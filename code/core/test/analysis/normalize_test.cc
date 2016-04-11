@@ -91,7 +91,7 @@ namespace analysis {
 			      toString(normalize(node)));
 		EXPECT_EQ("AP({int<4> v0 = 0; rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {return ref_deref(v0);}}(v0, v0);})",
 			      toString(normalize(node)));
-		
+
 		// test normalization with existing free variables
 		VariablePtr z = builder.variable(basic.getInt4(), 0); // create a v0!
 		std::map<string, NodePtr> map;
@@ -102,7 +102,7 @@ namespace analysis {
 		ASSERT_TRUE(expr);
 
 		EXPECT_EQ("AP(rec _.{_=fun() {v0;}})", toString(normalize(expr)));
-		
+
 		// test a sibling-compound
 		EXPECT_EQ("{int<4> v0 = 1; {int<4> v1 = 2;}; {int<4> v2 = 3;};}",
 		          toString(*normalize(builder.parseStmt("{var int<4> a = 1; { var int<4> b = 2; } { var int<4> c = 3; } }"))));
@@ -220,22 +220,22 @@ namespace analysis {
 
 		EXPECT_EQ(normalize(a), normalize(b));
 	}
-	
+
 	TEST(Normalizing, VarInType) {
         NodeManager mgr;
         IRBuilder builder(mgr);
-		
+
 		auto v192 = builder.variable(mgr.getLangBasic().getInt4(), 192);
 		auto testVar = builder.variable(builder.numericType(v192));
 		auto testCompound = builder.compoundStmt(builder.declarationStmt(v192, builder.intLit(4)), testVar);
         EXPECT_TRUE(analysis::contains(testCompound, v192));
         EXPECT_FALSE(analysis::contains(builder.normalize(testCompound), v192));
 	}
-	
+
 	TEST(Normalizing, FreeVarInType) {
         NodeManager mgr;
         IRBuilder builder(mgr);
-		
+
 		auto v192 = builder.variable(mgr.getLangBasic().getInt4(), 192);
 		auto testVar = builder.variable(builder.numericType(v192));
 		auto testCompound = builder.compoundStmt(testVar);
@@ -246,7 +246,7 @@ namespace analysis {
 	TEST(Normalizing, VarInTypeNested) {
         NodeManager mgr;
         IRBuilder builder(mgr);
-		
+
 		auto v192 = builder.variable(mgr.getLangBasic().getInt4(), 192);
 		auto genType = builder.genericType("bla", toVector<TypePtr>(builder.numericType(v192)));
 		auto outerType = builder.genericType("alb", toVector<TypePtr>(genType));
@@ -262,20 +262,20 @@ namespace analysis {
         NodeManager mgr;
         IRBuilder builder(mgr);
 		auto& basic = mgr.getLangBasic();
-		
+
 		auto v192 = builder.variable(mgr.getLangBasic().getUIntInf(), 192);
 		auto v193 = builder.variable(mgr.getLangBasic().getUIntInf(), 193);
 		auto arrType1 = builder.arrayType(basic.getInt4(), v192);
 		auto arrType2 = builder.arrayType(arrType1, v193);
-		
+
         EXPECT_TRUE(analysis::contains(arrType1, v192));
         EXPECT_TRUE(analysis::contains(builder.normalize(arrType1), v192));
-		
+
         EXPECT_TRUE(analysis::contains(arrType2, v192));
         EXPECT_TRUE(analysis::contains(arrType2, v193));
         EXPECT_TRUE(analysis::contains(builder.normalize(arrType2), v192));
         EXPECT_TRUE(analysis::contains(builder.normalize(arrType2), v193));
-		
+
 		auto arrVar1 = builder.variable(arrType1);
 		auto arrVar2 = builder.variable(arrType2);
 
@@ -294,13 +294,13 @@ namespace analysis {
         EXPECT_TRUE(analysis::contains(compound2, v193));
 		auto compound2N = builder.normalize(compound2);
         EXPECT_FALSE(analysis::contains(compound2N, v192));
-        EXPECT_FALSE(analysis::contains(compound2N, v193));		
+        EXPECT_FALSE(analysis::contains(compound2N, v193));
 		EXPECT_EQ(compound2N->getStatement(0).as<DeclarationStmtPtr>()->getVariable(),
 			      lang::ArrayType(compound2N->getStatement(1).as<CompoundStmtPtr>()->getStatement(2).as<VariablePtr>()->getType()).getSize());
 		//std::cout << dumpColor(compound2N) << dumpColor(compound2N->getStatement(1).as<CompoundStmtPtr>()->getStatement(2).as<VariablePtr>()->getType());
 	}
 
-	
+
 	TEST(Normalizing, Special) {
         NodeManager mgr;
         IRBuilder builder(mgr);
@@ -316,7 +316,7 @@ namespace analysis {
 		ASSERT_EQ(testAddrs.size(), 1);
 
 		auto testcode = testAddrs[0].getRootNode();
-		
+
 		//std::cout << "INPUT: ----------------------\n" << testcode << "-------------------------\n";
 		//std::cout << "OUTPUT: ----------------------\n" << builder.normalize(testcode) << "-------------------------\n";
 
@@ -328,7 +328,7 @@ namespace analysis {
 		EXPECT_NE(size1, size2);
 	}
 
-	
+
 	TEST(Normalizing, ReturnStmtBasic) {
 		NodeManager mgr;
         IRBuilder builder(mgr);
@@ -337,17 +337,17 @@ namespace analysis {
 		auto normalized = builder.normalize(ret);
 		EXPECT_NE(ret, normalized);
 		EXPECT_EQ(normalized->getReturnVar(), builder.variable(mgr.getLangBasic().getInt4(), 0));
-	}	
+	}
 
 	TEST(Normalizing, ReturnStmt) {
         NodeManager mgr;
         IRBuilder builder(mgr);
-	
+
 		auto testExpr = builder.parseExpr(R"(
 			def testLambda = () -> int<4> { var int<4> v; return v; };
 			testLambda()
 		)").as<CallExprPtr>();
-	
+
 		{
 			auto lambda = testExpr->getFunctionExpr().as<LambdaExprPtr>();
 			auto ret = lambda->getBody()->getStatement(1).as<ReturnStmtPtr>();
@@ -364,6 +364,35 @@ namespace analysis {
 			auto var = lambda->getBody()->getStatement(0).as<DeclarationStmtPtr>()->getVariable();
 			EXPECT_NE(retVar, var);
 		}
+	}
+
+	// Test used to debug getCanonicalType performance
+	TEST(Normalizing, DISABLED_RecTypePerformance) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto aParsed = builder.parseType(R"(
+			def struct B { };
+			def struct C {
+				ctor(a : int<4>) {}
+			};
+			def struct A {
+				b : B;
+				c : C;
+				ctor () {
+					B::(b);
+					C::(c, 43);
+				}
+			};
+			A
+		)");
+
+		auto aTag = aParsed.as<TagTypePtr>();
+		auto constructor = aTag->getRecord()->getConstructors()->getExpressions().front();
+		auto peeled = aTag.peel(constructor);
+
+		auto can = getCanonicalType(peeled->getType());
+
 	}
 
 } // end namespace analysis

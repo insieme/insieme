@@ -43,7 +43,6 @@
 #include "insieme/backend/statement_converter.h"
 
 #include "insieme/annotations/c/include.h"
-#include "insieme/annotations/c/decl_only.h"
 
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/lang/basic.h"

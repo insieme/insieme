@@ -113,6 +113,10 @@ void InHeader::f(int i) {
 	i = 0;
 }
 
+struct ClassWithStaticMethod {
+	static void bla() {}
+};
+
 int main() {
 	; // this is required because of the clang compound source location bug
 
@@ -202,6 +206,15 @@ int main() {
 		int x;
 		InHeader a;
 		a.f(x);
+	}
+
+	#pragma test expect_ir(R"(
+	def IMP_ClassWithStaticMethod_colon__colon_bla = function () -> unit { };
+	{
+		IMP_ClassWithStaticMethod_colon__colon_bla();
+	})")
+	{
+		ClassWithStaticMethod::bla();
 	}
 
 	return 0;

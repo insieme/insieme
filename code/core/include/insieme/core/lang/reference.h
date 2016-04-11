@@ -207,6 +207,11 @@ namespace lang {
 		 */
 		LANG_EXT_LITERAL(RefCast, "ref_cast", "(ref<'a,'c,'v,'k>, type<'new_const>, type<'new_volatile>, type<'new_kind>) -> ref<'a,'new_const,'new_volatile,'new_kind>")
 
+		/**
+		 * A cast to navigate to a parent struct.
+		 */
+		LANG_EXT_DERIVED(RefParentCast, "(r: ref<'a,'c,'v,'k>, t: type<'b>) -> ref<'b,'c,'v,'k> { return ref_narrow(r, dp_parent(dp_root(type_lit('a)), t)); }")
+
 
 		/**
 		 * A specialization of the ref_cast operator for modeling const casts.
@@ -238,7 +243,6 @@ namespace lang {
 		 * The expand operation is the inverse operation of the narrow operation.
 		 */
 		LANG_EXT_LITERAL(RefExpand, "ref_expand", "(ref<'b,'c,'v,'k>, datapath<'a,'b>) -> ref<'a,'c,'v,'k>")
-
 
 		/**
 		 * A derived operator providing access to an element in an array.
@@ -469,8 +473,10 @@ namespace lang {
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
 
 	ExpressionPtr buildRefDeref(const ExpressionPtr& refExpr);
+
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 	ExpressionPtr buildRefKindCast(const ExpressionPtr& refExpr, ReferenceType::Kind newKind);
+	ExpressionPtr buildRefParentCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 	ExpressionPtr buildRefReinterpret(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 
 	ExpressionPtr buildRefTemp(const TypePtr& type);

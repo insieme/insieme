@@ -336,8 +336,17 @@ namespace lang {
 		return builder.callExpr(rExt.getRefKindCast(), refExpr, builder.getTypeLiteral(lang::toType(refExpr->getNodeManager(), newKind)));
 	}
 
+	ExpressionPtr buildRefParentCast(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
+		assert_pred1(isReference, refExpr) << "Trying to build a ref parent cast from non-ref.";
+		auto rT = ReferenceType(refExpr);
+		if(rT.getElementType() == targetTy) return refExpr;
+		IRBuilder builder(refExpr->getNodeManager());
+		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();
+		return builder.callExpr(rExt.getRefParentCast(), refExpr, builder.getTypeLiteral(targetTy));
+	}
+
 	ExpressionPtr buildRefReinterpret(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
-		assert_pred1(isReference, refExpr) << "Trying to build a ref kind cast from non-ref.";
+		assert_pred1(isReference, refExpr) << "Trying to build a ref reinterpret cast from non-ref.";
 		auto rT = ReferenceType(refExpr);
 		if(rT.getElementType() == targetTy) return refExpr;
 		IRBuilder builder(refExpr->getNodeManager());

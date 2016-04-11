@@ -1182,7 +1182,7 @@ namespace analysis {
 						if (res) return res;
 					}
 				}
-				return RecordAddress();
+				return none;
 			}
 
 			bool equalUnder(const NodeAddress& a, const NodeAddress& b, const EqualityClasses& classes, const std::map<NodeAddress, unsigned>& index, bool topLevel = true) {
@@ -1246,24 +1246,46 @@ namespace analysis {
 				});
 
 				return res;
-
 			}
 
-			bool isReachable(const NodeAddress& from, const RecordAddress& trg, std::set<NodeAddress>& visited) {
+			struct CannotReachTagTypeTag {};
 
-				// if we reached the target, we are done
-				if (from == trg) return true;
+			struct CannotReachTagTypeTagger : public CachedVisitor<bool> {
+				CannotReachTagTypeTagger() : CachedVisitor<bool>(true) {}
+
+				virtual bool resolve(const NodePtr& node) {
+					bool ret = false;
+					if(node->hasAttachedValue<CannotReachTagTypeTag>()) return false;
+					if(node->getNodeType() == NT_TagType) return true;
+					if(node->getNodeType() == NT_TagTypeReference) return true;
+					ret = ::any(node.getChildList(), [&](const NodePtr& child) { return visit(child); });
+					if(!ret) node->attachValue<CannotReachTagTypeTag>();
+					return ret;
+				}
+			};
+
+			bool isReachable(const NodeAddress& from, const std::vector<RecordAddress>& trg, std::set<NodeAddress>& visited) {
+				// stop if we are at a builtin
+				if(core::lang::isBuiltIn(from)) return false;
+
+				// stop if we can't reach a tag type
+				if(from->hasAttachedValue<CannotReachTagTypeTag>()) return false;
+
+				// if we reached a target, we are done
+				for(const auto& t : trg) {
+					if(t == from) return true;
+				}
 
 				// stop here when already visited
-				if (!visited.insert(from).second) return false;
+				if(!visited.insert(from).second) return false;
 
 				// skip the tag type constructs
-				if (auto type = from.isa<TagTypeAddress>()) {
+				if(auto type = from.isa<TagTypeAddress>()) {
 					return isReachable(type->getRecord(), trg, visited);
 				}
 
 				// if it is a tag type reference, continue with definition
-				if (auto tag = from.isa<TagTypeReferenceAddress>()) {
+				if(auto tag = from.isa<TagTypeReferenceAddress>()) {
 					auto def = getDefinition(tag);
 					return def && isReachable(def, trg, visited);
 				}
@@ -1274,25 +1296,22 @@ namespace analysis {
 				});
 			}
 
-			bool isReachable(const NodeAddress& from, const RecordAddress& trg) {
-				std::set<NodeAddress> visited;
-				return isReachable(from, trg, visited);
-			}
-
 			bool dependsOn(const std::vector<RecordAddress>& a, const std::vector<RecordAddress>& b) {
 
 				// quick check: if any of the addresses in a is a prefix of any of the addresses in b
-				for (const auto& x : a) {
-					for (const auto& y : b) {
-						if (x != y && isChildOf(y, x)) return true;
+				for(const auto& x : a) {
+					for(const auto& y : b) {
+						if(x != y && isChildOf(y, x)) return true;
 					}
 				}
 
 				// more expensive: if you can reach through one of the types one of the other types => dependency
-				for (const auto& x : a) {
-					for (const auto& y : b) {
-						if (x != y && isReachable(y, x)) return true;
-					}
+				// works on entire vectors at once for performance reasons
+				for(const auto& y : b) {
+					auto copy = a;
+					copy.erase(std::remove(copy.begin(), copy.end(), y), copy.end());
+					std::set<NodeAddress> visited;
+					if(isReachable(y, copy, visited)) return true;
 				}
 
 				// otherwise there is no dependency
@@ -1338,7 +1357,6 @@ namespace analysis {
 		}
 
 		TypePtr normalizeRecursiveTypes(const TypePtr& type) {
-
 			// This function is converting recursive types into their most compact form.
 			// Thus, (partially) unrolled or peeled fragments will be identified as such
 			// and pruned to obtain a representation which can not be further reduced.
@@ -1346,11 +1364,17 @@ namespace analysis {
 			// function specific debugging flag
 			static const bool debug = false;
 
-			// 1) get a list of all record types and tag type references in the given type
+			// 1) get a list of all record types and tag type references in the given type (second most time consuming part)
+			CannotReachTagTypeTagger tagger;
+			tagger(type); // preprocessing pass to add annotations used to speed up steps 1) and 3)
+
 			vector<RecordAddress> records;
-			visitDepthFirst(TypeAddress(type), [&](const RecordAddress& record) {
-				records.push_back(record);
-			}, true, true);
+			visitDepthFirstPrunable(TypeAddress(type), [&](const NodeAddress& node) {
+				if(core::lang::isBuiltIn(node)) return true;
+				if(node->hasAttachedValue<CannotReachTagTypeTag>()) return true;
+				if(auto record = node.isa<RecordAddress>()) records.push_back(record);
+				return false;
+			}, true);
 
 			// print some debugging
 			if (debug) {
@@ -1403,8 +1427,7 @@ namespace analysis {
 				}
 			}
 
-
-			// 3) compute dependencies between equivalence classes
+			// 3) compute dependencies between equivalence classes (MOST time consuming part!)
 			using EquivalenceClass = std::vector<RecordAddress>;
 			utils::graph::Graph<EquivalenceClass> depGraph;
 
@@ -1420,7 +1443,7 @@ namespace analysis {
 			// add dependencies
 			for (const auto& a : vertices) {
 				for (const auto& b : vertices) {
-					if (&a != & b && dependsOn(a, b)) {
+					if (&a != &b && dependsOn(a, b)) {
 						depGraph.addEdge(a, b);
 					}
 				}
@@ -1431,7 +1454,6 @@ namespace analysis {
 				std::cout << "Dependency Graph:\n";
 				depGraph.printGraphViz(std::cout);
 			}
-
 
 			// 4) compute strongly connected components
 			auto componentGraph = utils::graph::computeSCCGraph(depGraph.asBoostGraph());
@@ -1453,7 +1475,7 @@ namespace analysis {
 				}
 			}
 
-			// process each component bottom up to build minimal type
+			// 6) process each component bottom up to build minimal type
 			IRBuilder builder(type.getNodeManager());
 			std::map<NodeAddress, NodePtr> replacements;
 			for (const auto& group : order) {
@@ -1557,7 +1579,7 @@ namespace analysis {
 			auto result = transform::replaceAll(type.getNodeManager(), replacements).as<TypePtr>();
 
 			// make sure the resulting type is OK
-			assert_true(checks::check(result).empty()) << checks::check(result);
+			if(debug) assert_true(checks::check(result).empty()) << checks::check(result);
 
 			// done
 			return result;

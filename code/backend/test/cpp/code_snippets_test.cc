@@ -601,6 +601,141 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(CppSnippet, ConstructorsInitConstructor) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(builder.parseProgram(R"(
+			alias int = int<4>;
+
+			def struct B { };
+			def struct A {
+				b : B;
+				ctor () {
+					B::(b);
+				}
+			};
+			def struct C {
+				ctor(a : int) {}
+			};
+			def struct D {
+				c : C;
+				ctor () {
+					C::(c, 43);
+				}
+			};
+
+			int main() {
+				var ref<A> a = A::(a);
+				var ref<D> d = D::(d);
+				return 0;
+			}
+		)"));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+		//std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "A::A() : b() { }");
+		EXPECT_PRED2(containsSubString, code, "D::D() : c(43) { }");
+		EXPECT_PRED2(notContainsSubString, utils::removeCppStyleComments(code), "*");
+		EXPECT_PRED2(notContainsSubString, code, "new ");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+	TEST(CppSnippet, ConstructorsChained) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(builder.parseProgram(R"(
+			decl ctor:ChainedConstructor::(int<4>);
+			def struct ChainedConstructor {
+				a : int<4>;
+				b : real<4>;
+				ctor function () {
+					ChainedConstructor::(this, 5);
+				}
+				ctor function (v1 : ref<int<4>,f,f,plain>) {
+					<ref<int<4>,f,f,plain>>((this).a) {*v1};
+					<ref<real<4>,f,f,plain>>((this).b) {2.0E+0f};
+				}
+			};
+
+			int<4> main() {
+				var ref<ChainedConstructor,f,f,plain> v0 = ChainedConstructor::(v0);
+				return 0;
+			}
+		)"));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+		//std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "ChainedConstructor::ChainedConstructor() : ChainedConstructor(5) { }");
+		EXPECT_PRED2(notContainsSubString, utils::removeCppStyleComments(code), "*");
+		EXPECT_PRED2(notContainsSubString, code, "new ");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+	TEST(CppSnippet, ConstructorsBase) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(builder.parseProgram(R"(
+			def struct Base {
+				a : int<4>;
+				ctor function (v1 : ref<int<4>,f,f,plain>) {
+					<ref<int<4>,f,f,plain>>((this).a) {*v1};
+				}
+			};
+			def struct Derived: [ public Base ] {
+				ctor function () {
+					Base::(ref_parent_cast(this, type_lit(Base)), 5);
+				}
+			};
+
+			int<4> main() {
+				var ref<Derived,f,f,plain> v0 = Derived::(v0);
+				return 0;
+			}
+		)"));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+		//std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "Derived::Derived() : Base(5) { }");
+		EXPECT_PRED2(notContainsSubString, utils::removeCppStyleComments(code), "*");
+		EXPECT_PRED2(notContainsSubString, code, "new ");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
 
 	TEST(CppSnippet, Globals) {
 		core::NodeManager manager;
@@ -1471,199 +1606,6 @@ namespace backend {
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 	}*/
-
-//	TEST(CppSnippet, ArrayConstruction) {
-//		core::NodeManager mgr;
-//		core::IRBuilder builder(mgr);
-//
-//		std::map<string, core::NodePtr> symbols;
-//		symbols["createArray"] = mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor();
-//
-//		auto res = builder.parseProgram(
-//		    R"(
-//					let int = int<4>;
-//
-//					let A = struct { int x; };
-//
-//					let ctorA = lambda ctor A::() {
-//						this.x = 4;
-//					};
-//
-//					int main() {
-//
-//						// create an array of objects of type A on the stack
-//						decl ref<array<A,1>> a = createArray(ref_var, ctorA, 5u);
-//
-//						// create an array of objects of type A on the heap
-//						decl ref<array<A,1>> b = createArray(ref_new, ctorA, 5u);
-//
-//						// update an element
-//						a[3].x = 12;
-//						b[3].x = 12;
-//
-//						return 0;
-//					}
-//				)",
-//		    symbols);
-//
-//		ASSERT_TRUE(res);
-//		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
-//
-//		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
-//		ASSERT_TRUE((bool)targetCode);
-//
-//		// std::cout << *targetCode;
-//
-//		// check generated code
-//		auto code = toString(*targetCode);
-//		EXPECT_PRED2(containsSubString, code, "A a[5u];");
-//		EXPECT_PRED2(containsSubString, code, "A* b = new A[5u];");
-//
-//		EXPECT_PRED2(containsSubString, code, "a[3].x = 12;");
-//		EXPECT_PRED2(containsSubString, code, "b[3].x = 12;");
-//
-//
-//		// check whether ctor is present!
-//		EXPECT_PRED2(containsSubString, code, "A();");
-//		EXPECT_PRED2(containsSubString, code, "A::A() : x(4) {");
-//
-//		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-//		compiler.addFlag("-c"); // do not run the linker
-//		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-//	}
-//
-//	TEST(CppSnippet, VectorConstruction) {
-//		core::NodeManager mgr;
-//		core::IRBuilder builder(mgr);
-//
-//		std::map<string, core::NodePtr> symbols;
-//		symbols["createVector"] = mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor();
-//
-//		auto res = builder.parseProgram(
-//		    R"(
-//					let int = int<4>;
-//
-//					let A = struct { int x; };
-//
-//					let ctorA = lambda ctor A::() {
-//						this.x = 4;
-//					};
-//
-//					int main() {
-//
-//						let size = expr lit("not important" : intTypeParam<5>);
-//
-//						// create an array of objects of type A on the stack
-//						decl ref<array<A,1>> a = createVector(ref_var, ctorA, size);
-//
-//						// create an array of objects of type A on the heap
-//						decl ref<array<A,1>> b = createVector(ref_new, ctorA, size);
-//
-////						// create an array of objects of type A on the stack
-////						decl ref<vector<A,5>> c = createVector(ref_var, ctorA, size);
-////
-////						// create an array of objects of type A on the heap
-////						decl ref<vector<A,5>> d = createVector(ref_new, ctorA, size);
-//
-//						// update an element
-//						a[3].x = 12;
-//						b[3].x = 12;
-////						c[3].x = 12;
-////						d[3].x = 12;
-//
-//						return 0;
-//					}
-//				)",
-//		    symbols);
-//
-//		// TODO: also support ref<vector<X,y>> as the value type
-//
-//		ASSERT_TRUE(res);
-//		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
-//
-//		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
-//		ASSERT_TRUE((bool)targetCode);
-//
-//		// std::cout << *targetCode;
-//
-//		// check generated code
-//		auto code = toString(*targetCode);
-//		EXPECT_PRED2(containsSubString, code, "A a[5u];");
-//		EXPECT_PRED2(containsSubString, code, "A* b = new A[5u];");
-//		//		EXPECT_PRED2(containsSubString, code, "A c[5u];");
-//		//		EXPECT_PRED2(containsSubString, code, "A* d = new A[5u];");
-//
-//		EXPECT_PRED2(containsSubString, code, "a[3].x = 12;");
-//		EXPECT_PRED2(containsSubString, code, "b[3].x = 12;");
-//		//		EXPECT_PRED2(containsSubString, code, "c[3].x = 12;");
-//		//		EXPECT_PRED2(containsSubString, code, "d[3].x = 12;");
-//
-//
-//		// check whether ctor is present!
-//		EXPECT_PRED2(containsSubString, code, "A();");
-//		EXPECT_PRED2(containsSubString, code, "A::A() : x(4) {");
-//
-//		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-//		compiler.addFlag("-c"); // do not run the linker
-//		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-//	}
-
-	TEST(CppSnippet, DISABLED_InitializerList) {
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
-		auto res = builder.normalize(builder.parseProgram(
-		    R"(
-					alias int = int<4>;
-
-					def struct B { };
-					def struct A : [B] {
-
-						x : int;
-						y : int;
-						z : int;
-
-						ctor (y : int) {
-							this.y = y;
-							for ( int i = 0 .. 10 ) {
-								this.y = 1;
-								this.z = 3;
-							}
-							this.x = 4;
-							this.z = 2;
-						}
-					};
-
-					int main() {
-
-						// call constructor
-						var ref<A> a = A::(ref_new(undefined(A)), 10);
-
-						return 0;
-					}
-				)"));
-
-		ASSERT_TRUE(res);
-		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
-
-		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
-		ASSERT_TRUE((bool)targetCode);
-
-		//		std::cout << *targetCode;
-
-		// check generated code
-		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "A a((10));");
-		EXPECT_PRED2(containsSubString, code, "A::A(int32_t y) : x(4), y(y) {");
-		EXPECT_PRED2(containsSubString, code, "(*this).z = 2;");
-
-		EXPECT_PRED2(notContainsSubString, code, "(*this).x = 4;");
-
-		// check whether code is compiling
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-		compiler.addFlag("-c"); // do not run the linker
-		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-	}
 
 	TEST(CppSnippet, DISABLED_InitializerList2) {
 		// something including a super-constructor call

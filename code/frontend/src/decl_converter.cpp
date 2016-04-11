@@ -42,11 +42,12 @@
 #include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/name_manager.h"
 
+#include "insieme/core/analysis/type_utils.h"
+#include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/array.h"
-#include "insieme/core/annotations/naming.h"
+#include "insieme/core/lang/pointer.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/extern_c.h"
@@ -72,6 +73,12 @@ namespace conversion {
 	}
 
 	namespace {
+		bool isIrMethod(const clang::FunctionDecl* funDecl) {
+			if(!funDecl) return false;
+			auto meth = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl);
+			return meth && !meth->isStatic();
+		}
+
 		core::TypePtr getThisType(Converter& converter, const clang::CXXMethodDecl* methDecl) {
 			auto parentType = converter.convertType(converter.getCompiler().getASTContext().getRecordType(methDecl->getParent()));
 			auto refKind = core::lang::ReferenceType::Kind::Plain;
@@ -88,7 +95,7 @@ namespace conversion {
 			auto funType = converter.convertType(funDecl->getType()).as<core::FunctionTypePtr>();
 			// is this a method? if not, we are done
 			const clang::CXXMethodDecl* methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl);
-			if(methDecl == nullptr) return funType;
+			if(!isIrMethod(methDecl)) return funType;
 			// now build "this" type
 			auto thisType = getThisType(converter, methDecl);
 			// add "this" parameter to param list
@@ -120,12 +127,18 @@ namespace conversion {
 			core::IRBuilder builder(converter.getNodeManager());
 			core::StatementList retStmts;
 			for(const auto& init: constrDecl->inits()) {
-				// access IR field
+				auto irThis = builder.deref(converter.getVarMan()->getThis());
+				auto irMember = irThis;
+
+				// check if field or delegating initialization
 				auto fieldDecl = init->getMember();
-				auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
-				auto retType = converter.convertVarType(fieldDecl->getType().getUnqualifiedType());
-				auto irMember = builder.callExpr(retType, access, builder.deref(converter.getVarMan()->getThis()), builder.getIdentifierLiteral(fieldDecl->getNameAsString()),
-					                             builder.getTypeLiteral(core::lang::ReferenceType(retType).getElementType()));
+				if(fieldDecl) {
+					// access IR field
+					auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+					auto retType = converter.convertVarType(fieldDecl->getType().getUnqualifiedType());
+					irMember = builder.callExpr(retType, access, irThis, builder.getIdentifierLiteral(fieldDecl->getNameAsString()),
+													 builder.getTypeLiteral(core::lang::ReferenceType(retType).getElementType()));
+				}
 				// handle CXXDefaultInitExpr
 				auto clangInitExpr = init->getInit();
 				if(auto defaultInitExpr = llvm::dyn_cast<clang::CXXDefaultInitExpr>(clangInitExpr)) {
@@ -133,7 +146,13 @@ namespace conversion {
 				}
 				// handle ConstructExprs
 				if(auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(clangInitExpr)) {
-					retStmts.push_back(utils::convertConstructExpr(converter, constructExpr, irMember));
+					auto converted = utils::convertConstructExpr(converter, constructExpr, irMember).as<core::CallExprPtr>();
+					// cast "this" as required for base constructor calls
+					auto targetObjType = core::analysis::getObjectType(converted->getFunctionExpr()->getType());
+					auto adjustedArgs = converted->getArgumentList();
+					adjustedArgs[0] = core::lang::buildRefParentCast(adjustedArgs[0], targetObjType);
+					converted = builder.callExpr(converted->getType(), converted->getFunctionExpr(), adjustedArgs);
+					retStmts.push_back(converted);
 					continue;
 				}
 
@@ -154,7 +173,7 @@ namespace conversion {
 				core::VariableList params;
 				core::StatementList bodyStmts;
 				// handle implicit "this" for methods
-				if(methDecl) {
+				if(isIrMethod(funcDecl)) {
 					auto thisType = getThisType(converter, methDecl);
 					auto thisVar = builder.variable(builder.refType(thisType));
 					params.push_back(thisVar);

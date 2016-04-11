@@ -77,12 +77,6 @@ namespace frontend {
 namespace extensions {
 
 	namespace {
-		auto isCStyleAssignment = [](const core::NodePtr& node) {
-			auto& mgr = node->getNodeManager();
-			auto& fMod = mgr.getLangExtension<utils::FrontendInspireModule>();
-			return core::analysis::isCallOf(node, fMod.getCStyleAssignment());
-		};
-
 		// tries to map a given operation (assignment or increment/decrement) to a step for an IR for loop
 		// returns (read/write, step expression)
 		std::pair<bool, core::ExpressionPtr> mapToStep(core::NodePtr operation) {
