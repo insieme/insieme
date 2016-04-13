@@ -34,31 +34,40 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/core/analysis/region/fun_call_selector.h"
 
-#include "insieme/core/analysis/region/dummy_selector.h"
-
-#include "insieme/core/ir_builder.h"
-#include "insieme/utils/container_utils.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/basic.h"
 
 namespace insieme {
 namespace core {
 namespace analysis {
 namespace region {
 
-	TEST(DummyRegionSelector, Basic) {
-		// the test is mainly focusing on the interface, not the actual selector
+	RegionList FunctionCallSelector::getRegions(const core::NodeAddress& code) const {
+		RegionList res;
 
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
+		core::visitDepthFirst(code, [&](const core::StatementAddress& cur) -> bool {
+			if(cur.getAddressedNode()->getNodeType() != core::NT_CallExpr) { return false; }
 
-		// create some IR structure
-		const core::CompoundStmtPtr stmt = builder.compoundStmt(builder.breakStmt());
+			core::LiteralPtr literalPtr = cur.getAddressedNode().as<core::CallExprPtr>()->getFunctionExpr().isa<core::LiteralPtr>();
 
-		DummyRegionSelector selector;
-		vector<Region> regions = selector.getRegions(core::StatementAddress(stmt));
+			if(!literalPtr) { return false; }
 
-		EXPECT_EQ(toVector(Region(stmt)), regions);
+			string name = literalPtr->getStringValue();
+
+			if(name.find(this->nameSubString) != string::npos) {
+				//std::cout << "found: " << utils::demangle(name) << "\n";
+				//dumpColor(cur);
+				res.push_back(cur);
+				return true;
+			}
+
+			return false;
+		}, false);
+
+		return res;
 	}
 
 } // end namespace region

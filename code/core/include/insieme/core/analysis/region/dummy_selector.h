@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -58,9 +58,9 @@ namespace region {
 		/**
 		 * Simply obtains all top-level compound statements.
 		 */
-		virtual RegionList getRegions(const core::NodePtr& node) const {
+		virtual RegionList getRegions(const core::NodeAddress& code) const {
 			RegionList regions;
-			visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CompoundStmtAddress& comp) {
+			visitDepthFirstPrunable(code, [&](const core::CompoundStmtAddress& comp) {
 				regions.push_back(comp);
 				return true;
 			});

@@ -34,32 +34,37 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "insieme/core/analysis/region/dummy_selector.h"
-
-#include "insieme/core/ir_builder.h"
-#include "insieme/utils/container_utils.h"
+#include "insieme/core/analysis/region/region_selector.h"
 
 namespace insieme {
 namespace core {
 namespace analysis {
 namespace region {
 
-	TEST(DummyRegionSelector, Basic) {
-		// the test is mainly focusing on the interface, not the actual selector
-
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create some IR structure
-		const core::CompoundStmtPtr stmt = builder.compoundStmt(builder.breakStmt());
-
-		DummyRegionSelector selector;
-		vector<Region> regions = selector.getRegions(core::StatementAddress(stmt));
-
-		EXPECT_EQ(toVector(Region(stmt)), regions);
-	}
+	/**
+	 * This region selector is picking all calls to literals whose name contains a given substring.
+	 */
+	class FunctionCallSelector : public RegionSelector {
+	  private:
+		  /*
+		   * The substring to match against when searching for function calls. An empty string will
+		   * match any function call.
+		   */
+		  const std::string nameSubString;
+	  public:
+		  /*
+		   * A constructor taking a substring which must be contained by the literal of a function 
+		   * call in order for the function call to be considered a region.
+		   * @param nameSubstring the string to match function call regions against
+		   */
+		  FunctionCallSelector(const std::string nameSubString = "") : nameSubString(nameSubString) {}
+		/**
+		 * Selects all regions within the given code fragment.
+		 */
+		virtual RegionList getRegions(const core::NodeAddress& code) const;
+	};
 
 } // end namespace region
 } // end namespace analysis

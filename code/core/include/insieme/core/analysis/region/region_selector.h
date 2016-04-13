@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -81,7 +81,7 @@ namespace region {
 		 * @return a list of addresses to the nodes forming the selected regions. The root
 		 * 		of all obtained addresses has to be equivalent to the given code region.
 		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const = 0;
+		virtual RegionList getRegions(const core::NodeAddress& code) const = 0;
 	};
 
 } // end namespace region

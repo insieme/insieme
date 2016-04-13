@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -577,7 +577,10 @@ void irt_inst_region_output() {
 
 	IRT_ASSERT(stat(outputprefix, &st) == 0, IRT_ERR_INSTRUMENTATION, "Error using directory %s for region data: %s", outputprefix, strerror(errno));
 
-	sprintf(outputfilename, "%s/worker_efficiency_log", outputprefix);
+	sprintf(outputfilename, "%s/worker_efficiency.log", outputprefix);
+#ifdef IRT_USE_MPI
+	sprintf(outputfilename + strlen(outputfilename), ".%s", getenv("OMPI_COMM_WORLD_RANK"));
+#endif
 
 	outputfile = fopen(outputfilename, "w");
 	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Unable to open region data file for writing: %s", strerror(errno));

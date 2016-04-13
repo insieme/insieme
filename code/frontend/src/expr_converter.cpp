@@ -598,7 +598,7 @@ namespace conversion {
 		case clang::BO_XorAssign: compAssignFunc = compOpExt.getCompAssignBitwiseXor(); break;
 		case clang::BO_ShlAssign: compAssignFunc = compOpExt.getCompAssignLeftShift();  break;
 		case clang::BO_ShrAssign: compAssignFunc = compOpExt.getCompAssignRightShift(); break;
-		default: assert_fail() << "Found unkonwn compound operator (Opcode: " << compOp->getOpcode() << ")";
+		default: assert_fail() << "Found unknown compound operator (Opcode: " << compOp->getOpcode() << ")";
 		}
 
 		// Special case where LHS is a char is handled in compound operators extension.
@@ -835,11 +835,11 @@ namespace conversion {
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//                  StmtExpr EXPRESSION
-	// Statement Expressions (a GNU C extension) allow statements to appear as 
+	// Statement Expressions (a GNU C extension) allow statements to appear as
 	// an expression by enclosing them in parentheses, e.g.:
 	//		({ int x = 5; x+3; })
-	// The last entry should be an expression terminated by a semicolon and 
-	// represents the return type and value, otherwise (last entry == statement) 
+	// The last entry should be an expression terminated by a semicolon and
+	// represents the return type and value, otherwise (last entry == statement)
 	// the entire construct has type void
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitStmtExpr(const clang::StmtExpr* stmtExpr) {

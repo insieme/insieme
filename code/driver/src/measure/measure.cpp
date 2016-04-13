@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -676,39 +676,6 @@ namespace measure {
 		return measure(regions, metrices, 1, executor, compiler, env)[0];
 	}
 
-	//	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>> measureAll(
-	//				const core::StatementAddress& stmt,
-	//				const vector<MetricPtr>& metrices,
-	//				unsigned numRuns, const ExecutorPtr& executor,
-	//				const utils::compiler::Compiler& compiler,
-	//				const std::map<string, string>& env) {
-	//
-	//			namespace iar = insieme::analysis::region;
-	//
-	//			iar::ForSelector forSelector;
-	//			vector<core::StatementAddress> regions = forSelector.getRegions(stmt.getAddressedNode());
-	//
-	//			// create a stmt-address <-> region_id map
-	//			std::map<core::StatementAddress, region_id> mappedRegions;
-	//			region_id id = 0;
-	//			for(const auto& cur : regions) {
-	//				mappedRegions[cur] = id++;
-	//			}
-	//
-	//			// run measurements
-	//			auto data = measure(mappedRegions, metrices, numRuns, executor, compiler, env);
-	//
-	//			// un-pack results
-	//			return ::transform(data, [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& data)->std::map<core::StatementAddress, std::map<MetricPtr,
-	//Quantity>> {
-	//				std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> res;
-	//				for(const auto& cur : data) {
-	//					res[regions[cur.first]] = cur.second;
-	//				}
-	//				return res;
-	//			});
-	//		}
-
 	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>> measure(const vector<core::StatementAddress>& regions,
 	                                                                                const vector<MetricPtr>& metrices, unsigned numRuns,
 	                                                                                const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
@@ -742,65 +709,6 @@ namespace measure {
 	}
 
 	namespace {
-
-		//
-		//		TODO: enable the limitation of iterations
-		//
-		//		core::NodeAddress limitExecutionsInternal(const core::NodeAddress& address, unsigned maxIterations) {
-		//
-		//			if (address->getNodeType() != core::NT_ForStmt) {
-		//
-		//				// check whether there is still a parent node
-		//				if (address.isRoot()) {
-		//					return address;
-		//				}
-		//
-		//				// resolve recursively and restore path to given address
-		//				return limitExecutionsInternal(address.getParentAddress(), maxIterations).getAddressOfChild(address.getIndex());
-		//
-		//			}
-		//
-		//			// found surrounding for-stmt => fix boundaries
-		//			core::NodeManager& manager = address->getNodeManager();
-		//			core::IRBuilder builder(manager);
-		//
-		//			// a loop has been found => update loop boundaries
-		//			core::ForStmtPtr loop = address.as<core::ForStmtPtr>();
-		//
-		//			core::TypePtr type = loop->getIterator()->getType();
-		//			core::ExpressionPtr start = loop->getStart();
-		//			core::ExpressionPtr end = loop->getEnd();
-		//			core::ExpressionPtr step = loop->getStep();
-		//
-		//			core::ExpressionPtr maxIt = builder.literal(type, utils::numeric_cast<string>(maxIterations));
-		//
-		//			// define new end as min(upperBound, lowerBound + step * maxIterations)
-		//			core::ExpressionPtr newEnd = builder.min(end, builder.add(start, builder.mul(step, maxIt)));
-		//
-		//			// create new for loop
-		//			core::ForStmtPtr newLoop = builder.forStmt(loop->getIterator(), start, newEnd, step, loop->getBody());
-		//
-		//			// encapsulate into compound including exit-call
-		//			core::StatementPtr compound = builder.compoundStmt(newLoop,
-		//					builder.callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getExit(), builder.intLit(0))
-		//			);
-		//
-		//			// replace loop
-		//			core::NodeAddress res = core::transform::replaceAddress(manager, address, compound);
-		//
-		//			// update region address and return result
-		//			return res.as<core::CompoundStmtAddress>()->getStatement(0);
-		//		}
-		//
-		//		region::Region limitExecutions(const region::Region& region, unsigned maxIterations) {
-		//			assert_ne(maxIterations, 0) << "Need to be executed at least once!";
-		//
-		//			// if there is no context we cannot find a loop to limit
-		//			if (region.isRoot()) { return region; }
-		//
-		//			// use recursive helper function to conduct manipulation
-		//			return limitExecutionsInternal(region.getParentAddress(), maxIterations).getAddressOfChild(region.getIndex()).as<region::Region>();
-		//		}
 
 		/**
 		 * This function is simply wrapping the given statement into instrumented start / end
@@ -960,9 +868,7 @@ namespace measure {
 		// build target code
 		auto binFile = buildBinary(regions, modifiedCompiler);
 
-		//		// create the instrumented binary
-		//		auto binFile = buildBinary(regions, compiler);
-		if(binFile.empty()) { throw MeasureException("Unable to compiling executable for measurement!"); }
+		if(binFile.empty()) { throw MeasureException("Unable to compile executable for measurement!"); }
 
 		// conduct measurement
 		auto res = measure(binFile, metrics, numRuns, executor, env);
@@ -1087,6 +993,9 @@ namespace measure {
 
 		core::NodePtr root = regions.begin()->first.getRootNode();
 
+		//dumpColor(root);
+		//std::cout << "#########################################################\n";
+
 		// sort addresses in descending order
 		typedef std::pair<core::StatementAddress, region_id> region_pair;
 		vector<region_pair> sorted_regions(regions.begin(), regions.end());
@@ -1120,6 +1029,8 @@ namespace measure {
 		} else {
 			program = wrapIntoProgram(root);
 		}
+
+		//dumpColor(program);
 
 		// create backend code
 		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
@@ -1215,6 +1126,8 @@ namespace measure {
 
 	namespace {
 
+		enum InputOutputState { UNKNOWN, SUCCESS, FAILURE, SKIP };
+
 		vector<string> readLine(std::ifstream& in) {
 			typedef boost::tokenizer<boost::escaped_list_separator<char>> Tokenizer;
 
@@ -1285,8 +1198,24 @@ namespace measure {
 	Measurements loadResults(const boost::filesystem::path& directory) {
 		Measurements res;
 
-		// load the efficiency log
-		loadFile(directory / "worker_efficiency_log", [&](region_id region, MetricPtr metric, const Quantity& value) { res.add(region, metric, value); });
+		// try loading a single file in case only a single Insieme runtime was executed
+		loadFile(directory / "worker_efficiency.log", [&](region_id region, MetricPtr metric, const Quantity& value) { res.add(region, metric, value); });
+
+		// if single file was not present
+		if(res.empty()) {
+			int index = 0;
+			bool stop = false;
+			// try checking for multiple files with ID suffix and stop at first unsuccessful file parsing
+			while(!stop) {
+				stop = true;
+				string filename = string("worker_efficiency.log.") + std::to_string(index);
+				loadFile(directory / filename, [&](region_id region, MetricPtr metric, const Quantity& value) {
+					res.add(region, metric, value);
+					stop = false;
+				});
+				++index;
+			}
+		}
 
 		// to avoid a warning
 		return res;

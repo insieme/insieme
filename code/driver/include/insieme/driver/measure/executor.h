@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -60,6 +60,17 @@ namespace measure {
 	 */
 	class Executor {
 	  public:
+		/**
+		* Holds a wrapper and its arguments to be prepended in the execution string (i.e. affinity tools, etc...)
+		*/
+		const string wrapper;
+
+		/**
+		* Creates an executor with a given wrapper if present
+		* @param wrapper a wrapper program (and its arguments, if any) to be prepended in the execution string
+		*/
+		Executor(const std::string& wrapper = "") : wrapper(wrapper) { }
+
 		virtual ~Executor(){};
 
 		/**
@@ -80,7 +91,13 @@ namespace measure {
 	 * the current working directory.
 	 */
 	class LocalExecutor : public Executor {
-	  public:
+	  public:		
+		  /**
+		   * Creates an executor with a given wrapper if present
+		   * @param wrapper a wrapper program (and its arguments, if any) to be prepended in the execution string
+		   */
+		  LocalExecutor(const std::string& wrapper = "") : Executor(wrapper) { }
+
 		/**
 		 * Runs the given binary within the current working directory.
 		 */
@@ -141,8 +158,8 @@ namespace measure {
 		 * @param remoteWorkDir the working directory to be used on the remote system.
 		 * @param system the system to be used to run binaries on the remote host
 		 */
-		RemoteExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp", JobSystem system = SSH)
-		    : system(system), hostname(hostname), username(username), workdir(remoteWorkDir) {}
+		RemoteExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp", JobSystem system = SSH, const std::string& wrapper = "")
+		    : Executor(wrapper), system(system), hostname(hostname), username(username), workdir(remoteWorkDir) {}
 
 		/**
 		 * Runs the given binary on the specified remote machine.

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -173,7 +173,7 @@ namespace measure {
 	 * 			using generated region IDs. If two addresses have the same region id assigned, their results
 	 * 			will be aggregated
 	 * @param metrics the metrics to be collected
-	 * @param exectuor the executor to be used for running the program
+	 * @param executor the executor to be used for running the program
 	 * @param env the set of environment variables to be set up for the experiment run
 	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
 	 * 		values data indexed by the requested metrics.
@@ -192,7 +192,7 @@ namespace measure {
 	 * 			will be aggregated
 	 * @param metrics the metrics to be collected
 	 * @param numRuns the number of runs to be conducted
-	 * @param exectuor the executor to be used for running the program
+	 * @param executor the executor to be used for running the program
 	 * @param env the set of environment variables to be set up for the experiment run
 	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
 	 * 		values data indexed by the requested metrics.
@@ -210,7 +210,7 @@ namespace measure {
 	 * 			using the given region IDs. If two addresses have the same region id assigned, their results
 	 * 			will be aggregated
 	 * @param metrics the metrics to be collected
-	 * @param exectuor the executor to be used for running the program
+	 * @param executor the executor to be used for running the program
 	 * @param env the set of environment variables to be set up for the experiment run
 	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
 	 * 		values data indexed by the requested metrics.
@@ -229,7 +229,7 @@ namespace measure {
 	 * 			will be aggregated
 	 * @param metrics the metrics to be collected
 	 * @param numRuns the number of runs to be conducted
-	 * @param exectuor the executor to be used for running the program
+	 * @param executor the executor to be used for running the program
 	 * @param env the set of environment variables to be set up for the experiment run
 	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
 	 * 		values data indexed by the requested metrics.
