@@ -42,6 +42,11 @@ namespace analysis {
 // TODO remove as soon as proper souffle header exists
 class Sf_Dummy_base {
 public:
+	sf_result_t getResultSet() const {
+		sf_result_t res;
+		res.emplace_back(1337);
+		return res;
+	}
 	void printAll() const {}
 	void run() const {}
 };
@@ -56,21 +61,6 @@ class SouffleWrapper : public SouffleBase {
 public:
 	SouffleWrapper() : SouffleBase() {}
 
-	sf_result_t getResultSet() const {
-
-		sf_result_t res;
-
-		#define symtab_get_num(i) (int32_t) cur[i]
-		#define symtab_get_str(i) symTable.resolve(cur[i])
-
-		// dummy
-		res.emplace_back(1337);
-
-		#undef symtab_get_str
-		#undef symtab_get_num
-
-		return res;
-	}
 };
 
 

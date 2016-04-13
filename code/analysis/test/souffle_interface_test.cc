@@ -50,7 +50,7 @@ TEST(SouffleInterface, Basic) {
 	sf_result_t res = si.getResultSet();
 
 	decltype(res) expectedRes;
-	res.emplace_back(1337);
+	expectedRes.emplace_back(1337);
 
 	EXPECT_EQ(expectedRes, res);
 
