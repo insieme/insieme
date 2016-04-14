@@ -11,13 +11,6 @@ macro(build_souffle)
 	# Create output dir
 	file(MAKE_DIRECTORY ${souffle_output_path})
 
-	# Load SSL libraries needed for HTTPS
-	find_package(PkgConfig REQUIRED)
-	pkg_search_module(OPENSSL REQUIRED openssl)
-
-	message(STATUS "Using OpenSSL ${OPENSSL_VERSION}")
-	include_directories(${OPENSSL_INCLUDE_DIRS})
-
 	# Download + build instructions for Soufflé
 	include(ExternalProject)
 
