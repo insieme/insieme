@@ -120,7 +120,7 @@ namespace conversion {
 			return newFunType;
 		}
 
-		StatementList getConstructorInitExpressions(Converter& converter, const clang::FunctionDecl* funcDecl) {
+		core::StatementList getConstructorInitExpressions(Converter& converter, const clang::FunctionDecl* funcDecl) {
 			const clang::CXXConstructorDecl* constrDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(funcDecl);
 			if(!constrDecl) return {};
 

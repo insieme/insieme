@@ -136,7 +136,7 @@ namespace conversion {
 				<< *funType << " and clang call expr " << dumpClang(callExpr, converter.getCompiler().getSourceManager());
 
 		// in Inspire 2.0, copy and move constructor calls are implicit on function calls
-		ExpressionList newArgs;
+		core::ExpressionList newArgs;
 		size_t i = 0;
 		std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(newArgs), [&](const clang::Expr* clangArgExpr) {
 			return convertCxxArgExpr(clangArgExpr, paramTypeList[i++]);

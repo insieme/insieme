@@ -86,28 +86,16 @@ namespace conversion {
 	//---------------------------------------------------------------------------------------------------------------------
 
 	core::ExpressionPtr Converter::ExprConverter::BaseVisit(const clang::Expr* expr, std::function<core::ExpressionPtr(const clang::Expr*)> self) {
-		// iterate clang handler list and check if a handler wants to convert the expr
-		core::ExpressionPtr retIr;
-		// call frontend extension visitors
-		for(auto extension : converter.getConversionSetup().getExtensions()) {
-			retIr = extension->Visit(expr, converter);
-			if(retIr) { break; }
-		}
-		if(!retIr) {
-			converter.trackSourceLocation(expr);
-			retIr = self(expr);
+
+		auto retIr = converter.applyExtensions<core::ExpressionPtr>(expr, [&](const clang::Expr* param) {
+			converter.trackSourceLocation(param);
+			auto retIr = self(param);
 			converter.untrackSourceLocation();
-		} else {
-			VLOG(2) << "CXXExprConverter::Visit handled by plugin";
-		}
+			return retIr;
+		});
 
 		// print diagnosis messages
 		converter.printDiagnosis(expr->getLocStart());
-
-		// call frontend extension post visitors
-		for(auto extension : converter.getConversionSetup().getExtensions()) {
-			retIr = extension->PostVisit(expr, retIr, converter);
-		}
 
 		// attach location annotation
 		if(expr->getLocStart().isValid()) {
@@ -139,7 +127,7 @@ namespace conversion {
 			string s = insieme::utils::unescapeString(lit->getValue()->getValue());
 			core::NodeManager& mgr = lit->getNodeManager();
 			core::IRBuilder builder(mgr);
-			ExpressionList initExps;
+			core::ExpressionList initExps;
 			for(char c : s) {
 				initExps.push_back(builder.literal(format("'%s'",toString(insieme::utils::escapeChar(c))), mgr.getLangBasic().getChar()));
 			}
@@ -789,7 +777,7 @@ namespace conversion {
 		else if(clangType->isArrayType()) {
 			auto gT = converter.convertType(clangType).as<core::GenericTypePtr>();
 			frontend_assert(core::lang::isArray(gT)) << "Clang InitListExpr of unexpected generic type (should be array):\n" << dumpColor(gT);
-			ExpressionList initExps;
+			core::ExpressionList initExps;
 			for(unsigned i = 0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
 				initExps.push_back(convertInitExpr(initList->getInit(i)));
 			}
