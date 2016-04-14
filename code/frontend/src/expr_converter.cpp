@@ -85,6 +85,41 @@ namespace conversion {
 	//										BASE EXPRESSION CONVERTER
 	//---------------------------------------------------------------------------------------------------------------------
 
+	core::ExpressionPtr Converter::ExprConverter::BaseVisit(const clang::Expr* expr, std::function<core::ExpressionPtr(const clang::Expr*)> self) {
+		// iterate clang handler list and check if a handler wants to convert the expr
+		core::ExpressionPtr retIr;
+		// call frontend extension visitors
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
+			retIr = extension->Visit(expr, converter);
+			if(retIr) { break; }
+		}
+		if(!retIr) {
+			converter.trackSourceLocation(expr);
+			retIr = self(expr);
+			converter.untrackSourceLocation();
+		} else {
+			VLOG(2) << "CXXExprConverter::Visit handled by plugin";
+		}
+
+		// print diagnosis messages
+		converter.printDiagnosis(expr->getLocStart());
+
+		// call frontend extension post visitors
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
+			retIr = extension->PostVisit(expr, retIr, converter);
+		}
+
+		// attach location annotation
+		if(expr->getLocStart().isValid()) {
+			auto presStart = converter.getSourceManager().getPresumedLoc(expr->getLocStart());
+			auto presEnd = converter.getSourceManager().getPresumedLoc(expr->getLocEnd());
+			core::annotations::attachLocation(retIr, std::string(presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(),
+				                              presEnd.getColumn());
+		}
+
+		return retIr;
+	}
+
 	core::TypePtr Converter::ExprConverter::convertExprType(const clang::Expr* expr) {
 		auto qType = expr->getType();
 		auto irType = converter.convertType(qType);
@@ -158,39 +193,8 @@ namespace conversion {
 	// and transparently attach annotations to node which are annotated
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
-		// iterate clang handler list and check if a handler wants to convert the expr
-		core::ExpressionPtr retIr;
-		for(auto extension : converter.getConversionSetup().getExtensions()) {
-			retIr = extension->Visit(expr, converter);
-			if(retIr) { break; }
-		}
-
-		if(!retIr) {
-			converter.trackSourceLocation(expr);
-			retIr = ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
-			converter.untrackSourceLocation();
-		} else {
-			VLOG(2) << "CExprConverter::Visit handled by plugin";
-		}
-
-		// print diagnosis messages
-		converter.printDiagnosis(expr->getLocStart());
-
-		// call frontend extension post visitors
-		for(auto extension : converter.getConversionSetup().getExtensions()) {
-			retIr = extension->PostVisit(expr, retIr, converter);
-		}
-
-		// attach location annotation
-		if(expr->getLocStart().isValid()) {
-			auto presStart = converter.getSourceManager().getPresumedLoc(expr->getLocStart());
-			auto presEnd = converter.getSourceManager().getPresumedLoc(expr->getLocEnd());
-			core::annotations::attachLocation(retIr, std::string(presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(),
-				                              presEnd.getColumn());
-		}
-
-        assert_true(retIr) << " no null return allowed";
-		return retIr;
+		VLOG(2) << "CStmtConverter";
+		return BaseVisit(expr, [&](const clang::Expr* param) { return ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(param); });
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -835,11 +839,11 @@ namespace conversion {
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//                  StmtExpr EXPRESSION
-	// Statement Expressions (a GNU C extension) allow statements to appear as 
+	// Statement Expressions (a GNU C extension) allow statements to appear as
 	// an expression by enclosing them in parentheses, e.g.:
 	//		({ int x = 5; x+3; })
-	// The last entry should be an expression terminated by a semicolon and 
-	// represents the return type and value, otherwise (last entry == statement) 
+	// The last entry should be an expression terminated by a semicolon and
+	// represents the return type and value, otherwise (last entry == statement)
 	// the entire construct has type void
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitStmtExpr(const clang::StmtExpr* stmtExpr) {

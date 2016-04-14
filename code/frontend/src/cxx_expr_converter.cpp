@@ -89,39 +89,8 @@ namespace conversion {
 	// and transparently attach annotations to node which are annotated
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) {
-		// iterate clang handler list and check if a handler wants to convert the expr
-		core::ExpressionPtr retIr;
-		// call frontend extension visitors
-		for (auto extension : converter.getConversionSetup().getExtensions()) {
-			retIr = extension->Visit(expr, converter);
-			if (retIr) { break; }
-		}
-		if (!retIr) {
-			converter.trackSourceLocation(expr);
-			retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
-			converter.untrackSourceLocation();
-		}
-		else {
-			VLOG(2) << "CXXExprConverter::Visit handled by plugin";
-		}
-
-		// print diagnosis messages
-		converter.printDiagnosis(expr->getLocStart());
-
-		// call frontend extension post visitors
-		for (auto extension : converter.getConversionSetup().getExtensions()) {
-			retIr = extension->PostVisit(expr, retIr, converter);
-		}
-
-		// attach location annotation
-		if (expr->getLocStart().isValid()) {
-			auto presStart = converter.getSourceManager().getPresumedLoc(expr->getLocStart());
-			auto presEnd = converter.getSourceManager().getPresumedLoc(expr->getLocEnd());
-			core::annotations::attachLocation(retIr, std::string(presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(),
-				presEnd.getColumn());
-		}
-
-		return retIr;
+		VLOG(2) << "CXXStmtConverter";
+		return BaseVisit(expr, [&](const clang::Expr* param) { return ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(param); });
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
