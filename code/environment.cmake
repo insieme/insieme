@@ -14,7 +14,7 @@ ENABLE_LANGUAGE(C)
 ENABLE_LANGUAGE(CXX)
 
 # setup std-include directories (to support some IDEs)
-if (GCC_INCLUDE_DIR) 
+if (GCC_INCLUDE_DIR)
 	include_directories( ${GCC_INCLUDE_DIR} )
 endif()
 
@@ -34,6 +34,7 @@ include(insieme_glob_headers)
 include(add_unit_test)
 include(cotire)
 include(insieme_fix_case_name)
+include(add_souffle)
 
 #if CBA_JOBS option was given, we query the number of cores, if no -j was specified this is the
 #uperlimit for parallel compile jobs
@@ -78,7 +79,7 @@ set ( insieme_playground_include_dir       	${insieme_code_dir}/playground/inclu
 
 # -------------------------------------------------------------- find location of utilities
 find_program(TIME_EXECUTABLE time)
-if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC) 
+if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC)
 	message(FATAL_ERROR "Unable to locate time utility!")
 endif()
 
@@ -116,7 +117,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 
 	# add flags for debug mode
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")
-  
+
 	# add flags for release mode
 	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
@@ -144,7 +145,7 @@ if (CMAKE_COMPILER_IS_GNUC)
 
 	# add flags for debug mode
 	set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g3 -O0 -fPIC")
-  
+
 	# add flags for release mode
 	set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC")
 
@@ -169,17 +170,17 @@ if (${CMAKE_CXX_COMPILER} MATCHES "clang")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
   	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")	
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")
 endif ()
 
 # --------------------------- Intel Compiler -------------------------
 if (${CMAKE_CXX_COMPILER} MATCHES "icpc")
 	# add general flags
 	add_definitions( -Wall )
-	
+
   	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")
-	
+
 	include(CheckCXXCompilerFlag)
 	# check for -std=c++0x
 	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
