@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -175,9 +175,9 @@ METRIC(PAPI_VEC_DP, "PAPI_VEC_DP", unit, none);
 // TODO: placeholder, needs to be fixed with RAPL on kernels newer than 3.5
 METRIC(TOTAL_ENERGY, "total_energy", j, none);
 METRIC(TOTAL_RESOURCE_USAGE, "total_resource_usage", unit, none);
-// METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(Metric::WALL_TIME));
-// METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(Metric::CPU_TIME));
-// METRIC(NUM_EXEC,				"total_num_exec",			unit,		sum(Metric::NUM_EXEC));
+METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(Metric::WALL_TIME));
+METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(Metric::CPU_TIME));
+METRIC(TOTAL_NUM_EXEC,				"total_num_exec",			unit,		sum(Metric::NUM_EXEC));
 
 METRIC(AVG_WALL_TIME, "avg_wall_time", ns, div(Metric::WALL_TIME, Metric::NUM_EXEC));
 METRIC(AVG_CPU_TIME, "avg_cpu_time", ns, div(Metric::CPU_TIME, Metric::NUM_EXEC));

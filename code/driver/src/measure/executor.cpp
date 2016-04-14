@@ -52,7 +52,7 @@ namespace measure {
 	namespace {
 
 		int runCommand(const std::string& cmd) {
-			LOG(DEBUG) << "Running " << cmd << "\n";
+			LOG(INFO) << "Running " << cmd << "\n";
 			//			return system((cmd + "> /dev/null").c_str());
 			return system(cmd.c_str());
 		}

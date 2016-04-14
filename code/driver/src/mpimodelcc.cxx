@@ -171,13 +171,16 @@ int main(int argc, char** argv) {
 
 	auto firstExpr = core::ExpressionAddress(program->getEntryPoints().front());
 
-	auto mpiCallsInLoops = findLoopsWithMPI(firstExpr);
+	std::vector<core::StatementAddress> mpiCallsInLoops = findLoopsWithMPI(firstExpr);
 
 	//wall time, cpu time, num executions
 
-	std::vector<dm::MetricPtr> metrics = { dm::Metric::getForNameAndUnit("wall_time(ns)") };
+	//std::vector<std::string> metricString = { "num_executions(unit)", "wall_time(ns)", "total_wall_time(ns)", "avg_wall_time(ns)" };
+	std::vector<std::string> metricString = { "total_wall_time(ns)" };
+	std::vector<dm::MetricPtr> metrics = transform(metricString, [](const std::string& cur) { return dm::Metric::getForNameAndUnit(cur); });
+	LOG(INFO) << "selected metrics: " << metrics;
 	utils::compiler::Compiler mpicc("mpicc");
-	//mpicc.addFlag("-x c");
+	mpicc.addFlag("-x c");
 	mpicc.addFlag("-Wall");
 	mpicc.addFlag("--std=gnu99");
 	mpicc.addFlag("-DIRT_USE_MPI");
@@ -200,7 +203,7 @@ int main(int argc, char** argv) {
 	 *   - verify that all IRT instances are correctly mapped to cores
 	 *   x IRT_NUM_WORKERS=1
 	 *   x add suffix for worker efficiency log
-	 *   - do data aggregation for worker efficiency log
+	 *   o do data aggregation for worker efficiency log
 	 * - Cleanup and nice-to-have
 	 *   - add mpi compiler to utils?
 	 *   - cleanup driver, remove non-functional cmd options, etc...

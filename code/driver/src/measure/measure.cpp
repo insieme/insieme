@@ -110,7 +110,7 @@ namespace measure {
 		 * The functor to be used in case no aggregation is supported.
 		 */
 		struct none {
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// slightly hacky: the none() extractor can be used for metrics that do not require any
 				// aggregation, i.e. when a metric occurs exactly once - for metrics occurring more often,
 				// we'd lose information and hence bail out with an invalid quantity as a result
@@ -118,12 +118,11 @@ namespace measure {
 				if(res.size() == 1) {
 					return res[0];
 				} else {
+					LOG(WARNING) << "'none' functor only allows single quantities, but found " << res.size() << " for metric " << metric;
 					return Quantity::invalid(metric->getUnit());
 				}
 			}
-			std::set<MetricPtr> getDependencies() const {
-				return std::set<MetricPtr>();
-			};
+			std::set<MetricPtr> getDependencies() const { return std::set<MetricPtr>(); };
 		};
 
 		// ---- List-extracting expressions ---
@@ -134,7 +133,7 @@ namespace measure {
 		struct list {
 			MetricPtr a; // < the metric to be extracted for a region
 			list(MetricPtr a) : a(a) {}
-			vector<Quantity> operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			vector<Quantity> operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				return data.getAll(region, a);
 			}
 			std::set<MetricPtr> getDependencies() const {
@@ -167,7 +166,7 @@ namespace measure {
 		struct id {
 			MetricPtr metric;
 			id(MetricPtr metric) : metric(metric) {}
-			Quantity operator()(const Measurements& data, MetricPtr, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr, region_id region) const {
 				return metric->extract(data, region);
 			}
 			std::set<MetricPtr> getDependencies() const {
@@ -186,7 +185,7 @@ namespace measure {
 			binary_connector(const SourceA& a, const SourceB& b) : a(a), b(b) {}
 
 
-			typename lambda_traits<Operator>::result_type operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			typename lambda_traits<Operator>::result_type operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				Operator op;
 				return op(a(data, metric, region), b(data, metric, region));
 			}
@@ -312,7 +311,7 @@ namespace measure {
 		struct first_impl {
 			T list_extractor;
 			first_impl(T list_extractor) : list_extractor(list_extractor) {}
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// check whether there is something
 				vector<Quantity> list = list_extractor(data, metric, region);
 				if(list.empty()) { return Quantity::invalid(metric->getUnit()); }
@@ -352,7 +351,7 @@ namespace measure {
 		struct var_impl {
 			T list_extractor;
 			var_impl(T list_extractor) : list_extractor(list_extractor) {}
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// check whether there is something
 				vector<Quantity> list = list_extractor(data, metric, region);
 				if(list.empty()) { return Quantity::invalid(metric->getUnit()); }
@@ -401,7 +400,7 @@ namespace measure {
 		struct min_impl {
 			T list_extractor;
 			min_impl(T list_extractor) : list_extractor(list_extractor) {}
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// check whether there is something
 				vector<Quantity> list = list_extractor(data, metric, region);
 				if(list.empty()) { return Quantity::invalid(metric->getUnit()); }
@@ -442,7 +441,7 @@ namespace measure {
 		struct max_impl {
 			T list_extractor;
 			max_impl(T list_extractor) : list_extractor(list_extractor) {}
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// check whether there is something
 				vector<Quantity> list = list_extractor(data, metric, region);
 				if(list.empty()) { return Quantity::invalid(metric->getUnit()); }
@@ -483,7 +482,7 @@ namespace measure {
 		struct sum_impl {
 			T list_extractor;
 			sum_impl(T list_extractor) : list_extractor(list_extractor) {}
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// check whether there is something
 				vector<Quantity> list = list_extractor(data, metric, region);
 				if(list.empty()) { return Quantity::invalid(metric->getUnit()); }
@@ -522,7 +521,7 @@ namespace measure {
 		struct avg_impl {
 			T sub;
 			avg_impl(T sub) : sub(sub) {}
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// check whether there is something
 				auto list = sub(data, metric, region);
 				if(list.empty()) { return Quantity::invalid(unit); }
@@ -583,13 +582,14 @@ namespace measure {
 	}
 
 	std::set<MetricPtr> getDependencyClosureLeafs(const std::vector<MetricPtr>& metrics) {
+
 		// create resulting set
 		std::set<MetricPtr> res;
 
 		// the set of metrics already checked out
 		std::set<MetricPtr> checked;
 
-		// init metrics which's dependencies still need to be considered
+		// init metrics whose dependencies still need to be considered
 		std::vector<MetricPtr> toCheck = metrics;
 		while(!toCheck.empty()) {
 			// check out next
@@ -609,6 +609,8 @@ namespace measure {
 			// add leaf dependency to the resulting set
 			if(subDep.empty()) { res.insert(cur); }
 		}
+
+		LOG(INFO) << "metric dependency closure leafs: " << res;
 
 		// return set containing closure of leafs
 		return res;
@@ -858,7 +860,7 @@ namespace measure {
 		modifiedCompiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
 
 		// enable papi only if at least one metric requires it
-		bool usePapi = any(getDependencyClosureLeafs(metrics), [&](const MetricPtr& cur) {
+		bool usePapi = any(getDependencyClosureLeafs(metrics), [](const MetricPtr& cur) {
 			if(cur->getName().find("PAPI") != std::string::npos) { return true; }
 			return false;
 		});
@@ -885,7 +887,7 @@ namespace measure {
 		if(!boost::filesystem::exists(binary)) { throw MeasureException("Invalid executable specified for measurement!"); }
 
 		// extract name of executable
-		std::string executable = bfs::path(binary).filename().string();
+		const std::string executable = bfs::path(binary).filename().string();
 
 		// partition the papi parameters
 		auto papiPartition = partitionPapiCounter(metrics);
@@ -942,8 +944,8 @@ namespace measure {
 				mod_env["IRT_INST_REGION_INSTRUMENTATION"] = "enabled";
 
 				string metric_selection;
-				for(auto metric : metrics) {
-					// only add non-papi metrics
+				for(auto metric : getDependencyClosureLeafs(metrics)) {
+					// only add non-papi metrics (identified by the PAPI prefix)
 					if(metric->getName().find("PAPI") != 0) { metric_selection += metric->getName() + ","; }
 				}
 				if(!paramList.empty()) { // only set if there are any parameters (otherwise collection is disabled)
@@ -993,9 +995,6 @@ namespace measure {
 
 		core::NodePtr root = regions.begin()->first.getRootNode();
 
-		//dumpColor(root);
-		//std::cout << "#########################################################\n";
-
 		// sort addresses in descending order
 		typedef std::pair<core::StatementAddress, region_id> region_pair;
 		vector<region_pair> sorted_regions(regions.begin(), regions.end());
@@ -1030,8 +1029,6 @@ namespace measure {
 			program = wrapIntoProgram(root);
 		}
 
-		//dumpColor(program);
-
 		// create backend code
 		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
 		auto targetCode = backend->convert(program);
@@ -1058,11 +1055,11 @@ namespace measure {
 		return utils::compiler::compileToBinary(*targetCode, compiler);
 	}
 
-	void Measurements::add(worker_id worker, region_id region, MetricPtr metric, const Quantity& value) {
+	void Measurements::add(worker_id worker, region_id region, const MetricPtr metric, const Quantity& value) {
 		workerDataStore[worker][region][metric].push_back(value); // just add value
 	}
 
-	void Measurements::add(region_id region, MetricPtr metric, const Quantity& value) {
+	void Measurements::add(region_id region, const MetricPtr metric, const Quantity& value) {
 		regionDataStore[region][metric].push_back(value);
 	}
 
@@ -1085,7 +1082,7 @@ namespace measure {
 		for_each(other.workerDataStore, [&](const WorkerDataStore::value_type& value) { mergeRegionData(workerDataStore[value.first], value.second); });
 	}
 
-	vector<Quantity> Measurements::getAll(region_id region, MetricPtr metric) const {
+	vector<Quantity> Measurements::getAll(region_id region, const MetricPtr metric) const {
 		vector<Quantity> res;
 
 		// a lambda merging region data
@@ -1126,8 +1123,6 @@ namespace measure {
 
 	namespace {
 
-		enum InputOutputState { UNKNOWN, SUCCESS, FAILURE, SKIP };
-
 		vector<string> readLine(std::ifstream& in) {
 			typedef boost::tokenizer<boost::escaped_list_separator<char>> Tokenizer;
 
@@ -1137,7 +1132,7 @@ namespace measure {
 			return vector<string>(tok.begin(), tok.end());
 		}
 
-		void loadFile(const boost::filesystem::path& file, const std::function<void(region_id id, MetricPtr metric, const Quantity& value)>& add) {
+		void loadFile(const boost::filesystem::path& file, const std::function<void(region_id id, const MetricPtr metric, const Quantity& value)>& add) {
 			// check whether file exists
 			if(!boost::filesystem::exists(file)) { return; }
 
@@ -1197,27 +1192,29 @@ namespace measure {
 
 	Measurements loadResults(const boost::filesystem::path& directory) {
 		Measurements res;
+		const std::string fileBasename = "worker_efficiency.log";
 
 		// try loading a single file in case only a single Insieme runtime was executed
-		loadFile(directory / "worker_efficiency.log", [&](region_id region, MetricPtr metric, const Quantity& value) { res.add(region, metric, value); });
+		loadFile(directory / fileBasename, [&](region_id region, const MetricPtr metric, const Quantity& value) { res.add(region, metric, value); });
 
 		// if single file was not present
 		if(res.empty()) {
-			int index = 0;
+			int index = -1;
 			bool stop = false;
 			// try checking for multiple files with ID suffix and stop at first unsuccessful file parsing
 			while(!stop) {
 				stop = true;
-				string filename = string("worker_efficiency.log.") + std::to_string(index);
-				loadFile(directory / filename, [&](region_id region, MetricPtr metric, const Quantity& value) {
-					res.add(region, metric, value);
+				++index;
+				string filename = fileBasename + string(".") + std::to_string(index);
+				loadFile(directory / filename, [&](region_id region, const MetricPtr metric, const Quantity& value) {
+					// add to measurement data, with the index being the worker id
+					res.add(index, region, metric, value);
 					stop = false;
 				});
-				++index;
 			}
+			LOG(INFO) << "found " << index << " log files";
 		}
 
-		// to avoid a warning
 		return res;
 	}
 
