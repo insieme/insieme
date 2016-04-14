@@ -34,58 +34,32 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/datalog/souffle_interface.h"
+#include <gtest/gtest.h>
+
+#include "insieme/analysis/datalog/varpointsto_example.h"
 
 namespace insieme {
 namespace analysis {
 
-// TODO remove as soon as proper souffle header exists
-class Sf_Dummy_base {
-public:
-	sf_result_t getResultSet() const {
-		sf_result_t res;
-		res.emplace_back(1337);
-		return res;
-	}
-	void printAll() const {}
-	void run() const {}
-};
+TEST(SouffleInterface, VarpointstoExample) {
 
-/*
- * Souffle wrapper
- */
+	using VPT = datalog::VarpointstoExample;
 
-using SouffleBase = Sf_Dummy_base;
+	std::string dummyNode;
+	VPT vpt(dummyNode);
 
-class SouffleWrapper : public SouffleBase {
-public:
-	SouffleWrapper() : SouffleBase() {}
+	vpt.run();
+	vpt.printAlias();
+	VPT::alias_t res = vpt.getAlias();
 
-};
+	decltype(res) expectedRes;
+	expectedRes.emplace_back("v1", "v1");
+	expectedRes.emplace_back("v1", "v2");
+	expectedRes.emplace_back("v2", "v2");
+	expectedRes.emplace_back("v4", "v3");
 
+	EXPECT_EQ(expectedRes, res);
 
-/*
- * Souffle interface
- */
-
-SouffleInterface::SouffleInterface() {
-	impl = new SouffleWrapper();
-}
-
-SouffleInterface::~SouffleInterface() {
-	delete impl;
-}
-
-void SouffleInterface::run() const {
-	impl->run();
-}
-
-void SouffleInterface::printAll() const {
-	impl->printAll();
-}
-
-sf_result_t SouffleInterface::getResultSet() const {
-	return impl->getResultSet();
 }
 
 } // end namespace analysis

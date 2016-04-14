@@ -36,33 +36,41 @@
 
 #pragma once
 
-#include <tuple>
-#include <vector>
+#include <string>
 
 namespace insieme {
 namespace analysis {
+namespace datalog {
+namespace framework {
 
-
-using num_t = uint32_t;
-using str_t = std::string;
-using sf_result_t = std::vector<std::tuple<num_t>>;
-
-class SouffleWrapper;
-
-
-class SouffleInterface {
+template <typename Sf_base>
+class AnalysisBase : public Sf_base {
 public:
-	SouffleInterface();
-	~SouffleInterface();
+	AnalysisBase() : Sf_base() {}
 
-	void run() const;
-	void printAll() const;
+	//FIXME: Make it build
+	using NodeType = std::string;
 
-	sf_result_t getResultSet() const;
+	int extractFacts(const NodeType &rootNode) {
+		int counter = 0;
+		return extractFacts(rootNode, counter);
+	}
 
 private:
-	SouffleWrapper *impl; // pimpl
+	void addFactToNode(int id, const std::string &kind) {
+		(void) id;
+		(void) kind;
+	}
+
+	int extractFacts(const NodeType &n, int &counter) {
+		(void) n;
+		(void) counter;
+		return 0;
+	}
+
 };
 
-} // end namespace transform
+} // end namespace framework
+} // end namespace datalog
 } // end namespace analysis
+} // end namespace insieme
