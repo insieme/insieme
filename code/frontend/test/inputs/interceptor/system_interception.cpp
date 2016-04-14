@@ -43,6 +43,11 @@
 struct Trivial {};
 struct OtherTrivial {}; // should ONLY be used once in the remaining test code
 
+struct InitListTest {
+	std::vector<int> v;
+	InitListTest() : v() {};
+};
+
 int main() {
 
 	// simple C function with struct param
@@ -140,5 +145,20 @@ int main() {
 	{
 		std::vector<int> a;
 		std::vector<int>::iterator it = a.begin();
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_InitListTest {
+			v : IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>;
+			ctor function () {
+				lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::())((this).v);
+			}
+		};
+		{
+			var ref<IMP_InitListTest,f,f,plain> v0 = IMP_InitListTest::(v0);
+		}
+	)")
+	{
+		InitListTest il;
 	}
 }
