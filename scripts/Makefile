@@ -141,5 +141,6 @@ INSIEME: ${GCC} \
 		 ${BISON} \
 		 ${FLEX} \
 		 ${PAPI} \
-		 ${HWLOC}
+		 ${HWLOC} \
+		 ${STACK}
 
