@@ -23,7 +23,7 @@ macro(build_souffle)
 
 	ExternalProject_Add(
 		souffle
-		URL https://github.com/souffle-lang/souffle/archive/master.zip
+		URL http://www.insieme-compiler.org/ext_libs/souffle-20160414.zip
 		PATCH_COMMAND ./bootstrap
 		CONFIGURE_COMMAND ${souffle_prefix}/src/souffle/configure
 		BUILD_COMMAND make
