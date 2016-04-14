@@ -486,7 +486,7 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(materTempExpr, retIr);
 		retIr = Visit(materTempExpr->GetTemporaryExpr());
 
-		// if we are materializing the rvalue result of a function call, do it
+		// if we are materializing the rvalue result of a non-built-in function call, do it
 		auto subCall = retIr.isa<core::CallExprPtr>();
 		if(subCall) {
 			auto materializedType = convertExprType(materTempExpr);
@@ -503,8 +503,10 @@ namespace conversion {
 					retIr = subCall->getArgument(0);
 					return retIr;
 				}
-				// otherwise, materialize call
-				retIr = builder.callExpr(builder.refType(retIr->getType()), subCall->getFunctionExpr(), subCall->getArguments());
+				// otherwise, materialize call if not built in
+				if(!core::lang::isBuiltIn(subCall->getFunctionExpr())) {
+					retIr = builder.callExpr(builder.refType(retIr->getType()), subCall->getFunctionExpr(), subCall->getArguments());
+				}
 			}
 		}
 
