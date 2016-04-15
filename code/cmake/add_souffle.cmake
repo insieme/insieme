@@ -46,8 +46,9 @@ endmacro(build_souffle)
 # Parameters:
 # input path e.g.  '${CMAKE_SOURCE_DIR}/code/src/datalog'
 # DL target e.g.  'constant_analysis' (without file extension!)
+# souffle_include_path (optional)
 #
-macro(souffle_generate_cpp souffle_input_path souffle_dl_target)
+macro(souffle_generate_cpp souffle_input_path souffle_dl_target souffle_include_path )
 	# Convenience variables
 	set(souffle_input_file    ${souffle_input_path}/${souffle_dl_target}.dl)
 	set(souffle_output_file   ${souffle_output_path}/${souffle_dl_target})
@@ -55,11 +56,17 @@ macro(souffle_generate_cpp souffle_input_path souffle_dl_target)
 	# Get path for soufflé that we built before
 	ExternalProject_Get_Property(souffle binary_dir)
 
+	# add -I to include path
+	set( include_argument "${souffle_include_path}" )
+	if ( include_argument ) 
+		set(include_argument "--include-dir=${include_argument}")
+	endif()
+
 	# Custom command to compile DL files into CPP files using Soufflé
 	add_custom_command(
 		SOURCE ${souffle_input_file}
 		COMMAND ${binary_dir}/src/souffle
-		ARGS -g ${souffle_output_file}.h ${souffle_input_file}
+		ARGS -g ${souffle_output_file}.h ${souffle_input_file} ${include_argument}
 		COMMENT "Generating compiled soufflé datalog"
 		DEPENDS souffle
 		WORKING_DIRECTORY ${souffle_output_path}

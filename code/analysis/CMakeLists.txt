@@ -16,8 +16,13 @@ insieme_glob_headers(insieme_analysis_incs include)
 set(souffle_input_dir  ${insieme_code_dir}/analysis/src/datalog)
 
 build_souffle()
-souffle_generate_cpp(${souffle_input_dir} varpointsto_example)
-# add ${souffle_output} to add_library!
+
+# compile all analysis files *.adl to 
+file(GLOB datalog_analysis ${souffle_input_dir}/*.dl)
+foreach ( analysis_file ${datalog_analysis} ) 
+	get_filename_component( analysis_name ${analysis_file} NAME_WE )
+	souffle_generate_cpp(${souffle_input_dir} ${analysis_name} "${souffle_input_dir}/include" )
+endforeach()
 
 
 # =============================================================================================
