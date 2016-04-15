@@ -13,7 +13,7 @@ insieme_glob_headers(insieme_analysis_incs include)
 # =============================================  SOUFFLE  =====================================
 
 # Generate soufflé files now so we can add them to the insieme_analysis library later
-set(souffle_input_dir  ${CMAKE_SOURCE_DIR}/code/analysis/src/datalog)
+set(souffle_input_dir  ${insieme_code_dir}/analysis/src/datalog)
 
 build_souffle()
 souffle_generate_cpp(${souffle_input_dir} varpointsto_example)

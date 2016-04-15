@@ -61,7 +61,7 @@ macro(souffle_generate_cpp souffle_input_path souffle_dl_target)
 		COMMAND ${binary_dir}/src/souffle
 		ARGS -g ${souffle_output_file}.h ${souffle_input_file}
 		COMMENT "Generating compiled soufflé datalog"
-		DEPENDS souffle ${souffle_input_file}
+		DEPENDS souffle
 		WORKING_DIRECTORY ${souffle_output_path}
 		OUTPUT ${souffle_output_file}.h
 	)
