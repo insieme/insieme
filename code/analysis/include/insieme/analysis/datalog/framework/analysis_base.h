@@ -38,13 +38,18 @@
 
 #include <string>
 
+#include "insieme/core/ir_visitor.h"
+
 namespace insieme {
 namespace analysis {
 namespace datalog {
 namespace framework {
 
 template <typename Sf_base>
-class AnalysisBase : public Sf_base {
+class AnalysisBase : public Sf_base, public core::IRVisitor<int> {
+
+	int node_counter = 0;
+
 public:
 	AnalysisBase() : Sf_base() {}
 
@@ -54,6 +59,22 @@ public:
 	int extractFacts(const NodeType &rootNode) {
 		int counter = 0;
 		return extractFacts(rootNode, counter);
+	}
+
+	int visitStringValue(const StringValueType& val) override {
+
+	}
+
+	int visitVariableType(const VariableTypePtr& var) override {
+		int id = ++node_counter;
+
+		auto subId = visit(var->getName());
+
+		return id;
+	}
+
+	int visit(const NodePtr& cur) override {
+		assert_not_implemented() << "Unsupported node type: " << cur->getNodeType() << "\n";
 	}
 
 private:

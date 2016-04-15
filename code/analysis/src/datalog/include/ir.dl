@@ -1,0 +1,185 @@
+#pragma once
+
+#include "boolean.dl"
+
+// some basic types
+.type char
+.number_type int
+.number_type uint
+.type string
+
+
+// basic type definitions
+
+// TODO: diversify types 
+//.number_type value
+//.number_type type
+//.number_type expr
+//.number_type stmt
+//.number_type support
+//.number_type node = value | type | expr | stmt | support
+
+.number_type node
+.number_type child_index
+
+
+// basic node infrastructure
+
+.decl NodeList ( list : node , idx : child_index , element : node ) input
+
+
+// Value Nodes
+.decl BoolValue   ( id : node , val : bool ) input
+.decl CharValue   ( id : node , val : char ) input
+.decl IntValue    ( id : node , val : int ) input
+.decl UIntValue   ( id : node , val : uint ) input
+.decl StringValue ( id : node , val : string ) input
+
+
+// Type Nodes
+
+.decl GenericType   ( id : node , name : string , parents : node , params : node ) input
+.decl TupleType 	( id : node ) input
+.decl FunctionType  ( id : node , parameter_types : node, return_type : node , kind : node , instantiation_types : node ) input
+
+.decl TypeVariable 			      ( id : node , name : string ) input
+.decl VariadicTypeVariable        ( id : node , name : string ) input
+.decl GenericTypeVariable         ( id : node , name : string , parameter_types : node ) input
+.decl VariadicGenericTypeVariable ( id : node , name : string , parameter_types : node ) input
+
+.decl NumericType      ( id : node , value : node ) input
+.decl TagType          ( id : node , tag : node , definition : node ) input
+.decl TagTypeReference ( id : node , name : string ) input
+
+
+
+// Expression Nodes
+
+
+// Statement Nodes
+
+
+// Support Nodes
+
+
+
+//.decl Types ( id : node )
+//
+//
+//
+//.decl Literal                       ( id : node, UNDEF : Type, UNDEF : StringValue )
+//.decl Variable                      ( id : node, UNDEF : Type, UNDEF : UIntValue )
+//.decl CallExpr                      ( id : node, UNDEF : Type, UNDEF : Expression, UNDEF : Expression )
+//.decl CastExpr                      ( id : node, UNDEF : Type, UNDEF : Expression )
+//.decl Parameters                    ( id : node, UNDEF : Variable )
+//.decl Lambda                        ( id : node, UNDEF : FunctionType, UNDEF : Parameters, UNDEF : CompoundStmt )
+//.decl LambdaReference               ( id : node, UNDEF : FunctionType, UNDEF : StringValue )
+//.decl LambdaExpr                    ( id : node, UNDEF : FunctionType, UNDEF : LambdaReference, UNDEF : LambdaDefinition )
+//.decl LambdaBinding                 ( id : node, UNDEF : LambdaReference, UNDEF : Lambda )
+//.decl LambdaDefinition              ( id : node, UNDEF : LambdaBinding )
+//.decl BindExpr                      ( id : node, UNDEF : Type, UNDEF : Parameters, UNDEF : CallExpr )
+//.decl TupleExpr                     ( id : node, UNDEF : TupleType, UNDEF : Expressions )
+//.decl InitExpr                      ( id : node, UNDEF : GenericType, UNDEF : Expression, UNDEF : Expressions )
+//.decl JobExpr                       ( id : node, UNDEF : GenericType, UNDEF : Expression, UNDEF : Expression )
+//.decl MarkerExpr                    ( id : node, UNDEF : Type, UNDEF : UIntValue, UNDEF : Expression )
+//.decl Expressions                   ( id : node, UNDEF : Expression )
+//.decl Program                       ( id : node, UNDEF : Expression )
+//.decl BreakStmt                     ( id : node )
+//.decl ContinueStmt                  ( id : node )
+//.decl GotoStmt                      ( id : node, UNDEF : StringValue )
+//.decl LabelStmt                     ( id : node, UNDEF : StringValue )
+//.decl DeclarationStmt               ( id : node, UNDEF : Variable, UNDEF : Expression )
+//.decl CompoundStmt                  ( id : node, UNDEF : Statement )
+//.decl IfStmt                        ( id : node, UNDEF : Expression, UNDEF : CompoundStmt, UNDEF : CompoundStmt )
+//.decl WhileStmt                     ( id : node, UNDEF : Expression, UNDEF : CompoundStmt )
+//.decl ForStmt                       ( id : node, UNDEF : DeclarationStmt, UNDEF : Expression, UNDEF : Expression, UNDEF : CompoundStmt )
+//.decl SwitchCase                    ( id : node, UNDEF : Literal, UNDEF : CompoundStmt )
+//.decl SwitchCases                   ( id : node, UNDEF : SwitchCase )
+//.decl SwitchStmt                    ( id : node, UNDEF : Expression, UNDEF : SwitchCases, UNDEF : CompoundStmt )
+//.decl MarkerStmt                    ( id : node, UNDEF : UIntValue, UNDEF : Statement )
+//.decl ThrowStmt                     ( id : node, UNDEF : Expression )
+//.decl CatchClause                   ( id : node, UNDEF : Variable, UNDEF : CompoundStmt )
+//.decl TryCatchStmt                  ( id : node, UNDEF : CompoundStmt, UNDEF : CatchClause )
+//.decl ReturnStmt                    ( id : node, UNDEF : Expression, UNDEF : Variable )
+//.decl Types                         ( id : node, UNDEF : Type )
+//.decl Parent                        ( id : node, UNDEF : BoolValue, UNDEF : UIntValue, UNDEF : Type )
+//.decl Parents                       ( id : node, UNDEF : Parent )
+//.decl GenericType                   ( id : node, UNDEF : StringValue, UNDEF : Parents, UNDEF : Types )
+//.decl TypeVariable                  ( id : node, UNDEF : StringValue )
+//.decl VariadicTypeVariable          ( id : node, UNDEF : StringValue )
+//.decl GenericTypeVariable           ( id : node, UNDEF : StringValue, UNDEF : Types )
+//.decl VariadicGenericTypeVariable   ( id : node, UNDEF : StringValue, UNDEF : Types )
+//.decl TupleType                     ( id : node, UNDEF : Type )
+//.decl FunctionType                  ( id : node, ParameterTypes : Types, ReturnType : Type, FunctionKind : UIntValue, InstantiationTypes: Types )
+//.decl TagTypeReference              ( id : node, UNDEF : StringValue )
+//.decl TagTypeBinding                ( id : node, UNDEF : TagTypeReference, UNDEF : Record )
+//.decl TagTypeDefinition             ( id : node, UNDEF : TagTypeBinding )
+//.decl TagType                       ( id : node, UNDEF : TagTypeReference, UNDEF : TagTypeDefinition )
+//.decl Field                         ( id : node, UNDEF : StringValue, UNDEF : Type )
+//.decl Fields                        ( id : node, UNDEF : Field )
+//.decl MemberFunction                ( id : node, UNDEF : StringValue, UNDEF : BoolValue, UNDEF : Expression )
+//.decl MemberFunctions               ( id : node, UNDEF : MemberFunction )
+//.decl PureVirtualMemberFunction     ( id : node, UNDEF : StringValue, UNDEF : FunctionType )
+//.decl PureVirtualMemberFunctions    ( id : node, UNDEF : PureVirtualMemberFunction )
+//.decl Struct                        ( id : node, UNDEF : StringValue, UNDEF : Fields, UNDEF : Expressions, UNDEF : Expression, UNDEF : BoolValue, UNDEF : MemberFunctions, UNDEF : PureVirtualMemberFunctions, UNDEF : Parents )
+//.decl Union                         ( id : node, UNDEF : StringValue, UNDEF : Fields, UNDEF : Expressions, UNDEF : Expression, UNDEF : BoolValue, UNDEF : MemberFunctions, UNDEF : PureVirtualMemberFunctions )
+//.decl NumericType                   ( id : node, UNDEF : Expression )
+//
+//
+//# Name: BindExpr;  Base: Expression;  Params: Type, Parameters, CallExpr
+//# Name: BreakStmt;  Base: Statement
+//# Name: CallExpr;  Base: Expression;  ListName: Arguments;  Params: Type, Expression, Expression
+//# Name: CastExpr;  Base: Expression;  Params: Type, Expression
+//# Name: CatchClause;  Base: Support;  Params: Variable, CompoundStmt
+//# Name: CompoundStmt;  Base: Statement;  ListName: Statements;  Params: Statement
+//# Name: ContinueStmt;  Base: Statement
+//# Name: DeclarationStmt;  Base: Statement;  Params: Variable, Expression
+//# Name: Expressions;  Base: Support;  ListName: Expressions;  Params: Expression
+//# Name: Field;  Base: Support;  Params: StringValue, Type
+//# Name: Fields;  Base: Support;  ListName: Fields;  Params: Field
+//# Name: ForStmt;  Base: Statement;  Params: DeclarationStmt, Expression, Expression, CompoundStmt
+//# Name: FunctionType;  Base: Type;  Params: Types, Type, UIntValue, Types
+//# Name: GenericType;  Base: Type;  Params: StringValue, Parents, Types
+//# Name: GenericTypeVariable;  Base: Type;  Params: StringValue, Types
+//# Name: GotoStmt;  Base: Statement;  Params: StringValue
+//# Name: IfStmt;  Base: Statement;  Params: Expression, CompoundStmt, CompoundStmt
+//# Name: InitExpr;  Base: Expression;  Params: GenericType, Expression, Expressions
+//# Name: JobExpr;  Base: Expression;  Params: GenericType, Expression, Expression
+//# Name: LabelStmt;  Base: Statement;  Params: StringValue
+//# Name: Lambda;  Base: Support;  Params: FunctionType, Parameters, CompoundStmt
+//# Name: LambdaBinding;  Base: Support;  Params: LambdaReference, Lambda
+//# Name: LambdaDefinition;  Base: Support;  ListName: Definitions;  Params: LambdaBinding
+//# Name: LambdaExpr;  Base: Expression;  Params: FunctionType, LambdaReference, LambdaDefinition
+//# Name: LambdaReference;  Base: Expression;  Params: FunctionType, StringValue
+//# Name: Literal;  Base: Expression;  Params: Type, StringValue
+//# Name: MarkerExpr;  Base: Expression;  Params: Type, UIntValue, Expression
+//# Name: MarkerStmt;  Base: Statement;  Params: UIntValue, Statement
+//# Name: MemberFunction;  Base: Support;  Params: StringValue, BoolValue, Expression
+//# Name: MemberFunctions;  Base: Support;  ListName: Members;  Params: MemberFunction
+//# Name: NumericType;  Base: Type;  Params: Expression
+//# Name: Parameters;  Base: Support;  ListName: Parameters;  Params: Variable
+//# Name: Parent;  Base: Support;  Params: BoolValue, UIntValue, Type
+//# Name: Parents;  Base: Support;  ListName: Types;  Params: Parent
+//# Name: Program;  Base: Node;  ListName: EntryPoints;  Params: Expression
+//# Name: PureVirtualMemberFunction;  Base: Support;  Params: StringValue, FunctionType
+//# Name: PureVirtualMemberFunctions;  Base: Support;  ListName: Members;  Params: PureVirtualMemberFunction
+//# Name: ReturnStmt;  Base: Statement;  Params: Expression, Variable
+//# Name: Struct;  Base: Record;  Params: StringValue, Fields, Expressions, Expression, BoolValue, MemberFunctions, PureVirtualMemberFunctions;  Parents
+//# Name: SwitchCase;  Base: Support;  Params: Literal, CompoundStmt
+//# Name: SwitchCases;  Base: Support;  ListName: Cases;  Params: SwitchCase
+//# Name: SwitchStmt;  Base: Statement;  Params: Expression, SwitchCases, CompoundStmt
+//# Name: TagType;  Base: Type;  Params: TagTypeReference, TagTypeDefinition
+//# Name: TagTypeBinding;  Base: Support;  Params: TagTypeReference, Record
+//# Name: TagTypeDefinition;  Base: Support;  ListName: Definitions;  Params: TagTypeBinding
+//# Name: TagTypeReference;  Base: Type;  Params: StringValue
+//# Name: ThrowStmt;  Base: Statement;  Params: Expression
+//# Name: TryCatchStmt;  Base: Statement;  ListName: Clauses;  Params: CompoundStmt, CatchClause
+//# Name: TupleExpr;  Base: Expression;  Params: TupleType, Expressions
+//# Name: TupleType;  Base: Type;  ListName: ElementTypes;  Params: Type
+//# Name: Types;  Base: Support;  ListName: Types;  Params: Type
+//# Name: TypeVariable;  Base: Type;  Params: StringValue
+//# Name: Union;  Base: Record;  Params: StringValue, Fields, Expressions, Expression, BoolValue, MemberFunctions, PureVirtualMemberFunctions
+//# Name: Variable;  Base: Expression;  Params: Type, UIntValue
+//# Name: VariadicGenericTypeVariable;  Base: Type;  Params: StringValue, Types
+//# Name: VariadicTypeVariable;  Base: Type;  Params: StringValue
+//# Name: WhileStmt;  Base: Statement;  Params: Expression, CompoundStmt

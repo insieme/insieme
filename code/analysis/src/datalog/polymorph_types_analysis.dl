@@ -1,0 +1,5 @@
+#include "ir.dl"
+
+.decl isPolymorph ( id : node ) output
+
+isPolymorph(X) :- TypeVariable(X,_).

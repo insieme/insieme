@@ -1,0 +1,13 @@
+#pragma once
+
+// define a basic boolean type
+.number_type bool
+
+// define true/false constants
+#define true 1
+#define false 0
+
+// define boolean operators
+#define not( X ) (1-X)
+#define and(X,Y) (X*Y)
+#define or(X,Y) not(and(not(X),not(Y)))
