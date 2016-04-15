@@ -1083,5 +1083,66 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(Pointer, Simple) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+			def fun = (i : ptr<int<4>>) -> unit {};
+			def pfun = () -> ptr<int<4>> {
+				var ref<int<4>,f,f> v0;
+				return ptr_from_ref(v0);
+			};
+			def pfun2 = (a : ptr<int<4>>) -> int<4> {
+				return *ptr_to_ref(a);
+			};
+
+			def struct A {
+				m1 : ptr<int<4>>;
+			};
+			def pAfun = (p : A) -> int<4> {
+				return *ptr_to_ref(p.m1);
+			};
+
+			int<4> main() {
+				var ref<int<4>,f,f> v0;
+				var ref<ptr<int<4>,f,f>,f,f> v1 = ptr_from_ref(v0);
+				fun(ptr_from_ref(v0));
+				fun(*v1);
+				pfun();
+				pfun2(*v1);
+				pfun2(pfun());
+
+				var ref<int<4>,f,f> s = *ptr_to_ref(pfun()) + *ptr_to_ref(pfun());
+
+				var A a;
+				pAfun(a);
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(program);
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		//std::cout << "Converting IR to C...";
+		auto converted = be->convert(program);
+		//std::cout << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(containsSubString, code, "*pfun() + *pfun()");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 } // namespace backend
 } // namespace insieme

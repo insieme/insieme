@@ -1,8 +1,4 @@
-
-
 #include <iostream>
-
-
 
 class Obj{
 	Obj& operator=(const Obj&){
@@ -19,7 +15,6 @@ public:
 		std::cout << "val: " << val<< std::endl;
 	}
 };
-
 
 Obj  obj;
 int main(){
