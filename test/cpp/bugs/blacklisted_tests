@@ -29,7 +29,6 @@ merge_bugs
 non_default_static
 non_working
 options
-ref_to_pointer
 return_overload
 set_spetialization
 static_cast_in_return
@@ -48,7 +47,6 @@ throw
 tr1_array
 try_catch
 unspecified_bool_type
-vector_pointers
 vector_specialization
 vfunc
 
