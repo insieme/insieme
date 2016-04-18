@@ -10,7 +10,7 @@ namespace datalog {
 	/**
 	 * Determines whether the given type is a polymorph type.
 	 */
-	bool isPolymorph(const core::TypePtr& type);
+	bool isPolymorph(const core::TypePtr& type, bool debug = false);
 
 	/**
 	 * Collects all returns within a lambda.

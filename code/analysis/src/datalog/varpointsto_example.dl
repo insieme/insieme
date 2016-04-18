@@ -8,6 +8,8 @@
 //  v4 = v1.f;
 //
 
+#include "ir.dl"
+
 .type var
 .type obj
 .type field

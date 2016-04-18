@@ -41,10 +41,14 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
 
+#include <souffle/SouffleInterface.h>
+
 namespace insieme {
 namespace analysis {
 namespace datalog {
 namespace framework {
+
+
 
 template <typename Sf_base>
 class AnalysisBase : public Sf_base, public core::IRVisitor<int> {
@@ -52,41 +56,103 @@ class AnalysisBase : public Sf_base, public core::IRVisitor<int> {
 	int node_counter = 0;
 
 public:
-	AnalysisBase() : Sf_base() {}
+	AnalysisBase() : Sf_base(), core::IRVisitor<int>(true) {}
 
 	//FIXME: Make it build
 	using NodeType = std::string;
 
 	int extractFacts(const core::NodePtr& rootNode) {
+
+		dumpText(rootNode);
+
 		return visit(rootNode);
 	}
+
+	// -- Value Nodes --
 
 	int visitStringValue(const core::StringValuePtr& val) override {
 		int id = ++node_counter;
 		return id;
 	}
 
+	// -- Type Nodes --
+
 	int visitTypeVariable(const core::TypeVariablePtr& var) override {
+
+		// get new ID for this node
 		int id = ++node_counter;
-		auto subId = visit(var->getVarName());
+
+		// check whether the necessary relation is present
+		auto rel = this->getRelation("TypeVariable");
+		if (!rel) return id;
+
+		// insert a tuple into the relation
+		souffle::tuple tuple(rel);
+		tuple << id;
+		tuple << var->getVarName()->getValue();
+		rel->insert(tuple);
+
+		// return id
 		return id;
 	}
 
-	int visit(const core::NodePtr& cur) override {
+	int visitTupleType(const core::TupleTypePtr& tuple) override {
+
+		// get new ID for this node
+		int id = ++node_counter;
+
+		// check whether the necessary relation is present
+		auto tuple_rel = this->getRelation("TupleType");
+		auto node_list_rel = this->getRelation("NodeList");
+		if (!tuple_rel || !node_list_rel) return id;
+
+		// insert a new entry into the tuple relation
+		souffle::tuple entry(tuple_rel);
+		entry << id;
+		tuple_rel->insert(entry);
+
+		// insert element types
+		int counter = 0;
+		for(const auto& cur : tuple) {
+			int child_id = visit(cur);
+
+			souffle::tuple entry(node_list_rel);
+			entry << id;
+			entry << counter++;
+			entry << child_id;
+
+			node_list_rel->insert(entry);
+		}
+
+		// return id
+		return id;
+	}
+
+	int visitGenericType(const core::GenericTypePtr& type) override {
+		int id = ++node_counter;
+		return id;
+	}
+
+	// -- Expression Nodes --
+
+	// -- Statement Nodes --
+
+	// -- Support Nodes --
+
+
+	int visitNode(const core::NodePtr& cur) override {
 		assert_not_implemented() << "Unsupported node type: " << cur->getNodeType() << "\n";
 		return 0;
 	}
 
 private:
-	void addFactToNode(int id, const std::string &kind) {
-		(void) id;
-		(void) kind;
+
+	souffle::RamDomain toIndex(const std::string& str) {
+		return this->symTable.lookup(str.c_str());
 	}
 
-	int extractFacts(const NodeType &n, int &counter) {
-		(void) n;
-		(void) counter;
-		return 0;
+	std::string toValue(souffle::RamDomain i) const {
+		return this->symTable.resolve(i);
 	}
 
 };

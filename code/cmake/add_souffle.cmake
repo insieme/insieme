@@ -16,10 +16,10 @@ macro(build_souffle)
 
 	ExternalProject_Add(
 		souffle
-		URL http://www.dps.uibk.ac.at/~csaf7445/ext_libs/souffle-20160416.zip
+		URL http://www.dps.uibk.ac.at/~csaf7445/ext_libs/souffle-20160418.zip
 		PATCH_COMMAND ./bootstrap
 		CONFIGURE_COMMAND ${souffle_prefix}/src/souffle/configure
-		BUILD_COMMAND make
+		BUILD_COMMAND $(MAKE)
 		INSTALL_COMMAND ""
 		PREFIX ${souffle_prefix}
 		DOWNLOAD_NO_PROGRESS 1
@@ -68,7 +68,7 @@ macro(souffle_generate_cpp souffle_input_path souffle_dl_target souffle_include_
 		COMMAND ${binary_dir}/src/souffle
 		ARGS -g ${souffle_output_file}.h ${souffle_input_file} ${include_argument}
 		COMMENT "Generating compiled soufflé datalog"
-		DEPENDS souffle
+		DEPENDS souffle ${souffle_input_file}
 		WORKING_DIRECTORY ${souffle_output_path}
 		OUTPUT ${souffle_output_file}.h
 	)
