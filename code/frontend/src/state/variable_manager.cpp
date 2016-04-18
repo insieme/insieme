@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -64,7 +64,7 @@ namespace state {
 		frontend_assert(false) << "Trying to look up local variable not previously declared: " << dumpClang(varDecl);
 		return core::ExpressionPtr();
 	}
-	
+
 	void VariableManager::undefine(const clang::VarDecl* varDecl) {
 		if(::containsKey(storage.back().variables, varDecl)) {
 			storage.back().variables.erase(varDecl);
@@ -100,7 +100,23 @@ namespace state {
 		}
 
 		frontend_assert(false) << "Trying to look up \"this\" variable, but not defined in any applicable scope";
-		return core::ExpressionPtr();
+		return {};
+	}
+
+	void VariableManager::setRetType(const core::TypePtr& retType) {
+		frontend_assert(!storage.back().retType) << "Trying to set return type for current scope, but already set.";
+		storage.back().retType = retType;
+	}
+
+	core::TypePtr VariableManager::getRetType() {
+		// lookup this in all applicable scopes starting from innermost
+		for(auto it = storage.crbegin(); it != storage.crend(); ++it) {
+			if(it->retType) return it->retType;
+			if(!it->nested) break;
+		}
+
+		frontend_assert(false) << "Trying to look up return type, but not defined";
+		return {};
 	}
 
 } // end namespace state

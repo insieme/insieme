@@ -163,7 +163,7 @@ namespace conversion {
 		// check if we have a return value
 		if(clang::Expr* expr = retStmt->getRetValue()) {
 			auto returnExpr = converter.convertCxxArgExpr(expr);
-			auto returnVar = builder.variable(returnExpr->getType());
+			auto returnVar = builder.variable(converter.getVarMan()->getRetType());
 			returnExpr = utils::fixTempMemoryInInitExpression(returnVar, returnExpr);
 			irRetStmt = builder.returnStmt(returnExpr, returnVar);
 		}

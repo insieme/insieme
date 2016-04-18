@@ -49,6 +49,7 @@
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/materialize.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/extern_c.h"
@@ -173,6 +174,8 @@ namespace conversion {
 				converter.getVarMan()->pushScope(false);
 				core::VariableList params;
 				core::StatementList bodyStmts;
+				// set return type (for return statement conversion)
+				converter.getVarMan()->setRetType(core::transform::materialize(funType->getReturnType()));
 				// handle implicit "this" for methods
 				if(isIrMethod(funcDecl)) {
 					auto thisType = getThisType(converter, methDecl);
@@ -193,12 +196,6 @@ namespace conversion {
 				std::copy(bodyRange.cbegin(), bodyRange.cend(), std::back_inserter(bodyStmts));
 				converter.getVarMan()->popScope();
 				auto body = builder.compoundStmt(bodyStmts);
-				// replace return statement var types
-				body = core::transform::transformBottomUpGen(body, [&funType, &builder](const core::ReturnStmtPtr& ret) {
-					auto retVar = ret->getReturnVar();
-					auto replacementVar = builder.variable(funType->getReturnType());
-					return core::transform::replaceAllGen(ret->getNodeManager(), ret, retVar, replacementVar);
-				});
 				auto lambda = builder.lambda(funType, params, body);
 				auto funExp = builder.lambdaExpr(lambda, name);
 				return funExp;

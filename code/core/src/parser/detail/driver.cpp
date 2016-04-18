@@ -541,7 +541,7 @@ namespace parser {
 			// replace return statement var types
 			auto retBody = core::transform::transformBottomUpGen(body, [&retType, this](const core::ReturnStmtPtr& ret) {
 				auto retVar = ret->getReturnVar();
-				auto replacementVar = builder.variable(retType);
+				auto replacementVar = builder.variable(core::transform::materialize(retType));
 				return core::transform::replaceAllGen(ret->getNodeManager(), ret, retVar, replacementVar);
 			});
 
