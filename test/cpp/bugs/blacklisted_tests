@@ -16,8 +16,6 @@ const_type_modifier
 ctor_base_ptr
 ctor_inherit
 def_initialization
-expr_with_cleanups
-global_init
 if_decl
 indirect_member_init
 intercepted_baseclass
@@ -31,7 +29,6 @@ merge_bugs
 non_default_static
 non_working
 options
-reference_in_condition_expression
 ref_to_pointer
 return_overload
 set_spetialization
