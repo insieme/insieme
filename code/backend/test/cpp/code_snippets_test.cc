@@ -348,15 +348,15 @@ namespace backend {
 		core::IRBuilder builder(manager);
 
 		core::ProgramPtr program = builder.parseProgram(R"(
-			def IMP_gen_ref = function () -> ref<int<4>,f,f,cpp_ref> {
-				return ptr_to_ref(*lit("g" : ref<ptr<int<4>>,f,f,plain>));
+			def gen_ref = function () -> ref<int<4>,f,f,cpp_ref> {
+				return ptr_to_ref(*lit("gr" : ref<ptr<int<4>>,f,f,plain>));
 			};
-			def IMP_gen_ptr = function () -> ptr<int<4>> {
-				return *lit("g" : ref<ptr<int<4>>,f,f,plain>);
+			def gen_ptr = function () -> ptr<int<4>> {
+				return *lit("gf" : ref<ptr<int<4>>,f,f,plain>);
 			};
 			int<4> function IMP_main() {
-				IMP_gen_ref() materialize ;
-				IMP_gen_ptr();
+				gen_ref();
+				gen_ptr();
 				return 0;
 			}
 		)");
@@ -368,12 +368,12 @@ namespace backend {
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		std::cout << "Converted: \n" << *converted << std::endl;
+		//std::cout << "Converted: \n" << *converted << std::endl;
 
 		// check absence of relevant code
 		auto code = toString(*converted);
-		//EXPECT_PRED2(containsSubString, code, "IMP_take_ref(*v1);");
-		//EXPECT_PRED2(containsSubString, code, "IMP_take_ptr((int32_t*)(&v2));");
+		EXPECT_PRED2(containsSubString, code, "return *gr;");
+		EXPECT_PRED2(containsSubString, code, "return gf;");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

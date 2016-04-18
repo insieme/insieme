@@ -538,14 +538,21 @@ namespace parser {
 			// build resulting function type
 			auto funcType = builder.functionType(paramTypes, retType, functionKind);
 
+			// replace return statement var types
+			auto retBody = core::transform::transformBottomUpGen(body, [&retType, this](const core::ReturnStmtPtr& ret) {
+				auto retVar = ret->getReturnVar();
+				auto replacementVar = builder.variable(retType);
+				return core::transform::replaceAllGen(ret->getNodeManager(), ret, retVar, replacementVar);
+			});
+
 			// if it is a function with explicitly auto-created parameters no materialization of the parameters is required
 			if(!inLambda) {
 				// => skip materialization of parameters
-				return builder.lambdaExpr(funcType, params, body);
+				return builder.lambdaExpr(funcType, params, retBody);
 			}
 
 			// replace all variables in the body by their implicitly materialized version
-			auto lambdaIngredients = transform::materialize({params, body});
+			auto lambdaIngredients = transform::materialize({params, retBody});
 
 			return builder.lambdaExpr(funcType, lambdaIngredients.params, lambdaIngredients.body);
 		}
