@@ -38,6 +38,7 @@
 
 #include <string>
 
+#include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
 
 namespace insieme {
@@ -56,25 +57,24 @@ public:
 	//FIXME: Make it build
 	using NodeType = std::string;
 
-	int extractFacts(const NodeType &rootNode) {
-		int counter = 0;
-		return extractFacts(rootNode, counter);
+	int extractFacts(const core::NodePtr& rootNode) {
+		return visit(rootNode);
 	}
 
-	int visitStringValue(const StringValueType& val) override {
-
-	}
-
-	int visitVariableType(const VariableTypePtr& var) override {
+	int visitStringValue(const core::StringValuePtr& val) override {
 		int id = ++node_counter;
-
-		auto subId = visit(var->getName());
-
 		return id;
 	}
 
-	int visit(const NodePtr& cur) override {
+	int visitTypeVariable(const core::TypeVariablePtr& var) override {
+		int id = ++node_counter;
+		auto subId = visit(var->getVarName());
+		return id;
+	}
+
+	int visit(const core::NodePtr& cur) override {
 		assert_not_implemented() << "Unsupported node type: " << cur->getNodeType() << "\n";
+		return 0;
 	}
 
 private:

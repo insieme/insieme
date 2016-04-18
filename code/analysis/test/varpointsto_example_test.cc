@@ -46,7 +46,7 @@ TEST(SouffleInterface, VarpointstoExample) {
 	using VPT = datalog::VarpointstoExample;
 
 	std::string dummyNode;
-	VPT vpt(dummyNode);
+	VPT vpt;
 
 	vpt.run();
 	vpt.printAlias();

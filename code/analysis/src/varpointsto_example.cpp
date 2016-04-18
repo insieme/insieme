@@ -66,7 +66,7 @@ namespace {
 				// There's no need for an inner loop like in 'printCSV',
 				// since we know the format beforehand.
 				// Hint: symTab in generated code, 0=num, 1=str
-				res.emplace_back(symtab_get_str(0), symtab_get_str(1));
+				res.emplace_back(std::string(symtab_get_str(0)), std::string(symtab_get_str(1)));
 			}
 
 			#undef symtab_get_num
@@ -78,7 +78,7 @@ namespace {
 		void printAlias() {
 			auto res = getAlias();
 			std::cout << "Varpointsto Alias result: " << res.size() << " elements" << std::endl;
-			for (std::tuple<str_t,str_t> line : res) {
+			for (const auto& line : res) {
 				std::cout << std::get<0>(line) << " \t"
 				          << std::get<1>(line) << std::endl;
 			}
@@ -93,8 +93,7 @@ VarpointstoExample::~VarpointstoExample() {
 }
 
 void VarpointstoExample::run() {
-	auto analysis = new Analysis;
-	analysis->extractFacts(rootNode);
+	auto analysis = new Analysis();
 	analysis->run();
 	this->analysis = analysis;
 }

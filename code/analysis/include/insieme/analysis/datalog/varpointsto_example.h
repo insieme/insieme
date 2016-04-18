@@ -39,8 +39,7 @@
 #include <vector>
 #include <tuple>
 
-#include "insieme/analysis/datalog/types.h"
-
+#include "insieme/core/ir.h"
 
 namespace insieme {
 namespace analysis {
@@ -48,12 +47,9 @@ namespace datalog {
 
 class VarpointstoExample {
 public:
-	using alias_t = std::vector<std::tuple<str_t,str_t>>;
+	using alias_t = std::vector<std::tuple<std::string,std::string>>;
 
-	//FIXME: Make it build
-	using NodeType = std::string;
-
-	VarpointstoExample(const NodeType &rootNode) : rootNode(rootNode) {}
+	VarpointstoExample() : analysis(nullptr) {}
 	~VarpointstoExample();
 
 	void run();
@@ -62,7 +58,6 @@ public:
 	void printAlias();
 
 private:
-	const NodeType &rootNode;
 	void *analysis;
 };
 
