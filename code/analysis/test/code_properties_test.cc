@@ -54,9 +54,8 @@ namespace datalog {
 		EXPECT_FALSE(isPolymorph(builder.parseType("bool")));
 		EXPECT_TRUE(isPolymorph(builder.parseType("'a")));
 
-
 		EXPECT_FALSE(isPolymorph(builder.parseType("(bool)")));
-		EXPECT_FALSE(isPolymorph(builder.parseType("(bool,int<4>)"), true));
+		EXPECT_FALSE(isPolymorph(builder.parseType("(bool,int<4>)")));
 
 		EXPECT_TRUE(isPolymorph(builder.parseType("('a)")));
 		EXPECT_TRUE(isPolymorph(builder.parseType("('a,bool)")));

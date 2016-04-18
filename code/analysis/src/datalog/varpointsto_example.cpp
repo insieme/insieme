@@ -45,14 +45,12 @@ namespace insieme {
 namespace analysis {
 namespace datalog {
 
-using AnalysisBase = framework::AnalysisBase<souffle::Sf_varpointsto_example>;
-
 
 namespace {
 
-	class Analysis : public AnalysisBase {
+	class Analysis : public souffle::Sf_varpointsto_example {
 	public:
-		Analysis() : AnalysisBase() {}
+		Analysis() {}
 
 		VarpointstoExample::alias_t getAlias() {
 			using rel_type = decltype(rel_alias);
