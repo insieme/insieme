@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -47,8 +47,8 @@
 
 #include "insieme/utils/debug/backtrace.h"
 
-#define __xstr(a) __str(a)
-#define __str(a) #a
+#define __xstr(a) __insieme_utils_str(a)
+#define __insieme_utils_str(a) #a
 
 #if defined(NDEBUG)
 
