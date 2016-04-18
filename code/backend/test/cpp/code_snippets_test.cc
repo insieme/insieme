@@ -585,10 +585,10 @@ namespace backend {
 
 		// check definition of six essential functions
 		EXPECT_PRED2(containsSubString, code, "A() = default;");						// default constructor
-		EXPECT_PRED2(containsSubString, code, "A(const A& p2) = default;");				// default copy constructor
+		EXPECT_PRED2(containsSubString, code, "A(A const& p2) = default;");				// default copy constructor
 		EXPECT_PRED2(containsSubString, code, "A(A&& p2) = default;");					// default move constructor
 		EXPECT_PRED2(containsSubString, code, "~A() = default;");						// default destructor
-		EXPECT_PRED2(containsSubString, code, "A& operator=(const A& p2) = default;");		// default assignment
+		EXPECT_PRED2(containsSubString, code, "A& operator=(A const& p2) = default;");		// default assignment
 		EXPECT_PRED2(containsSubString, code, "A& operator=(A&& p2) = default;");			// default move assignment
 
 		EXPECT_PRED2(containsSubString, code, "A(int32_t p2);");						// user defined constructor declaration
@@ -646,10 +646,10 @@ namespace backend {
 
 		// check definition of six essential functions
 		EXPECT_PRED2(containsSubString, code, "A() = default;");						// default constructor
-		EXPECT_PRED2(containsSubString, code, "A(const A& p2) = default;");				// default copy constructor
+		EXPECT_PRED2(containsSubString, code, "A(A const& p2) = default;");				// default copy constructor
 		EXPECT_PRED2(containsSubString, code, "A(A&& p2) = default;");					// default move constructor
 		EXPECT_PRED2(containsSubString, code, "~A() = default;");						// default destructor
-		EXPECT_PRED2(containsSubString, code, "A& operator=(const A& p2) = default;");		// default assignment
+		EXPECT_PRED2(containsSubString, code, "A& operator=(A const& p2) = default;");		// default assignment
 		EXPECT_PRED2(containsSubString, code, "A& operator=(A&& p2) = default;");			// default move assignment
 
 		EXPECT_PRED2(containsSubString, code, "A(int32_t p2);");						// user defined constructor declaration
@@ -1304,7 +1304,7 @@ namespace backend {
 		auto codeString = toString(*converted);
 		codeString = insieme::utils::removeCppStyleComments(codeString);
 		EXPECT_PRED2(notContainsSubString, codeString, "*");
-		EXPECT_PRED2(containsSubString, codeString, "IMP_A(const IMP_A& p2) = default");
+		EXPECT_PRED2(containsSubString, codeString, "IMP_A(IMP_A const& p2) = default");
 		EXPECT_PRED2(containsSubString, codeString, "IMP_A() = default");
 		EXPECT_PRED2(containsSubString, codeString, "IMP_A(IMP_A&& p2) = default");
 
@@ -1344,7 +1344,7 @@ namespace backend {
 		auto codeString = toString(*converted);
 		codeString = insieme::utils::removeCppStyleComments(codeString);
 		EXPECT_PRED2(notContainsSubString, codeString, "*");
-		EXPECT_PRED2(containsSubString, codeString, "IMP_A(const IMP_A& p2) = default");
+		EXPECT_PRED2(containsSubString, codeString, "IMP_A(IMP_A const& p2) = default");
 		EXPECT_PRED2(containsSubString, codeString, "IMP_A() = default");
 		EXPECT_PRED2(containsSubString, codeString, "IMP_A(IMP_A&& p2) = default");
 
