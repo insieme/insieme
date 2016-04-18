@@ -52,6 +52,11 @@ namespace datalog {
 		IRBuilder builder(mgr);
 
 		EXPECT_FALSE(isPolymorph(builder.parseType("bool")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("char")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("int")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("uint")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("string")));
+
 		EXPECT_TRUE(isPolymorph(builder.parseType("'a")));
 
 		EXPECT_FALSE(isPolymorph(builder.parseType("(bool)")));
@@ -59,6 +64,13 @@ namespace datalog {
 
 		EXPECT_TRUE(isPolymorph(builder.parseType("('a)")));
 		EXPECT_TRUE(isPolymorph(builder.parseType("('a,bool)")));
+
+		EXPECT_FALSE(isPolymorph(builder.parseType("int<4>")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("ref<int<4>>")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("array<'a,'b>")));
+		dumpText(builder.parseType("(int<4>)->bool"));
+		EXPECT_FALSE(isPolymorph(builder.parseType("(int<4>)->bool")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("(string, int<4>)->uint<4>")));
 
 	}
 

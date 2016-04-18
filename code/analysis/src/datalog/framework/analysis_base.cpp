@@ -1,3 +1,39 @@
+/**
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * regarding third party software licenses.
+ */
+
 #include "insieme/analysis/datalog/framework/analysis_base.h"
 
 #include <souffle/SouffleInterface.h>
@@ -21,9 +57,6 @@ namespace framework {
 
 			FactExtractor(souffle::Program& analysis)
 				: core::IRVisitor<int>(true), analysis(analysis) {}
-
-			//FIXME: Make it build
-			using NodeType = std::string;
 
 			int extractFacts(const core::NodePtr& rootNode) {
 				return visit(rootNode);
@@ -68,6 +101,18 @@ namespace framework {
 				return id;
 			}
 
+			int visitFunctionType(const core::FunctionTypePtr& fun) override {
+
+				// get new ID for this node
+				int id = ++node_counter;
+
+				// insert into function type relation
+				insert("FunctionType", id, visit(fun->getParameterTypes()), visit(fun->getReturnType()), fun->getKind(), visit(fun->getInstantiationTypes()));
+
+				// return id
+				return id;
+			}
+
 			int visitGenericType(const core::GenericTypePtr& type) override {
 				int id = ++node_counter;
 				return id;
@@ -78,6 +123,22 @@ namespace framework {
 			// -- Statement Nodes --
 
 			// -- Support Nodes --
+
+			int visitTypes(const core::TypesPtr& types) override {
+				int id = ++node_counter;
+
+				// insert type into relation
+				insert("Types", id);
+
+				//insert element types
+				int counter = 0;
+				for(const auto& cur : types) {
+					insert("NodeList", id, counter++, visit(cur));
+				}
+
+				// return id
+				return id;
+			}
 
 
 			int visitNode(const core::NodePtr& cur) override {
