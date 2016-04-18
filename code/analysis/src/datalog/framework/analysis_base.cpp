@@ -61,8 +61,7 @@ namespace framework {
 				// insert element types
 				int counter = 0;
 				for(const auto& cur : tuple) {
-					int child_id = visit(cur);
-					insert("NodeList", id, counter++, child_id);
+					insert("NodeList", id, counter++, visit(cur));
 				}
 
 				// return id
