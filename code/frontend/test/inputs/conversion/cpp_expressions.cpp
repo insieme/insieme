@@ -36,6 +36,8 @@
 
 class Trivial {};
 
+void takeIntPtr(int *c) {}
+
 int main() {
 //===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
 
@@ -350,7 +352,7 @@ int main() {
 	}
 
 	// FIXME: unsuported
-	// #pr agma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = sizeof(type_lit(real<8>)); v0 = sizeof(type_lit(uint<8>));
+	// #pragma test expect_ir("{ var ref<uint<8>,f,f,plain> v0 = sizeof(type_lit(real<8>)); v0 = sizeof(type_lit(uint<8>));
 	// }")
 	// {
 	//     unsigned long i = alignof(double);
@@ -378,5 +380,16 @@ int main() {
 	})")
 	{
 		int i = int();
+	}
+
+	// non-l-value compound initialization
+	#pragma test expect_ir(R"(
+		def IMP_takeIntPtr = function (v0 : ref<ptr<int<4>>,f,f,plain>) -> unit { };
+		{
+			IMP_takeIntPtr(ptr_null(type_lit(int<4>), type_lit(f), type_lit(f)));
+		}
+	)")
+	{
+		 takeIntPtr((int*){0});
 	}
 }

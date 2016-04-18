@@ -815,9 +815,11 @@ namespace conversion {
 
 		if(const clang::InitListExpr* initList = llvm::dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
 			retIr = VisitInitListExpr(initList);
-			auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-			if(refExt.isCallOfRefDeref(retIr)) retIr = core::analysis::getArgument(retIr, 0);
-			else retIr = builder.refTemp(retIr);
+			if(compLitExpr->isLValue()) {
+				auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+				if(refExt.isCallOfRefDeref(retIr)) retIr = core::analysis::getArgument(retIr, 0);
+				else retIr = builder.refTemp(retIr);
+			}
 		}
 
 		if(!retIr) frontend_assert(false) << "Unimplemented type of CompoundLiteralExpr encountered";
