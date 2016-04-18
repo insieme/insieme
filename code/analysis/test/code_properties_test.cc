@@ -46,7 +46,7 @@ namespace datalog {
 
 	using namespace core;
 
-	TEST(CodeProperties, IsPolymorth) {
+	TEST(CodeProperties, IsPolymorph) {
 
 		NodeManager mgr;
 		IRBuilder builder(mgr);
