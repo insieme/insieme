@@ -2,9 +2,7 @@
 
 #include "insieme/analysis/datalog/framework/analysis_base.h"
 
-#define protected public
 #include "souffle/gen/polymorph_types_analysis.h"
-#undef protected
 
 namespace insieme {
 namespace analysis {
