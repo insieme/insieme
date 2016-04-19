@@ -76,10 +76,25 @@ namespace datalog {
 	/**
 	 * Determine top level nodes
 	 */
-	std::vector<int> getTopLevelNodes(const core::TypePtr& root, bool debug)
+	std::vector<int> getTopLevelNodes(const core::NodePtr& root, bool debug)
 	{
 		// instantiate the analysis
 		souffle::Sf_code_properties analysis;
+
+		// fill in facts
+		framework::extractFacts(analysis, root);
+
+		// print debug information
+		if (debug) analysis.dumpInputs();
+
+		// run analysis
+		analysis.run();
+
+		// print debug information
+		if (debug) analysis.dumpOutputs();
+
+		// read result
+		return std::vector<int>{};
 	}
 
 } // end namespace datalog

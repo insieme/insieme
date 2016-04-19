@@ -57,9 +57,15 @@
 // Expression Nodes
 
 .decl Literal  ( id : node , type : node , string_value : string ) input
+.decl Variable ( id : node , type : node , var_id : uint ) input  /* do we need the var_id??? */
+.decl CallExpr  ( id : node , function_expr : node ) input  /* is this complete? */
 
 
 // Statement Nodes
+
+.decl CompoundStmt ( id : node ) input
+.decl DeclarationStmt ( id : node , variable : node , initialization : node ) input
+.decl IfStmt ( id : node , condition : node , then_body : node, else_body : node ) input
 
 
 // Support Nodes

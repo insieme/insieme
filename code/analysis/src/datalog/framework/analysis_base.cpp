@@ -151,7 +151,58 @@ namespace framework {
 				return id;
 			}
 
+			int visitVariable(const core::VariablePtr& var) override {
+				int id = ++node_counter;
+				int type = visit(var->getType());
+				unsigned var_id = var->getId();
+				insert("Variable", id, type, var_id);
+				return id;
+			}
+
+			int visitCallExpr(const core::CallExprPtr& var) override {
+				int id = ++node_counter;
+				int function_expr = visit(var->getFunctionExpr());
+				insert("CallExpr", id, function_expr);
+
+				int counter = 0;
+				for(const auto& cur : var->getArgumentList()) {
+					insert("NodeList", id, counter++, visit(cur));
+				}
+
+				return id;
+			}
+
 			// -- Statement Nodes --
+
+			int visitCompoundStmt(const core::CompoundStmtPtr& var) override {
+				int id = ++node_counter;
+
+				insert("CompoundStmt", id);
+
+				int counter = 0;
+				for(const auto& cur : var) {
+					insert("NodeList", id, counter++, visit(cur));
+				}
+
+				return id;
+			}
+
+			int visitDeclarationStmt(const core::DeclarationStmtPtr& var) override {
+				int id = ++node_counter;
+				int variable = visit(var->getVariable());
+				int initialization = visit(var->getInitialization());
+				insert("DeclarationStmt", id, variable, initialization);
+				return id;
+			}
+
+			int visitIfStmt(const core::IfStmtPtr& var) override {
+				int id = ++node_counter;
+				int condition = visit(var->getCondition());
+				int then_body = visit(var->getThenBody());
+				int else_body = visit(var->getElseBody());
+				insert("IfStmt", id, condition, then_body, else_body);
+				return id;
+			}
 
 			// -- Support Nodes --
 

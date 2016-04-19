@@ -74,6 +74,14 @@ namespace datalog {
 		// dumpText(builder.parseType("array<'a,'b>"));
 	}
 
+	TEST(CodeProperties, TopLevelTerm) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		getTopLevelNodes(builder.parseType("('a)"));
+		getTopLevelNodes(builder.parseStmt("{var int<4> a = 1; if (a > 0) { a+1; }}"), true);
+	}
+
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme

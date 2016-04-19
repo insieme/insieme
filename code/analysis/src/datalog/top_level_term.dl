@@ -1,5 +1,7 @@
 #include "ir.dl"
 
+
+
 // Type definitions
 
 .decl Node     ( id : node )
@@ -7,16 +9,20 @@
 .decl TopLevel ( id : node ) output
 
 
+
 // Add all the node types to the Node relation
 
+      /* List node */
 Node(X) :- NodeList(X,_,_).
 
+      /* Value nodes */
 Node(X) :- BoolValue  (X,_).
 Node(X) :- CharValue  (X,_).
 Node(X) :- IntValue   (X,_).
 Node(X) :- UIntValue  (X,_).
 Node(X) :- StringValue(X,_).
 
+      /* Type nodes */
 Node(X) :- GenericType                (X,_,_,_).
 Node(X) :- TupleType                  (X).
 Node(X) :- FunctionType               (X,_,_,_,_).
@@ -29,7 +35,20 @@ Node(X) :- NumericType     (X,_).
 Node(X) :- TagType         (X,_,_).
 Node(X) :- TagTypeReference(X,_).
 
+      /* Expression nodes */
+Node(X) :- Literal(X,_,_).
+Node(X) :- Variable(X,_,_).
+Node(X) :- CallExpr(X,_).
+
+      /* Statement nodes */
+Node(X) :- CompoundStmt(X).
+Node(X) :- DeclarationStmt(X,_,_).
+Node(X) :- IfStmt(X,_,_,_).
+
+      /* Support nodes */
 Node(X) :- Types(X).
+Node(X) :- Parents(X).
+
 
 
 // A UsedNode is a node that has been referenced
@@ -51,6 +70,20 @@ UsedNode(X) :- NumericType(_,X).
 
 UsedNode(X) :- TagType(_,X,_).
 UsedNode(X) :- TagType(_,_,X).
+
+UsedNode(X) :- Literal(_,X,_).
+
+UsedNode(X) :- Variable(_,X,_).
+
+UsedNode(X) :- CallExpr(_,X).
+
+UsedNode(X) :- DeclarationStmt(_,X,_).
+UsedNode(X) :- DeclarationStmt(_,_,X).
+
+UsedNode(X) :- IfStmt(_,X,_,_).
+UsedNode(X) :- IfStmt(_,_,X,_).
+UsedNode(X) :- IfStmt(_,_,_,X).
+
 
 
 // The TopLevel nodes are Nodes that have never been referenced
