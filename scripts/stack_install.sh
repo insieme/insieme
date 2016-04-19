@@ -1,10 +1,14 @@
 # setup environment variables
 . ./environment.setup
 
-stack() {
+set -e
+
+stack_tmp() {
+    STACK_ROOT="$TMP/stack-root" \
+    C_INCLUDE_PATH="$PREFIX/gmp-latest/include:$PREFIX/zlib-latest/include" \
     LIBRARY_PATH="$PREFIX/gmp-latest/lib:$PREFIX/zlib-latest/lib" \
     LD_LIBRARY_PATH="$PREFIX/gmp-latest/lib:$PREFIX/zlib-latest/lib" \
-    "$PREFIX/stack-latest/bin/stack" "$@"
+    "$TMP/stack" "$@"
 }
 
 ########################################################################
@@ -16,36 +20,26 @@ PACKAGE="stack-$VERSION"
 FILE="$PACKAGE-linux-x86_64.tar.gz"
 CHECKSUM="fedf161622170801f29be5d5096ea30e253b2bba54f185607f568c44ee151e5a"
 
-if [ -d $PREFIX/$PACKAGE ]; then
+if [ -d "$PREFIX/$PACKAGE" ]; then
     echo "Stack version $VERSION already installed"
     exit 0
 fi
+
+# create temporary folder
+OLDWD=$(pwd)
+TMP=$(mktemp -d --tmpdir stackinstallXXXX)
+cd "$TMP"
 
 echo "#### Downloading Stack (prebuilt) ####"
 wget -nc -O $FILE "https://github.com/commercialhaskell/stack/releases/download/v$VERSION/$FILE"
 echo "$CHECKSUM  $FILE" | sha256sum -c
 
-RET=$?
-if [ $RET -ne 0 ]; then
-    exit $RET
-fi
-
+echo "#### Unpacking Stack (prebuilt) ####"
 tar xf "$FILE"
-cd "$PACKAGE-linux-x86_64"
-
-# Remove any previous installation dir
-rm -rf "$PREFIX/$PACKAGE" "$HOME/.stack"
-
-echo "#### Installing Stack (prebuilt) ####"
-mkdir -p "$PREFIX/$PACKAGE/bin"
-cp stack "$PREFIX/$PACKAGE/bin/stack"
-
-rm -f "$PREFIX/stack-latest"
-ln -s "$PREFIX/$PACKAGE" "$PREFIX/stack-latest"
+cp "$PACKAGE-linux-x86_64/stack" stack
 
 echo "#### Cleaning up environment (prebuilt) ####"
-cd ..
-rm -rf "$PACKAGE-linux-x86_64" "$FILE"
+rm -r "$FILE" "$PACKAGE-linux-x86_64"
 
 ########################################################################
 ##                              STACK (patched)
@@ -57,11 +51,6 @@ CHECKSUM="60df5eaeccd9db7fdb535f056815c9ec196731231d4754d2e294f74bef3f4547"
 echo "#### Downloading Stack (patched) ####"
 wget -nc -O $FILE "https://github.com/commercialhaskell/stack/archive/$FILE"
 echo "$CHECKSUM  $FILE" | sha256sum -c
-
-RET=$?
-if [ $RET -ne 0 ]; then
-    exit $RET
-fi
 
 tar xf "$FILE"
 cd "$PACKAGE"
@@ -80,36 +69,17 @@ patch -p1 << EOF
      , ["--enable-split-objs" | boptsSplitObjs bopts]
 EOF
 
-RET=$?
-if [ $RET -ne 0 ]; then
-    exit $RET
-fi
-
 echo "#### Building Stack (patched) ####"
-stack setup
-
-RET=$?
-if [ $RET -ne 0 ]; then
-    exit $RET
-fi
-
-stack build
-
-RET=$?
-if [ $RET -ne 0 ]; then
-    exit $RET
-fi
+stack_tmp setup
+stack_tmp build
 
 echo "#### Installing Stack (patched) ####"
+mkdir -p "$PREFIX/$PACKAGE/bin"
 cp "$(find .stack-work/install -name stack)" "$PREFIX/$PACKAGE/bin/stack"
-
-RET=$?
-if [ $RET -ne 0 ]; then
-    exit $RET
-fi
+ln -s "$PREFIX/$PACKAGE" "$PREFIX/stack-latest"
 
 echo "#### Cleaning up environment (patched) ####"
-cd ..
-rm -rf "$PACKAGE" "$FILE"
+cd "$OLDWD"
+rm -rf "$TMP"
 
 exit 0
