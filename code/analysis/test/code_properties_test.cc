@@ -67,11 +67,11 @@ namespace datalog {
 
 		EXPECT_FALSE(isPolymorph(builder.parseType("int<4>")));
 		EXPECT_FALSE(isPolymorph(builder.parseType("ref<int<4>>")));
-		EXPECT_FALSE(isPolymorph(builder.parseType("array<'a,'b>")));
-		dumpText(builder.parseType("(int<4>)->bool"));
+		EXPECT_TRUE(isPolymorph(builder.parseType("array<'a,'b>")));
 		EXPECT_FALSE(isPolymorph(builder.parseType("(int<4>)->bool")));
 		EXPECT_FALSE(isPolymorph(builder.parseType("(string, int<4>)->uint<4>")));
 
+		// dumpText(builder.parseType("array<'a,'b>"));
 	}
 
 } // end namespace datalog

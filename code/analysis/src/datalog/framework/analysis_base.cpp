@@ -40,6 +40,7 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace analysis {
@@ -64,22 +65,26 @@ namespace framework {
 
 			// -- Value Nodes --
 
+			int visitUIntValue(const core::UIntValuePtr& val) override {
+				int id = ++node_counter;
+				insert("UintValue", id, val->getValue());
+				return id;
+			}
+
 			int visitStringValue(const core::StringValuePtr& val) override {
 				int id = ++node_counter;
+				insert("StringValue", id, val->getValue());
 				return id;
 			}
 
 			// -- Type Nodes --
 
-			int visitTypeVariable(const core::TypeVariablePtr& var) override {
-
-				// get new ID for this node
+			int visitGenericType(const core::GenericTypePtr& type) override {
 				int id = ++node_counter;
-
-				// insert record into relation
-				insert("TypeVariable", id, var->getVarName()->getValue());
-
-				// return id
+				const std::string& name = type->getName()->getValue();
+				int parents = visit(type->getParents());
+				int params = visit(type->getTypeParameter()); // TODO check this again
+				insert("GenericType", id, name, parents, params);
 				return id;
 			}
 
@@ -107,18 +112,44 @@ namespace framework {
 				int id = ++node_counter;
 
 				// insert into function type relation
-				insert("FunctionType", id, visit(fun->getParameterTypes()), visit(fun->getReturnType()), fun->getKind(), visit(fun->getInstantiationTypes()));
+				int parameter_types = visit(fun->getParameterTypes());
+				int return_type = visit(fun->getReturnType());
+				uint kind = fun->getFunctionKind()->getValue();
+				int instantiation_types = visit(fun->getInstantiationTypes());
+				insert("FunctionType", id, parameter_types, return_type, kind, instantiation_types);
 
 				// return id
 				return id;
 			}
 
-			int visitGenericType(const core::GenericTypePtr& type) override {
+			int visitTypeVariable(const core::TypeVariablePtr& var) override {
+
+				// get new ID for this node
 				int id = ++node_counter;
+
+				// insert record into relation
+				insert("TypeVariable", id, var->getVarName()->getValue());
+
+				// return id
+				return id;
+			}
+
+			int visitNumericType(const core::NumericTypePtr& var) override {
+				int id = ++node_counter;
+				int node = visit(var->getValue());
+				insert("NumericType", id, node);
 				return id;
 			}
 
 			// -- Expression Nodes --
+
+			int visitLiteral(const core::LiteralPtr& var) override {
+				int id = ++node_counter;
+				int type = visit(var->getType());
+				const std::string& string_value = var->getStringValue();
+				insert("Literal", id, type, string_value);
+				return id;
+			}
 
 			// -- Statement Nodes --
 
@@ -133,6 +164,22 @@ namespace framework {
 				//insert element types
 				int counter = 0;
 				for(const auto& cur : types) {
+					insert("NodeList", id, counter++, visit(cur));
+				}
+
+				// return id
+				return id;
+			}
+
+			int visitParents(const core::ParentsPtr& parents) override {
+				int id = ++node_counter;
+
+				// insert parent into relation
+				insert("Parents", id);
+
+				//insert list of parents
+				int counter = 0;
+				for(const auto& cur : parents) {
 					insert("NodeList", id, counter++, visit(cur));
 				}
 

@@ -1,0 +1,58 @@
+#include "ir.dl"
+
+// Type definitions
+
+.decl Node     ( id : node )
+.decl UsedNode ( id : node )
+.decl TopLevel ( id : node ) output
+
+
+// Add all the node types to the Node relation
+
+Node(X) :- NodeList(X,_,_).
+
+Node(X) :- BoolValue  (X,_).
+Node(X) :- CharValue  (X,_).
+Node(X) :- IntValue   (X,_).
+Node(X) :- UIntValue  (X,_).
+Node(X) :- StringValue(X,_).
+
+Node(X) :- GenericType                (X,_,_,_).
+Node(X) :- TupleType                  (X).
+Node(X) :- FunctionType               (X,_,_,_,_).
+Node(X) :- TypeVariable               (X,_).
+Node(X) :- VariadicTypeVariable       (X,_).
+Node(X) :- GenericTypeVariable        (X,_,_).
+Node(X) :- VariadicGenericTypeVariable(X,_,_).
+
+Node(X) :- NumericType     (X,_).
+Node(X) :- TagType         (X,_,_).
+Node(X) :- TagTypeReference(X,_).
+
+Node(X) :- Types(X).
+
+
+// A UsedNode is a node that has been referenced
+
+UsedNode(X) :- NodeList(_,_,X).
+
+UsedNode(X) :- GenericType(_,_,_,X).
+UsedNode(X) :- GenericType(_,_,X,_).
+
+UsedNode(X) :- FunctionType(_,X,_,_,_).
+UsedNode(X) :- FunctionType(_,_,X,_,_).
+UsedNode(X) :- FunctionType(_,_,_,_,X).
+
+UsedNode(X) :- GenericTypeVariable(_,_,X).
+
+UsedNode(X) :- VariadicGenericTypeVariable(_,_,X).
+
+UsedNode(X) :- NumericType(_,X).
+
+UsedNode(X) :- TagType(_,X,_).
+UsedNode(X) :- TagType(_,_,X).
+
+
+// The TopLevel nodes are Nodes that have never been referenced
+
+TopLevel(X) :- Node(X), !UsedNode(X).

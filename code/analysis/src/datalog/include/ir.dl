@@ -21,6 +21,7 @@
 
 .number_type node
 .number_type child_index
+.number_type function_kind
 
 
 // basic node infrastructure
@@ -39,10 +40,10 @@
 // Type Nodes
 
 .decl GenericType   ( id : node , name : string , parents : node , params : node ) input
-.decl TupleType 	( id : node ) input
-.decl FunctionType  ( id : node , parameter_types : node, return_type : node , kind : node , instantiation_types : node ) input
+.decl TupleType     ( id : node ) input
+.decl FunctionType  ( id : node , parameter_types : node, return_type : node , kind : function_kind , instantiation_types : node ) input
 
-.decl TypeVariable 			      ( id : node , name : string ) input
+.decl TypeVariable                ( id : node , name : string ) input
 .decl VariadicTypeVariable        ( id : node , name : string ) input
 .decl GenericTypeVariable         ( id : node , name : string , parameter_types : node ) input
 .decl VariadicGenericTypeVariable ( id : node , name : string , parameter_types : node ) input
@@ -55,12 +56,16 @@
 
 // Expression Nodes
 
+.decl Literal  ( id : node , type : node , string_value : string ) input
+
 
 // Statement Nodes
 
 
 // Support Nodes
 
+.decl Types ( id : node ) input
+.decl Parents ( id : node ) input
 
 
 //.decl Types ( id : node )
