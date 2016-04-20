@@ -15,13 +15,6 @@
       /* List node */
 Node(X) :- NodeList(X,_,_).
 
-      /* Value nodes */
-Node(X) :- BoolValue  (X,_).
-Node(X) :- CharValue  (X,_).
-Node(X) :- IntValue   (X,_).
-Node(X) :- UIntValue  (X,_).
-Node(X) :- StringValue(X,_).
-
       /* Type nodes */
 Node(X) :- GenericType                (X,_,_,_).
 Node(X) :- TupleType                  (X).

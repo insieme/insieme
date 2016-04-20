@@ -78,8 +78,20 @@ namespace datalog {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		getTopLevelNodes(builder.parseType("('a)"));
-		getTopLevelNodes(builder.parseStmt("{var int<4> a = 1; if (a > 0) { a+1; }}"), true);
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("('a)")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("{var int<4> a = 1; if (a > 0) { a+1; }}")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("int<4>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("ref<int<4>>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct { x : int<4>; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct B; def struct B { x : int<4>; }; B")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct B; def struct B { x : ref<B>; }; B")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct data; def struct data { x : ptr<data>; }; data")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct A; decl struct B; def struct A { x : ref<B>; }; def struct B { x : ref<A>; }; B")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct A; decl struct B; def struct A { x : ptr<B>; }; def struct B { x : ptr<A>; }; A")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct A; decl struct B; def struct A { x : ref<A>; }; def struct B { y : ref<A>; }; B")));
+
 	}
 
 } // end namespace datalog

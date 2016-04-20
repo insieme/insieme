@@ -63,20 +63,6 @@ namespace framework {
 				return visit(rootNode);
 			}
 
-			// -- Value Nodes --
-
-			int visitUIntValue(const core::UIntValuePtr& val) override {
-				int id = ++node_counter;
-				insert("UintValue", id, val->getValue());
-				return id;
-			}
-
-			int visitStringValue(const core::StringValuePtr& val) override {
-				int id = ++node_counter;
-				insert("StringValue", id, val->getValue());
-				return id;
-			}
-
 			// -- Type Nodes --
 
 			int visitGenericType(const core::GenericTypePtr& type) override {
@@ -138,6 +124,33 @@ namespace framework {
 				int id = ++node_counter;
 				int node = visit(var->getValue());
 				insert("NumericType", id, node);
+				return id;
+			}
+
+			int visitTagType(const core::TagTypePtr& var) override {
+				int id = ++node_counter;
+				int tag = visit(var->getTag());
+				int record = visit(var->getRecord());
+				insert("TagType", id, tag, record);
+				return id;
+			}
+
+			int visitTagTypeReference(const core::TagTypeReferencePtr& var) override {
+				int id = ++node_counter;
+				const std::string& name = var->getName()->getValue();
+				insert("TagTypeReference", id, name);
+				return id;
+			}
+
+			int visitStruct(const core::StructPtr& var) override {
+				int id = ++node_counter;
+				insert("Struct", id);
+
+				int counter = 0;
+				for(const auto& cur : var->getParents()) {
+					insert("NodeList", id, counter, visit(cur));
+				}
+
 				return id;
 			}
 
