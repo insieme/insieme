@@ -257,61 +257,36 @@ namespace measure {
 	                                                                   const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
 	                                                                   const std::map<string, string>& env = std::map<string, string>());
 
-	//	/**
-	//	 * Measures a list of metrics for a binary for a given number of times.
-	//	 *
-	//	 * @param stmt the statement to be converted into a binary and executed.
-	//	 * @param metrics the metrics to be collected
-	//	 * @param numRuns the number of runs to be conducted
-	//	 * @param executor the executor to be used for running the program
-	//	 * @param env the set of environment variables to be set up for the experiment run
-	//	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
-	//	 * 		values data indexed by the requested metrics.
-	//	 * @throws a MeasureException if something goes wrong
-	//	 */
-	//	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>> measureAll(
-	//					const core::StatementAddress& stmt,
-	//					const vector<MetricPtr>& metrices,
-	//					unsigned numRuns, const ExecutorPtr& executor,
-	//					const utils::compiler::Compiler& compiler,
-	//					const std::map<string, string>& env);
+	/**
+	* Measures a list of metrics for a binary for a given number of times.
+	*
+	* @param root the root of the already instrumented IR to be measured
+	* @param metrics the metrics to be collected
+	* @param numRuns the number of runs to be conducted
+	* @param executor the executor to be used for running the program
+	* @param env the set of environment variables to be set up for the experiment run
+	* @return a vector containing the results of each individual run. Each result is mapping regions the collected
+	* 		values data indexed by the requested metrics.
+	* @throws a MeasureException if something goes wrong
+	*/
+	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measurePreinstrumented(const core::NodePtr& root, const vector<MetricPtr>& metrics, unsigned numRuns,
+		                                                                              const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
+		                                                                              const std::map<string, string>& env);
 
 
 	// --------------------------------------------------------------------------------------------
 	//										Building
 	// --------------------------------------------------------------------------------------------
 
-
 	/**
 	 * Creates an instrumented binary based on the given regions using the given compiler.
 	 *
-	 * @param regions the regions to be instrumented. They all have to be based on the same root.
+	 * @param the root of the IR to be built
 	 * @param compiler the compiler to be used to build the resulting binary. If the build fails,
 	 * 			an empty string will be returned.
 	 * @return the path to the produced binary
 	 */
-	std::string buildBinary(const core::StatementAddress& regions, const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
-
-	/**
-	 * Creates an instrumented binary based on the given regions using the given compiler.
-	 *
-	 * @param regions the regions to be instrumented. They all have to be based on the same root.
-	 * @param compiler the compiler to be used to build the resulting binary. If the build fails,
-	 * 			an empty string will be returned.
-	 * @return the path to the produced binary
-	 */
-	std::string buildBinary(const std::map<core::StatementAddress, region_id>& regions,
-	                        const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
-
-	/**
-	 * Creates an instrumented binary based on all regions found within the given region using the given compiler.
-	 *
-	 * @param region the region within which to instrument regions.
-	 * @param compiler the compiler to be used to build the resulting binary. If the build fails,
-	 * 			an empty string will be returned.
-	 * @return the path to the produced binary
-	 */
-	std::string buildBinaryAll(const core::StatementAddress& region, const utils::compiler::Compiler& compiler);
+	std::string buildBinary(const core::NodePtr& root, const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
 
 
 	// --------------------------------------------------------------------------------------------

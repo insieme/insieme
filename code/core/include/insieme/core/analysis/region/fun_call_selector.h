@@ -44,20 +44,20 @@ namespace analysis {
 namespace region {
 
 	/**
-	 * This region selector is picking all calls to literals whose name contains a given substring.
+	 * This region selector is picking all calls to literals whose name matches a given regex.
 	 */
 	class FunctionCallSelector : public RegionSelector {
 	  private:
 		  /*
-		   * The substring to match against when searching for function calls. An empty string will
+		   * The regex to match against when searching for function calls. An empty string will
 		   * match any function call.
 		   */
 		  const std::string nameSubString;
 	  public:
 		  /*
-		   * A constructor taking a substring which must be contained by the literal of a function 
+		   * A constructor taking a regex which must match the literal of a function 
 		   * call in order for the function call to be considered a region.
-		   * @param nameSubstring the string to match function call regions against
+		   * @param nameSubstring the regex to match function call regions against
 		   */
 		  FunctionCallSelector(const std::string nameSubString = "") : nameSubString(nameSubString) {}
 		/**

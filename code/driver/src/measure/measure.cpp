@@ -720,7 +720,7 @@ namespace measure {
 		 * @param id the ID to be used within the wrapping region boundaries.
 		 * @return the instrumented replacement for the given statement
 		 */
-		core::StatementPtr instrument(const core::StatementPtr& stmt, region_id id) {
+		core::StatementPtr instrumentStmt(const core::StatementPtr& stmt, region_id id) {
 			// instrument region
 			auto& manager = stmt->getNodeManager();
 			core::IRBuilder build(manager);
@@ -791,6 +791,44 @@ namespace measure {
 
 			// assemble substitution
 			return build.compoundStmt(region_inst_start_call, instrumented, region_inst_end_call);
+		}
+
+		/**
+		* This function instrumented a given map of addresses and region IDs
+		*
+		* @param regions the regions to be instrumented with the corresponding region IDs
+		* @return the root node of an IR holding instrumented versions of all regions
+		*/
+		core::NodePtr instrumentRegions(const std::map<core::StatementAddress, region_id>& regions) {
+			using region_pair = std::pair<core::StatementAddress, region_id>;
+			core::NodePtr root = regions.begin()->first.getRootNode();
+			core::NodeManager& manager = root->getNodeManager();
+
+			// sort addresses in descending order
+			vector<region_pair> sorted_regions(regions.begin(), regions.end());
+			std::sort(sorted_regions.rbegin(), sorted_regions.rend());
+
+			// replace all regions with optimized versions
+			for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
+				// obtain address with current root
+				core::StatementAddress tmp = cur.first.switchRoot(root);
+				// migrate autotuning information (and other annotations if present)
+				core::transform::utils::migrateAnnotations(cur.first, tmp);
+				// replace region
+				root = core::transform::replaceNode(manager, tmp, cur.first);
+			});
+
+			// replace all regions with instrumented versions
+			for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
+				// obtain address with current root
+				core::StatementAddress tmp = cur.first.switchRoot(root);
+				// instrument the new region
+				core::StatementPtr instrumentedTmp = instrumentStmt(tmp, cur.second);
+				// replace region
+				root = core::transform::replaceNode(manager, tmp, instrumentedTmp);
+			});
+
+			return root;
 		}
 
 		/**
@@ -865,10 +903,14 @@ namespace measure {
 			return false;
 		});
 
+		// TODO: check if runtime needs PAPI for hardware queries, if yes always compile with PAPI and do not specify flag here
 		if(usePapi) { modifiedCompiler.addFlag("-DIRT_USE_PAPI"); }
 
+		// instrument code
+		auto instrumentedRoot = instrumentRegions(regions);
+
 		// build target code
-		auto binFile = buildBinary(regions, modifiedCompiler);
+		auto binFile = buildBinary(instrumentedRoot, modifiedCompiler);
 
 		if(binFile.empty()) { throw MeasureException("Unable to compile executable for measurement!"); }
 
@@ -896,29 +938,16 @@ namespace measure {
 		namespace idm = insieme::driver::measure;
 
 		papiPartition[0] = vector<MetricPtr>{
-		      idm::Metric::TOTAL_L1_DCM,
-		      idm::Metric::TOTAL_L2_DCM,
-		      idm::Metric::TOTAL_L3_TCM,
-		      idm::Metric::TOTAL_BR_MSP,
-		      idm::Metric::TOTAL_BR_PRC,
-		      idm::Metric::TOTAL_TOT_INS,
-		      idm::Metric::TOTAL_FDV_INS,
-		      idm::Metric::TOTAL_LD_INS,
+			idm::Metric::TOTAL_L1_DCM, idm::Metric::TOTAL_L2_DCM,  idm::Metric::TOTAL_L3_TCM,  idm::Metric::TOTAL_BR_MSP,
+			idm::Metric::TOTAL_BR_PRC, idm::Metric::TOTAL_TOT_INS, idm::Metric::TOTAL_FDV_INS, idm::Metric::TOTAL_LD_INS,
 		};
 
 		papiPartition[1] = vector<MetricPtr>{
-		      idm::Metric::TOTAL_FP_INS,
-		      idm::Metric::TOTAL_SR_INS,
-		      idm::Metric::TOTAL_L2_DCH,
-		      idm::Metric::TOTAL_FP_OPS,
-		      idm::Metric::TOTAL_VEC_SP,
+			idm::Metric::TOTAL_FP_INS, idm::Metric::TOTAL_SR_INS, idm::Metric::TOTAL_L2_DCH, idm::Metric::TOTAL_FP_OPS, idm::Metric::TOTAL_VEC_SP,
 		};
 
 		papiPartition[2] = vector<MetricPtr>{
-		      idm::Metric::TOTAL_VEC_DP,
-		      idm::Metric::TOTAL_STL_ICY,
-		      idm::Metric::TOTAL_TLB_DM,
-		      idm::Metric::TOTAL_TLB_IM,
+			idm::Metric::TOTAL_VEC_DP, idm::Metric::TOTAL_STL_ICY, idm::Metric::TOTAL_TLB_DM, idm::Metric::TOTAL_TLB_IM,
 		};*/
 
 		// run experiments and collect results
@@ -983,48 +1012,20 @@ namespace measure {
 		return res;
 	}
 
-	std::string buildBinary(const core::StatementAddress& region, const utils::compiler::Compiler& compiler) {
-		std::map<core::StatementAddress, region_id> regions;
-		regions[region] = 0;
-		return buildBinary(regions, compiler);
+	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measurePreinstrumented(const core::NodePtr& root,
+		                                                                              const vector<MetricPtr>& metrics, unsigned numRuns,
+		                                                                              const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
+		                                                                              const std::map<string, string>& env) {
+		auto binary = buildBinary(root, compiler);
+		return measure(binary, metrics, numRuns, executor, env);
 	}
 
-
-	std::string buildBinary(const std::map<core::StatementAddress, region_id>& regions, const utils::compiler::Compiler& compilerSetup) {
-		core::NodeManager& manager = regions.begin()->first->getNodeManager();
-
-		core::NodePtr root = regions.begin()->first.getRootNode();
-
-		// sort addresses in descending order
-		typedef std::pair<core::StatementAddress, region_id> region_pair;
-		vector<region_pair> sorted_regions(regions.begin(), regions.end());
-		std::sort(sorted_regions.begin(), sorted_regions.end(),
-		          [](const region_pair& first, const region_pair& second) { return first.second > second.second; });
-		
-		// replace all regions with optimized versions
-		for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
-			// obtain address with current root
-			core::StatementAddress tmp = cur.first.switchRoot(root);
-			// migrate autotuning information (and other annotations if present)
-			core::transform::utils::migrateAnnotations(cur.first, tmp);
-			// replace region
-			root = core::transform::replaceNode(manager, tmp, cur.first);
-		});
-
-		// replace all regions with instrumented versions
-		for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
-			// obtain address with current root
-			core::StatementAddress tmp = cur.first.switchRoot(root);
-			// instrument the new region
-			core::StatementPtr instrumentedTmp = instrument(tmp, cur.second);
-			// replace region
-			root = core::transform::replaceNode(manager, tmp, instrumentedTmp);
-		});
+	std::string buildBinary(const core::NodePtr& root, const utils::compiler::Compiler& compilerSetup) {
 
 		// create resulting program
 		core::ProgramPtr program;
 		if(root->getNodeType() == core::NT_LambdaExpr) {
-			program = core::Program::get(manager, toVector(root.as<core::ExpressionPtr>()));
+			program = core::Program::get(root->getNodeManager(), toVector(root.as<core::ExpressionPtr>()));
 		} else {
 			program = wrapIntoProgram(root);
 		}
@@ -1045,6 +1046,7 @@ namespace measure {
 		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
 		compiler.addFlag("-DIRT_WORKER_SLEEPING");
 		compiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
+		// TODO: check if runtime needs PAPI for hardware queries, if not then remove flag here
 		compiler.addFlag("-DIRT_USE_PAPI");
 		compiler.addFlag("-ldl -lrt -lpthread -lm");
 		compiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi");

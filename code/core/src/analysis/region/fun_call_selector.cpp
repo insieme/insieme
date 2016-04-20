@@ -36,6 +36,10 @@
 
 #include "insieme/core/analysis/region/fun_call_selector.h"
 
+#include <string.h>
+
+#include <boost/regex.hpp>
+
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/basic.h"
@@ -51,15 +55,13 @@ namespace region {
 		core::visitDepthFirst(code, [&](const core::StatementAddress& cur) -> bool {
 			if(cur.getAddressedNode()->getNodeType() != core::NT_CallExpr) { return false; }
 
-			core::LiteralPtr literalPtr = cur.getAddressedNode().as<core::CallExprPtr>()->getFunctionExpr().isa<core::LiteralPtr>();
+			const core::LiteralPtr literalPtr = cur.getAddressedNode().as<core::CallExprPtr>()->getFunctionExpr().isa<core::LiteralPtr>();
 
 			if(!literalPtr) { return false; }
 
-			string name = literalPtr->getStringValue();
+			const std::string name = literalPtr->getStringValue();
 
-			if(name.find(this->nameSubString) != string::npos) {
-				//std::cout << "found: " << utils::demangle(name) << "\n";
-				//dumpColor(cur);
+			if(boost::regex_search(name, boost::regex(nameSubString, boost::regex_constants::ECMAScript))) {
 				res.push_back(cur);
 				return true;
 			}
