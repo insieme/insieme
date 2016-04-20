@@ -1,5 +1,0 @@
-#include "include/ir.dl"
-
-#include "exit_point_analysis.dl"
-#include "polymorph_types_analysis.dl"
-#include "top_level_term.dl"

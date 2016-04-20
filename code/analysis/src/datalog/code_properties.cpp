@@ -38,7 +38,8 @@
 
 #include "insieme/analysis/datalog/framework/analysis_base.h"
 
-#include "souffle/gen/code_properties.h"
+#include "souffle/gen/polymorph_types_analysis.h"
+#include "souffle/gen/top_level_term.h"
 
 namespace insieme {
 namespace analysis {
@@ -51,7 +52,7 @@ namespace datalog {
 	bool isPolymorph(const core::TypePtr& type, bool debug) {
 
 		// instantiate the analysis
-		souffle::Sf_code_properties analysis;
+		souffle::Sf_polymorph_types_analysis analysis;
 
 		// fill in facts
 		int rootNodeID = framework::extractFacts(analysis, type);
@@ -79,7 +80,7 @@ namespace datalog {
 	std::vector<int> getTopLevelNodes(const core::NodePtr& root, bool debug)
 	{
 		// instantiate the analysis
-		souffle::Sf_code_properties analysis;
+		souffle::Sf_top_level_term analysis;
 
 		// fill in facts
 		framework::extractFacts(analysis, root);
