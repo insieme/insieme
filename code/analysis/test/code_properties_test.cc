@@ -46,12 +46,17 @@ namespace datalog {
 
 	using namespace core;
 
-	TEST(CodeProperties, IsPolymorth) {
+	TEST(CodeProperties, IsPolymorph) {
 
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
 		EXPECT_FALSE(isPolymorph(builder.parseType("bool")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("char")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("int")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("uint")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("string")));
+
 		EXPECT_TRUE(isPolymorph(builder.parseType("'a")));
 
 		EXPECT_FALSE(isPolymorph(builder.parseType("(bool)")));
@@ -60,6 +65,21 @@ namespace datalog {
 		EXPECT_TRUE(isPolymorph(builder.parseType("('a)")));
 		EXPECT_TRUE(isPolymorph(builder.parseType("('a,bool)")));
 
+		EXPECT_FALSE(isPolymorph(builder.parseType("int<4>")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("ref<int<4>>")));
+		EXPECT_TRUE(isPolymorph(builder.parseType("array<'a,'b>")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("(int<4>)->bool")));
+		EXPECT_FALSE(isPolymorph(builder.parseType("(string, int<4>)->uint<4>")));
+
+		// dumpText(builder.parseType("array<'a,'b>"));
+	}
+
+	TEST(CodeProperties, TopLevelTerm) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		getTopLevelNodes(builder.parseType("('a)"));
+		getTopLevelNodes(builder.parseStmt("{var int<4> a = 1; if (a > 0) { a+1; }}"), true);
 	}
 
 } // end namespace datalog

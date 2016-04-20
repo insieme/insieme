@@ -58,7 +58,7 @@ macro(souffle_generate_cpp souffle_input_path souffle_dl_target souffle_include_
 
 	# add -I to include path
 	set( include_argument "${souffle_include_path}" )
-	if ( include_argument ) 
+	if ( include_argument )
 		set(include_argument "--include-dir=${include_argument}")
 	endif()
 
@@ -67,7 +67,7 @@ macro(souffle_generate_cpp souffle_input_path souffle_dl_target souffle_include_
 		SOURCE ${souffle_input_file}
 		COMMAND ${binary_dir}/src/souffle
 		ARGS -g ${souffle_output_file}.h ${souffle_input_file} ${include_argument}
-		COMMENT "Generating compiled soufflé datalog"
+		COMMENT "Generating compiled soufflé datalog: ${souffle_dl_target}.h"
 		DEPENDS souffle ${souffle_input_file}
 		WORKING_DIRECTORY ${souffle_output_path}
 		OUTPUT ${souffle_output_file}.h
