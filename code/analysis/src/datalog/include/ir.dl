@@ -44,7 +44,8 @@
 .decl TagType          ( id : node , tag : node , record : node ) input
 .decl TagTypeReference ( id : node , name : string ) input
 
-.decl Struct ( id : node , parents : node ) input /* is this complete? */
+.decl Struct ( id : node , name : string , fields : node , constructors : node , destructor : node
+             , destructor_virtual : bool , member_functions : node , pure_virtual_member_functions : node , parents : node ) input
 //# Name: Program;  Base: Node;  ListName: EntryPoints;  Params: Expression
 //# Name: Union;  Base: Record;  Params: StringValue, Fields, Expressions, Expression, BoolValue, MemberFunctions, PureVirtualMemberFunctions
 
@@ -58,8 +59,8 @@
 //# Name: CastExpr;  Base: Expression;  Params: Type, Expression
 //# Name: InitExpr;  Base: Expression;  Params: GenericType, Expression, Expressions
 //# Name: JobExpr;  Base: Expression;  Params: GenericType, Expression, Expression
-//# Name: LambdaExpr;  Base: Expression;  Params: FunctionType, LambdaReference, LambdaDefinition
-//# Name: LambdaReference;  Base: Expression;  Params: FunctionType, StringValue
+.decl LambdaExpr ( id : node , type : node , reference : node , definition : node ) input
+.decl LambdaReference ( id : node , type : node , name : string ) input
 //# Name: MarkerExpr;  Base: Expression;  Params: Type, UIntValue, Expression
 //# Name: TupleExpr;  Base: Expression;  Params: TupleType, Expressions
 
@@ -87,15 +88,15 @@
 .decl Types ( id : node ) input
 .decl Parents ( id : node ) input
 //# Name: CatchClause;  Base: Support;  Params: Variable, CompoundStmt
-//# Name: Expressions;  Base: Support;  ListName: Expressions;  Params: Expression
-//# Name: Field;  Base: Support;  Params: StringValue, Type
-//# Name: Fields;  Base: Support;  ListName: Fields;  Params: Field
-//# Name: Lambda;  Base: Support;  Params: FunctionType, Parameters, CompoundStmt
-//# Name: LambdaBinding;  Base: Support;  Params: LambdaReference, Lambda
-//# Name: LambdaDefinition;  Base: Support;  ListName: Definitions;  Params: LambdaBinding
+.decl Expressions ( id : node ) input
+.decl Field  ( id : node , name : string , type : node ) input
+.decl Fields ( id : node ) input
+.decl Lambda ( id : node , type : node , parameters : node , body : node ) input
+.decl LambdaBinding ( id : node , reference : node , lambda : node ) input
+.decl LambdaDefinition ( id : node ) input
 //# Name: MemberFunction;  Base: Support;  Params: StringValue, BoolValue, Expression
 //# Name: MemberFunctions;  Base: Support;  ListName: Members;  Params: MemberFunction
-//# Name: Parameters;  Base: Support;  ListName: Parameters;  Params: Variable
+.decl Parameters ( id : node ) input
 //# Name: Parent;  Base: Support;  Params: BoolValue, UIntValue, Type
 //# Name: PureVirtualMemberFunction;  Base: Support;  Params: StringValue, FunctionType
 //# Name: PureVirtualMemberFunctions;  Base: Support;  ListName: Members;  Params: PureVirtualMemberFunction
@@ -126,3 +127,11 @@
 //# Name: Variable;  Base: Expression;  Params: Type, UIntValue
 //# Name: VariadicGenericTypeVariable;  Base: Type;  Params: StringValue, Types
 //# Name: VariadicTypeVariable;  Base: Type;  Params: StringValue
+//# Name: Fields;  Base: Support;  ListName: Fields;  Params: Field
+//# Name: Field;  Base: Support;  Params: StringValue, Type
+//# Name: Expressions;  Base: Support;  ListName: Expressions;  Params: Expression
+//# Name: LambdaReference;  Base: Expression;  Params: FunctionType, StringValue
+//# Name: Lambda;  Base: Support;  Params: FunctionType, Parameters, CompoundStmt
+//# Name: LambdaBinding;  Base: Support;  Params: LambdaReference, Lambda
+//# Name: LambdaDefinition;  Base: Support;  ListName: Definitions;  Params: LambdaBinding
+//# Name: Parameters;  Base: Support;  ListName: Parameters;  Params: Variable

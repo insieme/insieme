@@ -49,6 +49,16 @@ namespace framework {
 
 	namespace {
 
+		using std::string;
+
+		#define make_node_list(LOOP_OBJECT) do {                                              \
+		                int counter = 0;                                                                 \
+		                for(const auto& cur : LOOP_OBJECT) {                                             \
+		                        insert("NodeList", id, counter++, visit(cur));                    \
+		                }                                                                                \
+		        } while(0);
+
+
 		class FactExtractor : public core::IRVisitor<int> {
 
 			int node_counter = 0;
@@ -67,7 +77,7 @@ namespace framework {
 
 			int visitGenericType(const core::GenericTypePtr& type) override {
 				int id = ++node_counter;
-				const std::string& name = type->getName()->getValue();
+				const string& name = type->getName()->getValue();
 				int parents = visit(type->getParents());
 				int params = visit(type->getTypeParameter()); // TODO check this again
 				insert("GenericType", id, name, parents, params);
@@ -83,10 +93,7 @@ namespace framework {
 				insert("TupleType", id);
 
 				// insert element types
-				int counter = 0;
-				for(const auto& cur : tuple) {
-					insert("NodeList", id, counter++, visit(cur));
-				}
+				make_node_list(tuple);
 
 				// return id
 				return id;
@@ -102,6 +109,7 @@ namespace framework {
 				int return_type = visit(fun->getReturnType());
 				uint kind = fun->getFunctionKind()->getValue();
 				int instantiation_types = visit(fun->getInstantiationTypes());
+
 				insert("FunctionType", id, parameter_types, return_type, kind, instantiation_types);
 
 				// return id
@@ -137,19 +145,24 @@ namespace framework {
 
 			int visitTagTypeReference(const core::TagTypeReferencePtr& var) override {
 				int id = ++node_counter;
-				const std::string& name = var->getName()->getValue();
+				const string& name = var->getName()->getValue();
 				insert("TagTypeReference", id, name);
 				return id;
 			}
 
 			int visitStruct(const core::StructPtr& var) override {
 				int id = ++node_counter;
-				insert("Struct", id);
+				const string& name = var->getName()->getValue();
+				int fields = visit(var->getFields());
+				int constructors = visit(var->getConstructors());
+				int destructor = visit(var->getDestructor());
+				bool destructor_virtual = var->getDestructorVirtual()->getValue();
+				int member_functions = visit(var->getMemberFunctions());
+				int pure_virtual_member_functions = visit(var->getPureVirtualMemberFunctions());
+				int parents = visit(var->getParents());
 
-				int counter = 0;
-				for(const auto& cur : var->getParents()) {
-					insert("NodeList", id, counter, visit(cur));
-				}
+				insert("Struct", id, name, fields, constructors, destructor, destructor_virtual,
+				       member_functions, pure_virtual_member_functions, parents);
 
 				return id;
 			}
@@ -159,7 +172,7 @@ namespace framework {
 			int visitLiteral(const core::LiteralPtr& var) override {
 				int id = ++node_counter;
 				int type = visit(var->getType());
-				const std::string& string_value = var->getStringValue();
+				const string& string_value = var->getStringValue();
 				insert("Literal", id, type, string_value);
 				return id;
 			}
@@ -174,14 +187,29 @@ namespace framework {
 
 			int visitCallExpr(const core::CallExprPtr& var) override {
 				int id = ++node_counter;
+
 				int function_expr = visit(var->getFunctionExpr());
 				insert("CallExpr", id, function_expr);
 
-				int counter = 0;
-				for(const auto& cur : var->getArgumentList()) {
-					insert("NodeList", id, counter++, visit(cur));
-				}
+				make_node_list(var);
 
+				return id;
+			}
+
+			int visitLambdaExpr(const core::LambdaExprPtr& var) override {
+				int id = ++node_counter;
+				int type = visit(var->getType());
+				int reference = visit(var->getReference());
+				int definition = visit(var->getDefinition());
+				insert("LambdaExpr", id, type, reference, definition);
+				return id;
+			}
+
+			int visitLambdaReference(const core::LambdaReferencePtr& var) override {
+				int id = ++node_counter;
+				int type = visit(var->getType());
+				const string& name = var->getName()->getValue();
+				insert("LambdaReference", id, type, name);
 				return id;
 			}
 
@@ -192,10 +220,7 @@ namespace framework {
 
 				insert("CompoundStmt", id);
 
-				int counter = 0;
-				for(const auto& cur : var) {
-					insert("NodeList", id, counter++, visit(cur));
-				}
+				make_node_list(var);
 
 				return id;
 			}
@@ -226,10 +251,7 @@ namespace framework {
 				insert("Types", id);
 
 				//insert element types
-				int counter = 0;
-				for(const auto& cur : types) {
-					insert("NodeList", id, counter++, visit(cur));
-				}
+				make_node_list(types);
 
 				// return id
 				return id;
@@ -242,15 +264,66 @@ namespace framework {
 				insert("Parents", id);
 
 				//insert list of parents
-				int counter = 0;
-				for(const auto& cur : parents) {
-					insert("NodeList", id, counter++, visit(cur));
-				}
+				make_node_list(parents);
 
 				// return id
 				return id;
 			}
 
+			int visitExpressions(const core::ExpressionsPtr& expressions) override {
+				int id = ++node_counter;
+				insert("Expressions", id);
+				make_node_list(expressions);
+				return id;
+			}
+
+			int visitField(const core::FieldPtr& field) override {
+				int id = ++node_counter;
+				const string& name = field->getName()->getValue();
+				int type = visit(field->getType());
+				insert("Field", id, name, type);
+				return id;
+			}
+
+			int visitFields(const core::FieldsPtr& fields) override {
+				int id = ++node_counter;
+				insert("Fields", id);
+				make_node_list(fields);
+				return id;
+			}
+
+			int visitLambda(const core::LambdaPtr& lambda) override {
+				int id = ++node_counter;
+				int type = visit(lambda->getType());
+				int parameters = visit(lambda->getParameters());
+				int body = visit(lambda->getBody());
+				insert("Lambda", id, type, parameters, body);
+				return id;
+			}
+
+			int visitLambdaBinding(const core::LambdaBindingPtr& binding) override {
+				int id = ++node_counter;
+				int reference = visit(binding->getReference());
+				int lambda = visit(binding->getLambda());
+				insert("LambdaBinding", id, reference, lambda);
+				return id;
+			}
+
+			int visitLambdaDefinition(const core::LambdaDefinitionPtr& def) override {
+				int id = ++node_counter;
+				insert("LambdaDefinition", id);
+				make_node_list(def);
+				return id;
+			}
+
+			int visitParameters(const core::ParametersPtr& params) override {
+				int id = ++node_counter;
+				insert("Parameters", id);
+				make_node_list(params);
+				return id;
+			}
+
+			// -- Unimplemented Nodes: Fail --
 
 			int visitNode(const core::NodePtr& cur) override {
 				assert_not_implemented() << "Unsupported node type: " << cur->getNodeType() << "\n";
@@ -281,7 +354,9 @@ namespace framework {
 
 		};
 
-	}
+		#undef make_node_list
+
+	} // end anonymous namespace
 
 	int extractFacts(souffle::Program& analysis, const core::NodePtr& node) {
 		return FactExtractor(analysis).visit(node);

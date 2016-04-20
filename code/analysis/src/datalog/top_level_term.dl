@@ -28,10 +28,14 @@ Node(X) :- NumericType     (X,_).
 Node(X) :- TagType         (X,_,_).
 Node(X) :- TagTypeReference(X,_).
 
+Node(X) :- Struct(X,_,_,_,_,_,_,_,_).
+
       /* Expression nodes */
 Node(X) :- Literal(X,_,_).
 Node(X) :- Variable(X,_,_).
 Node(X) :- CallExpr(X,_).
+Node(X) :- LambdaExpr(X,_,_,_).
+Node(X) :- LambdaReference(X,_,_).
 
       /* Statement nodes */
 Node(X) :- CompoundStmt(X).
@@ -41,6 +45,13 @@ Node(X) :- IfStmt(X,_,_,_).
       /* Support nodes */
 Node(X) :- Types(X).
 Node(X) :- Parents(X).
+Node(X) :- Expressions(X).
+Node(X) :- Field(X,_,_).
+Node(X) :- Fields(X).
+Node(X) :- Lambda(X,_,_,_).
+Node(X) :- LambdaBinding(X,_,_).
+Node(X) :- LambdaDefinition(X).
+Node(X) :- Parameters(X).
 
 
 
@@ -64,11 +75,24 @@ UsedNode(X) :- NumericType(_,X).
 UsedNode(X) :- TagType(_,X,_).
 UsedNode(X) :- TagType(_,_,X).
 
+UsedNode(X) :- Struct(_,_,X,_,_,_,_,_,_).
+UsedNode(X) :- Struct(_,_,_,X,_,_,_,_,_).
+UsedNode(X) :- Struct(_,_,_,_,X,_,_,_,_).
+UsedNode(X) :- Struct(_,_,_,_,_,_,X,_,_).
+UsedNode(X) :- Struct(_,_,_,_,_,_,_,X,_).
+UsedNode(X) :- Struct(_,_,_,_,_,_,_,_,X).
+
 UsedNode(X) :- Literal(_,X,_).
 
 UsedNode(X) :- Variable(_,X,_).
 
 UsedNode(X) :- CallExpr(_,X).
+
+UsedNode(X) :- LambdaExpr(_,X,_,_).
+UsedNode(X) :- LambdaExpr(_,_,X,_).
+UsedNode(X) :- LambdaExpr(_,_,_,X).
+
+UsedNode(X) :- LambdaReference(_,X,_).
 
 UsedNode(X) :- DeclarationStmt(_,X,_).
 UsedNode(X) :- DeclarationStmt(_,_,X).
@@ -76,6 +100,15 @@ UsedNode(X) :- DeclarationStmt(_,_,X).
 UsedNode(X) :- IfStmt(_,X,_,_).
 UsedNode(X) :- IfStmt(_,_,X,_).
 UsedNode(X) :- IfStmt(_,_,_,X).
+
+UsedNode(X) :- Field(_,_,X).
+
+UsedNode(X) :- Lambda(_,X,_,_).
+UsedNode(X) :- Lambda(_,_,X,_).
+UsedNode(X) :- Lambda(_,_,_,X).
+
+UsedNode(X) :- LambdaBinding(_,X,_).
+UsedNode(X) :- LambdaBinding(_,_,X).
 
 
 
