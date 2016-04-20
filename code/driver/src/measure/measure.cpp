@@ -911,8 +911,7 @@ namespace measure {
 
 		// build target code
 		auto binFile = buildBinary(instrumentedRoot, modifiedCompiler);
-
-		if(binFile.empty()) { throw MeasureException("Unable to compile executable for measurement!"); }
+		assert_false(binFile.empty()) << "Unable to compile executable for measurement!";
 
 		// conduct measurement
 		auto res = measure(binFile, metrics, numRuns, executor, env);
@@ -926,7 +925,7 @@ namespace measure {
 	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(const std::string& binary, const vector<MetricPtr>& metrics, unsigned numRuns,
 	                                                                   const ExecutorPtr& executor, const std::map<string, string>& env) {
 		// check binary
-		if(!boost::filesystem::exists(binary)) { throw MeasureException("Invalid executable specified for measurement!"); }
+		assert_true(boost::filesystem::exists(binary)) << "Invalid executable specified for measurement!";
 
 		// extract name of executable
 		const std::string executable = bfs::path(binary).filename().string();
@@ -987,7 +986,7 @@ namespace measure {
 
 				// run code
 				int ret = executor->run(binary, mod_env, workdir.string());
-				if(ret != 0) { throw MeasureException("Failed to run executable for measurements - return code error!"); }
+				assert_eq(ret, 0) << "Failed to run executable for measurements - return code error!";
 
 				// load data and merge it
 				data.mergeIn(loadResults(workdir));
