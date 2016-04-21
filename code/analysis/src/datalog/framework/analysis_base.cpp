@@ -85,46 +85,25 @@ namespace framework {
 			}
 
 			int visitTupleType(const core::TupleTypePtr& tuple) override {
-
-				// get new ID for this node
 				int id = ++node_counter;
-
-				// insert into tuple type relation
 				insert("TupleType", id);
-
-				// insert element types
 				make_node_list(tuple);
-
-				// return id
 				return id;
 			}
 
 			int visitFunctionType(const core::FunctionTypePtr& fun) override {
-
-				// get new ID for this node
 				int id = ++node_counter;
-
-				// insert into function type relation
 				int parameter_types = visit(fun->getParameterTypes());
 				int return_type = visit(fun->getReturnType());
 				uint kind = fun->getFunctionKind()->getValue();
 				int instantiation_types = visit(fun->getInstantiationTypes());
-
 				insert("FunctionType", id, parameter_types, return_type, kind, instantiation_types);
-
-				// return id
 				return id;
 			}
 
 			int visitTypeVariable(const core::TypeVariablePtr& var) override {
-
-				// get new ID for this node
 				int id = ++node_counter;
-
-				// insert record into relation
 				insert("TypeVariable", id, var->getVarName()->getValue());
-
-				// return id
 				return id;
 			}
 
@@ -187,12 +166,9 @@ namespace framework {
 
 			int visitCallExpr(const core::CallExprPtr& var) override {
 				int id = ++node_counter;
-
 				int function_expr = visit(var->getFunctionExpr());
 				insert("CallExpr", id, function_expr);
-
 				make_node_list(var);
-
 				return id;
 			}
 
@@ -217,11 +193,8 @@ namespace framework {
 
 			int visitCompoundStmt(const core::CompoundStmtPtr& var) override {
 				int id = ++node_counter;
-
 				insert("CompoundStmt", id);
-
 				make_node_list(var);
-
 				return id;
 			}
 
@@ -254,27 +227,15 @@ namespace framework {
 
 			int visitTypes(const core::TypesPtr& types) override {
 				int id = ++node_counter;
-
-				// insert type into relation
 				insert("Types", id);
-
-				//insert element types
 				make_node_list(types);
-
-				// return id
 				return id;
 			}
 
 			int visitParents(const core::ParentsPtr& parents) override {
 				int id = ++node_counter;
-
-				// insert parent into relation
 				insert("Parents", id);
-
-				//insert list of parents
 				make_node_list(parents);
-
-				// return id
 				return id;
 			}
 
