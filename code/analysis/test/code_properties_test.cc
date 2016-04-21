@@ -99,8 +99,138 @@ namespace datalog {
 		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("decl f : (int<4>)->int<4>;"
 			                         "def f = (x : int<4>)->int<4> {"
 			                         "	return (x==0)?1:f(x-1)*x;"
-			                         "}; f"), true));
+			                         "}; f")));
 
+	}
+
+	TEST(CodeProperties, Types) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("int<4>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("someweirdname<>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("'a")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("'a...")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("'a<>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("'a...<>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("vector<int<4>, 4>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("vector<'a, 4>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("ref<'a,f,f,plain>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("ref<'a,f,t,plain>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("ref<'a,t,f,plain>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("ref<'a,t,t,plain>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("ref<'a,f,f,cpp_ref>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("ref<'a,f,f,cpp_rref>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("ptr<'a>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("ptr<'a,f,f>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("ptr<'a,t,f>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("ptr<'a,f,t>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("ptr<'a,t,t>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct { a : int<4>; b : int<5>; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct name { a : int<4>; b : int<5>; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("let papa = t<11> in struct name : [papa] { a : int<4>; b : int<5>; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("let papa = t<11> in struct name : [private papa] { a : int<4>; b : int<5>; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("let papa = t<11> in struct name : [protected papa] { a : int<4>; b : int<5>; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("let papa = t<11> in struct name : [public papa] { a : int<4>; b : int<5>; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("let int = int<4> in int")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("rf<int<4>>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("() -> unit")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("(int<4>) -> int<4>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("( int<4> , rf<int<4>>) -> int<4>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("( int<4> , rf<int<4>>) => int<4>")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("(ary<'elem,'n>, vector<uint<8>,'n>) -> 'elem")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("let class = struct name { a : int<4>; b : int<5>; } in "
+		                          "class::()->int<4> ")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("let class = struct name { a : int<4>; b : int<5>; } in "
+		                          "class::()~>int<4> ")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("let class = struct name { a : int<4>; b : int<5>; } in "
+		                          "~class::()")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("let class = struct name { a : int<4>; b : int<5>; } in "
+		                          "class::()")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct C { field : int<4>; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("(rf<ary<rf<ary<struct{int : int<4>; float : real<4>; },1>>,1>>,"
+		                          " rf<ary<rf<ary<real<4>,1>>,1>>,"
+		                          " rf<ary<uint<8>,1>>)")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct class {"
+		                          "  a : int<4>;"
+		                          "}")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct class {"
+		                          "  a : int<4>;"
+		                          "  b : int<4>;"
+		                          "}")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct class {"
+		                          "  a : int<4>;"
+		                          "  ctor () { }"
+		                          "}")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct class {"
+		                          "  a : int<4>;"
+		                          "  ctor () { }"
+		                          "  ctor (a : int<4>) { }"
+		                          "}")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct class {"
+		                          "  a : int<4>;"
+		                          "  dtor () { }"
+		                          "}")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct class {"
+		                          "  a : int<4>;"
+		                          "  dtor virtual () { }"
+		                          "}")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct class {"
+		                          "  a : int<4>;"
+		                          "  lambda f = () -> int<4> { return 1; }"
+		                          "}")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct class {" //multiple functions with the same name
+		                          "  a : int<4>;"
+		                          "  lambda f = () -> int<4> { return 1; }"
+		                          "  lambda f = (a : int<4>) -> int<4> { return 1; }"
+		                          "}")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct class {"
+		                          "  a : int<4>;"
+		                          "  lambda f = () -> int<4> { return 1; }"
+		                          "  lambda g = (b : int<4>) -> int<4> { return b; }"
+		                          "}")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct class {"
+		                          "  a : int<4>;"
+		                          "  const lambda b = () -> int<4> { return 1; }"
+		                          "  volatile lambda c = () -> int<4> { return 1; }"
+		                          "  volatile const lambda d = (a : int<4>) -> int<4> { return 1; }"
+		                          "  const volatile lambda e = (a : int<4>) -> int<4> { return 1; }"
+		                          "  virtual const lambda f = () -> int<4> { return 1; }"
+		                          "  virtual volatile lambda g = () -> int<4> { return 1; }"
+		                          "  virtual volatile const lambda h = (a : int<4>) -> int<4> { return 1; }"
+		                          "  virtual const volatile lambda i = (a : int<4>) -> int<4> { return 1; }"
+		                          "}")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct class {"
+		                          "  a : int<4>;"
+		                          "  pure virtual b : () -> int<4>"
+		                          "  pure virtual const c : () -> int<4>"
+		                          "  pure virtual volatile d : () -> int<4>"
+		                          "  pure virtual volatile const e : (int<4>) -> int<4>"
+		                          "  pure virtual const volatile f : (int<4>) -> int<4>"
+		                          "}")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("struct class {"
+		                          "  a : int<4>;"
+		                          "  ctor () { }"
+		                          "  ctor (a : int<4>) { }"
+		                          "  dtor () { }"
+		                          "  lambda f = () -> int<4> { return 1; }"
+		                          "  virtual const volatile lambda g = () -> int<4> { return 1; }"
+		                          "  pure virtual h : () -> int<4>"
+		                          "}")));
 	}
 
 } // end namespace datalog

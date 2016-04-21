@@ -60,6 +60,7 @@ Node(X) :- LambdaDefinition(X).
 Node(X) :- MemberFunction(X,_,_,_).
 Node(X) :- MemberFunctions(X).
 Node(X) :- Parameters(X).
+Node(X) :- Parent(X,_,_,_).
 Node(X) :- PureVirtualMemberFunction(X,_,_).
 Node(X) :- PureVirtualMemberFunctions(X).
 
@@ -135,6 +136,8 @@ UsedNode(X) :- LambdaBinding(_,X,_).
 UsedNode(X) :- LambdaBinding(_,_,X).
 
 UsedNode(X) :- MemberFunction(_,_,_,X).
+
+UsedNode(X) :- Parent(_,_,_,X).
 
 UsedNode(X) :- PureVirtualMemberFunction(_,_,X).
 

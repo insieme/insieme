@@ -35,10 +35,10 @@
 .decl TupleType     ( id : node ) input
 .decl FunctionType  ( id : node , parameter_types : node, return_type : node , kind : function_kind , instantiation_types : node ) input
 
-.decl TypeVariable                ( id : node , name : string ) input
-.decl VariadicTypeVariable        ( id : node , name : string ) input
-.decl GenericTypeVariable         ( id : node , name : string , parameter_types : node ) input
-.decl VariadicGenericTypeVariable ( id : node , name : string , parameter_types : node ) input
+.decl TypeVariable                ( id : node , var_name : string ) input
+.decl VariadicTypeVariable        ( id : node , var_name : string ) input
+.decl GenericTypeVariable         ( id : node , var_name : string , type_parameter : node ) input
+.decl VariadicGenericTypeVariable ( id : node , var_name : string , type_parameter : node ) input
 
 .decl NumericType      ( id : node , value : node ) input
 .decl TagType          ( id : node , tag : node , record : node ) input
@@ -97,7 +97,7 @@
 .decl MemberFunction ( id : node , name : string , virtual_flag : bool , implementation : node ) input
 .decl MemberFunctions ( id : node ) input
 .decl Parameters ( id : node ) input
-//# Name: Parent;  Base: Support;  Params: BoolValue, UIntValue, Type
+.decl Parent ( id : node , virtual : bool , access_specifier_kind : uint , type : node ) input
 .decl PureVirtualMemberFunction ( id : node , name : string , type : node ) input
 .decl PureVirtualMemberFunctions ( id : node ) input
 //# Name: SwitchCase;  Base: Support;  Params: Literal, CompoundStmt
@@ -143,3 +143,4 @@
 //# Name: WhileStmt;  Base: Statement;  Params: Expression, CompoundStmt
 //# Name: ContinueStmt;  Base: Statement
 //# Name: BreakStmt;  Base: Statement
+//# Name: Parent;  Base: Support;  Params: BoolValue, UIntValue, Type

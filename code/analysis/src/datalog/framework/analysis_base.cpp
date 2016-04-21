@@ -107,6 +107,29 @@ namespace framework {
 				return id;
 			}
 
+			int visitVariadicTypeVariable(const core::VariadicTypeVariablePtr& var) override {
+				int id = ++node_counter;
+				const string& var_name = var->getVarName()->getValue();
+				insert("VariadicTypeVariable", id, var_name);
+				return id;
+			}
+
+			int visitGenericTypeVariable(const core::GenericTypeVariablePtr& var) override {
+				int id = ++node_counter;
+				const string& var_name = var->getVarName()->getValue();
+				int type_parameter = visit(var->getTypeParameter());
+				insert("GenericTypeVariable", id, var_name, type_parameter);
+				return id;
+			}
+
+			int visitVariadicGenericTypeVariable(const core::VariadicGenericTypeVariablePtr& var) override {
+				int id = ++node_counter;
+				const string& var_name = var->getVarName()->getValue();
+				int type_parameter = visit(var->getTypeParameter());
+				insert("VariadicGenericTypeVariable", id, var_name, type_parameter);
+				return id;
+			}
+
 			int visitNumericType(const core::NumericTypePtr& var) override {
 				int id = ++node_counter;
 				int node = visit(var->getValue());
@@ -343,6 +366,15 @@ namespace framework {
 				int id = ++node_counter;
 				insert("Parameters", id);
 				make_node_list(params);
+				return id;
+			}
+
+			int visitParent(const core::ParentPtr& var) override {
+				int id = ++node_counter;
+				bool vvirtual = var->getVirtual()->getValue();
+				unsigned access_specifier_kind = var->getAccessSpecifierKind()->getValue();
+				int type = visit(var->getType());
+				insert("Parent", id, vvirtual, access_specifier_kind, type);
 				return id;
 			}
 
