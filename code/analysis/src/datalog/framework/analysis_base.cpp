@@ -203,6 +203,14 @@ namespace framework {
 				return id;
 			}
 
+			int visitInitExpr(const core::InitExprPtr& var) override {
+				int id = ++node_counter;
+				int memory_expr = visit(var->getMemoryExpr());
+				int init_exprs = visit(var->getInitExprs());
+				insert("InitExpr", id, memory_expr, init_exprs);
+				return id;
+			}
+
 			int visitLambdaExpr(const core::LambdaExprPtr& var) override {
 				int id = ++node_counter;
 				int type = visit(var->getType());
@@ -217,6 +225,13 @@ namespace framework {
 				int type = visit(var->getType());
 				const string& name = var->getName()->getValue();
 				insert("LambdaReference", id, type, name);
+				return id;
+			}
+
+			int visitTupleExpr(const core::TupleExprPtr& var) override {
+				int id = ++node_counter;
+				int expressions = visit(var->getExpressions());
+				insert("TupleExpr", id, expressions);
 				return id;
 			}
 

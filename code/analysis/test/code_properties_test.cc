@@ -233,6 +233,78 @@ namespace datalog {
 		                          "}")));
 	}
 
+	TEST(CodeProperties, Expressions) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("true?1:0")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("type_lit(1)")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1u")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1l")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1ul")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1ll")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1ull")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1.0f")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1.0")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("2.3E-5f")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("2.0E+0")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1 + 3")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1 - 0")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1 * 0")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1 / 0")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1 | 0")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1 & 0")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1 ^ 0")));
+
+		// precedence
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1 + 0 * 5")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1 * 0 + 5")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("(1.0)")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("((1.0))")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("((1.0) + 4.0)")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("1 + 2 * 3")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("(1 + 2) * 3")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("def struct x { a : int<4>; b : int<4>; }; <ref<x>> { 4, 5 }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("def struct x { a : int<4>; }; <ref<x>> { 4 }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("def struct x { }; <ref<x>> { }")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("def union uni { a : int<4>; lambda f = ()->unit {} }; uni")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("def union uni { a : int<4>; lambda f = ()->unit {} }; { var ref<uni,f,f,plain> a; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("def union uni { a : int<4>; lambda f = ()->unit {} }; { <ref<uni>> { 4 }; }")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("(_ : 'a) -> bool { return true; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("(x : 'a) -> 'a { return x+CAST('a) 3; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("(x : 'a) => x+CAST('a) 3")));
+
+		// return type deduction
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("() => { return true; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("(x : bool) => { if(x) { return true; } else { return false; } }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("(x : bool) => { if(x) { return 1; } else { return -5; } }")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("type_lit(int<4>)")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("decl f : ()->unit;"
+		                                "let f = ()->unit { 5; ()->unit { f(); } (); } in f")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("(v : int<4>, exp : int<4>) -> int<4> { "
+		                                "	let one = (_ : int<4>)=>4; "
+		                                "	let two = (x : int<4>)=>x+exp; "
+		                                "    return one(two(exp));"
+		                                "}")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("(v : int<4>, exp : int<4>) -> int<4> { "
+		                                "	let one = (_ : int<4>)-> int<4> { return 4;  };"
+		                                "	let two = (x : int<4>)-> int<4> { return x+5; };"
+		                                "    return one(two(exp));"
+		                                "}")));
+	}
+
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme

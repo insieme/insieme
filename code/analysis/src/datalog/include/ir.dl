@@ -58,11 +58,12 @@
 .decl BindExpr ( id : node, parameters : node , call : node ) input
 //# Name: CastExpr;  Base: Expression;  Params: Type, Expression
 //# Name: InitExpr;  Base: Expression;  Params: GenericType, Expression, Expressions
+.decl InitExpr ( id : node , memory_expr : node , init_exprs : node ) input
 //# Name: JobExpr;  Base: Expression;  Params: GenericType, Expression, Expression
 .decl LambdaExpr ( id : node , type : node , reference : node , definition : node ) input
 .decl LambdaReference ( id : node , type : node , name : string ) input
 //# Name: MarkerExpr;  Base: Expression;  Params: Type, UIntValue, Expression
-//# Name: TupleExpr;  Base: Expression;  Params: TupleType, Expressions
+.decl TupleExpr ( id : node , expressions : node ) input
 
 
 // Statement Nodes
@@ -144,3 +145,4 @@
 //# Name: ContinueStmt;  Base: Statement
 //# Name: BreakStmt;  Base: Statement
 //# Name: Parent;  Base: Support;  Params: BoolValue, UIntValue, Type
+//# Name: TupleExpr;  Base: Expression;  Params: TupleType, Expressions
