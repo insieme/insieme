@@ -172,6 +172,14 @@ namespace framework {
 				return id;
 			}
 
+			int visitBindExpr(const core::BindExprPtr& var) override {
+				int id = ++node_counter;
+				int parameters = visit(var->getParameters());
+				int call = visit(var->getParameters());
+				insert("BindExpr", id, parameters, call);
+				return id;
+			}
+
 			int visitLambdaExpr(const core::LambdaExprPtr& var) override {
 				int id = ++node_counter;
 				int type = visit(var->getType());
@@ -215,11 +223,41 @@ namespace framework {
 				return id;
 			}
 
+			int visitBreakStmt(const core::BreakStmtPtr& var) override {
+				int id = ++node_counter;
+				insert("BreakStmt", id);
+				return id;
+			}
+
+			int visitContinueStmt(const core::ContinueStmtPtr& var) override {
+				int id = ++node_counter;
+				insert("ContinueStmt", id);
+				return id;
+			}
+
+			int visitForStmt(const core::ForStmtPtr& var) override {
+				int id = ++node_counter;
+				int declaration = visit(var->getDeclaration());
+				int end = visit(var->getEnd());
+				int step = visit(var->getStep());
+				int body = visit(var->getBody());
+				insert("ForStmt", id, declaration, end, step, body);
+				return id;
+			}
+
 			int visitReturnStmt(const core::ReturnStmtPtr& var) override {
 				int id = ++node_counter;
 				int return_expr = visit(var->getReturnExpr());
 				int return_var = visit(var->getReturnVar());
 				insert("ReturnStmt", id, return_expr, return_var);
+				return id;
+			}
+
+			int visitWhileStmt(const core::WhileStmtPtr& var) override {
+				int id = ++node_counter;
+				int condition = visit(var->getCondition());
+				int body = visit(var->getBody());
+				insert("WhileStmt", id, condition, body);
 				return id;
 			}
 

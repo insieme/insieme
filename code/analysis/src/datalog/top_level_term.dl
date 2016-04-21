@@ -34,6 +34,7 @@ Node(X) :- Struct(X,_,_,_,_,_,_,_,_).
 Node(X) :- Literal(X,_,_).
 Node(X) :- Variable(X,_,_).
 Node(X) :- CallExpr(X,_).
+Node(X) :- BindExpr(X,_,_).
 Node(X) :- LambdaExpr(X,_,_,_).
 Node(X) :- LambdaReference(X,_,_).
 
@@ -41,7 +42,11 @@ Node(X) :- LambdaReference(X,_,_).
 Node(X) :- CompoundStmt(X).
 Node(X) :- DeclarationStmt(X,_,_).
 Node(X) :- IfStmt(X,_,_,_).
+Node(X) :- BreakStmt(X).
+Node(X) :- ContinueStmt(X).
+Node(X) :- ForStmt(X,_,_,_,_).
 Node(X) :- ReturnStmt(X,_,_).
+Node(X) :- WhileStmt(X,_,_).
 
       /* Support nodes */
 Node(X) :- Types(X).
@@ -93,6 +98,9 @@ UsedNode(X) :- Variable(_,X,_).
 
 UsedNode(X) :- CallExpr(_,X).
 
+UsedNode(X) :- BindExpr(_,X,_).
+UsedNode(X) :- BindExpr(_,_,X).
+
 UsedNode(X) :- LambdaExpr(_,X,_,_).
 UsedNode(X) :- LambdaExpr(_,_,X,_).
 UsedNode(X) :- LambdaExpr(_,_,_,X).
@@ -106,8 +114,16 @@ UsedNode(X) :- IfStmt(_,X,_,_).
 UsedNode(X) :- IfStmt(_,_,X,_).
 UsedNode(X) :- IfStmt(_,_,_,X).
 
+UsedNode(X) :- ForStmt(_,X,_,_,_).
+UsedNode(X) :- ForStmt(_,_,X,_,_).
+UsedNode(X) :- ForStmt(_,_,_,X,_).
+UsedNode(X) :- ForStmt(_,_,_,_,X).
+
 UsedNode(X) :- ReturnStmt(_,X,_).
 UsedNode(X) :- ReturnStmt(_,_,X).
+
+UsedNode(X) :- WhileStmt(_,X,_).
+UsedNode(X) :- WhileStmt(_,_,X).
 
 UsedNode(X) :- Field(_,_,X).
 

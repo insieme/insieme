@@ -87,11 +87,19 @@ namespace datalog {
 
 		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct B; def struct B { x : ref<B>; }; B")));
 		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct data; def struct data { x : ptr<data>; }; data")));
-//		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct A; decl struct B; def struct A { x : ref<B>; }; def struct B { x : ref<A>; }; B")));
-//		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct A; decl struct B; def struct A { x : ptr<B>; }; def struct B { x : ptr<A>; }; A")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct A; decl struct B; def struct A { x : ref<B>; }; def struct B { x : ref<A>; }; B")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct A; decl struct B; def struct A { x : ptr<B>; }; def struct B { x : ptr<A>; }; A")));
 
-//		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct A; decl struct B; def struct A { x : ref<A>; }; def struct B { y : ref<A>; }; B")));
-//		EXPECT_TRUE(getTopLevelNodes(builder.parseType("def struct A { lambda retA = () -> A { return *this; } }; A")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("decl struct A; decl struct B; def struct A { x : ref<A>; }; def struct B { y : ref<A>; }; B")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("def struct A { lambda retA = () -> A { return *this; } }; A")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("{ while(true) { continue; } }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("{ while(true) { break; } }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("{ for(int<4> i = 1 .. 10 ) { continue; } }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("decl f : (int<4>)->int<4>;"
+			                         "def f = (x : int<4>)->int<4> {"
+			                         "	return (x==0)?1:f(x-1)*x;"
+			                         "}; f"), true));
 
 	}
 

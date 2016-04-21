@@ -53,9 +53,9 @@
 // Expression Nodes
 
 .decl Literal  ( id : node , type : node , string_value : string ) input
-.decl Variable ( id : node , type : node , var_id : uint ) input  /* do we need the var_id??? */
-.decl CallExpr  ( id : node , function_expr : node ) input  /* is this complete? */
-//# Name: BindExpr;  Base: Expression;  Params: Type, Parameters, CallExpr
+.decl Variable ( id : node , type : node , var_id : uint ) input
+.decl CallExpr  ( id : node , function_expr : node ) input
+.decl BindExpr ( id : node, parameters : node , call : node ) input
 //# Name: CastExpr;  Base: Expression;  Params: Type, Expression
 //# Name: InitExpr;  Base: Expression;  Params: GenericType, Expression, Expressions
 //# Name: JobExpr;  Base: Expression;  Params: GenericType, Expression, Expression
@@ -70,9 +70,9 @@
 .decl CompoundStmt ( id : node ) input
 .decl DeclarationStmt ( id : node , variable : node , initialization : node ) input
 .decl IfStmt ( id : node , condition : node , then_body : node, else_body : node ) input
-//# Name: BreakStmt;  Base: Statement
-//# Name: ContinueStmt;  Base: Statement
-//# Name: ForStmt;  Base: Statement;  Params: DeclarationStmt, Expression, Expression, CompoundStmt
+.decl BreakStmt ( id : node ) input
+.decl ContinueStmt ( id : node ) input
+.decl ForStmt ( id : node , declaration : node , end : node , step : node , body : node ) input
 //# Name: GotoStmt;  Base: Statement;  Params: StringValue
 //# Name: LabelStmt;  Base: Statement;  Params: StringValue
 //# Name: MarkerStmt;  Base: Statement;  Params: UIntValue, Statement
@@ -80,7 +80,7 @@
 //# Name: SwitchStmt;  Base: Statement;  Params: Expression, SwitchCases, CompoundStmt
 //# Name: ThrowStmt;  Base: Statement;  Params: Expression
 //# Name: TryCatchStmt;  Base: Statement;  ListName: Clauses;  Params: CompoundStmt, CatchClause
-//# Name: WhileStmt;  Base: Statement;  Params: Expression, CompoundStmt
+.decl WhileStmt ( id : node , condition : node , body : node ) input
 
 
 // Support Nodes
@@ -140,3 +140,6 @@
 //# Name: ReturnStmt;  Base: Statement;  Params: Expression, Variable
 //# Name: PureVirtualMemberFunction;  Base: Support;  Params: StringValue, FunctionType
 //# Name: PureVirtualMemberFunctions;  Base: Support;  ListName: Members;  Params: PureVirtualMemberFunction
+//# Name: WhileStmt;  Base: Statement;  Params: Expression, CompoundStmt
+//# Name: ContinueStmt;  Base: Statement
+//# Name: BreakStmt;  Base: Statement
