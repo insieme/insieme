@@ -76,7 +76,7 @@
 //# Name: GotoStmt;  Base: Statement;  Params: StringValue
 //# Name: LabelStmt;  Base: Statement;  Params: StringValue
 //# Name: MarkerStmt;  Base: Statement;  Params: UIntValue, Statement
-//# Name: ReturnStmt;  Base: Statement;  Params: Expression, Variable
+.decl ReturnStmt( id : node , return_expr : node , return_var : node ) input
 //# Name: SwitchStmt;  Base: Statement;  Params: Expression, SwitchCases, CompoundStmt
 //# Name: ThrowStmt;  Base: Statement;  Params: Expression
 //# Name: TryCatchStmt;  Base: Statement;  ListName: Clauses;  Params: CompoundStmt, CatchClause
@@ -94,12 +94,12 @@
 .decl Lambda ( id : node , type : node , parameters : node , body : node ) input
 .decl LambdaBinding ( id : node , reference : node , lambda : node ) input
 .decl LambdaDefinition ( id : node ) input
-//# Name: MemberFunction;  Base: Support;  Params: StringValue, BoolValue, Expression
-//# Name: MemberFunctions;  Base: Support;  ListName: Members;  Params: MemberFunction
+.decl MemberFunction ( id : node , name : string , virtual_flag : bool , implementation : node ) input
+.decl MemberFunctions ( id : node ) input
 .decl Parameters ( id : node ) input
 //# Name: Parent;  Base: Support;  Params: BoolValue, UIntValue, Type
-//# Name: PureVirtualMemberFunction;  Base: Support;  Params: StringValue, FunctionType
-//# Name: PureVirtualMemberFunctions;  Base: Support;  ListName: Members;  Params: PureVirtualMemberFunction
+.decl PureVirtualMemberFunction ( id : node , name : string , type : node ) input
+.decl PureVirtualMemberFunctions ( id : node ) input
 //# Name: SwitchCase;  Base: Support;  Params: Literal, CompoundStmt
 //# Name: SwitchCases;  Base: Support;  ListName: Cases;  Params: SwitchCase
 //# Name: TagTypeBinding;  Base: Support;  Params: TagTypeReference, Record
@@ -135,3 +135,8 @@
 //# Name: LambdaBinding;  Base: Support;  Params: LambdaReference, Lambda
 //# Name: LambdaDefinition;  Base: Support;  ListName: Definitions;  Params: LambdaBinding
 //# Name: Parameters;  Base: Support;  ListName: Parameters;  Params: Variable
+//# Name: MemberFunction;  Base: Support;  Params: StringValue, BoolValue, Expression
+//# Name: MemberFunctions;  Base: Support;  ListName: Members;  Params: MemberFunction
+//# Name: ReturnStmt;  Base: Statement;  Params: Expression, Variable
+//# Name: PureVirtualMemberFunction;  Base: Support;  Params: StringValue, FunctionType
+//# Name: PureVirtualMemberFunctions;  Base: Support;  ListName: Members;  Params: PureVirtualMemberFunction

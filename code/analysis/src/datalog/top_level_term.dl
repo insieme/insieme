@@ -41,6 +41,7 @@ Node(X) :- LambdaReference(X,_,_).
 Node(X) :- CompoundStmt(X).
 Node(X) :- DeclarationStmt(X,_,_).
 Node(X) :- IfStmt(X,_,_,_).
+Node(X) :- ReturnStmt(X,_,_).
 
       /* Support nodes */
 Node(X) :- Types(X).
@@ -51,7 +52,11 @@ Node(X) :- Fields(X).
 Node(X) :- Lambda(X,_,_,_).
 Node(X) :- LambdaBinding(X,_,_).
 Node(X) :- LambdaDefinition(X).
+Node(X) :- MemberFunction(X,_,_,_).
+Node(X) :- MemberFunctions(X).
 Node(X) :- Parameters(X).
+Node(X) :- PureVirtualMemberFunction(X,_,_).
+Node(X) :- PureVirtualMemberFunctions(X).
 
 
 
@@ -101,6 +106,9 @@ UsedNode(X) :- IfStmt(_,X,_,_).
 UsedNode(X) :- IfStmt(_,_,X,_).
 UsedNode(X) :- IfStmt(_,_,_,X).
 
+UsedNode(X) :- ReturnStmt(_,X,_).
+UsedNode(X) :- ReturnStmt(_,_,X).
+
 UsedNode(X) :- Field(_,_,X).
 
 UsedNode(X) :- Lambda(_,X,_,_).
@@ -109,6 +117,10 @@ UsedNode(X) :- Lambda(_,_,_,X).
 
 UsedNode(X) :- LambdaBinding(_,X,_).
 UsedNode(X) :- LambdaBinding(_,_,X).
+
+UsedNode(X) :- MemberFunction(_,_,_,X).
+
+UsedNode(X) :- PureVirtualMemberFunction(_,_,X).
 
 
 

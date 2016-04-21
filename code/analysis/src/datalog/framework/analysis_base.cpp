@@ -242,6 +242,14 @@ namespace framework {
 				return id;
 			}
 
+			int visitReturnStmt(const core::ReturnStmtPtr& var) override {
+				int id = ++node_counter;
+				int return_expr = visit(var->getReturnExpr());
+				int return_var = visit(var->getReturnVar());
+				insert("ReturnStmt", id, return_expr, return_var);
+				return id;
+			}
+
 			// -- Support Nodes --
 
 			int visitTypes(const core::TypesPtr& types) override {
@@ -316,10 +324,41 @@ namespace framework {
 				return id;
 			}
 
+			int visitMemberFunction(const core::MemberFunctionPtr& fun) override {
+				int id = ++node_counter;
+				const string& name = fun->getName()->getValue();
+				bool virtual_flag = fun->getVirtualFlag()->getValue();
+				int implementation = visit(fun->getImplementation());
+				insert("MemberFunction", id, name, virtual_flag, implementation);
+				return id;
+			}
+
+			int visitMemberFunctions(const core::MemberFunctionsPtr& member_funcs) override {
+				int id = ++node_counter;
+				insert("MemberFunctions", id);
+				make_node_list(member_funcs);
+				return id;
+			}
+
 			int visitParameters(const core::ParametersPtr& params) override {
 				int id = ++node_counter;
 				insert("Parameters", id);
 				make_node_list(params);
+				return id;
+			}
+
+			int visitPureVirtualMemberFunction(const core::PureVirtualMemberFunctionPtr& pvmf) override {
+				int id = ++node_counter;
+				const string& name = pvmf->getName()->getValue();
+				int type = visit(pvmf->getType());
+				insert("PureVirtualMemberFunction", id, name, type);
+				return id;
+			}
+
+			int visitPureVirtualMemberFunctions(const core::PureVirtualMemberFunctionsPtr& pvm_funcs) override {
+				int id = ++node_counter;
+				insert("PureVirtualMemberFunctions", id);
+				make_node_list(pvm_funcs);
 				return id;
 			}
 
