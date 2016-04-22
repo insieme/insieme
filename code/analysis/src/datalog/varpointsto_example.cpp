@@ -34,27 +34,76 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/analysis/datalog/varpointsto_example.h"
 
-#include "insieme/analysis/datalog/souffle_interface.h"
+#include "insieme/analysis/datalog/framework/analysis_base.h"
+
+#include "souffle/gen/varpointsto_example.h"
+
 
 namespace insieme {
 namespace analysis {
+namespace datalog {
 
-TEST(SouffleInterface, Basic) {
 
-	SouffleInterface si;
+namespace {
 
-	si.run();
-	si.printAll();
-	sf_result_t res = si.getResultSet();
+	class Analysis : public souffle::Sf_varpointsto_example {
+	public:
+		Analysis() {}
 
-	decltype(res) expectedRes;
-	expectedRes.emplace_back(1337);
+		VarpointstoExample::alias_t getAlias() {
+			using rel_type = decltype(rel_alias);
 
-	EXPECT_EQ(expectedRes, res);
+			VarpointstoExample::alias_t res;
 
+			#define symtab_get_num(i) (int32_t) cur[i]
+			#define symtab_get_str(i) symTable.resolve(cur[i])
+
+			for (const rel_type::tuple_type &cur : rel_alias) {
+				// There's no need for an inner loop like in 'printCSV',
+				// since we know the format beforehand.
+				// Hint: symTab in generated code, 0=num, 1=str
+				res.emplace_back(std::string(symtab_get_str(0)), std::string(symtab_get_str(1)));
+			}
+
+			#undef symtab_get_num
+			#undef symtab_get_str
+
+			return res;
+		}
+
+		void printAlias() {
+			auto res = getAlias();
+			std::cout << "Varpointsto Alias result: " << res.size() << " elements" << std::endl;
+			for (const auto& line : res) {
+				std::cout << std::get<0>(line) << " \t"
+				          << std::get<1>(line) << std::endl;
+			}
+		}
+	};
+
+} // end anonymous namespace
+
+
+VarpointstoExample::~VarpointstoExample() {
+	delete static_cast<Analysis*>(analysis);
 }
 
+void VarpointstoExample::run() {
+	auto analysis = new Analysis();
+	analysis->run();
+	this->analysis = analysis;
+}
+
+VarpointstoExample::alias_t VarpointstoExample::getAlias() {
+	return static_cast<Analysis*>(analysis)->getAlias();
+}
+
+void VarpointstoExample::printAlias() {
+	static_cast<Analysis*>(analysis)->printAlias();
+}
+
+} // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme

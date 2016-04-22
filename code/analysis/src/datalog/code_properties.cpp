@@ -34,59 +34,71 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/datalog/souffle_interface.h"
+#include "insieme/analysis/datalog/code_properties.h"
+
+#include "insieme/analysis/datalog/framework/analysis_base.h"
+
+#include "souffle/gen/polymorph_types_analysis.h"
+#include "souffle/gen/top_level_term.h"
 
 namespace insieme {
 namespace analysis {
+namespace datalog {
 
-// TODO remove as soon as proper souffle header exists
-class Sf_Dummy_base {
-public:
-	sf_result_t getResultSet() const {
-		sf_result_t res;
-		res.emplace_back(1337);
-		return res;
+
+	/**
+	 * Determines whether the given type is a polymorph type.
+	 */
+	bool isPolymorph(const core::TypePtr& type, bool debug) {
+
+		// instantiate the analysis
+		souffle::Sf_polymorph_types_analysis analysis;
+
+		// fill in facts
+		int rootNodeID = framework::extractFacts(analysis, type);
+
+		// add start node
+		analysis.rel_rootNode.insert(rootNodeID);
+
+		// print debug information
+		if (debug) analysis.dumpInputs();
+
+		// run analysis
+		analysis.run();
+
+		// print debug information
+		if (debug) analysis.dumpOutputs();
+
+		// read result
+		auto& rel = analysis.rel_result;
+		return rel.size() > 0;
 	}
-	void printAll() const {}
-	void run() const {}
-};
 
-/*
- * Souffle wrapper
- */
+	/**
+	 * Determine top level nodes
+	 */
+	std::vector<int> getTopLevelNodes(const core::NodePtr& root, bool debug)
+	{
+		// instantiate the analysis
+		souffle::Sf_top_level_term analysis;
 
-using SouffleBase = Sf_Dummy_base;
+		// fill in facts
+		framework::extractFacts(analysis, root);
 
-class SouffleWrapper : public SouffleBase {
-public:
-	SouffleWrapper() : SouffleBase() {}
+		// print debug information
+		if (debug) analysis.dumpInputs();
 
-};
+		// run analysis
+		analysis.run();
 
+		// print debug information
+		if (debug) analysis.dumpOutputs();
 
-/*
- * Souffle interface
- */
+		// read result
+		return std::vector<int>{};
+	}
 
-SouffleInterface::SouffleInterface() {
-	impl = new SouffleWrapper();
-}
-
-SouffleInterface::~SouffleInterface() {
-	delete impl;
-}
-
-void SouffleInterface::run() const {
-	impl->run();
-}
-
-void SouffleInterface::printAll() const {
-	impl->printAll();
-}
-
-sf_result_t SouffleInterface::getResultSet() const {
-	return impl->getResultSet();
-}
-
+} // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme
+

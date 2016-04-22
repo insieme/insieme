@@ -36,33 +36,24 @@
 
 #pragma once
 
-#include <tuple>
-#include <vector>
+#include "insieme/core/forward_decls.h"
+
+// -- forward declarations --
+namespace souffle {
+	class Program;
+} // end namespace souffle
 
 namespace insieme {
 namespace analysis {
+namespace datalog {
+namespace framework {
 
+	/**
+	 * Extracts facts from the given root node and inserts them into the given program.
+	 */
+	int extractFacts(souffle::Program& analysis, const core::NodePtr& root);
 
-using num_t = uint32_t;
-using str_t = std::string;
-using sf_result_t = std::vector<std::tuple<num_t>>;
-
-class SouffleWrapper;
-
-
-class SouffleInterface {
-public:
-	SouffleInterface();
-	~SouffleInterface();
-
-	void run() const;
-	void printAll() const;
-
-	sf_result_t getResultSet() const;
-
-private:
-	SouffleWrapper *impl; // pimpl
-};
-
-} // end namespace transform
+} // end namespace framework
+} // end namespace datalog
 } // end namespace analysis
+} // end namespace insieme
