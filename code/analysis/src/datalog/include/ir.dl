@@ -41,12 +41,12 @@
 .decl VariadicGenericTypeVariable ( id : node , var_name : string , type_parameter : node ) input
 
 .decl NumericType      ( id : node , value : node ) input
-.decl TagType          ( id : node , tag : node , record : node ) input
+.decl TagType          ( id : node , tag : node , definition : node ) input
 .decl TagTypeReference ( id : node , name : string ) input
 
 .decl Struct ( id : node , name : string , fields : node , constructors : node , destructor : node
              , destructor_virtual : bool , member_functions : node , pure_virtual_member_functions : node , parents : node ) input
-//# Name: Program;  Base: Node;  ListName: EntryPoints;  Params: Expression
+.decl Program ( id : node ) input
 .decl Union ( id : node , name : string , fields : node , constructos : node, destructor : node
              , destructor_virtual : bool , member_functions : node , pure_virtual_member_functions : node ) input
 
@@ -59,10 +59,10 @@
 .decl BindExpr ( id : node, parameters : node , call : node ) input
 .decl CastExpr ( id : node , sub_expression : node ) input
 .decl InitExpr ( id : node , memory_expr : node , init_exprs : node ) input
-//# Name: JobExpr;  Base: Expression;  Params: GenericType, Expression, Expression
+.decl JobExpr ( id : node , thread_num_range : node , body : node ) input
 .decl LambdaExpr ( id : node , type : node , reference : node , definition : node ) input
 .decl LambdaReference ( id : node , type : node , name : string ) input
-// MarkerExpr omitted
+// piped through .decl MarkerExpr ( id : node , expr_id : uint , sub_expression : node ) input
 .decl TupleExpr ( id : node , expressions : node ) input
 
 
@@ -74,9 +74,9 @@
 .decl BreakStmt ( id : node ) input
 .decl ContinueStmt ( id : node ) input
 .decl ForStmt ( id : node , declaration : node , end : node , step : node , body : node ) input
-//# Name: GotoStmt;  Base: Statement;  Params: StringValue
-//# Name: LabelStmt;  Base: Statement;  Params: StringValue
-// MarkerStmt omitted
+// obsolete .decl GotoStmt ( id : node , label : string ) input
+// obsolete .decl LabelStmt ( id : node ,  label : string ) input
+// piped through .decl MarkerStmt ( id : node , stmt_id : uint , sub_statement : node ) input
 .decl ReturnStmt( id : node , return_expr : node , return_var : node ) input
 .decl SwitchStmt ( id : node , switch_expr : node , cases : node , default_case : node ) input
 .decl ThrowStmt ( id : node , throw_expr : node ) input
@@ -103,8 +103,8 @@
 .decl PureVirtualMemberFunctions ( id : node ) input
 .decl SwitchCase ( id : node , guard : node , body : node ) input
 .decl SwitchCases ( id : node ) input
-//# Name: TagTypeBinding;  Base: Support;  Params: TagTypeReference, Record
-//# Name: TagTypeDefinition;  Base: Support;  ListName: Definitions;  Params: TagTypeBinding
+.decl TagTypeBinding ( id : node , tag : node , record : node ) input
+.decl TagTypeDefinition ( id : node ) input
 
 
 
@@ -157,3 +157,9 @@
 //# Name: MarkerStmt;  Base: Statement;  Params: UIntValue, Statement
 //# Name: InitExpr;  Base: Expression;  Params: GenericType, Expression, Expressions
 //# Name: ThrowStmt;  Base: Statement;  Params: Expression
+//# Name: Program;  Base: Node;  ListName: EntryPoints;  Params: Expression
+//# Name: JobExpr;  Base: Expression;  Params: GenericType, Expression, Expression
+//# Name: GotoStmt;  Base: Statement;  Params: StringValue
+//# Name: LabelStmt;  Base: Statement;  Params: StringValue
+//# Name: TagTypeDefinition;  Base: Support;  ListName: Definitions;  Params: TagTypeBinding
+//# Name: TagTypeBinding;  Base: Support;  Params: TagTypeReference, Record

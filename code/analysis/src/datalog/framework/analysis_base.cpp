@@ -140,8 +140,8 @@ namespace framework {
 			int visitTagType(const core::TagTypePtr& var) override {
 				int id = ++node_counter;
 				int tag = visit(var->getTag());
-				int record = visit(var->getRecord());
-				insert("TagType", id, tag, record);
+				int defintion = visit(var->getDefinition());
+				insert("TagType", id, tag, defintion);
 				return id;
 			}
 
@@ -166,6 +166,13 @@ namespace framework {
 				insert("Struct", id, name, fields, constructors, destructor, destructor_virtual,
 				       member_functions, pure_virtual_member_functions, parents);
 
+				return id;
+			}
+
+			int visitProgram(const core::ProgramPtr& var) override {
+				int id = ++node_counter;
+				insert("Program", id);
+				make_node_list(var);
 				return id;
 			}
 
@@ -231,6 +238,14 @@ namespace framework {
 				int memory_expr = visit(var->getMemoryExpr());
 				int init_exprs = visit(var->getInitExprs());
 				insert("InitExpr", id, memory_expr, init_exprs);
+				return id;
+			}
+
+			int visitJobExpr(const core::JobExprPtr& var) override {
+				int id = ++node_counter;
+				int thread_num_range = visit(var->getThreadNumRange());
+				int body = visit(var->getBody());
+				insert("JobExpr", id, thread_num_range, body);
 				return id;
 			}
 
@@ -309,6 +324,16 @@ namespace framework {
 				int body = visit(var->getBody());
 				insert("ForStmt", id, declaration, end, step, body);
 				return id;
+			}
+
+			int visitGotoStmt(const core::GotoStmtPtr& var) override {
+				assert_not_implemented() << "Goto statement not implemented!";
+				return -1;
+			}
+
+			int visitLabelStmt(const core::LabelStmtPtr& var) override {
+				assert_not_implemented() << "Label statement not implemented!";
+				return -1;
 			}
 
 			int visitMarkerStmt(const core::MarkerStmtPtr& var) override {
@@ -485,6 +510,21 @@ namespace framework {
 				int id = ++node_counter;
 				insert("SwitchCases", id);
 				make_node_list(var);
+				return id;
+			}
+
+			int visitTagTypeDefinition(const core::TagTypeDefinitionPtr& var) override {
+				int id = ++node_counter;
+				insert("TagTypeDefinition", id);
+				make_node_list(var);
+				return id;
+			}
+
+			int visitTagTypeBinding(const core::TagTypeBindingPtr& var) override {
+				int id = ++node_counter;
+				int tag = visit(var->getTag());
+				int record = visit(var->getRecord());
+				insert("TagTypeBinding", id, tag, record);
 				return id;
 			}
 

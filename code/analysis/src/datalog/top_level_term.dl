@@ -29,6 +29,7 @@ Node(X) :- TagType         (X,_,_).
 Node(X) :- TagTypeReference(X,_).
 
 Node(X) :- Struct(X,_,_,_,_,_,_,_,_).
+Node(X) :- Program(X).
 Node(X) :- Union(X,_,_,_,_,_,_,_).
 
       /* Expression nodes */
@@ -38,6 +39,7 @@ Node(X) :- CallExpr(X,_).
 Node(X) :- BindExpr(X,_,_).
 Node(X) :- CastExpr(X,_).
 Node(X) :- InitExpr(X,_,_).
+Node(X) :- JobExpr(X,_,_).
 Node(X) :- LambdaExpr(X,_,_,_).
 Node(X) :- LambdaReference(X,_,_).
 Node(X) :- TupleExpr(X,_).
@@ -73,6 +75,8 @@ Node(X) :- PureVirtualMemberFunction(X,_,_).
 Node(X) :- PureVirtualMemberFunctions(X).
 Node(X) :- SwitchCase(X,_,_).
 Node(X) :- SwitchCases(X).
+Node(X) :- TagTypeBinding(X,_,_).
+Node(X) :- TagTypeDefinition(X).
 
 
 
@@ -123,6 +127,9 @@ UsedNode(X) :- CastExpr(_,X).
 
 UsedNode(X) :- InitExpr(_,X,_).
 UsedNode(X) :- InitExpr(_,_,X).
+
+UsedNode(X) :- JobExpr(_,X,_).
+UsedNode(X) :- JobExpr(_,_,X).
 
 UsedNode(X) :- LambdaExpr(_,X,_,_).
 UsedNode(X) :- LambdaExpr(_,_,X,_).
@@ -178,6 +185,9 @@ UsedNode(X) :- PureVirtualMemberFunction(_,_,X).
 
 UsedNode(X) :- SwitchCase(_,X,_).
 UsedNode(X) :- SwitchCase(_,_,X).
+
+UsedNode(X) :- TagTypeBinding(_,X,_).
+UsedNode(X) :- TagTypeBinding(_,_,X).
 
 
 

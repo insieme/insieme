@@ -379,6 +379,8 @@ namespace datalog {
 		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("<ref<int<4>>> { 3 }")));
 		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("throw true;")));
 		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("try {} catch (v1 : bool) {v1;} catch (v2 : int<4>) {v2;}")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseProgram("int main() { return 0; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("spawn 14")));
 	}
 
 } // end namespace datalog
