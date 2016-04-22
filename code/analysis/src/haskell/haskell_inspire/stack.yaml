@@ -1,0 +1,20 @@
+flags: {}
+
+extra-package-dbs: []
+
+packages:
+- '.'
+
+extra-deps:
+- attoparsec-binary-0.2
+#- kan-extensions-5.0.1
+#- lens-4.13.2.1
+#- text-1.2.2.1
+
+resolver: lts-5.13
+
+ghc-options:
+  '*': -lHSrts-ghc7.10.3
+
+#extra-lib-dirs:
+#- /software-local/insieme-dev/alex/insieme-libs/stack-latest/stack-root/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts
