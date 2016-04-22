@@ -300,6 +300,7 @@ alias : "alias" abstract_type "=" type                                      { dr
 
 declaration : "decl" struct_or_union "identifier"                           { driver.declareRecordType(@3, $3); }
             | "decl" "ctor" ":" constructor_type                            { driver.genDeclaration(@2, "ctor", $4); }
+            | "decl" "dtor" ":" destructor_type                             { driver.genDeclaration(@2, "dtor", $4); }
             | "decl" "identifier" ":" type                                  { driver.genDeclaration(@2, $2, $4); }
             | "decl" "identifier" "::" "identifier" ":" type                { driver.registerField(@4, $2, $4, $6); }
             ;

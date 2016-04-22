@@ -590,6 +590,7 @@ TEST(PrettyPrinter, Structs) {
 		          "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
 
 		EXPECT_EQ("decl struct s;\n"
+		          "decl dtor:~s::();\n"
 		          "def struct s {\n"
 		          "    dtor function () {\n"
 		          "        return unit;\n"
@@ -608,12 +609,14 @@ TEST(PrettyPrinter, Structs) {
 											   "}");
 
 		EXPECT_EQ("decl struct s;\n"
+		          "decl dtor:~s::();\n"
 		          "def struct s {\n"
 		          "    dtor virtual function () { }\n"
 		          "};\n"
 		          "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
 
 		EXPECT_EQ("decl struct s;\n"
+		          "decl dtor:~s::();\n"
 		          "def struct s {\n"
 		          "    dtor virtual function () {\n"
 		          "        return unit;\n"
@@ -797,37 +800,37 @@ IRBuilder builder(nm);
 }
 
 TEST(PrettyPrinter, PrintDefinedDecls) {
-NodeManager nm;
-IRBuilder builder(nm);
+	NodeManager nm;
+	IRBuilder builder(nm);
 
-{
-auto type0 = builder.normalize(builder.parseType("def struct A {}; A"));
-PrettyPrinter printer0(type0, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
-							  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
-							  | PrettyPrinter::PRINT_DERIVED_IMPL | PrettyPrinter::PRINT_DEFAULT_MEMBERS);
+	{
+		auto type0 = builder.normalize(builder.parseType("def struct A {}; A"));
+		PrettyPrinter printer0(type0, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS
+		                                  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::PRINT_DERIVED_IMPL | PrettyPrinter::PRINT_DEFAULT_MEMBERS);
 
-std::string res = "decl struct A;\n"
-			 	  "decl ctor:A::();\n"
-			 	  "decl ctor:A::(ref<A,t,f,cpp_ref>);\n"
-			 	  "decl ctor:A::(ref<A,f,f,cpp_rref>);\n"
-			 	  "decl " + utils::getMangledOperatorAssignName() + ":A::(ref<A,t,f,cpp_ref>) -> ref<A,f,f,cpp_ref>;\n"
-			 	  "decl " + utils::getMangledOperatorAssignName() + ":A::(ref<A,f,f,cpp_rref>) -> ref<A,f,f,cpp_ref>;\n"
-			 	  "def struct A {\n"
-			 	  "    ctor function () { }\n"
-			 	  "    ctor function (v1 : ref<A,t,f,cpp_ref>) { }\n"
-			 	  "    ctor function (v1 : ref<A,f,f,cpp_rref>) { }\n"
-			 	  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<A,t,f,cpp_ref>) -> ref<A,f,f,cpp_ref> {\n"
-			 	  "        return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
-			 	  "    }\n"
-			 	  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<A,f,f,cpp_rref>) -> ref<A,f,f,cpp_ref> {\n"
-			 	  "        return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
-			 	  "    }\n"
-			 	  "};\n"
-			 	  "A";
+		std::string res = "decl struct A;\n"
+			 			  "decl ctor:A::();\n"
+			 			  "decl ctor:A::(ref<A,t,f,cpp_ref>);\n"
+			 			  "decl ctor:A::(ref<A,f,f,cpp_rref>);\n"
+			 			  "decl dtor:~A::();\n"
+			 			  "decl " + utils::getMangledOperatorAssignName() + ":A::(ref<A,t,f,cpp_ref>) -> ref<A,f,f,cpp_ref>;\n"
+			 			  "decl " + utils::getMangledOperatorAssignName() + ":A::(ref<A,f,f,cpp_rref>) -> ref<A,f,f,cpp_ref>;\n"
+			 			  "def struct A {\n"
+			 			  "    ctor function () { }\n"
+			 			  "    ctor function (v1 : ref<A,t,f,cpp_ref>) { }\n"
+			 			  "    ctor function (v1 : ref<A,f,f,cpp_rref>) { }\n"
+			 			  "    dtor function () { }\n"
+			 			  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<A,t,f,cpp_ref>) -> ref<A,f,f,cpp_ref> {\n"
+			 			  "        return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
+			 			  "    }\n"
+			 			  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<A,f,f,cpp_rref>) -> ref<A,f,f,cpp_ref> {\n"
+			 			  "        return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
+			 			  "    }\n"
+			 			  "};\n"
+			 			  "A";
 
-EXPECT_EQ(res, toString(printer0)) << printer0;
-}
-
+		EXPECT_EQ(res, toString(printer0)) << printer0;
+	}
 }
 
 TEST(PrettyPrinter, DerivedLiterals) {

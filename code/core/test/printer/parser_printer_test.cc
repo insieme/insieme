@@ -638,6 +638,14 @@ TEST(After_Before_Test, Let) {
 				                       "  var ref<A> b = foo2(b, 10);"
 				                       "}"));
 
+		EXPECT_TRUE(test_statement(nm, "def struct A {"
+				                       "  x : int<4>;"
+				                       "  dtor() { 5; }"
+				                       "};"
+				                       "{"
+				                       "  var ref<A> b = A::(b);"
+				                       "}"));
+
 	}
 
     TEST(After_Before_Test, Program) {

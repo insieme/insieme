@@ -475,6 +475,18 @@ namespace printer {
 								}
 							}
 
+							// print destructor declaration
+							if(printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) || !analysis::hasDefaultDestructor(tag)) {
+								auto destructor = record->getDestructor();
+								if(auto dtorIn = destructor.isa<LambdaExprPtr>()) {
+									auto dtor = tag->peel(dtorIn);
+									newLine();
+									out << "decl dtor:";
+									visit(NodeAddress(dtor->getType()));
+									out << ";";
+								}
+							}
+
 							// print all memberFunctions declarations
 							auto memberFunctions = record->getMemberFunctions();
 							for (auto memberFunIn : memberFunctions) {
@@ -542,26 +554,21 @@ namespace printer {
 
 							// print all constructors definitions
 							auto constructors = record->getConstructors();
-							for (auto constr : constructors) {
-								if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
-									analysis::isaDefaultConstructor(tag, constr)) {
+							for(auto constr : constructors) {
+								if(!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultConstructor(tag, constr)) {
 									// we encounter any default constructors
 									// we just skip them
-									if (auto ctortype = constr->getType().isa<FunctionTypePtr>()) {
-										if (ctortype->getParameterTypeList().size() != 1 ||
-											constructors.size() == 3) {
-											continue;
-										}
+									if(auto ctortype = constr->getType().isa<FunctionTypePtr>()) {
+										if(ctortype->getParameterTypeList().size() != 1 || constructors.size() == 3) { continue; }
 										// this constructor is a non-default one, so we don't need to skip it
 									} else {
 										continue;
 									}
 								}
-								if (auto ctor = constr.isa<LambdaExprPtr>()) {
+								if(auto ctor = constr.isa<LambdaExprPtr>()) {
 									newLine();
 									auto params = ctor->getParameterList();
-									out << "ctor function (" <<
-									join(", ", params.begin() + 1, params.end(), paramPrinter);
+									out << "ctor function (" << join(", ", params.begin() + 1, params.end(), paramPrinter);
 									out << ") ";
 									thisStack.push(params.front());
 									visit(NodeAddress(ctor->getBody()));
@@ -570,15 +577,12 @@ namespace printer {
 							}
 
 							// print the destructor definitions
-							if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
-								!analysis::hasDefaultDestructor(tag)) {
+							if(printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) || !analysis::hasDefaultDestructor(tag)) {
 								auto destructor = record->getDestructor();
-								if (auto dtor = destructor.isa<LambdaExprPtr>()) {
+								if(auto dtor = destructor.isa<LambdaExprPtr>()) {
 									newLine();
 									out << "dtor ";
-									if (record->getDestructorVirtual() && record->getDestructorVirtual()->getValue()) {
-										out << "virtual ";
-									}
+									if(record->getDestructorVirtual() && record->getDestructorVirtual()->getValue()) { out << "virtual "; }
 									out << "function () ";
 									thisStack.push(dtor->getParameterList().front());
 									visit(NodeAddress(dtor->getBody()));
@@ -588,36 +592,31 @@ namespace printer {
 
 							// print all memberFunctions definitions
 							auto memberFunctions = record->getMemberFunctions();
-							for (auto memberFun : memberFunctions) {
-								if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
-									analysis::isaDefaultMember(tag, memberFun))
-									continue;
-								if (auto impl = memberFun->getImplementation().isa<LambdaExprPtr>()) {
+							for(auto memberFun : memberFunctions) {
+								if(!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(tag, memberFun)) continue;
+								if(auto impl = memberFun->getImplementation().isa<LambdaExprPtr>()) {
 									newLine();
-									if (memberFun->isVirtual()) out << "virtual ";
+									if(memberFun->isVirtual()) out << "virtual ";
 
 									const auto& params = impl->getParameterList();
 									assert_true(params.size() >= 1);
 
 									TypePtr thisParam = params[0]->getType();
-									assert_true (analysis::isRefType(thisParam));
-									if (analysis::isRefType(analysis::getReferencedType(thisParam))) {
-										thisParam = analysis::getReferencedType(thisParam);
-									}
+									assert_true(analysis::isRefType(thisParam));
+									if(analysis::isRefType(analysis::getReferencedType(thisParam))) { thisParam = analysis::getReferencedType(thisParam); }
 									const auto thisParamRef = lang::ReferenceType(thisParam);
-									if (thisParamRef.isConst()) { out << "const "; }
-									if (thisParamRef.isVolatile()) { out << "volatile "; }
+									if(thisParamRef.isConst()) { out << "const "; }
+									if(thisParamRef.isVolatile()) { out << "volatile "; }
 
 									out << "function " << memberFun->getName()->getValue();
 									auto parameters = impl->getParameterList();
 									thisStack.push(parameters.front());
 
-									out << " = (" << join(", ", parameters.begin() + 1, parameters.end(),
-														  [&](std::ostream &out, const VariablePtr &curVar) {
-															  visit(NodeAddress(curVar));
-															  out << " : ";
-															  visit(NodeAddress(curVar->getType()));
-														  }) << ") -> ";
+									out << " = (" << join(", ", parameters.begin() + 1, parameters.end(), [&](std::ostream& out, const VariablePtr& curVar) {
+										visit(NodeAddress(curVar));
+										out << " : ";
+										visit(NodeAddress(curVar->getType()));
+									}) << ") -> ";
 									visit(NodeAddress(impl->getFunctionType()->getReturnType()));
 									out << " ";
 									visit(NodeAddress(impl->getBody()));
@@ -816,7 +815,7 @@ namespace printer {
 					lang::ReferenceType refTy(thisParam);
 					if (refTy.isConst()) out << "const ";
 					if (refTy.isVolatile()) out << "volatile ";
-					out << getObjectName(node) << "::";
+					out << (node->isDestructor() ? "~" : "") << getObjectName(node) << "::";
 				}
 				if(node->isConstructor()) {
 					auto params = node->getParameterTypes();
