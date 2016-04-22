@@ -36,6 +36,7 @@ Node(X) :- Literal(X,_,_).
 Node(X) :- Variable(X,_,_).
 Node(X) :- CallExpr(X,_).
 Node(X) :- BindExpr(X,_,_).
+Node(X) :- CastExpr(X,_).
 Node(X) :- InitExpr(X,_,_).
 Node(X) :- LambdaExpr(X,_,_,_).
 Node(X) :- LambdaReference(X,_,_).
@@ -111,6 +112,8 @@ UsedNode(X) :- CallExpr(_,X).
 
 UsedNode(X) :- BindExpr(_,X,_).
 UsedNode(X) :- BindExpr(_,_,X).
+
+UsedNode(X) :- CastExpr(_,X).
 
 UsedNode(X) :- InitExpr(_,X,_).
 UsedNode(X) :- InitExpr(_,_,X).

@@ -57,7 +57,7 @@
 .decl Variable ( id : node , type : node , var_id : uint ) input
 .decl CallExpr  ( id : node , function_expr : node ) input
 .decl BindExpr ( id : node, parameters : node , call : node ) input
-//# Name: CastExpr;  Base: Expression;  Params: Type, Expression
+.decl CastExpr ( id : node , sub_expression : node ) input
 //# Name: InitExpr;  Base: Expression;  Params: GenericType, Expression, Expressions
 .decl InitExpr ( id : node , memory_expr : node , init_exprs : node ) input
 //# Name: JobExpr;  Base: Expression;  Params: GenericType, Expression, Expression
@@ -148,3 +148,4 @@
 //# Name: Parent;  Base: Support;  Params: BoolValue, UIntValue, Type
 //# Name: TupleExpr;  Base: Expression;  Params: TupleType, Expressions
 //# Name: Union;  Base: Record;  Params: StringValue, Fields, Expressions, Expression, BoolValue, MemberFunctions, PureVirtualMemberFunctions
+//# Name: CastExpr;  Base: Expression;  Params: Type, Expression

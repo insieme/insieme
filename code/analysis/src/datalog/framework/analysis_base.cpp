@@ -219,6 +219,13 @@ namespace framework {
 				return id;
 			}
 
+			int visitCastExpr(const core::CastExprPtr& var) override {
+				int id = ++node_counter;
+				int sub_expression = visit(var->getSubExpression());
+				insert("CastExpr", id, sub_expression);
+				return id;
+			}
+
 			int visitInitExpr(const core::InitExprPtr& var) override {
 				int id = ++node_counter;
 				int memory_expr = visit(var->getMemoryExpr());
