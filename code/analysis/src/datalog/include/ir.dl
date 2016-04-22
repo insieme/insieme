@@ -58,12 +58,11 @@
 .decl CallExpr  ( id : node , function_expr : node ) input
 .decl BindExpr ( id : node, parameters : node , call : node ) input
 .decl CastExpr ( id : node , sub_expression : node ) input
-//# Name: InitExpr;  Base: Expression;  Params: GenericType, Expression, Expressions
 .decl InitExpr ( id : node , memory_expr : node , init_exprs : node ) input
 //# Name: JobExpr;  Base: Expression;  Params: GenericType, Expression, Expression
 .decl LambdaExpr ( id : node , type : node , reference : node , definition : node ) input
 .decl LambdaReference ( id : node , type : node , name : string ) input
-//# Name: MarkerExpr;  Base: Expression;  Params: Type, UIntValue, Expression
+// MarkerExpr omitted
 .decl TupleExpr ( id : node , expressions : node ) input
 
 
@@ -77,11 +76,11 @@
 .decl ForStmt ( id : node , declaration : node , end : node , step : node , body : node ) input
 //# Name: GotoStmt;  Base: Statement;  Params: StringValue
 //# Name: LabelStmt;  Base: Statement;  Params: StringValue
-//# Name: MarkerStmt;  Base: Statement;  Params: UIntValue, Statement
+// MarkerStmt omitted
 .decl ReturnStmt( id : node , return_expr : node , return_var : node ) input
-//# Name: SwitchStmt;  Base: Statement;  Params: Expression, SwitchCases, CompoundStmt
-//# Name: ThrowStmt;  Base: Statement;  Params: Expression
-//# Name: TryCatchStmt;  Base: Statement;  ListName: Clauses;  Params: CompoundStmt, CatchClause
+.decl SwitchStmt ( id : node , switch_expr : node , cases : node , default_case : node ) input
+.decl ThrowStmt ( id : node , throw_expr : node ) input
+.decl TryCatchStmt ( id : node , body : node ) input
 .decl WhileStmt ( id : node , condition : node , body : node ) input
 
 
@@ -89,7 +88,7 @@
 
 .decl Types ( id : node ) input
 .decl Parents ( id : node ) input
-//# Name: CatchClause;  Base: Support;  Params: Variable, CompoundStmt
+.decl CatchClause ( id : node , variable : node , body : node ) input
 .decl Expressions ( id : node ) input
 .decl Field  ( id : node , name : string , type : node ) input
 .decl Fields ( id : node ) input
@@ -102,8 +101,8 @@
 .decl Parent ( id : node , virtual : bool , access_specifier_kind : uint , type : node ) input
 .decl PureVirtualMemberFunction ( id : node , name : string , type : node ) input
 .decl PureVirtualMemberFunctions ( id : node ) input
-//# Name: SwitchCase;  Base: Support;  Params: Literal, CompoundStmt
-//# Name: SwitchCases;  Base: Support;  ListName: Cases;  Params: SwitchCase
+.decl SwitchCase ( id : node , guard : node , body : node ) input
+.decl SwitchCases ( id : node ) input
 //# Name: TagTypeBinding;  Base: Support;  Params: TagTypeReference, Record
 //# Name: TagTypeDefinition;  Base: Support;  ListName: Definitions;  Params: TagTypeBinding
 
@@ -149,3 +148,12 @@
 //# Name: TupleExpr;  Base: Expression;  Params: TupleType, Expressions
 //# Name: Union;  Base: Record;  Params: StringValue, Fields, Expressions, Expression, BoolValue, MemberFunctions, PureVirtualMemberFunctions
 //# Name: CastExpr;  Base: Expression;  Params: Type, Expression
+//# Name: SwitchStmt;  Base: Statement;  Params: Expression, SwitchCases, CompoundStmt
+//# Name: SwitchCase;  Base: Support;  Params: Literal, CompoundStmt
+//# Name: SwitchCases;  Base: Support;  ListName: Cases;  Params: SwitchCase
+//# Name: TryCatchStmt;  Base: Statement;  ListName: Clauses;  Params: CompoundStmt, CatchClause
+//# Name: CatchClause;  Base: Support;  Params: Variable, CompoundStmt
+//# Name: MarkerExpr;  Base: Expression;  Params: Type, UIntValue, Expression
+//# Name: MarkerStmt;  Base: Statement;  Params: UIntValue, Statement
+//# Name: InitExpr;  Base: Expression;  Params: GenericType, Expression, Expressions
+//# Name: ThrowStmt;  Base: Statement;  Params: Expression

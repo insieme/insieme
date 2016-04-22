@@ -305,6 +305,83 @@ namespace datalog {
 		                                "}")));
 	}
 
+	TEST(CodeProperties, Statements) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("1;")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("1u;")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("1.0f;")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("1.0;")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("1 + 3;")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("1 - 0;")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("1 * 0;")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("1 / 0;")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("1 | 0;")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("1 & 0;")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("1 ^ 0;")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("(1.0);")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("((1.0));")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("{ var int<4> x = 0; x+1; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("{ var ref<int<4>,f,f,plain> x; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("{ auto x = 0; x+1; }")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("if ( true ) {}")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("if ( true ) {} else {}")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("if ( true ) { if ( false ) { } else { } }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("if ( true ) { if ( false ) { } else { } } else { } ")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("if( false ) { return 0; } else { return 1+2; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("if( false ) { return 0; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("if(1 != 0) { return 0; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("while ( true ) { 1+1; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("while ( false ) { 1+1; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("while ( false || true ) { 1+1; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("for ( int<4> it = 1 .. 3) { 1+1; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("for ( int<4> it = 1 .. 3: 2) { 1+1; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("for ( int<4> it = 1 .. 3: 2) { 1+1; }")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("switch (2) { case 1: { 1; } case 2: { 2; } }")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("{ }")));
+
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("alias type = struct a { a : int<4>; b : int<8>; };"
+		                               "{"
+		                               "    var ref<type,f,f,plain> variable;"
+		                               "    var ref<rf<type>,f,f,plain> var2;"
+		                               "    auto var3 = var2;"
+		                               "}")));
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("alias class = struct name { a : int<2>; };"
+		                               "alias collection = array<class, 10>;"
+		                               "{"
+		                               "    var ref<collection,f,f,plain> x;"
+		                               "    var int<2> y = CAST(int<2>) 5;"
+		                               "    x[5].a = y;"
+		                               "}")));
+
+		// return statements may also declare a variable which can be used in the return expression itself
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("def struct A { a : int<4>; };"
+		                               "def foo = () -> A {"
+		                               "  return var ref<A> v0 = A::(v0);"
+		                               "};"
+		                               "foo();")));
+	}
+
+	TEST(CodeProperties, TryCatch) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("<ref<int<4>>> { 3 }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("throw true;")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("try {} catch (v1 : bool) {v1;} catch (v2 : int<4>) {v2;}")));
+	}
+
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme
+

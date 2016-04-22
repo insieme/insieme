@@ -50,11 +50,15 @@ Node(X) :- BreakStmt(X).
 Node(X) :- ContinueStmt(X).
 Node(X) :- ForStmt(X,_,_,_,_).
 Node(X) :- ReturnStmt(X,_,_).
+Node(X) :- SwitchStmt(X,_,_,_).
+Node(X) :- ThrowStmt(X,_).
+Node(X) :- TryCatchStmt(X,_).
 Node(X) :- WhileStmt(X,_,_).
 
       /* Support nodes */
 Node(X) :- Types(X).
 Node(X) :- Parents(X).
+Node(X) :- CatchClause(X,_,_).
 Node(X) :- Expressions(X).
 Node(X) :- Field(X,_,_).
 Node(X) :- Fields(X).
@@ -67,6 +71,8 @@ Node(X) :- Parameters(X).
 Node(X) :- Parent(X,_,_,_).
 Node(X) :- PureVirtualMemberFunction(X,_,_).
 Node(X) :- PureVirtualMemberFunctions(X).
+Node(X) :- SwitchCase(X,_,_).
+Node(X) :- SwitchCases(X).
 
 
 
@@ -141,8 +147,19 @@ UsedNode(X) :- ForStmt(_,_,_,_,X).
 UsedNode(X) :- ReturnStmt(_,X,_).
 UsedNode(X) :- ReturnStmt(_,_,X).
 
+UsedNode(X) :- SwitchStmt(_,X,_,_).
+UsedNode(X) :- SwitchStmt(_,_,X,_).
+UsedNode(X) :- SwitchStmt(_,_,_,X).
+
+UsedNode(X) :- ThrowStmt(_,X).
+
+UsedNode(X) :- TryCatchStmt(_,X).
+
 UsedNode(X) :- WhileStmt(_,X,_).
 UsedNode(X) :- WhileStmt(_,_,X).
+
+UsedNode(X) :- CatchClause(_,X,_).
+UsedNode(X) :- CatchClause(_,_,X).
 
 UsedNode(X) :- Field(_,_,X).
 
@@ -158,6 +175,9 @@ UsedNode(X) :- MemberFunction(_,_,_,X).
 UsedNode(X) :- Parent(_,_,_,X).
 
 UsedNode(X) :- PureVirtualMemberFunction(_,_,X).
+
+UsedNode(X) :- SwitchCase(_,X,_).
+UsedNode(X) :- SwitchCase(_,_,X).
 
 
 

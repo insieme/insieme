@@ -251,6 +251,11 @@ namespace framework {
 				return id;
 			}
 
+			int visitMarkerExpr(const core::MarkerExprPtr& var) override {
+				// Special case: Markers are just piped through and have no ir.dl entry
+				return visit(var->getSubExpression());
+			}
+
 			int visitTupleExpr(const core::TupleExprPtr& var) override {
 				int id = ++node_counter;
 				int expressions = visit(var->getExpressions());
@@ -306,11 +311,40 @@ namespace framework {
 				return id;
 			}
 
+			int visitMarkerStmt(const core::MarkerStmtPtr& var) override {
+				// Special case: Markers are just piped through and have no ir.dl entry
+				return visit(var->getSubStatement());
+			}
+
 			int visitReturnStmt(const core::ReturnStmtPtr& var) override {
 				int id = ++node_counter;
 				int return_expr = visit(var->getReturnExpr());
 				int return_var = visit(var->getReturnVar());
 				insert("ReturnStmt", id, return_expr, return_var);
+				return id;
+			}
+
+			int visitSwitchStmt(const core::SwitchStmtPtr& var) override {
+				int id = ++node_counter;
+				int switch_expr = visit(var->getSwitchExpr());
+				int cases = visit(var->getCases());
+				int default_case = visit(var->getDefaultCase());
+				insert("SwitchStmt", id, switch_expr, cases, default_case);
+				return id;
+			}
+
+			int visitThrowStmt(const core::ThrowStmtPtr& var) override {
+				int id = ++node_counter;
+				int throw_expr = visit(var->getThrowExpr());
+				insert("ThrowStmt", id, throw_expr);
+				return id;
+			}
+
+			int visitTryCatchStmt(const core::TryCatchStmtPtr& var) override {
+				int id = ++node_counter;
+				int body = visit(var->getBody());
+				insert("TryCatchStmt", id, body);
+				make_node_list(var);
 				return id;
 			}
 
@@ -335,6 +369,14 @@ namespace framework {
 				int id = ++node_counter;
 				insert("Parents", id);
 				make_node_list(parents);
+				return id;
+			}
+
+			int visitCatchClause(const core::CatchClausePtr& var) override {
+				int id = ++node_counter;
+				int variable = visit(var->getVariable());
+				int body = visit(var->getBody());
+				insert("CatchClause", id, variable, body);
 				return id;
 			}
 
@@ -430,6 +472,22 @@ namespace framework {
 				make_node_list(pvm_funcs);
 				return id;
 			}
+
+			int visitSwitchCase(const core::SwitchCasePtr& var) override {
+				int id = ++node_counter;
+				int guard = visit(var->getGuard());
+				int body = visit(var->getBody());
+				insert("SwitchCase", id, guard, body);
+				return id;
+			}
+
+			int visitSwitchCases(const core::SwitchCasesPtr& var) override {
+				int id = ++node_counter;
+				insert("SwitchCases", id);
+				make_node_list(var);
+				return id;
+			}
+
 
 			// -- Unimplemented Nodes: Fail --
 
