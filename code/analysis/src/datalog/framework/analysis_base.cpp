@@ -51,11 +51,11 @@ namespace framework {
 
 		using std::string;
 
-		#define make_node_list(LOOP_OBJECT) do {                                              \
-		                int counter = 0;                                                                 \
-		                for(const auto& cur : LOOP_OBJECT) {                                             \
-		                        insert("NodeList", id, counter++, visit(cur));                    \
-		                }                                                                                \
+		#define make_node_list(LOOP_OBJECT) do {                                           \
+		                int counter = 0;                                                   \
+		                for(const auto& cur : LOOP_OBJECT) {                               \
+		                        insert("NodeList", id, counter++, visit(cur));             \
+		                }                                                                  \
 		        } while(0);
 
 
@@ -165,6 +165,22 @@ namespace framework {
 
 				insert("Struct", id, name, fields, constructors, destructor, destructor_virtual,
 				       member_functions, pure_virtual_member_functions, parents);
+
+				return id;
+			}
+
+			int visitUnion(const core::UnionPtr& var) override {
+				int id = ++node_counter;
+				const string& name = var->getName()->getValue();
+				int fields = visit(var->getFields());
+				int constructors = visit(var->getConstructors());
+				int destructor = visit(var->getDestructor());
+				bool destructor_virtual = var->getDestructorVirtual()->getValue();
+				int member_functions = visit(var->getMemberFunctions());
+				int pure_virtual_member_functions = visit(var->getPureVirtualMemberFunctions());
+
+				insert("Union", id, name, fields, constructors, destructor, destructor_virtual,
+				       member_functions, pure_virtual_member_functions);
 
 				return id;
 			}

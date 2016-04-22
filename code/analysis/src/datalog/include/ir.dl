@@ -47,7 +47,8 @@
 .decl Struct ( id : node , name : string , fields : node , constructors : node , destructor : node
              , destructor_virtual : bool , member_functions : node , pure_virtual_member_functions : node , parents : node ) input
 //# Name: Program;  Base: Node;  ListName: EntryPoints;  Params: Expression
-//# Name: Union;  Base: Record;  Params: StringValue, Fields, Expressions, Expression, BoolValue, MemberFunctions, PureVirtualMemberFunctions
+.decl Union ( id : node , name : string , fields : node , constructos : node, destructor : node
+             , destructor_virtual : bool , member_functions : node , pure_virtual_member_functions : node ) input
 
 
 // Expression Nodes
@@ -146,3 +147,4 @@
 //# Name: BreakStmt;  Base: Statement
 //# Name: Parent;  Base: Support;  Params: BoolValue, UIntValue, Type
 //# Name: TupleExpr;  Base: Expression;  Params: TupleType, Expressions
+//# Name: Union;  Base: Record;  Params: StringValue, Fields, Expressions, Expression, BoolValue, MemberFunctions, PureVirtualMemberFunctions

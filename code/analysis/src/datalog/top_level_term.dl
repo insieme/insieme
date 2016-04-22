@@ -29,6 +29,7 @@ Node(X) :- TagType         (X,_,_).
 Node(X) :- TagTypeReference(X,_).
 
 Node(X) :- Struct(X,_,_,_,_,_,_,_,_).
+Node(X) :- Union(X,_,_,_,_,_,_,_).
 
       /* Expression nodes */
 Node(X) :- Literal(X,_,_).
@@ -38,6 +39,7 @@ Node(X) :- BindExpr(X,_,_).
 Node(X) :- InitExpr(X,_,_).
 Node(X) :- LambdaExpr(X,_,_,_).
 Node(X) :- LambdaReference(X,_,_).
+Node(X) :- TupleExpr(X,_).
 
       /* Statement nodes */
 Node(X) :- CompoundStmt(X).
@@ -87,12 +89,19 @@ UsedNode(X) :- NumericType(_,X).
 UsedNode(X) :- TagType(_,X,_).
 UsedNode(X) :- TagType(_,_,X).
 
+
 UsedNode(X) :- Struct(_,_,X,_,_,_,_,_,_).
 UsedNode(X) :- Struct(_,_,_,X,_,_,_,_,_).
 UsedNode(X) :- Struct(_,_,_,_,X,_,_,_,_).
 UsedNode(X) :- Struct(_,_,_,_,_,_,X,_,_).
 UsedNode(X) :- Struct(_,_,_,_,_,_,_,X,_).
 UsedNode(X) :- Struct(_,_,_,_,_,_,_,_,X).
+
+UsedNode(X) :- Union(_,_,X,_,_,_,_,_).
+UsedNode(X) :- Union(_,_,_,X,_,_,_,_).
+UsedNode(X) :- Union(_,_,_,_,X,_,_,_).
+UsedNode(X) :- Union(_,_,_,_,_,_,X,_).
+UsedNode(X) :- Union(_,_,_,_,_,_,_,X).
 
 UsedNode(X) :- Literal(_,X,_).
 
@@ -111,6 +120,8 @@ UsedNode(X) :- LambdaExpr(_,_,X,_).
 UsedNode(X) :- LambdaExpr(_,_,_,X).
 
 UsedNode(X) :- LambdaReference(_,X,_).
+
+UsedNode(X) :- TupleExpr(_,X).
 
 UsedNode(X) :- DeclarationStmt(_,X,_).
 UsedNode(X) :- DeclarationStmt(_,_,X).

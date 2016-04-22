@@ -96,7 +96,9 @@ namespace datalog {
 
 		// read result
 		auto& rel = analysis.rel_TopLevel;
-		return rel.size() && rel.contains(1);
+		bool result = rel.size() && rel.contains(1);
+		if (!result) analysis.dumpOutputs();
+		return result;
 	}
 
 } // end namespace datalog

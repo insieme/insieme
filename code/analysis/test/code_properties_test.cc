@@ -275,9 +275,9 @@ namespace datalog {
 		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("def struct x { a : int<4>; }; <ref<x>> { 4 }")));
 		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("def struct x { }; <ref<x>> { }")));
 
-		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("def union uni { a : int<4>; lambda f = ()->unit {} }; uni")));
-		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("def union uni { a : int<4>; lambda f = ()->unit {} }; { var ref<uni,f,f,plain> a; }")));
-		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("def union uni { a : int<4>; lambda f = ()->unit {} }; { <ref<uni>> { 4 }; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseType("def union uni { a : int<4>; lambda f = ()->unit {} }; uni")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("def union uni { a : int<4>; lambda f = ()->unit {} }; { var ref<uni,f,f,plain> a; }")));
+		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("def union uni { a : int<4>; lambda f = ()->unit {} }; { <ref<uni>> { 4 }; }")));
 
 		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("(_ : 'a) -> bool { return true; }")));
 		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("(x : 'a) -> 'a { return x+CAST('a) 3; }")));
