@@ -36,19 +36,29 @@
 
 #pragma once
 
+#include <cstdlib>
+
 namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	void enter(void);
+	typedef void* StablePtr;
 
-	void exit(void);
+	class ir_tree {
+		StablePtr tree;
+	  public:
+		ir_tree(StablePtr tree);
+		~ir_tree();
+		std::size_t node_count();
+	};
 
-	void* passDump(unsigned char* dump, unsigned int length);
-
-	void freeDump(void* dump);
-
-	int getNodeCount(void* dump);
+	class env {
+		env();
+	  public:
+		~env();
+		static env& instance();
+		ir_tree passDump(const char* dump, std::size_t length);
+	};
 
 } // end namespace haskell
 } // end namespace analysis

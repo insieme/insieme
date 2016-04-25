@@ -1,35 +1,53 @@
-#include <iostream>
+#include "insieme/analysis/haskell/adapter.h"
+
+using namespace std;
 
 extern "C" {
-	void my_enter(void);
-	void my_exit(void);
-	void* passIRdump(unsigned char* dump, unsigned int length);
-	int nodeCount(void* dump);
-	void freeIRdump(void* dump);
+
+	typedef void* StablePtr;
+
+	// environment bracket
+	void hs_init(int, char*[]);
+	void hs_exit(void);
+
+	// IR dump functions
+	StablePtr passIRdump(const char* dump, const size_t length);
+	size_t nodeCount(const StablePtr dump);
+
+	// StablePtr functions
+	void freeStablePtr(StablePtr  ptr);
+
 }
 
 namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	void enter(void) {
-		my_enter();
+	ir_tree::ir_tree(StablePtr  tree) : tree(tree) {}
+
+	ir_tree::~ir_tree() {
+		freeStablePtr(tree);
 	}
 
-	void exit(void) {
-		my_exit();
+	size_t ir_tree::node_count() {
+		return nodeCount(tree);
 	}
 
-	void* passDump(unsigned char* dump, unsigned int length) {
+	env::env() {
+		hs_init(0, 0);
+	}
+
+	env::~env() {
+		hs_exit();
+	}
+
+	env& env::instance() {
+		static env* instance = new env;
+		return *instance;
+	}
+
+	ir_tree env::passDump(const char* dump, size_t length) {
 		return passIRdump(dump, length);
-	}
-
-	void freeDump(void* dump) {
-		freeIRdump(dump);
-	}
-
-	int getNodeCount(void* dump) {
-		return nodeCount(dump);
 	}
 
 } // end namespace haskell
