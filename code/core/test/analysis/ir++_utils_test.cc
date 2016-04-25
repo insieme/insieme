@@ -47,19 +47,16 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
-	TEST(IRppUtils, DefaultCtorTest) {
-		NodeManager manager;
-		IRBuilder builder(manager);
+	TEST(IRppUtils, IsCTorTest) {
+		NodeManager man;
+		IRBuilder builder(man);
 
-		// create a struct type
-		TypePtr type = builder.parseType("struct { x : int<4>; y : int<4>; }");
-		ASSERT_TRUE(type);
+		auto call = builder.parseExpr(R"(
+			def struct Whatever { };
+			Whatever::(ref_temp(type_lit(Whatever)))
+		)");
 
-		// create a default constructor for this type
-		auto ctor = createDefaultConstructor(type);
-		EXPECT_TRUE(checks::check(ctor).empty()) << ctor << checks::check(ctor);
-
-		EXPECT_PRED1(isDefaultConstructor, ctor);
+		EXPECT_TRUE(isConstructorCall(call));
 	}
 
 } // end namespace analysis

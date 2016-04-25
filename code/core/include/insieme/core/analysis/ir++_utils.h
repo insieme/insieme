@@ -110,8 +110,8 @@ namespace analysis {
 	 */
 	bool isObjectReferenceType(const GenericTypePtr& type);
 
-	
-	// ---------------------------- Constructors --------------------------------------
+	//
+	//// ---------------------------- Constructors --------------------------------------
 
 	/**
 	 * checks if a expression is a constructor call
@@ -119,22 +119,6 @@ namespace analysis {
 	 * @return if is a call to constructor, even intercepted ones
 	 */
 	bool isConstructorCall(const core::ExpressionPtr& expr);
-
-	/**
-	 * Creates a default constructor for the given struct type.
-	 * @param type the type for which a default constructor should be created
-	 * @return the synthesized constructor
-	 */
-	LambdaExprPtr createDefaultConstructor(const TypePtr& type);
-
-	/**
-	 * A check verifying whether the given lambda is a default a default constructor
-	 * for its target type.
-	 *
-	 * @param lambda the lambda to be tested
-	 * @return true if so, false otherwise
-	 */
-	bool isDefaultConstructor(const LambdaExprPtr& lambda);
 
 } // end namespace analysis
 } // end namespace core
