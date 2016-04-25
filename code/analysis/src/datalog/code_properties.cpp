@@ -77,7 +77,7 @@ namespace datalog {
 	/**
 	 * Determine top level nodes
 	 */
-	std::vector<int> getTopLevelNodes(const core::NodePtr& root, bool debug)
+	bool getTopLevelNodes(const core::NodePtr& root, bool debug)
 	{
 		// instantiate the analysis
 		souffle::Sf_top_level_term analysis;
@@ -95,10 +95,12 @@ namespace datalog {
 		if (debug) analysis.dumpOutputs();
 
 		// read result
-		return std::vector<int>{};
+		auto& rel = analysis.rel_TopLevel;
+		bool result = rel.size() && rel.contains(1);
+		if (!result) analysis.dumpOutputs();
+		return result;
 	}
 
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme
-

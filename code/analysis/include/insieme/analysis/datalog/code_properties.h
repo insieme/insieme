@@ -51,7 +51,7 @@ namespace datalog {
 	/**
 	 * Determine top level nodes
 	 */
-	std::vector<int> getTopLevelNodes(const core::NodePtr& root, bool debug = false);
+	bool getTopLevelNodes(const core::NodePtr& root, bool debug = false);
 
 	/**
 	 * Collects all returns within a lambda.
