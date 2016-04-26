@@ -30,4 +30,5 @@ add_custom_target(
 )
 
 # exports
+set(GHC_VERSION 7.10.3 PARENT_SCOPE)
 set(insieme_analysis_haskell ${CMAKE_CURRENT_BINARY_DIR}/libHShaskell-inspire.so PARENT_SCOPE)
