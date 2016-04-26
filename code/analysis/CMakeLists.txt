@@ -49,7 +49,7 @@ target_link_libraries(insieme_analysis ${insieme_analysis_haskell})
 link_directories(${CMAKE_CURRENT_BINARY_DIR}/src/haskell/haskell_inspire)
 
 # directory containing libffi and libHSrts
-link_directories($ENV{INSIEME_LIBS_HOME}/stack-latest/stack-root/programs/x86_64-linux/ghc-${GHC_VERSION}/lib/ghc-${GHC_VERSION}/rts)
+link_directories(${LIBHSRTS_DIR})
 
 # haskell stuff requires gmp
 link_directories($ENV{INSIEME_LIBS_HOME}/gmp-latest/lib)
