@@ -412,18 +412,6 @@ namespace parser {
 				return nullptr;
 			}
 
-			const TypePtr thisType = builder.refType(key);
-
-			// if this record type has user specified constructors and the default constructor is still our dummy lambda, we have to delete that one here
-			//if (!ctors.empty()) {
-			//	const auto ctorType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
-			//	const auto lit = builder.getLiteralForConstructor(ctorType);
-			//	const auto dummyLambda = builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda());
-			//	if (tu.getFunctions()[lit] == dummyLambda) {
-			//		tu.getFunctions().erase(lit);
-			//	}
-			//}
-
 			TagTypePtr res;
 
 			// now we insert new member functions with just literals as implementation for all functions which have only been declared by the user
@@ -1234,14 +1222,11 @@ namespace parser {
 		}
 
 		namespace {
-			enum class BodyType { DEFAULTED, DELETED, NONE };
-
-			std::pair<LambdaExprPtr, BodyType> isSpecialBody(const InspireDriver& driver, const ExpressionPtr& lambda) {
+			bool isDeletedBody(const InspireDriver& driver, const ExpressionPtr& lambda) {
 				auto lambdaExpr = lambda.isa<LambdaExprPtr>();
-				if(!lambdaExpr) return { LambdaExprPtr(), BodyType::NONE };
-				if(lambdaExpr->getBody() == driver.getParserDefaultCompound()) return { lambdaExpr, BodyType::DEFAULTED };
-				if(lambdaExpr->getBody() == driver.getParserDeleteCompound()) return { lambdaExpr, BodyType::DELETED };
-				return { LambdaExprPtr(), BodyType::NONE };
+				if(!lambdaExpr) return false;
+				if(lambdaExpr->getBody() == driver.getParserDeleteCompound()) return true;
+				return false;
 			};
 
 			RecordPtr handleDefaultedAndDeletedMembers(const InspireDriver& driver, const RecordPtr& record) {
@@ -1253,15 +1238,13 @@ namespace parser {
 				auto ctors = record->getConstructors();
 				ExpressionList newCtors;
 				for(auto& ctor : ctors) {
-					auto ret = isSpecialBody(driver, ctor);
-					if(ret.second == BodyType::DELETED) continue;
+					if(isDeletedBody(driver, ctor)) continue;
 					newCtors.push_back(ctor);
 				}
 
 				// handle destructor
 				ExpressionList newDtor { record->getDestructor() };
-				auto dtorSpecial = isSpecialBody(driver, newDtor[0]);
-				if(dtorSpecial.second == BodyType::DELETED) {
+				if(isDeletedBody(driver, newDtor[0])) {
 					newDtor.clear();
 				}
 
@@ -1269,8 +1252,7 @@ namespace parser {
 				auto mfuns = record->getMemberFunctions();
 				MemberFunctionList newMfuns;
 				for(auto& mfun : mfuns) {
-					auto ret = isSpecialBody(driver, mfun->getImplementation());
-					if(ret.second == BodyType::DELETED) continue;
+					if(isDeletedBody(driver, mfun->getImplementation())) continue;
 					newMfuns.push_back(mfun);
 				}
 
