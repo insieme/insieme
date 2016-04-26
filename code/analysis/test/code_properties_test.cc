@@ -49,6 +49,15 @@ namespace datalog {
 
 	using namespace core;
 
+	TEST(CodeProperties, TMP) {
+		core::NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		dumpText(builder.parseType("struct class {"
+		                           " lambda f = () -> int<4> { return 1; }"
+		                           "}"));
+	}
+
 	TEST(CodeProperties, LargerCode) {
 		using namespace driver::integration;
 
@@ -88,11 +97,6 @@ namespace datalog {
 		EXPECT_FALSE(isPolymorph(builder.parseType("(int<4>)->bool")));
 		EXPECT_FALSE(isPolymorph(builder.parseType("(string, int<4>)->uint<4>")));
 
-		/*
-		dumpText(builder.parseType("struct class {"
-		                           " lambda f = () -> int<4> { return 1; }"
-		                           "}"));
-		*/
 	}
 
 	TEST(CodeProperties, TopLevelTerm) {
