@@ -476,7 +476,7 @@ namespace printer {
 							}
 
 							// print destructor declaration
-							if(printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) || !analysis::hasDefaultDestructor(tag)) {
+							if(record->hasDestructor() && (printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) || !analysis::hasDefaultDestructor(tag))) {
 								auto destructor = record->getDestructor();
 								if(auto dtorIn = destructor.isa<LambdaExprPtr>()) {
 									auto dtor = tag->peel(dtorIn);
@@ -571,22 +571,28 @@ namespace printer {
 									out << "ctor function (" << join(", ", params.begin() + 1, params.end(), paramPrinter);
 									out << ") ";
 									thisStack.push(params.front());
-									visit(NodeAddress(ctor->getBody()));
+									if(analysis::isaDefaultConstructor(tag, constr)) out << "= default;";
+									else visit(NodeAddress(ctor->getBody()));
 									thisStack.pop();
 								}
 							}
 
 							// print the destructor definitions
 							if(printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) || !analysis::hasDefaultDestructor(tag)) {
-								auto destructor = record->getDestructor();
-								if(auto dtor = destructor.isa<LambdaExprPtr>()) {
+								if(record->hasDestructor()) {
+									if(auto dtor = record->getDestructor().isa<LambdaExprPtr>()) {
+										newLine();
+										out << "dtor ";
+										if(record->getDestructorVirtual() && record->getDestructorVirtual()->getValue()) { out << "virtual "; }
+										out << "function () ";
+										thisStack.push(dtor->getParameterList().front());
+										if(analysis::hasDefaultDestructor(tag)) out << "= default;";
+										else visit(NodeAddress(dtor->getBody()));
+										thisStack.pop();
+									}
+								} else {
 									newLine();
-									out << "dtor ";
-									if(record->getDestructorVirtual() && record->getDestructorVirtual()->getValue()) { out << "virtual "; }
-									out << "function () ";
-									thisStack.push(dtor->getParameterList().front());
-									visit(NodeAddress(dtor->getBody()));
-									thisStack.pop();
+									out << "dtor function () = delete;";
 								}
 							}
 
@@ -619,7 +625,8 @@ namespace printer {
 									}) << ") -> ";
 									visit(NodeAddress(impl->getFunctionType()->getReturnType()));
 									out << " ";
-									visit(NodeAddress(impl->getBody()));
+									if(analysis::isaDefaultMember(tag, memberFun)) out << "= default;";
+									else visit(NodeAddress(impl->getBody()));
 									thisStack.pop();
 								}
 							}
@@ -894,17 +901,19 @@ namespace printer {
 							out << "ctor ";
 							auto parameters = ctor->getParameterList();
 							out << "(" << join(", ", parameters.begin() + 1, parameters.end(), paramPrinter) << ") ";
-							VISIT(ctor->getBody());
+							if(analysis::isaDefaultConstructor(tagType, constr.getAddressedNode())) out << " = default;";
+							else VISIT(ctor->getBody());
 						}
 					}
 
-					// print all destructors
-					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && !analysis::hasDefaultDestructor(tagType)) {
+					// print destructor
+					if(node->hasDestructor() && (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && !analysis::hasDefaultDestructor(tagType))) {
 						auto destructor = node->getDestructor();
-						if (auto dtor = destructor.isa<LambdaExprAddress>()) {
+						if(auto dtor = destructor.isa<LambdaExprAddress>()) {
 							this->newLine();
 							out << "dtor ()";
-							VISIT(dtor->getBody());
+							if(analysis::hasDefaultDestructor(tagType)) out << " = default;";
+							else VISIT(dtor->getBody());
 						}
 					}
 
@@ -940,7 +949,8 @@ namespace printer {
 												  }) << ") -> ";
 							VISIT(impl->getFunctionType()->getReturnType());
 							out << " ";
-							VISIT(impl->getBody());
+							if(analysis::isaDefaultMember(tagType, memberFun.getAddressedNode())) out << "= default;";
+							else VISIT(impl->getBody());
 							thisStack.pop();
 						}
 					}

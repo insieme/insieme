@@ -415,14 +415,14 @@ namespace parser {
 			const TypePtr thisType = builder.refType(key);
 
 			// if this record type has user specified constructors and the default constructor is still our dummy lambda, we have to delete that one here
-			if (!ctors.empty()) {
-				const auto ctorType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
-				const auto lit = builder.getLiteralForConstructor(ctorType);
-				const auto dummyLambda = builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda());
-				if (tu.getFunctions()[lit] == dummyLambda) {
-					tu.getFunctions().erase(lit);
-				}
-			}
+			//if (!ctors.empty()) {
+			//	const auto ctorType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
+			//	const auto lit = builder.getLiteralForConstructor(ctorType);
+			//	const auto dummyLambda = builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda());
+			//	if (tu.getFunctions()[lit] == dummyLambda) {
+			//		tu.getFunctions().erase(lit);
+			//	}
+			//}
 
 			TagTypePtr res;
 
@@ -620,6 +620,8 @@ namespace parser {
 
 			auto key = builder.getLiteralForConstructor(ctor->getType());
 
+			if(ctor->getBody() == getParserDefaultCompound()) return nullptr;
+
 			//register the lambda itself in the TU - but only overwrite dummy declarations
 			if (const auto& otherMember = tu.getFunctions()[key]) {
 				const auto& otherBody = otherMember->getBody();
@@ -676,6 +678,8 @@ namespace parser {
 		ExpressionPtr InspireDriver::genDestructor(const location& l, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
+			if(body == getParserDefaultCompound()) return nullptr;
+
 			// get this-type (which is ref<ref in case of a function
 			auto thisType = getThisTypeForLambdaAndFunction(false, false);
 			auto thisParam = builder.variable(thisType);
@@ -712,6 +716,8 @@ namespace parser {
 		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name,
 			                                               const VariableList& params, const TypePtr& retType, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
+
+			if(body == getParserDefaultCompound()) return nullptr;
 
 			// get this-type (which is ref<ref in case of a function
 			auto thisType = getThisTypeForLambdaAndFunction(cnst, voltile);
@@ -783,11 +789,11 @@ namespace parser {
 		}
 
 		CompoundStmtPtr InspireDriver::getParserDefaultCompound() const {
-			return builder.compoundStmt(builder.stringLit("INSIEME_PARSER_DEFAULT"));
+			return builder.compoundStmt(builder.literal("INSIEME_PARSER_DEFAULT", builder.genericType("string")));
 		}
 
 		CompoundStmtPtr InspireDriver::getParserDeleteCompound() const {
-			return builder.compoundStmt(builder.stringLit("INSIEME_PARSER_DELETE"));
+			return builder.compoundStmt(builder.literal("INSIEME_PARSER_DELETE", builder.genericType("string")));
 		}
 
 		ExpressionPtr InspireDriver::genFreeConstructor(const location& l, const std::string& name, const LambdaExprPtr& ctor) {
@@ -1249,25 +1255,14 @@ namespace parser {
 				for(auto& ctor : ctors) {
 					auto ret = isSpecialBody(driver, ctor);
 					if(ret.second == BodyType::DELETED) continue;
-					if(ret.second == BodyType::DEFAULTED) {
-						auto paramTypes = ret.first.getFunctionType()->getParameterTypeList();
-						auto thisType = paramTypes[0];
-						if(paramTypes.size() == 1) {
-							newCtors.push_back(builder.getDefaultConstructor(thisType, parents, record->getFields()).as<ExpressionPtr>());
-							continue;
-						}
-						if(paramTypes.size() == 2) {
-							if(core::lang::isCppReference(paramTypes[1])) {
-								newCtors.push_back(builder.getDefaultCopyConstructor(thisType, parents, record->getFields()).as<ExpressionPtr>());
-								continue;
-							} else if(core::lang::isCppRValueReference(paramTypes[1])) {
-								newCtors.push_back(builder.getDefaultMoveConstructor(thisType, parents, record->getFields()).as<ExpressionPtr>());
-								continue;
-							}
-						}
-						assert_fail() << "Defaulted or deleted constructor of unsupported type";
-					}
 					newCtors.push_back(ctor);
+				}
+
+				// handle destructor
+				ExpressionList newDtor { record->getDestructor() };
+				auto dtorSpecial = isSpecialBody(driver, newDtor[0]);
+				if(dtorSpecial.second == BodyType::DELETED) {
+					newDtor.clear();
 				}
 
 				// handle operators
@@ -1276,29 +1271,15 @@ namespace parser {
 				for(auto& mfun : mfuns) {
 					auto ret = isSpecialBody(driver, mfun->getImplementation());
 					if(ret.second == BodyType::DELETED) continue;
-					if(ret.second == BodyType::DEFAULTED) {
-						auto paramTypes = ret.first.getFunctionType()->getParameterTypeList();
-						auto thisType = paramTypes[0];
-						if(paramTypes.size() == 2) {
-							if(core::lang::isCppReference(paramTypes[1])) {
-								newMfuns.push_back(builder.getDefaultCopyAssignOperator(thisType, parents, record->getFields()));
-								continue;
-							} else if(core::lang::isCppRValueReference(paramTypes[1])) {
-								newMfuns.push_back(builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()));
-								continue;
-							}
-						}
-						assert_fail() << "Defaulted or deleted member of unsupported type";
-					}
 					newMfuns.push_back(mfun);
 				}
 
 				// generate replacements
 				if(isStruct) {
-					return builder.structRecord(record->getName(), parents, record->getFields(), builder.expressions(newCtors), record->getDestructor(),
+					return builder.structRecord(record->getName(), parents, record->getFields(), builder.expressions(newCtors), builder.expressions(newDtor),
 						                        record->getDestructorVirtual(), builder.memberFunctions(newMfuns), record->getPureVirtualMemberFunctions());
 				} else {
-					return builder.unionRecord(record->getName(), record->getFields(), builder.expressions(newCtors), record->getDestructor(),
+					return builder.unionRecord(record->getName(), record->getFields(), builder.expressions(newCtors), builder.expressions(newDtor),
 						                       record->getDestructorVirtual(), builder.memberFunctions(newMfuns), record->getPureVirtualMemberFunctions());
 				}
 			}
@@ -1327,20 +1308,17 @@ namespace parser {
 			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
 
 			// check if artifacts remain
-			bool foundDummyLambda = false;
-			const auto& dummyLambda = parserIRExtension.getMemberDummyLambda();
-			const auto& explicitDummyLambda = parserIRExtension.getExplicitMemberDummyLambda();
-			visitDepthFirstOnceInterruptible(result, [&](const LiteralPtr& lit) {
-				if (lit == dummyLambda || lit == explicitDummyLambda) {
-					foundDummyLambda = true;
+			bool foundArtifacts = false;
+			visitDepthFirstOnceInterruptible(result, [&](const NodePtr& node) {
+				if(node == parserIRExtension.getMemberDummyLambda() || node == parserIRExtension.getExplicitMemberDummyLambda()
+				   || node == getParserDefaultCompound() || node == getParserDeleteCompound()) {
+					foundArtifacts = true;
 					return true;
 				}
 				return false;
-			});
+			}, true, true);
 
-			if (foundDummyLambda) {
-				assert_fail() << "Found dummy lambda in final parser result.";
-			}
+			if(foundArtifacts) { assert_fail() << "Found parser artifacts in final parser result."; }
 		}
 
 

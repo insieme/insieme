@@ -337,7 +337,7 @@ fields : fields field                                                       { $1
 field : "identifier" ":" type ";"                                           { $$ = driver.builder.field($1, $3); }
       ;
 
-constructors : constructors constructor                                     { INSPIRE_GUARD(@2, $2) $1.push_back($2); $$ = $1; }
+constructors : constructors constructor                                     { if($2) $1.push_back($2); $$ = $1; }
              |                                                              { $$ = ExpressionList(); }
              ;
 
@@ -361,7 +361,7 @@ destructor : "dtor" virtual_flag "(" ")" compound_no_scope_default_delete   { dr
            |                                                                { $$ = std::make_pair(LambdaExprPtr(), false); }
            ;
 
-member_functions : member_functions member_function                         { INSPIRE_GUARD(@2, $2) $1.push_back($2); $$ = $1; }
+member_functions : member_functions member_function                         { if($2) $1.push_back($2); $$ = $1; }
                  |                                                          { $$ = MemberFunctionList(); }
                  ;
 

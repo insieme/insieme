@@ -626,11 +626,12 @@ namespace backend {
 //				//}
 //
 				// add destructors (only for structs)
-				{
+				if(record->hasDestructor()) {
 					auto dtor = record->getDestructor();
 					auto info = funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
 					info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
 				}
+				// TODO: explicitly delete missing destructor
 
 				// add pure virtual function declarations
 				core::IRBuilder builder(ptr.getNodeManager());
@@ -646,6 +647,7 @@ namespace backend {
 				if (!trivial || !core::analysis::isaDefaultMember(tagType, member)) {
 					funMgr.getInfo(tagType->peel(member));
 				}
+				// TODO: explicitly delete missing mem funs
 			}
 
 			// done

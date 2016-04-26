@@ -205,6 +205,11 @@ namespace backend {
 	namespace cl = core::lang;
 
 	core::NodePtr RefCastIntroducer::process(const Converter& converter, const core::NodePtr& code) {
+		auto builtInLimiter = [](const core::NodePtr& cur) {
+			if(core::lang::isBuiltIn(cur)) return core::transform::ReplaceAction::Prune;
+			return core::transform::ReplaceAction::Process;
+		};
+
 		// 1) declaration stmts
 		auto retCode = core::transform::transformBottomUpGen(code, [](const core::DeclarationStmtPtr& decl) {
 			if(cl::isReference(decl->getVariable()) && cl::isReference(decl->getInitialization())) {
@@ -217,7 +222,7 @@ namespace backend {
 				}
 			}
 			return decl;
-		}, core::transform::globalReplacement);
+		}, builtInLimiter);
 
 		// 2) returns
 		retCode = core::transform::transformBottomUpGen(retCode, [](const core::ReturnStmtPtr& ret) {
@@ -231,7 +236,7 @@ namespace backend {
 				}
 			}
 			return ret;
-		}, core::transform::globalReplacement);
+		}, builtInLimiter);
 
 		return retCode;
 	}

@@ -110,8 +110,7 @@ namespace analysis {
 	 */
 	bool isObjectReferenceType(const GenericTypePtr& type);
 
-	//
-	//// ---------------------------- Constructors --------------------------------------
+	// ---------------------------- Constructors --------------------------------------
 
 	/**
 	 * checks if a expression is a constructor call
@@ -119,6 +118,12 @@ namespace analysis {
 	 * @return if is a call to constructor, even intercepted ones
 	 */
 	bool isConstructorCall(const core::ExpressionPtr& expr);
+
+	// ---------------------------- Defaulted Members --------------------------------------
+
+	LambdaExprPtr markAsDefaultMember(const LambdaExprPtr& lambda);
+
+	bool isaDefaultMember(const LambdaExprPtr& lambda);
 
 } // end namespace analysis
 } // end namespace core

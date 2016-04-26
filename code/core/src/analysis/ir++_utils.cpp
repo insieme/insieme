@@ -114,6 +114,34 @@ namespace analysis {
 		return call && call->getFunctionExpr()->getType().as<FunctionTypePtr>()->isConstructor();
 	}
 
+	// ---------------------------- Defaulted Members --------------------------------------
+
+	namespace {
+		struct DefaultedTag {};
+
+		LiteralPtr getDefaultedMarker(const IRBuilder& builder) {
+			auto defaulted = builder.stringLit("INSIEME_DEFAULTED");
+			defaulted.attachValue<DefaultedTag>();
+			return defaulted;
+		}
+	}
+
+	LambdaExprPtr markAsDefaultMember(const LambdaExprPtr& lambda) {
+		IRBuilder builder(lambda->getNodeManager());
+		StatementList newBody{ getDefaultedMarker(builder) };
+		std::copy(lambda->getBody()->begin(), lambda->getBody()->end(), std::back_inserter(newBody));
+		return builder.lambdaExpr(lambda->getType(), lambda->getParameterList(), builder.compoundStmt(newBody), lambda->getReference()->getNameAsString());
+	}
+
+	bool isaDefaultMember(const LambdaExprPtr& lambda) {
+		if (!lambda) return false;
+		if (!lambda->getFunctionType()->isMember()) return false;
+		auto body = lambda->getBody();
+		if (!body || body->size() < 1) return false;
+		auto first = body[0];
+		return first == getDefaultedMarker(IRBuilder(lambda->getNodeManager())) && first.hasAttachedValue<DefaultedTag>();
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

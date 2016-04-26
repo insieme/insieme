@@ -217,7 +217,7 @@ struct NonTrivial {
 	~NonTrivial() {}
 };
 
-#define STRUCT_NON_TRIVIAL "def struct IMP_NonTrivial { i : int<4>; }; "
+#define STRUCT_NON_TRIVIAL "def struct IMP_NonTrivial { i : int<4>; dtor() {} }; "
 #define CONSUME_NON_TRIVIAL "def IMP_consume_struct_NonTrivial_returns_void = function (v0 : ref<IMP_NonTrivial,f,f,plain>) -> unit { }; "
 #define PRODUCE_NON_TRIVIAL "def IMP_produce_struct_NonTrivial_returns_struct_NonTrivial = function () -> IMP_NonTrivial { return ref_cast(IMP_NonTrivial::(ref_temp(type_lit(IMP_NonTrivial))), type_lit(t), type_lit(f), type_lit(cpp_ref)); }; "
 

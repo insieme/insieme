@@ -187,12 +187,7 @@ namespace analysis {
 
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
-			"  ctor() {}"
-			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
-			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
 			"  dtor virtual() {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
 			"}")));
 	}
 

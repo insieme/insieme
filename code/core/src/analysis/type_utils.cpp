@@ -259,9 +259,6 @@ namespace analysis {
 				record.as<StructPtr>()->getParents() :
 				builder.parents();
 
-		// check that there are the right number of constructors
-		if (record->getConstructors().size() != 3) return false;
-
 		// and there is a non-virtual destructor
 		if (record->hasVirtualDestructor()) return false;
 
@@ -440,6 +437,8 @@ namespace analysis {
 
 	bool hasDefaultDestructor(const TagTypePtr& type) {
 		auto record = type->getRecord();
+		if(!record->hasDestructor()) return false;
+
 		IRBuilder builder(type->getNodeManager());
 		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
 

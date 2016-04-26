@@ -721,11 +721,13 @@ namespace tu {
 			}
 		}
 		// check dtor
-		dtor = tagType->getRecord()->getDestructor();
-		if (!dtor.isa<core::LiteralPtr>()) {
-			auto lit = builder.getLiteralForDestructor(dtor.as<core::LambdaExprPtr>()->getFunctionType());
-			addFunction(lit, dtor.as<core::LambdaExprPtr>());
-			dtor = lit;
+		if(tagType->getRecord()->hasDestructor()) {
+			dtor = tagType->getRecord()->getDestructor();
+			if (!dtor.isa<core::LiteralPtr>()) {
+				auto lit = builder.getLiteralForDestructor(dtor.as<core::LambdaExprPtr>()->getFunctionType());
+				addFunction(lit, dtor.as<core::LambdaExprPtr>());
+				dtor = lit;
+			}
 		}
 		// check mem funs
 		for (auto memfun : tagType->getRecord()->getMemberFunctions()) {

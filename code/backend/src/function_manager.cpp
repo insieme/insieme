@@ -1091,7 +1091,7 @@ namespace backend {
 						// add constructor
 						auto ctor = cManager->create<c_ast::Constructor>(classDecl->name, info->function);
 						c_ast::BodyFlag flag = (core::analysis::isaDefaultConstructor(classType, lambda) ? c_ast::BodyFlag::Default : c_ast::BodyFlag::None);
-						auto decl = cManager->create<c_ast::ConstructorPrototype>(ctor,flag);
+						auto decl = cManager->create<c_ast::ConstructorPrototype>(ctor, flag);
 						classDecl->ctors.push_back(decl);
 						info->declaration = decl;
 					} else if(funType.isDestructor()) {
@@ -1110,7 +1110,13 @@ namespace backend {
 						// add member function
 						assert_true(funType.isMemberFunction());
 						auto mfun = cManager->create<c_ast::MemberFunction>(classDecl->name, info->function);
-						auto decl = cManager->create<c_ast::MemberFunctionPrototype>(mfun);
+						c_ast::BodyFlag flag = c_ast::BodyFlag::None;
+						for(auto mem: classType->getRecord()->getMemberFunctions()->getMembers()) {
+							if(classType->peel(mem->getImplementation()) == lambda && core::analysis::isaDefaultMember(classType, mem)) {
+								flag = c_ast::BodyFlag::Default;
+							}
+						}
+						auto decl = cManager->create<c_ast::MemberFunctionPrototype>(mfun, flag);
 
 						// add cv modifier
 						auto thisRef = core::lang::ReferenceType(funType->getParameterType(0));
@@ -1152,13 +1158,13 @@ namespace backend {
 
 				// skip default implementations
 				auto funType = lambda->getFunctionType();
-				if (funType->isConstructor()) {
+				if(funType->isConstructor()) {
 					auto classType = core::analysis::getObjectType(funType).as<core::TagTypePtr>();
-					if (core::analysis::isaDefaultConstructor(classType, lambda)) return;
+					if(core::analysis::isaDefaultConstructor(classType, lambda)) return;
 				}
-				if (funType->isDestructor()) {
+				if(funType->isDestructor()) {
 					auto classType = core::analysis::getObjectType(funType).as<core::TagTypePtr>();
-					if (core::analysis::isDefaultDestructor(classType, lambda)) return;
+					if(core::analysis::isDefaultDestructor(classType, lambda)) return;
 				}
 
 				// peel function and create function definition

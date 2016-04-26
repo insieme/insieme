@@ -104,7 +104,7 @@ struct VolatileConstructor {
 
 #define VOL_CONSTR_IR R"(
 def struct IMP_VolatileConstructor {
-	ctor() { }
+	ctor() = default;
 	ctor(v : ref<IMP_VolatileConstructor,t,f,cpp_ref>) { }
 	ctor(v : ref<IMP_VolatileConstructor,t,t,cpp_ref>) { }
 };)"

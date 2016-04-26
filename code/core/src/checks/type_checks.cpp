@@ -381,8 +381,16 @@ namespace checks {
 
 	OptionalMessageList DestructorTypeCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
 		OptionalMessageList res;
+		auto record = address.getAddressedNode()->getRecord();
 
-		checkMemberType(address, address.getAddressedNode()->getRecord()->getDestructor().as<LambdaExprPtr>()->getFunctionType(), FK_DESTRUCTOR, false, res, EC_TYPE_INVALID_DESTRUCTOR_TYPE, "Invalid destructor type");
+		if(record->hasDestructor()) {
+			checkMemberType(address, record->getDestructor().as<LambdaExprPtr>()->getFunctionType(), FK_DESTRUCTOR, false, res,
+				            EC_TYPE_INVALID_DESTRUCTOR_TYPE, "Invalid destructor type");
+		}
+
+		if(record->getOptionalDestructor()->getExpressions().size() > 1) {
+			add(res, Message(address, EC_TYPE_MULTIPLE_DESTRUCTORS, format("More than one destructor on record:\n%s", *record), Message::ERROR));
+		}
 
 		return res;
 	}

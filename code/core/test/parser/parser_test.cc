@@ -1334,6 +1334,33 @@ namespace parser {
 			EXPECT_TRUE(checks::check(typ).empty()) << checks::check(typ);
 			EXPECT_EQ(2, typ.as<TagTypePtr>()->getRecord()->getMemberFunctions().size());
 		}
+
+		{
+			auto typ = builder.parseType(R"(
+				def struct S {
+					dtor() = delete;
+				};
+				S
+			)");
+
+			EXPECT_TRUE(typ);
+			//std::cout << printer::PrettyPrinter(typ, printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS) << std::endl;
+			EXPECT_TRUE(checks::check(typ).empty()) << checks::check(typ);
+			EXPECT_FALSE(typ.as<TagTypePtr>()->getRecord()->hasDestructor());
+		}
+		{
+			auto typ = builder.parseType(R"(
+				def struct S {
+					dtor() = default;
+				};
+				S
+			)");
+
+			EXPECT_TRUE(typ);
+			//std::cout << printer::PrettyPrinter(typ, printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS) << std::endl;
+			EXPECT_TRUE(checks::check(typ).empty()) << checks::check(typ);
+			EXPECT_TRUE(typ.as<TagTypePtr>()->getRecord()->hasDestructor());
+		}
 	}
 
 	TEST(IR_Parser, TypedExpression) {
