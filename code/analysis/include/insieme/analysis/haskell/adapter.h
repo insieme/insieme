@@ -36,28 +36,33 @@
 
 #pragma once
 
-#include <cstdlib>
+#include <memory>
+
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	typedef void* StablePtr;
+	class HSobject;
 
-	class ir_tree {
-		StablePtr tree;
-	  public:
-		ir_tree(StablePtr tree);
-		~ir_tree();
+	class IRtree {
+		std::shared_ptr<HSobject> tree;
+	public:
+		IRtree(std::shared_ptr<HSobject> tree);
 		std::size_t node_count();
 	};
 
-	class env {
-		env();
-	  public:
-		~env();
-		static env& instance();
-		ir_tree passDump(const char* dump, std::size_t length);
+	class Environment {
+		Environment();
+	public:
+		~Environment();
+
+		Environment(const Environment&) = delete;
+		void operator=(const Environment&) = delete;
+
+		static Environment& getInstance();
+		IRtree passTree(const core::NodePtr& root);
 	};
 
 } // end namespace haskell

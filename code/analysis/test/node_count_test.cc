@@ -38,9 +38,8 @@
 
 #include "insieme/analysis/haskell/adapter.h"
 #include "insieme/core/dump/binary_dump.h"
-#include "insieme/core/encoder/encoder.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/utils/container_utils.h"
+#include "insieme/core/ir_visitor.h"
 
 using namespace std;
 using namespace insieme::core;
@@ -56,7 +55,7 @@ namespace haskell {
 		IRBuilder builder(managerA);
 		std::map<std::string, NodePtr> symbols;
 		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
-		NodePtr code = builder.parseStmt(
+		NodePtr root = builder.parseStmt(
 				"{ "
 				"	for(uint<4> i = 10u .. 50u) { "
 				"		v[i]; "
@@ -68,22 +67,17 @@ namespace haskell {
 				symbols
 		);
 
-		// create a in-memory stream
-		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-
-		// dump IR using a binary format
-		binary::dumpIR(buffer, code);
-
-		// get data as cstring
-		const string dumps = buffer.str();
-		const char* dumpcs = dumps.c_str();
-
 		// pass to haskell
-		auto env = env::instance();
-		auto tree = env.passDump(dumpcs, dumps.size());
+		auto& env = Environment::getInstance();
+		auto tree = env.passTree(root);
 
-		// FIXME: get node count directly from code
-		EXPECT_EQ(1617, tree.node_count());
+		// calculate overall node count
+		size_t nodeCount = 0;
+		visitDepthFirst(NodeAddress(root), [&] (const NodeAddress& n) {
+				nodeCount++;
+		}, true, true);
+
+		EXPECT_EQ(nodeCount, tree.node_count());
 	}
 
 } // end namespace haskell
