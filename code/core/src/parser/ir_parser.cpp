@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -59,7 +59,7 @@ namespace parser {
 	namespace {
 
 		void checkErrors(InspireDriver& driver, bool onFailThrow) {
-			if(driver.whereErrors() || !driver.result) {
+			if(driver.wereErrors() || !driver.result) {
 				if(onFailThrow) {
 					std::stringstream ss;
 					driver.printErrors(ss);

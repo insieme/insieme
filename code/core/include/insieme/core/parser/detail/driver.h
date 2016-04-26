@@ -58,6 +58,7 @@
 namespace insieme {
 namespace core {
 namespace parser {
+
 	namespace detail {
 
 	class location;
@@ -265,7 +266,7 @@ namespace parser {
 
 		  private:
 			/**
-			 * Replaces every occurence of the this literal in the body with the correct usage of the given thisParam
+			 * Replaces every occurrences of the this literal in the body with the correct usage of the given thisParam
 			 */
 			StatementPtr replaceThisInBody(const location& l, const StatementPtr& body, const VariablePtr& thisParam);
 		  public:
@@ -294,6 +295,16 @@ namespace parser {
 			 * generates a member function for the currently defined record type
 			 */
 			PureVirtualMemberFunctionPtr genPureVirtualMemberFunction(const location& l, bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type);
+
+			/**
+			 * generates a dummy compound which represents defaulted members
+			 */
+			CompoundStmtPtr getParserDefaultCompound() const;
+
+			/**
+			 * generates a dummy compound which represents deleted members
+			 */
+			CompoundStmtPtr getParserDeleteCompound() const;
 
 			/**
 			 * generates a free constructor for the given lambda
@@ -574,7 +585,7 @@ namespace parser {
 			// Error handling.
 			void error(const location& l, const std::string& m) const;
 			void error(const std::string& m) const;
-			bool whereErrors() const;
+			bool wereErrors() const;
 			void printErrors(std::ostream& out = std::cout, bool color = true) const;
 		};
 

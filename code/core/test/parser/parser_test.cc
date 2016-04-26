@@ -242,7 +242,7 @@ namespace parser {
 
 		EXPECT_EQ("'a<'b>",    toString(*builder.parseType("'a<'b>")));
 		EXPECT_EQ("'a...<'b>", toString(*builder.parseType("'a...<'b>")));
-		
+
 	}
 
 
@@ -1191,7 +1191,7 @@ namespace parser {
 	}
 
 	TEST(IR_Parser, ManuallyBuilt) {
-	
+
 		NodeManager nm;
 		IRBuilder builder(nm);
 		auto& basic = nm.getLangBasic();
@@ -1219,7 +1219,7 @@ namespace parser {
 		auto ctorBody = builder.compoundStmt(builder.assign(fieldAccess, builder.intLit(0)));
 		auto ctor = builder.lambdaExpr(ctorType, builder.parameters(thisVariable), ctorBody, "A::ctor");
 
-		auto constructed = builder.structTypeWithDefaults(thisType, ParentList(), toVector(field), toVector<ExpressionPtr>(ctor), 
+		auto constructed = builder.structTypeWithDefaults(thisType, ParentList(), toVector(field), toVector<ExpressionPtr>(ctor),
 			builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 
 		constructed = builder.normalize(constructed);
@@ -1272,6 +1272,67 @@ namespace parser {
 			                             "def struct A { }; B");
 			EXPECT_TRUE(res);
 			EXPECT_TRUE(checks::check(res).empty()) << checks::check(res);
+		}
+	}
+
+	TEST(IR_Parser, DefaultedAndDeletedMembers) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		{
+			auto typ = builder.parseType(R"(
+				def struct S {
+					ctor() = delete;
+					ctor(other: ref<S,f,f,cpp_rref>) = delete;
+				};
+				S
+			)");
+
+			EXPECT_TRUE(typ);
+			//std::cout << printer::PrettyPrinter(typ, printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS) << std::endl;
+			EXPECT_TRUE(checks::check(typ).empty()) << checks::check(typ);
+			EXPECT_EQ(1, typ.as<TagTypePtr>()->getRecord()->getConstructors().size());
+		}
+		{
+			auto typ = builder.parseType(R"(
+				def struct S {
+					ctor() = default;
+					ctor(a : type) {}
+				};
+				S
+			)");
+
+			EXPECT_TRUE(typ);
+			//std::cout << printer::PrettyPrinter(typ, printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS) << std::endl;
+			EXPECT_TRUE(checks::check(typ).empty()) << checks::check(typ);
+			EXPECT_EQ(4, typ.as<TagTypePtr>()->getRecord()->getConstructors().size());
+		}
+
+		{
+			auto typ = builder.parseType(R"(
+				def struct S {
+					lambda )" + utils::getMangledOperatorAssignName() + R"( = (other: ref<S,t,f,cpp_ref>) -> ref<S,f,f,cpp_ref> = delete;
+				};
+				S
+			)");
+
+			EXPECT_TRUE(typ);
+			//std::cout << printer::PrettyPrinter(typ, printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS) << std::endl;
+			EXPECT_TRUE(checks::check(typ).empty()) << checks::check(typ);
+			EXPECT_EQ(1, typ.as<TagTypePtr>()->getRecord()->getMemberFunctions().size());
+		}
+		{
+			auto typ = builder.parseType(R"(
+				def struct S {
+					lambda )" + utils::getMangledOperatorAssignName() + R"( = (other: ref<S,t,f,cpp_ref>) -> ref<S,f,f,cpp_ref> = default;
+				};
+				S
+			)");
+
+			EXPECT_TRUE(typ);
+			//std::cout << printer::PrettyPrinter(typ, printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS) << std::endl;
+			EXPECT_TRUE(checks::check(typ).empty()) << checks::check(typ);
+			EXPECT_EQ(2, typ.as<TagTypePtr>()->getRecord()->getMemberFunctions().size());
 		}
 	}
 
@@ -1356,7 +1417,7 @@ namespace parser {
 		                     "}"));
 
 		// call g and manually specify which const/volatile overload to take
-		EXPECT_TRUE(test_statement(nm, commonClass + 
+		EXPECT_TRUE(test_statement(nm, commonClass +
 			                           "{"
 			                           "  var ref<A> a;"
 			                           "  var ref<int<4>> b;"
