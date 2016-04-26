@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -101,7 +101,7 @@ namespace backend {
 
 			void bindFragment(const string& name, const CodeFragmentPtr& fragment) {
 				assert_true(contains(fragments, fragment.ptr)) << "Cannot bind fragment not maintained by this manager!";
-				__unused auto res = namedFragments.insert(std::make_pair(name, fragment.ptr));
+				__attr_unused auto res = namedFragments.insert(std::make_pair(name, fragment.ptr));
 				assert_true(res.second) << "Name already in use!!";
 			}
 		};

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -557,9 +557,9 @@ namespace pragma {
 			}
 		};
 
-		__unused static MatchNodeGenerator<expr_p> expr;
-		__unused static MatchNodeGenerator<var_p> var;
-		__unused static MatchNodeGenerator<cpp_string_lit_p> cpp_string_lit;
+		__attr_unused static MatchNodeGenerator<expr_p> expr;
+		__attr_unused static MatchNodeGenerator<var_p> var;
+		__attr_unused static MatchNodeGenerator<cpp_string_lit_p> cpp_string_lit;
 
 	} // End tok namespace
 } // End pragma namespace

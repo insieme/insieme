@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -38,7 +38,7 @@
  * Just defines a nicer alternative to the attribute syntax.
  */
 #ifdef __GNUC__
-#define __unused __attribute__((unused))
+#define __attr_unused __attribute__((unused))
 #else
-#define __unused
+#define __attr_unused
 #endif
