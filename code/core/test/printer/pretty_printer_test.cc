@@ -490,7 +490,7 @@ TEST(PrettyPrinter, Structs) {
 
 	{ // default constructor
 		auto type = builder.parseType("struct s { ctor () { return; }}");
-		auto type1 = builder.parseType("struct s { ctor () {}}");
+		auto type1 = builder.parseType("struct s { ctor () = default;}");
 
 		EXPECT_EQ("decl struct s;\n"
                   "decl ctor:s::();\n"
@@ -514,8 +514,8 @@ TEST(PrettyPrinter, Structs) {
 									  "    ctor function (v1 : ref<s,f,f,cpp_rref>) { return;}"
 									  "}"));
 		auto type1 = builder.normalize(builder.parseType("struct s { "
-									   "    ctor (other : ref<s,t,f,cpp_ref>) { }"
-									   "    ctor (other : ref<s,f,f,cpp_rref>) { }"
+									   "    ctor (other : ref<s,t,f,cpp_ref>) = default;"
+									   "    ctor (other : ref<s,f,f,cpp_rref>) = default;"
 									   "}"));
 
 		EXPECT_EQ("decl struct s;\n"
@@ -549,12 +549,8 @@ TEST(PrettyPrinter, Structs) {
 
 		auto type1 = builder.normalize(builder.parseType(
 				"struct s {"
-				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,t,f,cpp_ref>) -> ref<s,f,f,cpp_ref> {\n"
-				"        return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
-				"    }\n"
-				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,f,f,cpp_rref>) -> ref<s,f,f,cpp_ref> {\n"
-				"        return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
-				"    }\n"
+				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,t,f,cpp_ref>) -> ref<s,f,f,cpp_ref> = default;\n"
+				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,f,f,cpp_rref>) -> ref<s,f,f,cpp_ref> = default;\n"
 				"}"));
 
 		std::string res = "decl struct s;\n"
@@ -577,7 +573,7 @@ TEST(PrettyPrinter, Structs) {
 
 	{ // destructor
 		auto type = builder.parseType("struct s {"
-									  "    dtor () {}"
+									  "    dtor () = default;"
 									  "}");
 
 		auto type1 = builder.parseType("struct s {"
@@ -809,25 +805,21 @@ TEST(PrettyPrinter, PrintDefinedDecls) {
 		                                  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::PRINT_DERIVED_IMPL | PrettyPrinter::PRINT_DEFAULT_MEMBERS);
 
 		std::string res = "decl struct A;\n"
-			 			  "decl ctor:A::();\n"
-			 			  "decl ctor:A::(ref<A,t,f,cpp_ref>);\n"
-			 			  "decl ctor:A::(ref<A,f,f,cpp_rref>);\n"
-			 			  "decl dtor:~A::();\n"
-			 			  "decl " + utils::getMangledOperatorAssignName() + ":A::(ref<A,t,f,cpp_ref>) -> ref<A,f,f,cpp_ref>;\n"
-			 			  "decl " + utils::getMangledOperatorAssignName() + ":A::(ref<A,f,f,cpp_rref>) -> ref<A,f,f,cpp_ref>;\n"
-			 			  "def struct A {\n"
-			 			  "    ctor function () { }\n"
-			 			  "    ctor function (v1 : ref<A,t,f,cpp_ref>) { }\n"
-			 			  "    ctor function (v1 : ref<A,f,f,cpp_rref>) { }\n"
-			 			  "    dtor function () { }\n"
-			 			  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<A,t,f,cpp_ref>) -> ref<A,f,f,cpp_ref> {\n"
-			 			  "        return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
-			 			  "    }\n"
-			 			  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<A,f,f,cpp_rref>) -> ref<A,f,f,cpp_ref> {\n"
-			 			  "        return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
-			 			  "    }\n"
-			 			  "};\n"
-			 			  "A";
+		                  "decl ctor:A::();\n"
+		                  "decl ctor:A::(ref<A,t,f,cpp_ref>);\n"
+		                  "decl ctor:A::(ref<A,f,f,cpp_rref>);\n"
+		                  "decl dtor:~A::();\n"
+		                  "decl " + utils::getMangledOperatorAssignName() + ":A::(ref<A,t,f,cpp_ref>) -> ref<A,f,f,cpp_ref>;\n"
+		                  "decl " + utils::getMangledOperatorAssignName() + ":A::(ref<A,f,f,cpp_rref>) -> ref<A,f,f,cpp_ref>;\n"
+		                  "def struct A {\n"
+		                  "    ctor function () = default;\n"
+		                  "    ctor function (v1 : ref<A,t,f,cpp_ref>) = default;\n"
+		                  "    ctor function (v1 : ref<A,f,f,cpp_rref>) = default;\n"
+		                  "    dtor function () = default;\n"
+		                  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<A,t,f,cpp_ref>) -> ref<A,f,f,cpp_ref> = default;\n"
+		                  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<A,f,f,cpp_rref>) -> ref<A,f,f,cpp_ref> = default;\n"
+		                  "};\n"
+		                  "A";
 
 		EXPECT_EQ(res, toString(printer0)) << printer0;
 	}
