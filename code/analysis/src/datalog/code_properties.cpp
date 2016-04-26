@@ -40,6 +40,7 @@
 
 #include "souffle/gen/polymorph_types_analysis.h"
 #include "souffle/gen/top_level_term.h"
+#include "souffle/gen/exit_point_analysis.h"
 
 namespace insieme {
 namespace analysis {
@@ -96,6 +97,36 @@ namespace datalog {
 
 		// read result
 		auto& rel = analysis.rel_TopLevel;
+		bool result = rel.size() && rel.contains(1);
+		if (!result) analysis.dumpOutputs();
+		return result;
+	}
+
+	/**
+	 * Get exit points from a given lambda function
+	 */
+	bool performExitPointAnalysis(const core::NodePtr& rootLambda, bool debug)
+	{
+		// instantiate the analysis
+		souffle::Sf_exit_point_analysis analysis;
+
+		// fill in facts
+		framework::extractFacts(analysis, rootLambda);
+
+		// Add the lambda which we are interested in as 'top level'
+		analysis.rel_TopLevelLambda.insert(rootLambda);
+
+		// print debug information
+		if (debug) analysis.dumpInputs();
+
+		// run analysis
+		analysis.run();
+
+		// print debug information
+		if (debug) analysis.dumpOutputs();
+
+		// read result
+		auto& rel = analysis.rel_ExitPoints;
 		bool result = rel.size() && rel.contains(1);
 		if (!result) analysis.dumpOutputs();
 		return result;

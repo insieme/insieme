@@ -3,14 +3,14 @@
 
 
 .decl TopLevelLambda ( id:node )   input
-.decl ExitPoint      ( id:node )   output
+.decl ExitPoints     ( id:node )   output
 .decl ChildOfLambda  ( id:node )
 .decl SomeStatement  ( id:node , references:node )
 
 
 
 // An exit point is a return statement inside a lambda expression
-ExitPoint(X) :- ReturnStmt(X,_,_), ChildOfLambda(X).
+ExitPoints(X) :- ReturnStmt(X,_,_), ChildOfLambda(X).
 
 
 // A node is a child of a lambda if it is referenced as the body of a

@@ -53,9 +53,13 @@ namespace datalog {
 		core::NodeManager mgr;
 		IRBuilder builder(mgr);
 
+		auto t = builder.parseType("struct class { lambda f = () -> int<4> { return 1; } }");
+		performExitPointAnalysis(t, true);
+		/*
 		dumpText(builder.parseType("struct class {"
 		                           " lambda f = () -> int<4> { return 1; }"
 		                           "}"));
+		*/
 	}
 
 	TEST(CodeProperties, LargerCode) {

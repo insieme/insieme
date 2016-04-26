@@ -54,6 +54,11 @@ namespace datalog {
 	bool getTopLevelNodes(const core::NodePtr& root, bool debug = false);
 
 	/**
+	 * Get exit points from a given lambda function
+	 */
+	bool performExitPointAnalysis(const core::NodePtr& rootLambda, bool debug = false);
+
+	/**
 	 * Collects all returns within a lambda.
 	 *
 	 * @param lambda the lambda to be analyzed
