@@ -40,11 +40,28 @@
 
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/driver/integration/tests.h"
+
+
 namespace insieme {
 namespace analysis {
 namespace datalog {
 
 	using namespace core;
+
+	TEST(CodeProperties, LargerCode) {
+		using namespace driver::integration;
+
+		core::NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		for (auto name : {"loop_transform", "pyramids", "pendulum", "mqap", "loops", "transpose"}) {
+			IntegrationTestCaseOpt testCase = getCase(name);
+			core::ProgramPtr code = testCase.get().load(mgr);
+			EXPECT_TRUE(code);
+			EXPECT_TRUE(getTopLevelNodes(code));
+		}
+	}
 
 	TEST(CodeProperties, IsPolymorph) {
 
@@ -71,7 +88,11 @@ namespace datalog {
 		EXPECT_FALSE(isPolymorph(builder.parseType("(int<4>)->bool")));
 		EXPECT_FALSE(isPolymorph(builder.parseType("(string, int<4>)->uint<4>")));
 
-		// dumpText(builder.parseType("array<'a,'b>"));
+		/*
+		dumpText(builder.parseType("struct class {"
+		                           " lambda f = () -> int<4> { return 1; }"
+		                           "}"));
+		*/
 	}
 
 	TEST(CodeProperties, TopLevelTerm) {

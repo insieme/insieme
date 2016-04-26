@@ -36,6 +36,7 @@ insieme_find_package(NAME Boost)
 target_include_directories(insieme_analysis SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
 target_link_libraries(insieme_analysis insieme_core)
+target_link_libraries(insieme_analysis insieme_driver)
 target_link_libraries(insieme_analysis insieme_utils)
 
 cotire(insieme_analysis)
