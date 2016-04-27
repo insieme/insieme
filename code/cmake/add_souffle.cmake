@@ -14,7 +14,7 @@ macro(build_souffle)
 	# Download + build instructions for Soufflé
 	include(ExternalProject)
 
-	set(jenkins_path_fix /insieme-dev/bison-latest/bin:/insieme-dev/flex-latest/bin}
+	set(jenkins_path_fix /insieme-libs/bison-latest/bin:/insieme-libs/flex-latest/bin}
 	set(souffle_environment_setup ${CMAKE_COMMAND} -E env PATH=${BISON_ROOT}/bin:${FLEX_ROOT}/bin:${jenkins_path_fix}:$ENV{PATH})
 
 	ExternalProject_Add(
