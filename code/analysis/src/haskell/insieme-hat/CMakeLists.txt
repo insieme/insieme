@@ -31,4 +31,4 @@ add_custom_target(
 
 # exports
 set(LIBHSRTS_DIR $ENV{INSIEME_LIBS_HOME}/stack-latest/stack-root/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts PARENT_SCOPE)
-set(insieme_analysis_haskell ${CMAKE_CURRENT_BINARY_DIR}/libHShaskell-inspire.so PARENT_SCOPE)
+set(insieme_analysis_haskell ${CMAKE_CURRENT_BINARY_DIR}/libHSinsieme-hat.so PARENT_SCOPE)

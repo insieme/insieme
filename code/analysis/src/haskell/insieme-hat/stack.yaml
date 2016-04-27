@@ -11,4 +11,4 @@ extra-deps:
 resolver: lts-5.13
 
 ghc-options:
-  haskell-inspire: -lHSrts-ghc7.10.3
+  insieme-hat: -lHSrts-ghc7.10.3

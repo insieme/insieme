@@ -11,7 +11,7 @@ main = do
     if null args then exitFailure else return ()
 
     -- find shared libraries
-    libs <- head . fst <$> globDir [(compile "install/**/libHShaskell-inspire-*.so")] ".stack-work"
+    libs <- head . fst <$> globDir [(compile "install/**/libHSinsieme-hat-*.so")] ".stack-work"
 
     -- attach timestamps
     ts   <- mapM getModificationTime libs
@@ -20,5 +20,5 @@ main = do
     let latestlib = snd $ maximum $ zip ts libs
 
     -- copy original + simple name
-    copyFile latestlib ((args !! 0) </> "libHShaskell-inspire.so")
+    copyFile latestlib ((args !! 0) </> "libHSinsieme-hat.so")
     copyFile latestlib ((args !! 0) </> takeFileName latestlib)

@@ -1,4 +1,4 @@
-name:               haskell-inspire
+name:               insieme-hat
 version:            0.1
 -- synopsis:
 -- description:
@@ -12,7 +12,7 @@ build-type:         Simple
 -- extra-source-files:
 cabal-version:      >=1.10
 
-executable haskell-inspire
+executable insieme-hat
     main-is:            Main.hs
     other-modules:      Insieme.Analysis.Examples,
                         Insieme.Inspire,
