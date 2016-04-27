@@ -777,11 +777,11 @@ namespace parser {
 		}
 
 		CompoundStmtPtr InspireDriver::getParserDefaultCompound() const {
-			return builder.compoundStmt(builder.literal("INSIEME_PARSER_DEFAULT", builder.genericType("string")));
+			return parserIRExtension.getDefaultedBodyCompound();
 		}
 
 		CompoundStmtPtr InspireDriver::getParserDeleteCompound() const {
-			return builder.compoundStmt(builder.literal("INSIEME_PARSER_DELETE", builder.genericType("string")));
+			return parserIRExtension.getDeletedBodyCompound();
 		}
 
 		ExpressionPtr InspireDriver::genFreeConstructor(const location& l, const std::string& name, const LambdaExprPtr& ctor) {
@@ -1293,7 +1293,7 @@ namespace parser {
 			bool foundArtifacts = false;
 			visitDepthFirstOnceInterruptible(result, [&](const NodePtr& node) {
 				if(node == parserIRExtension.getMemberDummyLambda() || node == parserIRExtension.getExplicitMemberDummyLambda()
-				   || node == getParserDefaultCompound() || node == getParserDeleteCompound()) {
+				   || node == parserIRExtension.getDefaultedBodyCompound() || node == parserIRExtension.getDeletedBodyCompound()) {
 					foundArtifacts = true;
 					return true;
 				}
