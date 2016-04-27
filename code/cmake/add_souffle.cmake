@@ -20,8 +20,8 @@ macro(build_souffle)
 		souffle
 		URL http://www.dps.uibk.ac.at/~csaf7445/ext_libs/souffle-20160420.zip
 		PATCH_COMMAND ./bootstrap
-		CONFIGURE_COMMAND ${souffle_environment_setup} ${souffle_prefix}/src/souffle/configure
-		BUILD_COMMAND ${souffle_environment_setup} $(MAKE)
+		CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env PATH=${BISON_ROOT}/bin:${FLEX_ROOT}/bin:$ENV{PATH} ${souffle_prefix}/src/souffle/configure
+		BUILD_COMMAND ${CMAKE_COMMAND} -E env PATH=${BISON_ROOT}/bin:${FLEX_ROOT}/bin:$ENV{PATH} $(MAKE)
 		INSTALL_COMMAND ""
 		PREFIX ${souffle_prefix}
 		DOWNLOAD_NO_PROGRESS 1
