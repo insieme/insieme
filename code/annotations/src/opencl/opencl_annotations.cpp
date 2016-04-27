@@ -117,6 +117,7 @@ namespace opencl {
 		case CPU:			return "CPU";
 		case GPU:			return "GPU";
 		case ACCELERATOR:	return "ACCELERATOR";
+		case ALL:			return "ALL";
 		}
 		assert_fail() << "given type " << type << " does not exist!";
 		return "?";

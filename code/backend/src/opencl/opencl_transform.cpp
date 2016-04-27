@@ -739,8 +739,10 @@ namespace transform {
 		// first of all, mark this variant as opencl capable.
 		// secondly, we take note which kernel this meta_info is about for future extendability
 		info_type meta_data;
-		meta_data.opencl    = true;
+		meta_data.opencl = true;
 		meta_data.kernel_id = id;
+		// this kernel can run on any device
+		meta_data.device_type = (unsigned) -1;
 		lambdaExpr->attachValue(meta_data);
 		// add the generated variant to the result set
 		variants.push_back(lambdaExpr);

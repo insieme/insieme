@@ -157,6 +157,7 @@ struct _irt_opencl_device {
 	char *name;
 	cl_platform_id platform_id;
 	cl_device_fp_config single_fp_config;
+	cl_device_type device_type;
 	
 	/* pointer to the next device -- models a single linked list */
 	struct _irt_opencl_device *next;
@@ -177,6 +178,8 @@ struct _irt_opencl_kernel_data {
 	uint32 flags;
 	cl_program program;
 	cl_kernel kernel;
+	/* bits of suitable devices */
+	cl_device_type device_type;
 	/* pointer to the next kernel -- models a single linked list */
 	struct _irt_opencl_kernel_data *next;
 };

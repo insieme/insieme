@@ -68,7 +68,7 @@ namespace extensions {
 		static const std::string cpu = "CPU";
 		static const std::string gpu = "GPU";
 		static const std::string accelerator = "ACCELERATOR";
-		static const std::string defaulted = "DEFAULT";
+		static const std::string all = "ALL";
 		static const std::string loop = "loop";
 		static const std::string independent = "independent";
 		static const std::string yes = "yes";
@@ -83,7 +83,7 @@ namespace extensions {
 
 	// contains all clauses which are used to register the pragma handlers
 	namespace clauses {
-		auto device = kwd(keywords::type) >> l_paren >> (kwd(keywords::cpu) | kwd(keywords::gpu) | kwd(keywords::accelerator) | kwd(keywords::defaulted))[keywords::type] >> r_paren;
+		auto device = kwd(keywords::type) >> l_paren >> (kwd(keywords::cpu) | kwd(keywords::gpu) | kwd(keywords::accelerator) | kwd(keywords::all))[keywords::type] >> r_paren;
 		auto loop = !(kwd(keywords::independent) >> l_paren >> (kwd(keywords::yes) | kwd(keywords::no))[keywords::independent] >> r_paren);
 		auto range = kwd(keywords::range) >> l_paren >> tok::expr[keywords::range] >> colon >> tok::expr[keywords::range] >> colon >> tok::expr[keywords::range] >> r_paren;
 		auto requirement = l_paren >> var[keywords::requirement] >> comma >> range >> comma >> (kwd(keywords::ro) | kwd(keywords::wo) | kwd(keywords::rw))[keywords::access] >> r_paren;
@@ -108,8 +108,8 @@ namespace extensions {
 				type = Device::ACCELERATOR;
 			} else if(value == keywords::cpu) {
 				type = Device::CPU;
-			} else if(value == keywords::defaulted) {
-				type = Device::DEFAULT;
+			} else if(value == keywords::all) {
+				type = Device::ALL;
 			} else if(value == keywords::gpu) {
 				type = Device::GPU;
 			} else {

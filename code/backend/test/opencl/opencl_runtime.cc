@@ -142,7 +142,7 @@ namespace opencl {
 		bool mat_init(float *mat, unsigned elements, float value)
 		{
 			TIMEX_BGN("mat_init_acc");
-			#pragma opencl device type(DEFAULT)
+			#pragma opencl device type(ALL)
 			#pragma opencl requirement(mat, range(elements:0:elements), WO)
 			#pragma opencl loop independent(yes)
 			#pragma omp parallel for
@@ -179,7 +179,7 @@ namespace opencl {
 				
 				TIMEX_BGN("mat_mult_acc");
 				// now do the matrix multiplication
-				#pragma opencl device type(DEFAULT)
+				#pragma opencl device type(ALL)
 				#pragma opencl loop independent(yes)
 				#pragma omp parallel for
 				for (unsigned i = 0; i < N; ++i)
@@ -327,14 +327,14 @@ namespace opencl {
 		EXPECT_EQ(markers.size(), 8) << "failed to determine all for loops";
 		
 		// set the preferred device
-		addDeviceAnnotation(markers[2].getAddressedNode(), Device::Type::DEFAULT);
+		addDeviceAnnotation(markers[2].getAddressedNode(), Device::Type::ALL);
 		// annotate the matrix multiplication loops with independence information
 		addLoopAnnotation(markers[2].getAddressedNode(), true);
 		addLoopAnnotation(markers[3].getAddressedNode(), true);
 		addLoopAnnotation(markers[4].getAddressedNode(), false);
 		
 		// set the preferred device
-		addDeviceAnnotation(markers[0].getAddressedNode(), Device::Type::DEFAULT);
+		addDeviceAnnotation(markers[0].getAddressedNode(), Device::Type::ALL);
 		// annotate with independence information
 		addLoopAnnotation(markers[0].getAddressedNode(), true);
 		// determine the enclosing lambda

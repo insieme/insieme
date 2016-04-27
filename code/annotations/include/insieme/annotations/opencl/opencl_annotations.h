@@ -88,7 +88,7 @@ namespace opencl {
 	
 	class Device : public Annotation {
 	public:
-		enum Type { CPU, GPU, ACCELERATOR, DEFAULT = CPU };
+		enum Type { CPU, GPU, ACCELERATOR, ALL = (unsigned) -1 };
 
 		Device(Type type);
 		Type getType() const;

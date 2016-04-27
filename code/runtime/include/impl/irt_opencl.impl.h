@@ -66,7 +66,7 @@ void irt_opencl_unlock_device(irt_opencl_device *device);
 bool irt_opencl_init_kernel_data(irt_opencl_device *device, cl_program program,
 								 const char *routine, irt_opencl_kernel_data *data);
 void irt_opencl_cleanup_kernel_data(irt_opencl_kernel_data *data);
-bool irt_opencl_init_kernel_implementation(irt_opencl_context *context, irt_opencl_kernel_implementation *impl);
+bool irt_opencl_init_kernel_implementation(irt_opencl_context *context, unsigned id, irt_opencl_kernel_implementation *impl);
 void irt_opencl_cleanup_kernel_implementation(irt_opencl_kernel_implementation *impl);
 irt_opencl_kernel_implementation *irt_opencl_get_kernel_implementation(irt_context *context, uint32 index);
 irt_opencl_kernel_data *irt_opencl_select_kernel_data_random(irt_opencl_context *context,
@@ -86,6 +86,8 @@ irt_opencl_event_list *irt_opencl_event_list_create(unsigned max_events);
 void irt_opencl_event_list_wait_and_free(irt_opencl_event_list *list);
 cl_event *irt_opencl_event_list_advance(irt_opencl_event_list *list);
 bool irt_opencl_location_is_equal(irt_opencl_location *fst, irt_opencl_location *snd);
+opencl_info *irt_opencl_get_meta_info(unsigned id);
+opencl_info *irt_opencl_wi_get_meta_info(irt_work_item *wi, unsigned id);
 
 void irt_opencl_printf(enum irt_opencl_log_level level, const char *format, ...)
 {
@@ -110,23 +112,53 @@ irt_opencl_context *irt_opencl_get_context(irt_context *context)
 	return &(context->opencl_context);
 }
 
+opencl_info *irt_opencl_get_meta_info(unsigned id)
+{
+	irt_context *context = irt_context_get_current();
+	for (uint32 i = 0; i < context->info_table_size; ++i) {
+		irt_meta_info_table_entry *meta_info = &context->info_table[i];
+
+		/* check if it has opencl support */
+		if(!irt_meta_info_is_opencl_available(meta_info))
+			continue;
+
+		/* does it match with the requested id? */
+		opencl_info *info = irt_meta_info_get_opencl(meta_info);
+		if (info->kernel_id == id)
+			return info;
+	}
+
+	return NULL;
+}
+
+opencl_info *irt_opencl_wi_get_meta_info(irt_work_item *wi, unsigned id)
+{
+	irt_wi_implementation* wimpl = wi->impl;
+	for(uint32 i = 0; i < wimpl->num_variants; ++i) {
+		irt_wi_implementation_variant *variant = &wimpl->variants[i];
+		/* check if it has opencl support */
+		if(!irt_meta_info_is_opencl_available(variant->meta_info))
+			continue;
+
+		/* does it match with the requested id? */
+		opencl_info *info = irt_meta_info_get_opencl(variant->meta_info);
+		if (info->kernel_id == id)
+			return info;
+	}
+
+	return NULL;
+}
+
 irt_work_item *irt_opencl_wi_get_current(unsigned id)
 {
 	irt_work_item *wi = irt_wi_get_current();
 	while (wi) {
-		irt_wi_implementation* wimpl = wi->impl;
-		for(uint32 i = 0; i < wimpl->num_variants; ++i) {
-			irt_wi_implementation_variant *variant = &wimpl->variants[i];
-			/* check if it has opencl support */
-			if(!irt_meta_info_is_opencl_available(variant->meta_info))
-				continue;
+		/* does it match with the requested id? */
+		opencl_info *info = irt_opencl_wi_get_meta_info(wi, id);
+		if (info != NULL)
+			/* wi is well formed return it */
+			return wi;
 
-			/* does it match with the requested id? */
-			opencl_info *info = irt_meta_info_get_opencl(variant->meta_info);
-			if (info->kernel_id == id)
-				/* wi is well formed return it */
-				return wi;
-		}
 		/* hop one level up .. try to find captured env there */
 		wi = wi->parent_id.cached;
 	}
@@ -145,7 +177,7 @@ irt_opencl_kernel_implementation *irt_opencl_get_kernel_implementation(irt_conte
 	IRT_ASSERT(index < max_index, IRT_ERR_OCL, "invalid kernel implementation index %d, maximum is %d", index, max_index);
 	/* try to initialize it (only required in lazy initialization) */
 	irt_opencl_kernel_implementation *impl = table[index];
-	if(!irt_opencl_init_kernel_implementation(opencl_context, impl))
+	if(!irt_opencl_init_kernel_implementation(opencl_context, index, impl))
 		return NULL;
 	return impl;
 }
@@ -526,6 +558,7 @@ bool irt_opencl_init_device(cl_device_id device_id, cl_context context, irt_open
 	irt_opencl_get_device_info(CL_DEVICE_PLATFORM, platform_id);
 	irt_opencl_get_device_info(CL_DEVICE_SINGLE_FP_CONFIG, single_fp_config);
 	irt_opencl_get_device_info(CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, max_work_item_dimensions);
+	irt_opencl_get_device_info(CL_DEVICE_TYPE, device_type);
 	#undef irt_opencl_get_device_info
 
 	/* at this point only dynamically sized properties are left */
@@ -738,7 +771,7 @@ void irt_opencl_cleanup_kernel_data(irt_opencl_kernel_data *data)
 		clReleaseProgram(data->program);
 }
 
-bool irt_opencl_init_kernel_implementation(irt_opencl_context *context, irt_opencl_kernel_implementation *impl)
+bool irt_opencl_init_kernel_implementation(irt_opencl_context *context, unsigned id, irt_opencl_kernel_implementation *impl)
 {
 	cl_int result;
 	/* if irt_private is set .. this kernel has already been initiaized */
@@ -751,10 +784,16 @@ bool irt_opencl_init_kernel_implementation(irt_opencl_context *context, irt_open
 		return false;
 	}
 
+	/* obtain the meta info to check for which devices this impl is suitable */
+	opencl_info *meta_info = irt_opencl_get_meta_info(id);
+
 	irt_opencl_kernel_data *data = NULL;
 	irt_opencl_device *device = context->device;
 	/* iterate over all devices and build the program */
 	while (device != NULL) {
+		/* check if this type of device is ok for this impl */
+		if ((device->device_type & meta_info->device_type) == 0)
+			continue;
 		/* allocate a new kernel_data structure if we cannot reuse the latter one */
 		if (data == NULL)
 			data = malloc(sizeof(*data));
@@ -806,7 +845,7 @@ bool irt_opencl_init_kernel_table(irt_opencl_context *context, irt_opencl_kernel
 			break;
 			
 		OCL_DEBUG("registering kernel %d at %p\n", index, impl);
-		irt_opencl_init_kernel_implementation(context, impl);
+		irt_opencl_init_kernel_implementation(context, index, impl);
 		// right now, we only increase the total count
 		context->kernel_table_size += 1;
 	}

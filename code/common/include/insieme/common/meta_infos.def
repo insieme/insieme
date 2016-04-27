@@ -97,6 +97,7 @@ INFO_STRUCT_END()
 INFO_STRUCT_BEGIN(opencl)
 INFO_FIELD(opencl, bool, false)
 INFO_FIELD(kernel_id, unsigned, UINT_MAX)
+INFO_FIELD(device_type, unsigned, UINT_MAX)
 INFO_STRUCT_END()
 
 /*
