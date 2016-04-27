@@ -80,6 +80,8 @@ namespace parser {
 
 			const CompoundStmtPtr deletedBodyCompound;
 
+			const LiteralPtr defaultedBodyMarker;
+
 			/**
 			 * Creates a new instance based on the given node manager.
 			 */
@@ -88,7 +90,9 @@ namespace parser {
 					memberDummyLambda(builder.literal(builder.genericType("parser_member_dummy_lambda"), "parser_member_dummy_lambda")),
 					explicitMemberDummyLambda(builder.literal(builder.genericType("parser_explicit_member_dummy_lambda"), "parser_explicit_member_dummy_lambda")),
 					defaultedBodyCompound(builder.compoundStmt(builder.literal(builder.genericType("parser_defaulted_body_compound_marker"), "parser_defaulted_body_compound_marker"))),
-					deletedBodyCompound(builder.compoundStmt(builder.literal(builder.genericType("parser_deleted_body_compound_marker"), "parser_deleted_body_compound_marker"))) {}
+					deletedBodyCompound(builder.compoundStmt(builder.literal(builder.genericType("parser_deleted_body_compound_marker"), "parser_deleted_body_compound_marker"))),
+					defaultedBodyMarker(builder.literal(builder.genericType("parser_defaulted_body_marker"), "parser_defaulted_body_marker"))
+			{}
 
 			LANG_EXT_LITERAL(MemberFunctionAccess, "parser_member_function_access", "('a, identifier) -> unit")
 
@@ -106,6 +110,10 @@ namespace parser {
 
 			const CompoundStmtPtr& getDeletedBodyCompound() const {
 				return deletedBodyCompound;
+			}
+
+			const LiteralPtr& getDefaultedBodyMarker() const {
+				return defaultedBodyMarker;
 			}
 		};
 
@@ -322,6 +330,11 @@ namespace parser {
 			 * generates a dummy compound which represents deleted members
 			 */
 			CompoundStmtPtr getParserDeleteCompound() const;
+
+			/**
+			 * Tests whether the given node represents a defaulted member (this can either be a literal or a member function)
+			 */
+			bool isMarkedAsDefaultedMember(const NodePtr& node) const;
 
 			/**
 			 * generates a free constructor for the given lambda
