@@ -42,7 +42,6 @@ namespace ns {
 
 	struct S {
 		int a, b, c;
-		S() {}
 		int memberFunc(int x) {
 			return x;
 		}

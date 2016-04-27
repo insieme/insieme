@@ -956,7 +956,7 @@ namespace backend {
 
 				def struct A {
 					x : int;
-					dtor() { }
+					dtor() = default;
 				};
 
 				def struct B {

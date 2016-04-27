@@ -47,7 +47,6 @@ def struct IMP_std_colon__colon_initializer_list_int {
     _M_array : ptr<int<4>,t,f>;
     _M_len : uint<8>;
     ctor function (v1 : ref<ptr<int<4>,t,f>,f,f,plain>, v2 : ref<uint<8>,f,f,plain>) { }
-    ctor() { }
 };
 )"
 
