@@ -63,6 +63,8 @@
 #include "insieme/utils/name_mangling.h"
 #include "insieme/utils/map_utils.h"
 
+#include <boost/filesystem.hpp>
+
 namespace insieme {
 namespace backend {
 namespace opencl {
@@ -106,6 +108,29 @@ namespace opencl {
 				return builder.compoundStmt(builder.callExpr(manager.getLangBasic().getUnit(), pickExpr, callExpr->getArguments()));
 			}
 		};
+
+		class OffloadReplacerStep : public PreProcessor {
+		public:
+			core::NodePtr process(const Converter& converter, const core::NodePtr& code) override {
+				return OffloadReplacer(converter, code).map(code);
+			}
+		};
+
+		class OffloadIRDumperStep : public PreProcessor {
+		public:
+			core::NodePtr process(const Converter& converter, const core::NodePtr& code) override {
+				if (utils::logger_details::getLogLevel() > DEBUG) return code;
+
+				boost::filesystem::path sourceFile = boost::filesystem::unique_path(boost::filesystem::temp_directory_path() / "insieme-ocl-%%%%%%%%");
+				LOG(DEBUG) << "Using temporary file " << sourceFile << " as a target file for ocl dump.";
+
+				// write source to file
+				std::fstream srcFile(sourceFile.string(), std::fstream::out);
+				srcFile << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::PRINT_DEREFS);
+				srcFile.close();
+				return code;
+			}
+		};
 	}
 
 	OffloadSupportPre::OffloadSupportPre() :
@@ -113,7 +138,17 @@ namespace opencl {
 	{ }
 
 	core::NodePtr OffloadSupportPre::process(const Converter& converter, const core::NodePtr& code) {
-		return OffloadReplacer(converter, code).map(code);
+		/*
+		* note:
+		* this is the right spot to inject program wide optimizations.
+		* e.g. if data dependency analysis allow the split of a for loop into smaller tiles
+		* do it here in a seperate step and annotate it with proper opencl annos.
+		* thus the backend can use that to generate kernels.
+		*/
+		auto processor = makePreProcessorSequence(
+			makePreProcessor<OffloadReplacerStep>(),
+			makePreProcessor<OffloadIRDumperStep>());
+		return processor->process(converter, code);
 	}
 
 } // end namespace opencl
