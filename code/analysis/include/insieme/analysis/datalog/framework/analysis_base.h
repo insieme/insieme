@@ -51,7 +51,10 @@ namespace framework {
 	/**
 	 * Extracts facts from the given root node and inserts them into the given program.
 	 */
-	int extractFacts(souffle::Program& analysis, const core::NodePtr& root);
+	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer = [](const core::NodePtr&,int){});
+
+	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer = [](const core::NodeAddress&,int){});
+
 
 } // end namespace framework
 } // end namespace datalog

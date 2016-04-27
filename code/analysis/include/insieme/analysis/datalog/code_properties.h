@@ -56,7 +56,7 @@ namespace datalog {
 	/**
 	 * Get exit points from a given lambda function
 	 */
-	bool performExitPointAnalysis(const core::NodePtr& rootLambda, bool debug = false);
+	std::vector<core::ReturnStmtAddress> performExitPointAnalysis(const core::LambdaPtr& rootLambda, bool debug = false);
 
 	/**
 	 * Collects all returns within a lambda.

@@ -53,13 +53,24 @@ namespace datalog {
 		core::NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto t = builder.parseType("struct class { lambda f = () -> int<4> { return 1; } }");
-		performExitPointAnalysis(t, true);
-		/*
-		dumpText(builder.parseType("struct class {"
-		                           " lambda f = () -> int<4> { return 1; }"
-		                           "}"));
-		*/
+		auto t = builder.parseExpr(
+				"() -> int<4> { "
+				"	() -> bool {"
+				"		return false; "
+				"	};"
+				"	return 1; "
+				"	return 2; "
+				"	() -> int<4> {"
+				"		return 1; "
+				"	};"
+				"}"
+		);
+
+		visitDepthFirstOnce(t, [](const core::LambdaPtr& lambda) {
+			std::cout << "Running for " << dumpColor(lambda) << "\n";
+			auto list = performExitPointAnalysis(lambda);
+			std::cout << " \t" << list << "\n";
+		});
 	}
 
 	TEST(CodeProperties, LargerCode) {
