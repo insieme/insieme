@@ -438,11 +438,6 @@ namespace analysis {
 		}
 
 		{
-			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, true, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
-			EXPECT_FALSE(hasDefaultDestructor(record));
-		}
-
-		{
 			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_DESTRUCTOR);
 			auto dtor = builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp());
 			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), dtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());

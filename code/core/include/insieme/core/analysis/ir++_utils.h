@@ -121,8 +121,14 @@ namespace analysis {
 
 	// ---------------------------- Defaulted Members --------------------------------------
 
+	/**
+	 * Returns a new lambda which has been marked to be a default member
+	 */
 	LambdaExprPtr markAsDefaultMember(const LambdaExprPtr& lambda);
 
+	/**
+	 * Checks whether the given lambda is marked as a default member
+	 */
 	bool isaDefaultMember(const LambdaExprPtr& lambda);
 
 } // end namespace analysis
