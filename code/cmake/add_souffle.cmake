@@ -14,12 +14,14 @@ macro(build_souffle)
 	# Download + build instructions for Soufflé
 	include(ExternalProject)
 
+	set(souffle_environment_setup ${CMAKE_COMMAND} -E env PATH=${BISON_ROOT}/bin:${FLEX_ROOT}/bin:$ENV{PATH})
+
 	ExternalProject_Add(
 		souffle
 		URL http://www.dps.uibk.ac.at/~csaf7445/ext_libs/souffle-20160420.zip
 		PATCH_COMMAND ./bootstrap
-		CONFIGURE_COMMAND ${souffle_prefix}/src/souffle/configure
-		BUILD_COMMAND $(MAKE)
+		CONFIGURE_COMMAND ${souffle_environment_setup} ${souffle_prefix}/src/souffle/configure
+		BUILD_COMMAND ${souffle_environment_setup} $(MAKE)
 		INSTALL_COMMAND ""
 		PREFIX ${souffle_prefix}
 		DOWNLOAD_NO_PROGRESS 1
