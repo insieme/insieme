@@ -44,7 +44,6 @@ rec_memberfunc_pointer
 refs
 refs_ctor
 refs_obj
-return
 return_types
 scope
 scoped_enum

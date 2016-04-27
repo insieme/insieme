@@ -255,6 +255,132 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(CppSnippet, RefPtrDecl) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		//int i;
+		//int* i_ptr = &i;
+		//int& i_ref = i;
+
+		//int j = *i_ptr;
+		//int* j_ptr = &i_ref;
+		//int& j_ref = *i_ptr;
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+			int<4> function IMP_main (){
+				var ref<int<4>,f,f,plain> v0 = v0;
+				var ref<ptr<int<4>>,f,f,plain> v1 = ptr_from_ref(v0);
+				var ref<int<4>,f,f,cpp_ref> v2 = v0;
+				var ref<int<4>,f,f,plain> v3 = *ptr_to_ref(*v1);
+				var ref<ptr<int<4>>,f,f,plain> v4 = ptr_from_ref(ref_cast(v2, type_lit(f), type_lit(f), type_lit(plain)));
+				var ref<int<4>,f,f,cpp_ref> v5 = ptr_to_ref(*v1);
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check absence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "int32_t* v4 = (int32_t*)(&v2);");
+		EXPECT_PRED2(containsSubString, code, "int32_t& v5 = *v1;");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, RefPtrFun) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		//int i;
+		//int* i_ptr = &i;
+		//int& i_ref = i;
+		//take_ref(*i_ptr);
+		//take_ptr(&i_ref);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+			def IMP_take_ref = (a: ref<int<4>,f,f,cpp_ref>) -> unit {};
+			def IMP_take_ptr = (a: ptr<int<4>>) -> unit {};
+			int<4> function IMP_main() {
+				var ref<int<4>,f,f,plain> v0 = v0;
+				var ref<ptr<int<4>>,f,f,plain> v1 = ptr_from_ref(v0);
+				var ref<int<4>,f,f,cpp_ref> v2 = v0;
+
+				IMP_take_ref(ref_kind_cast(ptr_to_ref(*v1), type_lit(cpp_ref)));
+				IMP_take_ptr(ptr_from_ref(ref_cast(v2, type_lit(f), type_lit(f), type_lit(plain))));
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check absence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "IMP_take_ref(*v1);");
+		EXPECT_PRED2(containsSubString, code, "IMP_take_ptr((int32_t*)(&v2));");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, RefPtrRet) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+			def gen_ref = function () -> ref<int<4>,f,f,cpp_ref> {
+				return ptr_to_ref(*lit("gr" : ref<ptr<int<4>>,f,f,plain>));
+			};
+			def gen_ptr = function () -> ptr<int<4>> {
+				return *lit("gf" : ref<ptr<int<4>>,f,f,plain>);
+			};
+			int<4> function IMP_main() {
+				gen_ref();
+				gen_ptr();
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check absence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "return *gr;");
+		EXPECT_PRED2(containsSubString, code, "return gf;");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 	TEST(CppSnippet, MemberFunctions) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
@@ -459,10 +585,10 @@ namespace backend {
 
 		// check definition of six essential functions
 		EXPECT_PRED2(containsSubString, code, "A() = default;");						// default constructor
-		EXPECT_PRED2(containsSubString, code, "A(const A& p2) = default;");				// default copy constructor
+		EXPECT_PRED2(containsSubString, code, "A(A const& p2) = default;");				// default copy constructor
 		EXPECT_PRED2(containsSubString, code, "A(A&& p2) = default;");					// default move constructor
 		EXPECT_PRED2(containsSubString, code, "~A() = default;");						// default destructor
-		EXPECT_PRED2(containsSubString, code, "A& operator=(const A& p2) = default;");		// default assignment
+		EXPECT_PRED2(containsSubString, code, "A& operator=(A const& p2) = default;");		// default assignment
 		EXPECT_PRED2(containsSubString, code, "A& operator=(A&& p2) = default;");			// default move assignment
 
 		EXPECT_PRED2(containsSubString, code, "A(int32_t p2);");						// user defined constructor declaration
@@ -520,10 +646,10 @@ namespace backend {
 
 		// check definition of six essential functions
 		EXPECT_PRED2(containsSubString, code, "A() = default;");						// default constructor
-		EXPECT_PRED2(containsSubString, code, "A(const A& p2) = default;");				// default copy constructor
+		EXPECT_PRED2(containsSubString, code, "A(A const& p2) = default;");				// default copy constructor
 		EXPECT_PRED2(containsSubString, code, "A(A&& p2) = default;");					// default move constructor
 		EXPECT_PRED2(containsSubString, code, "~A() = default;");						// default destructor
-		EXPECT_PRED2(containsSubString, code, "A& operator=(const A& p2) = default;");		// default assignment
+		EXPECT_PRED2(containsSubString, code, "A& operator=(A const& p2) = default;");		// default assignment
 		EXPECT_PRED2(containsSubString, code, "A& operator=(A&& p2) = default;");			// default move assignment
 
 		EXPECT_PRED2(containsSubString, code, "A(int32_t p2);");						// user defined constructor declaration
@@ -1178,7 +1304,7 @@ namespace backend {
 		auto codeString = toString(*converted);
 		codeString = insieme::utils::removeCppStyleComments(codeString);
 		EXPECT_PRED2(notContainsSubString, codeString, "*");
-		EXPECT_PRED2(containsSubString, codeString, "IMP_A(const IMP_A& p2) = default");
+		EXPECT_PRED2(containsSubString, codeString, "IMP_A(IMP_A const& p2) = default");
 		EXPECT_PRED2(containsSubString, codeString, "IMP_A() = default");
 		EXPECT_PRED2(containsSubString, codeString, "IMP_A(IMP_A&& p2) = default");
 
@@ -1218,7 +1344,7 @@ namespace backend {
 		auto codeString = toString(*converted);
 		codeString = insieme::utils::removeCppStyleComments(codeString);
 		EXPECT_PRED2(notContainsSubString, codeString, "*");
-		EXPECT_PRED2(containsSubString, codeString, "IMP_A(const IMP_A& p2) = default");
+		EXPECT_PRED2(containsSubString, codeString, "IMP_A(IMP_A const& p2) = default");
 		EXPECT_PRED2(containsSubString, codeString, "IMP_A() = default");
 		EXPECT_PRED2(containsSubString, codeString, "IMP_A(IMP_A&& p2) = default");
 

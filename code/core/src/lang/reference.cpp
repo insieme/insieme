@@ -310,17 +310,27 @@ namespace lang {
 		assert_pred1(isReference, targetTy) << "Trying to build a ref cast to non-ref type.";
 		if(targetTy == refExpr->getType()) return refExpr;
 
-		//only create the cast if the types really do differ in their qualifiers
-		if (!doReferenceQualifiersDiffer(refExpr->getType(), targetTy)) {
+		// only create the cast if the types really do differ in their qualifiers
+		if(!doReferenceQualifiersDiffer(refExpr->getType(), targetTy)) {
 			return refExpr;
 		}
 
 		assert_true(doReferencesDifferOnlyInQualifiers(refExpr->getType(), targetTy)) << "Ref cast only allowed to cast between qualifiers,"
 			<< "trying to cast from\n" << dumpColor(refExpr->getType()) << " - to - \n" << dumpColor(targetTy);
+
+
 		IRBuilder builder(refExpr->getNodeManager());
 		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();
 		auto& bmExt = refExpr->getNodeManager().getLangExtension<BooleanMarkerExtension>();
 		ReferenceType referenceTy(targetTy);
+
+		// for temp init exprs, simply change type being created rather than casting
+		if(auto initExpr = refExpr.isa<InitExprPtr>()) {
+			if(rExt.isCallOfRefTemp(initExpr->getMemoryExpr())) {
+				return builder.initExprTemp(targetTy.as<GenericTypePtr>(), initExpr->getInitExprList());
+			}
+		}
+
 		return builder.callExpr(rExt.getRefCast(), refExpr,
 						bmExt.getMarkerTypeLiteral(referenceTy.isConst()),
 			            bmExt.getMarkerTypeLiteral(referenceTy.isVolatile()),
@@ -339,7 +349,7 @@ namespace lang {
 	ExpressionPtr buildRefParentCast(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
 		assert_pred1(isReference, refExpr) << "Trying to build a ref parent cast from non-ref.";
 		auto rT = ReferenceType(refExpr);
-		if(rT.getElementType() == targetTy) return refExpr;
+		if(rT.getElementType() == targetTy || core::types::isMatchable(rT.getElementType(), targetTy)) return refExpr;
 		IRBuilder builder(refExpr->getNodeManager());
 		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();
 		return builder.callExpr(rExt.getRefParentCast(), refExpr, builder.getTypeLiteral(targetTy));
@@ -348,7 +358,7 @@ namespace lang {
 	ExpressionPtr buildRefReinterpret(const ExpressionPtr& refExpr, const TypePtr& targetTy) {
 		assert_pred1(isReference, refExpr) << "Trying to build a ref reinterpret cast from non-ref.";
 		auto rT = ReferenceType(refExpr);
-		if(rT.getElementType() == targetTy) return refExpr;
+		if(rT.getElementType() == targetTy || core::types::isMatchable(rT.getElementType(), targetTy)) return refExpr;
 		IRBuilder builder(refExpr->getNodeManager());
 		auto& rExt = refExpr->getNodeManager().getLangExtension<ReferenceExtension>();
 		return builder.callExpr(rExt.getRefReinterpret(), refExpr, builder.getTypeLiteral(targetTy));

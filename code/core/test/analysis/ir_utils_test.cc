@@ -267,7 +267,7 @@ namespace analysis {
 
 		// check variables
 		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
-		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0), builder.variable(int4, 1), builder.variable(int4, 77),
+		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0), builder.variable(builder.refType(int4), 1), builder.variable(int4, 77),
 			                                     builder.variable(builder.refType(builder.functionType(int4, int4, FK_CLOSURE)), 0)),
 			      getAllVariables(call));
 	}
@@ -799,7 +799,7 @@ namespace analysis {
 
 		// check that the composed type is properly composed
 		EXPECT_TRUE(core::checks::check(partiallyUnrolled).empty()) << core::checks::check(partiallyUnrolled);
-		
+
 		// make sure that standard properties hold
 		EXPECT_TRUE(partiallyUnrolled->isRecursive());
 
@@ -815,7 +815,7 @@ namespace analysis {
 			builder.parseType("def struct Z { x : R; }; Z", symbols),
 			getCanonicalType(builder.parseType("def struct Z { x : T; }; Z", symbols))
 		);
-		
+
 	}
 
 

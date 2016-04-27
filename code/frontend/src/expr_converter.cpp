@@ -85,6 +85,29 @@ namespace conversion {
 	//										BASE EXPRESSION CONVERTER
 	//---------------------------------------------------------------------------------------------------------------------
 
+	core::ExpressionPtr Converter::ExprConverter::BaseVisit(const clang::Expr* expr, std::function<core::ExpressionPtr(const clang::Expr*)> self) {
+
+		auto retIr = converter.applyExtensions<core::ExpressionPtr>(expr, [&](const clang::Expr* param) {
+			converter.trackSourceLocation(param);
+			auto retIr = self(param);
+			converter.untrackSourceLocation();
+			return retIr;
+		});
+
+		// print diagnosis messages
+		converter.printDiagnosis(expr->getLocStart());
+
+		// attach location annotation
+		if(expr->getLocStart().isValid()) {
+			auto presStart = converter.getSourceManager().getPresumedLoc(expr->getLocStart());
+			auto presEnd = converter.getSourceManager().getPresumedLoc(expr->getLocEnd());
+			core::annotations::attachLocation(retIr, std::string(presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(),
+				                              presEnd.getColumn());
+		}
+
+		return retIr;
+	}
+
 	core::TypePtr Converter::ExprConverter::convertExprType(const clang::Expr* expr) {
 		auto qType = expr->getType();
 		auto irType = converter.convertType(qType);
@@ -104,7 +127,7 @@ namespace conversion {
 			string s = insieme::utils::unescapeString(lit->getValue()->getValue());
 			core::NodeManager& mgr = lit->getNodeManager();
 			core::IRBuilder builder(mgr);
-			ExpressionList initExps;
+			core::ExpressionList initExps;
 			for(char c : s) {
 				initExps.push_back(builder.literal(format("'%s'",toString(insieme::utils::escapeChar(c))), mgr.getLangBasic().getChar()));
 			}
@@ -158,39 +181,8 @@ namespace conversion {
 	// and transparently attach annotations to node which are annotated
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
-		// iterate clang handler list and check if a handler wants to convert the expr
-		core::ExpressionPtr retIr;
-		for(auto extension : converter.getConversionSetup().getExtensions()) {
-			retIr = extension->Visit(expr, converter);
-			if(retIr) { break; }
-		}
-
-		if(!retIr) {
-			converter.trackSourceLocation(expr);
-			retIr = ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
-			converter.untrackSourceLocation();
-		} else {
-			VLOG(2) << "CExprConverter::Visit handled by plugin";
-		}
-
-		// print diagnosis messages
-		converter.printDiagnosis(expr->getLocStart());
-
-		// call frontend extension post visitors
-		for(auto extension : converter.getConversionSetup().getExtensions()) {
-			retIr = extension->PostVisit(expr, retIr, converter);
-		}
-
-		// attach location annotation
-		if(expr->getLocStart().isValid()) {
-			auto presStart = converter.getSourceManager().getPresumedLoc(expr->getLocStart());
-			auto presEnd = converter.getSourceManager().getPresumedLoc(expr->getLocEnd());
-			core::annotations::attachLocation(retIr, std::string(presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(),
-				                              presEnd.getColumn());
-		}
-
-        assert_true(retIr) << " no null return allowed";
-		return retIr;
+		VLOG(2) << "CStmtConverter";
+		return BaseVisit(expr, [&](const clang::Expr* param) { return ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(param); });
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -785,7 +777,7 @@ namespace conversion {
 		else if(clangType->isArrayType()) {
 			auto gT = converter.convertType(clangType).as<core::GenericTypePtr>();
 			frontend_assert(core::lang::isArray(gT)) << "Clang InitListExpr of unexpected generic type (should be array):\n" << dumpColor(gT);
-			ExpressionList initExps;
+			core::ExpressionList initExps;
 			for(unsigned i = 0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
 				initExps.push_back(convertInitExpr(initList->getInit(i)));
 			}
@@ -823,9 +815,11 @@ namespace conversion {
 
 		if(const clang::InitListExpr* initList = llvm::dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())) {
 			retIr = VisitInitListExpr(initList);
-			auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-			if(refExt.isCallOfRefDeref(retIr)) retIr = core::analysis::getArgument(retIr, 0);
-			else retIr = builder.refTemp(retIr);
+			if(compLitExpr->isLValue()) {
+				auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+				if(refExt.isCallOfRefDeref(retIr)) retIr = core::analysis::getArgument(retIr, 0);
+				else retIr = builder.refTemp(retIr);
+			}
 		}
 
 		if(!retIr) frontend_assert(false) << "Unimplemented type of CompoundLiteralExpr encountered";
@@ -835,11 +829,11 @@ namespace conversion {
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//                  StmtExpr EXPRESSION
-	// Statement Expressions (a GNU C extension) allow statements to appear as 
+	// Statement Expressions (a GNU C extension) allow statements to appear as
 	// an expression by enclosing them in parentheses, e.g.:
 	//		({ int x = 5; x+3; })
-	// The last entry should be an expression terminated by a semicolon and 
-	// represents the return type and value, otherwise (last entry == statement) 
+	// The last entry should be an expression terminated by a semicolon and
+	// represents the return type and value, otherwise (last entry == statement)
 	// the entire construct has type void
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::ExprConverter::VisitStmtExpr(const clang::StmtExpr* stmtExpr) {
