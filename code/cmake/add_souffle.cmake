@@ -14,8 +14,22 @@ macro(build_souffle)
 	# Download + build instructions for Soufflé
 	include(ExternalProject)
 
-	set(jenkins_path_fix /insieme-libs/bison-latest/bin:/insieme-libs/flex-latest/bin)
-	set(souffle_environment_setup ${CMAKE_COMMAND} -E env PATH=${BISON_ROOT}/bin:${FLEX_ROOT}/bin:${jenkins_path_fix}:$ENV{PATH})
+
+	insieme_find_package(NAME BISON)
+	if(BISON_EXECUTABLE-NOTFOUND)
+		message(FATAL_ERROR "bison not found")
+	else()
+		message(STATUS "bison found @ ${BISON_EXECUTABLE}")
+	endif()
+
+	insieme_find_package(NAME FLEX)
+	if(FLEX_EXECUTABLE-NOTFOUND)
+		message(FATAL_ERROR "flex not found")
+	else()
+		message(STATUS "flex found @ ${FLEX_EXECUTABLE}")
+	endif()
+
+	set(souffle_environment_setup ${CMAKE_COMMAND} -E env PATH=${BISON_EXECUTABLE}:${FLEX_EXECUTABLE}:$ENV{PATH})
 
 	ExternalProject_Add(
 		souffle
