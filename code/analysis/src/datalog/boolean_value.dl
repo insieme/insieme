@@ -1,0 +1,41 @@
+#include "boolean.dl"
+#include "ir.dl"
+
+
+// input parameters
+.decl target_expr( n : node ) input
+
+// output values
+.decl result( v : bool ) output
+
+
+// the actual analysis
+.decl boolean_value( n : node , v : bool ) 
+
+// link analysis with result
+result( v ) :- target_expr(n), boolean_value(n,v).
+
+
+
+// ---------- Analysis Specification -----------
+
+// -- empty list checks --
+.decl is_empty ( e : node )
+is_empty(e) :- Types(e), !NodeList(e,_,_).
+is_empty(e) :- Parents(e), !NodeList(e,_,_).
+
+
+// -- identify the boolean type --
+.decl is_boolean( t : node )
+is_boolean( n ) :- GenericType(n,"bool",a,b), is_empty(a), is_empty(b).
+
+
+// -- boolean value analysis --
+
+// -- assign values to literals --
+boolean_value( n , true ) :- Literal(n,t,"true"), is_boolean(t).
+boolean_value( n , false ) :- Literal(n,t,"false"), is_boolean(t).
+
+// -- assign values to free variables --
+
+// TODO: continue here
