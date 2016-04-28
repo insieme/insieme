@@ -11,24 +11,24 @@ insieme_glob_headers(insieme_analysis_incs include)
 
 
 # =============================================  SOUFFLE  =====================================
-#
-## Generate soufflé files now so we can add them to the insieme_analysis library later
-#set(souffle_input_dir  ${insieme_code_dir}/analysis/src/datalog)
-#
-#build_souffle()
-#
-## compile all analysis files *.dl to CPP header files
-#file(GLOB datalog_analysis ${souffle_input_dir}/*.dl)
-#foreach ( analysis_file ${datalog_analysis} )
-#	get_filename_component( analysis_name ${analysis_file} NAME_WE )
-#	souffle_generate_cpp(${souffle_input_dir} ${analysis_name} "${souffle_input_dir}/include" )
-#endforeach()
-#
-#
+
+# Generate soufflé files now so we can add them to the insieme_analysis library later
+set(souffle_input_dir  ${insieme_code_dir}/analysis/src/datalog)
+
+configure_souffle()
+
+# compile all analysis files *.dl to CPP header files
+file(GLOB datalog_analysis ${souffle_input_dir}/*.dl)
+foreach ( analysis_file ${datalog_analysis} )
+	get_filename_component( analysis_name ${analysis_file} NAME_WE )
+	souffle_generate_cpp(${souffle_input_dir} ${analysis_name} "${souffle_input_dir}/include" )
+endforeach()
+
+
 # =============================================================================================
 
 # Build the analysis library
-add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_analysis_incs} ) #${souffle_output})
+add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_analysis_incs} ${souffle_output})
 target_include_directories(insieme_analysis PUBLIC ${insieme_analysis_include_dir})
 
 # lookup Boost library
@@ -36,12 +36,13 @@ insieme_find_package(NAME Boost)
 target_include_directories(insieme_analysis SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
 target_link_libraries(insieme_analysis insieme_core)
+target_link_libraries(insieme_analysis insieme_driver)
 target_link_libraries(insieme_analysis insieme_utils)
 
 cotire(insieme_analysis)
 
 
-## =============================================  HASKELL  =====================================
+# =============================================  HASKELL  =====================================
 
 add_subdirectory(src/haskell/insieme-hat)
 add_dependencies(insieme_analysis insieme_analysis_haskell)
@@ -54,10 +55,11 @@ link_directories(${LIBHSRTS_DIR})
 # haskell stuff requires gmp
 link_directories($ENV{INSIEME_LIBS_HOME}/gmp-latest/lib)
 
-## =============================================  TESTING  =====================================
+
+# =============================================  TESTING  =====================================
 
 set ( ut_prefix  ut_analysis )
-file(GLOB_RECURSE test_cases test/node_count_test.cc)
+file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 
