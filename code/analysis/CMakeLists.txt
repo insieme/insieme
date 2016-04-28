@@ -15,7 +15,7 @@ insieme_glob_headers(insieme_analysis_incs include)
 # Generate soufflé files now so we can add them to the insieme_analysis library later
 set(souffle_input_dir  ${insieme_code_dir}/analysis/src/datalog)
 
-build_souffle()
+configure_souffle()
 
 # compile all analysis files *.dl to CPP header files
 file(GLOB datalog_analysis ${souffle_input_dir}/*.dl)
