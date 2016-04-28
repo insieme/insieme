@@ -11,10 +11,91 @@
 .type string
 
 // More Type Definitions
-.number_type node
 .number_type child_index
 .number_type function_kind
 
+
+// -- type types --
+
+.number_type generic_type
+.number_type tuple_type
+.number_type function_type
+.number_type type_variable
+.number_type variadic_type_variable
+.number_type generic_type_variable
+.number_type variadic_generic_type_variable
+.number_type numeric_type
+.number_type tag_type
+.number_type tag_type_reference
+
+.type type = generic_type 
+		   | generic_type                  
+           | tuple_type                    
+		   | function_type                 
+		   | type_variable                 
+		   | variadic_type_variable        
+		   | generic_type_variable         
+		   | variadic_generic_type_variable
+		   | numeric_type
+		   | tag_type
+		   | tag_type_reference
+
+
+// -- expression types --
+		   
+.number_type literal        
+.number_type variable       
+.number_type call_expr       
+.number_type bind_expr       
+.number_type cast_expr       
+.number_type init_expr       
+.number_type job_expr        
+.number_type lambda_expr     
+.number_type lambda_reference
+.number_type tuple_expr      
+
+
+.type expr = literal          
+           | variable         
+		   | call_expr        
+           | bind_expr        
+           | cast_expr        
+		   | init_expr        
+		   | job_expr         
+		   | lambda_expr      
+           | lambda_reference 
+           | tuple_expr       
+
+		   
+// -- statement types --
+
+.number_type if_stmt
+		   
+.type stmt = expr
+		   | if_stmt
+
+.number_type types
+.number_type parents
+
+
+// -- support types --
+
+.type support = types
+			  | parents
+			  
+
+// -- program type --
+
+.number_type program
+
+
+// -- node type --
+
+.type node = type
+		   | stmt
+		   | program
+		   | support
+		   
 // TODO: diversify types
 //.number_type value
 //.number_type type
