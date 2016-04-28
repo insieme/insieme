@@ -532,7 +532,7 @@ namespace backend {
 					// Create code similar to this:
 					// 		(A*)memcpy(malloc(sizeof(A) + sizeof(float) * v2), &(struct A){ v2 }, sizeof(A))
 
-					__unused auto& arrayExt = LANG_EXT(core::lang::ArrayExtension);
+					__attr_unused auto& arrayExt = LANG_EXT(core::lang::ArrayExtension);
 
 					assert_eq(ARG(0)->getNodeType(), core::NT_InitExpr) << "Only supporting struct expressions as initializer value so far!";
 					core::InitExprPtr initValue = ARG(0).as<core::InitExprPtr>();

@@ -40,6 +40,7 @@
 
 #include "souffle/gen/polymorph_types_analysis.h"
 #include "souffle/gen/top_level_term.h"
+#include "souffle/gen/exit_point_analysis.h"
 
 namespace insieme {
 namespace analysis {
@@ -96,9 +97,44 @@ namespace datalog {
 
 		// read result
 		auto& rel = analysis.rel_TopLevel;
-		bool result = rel.size() && rel.contains(1);
+		bool result = rel.size() && rel.contains(0);
 		if (!result) analysis.dumpOutputs();
 		return result;
+	}
+
+	/**
+	 * Get exit points from a given lambda function
+	 */
+	std::vector<core::ReturnStmtAddress> performExitPointAnalysis(const core::LambdaPtr& rootLambda, bool debug)
+	{
+		// instantiate the analysis
+		souffle::Sf_exit_point_analysis analysis;
+
+		std::map<int,core::ReturnStmtAddress> index;
+
+		// fill in facts
+		int id = framework::extractAddressFacts(analysis, rootLambda, [&](const core::NodeAddress& node, int id) {
+			if (auto ret = node.isa<core::ReturnStmtAddress>()) index[id] = ret;
+		});
+
+		// Add the lambda which we are interested in as 'top level'
+		analysis.rel_TopLevelLambda.insert(id);
+
+		// print debug information
+		if (debug) analysis.dumpInputs();
+
+		// run analysis
+		analysis.run();
+
+		// print debug information
+		if (debug) analysis.dumpOutputs();
+
+		// produces result
+		std::vector<core::ReturnStmtAddress> res;
+		for(const auto& cur : analysis.rel_ExitPoints) {
+			res.push_back(index[cur[0]]);
+		}
+		return res;
 	}
 
 } // end namespace datalog

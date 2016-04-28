@@ -16,6 +16,7 @@ LUAJIT 	:= ${PREFIX}/luajit-$(shell ${AWK_CMD} luajit_install.sh | cut -d= -f2 )
 CUDD 	:= ${PREFIX}/cudd-$(shell ${AWK_CMD} cudd_install.sh | cut -d= -f2 )
 BISON 	:= ${PREFIX}/bison-$(shell ${AWK_CMD} bison_install.sh | cut -d= -f2 )
 FLEX 	:= ${PREFIX}/flex-$(shell ${AWK_CMD} flex_install.sh | cut -d= -f2 )
+SOUFFLE	:= ${PREFIX}/souffle-$(shell ${AWK_CMD} souffle_install.sh | cut -d= -f2 )
 
 # HASKELL STUFF
 GHC     := ${PREFIX}/ghc-$(shell ${AWK_CMD} ghc_install.sh | cut -d= -f2 )
@@ -30,13 +31,13 @@ HWLOC	:= ${PREFIX}/hwloc-$(shell ${AWK_CMD} hwloc_install.sh | cut -d= -f2 )
 all: INSIEME
 
 ## GMP
-${GMP}: gmp_install.sh 
+${GMP}: gmp_install.sh
 	@echo "#### INSTALL GMP ${GMP} ####"
 	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh gmp_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## MPFR
-${MPFR}: mpfr_install.sh ${GMP} 
+${MPFR}: mpfr_install.sh ${GMP}
 	@echo "#### INSTALL MPFR ${MPFR} ####"
 	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh mpfr_install.sh
 	@echo "@@@@ Done! @@@@"
@@ -95,6 +96,12 @@ ${FLEX}: flex_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh flex_install.sh
 	@echo "@@@@ Done! @@@@"
 
+## SOUFFLE
+${SOUFFLE}: souffle_install.sh ${GCC} ${FLEX} ${BISON}
+	@echo "#### INSTALL SOUFFLE ${SOUFFLE} ####"
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh souffle_install.sh
+	@echo "@@@@ Done! @@@@"
+
 ## GHC
 ${GHC}: ghc_install.sh ${GMP}
 	@echo "#### INSTALL GHC ${GHC} ####"
@@ -142,5 +149,5 @@ INSIEME: ${GCC} \
 		 ${FLEX} \
 		 ${PAPI} \
 		 ${HWLOC} \
+		 ${SOUFFLE} \
 		 ${STACK}
-

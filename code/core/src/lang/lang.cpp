@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -116,7 +116,7 @@ namespace {
 	};
 
 	// register the converter into the central annotation converter registry
-	__unused bool reg = dump::AnnotationConverterRegister::getDefault().registerConverter<BuiltInTagConverter,BuiltInTag>();
+	__attr_unused bool reg = dump::AnnotationConverterRegister::getDefault().registerConverter<BuiltInTagConverter,BuiltInTag>();
 
 }
 
