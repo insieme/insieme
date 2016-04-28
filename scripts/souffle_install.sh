@@ -2,7 +2,7 @@
 . ./environment.setup
 set -e
 
-VERSION=20160420
+VERSION=2016.04.20
 
 ########################################################################
 ##                       SOUFFLÉ DATALOG ENGINE
