@@ -91,7 +91,7 @@ namespace region {
 		visitDepthFirstPrunable(code, [&](const core::CompoundStmtAddress& comp) {
 			unsigned size = calculator.estimateSize(comp.getAddressedNode());
 			if(minSize < size && size < maxSize) {
-				regions.push_back(comp);
+				regions.push_back(Region(comp));
 				return true;
 			}
 			return false;

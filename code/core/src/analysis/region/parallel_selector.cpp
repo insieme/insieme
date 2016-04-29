@@ -58,7 +58,7 @@ namespace region {
 
 			if(addr->getNodeType() == core::NT_BindExpr) { addr = addr.as<core::BindExprAddress>()->getCall()->getFunctionExpr(); }
 
-			if(addr->getNodeType() == core::NT_LambdaExpr) { res.push_back(addr.as<core::LambdaExprAddress>()->getBody()); }
+			if(addr->getNodeType() == core::NT_LambdaExpr) { res.push_back(Region(addr.as<core::LambdaExprAddress>()->getBody()));  }
 
 			return true;
 

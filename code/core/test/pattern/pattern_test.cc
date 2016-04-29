@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -771,7 +771,7 @@ namespace pattern {
 
 		res = pattern.matchTree(makeTree('a', b, c));
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ("Match({x=[a(b,c),null,null]})", toString(*res)); }
+		if(res) { EXPECT_EQ("Match({x=[a(b,c),null,null,null,null]})", toString(*res)); }
 
 		res = pattern.matchTree(makeTree('b', a, c));
 		EXPECT_TRUE(res);
@@ -779,15 +779,15 @@ namespace pattern {
 
 		res = pattern.matchTree(makeTree('b', makeTree('b', a, makeTree('a', b)), c));
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ("Match({x=[null,null,a,a(b),null,null]})", toString(*res)); }
+		if(res) { EXPECT_EQ("Match({x=[null,null,a,a(b),null,null,null]})", toString(*res)); }
 
 		res = pattern.matchTree(makeTree('a', a, a));
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ("Match({x=[a(a,a),a,a]})", toString(*res)); }
+		if(res) { EXPECT_EQ("Match({x=[a(a,a),a,a,a,a]})", toString(*res)); }
 
 		res = pattern.matchTree(makeTree('b', makeTree('a', a, a)));
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ("Match({x=[null,a(a,a),a,a]})", toString(*res)); }
+		if(res) { EXPECT_EQ("Match({x=[null,a(a,a),a,a,a,a]})", toString(*res)); }
 
 		res = pattern.matchTree(makeTree('b', makeTree('b', makeTree('b', a), a), a));
 		EXPECT_TRUE(res);

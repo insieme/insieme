@@ -36,36 +36,63 @@
 
 #pragma once
 
-#include <vector>
-
 #include "insieme/core/analysis/region/region_selector.h"
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/ir_address.h"
-#include "insieme/core/ir_visitor.h"
+#include "insieme/core/pattern/pattern.h"
+#include "insieme/core/pattern/ir_pattern.h"
 
 namespace insieme {
 namespace core {
 namespace analysis {
 namespace region {
 
+	namespace pt = insieme::core::pattern;
+
 	/**
-	 * A simple region selection implementation picking all top-level compound statements
-	 * to represent regions.
+	 * This region selector is picking all MPI communication constructs.
 	 */
-	class DummyRegionSelector : public RegionSelector {
+	class MPISelector : public RegionSelector {
+	  private:
+		const bool matchRequestObjs;
+
 	  public:
-		/**
-		 * Simply obtains all top-level compound statements.
+		MPISelector(bool matchRequestObjects = false) : matchRequestObjs(matchRequestObjects) {}
+
+		/*
+		 * Returns a pattern matching MPI_Isend and MPI_Ireceive calls
+		 * @param mpiRequest a specific MPI request object for async calls to be matched against (any by default)
 		 */
-		virtual RegionList getRegions(const core::NodeAddress& code) const {
-			RegionList regions;
-			visitDepthFirstPrunable(code, [&](const core::CompoundStmtAddress& comp) {
-				regions.push_back(Region(comp));
-				return true;
-			});
-			return regions;
-		}
+		pt::TreePattern getMPITransport(pt::TreePattern mpiRequest = pt::any) const;
+
+		/*
+		* Returns a pattern matching MPI_Test calls
+		* @param mpiRequest a specific MPI request object to be matched against (any by default)
+		*/
+		pt::TreePattern getMPITest(pt::TreePattern mpiRequest = pt::any) const;
+
+		/*
+		* Returns a pattern matching MPI_Wait calls
+		* @param mpiRequest a specific MPI request object to be matched against (any by default)
+		*/
+		pt::TreePattern getMPIWait(pt::TreePattern mpiRequest = pt::any) const;
+
+		/*
+		* Returns a pattern matching while loops containing MPI_Test calls
+		* @param mpiRequest a specific MPI request object for async calls to be matched against (any by default)
+		*/
+		pt::TreePattern getMPIWhileTest(pt::TreePattern mpiRequest = pt::any) const;
+
+		/*
+		* Returns a pattern matching an asynchronous MPI communication operation containing MPI_Isend or MPI_Ireceive primitives followed by
+		* either MPI_Wait or a while loop holding MPI_Test
+		* @param matchRequestObjects require that MPI request objects of communication calls match
+		*/
+		pt::ListPattern getMPIAsyncPattern(bool matchRequestObjects) const;
+
+		/**
+		 * Selects all MPI regions within the given code fragment.
+		 */
+		virtual RegionList getRegions(const core::NodeAddress& code) const;
 	};
 
 } // end namespace region

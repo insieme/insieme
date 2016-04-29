@@ -51,7 +51,7 @@ namespace region {
 		core::visitDepthFirst(code, [&](const core::StatementAddress& cur) -> bool {
 			if(cur.getAddressedNode()->getNodeType() != core::NT_ForStmt) { return false; }
 
-			res.push_back(cur);
+			res.push_back(Region(cur));
 
 			return true;
 		}, false);

@@ -40,35 +40,38 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 
-#include "insieme/utils/compiler/compiler.h"
-#include "insieme/utils/container_utils.h"
-#include "insieme/utils/logging.h"
-#include "insieme/utils/name_mangling.h"
-#include "insieme/utils/timer.h"
-#include "insieme/utils/version.h"
-
-#include "insieme/frontend/frontend.h"
-
-#include "insieme/driver/cmd/insiemecc_options.h"
-#include "insieme/driver/measure/measure.h"
-#include "insieme/driver/object_file_utils.h"
-
 #include "insieme/core/analysis/region/for_selector.h"
 #include "insieme/core/analysis/region/fun_call_selector.h"
+#include "insieme/core/analysis/region/mpi_selector.h"
 #include "insieme/core/annotations/naming.h"
-#include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/lang/instrumentation_extension.h"
 #include "insieme/core/pattern/ir_generator.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
 #include "insieme/core/printer/error_printer.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/transform/manipulation.h"
+
+#include "insieme/driver/cmd/insiemecc_options.h"
+#include "insieme/driver/measure/measure.h"
+#include "insieme/driver/object_file_utils.h"
+
+#include "insieme/frontend/frontend.h"
+
+#include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/config.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/logging.h"
+#include "insieme/utils/name_mangling.h"
+#include "insieme/utils/printable.h"
+#include "insieme/utils/timer.h"
+#include "insieme/utils/version.h"
 
 using namespace std;
 using namespace insieme;
@@ -77,22 +80,63 @@ namespace fs = boost::filesystem;
 
 namespace fe = insieme::frontend;
 namespace co = insieme::core;
+namespace cr = insieme::core::analysis::region;
 namespace dr = insieme::driver;
 namespace cmd = insieme::driver::cmd;
 namespace dm = insieme::driver::measure;
 namespace pt = insieme::core::pattern;
 
-struct Region {
-	core::StatementAddress start;
-	core::StatementAddress end;
-	dm::region_id regionID;
+class RegionAttribute : public utils::Printable {
+public:
+	cr::Region region;
 	std::string label;
 
-	Region(core::StatementAddress start, core::StatementAddress end, dm::region_id regionID, std::string label)
-		: start(start), end(end), regionID(regionID), label(label) {}
+	RegionAttribute(const cr::Region region, const std::string label)
+		: region(region), label(label) { }
 
 	// sort according to addresses
-	bool operator<(Region other) const { return start < other.start || (start >= other.start && end < other.end); }
+	bool operator<(const RegionAttribute other) const { return std::tie(region, label) < std::tie(other.region, other.label); }
+
+	virtual std::ostream& printTo(std::ostream& out) const {
+		return out << "[" << region << ", " << label << "]";
+	}
+};
+
+using RegionMap = std::map<dm::region_id, const RegionAttribute>;
+
+class RegionDatabase : public utils::Printable {
+private:
+	RegionMap regions;
+	unsigned index;
+
+public:
+	RegionDatabase() : regions(), index(0) { }
+
+	void addRegion(const cr::Region region, const std::string label) {
+		regions.insert(std::make_pair(index++, RegionAttribute(region, label)));
+	}
+
+	const RegionMap& getAllRegions() const {
+		return regions;
+	}
+
+	bool empty() const {
+		return regions.empty();
+	}
+
+	std::size_t size() const {
+		return regions.size();
+	}
+
+	void mergeIn(const RegionDatabase& other) {
+		for(const auto& e : other.getAllRegions()) {
+			addRegion(e.second.region, e.second.label);
+		}
+	}
+
+	virtual std::ostream& printTo(std::ostream& out) const {
+		return out << "{" << join("|", regions) << "}";
+	}
 };
 
 std::string getNameForFunCall(core::NodePtr funPtr) {
@@ -102,7 +146,7 @@ std::string getNameForFunCall(core::NodePtr funPtr) {
 	return utils::demangle(retVal);
 }
 
-core::NodePtr encloseInInstrumentation(const core::NodePtr& root, const core::NodeAddress& begin, const core::NodeAddress& end, const unsigned regionID) {
+core::NodePtr encloseInInstrumentation(const core::NodePtr& root, const core::NodeAddress& begin, const core::NodeAddress& finish, const unsigned regionID) {
 	// obtain references to primitives
 	auto myRoot = root;
 	auto& manager = myRoot.getNodeManager();
@@ -116,8 +160,9 @@ core::NodePtr encloseInInstrumentation(const core::NodePtr& root, const core::No
 	auto region_inst_start_call = builder.callExpr(unit, instExt.getInstrumentationRegionStart(), regionIDLit);
 	auto region_inst_end_call = builder.callExpr(unit, instExt.getInstrumentationRegionEnd(), regionIDLit);
 
-	core::NodeAddress newEnd = end.switchRoot(myRoot);
-	myRoot = core::transform::insertAfter(manager, newEnd.as<core::StatementAddress>(), region_inst_end_call);
+	// instrument bottom up
+	core::NodeAddress newFinish = finish.switchRoot(myRoot);
+	myRoot = core::transform::insertAfter(manager, newFinish.as<core::StatementAddress>(), region_inst_end_call);
 
 	core::NodeAddress newStart = begin.switchRoot(myRoot);
 	myRoot = core::transform::insertBefore(manager, newStart.as<core::StatementAddress>(), region_inst_start_call);
@@ -125,85 +170,62 @@ core::NodePtr encloseInInstrumentation(const core::NodePtr& root, const core::No
 	return myRoot;
 }
 
-std::vector<Region> findMPICalls(const core::NodeAddress& root) {
-	std::vector<Region> retVal;
+RegionDatabase findMPICalls(const core::NodeAddress& root) {
+	RegionDatabase retVal;
 
-	// ensures that all MPI calls refer to the same MPI_Request object
-	auto mpiRequest = pt::irp::variable(pt::var("request"), pt::var("x"));
+	core::analysis::region::MPISelector mpiSelector(true);
+	//core::analysis::region::FunctionCallSelector funCallSelector("MPI_[^W]");
 
-	// matches non-blocking mpi send/receive with a defined request object
-	pt::TreePattern mpiTransport = pt::var("start", pt::irp::callExpr(pt::lambda([](const core::NodePtr& nodePtr) {
-		                                                                  return getNameForFunCall(nodePtr).find("MPI_I") == 0
-		                                                                         && getNameForFunCall(nodePtr).find("MPI_Init") == std::string::npos;
-		                                                              }),
-	                                                                  pt::ListPattern(*pt::any << pt::irp::ptrFromRef(mpiRequest))));
+	//auto regions = funCallSelector.getRegions(root);
+	auto regions = mpiSelector.getRegions(root);
 
-	// matches MPI_Test with a given request object
-	pt::TreePattern mpiTest = pt::irp::callExpr(pt::lambda([](const core::NodePtr& nodePtr) { return getNameForFunCall(nodePtr).find("MPI_Test") == 0; }),
-	                                            pt::ListPattern(pt::irp::ptrFromRef(mpiRequest) << pt::any << pt::any));
-
-	// matches MPI_Wait with a given request object
-	pt::TreePattern mpiWait = pt::irp::callExpr(pt::lambda([](const core::NodePtr& nodePtr) { return getNameForFunCall(nodePtr).find("MPI_Wait") == 0; }),
-	                                            pt::ListPattern(pt::irp::ptrFromRef(mpiRequest) << pt::any));
-
-	// look for a while loop containing an MPI_test
-	pt::TreePattern whileTestPattern = pt::irp::whileStmt(pt::any, pt::irp::compoundStmt(*pt::any << mpiTest << *pt::any));
-
-	// matches a full non-blocking communication construct up to the blocking call
-	pt::TreePattern fullMPI = pt::irp::compoundStmt(*pt::any << mpiTransport << *pt::any << pt::var("end", (mpiWait | whileTestPattern)) << *pt::any);
-
-	unsigned index = 0;
-
-	auto myRoot = root.getRootNode();
-
-	pt::irp::matchAllPairsReverse(fullMPI, root, [&](const core::NodeAddress addr, pt::AddressMatch match) {
-		auto startAddress = addr.concat(match["start"].getValue()).as<core::StatementAddress>();
-		auto endAddress = addr.concat(match["end"].getValue()).as<core::StatementAddress>();
-
-		retVal.push_back(Region(startAddress, endAddress, index++, "MPI"));
-	});
+	for(const auto& e : regions) {
+		retVal.addRegion(e, getNameForFunCall(e.getBegin()));
+	}
 
 	return retVal;
 }
 
-/*std::vector<core::StatementAddress> findLoopsWithMPI(const core::NodeAddress& addr) {
-	std::vector<core::StatementAddress> retVal;
+RegionDatabase findLoopsWithMPI(const core::NodeAddress& addr) {
+	RegionDatabase retVal;
+	// use visitor to find for loops rather than pattern matcher for performance reasons
+	std::vector<core::StatementAddress> forLoops;
+	core::visitDepthFirstPrunable(addr,
+	                              [&](const core::StatementAddress& cur) -> core::Action {
+		                              auto nT = cur.getAddressedNode()->getNodeType();
+		                              if(nT != core::NT_ForStmt && nT != core::NT_WhileStmt) { return core::Action::Descent; }
+		                              forLoops.push_back(cur);
+		                              return core::Action::Prune;
+		                          },
+	                              false);
 
-	// find all for loops
-	core::analysis::region::ForSelector forSelector;
-	auto loopList = forSelector.getRegions(addr);
+	// core::analysis::region::MPISelector mpiSelector;
+	// select everything but MPI_Wtime, which is not of interest
+	// (and is frequently seen within assignment expressions, and hence cannot be properly instrumented)
+	core::analysis::region::FunctionCallSelector funCalSelector("MPI_");
+	//auto mpiAsyncPattern = mpiSelector.getMPIAsyncPattern();
 
-	// keep only the ones containing MPI calls
-	for(auto loop : loopList) {
-		if(!findMPICalls(loop).empty()) { retVal.push_back(loop); }
+	// check all for loops for MPI calls
+	for(const auto& loop : forLoops) {
+		auto regions = funCalSelector.getRegions(loop);
+		//auto match = pt::aT(mpiAsyncPattern).match(loop);
+		if(!regions.empty()) { 
+			retVal.addRegion(cr::Region(loop), "for"); 
+		}
 	}
 
-	LOG(INFO) << "Total number of for loops " << loopList.size() << ", of which " << retVal.size() << " contain(s) MPI calls";
-
-	std::sort(retVal.begin(), retVal.end());
-	
 	return retVal;
-}*/
+}
 
-std::vector<Region> getInterestingRegions(const core::NodeAddress& addr) {
-	std::vector<Region> regions;
-	//dm::region_id index = 0;
+RegionDatabase getInterestingRegions(const core::NodeAddress& addr) {
+	RegionDatabase retVal;
 
-	regions = findMPICalls(addr);
+	const auto mpiCalls = findMPICalls(addr);
+	retVal.mergeIn(mpiCalls);
+	const auto loops = findLoopsWithMPI(addr);
+	retVal.mergeIn(loops);
 
-	std::sort(regions.rbegin(), regions.rend());
-
-	core::NodePtr root = addr.getRootNode();
-
-	for(const auto& e : regions) {
-		root = encloseInInstrumentation(root, e.start, e.end, e.regionID);
-	}
-
-	// look for regions again, since the addresses have changed with instrumentation
-	// TODO: find a better way of doing this?
-	regions = findMPICalls(core::NodeAddress(root));
-
-	return regions;
+	return retVal;
 }
 
 int main(int argc, char** argv) {
@@ -218,7 +240,7 @@ int main(int argc, char** argv) {
 	if(options.gracefulExit) { return 0; }
 
 	std::cout << "Insieme MPI model builder - Version: " << utils::getVersion() << "\n";
-
+		
 	// Step 2: filter input files
 	vector<fe::path> inputs;
 	vector<fe::path> libs;
@@ -256,6 +278,8 @@ int main(int argc, char** argv) {
 	// std::cout << "SharedObject: " << createSharedObject << "\n";
 	// std::cout << "WorkingDir: " << boost::filesystem::current_path() << "\n";
 
+
+
 	// update input files
 	options.job.setFiles(inputs);
 
@@ -268,6 +292,8 @@ int main(int argc, char** argv) {
 		return dr::loadLib(mgr, cur);
 	}));
 
+	options.job.setDefinition("DEFAULT_NUM_QUERIES", "50000");
+	options.job.setDefinition("DEFAULT_NUM_STRING", "50000");
 
 	// if it is compile only or if it should become an object file => save it
 	if(options.settings.compileOnly || createSharedObject) {
@@ -280,37 +306,61 @@ int main(int argc, char** argv) {
 	std::cout << "Extracting executable ...\n";
 
 	// convert src file to target code
+
 	auto program = options.job.execute(mgr);
 
-	if(!program || program->getEntryPoints().empty()) {
-		LOG(ERROR) << "Unable to parse program or find entry point";
-		return 1;
-	};
+	assert_true(program && !program->getEntryPoints().empty()) << "Unable to parse program or find entry point";
+	
+	auto rootAddr = core::ExpressionAddress(program->getEntryPoints()[0]);
+	core::NodePtr rootPtr = rootAddr.getAddressedNode();
 
-	auto entryPoint = core::ExpressionAddress(program->getEntryPoints()[0]);
+	LOG(INFO) << "Looking for regions ...\n";
 
-	const std::vector<Region> regionsWithName = getInterestingRegions(entryPoint);
-	assert_false(regionsWithName.empty()) << "No region found!";
-	const core::NodePtr root = regionsWithName.front().start.getRootNode();
+	RegionDatabase regionDatabase = getInterestingRegions(rootAddr);
 
-	dumpPretty(root);
+	assert_false(regionDatabase.empty()) << "No regions found!";
 
-	// make sure instrumented IR is correct
-	auto semas = core::checks::check(root);
+	LOG(INFO) << "Found " << regionDatabase.size() << " region(s)";
 
-	if(!semas.empty()) {
-		LOG(ERROR) << "Found semantic errors, bailing out";
-		return 1;
+	std::map<RegionAttribute, dm::region_id> attributeMap;
+
+	for(const auto& e : regionDatabase.getAllRegions()) {
+		attributeMap[e.second] = e.first;
 	}
 
-	std::vector<std::string> metricString = { "total_wall_time(ns)" };
-	std::vector<dm::MetricPtr> metrics = transform(metricString, [](const std::string& cur) { return dm::Metric::getForNameAndUnit(cur); });
-	LOG(INFO) << "selected metrics: " << metrics;
+	LOG(INFO) << "Instrumenting regions ...\n";
+
+	for(auto it = attributeMap.rbegin(); it != attributeMap.rend(); ++it) {
+		rootPtr = encloseInInstrumentation(rootPtr, it->first.region.getBegin(), it->first.region.getEnd(), it->second);
+	}
+
+	// dump IR code
+	if(!options.settings.dumpIR.empty()) {
+		std::cout << "Dumping intermediate representation ...\n";
+		std::ofstream out(options.settings.dumpIR.string());
+		out << co::printer::PrettyPrinter(rootPtr, co::printer::PrettyPrinter::PRINT_DEREFS);
+	}
+
+	LOG(INFO) << "Running semantic checks, just to be safe ...\n";
+
+	// make sure instrumented IR is correct
+	auto semas = core::checks::check(rootPtr);
+
+	LOG(INFO) << "Compiling and measuring ...\n";
+
+	assert_true(semas.empty()) << "Found semantic errors, please check instrumented IR";
+	
+	std::vector<dm::MetricPtr> metrics = { dm::Metric::TOTAL_WALL_TIME, dm::Metric::TOTAL_NUM_EXEC };
+	
+	LOG(INFO) << "Selected metrics: " << metrics;
+
 	utils::compiler::Compiler mpicc("mpicc");
 	mpicc.addFlag("-x c");
 	mpicc.addFlag("-Wall");
 	mpicc.addFlag("--std=gnu99");
 	mpicc.addFlag("-DIRT_USE_MPI");
+	mpicc.addFlag("-DIRT_USE_PAPI");
+	mpicc.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi -lpfm");
 	std::map<string, string> env;
 	// fix number of worker threads to 1, relying on mpirun alone seems insufficient for thread concurrency control
 	env["IRT_NUM_WORKERS"] = "1";
@@ -319,14 +369,16 @@ int main(int argc, char** argv) {
 	const string mpiRun = "mpirun -np 2 --map-by core";
 	const unsigned numRuns = 1;
 	
-	const auto result = dm::measurePreinstrumented(root, metrics, numRuns, std::make_shared<dm::LocalExecutor>(mpiRun), mpicc, env);
+	const auto result = dm::measurePreinstrumented(rootPtr, metrics, numRuns, std::make_shared<dm::LocalExecutor>(mpiRun), mpicc, env);
 
 	assert_eq(result.size(), numRuns) << "Unexpected result structure!\n";
+
+	LOG(INFO) << "Measurement done, processing data ...\n";
 
 	auto resultPrinter = [&](std::vector<std::map<dm::region_id, std::map<dm::MetricPtr, dm::Quantity>>> data) {
 		for(auto& run : data) {
 			for(auto& region : run) {
-				std::cout << boost::format("%4d\t(%24s)\t") % region.first % regionsWithName.at(region.first).label;
+				std::cout << boost::format("%4d\t(%24s)\t") % region.first % regionDatabase.getAllRegions().at(region.first).label;
 				std::cout << region.second << "\n";
 			}
 		}
@@ -339,6 +391,8 @@ int main(int argc, char** argv) {
 	 * TODO:
 	 * - Crucial
 	 *   - region definition
+	 *      - TODO: check blocking MPI pattern and test them!
+	 *		- what to do with async MPI primitives followed by barrier?
 	 *		- all mpi calls in loops
 	 *		- instrument blocking MPI!
 	 *		- all loop bodies holding mpi calls
@@ -356,6 +410,9 @@ int main(int argc, char** argv) {
 	 *   x add suffix for worker efficiency log
 	 *   o do data aggregation for worker efficiency log
 	 * - Cleanup and nice-to-have
+	 *   - move getMPIAsyncPattern to anonymous namespace, lookup mpi loops by comparing addresses and not searching again for mpi inside them
+	 *   - clean up includes
+	 *   - unit tests!
 	 *   - add mpi compiler to utils?
 	 *   - cleanup driver, remove non-functional cmd options, etc...
 	 *   - set IRT_INST_REGION_INSTRUMENTATION=enabled env var even if there are no PAPI counters (c.f. measure.cpp)

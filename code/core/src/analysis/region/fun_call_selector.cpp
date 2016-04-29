@@ -62,7 +62,7 @@ namespace region {
 			const std::string name = literalPtr->getStringValue();
 
 			if(boost::regex_search(name, boost::regex(nameSubString, boost::regex_constants::ECMAScript))) {
-				res.push_back(cur);
+				res.push_back(Region(cur));
 				return true;
 			}
 

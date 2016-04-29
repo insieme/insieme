@@ -53,10 +53,10 @@ namespace region {
 		core::IRBuilder builder(manager);
 
 		// create some IR structure
-		const core::CompoundStmtPtr stmt = builder.compoundStmt(builder.breakStmt());
+		const core::CompoundStmtAddress stmt = core::CompoundStmtAddress(builder.compoundStmt(builder.breakStmt()));
 
 		DummyRegionSelector selector;
-		vector<Region> regions = selector.getRegions(core::StatementAddress(stmt));
+		vector<Region> regions = selector.getRegions(stmt);
 
 		EXPECT_EQ(toVector(Region(stmt)), regions);
 	}
