@@ -6,7 +6,7 @@ message(STATUS "========== configure analysis =============")
 cmake_minimum_required(VERSION 3.2)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
-file(GLOB_RECURSE insieme_analysis_srcs src/haskell/*.cpp src/*.def src/*.inc src/*.dl)
+file(GLOB_RECURSE insieme_analysis_srcs src/*.cpp src/*.def src/*.inc src/*.dl)
 insieme_glob_headers(insieme_analysis_incs include)
 
 
