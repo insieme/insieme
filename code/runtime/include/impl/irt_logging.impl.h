@@ -65,7 +65,7 @@ const char* _irt_time_string() {
 void irt_log_init() {
 	char* output_path = getenv("IRT_INST_OUTPUT_PATH");
 	char fn[] = "insieme_runtime.log";
-	char buffer[1024];
+	char buffer[1024] = "";
 	if(output_path != NULL) { sprintf(buffer, "%s/", output_path); }
 	sprintf(buffer + strlen(buffer), "%s", fn);
 #ifdef IRT_USE_MPI
