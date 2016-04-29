@@ -10,21 +10,21 @@ add_custom_target(
         "STACK_ROOT=$ENV{INSIEME_LIBS_HOME}/stack-latest/stack-root"
         "LIBRARY_PATH=$ENV{INSIEME_LIBS_HOME}/gmp-latest/lib:$ENV{INSIEME_LIBS_HOME}/zlib-latest/lib"
         "LD_LIBRARY_PATH=$ENV{INSIEME_LIBS_HOME}/gmp-latest/lib:$ENV{INSIEME_LIBS_HOME}/zlib-latest/lib"
-        $ENV{INSIEME_LIBS_HOME}/stack-latest/bin/stack setup
+        $ENV{INSIEME_LIBS_HOME}/stack-latest/bin/stack --allow-different-user setup
 
     # install dependencies and build package
     COMMAND ${CMAKE_COMMAND} -E env
         "STACK_ROOT=$ENV{INSIEME_LIBS_HOME}/stack-latest/stack-root"
         "LIBRARY_PATH=$ENV{INSIEME_LIBS_HOME}/gmp-latest/lib:$ENV{INSIEME_LIBS_HOME}/zlib-latest/lib"
         "LD_LIBRARY_PATH=$ENV{INSIEME_LIBS_HOME}/gmp-latest/lib:$ENV{INSIEME_LIBS_HOME}/zlib-latest/lib"
-        $ENV{INSIEME_LIBS_HOME}/stack-latest/bin/stack build
+        $ENV{INSIEME_LIBS_HOME}/stack-latest/bin/stack --allow-different-user build
 
     # copy library (package key in name) to binary dir
     COMMAND ${CMAKE_COMMAND} -E env
         "STACK_ROOT=$ENV{INSIEME_LIBS_HOME}/stack-latest/stack-root"
         "LIBRARY_PATH=$ENV{INSIEME_LIBS_HOME}/gmp-latest/lib:$ENV{INSIEME_LIBS_HOME}/zlib-latest/lib"
         "LD_LIBRARY_PATH=$ENV{INSIEME_LIBS_HOME}/gmp-latest/lib:$ENV{INSIEME_LIBS_HOME}/zlib-latest/lib"
-        $ENV{INSIEME_LIBS_HOME}/stack-latest/bin/stack runhaskell --package Glob --package directory utils/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}
+        $ENV{INSIEME_LIBS_HOME}/stack-latest/bin/stack --allow-different-user runhaskell --package Glob --package directory utils/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}
 
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
