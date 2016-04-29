@@ -49,10 +49,13 @@ namespace datalog {
 namespace framework {
 
 	/**
-	 * Extracts facts from the given root node and inserts them into the given program.
+	 * Extracts facts from the given root node and inserts them into the given program using node pointers.
 	 */
 	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer = [](const core::NodePtr&,int){});
 
+	/**
+	 * Extracts facts from the given root node and inserts them into the given program using node addresses.
+	 */
 	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer = [](const core::NodeAddress&,int){});
 
 

@@ -110,6 +110,7 @@ namespace datalog {
 		// instantiate the analysis
 		souffle::Sf_exit_point_analysis analysis;
 
+		// Create a map which maps node ID to IR node address (only return statements)
 		std::map<int,core::ReturnStmtAddress> index;
 
 		// fill in facts
