@@ -34,32 +34,52 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/core/forward_decls.h"
+#include "insieme/analysis/haskell/adapter.h"
+#include "insieme/core/dump/binary_dump.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
 
-// -- forward declarations --
-namespace souffle {
-	class Program;
-} // end namespace souffle
+using namespace std;
+using namespace insieme::core;
+using namespace insieme::core::dump;
 
 namespace insieme {
 namespace analysis {
-namespace datalog {
-namespace framework {
+namespace haskell {
 
-	/**
-	 * Extracts facts from the given root node and inserts them into the given program using node pointers.
-	 */
-	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer = [](const core::NodePtr&,int){});
+	TEST(HaskellAdapter, NodeCount) {
+		// create a code fragment using manager A
+		NodeManager managerA;
+		IRBuilder builder(managerA);
+		std::map<std::string, NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+		NodePtr root = builder.parseStmt(
+				"{ "
+				"	for(uint<4> i = 10u .. 50u) { "
+				"		v[i]; "
+				"	} "
+				"	for(uint<4> j = 5u .. 25u) { "
+				"		v[j]; "
+				"	} "
+				"}",
+				symbols
+		);
 
-	/**
-	 * Extracts facts from the given root node and inserts them into the given program using node addresses.
-	 */
-	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer = [](const core::NodeAddress&,int){});
+		// pass to haskell
+		auto& env = Environment::getInstance();
+		auto tree = env.passTree(root);
 
+		// calculate overall node count
+		size_t nodeCount = 0;
+		visitDepthFirst(NodeAddress(root), [&] (const NodeAddress& n) {
+				nodeCount++;
+		}, true, true);
 
-} // end namespace framework
-} // end namespace datalog
+		EXPECT_EQ(nodeCount, tree.node_count());
+	}
+
+} // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme

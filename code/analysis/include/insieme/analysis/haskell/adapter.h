@@ -36,30 +36,35 @@
 
 #pragma once
 
-#include "insieme/core/forward_decls.h"
+#include <memory>
 
-// -- forward declarations --
-namespace souffle {
-	class Program;
-} // end namespace souffle
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace analysis {
-namespace datalog {
-namespace framework {
+namespace haskell {
 
-	/**
-	 * Extracts facts from the given root node and inserts them into the given program using node pointers.
-	 */
-	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer = [](const core::NodePtr&,int){});
+	class HSobject;
 
-	/**
-	 * Extracts facts from the given root node and inserts them into the given program using node addresses.
-	 */
-	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer = [](const core::NodeAddress&,int){});
+	class IRtree {
+		std::shared_ptr<HSobject> tree;
+	public:
+		IRtree(std::shared_ptr<HSobject> tree);
+		std::size_t node_count();
+	};
 
+	class Environment {
+		Environment();
+	public:
+		~Environment();
 
-} // end namespace framework
-} // end namespace datalog
+		Environment(const Environment&) = delete;
+		void operator=(const Environment&) = delete;
+
+		static Environment& getInstance();
+		IRtree passTree(const core::NodePtr& root);
+	};
+
+} // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme

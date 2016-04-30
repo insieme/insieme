@@ -58,17 +58,6 @@ namespace datalog {
 	 */
 	std::vector<core::ReturnStmtAddress> performExitPointAnalysis(const core::LambdaPtr& rootLambda, bool debug = false);
 
-	/**
-	 * Collects all returns within a lambda.
-	 *
-	 * @param lambda the lambda to be analyzed
-	 * @return the addresses of all return statements within the lambda
-	 */
-	std::vector<core::ReturnStmtAddress> getReturns(const core::LambdaPtr& lambda);
-
-
-
-
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme

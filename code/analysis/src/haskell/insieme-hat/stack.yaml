@@ -1,0 +1,14 @@
+flags: {}
+
+extra-package-dbs: []
+
+packages:
+- '.'
+
+extra-deps:
+- attoparsec-binary-0.2
+
+resolver: lts-5.13
+
+ghc-options:
+  insieme-hat: -lHSrts-ghc7.10.3

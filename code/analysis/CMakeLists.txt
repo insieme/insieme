@@ -42,6 +42,20 @@ target_link_libraries(insieme_analysis insieme_utils)
 cotire(insieme_analysis)
 
 
+# =============================================  HASKELL  =====================================
+
+add_subdirectory(src/haskell/insieme-hat)
+add_dependencies(insieme_analysis insieme_analysis_haskell)
+target_link_libraries(insieme_analysis ${insieme_analysis_haskell})
+link_directories(${CMAKE_CURRENT_BINARY_DIR}/src/haskell/insieme-hat)
+
+# directory containing libffi and libHSrts
+link_directories(${LIBHSRTS_DIR})
+
+# haskell stuff requires gmp
+link_directories($ENV{INSIEME_LIBS_HOME}/gmp-latest/lib)
+
+
 # =============================================  TESTING  =====================================
 
 set ( ut_prefix  ut_analysis )

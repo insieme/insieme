@@ -18,6 +18,12 @@ BISON 	:= ${PREFIX}/bison-$(shell ${AWK_CMD} bison_install.sh | cut -d= -f2 )
 FLEX 	:= ${PREFIX}/flex-$(shell ${AWK_CMD} flex_install.sh | cut -d= -f2 )
 SOUFFLE	:= ${PREFIX}/souffle-$(shell ${AWK_CMD} souffle_install.sh | cut -d= -f2 )
 
+# HASKELL STUFF
+GHC     := ${PREFIX}/ghc-$(shell ${AWK_CMD} ghc_install.sh | cut -d= -f2 )
+CABAL   := ${PREFIX}/cabal-$(shell ${AWK_CMD} cabal_install.sh | cut -d= -f2 )
+STACK   := ${PREFIX}/stack-$(shell ${AWK_CMD} stack_install.sh | cut -d= -f2 )
+ZLIB    := ${PREFIX}/zlib-$(shell ${AWK_CMD} zlib_install.sh | cut -d= -f2 )
+
 # OPTIONAL STUFF
 PAPI 	:= ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
 HWLOC	:= ${PREFIX}/hwloc-$(shell ${AWK_CMD} hwloc_install.sh | cut -d= -f2 )
@@ -96,6 +102,30 @@ ${SOUFFLE}: souffle_install.sh ${GCC} ${FLEX} ${BISON}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh souffle_install.sh
 	@echo "@@@@ Done! @@@@"
 
+## GHC
+${GHC}: ghc_install.sh ${GMP}
+	@echo "#### INSTALL GHC ${GHC} ####"
+	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh ghc_install.sh
+	@echo "@@@@ Done! @@@@"
+
+## CABAL
+${CABAL}: cabal_install.sh ${GHC} ${GMP} ${ZLIB}
+	@echo "#### INSTALL CABAL ${CABAL} ####"
+	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh cabal_install.sh
+	@echo "@@@@ Done! @@@@"
+
+## STACK
+${STACK}: stack_install.sh ${GMP} ${ZLIB}
+	@echo "#### INSTALL STACK ${STACK} ####"
+	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh stack_install.sh
+	@echo "@@@@ Done! @@@@"
+
+## ZLIB
+${ZLIB}: zlib_install.sh
+	@echo "#### INSTALL ZLIB ${ZLIB} ####"
+	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh zlib_install.sh
+	@echo "@@@@ Done! @@@@"
+
 ## PAPI
 ${PAPI}: papi_install.sh ${GCC}
 	@echo "#### INSTALL PAPI ${PAPI} ####"
@@ -119,5 +149,5 @@ INSIEME: ${GCC} \
 		 ${FLEX} \
 		 ${PAPI} \
 		 ${HWLOC} \
-		 ${SOUFFLE}
-
+		 ${SOUFFLE} \
+		 ${STACK}

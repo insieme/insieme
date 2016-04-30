@@ -10,7 +10,7 @@
 
 
 // the actual analysis
-.decl boolean_value( n : node , v : bool ) 
+.decl boolean_value( n : node , v : bool )
 
 // link analysis with result
 result( v ) :- target_expr(n), boolean_value(n,v).
