@@ -214,10 +214,10 @@ void validateTrivial() {
 // a non-trivial struct
 struct NonTrivial {
 	int i;
-	~NonTrivial() {}
+	~NonTrivial() { 5; }
 };
 
-#define STRUCT_NON_TRIVIAL "def struct IMP_NonTrivial { i : int<4>; dtor() {} }; "
+#define STRUCT_NON_TRIVIAL "def struct IMP_NonTrivial { i : int<4>; dtor() { 5; } }; "
 #define CONSUME_NON_TRIVIAL "def IMP_consume_struct_NonTrivial_returns_void = function (v0 : ref<IMP_NonTrivial,f,f,plain>) -> unit { }; "
 #define PRODUCE_NON_TRIVIAL "def IMP_produce_struct_NonTrivial_returns_struct_NonTrivial = function () -> IMP_NonTrivial { return ref_cast(IMP_NonTrivial::(ref_temp(type_lit(IMP_NonTrivial))), type_lit(t), type_lit(f), type_lit(cpp_ref)); }; "
 
@@ -249,7 +249,7 @@ void validateNonTrivial() {
 
 	// pass temporary
 	#pragma test expect_ir(STRUCT_NON_TRIVIAL,CONSUME_NON_TRIVIAL, R"({
-		 IMP_consume_struct_NonTrivial_returns_void(*<ref<IMP_NonTrivial,f,f,plain>>(ref_temp(type_lit(IMP_NonTrivial))) {12});
+		 IMP_consume_struct_NonTrivial_returns_void(<ref<IMP_NonTrivial,f,f,plain>>(ref_temp(type_lit(IMP_NonTrivial))) {12});
 	})")
 	{ consume<T>({12}); }
 
