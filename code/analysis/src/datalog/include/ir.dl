@@ -13,7 +13,7 @@
 
 // -- list  & misc node types
 .number_type child_index
-.number_type function_kind
+.number_type function_kind  // TODO should it be replaced?
 
 
 // -- program type --
@@ -35,7 +35,6 @@
 .number_type tag_type_ref
 
 .type type = generic_type
-           | generic_type
            | tuple_type
            | function_type
            | type_variable
@@ -87,7 +86,7 @@
 .number_type compound_stmt
 .number_type decl_stmt
 
-.type stmt = expr
+.type stmt = expr  // TODO really needed?
            | if_stmt
            | compound_stmt
            | decl_stmt
@@ -105,8 +104,8 @@
 .number_type lambda_def
 .number_type lambda
 
-.type support = types
-              | parents
+.type support = types  // TODO really needed?
+              | parents // TODO really needed?
               | tag_type_def
               | lambda_def
               | lambda
@@ -132,8 +131,8 @@
            | type
            | record
            | expr
-           | stmt | stmt_list
-           | support | support_list
+           | stmt | stmt_list         // TODO include list types here?
+           | support | support_list   // ---´
 
 
 
@@ -174,6 +173,8 @@
 
 .decl Struct ( id:node , RecordTypeContents , parents:parents )                                               input
 .decl Union  ( id:node , RecordTypeContents )                                                                 input
+
+#undef RecordTypeContents
 
 
 
@@ -230,6 +231,6 @@
 .decl PureVirtualMemberFunctions ( id:node )                                                                  input
 .decl SwitchCase                 ( id:node , guard:literal , body:compound_stmt )                             input
 .decl SwitchCases                ( id:node )                                                                  input
-.decl TagTypeBinding             ( id:node , tag:tag_type_ref, record:record )                         input
+.decl TagTypeBinding             ( id:node , tag:tag_type_ref, record:record )                                input
 .decl TagTypeDefinition          ( id:node )                                                                  input
 .decl Types                      ( id:node )                                                                  input
