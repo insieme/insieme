@@ -42,6 +42,7 @@ unzip -d souffle-$VERSION souffle-$VERSION.zip
 cd souffle-$VERSION/souffle-master
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH
+export PATH=$PATH:$PREFIX/flex-latest/bin:$PREFIX/bison-latest/bin
 
 echo "#### Building Soufflé ####"
 strip_java_from_souffle
