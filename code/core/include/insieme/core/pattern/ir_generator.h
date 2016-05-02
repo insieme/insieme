@@ -176,8 +176,12 @@ namespace irg {
 		return compoundStmt(single(stmt));
 	}
 
+	inline TreeGenerator declaration(const TreeGenerator& variable, const TreeGenerator& initExpr) {
+		return node(core::NT_Declaration, single(variable) << single(initExpr));
+	}
+
 	inline TreeGenerator declarationStmt(const TreeGenerator& variable, const TreeGenerator& initExpr) {
-		return node(core::NT_DeclarationStmt, single(variable) << single(initExpr));
+		return node(core::NT_DeclarationStmt, single(declaration(variable, initExpr)));
 	}
 
 	inline TreeGenerator ifStmt(const TreeGenerator& condition, const TreeGenerator& thenBody, const TreeGenerator& elseBody) {

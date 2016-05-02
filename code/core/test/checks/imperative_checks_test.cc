@@ -68,7 +68,7 @@ namespace checks {
 		EXPECT_TRUE(check(ok, typeCheck).empty());
 		ASSERT_FALSE(check(err, typeCheck).empty());
 
-		NodeAddress errorAdr = NodeAddress(err).getAddressOfChild(2, 0, 1, 2, 0, 1);
+		NodeAddress errorAdr = NodeAddress(err).getAddressOfChild(2, 0, 1, 2, 0, 0, 1);
 		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(errorAdr, EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, "", Message::ERROR));
 
 		//using the declared variable within it's initialization is ok too
@@ -228,13 +228,13 @@ namespace checks {
 
 		auto code = builder.normalize(builder.parseStmt(
 		    R"(
-			
+
 			try {
 
 			} catch(x : int<4>) {
 				x;
 			}
-			
+
 			)"));
 
 		ASSERT_TRUE(code);

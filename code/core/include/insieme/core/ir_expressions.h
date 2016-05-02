@@ -214,7 +214,6 @@ namespace core {
 
 	// ------------------------------------- Call Expr -----------------------------------
 
-
 	/**
 	 * The accessor associated to the call expression.
 	 */
@@ -231,7 +230,7 @@ namespace core {
 		Ptr<const Expression> getArgument(unsigned index) const {
 			return this->getElement(index);
 		}
-		
+
 		/**
 		 * Obtains a list of argument expressions for this call.
 		 */
@@ -662,7 +661,7 @@ namespace core {
 		static LambdaExprPtr get(NodeManager & manager, const LambdaReferencePtr& ref, const LambdaDefinitionPtr& definition) {
 			return get(manager, ref->getType(), ref, definition);
 		}
-		
+
 		/**
 		 * Obtains a simple, non-recursive Lambda based on the given definition.
 		 *
@@ -1086,7 +1085,7 @@ namespace core {
 		 * (Either a variable or ref_temp)
 		 */
 		IR_NODE_PROPERTY(Expression, MemoryExpr, 1);
-	
+
 		/**
 		 * Obtains the initialization expressions.
 		 */

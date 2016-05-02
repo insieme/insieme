@@ -191,21 +191,70 @@ namespace core {
 		}
 	IR_NODE_END()
 
+	// ------------------------------------- Declaration ---------------------------------
+
+	/**
+	 * The accessor associated to the declaration support node.
+	 */
+	IR_NODE_ACCESSOR(Declaration, Support, Variable, Expression)
+
+		/**
+		 * Obtains the variable being declared.
+		 */
+		IR_NODE_PROPERTY(Variable, Variable, 0);
+
+		/**
+		 * Obtains the initialization value of the declared variable.
+		 */
+		IR_NODE_PROPERTY(Expression, Initialization, 1);
+
+	IR_NODE_END()
+
+	/**
+	 * The support node used to represent declarations within the IR.
+	 */
+	IR_NODE(Declaration, Support)
+	  protected:
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const;
+
+	  public:
+		/**
+		 * This static factory method allows to obtain a declaration instance
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param variable the variable to be declared
+		 * @param initExpression the expression initializing the given variable
+		 * @return the requested type instance managed by the given manager
+		 */
+		static DeclarationPtr get(NodeManager & manager, const VariablePtr& variable, const ExpressionPtr& initExpression) {
+			return manager.get(Declaration(variable, initExpression));
+		}
+	IR_NODE_END()
+
+
 	// ---------------------------------------- Declaration Statement ------------------------------
 
 	/**
 	 * The accessor associated to the declaration statement.
 	 */
-	IR_NODE_ACCESSOR(DeclarationStmt, Statement, Variable, Expression)
+	IR_NODE_ACCESSOR(DeclarationStmt, Statement, Declaration)
 		/**
-		 * Obtains a reference to the variable defined by this declaration.
+		 * Obtains the declaration support node used by this declaration statement.
 		 */
-		IR_NODE_PROPERTY(Variable, Variable, 0);
+		IR_NODE_PROPERTY(Declaration, Declaration, 0);
 
-		/**
-		 * Obtains a reference to the initialization value of the new variable.
-		 */
-		IR_NODE_PROPERTY(Expression, Initialization, 1);
+		Ptr<const Variable> getVariable() const {
+			return getDeclaration()->getVariable();
+		}
+
+		Ptr<const Expression> getInitialization() const {
+			return getDeclaration()->getInitialization();
+		}
+
 	IR_NODE_END()
 
 	/**
@@ -229,7 +278,7 @@ namespace core {
 		 * @return the requested type instance managed by the given manager
 		 */
 		static DeclarationStmtPtr get(NodeManager & manager, const VariablePtr& variable, const ExpressionPtr& initExpression) {
-			return manager.get(DeclarationStmt(variable, initExpression));
+			return manager.get(DeclarationStmt(Declaration::get(manager, variable, initExpression)));
 		}
 	IR_NODE_END()
 
@@ -807,7 +856,7 @@ namespace core {
 		 * Obtains a reference to the implicit variable associated to this return statement.
 		 */
 		IR_NODE_PROPERTY(Variable, ReturnVar, 1);
-		
+
 	IR_NODE_END()
 
 	/**

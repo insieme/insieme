@@ -250,7 +250,7 @@ namespace core {
 
 		// check hash codes, children and cloning
 		VariablePtr varExpr = Variable::get(manager, manager.getLangBasic().getInt4(), 1);
-		basicNodeTests(stmt, toVector<NodePtr>(varExpr, literal));
+		basicNodeTests(stmt, toVector<NodePtr>(Declaration::get(manager, varExpr, literal)));
 	}
 
 	TEST(StatementsTest, Compound) {

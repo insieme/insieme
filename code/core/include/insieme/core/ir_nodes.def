@@ -239,6 +239,8 @@ AST_TERMINAL(Types, Support)
 AST_TERMINAL(TagTypeBinding, Support)
 AST_TERMINAL(TagTypeDefinition, Support)
 
+AST_TERMINAL(Declaration, Support)
+
 AST_NODE(Record, Support)
 ABSTRACT(Record)
 
