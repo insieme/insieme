@@ -59,10 +59,8 @@ library
                         attoparsec >=0.13
     hs-source-dirs:     src
     build-tools:        c2hs
-    --C-sources:          cbits/hsbracket.c
     include-dirs:       include,
                         ../../../../core/include
-    --extra-libraries:    HSrts-ghc7.10.3
     default-language:   Haskell2010
 
 test-suite test
