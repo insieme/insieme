@@ -18,7 +18,7 @@ passIRdump dump_c length_c = do
     let Right tree = BinPar.parseBinaryDump dump
     newStablePtr tree
 
-foreign export ccall
+foreign export ccall "hat_passIRdump"
     passIRdump :: CString -> CSize -> IO (StablePtr (Tree IR.Inspire))
 
 
@@ -26,10 +26,10 @@ foreign export ccall
 nodeCount :: StablePtr (Tree IR.Inspire) -> IO CSize
 nodeCount tree_c = fromIntegral . length <$> deRefStablePtr tree_c
 
-foreign export ccall
+foreign export ccall "hat_tree_nodeCount"
     nodeCount :: StablePtr (Tree IR.Inspire) -> IO CSize
 
 
 
-foreign export ccall
+foreign export ccall "hat_freeStablePtr"
     freeStablePtr :: StablePtr a -> IO ()

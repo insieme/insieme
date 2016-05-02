@@ -10,15 +10,15 @@ extern "C" {
 
 	// Haskell object management
 	typedef void* StablePtr;
-	void freeStablePtr(StablePtr ptr);
+	void hat_freeStablePtr(StablePtr ptr);
 
 	// environment bracket
 	void hs_init(int, char*[]);
 	void hs_exit(void);
 
 	// IR dump functions
-	StablePtr passIRdump(const char* dump, const size_t length);
-	size_t nodeCount(const StablePtr dump);
+	StablePtr hat_passIRdump(const char* dump, size_t length);
+	size_t hat_tree_nodeCount(const StablePtr dump);
 
 }
 
@@ -33,15 +33,15 @@ namespace haskell {
 		HSobject(StablePtr object) : object(object) {}
 
 		~HSobject() {
-			freeStablePtr(object);
+			hat_freeStablePtr(object);
 		}
 
 	};
 
 	IRtree::IRtree(std::shared_ptr<HSobject> tree) : tree(tree) {}
 
-	size_t IRtree::node_count() {
-		return nodeCount(tree->object);
+	size_t IRtree::nodeCount() {
+		return hat_tree_nodeCount(tree->object);
 	}
 
 	Environment::Environment() {
@@ -69,7 +69,7 @@ namespace haskell {
 		const char* dumpcs = dumps.c_str();
 
 		// pass to haskell
-		return make_shared<HSobject>(passIRdump(dumpcs, dumps.size()));
+		return make_shared<HSobject>(hat_passIRdump(dumpcs, dumps.size()));
 	}
 
 } // end namespace haskell

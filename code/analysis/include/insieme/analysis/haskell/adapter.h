@@ -38,7 +38,7 @@
 
 #include <memory>
 
-#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace analysis {
@@ -50,7 +50,7 @@ namespace haskell {
 		std::shared_ptr<HSobject> tree;
 	public:
 		IRtree(std::shared_ptr<HSobject> tree);
-		std::size_t node_count();
+		std::size_t nodeCount();
 	};
 
 	class Environment {
