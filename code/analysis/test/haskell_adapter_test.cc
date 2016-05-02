@@ -38,6 +38,7 @@
 
 #include "insieme/analysis/haskell/adapter.h"
 #include "insieme/core/dump/binary_dump.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 
@@ -77,7 +78,7 @@ namespace haskell {
 				nodeCount++;
 		}, true, true);
 
-		EXPECT_EQ(nodeCount, tree.node_count());
+		EXPECT_EQ(nodeCount, tree.nodeCount());
 	}
 
 } // end namespace haskell
