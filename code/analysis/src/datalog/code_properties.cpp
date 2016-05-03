@@ -42,6 +42,8 @@
 #include "souffle/gen/top_level_term.h"
 #include "souffle/gen/exit_point_analysis.h"
 
+#include "souffle/gen/definition_point.h"
+
 namespace insieme {
 namespace analysis {
 namespace datalog {
@@ -136,6 +138,51 @@ namespace datalog {
 			res.push_back(index[cur[0]]);
 		}
 		return res;
+	}
+
+
+	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var) {
+		const bool debug = true;
+
+		// instantiate the analysis
+		souffle::Sf_definition_point analysis;
+
+		int targetID = 0;
+		std::map<int,core::VariableAddress> variables;
+
+		// fill in facts
+		framework::extractAddressFacts(analysis, var.getRootNode(), [&](const core::NodeAddress& addr, int id) {
+			if (!addr.isa<core::VariableAddress>()) return;
+			auto cur = addr.as<core::VariableAddress>();
+			if (cur == var) targetID = id;
+			variables[id] = cur;
+		});
+
+		// add targeted node
+		analysis.rel_target.insert(targetID);
+
+		// print debug information
+		if (debug) analysis.dumpInputs();
+
+		// run analysis
+		analysis.run();
+
+		// print debug information
+		if (debug) analysis.dumpOutputs();
+
+		// read result
+		auto& result = analysis.rel_result;
+		if (result.empty()) return core::VariableAddress();
+
+		assert_le(result.size(), 1) << "Invalid result - multiple definition points!";
+
+		auto definitionID = (*result.begin())[0];
+
+		auto pos = variables.find(definitionID);
+		assert_true(pos != variables.end()) << "Invalid result - referencing unknown address!";
+
+		// return definition point
+		return pos->second;
 	}
 
 } // end namespace datalog

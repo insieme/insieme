@@ -1,0 +1,84 @@
+#pragma once
+
+#include "ir.dl"
+#include "parent.dl"
+
+
+
+// ------ Definition Point ---------
+
+
+// all defined variables
+.decl VariableDefinition ( var : variable )
+
+// links from all defined variables to all their uses
+.decl DefinitionPoint ( definition : variable, var : variable )
+
+
+// ---------------------------------
+
+
+// -- definitions --
+
+// parameters are variable definitions
+VariableDefinition(V) :- Parameters(P), ParentOf(P,V).
+
+// variables in declrations are definitions
+VariableDefinition(V) :- DeclarationStmt(_,V,_).
+
+/// variables in catch clauses
+VariableDefinition(V) :- CatchClause(_,V,_).
+
+
+
+// -- definition <=> usage --
+
+.decl FullExpression( s : stmt, e : expr )
+
+FullExpression( E, E ) :- ParentOf(C,E), CompoundStmt(C).
+FullExpression( F, E ) :- FullExpression(F,I), ParentOf(I,E), !CompoundStmt(E). 
+
+
+
+.decl DefinitionPointTrace( n : node, v : variable , position : number )
+
+
+DefinitionPointTrace(V,V,0) :- Variable(V,_,_), !VariableDefinition(V).
+
+
+
+
+
+
+
+//.decl Successor ( A : stmt, B : stmt )
+//
+//Successor( A , B ) :- CompoundStmt(C), NodeList(C,N,A), !CompoundStmt(A), NodeList(C,N+1,B).
+
+
+
+
+//.decl _VariableScope( n : node , i : pos, v : variable )
+//
+//_VariableScope(V,0,V) :- Variable(V,_,_), !VariableDefinition(V).									// start at variable
+//_VariableScope(C,N,V) :- _VariableScope(V,0,V), FullExpression(F,V), ParentOf(C,F), CompoundStmt(C), NodeList(C,N,F).		// get the full expression
+//
+//_VariableScope(C,N-1,V) :- _VariableScope(C,N,V), CompoundStmt(C), NodeList(C,N-1,S), !DeclarationStmt(S,V,_). 
+//						:- _VariableScope(C,-1,V), ParentOf(P,C), 
+//
+//_VariableScope(V,-1,V) :- Variable(V,_,_), 
+//_VariableScope(P,-1,V) :- _VariableScope(A,-1,V), Parent(P,A), !CompoundStmt(P).  					// walk up to the compound statement
+//_VariableScope(P,N,V) :- _VariableScope(A,-1,V), Parent(P,A), CompoundStmt(P), NodeList(P,N,A).  	// record the child number through which we reached the compound
+
+
+
+//_VariableScope(P,V) :- _VariableScope(C,V), CompoundStmt(C),
+
+
+// link definition points to themselfs
+DefinitionPoint(V,V) :- VariableDefinition(V).
+
+//// link other variables to the enclosing definition point
+//DefinitionPoint(D,V) :- 
+//	!VariableDefinition(V), 
+//	DefinitionReaches(D,V).

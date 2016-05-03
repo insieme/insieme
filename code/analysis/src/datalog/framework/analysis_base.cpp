@@ -71,6 +71,8 @@ namespace framework {
 
 			souffle::Program& analysis;
 
+//			std::map<NodePtr,int> index;
+
 		public:
 
 			FactExtractor(souffle::Program& analysis,const NodeIndexer& indexer)
@@ -81,10 +83,23 @@ namespace framework {
 			}
 
 			int getFreshID(const Ptr<const core::Node>& node) {
+
 				int res = counter++;
 				indexer(core::NodeAddress(node),res);
 				return res;
 			}
+
+//			int getFreshID(const Ptr<const core::Node>& node) {
+//
+//				NodePtr entry(&*node);
+//				auto pos = index.find(entry);
+//				if (pos != index.end()) return pos->second;
+//				int newIndex = index.size();
+//				index[entry] = newIndex;
+//
+//				return newIndex;
+//			}
+
 
 			// -- Type Nodes --
 

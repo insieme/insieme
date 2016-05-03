@@ -142,6 +142,8 @@
 .decl NodeList ( list:node , idx:child_index , element:node )                                                 input
 
 
+// .decl NodeIdentity ( n : node , id : node_id ) input
+
 
 // Program Node
 

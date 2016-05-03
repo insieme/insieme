@@ -1,6 +1,6 @@
 #include "boolean.dl"
 #include "ir.dl"
-
+#include "definition_point.dl"
 
 // input parameters
 .decl target_expr( n : node ) input
@@ -17,7 +17,14 @@ result( v ) :- target_expr(n), boolean_value(n,v).
 
 
 
+
 // ---------- Analysis Specification -----------
+
+// the value to be exhibited by any unknown value
+.decl unknown_boolean_value ( v : bool )
+unknown_boolean_value ( true ).
+unknown_boolean_value ( false ).
+
 
 // -- empty list checks --
 .decl is_empty ( e : node )
@@ -35,6 +42,10 @@ is_boolean( n ) :- GenericType(n,"bool",a,b), is_empty(a), is_empty(b).
 // -- assign values to literals --
 boolean_value( n , true ) :- Literal(n,t,"true"), is_boolean(t).
 boolean_value( n , false ) :- Literal(n,t,"false"), is_boolean(t).
+
+// all other literals have an unknown boolean value 
+boolean_value( n, v ) :- Literal(n,t,_), !is_boolean(t), unknown_boolean_value(v).
+
 
 // -- assign values to free variables --
 

@@ -423,6 +423,48 @@ namespace datalog {
 		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("spawn 14")));
 	}
 
+
+//	TEST(CodeProperties, DefinitionPoint_LocalVariable) {
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		auto addresses = builder.parseAddressesStatement(
+//				"{ var int<4> x = 12; $x$; }"
+//		);
+//
+//		ASSERT_EQ(1, addresses.size());
+//
+//		auto var = addresses[0].as<CallExprAddress>()[0].as<VariableAddress>();
+//		auto param = var.getRootAddress().as<LambdaExprAddress>()->getParameterList()[0];
+//
+//		std::cout << "Parameter: " << param << "\n";
+//		std::cout << "Variable:  " << var << "\n";
+//
+//		EXPECT_EQ(param, getDefinitionPoint(var));
+//
+//	}
+
+
+	TEST(CodeProperties, DefinitionPoint_Parameter) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesExpression(
+				"( x : int<4> ) -> int<4> { return $x$; }"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<CallExprAddress>()[0].as<VariableAddress>();
+		auto param = var.getRootAddress().as<LambdaExprAddress>()->getParameterList()[0];
+
+		std::cout << "Parameter: " << param << "\n";
+		std::cout << "Variable:  " << var << "\n";
+
+		EXPECT_EQ(param, getDefinitionPoint(var));
+
+	}
+
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme

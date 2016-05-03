@@ -61,6 +61,13 @@ namespace datalog {
 		EXPECT_FALSE(mayBeTrue(ExpressionAddress(builder.parseExpr("false"))));
 		EXPECT_FALSE(mayBeFalse(ExpressionAddress(builder.parseExpr("true"))));
 
+
+		// check string constants (should be neither true nor false)
+		EXPECT_FALSE(isTrue(ExpressionAddress(builder.parseExpr("\"x\""))));
+		EXPECT_FALSE(isFalse(ExpressionAddress(builder.parseExpr("\"x\""))));
+		EXPECT_TRUE(mayBeTrue(ExpressionAddress(builder.parseExpr("\"x\""))));
+		EXPECT_TRUE(mayBeFalse(ExpressionAddress(builder.parseExpr("\"x\""))));
+
 	}
 
 } // end namespace datalog

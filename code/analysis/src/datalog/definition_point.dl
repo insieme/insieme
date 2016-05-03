@@ -1,0 +1,104 @@
+#include "ir.dl"
+#include "parent.dl"
+
+
+.decl target ( var : variable ) input
+.decl result ( var : variable ) output
+
+
+// ------ Definition Point ---------
+
+
+// all defined variables
+.decl VariableDefinition ( var : variable ) output
+
+// links from all defined variables to all their uses
+.decl DefinitionPoint ( definition : variable, var : variable ) output
+
+
+// ---------------------------------
+
+
+// -- definitions --
+
+// parameters are variable definitions
+VariableDefinition(V) :- Parameters(P), ParentOf(P,V).
+
+// variables in declrations are definitions
+VariableDefinition(V) :- DeclarationStmt(_,V,_).
+
+/// variables in catch clauses
+VariableDefinition(V) :- CatchClause(_,V,_).
+
+
+
+// -- definition <=> usage --
+
+.decl FullExpression( s : stmt, e : expr )
+
+FullExpression( E, E ) :- ParentOf(C,E), CompoundStmt(C).
+FullExpression( F, E ) :- FullExpression(F,I), ParentOf(I,E), !CompoundStmt(E). 
+
+
+.decl equalType( t1 : type , t2 : type ) output
+
+equalType( t1, t2 ) :- GenericType(t1,n,_,_), GenericType(t2,n,_,_).
+
+
+
+.decl DefinitionPointTrace( n : node, v : variable , position : number ) output
+
+
+DefinitionPointTrace(V,V,-1) :- Variable(V,_,_), !VariableDefinition(V).
+DefinitionPointTrace(P,V,-1) :- DefinitionPointTrace(N,V,-1), ParentOf(P,N), !CompoundStmt(P), !Lambda(P,_,_,_).
+
+DefinitionPointTrace(C,V,N) :- DefinitionPointTrace(F,V,-1), ParentOf(C,F), CompoundStmt(C), NodeList(C,N,F).
+
+DefinitionPointTrace(C,V,N-1) :- DefinitionPointTrace(C,V,N), N >= 0, NodeList(C,N,P), !DeclarationStmt(P,X,_), Variable(X,T1,Name), Variable(V,T2,Name), equalType(T1,T2).
+
+
+
+
+
+// link definition points to themselfs
+DefinitionPoint(V,V) :- VariableDefinition(V).
+
+DefinitionPoint(X,V) :- DefinitionPointTrace(C,V,N), NodeList(C,N,D), DeclarationStmt(D,X,_), Variable(X,T1,Name), Variable(V,T2,Name), equalType(T1,T2).
+DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ParentOf(L,F), Lambda(L,_,P,_), NodeList(P,_,X), Variable(X,T1,Name), Variable(V,T2,Name), equalType(T1,T2).
+
+
+
+
+
+result(X) :- target(V), DefinitionPoint(X,V).
+
+
+//.decl Successor ( A : stmt, B : stmt )
+//
+//Successor( A , B ) :- CompoundStmt(C), NodeList(C,N,A), !CompoundStmt(A), NodeList(C,N+1,B).
+
+
+
+
+//.decl _VariableScope( n : node , i : pos, v : variable )
+//
+//_VariableScope(V,0,V) :- Variable(V,_,_), !VariableDefinition(V).									// start at variable
+//_VariableScope(C,N,V) :- _VariableScope(V,0,V), FullExpression(F,V), ParentOf(C,F), CompoundStmt(C), NodeList(C,N,F).		// get the full expression
+//
+//_VariableScope(C,N-1,V) :- _VariableScope(C,N,V), CompoundStmt(C), NodeList(C,N-1,S), !DeclarationStmt(S,V,_). 
+//						:- _VariableScope(C,-1,V), ParentOf(P,C), 
+//
+//_VariableScope(V,-1,V) :- Variable(V,_,_), 
+//_VariableScope(P,-1,V) :- _VariableScope(A,-1,V), Parent(P,A), !CompoundStmt(P).  					// walk up to the compound statement
+//_VariableScope(P,N,V) :- _VariableScope(A,-1,V), Parent(P,A), CompoundStmt(P), NodeList(P,N,A).  	// record the child number through which we reached the compound
+
+
+
+//_VariableScope(P,V) :- _VariableScope(C,V), CompoundStmt(C),
+
+
+
+//// link other variables to the enclosing definition point
+//DefinitionPoint(D,V) :- 
+//	!VariableDefinition(V), 
+//	DefinitionReaches(D,V).
