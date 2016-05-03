@@ -146,25 +146,6 @@ namespace analysis {
 		}
 
 		bool isTrivial(const core::TypePtr& type, bool isParameter = false) {
-			// @TODO: this case of ptr casting is currently not handeled
-			//
-			// decl IMP_printf : (ptr<char,t,f>, var_list) -> int<4>;
-			// decl fun000 : (int<4>, ptr<ptr<char>>) -> int<4>;
-			// decl fun001 : (ptr<unit>) -> unit;
-			// decl fun002 : () -> unit;
-			// def fun000 = function (v379 : ref<int<4>,f,f,plain>, v380 : ref<ptr<ptr<char>>,f,f,plain>) -> int<4> {
-			//     fun001(ptr_cast(ptr_reinterpret(ptr_of_function(fun002), type_lit(unit)), type_lit(f), type_lit(f)));
-			//     return 0;
-			// };
-			// def fun001 = function (v341 : ref<ptr<unit>,f,f,plain>) -> unit {
-			//     ptr_deref(ptr_cast(ptr_reinterpret(*v341, type_lit(() -> unit)), type_lit(t), type_lit(f)))();
-			//     return unit;
-			// };
-			// def fun002 = function () -> unit {
-			//     IMP_printf(ptr_cast(ptr_from_array("hihi\n"), type_lit(t), type_lit(f)), varlist_pack(()));
-			//     return unit;
-			// };
-			//
 			// if we hold a reference, get the element type instead
 			if (core::lang::isReference(type)) {
 				if (!core::lang::isPlainReference(type))
