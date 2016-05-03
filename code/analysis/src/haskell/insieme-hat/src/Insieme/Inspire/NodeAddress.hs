@@ -13,11 +13,11 @@ module Insieme.Inspire.NodeAddress (
 ) where
 
 import Data.Maybe
-import Data.Sequence as Seq
+import Data.Sequence
 import Data.Tree
 import Insieme.Inspire
 
--- | Represents a path along a tree to a spcific node.
+-- | Represents a path along a tree to a specific node.
 type NodeAddress = Seq Int
 
 pattern Empty     <- (viewl -> EmptyL)
@@ -46,6 +46,6 @@ goRight  xs        = xs
 -- | Traverse the tree @t@ along a given 'NodeAddress'.
 resolve :: NodeAddress -> Tree Inspire -> Maybe (Tree Inspire)
 resolve Empty      t           = Just t
-resolve (x :<: xs) (Node _ ns) = if x <= Prelude.length ns
+resolve (x :<: xs) (Node _ ns) = if x < Prelude.length ns
                                  then resolve xs (ns !! x)
                                  else Nothing
