@@ -287,7 +287,7 @@ namespace pattern {
 		}
 
 		inline TreePattern returnStmt(const TreePattern& returnExpr) {
-			return node(core::NT_ReturnStmt, single(returnExpr) << any);
+			return node(core::NT_ReturnStmt, single(declaration(any, returnExpr)));
 		}
 
 		inline TreePattern markerStmt(const TreePattern& subExpr, const TreePattern& id) {

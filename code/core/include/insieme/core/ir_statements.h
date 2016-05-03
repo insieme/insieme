@@ -846,16 +846,25 @@ namespace core {
 	/**
 	 * The accessor associated to the return statement.
 	 */
-	IR_NODE_ACCESSOR(ReturnStmt, Statement, Expression, Variable)
+	IR_NODE_ACCESSOR(ReturnStmt, Statement, Declaration)
 		/**
-		 * Obtains a reference to the expression associated to this return statement.
+		 * Obtains the declaration support node associated to this return statement.
 		 */
-		IR_NODE_PROPERTY(Expression, ReturnExpr, 0);
+		IR_NODE_PROPERTY(Declaration, ReturnDeclaration, 0);
 
 		/**
-		 * Obtains a reference to the implicit variable associated to this return statement.
+		 * Obtains the expression associated to this return statement.
 		 */
-		IR_NODE_PROPERTY(Variable, ReturnVar, 1);
+		Ptr<const Expression> getReturnExpr() const {
+			return getReturnDeclaration()->getInitialization();
+		}
+
+		/**
+		 * Obtains the implicit variable associated to this return statement.
+		 */
+		Ptr<const Variable> getReturnVar() const {
+			return getReturnDeclaration()->getVariable();
+		}
 
 	IR_NODE_END()
 
@@ -883,7 +892,7 @@ namespace core {
 		 * @return the requested type instance managed by the given manager
 		 */
 		static ReturnStmtPtr get(NodeManager & manager, const ExpressionPtr& returnExpr, const VariablePtr& returnVar) {
-			return manager.get(ReturnStmt(returnExpr, returnVar));
+			return manager.get(ReturnStmt(Declaration::get(manager, returnVar, returnExpr)));
 		}
 	IR_NODE_END()
 

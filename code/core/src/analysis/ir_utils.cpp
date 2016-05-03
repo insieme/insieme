@@ -413,27 +413,15 @@ namespace analysis {
 				this->visit(decl->getInitialization(), bound, free);
 			}
 
-			void visitReturnStmt(const Ptr<const ReturnStmt>& ret, VariableSet& bound, ResultSet& free) {
-				// a return statement creates a new scope
-				VariableSet innerBound = bound;
-				innerBound.insert(ret->getReturnVar());
-
-				// then visit the return expr
-				this->visit(ret->getReturnExpr(), innerBound, free);
-			}
-
-			void visitForStmt(const Ptr<const ForStmt>& forStmt, VariableSet& bound, ResultSet& free) {
-				// a for statement creates a new scope
-				VariableSet innerBound = bound;
-				// continue visiting with the limited scope
-				visitNode(forStmt, innerBound, free);
-			}
-
-			void visitCompoundStmt(const Ptr<const CompoundStmt>& compound, VariableSet& bound, ResultSet& free) {
-				// a compound statement creates a new scope
-				VariableSet innerBound = bound;
-				// continue visiting with the limited scope
-				visitNode(compound, innerBound, free);
+			void visitStatement(const Ptr<const Statement>& stmt, VariableSet& bound, ResultSet& free) {
+				// compound, return and for statements create new scopes
+				auto nt = stmt->getNodeType();
+				if(nt == NT_CompoundStmt || nt == NT_ReturnStmt || nt == NT_ForStmt) {
+					VariableSet innerBound = bound;
+					visitNode(stmt, innerBound, free);
+				} else {
+					visitNode(stmt, bound, free);
+				}
 			}
 
 			void visitCatchClause(const Ptr<const CatchClause>& clause, VariableSet& bound, ResultSet& free) {

@@ -201,7 +201,7 @@ namespace core {
 		EXPECT_EQ("return 12", toString(*stmt));
 
 		// check hash codes, children and cloning
-		basicNodeTests(stmt, toVector<NodePtr>(literal, var));
+		basicNodeTests(stmt, toVector<NodePtr>(builder.declaration(var, literal)));
 	}
 
 	TEST(StatementsTest, Goto) {

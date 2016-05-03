@@ -207,8 +207,8 @@ namespace irg {
 		return node(core::NT_SwitchStmt, single(expression) << cases << single(defaultCase));
 	}
 
-	inline TreeGenerator returnStmt(const TreeGenerator& returnExpression) {
-		return node(core::NT_ReturnStmt, single(returnExpression));
+	inline TreeGenerator returnStmt(const TreeGenerator& returnVariable, const TreeGenerator& returnExpression) {
+		return node(core::NT_ReturnStmt, single(declaration(returnVariable, returnExpression)));
 	}
 
 	inline TreeGenerator markerStmt(const TreeGenerator& subExpr, const TreeGenerator& id) {
