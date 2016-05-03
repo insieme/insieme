@@ -60,7 +60,16 @@ namespace datalog {
 
 		EXPECT_FALSE(mayBeTrue(ExpressionAddress(builder.parseExpr("false"))));
 		EXPECT_FALSE(mayBeFalse(ExpressionAddress(builder.parseExpr("true"))));
+	}
 
+
+	TEST(BooleanValue, SimpleExpressions) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		#define do_test(EXPECTED, FUNC, EXPR) EXPECT_##EXPECTED(FUNC(ExpressionAddress(builder.parseExpr(EXPR))));
+
+		do_test(TRUE, isTrue, "(true)");
 
 		// check string constants (should be neither true nor false)
 		EXPECT_FALSE(isTrue(ExpressionAddress(builder.parseExpr("\"x\""))));
@@ -68,6 +77,7 @@ namespace datalog {
 		EXPECT_TRUE(mayBeTrue(ExpressionAddress(builder.parseExpr("\"x\""))));
 		EXPECT_TRUE(mayBeFalse(ExpressionAddress(builder.parseExpr("\"x\""))));
 
+		#undef do_test
 	}
 
 } // end namespace datalog
