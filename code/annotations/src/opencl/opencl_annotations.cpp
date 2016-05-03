@@ -48,19 +48,6 @@ namespace opencl {
 	const string BaseAnnotation::NAME = "OpenCLAnnotation";
 	const utils::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
 
-	namespace {
-		core::ExpressionPtr toUInt(const core::ExpressionPtr& expr) {
-			if (expr->getNodeType() != core::NT_Literal) return expr;
-
-			auto& manager = expr->getNodeManager();
-			if (manager.getLangBasic().isUInt4(expr->getType())) return expr;
-
-			// build a new literal and omit the cast -- as tight==false it defaults to uint4
-			core::IRBuilder builder(manager);
-			return builder.uintLit(expr.as<core::LiteralPtr>()->getValue());
-		}
-	}
-
 	BaseAnnotation::BaseAnnotation(const insieme::utils::CompoundAnnotation<opencl::Annotation>::AnnotationList& annotationList) :
 		insieme::utils::CompoundAnnotation<opencl::Annotation, core::NodeAnnotation>(annotationList)
 	{ }
