@@ -55,7 +55,7 @@ namespace opencl {
 	using namespace core::lang;
 	using namespace insieme::backend::opencl::transform;
 
-	TEST(inlineAssignments, Basic) {
+	TEST(DISABLED_inlineAssignments, Basic) {
 
 		NodeManager mgr;
 		IRBuilder builder(mgr);
