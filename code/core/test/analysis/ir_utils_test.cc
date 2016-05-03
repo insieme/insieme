@@ -247,6 +247,20 @@ namespace analysis {
 		}
 	}
 
+	TEST(FreeVariables, ImplicitlyDeclared) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		{
+			auto ret1 = builder.parseStmt("return 5;");
+			EXPECT_FALSE(hasFreeVariables(ret1));
+		}
+		{
+			auto for1 = builder.parseStmt("for(int<4> k = 0 .. 10) { }");
+			EXPECT_FALSE(hasFreeVariables(for1));
+		}
+	}
+
 
 	TEST(AllVariables, BindTest) {
 		NodeManager manager;

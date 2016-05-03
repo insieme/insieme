@@ -337,13 +337,13 @@ namespace pattern {
 		EXPECT_TRUE(match);
 		ASSERT_TRUE(match->isVarBound("x"));
 		ASSERT_TRUE(match->isVarBound("y"));
-		EXPECT_EQ(stmt1.getAddressOfChild(0, 0, 0), match->getVarBinding("x").getValue());
+		EXPECT_EQ(stmt1.getAddressOfChild(0, 0), match->getVarBinding("x").getValue());
 		EXPECT_EQ(stmt1.getAddressOfChild(3, 0, 0, 0), match->getVarBinding("y").getValue());
 
 		match = pattern2.matchAddress(stmt2);
 		EXPECT_TRUE(match);
-		EXPECT_EQ(stmt2.getAddressOfChild(0, 0, 0), match->getVarBinding("i").getValue());
-		EXPECT_EQ(stmt2.getAddressOfChild(0, 0, 1), match->getVarBinding("x").getValue());
+		EXPECT_EQ(stmt2.getAddressOfChild(0, 0), match->getVarBinding("i").getValue());
+		EXPECT_EQ(stmt2.getAddressOfChild(0, 1), match->getVarBinding("x").getValue());
 		EXPECT_EQ(stmt2.getAddressOfChild(1), match->getVarBinding("y").getValue());
 		EXPECT_EQ(stmt2.getAddressOfChild(2), match->getVarBinding("z").getValue());
 

@@ -191,12 +191,12 @@ namespace irg {
 
 	inline TreeGenerator forStmt(const TreeGenerator& iterator, const TreeGenerator& start, const TreeGenerator& end, const TreeGenerator& step,
 	                             const ListGenerator& body) {
-		return node(core::NT_ForStmt, single(declarationStmt(iterator, start)) << single(end) << single(step) << compoundStmt(body));
+		return node(core::NT_ForStmt, single(declaration(iterator, start)) << single(end) << single(step) << compoundStmt(body));
 	}
 
 	inline TreeGenerator forStmt(const TreeGenerator& iterator, const TreeGenerator& start, const TreeGenerator& end, const TreeGenerator& step,
 	                             const TreeGenerator& body) {
-		return node(core::NT_ForStmt, single(declarationStmt(iterator, start)) << end << step << compoundStmt(body));
+		return node(core::NT_ForStmt, single(declaration(iterator, start)) << end << step << compoundStmt(body));
 	}
 
 	inline TreeGenerator whileStmt(const TreeGenerator& condition, const TreeGenerator& body) {

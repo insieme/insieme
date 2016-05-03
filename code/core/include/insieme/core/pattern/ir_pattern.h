@@ -258,12 +258,12 @@ namespace pattern {
 
 		inline TreePattern forStmt(const TreePattern& iterator, const TreePattern& start, const TreePattern& end, const TreePattern& step,
 		                           const ListPattern& body) {
-			return node(core::NT_ForStmt, single(declarationStmt(iterator, start)) << single(end) << single(step) << compoundStmt(body));
+			return node(core::NT_ForStmt, single(declaration(iterator, start)) << single(end) << single(step) << compoundStmt(body));
 		}
 
 		inline TreePattern forStmt(const TreePattern& iterator, const TreePattern& start, const TreePattern& end, const TreePattern& step,
 		                           const TreePattern& body) {
-			return node(core::NT_ForStmt, single(declarationStmt(iterator, start)) << single(end) << single(step) << wrapBody(body));
+			return node(core::NT_ForStmt, single(declaration(iterator, start)) << single(end) << single(step) << wrapBody(body));
 		}
 
 		inline TreePattern forStmt(const TreePattern& body) {

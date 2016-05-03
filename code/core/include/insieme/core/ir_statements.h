@@ -441,12 +441,12 @@ namespace core {
 	/**
 	 * The accessor associated to the for statement.
 	 */
-	IR_NODE_ACCESSOR(ForStmt, Statement, DeclarationStmt, Expression, Expression, CompoundStmt)
+	IR_NODE_ACCESSOR(ForStmt, Statement, Declaration, Expression, Expression, CompoundStmt)
 
 		/**
 		 * Obtains a reference to the variable declaration within this for stmt.
 		 */
-		IR_NODE_PROPERTY(DeclarationStmt, Declaration, 0);
+		IR_NODE_PROPERTY(Declaration, Declaration, 0);
 
 		/**
 		 * Obtains a reference to the expression representing the end value of the iterator variable (exclusive).
@@ -501,7 +501,7 @@ namespace core {
 		 * @param body the body of the for loop
 		 * @return the requested type instance managed by the given manager
 		 */
-		static ForStmtPtr get(NodeManager & manager, const DeclarationStmtPtr& varDecl, const ExpressionPtr& end, const ExpressionPtr& step,
+		static ForStmtPtr get(NodeManager & manager, const DeclarationPtr& varDecl, const ExpressionPtr& end, const ExpressionPtr& step,
 							  const CompoundStmtPtr& body) {
 			return manager.get(ForStmt(varDecl, end, step, body));
 		}
@@ -520,7 +520,7 @@ namespace core {
 		 */
 		static ForStmtPtr get(NodeManager & manager, const VariablePtr& iterator, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step,
 							  const CompoundStmtPtr& body) {
-			return get(manager, DeclarationStmt::get(manager, iterator, start), end, step, body);
+			return get(manager, Declaration::get(manager, iterator, start), end, step, body);
 		}
 
 	IR_NODE_END()

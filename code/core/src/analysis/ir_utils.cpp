@@ -405,7 +405,7 @@ namespace analysis {
 				this->visitAll(node->getChildList(), bound, free);
 			}
 
-			void visitDeclarationStmt(const Ptr<const DeclarationStmt>& decl, VariableSet& bound, ResultSet& free) {
+			void visitDeclaration(const Ptr<const Declaration>& decl, VariableSet& bound, ResultSet& free) {
 				// first add variable to set of bound variables
 				bound.insert(decl->getVariable());
 
@@ -413,18 +413,25 @@ namespace analysis {
 				this->visit(decl->getInitialization(), bound, free);
 			}
 
-			void visitReturnStmt(const Ptr<const ReturnStmt>& decl, VariableSet& bound, ResultSet& free) {
-				// first add variable to set of bound variables
-				bound.insert(decl->getReturnVar());
+			void visitReturnStmt(const Ptr<const ReturnStmt>& ret, VariableSet& bound, ResultSet& free) {
+				// a return statement creates a new scope
+				VariableSet innerBound = bound;
+				innerBound.insert(ret->getReturnVar());
 
-				// then visit the defining expression
-				this->visit(decl->getReturnExpr(), bound, free);
+				// then visit the return expr
+				this->visit(ret->getReturnExpr(), innerBound, free);
+			}
+
+			void visitForStmt(const Ptr<const ForStmt>& forStmt, VariableSet& bound, ResultSet& free) {
+				// a for statement creates a new scope
+				VariableSet innerBound = bound;
+				// continue visiting with the limited scope
+				visitNode(forStmt, innerBound, free);
 			}
 
 			void visitCompoundStmt(const Ptr<const CompoundStmt>& compound, VariableSet& bound, ResultSet& free) {
 				// a compound statement creates a new scope
 				VariableSet innerBound = bound;
-
 				// continue visiting with the limited scope
 				visitNode(compound, innerBound, free);
 			}
