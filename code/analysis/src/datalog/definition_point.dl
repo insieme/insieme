@@ -3,7 +3,7 @@
 
 
 .decl target ( var : variable ) input
-.decl result ( var : variable ) output
+.decl DefinitionPointResult ( var : variable ) output
 
 
 // ------ Definition Point ---------
@@ -37,12 +37,12 @@ VariableDefinition(V) :- CatchClause(_,V,_).
 .decl FullExpression( s : stmt, e : expr )
 
 FullExpression( E, E ) :- ParentOf(C,E), CompoundStmt(C).
-FullExpression( F, E ) :- FullExpression(F,I), ParentOf(I,E), !CompoundStmt(E). 
+FullExpression( F, E ) :- FullExpression(F,I), ParentOf(I,E), !CompoundStmt(E).
 
 
 .decl equalType( t1 : type , t2 : type ) output
 
-equalType( t1, t2 ) :- GenericType(t1,n,_,_), GenericType(t2,n,_,_).
+equalType( t1, t2 ) :- GenericType(t1,n,_,_), GenericType(t2,n,_,_), NodeIdentity(t1, uid), NodeIdentity(t2, uid).
 
 
 
@@ -55,6 +55,8 @@ DefinitionPointTrace(P,V,-1) :- DefinitionPointTrace(N,V,-1), ParentOf(P,N), !Co
 DefinitionPointTrace(C,V,N) :- DefinitionPointTrace(F,V,-1), ParentOf(C,F), CompoundStmt(C), NodeList(C,N,F).
 
 DefinitionPointTrace(C,V,N-1) :- DefinitionPointTrace(C,V,N), N >= 0, NodeList(C,N,P), !DeclarationStmt(P,X,_), Variable(X,T1,Name), Variable(V,T2,Name), equalType(T1,T2).
+
+// FIXME: Rule for !ForLoop missing
 
 
 
@@ -70,7 +72,7 @@ DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ParentOf(L,F), Lambda(L,_,
 
 
 
-result(X) :- target(V), DefinitionPoint(X,V).
+DefinitionPointResult(X) :- target(V), DefinitionPoint(X,V).
 
 
 //.decl Successor ( A : stmt, B : stmt )
@@ -85,10 +87,10 @@ result(X) :- target(V), DefinitionPoint(X,V).
 //_VariableScope(V,0,V) :- Variable(V,_,_), !VariableDefinition(V).									// start at variable
 //_VariableScope(C,N,V) :- _VariableScope(V,0,V), FullExpression(F,V), ParentOf(C,F), CompoundStmt(C), NodeList(C,N,F).		// get the full expression
 //
-//_VariableScope(C,N-1,V) :- _VariableScope(C,N,V), CompoundStmt(C), NodeList(C,N-1,S), !DeclarationStmt(S,V,_). 
-//						:- _VariableScope(C,-1,V), ParentOf(P,C), 
+//_VariableScope(C,N-1,V) :- _VariableScope(C,N,V), CompoundStmt(C), NodeList(C,N-1,S), !DeclarationStmt(S,V,_).
+//						:- _VariableScope(C,-1,V), ParentOf(P,C),
 //
-//_VariableScope(V,-1,V) :- Variable(V,_,_), 
+//_VariableScope(V,-1,V) :- Variable(V,_,_),
 //_VariableScope(P,-1,V) :- _VariableScope(A,-1,V), Parent(P,A), !CompoundStmt(P).  					// walk up to the compound statement
 //_VariableScope(P,N,V) :- _VariableScope(A,-1,V), Parent(P,A), CompoundStmt(P), NodeList(P,N,A).  	// record the child number through which we reached the compound
 
@@ -99,6 +101,6 @@ result(X) :- target(V), DefinitionPoint(X,V).
 
 
 //// link other variables to the enclosing definition point
-//DefinitionPoint(D,V) :- 
-//	!VariableDefinition(V), 
+//DefinitionPoint(D,V) :-
+//	!VariableDefinition(V),
 //	DefinitionReaches(D,V).

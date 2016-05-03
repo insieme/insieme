@@ -49,6 +49,49 @@ namespace datalog {
 
 	using namespace core;
 
+
+	TEST(CodeProperties, DefinitionPoint_Parameter) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesExpression(
+			"( x : int<4> ) -> int<4> { return $x$; }"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<CallExprAddress>()[0].as<VariableAddress>();
+		auto param = var.getRootAddress().as<LambdaExprAddress>()->getParameterList()[0];
+
+		std::cout << "Parameter: " << param << "\n";
+		std::cout << "Variable:  " << var << "\n";
+
+		EXPECT_EQ(param, getDefinitionPoint(var, false));
+
+	}
+
+
+	TEST(CodeProperties, DefinitionPoint_LocalVariable) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(
+			"{ var int<4> x = 12; $x$; }"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		// auto var... fails
+		auto var = addresses[0].as<VariableAddress>();
+		auto param = var.getRootAddress().as<CompoundStmtAddress>()[0];
+
+		std::cout << "Parameter: " << param << "\n";
+		std::cout << "Variable:  " << var << "\n";
+
+		EXPECT_EQ(param, getDefinitionPoint(var,false));
+
+	}
+
 	TEST(CodeProperties, TMP) {
 		core::NodeManager mgr;
 		IRBuilder builder(mgr);
@@ -72,6 +115,7 @@ namespace datalog {
 			std::cout << " \t" << list << "\n";
 		});
 	}
+
 
 	TEST(CodeProperties, LargerCode) {
 		using namespace driver::integration;
@@ -421,48 +465,6 @@ namespace datalog {
 		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("try {} catch (v1 : bool) {v1;} catch (v2 : int<4>) {v2;}")));
 		EXPECT_TRUE(getTopLevelNodes(builder.parseProgram("int main() { return 0; }")));
 		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("spawn 14")));
-	}
-
-
-//	TEST(CodeProperties, DefinitionPoint_LocalVariable) {
-//		NodeManager mgr;
-//		IRBuilder builder(mgr);
-//
-//		auto addresses = builder.parseAddressesStatement(
-//				"{ var int<4> x = 12; $x$; }"
-//		);
-//
-//		ASSERT_EQ(1, addresses.size());
-//
-//		auto var = addresses[0].as<CallExprAddress>()[0].as<VariableAddress>();
-//		auto param = var.getRootAddress().as<LambdaExprAddress>()->getParameterList()[0];
-//
-//		std::cout << "Parameter: " << param << "\n";
-//		std::cout << "Variable:  " << var << "\n";
-//
-//		EXPECT_EQ(param, getDefinitionPoint(var));
-//
-//	}
-
-
-	TEST(CodeProperties, DefinitionPoint_Parameter) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		auto addresses = builder.parseAddressesExpression(
-				"( x : int<4> ) -> int<4> { return $x$; }"
-		);
-
-		ASSERT_EQ(1, addresses.size());
-
-		auto var = addresses[0].as<CallExprAddress>()[0].as<VariableAddress>();
-		auto param = var.getRootAddress().as<LambdaExprAddress>()->getParameterList()[0];
-
-		std::cout << "Parameter: " << param << "\n";
-		std::cout << "Variable:  " << var << "\n";
-
-		EXPECT_EQ(param, getDefinitionPoint(var));
-
 	}
 
 } // end namespace datalog

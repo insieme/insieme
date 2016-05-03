@@ -141,9 +141,8 @@ namespace datalog {
 	}
 
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var) {
-		const bool debug = true;
-
+	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var, bool debug)
+	{
 		// instantiate the analysis
 		souffle::Sf_definition_point analysis;
 
@@ -171,7 +170,7 @@ namespace datalog {
 		if (debug) analysis.dumpOutputs();
 
 		// read result
-		auto& result = analysis.rel_result;
+		auto& result = analysis.rel_DefinitionPointResult;
 		if (result.empty()) return core::VariableAddress();
 
 		assert_le(result.size(), 1) << "Invalid result - multiple definition points!";

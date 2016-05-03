@@ -57,6 +57,7 @@ namespace datalog {
 	 * Get exit points from a given lambda function
 	 */
 	std::vector<core::ReturnStmtAddress> performExitPointAnalysis(const core::LambdaPtr& rootLambda, bool debug = false);
+	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var, bool debug = false);
 
 } // end namespace datalog
 } // end namespace analysis

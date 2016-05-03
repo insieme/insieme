@@ -13,7 +13,8 @@
 
 // -- list  & misc node types
 .number_type child_index
-.number_type function_kind  // TODO should it be replaced?
+.number_type function_kind
+.number_type unique_node_id
 
 
 // -- program type --
@@ -141,7 +142,11 @@
 .decl NodeList ( list:node , idx:child_index , element:node )                                                 input
 
 
-// .decl NodeIdentity ( n : node , id : node_id ) input
+
+// Unique Node Identity Relation
+
+.decl NodeIdentity (  id:node , uid:unique_node_id )                                                          input
+
 
 
 // Program Node

@@ -43,7 +43,7 @@ is_boolean( n ) :- GenericType(n,"bool",a,b), is_empty(a), is_empty(b).
 boolean_value( n , true ) :- Literal(n,t,"true"), is_boolean(t).
 boolean_value( n , false ) :- Literal(n,t,"false"), is_boolean(t).
 
-// all other literals have an unknown boolean value 
+// all other literals have an unknown boolean value
 boolean_value( n, v ) :- Literal(n,t,_), !is_boolean(t), unknown_boolean_value(v).
 
 
