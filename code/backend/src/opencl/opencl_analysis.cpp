@@ -71,13 +71,6 @@ namespace analysis {
 				return node;
 		}
 
-		core::TypePtr removePointer(const core::TypePtr& node) {
-			if (core::lang::isPointer(node))
-				return core::lang::PointerType(node).getElementType();
-			else
-				return node;
-		}
-
 		bool isBuiltIn(const core::NodePtr& node) {
 			// represents a white-list of all IMP__fun which are allowed in the kernel
 			static std::unordered_set<std::string> builtins = {
@@ -369,6 +362,9 @@ namespace analysis {
 		// if the generic check fails, we do not need to proceed any further
 		if (!core::analysis::isOutlineAble(stmt, false))
 			return false;
+
+		// check if it contain builtin literals only
+		if (!hasBuiltInLiterals(node)) return false;
 
 		// obtain a list for all & only free variables
 		core::VariableSet vars = core::analysis::getAllVariables(manager.get(stmt));

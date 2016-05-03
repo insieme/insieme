@@ -91,14 +91,6 @@ namespace transform {
 			return builder.stringLit(ss.str());
 		}
 
-		core::ExpressionPtr wrapLazy(core::NodeManager& manager, const core::ExpressionPtr& expr) {
-			if (expr->getNodeType() == core::NT_LambdaExpr) return expr.as<core::LambdaExprPtr>();
-				// in this case we take use of materialization to wrap it
-				core::IRBuilder builder(manager);
-				auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-				return builder.wrapLazy(builder.numericCast(expr, oclExt.getSizeType()));
-		}
-
 		core::ExpressionPtr identity(const core::ExpressionPtr& expr) {
 			return expr;
 		}
