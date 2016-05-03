@@ -92,15 +92,20 @@ namespace opencl {
 				auto it = std::find_if(candidates.begin(), candidates.end(), [&](const core::NodePtr& e) { return *e == *node; });
 				if (it == candidates.end()) return node->substitute(manager, *this);
 
-				auto requirements = analysis::getVariableRequirements(manager, root, node.as<core::StatementPtr>());
+				auto stmt = node.as<core::StatementPtr>();
+				// obtain the requirements for this candidate
+				auto requirements = analysis::getVariableRequirements(manager, root, stmt);
 				// we outline the compound such that we can implement our pick between default & opencl kernel
-				auto callExpr = transform::outline(manager, node.as<core::StatementPtr>(), requirements);
+				auto callExpr = transform::outline(manager, stmt, requirements);
 				auto fallback = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
 				// put together the variants used by the pick -- first one is the fallback which will run on cpu
 				core::ExpressionList variants;
 				variants.push_back(fallback);
 
-				auto generated = transform::toOcl(converter, manager, root, callExpr, requirements);
+				// obtain the static device information attached to the statement
+				auto deviceInfo = analysis::getDeviceInfo(stmt);
+
+				auto generated = transform::toOcl(converter, manager, root, callExpr, requirements, deviceInfo);
 				std::copy(generated.begin(), generated.end(), std::back_inserter(variants));
 				// build a pick for the generated variants
 				auto pickExpr = builder.pickVariant(variants);

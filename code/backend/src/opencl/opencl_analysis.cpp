@@ -64,12 +64,6 @@ namespace analysis {
 	using namespace insieme::annotations::opencl;
 
 	namespace {
-		bool isPrimitive(const core::TypePtr& type) {
-			// return type->getNodeManager().getLangBasic().isPrimitive(type);
-			auto& basic = type->getNodeManager().getLangBasic();
-			return basic.isChar(type) || basic.isBool(type) || basic.isScalarType(type);
-		}
-
 		core::TypePtr removeReference(const core::TypePtr& node) {
 			if (core::lang::isReference(node))
 				return core::lang::ReferenceType(node).getElementType();
@@ -329,8 +323,22 @@ namespace analysis {
 			return core::analysis::getFreeVariables(derived.get(builder.compoundStmt(body)));
 		}
 
-		// @TODO: an argument wih an incomplete type is not allowed!!!
-		// @TODO: while to for extension is a problem if produces e.g. ref<ref<'a>...>
+		DeviceAnnotationPtr tryDeduceDeviceInfo(const core::StatementPtr& stmt) {
+			// assume that it works _well_ on all types of devices
+			// thus taking the optimistic approach here instead of other tryXxx fallbacks
+			return std::make_shared<DeviceAnnotation>(std::make_shared<Device>(Device::Type::ALL));
+		}
+	}
+
+	bool isPrimitive(const core::NodePtr& node) {
+		if (node->getNodeCategory() != core::NC_Type) return false;
+		return isPrimitive(node.as<core::TypePtr>());
+	}
+
+	bool isPrimitive(const core::TypePtr& type) {
+		// return type->getNodeManager().getLangBasic().isPrimitive(type);
+		auto& basic = type->getNodeManager().getLangBasic();
+		return basic.isChar(type) || basic.isBool(type) || basic.isScalarType(type);
 	}
 
 	core::TypePtr getElementType(const core::TypePtr& type) {
@@ -537,6 +545,22 @@ namespace analysis {
 	core::TypePtr getLWDataItemType(const core::LambdaExprPtr& lambdaExpr) {
 		core::IRBuilder builder(lambdaExpr->getNodeManager());
 		return runtime::DataItem::toLWDataItemType(builder.tupleType(lambdaExpr->getType().as<core::FunctionTypePtr>().getParameterTypeList()));
+	}
+
+	DeviceAnnotationPtr getDeviceInfo(const core::StatementPtr& stmt) {
+		// all annotations, if present, must be attached to the given stmt
+		if (stmt->hasAnnotation(BaseAnnotation::KEY)) {
+			// grab all annotations which relate to OpenCL (and have been attached by FE)
+			const auto& annos = stmt->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
+			// loop through all of them and pick only those who correspond to variables
+			for (const auto& anno : annos) {
+				if (auto da = std::dynamic_pointer_cast<DeviceAnnotation>(anno))
+					return da;
+			}
+		}
+
+		LOG(DEBUG) << "trying to deduce device info for: " << dumpColor(stmt);
+		return tryDeduceDeviceInfo(stmt);
 	}
 
 	namespace {

@@ -696,9 +696,9 @@ namespace transform {
 		return code;
 	}
 
-	std::vector<core::LambdaExprPtr> toOcl(const Converter& converter, core::NodeManager& manager,
-										   const core::NodePtr& code, const core::CallExprPtr& callExpr,
-										   const VariableRequirementList& requirements) {
+	std::vector<core::LambdaExprPtr> toOcl(const Converter& converter, core::NodeManager& manager, const core::NodePtr& code,
+										   const core::CallExprPtr& callExpr, const VariableRequirementList& requirements,
+										   const DeviceAnnotationPtr& deviceInfo) {
 		// even though the interface supports it, only one variant is generated
 		core::IRBuilder builder(manager);
 		std::vector<core::LambdaExprPtr> variants;
@@ -742,7 +742,7 @@ namespace transform {
 		meta_data.opencl = true;
 		meta_data.kernel_id = id;
 		// this kernel can run on any device
-		meta_data.device_type = (unsigned) -1;
+		meta_data.device_type = static_cast<unsigned>(deviceInfo->getDevice()->getType());
 		lambdaExpr->attachValue(meta_data);
 		// add the generated variant to the result set
 		variants.push_back(lambdaExpr);

@@ -204,9 +204,9 @@ namespace transform {
 	core::LambdaExprPtr toIR(core::NodeManager& manager, const StepContext& sc, const VariableRequirementPtr& var);
 
 	// callExpr must have been obtained via outline() of above!
-	std::vector<core::LambdaExprPtr> toOcl(const Converter& converter, core::NodeManager& manager,
-										   const core::NodePtr& code, const core::CallExprPtr& callExpr,
-										   const VariableRequirementList& requirements);
+	std::vector<core::LambdaExprPtr> toOcl(const Converter& converter, core::NodeManager& manager, const core::NodePtr& code,
+										   const core::CallExprPtr& callExpr, const VariableRequirementList& requirements,
+										   const DeviceAnnotationPtr& deviceInfo);
 }
 }
 }

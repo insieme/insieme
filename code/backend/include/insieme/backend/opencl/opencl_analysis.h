@@ -54,6 +54,11 @@ namespace analysis {
 	 */
 	typedef utils::graph::PointerGraph<core::NodePtr, utils::graph::unlabeled, boost::directedS> DependencyGraph;
 	/**
+     * Returns true, iff the given node represents a primitive type
+	 */
+	bool isPrimitive(const core::NodePtr& node);
+	bool isPrimitive(const core::TypePtr& type);
+	/**
 	 * Shortcut for eg. core::lang::PointerType(node).getElementType() & friends
 	 */
 	core::TypePtr getElementType(const core::TypePtr& type);
@@ -94,6 +99,11 @@ namespace analysis {
      * Determine the LWDataItemType for a given lambda
      */
 	core::TypePtr getLWDataItemType(const core::LambdaExprPtr& lambdaExpr);
+
+	/**
+     * Determine static device information for the given statement
+	 */
+	DeviceAnnotationPtr getDeviceInfo(const core::StatementPtr& stmt);
 
 	DependencyGraph& getDependencyGraph(const core::StatementPtr& stmt, const core::VariableSet& vars, DependencyGraph& base);
 
