@@ -40,9 +40,9 @@ FullExpression( E, E ) :- ParentOf(C,E), CompoundStmt(C).
 FullExpression( F, E ) :- FullExpression(F,I), ParentOf(I,E), !CompoundStmt(E).
 
 
-.decl equalType( t1 : type , t2 : type ) output
+.decl identicalNodes( t1 : node , t2 : node )
 
-equalType( t1, t2 ) :- GenericType(t1,n,_,_), GenericType(t2,n,_,_), NodeIdentity(t1, uid), NodeIdentity(t2, uid).
+identicalNodes( t1, t2 ) :- NodeIdentity(t1, uid), NodeIdentity(t2, uid).
 
 
 
@@ -50,11 +50,12 @@ equalType( t1, t2 ) :- GenericType(t1,n,_,_), GenericType(t2,n,_,_), NodeIdentit
 
 
 DefinitionPointTrace(V,V,-1) :- Variable(V,_,_), !VariableDefinition(V).
+
 DefinitionPointTrace(P,V,-1) :- DefinitionPointTrace(N,V,-1), ParentOf(P,N), !CompoundStmt(P), !Lambda(P,_,_,_).
 
 DefinitionPointTrace(C,V,N) :- DefinitionPointTrace(F,V,-1), ParentOf(C,F), CompoundStmt(C), NodeList(C,N,F).
 
-DefinitionPointTrace(C,V,N-1) :- DefinitionPointTrace(C,V,N), N >= 0, NodeList(C,N,P), !DeclarationStmt(P,X,_), Variable(X,T1,Name), Variable(V,T2,Name), equalType(T1,T2).
+DefinitionPointTrace(C,V,N-1) :- DefinitionPointTrace(C,V,N), N >= 0, NodeList(C,N,P), !DeclarationStmt(P,X,_), Variable(X,T1,Name), Variable(V,T2,Name), identicalNodes(T1,T2).
 
 // FIXME: Rule for !ForLoop missing
 
@@ -65,8 +66,8 @@ DefinitionPointTrace(C,V,N-1) :- DefinitionPointTrace(C,V,N), N >= 0, NodeList(C
 // link definition points to themselfs
 DefinitionPoint(V,V) :- VariableDefinition(V).
 
-DefinitionPoint(X,V) :- DefinitionPointTrace(C,V,N), NodeList(C,N,D), DeclarationStmt(D,X,_), Variable(X,T1,Name), Variable(V,T2,Name), equalType(T1,T2).
-DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ParentOf(L,F), Lambda(L,_,P,_), NodeList(P,_,X), Variable(X,T1,Name), Variable(V,T2,Name), equalType(T1,T2).
+DefinitionPoint(X,V) :- DefinitionPointTrace(C,V,N), NodeList(C,N,D), DeclarationStmt(D,X,_), Variable(X,T1,Name), Variable(V,T2,Name), identicalNodes(T1,T2).
+DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ParentOf(L,F), Lambda(L,_,P,_), NodeList(P,_,X), Variable(X,T1,Name), Variable(V,T2,Name), identicalNodes(T1,T2).
 
 
 
