@@ -109,7 +109,7 @@ namespace text {
 		/**
 		 * The text dumper is converting a given IR node into a text-based
 		 * human readable format. The dumped structure represents the full
-		 * IR tree and is not exploiting the sharing properties of the the DAG.
+		 * IR tree and is not exploiting the sharing properties of the DAG.
 		 * The template parameter is meant to be instantiated to either a
 		 * NodePtr or a NodeAddress.
 		 */
@@ -146,7 +146,7 @@ namespace text {
 				out << "\n" << times("    ", level) << ")";
 			}
 
-		private:
+		 private:
 			std::ostream& printNodeName(std::ostream& out, const NodePtr& cur) {
 				out << cur->getNodeType() << " ";
 				return out;
@@ -155,6 +155,50 @@ namespace text {
 			std::ostream& printNodeName(std::ostream& out, const NodeAddress& cur) {
 				out << cur->getNodeType() << " <" << cur << "> ";
 				return out;
+			}
+		};
+
+
+		/**
+		 * The JsonDumper is very similar to TextDumper, but prints in Json format,
+		 * which is easier to parse when the output is needed by other programs. The
+		 * output represents the full IR tree and is not exploting the sharing
+		 * proerties of the DAG.
+		 */
+		class JsonDumper {
+		public:
+			void dump(std::ostream& out, const NodeAddress& ir) {
+				dump(out, 0, ir);
+				out << std::endl;
+			}
+
+			void dump(std::ostream& out, int level, const NodeAddress& cur) {
+				// Indentation
+				out << times("   ", level) << "{"
+				    << "\"node\": \"" << cur->getNodeType() << "\", "
+				    << "\"addr\": \"" << cur << "\"";
+
+				if(cur->isValue()) {
+					// Print the value
+					out << ", \"value\": ";
+					boost::apply_visitor(ValueDumper(out), cur->getNodeValue());
+				}
+
+				// Print children, if there are any
+				if(!cur->getChildList().empty()) {
+					out << ", \"children\": [";
+					// Classic for-loop because we have to avoid comma at the end
+					for(int i = 0; i < cur->getChildList().size(); i++) {
+						out << std::endl;
+						dump(out, level + 1, cur->getChildList()[i]);
+						if(i+1 < cur->getChildList().size())
+							out << ",";
+					}
+					out << "]";
+				}
+
+				// Close block
+				out << " }";
 			}
 		};
 
@@ -406,6 +450,9 @@ namespace text {
 		}
 	}
 
+	void dumpJson(std::ostream& out, const NodeAddress& address) {
+		JsonDumper().dump(out, address.getRootAddress());
+	}
 
 	NodePtr loadIR(std::istream& in, core::NodeManager& manager) {
 		return loadAddress(in, manager).getAddressedNode();
