@@ -41,9 +41,6 @@
 #include "declarations.h"
 #include "client_app.h"
 #include "instrumentation_regions.h"
-#ifdef USE_OPENCL
-#include "irt_ocl.h"
-#endif
 #ifdef IRT_ENABLE_OPENCL
 #include "irt_opencl.h"
 #endif
@@ -72,11 +69,6 @@ struct _irt_context {
 	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_inst_region_context_data* inst_region_data;                             // initialized by runtime
 	irt_inst_region_context_declarations inst_region_metric_group_support_data; // initialized by runtime
-	#endif
-
-	#ifdef USE_OPENCL
-	irt_ocl_kernel_code* kernel_code_table;
-	irt_ocl_kernel** kernel_binary_table;
 	#endif
 
 	#ifdef IRT_ENABLE_OPENCL

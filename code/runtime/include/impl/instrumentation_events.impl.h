@@ -138,10 +138,6 @@ void _irt_inst_insert_db_event(irt_worker* worker, irt_instrumentation_event eve
 
 // ================= debug output functions ==================================
 
-#if defined(USE_OPENCL) && defined(IRT_OCL_INSTR)
-bool irt_g_ocl_temp_event_dump_already_done = false;
-#endif
-
 void irt_inst_event_data_output_single(irt_instrumentation_event_data data, FILE* outputfile, bool readable) {
 	if(readable) {
 		fprintf(outputfile, "%s,[%d %d],%20s,%32" PRIu64 "\n", irt_g_instrumentation_group_names[data.event_id], data.thread, data.index,
@@ -190,78 +186,6 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 	irt_instrumentation_event_data_table* table = worker->instrumentation_event_data;
 	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no event data!")
 	// fprintf(outputfile, "INSTRUMENTATION: %10u events for worker %4u\n", table->number_of_elements, worker->id.thread);
-
-	#if defined(USE_OPENCL) && defined(IRT_OCL_INSTR)
-	irt_ocl_event_table* ocl_table = worker->event_data;
-	IRT_ASSERT(ocl_table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no OpenCL event data!")
-	int64 ocl_offset = 0;
-	_irt_inst_ocl_performance_helper* ocl_helper_table =
-	    (_irt_inst_ocl_performance_helper*)malloc(ocl_table->num_events * 4 * sizeof(_irt_inst_ocl_performance_helper));
-	int ocl_helper_table_num_entries = ocl_table->num_events * 4;
-	int helper_counter = 0;
-
-	char ocl_filename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
-	sprintf(ocl_filename, "%s/ocl_event_log", outputprefix);
-	FILE* opencl_logfile;
-
-	if(irt_g_ocl_temp_event_dump_already_done) {
-		opencl_logfile = fopen(ocl_filename, "a");
-	} else {
-		opencl_logfile = fopen(ocl_filename, "w");
-		irt_g_ocl_temp_event_dump_already_done = true;
-	}
-
-	for(int i = 0; i < ocl_table->num_events; ++i) {
-		cl_command_type retval;
-		cl_int err_code = clGetEventInfo(ocl_table->event_array[i].cl_event, CL_EVENT_COMMAND_TYPE, sizeof(cl_command_type), &retval, NULL);
-		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"event command type\" info: \"%d\"", err_code);
-
-		cl_ulong events[4];
-		err_code =
-		    clGetEventProfilingInfo(ocl_table->event_array[i].cl_event, CL_PROFILING_COMMAND_QUEUED, sizeof(cl_ulong), &events[IRT_INST_OCL_QUEUED], NULL);
-		err_code |=
-		    clGetEventProfilingInfo(ocl_table->event_array[i].cl_event, CL_PROFILING_COMMAND_SUBMIT, sizeof(cl_ulong), &events[IRT_INST_OCL_SUBMITTED], NULL);
-		err_code |=
-		    clGetEventProfilingInfo(ocl_table->event_array[i].cl_event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &events[IRT_INST_OCL_STARTED], NULL);
-		err_code |=
-		    clGetEventProfilingInfo(ocl_table->event_array[i].cl_event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &events[IRT_INST_OCL_FINISHED], NULL);
-		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info: \"%d\"", err_code);
-
-		// convert all ocl event information into a flat table, only the ocl_events[j] changes over this run
-		for(int j = IRT_INST_OCL_QUEUED; j <= IRT_INST_OCL_FINISHED; ++j) {
-			ocl_helper_table[helper_counter].workitem_id = ocl_table->event_array[i].workitem_id;
-			ocl_helper_table[helper_counter].timestamp = events[j];
-			ocl_helper_table[helper_counter].origin = retval;
-			ocl_helper_table[helper_counter].event = j;
-
-			fprintf(opencl_logfile, "Worker: %u %hu %hu, KN,%14lu,\t", worker->id.index, worker->id.thread, worker->id.node,
-			        ocl_helper_table[helper_counter].workitem_id);
-			switch(ocl_helper_table[helper_counter].origin) {
-			case CL_COMMAND_NDRANGE_KERNEL: fprintf(opencl_logfile, "ND_"); break;
-			case CL_COMMAND_WRITE_BUFFER: fprintf(opencl_logfile, "WRITE_"); break;
-			case CL_COMMAND_READ_BUFFER: fprintf(opencl_logfile, "READ_"); break;
-			default: fprintf(opencl_logfile, "UNKNOWN_");
-			}
-			switch(ocl_helper_table[helper_counter].event) {
-			case IRT_INST_OCL_QUEUED: fprintf(opencl_logfile, "QUEUED"); break;
-			case IRT_INST_OCL_SUBMITTED: fprintf(opencl_logfile, "SUBMITTED"); break;
-			case IRT_INST_OCL_STARTED: fprintf(opencl_logfile, "STARTED"); break;
-			case IRT_INST_OCL_FINISHED: fprintf(opencl_logfile, "FINISHED"); break;
-			default: fprintf(opencl_logfile, "UNNKOWN"); break;
-			}
-
-			fprintf(opencl_logfile, ",\t%18lu\n", ocl_helper_table[helper_counter].timestamp);
-			helper_counter++;
-		}
-	}
-
-	fclose(opencl_logfile);
-
-	IRT_ASSERT(ocl_helper_table_num_entries == helper_counter, IRT_ERR_INSTRUMENTATION, "OCL event counts do not match: helper_counter: %d, table_entries: %d",
-	           helper_counter, ocl_helper_table_num_entries);
-	int ocl_helper_table_counter = 0;
-	#endif
-
 
 	if(binary_format) {
 		/*
@@ -325,10 +249,6 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 
 	#ifndef _GEMS_SIM
 	fclose(outputfile);
-	#endif
-
-	#if defined(USE_OPENCL) && defined(IRT_OCL_INSTR)
-	free(ocl_helper_table);
 	#endif
 }
 

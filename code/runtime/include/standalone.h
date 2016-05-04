@@ -188,9 +188,6 @@ void irt_exit_handler() {
 	irt_maintenance_cleanup();
 	#endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
-	#ifdef USE_OPENCL
-	irt_ocl_release_devices();
-	#endif
 	irt_g_exit_handling_done = true;
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
@@ -290,11 +287,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 		signal(SIGSEGV, &irt_abort_handler);
 		atexit(&irt_exit_handler);
 	}
-	#endif
-
-	#ifdef USE_OPENCL
-	irt_log_comment("Running Insieme runtime with OpenCL!\n");
-	irt_ocl_init_devices();
 	#endif
 
 	irt_g_rt_is_initialized = true;

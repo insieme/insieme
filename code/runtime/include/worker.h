@@ -47,10 +47,6 @@
 #include "instrumentation_events.h"
 #include "utils/affinity.h"
 
-#ifdef USE_OPENCL
-#include "irt_ocl.h"
-#endif
-
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(worker)
