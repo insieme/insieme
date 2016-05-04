@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -217,8 +217,8 @@ IRDump dump(const insieme::core::NodePtr& node, std::ostream& out) {
 	return dumpPretty(node, out);
 }
 
-IRDump dumpText(const insieme::core::NodePtr& node, std::ostream& out) {
-	return IRDump([node](std::ostream& out) -> std::ostream& { return out << insieme::core::dump::text::TextDump(node) << std::endl; }, out);
+IRDump dumpText(const insieme::core::NodePtr& node, std::ostream& out, bool printAddresses) {
+	return IRDump([node,printAddresses](std::ostream& out) -> std::ostream& { return out << insieme::core::dump::text::TextDump(node,printAddresses) << std::endl; }, out);
 }
 
 IRDump dumpColor(const insieme::core::NodePtr& node, std::ostream& out, bool noLet) {

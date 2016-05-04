@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -65,8 +65,9 @@ namespace text {
 	 *
 	 * @param out the stream to be writing to
 	 * @param address the address to be written
+	 * @param printAddresses whether the addresses should be printed
 	 */
-	void dumpAddress(std::ostream& out, const NodeAddress& address);
+	void dumpAddress(std::ostream& out, const NodeAddress& address, const bool printAddresses = false);
 
 	/**
 	 * Restores an IR code fragment from the given input stream. For constructing
@@ -102,26 +103,33 @@ namespace text {
 		 */
 		const NodeAddress address;
 
+		/**
+		 * Whether addresses should be printed too
+		 */
+		const bool printAddresses;
+
 	  public:
 		/**
 		 * Creates a new instance dumping the given node.
 		 *
 		 * @param ir the node to be dumped.
+		 * @param addr whether addresses should be printed
 		 */
-		TextDump(const NodePtr& ir) : address(NodeAddress(ir)) {}
+		TextDump(const NodePtr& ir, const bool addr = false) : address(NodeAddress(ir)), printAddresses(addr) {}
 
 		/**
 		 * Creates a new instance dumping the given node address.
 		 *
 		 * @param address the address to be dumped.
+		 * @param addr whether addresses should be printed
 		 */
-		TextDump(const NodeAddress& address) : address(address) {}
+		TextDump(const NodeAddress& address, const bool addr = false) : address(address), printAddresses(addr) {}
 
 		/**
 		 * Bridges the gap to the actual binary dump function.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			dumpAddress(out, address);
+			dumpAddress(out, address, printAddresses);
 			return out;
 		}
 	};
