@@ -908,7 +908,11 @@ void irt_opencl_init_context(irt_context *context, irt_opencl_kernel_implementat
 	bool result;
 	irt_opencl_context *opencl_context = irt_opencl_get_context(context);
 	/* this is the default logging level */
+	#ifndef IRT_VERBOSE
 	opencl_context->policy.log_level = IRT_OPENCL_LOG_LEVEL_WARN;
+	#else
+	opencl_context->policy.log_level = IRT_OPENCL_LOG_LEVEL_DEBUG;
+	#endif
 	result = irt_opencl_init_policy(opencl_context);
 	if (!result) {
 		OCL_WARN("failed to initialize policy");

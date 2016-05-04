@@ -200,15 +200,17 @@ uint32 _irt_worker_select_implementation_variant(const irt_worker* self, const i
 	irt_wi_implementation* wimpl = wi->impl;
 	#ifndef IRT_TASK_OPT
 	
-	// @FEKO: @TODO: dummy implementation!
+	#ifdef IRT_ENABLE_OPENCL
 	for(uint32 i = 0; i < wimpl->num_variants; ++i) {
 		irt_wi_implementation_variant *variant = &wimpl->variants[i];
 		// check if it has opencl support
 		if(irt_meta_info_is_opencl_available(variant->meta_info)) {
+			IRT_DEBUG("Worker %p _irt_worker_select_implementation_variant - selected opencl variant: %u.", (void*)self, i);
 			return i;
 		}
 	}
-	
+	#endif
+
 	if(self->default_variant < wimpl->num_variants) {
 		return self->default_variant;
 	} else {
