@@ -8,6 +8,7 @@ module Insieme.Inspire.NodeAddress (
     goLeft,
     goRight,
     resolve,
+    addressTree,
     pattern (:<:),
     pattern (:>:),
 ) where
@@ -49,3 +50,13 @@ resolve Empty      t           = Just t
 resolve (x :<: xs) (Node _ ns) = if x < Prelude.length ns
                                  then resolve xs (ns !! x)
                                  else Nothing
+
+-- | Pair each node of the given tree with its corresponding 'NodeAddress'.
+addressTree :: Tree a -> Tree (a, NodeAddress)
+addressTree = addressTree empty
+  where
+    addressTree :: NodeAddress -> Tree a -> Tree (a, NodeAddress)
+    addressTree as (Node t ts) = Node (t, as) (mergeAddr as <$> Prelude.zip ts [0..])
+
+    mergeAddr :: NodeAddress -> (Tree a, Int) -> Tree (a, NodeAddress)
+    mergeAddr as (t, a) = addressTree (as |> a) t
