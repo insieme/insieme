@@ -21,9 +21,9 @@ import Insieme.Inspire
 -- | Represents a path along a tree to a specific node.
 type NodeAddress = Seq Int
 
-pattern Empty     <- (viewl -> EmptyL)
-pattern x  :<: xs <- (viewl -> x :< xs)
-pattern xs :>: x  <- (viewr -> xs :> x)
+pattern Empty     <- (viewl -> EmptyL  )
+pattern x  :<: xs <- (viewl -> x  :< xs)
+pattern xs :>: x  <- (viewr -> xs :> x )
 
 infixr 5 :<:
 infixl 5 :>:
@@ -45,7 +45,7 @@ goRight (xs :>: x) = xs |> x + 1
 goRight  xs        = xs
 
 -- | Traverse the tree @t@ along a given 'NodeAddress'.
-resolve :: NodeAddress -> Tree Inspire -> Maybe (Tree Inspire)
+resolve :: NodeAddress -> Tree a -> Maybe (Tree a)
 resolve Empty      t           = Just t
 resolve (x :<: xs) (Node _ ns) = if x < Prelude.length ns
                                  then resolve xs (ns !! x)
