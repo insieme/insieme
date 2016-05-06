@@ -645,6 +645,7 @@ namespace analysis {
 		IRBuilder::EagerDefinitionMap symbols { {"v", builder.variable(builder.refType(mgr.getLangBasic().getInt4())) } };
 
 		EXPECT_TRUE(isSideEffectFree(builder.parseExpr(R"("Hello")")));
+		EXPECT_TRUE(isSideEffectFree(builder.parseExpr(R"(5 + 3)", symbols)));
 		EXPECT_TRUE(isSideEffectFree(builder.parseExpr(R"(5 + 3 - v)", symbols)));
 		EXPECT_TRUE(notSideEffectFree(builder.parseExpr(R"(v = 5)", symbols)));
 	}
@@ -656,14 +657,14 @@ namespace analysis {
 		auto notSideEffectFree = [](const DeclarationPtr& decl) { return !isSideEffectFree(decl); };
 
 		IRBuilder::EagerDefinitionMap symbols {
-			{"S", builder.parseType("struct S { a: int<4>, b: int<4> }") },
-			{"fun", builder.literal("fun", builder.parseType("ref<int<4>> -> int<4>")) },
+			{"S", builder.parseType("struct S { a: int<4>; b: int<4>; }") },
+			{"fun", builder.literal("fun", builder.parseType("(ref<int<4>>) -> int<4>")) },
 			{"v", builder.variable(builder.refType(mgr.getLangBasic().getInt4())) }
 		};
 
 		EXPECT_TRUE(isSideEffectFree(builder.parseStmt(R"(var ref<int<4>> v = 1;)").as<DeclarationStmtPtr>()->getDeclaration()));
-		EXPECT_TRUE(isSideEffectFree(builder.parseStmt(R"(var ref<S> s = <s>(1,2);)", symbols).as<DeclarationStmtPtr>()->getDeclaration()));
-		EXPECT_TRUE(notSideEffectFree(builder.parseStmt(R"(var ref<S> s = <s>(fun(v),2);)", symbols).as<DeclarationStmtPtr>()->getDeclaration()));
+		EXPECT_TRUE(isSideEffectFree(builder.parseStmt(R"(var ref<S> s = <ref<S>>(s){1,2};)", symbols).as<DeclarationStmtPtr>()->getDeclaration()));
+		EXPECT_TRUE(notSideEffectFree(builder.parseStmt(R"(var ref<S> s = <ref<S>>(s){fun(v),2};)", symbols).as<DeclarationStmtPtr>()->getDeclaration()));
 	}
 
 	TEST(IsParallel, Negative) {

@@ -92,11 +92,11 @@ namespace analysis {
 		CallExprPtr call = expr.as<CallExprPtr>();
 		auto& basic = expr->getNodeManager().getLangBasic();
 		auto& refExt = expr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
-
 		// TODO: use different way of identifying pure functions!
 		auto fun = call->getFunctionExpr();
-		return (basic.isPure(fun) || refExt.isRefDeref(fun))
-			   && all(call->getArgumentDeclarations(), [](const DeclarationPtr& decl) { return isSideEffectFree(decl); });
+		auto isPure = basic.isPure(fun) || refExt.isRefDeref(fun);
+		auto argsSideEffectFree = all(call->getArgumentDeclarations(), [](const DeclarationPtr& decl) { return isSideEffectFree(decl); });
+		return isPure && argsSideEffectFree;
 	}
 
 
@@ -121,7 +121,8 @@ namespace analysis {
 			return false;
 		}
 
-		return false;
+		// fallback, just check the init expr
+		return isSideEffectFree(initExpr);
 	}
 
 	bool isCallOf(const CallExprPtr& candidate, const NodePtr& function) {
