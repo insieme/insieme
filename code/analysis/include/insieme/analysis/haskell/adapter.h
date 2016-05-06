@@ -36,8 +36,10 @@
 
 #pragma once
 
+#include <boost/optional.hpp>
 #include <memory>
 
+#include "insieme/core/ir_address.h"
 #include "insieme/core/ir_node.h"
 
 namespace insieme {
@@ -45,24 +47,48 @@ namespace analysis {
 namespace haskell {
 
 	class HSobject;
+	class Tree;
+	class Address;
 
-	class IRtree {
+	struct Tree {
+
 		std::shared_ptr<HSobject> tree;
-	public:
-		IRtree(std::shared_ptr<HSobject> tree);
-		std::size_t nodeCount();
+
+		Tree(std::shared_ptr<HSobject> tree);
+
+		std::size_t size() const;
+		void printNode(const Address& addr) const;
+
+	};
+
+	struct Address {
+
+		std::shared_ptr<HSobject> addr;
+
+		Address(std::shared_ptr<HSobject> addr);
+
+		std::size_t size() const;
+		core::NodeAddress toNodeAddress(const core::NodePtr& root) const;
+
 	};
 
 	class Environment {
-		Environment();
-	public:
-		~Environment();
 
+		Environment();
+
+	public:
+
+		~Environment();
 		Environment(const Environment&) = delete;
 		void operator=(const Environment&) = delete;
 
 		static Environment& getInstance();
-		IRtree passTree(const core::NodePtr& root);
+
+		Tree passTree(const core::NodePtr& root);
+		Address passAddress(const core::NodeAddress& addr);
+
+		boost::optional<Address> findDeclr(Tree& tree, Address& var);
+
 	};
 
 } // end namespace haskell
