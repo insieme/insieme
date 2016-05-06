@@ -458,6 +458,11 @@ namespace lang {
 	bool isQualifiedReference(const NodePtr& node);
 
 	/**
+	 * Determines whether a given node is an assignment operation.
+	 */
+	bool isAssignment(const NodePtr& node);
+
+	/**
 	 * Determines the reference kind represented by the given input type literal
 	 */
 	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType);

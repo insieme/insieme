@@ -498,7 +498,7 @@ namespace checks {
 
 		// Obtain argument type
 		TypeList argumentTypes;
-		::transform(address.as<CallExprPtr>()->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
+		::transform(address.as<CallExprPtr>()->getArgumentList(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
 
 		// 1) check number of arguments
 		int numParameter = parameterTypes.size();
@@ -798,7 +798,7 @@ namespace checks {
 		if(!fun.isa<LiteralPtr>() || !base.isGenOp(fun)) { return res; }
 
 		// arguments need to be arithmetic types or function types
-		for(auto arg : call) {
+		for(auto arg : call->getArgumentList()) {
 			auto type = arg->getType();
 			if(!type.isa<TypeVariablePtr>() && !base.isScalarType(type) && !type.isa<FunctionTypePtr>() && !core::lang::isEnum(type)) {
 				add(res, Message(address, EC_TYPE_INVALID_GENERIC_OPERATOR_APPLICATION,
@@ -1102,7 +1102,7 @@ namespace checks {
 			return res;
 		}
 
-		if(address->getArguments().size() != 3) {
+		if(address->getArgumentDeclarations().size() != 3) {
 			// incorrect function usage => let function check provide errors
 			return res;
 		}
@@ -1171,22 +1171,22 @@ namespace checks {
 				if (!analysis::isCallOf(call.as<CallExprPtr>(), refMember)) return;
 
 				// check target type
-				if (!lang::isReference(call[0])) return;
+				if (!lang::isReference(call->getArgument(0))) return;
 
 				// unpack tag type ptr
-				auto tagType = analysis::getReferencedType(call[0]->getType()).isa<TagTypeReferencePtr>();
+				auto tagType = analysis::getReferencedType(call->getArgument(0)->getType()).isa<TagTypeReferencePtr>();
 				if (!tagType) return;
 
 				// check that it is a locally defined tag type
 				if (!address->getDefinitionOf(tagType)) return;
 
 				// unpack identifier
-				auto identifierLit = call[1].as<LiteralPtr>();
+				auto identifierLit = call->getArgument(1).as<LiteralPtr>();
 				if (!identifierLit) return;
 
 				// unpack target type
-				if (!analysis::isTypeLiteral(call[2])) return;
-				auto targetType = analysis::getRepresentedType(call[2]);
+				if (!analysis::isTypeLiteral(call->getArgument(2))) return;
+				auto targetType = analysis::getRepresentedType(call->getArgument(2));
 
 				// collect the access
 				accesses[call] = CallInfo{
@@ -1277,7 +1277,7 @@ namespace checks {
 			return res;
 		}
 
-		if(address->getArguments().size() != 3) {
+		if(address->getArgumentDeclarations().size() != 3) {
 			// incorrect function usage => let function check provide errors
 			return res;
 		}
@@ -1450,8 +1450,8 @@ namespace checks {
 		}
 
 		// get source and target types
-		TypePtr srcType = callExpr[0]->getType();
-		TypePtr trgType = callExpr[1]->getType();
+		TypePtr srcType = callExpr->getArgument(0)->getType();
+		TypePtr trgType = callExpr->getArgument(1)->getType();
 
 		// check whether the second type is a type literal
 		if (!analysis::isTypeLiteralType(trgType)) {
@@ -1496,7 +1496,7 @@ namespace checks {
 		}
 
 		// get source type
-		TypePtr srcType = callExpr[0]->getType();
+		TypePtr srcType = callExpr->getArgument(0)->getType();
 
 		// check whether type is a type literal
 		if (!analysis::isTypeLiteralType(srcType)) {
@@ -1535,7 +1535,7 @@ namespace checks {
 			return res;
 		}
 
-		auto argumentType = callExpr[0]->getType();
+		auto argumentType = callExpr->getArgument(0)->getType();
 
 		if(argumentType.isa<TypeVariablePtr>()) {
 			return res;		// this might still be a function

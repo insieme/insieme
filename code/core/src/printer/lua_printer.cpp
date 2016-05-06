@@ -118,7 +118,7 @@ namespace printer {
 
 				// default formating
 				this->visit(function);
-				auto arguments = call->getArguments();
+				auto arguments = call->getArgumentList();
 				if(arguments.empty()) {
 					out << "()";
 					return;
@@ -513,7 +513,7 @@ namespace printer {
 
 				IRBuilder builder(call->getNodeManager());
 
-				auto& args = call->getArguments();
+				const auto& args = call->getArgumentList();
 				OUT("(");
 				PRINT_EXPR(builder.callExpr(call->getType(), args[2], args[0], args[1]));
 				OUT(" and ");

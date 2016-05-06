@@ -1018,7 +1018,7 @@ namespace parser {
 					callRefType.setKind(lang::ReferenceType::Kind::Plain);
 					newType = callRefType.toType();
 				}
-				return builder.callExpr(newType, call->getFunctionExpr(), call->getArguments());
+				return builder.callExpr(newType, call->getFunctionExpr(), call->getArgumentList());
 			}
 			return exp;
 		}

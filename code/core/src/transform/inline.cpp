@@ -164,7 +164,7 @@ namespace transform {
 			// build parameter map
 			NodeMap parReplacements;
 			VariableList parameters = lambdaExpr->getParameterList()->getParameters();
-			ExpressionList arguments = call->getArguments();
+			ExpressionList arguments = call->getArgumentList();
 			auto parArgRange = make_paired_range(parameters, arguments);
 			for_each(make_paired_range(parameters, arguments), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
 				if(LiteralPtr lit = dynamic_pointer_cast<LiteralPtr>(cur.second)) {

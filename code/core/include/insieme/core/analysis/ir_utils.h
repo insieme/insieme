@@ -65,6 +65,14 @@ namespace analysis {
 	bool isSideEffectFree(const ExpressionPtr& expr);
 
 	/**
+	 * Tests whether the given declaration is side effect free.
+	 * A declaration is side effect free if the arguments to its initializing expression are side effect free.
+	 *
+	 * @param decl the declaration to be tested
+	 */
+	bool isSideEffectFree(const DeclarationPtr& decl);
+
+	/**
 	 * Tests whether the call referenced by the given pointer is a call to the given function.
 	 *
 	 * @param candidate the node to be tested
@@ -359,15 +367,6 @@ namespace analysis {
 	 * @return the list of exit point addresses extending the given stmt address
 	 */
 	vector<StatementAddress> getExitPoints(const StatementAddress& stmt);
-
-	/**
-	 * Retrieves the name of variable in all the outer scopes up to his declaration.
-	 *
-	 * @param var is the variable
-	 * @code is the scope
-	 * @return a vector of names of the variable from the inner scope up to the declaration
-	 */
-	std::vector<VariablePtr> getVariableNames(const VariablePtr& var, const NodePtr& code);
 
 	/**
 	 * Locates the address of the first call expression node calling the given function.

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -265,7 +265,7 @@ namespace transform {
 			auto bindType = bind->getType().as<FunctionTypePtr>();
 			auto funType = builder.functionType(bindType->getParameterTypes(), bindType->getReturnType());
 			auto fun = builder.lambdaExpr(funType, ingredients.params, ingredients.body);
-			auto intermediateCall = builder.callExpr(call->getType(), fun, call->getArguments());
+			auto intermediateCall = builder.callExpr(call->getType(), fun, call->getArgumentDeclarations());
 
 			// try inlining the intermediate call
 			auto res = tryInlineToExpr(manager, intermediateCall);

@@ -70,7 +70,7 @@ namespace checks {
 
 		CallExprPtr curPtr = curcall.getAddressedNode();
 
-		for(unsigned argIndex = 0; argIndex < curPtr->getArguments().size(); ++argIndex) {
+		for(unsigned argIndex = 0; argIndex < curPtr->getArgumentDeclarations().size(); ++argIndex) {
 			// the potential outer call to scalar.to.array in one of curcall's parameters
 			ExpressionPtr curArg = curPtr->getArgument(argIndex);
 			if(!core::analysis::isCallOf(curArg, refExt.getRefScalarToRefArray())) { continue; }

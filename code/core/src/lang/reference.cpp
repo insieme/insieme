@@ -257,6 +257,12 @@ namespace lang {
 		return isReference(node) && ReferenceType(node).isQualified();
 	}
 
+	bool isAssignment(const NodePtr& node) {
+		if(node->getNodeType() != NT_CallExpr) return false;
+		auto& rExt = node->getNodeManager().getLangExtension<ReferenceExtension>();
+		return rExt.isCallOfRefAssign(node);
+	}
+
 	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType) {
 		if(core::analysis::isTypeLiteralType(typeLitType)) return parseKind(core::analysis::getRepresentedType(typeLitType));
 		return parseKind(typeLitType);

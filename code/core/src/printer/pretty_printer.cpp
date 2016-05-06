@@ -1313,7 +1313,7 @@ namespace printer {
 					if (auto lambdaExpr = functionPtr.isa<LambdaExprPtr>()) {
 						if (lambdaExpr->getType().as<FunctionTypePtr>().isMemberFunction()) {
 							isMemberFun = true;
-							auto arguments = node->getArguments();
+							auto arguments = node->getArgumentList();
 							VISIT(arguments[0]);
 							out << ".";
 							//auto lambdaFunType = lambdaExpr->getType().as<FunctionTypePtr>();
@@ -1358,7 +1358,7 @@ namespace printer {
 				}
 
 				// print arguments
-				auto args = node->getArguments();
+				auto args = node->getArgumentList();
 				if(args.empty()) {
 					out << "()";
 				} else {
@@ -1605,7 +1605,7 @@ namespace printer {
 		 * @param n the index of the argument to be printed; in case there is no such argument a ? is printed.
 		 */
 		void printArgument(InspirePrinter& printer, const CallExprAddress& call, unsigned n) {
-			ExpressionAddress argument = call[n];
+			ExpressionAddress argument = call->getArgument(n);
 			if(argument) {
 				printer.visit(argument);
 			} else {
@@ -1629,7 +1629,7 @@ namespace printer {
 
 
 			#define OUT(Literal) printer.out << Literal
-			#define ARG(N) call[N]
+			#define ARG(N) call->getArgument(N)
 			#define MGR call->getNodeManager()
 			#define PRINT_EXPR(E) printer.visit(E)
 			#define PRINT_ARG(N) printArgument(printer, call, N)

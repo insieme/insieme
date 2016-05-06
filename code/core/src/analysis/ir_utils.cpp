@@ -50,6 +50,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/types/type_variable_deduction.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/reference.h"
@@ -94,7 +95,33 @@ namespace analysis {
 
 		// TODO: use different way of identifying pure functions!
 		auto fun = call->getFunctionExpr();
-		return (basic.isPure(fun) || refExt.isRefDeref(fun)) && all(call->getArguments(), &isSideEffectFree);
+		return (basic.isPure(fun) || refExt.isRefDeref(fun))
+			   && all(call->getArgumentDeclarations(), [](const DeclarationPtr& decl) { return isSideEffectFree(decl); });
+	}
+
+
+	bool isSideEffectFree(const DeclarationPtr& decl) {
+		auto initExpr = decl->getInitialization();
+		auto var = decl->getVariable();
+
+		// if initExpr is assignment to declared var, just test RHS
+		if(lang::isAssignment(initExpr)) {
+			if(getArgument(initExpr, 0) == var) {
+				return isSideEffectFree(getArgument(initExpr, 2));
+			}
+		}
+		// if initExpr is an InitExpr node, test all of its subexpressions
+		if(auto initNode = initExpr.isa<InitExprPtr>()) {
+			if(initNode->getMemoryExpr() == var) {
+				return all(initNode->getInitExprs(), [](const ExpressionPtr& expr) { return isSideEffectFree(expr); });
+			}
+		}
+		// if initExpr is a constructor call, return false for now
+		if(isConstructorCall(initExpr)) {
+			return false;
+		}
+
+		return false;
 	}
 
 	bool isCallOf(const CallExprPtr& candidate, const NodePtr& function) {
@@ -652,101 +679,6 @@ namespace analysis {
 
 		// done
 		return res;
-	}
-
-	namespace {
-		class RenamingVarVisitor : public core::IRVisitor<void, Address> {
-			core::VariableAddress varAddr;
-
-			void visitCallExpr(const CallExprAddress& call) {
-				if(LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr())) {
-					for_each(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()),
-					          [&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
-						          if(*varAddr == *pair.second) {
-							          if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first))) { varAddr = tmp; }
-						          }
-						      });
-				}
-			}
-
-			ExpressionAddress extractVariable(ExpressionAddress exp) {
-				if(VariableAddress var = dynamic_address_cast<const Variable>(exp)) { return var; }
-
-				if(CastExprAddress cast = dynamic_address_cast<const CastExpr>(exp)) { return extractVariable(cast->getSubExpression()); }
-
-				if(CallExprAddress call = dynamic_address_cast<const CallExpr>(exp)) {
-					NodeManager& manager = exp->getNodeManager();
-					if(manager.getLangExtension<lang::ReferenceExtension>().isRefDeref(call->getFunctionExpr())) {
-						return extractVariable(call->getArgument(0));
-					}
-				}
-
-				return exp;
-			}
-
-		  public:
-			VariableAddress& getVariableAddr() {
-				return varAddr;
-			}
-
-			RenamingVarVisitor(const core::VariableAddress& va) : IRVisitor<void, Address>(false), varAddr(va) {}
-		};
-	}
-
-	namespace {
-		class VariableNameVisitor : public core::IRVisitor<void, Address> {
-			core::VariableAddress varAddr;
-			std::vector<VariablePtr>& varVec;
-
-			void visitCallExpr(const CallExprAddress& call) {
-				if(LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr())) {
-					for_each(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()),
-					          [&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
-						          if(*varAddr == *pair.second) {
-							          if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first))) { varAddr = tmp; }
-							          VariableAddress second = dynamic_address_cast<const Variable>(extractVariable(pair.second));
-
-							          if(std::find(std::begin(varVec), std::end(varVec), second.getAddressedNode()) == std::end(varVec)) {
-								          varVec.push_back(second.getAddressedNode());
-							          }
-
-							          if(std::find(std::begin(varVec), std::end(varVec), varAddr.getAddressedNode()) == std::end(varVec)) {
-								          varVec.push_back(varAddr.getAddressedNode());
-							          }
-						          }
-						      });
-				}
-			}
-
-			ExpressionAddress extractVariable(ExpressionAddress exp) {
-				if(VariableAddress var = dynamic_address_cast<const Variable>(exp)) { return var; }
-
-				if(CastExprAddress cast = dynamic_address_cast<const CastExpr>(exp)) { return extractVariable(cast->getSubExpression()); }
-
-				if(CallExprAddress call = dynamic_address_cast<const CallExpr>(exp)) {
-					NodeManager& manager = exp->getNodeManager();
-					if(manager.getLangExtension<lang::ReferenceExtension>().isRefDeref(call->getFunctionExpr())) {
-						return extractVariable(call->getArgument(0));
-					}
-				}
-
-				return exp;
-			}
-
-		  public:
-			VariableNameVisitor(const core::VariableAddress& va, std::vector<VariablePtr>& vv) : IRVisitor<void, Address>(false), varAddr(va), varVec(vv) {}
-		};
-	}
-
-
-	std::vector<VariablePtr> getVariableNames(const VariablePtr& var, const NodePtr& code) {
-		VariableAddress varAddr = core::Address<const core::Variable>::find(var, code);
-
-		std::vector<VariablePtr> varVec;
-		VariableNameVisitor rvv(varAddr, varVec);
-		visitPathBottomUp(varAddr, rvv);
-
-		return varVec;
 	}
 
 	CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const ExpressionPtr& fun) {

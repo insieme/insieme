@@ -43,7 +43,7 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
-	//precedence_container.first => precedence; 
+	//precedence_container.first => precedence;
 	//precedence_container.second => associativity;
 	using precedence_container = std::pair<int,int>;
 	using precedence_map = std::map<NodePtr, precedence_container>;
@@ -224,8 +224,7 @@ namespace analysis {
 				auto parentAddress = cur.getParentAddress();
 				auto parentCall = parentAddress.isa<CallExprPtr>();
 				if(parentCall) {
-					auto parentArgs = parentCall.getArguments();
-					if (cur.as<CallExprPtr>() == parentArgs[1]) {
+					if(cur.as<CallExprPtr>() == parentCall.getArgument(1)) {
 						return true;
 					}
 				}

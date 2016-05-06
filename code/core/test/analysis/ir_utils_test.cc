@@ -636,6 +636,19 @@ namespace analysis {
 		EXPECT_PRED2(notReadOnly, callB, varD);
 	}
 
+	TEST(isSideEffectFree, Expressions) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto notSideEffectFree = [](const ExpressionPtr& expr) { return !isSideEffectFree(expr); };
+
+		IRBuilder::EagerDefinitionMap symbols { {"v", builder.variable(mgr.getLangBasic().getInt4()) } };
+
+		EXPECT_TRUE(isSideEffectFree(builder.parseExpr(R"("Hello")")));
+		EXPECT_TRUE(isSideEffectFree(builder.parseExpr(R"(5 + 3)")));
+		EXPECT_TRUE(notSideEffectFree(builder.parseExpr(R"(v = 5)", symbols)));
+	}
+
 	TEST(IsParallel, Negative) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
