@@ -281,11 +281,37 @@ namespace core {
 		 * @param manager the manager used for maintaining instances of this class
 		 * @param type the type of the call expression, hence the return type of the function
 		 * @param function the function to be called
+		 * @param argumentDecls the declarations for arguments to be passed to the function call
+		 * @return the requested type instance managed by the given manager
+		 */
+		static CallExprPtr get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& function, const NodeRange<DeclarationPtr>& argumentDecls);
+
+		/**
+		 * This static factory method allows to obtain an instance of a call expression
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the call expression, hence the return type of the function
+		 * @param function the function to be called
 		 * @param arguments the arguments to be passed to the function call
 		 * @return the requested type instance managed by the given manager
 		 */
 		static CallExprPtr get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& function, const ExpressionList& arguments) {
 			return get(manager, type, function, NodeRange<ExpressionPtr>(arguments.begin(), arguments.end()));
+		}
+
+		/**
+		 * This static factory method allows to obtain an instance of a call expression
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the call expression, hence the return type of the function
+		 * @param function the function to be called
+		 * @param argumentDecls the declarations for arguments to be passed to the function call
+		 * @return the requested type instance managed by the given manager
+		 */
+		static CallExprPtr get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& function, const DeclarationList& argumentDecls) {
+			return get(manager, type, function, NodeRange<DeclarationPtr>(argumentDecls.begin(), argumentDecls.end()));
 		}
 	IR_NODE_END()
 

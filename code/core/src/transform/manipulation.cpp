@@ -341,7 +341,7 @@ namespace transform {
 				// check if current node is a parameter access
 				if (analysis::isCallOf(cur, deref)) {
 					// check for parameters
-					if (auto var = cur.as<CallExprPtr>()[0].isa<VariablePtr>()) {
+					if (auto var = cur.as<CallExprPtr>()->getArgument(0).isa<VariablePtr>()) {
 						if (::contains(params, var)) {
 
 							// get position of parameter
@@ -437,22 +437,15 @@ namespace transform {
 
 		// instantiate every variable within the parameter list with a fresh name
 		const auto& params = fun->getParameterList().getElements();
-		const auto& args = call->getArguments();
+		const auto& args = call->getArgumentDeclarations();
 
 		assert_eq(params.size(), args.size()) << "Arguments do not fit parameters!!";
 
 		for(std::size_t i = 0; i < params.size(); i++) {
-			VariablePtr localVar;
-			if(args[i]->getNodeType() == NT_Variable) {
-				// passing a pure variable => use variable everywhere
-				localVar = static_pointer_cast<VariablePtr>(args[i]);
-			} else {
-				// temporary value is passed => create temporary variable
-				localVar = builder.variable(args[i]->getType());
+			VariablePtr localVar = builder.variable(args[i]->getVariable()->getType());
 
-				// copy value of parameter into a local variable
-				stmts.push_back(builder.declarationStmt(localVar, args[i]));
-			}
+			// copy value of parameter into a local variable
+			stmts.push_back(builder.declarationStmt(localVar, args[i]->getInitialization()));
 
 			// add to replacement map
 			varMap[params[i]] = localVar;
@@ -553,8 +546,8 @@ namespace transform {
 				// handle call expressions
 				if(ptr->getNodeType() == NT_CallExpr) {
 					CallExprPtr call = static_pointer_cast<const CallExpr>(ptr);
-					if(::contains(call->getArguments(), target)) {
-						const auto& args = call->getArguments();
+					if(::contains(call->getArgumentList(), target)) {
+						const auto& args = call->getArgumentList();
 						ExpressionList newArgs;
 
 						bool resolved = false;
@@ -673,7 +666,7 @@ namespace transform {
 			// check whether parameter is propagated
 			bool isPropagated = all(calls, [&](const CallExprPtr& call) -> bool {
 				// check whether value is propagated along the recursion
-				assert_lt(index, call->getArguments().size()) << "Invalid recursive call!";
+				assert_lt(index, call->getArgumentDeclarations().size()) << "Invalid recursive call!";
 				return call->getArgument(index) == value;
 			});
 
@@ -691,9 +684,8 @@ namespace transform {
 			std::map<NodeAddress, NodePtr> replacements;
 			for(const CallExprAddress& cur : calls) {
 				// eliminate argument from call
-				ExpressionList newArgs = cur.as<CallExprPtr>()->getArguments();
+				DeclarationList newArgs = cur.as<CallExprPtr>()->getArgumentDeclarations();
 				newArgs.erase(newArgs.begin() + index);
-
 
 				// build and register updated call
 				CallExprPtr newCall = builder.callExpr(cur->getType(), newLambdaRef, newArgs);
@@ -727,7 +719,7 @@ namespace transform {
 		// ---------------- Pre-Conditions --------------------
 
 		// check whether indexed parameter is in-deed a bind
-		assert_lt(index, call->getArguments().size()) << "Invalid argument index!";
+		assert_lt(index, call->getArgumentDeclarations().size()) << "Invalid argument index!";
 		assert_eq(call->getArgument(index)->getNodeType(), NT_BindExpr) << "Specified argument is not a bind!";
 
 		// check whether function is in-deed a lambda
@@ -764,7 +756,7 @@ namespace transform {
 		BindExprPtr bind = call->getArgument(index).as<BindExprPtr>();
 		const VariableList bindParams = bind->getParameters().getParameters();
 		CallExprPtr callWithinBind = bind->getCall();
-		for(const ExpressionPtr& cur : callWithinBind->getArguments()) {
+		for(const ExpressionPtr& cur : callWithinBind->getArgumentList()) {
 			// bind-parameters are just forwarded
 			if(cur->getNodeType() == NT_Variable && contains(bindParams, cur.as<VariablePtr>())) {
 				newBindCallArgs.push_back(cur);
@@ -807,7 +799,7 @@ namespace transform {
 		auto newLambda = builder.lambdaExpr(lambda->getFunctionType()->getReturnType(), newLambdaParams, newBody);
 
 		// assemble new argument list
-		ExpressionList newArgumentList = call->getArguments();
+		ExpressionList newArgumentList = call->getArgumentList();
 		newArgumentList.erase(newArgumentList.begin() + index);                                  // drop bind argument
 		newArgumentList.insert(newArgumentList.begin() + index, newArgs.begin(), newArgs.end()); // inject new arguments
 
@@ -1007,9 +999,9 @@ namespace transform {
 					CallExprPtr call = parent.as<CallExprPtr>();
 					if(*call->getFunctionExpr() == *target) {
 						// we are following the function call => add a parameter
-						if(!contains(call.getArguments(), value)) {
+						if(!contains(call.getArgumentList(), value)) {
 							IRBuilder builder(manager);
-							ExpressionList newArgs = call.getArguments();
+							ExpressionList newArgs = call.getArgumentList();
 							newArgs.push_back(value);
 
 							// build new call (function is fixed within recursive step one level up)
@@ -1028,7 +1020,7 @@ namespace transform {
 					CallExprPtr call = res.getParentNode().as<CallExprPtr>();
 
 					// check whether a new argument needs to be added
-					if(call->getArguments().size() != lambda->getParameterList().size()) {
+					if(call->getArgumentDeclarations().size() != lambda->getParameterList().size()) {
 						// add new parameter to lambda
 						LambdaExprPtr newLambda;
 						std::tie(newLambda, value) = detail::addNewParameter(lambda, value->getType());
@@ -1036,7 +1028,7 @@ namespace transform {
 
 					} else {
 						// update variable when it is already passed as an argument
-						auto args = call->getArguments();
+						auto args = call->getArgumentList();
 						for(int i = args.size() - 1; i > 0; i--) {
 							if(args[i] == value) {
 								value = IRBuilder(manager).deref(lambda->getParameterList()[i]);
@@ -1187,13 +1179,13 @@ namespace transform {
 
 				                   // handle getThreadID
 				                   if(analysis::isCallOf(call, parExt.getGetThreadId())) {
-					                   if(ExpressionPtr newLevel = decLevel(call[0])) { return builder.getThreadId(newLevel); }
+					                   if(ExpressionPtr newLevel = decLevel(call.getArgument(0))) { return builder.getThreadId(newLevel); }
 					                   return idConstant;
 				                   }
 
 				                   // handle group size
 				                   if(analysis::isCallOf(call, parExt.getGetGroupSize())) {
-					                   if(ExpressionPtr newLevel = decLevel(call[0])) { return builder.getThreadGroupSize(newLevel); }
+					                   if(ExpressionPtr newLevel = decLevel(call.getArgument(0))) { return builder.getThreadGroupSize(newLevel); }
 					                   return sizeConstant;
 				                   }
 

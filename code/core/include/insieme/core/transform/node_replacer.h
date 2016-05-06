@@ -162,9 +162,6 @@ namespace core {
 		typedef std::function<StatementPtr(const StatementPtr&)> TypeHandler;
 		typedef std::function<ExpressionPtr(const ExpressionPtr&, const ExpressionPtr&)> TypeRecoveryHandler;
 
-		ExpressionPtr no_type_fixes(const ExpressionPtr&, const ExpressionPtr&);
-		ExpressionPtr defaultTypeRecovery(const ExpressionPtr& oldExpr, const ExpressionPtr& newExpr);
-
 		/**
 		 * Replaces all occurrences of the type variables and int type parameters within the top level scope of the
 		 * given root node by the values assigned to them within the given substitution.

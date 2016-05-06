@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -84,13 +84,13 @@ namespace transform {
 
 				       // handle getThreadID
 				       if(analysis::isCallOf(call, parExt.getGetThreadId())) {
-					       if(ExpressionPtr newLevel = decLevel(call[0])) { return builder.getThreadId(newLevel); }
+					       if(ExpressionPtr newLevel = decLevel(call->getArgument(0))) { return builder.getThreadId(newLevel); }
 					       return builder.literal("0", call->getType());
 				       }
 
 				       // handle group size
 				       if(analysis::isCallOf(call, parExt.getGetGroupSize())) {
-					       if(ExpressionPtr newLevel = decLevel(call[0])) { return builder.getThreadGroupSize(newLevel); }
+					       if(ExpressionPtr newLevel = decLevel(call->getArgument(0))) { return builder.getThreadGroupSize(newLevel); }
 					       return builder.literal("1", call->getType());
 				       }
 
@@ -121,7 +121,7 @@ namespace transform {
 		  protected:
 			StatementPtr handleCall(const CallExprPtr& call) {
 				const auto& fun = call->getFunctionExpr();
-				auto args = call->getArguments();
+				auto args = call->getArgumentList();
 
 				// skip merge expressions if possible
 				if(parExt.isMerge(fun)) {

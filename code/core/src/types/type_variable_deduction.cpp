@@ -83,7 +83,7 @@ namespace types {
 		/**
 		 * Expands variadic type parameters in the given params type list to fit the structure of the given argument type. The
 		 * necessary un-pack substitution will be returned as a result.
-		 * 
+		 *
 		 * @param manager the manager to be used for creating entries within the resulting substitution
 		 * @param params the list of parameters to be expanded
 		 * @param arguments the list of arguments to be matched against
@@ -960,9 +960,9 @@ namespace types {
 
 		struct ResultCache {
 			mutable std::map<std::pair<TypeList, TypeList>, SubstitutionOpt> results;
-			bool operator==(const ResultCache& other) const { 
+			bool operator==(const ResultCache& other) const {
 				assert_fail() << "Should never be reached!";
-				return false; 
+				return false;
 			};
 		};
 
@@ -1102,12 +1102,11 @@ namespace types {
 		// check for null
 		if(!call) { return boost::none; }
 
-
 		// derive substitution
 
 		// get argument types
 		TypeList argTypes;
-		::transform(call->getArguments(), back_inserter(argTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
+		::transform(call->getArgumentList(), back_inserter(argTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
 
 		// get function parameter types
 		const TypePtr& funType = call->getFunctionExpr()->getType();

@@ -343,5 +343,13 @@ namespace core {
 		return manager.get(CallExpr(children));
 	}
 
+	CallExprPtr CallExpr::get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& function, const NodeRange<DeclarationPtr>& argumentDecls) {
+		NodeList children;
+		children.push_back(type);
+		children.push_back(function);
+		std::copy(argumentDecls.cbegin(), argumentDecls.cend(), std::back_inserter(children));
+		return manager.get(CallExpr(children));
+	}
+
 } // end namespace core
 } // end namespace insieme

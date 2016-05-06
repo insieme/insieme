@@ -959,11 +959,6 @@ namespace core {
 		}
 
 		CallExprPtr createCall(const IRBuilderBaseModule& builder, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
-			// check user-specified return type - only when compiled in debug mode
-			// NOTE: the check returns true in any case, hence this assertion will never fail - its just a warning!
-			// TODO: make this check faster
-			//		assert_true(checkType(resultType, functionExpr, arguments)) << "Incorrect user-specified return type!";
-
 			// create calling expression
 			return builder.callExpr(resultType, functionExpr, arguments);
 		}
