@@ -17,11 +17,12 @@ executable insieme-hat
     other-modules:      Insieme.Analysis.Examples,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
-                        Insieme.Inspire.NodeAddress
-    other-extensions:   PatternSynonyms,
+                        Insieme.Inspire.NodeAddress,
+                        Insieme.Inspire.ThHelpers
+    other-extensions:   OverloadedStrings,
+                        PatternSynonyms,
                         TemplateHaskell,
-                        ViewPatterns,
-                        OverloadedStrings
+                        ViewPatterns
     build-depends:      base >=4.7,
                         mtl >=2.2,
                         lens >=4.13,
@@ -42,7 +43,8 @@ library
     other-modules:      Insieme.Analysis.Examples,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
-                        Insieme.Inspire.NodeAddress
+                        Insieme.Inspire.NodeAddress,
+                        Insieme.Inspire.ThHelpers
     other-extensions:   ForeignFunctionInterface,
                         OverloadedStrings,
                         PatternSynonyms,
