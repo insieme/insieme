@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <boost/optional.hpp>
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
 
@@ -57,7 +58,11 @@ namespace datalog {
 	 * Get exit points from a given lambda function
 	 */
 	std::vector<core::ReturnStmtAddress> performExitPointAnalysis(const core::LambdaPtr& rootLambda, bool debug = false);
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var, bool debug = false);
+
+	/**
+	 * Get definition point for a certain variable if there is one
+	 */
+	boost::optional<core::VariableAddress> getDefinitionPoint(const core::VariableAddress& var, bool debug = false);
 
 } // end namespace datalog
 } // end namespace analysis

@@ -64,6 +64,7 @@ namespace datalog {
 
 		std::ofstream outputFile("/tmp/insieme_ir_text_dump.txt");
 		if (outputFile.is_open()) {
+			// dumpJson(addresses[0].getRootAddress(), outputFile);
 			dumpText(addresses[0].getRootNode(), outputFile, true);
 			outputFile.close();
 		}
@@ -488,4 +489,5 @@ namespace datalog {
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme
+
 

@@ -141,7 +141,7 @@ namespace datalog {
 	}
 
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var, bool debug)
+	boost::optional<core::VariableAddress> getDefinitionPoint(const core::VariableAddress& var, bool debug)
 	{
 		// instantiate the analysis
 		souffle::Sf_definition_point analysis;
