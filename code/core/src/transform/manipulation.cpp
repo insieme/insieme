@@ -357,7 +357,7 @@ namespace transform {
 							success &= (core::analysis::isSideEffectFree(arg) || firstUsage);
 
 							// register replacement
-							replacements[cur] = call[idx];
+							replacements[cur] = extractInitExprFromDecl(call[idx]);
 
 							// no more descent required here
 							return true;
@@ -1308,6 +1308,12 @@ namespace transform {
 
 		// build resulting function
 		return extractLambda(mgr, builder.compoundStmt(stmts));
+	}
+
+	ExpressionPtr extractInitExprFromDecl(const DeclarationPtr& decl) {
+		auto var = decl->getVariable();
+		VarExprMap replacement { { var, lang::buildRefTemp(var->getType()) } };
+		return replaceVarsGen(decl->getNodeManager(), decl->getInitialization(), replacement);
 	}
 
 } // end namespace transform
