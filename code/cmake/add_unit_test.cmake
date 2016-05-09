@@ -75,19 +75,19 @@ macro ( add_unit_test case_name ut_prefix )
 	# add dependency to pthread (TODO check gtest if depends on pthread?)
 	target_link_libraries(${case_name} ${CMAKE_THREAD_LIBS_INIT})
 
-	# take value from environment variable
+	# set USE_VALGRIND=ON as fallback and disable only if asked to do so
 	set(USE_VALGRIND ON)
 
 	# check whether there was a optional 2nd argument 
 	# which disables use of valgrind for this particular test
-	if(${ARGC} GREATER 1)
+	if(${ARGC} GREATER 2)
 		# use (optional) 2nd argument as a valgrind flag
 		set(USE_VALGRIND ${ARGV2})
 		if(NOT ${USE_VALGRIND})
 			message(STATUS "Disabling Valgrind for ${case_name}")
 		endif()
 	endif()
-	
+
 	# add test case
 	if(CONDUCT_MEMORY_CHECKS AND USE_VALGRIND)
 		# no valgrind support in MSVC 
