@@ -338,7 +338,7 @@ namespace core {
 		children.push_back(function);
 		auto param_types = function->getType().as<FunctionTypePtr>()->getParameterTypeList();
 		for(auto arg : ::make_paired_range(param_types, arguments)) {
-			children.push_back(Declaration::get(manager, Variable::get(manager, transform::materialize(arg.first)), arg.second));
+			children.push_back(Declaration::get(manager, transform::materialize(arg.first), arg.second));
 		}
 		return manager.get(CallExpr(children));
 	}

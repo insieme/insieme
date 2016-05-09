@@ -87,15 +87,6 @@ namespace checks {
 			}
 
 			/**
-			 * Declarations which are not decl statements (e.g. in return, calls) only declare the variable for the scope of their init expression.
-			 */
-			void visitDeclaration(const DeclarationAddress& decl) {
-				declaredVariables.insert(decl->getVariable());
-				visit(decl->getInitialization());
-				declaredVariables.erase(decl->getVariable());
-			}
-
-			/**
 			 * A special handling of declaration statements, which are introducing new variables.
 			 */
 			void visitDeclarationStmt(const DeclarationStmtAddress& cur) {

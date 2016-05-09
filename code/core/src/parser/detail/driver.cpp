@@ -528,11 +528,11 @@ namespace parser {
 			// build resulting function type
 			auto funcType = builder.functionType(paramTypes, retType, functionKind);
 
-			// replace return statement var types
+			// replace return statement types
 			auto retBody = core::transform::transformBottomUpGen(body, [&retType, this](const core::ReturnStmtPtr& ret) {
-				auto retVar = ret->getReturnVar();
-				auto replacementVar = builder.variable(core::transform::materialize(retType));
-				return core::transform::replaceAllGen(ret->getNodeManager(), ret, retVar, replacementVar);
+				auto retT = ret->getReturnType();
+				auto replacementT = core::transform::materialize(retType);
+				return builder.returnStmt(ret->getReturnExpr(), replacementT);
 			});
 
 			// if it is a function with explicitly auto-created parameters no materialization of the parameters is required

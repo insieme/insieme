@@ -981,16 +981,7 @@ namespace printer {
 
 			PRINT(ReturnStmt) {
 				out << "return ";
-				auto var = node->getReturnVar();
 				auto exp = node->getReturnExpr();
-				// if the return expr uses it's variable in it's expression, we have to print the declaration
-				if (analysis::countInstances(exp, var, true) > 0) {
-					out << "var ";
-					VISIT(var->getType());
-					out << " ";
-					VISIT(var);
-					out << " = ";
-				}
 				VISIT(exp);
 			}
 

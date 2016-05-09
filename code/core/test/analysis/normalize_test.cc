@@ -328,44 +328,6 @@ namespace analysis {
 		EXPECT_NE(size1, size2);
 	}
 
-
-	TEST(Normalizing, ReturnStmtBasic) {
-		NodeManager mgr;
-        IRBuilder builder(mgr);
-		auto var = builder.variable(mgr.getLangBasic().getInt4(), 31337);
-		auto ret = builder.returnStmt(builder.intLit(4), var);
-		auto normalized = builder.normalize(ret);
-		EXPECT_NE(ret, normalized);
-		EXPECT_EQ(normalized->getReturnVar(), builder.variable(mgr.getLangBasic().getInt4(), 0));
-	}
-
-	TEST(Normalizing, ReturnStmt) {
-        NodeManager mgr;
-        IRBuilder builder(mgr);
-
-		auto testExpr = builder.parseExpr(R"(
-			def testLambda = () -> int<4> { var int<4> v; return v; };
-			testLambda()
-		)").as<CallExprPtr>();
-
-		{
-			auto lambda = testExpr->getFunctionExpr().as<LambdaExprPtr>();
-			auto ret = lambda->getBody()->getStatement(1).as<ReturnStmtPtr>();
-			auto retVar = ret->getReturnVar();
-			auto var = lambda->getBody()->getStatement(0).as<DeclarationStmtPtr>()->getVariable();
-			EXPECT_NE(retVar, var);
-		}
-
-		auto normalized = builder.normalize(testExpr);
-		{
-			auto lambda = normalized->getFunctionExpr().as<LambdaExprPtr>();
-			auto ret = lambda->getBody()->getStatement(1).as<ReturnStmtPtr>();
-			auto retVar = ret->getReturnVar();
-			auto var = lambda->getBody()->getStatement(0).as<DeclarationStmtPtr>()->getVariable();
-			EXPECT_NE(retVar, var);
-		}
-	}
-
 	// Test used to debug getCanonicalType performance
 	TEST(Normalizing, DISABLED_RecTypePerformance) {
 		NodeManager mgr;

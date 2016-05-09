@@ -433,7 +433,7 @@ namespace analysis {
 				this->visitAll(node->getChildList(), bound, free);
 			}
 
-			void visitDeclaration(const Ptr<const Declaration>& decl, VariableSet& bound, ResultSet& free) {
+			void visitDeclarationStmt(const Ptr<const DeclarationStmt>& decl, VariableSet& bound, ResultSet& free) {
 				// first add variable to set of bound variables
 				bound.insert(decl->getVariable());
 
@@ -442,9 +442,9 @@ namespace analysis {
 			}
 
 			void visitStatement(const Ptr<const Statement>& stmt, VariableSet& bound, ResultSet& free) {
-				// compound, return and for statements create new scopes
+				// compound and for statements create new scopes
 				auto nt = stmt->getNodeType();
-				if(nt == NT_CompoundStmt || nt == NT_ReturnStmt || nt == NT_ForStmt) {
+				if(nt == NT_CompoundStmt || nt == NT_ForStmt) {
 					VariableSet innerBound = bound;
 					visitNode(stmt, innerBound, free);
 				} else {

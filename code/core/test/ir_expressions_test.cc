@@ -252,9 +252,9 @@ namespace core {
 		LiteralPtr constantA = builder.literal(typeA, "12");
 		LiteralPtr constantB = builder.literal(typeA, "14");
 
-		auto callBArg1 = builder.declaration(builder.variable(typeA), constantA);
-		auto callCArg1 = builder.declaration(builder.variable(typeA), constantA);
-		auto callCArg2 = builder.declaration(builder.variable(typeA), constantB);
+		auto callBArg1 = builder.declaration(typeA, constantA);
+		auto callCArg1 = builder.declaration(typeA, constantA);
+		auto callCArg2 = builder.declaration(typeA, constantB);
 
 		CallExprPtr callA = builder.callExpr(typeRes, funA, toVector<ExpressionPtr>());
 		CallExprPtr callB = builder.callExpr(typeRes, funB, toVector<DeclarationPtr>(callBArg1));

@@ -846,8 +846,7 @@ namespace core {
 	}
 
 	ReturnStmtPtr IRBuilderBaseModule::returnStmt(const ExpressionPtr& retVal) const {
-		auto implicitVariable = variable(retVal->getType());
-		return returnStmt(retVal, implicitVariable);
+		return returnStmt(retVal, retVal->getType());
 	}
 
 	ReturnStmtPtr IRBuilderBaseModule::returnStmt() const {
@@ -1527,11 +1526,11 @@ namespace core {
 		// convert all variables to references
 		auto ingredients = transform::materialize({list, returnStmt(expr)});
 		auto funType = functionType(extractTypes(list), expr->getType());
-		// replace return statement var types
+		// replace return statement types
 		ingredients.body = core::transform::transformBottomUpGen(ingredients.body, [&funType, this](const core::ReturnStmtPtr& ret) {
-			auto retVar = ret->getReturnVar();
-			auto replacementVar = variable(core::transform::materialize(funType->getReturnType()));
-			return core::transform::replaceAllGen(ret->getNodeManager(), ret, retVar, replacementVar);
+			auto retT = ret->getReturnType();
+			auto replacementT = core::transform::materialize(funType->getReturnType());
+			return returnStmt(ret->getReturnExpr(), replacementT);
 		});
 
 		ExpressionPtr res = lambdaExpr(funType, ingredients.params, ingredients.body);

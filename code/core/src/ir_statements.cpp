@@ -42,11 +42,11 @@ namespace insieme {
 namespace core {
 
 	std::ostream& Declaration::printTo(std::ostream& out) const {
-		return out << *getVariable()->getType() << " " << *getVariable() << " = " << *getInitialization();
+		return out << "decl " <<  *getType() << " : " << *getInitialization();
 	}
 
 	std::ostream& DeclarationStmt::printTo(std::ostream& out) const {
-		return out << *getDeclaration();
+		return out << *getVariable()->getType() << " " << *getVariable() << " = " << *getInitialization();
 	}
 
 	std::ostream& ForStmt::printTo(std::ostream& out) const {

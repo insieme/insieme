@@ -442,7 +442,7 @@ namespace transform {
 		assert_eq(params.size(), args.size()) << "Arguments do not fit parameters!!";
 
 		for(std::size_t i = 0; i < params.size(); i++) {
-			VariablePtr localVar = builder.variable(args[i]->getVariable()->getType());
+			VariablePtr localVar = builder.variable(args[i]->getType());
 
 			// copy value of parameter into a local variable
 			stmts.push_back(builder.declarationStmt(localVar, args[i]->getInitialization()));
@@ -1310,9 +1310,9 @@ namespace transform {
 	}
 
 	ExpressionPtr extractInitExprFromDecl(const DeclarationPtr& decl) {
-		auto var = decl->getVariable();
-		VarExprMap replacement { { var, lang::buildRefTemp(var->getType()) } };
-		return replaceVarsGen(decl->getNodeManager(), decl->getInitialization(), replacement);
+		auto type = decl->getType();
+		NodeMap replacement { { lang::buildRefDecl(type), lang::buildRefTemp(type) } };
+		return replaceAllGen(decl->getNodeManager(), decl->getInitialization(), replacement);
 	}
 
 } // end namespace transform

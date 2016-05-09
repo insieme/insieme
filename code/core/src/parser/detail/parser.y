@@ -853,7 +853,6 @@ continue : "continue" ";"                                                 { $$ =
 // -- return --
 
 return : "return" expression ";"                                          { $$ = driver.builder.returnStmt(driver.getScalar($2)); }
-       | "return" typed_variable_definition                               { $$ = driver.builder.returnStmt($2->getInitialization(), $2->getVariable()); }
        | "return" ";"                                                     { $$ = driver.builder.returnStmt(); }
        ;
 
