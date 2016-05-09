@@ -1,11 +1,10 @@
 #include "ir.dl"
-
+#include "parent.dl"
 
 
 .decl TopLevelLambda ( id:node )   input
 .decl ExitPoints     ( id:node )   output
 .decl ChildOfLambda  ( id:node )
-.decl SomeStatement  ( id:node , references:node )
 
 
 
@@ -17,107 +16,4 @@ ExitPoints(X) :- ReturnStmt(X,_,_), ChildOfLambda(X).
 // lambda node, or if it is referenced as the body of a lambda child
 // without being a lambda node itself.
 ChildOfLambda(X) :- TopLevelLambda(ID), Lambda(ID,_,_,X).
-ChildOfLambda(X) :- ChildOfLambda(ID), SomeStatement(ID,X), !Lambda(X,_,_,_).
-
-
-// Every node that references another node in its body should be in
-// the SomeStatement relation.
-
-    /* List node */
-SomeStatement(ID,X) :- NodeList(ID,_,X).
-
-    /* Type nodes */
-SomeStatement(ID,X) :- GenericType(ID,_,X,_).
-SomeStatement(ID,X) :- GenericType(ID,_,_,X).
-
-SomeStatement(ID,X) :- FunctionType(ID,X,_,_,_).
-SomeStatement(ID,X) :- FunctionType(ID,_,X,_,_).
-SomeStatement(ID,X) :- FunctionType(ID,_,_,_,X).
-
-SomeStatement(ID,X) :- GenericTypeVariable(ID,_,X).
-
-SomeStatement(ID,X) :- VariadicGenericTypeVariable(ID,_,X).
-
-SomeStatement(ID,X) :- NumericType(ID,X).
-
-SomeStatement(ID,X) :- TagType(ID,X,_).
-SomeStatement(ID,X) :- TagType(ID,_,X).
-
-SomeStatement(ID,X) :- Struct(ID,_,X,_,_,_,_,_,_).
-SomeStatement(ID,X) :- Struct(ID,_,_,X,_,_,_,_,_).
-SomeStatement(ID,X) :- Struct(ID,_,_,_,X,_,_,_,_).
-SomeStatement(ID,X) :- Struct(ID,_,_,_,_,_,X,_,_).
-SomeStatement(ID,X) :- Struct(ID,_,_,_,_,_,_,X,_).
-SomeStatement(ID,X) :- Struct(ID,_,_,_,_,_,_,_,X).
-
-SomeStatement(ID,X) :- Union(ID,_,X,_,_,_,_,_).
-SomeStatement(ID,X) :- Union(ID,_,_,X,_,_,_,_).
-SomeStatement(ID,X) :- Union(ID,_,_,_,X,_,_,_).
-SomeStatement(ID,X) :- Union(ID,_,_,_,_,_,X,_).
-SomeStatement(ID,X) :- Union(ID,_,_,_,_,_,_,X).
-
-    /* Expression nodes */
-SomeStatement(ID,X) :- Literal(ID,X,_).
-
-SomeStatement(ID,X) :- Variable(ID,X,_).
-
-SomeStatement(ID,X) :- CallExpr(ID,X).
-
-SomeStatement(ID,X) :- BindExpr(ID,X,_).
-SomeStatement(ID,X) :- BindExpr(ID,_,X).
-
-SomeStatement(ID,X) :- CastExpr(ID,X).
-
-SomeStatement(ID,X) :- InitExpr(ID,X,_).
-SomeStatement(ID,X) :- InitExpr(ID,_,X).
-
-SomeStatement(ID,X) :- JobExpr(ID,X,_).
-SomeStatement(ID,X) :- JobExpr(ID,_,X).
-
-SomeStatement(ID,X) :- TupleExpr(ID,X).
-
-    /* Statement nodes */
-SomeStatement(ID,X) :- DeclarationStmt(ID,X,_).
-SomeStatement(ID,X) :- DeclarationStmt(ID,_,X).
-
-SomeStatement(ID,X) :- IfStmt(ID,X,_,_).
-SomeStatement(ID,X) :- IfStmt(ID,_,X,_).
-SomeStatement(ID,X) :- IfStmt(ID,_,_,X).
-
-SomeStatement(ID,X) :- ForStmt(ID,X,_,_,_).
-SomeStatement(ID,X) :- ForStmt(ID,_,X,_,_).
-SomeStatement(ID,X) :- ForStmt(ID,_,_,X,_).
-SomeStatement(ID,X) :- ForStmt(ID,_,_,_,X).
-
-SomeStatement(ID,X) :- ReturnStmt(ID,X,_).
-SomeStatement(ID,X) :- ReturnStmt(ID,_,X).
-
-SomeStatement(ID,X) :- SwitchStmt(ID,X,_,_).
-SomeStatement(ID,X) :- SwitchStmt(ID,_,X,_).
-SomeStatement(ID,X) :- SwitchStmt(ID,_,_,X).
-
-SomeStatement(ID,X) :- ThrowStmt(ID,X).
-
-SomeStatement(ID,X) :- TryCatchStmt(ID,X).
-
-SomeStatement(ID,X) :- WhileStmt(ID,X,_).
-SomeStatement(ID,X) :- WhileStmt(ID,_,X).
-
-    /* Support nodes */
-SomeStatement(ID,X) :- CatchClause(ID,X,_).
-SomeStatement(ID,X) :- CatchClause(ID,_,X).
-
-SomeStatement(ID,X) :- Field(ID,_,X).
-
-SomeStatement(ID,X) :- MemberFunction(ID,_,_,X).
-
-SomeStatement(ID,X) :- Parent(ID,_,_,X).
-
-SomeStatement(ID,X) :- PureVirtualMemberFunction(ID,_,X).
-
-SomeStatement(ID,X) :- SwitchCase(ID,X,_).
-SomeStatement(ID,X) :- SwitchCase(ID,_,X).
-
-SomeStatement(ID,X) :- TagTypeBinding(ID,X,_).
-SomeStatement(ID,X) :- TagTypeBinding(ID,_,X).
-
+ChildOfLambda(X) :- ChildOfLambda(ID), ParentOf(ID,X), !Lambda(X,_,_,_).

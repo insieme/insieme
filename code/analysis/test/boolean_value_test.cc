@@ -34,32 +34,53 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/core/forward_decls.h"
-
-// -- forward declarations --
-namespace souffle {
-	class Program;
-} // end namespace souffle
+#include "insieme/analysis/datalog/boolean_value.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace analysis {
 namespace datalog {
-namespace framework {
 
-	/**
-	 * Extracts facts from the given root node and inserts them into the given program using node pointers.
-	 */
-	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer = [](const core::NodePtr&,int){});
+	using namespace core;
 
-	/**
-	 * Extracts facts from the given root node and inserts them into the given program using node addresses.
-	 */
-	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer = [](const core::NodeAddress&,int){});
+	TEST(BooleanValue, Constants) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		EXPECT_TRUE(isTrue(ExpressionAddress(builder.parseExpr("true"))));
+		EXPECT_TRUE(isFalse(ExpressionAddress(builder.parseExpr("false"))));
+
+		EXPECT_TRUE(mayBeTrue(ExpressionAddress(builder.parseExpr("true"))));
+		EXPECT_TRUE(mayBeFalse(ExpressionAddress(builder.parseExpr("false"))));
+
+		EXPECT_FALSE(isTrue(ExpressionAddress(builder.parseExpr("false"))));
+		EXPECT_FALSE(isFalse(ExpressionAddress(builder.parseExpr("true"))));
+
+		EXPECT_FALSE(mayBeTrue(ExpressionAddress(builder.parseExpr("false"))));
+		EXPECT_FALSE(mayBeFalse(ExpressionAddress(builder.parseExpr("true"))));
+	}
 
 
-} // end namespace framework
+	TEST(BooleanValue, SimpleExpressions) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		#define do_test(EXPECTED, FUNC, EXPR) EXPECT_##EXPECTED(FUNC(ExpressionAddress(builder.parseExpr(EXPR))));
+
+		do_test(TRUE, isTrue, "(true)");
+
+		// check string constants (should be neither true nor false)
+		EXPECT_FALSE(isTrue(ExpressionAddress(builder.parseExpr("\"x\""))));
+		EXPECT_FALSE(isFalse(ExpressionAddress(builder.parseExpr("\"x\""))));
+		EXPECT_TRUE(mayBeTrue(ExpressionAddress(builder.parseExpr("\"x\""))));
+		EXPECT_TRUE(mayBeFalse(ExpressionAddress(builder.parseExpr("\"x\""))));
+
+		#undef do_test
+	}
+
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme
+

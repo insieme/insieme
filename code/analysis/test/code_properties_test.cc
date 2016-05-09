@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include <fstream>
+
 #include <gtest/gtest.h>
 
 #include "insieme/analysis/datalog/code_properties.h"
@@ -48,6 +50,66 @@ namespace analysis {
 namespace datalog {
 
 	using namespace core;
+
+	TEST(CodeProperties, DumpTextToFile) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+
+		auto addresses = builder.parseAddressesStatement(
+			"{ var int<4> x = 12; $x$; }"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		std::ofstream outputFile("/tmp/insieme_ir_text_dump.txt");
+		if (outputFile.is_open()) {
+			// dumpJson(addresses[0].getRootAddress(), outputFile);
+			dumpText(addresses[0].getRootNode(), outputFile, true);
+			outputFile.close();
+		}
+	}
+
+	TEST(CodeProperties, DefinitionPoint_Parameter) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesExpression(
+			"( x : int<4> ) -> int<4> { return $x$; }"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<CallExprAddress>()[0].as<VariableAddress>();
+		auto param = var.getRootAddress().as<LambdaExprAddress>()->getParameterList()[0];
+
+		std::cout << "Parameter: " << param << "\n";
+		std::cout << "Variable:  " << var << "\n";
+
+		EXPECT_EQ(param, getDefinitionPoint(var, false));
+
+	}
+
+
+	TEST(CodeProperties, DefinitionPoint_LocalVariable) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(
+			"{ var int<4> x = 12; $x$; }"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<VariableAddress>();
+		auto param = var.getRootAddress().as<CompoundStmtAddress>()[0].as<DeclarationStmtAddress>()->getVariable();
+
+		std::cout << "Parameter: " << param << "\n";
+		std::cout << "Variable:  " << var << "\n";
+
+		EXPECT_EQ(param, getDefinitionPoint(var,false));
+
+	}
 
 	TEST(CodeProperties, TMP) {
 		core::NodeManager mgr;
@@ -72,6 +134,7 @@ namespace datalog {
 			std::cout << " \t" << list << "\n";
 		});
 	}
+
 
 	TEST(CodeProperties, LargerCode) {
 		using namespace driver::integration;
@@ -426,4 +489,5 @@ namespace datalog {
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme
+
 

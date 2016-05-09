@@ -36,30 +36,29 @@
 
 #pragma once
 
-#include "insieme/core/forward_decls.h"
-
-// -- forward declarations --
-namespace souffle {
-	class Program;
-} // end namespace souffle
+#include <boost/optional.hpp>
+#include "insieme/utils/assert.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/analysis/datalog/code_properties.h"
 
 namespace insieme {
 namespace analysis {
-namespace datalog {
-namespace framework {
 
-	/**
-	 * Extracts facts from the given root node and inserts them into the given program using node pointers.
+	enum class Backend { DATALOG, HASKELL };
+
+	template <Backend B>
+	boost::optional<core::VariableAddress> getDefinitionPoint(const core::VariableAddress& var) {
+		switch(B) {
+		case Backend::DATALOG: return datalog::getDefinitionPoint(var);
+		case Backend::HASKELL: /* return haskell::getDefinitionPoint(var); */
+		default: assert_not_implemented() << "Backend not implemented!";
+		}
+	        return boost::optional<core::VariableAddress>();
+	}
+
+	/* Usage:
+	 * getDefinitionPoint<Backend::Datalog>(root);
 	 */
-	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer = [](const core::NodePtr&,int){});
 
-	/**
-	 * Extracts facts from the given root node and inserts them into the given program using node addresses.
-	 */
-	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer = [](const core::NodeAddress&,int){});
-
-
-} // end namespace framework
-} // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme

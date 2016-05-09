@@ -34,32 +34,76 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/analysis/datalog/boolean_value.h"
 
-#include "insieme/core/forward_decls.h"
+#include "insieme/analysis/datalog/framework/analysis_base.h"
 
-// -- forward declarations --
-namespace souffle {
-	class Program;
-} // end namespace souffle
+#include "souffle/gen/boolean_value.h"
 
 namespace insieme {
 namespace analysis {
 namespace datalog {
-namespace framework {
 
-	/**
-	 * Extracts facts from the given root node and inserts them into the given program using node pointers.
-	 */
-	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer = [](const core::NodePtr&,int){});
+	enum Result {
+		TRUE,
+		FALSE,
+		TRUE_OR_FALSE
+	};
 
-	/**
-	 * Extracts facts from the given root node and inserts them into the given program using node addresses.
-	 */
-	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer = [](const core::NodeAddress&,int){});
+	Result getBoolValue(const core::ExpressionAddress& expr) {
+		const bool debug = false;
+
+		// instantiate the analysis
+		souffle::Sf_boolean_value analysis;
+
+		int targetID = 0;
+
+		// fill in facts
+		framework::extractAddressFacts(analysis, expr.getRootNode(), [&](const core::NodeAddress& addr, int id) {
+			if (addr == expr) targetID = id;
+		});
+
+		// add targeted node
+		analysis.rel_target_expr.insert(targetID);
+
+		// print debug information
+		if (debug) analysis.dumpInputs();
+
+		// run analysis
+		analysis.run();
+
+		// print debug information
+		if (debug) analysis.dumpOutputs();
+
+		// read result
+		auto& result = analysis.rel_result;
+		assert_le(1, result.size()) << "Incomplete analysis!";
+
+		// if it is true or false => we don't know
+		if (result.size() != 1) return TRUE_OR_FALSE;
+
+		// read the single entry in the result set
+		auto value = (*result.begin())[0];
+		return (value) ? TRUE : FALSE;
+	}
 
 
-} // end namespace framework
+	bool isTrue(const core::ExpressionAddress& expr) {
+		return getBoolValue(expr) == TRUE;
+	}
+
+	bool isFalse(const core::ExpressionAddress& expr) {
+		return getBoolValue(expr) == FALSE;
+	}
+
+	bool mayBeTrue(const core::ExpressionAddress& expr) {
+		return getBoolValue(expr) != FALSE;
+	}
+
+	bool mayBeFalse(const core::ExpressionAddress& expr) {
+		return getBoolValue(expr) != TRUE;
+	}
+
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme

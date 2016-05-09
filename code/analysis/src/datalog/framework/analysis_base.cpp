@@ -39,6 +39,7 @@
 #include <souffle/SouffleInterface.h>
 
 #include "insieme/core/ir.h"
+#include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/utils/logging.h"
@@ -71,6 +72,8 @@ namespace framework {
 
 			souffle::Program& analysis;
 
+			std::map<core::NodePtr,int> uniqueIndex;
+
 		public:
 
 			FactExtractor(souffle::Program& analysis,const NodeIndexer& indexer)
@@ -80,11 +83,22 @@ namespace framework {
 				return this->visit(rootNode);
 			}
 
+			int getUniqueID(const Ptr<const core::Node>& node) {
+				core::NodePtr entry(&*node);
+				auto pos = uniqueIndex.find(entry);
+				if (pos != uniqueIndex.end()) return pos->second;
+				int newIndex = uniqueIndex.size();
+				uniqueIndex[entry] = newIndex;
+				return newIndex;
+			}
+
 			int getFreshID(const Ptr<const core::Node>& node) {
 				int res = counter++;
 				indexer(core::NodeAddress(node),res);
+				insert("NodeIdentity", res, getUniqueID(node));
 				return res;
 			}
+
 
 			// -- Type Nodes --
 
