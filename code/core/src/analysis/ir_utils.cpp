@@ -832,8 +832,8 @@ namespace analysis {
 					// peeling of enclosing deref calls
 					int peeledLevels = 0;
 					for(int i=0; i<indirectionLevels; i++) {
-						if (!cur.isRoot() && isCallOf(cur.getParentNode(), deref)) {
-							cur = cur.getParentAddress();
+						if(cur.getDepth()>=2 && isCallOf(cur.getParentNode(2), deref)) {
+							cur = cur.getParentAddress(2);
 							peeledLevels++;
 						}
 					}
@@ -844,23 +844,22 @@ namespace analysis {
 					// if it is a call to a lambda, check the lambda
 					if(VisitScopes) {
 						indirectionLevels -= peeledLevels;
-						if(CallExprPtr call = cur.getParentNode().isa<CallExprPtr>()) {
+						if(CallExprPtr call = cur.getParentNode(2).isa<CallExprPtr>()) {
 							// check calls to nested functions
 							if(LambdaExprPtr fun = call->getFunctionExpr().isa<LambdaExprPtr>()) {
-								if(!isReadOnly(fun, fun->getParameterList()[cur.getIndex() - 2])) { // -1 for type, -1 for function expr
-									readOnly = false;                                               // it is no longer read-only
+								if(!isReadOnly(fun, fun->getParameterList()[cur.getParentAddress().getIndex() - 2])) { // -1 for type, -1 for function expr
+									readOnly = false; // it is no longer read-only
 								}
-
-								// we can stop the decent here
+								// we can stop the descent here
 								return true;
 							}
 
 							// check calls to recursive functions
 							if(auto ref = call->getFunctionExpr().isa<LambdaReferencePtr>()) {
-								if(!isReadOnly(ref, cur.getIndex() - 2)) { // -1 for type, -1 for function expr
-									readOnly = false;                      // it is no longer read-only
+								if(!isReadOnly(ref, cur.getParentAddress().getIndex() - 2)) { // -1 for type, -1 for function expr
+									readOnly = false; // it is no longer read-only
 								}
-								// we can stop the decent here
+								// we can stop the descent here
 								return true;
 							}
 						}
@@ -868,10 +867,10 @@ namespace analysis {
 					}
 
 					// check whether variable is dereferenced at this location
-					if(peeledLevels == indirectionLevels && !isCallOf(cur.getParentNode(), deref)) {
+					if(peeledLevels == indirectionLevels && !isCallOf(cur.getParentNode(2), deref)) {
 						// => it is not, so it is used by reference
 						readOnly = false; // it is no longer read-only
-						return true;      // we can stop the decent here
+						return true;      // we can stop the descent here
 					}
 
 					// continue search

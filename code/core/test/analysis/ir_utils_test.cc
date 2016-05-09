@@ -93,7 +93,7 @@ namespace analysis {
 
 		// check free variables
 		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
-		EXPECT_EQ("[0-2-2-2-3]", toString(getFreeVariableAddresses(call)));
+		EXPECT_EQ("[0-2-1-2-2-1-3-1]", toString(getFreeVariableAddresses(call)));
 	}
 
 	TEST(FreeVariables, TryCatchTest) {
@@ -281,7 +281,7 @@ namespace analysis {
 
 		// check variables
 		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
-		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0), builder.variable(builder.refType(int4), 1), builder.variable(int4, 77),
+		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0), builder.variable(int4, 77),
 			                                     builder.variable(builder.refType(builder.functionType(int4, int4, FK_CLOSURE)), 0)),
 			      getAllVariables(call));
 	}
@@ -404,9 +404,8 @@ namespace analysis {
 	}
 
 	namespace {
-
 		bool readOnly(const StatementPtr& stmt, const VariablePtr& var) {
-			return insieme::core::analysis::isReadOnly(stmt, var);
+			return isReadOnly(stmt, var);
 		}
 
 		bool notReadOnly(const StatementPtr& stmt, const VariablePtr& var) {

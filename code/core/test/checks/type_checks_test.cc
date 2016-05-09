@@ -159,7 +159,8 @@ namespace checks {
 		EXPECT_EQ((std::size_t)1, issues.size());
 		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
 
-		expr = builder.callExpr(intA, binaryFun, toVector<ExpressionPtr>(x, y, z));
+		expr = builder.callExpr(intA, binaryFun,
+			                    toVector<DeclarationPtr>(builder.declaration(int4, x), builder.declaration(int4, y), builder.declaration(int4, z)));
 		issues = check(expr, typeCheck);
 		EXPECT_EQ((std::size_t)1, issues.size());
 		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
@@ -796,8 +797,8 @@ namespace checks {
 		auto x = pos[0].as<CallExprAddress>();
 
 		auto ok = x.getRootNode();
-		auto err1 = transform::replaceNode(manager, x[2], builder.getTypeLiteral(builder.parseType("ref<int<4>>")));
-		auto err2 = transform::replaceNode(manager, x[2], builder.getTypeLiteral(builder.parseType("float")));
+		auto err1 = transform::replaceNode(manager, x->getArgument(2), builder.getTypeLiteral(builder.parseType("ref<int<4>>")));
+		auto err2 = transform::replaceNode(manager, x->getArgument(2), builder.getTypeLiteral(builder.parseType("float")));
 
 		CheckPtr typeCheck = makeVisitOnce(make_check<MemberAccessElementTypeInTagTypeCheck>());
 		EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
