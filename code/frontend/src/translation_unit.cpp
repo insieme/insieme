@@ -132,11 +132,7 @@ namespace frontend {
 			if(!cur->isStatement() && !cur->isDecl()) { cur->setDecl(getCompiler().getASTContext().getTranslationUnitDecl()); }
 		}
 
-		if(mClang.getDiagnostics().hasErrorOccurred()) {
-			// errors are always fatal
-            assert_fail() << " clang could not parse input file, please check error report";
-			throw ClangParsingError(mFileName);
-		}
+		assert_false(mClang.getDiagnostics().hasErrorOccurred()) << "Clang could not parse input file " << mFileName << ", please check the error report";
 
 		if(setup.hasOption(ConversionSetup::DumpClangAST)) {
 			const std::string filter = setup.getClangASTDumpFilter();
