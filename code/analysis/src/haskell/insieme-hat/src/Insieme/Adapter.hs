@@ -3,11 +3,11 @@
 module Insieme.Adapter where
 
 import Data.Foldable
+import Data.Maybe
 import Data.Tree
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
-import Text.Show.Pretty
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Sequence as Seq
 import qualified Insieme.Analysis.Examples as Anal
@@ -45,7 +45,9 @@ printNode :: StablePtr (Tree IR.Inspire) -> StablePtr Addr.NodeAddress -> IO ()
 printNode tree_c addr_c = do
     tree <- deRefStablePtr tree_c
     addr <- deRefStablePtr addr_c
-    putStrLn $ ppShow $ Addr.resolve addr $ Addr.addressTree tree
+    case Addr.resolve addr $ Addr.addressTree tree of
+        Just t  -> putStrLn $ drawTree $ show <$> t
+        Nothing -> putStrLn "Invalid NodeAddress for given tree"
 
 foreign export ccall "hat_tree_printNode"
     printNode :: StablePtr (Tree IR.Inspire) -> StablePtr Addr.NodeAddress

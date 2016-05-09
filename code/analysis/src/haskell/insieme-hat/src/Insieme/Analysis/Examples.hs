@@ -17,7 +17,7 @@ findDeclr start tree = findDeclr start tree
 
         | Just (Node IR.DeclarationStmt [v, _]) <- resolve addr tree
         , v == org
-        = trace ("--> Declr found: " ++ show addr) $ Just addr
+        = trace ("--> Declr found: " ++ show addr) $ Just $ goDown 0 $ addr
 
         | Just (Node IR.ForStmt _) <- resolve (goUp addr) tree
         , _ :>: x <- addr

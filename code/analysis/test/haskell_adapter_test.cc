@@ -104,7 +104,7 @@ namespace haskell {
 
 		boost::optional<Address> decl = env.findDeclr(tree, var);
 		EXPECT_TRUE(decl);
-		EXPECT_EQ(addrRoot.getAddressOfChild(0), decl->toNodeAddress(root));
+		EXPECT_EQ(addrRoot.getAddressOfChild(0, 0), decl->toNodeAddress(root));
 	}
 
 } // end namespace haskell
