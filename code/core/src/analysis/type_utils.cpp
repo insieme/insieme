@@ -72,7 +72,9 @@ namespace analysis {
 			}
 
 			bool visitNode(const NodePtr& cur, NodeSet& knownVariables) {
-				return any(cur.getChildList(), [&](const NodePtr& cur) -> bool { return this->visit(cur, knownVariables); });
+				if(cur->getNodeCategory() == NC_Statement || cur->getNodeCategory() == NC_Expression) return false;
+				auto ret = any(cur.getChildList(), [&](const NodePtr& cur) -> bool { return this->visit(cur, knownVariables); });
+				return ret;
 			}
 		};
 

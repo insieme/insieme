@@ -493,13 +493,13 @@ namespace transform {
 
 	namespace {
 
-		class ConstantPropagater : public core::transform::CachedNodeMapping {
+		class ConstantPropagator : public core::transform::CachedNodeMapping {
 			NodeManager& manager;
 			const ExpressionPtr target;
 			const ExpressionPtr replacement;
 
 		  public:
-			ConstantPropagater(NodeManager& manager, const ExpressionPtr& target, const ExpressionPtr& replacement)
+			ConstantPropagator(NodeManager& manager, const ExpressionPtr& target, const ExpressionPtr& replacement)
 			    : manager(manager), target(target), replacement(replacement) {}
 
 			LambdaExprPtr fixLambda(const LambdaExprPtr& original, const ExpressionList& args, ExpressionList& newArgs) {
@@ -536,7 +536,7 @@ namespace transform {
 
 			const NodePtr resolveElement(const NodePtr& ptr) {
 				// check for replacement (dereferenced parameter needs to be replaced)
-				if (*ptr == *target) {
+				if(*ptr == *target) {
 					return replacement;
 				}
 
@@ -607,10 +607,10 @@ namespace transform {
 			}
 		};
 
-		class ParameterFixer : public ConstantPropagater {
+		class ParameterFixer : public ConstantPropagator {
 		public:
 			ParameterFixer(NodeManager& manager, const VariablePtr& param, const ExpressionPtr& replacement)
-				: ConstantPropagater(manager, IRBuilder(manager).deref(param), replacement)  {}
+				: ConstantPropagator(manager, IRBuilder(manager).deref(param), replacement) {}
 		};
 
 	}
@@ -678,7 +678,6 @@ namespace transform {
 
 			// update recursive variable
 
-
 			// update recursive calls within body
 			IRBuilder builder(manager);
 			std::map<NodeAddress, NodePtr> replacements;
@@ -708,7 +707,7 @@ namespace transform {
 	}
 
 	NodePtr fixLambdaReference(NodeManager& manager, const NodePtr& node, const LambdaReferencePtr& ref, const ExpressionPtr& value) {
-		return ConstantPropagater(manager, ref, value).map(node);
+		return ConstantPropagator(manager, ref, value).map(node);
 	}
 
 	NodePtr fixParameter(NodeManager& manager, const NodePtr& node, const VariablePtr& param, const ExpressionPtr& value) {
