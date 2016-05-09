@@ -69,7 +69,7 @@ namespace datalog {
 
 		#define do_test(EXPECTED, FUNC, EXPR) EXPECT_##EXPECTED(FUNC(ExpressionAddress(builder.parseExpr(EXPR))));
 
-		do_test(TRUE, isTrue, "(true)");
+		do_test(TRUE, isTrue, "true");
 
 		// check string constants (should be neither true nor false)
 		EXPECT_FALSE(isTrue(ExpressionAddress(builder.parseExpr("\"x\""))));
