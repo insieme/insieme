@@ -38,6 +38,7 @@
 
 #include "insieme/analysis/haskell/adapter.h"
 #include "insieme/core/dump/binary_dump.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 
@@ -49,26 +50,34 @@ namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	TEST(HaskellAdapter, NodeCount) {
-		// create a code fragment using manager A
-		NodeManager managerA;
-		IRBuilder builder(managerA);
-		std::map<std::string, NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
-		NodePtr root = builder.parseStmt(
-				"{ "
-				"	for(uint<4> i = 10u .. 50u) { "
-				"		v[i]; "
-				"	} "
-				"	for(uint<4> j = 5u .. 25u) { "
-				"		v[j]; "
-				"	} "
-				"}",
-				symbols
-		);
+	struct Env {
+		Environment& env;
+		Env() : env(Environment::getInstance()) {}
+	};
 
-		// pass to haskell
-		auto& env = Environment::getInstance();
+	struct SimpleDeclaration {
+
+		NodeManager manager;
+		IRBuilder builder;
+		NodePtr root;
+
+		SimpleDeclaration() : builder(manager) {
+			root = builder.parseAddressesStatement(
+				"{ "
+				"   var int<4> x = 12; "
+				"   $x$; "
+				"} "
+			)[0].getRootNode();
+		}
+
+	};
+
+	class HaskellAdapter :
+		public ::testing::Test,
+		public Env,
+		public SimpleDeclaration {};
+
+	TEST_F(HaskellAdapter, NodeCount) {
 		auto tree = env.passTree(root);
 
 		// calculate overall node count
@@ -77,7 +86,25 @@ namespace haskell {
 				nodeCount++;
 		}, true, true);
 
-		EXPECT_EQ(nodeCount, tree.node_count());
+		EXPECT_EQ(nodeCount, tree.size());
+	}
+
+	TEST_F(HaskellAdapter, AddressLength) {
+		NodeAddress addr = NodeAddress(root).getAddressOfChild(0, 0, 0, 0);
+		Address addr_hs = env.passAddress(addr);
+		EXPECT_EQ(addr.getDepth(), addr_hs.size() + 1);
+	}
+
+	TEST_F(HaskellAdapter, FindDeclaration) {
+		auto tree = env.passTree(root);
+
+		// target
+		NodeAddress addrRoot(root);
+		auto var = env.passAddress(addrRoot.getAddressOfChild(1));
+
+		boost::optional<Address> decl = env.findDeclr(tree, var);
+		EXPECT_TRUE(decl);
+		EXPECT_EQ(addrRoot.getAddressOfChild(0, 0), decl->toNodeAddress(root));
 	}
 
 } // end namespace haskell

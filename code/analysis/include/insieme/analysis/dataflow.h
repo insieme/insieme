@@ -40,6 +40,7 @@
 #include "insieme/utils/assert.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/analysis/datalog/code_properties.h"
+#include "insieme/analysis/haskell//dataflow.h"
 
 namespace insieme {
 namespace analysis {
@@ -59,10 +60,10 @@ namespace analysis {
 	boost::optional<core::VariableAddress> getDefinitionPoint(const core::VariableAddress& var) {
 		switch(B) {
 		case Backend::DATALOG: return datalog::getDefinitionPoint(var);
-		case Backend::HASKELL: /* return haskell::getDefinitionPoint(var); */
+		case Backend::HASKELL: return haskell::getDefinitionPoint(var);
 		default: assert_not_implemented() << "Backend not implemented!";
 		}
-	        return boost::optional<core::VariableAddress>();
+		return boost::optional<core::VariableAddress>();
 	}
 
 	/*

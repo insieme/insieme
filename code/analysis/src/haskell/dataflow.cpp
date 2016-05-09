@@ -34,62 +34,31 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/analysis/haskell/dataflow.h"
 
-#include <boost/optional.hpp>
-#include <memory>
+#include "insieme/analysis/haskell/adapter.h"
 
-#include "insieme/core/ir_address.h"
-#include "insieme/core/ir_node.h"
+#include <iostream>
+
+using namespace insieme::core;
 
 namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	class HSobject;
-	class Tree;
-	class Address;
+	boost::optional<VariableAddress> getDefinitionPoint(const VariableAddress& var) {
+		auto& env = Environment::getInstance();
 
-	struct Tree {
+		auto tree = env.passTree(var.getRootNode());
+		auto var_addr = env.passAddress(var);
 
-		std::shared_ptr<HSobject> tree;
+		auto target = env.findDeclr(tree, var_addr);
+		if (!target) {
+			return {};
+		}
 
-		Tree(std::shared_ptr<HSobject> tree);
-
-		std::size_t size() const;
-		void printNode(const Address& addr) const;
-
-	};
-
-	struct Address {
-
-		std::shared_ptr<HSobject> addr;
-
-		Address(std::shared_ptr<HSobject> addr);
-
-		std::size_t size() const;
-		core::NodeAddress toNodeAddress(const core::NodePtr& root) const;
-
-	};
-
-	class Environment {
-
-		Environment();
-
-	public:
-
-		~Environment();
-		Environment(const Environment&) = delete;
-		void operator=(const Environment&) = delete;
-
-		static Environment& getInstance();
-
-		Tree passTree(const core::NodePtr& root);
-		Address passAddress(const core::NodeAddress& addr);
-
-		boost::optional<Address> findDeclr(Tree& tree, Address& var);
-
-	};
+		return target->toNodeAddress(var.getRootNode()).as<VariableAddress>();
+	}
 
 } // end namespace haskell
 } // end namespace analysis

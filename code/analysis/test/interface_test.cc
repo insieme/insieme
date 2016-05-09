@@ -89,8 +89,8 @@ namespace analysis {
 		auto var = addresses[0].as<VariableAddress>();
 		auto param = var.getRootAddress().as<CompoundStmtAddress>()[0].as<DeclarationStmtAddress>()->getVariable();
 
-		std::cout << "Parameter: " << param << "\n";
-		std::cout << "Variable:  " << var << "\n";
+		//std::cout << "Parameter: " << param << "\n";
+		//std::cout << "Variable:  " << var << "\n";
 
 		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
 

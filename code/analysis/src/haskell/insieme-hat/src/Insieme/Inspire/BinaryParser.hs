@@ -80,7 +80,7 @@ parseDumpNode = do
 
     return $ n
 
-connectDumpNodes :: (IntMap.IntMap DumpNode) -> Tree IR.Inspire
+connectDumpNodes :: IntMap.IntMap DumpNode -> Tree IR.Inspire
 connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
   where
     go :: Int -> State (IntMap.IntMap (Tree IR.Inspire)) (Tree IR.Inspire)

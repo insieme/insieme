@@ -25,11 +25,30 @@ foreach ( analysis_file ${datalog_analysis} )
 endforeach()
 
 
+# =============================================  HASKELL  =====================================
+
+# check for (patched) haskell stack
+if(NOT EXISTS $ENV{INSIEME_LIBS_HOME}/stack-latest/bin/stack)
+	MESSAGE(FATAL_ERROR "Coulnd't find patched Haskell stack")
+endif()
+
+add_subdirectory(src/haskell/insieme-hat)
+link_directories(${CMAKE_CURRENT_BINARY_DIR}/src/haskell/insieme-hat)
+
+# add directories containing libffi, libHSrts and gmp
+link_directories(${LIBHSRTS_DIR})
+link_directories($ENV{INSIEME_LIBS_HOME}/gmp-latest/lib)
+
+
 # =============================================================================================
 
 # Build the analysis library
 add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_analysis_incs} ${souffle_output})
 target_include_directories(insieme_analysis PUBLIC ${insieme_analysis_include_dir})
+
+# Haskell dependency
+add_dependencies(insieme_analysis insieme_analysis_haskell)
+target_link_libraries(insieme_analysis ${insieme_analysis_haskell})
 
 # lookup Boost library
 insieme_find_package(NAME Boost)
@@ -40,20 +59,6 @@ target_link_libraries(insieme_analysis insieme_driver)
 target_link_libraries(insieme_analysis insieme_utils)
 
 cotire(insieme_analysis)
-
-
-# =============================================  HASKELL  =====================================
-
-add_subdirectory(src/haskell/insieme-hat)
-add_dependencies(insieme_analysis insieme_analysis_haskell)
-target_link_libraries(insieme_analysis ${insieme_analysis_haskell})
-link_directories(${CMAKE_CURRENT_BINARY_DIR}/src/haskell/insieme-hat)
-
-# directory containing libffi and libHSrts
-link_directories(${LIBHSRTS_DIR})
-
-# haskell stuff requires gmp
-link_directories($ENV{INSIEME_LIBS_HOME}/gmp-latest/lib)
 
 
 # =============================================  TESTING  =====================================
