@@ -188,7 +188,7 @@ namespace text {
 				if(!cur->getChildList().empty()) {
 					out << ", \"children\": [";
 					// Classic for-loop because we have to avoid comma at the end
-					for(int i = 0; i < cur->getChildList().size(); i++) {
+					for(unsigned int i = 0; i < cur->getChildList().size(); i++) {
 						out << std::endl;
 						dump(out, level + 1, cur->getChildList()[i]);
 						if(i+1 < cur->getChildList().size())
