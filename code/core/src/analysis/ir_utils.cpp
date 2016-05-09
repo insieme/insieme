@@ -102,17 +102,17 @@ namespace analysis {
 
 	bool isSideEffectFree(const DeclarationPtr& decl) {
 		auto initExpr = decl->getInitialization();
-		auto var = decl->getVariable();
+		auto& refExt = decl->getNodeManager().getLangExtension<lang::ReferenceExtension>();
 
 		// if initExpr is assignment to declared var, just test RHS
 		if(lang::isAssignment(initExpr)) {
-			if(getArgument(initExpr, 0) == var) {
+			if(refExt.isCallOfRefDecl(getArgument(initExpr, 0))) {
 				return isSideEffectFree(getArgument(initExpr, 2));
 			}
 		}
 		// if initExpr is an InitExpr node, test all of its subexpressions
 		if(auto initNode = initExpr.isa<InitExprPtr>()) {
-			if(initNode->getMemoryExpr() == var) {
+			if(refExt.isCallOfRefDecl(initNode->getMemoryExpr())) {
 				return all(initNode->getInitExprs(), [](const ExpressionPtr& expr) { return isSideEffectFree(expr); });
 			}
 		}

@@ -71,5 +71,9 @@ namespace core {
 		return out << "try " << *getBody() << " " << join(" ", getClauses(), print<deref<CatchClausePtr>>());
 	}
 
+	DeclarationStmtPtr DeclarationStmt::get(NodeManager & manager, const VariablePtr& variable, const ExpressionPtr& initExpression) {
+		return manager.get(DeclarationStmt(Declaration::get(manager, variable->getType(), initExpression), variable));
+	}
+
 } // end namespace core
 } // end namespace insieme

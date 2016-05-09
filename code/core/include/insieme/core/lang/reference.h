@@ -151,6 +151,11 @@ namespace lang {
 		LANG_EXT_LITERAL(RefAlloc, "ref_alloc", "(type<'a>, memloc) -> ref<'a,f,f>")
 
 		/**
+		 * A literal for referencing memory allocated in a surrounding declaration context.
+		 */
+		LANG_EXT_LITERAL(RefDecl, "ref_decl", "(type<ref<'a,'c,'v,'k>>) -> ref<'a,'c,'v,'k>")
+
+		/**
 		 * A literal to free memory.
 		 */
 		LANG_EXT_LITERAL(RefDelete, "ref_delete", "(ref<'a,f,'v>) -> unit")
@@ -486,6 +491,7 @@ namespace lang {
 
 	ExpressionPtr buildRefTemp(const TypePtr& type);
 	ExpressionPtr buildRefNull(const TypePtr& type);
+	ExpressionPtr buildRefDecl(const TypePtr& type);
 
 } // end namespace lang
 } // end namespace core

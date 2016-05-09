@@ -390,6 +390,13 @@ namespace lang {
 								bmExt.getMarkerTypeLiteral(rt.isVolatile()));
 	}
 
+	ExpressionPtr buildRefDecl(const TypePtr& type) {
+		assert_pred1(isReference, type) << "Trying to build a decl ref which isn't a reference.";
+		IRBuilder builder(type->getNodeManager());
+		auto& refExt = type->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+		return builder.callExpr(type, refExt.getRefDecl(), builder.getTypeLiteral(type));
+	}
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
