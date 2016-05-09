@@ -36,6 +36,8 @@
 
 #include <gtest/gtest.h>
 
+#include <boost/optional.hpp>
+
 #include "insieme/analysis/dataflow.h"
 
 #include "insieme/core/ir_builder.h"
@@ -45,6 +47,21 @@ namespace insieme {
 namespace analysis {
 
 	using namespace core;
+
+	#define create_dispatcher_for(FUNC)                                                                             \
+	    boost::optional<core::VariableAddress> dispatch_##FUNC(const core::VariableAddress& var, Backend backend) { \
+	        switch(backend) {                                                                                       \
+	        case Backend::DATALOG: return FUNC<Backend::DATALOG>(var);                                              \
+	        case Backend::HASKELL: return FUNC<Backend::HASKELL>(var);                                              \
+	        default: assert_not_implemented() << "Backend not implemented!";                                        \
+	        }                                                                                                       \
+	        return boost::optional<core::VariableAddress>();                                                        \
+	    }
+
+	create_dispatcher_for(getDefinitionPoint)
+
+	#undef create_dispatcher_for
+
 
 	class CBA_Interface : public ::testing::TestWithParam<Backend> {
 
@@ -66,9 +83,11 @@ namespace analysis {
 		std::cout << "Parameter: " << param << "\n";
 		std::cout << "Variable:  " << var << "\n";
 
-		EXPECT_EQ(param, getDefinitionPoint<GetParam()>(var));
+		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
 
 	}
+
+	INSTANTIATE_TEST_CASE_P(CBA, CBA_Interface, ::testing::Values(Backend::DATALOG, Backend::HASKELL));
 
 } // end namespace analysis
 } // end namespace insieme

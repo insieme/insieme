@@ -50,13 +50,14 @@ namespace analysis {
 	boost::optional<core::VariableAddress> getDefinitionPoint(const core::VariableAddress& var) {
 		switch(B) {
 		case Backend::DATALOG: return datalog::getDefinitionPoint(var);
-		//case Backend::HASKELL: return haskell::getDefinitionPoint(var);
+		case Backend::HASKELL: /* return haskell::getDefinitionPoint(var); */
 		default: assert_not_implemented() << "Backend not implemented!";
 		}
+	        return boost::optional<core::VariableAddress>();
 	}
 
 	/* Usage:
-	 * getDefinitionPoint<Backend::Datalog>(root...);
+	 * getDefinitionPoint<Backend::Datalog>(root);
 	 */
 
 } // end namespace analysis
