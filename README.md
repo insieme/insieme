@@ -19,7 +19,7 @@ Insieme is written in C++11 and relies on several third-party libraries:
 ### List of Required Libraries and Software
 Name 		| Version | Purpose |
 --------|---------|------------|
-[G++](http://gcc.gnu.org/gcc-4.8/)	                                | >= 4.8   | Compiler |
+[G++](http://gcc.gnu.org/gcc-5/)	                                | >= 5.1   | Compiler |
 [CMake](http://www.cmake.org/)                                      | >= 3.2.x | Build System |
 [Google Test](https://code.google.com/p/googletest/)                | >= 1.7   | Unit testing - is installed/built by us - no need to install it|
 [Boost](http://www.boost.org/users/history/version_1_50_0.html)     | >= 1.50   | Utilities, regex, filesystem, program options|
@@ -35,6 +35,7 @@ Name 		| Version | Purpose |
 --------|---------|------------|
 [PAPI](http://icl.cs.utk.edu/papi/)	                                | >= 5.4.0 | Runtime system, for hardware information and event counters |
 [hwloc](http://www.open-mpi.org/projects/hwloc/)	                  | >= 1.10  | Runtime system, for system architecture information |
+[valgrind](http://valgrind.org/)	                  | >= 3.10  | Memory checks |
 
 ### Preparing the Environment
 You can either install those packages manually (or via a package manager) or use the provided utility which takes care of building all dependencies from scratch and applies patches. 
