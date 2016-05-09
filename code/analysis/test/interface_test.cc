@@ -96,6 +96,22 @@ namespace analysis {
 
 	}
 
+	TEST_P(CBA_Interface, DefinitionPointFail) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(
+			"{ var int<4> x = 12; $x$; }"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<VariableAddress>();
+		var = var.switchRoot(var);
+
+		EXPECT_FALSE(dispatch_getDefinitionPoint(var, GetParam()));
+	}
+
 	/**
 	 * GTest parametrized tests instantiation. Backends which should be tested are listed here.
 	 */

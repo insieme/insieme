@@ -171,7 +171,7 @@ namespace datalog {
 
 		// read result
 		auto& result = analysis.rel_DefinitionPointResult;
-		if (result.empty()) return core::VariableAddress();
+		if (result.empty()) return {};
 
 		assert_le(result.size(), 1) << "Invalid result - multiple definition points!";
 
