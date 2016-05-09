@@ -6,7 +6,6 @@ import Data.Maybe
 import Data.Tree
 import Debug.Trace
 import Insieme.Inspire.NodeAddress
-import qualified Data.Sequence as Seq
 import qualified Insieme.Inspire as IR
 
 findDeclr :: NodeAddress -> Tree IR.Inspire -> Maybe NodeAddress
@@ -29,7 +28,7 @@ findDeclr start tree = findDeclr start tree
         , x /= 0
         = trace ("going left from: " ++ show addr) $ findDeclr (goLeft addr) tree
 
-        | Seq.null addr
+        | Empty <- addr
         = trace "no declr found" $ Nothing
 
         | Just _ <- resolve addr tree
