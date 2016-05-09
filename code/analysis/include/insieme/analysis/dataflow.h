@@ -44,8 +44,17 @@
 namespace insieme {
 namespace analysis {
 
+	/**
+	 * Enumeration of available backends. Should be used as a template parameter
+	 * in the functions below.
+	 */
 	enum class Backend { DATALOG, HASKELL };
 
+	/**
+	 * Get the definition point for a certain variable, if there is one.
+	 *
+	 * @param var the VariableAddress of the root node whose subtree will be searched
+	 */
 	template <Backend B>
 	boost::optional<core::VariableAddress> getDefinitionPoint(const core::VariableAddress& var) {
 		switch(B) {
@@ -56,7 +65,8 @@ namespace analysis {
 	        return boost::optional<core::VariableAddress>();
 	}
 
-	/* Usage:
+	/*
+	 * Usage example:
 	 * getDefinitionPoint<Backend::Datalog>(root);
 	 */
 

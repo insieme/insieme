@@ -48,6 +48,10 @@ namespace analysis {
 
 	using namespace core;
 
+	/*
+	 * A macro to create dispatcher functions for the different backends.
+	 * Needed because GTest can't generate parametrized tests if the parameter is a template argument.
+	 */
 	#define create_dispatcher_for(FUNC)                                                                             \
 	    boost::optional<core::VariableAddress> dispatch_##FUNC(const core::VariableAddress& var, Backend backend) { \
 	        switch(backend) {                                                                                       \
@@ -58,15 +62,20 @@ namespace analysis {
 	        return boost::optional<core::VariableAddress>();                                                        \
 	    }
 
+	/* List of the dynamic dispatchers that should be available */
 	create_dispatcher_for(getDefinitionPoint)
 
 	#undef create_dispatcher_for
 
 
-	class CBA_Interface : public ::testing::TestWithParam<Backend> {
+	/**
+	 * GTest-specific class to enable parametrized tests
+	 */
+	class CBA_Interface : public ::testing::TestWithParam<Backend> { };
 
-	};
-
+	/**
+	 * Test the definition point interface
+	 */
 	TEST_P(CBA_Interface, DefinitionPoint) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
@@ -87,6 +96,9 @@ namespace analysis {
 
 	}
 
+	/**
+	 * GTest parametrized tests instantiation. Backends which should be tested are listed here.
+	 */
 	INSTANTIATE_TEST_CASE_P(CBA, CBA_Interface, ::testing::Values(Backend::DATALOG, Backend::HASKELL));
 
 } // end namespace analysis
