@@ -128,6 +128,25 @@ namespace analysis {
 		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
 	}
 
+	TEST_P(CBA_Interface, DefinitionPointLambda) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(
+			"def f = (x : int<4>, y : int<4>) -> unit { $y$; };"
+			"{"
+			"  f(1, 2);"
+			"}"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
+		auto param = var.getParentAddress(3).as<LambdaAddress>()->getParameterList()[1];
+
+		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
+	}
+
 	/**
 	 * GTest parametrized tests instantiation. Backends which should be tested are listed here.
 	 */
