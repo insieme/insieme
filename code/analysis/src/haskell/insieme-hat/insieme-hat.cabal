@@ -20,6 +20,7 @@ executable insieme-hat
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.ThHelpers
     other-extensions:   OverloadedStrings,
+                        PatternGuards,
                         PatternSynonyms,
                         TemplateHaskell,
                         ViewPatterns
@@ -47,6 +48,7 @@ library
                         Insieme.Inspire.ThHelpers
     other-extensions:   ForeignFunctionInterface,
                         OverloadedStrings,
+                        PatternGuards,
                         PatternSynonyms,
                         TemplateHaskell,
                         ViewPatterns
