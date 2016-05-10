@@ -5,6 +5,7 @@ module Insieme.Inspire.NodeAddress (
     NodeAddress,
     Seq.fromList,
     Seq.length,
+    Seq.null,
     goUp,
     goDown,
     goLeft,

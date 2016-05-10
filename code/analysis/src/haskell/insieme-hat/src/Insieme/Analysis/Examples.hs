@@ -2,10 +2,13 @@
 
 module Insieme.Analysis.Examples where
 
+import Control.Monad.Trans
+import Control.Monad.Trans.State
+import Control.Applicative
 import Data.List
 import Data.Maybe
 import Data.Tree
-import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.NodeAddress as Addr
 import qualified Debug.Trace as Dbg
 import qualified Insieme.Inspire as IR
 
@@ -56,3 +59,55 @@ findDeclr start tree = findDeclr start
 
         | otherwise
         = error "fix your shit"
+
+findDeclr2 :: NodeAddress -> Tree IR.Inspire -> Maybe NodeAddress
+findDeclr2 start tree = evalStateT findDeclr start
+  where
+    org = fromJust $ resolve start tree
+
+    findDeclr :: StateT NodeAddress Maybe NodeAddress
+    findDeclr = declstmt <|> forstmt <|> lambda <|> compstmt <|> nextlevel
+
+    declstmt :: StateT NodeAddress Maybe NodeAddress
+    declstmt = do
+        addr <- get
+        lift $ case resolve addr tree of
+            Just (Node IR.DeclarationStmt [v, _]) ->
+                if v == org
+                   then Just $ goDown 0 $ addr
+                   else Nothing
+            _ -> Nothing
+
+    forstmt :: StateT NodeAddress Maybe NodeAddress
+    forstmt = do
+        addr <- get
+        case resolve addr tree of
+            Just (Node IR.ForStmt _) ->
+                modify (goDown 0) >> declstmt
+            _ -> lift Nothing
+
+    lambda :: StateT NodeAddress Maybe NodeAddress
+    lambda = do
+        addr <- get
+        lift $ case resolve addr tree of
+            Just (Node IR.Lambda [_, Node IR.Parameters ps, _]) ->
+                (\i -> goDown i $ goDown 1 $ addr) <$> findIndex (==org) ps
+            _ -> Nothing
+
+    compstmt :: StateT NodeAddress Maybe NodeAddress
+    compstmt = do
+        addr <- get
+        case resolve (goUp addr) tree of
+            Just (Node IR.CompoundStmt _) ->
+                case addr of
+                    _ :>: 0 -> lift Nothing
+                    Empty   -> lift Nothing
+                    _       -> modify goLeft >> findDeclr
+            _ -> lift Nothing
+
+    nextlevel :: StateT NodeAddress Maybe NodeAddress
+    nextlevel = do
+        addr <- get
+        if Addr.null addr
+           then lift Nothing
+           else modify goUp >> findDeclr
