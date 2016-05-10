@@ -413,7 +413,8 @@ TEST(region_instrumentation, papi) {
 		irt_inst_region_context_data* reg0 = &(irt_context_get_current()->inst_region_data[0]);
 
 		EXPECT_GT(reg0->aggregated_PAPI_TOT_INS, 1e4);
-		EXPECT_LT(reg0->aggregated_PAPI_TOT_INS, 1e6);
+		// set a high upper limit for PAPI_TOT_INS to accomodate debug builds with large overheads
+		EXPECT_LT(reg0->aggregated_PAPI_TOT_INS, 1e7);
 		EXPECT_EQ(reg0->last_PAPI_TOT_INS, 0);
 		EXPECT_GT(reg0->aggregated_wall_time, 0);
 		EXPECT_LT(reg0->aggregated_wall_time, 1e9);
