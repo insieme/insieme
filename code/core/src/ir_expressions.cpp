@@ -337,9 +337,9 @@ namespace core {
 		children.push_back(type);
 		children.push_back(function);
 		auto param_types = function->getType().as<FunctionTypePtr>()->getParameterTypeList();
-		assert_ge(param_types.size(), arguments.size()) << "Cannot use simplified call expression construction with larger number of arguments than parameters";
 		for(size_t i = 0; i < arguments.size(); ++i) {
-			children.push_back(Declaration::get(manager, transform::materialize(param_types[i]), arguments[i]));
+			auto t = i < param_types.size() ? param_types[i] : arguments[i]->getType();
+			children.push_back(Declaration::get(manager, transform::materialize(t), arguments[i]));
 		}
 		return manager.get(CallExpr(children));
 	}

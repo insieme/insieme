@@ -267,7 +267,7 @@ namespace core {
 		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream & out) const;
+		virtual std::ostream& printTo(std::ostream& out) const;
 
 	  public:
 		/**
@@ -279,7 +279,18 @@ namespace core {
 		 * @param initExpression the initial value of the new variable
 		 * @return the requested type instance managed by the given manager
 		 */
-		static DeclarationStmtPtr get(NodeManager & manager, const VariablePtr& variable, const ExpressionPtr& initExpression);
+		static DeclarationStmtPtr get(NodeManager& manager, const VariablePtr& variable, const ExpressionPtr& initExpression);
+
+		/**
+		 * This static factory method allows to obtain a declaration statement instance
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param declaration the underlying declaration node
+		 * @param variable the variable to be declared
+		 * @return the requested type instance managed by the given manager
+		 */
+		static DeclarationStmtPtr get(NodeManager& manager, const DeclarationPtr& declaration, const VariablePtr& variable);
 
 	IR_NODE_END()
 
@@ -520,9 +531,7 @@ namespace core {
 		 * @return the requested type instance managed by the given manager
 		 */
 		static ForStmtPtr get(NodeManager & manager, const VariablePtr& iterator, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step,
-							  const CompoundStmtPtr& body) {
-			return get(manager, DeclarationStmt::get(manager, iterator, start), end, step, body);
-		}
+							  const CompoundStmtPtr& body);
 
 	IR_NODE_END()
 

@@ -907,12 +907,6 @@ namespace parser {
 		                               "    x[5].a = y;"
 		                               "}"));
 
-		// return statements may also declare a variable which can be used in the return expression itself
-		EXPECT_TRUE(test_statement(nm, "def struct A { a : int<4>; };"
-		                               "def foo = () -> A {"
-		                               "  return var ref<A> v0 = A::(v0);"
-		                               "};"
-		                               "foo();"));
 	}
 
 

@@ -428,7 +428,6 @@ namespace transform {
 		if(!inlineDerivedBuiltIns && core::lang::isDerived(fun)) { return call; }
 
 		// --- ok, some inline has to be done --
-
 		IRBuilder builder(manager);
 
 		// create substitution
@@ -445,7 +444,7 @@ namespace transform {
 			VariablePtr localVar = builder.variable(args[i]->getType());
 
 			// copy value of parameter into a local variable
-			stmts.push_back(builder.declarationStmt(localVar, args[i]->getInitialization()));
+			stmts.push_back(builder.declarationStmt(args[i], localVar));
 
 			// add to replacement map
 			varMap[params[i]] = localVar;
@@ -466,9 +465,9 @@ namespace transform {
 			if (auto var = cur.isa<VariablePtr>()) {
 				if (::contains(params, var)) {
 					// if it is a parameter read ..
-					if(analysis::isCallOf(cur.getParentAddress(), deref)) {
+					if(analysis::isCallOf(cur.getParentAddress(2), deref)) {
 						// .. replace it
-						derefReplacements[cur.getParentNode()] = varMap[var];
+						derefReplacements[cur.getParentNode(2)] = varMap[var];
 					} else {
 						// invalid parameter access => no inlining possible
 						allParamsDerefed = false;

@@ -191,13 +191,13 @@ namespace analysis {
 
 		// in the case, where the operation is already the root
 		// there is no need for parentheses
-		if(cur.isRoot()) {
+		if(cur.getDepth()<=2) {
 			return false;
 		}
 
 		// In every other case we need to check the parent,
 		// to determine whether we need parentheses or not.
-		if(auto enclosingOp = getEnclosingOperatorCall(cur.getParentAddress())) {
+		if(auto enclosingOp = getEnclosingOperatorCall(cur.getParentAddress(2))) {
 
 			// look up precedences
 			auto curOp = pm.find(cur->getFunctionExpr());
@@ -220,7 +220,7 @@ namespace analysis {
 				// put parentheses if cur is the second argument of the parent
 				auto parentAddress = cur.getParentAddress(2);
 				auto parentCall = parentAddress.isa<CallExprPtr>();
-				if(parentCall) {
+				if(parentCall && parentCall->getArgumentDeclarations().size() > 1) {
 					if(cur.as<CallExprPtr>() == parentCall->getArgument(1)) {
 						return true;
 					}

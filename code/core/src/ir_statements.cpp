@@ -75,5 +75,14 @@ namespace core {
 		return manager.get(DeclarationStmt(Declaration::get(manager, variable->getType(), initExpression), variable));
 	}
 
+	DeclarationStmtPtr DeclarationStmt::get(NodeManager& manager, const DeclarationPtr& declaration, const VariablePtr& variable) {
+		return manager.get(DeclarationStmt(declaration, variable));
+	}
+
+	ForStmtPtr ForStmt::get(NodeManager& manager, const VariablePtr& iterator, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step,
+	                        const CompoundStmtPtr& body) {
+		return get(manager, DeclarationStmt::get(manager, iterator, start), end, step, body);
+	}
+
 } // end namespace core
 } // end namespace insieme
