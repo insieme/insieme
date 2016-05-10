@@ -243,12 +243,12 @@ namespace pattern {
 			return compoundStmt(single(stmt));
 		}
 
-		inline TreePattern declaration(const TreePattern& variable = any, const TreePattern& initExpr = any) {
-			return node(core::NT_Declaration, single(variable) << single(initExpr));
+		inline TreePattern declaration(const TreePattern& type = any, const TreePattern& initExpr = any) {
+			return node(core::NT_Declaration, single(type) << single(initExpr));
 		}
 
 		inline TreePattern declarationStmt(const TreePattern& variable = any, const TreePattern& initExpr = any) {
-			return node(core::NT_DeclarationStmt, single(declaration(variable, initExpr)));
+			return node(core::NT_DeclarationStmt, single(declaration(any, initExpr)) << single(variable));
 		}
 
 		inline TreePattern ifStmt(const TreePattern& condition, const TreePattern& thenBody, const TreePattern& elseBody) {
@@ -258,12 +258,12 @@ namespace pattern {
 
 		inline TreePattern forStmt(const TreePattern& iterator, const TreePattern& start, const TreePattern& end, const TreePattern& step,
 		                           const ListPattern& body) {
-			return node(core::NT_ForStmt, single(declaration(iterator, start)) << single(end) << single(step) << compoundStmt(body));
+			return node(core::NT_ForStmt, single(declarationStmt(iterator, start)) << single(end) << single(step) << compoundStmt(body));
 		}
 
 		inline TreePattern forStmt(const TreePattern& iterator, const TreePattern& start, const TreePattern& end, const TreePattern& step,
 		                           const TreePattern& body) {
-			return node(core::NT_ForStmt, single(declaration(iterator, start)) << single(end) << single(step) << wrapBody(body));
+			return node(core::NT_ForStmt, single(declarationStmt(iterator, start)) << single(end) << single(step) << wrapBody(body));
 		}
 
 		inline TreePattern forStmt(const TreePattern& body) {

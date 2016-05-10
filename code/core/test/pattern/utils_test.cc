@@ -166,7 +166,7 @@ namespace pattern {
 			matches++;
 			return m.getRoot();
 		}, true);
-		EXPECT_EQ(301, matches);
+		EXPECT_EQ(401, matches);
 	}
 }
 }

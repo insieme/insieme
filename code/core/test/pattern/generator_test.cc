@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -87,8 +87,8 @@ namespace pattern {
 
 		auto match = pattern.matchPointer(stmt);
 
-		TreeGenerator generator = irg::forStmt(g::var("j"), g::var("s2"), g::var("e2"), g::atom(one),
-		                                       irg::forStmt(g::var("i"), g::var("s1"), g::var("e1"), g::atom(one), g::listVar("b")));
+		TreeGenerator generator = irg::forStmt(irg::int4(), g::var("j"), g::var("s2"), g::var("e2"), g::atom(one),
+		                                       irg::forStmt(irg::int4(), g::var("i"), g::var("s1"), g::var("e1"), g::atom(one), g::listVar("b")));
 
 		NodePtr res = generator.generate(*match);
 

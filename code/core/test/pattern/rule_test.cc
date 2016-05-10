@@ -178,12 +178,16 @@ TEST(Rule, MultiplyAndAdd) {
 	auto mad = builder.parseExpr("lit(\"mad\" : (int<'a>,int<'a>,int<'a>) -> int<'a>)");
 
 	Variable t = "t";
+	Variable argt = "argt";
 	Variable a = "a";
 	Variable b = "b";
 	Variable c = "c";
 
-	auto p = irp::callExpr(t, add, irp::callExpr(mul, a << b) << c);
-	auto g = irg::callExpr(t, mad, a << b << c);
+	auto argp = [&](const p::TreePattern& arg) { return irp::declaration(argt,arg); };
+	auto argg = [&](const p::TreeGenerator& arg) { return irg::declaration(argt,arg); };
+
+	auto p = irp::callExpr(t, add, argp(irp::callExpr(mul, argp(a) << argp(b))) << argp(c));
+	auto g = irg::callExpr(t, mad, argg(a) << argg(b) << argg(c));
 
 	auto c1 = builder.parseExpr("(1*2)+3");
 	ASSERT_TRUE(p.matchPointer(c1));
@@ -245,7 +249,9 @@ TEST(Rule, VarDeref) {
 
 	Variable x;
 
-	auto r = Rule(irp::callExpr(ext.getRefDeref(), irp::callExpr((irp::atom(ext.getRefTempInit()) | irp::atom(ext.getRefNewInit())), x)), x);
+	auto argp = [&](const p::TreePattern& arg) { return irp::declaration(p::any,arg); };
+
+	auto r = Rule(irp::callExpr(ext.getRefDeref(), argp(irp::callExpr((irp::atom(ext.getRefTempInit()) | irp::atom(ext.getRefNewInit())), argp(x)))), x);
 
 	auto a = builder.intLit(1);
 	auto b = builder.deref(builder.refTemp(a));

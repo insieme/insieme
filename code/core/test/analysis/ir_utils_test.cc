@@ -662,8 +662,8 @@ namespace analysis {
 		};
 
 		EXPECT_TRUE(isSideEffectFree(builder.parseStmt(R"(var ref<int<4>> v = 1;)").as<DeclarationStmtPtr>()->getDeclaration()));
-		EXPECT_TRUE(isSideEffectFree(builder.parseStmt(R"(var ref<S> s = <ref<S>>(s){1,2};)", symbols).as<DeclarationStmtPtr>()->getDeclaration()));
-		EXPECT_TRUE(notSideEffectFree(builder.parseStmt(R"(var ref<S> s = <ref<S>>(s){fun(v),2};)", symbols).as<DeclarationStmtPtr>()->getDeclaration()));
+		EXPECT_TRUE(isSideEffectFree(builder.parseStmt(R"(var ref<S> s = <ref<S>>(ref_decl(type_lit(ref<s>))){1,2};)", symbols).as<DeclarationStmtPtr>()->getDeclaration()));
+		EXPECT_TRUE(notSideEffectFree(builder.parseStmt(R"(var ref<S> s = <ref<S>>(ref_decl(type_lit(ref<s>))){fun(v),2};)", symbols).as<DeclarationStmtPtr>()->getDeclaration()));
 	}
 
 	TEST(IsParallel, Negative) {
@@ -721,7 +721,7 @@ namespace analysis {
 			}
 		)1N5P1RE");
 
-		EXPECT_EQ(8, countInstances(prog, builder.parseType("int<4>")));
+		EXPECT_EQ(12, countInstances(prog, builder.parseType("int<4>")));
 		EXPECT_EQ(2, countInstances(prog, builder.intLit(1)));
 	}
 
