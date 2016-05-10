@@ -28,10 +28,10 @@ findDeclr start tree = findDeclr start
           Just $ goDown 0 $ addr
 
         -- Checking Lambda
-        | Just (Node IR.Lambda [_, Node IR.Parameters ps, _]) <- resolve (goUp addr) tree
+        | Just (Node IR.Lambda [_, Node IR.Parameters ps, _]) <- resolve addr tree
         = trace ("checking lambda: " ++ show addr) $
           case findIndex (==org) ps of
-              Just i  -> Just $ goDown i $ goDown 1 $ goUp $ addr
+              Just i  -> Just $ goDown i $ goDown 1 $ addr
               Nothing -> findDeclr $ goUp $ addr
 
         -- Checking For Statement
