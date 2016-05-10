@@ -92,8 +92,9 @@ namespace analysis {
 		//std::cout << "Parameter: " << param << "\n";
 		//std::cout << "Variable:  " << var << "\n";
 
-		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
-
+		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		ASSERT_TRUE(find);
+		ASSERT_EQ(param, find);
 	}
 
 	TEST_P(CBA_Interface, DefinitionPointFail) {
@@ -117,7 +118,7 @@ namespace analysis {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(
-			"{ for(int<4> x = 0 .. 4) { $x$; } }"
+			"{ for (int<4> x = 0 .. 4) { $x$; } }"
 		);
 
 		ASSERT_EQ(1, addresses.size());
@@ -125,7 +126,27 @@ namespace analysis {
 		auto var = addresses[0].as<VariableAddress>();
 		auto param = var.getRootAddress().as<CompoundStmtAddress>()[0].as<ForStmtAddress>()->getDeclaration()->getVariable();
 
-		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
+		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		ASSERT_TRUE(find);
+		ASSERT_EQ(param, find);
+	}
+
+	TEST_P(CBA_Interface, DefinitionPointDoubleFor) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(
+			"{ for (int<4> x = 0 .. 4) { for(int<4> y = 0 .. 4) { $x$; } } }"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<VariableAddress>();
+		auto param = var.getRootAddress().as<CompoundStmtAddress>()[0].as<ForStmtAddress>()->getDeclaration()->getVariable();
+
+		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		ASSERT_TRUE(find);
+		ASSERT_EQ(param, find);
 	}
 
 	TEST_P(CBA_Interface, DefinitionPointLambda) {
@@ -144,7 +165,9 @@ namespace analysis {
 		auto var = addresses[0].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
 		auto param = var.getParentAddress(3).as<LambdaAddress>()->getParameterList()[1];
 
-		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
+		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		ASSERT_TRUE(find);
+		ASSERT_EQ(param, find);
 	}
 
 	/**
