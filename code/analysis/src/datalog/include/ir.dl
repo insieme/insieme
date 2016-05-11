@@ -239,3 +239,6 @@
 .decl TagTypeBinding             ( id:node , tag:tag_type_ref, record:record )                                input
 .decl TagTypeDefinition          ( id:node )                                                                  input
 .decl Types                      ( id:node )                                                                  input
+
+// associating names to known constructs (built-ins)
+.decl NamedConstruct( name : string , uid : unique_node_id )                                                  input

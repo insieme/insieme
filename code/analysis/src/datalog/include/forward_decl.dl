@@ -1,0 +1,11 @@
+#pragma once
+
+#include "ir.dl"
+
+// the analysis assigning IR nodes boolean values
+#include "boolean.dl"
+.decl boolean_value( n : node , v : bool )
+
+// the analysis assigning IR nodes a callable value
+.type callable = lambda | call_expr 
+.decl callable_value( n : node , v : callable )

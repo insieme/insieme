@@ -1,0 +1,68 @@
+#pragma once
+
+#include "ir.dl"
+#include "parent.dl"
+#include "equality.dl"
+
+// ------ Definition Point ---------
+
+
+// all defined variables
+.decl VariableDefinition ( var : variable ) 
+
+// links from all defined variables to all their uses
+.decl DefinitionPoint ( definition : variable, var : variable ) 
+
+// a list of free variables
+.decl FreeVariable ( var : variable )
+
+// ---------------------------------
+
+
+// -- define definition points --
+
+// parameters are variable definitions
+VariableDefinition(V) :- Parameters(P), ParentOf(P,V).
+
+// variables in declrations are definitions
+VariableDefinition(V) :- DeclarationStmt(_,V,_).
+
+// variables in catch clauses
+VariableDefinition(V) :- CatchClause(_,V,_).
+
+// variables in return statements
+VariableDefinition(V) :- ReturnStmt(_,_,V).
+
+
+// -- define an auxilary relation tracing the path from a variable to its definition point --
+
+.decl DefinitionPointTrace( n : node, v : variable , position : number )
+
+DefinitionPointTrace(V,V,-1) :- Variable(V,_,_), !VariableDefinition(V).
+
+DefinitionPointTrace(P,V,-1) :- DefinitionPointTrace(N,V,-1), ParentOf(P,N), !CompoundStmt(P), !Lambda(P,_,_,_).
+
+DefinitionPointTrace(C,V,N) :- DefinitionPointTrace(F,V,-1), ParentOf(C,F), CompoundStmt(C), NodeList(C,N,F).
+
+DefinitionPointTrace(C,V,N-1) :- DefinitionPointTrace(C,V,N), N >= 0, NodeList(C,N,P), !DeclarationStmt(P,X,_), EqualNodes(X,V).
+
+// FIXME: Rule for !ForLoop missing
+
+
+
+// -- link variables to their definition points --
+
+// link definition points to themselfs
+DefinitionPoint(V,V) :- VariableDefinition(V).
+
+// link all other variables to their definition points using the definition point trace
+// - ending in a declaration statement
+DefinitionPoint(X,V) :- DefinitionPointTrace(C,V,N), NodeList(C,N,D), DeclarationStmt(D,X,_), EqualNodes(X,V). 
+
+// - ending in a lambda parameter
+DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ParentOf(L,F), Lambda(L,_,P,_), NodeList(P,_,X), EqualNodes(X,V).
+
+
+// -- define free variables ---
+
+FreeVariable(V) :- Variable(V,_,_), !DefinitionPoint(_,V).

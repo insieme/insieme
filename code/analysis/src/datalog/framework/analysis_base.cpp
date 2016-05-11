@@ -42,6 +42,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/lang/lang.h"
 #include "insieme/utils/logging.h"
 
 namespace insieme {
@@ -89,6 +90,13 @@ namespace framework {
 				if (pos != uniqueIndex.end()) return pos->second;
 				int newIndex = uniqueIndex.size();
 				uniqueIndex[entry] = newIndex;
+
+				// also add element to named constructs list
+				if (entry.isa<core::ExpressionPtr>() && core::lang::isBuiltIn(entry)) {
+					insert("NamedConstruct", core::lang::getConstructName(entry), newIndex);
+				}
+
+				// done
 				return newIndex;
 			}
 

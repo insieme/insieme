@@ -45,40 +45,121 @@ namespace datalog {
 
 	using namespace core;
 
-	TEST(BooleanValue, Constants) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
+	using SymbolTable = std::map<std::string,core::NodePtr>;
 
-		EXPECT_TRUE(isTrue(ExpressionAddress(builder.parseExpr("true"))));
-		EXPECT_TRUE(isFalse(ExpressionAddress(builder.parseExpr("false"))));
+	IRBuilder& getBuilder() {
+		static NodeManager mgr;
+		static IRBuilder builder(mgr);
+		return builder;
+	}
 
-		EXPECT_TRUE(mayBeTrue(ExpressionAddress(builder.parseExpr("true"))));
-		EXPECT_TRUE(mayBeFalse(ExpressionAddress(builder.parseExpr("false"))));
+	bool isTrue(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
+		return isTrue(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
+	}
 
-		EXPECT_FALSE(isTrue(ExpressionAddress(builder.parseExpr("false"))));
-		EXPECT_FALSE(isFalse(ExpressionAddress(builder.parseExpr("true"))));
+	bool isFalse(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
+		return isFalse(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
+	}
 
-		EXPECT_FALSE(mayBeTrue(ExpressionAddress(builder.parseExpr("false"))));
-		EXPECT_FALSE(mayBeFalse(ExpressionAddress(builder.parseExpr("true"))));
+	bool mayBeTrue(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
+		return mayBeTrue(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
+	}
+
+	bool mayBeFalse(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
+		return mayBeFalse(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
 	}
 
 
-	TEST(BooleanValue, SimpleExpressions) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
+	TEST(BooleanValue, Constants) {
 
-		#define do_test(EXPECTED, FUNC, EXPR) EXPECT_##EXPECTED(FUNC(ExpressionAddress(builder.parseExpr(EXPR))));
+		EXPECT_TRUE(isTrue("true"));
+		EXPECT_TRUE(isFalse("false"));
+		EXPECT_TRUE(isTrue("true"));
+		EXPECT_TRUE(isFalse("false"));
 
-		do_test(TRUE, isTrue, "true");
+		EXPECT_TRUE(mayBeTrue("true"));
+		EXPECT_TRUE(mayBeFalse("false"));
+
+		EXPECT_FALSE(isTrue("false"));
+		EXPECT_FALSE(isFalse("true"));
+
+		EXPECT_FALSE(mayBeTrue("false"));
+		EXPECT_FALSE(mayBeFalse("true"));
+	}
+
+
+	TEST(BooleanValue, StringConstants) {
 
 		// check string constants (should be neither true nor false)
-		EXPECT_FALSE(isTrue(ExpressionAddress(builder.parseExpr("\"x\""))));
-		EXPECT_FALSE(isFalse(ExpressionAddress(builder.parseExpr("\"x\""))));
-		EXPECT_TRUE(mayBeTrue(ExpressionAddress(builder.parseExpr("\"x\""))));
-		EXPECT_TRUE(mayBeFalse(ExpressionAddress(builder.parseExpr("\"x\""))));
+		EXPECT_FALSE(isTrue("\"x\""));
+		EXPECT_FALSE(isFalse("\"x\""));
+		EXPECT_TRUE(mayBeTrue("\"x\""));
+		EXPECT_TRUE(mayBeFalse("\"x\""));
 
-		#undef do_test
 	}
+
+	TEST(BooleanValue, FreeVariables) {
+
+		IRBuilder& builder = getBuilder();
+		SymbolTable symbols;
+		symbols["x"] = builder.variable(builder.parseType("bool"));
+
+		// check that the free variable "x" is neither definitely true nor false
+		EXPECT_FALSE(isTrue("x",symbols));
+		EXPECT_FALSE(isFalse("x",symbols));
+		EXPECT_TRUE(mayBeTrue("x",symbols));
+		EXPECT_TRUE(mayBeFalse("x",symbols));
+
+	}
+
+	TEST(BooleanValue, ReturnValue) {
+
+		// test whether the return value of a function is deduced properly
+		EXPECT_TRUE( isTrue("()->bool { return true; }()"));
+		EXPECT_TRUE(isFalse("()->bool { return false; }()"));
+
+	}
+
+	TEST(BooleanValue, LocalVariable) {
+
+		// test whether the return value of a function is deduced properly
+		EXPECT_TRUE( isTrue("()->bool { var bool x = true; return x; }()"));
+		EXPECT_TRUE(isFalse("()->bool { var bool x = false; return x; }()"));
+
+	}
+
+	TEST(BooleanValue, ParameterPassing) {
+
+		// test whether the return value of a function is deduced properly
+		EXPECT_TRUE( isTrue("(x : 'a)->'a { return x; }(true)"));
+		EXPECT_TRUE(isFalse("(x : 'a)->'a { return x; }(false)"));
+
+		// check order of arguments
+		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { return a; }(true,false)"));
+		EXPECT_TRUE(isFalse("( a:'a, b:'a )->'a { return b; }(true,false)"));
+
+	}
+
+	TEST(BooleanValue, ControlFlow) {
+
+		// test whether control flow restrictions are considered
+		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(true,true)"));
+		EXPECT_TRUE(isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(true,false)"));
+		EXPECT_TRUE(isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(false,true)"));
+		EXPECT_TRUE(isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(false,false)"));
+
+		// test whether control flow restrictions are considered
+		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(true,true)"));
+		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(true,false)"));
+		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(false,true)"));
+		EXPECT_TRUE(isFalse("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(false,false)"));
+
+
+//		EXPECT_TRUE( isTrue("true && true"));
+//		EXPECT_TRUE(isFalse("true && false"));
+
+	}
+
 
 } // end namespace datalog
 } // end namespace analysis
