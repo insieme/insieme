@@ -1,7 +1,7 @@
 # setup environment variables
 . ./environment.setup
 
-VERSION=3.1.8
+VERSION=3.2.5
 CFLAGS="-mtune=native -O3"
 CXXFLAGS=$CFLAGS
 LDFLAGS="-mtune=native -O3"
