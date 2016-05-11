@@ -93,7 +93,7 @@ macro ( add_unit_test case_name ut_prefix )
 		#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
 		
 	# parallelize integration test if required
-	function(add_test_conditionally_parallel case_name cmd insieme_root_dir current_binary_dir)
+	function(add_test_conditionally_parallel case_name_internal cmd insieme_root_dir current_binary_dir)
 		include(ProcessorCount)
 		# use half the NB_PROCESSORS count to parallelize test
 		ProcessorCount(NB_PROCESSORS)
@@ -103,8 +103,8 @@ macro ( add_unit_test case_name ut_prefix )
 		endif(NOT NB_PROCESSORS)
 		math(EXPR NB_PROCESSOR_PART "${NB_PROCESSORS} / 2")
 
-		if(${case_name} MATCHES ".*driver_integration.*" OR ${case_name} MATCHES ".*snippets.*")
-			add_test(NAME ${case_name} 
+		if(${case_name_internal} MATCHES ".*driver_integration.*" OR ${case_name_internal} MATCHES ".*snippets.*")
+			add_test(NAME ${case_name_internal} 
 			COMMAND ${insieme_root_dir}/code/gtest-parallel.rb 
 				-w ${NB_PROCESSOR_PART}
 				"${cmd}"
@@ -112,7 +112,7 @@ macro ( add_unit_test case_name ut_prefix )
 				${current_binary_dir}
 			)
 		else()
-			add_test(${case_name} ${case_name})
+			add_test(${case_name_internal} ${case_name_internal})
 		endif()
 	
 	endfunction()
