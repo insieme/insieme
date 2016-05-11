@@ -35,6 +35,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <boost/filesystem.hpp>
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_address.h"
@@ -89,6 +90,25 @@ namespace opencl {
 			BaseAnnotation::AnnotationList annos;
 			annos.push_back(std::make_shared<VariableRequirement>(var, accessMode, ranges));
 			addAnnotations(node, annos);
+		}
+
+		bool isOclHeaderAvail() {
+			auto compiler = utils::compiler::Compiler::getOpenCLCompiler();
+			compiler.addFlag("-E");
+			compiler.setSilent();
+
+			auto path = boost::filesystem::unique_path(
+				boost::filesystem::temp_directory_path() / "insieme-ocl-%%%%%%%%.h").string();
+
+			// write header to file
+			std::fstream file(path, std::fstream::out);
+			file << "#include <CL/cl.h>";
+			file.close();
+
+			auto result = system(compiler.getCommand({path}, "a.out").c_str());
+			// remove the temporary file as it is not needed anymore
+			boost::filesystem::remove(path);
+			return result == 0;
 		}
 	}
 
@@ -349,6 +369,11 @@ namespace opencl {
 		// check if the backend generated a kernel with 2D access
 		EXPECT_NE(targetCode.find("get_global_id(1u)"), std::string::npos)
 			<< "failed to generate kernel: " << targetCode;
+		// check if we can compile the code, otherwise skip the execution
+		if (!isOclHeaderAvail()) {
+			std::cerr << "skipping OpenCL MatrixMultiplication Runtime Test as CL.h is not avail!" << std::endl;
+			return;
+		}
 		auto compiler = utils::compiler::Compiler::getOpenCLCompiler();
 		// compile the code to binary
 		auto targetPath = utils::compiler::compileToBinary(targetCode, compiler);
