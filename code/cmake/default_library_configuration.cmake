@@ -37,12 +37,15 @@ set(BISON_VERSION 3.0.0)
 #FLEX - used in core
 set(FLEX_VERSION 2.5.35)
 
+#VALGRIND - used for memchecks
+set(VALGRIND_VERSION 3.10.0)
+
 #TODO: currently this happens everytime we include this cmake some where...
 #if the user provides a env{lib_version} for one of the libraries
 # we overwrite the default
 list(APPEND LIB_VERSIONS LLVM_VERSION PAPI_VERSION
 	CUDD_VERSION LUAJIT_VERSION
-	GTEST_VERSION BOOST_VERSION BISON_VERSION FLEX_VERSION HWLOC_VERSION)
+	GTEST_VERSION BOOST_VERSION BISON_VERSION FLEX_VERSION HWLOC_VERSION VALGRIND_VERSION)
 
 foreach(libversion ${LIB_VERSIONS})
 	#get ${lib_NAME}_VERSION from library_default_version_file

@@ -38,7 +38,7 @@ macro ( add_unit_test case_name ut_prefix )
 	add_dependencies(${ut_prefix} ${case_name})
 
 	#rely on CMAKE_MODULE_PATH being set correctly
-    include(insieme_find_package)
+	include(insieme_find_package)
 
 	# lookup pthread library
 	find_package(Threads REQUIRED)
@@ -117,7 +117,6 @@ macro ( add_unit_test case_name ut_prefix )
 		endif()
 	endif()
 
-	set(valgrind_exe "valgrind") 
 	set(valgrind_options --leak-check=full --show-reachable=no --track-fds=yes --error-exitcode=1 --track-origins=no)
 		#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
 
@@ -125,16 +124,22 @@ macro ( add_unit_test case_name ut_prefix )
 	if(CONDUCT_MEMORY_CHECKS AND USE_VALGRIND)
 		# no valgrind support in MSVC 
 		if(NOT MSVC)
+			# lookup valgrind
+			insieme_find_package(NAME Valgrind)
+
 			# add valgrind as a test
-			add_test_conditionally_parallel(valgrind_${case_name} ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR} ${valgrind_exe} ${valgrind_options} "${CMAKE_CURRENT_BINARY_DIR}/${case_name}")
+			add_test_conditionally_parallel(valgrind_${case_name} ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR} ${VALGRIND_EXECUTABLE} ${valgrind_options} "${CMAKE_CURRENT_BINARY_DIR}/${case_name}")
 		endif(NOT MSVC)
 	else()
 		# add normal test
 		add_test_conditionally_parallel(${case_name} ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/${case_name}")
 		# + valgrind as a custom target (only if not explicitly prohibited)
 		if(NOT MSVC)
+			# lookup valgrind
+			insieme_find_package(NAME Valgrind)
+
 			add_custom_target(valgrind_${case_name}
-				COMMAND ${valgrind_exe}	${valgrind_options} ${CMAKE_CURRENT_BINARY_DIR}/${case_name}
+				COMMAND ${VALGRIND_EXECUTABLE} ${valgrind_options} ${CMAKE_CURRENT_BINARY_DIR}/${case_name}
 			WORKING_DIRECTORY
 				${CMAKE_CURRENT_BINARY_DIR}
 			)

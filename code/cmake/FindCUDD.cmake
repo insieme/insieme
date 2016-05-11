@@ -8,7 +8,7 @@
 # to be set before calling find_package:
 #
 # CUDD_ROOT Set this variable to the root installation of
-# libpapi if the module has problems finding the
+# libcudd if the module has problems finding the
 # proper installation path.
 #
 # Variables defined by this module:
