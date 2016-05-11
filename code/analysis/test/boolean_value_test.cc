@@ -161,8 +161,7 @@ namespace datalog {
 
 	TEST(BooleanValue, HigherOrderFunction) {
 
-		// TODO: fix this
-//		EXPECT_TRUE( isTrue("( a: ('a)-> 'a, b:'a )->'a { return a(b); }(id,true)"));
+		EXPECT_TRUE( isTrue("( a: ('a)-> 'a, b:'a )->'a { return a(b); }(id,true)"));
 
 	}
 

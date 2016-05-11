@@ -17,7 +17,7 @@
 	.decl unknown_value( v : ValueType )
 
 	// -- the value to be computed by this analysis --
-	.decl value ( n : node , v : ValueType )
+	.decl value ( n : node , v : ValueType ) output
 
 	
 	// ------------------------------
