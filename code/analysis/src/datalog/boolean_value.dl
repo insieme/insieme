@@ -1,9 +1,5 @@
 #include "boolean.dl"
-#include "ir.dl"
-#include "reachable.dl"
-#include "variable_definition_point.dl"
-#include "return_value.dl"
-#include "callable.dl"
+#include "data_flow_analysis.dl"
 
 // input parameters
 .decl target_expr( n : node ) input
@@ -16,13 +12,18 @@ result( v ) :- target_expr(n), boolean_value(n,v).
 
 
 
-
 // ---------- Analysis Specification -----------
 
+
+// create a data flow analysis instance for boolean values
+.init boolean = DataFlowAnalysis<bool>
+
+// define an alias
+boolean_value(n,v) :- boolean.value(n,v).
+
 // the value to be exhibited by any unknown value
-.decl unknown_boolean_value ( v : bool )
-unknown_boolean_value ( true ).
-unknown_boolean_value ( false ).
+boolean.unknown_value( true ).
+boolean.unknown_value( false ).
 
 
 // -- empty list checks --
@@ -39,46 +40,9 @@ is_boolean( n ) :- GenericType(n,"bool",a,b), is_empty(a), is_empty(b).
 // -- boolean value analysis --
 
 // -- assign values to literals --
-boolean_value( n , true ) :- Literal(n,t,"true"), is_boolean(t).
-boolean_value( n , false ) :- Literal(n,t,"false"), is_boolean(t).
+boolean.value( n , true ) :- Literal(n,t,"true"), is_boolean(t).
+boolean.value( n , false ) :- Literal(n,t,"false"), is_boolean(t).
 
 // all other literals have an unknown boolean value
-boolean_value( n, v ) :- Literal(n,t,_), !is_boolean(t), unknown_boolean_value(v).
+boolean.value( n, v ) :- Literal(n,t,_), !is_boolean(t), boolean.unknown_value(v).
 
-
-
-// -- value of variables --
-
-// definitions of variables take the value at the definition
-
-// declaration statements
-boolean_value( v, b ) :- VariableDefinition(v), DeclarationStmt(_,v,e), boolean_value(e,b).
-
-// function parameters
-boolean_value( v, b ) :-  
-		VariableDefinition(v), NodeList(p,i,v), Lambda(l,_,p,_),			// this variable is the i-th parameter of a lambda l
-		callGraph(c,l),														// l is called by call site c 
-		NodeList(c,i,a),boolean_value(a,b).  								// v get's assigned the value of the i-th argument of c
-
-// return variables
-boolean_value( v, b ) :- VariableDefinition(v), ReturnStmt(_,e,v), boolean_value(e,b). 
-
-// uses of variables correspond to the value of the definition point
-boolean_value( v, b ) :- Variable(v,_,_), DefinitionPoint(d,v), boolean_value(d,b).
-
-// free variables are undefined
-boolean_value( v, b ) :- FreeVariable(v), unknown_boolean_value(b).
-
-
-
-
-
-// -- value of call expressions --
-
-boolean_value( c, v ) :- CallExpr(c,f), callable_value(f,t), ReturnValue(t,r), ReachableIn(r), boolean_value(r,v). 
-
-// FIXME: this is a temporary rule and needs to be replaced by an actual reference-handling implementation
-boolean_value( c, v ) :- CallExpr(c,f), NodeIdentity(f,id), NamedConstruct("ref_deref",id), NodeList(c,0,a), boolean_value(a,v). 
-
-
-// TODO: continue here

@@ -159,6 +159,13 @@ namespace datalog {
 
 	}
 
+	TEST(BooleanValue, HigherOrderFunction) {
+
+		// TODO: fix this
+//		EXPECT_TRUE( isTrue("( a: ('a)-> 'a, b:'a )->'a { return a(b); }(id,true)"));
+
+	}
+
 
 } // end namespace datalog
 } // end namespace analysis

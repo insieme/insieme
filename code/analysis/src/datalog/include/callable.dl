@@ -1,6 +1,7 @@
 #pragma once
 
 #include "forward_decl.dl"
+#include "data_flow_analysis.dl"
 
 
 // some additional results
@@ -9,23 +10,26 @@
 
 // ---------- Analysis Specification -----------
 
+
+.init callable = DataFlowAnalysis<callable>
+
+// link to result set
+callable_value(n,v) :- callable.value(n,v).
+
 // the value to be exhibited by any unknown value
-.decl unknown_callable_value ( c : callable )
-unknown_callable_value ( X ) :- callable_value(_,X).
+callable.unknown_value ( X ) :- callable.value(_,X).
 
 
 // lambda expressions point to callable lambdas
-callable_value( le, l ) :- LambdaExpr( le,_,refA,def ), ParentOf(def,binding), LambdaBinding(binding,refB,l), EqualNodes(refA,refB).
+callable.value( le, l ) :- LambdaExpr( le,_,refA,def ), ParentOf(def,binding), LambdaBinding(binding,refB,l), EqualNodes(refA,refB).
 
 // binds are all callable
-callable_value( bind, bind ) :- BindExpr(bind,_,_).
+callable.value( bind, bind ) :- BindExpr(bind,_,_).
 
 // literals with a function type are callable
-callable_value( lit, lit ) :- Literal(lit,type,_), FunctionType(type,_,_,_,_).
+callable.value( lit, lit ) :- Literal(lit,type,_), FunctionType(type,_,_,_,_).
 
 // TODO: add support for recursive calls
-
-// TODO: add support for data flow
 
 
 // --------------------------------------------
