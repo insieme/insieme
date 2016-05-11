@@ -1,3 +1,4 @@
+
 # define macro for adding tests
 macro ( add_unit_test case_name ut_prefix )
 
@@ -88,62 +89,52 @@ macro ( add_unit_test case_name ut_prefix )
 		endif()
 	endif()
 
-	# add test case
-	if(CONDUCT_MEMORY_CHECKS AND USE_VALGRIND)
-		# no valgrind support in MSVC 
-		if(NOT MSVC)
-			# add valgrind as a test
-			add_test(NAME valgrind_${case_name} 
-				COMMAND valgrind
-					--leak-check=full
-					--show-reachable=no
-					--track-fds=yes
-					--error-exitcode=1
-					--track-origins=no
-					#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
-					${CMAKE_CURRENT_BINARY_DIR}/${case_name}
-				WORKING_DIRECTORY
-					${CMAKE_CURRENT_BINARY_DIR}
-			)
-		endif(NOT MSVC)
-	else()
+	set(valgrind_cmd "valgrind --leak-check=full --show-reachable=no --track-fds=yes --error-exitcode=1 --track-origins=no")
+		#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
+		
+	# parallelize integration test if required
+	function(add_test_conditionally_parallel case_name cmd insieme_root_dir current_binary_dir)
 		include(ProcessorCount)
-		# use half the NB_PROCESSORS count to parallelize tests
+		# use half the NB_PROCESSORS count to parallelize test
 		ProcessorCount(NB_PROCESSORS)
 		if(NOT NB_PROCESSORS)
 			# default = 8 if system query failed
 			set(NB_PROCESSORS 8)
 		endif(NOT NB_PROCESSORS)
 		math(EXPR NB_PROCESSOR_PART "${NB_PROCESSORS} / 2")
-		
-		# add normal test
-		# parallelize integration tests
+
 		if(${case_name} MATCHES ".*driver_integration.*" OR ${case_name} MATCHES ".*snippets.*")
 			add_test(NAME ${case_name} 
 			COMMAND ${insieme_root_dir}/code/gtest-parallel.rb 
 				-w ${NB_PROCESSOR_PART}
-				${CMAKE_CURRENT_BINARY_DIR}/${case_name}
+				"${cmd}"
 			WORKING_DIRECTORY
-				${CMAKE_CURRENT_BINARY_DIR}
+				${current_binary_dir}
 			)
 		else()
 			add_test(${case_name} ${case_name})
 		endif()
+	
+	endfunction()
 
+	# add test case
+	if(CONDUCT_MEMORY_CHECKS AND USE_VALGRIND)
+		# no valgrind support in MSVC 
+		if(NOT MSVC)
+			# add valgrind as a test
+			add_test_conditionally_parallel(valgrind_${case_name} "${valgrind_cmd} ${CMAKE_CURRENT_BINARY_DIR}/${case_name}" ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR})
+		endif(NOT MSVC)
+	else()
+		# add normal test
+		add_test_conditionally_parallel(${case_name} "${CMAKE_CURRENT_BINARY_DIR}/${case_name}" ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR})
 		# + valgrind as a custom target (only if not explicitly prohibited)
-		if ((NOT MSVC))
-			add_custom_target(valgrind_${case_name} 
-				COMMAND valgrind
-					--leak-check=full
-					--show-reachable=no
-					--track-fds=yes
-					--error-exitcode=1
-					--track-origins=no
-					#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
-					${CMAKE_CURRENT_BINARY_DIR}/${case_name}
-				WORKING_DIRECTORY
-					${CMAKE_CURRENT_BINARY_DIR}
+		if(NOT MSVC)
+			add_custom_target(valgrind_${case_name}
+				COMMAND ${valgrind-cmd}	${CMAKE_CURRENT_BINARY_DIR}/${case_name}
+			WORKING_DIRECTORY
+				${CMAKE_CURRENT_BINARY_DIR}
 			)
+
 			add_dependencies(valgrind valgrind_${case_name})
 			add_dependencies(valgrind_${case_name} ${case_name})
 
