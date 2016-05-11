@@ -632,32 +632,14 @@ namespace transform {
 		auto lambdaExpr = code.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return code;
 
-		// used to modify the body and header
-		core::NodeMap bodyReplacements;
-		core::VariableMap annoReplacements;
-
-		core::VariableList parameter;
-		for_each(lambdaExpr->getParameterList(), [&](const core::VariablePtr& cur) {
-			parameter.push_back(cur);
-			auto type = cur->getType();
-			if (!core::lang::isReference(type)) return;
-			// check the element type
-			type = opencl::analysis::getElementType(type);
-			if (!core::lang::isPointer(type) && !core::lang::isReference(type)) return;
-
-			auto param = builder.variable(core::lang::buildRefType(buildKernelType(type, KernelType::AddressSpace::Global)));
-			parameter.back() = param;
-			bodyReplacements[builder.deref(cur)] = builder.callExpr(type, oclExt.getPeel(), builder.deref(param));
-			annoReplacements[cur] = param;
-		});
-		// fast-path?
-		if (bodyReplacements.empty()) return lambdaExpr;
-		// replace all usages in the original body
-		auto newLambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(),
-			parameter, core::transform::replaceAllGen(manager, lambdaExpr->getBody(), bodyReplacements));
-		// in the end migrate the annotations and fix them up
-		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
-		return Step::process(converter, newLambdaExpr);
+		/*
+		 * note:
+		 * per default, all pointers within the kernel region are modeled as __global 'a*.
+		 * thus if one wants to restrict the scope to e.g. private or local wrap them with kernel types
+		 *
+		 * check for additional info: opencl_type_handler.cpp:handleKrnlType
+		 */
+		return Step::process(converter, lambdaExpr);
 	}
 
 	core::NodePtr CallOptimizerStep::process(const Converter& converter, const core::NodePtr& code) {

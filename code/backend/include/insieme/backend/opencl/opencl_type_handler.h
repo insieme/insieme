@@ -42,7 +42,8 @@ namespace insieme {
 namespace backend {
 namespace opencl {
 
-	extern TypeHandler OpenCLTypeHandler;
+	extern TypeHandler HostTypeHandler;
+	extern TypeHandler KrnlTypeHandler;
 
 } // end namespace opencl
 } // end namespace backend

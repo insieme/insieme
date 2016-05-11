@@ -42,18 +42,19 @@
 
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
+#include "insieme/backend/c_ast/c_ast_printer.h"
 
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/array.h"
 
 namespace insieme {
 namespace backend {
 namespace opencl {
 
-	using namespace insieme::core;
-
 	namespace {
 
-		const TypeInfo* handleType(const Converter& converter, const TypePtr& type) {
+		const TypeInfo* handleHostType(const Converter& converter, const core::TypePtr& type) {
 			auto& oclExt = converter.getNodeManager().getLangExtension<OpenCLExtension>();
 			
 			if (oclExt.isSizeType(type)) {
@@ -67,10 +68,28 @@ namespace opencl {
 			} else if(oclExt.isNDRange(type)) {
 				// use opencl definition of the work item type
 				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_opencl_ndrange", "irt_opencl.h");
-			} else if(isKernelType(type)) {
+			}
+			// it is not a special opencl type => let somebody else try
+			return 0;
+		}
+
+		bool isPointerType(const core::TypePtr& type) {
+			if (core::lang::isPointer(type)) return true;
+			if (core::lang::isFixedSizedArray(type)) return true;
+			if (core::lang::isReference(type) && core::lang::isReference(opencl::analysis::getElementType(type))) return true;
+			// nope, not of interest
+			return false;
+		}
+
+		const TypeInfo* handleKrnlType(const Converter& converter, const core::TypePtr& type) {
+			static bool inRecursion = false;
+			// regardless of implicit wrapping, it a user-supplied KernelType is present it has prio
+			if(isKernelType(type)) {
 				KernelType kernelType(type);
 				// first of all we transform the element type
+				inRecursion = true;
 				const auto& info = converter.getTypeManager().getTypeInfo(kernelType.getElementType());
+				inRecursion = false;
 				// second step is to wrap the lvalue with an attributed type
 				std::string attribute;
 				switch (kernelType.getAddressSpace()) {
@@ -91,13 +110,26 @@ namespace opencl {
 				typeInfo->declaration = info.declaration;
 				typeInfo->definition = info.definition;
 				return typeInfo;
+			} else if (!inRecursion && isPointerType(type)) {
+				// first of all we transform the element type
+				inRecursion = true;
+				const TypeInfo& info = converter.getTypeManager().getTypeInfo(type);
+				inRecursion = false;
+
+				// if there would exist a dislike button, it would press it myself
+				// on the other hand, this is a simple way to inject an implicit address space
+				// without altering the existing type_manager with the needs which are only devoted to ocl
+				const_cast<TypeInfo&>(info).lValueType = c_ast::attribute("__global", info.lValueType);
+				const_cast<TypeInfo&>(info).rValueType = c_ast::attribute("__global", info.rValueType);
+				return std::addressof(info);
 			}
 			// it is not a special opencl type => let somebody else try
 			return 0;
 		}
 	}
 
-	TypeHandler OpenCLTypeHandler = &handleType;
+	TypeHandler HostTypeHandler = &handleHostType;
+	TypeHandler KrnlTypeHandler = &handleKrnlType;
 
 } // end namespace opencl
 } // end namespace backend
