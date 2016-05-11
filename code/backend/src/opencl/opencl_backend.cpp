@@ -118,7 +118,7 @@ namespace opencl {
 		converter.setPreProcessor(preprocessor);
 
 		TypeManager& typeManager = converter.getTypeManager();
-		typeManager.addTypeHandler(OpenCLTypeHandler);
+		typeManager.addTypeHandler(HostTypeHandler);
 
 		FunctionManager& functionManager = converter.getFunctionManager();
 		addOpenCLSpecificOps(manager, functionManager.getOperatorConverterTable(), getConfiguration());
@@ -150,7 +150,7 @@ namespace opencl {
 		converter.setPostProcessor(postprocessor);
 
 		TypeManager& typeManager = converter.getTypeManager();
-		typeManager.addTypeHandler(OpenCLTypeHandler);
+		typeManager.addTypeHandler(KrnlTypeHandler);
 		
 		FunctionManager& functionManager = converter.getFunctionManager();
 		addOpenCLSpecificOps(manager, functionManager.getOperatorConverterTable(), getConfiguration());

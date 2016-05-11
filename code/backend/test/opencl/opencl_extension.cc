@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,16 +34,39 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/backend/type_manager.h"
+#include "insieme/backend/opencl/opencl_extension.h"
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/pointer.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace backend {
 namespace opencl {
 
-	extern TypeHandler HostTypeHandler;
-	extern TypeHandler KrnlTypeHandler;
+    TEST(KernelType, Basic) {
+        core::NodeManager manager;
+        core::IRBuilder builder(manager);
+
+        auto varType = builder.typeVariable("a");
+        auto locType = builder.typeVariable("loc");
+        EXPECT_FALSE(isKernelType(varType));
+
+        auto genType = buildKernelType(varType, KernelType::AddressSpace::Global);
+        EXPECT_TRUE(isKernelType(genType));
+
+        auto krnType = KernelType(genType);
+        EXPECT_EQ(krnType.getAddressSpace(), KernelType::AddressSpace::Global);
+        EXPECT_EQ(*krnType.getElementType(), *varType);
+
+        krnType = KernelType(builder.genericType("opencl_type",
+            toVector(varType.as<core::TypePtr>(), locType.as<core::TypePtr>())));
+        EXPECT_TRUE(isKernelType(krnType.toType()));
+        EXPECT_EQ(krnType.getAddressSpace(), KernelType::AddressSpace::Undefined);
+        EXPECT_EQ(*krnType.getElementType(), *varType);
+    }
 
 } // end namespace opencl
 } // end namespace backend

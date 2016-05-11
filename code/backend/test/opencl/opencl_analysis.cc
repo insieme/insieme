@@ -98,7 +98,7 @@ namespace opencl {
 		EXPECT_TRUE(analysis::isIndependentStmt(forStmt));
 	}
 
-	TEST(getDependencyGraph, Basic) {
+	TEST(DISABLED_getDependencyGraph, Basic) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 

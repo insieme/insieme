@@ -124,7 +124,6 @@ namespace opencl {
 			return c_ast::ExpressionPtr();
 		};
 		table[oclExt.getExecuteKernel()] = OP_CONVERTER {
-			auto& vaExt = call->getNodeManager().getLangExtension<core::lang::VarArgsExtension>();
 			/*
 			input:
 			opencl_execute_kernel(1u, fun018, [fun019,fun020,fun021], varlist_pack((sizeof(int<4>), callExpr));
@@ -157,7 +156,7 @@ namespace opencl {
 				init.push_back(CONVERT_EXPR(req));
 
 			auto va = call->getArgument(3);
-			assert_true(core::analysis::isCallOf(va, vaExt.getVarlistPack())) << "expected varlist_pack as argument";
+			assert_true(core::analysis::isCallOf(va, call->getNodeManager().getLangExtension<core::lang::VarArgsExtension>().getVarlistPack())) << "expected varlist_pack as argument";
 			// if core::IRBuilder was used -- which is the encouraged way of doing it -- it must be a tupleExpr
 			auto tupleExpr = core::analysis::getArgument(va, 0).isa<core::TupleExprPtr>();
 			assert_true(tupleExpr) << "expected a tupleExpr as argument of varlist_pack";
