@@ -148,7 +148,6 @@ namespace datalog {
 		EXPECT_TRUE(isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(false,true)"));
 		EXPECT_TRUE(isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(false,false)"));
 
-		// test whether control flow restrictions are considered
 		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(true,true)"));
 		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(true,false)"));
 		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(false,true)"));
