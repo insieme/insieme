@@ -2,7 +2,8 @@
 # parallelize integration test if required - requires at least an executable parameter, but also parses any additional parameters as arguments to that executable
 function(add_test_conditionally_parallel case_name_internal insieme_root_dir current_binary_dir executable)
 	# save all un-named arguments after the last named one
-	set(extra_args ${ARGN})
+	string(REPLACE ";" " " extra_args_string "${ARGN}")
+	set(extra_args_list ${ARGN})
 	include(ProcessorCount)
 	# use half the NB_PROCESSORS count to parallelize test
 	ProcessorCount(NB_PROCESSORS)
@@ -16,12 +17,12 @@ function(add_test_conditionally_parallel case_name_internal insieme_root_dir cur
 		add_test(NAME ${case_name_internal} 
 		COMMAND ${insieme_root_dir}/code/gtest-parallel.rb 
 			-w ${NB_PROCESSOR_PART}
-			${executable} ${extra_args}
+			"${executable} ${extra_args_string}"
 		WORKING_DIRECTORY
 			${current_binary_dir}
 		)
 	else()
-		add_test(NAME ${case_name_internal} COMMAND ${executable} ${extra_args})
+		add_test(NAME ${case_name_internal} COMMAND ${executable} ${extra_args_list})
 	endif()
 
 endfunction()
