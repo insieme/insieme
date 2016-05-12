@@ -53,12 +53,12 @@ void intercept_simpleFunc() {
 
 void intercept_memFunc() {
 	#pragma test expect_ir(R"(
-		var ref<IMP_ns_colon__colon_S> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(v0);
+		var ref<IMP_ns_colon__colon_S> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(ref_decl(type_lit(ref<IMP_ns_colon__colon_S,f,f,plain>)));
 	)")
 	ns::S s1;
 
 	#pragma test expect_ir(R"({
-		var ref<IMP_ns_colon__colon_S,f,f,plain> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(v0);
+		var ref<IMP_ns_colon__colon_S,f,f,plain> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(ref_decl(type_lit(ref<IMP_ns_colon__colon_S,f,f,plain>)));
 		lit("IMP_ns_colon__colon_S::IMP_memberFunc" : IMP_ns_colon__colon_S::(int<4>) -> int<4>)(v0, 1);
 	})")
 	{
@@ -72,12 +72,12 @@ void intercept_memFunc2() {
 	int magic; // do not remove
 
 	#pragma test expect_ir(R"(
-		var ref<IMP_ns_colon__colon_S> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(v0);
+		var ref<IMP_ns_colon__colon_S> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(ref_decl(type_lit(ref<IMP_ns_colon__colon_S,f,f,plain>)));
 	)")
 	S s1;
 
 	#pragma test expect_ir(R"({
-		var ref<IMP_ns_colon__colon_S,f,f,plain> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(v0);
+		var ref<IMP_ns_colon__colon_S,f,f,plain> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(ref_decl(type_lit(ref<IMP_ns_colon__colon_S,f,f,plain>)));
 		lit("IMP_ns_colon__colon_S::IMP_memberFunc" : IMP_ns_colon__colon_S::(int<4>) -> int<4>)(v0, 1);
 	})")
 	{
@@ -88,7 +88,7 @@ void intercept_memFunc2() {
 
 void intercept_fieldAccess() {
 	#pragma test expect_ir(R"({
-		var ref<IMP_ns_colon__colon_S,f,f,plain> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(v0);
+		var ref<IMP_ns_colon__colon_S,f,f,plain> v0 = lit("IMP_ns_colon__colon_S::ctor" : IMP_ns_colon__colon_S::())(ref_decl(type_lit(ref<IMP_ns_colon__colon_S,f,f,plain>)));
 		ref_member_access(v0,lit("a"),type_lit(int<4>)) = *ref_member_access(v0,lit("b"),type_lit(int<4>));
 	})")
 	{
@@ -112,8 +112,8 @@ void intercept_materialize() {
 	refFunTest();
 
 	#pragma test expect_ir(R"( {
-		var ref<IMP_RefOpTest,f,f,plain> v0 = lit("IMP_RefOpTest::ctor" : IMP_RefOpTest::())(v0);
-		var ref<IMP_RefOpTest,f,f,plain> v1 = lit("IMP_RefOpTest::ctor" : IMP_RefOpTest::())(v1);
+		var ref<IMP_RefOpTest,f,f,plain> v0 = lit("IMP_RefOpTest::ctor" : IMP_RefOpTest::())(ref_decl(type_lit(ref<IMP_RefOpTest,f,f,plain>)));
+		var ref<IMP_RefOpTest,f,f,plain> v1 = lit("IMP_RefOpTest::ctor" : IMP_RefOpTest::())(ref_decl(type_lit(ref<IMP_RefOpTest,f,f,plain>)));
 		lit("IMP_RefOpTest::IMP__operator_plus_" : IMP_RefOpTest::(ref<IMP_RefOpTest,t,f,cpp_ref>) -> ref<IMP_RefOpTest,f,f,cpp_ref>)
 			(lit("IMP_RefOpTest::IMP__operator_plus_" : IMP_RefOpTest::(ref<IMP_RefOpTest,t,f,cpp_ref>) -> ref<IMP_RefOpTest,f,f,cpp_ref>)
 				(v0, ref_kind_cast(v1, type_lit(cpp_ref))) materialize , ref_kind_cast(v1, type_lit(cpp_ref))) materialize ;
@@ -124,7 +124,7 @@ void intercept_materialize() {
 	}
 
 	#pragma test expect_ir(R"( {
-		var ref<IMP_RefMethTest,f,f,plain> v0 = lit("IMP_RefMethTest::ctor" : IMP_RefMethTest::())(v0);
+		var ref<IMP_RefMethTest,f,f,plain> v0 = lit("IMP_RefMethTest::ctor" : IMP_RefMethTest::())(ref_decl(type_lit(ref<IMP_RefMethTest,f,f,plain>)));
 		lit("IMP_RefMethTest::IMP_meth" : IMP_RefMethTest::() -> ref<IMP_RefMethTest,f,f,cpp_ref>)(v0) materialize ;
 	} )")
 	{

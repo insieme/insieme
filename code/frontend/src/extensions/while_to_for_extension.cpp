@@ -271,19 +271,22 @@ namespace extensions {
 					auto var = varA.getAddressedNode().isa<core::VariablePtr>();
 					if(var == cvar) {
 						// check if it's a write
-						auto varParent = varA.getParentNode();
+						auto varParent = varA.getParentNode(2);
 						auto convertedPair = mapToStep(varParent);
 						if(convertedPair.second && !convertedPair.first) {
 							writeStepExprs.push_back(convertedPair.second);
-							auto parentParent = varA.getParentAddress(2);
 							core::NodePtr parentNode;
 							// compound assignment operations are enclosed in an additional refDeref. We have to consider this here
-							if (refExt.isCallOfRefDeref(parentParent)) {
-								toRemoveFromBody.push_back(parentParent);
-								parentNode = parentParent.getAddressedNode();
-							} else {
+							if(varA.getDepth()>4) {
+								auto parentParent = varA.getParentAddress(4);
+								if(refExt.isCallOfRefDeref(parentParent)) {
+									toRemoveFromBody.push_back(parentParent);
+									parentNode = parentParent.getAddressedNode();
+								}
+							}
+							if(!parentNode) {
 								toRemoveFromBody.push_back(varParent);
-								parentNode = varA.getParentNode();
+								parentNode = varA.getParentNode(2);
 							}
 							// additionally check if the condition var write
 							// occurs at the end of the while body, otherwise

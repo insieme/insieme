@@ -55,11 +55,11 @@ void intercept_simpleFunc() {
 }
 
 void intercept_memFunc() {
-	#pragma test expect_ir(STRUCT_S, R"( var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(v0); )")
+	#pragma test expect_ir(STRUCT_S, R"( var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(ref_decl(type_lit(ref<IMP_ns_colon__colon_S,f,f,plain>))); )")
 	ns::S s1;
 
 	#pragma test expect_ir(STRUCT_S, R"({
-		var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(v0);
+		var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(ref_decl(type_lit(ref<IMP_ns_colon__colon_S,f,f,plain>)));
 		v0.IMP_memberFunc(1);
 	})")
 	{
@@ -72,11 +72,11 @@ void intercept_memFunc2() {
 	using namespace ns;
 	int magic; // do not remove
 
-	#pragma test expect_ir(STRUCT_S, R"( var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(v0); )")
+	#pragma test expect_ir(STRUCT_S, R"( var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(ref_decl(type_lit(ref<IMP_ns_colon__colon_S,f,f,plain>))); )")
 	S s1;
 
 	#pragma test expect_ir(STRUCT_S, R"({
-		var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(v0);
+		var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(ref_decl(type_lit(ref<IMP_ns_colon__colon_S,f,f,plain>)));
 		v0.IMP_memberFunc(1);
 	})")
 	{
@@ -87,7 +87,7 @@ void intercept_memFunc2() {
 
 void intercept_fieldAccess() {
 	#pragma test expect_ir(STRUCT_S, R"({
-		var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(v0);
+		var ref<IMP_ns_colon__colon_S> v0 = IMP_ns_colon__colon_S::(ref_decl(type_lit(ref<IMP_ns_colon__colon_S,f,f,plain>)));
 		v0.a = *v0.b;
 	})")
 	{
