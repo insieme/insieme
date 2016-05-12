@@ -97,7 +97,7 @@ namespace arithmetic {
 
 				// handle casts
 				if(lang.isNumericCast(call->getFunctionExpr())) {
-					return visit(call[0]); // ignore casts
+					return visit(transform::extractInitExprFromDecl(call[0])); // ignore casts
 				}
 
 				// handle selects
@@ -119,8 +119,8 @@ namespace arithmetic {
 				// special handling of division
 
 				// handle remaining operators as usual
-				Formula a = visit(call->getArgument(0));
-				Formula b = visit(call->getArgument(1));
+				Formula a = visit(transform::extractInitExprFromDecl(call[0]));
+				Formula b = visit(transform::extractInitExprFromDecl(call[1]));
 
 				if(lang.isSignedIntAdd(fun) || lang.isUnsignedIntAdd(fun)) { return a + b; }
 				if(lang.isSignedIntSub(fun) || lang.isUnsignedIntSub(fun)) { return a - b; }

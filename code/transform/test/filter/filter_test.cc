@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -78,7 +78,7 @@ TEST(TargetFilter, Basic) {
 
 	// try list-variable filter
 	filter = pattern(p::rT(p::var("y", irp::forStmt(p::any, p::any, p::any, p::any, p::recurse | !p::recurse))), "y");
-	EXPECT_EQ("all y within (rT.x($y:(ForStmt|(DeclarationStmt|_,_),_,_,(CompoundStmt|rec.x | !(rec.x)) | rec.x | !(rec.x))))", toString(filter));
+	EXPECT_EQ("all y within (rT.x($y:(ForStmt|(DeclarationStmt|(Declaration|_,_),_),_,_,(CompoundStmt|rec.x | !(rec.x)) | rec.x | !(rec.x))))", toString(filter));
 	EXPECT_EQ(3u, filter(node).size());
 }
 
