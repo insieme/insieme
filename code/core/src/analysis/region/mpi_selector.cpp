@@ -38,7 +38,6 @@
 
 #include <set>
 
-#include "insieme/core/annotations/source_location.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/basic.h"
@@ -57,7 +56,7 @@ namespace region {
 	namespace pt = insieme::core::pattern;
 
 	namespace {
-		
+
 		std::string getNameForFunCall(core::NodePtr funPtr) {
 			std::string retVal("");
 			if(auto exprPtr = funPtr.isa<core::CallExprPtr>()) { funPtr = exprPtr->getFunctionExpr(); }

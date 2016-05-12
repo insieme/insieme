@@ -931,7 +931,7 @@ namespace measure {
 		const std::string executable = bfs::path(binary).filename().string();
 
 		// partition the papi parameters
-		auto papiPartition = partitionPapiCounter(metrics);
+		//auto papiPartition = partitionPapiCounter(metrics);
 		/*auto papiPartition = vector<vector<MetricPtr> >(3);
 
 		namespace idm = insieme::driver::measure;
@@ -948,6 +948,9 @@ namespace measure {
 		papiPartition[2] = vector<MetricPtr>{
 			idm::Metric::TOTAL_VEC_DP, idm::Metric::TOTAL_STL_ICY, idm::Metric::TOTAL_TLB_DM, idm::Metric::TOTAL_TLB_IM,
 		};*/
+
+		vector<vector<MetricPtr>> papiPartition = {
+			{Metric::TOTAL_PAPI_TOT_INS, Metric::TOTAL_PAPI_L3_TCM, Metric::TOTAL_PAPI_L2_TCM, Metric::TOTAL_PAPI_BR_INS, Metric::TOTAL_PAPI_STL_ICY}};
 
 		// run experiments and collect results
 		vector<std::map<region_id, std::map<MetricPtr, Quantity>>> res;
@@ -986,25 +989,33 @@ namespace measure {
 
 				// run code
 				int ret = executor->run(binary, mod_env, workdir.string());
-				assert_eq(ret, 0) << "Failed to run executable for measurements - return code error!";
+				if(ret != 0) {
+					LOG(WARNING) << "Unexpected executable return code " << ret;
+				}
 
 				// load data and merge it
-				data.mergeIn(loadResults(workdir));
+				if(ret == 0) {
+					data.mergeIn(loadResults(workdir));
+				}
 
 				// delete local files
 				if(boost::filesystem::exists(workdir)) { bfs::remove_all(workdir); }
 
 			});
 
-			// extract results
-			res.push_back(std::map<region_id, std::map<MetricPtr, Quantity>>());
-			auto& curRes = res.back();
-			for_each(data.getAllRegions(), [&](const region_id& region) {
-				for_each(metrics, [&](const MetricPtr& metric) {
-					// use extractor of metric to collect values
-					curRes[region][metric] = metric->extract(data, region);
-				});
-			});
+			if(!data.empty()) {
+				// extract results
+				res.push_back(std::map<region_id, std::map<MetricPtr, Quantity>>());
+				auto& curRes = res.back();
+				for(const auto& region : data.getAllRegions()) {
+				//for_each(data.getAllRegions(), [&](const region_id& region) {
+					for(const auto& metric : metrics) {
+					//for_each(metrics, [&](const MetricPtr& metric) {
+						// use extractor of metric to collect values
+						curRes[region][metric] = metric->extract(data, region);
+					}//);
+				}//);
+			}
 		}
 
 		// return result

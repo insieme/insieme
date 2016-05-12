@@ -1419,6 +1419,7 @@ namespace insieme {
 				if(!pattern.mayBeType && isTypeOrValueOrParam(tree)) { return false; }
 
 				// use cache if possible
+				// TODO: re-enable, find a better solution of disabling/enabling pattern matcher cache
 				//if(pattern.isVariableFree) {
 				//	CachedMatchResult cachRes = context.cachedMatch(pattern, tree);
 				//	if(cachRes != Unknown) {
