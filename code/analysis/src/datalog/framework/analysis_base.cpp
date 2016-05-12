@@ -256,7 +256,7 @@ namespace framework {
 			int visitBindExpr(const Ptr<const core::BindExpr>& var) override {
 				int id = getFreshID(var);
 				int parameters = this->visit(var->getParameters());
-				int call = this->visit(var->getParameters());
+				int call = this->visit(var->getCall());
 				insert("BindExpr", id, parameters, call);
 				return id;
 			}

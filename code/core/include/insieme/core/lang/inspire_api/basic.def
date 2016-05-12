@@ -168,12 +168,12 @@ GROUP(LogicOp, BoolLAnd, BoolLOr, BoolEq, BoolNe, BoolLNot)
 
 OPERATION(Bool, Eq,   "bool_eq",   "(bool, bool) -> bool")
 OPERATION(Bool, Ne,   "bool_ne",   "(bool, bool) -> bool")
-OPERATION(Bool, LNot, "bool_not",  "(bool) -> bool")
 OPERATION(Bool, And,  "bool_band", "(bool, bool) -> bool")
 OPERATION(Bool, Or,   "bool_bor",  "(bool, bool) -> bool")
 OPERATION(Bool, Xor,  "bool_bxor", "(bool, bool) -> bool")
 OPERATION(Bool, Not,  "bool_bnot", "(bool) -> bool")
 
+DERIVED_OP(Bool, LNot, "bool_not", "(a : bool)->bool { if (a) { return false; } else { return true; }; }")
 DERIVED_OP(Bool, LAnd, "bool_and", "(a : bool, b : ()=>bool)->bool { if (a) { return b(); } return false; }")
 DERIVED_OP(Bool, LOr,  "bool_or",  "(a : bool, b : ()=>bool)->bool { if (a) { return true; } return b(); }")
 

@@ -13,6 +13,9 @@
 // for simplicity: assume the entry point of every lambda is reachable
 ReachableIn( s ) :- Lambda(_,_,_,b), NodeList(b,0,s).
 
+// also for simplicity: assume the entry point of every bind is reachable
+ReachableIn( e ) :- BindExpr(_,_,e).
+
 // if a parent expression is reachable, so is the child (unless the parent is some control flow construct)
 ReachableIn( e ) :- ReachableIn(p), ParentOf( p, e ), 
 		!CompoundStmt(p), !IfStmt(p,_,_,_), !LambdaExpr(p,_,_,_), !BindExpr(p,_,_).

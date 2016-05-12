@@ -54,7 +54,10 @@ namespace datalog {
 	}
 
 	bool isTrue(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
-		return isTrue(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
+		auto expr = getBuilder().parseExpr(code, symbols);
+//		std::cout << *expr << "\n";
+//		std::cout << dumpText(expr) << "\n";
+		return isTrue(ExpressionAddress(expr));
 	}
 
 	bool isFalse(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
@@ -140,6 +143,14 @@ namespace datalog {
 
 	}
 
+	TEST(BooleanValue, ParameterPassingToBind) {
+
+		// test whether values can be passed to bind expressions
+		EXPECT_TRUE( isTrue("( (x : 'a)=> x )(true)"));
+		EXPECT_TRUE(isFalse("( (x : 'a)=> x )(false)"));
+
+	}
+
 	TEST(BooleanValue, ControlFlow) {
 
 		// test whether control flow restrictions are considered
@@ -153,9 +164,8 @@ namespace datalog {
 		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(false,true)"));
 		EXPECT_TRUE(isFalse("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(false,false)"));
 
-
-//		EXPECT_TRUE( isTrue("true && true"));
-//		EXPECT_TRUE(isFalse("true && false"));
+		EXPECT_TRUE(isFalse("!true"));
+		EXPECT_TRUE( isTrue("!false"));
 
 	}
 
@@ -165,6 +175,39 @@ namespace datalog {
 
 	}
 
+
+	TEST(BooleanValue, BoundValues) {
+
+		// check a simple constant value in a bind
+		EXPECT_TRUE( isTrue("(()=>true)()"));
+		EXPECT_TRUE(isFalse("(()=>false)()"));
+
+		// check whether higher functions work with closures
+		EXPECT_TRUE( isTrue("(f:()=>'a)->'a{ return f(); }(()=>true)"));
+
+		// check proper operation of lazy boolean connectors (based on closures)
+		EXPECT_TRUE( isTrue("true && true"));
+		EXPECT_TRUE(isFalse("true && false"));
+		EXPECT_TRUE(isFalse("false && true"));
+		EXPECT_TRUE(isFalse("false && false"));
+
+		EXPECT_TRUE( isTrue("true || true"));
+		EXPECT_TRUE( isTrue("true || false"));
+		EXPECT_TRUE( isTrue("false || true"));
+		EXPECT_TRUE(isFalse("false || false"));
+
+
+		// check the capturing of a variable
+		EXPECT_TRUE( isTrue("(x: 'a)->'a { return (f:()=>'a)->'a{ return f(); }(()=>x); }(true)"));
+		EXPECT_TRUE(isFalse("(x: 'a)->'a { return (f:()=>'a)->'a{ return f(); }(()=>x); }(false)"));
+
+		// check the parameter of a bind expression
+		EXPECT_TRUE( isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(true)); }(true)"));
+		EXPECT_TRUE( isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(x)); }(true)"));
+		EXPECT_TRUE( isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(y)); }(true)"));
+		EXPECT_TRUE( isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(x && y)); }(true)"));
+
+	}
 
 } // end namespace datalog
 } // end namespace analysis

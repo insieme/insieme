@@ -11,7 +11,7 @@
 .decl VariableDefinition ( var : variable ) 
 
 // links from all defined variables to all their uses
-.decl DefinitionPoint ( definition : variable, var : variable ) 
+.decl DefinitionPoint ( definition : variable, var : variable )
 
 // a list of free variables
 .decl FreeVariable ( var : variable )
@@ -40,7 +40,9 @@ VariableDefinition(V) :- ReturnStmt(_,_,V).
 
 DefinitionPointTrace(V,V,-1) :- Variable(V,_,_), !VariableDefinition(V).
 
-DefinitionPointTrace(P,V,-1) :- DefinitionPointTrace(N,V,-1), ParentOf(P,N), !CompoundStmt(P), !Lambda(P,_,_,_).
+DefinitionPointTrace(P,V,-1) :- DefinitionPointTrace(N,V,-1), ParentOf(P,N), !CompoundStmt(P), !Lambda(P,_,_,_), !BindExpr(P,_,_).
+
+DefinitionPointTrace(P,V,-1) :- DefinitionPointTrace(N,V,-1), ParentOf(P,N), BindExpr(P,A,_), !NodeList(A,_,X), EqualNodes(X,V).
 
 DefinitionPointTrace(C,V,N) :- DefinitionPointTrace(F,V,-1), ParentOf(C,F), CompoundStmt(C), NodeList(C,N,F).
 
@@ -61,6 +63,9 @@ DefinitionPoint(X,V) :- DefinitionPointTrace(C,V,N), NodeList(C,N,D), Declaratio
 
 // - ending in a lambda parameter
 DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ParentOf(L,F), Lambda(L,_,P,_), NodeList(P,_,X), EqualNodes(X,V).
+
+// - ending in a bind parameter list
+DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ParentOf(B,F), BindExpr(B,P,_), NodeList(P,_,X), EqualNodes(X,V).
 
 
 // -- define free variables ---
