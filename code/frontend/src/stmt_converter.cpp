@@ -126,7 +126,7 @@ namespace conversion {
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
 				initExp = *convertedDecl.second;
-				initExp = utils::fixTempMemoryInInitExpression(convertedDecl.first, initExp);
+				initExp = utils::fixTempMemoryInInitExpression(convertedDecl.first->getType(), initExp);
 			} else {
 				// generate undefined initializer
 				initExp = convertedDecl.first;
@@ -163,9 +163,8 @@ namespace conversion {
 		// check if we have a return value
 		if(clang::Expr* expr = retStmt->getRetValue()) {
 			auto returnExpr = converter.convertCxxArgExpr(expr);
-			auto returnVar = builder.variable(converter.getVarMan()->getRetType());
-			returnExpr = utils::fixTempMemoryInInitExpression(returnVar, returnExpr);
-			irRetStmt = builder.returnStmt(returnExpr, returnVar);
+			returnExpr = utils::fixTempMemoryInInitExpression(converter.getVarMan()->getRetType(), returnExpr);
+			irRetStmt = builder.returnStmt(returnExpr, converter.getVarMan()->getRetType());
 		}
 
 		retIr.push_back(irRetStmt);

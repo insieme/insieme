@@ -247,6 +247,14 @@ namespace core {
 			std::transform(argRange.cbegin(), argRange.cend(), std::back_inserter(ret), [](const Ptr<const Declaration>& decl){ return decl->getInitialization(); });
 			return ret;
 		}
+
+		/**
+		 * Obtains the number of arguments for this call.
+		 */
+		size_t getNumArguments() const {
+			return this->size();
+		}
+
 	IR_NODE_END()
 
 	/**

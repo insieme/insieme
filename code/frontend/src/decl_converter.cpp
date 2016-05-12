@@ -347,7 +347,7 @@ namespace conversion {
 		// handle initialization if not extern
 		if(!var->hasExternalStorage()) {
 			auto init = (var->getInit()) ? converter.convertInitExpr(var->getInit()) : builder.getZero(elemType);
-			init = utils::fixTempMemoryInInitExpression(globalLit, init);
+			init = utils::fixTempMemoryInInitExpression(globalLit->getType(), init);
 			core::annotations::attachName(globalLit, name);
 			// remove extern tag, add declared tag
 			annotations::c::markExtern(globalLit, false);

@@ -628,8 +628,8 @@ namespace core {
 
 		CompoundStmtPtr wholeStat = builder.compoundStmt(statements);
 
-		EXPECT_EQ(0u, transform::outline(mgr, wholeStat)->getArgumentDeclarations().size());
-		EXPECT_EQ(3u, transform::outline(mgr, forStmt)->getArgumentDeclarations().size());
+		EXPECT_EQ(0u, transform::outline(mgr, wholeStat)->getNumArguments());
+		EXPECT_EQ(3u, transform::outline(mgr, forStmt)->getNumArguments());
 
 		EXPECT_PRED2(containsSubString, toString(*transform::outline(mgr, forStmt)), "(v1, v2, v3)");
 	}

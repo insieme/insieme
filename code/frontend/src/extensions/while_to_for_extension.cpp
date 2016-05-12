@@ -143,7 +143,7 @@ namespace extensions {
 			// operation needs to be a call and have 2 arguments
 			auto callExpr = operation.isa<core::CallExprPtr>();
 			auto callee = callExpr->getFunctionExpr();
-			if(!callExpr || callExpr->getArguments().size() != 2) return invalid;
+			if(!callExpr || callExpr->getNumArguments() != 2) return invalid;
 
 			// first check if variable is on LHS
 			// (should also work for rhs -- not yet)

@@ -665,7 +665,7 @@ namespace transform {
 			// check whether parameter is propagated
 			bool isPropagated = all(calls, [&](const CallExprPtr& call) -> bool {
 				// check whether value is propagated along the recursion
-				assert_lt(index, call->getArgumentDeclarations().size()) << "Invalid recursive call!";
+				assert_lt(index, call->getNumArguments()) << "Invalid recursive call!";
 				return call->getArgument(index) == value;
 			});
 
@@ -717,7 +717,7 @@ namespace transform {
 		// ---------------- Pre-Conditions --------------------
 
 		// check whether indexed parameter is in-deed a bind
-		assert_lt(index, call->getArgumentDeclarations().size()) << "Invalid argument index!";
+		assert_lt(index, call->getNumArguments()) << "Invalid argument index!";
 		assert_eq(call->getArgument(index)->getNodeType(), NT_BindExpr) << "Specified argument is not a bind!";
 
 		// check whether function is in-deed a lambda
@@ -1018,7 +1018,7 @@ namespace transform {
 					CallExprPtr call = res.getParentNode().as<CallExprPtr>();
 
 					// check whether a new argument needs to be added
-					if(call->getArgumentDeclarations().size() != lambda->getParameterList().size()) {
+					if(call->getNumArguments() != lambda->getParameterList().size()) {
 						// add new parameter to lambda
 						LambdaExprPtr newLambda;
 						std::tie(newLambda, value) = detail::addNewParameter(lambda, value->getType());

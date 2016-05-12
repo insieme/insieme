@@ -220,7 +220,7 @@ namespace analysis {
 				// put parentheses if cur is the second argument of the parent
 				auto parentAddress = cur.getParentAddress(2);
 				auto parentCall = parentAddress.isa<CallExprPtr>();
-				if(parentCall && parentCall->getArgumentDeclarations().size() > 1) {
+				if(parentCall && parentCall->getNumArguments() > 1) {
 					if(cur.as<CallExprPtr>() == parentCall->getArgument(1)) {
 						return true;
 					}

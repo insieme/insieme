@@ -1102,7 +1102,7 @@ namespace checks {
 			return res;
 		}
 
-		if(address->getArgumentDeclarations().size() != 3) {
+		if(address->getNumArguments() != 3) {
 			// incorrect function usage => let function check provide errors
 			return res;
 		}
@@ -1277,7 +1277,7 @@ namespace checks {
 			return res;
 		}
 
-		if(address->getArgumentDeclarations().size() != 3) {
+		if(address->getNumArguments() != 3) {
 			// incorrect function usage => let function check provide errors
 			return res;
 		}
