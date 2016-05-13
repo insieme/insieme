@@ -1,8 +1,7 @@
 #pragma once
 
-#include "ir.dl"
-#include "parent.dl"
-#include "callable.dl"
+#include "entry_and_exit_points.dl"
+
 
 // TODO: remove once the typing of the ir.dl is fixed
 .type return_stmt = node
@@ -12,20 +11,8 @@
 .decl ReturnValue( c : callable , e : expr )
 
 
-
 // --- Definiton ---
 
-// - an auxiliary relation to link returns to enclosing lamba
-.decl ReturnOfLambda( l : lambda, r : return_stmt )
-
-.decl ReturnParent( r : return_stmt, p : node )
-ReturnParent( r, r ) :- ReturnStmt(r,_,_).
-ReturnParent( r, p ) :- ReturnParent(r,s), ParentOf(p,s), !Lambda(s,_,_,_).
-
-ReturnOfLambda(l,r) :- Lambda(l,_,_,_), ReturnParent(r,l).
-
-
-// -- fix ReturnvValue relation --
 
 // for lambdas, those are the corresponding return statements
 ReturnValue( l, v ) :- ReturnOfLambda(l,r), ReturnStmt(r,_,v).

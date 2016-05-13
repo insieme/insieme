@@ -599,6 +599,30 @@ namespace datalog {
 		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("spawn 14")));
 	}
 
+	TEST(CodeProperties, HappensBefore_1) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(
+				"{"
+				"	$1$;"
+				"	$2$;"
+				"}"
+		);
+
+		ASSERT_EQ(2,addresses.size());
+		auto a = addresses[0].as<StatementAddress>();
+		auto b = addresses[1].as<StatementAddress>();
+
+		// simple cases
+		EXPECT_FALSE(happensBefore(a,a));
+		EXPECT_FALSE(happensBefore(b,b));
+
+		// just a bit more complicated
+		EXPECT_TRUE(happensBefore(a,b));
+		EXPECT_FALSE(happensBefore(b,a));
+	}
+
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme

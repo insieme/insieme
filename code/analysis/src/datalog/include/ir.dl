@@ -137,7 +137,7 @@
 // List Node
 
 .decl NodeList ( list:node , idx:child_index , element:node )                                                 input
-
+.decl NodeListLength( list:node, length : number )                                                            input
 
 
 // Unique Node Identity Relation

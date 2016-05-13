@@ -6,6 +6,10 @@
 #include "boolean.dl"
 .decl boolean_value( n : node , v : bool )
 
+// the analysis assigning each expression reference values
+.type memory_location = stmt 		// the creation point
+.decl reference_value( n : node, r : memory_location )
+
 // the analysis assigning IR nodes a callable value
 .type callable = lambda | call_expr 
 .decl callable_value( n : node , v : callable )

@@ -37,7 +37,7 @@ ReachableIn( s ) :- ParentOf( c, s ), CompoundStmt(c), NodeList(c,i,s), NodeList
 ReachableOut( s ) :- ReachableIn( s ), !IfStmt(s,_,_,_), !ReturnStmt(s,_,_), !BreakStmt(s), !ContinueStmt(s), !CompoundStmt(s).
 
 // when reaching the last statement of a compound, we reach the end of the compound
-ReachableOut( c ) :- CompoundStmt(c), NodeList(c,i,l), !NodeList(c,i+1,_), ReachableOut(l).
+ReachableOut( c ) :- CompoundStmt(c), NodeListLength(c,i), NodeList(c,i-1,l), ReachableOut(l).
 
 // also empty compound statements will finish if reached
 ReachableOut( c ) :- ReachableIn(c), CompoundStmt(c), !NodeList(c,_,_).
