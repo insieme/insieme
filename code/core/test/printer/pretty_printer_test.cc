@@ -1098,8 +1098,8 @@ TEST(PrettyPrinter, MarkerTest) {
 				            "}";
 
 		std::string res = "{\n"
-				          "    <m id=41>1</m>;\n"
-				          "    <m id=44>var int<4> v0 = <m id=43>5</m></m>;\n"
+				          "    <m id=44>1</m>;\n"
+				          "    <m id=47>var int<4> v0 = <m id=46>5</m></m>;\n"
 				          "}";
 
 		auto ir = builder.normalize(builder.parseStmt(input));

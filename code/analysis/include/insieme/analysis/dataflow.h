@@ -71,5 +71,12 @@ namespace analysis {
 	 * getDefinitionPoint<Backend::Datalog>(root);
 	 */
 
+
+//	template<typename Engine>
+//	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var) {
+//		return Engine::getDefinitionPoint(var);
+//	}
+
+
 } // end namespace analysis
 } // end namespace insieme

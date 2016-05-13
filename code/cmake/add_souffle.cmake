@@ -14,12 +14,15 @@ macro(configure_souffle)
 	# Generated files will also be included as header files
 	include_directories(SYSTEM ${souffle_output_base})
 
+	# Find Soufflé installation directory
+	set(souffle_home $ENV{INSIEME_LIBS_HOME}/souffle-latest CACHE PATH "Souffle Home Directory")	# TODO: use a FindSouffle to locate it
+
 	# Find Soufflé static header files
-	set(souffle_header_files $ENV{INSIEME_LIBS_HOME}/souffle-latest/include)
+	set(souffle_header_files ${souffle_home}/include)
 	include_directories(SYSTEM ${souffle_header_files})
 
 	# Find the Soufflé binary
-	set(souffle_binary $ENV{INSIEME_LIBS_HOME}/souffle-latest/bin/souffle)
+	set(souffle_binary ${souffle_home}/bin/souffle)
 
 endmacro(configure_souffle)
 
@@ -52,6 +55,7 @@ macro(souffle_generate_cpp souffle_input_path souffle_dl_target souffle_include_
 		ARGS -g ${souffle_output_file}.h ${souffle_input_file} ${include_argument}
 		COMMENT "Generating compiled soufflé datalog: ${souffle_dl_target}.h"
 		DEPENDS ${souffle_input_file}
+		IMPLICIT_DEPENDS C ${souffle_input_file}
 		WORKING_DIRECTORY ${souffle_output_path}
 		OUTPUT ${souffle_output_file}.h
 	)

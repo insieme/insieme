@@ -1,0 +1,63 @@
+#pragma once
+
+#include "boolean.dl"
+#include "ir.dl"
+#include "reachable.dl"
+#include "variable_definition_point.dl"
+#include "return_value.dl"
+#include "callable.dl"
+
+
+.comp DataFlowAnalysis<ValueType> {
+	
+	// --------- interface ----------
+	
+	
+	// the values to be assigned to all unknown values 
+	.decl unknown_value( v : ValueType )
+
+	// -- the value to be computed by this analysis --
+	.decl value ( n : node , v : ValueType ) output
+
+	
+	// ------------------------------
+	
+
+	// -- value of variables --
+
+	// definitions of variables take the value at the definition
+
+	// declaration statements
+	value( v, b ) :- VariableDefinition(v), DeclarationStmt(_,v,e), value(e,b).
+
+	// function parameters
+	value( v, b ) :-  
+			VariableDefinition(v), NodeList(p,i,v), Lambda(l,_,p,_),			// this variable is the i-th parameter of a lambda l
+			callGraph(c,l),														// l is called by call site c 
+			NodeList(c,i,a),value(a,b).  										// v get's assigned the value of the i-th argument of c
+
+	// bind parameters
+	value( v, b ) :-
+			VariableDefinition(v), NodeList(p,i,v), BindExpr(f,p,_),			// this variable is the i-th parameter of a bind expression f
+			callGraph(c,f),														// f is called by call site c 
+			NodeList(c,i,a),value(a,b).  										// v get's assigned the value of the i-th argument of c	
+			
+	// return variables
+	value( v, b ) :- VariableDefinition(v), ReturnStmt(_,e,v), value(e,b). 
+
+	// uses of variables correspond to the value of the definition point
+	value( v, b ) :- Variable(v,_,_), DefinitionPoint(d,v), value(d,b).
+
+	// free variables are undefined
+	value( v, b ) :- FreeVariable(v), unknown_value(b).
+
+
+
+	// -- value of call expressions --
+
+	value( c, v ) :- CallExpr(c,f), callable_value(f,t), ReturnValue(t,r), ReachableIn(r), value(r,v). 
+
+	// FIXME: this is a temporary rule and needs to be replaced by an actual reference-handling implementation
+	value( c, v ) :- CallExpr(c,f), NodeIdentity(f,id), NamedConstruct("ref_deref",id), NodeList(c,0,a), value(a,v). 
+
+}

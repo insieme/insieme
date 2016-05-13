@@ -277,8 +277,8 @@ namespace arithmetic {
 		EXPECT_EQ("(!(v0-1 <= 0) and !(-v0+2 <= 0))", toString(c));
 
 		EXPECT_EQ("rec bool_and.{bool_and=fun(ref<bool,f,f,plain> v0, ref<(()=>bool),f,f,plain> v1) {if(ref_deref(v0)) {return ref_deref(v1)();} else {}; "
-			      "return false;}}(bool_not(int_le(int_sub(v0, 1), 0)), bind(){rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return "
-			      "bool_not(int_le(int_add(int_mul(-1, ref_deref(v0)), 2), 0));}}(v0)})",
+			      "return false;}}(rec bool_not.{bool_not=fun(ref<bool,f,f,plain> v0) {if(ref_deref(v0)) {return false;} else {return true;};}}(int_le(int_sub(v0, 1), 0)), bind(){rec _.{_=fun(ref<int<4>,f,f,plain> v0) {return "
+			      "rec bool_not.{bool_not=fun(ref<bool,f,f,plain> v0) {if(ref_deref(v0)) {return false;} else {return true;};}}(int_le(int_add(int_mul(-1, ref_deref(v0)), 2), 0));}}(v0)})",
 			      toString(*builder.normalize(toIR(mgr, c))));
 		EXPECT_EQ(c, toConstraint(toIR(mgr, c)));
 
