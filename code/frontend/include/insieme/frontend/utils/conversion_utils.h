@@ -48,9 +48,9 @@ namespace conversion {
 
 namespace utils {
 
-	/// Replace RefTemps in initialization with RefDecl
+	/// Replace RefTemps in initialization with memLoc
 	///
-	core::ExpressionPtr fixTempMemoryInInitExpression(const core::TypePtr& targetTy, const core::ExpressionPtr& initExp);
+	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& memLoc, const core::ExpressionPtr& initExp);
 
 	/// Build a Cxx method call from its components
 	///

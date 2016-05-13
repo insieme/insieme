@@ -140,13 +140,13 @@ int main() {
 	// ENUM TYPES //////////////////////////////////////////////////////////////
 
 	typedef enum { Bla, Alb } enum_t;
-	#pragma test expect_ir("REGEX", R"(.*var ref<\(type<enum_def<IMP_enum_t_IMLOC.*,int<4>,enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Bla,0>,enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Alb,1>>>, int<4>\),f,f,plain> v0 = v0.*)")
+	#pragma test expect_ir("REGEX", R"(.*var ref<\(type<enum_def<IMP_enum_t_IMLOC.*,int<4>,enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Bla,0>,enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Alb,1>>>, int<4>\),f,f,plain> v0 = .*)")
 	enum_t enu;
 	enum { XY, ZR } bla;
 
 	// STRUCT TYPES //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("STRING", "var ref<struct {i : int<4>;\n},f,f,plain> v0 = v0")
+	#pragma test expect_ir("STRING", "var ref<struct {i : int<4>;\n},f,f,plain> v0 = ref_decl(type_lit(ref<struct {\n    i : int<4>;\n},f,f,plain>))")
 	struct { int i; } swi_anon;
 
 	typedef struct swi_s { int i; } swi_t;

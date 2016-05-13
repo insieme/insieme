@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -56,19 +56,19 @@ namespace frontend {
 		runLargeIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_hello_world.c");
 	}
 
-	TEST(IndependentTest, MatrixMul) {
+	TEST(LargeIndependentTest, MatrixMul) {
 		runLargeIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_matrix_mul.c");
 	}
 
-	TEST(IndependentTest, Pendulum) {
+	TEST(LargeIndependentTest, Pendulum) {
 		runLargeIndependentTestOn(FRONTEND_TEST_DIR + "../../../test/pendulum/pendulum.c");
 	}
 
-	TEST(IndependentTest, Pyramids) {
+	TEST(LargeIndependentTest, Pyramids) {
 		runLargeIndependentTestOn(FRONTEND_TEST_DIR + "../../../test/pyramids/pyramids.c");
 	}
-	
-	TEST(IndependentTest, Stencil3D) {
+
+	TEST(LargeIndependentTest, Stencil3D) {
 		runLargeIndependentTestOn(FRONTEND_TEST_DIR + "../../../test/stencil3d/stencil3d.c");
 	}
 

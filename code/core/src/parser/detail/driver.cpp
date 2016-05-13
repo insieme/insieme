@@ -1139,7 +1139,7 @@ namespace parser {
 			if (!var) {
 				return nullptr;
 			}
-			return builder.declarationStmt(var, var);
+			return builder.declarationStmt(var, lang::buildRefDecl(var->getType()));
 		}
 
 		ForStmtPtr InspireDriver::genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName, const ExpressionPtr& lowerBound,

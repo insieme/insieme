@@ -51,10 +51,9 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
-	core::ExpressionPtr fixTempMemoryInInitExpression(const core::TypePtr& targetTy, const core::ExpressionPtr& initExpIn) {
+	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& memLoc, const core::ExpressionPtr& initExpIn) {
 		auto& mgr = initExpIn->getNodeManager();
 		auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
-		auto refDecl = core::lang::buildRefDecl(targetTy);
 		// if the init expr is a constructor call
 		if(core::analysis::isConstructorCall(initExpIn)) {
 			core::CallExprAddress call(initExpIn.as<core::CallExprPtr>());
@@ -63,7 +62,7 @@ namespace utils {
 				// we replace the first parameter (which has been created as ref_temp) by the variable to initialize
 				return core::transform::replaceNode(
 					       initExpIn->getNodeManager(), call->getArgument(0),
-					       core::lang::buildRefCast(refDecl, call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(0)))
+					       core::lang::buildRefCast(memLoc, call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(0)))
 					.as<core::ExpressionPtr>();
 			}
 		}
@@ -74,7 +73,7 @@ namespace utils {
 			auto memExprAddr = initInitExpr->getMemoryExpr();
 			if(refExt.isCallOfRefTemp(memExprAddr)) {
 				// we replace the memory address to be initialized with the variable being declared
-				return core::transform::replaceNode(initExp->getNodeManager(), memExprAddr, refDecl).as<core::ExpressionPtr>();
+				return core::transform::replaceNode(initExp->getNodeManager(), memExprAddr, memLoc).as<core::ExpressionPtr>();
 			}
 		}
 		return initExpIn;

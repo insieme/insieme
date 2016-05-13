@@ -121,15 +121,16 @@ namespace conversion {
 			}
 			// convert decl
 			auto convertedDecl = converter.getDeclConverter()->convertVarDecl(varDecl);
+			auto refDecl = core::lang::buildRefDecl(convertedDecl.first->getType());
 			converter.getVarMan()->insert(varDecl, convertedDecl.first);
 			// check if we have an init expression
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
 				initExp = *convertedDecl.second;
-				initExp = utils::fixTempMemoryInInitExpression(convertedDecl.first->getType(), initExp);
+				initExp = utils::fixTempMemoryInInitExpression(refDecl, initExp);
 			} else {
 				// generate undefined initializer
-				initExp = convertedDecl.first;
+				initExp = refDecl;
 			}
 
 			// build ir declaration
@@ -163,7 +164,7 @@ namespace conversion {
 		// check if we have a return value
 		if(clang::Expr* expr = retStmt->getRetValue()) {
 			auto returnExpr = converter.convertCxxArgExpr(expr);
-			returnExpr = utils::fixTempMemoryInInitExpression(converter.getVarMan()->getRetType(), returnExpr);
+			returnExpr = utils::fixTempMemoryInInitExpression(core::lang::buildRefDecl(converter.getVarMan()->getRetType()), returnExpr);
 			irRetStmt = builder.returnStmt(returnExpr, converter.getVarMan()->getRetType());
 		}
 
