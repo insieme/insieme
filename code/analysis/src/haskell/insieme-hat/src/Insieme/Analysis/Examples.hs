@@ -1,5 +1,3 @@
-{-# LANGUAGE PatternGuards #-}
-
 module Insieme.Analysis.Examples where
 
 import Control.Applicative
