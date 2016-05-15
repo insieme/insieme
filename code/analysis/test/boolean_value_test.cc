@@ -209,6 +209,12 @@ namespace datalog {
 
 	}
 
+	TEST(BooleanValue, MemoryState) {
+
+		EXPECT_TRUE( isTrue("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; return *a; }()"));
+
+	}
+
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme

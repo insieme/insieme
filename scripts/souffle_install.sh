@@ -2,7 +2,7 @@
 . ./environment.setup
 set -e
 
-VERSION=2016.04.20
+VERSION=2016.05.15
 
 ########################################################################
 ##                       SOUFFLÉ DATALOG ENGINE
@@ -10,7 +10,7 @@ VERSION=2016.04.20
 
 strip_java_from_souffle()
 {
-	rm configure Makefile.in
+#	rm configure Makefile.in
 	echo "$1" | patch -Np1
 }
 
@@ -25,7 +25,7 @@ wget -nc http://www.dps.uibk.ac.at/~csaf7445/ext_libs/souffle-$VERSION.zip
 unzip -d souffle-$VERSION souffle-$VERSION.zip
 
 java_patch="$(cat patches/souffle_strip_java.patch)"
-cd souffle-$VERSION/souffle-master
+cd souffle-$VERSION/souffle
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH
 export PATH=$PATH:$PREFIX/flex-latest/bin:$PREFIX/bison-latest/bin

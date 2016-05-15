@@ -1,4 +1,5 @@
-#include "program_point.dl"
+#include "control_flow.dl"
+
 
 // a relation to specify a start node
 .decl start ( s : stmt ) input

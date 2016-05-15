@@ -6,8 +6,18 @@
 #include "variable_definition_point.dl"
 #include "return_value.dl"
 #include "callable.dl"
+#include "program_point_analysis.dl"
 
 
+// -- a realation identifying every assignment --
+.decl assignment ( e : expr ) output
+assignment(c) :- NamedConstruct("ref_assign", i), NodeIdentity(t,i), callGraph(c,t).
+
+// -- a realation identifying every deref operation --
+.decl deref ( e : expr ) output
+deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
+
+// -- a generic data flow analysis --
 .comp DataFlowAnalysis<ValueType> {
 	
 	// --------- interface ----------
@@ -21,7 +31,7 @@
 
 	
 	// ------------------------------
-	
+
 
 	// -- value of variables --
 
@@ -60,4 +70,22 @@
 	// FIXME: this is a temporary rule and needs to be replaced by an actual reference-handling implementation
 	value( c, v ) :- CallExpr(c,f), NodeIdentity(f,id), NamedConstruct("ref_deref",id), NodeList(c,0,a), value(a,v). 
 
+
+
+	// ------ Memory Locations ------
+	
+	// using a program point analysis to trace the memory location state
+	.type memory_state = [ m : memory_location, v : ValueType ]
+	.init memory_state = ProgramPointAnalysis<memory_state>
+
+	// memory_state.intercepted( s , IN ) :- assignment(s).
+
+	// read value from a memory location
+	value( c, v ) :- deref(c), NodeList(c,0,t), reference_value(t,m), memory_state.value(c,IN,[m,v]).
+
+	// write values to memory locations
+	memory_state.value(c,IN,[m,v]) :- assignment(c), NodeList(c,0,t), NodeList(c,1,e), reference_value(t,m), value(e,v).
+
 }
+
+#include "reference.dl"
