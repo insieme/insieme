@@ -5,12 +5,12 @@
  *
  * To issue queries:
  *     In query.c, KMI_query_db is to send queries and receive query results.
- *     In iquery.c, KMI_iquery_db is to send queries; and KMI_test is
+ *     In iquery.c, KMI_iquery_db is to send queries; and KMI_test is 
  *     to receive query results.
  *
  * To answer queries:
- *     _KMI_query_db_check in query.c is to receive query, and to send
- *     back results. Note iquery and query share the same
+ *     _KMI_query_db_check in query.c is to receive query, and to send 
+ *     back results. Note iquery and query share the same 
  *     _KMI_query_db_check.
  */
 #include "kmi.h"
@@ -47,9 +47,9 @@ inline int kmi_set_all_deleted(KMI_table_t tb)
             count++;
     }
     if (count == numprocs) {
-//#ifdef DEBUG_PRINT
-//        printf("[%d] all_deleted = 1, rank=%d\n", myid, rank);
-//#endif
+#ifdef DEBUG_PRINT
+        printf("[%d] all_deleted = 1, rank=%d\n", myid, rank);
+#endif
         tb->all_deleted = 1;
         rc = 1;
     }
@@ -256,8 +256,7 @@ int KMI_query_db_start(KMI_db_t db)
                   &db->mpi_recvreq);
         db->stage = 0;
     }
-	// not setting srand here, because it's done in the application and only needs to be done once per process run
-    //srand((int) time(NULL) + myid);
+    srand((int) time(NULL) + myid);
     return 0;
 }
 
@@ -293,7 +292,7 @@ int KMI_query_table(KMI_table_t tb, char *str, long str_len,
 }
 
 /** Fetch strings according to pointers.
- * Before calling this fucntion, the return list will only contain the
+ * Before calling this fucntion, the return list will only contain the 
  * addresses of the query results. After this function is called, each
  * "str" field records in the list is filled.
  * @input/output list
@@ -586,7 +585,6 @@ int kmi_query_db_bin(KMI_db_t db, char *str_bin, int str_len,
         KMI_keyspace_splitter(db->tb[i], str_bin, str_len, numprocs, &low,
                               &high);
         int hash_key;
-		printf("====================================================\n");
         for (hash_key = low; hash_key <= high; hash_key++) {
 #ifdef DEBUG_PRINT
             if (myid == 0) {
@@ -626,8 +624,6 @@ int kmi_query_db_bin(KMI_db_t db, char *str_bin, int str_len,
                 int flag = 0;
                 MPI_Status status;
                 MPI_Request sendreq;
-				assert(hash_key <= numprocs);
-				printf("query from: %d\t to: %d\n", myid, hash_key);
                 MPI_Isend(&query, sizeof(KMI_query_t), MPI_CHAR, hash_key,
                           KMI_QUERY_DAEMON_TAG, db->comm, &sendreq);
                 MPI_Test(&sendreq, &flag, &status);
@@ -713,7 +709,6 @@ int kmi_query_db_bin(KMI_db_t db, char *str_bin, int str_len,
                     kmi_free(databuf);
                 }
             }
-			printf("====================================================\n");
         }
     }
 
@@ -860,7 +855,7 @@ int KMI_query_table_random_pick_local(KMI_table_t tb, char *str, int *str_len)
 int max_count = 1000;
 int debug_count = 0;
 #endif
-/* A best effort random string picker. Try five times to get a random string.
+/* A best effort random string picker. Try five times to get a random string. 
  * If all fails, use the leftmost of all strings.
  * @input tb
  * @output str

@@ -1,10 +1,18 @@
 #include "kmi.h"
 #include "unistd.h"
 
-#define STRING_LEN              100
-#define QUERY_LEN               20
-#define DEFAULT_NUM_STRING      2048
-#define DEFAULT_NUM_QUERIES     2048
+//#ifndef STRING_LEN
+//	#define STRING_LEN              100
+//#endif
+//#ifndef QUERY_LEN
+//	#define QUERY_LEN               20
+//#endif
+#ifndef DEFAULT_NUM_STRING
+	#define DEFAULT_NUM_STRING      2048
+#endif
+#ifndef DEFAULT_NUM_QUERIES
+	#define DEFAULT_NUM_QUERIES     2048
+#endif
 
 int numstrings;
 int numqueries;
@@ -100,8 +108,6 @@ long long query_loop(char *query, KMI_db_t db, int myid)
 	int i;
 	int len;
     long long hit_count = 0;
-	if(myid == 0)
-		printf("doing a query loop\n");
     for (i = 0; i < numqueries; i++) {
 #ifdef DEBUG_PRINT
         if (myid == 0) {
@@ -113,7 +119,6 @@ long long query_loop(char *query, KMI_db_t db, int myid)
         }
 #endif
         len = 0;
-		//printf("query: %d\t\t", i);
         KMI_query_db_bin(db, query, query_len, KMI_QUERY_PREFIX, error_tlr, &list,
                      &len);
 
@@ -124,10 +129,10 @@ long long query_loop(char *query, KMI_db_t db, int myid)
             hit_count++;
             KMI_query_delete_list(list, len);
         }
-
+       
         query += KMI_BIN_STR_LEN(query_len);
     }
-
+    
     return hit_count;
 }
 
@@ -136,8 +141,14 @@ int main(int argc, char *argv[])
     MPI_Init(&argc, &argv);
     str_len = STRING_LEN;
     query_len = QUERY_LEN;
-    numstrings = DEFAULT_NUM_STRING;
-    numqueries = DEFAULT_NUM_QUERIES;
+    //numstrings = DEFAULT_NUM_STRING;
+    //numqueries = DEFAULT_NUM_QUERIES;
+    if(getenv("DEFAULT_NUM_STRING") == NULL || getenv("DEFAULT_NUM_QUERIES") == NULL) {
+    	printf("Please set both DEFAULT_NUM_STRING and DEFAULT_NUM_QUERIES environment variables");
+    } else {
+    	numstrings = atoi(getenv("DEFAULT_NUM_STRING"));
+    	numqueries = atoi(getenv("DEFAULT_NUM_QUERIES"));
+    }
     if (argc > 1)
         get_options(argc, argv);
     KMI_init();
@@ -161,11 +172,7 @@ int main(int argc, char *argv[])
     /* parallel add strings to the table */
     char *str;
     str = (char *) malloc(str_len * sizeof(char));
-#ifdef KMI_RANDOM_DATA
     srand((int) time(NULL) + myid);
-#elseif
-	srand(myid);
-#endif
     int i;
     for (i = 0; i < numstrings; i++) {
         generate_random_string(str, str_len);
@@ -194,9 +201,9 @@ int main(int argc, char *argv[])
     debug_t1 = t2;
 #endif
     KMI_query_db_start(db);
-
+    
     long long hit_count = query_loop(query, db, myid);
-
+    
     KMI_query_db_finish(db);
     double t4 = MPI_Wtime();
 
