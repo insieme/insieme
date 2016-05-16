@@ -260,8 +260,8 @@ OPERATION(SignedInt, Not,    "int_not",    "(int<'a>) -> int<'a>")
 OPERATION(SignedInt, And,    "int_and",    "(int<'a>, int<'a>) -> int<'a>")
 OPERATION(SignedInt, Or,     "int_or",     "(int<'a>, int<'a>) -> int<'a>")
 OPERATION(SignedInt, Xor,    "int_xor",    "(int<'a>, int<'a>) -> int<'a>")
-OPERATION(SignedInt, LShift, "int_lshift", "(int<'a>, int<'b>) -> int<'a>")
-OPERATION(SignedInt, RShift, "int_rshift", "(int<'a>, int<'b>) -> int<'a>")
+OPERATION(SignedInt, LShift, "int_lshift", "(int<'a>, 'b) -> int<'a>")
+OPERATION(SignedInt, RShift, "int_rshift", "(int<'a>, 'b) -> int<'a>")
 
 GROUP(BitwiseUIntOp, UnsignedIntNot, UnsignedIntAnd, UnsignedIntOr, UnsignedIntXor, UnsignedIntLShift, UnsignedIntRShift)
 
@@ -269,8 +269,8 @@ OPERATION(UnsignedInt, Not,    "uint_not",    "(uint<'a>) -> uint<'a>")
 OPERATION(UnsignedInt, And,    "uint_and",    "(uint<'a>, uint<'a>) -> uint<'a>")
 OPERATION(UnsignedInt, Or,     "uint_or",     "(uint<'a>, uint<'a>) -> uint<'a>")
 OPERATION(UnsignedInt, Xor,    "uint_xor",    "(uint<'a>, uint<'a>) -> uint<'a>")
-OPERATION(UnsignedInt, LShift, "uint_lshift", "(uint<'a>, int<'b>) -> uint<'a>")
-OPERATION(UnsignedInt, RShift, "uint_rshift", "(uint<'a>, int<'b>) -> uint<'a>")
+OPERATION(UnsignedInt, LShift, "uint_lshift", "(uint<'a>, 'b) -> uint<'a>")
+OPERATION(UnsignedInt, RShift, "uint_rshift", "(uint<'a>, 'b) -> uint<'a>")
 
 GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
