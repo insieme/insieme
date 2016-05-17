@@ -1,6 +1,5 @@
 #include "boolean.dl"
-#include "ir.dl"
-#include "definition_point.dl"
+#include "data_flow_analysis.dl"
 
 // input parameters
 .decl target_expr( n : node ) input
@@ -8,22 +7,23 @@
 // output values
 .decl result( v : bool ) output
 
-
-// the actual analysis
-.decl boolean_value( n : node , v : bool )
-
 // link analysis with result
 result( v ) :- target_expr(n), boolean_value(n,v).
 
 
 
-
 // ---------- Analysis Specification -----------
 
+
+// create a data flow analysis instance for boolean values
+.init boolean = DataFlowAnalysis<bool>
+
+// define an alias
+boolean_value(n,v) :- boolean.value(n,v).
+
 // the value to be exhibited by any unknown value
-.decl unknown_boolean_value ( v : bool )
-unknown_boolean_value ( true ).
-unknown_boolean_value ( false ).
+boolean.unknown_value( true ).
+boolean.unknown_value( false ).
 
 
 // -- empty list checks --
@@ -40,13 +40,9 @@ is_boolean( n ) :- GenericType(n,"bool",a,b), is_empty(a), is_empty(b).
 // -- boolean value analysis --
 
 // -- assign values to literals --
-boolean_value( n , true ) :- Literal(n,t,"true"), is_boolean(t).
-boolean_value( n , false ) :- Literal(n,t,"false"), is_boolean(t).
+boolean.value( n , true ) :- Literal(n,t,"true"), is_boolean(t).
+boolean.value( n , false ) :- Literal(n,t,"false"), is_boolean(t).
 
 // all other literals have an unknown boolean value
-boolean_value( n, v ) :- Literal(n,t,_), !is_boolean(t), unknown_boolean_value(v).
+boolean.value( n, v ) :- Literal(n,t,_), !is_boolean(t), boolean.unknown_value(v).
 
-
-// -- assign values to free variables --
-
-// TODO: continue here

@@ -76,7 +76,7 @@ namespace analysis {
 	/**
 	 * Test the definition point interface
 	 */
-	TEST_P(CBA_Interface, DefinitionPoint) {
+	TEST_P(CBA_Interface, DefinitionPoint_DeclarationStmt) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -95,6 +95,227 @@ namespace analysis {
 		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
 
 	}
+
+	/**
+	 * Test the definition point interface
+	 */
+	TEST_P(CBA_Interface, DefinitionPoint_DeclarationStmt_2) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<std::string,core::NodePtr> symbols;
+		symbols["w"] = builder.variable(builder.parseType("int<4>"));
+
+		auto addresses = builder.parseAddressesStatement(
+			"{ "
+			"	var int<4> x = 12; "
+			"	var int<4> y = 12; "
+			"	var int<4> z = 12; "
+			"	$x$; "
+			"	$y$; "
+			"	$z$; "
+			"   $w$; "
+			"}", symbols
+		);
+
+		ASSERT_EQ(4, addresses.size());
+
+		auto varX = addresses[0].as<VariableAddress>();
+		auto varY = addresses[1].as<VariableAddress>();
+		auto varZ = addresses[2].as<VariableAddress>();
+		auto varW = addresses[3].as<VariableAddress>();
+
+		auto comp = varX.getRootAddress().as<CompoundStmtAddress>();
+
+		auto declX = comp[0].as<DeclarationStmtAddress>()->getVariable();
+		auto declY = comp[1].as<DeclarationStmtAddress>()->getVariable();
+		auto declZ = comp[2].as<DeclarationStmtAddress>()->getVariable();
+
+		EXPECT_EQ(declX, dispatch_getDefinitionPoint(varX, GetParam()));
+		EXPECT_EQ(declY, dispatch_getDefinitionPoint(varY, GetParam()));
+		EXPECT_EQ(declZ, dispatch_getDefinitionPoint(varZ, GetParam()));
+		EXPECT_FALSE(dispatch_getDefinitionPoint(varW, GetParam()));
+	}
+
+	/**
+	 * Test the definition point interface
+	 */
+	TEST_P(CBA_Interface, DefinitionPoint_DeclarationStmt_3) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<std::string,core::NodePtr> symbols;
+		symbols["w"] = builder.variable(builder.parseType("int<4>"));
+
+		auto addresses = builder.parseAddressesStatement(
+			"{ "
+			"	var int<4> x = 12; "
+			"	{"
+			"		var int<4> y = 12; "
+			"		$x$;"
+			"		$y$;"
+			"	}"
+			"	var int<4> y = 12; "
+			"	$x$; "
+			"	$y$; "
+			"}", symbols
+		);
+
+		ASSERT_EQ(4, addresses.size());
+
+		auto varX1 = addresses[0].as<VariableAddress>();
+		auto varY1 = addresses[1].as<VariableAddress>();
+		auto varX2 = addresses[2].as<VariableAddress>();
+		auto varY2 = addresses[3].as<VariableAddress>();
+
+		auto comp1 = varX1.getRootAddress().as<CompoundStmtAddress>();
+		auto comp2 = comp1[1].as<CompoundStmtAddress>();
+
+		auto declX1 = comp1[0].as<DeclarationStmtAddress>()->getVariable();
+		auto declY1 = comp2[0].as<DeclarationStmtAddress>()->getVariable();
+		auto declY2 = comp1[2].as<DeclarationStmtAddress>()->getVariable();
+
+		EXPECT_EQ(declX1, dispatch_getDefinitionPoint(varX1, GetParam()));
+		EXPECT_EQ(declY1, dispatch_getDefinitionPoint(varY1, GetParam()));
+		EXPECT_EQ(declX1, dispatch_getDefinitionPoint(varX2, GetParam()));
+		EXPECT_EQ(declY2, dispatch_getDefinitionPoint(varY2, GetParam()));
+	}
+
+
+	TEST_P(CBA_Interface, DefinitionPoint_LambdaParameter) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesExpression(
+			"( x : int<4> ) -> int<4> { return $x$; }"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<CallExprAddress>()[0].as<VariableAddress>();
+		auto param = var.getRootAddress().as<LambdaExprAddress>()->getParameterList()[0];
+
+		std::cout << "Parameter: " << param << "\n";
+		std::cout << "Variable:  " << var << "\n";
+
+		EXPECT_EQ(param, *dispatch_getDefinitionPoint(var, GetParam()));
+
+	}
+
+
+	TEST_P(CBA_Interface, DefinitionPoint_BindParameter) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesExpression(
+			"( x : int<4> ) => $x$"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<VariableAddress>();
+		auto param = var.getRootAddress().as<BindExprAddress>()->getParameters()[0];
+
+		std::cout << "Parameter: " << param << "\n";
+		std::cout << "Variable:  " << var << "\n";
+
+		auto definition = dispatch_getDefinitionPoint(var, GetParam());
+		EXPECT_TRUE(definition);
+		EXPECT_EQ(param, *definition);
+
+	}
+
+
+	TEST_P(CBA_Interface, DefinitionPoint_BindParameter_2) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<std::string,core::NodePtr> symbols;
+		symbols["z"] = builder.variable(builder.parseType("int<4>"));
+
+		auto addresses = builder.parseAddressesStatement(
+			"{ var int<4> y = 4; ( x : int<4>, w : int<4> ) => $x$ + $y$ + $z$ + $w$; }",
+			symbols
+		);
+
+		ASSERT_EQ(4, addresses.size());
+
+		auto x = addresses[0].as<VariableAddress>();
+		auto y = addresses[1].as<VariableAddress>();
+		auto z = addresses[2].as<VariableAddress>();
+		auto w = addresses[3].as<VariableAddress>();
+
+		auto decl = x.getRootAddress().as<CompoundStmtAddress>()[0].as<DeclarationStmtAddress>();
+		auto bind = x.getRootAddress().as<CompoundStmtAddress>()[1].as<BindExprAddress>();
+
+		auto defX = bind->getParameters()[0];
+		auto defY = decl->getVariable();
+		auto defW = bind->getParameters()[1];
+
+		EXPECT_EQ(defX,*dispatch_getDefinitionPoint(x, GetParam()));
+		EXPECT_EQ(defY,*dispatch_getDefinitionPoint(y, GetParam()));
+		EXPECT_FALSE(dispatch_getDefinitionPoint(z, GetParam()));
+		EXPECT_EQ(defW,*dispatch_getDefinitionPoint(w, GetParam()));
+
+	}
+
+
+	TEST_P(CBA_Interface, DefinitionPoint_BindParameter_3) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<std::string,core::NodePtr> symbols;
+		symbols["y"] = builder.variable(builder.parseType("bool"));
+
+		auto addresses = builder.parseAddressesExpression(
+			"(x:bool)=>($x$ && $y$)",
+			symbols
+		);
+
+		ASSERT_EQ(2, addresses.size());
+
+		auto x = addresses[0].as<VariableAddress>();
+		auto y = addresses[1].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
+
+		// there is a bug in the parser, marking the wrong y => fix this
+		y = y.getParentAddress(8).as<CallExprAddress>()[0].as<VariableAddress>();
+
+		auto bind = x.getRootAddress().as<BindExprAddress>();
+		auto defX = bind->getParameters()[0];
+
+		EXPECT_EQ(defX,*dispatch_getDefinitionPoint(x, GetParam()));
+		EXPECT_FALSE(dispatch_getDefinitionPoint(y, GetParam()));
+
+	}
+
+	TEST_P(CBA_Interface, DefinitionPoint_BindParameter_4) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<std::string,core::NodePtr> symbols;
+		symbols["x"] = builder.variable(builder.parseType("bool"));
+
+		auto addresses = builder.parseAddressesExpression(
+			"(y:bool)=>($x$ && $y$)",
+			symbols
+		);
+
+		ASSERT_EQ(2, addresses.size());
+
+		auto x = addresses[0].as<VariableAddress>();
+		auto y = addresses[1].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
+
+		// there is a bug in the parser, marking the wrong y => fix this
+		y = y.getParentAddress(8).as<CallExprAddress>()[0].as<VariableAddress>();
+
+		auto bind = x.getRootAddress().as<BindExprAddress>();
+		auto defY = bind->getParameters()[0];
+
+		EXPECT_FALSE(dispatch_getDefinitionPoint(x, GetParam()));
+		EXPECT_EQ(defY,*dispatch_getDefinitionPoint(y, GetParam()));
+
+	}
+
 
 	TEST_P(CBA_Interface, DefinitionPointFail) {
 		NodeManager mgr;

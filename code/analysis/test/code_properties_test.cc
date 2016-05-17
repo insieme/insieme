@@ -78,7 +78,7 @@ namespace datalog {
 		}
 	}
 
-	TEST(CodeProperties, DefinitionPoint_Parameter) {
+	TEST(CodeProperties, DefinitionPoint_LambdaParameter) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -95,6 +95,119 @@ namespace datalog {
 		std::cout << "Variable:  " << var << "\n";
 
 		EXPECT_EQ(param, getDefinitionPoint(var, false));
+
+	}
+
+
+	TEST(CodeProperties, DefinitionPoint_BindParameter) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesExpression(
+			"( x : int<4> ) => $x$"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<VariableAddress>();
+		auto param = var.getRootAddress().as<BindExprAddress>()->getParameters()[0];
+
+		std::cout << "Parameter: " << param << "\n";
+		std::cout << "Variable:  " << var << "\n";
+
+		auto definition = getDefinitionPoint(var, false);
+		EXPECT_TRUE(definition);
+		EXPECT_EQ(param, definition);
+
+	}
+
+
+	TEST(CodeProperties, DefinitionPoint_BindParameter_2) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<std::string,core::NodePtr> symbols;
+		symbols["z"] = builder.variable(builder.parseType("int<4>"));
+
+		auto addresses = builder.parseAddressesStatement(
+			"{ var int<4> y = 4; ( x : int<4>, w : int<4> ) => $x$ + $y$ + $z$ + $w$; }",
+			symbols
+		);
+
+		ASSERT_EQ(4, addresses.size());
+
+		auto x = addresses[0].as<VariableAddress>();
+		auto y = addresses[1].as<VariableAddress>();
+		auto z = addresses[2].as<VariableAddress>();
+		auto w = addresses[3].as<VariableAddress>();
+
+		auto decl = x.getRootAddress().as<CompoundStmtAddress>()[0].as<DeclarationStmtAddress>();
+		auto bind = x.getRootAddress().as<CompoundStmtAddress>()[1].as<BindExprAddress>();
+
+		auto defX = bind->getParameters()[0];
+		auto defY = decl->getVariable();
+		auto defW = bind->getParameters()[1];
+
+		EXPECT_EQ(defX,getDefinitionPoint(x));
+		EXPECT_EQ(defY,getDefinitionPoint(y));
+		EXPECT_FALSE(getDefinitionPoint(z));
+		EXPECT_EQ(defW,getDefinitionPoint(w));
+
+	}
+
+	TEST(CodeProperties, DefinitionPoint_BindParameter_3) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<std::string,core::NodePtr> symbols;
+		symbols["y"] = builder.variable(builder.parseType("bool"));
+
+		auto addresses = builder.parseAddressesExpression(
+			"(x:bool)=>($x$ && $y$)",
+			symbols
+		);
+
+		ASSERT_EQ(2, addresses.size());
+
+		auto x = addresses[0].as<VariableAddress>();
+		auto y = addresses[1].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
+
+		// there is a bug in the parser, marking the wrong y => fix this
+		y = y.getParentAddress(8).as<CallExprAddress>()[0].as<VariableAddress>();
+
+		auto bind = x.getRootAddress().as<BindExprAddress>();
+		auto defX = bind->getParameters()[0];
+
+		EXPECT_EQ(defX,getDefinitionPoint(x));
+		EXPECT_FALSE(getDefinitionPoint(y));
+
+	}
+
+	TEST(CodeProperties, DefinitionPoint_BindParameter_4) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<std::string,core::NodePtr> symbols;
+		symbols["x"] = builder.variable(builder.parseType("bool"));
+
+		auto addresses = builder.parseAddressesExpression(
+			"(y:bool)=>($x$ && $y$)",
+			symbols
+		);
+
+		ASSERT_EQ(2, addresses.size());
+
+		auto x = addresses[0].as<VariableAddress>();
+		auto y = addresses[1].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
+
+		// there is a bug in the parser, marking the wrong y => fix this
+		y = y.getParentAddress(8).as<CallExprAddress>()[0].as<VariableAddress>();
+
+		auto bind = x.getRootAddress().as<BindExprAddress>();
+		auto defY = bind->getParameters()[0];
+
+		EXPECT_FALSE(getDefinitionPoint(x));
+		EXPECT_EQ(defY,getDefinitionPoint(y));
 
 	}
 
@@ -492,6 +605,30 @@ namespace datalog {
 		EXPECT_TRUE(getTopLevelNodes(builder.parseStmt("try {} catch (v1 : bool) {v1;} catch (v2 : int<4>) {v2;}")));
 		EXPECT_TRUE(getTopLevelNodes(builder.parseProgram("int main() { return 0; }")));
 		EXPECT_TRUE(getTopLevelNodes(builder.parseExpr("spawn 14")));
+	}
+
+	TEST(CodeProperties, HappensBefore_1) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(
+				"{"
+				"	$1$;"
+				"	$2$;"
+				"}"
+		);
+
+		ASSERT_EQ(2,addresses.size());
+		auto a = addresses[0].as<StatementAddress>();
+		auto b = addresses[1].as<StatementAddress>();
+
+		// simple cases
+		EXPECT_FALSE(happensBefore(a,a));
+		EXPECT_FALSE(happensBefore(b,b));
+
+		// just a bit more complicated
+		EXPECT_TRUE(happensBefore(a,b));
+		EXPECT_FALSE(happensBefore(b,a));
 	}
 
 } // end namespace datalog

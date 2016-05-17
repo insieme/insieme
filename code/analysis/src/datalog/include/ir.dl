@@ -87,30 +87,20 @@
 .number_type compound_stmt
 .number_type decl_stmt
 
-.type stmt = expr  // TODO really needed?
+.type stmt = expr 
            | if_stmt
            | compound_stmt
            | decl_stmt
 
-.number_type types
-.number_type parents
-
-.type stmt_list = types
-                | parents
 
 
 // -- support types --
 
+.number_type types
+.number_type parents
 .number_type tag_type_def
 .number_type lambda_def
 .number_type lambda
-
-.type support = types  // TODO really needed?
-              | parents // TODO really needed?
-              | tag_type_def
-              | lambda_def
-              | lambda
-
 .number_type exprs
 .number_type parameters
 .number_type switch_cases
@@ -118,12 +108,19 @@
 .number_type member_funcs
 .number_type pure_virt_member_funcs
 
-.type support_list = exprs
-                   | parameters
-                   | switch_cases
-                   | fields
-                   | member_funcs
-                   | pure_virt_member_funcs
+
+.type support = types 
+			  | exprs
+              | parents
+			  | record
+              | tag_type_def
+              | lambda_def
+              | lambda
+			  | parameters
+			  | switch_cases
+			  | fields
+			  | member_funcs
+			  | pure_virt_member_funcs
 
 
 // -- node type --
@@ -132,15 +129,15 @@
            | type
            | record
            | expr
-           | stmt | stmt_list         // TODO include list types here?
-           | support | support_list   // ---´
+           | stmt
+           | support
 
 
 
 // List Node
 
 .decl NodeList ( list:node , idx:child_index , element:node )                                                 input
-
+.decl NodeListLength( list:node, length : number )                                                            input
 
 
 // Unique Node Identity Relation
@@ -192,9 +189,9 @@
 .decl JobExpr         ( id:node , thread_num_range:node , body:node )                                         input
 .decl LambdaExpr      ( id:node , type:function_type , reference:lambda_ref, definition:lambda_def )          input
 .decl LambdaReference ( id:node , type:function_type , name:string )                                          input
-.decl Literal         ( id:node , type:type , string_value:string )              /* TODO type:node needed? */ input
+.decl Literal         ( id:node , type:type , string_value:string )                                           input
 .decl TupleExpr       ( id:node , expressions:exprs )                                                         input
-.decl Variable        ( id:node , type:type , var_id:uint )                      /* TODO type:node needed? */ input
+.decl Variable        ( id:node , type:type , var_id:uint )                                                   input
 // piped through   .decl MarkerExpr ( id:node , expr_id:uint , sub_expression:expr                            input
 
 
@@ -239,3 +236,6 @@
 .decl TagTypeBinding             ( id:node , tag:tag_type_ref, record:record )                                input
 .decl TagTypeDefinition          ( id:node )                                                                  input
 .decl Types                      ( id:node )                                                                  input
+
+// associating names to known constructs (built-ins)
+.decl NamedConstruct( name : string , uid : unique_node_id )                                                  input

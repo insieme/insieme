@@ -27,8 +27,11 @@ endforeach()
 
 # =============================================  HASKELL  =====================================
 
+set( stack_home $ENV{INSIEME_LIBS_HOME}/stack-latest CACHE PATH "Stack Home Directory" ) 	# TODO: use e.g. insieme_find_package
+set( gmp_lib_dir $ENV{INSIEME_LIBS_HOME}/gmp-latest/lib CACHE PATH "GMP Library Directory" )	# TODO: use e.g. insieme_find_package
+
 # check for (patched) haskell stack
-if(NOT EXISTS $ENV{INSIEME_LIBS_HOME}/stack-latest/bin/stack)
+if(NOT EXISTS ${stack_home}/bin/stack)
 	MESSAGE(FATAL_ERROR "Coulnd't find patched Haskell stack")
 endif()
 
@@ -37,7 +40,7 @@ link_directories(${CMAKE_CURRENT_BINARY_DIR}/src/haskell/insieme-hat)
 
 # add directories containing libffi, libHSrts and gmp
 link_directories(${LIBHSRTS_DIR})
-link_directories($ENV{INSIEME_LIBS_HOME}/gmp-latest/lib)
+link_directories(${gmp_lib_dir})
 
 
 # =============================================================================================

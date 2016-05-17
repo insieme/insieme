@@ -64,6 +64,11 @@ namespace datalog {
 	 */
 	boost::optional<core::VariableAddress> getDefinitionPoint(const core::VariableAddress& var, bool debug = false);
 
+	/**
+	 * Determines whether the statement a happens before statement b.
+	 */
+	bool happensBefore(const core::StatementAddress& a, const core::StatementAddress& b);
+
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme
