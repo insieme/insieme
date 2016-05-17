@@ -221,10 +221,6 @@ IRDump dumpText(const insieme::core::NodePtr& node, std::ostream& out, bool prin
 	return IRDump([node,printAddresses](std::ostream& out) -> std::ostream& { return out << insieme::core::dump::text::TextDump(node,printAddresses) << std::endl; }, out);
 }
 
-IRDump dumpJson(const insieme::core::NodeAddress& node, std::ostream& out) {
-	return IRDump([node](std::ostream& out) -> std::ostream& { return out << insieme::core::dump::text::JsonDump(node) << std::endl; }, out);
-}
-
 IRDump dumpColor(const insieme::core::NodePtr& node, std::ostream& out, bool noLet) {
 	return IRDump([node, noLet](std::ostream& out) -> std::ostream& {
 		insieme::core::printer::PrettyPrinter print(node);

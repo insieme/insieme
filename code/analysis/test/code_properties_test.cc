@@ -40,6 +40,7 @@
 
 #include "insieme/analysis/datalog/code_properties.h"
 
+#include "insieme/core/dump/json_dump.h"
 #include "insieme/core/dump/binary_dump.h"
 
 #include "insieme/core/ir_builder.h"
@@ -71,9 +72,9 @@ namespace datalog {
 
 		std::ofstream outputFile("/tmp/insieme_ir_text_dump.txt");
 		if (outputFile.is_open()) {
-			//dumpJson(addresses[0].getRootAddress(), outputFile);
 			//core::dump::binary::dumpIR(outputFile, code);
-			dumpText(addresses[0].getRootAddress(), outputFile, true);
+			//dumpText(addresses[0].getRootAddress(), outputFile, true);
+			core::dump::json::dumpIR(outputFile, code);
 			outputFile.close();
 		}
 	}
