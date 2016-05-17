@@ -40,6 +40,8 @@
 
 #include "insieme/analysis/datalog/code_properties.h"
 
+#include "insieme/core/dump/binary_dump.h"
+
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/driver/integration/tests.h"
@@ -52,6 +54,8 @@ namespace datalog {
 	using namespace core;
 
 	TEST(CodeProperties, DumpTextToFile) {
+		using namespace driver::integration;
+
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -60,12 +64,16 @@ namespace datalog {
 			"{ var int<4> x = 12; $x$; }"
 		);
 
+		IntegrationTestCaseOpt testCase = getCase("pyramids");
+		core::ProgramPtr code = testCase.get().load(mgr);
+
 		ASSERT_EQ(1, addresses.size());
 
 		std::ofstream outputFile("/tmp/insieme_ir_text_dump.txt");
 		if (outputFile.is_open()) {
-			// dumpJson(addresses[0].getRootAddress(), outputFile);
-			dumpText(addresses[0].getRootNode(), outputFile, true);
+			//dumpJson(addresses[0].getRootAddress(), outputFile);
+			//core::dump::binary::dumpIR(outputFile, code);
+			dumpText(addresses[0].getRootAddress(), outputFile, true);
 			outputFile.close();
 		}
 	}
@@ -489,5 +497,6 @@ namespace datalog {
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme
+
 
 
