@@ -232,7 +232,7 @@ namespace datalog {
 
 	}
 
-	TEST(BooleanValue, PassByReference ) {
+	TEST(BooleanValue, PassByReference) {
 
 		// some more complex example
 		auto code = R"(
@@ -246,6 +246,21 @@ namespace datalog {
 		)";
 
 		EXPECT_TRUE(isTrue(code));
+
+	}
+
+	TEST(DISABLED_BooleanValue, Tuples) {
+
+		// some more complex example
+		auto code = R"(
+			()->bool {
+				var ( bool , bool ) a = ( true, false );
+				return a.0;
+			}()
+		)";
+
+		EXPECT_TRUE(isTrue(code));
+
 
 	}
 
