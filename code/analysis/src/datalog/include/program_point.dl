@@ -7,7 +7,7 @@
 
 // some exec_state constants
 #define PRE 0		// < the statement is starting its evaluation
-#define IN 1		// < the statement is in an intermediate state (only some)
+#define INT 1		// < the statement is in an intermediate state (only some)
 #define POST 2		// < the statement ended its evaluation
 
 

@@ -13,6 +13,10 @@
 .decl assignment ( e : expr ) output
 assignment(c) :- NamedConstruct("ref_assign", i), NodeIdentity(t,i), callGraph(c,t).
 
+// -- an under-approximation of assignments, computed without data flow analysis --
+.decl simple_assignment ( e : expr ) output
+simple_assignment(c) :- CallExpr(c,f), NamedConstruct("ref_assign", i), NodeIdentity(f,i).
+
 // -- a realation identifying every deref operation --
 .decl deref ( e : expr ) output
 deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
@@ -40,12 +44,6 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 	// declaration statements
 	value( v, b ) :- VariableDefinition(v), DeclarationStmt(_,v,e), value(e,b).
 
-	// function parameters
-	value( v, b ) :-  
-			VariableDefinition(v), NodeList(p,i,v), Lambda(l,_,p,_),			// this variable is the i-th parameter of a lambda l
-			callGraph(c,l),														// l is called by call site c 
-			NodeList(c,i,a),value(a,b).  										// v get's assigned the value of the i-th argument of c
-
 	// bind parameters
 	value( v, b ) :-
 			VariableDefinition(v), NodeList(p,i,v), BindExpr(f,p,_),			// this variable is the i-th parameter of a bind expression f
@@ -67,9 +65,6 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 
 	value( c, v ) :- CallExpr(c,f), callable_value(f,t), ReturnValue(t,r), ReachableIn(r), value(r,v). 
 
-	// FIXME: this is a temporary rule and needs to be replaced by an actual reference-handling implementation
-	value( c, v ) :- CallExpr(c,f), NodeIdentity(f,id), NamedConstruct("ref_deref",id), NodeList(c,0,a), value(a,v). 
-
 
 
 	// ------ Memory Locations ------
@@ -78,13 +73,21 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 	.type memory_state = [ m : memory_location, v : ValueType ]
 	.init memory_state = ProgramPointAnalysis<memory_state>
 
-	// memory_state.intercepted( s , IN ) :- assignment(s).
 
 	// read value from a memory location
-	value( c, v ) :- deref(c), NodeList(c,0,t), reference_value(t,m), memory_state.value(c,IN,[m,v]).
+	value( c, v ) :- deref(c), NodeList(c,0,t), reference_value(t,m), memory_state.value(c,INT,[m,v]).
 
-	// write values to memory locations
-	memory_state.value(c,IN,[m,v]) :- assignment(c), NodeList(c,0,t), NodeList(c,1,e), reference_value(t,m), value(e,v).
+	// write values to memory locations (perfect assignment)
+	memory_state.intercepted( c , INT ) :- simple_assignment(c).
+	memory_state.value(c,POST,[m,v]) :- assignment(c), NodeList(c,0,t), NodeList(c,1,e), reference_value(t,m), value(e,v).
+	memory_state.value(c,POST,s) :- assignment(c), NodeList(c,0,t), reference_value(t,m1), reference_value(t,m2), m1!=m2, memory_state.value(c,INT,s).
+	
+	
+	// pass function argument to memory location of parameter
+	memory_state.value( b, PRE, [v,d] ) :-  
+			VariableDefinition(v), NodeList(p,i,v), Lambda(l,_,p,b),			// this variable is the i-th parameter of a lambda l
+			callGraph(c,l),														// l is called by call site c 
+			NodeList(c,i,a),value(a,d).  										// v get's assigned the value of the i-th argument of c
 
 }
 

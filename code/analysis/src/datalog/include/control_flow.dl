@@ -37,13 +37,13 @@ ControlFlow( ProgramPoint( a, POST ), ProgramPoint( f, PRE ) ) :- CallExpr(c,f),
 ControlFlow( ProgramPoint( c, PRE ), ProgramPoint( f , PRE ) ) :- CallExpr(c,f), NodeListLength(c,0).
 
 // adter the evaluation of the function call target: jump to called function
-ControlFlow( ProgramPoint( f, POST ), ProgramPoint( b, IN )) :- CallExpr(_,f), callable_value(f,t), EntryPoint(t,b).
+ControlFlow( ProgramPoint( f, POST ), ProgramPoint( b, PRE ) ) :- CallExpr(_,f), callable_value(f,t), EntryPoint(t,b).
 
 // at the end of the called function, bring the call expression in an intermediate state
-ControlFlow( ProgramPoint( b, POST ), ProgramPoint( c, IN ) ) :- CallExpr(c,f), callable_value(f,t), ExitPoint(t,b).
+ControlFlow( ProgramPoint( b, POST ), ProgramPoint( c, INT ) ) :- CallExpr(c,f), callable_value(f,t), ExitPoint(t,b).
 
 // from the intermediate state, continue with the POST state of the call  
-ControlFlow( ProgramPoint( c, IN ), ProgramPoint( c, POST ) ) :- CallExpr(c,_).
+ControlFlow( ProgramPoint( c, INT ), ProgramPoint( c, POST ) ) :- CallExpr(c,_).
 
 
 // - Lambda Expr -
@@ -90,10 +90,16 @@ ControlFlow( ProgramPoint( c ,  PRE ), ProgramPoint( c , POST ) ) :- CompoundStm
 // statements within compound statements
 ControlFlow( ProgramPoint( a , POST ), ProgramPoint( b ,  PRE ) ) :- CompoundStmt(c), NodeList(c,i,a), NodeList(c,i+1,b).
 
+// conditional statement
+ControlFlow( ProgramPoint( i ,  PRE ), ProgramPoint( c,  PRE ) ) :- IfStmt(i,c,_,_).
+ControlFlow( ProgramPoint( c , POST ), ProgramPoint( t,  PRE ) ) :- IfStmt(i,c,t,_), boolean_value(c,true).
+ControlFlow( ProgramPoint( t , POST ), ProgramPoint( i, POST ) ) :- IfStmt(i,c,t,_), boolean_value(c,true).
+ControlFlow( ProgramPoint( c , POST ), ProgramPoint( e,  PRE ) ) :- IfStmt(i,c,_,e), boolean_value(c,false).
+ControlFlow( ProgramPoint( e , POST ), ProgramPoint( i, POST ) ) :- IfStmt(i,c,_,e), boolean_value(c,false).
 
 // return statements
 ControlFlow( ProgramPoint( r ,  PRE ), ProgramPoint( e ,  PRE ) ) :- ReturnStmt(r,e,_).
-ControlFlow( ProgramPoint( e , POST ), ProgramPoint( c ,   IN ) ) :- ReturnStmt(r,e,_), ExitPoint(l,r), callGraph(c,l).
+ControlFlow( ProgramPoint( e , POST ), ProgramPoint( c ,   INT ) ) :- ReturnStmt(r,e,_), ExitPoint(l,r), callGraph(c,l).
 
 
 // TODO: argument evaluation right-2-left 
