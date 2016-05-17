@@ -63,6 +63,15 @@ enum _irt_opencl_data_mode {
 };
 typedef enum _irt_opencl_data_mode irt_opencl_data_mode;
 
+/**
+ * influences the interpretation of an optional argument
+ */
+enum _irt_opencl_optional_mode {
+	IRT_OPENCL_OPTIONAL_MODE_HOST_PRIMITIVE,
+	IRT_OPENCL_OPTIONAL_MODE_KRNL_BUFFER
+};
+typedef enum _irt_opencl_optional_mode irt_opencl_optional_mode;
+
 #define IRT_OPENCL_MAX_DIMS 3
 /**
  * this function is called to evaluate a given size_t

@@ -126,7 +126,7 @@ namespace opencl {
 		table[oclExt.getExecuteKernel()] = OP_CONVERTER {
 			/*
 			input:
-			opencl_execute_kernel(1u, fun018, [fun019,fun020,fun021], varlist_pack((sizeof(int<4>), callExpr));
+			opencl_execute_kernel(1u, fun018, [fun019,fun020,fun021], varlist_pack(make_optional(sizeof(int<4>), callExpr)));
 			
 			output:
 			({
@@ -162,7 +162,6 @@ namespace opencl {
 			assert_true(tupleExpr) << "expected a tupleExpr as argument of varlist_pack";
 			// acquire the list of packed expressions and make sure the number is sane
 			core::ExpressionList optionals = tupleExpr->getExpressions()->getElements();
-			assert_true((optionals.size() % 2) == 0) << "an optional argument must be modeled as tuple (size,value)";
 
 			std::vector<c_ast::NodePtr> args;
 			args.push_back(id);
@@ -170,37 +169,41 @@ namespace opencl {
 			args.push_back(CONVERT_EXPR(builder.uintLit(requirements.size())));
 			args.push_back(requirementsTable);
 			// inform the IRT about the number of optionals present
-			args.push_back(CONVERT_EXPR(builder.uintLit(optionals.size() / 2)));
-			if (!optionals.empty()) {
-				for (auto it = optionals.begin(); it != optionals.end(); ) {
-					// check if size is acceptable for IRT first
-					auto size = CONVERT_EXPR(*it++).isa<c_ast::UnaryOperationPtr>();
-					assert_true(size && size->operation == c_ast::UnaryOperation::SizeOf)
-						<< "an optional argument must be modeled as tuple (size,value)";
-					auto type = size->operand.isa<c_ast::PrimitiveTypePtr>();
-					assert_true(type) << "an optional argument must be of primitive type";
-					// check for further restrictions
-					switch (type->type) {
-					case c_ast::PrimitiveType::Void:
-					case c_ast::PrimitiveType::Int128:
-					case c_ast::PrimitiveType::UInt128:
-							// u/int128 is not allowed as IRT can only handle u/int64 in a
-							// portable and reliable manner! -- c99 va_arg actually.
-							assert_fail() << "invalid primitive type for optional argument";
-							break;
-					default:
-							// no-op fall through
-							break;
-					}
-					args.push_back(size);
-					// type is fine, proceed with value
-					auto value = *it++;
-					// in case we face a literal we need to convert the value on our own!
-					if (value->getNodeType() == core::NT_Literal)
-						args.push_back(CONVERT_EXPR(value));
-					else
-						// it might be a variable, call or bind
-						args.push_back(CONVERTER.getFunctionManager().getValue(value, context));
+			args.push_back(CONVERT_EXPR(builder.uintLit(optionals.size())));
+			for (const auto& expr : optionals) {
+				auto optional = Optional::decode(expr);
+				// check if size is acceptable for IRT first
+				auto size = CONVERT_EXPR(optional->getSize()).isa<c_ast::UnaryOperationPtr>();
+				assert_true(size && size->operation == c_ast::UnaryOperation::SizeOf)
+					<< "an optional argument must be modeled as tuple (size,value)";
+				auto type = size->operand.isa<c_ast::PrimitiveTypePtr>();
+				assert_true(type) << "an optional argument must be of primitive type";
+				// check for further restrictions
+				switch (type->type) {
+				case c_ast::PrimitiveType::Void:
+				case c_ast::PrimitiveType::Int128:
+				case c_ast::PrimitiveType::UInt128:
+						// u/int128 is not allowed as IRT can only handle u/int64 in a
+						// portable and reliable manner! -- c99 va_arg actually.
+						assert_fail() << "invalid primitive type for optional argument";
+						break;
+				default:
+						// no-op fall through
+						break;
+				}
+				args.push_back(size);
+				// type is fine, proceed with value
+				auto value = optional->getValue();
+				// in case we face a literal we need to convert the value on our own!
+				if (value->getNodeType() == core::NT_Literal)
+					args.push_back(CONVERT_EXPR(value));
+				else
+					// it might be a variable, call or bind
+					args.push_back(CONVERTER.getFunctionManager().getValue(value, context));
+				// generate the optional modifier as well
+				switch (optional->getModifier()) {
+				case Optional::Modifier::HOST_PRIMITIVE: args.push_back(manager->create("IRT_OPENCL_OPTIONAL_MODE_HOST_PRIMITIVE")); break;
+				case Optional::Modifier::KRNL_BUFFER:    args.push_back(manager->create("IRT_OPENCL_OPTIONAL_MODE_KRNL_BUFFER")); break;
 				}
 			}
 

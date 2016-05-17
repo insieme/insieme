@@ -420,7 +420,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
          * types can only be modeled using 'struct { vla }' which is _not_
          * supported by any compiler expect gcc.
          *
-         * note: num_optionals refers the the number of tuples given (size, arg)
+         * note: num_optionals refers the the number of tuples given (size, arg, mod)
          */
         uint64 data;
         uint32 size = va_arg(optionals, uint32);    
@@ -436,8 +436,16 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
         default:
                 IRT_ASSERT(false, IRT_ERR_OCL, "optional argument must fit in uint64, size %d", size);
                 break;
-        }       
-        result = clSetKernelArg(impl_data->kernel, num_requirements + opt, size, &data);
+        }
+		irt_opencl_optional_mode modifier = va_arg(optionals, uint32);
+		switch (modifier) {
+		case IRT_OPENCL_OPTIONAL_MODE_HOST_PRIMITIVE:
+			result = clSetKernelArg(impl_data->kernel, num_requirements + opt, size, &data);
+			break;
+		case IRT_OPENCL_OPTIONAL_MODE_KRNL_BUFFER:
+			result = clSetKernelArg(impl_data->kernel, num_requirements + opt, data, NULL);
+			break;
+		}
         /* iff the latter fails, the generated code has flaws and thus cannot continue */
         IRT_ASSERT(result == CL_SUCCESS, IRT_ERR_OCL, "clSetKernelArg returned with %d", result);
     }

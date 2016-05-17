@@ -273,13 +273,17 @@ namespace transform {
 	}
 
 	core::CallExprPtr buildExecuteKernel(core::NodeManager& manager, unsigned int id, const core::ExpressionPtr& ndrange,
-										 const core::ExpressionList& requirements, const core::ExpressionList& optionals) {
+										 const core::ExpressionList& requirements, const OptionalList& optionals) {
 		core::IRBuilder builder(manager);
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
+		// encode all optionals into IR in order to generate a var_list
+		core::ExpressionList vargs;
+		for (const auto& optional : optionals)
+			vargs.push_back(Optional::encode(manager, optional));
 		// this call instructs the irt to execute the kernel @id
 		return builder.callExpr(manager.getLangBasic().getUnit(), oclExt.getExecuteKernel(), builder.uintLit(id), ndrange,
 								core::encoder::toIR<core::ExpressionList, core::encoder::DirectExprListConverter>(manager, requirements),
-								builder.pack(optionals));
+								builder.pack(vargs));
 	}
 
 	core::CallExprPtr buildExecuteKernel(core::NodeManager& manager, unsigned int id, const StepContext& sc, const CallContext& cc) {
@@ -300,53 +304,8 @@ namespace transform {
 			for (const auto& requirement : sc.getDefaultRequirements())
 				requirements.push_back(toIR(manager, sc, requirement));
 		}
-		// put together all optionals
-		core::ExpressionList optionals;
-		if (!cc.getOptionals().empty()) {
-			core::IRBuilder builder(manager);
-			// each optional is represented as tuple (size,expr)
-			for (const auto& optional : cc.getOptionals()) {
-				// in case the optional is a function or a closure -- which must be in the form of
-				// (...) -> 'a -- the opconverter will take care to evaluate it in an eager manner
-				auto unit = manager.getLangBasic().getUnit();
-				auto type = unit;
-				switch (optional->getNodeType()) {
-				case core::NT_Literal:
-				case core::NT_Variable:
-						type = optional->getType();
-						break;
-				case core::NT_CallExpr:
-					{
-						auto callExpr = optional.as<core::CallExprPtr>();
-						// use returnType deduction for this purpose
-						type = core::types::deduceReturnType(callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>(),
-							core::extractTypes(callExpr->getArguments()));
-						break;
-					}
-				case core::NT_BindExpr:
-					{
-						auto bindExpr = optional.as<core::BindExprPtr>();
-						assert_true(bindExpr->getParameters().empty())
-							<< "optional argument modeled as bindExpr must not expect additional parameters";
-						// also use returnType deduction but use bound parameters
-						auto callExpr = bindExpr->getCall();
-						type = core::types::deduceReturnType(callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>(),
-							core::extractTypes(callExpr->getArguments()));
-						break;
-					}
-				default:
-						// fall through and trigger error handling
-						break;
-				}
-				assert_ne(type, unit) << "failed to deduce type of optional argument";
-				// at this point we can finally construct the tuple
-				optionals.push_back(builder.callExpr(manager.getLangBasic().getSizeof(),
-													 builder.getTypeLiteral(type)));
-				optionals.push_back(optional);
-			}
-		}
 		// done .. execute the helper one level deeper
-		return buildExecuteKernel(manager, id, toIR(manager, sc, cc.getNDRange()), requirements, optionals);
+		return buildExecuteKernel(manager, id, toIR(manager, sc, cc.getNDRange()), requirements, cc.getOptionals());
 	}
 
 	core::StatementList buildExecuteGraph(core::NodeManager& manager, unsigned int id, const StepContext& sc) {
@@ -376,6 +335,49 @@ namespace transform {
 			// and merge to enforce a sync point
 			result.push_back(builder.mergeAll());
 		}
+		return result;
+	}
+
+	OptionalPtr buildOptional(core::NodeManager& manager, const core::ExpressionPtr& expr, Optional::Modifier modifier) {
+		core::IRBuilder builder(manager);
+		// in case the optional is a function or a closure -- which must be in the form of
+		// (...) -> 'a -- the opconverter will take care to evaluate it in an eager manner
+		auto unit = manager.getLangBasic().getUnit();
+		auto type = unit;
+		switch (expr->getNodeType()) {
+		case core::NT_Literal:
+		case core::NT_Variable:
+				type = expr->getType();
+				break;
+		case core::NT_CallExpr:
+			{
+				auto callExpr = expr.as<core::CallExprPtr>();
+				// use returnType deduction for this purpose
+				type = core::types::deduceReturnType(callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>(),
+					core::extractTypes(callExpr->getArguments()));
+				break;
+			}
+		case core::NT_BindExpr:
+			{
+				auto bindExpr = expr.as<core::BindExprPtr>();
+				assert_true(bindExpr->getParameters().empty())
+					<< "optional argument modeled as bindExpr must not expect additional parameters";
+				// also use returnType deduction but use bound parameters
+				auto callExpr = bindExpr->getCall();
+				type = core::types::deduceReturnType(callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>(),
+					core::extractTypes(callExpr->getArguments()));
+				break;
+			}
+		default:
+				// fall through and trigger error handling
+				break;
+		}
+		assert_ne(type, unit) << "failed to deduce type of optional argument";
+		// at this point we can finally construct the tuple
+		auto result = std::make_shared<Optional>();
+		result->setModifier(modifier);
+		result->setValue(expr);
+		result->setSize(builder.callExpr(manager.getLangBasic().getSizeof(), builder.getTypeLiteral(type)));
 		return result;
 	}
 
