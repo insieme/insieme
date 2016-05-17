@@ -63,13 +63,8 @@ namespace transform {
 	 * Note: the optionals specified in 3. must fit into an uint64 due to limitations in the runtime
 	 */
 	class CallContext {
-		// ndrange associated with this call
 		NDRangePtr ndrange;
-		// concrete requirements -- if not empty, size must be the same as defaultRq!
-		// a processing step can use it to adjust the requirements for its needs
 		core::ExpressionList overrideRq;
-		// a list of optionals which shall be passed to irt_opencl_execute.
-		// right now the type must fit into an uint64 (limitation of IRT)
 		OptionalList optionals;
 	public:
 		const NDRangePtr& getNDRange() const { return ndrange; }
@@ -110,9 +105,13 @@ namespace transform {
 		 * edge models a dependency which restricts static parallelism
 		 */
 		CallGraph graph;
-		// represents what extensions the kernel needs to function properly
+		/**
+		 * Represents a set of extension which are required by the generated kernel to operate
+		 */
 		std::set<KhrExtension> extensions;
-		// name of the kernel
+		/**
+		 * Name of the generated kernel which will be used by the runtime system to enqueue the execution
+		 */
 		std::string kernelName;
 	public:
 		void setDefaultLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { defaultLe = lambdaExpr; }
@@ -129,6 +128,9 @@ namespace transform {
 		const std::string& getKernelName() const { return kernelName; }
 	};
 
+	/**
+	 * Represents an abstract processing step applied to an outlined lambdaExpr
+	 */
 	class Step : public PreProcessor {
 	protected:
 		core::NodeManager& manager;
@@ -144,8 +146,9 @@ namespace transform {
 	};
 
 	/**
-	 * transform::outline may produces e.g. float ** (due to ref<ref<ptr<real<4>>>>) which is not
-	 * suitable for OpenCL kernel node arguments. This step flattens e.g. float ** to float *
+	 * Strips all arguments which are not solely devoted to the generated kernel.
+     * Such additional arguments may be introduced during the process of outline
+	 * if a data requirement uses additionally captured information.
 	 */
 	class FixParametersStep : public Step {
 	public:
@@ -154,7 +157,7 @@ namespace transform {
 	};
 
 	/**
-	 * tries to simplify the given code
+	 * Tries to simplify the given code by e.g. inlining or using the core's functionality
 	 */
 	class StmtOptimizerStep : public Step {
 	public:
@@ -163,7 +166,7 @@ namespace transform {
 	};
 
 	/**
-	 * optimizes loops and generates a vertex in the call graph
+	 * Transform independent loops into OpenCL aware code and generate a corresponding call vertex
 	 */
 	class LoopOptimizerStep : public Step {
 	public:
@@ -172,7 +175,7 @@ namespace transform {
 	};
 
 	/**
-	 * introduces KernelType and applies 'local' transformations
+	 * May be used to modify kernel types, e.g. add the addition of __local prefetching
 	 */
 	class TypeOptimizerStep : public Step {
 	public:
@@ -181,7 +184,7 @@ namespace transform {
 	};
 
 	/**
-	 * tries to optimize the call-graph
+	 * May be used to optimize a given CallGraph
 	 */
 	class CallOptimizerStep : public Step {
 	public:
@@ -190,7 +193,7 @@ namespace transform {
 	};
 
 	/**
-	 * checks the integrity of the IR
+	 * Checks the integrity of the produced IR before it is handed off to the Sub-Backend
 	 */
 	class IntegrityCheckStep : public Step {
 	public:
@@ -199,36 +202,87 @@ namespace transform {
 	};
 
 	/**
-     * outlines the given stmt and captures anything additionally required by the requirements
+     * Outlines the given statement and captures any expressions indirectly required by @requirements
      */
 	core::CallExprPtr outline(core::NodeManager& manager, const core::StatementPtr& stmt,
 							  VariableRequirementList& requirements);
 
+	/**
+	 * Build the IR-Equivalent of get_work_dim()
+	 */
 	core::CallExprPtr buildGetWorkDim(core::NodeManager& manager);
+
+	/**
+	 * Build the IR-Equivalent of get_global_id()
+	 */
 	core::CallExprPtr buildGetGlobalId(core::NodeManager& manager, const core::ExpressionPtr& dim);
+
+	/**
+	 * Build the IR-Equivalent of get_global_size()
+	 */
 	core::CallExprPtr buildGetGlobalSize(core::NodeManager& manager, const core::ExpressionPtr& dim);
+
+	/**
+	 * Build the IR-Equivalent of get_local_id()
+	 */
 	core::CallExprPtr buildGetLocalId(core::NodeManager& manager, const core::ExpressionPtr& dim);
+
+	/**
+	 * Build the IR-Equivalent of get_local_size()
+	 */
 	core::CallExprPtr buildGetLocalSize(core::NodeManager& manager, const core::ExpressionPtr& dim);
+
+	/**
+	 * Build the IR-Equivalent of get_num_groups()
+	 */
 	core::CallExprPtr buildGetNumGroups(core::NodeManager& manager, const core::ExpressionPtr& dim);
+
+	/**
+	 * Build the IR-Equivalent of get_group_id()
+	 */
 	core::CallExprPtr buildGetGroupId(core::NodeManager& manager, const core::ExpressionPtr& dim);
 
+	/**
+	 * Build a callExpr which will register the given kernel within the runtime system
+	 */
 	core::CallExprPtr buildRegisterKernel(core::NodeManager& manager, unsigned int& id,
 										  const StepContext& sc, const core::LambdaExprPtr& oclExpr);
 
+	/**
+	 * Build a callExpr which will execute the given kernel synchronously
+	 */
 	core::CallExprPtr buildExecuteKernel(core::NodeManager& manager, unsigned int id, const core::ExpressionPtr& ndrange,
 										 const core::ExpressionList& requirements, const OptionalList& optionals);
 
+	/**
+	 * Build a callExpr which will execute the given kernel synchronously with information taken from the CallContext
+	 */
 	core::CallExprPtr buildExecuteKernel(core::NodeManager& manager, unsigned int id, const StepContext& sc, const CallContext& cc);
 
+	/**
+	 * Builds an execution graph for the given kernel, furthermore the impl tries to parallelize independent calls
+	 */
 	core::StatementList buildExecuteGraph(core::NodeManager& manager, unsigned int id, const StepContext& sc);
 
+	/**
+	 * Build an optional kernel argument in the proper IR construct
+	 */
 	OptionalPtr buildOptional(core::NodeManager& manager, const core::ExpressionPtr& expr, Optional::Modifier modifier);
 
+	/**
+	 * Convert a given NDRange into a runtime callable function
+	 */
 	core::LambdaExprPtr toIR(core::NodeManager& manager, const StepContext& sc, const NDRangePtr& ndrange);
 
+	/**
+	 * Convert the given VariableRequirement into a DataRequirement with an associated runtime callable function
+	 */
 	core::LambdaExprPtr toIR(core::NodeManager& manager, const StepContext& sc, const VariableRequirementPtr& var);
 
-	// callExpr must have been obtained via outline() of above!
+	/**
+	 * Convert the given code, which must have been previously outlined via opencl::transform::outline(), into a set
+	 * of lambdaExprs which represent pickable WI-variants
+	 */
 	std::vector<core::LambdaExprPtr> toOcl(const Converter& converter, core::NodeManager& manager, const core::NodePtr& code,
 										   const core::CallExprPtr& callExpr, const VariableRequirementList& requirements,
 										   const DeviceAnnotationPtr& deviceInfo);
