@@ -3,11 +3,12 @@
 #include "ir.dl"
 #include "parent.dl"
 #include "callable.dl"
+#include "reachable.dl"
 
 // --- compute entry and exit points of all callables---
 
 .decl EntryPoint( c : callable, s : stmt )
-.decl  ExitPoint( c : callable, s : stmt )
+.decl  ExitPoint( c : callable, s : stmt ) output
 
 
 // - an auxiliary relation to link returns to enclosing lambda
@@ -31,6 +32,9 @@ EntryPoint( l, l ) :- Literal(l,_,_).
 // the exit point of a lambda is every reachable return
 ExitPoint( l, r ) :- ReturnOfLambda( l, r ).
 
+// the end of the body of a lambda is an exit point, if reachable
+ExitPoint( l , b ) :- Lambda(l,_,_,b), ReachableOut(b).
+
 // the exit point of a closure is the call expression
 ExitPoint( b, c ) :- BindExpr( b, _, c ).
 
@@ -45,4 +49,4 @@ ExitPoint( l, l ) :- Literal(l,_,_).
 ReturnParent( r, r ) :- ReturnStmt(r,_,_).
 ReturnParent( r, p ) :- ReturnParent(r,s), ParentOf(p,s), !Lambda(s,_,_,_).
 
-ReturnOfLambda(l,r) :- Lambda(l,_,_,_), ReturnParent(r,l).
+ReturnOfLambda(l,r) :- Lambda(l,_,_,_), ReturnParent(r,l), ReachableIn(r).

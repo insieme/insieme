@@ -212,6 +212,40 @@ namespace datalog {
 	TEST(BooleanValue, MemoryState) {
 
 		EXPECT_TRUE( isTrue("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; return *a; }()"));
+		EXPECT_TRUE(isFalse("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; a = !a; return *a; }()"));
+
+
+		// some more complex example
+		auto code = R"(
+			let negate = ( a : ref<bool> )->unit { a = !a; } in
+			()->bool {
+				var ref<bool> a = ref_new(type_lit(bool));
+				a = false;
+				negate(a);
+				negate(a);
+				negate(a);
+				return *a;
+			}()
+		)";
+
+		EXPECT_TRUE(isTrue(code));
+
+	}
+
+	TEST(BooleanValue, PassByReference ) {
+
+		// some more complex example
+		auto code = R"(
+			let forward = ( a : ref<bool> )->bool { return *a; } in
+			()->bool {
+				var ref<bool> a = ref_new(type_lit(bool));
+				a = true;
+				a = forward(a);
+				return *a;
+			}()
+		)";
+
+		EXPECT_TRUE(isTrue(code));
 
 	}
 

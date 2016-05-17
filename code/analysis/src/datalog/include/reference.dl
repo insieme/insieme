@@ -23,6 +23,7 @@ reference.value( c, c ) :- callGraph(c,t),NodeIdentity(t,x),NamedConstruct("ref_
 
 // and by function parameters
 // TODO: cover this (after merge, this is different)
+reference.value( a, a ) :- Lambda(l,_,p,_), NodeList(p,_,a).
 
 // and by return statements
 // TODO: cover this (after merge, this is different)
