@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -64,7 +64,7 @@ namespace tu {
 		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(),
 		                 builder.parseExpr("()->unit { return; }").as<core::LambdaExprPtr>());
 		unit.addFunction(builder.parseExpr("lit(\"Y\":()->unit)").as<core::LiteralPtr>(),
-		                 builder.parseExpr("()->unit { var int<4> x; return; }").as<core::LambdaExprPtr>());
+		                 builder.parseExpr("()->unit { var int<4> x = 1; return; }").as<core::LambdaExprPtr>());
 
 		// check adding globals
 		unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));

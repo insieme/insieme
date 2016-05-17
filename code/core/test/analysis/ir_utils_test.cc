@@ -713,7 +713,7 @@ namespace analysis {
 			alias int = int<4>;
 			def fun = () -> unit {
 				var int x = 1;
-				var int y;
+				var int y = 2;
 			};
 			unit main() {
 				fun();

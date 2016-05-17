@@ -57,8 +57,8 @@ namespace transform {
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
 		def x = (a : 'a)->unit {
-			auto z = a; 
-			$z$; 
+			auto z = a;
+			$z$;
 		};
 		def test = (f : 'a) -> unit {
 			auto y = f;
@@ -84,8 +84,8 @@ namespace transform {
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
 		def x = (a : 'a)->unit {
-			auto z = a; 
-			$z$; 
+			auto z = a;
+			$z$;
 		};
 		def test = (f : 'a) -> unit {
 			auto y = f;
@@ -111,11 +111,11 @@ namespace transform {
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
 		def test = (a : vector<'res,'l>) -> unit {
-			$var vector<'res, 'l> res;$
+			$var ref<vector<'res, 'l>> res;$
 		};
 		{
-			var vector<int<4>, 8> a;
-			test(a);
+			var ref<vector<int<4>, 8>> a;
+			test(*a);
 		}
 	)raw");
 
@@ -125,7 +125,7 @@ namespace transform {
 
 		auto newAddr = addresses[0].switchRoot(result);
 
-		EXPECT_EQ(builder.normalize(builder.parseStmt("var vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
+		EXPECT_EQ(builder.normalize(builder.parseStmt("var ref<vector<int<4>, 8>> res;")), builder.normalize(newAddr.getAddressedNode()));
 	}
 
 	TEST(TypeInstantiation, Constructor) {
@@ -153,17 +153,17 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def test = (a : vector<'res,'l>) -> unit {
-			$var vector<'res, 'l> res;$
-			var int<4> x = 0;
-			$x$;
-			$res$;
-		};
-		{
-			var vector<int<4>, 8> a;
-			test(a);
-		}
-	)raw");
+			def test = (a : vector<'res,'l>) -> unit {
+				$var ref<vector<'res, 'l>> res;$
+				var int<4> x = 0;
+				$x$;
+				$res$;
+			};
+			{
+				var ref<vector<int<4>, 8>> a;
+				test(*a);
+			}
+		)raw");
 
 		EXPECT_EQ(addresses.size(), 3);
 
@@ -172,7 +172,7 @@ namespace transform {
 		auto newAddr = addresses[0].switchRoot(result);
 		auto newAnnAddr = addresses[1].switchRoot(result);
 		auto newAnnAddr2 = addresses[2].switchRoot(result);
-		EXPECT_EQ(builder.normalize(builder.parseStmt("var vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
+		EXPECT_EQ(builder.normalize(builder.parseStmt("var ref<vector<int<4>, 8>> res;")), builder.normalize(newAddr.getAddressedNode()));
 		EXPECT_TRUE(annotations::hasAttachedName(addresses[1].getAddressedNode()));
 		EXPECT_TRUE(annotations::hasAttachedName(newAnnAddr.getAddressedNode()));
 		EXPECT_TRUE(annotations::hasAttachedName(newAnnAddr2.getAddressedNode()));
@@ -186,11 +186,11 @@ namespace transform {
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
 		def test = (a : vector<'res,'l>) -> unit {
-			$var vector<'res, 'l> res;$
+			$var ref<vector<'res, 'l>> res;$
 		};
 		{
-			var vector<int<4>, 8> a;
-			test(a);
+			var ref<vector<int<4>, 8>> a;
+			test(*a);
 		}
 	)raw");
 
@@ -214,12 +214,12 @@ namespace transform {
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
 		def test = (a : vector<'res,'l>) -> unit {
-			var vector<'res, 'l> res;
+			var ref<vector<'res, 'l>> res;
 		};
 
 		{
-			var vector<int<4>, 8> a;
-			$test(a)$;
+			var ref<vector<int<4>, 8>> a;
+			$test(*a)$;
 		}
 	)raw");
 
@@ -244,14 +244,14 @@ namespace transform {
 		def foo = (v : 'a) -> 'a {
 			return $v$;
 		};
-		
+
 		def test = (v : array<'res,'l>, f : ('res) -> 'res) -> unit {
 			f(v[0]);
 		};
-		
+
 		{
-			var array<int<4>, 8> a;
-			test(a, foo);
+			var ref<array<int<4>, 8>> a;
+			test(*a, foo);
 		}
 	)raw");
 
@@ -287,14 +287,14 @@ namespace transform {
 		IRBuilder build(mgr);
 
 		auto expr = build.parseExpr(R"(
-		(x : '_type_) -> unit {
-			var ref<'_type_> b;
-			() => {
-				auto y = b;
-				return y;
-			};
-		}(5)
-	)");
+			(x : '_type_) -> unit {
+				var ref<'_type_> b;
+				() => {
+					auto y = b;
+					return y;
+				};
+			}(5)
+		)");
 
 		EXPECT_TRUE(expr);
 
@@ -312,18 +312,18 @@ namespace transform {
 		IRBuilder build(mgr);
 
 		auto expr = build.parseExpr(R"(
-		(x : '_type_) -> unit {
-			var ref<'_type_> b;
-			() => {
-				auto y = b;
+			(x : '_type_) -> unit {
+				var ref<'_type_> b;
 				() => {
-					auto z = y;
-					return z;
+					auto y = b;
+					() => {
+						auto z = y;
+						return z;
+					};
+					return y;
 				};
-				return y;
-			};
-		}(5)
-	)");
+			}(5)
+		)");
 
 		EXPECT_TRUE(expr);
 
@@ -340,13 +340,13 @@ namespace transform {
 		IRBuilder build(mgr);
 
 		auto expr = build.parseExpr(R"(
-		(x : '_type_) -> unit {
-			var ref<'_type_> b;		
-			parallel(job {
-				auto y = b;
-			});
-		}(5)
-	)");
+			(x : '_type_) -> unit {
+				var ref<'_type_> b;
+				parallel(job {
+					auto y = b;
+				});
+			}(5)
+		)");
 
 		EXPECT_TRUE(expr);
 
@@ -409,14 +409,14 @@ namespace transform {
 		IRBuilder build(mgr);
 
 		auto addresses = build.parseAddressesStatement(R"raw(
-		decl x : ('_type_)->unit;
-		def x = (a : '_type_)->unit {
-			$x$(a); // address 1
-		};
-		{
-			$x$(5); // address 0
-		}
-	)raw");
+			decl x : ('_type_)->unit;
+			def x = (a : '_type_)->unit {
+				$x$(a); // address 1
+			};
+			{
+				$x$(5); // address 0
+			}
+		)raw");
 
 		EXPECT_EQ(addresses.size(), 2);
 
@@ -437,19 +437,19 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def x = (a : 'a)->unit {
-			auto z = a; 
-			$z$; 
-		};
-		def test = (f : 'a) -> unit {
-			auto y = f;
-			x(f);
-		};
-		{
-			var int<4> v = 1;
-			test(v);
-		}
-	)raw");
+			def x = (a : 'a)->unit {
+				auto z = a;
+				$z$;
+			};
+			def test = (f : 'a) -> unit {
+				auto y = f;
+				x(f);
+			};
+			{
+				var int<4> v = 1;
+				test(v);
+			}
+		)raw");
 
 		auto result = instantiateTypes(addresses[0].getRootNode());
 
@@ -470,7 +470,7 @@ namespace transform {
 		core::ProgramPtr code = builder.parseProgram("int<4> main() {"
 		                                             "  (dtype : type<'a>, size : type<'s>)->unit {"
 		                                             "    var ref<'a> v0;"
-		                                             "    var int<'s> v1;"
+		                                             "    var ref<int<'s>> v1;"
 		                                             "  } (type_lit(real<4>), type_lit(8));"
 		                                             "  return 0;"
 		                                             "}");

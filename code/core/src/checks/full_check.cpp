@@ -58,7 +58,7 @@ namespace checks {
 			context_free_checks.push_back(make_check<ExternalFunctionTypeCheck>());
 			context_free_checks.push_back(make_check<ReturnTypeCheck>());
 			context_free_checks.push_back(make_check<LambdaTypeCheck>());
-			context_free_checks.push_back(make_check<DeclarationStmtTypeCheck>());
+			context_free_checks.push_back(make_check<DeclarationTypeCheck>());
 			context_free_checks.push_back(make_check<DeclarationStmtSemanticCheck>());
 			context_free_checks.push_back(make_check<IfConditionTypeCheck>());
 			context_free_checks.push_back(make_check<ForStmtTypeCheck>());

@@ -136,7 +136,7 @@ namespace analysis {
 		                              "	var int<inf> v40 = 3;"
 		                              "	var ref<array<int<4>,#v40>,f,f,plain> v50;"
 		                              "}; x()");
-		EXPECT_EQ("rec x.{x=fun() {int<inf> v0 = 3; ref<array<int<4>,v0>,f,f,plain> v1 = v1;}}()",
+		EXPECT_EQ("rec x.{x=fun() {int<inf> v0 = 3; ref<array<int<4>,v0>,f,f,plain> v1 = ref_decl(type<ref<array<int<4>,v0>,f,f,plain>>);}}()",
 			      toString(*normalize(code)));
 	}
 

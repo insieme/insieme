@@ -810,11 +810,11 @@ namespace checks {
 		return res;
 	}
 
-	OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
+	OptionalMessageList DeclarationTypeCheck::visitDeclaration(const DeclarationAddress& address) {
 		OptionalMessageList res;
 
-		DeclarationStmtPtr declaration = address.getAddressedNode();
-		TypePtr variableType = declaration->getVariable()->getType();
+		DeclarationPtr declaration = address.getAddressedNode();
+		TypePtr variableType = declaration->getType();
 		ExpressionPtr init = declaration->getInitialization();
 		TypePtr initType = init->getType();
 

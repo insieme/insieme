@@ -255,8 +255,8 @@ namespace core {
 		auto& basic = builder.getLangBasic();
 
 		auto comp = builder.parseStmt(R"({
-			var int<4> a;
-			var int<4> b;
+			var int<4> a = 0;
+			var int<4> b = 1;
 			if(true) {
 				var int<4> c = a;
 			}
@@ -287,11 +287,11 @@ namespace core {
 
 		auto comp = builder.parseAddressesStatement(R"(
 		def fun = () -> unit {
-			var int<4> c;
+			var int<4> c = 0;
 			$c$;
 		};
 		{
-			var int<4> a;
+			var int<4> a = 1;
 			$a$;
 			fun();
 		})");
@@ -327,7 +327,7 @@ namespace core {
 
 		auto comp = builder.parseAddressesStatement(R"(
 		{
-			var int<4> a;
+			var int<4> a = 0;
 			$a$;
 			fun($a$);
 		})", IRBuilderBaseModule::EagerDefinitionMap { {"fun", fun} });

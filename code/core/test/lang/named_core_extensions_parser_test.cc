@@ -58,15 +58,15 @@ namespace lang {
 	TEST(NamedCoreExtensionParserTest, ParserAssertsDeathTest) {
 		NodeManager manager;
 
-		EXPECT_THROW(parser::parseStmt(manager, "using \"ext.unknown_extension\"; var complex a;", true), parser::IRParserException);
+		EXPECT_THROW(parser::parseStmt(manager, "using \"ext.unknown_extension\";", true), parser::IRParserException);
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserSingleStatement) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_EQ("AP(('a,'a) v0 = v0)",
-		          toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; var complex a;"))));
+		EXPECT_EQ("AP(ref<('a,'a),f,f,plain> v0 = ref_decl(type<ref<('a,'a),f,f,plain>>))",
+		          toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; var ref<complex> a;"))));
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserCompoundStatement) {
@@ -74,8 +74,8 @@ namespace lang {
 		IRBuilder builder(manager);
 
 		// both instances of type complex should be expanded
-		EXPECT_EQ("AP({('a,'a) v0 = v0; ('a,'a) v1 = v1;})",
-			      toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; { var complex a; var complex b; }"))));
+		EXPECT_EQ("AP({ref<('a,'a),f,f,plain> v0 = ref_decl(type<ref<('a,'a),f,f,plain>>); ref<('a,'a),f,f,plain> v1 = ref_decl(type<ref<('a,'a),f,f,plain>>);})",
+			      toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; { var ref<complex> a; var ref<complex> b; }"))));
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserCompoundNestedStatement) {
@@ -83,8 +83,8 @@ namespace lang {
 		IRBuilder builder(manager);
 
 		// the nested instance of complex should also be expanded
-		EXPECT_EQ("AP({('a,'a) v0 = v0; {('a,'a) v1 = v1;};})",
-			      toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; { var complex a; { var complex b; }}"))));
+		EXPECT_EQ("AP({ref<('a,'a),f,f,plain> v0 = ref_decl(type<ref<('a,'a),f,f,plain>>); {ref<('a,'a),f,f,plain> v1 = ref_decl(type<ref<('a,'a),f,f,plain>>);};})",
+			      toString(builder.normalize(parser::parseStmt(manager, "using \"ext.complex\"; { var ref<complex> a; { var ref<complex> b; }}"))));
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserMultipleUsing) {
@@ -92,7 +92,7 @@ namespace lang {
 		IRBuilder builder(manager);
 
 		// both named extensions should be expanded
-		EXPECT_TRUE(parser::parseStmt(manager, "using \"ext.complex\"; using \"ext.enum\"; { auto a = enum_to_int; var complex b; }"));
+		EXPECT_TRUE(parser::parseStmt(manager, "using \"ext.complex\"; using \"ext.enum\"; { auto a = enum_to_int; var ref<complex> b; }"));
 	}
 
 
@@ -103,28 +103,26 @@ namespace lang {
 		NamedCoreExtensionParserTestExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
-		TYPE_ALIAS("complex","struct { foo : NamedType; }")
+		TYPE_ALIAS("complex","real<16>")
 	};
 
-	TEST(NamedCoreExtensionParserTest, ParserAlreadyExistingNameDeathTest) {
+	TEST(NamedCoreExtensionParserTest, ParserAlreadyExistingNameTest) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
 		const auto& existingNames = manager.getLangExtension<NamedCoreExtensionParserTestExtension>().getDefinedSymbols();
-		const auto& typeAlises = manager.getLangExtension<NamedCoreExtensionParserTestExtension>().getTypeAliases();
+		const auto& typeAliases = manager.getLangExtension<NamedCoreExtensionParserTestExtension>().getTypeAliases();
 
 		// As I passed the extension with the name "complex" already defined this should be expanded
-		EXPECT_EQ("AP(struct "
-			      "{foo:NamedType,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>,"
-			      + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>} v0 = v0)",
-			      toString(builder.normalize(parser::parseStmt(manager, "var complex a;", false, existingNames, typeAlises))));
+		EXPECT_EQ("AP(ref<real<16>,f,f,plain> v0 = ref_decl(type<ref<real<16>,f,f,plain>>))",
+			      toString(builder.normalize(parser::parseStmt(manager, "var ref<complex,f,f,plain> a;", false, existingNames, typeAliases))));
 
-		// inside of a compound stmt we shadow previous vararations
-		EXPECT_TRUE(parser::parseStmt(manager, "using \"ext.complex\"; var complex a;", false, existingNames));
+		// inside of a compound stmt we shadow previous declarations
+		EXPECT_TRUE(parser::parseStmt(manager, "using \"ext.complex\"; var ref<complex> a;", false, existingNames));
 
 	}
 
-	TEST(ConstTypeExtensionTest, Semantic) {
+	TEST(NamedCoreExtensionParserTestExtension, Semantic) {
 		NodeManager nm;
 
 		const NamedCoreExtensionParserTestExtension& ext = nm.getLangExtension<NamedCoreExtensionParserTestExtension>();

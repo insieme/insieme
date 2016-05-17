@@ -69,7 +69,7 @@ namespace checks {
 	SIMPLE_CHECK(ArrayType, Node, true);
 	SIMPLE_CHECK(GenericOps, CallExpr, false);
 
-	SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt, false);
+	SIMPLE_CHECK(DeclarationType, Declaration, false);
 	SIMPLE_CHECK(DeclarationStmtSemantic, DeclarationStmt, false);
 	SIMPLE_CHECK(IfConditionType, IfStmt, false);
 	SIMPLE_CHECK(ForStmtType, ForStmt, false);

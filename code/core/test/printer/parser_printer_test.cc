@@ -337,13 +337,13 @@ namespace parser {
 
 		EXPECT_TRUE(test_statement(nm, "def struct name { a : int<2>; };"
 				                       "{"
-			                           "    var name a;"
+			                           "    var ref<name> a;"
 			                           "}"));
 
 		EXPECT_TRUE(test_statement(nm, "def struct name { a : int<2>; };"
 				                       "alias collection = vector<class, 10>;"
 			                           "{"
-				                       "    var collection col;"
+				                       "    var ref<collection> col;"
 			                           "}"));
 
 		EXPECT_TRUE(test_statement(nm, "def struct somenewname { a : int<2>; };"
@@ -580,7 +580,6 @@ TEST(After_Before_Test, Let) {
 		"alias class = name;"
 		"unit main() {  "
 		"    var ref<class> x;"
-		"    var fancy y;"
 		"    x.f();"
 		"    x.g();"
 		"}" ));
@@ -596,7 +595,7 @@ TEST(After_Before_Test, Let) {
 		"    }"
 		"};"
 		"unit main() {"
-		"    var name y;"
+		"    var ref<name> y;"
 		"}"
 		));
 	}

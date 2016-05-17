@@ -216,9 +216,9 @@ namespace checks {
 		auto stmt = builder.parseStmt(R"1N5P1RE(
 			alias uint = uint<8>;
 			{
-				() -> uint {
-					var int<4> a;
-					switch(a) {
+				() -> int<4> {
+					var ref<int<4>> a;
+					switch(*a) {
 					case 0: { return 5; }
 					case 1: { return 10; }
 					default: { throw "Ugh"; }
@@ -242,9 +242,9 @@ namespace checks {
 		auto stmt = builder.parseStmt(R"1N5P1RE(
 			alias uint = uint<8>;
 			{
-				() -> uint {
-					var int<4> a;
-					switch(a) {
+				() -> int<4> {
+					var ref<int<4>> a;
+					switch(*a) {
 					case 0: { return 5; }
 					case 1: { 10; }
 					default: { throw "Ugh"; }
@@ -268,9 +268,9 @@ namespace checks {
 		auto stmt = builder.parseStmt(R"1N5P1RE(
 			alias uint = uint<8>;
 			{
-				() -> uint {
-					var int<4> a;
-					switch(a) {
+				() -> int<4> {
+					var ref<int<4>> a;
+					switch(*a) {
 					case 0: { return 5; }
 					case 1: { return 10; }
 					}
@@ -293,10 +293,10 @@ namespace checks {
 		auto stmt = builder.parseStmt(R"1N5P1RE(
 			alias uint = uint<8>;
 			{
-				() -> uint {
-					var int<4> a;
+				() -> int<4> {
+					var ref<int<4>> a;
 					while(true) {
-						switch(a) {
+						switch(*a) {
 						case 0: { return 5; }
 						case 1: { 10; }
 						default: { "Ugh"; }

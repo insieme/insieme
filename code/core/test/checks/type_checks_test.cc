@@ -1063,25 +1063,25 @@ namespace checks {
 		*/
 	}
 
-	TEST(DeclarationStmtTypeCheck, Basic) {
+	TEST(DeclarationTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		// OK ... create a function literal
 		TypePtr type = builder.genericType("int");
 		TypePtr type2 = builder.genericType("uint");
 		ExpressionPtr init = builder.literal(type, "4");
 		DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(type), init);
 		DeclarationStmtPtr err = builder.declarationStmt(builder.variable(type2), init);
 
-		CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+		CheckPtr typeCheck = makeRecursive(make_check<DeclarationTypeCheck>());
 		EXPECT_TRUE(check(ok, typeCheck).empty());
 		ASSERT_FALSE(check(err, typeCheck).empty());
 
-		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, check(err, typeCheck),
+			         Message(DeclarationStmtAddress(err)->getDeclaration(), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 	}
 
-	TEST(DeclarationStmtTypeCheck, SubTypes) {
+	TEST(DeclarationTypeCheck, SubTypes) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		auto& basic = manager.getLangBasic();
@@ -1093,14 +1093,15 @@ namespace checks {
 		DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(typeB), builder.literal(typeA, "4"));
 		DeclarationStmtPtr err = builder.declarationStmt(builder.variable(typeA), builder.literal(typeB, "4"));
 
-		CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+		CheckPtr typeCheck = makeRecursive(make_check<DeclarationTypeCheck>());
 		EXPECT_TRUE(check(ok, typeCheck).empty());
 		ASSERT_FALSE(check(err, typeCheck).empty());
 
-		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, check(err, typeCheck),
+			         Message(DeclarationStmtAddress(err)->getDeclaration(), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 	}
 
-	TEST(DeclarationStmtTypeCheck, RecursiveTypes) {
+	TEST(DeclarationTypeCheck, RecursiveTypes) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -1114,14 +1115,14 @@ namespace checks {
 		DeclarationStmtPtr ok2 = builder.declarationStmt(builder.variable(typeB), builder.literal(typeA, "X"));
 		DeclarationStmtPtr ok3 = builder.declarationStmt(builder.variable(typeB), builder.literal(typeB, "X"));
 
-		CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+		CheckPtr typeCheck = makeRecursive(make_check<DeclarationTypeCheck>());
 		EXPECT_TRUE(check(ok0, typeCheck).empty()) << check(ok0, typeCheck);
 		EXPECT_TRUE(check(ok1, typeCheck).empty()) << check(ok1, typeCheck);
 		EXPECT_TRUE(check(ok2, typeCheck).empty()) << check(ok2, typeCheck);
 		EXPECT_TRUE(check(ok3, typeCheck).empty()) << check(ok3, typeCheck);
 	}
 
-	TEST(DeclarationStmtTypeCheck, ReferenceSemantics) {
+	TEST(DeclarationTypeCheck, ReferenceSemantics) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -1129,7 +1130,7 @@ namespace checks {
 		const auto& int4 = basic.getInt4();
 		const auto& int8 = basic.getInt8();
 
-		CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+		CheckPtr typeCheck = makeRecursive(make_check<DeclarationTypeCheck>());
 
 		{ //plain integer
 			DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(builder.refType(int4)), builder.literal(int4, "42"));
@@ -1158,10 +1159,11 @@ namespace checks {
 			EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
 		}
 
-		{ //different types do not work
+		{ // different types do not work
 			DeclarationStmtPtr err = builder.declarationStmt(builder.variable(builder.refType(int4)), builder.literal(int8, "42"));
 			ASSERT_FALSE(check(err, typeCheck).empty());
-			EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+			EXPECT_PRED2(containsMSG, check(err, typeCheck),
+				         Message(DeclarationStmtAddress(err)->getDeclaration(), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 		}
 	}
 

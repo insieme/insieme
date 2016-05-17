@@ -1071,7 +1071,7 @@ namespace parser {
 			                                                 "  a : int<4>;"
 			                                                 "};"
 			                                                 "{"
-			                                                 "  var A a;"
+			                                                 "  var A a = *ref_temp(type_lit(ref<A>));"
 			                                                 "  var ref<A,f,f,plain> ra;"
 			                                                 "  $a.a$;"
 			                                                 "  $ra.a$;"
