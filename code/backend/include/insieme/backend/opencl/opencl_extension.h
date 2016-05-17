@@ -76,6 +76,9 @@ namespace opencl {
 		LANG_EXT_TYPE(DataRequirement, "opencl_data_requirement");
 		LANG_EXT_LITERAL(MakeDataRequirement, "opencl_make_data_requirement", "(type<'a>, uint<4>, opencl_data_range_fun, uint<4>)->opencl_data_requirement");
 
+		LANG_EXT_TYPE(Optional, "opencl_optional");
+		LANG_EXT_LITERAL(MakeOptional, "opencl_make_optional", "('size, 'value, 'modifier)->opencl_optional");
+
 		// extensions for the opencl kernel code
 		LANG_EXT_LITERAL(WorkDim, "opencl_get_work_dim", "()->uint<4>");
 		LANG_EXT_LITERAL(GlobalSize, "opencl_get_global_size", "(uint<4>)->opencl_size_type");

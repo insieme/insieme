@@ -50,6 +50,10 @@ namespace opencl {
 	typedef std::shared_ptr<DataRange> DataRangePtr;
 	typedef std::vector<DataRangePtr> DataRangeList;
 	
+	/**
+	 * Represents a range bound to a specific dimension, where @size donates the full length
+	 * of the target and (@start, @size) specify a single subrange.
+	 */
 	class DataRange {
 		ExpressionPtr size;
 		ExpressionPtr start;
@@ -62,8 +66,12 @@ namespace opencl {
 		const ExpressionPtr& getStart() const { return start; }
 		const ExpressionPtr& getEnd() const { return end; }
 		
-		bool operator==(const DataRange& other) const {
-			return size == other.size && start == other.start && end == other.end;
+		bool operator ==(const DataRange& other) const {
+			return *size == *other.size && *start == *other.start && *end == *other.end;
+		}
+
+		bool operator !=(const DataRange& other) const {
+			return !(*this == other);
 		}
 		
 		static DataRangePtr get(NodeManager& manager, const ExpressionPtr& size, const ExpressionPtr& start, const ExpressionPtr& end) {
@@ -83,6 +91,10 @@ namespace opencl {
 	typedef std::shared_ptr<DataRequirement> DataRequirementPtr;
 	typedef std::vector<DataRequirementPtr> DataRequirementList;
 	
+	/**
+	 * Models the data requirements of one data blob. The blob has an associated access mode
+	 * along with a dedicated data range for each dimension.
+	 */
 	class DataRequirement {
 	public:
 		enum AccessMode { RO = 0, WO = 1, RW = 2 };
@@ -96,9 +108,13 @@ namespace opencl {
 		const LambdaExprPtr& getRangeExpr() const { return rangeExpr; }
 		void setRangeExpr(const LambdaExprPtr& expr) { rangeExpr = expr; }
 		
-		bool operator==(const DataRequirement& other) const {
-			return accessMode == other.accessMode && typePtr == other.typePtr &&
-				   numRanges == other.numRanges && rangeExpr == other.rangeExpr;
+		bool operator ==(const DataRequirement& other) const {
+			return accessMode == other.accessMode && *typePtr == *other.typePtr &&
+				   *numRanges == *other.numRanges && *rangeExpr == *other.rangeExpr;
+		}
+
+		bool operator !=(const DataRequirement& other) const {
+			return !(*this == other);
 		}
 		
 		static DataRequirementPtr decode(const ExpressionPtr& expr) {
@@ -118,6 +134,9 @@ namespace opencl {
 	class NDRange;
 	typedef std::shared_ptr<NDRange> NDRangePtr;
 	
+	/**
+	 * IR-Equivalent of the well-known OpenCL NDRange concept
+	 */
 	class NDRange {
 	public:
 		const ExpressionPtr& getWorkDim() const { return workDim; }
@@ -129,13 +148,19 @@ namespace opencl {
 		const ExpressionList& getLocalWorkSizes() const { return localWorkSize; }
 		void setLocalWorkSize(const ExpressionList& lst) { localWorkSize = lst; }
 
-		bool operator==(const NDRange& other) const {
-			return workDim == other.workDim && globalOffsets == other.globalOffsets &&
+		bool operator ==(const NDRange& other) const {
+			return *workDim == *other.workDim && globalOffsets == other.globalOffsets &&
 				   globalWorkSize == other.globalWorkSize && localWorkSize == other.localWorkSize;
 		}
+
+		bool operator !=(const NDRange& other) const {
+			return !(*this == other);
+		}
+
 		static NDRangePtr decode(const ExpressionPtr& expr) {
 			return std::make_shared<NDRange>(encoder::toValue<NDRange>(expr));
 		}
+
 		static ExpressionPtr encode(NodeManager& manager, const NDRangePtr& value) {
 			return encoder::toIR<NDRange>(manager, *value);
 		}
@@ -144,6 +169,55 @@ namespace opencl {
 		ExpressionList globalOffsets;
 		ExpressionList globalWorkSize;
 		ExpressionList localWorkSize;
+	};
+
+	class Optional;
+	typedef std::shared_ptr<Optional> OptionalPtr;
+	typedef std::vector<OptionalPtr> OptionalList;
+
+	/**
+	 * An Optional argument is a triple (sizeof(type_lit<'a>), value, modifier) where
+	 * 1. 'a       is the type of the passed in value
+	 * 2. value    is the actual expression which is expressed by this optional
+	 * 3. modifier influences runtime interpretation
+	 */
+	class Optional {
+	public:
+		enum Modifier {
+		  HOST_PRIMITIVE = 0, ///< value is of primitive type and shall be forwared to the kernel
+		  KRNL_BUFFER    = 1  ///< value is the size of the __local buffer which shall be allocated
+		};
+
+		Modifier getModifier() const { return modifier; }
+		void setModifier(Modifier modifier) { this->modifier = modifier; }
+		const ExpressionPtr& getValue() const { return value; }
+		void setValue(const ExpressionPtr& value) { this->value = value; }
+		const ExpressionPtr& getSize() const { return size; }
+		void setSize(const ExpressionPtr& size) {
+			assert_true(core::analysis::isCallOf(size, size->getNodeManager().getLangBasic().getSizeof()))
+				<< "size of an optional must be modeled as sizeof(type_lit<'a>)";
+			this->size = size;
+		}
+
+		bool operator ==(const Optional& other) const {
+			return *size == *other.size && *value == *other.value && modifier == other.modifier;
+		}
+
+		bool operator !=(const Optional& other) const {
+			return !(*this == other);
+		}
+
+		static OptionalPtr decode(const ExpressionPtr& expr) {
+			return std::make_shared<Optional>(encoder::toValue<Optional>(expr));
+		}
+
+		static ExpressionPtr encode(NodeManager& manager, const OptionalPtr& value) {
+			return encoder::toIR<Optional>(manager, *value);
+		}
+	private:
+		ExpressionPtr size;
+		ExpressionPtr value;
+		Modifier modifier;
 	};
 } // end namespace opencl
 } // end namespace backend
@@ -289,6 +363,60 @@ namespace encoder {
 		bool operator()(const core::ExpressionPtr& expr) const {
 			auto& oclExt = expr->getNodeManager().getLangExtension<opencl::OpenCLExtension>();
 			return analysis::isCallOf(expr, oclExt.getMakeNDRange());
+		}
+	};
+
+	template <>
+	struct type_factory<opencl::Optional> {
+		TypePtr operator()(NodeManager& manager) const {
+			return manager.getLangExtension<opencl::OpenCLExtension>().getOptional();
+		}
+	};
+
+	template <>
+	struct value_to_ir_converter<opencl::Optional> {
+		ExpressionPtr operator()(NodeManager& manager, const opencl::Optional& value) const {
+			IRBuilder builder(manager);
+			auto& oclExt = manager.getLangExtension<opencl::OpenCLExtension>();
+
+			LiteralPtr modifier;
+			switch(value.getModifier()) {
+			case opencl::Optional::Modifier::HOST_PRIMITIVE:	modifier = builder.uintLit(0); break;
+			case opencl::Optional::Modifier::KRNL_BUFFER:		modifier = builder.uintLit(1); break;
+			}
+			// use the default IRBuilder to generate the callExpr
+			return builder.callExpr(oclExt.getOptional(), oclExt.getMakeOptional(),
+									value.getSize(), value.getValue(), modifier);
+		}
+	};
+
+	template <>
+	struct ir_to_value_converter<opencl::Optional> {
+		opencl::Optional operator()(const core::ExpressionPtr& expr) const {
+			// paranoia check
+			if (!isEncodingOf<opencl::Optional>(expr)) throw InvalidExpression(expr);
+			// prepare an empty requirement such that we can fill it up
+			opencl::Optional optional;
+
+			// extract the enclosed size
+			optional.setSize(analysis::getArgument(expr, 0));
+			// extract the enclosed value itself
+			optional.setValue(analysis::getArgument(expr, 1));
+			// extract the modifier converted to an uintLit
+			unsigned int modifier = toValue<unsigned int>(analysis::getArgument(expr, 2));
+			if 		(modifier == 0) optional.setModifier(opencl::Optional::Modifier::HOST_PRIMITIVE);
+			else if (modifier == 1) optional.setModifier(opencl::Optional::Modifier::KRNL_BUFFER);
+			else					{ assert_fail() << "literal " << modifier << " cannot be mapped to a valid modifier"; }
+			// DataRequirement is done now and can be returend to user-code
+			return optional;
+		}
+	};
+
+	template <>
+	struct is_encoding_of<opencl::Optional> {
+		bool operator()(const core::ExpressionPtr& expr) const {
+			auto& oclExt = expr->getNodeManager().getLangExtension<opencl::OpenCLExtension>();
+			return analysis::isCallOf(expr, oclExt.getMakeOptional());
 		}
 	};
 } // end namespace core
