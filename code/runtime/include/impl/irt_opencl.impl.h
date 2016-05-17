@@ -88,6 +88,7 @@ cl_event *irt_opencl_event_list_advance(irt_opencl_event_list *list);
 bool irt_opencl_location_is_equal(irt_opencl_location *fst, irt_opencl_location *snd);
 opencl_info *irt_opencl_get_meta_info(unsigned id);
 opencl_info *irt_opencl_wi_get_meta_info(irt_work_item *wi, unsigned id);
+void irt_opencl_set_kernel_optionals(cl_kernel kernel, unsigned num_requirements, unsigned num_optionals, va_list optionals);
 
 void irt_opencl_printf(enum irt_opencl_log_level level, const char *format, ...)
 {
@@ -241,6 +242,48 @@ void irt_opencl_evaluate_ndrange(irt_opencl_ndrange *ndrange)
 		OCL_DEBUG("ndrange[%d] %zu %zu %zu\n", i, ndrange->global_offset_size[i],
 			ndrange->global_work_size[i], ndrange->local_work_size[i]);
 	}
+}
+
+void irt_opencl_set_kernel_optionals(cl_kernel kernel, unsigned num_requirements, unsigned num_optionals, va_list optionals)
+{
+	cl_int result;
+	for (unsigned opt = 0; opt < num_optionals; ++opt) {
+        /*
+         * in order to be compatible with C99 we enforce that an optional
+         * argument must have a size of at least uint8 and max uint64!
+         * furthermore dealing with pointers would be broken per-se and complex
+         * types can only be modeled using 'struct { vla }' which is _not_
+         * supported by any compiler expect gcc.
+         *
+         * note: num_optionals refers the the number of tuples given (size, arg, mod)
+         */
+        uint64 data;
+        uint32 size = va_arg(optionals, uint32);
+        switch (size) {
+        case sizeof(uint8):
+		case sizeof(uint16):
+		case sizeof(uint32):
+                data = va_arg(optionals, uint32);
+                break;
+		case sizeof(uint64):
+                data = va_arg(optionals, uint64);
+                break;
+        default:
+                IRT_ASSERT(false, IRT_ERR_OCL, "optional argument must fit in uint64, size %d", size);
+                break;
+        }
+		irt_opencl_optional_mode modifier = va_arg(optionals, uint32);
+		switch (modifier) {
+		case IRT_OPENCL_OPTIONAL_MODE_HOST_PRIMITIVE:
+			result = clSetKernelArg(kernel, num_requirements + opt, size, &data);
+			break;
+		case IRT_OPENCL_OPTIONAL_MODE_KRNL_BUFFER:
+			result = clSetKernelArg(kernel, num_requirements + opt, data, NULL);
+			break;
+		}
+        /* iff the latter fails, the generated code has flaws and thus cannot continue */
+        IRT_ASSERT(result == CL_SUCCESS, IRT_ERR_OCL, "clSetKernelArg returned with %d", result);
+    }
 }
 
 void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
@@ -411,44 +454,8 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		}
     }
      
-    /* ... */
-    for (unsigned opt = 0; opt < num_optionals; ++opt) {
-        /* 
-         * in order to be compatible with C99 we enforce that an optional
-         * argument must have a size of at least uint8 and max uint64!
-         * furthermore dealing with pointers would be broken per-se and complex
-         * types can only be modeled using 'struct { vla }' which is _not_
-         * supported by any compiler expect gcc.
-         *
-         * note: num_optionals refers the the number of tuples given (size, arg, mod)
-         */
-        uint64 data;
-        uint32 size = va_arg(optionals, uint32);    
-        switch (size) {
-        case sizeof(uint8):
-		case sizeof(uint16):
-		case sizeof(uint32):
-                data = va_arg(optionals, uint32);
-                break;
-		case sizeof(uint64):
-                data = va_arg(optionals, uint64);
-                break;
-        default:
-                IRT_ASSERT(false, IRT_ERR_OCL, "optional argument must fit in uint64, size %d", size);
-                break;
-        }
-		irt_opencl_optional_mode modifier = va_arg(optionals, uint32);
-		switch (modifier) {
-		case IRT_OPENCL_OPTIONAL_MODE_HOST_PRIMITIVE:
-			result = clSetKernelArg(impl_data->kernel, num_requirements + opt, size, &data);
-			break;
-		case IRT_OPENCL_OPTIONAL_MODE_KRNL_BUFFER:
-			result = clSetKernelArg(impl_data->kernel, num_requirements + opt, data, NULL);
-			break;
-		}
-        /* iff the latter fails, the generated code has flaws and thus cannot continue */
-        IRT_ASSERT(result == CL_SUCCESS, IRT_ERR_OCL, "clSetKernelArg returned with %d", result);
-    }
+    /* include any additional parameters */
+    irt_opencl_set_kernel_optionals(impl_data->kernel, num_requirements, num_optionals, optionals);
 	/* copy to device has been set up .. wait for them to complete */
     irt_opencl_event_list_wait_and_free(event_io);
 	event_io = NULL;
