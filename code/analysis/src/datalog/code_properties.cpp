@@ -49,11 +49,10 @@ namespace insieme {
 namespace analysis {
 namespace datalog {
 
-
 	/**
 	 * Determines whether the given type is a polymorph type.
 	 */
-	bool isPolymorph(const core::TypePtr& type, bool debug) {
+	bool Datalog::isPolymorph(const core::TypePtr& type, bool debug) {
 
 		// instantiate the analysis
 		souffle::Sf_polymorph_types_analysis analysis;
@@ -81,7 +80,7 @@ namespace datalog {
 	/**
 	 * Determine top level nodes
 	 */
-	bool getTopLevelNodes(const core::NodePtr& root, bool debug)
+	bool Datalog::getTopLevelNodes(const core::NodePtr& root, bool debug)
 	{
 		// instantiate the analysis
 		souffle::Sf_top_level_term analysis;
@@ -108,7 +107,7 @@ namespace datalog {
 	/**
 	 * Get exit points from a given lambda function
 	 */
-	std::vector<core::ReturnStmtAddress> performExitPointAnalysis(const core::LambdaPtr& rootLambda, bool debug)
+	std::vector<core::ReturnStmtAddress> Datalog::performExitPointAnalysis(const core::LambdaPtr& rootLambda, bool debug)
 	{
 		// instantiate the analysis
 		souffle::Sf_exit_point_analysis analysis;
@@ -142,7 +141,7 @@ namespace datalog {
 	}
 
 
-	boost::optional<core::VariableAddress> getDefinitionPoint(const core::VariableAddress& var, bool debug)
+	core::VariableAddress Datalog::getDefinitionPoint(const core::VariableAddress& var, bool debug)
 	{
 		// instantiate the analysis
 		souffle::Sf_definition_point analysis;
@@ -185,7 +184,7 @@ namespace datalog {
 		return pos->second;
 	}
 
-	bool happensBefore(const core::StatementAddress& a, const core::StatementAddress& b) {
+	bool Datalog::happensBefore(const core::StatementAddress& a, const core::StatementAddress& b) {
 		static const bool debug = false;
 		assert_eq(a.getRootNode(), b.getRootNode());
 

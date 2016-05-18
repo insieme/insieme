@@ -36,7 +36,6 @@
 
 #pragma once
 
-#include <boost/optional.hpp>
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
 
@@ -44,30 +43,38 @@ namespace insieme {
 namespace analysis {
 namespace datalog {
 
-	/**
-	 * Determines whether the given type is a polymorph type.
-	 */
-	bool isPolymorph(const core::TypePtr& type, bool debug = false);
+	struct Datalog {
 
-	/**
-	 * Determine top level nodes
-	 */
-	bool getTopLevelNodes(const core::NodePtr& root, bool debug = false);
+		/**
+		 * Determines whether the given type is a polymorph type.
+		 */
+		static bool isPolymorph(const core::TypePtr& type, bool debug = false);
 
-	/**
-	 * Get exit points from a given lambda function
-	 */
-	std::vector<core::ReturnStmtAddress> performExitPointAnalysis(const core::LambdaPtr& rootLambda, bool debug = false);
+		/**
+		 * Determine top level nodes
+		 */
+		static bool getTopLevelNodes(const core::NodePtr& root, bool debug = false);
 
-	/**
-	 * Get definition point for a certain variable if there is one
-	 */
-	boost::optional<core::VariableAddress> getDefinitionPoint(const core::VariableAddress& var, bool debug = false);
+		/**
+		 * Get exit points from a given lambda function
+		 */
+		static std::vector<core::ReturnStmtAddress> performExitPointAnalysis(const core::LambdaPtr& rootLambda, bool debug = false);
 
-	/**
-	 * Determines whether the statement a happens before statement b.
-	 */
-	bool happensBefore(const core::StatementAddress& a, const core::StatementAddress& b);
+		/**
+		 * Get definition point for a certain variable if there is one
+		 */
+		static core::VariableAddress getDefinitionPoint(const core::VariableAddress& var, bool debug = false);
+
+		/**
+		 * Determines whether the statement a happens before statement b.
+		 */
+		static bool happensBefore(const core::StatementAddress& a, const core::StatementAddress& b);
+
+	private:
+		Datalog() {} // Prevent instantiation
+
+
+	}; // end class Datalog
 
 } // end namespace datalog
 } // end namespace analysis
