@@ -82,7 +82,7 @@ namespace measure {
 		 * @param outputDirectory the directory the resulting logs will be written to
 		 * @return the return code of the binaries execution
 		 */
-		virtual int run(const std::string& binary, const std::map<string, string>& env = std::map<string, string>(),
+		virtual int run(const std::string& binary, const std::map<string, string>& env = std::map<string, string>(), const std::vector<string>& params = std::vector<string>(),
 		                const std::string& outputDirectory = ".") const = 0;
 	};
 
@@ -91,7 +91,7 @@ namespace measure {
 	 * the current working directory.
 	 */
 	class LocalExecutor : public Executor {
-	  public:		
+	  public:
 		  /**
 		   * Creates an executor with a given wrapper if present
 		   * @param wrapper a wrapper program (and its arguments, if any) to be prepended in the execution string
@@ -101,7 +101,7 @@ namespace measure {
 		/**
 		 * Runs the given binary within the current working directory.
 		 */
-		virtual int run(const std::string& binary, const std::map<string, string>& env, const string& dir) const;
+		virtual int run(const std::string& binary, const std::map<string, string>& env, const std::vector<string>& params, const string& dir) const;
 	};
 
 	/**
@@ -164,7 +164,7 @@ namespace measure {
 		/**
 		 * Runs the given binary on the specified remote machine.
 		 */
-		virtual int run(const std::string& binary, const std::map<string, string>& env, const string& dir) const;
+		virtual int run(const std::string& binary, const std::map<string, string>& env, const std::vector<string>& params, const string& dir) const;
 	};
 
 

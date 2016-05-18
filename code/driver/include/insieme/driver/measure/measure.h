@@ -80,11 +80,12 @@ namespace measure {
 	 * @param stmt the statement to be converted into a binary and executed.
 	 * @param metric the metric to be collected
 	 * @param env the set of environment variables to be set up for the experiment run
+	 * @param params a vector of executable parameters
 	 * @return the measured quantity
 	 */
 	Quantity measure(const core::StatementPtr& stmt, const MetricPtr& metric, const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-	                 const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
-	                 const std::map<string, string>& env = std::map<string, string>());
+		             const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+		             const std::map<string, string>& env = std::map<string, string>(), const std::vector<string>& params = std::vector<string>());
 
 	/**
 	 * Measures a single metric for a single statement for a given number of times.
@@ -95,12 +96,13 @@ namespace measure {
 	 * @param executor the executor to be used for running the measurement
 	 * @param compiler the compiler configuration to be used for the measurement
 	 * @param env the set of environment variables to be set up for the experiment run
+	 * @param params a vector of executable parameters
 	 * @return the list of measured quantities containing numRuns entries
 	 */
 	vector<Quantity> measure(const core::StatementPtr& stmt, const MetricPtr& metric, unsigned numRuns,
-	                         const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-	                         const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
-	                         const std::map<string, string>& env = std::map<string, string>());
+		                     const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+		                     const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+		                     const std::map<string, string>& env = std::map<string, string>(), const std::vector<string>& params = std::vector<string>());
 
 	/**
 	 * Measures a single metric for a single statement within a code fragment using
@@ -109,11 +111,12 @@ namespace measure {
 	 * @param stmt the statement to be converted into a binary and executed.
 	 * @param metric the metric to be collected
 	 * @param env the set of environment variables to be set up for the experiment run
+	 * @param params a vector of executable parameters
 	 * @return the measured quantity
 	 */
 	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-	                 const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
-	                 const std::map<string, string>& env = std::map<string, string>());
+		             const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+		             const std::map<string, string>& env = std::map<string, string>(), const std::vector<string>& params = std::vector<string>());
 
 	/**
 	 * Measures a single metric for a single statement for a given number of times.
@@ -124,12 +127,13 @@ namespace measure {
 	 * @param executor the executor to be used for running the measurement
 	 * @param compiler the compiler configuration to be used for the measurement
 	 * @param env the set of environment variables to be set up for the experiment run
+	 * @param params a vector of executable parameters
 	 * @return the list of measured quantities containing numRuns entries
 	 */
 	vector<Quantity> measure(const core::StatementAddress& stmt, const MetricPtr& metric, unsigned numRuns,
-	                         const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-	                         const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
-	                         const std::map<string, string>& env = std::map<string, string>());
+		                     const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+		                     const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+		                     const std::map<string, string>& env = std::map<string, string>(), const std::vector<string>& params = std::vector<string>());
 
 	/**
 	 * Measures a list of metrics for a single statement within a code fragment using
@@ -138,12 +142,14 @@ namespace measure {
 	 * @param stmt the statement to be converted into a binary and executed.
 	 * @param metrics the metrics to be collected
 	 * @param env the set of environment variables to be set up for the experiment run
+	 * @param params a vector of executable parameters
 	 * @return the measured quantity
 	 */
 	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
-	                                      const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-	                                      const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
-	                                      const std::map<string, string>& env = std::map<string, string>());
+		                                  const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+		                                  const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+		                                  const std::map<string, string>& env = std::map<string, string>(),
+		                                  const std::vector<string>& params = std::vector<string>());
 
 	/**
 	 * Measures a single metric for a single statement within a code fragment using
@@ -153,12 +159,14 @@ namespace measure {
 	 * @param metrics the metrics to be collected
 	 * @param numRuns the number of experiments to be executed
 	 * @param env the set of environment variables to be set up for the experiment run
+	 * @param params a vector of executable parameters
 	 * @return the measured quantity
 	 */
 	vector<std::map<MetricPtr, Quantity>> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics, unsigned numRuns,
-	                                              const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-	                                              const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
-	                                              const std::map<string, string>& env = std::map<string, string>());
+		                                          const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+		                                          const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+		                                          const std::map<string, string>& env = std::map<string, string>(),
+		                                          const std::vector<string>& params = std::vector<string>());
 
 	/**
 	 * Measures a list of metrics for a list of regions within a single program.
@@ -169,13 +177,15 @@ namespace measure {
 	 * @param metrics the metrics to be collected
 	 * @param executor the executor to be used for running the program
 	 * @param env the set of environment variables to be set up for the experiment run
+	 * @param params a vector of executable parameters
 	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
 	 * 		values data indexed by the requested metrics.
 	 */
 	std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> measure(const vector<core::StatementAddress>& regions, const vector<MetricPtr>& metrices,
-	                                                                        const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-	                                                                        const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
-	                                                                        const std::map<string, string>& env = std::map<string, string>());
+		                                                                    const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+		                                                                    const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+		                                                                    const std::map<string, string>& env = std::map<string, string>(),
+		                                                                    const std::vector<string>& params = std::vector<string>());
 
 	/**
 	 * Measures a list of metrics for a list of regions within a single program for a given number of times.
@@ -187,13 +197,14 @@ namespace measure {
 	 * @param numRuns the number of runs to be conducted
 	 * @param executor the executor to be used for running the program
 	 * @param env the set of environment variables to be set up for the experiment run
+	 * @param params a vector of executable parameters
 	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
 	 * 		values data indexed by the requested metrics.
 	 */
 	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>>
 	measure(const vector<core::StatementAddress>& regions, const vector<MetricPtr>& metrices, unsigned numRuns,
-	        const ExecutorPtr& executor = std::make_shared<LocalExecutor>(), const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
-	        const std::map<string, string>& env = std::map<string, string>());
+		    const ExecutorPtr& executor = std::make_shared<LocalExecutor>(), const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+		    const std::map<string, string>& env = std::map<string, string>(), const std::vector<string>& params = std::vector<string>());
 
 	/**
 	 * Measures a list of metrics for a list of regions within a single program.
@@ -204,13 +215,15 @@ namespace measure {
 	 * @param metrics the metrics to be collected
 	 * @param executor the executor to be used for running the program
 	 * @param env the set of environment variables to be set up for the experiment run
+	 * @param params a vector of executable parameters
 	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
 	 * 		values data indexed by the requested metrics.
 	 */
 	std::map<region_id, std::map<MetricPtr, Quantity>> measure(const std::map<core::StatementAddress, region_id>& regions, const vector<MetricPtr>& metrices,
-	                                                           const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-	                                                           const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
-	                                                           const std::map<string, string>& env = std::map<string, string>());
+		                                                       const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+		                                                       const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+		                                                       const std::map<string, string>& env = std::map<string, string>(),
+		                                                       const std::vector<string>& params = std::vector<string>());
 
 	/**
 	 * Measures a list of metrics for a list of regions within a single program for a given number of times.
@@ -222,14 +235,14 @@ namespace measure {
 	 * @param numRuns the number of runs to be conducted
 	 * @param executor the executor to be used for running the program
 	 * @param env the set of environment variables to be set up for the experiment run
+	 * @param params a vector of executable parameters
 	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
 	 * 		values data indexed by the requested metrics.
 	 */
-	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(const std::map<core::StatementAddress, region_id>& regions,
-	                                                                   const vector<MetricPtr>& metrices, unsigned numRuns,
-	                                                                   const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-	                                                                   const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
-	                                                                   const std::map<string, string>& env = std::map<string, string>());
+	vector<std::map<region_id, std::map<MetricPtr, Quantity>>>
+	measure(const std::map<core::StatementAddress, region_id>& regions, const vector<MetricPtr>& metrices, unsigned numRuns,
+		    const ExecutorPtr& executor = std::make_shared<LocalExecutor>(), const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+		    const std::map<string, string>& env = std::map<string, string>(), const std::vector<string>& params = std::vector<string>());
 
 	/**
 	 * Measures a list of metrics for a binary for a given number of times.
@@ -239,27 +252,32 @@ namespace measure {
 	 * @param numRuns the number of runs to be conducted
 	 * @param executor the executor to be used for running the program
 	 * @param env the set of environment variables to be set up for the experiment run
+	 * @param params a vector of executable parameters
 	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
 	 * 		values data indexed by the requested metrics.
 	 */
 	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(const std::string& binary, const vector<MetricPtr>& metrices, unsigned numRuns = 1,
-	                                                                   const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-	                                                                   const std::map<string, string>& env = std::map<string, string>());
+		                                                               const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+		                                                               const std::map<string, string>& env = std::map<string, string>(),
+		                                                               const std::vector<string>& params = std::vector<string>());
 
 	/**
-	* Measures a list of metrics for a binary for a given number of times.
+	* Measures a list of metrics for an already instrumented IR for a given number of times.
 	*
 	* @param root the root of the already instrumented IR to be measured
 	* @param metrics the metrics to be collected
 	* @param numRuns the number of runs to be conducted
 	* @param executor the executor to be used for running the program
 	* @param env the set of environment variables to be set up for the experiment run
+	* @param params a vector of executable parameters
 	* @return a vector containing the results of each individual run. Each result is mapping regions the collected
 	* 		values data indexed by the requested metrics.
 	*/
-	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measurePreinstrumented(const core::NodePtr& root, const vector<MetricPtr>& metrics, unsigned numRuns,
-		                                                                              const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
-		                                                                              const std::map<string, string>& env);
+	vector<std::map<region_id, std::map<MetricPtr, Quantity>>>
+	measurePreinstrumented(const core::NodePtr& root, const vector<MetricPtr>& metrics, unsigned numRuns = 1,
+		                   const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+		                   const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+		                   const std::map<string, string>& env = std::map<string, string>(), const std::vector<string>& params = std::vector<string>());
 
 
 	// --------------------------------------------------------------------------------------------
