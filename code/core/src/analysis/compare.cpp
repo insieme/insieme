@@ -39,79 +39,84 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/string_utils.h"
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
 namespace core {
 namespace analysis {
 
 	namespace {
-		using TagMap = utils::map::PointerMap<NodePtr, unsigned>;
-		/// generates a mapping from TT/Lambda reference nodes to unsigned ints
-		class TagMapGenerator : public IRVisitor<void> {
-			TagMap map;
-			unsigned id;
 
-		  protected:
-			void visitNode(const NodePtr& node) {
-				// visit all sub-nodes
-				this->visitAll(node->getChildList());
-			}
+		NodePtr wipeNames(const NodePtr& node) {
 
-			void visitRef(const NodePtr& ref) {
-				if(map.find(ref) == map.end()) { map[ref] = ++id; }
-				visitNode(ref);
-			}
-
-			void visitTagTypeReference(const TagTypeReferencePtr& ref) { visitRef(ref); }
-			void visitLambdaReference(const LambdaReferencePtr& ref) { visitRef(ref); }
-
-		  public:
-			TagMapGenerator() : IRVisitor(true) {}
-			TagMap run(const NodePtr& node) {
-				map.clear();
-				id = 0;
-				visit(node);
-				return map;
-			}
-		};
-		
-		/// compares A and B while applying maps to references
-		bool equalNamelessImpl(const NodePtr& nodeA, const NodePtr& nodeB, const TagMap& mapA, const TagMap& mapB) {
-			auto ntA = nodeA->getNodeType();
-			auto ntB = nodeB->getNodeType();
-			if(ntA != ntB) return false;
-
-			// for references, compare mapped id
-			if(ntA == NT_TagTypeReference || ntA == NT_LambdaReference) {
-				return mapA.find(nodeA)->second == mapB.find(nodeB)->second;
-			} 
-			// compare values directly
-			else if(nodeA->isValue()) {
-				return nodeA == nodeB;
-			}
-			// else traverse further
-			else {
-				auto childrenA = nodeA->getChildList();
-				auto childrenB = nodeB->getChildList();
-				if(childrenA.size() != childrenB.size()) return false;
-				for(size_t i = 0; i < childrenA.size(); ++i) {
-					if(!equalNamelessImpl(childrenA[i], childrenB[i], mapA, mapB)) return false;
+			struct Annotation {
+				NodePtr cleaned;
+				bool operator==(const Annotation& other) const {
+					return cleaned == other.cleaned;
 				}
+			};
+
+			// check the annotation
+			if (node->hasAttachedValue<Annotation>()) {
+				return node->getAttachedValue<Annotation>().cleaned;
 			}
-			return true;
+
+			// compute a cleaned version
+			std::map<NodePtr,NodePtr> map;
+			std::map<NodeAddress,NodePtr> replacements;
+			unsigned id = 0;
+			NodeManager& mgr = node->getNodeManager();
+			IRBuilder builder(mgr);
+			visitDepthFirstPrunable(NodeAddress(node),[&](const NodeAddress& cur)->Action {
+
+				// skip root node
+				if (cur.getAddressedNode() == node) return Action::Descent;
+
+				// check some cases
+				if (auto ref = cur.isa<LambdaReferencePtr>()) {
+
+					auto& replacement = map[ref];
+					if (!replacement) replacement = builder.lambdaReference(ref->getType(), format("l_ref_%d", ++id));
+					replacements[cur.as<LambdaReferenceAddress>()->getName()] = replacement.as<LambdaReferencePtr>()->getName();
+					return Action::Descent;
+
+				} else if (auto ref = cur.isa<TagTypeReferencePtr>()) {
+
+					auto& replacement = map[ref];
+					if (!replacement) replacement = builder.tagTypeReference(format("t_ref_%d", ++id));
+					replacements[cur] = replacement;
+					return Action::Prune;
+
+				} else if (auto type = cur.isa<TagTypePtr>()) {
+
+					auto clean = wipeNames(type);
+					if (*type != *clean) {
+						replacements[cur] = clean;
+					}
+					return Action::Prune;
+
+				}
+
+				// continue searching
+				return Action::Descent;
+			},true);
+
+
+			// conduct replacement
+			auto cleaned = (replacements.empty()) ? node : core::transform::replaceAll(mgr, replacements);
+
+			// attach and return
+			node->attachValue(Annotation{cleaned});
+			return cleaned;
 		}
+
 	}
 
 	bool equalNameless(const NodePtr& nodeA, const NodePtr& nodeB) {
-		if(nodeA == nodeB) return true;
-
-		TagMapGenerator tmg;
-		auto mapA = tmg.run(nodeA);
-		auto mapB = tmg.run(nodeB);
-		VLOG(3) << "equalNameless map A: " << mapA << "\n";
-		VLOG(3) << "equalNameless map B: " << mapB << "\n";
-
-		return equalNamelessImpl(nodeA, nodeB, mapA, mapB);
+		return *nodeA == *nodeB || *wipeNames(nodeA) == *wipeNames(nodeB);
 	}
 
 } // namespace analysis

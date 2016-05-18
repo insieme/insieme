@@ -58,6 +58,7 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/graph_utils.h"
+#include "insieme/utils/timer.h"
 
 namespace insieme {
 namespace core {
@@ -1264,57 +1265,66 @@ namespace analysis {
 				}
 			};
 
-			bool isReachable(const NodeAddress& from, const std::vector<RecordAddress>& trg, std::set<NodeAddress>& visited) {
-				// stop if we are at a builtin
-				if(core::lang::isBuiltIn(from)) return false;
+			bool isDecendant(const NodeAddress& child, const std::vector<RecordAddress>& anchesters, std::set<NodeAddress>& visited) {
 
-				// stop if we can't reach a tag type
-				if(from->hasAttachedValue<CannotReachTagTypeTag>()) return false;
+				// fast forward for non-record addresses
+				if (!child.isa<RecordAddress>()) {
+					// => continue with parent
+					if (child.isRoot()) return false;
+					return isDecendant(child.getParentAddress(), anchesters, visited);
+				}
 
 				// if we reached a target, we are done
-				for(const auto& t : trg) {
-					if(t == from) return true;
+				for(const auto& p : anchesters) {
+					if(p == child) return true;
 				}
 
 				// stop here when already visited
-				if(!visited.insert(from).second) return false;
+				if(!visited.insert(child).second) return false;
 
-				// skip the tag type constructs
-				if(auto type = from.isa<TagTypeAddress>()) {
-					return isReachable(type->getRecord(), trg, visited);
+				// if we reached the root, we are done
+				if (child.isRoot()) return false;
+
+				// inspect parent
+				auto binding = child.getParentAddress().as<TagTypeBindingAddress>();
+				assert(!binding.isRoot());
+				auto def = binding.getParentAddress().as<TagTypeDefinitionAddress>();
+
+				// walk through all references of the current type
+				for(const auto& cur : def->getRecursiveReferencesOf(binding->getTag())) {
+
+					// get full address of the tag type reference
+					auto ref = concat(def,cur);
+
+					// check whether we found a (in-)direct child
+					for(const auto& p : anchesters) {
+						if (isChildOf(p,ref)) return true;
+					}
+
+					// explore reference
+					if (isDecendant(ref, anchesters, visited)) return true;
 				}
 
-				// if it is a tag type reference, continue with definition
-				if(auto tag = from.isa<TagTypeReferenceAddress>()) {
-					auto def = getDefinition(tag);
-					return def && isReachable(def, trg, visited);
-				}
-
-				// check all child nodes
-				return any(from->getChildList(), [&](const NodeAddress& cur) {
-					return isReachable(cur, trg, visited);
-				});
+				// skip up to the tag type
+				assert(!def.isRoot());
+				return isDecendant(def.getParentAddress().as<TagTypeAddress>(), anchesters, visited);
 			}
 
 			bool dependsOn(const std::vector<RecordAddress>& a, const std::vector<RecordAddress>& b) {
 
-				// quick check: if any of the addresses in a is a prefix of any of the addresses in b
+				// quick check: if any of the addresses in b is a prefix of any of the addresses in a
 				for(const auto& x : a) {
 					for(const auto& y : b) {
-						if(x != y && isChildOf(y, x)) return true;
+						if(x != y && isChildOf(x, y)) return true;
 					}
 				}
 
-				// more expensive: if you can reach through one of the types one of the other types => dependency
-				// works on entire vectors at once for performance reasons
-				for(const auto& y : b) {
-					auto copy = a;
-					copy.erase(std::remove(copy.begin(), copy.end(), y), copy.end());
-					std::set<NodeAddress> visited;
-					if(isReachable(y, copy, visited)) return true;
+				// more expensive: check whether some b can be reached from some a
+				std::set<NodeAddress> visited;
+				for(const auto& x : b) {
+					if(isDecendant(x, a, visited)) return true;
 				}
 
-				// otherwise there is no dependency
 				return false;
 			}
 
@@ -1365,15 +1375,38 @@ namespace analysis {
 			static const bool debug = false;
 
 			// 1) get a list of all record types and tag type references in the given type (second most time consuming part)
+
+			// mark types that do not contain a tag reference anywhere
 			CannotReachTagTypeTagger tagger;
-			tagger(type); // preprocessing pass to add annotations used to speed up steps 1) and 3)
+			tagger(type); // preprocessing pass to add annotations used to speed up steps 1)
 
 			vector<RecordAddress> records;
-			visitDepthFirstPrunable(TypeAddress(type), [&](const NodeAddress& node) {
-				if(core::lang::isBuiltIn(node)) return true;
-				if(node->hasAttachedValue<CannotReachTagTypeTag>()) return true;
+			visitDepthFirstPrunable(TypeAddress(type), [&](const NodeAddress& node)->Action {
+
+				// ignore built in types
+				if(core::lang::isBuiltIn(node)) return Action::Prune;
+
+				// ignore nodes that do not contain tag type references
+				if(node->hasAttachedValue<CannotReachTagTypeTag>()) return Action::Prune;
+
+				// ignore nested, cannonical tag types
+				if(auto tagType = node.isa<TagTypePtr>()) {
+					if (tagType != type) {
+						if (!hasFreeTagTypeReferences(tagType)) {
+							auto cannonical = getCanonicalType(tagType);
+							if (*cannonical == *tagType) {
+								for(const auto& cur : node.as<TagTypeAddress>()->getDefinition()) {
+									records.push_back(cur->getRecord());
+								}
+								return Action::Prune;
+							}
+						}
+					}
+				}
+
+				// collect all encountered records
 				if(auto record = node.isa<RecordAddress>()) records.push_back(record);
-				return false;
+				return Action::Descent;
 			}, true);
 
 			// print some debugging
@@ -1427,6 +1460,7 @@ namespace analysis {
 				}
 			}
 
+
 			// 3) compute dependencies between equivalence classes (MOST time consuming part!)
 			using EquivalenceClass = std::vector<RecordAddress>;
 			utils::graph::Graph<EquivalenceClass> depGraph;
@@ -1444,7 +1478,7 @@ namespace analysis {
 			for (const auto& a : vertices) {
 				for (const auto& b : vertices) {
 					if (&a != &b && dependsOn(a, b)) {
-						depGraph.addEdge(a, b);
+						depGraph.addEdge(b, a);
 					}
 				}
 			}
@@ -1454,6 +1488,7 @@ namespace analysis {
 				std::cout << "Dependency Graph:\n";
 				depGraph.printGraphViz(std::cout);
 			}
+
 
 			// 4) compute strongly connected components
 			auto componentGraph = utils::graph::computeSCCGraph(depGraph.asBoostGraph());
@@ -1716,8 +1751,31 @@ namespace analysis {
 				for(const auto& cur : def) visit(cur->getRecord(), res, nestedBound);
 			}
 
-			void visitTagType(const TagTypeAddress& def, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
-				visit(def->getDefinition(), res, bound);
+			void visitTagType(const TagTypeAddress& type, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
+				// here we cache the result of nested calls
+				struct Cache {
+					TagTypeReferenceAddressList references;
+					bool operator==(const Cache& other) const {
+						return this == &other || references == other.references;
+					}
+				};
+
+				// check for a cached result
+				if (type->hasAttachedValue<Cache>()) {
+					for (const auto& cur : type->getAttachedValue<Cache>().references) {
+						res.push_back(concat(type->getDefinition(),cur));
+					}
+					return;
+				}
+
+				// attach a cache
+				Cache& cache = type->attachValue<Cache>();
+
+				// fill it
+				visit(TagTypeDefinitionAddress(TagTypePtr(type)->getDefinition()), cache.references, bound);
+
+				// restart lookup
+				visitTagType(type,res,bound);
 			}
 
 			void visitNode(const NodeAddress& node, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
