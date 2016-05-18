@@ -211,56 +211,56 @@ namespace transform {
 
 	core::CallExprPtr buildGetWorkDim(core::NodeManager& manager) {
 		core::IRBuilder builder(manager);
-		// grab a reference to the runtime & opencl extension
+		// grab a reference to the opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		return builder.callExpr(manager.getLangBasic().getUInt4(), oclExt.getWorkDim());
 	}
 
 	core::CallExprPtr buildGetGlobalId(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
-		// grab a reference to the runtime & opencl extension
+		// grab a reference to the opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		return builder.callExpr(oclExt.getSizeType(), oclExt.getGlobalId(), dim);
 	}
 
 	core::CallExprPtr buildGetGlobalSize(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
-		// grab a reference to the runtime & opencl extension
+		// grab a reference to the opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		return builder.callExpr(oclExt.getSizeType(), oclExt.getGlobalSize(), dim);
 	}
 
 	core::CallExprPtr buildGetLocalId(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
-		// grab a reference to the runtime & opencl extension
+		// grab a reference to the opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		return builder.callExpr(oclExt.getSizeType(), oclExt.getLocalId(), dim);
 	}
 
 	core::CallExprPtr buildGetLocalSize(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
-		// grab a reference to the runtime & opencl extension
+		// grab a reference to the opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		return builder.callExpr(oclExt.getSizeType(), oclExt.getLocalSize(), dim);
 	}
 
 	core::CallExprPtr buildGetNumGroups(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
-		// grab a reference to the runtime & opencl extension
+		// grab a reference to the opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		return builder.callExpr(oclExt.getSizeType(), oclExt.getNumGroups(), dim);
 	}
 
 	core::CallExprPtr buildGetGroupId(core::NodeManager& manager, const core::ExpressionPtr& dim) {
 		core::IRBuilder builder(manager);
-		// grab a reference to the runtime & opencl extension
+		// grab a reference to the opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		return builder.callExpr(oclExt.getSizeType(), oclExt.getGroupId(), dim);
 	}
 
 	core::CallExprPtr buildRegisterKernel(core::NodeManager& manager, unsigned int& id, const StepContext& sc, const core::LambdaExprPtr& oclExpr) {
 		core::IRBuilder builder(manager);
-		// grab a reference to the runtime & opencl extension
+		// grab a reference to the opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		// most important step here, transform the oclExpr into a literal
 		core::LiteralPtr literal = toKernelLiteral(manager, sc, oclExpr);
