@@ -84,6 +84,8 @@ namespace conversion {
 		 */
 		core::ExpressionPtr createUnaryExpression(const core::TypePtr& exprTy, const core::ExpressionPtr& subexp, clang::UnaryOperator::Opcode op);
 
+		core::ExpressionPtr BaseVisit(const clang::Expr* expr, std::function<core::ExpressionPtr(const clang::Expr*)> self);
+
 	  public:
 		ExprConverter(Converter& converter) : converter(converter), mgr(converter.mgr), builder(converter.builder), basic(converter.builder.getLangBasic()) ,
 		binOpMap ({

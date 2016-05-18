@@ -188,9 +188,6 @@ void irt_exit_handler() {
 	irt_maintenance_cleanup();
 	#endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
-	#ifdef USE_OPENCL
-	irt_ocl_release_devices();
-	#endif
 	irt_g_exit_handling_done = true;
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
@@ -292,11 +289,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	}
 	#endif
 
-	#ifdef USE_OPENCL
-	irt_log_comment("Running Insieme runtime with OpenCL!\n");
-	irt_ocl_init_devices();
-	#endif
-
 	irt_g_rt_is_initialized = true;
 }
 
@@ -361,13 +353,16 @@ irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun*
 
 	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals);
+
+	// assure that the early context can be obtained during custom init
+	tempw.cur_context = context->id;
+
 	irt_context_initialize(context);
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 
 	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;
 	}
-
 	return context;
 }
 

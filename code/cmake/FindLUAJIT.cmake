@@ -8,7 +8,7 @@
 # to be set before calling find_package:
 #
 # LUAJIT_ROOT Set this variable to the root installation of
-# libpapi if the module has problems finding the
+# libluajit if the module has problems finding the
 # proper installation path.
 #
 # Variables defined by this module:

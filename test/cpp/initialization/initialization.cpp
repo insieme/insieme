@@ -148,15 +148,17 @@ int main(){
 
 	// initialize parameters
 	{	
+		A a;
+		f (0, a, (int*){0});
 		f (getValue(), getStruct(), getPointer());
 		f (0, (struct A){0,1}, (int*){0});
-
+		
 		g (getRef(), getRefStruct(), getRefPtr());
 
 		h (getValue(), getStruct(), getPointer());
 		h (getRef(), getRefStruct(), getRefPtr());
 		h (getConstRef(), getConstRefStruct(), getConstRefPtr());
 
-	}	
+	}
 	return 0;
 }

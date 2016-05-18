@@ -160,7 +160,7 @@ namespace frontend {
 
 
 		//******************** TAKE CARE OF ORDER OF INCLUDE PATHS *************//
-		// first user-provided, than our openmp replacement, then default-path
+		// first user-provided, then our openmp replacement, then default-path
 
 		// setup headers
 		pimpl->clang.getHeaderSearchOpts().UseBuiltinIncludes = 0;
@@ -229,7 +229,7 @@ namespace frontend {
 		//		functiondefinition
 		//	+	for some builtins with differeing signature (currently storelps/storehps/movntq) we hack the
 		//		intrinsic to use depending on the used compiler the correct casts
-		this->pimpl->clang.getHeaderSearchOpts().AddPath(utils::getInsiemeSourceRootDir() + "frontend/include/insieme/frontend/builtin_headers/", clang::frontend::System, false,
+		this->pimpl->clang.getHeaderSearchOpts().AddPath(utils::getInsiemeSourceRootDir() + "frontend/include/insieme/frontend/builtin_headers/", clang::frontend::Angled, false,
 		                                                 false);
 		/*** VECTOR EXTENSION STUFF END ***/
 
@@ -249,7 +249,6 @@ namespace frontend {
 		}
 
 		if(pimpl->m_isCXX) {
-			// set cxx standard to c++98
 			if(config.getStandard() == ConversionSetup::Cxx14) {
 				CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx14);
 			} else if(config.getStandard() == ConversionSetup::Cxx11) {
@@ -279,24 +278,21 @@ namespace frontend {
 			pimpl->clang.getHeaderSearchOpts().AddPath(curr, clang::frontend::System, false, false);
 		}
 		for(const path& cur : config.getSystemHeadersDirectories()) {
-			pimpl->clang.getHeaderSearchOpts().AddPath(cur.string(), clang::frontend::System, false, false);
+			pimpl->clang.getHeaderSearchOpts().AddPath(cur.string(), clang::frontend::Angled, false, false);
 		}
 
 		// Do this AFTER setting preprocessor options
 		pimpl->clang.createPreprocessor(clang::TranslationUnitKind::TU_Complete);
 		pimpl->clang.createASTContext();
 
-        // since we perform a custom initialization of the compiler entity,
-        // we should not forget to initialize the set of invariant and target dependent builtints.
-        // (which we need to compile code with standard c++ headers)
+		// since we perform a custom initialization of the compiler entity,
+		// we should not forget to initialize the set of invariant and target dependent builtints.
+		// (which we need to compile code with standard c++ headers)
 		getPreprocessor().getBuiltinInfo().InitializeBuiltins(getPreprocessor().getIdentifierTable(), getPreprocessor().getLangOpts());
 
 		// pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
 		const FileEntry* fileID = pimpl->clang.getFileManager().getFile(file.string());
-		if(!fileID) {
-			std::cerr << " file: " << file.string() << " does not exist" << std::endl;
-			throw ClangParsingError(file);
-		}
+		assert_true(fileID) << "File " << file.string() << " does not exist!";
 
 		pimpl->clang.getSourceManager().setMainFileID(pimpl->clang.getSourceManager().createFileID(fileID, SourceLocation(), SrcMgr::C_User));
 
@@ -330,5 +326,5 @@ namespace frontend {
 		// sema object of pimpl will be deleted by the InsiemeSema pimpl
 	}
 
-} // End fronend namespace
+} // End frontend namespace
 } // End insieme namespace

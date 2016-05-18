@@ -52,11 +52,6 @@
 
 #include "insieme/utils/map_utils.h"
 
-namespace {
-	typedef vector<insieme::core::StatementPtr> StatementList;
-	typedef vector<insieme::core::ExpressionPtr> ExpressionList;
-} // end anonymous namespace
-
 namespace insieme {
 namespace frontend {
 	/**
@@ -84,6 +79,15 @@ namespace frontend {
 namespace insieme {
 namespace frontend {
 namespace conversion {
+
+	namespace {
+		static inline bool genericEmpty(const insieme::core::NodePtr& t) {
+			return !t;
+		}
+		static inline bool genericEmpty(const insieme::frontend::stmtutils::StmtWrapper& w) {
+			return w.size() == 0;
+		}
+	} // end anonymous namespace
 
 	// Forward Declaration
 	class DeclConverter;
@@ -306,6 +310,32 @@ namespace conversion {
 		const boost::filesystem::path& getTUFileName() const {
 			return getTranslationUnit().getFileName();
 		}
+
+	  public:
+		/**
+		 *  Apply extension pre- and postprocessing steps to translation
+		 */
+		template<typename IRType, typename ClangType, typename AppliedFunction>
+		IRType applyExtensions(ClangType input, const AppliedFunction& fun) {
+			IRType ret;
+
+			// call frontend extension visitors
+			for(auto extension : getConversionSetup().getExtensions()) {
+				ret = extension->Visit(input, *this);
+				if(!genericEmpty(ret)) { break; }
+			}
+
+			if(genericEmpty(ret)) {
+				ret = fun(input);
+			}
+
+			// call frontend extension post visitors
+			for(auto extension : getConversionSetup().getExtensions()) {
+				ret = extension->PostVisit(input, ret, *this);
+			}
+			return ret;
+		}
+
 	};
 
 } // End conversion namespace

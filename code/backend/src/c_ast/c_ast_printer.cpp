@@ -181,23 +181,25 @@ namespace c_ast {
 			}
 
 			PRINT(ReferenceType) {
+				// print referenced type
+				out << print(node->elementType);
 
 				// print qualifiers
-				if(node->isConst())    { out << "const "; }
-				if(node->isVolatile()) { out << "volatile "; }
+				if(node->isConst())    { out << " const"; }
+				if(node->isVolatile()) { out << " volatile"; }
 
-				// print rest
-				return out << print(node->elementType) << "&";
+				return out << "&";
 			}
 
 			PRINT(RValueReferenceType) {
+				// print referenced type
+				out << print(node->elementType);
 
 				// print qualifiers
-				if (node->isConst()) { out << "const "; }
-				if (node->isVolatile()) { out << "volatile "; }
+				if(node->isConst())    { out << " const"; }
+				if(node->isVolatile()) { out << " volatile"; }
 
-				// print rest
-				return out << print(node->elementType) << "&&";
+				return out << "&&";
 			}
 
 			PRINT(VectorType) {

@@ -112,10 +112,10 @@ int main() {
 
 	#pragma test expect_ir(R"({ var ref<int<4>,f,f> v0;
 		switch(*v0) {
-			case 0: { return 5; }
+			case 0: { return var ref<int<4>> r = 5; }
 			case 4: { 5; 6; break; }
 			case 5: { 6; break; }
-			case 8: { return 6; }
+			case 8: { return var ref<int<4>> r = 6; }
 			default: { break; } }
 		})")
 	{
@@ -131,19 +131,13 @@ int main() {
 
 	#pragma test expect_ir("{" R"(var ref<int<4>,f,f> v0;
 		switch(c_style_assignment(v0, 0)) {
-			case 0: { return 5; }
-			case 4: { 5; 6; break; }
-			case 5: { 6; break; }
-			case 8: { return 6; }
+			case 0: { return var ref<int<4>> r = 5; }
 			default: { break; } }
 		})")
 	{
 		int a;
 		switch(a=0) {
 			case 0: return 5;
-			case 4: 5;
-			case 5: 6; break;
-			case 8: return 6;
 			default: break;
 		}
 	}

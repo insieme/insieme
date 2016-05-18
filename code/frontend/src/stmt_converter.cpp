@@ -74,17 +74,12 @@ namespace conversion {
 
 	stmtutils::StmtWrapper Converter::StmtConverter::BaseVisit(clang::Stmt* stmt, std::function<stmtutils::StmtWrapper(clang::Stmt*)> self) {
 
-		// iterate frontend extension list and check if a extension wants to convert the stmt
-		stmtutils::StmtWrapper retStmt;
-		for(auto extension : converter.getConversionSetup().getExtensions()) {
-			retStmt = extension->Visit(stmt, converter);
-			if(retStmt.size()) { break; }
-		}
-		if(retStmt.size() == 0) {
-			converter.trackSourceLocation(stmt);
-			retStmt = self(stmt);
+		auto retStmt = converter.applyExtensions<stmtutils::StmtWrapper>(stmt, [&](clang::Stmt* param) {
+			converter.trackSourceLocation(param);
+			auto retIr = self(param);
 			converter.untrackSourceLocation();
-		}
+			return retIr;
+		});
 
 		// print diagnosis messages
 		converter.printDiagnosis(stmt->getLocStart());
@@ -95,11 +90,6 @@ namespace conversion {
 		retStmt.clear();
 		for(const auto& e : list) {
 			retStmt.push_back(e.as<core::StatementPtr>());
-		}
-
-		// call frontend extension post visitors
-		for(auto extension : converter.getConversionSetup().getExtensions()) {
-			retStmt = extension->PostVisit(stmt, retStmt, converter);
 		}
 
 		// attach location from clang
@@ -173,7 +163,7 @@ namespace conversion {
 		// check if we have a return value
 		if(clang::Expr* expr = retStmt->getRetValue()) {
 			auto returnExpr = converter.convertCxxArgExpr(expr);
-			auto returnVar = builder.variable(returnExpr->getType());
+			auto returnVar = builder.variable(converter.getVarMan()->getRetType());
 			returnExpr = utils::fixTempMemoryInInitExpression(returnVar, returnExpr);
 			irRetStmt = builder.returnStmt(returnExpr, returnVar);
 		}

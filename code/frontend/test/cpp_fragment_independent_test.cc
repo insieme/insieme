@@ -69,5 +69,7 @@ namespace frontend {
 
 	TEST(CppIndependentTest, Constructors) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_constructors.cpp"); }
 
+	TEST(CppIndependentTest, RefPtr) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_ref_ptr.cpp"); }
+
 } // fe namespace
 } // insieme namespace

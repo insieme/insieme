@@ -44,9 +44,9 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-#define DECLARE_TYPE_VISIT(Base, TypeTy) virtual core::TypePtr Visit##TypeTy(const clang::TypeTy* type);
+	#define DECLARE_TYPE_VISIT(Base, TypeTy) virtual core::TypePtr Visit##TypeTy(const clang::TypeTy* type);
 
-#define CALL_BASE_TYPE_VISIT(Base, TypeTy)                                                                                                                     \
+	#define CALL_BASE_TYPE_VISIT(Base, TypeTy)                                                                                                                 \
 	core::TypePtr Visit##TypeTy(const clang::TypeTy* type) {                                                                                                   \
 		return Base::Visit##TypeTy(type);                                                                                                                      \
 	}

@@ -30,7 +30,10 @@ optparse.parse!
 testcases=`#{ARGV.first} --gtest_list_tests`
 
 list=testcases.split("\n").map{|x| x.split(" ")[0].strip }
+# remove disabled tests if present
 list.reject! {|t| t =~ /DISABLED.*/ }
+# remove valgrind output if present
+list.reject! {|t| t =~ /^==[0-9]+==.*/}
 
 # remove gtest output header, merge test case names
 list.shift(1)

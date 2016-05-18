@@ -1546,6 +1546,12 @@ namespace core {
 		// convert all variables to references
 		auto ingredients = transform::materialize({list, returnStmt(expr)});
 		auto funType = functionType(extractTypes(list), expr->getType());
+		// replace return statement var types
+		ingredients.body = core::transform::transformBottomUpGen(ingredients.body, [&funType, this](const core::ReturnStmtPtr& ret) {
+			auto retVar = ret->getReturnVar();
+			auto replacementVar = variable(core::transform::materialize(funType->getReturnType()));
+			return core::transform::replaceAllGen(ret->getNodeManager(), ret, retVar, replacementVar);
+		});
 
 		ExpressionPtr res = lambdaExpr(funType, ingredients.params, ingredients.body);
 

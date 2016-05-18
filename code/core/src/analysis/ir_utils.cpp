@@ -746,12 +746,13 @@ namespace analysis {
 
 
 	std::vector<VariablePtr> getVariableNames(const VariablePtr& var, const NodePtr& code) {
-		VariableAddress varAddr = core::Address<const core::Variable>::find(var, code);
+		auto varAddrs = core::Address<const core::Variable>::findAll(var, code);
 
 		std::vector<VariablePtr> varVec;
-		VariableNameVisitor rvv(varAddr, varVec);
-		visitPathBottomUp(varAddr, rvv);
-
+		for (const auto& varAddr : varAddrs) {
+			VariableNameVisitor rvv(varAddr, varVec);
+			visitPathBottomUp(varAddr, rvv);
+		}
 		return varVec;
 	}
 

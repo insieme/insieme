@@ -121,6 +121,17 @@ namespace utils {
 		VLOG(2) << "convertConstructExpr - ResType: \n" << dumpDetailColored(resType) << " recType:\n"
 			    << (*converter.getIRTranslationUnit().getTypes().find(resType.as<core::GenericTypePtr>())).second << "\n";
 
+		// try to employ plugins for translation
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
+			auto retIr = extension->Visit(constructExpr, converter);
+			if(retIr) {
+				auto call = retIr.as<core::CallExprPtr>();
+				auto args = call.getArgumentList();
+				args[0] = memLoc;
+				return converter.getIRBuilder().callExpr(call.getType(), call.getFunctionExpr(), args);
+			}
+		}
+
 		// get constructor lambda
 		auto constructorLambda = converter.getFunMan()->lookup(constructExpr->getConstructor());
 

@@ -288,6 +288,18 @@ namespace core {
 			return ret;
 		}
 
+		static std::vector<Address<T>> findAll(const Pointer<T>& target, const NodePtr& root, bool dfs = true) {
+			bool visitTypes = (target->getNodeCategory() == NC_Type) || (target->getNodeCategory() == NC_Support) || (target->getNodeCategory() == NC_Value);
+			std::vector<Address<T>> ret;
+
+			auto search = [&](const Address<T>& addr){
+				if(*addr.getAddressedNode() == *target) ret.push_back(addr);
+			};
+
+			if (dfs) visitDepthFirstOnce(Address(root), search, true, visitTypes);
+			else	 visitBreadthFirst(Address(root), search, visitTypes);
+			return ret;
+		}
 
 		/**
 		 * Obtains a pointer to the root node this address is starting from.

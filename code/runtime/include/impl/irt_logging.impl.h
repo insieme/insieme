@@ -104,10 +104,10 @@ void irt_log_init() {
 	#else
 	irt_log_setting_s("IRT_RUNTIME_TUNING_EXTENDED", "disabled");
 	#endif
-	#ifdef USE_OPENCL
-	irt_log_setting_s("USE_OPENCL", "enabled");
+	#ifdef IRT_ENABLE_OPENCL
+	irt_log_setting_s("IRT_ENABLE_OPENCL", "enabled");
 	#else
-	irt_log_setting_s("USE_OPENCL", "disabled");
+	irt_log_setting_s("IRT_ENABLE_OPENCL", "disabled");
 	#endif
 	#ifdef IRT_USE_PAPI
 	irt_log_setting_s("IRT_USE_PAPI", "enabled");
