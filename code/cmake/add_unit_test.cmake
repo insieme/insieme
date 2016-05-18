@@ -1,3 +1,32 @@
+
+# parallelize integration test if required - requires at least an executable parameter, but also parses any additional parameters as arguments to that executable
+function(add_test_conditionally_parallel case_name_internal insieme_root_dir current_binary_dir executable)
+	# save all un-named arguments after the last named one
+	string(REPLACE ";" " " extra_args_string "${ARGN}")
+	set(extra_args_list ${ARGN})
+	include(ProcessorCount)
+	# use half the NB_PROCESSORS count to parallelize test
+	ProcessorCount(NB_PROCESSORS)
+	if(NOT NB_PROCESSORS)
+		# default = 8 if system query failed
+		set(NB_PROCESSORS 8)
+	endif(NOT NB_PROCESSORS)
+	math(EXPR NB_PROCESSOR_PART "${NB_PROCESSORS} / 2")
+
+	if(${case_name_internal} MATCHES ".*driver_integration.*" OR ${case_name_internal} MATCHES ".*snippets.*")
+		add_test(NAME ${case_name_internal} 
+		COMMAND ${insieme_root_dir}/code/gtest-parallel.rb 
+			-w ${NB_PROCESSOR_PART}
+			"${executable} ${extra_args_string}"
+		WORKING_DIRECTORY
+			${current_binary_dir}
+		)
+	else()
+		add_test(NAME ${case_name_internal} COMMAND ${executable} ${extra_args_list})
+	endif()
+
+endfunction()
+
 # define macro for adding tests
 macro ( add_unit_test case_name ut_prefix )
 
@@ -9,7 +38,7 @@ macro ( add_unit_test case_name ut_prefix )
 	add_dependencies(${ut_prefix} ${case_name})
 
 	#rely on CMAKE_MODULE_PATH being set correctly
-    include(insieme_find_package)
+	include(insieme_find_package)
 
 	# lookup pthread library
 	find_package(Threads REQUIRED)
@@ -88,62 +117,33 @@ macro ( add_unit_test case_name ut_prefix )
 		endif()
 	endif()
 
+	set(valgrind_options --leak-check=full --show-reachable=no --track-fds=yes --error-exitcode=1 --track-origins=no)
+		#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
+
 	# add test case
 	if(CONDUCT_MEMORY_CHECKS AND USE_VALGRIND)
 		# no valgrind support in MSVC 
 		if(NOT MSVC)
+			# lookup valgrind
+			insieme_find_package(NAME Valgrind)
+
 			# add valgrind as a test
-			add_test(NAME valgrind_${case_name} 
-				COMMAND valgrind
-					--leak-check=full
-					--show-reachable=no
-					--track-fds=yes
-					--error-exitcode=1
-					--track-origins=no
-					#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
-					${CMAKE_CURRENT_BINARY_DIR}/${case_name}
-				WORKING_DIRECTORY
-					${CMAKE_CURRENT_BINARY_DIR}
-			)
+			add_test_conditionally_parallel(valgrind_${case_name} ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR} ${VALGRIND_EXECUTABLE} ${valgrind_options} "${CMAKE_CURRENT_BINARY_DIR}/${case_name}")
 		endif(NOT MSVC)
 	else()
-		include(ProcessorCount)
-		# use half the NB_PROCESSORS count to parallelize tests
-		ProcessorCount(NB_PROCESSORS)
-		if(NOT NB_PROCESSORS)
-			# default = 8 if system query failed
-			set(NB_PROCESSORS 8)
-		endif(NOT NB_PROCESSORS)
-		math(EXPR NB_PROCESSOR_PART "${NB_PROCESSORS} / 2")
-		
 		# add normal test
-		# parallelize integration tests
-		if(${case_name} MATCHES ".*driver_integration.*" OR ${case_name} MATCHES ".*snippets.*")
-			add_test(NAME ${case_name} 
-			COMMAND ${insieme_root_dir}/code/gtest-parallel.rb 
-				-w ${NB_PROCESSOR_PART}
-				${CMAKE_CURRENT_BINARY_DIR}/${case_name}
+		add_test_conditionally_parallel(${case_name} ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/${case_name}")
+		# + valgrind as a custom target (only if not explicitly prohibited)
+		if(NOT MSVC)
+			# lookup valgrind
+			insieme_find_package(NAME Valgrind)
+
+			add_custom_target(valgrind_${case_name}
+				COMMAND ${VALGRIND_EXECUTABLE} ${valgrind_options} ${CMAKE_CURRENT_BINARY_DIR}/${case_name}
 			WORKING_DIRECTORY
 				${CMAKE_CURRENT_BINARY_DIR}
 			)
-		else()
-			add_test(${case_name} ${case_name})
-		endif()
 
-		# + valgrind as a custom target (only if not explicitly prohibited)
-		if ((NOT MSVC))
-			add_custom_target(valgrind_${case_name} 
-				COMMAND valgrind
-					--leak-check=full
-					--show-reachable=no
-					--track-fds=yes
-					--error-exitcode=1
-					--track-origins=no
-					#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
-					${CMAKE_CURRENT_BINARY_DIR}/${case_name}
-				WORKING_DIRECTORY
-					${CMAKE_CURRENT_BINARY_DIR}
-			)
 			add_dependencies(valgrind valgrind_${case_name})
 			add_dependencies(valgrind_${case_name} ${case_name})
 

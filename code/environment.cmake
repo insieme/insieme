@@ -18,10 +18,6 @@ if (GCC_INCLUDE_DIR)
 	include_directories( ${GCC_INCLUDE_DIR} )
 endif()
 
-# get code root directory (based on current file name path)
-get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
-get_filename_component( insieme_root_dir ${insieme_code_dir} PATH )
-
 #custom findxxx modules
 list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
 
