@@ -336,6 +336,15 @@ namespace utils {
 			}
 
 			/**
+			 * Obtains the value represented by this annotation.
+			 *
+			 * @return the value represented by this annotation
+			 */
+			V& getValue() {
+				return value;
+			}
+
+			/**
 			 * Updates the value represented by this annotation.
 			 *
 			 * @param value the new value to be represented
@@ -623,10 +632,11 @@ namespace utils {
 		 * @param value the value to be attached
 		 */
 		template <typename V, typename... Args>
-		void attachValue(const Args&... args) const {
+		V& attachValue(const Args&... args) const {
 			std::shared_ptr<detail::ValueAnnotation<V, AnnotationType, KeyType>> annotation =
 			    std::make_shared<detail::ValueAnnotation<V, AnnotationType, KeyType>>(args...);
 			addAnnotation(annotation);
+			return annotation->getValue();
 		}
 
 		/**
