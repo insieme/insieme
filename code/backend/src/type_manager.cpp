@@ -63,6 +63,7 @@
 
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/tag.h"
+#include "insieme/annotations/c/declaration.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/name_mangling.h"
@@ -495,8 +496,7 @@ namespace backend {
 				return type_info_utils::createInfo(boolType, definition);
 			}
 
-			// handle intercepted types
-			if(annotations::c::hasIncludeAttached(ptr)) {
+			auto getNamedType = [&](const core::NodePtr& nodePtr){
 				std::string name = insieme::utils::demangle(ptr->getName()->getValue());
 				if(core::annotations::hasAttachedName(ptr)) {
 					name = core::annotations::getAttachedName(ptr);
@@ -504,17 +504,35 @@ namespace backend {
 						name = annotations::c::getAttachedCTag(ptr) + " " + name;
 					}
 				}
-				c_ast::NamedTypePtr namedType = manager.create<c_ast::NamedType>(manager.create<c_ast::Identifier>(name));
-				c_ast::CodeFragmentPtr definition = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), annotations::c::getAttachedInclude(ptr));
+				return manager.create<c_ast::NamedType>(manager.create<c_ast::Identifier>(name));
+			};
+
+			// handle intercepted types
+			if(annotations::c::hasIncludeAttached(ptr) || annotations::c::isDeclaration(ptr)) {
+				c_ast::NamedTypePtr namedType = getNamedType(ptr);
+				c_ast::CodeFragmentPtr definition;
+				if(annotations::c::hasIncludeAttached(ptr)) {
+					definition = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), annotations::c::getAttachedInclude(ptr));
+				}
 				// also handle optional template arguments
 				for(auto typeArg : ptr->getTypeParameterList()) {
 					auto tempParamType = converter.getTypeManager().getTemplateArgumentType(typeArg);
 					namedType->parameters.push_back(tempParamType);
 					// if argument type is not intercepted, add a dependency on its definition
 					auto tempParamTypeInfo = typeInfos.find(typeArg);
-					if(tempParamTypeInfo != typeInfos.end()) definition->addDependency(tempParamTypeInfo->second->definition);
+					if(tempParamTypeInfo != typeInfos.end()) {
+						assert_true(definition) << "Tried to add a dependency to non-existent definition";
+						definition->addDependency(tempParamTypeInfo->second->definition);
+					}
 				}
-				return type_info_utils::createInfo(namedType, definition);
+				// if there is a definition then use it, otherwise create a forward declaration
+				if(definition) {
+					return type_info_utils::createInfo(namedType, definition);
+				} else {
+					auto declCode = manager.create<c_ast::TypeDeclaration>(namedType);
+					c_ast::CodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), declCode);
+					return type_info_utils::createInfo(namedType, declaration);
+				}
 			}
 
 			// no match found => return unsupported type info
