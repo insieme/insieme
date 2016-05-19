@@ -1219,7 +1219,6 @@ namespace checks {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		// OK ... create a function literal
 		TypePtr intType = builder.genericType("int");
 		TypePtr boolType = builder.genericType("bool");
 		ExpressionPtr intLit = builder.literal(intType, "4");
@@ -1238,7 +1237,6 @@ namespace checks {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		// OK ... create a function literal
 		TypePtr intType = builder.getLangBasic().getInt1();
 		TypePtr boolType = builder.genericType("bool");
 		ExpressionPtr intLit = builder.literal(intType, "4");
@@ -1253,11 +1251,26 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_SWITCH_EXPR, "", Message::ERROR));
 	}
 
-	TEST(BuildInLiterals, Basic) {
+	TEST(RefDeclTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		// OK ... create a function literal
+		auto ok = builder.parseStmt("var ref<array<int<4>,2>> v = <ref<array<int<4>,2>>>(ref_decl(type_lit(ref<array<int<4>,2>>))) { 1, 2 };");
+		auto errAddr =
+			builder.parseAddressesStatement("var ref<array<int<4>,2>> v = <ref<array<int<4>,2>>>($ref_decl(type_lit(ref<array<int<4>,3>>))$) { 1, 2 };");
+		ASSERT_EQ(errAddr.size(), 1);
+		auto err = errAddr[0].getRootNode();
+
+		CheckPtr typeCheck = makeRecursive(make_check<RefDeclTypeCheck>());
+		EXPECT_TRUE(check(ok, typeCheck).empty());
+		ASSERT_FALSE(check(err, typeCheck).empty());
+
+		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(errAddr[0], EC_TYPE_REF_DECL_TYPE_MISMATCH, "", Message::ERROR));
+	}
+
+	TEST(BuildInLiterals, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
 
 		LiteralPtr ok = builder.getLangBasic().getFalse();
 		LiteralPtr err = builder.literal(builder.genericType("strangeType"), ok->getValue());
@@ -1272,8 +1285,6 @@ namespace checks {
 	TEST(RefCastExpr, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
-
-		// OK ... create a function literal
 
 		TypePtr type = builder.genericType("int");
 		TypePtr ref = builder.refType(type);

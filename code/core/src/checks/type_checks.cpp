@@ -913,6 +913,28 @@ namespace checks {
 		return res;
 	}
 
+	OptionalMessageList RefDeclTypeCheck::visitCallExpr(const CallExprAddress& address) {
+		NodeManager& manager = address->getNodeManager();
+		auto& rExt = manager.getLangExtension<lang::ReferenceExtension>();
+		OptionalMessageList res;
+
+		// we are only interested in calls of ref decl
+		if(!rExt.isCallOfRefDecl(address)) return res;
+
+		TypePtr refDeclType = address->getType();
+		TypePtr declType = nullptr;
+
+		visitPathBottomUpInterruptible(address, [&declType](const core::DeclarationPtr& decl) {
+			declType = decl->getType();
+			return true;
+		});
+
+		if(refDeclType != declType) {
+			add(res, Message(address, EC_TYPE_REF_DECL_TYPE_MISMATCH, format("ref_decl type mismatch\nreferenced: %s\n    actual: %s", *refDeclType, *declType),
+				             Message::ERROR));
+		}
+		return res;
+	}
 
 	OptionalMessageList InitExprTypeCheck::visitInitExpr(const InitExprAddress& address) {
 		OptionalMessageList res;
