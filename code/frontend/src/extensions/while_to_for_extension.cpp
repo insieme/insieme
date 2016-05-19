@@ -172,14 +172,14 @@ namespace extensions {
 	}
 
 	bool isUsedAfterLoop(const core::StatementList& stmts, const core::WhileStmtPtr& whileStmt, const core::NodePtr& predecessor,
-		const core::VariablePtr& cvar) {
-		if (!predecessor.isa<core::DeclarationStmtPtr>()) return true;
+		                 const core::VariablePtr& cvar) {
+		if(!predecessor.isa<core::DeclarationStmtPtr>()) return true;
 		bool afterWhile = false;
-		for (auto stmt : stmts) {
-			if (stmt == whileStmt) {
+		for(auto stmt : stmts) {
+			if(stmt == whileStmt) {
 				afterWhile = true;
 			} else {
-				if (afterWhile && ::contains(core::analysis::getFreeVariables(stmt), cvar)) return true;
+				if(afterWhile && ::contains(core::analysis::getFreeVariables(stmt), cvar)) return true;
 			}
 		}
 		return false;
@@ -331,31 +331,44 @@ namespace extensions {
 				// prepare new body
 				core::StatementList newBodyStmts;
 				core::NodeMap loopVarReplacement;
-				loopVarReplacement[builder.deref(cvar)] = forVar;
+				loopVarReplacement[builder.deref(cvar)] = forVar; // TODO: replace cvar, not deref(cvar) -- issues with binds expecting refs
 				for(auto stmt : body->getStatements()) {
-					if(!::contains(toRemoveFromBody, stmt)) newBodyStmts.push_back(core::transform::replaceAllGen(mgr, stmt, loopVarReplacement));
+					if(!::contains(toRemoveFromBody, stmt)) {
+						newBodyStmts.push_back(core::transform::replaceAllGen(mgr, stmt, loopVarReplacement));
+						if(!core::analysis::isReadOnly(stmt, cvar)) {
+							VLOG(1) << "Loop var not readonly in: " << stmt;
+							return original;
+						}
+					}
 				}
-				//synchronize cvar and new forVar
-				//newBodyStmts.push_back(builder.callExpr(cvar->getType(), fMod.getCStyleAssignment(), forVar, cvar));
+
 				auto newBody = builder.compoundStmt(newBodyStmts);
 
 				// if the old loop variable is free in the new body, we messed up and should bail
-				if(::contains(core::analysis::getFreeVariables(newBody), cvar)) return original;
+				std::cout << core::printer::PrettyPrinter(newBody, core::printer::PrettyPrinter::NO_EVAL_LAZY);
+				auto oldLoopVarFree = ::contains(core::analysis::getFreeVariables(newBody), cvar);
+				VLOG(1) << "oldLoopVarFree: " << oldLoopVarFree << " // " << "free vars: " << core::analysis::getFreeVariables(newBody) << "\n";
+				if(oldLoopVarFree) return original;
 
 				auto forStmt = builder.forStmt(forVar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr, newBody);
 				core::transform::utils::migrateAnnotations(whileAddr.getAddressedNode(), forStmt);
 				VLOG(1) << "======> FOR:\n" << dumpColor(forStmt);
 
-				/////////////////////////////////////////////////////////////////////////////////////// check if post assignment is mandatory
-				core::StatementPtr postCond = nullptr;
-				if (isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), pred, cvar)) {
-					postCond = getPostCondition(cvar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr);
-				}
-
 				/////////////////////////////////////////////////////////////////////////////////////// replace the while in the original compound
 				auto replacementCompoundStmt = core::transform::replaceAddress(mgr, whileAddr, forStmt).getRootNode().as<core::CompoundStmtPtr>();
 				core::StatementList stmtlist = replacementCompoundStmt->getStatements();
-				if(postCond) stmtlist.push_back(postCond);
+
+				/////////////////////////////////////////////////////////////////////////////////////// check if post assignment is mandatory
+				auto usedAfterLoop = isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), pred, cvar);
+				if(usedAfterLoop) {
+					stmtlist.push_back(getPostCondition(cvar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr));
+				}
+
+				/////////////////////////////////////////////////////////////////////////////////////// remove declaration if we can
+				if(!usedAfterLoop && pred.isa<core::DeclarationStmtPtr>()) {
+					stmtlist.erase(std::find(stmtlist.begin(), stmtlist.end(), pred.as<core::StatementPtr>()));
+				}
+
 				return builder.compoundStmt(stmtlist);
 			}).as<core::LambdaExprPtr>();
 
