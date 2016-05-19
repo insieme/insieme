@@ -1297,6 +1297,9 @@ namespace analysis {
 					// get full address of the tag type reference
 					auto ref = concat(def,cur);
 
+					// filter out references in the same sub-branch we have been coming from
+					if (isChildOf(child,ref)) continue;
+
 					// check whether we found a (in-)direct child
 					for(const auto& p : anchesters) {
 						if (isChildOf(p,ref)) return true;
