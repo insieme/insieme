@@ -825,19 +825,17 @@ namespace checks {
 		return res;
 	}
 
-	OptionalMessageList DeclarationStmtSemanticCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
+	OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
 		OptionalMessageList res;
 
-		auto variable = address.getAddressedNode()->getVariable();
-		auto expression = address.getAddressedNode()->getInitialization();
+		DeclarationStmtPtr declaration = address.getAddressedNode();
+		TypePtr variableType = declaration->getVariable()->getType();
+		TypePtr declarationType = declaration->getDeclaration()->getType();
 
-		unsigned count = analysis::countInstances(expression, variable, true);
+		if(variableType == declarationType) return res;
 
-		if(count > 1) {
-			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, "Invalid declaration statement with multiple occurrences of the declared variable",
-				             Message::ERROR));
-		}
-
+		add(res, Message(address, EC_TYPE_INVALID_DECLARATION_TYPE,
+			             format("Invalid type of declaration - variable type: \n%s, declaration type: \n%s", *variableType, *declarationType), Message::ERROR));
 		return res;
 	}
 

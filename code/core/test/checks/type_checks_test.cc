@@ -1167,28 +1167,6 @@ namespace checks {
 		}
 	}
 
-	TEST(DeclarationStmtSemanticCheck, Basic) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		CheckPtr semanticCheck = make_check<DeclarationStmtSemanticCheck>();
-
-		TypePtr typeA = builder.getLangBasic().getInt4();
-
-		// not using the variable is ok
-		DeclarationStmtPtr ok0 = builder.declarationStmt(builder.variable(typeA), builder.intLit(5));
-		EXPECT_TRUE(check(ok0, semanticCheck).empty()) << check(ok0, semanticCheck);
-
-		// using the variable once is ok (for all semantic checks)
-		auto variable1 = builder.variable(typeA);
-		DeclarationStmtPtr ok1 = builder.declarationStmt(variable1, variable1);
-		EXPECT_TRUE(check(ok1).empty()) << check(ok0);
-
-		// using the variable more than once results in the check to fail
-		DeclarationStmtPtr err0 = builder.declarationStmt(variable1, builder.add(variable1, variable1));
-		EXPECT_PRED2(containsMSG, check(err0, semanticCheck), Message(NodeAddress(err0), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
-	}
-
 	TEST(IfCondition, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
