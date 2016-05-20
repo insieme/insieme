@@ -18,6 +18,11 @@ BISON 	:= ${PREFIX}/bison-$(shell ${AWK_CMD} bison_install.sh | cut -d= -f2 )
 FLEX 	:= ${PREFIX}/flex-$(shell ${AWK_CMD} flex_install.sh | cut -d= -f2 )
 SOUFFLE	:= ${PREFIX}/souffle-$(shell ${AWK_CMD} souffle_install.sh | cut -d= -f2 )
 
+# SOUFFLE STUFF
+AUTOCONF:= ${PREFIX}/autoconf-$(shell ${AWK_CMD} autoconf_install.sh | cut -d= -f2 )
+AUTOMAKE:= ${PREFIX}/automake-$(shell ${AWK_CMD} automake_install.sh | cut -d= -f2 )
+LIBTOOL := ${PREFIX}/libtool-$(shell ${AWK_CMD} libtool_install.sh | cut -d= -f2 )
+
 # HASKELL STUFF
 GHC     := ${PREFIX}/ghc-$(shell ${AWK_CMD} ghc_install.sh | cut -d= -f2 )
 CABAL   := ${PREFIX}/cabal-$(shell ${AWK_CMD} cabal_install.sh | cut -d= -f2 )
@@ -97,9 +102,27 @@ ${FLEX}: flex_install.sh ${GCC}
 	@echo "@@@@ Done! @@@@"
 
 ## SOUFFLE
-${SOUFFLE}: souffle_install.sh ${GCC} ${FLEX} ${BISON}
+${SOUFFLE}: souffle_install.sh ${GCC} ${FLEX} ${BISON} ${AUTOCONF} ${AUTOMAKE} ${LIBTOOL}
 	@echo "#### INSTALL SOUFFLE ${SOUFFLE} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh souffle_install.sh
+	@echo "@@@@ Done! @@@@"
+
+## AUTOCONF
+${AUTOCONF}: ${GCC}
+	@echo "#### INSTALL AUTOCONF ${AUTOCONF} ####"
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh autoconf_install.sh
+	@echo "@@@@ Done! @@@@"
+
+## AUTOMAKE
+${AUTOMAKE}: ${GCC}
+	@echo "#### INSTALL AUTOMAKE ${AUTOMAKE} ####"
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh automake_install.sh
+	@echo "@@@@ Done! @@@@"
+	
+## LIBTOOL
+${LIBTOOL}: ${GCC}
+	@echo "#### INSTALL LIBTOOL ${LIBTOOL} ####"
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh libtool_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## GHC
@@ -150,4 +173,7 @@ INSIEME: ${GCC} \
 		 ${PAPI} \
 		 ${HWLOC} \
 		 ${SOUFFLE} \
+		 ${AUTOCONF} \
+		 ${AUTOMAKE} \
+		 ${LIBTOOL} \
 		 ${STACK}

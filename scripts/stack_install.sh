@@ -77,6 +77,8 @@ echo "#### Installing Stack (patched) ####"
 mkdir -p "$PREFIX/$PACKAGE/bin"
 cp "$(find .stack-work/install -name stack)" "$PREFIX/$PACKAGE/bin/stack"
 ln -s "$PREFIX/$PACKAGE" "$PREFIX/stack-latest"
+mkdir -p "$PREFIX/$PACKAGE/stack-root"
+chmod -R g+s "$PREFIX/$PACKAGE/stack-root"
 
 echo "#### Cleaning up environment (patched) ####"
 cd "$OLDWD"

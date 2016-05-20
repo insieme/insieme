@@ -8,31 +8,46 @@ VERSION=2016.05.15
 ##                       SOUFFLÉ DATALOG ENGINE
 ########################################################################
 
-strip_java_from_souffle()
+patch_souffle()
 {
-#	rm configure Makefile.in
-	echo "$1" | patch -Np1
+	cp $patchdir/boost.m4 m4
+	patch -Np1 < $patchdir/souffle_strip_java.patch
+	patch -Np1 < $patchdir/souffle_change_boost_macros.patch
 }
+
 
 if [ -d $PREFIX/souffle-$VERSION ]; then
 	echo "Soufflé version $VERSION already installed"
 	exit 0
 fi
 
-rm -rf $PREFIX/souffle-$VERSION
+
+# Set correct PATH and other variables
+isl=$PREFIX
+autoconf=$isl/autoconf-latest/bin
+automake=$isl/automake-latest/bin
+libtool=$isl/libtool-latest/bin
+flex=$isl/flex-latest/bin
+bison=$isl/bison-latest/bin
+
+export BOOST_ROOT=$isl/boost-latest
+export PATH=$automake:$autoconf:$libtool:$flex:$bison:$PATH
+
+patchdir="$(pwd)/patches"
+
 echo "#### Downloading Soufflé ####"
 wget -nc http://www.dps.uibk.ac.at/~csaf7445/ext_libs/souffle-$VERSION.zip
-unzip -d souffle-$VERSION souffle-$VERSION.zip
+unzip -o -d souffle-$VERSION souffle-$VERSION.zip
 
-java_patch="$(cat patches/souffle_strip_java.patch)"
 cd souffle-$VERSION/souffle
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH
-export PATH=$PATH:$PREFIX/flex-latest/bin:$PREFIX/bison-latest/bin
-
 echo "#### Building Soufflé ####"
-strip_java_from_souffle "$java_patch"
-sh bootstrap
+patch_souffle
+libtoolize
+aclocal
+autoheader
+automake --gnu --add-missing
+autoconf || autoconf # Fails the first time
 ./configure --prefix=$PREFIX/souffle-$VERSION
 make -j $SLOTS
 

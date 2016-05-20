@@ -1,9 +1,11 @@
 # setup environment variables
 . ./environment.setup
 
-VERSION=1.50.0
-VERSION_FILENAME=1_50_0
-BOOST_LIBS=filesystem,program_options,random,system,regex,thread,serialization,date_time
+set -e
+
+VERSION=1.54.0
+VERSION_FILENAME=1_54_0
+BOOST_LIBS=filesystem,program_options,random,system,regex,thread,serialization,date_time,wave
 
 ########################################################################
 ##		                Boost
@@ -16,7 +18,8 @@ fi
 
 rm -Rf $PREFIX/boost-$VERSION
 echo "#### Downloading Boost library ####"
-wget -nc http://www.insieme-compiler.org/ext_libs/boost_$VERSION_FILENAME.tar.bz2
+cp ~/boost_$VERSION_FILENAME.tar.bz2 .
+#wget -nc http://www.insieme-compiler.org/ext_libs/boost_$VERSION_FILENAME.tar.bz2
 
 RET=$?
 if [ $RET -ne 0 ]; then
@@ -27,6 +30,7 @@ tar -xf boost_$VERSION_FILENAME.tar.bz2
 cd boost_$VERSION_FILENAME
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH 
+export LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH 
 
 export PATH=$PREFIX/gcc-latest/bin:$PATH
 
@@ -48,7 +52,7 @@ if [ $RET -ne 0 ]; then
 	exit $RET
 fi
 
-rm $PREFIX/boost-latest
+rm $PREFIX/boost-latest || true
 ln -s $PREFIX/boost-$VERSION $PREFIX/boost-latest
 
 echo "#### Cleaning up environment ####"

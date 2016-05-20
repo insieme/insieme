@@ -3,7 +3,7 @@
 #
 
 # determine installation directory
-PREFIX = ${HOME}/libs
+PREFIX = ${INSIEME_LIBS_HOME}
 
 # determine number of cores to be used for compiling code (default = all)
 SLOTS = `grep 'processor' /proc/cpuinfo | sort -u | wc -l`

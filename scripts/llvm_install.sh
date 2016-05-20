@@ -1,5 +1,6 @@
 # setup environment variables
 . ./environment.setup
+set -e
 
 ###########################################################################
 #  instalation notes:  
