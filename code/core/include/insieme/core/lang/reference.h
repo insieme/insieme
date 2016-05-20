@@ -489,6 +489,8 @@ namespace lang {
 	ExpressionPtr buildRefParentCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 	ExpressionPtr buildRefReinterpret(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 
+	bool isAnyRefCast(const NodePtr& node);
+
 	ExpressionPtr buildRefTemp(const TypePtr& type);
 	ExpressionPtr buildRefNull(const TypePtr& type);
 	ExpressionPtr buildRefDecl(const TypePtr& type);

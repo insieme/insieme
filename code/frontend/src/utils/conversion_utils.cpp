@@ -68,7 +68,7 @@ namespace utils {
 		}
 		// if the init expr is an init expr
 		core::ExpressionAddress initExp(initExpIn);
-		if(refExt.isCallOfRefDeref(initExp)) initExp = initExp.as<core::CallExprAddress>().getArgument(0);
+		if(refExt.isCallOfRefDeref(initExp)) initExp = core::ExpressionAddress(initExpIn.as<core::CallExprPtr>()->getArgument(0));
 		if(auto initInitExpr = initExp.isa<core::InitExprAddress>()) {
 			auto memExprAddr = initInitExpr->getMemoryExpr();
 			if(refExt.isCallOfRefTemp(memExprAddr)) {

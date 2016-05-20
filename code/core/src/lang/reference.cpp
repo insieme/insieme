@@ -370,6 +370,17 @@ namespace lang {
 		return builder.callExpr(rExt.getRefReinterpret(), refExpr, builder.getTypeLiteral(targetTy));
 	}
 
+
+	bool isAnyRefCast(const NodePtr& node) {
+		auto expr = node.isa<ExpressionPtr>();
+		if(!expr) return false;
+		auto& refExt = expr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+		auto funExpr = expr;
+		if(auto call = expr.isa<CallExprPtr>()) funExpr = call->getFunctionExpr();
+		return refExt.isRefCast(funExpr) || refExt.isRefConstCast(funExpr) || refExt.isRefVolatileCast(funExpr) || refExt.isRefKindCast(funExpr)
+			   || refExt.isRefReinterpret(funExpr) || refExt.isRefParentCast(funExpr);
+	}
+
 	ExpressionPtr buildRefTemp(const TypePtr& type) {
 		IRBuilder builder(type->getNodeManager());
 		auto& refExt = type->getNodeManager().getLangExtension<lang::ReferenceExtension>();
