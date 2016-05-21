@@ -40,6 +40,7 @@
 
 #include <boost/regex.hpp>
 
+#include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/basic.h"
@@ -53,13 +54,24 @@ namespace region {
 		RegionList res;
 
 		core::visitDepthFirst(code, [&](const core::StatementAddress& cur) -> bool {
-			if(cur.getAddressedNode()->getNodeType() != core::NT_CallExpr) { return false; }
+			core::StatementPtr stmt = cur.getAddressedNode();
 
-			const core::LiteralPtr literalPtr = cur.getAddressedNode().as<core::CallExprPtr>()->getFunctionExpr().isa<core::LiteralPtr>();
+			if(stmt->getNodeType() != core::NT_CallExpr) { return false; }
 
-			if(!literalPtr) { return false; }
+			const auto funExpr = stmt.as<core::CallExprPtr>()->getFunctionExpr();
 
-			const std::string name = literalPtr->getStringValue();
+			std::string name;
+
+			if(const core::LiteralPtr literalPtr = funExpr.isa<core::LiteralPtr>()) {
+				name = literalPtr->getStringValue();
+			} else {
+				if(core::annotations::hasAttachedName(funExpr)) {
+					name = core::annotations::getAttachedName(funExpr);
+				} else {
+					// no name found, hence cannot match
+					return false;
+				}
+			}
 
 			if(boost::regex_search(name, boost::regex(nameSubString, boost::regex_constants::ECMAScript))) {
 				res.push_back(Region(cur));
