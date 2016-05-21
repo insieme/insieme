@@ -9,4 +9,4 @@
 // ------------------
 
 // compute results
-result( x , r ) :- targets(x), reference_value(x,r).
+result( x , r ) :- targets(x), reference_value(x,DP_ROOT,r).

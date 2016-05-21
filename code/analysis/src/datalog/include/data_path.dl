@@ -1,0 +1,27 @@
+#pragma once
+
+#include "ir.dl"
+
+.type path_element
+.type data_path = [ s : path_element , p : data_path ]
+
+#define DP_ROOT nil					
+
+.decl all_data_paths ( d : data_path )
+
+all_data_paths ( DP_ROOT ).
+all_data_paths ( t ) :- all_data_paths( [ _ , t ] ).
+
+// TODO: compute all possible data paths from the type system
+
+// a table comuting concatenations of data paths
+.decl concat ( a : data_path , b : data_path , c : data_path )
+concat( DP_ROOT , p , p ) :- all_data_paths(p).
+concat( [ah,at] , b , [ah,r]) :- all_data_paths([ah,at]), concat(at,b,r).
+
+
+// a table computing string representations of data paths (for debugging)
+.decl data_path_to_string ( p : data_path , s : symbol ) output
+data_path_to_string( DP_ROOT, "_" ).
+data_path_to_string( [ x , r ], cat(cat(x,"."),s) ) :- all_data_paths([x,r]), data_path_to_string(r,s).
+
