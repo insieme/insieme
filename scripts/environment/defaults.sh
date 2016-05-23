@@ -31,7 +31,7 @@ pkg_extract() {
 }
 
 pkg_prepare() {
-	find "../patches" -name "$NAME-*.patch" | sort | xargs -r -L 1 patch -p1 -i
+	find "../patches" -name "$NAME-*.patch" | sort | xargs -r -L 1 patch -p1 -N -i
 }
 
 pkg_configure() {
