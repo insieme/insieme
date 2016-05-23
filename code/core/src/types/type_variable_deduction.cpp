@@ -38,21 +38,17 @@
 
 #include <iterator>
 
-#include "insieme/utils/annotation.h"
-
 #include "insieme/core/analysis/type_utils.h"
-
-#include "insieme/core/types/type_variable_renamer.h"
-#include "insieme/core/types/subtype_constraints.h"
-
-#include "insieme/core/lang/reference.h"
-
-#include "insieme/core/transform/node_replacer.h"
-
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/materialize.h"
+#include "insieme/core/types/subtype_constraints.h"
+#include "insieme/core/types/type_variable_renamer.h"
 
-#include "insieme/utils/logging.h"
+#include "insieme/utils/annotation.h"
 #include "insieme/utils/difference_constraints.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
@@ -797,13 +793,18 @@ namespace types {
 						);
 				}
 
-				// implicit copy construction
-				if (isRefArg && !isRefParam) {
-					if (lang::isCppReference(arguments[i]) || lang::isCppRValueReference(arguments[i])) {
+				// deal with value construction
+				if(isRefArg && !isRefParam) {
+					if(lang::isCppReference(arguments[i]) || lang::isCppRValueReference(arguments[i])) {
 						lang::ReferenceType refArg(arguments[i]);
 						materializedArguments[i] = refArg.getElementType();
 					}
-					else if (analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
+					// implicit copy construction
+					else if(analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
+						materializedArguments[i] = parameter[i];
+					}
+					// directly passing initialized materialized value as plain ref
+					else if(transform::materialize(parameter[i]) == materializedArguments[i]) {
 						materializedArguments[i] = parameter[i];
 					}
 				}
@@ -814,15 +815,11 @@ namespace types {
 					lang::ReferenceType paramType(parameter[i]);
 
 					// promote qualifiers
-					if (paramType.isConst() && !argType.isConst()) {
-						argType.setConst(true);
-					}
-					if (paramType.isVolatile() && !argType.isVolatile()) {
-						argType.setVolatile(true);
-					}
+					if(paramType.isConst() && !argType.isConst()) { argType.setConst(true); }
+					if(paramType.isVolatile() && !argType.isVolatile()) { argType.setVolatile(true); }
 
 					// convert implicitly to plain reference
-					if (paramType.isPlain() && (argType.isCppReference() || argType.isCppRValueReference())) {
+					if(paramType.isPlain() && (argType.isCppReference() || argType.isCppRValueReference())) {
 						argType.setKind(lang::ReferenceType::Kind::Plain);
 					}
 

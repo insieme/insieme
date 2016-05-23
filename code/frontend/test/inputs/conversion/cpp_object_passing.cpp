@@ -248,10 +248,10 @@ void validateNonTrivial() {
 	{ consume<T>(T()); }
 
 	// pass temporary
-	//#pragma test expect_ir(STRUCT_NON_TRIVIAL,CONSUME_NON_TRIVIAL, R"({
-	//	 IMP_consume_struct_NonTrivial_returns_void(<ref<IMP_NonTrivial,f,f,plain>>(ref_temp(type_lit(IMP_NonTrivial))) {12});
-	//})")
-	//{ consume<T>({12}); }
+	#pragma test expect_ir(STRUCT_NON_TRIVIAL,CONSUME_NON_TRIVIAL, R"({
+		 IMP_consume_struct_NonTrivial_returns_void(<ref<IMP_NonTrivial,f,f,plain>>(ref_decl(type_lit(ref<IMP_NonTrivial>))) {12});
+	})")
+	{ consume<T>({12}); }
 
 	// pass x-value
 	#pragma test expect_ir(STRUCT_NON_TRIVIAL,CONSUME_NON_TRIVIAL,PRODUCE_NON_TRIVIAL, R"({

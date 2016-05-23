@@ -71,6 +71,7 @@
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/materialize.h"
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/c/include.h"
@@ -172,6 +173,10 @@ namespace conversion {
 			auto targetRef = core::lang::ReferenceType(targetType);
 			auto retRef = core::lang::ReferenceType(ret->getType());
 			ret = core::lang::buildRefKindCast(ret, targetRef.getKind());
+		}
+		// if a target type is given, and it is a value type, replace plain ref initializers to initialize that memory location
+		if(targetType && !core::analysis::isRefType(targetType) && core::transform::materialize(targetType) == ret->getType()) {
+			ret = utils::fixTempMemoryInInitExpression(core::lang::buildRefDecl(builder.refType(targetType)), ret);
 		}
 		return ret;
 	}

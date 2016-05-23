@@ -468,10 +468,10 @@ namespace types {
 
 		// a trivial value can also be provided as a reference to a value
 
-		// -- not as a plain reference, since no constructor available --
+		// -- plain reference is fine, direct construction --
 		argType = builder.parseType("ref<int<4>>");
 		funType = builder.parseType("(int<4>)->bool").as<FunctionTypePtr>();
-		EXPECT_EQ("unit", toString(*deduceReturnType(funType, { argType })));
+		EXPECT_EQ("bool", toString(*deduceReturnType(funType, { argType })));
 
 		// -- cpp_refs are supported --
 		argType = builder.parseType("ref<int<4>,f,f,cpp_ref>");
