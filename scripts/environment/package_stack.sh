@@ -15,7 +15,7 @@ DEPENDS="gcc gmp zlib"
 export CPATH="$PREFIX/gmp-latest/include:$PREFIX/zlib-latest/include"
 export LIBRARY_PATH="$PREFIX/gmp-latest/lib:$PREFIX/zlib-latest/lib"
 export LD_LIBRARY_PATH="$PREFIX/gmp-latest/lib:$PREFIX/zlib-latest/lib"
-export STACK_ROOT="$(cd .. && pwd)/$PACKAGE-linux-x86_64/stack-root"
+export STACK_ROOT="$(cd "$(dirname "$1")"; pwd)/$(basename "$1")/$PACKAGE-linux-x86_64/stack-root"
 
 pkg_download() {
 	wget -nc "$URL"
