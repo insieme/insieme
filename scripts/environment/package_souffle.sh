@@ -12,18 +12,23 @@ export PATH="$PREFIX/autoconf-latest/bin:$PREFIX/automake-latest/bin:$PATH"
 export PATH="$PREFIX/bison-latest/bin:$PREFIX/flex-latest/bin:$PATH"
 export PATH="$PREFIX/libtool-latest/bin:$PATH"
 
-echo "Script has been disabled for now"; false
+export BOOST_ROOT="$PREFIX/boost-latest"
 
 pkg_extract() {
-	unzip "$FILE"
-	mv "$NAME" "$PACKAGE"
+	unzip -o -d "$PACKAGE" "$FILE"
+	mv "$PACKAGE/souffle/"* "$PACKAGE"
 }
 
 pkg_prepare() {
-	find "../patches" -name "$NAME-*.patch" | sort | xargs -r -L 1 patch -p1 -i
+	find "../patches" -name "$NAME-*.patch" | sort | xargs -r -L 1 patch -p1 -N -i
+	cp "../patches/boost.m4" "m4/"
 }
 
 pkg_configure() {
-	sh bootstrap
+	libtoolize
+	aclocal
+	autoheader
+	automake --gnu --add-missing
+	autoconf || autoconf # Fails the first time
 	./configure --prefix="$PREFIX/$PACKAGE"
 }
