@@ -89,7 +89,7 @@ namespace transform {
 
 				// apply substitution on arguments (for higher-order functions)
 				auto newArgs = ::transform(call->getArgumentList(), [&](const ExpressionPtr& expr) {
-					return (expr.isa<CallExprPtr>() || skip(expr)) ? expr : (*substitution)(expr);
+					return (expr.isa<CallExprPtr>() || expr.isa<InitExprPtr>() || skip(expr)) ? expr : (*substitution)(expr);
 				});
 
 				// build replacement call

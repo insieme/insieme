@@ -56,19 +56,19 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def x = (a : 'a)->unit {
-			auto z = a;
-			$z$;
-		};
-		def test = (f : 'a) -> unit {
-			auto y = f;
-			x(f);
-		};
-		{
-			var int<4> x = 1;
-			test(x);
-		}
-	)raw");
+			def x = (a : 'a)->unit {
+				auto z = a;
+				$z$;
+			};
+			def test = (f : 'a) -> unit {
+				auto y = f;
+				x(f);
+			};
+			{
+				var int<4> x = 1;
+				test(x);
+			}
+		)raw");
 
 		EXPECT_EQ(addresses.size(), 1);
 
@@ -83,19 +83,19 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def x = (a : 'a)->unit {
-			auto z = a;
-			$z$;
-		};
-		def test = (f : 'a) -> unit {
-			auto y = f;
-			x(f);
-		};
-		{
-			var int<4> x = 1;
-			test(x*5);
-		}
-	)raw");
+			def x = (a : 'a)->unit {
+				auto z = a;
+				$z$;
+			};
+			def test = (f : 'a) -> unit {
+				auto y = f;
+				x(f);
+			};
+			{
+				var int<4> x = 1;
+				test(x*5);
+			}
+		)raw");
 
 		EXPECT_EQ(addresses.size(), 1);
 
@@ -110,14 +110,14 @@ namespace transform {
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def test = (a : vector<'res,'l>) -> unit {
-			$var ref<vector<'res, 'l>> res;$
-		};
-		{
-			var ref<vector<int<4>, 8>> a;
-			test(*a);
-		}
-	)raw");
+			def test = (a : vector<'res,'l>) -> unit {
+				$var ref<vector<'res, 'l>> res;$
+			};
+			{
+				var ref<vector<int<4>, 8>> a;
+				test(*a);
+			}
+		)raw");
 
 		EXPECT_EQ(addresses.size(), 1);
 
@@ -128,15 +128,40 @@ namespace transform {
 		EXPECT_EQ(builder.normalize(builder.parseStmt("var ref<vector<int<4>, 8>> res;")), builder.normalize(newAddr.getAddressedNode()));
 	}
 
+	TEST(TypeInstantiation, BuiltinPreserving) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(R"raw(
+			def bla = (a : 'a) -> 'a { return a; };
+			def test = (a : vector<'res,'l>) -> unit {
+				bla($ref_temp(type_lit(vector<'res,'l>))$);
+			};
+			{
+				var ref<vector<int<4>, 8>> a;
+				test(*a);
+			}
+		)raw");
+
+		EXPECT_EQ(addresses.size(), 1);
+
+		auto result = instantiateTypes(addresses[0].getRootNode());
+
+		auto newAddr = addresses[0].switchRoot(result);
+
+		EXPECT_EQ(builder.normalize(builder.parseExpr("ref_temp(type_lit(vector<int<4>, 8>))")), builder.normalize(newAddr.getAddressedNode()));
+		EXPECT_TRUE(core::lang::isBuiltIn(newAddr.as<CallExprPtr>()->getFunctionExpr()));
+	}
+
 	TEST(TypeInstantiation, Constructor) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		{
-			var ref<IMP_TemplateWithMethod<int<4>>,f,f,plain> v0 = $lit("IMP_TemplateWithMethod::ctor" : IMP_TemplateWithMethod<'T>::())$(v0);
-		}
-	)raw");
+			{
+				var ref<IMP_TemplateWithMethod<int<4>>,f,f,plain> v0 = $lit("IMP_TemplateWithMethod::ctor" : IMP_TemplateWithMethod<'T>::())$(v0);
+			}
+		)raw");
 
 		EXPECT_EQ(addresses.size(), 1);
 
