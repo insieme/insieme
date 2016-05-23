@@ -248,6 +248,10 @@ namespace core {
 			return ret;
 		}
 
+		vector<Ptr<const Declaration>> getArgumentDeclarationList() const {
+			return (DeclarationList)getArgumentDeclarations();
+		}
+
 		/**
 		 * Obtains the number of arguments for this call.
 		 */

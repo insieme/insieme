@@ -1310,8 +1310,14 @@ namespace transform {
 
 	ExpressionPtr extractInitExprFromDecl(const DeclarationPtr& decl) {
 		auto type = decl->getType();
-		NodeMap replacement { { lang::buildRefDecl(type), lang::buildRefTemp(type) } };
-		return replaceAllGen(decl->getNodeManager(), decl->getInitialization(), replacement);
+
+		auto& refExt = decl->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+		return transformBottomUpGen(decl->getInitialization(), [&refExt](const core::CallExprPtr& call) {
+			if(refExt.isCallOfRefDecl(call)) {
+				return core::lang::buildRefTemp(core::analysis::getReferencedType(call->getType())).as<core::CallExprPtr>();
+			}
+			return call;
+		});
 	}
 
 
