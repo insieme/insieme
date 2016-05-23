@@ -1,74 +1,84 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Insieme.Analysis.Examples where
 
 import Control.Applicative
-import Control.Monad.Trans
-import Control.Monad.Trans.State
+import Control.Monad
+import Control.Monad.State.Strict
 import Data.List
 import Data.Maybe
 import Data.Tree
 import Insieme.Inspire.NodeAddress as Addr
+import qualified Data.Map as Map
 import qualified Insieme.Inspire as IR
 
+type NodeCache = Map.Map NodeAddress (Tree IR.Inspire)
+
 findDeclr :: NodeAddress -> Tree IR.Inspire -> Maybe NodeAddress
-findDeclr start tree = evalStateT findDeclr start
+findDeclr start tree = evalState (findDeclr start) Map.empty
   where
     org = fromJust $ resolve start tree
 
-    findDeclr :: StateT NodeAddress Maybe NodeAddress
-    findDeclr = do
-        addr <- get
-        case resolve addr tree of
-            Just (Node IR.Lambda _) -> lambda
-            _ -> declstmt <|> forstmt <|> bindexpr <|> compstmt <|> nextlevel
+    resolvememo :: NodeAddress -> State NodeCache (Maybe (Tree IR.Inspire))
+    resolvememo addr = do
+        memo <- get
+        case Map.lookup addr memo of
+          Just node -> return $ Just node
+          Nothing   -> do
+              case resolve addr tree of
+                Nothing   -> return $ Nothing
+                Just node -> do
+                    modify (Map.insert addr node)
+                    return $ Just node
 
-    declstmt :: StateT NodeAddress Maybe NodeAddress
-    declstmt = do
-        addr <- get
-        lift $ case resolve addr tree of
-            Just (Node IR.DeclarationStmt [v, _]) ->
-                if v == org
-                   then Just $ goDown 0 $ addr
-                   else Nothing
-            _ -> Nothing
+    findDeclr :: NodeAddress -> State NodeCache (Maybe NodeAddress)
+    findDeclr addr = resolvememo addr >>= \case
+        Just (Node IR.Lambda _) -> lambda addr
+        _ -> declstmt addr <||> forstmt addr <||> bindexpr addr <||>
+             compstmt addr <||> nextlevel addr
 
-    forstmt :: StateT NodeAddress Maybe NodeAddress
-    forstmt = do
-        addr <- get
-        case resolve addr tree of
-            Just (Node IR.ForStmt _) ->
-                modify (goDown 0) >> declstmt
-            _ -> lift Nothing
+    declstmt :: NodeAddress -> State NodeCache (Maybe NodeAddress)
+    declstmt addr = resolvememo addr >>= return . \case
+        Just (Node IR.DeclarationStmt [v, _]) ->
+            if v == org
+               then Just $ goDown 0 $ addr
+               else Nothing
+        _ -> Nothing
 
-    lambda :: StateT NodeAddress Maybe NodeAddress
-    lambda = do
-        addr <- get
-        lift $ case resolve addr tree of
-            Just (Node IR.Lambda [_, Node IR.Parameters ps, _]) ->
-                (\i -> goDown i $ goDown 1 $ addr) <$> findIndex (==org) ps
-            _ -> Nothing
+    forstmt :: NodeAddress -> State NodeCache (Maybe NodeAddress)
+    forstmt addr = resolvememo addr >>= \case
+        Just (Node IR.ForStmt _) -> declstmt $ goDown 0 $ addr
+        _ -> return Nothing
 
-    bindexpr :: StateT NodeAddress Maybe NodeAddress
-    bindexpr = do
-        addr <- get
-        lift $ case resolve addr tree of
-            Just (Node IR.BindExpr [_, Node IR.Parameters ps, _]) ->
-                (\i -> goDown i $ goDown 1 $ addr) <$> findIndex (==org) ps
-            _ -> Nothing
+    lambda :: NodeAddress -> State NodeCache (Maybe NodeAddress)
+    lambda addr = resolvememo addr >>= return . \case
+        Just (Node IR.Lambda [_, Node IR.Parameters ps, _]) ->
+            (\i -> goDown i $ goDown 1 $ addr) <$> findIndex (==org) ps
+        _ -> Nothing
 
-    compstmt :: StateT NodeAddress Maybe NodeAddress
-    compstmt = do
-        addr <- get
-        case resolve (goUp addr) tree of
-            Just (Node IR.CompoundStmt _) ->
-                case addr of
-                    _ :>: 0 -> lift Nothing
-                    _ :>: _ -> modify goLeft >> findDeclr
-                    _       -> lift Nothing
-            _ -> lift Nothing
+    bindexpr :: NodeAddress -> State NodeCache (Maybe NodeAddress)
+    bindexpr addr = resolvememo addr >>= return . \case
+        Just (Node IR.BindExpr [_, Node IR.Parameters ps, _]) ->
+            (\i -> goDown i $ goDown 1 $ addr) <$> findIndex (==org) ps
+        _ -> Nothing
 
-    nextlevel :: StateT NodeAddress Maybe NodeAddress
-    nextlevel = do
-        addr <- get
+    compstmt :: NodeAddress -> State NodeCache (Maybe NodeAddress)
+    compstmt addr = resolvememo (goUp addr) >>= \case
+        Just (Node IR.CompoundStmt _) ->
+            case addr of
+                _ :>: 0 -> return Nothing
+                _ :>: _ -> findDeclr $ goLeft $ addr
+                _       -> return Nothing
+        _ -> return Nothing
+
+    nextlevel :: NodeAddress -> State NodeCache (Maybe NodeAddress)
+    nextlevel addr =
         if Addr.null addr
-           then lift Nothing
-           else modify goUp >> findDeclr
+           then return Nothing
+           else findDeclr $ goUp $ addr
+
+(<||>) :: State NodeCache (Maybe NodeAddress)
+       -> State NodeCache (Maybe NodeAddress)
+       -> State NodeCache (Maybe NodeAddress)
+(<||>) = liftM2 (<|>)
+infixl 3 <||>
