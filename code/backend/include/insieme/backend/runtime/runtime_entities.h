@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -41,6 +41,7 @@
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/lists.h"
+#include "insieme/core/transform/manipulation.h"
 
 #include "insieme/backend/runtime/runtime_extension.h"
 
@@ -164,7 +165,7 @@ struct ir_to_value_converter<rbe::WorkItemRange> {
 
 		const core::CallExprPtr& call = static_pointer_cast<const core::CallExpr>(expr);
 		const core::ExpressionPtr& fun = call->getFunctionExpr();
-		const core::ExpressionList& args = call->getArguments();
+		const core::ExpressionList& args = core::transform::extractArgExprsFromCall(call);
 
 		core::ExpressionPtr min;
 		;
@@ -212,8 +213,7 @@ struct is_encoding_of<rbe::WorkItemRange> {
 		}
 
 		// check number and encoding of arguments
-		const core::ExpressionList& args = call->getArguments();
-		return args.size() == numArgs;
+		return call->getArgumentDeclarations().size() == numArgs;
 	}
 };
 
@@ -261,7 +261,7 @@ struct is_encoding_of<rbe::WorkItemVariant> {
 		const rbe::RuntimeExtension& ext = expr->getNodeManager().getLangExtension<rbe::RuntimeExtension>();
 
 		bool res = true;
-		res = res && call->getArguments().size() == static_cast<std::size_t>(1);
+		res = res && call->getArgumentDeclarations().size() == static_cast<std::size_t>(1);
 		res = res && *call->getFunctionExpr() == *ext.getWorkItemVariantCtr();
 
 		if(!res) { return res; }
@@ -327,7 +327,7 @@ struct is_encoding_of<rbe::WorkItemImpl> {
 		const rbe::RuntimeExtension& ext = expr->getNodeManager().getLangExtension<rbe::RuntimeExtension>();
 
 		bool res = true;
-		res = res && call->getArguments().size() == static_cast<std::size_t>(1);
+		res = res && call->getArgumentDeclarations().size() == static_cast<std::size_t>(1);
 		res = res && *call->getFunctionExpr() == *ext.getWorkItemImplCtr();
 
 		if(!res) { return res; }

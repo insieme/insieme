@@ -166,14 +166,6 @@ namespace backend {
 	};
 
 	/**
-	 * Eliminates assignments to or declarations of dead variables.
-	 */
-	class RedundancyElimination : public PreProcessor {
-	  public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-	};
-
-	/**
 	 * Eliminated unnecessary function pointers being passed as argument within mutual
 	 * recursive functions.
 	 */
@@ -195,6 +187,14 @@ namespace backend {
 	 * Adjust the semantics of cpp references by introducing ref casts as required.
 	 */
 	class RefCastIntroducer : public PreProcessor {
+	  public:
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+	};
+
+	/**
+	 * Replace ref decls with ref temps.
+	 */
+	class RefDeclEliminator : public PreProcessor {
 	  public:
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};

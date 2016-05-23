@@ -1314,6 +1314,14 @@ namespace transform {
 		return replaceAllGen(decl->getNodeManager(), decl->getInitialization(), replacement);
 	}
 
+
+	ExpressionList extractArgExprsFromCall(const CallExprPtr& call) {
+		auto decls = call->getArgumentDeclarations();
+		ExpressionList out;
+		std::transform(decls.begin(), decls.end(), std::back_inserter(out), [](const DeclarationPtr& d) { return extractInitExprFromDecl(d); });
+		return out;
+	}
+
 } // end namespace transform
 } // end namespace core
 } // end namespace insieme

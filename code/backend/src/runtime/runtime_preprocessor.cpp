@@ -102,13 +102,13 @@ namespace runtime {
 			core::IRBuilder builder(job->getNodeManager());
 
 			// range(1-inf)
-			if(job->getThreadNumRange().as<core::CallExprPtr>()->getArguments().size() == 1) { return false; }
+			if(job->getThreadNumRange().as<core::CallExprPtr>()->getArgumentDeclarations().size() == 1) { return false; }
 
 			// skipping casts
 			try {
-
 				// try to 'parse' the upper boundary as a integer constant
-				core::arithmetic::Formula max = core::arithmetic::toFormula(job->getThreadNumRange().as<core::CallExprPtr>()[1]);
+				core::arithmetic::Formula max =
+					core::arithmetic::toFormula(core::transform::extractInitExprFromDecl(job->getThreadNumRange().as<core::CallExprPtr>()[1]));
 
 				// check that the constant is 1
 				if (!max.isInteger() || max.getIntegerValue() != 1) return false;
@@ -571,7 +571,7 @@ namespace runtime {
 					assert(ext.isJobType(job->getType()) && "Argument hasn't been converted!");
 
 					// unpack job to attach meta information
-					WorkItemImpl wi = core::encoder::toValue<WorkItemImpl>(job.as<core::CallExprPtr>()[3]);
+					WorkItemImpl wi = core::encoder::toValue<WorkItemImpl>(core::transform::extractInitExprFromDecl(job.as<core::CallExprPtr>()[3]));
 					for(const auto& var : wi.getVariants()) {
 						annotations::migrateMetaInfos(call, var.getImplementation());
 					}
@@ -635,7 +635,7 @@ namespace runtime {
 			assert_true(parExt.isPFor(core::analysis::stripAttributes(call->getFunctionExpr())));
 
 			// construct call to pfor ...
-			const core::ExpressionList& args = call->getArguments();
+			const core::ExpressionList& args = core::transform::extractArgExprsFromCall(call);
 
 			// convert pfor body
 			auto info = pforBodyToWorkItem(args[4]);
@@ -735,7 +735,7 @@ namespace runtime {
 
 		core::StatementPtr convertVariantToSwitch(const core::CallExprPtr& call) {
 			// obtain arguments
-			const auto& arguments = call->getArguments();
+			const auto& arguments = core::transform::extractArgExprsFromCall(call);
 
 			// extract code variants
 			auto variantCodes = coder::toValue<vector<core::ExpressionPtr>, core::encoder::DirectExprListConverter>(
@@ -771,7 +771,7 @@ namespace runtime {
 			// --- build work item parameters (arguments to variant) ---
 
 			// collect values to be passed
-			const vector<core::ExpressionPtr>& arguments = call->getArguments();
+			const vector<core::ExpressionPtr>& arguments = core::transform::extractArgExprsFromCall(call);
 
 			// create tuple of captured data
 			core::TypeList typeList;
@@ -890,8 +890,9 @@ namespace runtime {
 			if(!(core::analysis::isCallOf(call, instExt.getInstrumentationRegionStart()) || core::analysis::isCallOf(call, rtExt.getRegionAttribute()))) { return; }
 
 			// take first argument
-			assert_eq(call[0]->getNodeType(), core::NT_Literal) << "Region ID is expected to be a literal!";
-			unsigned regionId = call[0].as<core::LiteralPtr>()->getValueAs<unsigned>();
+			auto arg0 = core::transform::extractInitExprFromDecl(call[0]);
+			assert_eq(arg0->getNodeType(), core::NT_Literal) << "Region ID is expected to be a literal!";
+			unsigned regionId = arg0.as<core::LiteralPtr>()->getValueAs<unsigned>();
 			if(max < regionId) { max = regionId; }
 		});
 

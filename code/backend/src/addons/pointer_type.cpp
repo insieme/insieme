@@ -128,7 +128,7 @@ namespace addons {
 			// ------------------------ casts -----------------------
 
 			auto cast = OP_CONVERTER {
-				if (call[0]->getType() == call->getType()) return CONVERT_ARG(0);
+				if(ARG(0)->getType() == call->getType()) return CONVERT_ARG(0);
 				return c_ast::cast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0));
 			};
 

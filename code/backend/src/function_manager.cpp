@@ -214,7 +214,7 @@ namespace backend {
 				// test if current argument is a variable argument list
 				if(core::analysis::isCallOf(cur, varlistPack)) {
 					// inline arguments of varlist-pack call => append arguments directly
-					const vector<core::ExpressionPtr>& packed = static_pointer_cast<const core::CallExpr>(cur)->getArguments();
+					const auto& packed = core::transform::extractArgExprsFromCall(cur.as<core::CallExprPtr>());
 
 					for_each(static_pointer_cast<const core::TupleExpr>(packed[0])->getExpressions()->getElements(),
 					         [&](const core::ExpressionPtr& cur) { append(nullptr, cur); });
@@ -340,7 +340,7 @@ namespace backend {
 			const core::FunctionTypePtr& funType = core::static_pointer_cast<const core::FunctionType>(type);
 
 			const core::TypeList& paramTypes = funType->getParameterTypes()->getElements();
-			const core::ExpressionList& args = call->getArguments();
+			const core::ExpressionList& args = core::transform::extractArgExprsFromCall(call);
 
 			// check number of arguments
 			if(paramTypes.size() != args.size()) {
@@ -350,7 +350,7 @@ namespace backend {
 
 			// generate new argument list
 			bool changed = false;
-			core::ExpressionList newArgs = call->getArguments();
+			core::ExpressionList newArgs = args;
 			for(unsigned i = 0; i < newArgs.size(); i++) {
 				// get pair of types
 				core::FunctionTypePtr paramType = paramTypes[i].isa<core::FunctionTypePtr>();
@@ -434,7 +434,7 @@ namespace backend {
 
 			// produce call to external literal
 			c_ast::CallPtr res = c_ast::call(info.function->name, info.instantiationTypes);
-			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArguments(), true);
+			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), core::transform::extractArgExprsFromCall(call), true);
 
 			// add dependencies
 			context.getDependencies().insert(info.prototype);
@@ -460,7 +460,7 @@ namespace backend {
 
 			// produce call to internal lambda
 			c_ast::CallPtr c_call = c_ast::call(info.function->name, info.instantiationTypes);
-			appendAsArguments(context, c_call, materializeTypeList(extractCallTypeList(call)), call->getArguments(), false);
+			appendAsArguments(context, c_call, materializeTypeList(extractCallTypeList(call)), core::transform::extractArgExprsFromCall(call), false);
 
 			// handle potential member calls
 			auto ret = handleMemberCall(call, c_call, context);
@@ -473,7 +473,7 @@ namespace backend {
 		if(funType->isPlain()) {
 			// add call to function pointer (which is the value)
 			c_ast::CallPtr res = c_ast::call(c_ast::parentheses(getValue(call->getFunctionExpr(), context)));
-			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArguments(), false);
+			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), core::transform::extractArgExprsFromCall(call), false);
 			return res;
 		}
 
@@ -485,7 +485,7 @@ namespace backend {
 			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
 
 			// extract first parameter of the function, it is the target object
-			c_ast::ExpressionPtr trgObj = converter.getStmtConverter().convertExpression(context, call[0]);
+			c_ast::ExpressionPtr trgObj = converter.getStmtConverter().convertExpression(context, core::transform::extractInitExprFromDecl(call[0]));
 
 			// make a call to the member pointer executor binary operator
 			c_ast::ExpressionPtr funcExpr = c_ast::parentheses(c_ast::pointerToMember(trgObj, getValue(call->getFunctionExpr(), context)));
@@ -494,7 +494,7 @@ namespace backend {
 			c_ast::CallPtr res = c_ast::call(funcExpr, info.instantiationTypes);
 			core::TypeList types = extractCallTypeList(call);
 			types.erase(types.begin());
-			core::ExpressionList args = call->getArguments();
+			core::ExpressionList args = core::transform::extractArgExprsFromCall(call);
 			args.erase(args.begin());
 			appendAsArguments(context, res, materializeTypeList(types), args, false);
 			return res;
@@ -512,7 +512,7 @@ namespace backend {
 
 		const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(funType);
 		c_ast::CallPtr res = c_ast::call(typeInfo.callerName, c_ast::cast(typeInfo.rValueType, value));
-		appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArguments(), false);
+		appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), core::transform::extractArgExprsFromCall(call), false);
 
 		// add dependencies
 		context.getDependencies().insert(typeInfo.caller);
@@ -864,7 +864,7 @@ namespace backend {
 				fun = core::transform::instantiate(mgr, fun.as<core::LambdaExprPtr>(), map);
 
 				// replace call with call to instantiated function
-				call = core::IRBuilder(call->getNodeManager()).callExpr(call->getType(), fun, call->getArguments());
+				call = core::IRBuilder(call->getNodeManager()).callExpr(call->getType(), fun, core::transform::extractArgExprsFromCall(call));
 			}
 
 			// create a map between expressions in the IR and parameter / captured variable names in C
@@ -879,7 +879,7 @@ namespace backend {
 
 			// add arguments of call
 			int argumentCounter = 0;
-			const vector<core::ExpressionPtr>& args = call->getArguments();
+			const vector<core::ExpressionPtr>& args = core::transform::extractArgExprsFromCall(call);
 			for_each(args, [&](const core::ExpressionPtr& cur) {
 				variableMap[cur] = var(typeManager.getTypeInfo(cur->getType()).rValueType, format("c%d", ++argumentCounter));
 			});
@@ -1250,7 +1250,8 @@ namespace backend {
 						values.push_back(call->getArgument(1)); // that is the value
 					} else {
 						// it is a constructor call => collect all arguments but the first
-						values.insert(values.end(), call->begin() + 1, call->end());
+						auto args = core::transform::extractArgExprsFromCall(call);
+						values.insert(values.end(), args.begin() + 1, args.end());
 					}
 				}
 

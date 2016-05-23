@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -42,6 +42,7 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/transform/manipulation.h"
 
 #include "insieme/utils/map_utils.h"
 

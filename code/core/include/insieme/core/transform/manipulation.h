@@ -396,6 +396,15 @@ namespace transform {
 	 */
 	ExpressionPtr extractInitExprFromDecl(const DeclarationPtr& decl);
 
+	/**
+	 * Creates a list of expressions containing call arguments usable outside the calling context,
+	 * by replacing usage of the declared variable with appropriate ref_temp calls.
+	 *
+	 * @param call the call to extract the arguments expression from
+	 * @return list of expressions containing call arguments
+	 */
+	ExpressionList extractArgExprsFromCall(const CallExprPtr& call);
+
 } // end namespace transform
 } // end namespace core
 } // end namespace insieme

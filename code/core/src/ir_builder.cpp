@@ -970,6 +970,10 @@ namespace core {
 	CallExprPtr IRBuilderBaseModule::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const {
 		return createCall(*this, resultType, functionExpr, toVector<ExpressionPtr>());
 	}
+	CallExprPtr IRBuilderBaseModule::callExpr(const ExpressionPtr& functionExpr, const DeclarationList& arguments) const {
+		auto args = ::transform(arguments, [](const DeclarationPtr& d){ return transform::extractInitExprFromDecl(d); });
+		return callExpr(deduceReturnTypeForCall(functionExpr, args), functionExpr, arguments);
+	}
 
 	LambdaPtr IRBuilderBaseModule::lambda(const FunctionTypePtr& type, const ParametersPtr& params, const StatementPtr& body) const {
 		return lambda(type, params, wrapBody(body));

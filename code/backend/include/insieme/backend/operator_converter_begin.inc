@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -45,7 +45,7 @@
  *
  * @param N the index of the argument to be obtained
  */
-#define ARG(N) call->getArgument(N)
+#define ARG(N) core::transform::extractInitExprFromDecl(call[N])
 
 #define CONVERTER context.getConverter()
 #define NODE_MANAGER context.getConverter().getNodeManager()
