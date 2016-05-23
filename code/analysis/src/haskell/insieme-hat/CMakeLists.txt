@@ -2,7 +2,7 @@ project(insieme_analysis_haskell NONE)
 cmake_minimum_required(VERSION 3.2)
 
 set( stack_home $ENV{INSIEME_LIBS_HOME}/stack-latest CACHE PATH "Stack Home Directory" ) 		# TODO: use e.g. insieme_find_package
-set( stack_root ${stack_home}/stack-root) 
+set( stack_root ${stack_home}/stack-root_$ENV{USER} )
 
 set( gmp_lib_dir $ENV{INSIEME_LIBS_HOME}/gmp-latest/lib CACHE PATH "GMP library directory" )		# TODO: use e.g. insieme_find_package
 set( z_lib_dir $ENV{INSIEME_LIBS_HOME}/zlib-latest/lib CACHE PATH "ZLIB library directory" )		# TODO: use e.g. insieme_find_package
