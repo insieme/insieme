@@ -225,7 +225,8 @@ namespace analysis {
 	 * @return true if the passed declaration is an undefined declaration
 	 */
 	static inline bool isUndefinedInitalization(const DeclarationStmtPtr& decl) {
-		return decl->getVariable() == decl->getInitialization();
+		auto& refExt = decl->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+		return refExt.isCallOfRefDecl(decl->getInitialization());
 	}
 
 

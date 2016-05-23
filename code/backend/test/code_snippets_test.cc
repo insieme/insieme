@@ -141,7 +141,7 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
 		                                                "  (dtype : type<'a>, size : type<'s>)->unit {"
 		                                                "    var ref<'a> v0;"
-		                                                "    var int<'s> v1;"
+		                                                "    var int<'s> v1 = lit(\"0\":int<'s>);"
 		                                                "  } (type_lit(real<4>), type_lit(8));"
 		                                                "  return 0;"
 		                                                "}");
@@ -1115,8 +1115,8 @@ namespace backend {
 
 				var ref<int<4>,f,f> s = *ptr_to_ref(pfun()) + *ptr_to_ref(pfun());
 
-				var A a;
-				pAfun(a);
+				var ref<A> a;
+				pAfun(*a);
 				return 0;
 			}
 		)");

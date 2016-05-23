@@ -244,7 +244,7 @@ namespace backend {
 
 	core::NodePtr RefDeclEliminator::process(const Converter& converter, const core::NodePtr& code) {
 		auto& refExt = code->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-		return core::transform::transformBottomUpGen(code, [&refExt](const core::CallExprPtr call) {
+		return core::transform::transformBottomUpGen(code, [&refExt](const core::CallExprPtr& call) {
 			if(refExt.isCallOfRefDecl(call)) {
 				return core::lang::buildRefTemp(core::analysis::getReferencedType(call->getType())).as<core::CallExprPtr>();
 			}
