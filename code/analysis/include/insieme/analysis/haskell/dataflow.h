@@ -36,15 +36,17 @@
 
 #pragma once
 
-#include <boost/optional.hpp>
-
 #include "insieme/core/ir_address.h"
 
 namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	boost::optional<core::VariableAddress> getDefinitionPoint(const core::VariableAddress& var);
+	struct Haskell {
+
+		static core::VariableAddress getDefinitionPoint(const core::VariableAddress& var);
+
+	};
 
 } // end namespace haskell
 } // end namespace analysis

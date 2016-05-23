@@ -46,7 +46,7 @@ namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	boost::optional<VariableAddress> getDefinitionPoint(const VariableAddress& var) {
+	VariableAddress Haskell::getDefinitionPoint(const VariableAddress& var) {
 		auto& env = Environment::getInstance();
 
 		auto tree = env.passTree(var.getRootNode());
