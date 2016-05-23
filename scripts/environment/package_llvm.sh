@@ -27,10 +27,6 @@ pkg_extract() {
 	mv "cfe-$VERSION.src" "$PACKAGE/tools/clang"
 }
 
-pkg_prepare() {
-	find "../patches" -name "$NAME-$VERSION-*.patch" | sort | xargs -r -L 1 patch -p1 -i
-}
-
 pkg_configure() {
 	./configure --prefix="$PREFIX/$PACKAGE" \
 		--enable-assert=yes \
