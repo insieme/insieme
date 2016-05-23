@@ -1,0 +1,10 @@
+--- a/src/Stack/Types/Build.hs
++++ b/src/Stack/Types/Build.hs
+@@ -606,6 +606,7 @@ configureOptsNoDir :: EnvConfig
+                    -> [String]
+ configureOptsNoDir econfig bco deps wanted isLocal package = concat
+     [ depOptions
++    , ["--disable-library-stripping"]
+     , ["--enable-library-profiling" | boptsLibProfile bopts || boptsExeProfile bopts]
+     , ["--enable-executable-profiling" | boptsExeProfile bopts && isLocal]
+     , ["--enable-split-objs" | boptsSplitObjs bopts]

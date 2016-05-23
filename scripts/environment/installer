@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -e
+
+resolve_dependencies() {
+	local deps=$(echo "source package_$1.sh && echo -n \$DEPENDS" | bash -)
+	for pkg in $deps; do
+		install_pkg "$pkg"
+	done
+}
+
+install_pkg() {
+	resolve_dependencies "$1"
+	bash - <<-EOF
+		set -e
+		source defaults.sh
+		source package_$1.sh
+		pkg_check_installed
+		pkg_download
+		pkg_extract
+		pushd \$PACKAGE
+		pkg_prepare
+		pkg_configure
+		pkg_build
+		pkg_check
+		pkg_install
+		popd
+		pkg_cleanup
+	EOF
+}
+
+if [[ $# -eq 0 ]]; then
+	PACKAGES="gcc llvm boost cmake luajit cudd bison flex papi hwloc stack"
+else
+	PACKAGES="$@"
+fi
+
+for pkg in $PACKAGES; do
+	install_pkg "$pkg"
+done
