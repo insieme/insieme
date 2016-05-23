@@ -269,15 +269,17 @@ namespace backend {
 
 		core::ProgramPtr program = builder.parseProgram(R"(
 			int<4> function IMP_main (){
-				var ref<int<4>,f,f,plain> v0 = v0;
-				var ref<ptr<int<4>>,f,f,plain> v1 = ptr_from_ref(v0);
-				var ref<int<4>,f,f,cpp_ref> v2 = v0;
-				var ref<int<4>,f,f,plain> v3 = *ptr_to_ref(*v1);
-				var ref<ptr<int<4>>,f,f,plain> v4 = ptr_from_ref(ref_cast(v2, type_lit(f), type_lit(f), type_lit(plain)));
-				var ref<int<4>,f,f,cpp_ref> v5 = ptr_to_ref(*v1);
+				var ref<int<4>,f,f,plain> i;
+				var ref<ptr<int<4>>,f,f,plain> i_ptr = ptr_from_ref(i);
+				var ref<int<4>,f,f,cpp_ref> i_ref = i;
+				var ref<int<4>,f,f,plain> j = *ptr_to_ref(*i_ptr);
+				var ref<ptr<int<4>>,f,f,plain> j_ptr = ptr_from_ref(ref_cast(i_ref, type_lit(f), type_lit(f), type_lit(plain)));
+				var ref<int<4>,f,f,cpp_ref> j_ref = ptr_to_ref(*i_ptr);
 				return 0;
 			}
 		)");
+
+		dumpColor(program);
 
 		ASSERT_TRUE(program);
 		// std::cout << "Program: " << dumpColor(program) << std::endl;
@@ -290,7 +292,7 @@ namespace backend {
 
 		// check absence of relevant code
 		auto code = toString(*converted);
-		EXPECT_PRED2(containsSubString, code, "int32_t* v4 = (int32_t*)(&v2);");
+		EXPECT_PRED2(containsSubString, code, "int32_t* v4 = (int32_t*)(&v5);");
 		EXPECT_PRED2(containsSubString, code, "int32_t& v5 = *v1;");
 
 		// try compiling the code fragment

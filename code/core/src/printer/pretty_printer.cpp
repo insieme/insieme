@@ -1122,12 +1122,15 @@ namespace printer {
 			}
 
 			PRINT(Variable) {
-
 				// print this references as 'this'
 				if(!thisStack.empty() && *node == *thisStack.top()) {
 					out << "this";
 				} else {
-					out << *node;
+					if(printer.hasOption(PrettyPrinter::USE_VARIABLE_NAME_ANNOTATIONS) && annotations::hasAttachedName(node)) {
+						out << annotations::getAttachedName(node);
+					} else {
+						out << *node;
+					}
 				}
 
 			}

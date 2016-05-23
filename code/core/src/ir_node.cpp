@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -226,6 +226,7 @@ IRDump dumpColor(const insieme::core::NodePtr& node, std::ostream& out, bool noL
 		insieme::core::printer::PrettyPrinter print(node);
 		print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
 		print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);
+		print.setOption(insieme::core::printer::PrettyPrinter::USE_VARIABLE_NAME_ANNOTATIONS);
 		if(noLet) print.setOption(insieme::core::printer::PrettyPrinter::NO_LET_BINDINGS);
 		return out << print << std::endl;
 	}, out);
