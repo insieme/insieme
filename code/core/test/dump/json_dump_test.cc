@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,36 +34,37 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/utils/assert.h"
-#include "insieme/core/ir_address.h"
-#include "insieme/analysis/datalog/code_properties.h"
-#include "insieme/analysis/haskell/dataflow.h"
+#include "insieme/core/dump/json_dump.h"
+
+#include <sstream>
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/encoder/encoder.h"
+
+using std::shared_ptr;
 
 namespace insieme {
-namespace analysis {
+namespace core {
+namespace dump {
 
-	using namespace datalog;
-	using namespace haskell;
+	using namespace std;
 
-	/**
-	 * Get the definition point for a certain variable, if there is one.
-	 *
-	 * @param var the VariableAddress of the root node whose subtree will be searched
-	 * @return the resulting definition point or an empty VariableAddress if none could be found
-	 */
-	template<typename Engine>
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var) {
-		return Engine::getDefinitionPoint(var);
+
+	TEST(JsonDump, Store) {
+		// create a code fragment using manager A
+		NodeManager managerA;
+		IRBuilder builder(managerA);
+
+		// print the plain json dump
+		json::dumpIR(std::cout, builder.parseType("int<4>"));
+
+		// print the json dump + extra information
+		json::dumpIR(std::cout, builder.parseType("int<4>"), [](const NodeAddress& cur)->std::string {
+			return (cur.isa<TypePtr>()) ? "TYPE!" : "";
+		});
 	}
 
-	/*
-
-	 * Usage example:
-	 * getDefinitionPoint<Datalog>(root);
-	 */
-
-
-} // end namespace analysis
+} // end namespace dump
+} // end namespace core
 } // end namespace insieme

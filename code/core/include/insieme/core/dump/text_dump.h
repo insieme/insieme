@@ -70,15 +70,6 @@ namespace text {
 	void dumpAddress(std::ostream& out, const NodeAddress& address, const bool printAddresses = false);
 
 	/**
-	 * Writes a JSON-encoded text dump of a given IR address into the given output stream.
-	 * This function is well-suited if the output needs to be read again by another program.
-	 *
-	 * @param out the stream to be writing to
-	 * @param address the address to be written
-	 */
-	void dumpJson(std::ostream& out, const NodeAddress& address);
-
-	/**
 	 * Restores an IR code fragment from the given input stream. For constructing
 	 * the resulting nodes, the given manager will be used. In case the stream contains
 	 * an illegal encoding, an InvalidEncodingException will be thrown.
@@ -139,33 +130,6 @@ namespace text {
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
 			dumpAddress(out, address, printAddresses);
-			return out;
-		}
-	};
-
-
-	/**
-	 * A wrapper to be streamed into an output stream when aiming on dumping some JSON.
-	 */
-	class JsonDump : public utils::Printable {
-		/**
-		 * The address to be dumped.
-		 */
-		const NodeAddress address;
-
-	  public:
-		/**
-		 * Creates a new instance dumping the JSON for a given node address.
-		 *
-		 * @param address the address to be dumped.
-		 */
-		JsonDump(const NodeAddress& address) : address(address) {}
-
-		/**
-		 * Bridges the gap to the actual binary dump function.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
-			dumpJson(out, address);
 			return out;
 		}
 	};

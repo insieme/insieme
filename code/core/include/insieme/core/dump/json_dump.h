@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,34 +36,35 @@
 
 #pragma once
 
-#include "insieme/utils/assert.h"
+#include <ostream>
+#include <istream>
+
+#include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_address.h"
-#include "insieme/analysis/datalog/code_properties.h"
-#include "insieme/analysis/haskell/dataflow.h"
+#include "insieme/core/dump/dump.h"
+#include "insieme/core/dump/annotations.h"
+
+#include "insieme/utils/printable.h"
+
 
 namespace insieme {
-namespace analysis {
+namespace core {
+namespace dump {
 
-	using namespace datalog;
-	using namespace haskell;
+namespace json {
 
 	/**
-	 * Get the definition point for a certain variable, if there is one.
+	 * Writes a binary encoding of the given IR node into the given output stream.
 	 *
-	 * @param var the VariableAddress of the root node whose subtree will be searched
-	 * @return the resulting definition point or an empty VariableAddress if none could be found
+	 * @param out the stream to be writing to
+	 * @param ir the code fragment to be written
+	 * @param infoAnnotator provides extra information for individual addresses -- no information by default
 	 */
-	template<typename Engine>
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var) {
-		return Engine::getDefinitionPoint(var);
-	}
-
-	/*
-
-	 * Usage example:
-	 * getDefinitionPoint<Datalog>(root);
-	 */
+	void dumpIR(std::ostream& out, const NodePtr& ir, const std::function<std::string(NodeAddress)>& infoAnnotator = [](const NodeAddress&)->std::string { return ""; });
 
 
-} // end namespace analysis
+} // end namespace json
+
+} // end namespace dump
+} // end namespace core
 } // end namespace insieme

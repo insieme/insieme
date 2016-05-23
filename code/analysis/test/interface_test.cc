@@ -36,8 +36,6 @@
 
 #include <gtest/gtest.h>
 
-#include <boost/optional.hpp>
-
 #include "insieme/analysis/dataflow.h"
 
 #include "insieme/core/ir_builder.h"
@@ -48,18 +46,20 @@ namespace analysis {
 
 	using namespace core;
 
+	enum class Backend { DATALOG, HASKELL };
+
 	/*
 	 * A macro to create dispatcher functions for the different backends.
 	 * Needed because GTest can't generate parametrized tests if the parameter is a template argument.
 	 */
 	#define create_dispatcher_for(FUNC)                                                                             \
-	    boost::optional<core::VariableAddress> dispatch_##FUNC(const core::VariableAddress& var, Backend backend) { \
+	    core::VariableAddress dispatch_##FUNC(const core::VariableAddress& var, Backend backend) { \
 	        switch(backend) {                                                                                       \
-	        case Backend::DATALOG: return FUNC<Backend::DATALOG>(var);                                              \
-	        case Backend::HASKELL: return FUNC<Backend::HASKELL>(var);                                              \
+	        case Backend::DATALOG: return FUNC<Datalog>(var);                                              \
+	        case Backend::HASKELL: return FUNC<Datalog>(var);                                              \
 	        default: assert_not_implemented() << "Backend not implemented!";                                        \
 	        }                                                                                                       \
-	        return boost::optional<core::VariableAddress>();                                                        \
+	        return core::VariableAddress();                                                        \
 	    }
 
 	/* List of the dynamic dispatchers that should be available */
@@ -199,7 +199,7 @@ namespace analysis {
 		std::cout << "Parameter: " << param << "\n";
 		std::cout << "Variable:  " << var << "\n";
 
-		EXPECT_EQ(param, *dispatch_getDefinitionPoint(var, GetParam()));
+		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
 
 	}
 
@@ -222,7 +222,7 @@ namespace analysis {
 
 		auto definition = dispatch_getDefinitionPoint(var, GetParam());
 		EXPECT_TRUE(definition);
-		EXPECT_EQ(param, *definition);
+		EXPECT_EQ(param, definition);
 
 	}
 
@@ -253,10 +253,10 @@ namespace analysis {
 		auto defY = decl->getVariable();
 		auto defW = bind->getParameters()[1];
 
-		EXPECT_EQ(defX,*dispatch_getDefinitionPoint(x, GetParam()));
-		EXPECT_EQ(defY,*dispatch_getDefinitionPoint(y, GetParam()));
+		EXPECT_EQ(defX,dispatch_getDefinitionPoint(x, GetParam()));
+		EXPECT_EQ(defY,dispatch_getDefinitionPoint(y, GetParam()));
 		EXPECT_FALSE(dispatch_getDefinitionPoint(z, GetParam()));
-		EXPECT_EQ(defW,*dispatch_getDefinitionPoint(w, GetParam()));
+		EXPECT_EQ(defW,dispatch_getDefinitionPoint(w, GetParam()));
 
 	}
 
@@ -284,7 +284,7 @@ namespace analysis {
 		auto bind = x.getRootAddress().as<BindExprAddress>();
 		auto defX = bind->getParameters()[0];
 
-		EXPECT_EQ(defX,*dispatch_getDefinitionPoint(x, GetParam()));
+		EXPECT_EQ(defX,dispatch_getDefinitionPoint(x, GetParam()));
 		EXPECT_FALSE(dispatch_getDefinitionPoint(y, GetParam()));
 
 	}
@@ -313,7 +313,7 @@ namespace analysis {
 		auto defY = bind->getParameters()[0];
 
 		EXPECT_FALSE(dispatch_getDefinitionPoint(x, GetParam()));
-		EXPECT_EQ(defY,*dispatch_getDefinitionPoint(y, GetParam()));
+		EXPECT_EQ(defY,dispatch_getDefinitionPoint(y, GetParam()));
 
 	}
 

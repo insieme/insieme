@@ -160,50 +160,6 @@ namespace text {
 
 
 		/**
-		 * The JsonDumper is very similar to TextDumper, but prints in Json format,
-		 * which is easier to parse when the output is needed by other programs. The
-		 * output represents the full IR tree and is not exploting the sharing
-		 * proerties of the DAG.
-		 */
-		class JsonDumper {
-		public:
-			void dump(std::ostream& out, const NodeAddress& ir) {
-				dump(out, 0, ir);
-				out << std::endl;
-			}
-
-			void dump(std::ostream& out, int level, const NodeAddress& cur) {
-				// Indentation
-				out << times("   ", level) << "{"
-				    << "\"node\": \"" << cur->getNodeType() << "\", "
-				    << "\"addr\": \"" << cur << "\"";
-
-				if(cur->isValue()) {
-					// Print the value
-					out << ", \"value\": ";
-					boost::apply_visitor(ValueDumper(out), cur->getNodeValue());
-				}
-
-				// Print children, if there are any
-				if(!cur->getChildList().empty()) {
-					out << ", \"children\": [";
-					// Classic for-loop because we have to avoid comma at the end
-					for(unsigned int i = 0; i < cur->getChildList().size(); i++) {
-						out << std::endl;
-						dump(out, level + 1, cur->getChildList()[i]);
-						if(i+1 < cur->getChildList().size())
-							out << ",";
-					}
-					out << "]";
-				}
-
-				// Close block
-				out << " }";
-			}
-		};
-
-
-		/**
 		 * The tokenizer is splitting up the encoded form of an IR tree into its token. It
 		 * is respecting the boundary tokens (, | and ) as well as text being escaped within
 		 * quotes.
@@ -448,10 +404,6 @@ namespace text {
 		if(!address.isRoot()) { // we can skip the address if it is the root
 			dumpPath(out, address.getPath());
 		}
-	}
-
-	void dumpJson(std::ostream& out, const NodeAddress& address) {
-		JsonDumper().dump(out, address.getRootAddress());
 	}
 
 	NodePtr loadIR(std::istream& in, core::NodeManager& manager) {
