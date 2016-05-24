@@ -8,7 +8,7 @@ SHA256SUM="7b66c3f13dc8385f08264c805853f3e1a8eedab8071d582f3e661971c9acd5fd"
 
 DEPENDS="gmp"
 
-unset CC CXX
+unset CC CXX LD_LIBRARY_PATH
 export LD_RUN_PATH="$PREFIX/gmp-latest/lib"
 
 pkg_configure() {

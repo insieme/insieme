@@ -8,7 +8,7 @@ SHA256SUM="335275817b5ed845fee787e75efd76a6e240bfabbe0a0c20a81a04777e204617"
 
 DEPENDS="gmp mpc mpfr"
 
-unset CC CXX
+unset CC CXX LD_LIBRARY_PATH
 export LD_RUN_PATH="$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib"
 
 pkg_configure() {
