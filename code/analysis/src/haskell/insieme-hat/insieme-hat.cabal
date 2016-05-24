@@ -19,7 +19,8 @@ executable insieme-hat
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.ThHelpers
-    other-extensions:   OverloadedStrings,
+    other-extensions:   LambdaCase,
+                        OverloadedStrings,
                         PatternSynonyms,
                         TemplateHaskell,
                         ViewPatterns
@@ -30,6 +31,7 @@ executable insieme-hat
                         pretty-show >=1.6,
                         bytestring >=0.10,
                         template-haskell >=2.9,
+                        transformers >=0.4,
                         attoparsec-binary >=0.2,
                         attoparsec >=0.13
     hs-source-dirs:     src
@@ -46,6 +48,7 @@ library
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.ThHelpers
     other-extensions:   ForeignFunctionInterface,
+                        LambdaCase,
                         OverloadedStrings,
                         PatternSynonyms,
                         TemplateHaskell,
@@ -57,6 +60,7 @@ library
                         pretty-show >=1.6,
                         bytestring >=0.10,
                         template-haskell >=2.9,
+                        transformers >=0.4,
                         attoparsec-binary >=0.2,
                         attoparsec >=0.13
     hs-source-dirs:     src

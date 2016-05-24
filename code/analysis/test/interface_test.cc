@@ -53,13 +53,13 @@ namespace analysis {
 	 * Needed because GTest can't generate parametrized tests if the parameter is a template argument.
 	 */
 	#define create_dispatcher_for(FUNC)                                                                             \
-	    core::VariableAddress dispatch_##FUNC(const core::VariableAddress& var, Backend backend) { \
+	    core::VariableAddress dispatch_##FUNC(const core::VariableAddress& var, Backend backend) {                  \
 	        switch(backend) {                                                                                       \
-	        case Backend::DATALOG: return FUNC<Datalog>(var);                                              \
-	        case Backend::HASKELL: return FUNC<Datalog>(var);                                              \
+	        case Backend::DATALOG: return FUNC<Datalog>(var);                                                       \
+	        case Backend::HASKELL: return FUNC<Haskell>(var);                                                       \
 	        default: assert_not_implemented() << "Backend not implemented!";                                        \
 	        }                                                                                                       \
-	        return core::VariableAddress();                                                        \
+	        return core::VariableAddress();                                                                         \
 	    }
 
 	/* List of the dynamic dispatchers that should be available */
@@ -92,8 +92,9 @@ namespace analysis {
 		//std::cout << "Parameter: " << param << "\n";
 		//std::cout << "Variable:  " << var << "\n";
 
-		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
-
+		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		ASSERT_TRUE(find);
+		ASSERT_EQ(param, find);
 	}
 
 	/**
@@ -331,6 +332,63 @@ namespace analysis {
 		var = var.switchRoot(var);
 
 		EXPECT_FALSE(dispatch_getDefinitionPoint(var, GetParam()));
+	}
+
+	TEST_P(CBA_Interface, DefinitionPointFor) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(
+			"{ for (int<4> x = 0 .. 4) { $x$; } }"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<VariableAddress>();
+		auto param = var.getRootAddress().as<CompoundStmtAddress>()[0].as<ForStmtAddress>()->getDeclaration()->getVariable();
+
+		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		ASSERT_TRUE(find);
+		ASSERT_EQ(param, find);
+	}
+
+	TEST_P(CBA_Interface, DefinitionPointDoubleFor) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(
+			"{ for (int<4> x = 0 .. 4) { for(int<4> y = 0 .. 4) { $x$; } } }"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<VariableAddress>();
+		auto param = var.getRootAddress().as<CompoundStmtAddress>()[0].as<ForStmtAddress>()->getDeclaration()->getVariable();
+
+		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		ASSERT_TRUE(find);
+		ASSERT_EQ(param, find);
+	}
+
+	TEST_P(CBA_Interface, DefinitionPointLambda) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(
+			"def f = (x : int<4>, y : int<4>) -> unit { $y$; };"
+			"{"
+			"  f(1, 2);"
+			"}"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
+		auto param = var.getParentAddress(3).as<LambdaAddress>()->getParameterList()[1];
+
+		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		ASSERT_TRUE(find);
+		ASSERT_EQ(param, find);
 	}
 
 	/**

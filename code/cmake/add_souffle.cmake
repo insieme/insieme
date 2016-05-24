@@ -43,9 +43,10 @@ macro(souffle_generate_cpp souffle_input_path souffle_dl_target souffle_include_
 	set(souffle_output_file   ${souffle_output_path}/${souffle_dl_target})
 
 	# add -I to include path
-	set( include_argument "${souffle_include_path}" )
-	if ( include_argument )
+	set(include_argument "${souffle_include_path}")
+	if (include_argument)
 		set(include_argument "--include-dir=${include_argument}")
+		file(GLOB include_dl_dependencies ${souffle_include_path}/*.dl)
 	endif()
 
 	# Custom command to compile DL files into CPP files using Soufflé
@@ -54,7 +55,7 @@ macro(souffle_generate_cpp souffle_input_path souffle_dl_target souffle_include_
 		COMMAND ${souffle_binary}
 		ARGS -g ${souffle_output_file}.h ${souffle_input_file} ${include_argument}
 		COMMENT "Generating compiled soufflé datalog: ${souffle_dl_target}.h"
-		DEPENDS ${souffle_input_file}
+		DEPENDS ${souffle_input_file} ${include_dl_dependencies}
 		IMPLICIT_DEPENDS C ${souffle_input_file}
 		WORKING_DIRECTORY ${souffle_output_path}
 		OUTPUT ${souffle_output_file}.h

@@ -3,18 +3,22 @@
 
 module Insieme.Inspire.NodeAddress (
     NodeAddress,
+    Seq.fromList,
+    Seq.length,
+    Seq.null,
     goUp,
     goDown,
     goLeft,
     goRight,
     resolve,
     addressTree,
+    pattern Empty,
     pattern (:<:),
     pattern (:>:),
 ) where
 
 import Data.Maybe
-import Data.Sequence
+import Data.Sequence as Seq
 import Data.Tree
 import Insieme.Inspire
 

@@ -9,7 +9,6 @@ import Foreign
 import Foreign.C.String
 import Foreign.C.Types
 import qualified Data.ByteString.Char8 as BS8
-import qualified Data.Sequence as Seq
 import qualified Insieme.Analysis.Examples as Anal
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryParser as BinPar
@@ -60,14 +59,14 @@ foreign export ccall "hat_tree_printNode"
 passAddress :: Ptr CSize -> CSize -> IO (StablePtr Addr.NodeAddress)
 passAddress path_c length_c = do
     path <- peekArray (fromIntegral length_c) path_c
-    let addr = Seq.fromList (fromIntegral <$> path)
+    let addr = Addr.fromList (fromIntegral <$> path)
     newStablePtr addr
 
 foreign export ccall "hat_passAddress"
     passAddress :: Ptr CSize -> CSize -> IO (StablePtr Addr.NodeAddress)
 
 addrLength :: StablePtr Addr.NodeAddress -> IO CSize
-addrLength addr_c = fromIntegral . Seq.length <$> deRefStablePtr addr_c
+addrLength addr_c = fromIntegral . Addr.length <$> deRefStablePtr addr_c
 
 foreign export ccall "hat_addr_length"
     addrLength :: StablePtr Addr.NodeAddress -> IO CSize
