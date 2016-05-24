@@ -7,7 +7,7 @@
 #include "return_value.dl"
 #include "callable.dl"
 #include "program_point_analysis.dl"
-
+#include "data_path.dl"
 
 // -- a realation identifying every assignment --
 .decl assignment ( e : expr ) output
@@ -31,7 +31,7 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 	.decl unknown_value( v : ValueType )
 
 	// -- the value to be computed by this analysis --
-	.decl value ( n : node , v : ValueType ) output
+	.decl value ( n : node , p : data_path , v : ValueType ) output
 
 	
 	// ------------------------------
@@ -42,28 +42,28 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 	// definitions of variables take the value at the definition
 
 	// declaration statements
-	value( v, b ) :- VariableDefinition(v), DeclarationStmt(_,v,e), value(e,b).
+	value( v, p, b ) :- VariableDefinition(v), DeclarationStmt(_,v,e), value( e, p, b ).
 
 	// bind parameters
-	value( v, b ) :-
+	value( v, d, b ) :-
 			VariableDefinition(v), NodeList(p,i,v), BindExpr(f,p,_),			// this variable is the i-th parameter of a bind expression f
 			callGraph(c,f),														// f is called by call site c 
-			NodeList(c,i,a),value(a,b).  										// v get's assigned the value of the i-th argument of c	
+			NodeList(c,i,a),value(a,d,b).  										// v get's assigned the value of the i-th argument of c	
 			
 	// return variables
-	value( v, b ) :- VariableDefinition(v), ReturnStmt(_,e,v), value(e,b). 
+	value( v, p, b ) :- VariableDefinition(v), ReturnStmt(_,e,v), value(e,p,b). 
 
 	// uses of variables correspond to the value of the definition point
-	value( v, b ) :- Variable(v,_,_), DefinitionPoint(d,v), value(d,b).
+	value( v, p, b ) :- Variable(v,_,_), DefinitionPoint(d,v), value(d,p,b).
 
 	// free variables are undefined
-	value( v, b ) :- FreeVariable(v), unknown_value(b).
+	value( v, DP_ROOT, b ) :- FreeVariable(v), unknown_value(b).
 
 
 
 	// -- value of call expressions --
 
-	value( c, v ) :- CallExpr(c,f), callable_value(f,t), ReturnValue(t,r), ReachableIn(r), value(r,v). 
+	value( c, p, v ) :- CallExpr(c,f), callable_value(f,DP_ROOT,t), ReturnValue(t,r), ReachableIn(r), value(r,p,v). 
 
 
 
@@ -75,19 +75,19 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 
 
 	// read value from a memory location
-	value( c, v ) :- deref(c), NodeList(c,0,t), reference_value(t,m), memory_state.value(c,INT,[m,v]).
+	value( c, vp, v ) :- deref(c), NodeList(c,0,t), reference_value(t,DP_ROOT, [m,rp]), memory_state.value(c,INT,[[m,p],v]), concat(rp,vp,p).
 
 	// write values to memory locations (perfect assignment)
 	memory_state.intercepted( c , INT ) :- simple_assignment(c).
-	memory_state.value(c,POST,[m,v]) :- assignment(c), NodeList(c,0,t), NodeList(c,1,e), reference_value(t,m), value(e,v).
-	memory_state.value(c,POST,s) :- assignment(c), NodeList(c,0,t), reference_value(t,m1), reference_value(t,m2), m1!=m2, memory_state.value(c,INT,s).
+	memory_state.value(c,POST,[[m,p],v]) :- assignment(c), NodeList(c,0,t), NodeList(c,1,e), reference_value(t,DP_ROOT,[m,p]), value(e,DP_ROOT,v).
+	memory_state.value(c,POST,s) :- assignment(c), NodeList(c,0,t), reference_value(t,DP_ROOT,[m1,p1]), reference_value(t,DP_ROOT,[m2,p2]), (m1!=m2 ; p1!=p2), memory_state.value(c,INT,s).
 	
 	
 	// pass function argument to memory location of parameter
-	memory_state.value( b, PRE, [v,d] ) :-  
+	memory_state.value( b, PRE, [[v,dp],d] ) :-  
 			VariableDefinition(v), NodeList(p,i,v), Lambda(l,_,p,b),			// this variable is the i-th parameter of a lambda l
 			callGraph(c,l),														// l is called by call site c 
-			NodeList(c,i,a),value(a,d).  										// v get's assigned the value of the i-th argument of c
+			NodeList(c,i,a),value(a,dp,d).  										// v get's assigned the value of the i-th argument of c
 
 }
 

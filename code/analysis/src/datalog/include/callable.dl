@@ -14,20 +14,20 @@
 .init callable = DataFlowAnalysis<callable>
 
 // link to result set
-callable_value(n,v) :- callable.value(n,v).
+callable_value(n,p,v) :- callable.value(n,p,v).
 
 // the value to be exhibited by any unknown value
-callable.unknown_value ( X ) :- callable.value(_,X).
+callable.unknown_value ( X ) :- callable.value(_,_,X).
 
 
 // lambda expressions point to callable lambdas
-callable.value( le, l ) :- LambdaExpr( le,_,refA,def ), ParentOf(def,binding), LambdaBinding(binding,refB,l), EqualNodes(refA,refB).
+callable.value( le, DP_ROOT, l ) :- LambdaExpr( le,_,refA,def ), ParentOf(def,binding), LambdaBinding(binding,refB,l), EqualNodes(refA,refB).
 
 // binds are all callable
-callable.value( bind, bind ) :- BindExpr(bind,_,_).
+callable.value( bind, DP_ROOT, bind ) :- BindExpr(bind,_,_).
 
 // literals with a function type are callable
-callable.value( lit, lit ) :- Literal(lit,type,_), FunctionType(type,_,_,_,_).
+callable.value( lit, DP_ROOT, lit ) :- Literal(lit,type,_), FunctionType(type,_,_,_,_).
 
 // TODO: add support for recursive calls
 
@@ -35,4 +35,4 @@ callable.value( lit, lit ) :- Literal(lit,type,_), FunctionType(type,_,_,_,_).
 // --------------------------------------------
 
 // create the call graph
-callGraph ( call, trg ) :- CallExpr(call,f), callable_value(f,trg).
+callGraph ( call, trg ) :- CallExpr(call,f), callable_value(f,DP_ROOT,trg).

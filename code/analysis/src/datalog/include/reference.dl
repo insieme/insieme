@@ -10,20 +10,20 @@
 .init reference = DataFlowAnalysis<memory_location>
 
 // link to result set
-reference_value(n,v) :- reference.value(n,v).
+reference_value(n,p,v) :- reference.value(n,p,v).
 
 // the value to be exhibited by any unknown value
-reference.unknown_value ( X ) :- reference.value(_,X).		
+reference.unknown_value ( X ) :- reference.value(_,_,X).		
 reference.unknown_value ( -1 ).			// two values not covered anywhere (=outside the application)
 reference.unknown_value ( -2 ).
 
 
 // references are created by calls to ref_alloc
-reference.value( c, c ) :- callGraph(c,t),NodeIdentity(t,x),NamedConstruct("ref_alloc",x).
+reference.value( c, DP_ROOT, [ c , DP_ROOT ] ) :- callGraph(c,t),NodeIdentity(t,x),NamedConstruct("ref_alloc",x).
 
 // and by function parameters
 // TODO: cover this (after merge, this is different)
-reference.value( a, a ) :- Lambda(l,_,p,_), NodeList(p,_,a).
+reference.value( a, DP_ROOT, [ a , DP_ROOT] ) :- Lambda(_,_,p,_), NodeList(p,_,a).
 
 // and by return statements
 // TODO: cover this (after merge, this is different)

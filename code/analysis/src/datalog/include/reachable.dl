@@ -22,8 +22,8 @@ ReachableIn( e ) :- ReachableIn(p), ParentOf( p, e ),
 
 // select condition branches in if statements
 ReachableIn( c ) :- IfStmt( i, c, _, _ ), ReachableIn(i).
-ReachableIn( t ) :- IfStmt( i, c, t, _ ), ReachableIn(i), boolean_value(c, true).
-ReachableIn( e ) :- IfStmt( i, c, _, e ), ReachableIn(i), boolean_value(c, false).
+ReachableIn( t ) :- IfStmt( i, c, t, _ ), ReachableIn(i), boolean_value(c, DP_ROOT, true).
+ReachableIn( e ) :- IfStmt( i, c, _, e ), ReachableIn(i), boolean_value(c, DP_ROOT, false).
 
 ReachableOut( i ) :- IfStmt( i, _, t, _ ), ReachableOut(t).
 ReachableOut( i ) :- IfStmt( i, _, _, e ), ReachableOut(e).

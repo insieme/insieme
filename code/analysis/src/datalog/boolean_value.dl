@@ -8,7 +8,7 @@
 .decl result( v : bool ) output
 
 // link analysis with result
-result( v ) :- target_expr(n), boolean_value(n,v).
+result( v ) :- target_expr(n), boolean_value(n,DP_ROOT,v).
 
 
 
@@ -19,7 +19,7 @@ result( v ) :- target_expr(n), boolean_value(n,v).
 .init boolean = DataFlowAnalysis<bool>
 
 // define an alias
-boolean_value(n,v) :- boolean.value(n,v).
+boolean_value(n,p,v) :- boolean.value(n,p,v).
 
 // the value to be exhibited by any unknown value
 boolean.unknown_value( true ).
@@ -40,9 +40,9 @@ is_boolean( n ) :- GenericType(n,"bool",a,b), is_empty(a), is_empty(b).
 // -- boolean value analysis --
 
 // -- assign values to literals --
-boolean.value( n , true ) :- Literal(n,t,"true"), is_boolean(t).
-boolean.value( n , false ) :- Literal(n,t,"false"), is_boolean(t).
+boolean.value( n , DP_ROOT, true ) :- Literal(n,t,"true"), is_boolean(t).
+boolean.value( n , DP_ROOT, false ) :- Literal(n,t,"false"), is_boolean(t).
 
 // all other literals have an unknown boolean value
-boolean.value( n, v ) :- Literal(n,t,_), !is_boolean(t), boolean.unknown_value(v).
+boolean.value( n, DP_ROOT, v ) :- Literal(n,t,_), !is_boolean(t), boolean.unknown_value(v).
 
