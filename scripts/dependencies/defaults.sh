@@ -21,7 +21,7 @@ pkg_check_installed() {
 
 pkg_download() {
 	wget -nc "$URL"
-	if [[ -z "$SHA256SUM" ]]; then
+	if [[ "$SHA256SUM" ]]; then
 		echo "$SHA256SUM  $FILE" | sha256sum -c
 	fi
 }
