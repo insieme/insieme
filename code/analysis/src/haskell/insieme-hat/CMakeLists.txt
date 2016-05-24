@@ -11,6 +11,9 @@ add_custom_target(
     insieme_analysis_haskell
     ALL
 
+    # create STACK_ROOT folder to prevent hideous error
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${stack_root}
+
     # install adequate ghc / cabal lib
     COMMAND ${CMAKE_COMMAND} -E env
         "STACK_ROOT=${stack_root}"
@@ -24,8 +27,6 @@ add_custom_target(
         "LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
         "LD_LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
         ${stack_home}/bin/stack --allow-different-user build --force-dirty --ghc-options='-lHSrts-ghc7.10.3'
-
-    COMMAND chmod -R g+w ${stack_root}
 
     # copy library (package key in name) to binary dir
     COMMAND ${CMAKE_COMMAND} -E env
