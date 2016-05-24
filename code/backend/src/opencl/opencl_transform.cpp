@@ -533,6 +533,62 @@ namespace transform {
 		return Step::process(converter, newLambdaExpr);
 	}
 	
+	namespace {
+		class ForLoopReplacer : public core::transform::CachedNodeMapping {
+			core::NodeManager& manager;
+			core::IRBuilder builder;
+			core::ExpressionList globalWorkSizes;
+		public:
+			ForLoopReplacer(core::NodeManager& manager) :
+				manager(manager), builder(manager)
+			{ }
+
+			const core::ExpressionList& getGlobalWorkSizes() { return globalWorkSizes; }
+
+			const core::NodePtr resolveElement(const core::NodePtr& node) {
+				// if we have already exhausted all dimensions
+				if (globalWorkSizes.size() == 3) return node;
+				// do not visit child calls
+				if (node->getNodeType() == core::NT_CallExpr) return node;
+				// in case we do not face a for-stmt, hop one level deeper
+				if (node->getNodeType() != core::NT_ForStmt) return node->substitute(manager, *this);
+				// do nothing if it is not independent -- continue our way down
+				if (!analysis::isIndependentStmt(node.as<core::StatementPtr>())) return node->substitute(manager, *this);
+
+				core::StatementList stmts;
+				auto forStmt = node.as<core::ForStmtPtr>();
+				/*
+				for( int<4> v87 = 0 .. 1000 : 1) {
+					ptr_subscript(*v308, v87) = IMP_add(*ptr_subscript(*v306, v87), *ptr_subscript(*v307, v87));
+				}
+
+				-->
+
+				int<4> v00 = num_cast(opencl_get_global_id(), type_lit(int<4>));
+				if (v00 < 1000 && (v00 - start) % step == 0)
+					ptr_subscript(*v308, v00) = IMP_add(*ptr_subscript(*v306, v00), *ptr_subscript(*v307, v00));
+				*/
+				auto decl = forStmt->getDeclaration();
+				stmts.push_back(DeclarationStmt::get(manager, decl->getVariable(), builder.numericCast(
+					buildGetGlobalId(manager, builder.uintLit(globalWorkSizes.size())), decl->getVariable()->getType())));
+				// save the loop end for build an NDRange from it later on
+				globalWorkSizes.push_back(forStmt->getEnd());
+				// prepare the body -- thus we do a bottom up replacement
+				auto body = forStmt->getBody()->substitute(manager, *this);
+				stmts.push_back(builder.ifStmt(
+					builder.logicAnd(
+						builder.lt(decl->getVariable(), forStmt->getEnd()),
+						builder.eq(
+							builder.mod(
+								builder.sub(decl->getVariable(), decl->getInitialization()),
+								forStmt->getStep()),
+							builder.numericCast(builder.uintLit(0), forStmt->getStep()->getType()))),
+					body));
+				return builder.compoundStmt(stmts);
+			}
+		};
+	}
+
 	core::NodePtr LoopOptimizerStep::process(const Converter& converter, const core::NodePtr& node) {
 		auto lambdaExpr = node.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return node;
@@ -564,53 +620,13 @@ namespace transform {
 		auto callContext = std::make_shared<CallContext>();
 		context.getCallGraph().addVertex(callContext);
 
-		// replace the first independent stmt with a loop
-		core::ExpressionList globalWorkSizes;
-		std::vector<core::NodeMap> replacements;
-		core::visitDepthFirstOncePrunable(lambdaExpr->getBody(), [&](const core::StatementPtr& stmt) {
-			// if we have already exhausted all dimensions -- skip
-			if (globalWorkSizes.size() == 3) return true;
-			// do not visit child calls
-			if (stmt->getNodeType() == core::NT_CallExpr) return true;
-			// skip visit of non for-stmts
-			if (stmt->getNodeType() != core::NT_ForStmt) return false;
-			// do nothing if it is not independent
-			if (!analysis::isIndependentStmt(stmt)) return false;
+		// replace the loops with OpenCL constructs
+		ForLoopReplacer loopReplacer(manager);
+		auto body = loopReplacer.map(lambdaExpr->getBody());
 
-			core::StatementList stmts;
-			auto forStmt = stmt.as<core::ForStmtPtr>();
-			/*
-			for( int<4> v87 = 0 .. 1000 : 1) {
-				ptr_subscript(*v308, v87) = IMP_add(*ptr_subscript(*v306, v87), *ptr_subscript(*v307, v87));
-			}
-
-			-->
-
-			int<4> v00 = num_cast(opencl_get_global_id(), type_lit(int<4>));
-			if (v00 < 1000 && (v00 - start) % step == 0)
-				ptr_subscript(*v308, v00) = IMP_add(*ptr_subscript(*v306, v00), *ptr_subscript(*v307, v00));
-			*/
-			auto decl = forStmt->getDeclaration();
-			stmts.push_back(DeclarationStmt::get(manager, decl->getVariable(), builder.numericCast(
-				buildGetGlobalId(manager, builder.uintLit(globalWorkSizes.size())), decl->getVariable()->getType())));
-			stmts.push_back(builder.ifStmt(
-				builder.logicAnd(
-					builder.lt(decl->getVariable(), forStmt->getEnd()),
-					builder.eq(
-						builder.mod(
-							builder.sub(decl->getVariable(), decl->getInitialization()),
-							forStmt->getStep()),
-						builder.numericCast(builder.uintLit(0), forStmt->getStep()->getType()))),
-				forStmt->getBody()));
-			// register the replacement for later on
-			core::NodeMap nm;
-			nm[forStmt] = builder.compoundStmt(stmts);
-			replacements.push_back(nm);
-			globalWorkSizes.push_back(forStmt->getEnd());
-			return false;
-		});
+		const auto& globalWorkSizes = loopReplacer.getGlobalWorkSizes();
 		// introduce a single default clEnqueueTask call if we replace nothing
-		if (replacements.empty()) {
+		if (globalWorkSizes.empty()) {
 			callContext->setNDRange(makeDefaultNDRange(manager));
 			return node;
 		}
@@ -621,9 +637,6 @@ namespace transform {
 		callContext->setNDRange(ndrange);
 		// for the sake of sanity!
 		assert_true(context.getCallGraph().getNumVertices() > 0) << "execution graph must exist prior loop optimizer";
-		auto body = lambdaExpr->getBody();
-		for (const auto& replacement : replacements)
-			body = core::transform::replaceAllGen(manager, body, replacement);
 		auto newLambdaExpr= builder.lambdaExpr(manager.getLangBasic().getUnit(), lambdaExpr->getParameterList(), body);
 		// migrate the annotations -- but no need to fixup as only hthe body has changed
 		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
