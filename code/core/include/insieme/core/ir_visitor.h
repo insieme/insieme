@@ -517,12 +517,12 @@ namespace core {
 	 * may simply return *true*. The result of the interrupted visitor is false if not interrupted,
 	 * true otherwise.
 	 */
-	template <template <class Target> class Ptr = Pointer, typename... P>
+	template <typename Action, template <class Target> class Ptr = Pointer, typename... P>
 	class DepthFirstInterruptibleIRVisitor : public IRVisitor<bool, Ptr, P...> {
 		/**
 		 * The sub-visitor visiting all nodes DepthFirstly.
 		 */
-		IRVisitor<bool, Ptr, P...>& subVisitor;
+		IRVisitor<Action, Ptr, P...>& subVisitor;
 
 		/**
 		 * The order in which nodes are processed.
@@ -533,7 +533,7 @@ namespace core {
 		/**
 		 * Create a new visitor based on the given sub-visitor.
 		 */
-		DepthFirstInterruptibleIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
+		DepthFirstInterruptibleIRVisitor(IRVisitor<Action, Ptr, P...>& subVisitor, bool preorder = true)
 		    : IRVisitor<bool, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder){};
 
 		/**
@@ -579,9 +579,11 @@ namespace core {
 	 * whether the visitor should decent into the subtree or prune the subtree from the visiting
 	 * process.
 	 */
-	enum class Action {
+	enum Action {
 		Prune = true,
-		Descent = false
+		Descent = false,
+		Interrupt = true,
+		Continue = false
 	};
 
 	/**
@@ -676,18 +678,18 @@ namespace core {
 	 * will iterate breadth first, pre-order through every visited node and can be interrupted at
 	 * any point by the sub-visitor.
 	 */
-	template <template <class Target> class Ptr = Pointer, typename... P>
+	template <typename Action, template <class Target> class Ptr = Pointer, typename... P>
 	class BreadthFirstInterruptibleIRVisitor : public IRVisitor<bool, Ptr, P...> {
 		/**
 		 * The sub-visitor visiting all nodes DepthFirstly.
 		 */
-		IRVisitor<bool, Ptr, P...>& subVisitor;
+		IRVisitor<Action, Ptr, P...>& subVisitor;
 
 	  public:
 		/**
 		 * Create a new visitor based on the given sub-visitor.
 		 */
-		BreadthFirstInterruptibleIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor)
+		BreadthFirstInterruptibleIRVisitor(IRVisitor<Action, Ptr, P...>& subVisitor)
 		    : IRVisitor<bool, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor){};
 
 		bool visitNode(const Ptr<const Node>& node, P... context) {
@@ -785,12 +787,12 @@ namespace core {
 	/**
 	 * This visitor is visiting all nodes within the IR in a DepthFirst manner and can be aborted at any time.
 	 */
-	template <template <class Target> class Ptr = Pointer, typename... P>
+	template <typename Action, template <class Target> class Ptr = Pointer, typename... P>
 	class DepthFirstOnceInterruptibleIRVisitor : public IRVisitor<bool, Ptr, P...> {
 		/**
 		 * The sub-visitor visiting all nodes DepthFirstly.
 		 */
-		IRVisitor<bool, Ptr, P...>& subVisitor;
+		IRVisitor<Action, Ptr, P...>& subVisitor;
 
 		/**
 		 * The order in which nodes are processed.
@@ -801,7 +803,7 @@ namespace core {
 		/**
 		 * Create a new visitor based on the given sub-visitor.
 		 */
-		DepthFirstOnceInterruptibleIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
+		DepthFirstOnceInterruptibleIRVisitor(IRVisitor<Action, Ptr, P...>& subVisitor, bool preorder = true)
 		    : IRVisitor<bool, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder){};
 
 
@@ -852,18 +854,18 @@ namespace core {
 	 * This visitor is visiting all nodes within the IR in a DepthFirst manner. Thereby,
 	 * the DepthFirst visiting of sub-trees can be pruned at any time.
 	 */
-	template <template <class Target> class Ptr = Pointer, typename... P>
+	template <typename Action, template <class Target> class Ptr = Pointer, typename... P>
 	class DepthFirstOncePrunableIRVisitor : public IRVisitor<void, Ptr, P...> {
 		/**
 		 * The sub-visitor visiting all nodes DepthFirstly.
 		 */
-		IRVisitor<bool, Ptr, P...>& subVisitor;
+		IRVisitor<Action, Ptr, P...>& subVisitor;
 
 	  public:
 		/**
 		 * Create a new visitor based on the given sub-visitor.
 		 */
-		DepthFirstOncePrunableIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor)
+		DepthFirstOncePrunableIRVisitor(IRVisitor<Action, Ptr, P...>& subVisitor)
 		    : IRVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor){};
 
 
@@ -917,9 +919,9 @@ namespace core {
 	 * @param visitor the visitor to be based on
 	 * @return a DepthFirst visitor encapsulating the given visitor
 	 */
-	template <template <class Target> class Ptr, typename... P>
-	DepthFirstInterruptibleIRVisitor<Ptr, P...> makeDepthFirstInterruptibleVisitor(IRVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
-		return DepthFirstInterruptibleIRVisitor<Ptr, P...>(visitor, preorder);
+	template <typename Action, template <class Target> class Ptr, typename... P>
+	DepthFirstInterruptibleIRVisitor<Action, Ptr, P...> makeDepthFirstInterruptibleVisitor(IRVisitor<Action, Ptr, P...>& visitor, bool preorder = true) {
+		return DepthFirstInterruptibleIRVisitor<Action, Ptr, P...>(visitor, preorder);
 	}
 
 	/**
@@ -950,9 +952,9 @@ namespace core {
 	 * @param visitor the visitor to be based on
 	 * @return a BreadthFirstInterruptible visitor encapsulating the given visitor
 	 */
-	template <template <class Target> class Ptr, typename... P>
-	BreadthFirstInterruptibleIRVisitor<Ptr, P...> makeBreadthFirstInterruptibleVisitor(IRVisitor<bool, Ptr, P...>& visitor) {
-		return BreadthFirstInterruptibleIRVisitor<Ptr, P...>(visitor);
+	template <typename Action, template <class Target> class Ptr, typename... P>
+	BreadthFirstInterruptibleIRVisitor<Action, Ptr, P...> makeBreadthFirstInterruptibleVisitor(IRVisitor<Action, Ptr, P...>& visitor) {
+		return BreadthFirstInterruptibleIRVisitor<Action, Ptr, P...>(visitor);
 	}
 
 	/**
@@ -972,9 +974,9 @@ namespace core {
 	 * @param visitor the visitor to be based on
 	 * @return a DepthFirst visitor encapsulating the given visitor
 	 */
-	template <template <class Target> class Ptr, typename... P>
-	DepthFirstOnceInterruptibleIRVisitor<Ptr, P...> makeDepthFirstOnceInterruptibleVisitor(IRVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
-		return DepthFirstOnceInterruptibleIRVisitor<Ptr, P...>(visitor, preorder);
+	template <template <class Target> class Ptr, typename Action, typename... P>
+	DepthFirstOnceInterruptibleIRVisitor<Action, Ptr, P...> makeDepthFirstOnceInterruptibleVisitor(IRVisitor<Action, Ptr, P...>& visitor, bool preorder = true) {
+		return DepthFirstOnceInterruptibleIRVisitor<Action, Ptr, P...>(visitor, preorder);
 	}
 
 	/**
@@ -983,9 +985,9 @@ namespace core {
 	 * @param visitor the visitor to be based on
 	 * @return a DepthFirst visitor encapsulating the given visitor
 	 */
-	template <template <class Target> class Ptr, typename... P>
-	DepthFirstOncePrunableIRVisitor<Ptr, P...> makeDepthFirstOncePrunableVisitor(IRVisitor<bool, Ptr, P...>& visitor) {
-		return DepthFirstOncePrunableIRVisitor<Ptr, P...>(visitor);
+	template <template <class Target> class Ptr, typename Action, typename... P>
+	DepthFirstOncePrunableIRVisitor<Action, Ptr, P...> makeDepthFirstOncePrunableVisitor(IRVisitor<Action, Ptr, P...>& visitor) {
+		return DepthFirstOncePrunableIRVisitor<Action, Ptr, P...>(visitor);
 	}
 
 
@@ -1036,14 +1038,14 @@ namespace core {
 	 * 				   post order will be enforced.
 	 * @return returns true if interrupted, false otherwise
 	 */
-	template <typename Node, template <class Target> class Ptr, typename... P>
-	inline bool visitDepthFirstInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
+	template <typename Node, typename Action, template <class Target> class Ptr, typename... P>
+	inline bool visitDepthFirstInterruptible(const Ptr<Node>& root, IRVisitor<Action, Ptr, P...>&& visitor, bool preorder = true) {
 		return makeDepthFirstInterruptibleVisitor(visitor, preorder).visit(root);
 	}
 
 	// same as above, however it is accepting visitors by reference
-	template <typename Node, template <class Target> class Ptr, typename... P>
-	inline bool visitDepthFirstInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
+	template <typename Node, typename Action, template <class Target> class Ptr, typename... P>
+	inline bool visitDepthFirstInterruptible(const Ptr<Node>& root, IRVisitor<Action, Ptr, P...>& visitor, bool preorder = true) {
 		return makeDepthFirstInterruptibleVisitor(visitor, preorder).visit(root);
 	}
 
@@ -1144,14 +1146,14 @@ namespace core {
 	 * @param root the root not to start the visiting from
 	 * @param visitor the visitor to be visiting all the nodes
 	 */
-	template <typename Node, template <class Target> class Ptr, typename... P>
-	inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor) {
+	template <typename Node, typename Action, template <class Target> class Ptr, typename... P>
+	inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, IRVisitor<Action, Ptr, P...>&& visitor) {
 		makeDepthFirstOncePrunableVisitor(visitor).visit(root);
 	}
 
 	// same as above, however it is accepting visitors by reference
-	template <typename Node, template <class Target> class Ptr, typename... P>
-	inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor) {
+	template <typename Node, typename Action, template <class Target> class Ptr, typename... P>
+	inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, IRVisitor<Action, Ptr, P...>& visitor) {
 		makeDepthFirstOncePrunableVisitor(visitor).visit(root);
 	}
 

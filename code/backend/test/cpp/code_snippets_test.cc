@@ -751,19 +751,39 @@ namespace backend {
 				}
 			};
 
+			def struct E {
+				a : A;
+				b : B;
+				c : C;
+				d : D;
+				ctor () {
+					A::(a);
+					B::(b);
+					C::(c, 3);
+					D::(d);
+				}
+			};
+
 			int main() {
 				var ref<A> a = A::(a);
 				var ref<D> d = D::(d);
+				var ref<E> e = E::(e);
 				return 0;
 			}
 		)"));
 
+		std::cout << " ------------- Parsing Done -----------------------\n";
+
 		ASSERT_TRUE(res);
 		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		std::cout << " -------------- Checks Done -----------------------\n";
 
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 		//std::cout << *targetCode;
+
+		std::cout << " ----------- Conversion Done ----------------------\n";
 
 		// check generated code
 		auto code = toString(*targetCode);

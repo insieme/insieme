@@ -304,12 +304,12 @@ namespace core {
 		}
 
 		template <typename V>
-		void attachValue(const V& value = V()) const {
+		V& attachValue(const V& value = V()) const {
 			return getAnnotationContainer().template attachValue<V>(value);
 		}
 
 		template <typename V, typename... Args>
-		void attachValue(const Args&... args) const {
+		V& attachValue(const Args&... args) const {
 			return getAnnotationContainer().template attachValue<V>(args...);
 		}
 

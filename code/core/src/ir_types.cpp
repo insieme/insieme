@@ -49,6 +49,8 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/reference.h"
 
+#include "insieme/core/analysis/ir_utils.h"
+
 namespace insieme {
 namespace core {
 
@@ -296,7 +298,11 @@ namespace core {
 
 			// skip tags in type variable bindings
 			if (auto tagType = root.template isa<Ptr<const TagType>>()) {
-				appendFreeTagTypeReferences(Ptr<const Node>(tagType->getDefinition()), set, fieldsOnly, origin);
+				// if there are free tag type references ...
+				if (analysis::hasFreeTagTypeReferences(tagType)) {
+					// ... collect those too
+					appendFreeTagTypeReferences(Ptr<const Node>(tagType->getDefinition()), set, fieldsOnly, origin);
+				}
 				return;
 			}
 
@@ -331,9 +337,11 @@ namespace core {
 		 */
 		template<template<typename T> class Ptr>
 		std::set<Ptr<const TagTypeReference>> getFreeTagTypeReferences(const Ptr<const Node>& root, const TagTypeReferencePtr& origin = TagTypeReferencePtr()) {
+
 			std::set<Ptr<const TagTypeReference>> res;
 			appendFreeTagTypeReferences(root, res, false, origin);
 			return res;
+
 		}
 
 		template<template<typename T> class Ptr>
@@ -375,6 +383,7 @@ namespace core {
 		vector<TagTypeReferenceAddress> res;
 		for (const auto& binding : TagTypeDefinitionAddress(TagTypeDefinitionPtr(this))) {
 			for (const auto& cur : getFreeTagTypeReferences(NodeAddress(binding->getRecord()), TagTypeReferencePtr())) {
+				assert_eq(cur.getRootNode().ptr, this) << cur << " = " << *cur << " is not rooted by this definition!\n" << *this;
 				res.push_back(cur);
 			}
 		}
@@ -392,28 +401,33 @@ namespace core {
 
 		// the annotation to store the reference list
 		struct reference_list {
-			vector<TagTypeReferenceAddress> list;
+			utils::map::PointerMap<TagTypeReferencePtr,vector<TagTypeReferenceAddress>> lists;
 			bool operator==(const reference_list& other) const {
-				return list == other.list;
+				return lists == other.lists;
 			}
 		};
 
-		// check for annotation
-		if (def->hasAttachedValue<reference_list>()) {
-			return def->getAttachedValue<reference_list>().list;
+		// create annotation if necessary
+		if (!hasAttachedValue<reference_list>()) {
+			attachValue<reference_list>();
 		}
 
+		// get lists
+		auto& lists = const_cast<reference_list&>(getAttachedValue<reference_list>()).lists;
+
+		// find entry
+		auto pos = lists.find(reference);
+		if (pos != lists.end()) return pos->second;
+
 		// compute list
-		vector<TagTypeReferenceAddress> res;
+		vector<TagTypeReferenceAddress>& res = lists[reference];
 		for (const auto& cur : getRecursiveReferences()) {
+			assert_eq(cur.getRootNode().ptr,this);
 			if (*cur == *reference) res.push_back(cur);
 		}
 
-		// attach new value
-		def->attachValue(reference_list{res});
-
 		// done
-		return def->getAttachedValue<reference_list>().list;
+		return res;
 	}
 
 
