@@ -1,10 +1,10 @@
 NAME="boost"
-VERSION="1.59.0"
+VERSION="1.58.0"
 PACKAGE="$NAME-$VERSION"
 
 FILE="${NAME}_${VERSION//./_}.tar.bz2"
-URL="http://downloads.sourceforge.net/project/boost/boost/1.59.0/boost_1_59_0.tar.bz2"
-SHA256SUM="727a932322d94287b62abb1bd2d41723eec4356a7728909e38adb65ca25241ca"
+URL="http://downloads.sourceforge.net/project/boost/boost/$VERSION/$FILE"
+SHA256SUM="fdfc204fc33ec79c99b9a74944c3e54bd78be4f7f15e260c0e2700a36dc7d3e5"
 
 DEPENDS="gcc"
 
