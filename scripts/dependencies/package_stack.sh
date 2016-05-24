@@ -41,6 +41,8 @@ pkg_install() {
 	mkdir -p "$PREFIX/$PACKAGE/bin"
 	cp "$(find .stack-work/install -name stack)" "$PREFIX/$PACKAGE/bin/stack"
 
+	chmod g+w "$PREFIX/$PACKAGE"
+
 	rm -f "$PREFIX/$NAME-latest"
 	ln -s "$PREFIX/$PACKAGE" "$PREFIX/$NAME-latest"
 }
