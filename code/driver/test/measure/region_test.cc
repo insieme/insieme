@@ -169,7 +169,7 @@ namespace measure {
 
 		analysis::region::MPISelector mpiSelector;
 		analysis::region::RegionList mpiList = mpiSelector.getRegions(NodeAddress(program));
-		EXPECT_EQ(6, mpiList.size());
+		EXPECT_EQ(10, mpiList.size());
 
 		//std::cout << mpiList << "\n";
 
@@ -179,13 +179,20 @@ namespace measure {
 		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-0-1-4", toString(mpiList[1].getEnd()));
 		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-0-1-5", toString(mpiList[2].getBegin()));
 		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-0-1-7", toString(mpiList[2].getEnd()));
-		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-0", toString(mpiList[3].getBegin()));
-		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-1", toString(mpiList[3].getEnd()));
-		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-2", toString(mpiList[4].getBegin()));
-		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-4", toString(mpiList[4].getEnd()));
-		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-5", toString(mpiList[5].getBegin()));
-		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-6", toString(mpiList[5].getEnd()));
-
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-0-1-8", toString(mpiList[3].getBegin()));
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-0-1-8", toString(mpiList[3].getEnd()));
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-0-1-9", toString(mpiList[4].getBegin()));
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-0-1-9", toString(mpiList[4].getEnd()));
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-0", toString(mpiList[5].getBegin()));
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-1", toString(mpiList[5].getEnd()));
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-2", toString(mpiList[6].getBegin()));
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-4", toString(mpiList[6].getEnd()));
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-5", toString(mpiList[7].getBegin()));
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-6", toString(mpiList[7].getEnd()));
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-7", toString(mpiList[8].getBegin()));
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-7", toString(mpiList[8].getEnd()));
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-8", toString(mpiList[9].getBegin()));
+		EXPECT_EQ("0-0-2-0-1-2-8-1-3-0-1-1-8", toString(mpiList[9].getEnd()));
 	}
 
 } // end namespace measure

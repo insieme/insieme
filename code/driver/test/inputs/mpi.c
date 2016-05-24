@@ -88,6 +88,10 @@ int main(int argc, char** argv) {
 			while(!flag) {
 				MPI_Test(&bla, &flag, NULL);
 			}
+
+			MPI_Send(&a, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+
+			MPI_Send(&a, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
 		}
 
 		if(my_rank == 1) {
@@ -103,6 +107,10 @@ int main(int argc, char** argv) {
 
 			MPI_Irecv(&a, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &bla);
 			MPI_Wait(&bla, NULL);
+
+			MPI_Recv(&a, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, &flag);
+
+			MPI_Recv(&a, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, &flag);
 		}
 	}
 

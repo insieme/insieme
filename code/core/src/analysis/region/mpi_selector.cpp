@@ -66,7 +66,7 @@ namespace region {
 
 	}
 
-	pt::TreePattern MPISelector::getMPITransport(pt::TreePattern mpiRequest) const {
+	pt::TreePattern MPISelector::getMPIAsyncTransport(pt::TreePattern mpiRequest) const {
 		return pt::var("transport", pt::irp::callExpr(pt::lambda([](const core::NodeAddress& nodeAddr) {
 					                                      return getNameForFunCall(nodeAddr).find("MPI_I") == 0
 					                                             && getNameForFunCall(nodeAddr).find("MPI_Init") == std::string::npos;
@@ -74,14 +74,22 @@ namespace region {
 				                                      pt::ListPattern(*pt::any << pt::irp::ptrFromRef(mpiRequest))));
 	}
 
+	pt::TreePattern MPISelector::getMPISyncTransport() const {
+		return pt::var("transport", pt::var("block", pt::irp::callExpr(pt::lambda([](const core::NodeAddress& nodeAddr) {
+					                                                       return (getNameForFunCall(nodeAddr).find("MPI_Send") == 0)
+					                                                              || (getNameForFunCall(nodeAddr).find("MPI_Recv") == 0);
+					                                                   }),
+				                                                       *pt::any)));
+	}
+
 	pt::TreePattern MPISelector::getMPITest(pt::TreePattern mpiRequest) const {
 		return pt::irp::callExpr(pt::lambda([](const core::NodeAddress& nodeAddr) { return getNameForFunCall(nodeAddr).find("MPI_Test") == 0; }),
-			pt::ListPattern(pt::irp::ptrFromRef(mpiRequest) << pt::any << pt::any));
+				                 pt::ListPattern(pt::irp::ptrFromRef(mpiRequest) << pt::any << pt::any));
 	}
 
 	pt::TreePattern MPISelector::getMPIWait(pt::TreePattern mpiRequest) const {
 		return pt::irp::callExpr(pt::lambda([](const core::NodeAddress& nodeAddr) { return getNameForFunCall(nodeAddr).find("MPI_Wait") == 0; }),
-			pt::ListPattern(pt::irp::ptrFromRef(mpiRequest) << pt::any));
+				                 pt::ListPattern(pt::irp::ptrFromRef(mpiRequest) << pt::any));
 	}
 
 	pt::TreePattern MPISelector::getMPIWhileTest(pt::TreePattern mpiRequest) const {
@@ -97,7 +105,7 @@ namespace region {
 			mpiRequest = pt::any;
 		}
 
-		auto mpiTransport = getMPITransport(mpiRequest);
+		auto mpiTransport = getMPIAsyncTransport(mpiRequest);
 		auto mpiTest = getMPITest(mpiRequest);
 
 		// matches MPI_Wait with a given request object
@@ -112,18 +120,21 @@ namespace region {
 		return fullMPI;
 	}
 
+	pt::TreePattern MPISelector::getMPISyncPattern() const { return getMPISyncTransport(); }
+
+	pt::ListPattern MPISelector::getMPIPattern(bool matchRequestObjects) const { return getMPISyncPattern() | getMPIAsyncPattern(matchRequestObjects); }
+
 	namespace {
 
 		pt::TreePattern matchAddr(const core::NodeAddress& addr) {
 			return pt::lambda([&](const core::NodeAddress& cur) { return cur == addr; });
 		}
-
 	}
 
 	RegionList MPISelector::getRegions(const core::NodeAddress& code) const {
 		RegionList res;
 
-		const pt::TreePattern searchPattern = pt::irp::compoundStmt(*pt::any << getMPIAsyncPattern(matchRequestObjs) << *pt::any);
+		const pt::TreePattern searchPattern = pt::irp::compoundStmt(*pt::any << getMPIPattern(matchRequestObjs) << *pt::any);
 
 		std::set<Region> regionSet;
 
@@ -132,7 +143,7 @@ namespace region {
 		pt::irp::matchAllPairs(searchPattern, code, [&](const core::NodeAddress& addr, const pt::AddressMatch match) {
 			core::StatementAddress startAddress = addr.concat(getValue(match, "transport")).as<core::StatementAddress>();
 			core::StatementAddress endAddress = addr.concat(getValue(match, "block")).as<core::StatementAddress>();
-			LOG(DEBUG) << "matchAll: " << startAddress << " -> " << endAddress;
+			LOG(DEBUG) << "matchAll addresses: " << startAddress << " -> " << endAddress;
 
 			regionSet.insert(Region(startAddress, endAddress));
 
@@ -145,7 +156,8 @@ namespace region {
 				LOG(DEBUG) << "trying to match, continueMatching=" << continueMatching << ", breakIndex=" << breakIndex;
 				continueMatching = false;
 				// match the same pattern prefixed with the end address of the last match
-				const auto continuedSearchPattern = pt::irp::compoundStmt(*pt::any << matchAddr(endAddress) << *pt::any << getMPIAsyncPattern(matchRequestObjs) << *pt::any);
+				const auto continuedSearchPattern =
+					pt::irp::compoundStmt(*pt::any << matchAddr(endAddress) << *pt::any << getMPIPattern(matchRequestObjs) << *pt::any);
 				const auto matchOpt = continuedSearchPattern.matchAddress(addr);
 				if(matchOpt) {
 					startAddress = getValue(matchOpt.get(), "transport").as<core::StatementAddress>();
@@ -162,7 +174,9 @@ namespace region {
 
 		});
 
-		LOG(DEBUG) << "regionSet:\n" << regionSet << "\n" << "regionSet size: " << regionSet.size();
+		LOG(DEBUG) << "regionSet:\n"
+				   << regionSet << "\n"
+				   << "regionSet size: " << regionSet.size();
 
 		for(const auto& e : regionSet) {
 			res.push_back(e);

@@ -62,7 +62,12 @@ namespace region {
 		 * Returns a pattern matching MPI_Isend and MPI_Ireceive calls
 		 * @param mpiRequest a specific MPI request object for async calls to be matched against (any by default)
 		 */
-		pt::TreePattern getMPITransport(pt::TreePattern mpiRequest = pt::any) const;
+		pt::TreePattern getMPIAsyncTransport(pt::TreePattern mpiRequest = pt::any) const;
+
+		/*
+		* Returns a pattern matching MPI_Send and MPI_Receive calls
+		*/
+		pt::TreePattern getMPISyncTransport() const;
 
 		/*
 		* Returns a pattern matching MPI_Test calls
@@ -88,6 +93,17 @@ namespace region {
 		* @param matchRequestObjects require that MPI request objects of communication calls match
 		*/
 		pt::ListPattern getMPIAsyncPattern(bool matchRequestObjects) const;
+
+		/*
+		* Returns a pattern matching a synchronous MPI communication operation containing MPI_Send or MPI_Receive primitives
+		*/
+		pt::TreePattern getMPISyncPattern() const;
+
+		/*
+		* Returns a pattern matching a synchronous or asynchronous MPI communication operation containing MPI primitives
+		* @param matchRequestObjects require that MPI request objects of asynchronous communication calls match
+		*/
+		pt::ListPattern getMPIPattern(bool matchRequestObjects) const;
 
 		/**
 		 * Selects all MPI regions within the given code fragment.
