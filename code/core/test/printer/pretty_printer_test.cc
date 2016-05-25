@@ -37,6 +37,8 @@
 #include <gtest/gtest.h>
 #include <string>
 
+#include <boost/regex.hpp>
+
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -1097,14 +1099,25 @@ TEST(PrettyPrinter, MarkerTest) {
 				            "  $var int<4> a = $5$;$"
 				            "}";
 
-		std::string res = "{\n    <m id=54>1</m>;\n    <m id=57>var int<4> v0 = <m id=56>5</m></m>;\n}";
+		boost::regex res_regex{"{\n    <m id=(\\d+)>1</m>;\n    <m id=(\\d+)>var int<4> v0 = <m id=(\\d+)>5</m></m>;\n}"};
+		boost::smatch res_what;
 
 		auto ir = builder.normalize(builder.parseStmt(input));
 		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
 								  | PrettyPrinter::PRINT_MARKERS);
 
-		EXPECT_EQ(res, toString(printer)) << printer;
+		// Check if the string matches the regex
+		EXPECT_TRUE(boost::regex_search(toString(printer), res_what, res_regex)) << printer;
+
+		// Additionally, check if the IDs are all different
+		std::string s1{res_what[1].first, res_what[1].second};
+		std::string s2{res_what[2].first, res_what[2].second};
+		std::string s3{res_what[3].first, res_what[3].second};
+
+		EXPECT_TRUE(s1 != s2);
+		EXPECT_TRUE(s1 != s3);
+		EXPECT_TRUE(s2 != s3);
 	}
 }
 
