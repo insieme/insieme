@@ -75,6 +75,7 @@ namespace backend {
 		// steps.push_back(makePreProcessor<RedundancyElimination>());		// optional - disabled for performance reasons
 		steps.push_back(makePreProcessor<CorrectRecVariableUsage>());
 		steps.push_back(makePreProcessor<RecursiveLambdaInstantiator>());
+		steps.push_back(makePreProcessor<RefCastIntroducer>());
 		return makePreProcessor<PreProcessingSequence>(steps);
 	}
 
@@ -199,6 +200,40 @@ namespace backend {
 			return !annotations::isBackendInstantiate(node) && converter.getFunctionManager().isBuiltIn(node);
 		};
 		return core::transform::instantiateTypes(code, skipInstantiation);
+	}
+
+	namespace cl = core::lang;
+
+	core::NodePtr RefCastIntroducer::process(const Converter& converter, const core::NodePtr& code) {
+		// 1) declaration stmts
+		auto retCode = core::transform::transformBottomUpGen(code, [](const core::DeclarationStmtPtr& decl) {
+			if(cl::isReference(decl->getVariable()) && cl::isReference(decl->getInitialization())) {
+				cl::ReferenceType varT(decl->getVariable()), initT(decl->getInitialization());
+				if(!varT.isPlain() && initT.isPlain()) {
+					core::DeclarationStmtAddress addr(decl);
+					auto replacement = core::transform::replaceAddress(decl->getNodeManager(), addr->getInitialization(),
+					                                                   cl::buildRefKindCast(decl->getInitialization(), varT.getKind()));
+					return replacement.getRootNode().as<core::DeclarationStmtPtr>();
+				}
+			}
+			return decl;
+		}, core::transform::globalReplacement);
+
+		// 2) returns
+		retCode = core::transform::transformBottomUpGen(retCode, [](const core::ReturnStmtPtr& ret) {
+			if(cl::isReference(ret->getReturnVar()) && cl::isReference(ret->getReturnExpr())) {
+				cl::ReferenceType varT(ret->getReturnVar()), initT(ret->getReturnExpr());
+				if(!varT.isPlain() && initT.isPlain()) {
+					core::ReturnStmtAddress addr(ret);
+					auto replacement = core::transform::replaceAddress(ret->getNodeManager(), addr->getReturnExpr(),
+					                                                   cl::buildRefKindCast(ret->getReturnExpr(), varT.getKind()));
+					return replacement.getRootNode().as<core::ReturnStmtPtr>();
+				}
+			}
+			return ret;
+		}, core::transform::globalReplacement);
+
+		return retCode;
 	}
 
 } // end namespace backend

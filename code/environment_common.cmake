@@ -2,6 +2,11 @@
 # This file sets up some general variables and include paths for the build environment common to both runtime and compiler
 #
 
+# get code root directory (based on current file name path)
+get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
+get_filename_component( insieme_root_dir ${insieme_code_dir} PATH )
+
+# set compiler flags
 SET( CMAKE_CXX_FLAGS_DEBUG "-DINS_DEBUG" CACHE STRING
     "Flags used by the C++ compiler during Debug builds."
     FORCE )

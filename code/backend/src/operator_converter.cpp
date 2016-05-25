@@ -628,8 +628,13 @@ namespace backend {
 			auto trg = core::lang::ReferenceType(call->getType());
 
 			// if it is a plain to cpp reference cast => deref source
-			if (src.isPlain() && !trg.isPlain()) {
+			if(src.isPlain() && !trg.isPlain()) {
 				in = c_ast::deref(in);
+			}
+
+			// if it is a cpp reference to plain cast => ref source
+			if(!src.isPlain() && trg.isPlain()) {
+				in = c_ast::ref(in);
 			}
 
 			auto res_type = GET_TYPE_INFO(call->getType()).rValueType;

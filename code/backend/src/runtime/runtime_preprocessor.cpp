@@ -826,8 +826,12 @@ namespace runtime {
 				// add call to variant implementation
 				body.push_back(builder.callExpr(basic.getUnit(), variantImpl, newArgs));
 
+				// put together the wrapper & migrate meta information from variantImpl to wrapperExpr
+				LambdaExprPtr wrapperExpr = builder.lambdaExpr(unit, toVector(workItem), builder.compoundStmt(body));
+				annotations::migrateMetaInfos(variantImpl, wrapperExpr);
+
 				// create the resulting lambda expression / work item variant
-				variants.push_back(WorkItemVariant(builder.lambdaExpr(unit, toVector(workItem), builder.compoundStmt(body))));
+				variants.push_back(WorkItemVariant(wrapperExpr));
 			});
 
 			// produce work item implementation

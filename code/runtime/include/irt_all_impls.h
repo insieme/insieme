@@ -70,8 +70,8 @@
 #include "runtime.h"
 //#include "context/impl/capture.impl.h"
 
-#ifdef USE_OPENCL
-#include "impl/irt_ocl.impl.h"
+#ifdef IRT_ENABLE_OPENCL
+#include "impl/irt_opencl.impl.h"
 #endif
 
 #include "impl/irt_debug.impl.h"

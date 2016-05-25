@@ -84,7 +84,7 @@ int main() {
 		for(int k = 2; k < 5; k+=1) { if(k==3) break; }
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { if( *v0==3) { return 0; }; *comp_assign_add(v0, 1); }; }; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { if( *v0==3) { return var ref<int<4>> r = 0; }; *comp_assign_add(v0, 1); }; }; }")
 	{
 		for(int k = 2; k < 5; k+=1) { if(k==3) return 0; }
 	}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -979,9 +979,9 @@ namespace backend {
 		type = builder.parseType("ref<int<4>,t,f,cpp_ref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppReference, type);
 		info = typeManager.getRefTypeInfo(type);
-		EXPECT_EQ("const int32_t&", toC(info.lValueType));
-		EXPECT_EQ("const int32_t&", toC(info.rValueType));
-		EXPECT_EQ("const int32_t&", toC(info.externalType));
+		EXPECT_EQ("int32_t const&", toC(info.lValueType));
+		EXPECT_EQ("int32_t const&", toC(info.rValueType));
+		EXPECT_EQ("int32_t const&", toC(info.externalType));
 		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
@@ -992,9 +992,9 @@ namespace backend {
 		type = builder.parseType("ref<int<4>,f,t,cpp_ref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppReference, type);
 		info = typeManager.getRefTypeInfo(type);
-		EXPECT_EQ("volatile int32_t&", toC(info.lValueType));
-		EXPECT_EQ("volatile int32_t&", toC(info.rValueType));
-		EXPECT_EQ("volatile int32_t&", toC(info.externalType));
+		EXPECT_EQ("int32_t volatile&", toC(info.lValueType));
+		EXPECT_EQ("int32_t volatile&", toC(info.rValueType));
+		EXPECT_EQ("int32_t volatile&", toC(info.externalType));
 		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
@@ -1005,9 +1005,9 @@ namespace backend {
 		type = builder.parseType("ref<int<4>,t,t,cpp_ref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppReference, type);
 		info = typeManager.getRefTypeInfo(type);
-		EXPECT_EQ("const volatile int32_t&", toC(info.lValueType));
-		EXPECT_EQ("const volatile int32_t&", toC(info.rValueType));
-		EXPECT_EQ("const volatile int32_t&", toC(info.externalType));
+		EXPECT_EQ("int32_t const volatile&", toC(info.externalType));
+		EXPECT_EQ("int32_t const volatile&", toC(info.lValueType));
+		EXPECT_EQ("int32_t const volatile&", toC(info.rValueType));
 		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
@@ -1019,7 +1019,7 @@ namespace backend {
 	TEST(TypeManager, RefTypesCppRValueRef) {
 		core::NodeManager nodeManager;
 		core::IRBuilder builder(nodeManager);
-		
+
 		Converter converter(nodeManager);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		TypeManager& typeManager = converter.getTypeManager();
@@ -1050,9 +1050,9 @@ namespace backend {
 		type = builder.parseType("ref<int<4>,t,f,cpp_rref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppRValueReference, type);
 		info = typeManager.getRefTypeInfo(type);
-		EXPECT_EQ("const int32_t&&", toC(info.lValueType));
-		EXPECT_EQ("const int32_t&&", toC(info.rValueType));
-		EXPECT_EQ("const int32_t&&", toC(info.externalType));
+		EXPECT_EQ("int32_t const&&", toC(info.lValueType));
+		EXPECT_EQ("int32_t const&&", toC(info.rValueType));
+		EXPECT_EQ("int32_t const&&", toC(info.externalType));
 		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
@@ -1063,9 +1063,9 @@ namespace backend {
 		type = builder.parseType("ref<int<4>,f,t,cpp_rref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppRValueReference, type);
 		info = typeManager.getRefTypeInfo(type);
-		EXPECT_EQ("volatile int32_t&&", toC(info.lValueType));
-		EXPECT_EQ("volatile int32_t&&", toC(info.rValueType));
-		EXPECT_EQ("volatile int32_t&&", toC(info.externalType));
+		EXPECT_EQ("int32_t volatile&&", toC(info.lValueType));
+		EXPECT_EQ("int32_t volatile&&", toC(info.rValueType));
+		EXPECT_EQ("int32_t volatile&&", toC(info.externalType));
 		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
@@ -1076,9 +1076,9 @@ namespace backend {
 		type = builder.parseType("ref<int<4>,t,t,cpp_rref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppRValueReference, type);
 		info = typeManager.getRefTypeInfo(type);
-		EXPECT_EQ("const volatile int32_t&&", toC(info.lValueType));
-		EXPECT_EQ("const volatile int32_t&&", toC(info.rValueType));
-		EXPECT_EQ("const volatile int32_t&&", toC(info.externalType));
+		EXPECT_EQ("int32_t const volatile&&", toC(info.lValueType));
+		EXPECT_EQ("int32_t const volatile&&", toC(info.rValueType));
+		EXPECT_EQ("int32_t const volatile&&", toC(info.externalType));
 		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);

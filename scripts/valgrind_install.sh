@@ -1,10 +1,10 @@
 # setup environment variables
 . ./environment.setup
 
-VERSION=3.7.0
+VERSION=3.11.0
 
-CFLAGS="-O3 -mtune=native -fgraphite-identity -fPIC"
-LDFLAGS="-O3 -mtune=native -fPIC"
+CFLAGS="-O3 -fPIC"
+LDFLAGS="-O3 -fPIC"
 
 ########################################################################
 ##								Valgrind
@@ -19,7 +19,7 @@ if [ $RET -ne 0 ]; then
 	exit $RET
 fi
 
-tar xvf valgrind-$VERSION.tar.bz2
+tar xf valgrind-$VERSION.tar.bz2
 cd valgrind-$VERSION
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH 

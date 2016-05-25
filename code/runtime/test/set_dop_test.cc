@@ -59,12 +59,6 @@ double C[N][N];
 #undef IRT_USE_HWLOC
 #endif
 
-#ifdef USE_OPENCL
-// OpenCL is even more flowers slow on hudson
-// (580 microseconds per runtime startup/shutdown without, 70 *milli*seconds with)
-#undef USE_OPENCL
-#endif
-
 #define IRT_LIBRARY_MAIN
 #define IRT_LIBRARY_NO_MAIN_FUN
 #include "irt_library.hxx"

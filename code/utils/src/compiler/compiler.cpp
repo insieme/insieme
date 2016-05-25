@@ -83,6 +83,14 @@ Compiler Compiler::getRuntimeCompiler(const Compiler& base) {
 	return res;
 }
 
+Compiler Compiler::getOpenCLCompiler(const Compiler& base) {
+	Compiler res = getRuntimeCompiler(base);
+	res.addFlag("-lOpenCL -DIRT_ENABLE_OPENCL -DIRT_ENABLE_ASSERTS");
+	res.addFlag(string("-I ") + utils::getInsiemeLibsRootDir() + "opencl/include");
+	res.addFlag(string("-L ") + utils::getInsiemeLibsRootDir() + "opencl/lib64/");
+	return res;
+}
+
 Compiler Compiler::getOptimizedCompiler(const Compiler& base, const string& level) {
 	Compiler res = base;
 	res.addFlag("-O" + level);

@@ -167,7 +167,7 @@ namespace cmd {
 			// check whether version was requested
 			if(res.settings.version) {
 				std::cout << "This is the Insieme (tm) compiler version: " << INSIEME_VERSION << "\n"
-				          << "Realized by the Distributed and Parallel Systems (DPS) group, copyright 2008-2015, "
+				          << "Realized by the Distributed and Parallel Systems (DPS) group, copyright 2008-2016, "
 				          << "University of Innsbruck\n"
 				          << "http://www.insieme-compiler.org\n";
 				// no non-zero exit code when requesting version!

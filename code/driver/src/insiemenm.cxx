@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
 	NodeManager mgr;
 	auto tu = loadLib(mgr, options.inputFile);
 
-	// perform sematic checks (do not print other output)
+	// perform semantic checks (do not print other output)
 	if(options.semanticChecks) {
 		PerformChecks(tu);
 		return 0;

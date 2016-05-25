@@ -1097,10 +1097,7 @@ TEST(PrettyPrinter, MarkerTest) {
 				            "  $var int<4> a = $5$;$"
 				            "}";
 
-		std::string res = "{\n"
-				          "    <m id=44>1</m>;\n"
-				          "    <m id=47>var int<4> v0 = <m id=46>5</m></m>;\n"
-				          "}";
+		std::string res = "{\n    <m id=54>1</m>;\n    <m id=57>var int<4> v0 = <m id=56>5</m></m>;\n}";
 
 		auto ir = builder.normalize(builder.parseStmt(input));
 		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS

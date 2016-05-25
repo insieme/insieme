@@ -48,6 +48,8 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/materialize.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/extern_c.h"
@@ -120,7 +122,7 @@ namespace conversion {
 			return newFunType;
 		}
 
-		StatementList getConstructorInitExpressions(Converter& converter, const clang::FunctionDecl* funcDecl) {
+		core::StatementList getConstructorInitExpressions(Converter& converter, const clang::FunctionDecl* funcDecl) {
 			const clang::CXXConstructorDecl* constrDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(funcDecl);
 			if(!constrDecl) return {};
 
@@ -172,6 +174,8 @@ namespace conversion {
 				converter.getVarMan()->pushScope(false);
 				core::VariableList params;
 				core::StatementList bodyStmts;
+				// set return type (for return statement conversion)
+				converter.getVarMan()->setRetType(core::transform::materialize(funType->getReturnType()));
 				// handle implicit "this" for methods
 				if(isIrMethod(funcDecl)) {
 					auto thisType = getThisType(converter, methDecl);
@@ -191,7 +195,8 @@ namespace conversion {
 				bodyStmts = getConstructorInitExpressions(converter, funcDecl);
 				std::copy(bodyRange.cbegin(), bodyRange.cend(), std::back_inserter(bodyStmts));
 				converter.getVarMan()->popScope();
-				auto lambda = builder.lambda(funType, params, builder.compoundStmt(bodyStmts));
+				auto body = builder.compoundStmt(bodyStmts);
+				auto lambda = builder.lambda(funType, params, body);
 				auto funExp = builder.lambdaExpr(lambda, name);
 				return funExp;
 			} else {

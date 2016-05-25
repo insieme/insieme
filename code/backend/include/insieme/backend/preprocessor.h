@@ -191,5 +191,13 @@ namespace backend {
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};
 
+	/**
+	 * Adjust the semantics of cpp references by introducing ref casts as required.
+	 */
+	class RefCastIntroducer : public PreProcessor {
+	  public:
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+	};
+
 } // end namespace backend
 } // end namespace insieme

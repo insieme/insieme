@@ -63,6 +63,7 @@ namespace runtime {
 	    : converter(converter), typeTable(TypeTable::get(converter)), implTable(ImplementationTable::get(converter)), infoTable(MetaInfoTable::get(converter)) {
 		// add include to context definition and type and implementation table
 		addInclude("irt_all_impls.h");
+		addInclude("stddef.h");
 		addDependency(TypeTable::get(converter));
 		addDependency(ImplementationTable::get(converter));
 	}
@@ -230,7 +231,16 @@ namespace runtime {
 			Entry entry;
 			entry.kind = converter.getCNodeManager()->create(kind);
 			entry.type = type;
-			// not resolving target type of pointer because definition might not be available
+			switch (type->elementType->getNodeType()) {
+			case c_ast::NT_PointerType:
+			case c_ast::NT_PrimitiveType:
+					// if the element type is a pointer or a primitive type do it tho
+					entry.components.push_back(resolve(type->elementType).index);
+					break;
+			default:
+					// not resolving target type of pointer because definition might not be available
+					break;
+			}
 			return addEntry(entry);
 		}
 
@@ -290,6 +300,20 @@ namespace runtime {
 			if(!cur.components.empty()) { out << "irt_type_id g_type_" << cur.index << "_components[] = {" << join(",", cur.components) << "};\n"; }
 		});
 		out << "\n";
+		out << "// --- components_offset for type table entries ---\n";
+		for_each(store->getEntries(), [&](const TypeTableStore::Entry& cur) {
+			// only structs can have an offsets table
+			if(cur.type->getNodeType() != c_ast::NT_StructType) return;
+			// the type does not consit of components, omit the table as well
+			if(cur.components.empty()) return;
+			
+			out << "size_t g_type_" << cur.index << "_components_offset[] = {";
+			for_each(cur.type.as<c_ast::NamedCompositeTypePtr>()->elements, [&](const c_ast::VariablePtr& var) { 
+				out << "offsetof(" << toC(cur.type) << ", " << var->name->name << "), ";
+			});
+			out << "};\n";
+		});
+		out << "\n";
 
 		out << "// --- the type table ---\n"
 		       "irt_type " TYPE_TABLE_NAME "[] = {\n";
@@ -307,9 +331,14 @@ namespace runtime {
 			}
 			out << ", " << cur.components.size() << ", ";
 			if(cur.components.empty()) {
+				out << "0, ";
+			} else {
+				out << "g_type_" << cur.index << "_components, ";
+			}
+			if(cur.type->getNodeType() != c_ast::NT_StructType || cur.components.empty()) {
 				out << "0";
 			} else {
-				out << "g_type_" << cur.index << "_components";
+				out << "g_type_" << cur.index << "_components_offset";
 			}
 			out << "}";
 		});

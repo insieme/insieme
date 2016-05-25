@@ -29,11 +29,53 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-#pragma once 
+#pragma once
 
-#define WORKER_PATH "${CMAKE_BINARY_DIR}/code/runtime/src/mpi_ocl/worker"
+#include "insieme/backend/c_ast/c_code.h"
+#include "insieme/backend/converter.h"
+#include "insieme/backend/opencl/opencl_entities.h"
+
+namespace insieme {
+namespace backend {
+namespace opencl {
+
+	using namespace insieme::core;
+
+	class KernelTable;
+	typedef Ptr<KernelTable> KernelTablePtr;
+	
+	class DataRequirementTable;
+	typedef Ptr<DataRequirementTable> DataRequirementTablePtr;
+
+	class KernelTable : public c_ast::CodeFragment {
+		struct Entry {
+			unsigned id;
+			std::string source;
+			std::string routine;
+		};
+		typedef std::shared_ptr<Entry> EntryPtr;
+
+		const Converter& converter;
+		std::map<unsigned, EntryPtr> impls;
+		c_ast::CodeFragmentPtr declaration;
+		static unsigned unique;
+	public:
+		KernelTable(const Converter& converter);
+		static KernelTablePtr get(const Converter& converter);
+		static unsigned getNextUnique();
+
+		c_ast::CodeFragmentPtr getDeclaration() const;
+		const c_ast::ExpressionPtr getTable() const;
+		unsigned size() const;
+		
+		unsigned registerKernel(const ExpressionPtr& id, const ExpressionPtr& source, const ExpressionPtr& routine);
+		std::ostream& printTo(std::ostream& out) const override;
+	};	
+} // end namespace opencl
+} // end namespace backend
+} // end namespace insieme

@@ -51,6 +51,7 @@
 
 #include "insieme/frontend/frontend.h"
 
+#include "insieme/backend/opencl/opencl_backend.h"
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 
@@ -215,6 +216,7 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 //***************************************************************************************
 insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const cmd::Options& options) {
 	if(options.backendHint == cmd::BackendEnum::Sequential) { return be::sequential::SequentialBackend::getDefault(); }
+	if(options.backendHint == cmd::BackendEnum::OpenCL) { return be::opencl::OpenCLBackend::getDefault(); }
 
 	return be::runtime::RuntimeBackend::getDefault();
 }
@@ -344,8 +346,8 @@ int main(int argc, char** argv) {
 
 	switch(options.backendHint.backend) {
 	case cmd::BackendEnum::Sequential: break;
+	case cmd::BackendEnum::OpenCL: compiler = cp::Compiler::getOpenCLCompiler(compiler); break;
 	case cmd::BackendEnum::Runtime:
-	case cmd::BackendEnum::OpenCL:
 	case cmd::BackendEnum::Pthreads:
 	default: compiler = cp::Compiler::getRuntimeCompiler(compiler);
 	}

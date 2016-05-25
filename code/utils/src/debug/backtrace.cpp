@@ -84,6 +84,7 @@ namespace debug {
 		}
 
 		free(symbols); // malloc'ed by backtrace_symbols()
+		delete[] buffer;
 
 		return ss.str();
 	}

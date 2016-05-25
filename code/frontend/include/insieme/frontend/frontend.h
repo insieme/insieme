@@ -563,14 +563,5 @@ namespace frontend {
 		core::ProgramPtr applyPostProcessing(core::NodeManager& manager, core::ProgramPtr& program) const;
 	};
 
-
-	/**
-	 * Used to report a parsing error occurred during the parsing of the input file
-	 */
-	struct ClangParsingError : public std::logic_error {
-		ClangParsingError(const path& file_name) : std::logic_error(file_name.string()) {}
-	};
-
-
 } // end namespace frontend
 } // end namespace insieme

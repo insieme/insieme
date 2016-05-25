@@ -42,10 +42,6 @@
 
 #include "declarations.h"
 
-#ifdef USE_OPENCL
-#define IRT_ENABLE_INSTRUMENTATION
-#endif
-
 #ifndef IRT_ENABLE_INSTRUMENTATION
 //#define IRT_ENABLE_INSTRUMENTATION
 #endif
@@ -100,24 +96,6 @@ typedef struct _irt_instrumentation_event_data_table {
 	uint32 number_of_elements;
 	irt_instrumentation_event_data* data;
 } irt_instrumentation_event_data_table;
-
-#ifdef USE_OPENCL
-
-typedef struct _irt_inst_ocl_performance_helper {
-	uint64 timestamp;
-	uint64 workitem_id;
-	uint64 event;
-	uint64 origin;
-} _irt_inst_ocl_performance_helper;
-
-typedef enum {
-	IRT_INST_OCL_QUEUED = 0,
-	IRT_INST_OCL_SUBMITTED = 1,
-	IRT_INST_OCL_STARTED = 2,
-	IRT_INST_OCL_FINISHED = 3,
-} _irt_inst_ocl_helper_events;
-
-#endif
 
 // functions for creating and destroying performance tables
 

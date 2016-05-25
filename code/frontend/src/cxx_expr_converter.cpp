@@ -89,39 +89,8 @@ namespace conversion {
 	// and transparently attach annotations to node which are annotated
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) {
-		// iterate clang handler list and check if a handler wants to convert the expr
-		core::ExpressionPtr retIr;
-		// call frontend extension visitors
-		for (auto extension : converter.getConversionSetup().getExtensions()) {
-			retIr = extension->Visit(expr, converter);
-			if (retIr) { break; }
-		}
-		if (!retIr) {
-			converter.trackSourceLocation(expr);
-			retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
-			converter.untrackSourceLocation();
-		}
-		else {
-			VLOG(2) << "CXXExprConverter::Visit handled by plugin";
-		}
-
-		// print diagnosis messages
-		converter.printDiagnosis(expr->getLocStart());
-
-		// call frontend extension post visitors
-		for (auto extension : converter.getConversionSetup().getExtensions()) {
-			retIr = extension->PostVisit(expr, retIr, converter);
-		}
-
-		// attach location annotation
-		if (expr->getLocStart().isValid()) {
-			auto presStart = converter.getSourceManager().getPresumedLoc(expr->getLocStart());
-			auto presEnd = converter.getSourceManager().getPresumedLoc(expr->getLocEnd());
-			core::annotations::attachLocation(retIr, std::string(presStart.getFilename()), presStart.getLine(), presStart.getColumn(), presEnd.getLine(),
-				presEnd.getColumn());
-		}
-
-		return retIr;
+		VLOG(2) << "CXXStmtConverter";
+		return BaseVisit(expr, [&](const clang::Expr* param) { return ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(param); });
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -167,7 +136,7 @@ namespace conversion {
 				<< *funType << " and clang call expr " << dumpClang(callExpr, converter.getCompiler().getSourceManager());
 
 		// in Inspire 2.0, copy and move constructor calls are implicit on function calls
-		ExpressionList newArgs;
+		core::ExpressionList newArgs;
 		size_t i = 0;
 		std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(newArgs), [&](const clang::Expr* clangArgExpr) {
 			return convertCxxArgExpr(clangArgExpr, paramTypeList[i++]);
@@ -486,7 +455,7 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(materTempExpr, retIr);
 		retIr = Visit(materTempExpr->GetTemporaryExpr());
 
-		// if we are materializing the rvalue result of a function call, do it
+		// if we are materializing the rvalue result of a non-built-in function call, do it
 		auto subCall = retIr.isa<core::CallExprPtr>();
 		if(subCall) {
 			auto materializedType = convertExprType(materTempExpr);
@@ -503,8 +472,10 @@ namespace conversion {
 					retIr = subCall->getArgument(0);
 					return retIr;
 				}
-				// otherwise, materialize call
-				retIr = builder.callExpr(builder.refType(retIr->getType()), subCall->getFunctionExpr(), subCall->getArguments());
+				// otherwise, materialize call if not built in
+				if(!core::lang::isBuiltIn(subCall->getFunctionExpr())) {
+					retIr = builder.callExpr(builder.refType(retIr->getType()), subCall->getFunctionExpr(), subCall->getArguments());
+				}
 			}
 		}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -60,9 +60,11 @@ namespace state {
 			bool nested;
 			/// stores the "this" parameter for methods
 			core::ExpressionPtr thisExpr = nullptr;
+			/// stores the return type for functions and methods
+			core::TypePtr retType = nullptr;
 		};
 
-		/// Internal storage for mappings from clang variable declarations to 
+		/// Internal storage for mappings from clang variable declarations to
 		/// IR variables for locals and literals for globals
 		std::vector<Scope> storage;
 
@@ -82,6 +84,11 @@ namespace state {
 		void setThis(const core::ExpressionPtr& thisVar);
 		/// Get the "this" expression for the current scope
 		core::ExpressionPtr getThis();
+
+		/// Set the return type for the current scope
+		void setRetType(const core::TypePtr& retType);
+		/// Get the return type for the current scope
+		core::TypePtr getRetType();
 
 		/// get the number of visible declarations in current scope (for testing)
 		size_t numVisibleDeclarations() const;
