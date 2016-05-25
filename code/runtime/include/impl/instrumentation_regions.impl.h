@@ -262,7 +262,7 @@ void irt_inst_region_wg_init(irt_work_group* wg) {
 	memset((void*)wg->region_data_exits, 0, sizeof(uint64) * context->num_regions);
 	for(uint32 i = 0; i < context->num_regions; ++i) {
 		wg->region_data[i] = (irt_inst_region_wi_data*)malloc(sizeof(irt_inst_region_wi_data) * IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE);
-		memset((void*)wg->region_data[i], 0, sizeof(uint64) * IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE);
+		memset((void*)wg->region_data[i], 0, sizeof(irt_inst_region_wi_data) * IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE);
 	}
 }
 
