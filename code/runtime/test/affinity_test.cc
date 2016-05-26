@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -144,4 +144,5 @@ TEST(affinity, manual) {
 	irt_set_affinity(m, myself);
 	// clear affinity for main thread
 	irt_clear_affinity();
+	irt_thread_join(&t);
 }
