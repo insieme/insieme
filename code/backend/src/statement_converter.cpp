@@ -537,8 +537,9 @@ namespace backend {
 
 		c_ast::ExpressionPtr initValue = convertInitExpression(context, plainType, init);
 
-		// if LHS is cpp ref/rref, remove ref on RHS
-		if(core::lang::isCppReference(var) || core::lang::isCppRValueReference(var)) {
+		// if LHS is cpp ref/rref, or we have a direct plain ref initialization, remove ref on RHS
+		if(core::lang::isCppReference(var) || core::lang::isCppRValueReference(var)
+		   || (core::lang::isPlainReference(init) && core::lang::isPlainReference(plainType) && core::analysis::isConstructorCall(init))) {
 			auto unOp = initValue.isa<c_ast::UnaryOperationPtr>();
 			if(unOp && unOp->operation == c_ast::UnaryOperation::Reference) initValue = unOp->operand.as<c_ast::ExpressionPtr>();
 		}

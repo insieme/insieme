@@ -272,10 +272,11 @@ namespace backend {
 				bool isOnHeap = core::analysis::isCallOf(irCallArgs[0], refs.getRefNew());
 
 				// case c) create object in-place (placement new)
-				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(irCallArgs[0], refs.getRefTemp()) && !core::analysis::isCallOf(irCallArgs[0], refs.getRefTempInit())
-				                            && !core::analysis::isCallOf(irCallArgs[0], refs.getRefNew()))
-				                               ? location.as<c_ast::ExpressionPtr>()
-				                               : c_ast::ExpressionPtr();
+				c_ast::ExpressionPtr loc =
+				    (!core::analysis::isCallOf(irCallArgs[0], refs.getRefTemp()) && !core::analysis::isCallOf(irCallArgs[0], refs.getRefTempInit())
+				     && !core::analysis::isCallOf(irCallArgs[0], refs.getRefNew()))
+				        ? location.as<c_ast::ExpressionPtr>()
+				        : c_ast::ExpressionPtr();
 
 				// to get support for the placement new the new header is required
 				if(loc) { context.addInclude("<new>"); }

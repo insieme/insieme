@@ -780,6 +780,39 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(CppSnippet, InterceptedConstructors) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		auto program = builder.normalize(builder.parseProgram(R"(
+			def struct S {};
+			int<4> main() {
+				var ref<S> s0 = lit("S::ctor" : S::())(ref_decl(type_lit(ref<S,f,f,plain>)));
+				var ref<S> s1 = S::(ref_decl(type_lit(ref<S,f,f,plain>)));
+				var ref<S> s2;
+				return 0;
+			}
+		)"));
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(notContainsSubString, code, "&");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 	TEST(CppSnippet, ConstructorsInitConstructor) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
