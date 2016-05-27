@@ -1168,8 +1168,41 @@ namespace backend {
 		//std::cout << "Printing converted code: " << *converted;
 
 		string code = toString(*converted);
-
 		EXPECT_PRED2(containsSubString, code, "u v71 = {1};");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(Pointers, Simple) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"string(
+		decl IMP___assert_fail : (ptr<char,t,f>, ptr<char,t,f>, uint<4>, ptr<char,t,f>) -> unit;
+		int<4> function IMP_main (v9 : ref<int<4>,f,f,plain>, v10 : ref<ptr<ptr<char>>,f,f,plain>){
+			var ref<ptr<int<4>>,f,f,plain> v11 = ptr_null(type_lit(int<4>), type_lit(f), type_lit(f));
+			var ref<ptr<int<4>>,f,f,plain> v15 = *v11;
+			ptr_eq(*v11, *v15) && ptr_ne(ptr_from_array("This is a semantic ERROR!"), ptr_null(type_lit(char), type_lit(f), type_lit(f)))?unit_consume(0):
+				IMP___assert_fail(ptr_cast(ptr_from_array("a == b && \"This is a semantic ERROR!\""), type_lit(t), type_lit(f)), ptr_cast(ptr_from_array("s"), type_lit(t), type_lit(f)), num_cast(9, type_lit(uint<4>)), ptr_from_array("int main(int, char **)"));
+			return 0;
+		})string");
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		//std::cout << "Converting IR to C...";
+		auto converted = be->convert(program);
+		//std::cout << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+		EXPECT_PRED2(notContainsSubString, code, "ptr_");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

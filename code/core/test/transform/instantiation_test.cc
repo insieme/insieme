@@ -261,24 +261,24 @@ namespace transform {
 		EXPECT_EQ(annotations::getLocation(addresses[0].getAddressedNode()), annotations::getLocation(newAddr.getAddressedNode()));
 	}
 
-	TEST(TypeInstantiation, HigherOrderFunction) {
+	TEST(TypeInstantiation, DISABLED_HigherOrderFunction) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
 		auto addresses = builder.parseAddressesStatement(R"raw(
-		def foo = (v : 'a) -> 'a {
-			return $v$;
-		};
+			def foo = (v : 'a) -> 'a {
+				return $v$;
+			};
 
-		def test = (v : array<'res,'l>, f : ('res) -> 'res) -> unit {
-			f(v[0]);
-		};
+			def test = (v : array<'res,'l>, f : ('res) -> 'res) -> unit {
+				f(v[0]);
+			};
 
-		{
-			var ref<array<int<4>, 8>> a;
-			test(*a, foo);
-		}
-	)raw");
+			{
+				var ref<array<int<4>, 8>> a;
+				test(*a, foo);
+			}
+		)raw");
 
 		EXPECT_EQ(addresses.size(), 1);
 
