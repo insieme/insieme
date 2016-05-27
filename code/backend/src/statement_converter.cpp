@@ -513,7 +513,7 @@ namespace backend {
 		// decide storage location of variable
 		VariableInfo::MemoryLocation location = VariableInfo::NONE;
 		// assigning from the same type (not uninitialized) doesn't regard the location
-		if(plainType == init->getType() && !undefinedInit && !core::analysis::isConstructorCall(init)) {
+		if(plainType == init->getType() && !undefinedInit && !core::analysis::isConstructorCall(init) && !init.isa<core::InitExprPtr>()) {
 			location = VariableInfo::INDIRECT;
 		} else if(core::lang::isReference(plainType)) {
 			if(toBeAllocatedOnStack(init)) {

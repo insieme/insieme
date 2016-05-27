@@ -1144,5 +1144,39 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(VariableDeclTypes, InitExpr) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::ProgramPtr program = builder.parseProgram(R"(
+		def union u {
+			i : int<4>;
+		};
+		int<4> function main (v69 : ref<int<4>,f,f,plain>, v70 : ref<ptr<ptr<char>>,f,f,plain>){
+			var ref<u,f,f,plain> v71 = <ref<u,f,f,plain>>(ref_decl(type_lit(ref<u,f,f,plain>))) {1};
+			return 0;
+		})");
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		//std::cout << "Converting IR to C...";
+		auto converted = be->convert(program);
+		//std::cout << "Printing converted code: " << *converted;
+
+		string code = toString(*converted);
+
+		EXPECT_PRED2(containsSubString, code, "u v71 = {1};");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 } // namespace backend
 } // namespace insieme
