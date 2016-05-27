@@ -654,9 +654,17 @@ namespace backend {
 			auto srcRefKind = core::lang::getReferenceKind(ARG(0));
 			auto trgRefKind = core::lang::getReferenceKind(ARG(1));
 
+			if(ARG(0).isa<core::InitExprPtr>()) return CONVERT_ARG(0);
+
 			if(srcRefKind == core::lang::ReferenceType::Kind::Plain) {
-				if(trgRefKind == core::lang::ReferenceType::Kind::CppReference) {
+				if(trgRefKind == core::lang::ReferenceType::Kind::CppReference || trgRefKind == core::lang::ReferenceType::Kind::CppRValueReference) {
 					return c_ast::deref(CONVERT_ARG(0));
+				}
+			}
+
+			if(srcRefKind == core::lang::ReferenceType::Kind::CppReference || trgRefKind == core::lang::ReferenceType::Kind::CppRValueReference) {
+				if(trgRefKind == core::lang::ReferenceType::Kind::Plain) {
+					return c_ast::ref(CONVERT_ARG(0));
 				}
 			}
 

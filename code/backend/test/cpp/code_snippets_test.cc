@@ -682,7 +682,6 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram(R"(
 				def struct IMP_S {
 					val : int<4>;
-					ctor( ) {}
 					dtor() { 5;}
 				};
 
@@ -698,16 +697,18 @@ namespace backend {
 		)");
 
 		ASSERT_TRUE(program);
-		std::cout << "Program: " << core::printer::PrettyPrinter(program, core::printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS) << std::endl;
+		//std::cout << "Program: " << core::printer::PrettyPrinter(program, core::printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS) << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		 std::cout << "Converted: \n" << *converted << std::endl;
+		//std::cout << "Converted: \n" << *converted << std::endl;
 
 		// check presence of relevant code
 		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "IMP_S& IMP_j(IMP_S& v57)");
+		EXPECT_PRED2(containsSubString, code, "return v57.operator=((IMP_S){5});");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

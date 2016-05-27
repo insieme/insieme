@@ -226,10 +226,12 @@ namespace backend {
 					return; // skip those parameters
 				}
 
-				// simply append the argument (externalize if necessary)
+				// convert the argument (externalize if necessary)
 				c_ast::ExpressionPtr res =
 				    targetType ? stmtConverter.convertInitExpression(context, targetType, cur) : stmtConverter.convertExpression(context, cur);
-				call->arguments.push_back((external) ? typeManager.getTypeInfo(cur->getType()).externalize(manager, res) : res);
+				if(external) res = typeManager.getTypeInfo(cur->getType()).externalize(manager, res);
+
+				call->arguments.push_back(res);
 
 			};
 			append = recLambda;
