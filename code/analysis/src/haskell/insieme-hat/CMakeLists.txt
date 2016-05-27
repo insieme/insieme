@@ -1,15 +1,14 @@
 project(insieme_analysis_haskell NONE)
 cmake_minimum_required(VERSION 3.2)
 
-set( stack_home $ENV{INSIEME_LIBS_HOME}/stack-latest CACHE PATH "Stack Home Directory" ) 		# TODO: use e.g. insieme_find_package
-set( stack_root ${stack_home}/stack-root_$ENV{USER} )
+insieme_find_package(NAME GMP)
+insieme_find_package(NAME ZLIB)
 
-set( gmp_lib_dir $ENV{INSIEME_LIBS_HOME}/gmp-latest/lib CACHE PATH "GMP library directory" )		# TODO: use e.g. insieme_find_package
-set( z_lib_dir $ENV{INSIEME_LIBS_HOME}/zlib-latest/lib CACHE PATH "ZLIB library directory" )		# TODO: use e.g. insieme_find_package
+set( stack_home $ENV{INSIEME_LIBS_HOME}/stack-latest CACHE PATH "Stack Home Directory" )
+set( stack_root ${stack_home}/stack-root_$ENV{USER} )
 
 add_custom_target(
     insieme_analysis_haskell
-    ALL
 
     # create STACK_ROOT folder to prevent hideous error
     COMMAND ${CMAKE_COMMAND} -E make_directory ${stack_root}
@@ -17,22 +16,22 @@ add_custom_target(
     # install adequate ghc / cabal lib
     COMMAND ${CMAKE_COMMAND} -E env
         "STACK_ROOT=${stack_root}"
-        "LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
-        "LD_LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
+        "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
+        "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
         ${stack_home}/bin/stack setup
 
     # install dependencies and build package
     COMMAND ${CMAKE_COMMAND} -E env
         "STACK_ROOT=${stack_root}"
-        "LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
-        "LD_LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
+        "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
+        "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
         ${stack_home}/bin/stack build --ghc-options='-lHSrts-ghc7.10.3'
 
     # copy library (package key in name) to binary dir
     COMMAND ${CMAKE_COMMAND} -E env
         "STACK_ROOT=${stack_root}"
-        "LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
-        "LD_LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
+        "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
+        "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
         ${stack_home}/bin/stack runhaskell --package Glob --package directory utils/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}
 
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
