@@ -82,6 +82,16 @@ def struct IMP_RefOpTest {
 	}
 };)"
 
+struct S {
+	int a;
+	~S() {
+		5;
+	}
+};
+
+void j(S& s) {
+	s = {5};
+}
 
 int main() {
 	; // this is required because of the clang compound source location bug
@@ -137,6 +147,26 @@ int main() {
 	{
 		RefOpTest a, b;
 		a + b + b;
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_S {
+			a : int<4>;
+			dtor function () {
+				5;
+			}
+		};
+		def IMP_j = function (v0 : ref<IMP_S,f,f,cpp_ref>) -> unit {
+			ref_kind_cast(v0, type_lit(plain)).IMP__operator_assign_(ref_kind_cast(<ref<IMP_S,f,f,plain>>(ref_temp(type_lit(IMP_S))) {5}, type_lit(cpp_ref))) materialize ;
+		};
+		{
+			var ref<IMP_S,f,f,plain> v0 = IMP_S::(ref_decl(type_lit(ref<IMP_S,f,f,plain>)));
+			IMP_j(ref_kind_cast(v0, type_lit(cpp_ref)));
+		}
+	)")
+	{
+		S a;
+		j(a);
 	}
 
 	return 0;

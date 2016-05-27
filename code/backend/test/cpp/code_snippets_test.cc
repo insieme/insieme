@@ -284,6 +284,7 @@ namespace backend {
 		ASSERT_TRUE(program);
 		// std::cout << "Program: " << dumpColor(program) << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+dumpColor(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
@@ -668,6 +669,17 @@ namespace backend {
 	TEST(CppSnippet, DefaultOperators) {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
+
+//		struct S {
+//		int a;
+//			~S() {
+//				5;
+//			}
+//		};
+//
+//		void j(S& s) {
+//			s = {5};
+//		}
 
 		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
