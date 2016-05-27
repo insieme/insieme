@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -51,6 +51,7 @@
 #include "insieme/core/dump/binary_dump.h"
 #include "insieme/core/dump/text_dump.h"
 #include "insieme/core/types/type_variable_deduction.h"
+#include "insieme/core/transform/manipulation.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
 
@@ -136,7 +137,7 @@ namespace integration {
 				EXPECT_TRUE(core::types::getTypeVariableInstantiation(manager, call))
 					<< "Type deduction failed for test case: " << testCase.getName() << "\n"
 					<< "FunctionType:   " << *(call->getFunctionExpr()->getType()) << "\n"
-					<< "Argument Types: " << extractTypes(call->getArguments());
+					<< "Argument Types: " << extractTypes(core::transform::extractArgExprsFromCall(call));
 			});
 		}
 

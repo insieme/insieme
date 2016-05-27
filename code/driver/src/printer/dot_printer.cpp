@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -416,7 +416,7 @@ namespace printer {
 		visitChildList(*builder, toVector(callExpr->getType()), callExpr, "type");
 		visitChildList(*builder, toVector(callExpr->getFunctionExpr()), callExpr, "func_expr");
 
-		visitChildList(*builder, callExpr->getArguments(), callExpr, "argument");
+		visitChildList(*builder, callExpr->getArgumentList(), callExpr, "argument");
 	}
 
 	void ASTPrinter::visitCastExpr(const CastExprPtr& castExpr) {
