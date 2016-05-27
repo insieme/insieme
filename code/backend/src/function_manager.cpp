@@ -247,6 +247,8 @@ namespace backend {
 			// extract type of target function
 			const core::FunctionTypePtr funType = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>();
 
+			auto irCallArgs = core::transform::extractArgExprsFromCall(call);
+
 			// ----------------- constructor call ---------------
 
 			// re-structure call into a constructor call
@@ -265,11 +267,11 @@ namespace backend {
 				// case a) create object on stack => default
 
 				// case b) create object on heap
-				bool isOnHeap = core::analysis::isCallOf(call[0], refs.getRefNew());
+				bool isOnHeap = core::analysis::isCallOf(irCallArgs[0], refs.getRefNew());
 
 				// case c) create object in-place (placement new)
-				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(call[0], refs.getRefTemp()) && !core::analysis::isCallOf(call[0], refs.getRefTempInit())
-				                            && !core::analysis::isCallOf(call[0], refs.getRefNew()))
+				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(irCallArgs[0], refs.getRefTemp()) && !core::analysis::isCallOf(irCallArgs[0], refs.getRefTempInit())
+				                            && !core::analysis::isCallOf(irCallArgs[0], refs.getRefNew()))
 				                               ? location.as<c_ast::ExpressionPtr>()
 				                               : c_ast::ExpressionPtr();
 
@@ -295,7 +297,7 @@ namespace backend {
 				vector<c_ast::NodePtr> args = c_call->arguments;
 				assert_eq(args.size(), 1u);
 				auto obj = args[0].as<c_ast::ExpressionPtr>();
-				if(core::lang::isPlainReference(call->getArgument(0))) obj = c_ast::deref(obj);
+				if(core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
 
 				// extract class type
 				auto classType = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)).lValueType;
@@ -312,7 +314,7 @@ namespace backend {
 				assert_false(args.empty());
 
 				auto obj = args[0].as<c_ast::ExpressionPtr>();
-				if(core::lang::isPlainReference(call->getArgument(0))) obj = c_ast::deref(obj);
+				if(core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
 				args.erase(args.begin());
 
 				res = c_ast::memberCall(obj, c_call->function, args, c_call->instantiationTypes);
@@ -1456,9 +1458,13 @@ namespace backend {
 								replacementArgs[0] = core::lang::buildRefTemp(replacementArgs[0]->getType());
 								auto replacementCall = builder.callExpr(memCtor->getType(), memCtor->getFunctionExpr(), replacementArgs);
 								auto cCall = converter.getStmtConverter().convertExpression(context, replacementCall);
-								assert_eq(cCall->getNodeType(), c_ast::NT_UnaryOperation) << "Expected constructor to translate to ref operation";
-								auto cCtor = cCall.as<c_ast::UnaryOperationPtr>()->operand.as<c_ast::ConstructorCallPtr>();
-								initializers.push_back( { fieldId, cCtor->arguments } );
+								c_ast::ConstructorCallPtr cCtor;
+								if(cCall->getNodeType() == c_ast::NT_UnaryOperation) {
+									cCtor = cCall.as<c_ast::UnaryOperationPtr>()->operand.as<c_ast::ConstructorCallPtr>();
+								} else {
+									cCtor = cCall.as<c_ast::ConstructorCallPtr>();
+								}
+								initializers.push_back({fieldId, cCtor->arguments});
 								continue;
 							}
 						}

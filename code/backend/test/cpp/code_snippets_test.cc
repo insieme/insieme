@@ -267,7 +267,7 @@ namespace backend {
 		//int* j_ptr = &i_ref;
 		//int& j_ref = *i_ptr;
 
-		core::ProgramPtr program = builder.parseProgram(R"(
+		core::ProgramPtr program = builder.normalize(builder.parseProgram(R"(
 			int<4> function IMP_main (){
 				var ref<int<4>,f,f,plain> i;
 				var ref<ptr<int<4>>,f,f,plain> i_ptr = ptr_from_ref(i);
@@ -277,14 +277,11 @@ namespace backend {
 				var ref<int<4>,f,f,cpp_ref> j_ref = ptr_to_ref(*i_ptr);
 				return 0;
 			}
-		)");
-
-		dumpColor(program);
+		)"));
 
 		ASSERT_TRUE(program);
 		// std::cout << "Program: " << dumpColor(program) << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
-dumpColor(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
@@ -293,8 +290,8 @@ dumpColor(program);
 
 		// check absence of relevant code
 		auto code = toString(*converted);
-		EXPECT_PRED2(containsSubString, code, "int32_t* v4 = (int32_t*)(&v5);");
-		EXPECT_PRED2(containsSubString, code, "int32_t& v5 = *v1;");
+		EXPECT_PRED2(containsSubString, code, "int32_t* j_ptr = (int32_t*)(&i_ref);");
+		EXPECT_PRED2(containsSubString, code, "int32_t& j_ref = *i_ptr;");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
