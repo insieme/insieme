@@ -19,21 +19,21 @@ add_custom_target(
         "STACK_ROOT=${stack_root}"
         "LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
         "LD_LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
-        ${stack_home}/bin/stack --allow-different-user setup
+        ${stack_home}/bin/stack setup
 
     # install dependencies and build package
     COMMAND ${CMAKE_COMMAND} -E env
         "STACK_ROOT=${stack_root}"
         "LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
         "LD_LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
-        ${stack_home}/bin/stack --allow-different-user build --force-dirty --ghc-options='-lHSrts-ghc7.10.3'
+        ${stack_home}/bin/stack build --ghc-options='-lHSrts-ghc7.10.3'
 
     # copy library (package key in name) to binary dir
     COMMAND ${CMAKE_COMMAND} -E env
         "STACK_ROOT=${stack_root}"
         "LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
         "LD_LIBRARY_PATH=${gmp_lib_dir}:${z_lib_dir}"
-        ${stack_home}/bin/stack --allow-different-user runhaskell --package Glob --package directory utils/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}
+        ${stack_home}/bin/stack runhaskell --package Glob --package directory utils/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}
 
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
