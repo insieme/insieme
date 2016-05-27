@@ -702,7 +702,7 @@ namespace core {
 		EXPECT_EQ("rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {int_add(ref_deref(v0), ref_deref(v1)); int_sub(ref_deref(v1), ref_deref(v0));}}(v10, int_add(v10, v20))", toString(*call));
 
 		auto inlined = builder.normalize(transform::tryInlineToStmt(mgr, call));
-		EXPECT_EQ("{ref<int<4>,f,f,plain> v0 = v10; ref<int<4>,f,f,plain> v1 = int_add(v10, v20); int_add(v0, v1); int_sub(v1, v0);}", toString(*inlined));
+		EXPECT_EQ("{ref<int<4>,f,f,plain> v0 = v10; ref<int<4>,f,f,plain> v1 = int_add(v10, v20); int_add(ref_deref(v0), ref_deref(v1)); int_sub(ref_deref(v1), ref_deref(v0));}", toString(*inlined));
 	}
 
 	TEST(Manipulation, InlineITE) {

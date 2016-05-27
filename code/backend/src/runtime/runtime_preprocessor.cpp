@@ -53,6 +53,7 @@
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/instrumentation_extension.h"
 #include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/annotations/meta_info/meta_infos.h"
 #include "insieme/annotations/omp/omp_annotations.h"

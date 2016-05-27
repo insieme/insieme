@@ -454,20 +454,20 @@ namespace transform {
 		bool allParamsDerefed = true;
 		auto deref = manager.getLangExtension<lang::ReferenceExtension>().getRefDeref();
 		NodeMap derefReplacements;
-		visitDepthFirstOncePrunable(NodeAddress(fun->getBody()), [&](const NodeAddress& cur)->bool {
+		visitDepthFirstOncePrunable(NodeAddress(fun->getBody()), [&](const NodeAddress& cur) -> bool {
 			// early exit ...
-			if (!allParamsDerefed) return true;
+			if(!allParamsDerefed) return true;
 
 			// prune nested lambdas
-			if (cur.isa<LambdaExprPtr>()) return true;
+			if(cur.isa<LambdaExprPtr>()) return true;
 
 			// check for parameters
-			if (auto var = cur.isa<VariablePtr>()) {
-				if (::contains(params, var)) {
+			if(auto var = cur.isa<VariablePtr>()) {
+				if(::contains(params, var)) {
 					// if it is a parameter read ..
 					if(analysis::isCallOf(cur.getParentAddress(2), deref)) {
 						// .. replace it
-						derefReplacements[cur.getParentNode(2)] = varMap[var];
+						derefReplacements[cur.getParentNode(2)] = builder.deref(varMap[var]);
 					} else {
 						// invalid parameter access => no inlining possible
 						allParamsDerefed = false;
@@ -480,7 +480,7 @@ namespace transform {
 		});
 
 		// if there is a un-dereferenced parameter => no inlining supported
-		if (!allParamsDerefed) return call;
+		if(!allParamsDerefed) return call;
 
 		// add body of function to resulting inlined code
 		for_each(fun->getBody()->getStatements(), [&](const core::StatementPtr& cur) { stmts.push_back(replaceAllGen(manager, cur, derefReplacements)); });
@@ -1312,12 +1312,13 @@ namespace transform {
 		auto type = decl->getType();
 
 		auto& refExt = decl->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-		return transformBottomUpGen(decl->getInitialization(), [&refExt](const core::CallExprPtr& call) {
+		auto ret = transformBottomUpGen(decl->getInitialization(), [&refExt](const core::CallExprPtr& call) {
 			if(refExt.isCallOfRefDecl(call)) {
 				return core::lang::buildRefTemp(core::analysis::getReferencedType(call->getType())).as<core::CallExprPtr>();
 			}
 			return call;
 		});
+		return ret;
 	}
 
 
