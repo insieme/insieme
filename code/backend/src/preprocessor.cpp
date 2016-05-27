@@ -244,12 +244,18 @@ namespace backend {
 
 	core::NodePtr RefDeclEliminator::process(const Converter& converter, const core::NodePtr& code) {
 		auto& refExt = code->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-		return core::transform::transformBottomUpGen(code, [&refExt](const core::CallExprPtr& call) {
-			if(refExt.isCallOfRefDecl(call)) {
-				return core::lang::buildRefTemp(core::analysis::getReferencedType(call->getType())).as<core::CallExprPtr>();
-			}
-			return call;
-		}, core::transform::globalReplacement);
+		return core::transform::transformBottomUpGen(
+		    code,
+		    [&refExt](const core::CallExprPtr& call) {
+			    if(refExt.isCallOfRefDecl(call)) {
+				    return core::lang::buildRefTemp(core::analysis::getReferencedType(call->getType())).as<core::CallExprPtr>();
+			    }
+			    return call;
+			},
+		    [&converter](const core::NodePtr& cur) {
+			    return converter.getFunctionManager().isBuiltIn(cur) ? core::transform::ReplaceAction::Prune : core::transform::ReplaceAction::Process;
+			});
+		return code;
 	}
 
 } // end namespace backend
