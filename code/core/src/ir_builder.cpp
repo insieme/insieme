@@ -840,9 +840,11 @@ namespace core {
 	DeclarationStmtPtr IRBuilderBaseModule::declarationStmt(const ExpressionPtr& value) const {
 		return declarationStmt(value->getType(), value);
 	}
-
 	DeclarationStmtPtr IRBuilderBaseModule::declarationStmt(const TypePtr& type, const ExpressionPtr& value) const {
 		return declarationStmt(variable(type), value);
+	}
+	DeclarationStmtPtr IRBuilderBaseModule::declarationStmt(const VariablePtr& value) const {
+		return declarationStmt(value, lang::buildRefDecl(value->getType()));
 	}
 
 	ReturnStmtPtr IRBuilderBaseModule::returnStmt(const ExpressionPtr& retVal) const {

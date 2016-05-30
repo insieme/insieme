@@ -467,6 +467,7 @@ namespace core {
 		// Declaration Statements
 		DeclarationStmtPtr declarationStmt(const ExpressionPtr& value) const;
 		DeclarationStmtPtr declarationStmt(const TypePtr& type, const ExpressionPtr& value) const;
+		DeclarationStmtPtr declarationStmt(const VariablePtr& value) const;
 
 		// Return Statement
 		ReturnStmtPtr returnStmt(const ExpressionPtr& retVal) const;

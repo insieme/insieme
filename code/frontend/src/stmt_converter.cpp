@@ -421,14 +421,14 @@ namespace conversion {
 					decl = st.as<core::DeclarationStmtPtr>();
 					// remove the init, use undefinedvar
 					// this is what GCC does, VC simply errors out
-					decl = builder.declarationStmt(decl->getVariable(), decl->getVariable());
+					decl = builder.declarationStmt(decl->getVariable());
 					decls.push_back(decl);
 				}
 			} else {
 				decl = result.as<core::DeclarationStmtPtr>();
 				// remove the init, use undefinedvar
 				// this is what GCC does, VC simply errors out
-				decl = builder.declarationStmt(decl->getVariable(), decl->getVariable());
+				decl = builder.declarationStmt(decl->getVariable());
 				decls.push_back(decl);
 			}
 		};
