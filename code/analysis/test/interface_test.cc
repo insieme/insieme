@@ -40,6 +40,7 @@
 
 #include "insieme/core/ir_builder.h"
 
+#include <iostream>
 
 namespace insieme {
 namespace analysis {
@@ -66,7 +67,6 @@ namespace analysis {
 	create_dispatcher_for(getDefinitionPoint)
 
 	#undef create_dispatcher_for
-
 
 	/**
 	 * GTest-specific class to enable parametrized tests
@@ -182,28 +182,6 @@ namespace analysis {
 		EXPECT_EQ(declY2, dispatch_getDefinitionPoint(varY2, GetParam()));
 	}
 
-
-	TEST_P(CBA_Interface, DefinitionPoint_LambdaParameter) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		auto addresses = builder.parseAddressesExpression(
-			"( x : int<4> ) -> int<4> { return $x$; }"
-		);
-
-		ASSERT_EQ(1, addresses.size());
-
-		auto var = addresses[0].as<CallExprAddress>()[0].as<VariableAddress>();
-		auto param = var.getRootAddress().as<LambdaExprAddress>()->getParameterList()[0];
-
-		std::cout << "Parameter: " << param << "\n";
-		std::cout << "Variable:  " << var << "\n";
-
-		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
-
-	}
-
-
 	TEST_P(CBA_Interface, DefinitionPoint_BindParameter) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
@@ -225,7 +203,6 @@ namespace analysis {
 		EXPECT_EQ(param, definition);
 
 	}
-
 
 	TEST_P(CBA_Interface, DefinitionPoint_BindParameter_2) {
 		NodeManager mgr;
@@ -259,7 +236,6 @@ namespace analysis {
 		EXPECT_EQ(defW,dispatch_getDefinitionPoint(w, GetParam()));
 
 	}
-
 
 	TEST_P(CBA_Interface, DefinitionPoint_BindParameter_3) {
 		NodeManager mgr;
@@ -317,8 +293,48 @@ namespace analysis {
 
 	}
 
+	TEST_P(CBA_Interface, DefinitionPoint_LambdaParameter) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
 
-	TEST_P(CBA_Interface, DefinitionPointFail) {
+		auto addresses = builder.parseAddressesExpression(
+			"( x : int<4> ) -> int<4> { return $x$; }"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<CallExprAddress>()[0].as<VariableAddress>();
+		auto param = var.getRootAddress().as<LambdaExprAddress>()->getParameterList()[0];
+
+		std::cout << "Parameter: " << param << "\n";
+		std::cout << "Variable:  " << var << "\n";
+
+		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
+
+	}
+
+	TEST_P(CBA_Interface, DefinitionPoint_LambdaParameter_2) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(
+			"def f = (x : int<4>, y : int<4>) -> unit { $y$; };"
+			"{"
+			"  f(1, 2);"
+			"}"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
+		auto param = var.getParentAddress(3).as<LambdaAddress>()->getParameterList()[1];
+
+		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		ASSERT_TRUE(find);
+		ASSERT_EQ(param, find);
+	}
+
+	TEST_P(CBA_Interface, DefinitionPoint_Fail) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -334,7 +350,7 @@ namespace analysis {
 		EXPECT_FALSE(dispatch_getDefinitionPoint(var, GetParam()));
 	}
 
-	TEST_P(CBA_Interface, DefinitionPointFor) {
+	TEST_P(CBA_Interface, DefinitionPoint_ForLoop) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -352,7 +368,7 @@ namespace analysis {
 		ASSERT_EQ(param, find);
 	}
 
-	TEST_P(CBA_Interface, DefinitionPointDoubleFor) {
+	TEST_P(CBA_Interface, DefinitionPoint_ForLoop_2) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -364,27 +380,6 @@ namespace analysis {
 
 		auto var = addresses[0].as<VariableAddress>();
 		auto param = var.getRootAddress().as<CompoundStmtAddress>()[0].as<ForStmtAddress>()->getDeclaration()->getVariable();
-
-		auto find = dispatch_getDefinitionPoint(var, GetParam());
-		ASSERT_TRUE(find);
-		ASSERT_EQ(param, find);
-	}
-
-	TEST_P(CBA_Interface, DefinitionPointLambda) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		auto addresses = builder.parseAddressesStatement(
-			"def f = (x : int<4>, y : int<4>) -> unit { $y$; };"
-			"{"
-			"  f(1, 2);"
-			"}"
-		);
-
-		ASSERT_EQ(1, addresses.size());
-
-		auto var = addresses[0].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
-		auto param = var.getParentAddress(3).as<LambdaAddress>()->getParameterList()[1];
 
 		auto find = dispatch_getDefinitionPoint(var, GetParam());
 		ASSERT_TRUE(find);

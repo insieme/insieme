@@ -38,8 +38,6 @@
 
 #include "insieme/analysis/haskell/adapter.h"
 
-#include <iostream>
-
 using namespace insieme::core;
 
 namespace insieme {

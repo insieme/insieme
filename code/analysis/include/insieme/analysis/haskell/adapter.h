@@ -36,11 +36,11 @@
 
 #pragma once
 
-#include <boost/optional.hpp>
-#include <memory>
-
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_node.h"
+
+#include <boost/optional.hpp>
+#include <memory>
 
 namespace insieme {
 namespace analysis {

@@ -36,10 +36,10 @@
 
 #include "insieme/analysis/haskell/adapter.h"
 
-#include <vector>
-#include <sstream>
-
 #include "insieme/core/dump/binary_dump.h"
+
+#include <sstream>
+#include <vector>
 
 using namespace std;
 using namespace insieme::core;
