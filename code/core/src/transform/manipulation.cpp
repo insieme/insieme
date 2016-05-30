@@ -1321,12 +1321,17 @@ namespace transform {
 		return ret;
 	}
 
-
-	ExpressionList extractArgExprsFromCall(const CallExprPtr& call) {
-		auto decls = call->getArgumentDeclarations();
+	ExpressionList extractArgExprsFromCall(const NodePtr& call) {
+		assert_eq(call->getNodeType(), NT_CallExpr);
+		auto decls = call.as<core::CallExprPtr>()->getArgumentDeclarations();
 		ExpressionList out;
 		std::transform(decls.begin(), decls.end(), std::back_inserter(out), [](const DeclarationPtr& d) { return extractInitExprFromDecl(d); });
 		return out;
+	}
+
+	ExpressionPtr extractArg(const NodePtr& call, size_t num) {
+		assert_eq(call->getNodeType(), NT_CallExpr);
+		return extractInitExprFromDecl(call.as<core::CallExprPtr>().getArgumentDeclaration(num));
 	}
 
 } // end namespace transform

@@ -161,4 +161,13 @@ int main() {
 	{
 		InitListTest il;
 	}
+
+
+	#pragma test expect_ir(R"(
+		var ref<IMP_std_colon__colon_pair<ref<int<4>,f,f,qualified>,ref<bool,f,f,qualified>>,f,f,plain> v0 =
+			ref_cast(type_instantiation(type_lit(<ref<int<4>,f,f,qualified>, ref<bool,f,f,qualified>>(ref<int<4>,f,f,cpp_rref>, ref<bool,f,f,cpp_rref>) -> IMP_std_colon__colon_pair<ref<int<4>,f,f,qualified>,ref<bool,f,f,qualified>>),
+						lit("IMP_std_colon__colon_make_pair" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>(ref<'T_0_0,f,f,cpp_rref>, ref<'T_0_1,f,f,cpp_rref>) -> IMP_pair<'IMP_typename_space___decay_and_strip_lt__T1_gt__colon__colon___type,'IMP_typename_space___decay_and_strip_lt__T2_gt__colon__colon___type>))
+					(12, true) materialize, type_lit(f), type_lit(f), type_lit(cpp_rref));
+	)")
+	std::pair<int,bool> x = std::make_pair(12, true);
 }
