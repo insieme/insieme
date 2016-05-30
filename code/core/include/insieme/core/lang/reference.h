@@ -392,6 +392,8 @@ namespace lang {
 		 */
 		static GenericTypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false, const Kind& kind = Kind::Plain);
 
+		static GenericTypePtr create(const TypePtr& elementType, const TypePtr& _const, const TypePtr& _volatile, const Kind& kind = Kind::Plain);
+
 		// an implicit converter of this wrapper to an IR type
 		operator GenericTypePtr() const {
 			return toType();

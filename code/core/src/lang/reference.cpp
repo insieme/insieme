@@ -119,6 +119,12 @@ namespace lang {
 		return ReferenceType(elementType, ext.getMarkerType(_const), ext.getMarkerType(_volatile), lang::toType(mgr, kind)).operator GenericTypePtr();
 	}
 
+	GenericTypePtr ReferenceType::create(const TypePtr& elementType, const TypePtr& _const, const TypePtr& _volatile, const Kind& kind) {
+		assert_true(elementType);
+		NodeManager& mgr = elementType.getNodeManager();
+		return ReferenceType(elementType, _const, _volatile, lang::toType(mgr, kind)).operator GenericTypePtr();
+	}
+
 	GenericTypePtr ReferenceType::toType() const {
 		NodeManager& mgr = elementType.getNodeManager();
 		return GenericType::get(mgr, "ref", ParentList(), toVector(elementType, mConst, mVolatile, kind));

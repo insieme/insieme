@@ -41,6 +41,7 @@
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/materialize.h"
 #include "insieme/core/types/subtype_constraints.h"
@@ -825,6 +826,15 @@ namespace types {
 
 					// update argument
 					materializedArguments[i] = argType.toType();
+				}
+
+				// promote qualifiers on pointers (TODO: better solution to this)
+				if(lang::isPointer(arguments[i]) && lang::isPointer(parameter[i])) {
+					lang::PointerType argType(arguments[i]);
+					lang::PointerType paramType(parameter[i]);
+					if(paramType.isConst() && !argType.isConst()) { argType.setConst(true); }
+					if(paramType.isVolatile() && !argType.isVolatile()) { argType.setVolatile(true); }
+					materializedArguments[i] = argType;
 				}
 			}
 

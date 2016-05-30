@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -170,7 +170,7 @@ namespace lang {
 				"		return ( ref_volatile_cast(p.0, v), p.1 );   "
 				"  }                                                                               "
 		)
-			
+
 		/**
 		 * Literals to support converting from/to pointers/integral data types.
 		 */
@@ -326,7 +326,7 @@ namespace lang {
 
 	/**
 	 * A type wrapper to handle pointer types in a more user
-	 * friendly way then its raw encoding.
+	 * friendly way than its raw encoding.
 	 */
 	class PointerType {
 
@@ -336,20 +336,19 @@ namespace lang {
 		TypePtr elementType;
 
 		/**
-		 * A flag indicating whether the addressed element is not mutable (constant) through
-		 * this this pointer.
+		 * A marker indicating whether the referenced memory cell can be modified through this pointer or not (const).
 		 */
-		bool mConst;
+		TypePtr mConst;
 
 		/**
-		 * A flag indicating whether the addressed element is volatile.
+		 * A marker indicating whether the referenced memory cell might be concurrently modified or not.
 		 */
-		bool mVolatile;
+		TypePtr mVolatile;
 
 		/**
 		 * Creates a new pointer addressing an element of the given type, being marked const and volatile as specified.
 		 */
-		PointerType(const TypePtr& elementType, bool mConst, bool mVolatile)
+		PointerType(const TypePtr& elementType, const TypePtr& mConst, const TypePtr& mVolatile)
 			: elementType(elementType), mConst(mConst), mVolatile(mVolatile) {}
 
 	  public:
@@ -388,37 +387,21 @@ namespace lang {
 
 		// --- observers and mutators ---
 
-		const TypePtr& getElementType() const {
-			return elementType;
-		}
+		const TypePtr& getElementType() const;
+		void setElementType(const TypePtr& type);
 
-		void setElementType(const TypePtr& type) {
-			assert_true(type) << "Element type must not be null!";
-			elementType = type;
-		}
+		bool isConst() const;
+		void setConst(bool newState = true);
 
-		bool isConst() const {
-			return mConst;
-		}
-
-		void setConst(bool newState = true) {
-			mConst = newState;
-		}
-
-		bool isVolatile() const {
-			return mVolatile;
-		}
-
-		void setVolatile(bool newState = true) {
-			mVolatile = newState;
-		}
+		bool isVolatile() const;
+		void setVolatile(bool newState = true);
 	};
-	
+
 	/**
 	 * Tests whether the given node is a pointer type or an expression of a pointer type.
 	 */
 	bool isPointer(const NodePtr& node);
-	
+
 	/**
 	 * Creates a new pointer type based on the given specification.
 	 */
