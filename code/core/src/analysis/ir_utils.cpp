@@ -49,6 +49,7 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/transform/materialize.h"
 #include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/analysis/ir++_utils.h"
 
@@ -147,7 +148,7 @@ namespace analysis {
 		auto callType = call->getType();
 		auto function = call->getFunctionExpr();
 		auto funType = function->getType().as<FunctionTypePtr>()->getReturnType();
-		return !analysis::equalTypes(callType, funType) && !types::getTypeVariableInstantiation(call->getNodeManager(), funType, callType);
+		return !analysis::equalTypes(callType, funType) && types::getTypeVariableInstantiation(call->getNodeManager(), callType, transform::materialize(funType));
 	}
 
 	bool isNoOp(const StatementPtr& candidate) {
