@@ -35,24 +35,26 @@ needs hwloc's `lib`.
 
     export INSIEME_LIBS_HOME="/software-local/insieme-libs"
     export PATH="$INSIEME_LIBS_HOME/gcc-latest/bin:$PATH"
-    export LD_LIBRARY_PATH="$INSIEME_LIBS_HOME/gcc-latest/lib64:$INSIEME_LIBS_HOME/hwloc-latest/lib"
+    export LD_LIBRARY_PATH="$INSIEME_LIBS_HOME/gcc-latest/lib64"
+    export LD_LIBRARY_PATH="$INSIEME_LIBS_HOME/hwloc-latest/lib:$LD_LIBRARY_PATH"
 
 ## Ubuntu 16.04 LTS
 
 Environment setup has been tested on a clean Ubuntu 16.04 Server (amd64)
-installaiton:
+installation:
 
     $ sudo apt-get update
-    $ sudo apt-get install build-essential m4 python unzip
+    $ sudo apt-get install build-essential m4 pkg-config python ruby unzip valgrind
     $ ./installer
 
-## Ruby
+## Ruby / Valgrind
 
-Just in case your local Ruby installation is too old an optional package is
-provided. Double check if some tests fail for you.
+Ruby and Valgrind can be installed via this installer, just in case your local
+installation is too old.  Double check if some tests fail for you.
 
-    $ ./installer ruby
+    $ ./installer ruby valgrind
 
 Do not forget to add the new `bin` directory to your path.
 
     export PATH="$INSIEME_LIBS_HOME/ruby-latest/bin:$PATH"
+    export PATH="$INSIEME_LIBS_HOME/valgrind-latest/bin:$PATH"
