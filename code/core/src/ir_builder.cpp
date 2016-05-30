@@ -844,6 +844,9 @@ namespace core {
 		return declarationStmt(variable(type), value);
 	}
 	DeclarationStmtPtr IRBuilderBaseModule::declarationStmt(const VariablePtr& value) const {
+		if(!lang::isReference(value)) {
+			return declarationStmt(value, getZero(value->getType()));
+		}
 		return declarationStmt(value, lang::buildRefDecl(value->getType()));
 	}
 
