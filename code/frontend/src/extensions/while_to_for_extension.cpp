@@ -345,7 +345,7 @@ namespace extensions {
 				auto newBody = builder.compoundStmt(newBodyStmts);
 
 				// if the old loop variable is free in the new body, we messed up and should bail
-				std::cout << core::printer::PrettyPrinter(newBody, core::printer::PrettyPrinter::NO_EVAL_LAZY);
+				VLOG(2) << core::printer::PrettyPrinter(newBody, core::printer::PrettyPrinter::NO_EVAL_LAZY);
 				auto oldLoopVarFree = ::contains(core::analysis::getFreeVariables(newBody), cvar);
 				VLOG(1) << "oldLoopVarFree: " << oldLoopVarFree << " // " << "free vars: " << core::analysis::getFreeVariables(newBody) << "\n";
 				if(oldLoopVarFree) return original;

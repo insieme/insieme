@@ -126,12 +126,12 @@ namespace backend {
 		EXPECT_TRUE(core::checks::check(prog).empty()) << core::printer::dumpErrors(core::checks::check(prog));
 
 		// print program using pretty printer
-		dumpColor(prog);
+		//dumpColor(prog);
 
 		// build it using the sequential backend
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(prog);
 
-		std::cout << "Converted Code: \n" << *targetCode << "\n";
+		//std::cout << "Converted Code: \n" << *targetCode << "\n";
 
 		// try compiling code
 		EXPECT_TRUE(utils::compiler::compile(*targetCode));
