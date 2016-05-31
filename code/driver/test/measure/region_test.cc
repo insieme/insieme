@@ -169,7 +169,7 @@ namespace measure {
 
 		analysis::region::MPISelector mpiSelector;
 		analysis::region::RegionList mpiList = mpiSelector.getRegions(NodeAddress(program));
-		EXPECT_EQ(10, mpiList.size());
+		ASSERT_EQ(10, mpiList.size());
 
 		//std::cout << mpiList << "\n";
 
