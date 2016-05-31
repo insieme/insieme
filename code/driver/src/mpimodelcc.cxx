@@ -62,6 +62,7 @@
 #include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/driver/measure/measure.h"
 #include "insieme/driver/object_file_utils.h"
+#include "insieme/driver/utils/driver_utils.h"
 
 #include "insieme/frontend/frontend.h"
 
@@ -86,6 +87,7 @@ namespace dr = insieme::driver;
 namespace cmd = insieme::driver::cmd;
 namespace dm = insieme::driver::measure;
 namespace pt = insieme::core::pattern;
+namespace du = insieme::driver::utils;
 
 class RegionAttribute : public utils::Printable {
 public:
@@ -140,17 +142,14 @@ public:
 	}
 };
 
-std::string getNameForNode(core::NodePtr funPtr) {
+std::string getNameForAddress(const core::NodeAddress& funAddr) {
 	std::string retVal("");
+	auto funPtr = funAddr.getAddressedNode();
 	if(auto exprPtr = funPtr.isa<core::CallExprPtr>()) { funPtr = exprPtr->getFunctionExpr(); }
-	if(auto litPtr = funPtr.isa<core::LiteralPtr>()) { retVal = litPtr->getStringValue(); }
+	if(auto litPtr = funPtr.isa<core::LiteralPtr>()) { retVal = utils::demangle(litPtr->getStringValue()); }
 
-	std::stringstream ss;
-	//ss << "_" << core::annotations::getLocation(funPtr);
-	if(core::annotations::hasAttachedLocation(funPtr)) {
-		ss << "_" << core::annotations::getAttachedLocation(funPtr);
-	}
-	return utils::demangle(retVal) + ss.str();
+	if(auto loc = core::annotations::getLocation(funAddr)) { retVal += "_" + toString(loc.get()); }
+	return retVal;
 }
 
 core::NodePtr encloseInInstrumentation(const core::NodePtr& root, const core::NodeAddress& begin, const core::NodeAddress& finish, const unsigned regionID) {
@@ -181,13 +180,13 @@ RegionDatabase findMPICalls(const core::NodeAddress& root) {
 	RegionDatabase retVal;
 
 	core::analysis::region::MPISelector mpiSelector(true);
-	core::analysis::region::FunctionCallSelector funCallSelector("MPI_All");
+	//core::analysis::region::FunctionCallSelector funCallSelector("MPI_All");
 
-	auto regions = funCallSelector.getRegions(root);
-	//auto regions = mpiSelector.getRegions(root);
+	//auto regions = funCallSelector.getRegions(root);
+	auto regions = mpiSelector.getRegions(root);
 
 	for(const auto& e : regions) {
-		retVal.addRegion(e, getNameForNode(e.getBegin()));
+		retVal.addRegion(e, getNameForAddress(e.getBegin()));
 	}
 
 	return retVal;
@@ -209,7 +208,8 @@ RegionDatabase findLoopsWithMPI(const core::NodeAddress& addr) {
 	// core::analysis::region::MPISelector mpiSelector;
 	// select everything but MPI_Wtime, which is not of interest
 	// (and is frequently seen within assignment expressions, and hence cannot be properly instrumented)
-	core::analysis::region::FunctionCallSelector funCalSelector("MPI_");
+	//core::analysis::region::FunctionCallSelector funCalSelector("MPI_");
+	core::analysis::region::FunctionCallSelector funCalSelector("MPI_All|MPI_Gather|MPI_Scatter|MPI_Send|MPI_Recv|MPI_Isend|MPI_Irecv|MPI_Barrier|MPI_Test|MPI_Wait|MPI_Reduce");
 	//auto mpiAsyncPattern = mpiSelector.getMPIAsyncPattern();
 
 	// check all for loops for MPI calls
@@ -217,7 +217,7 @@ RegionDatabase findLoopsWithMPI(const core::NodeAddress& addr) {
 		auto regions = funCalSelector.getRegions(loop);
 		//auto match = pt::aT(mpiAsyncPattern).match(loop);
 		if(!regions.empty()) {
-			retVal.addRegion(cr::Region(loop), "for" + getNameForNode(loop));
+			retVal.addRegion(cr::Region(loop), "for" + getNameForAddress(loop));
 		}
 	}
 
@@ -233,19 +233,6 @@ RegionDatabase getInterestingRegions(const core::NodeAddress& addr) {
 	retVal.mergeIn(loops);
 
 	return retVal;
-}
-
-#define TEXT_WIDTH 120
-
-void boxTitle(const std::string title) {
-	std::cout <<
-		// Opening ascii row
-		"\n//" << std::setfill('*') << std::setw(TEXT_WIDTH) << std::right << "//" <<
-		// Section title left aligned
-		"\n//" << std::setfill(' ') << std::setw(TEXT_WIDTH - 2) << std::left << " " + title + " " << std::right << "//" <<
-		// Closing ascii row
-		"\n//" << std::setfill('*') << std::setw(TEXT_WIDTH) << "//" <<
-		"\n";
 }
 
 int main(int argc, char** argv) {
@@ -290,14 +277,6 @@ int main(int argc, char** argv) {
 	// indicates that a shared object file should be created
 	bool createSharedObject = fs::extension(options.settings.outFile) == ".so";
 
-	// std::cout << "Libs:    " << libs << "\n";
-	// std::cout << "Inputs:  " << inputs << "\n";
-	// std::cout << "ExtLibs: " << extLibs << "\n";
-	// std::cout << "OutFile: " << options.settings.outFile << "\n";
-	// std::cout << "Compile Only: " << options.settings.compileOnly << "\n";
-	// std::cout << "SharedObject: " << createSharedObject << "\n";
-	// std::cout << "WorkingDir: " << boost::filesystem::current_path() << "\n";
-
 	// update input files
 	options.job.setFiles(inputs);
 
@@ -310,8 +289,8 @@ int main(int argc, char** argv) {
 		return dr::loadLib(mgr, cur);
 	}));
 
-	options.job.setDefinition("STRING_LEN", "100" );
-	options.job.setDefinition("QUERY_LEN", "20");
+	//options.job.setDefinition("STRING_LEN", "100" );
+	//options.job.setDefinition("QUERY_LEN", "20");
 
 	// if it is compile only or if it should become an object file => save it
 	if(options.settings.compileOnly || createSharedObject) {
@@ -325,21 +304,32 @@ int main(int argc, char** argv) {
 
 	// convert src file to target code
 
+	LOG(INFO) << "Looking for regions ...\n";
+	utils::Timer timer = insieme::utils::Timer("Frontend conversion");
 	auto program = options.job.execute(mgr);
+	timer.stop(); LOG(INFO) << timer;
 
 	assert_true(program && !program->getEntryPoints().empty()) << "Unable to parse program or find entry point";
 
 	auto rootAddr = core::ExpressionAddress(program->getEntryPoints()[0]);
 	core::NodePtr rootPtr = rootAddr.getAddressedNode();
 
-	LOG(INFO) << "Looking for regions ...\n";
+	timer = insieme::utils::Timer("Region search");
 
 	RegionDatabase regionDatabase;
+
+	// works with addresses
 	regionDatabase = getInterestingRegions(rootAddr);
+	// works with pointers
+	//regionDatabase = getInterestingRegions(rootPtr);
+
+	timer.stop(); LOG(INFO) << timer;
 
 	assert_false(regionDatabase.empty()) << "No regions found!";
 
 	LOG(INFO) << "Found " << regionDatabase.size() << " region(s)";
+
+	timer = insieme::utils::Timer("Region instrumentation");
 
 	std::map<RegionAttribute, dm::region_id> attributeMap;
 
@@ -352,6 +342,8 @@ int main(int argc, char** argv) {
 	for(auto it = attributeMap.rbegin(); it != attributeMap.rend(); ++it) {
 		rootPtr = encloseInInstrumentation(rootPtr, it->first.region.getBegin(), it->first.region.getEnd(), it->second);
 	}
+
+	timer.stop(); LOG(INFO) << timer;
 
 	// dump IR code
 	if(!options.settings.dumpIR.empty()) {
@@ -381,21 +373,21 @@ int main(int argc, char** argv) {
 	mpicc.addFlag("--std=gnu99");
 	mpicc.addFlag("-DIRT_USE_MPI");
 	mpicc.addFlag("-DIRT_USE_PAPI");
-	mpicc.addFlag("-O3");
+	mpicc.addFlag("-O0");
 	mpicc.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi -lpfm");
 
 	// compile binary
 	const auto binary = dm::buildBinary(rootPtr, mpicc);
 
-	using problemType = std::pair<unsigned, unsigned>;
+	using problemType = std::vector<unsigned>;
 	using resultType = vector<std::map<dm::region_id, std::map<dm::MetricPtr, dm::Quantity>>>;
 
 	vector<problemType> problemSizes;
-	const unsigned startNumStrings = 50000;
-	const unsigned startNumQueries = 5000;
+	const unsigned firstParam = 1024;
+	const unsigned secondParam = 128;
 
-	for(unsigned i = 1; i <= 20; ++i) {
-		problemSizes.push_back(std::make_pair(startNumStrings * i, startNumQueries * i));
+	for(unsigned i = 1; i <= 10; ++i) {
+		problemSizes.push_back({ firstParam * i, secondParam });
 	}
 
 	map<problemType, resultType> overallResults;
@@ -409,18 +401,22 @@ int main(int argc, char** argv) {
 		// TODO: needs fixing, since it might clash with mpirun affinity masks
 		env["IRT_AFFINITY_POLICY"] = "IRT_AFFINITY_FILL";
 		// set problem sizes
-		env["DEFAULT_NUM_STRING"] = std::to_string(problemSize.first);
-		env["DEFAULT_NUM_QUERIES"] = std::to_string(problemSize.second);
+		//env["DEFAULT_NUM_STRING"] = std::to_string(problemSize.first);
+		//env["DEFAULT_NUM_QUERIES"] = std::to_string(problemSize.second);
 		// rely on mpirun to do process-core mapping
-		const string mpiRun = "mpirun -np 32 --map-by core";
-		const unsigned numRuns = 50;
+		const string mpiRun = "mpirun -np 17 --map-by core --mca btl tcp,self";
+		const std::vector<string> params = ::transform(problemSize, [](const problemType::value_type problem) { return toString(problem); });
+
+		const unsigned numRuns = 10;
 
 		resultType result;
 
 		while(result.size() < numRuns) {
 			const unsigned numRemainingRuns = numRuns - result.size();
-			//const resultType remainingResults = dm::measurePreinstrumented(rootPtr, metrics, numRemainingRuns, std::make_shared<dm::LocalExecutor>(mpiRun), mpicc, env);
-			const resultType remainingResults = dm::measure(binary, metrics, numRemainingRuns, std::make_shared<dm::LocalExecutor>(mpiRun), env);
+			timer = insieme::utils::Timer("Running measurement");
+			const resultType remainingResults = dm::measure(binary, metrics, numRemainingRuns, std::make_shared<dm::LocalExecutor>(mpiRun), env, params);
+			timer.stop(); LOG(INFO) << timer;
+			assert_gt(remainingResults.size(), 0) << "Expected at least a single result set but found none, bailing out";
 			addAll(result, remainingResults);
 		}
 
@@ -434,13 +430,13 @@ int main(int argc, char** argv) {
 
 
 	auto resultPrinterFull = [&](const std::map<problemType, resultType> data) {
-		boxTitle("Full Results");
+		du::openBoxTitle("Full Results");
 		for(const auto& problem : data) {
 			std::cout << "Data for problem size: " << problem.first << "\n";
 			for(unsigned run = 0; run < problem.second.size(); ++run) {
 				const auto program = problem.second.at(run);
 				for(const auto& region : program) {
-					std::cout << boost::format("%10d %10d %2d %4d\t(%24s)\t %s") % problem.first.first % problem.first.second % run % region.first
+					std::cout << boost::format("%10d %2d %4d\t(%24s)\t %s") % problem.first % run % region.first
 					                 % regionDatabase.getAllRegions().at(region.first).label % regionDatabase.getAllRegions().at(region.first).region;
 					std::cout << region.second << "\n";
 				}
@@ -452,7 +448,7 @@ int main(int argc, char** argv) {
 		if(data.empty()) { std::cout << "No results!\n"; return; }
 		if(data.begin()->second.empty()) { std::cout << "No results!\n"; return; }
 		std::map<problemType, std::map<dm::region_id, std::map<dm::MetricPtr, dm::Quantity>>> aggregatedData;
-		boxTitle("Aggregated Results (median)");
+		du::openBoxTitle("Aggregated Results (median)");
 		std::cout << "problem\tregion_id\tregion_name";
 		// print all metrics in header
 		for(const auto& metric : data.begin()->second.front().begin()->second) {
@@ -479,7 +475,7 @@ int main(int argc, char** argv) {
 			}
 			// take median
 			for(const auto& region : tempData) {
-				std::cout << boost::format("%10d %10d %4d\t(%24s)\t") % problem.first.first % problem.first.second % region.first % regionDatabase.getAllRegions().at(region.first).label;
+				std::cout << boost::format("%10d %4d\t(%24s)\t") % problem.first % region.first % regionDatabase.getAllRegions().at(region.first).label;
 				for(const auto& metric : region.second) {
 					aggregatedData[problem.first][region.first][metric.first] = tempData[region.first][metric.first][ tempData[region.first][metric.first].size() / 2 ];
 					std::cout << boost::format(" %20s") % aggregatedData[problem.first][region.first][metric.first];
@@ -497,7 +493,7 @@ int main(int argc, char** argv) {
 	 * TODO:
 	 * - Crucial
 	 *   - region definition
-	 *      - instrument blocking MPI patterns and test them!
+	 *      x instrument blocking MPI patterns and test them!
 	 *		- what to do with async MPI primitives followed by barrier?
 	 *		- all mpi calls in loops
 	 *		x all loop bodies holding mpi calls
