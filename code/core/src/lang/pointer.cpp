@@ -84,14 +84,18 @@ namespace lang {
 		auto tupleType = trg.as<TupleTypePtr>();
 		*this = PointerType(
 				extractReferencedType(tupleType),
-				isTrueMarker(extractConstMarker(tupleType)),
-				isTrueMarker(extractVolatileMarker(tupleType))
+				extractConstMarker(tupleType),
+				extractVolatileMarker(tupleType)
 		);
 	}
 
 	TypePtr PointerType::create(const TypePtr& elementType, bool _const, bool _volatile) {
 		assert_true(elementType);
-		return PointerType(elementType, _const, _volatile).operator TypePtr();
+
+		NodeManager& mgr = elementType.getNodeManager();
+		const BooleanMarkerExtension& ext = mgr.getLangExtension<BooleanMarkerExtension>();
+
+		return PointerType(elementType, ext.getMarkerType(_const), ext.getMarkerType(_volatile)).operator TypePtr();
 	}
 
 
@@ -105,8 +109,34 @@ namespace lang {
 		return builder.tupleType(toVector(ReferenceType::create(ArrayType::create(elementType), mConst, mVolatile).as<TypePtr>(), ext.getInt8().as<TypePtr>()));
 	}
 
-	namespace {
+	const TypePtr& PointerType::getElementType() const {
+		return elementType;
+	}
 
+	void PointerType::setElementType(const TypePtr& type) {
+		assert_true(type) << "Element type must not be null!";
+		elementType = type;
+	}
+
+	bool PointerType::isConst() const {
+		return isTrueMarker(mConst);
+	}
+
+	void PointerType::setConst(bool newState) {
+		const auto& ext = elementType->getNodeManager().getLangExtension<BooleanMarkerExtension>();
+		mConst = (newState) ? ext.getTrue() : ext.getFalse();
+	}
+
+	bool PointerType::isVolatile() const {
+		return isTrueMarker(mVolatile);
+	}
+
+	void PointerType::setVolatile(bool newState) {
+		const auto& ext = elementType->getNodeManager().getLangExtension<BooleanMarkerExtension>();
+		mVolatile = (newState) ? ext.getTrue() : ext.getFalse();
+	}
+
+	namespace {
 		bool isPointerInternal(const TupleTypePtr& type) {
 
 			// simple approach: use matching
@@ -144,7 +174,7 @@ namespace lang {
 				return res == other.res;
 			}
 		};
-		
+
 		// check for annotations
 		if (type->hasAttachedValue<PointerMarker>()) {
 			return type->getAttachedValue<PointerMarker>().res;
@@ -219,14 +249,14 @@ namespace lang {
 		auto& pExt = funExpr->getNodeManager().getLangExtension<PointerExtension>();
 		return builder.callExpr(pExt.getPtrOfFunction(), funExpr);
 	}
-	
+
 	ExpressionPtr buildPtrToArray(const ExpressionPtr& ptrExpr) {
 		assert_pred1(isPointer, ptrExpr) << "Trying to build an array from non-ptr.";
 		IRBuilder builder(ptrExpr->getNodeManager());
 		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
 		return builder.callExpr(pExt.getPtrToArray(), ptrExpr);
 	}
-	
+
 	ExpressionPtr buildPtrCast(const ExpressionPtr& ptrExpr, bool newConst, bool newVolatile) {
 		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ptr cast from non-ptr.";
 		PointerType srcTy(ptrExpr->getType());
@@ -238,7 +268,7 @@ namespace lang {
 		auto& bmExt = ptrExpr->getNodeManager().getLangExtension<BooleanMarkerExtension>();
 		return builder.callExpr(pExt.getPtrCast(), ptrExpr, bmExt.getMarkerTypeLiteral(newConst), bmExt.getMarkerTypeLiteral(newVolatile));
 	}
-	
+
 	ExpressionPtr buildPtrReinterpret(const ExpressionPtr& ptrExpr, const TypePtr& newElementType) {
 		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ptr reinterpret from non-ptr.";
 		PointerType srcTy(ptrExpr->getType());
@@ -284,13 +314,13 @@ namespace lang {
 
 		auto assertPtr = [&](const ExpressionPtr& exp) {
 			assert_pred1(isPointer, exp) << "Trying to build a ptr operation from non-ptr:"
-				<< "\n lhs: " << *lhs << "\n  - of type: " << *lhs->getType() 
+				<< "\n lhs: " << *lhs << "\n  - of type: " << *lhs->getType()
 				<< "\n rhs: " << *rhs << "\n  - of type: " << *rhs->getType()
 				<< "\n op: " << op;
 		};
 		auto assertInt = [&](const ExpressionPtr& exp) {
 			assert_pred1(builder.getLangBasic().isInt, exp->getType()) << "Trying to build a ptr add/sub with non-int"
-				<< "\n lhs: " << *lhs << "\n  - of type: " << *lhs->getType() 
+				<< "\n lhs: " << *lhs << "\n  - of type: " << *lhs->getType()
 				<< "\n rhs: " << *rhs << "\n  - of type: " << *rhs->getType()
 				<< "\n op: " << op;
 		};

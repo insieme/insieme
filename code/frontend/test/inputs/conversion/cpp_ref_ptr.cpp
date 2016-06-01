@@ -44,13 +44,13 @@ int* gen_ptr() { return g; }
 int main() {
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
-		var ref<ptr<int<4>>,f,f,plain> v1 = ptr_from_ref(v0);
-		var ref<int<4>,f,f,cpp_ref> v2 = v0;
-		var ref<int<4>,f,f,plain> v3 = *ptr_to_ref(*v1);
-		var ref<ptr<int<4>>,f,f,plain> v4 = ptr_from_ref(ref_cast(v2, type_lit(f), type_lit(f), type_lit(plain)));
-		var ref<int<4>,f,f,cpp_ref> v5 = ptr_to_ref(*v1);
-	})")
+    var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+    var ref<ptr<int<4>>,f,f,plain> v1 = ptr_from_ref(v0);
+    var ref<int<4>,f,f,cpp_ref> v2 = v0;
+    var ref<int<4>,f,f,plain> v3 = *ptr_to_ref(*v1);
+    var ref<ptr<int<4>>,f,f,plain> v4 = ptr_from_ref(ref_cast(v2, type_lit(f), type_lit(f), type_lit(plain)));
+    var ref<int<4>,f,f,cpp_ref> v5 = ptr_to_ref(*v1);
+})")
 	{
 		int i;
 		int* i_ptr = &i;
@@ -65,7 +65,7 @@ int main() {
 		def IMP_take_ref = (a: ref<int<4>,f,f,cpp_ref>) -> unit {};
 		def IMP_take_ptr = (a: ptr<int<4>>) -> unit {};
 		{
-			var ref<int<4>,f,f,plain> v0 = v0;
+			var ref<int<4>,f,f,plain> v0;
 			var ref<ptr<int<4>>,f,f,plain> v1 = ptr_from_ref(v0);
 			var ref<int<4>,f,f,cpp_ref> v2 = v0;
 

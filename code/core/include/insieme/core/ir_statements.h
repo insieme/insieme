@@ -191,21 +191,72 @@ namespace core {
 		}
 	IR_NODE_END()
 
+	// ------------------------------------- Declaration ---------------------------------
+
+	/**
+	 * The accessor associated to the declaration support node.
+	 */
+	IR_NODE_ACCESSOR(Declaration, Support, Type, Expression)
+
+		/**
+		 * Obtains the type being declared.
+		 */
+		IR_NODE_PROPERTY(Type, Type, 0);
+
+		/**
+		 * Obtains the initialization value of the declared type.
+		 */
+		IR_NODE_PROPERTY(Expression, Initialization, 1);
+
+	IR_NODE_END()
+
+	/**
+	 * The support node used to represent declarations within the IR.
+	 */
+	IR_NODE(Declaration, Support)
+	  protected:
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const;
+
+	  public:
+		/**
+		 * This static factory method allows to obtain a declaration instance
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type to be declared
+		 * @param initExpression the expression initializing the given variable
+		 * @return the requested type instance managed by the given manager
+		 */
+		static DeclarationPtr get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& initExpression) {
+			return manager.get(Declaration(type, initExpression));
+		}
+	IR_NODE_END()
+
+
 	// ---------------------------------------- Declaration Statement ------------------------------
 
 	/**
 	 * The accessor associated to the declaration statement.
 	 */
-	IR_NODE_ACCESSOR(DeclarationStmt, Statement, Variable, Expression)
-		/**
-		 * Obtains a reference to the variable defined by this declaration.
-		 */
-		IR_NODE_PROPERTY(Variable, Variable, 0);
+	IR_NODE_ACCESSOR(DeclarationStmt, Statement, Declaration, Variable)
 
 		/**
-		 * Obtains a reference to the initialization value of the new variable.
+		 * Obtains the declaration support node used by this declaration statement.
 		 */
-		IR_NODE_PROPERTY(Expression, Initialization, 1);
+		IR_NODE_PROPERTY(Declaration, Declaration, 0);
+
+		/**
+		 * Obtains the variable being bound in this declaration statement.
+		 */
+		IR_NODE_PROPERTY(Variable, Variable, 1);
+
+		Ptr<const Expression> getInitialization() const {
+			return getDeclaration()->getInitialization();
+		}
+
 	IR_NODE_END()
 
 	/**
@@ -216,7 +267,7 @@ namespace core {
 		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream & out) const;
+		virtual std::ostream& printTo(std::ostream& out) const;
 
 	  public:
 		/**
@@ -228,9 +279,19 @@ namespace core {
 		 * @param initExpression the initial value of the new variable
 		 * @return the requested type instance managed by the given manager
 		 */
-		static DeclarationStmtPtr get(NodeManager & manager, const VariablePtr& variable, const ExpressionPtr& initExpression) {
-			return manager.get(DeclarationStmt(variable, initExpression));
-		}
+		static DeclarationStmtPtr get(NodeManager& manager, const VariablePtr& variable, const ExpressionPtr& initExpression);
+
+		/**
+		 * This static factory method allows to obtain a declaration statement instance
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param declaration the underlying declaration node
+		 * @param variable the variable to be declared
+		 * @return the requested type instance managed by the given manager
+		 */
+		static DeclarationStmtPtr get(NodeManager& manager, const DeclarationPtr& declaration, const VariablePtr& variable);
+
 	IR_NODE_END()
 
 
@@ -470,9 +531,7 @@ namespace core {
 		 * @return the requested type instance managed by the given manager
 		 */
 		static ForStmtPtr get(NodeManager & manager, const VariablePtr& iterator, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step,
-							  const CompoundStmtPtr& body) {
-			return get(manager, DeclarationStmt::get(manager, iterator, start), end, step, body);
-		}
+							  const CompoundStmtPtr& body);
 
 	IR_NODE_END()
 
@@ -797,17 +856,26 @@ namespace core {
 	/**
 	 * The accessor associated to the return statement.
 	 */
-	IR_NODE_ACCESSOR(ReturnStmt, Statement, Expression, Variable)
+	IR_NODE_ACCESSOR(ReturnStmt, Statement, Declaration)
 		/**
-		 * Obtains a reference to the expression associated to this return statement.
+		 * Obtains the declaration support node associated to this return statement.
 		 */
-		IR_NODE_PROPERTY(Expression, ReturnExpr, 0);
+		IR_NODE_PROPERTY(Declaration, ReturnDeclaration, 0);
 
 		/**
-		 * Obtains a reference to the implicit variable associated to this return statement.
+		 * Obtains the expression associated to this return statement.
 		 */
-		IR_NODE_PROPERTY(Variable, ReturnVar, 1);
-		
+		Ptr<const Expression> getReturnExpr() const {
+			return getReturnDeclaration()->getInitialization();
+		}
+
+		/**
+		 * Obtains the return type associated to this return statement.
+		 */
+		Ptr<const Type> getReturnType() const {
+			return getReturnDeclaration()->getType();
+		}
+
 	IR_NODE_END()
 
 	/**
@@ -830,11 +898,11 @@ namespace core {
 		 *
 		 * @param manager the manager used for maintaining instances of this class
 		 * @param returnExpr the expression forming the return value
-		 * @param returnVar the implicit variable associated with this return
+		 * @param returnType the type associated with this return
 		 * @return the requested type instance managed by the given manager
 		 */
-		static ReturnStmtPtr get(NodeManager & manager, const ExpressionPtr& returnExpr, const VariablePtr& returnVar) {
-			return manager.get(ReturnStmt(returnExpr, returnVar));
+		static ReturnStmtPtr get(NodeManager & manager, const ExpressionPtr& returnExpr, const TypePtr& returnType) {
+			return manager.get(ReturnStmt(Declaration::get(manager, returnType, returnExpr)));
 		}
 	IR_NODE_END()
 

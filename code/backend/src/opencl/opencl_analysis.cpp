@@ -60,7 +60,7 @@ namespace insieme {
 namespace backend {
 namespace opencl {
 namespace analysis {
-	
+
 	using namespace insieme::annotations::opencl;
 
 	namespace {
@@ -631,7 +631,7 @@ namespace analysis {
 		if (!lambdaExpr) return base;
 
 		core::VariableSet vars;
-		for_each(make_paired_range(callExpr->getArguments(), lambdaExpr->getLambda()->getParameters()),
+		for_each(make_paired_range(callExpr->getArgumentList(), lambdaExpr->getLambda()->getParameters()),
 		[&](const std::pair<const core::ExpressionPtr, const core::VariablePtr>& pair) {
 			// note vars for later
 			vars.insert(pair.second);

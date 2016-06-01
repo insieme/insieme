@@ -72,10 +72,10 @@ namespace backend {
 	PreProcessorPtr getBasicPreProcessorSequence(BasicPreprocessorFlags options) {
 		vector<PreProcessorPtr> steps;
 		if(!(options & SKIP_POINTWISE_EXPANSION)) { steps.push_back(makePreProcessor<InlinePointwise>()); }
-		// steps.push_back(makePreProcessor<RedundancyElimination>());		// optional - disabled for performance reasons
 		steps.push_back(makePreProcessor<CorrectRecVariableUsage>());
 		steps.push_back(makePreProcessor<RecursiveLambdaInstantiator>());
 		steps.push_back(makePreProcessor<RefCastIntroducer>());
+		steps.push_back(makePreProcessor<RefDeclEliminator>());
 		return makePreProcessor<PreProcessingSequence>(steps);
 	}
 
@@ -117,7 +117,8 @@ namespace backend {
 
 			// check whether current node is a target of interest
 			auto call = ptr.isa<core::CallExprPtr>();
-			if (!call) return ptr->substitute(manager, *this);		// not of interest
+			if(!call) return ptr->substitute(manager, *this);		// not of interest
+			auto callArgs = core::transform::extractArgExprsFromCall(call);
 
 			// get the (potential) pointwise operator
 			auto pointwiseOp = call->getFunctionExpr();
@@ -127,8 +128,8 @@ namespace backend {
 			if (!arrayModule.isCallOfArrayPointwise(pointwiseOp)) return ptr->substitute(manager, *this);
 
 			// extract argument types
-			core::TypePtr arg0Type = call[0]->getType();
-			core::TypePtr arg1Type = call[1]->getType();
+			core::TypePtr arg0Type = callArgs[0]->getType();
+			core::TypePtr arg1Type = callArgs[1]->getType();
 			core::TypePtr resType = call->getType();
 
 			// check argument and result types!
@@ -144,7 +145,7 @@ namespace backend {
 			core::TypePtr arg1ElementType = core::lang::ArrayType(arg1Type).getElementType();
 
 			// extract operator
-			core::ExpressionPtr op = pointwiseOp.as<core::CallExprPtr>()[0];
+			core::ExpressionPtr op = pointwiseOp.as<core::CallExprPtr>()->getArgument(0);
 
 			// create new lambda, realizing the point-wise operation
 			core::IRBuilder builder(manager);
@@ -173,7 +174,7 @@ namespace backend {
 
 			// construct substitute ...
 			core::LambdaExprPtr substitute = builder.lambdaExpr(funType, toVector(v1, v2), body);
-			return builder.callExpr(resType, substitute, call->getArguments())->substitute(manager, *this);
+			return builder.callExpr(resType, substitute, callArgs)->substitute(manager, *this);
 		}
 	};
 
@@ -205,6 +206,11 @@ namespace backend {
 	namespace cl = core::lang;
 
 	core::NodePtr RefCastIntroducer::process(const Converter& converter, const core::NodePtr& code) {
+		auto builtInLimiter = [](const core::NodePtr& cur) {
+			if(core::lang::isBuiltIn(cur)) return core::transform::ReplaceAction::Prune;
+			return core::transform::ReplaceAction::Process;
+		};
+
 		// 1) declaration stmts
 		auto retCode = core::transform::transformBottomUpGen(code, [](const core::DeclarationStmtPtr& decl) {
 			if(cl::isReference(decl->getVariable()) && cl::isReference(decl->getInitialization())) {
@@ -217,12 +223,12 @@ namespace backend {
 				}
 			}
 			return decl;
-		}, core::transform::globalReplacement);
+		}, builtInLimiter);
 
 		// 2) returns
 		retCode = core::transform::transformBottomUpGen(retCode, [](const core::ReturnStmtPtr& ret) {
-			if(cl::isReference(ret->getReturnVar()) && cl::isReference(ret->getReturnExpr())) {
-				cl::ReferenceType varT(ret->getReturnVar()), initT(ret->getReturnExpr());
+			if(cl::isReference(ret->getReturnType()) && cl::isReference(ret->getReturnExpr())) {
+				cl::ReferenceType varT(ret->getReturnType()), initT(ret->getReturnExpr());
 				if(!varT.isPlain() && initT.isPlain()) {
 					core::ReturnStmtAddress addr(ret);
 					auto replacement = core::transform::replaceAddress(ret->getNodeManager(), addr->getReturnExpr(),
@@ -231,9 +237,25 @@ namespace backend {
 				}
 			}
 			return ret;
-		}, core::transform::globalReplacement);
+		}, builtInLimiter);
 
 		return retCode;
+	}
+
+	core::NodePtr RefDeclEliminator::process(const Converter& converter, const core::NodePtr& code) {
+		auto& refExt = code->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+		return core::transform::transformBottomUpGen(
+		    code,
+		    [&refExt](const core::CallExprPtr& call) {
+			    if(refExt.isCallOfRefDecl(call)) {
+				    return core::lang::buildRefTemp(core::analysis::getReferencedType(call->getType())).as<core::CallExprPtr>();
+			    }
+			    return call;
+			},
+		    [&converter](const core::NodePtr& cur) {
+			    return converter.getFunctionManager().isBuiltIn(cur) ? core::transform::ReplaceAction::Prune : core::transform::ReplaceAction::Process;
+			});
+		return code;
 	}
 
 } // end namespace backend

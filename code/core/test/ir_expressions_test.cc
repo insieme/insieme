@@ -199,12 +199,12 @@ namespace core {
 		for(auto b : bindings) {
 			compVal.push_back(builder.lambdaBinding(b.first, b.second));
 		}
-		
+
 		// test definition node
 		for(auto c : compVal) {
 			EXPECT_TRUE(analysis::contains(definition, c));
 		}
-		
+
 		// create recursive lambda nodes
 		LambdaExprPtr even = builder.lambdaExpr(evenVar, definition);
 		LambdaExprPtr odd = builder.lambdaExpr(oddVar, definition);
@@ -252,20 +252,24 @@ namespace core {
 		LiteralPtr constantA = builder.literal(typeA, "12");
 		LiteralPtr constantB = builder.literal(typeA, "14");
 
-		CallExprPtr callA = builder.callExpr(funA, toVector<ExpressionPtr>());
-		CallExprPtr callB = builder.callExpr(funB, toVector<ExpressionPtr>(constantA));
-		CallExprPtr callC = builder.callExpr(funC, toVector<ExpressionPtr>(constantA, constantB));
+		auto callBArg1 = builder.declaration(typeA, constantA);
+		auto callCArg1 = builder.declaration(typeA, constantA);
+		auto callCArg2 = builder.declaration(typeA, constantB);
 
-		EXPECT_EQ(callA->getArguments(), toVector<ExpressionPtr>());
-		EXPECT_EQ(callB->getArguments(), toVector<ExpressionPtr>(constantA));
-		EXPECT_EQ(callC->getArguments(), toVector<ExpressionPtr>(constantA, constantB));
+		CallExprPtr callA = builder.callExpr(typeRes, funA, toVector<ExpressionPtr>());
+		CallExprPtr callB = builder.callExpr(typeRes, funB, toVector<DeclarationPtr>(callBArg1));
+		CallExprPtr callC = builder.callExpr(typeRes, funC, toVector<DeclarationPtr>(callCArg1, callCArg2));
+
+		EXPECT_EQ(callA->getArgumentList(), toVector<ExpressionPtr>());
+		EXPECT_EQ(callB->getArgumentList(), toVector<ExpressionPtr>(constantA));
+		EXPECT_EQ(callC->getArgumentList(), toVector<ExpressionPtr>(constantA, constantB));
 
 		CallExprAddress callC2 = CallExprAddress(callC);
-		EXPECT_EQ(callC2->getArguments(), toVector(callC2->getArgument(0), callC2->getArgument(1)));
+		EXPECT_EQ(callC2->getArgumentList(), toVector(callC2->getArgument(0), callC2->getArgument(1)));
 
 		basicExprTests(callA, typeRes, toVector<NodePtr>(typeRes, funA));
-		basicExprTests(callB, typeRes, toVector<NodePtr>(typeRes, funB, constantA));
-		basicExprTests(callC, typeRes, toVector<NodePtr>(typeRes, funC, constantA, constantB));
+		basicExprTests(callB, typeRes, toVector<NodePtr>(typeRes, funB, callBArg1));
+		basicExprTests(callC, typeRes, toVector<NodePtr>(typeRes, funC, callCArg1, callCArg2));
 	}
 
 	TEST(ExpressionsTest, BindExpr) {
@@ -355,7 +359,7 @@ namespace core {
 	TEST(ExpressionsTest, MemberAccessExpr) {
 		NodeManager manager;
 		IRBuilder builder(manager);
-		
+
 		StringValuePtr idA = StringValue::get(manager, "a");
 		StringValuePtr idB = StringValue::get(manager, "b");
 		TypePtr typeA = GenericType::get(manager, "typeA");
@@ -377,7 +381,7 @@ namespace core {
 
 		EXPECT_NE(access, access2);
 		EXPECT_NE(access2, access3);
-		EXPECT_EQ(access, access3);
+		EXPECT_EQ(builder.normalize(access), builder.normalize(access3));
 
 		EXPECT_EQ("composite_member_access(ref_deref((AP(rec ref_temp.{ref_temp=fun(ref<type<'a>,f,f,plain> v0) {return ref_alloc(ref_deref(v0), "
 		          "mem_loc_stack);}}(type<struct "
@@ -419,7 +423,7 @@ namespace core {
 
 		EXPECT_NE(access, access2);
 		EXPECT_NE(access2, access3);
-		EXPECT_EQ(access, access3);
+		EXPECT_EQ(builder.normalize(access), builder.normalize(access3));
 
 		EXPECT_EQ("tuple_member_access(tuple(1,2), 0, type<typeA>)", toString(*access));
 		EXPECT_EQ("tuple_member_access(tuple(1,2), 1, type<typeB>)", toString(*access2));
@@ -632,7 +636,7 @@ namespace core {
 
 		EXPECT_NE(*even->unroll(2), *even->peel(2));
 
-		// std::cout << "Unroll 0:\n" << core::printer::PrettyPrinter(even->unroll(0)) << "\n\n";
+		//std::cout << "Unroll 0:\n" << core::printer::PrettyPrinter(even->unroll(0)) << "\n\n";
 		// std::cout << "Unroll 1:\n" << core::printer::PrettyPrinter(even->unroll(1)) << "\n\n";
 		// std::cout << "Unroll 2:\n" << core::printer::PrettyPrinter(even->unroll(2)) << "\n\n";
 		// std::cout << "Unroll 5:\n" << core::printer::PrettyPrinter(even->unroll(5)) << "\n\n";

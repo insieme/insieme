@@ -151,6 +151,11 @@ namespace lang {
 		LANG_EXT_LITERAL(RefAlloc, "ref_alloc", "(type<'a>, memloc) -> ref<'a,f,f>")
 
 		/**
+		 * A literal for referencing memory allocated in a surrounding declaration context.
+		 */
+		LANG_EXT_LITERAL(RefDecl, "ref_decl", "(type<ref<'a,'c,'v,'k>>) -> ref<'a,'c,'v,'k>")
+
+		/**
 		 * A literal to free memory.
 		 */
 		LANG_EXT_LITERAL(RefDelete, "ref_delete", "(ref<'a,f,'v>) -> unit")
@@ -387,6 +392,8 @@ namespace lang {
 		 */
 		static GenericTypePtr create(const TypePtr& elementType, bool _const = false, bool _volatile = false, const Kind& kind = Kind::Plain);
 
+		static GenericTypePtr create(const TypePtr& elementType, const TypePtr& _const, const TypePtr& _volatile, const Kind& kind = Kind::Plain);
+
 		// an implicit converter of this wrapper to an IR type
 		operator GenericTypePtr() const {
 			return toType();
@@ -458,6 +465,11 @@ namespace lang {
 	bool isQualifiedReference(const NodePtr& node);
 
 	/**
+	 * Determines whether a given node is an assignment operation.
+	 */
+	bool isAssignment(const NodePtr& node);
+
+	/**
 	 * Determines the reference kind represented by the given input type literal
 	 */
 	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType);
@@ -479,8 +491,11 @@ namespace lang {
 	ExpressionPtr buildRefParentCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 	ExpressionPtr buildRefReinterpret(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 
+	bool isAnyRefCast(const NodePtr& node);
+
 	ExpressionPtr buildRefTemp(const TypePtr& type);
 	ExpressionPtr buildRefNull(const TypePtr& type);
+	ExpressionPtr buildRefDecl(const TypePtr& type);
 
 } // end namespace lang
 } // end namespace core

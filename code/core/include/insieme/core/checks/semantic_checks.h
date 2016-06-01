@@ -46,12 +46,6 @@ namespace checks {
 #include "insieme/core/checks/check_macros.inc"
 
 	/**
-	 * This check verifies that array indices are in range.
-	 * Currently only implemented for single element arrays generated from scalars.
-	 */
-	SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
-
-	/**
 	 * This check verifies that undefined(...) is only called within ref.new or ref.var.
 	 */
 	SIMPLE_CHECK(Undefined, CallExpr, false);
@@ -65,7 +59,7 @@ namespace checks {
 	 * This check verifies that functions with non-unit return type return something on every code path.
 	 */
 	SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
-	
+
 	/**
 	 * This check verifies that init expressions are executed on synthesizable locations.
 	 */

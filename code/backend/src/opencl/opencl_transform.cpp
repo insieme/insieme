@@ -69,10 +69,10 @@ namespace insieme {
 namespace backend {
 namespace opencl {
 namespace transform {
-	
+
 	using namespace insieme::annotations::opencl;
 	using namespace insieme::annotations::opencl_ns;
-	
+
 	namespace {
 		core::LiteralPtr toKernelLiteral(core::NodeManager& manager, const StepContext& sc, const core::LambdaExprPtr& oclExpr) {
 			core::IRBuilder builder(manager);
@@ -148,7 +148,7 @@ namespace transform {
 			return newExpr;
 		}
 	}
-	
+
 	core::CallExprPtr outline(core::NodeManager& manager, const core::StatementPtr& stmt, VariableRequirementList& requirements) {
 		// check whether it is allowed
 		assert_true(opencl::analysis::isOffloadAble(manager, stmt)) << "cannot outline given code: " << dumpColor(stmt);
@@ -354,7 +354,7 @@ namespace transform {
 				auto callExpr = expr.as<core::CallExprPtr>();
 				// use returnType deduction for this purpose
 				type = core::types::deduceReturnType(callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>(),
-					core::extractTypes(callExpr->getArguments()));
+					core::extractTypes(callExpr->getArgumentList()));
 				break;
 			}
 		case core::NT_BindExpr:
@@ -365,7 +365,7 @@ namespace transform {
 				// also use returnType deduction but use bound parameters
 				auto callExpr = bindExpr->getCall();
 				type = core::types::deduceReturnType(callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>(),
-					core::extractTypes(callExpr->getArguments()));
+					core::extractTypes(callExpr->getArgumentList()));
 				break;
 			}
 		default:
@@ -386,7 +386,7 @@ namespace transform {
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		auto& runExt = manager.getLangExtension<runtime::RuntimeExtension>();
-		
+
 		core::VariableList params;
 		auto wi = builder.variable(core::lang::buildRefType(core::lang::buildRefType(runExt.getWorkItemType())));
 		params.push_back(wi);
@@ -396,7 +396,7 @@ namespace transform {
 		// and finally ... THE lambda ladies and gentleman
 		return builder.lambdaExpr(oclExt.getNDRange(), params, builder.compoundStmt(body));
 	}
-	
+
 	core::LambdaExprPtr toIR(core::NodeManager& manager, const StepContext& sc, const VariableRequirementPtr& var) {
 		/*
 		the requirement is transformed into the following 'lambda'
@@ -423,7 +423,7 @@ namespace transform {
 				break;
 		case VariableRequirement::AccessMode::WO:
 				requirement->setAccessMode(DataRequirement::AccessMode::WO);
-				break;		
+				break;
 		case VariableRequirement::AccessMode::RW:
 				requirement->setAccessMode(DataRequirement::AccessMode::RW);
 				break;
@@ -466,7 +466,7 @@ namespace transform {
 		// and finally ... THE lambda ladies and gentleman
 		return builder.lambdaExpr(oclExt.getDataRequirement(), params, builder.compoundStmt(body));
 	}
-	
+
 	core::NodePtr FixParametersStep::process(const Converter& converter, const core::NodePtr& code) {
 		auto lambdaExpr = code.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return code;
@@ -532,7 +532,7 @@ namespace transform {
 		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
 		return Step::process(converter, newLambdaExpr);
 	}
-	
+
 	namespace {
 		class ForLoopReplacer : public core::transform::CachedNodeMapping {
 			core::NodeManager& manager;
@@ -675,7 +675,7 @@ namespace transform {
 			messages.printTo(ss);
 			LOG(ERROR) << "integrity checks for OpenCL Kernel code has failed:";
 			LOG(ERROR) << ss.str();
-			
+
 			assert_fail() << "see messages above!";
 		}
 

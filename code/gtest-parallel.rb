@@ -76,54 +76,59 @@ end
 
 puts "Running #{result.length} tests in #{ARGV.first} using #{chunks.length} threads"
 
-chunks.each do |x|
+chunks.each_with_index do |x,i|
 	threads << Thread.new() do
 		case_name = ""
 		status_string = ""
 		time = ""
 		old_case_name = ""
 		selection = x.map{|x| "#{x}"}.join(":")
-		regex = /^\[\s*([A-Z]+)\s*\]\s([a-zA-Z0-9_\.\/]+)(?:.*\(([0-9]+)\sms\))?/
-		Open3.popen3("#{ARGV.first} --gtest_filter=" + selection + " 2>/dev/null") do |stdin, stdout, stderr, wait_thr|
-		stdin.close
-		stdout.each do |line|
-			# grep for status string and case name - also matches "RUN" status lines
-			# write output when "RUN" for next test case or "tear-down" of the entire suite occurs
-			matched = regex.match(line)
-			if(matched != nil)
-				status_string = matched[1].strip
-				case_name = matched[2].strip
-				# not necessarily present
-				time = matched[3].strip if matched[3] != nil
+		regex = /\[\s*([A-Z]+)\s*\]\s([a-zA-Z0-9_\.\/]+\/\d+)(?:.*\(([0-9]+)\sms\))?/
+		cmd = "#{ARGV.first} --gtest_filter=" + selection + " 2>/dev/null"
+		Open3.popen3(cmd) do |stdin, stdout, stderr, wait_thr|
+			stdin.close
+			stdout.each do |line|
+				# grep for status string and case name - also matches "RUN" status lines
+				# write output when "RUN" for next test case or "tear-down" of the entire suite occurs
+				matched = regex.match(line)
+				if(matched != nil)
+					status_string = matched[1].strip
+					case_name = matched[2].strip
+					# not necessarily present
+					time = matched[3].strip if matched[3] != nil
 
-				result[case_name] = status_string
-				# first matching line per test case is always "RUN"
-				if(status_string == "RUN")
-					if(old_case_name != "")
-						# if there is no second one with "OK" for the previous test case, we assume that it failed
-						result[old_case_name] = "FAILED" if result[old_case_name] != "OK"
-						print "#{old_case_name.ljust(max_string_length)}\t#{result[old_case_name].rjust(8)} (#{time} ms)\n"
+					result[case_name] = status_string
+					# first matching line per test case is always "RUN"
+					if(status_string == "RUN")
+						if(old_case_name != "")
+							# if there is no second one with "OK" for the previous test case, we assume that it failed
+							if result[old_case_name] != "OK"
+								result[old_case_name] = "FAILED" 
+							end
+							print "#{old_case_name.ljust(max_string_length)}\t#{result[old_case_name].rjust(8)} (#{time} ms)\n"
+						end
+						old_case_name = case_name
 					end
-					old_case_name = case_name
 				end
+				# drop any gtest footer output
+				# output last test case explicitely if it crashed
+				matched = /tear-down/.match(line)
+				break if matched != nil
 			end
-			# drop any gtest footer output
-			# output last test case explicitely if it crashed
-			matched = /tear-down/.match(line)
-			break if matched != nil
-		end
-		# consume any leftover output
-		stdout.read if stdout.ready?
-#		stdout.close
-#		stderr.close
-		if(wait_thr.value != 0)
-			if(wait_thr.value.signaled?)
-				result[case_name] = "*** FAILED (signal #{wait_thr.value.termsig})"
-			else
-				result[case_name] = "*** FAILED (exit code #{wait_thr.value.exitstatus})"
+			# consume any leftover output
+			stdout.read if stdout.ready?
+	#		stdout.close
+	#		stderr.close
+			if(wait_thr.value != 0)
+				if(wait_thr.value.signaled?)
+					result[case_name] = "*** FAILED (signal #{wait_thr.value.termsig})"
+				else
+					result[case_name] = "*** FAILED (exit code #{wait_thr.value.exitstatus})"
+				end
+				puts "Failed command:"
+				puts cmd
 			end
-		end
-		print "#{case_name.ljust(max_string_length)}\t#{result[case_name].rjust(8)} (#{time} ms)\n"
+			print "#{case_name.ljust(max_string_length)}\t#{result[case_name].rjust(8)} (#{time} ms)\n"
 		end
 	end
 end

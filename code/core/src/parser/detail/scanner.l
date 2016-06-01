@@ -161,6 +161,7 @@ blank         [ \t]
 "catch"       return InspireParser::make_CATCH(loc);
 "throw"       return InspireParser::make_THROW(loc);
 "default"     return InspireParser::make_DEFAULT(loc);
+"delete"      return InspireParser::make_DELETE(loc);
 "continue"    return InspireParser::make_CONTINUE(loc);
 "break"       return InspireParser::make_BREAK(loc);
 

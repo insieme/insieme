@@ -110,7 +110,6 @@ namespace analysis {
 	 */
 	bool isObjectReferenceType(const GenericTypePtr& type);
 
-	
 	// ---------------------------- Constructors --------------------------------------
 
 	/**
@@ -120,21 +119,17 @@ namespace analysis {
 	 */
 	bool isConstructorCall(const core::ExpressionPtr& expr);
 
-	/**
-	 * Creates a default constructor for the given struct type.
-	 * @param type the type for which a default constructor should be created
-	 * @return the synthesized constructor
-	 */
-	LambdaExprPtr createDefaultConstructor(const TypePtr& type);
+	// ---------------------------- Defaulted Members --------------------------------------
 
 	/**
-	 * A check verifying whether the given lambda is a default a default constructor
-	 * for its target type.
-	 *
-	 * @param lambda the lambda to be tested
-	 * @return true if so, false otherwise
+	 * Returns a new lambda which has been marked to be a default member
 	 */
-	bool isDefaultConstructor(const LambdaExprPtr& lambda);
+	LambdaExprPtr markAsDefaultMember(const LambdaExprPtr& lambda);
+
+	/**
+	 * Checks whether the given lambda is marked as a default member
+	 */
+	bool isaDefaultMember(const LambdaExprPtr& lambda);
 
 } // end namespace analysis
 } // end namespace core

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -467,7 +467,7 @@ namespace encoder {
 				if(core::analysis::isCallOf(expr, nullFun)) return true;                                                                                       \
 				if(!core::analysis::isCallOf(expr, wrapFun)) return false;                                                                                     \
                                                                                                                                                                \
-				auto arg = expr.as<CallExprPtr>()[0];                                                                                                          \
+				auto arg = expr.as<CallExprPtr>()->getArgument(0);                                                                                             \
 				if(arg->getNodeType() != core::NT_Literal) { return false; }                                                                                   \
                                                                                                                                                                \
 				const core::TypePtr& type = arg->getType();                                                                                                    \

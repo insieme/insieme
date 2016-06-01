@@ -337,13 +337,13 @@ namespace parser {
 
 		EXPECT_TRUE(test_statement(nm, "def struct name { a : int<2>; };"
 				                       "{"
-			                           "    var name a;"
+			                           "    var ref<name> a;"
 			                           "}"));
 
 		EXPECT_TRUE(test_statement(nm, "def struct name { a : int<2>; };"
 				                       "alias collection = vector<class, 10>;"
 			                           "{"
-				                       "    var collection col;"
+				                       "    var ref<collection> col;"
 			                           "}"));
 
 		EXPECT_TRUE(test_statement(nm, "def struct somenewname { a : int<2>; };"
@@ -360,18 +360,15 @@ namespace parser {
 			                           "    var ref<someoldname> y;"
 			                           "}"));
 
-		//test return statements containing variables
+		// test return statements
 		EXPECT_TRUE(test_statement(nm, "def struct A { a : int<4>; };"
 		                               "def foo1 = () -> A {"
-		                               "  return A::(ref_temp(type_lit(A)));" // this is actually using wrong semantics now
+		                               "  return A::(ref_decl(type_lit(ref<A>)));" // this is the correct way to do it
 		                               "};"
-		                               "def foo2 = () -> A {"
-		                               "  return var ref<A> v0 = A::(v0);" // this is the correct way to do it
-		                               "};"
-		                               "def foo3 = () -> int<4> {"
+		                               "def foo2 = () -> int<4> {"
 		                               "  return 5;"
 		                               "};"
-		                               "def foo4 = () -> int<4> {"
+		                               "def foo3 = () -> int<4> {"
 		                               "  var ref<int<4>> v = 5;"
 		                               "  return v;"
 		                               "};"
@@ -379,7 +376,6 @@ namespace parser {
 		                               "  foo1();"
 		                               "  foo2();"
 		                               "  foo3();"
-		                               "  foo4();"
 		                               "}"));
 	}
 
@@ -584,7 +580,6 @@ TEST(After_Before_Test, Let) {
 		"alias class = name;"
 		"unit main() {  "
 		"    var ref<class> x;"
-		"    var fancy y;"
 		"    x.f();"
 		"    x.g();"
 		"}" ));
@@ -600,7 +595,7 @@ TEST(After_Before_Test, Let) {
 		"    }"
 		"};"
 		"unit main() {"
-		"    var name y;"
+		"    var ref<name> y;"
 		"}"
 		));
 	}
@@ -636,6 +631,14 @@ TEST(After_Before_Test, Let) {
 				                       "{"
 				                       "  var ref<A> a = foo1(a);"
 				                       "  var ref<A> b = foo2(b, 10);"
+				                       "}"));
+
+		EXPECT_TRUE(test_statement(nm, "def struct A {"
+				                       "  x : int<4>;"
+				                       "  dtor() { 5; }"
+				                       "};"
+				                       "{"
+				                       "  var ref<A> b = A::(b);"
 				                       "}"));
 
 	}

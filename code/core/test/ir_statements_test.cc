@@ -195,13 +195,12 @@ namespace core {
 
 		LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
 		IRBuilder builder(manager);
-		auto var = builder.variable(literal->getType(), 1337);
-		ReturnStmtPtr stmt = ReturnStmt::get(manager, literal, var);
+		ReturnStmtPtr stmt = ReturnStmt::get(manager, literal, literal->getType());
 
 		EXPECT_EQ("return 12", toString(*stmt));
 
 		// check hash codes, children and cloning
-		basicNodeTests(stmt, toVector<NodePtr>(literal, var));
+		basicNodeTests(stmt, toVector<NodePtr>(builder.declaration(literal->getType(), literal)));
 	}
 
 	TEST(StatementsTest, Goto) {
@@ -244,13 +243,13 @@ namespace core {
 		NodeManager manager;
 
 		LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
-		DeclarationStmtPtr stmt = DeclarationStmt::get(manager, Variable::get(manager, manager.getLangBasic().getInt4(), 1), literal);
+		auto var = Variable::get(manager, manager.getLangBasic().getInt4(), 1);
+		DeclarationStmtPtr stmt = DeclarationStmt::get(manager, var, literal);
 
 		EXPECT_EQ("int<4> v1 = 12", toString(*stmt));
 
 		// check hash codes, children and cloning
-		VariablePtr varExpr = Variable::get(manager, manager.getLangBasic().getInt4(), 1);
-		basicNodeTests(stmt, toVector<NodePtr>(varExpr, literal));
+		basicNodeTests(stmt, toVector<NodePtr>(Declaration::get(manager, manager.getLangBasic().getInt4(), literal), var));
 	}
 
 	TEST(StatementsTest, Compound) {

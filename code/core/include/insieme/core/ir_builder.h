@@ -467,6 +467,7 @@ namespace core {
 		// Declaration Statements
 		DeclarationStmtPtr declarationStmt(const ExpressionPtr& value) const;
 		DeclarationStmtPtr declarationStmt(const TypePtr& type, const ExpressionPtr& value) const;
+		DeclarationStmtPtr declarationStmt(const VariablePtr& value) const;
 
 		// Return Statement
 		ReturnStmtPtr returnStmt(const ExpressionPtr& retVal) const;
@@ -476,19 +477,32 @@ namespace core {
 		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const;
 
 		template <typename First, typename... Rest>
-		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const First& arg1, const Rest&... rest) const {
+		typename std::enable_if<!std::is_same<First, DeclarationPtr>::value, CallExprPtr>::type
+		callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const First& arg1, const Rest&... rest) const {
 			return callExpr(resultType, functionExpr, toVector<ExpressionPtr>(arg1, rest...));
+		}
+		template <typename First, typename... Rest>
+		typename std::enable_if<std::is_same<First, DeclarationPtr>::value, CallExprPtr>::type
+		callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const First& arg1, const Rest&... rest) const {
+			return callExpr(resultType, functionExpr, toVector<DeclarationPtr>(arg1, rest...));
 		}
 
 		// For the methods below, the return type is deduced from the functionExpr's function type
-		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments = vector<ExpressionPtr>()) const;
+		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionList& arguments = vector<ExpressionPtr>()) const;
 		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const NodeRange<ExpressionPtr>& range) const {
 			return callExpr(functionExpr, (ExpressionList)range);
 		}
+		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const DeclarationList& arguments) const;
 
 		template <typename First, typename... Rest>
-		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const First& arg1, const Rest&... rest) const {
+		typename std::enable_if<!std::is_same<First, DeclarationPtr>::value, CallExprPtr>::type
+		callExpr(const ExpressionPtr& functionExpr, const First& arg1, const Rest&... rest) const {
 			return callExpr(functionExpr, toVector<ExpressionPtr>(arg1, rest...));
+		}
+		template <typename First, typename... Rest>
+		typename std::enable_if<std::is_same<First, DeclarationPtr>::value, CallExprPtr>::type
+		callExpr(const ExpressionPtr& functionExpr, const First& arg1, const Rest&... rest) const {
+			return callExpr(functionExpr, toVector<DeclarationPtr>(arg1, rest...));
 		}
 
 		// Lambda Nodes

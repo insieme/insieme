@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -41,6 +41,9 @@
 namespace insieme {
 namespace core {
 
+	std::ostream& Declaration::printTo(std::ostream& out) const {
+		return out << "decl " <<  *getType() << " : " << *getInitialization();
+	}
 
 	std::ostream& DeclarationStmt::printTo(std::ostream& out) const {
 		return out << *getVariable()->getType() << " " << *getVariable() << " = " << *getInitialization();
@@ -66,6 +69,19 @@ namespace core {
 
 	std::ostream& TryCatchStmt::printTo(std::ostream& out) const {
 		return out << "try " << *getBody() << " " << join(" ", getClauses(), print<deref<CatchClausePtr>>());
+	}
+
+	DeclarationStmtPtr DeclarationStmt::get(NodeManager & manager, const VariablePtr& variable, const ExpressionPtr& initExpression) {
+		return manager.get(DeclarationStmt(Declaration::get(manager, variable->getType(), initExpression), variable));
+	}
+
+	DeclarationStmtPtr DeclarationStmt::get(NodeManager& manager, const DeclarationPtr& declaration, const VariablePtr& variable) {
+		return manager.get(DeclarationStmt(declaration, variable));
+	}
+
+	ForStmtPtr ForStmt::get(NodeManager& manager, const VariablePtr& iterator, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step,
+	                        const CompoundStmtPtr& body) {
+		return get(manager, DeclarationStmt::get(manager, iterator, start), end, step, body);
 	}
 
 } // end namespace core
