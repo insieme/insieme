@@ -923,7 +923,7 @@ bool irt_opencl_init_logging(irt_opencl_context *context)
 		}
 
 		if (fail) {
-			OCL_WARN("invalid log_level supplied: %s", value);
+			OCL_WARN("invalid log_level supplied: %s\n", value);
 		} else {
 			context->policy.log_level = (enum irt_opencl_log_level) log_level;
 		}
@@ -954,7 +954,7 @@ bool irt_opencl_init_policy(irt_opencl_context *context)
 		}
 
 		if (fail) {
-			OCL_WARN("invalid device location supplied: %s", value);
+			OCL_WARN("invalid device location supplied: %s\n", value);
 		} else {
 			context->policy.location = location;
 			context->policy.select_kernel_data = &irt_opencl_select_kernel_data_user_defined;
@@ -981,7 +981,7 @@ void irt_opencl_init_context(irt_context *context, irt_opencl_kernel_implementat
 	OCL_DEBUG("initializing logging...\n");
 	result = irt_opencl_init_logging(opencl_context);
 	if (!result) {
-		OCL_WARN("failed to initialize policy");
+		OCL_WARN("failed to initialize policy\n");
 		return;
 	}
 
@@ -989,7 +989,7 @@ void irt_opencl_init_context(irt_context *context, irt_opencl_kernel_implementat
 	/* device discovery phase is the first step within our impl */
 	result = irt_opencl_init_platforms(opencl_context);
 	if (!result) {
-		OCL_WARN("failed to initialize platforms");
+		OCL_WARN("failed to initialize platforms\n");
 		return;
 	}
 
@@ -997,13 +997,14 @@ void irt_opencl_init_context(irt_context *context, irt_opencl_kernel_implementat
 	/* device discovery is done, initialize the kernel table */
 	result = irt_opencl_init_kernel_table(opencl_context, kernel_table);
 	if (!result) {
-		OCL_WARN("failed to initialize kernels");
+		OCL_WARN("failed to initialize kernels\n");
 		return;
 	}
 
+	OCL_DEBUG("initializing policy...\n");
 	result = irt_opencl_init_policy(opencl_context);
 	if (!result) {
-		OCL_WARN("failed to initialize policy");
+		OCL_WARN("failed to initialize policy\n");
 		return;
 	}
 
