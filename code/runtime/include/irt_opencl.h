@@ -33,16 +33,16 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
- 
+
 #pragma once
 #ifndef __GUARD_IRT_OCL_H
 #define __GUARD_IRT_OCL_H
 
 #include "error_handling.h"
 #include "abstraction/threads.h"
- 
+
 #include <CL/cl.h>
- 
+
 enum irt_opencl_log_level {
 	IRT_OPENCL_LOG_LEVEL_DEBUG = 0,
 	IRT_OPENCL_LOG_LEVEL_INFO  = 1,
@@ -56,7 +56,7 @@ extern void irt_opencl_printf(enum irt_opencl_log_level level, const char *forma
 #define OCL_WARN(format, ...)  irt_opencl_printf(IRT_OPENCL_LOG_LEVEL_WARN, format, ##__VA_ARGS__)
 #define OCL_ERROR(format, ...) irt_opencl_printf(IRT_OPENCL_LOG_LEVEL_ERROR, format, ##__VA_ARGS__)
 
-enum _irt_opencl_data_mode { 
+enum _irt_opencl_data_mode {
     IRT_OPENCL_DATA_MODE_READ_ONLY,
     IRT_OPENCL_DATA_MODE_WRITE_ONLY,
     IRT_OPENCL_DATA_MODE_READ_WRITE
@@ -125,20 +125,38 @@ struct _irt_opencl_location {
 	cl_uint device;
 };
 typedef struct _irt_opencl_location irt_opencl_location;
+/* forward decl the device such that the platform can use it */
+struct _irt_opencl_device;
+/**
+ * represents a platform within the context of openl
+ */
+struct _irt_opencl_platform {
+  /* logical id of this platform */
+  cl_uint id;
+  /* opencl associated id */
+  cl_platform_id platform_id;
+  /* context which is used for all devices bound to this platform */
+  cl_context context;
+  /* number od irt_opencl_device structs linked into  */
+  unsigned num_devices;
+  /* points to the first discovered device */
+  struct _irt_opencl_device *device;
+  /* pointer to the next platform -- models a single linked list */
+  struct _irt_opencl_platform *next;
+};
+typedef struct _irt_opencl_platform irt_opencl_platform;
 /**
  * represents an OpenCL capable device including its properties
  */
 struct _irt_opencl_device {
 	cl_device_id device_id;
-	cl_context context;
 	cl_command_queue queue;
-
+  /* platform which hosts this device */
+  irt_opencl_platform *platform;
 	/* logical device nr */
 	irt_opencl_location location;
-
 	/* lock to protect e.g. the queue from concurrent access */
 	irt_spinlock lock;
-	
 	/* what follows is a list of properties */
 	cl_uint address_bits;
 	cl_bool available;
@@ -164,10 +182,9 @@ struct _irt_opencl_device {
 	cl_uint mem_base_addr_align;
 	cl_uint min_data_type_align_size;
 	char *name;
-	cl_platform_id platform_id;
 	cl_device_fp_config single_fp_config;
 	cl_device_type device_type;
-	
+
 	/* pointer to the next device -- models a single linked list */
 	struct _irt_opencl_device *next;
 };
@@ -207,12 +224,9 @@ typedef struct _irt_opencl_kernel_implementation irt_opencl_kernel_implementatio
  * models the OpenCL context within IRT
  */
 struct _irt_opencl_context {
-	/* context which holds all devices of any type */
-	cl_context context;
 	unsigned num_platforms;
-	unsigned num_devices;
-	/* points to the first discovered device */
-	irt_opencl_device *device;
+  /* points to the first discovered platform */
+  irt_opencl_platform *platform;
 	/* table which holds all kernels */
 	unsigned kernel_table_size;
     irt_opencl_kernel_implementation** kernel_table;
@@ -224,7 +238,6 @@ struct _irt_opencl_context {
 	} policy;
 };
 typedef struct _irt_opencl_context irt_opencl_context;
- 
 /**
  * initializes the opencl context
  *
@@ -245,7 +258,7 @@ void irt_opencl_cleanup_context();
 /**
  * issues the execution of an opencl kernel
  *
- * @param id id of kernel to execute 
+ * @param id id of kernel to execute
  * @param ndrange pointer to function which returns the ndrange for this execution
  * @param num_requirements number of requirements pointed to by the next argument
  * @param requirements pointer to an array of irt_opencl_requirement_func pointers
@@ -259,4 +272,3 @@ void irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
                         unsigned num_optionals, ...);
 
 #endif // ifndef __GUARD_IRT_OPENCL_H
-
