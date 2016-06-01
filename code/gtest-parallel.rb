@@ -83,7 +83,7 @@ chunks.each_with_index do |x,i|
 		time = ""
 		old_case_name = ""
 		selection = x.map{|x| "#{x}"}.join(":")
-		regex = /\[\s*([A-Z]+)\s*\]\s([a-zA-Z0-9_\.\/]+\/\d+)(?:.*\(([0-9]+)\sms\))?/
+		regex = /\[\s*([A-Z]+)\s*\]\s([a-zA-Z0-9_\.\/]+)(?:.*\(([0-9]+)\sms\))?/
 		cmd = "#{ARGV.first} --gtest_filter=" + selection + " 2>/dev/null"
 		Open3.popen3(cmd) do |stdin, stdout, stderr, wait_thr|
 			stdin.close
