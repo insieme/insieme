@@ -1,4 +1,7 @@
-
+#
+# Macro to configure souffle-related variables and paths, as well as
+# soufflé-code defines, directory creation, etc...
+#
 macro(configure_souffle)
 
 	# Settings
@@ -18,7 +21,7 @@ macro(configure_souffle)
 	include_directories(SYSTEM ${souffle_output_base})
 
 	# Find the Dough script, a preprocessor script
-	set(souffle_dough ${CMAKE_SOURCE_DIR}/code/analysis/src/souffle_dough.sh)
+	set(souffle_dough ${CMAKE_SOURCE_DIR}/code/analysis/src/datalog/souffle_dough.sh)
 
 	# Find Soufflé installation directory
 	set(souffle_home $ENV{INSIEME_LIBS_HOME}/souffle-latest CACHE PATH "Souffle Home Directory")	# TODO: use a FindSouffle to locate it
@@ -34,20 +37,23 @@ endmacro(configure_souffle)
 
 
 
+#
+# Macro to execute the Dough preprocessor, a script which name-mangles
+# the datalog files to provide some sort of namespacing in the dl header files.
+#
+# Parameters:
+# input dir e.g. '${insieme_code_dir}/analysis/src/datalog'
+# output dir e.g. '${CMAKE_CURRENT_BINARY_DIR}/souffle_tmp'
+#
 macro(souffle_run_dough input_dir output_dir)
-
-	# Glob the dl-files to add them as a dependency
-	file(GLOB souffle_original_dls         ${input_dir}/*.dl)
-	file(GLOB souffle_original_dl_includes ${input_dir}/include/*.dl)
 
 	# Execute on given input dir
 	add_custom_command(
 		COMMAND ${souffle_dough}
 		ARGS ${input_dir} ${output_dir}
-		COMMENT "todo"
-		DEPENDS ${souffle_original_dls} ${souffle_original_dl_includes}
+		COMMENT "Executing Dough, the Soufflé preprocessor"
 		WORKING_DIRECTORY ${input_dir}
-		OUTPUT ${souffle_dough_done}
+		OUTPUT ${souffle_dough_done}  # dummy file for dependencies, not actually created
 	)
 
 endmacro(souffle_run_dough)
