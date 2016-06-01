@@ -60,7 +60,7 @@ namespace insieme {
 namespace backend {
 namespace opencl {
 namespace analysis {
-	
+
 	using namespace insieme::annotations::opencl;
 
 	namespace {
@@ -205,9 +205,9 @@ namespace analysis {
 			// the deduction is atm purely based on the type
 			auto type = getReferencedType(var->getType());
 			// at this point we try to deduce the correct requirement
-			core::ExpressionPtr size;
-			core::ExpressionPtr start;
-			core::ExpressionPtr end;
+			core::ExpressionList size;
+			core::ExpressionList start;
+			core::ExpressionList end;
 			if (core::lang::isPlainReference(var->getType()) && core::lang::isPointer(getElementType(var->getType()))) {
 				// build the literal which represents malloc only once
 				auto declMalloc = builder.literal(insieme::utils::mangle("malloc"), builder.parseType("(uint<8>) -> ptr<unit>"));
@@ -230,11 +230,10 @@ namespace analysis {
 
 					// transform::outline will use our analysis module to pass any
 					// required variables into the lambda later on!
-					size  = builder.div(core::analysis::getArgument(castee, 0),
-										builder.callExpr(manager.getLangBasic().getSizeof(),
-														 builder.getTypeLiteral(getUnderlyingType(type))));
-					start = builder.uintLit(0);
-					end   = size;
+					size.push_back(builder.div(core::analysis::getArgument(castee, 0),
+						builder.callExpr(manager.getLangBasic().getSizeof(), builder.getTypeLiteral(getUnderlyingType(type)))));
+					start.push_back(builder.uintLit(0));
+					end.push_back(size.back());
 					// mark this as success
 					success = true;
 					return true;
@@ -242,27 +241,32 @@ namespace analysis {
 
 				if (!success) return nullptr;
 			} else if (isPrimitive(type)) {
-				size = builder.uintLit(1);
-				start = builder.uintLit(0);
-				end = size;
+				size.push_back(builder.uintLit(1));
+				start.push_back(builder.uintLit(0));
+				end.push_back(size.back());
 			} else if (core::lang::isFixedSizedArray(type)) {
-				core::lang::ArrayType arrayType = core::lang::ArrayType(type);
-				// element type must be primitive
-				if (!isPrimitive(arrayType.getElementType()))
-					return nullptr;
+				// recurse as long as it stays a fixed size one
+				do {
+					core::lang::ArrayType arrayType = core::lang::ArrayType(type);
+					unsigned numElements = arrayType.getNumElements();
+					// at this point we assume full-range
+					size.push_back(builder.uintLit(numElements));
+					start.push_back(builder.uintLit(0));
+					end.push_back(size.back());
+					// hope one level deeper
+					type = arrayType.getElementType();
+				} while (core::lang::isFixedSizedArray(type));
 
-				unsigned numElements = arrayType.getNumElements();
-				// at this point we assume full-range
-				size = builder.uintLit(numElements);
-				start = builder.uintLit(0);
-				end = size;
+				// the last inner-most element type must be primitive
+				if (!isPrimitive(type)) return nullptr;
 			} else
 				return nullptr;
 			// right now the access mode is determined solely using the type
 			auto accessMode = tryDeduceAccessMode(var->getType());
 			// generate a temporary variable to hold the type inforation
 			VariableRangeList ranges;
-			ranges.push_back(std::make_shared<VariableRange>(size, start, end));
+			for (unsigned i = 0; i < size.size(); ++i)
+				ranges.push_back(std::make_shared<VariableRange>(size[i], start[i], end[i]));
 			return std::make_shared<VariableRequirement>(builder.variable(var->getType()), accessMode, ranges);
 		}
 
