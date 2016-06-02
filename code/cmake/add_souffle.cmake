@@ -6,7 +6,6 @@ macro(configure_souffle)
 
 	# Settings
 	set(souffle_tmp_dir       ${CMAKE_CURRENT_BINARY_DIR}/souffle_tmp)
-	set(souffle_dough_done    ${souffle_tmp_dir}/preprocessor_done.txt)
 	set(souffle_output_base   ${CMAKE_CURRENT_BINARY_DIR}/souffle_gen)
 	set(souffle_output_path   ${souffle_output_base}/souffle/gen)
 
@@ -24,7 +23,7 @@ macro(configure_souffle)
 	set(souffle_dough ${CMAKE_SOURCE_DIR}/code/analysis/src/datalog/souffle_dough.sh)
 
 	# Find Soufflé installation directory
-	set(souffle_home $ENV{INSIEME_LIBS_HOME}/souffle-latest CACHE PATH "Souffle Home Directory")	# TODO: use a FindSouffle to locate it
+	set(souffle_home $ENV{INSIEME_LIBS_HOME}/souffle-latest CACHE PATH "Souffle Home Directory")
 
 	# Find Soufflé static header files
 	set(souffle_header_files ${souffle_home}/include)
@@ -50,7 +49,7 @@ macro(souffle_run_dough input_dir output_dir)
 	# Glob all the dl files to provide correct dependency creation
 	file(GLOB datalog_analysises_raw_dls         ${input_dir}/*.dl)
 	file(GLOB datalog_analysises_raw_include_dls ${input_dir}/include/*.dl)
-	
+
 	foreach (analysis_file ${datalog_analysises_raw_dls})
 		get_filename_component(analysis_name ${analysis_file} NAME_WE)
 		set(dough_output_files ${dough_output_files} ${output_dir}/${analysis_name}.dl)
@@ -60,7 +59,6 @@ macro(souffle_run_dough input_dir output_dir)
 		get_filename_component(analysis_name ${analysis_file} NAME_WE)
 		set(dough_output_files ${dough_output_files} ${output_dir}/include/${analysis_name}.dl)
 	endforeach()
-
 
 	# Execute on given input dir
 	add_custom_command(
@@ -102,7 +100,7 @@ macro(souffle_generate_cpp souffle_input_path souffle_dl_target souffle_include_
 		COMMAND ${souffle_binary}
 		ARGS -g ${souffle_output_file}.h ${souffle_input_file} ${include_argument}
 		COMMENT "Generating compiled soufflé datalog: ${souffle_dl_target}.h"
-	DEPENDS ${souffle_input_file} ${include_dl_dependencies}
+		DEPENDS ${souffle_input_file} ${include_dl_dependencies}
 		IMPLICIT_DEPENDS C ${souffle_input_file}
 		WORKING_DIRECTORY ${souffle_output_path}
 		OUTPUT ${souffle_output_file}.h
