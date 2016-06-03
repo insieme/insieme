@@ -64,16 +64,9 @@ add_dependencies(integration_tests insiemecc)
 set(ut_prefix  ut_driver )
 file(GLOB_RECURSE test_cases test/*.cc)
 
-insieme_find_package(NAME PAPI)
-if(NOT PAPI_FOUND)
-	#measure test run a runtime-thingy which sould use papi if available
-	# if papi is not available the measure test will fail therefore exclude measuretest if papi is not
-	# available
-	message(STATUS "Excluding measure tests")
-
-	# get measure unit tests, to be excluded if papi is not present
-	file(GLOB_RECURSE measure_test_cases test/measure*.cc)
-	list(REMOVE_ITEM test_cases ${measure_test_cases})
+if(USE_PAPI)
+	insieme_find_package(NAME PAPI)
+	add_definitions(-DUSE_PAPI)
 endif()
 
 foreach ( case_file ${test_cases})

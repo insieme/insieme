@@ -955,7 +955,13 @@ namespace measure {
 			return false;
 		});
 
-		if(usePapi) { modifiedCompiler.addFlag("-DIRT_USE_PAPI"); }
+		if(usePapi) { 
+			#ifndef USE_PAPI
+				LOG(ERROR) << "PAPI events requested, but compiled without PAPI support";
+			#else
+				modifiedCompiler.addFlag("-DIRT_USE_PAPI");
+			#endif
+		}
 
 		// build target code
 		auto binFile = buildBinary(regions, modifiedCompiler);
@@ -1137,9 +1143,11 @@ namespace measure {
 		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
 		compiler.addFlag("-DIRT_WORKER_SLEEPING");
 		compiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
-		compiler.addFlag("-DIRT_USE_PAPI");
+		#ifdef USE_PAPI
+			compiler.addFlag("-DIRT_USE_PAPI");
+			compiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi");
+		#endif
 		compiler.addFlag("-ldl -lrt -lpthread -lm");
-		compiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi");
 		compiler.addFlag("-Wno-unused-but-set-variable");
 		compiler.addFlag("-Wno-unused-variable");
 
