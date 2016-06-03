@@ -27,23 +27,25 @@ SET( CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING
     "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel RelWithAsserts."
     FORCE )
 
-# disable energy stuff if not explicitely requested
 option(USE_ENERGY "Enable energy capabilities" OFF)
+option(USE_PAPI "Enable PAPI support" OFF)
+
 if (NOT MSVC)
-	if(NOT USE_ENERGY)
+	if(USE_ENERGY)
+		message(STATUS "Enabling energy capabilities" )
+		# energy measurements require PAPI for hardware specs support
+		set(USE_PAPI ON)
+	else()
 		message(STATUS "Disabling energy capabilities" )
+		# disable energy stuff if not explicitely requested
 		add_definitions(-DDISABLE_ENERGY)
-	endif ( NOT USE_ENERGY)
-endif (NOT MSVC)
-# enable papi if requested
-option(USE_PAPI "Enable PAPI" OFF)
-if (NOT MSVC)
+	endif()
 	if(USE_PAPI)
 		message(STATUS "Enabling PAPI")
 	else()
 		message(STATUS "Disabling PAPI")
 	endif()
-endif()
+endif (NOT MSVC)
 
 # toggle shared vs. static MSVC runtime library linking
 option(MSVC_SHARED_RUNTIME "Use shared MSVC runtime linking" ON)
