@@ -322,6 +322,30 @@ namespace core {
 		EXPECT_EQ(exp_addr2, addr2[1]);
 	}
 
+TEST(NodeAddressTest, CloneTo) {
+	NodeManager nm1;
+	NodeManager nm2;
+
+	IRBuilder builder(nm1);
+
+	TypePtr typeA = builder.genericType("A", toVector<TypePtr>(builder.genericType("1"), builder.genericType("2")));
+	TypePtr typeB = builder.genericType("B", toVector<TypePtr>(builder.genericType("3")));
+	TypePtr typeC = builder.genericType("C", toVector<TypePtr>());
+
+	TypePtr root = builder.genericType("root", toVector(typeA, typeB, typeC));
+
+	EXPECT_EQ("root<A<1,2>,B<3>,C>", toString(*root));
+
+	NodeAddress rootAddress(root);
+
+	NodeAddress newRoot = rootAddress.cloneTo(nm2);
+
+	EXPECT_EQ(Address<const Type>::find(typeC, root), rootAddress.getAddressOfChild(2, 2));
+	EXPECT_EQ(Address<const Type>::find(typeC, newRoot), rootAddress.getAddressOfChild(2, 2));
+	EXPECT_EQ(Address<const Type>::find(typeC, newRoot), newRoot.getAddressOfChild(2, 2));
+
+}
+
 	TEST(NodeAddressTest, Visiting) {
 		NodeManager manager;
 		IRBuilder builder(manager);
