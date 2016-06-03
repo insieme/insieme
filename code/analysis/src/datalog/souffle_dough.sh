@@ -8,6 +8,7 @@ incdir="include"
 
 mangletoken="D474L06_"
 decltoken="decl"
+usetoken="use"
 
 # Check if in and out dirs are given and exist
 if [ "x$srcdir" == "x" ]; then
@@ -47,5 +48,41 @@ do
 	done
 
 	echo "$new_header" > $header
+done
+cd -
+
+# Step 2: Expand use-declarations
+cd "$outdir/$incdir"
+for header in *dl
+do
+	# Skip ir.dl
+	test "$header" == "ir.dl" && continue;
+
+	prefix="$(echo $mangletoken$header | sed 's/\./_/g')__"
+	uses="$(cat "$header" | grep '[:space:]]*.'$usetoken' ')"
+
+	## Remove comments
+	#tmp="$(cat "$header" | \
+	#	sed 's/\/\/.*//' | \
+	#	sed 's/\/\*.*\*\///g' | \
+	#	grep -v '^[[:space:]]*$')"
+	## Join multi-line relations into one line
+	#tmp2=""
+	#in_multiline_rel=false
+	#OLDIFS="$IFS"
+	#IFS='\n'
+	#for line in $tmp
+	#do
+	#	mlr="$(echo "$line" | grep ':-.*[^\.]$' | wc -l)"
+	#	test "$mlr" == "1" && in_multiline_rel=true
+
+	#	if [ "$in_multiline_rel" == true && "$mlr" == "1"]; then
+	#		tmp="$(echo "$tmp"; echo -n "$line")"
+	#	elif [ "$in_multiline_rel" == true && "$mlr" == "0"]; then
+	#		tmp="$(echo -n "$tmp"; echo -n "$line")"
+	#	else
+
+	#done
+
 done
 cd -
