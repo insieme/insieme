@@ -35,6 +35,15 @@ if (NOT MSVC)
 		add_definitions(-DDISABLE_ENERGY)
 	endif ( NOT USE_ENERGY)
 endif (NOT MSVC)
+# enable papi if requested
+option(USE_PAPI "Enable PAPI" OFF)
+if (NOT MSVC)
+	if(USE_PAPI)
+		message(STATUS "Enabling PAPI")
+	else()
+		message(STATUS "Disabling PAPI")
+	endif()
+endif()
 
 # toggle shared vs. static MSVC runtime library linking
 option(MSVC_SHARED_RUNTIME "Use shared MSVC runtime linking" ON)
