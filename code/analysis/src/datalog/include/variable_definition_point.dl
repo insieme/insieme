@@ -4,6 +4,9 @@
 #include "parent.dl"
 #include "equality.dl"
 
+.using ParentOf from Parent
+.using EqualNodes from Equality
+
 // ------ Definition Point ---------
 
 
