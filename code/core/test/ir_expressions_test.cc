@@ -35,6 +35,7 @@
  */
 
 #include <gtest/gtest.h>
+#include "insieme/utils/container_utils.h"
 
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_expressions.h"
@@ -135,6 +136,18 @@ namespace core {
 		basicExprTests(empty, first, toVector<NodePtr>(first, empty->getExpressions()));
 		basicExprTests(more, second, toVector<NodePtr>(second, more->getExpressions()));
 	}
+
+TEST(ExpressionTest, Parameters) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto root = builder.parseStmt(""
+	                              "alias int = int<4>;"
+	                              "def f = (a : int, b : int) -> int { return 1; };"
+	                              "f(1,2);");
+
+	EXPECT_EQ("AP([v1,v2])", toString(root.as<CallExprPtr>()->getFunctionExpr().as<LambdaExprPtr>()->getParameterList()));
+}
 
 	TEST(ExpressionsTest, Lambda) {
 		NodeManager manager;
