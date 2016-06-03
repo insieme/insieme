@@ -290,7 +290,61 @@ namespace core {
 		NodeAddress addrRoot(root);
 
 		EXPECT_EQ(Address<const Type>::find(typeC, root), addrRoot.getAddressOfChild(2, 2));
+		EXPECT_EQ(Address<const Type>::find(typeC, root, false), addrRoot.getAddressOfChild(2, 2));
 	}
+
+	TEST(NodeAddressTest, FindAll) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr typeA1 = builder.genericType("A", toVector<TypePtr>(builder.genericType("1"), builder.genericType("2")));
+		TypePtr typeA2 = builder.genericType("A", toVector<TypePtr>(builder.genericType("3"), builder.genericType("4")));
+		TypePtr typeB = builder.genericType("B", toVector<TypePtr>(builder.genericType("3")));
+		TypePtr typeC = builder.genericType("C", toVector<TypePtr>());
+
+		TypePtr root = builder.genericType("root", toVector(typeA1, typeB, typeC, typeC, typeA2));
+
+		EXPECT_EQ("root<A<1,2>,B<3>,C,C,A<3,4>>", toString(*root));
+
+		auto addr1 = Address<const Type>::findAll(typeC, root);
+		auto addr2 = Address<const Type>::findAll(typeC, root, false);
+
+		auto exp_addr1 = NodeAddress(Path(root).extendForChild(2).extendForChild(2));
+		auto exp_addr2 = NodeAddress(Path(root).extendForChild(2).extendForChild(3));
+
+		EXPECT_EQ(2, addr1.size());
+		EXPECT_EQ(2, addr2.size());
+
+		EXPECT_EQ(exp_addr1, addr1[0]);
+		EXPECT_EQ(exp_addr2, addr1[1]);
+
+		EXPECT_EQ(exp_addr1, addr2[0]);
+		EXPECT_EQ(exp_addr2, addr2[1]);
+	}
+
+TEST(NodeAddressTest, CloneTo) {
+	NodeManager nm1;
+	NodeManager nm2;
+
+	IRBuilder builder(nm1);
+
+	TypePtr typeA = builder.genericType("A", toVector<TypePtr>(builder.genericType("1"), builder.genericType("2")));
+	TypePtr typeB = builder.genericType("B", toVector<TypePtr>(builder.genericType("3")));
+	TypePtr typeC = builder.genericType("C", toVector<TypePtr>());
+
+	TypePtr root = builder.genericType("root", toVector(typeA, typeB, typeC));
+
+	EXPECT_EQ("root<A<1,2>,B<3>,C>", toString(*root));
+
+	NodeAddress rootAddress(root);
+
+	NodeAddress newRoot = rootAddress.cloneTo(nm2);
+
+	EXPECT_EQ(Address<const Type>::find(typeC, root), rootAddress.getAddressOfChild(2, 2));
+	EXPECT_EQ(Address<const Type>::find(typeC, newRoot), rootAddress.getAddressOfChild(2, 2));
+	EXPECT_EQ(Address<const Type>::find(typeC, newRoot), newRoot.getAddressOfChild(2, 2));
+
+}
 
 	TEST(NodeAddressTest, Visiting) {
 		NodeManager manager;

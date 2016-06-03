@@ -824,7 +824,7 @@ namespace core {
 			return select(a, b, lang::BasicGenerator::Lt);
 		}
 
-		CallExprPtr max(const ExpressionPtr& a, const ExpressionPtr& b) const {
+		inline CallExprPtr max(const ExpressionPtr& a, const ExpressionPtr& b) const {
 			return select(a, b, lang::BasicGenerator::Gt);
 		}
 
