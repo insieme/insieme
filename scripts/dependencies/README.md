@@ -30,13 +30,11 @@ the filename.
 ## Paths
 
 `INSIEME_LIBS_HOME` should be set to the prefix of the installer and the newly
-installed GCC should be used via `PATH` and `LD_LIBRARY_PATH`. The runtime
-needs hwloc's `lib`.
+installed GCC should be used via `PATH` and `LD_LIBRARY_PATH`.
 
     export INSIEME_LIBS_HOME="/software-local/insieme-libs"
     export PATH="$INSIEME_LIBS_HOME/gcc-latest/bin:$PATH"
     export LD_LIBRARY_PATH="$INSIEME_LIBS_HOME/gcc-latest/lib64"
-    export LD_LIBRARY_PATH="$INSIEME_LIBS_HOME/hwloc-latest/lib:$LD_LIBRARY_PATH"
 
 ## Ubuntu 16.04 LTS
 
