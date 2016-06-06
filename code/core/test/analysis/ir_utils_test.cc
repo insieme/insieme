@@ -403,6 +403,33 @@ namespace analysis {
 		EXPECT_EQ("[0-0-1-0,0-0-2-0]", toString(res));
 	}
 
+	TEST(IsMaterializingCall, Basic) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		const lang::BasicGenerator& gen = builder.getLangBasic();
+
+		LiteralPtr zero = builder.literal(gen.getUInt4(), "0");
+		VariablePtr x = builder.variable(builder.refType(gen.getUInt4()), 3);
+
+		ExpressionPtr call1 = builder.callExpr(builder.refType(gen.getBool()), gen.getUnsignedIntEq(), x, zero);
+		EXPECT_TRUE(isMaterializingCall(call1));
+
+		ExpressionPtr call2 = builder.callExpr(gen.getBool(), gen.getUnsignedIntEq(), x, zero);
+		EXPECT_FALSE(isMaterializingCall(call2));
+
+		auto call3 = builder.parseStmt(
+			"def fun = (a : int<4>) -> int<4> { return a; };"
+			"fun(1) materialize;"
+		);
+		EXPECT_TRUE(isMaterializingCall(call3));
+
+		auto call4 = builder.parseStmt(
+			"def fun = (a : int<4>) -> int<4> { return a; };"
+			"fun(1);"
+		);
+		EXPECT_FALSE(isMaterializingCall(call4));
+	}
+
 	namespace {
 		bool readOnly(const StatementPtr& stmt, const VariablePtr& var) {
 			return isReadOnly(stmt, var);
