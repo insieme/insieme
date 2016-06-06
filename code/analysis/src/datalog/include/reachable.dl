@@ -1,10 +1,6 @@
-#pragma once
-
-#include "forward_decl.dl"
-#include "parent.dl"
-
 .using ParentOf from Parent
 .using boolean_value from ForwardDecl
+
 
 // marks all reachable statements that may be entered
 .decl ReachableIn( s : stmt )

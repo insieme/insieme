@@ -1,12 +1,8 @@
-#pragma once
-
-#include "forward_decl.dl"
-#include "data_flow_analysis.dl"
-
 .using callable_value from ForwardDecl
 .using ParentOf from Parent
 .using EqualNodes from Equality
 .using DataFlowAnalysis from DataFlowAnalysis
+
 
 // some additional results
 .decl callGraph ( n : call_expr , c : callable )

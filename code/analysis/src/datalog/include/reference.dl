@@ -1,12 +1,7 @@
-#pragma once
-
-#include "forward_decl.dl"
-#include "data_flow_analysis.dl"
-#include "callable.dl"
-
 .using callGraph from callable
 .using reference_value from forward_decl as ref_val
 .using DataFlowAnalysis from DataFlowAnalysis
+
 
 // ---------- Analysis Specification -----------
 

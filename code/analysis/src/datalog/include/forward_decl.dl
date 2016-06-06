@@ -1,10 +1,7 @@
-#pragma once
+.using _ from DataPath
 
-#include "ir.dl"
-#include "data_path.dl"
 
 // the analysis assigning IR nodes boolean values
-#include "boolean.dl"
 .decl boolean_value( n : node , p : data_path, v : bool )
 
 // the analysis assigning each expression reference values
@@ -12,5 +9,5 @@
 .decl reference_value( n : node , p : data_path , r : memory_location )
 
 // the analysis assigning IR nodes a callable value
-.type callable = lambda | call_expr 
+.type callable = lambda | call_expr
 .decl callable_value( n : node , p : data_path , v : callable )

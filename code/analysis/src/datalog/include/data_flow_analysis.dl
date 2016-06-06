@@ -1,14 +1,3 @@
-#pragma once
-
-#include "boolean.dl"
-#include "ir.dl"
-#include "reachable.dl"
-#include "variable_definition_point.dl"
-#include "return_value.dl"
-#include "callable.dl"
-#include "program_point_analysis.dl"
-#include "data_path.dl"
-
 .using callGraph from Callable
 .using VariableDefinition from VariableDefinitionPoint
 .using DefinitionPoint from VariableDefinitionPoint
@@ -19,6 +8,7 @@
 .using ReachableIn from Reachable
 .using concat from DataPath
 .using ProgramPointAnalysis from ProgramPointAnalysis
+
 
 // -- a realation identifying every assignment --
 .decl assignment ( e : expr ) output

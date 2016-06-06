@@ -1,6 +1,5 @@
-#include "control_flow.dl"
-
 .using ControlFlow from ControlFlow
+
 
 // a relation to specify a start node
 .decl start ( s : stmt ) input

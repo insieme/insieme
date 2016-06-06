@@ -34,29 +34,30 @@ foreach my $filename (<*.$file_ext>) {
 
 	say "Header file: $filename";
 
-	# Skip ir.dl
-	next if $filename eq "ir.$file_ext";
-
 	tie my @lines, 'Tie::File', $filename;
 
-	# Get all decls, inits and comps in this file
-	my @decls = grep /^\s*\.$decltoken\s+/, @lines;
-	my @inits = grep /^\s*\.$inittoken\s+/, @lines;
-	my @comps = grep /^\s*\.$comptoken\s+/, @lines;
-	$_ =~ s/^\s*\.$decltoken\s+(\w+).*/$1/ foreach @decls;
-	$_ =~ s/^\s*\.$inittoken\s+(\w+).*/$1/ foreach @inits;
-	$_ =~ s/^\s*\.$comptoken\s+(\w+).*/$1/ foreach @comps;
-	push @decls, @comps;
+	# Skip mangling for ir.dl
+	unless ($filename eq "ir.$file_ext") {
 
-	# Create mangles
-	foreach my $decl (@decls) {
-		my $new_decl = create_mangle($filename, $decl);
-		s/([^\w]?)$decl([^\w]+)/$1$new_decl$2/g foreach @lines;
-	}
-	foreach my $init (@inits) {
-		my $new_init = create_mangle($filename, $init);
-		s/(\.$inittoken\s+)$init(\s*=\s*\w+)/$1$new_init$2/g foreach @lines;
-		s/([^\w]?)$init(\.\w+\s*\()/$1$new_init$2/g foreach @lines;
+		# Get all decls, inits and comps in this file
+		my @decls = grep /^\s*\.$decltoken\s+/, @lines;
+		my @inits = grep /^\s*\.$inittoken\s+/, @lines;
+		my @comps = grep /^\s*\.$comptoken\s+/, @lines;
+		$_ =~ s/^\s*\.$decltoken\s+(\w+).*/$1/ foreach @decls;
+		$_ =~ s/^\s*\.$inittoken\s+(\w+).*/$1/ foreach @inits;
+		$_ =~ s/^\s*\.$comptoken\s+(\w+).*/$1/ foreach @comps;
+		push @decls, @comps;
+
+		# Create mangles
+		foreach my $decl (@decls) {
+			my $new_decl = create_mangle($filename, $decl);
+			s/([^\w]?)$decl([^\w]+)/$1$new_decl$2/g foreach @lines;
+		}
+		foreach my $init (@inits) {
+			my $new_init = create_mangle($filename, $init);
+			s/(\.$inittoken\s+)$init(\s*=\s*\w+)/$1$new_init$2/g foreach @lines;
+			s/([^\w]?)$init(\.\w+\s*\()/$1$new_init$2/g foreach @lines;
+		}
 	}
 
 	# Replace relation names according to using-declarations
@@ -104,10 +105,10 @@ sub expand_using_decls {
 	}
 
 	# Insert includes
-	$include_collect{"ir.$file_ext"} = 1;
 	my @includes = (keys %include_collect);
 	$_ = "#include \"$_\"" foreach @includes;
-	push @$lines_ref, @includes;
+	unshift @includes, "#include \"ir.dl\"";
+	unshift @$lines_ref, @includes;
 
 	# Replace relations with their mangled names
 	while (my ($rel, $new_rel) = each %usings) {

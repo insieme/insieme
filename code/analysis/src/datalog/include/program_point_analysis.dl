@@ -1,9 +1,6 @@
-#pragma once
-
-#include "program_point.dl"
-#include "control_flow.dl"
-
+.using _ from ProgramPoint
 .using ControlFlow from ControlFlow
+
 
 .comp ProgramPointAnalysis<ValueType> {
 

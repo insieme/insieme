@@ -1,8 +1,5 @@
-#include "ir.dl"
-#include "parent.dl"
-
-
 .using ParentOf from Parent
+
 
 .decl TopLevelLambda ( id:node )   input
 .decl ExitPoints     ( id:node )   output

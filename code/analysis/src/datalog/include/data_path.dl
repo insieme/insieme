@@ -1,11 +1,7 @@
-#pragma once
-
-#include "ir.dl"
-
 .number_type path_element
 .type data_path = [ s : number , p : data_path ]
 
-#define DP_ROOT nil					
+#define DP_ROOT nil
 
 // TODO: compute all possible data paths from the type system
 .decl data_paths_in_type ( t : type , d : data_path )

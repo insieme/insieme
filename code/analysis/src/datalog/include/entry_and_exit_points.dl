@@ -1,13 +1,7 @@
-#pragma once
-
-#include "ir.dl"
-#include "parent.dl"
-#include "callable.dl"
-#include "reachable.dl"
-
 .using ReachableOut from Reachable
 .using ParentOf from Parent
 .using ReachableIn from Reachable
+
 
 // --- compute entry and exit points of all callables---
 

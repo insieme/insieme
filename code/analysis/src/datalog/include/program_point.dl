@@ -1,7 +1,3 @@
-#pragma once
-
-#include "ir.dl"
-
 // a type for the phase of the execution of a statement
 .number_type exec_state
 
@@ -15,6 +11,6 @@
 //#define ProgramPoint( S, P ) [ S , P ]
 //.type program_point = [ s : stmt, e : exec_state ]
 
-#define ProgramPoint( S, P )  S , P 
+#define ProgramPoint( S, P )  S , P
 .type program_point = [ s : stmt, e : exec_state ]
 

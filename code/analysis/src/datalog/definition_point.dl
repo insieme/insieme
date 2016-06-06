@@ -1,6 +1,5 @@
-#include "variable_definition_point.dl"
-
 .using DefinitionPoint from VariableDefinitionPoint
+
 
 // -- definie relation for the targeted variable --
 .decl target ( var : variable ) input
