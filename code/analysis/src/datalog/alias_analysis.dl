@@ -1,5 +1,7 @@
 #include "reference.dl"
 
+.using reference_value from ForwardDecl
+
 // a relation to specify the terms which's target references shell be obtained
 .decl targets ( s : stmt ) input
 

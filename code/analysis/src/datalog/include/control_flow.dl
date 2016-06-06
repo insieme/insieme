@@ -5,7 +5,10 @@
 #include "callable.dl"
 
 .using callable_value from ForwardDecl
+.using boolean_value from ForwardDecl
 .using EntryPoint from EntryAndExitPoints
+.using ExitPoint from EntryAndExitPoints
+.using callGraph from Callable
 
 
 // definies the control flow in a code fragment

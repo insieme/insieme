@@ -3,6 +3,8 @@
 #include "forward_decl.dl"
 #include "parent.dl"
 
+.using ParentOf from Parent
+.using boolean_value from ForwardDecl
 
 // marks all reachable statements that may be entered
 .decl ReachableIn( s : stmt )
@@ -17,7 +19,7 @@ ReachableIn( s ) :- Lambda(_,_,_,b), NodeList(b,0,s).
 ReachableIn( e ) :- BindExpr(_,_,e).
 
 // if a parent expression is reachable, so is the child (unless the parent is some control flow construct)
-ReachableIn( e ) :- ReachableIn(p), ParentOf( p, e ), 
+ReachableIn( e ) :- ReachableIn(p), ParentOf( p, e ),
 		!CompoundStmt(p), !IfStmt(p,_,_,_), !LambdaExpr(p,_,_,_), !BindExpr(p,_,_).
 
 // select condition branches in if statements

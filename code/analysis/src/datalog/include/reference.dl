@@ -6,10 +6,11 @@
 
 .using callGraph from callable
 .using reference_value from forward_decl as ref_val
+.using DataFlowAnalysis from DataFlowAnalysis
 
 // ---------- Analysis Specification -----------
 
-.init reference = DataFlowAnalysis<memory_location>
+.init reference = DataFlowAnalysis <memory_location>
 
 // link to result set
 ref_val(n,p,v) :- reference.value(n,p,v).

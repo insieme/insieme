@@ -6,6 +6,7 @@
 .using callable_value from ForwardDecl
 .using ParentOf from Parent
 .using EqualNodes from Equality
+.using DataFlowAnalysis from DataFlowAnalysis
 
 // some additional results
 .decl callGraph ( n : call_expr , c : callable )
