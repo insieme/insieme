@@ -1758,9 +1758,9 @@ namespace core {
 		IR_NODE_PROPERTY(Expressions, Constructors, 2);
 
 		/**
-		 * Obtains a reference to the destructor defined for this record type.
+		 * Obtains the destructor defined for this record type if available.
 		 */
-		IR_NODE_PROPERTY(Expression, Destructor, 3);
+		IR_NODE_PROPERTY(Expressions, OptionalDestructor, 3);
 
 		/**
 		 * Whether or not the destructor is virtual.
@@ -1821,10 +1821,25 @@ namespace core {
 		}
 
 		/**
-		 * Determines whether the destrutor of this record is virtual or not.
+		 * Determines whether a destructor is defined.
+		 */
+		bool hasDestructor() const {
+			return !getOptionalDestructor()->getExpressions().empty();
+		}
+
+		/**
+		 * Determines whether the destructor of this record is virtual or not.
 		 */
 		bool hasVirtualDestructor() const {
 			return getDestructorVirtual().getValue();
+		}
+
+		/**
+		 * Get the destructor, if one is defined.
+		 */
+		Ptr<const Expression> getDestructor() const {
+			assert_true(hasDestructor());
+			return getOptionalDestructor()[0];
 		}
 	};
 
@@ -1832,7 +1847,7 @@ namespace core {
 	/**
 	 * A node type used to represent a common base-class for structs and unions.
 	 */
-	class Record : public Support, public AbstractFixedSizeNodeHelper<Record,StringValue,Fields,Expressions,Expression,BoolValue,MemberFunctions,PureVirtualMemberFunctions> {
+	class Record : public Support, public AbstractFixedSizeNodeHelper<Record,StringValue,Fields,Expressions,Expressions,BoolValue,MemberFunctions,PureVirtualMemberFunctions> {
 	  protected:
 		/**
 		 * A constructor creating a new instance of this type based on a given child-node list.
@@ -1856,7 +1871,7 @@ namespace core {
 
 
     #define IR_RECORD_ACCESSOR(NAME, ...)                                                                                                                  \
-		IR_NODE_ACCESSOR(NAME, Record, StringValue, Fields, Expressions, Expression, BoolValue, MemberFunctions, PureVirtualMemberFunctions, ##__VA_ARGS__)
+		IR_NODE_ACCESSOR(NAME, Record, StringValue, Fields, Expressions, Expressions, BoolValue, MemberFunctions, PureVirtualMemberFunctions, ##__VA_ARGS__)
 
 
 	// --------------------------------- Struct ----------------------------
@@ -1898,6 +1913,30 @@ namespace core {
 		 * @param parents the list of parent types to be referenced by the resulting struct
 		 * @param fields the list of fields the resulting struct should consist of
 		 * @param ctors the list of constructors for this struct
+		 * @param dtorOpt the destructor for this struct or empty
+		 * @param mfuns the list of member functions associated to this struct
+		 * @param pvmfuns the list of pure virtual member functions of this struct
+		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * 		   the same parameters will lead to pointers addressing the same instance.
+		 */
+		static StructPtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
+		                     const ExpressionsPtr& ctors, const ExpressionsPtr& dtorOpt, const BoolValuePtr& dtorIsVirtual,
+		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
+			ExpressionList sortedCtors = ctors.getExpressions();
+		    std::stable_sort(sortedCtors.begin(), sortedCtors.end(), detail::semanticNodeLessThan);
+			return manager.get(Struct(name, fields, Expressions::get(manager, sortedCtors), dtorOpt, dtorIsVirtual, mfuns, pvfuns, parents));
+		}
+
+		/**
+		 * A factory method allowing to obtain a pointer to a struct representing
+		 * an instance managed by the given manager.
+		 *
+		 * @param manager the manager which should be responsible for maintaining the new
+		 * 				  type instance and all its referenced elements.
+		 * @param name the name of the resulting struct
+		 * @param parents the list of parent types to be referenced by the resulting struct
+		 * @param fields the list of fields the resulting struct should consist of
+		 * @param ctors the list of constructors for this struct
 		 * @param dtor the destructor for this struct
 		 * @param mfuns the list of member functions associated to this struct
 		 * @param pvmfuns the list of pure virtual member functions of this struct
@@ -1907,9 +1946,7 @@ namespace core {
 		static StructPtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
 		                     const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			ExpressionList sortedCtors = ctors.getExpressions();
-		    std::stable_sort(sortedCtors.begin(), sortedCtors.end(), detail::semanticNodeLessThan);
-			return manager.get(Struct(name, fields, Expressions::get(manager, sortedCtors), dtor, dtorIsVirtual, mfuns, pvfuns, parents));
+			return get(manager, name, parents, fields, ctors, Expressions::get(manager, toVector(dtor)), dtorIsVirtual, mfuns, pvfuns);
 		}
 
 		/**
@@ -2034,6 +2071,29 @@ namespace core {
 		 * @param name the name of the resulting union
 		 * @param fields the list of fields the resulting union should consist of
 		 * @param ctors the list of constructors for this union
+		 * @param dtorOpt the destructor for this union or empty
+		 * @param mfuns the list of member functions associated to this union
+		 * @param pvmfuns the list of pure virtual member functions of this union
+		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * 		   the same parameters will lead to pointers addressing the same instance.
+		 */
+		static UnionPtr get(NodeManager& manager, const StringValuePtr& name, const FieldsPtr& fields,
+		                    const ExpressionsPtr& ctors, const ExpressionsPtr& dtorOpt, const BoolValuePtr& dtorIsVirtual,
+		                    const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
+			ExpressionList sortedCtors = ctors.getExpressions();
+		    std::stable_sort(sortedCtors.begin(), sortedCtors.end(), detail::semanticNodeLessThan);
+			return manager.get(Union(name, fields, Expressions::get(manager, sortedCtors), dtorOpt, dtorIsVirtual, mfuns, pvfuns));
+		}
+
+		/**
+		 * A factory method allowing to obtain a pointer to a union representing
+		 * an instance managed by the given manager.
+		 *
+		 * @param manager the manager which should be responsible for maintaining the new
+		 * 				  type instance and all its referenced elements.
+		 * @param name the name of the resulting union
+		 * @param fields the list of fields the resulting union should consist of
+		 * @param ctors the list of constructors for this union
 		 * @param dtor the destructor for this union
 		 * @param mfuns the list of member functions associated to this union
 		 * @param pvmfuns the list of pure virtual member functions of this union
@@ -2043,9 +2103,7 @@ namespace core {
 		static UnionPtr get(NodeManager& manager, const StringValuePtr& name, const FieldsPtr& fields,
 		                    const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 		                    const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			ExpressionList sortedCtors = ctors.getExpressions();
-		    std::stable_sort(sortedCtors.begin(), sortedCtors.end(), detail::semanticNodeLessThan);
-			return manager.get(Union(name, fields, Expressions::get(manager, sortedCtors), dtor, dtorIsVirtual, mfuns, pvfuns));
+			return get(manager, name, fields, ctors, Expressions::get(manager, toVector(dtor)), dtorIsVirtual, mfuns, pvfuns);
 		}
 
 		/**

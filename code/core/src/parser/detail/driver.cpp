@@ -73,6 +73,7 @@
 namespace insieme {
 namespace core {
 namespace parser {
+
 	namespace detail {
 
 		class location;
@@ -92,7 +93,7 @@ namespace parser {
 		ProgramPtr InspireDriver::parseProgram() {
 			scanner.setStartProgram();
 			int fail = parser.parse();
-			if(whereErrors() || fail) {
+			if(wereErrors() || fail) {
 				result = nullptr;
 				return nullptr;
 			}
@@ -103,7 +104,7 @@ namespace parser {
 			scanner.setStartType();
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
-			if(whereErrors() || fail) {
+			if(wereErrors() || fail) {
 				result = nullptr;
 				return nullptr;
 			}
@@ -114,7 +115,7 @@ namespace parser {
 			scanner.setStartStatement();
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
-			if(whereErrors() || fail) {
+			if(wereErrors() || fail) {
 				result = nullptr;
 				return nullptr;
 			}
@@ -125,7 +126,7 @@ namespace parser {
 			scanner.setStartExpression();
 			InspireParser parser(*this, scanner);
 			int fail = parser.parse();
-			if(whereErrors() || fail) {
+			if(wereErrors() || fail) {
 				result = nullptr;
 				return nullptr;
 			}
@@ -402,24 +403,13 @@ namespace parser {
 		}
 
 		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields,
-			                                 const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual, const MemberFunctionList& mfuns,
-			                                 const PureVirtualMemberFunctionList& pvmfuns) {
+			                                 const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
+			                                 const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
 			// check if this type has already been defined before
 			const GenericTypePtr key = builder.genericType(name);
 			if(tu[key]) {
 				error(l, format("Type %s has already been defined", name));
 				return nullptr;
-			}
-
-			//if this record type has user specified constructors and the default constructor is still our dummy lambda, we have to delete that one here
-			if (!ctors.empty()) {
-				const TypePtr thisType = builder.refType(key);
-				const auto ctorType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
-				const auto lit = builder.getLiteralForConstructor(ctorType);
-				const auto dummyLambda = builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda());
-				if (tu.getFunctions()[lit] == dummyLambda) {
-					tu.getFunctions().erase(lit);
-				}
 			}
 
 			TagTypePtr res;
@@ -538,11 +528,11 @@ namespace parser {
 			// build resulting function type
 			auto funcType = builder.functionType(paramTypes, retType, functionKind);
 
-			// replace return statement var types
+			// replace return statement types
 			auto retBody = core::transform::transformBottomUpGen(body, [&retType, this](const core::ReturnStmtPtr& ret) {
-				auto retVar = ret->getReturnVar();
-				auto replacementVar = builder.variable(core::transform::materialize(retType));
-				return core::transform::replaceAllGen(ret->getNodeManager(), ret, retVar, replacementVar);
+				auto retT = ret->getReturnType();
+				auto replacementT = core::transform::materialize(retType);
+				return builder.returnStmt(ret->getReturnExpr(), replacementT);
 			});
 
 			// if it is a function with explicitly auto-created parameters no materialization of the parameters is required
@@ -616,6 +606,9 @@ namespace parser {
 		ExpressionPtr InspireDriver::genConstructor(const location& l, const LambdaExprPtr& ctor) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
+			// return a special literal if the body indicates to default this function
+			if(ctor->getBody() == getParserDefaultCompound()) return parserIRExtension.getDefaultedBodyMarker();
+
 			auto key = builder.getLiteralForConstructor(ctor->getType());
 
 			//register the lambda itself in the TU - but only overwrite dummy declarations
@@ -674,6 +667,8 @@ namespace parser {
 		ExpressionPtr InspireDriver::genDestructor(const location& l, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
+			if(body == getParserDefaultCompound()) return nullptr;
+
 			// get this-type (which is ref<ref in case of a function
 			auto thisType = getThisTypeForLambdaAndFunction(false, false);
 			auto thisParam = builder.variable(thisType);
@@ -710,6 +705,9 @@ namespace parser {
 		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name,
 			                                               const VariableList& params, const TypePtr& retType, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
+
+			// return a member function containing a special literal if the body indicates to default this function
+			if(body == getParserDefaultCompound()) return builder.memberFunction(false, name, parserIRExtension.getDefaultedBodyMarker());
 
 			// get this-type (which is ref<ref in case of a function
 			auto thisType = getThisTypeForLambdaAndFunction(cnst, voltile);
@@ -778,6 +776,29 @@ namespace parser {
 
 			// create the member function entry
 			return builder.pureVirtualMemberFunction(name, memberFunType);
+		}
+
+		CompoundStmtPtr InspireDriver::getParserDefaultCompound() const {
+			return parserIRExtension.getDefaultedBodyCompound();
+		}
+
+		CompoundStmtPtr InspireDriver::getParserDeleteCompound() const {
+			return parserIRExtension.getDeletedBodyCompound();
+		}
+
+		bool InspireDriver::isMarkedAsDefaultedMember(const NodePtr& node) const {
+			if(!node) return false;
+
+			// member functions are checked for their implementation
+			if(const auto& mFun = node.isa<MemberFunctionPtr>()) {
+				return isMarkedAsDefaultedMember(mFun->getImplementation());
+			}
+			// literals can be compared directly
+			if(const auto& lit = node.isa<LiteralPtr>()) {
+				return lit == parserIRExtension.getDefaultedBodyMarker();
+			}
+			// everything else isn't a defaulted member
+			return false;
 		}
 
 		ExpressionPtr InspireDriver::genFreeConstructor(const location& l, const std::string& name, const LambdaExprPtr& ctor) {
@@ -997,7 +1018,7 @@ namespace parser {
 					callRefType.setKind(lang::ReferenceType::Kind::Plain);
 					newType = callRefType.toType();
 				}
-				return builder.callExpr(newType, call->getFunctionExpr(), call->getArguments());
+				return builder.callExpr(newType, call->getFunctionExpr(), call->getArgumentList());
 			}
 			return exp;
 		}
@@ -1092,7 +1113,7 @@ namespace parser {
 			auto variable = builder.variable(resolvedType);
 			annotations::attachName(variable, name);
 			declareSymbol(l, name, variable);
-			if (whereErrors()) {
+			if (wereErrors()) {
 				return nullptr;
 			}
 			return variable;
@@ -1118,7 +1139,7 @@ namespace parser {
 			if (!var) {
 				return nullptr;
 			}
-			return builder.declarationStmt(var, var);
+			return builder.declarationStmt(var, lang::buildRefDecl(var->getType()));
 		}
 
 		ForStmtPtr InspireDriver::genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName, const ExpressionPtr& lowerBound,
@@ -1217,6 +1238,52 @@ namespace parser {
 			return builder.literal("this", builder.refType(getThisType()));
 		}
 
+		namespace {
+			bool isDeletedBody(const InspireDriver& driver, const ExpressionPtr& lambda) {
+				auto lambdaExpr = lambda.isa<LambdaExprPtr>();
+				if(!lambdaExpr) return false;
+				if(lambdaExpr->getBody() == driver.getParserDeleteCompound()) return true;
+				return false;
+			};
+
+			RecordPtr handleDefaultedAndDeletedMembers(const InspireDriver& driver, const RecordPtr& record) {
+				auto& builder = driver.builder;
+				bool isStruct = record.isa<StructPtr>();
+				auto parents = isStruct ? record.as<StructPtr>()->getParents() : builder.parents();
+
+				// handle constructors
+				auto ctors = record->getConstructors();
+				ExpressionList newCtors;
+				for(auto& ctor : ctors) {
+					if(isDeletedBody(driver, ctor)) continue;
+					newCtors.push_back(ctor);
+				}
+
+				// handle destructor
+				ExpressionList newDtor { record->getDestructor() };
+				if(isDeletedBody(driver, newDtor[0])) {
+					newDtor.clear();
+				}
+
+				// handle operators
+				auto mfuns = record->getMemberFunctions();
+				MemberFunctionList newMfuns;
+				for(auto& mfun : mfuns) {
+					if(isDeletedBody(driver, mfun->getImplementation())) continue;
+					newMfuns.push_back(mfun);
+				}
+
+				// generate replacements
+				if(isStruct) {
+					return builder.structRecord(record->getName(), parents, record->getFields(), builder.expressions(newCtors), builder.expressions(newDtor),
+						                        record->getDestructorVirtual(), builder.memberFunctions(newMfuns), record->getPureVirtualMemberFunctions());
+				} else {
+					return builder.unionRecord(record->getName(), record->getFields(), builder.expressions(newCtors), builder.expressions(newDtor),
+						                       record->getDestructorVirtual(), builder.memberFunctions(newMfuns), record->getPureVirtualMemberFunctions());
+				}
+			}
+		}
+
 		void InspireDriver::computeResult(const NodePtr& fragment) {
 			result = tu.resolve(fragment);
 
@@ -1230,21 +1297,28 @@ namespace parser {
 				replacements[builder.stringValue(temporaryName->getValue() + "::" + utils::getMangledOperatorAssignName())] = builder.stringValue("::" + utils::getMangledOperatorAssignName());
 			}
 			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
+			replacements.clear();
 
-			bool foundDummyLambda = false;
-			const auto& dummyLambda = parserIRExtension.getMemberDummyLambda();
-			const auto& explicitDummyLambda = parserIRExtension.getExplicitMemberDummyLambda();
-			visitDepthFirstOnceInterruptible(result, [&](const LiteralPtr& lit) {
-				if (lit == dummyLambda || lit == explicitDummyLambda) {
-					foundDummyLambda = true;
+			// replace defaulted member functions and remove deleted ones
+			visitDepthFirstOnce(result, [&](const RecordPtr& record) {
+				replacements[record] = handleDefaultedAndDeletedMembers(*this, record);
+			}, true);
+
+			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
+
+			// check if artifacts remain
+			bool foundArtifacts = false;
+			visitDepthFirstOnceInterruptible(result, [&](const NodePtr& node) {
+				if(node == parserIRExtension.getMemberDummyLambda() || node == parserIRExtension.getExplicitMemberDummyLambda()
+				   || node == parserIRExtension.getDefaultedBodyCompound() || node == parserIRExtension.getDeletedBodyCompound()
+				   || node == parserIRExtension.getDefaultedBodyMarker()) {
+					foundArtifacts = true;
 					return true;
 				}
 				return false;
-			});
+			}, true, true);
 
-			if (foundDummyLambda) {
-				assert_fail() << "Found dummy lambda in final parser result.";
-			}
+			if(foundArtifacts) { assert_fail() << "Found parser artifacts in final parser result."; }
 		}
 
 
@@ -1597,7 +1671,7 @@ namespace parser {
 
 		void InspireDriver::error(const std::string& m) const { errors.push_back(ParserError(globLoc, m)); }
 
-		bool InspireDriver::whereErrors() const { return !errors.empty(); }
+		bool InspireDriver::wereErrors() const { return !errors.empty(); }
 
 
 		void InspireDriver::printErrors(std::ostream& out, bool color) const {

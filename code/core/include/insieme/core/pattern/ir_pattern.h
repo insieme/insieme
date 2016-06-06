@@ -243,8 +243,12 @@ namespace pattern {
 			return compoundStmt(single(stmt));
 		}
 
+		inline TreePattern declaration(const TreePattern& type = any, const TreePattern& initExpr = any) {
+			return node(core::NT_Declaration, single(type) << single(initExpr));
+		}
+
 		inline TreePattern declarationStmt(const TreePattern& variable = any, const TreePattern& initExpr = any) {
-			return node(core::NT_DeclarationStmt, single(variable) << single(initExpr));
+			return node(core::NT_DeclarationStmt, single(declaration(any, initExpr)) << single(variable));
 		}
 
 		inline TreePattern ifStmt(const TreePattern& condition, const TreePattern& thenBody, const TreePattern& elseBody) {
@@ -283,7 +287,7 @@ namespace pattern {
 		}
 
 		inline TreePattern returnStmt(const TreePattern& returnExpr) {
-			return node(core::NT_ReturnStmt, single(returnExpr) << any);
+			return node(core::NT_ReturnStmt, single(declaration(any, returnExpr)));
 		}
 
 		inline TreePattern markerStmt(const TreePattern& subExpr, const TreePattern& id) {

@@ -120,7 +120,7 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(PFor, "pfor",
                 "                                                                                                        "
-				"	(g : threadgroup, a : int<'a>, b : int<'a>, c : int<'a>, f : (int<'a>, int<'a>, int<'a>)=>'b)->unit {   "
+				"	(g : threadgroup, a : int<'a>, b : int<'a>, c : int<'a>, f : (int<'a>, int<'a>, int<'a>)=>'b)->unit {"
 				"				f(a,b,c);                                                                                "
 				"	}                                                                                                    "
 	            "                                                                                                        "
@@ -141,8 +141,8 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(Barrier, "barrier",
 				    "                                                                                                    "
-					"	(g : threadgroup)->unit {                                                                   "
-					"		redistribute(g, 0, (_ : ref<array<int<4>>>, _ : uint<8>, _ : uint<8>)->unit { });   "
+					"	(g : threadgroup)->unit {                                                                        "
+					"		redistribute(g, 0, (_ : ref<array<int<4>>>, _ : uint<8>, _ : uint<8>)->unit { });            "
 					"	}                                                                                                "
 		            "                                                                                                    "
 		)

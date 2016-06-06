@@ -70,47 +70,51 @@ int main() {
 	;
 
 	#pragma test expect_ir(R"(
-		def IMP_plusOne_unsigned_int_returns_unsigned_int = (v1 : uint<4>) -> uint<4> { return v1+num_cast(1, type_lit(uint<4>)); }; 
+		def IMP_plusOne_unsigned_int_returns_unsigned_int = (v1 : uint<4>) -> uint<4> { return v1+num_cast(1, type_lit(uint<4>)); };
 		IMP_plusOne_unsigned_int_returns_unsigned_int(1u))")
 	plusOne(1u);
 	#pragma test expect_ir(R"(
-		def IMP_plusOne_int_returns_int = (v1 : int<4>) -> int<4> { return v1+1; }; 
+		def IMP_plusOne_int_returns_int = (v1 : int<4>) -> int<4> { return v1+1; };
 		IMP_plusOne_int_returns_int(1))")
 	plusOne(1);
 	#pragma test expect_ir(R"(
-		def IMP_plusOne_double_returns_double = (v1 : real<8>) -> real<8> { return v1+num_cast(1, type_lit(real<8>)); }; 
+		def IMP_plusOne_double_returns_double = (v1 : real<8>) -> real<8> { return v1+num_cast(1, type_lit(real<8>)); };
 		IMP_plusOne_double_returns_double(lit("1.0E+0":real<8>)))")
 	plusOne(1.0);
 
 	#pragma test expect_ir(R"(
-	def IMP_fib_0 = () -> int<4> { return 1; };
-	def IMP_fib_1 = () -> int<4> { return 1; };
-	def IMP_fib_2_returns_int = () -> int<4> { return IMP_fib_1()+IMP_fib_0(); };
-	def IMP_fib_3_returns_int = () -> int<4> { return IMP_fib_2_returns_int()+IMP_fib_1(); };
-	def IMP_fib_4_returns_int = () -> int<4> { return IMP_fib_3_returns_int()+IMP_fib_2_returns_int(); };
-	IMP_fib_4_returns_int())")
+		def IMP_fib_0 = () -> int<4> { return 1; };
+		def IMP_fib_1 = () -> int<4> { return 1; };
+		def IMP_fib_2_returns_int = () -> int<4> { return IMP_fib_1()+IMP_fib_0(); };
+		def IMP_fib_3_returns_int = () -> int<4> { return IMP_fib_2_returns_int()+IMP_fib_1(); };
+		def IMP_fib_4_returns_int = () -> int<4> { return IMP_fib_3_returns_int()+IMP_fib_2_returns_int(); };
+		IMP_fib_4_returns_int())")
 	fib<4>();
 
 	#pragma test expect_ir(R"(
-	def IMP_bla_0_1 = () -> int<4> { return 2; };
-	def IMP_bla_1_2_returns_int = () -> int<4> { return IMP_bla_0_1()+1; };
-	def IMP_bla_2_3_returns_int = () -> int<4> { return IMP_bla_1_2_returns_int()+1; };
-	IMP_bla_2_3_returns_int())")
+		def IMP_bla_0_1 = () -> int<4> { return 2; };
+		def IMP_bla_1_2_returns_int = () -> int<4> { return IMP_bla_0_1()+1; };
+		def IMP_bla_2_3_returns_int = () -> int<4> { return IMP_bla_1_2_returns_int()+1; };
+		IMP_bla_2_3_returns_int())")
 	bla<2, 3>();
 
 	#pragma test expect_ir(R"(
+		decl struct IMP_tempClass_int;
+		decl IMP_tempClass_int::val:int<4>;
 		def struct IMP_tempClass_int {
 			val : int<4>;
 		};
-		var ref<IMP_tempClass_int,f,f,plain> v0 = IMP_tempClass_int::(v0);
+		var ref<IMP_tempClass_int,f,f,plain> v0 = IMP_tempClass_int::(ref_decl(type_lit(ref<IMP_tempClass_int,f,f,plain>)));
 	)")
 	tempClass<int> aInt;
 
 	#pragma test expect_ir(R"(
+		decl struct IMP_tempClass_float;
+		decl IMP_tempClass_float::val:real<4>;
 		def struct IMP_tempClass_float {
 			val : real<4>;
 		};
-		var ref<IMP_tempClass_float,f,f,plain> v0 = IMP_tempClass_float::(v0);
+		var ref<IMP_tempClass_float,f,f,plain> v0 = IMP_tempClass_float::(ref_decl(type_lit(ref<IMP_tempClass_float,f,f,plain>)));
 	)")
 	tempClass<float> aFloat;
 

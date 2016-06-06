@@ -87,7 +87,7 @@ namespace analysis {
 	TEST(ArrayOfNonTrivialType, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
-		EXPECT_FALSE(isTrivial(builder.parseType("array<struct s { ctor(a : int<4>) {} },1>")));
+		EXPECT_FALSE(isTrivial(builder.parseType("array<struct s { ctor() { return; } },1>")));
 	}
 
 	TEST(TrivialStruct, Basic) {
@@ -187,12 +187,7 @@ namespace analysis {
 
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
-			"  ctor() {}"
-			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
-			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
 			"  dtor virtual() {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
 			"}")));
 	}
 
@@ -210,7 +205,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  ctor() {}"
+			"  ctor() = default;"
 			"}")));
 	}
 
@@ -219,7 +214,6 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
-			"  ctor() {}"
 			"  ctor(other: ref<class,t,f,cpp_ref>) { return; }"
 			"}")));
 	}
@@ -229,8 +223,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  ctor() {}"
-			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
+			"  ctor(other: ref<class,t,f,cpp_ref>) = default;"
 			"}")));
 	}
 
@@ -239,7 +232,6 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
-			"  ctor() {}"
 			"  ctor(other: ref<class,f,f,cpp_rref>) { return; }"
 			"}")));
 	}
@@ -249,8 +241,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  ctor() {}"
-			"  ctor(other: ref<class,f,f,cpp_rref>) {}"
+			"  ctor(other: ref<class,f,f,cpp_rref>) = default;"
 			"}")));
 	}
 
@@ -270,9 +261,9 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  ctor() {}"
-			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
-			"  ctor(other: ref<class,f,f,cpp_rref>) {}"
+			"  ctor() = default;"
+			"  ctor(other: ref<class,t,f,cpp_ref>) = default;"
+			"  ctor(other: ref<class,f,f,cpp_rref>) = default;"
 			"}")));
 	}
 
@@ -281,7 +272,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
-			"  ctor(data: int<4>) { return; }"
+			"  ctor() { return; }"
 			"}")));
 	}
 
@@ -297,7 +288,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"let base = struct base_class {"
-			"  ctor(a : int<4>) {}"
+			"  ctor() { return; }"
 			"} in struct class : [public base] {}")));
 	}
 
@@ -315,7 +306,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> = default;"
 			"}")));
 	}
 
@@ -333,7 +324,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> = default;"
 			"}")));
 	}
 
@@ -342,11 +333,11 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_TRUE(isTrivial(builder.parseType(
 			"struct class {"
-			"  ctor() {}"
-			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
-			"  ctor(other: ref<class,f,f,cpp_rref>) {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
-			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> { return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref)); }"
+			"  ctor() = default;"
+			"  ctor(other: ref<class,t,f,cpp_ref>) = default;"
+			"  ctor(other: ref<class,f,f,cpp_rref>) = default;"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> = default;"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> = default;"
 			"}")));
 	}
 
@@ -357,11 +348,11 @@ namespace analysis {
 			"let base = struct base_class {"
 			"  ctor(other: ref<base_class,t,f,cpp_ref>) { return; }"
 			"} in struct class : [public base] {"
-			"  ctor() {}"
-			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
-			"  ctor(other: ref<class,f,f,cpp_rref>) {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"  ctor() = default;"
+			"  ctor(other: ref<class,t,f,cpp_ref>) = default;"
+			"  ctor(other: ref<class,f,f,cpp_rref>) = default;"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> = default;"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> = default;"
 			"}")));
 	}
 
@@ -370,13 +361,13 @@ namespace analysis {
 		IRBuilder builder(manager);
 		EXPECT_FALSE(isTrivial(builder.parseType(
 			"let base = struct base_class {"
-			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<base_class,f,f,cpp_ref>) -> ref<nase_class,f,f,cpp_ref> { return; }"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<base_class,t,f,cpp_ref>) -> ref<base_class,f,f,cpp_ref> { return; }"
 			"} in struct class : [public base] {"
-			"  ctor() {}"
-			"  ctor(other: ref<class,t,f,cpp_ref>) {}"
-			"  ctor(other: ref<class,t,f,cpp_rref>) {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_ref>) -> ref<class,f,f,cpp_ref> {}"
-			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> {}"
+			"  ctor() = default;"
+			"  ctor(other: ref<class,t,f,cpp_ref>) = default;"
+			"  ctor(other: ref<class,t,f,cpp_rref>) = default;"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,t,f,cpp_ref>) -> ref<class,f,f,cpp_ref> = default;"
+			"  lambda " + utils::getMangledOperatorAssignName() + " = (rhs: ref<class,f,f,cpp_rref>) -> ref<class,f,f,cpp_ref> = default;"
 			"}")));
 	}
 
@@ -444,11 +435,6 @@ namespace analysis {
 		{
 			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
 			EXPECT_TRUE(hasDefaultDestructor(record));
-		}
-
-		{
-			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, true, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
-			EXPECT_FALSE(hasDefaultDestructor(record));
 		}
 
 		{

@@ -40,7 +40,7 @@
 #include <functional>
 
 #include <boost/functional/hash.hpp>
-
+#include <boost/version.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/type_traits/is_convertible.hpp>
@@ -397,7 +397,7 @@ namespace std {
 
 
 	// --------- support for shared pointer in boost -------------
-
+	#if BOOST_VERSION < 105100
 	template <typename T>
 	class shared_ptr;
 
@@ -406,4 +406,5 @@ namespace std {
 		// forward call to std-shared ptr
 		return hash<shared_ptr<T>>()(ptr);
 	}
+	#endif
 }

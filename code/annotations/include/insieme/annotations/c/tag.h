@@ -46,19 +46,18 @@ namespace c {
 	using std::string;
 
 	/**
-	 * Checks whether a tag is attached to the given node.
+	 * Checks whether a tag (e.g. "enum", "struct" or "union") is attached to the given node.
 	 */
 	bool hasAttachedCTag(const core::NodePtr& node);
 
 	/**
-	 * Obtains a reference to the C tag attached to the given node. If
-	 * no tag has been attached the result is undefined (an assertion
-	 * in debug mode).
+	 * Obtains a reference to the C tag (e.g. "enum", "struct" or "union") attached to the given node. If
+	 * no tag has been attached the result is undefined (an assertion in debug mode).
 	 */
 	const string& getAttachedCTag(const core::NodePtr& node);
 
 	/**
-	 * Attaches the given C tag to the given node.
+	 * Attaches the given C tag (e.g. "enum", "struct" or "union") to the given node.
 	 */
 	const core::NodePtr& attachCTag(const core::NodePtr& node, const string& tag);
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -43,7 +43,6 @@
 #include "insieme/backend/c_ast/c_ast.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
-
 
 #include "insieme/core/lang/asm_extension.h"
 

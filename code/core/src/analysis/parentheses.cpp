@@ -43,12 +43,12 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
-	//precedence_container.first => precedence; 
+	//precedence_container.first => precedence;
 	//precedence_container.second => associativity;
-	using precedence_container = std::pair<int,int>;
-	using precedence_map = std::map<NodePtr, precedence_container>;
+	using PrecedenceContainer = std::pair<int,int>;
+	using PrecedenceMap = std::map<NodePtr, PrecedenceContainer>;
 
-	precedence_map create_precedence_map(NodeManager& nm) {
+	PrecedenceMap createPrecedenceMap(NodeManager& nm) {
 
 		auto& lang = nm.getLangBasic();
 		auto& refs = nm.getLangExtension<lang::ReferenceExtension>();
@@ -56,7 +56,7 @@ namespace analysis {
 		//TODO: check why using the attached value is slower than recreating the map everytime?!?!
 		//if (nm.hasAttachedValue<precedence_map>()) return nm.getAttachedValue<precedence_map>();
 
-		precedence_map m;
+		PrecedenceMap m;
 
 		m[refs.getGenPostInc()] = {2,0};
 		m[refs.getGenPostDec()] = {2,0};
@@ -187,17 +187,17 @@ namespace analysis {
 	 */
 	bool needsParentheses(const CallExprAddress& cur) {
 
-		const precedence_map& pm = create_precedence_map(cur->getNodeManager());
+		const PrecedenceMap& pm = createPrecedenceMap(cur->getNodeManager());
 
 		// in the case, where the operation is already the root
 		// there is no need for parentheses
-		if(cur.isRoot()) {
+		if(cur.getDepth()<=2) {
 			return false;
 		}
 
 		// In every other case we need to check the parent,
-		// to determine, whether we need parentheses or not.
-		if(auto enclosingOp = getEnclosingOperatorCall(cur.getParentAddress())) {
+		// to determine whether we need parentheses or not.
+		if(auto enclosingOp = getEnclosingOperatorCall(cur.getParentAddress(2))) {
 
 			// look up precedences
 			auto curOp = pm.find(cur->getFunctionExpr());
@@ -217,15 +217,11 @@ namespace analysis {
 			// we need to determine other things
 			if (parentOp->second.first == curOp->second.first) {
 
-				// The first thing we check is, if cur is the same as
-				// the second ([1]) child-Node of the parent AND if
-				// the parent function expressions are NOT "sub", "div" or "mod"
-
-				auto parentAddress = cur.getParentAddress();
+				// put parentheses if cur is the second argument of the parent
+				auto parentAddress = cur.getParentAddress(2);
 				auto parentCall = parentAddress.isa<CallExprPtr>();
-				if(parentCall) {
-					auto parentArgs = parentCall.getArguments();
-					if (cur.as<CallExprPtr>() == parentArgs[1]) {
+				if(parentCall && parentCall->getNumArguments() > 1) {
+					if(cur.as<CallExprPtr>() == parentCall->getArgument(1)) {
 						return true;
 					}
 				}

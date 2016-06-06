@@ -48,9 +48,9 @@ namespace conversion {
 
 namespace utils {
 
-	/// Replace RefTemps in outer constructor calls with variable itself
+	/// Replace RefTemps in initialization with memLoc
 	///
-	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& variable, const core::ExpressionPtr& initExp);
+	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& memLoc, const core::ExpressionPtr& initExp);
 
 	/// Build a Cxx method call from its components
 	///

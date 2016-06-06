@@ -159,7 +159,8 @@ namespace checks {
 		EXPECT_EQ((std::size_t)1, issues.size());
 		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
 
-		expr = builder.callExpr(intA, binaryFun, toVector<ExpressionPtr>(x, y, z));
+		expr = builder.callExpr(intA, binaryFun,
+			                    toVector<DeclarationPtr>(builder.declaration(int4, x), builder.declaration(int4, y), builder.declaration(int4, z)));
 		issues = check(expr, typeCheck);
 		EXPECT_EQ((std::size_t)1, issues.size());
 		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
@@ -796,8 +797,8 @@ namespace checks {
 		auto x = pos[0].as<CallExprAddress>();
 
 		auto ok = x.getRootNode();
-		auto err1 = transform::replaceNode(manager, x[2], builder.getTypeLiteral(builder.parseType("ref<int<4>>")));
-		auto err2 = transform::replaceNode(manager, x[2], builder.getTypeLiteral(builder.parseType("float")));
+		auto err1 = transform::replaceNode(manager, x->getArgument(2), builder.getTypeLiteral(builder.parseType("ref<int<4>>")));
+		auto err2 = transform::replaceNode(manager, x->getArgument(2), builder.getTypeLiteral(builder.parseType("float")));
 
 		CheckPtr typeCheck = makeVisitOnce(make_check<MemberAccessElementTypeInTagTypeCheck>());
 		EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
@@ -1062,25 +1063,25 @@ namespace checks {
 		*/
 	}
 
-	TEST(DeclarationStmtTypeCheck, Basic) {
+	TEST(DeclarationTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		// OK ... create a function literal
 		TypePtr type = builder.genericType("int");
 		TypePtr type2 = builder.genericType("uint");
 		ExpressionPtr init = builder.literal(type, "4");
 		DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(type), init);
 		DeclarationStmtPtr err = builder.declarationStmt(builder.variable(type2), init);
 
-		CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+		CheckPtr typeCheck = makeRecursive(make_check<DeclarationTypeCheck>());
 		EXPECT_TRUE(check(ok, typeCheck).empty());
 		ASSERT_FALSE(check(err, typeCheck).empty());
 
-		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, check(err, typeCheck),
+			         Message(DeclarationStmtAddress(err)->getDeclaration(), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 	}
 
-	TEST(DeclarationStmtTypeCheck, SubTypes) {
+	TEST(DeclarationTypeCheck, SubTypes) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		auto& basic = manager.getLangBasic();
@@ -1092,14 +1093,15 @@ namespace checks {
 		DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(typeB), builder.literal(typeA, "4"));
 		DeclarationStmtPtr err = builder.declarationStmt(builder.variable(typeA), builder.literal(typeB, "4"));
 
-		CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+		CheckPtr typeCheck = makeRecursive(make_check<DeclarationTypeCheck>());
 		EXPECT_TRUE(check(ok, typeCheck).empty());
 		ASSERT_FALSE(check(err, typeCheck).empty());
 
-		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, check(err, typeCheck),
+			         Message(DeclarationStmtAddress(err)->getDeclaration(), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 	}
 
-	TEST(DeclarationStmtTypeCheck, RecursiveTypes) {
+	TEST(DeclarationTypeCheck, RecursiveTypes) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -1113,14 +1115,14 @@ namespace checks {
 		DeclarationStmtPtr ok2 = builder.declarationStmt(builder.variable(typeB), builder.literal(typeA, "X"));
 		DeclarationStmtPtr ok3 = builder.declarationStmt(builder.variable(typeB), builder.literal(typeB, "X"));
 
-		CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+		CheckPtr typeCheck = makeRecursive(make_check<DeclarationTypeCheck>());
 		EXPECT_TRUE(check(ok0, typeCheck).empty()) << check(ok0, typeCheck);
 		EXPECT_TRUE(check(ok1, typeCheck).empty()) << check(ok1, typeCheck);
 		EXPECT_TRUE(check(ok2, typeCheck).empty()) << check(ok2, typeCheck);
 		EXPECT_TRUE(check(ok3, typeCheck).empty()) << check(ok3, typeCheck);
 	}
 
-	TEST(DeclarationStmtTypeCheck, ReferenceSemantics) {
+	TEST(DeclarationTypeCheck, ReferenceSemantics) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -1128,7 +1130,7 @@ namespace checks {
 		const auto& int4 = basic.getInt4();
 		const auto& int8 = basic.getInt8();
 
-		CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+		CheckPtr typeCheck = makeRecursive(make_check<DeclarationTypeCheck>());
 
 		{ //plain integer
 			DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(builder.refType(int4)), builder.literal(int4, "42"));
@@ -1157,33 +1159,12 @@ namespace checks {
 			EXPECT_TRUE(check(ok, typeCheck).empty()) << check(ok, typeCheck);
 		}
 
-		{ //different types do not work
+		{ // different types do not work
 			DeclarationStmtPtr err = builder.declarationStmt(builder.variable(builder.refType(int4)), builder.literal(int8, "42"));
 			ASSERT_FALSE(check(err, typeCheck).empty());
-			EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+			EXPECT_PRED2(containsMSG, check(err, typeCheck),
+				         Message(DeclarationStmtAddress(err)->getDeclaration(), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 		}
-	}
-
-	TEST(DeclarationStmtSemanticCheck, Basic) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		CheckPtr semanticCheck = make_check<DeclarationStmtSemanticCheck>();
-
-		TypePtr typeA = builder.getLangBasic().getInt4();
-
-		// not using the variable is ok
-		DeclarationStmtPtr ok0 = builder.declarationStmt(builder.variable(typeA), builder.intLit(5));
-		EXPECT_TRUE(check(ok0, semanticCheck).empty()) << check(ok0, semanticCheck);
-
-		// using the variable once is ok (for all semantic checks)
-		auto variable1 = builder.variable(typeA);
-		DeclarationStmtPtr ok1 = builder.declarationStmt(variable1, variable1);
-		EXPECT_TRUE(check(ok1).empty()) << check(ok0);
-
-		// using the variable more than once results in the check to fail
-		DeclarationStmtPtr err0 = builder.declarationStmt(variable1, builder.add(variable1, variable1));
-		EXPECT_PRED2(containsMSG, check(err0, semanticCheck), Message(NodeAddress(err0), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 	}
 
 	TEST(IfCondition, Basic) {
@@ -1238,7 +1219,6 @@ namespace checks {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		// OK ... create a function literal
 		TypePtr intType = builder.genericType("int");
 		TypePtr boolType = builder.genericType("bool");
 		ExpressionPtr intLit = builder.literal(intType, "4");
@@ -1257,7 +1237,6 @@ namespace checks {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		// OK ... create a function literal
 		TypePtr intType = builder.getLangBasic().getInt1();
 		TypePtr boolType = builder.genericType("bool");
 		ExpressionPtr intLit = builder.literal(intType, "4");
@@ -1272,11 +1251,26 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_SWITCH_EXPR, "", Message::ERROR));
 	}
 
-	TEST(BuildInLiterals, Basic) {
+	TEST(RefDeclTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		// OK ... create a function literal
+		auto ok = builder.parseStmt("var ref<array<int<4>,2>> v = <ref<array<int<4>,2>>>(ref_decl(type_lit(ref<array<int<4>,2>>))) { 1, 2 };");
+		auto errAddr =
+			builder.parseAddressesStatement("var ref<array<int<4>,2>> v = <ref<array<int<4>,2>>>($ref_decl(type_lit(ref<array<int<4>,3>>))$) { 1, 2 };");
+		ASSERT_EQ(errAddr.size(), 1);
+		auto err = errAddr[0].getRootNode();
+
+		CheckPtr typeCheck = makeRecursive(make_check<RefDeclTypeCheck>());
+		EXPECT_TRUE(check(ok, typeCheck).empty());
+		ASSERT_FALSE(check(err, typeCheck).empty());
+
+		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(errAddr[0], EC_TYPE_REF_DECL_TYPE_MISMATCH, "", Message::ERROR));
+	}
+
+	TEST(BuildInLiterals, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
 
 		LiteralPtr ok = builder.getLangBasic().getFalse();
 		LiteralPtr err = builder.literal(builder.genericType("strangeType"), ok->getValue());
@@ -1291,8 +1285,6 @@ namespace checks {
 	TEST(RefCastExpr, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
-
-		// OK ... create a function literal
 
 		TypePtr type = builder.genericType("int");
 		TypePtr ref = builder.refType(type);

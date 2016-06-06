@@ -591,12 +591,16 @@ namespace tu {
 				// check if the initialization of any literal specifies the array type more accurately than the literal (e.g. inf -> fixed size)
 				// if so, replace the literal type
 				auto globalRefT = core::analysis::getReferencedType(newLit);
-
 				auto lit = newLit;
-				if(core::lang::isArray(globalRefT) && core::lang::isArray(cur.second)) {
+				auto initT = cur.second->getType();
+				// if we init an array using an initExpr the type is wrapped in a reference and we need to unwrap it
+				if(core::analysis::isRefType(cur.second) && core::lang::isArray(core::analysis::getReferencedType(cur.second))) {
+					initT = core::analysis::getReferencedType(cur.second);
+				}
+				if(core::lang::isArray(globalRefT) && core::lang::isArray(initT)) {
 					auto litArrT = core::lang::ArrayType(globalRefT);
-					auto initArrT = core::lang::ArrayType(cur.second);
-					if(litArrT.isUnknownSize() && ! initArrT.isUnknownSize()) {
+					auto initArrT = core::lang::ArrayType(initT);
+					if(litArrT.isUnknownSize() && !initArrT.isUnknownSize()) {
 						// get the literal
 						auto rT = core::lang::ReferenceType(newLit);
 						auto replacement =
@@ -721,11 +725,13 @@ namespace tu {
 			}
 		}
 		// check dtor
-		dtor = tagType->getRecord()->getDestructor();
-		if (!dtor.isa<core::LiteralPtr>()) {
-			auto lit = builder.getLiteralForDestructor(dtor.as<core::LambdaExprPtr>()->getFunctionType());
-			addFunction(lit, dtor.as<core::LambdaExprPtr>());
-			dtor = lit;
+		if(tagType->getRecord()->hasDestructor()) {
+			dtor = tagType->getRecord()->getDestructor();
+			if (!dtor.isa<core::LiteralPtr>()) {
+				auto lit = builder.getLiteralForDestructor(dtor.as<core::LambdaExprPtr>()->getFunctionType());
+				addFunction(lit, dtor.as<core::LambdaExprPtr>());
+				dtor = lit;
+			}
 		}
 		// check mem funs
 		for (auto memfun : tagType->getRecord()->getMemberFunctions()) {

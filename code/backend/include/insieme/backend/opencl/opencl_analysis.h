@@ -73,6 +73,10 @@ namespace analysis {
 	core::TypePtr getReferencedType(const core::NodePtr& node);
 	core::TypePtr getReferencedType(const core::TypePtr& type);
 	/**
+	 * Tests whether the given variable is readOnly or not
+	 */
+	bool isReadOnly(const core::StatementPtr& stmt, const core::VariablePtr& var);
+	/**
 	 * Tests whether the given node is outline-able or not.
 	 */
 	bool isOffloadAble(core::NodeManager& manager, const core::NodePtr& node);

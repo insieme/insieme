@@ -60,7 +60,7 @@ namespace insieme {
 namespace backend {
 namespace opencl {
 namespace analysis {
-	
+
 	using namespace insieme::annotations::opencl;
 
 	namespace {
@@ -141,7 +141,8 @@ namespace analysis {
 		bool isTrivial(const core::TypePtr& type, bool isParameter = false) {
 			// if we hold a reference, get the element type instead
 			if (core::lang::isReference(type)) {
-				if (!core::lang::isPlainReference(type))
+				// allow undefined references along plain ones
+				if (core::lang::isCppReference(type) || core::lang::isCppRValueReference(type))
 					// in this case we cannot simply strip it off since OpenCL requires plain refs only
 					return false;
 				// in case of a parameter the indirection is limited
@@ -351,6 +352,16 @@ namespace analysis {
 			return type;
 	}
 
+	bool isReadOnly(const core::StatementPtr& stmt, const core::VariablePtr& var) {
+		if (core::lang::isReference(var->getType())) {
+			auto type = core::lang::ReferenceType(var->getType());
+			if (type.isConst()) return true;
+			// otherwise fall through
+		}
+
+		return core::analysis::isReadOnly(stmt, var);
+	}
+
 	bool isOffloadAble(core::NodeManager& manager, const core::NodePtr& node) {
 		// if it is not a statement then we cannot outline it anyway
 		core::StatementPtr stmt = node.isa<core::StatementPtr>();
@@ -394,7 +405,7 @@ namespace analysis {
 			// in case of a primitive, the standard check can be used
 			if (isPrimitive(type)) {
 				// fail if it is not!
-				if (core::analysis::isReadOnly(stmt, cur)) continue;
+				if (opencl::analysis::isReadOnly(stmt, cur)) continue;
 				// whooops!
 				LOG(ERROR) << "not outlineable due to non-read-only of: " << dumpColor(cur);
 				return false;
@@ -411,7 +422,7 @@ namespace analysis {
 		bool fail = false;
 		for (const auto& cur : vars) {
 			// if it is read-only straight along we can skip further checks
-			if (core::analysis::isReadOnly(stmt, cur)) continue;
+			if (opencl::analysis::isReadOnly(stmt, cur)) continue;
 
 			fail = true;
 			LOG(WARNING) << "pessimistic read-only assumption of: " << dumpColor(cur) << " with type: " << dumpColor(cur->getType());
@@ -620,7 +631,7 @@ namespace analysis {
 		if (!lambdaExpr) return base;
 
 		core::VariableSet vars;
-		for_each(make_paired_range(callExpr->getArguments(), lambdaExpr->getLambda()->getParameters()),
+		for_each(make_paired_range(callExpr->getArgumentList(), lambdaExpr->getLambda()->getParameters()),
 		[&](const std::pair<const core::ExpressionPtr, const core::VariablePtr>& pair) {
 			// note vars for later
 			vars.insert(pair.second);

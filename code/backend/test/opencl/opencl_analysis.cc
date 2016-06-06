@@ -78,6 +78,30 @@ namespace opencl {
 		EXPECT_EQ(toString(*uintTy), toString(*analysis::getUnderlyingType(builder.refType(builder.arrayType(uintTy)))));
 	}
 
+	TEST(isReadOnly, Basic) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto typeA = core::lang::buildRefType(mgr.getLangBasic().getInt4(), true, false, core::lang::ReferenceType::Kind::Plain);
+		auto typeB = core::lang::buildRefType(mgr.getLangBasic().getInt4(), false, false, core::lang::ReferenceType::Kind::Plain);
+
+		auto declA = builder.declarationStmt(typeA, builder.intLit(0));
+		auto declB = builder.declarationStmt(typeB, builder.intLit(0));
+		auto declC = builder.declarationStmt(typeB, builder.intLit(0));
+
+		core::StatementList stmts;
+		stmts.push_back(declA);
+		stmts.push_back(declB);
+		stmts.push_back(declC);
+		auto comp = builder.compoundStmt(builder.assign(declB->getVariable(), builder.intLit(1)));
+		stmts.push_back(comp);
+		auto stmt = builder.compoundStmt(stmts);
+
+		EXPECT_TRUE(opencl::analysis::isReadOnly(comp, declA->getVariable()));
+		EXPECT_FALSE(opencl::analysis::isReadOnly(comp, declB->getVariable()));
+		EXPECT_TRUE(opencl::analysis::isReadOnly(comp, declC->getVariable()));
+	}
+
 	TEST(isIndependentStmt, Basic) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);

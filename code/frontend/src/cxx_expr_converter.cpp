@@ -407,6 +407,33 @@ namespace conversion {
 		return retIr;
 	}
 
+
+	namespace {
+		core::ExpressionPtr convertMaterializingExpr(Converter& converter, core::ExpressionPtr retIr, const clang::Expr* materTempExpr) {
+			auto& builder = converter.getIRBuilder();
+			// if we are materializing the rvalue result of a non-built-in function call, do it
+			auto subCall = retIr.isa<core::CallExprPtr>();
+			if(subCall) {
+				// if we are already materialized everything is fine
+				if(core::lang::isPlainReference(retIr->getType())) return retIr;
+				// otherwise, materialize
+
+				// if call to deref, simply remove it
+				auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+				if(refExt.isCallOfRefDeref(retIr)) {
+					retIr = subCall->getArgument(0);
+					return retIr;
+				}
+				// otherwise, materialize call if not built in
+				if(!core::lang::isBuiltIn(subCall->getFunctionExpr())) {
+					retIr = builder.callExpr(builder.refType(retIr->getType()), subCall->getFunctionExpr(), subCall->getArgumentDeclarations());
+				}
+			}
+			return retIr;
+		}
+	}
+
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					CXX Bind Temporary expr
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -416,6 +443,8 @@ namespace conversion {
 
 		// temporary creation/destruction is implicit
 		retIr = converter.convertExpr(bindTempExpr->getSubExpr());
+
+		retIr = convertMaterializingExpr(converter, retIr, bindTempExpr);
 
 		return retIr;
 
@@ -446,7 +475,6 @@ namespace conversion {
 		return retIr;
 	}
 
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					Materialize temporary expr
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -455,29 +483,7 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(materTempExpr, retIr);
 		retIr = Visit(materTempExpr->GetTemporaryExpr());
 
-		// if we are materializing the rvalue result of a non-built-in function call, do it
-		auto subCall = retIr.isa<core::CallExprPtr>();
-		if(subCall) {
-			auto materializedType = convertExprType(materTempExpr);
-			if(core::analysis::isRefType(materializedType)) {
-				core::lang::ReferenceType matRefType(materializedType);
-				// if we are already materialized everything is fine
-				if(core::lang::isPlainReference(retIr->getType())) return retIr;
-				// otherwise, materialize
-				frontend_assert(matRefType.getElementType() == retIr->getType()) << "Materializing to unexpected type " << dumpColor(matRefType.toType())
-					                                                            << " from " << dumpColor(retIr->getType());
-				// if call to deref, simply remove it
-				auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-				if(refExt.isCallOfRefDeref(retIr)) {
-					retIr = subCall->getArgument(0);
-					return retIr;
-				}
-				// otherwise, materialize call if not built in
-				if(!core::lang::isBuiltIn(subCall->getFunctionExpr())) {
-					retIr = builder.callExpr(builder.refType(retIr->getType()), subCall->getFunctionExpr(), subCall->getArguments());
-				}
-			}
-		}
+		retIr = convertMaterializingExpr(converter, retIr, materTempExpr);
 
 		return retIr;
 	}
