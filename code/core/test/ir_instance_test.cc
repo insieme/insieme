@@ -246,7 +246,7 @@ namespace core {
 		EXPECT_EQ(ABD2.getAddressedNode(), ACD.getAddressedNode());
 	}
 
-	TEST(NodeInstanceTest, LoopIteration) {
+	TEST(NodeInstanceTest, ForLoopIteration) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -292,6 +292,27 @@ namespace core {
 		EXPECT_LT(a5, b50);
 		EXPECT_LT(a5, b57);
 		EXPECT_LT(b50, b57);
+	}
+
+	TEST(NodeInstanceTest, WhileLoopIteration) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		StatementPtr loop = builder.parseStmt("while ( true ) {"
+											  "	1;"
+											  "}");
+
+		ASSERT_TRUE(loop);
+
+		StatementInstance root(loop);
+
+		auto a0 = root.as<WhileStmtInstance>()->getBody();
+		EXPECT_EQ("0-1/0", toString(a0));
+
+		auto a5 = a0.getIteration(5);
+		EXPECT_EQ("0-1/5", toString(a5));
+
+		EXPECT_LT(a0, a5);
 	}
 
 	TEST(NodeInstanceTest, Visitor) {
