@@ -12,6 +12,8 @@ my $basedir = system "pwd";
 
 my $file_ext = "dl";
 my $decltoken = "decl";
+my $comptoken = "comp";
+my $inittoken = "init";
 my $membertoken = "member";
 my $usingtoken = "using";
 my $mangle = "D474L06";
@@ -23,7 +25,8 @@ die "Invalid include dir ($incdir): Does not exist in '$srcdir'!" unless -d "$sr
 
 # Step 1: Copy files
 system "cp", <$srcdir/*.$file_ext>, "$destdir";
-system "cp", "-r", "$srcdir/$incdir", "$destdir";
+system "mkdir", "-p", "$destdir/$incdir";
+system "cp", <$srcdir/$incdir/*.$file_ext>, "$destdir/$incdir";
 
 # Step 2: Name-mangle declarations in header files
 chdir("$destdir/$incdir");
@@ -36,20 +39,34 @@ foreach my $filename (<*.$file_ext>) {
 
 	tie my @lines, 'Tie::File', $filename;
 
-	# Get all decls in this file
+	# Get all decls, inits and comps in this file
 	my @decls = grep /^\s*\.$decltoken\s+/, @lines;
+	my @inits = grep /^\s*\.$inittoken\s+/, @lines;
+	my @comps = grep /^\s*\.$comptoken\s+/, @lines;
 	$_ =~ s/^\s*\.$decltoken\s+(\w+).*/$1/ foreach @decls;
+	$_ =~ s/^\s*\.$inittoken\s+(\w+).*/$1/ foreach @inits;
+	$_ =~ s/^\s*\.$comptoken\s+(\w+).*/$1/ foreach @comps;
+	push @decls, @comps;
 
 	# Create mangles
 	foreach my $decl (@decls) {
 		my $new_decl = create_mangle($filename, $decl);
 		s/([^\w]?)$decl([^\w]+)/$1$new_decl$2/g foreach @lines;
 	}
+	foreach my $init (@inits) {
+		my $new_init = create_mangle($filename, $init);
+		s/(\.$inittoken\s+)$init(\s*=\s*\w+)/$1$new_init$2/g foreach @lines;
+		s/([^\w]?)$init(\.\w+\s*\()/$1$new_init$2/g foreach @lines;
+	}
 
 	# Replace relation names according to using-declarations
 	expand_using_decls(\@lines);
 
+	# Change 'member' declarations back to decl
+	s/(\s*\.)$membertoken([^\w]+)/$1$decltoken$2/g foreach @lines;
+
 	# Done: Commit changes to file
+	unshift @lines, "#pragma once";
 	untie $filename;
 }
 chdir("$basedir");
@@ -75,27 +92,40 @@ sub expand_using_decls {
 
 	# Get all using-declarations
 	my %usings;
+	my %include_collect;
 	for (@$lines_ref) {
 		next unless s/(^\s*\.$usingtoken\s+(\w+)\s+from\s+(\w+)(?:\s+as\s+(\w+))?.*)/\/\/ $1/;
 		my $use = $2;
-		my $from = "$3.$file_ext";
+		my $from = camelcase_to_underscore("$3.$file_ext");
 		my $as = ($4?$4:$2);
 		my $res = create_mangle($from, $use);
 		$usings{$as} = $res;
-		say "Found using: $use from $from";
+		$include_collect{$from} = 1;
 	}
+
+	# Insert includes
+	$include_collect{"ir.$file_ext"} = 1;
+	my @includes = (keys %include_collect);
+	$_ = "#include \"$_\"" foreach @includes;
+	push @$lines_ref, @includes;
 
 	# Replace relations with their mangled names
 	while (my ($rel, $new_rel) = each %usings) {
-		say "Replacing using of $rel";
 		s/(^|\W)$rel(\s*\()/$1$new_rel$2/g foreach @$lines_ref;
+		s/(^|\W)(\.$inittoken\s+\w+\s*=\s*)$rel(\s*)/$1$2$new_rel$3/g foreach @$lines_ref;
 	}
 }
 
 sub create_mangle {
 	my ($filename, $decl) = @_;
-	$filename =~ s/^(.)/\l$1/;
-	$filename =~ s/([A-Z])/_\l$1/g;
 	$filename =~ s/\./_/g;
 	return "$mangle\_$filename\_$decl";
 }
+
+sub camelcase_to_underscore {
+	my ($in) = @_;
+	$in =~ s/^(.)/\l$1/;
+	$in =~ s/([A-Z])/_\l$1/g;
+	return "$in";
+}
+
