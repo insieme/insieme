@@ -50,5 +50,19 @@ namespace core {
 		NodePath<empty> path;
 	}
 
+TEST(NodePathTest, While) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	auto stmt = builder.parseStmt("while ( true ) {"
+	                              "  1;"
+	                              "}");
+
+	NodePath<empty> path(stmt);
+	ASSERT_TRUE(path);
+
+	EXPECT_EQ("0", toString(path));
+}
+
 } // end namespace core
 } // end namespace insieme
