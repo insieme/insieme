@@ -167,6 +167,10 @@ else()
   message(STATUS "hwloc libs ${Hwloc_LIBRARIES}")
   message(STATUS "hwloc incs ${Hwloc_INCLUDE_DIR}")
 
+  find_library(HWLOC_LIBRARIES NAMES hwloc HINTS "${HWLOC_ROOT}/lib")
+
+  mark_as_advanced(HWLOC_LIBRARIES)
+  
   if(Hwloc_FOUND)
     include(FindPackageHandleStandardArgs)
     find_package_handle_standard_args(Hwloc DEFAULT_MSG Hwloc_LIBRARIES)
