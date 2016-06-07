@@ -9,6 +9,7 @@ my $srcdir = $ARGV[0];
 my $destdir = $ARGV[1];
 my $incdir = "include";
 my $basedir = system "pwd";
+my $verbose = 0;
 
 my $file_ext = "dl";
 my $decltoken = "decl";
@@ -32,7 +33,7 @@ system "cp", <$srcdir/$incdir/*.$file_ext>, "$destdir/$incdir";
 chdir("$destdir/$incdir");
 foreach my $filename (<*.$file_ext>) {
 
-	say "Header file: $filename";
+	say "Header file: $filename" if $verbose;
 
 	tie my @lines, 'Tie::File', $filename;
 
@@ -77,7 +78,7 @@ chdir("$basedir");
 chdir("$destdir");
 foreach my $filename (<*.$file_ext>) {
 
-	say "Source file: $filename";
+	say "Source file: $filename" if $verbose;
 
 	tie my @lines, 'Tie::File', $filename;
 
@@ -115,7 +116,7 @@ sub expand_using_decls {
 		         $replace_count++;
 		}
 
-		say "Warning: Superfluous inclusion of '$rel' in file '$filename'. " if $replace_count == 0;
+		say "\x1B[33mWarning:\033[0m Superfluous inclusion of '$rel' in file '$filename'. " if $replace_count == 0;
 	}
 }
 
