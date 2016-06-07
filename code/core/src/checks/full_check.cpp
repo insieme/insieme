@@ -58,8 +58,9 @@ namespace checks {
 			context_free_checks.push_back(make_check<ExternalFunctionTypeCheck>());
 			context_free_checks.push_back(make_check<ReturnTypeCheck>());
 			context_free_checks.push_back(make_check<LambdaTypeCheck>());
+			context_free_checks.push_back(make_check<DeclarationTypeCheck>());
 			context_free_checks.push_back(make_check<DeclarationStmtTypeCheck>());
-			context_free_checks.push_back(make_check<DeclarationStmtSemanticCheck>());
+			context_free_checks.push_back(make_check<RefDeclTypeCheck>());
 			context_free_checks.push_back(make_check<IfConditionTypeCheck>());
 			context_free_checks.push_back(make_check<ForStmtTypeCheck>());
 			context_free_checks.push_back(make_check<WhileConditionTypeCheck>());
@@ -89,7 +90,6 @@ namespace checks {
 
 			context_free_checks.push_back(make_check<UndeclaredVariableCheck>());
 
-			context_free_checks.push_back(make_check<ScalarArrayIndexRangeCheck>());
 			// context_free_checks.push_back(make_check<UndefinedCheck>());
 			context_free_checks.push_back(make_check<FreeBreakInsideForLoopCheck>());
 			context_free_checks.push_back(make_check<MissingReturnStmtCheck>());

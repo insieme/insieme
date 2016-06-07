@@ -29,7 +29,6 @@ inherit_ptr
 inherit_single
 inherit_single_dynmem
 inherit_virtual
-initialization
 mem_alloc
 mem_alloc_ctor
 mem_alloc_ctor_inherit
@@ -39,7 +38,6 @@ memb_func_ptr
 omp
 op_overl
 performance
-pod_struct_bug
 rec_memberfunc_pointer
 refs
 refs_ctor

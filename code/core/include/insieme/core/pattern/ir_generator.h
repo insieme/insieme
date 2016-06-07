@@ -176,8 +176,12 @@ namespace irg {
 		return compoundStmt(single(stmt));
 	}
 
-	inline TreeGenerator declarationStmt(const TreeGenerator& variable, const TreeGenerator& initExpr) {
-		return node(core::NT_DeclarationStmt, single(variable) << single(initExpr));
+	inline TreeGenerator declaration(const TreeGenerator& type, const TreeGenerator& initExpr) {
+		return node(core::NT_Declaration, single(type) << single(initExpr));
+	}
+
+	inline TreeGenerator declarationStmt(const TreeGenerator& type, const TreeGenerator& variable, const TreeGenerator& initExpr) {
+		return node(core::NT_DeclarationStmt, single(declaration(type, initExpr)) << single(variable));
 	}
 
 	inline TreeGenerator ifStmt(const TreeGenerator& condition, const TreeGenerator& thenBody, const TreeGenerator& elseBody) {
@@ -185,14 +189,14 @@ namespace irg {
 	}
 
 
-	inline TreeGenerator forStmt(const TreeGenerator& iterator, const TreeGenerator& start, const TreeGenerator& end, const TreeGenerator& step,
-	                             const ListGenerator& body) {
-		return node(core::NT_ForStmt, single(declarationStmt(iterator, start)) << single(end) << single(step) << compoundStmt(body));
+	inline TreeGenerator forStmt(const TreeGenerator& iteratorT, const TreeGenerator& iterator, const TreeGenerator& start, const TreeGenerator& end,
+				                 const TreeGenerator& step, const ListGenerator& body) {
+		return node(core::NT_ForStmt, single(declarationStmt(iteratorT, iterator, start)) << single(end) << single(step) << compoundStmt(body));
 	}
 
-	inline TreeGenerator forStmt(const TreeGenerator& iterator, const TreeGenerator& start, const TreeGenerator& end, const TreeGenerator& step,
-	                             const TreeGenerator& body) {
-		return node(core::NT_ForStmt, single(declarationStmt(iterator, start)) << end << step << compoundStmt(body));
+	inline TreeGenerator forStmt(const TreeGenerator& iteratorT, const TreeGenerator& iterator, const TreeGenerator& start, const TreeGenerator& end,
+				                 const TreeGenerator& step, const TreeGenerator& body) {
+		return node(core::NT_ForStmt, single(declarationStmt(iteratorT, iterator, start)) << end << step << compoundStmt(body));
 	}
 
 	inline TreeGenerator whileStmt(const TreeGenerator& condition, const TreeGenerator& body) {
@@ -203,8 +207,8 @@ namespace irg {
 		return node(core::NT_SwitchStmt, single(expression) << cases << single(defaultCase));
 	}
 
-	inline TreeGenerator returnStmt(const TreeGenerator& returnExpression) {
-		return node(core::NT_ReturnStmt, single(returnExpression));
+	inline TreeGenerator returnStmt(const TreeGenerator& returnType, const TreeGenerator& returnExpression) {
+		return node(core::NT_ReturnStmt, single(declaration(returnType, returnExpression)));
 	}
 
 	inline TreeGenerator markerStmt(const TreeGenerator& subExpr, const TreeGenerator& id) {

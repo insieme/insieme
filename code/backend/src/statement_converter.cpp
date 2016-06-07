@@ -501,17 +501,19 @@ namespace backend {
 		// goal: create a variable declaration and register new variable within variable manager
 		auto manager = converter.getCNodeManager();
 		core::IRBuilder builder(ptr->getNodeManager());
+		auto& refExt = ptr->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
 		core::VariablePtr var = ptr->getVariable();
 
 		core::ExpressionPtr init = ptr->getInitialization();
+		bool undefinedInit = refExt.isCallOfRefTemp(init);
 
 		core::TypePtr plainType = var->getType();
 
 		// decide storage location of variable
 		VariableInfo::MemoryLocation location = VariableInfo::NONE;
 		// assigning from the same type (not uninitialized) doesn't regard the location
-		if(plainType == init->getType() && !core::analysis::isUndefinedInitalization(ptr) && !core::analysis::isConstructorCall(init)) {
+		if(plainType == init->getType() && !undefinedInit && !core::analysis::isConstructorCall(init) && !init.isa<core::InitExprPtr>()) {
 			location = VariableInfo::INDIRECT;
 		} else if(core::lang::isReference(plainType)) {
 			if(toBeAllocatedOnStack(init)) {
@@ -535,14 +537,15 @@ namespace backend {
 
 		c_ast::ExpressionPtr initValue = convertInitExpression(context, plainType, init);
 
-		// if LHS is cpp ref/rref, remove ref on RHS
-		if(core::lang::isCppReference(var) || core::lang::isCppRValueReference(var)) {
+		// if LHS is cpp ref/rref, or we have a direct plain ref initialization, remove ref on RHS
+		if(core::lang::isCppReference(var) || core::lang::isCppRValueReference(var)
+		   || (core::lang::isPlainReference(init) && core::lang::isPlainReference(plainType) && core::analysis::isConstructorCall(init))) {
 			auto unOp = initValue.isa<c_ast::UnaryOperationPtr>();
 			if(unOp && unOp->operation == c_ast::UnaryOperation::Reference) initValue = unOp->operand.as<c_ast::ExpressionPtr>();
 		}
 
 		// if the declared variable is undefined, we don't create an initialization value
-		if(core::analysis::isUndefinedInitalization(ptr)) {
+		if(undefinedInit) {
 			initValue = c_ast::ExpressionPtr();
 		}
 

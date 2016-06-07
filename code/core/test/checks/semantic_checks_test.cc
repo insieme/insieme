@@ -49,51 +49,6 @@ namespace checks {
 		return contains(list.getAll(), msg);
 	}
 
-	TEST(ScalarArrayIndexRangeCheck, Basic) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		{
-			auto addrlist = builder.parseAddressesStatement(R"1N5P1RE(
-            alias uint = uint<8>;
-            {
-                () -> unit {
-                    var ref<uint<8>,f,f,plain> i = 0u;
-                    (arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit {
-                        var uint<8> b = 1u;
-                        $ arr[b] $;
-                    } (ref_scalar_to_ref_array(i));
-                 };
-			}
-            )1N5P1RE");
-
-			EXPECT_EQ(addrlist.size(), 1) << "parsing error";
-
-			CheckPtr scalarArrayIndexRangeCheck = makeRecursive(make_check<ScalarArrayIndexRangeCheck>());
-
-			NodeAddress errorAdr = addrlist[0];
-
-			auto errors = check(errorAdr.getRootNode(), scalarArrayIndexRangeCheck);
-			ASSERT_FALSE(errors.empty());
-			EXPECT_PRED2(containsMSG, errors, Message(errorAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE, "", Message::WARNING));
-		}
-
-		{
-			StatementPtr stmt_pass = builder.parseExpr("alias uint = uint<8>;"
-			                                           "() -> unit { "
-			                                           "	var ref<uint<8>,f,f,plain> i = 0u; "
-			                                           "	(arr : ref<array<uint<8>,inf>,f,f,plain>) -> unit { "
-			                                           "		var uint<8> b = 1; "
-			                                           "		arr[0u]; "
-			                                           "	} (ref_scalar_to_ref_array(i)); "
-			                                           "}");
-			EXPECT_TRUE(stmt_pass) << "parsing error";
-
-			CheckPtr scalarArrayIndexRangeCheck = makeRecursive(make_check<ScalarArrayIndexRangeCheck>());
-			EXPECT_TRUE(check(stmt_pass, scalarArrayIndexRangeCheck).empty());
-		}
-	}
-
 	TEST(MissingReturnStmtCheck, UnitLambda) {
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -261,9 +216,9 @@ namespace checks {
 		auto stmt = builder.parseStmt(R"1N5P1RE(
 			alias uint = uint<8>;
 			{
-				() -> uint {
-					var int<4> a;
-					switch(a) {
+				() -> int<4> {
+					var ref<int<4>> a;
+					switch(*a) {
 					case 0: { return 5; }
 					case 1: { return 10; }
 					default: { throw "Ugh"; }
@@ -287,9 +242,9 @@ namespace checks {
 		auto stmt = builder.parseStmt(R"1N5P1RE(
 			alias uint = uint<8>;
 			{
-				() -> uint {
-					var int<4> a;
-					switch(a) {
+				() -> int<4> {
+					var ref<int<4>> a;
+					switch(*a) {
 					case 0: { return 5; }
 					case 1: { 10; }
 					default: { throw "Ugh"; }
@@ -313,9 +268,9 @@ namespace checks {
 		auto stmt = builder.parseStmt(R"1N5P1RE(
 			alias uint = uint<8>;
 			{
-				() -> uint {
-					var int<4> a;
-					switch(a) {
+				() -> int<4> {
+					var ref<int<4>> a;
+					switch(*a) {
 					case 0: { return 5; }
 					case 1: { return 10; }
 					}
@@ -338,10 +293,10 @@ namespace checks {
 		auto stmt = builder.parseStmt(R"1N5P1RE(
 			alias uint = uint<8>;
 			{
-				() -> uint {
-					var int<4> a;
+				() -> int<4> {
+					var ref<int<4>> a;
 					while(true) {
-						switch(a) {
+						switch(*a) {
 						case 0: { return 5; }
 						case 1: { 10; }
 						default: { "Ugh"; }

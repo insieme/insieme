@@ -106,7 +106,7 @@ namespace analysis {
 	bool isObjectReferenceType(const GenericTypePtr& type) {
 		return isRefType(type) && isObjectType(getReferencedType(type));
 	}
-	
+
 	// --------------------------- C++ calls ---------------------------------------------
 
 	bool isConstructorCall(const core::ExpressionPtr& expr) {
@@ -114,39 +114,33 @@ namespace analysis {
 		return call && call->getFunctionExpr()->getType().as<FunctionTypePtr>()->isConstructor();
 	}
 
+	// ---------------------------- Defaulted Members --------------------------------------
 
-	LambdaExprPtr createDefaultConstructor(const TypePtr& type) {
-		assert_true(isObjectType(type)) << "to create DefaultCtor a objectType is needed";
-		NodeManager& manager = type.getNodeManager();
-		IRBuilder builder(manager);
+	namespace {
+		struct DefaultedTag {};
 
-		// the type of the reference to be initialized by constructor (this type)
-		TypePtr refType = builder.refType(type);
-
-		// create the type of the resulting function
-		FunctionTypePtr ctorType = builder.functionType(toVector(refType), refType, FK_CONSTRUCTOR);
-
-		// build the constructor
-		VariablePtr thisVar = builder.variable(builder.refType(refType), 1);
-		return builder.lambdaExpr(ctorType, toVector(thisVar), builder.compoundStmt());
+		LiteralPtr getDefaultedMarker(const IRBuilder& builder) {
+			auto defaulted = builder.stringLit("INSIEME_DEFAULTED");
+			defaulted.attachValue<DefaultedTag>();
+			return defaulted;
+		}
 	}
 
-
-	bool isDefaultConstructor(const LambdaExprPtr& lambda) {
-		// it has to be a lambda
-		if(!lambda) { return false; }
-
-		// it has to be a constructor
-		if(lambda->getFunctionType()->getKind() != FK_CONSTRUCTOR) { return false; }
-
-		// it has to have a single parameter
-		if(lambda->getParameterList()->size() != 1u) { return false; }
-
-		// TODO: check the actual initialization of the members and parent types
-		// if the body is empty, be fine
-		return lambda->getBody() == IRBuilder(lambda->getNodeManager()).compoundStmt();
+	LambdaExprPtr markAsDefaultMember(const LambdaExprPtr& lambda) {
+		IRBuilder builder(lambda->getNodeManager());
+		StatementList newBody{ getDefaultedMarker(builder) };
+		std::copy(lambda->getBody()->begin(), lambda->getBody()->end(), std::back_inserter(newBody));
+		return builder.lambdaExpr(lambda->getType(), lambda->getParameterList(), builder.compoundStmt(newBody), lambda->getReference()->getNameAsString());
 	}
 
+	bool isaDefaultMember(const LambdaExprPtr& lambda) {
+		if (!lambda) return false;
+		if (!lambda->getFunctionType()->isMember()) return false;
+		auto body = lambda->getBody();
+		if (!body || body->size() < 1) return false;
+		auto first = body[0];
+		return first == getDefaultedMarker(IRBuilder(lambda->getNodeManager())) && first.hasAttachedValue<DefaultedTag>();
+	}
 
 } // end namespace analysis
 } // end namespace core

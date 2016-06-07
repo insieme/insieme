@@ -47,6 +47,10 @@ namespace measure {
 	using namespace std;
 
 	TEST(SystemInfo, HardwareSpecs) {
+		#ifndef USE_PAPI
+			std::cout << "Compiled without PAPI support, not testing hardware specs\n";
+			return;
+		#endif
 		SystemInfo sysInfo;
 
 		ASSERT_TRUE(sysInfo.isValid());

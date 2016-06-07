@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -97,7 +97,7 @@ namespace arithmetic {
 
 				// handle casts
 				if(lang.isNumericCast(call->getFunctionExpr())) {
-					return visit(call[0]); // ignore casts
+					return visit(transform::extractInitExprFromDecl(call[0])); // ignore casts
 				}
 
 				// handle selects
@@ -111,7 +111,7 @@ namespace arithmetic {
 				}
 
 				// check number of arguments
-				if(call->getArguments().size() != static_cast<std::size_t>(2)) { throw NotAFormulaException(call); }
+				if(call->getNumArguments() != static_cast<std::size_t>(2)) { throw NotAFormulaException(call); }
 
 				// check function
 				ExpressionPtr fun = call->getFunctionExpr();
@@ -119,8 +119,8 @@ namespace arithmetic {
 				// special handling of division
 
 				// handle remaining operators as usual
-				Formula a = visit(call->getArgument(0));
-				Formula b = visit(call->getArgument(1));
+				Formula a = visit(transform::extractInitExprFromDecl(call[0]));
+				Formula b = visit(transform::extractInitExprFromDecl(call[1]));
 
 				if(lang.isSignedIntAdd(fun) || lang.isUnsignedIntAdd(fun)) { return a + b; }
 				if(lang.isSignedIntSub(fun) || lang.isUnsignedIntSub(fun)) { return a - b; }
@@ -243,7 +243,7 @@ namespace arithmetic {
 				// --- comparison operators between formulas ---
 
 				// check whether it is a comparison operator
-				if(call->getArguments().size() != 2u || fun->getNodeType() != core::NT_Literal || !lang.isCompOp(fun)) { throw NotAConstraintException(call); }
+				if(call->getNumArguments() != 2u || fun->getNodeType() != core::NT_Literal || !lang.isCompOp(fun)) { throw NotAConstraintException(call); }
 
 				// handle arguments (need to be formulas
 				Formula a;
@@ -329,7 +329,7 @@ namespace arithmetic {
 
 				// process selects
 				if(lang.isSelect(fun)) {
-					assert_eq(call->getArguments().size(), 3u);
+					assert_eq(call->getNumArguments(), 3u);
 
 					// arguments must be formulas
 					Piecewise a = visit(call->getArgument(0));
@@ -350,7 +350,7 @@ namespace arithmetic {
 					throw NotAPiecewiseException(call);
 				}
 
-				if(call->getArguments().size() == 2) {
+				if(call->getNumArguments() == 2) {
 					// handle remaining integer operators as usual
 					Piecewise a = visit(call->getArgument(0));
 					Piecewise b = visit(call->getArgument(1));

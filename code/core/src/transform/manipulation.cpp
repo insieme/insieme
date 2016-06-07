@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -265,7 +265,7 @@ namespace transform {
 			auto bindType = bind->getType().as<FunctionTypePtr>();
 			auto funType = builder.functionType(bindType->getParameterTypes(), bindType->getReturnType());
 			auto fun = builder.lambdaExpr(funType, ingredients.params, ingredients.body);
-			auto intermediateCall = builder.callExpr(call->getType(), fun, call->getArguments());
+			auto intermediateCall = builder.callExpr(call->getType(), fun, call->getArgumentDeclarations());
 
 			// try inlining the intermediate call
 			auto res = tryInlineToExpr(manager, intermediateCall);
@@ -341,7 +341,7 @@ namespace transform {
 				// check if current node is a parameter access
 				if (analysis::isCallOf(cur, deref)) {
 					// check for parameters
-					if (auto var = cur.as<CallExprPtr>()[0].isa<VariablePtr>()) {
+					if (auto var = cur.as<CallExprPtr>()->getArgument(0).isa<VariablePtr>()) {
 						if (::contains(params, var)) {
 
 							// get position of parameter
@@ -357,7 +357,7 @@ namespace transform {
 							success &= (core::analysis::isSideEffectFree(arg) || firstUsage);
 
 							// register replacement
-							replacements[cur] = call[idx];
+							replacements[cur] = extractInitExprFromDecl(call[idx]);
 
 							// no more descent required here
 							return true;
@@ -428,7 +428,6 @@ namespace transform {
 		if(!inlineDerivedBuiltIns && core::lang::isDerived(fun)) { return call; }
 
 		// --- ok, some inline has to be done --
-
 		IRBuilder builder(manager);
 
 		// create substitution
@@ -437,22 +436,15 @@ namespace transform {
 
 		// instantiate every variable within the parameter list with a fresh name
 		const auto& params = fun->getParameterList().getElements();
-		const auto& args = call->getArguments();
+		const auto& args = call->getArgumentDeclarations();
 
 		assert_eq(params.size(), args.size()) << "Arguments do not fit parameters!!";
 
 		for(std::size_t i = 0; i < params.size(); i++) {
-			VariablePtr localVar;
-			if(args[i]->getNodeType() == NT_Variable) {
-				// passing a pure variable => use variable everywhere
-				localVar = static_pointer_cast<VariablePtr>(args[i]);
-			} else {
-				// temporary value is passed => create temporary variable
-				localVar = builder.variable(args[i]->getType());
+			VariablePtr localVar = builder.variable(args[i]->getType());
 
-				// copy value of parameter into a local variable
-				stmts.push_back(builder.declarationStmt(localVar, args[i]));
-			}
+			// copy value of parameter into a local variable
+			stmts.push_back(builder.declarationStmt(args[i], localVar));
 
 			// add to replacement map
 			varMap[params[i]] = localVar;
@@ -462,20 +454,20 @@ namespace transform {
 		bool allParamsDerefed = true;
 		auto deref = manager.getLangExtension<lang::ReferenceExtension>().getRefDeref();
 		NodeMap derefReplacements;
-		visitDepthFirstOncePrunable(NodeAddress(fun->getBody()), [&](const NodeAddress& cur)->bool {
+		visitDepthFirstOncePrunable(NodeAddress(fun->getBody()), [&](const NodeAddress& cur) -> bool {
 			// early exit ...
-			if (!allParamsDerefed) return true;
+			if(!allParamsDerefed) return true;
 
 			// prune nested lambdas
-			if (cur.isa<LambdaExprPtr>()) return true;
+			if(cur.isa<LambdaExprPtr>()) return true;
 
 			// check for parameters
-			if (auto var = cur.isa<VariablePtr>()) {
-				if (::contains(params, var)) {
+			if(auto var = cur.isa<VariablePtr>()) {
+				if(::contains(params, var)) {
 					// if it is a parameter read ..
-					if(analysis::isCallOf(cur.getParentAddress(), deref)) {
+					if(analysis::isCallOf(cur.getParentAddress(2), deref)) {
 						// .. replace it
-						derefReplacements[cur.getParentNode()] = varMap[var];
+						derefReplacements[cur.getParentNode(2)] = builder.deref(varMap[var]);
 					} else {
 						// invalid parameter access => no inlining possible
 						allParamsDerefed = false;
@@ -488,7 +480,7 @@ namespace transform {
 		});
 
 		// if there is a un-dereferenced parameter => no inlining supported
-		if (!allParamsDerefed) return call;
+		if(!allParamsDerefed) return call;
 
 		// add body of function to resulting inlined code
 		for_each(fun->getBody()->getStatements(), [&](const core::StatementPtr& cur) { stmts.push_back(replaceAllGen(manager, cur, derefReplacements)); });
@@ -500,13 +492,13 @@ namespace transform {
 
 	namespace {
 
-		class ConstantPropagater : public core::transform::CachedNodeMapping {
+		class ConstantPropagator : public core::transform::CachedNodeMapping {
 			NodeManager& manager;
 			const ExpressionPtr target;
 			const ExpressionPtr replacement;
 
 		  public:
-			ConstantPropagater(NodeManager& manager, const ExpressionPtr& target, const ExpressionPtr& replacement)
+			ConstantPropagator(NodeManager& manager, const ExpressionPtr& target, const ExpressionPtr& replacement)
 			    : manager(manager), target(target), replacement(replacement) {}
 
 			LambdaExprPtr fixLambda(const LambdaExprPtr& original, const ExpressionList& args, ExpressionList& newArgs) {
@@ -543,7 +535,7 @@ namespace transform {
 
 			const NodePtr resolveElement(const NodePtr& ptr) {
 				// check for replacement (dereferenced parameter needs to be replaced)
-				if (*ptr == *target) {
+				if(*ptr == *target) {
 					return replacement;
 				}
 
@@ -553,8 +545,8 @@ namespace transform {
 				// handle call expressions
 				if(ptr->getNodeType() == NT_CallExpr) {
 					CallExprPtr call = static_pointer_cast<const CallExpr>(ptr);
-					if(::contains(call->getArguments(), target)) {
-						const auto& args = call->getArguments();
+					if(::contains(call->getArgumentList(), target)) {
+						const auto& args = call->getArgumentList();
 						ExpressionList newArgs;
 
 						bool resolved = false;
@@ -614,10 +606,10 @@ namespace transform {
 			}
 		};
 
-		class ParameterFixer : public ConstantPropagater {
+		class ParameterFixer : public ConstantPropagator {
 		public:
 			ParameterFixer(NodeManager& manager, const VariablePtr& param, const ExpressionPtr& replacement)
-				: ConstantPropagater(manager, IRBuilder(manager).deref(param), replacement)  {}
+				: ConstantPropagator(manager, IRBuilder(manager).deref(param), replacement) {}
 		};
 
 	}
@@ -673,7 +665,7 @@ namespace transform {
 			// check whether parameter is propagated
 			bool isPropagated = all(calls, [&](const CallExprPtr& call) -> bool {
 				// check whether value is propagated along the recursion
-				assert_lt(index, call->getArguments().size()) << "Invalid recursive call!";
+				assert_lt(index, call->getNumArguments()) << "Invalid recursive call!";
 				return call->getArgument(index) == value;
 			});
 
@@ -685,15 +677,13 @@ namespace transform {
 
 			// update recursive variable
 
-
 			// update recursive calls within body
 			IRBuilder builder(manager);
 			std::map<NodeAddress, NodePtr> replacements;
 			for(const CallExprAddress& cur : calls) {
 				// eliminate argument from call
-				ExpressionList newArgs = cur.as<CallExprPtr>()->getArguments();
+				DeclarationList newArgs = cur.as<CallExprPtr>()->getArgumentDeclarations();
 				newArgs.erase(newArgs.begin() + index);
-
 
 				// build and register updated call
 				CallExprPtr newCall = builder.callExpr(cur->getType(), newLambdaRef, newArgs);
@@ -716,7 +706,7 @@ namespace transform {
 	}
 
 	NodePtr fixLambdaReference(NodeManager& manager, const NodePtr& node, const LambdaReferencePtr& ref, const ExpressionPtr& value) {
-		return ConstantPropagater(manager, ref, value).map(node);
+		return ConstantPropagator(manager, ref, value).map(node);
 	}
 
 	NodePtr fixParameter(NodeManager& manager, const NodePtr& node, const VariablePtr& param, const ExpressionPtr& value) {
@@ -727,7 +717,7 @@ namespace transform {
 		// ---------------- Pre-Conditions --------------------
 
 		// check whether indexed parameter is in-deed a bind
-		assert_lt(index, call->getArguments().size()) << "Invalid argument index!";
+		assert_lt(index, call->getNumArguments()) << "Invalid argument index!";
 		assert_eq(call->getArgument(index)->getNodeType(), NT_BindExpr) << "Specified argument is not a bind!";
 
 		// check whether function is in-deed a lambda
@@ -764,7 +754,7 @@ namespace transform {
 		BindExprPtr bind = call->getArgument(index).as<BindExprPtr>();
 		const VariableList bindParams = bind->getParameters().getParameters();
 		CallExprPtr callWithinBind = bind->getCall();
-		for(const ExpressionPtr& cur : callWithinBind->getArguments()) {
+		for(const ExpressionPtr& cur : callWithinBind->getArgumentList()) {
 			// bind-parameters are just forwarded
 			if(cur->getNodeType() == NT_Variable && contains(bindParams, cur.as<VariablePtr>())) {
 				newBindCallArgs.push_back(cur);
@@ -807,7 +797,7 @@ namespace transform {
 		auto newLambda = builder.lambdaExpr(lambda->getFunctionType()->getReturnType(), newLambdaParams, newBody);
 
 		// assemble new argument list
-		ExpressionList newArgumentList = call->getArguments();
+		ExpressionList newArgumentList = call->getArgumentList();
 		newArgumentList.erase(newArgumentList.begin() + index);                                  // drop bind argument
 		newArgumentList.insert(newArgumentList.begin() + index, newArgs.begin(), newArgs.end()); // inject new arguments
 
@@ -1007,9 +997,9 @@ namespace transform {
 					CallExprPtr call = parent.as<CallExprPtr>();
 					if(*call->getFunctionExpr() == *target) {
 						// we are following the function call => add a parameter
-						if(!contains(call.getArguments(), value)) {
+						if(!contains(call.getArgumentList(), value)) {
 							IRBuilder builder(manager);
-							ExpressionList newArgs = call.getArguments();
+							ExpressionList newArgs = call.getArgumentList();
 							newArgs.push_back(value);
 
 							// build new call (function is fixed within recursive step one level up)
@@ -1028,7 +1018,7 @@ namespace transform {
 					CallExprPtr call = res.getParentNode().as<CallExprPtr>();
 
 					// check whether a new argument needs to be added
-					if(call->getArguments().size() != lambda->getParameterList().size()) {
+					if(call->getNumArguments() != lambda->getParameterList().size()) {
 						// add new parameter to lambda
 						LambdaExprPtr newLambda;
 						std::tie(newLambda, value) = detail::addNewParameter(lambda, value->getType());
@@ -1036,7 +1026,7 @@ namespace transform {
 
 					} else {
 						// update variable when it is already passed as an argument
-						auto args = call->getArguments();
+						auto args = call->getArgumentList();
 						for(int i = args.size() - 1; i > 0; i--) {
 							if(args[i] == value) {
 								value = IRBuilder(manager).deref(lambda->getParameterList()[i]);
@@ -1187,13 +1177,13 @@ namespace transform {
 
 				                   // handle getThreadID
 				                   if(analysis::isCallOf(call, parExt.getGetThreadId())) {
-					                   if(ExpressionPtr newLevel = decLevel(call[0])) { return builder.getThreadId(newLevel); }
+					                   if(ExpressionPtr newLevel = decLevel(call.getArgument(0))) { return builder.getThreadId(newLevel); }
 					                   return idConstant;
 				                   }
 
 				                   // handle group size
 				                   if(analysis::isCallOf(call, parExt.getGetGroupSize())) {
-					                   if(ExpressionPtr newLevel = decLevel(call[0])) { return builder.getThreadGroupSize(newLevel); }
+					                   if(ExpressionPtr newLevel = decLevel(call.getArgument(0))) { return builder.getThreadGroupSize(newLevel); }
 					                   return sizeConstant;
 				                   }
 
@@ -1316,6 +1306,32 @@ namespace transform {
 
 		// build resulting function
 		return extractLambda(mgr, builder.compoundStmt(stmts));
+	}
+
+	ExpressionPtr extractInitExprFromDecl(const DeclarationPtr& decl) {
+		auto type = decl->getType();
+
+		auto& refExt = decl->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+		auto ret = transformBottomUpGen(decl->getInitialization(), [&refExt](const core::CallExprPtr& call) {
+			if(refExt.isCallOfRefDecl(call)) {
+				return core::lang::buildRefTemp(core::analysis::getReferencedType(call->getType())).as<core::CallExprPtr>();
+			}
+			return call;
+		});
+		return ret;
+	}
+
+	ExpressionList extractArgExprsFromCall(const NodePtr& call) {
+		assert_eq(call->getNodeType(), NT_CallExpr);
+		auto decls = call.as<core::CallExprPtr>()->getArgumentDeclarations();
+		ExpressionList out;
+		std::transform(decls.begin(), decls.end(), std::back_inserter(out), [](const DeclarationPtr& d) { return extractInitExprFromDecl(d); });
+		return out;
+	}
+
+	ExpressionPtr extractArg(const NodePtr& call, size_t num) {
+		assert_eq(call->getNodeType(), NT_CallExpr);
+		return extractInitExprFromDecl(call.as<core::CallExprPtr>().getArgumentDeclaration(num));
 	}
 
 } // end namespace transform

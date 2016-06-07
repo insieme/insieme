@@ -356,7 +356,7 @@ namespace transform {
 				auto callExpr = expr.as<core::CallExprPtr>();
 				// use returnType deduction for this purpose
 				type = core::types::deduceReturnType(callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>(),
-					core::extractTypes(callExpr->getArguments()));
+					core::extractTypes(callExpr->getArgumentList()));
 				break;
 			}
 		case core::NT_BindExpr:
@@ -367,7 +367,7 @@ namespace transform {
 				// also use returnType deduction but use bound parameters
 				auto callExpr = bindExpr->getCall();
 				type = core::types::deduceReturnType(callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>(),
-					core::extractTypes(callExpr->getArguments()));
+					core::extractTypes(callExpr->getArgumentList()));
 				break;
 			}
 		default:

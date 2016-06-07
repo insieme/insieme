@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -101,7 +101,7 @@ namespace addons {
 				std::map<core::LiteralPtr, std::set<core::CallExprPtr>> inits;
 				auto collector = [&](const core::CallExprPtr& call) {
 					// only interested in init-static-lazy calls
-					if(core::analysis::isCallOf(call, ext.getInitStaticLazy())) { inits[call[0].as<core::LiteralPtr>()].insert(call); }
+					if(core::analysis::isCallOf(call, ext.getInitStaticLazy())) { inits[core::transform::extractInitExprFromDecl(call[0]).as<core::LiteralPtr>()].insert(call); }
 				};
 
 				// search all InitStaticLazy calls
@@ -156,10 +156,10 @@ namespace addons {
 				auto& ext = mgr.getLangExtension<StaticVarBackendExtension>();
 				core::IRBuilder builder(mgr);
 
-				auto init = builder.callExpr(ext.getInitStaticConst(), call[1], call[0]);
+				auto init = builder.callExpr(builder.refType(call[1]->getType()), ext.getInitStaticConst(), toVector(call[1], call[0]));
 				auto lambda = builder.lambdaExpr(retType, core::VariableList(), init);
 
-				// this function call is equivalent to a call to the new artifical lambda
+				// this function call is equivalent to a call to the new artificial lambda
 				auto ret = builder.callExpr(retType, lambda, core::ExpressionList());
 				LOG(DEBUG) << "ISC: " << dumpColor(ret) << " : " << dumpColor(ret->getType()) << "\n";
 				return CONVERT_EXPR(ret);
@@ -205,7 +205,7 @@ namespace addons {
 					}
 
 					// convert the init expression
-					init = CONVERT_EXPR(call[0]);
+					init = CONVERT_EXPR(core::transform::extractInitExprFromDecl(call[0]));
 				}
 
 				// built the static initialization
@@ -256,7 +256,7 @@ namespace addons {
 					LOG(DEBUG) << "value:\n" << dumpColor(ARG(1)) << "\n value type: " << dumpColor(ARG(1)->getType()) << "\n";
 					LOG(DEBUG) << "value TEXT:\n" << dumpText(ARG(1)) << "\n";
 
-					auto init = builder.callExpr(retType, ext.getInitStaticConst(), value, call[0]);
+					auto init = builder.callExpr(retType, ext.getInitStaticConst(), value, core::transform::extractInitExprFromDecl(call[0]));
 					LOG(DEBUG) << ">>>>>>>INIT: \n" << dumpPretty(init) << " : " << init->getType() << "\n";
 					auto lambda = builder.lambdaExpr(retType, core::VariableList(), init);
 					LOG(DEBUG) << ">>>>>>>LAMBDA: \n" << dumpPretty(lambda) << " : " << lambda->getType() << "\n";
@@ -270,7 +270,8 @@ namespace addons {
 				auto param = fun->getParameterList()[1];
 				param = core::transform::replaceAllGen(mgr, param, {{builder.typeVariable("a"), core::analysis::getReferencedType(retType)}});
 
-				auto init = builder.callExpr(ext.getInitStaticLazy(), builder.deref(param), call[0]);
+				auto init = builder.callExpr(builder.refType(builder.deref(param)->getType()), ext.getInitStaticLazy(), builder.deref(param),
+					                         core::transform::extractInitExprFromDecl(call[0]));
 				LOG(DEBUG) << ">>>>>>>INIT: \n" << dumpPretty(init) << " : " << init->getType() << "\n";
 				auto newFunTy = builder.functionType(param->getType(), init->getType());
 				LOG(DEBUG) << ">>>>NEWFT: \n" << dumpPretty(newFunTy) << "\n";
@@ -278,7 +279,7 @@ namespace addons {
 				LOG(DEBUG) << ">>>>>>>LAMBDA: \n" << dumpPretty(lambda) << " : " << lambda->getType() << "\n";
 
 				// this function call is equivalent to a call to the new artificial lambda
-				auto rcall = builder.callExpr(newFunTy->getReturnType(), lambda, call[1]);
+				auto rcall = builder.callExpr(newFunTy->getReturnType(), lambda, core::transform::extractInitExprFromDecl(call[1]));
 				LOG(DEBUG) << "ext.getInitStaticLazy() BUILT2:\n" << *rcall << "\n";
 				return CONVERT_EXPR(rcall);
 			};
@@ -305,7 +306,7 @@ namespace addons {
 				// create init value
 				auto& mgr = NODE_MANAGER;
 				core::IRBuilder builder(mgr);
-				auto init = CONVERT_EXPR(builder.callExpr(call[0], toVector<core::ExpressionPtr>()));
+				auto init = CONVERT_EXPR(builder.callExpr(core::transform::extractInitExprFromDecl(call[0]), toVector<core::ExpressionPtr>()));
 
 				// built the static initialization
 				auto decl = C_NODE_MANAGER->create<c_ast::VarDecl>(var, init);

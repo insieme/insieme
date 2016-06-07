@@ -113,22 +113,23 @@ namespace backend {
 
 			// resolve data path recursively
 			core::CallExprPtr call = dataPath.as<core::CallExprPtr>();
-			core::ExpressionPtr res = wrapNarrow(root, call->getArgument(0));
+			auto args = core::transform::extractArgExprsFromCall(call);
+			core::ExpressionPtr res = wrapNarrow(root, args[0]);
 			auto fun = call->getFunctionExpr();
 			if(dpExt.isDataPathMember(fun)) {
 				// access the member of the struct / union
-				return builder.refMember(res, call->getArgument(1).as<core::LiteralPtr>()->getStringValue());
+				return builder.refMember(res, args[1].as<core::LiteralPtr>()->getStringValue());
 			} else if(dpExt.isDataPathElement(fun)) {
 				// access element of vector
-				return builder.arrayRefElem(res, call->getArgument(1));
+				return builder.arrayRefElem(res, args[1]);
 			} else if(dpExt.isDataPathComponent(fun)) {
 				// access tuple component
-				return builder.refComponent(res, call->getArgument(1));
+				return builder.refComponent(res, args[1]);
 			} else if(dpExt.isDataPathParent(fun)) {
 				// cast to parent type using a static cast
 				const auto& ext = mgr.getLangExtension<addons::CppCastExtension>();
 				core::lang::ReferenceType refType(res);
-				refType.setElementType(core::analysis::getRepresentedType(call[1]));
+				refType.setElementType(core::analysis::getRepresentedType(args[1]));
 				return builder.callExpr(ext.getStaticCast(), res, builder.getTypeLiteral((core::GenericTypePtr)refType));
 			}
 
@@ -472,6 +473,11 @@ namespace backend {
 			return c_ast::cast(cType, allocaNode);
 		};
 
+		res[refExt.getRefDecl()] = OP_CONVERTER {
+			assert_fail() << "ref_decl calls should have been eliminated by the preprocessor";
+			return CONVERT_ARG(0);
+		};
+
 		res[refExt.getRefTempInit()] = OP_CONVERTER {
 
 			// extract type
@@ -492,8 +498,8 @@ namespace backend {
 			if(res->getNodeType() == c_ast::NT_Initializer) { return c_ast::ref(res); }
 
 			// moderm C++ does not allow the usage of the syntax (int[1]{x})
-			// the value of a class instance is implicity materialized to
-			// be used as reference paramenter in function calls,
+			// the value of a class instance is implicitly materialized to
+			// be used as reference parameter in function calls,
 			// lets try just to write the expression and let the backend compiler
 			// materialize it
 			// 	Classes && generic types (which are intercepted objects)
@@ -585,7 +591,9 @@ namespace backend {
 
 			// handle destructor call
 			if(core::CallExprPtr dtorCall = ARG(0).isa<core::CallExprPtr>()) {
-				if(dtorCall->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isDestructor()) { return c_ast::deleteCall(CONVERT_EXPR(dtorCall[0])); }
+				if(dtorCall->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isDestructor()) {
+					return c_ast::deleteCall(CONVERT_EXPR(core::transform::extractInitExprFromDecl(dtorCall[0])));
+				}
 			}
 
 			// add dependency to stdlib.h (contains the free)
@@ -646,9 +654,17 @@ namespace backend {
 			auto srcRefKind = core::lang::getReferenceKind(ARG(0));
 			auto trgRefKind = core::lang::getReferenceKind(ARG(1));
 
+			if(ARG(0).isa<core::InitExprPtr>()) return CONVERT_ARG(0);
+
 			if(srcRefKind == core::lang::ReferenceType::Kind::Plain) {
-				if(trgRefKind == core::lang::ReferenceType::Kind::CppReference) {
+				if(trgRefKind == core::lang::ReferenceType::Kind::CppReference || trgRefKind == core::lang::ReferenceType::Kind::CppRValueReference) {
 					return c_ast::deref(CONVERT_ARG(0));
+				}
+			}
+
+			if(srcRefKind == core::lang::ReferenceType::Kind::CppReference || trgRefKind == core::lang::ReferenceType::Kind::CppRValueReference) {
+				if(trgRefKind == core::lang::ReferenceType::Kind::Plain) {
+					return c_ast::ref(CONVERT_ARG(0));
 				}
 			}
 

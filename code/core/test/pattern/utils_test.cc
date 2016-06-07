@@ -72,7 +72,7 @@ namespace pattern {
 		return res;
 	}
 
-	TEST(PatternUtils, basic) {
+	TEST(PatternUtils, Basic) {
 		core::NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -81,15 +81,15 @@ namespace pattern {
 
 		core::NodePtr node = builder.parseStmt(R"(
 		for(uint<4> l = 8u .. 70u : 3u) {
-			l; 
+			l;
 			for(uint<4> i = 10u .. 50u) {
 				for(uint<4> j = 3u .. 25u) {
-					j; 
-					for(uint<4> k = 2u .. 100u) { 
-						v[i+j]; 
-					}; 
+					j;
+					for(uint<4> k = 2u .. 100u) {
+						v[i+j];
+					};
 		            var ref<uint<4>> a = 3u;
-					a = i; 
+					a = i;
 				}
 			}
 			for(uint<4> k = 2u .. 100u) {
@@ -146,7 +146,7 @@ namespace pattern {
 	}
 
 
-	TEST(PatternUtils, performance) {
+	TEST(PatternUtils, Performance) {
 		core::NodeManager manager;
 		IRBuilder builder(manager);
 

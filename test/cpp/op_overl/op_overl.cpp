@@ -38,10 +38,6 @@ void f() {
 	c1(1,2,3);
 }
 
-
-// NOTE: pointers to const values loose qualification in IR, so they wont call const methods in
-// rebuilt code. this trait is ignored but aknoledged to the programmer as a warnning
-
 int main() {
 
 	C c1;

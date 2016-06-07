@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -38,10 +38,10 @@
 
 #include "insieme/core/printer/lua_printer.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/normalize.h"
 
 #include "insieme/utils/lua/lua.h"
 #include "insieme/utils/test/test_utils.h"
-#include "insieme/core/analysis/normalize.h"
 
 namespace insieme {
 namespace core {
@@ -88,7 +88,6 @@ namespace printer {
 					}
 				}
 			})", symbols).as<ForStmtPtr>());
-
 
 		string script = toLuaScript(forStmt);
 		EXPECT_PRED2(containsSubString, script, "(10 - 1)");

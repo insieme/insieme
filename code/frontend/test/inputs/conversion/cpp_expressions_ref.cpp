@@ -38,7 +38,7 @@ int main() {
 	//===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		ptr_from_ref(ref_cast(v1, type_lit(f), type_lit(f), type_lit(plain)));
 	})")
@@ -49,7 +49,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,t,f,cpp_ref> v1 = v0;
 		ptr_from_ref(ref_cast(v1, type_lit(t), type_lit(f), type_lit(plain)));
 	})")
@@ -60,7 +60,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		0-*v1;
 	})")
@@ -71,7 +71,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,t,f,cpp_ref> v1 = v0;
 		0-*v1;
 	})")
@@ -82,7 +82,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		gen_pre_inc(ref_cast(v1, type_lit(f), type_lit(f), type_lit(plain)));
 	})")
@@ -93,7 +93,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		gen_post_inc(ref_cast(v1, type_lit(f), type_lit(f), type_lit(plain)));
 	})")
@@ -104,7 +104,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		gen_pre_dec(ref_cast(v1, type_lit(f), type_lit(f), type_lit(plain)));
 	})")
@@ -115,7 +115,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		gen_post_dec(ref_cast(v1, type_lit(f), type_lit(f), type_lit(plain)));
 	})")
@@ -130,7 +130,7 @@ int main() {
 	// MATH //////////////////////////////////////////////////////////////
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		*v0+*v1;
 	})")
@@ -152,7 +152,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		*v1+*v0;
 	})")
@@ -163,7 +163,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		var ref<int<4>,f,f,cpp_ref> v2 = v0;
 		*v1+*v2;
@@ -178,7 +178,7 @@ int main() {
 	// COMPARISON /////////////////////////////////////////////////////////
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		*v0==*v1;
 	})")
@@ -189,7 +189,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		*v0<=*v1;
 	})")
@@ -200,7 +200,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		*v0<*v1;
 	})")
@@ -213,8 +213,8 @@ int main() {
 	// WITH DIFFERENT TYPES ///////////////////////////////////////////////////
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
-		var ref<real<4>,f,f,plain> v1 = v1;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+		var ref<real<4>,f,f,plain> v1 = ref_decl(type_lit(ref<real<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v2 = v0;
 		var ref<real<4>,f,f,cpp_ref> v3 = v1;
 		num_cast(*v2, type_lit(real<4>))+*v3;
@@ -233,7 +233,7 @@ int main() {
 	typedef int* intPtr;
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<int<4>>,f,f,plain> v0 = v0;
+		var ref<ptr<int<4>>,f,f,plain> v0 = ref_decl(type_lit(ref<ptr<int<4>>,f,f,plain>));
 		var ref<ptr<int<4>>,f,f,cpp_ref> v1 = v0;
 		ptr_to_ref(*v1);
 	})")
@@ -244,7 +244,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<int<4>>,f,f,plain> v0 = v0;
+		var ref<ptr<int<4>>,f,f,plain> v0 = ref_decl(type_lit(ref<ptr<int<4>>,f,f,plain>));
 		var ref<ptr<int<4>>,t,f,cpp_ref> v1 = v0;
 		ptr_to_ref(*v1);
 	})")
@@ -257,7 +257,7 @@ int main() {
 	typedef const int* constIntPtr;
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<int<4>,t,f>,f,f,plain> v0 = v0;
+		var ref<ptr<int<4>,t,f>,f,f,plain> v0 = ref_decl(type_lit(ref<ptr<int<4>,t,f>,f,f,plain>));
 		var ref<ptr<int<4>,t,f>,t,f,cpp_ref> v1 = v0;
 		ptr_to_ref(*v1);
 	})")
@@ -268,8 +268,8 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
-		var ref<ptr<int<4>>,f,f,plain> v1 = v1;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+		var ref<ptr<int<4>>,f,f,plain> v1 = ref_decl(type_lit(ref<ptr<int<4>>,f,f,plain>));
 		var ref<ptr<int<4>>,f,f,cpp_ref> v2 = v1;
 		v2 = ptr_from_ref(v0);
 	})")
@@ -281,7 +281,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<int<4>>,f,f,plain> v0 = v0;
+		var ref<ptr<int<4>>,f,f,plain> v0 = ref_decl(type_lit(ref<ptr<int<4>>,f,f,plain>));
 		var ref<ptr<int<4>>,f,f,cpp_ref> v1 = v0;
 		ptr_gt(*v1, *v1);
 		ptr_lt(*v1, *v1);
@@ -300,9 +300,9 @@ int main() {
 	// COMPOUND //////////////////////////////////////////////////////////////
 
 	#pragma test expect_ir(R"(
-		using "ext.compound_ops";
+	using "ext.compound_ops";
 	{
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		comp_assign_add(v1, 1);
 	})")
@@ -313,9 +313,9 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"(
-		using "ext.compound_ops";
+	using "ext.compound_ops";
 	{
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		comp_assign_subtract(v1, 1);
 	})")
@@ -328,7 +328,7 @@ int main() {
 	// ASSIGNMENT //////////////////////////////////////////////////////////////
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		v1 = *v0;
 	})")
@@ -339,7 +339,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		v1 = 1;
 	})")
@@ -350,7 +350,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		var ref<int<4>,f,f,cpp_ref> v2 = v0;
 		v1 = *v2;
@@ -363,7 +363,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		var ref<int<4>,f,f,cpp_ref> v2 = v0;
 		v0 = *cxx_style_assignment(v1, *v2);
@@ -378,7 +378,7 @@ int main() {
 	//===----------------------------------------------------------------------------------------------------------------------------------------- SIZEOF ---===
 
 	#pragma test expect_ir(R"({
-		var ref<int<4>,f,f,plain> v0 = v0;
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = v0;
 		v1 = num_cast(sizeof(type_lit(int<4>)), type_lit(int<4>));
 	})")

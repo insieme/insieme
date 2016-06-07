@@ -78,10 +78,12 @@ namespace frontend {
 		res = checks::check(prog);
 		ASSERT_TRUE(res.empty()) << "Semantic error after cleanup:\n" << res;
 
-		// check that only assignments for which the return value is used (that is, the parent is an expression) remain
+		// check that only assignments for which the return value is used (that is, the parent is an expression or declaration) remain
 		visitDepthFirst(core::ProgramAddress(prog), [&](const core::CallExprAddress& call) {
 			if(feExt.isCallOfCStyleAssignment(call) || feExt.isCallOfCxxStyleAssignment(call)) {
-				EXPECT_EQ(core::NC_Expression, call.getParentNode().getNodeCategory());
+				auto parentCategory = call.getParentNode().getNodeCategory();
+				if(call.getParentNode().getNodeType() == core::NT_Declaration && call.getDepth() >= 2) parentCategory = call.getParentNode(2).getNodeCategory();
+				EXPECT_EQ(core::NC_Expression, parentCategory);
 			}
 		});
 

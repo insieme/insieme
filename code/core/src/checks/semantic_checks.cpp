@@ -48,113 +48,6 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-	namespace {
-		NodeAddress firstAddress(NodeAddress start, NodePtr node) {
-			NodeAddress retval;
-			visitDepthFirstInterruptible(start, [&](const NodeAddress& addr) -> bool {
-				if(*node == *addr.getAddressedNode()) {
-					retval = addr;
-					return true;
-				}
-				return false;
-			});
-			return retval;
-		}
-	}
-
-	OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddress& curcall) {
-		OptionalMessageList res;
-		auto& mgr = curcall->getNodeManager();
-		auto& refExt = mgr.getLangExtension<lang::ReferenceExtension>();
-		IRBuilder builder(mgr);
-
-		CallExprPtr curPtr = curcall.getAddressedNode();
-
-		for(unsigned argIndex = 0; argIndex < curPtr->getArguments().size(); ++argIndex) {
-			// the potential outer call to scalar.to.array in one of curcall's parameters
-			ExpressionPtr curArg = curPtr->getArgument(argIndex);
-			if(!core::analysis::isCallOf(curArg, refExt.getRefScalarToRefArray())) { continue; }
-			LambdaExprPtr called = dynamic_pointer_cast<const LambdaExpr>(curPtr->getFunctionExpr());
-			if(!called) { continue; }
-			VariablePtr param = called->getParameterList()[argIndex];
-			// LOG(INFO) << "**************************************\n====\nparam:\n " << printer::PrettyPrinter(param) << "\n*********************\n";
-			NodeAddress addr = firstAddress(curcall, called->getBody());
-			if(addr) {
-				visitDepthFirst(addr, [&](const VariableAddress& var) {
-					if(*var.getAddressedNode() != *param) { return; }
-					if(var.isRoot() || var.getDepth() < 2) { return; }
-					if(!analysis::isCallOf(var.getParentAddress(1), refExt.getRefDeref())) { return; }
-					if(var.getParentAddress(2).getNodeType() != NT_CallExpr) { return; }
-					CallExprAddress useCallAdr = var.getParentAddress(2).as<CallExprAddress>();
-					CallExprPtr usecall = useCallAdr;
-					if(usecall) {
-						if(refExt.isRefArrayElement(usecall->getFunctionExpr())) {
-							try {
-								auto formula = arithmetic::toFormula(usecall->getArgument(1));
-								if(formula.isZero()) {
-									// correct use
-								} else {
-									add(res, Message(useCallAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
-									                 format("Potentially unsafe indexing of single-element array %s using formula %s",
-									                        *param, formula),
-									                 Message::WARNING));
-								}
-							} catch(const arithmetic::NotAFormulaException& e) {
-								add(res, Message(useCallAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
-								                 format("Potentially unsafe indexing of single-element array %s using expression %s",
-								                        *param, *(usecall->getArgument(1))),
-								                 Message::WARNING));
-							}
-						} else {
-							// warn here as well? (used in unexpected call)
-						}
-					} else {
-						// warn here as well? (used in non-call)
-					}
-				});
-			}
-		}
-
-		return res;
-	}
-
-	// OptionalMessageList UndefinedCheck::visitCallExpr(const CallExprAddress& curcall) {
-	//	OptionalMessageList res;
-	//
-	//	if (curcall.isRoot()) {
-	//		return res;
-	//	}
-	//
-	//	auto& mgr = curcall->getNodeManager();
-	//	auto& basic = mgr.getLangBasic();
-	//	if(!core::analysis::isCallOf(curcall.getAddressedNode(), basic.getUndefined())) return res;
-	//
-	//	// find first non-marker / helper parent
-	//	NodeAddress cur = curcall.getParentAddress();
-	//	while(!cur.isRoot() && cur->getNodeCategory() == NC_Support) {
-	//		cur = cur.getParentAddress();
-	//	}
-	//
-	//	NodePtr parent = cur.getAddressedNode();
-	//
-	//	// check if parent in allowed set
-	//	NodeType pnt = parent->getNodeType();
-	//	if(core::analysis::isCallOf(parent, basic.getRefNew())
-	//		|| core::analysis::isCallOf(parent, basic.getRefVar())
-	//		|| core::analysis::isCallOf(parent, basic.getVectorInitUniform())
-	//		|| (core::analysis::isConstructorExpr(parent) && pnt != NT_JobExpr)) {
-	//
-	//		return res;
-	//	}
-	//	// error if not
-	//	std::cout << "\n~~~~~~~~~~~~~~~~~~ Node type of parent: " << pnt << std::endl;
-	//	add(res, Message(curcall,
-	//		EC_SEMANTIC_INCORRECT_UNDEFINED,
-	//		string("Call to undefined(...) not enclosed within ref.new, ref.var or constructor expression"),
-	//		Message::ERROR));
-	//	return res;
-	//}
-
 	OptionalMessageList FreeBreakInsideForLoopCheck::visitForStmt(const ForStmtAddress& curfor) {
 		OptionalMessageList res;
 		auto& mgr = curfor->getNodeManager();
@@ -268,10 +161,10 @@ namespace checks {
 		if(refExt.isCallOfRefCast(memLocExpr)) memLocExpr = analysis::getArgument(memLocExpr, 0);
 
 		if(!memLocExpr.isa<VariablePtr>() && !memLocExpr.isa<LiteralPtr>() && !refExt.isCallOfRefTemp(memLocExpr)
-		   && !refExt.isCallOfRefMemberAccess(memLocExpr)) {
+		   && !refExt.isCallOfRefMemberAccess(memLocExpr) && !refExt.isCallOfRefDecl(memLocExpr)) {
 			add(res,
 				Message(initExpr, EC_SEMANTIC_INVALID_INIT_MEMLOC,
-				        format("InitExpr must initialize memory of a variable, literal, member, or temporary generated by ref_temp.\n -> got: %s of type %s",
+				        format("InitExpr must initialize memory of a variable, literal, member, or temporary generated by ref_temp or referenced by ref_decl.\n -> got: %s of type %s",
 				               *memLocExpr, *memLocExpr->getType()),
 				        Message::ERROR));
 		}

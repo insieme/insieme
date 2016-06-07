@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -62,7 +62,7 @@ namespace analysis {
 		// dumpText(type);
 
 		if(type) {
-			insieme::core::printer::PrettyPrinter printer(type, 
+			insieme::core::printer::PrettyPrinter printer(type,
 														  insieme::core::printer::PrettyPrinter::OPTIONS_DEFAULT |
 														  insieme::core::printer::PrettyPrinter::PRINT_CASTS |
 														  insieme::core::printer::PrettyPrinter::PRINT_DEREFS |
@@ -110,28 +110,28 @@ TEST(Parentheses, Basic) {
 	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$1|2$&3")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$1+2$*3")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$1*2$+3")[0].as<CallExprAddress>());
-	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$1-2+3$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
-	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$1-(2+3)$")[0].as<CallExprAddress>()[1].as<CallExprAddress>());
-	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$1-(2-3)$")[0].as<CallExprAddress>()[1].as<CallExprAddress>());
-	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$(1-2)+3$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
-	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$(1+2)+3$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
+	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$1-2+3$")[0].as<CallExprAddress>()->getArgument(0).as<CallExprAddress>());
+	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$1-(2+3)$")[0].as<CallExprAddress>()->getArgument(1).as<CallExprAddress>());
+	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$1-(2-3)$")[0].as<CallExprAddress>()->getArgument(1).as<CallExprAddress>());
+	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$(1-2)+3$")[0].as<CallExprAddress>()->getArgument(0).as<CallExprAddress>());
+	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$(1+2)+3$")[0].as<CallExprAddress>()->getArgument(0).as<CallExprAddress>());
 
-	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$3*4/5$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
-	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$3/4*5$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
+	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$3*4/5$")[0].as<CallExprAddress>()->getArgument(0).as<CallExprAddress>());
+	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$3/4*5$")[0].as<CallExprAddress>()->getArgument(0).as<CallExprAddress>());
 	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("3/$4*5$")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("3*$4/5$")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("3/$4/5$")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$3/4$/5")[0].as<CallExprAddress>());
-	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$1/2*3$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
-	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$1/(2*3)$")[0].as<CallExprAddress>()[1].as<CallExprAddress>());
-	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$1/(2/3)$")[0].as<CallExprAddress>()[1].as<CallExprAddress>());
+	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$1/2*3$")[0].as<CallExprAddress>()->getArgument(0).as<CallExprAddress>());
+	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$1/(2*3)$")[0].as<CallExprAddress>()->getArgument(1).as<CallExprAddress>());
+	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$1/(2/3)$")[0].as<CallExprAddress>()->getArgument(1).as<CallExprAddress>());
 
 
 	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$true&&false$||true")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$true&&false$")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$true&&false$&&true&&false")[0].as<CallExprAddress>());
 	EXPECT_PRED1(needsParentheses, builder.parseAddressesExpression("$true||false$&&true")[0].as<CallExprAddress>());
-	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$true&&false||true$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
+	EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$true&&false||true$")[0].as<CallExprAddress>()->getArgument(0).as<CallExprAddress>());
 	// failure from parser!!
 	//EXPECT_PRED1(needsNoParentheses, builder.parseAddressesExpression("$true||false&&true$")[0].as<CallExprAddress>()[0].as<CallExprAddress>());
 }

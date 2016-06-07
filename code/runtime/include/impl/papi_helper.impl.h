@@ -97,6 +97,8 @@ void irt_papi_shutdown() {
 	PAPI_shutdown();
 }
 
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+
 /*
  * free allocated memory, shutdown papi
  */
@@ -239,11 +241,7 @@ void irt_papi_setup_worker(irt_worker* worker) {
 	irt_papi_select_events_from_env(worker, context);
 }
 
-#else // IRT_USE_PAPI
-
-void irt_papi_init() {}
-
-void irt_papi_shutdown() {}
+#else // IRT_ENABLE_REGION_INSTRUMENTATION
 
 void irt_papi_finalize_context(irt_context* context) {}
 
@@ -265,4 +263,13 @@ void irt_papi_setup_context(irt_context* context) {}
 
 void irt_papi_setup_worker(irt_worker* worker) {}
 
+#endif // IRT_ENABLE_REGION_INSTRUMENTATION
+
+#else // IRT_USE_PAPI
+
+void irt_papi_init() {}
+
+void irt_papi_shutdown() {}
+
 #endif // IRT_USE_PAPI
+

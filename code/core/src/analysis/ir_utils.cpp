@@ -48,8 +48,11 @@
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/transform/materialize.h"
 #include "insieme/core/types/type_variable_deduction.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/reference.h"
@@ -92,10 +95,37 @@ namespace analysis {
 		CallExprPtr call = expr.as<CallExprPtr>();
 		auto& basic = expr->getNodeManager().getLangBasic();
 		auto& refExt = expr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
-
 		// TODO: use different way of identifying pure functions!
 		auto fun = call->getFunctionExpr();
-		return (basic.isPure(fun) || refExt.isRefDeref(fun)) && all(call->getArguments(), &isSideEffectFree);
+		auto isPure = basic.isPure(fun) || refExt.isRefDeref(fun);
+		auto argsSideEffectFree = all(call->getArgumentDeclarations(), [](const DeclarationPtr& decl) { return isSideEffectFree(decl); });
+		return isPure && argsSideEffectFree;
+	}
+
+
+	bool isSideEffectFree(const DeclarationPtr& decl) {
+		auto initExpr = decl->getInitialization();
+		auto& refExt = decl->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+
+		// if initExpr is assignment to declared var, just test RHS
+		if(lang::isAssignment(initExpr)) {
+			if(refExt.isCallOfRefDecl(getArgument(initExpr, 0))) {
+				return isSideEffectFree(getArgument(initExpr, 2));
+			}
+		}
+		// if initExpr is an InitExpr node, test all of its subexpressions
+		if(auto initNode = initExpr.isa<InitExprPtr>()) {
+			if(refExt.isCallOfRefDecl(initNode->getMemoryExpr())) {
+				return all(initNode->getInitExprs(), [](const ExpressionPtr& expr) { return isSideEffectFree(expr); });
+			}
+		}
+		// if initExpr is a constructor call, return false for now
+		if(isConstructorCall(initExpr)) {
+			return false;
+		}
+
+		// fallback, just check the init expr
+		return isSideEffectFree(initExpr);
 	}
 
 	bool isCallOf(const CallExprPtr& candidate, const NodePtr& function) {
@@ -120,7 +150,7 @@ namespace analysis {
 		auto callType = call->getType();
 		auto function = call->getFunctionExpr();
 		auto funType = function->getType().as<FunctionTypePtr>()->getReturnType();
-		return !analysis::equalTypes(callType, funType) && !types::getTypeVariableInstantiation(call->getNodeManager(), funType, callType);
+		return !analysis::equalTypes(callType, funType) && types::getTypeVariableInstantiation(call->getNodeManager(), callType, transform::materialize(funType));
 	}
 
 	bool isNoOp(const StatementPtr& candidate) {
@@ -414,20 +444,15 @@ namespace analysis {
 				this->visit(decl->getInitialization(), bound, free);
 			}
 
-			void visitReturnStmt(const Ptr<const ReturnStmt>& decl, VariableSet& bound, ResultSet& free) {
-				// first add variable to set of bound variables
-				bound.insert(decl->getReturnVar());
-
-				// then visit the defining expression
-				this->visit(decl->getReturnExpr(), bound, free);
-			}
-
-			void visitCompoundStmt(const Ptr<const CompoundStmt>& compound, VariableSet& bound, ResultSet& free) {
-				// a compound statement creates a new scope
-				VariableSet innerBound = bound;
-
-				// continue visiting with the limited scope
-				visitNode(compound, innerBound, free);
+			void visitStatement(const Ptr<const Statement>& stmt, VariableSet& bound, ResultSet& free) {
+				// compound and for statements create new scopes
+				auto nt = stmt->getNodeType();
+				if(nt == NT_CompoundStmt || nt == NT_ForStmt) {
+					VariableSet innerBound = bound;
+					visitNode(stmt, innerBound, free);
+				} else {
+					visitNode(stmt, bound, free);
+				}
 			}
 
 			void visitCatchClause(const Ptr<const CatchClause>& clause, VariableSet& bound, ResultSet& free) {
@@ -661,52 +686,13 @@ namespace analysis {
 	}
 
 	namespace {
-		class RenamingVarVisitor : public core::IRVisitor<void, Address> {
-			core::VariableAddress varAddr;
-
-			void visitCallExpr(const CallExprAddress& call) {
-				if(LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr())) {
-					for_each(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()),
-					          [&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
-						          if(*varAddr == *pair.second) {
-							          if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first))) { varAddr = tmp; }
-						          }
-						      });
-				}
-			}
-
-			ExpressionAddress extractVariable(ExpressionAddress exp) {
-				if(VariableAddress var = dynamic_address_cast<const Variable>(exp)) { return var; }
-
-				if(CastExprAddress cast = dynamic_address_cast<const CastExpr>(exp)) { return extractVariable(cast->getSubExpression()); }
-
-				if(CallExprAddress call = dynamic_address_cast<const CallExpr>(exp)) {
-					NodeManager& manager = exp->getNodeManager();
-					if(manager.getLangExtension<lang::ReferenceExtension>().isRefDeref(call->getFunctionExpr())) {
-						return extractVariable(call->getArgument(0));
-					}
-				}
-
-				return exp;
-			}
-
-		  public:
-			VariableAddress& getVariableAddr() {
-				return varAddr;
-			}
-
-			RenamingVarVisitor(const core::VariableAddress& va) : IRVisitor<void, Address>(false), varAddr(va) {}
-		};
-	}
-
-	namespace {
 		class VariableNameVisitor : public core::IRVisitor<void, Address> {
 			core::VariableAddress varAddr;
 			std::vector<VariablePtr>& varVec;
 
 			void visitCallExpr(const CallExprAddress& call) {
 				if(LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr())) {
-					for_each(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()),
+					for_each(make_paired_range(call->getArgumentList(), lambda->getLambda()->getParameters()),
 					          [&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
 						          if(*varAddr == *pair.second) {
 							          if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first))) { varAddr = tmp; }
@@ -906,8 +892,8 @@ namespace analysis {
 					// peeling of enclosing deref calls
 					int peeledLevels = 0;
 					for(int i=0; i<indirectionLevels; i++) {
-						if (!cur.isRoot() && isCallOf(cur.getParentNode(), deref)) {
-							cur = cur.getParentAddress();
+						if(cur.getDepth()>=2 && isCallOf(cur.getParentNode(2), deref)) {
+							cur = cur.getParentAddress(2);
 							peeledLevels++;
 						}
 					}
@@ -918,23 +904,22 @@ namespace analysis {
 					// if it is a call to a lambda, check the lambda
 					if(VisitScopes) {
 						indirectionLevels -= peeledLevels;
-						if(CallExprPtr call = cur.getParentNode().isa<CallExprPtr>()) {
+						if(CallExprPtr call = cur.getParentNode(2).isa<CallExprPtr>()) {
 							// check calls to nested functions
 							if(LambdaExprPtr fun = call->getFunctionExpr().isa<LambdaExprPtr>()) {
-								if(!isReadOnly(fun, fun->getParameterList()[cur.getIndex() - 2])) { // -1 for type, -1 for function expr
-									readOnly = false;                                               // it is no longer read-only
+								if(!isReadOnly(fun, fun->getParameterList()[cur.getParentAddress().getIndex() - 2])) { // -1 for type, -1 for function expr
+									readOnly = false; // it is no longer read-only
 								}
-
-								// we can stop the decent here
+								// we can stop the descent here
 								return true;
 							}
 
 							// check calls to recursive functions
 							if(auto ref = call->getFunctionExpr().isa<LambdaReferencePtr>()) {
-								if(!isReadOnly(ref, cur.getIndex() - 2)) { // -1 for type, -1 for function expr
-									readOnly = false;                      // it is no longer read-only
+								if(!isReadOnly(ref, cur.getParentAddress().getIndex() - 2)) { // -1 for type, -1 for function expr
+									readOnly = false; // it is no longer read-only
 								}
-								// we can stop the decent here
+								// we can stop the descent here
 								return true;
 							}
 						}
@@ -942,10 +927,10 @@ namespace analysis {
 					}
 
 					// check whether variable is dereferenced at this location
-					if(peeledLevels == indirectionLevels && !isCallOf(cur.getParentNode(), deref)) {
+					if(peeledLevels == indirectionLevels && !isCallOf(cur.getParentNode(2), deref)) {
 						// => it is not, so it is used by reference
 						readOnly = false; // it is no longer read-only
-						return true;      // we can stop the decent here
+						return true;      // we can stop the descent here
 					}
 
 					// continue search

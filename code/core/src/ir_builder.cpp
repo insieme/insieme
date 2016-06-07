@@ -75,6 +75,7 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/parser/ir_parser.h"
+#include "insieme/core/parser/detail/driver.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/map_utils.h"
@@ -350,27 +351,27 @@ namespace core {
 		                                        const ExpressionList& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 		                                        const MemberFunctionList& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) {
 
-			//make sure the passed this type is of the correct type and extract the name
+			// make sure the passed this type is of the correct type and extract the name
 			assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 			auto elementType = analysis::getReferencedType(thisType);
 			assert_true(elementType.isa<TagTypeReferencePtr>() || elementType.isa<GenericTypePtr>()) << "thisType must be either a TagTypeReference or a GenericType";
 			auto name = elementType.isa<TagTypeReferencePtr>() ? elementType.as<TagTypeReferencePtr>()->getName() : elementType.as<GenericTypePtr>()->getName();
 
-			//lambda to check for the presence of a specific constructor type
+			// lambda to check for the presence of a specific constructor type
 			auto containsCtorType = [&](const ExpressionPtr& ctor)->bool {
 				return any(ctors, [&](const ExpressionPtr& cur) {
 					return *(cur->getType()) == *(ctor->getType());
 				});
 			};
 
-			//lambda to check for the presence of a specific member function (with the same name and type as the passed one)
+			// lambda to check for the presence of a specific member function (with the same name and type as the passed one)
 			auto containsMemberFunction = [&](const MemberFunctionPtr& member)->bool {
 				return any(mfuns, [&](const MemberFunctionPtr& cur) {
 					return cur->getName() == member->getName() && *(cur->getImplementation()->getType()) == *(member->getImplementation()->getType());
 				});
 			};
 
-			//all the default constructs
+			// all the default constructs
 			auto defaultConstructor = builder.getDefaultConstructor(thisType, parents, fields);
 			auto defaultCopyConstructor = builder.getDefaultCopyConstructor(thisType, parents, fields);
 			auto defaultMoveConstructor = builder.getDefaultMoveConstructor(thisType, parents, fields);
@@ -382,34 +383,20 @@ namespace core {
 			ExpressionPtr dtorOut = dtor;
 			MemberFunctionList mfunsOut = mfuns;
 
-			//if the user didn't provide any destructor we create the default constructor
-			if (ctors.empty()) {
-				ctorsOut.push_back(defaultConstructor);
-			}
+			// if the user didn't provide a given constructor type we create it
+			if(!containsCtorType(defaultConstructor)) { ctorsOut.push_back(defaultConstructor); }
+			if(!containsCtorType(defaultCopyConstructor)) { ctorsOut.push_back(defaultCopyConstructor); }
+			if(!containsCtorType(defaultMoveConstructor)) { ctorsOut.push_back(defaultMoveConstructor); }
 
-			//both the other default constructs are created if the user didn't provide them
-			if (!containsCtorType(defaultCopyConstructor)) {
-				ctorsOut.push_back(defaultCopyConstructor);
-			}
-			if (!containsCtorType(defaultMoveConstructor)) {
-				ctorsOut.push_back(defaultMoveConstructor);
-			}
+			// as are the default assignment operators
+			if(!containsMemberFunction(defaultCopyAssignment)) { mfunsOut.push_back(defaultCopyAssignment); }
+			if(!containsMemberFunction(defaultMoveAssignment)) { mfunsOut.push_back(defaultMoveAssignment); }
 
-			//as are the default assignment operators
-			if (!containsMemberFunction(defaultCopyAssignment)) {
-				mfunsOut.push_back(defaultCopyAssignment);
-			}
-			if (!containsMemberFunction(defaultMoveAssignment)) {
-				mfunsOut.push_back(defaultMoveAssignment);
-			}
+			// finally handle the default destructor. If the user provided one we don't create the default one
+			if(!dtor) { dtorOut = defaultDestructor; }
 
-			//finally handle the default destructor. If the user provided one we don't create the default one
-			if (!dtor) {
-				dtorOut = defaultDestructor;
-			}
-
-			//create a new struct or union with the (maybe) modified parameters
-			if (generateStruct) {
+			// create a new struct or union with the (maybe) modified parameters
+			if(generateStruct) {
 				return builder.structType(name, parents, fields, builder.expressions(ctorsOut), dtorOut, dtorIsVirtual, builder.memberFunctions(mfunsOut), pvmfuns);
 			}
 			return builder.unionType(name, fields, builder.expressions(ctorsOut), dtorOut, dtorIsVirtual, builder.memberFunctions(mfunsOut), pvmfuns);
@@ -514,12 +501,11 @@ namespace core {
 		                                    dtor, boolValue(dtorIsVirtual), mfuns, pureVirtualMemberFunctions(pvmfuns));
 	}
 
-
 	LambdaExprPtr IRBuilderBaseModule::getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		auto ctorType = functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
 		auto name = getLiteralForConstructor(ctorType);
-		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType))), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>();
+		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType))), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
 	}
 
 	LambdaExprPtr IRBuilderBaseModule::getDefaultCopyConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
@@ -527,7 +513,7 @@ namespace core {
 		TypePtr otherType = refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
 		auto ctorType = functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
 		auto name = getLiteralForConstructor(ctorType);
-		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>();
+		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
 	}
 
 	LambdaExprPtr IRBuilderBaseModule::getDefaultMoveConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
@@ -535,7 +521,7 @@ namespace core {
 		TypePtr otherType = refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
 		auto ctorType = functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
 		auto name = getLiteralForConstructor(ctorType);
-		return normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>();
+		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
 	}
 
 	LambdaExprPtr IRBuilderBaseModule::getDefaultDestructor(const TypePtr& thisType) const {
@@ -543,7 +529,7 @@ namespace core {
 		// create default destructor
 		auto dtorType = functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
 		auto name = getLiteralForDestructor(dtorType);
-		return normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>();
+		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
 	}
 
 	MemberFunctionPtr IRBuilderBaseModule::getDefaultCopyAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
@@ -554,7 +540,7 @@ namespace core {
 		auto thisParam = variable(refType(thisType));
 		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
 		auto name = getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
-		auto fun = normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)), res, name->getValue()->getValue())).as<LambdaExprPtr>();
+		auto fun = core::analysis::markAsDefaultMember(normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)), res, name->getValue()->getValue())).as<LambdaExprPtr>());
 		return memberFunction(false, utils::getMangledOperatorAssignName(), fun);
 	}
 
@@ -566,7 +552,7 @@ namespace core {
 		auto thisParam = variable(refType(thisType));
 		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
 		auto name = getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
-		auto fun = normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)), res, name->getValue()->getValue())).as<LambdaExprPtr>();
+		auto fun = core::analysis::markAsDefaultMember(normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)), res, name->getValue()->getValue())).as<LambdaExprPtr>());
 		return memberFunction(false, utils::getMangledOperatorAssignName(), fun);
 	}
 
@@ -854,14 +840,18 @@ namespace core {
 	DeclarationStmtPtr IRBuilderBaseModule::declarationStmt(const ExpressionPtr& value) const {
 		return declarationStmt(value->getType(), value);
 	}
-
 	DeclarationStmtPtr IRBuilderBaseModule::declarationStmt(const TypePtr& type, const ExpressionPtr& value) const {
 		return declarationStmt(variable(type), value);
 	}
+	DeclarationStmtPtr IRBuilderBaseModule::declarationStmt(const VariablePtr& value) const {
+		if(!lang::isReference(value)) {
+			return declarationStmt(value, getZero(value->getType()));
+		}
+		return declarationStmt(value, lang::buildRefDecl(value->getType()));
+	}
 
 	ReturnStmtPtr IRBuilderBaseModule::returnStmt(const ExpressionPtr& retVal) const {
-		auto implicitVariable = variable(retVal->getType());
-		return returnStmt(retVal, implicitVariable);
+		return returnStmt(retVal, retVal->getType());
 	}
 
 	ReturnStmtPtr IRBuilderBaseModule::returnStmt() const {
@@ -973,11 +963,6 @@ namespace core {
 		}
 
 		CallExprPtr createCall(const IRBuilderBaseModule& builder, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
-			// check user-specified return type - only when compiled in debug mode
-			// NOTE: the check returns true in any case, hence this assertion will never fail - its just a warning!
-			// TODO: make this check faster
-			//		assert_true(checkType(resultType, functionExpr, arguments)) << "Incorrect user-specified return type!";
-
 			// create calling expression
 			return builder.callExpr(resultType, functionExpr, arguments);
 		}
@@ -989,6 +974,10 @@ namespace core {
 	}
 	CallExprPtr IRBuilderBaseModule::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const {
 		return createCall(*this, resultType, functionExpr, toVector<ExpressionPtr>());
+	}
+	CallExprPtr IRBuilderBaseModule::callExpr(const ExpressionPtr& functionExpr, const DeclarationList& arguments) const {
+		auto args = ::transform(arguments, [](const DeclarationPtr& d){ return transform::extractInitExprFromDecl(d); });
+		return callExpr(deduceReturnTypeForCall(functionExpr, args), functionExpr, arguments);
 	}
 
 	LambdaPtr IRBuilderBaseModule::lambda(const FunctionTypePtr& type, const ParametersPtr& params, const StatementPtr& body) const {
@@ -1546,11 +1535,11 @@ namespace core {
 		// convert all variables to references
 		auto ingredients = transform::materialize({list, returnStmt(expr)});
 		auto funType = functionType(extractTypes(list), expr->getType());
-		// replace return statement var types
+		// replace return statement types
 		ingredients.body = core::transform::transformBottomUpGen(ingredients.body, [&funType, this](const core::ReturnStmtPtr& ret) {
-			auto retVar = ret->getReturnVar();
-			auto replacementVar = variable(core::transform::materialize(funType->getReturnType()));
-			return core::transform::replaceAllGen(ret->getNodeManager(), ret, retVar, replacementVar);
+			auto retT = ret->getReturnType();
+			auto replacementT = core::transform::materialize(funType->getReturnType());
+			return returnStmt(ret->getReturnExpr(), replacementT);
 		});
 
 		ExpressionPtr res = lambdaExpr(funType, ingredients.params, ingredients.body);

@@ -36,60 +36,63 @@
 
 int g_bla = 10;
 
+#define N 10
+double g_volume[N][N][N][N];
+
 int main() {
 
-	#pragma test expect_ir("{{ var ref<int<4>,f,f> v0 = 0; for(int<4> v1 = 0 .. 10 : 1) { v1; }; }}")
+	#pragma test expect_ir("{{ for(int<4> v1 = 0 .. 10 : 1) { v1; }; }}")
 	{
 		for(int i = 0; i < 10; i++) {
 			i;
 		}
 	}
 
-	#pragma test expect_ir("{{ var ref<int<4>,f,f> v0 = 2; for(int<4> v1 = 2 .. 5 : 5) { v1; }; }}")
+	#pragma test expect_ir("{{ for(int<4> v1 = 2 .. 5 : 5) { v1; }; }}")
 	{
 		for(int k = 2; k < 5; k+=5) {
 			k;
 		}
 	}
 
-	#pragma test expect_ir("{{ var ref<int<4>,f,f> v0 = 2; for(int<4> v1 = 2 .. 5+1 : 5) { v1; }; }}")
+	#pragma test expect_ir("{{ for(int<4> v1 = 2 .. 5+1 : 5) { v1; }; }}")
 	{
 		for(int k = 2; k <= 5; k+=5) {
 			k;
 		}
 	}
 
-	#pragma test expect_ir(R"({{ var ref<uint<4>,f,f> v0 = 2u; for(uint<4> v1 = 2u .. 5u : 1u) { v1; }; } } )")
+	#pragma test expect_ir(R"({{ for(uint<4> v1 = 2u .. 5u : 1u) { v1; }; } } )")
 	{
 		for(unsigned k = 2u; k < 5u; k++) k;
 	}
 
-	#pragma test expect_ir("{{ var ref<int<4>,f,f> v0 = 2; for(int<4> v1 = 2 .. 5 : 1) { }; }}")
+	#pragma test expect_ir("{{ for(int<4> v1 = 2 .. 5 : 1) { }; }}")
 	{
 		for(int k = 2; k < 5; k+=1);
 	}
 
-	#pragma test expect_ir("{{ var ref<int<4>,f,f> v0 = 2; for(int<4> v1 = 2 .. 5 : 1) { }; }}")
+	#pragma test expect_ir("{{ for(int<4> v1 = 2 .. 5 : 1) { }; }}")
 	{
 		for(int k = 2; k < 5; k+=1) { }
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { if( *v0==3) { *comp_assign_add(v0, 1); continue; }; *comp_assign_add(v0, 1); } }}")
+	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f,plain> v0 = 2; while( *v0<5) { if( *v0==3) { *comp_assign_add(v0, 1); continue; }; *comp_assign_add(v0, 1); } }}")
 	{
 		for(int k = 2; k < 5; k+=1) { if(k==3){ continue; } }
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { if( *v0==3) { break; }; *comp_assign_add(v0, 1); }; }; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f,plain> v0 = 2; while( *v0<5) { if( *v0==3) { break; }; *comp_assign_add(v0, 1); }; }; }")
 	{
 		for(int k = 2; k < 5; k+=1) { if(k==3) break; }
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { if( *v0==3) { return var ref<int<4>> r = 0; }; *comp_assign_add(v0, 1); }; }; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f,plain> v0 = 2; while( *v0<5) { if( *v0==3) { return 0 in ref<int<4>>; }; *comp_assign_add(v0, 1); }; }; }")
 	{
 		for(int k = 2; k < 5; k+=1) { if(k==3) return 0; }
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f,plain> v0 =  2; while( *v0<5) { gen_post_inc(v0); *comp_assign_add(v0, 1); }; }; }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f,plain> v0 = 2; while( *v0<5) { gen_post_inc(v0); *comp_assign_add(v0, 1); }; }; }")
 	{
 		for(int k = 2; k < 5; k+=1) { k++; }
 	}
@@ -101,7 +104,7 @@ int main() {
 		for(int k = 2; k > 5; k+=1) { }
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f,plain> v0; { v0 = 0; for( int<4> v1 = 0 .. 5 : 1) { }; v0 = 5+((0-5)%1+1)%1; } { var ref<int<4>,f,f,plain> v1 = 0; for( int<4> v2 = 0 .. 5 : 1) { } } var ref<int<4>,f,f,plain> v3 = *v0; }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f,plain> v0; { v0 = 0; for( int<4> v1 = 0 .. 5 : 1) { }; v0 = 5+((0-5)%1+1)%1; } { for( int<4> v2 = 0 .. 5 : 1) { } } var ref<int<4>,f,f,plain> v3 = *v0; }")
 	{
 		int i;
 		for(i=0; i<5; i++) { }
@@ -112,7 +115,7 @@ int main() {
 
 	// should not be converted into for loop, because we do
 	// not inspect the modification of the global literal yet.
-	#pragma test expect_ir("{{ var ref<int<4>, f, f, plain> v0 =  0; while(*v0<*lit(\"g_bla\": ref<int<4>,f,f>)) { gen_post_dec(lit(\"g_bla\": ref<int<4>,f,f>)); gen_pre_inc(v0); }; }}")
+	#pragma test expect_ir("{ { var ref<int<4>,f,f,plain> v0 = 0; while(*v0<*lit(\"g_bla\": ref<int<4>,f,f>)) { gen_post_dec(lit(\"g_bla\": ref<int<4>,f,f>)); gen_pre_inc(v0); }; }}")
 	{
 		for (int i = 0; i < g_bla; ++i) {
 			g_bla--;
@@ -270,7 +273,7 @@ int main() {
 	}
 
 	//for ( declaration; expression; ) statement
-	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 8; { var ref<int<4>,f,f,plain> v1 = 5; for( int<4> v2 = 5 .. 7 : 1) { var ref<int<4>,f,f,plain> v3 = v2; }; };}")
+	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 8; { for( int<4> v2 = 5 .. 7 : 1) { var ref<int<4>,f,f,plain> v3 = v2; }; };}")
 	{
 		int i=8;
 		for(int i=5;i<7;) {
@@ -280,7 +283,7 @@ int main() {
 	}
 
 	//for ( declaration; expression; expression ) statement
-	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 8; { var ref<int<4>,f,f,plain> v1 = 5; for( int<4> v2 = 5 .. 7 : 1) { var ref<int<4>,f,f,plain> v3 = v2; }; };}")
+	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0 = 8; { for( int<4> v2 = 5 .. 7 : 1) { var ref<int<4>,f,f,plain> v3 = v2; }; };}")
 	{
 		int i=8;
 		for(int i=5;i<7;++i) {
@@ -307,6 +310,40 @@ int main() {
 		}
 	}
 
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	// TODO: replace cvar, not deref(cvar) -- issues with binds expecting refs
+
+	//#pragma test expect_ir(R"({
+	//	var ref<int<4>,f,f,plain> v0 = 0;
+	//	for( int<4> v1 = 0 .. 10 : 1) {
+	//		ptr_subscript(ptr_from_array(ptr_subscript(ptr_from_array(ptr_subscript(ptr_from_array(ptr_subscript(ptr_from_array(lit("g_volume" : ref<array<array<array<array<real<8>,10>,10>,10>,10>,f,f,plain>)), 0)), v1)), 0)), 0) = v1==10/2?1.0E+0:0.0E+0;
+	//	};
+	//})")
+	//for(int i=0; i<N; ++i) {
+	//	g_volume[0][i][0][0] = (i == N/2) ? 1.0 : 0.0;
+	//}
+
+	//#pragma test expect_ir(R"({})")
+	//for(int i=0; i<N; ++i) {
+	//	g_volume[0][i][0][0] = (1 && i == N/2) ? 1.0 : 0.0;
+	//}
+
+	//#pragma test expect_ir(R"({})")
+	//for(int i=0; i<N; ++i) {
+	//	for(int j=0; j<N; ++j) {
+	//		g_volume[0][i][j][0] = (i == N/2 && j == N/2) ? 1.0 : 0.0;
+	//	}
+	//}
+
+	//#pragma test expect_ir(R"({})")
+	//for(int i=0; i<N; ++i) {
+	//	for(int j=0; j<N; ++j) {
+	//		for(int k=0; k<N; ++k) {
+	//			g_volume[0][i][j][k] = (i == N/2 && j == N/2 && k == N/2) ? 1.0 : 0.0;
+	//		}
+	//	}
+	//}
 
 	return 0;
 }

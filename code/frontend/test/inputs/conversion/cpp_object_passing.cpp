@@ -74,7 +74,7 @@ void validateTrivial() {
 
 	// pass l-value
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL, R"({
-		var ref<IMP_Trivial> v0 = IMP_Trivial::(v0);
+		var ref<IMP_Trivial> v0 = IMP_Trivial::(ref_decl(type_lit(ref<IMP_Trivial,f,f,plain>)));
 		IMP_consume_struct_Trivial_returns_void(ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)));
 	})")
 	{ T t; consume<T>(t); }
@@ -99,7 +99,7 @@ void validateTrivial() {
 
 	// pass reference
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL,R"({
-		var ref<IMP_Trivial,f,f,plain> v0 = IMP_Trivial::(v0);
+		var ref<IMP_Trivial,f,f,plain> v0 = IMP_Trivial::(ref_decl(type_lit(ref<IMP_Trivial,f,f,plain>)));
 		var ref<IMP_Trivial,f,f,cpp_ref> v1 = v0;
 		IMP_consume_struct_Trivial_returns_void(ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref)));
 	})")
@@ -109,7 +109,7 @@ void validateTrivial() {
 
 	// pass l-value
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL_REF,R"({
-		var ref<IMP_Trivial,f,f,plain> v0 = IMP_Trivial::(v0);
+		var ref<IMP_Trivial,f,f,plain> v0 = IMP_Trivial::(ref_decl(type_lit(ref<IMP_Trivial,f,f,plain>)));
 		IMP_consume_struct_Trivial__ampersand__returns_void(ref_kind_cast(v0,type_lit(cpp_ref)));
 	})")
 	{ T t; consume<T&>(t); }
@@ -120,7 +120,7 @@ void validateTrivial() {
 
 	// pass reference
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL_REF,R"({
-		var ref<IMP_Trivial,f,f,plain> v0 = IMP_Trivial::(v0);
+		var ref<IMP_Trivial,f,f,plain> v0 = IMP_Trivial::(ref_decl(type_lit(ref<IMP_Trivial,f,f,plain>)));
 		var ref<IMP_Trivial,f,f,cpp_ref> v1 = v0;
 		IMP_consume_struct_Trivial__ampersand__returns_void(v1);
 	})")
@@ -154,7 +154,7 @@ void validateTrivial() {
 
 	// pass l-value
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL_CONST_REF,R"({
-		var ref<IMP_Trivial,f,f,plain> v0 = IMP_Trivial::(v0);
+		var ref<IMP_Trivial,f,f,plain> v0 = IMP_Trivial::(ref_decl(type_lit(ref<IMP_Trivial,f,f,plain>)));
 		IMP_consume_const_struct_Trivial__ampersand__returns_void(ref_kind_cast(v0,type_lit(cpp_ref)));
 	})")
 	{ T t; consume<const T&>(t); }
@@ -179,7 +179,7 @@ void validateTrivial() {
 
 	// pass reference
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL_CONST_REF,R"({
-		var ref<IMP_Trivial,f,f,plain> v0 = IMP_Trivial::(v0);
+		var ref<IMP_Trivial,f,f,plain> v0 = IMP_Trivial::(ref_decl(type_lit(ref<IMP_Trivial,f,f,plain>)));
 		var ref<IMP_Trivial,f,f,cpp_ref> v1 = v0;
 		IMP_consume_const_struct_Trivial__ampersand__returns_void(v1);
 	})")
@@ -214,10 +214,10 @@ void validateTrivial() {
 // a non-trivial struct
 struct NonTrivial {
 	int i;
-	~NonTrivial() {}
+	~NonTrivial() { 5; }
 };
 
-#define STRUCT_NON_TRIVIAL "def struct IMP_NonTrivial { i : int<4>; }; "
+#define STRUCT_NON_TRIVIAL "def struct IMP_NonTrivial { i : int<4>; dtor() { 5; } }; "
 #define CONSUME_NON_TRIVIAL "def IMP_consume_struct_NonTrivial_returns_void = function (v0 : ref<IMP_NonTrivial,f,f,plain>) -> unit { }; "
 #define PRODUCE_NON_TRIVIAL "def IMP_produce_struct_NonTrivial_returns_struct_NonTrivial = function () -> IMP_NonTrivial { return ref_cast(IMP_NonTrivial::(ref_temp(type_lit(IMP_NonTrivial))), type_lit(t), type_lit(f), type_lit(cpp_ref)); }; "
 
@@ -236,7 +236,7 @@ void validateNonTrivial() {
 
 	// pass l-value
 	#pragma test expect_ir(STRUCT_NON_TRIVIAL,CONSUME_NON_TRIVIAL, R"({
-		var ref<IMP_NonTrivial> v0 = IMP_NonTrivial::(v0);
+		var ref<IMP_NonTrivial> v0 = IMP_NonTrivial::(ref_decl(type_lit(ref<IMP_NonTrivial,f,f,plain>)));
 		IMP_consume_struct_NonTrivial_returns_void(ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)));
 	})")
 	{ T t; consume<T>(t); }
@@ -249,7 +249,7 @@ void validateNonTrivial() {
 
 	// pass temporary
 	#pragma test expect_ir(STRUCT_NON_TRIVIAL,CONSUME_NON_TRIVIAL, R"({
-		 IMP_consume_struct_NonTrivial_returns_void(*<ref<IMP_NonTrivial,f,f,plain>>(ref_temp(type_lit(IMP_NonTrivial))) {12});
+		 IMP_consume_struct_NonTrivial_returns_void(<ref<IMP_NonTrivial,f,f,plain>>(ref_decl(type_lit(ref<IMP_NonTrivial>))) {12});
 	})")
 	{ consume<T>({12}); }
 
@@ -261,7 +261,7 @@ void validateNonTrivial() {
 
 	// pass reference
 	#pragma test expect_ir(STRUCT_NON_TRIVIAL,CONSUME_NON_TRIVIAL, R"({
-		var ref<IMP_NonTrivial,f,f,plain> v0 = IMP_NonTrivial::(v0);
+		var ref<IMP_NonTrivial,f,f,plain> v0 = IMP_NonTrivial::(ref_decl(type_lit(ref<IMP_NonTrivial,f,f,plain>)));
 		var ref<IMP_NonTrivial,f,f,cpp_ref> v1 = v0;
 		IMP_consume_struct_NonTrivial_returns_void(ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref)));
 	})")
@@ -272,7 +272,7 @@ void validateNonTrivial() {
 
 	// pass l-value
 	#pragma test expect_ir(STRUCT_NON_TRIVIAL,CONSUME_NON_TRIVIAL_REF,R"({
-		var ref<IMP_NonTrivial,f,f,plain> v0 = IMP_NonTrivial::(v0);
+		var ref<IMP_NonTrivial,f,f,plain> v0 = IMP_NonTrivial::(ref_decl(type_lit(ref<IMP_NonTrivial,f,f,plain>)));
 		IMP_consume_struct_NonTrivial__ampersand__returns_void(ref_kind_cast(v0,type_lit(cpp_ref)));
 	})")
 	{ T t; consume<T&>(t); }
@@ -283,7 +283,7 @@ void validateNonTrivial() {
 
 	// pass reference
 	#pragma test expect_ir(STRUCT_NON_TRIVIAL,CONSUME_NON_TRIVIAL_REF,R"({
-		var ref<IMP_NonTrivial,f,f,plain> v0 = IMP_NonTrivial::(v0);
+		var ref<IMP_NonTrivial,f,f,plain> v0 = IMP_NonTrivial::(ref_decl(type_lit(ref<IMP_NonTrivial,f,f,plain>)));
 		var ref<IMP_NonTrivial,f,f,cpp_ref> v1 = v0;
 		IMP_consume_struct_NonTrivial__ampersand__returns_void(v1);
 	})")
@@ -317,7 +317,7 @@ void validateNonTrivial() {
 
 	// pass l-value
 	#pragma test expect_ir(STRUCT_NON_TRIVIAL,CONSUME_NON_TRIVIAL_CONST_REF,R"({
-		var ref<IMP_NonTrivial,f,f,plain> v0 = IMP_NonTrivial::(v0);
+		var ref<IMP_NonTrivial,f,f,plain> v0 = IMP_NonTrivial::(ref_decl(type_lit(ref<IMP_NonTrivial,f,f,plain>)));
 		IMP_consume_const_struct_NonTrivial__ampersand__returns_void(ref_kind_cast(v0,type_lit(cpp_ref)));
 	})")
 	{ T t; consume<const T&>(t); }
@@ -342,7 +342,7 @@ void validateNonTrivial() {
 
 	// pass reference
 	#pragma test expect_ir(STRUCT_NON_TRIVIAL,CONSUME_NON_TRIVIAL_CONST_REF,R"({
-		var ref<IMP_NonTrivial,f,f,plain> v0 = IMP_NonTrivial::(v0);
+		var ref<IMP_NonTrivial,f,f,plain> v0 = IMP_NonTrivial::(ref_decl(type_lit(ref<IMP_NonTrivial,f,f,plain>)));
 		var ref<IMP_NonTrivial,f,f,cpp_ref> v1 = v0;
 		IMP_consume_const_struct_NonTrivial__ampersand__returns_void(v1);
 	})")

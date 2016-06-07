@@ -47,7 +47,6 @@ using std::vector;
 #define MAX_REGIONS 8
 
 #define IRT_ENABLE_REGION_INSTRUMENTATION
-#define IRT_USE_PAPI
 //#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
 
 #define IRT_LIBRARY_MAIN
@@ -291,7 +290,7 @@ TEST(region_instrumentation, rapl) {
 #endif
 
 #ifndef IRT_USE_PAPI
-	printf("Warning: Not compiled with PAPI, not testing RAPL\n");
+	printf("Warning: Compiled without PAPI, not testing RAPL\n");
 	return;
 #endif
 	if(!irt_rapl_is_supported()) {
@@ -394,6 +393,10 @@ TEST(region_instrumentation, pfor) {
 }
 
 TEST(region_instrumentation, papi) {
+#ifndef IRT_USE_PAPI
+	printf("Warning: Compiled without PAPI, not testing RAPL\n");
+	return;
+#else
 	irt::init_in_context(MAX_PARA, insieme_init_context_simple, insieme_cleanup_context);
 	irt::run([]() {
 		const char* env_string = "wall_time,PAPI_TOT_INS";
@@ -424,6 +427,7 @@ TEST(region_instrumentation, papi) {
 		printf("res: %f, total instruction count: %" PRIu64 "\n", a, reg0->aggregated_PAPI_TOT_INS);
 	});
 	irt::shutdown();
+#endif
 }
 
 TEST(region_instrumentation, all_metrics) {
