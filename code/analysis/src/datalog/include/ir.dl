@@ -104,20 +104,22 @@
 .number_type fields
 .number_type member_funcs
 .number_type pure_virt_member_funcs
+.number_type declaration
 
 
 .type support = types
-			  | exprs
+              | exprs
               | parents
-			  | record
+              | record
               | tag_type_def
               | lambda_def
               | lambda
-			  | parameters
-			  | switch_cases
-			  | fields
-			  | member_funcs
-			  | pure_virt_member_funcs
+              | parameters
+              | switch_cases
+              | fields
+              | member_funcs
+              | pure_virt_member_funcs
+              | declaration
 
 
 // -- node type --
@@ -167,7 +169,7 @@
 
 // Record-Type Nodes
 
-#define RecordTypeContents name:string , fields:fields , constructors:exprs , destructor:expr , destructor_virtual:bool \
+#define RecordTypeContents name:string , fields:fields , ctors:exprs , dtor_opt:exprs , destructor_virtual:bool \
                          , member_functions:member_funcs , pure_virtual_member_functions:pure_virt_member_funcs
 
 .decl Struct ( id:node , RecordTypeContents , parents:parents )                                               input
@@ -198,10 +200,10 @@
 .decl BreakStmt       ( id:node )                                                                             input
 .decl CompoundStmt    ( id:node )                                                                             input
 .decl ContinueStmt    ( id:node )                                                                             input
-.decl DeclarationStmt ( id:node , variable:variable , initialization:expr )                                   input
+.decl DeclarationStmt ( id:node , declaration:declaration , variable:variable )                               input
 .decl ForStmt         ( id:node , declaration:decl_stmt , end:expr , step:expr , body:compound_stmt )         input
 .decl IfStmt          ( id:node , condition:expr , then_body:compound_stmt, else_body:compound_stmt )         input
-.decl ReturnStmt      ( id:node , return_expr:expr , return_var:variable )                                    input
+.decl ReturnStmt      ( id:node , return_decl:declaration )                                                   input
 .decl SwitchStmt      ( id:node , switch_expr:expr , cases:switch_cases , default_case:compound_stmt )        input
 .decl ThrowStmt       ( id:node , throw_expr:expr )                                                           input
 .decl TryCatchStmt    ( id:node , body:compound_stmt )                                                        input
@@ -215,6 +217,7 @@
 // Support Nodes
 
 .decl CatchClause                ( id:node , variable:variable , body:compound_stmt )                         input
+.decl Declaration                ( id:node , type:type , initialization:expr )                                input
 .decl Expressions                ( id:node )                                                                  input
 .decl Field                      ( id:node , name:string , type:type )                                        input
 .decl Fields                     ( id:node )                                                                  input

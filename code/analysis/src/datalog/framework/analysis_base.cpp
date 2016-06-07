@@ -193,13 +193,13 @@ namespace framework {
 				const string& name = var->getName()->getValue();
 				int fields = this->visit(var->getFields());
 				int constructors = this->visit(var->getConstructors());
-				int destructor = this->visit(var->getDestructor());
+				int destructor_opt = this->visit(var->getOptionalDestructor());
 				bool destructor_virtual = var->getDestructorVirtual()->getValue();
 				int member_functions = this->visit(var->getMemberFunctions());
 				int pure_virtual_member_functions = this->visit(var->getPureVirtualMemberFunctions());
 				int parents = this->visit(var->getParents());
 
-				insert("Struct", id, name, fields, constructors, destructor, destructor_virtual,
+				insert("Struct", id, name, fields, constructors, destructor_opt, destructor_virtual,
 				       member_functions, pure_virtual_member_functions, parents);
 
 				return id;
@@ -325,9 +325,9 @@ namespace framework {
 
 			int visitDeclarationStmt(const Ptr<const core::DeclarationStmt>& var) override {
 				int id = getFreshID(var);
+				int declaration = this->visit(var->getDeclaration());
 				int variable = this->visit(var->getVariable());
-				int initialization = this->visit(var->getInitialization());
-				insert("DeclarationStmt", id, variable, initialization);
+				insert("DeclarationStmt", id, declaration, variable);
 				return id;
 			}
 
@@ -379,9 +379,8 @@ namespace framework {
 
 			int visitReturnStmt(const Ptr<const core::ReturnStmt>& var) override {
 				int id = getFreshID(var);
-				int return_expr = this->visit(var->getReturnExpr());
-				int return_var = this->visit(var->getReturnVar());
-				insert("ReturnStmt", id, return_expr, return_var);
+				int return_decl = this->visit(var->getReturnDeclaration());
+				insert("ReturnStmt", id, return_decl);
 				return id;
 			}
 
@@ -438,6 +437,14 @@ namespace framework {
 				int variable = this->visit(var->getVariable());
 				int body = this->visit(var->getBody());
 				insert("CatchClause", id, variable, body);
+				return id;
+			}
+
+			int visitDeclaration(const Ptr<const core::Declaration>& decl) override {
+				int id = getFreshID(decl);
+				int type = this->visit(decl->getType());
+				int initialization = this->visit(decl->getInitialization());
+				insert("Declaration", id, type, initialization);
 				return id;
 			}
 
