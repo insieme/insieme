@@ -240,9 +240,6 @@ namespace core {
 			return getNode().annotations;
 		}
 
-		std::size_t getNodeHashValue() const {
-			return getNode().hash();
-		}
 	};
 
 } // end namespace core
