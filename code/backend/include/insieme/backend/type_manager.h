@@ -51,6 +51,8 @@
 namespace insieme {
 namespace backend {
 
+	class UsedMemberTag {};
+
 	class Converter;
 
 	struct TypeInfo;

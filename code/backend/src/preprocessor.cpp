@@ -40,6 +40,7 @@
 
 #include "insieme/backend/ir_extensions.h"
 #include "insieme/backend/function_manager.h"
+#include "insieme/backend/type_manager.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_builder.h"
@@ -53,6 +54,8 @@
 #include "insieme/core/lang/static_vars.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/attributes.h"
 
 #include "insieme/core/types/type_variable_deduction.h"
@@ -76,6 +79,7 @@ namespace backend {
 		steps.push_back(makePreProcessor<RecursiveLambdaInstantiator>());
 		steps.push_back(makePreProcessor<RefCastIntroducer>());
 		steps.push_back(makePreProcessor<RefDeclEliminator>());
+		steps.push_back(makePreProcessor<DefaultedMemberCallMarker>());
 		return makePreProcessor<PreProcessingSequence>(steps);
 	}
 
@@ -255,6 +259,19 @@ namespace backend {
 		    [&converter](const core::NodePtr& cur) {
 			    return converter.getFunctionManager().isBuiltIn(cur) ? core::transform::ReplaceAction::Prune : core::transform::ReplaceAction::Process;
 			});
+		return code;
+	}
+
+	core::NodePtr DefaultedMemberCallMarker::process(const Converter& converter, const core::NodePtr& code) {
+		visitDepthFirstOnce(code, [&](const core::CallExprPtr& call) {
+			auto fun = call->getFunctionExpr();
+			if(core::analysis::isaDefaultMember(fun)) {
+				auto obj = core::analysis::getObjectType(fun->getType());
+				if(obj.isa<core::TagTypePtr>()) {
+					obj.as<core::TagTypePtr>()->getRecord().attachValue<UsedMemberTag>();
+				}
+			}
+		});
 		return code;
 	}
 
