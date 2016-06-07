@@ -163,6 +163,7 @@
 	SWITCH       "switch"
 	CASE         "case"
 	DEFAULT      "default"
+	DELETE       "delete"
 	TRY          "try"
 	CATCH        "catch"
 	THROW        "throw"
@@ -248,7 +249,7 @@
 %type <VariableList>                   parameters non_empty_parameters non_empty_bind_parameters
 
 
-%type <CompoundStmtPtr>                compound_statement compound_statement_no_scope
+%type <CompoundStmtPtr>                compound_statement compound_statement_no_scope compound_no_scope_default_delete
 %type <DeclarationStmtPtr>             variable_definition typed_variable_definition
 %type <IfStmtPtr>                      if_statement
 %type <SwitchStmtPtr>                  switch_statement
@@ -300,6 +301,7 @@ alias : "alias" abstract_type "=" type                                      { dr
 
 declaration : "decl" struct_or_union "identifier"                           { driver.declareRecordType(@3, $3); }
             | "decl" "ctor" ":" constructor_type                            { driver.genDeclaration(@2, "ctor", $4); }
+            | "decl" "dtor" ":" destructor_type                             { driver.genDeclaration(@2, "dtor", $4); }
             | "decl" "identifier" ":" type                                  { driver.genDeclaration(@2, $2, $4); }
             | "decl" "identifier" "::" "identifier" ":" type                { driver.registerField(@4, $2, $4, $6); }
             ;
@@ -335,35 +337,40 @@ fields : fields field                                                       { $1
 field : "identifier" ":" type ";"                                           { $$ = driver.builder.field($1, $3); }
       ;
 
-constructors : constructors constructor                                     { INSPIRE_GUARD(@2, $2) $1.push_back($2); $$ = $1; }
+constructors : constructors constructor                                     { INSPIRE_GUARD(@2, $2) if(!driver.isMarkedAsDefaultedMember($2)) { $1.push_back($2); } $$ = $1; }
              |                                                              { $$ = ExpressionList(); }
              ;
 
 constructor : "ctor" constructor_lambda                                     { $$ = driver.genConstructor(@$, $2); }
             ;
 
+compound_no_scope_default_delete : compound_statement_no_scope              { $$ = $1; }
+                                 | "=" "default" ";"                        { $$ = driver.getParserDefaultCompound(); }
+                                 | "=" "delete"  ";"                        { $$ = driver.getParserDeleteCompound(); }
+                                 ;
+
 constructor_lambda : "(" parameters                                         { driver.openScope(); driver.registerParameters(@2, $2); }
-                                    ")" compound_statement_no_scope         { $$ = driver.genConstructorLambda(@$, $2, $5); driver.closeScope(); }
+                         ")" compound_no_scope_default_delete               { $$ = driver.genConstructorLambda(@$, $2, $5); driver.closeScope(); }
                    | "function" "(" parameters                              { driver.openScope(); driver.registerParameters(@2, $3); driver.inLambda = false; }
-                                    ")" compound_statement_no_scope         { $$ = driver.genConstructorLambda(@$, $3, $6); driver.closeScope(); driver.inLambda = true; }
+                         ")" compound_no_scope_default_delete               { $$ = driver.genConstructorLambda(@$, $3, $6); driver.closeScope(); driver.inLambda = true; }
                    ;
 
-destructor : "dtor" virtual_flag "(" ")" compound_statement                 { $$ = std::make_pair(driver.genDestructor(@$, $5), $2); }
-           | "dtor" virtual_flag "function"                                 { driver.inLambda = false; }
-                                            "(" ")" compound_statement      { $$ = std::make_pair(driver.genDestructor(@$, $7), $2); driver.inLambda = true; }
+destructor : "dtor" virtual_flag "(" ")" compound_no_scope_default_delete   { driver.openScope(); $$ = std::make_pair(driver.genDestructor(@$, $5), $2); driver.closeScope(); }
+           | "dtor" virtual_flag "function"                                 { driver.openScope(); driver.inLambda = false; }
+                                   "(" ")" compound_no_scope_default_delete { $$ = std::make_pair(driver.genDestructor(@$, $7), $2); driver.inLambda = true; driver.closeScope(); }
            |                                                                { $$ = std::make_pair(LambdaExprPtr(), false); }
            ;
 
-member_functions : member_functions member_function                         { INSPIRE_GUARD(@2, $2) $1.push_back($2); $$ = $1; }
+member_functions : member_functions member_function                         { INSPIRE_GUARD(@2, $2) if(!driver.isMarkedAsDefaultedMember($2)) { $1.push_back($2); } $$ = $1; }
                  |                                                          { $$ = MemberFunctionList(); }
                  ;
 
-member_function : virtual_flag cv_flags lambda_or_function "identifier" "=" "(" ")"    { driver.inLambda = $3; }
-                          "->" type compound_statement                      { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, VariableList(), $10, $11); driver.inLambda = true; }
+member_function : virtual_flag cv_flags lambda_or_function "identifier" "=" "(" ")"     { driver.openScope(); driver.inLambda = $3; }
+                      "->" type compound_no_scope_default_delete            { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, VariableList(), $10, $11); driver.inLambda = true; driver.closeScope(); }
                 | virtual_flag cv_flags lambda_or_function "identifier" "=" "(" non_empty_parameters
-                                                                            { driver.openScope(); driver.registerParameters(@7, $7); driver.inLambda = $3; }
-                      ")" "->" type compound_statement_no_scope             { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $7, $11, $12); driver.closeScope(); driver.inLambda = true; }
-                ;
+                                                                                        { driver.openScope(); driver.registerParameters(@7, $7); driver.inLambda = $3; }
+                      ")" "->" type compound_no_scope_default_delete        { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $7, $11, $12); driver.closeScope(); driver.inLambda = true; }
+				;
 
 virtual_flag : "virtual"                                                    { $$ = true; }
              |                                                              { $$ = false; }
@@ -758,7 +765,7 @@ compound_statement : { driver.openScope(); } "{" statement_list "}"       { $$ =
                    ;
 
 compound_statement_no_scope : "{" statement_list "}"                      { $$ = driver.builder.compoundStmt($2); }
-                   ;
+                            ;
 
 statement_list :                                                          { $$ = StatementList(); }
                | statement_list statement                                 { $1.push_back($2); $$ = $1; }
@@ -846,7 +853,7 @@ continue : "continue" ";"                                                 { $$ =
 // -- return --
 
 return : "return" expression ";"                                          { $$ = driver.builder.returnStmt(driver.getScalar($2)); }
-       | "return" typed_variable_definition                               { $$ = driver.builder.returnStmt($2->getInitialization(), $2->getVariable()); }
+       | "return" expression "in" type ";"                              { $$ = driver.builder.returnStmt(driver.getScalar($2), $4); }
        | "return" ";"                                                     { $$ = driver.builder.returnStmt(); }
        ;
 

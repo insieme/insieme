@@ -278,7 +278,7 @@ namespace extensions {
 		core::CallExprPtr fixMaterializedReturnType(conversion::Converter& converter, const clang::CallExpr* clangCall, const core::CallExprPtr& call) {
 			if(!call) return call;
 			auto irRetType = converter.convertExprType(clangCall);
-			auto newCall = converter.getIRBuilder().callExpr(irRetType, call->getFunctionExpr(), call->getArguments());
+			auto newCall = converter.getIRBuilder().callExpr(irRetType, call->getFunctionExpr(), call->getArgumentDeclarations());
 			core::transform::utils::migrateAnnotations(call, newCall);
 			return newCall;
 		}

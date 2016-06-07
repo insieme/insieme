@@ -58,6 +58,7 @@
 namespace insieme {
 namespace core {
 namespace parser {
+
 	namespace detail {
 
 	class location;
@@ -69,16 +70,29 @@ namespace parser {
 			 */
 			friend class core::NodeManager;
 
+			const IRBuilder builder;
+
 			const LiteralPtr memberDummyLambda;
 
 			const LiteralPtr explicitMemberDummyLambda;
+
+			const CompoundStmtPtr defaultedBodyCompound;
+
+			const CompoundStmtPtr deletedBodyCompound;
+
+			const LiteralPtr defaultedBodyMarker;
 
 			/**
 			 * Creates a new instance based on the given node manager.
 			 */
 			ParserIRExtension(core::NodeManager& manager) : core::lang::Extension(manager),
-					memberDummyLambda(IRBuilder(manager).literal(IRBuilder(manager).genericType("parser_member_dummy_lambda"), "parser_member_dummy_lambda")),
-					explicitMemberDummyLambda(IRBuilder(manager).literal(IRBuilder(manager).genericType("parser_explicit_member_dummy_lambda"), "parser_explicit_member_dummy_lambda")) {}
+					builder(IRBuilder(manager)),
+					memberDummyLambda(builder.literal(builder.genericType("parser_member_dummy_lambda"), "parser_member_dummy_lambda")),
+					explicitMemberDummyLambda(builder.literal(builder.genericType("parser_explicit_member_dummy_lambda"), "parser_explicit_member_dummy_lambda")),
+					defaultedBodyCompound(builder.compoundStmt(builder.literal(builder.genericType("parser_defaulted_body_compound_marker"), "parser_defaulted_body_compound_marker"))),
+					deletedBodyCompound(builder.compoundStmt(builder.literal(builder.genericType("parser_deleted_body_compound_marker"), "parser_deleted_body_compound_marker"))),
+					defaultedBodyMarker(builder.literal(builder.genericType("parser_defaulted_body_marker"), "parser_defaulted_body_marker"))
+			{}
 
 			LANG_EXT_LITERAL(MemberFunctionAccess, "parser_member_function_access", "('a, identifier) -> unit")
 
@@ -88,6 +102,18 @@ namespace parser {
 
 			const LiteralPtr& getExplicitMemberDummyLambda() const {
 				return explicitMemberDummyLambda;
+			}
+
+			const CompoundStmtPtr& getDefaultedBodyCompound() const {
+				return defaultedBodyCompound;
+			}
+
+			const CompoundStmtPtr& getDeletedBodyCompound() const {
+				return deletedBodyCompound;
+			}
+
+			const LiteralPtr& getDefaultedBodyMarker() const {
+				return defaultedBodyMarker;
 			}
 		};
 
@@ -265,7 +291,7 @@ namespace parser {
 
 		  private:
 			/**
-			 * Replaces every occurence of the this literal in the body with the correct usage of the given thisParam
+			 * Replaces every occurrences of the this literal in the body with the correct usage of the given thisParam
 			 */
 			StatementPtr replaceThisInBody(const location& l, const StatementPtr& body, const VariablePtr& thisParam);
 		  public:
@@ -294,6 +320,21 @@ namespace parser {
 			 * generates a member function for the currently defined record type
 			 */
 			PureVirtualMemberFunctionPtr genPureVirtualMemberFunction(const location& l, bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type);
+
+			/**
+			 * generates a dummy compound which represents defaulted members
+			 */
+			CompoundStmtPtr getParserDefaultCompound() const;
+
+			/**
+			 * generates a dummy compound which represents deleted members
+			 */
+			CompoundStmtPtr getParserDeleteCompound() const;
+
+			/**
+			 * Tests whether the given node represents a defaulted member (this can either be a literal or a member function)
+			 */
+			bool isMarkedAsDefaultedMember(const NodePtr& node) const;
 
 			/**
 			 * generates a free constructor for the given lambda
@@ -574,7 +615,7 @@ namespace parser {
 			// Error handling.
 			void error(const location& l, const std::string& m) const;
 			void error(const std::string& m) const;
-			bool whereErrors() const;
+			bool wereErrors() const;
 			void printErrors(std::ostream& out = std::cout, bool color = true) const;
 		};
 

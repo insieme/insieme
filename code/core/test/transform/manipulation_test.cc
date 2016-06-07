@@ -484,38 +484,44 @@ namespace core {
 				"(a : T, b : T)->T { return let op = lit(\"op\":(T,T)->T) in op(a,b); }"
 		)).as<LambdaExprPtr>();
 
-		// ... now, fix first parameter to be X
 		LiteralPtr value = builder.literal(type, "X");
-		LambdaExprPtr res = transform::tryFixParameter(manager, lambda, 0, value);
-		EXPECT_NE(*res, *lambda);
-		EXPECT_EQ("{return op(X, ref_deref(v1));}", toString(*res->getBody()));
-
-		EXPECT_EQ("[]", toString(core::checks::check(res)));
-
-		res = transform::tryFixParameter(manager, lambda, 1, value);
-		EXPECT_NE(*res, *lambda);
-		EXPECT_EQ("{return op(ref_deref(v0), X);}", toString(*res->getBody()));
-		EXPECT_EQ("[]", toString(core::checks::check(res)));
-
-		// nested lambdas
 		std::map<string, NodePtr> symbols;
 		symbols["f"] = lambda;
-		LambdaExprPtr outer1 = builder.normalize(builder.parseExpr(
-				"(a : T, b : T)->T { return f(a,b); }", symbols
-		)).as<LambdaExprPtr>();
 
-		res = transform::tryFixParameter(manager, outer1, 0, value);
-		EXPECT_PRED2(isSubString, "return op(X, ref_deref(v1))", toString(*res));
-		EXPECT_EQ("[]", toString(core::checks::check(res)));
+		// ... now, fix first parameter to be X
+		{
+			LambdaExprPtr res = transform::tryFixParameter(manager, lambda, 0, value);
+			EXPECT_NE(*res, *lambda);
+			EXPECT_EQ("{return op(X, ref_deref(v1));}", toString(*res->getBody()));
+			EXPECT_EQ("[]", toString(core::checks::check(res)));
+
+			res = transform::tryFixParameter(manager, lambda, 1, value);
+			EXPECT_NE(*res, *lambda);
+			EXPECT_EQ("{return op(ref_deref(v0), X);}", toString(*res->getBody()));
+			EXPECT_EQ("[]", toString(core::checks::check(res)));
+		}
+
+		// nested lambdas
+		{
+			LambdaExprPtr outer1 = builder.normalize(builder.parseExpr(
+					"(a : T, b : T)->T { return f(a,b); }", symbols
+			)).as<LambdaExprPtr>();
+
+			LambdaExprPtr res = transform::tryFixParameter(manager, outer1, 0, value);
+			EXPECT_PRED2(isSubString, "return op(X, ref_deref(v1))", toString(*res));
+			EXPECT_EQ("[]", toString(core::checks::check(res)));
+		}
 
 		// multiple nested lambdas
-		LambdaExprPtr outer2 = builder.normalize(builder.parseExpr(
-				"(a : T, b : T)->T { return f(a,f(a,b)); }", symbols
-		)).as<LambdaExprPtr>();
+		{
+			LambdaExprPtr outer2 = builder.normalize(builder.parseExpr(
+					"(a : T, b : T)->T { return f(a,f(a,b)); }", symbols
+			)).as<LambdaExprPtr>();
 
-		res = transform::tryFixParameter(manager, outer2, 0, value);
-		EXPECT_PRED3(containsSubstring, "return op(X, ref_deref(v1))", toString(*res), 2);
-		EXPECT_EQ("[]", toString(core::checks::check(res)));
+			LambdaExprPtr res = transform::tryFixParameter(manager, outer2, 0, value);
+			EXPECT_PRED3(containsSubstring, "return op(X, ref_deref(v1))", toString(*res), 2);
+			EXPECT_EQ("[]", toString(core::checks::check(res)));
+		}
 
 	}
 
@@ -622,8 +628,8 @@ namespace core {
 
 		CompoundStmtPtr wholeStat = builder.compoundStmt(statements);
 
-		EXPECT_EQ(0u, transform::outline(mgr, wholeStat)->getArguments().size());
-		EXPECT_EQ(3u, transform::outline(mgr, forStmt)->getArguments().size());
+		EXPECT_EQ(0u, transform::outline(mgr, wholeStat)->getNumArguments());
+		EXPECT_EQ(3u, transform::outline(mgr, forStmt)->getNumArguments());
 
 		EXPECT_PRED2(containsSubString, toString(*transform::outline(mgr, forStmt)), "(v1, v2, v3)");
 	}
@@ -696,7 +702,7 @@ namespace core {
 		EXPECT_EQ("rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {int_add(ref_deref(v0), ref_deref(v1)); int_sub(ref_deref(v1), ref_deref(v0));}}(v10, int_add(v10, v20))", toString(*call));
 
 		auto inlined = builder.normalize(transform::tryInlineToStmt(mgr, call));
-		EXPECT_EQ("{int<4> v0 = int_add(v10, v20); int_add(v10, v0); int_sub(v0, v10);}", toString(*inlined));
+		EXPECT_EQ("{ref<int<4>,f,f,plain> v0 = v10; ref<int<4>,f,f,plain> v1 = int_add(v10, v20); int_add(ref_deref(v0), ref_deref(v1)); int_sub(ref_deref(v1), ref_deref(v0));}", toString(*inlined));
 	}
 
 	TEST(Manipulation, InlineITE) {
@@ -735,7 +741,7 @@ namespace core {
 
 		// check arguments
 		auto hasSideEffects = [](const ExpressionPtr& cur) { return !analysis::isSideEffectFree(cur); };
-		EXPECT_PRED1(analysis::isSideEffectFree, argPure);
+		EXPECT_TRUE(analysis::isSideEffectFree(argPure));
 		EXPECT_PRED1(hasSideEffects, argSideEffects);
 
 

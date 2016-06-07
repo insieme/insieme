@@ -24,7 +24,7 @@ include(add_unit_test)
 
 # for win64 we need to add a assembly object file to each target, see below.
 # For all other platforms this var is empty. This safes a lot of if clauses througout this file
-set (WIN64ASM_OBJ "") 
+set (WIN64ASM_OBJ "")
 
 if(WIN32)
 	#you need to have environment variables PTHREAD_ROOT and GTEST_ROOT which point to the base dir of those libraries/headers
@@ -54,7 +54,10 @@ else()
 	find_package(Threads REQUIRED)
 
 	#look for papi
-	insieme_find_package(NAME PAPI)
+	if(USE_PAPI)
+		insieme_find_package(NAME PAPI)
+		add_definitions(-DIRT_USE_PAPI)
+	endif()
 endif()
 	
 # set compiler flags for gcc
@@ -121,10 +124,7 @@ if (NOT MSVC)
 
 	function(link_hwloc target)
 		if (Hwloc_FOUND)
-			# I tried to do this as it is supposed to be done, but CMake sucks
-			#target_link_libraries(${target} ${Hwloc_LIBRARIES})
-			target_link_libraries(${target} ${Hwloc_LDFLAGS})
-			#target_link_libraries(${target} ${Hwloc_INCLUDE_DIRS}/../lib/lib${Hwloc_LIBRARIES}.so)
+			target_link_libraries(${target} ${HWLOC_LIBRARIES})
 		endif()
 	endfunction(link_hwloc)
 else()
@@ -171,7 +171,16 @@ endif( USE_OPENCL )
 # create the runtime target
 add_executable(insieme_runtime ${insieme_runtime_srcs} ${insieme_runtime_incs} ${WIN64ASM_OBJ})
 
+target_link_libraries(insieme_runtime dl rt m)
+
 link_hwloc(insieme_runtime)
+
+if(USE_PAPI)
+	#papi header+libraries
+	target_include_directories(insieme_runtime PRIVATE ${PAPI_INCLUDE_DIRS})
+	target_link_libraries(insieme_runtime ${PAPI_LIBRARIES})
+endif()
+	
 
 if ( USE_OPENCL )
 	target_link_libraries(insieme_runtime ${OPENCL_LIBS})
@@ -182,11 +191,6 @@ if(NOT WIN32 OR USE_PTHREADS)
 	target_link_libraries(insieme_runtime ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-#papi header+libraries
-if(NOT WIN32) 
-	target_include_directories(insieme_runtime PRIVATE ${PAPI_INCLUDE_DIRS})
-	target_link_libraries(insieme_runtime dl rt m ${PAPI_LIBRARIES})
-endif()
 
 if ( USE_MPI_OPENCL )
 	find_package(MPI REQUIRED)
@@ -262,8 +266,10 @@ foreach ( case_file ${test_cases})
 		target_link_libraries(${case_name} m)
 
 		#papi header+libraries
-		target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
-		target_link_libraries(${case_name} ${PAPI_LIBRARIES})
+		if(USE_PAPI)
+			target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
+			target_link_libraries(${case_name} ${PAPI_LIBRARIES})
+		endif()
 		if ( USE_MPI_OPENCL )
 			target_link_libraries(${case_name} ${MPI_C_LIBRARIES})
 		endif ( USE_MPI_OPENCL )
@@ -298,8 +304,10 @@ foreach (case_file ${test_cases})
 		target_link_libraries(${case_name} m)
 
 		#papi header+libraries
-		target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
-		target_link_libraries(${case_name} ${PAPI_LIBRARIES})
+		if(USE_PAPI)
+			target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
+			target_link_libraries(${case_name} ${PAPI_LIBRARIES})
+		endif()
 		if ( USE_MPI_OPENCL )
 			target_link_libraries(${case_name} ${MPI_C_LIBRARIES} )
 		endif ( USE_MPI_OPENCL )
@@ -324,8 +332,10 @@ foreach (case_file ${test_cases})
 		target_link_libraries(${case_name} m)
 		
 		#papi header+libraries
-		target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
-		target_link_libraries(${case_name} ${PAPI_LIBRARIES})
+		if(USE_PAPI)
+			target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
+			target_link_libraries(${case_name} ${PAPI_LIBRARIES})
+		endif()
 		if ( USE_MPI_OPENCL )
 			target_link_libraries(${case_name} ${MPI_C_LIBRARIES} )
 		endif ( USE_MPI_OPENCL )

@@ -68,7 +68,7 @@ int main() {
 		&x;
 	}
 
-	#pragma test expect_ir("{ var ref<ptr<int<4>,f,f>,f,f> v0 = v0; *ptr_to_ref(*v0); }")
+	#pragma test expect_ir("{ var ref<ptr<int<4>,f,f>,f,f> v0; *ptr_to_ref(*v0); }")
 	{
 		int* x;
 		*x;
@@ -437,7 +437,7 @@ int main() {
 	// check direct R-value access
 	#pragma test expect_ir(R"(
 		def struct IMP_simple_struct { i: int<4>; };
-		def IMP_generate_struct = () -> IMP_simple_struct { return var IMP_simple_struct v0 = *<ref<IMP_simple_struct>>(v0) {0}; };
+		def IMP_generate_struct = () -> IMP_simple_struct { return <ref<IMP_simple_struct>>(ref_decl(type_lit(ref<IMP_simple_struct>))) {0} in IMP_simple_struct; };
 		IMP_generate_struct().i+5
 	)")
 	generate_struct().i + 5;

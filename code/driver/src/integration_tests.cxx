@@ -99,7 +99,7 @@ namespace {
 		    ("step,s",              bpo::value<string>(),                "the test step to be applied")
 		    ("repeat,r",            bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
 		    ("no-clean",            "keep all output files")
-		    ("no-color",            "no highlighting of output")
+		    ("no-color",            "force-disable highlighting of output")
 		    ("blacklisted-only",    "only run the blacklisted test cases")
 		    ("long-tests-only",     "only run test cases which take long to execute")
 		    ("long-tests-also",     "also run test cases which take long to execute")
@@ -147,6 +147,8 @@ namespace {
 		res.mockrun = map.count("mock");
 		res.no_clean = map.count("no-clean");
 		res.color = !map.count("no-color");
+		// if colored output was not disabled explicitely, disable anyway if there is no support
+		if(res.color) { res.color = isatty(fileno(stdout)); }
 		res.panic_mode = map.count("panic");
 		res.num_threads = map["worker"].as<int>();
 		res.num_repetitions = map["repeat"].as<int>();

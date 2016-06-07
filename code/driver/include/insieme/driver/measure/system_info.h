@@ -109,6 +109,9 @@ namespace measure {
 		           insieme::utils::compiler::Compiler compiler = insieme::utils::compiler::Compiler::getRuntimeCompiler(),
 		           insieme::driver::measure::ExecutorPtr executor = insieme::driver::measure::makeLocalExecutor())
 		    : valid(false), data(""), env(env), backendCompilerDefs(backendCompilerDefs), backend(backend), compiler(compiler), executor(executor) {
+		    	#ifndef USE_PAPI
+				assert_fail() << "SystemInfo requires PAPI";
+			#endif
 			assert_true(backend) << "SystemInfo requires a valid backend!";
 			assert_true(executor) << "SystemInfo requires a valid executor!";
 

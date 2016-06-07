@@ -40,6 +40,7 @@
 #include "insieme/backend/opencl/opencl_code_fragments.h"
 #include "insieme/backend/opencl/opencl_analysis.h"
 #include "insieme/backend/opencl/opencl_extension.h"
+#include "insieme/backend/opencl/opencl_postprocessor.h"
 
 #include "insieme/annotations/meta_info/meta_infos.h"
 #include "insieme/annotations/opencl/opencl_annotations.h"
@@ -69,10 +70,10 @@ namespace insieme {
 namespace backend {
 namespace opencl {
 namespace transform {
-	
+
 	using namespace insieme::annotations::opencl;
 	using namespace insieme::annotations::opencl_ns;
-	
+
 	namespace {
 		core::LiteralPtr toKernelLiteral(core::NodeManager& manager, const StepContext& sc, const core::LambdaExprPtr& oclExpr) {
 			core::IRBuilder builder(manager);
@@ -81,6 +82,7 @@ namespace transform {
 			TargetCodePtr target = backend->convert(oclExpr);
 
 			std::stringstream ss;
+			OffloadSupportPost::generateCompat(sc, ss);
 			// in case it is CCode we print it differently -- this shall be the general case tho!
 			if (auto ccode = std::dynamic_pointer_cast<c_ast::CCode>(target)) {
 				for (const c_ast::CodeFragmentPtr& cur : ccode->getFragments()) { ss << *cur; }
@@ -148,7 +150,7 @@ namespace transform {
 			return newExpr;
 		}
 	}
-	
+
 	core::CallExprPtr outline(core::NodeManager& manager, const core::StatementPtr& stmt, VariableRequirementList& requirements) {
 		// check whether it is allowed
 		assert_true(opencl::analysis::isOffloadAble(manager, stmt)) << "cannot outline given code: " << dumpColor(stmt);
@@ -354,7 +356,7 @@ namespace transform {
 				auto callExpr = expr.as<core::CallExprPtr>();
 				// use returnType deduction for this purpose
 				type = core::types::deduceReturnType(callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>(),
-					core::extractTypes(callExpr->getArguments()));
+					core::extractTypes(callExpr->getArgumentList()));
 				break;
 			}
 		case core::NT_BindExpr:
@@ -365,7 +367,7 @@ namespace transform {
 				// also use returnType deduction but use bound parameters
 				auto callExpr = bindExpr->getCall();
 				type = core::types::deduceReturnType(callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>(),
-					core::extractTypes(callExpr->getArguments()));
+					core::extractTypes(callExpr->getArgumentList()));
 				break;
 			}
 		default:
@@ -386,7 +388,7 @@ namespace transform {
 		// grab a reference to the runtime & opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		auto& runExt = manager.getLangExtension<runtime::RuntimeExtension>();
-		
+
 		core::VariableList params;
 		auto wi = builder.variable(core::lang::buildRefType(core::lang::buildRefType(runExt.getWorkItemType())));
 		params.push_back(wi);
@@ -396,7 +398,7 @@ namespace transform {
 		// and finally ... THE lambda ladies and gentleman
 		return builder.lambdaExpr(oclExt.getNDRange(), params, builder.compoundStmt(body));
 	}
-	
+
 	core::LambdaExprPtr toIR(core::NodeManager& manager, const StepContext& sc, const VariableRequirementPtr& var) {
 		/*
 		the requirement is transformed into the following 'lambda'
@@ -423,7 +425,7 @@ namespace transform {
 				break;
 		case VariableRequirement::AccessMode::WO:
 				requirement->setAccessMode(DataRequirement::AccessMode::WO);
-				break;		
+				break;
 		case VariableRequirement::AccessMode::RW:
 				requirement->setAccessMode(DataRequirement::AccessMode::RW);
 				break;
@@ -458,15 +460,14 @@ namespace transform {
 		// prepare for the outer lamdba
 		body.pop_back();
 		params.pop_back();
-		// as a VariableRequirement is used for 1D, we set the numRanges hard-coded
-		requirement->setNumRanges(builder.uintLit(1));
+		requirement->setNumRanges(builder.uintLit(var->getRanges().size()));
 		// encode the requirement and build the "outer" lambda
 		requirement->setRangeExpr(rangeExpr);
 		body.push_back(builder.returnStmt(DataRequirement::encode(manager, requirement)));
 		// and finally ... THE lambda ladies and gentleman
 		return builder.lambdaExpr(oclExt.getDataRequirement(), params, builder.compoundStmt(body));
 	}
-	
+
 	core::NodePtr FixParametersStep::process(const Converter& converter, const core::NodePtr& code) {
 		auto lambdaExpr = code.isa<LambdaExprPtr>();
 		if (!lambdaExpr) return code;
@@ -532,7 +533,7 @@ namespace transform {
 		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
 		return Step::process(converter, newLambdaExpr);
 	}
-	
+
 	namespace {
 		class ForLoopReplacer : public core::transform::CachedNodeMapping {
 			core::NodeManager& manager;
@@ -565,7 +566,7 @@ namespace transform {
 				-->
 
 				int<4> v00 = num_cast(opencl_get_global_id(), type_lit(int<4>));
-				if (v00 < 1000 && (v00 - start) % step == 0)
+				if (v00 >= start && v00 < end && (v00 - start) % step == 0)
 					ptr_subscript(*v308, v00) = IMP_add(*ptr_subscript(*v306, v00), *ptr_subscript(*v307, v00));
 				*/
 				auto decl = forStmt->getDeclaration();
@@ -577,12 +578,14 @@ namespace transform {
 				auto body = forStmt->getBody()->substitute(manager, *this);
 				stmts.push_back(builder.ifStmt(
 					builder.logicAnd(
-						builder.lt(decl->getVariable(), forStmt->getEnd()),
-						builder.eq(
-							builder.mod(
-								builder.sub(decl->getVariable(), decl->getInitialization()),
-								forStmt->getStep()),
-							builder.numericCast(builder.uintLit(0), forStmt->getStep()->getType()))),
+						builder.ge(decl->getVariable(), forStmt->getStart()),
+						builder.logicAnd(
+							builder.lt(decl->getVariable(), forStmt->getEnd()),
+							builder.eq(
+								builder.mod(
+									builder.sub(decl->getVariable(), decl->getInitialization()),
+									forStmt->getStep()),
+								builder.numericCast(builder.uintLit(0), forStmt->getStep()->getType())))),
 					body));
 				return builder.compoundStmt(stmts);
 			}
@@ -675,7 +678,7 @@ namespace transform {
 			messages.printTo(ss);
 			LOG(ERROR) << "integrity checks for OpenCL Kernel code has failed:";
 			LOG(ERROR) << ss.str();
-			
+
 			assert_fail() << "see messages above!";
 		}
 

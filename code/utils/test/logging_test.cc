@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -53,7 +53,7 @@ class StdoutRedirect {
 };
 
 TEST(Logging, EnvVariableLevel) {
-	ASSERT_EXIT({
+	ASSERT_DEATH({
 		StdoutRedirect redirect;
 		SETENV_WRAPPER(LOG_LEVEL_ENV, "DEBUG", 1);
 		insieme::utils::logger_details::reloadConfiguration();
@@ -62,9 +62,9 @@ TEST(Logging, EnvVariableLevel) {
 		LOG(WARNING) << "WARNING log test";
 		LOG(ERROR) << "ERROR log test";
 		LOG(FATAL) << "FATAL log test";
-	} exit(0);, ::testing::ExitedWithCode(0), "DEBUG.*INFO.*WARNING.*ERROR.*FATAL");
+	} exit(1);, "DEBUG.*INFO.*WARNING.*ERROR.*FATAL");
 
-	ASSERT_EXIT({
+	ASSERT_DEATH({
 		StdoutRedirect redirect;
 		SETENV_WRAPPER(LOG_LEVEL_ENV, "INFO", 1);
 		insieme::utils::logger_details::reloadConfiguration();
@@ -73,10 +73,10 @@ TEST(Logging, EnvVariableLevel) {
 		LOG(WARNING) << "WARNING log test";
 		LOG(ERROR) << "ERROR log test";
 		LOG(FATAL) << "FATAL log test";
-	} exit(0);, ::testing::ExitedWithCode(0), "INFO.*WARNING.*ERROR.*FATAL");
+	} exit(1);, "INFO.*WARNING.*ERROR.*FATAL");
 
 
-	ASSERT_EXIT({
+	ASSERT_DEATH({
 		StdoutRedirect redirect;
 		SETENV_WRAPPER(LOG_LEVEL_ENV, "WARNING", 1);
 		insieme::utils::logger_details::reloadConfiguration();
@@ -85,10 +85,10 @@ TEST(Logging, EnvVariableLevel) {
 		LOG(WARNING) << "WARNING log test";
 		LOG(ERROR) << "ERROR log test";
 		LOG(FATAL) << "FATAL log test";
-	} exit(0);, ::testing::ExitedWithCode(0), "WARNING.*ERROR.*FATAL");
+	} exit(1);, "WARNING.*ERROR.*FATAL");
 
 
-	ASSERT_EXIT({
+	ASSERT_DEATH({
 		StdoutRedirect redirect;
 		SETENV_WRAPPER(LOG_LEVEL_ENV, "ERROR", 1);
 		insieme::utils::logger_details::reloadConfiguration();
@@ -97,10 +97,10 @@ TEST(Logging, EnvVariableLevel) {
 		LOG(WARNING) << "WARNING log test";
 		LOG(ERROR) << "ERROR log test";
 		LOG(FATAL) << "FATAL log test";
-	} exit(0);, ::testing::ExitedWithCode(0), "ERROR.*FATAL");
+	} exit(1);, "ERROR.*FATAL");
 
 
-	ASSERT_EXIT({
+	ASSERT_DEATH({
 		StdoutRedirect redirect;
 		SETENV_WRAPPER(LOG_LEVEL_ENV, "FATAL", 1);
 		insieme::utils::logger_details::reloadConfiguration();
@@ -109,7 +109,7 @@ TEST(Logging, EnvVariableLevel) {
 		LOG(WARNING) << "WARNING log test";
 		LOG(ERROR) << "ERROR log test";
 		LOG(FATAL) << "FATAL log test";
-	} exit(0);, ::testing::ExitedWithCode(0), "FATAL");
+	} exit(1);, "FATAL");
 }
 
 // single character, since otherwise regexs get cumbersome
@@ -121,19 +121,19 @@ void Beta() {
 }
 
 TEST(Logging, EnvVariableFilter) {
-	ASSERT_EXIT({
+	ASSERT_DEATH({
 		StdoutRedirect redirect;
 		SETENV_WRAPPER(LOG_LEVEL_ENV, "DEBUG", 1);
 		SETENV_WRAPPER(LOG_FILTER_ENV, ".*Alpha.*", 1);
 		Alpha();
 		Beta();
-	} exit(0);, ::testing::ExitedWithCode(0), "^[^%]*$[^%]*$");
+	} exit(1);, "^[^%]*$[^%]*$");
 
-	ASSERT_EXIT({
+	ASSERT_DEATH({
 		StdoutRedirect redirect;
 		SETENV_WRAPPER(LOG_LEVEL_ENV, "DEBUG", 1);
 		SETENV_WRAPPER(LOG_FILTER_ENV, ".*Beta.*", 1);
 		Alpha();
 		Beta();
-	} exit(0);, ::testing::ExitedWithCode(0), "^[^$]*%[^$]*$");
+	} exit(1);, "^[^$]*%[^$]*$");
 }

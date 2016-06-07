@@ -143,7 +143,7 @@ namespace extensions {
 			// operation needs to be a call and have 2 arguments
 			auto callExpr = operation.isa<core::CallExprPtr>();
 			auto callee = callExpr->getFunctionExpr();
-			if(!callExpr || callExpr->getArguments().size() != 2) return invalid;
+			if(!callExpr || callExpr->getNumArguments() != 2) return invalid;
 
 			// first check if variable is on LHS
 			// (should also work for rhs -- not yet)
@@ -172,14 +172,14 @@ namespace extensions {
 	}
 
 	bool isUsedAfterLoop(const core::StatementList& stmts, const core::WhileStmtPtr& whileStmt, const core::NodePtr& predecessor,
-		const core::VariablePtr& cvar) {
-		if (!predecessor.isa<core::DeclarationStmtPtr>()) return true;
+		                 const core::VariablePtr& cvar) {
+		if(!predecessor.isa<core::DeclarationStmtPtr>()) return true;
 		bool afterWhile = false;
-		for (auto stmt : stmts) {
-			if (stmt == whileStmt) {
+		for(auto stmt : stmts) {
+			if(stmt == whileStmt) {
 				afterWhile = true;
 			} else {
-				if (afterWhile && ::contains(core::analysis::getFreeVariables(stmt), cvar)) return true;
+				if(afterWhile && ::contains(core::analysis::getFreeVariables(stmt), cvar)) return true;
 			}
 		}
 		return false;
@@ -271,19 +271,22 @@ namespace extensions {
 					auto var = varA.getAddressedNode().isa<core::VariablePtr>();
 					if(var == cvar) {
 						// check if it's a write
-						auto varParent = varA.getParentNode();
+						auto varParent = varA.getParentNode(2);
 						auto convertedPair = mapToStep(varParent);
 						if(convertedPair.second && !convertedPair.first) {
 							writeStepExprs.push_back(convertedPair.second);
-							auto parentParent = varA.getParentAddress(2);
 							core::NodePtr parentNode;
 							// compound assignment operations are enclosed in an additional refDeref. We have to consider this here
-							if (refExt.isCallOfRefDeref(parentParent)) {
-								toRemoveFromBody.push_back(parentParent);
-								parentNode = parentParent.getAddressedNode();
-							} else {
+							if(varA.getDepth()>4) {
+								auto parentParent = varA.getParentAddress(4);
+								if(refExt.isCallOfRefDeref(parentParent)) {
+									toRemoveFromBody.push_back(parentParent);
+									parentNode = parentParent.getAddressedNode();
+								}
+							}
+							if(!parentNode) {
 								toRemoveFromBody.push_back(varParent);
-								parentNode = varA.getParentNode();
+								parentNode = varA.getParentNode(2);
 							}
 							// additionally check if the condition var write
 							// occurs at the end of the while body, otherwise
@@ -328,31 +331,44 @@ namespace extensions {
 				// prepare new body
 				core::StatementList newBodyStmts;
 				core::NodeMap loopVarReplacement;
-				loopVarReplacement[builder.deref(cvar)] = forVar;
+				loopVarReplacement[builder.deref(cvar)] = forVar; // TODO: replace cvar, not deref(cvar) -- issues with binds expecting refs
 				for(auto stmt : body->getStatements()) {
-					if(!::contains(toRemoveFromBody, stmt)) newBodyStmts.push_back(core::transform::replaceAllGen(mgr, stmt, loopVarReplacement));
+					if(!::contains(toRemoveFromBody, stmt)) {
+						newBodyStmts.push_back(core::transform::replaceAllGen(mgr, stmt, loopVarReplacement));
+						if(!core::analysis::isReadOnly(stmt, cvar)) {
+							VLOG(1) << "Loop var not readonly in: " << stmt;
+							return original;
+						}
+					}
 				}
-				//synchronize cvar and new forVar
-				//newBodyStmts.push_back(builder.callExpr(cvar->getType(), fMod.getCStyleAssignment(), forVar, cvar));
+
 				auto newBody = builder.compoundStmt(newBodyStmts);
 
 				// if the old loop variable is free in the new body, we messed up and should bail
-				if(::contains(core::analysis::getFreeVariables(newBody), cvar)) return original;
+				VLOG(2) << core::printer::PrettyPrinter(newBody, core::printer::PrettyPrinter::NO_EVAL_LAZY);
+				auto oldLoopVarFree = ::contains(core::analysis::getFreeVariables(newBody), cvar);
+				VLOG(1) << "oldLoopVarFree: " << oldLoopVarFree << " // " << "free vars: " << core::analysis::getFreeVariables(newBody) << "\n";
+				if(oldLoopVarFree) return original;
 
 				auto forStmt = builder.forStmt(forVar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr, newBody);
 				core::transform::utils::migrateAnnotations(whileAddr.getAddressedNode(), forStmt);
 				VLOG(1) << "======> FOR:\n" << dumpColor(forStmt);
 
-				/////////////////////////////////////////////////////////////////////////////////////// check if post assignment is mandatory
-				core::StatementPtr postCond = nullptr;
-				if (isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), pred, cvar)) {
-					postCond = getPostCondition(cvar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr);
-				}
-
 				/////////////////////////////////////////////////////////////////////////////////////// replace the while in the original compound
 				auto replacementCompoundStmt = core::transform::replaceAddress(mgr, whileAddr, forStmt).getRootNode().as<core::CompoundStmtPtr>();
 				core::StatementList stmtlist = replacementCompoundStmt->getStatements();
-				if(postCond) stmtlist.push_back(postCond);
+
+				/////////////////////////////////////////////////////////////////////////////////////// check if post assignment is mandatory
+				auto usedAfterLoop = isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), pred, cvar);
+				if(usedAfterLoop) {
+					stmtlist.push_back(getPostCondition(cvar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr));
+				}
+
+				/////////////////////////////////////////////////////////////////////////////////////// remove declaration if we can
+				if(!usedAfterLoop && pred.isa<core::DeclarationStmtPtr>()) {
+					stmtlist.erase(std::find(stmtlist.begin(), stmtlist.end(), pred.as<core::StatementPtr>()));
+				}
+
 				return builder.compoundStmt(stmtlist);
 			}).as<core::LambdaExprPtr>();
 

@@ -44,6 +44,7 @@
 #include "insieme/core/lang/array.h"
 #include "insieme/core/analysis/compare.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/types/subtype_constraints.h"
 
 #include "insieme/core/transform/node_replacer.h"
@@ -71,7 +72,9 @@ namespace analysis {
 			}
 
 			bool visitNode(const NodePtr& cur, NodeSet& knownVariables) {
-				return any(cur.getChildList(), [&](const NodePtr& cur) -> bool { return this->visit(cur, knownVariables); });
+				if(cur->getNodeCategory() == NC_Statement || cur->getNodeCategory() == NC_Expression) return false;
+				auto ret = any(cur.getChildList(), [&](const NodePtr& cur) -> bool { return this->visit(cur, knownVariables); });
+				return ret;
 			}
 		};
 
@@ -259,9 +262,6 @@ namespace analysis {
 				record.as<StructPtr>()->getParents() :
 				builder.parents();
 
-		// check that there are the right number of constructors
-		if (record->getConstructors().size() != 3) return false;
-
 		// and there is a non-virtual destructor
 		if (record->hasVirtualDestructor()) return false;
 
@@ -395,84 +395,32 @@ namespace analysis {
 	}
 
 	bool isaDefaultConstructor(const TagTypePtr& type, const ExpressionPtr& ctor) {
-		auto record = type->getRecord();
-		IRBuilder builder(record->getNodeManager());
-		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
-
-		auto checkCtor = [&](const ExpressionPtr& ctor, const ExpressionPtr& candidate)->bool {
-			return analysis::equalNameless(ctor, builder.normalize(candidate)) ||
-				analysis::equalNameless(ctor, builder.normalize(type->peel(candidate)));
-		};
-
-		ParentsPtr parents =
-				(record.isa<StructPtr>()) ?
-				record.as<StructPtr>()->getParents() :
-				builder.parents();
-
-		//compare with all three default generated constructors
-		auto norm_ctor = builder.normalize(ctor);
-		if (checkCtor(norm_ctor, builder.getDefaultConstructor(thisType, parents, record->getFields()))) return true;
-		if (checkCtor(norm_ctor, builder.getDefaultCopyConstructor(thisType, parents, record->getFields()))) return true;
-		if (checkCtor(norm_ctor, builder.getDefaultMoveConstructor(thisType, parents, record->getFields()))) return true;
-
+		if(auto lambda = ctor.isa<LambdaExprPtr>()) {
+			return lambda->getType().as<FunctionTypePtr>().isConstructor() && isaDefaultMember(lambda);
+		}
 		return false;
 	}
 
 	bool isDefaultDestructor(const TagTypePtr& type, const ExpressionPtr& dtor) {
-		auto record = type->getRecord();
-		IRBuilder builder(type->getNodeManager());
-		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
-
-		auto checkDtor = [&](const ExpressionPtr& dtor, const ExpressionPtr& candidate)->bool {
-			return analysis::equalNameless(dtor, builder.normalize(candidate)) ||
-				analysis::equalNameless(dtor, builder.normalize(type->peel(candidate)));
-		};
-
-		ParentsPtr parents =
-			(record.isa<StructPtr>()) ?
-			record.as<StructPtr>()->getParents() :
-			builder.parents();
-
-		//compare with all three default generated constructors
-		auto norm_dtor = builder.normalize(dtor);
-		return checkDtor(norm_dtor, builder.getDefaultDestructor(thisType));
+		if(auto lambda = dtor.isa<LambdaExprPtr>()) {
+			return lambda->getType().as<FunctionTypePtr>().isDestructor() && isaDefaultMember(lambda);
+		}
+		return false;
 	}
 
 	bool hasDefaultDestructor(const TagTypePtr& type) {
 		auto record = type->getRecord();
-		IRBuilder builder(type->getNodeManager());
-		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
-
-		//check the virtual flag and compare with the default generated destructor
-		if(!record->getDestructorVirtual().getValue()
-				&& analysis::equalNameless(builder.normalize(record->getDestructor()), builder.normalize(builder.getDefaultDestructor(thisType)))) return true;
-
-		return false;
+		return record->hasDestructor() && isDefaultDestructor(type, record->getDestructor());
 	}
 
 	bool isaDefaultMember(const TagTypePtr& type, const MemberFunctionPtr& memberFunction) {
 		//only assignment operators can be default member functions
 		if (memberFunction->getNameAsString() != utils::getMangledOperatorAssignName()) return false;
 
-		auto record = type->getRecord();
-		IRBuilder builder(type->getNodeManager());
-		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
-
-		auto checkMemberFunction = [&](const MemberFunctionPtr& member, const MemberFunctionPtr& candidate)->bool {
-			return analysis::equalNameless(member, builder.normalize(candidate)) ||
-					analysis::equalNameless(member, builder.normalize(type->peel(candidate)));
-		};
-
-		ParentsPtr parents =
-				(record.isa<StructPtr>()) ?
-				record.as<StructPtr>()->getParents() :
-				builder.parents();
-
-		//compare with both default generated assignment operators
-		auto norm_member = builder.normalize(memberFunction);
-		if (checkMemberFunction(norm_member, builder.getDefaultCopyAssignOperator(thisType, parents, record->getFields()))) return true;
-		if (checkMemberFunction(norm_member, builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()))) return true;
-
+		const auto& impl = memberFunction->getImplementation();
+		if(auto lambda = impl.isa<LambdaExprPtr>()) {
+			return lambda->getType().as<FunctionTypePtr>().isMemberFunction() && isaDefaultMember(lambda);
+		}
 		return false;
 	}
 

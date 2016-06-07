@@ -110,7 +110,7 @@ namespace opencl {
 				// build a pick for the generated variants
 				auto pickExpr = builder.pickVariant(variants);
 				// finally wrap it into a call wrapped by a compound
-				return builder.compoundStmt(builder.callExpr(manager.getLangBasic().getUnit(), pickExpr, callExpr->getArguments()));
+				return builder.compoundStmt(builder.callExpr(manager.getLangBasic().getUnit(), pickExpr, callExpr->getArgumentList()));
 			}
 		};
 

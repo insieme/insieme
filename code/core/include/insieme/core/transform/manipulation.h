@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -386,6 +386,34 @@ namespace transform {
 	 * 		represented by the job or null if it can not be converted
 	 */
 	ExpressionPtr tryToPFor(const JobExprPtr& job);
+
+	/**
+	 * Makes declaration initialization expressions usable outside the declaration context,
+	 * by replacing usage of the declared variable with appropriate ref_temp calls.
+	 *
+	 * @param decl the declaration to extract the initialization expression from
+	 * @return the init expression usable outside the declaration context
+	 */
+	ExpressionPtr extractInitExprFromDecl(const DeclarationPtr& decl);
+
+	/**
+	 * Creates a list of expressions containing call arguments usable outside the calling context,
+	 * by replacing usage of the declared variable with appropriate ref_temp calls.
+	 *
+	 * @param call the call to extract the arguments expression from
+	 * @return list of expressions containing call arguments
+	 */
+	ExpressionList extractArgExprsFromCall(const NodePtr& call);
+
+	/**
+	 * Extracts the Nth argument from the given call and makes it usable outside the calling context,
+	 * by replacing usage of the declared variable with appropriate ref_temp calls.
+	 *
+	 * @param call the call to extract the arguments expression from
+	 * @param num the index of the argument
+	 * @return expressions containing call argument
+	 */
+	ExpressionPtr extractArg(const NodePtr& call, size_t num);
 
 } // end namespace transform
 } // end namespace core

@@ -34,7 +34,6 @@
  * regarding third party software licenses.
  */
 
-#define IRT_USE_PAPI
 #define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
 #define IRT_ENABLE_REGION_INSTRUMENTATION
 

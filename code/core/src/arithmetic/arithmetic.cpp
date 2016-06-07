@@ -276,7 +276,7 @@ namespace arithmetic {
 
 			const CallExprPtr& call = static_pointer_cast<const CallExpr>(expr);
 			const ExpressionPtr& fun = call->getFunctionExpr();
-			const ExpressionList& args = call->getArguments();
+			const ExpressionList& args = call->getArgumentList();
 
 			// handle references
 			if(ext.isRefDeref(fun)) { return isValueInternal(args[0]); }

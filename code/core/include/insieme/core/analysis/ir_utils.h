@@ -65,6 +65,14 @@ namespace analysis {
 	bool isSideEffectFree(const ExpressionPtr& expr);
 
 	/**
+	 * Tests whether the given declaration is side effect free.
+	 * A declaration is side effect free if the arguments to its initializing expression are side effect free.
+	 *
+	 * @param decl the declaration to be tested
+	 */
+	bool isSideEffectFree(const DeclarationPtr& decl);
+
+	/**
 	 * Tests whether the call referenced by the given pointer is a call to the given function.
 	 *
 	 * @param candidate the node to be tested
@@ -217,7 +225,8 @@ namespace analysis {
 	 * @return true if the passed declaration is an undefined declaration
 	 */
 	static inline bool isUndefinedInitalization(const DeclarationStmtPtr& decl) {
-		return decl->getVariable() == decl->getInitialization();
+		auto& refExt = decl->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+		return refExt.isCallOfRefDecl(decl->getInitialization());
 	}
 
 

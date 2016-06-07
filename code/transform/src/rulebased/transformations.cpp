@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -122,7 +122,7 @@ namespace rulebased {
 	                  //  mul(S,f)
 	                  //  irg::mul(g::var("S"),irg::literal(irg::int4(),parameter::getValue<unsigned>(params)))
 	                  irg::forStmt(
-	                      g::var("V"), g::var("L"),
+	                      g::var("T"), g::var("V"), g::var("L"),
 	                      // u - (u-l)%(f*s)
 	                      // irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")),
 	                      // irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
@@ -152,7 +152,7 @@ namespace rulebased {
 	                  // *upper bound* : U" = U (simpler)
 	                  // *step*        : S" = S
 	                  irg::forStmt(
-	                      g::var("V"),
+	                      g::var("T"), g::var("V"),
 	                      // irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")),
 	                      // irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
 	                      // irg::add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
@@ -276,13 +276,13 @@ namespace rulebased {
 	                                g::let("tsB", irg::literal(g::var("T2"), parameter::getValue<unsigned>(params, 1)),
 
 	                                       irg::forStmt(
-	                                           g::var("ii"), g::var("L1"), g::var("U1"), irg::mul(g::var("tsA"), g::var("S1")),
+	                                           g::var("T1"), g::var("ii"), g::var("L1"), g::var("U1"), irg::mul(g::var("tsA"), g::var("S1")),
 	                                           irg::forStmt(
-	                                               g::var("jj"), g::var("L2"), g::var("U2"), irg::mul(g::var("tsB"), g::var("S2")),
+	                                               g::var("T2"), g::var("jj"), g::var("L2"), g::var("U2"), irg::mul(g::var("tsB"), g::var("S2")),
 	                                               irg::forStmt(
-	                                                   g::var("V1"), g::var("ii"),
+	                                                   g::var("T1"), g::var("V1"), g::var("ii"),
 	                                                   irg::min(irg::add(g::var("ii"), irg::mul(g::var("tsA"), g::var("S1"))), g::var("U1")), g::var("S1"),
-	                                                   g::listVar("A1") << irg::forStmt(g::var("V2"), g::var("jj"),
+	                                                   g::listVar("A1") << irg::forStmt(g::var("T2"), g::var("V2"), g::var("jj"),
 	                                                                                    irg::min(irg::add(g::var("jj"), irg::mul(g::var("tsB"), g::var("S2"))),
 	                                                                                             g::var("U2")),
 	                                                                                    g::var("S2"), g::var("BODY"))
@@ -320,23 +320,23 @@ namespace rulebased {
 	                                              g::let("tsC", irg::literal(g::var("T3"), parameter::getValue<unsigned>(params, 2)),
 
 	                                                     irg::forStmt(
-	                                                         g::var("ii"), g::var("L1"), g::var("U1"), irg::mul(g::var("tsA"), g::var("S1")),
+	                                                         g::var("T1"), g::var("ii"), g::var("L1"), g::var("U1"), irg::mul(g::var("tsA"), g::var("S1")),
 	                                                         irg::forStmt(
-	                                                             g::var("jj"), g::var("L2"), g::var("U2"), irg::mul(g::var("tsB"), g::var("S2")),
+	                                                             g::var("T2"), g::var("jj"), g::var("L2"), g::var("U2"), irg::mul(g::var("tsB"), g::var("S2")),
 	                                                             irg::forStmt(
-	                                                                 g::var("kk"), g::var("L3"), g::var("U3"), irg::mul(g::var("tsC"), g::var("S3")),
+	                                                                 g::var("T3"), g::var("kk"), g::var("L3"), g::var("U3"), irg::mul(g::var("tsC"), g::var("S3")),
 	                                                                 irg::forStmt(
-	                                                                     g::var("V1"), g::var("ii"),
+	                                                                     g::var("T1"), g::var("V1"), g::var("ii"),
 	                                                                     irg::min(irg::add(g::var("ii"), irg::mul(g::var("tsA"), g::var("S1"))), g::var("U1")),
 	                                                                     g::var("S1"),
 	                                                                     g::listVar("A1")
 	                                                                         << irg::forStmt(
-	                                                                                g::var("V2"), g::var("jj"),
+	                                                                                g::var("T2"), g::var("V2"), g::var("jj"),
 	                                                                                irg::min(irg::add(g::var("jj"), irg::mul(g::var("tsB"), g::var("S2"))),
 	                                                                                         g::var("U2")),
 	                                                                                g::var("S2"),
 	                                                                                g::listVar("A2")
-	                                                                                    << irg::forStmt(g::var("V3"), g::var("kk"),
+	                                                                                    << irg::forStmt(g::var("T3"), g::var("V3"), g::var("kk"),
 	                                                                                                    irg::min(irg::add(g::var("kk"), irg::mul(g::var("tsC"),
 	                                                                                                                                             g::var("S3"))),
 	                                                                                                             g::var("U3")),

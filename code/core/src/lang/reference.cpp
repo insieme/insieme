@@ -119,6 +119,12 @@ namespace lang {
 		return ReferenceType(elementType, ext.getMarkerType(_const), ext.getMarkerType(_volatile), lang::toType(mgr, kind)).operator GenericTypePtr();
 	}
 
+	GenericTypePtr ReferenceType::create(const TypePtr& elementType, const TypePtr& _const, const TypePtr& _volatile, const Kind& kind) {
+		assert_true(elementType);
+		NodeManager& mgr = elementType.getNodeManager();
+		return ReferenceType(elementType, _const, _volatile, lang::toType(mgr, kind)).operator GenericTypePtr();
+	}
+
 	GenericTypePtr ReferenceType::toType() const {
 		NodeManager& mgr = elementType.getNodeManager();
 		return GenericType::get(mgr, "ref", ParentList(), toVector(elementType, mConst, mVolatile, kind));
@@ -257,6 +263,12 @@ namespace lang {
 		return isReference(node) && ReferenceType(node).isQualified();
 	}
 
+	bool isAssignment(const NodePtr& node) {
+		if(node->getNodeType() != NT_CallExpr) return false;
+		auto& rExt = node->getNodeManager().getLangExtension<ReferenceExtension>();
+		return rExt.isCallOfRefAssign(node);
+	}
+
 	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType) {
 		if(core::analysis::isTypeLiteralType(typeLitType)) return parseKind(core::analysis::getRepresentedType(typeLitType));
 		return parseKind(typeLitType);
@@ -364,6 +376,17 @@ namespace lang {
 		return builder.callExpr(rExt.getRefReinterpret(), refExpr, builder.getTypeLiteral(targetTy));
 	}
 
+
+	bool isAnyRefCast(const NodePtr& node) {
+		auto expr = node.isa<ExpressionPtr>();
+		if(!expr) return false;
+		auto& refExt = expr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+		auto funExpr = expr;
+		if(auto call = expr.isa<CallExprPtr>()) funExpr = call->getFunctionExpr();
+		return refExt.isRefCast(funExpr) || refExt.isRefConstCast(funExpr) || refExt.isRefVolatileCast(funExpr) || refExt.isRefKindCast(funExpr)
+			   || refExt.isRefReinterpret(funExpr) || refExt.isRefParentCast(funExpr);
+	}
+
 	ExpressionPtr buildRefTemp(const TypePtr& type) {
 		IRBuilder builder(type->getNodeManager());
 		auto& refExt = type->getNodeManager().getLangExtension<lang::ReferenceExtension>();
@@ -382,6 +405,13 @@ namespace lang {
 		ReferenceType rt(type);
 		return builder.callExpr(rExt.getRefNull(), builder.getTypeLiteral(rt.getElementType()), bmExt.getMarkerTypeLiteral(rt.isConst()),
 								bmExt.getMarkerTypeLiteral(rt.isVolatile()));
+	}
+
+	ExpressionPtr buildRefDecl(const TypePtr& type) {
+		assert_pred1(isReference, type) << "Trying to build a decl ref which isn't a reference.";
+		IRBuilder builder(type->getNodeManager());
+		auto& refExt = type->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+		return builder.callExpr(type, refExt.getRefDecl(), builder.getTypeLiteral(type));
 	}
 
 } // end namespace lang

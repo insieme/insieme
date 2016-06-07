@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -273,9 +273,9 @@ namespace transform {
 					CallExprPtr call = bind->getCall();
 
 					// improve function part and parameters, yet preserve call
-					ExpressionPtr newFun = map(call->getFunctionExpr()); // call->getFunctionExpr()->substitute(manager, *this);
-					vector<ExpressionPtr> args;
-					for(auto& cur : call->getArguments()) {
+					ExpressionPtr newFun = map(call->getFunctionExpr());
+					DeclarationList args;
+					for(auto& cur : call->getArgumentDeclarations()) {
 						args.push_back(map(cur));
 					}
 

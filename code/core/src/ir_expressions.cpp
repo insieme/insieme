@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -38,14 +38,14 @@
 
 #include <algorithm>
 
-#include "insieme/core/ir_visitor.h"
-#include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_address.h"
-
-#include "insieme/core/lang/reference.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/transform/materialize.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
 namespace core {
@@ -233,13 +233,13 @@ namespace core {
 	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const LambdaPtr& lambda) {
 		return get(manager, lambda, "_");
 	}
-	
+
 	LambdaExprPtr LambdaExpr::get(NodeManager & manager, const LambdaPtr& lambda, const string& name) {
 		LambdaReferencePtr ref = LambdaReference::get(manager, lambda->getType(), name);
 		LambdaBindingMap bindings = { { ref, lambda } };
 		LambdaDefinitionPtr def = LambdaDefinition::get(manager, bindings);
 		def->attachValue(RecursiveCallLocations(def)); // this is not a recursive function!
-		return get(manager, lambda->getType(), ref, def);		
+		return get(manager, lambda->getType(), ref, def);
 	}
 
 	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
@@ -330,6 +330,26 @@ namespace core {
 
 		// build up resulting definitions
 		return LambdaDefinition::get(manager, newBindings);
+	}
+
+	CallExprPtr CallExpr::get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& function, const NodeRange<ExpressionPtr>& arguments) {
+		NodeList children;
+		children.push_back(type);
+		children.push_back(function);
+		auto param_types = function->getType().as<FunctionTypePtr>()->getParameterTypeList();
+		for(size_t i = 0; i < arguments.size(); ++i) {
+			auto t = i < param_types.size() ? param_types[i] : arguments[i]->getType();
+			children.push_back(Declaration::get(manager, transform::materialize(t), arguments[i]));
+		}
+		return manager.get(CallExpr(children));
+	}
+
+	CallExprPtr CallExpr::get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& function, const NodeRange<DeclarationPtr>& argumentDecls) {
+		NodeList children;
+		children.push_back(type);
+		children.push_back(function);
+		std::copy(argumentDecls.cbegin(), argumentDecls.cend(), std::back_inserter(children));
+		return manager.get(CallExpr(children));
 	}
 
 } // end namespace core
