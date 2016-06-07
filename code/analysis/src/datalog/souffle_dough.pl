@@ -61,7 +61,7 @@ foreach my $filename (<*.$file_ext>) {
 	}
 
 	# Replace relation names according to using-declarations
-	expand_using_decls(\@lines);
+	expand_using_decls(\@lines, $filename);
 	convert_usings_to_includes(\@lines);
 
 	# Change 'member' declarations back to decl
@@ -81,7 +81,7 @@ foreach my $filename (<*.$file_ext>) {
 
 	tie my @lines, 'Tie::File', $filename;
 
-	expand_using_decls(\@lines);
+	expand_using_decls(\@lines, $filename);
 	convert_usings_to_includes(\@lines);
 
 	# Done: Commit changes to file
@@ -91,7 +91,7 @@ chdir("$basedir");
 
 sub expand_using_decls {
 
-	my ($lines_ref) = @_;
+	my ($lines_ref, $filename) = @_;
 
 	# Get all using-declarations
 	my %usings;
@@ -106,8 +106,16 @@ sub expand_using_decls {
 
 	# Replace relations with their mangled names
 	while (my ($rel, $new_rel) = each %usings) {
-		s/(^|\W)$rel(\s*\()/$1$new_rel$2/g foreach @$lines_ref;
-		s/(^|\W)(\.$inittoken\s+\w+\s*=\s*)$rel(\s*)/$1$2$new_rel$3/g foreach @$lines_ref;
+		next if $rel eq "_";
+		my $replace_count = 0;
+
+		foreach (@$lines_ref) {
+			next unless s/(^|\W)$rel(\s*\()/$1$new_rel$2/g
+			         or s/(^|\W)(\.$inittoken\s+\w+\s*=\s*)$rel(\s*)/$1$2$new_rel$3/g;
+		         $replace_count++;
+		}
+
+		say "Warning: Superfluous inclusion of '$rel' in file '$filename'. " if $replace_count == 0;
 	}
 }
 
