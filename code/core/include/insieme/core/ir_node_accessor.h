@@ -240,6 +240,10 @@ namespace core {
 			return getNode().annotations;
 		}
 
+		/**
+		 * Wrapper member function
+		 * Hint: if code coverage missed those lines, it is used in type_manager.cpp -> line 312
+		 */
 		std::size_t getNodeHashValue() const {
 			return getNode().hash();
 		}

@@ -338,11 +338,17 @@ TEST(NodeAddressTest, CloneTo) {
 
 	NodeAddress rootAddress(root);
 
+	NodeAddress newOwnRoot = rootAddress.cloneTo(nm1);
+	EXPECT_TRUE(&(newOwnRoot.getNodeManager()) == &nm1);
+
 	NodeAddress newRoot = rootAddress.cloneTo(nm2);
 
 	EXPECT_EQ(Address<const Type>::find(typeC, root), rootAddress.getAddressOfChild(2, 2));
 	EXPECT_EQ(Address<const Type>::find(typeC, newRoot), rootAddress.getAddressOfChild(2, 2));
 	EXPECT_EQ(Address<const Type>::find(typeC, newRoot), newRoot.getAddressOfChild(2, 2));
+
+	EXPECT_EQ(Address<const Type>::find(typeC, newOwnRoot), rootAddress.getAddressOfChild(2, 2));
+	EXPECT_EQ(Address<const Type>::find(typeC, newOwnRoot), newOwnRoot.getAddressOfChild(2, 2));
 
 }
 

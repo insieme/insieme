@@ -54,15 +54,14 @@ namespace backend {
 namespace opencl {
 
 	#define KERNEL_TABLE_NAME "g_insieme_opencl_kernel_table"
-
-	unsigned KernelTable::unique = 0;
+	utils::SimpleIDGenerator<unsigned> KernelTable::idGenerator;
 
 	KernelTable::KernelTable(const Converter& converter) :
 		converter(converter),
 	    declaration(c_ast::CCodeFragment::createNew(
 			converter.getFragmentManager(),
 			converter.getCNodeManager()->create<c_ast::OpaqueCode>("extern irt_opencl_kernel_implementation *" KERNEL_TABLE_NAME "[];"))) {
-		addDependency(declaration);		
+		addDependency(declaration);
 		runtime::ContextHandlingFragmentPtr ctx = runtime::ContextHandlingFragment::get(converter);
 		// add the dataReq. table as well
 		ctx->addInitExpression("\tirt_opencl_init_context(%s, " KERNEL_TABLE_NAME ");\n");
@@ -83,9 +82,10 @@ namespace opencl {
 		}
 		return static_pointer_cast<KernelTable>(res);
 	}
-	
+
 	unsigned KernelTable::getNextUnique() {
-		return unique++;
+		// substract one as we want to start with 0
+		return idGenerator.getNext() - 1;
 	}
 
 	c_ast::CodeFragmentPtr KernelTable::getDeclaration() const {
