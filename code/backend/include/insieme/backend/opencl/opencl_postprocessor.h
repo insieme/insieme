@@ -50,6 +50,8 @@ namespace opencl {
 	public:
 		OffloadSupportPost(const transform::StepContext& sc);
 		c_ast::NodePtr process(c_ast::CNodeManager& manager, const c_ast::NodePtr& code) override;
+
+		static void generateCompat(const transform::StepContext& sc, std::stringstream& ss);
 	};
 
 } // end namespace opencl
