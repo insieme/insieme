@@ -177,6 +177,7 @@ struct _irt_opencl_device {
 	cl_ulong max_constant_buffer_size;
 	cl_ulong max_mem_alloc_size;
 	size_t max_parameter_size;
+	size_t max_work_group_size;
 	cl_uint max_work_item_dimensions;
 	size_t *max_work_item_sizes;
 	cl_uint mem_base_addr_align;

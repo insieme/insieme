@@ -80,7 +80,7 @@ void irt_opencl_execute_fallback(irt_work_item *wi);
 void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
                          unsigned num_requirements, irt_opencl_data_requirement_func *requirements,
                          unsigned num_optionals, va_list optionals);
-void irt_opencl_evaluate_ndrange(irt_opencl_ndrange *ndrange);
+void irt_opencl_evaluate_ndrange(irt_opencl_device* device, irt_opencl_ndrange *ndrange);
 irt_work_item *irt_opencl_wi_get_current(unsigned id);
 size_t irt_opencl_round_up(size_t value, size_t multiple);
 irt_opencl_event_list *irt_opencl_event_list_create(unsigned max_events);
@@ -233,12 +233,16 @@ void irt_opencl_execute_fallback(irt_work_item *wi)
 	wi->impl->variants[0].implementation(wi);
 }
 
-void irt_opencl_evaluate_ndrange(irt_opencl_ndrange *ndrange)
+void irt_opencl_evaluate_ndrange(irt_opencl_device *device, irt_opencl_ndrange *ndrange)
 {
+	size_t work_group_size = device->max_work_group_size;
+	size_t local_work_size = pow(work_group_size, 1.0/ndrange->work_dim);
+
 	for (unsigned i = 0; i < ndrange->work_dim; ++i) {
 		/* in case no local size is supplied we pick a default one */
-		if (ndrange->local_work_size[i] == 0)
-			ndrange->local_work_size[i] = 32;
+		if (ndrange->local_work_size[i] == 0) {
+			ndrange->local_work_size[i] = MIN(device->max_work_item_sizes[i], local_work_size);
+		}
 		/* evaluate and round up to a multiple of the associated local */
 		if (ndrange->global_work_size[i]) {
 			ndrange->global_work_size[i] = irt_opencl_round_up(ndrange->global_work_size[i],
@@ -371,14 +375,14 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 			  requirement.element_type_id, requirement.mode, requirement.num_ranges, requirement.range_func);
 
 			/* obtain all ranges which are associated with this requirement */
-			size_t num_of_elements = 0;
+			size_t num_of_elements = 1;
 			irt_opencl_data_range ranges[requirement.num_ranges];
 			for (unsigned dim = 0; dim < requirement.num_ranges; ++dim) {
 				ranges[dim] = requirement.range_func(wi, &nd, arg, dim);
 				OCL_DEBUG("range: %d\nsize: %zu\nstart: %zu\nend: %zu\n",
 						  dim, ranges[dim].size, ranges[dim].start, ranges[dim].end);
-				/* sum up all sum sizes to compute the total object size */
-				num_of_elements += ranges[dim].size;
+				/* multiply all sum sizes to compute the total object size */
+				num_of_elements *= ranges[dim].size;
 			}
 
 			cl_mem_flags flags = irt_opencl_get_data_mode_flags(requirement.mode);
@@ -451,7 +455,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 	event_io = NULL;
 
 	/* make sure everything is set up properly */
-	irt_opencl_evaluate_ndrange(&nd);
+	irt_opencl_evaluate_ndrange(device, &nd);
 
 	cl_event event_krnl;
     /* at this point we can finally execute the given kernel */
@@ -477,7 +481,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
             return;
     }
 
-    /* wait until everythin is done */
+  /* wait until everythin is done */
 	clWaitForEvents(1, &event_krnl);
 	OCL_DEBUG("kernel execution has finished\n");
 
@@ -556,6 +560,7 @@ bool irt_opencl_init_device(cl_device_id device_id, irt_opencl_platform *platfor
 	irt_opencl_get_device_info(CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, max_constant_buffer_size);
 	irt_opencl_get_device_info(CL_DEVICE_MAX_MEM_ALLOC_SIZE, max_mem_alloc_size);
 	irt_opencl_get_device_info(CL_DEVICE_MAX_PARAMETER_SIZE, max_parameter_size);
+	irt_opencl_get_device_info(CL_DEVICE_MAX_WORK_GROUP_SIZE, max_work_group_size);
 	irt_opencl_get_device_info(CL_DEVICE_MEM_BASE_ADDR_ALIGN, mem_base_addr_align);
 	irt_opencl_get_device_info(CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE, min_data_type_align_size);
 	irt_opencl_get_device_info(CL_DEVICE_SINGLE_FP_CONFIG, single_fp_config);
