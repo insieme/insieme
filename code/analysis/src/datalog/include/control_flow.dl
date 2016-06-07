@@ -1,14 +1,15 @@
-#pragma once
+.using _ from ProgramPoint
+.using callGraph from Callable
+.using callable_value from ForwardDecl
+.using boolean_value from ForwardDecl
+.using EntryPoint from EntryAndExitPoints
+.using ExitPoint from EntryAndExitPoints
 
-#include "ir.dl"
-#include "program_point.dl"
-#include "callable.dl"
 
-						
 // definies the control flow in a code fragment
 //.decl ControlFlow( before : program_point , after : program_point ) output
 .decl ControlFlow( before_stmt : stmt, before_state : exec_state , after_stmt : stmt, after_state : exec_state ) output
-						
+
 
 // ---------------------
 
@@ -33,7 +34,7 @@ ControlFlow( ProgramPoint( a, POST ), ProgramPoint( b, PRE ) ) :- CallExpr(c,_),
 // the first argument is followed by the function call target
 ControlFlow( ProgramPoint( a, POST ), ProgramPoint( f, PRE ) ) :- CallExpr(c,f), NodeList(c,0,a).
 
-// if there are no arguments, start immediately with function call target 
+// if there are no arguments, start immediately with function call target
 ControlFlow( ProgramPoint( c, PRE ), ProgramPoint( f , PRE ) ) :- CallExpr(c,f), NodeListLength(c,0).
 
 // adter the evaluation of the function call target: jump to called function
@@ -42,7 +43,7 @@ ControlFlow( ProgramPoint( f, POST ), ProgramPoint( b, PRE ) ) :- CallExpr(_,f),
 // at the end of the called function, bring the call expression in an intermediate state
 ControlFlow( ProgramPoint( b, POST ), ProgramPoint( c, INT ) ) :- CallExpr(c,f), callable_value(f,DP_ROOT,t), ExitPoint(t,b).
 
-// from the intermediate state, continue with the POST state of the call  
+// from the intermediate state, continue with the POST state of the call
 ControlFlow( ProgramPoint( c, INT ), ProgramPoint( c, POST ) ) :- CallExpr(c,_).
 
 
@@ -102,5 +103,5 @@ ControlFlow( ProgramPoint( r ,  PRE ), ProgramPoint( e ,  PRE ) ) :- ReturnStmt(
 ControlFlow( ProgramPoint( e , POST ), ProgramPoint( c ,   INT ) ) :- ReturnStmt(r,e,_), ExitPoint(l,r), callGraph(c,l).
 
 
-// TODO: argument evaluation right-2-left 
+// TODO: argument evaluation right-2-left
 // TODO: provide other options for evaluation orders

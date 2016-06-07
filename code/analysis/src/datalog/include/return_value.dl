@@ -1,6 +1,4 @@
-#pragma once
-
-#include "entry_and_exit_points.dl"
+.using ReturnOfLambda from EntryAndExitPoints
 
 
 // TODO: remove once the typing of the ir.dl is fixed

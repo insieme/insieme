@@ -1,14 +1,12 @@
-#pragma once
+.using ReachableOut from Reachable
+.using ParentOf from Parent
+.using ReachableIn from Reachable
 
-#include "ir.dl"
-#include "parent.dl"
-#include "callable.dl"
-#include "reachable.dl"
 
 // --- compute entry and exit points of all callables---
 
 .decl EntryPoint( c : callable, s : stmt )
-.decl  ExitPoint( c : callable, s : stmt ) output
+.decl ExitPoint ( c : callable, s : stmt ) output
 
 
 // - an auxiliary relation to link returns to enclosing lambda

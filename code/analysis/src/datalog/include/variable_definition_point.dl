@@ -1,8 +1,6 @@
-#pragma once
+.using ParentOf from Parent
+.using EqualNodes from Equality
 
-#include "ir.dl"
-#include "parent.dl"
-#include "equality.dl"
 
 // ------ Definition Point ---------
 

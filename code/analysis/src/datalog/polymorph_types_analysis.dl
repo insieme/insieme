@@ -1,5 +1,3 @@
-#include "include/ir.dl"
-
 // the node to be tested
 .decl rootNode ( id : node ) input
 

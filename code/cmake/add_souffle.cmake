@@ -1,21 +1,29 @@
-
+#
+# Macro to configure souffle-related variables and paths, as well as
+# soufflé-code defines, directory creation, etc...
+#
 macro(configure_souffle)
 
 	# Settings
+	set(souffle_tmp_dir       ${CMAKE_CURRENT_BINARY_DIR}/souffle_tmp)
 	set(souffle_output_base   ${CMAKE_CURRENT_BINARY_DIR}/souffle_gen)
 	set(souffle_output_path   ${souffle_output_base}/souffle/gen)
 
 	# Define preprocessor macro for embedded soufflé
 	add_definitions(-D__EMBEDDED_SOUFFLE__)
 
-	# Create output directory
+	# Create tmp and output directory
+	file(MAKE_DIRECTORY ${souffle_tmp_dir})
 	file(MAKE_DIRECTORY ${souffle_output_path})
 
 	# Generated files will also be included as header files
 	include_directories(SYSTEM ${souffle_output_base})
 
+	# Find the Dough script, a preprocessor script
+	set(souffle_dough ${CMAKE_SOURCE_DIR}/code/analysis/src/datalog/souffle_dough.pl)
+
 	# Find Soufflé installation directory
-	set(souffle_home $ENV{INSIEME_LIBS_HOME}/souffle-latest CACHE PATH "Souffle Home Directory")	# TODO: use a FindSouffle to locate it
+	set(souffle_home $ENV{INSIEME_LIBS_HOME}/souffle-latest CACHE PATH "Souffle Home Directory")
 
 	# Find Soufflé static header files
 	set(souffle_header_files ${souffle_home}/include)
@@ -25,6 +33,43 @@ macro(configure_souffle)
 	set(souffle_binary ${souffle_home}/bin/souffle)
 
 endmacro(configure_souffle)
+
+
+
+#
+# Macro to execute the Dough preprocessor, a script which name-mangles
+# the datalog files to provide some sort of namespacing in the dl header files.
+#
+# Parameters:
+# input dir e.g. '${insieme_code_dir}/analysis/src/datalog'
+# output dir e.g. '${CMAKE_CURRENT_BINARY_DIR}/souffle_tmp'
+#
+macro(souffle_run_dough input_dir output_dir)
+
+	# Glob all the dl files to provide correct dependency creation
+	file(GLOB datalog_analysises_raw_dls         ${input_dir}/*.dl)
+	file(GLOB datalog_analysises_raw_include_dls ${input_dir}/include/*.dl)
+
+	foreach (analysis_file ${datalog_analysises_raw_dls})
+		get_filename_component(analysis_name ${analysis_file} NAME_WE)
+		set(dough_output_files ${dough_output_files} ${output_dir}/${analysis_name}.dl)
+	endforeach()
+
+	foreach (analysis_file ${datalog_analysises_raw_include_dls})
+		get_filename_component(analysis_name ${analysis_file} NAME_WE)
+		set(dough_output_files ${dough_output_files} ${output_dir}/include/${analysis_name}.dl)
+	endforeach()
+
+	# Execute on given input dir
+	add_custom_command(
+		COMMAND ${souffle_dough}
+		ARGS ${input_dir} ${output_dir}
+		COMMENT "Executing Dough, the Soufflé preprocessor"
+		WORKING_DIRECTORY ${input_dir}
+		OUTPUT ${dough_output_files}
+	)
+
+endmacro(souffle_run_dough)
 
 
 

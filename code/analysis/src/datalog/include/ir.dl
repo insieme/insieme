@@ -1,7 +1,4 @@
-#pragma once
-
-#include "boolean.dl"
-
+.using _ from Boolean
 
 
 // -- basic value types --
@@ -87,7 +84,7 @@
 .number_type compound_stmt
 .number_type decl_stmt
 
-.type stmt = expr 
+.type stmt = expr
            | if_stmt
            | compound_stmt
            | decl_stmt
@@ -109,7 +106,7 @@
 .number_type pure_virt_member_funcs
 
 
-.type support = types 
+.type support = types
 			  | exprs
               | parents
 			  | record
