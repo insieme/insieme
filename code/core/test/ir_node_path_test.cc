@@ -68,5 +68,15 @@ namespace core {
 		EXPECT_EQ("0", toString(lpath));
 	}
 
+	TEST(NodePathTest, Print) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		auto np1 = NodePath<NodePtr>();
+		auto np2 = NodePath<ExpressionPtr>(builder.parseExpr("1"));
+
+		EXPECT_EQ(" - empty path - ", toString(np1));
+	}
+
 } // end namespace core
 } // end namespace insieme
