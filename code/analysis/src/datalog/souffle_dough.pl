@@ -62,6 +62,7 @@ foreach my $filename (<*.$file_ext>) {
 
 	# Replace relation names according to using-declarations
 	expand_using_decls(\@lines);
+	convert_usings_to_includes(\@lines);
 
 	# Change 'member' declarations back to decl
 	s/(\s*\.)$membertoken([^\w]+)/$1$decltoken$2/g foreach @lines;
@@ -81,6 +82,7 @@ foreach my $filename (<*.$file_ext>) {
 	tie my @lines, 'Tie::File', $filename;
 
 	expand_using_decls(\@lines);
+	convert_usings_to_includes(\@lines);
 
 	# Done: Commit changes to file
 	untie $filename;
@@ -93,28 +95,27 @@ sub expand_using_decls {
 
 	# Get all using-declarations
 	my %usings;
-	my %include_collect;
 	for (@$lines_ref) {
-		next unless s/(^\s*\.$usingtoken\s+(\w+)\s+from\s+(\w+)(?:\s+as\s+(\w+))?.*)/\/\/ $1/;
+		next unless m/(^\s*\.$usingtoken\s+(\w+)\s+from\s+(\w+)(?:\s+as\s+(\w+))?.*)/;
 		my $use = $2;
 		my $from = camelcase_to_underscore("$3.$file_ext");
 		my $as = ($4?$4:$2);
 		my $res = create_mangle($from, $use);
 		$usings{$as} = $res;
-		$include_collect{$from} = 1;
 	}
-
-	# Insert includes
-	my @includes = (keys %include_collect);
-	$_ = "#include \"$_\"" foreach @includes;
-	unshift @includes, "#include \"ir.dl\"";
-	unshift @$lines_ref, @includes;
 
 	# Replace relations with their mangled names
 	while (my ($rel, $new_rel) = each %usings) {
 		s/(^|\W)$rel(\s*\()/$1$new_rel$2/g foreach @$lines_ref;
 		s/(^|\W)(\.$inittoken\s+\w+\s*=\s*)$rel(\s*)/$1$2$new_rel$3/g foreach @$lines_ref;
 	}
+}
+
+sub convert_usings_to_includes {
+	my ($lines_ref) = @_;
+	unshift @$lines_ref, ".using _ from ir";
+	my $searchstr = '^\s*\.'.$usingtoken.'\s+\w+\s+from\s+(\w+)(?:\s+as\s+\w+)?.*';
+	s/$searchstr/"#include \"".camelcase_to_underscore($1).".dl\""/e foreach @$lines_ref;
 }
 
 sub create_mangle {
