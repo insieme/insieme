@@ -50,11 +50,13 @@ enum irt_opencl_log_level {
 	IRT_OPENCL_LOG_LEVEL_ERROR = 3
 };
 
-extern void irt_opencl_printf(enum irt_opencl_log_level level, const char *format, ...);
-#define OCL_DEBUG(format, ...) irt_opencl_printf(IRT_OPENCL_LOG_LEVEL_DEBUG, format, ##__VA_ARGS__)
-#define OCL_INFO(format, ...)  irt_opencl_printf(IRT_OPENCL_LOG_LEVEL_INFO, format, ##__VA_ARGS__)
-#define OCL_WARN(format, ...)  irt_opencl_printf(IRT_OPENCL_LOG_LEVEL_WARN, format, ##__VA_ARGS__)
-#define OCL_ERROR(format, ...) irt_opencl_printf(IRT_OPENCL_LOG_LEVEL_ERROR, format, ##__VA_ARGS__)
+extern void irt_opencl_lprintf(enum irt_opencl_log_level level, const char *format, ...);
+extern void irt_opencl_pprintf(const char *format, ...);
+#define OCL_DEBUG(format, ...) irt_opencl_lprintf(IRT_OPENCL_LOG_LEVEL_DEBUG, format, ##__VA_ARGS__)
+#define OCL_INFO(format, ...)  irt_opencl_lprintf(IRT_OPENCL_LOG_LEVEL_INFO, format, ##__VA_ARGS__)
+#define OCL_WARN(format, ...)  irt_opencl_lprintf(IRT_OPENCL_LOG_LEVEL_WARN, format, ##__VA_ARGS__)
+#define OCL_ERROR(format, ...) irt_opencl_lprintf(IRT_OPENCL_LOG_LEVEL_ERROR, format, ##__VA_ARGS__)
+#define OCL_PURE(format, ...)  irt_opencl_pprintf(format, ##__VA_ARGS__)
 
 enum _irt_opencl_data_mode {
     IRT_OPENCL_DATA_MODE_READ_ONLY,
