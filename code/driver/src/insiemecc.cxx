@@ -216,7 +216,11 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 //***************************************************************************************
 insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const cmd::Options& options) {
 	if(options.backendHint == cmd::BackendEnum::Sequential) { return be::sequential::SequentialBackend::getDefault(); }
-	if(options.backendHint == cmd::BackendEnum::OpenCL) { return be::opencl::OpenCLBackend::getDefault(); }
+	if(options.backendHint == cmd::BackendEnum::OpenCL) {
+		auto config = std::make_shared<be::BackendConfig>();
+		config->dumpOclKernel = options.settings.dumpOclKernel.string();
+		return be::opencl::OpenCLBackend::getDefault(config);
+	}
 
 	return be::runtime::RuntimeBackend::getDefault();
 }

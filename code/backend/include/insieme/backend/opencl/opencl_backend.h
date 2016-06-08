@@ -50,8 +50,8 @@ namespace opencl {
 	 */
 	class OpenCLBackend : public runtime::RuntimeBackend {
 	public:
-		OpenCLBackend(const BackendConfigPtr& config = std::make_shared<BackendConfig>());
-		static OpenCLBackendPtr getDefault();
+		OpenCLBackend(const BackendConfigPtr& config);
+		static OpenCLBackendPtr getDefault(const BackendConfigPtr& config = std::make_shared<BackendConfig>());
 
 	protected:
 		virtual Converter buildConverter(core::NodeManager& manager) const;
@@ -67,8 +67,8 @@ namespace opencl {
 	class KernelBackend : public Backend {
 		const transform::StepContext& sc;
 	public:
-		KernelBackend(const transform::StepContext& sc, const BackendConfigPtr& config = std::make_shared<BackendConfig>());
-		static KernelBackendPtr getDefault(const transform::StepContext& sc);
+		KernelBackend(const transform::StepContext& sc, const BackendConfigPtr& config);
+		static KernelBackendPtr getDefault(const transform::StepContext& sc, const BackendConfigPtr& config = std::make_shared<BackendConfig>());
 
 	  protected:
 		virtual Converter buildConverter(core::NodeManager& manager) const;

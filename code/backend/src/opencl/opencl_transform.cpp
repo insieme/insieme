@@ -75,7 +75,7 @@ namespace transform {
 	using namespace insieme::annotations::opencl_ns;
 
 	namespace {
-		core::LiteralPtr toKernelLiteral(core::NodeManager& manager, const StepContext& sc, const core::LambdaExprPtr& oclExpr) {
+		core::LiteralPtr toKernelLiteral(core::NodeManager& manager, const StepContext& sc, unsigned int id, const core::LambdaExprPtr& oclExpr) {
 			core::IRBuilder builder(manager);
 			// obtain the kernel backend which transforms oclExpr into a stringLit -- each call MUST allocate a fresh new backend!
 			KernelBackendPtr backend = KernelBackend::getDefault(sc);
@@ -89,8 +89,19 @@ namespace transform {
 			} else {
 				ss << toString(*target);
 			}
+			// extract the generated code from the stringstream
+			auto code = ss.str();
+			// shall we dump the code?
+			auto dumpOclKernel = sc.getConverter().getBackendConfig().dumpOclKernel;
+			if (dumpOclKernel.size()) {
+				auto filePath = dumpOclKernel + std::to_string(id);
+				std::cout << "Dumping OpenCL kernel " << id << " ..." << std::endl;
+				// append the kernel id to generate a unique name
+				std::ofstream out(filePath);
+				out << code;
+			}
 			// dump the target code as string and put into IR lit
-			return builder.stringLit(ss.str());
+			return builder.stringLit(code);
 		}
 
 		core::ExpressionPtr identity(const core::ExpressionPtr& expr) {
@@ -264,10 +275,10 @@ namespace transform {
 		core::IRBuilder builder(manager);
 		// grab a reference to the opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		// most important step here, transform the oclExpr into a literal
-		core::LiteralPtr literal = toKernelLiteral(manager, sc, oclExpr);
 		// generate a new unique id for this kernel
 		id = KernelTable::getNextUnique();
+		// most important step here, transform the oclExpr into a literal
+		core::LiteralPtr literal = toKernelLiteral(manager, sc, id, oclExpr);
 		// use the default IRBuilder to generate the callExpr
 		return builder.callExpr(manager.getLangBasic().getUnit(), oclExt.getRegisterKernel(),
 								builder.uintLit(id), core::lang::buildPtrFromArray(literal),
@@ -656,7 +667,7 @@ namespace transform {
 		// log what we got as input to quickly check if outline worked right
 		LOG(INFO) << "trying to generate kernel for: " << dumpColor(lambdaExpr);
 		// context which is usable among all steps
-		StepContext context;
+		StepContext context(converter);
 		context.setDefaultLambdaExpr(lambdaExpr);
 		context.setDefaultLWDataItemType(analysis::getLWDataItemType(lambdaExpr));
 		context.setDefaultRequirements(requirements);

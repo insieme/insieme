@@ -113,7 +113,12 @@ namespace transform {
 		 * Name of the generated kernel which will be used by the runtime system to enqueue the execution
 		 */
 		std::string kernelName;
+		/**
+		 * Converter in which the transformation is executed
+		 */
+		 const Converter& converter;
 	public:
+		StepContext(const Converter& converter) : converter(converter) {}
 		void setDefaultLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { defaultLe = lambdaExpr; }
 		const core::LambdaExprPtr& getDefaultLambdaExpr() const { return defaultLe; }
 		void setDefaultLWDataItemType(const core::TypePtr& type) { defaultTy = type; }
@@ -126,6 +131,7 @@ namespace transform {
 		const std::set<KhrExtension>& getExtensions() const { return extensions; }
 		void setKernelName(const std::string& kernelName) { this->kernelName = kernelName; }
 		const std::string& getKernelName() const { return kernelName; }
+		const Converter& getConverter() const { return converter; }
 	};
 
 	/**

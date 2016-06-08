@@ -85,9 +85,7 @@ namespace opencl {
 		RuntimeBackend(config)
 	{ }
 
-	OpenCLBackendPtr OpenCLBackend::getDefault() {
-		auto config = std::make_shared<BackendConfig>();
-
+	OpenCLBackendPtr OpenCLBackend::getDefault(const BackendConfigPtr& config) {
 		auto res = std::make_shared<OpenCLBackend>(config);
 		res->addAddOn<addons::PointerType>();
 		res->addAddOn<addons::CppCastsAddon>();
@@ -125,13 +123,13 @@ namespace opencl {
 		addOpenCLSpecificHeaders(functionManager.getFunctionIncludeTable());
 		return converter;
 	}
-	
+
 	KernelBackend::KernelBackend(const transform::StepContext& sc, const BackendConfigPtr& config) :
 		Backend(std::vector<AddOnPtr>(), config), sc(sc)
 	{ }
-	
-	KernelBackendPtr KernelBackend::getDefault(const transform::StepContext& sc) {
-		auto res = std::make_shared<KernelBackend>(sc, std::make_shared<BackendConfig>());
+
+	KernelBackendPtr KernelBackend::getDefault(const transform::StepContext& sc, const BackendConfigPtr& config) {
+		auto res = std::make_shared<KernelBackend>(sc, config);
 		res->addAddOn<addons::PointerType>();
 		res->addAddOn<addons::CompoundOps>();
 		return res;
@@ -139,7 +137,7 @@ namespace opencl {
 
 	Converter KernelBackend::buildConverter(core::NodeManager& manager) const {
 		Converter converter(manager, "OpenCLKernelBackend", getConfiguration());
-		
+
 		PreProcessorPtr preprocessor = makePreProcessor<PreProcessingSequence>(
 			makePreProcessor<sequential::Sequentializer>(),
 			getBasicPreProcessorSequence());
@@ -151,12 +149,12 @@ namespace opencl {
 
 		TypeManager& typeManager = converter.getTypeManager();
 		typeManager.addTypeHandler(KrnlTypeHandler);
-		
+
 		FunctionManager& functionManager = converter.getFunctionManager();
 		addOpenCLSpecificOps(manager, functionManager.getOperatorConverterTable(), getConfiguration());
 		return converter;
 	}
-	
+
 } // end namespace opencl
 } // end namespace backend
 } // end namespace insieme
