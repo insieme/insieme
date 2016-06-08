@@ -522,6 +522,23 @@ namespace backend {
 			return type_info_utils::createUnsupportedInfo(manager, ptr);
 		}
 
+		namespace {
+			// a record is "C-style" if all of its members, constructors and its destructor are defaulted and not explicitly called
+			bool isCStyleRecord(const core::RecordPtr& rec) {
+				if(rec.hasAttachedValue<UsedMemberTag>()) return false;
+				for(auto c : rec->getConstructors()) {
+					if(!core::analysis::isaDefaultMember(c)) return false;
+				}
+				for(auto m : rec->getMemberFunctions()) {
+					if(!core::analysis::isaDefaultMember(m)) return false;
+				}
+				if(rec->hasDestructor()) {
+					if(!core::analysis::isaDefaultMember(rec->getDestructor())) return false;
+				}
+				return rec->getPureVirtualMemberFunctions().empty();
+			}
+		}
+
 		TagTypeInfo* TypeInfoStore::resolveRecordType(const core::TagTypePtr& tagType, const core::RecordPtr& ptr) {
 			assert_eq(tagType->getRecord(), ptr);
 
@@ -611,43 +628,38 @@ namespace backend {
 			// extract the record type info
 			auto record = tagType->getRecord();
 
-			// add constructors, destructors and assignments to non-trivial classes
-			bool trivial = core::analysis::isTrivial(tagType);
-			if (!trivial) {
+			// add constructors, destructors and assignments, except if we are dealing with a C-style record (only default members)
+			if(isCStyleRecord(record)) return res;
 
-				// add constructors
-				for (const auto& ctor : record->getConstructors()) {
-					auto impl = (core::analysis::getObjectType(ctor->getType()).isa<core::TagTypeReferencePtr>()) ? tagType->peel(ctor) : ctor;
-					funMgr.getInfo(impl.as<core::LambdaExprPtr>());	// this will declare and define the constructor
-				}
-//				// TODO: explicitly delete missing constructors
-//				//if (!core::analysis::hasDefaultConstructor(tagType)) {
-//					//type->ctors.push_back(manager->create<c_ast::ConstructorPrototype>());
-//				//}
-//
-				// add destructors (only for structs)
-				if(record->hasDestructor()) {
-					auto dtor = record->getDestructor();
-					auto info = funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
-					info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
-				}
-				// TODO: explicitly delete missing destructor
+			// add constructors
+			for(const auto& ctor : record->getConstructors()) {
+				auto impl = (core::analysis::getObjectType(ctor->getType()).isa<core::TagTypeReferencePtr>()) ? tagType->peel(ctor) : ctor;
+				funMgr.getInfo(impl.as<core::LambdaExprPtr>()); // this will declare and define the constructor
+			}
+			//// TODO: explicitly delete missing constructors
+			//if (!core::analysis::hasDefaultConstructor(tagType)) {
+			//	type->ctors.push_back(manager->create<c_ast::ConstructorPrototype>());
+			//}
+			//
+			// add destructors (only for structs)
+			if(record->hasDestructor()) {
+				auto dtor = record->getDestructor();
+				auto info = funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
+				info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
+			}
+			// TODO: explicitly delete missing destructor
 
-				// add pure virtual function declarations
-				core::IRBuilder builder(ptr.getNodeManager());
-				for (const auto& pureVirtual : record->getPureVirtualMemberFunctions()) {
-					auto type = pureVirtual->getType();
-					type = (core::analysis::getObjectType(type).isa<core::TagTypeReferencePtr>()) ? tagType->peel(type) : type;
-					funMgr.getInfo(builder.pureVirtualMemberFunction(pureVirtual->getName(), type));
-				}
+			// add pure virtual function declarations
+			core::IRBuilder builder(ptr.getNodeManager());
+			for(const auto& pureVirtual : record->getPureVirtualMemberFunctions()) {
+				auto type = pureVirtual->getType();
+				type = (core::analysis::getObjectType(type).isa<core::TagTypeReferencePtr>()) ? tagType->peel(type) : type;
+				funMgr.getInfo(builder.pureVirtualMemberFunction(pureVirtual->getName(), type));
 			}
 
-			// add member functions (for trivial and non trivial classes)
-			for (const auto& member : record->getMemberFunctions()) {
-				if (!trivial || !core::analysis::isaDefaultMember(tagType, member)) {
-					funMgr.getInfo(tagType->peel(member));
-				}
-				// TODO: explicitly delete missing mem funs
+			// add member functions
+			for(const auto& member : record->getMemberFunctions()) {
+				funMgr.getInfo(tagType->peel(member));
 			}
 
 			// done
@@ -657,7 +669,7 @@ namespace backend {
 		const TagTypeInfo* TypeInfoStore::resolveTagType(const core::TagTypePtr& tagType) {
 
 			// handle recursive types
-			if (tagType->isRecursive()) {
+			if(tagType->isRecursive()) {
 				return resolveRecType(tagType);
 			}
 

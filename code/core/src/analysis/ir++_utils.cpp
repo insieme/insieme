@@ -133,11 +133,16 @@ namespace analysis {
 		return builder.lambdaExpr(lambda->getType(), lambda->getParameterList(), builder.compoundStmt(newBody), lambda->getReference()->getNameAsString());
 	}
 
-	bool isaDefaultMember(const LambdaExprPtr& lambda) {
-		if (!lambda) return false;
-		if (!lambda->getFunctionType()->isMember()) return false;
+	bool isaDefaultMember(const NodePtr& node) {
+		auto n = node;
+		if(auto mem = n.isa<MemberFunctionPtr>()) {
+			n = mem->getImplementation();
+		}
+		auto lambda = n.isa<LambdaExprPtr>();
+		if(!lambda) return false;
+		if(!lambda->getFunctionType()->isMember()) return false;
 		auto body = lambda->getBody();
-		if (!body || body->size() < 1) return false;
+		if(!body || body->size() < 1) return false;
 		auto first = body[0];
 		return first == getDefaultedMarker(IRBuilder(lambda->getNodeManager())) && first.hasAttachedValue<DefaultedTag>();
 	}
