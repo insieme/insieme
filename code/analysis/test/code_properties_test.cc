@@ -89,13 +89,13 @@ namespace datalog {
 
 		ASSERT_EQ(1, addresses.size());
 
-		// auto var = addresses[0].as<CallExprAddress>()[0].as<VariableAddress>();
-		// auto param = var.getRootAddress().as<LambdaExprAddress>()->getParameterList()[0];
+		auto var = addresses[0].as<CallExprAddress>().getArgument(0).as<VariableAddress>();
+		auto param = var.getRootAddress().as<LambdaExprAddress>()->getParameterList()[0];
 
-		// std::cout << "Parameter: " << param << "\n";
-		// std::cout << "Variable:  " << var << "\n";
+		std::cout << "Parameter: " << param << "\n";
+		std::cout << "Variable:  " << var << "\n";
 
-		// EXPECT_EQ(param, Datalog::getDefinitionPoint(var, false));
+		EXPECT_EQ(param, Datalog::getDefinitionPoint(var, false));
 
 	}
 
@@ -174,13 +174,13 @@ namespace datalog {
 		auto y = addresses[1].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
 
 		// there is a bug in the parser, marking the wrong y => fix this
-		// y = y.getParentAddress(8).as<CallExprAddress>()[0].as<VariableAddress>();
+		y = y.getParentAddress(8).as<CallExprAddress>().getArgument(0).as<VariableAddress>();
 
-		// auto bind = x.getRootAddress().as<BindExprAddress>();
-		// auto defX = bind->getParameters()[0];
+		auto bind = x.getRootAddress().as<BindExprAddress>();
+		auto defX = bind->getParameters()[0];
 
-		// EXPECT_EQ(defX,Datalog::getDefinitionPoint(x));
-		// EXPECT_FALSE(Datalog::getDefinitionPoint(y));
+		EXPECT_EQ(defX,Datalog::getDefinitionPoint(x));
+		EXPECT_FALSE(Datalog::getDefinitionPoint(y));
 
 	}
 
@@ -202,13 +202,13 @@ namespace datalog {
 		auto y = addresses[1].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
 
 		// there is a bug in the parser, marking the wrong y => fix this
-		// y = y.getParentAddress(8).as<CallExprAddress>()[0].as<VariableAddress>();
+		y = y.getParentAddress(8).as<CallExprAddress>().getArgument(0).as<VariableAddress>();
 
-		// auto bind = x.getRootAddress().as<BindExprAddress>();
-		// auto defY = bind->getParameters()[0];
+		auto bind = x.getRootAddress().as<BindExprAddress>();
+		auto defY = bind->getParameters()[0];
 
-		// EXPECT_FALSE(Datalog::getDefinitionPoint(x));
-		// EXPECT_EQ(defY,Datalog::getDefinitionPoint(y));
+		EXPECT_FALSE(Datalog::getDefinitionPoint(x));
+		EXPECT_EQ(defY,Datalog::getDefinitionPoint(y));
 
 	}
 
