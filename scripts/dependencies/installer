@@ -3,14 +3,20 @@
 set -e
 
 resolve_dependencies() {
+	for pkg in $1; do
+		resolve_dependencies_for_pkg "$pkg"
+	done | awk '!unique[$_]++'
+}
+
+resolve_dependencies_for_pkg() {
 	local deps=$(echo "source package_$1.sh && echo -n \$DEPENDS" | bash -)
 	for pkg in $deps; do
-		install_pkg "$pkg"
+		resolve_dependencies_for_pkg "$pkg"
 	done
+	echo "$1"
 }
 
 install_pkg() {
-	resolve_dependencies "$1"
 	bash - <<-EOF
 		set -e
 		source defaults.sh
@@ -34,6 +40,8 @@ if [[ $# -eq 0 ]]; then
 else
 	PACKAGES="$@"
 fi
+
+PACKAGES="$(resolve_dependencies "$PACKAGES")"
 
 for pkg in $PACKAGES; do
 	install_pkg "$pkg"
