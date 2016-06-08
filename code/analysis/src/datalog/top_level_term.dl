@@ -47,7 +47,7 @@ Node(X) :- IfStmt(X,_,_,_).
 Node(X) :- BreakStmt(X).
 Node(X) :- ContinueStmt(X).
 Node(X) :- ForStmt(X,_,_,_,_).
-Node(X) :- ReturnStmt(X,_,_).
+Node(X) :- ReturnStmt(X,_).
 Node(X) :- SwitchStmt(X,_,_,_).
 Node(X) :- ThrowStmt(X,_).
 Node(X) :- TryCatchStmt(X,_).
@@ -57,6 +57,7 @@ Node(X) :- WhileStmt(X,_,_).
 Node(X) :- Types(X).
 Node(X) :- Parents(X).
 Node(X) :- CatchClause(X,_,_).
+Node(X) :- Declaration(X,_,_).
 Node(X) :- Expressions(X).
 Node(X) :- Field(X,_,_).
 Node(X) :- Fields(X).
@@ -147,8 +148,7 @@ UsedNode(X) :- ForStmt(_,_,X,_,_).
 UsedNode(X) :- ForStmt(_,_,_,X,_).
 UsedNode(X) :- ForStmt(_,_,_,_,X).
 
-UsedNode(X) :- ReturnStmt(_,X,_).
-UsedNode(X) :- ReturnStmt(_,_,X).
+UsedNode(X) :- ReturnStmt(_,X).
 
 UsedNode(X) :- SwitchStmt(_,X,_,_).
 UsedNode(X) :- SwitchStmt(_,_,X,_).
@@ -163,6 +163,9 @@ UsedNode(X) :- WhileStmt(_,_,X).
 
 UsedNode(X) :- CatchClause(_,X,_).
 UsedNode(X) :- CatchClause(_,_,X).
+
+UsedNode(X) :- Declaration(_,X,_).
+UsedNode(X) :- Declaration(_,_,X).
 
 UsedNode(X) :- Field(_,_,X).
 

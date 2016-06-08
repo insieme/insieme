@@ -217,12 +217,12 @@ namespace framework {
 				const string& name = var->getName()->getValue();
 				int fields = this->visit(var->getFields());
 				int constructors = this->visit(var->getConstructors());
-				int destructor = this->visit(var->getDestructor());
+				int destructor_opt = this->visit(var->getOptionalDestructor());
 				bool destructor_virtual = var->getDestructorVirtual()->getValue();
 				int member_functions = this->visit(var->getMemberFunctions());
 				int pure_virtual_member_functions = this->visit(var->getPureVirtualMemberFunctions());
 
-				insert("Union", id, name, fields, constructors, destructor, destructor_virtual,
+				insert("Union", id, name, fields, constructors, destructor_opt, destructor_virtual,
 				       member_functions, pure_virtual_member_functions);
 
 				return id;

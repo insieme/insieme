@@ -44,7 +44,7 @@ ExitPoint( l, l ) :- Literal(l,_,_).
 
 
 .decl ReturnParent( r : return_stmt, p : node )
-ReturnParent( r, r ) :- ReturnStmt(r,_,_).
+ReturnParent( r, r ) :- ReturnStmt(r,_).
 ReturnParent( r, p ) :- ReturnParent(r,s), ParentOf(p,s), !Lambda(s,_,_,_).
 
 ReturnOfLambda(l,r) :- Lambda(l,_,_,_), ReturnParent(r,l), ReachableIn(r).
