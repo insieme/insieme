@@ -157,15 +157,6 @@ namespace transform {
 	};
 
 	/**
-	 * Tries to simplify the given code by e.g. inlining or using the core's functionality
-	 */
-	class StmtOptimizerStep : public Step {
-	public:
-		using Step::Step;
-		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
-	};
-
-	/**
 	 * Transform independent loops into OpenCL aware code and generate a corresponding call vertex
 	 */
 	class LoopOptimizerStep : public Step {

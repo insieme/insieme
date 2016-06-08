@@ -491,49 +491,6 @@ namespace transform {
 		return Step::process(converter, newLambdaExpr);
 	}
 
-	core::NodePtr StmtOptimizerStep::process(const Converter& converter, const core::NodePtr& node) {
-		auto lambdaExpr = node.isa<LambdaExprPtr>();
-		if (!lambdaExpr) return node;
-
-		// auto var = core::pattern::irp::atom(builder.typeVariable("a"));
-		auto rhs = core::pattern::irp::variable(core::pattern::any);
-		auto lhs = core::pattern::irp::variable(core::pattern::irp::refType(core::pattern::any));
-		// now construct the lambda pattern which represents the actual c/cpp_style_assignment
-		auto pattern = core::pattern::irp::lambda(
-			core::pattern::any, 				// return type
-			core::pattern::empty << lhs << rhs,	// arguments
-			core::pattern::aT( 					// body
-				core::pattern::irp::assignment(),
-				core::pattern::irp::returnStmt(core::pattern::any)
-				));
-
-		core::NodeMap replacements;
-		core::visitDepthFirstOnce(core::NodeAddress(lambdaExpr->getBody()), [&](const core::NodeAddress& addr) {
-			const core::NodePtr& target = addr.getAddressedNode();
-			// non-calls are not important
-			if (target->getNodeType() != core::NT_CallExpr) return;
-
-			auto callExpr = target.as<core::CallExprPtr>();
-			// if we call something else than a lambda we are not interested in it as well
-			if (auto callee = callExpr->getFunctionExpr().isa<core::LambdaExprPtr>()) {
-				// do not introduce a local var to hold the evaluated value -- only inline straight assignments
-				if (!addr.isRoot() && addr.getParentAddress().getAddressedNode()->getNodeType() == core::NT_CallExpr) return;
-				// if our parent is not a call & the pattern matches the replacement is valid
-				if (!pattern.match(callee->getLambda())) return;
-
-				replacements[target] = builder.assign(callExpr->getArgument(0), callExpr->getArgument(1));
-			}
-		});
-		// fast-path
-		if (replacements.empty()) return node;
-
-		auto newLambdaExpr= builder.lambdaExpr(manager.getLangBasic().getUnit(), lambdaExpr->getParameterList(),
-			core::transform::simplify(manager, core::transform::replaceAllGen(manager, lambdaExpr->getBody(), replacements), true));
-		// migrate the annotations -- but no need to fixup as only hthe body has changed
-		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
-		return Step::process(converter, newLambdaExpr);
-	}
-
 	namespace {
 		class ForLoopReplacer : public core::transform::CachedNodeMapping {
 			core::NodeManager& manager;
@@ -576,17 +533,17 @@ namespace transform {
 				globalWorkSizes.push_back(forStmt->getEnd());
 				// prepare the body -- thus we do a bottom up replacement
 				auto body = forStmt->getBody()->substitute(manager, *this);
-				stmts.push_back(builder.ifStmt(
+				auto cond = builder.logicAnd(
+					builder.ge(decl->getVariable(), forStmt->getStart()),
 					builder.logicAnd(
-						builder.ge(decl->getVariable(), forStmt->getStart()),
-						builder.logicAnd(
-							builder.lt(decl->getVariable(), forStmt->getEnd()),
-							builder.eq(
-								builder.mod(
-									builder.sub(decl->getVariable(), decl->getInitialization()),
-									forStmt->getStep()),
-								builder.numericCast(builder.uintLit(0), forStmt->getStep()->getType())))),
-					body));
+						builder.lt(decl->getVariable(), forStmt->getEnd()),
+						builder.eq(
+							builder.mod(
+								builder.sub(decl->getVariable(), decl->getInitialization()),
+								forStmt->getStep()),
+							builder.numericCast(builder.uintLit(0), forStmt->getStep()->getType()))));
+				// try to simplify the generated condition if possible
+				stmts.push_back(builder.ifStmt(core::transform::simplify(manager, cond), body));
 				return builder.compoundStmt(stmts);
 			}
 		};
@@ -707,7 +664,6 @@ namespace transform {
 		auto processor = makePreProcessorSequence(
 			getBasicPreProcessorSequence(),
 			makePreProcessor<FixParametersStep>(boost::ref(manager), boost::ref(context)),
-			makePreProcessor<StmtOptimizerStep>(boost::ref(manager), boost::ref(context)),
 			makePreProcessor<LoopOptimizerStep>(boost::ref(manager), boost::ref(context)),
 			makePreProcessor<TypeOptimizerStep>(boost::ref(manager), boost::ref(context)),
 			makePreProcessor<CallOptimizerStep>(boost::ref(manager), boost::ref(context)),
