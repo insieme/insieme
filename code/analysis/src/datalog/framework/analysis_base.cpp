@@ -55,12 +55,12 @@ namespace framework {
 		using std::string;
 
 		#define make_node_list(LOOP_OBJECT) {                                              \
-					int counter = 0;                                                       \
-					for(const auto& cur : LOOP_OBJECT) {                                   \
-							insert("NodeList", id, counter++, this->visit(cur));           \
-					}                                                                      \
-					insert("NodeListLength", id, counter);                                 \
-		        };
+		            int counter = 0;                                                       \
+		            for(const auto& cur : LOOP_OBJECT) {                                   \
+		                    insert("NodeList", id, counter++, this->visit(cur));           \
+		            }                                                                      \
+		            insert("NodeListLength", id, counter);                                 \
+		    };
 
 
 		template<template <class Target> class Ptr = core::Pointer>
