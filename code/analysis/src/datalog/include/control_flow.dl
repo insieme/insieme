@@ -98,9 +98,9 @@ ControlFlow( ProgramPoint( t , POST ), ProgramPoint( i, POST ) ) :- IfStmt(i,c,t
 ControlFlow( ProgramPoint( c , POST ), ProgramPoint( e,  PRE ) ) :- IfStmt(i,c,_,e), boolean_value(c,DP_ROOT,false).
 ControlFlow( ProgramPoint( e , POST ), ProgramPoint( i, POST ) ) :- IfStmt(i,c,_,e), boolean_value(c,DP_ROOT,false).
 
-// return statements
-ControlFlow( ProgramPoint( r ,  PRE ), ProgramPoint( e ,  PRE ) ) :- ReturnStmt(r,e,_).
-ControlFlow( ProgramPoint( e , POST ), ProgramPoint( c ,   INT ) ) :- ReturnStmt(r,e,_), ExitPoint(l,r), callGraph(c,l).
+// return statements -- Like this, or ReturnStmt(r,e) ?
+ControlFlow( ProgramPoint( r ,  PRE ), ProgramPoint( e ,  PRE ) ) :- ReturnStmt(r,d), Declaration(d,_,e).
+ControlFlow( ProgramPoint( e , POST ), ProgramPoint( c ,   INT ) ) :- ReturnStmt(r,d), Declaration(d,_,e), ExitPoint(l,r), callGraph(c,l).
 
 
 // TODO: argument evaluation right-2-left

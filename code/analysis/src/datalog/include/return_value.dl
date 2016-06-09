@@ -13,7 +13,7 @@
 
 
 // for lambdas, those are the corresponding return statements
-ReturnValue( l, v ) :- ReturnOfLambda(l,r), ReturnStmt(r,_,v).
+//DISABLED DUE TO IR CHANGE ReturnValue( l, v ) :- ReturnOfLambda(l,r), ReturnStmt(r,_,v).
 
 // for bind expressions, it is the direct sub-expression
 ReturnValue( b , e ) :- BindExpr(b,_,e).

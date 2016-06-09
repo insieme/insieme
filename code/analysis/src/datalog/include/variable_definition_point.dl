@@ -23,13 +23,13 @@
 VariableDefinition(V) :- Parameters(P), ParentOf(P,V).
 
 // variables in declrations are definitions
-VariableDefinition(V) :- DeclarationStmt(_,V,_).
+VariableDefinition(V) :- DeclarationStmt(_,_,V).
 
 // variables in catch clauses
 VariableDefinition(V) :- CatchClause(_,V,_).
 
 // variables in return statements
-VariableDefinition(V) :- ReturnStmt(_,_,V).
+//DISABLED DUE TO IR CHANGE VariableDefinition(V) :- ReturnStmt(_,_,V).
 
 
 // -- define an auxilary relation tracing the path from a variable to its definition point --
@@ -44,7 +44,7 @@ DefinitionPointTrace(P,V,-1) :- DefinitionPointTrace(N,V,-1), ParentOf(P,N), Bin
 
 DefinitionPointTrace(C,V,N) :- DefinitionPointTrace(F,V,-1), ParentOf(C,F), CompoundStmt(C), NodeList(C,N,F).
 
-DefinitionPointTrace(C,V,N-1) :- DefinitionPointTrace(C,V,N), N >= 0, NodeList(C,N,P), !DeclarationStmt(P,X,_), EqualNodes(X,V).
+DefinitionPointTrace(C,V,N-1) :- DefinitionPointTrace(C,V,N), N >= 0, NodeList(C,N,P), !DeclarationStmt(P,_,X), EqualNodes(X,V).
 
 
 // -- link variables to their definition points --
@@ -54,7 +54,7 @@ DefinitionPoint(V,V) :- VariableDefinition(V).
 
 // link all other variables to their definition points using the definition point trace
 // - ending in a declaration statement
-DefinitionPoint(X,V) :- DefinitionPointTrace(C,V,N), NodeList(C,N,D), DeclarationStmt(D,X,_), EqualNodes(X,V).
+DefinitionPoint(X,V) :- DefinitionPointTrace(C,V,N), NodeList(C,N,D), DeclarationStmt(D,_,X), EqualNodes(X,V).
 
 // - ending in a lambda parameter
 DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ParentOf(L,F), Lambda(L,_,P,_), NodeList(P,_,X), EqualNodes(X,V).
@@ -63,7 +63,7 @@ DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ParentOf(L,F), Lambda(L,_,
 DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ParentOf(B,F), BindExpr(B,P,_), NodeList(P,_,X), EqualNodes(X,V).
 
 // - ending in a for loop
-DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ForStmt(_,D,_,_,F), DeclarationStmt(D,X,_), EqualNodes(X,V).
+DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ForStmt(_,D,_,_,F), DeclarationStmt(D,_,X), EqualNodes(X,V).
 
 
 // -- define free variables ---

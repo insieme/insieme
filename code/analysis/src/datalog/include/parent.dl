@@ -73,8 +73,7 @@ ParentOf(ID,X) :- ForStmt(ID,_,X,_,_).
 ParentOf(ID,X) :- ForStmt(ID,_,_,X,_).
 ParentOf(ID,X) :- ForStmt(ID,_,_,_,X).
 
-ParentOf(ID,X) :- ReturnStmt(ID,X,_).
-ParentOf(ID,X) :- ReturnStmt(ID,_,X).
+ParentOf(ID,X) :- ReturnStmt(ID,X).
 
 ParentOf(ID,X) :- SwitchStmt(ID,X,_,_).
 ParentOf(ID,X) :- SwitchStmt(ID,_,X,_).
@@ -90,6 +89,9 @@ ParentOf(ID,X) :- WhileStmt(ID,_,X).
 /* Support nodes */
 ParentOf(ID,X) :- CatchClause(ID,X,_).
 ParentOf(ID,X) :- CatchClause(ID,_,X).
+
+ParentOf(ID,X) :- Declaration(ID,X,_).
+ParentOf(ID,X) :- Declaration(ID,_,X).
 
 ParentOf(ID,X) :- Field(ID,_,X).
 

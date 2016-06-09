@@ -43,7 +43,7 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 	// definitions of variables take the value at the definition
 
 	// declaration statements
-	value( v, p, b ) :- VariableDefinition(v), DeclarationStmt(_,v,e), value( e, p, b ).
+	value( v, p, b ) :- VariableDefinition(v), DeclarationStmt(_,d,v), Declaration(d,_,e), value(e,p,b).
 
 	// bind parameters
 	value( v, d, b ) :-
@@ -52,7 +52,7 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 			NodeList(c,i,a),value(a,d,b).  										// v get's assigned the value of the i-th argument of c
 
 	// return variables
-	value( v, p, b ) :- VariableDefinition(v), ReturnStmt(_,e,v), value(e,p,b).
+	//DISABLED DUE TO IR CHANGE value( v, p, b ) :- VariableDefinition(v), ReturnStmt(_,e,v), value(e,p,b).
 
 	// uses of variables correspond to the value of the definition point
 	value( v, p, b ) :- Variable(v,_,_), DefinitionPoint(d,v), value(d,p,b).
