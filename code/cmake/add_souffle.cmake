@@ -94,6 +94,9 @@ macro(souffle_generate_cpp souffle_input_path souffle_dl_target souffle_include_
 		file(GLOB include_dl_dependencies ${souffle_include_path}/*.dl)
 	endif()
 
+	# Add raw dls to dependencies
+	set(include_dl_dependencies ${include_dl_dependencies} ${datalog_analysises_raw_dls} ${datalog_analysises_raw_include_dls})
+
 	# Custom command to compile DL files into CPP files using Soufflé
 	add_custom_command(
 		SOURCE ${souffle_input_file}
