@@ -279,7 +279,7 @@ namespace analysis {
 		auto y = addresses[1].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
 
 		// there is a bug in the parser, marking the wrong y => fix this
-		y = y.getParentAddress(8).as<CallExprAddress>().getArgument(0).as<VariableAddress>();
+		y = y.getParentAddress(10).as<CallExprAddress>().getArgument(0).as<VariableAddress>();
 
 		auto bind = x.getRootAddress().as<BindExprAddress>();
 		auto defX = bind->getParameters()[0];
@@ -307,7 +307,7 @@ namespace analysis {
 		auto y = addresses[1].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
 
 		// there is a bug in the parser, marking the wrong y => fix this
-		y = y.getParentAddress(8).as<CallExprAddress>().getArgument(0).as<VariableAddress>();
+		y = y.getParentAddress(10).as<CallExprAddress>().getArgument(0).as<VariableAddress>();
 
 		auto bind = x.getRootAddress().as<BindExprAddress>();
 		auto defY = bind->getParameters()[0];
@@ -384,7 +384,7 @@ namespace analysis {
 		ASSERT_EQ(1, addresses.size());
 
 		auto var = addresses[0].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
-		auto param = var.getParentAddress(3).as<LambdaAddress>()->getParameterList()[1];
+		auto param = var.getParentAddress(4).as<LambdaAddress>()->getParameterList()[1];
 
 		auto find = dispatch_getDefinitionPoint(var, GetParam());
 		ASSERT_TRUE(find);
