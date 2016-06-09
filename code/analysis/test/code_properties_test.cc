@@ -174,7 +174,7 @@ namespace datalog {
 		auto y = addresses[1].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
 
 		// there is a bug in the parser, marking the wrong y => fix this
-		y = y.getParentAddress(8).as<CallExprAddress>().getArgument(0).as<VariableAddress>();
+		y = y.getParentAddress(10).as<CallExprAddress>().getArgument(0).as<VariableAddress>();
 
 		auto bind = x.getRootAddress().as<BindExprAddress>();
 		auto defX = bind->getParameters()[0];
@@ -202,7 +202,7 @@ namespace datalog {
 		auto y = addresses[1].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
 
 		// there is a bug in the parser, marking the wrong y => fix this
-		y = y.getParentAddress(8).as<CallExprAddress>().getArgument(0).as<VariableAddress>();
+		y = y.getParentAddress(10).as<CallExprAddress>().getArgument(0).as<VariableAddress>();
 
 		auto bind = x.getRootAddress().as<BindExprAddress>();
 		auto defY = bind->getParameters()[0];
@@ -592,7 +592,7 @@ namespace datalog {
 		// return statements may also declare a variable which can be used in the return expression itself
 		EXPECT_TRUE(Datalog::getTopLevelNodes(builder.parseStmt("def struct A { a : int<4>; };"
 		                               "def foo = () -> A {"
-		                               "  return var ref<A> v0 = A::(v0);"
+		                               "  return A::(ref_decl(type_lit(ref<A>))) in ref<A>;"
 		                               "};"
 		                               "foo();")));
 	}
@@ -602,10 +602,10 @@ namespace datalog {
 		IRBuilder builder(mgr);
 
 		EXPECT_TRUE(Datalog::getTopLevelNodes(builder.parseExpr("<ref<int<6>>> { 3 }")));
-		EXPECT_TRUE(Datalog::getTopLevelNodes(builder.parseStmt("throw true;")));
-		EXPECT_TRUE(Datalog::getTopLevelNodes(builder.parseStmt("try {} catch (v1 : bool) {v1;} catch (v2 : int<4>) {v2;}")));
-		EXPECT_TRUE(Datalog::getTopLevelNodes(builder.parseProgram("int main() { return 0; }")));
-		EXPECT_TRUE(Datalog::getTopLevelNodes(builder.parseExpr("spawn 14")));
+	        EXPECT_TRUE(Datalog::getTopLevelNodes(builder.parseStmt("throw true;")));
+	        EXPECT_TRUE(Datalog::getTopLevelNodes(builder.parseStmt("try {} catch (v1 : bool) {v1;} catch (v2 : int<4>) {v2;}")));
+	        EXPECT_TRUE(Datalog::getTopLevelNodes(builder.parseProgram("int main() { return 0; }")));
+	        EXPECT_TRUE(Datalog::getTopLevelNodes(builder.parseExpr("spawn 14")));
 	}
 
 	TEST(CodeProperties, HappensBefore_1) {
