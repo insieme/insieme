@@ -214,11 +214,10 @@ namespace core {
 
 	// ------------------------------------- Call Expr -----------------------------------
 
-
 	/**
 	 * The accessor associated to the call expression.
 	 */
-	IR_LIST_NODE_ACCESSOR(CallExpr, Expression, Arguments, Type, Expression, Expression)
+	IR_LIST_NODE_ACCESSOR(CallExpr, Expression, ArgumentDeclarations, Type, Expression, Declaration)
 
 		/**
 		 * Obtains a reference to the function called by this expression.
@@ -226,18 +225,40 @@ namespace core {
 		IR_NODE_PROPERTY(Expression, FunctionExpr, 1);
 
 		/**
-		 * Obtains a reference to the requested argument.
+		 * Obtains a reference to the requested argument declaration.
 		 */
-		Ptr<const Expression> getArgument(unsigned index) const {
+		Ptr<const Declaration> getArgumentDeclaration(unsigned index) const {
 			return this->getElement(index);
 		}
-		
+
+		/**
+		 * Obtains a reference to the requested argument expression.
+		 */
+		Ptr<const Expression> getArgument(unsigned index) const {
+			return this->getArgumentDeclaration(index)->getInitialization();
+		}
+
 		/**
 		 * Obtains a list of argument expressions for this call.
 		 */
-		ExpressionList getArgumentList() const {
-			return getArguments();
+		vector<Ptr<const Expression>> getArgumentList() const {
+			auto argRange = getArgumentDeclarations();
+			vector<Ptr<const Expression>> ret;
+			std::transform(argRange.cbegin(), argRange.cend(), std::back_inserter(ret), [](const Ptr<const Declaration>& decl){ return decl->getInitialization(); });
+			return ret;
 		}
+
+		vector<Ptr<const Declaration>> getArgumentDeclarationList() const {
+			return (DeclarationList)getArgumentDeclarations();
+		}
+
+		/**
+		 * Obtains the number of arguments for this call.
+		 */
+		size_t getNumArguments() const {
+			return this->size();
+		}
+
 	IR_NODE_END()
 
 	/**
@@ -249,7 +270,7 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream & out) const {
-			return out << *getFunctionExpr() << "(" << join(", ", getArguments(), print<deref<ExpressionPtr>>()) << ")";
+			return out << *getFunctionExpr() << "(" << join(", ", getArgumentList(), print<deref<ExpressionPtr>>()) << ")";
 		}
 
 	  public:
@@ -263,13 +284,19 @@ namespace core {
 		 * @param arguments the arguments to be passed to the function call
 		 * @return the requested type instance managed by the given manager
 		 */
-		static CallExprPtr get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& function, const NodeRange<ExpressionPtr>& arguments) {
-			NodeList children;
-			children.push_back(type);
-			children.push_back(function);
-			children.insert(children.end(), arguments.begin(), arguments.end());
-			return manager.get(CallExpr(children));
-		}
+		static CallExprPtr get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& function, const NodeRange<ExpressionPtr>& arguments);
+
+		/**
+		 * This static factory method allows to obtain an instance of a call expression
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the call expression, hence the return type of the function
+		 * @param function the function to be called
+		 * @param argumentDecls the declarations for arguments to be passed to the function call
+		 * @return the requested type instance managed by the given manager
+		 */
+		static CallExprPtr get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& function, const NodeRange<DeclarationPtr>& argumentDecls);
 
 		/**
 		 * This static factory method allows to obtain an instance of a call expression
@@ -283,6 +310,20 @@ namespace core {
 		 */
 		static CallExprPtr get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& function, const ExpressionList& arguments) {
 			return get(manager, type, function, NodeRange<ExpressionPtr>(arguments.begin(), arguments.end()));
+		}
+
+		/**
+		 * This static factory method allows to obtain an instance of a call expression
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the call expression, hence the return type of the function
+		 * @param function the function to be called
+		 * @param argumentDecls the declarations for arguments to be passed to the function call
+		 * @return the requested type instance managed by the given manager
+		 */
+		static CallExprPtr get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& function, const DeclarationList& argumentDecls) {
+			return get(manager, type, function, NodeRange<DeclarationPtr>(argumentDecls.begin(), argumentDecls.end()));
 		}
 	IR_NODE_END()
 
@@ -662,7 +703,7 @@ namespace core {
 		static LambdaExprPtr get(NodeManager & manager, const LambdaReferencePtr& ref, const LambdaDefinitionPtr& definition) {
 			return get(manager, ref->getType(), ref, definition);
 		}
-		
+
 		/**
 		 * Obtains a simple, non-recursive Lambda based on the given definition.
 		 *
@@ -953,14 +994,14 @@ namespace core {
 			vector<Ptr<const Expression>> res;
 
 			const auto& parameters = this->getNode().getParameters()->getElements();
-			for_each(getCall()->getArguments(), [&](const Ptr<const Expression>& cur) {
+			for(const auto& cur : getCall()->getArgumentList()) {
 				if(cur->getNodeType() == NT_Variable) {
 					const VariablePtr& var = cur.template as<VariablePtr>();
-					if(contains(parameters, var)) { return; }
+					if(contains(parameters, var)) { continue; }
 				}
 				// add to bind expressions
 				res.push_back(cur);
-			});
+			}
 
 			return res;
 		}
@@ -1086,7 +1127,7 @@ namespace core {
 		 * (Either a variable or ref_temp)
 		 */
 		IR_NODE_PROPERTY(Expression, MemoryExpr, 1);
-	
+
 		/**
 		 * Obtains the initialization expressions.
 		 */

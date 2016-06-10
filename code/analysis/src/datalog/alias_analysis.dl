@@ -1,4 +1,6 @@
-#include "reference.dl"
+.using _ from Callable
+.using reference_value from ForwardDecl
+
 
 // a relation to specify the terms which's target references shell be obtained
 .decl targets ( s : stmt ) input
@@ -10,3 +12,4 @@
 
 // compute results
 result( x , r ) :- targets(x), reference_value(x,DP_ROOT,r).
+

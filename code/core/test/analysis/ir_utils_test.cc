@@ -93,7 +93,7 @@ namespace analysis {
 
 		// check free variables
 		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
-		EXPECT_EQ("[0-2-2-2-3]", toString(getFreeVariableAddresses(call)));
+		EXPECT_EQ("[0-2-1-2-2-1-3-1]", toString(getFreeVariableAddresses(call)));
 	}
 
 	TEST(FreeVariables, TryCatchTest) {
@@ -247,6 +247,20 @@ namespace analysis {
 		}
 	}
 
+	TEST(FreeVariables, ImplicitlyDeclared) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		{
+			auto ret1 = builder.parseStmt("return 5;");
+			EXPECT_FALSE(hasFreeVariables(ret1));
+		}
+		{
+			auto for1 = builder.parseStmt("for(int<4> k = 0 .. 10) { }");
+			EXPECT_FALSE(hasFreeVariables(for1));
+		}
+	}
+
 
 	TEST(AllVariables, BindTest) {
 		NodeManager manager;
@@ -267,7 +281,7 @@ namespace analysis {
 
 		// check variables
 		EXPECT_EQ("rec _.{_=fun(ref<((int<4>)=>int<4>),f,f,plain> v0) {return ref_deref(v0)(2);}}(bind(v0){int_add(int_add(2, v77), v0)})", toString(*call));
-		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0), builder.variable(builder.refType(int4), 1), builder.variable(int4, 77),
+		EXPECT_EQ(utils::set::toSet<VariableSet>(builder.variable(int4, 0), builder.variable(int4, 77),
 			                                     builder.variable(builder.refType(builder.functionType(int4, int4, FK_CLOSURE)), 0)),
 			      getAllVariables(call));
 	}
@@ -389,10 +403,36 @@ namespace analysis {
 		EXPECT_EQ("[0-0-1-0,0-0-2-0]", toString(res));
 	}
 
-	namespace {
+	TEST(IsMaterializingCall, Basic) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		const lang::BasicGenerator& gen = builder.getLangBasic();
 
+		LiteralPtr zero = builder.literal(gen.getUInt4(), "0");
+		VariablePtr x = builder.variable(builder.refType(gen.getUInt4()), 3);
+
+		ExpressionPtr call1 = builder.callExpr(builder.refType(gen.getBool()), gen.getUnsignedIntEq(), x, zero);
+		EXPECT_TRUE(isMaterializingCall(call1));
+
+		ExpressionPtr call2 = builder.callExpr(gen.getBool(), gen.getUnsignedIntEq(), x, zero);
+		EXPECT_FALSE(isMaterializingCall(call2));
+
+		auto call3 = builder.parseStmt(
+			"def fun = (a : int<4>) -> int<4> { return a; };"
+			"fun(1) materialize;"
+		);
+		EXPECT_TRUE(isMaterializingCall(call3));
+
+		auto call4 = builder.parseStmt(
+			"def fun = (a : int<4>) -> int<4> { return a; };"
+			"fun(1);"
+		);
+		EXPECT_FALSE(isMaterializingCall(call4));
+	}
+
+	namespace {
 		bool readOnly(const StatementPtr& stmt, const VariablePtr& var) {
-			return insieme::core::analysis::isReadOnly(stmt, var);
+			return isReadOnly(stmt, var);
 		}
 
 		bool notReadOnly(const StatementPtr& stmt, const VariablePtr& var) {
@@ -622,6 +662,37 @@ namespace analysis {
 		EXPECT_PRED2(notReadOnly, callB, varD);
 	}
 
+	TEST(isSideEffectFree, Expressions) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto notSideEffectFree = [](const ExpressionPtr& expr) { return !isSideEffectFree(expr); };
+
+		IRBuilder::EagerDefinitionMap symbols { {"v", builder.variable(builder.refType(mgr.getLangBasic().getInt4())) } };
+
+		EXPECT_TRUE(isSideEffectFree(builder.parseExpr(R"("Hello")")));
+		EXPECT_TRUE(isSideEffectFree(builder.parseExpr(R"(5 + 3)", symbols)));
+		EXPECT_TRUE(isSideEffectFree(builder.parseExpr(R"(5 + 3 - v)", symbols)));
+		EXPECT_TRUE(notSideEffectFree(builder.parseExpr(R"(v = 5)", symbols)));
+	}
+
+	TEST(isSideEffectFree, Declarations) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto notSideEffectFree = [](const DeclarationPtr& decl) { return !isSideEffectFree(decl); };
+
+		IRBuilder::EagerDefinitionMap symbols {
+			{"S", builder.parseType("struct S { a: int<4>; b: int<4>; }") },
+			{"fun", builder.literal("fun", builder.parseType("(ref<int<4>>) -> int<4>")) },
+			{"v", builder.variable(builder.refType(mgr.getLangBasic().getInt4())) }
+		};
+
+		EXPECT_TRUE(isSideEffectFree(builder.parseStmt(R"(var ref<int<4>> v = 1;)").as<DeclarationStmtPtr>()->getDeclaration()));
+		EXPECT_TRUE(isSideEffectFree(builder.parseStmt(R"(var ref<S> s = <ref<S>>(ref_decl(type_lit(ref<s>))){1,2};)", symbols).as<DeclarationStmtPtr>()->getDeclaration()));
+		EXPECT_TRUE(notSideEffectFree(builder.parseStmt(R"(var ref<S> s = <ref<S>>(ref_decl(type_lit(ref<s>))){fun(v),2};)", symbols).as<DeclarationStmtPtr>()->getDeclaration()));
+	}
+
 	TEST(IsParallel, Negative) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
@@ -669,7 +740,7 @@ namespace analysis {
 			alias int = int<4>;
 			def fun = () -> unit {
 				var int x = 1;
-				var int y;
+				var int y = 2;
 			};
 			unit main() {
 				fun();
@@ -677,7 +748,7 @@ namespace analysis {
 			}
 		)1N5P1RE");
 
-		EXPECT_EQ(8, countInstances(prog, builder.parseType("int<4>")));
+		EXPECT_EQ(12, countInstances(prog, builder.parseType("int<4>")));
 		EXPECT_EQ(2, countInstances(prog, builder.intLit(1)));
 	}
 

@@ -111,7 +111,7 @@ namespace new_core {
 		EXPECT_EQ(StringValue::get(manager, "A"), a->getName().getAddressedNode());
 	}
 
-	TEST(NodePtr, HashMapSpeed) {
+	TEST(DISABLED_NodePtr, HashMapSpeed) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 

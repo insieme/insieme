@@ -1,4 +1,4 @@
-#include "control_flow.dl"
+.using ControlFlow from ControlFlow
 
 
 // a relation to specify a start node
@@ -19,5 +19,5 @@
 
 happens_before( as, ae , bs, be ) :- ControlFlow( ProgramPoint( as, ae ), ProgramPoint( bs, be ) ).
 happens_before( as, ae , cs, ce ) :- happens_before(as,ae,bs,be), happens_before(bs,be,cs,ce).
- 
+
 result(1) :- start(s), end(e), happens_before( s, PRE , e , PRE ).

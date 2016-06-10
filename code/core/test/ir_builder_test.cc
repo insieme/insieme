@@ -104,5 +104,31 @@ namespace core {
 			<< checks::check(type);
 	}
 
+	TEST(BuilderTest, MinMax) {
+
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		auto expr1 = builder.parseExpr("1");
+		auto expr2 = builder.parseExpr("2");
+
+		auto result_min = builder.min(expr1, expr2);
+		auto result_max = builder.max(expr1, expr2);
+
+		const auto& basic = nm.getLangBasic();
+		const core::LiteralPtr& select = basic.getSelect();
+
+		auto op_Lt = nm.getLangBasic().getOperator(expr1->getType(), lang::BasicGenerator::Lt);
+		auto op_Gt = nm.getLangBasic().getOperator(expr1->getType(), lang::BasicGenerator::Gt);
+
+		auto exp_min = builder.callExpr(builder.infereExprType(select, expr1, expr2, op_Lt), select, expr1, expr2, op_Lt);
+		auto exp_max = builder.callExpr(builder.infereExprType(select, expr1, expr2, op_Gt), select, expr1, expr2, op_Gt);
+
+		EXPECT_FALSE(result_min == result_max);
+
+		EXPECT_EQ(exp_min, result_min);
+		EXPECT_EQ(exp_max, result_max);
+	}
+
 }
 }

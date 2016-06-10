@@ -1,19 +1,17 @@
-#pragma once
-
-#include "forward_decl.dl"
-#include "data_flow_analysis.dl"
-#include "callable.dl"
+.using callGraph from callable
+.using reference_value from forward_decl as ref_val
+.using DataFlowAnalysis from DataFlowAnalysis
 
 
 // ---------- Analysis Specification -----------
 
-.init reference = DataFlowAnalysis<memory_location>
+.init reference = DataFlowAnalysis <memory_location>
 
 // link to result set
-reference_value(n,p,v) :- reference.value(n,p,v).
+ref_val(n,p,v) :- reference.value(n,p,v).
 
 // the value to be exhibited by any unknown value
-reference.unknown_value ( X ) :- reference.value(_,_,X).		
+reference.unknown_value ( X ) :- reference.value(_,_,X).
 reference.unknown_value ( -1 ).			// two values not covered anywhere (=outside the application)
 reference.unknown_value ( -2 ).
 

@@ -182,6 +182,47 @@ namespace analysis {
 		EXPECT_EQ(declY2, dispatch_getDefinitionPoint(varY2, GetParam()));
 	}
 
+	TEST_P(CBA_Interface, DefinitionPoint_LambdaParameter) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesExpression(
+			"( x : int<4> ) -> int<4> { return $x$; }"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<CallExprAddress>().getArgument(0).as<VariableAddress>();
+		auto param = var.getRootAddress().as<LambdaExprAddress>()->getParameterList()[0];
+
+		std::cout << "Parameter: " << param << "\n";
+		std::cout << "Variable:  " << var << "\n";
+
+		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
+
+	}
+
+	TEST_P(CBA_Interface, DefinitionPoint_LambdaParameter_2) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto addresses = builder.parseAddressesStatement(
+			"def f = (x : int<4>, y : int<4>) -> unit { $y$; };"
+			"{"
+			"  f(1, 2);"
+			"}"
+		);
+
+		ASSERT_EQ(1, addresses.size());
+
+		auto var = addresses[0].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
+		auto param = var.getParentAddress(4).as<LambdaAddress>()->getParameterList()[1];
+
+		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		ASSERT_TRUE(find);
+		ASSERT_EQ(param, find);
+	}
+
 	TEST_P(CBA_Interface, DefinitionPoint_BindParameter) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
@@ -255,7 +296,7 @@ namespace analysis {
 		auto y = addresses[1].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
 
 		// there is a bug in the parser, marking the wrong y => fix this
-		y = y.getParentAddress(8).as<CallExprAddress>()[0].as<VariableAddress>();
+		y = y.getParentAddress(10).as<CallExprAddress>().getArgument(0).as<VariableAddress>();
 
 		auto bind = x.getRootAddress().as<BindExprAddress>();
 		auto defX = bind->getParameters()[0];
@@ -283,7 +324,7 @@ namespace analysis {
 		auto y = addresses[1].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
 
 		// there is a bug in the parser, marking the wrong y => fix this
-		y = y.getParentAddress(8).as<CallExprAddress>()[0].as<VariableAddress>();
+		y = y.getParentAddress(10).as<CallExprAddress>().getArgument(0).as<VariableAddress>();
 
 		auto bind = x.getRootAddress().as<BindExprAddress>();
 		auto defY = bind->getParameters()[0];
@@ -291,47 +332,6 @@ namespace analysis {
 		EXPECT_FALSE(dispatch_getDefinitionPoint(x, GetParam()));
 		EXPECT_EQ(defY,dispatch_getDefinitionPoint(y, GetParam()));
 
-	}
-
-	TEST_P(CBA_Interface, DefinitionPoint_LambdaParameter) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		auto addresses = builder.parseAddressesExpression(
-			"( x : int<4> ) -> int<4> { return $x$; }"
-		);
-
-		ASSERT_EQ(1, addresses.size());
-
-		auto var = addresses[0].as<CallExprAddress>()[0].as<VariableAddress>();
-		auto param = var.getRootAddress().as<LambdaExprAddress>()->getParameterList()[0];
-
-		std::cout << "Parameter: " << param << "\n";
-		std::cout << "Variable:  " << var << "\n";
-
-		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
-
-	}
-
-	TEST_P(CBA_Interface, DefinitionPoint_LambdaParameter_2) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		auto addresses = builder.parseAddressesStatement(
-			"def f = (x : int<4>, y : int<4>) -> unit { $y$; };"
-			"{"
-			"  f(1, 2);"
-			"}"
-		);
-
-		ASSERT_EQ(1, addresses.size());
-
-		auto var = addresses[0].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
-		auto param = var.getParentAddress(3).as<LambdaAddress>()->getParameterList()[1];
-
-		auto find = dispatch_getDefinitionPoint(var, GetParam());
-		ASSERT_TRUE(find);
-		ASSERT_EQ(param, find);
 	}
 
 	TEST_P(CBA_Interface, DefinitionPoint_Fail) {

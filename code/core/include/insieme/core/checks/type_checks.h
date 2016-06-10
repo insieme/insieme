@@ -69,12 +69,13 @@ namespace checks {
 	SIMPLE_CHECK(ArrayType, Node, true);
 	SIMPLE_CHECK(GenericOps, CallExpr, false);
 
+	SIMPLE_CHECK(DeclarationType, Declaration, false);
 	SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt, false);
-	SIMPLE_CHECK(DeclarationStmtSemantic, DeclarationStmt, false);
 	SIMPLE_CHECK(IfConditionType, IfStmt, false);
 	SIMPLE_CHECK(ForStmtType, ForStmt, false);
 	SIMPLE_CHECK(WhileConditionType, WhileStmt, false);
 	SIMPLE_CHECK(SwitchExpressionType, SwitchStmt, false);
+	SIMPLE_CHECK(RefDeclType, CallExpr, false);
 
 	SIMPLE_CHECK(InitExprType, InitExpr, false);
 	SIMPLE_CHECK(MemberAccessElementType, CallExpr, false);

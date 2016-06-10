@@ -326,7 +326,9 @@ namespace measure {
 		EXPECT_TRUE(time.isValid());
 		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
 
-
+#ifndef USE_PAPI
+		std::cout << "Compiled without PAPI support, not testing PAPI measurements\n";
+#else
 		// measure cache misses of this fragment
 		auto misses = measure(addr, toVector(Metric::PAPI_L1_DCM, Metric::PAPI_L2_TCM));
 
@@ -335,6 +337,7 @@ namespace measure {
 
 		EXPECT_TRUE(misses[Metric::PAPI_L2_TCM].isValid());
 		EXPECT_TRUE(misses[Metric::PAPI_L2_TCM].getValue() > 0);
+#endif
 	}
 
 	// 	TEST(Measuring, MeasureRemote) {

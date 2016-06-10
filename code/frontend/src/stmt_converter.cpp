@@ -121,15 +121,16 @@ namespace conversion {
 			}
 			// convert decl
 			auto convertedDecl = converter.getDeclConverter()->convertVarDecl(varDecl);
+			auto refDecl = core::lang::buildRefDecl(convertedDecl.first->getType());
 			converter.getVarMan()->insert(varDecl, convertedDecl.first);
 			// check if we have an init expression
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
 				initExp = *convertedDecl.second;
-				initExp = utils::fixTempMemoryInInitExpression(convertedDecl.first, initExp);
+				initExp = utils::fixTempMemoryInInitExpression(refDecl, initExp);
 			} else {
 				// generate undefined initializer
-				initExp = convertedDecl.first;
+				initExp = refDecl;
 			}
 
 			// build ir declaration
@@ -163,9 +164,8 @@ namespace conversion {
 		// check if we have a return value
 		if(clang::Expr* expr = retStmt->getRetValue()) {
 			auto returnExpr = converter.convertCxxArgExpr(expr);
-			auto returnVar = builder.variable(converter.getVarMan()->getRetType());
-			returnExpr = utils::fixTempMemoryInInitExpression(returnVar, returnExpr);
-			irRetStmt = builder.returnStmt(returnExpr, returnVar);
+			returnExpr = utils::fixTempMemoryInInitExpression(core::lang::buildRefDecl(converter.getVarMan()->getRetType()), returnExpr);
+			irRetStmt = builder.returnStmt(returnExpr, converter.getVarMan()->getRetType());
 		}
 
 		retIr.push_back(irRetStmt);
@@ -421,14 +421,14 @@ namespace conversion {
 					decl = st.as<core::DeclarationStmtPtr>();
 					// remove the init, use undefinedvar
 					// this is what GCC does, VC simply errors out
-					decl = builder.declarationStmt(decl->getVariable(), decl->getVariable());
+					decl = builder.declarationStmt(decl->getVariable());
 					decls.push_back(decl);
 				}
 			} else {
 				decl = result.as<core::DeclarationStmtPtr>();
 				// remove the init, use undefinedvar
 				// this is what GCC does, VC simply errors out
-				decl = builder.declarationStmt(decl->getVariable(), decl->getVariable());
+				decl = builder.declarationStmt(decl->getVariable());
 				decls.push_back(decl);
 			}
 		};

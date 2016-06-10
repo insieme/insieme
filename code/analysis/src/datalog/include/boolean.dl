@@ -1,5 +1,3 @@
-#pragma once
-
 // define a basic boolean type
 .number_type bool
 

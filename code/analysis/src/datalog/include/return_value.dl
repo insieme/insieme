@@ -1,6 +1,4 @@
-#pragma once
-
-#include "entry_and_exit_points.dl"
+.using ReturnOfLambda from EntryAndExitPoints
 
 
 // TODO: remove once the typing of the ir.dl is fixed
@@ -15,7 +13,7 @@
 
 
 // for lambdas, those are the corresponding return statements
-ReturnValue( l, v ) :- ReturnOfLambda(l,r), ReturnStmt(r,_,v).
+//DISABLED DUE TO IR CHANGE ReturnValue( l, v ) :- ReturnOfLambda(l,r), ReturnStmt(r,_,v).
 
 // for bind expressions, it is the direct sub-expression
 ReturnValue( b , e ) :- BindExpr(b,_,e).

@@ -43,6 +43,7 @@
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
+#include "insieme/core/encoder/encoder.h"
 
 #include "insieme/annotations/opencl/opencl_annotations.h"
 
@@ -79,23 +80,25 @@ namespace extensions {
 		static const std::string ro = "RO";
 		static const std::string wo = "WO";
 		static const std::string rw = "RW";
+		static const std::string collapse = "collapse";
 	}
 
 	// contains all clauses which are used to register the pragma handlers
 	namespace clauses {
 		auto device = kwd(keywords::type) >> l_paren >> (kwd(keywords::cpu) | kwd(keywords::gpu) | kwd(keywords::accelerator) | kwd(keywords::all))[keywords::type] >> r_paren;
-		auto loop = !(kwd(keywords::independent) >> l_paren >> (kwd(keywords::yes) | kwd(keywords::no))[keywords::independent] >> r_paren);
+		auto collapse = kwd(keywords::collapse) >> l_paren >> tok::expr[keywords::collapse] >> r_paren;
+		auto loop = !(kwd(keywords::independent) >> l_paren >> (kwd(keywords::yes) | kwd(keywords::no))[keywords::independent] >> r_paren >> !collapse);
 		auto range = kwd(keywords::range) >> l_paren >> tok::expr[keywords::range] >> colon >> tok::expr[keywords::range] >> colon >> tok::expr[keywords::range] >> r_paren;
-		auto requirement = l_paren >> var[keywords::requirement] >> comma >> range >> comma >> (kwd(keywords::ro) | kwd(keywords::wo) | kwd(keywords::rw))[keywords::access] >> r_paren;
+		auto requirement = l_paren >> var[keywords::requirement] >> comma >> range >> *(!comma >> range) >> comma >> (kwd(keywords::ro) | kwd(keywords::wo) | kwd(keywords::rw))[keywords::access] >> r_paren;
 	}
 
 	namespace {
 		core::ExpressionPtr toRV(const core::ExpressionPtr& expr) {
 			if (expr->getNodeType() != core::NT_Variable) return expr;
-			
+
 			auto var = expr.as<core::VariablePtr>();
 			if (!core::lang::isReference(var->getType())) return expr;
-			
+
 			core::IRBuilder builder(expr->getNodeManager());
 			return builder.deref(var);
 		}
@@ -123,18 +126,20 @@ namespace extensions {
 			return value == keywords::yes;
 		}
 
+		unsigned handleCollapseClause(const MatchObject& object) {
+			auto exprs = object.getExprs(keywords::collapse);
+			assert_true(exprs.size() <= 1) << "OpenCL: collapse clause must include at most one expression";
+			if (exprs.empty()) return 0;
+
+			return core::encoder::toValue<int>(exprs[0]);
+		}
+
 		VariableRequirementPtr handleRequirementClause(const MatchObject& object) {
 			auto var = object.getVars(keywords::requirement);
 			assert_eq(var.size(), 1) << "OpenCL: requirement clause must contain a variable";
 			// extract the supplied ranges
 			auto exprs = object.getExprs(keywords::range);
-			assert_eq(exprs.size(), 3) << "OpenCL: requirement clause must contain a range with three exprs";
-			// check if the ranges are integer based expressions!
-			#if 0
-			assert_true(::all(exprs, [&](const core::ExpressionPtr& expr) {
-					return core::types::isMatchable(expr->getType(), var[0]->getNodeManager().getLangBasic().getUIntGen());
-				})) << "OpenCL: ranges clause must contain uints";
-			#endif
+			assert_true(exprs.size() % 3 == 0) << "OpenCL: requirement clause must contain a valid range expr";
 			// last but not least, grab the access mode
 			const std::string& value = object.getString(keywords::access);
 			VariableRequirement::AccessMode accessMode;
@@ -147,13 +152,14 @@ namespace extensions {
 			} else {
 				assert_fail() << "OpenCL: unsupported access type: " << value;
 			}
-			// put together the range for this variable -- currently 1D
+			// put together the range for this variable
 			VariableRangeList ranges;
-			ranges.push_back(std::make_shared<VariableRange>(toRV(exprs[0]), toRV(exprs[1]), toRV(exprs[2])));
+			for (unsigned i = 0; i < exprs.size() / 3; ++i)
+				ranges.push_back(std::make_shared<VariableRange>(toRV(exprs[i+0]), toRV(exprs[i+1]), toRV(exprs[i+2])));
 			return std::make_shared<VariableRequirement>(var[0], accessMode, ranges);
 		}
 
-		void addAnnotations(const core::NodePtr& node, BaseAnnotation::AnnotationList& annos) {
+		void addAnnotations(const core::NodePtr& node, BaseAnnotation::AnnotationList& annos, unsigned collapse) {
 			if(annos.empty()) return;
 
 			auto innerWhilePat = core::pattern::var("while", core::pattern::irp::whileStmt());
@@ -161,21 +167,23 @@ namespace extensions {
 			auto whilePat = core::pattern::irp::compoundStmt(core::pattern::anyList
 				<< core::pattern::var("predecessor", (core::pattern::irp::declarationStmt() | core::pattern::irp::callExpr(core::pattern::any)))
 				<< markerNestedWhile << core::pattern::anyList);
-			auto match = whilePat.matchPointer(node);
-			if (!match) return;
+			collapse++;
+			core::pattern::irp::matchAll(whilePat, node, [&](const core::pattern::NodeMatch& match) {
+				if (!collapse) return;
+				// in order for the while_to_for_extension to pick up our annotations
+				// we need to attach them onto the while stmt!
+				auto stmt = match["while"].getFlattened().front().as<core::WhileStmtPtr>();
 
-			// in order for the while_to_for_extension to pick up our annotations
-			// we need to attach them onto the while stmt!
-			auto stmt = (*match)["while"].getFlattened().front().as<core::WhileStmtPtr>();
-
-			// get old annotation list and append our annotations
-			if(stmt->hasAnnotation(BaseAnnotation::KEY)) {
-				auto& lst = stmt->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
-				lst.insert(lst.end(), annos.begin(), annos.end());
-			} else {
-				// in this case we need to create a new one
-				stmt->addAnnotation(std::make_shared<BaseAnnotation>(annos));
-			}
+				// get old annotation list and append our annotations
+				if(stmt->hasAnnotation(BaseAnnotation::KEY)) {
+					auto& lst = stmt->getAnnotation(BaseAnnotation::KEY)->getAnnotationList();
+					lst.insert(lst.end(), annos.begin(), annos.end());
+				} else {
+					// in this case we need to create a new one
+					stmt->addAnnotation(std::make_shared<BaseAnnotation>(annos));
+				}
+				--collapse;
+			});
 		}
 	}
 
@@ -193,21 +201,23 @@ namespace extensions {
 			    BaseAnnotation::AnnotationList deviceAnnos;
 			    deviceAnnos.push_back(std::make_shared<DeviceAnnotation>(deviceClause));
 
-			    for (auto& node : nodes) addAnnotations(node, deviceAnnos);
+			    for (auto& node : nodes) addAnnotations(node, deviceAnnos, 0);
 			    return nodes;
 			})));
-		// Add a handler for pragma opencl loop [independent]
+		// Add a handler for pragma opencl loop [independent] [collapse]
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 			PragmaHandler(pragmaNamespace, keywords::loop, clauses::loop >> tok::eod, [](const MatchObject& object, core::NodeList nodes) {
 				// check for the optional independent keyword
 				bool independent = handleIndependentClause(object);
 				LOG(DEBUG) << "OpenCL: found loop clause, independent: " << (independent ? "yes" : "no");
+				// determine if we shall collapse it
+				unsigned collapse = handleCollapseClause(object);
 				// create the annotation and put it into the BaseAnnotation list
-			    BaseAnnotation::AnnotationList loopAnnos;
-			    loopAnnos.push_back(std::make_shared<LoopAnnotation>(independent));
+			  BaseAnnotation::AnnotationList loopAnnos;
+			  loopAnnos.push_back(std::make_shared<LoopAnnotation>(independent));
 
-			    for (auto& node : nodes) addAnnotations(node, loopAnnos);
-			    return nodes;
+			  for (auto& node : nodes) addAnnotations(node, loopAnnos, collapse);
+			  return nodes;
 			})));
 		// Add a handler for pragma opencl requirement
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
@@ -216,7 +226,7 @@ namespace extensions {
 				// create the annotation and put it into the BaseAnnotation list
 				BaseAnnotation::AnnotationList reqAnnos;
 				reqAnnos.push_back(handleRequirementClause(object));
-				for (auto& node : nodes) addAnnotations(node, reqAnnos);
+				for (auto& node : nodes) addAnnotations(node, reqAnnos, 0);
 				return nodes;
 			})));
 	}

@@ -1,7 +1,3 @@
-#pragma once
-
-#include "ir.dl"
-
 // ---- node equality ---
 
 // determines whether two nodes a and b are structually identical

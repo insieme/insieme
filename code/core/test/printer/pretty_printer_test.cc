@@ -492,7 +492,7 @@ TEST(PrettyPrinter, Structs) {
 
 	{ // default constructor
 		auto type = builder.parseType("struct s { ctor () { return; }}");
-		auto type1 = builder.parseType("struct s { ctor () {}}");
+		auto type1 = builder.parseType("struct s { ctor () = default;}");
 
 		EXPECT_EQ("decl struct s;\n"
                   "decl ctor:s::();\n"
@@ -516,8 +516,8 @@ TEST(PrettyPrinter, Structs) {
 									  "    ctor function (v1 : ref<s,f,f,cpp_rref>) { return;}"
 									  "}"));
 		auto type1 = builder.normalize(builder.parseType("struct s { "
-									   "    ctor (other : ref<s,t,f,cpp_ref>) { }"
-									   "    ctor (other : ref<s,f,f,cpp_rref>) { }"
+									   "    ctor (other : ref<s,t,f,cpp_ref>) = default;"
+									   "    ctor (other : ref<s,f,f,cpp_rref>) = default;"
 									   "}"));
 
 		EXPECT_EQ("decl struct s;\n"
@@ -551,12 +551,8 @@ TEST(PrettyPrinter, Structs) {
 
 		auto type1 = builder.normalize(builder.parseType(
 				"struct s {"
-				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,t,f,cpp_ref>) -> ref<s,f,f,cpp_ref> {\n"
-				"        return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
-				"    }\n"
-				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,f,f,cpp_rref>) -> ref<s,f,f,cpp_ref> {\n"
-				"        return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
-				"    }\n"
+				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,t,f,cpp_ref>) -> ref<s,f,f,cpp_ref> = default;\n"
+				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,f,f,cpp_rref>) -> ref<s,f,f,cpp_ref> = default;\n"
 				"}"));
 
 		std::string res = "decl struct s;\n"
@@ -579,7 +575,7 @@ TEST(PrettyPrinter, Structs) {
 
 	{ // destructor
 		auto type = builder.parseType("struct s {"
-									  "    dtor () {}"
+									  "    dtor () = default;"
 									  "}");
 
 		auto type1 = builder.parseType("struct s {"
@@ -592,6 +588,7 @@ TEST(PrettyPrinter, Structs) {
 		          "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
 
 		EXPECT_EQ("decl struct s;\n"
+		          "decl dtor:~s::();\n"
 		          "def struct s {\n"
 		          "    dtor function () {\n"
 		          "        return unit;\n"
@@ -610,12 +607,14 @@ TEST(PrettyPrinter, Structs) {
 											   "}");
 
 		EXPECT_EQ("decl struct s;\n"
+		          "decl dtor:~s::();\n"
 		          "def struct s {\n"
 		          "    dtor virtual function () { }\n"
 		          "};\n"
 		          "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
 
 		EXPECT_EQ("decl struct s;\n"
+		          "decl dtor:~s::();\n"
 		          "def struct s {\n"
 		          "    dtor virtual function () {\n"
 		          "        return unit;\n"
@@ -799,37 +798,33 @@ IRBuilder builder(nm);
 }
 
 TEST(PrettyPrinter, PrintDefinedDecls) {
-NodeManager nm;
-IRBuilder builder(nm);
+	NodeManager nm;
+	IRBuilder builder(nm);
 
-{
-auto type0 = builder.normalize(builder.parseType("def struct A {}; A"));
-PrettyPrinter printer0(type0, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
-							  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
-							  | PrettyPrinter::PRINT_DERIVED_IMPL | PrettyPrinter::PRINT_DEFAULT_MEMBERS);
+	{
+		auto type0 = builder.normalize(builder.parseType("def struct A {}; A"));
+		PrettyPrinter printer0(type0, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS
+		                                  | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::PRINT_DERIVED_IMPL | PrettyPrinter::PRINT_DEFAULT_MEMBERS);
 
-std::string res = "decl struct A;\n"
-			 	  "decl ctor:A::();\n"
-			 	  "decl ctor:A::(ref<A,t,f,cpp_ref>);\n"
-			 	  "decl ctor:A::(ref<A,f,f,cpp_rref>);\n"
-			 	  "decl " + utils::getMangledOperatorAssignName() + ":A::(ref<A,t,f,cpp_ref>) -> ref<A,f,f,cpp_ref>;\n"
-			 	  "decl " + utils::getMangledOperatorAssignName() + ":A::(ref<A,f,f,cpp_rref>) -> ref<A,f,f,cpp_ref>;\n"
-			 	  "def struct A {\n"
-			 	  "    ctor function () { }\n"
-			 	  "    ctor function (v1 : ref<A,t,f,cpp_ref>) { }\n"
-			 	  "    ctor function (v1 : ref<A,f,f,cpp_rref>) { }\n"
-			 	  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<A,t,f,cpp_ref>) -> ref<A,f,f,cpp_ref> {\n"
-			 	  "        return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
-			 	  "    }\n"
-			 	  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<A,f,f,cpp_rref>) -> ref<A,f,f,cpp_ref> {\n"
-			 	  "        return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref));\n"
-			 	  "    }\n"
-			 	  "};\n"
-			 	  "A";
+		std::string res = "decl struct A;\n"
+		                  "decl ctor:A::();\n"
+		                  "decl ctor:A::(ref<A,t,f,cpp_ref>);\n"
+		                  "decl ctor:A::(ref<A,f,f,cpp_rref>);\n"
+		                  "decl dtor:~A::();\n"
+		                  "decl " + utils::getMangledOperatorAssignName() + ":A::(ref<A,t,f,cpp_ref>) -> ref<A,f,f,cpp_ref>;\n"
+		                  "decl " + utils::getMangledOperatorAssignName() + ":A::(ref<A,f,f,cpp_rref>) -> ref<A,f,f,cpp_ref>;\n"
+		                  "def struct A {\n"
+		                  "    ctor function () = default;\n"
+		                  "    ctor function (v1 : ref<A,t,f,cpp_ref>) = default;\n"
+		                  "    ctor function (v1 : ref<A,f,f,cpp_rref>) = default;\n"
+		                  "    dtor function () = default;\n"
+		                  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<A,t,f,cpp_ref>) -> ref<A,f,f,cpp_ref> = default;\n"
+		                  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<A,f,f,cpp_rref>) -> ref<A,f,f,cpp_ref> = default;\n"
+		                  "};\n"
+		                  "A";
 
-EXPECT_EQ(res, toString(printer0)) << printer0;
-}
-
+		EXPECT_EQ(res, toString(printer0)) << printer0;
+	}
 }
 
 TEST(PrettyPrinter, DerivedLiterals) {
@@ -902,13 +897,13 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"    return **v0;\n"
 			"};\n"
 			"{\n"
-			"    var ref<int<4>,f,f,plain> v0 = v0;\n"
-			"    var ref<int<4>,f,f,plain> v1 = v1;\n"
-			"    var ref<int<4>,f,f,plain> v2 = v2;\n"
-			"    var ref<int<4>,f,f,plain> v3 = v3;\n"
-			"    var ref<int<4>,f,f,plain> v4 = v4;\n"
-			"    var ref<int<4>,f,f,plain> v5 = v5;\n"
-			"    var ref<int<4>,f,f,plain> v6 = v6;\n"
+			"    var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
+			"    var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
+			"    var ref<int<4>,f,f,plain> v2 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
+			"    var ref<int<4>,f,f,plain> v3 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
+			"    var ref<int<4>,f,f,plain> v4 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
+			"    var ref<int<4>,f,f,plain> v5 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
+			"    var ref<int<4>,f,f,plain> v6 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
 			"    {\n"
 			"        v0 = 7;\n"
 			"        fun(*v1);\n"
@@ -922,13 +917,13 @@ TEST(PrettyPrinter, JustOutermostScope) {
 
 	EXPECT_EQ(res, toString(PrettyPrinter(stmt, PrettyPrinter::PRINT_DEREFS))) << toString(PrettyPrinter(stmt, PrettyPrinter::PRINT_DEREFS));
 	std::string res2 = ""
-			"{var ref<int<4>,f,f,plain> v0 = v0;\n"
-			"    var ref<int<4>,f,f,plain> v1 = v1;\n"
-			"    var ref<int<4>,f,f,plain> v2 = v2;\n"
-			"    var ref<int<4>,f,f,plain> v3 = v3;\n"
-			"    var ref<int<4>,f,f,plain> v4 = v4;\n"
-			"    var ref<int<4>,f,f,plain> v5 = v5;\n"
-			"    var ref<int<4>,f,f,plain> v6 = v6;\n"
+			"{var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
+			"    var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
+			"    var ref<int<4>,f,f,plain> v2 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
+			"    var ref<int<4>,f,f,plain> v3 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
+			"    var ref<int<4>,f,f,plain> v4 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
+			"    var ref<int<4>,f,f,plain> v5 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
+			"    var ref<int<4>,f,f,plain> v6 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
 			"    {\n"
 			"        v0 = 7;\n"
 			"        fun(*v1);\n"
@@ -987,7 +982,7 @@ TEST(PrettyPrinter, FreeFunctions) {
 				  "    }\n"
 				  "};\n"
 				  "{\n"
-				  "    var ref<A,f,f,plain> v0 = v0;\n"
+				  "    var ref<A,f,f,plain> v0 = ref_decl(type_lit(ref<A,f,f,plain>));\n"
 				  "    v0.func();\n"
 				  "}", toString(printer));
 	}
@@ -1018,7 +1013,7 @@ TEST(PrettyPrinter, FreeFunctions) {
 				  "    1+1;\n"
 				  "};\n"
 				  "{\n"
-				  "    var ref<A,f,f,plain> v0 = v0;\n"
+				  "    var ref<A,f,f,plain> v0 = ref_decl(type_lit(ref<A,f,f,plain>));\n"
 				  "    v0.func();\n"
 				  "}", toString(printer));
 	}

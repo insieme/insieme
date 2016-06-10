@@ -47,7 +47,7 @@ enum e eProducer() { return A; }
 int main() {
 
 	// undefined initialization
-	#pragma test expect_ir("var ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain> v0 = v0;")
+	#pragma test expect_ir("var ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain> v0 = ref_decl(type_lit(ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain>));")
 	enum e e1;
 
 	// initialized with an enum constant
@@ -58,9 +58,10 @@ int main() {
 	#pragma test expect_ir("using \"ext.enum\"; var ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain> v0 = enum_from_int(type_lit((type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>)), 7);")
 	enum e e3 = 7;
 
+	int magic;
 	// initialized with another enum variable
 	#pragma test expect_ir(R"(using "ext.enum"; {
-	    var ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain> v0 = v0;
+	    var ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain> v0 = ref_decl(type_lit(ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain>));
 	    var ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain> v1 = *v0;
 	    })")
 	{
@@ -72,7 +73,7 @@ int main() {
 	#pragma test expect_ir(R"(using "ext.enum";
 	    def IMP_eConsumer = function (v0 : ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain>) -> unit { };
 	    {
-	        var ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain> v0 = v0;
+	        var ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain> v0 = ref_decl(type_lit(ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain>));
 	        IMP_eConsumer(*v0);
 	    })")
 	{
@@ -92,14 +93,12 @@ int main() {
 		enum e e6 = eProducer();
 	}
 
-
 	// typedef-ed enum
-	#pragma test expect_ir("var ref<(type<enum_def<IMP_f,int<4>,enum_entry<IMP_f_colon__colon_D,0>,enum_entry<IMP_f_colon__colon_E,1>,enum_entry<IMP_f_colon__colon_F,2>>>, int<4>),f,f,plain> v0 = v0;")
+	#pragma test expect_ir("var ref<(type<enum_def<IMP_f,int<4>,enum_entry<IMP_f_colon__colon_D,0>,enum_entry<IMP_f_colon__colon_E,1>,enum_entry<IMP_f_colon__colon_F,2>>>, int<4>),f,f,plain> v0 = ref_decl(type_lit(ref<(type<enum_def<IMP_f,int<4>,enum_entry<IMP_f_colon__colon_D,0>,enum_entry<IMP_f_colon__colon_E,1>,enum_entry<IMP_f_colon__colon_F,2>>>, int<4>),f,f,plain>));")
 	f f1;
 
-
 	// enum with custom values
-	#pragma test expect_ir("var ref<(type<enum_def<IMP_g,int<4>,enum_entry<IMP_g_colon__colon_G,0>,enum_entry<IMP_g_colon__colon_H,4>,enum_entry<IMP_g_colon__colon_I,5>>>, int<4>),f,f,plain> v0 = v0;")
+	#pragma test expect_ir("var ref<(type<enum_def<IMP_g,int<4>,enum_entry<IMP_g_colon__colon_G,0>,enum_entry<IMP_g_colon__colon_H,4>,enum_entry<IMP_g_colon__colon_I,5>>>, int<4>),f,f,plain> v0 = ref_decl(type_lit(ref<(type<enum_def<IMP_g,int<4>,enum_entry<IMP_g_colon__colon_G,0>,enum_entry<IMP_g_colon__colon_H,4>,enum_entry<IMP_g_colon__colon_I,5>>>, int<4>),f,f,plain>));")
 	g g1;
 
 	// comparison operators

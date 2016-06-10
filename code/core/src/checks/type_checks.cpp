@@ -381,8 +381,16 @@ namespace checks {
 
 	OptionalMessageList DestructorTypeCheck::visitTagTypeBinding(const TagTypeBindingAddress& address) {
 		OptionalMessageList res;
+		auto record = address.getAddressedNode()->getRecord();
 
-		checkMemberType(address, address.getAddressedNode()->getRecord()->getDestructor().as<LambdaExprPtr>()->getFunctionType(), FK_DESTRUCTOR, false, res, EC_TYPE_INVALID_DESTRUCTOR_TYPE, "Invalid destructor type");
+		if(record->hasDestructor()) {
+			checkMemberType(address, record->getDestructor().as<LambdaExprPtr>()->getFunctionType(), FK_DESTRUCTOR, false, res,
+				            EC_TYPE_INVALID_DESTRUCTOR_TYPE, "Invalid destructor type");
+		}
+
+		if(record->getOptionalDestructor()->getExpressions().size() > 1) {
+			add(res, Message(address, EC_TYPE_MULTIPLE_DESTRUCTORS, format("More than one destructor on record:\n%s", *record), Message::ERROR));
+		}
 
 		return res;
 	}
@@ -490,7 +498,7 @@ namespace checks {
 
 		// Obtain argument type
 		TypeList argumentTypes;
-		::transform(address.as<CallExprPtr>()->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
+		::transform(address.as<CallExprPtr>()->getArgumentList(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
 
 		// 1) check number of arguments
 		int numParameter = parameterTypes.size();
@@ -790,7 +798,7 @@ namespace checks {
 		if(!fun.isa<LiteralPtr>() || !base.isGenOp(fun)) { return res; }
 
 		// arguments need to be arithmetic types or function types
-		for(auto arg : call) {
+		for(auto arg : call->getArgumentList()) {
 			auto type = arg->getType();
 			if(!type.isa<TypeVariablePtr>() && !base.isScalarType(type) && !type.isa<FunctionTypePtr>() && !core::lang::isEnum(type)) {
 				add(res, Message(address, EC_TYPE_INVALID_GENERIC_OPERATOR_APPLICATION,
@@ -802,11 +810,11 @@ namespace checks {
 		return res;
 	}
 
-	OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
+	OptionalMessageList DeclarationTypeCheck::visitDeclaration(const DeclarationAddress& address) {
 		OptionalMessageList res;
 
-		DeclarationStmtPtr declaration = address.getAddressedNode();
-		TypePtr variableType = declaration->getVariable()->getType();
+		DeclarationPtr declaration = address.getAddressedNode();
+		TypePtr variableType = declaration->getType();
 		ExpressionPtr init = declaration->getInitialization();
 		TypePtr initType = init->getType();
 
@@ -817,19 +825,17 @@ namespace checks {
 		return res;
 	}
 
-	OptionalMessageList DeclarationStmtSemanticCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
+	OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
 		OptionalMessageList res;
 
-		auto variable = address.getAddressedNode()->getVariable();
-		auto expression = address.getAddressedNode()->getInitialization();
+		DeclarationStmtPtr declaration = address.getAddressedNode();
+		TypePtr variableType = declaration->getVariable()->getType();
+		TypePtr declarationType = declaration->getDeclaration()->getType();
 
-		unsigned count = analysis::countInstances(expression, variable, true);
+		if(variableType == declarationType) return res;
 
-		if(count > 1) {
-			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, "Invalid declaration statement with multiple occurrences of the declared variable",
-				             Message::ERROR));
-		}
-
+		add(res, Message(address, EC_TYPE_INVALID_DECLARATION_TYPE,
+			             format("Invalid type of declaration - variable type: \n%s, declaration type: \n%s", *variableType, *declarationType), Message::ERROR));
 		return res;
 	}
 
@@ -907,6 +913,33 @@ namespace checks {
 		return res;
 	}
 
+	OptionalMessageList RefDeclTypeCheck::visitCallExpr(const CallExprAddress& address) {
+		NodeManager& manager = address->getNodeManager();
+		auto& rExt = manager.getLangExtension<lang::ReferenceExtension>();
+		OptionalMessageList res;
+
+		// we are only interested in calls of ref decl
+		if(!rExt.isCallOfRefDecl(address)) return res;
+
+		TypePtr refDeclType = address->getType();
+		TypePtr declType = nullptr;
+
+		visitPathBottomUpInterruptible(address, [&declType,&rExt](const core::DeclarationAddress& decl) {
+			// ignore ref casts
+			if(lang::isAnyRefCast(decl.getParentNode())) return false;
+			// ignore constructors if we are the this parameter
+			auto parentCall = decl.getParentNode().isa<CallExprPtr>();
+			if(parentCall && analysis::isConstructorCall(parentCall) && decl.getAddressedNode() == parentCall.getArgumentDeclaration(0)) return false;
+			declType = decl->getType();
+			return true;
+		});
+
+		if(refDeclType != declType) {
+			add(res, Message(address, EC_TYPE_REF_DECL_TYPE_MISMATCH, format("ref_decl type mismatch\nreferenced: %s\n    actual: %s", *refDeclType, *declType),
+				             Message::ERROR));
+		}
+		return res;
+	}
 
 	OptionalMessageList InitExprTypeCheck::visitInitExpr(const InitExprAddress& address) {
 		OptionalMessageList res;
@@ -1094,7 +1127,7 @@ namespace checks {
 			return res;
 		}
 
-		if(address->getArguments().size() != 3) {
+		if(address->getNumArguments() != 3) {
 			// incorrect function usage => let function check provide errors
 			return res;
 		}
@@ -1163,22 +1196,22 @@ namespace checks {
 				if (!analysis::isCallOf(call.as<CallExprPtr>(), refMember)) return;
 
 				// check target type
-				if (!lang::isReference(call[0])) return;
+				if (!lang::isReference(call->getArgument(0))) return;
 
 				// unpack tag type ptr
-				auto tagType = analysis::getReferencedType(call[0]->getType()).isa<TagTypeReferencePtr>();
+				auto tagType = analysis::getReferencedType(call->getArgument(0)->getType()).isa<TagTypeReferencePtr>();
 				if (!tagType) return;
 
 				// check that it is a locally defined tag type
 				if (!address->getDefinitionOf(tagType)) return;
 
 				// unpack identifier
-				auto identifierLit = call[1].as<LiteralPtr>();
+				auto identifierLit = call->getArgument(1).as<LiteralPtr>();
 				if (!identifierLit) return;
 
 				// unpack target type
-				if (!analysis::isTypeLiteral(call[2])) return;
-				auto targetType = analysis::getRepresentedType(call[2]);
+				if (!analysis::isTypeLiteral(call->getArgument(2))) return;
+				auto targetType = analysis::getRepresentedType(call->getArgument(2));
 
 				// collect the access
 				accesses[call] = CallInfo{
@@ -1269,7 +1302,7 @@ namespace checks {
 			return res;
 		}
 
-		if(address->getArguments().size() != 3) {
+		if(address->getNumArguments() != 3) {
 			// incorrect function usage => let function check provide errors
 			return res;
 		}
@@ -1442,8 +1475,8 @@ namespace checks {
 		}
 
 		// get source and target types
-		TypePtr srcType = callExpr[0]->getType();
-		TypePtr trgType = callExpr[1]->getType();
+		TypePtr srcType = callExpr->getArgument(0)->getType();
+		TypePtr trgType = callExpr->getArgument(1)->getType();
 
 		// check whether the second type is a type literal
 		if (!analysis::isTypeLiteralType(trgType)) {
@@ -1488,7 +1521,7 @@ namespace checks {
 		}
 
 		// get source type
-		TypePtr srcType = callExpr[0]->getType();
+		TypePtr srcType = callExpr->getArgument(0)->getType();
 
 		// check whether type is a type literal
 		if (!analysis::isTypeLiteralType(srcType)) {
@@ -1527,7 +1560,7 @@ namespace checks {
 			return res;
 		}
 
-		auto argumentType = callExpr[0]->getType();
+		auto argumentType = callExpr->getArgument(0)->getType();
 
 		if(argumentType.isa<TypeVariablePtr>()) {
 			return res;		// this might still be a function

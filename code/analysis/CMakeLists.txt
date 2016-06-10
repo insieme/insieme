@@ -15,13 +15,17 @@ insieme_glob_headers(insieme_analysis_incs include)
 # Generate soufflé files now so we can add them to the insieme_analysis library later
 set(souffle_input_dir  ${insieme_code_dir}/analysis/src/datalog)
 
+# Create directories, soufflé-related variables etc
 configure_souffle()
 
-# compile all analysis files *.dl to CPP header files
-file(GLOB datalog_analysis ${souffle_input_dir}/*.dl)
-foreach ( analysis_file ${datalog_analysis} )
+# Run the Dough preprocessor script on the datalog files
+souffle_run_dough(${souffle_input_dir} ${souffle_tmp_dir})
+
+# compile the preprocessed analysis files *.dl to CPP header files
+file(GLOB datalog_analysises ${souffle_input_dir}/*.dl)
+foreach ( analysis_file ${datalog_analysises} )
 	get_filename_component( analysis_name ${analysis_file} NAME_WE )
-	souffle_generate_cpp(${souffle_input_dir} ${analysis_name} "${souffle_input_dir}/include" )
+	souffle_generate_cpp(${souffle_tmp_dir} ${analysis_name} "${souffle_tmp_dir}/include" )
 endforeach()
 
 

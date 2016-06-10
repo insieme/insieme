@@ -66,12 +66,12 @@ namespace transform {
 				NodeManager& mgr = ptr->getNodeManager();
 
 				// check skip-filter
-				if (skip(ptr)) return ptr;
+				if(skip(ptr)) return ptr;
 
-				/// for non-calls ...
+				// for non-calls ...
 				auto call = ptr.isa<CallExprPtr>();
-				if (!call) {
-					// ... just descent recursively
+				if(!call) {
+					// ... just descend recursively
 					return ptr->substitute(mgr, *this);
 				}
 
@@ -82,15 +82,13 @@ namespace transform {
 				auto substitution = types::getTypeVariableInstantiation(mgr, call);
 
 				// skip invalid function calls
-				if (!substitution) return ptr;
+				if(!substitution) return ptr;
 
 				// apply substitution on function
 				auto newFun = (fun.isa<CallExprPtr>() || skip(fun)) ? fun : (*substitution).applyTo(fun);
 
-				// apply substitution on arguments (for higher-order functions)
-				auto newArgs = ::transform(call->getArgumentList(), [&](const ExpressionPtr& expr) {
-					return (expr.isa<CallExprPtr>() || skip(expr)) ? expr : (*substitution)(expr);
-				});
+				// TODO: apply substitution on arguments (for higher-order functions)
+				auto newArgs = call->getArgumentList();
 
 				// build replacement call
 				NodePtr res = CallExpr::get(mgr, call->getType(), newFun, newArgs);
@@ -100,7 +98,6 @@ namespace transform {
 
 				// continue instantiating nested structures
 				return res->substitute(mgr, *this);
-
 			}
 
 		};

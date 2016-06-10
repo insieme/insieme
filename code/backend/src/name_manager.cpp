@@ -183,7 +183,7 @@ namespace backend {
 		// register string
 		globalScope.names.insert(make_pair(ptr, resName));
 		globalScope.usedNames.insert(resName);
-		
+
 		// return result
 		return resName;
 	}
@@ -256,7 +256,7 @@ namespace backend {
 		if(pos != globalScope.names.end()) { return &(pos->second); }
 
 		// not found
-		return NULL;
+		return nullptr;
 	}
 
 } // end: namespace simple_backend

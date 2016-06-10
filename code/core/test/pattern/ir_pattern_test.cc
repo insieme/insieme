@@ -288,7 +288,7 @@ namespace pattern {
 		{
 			StatementPtr compound = build.compoundStmt();
 			StatementPtr markerStmt = build.markerStmt(compound, 31337);
-		
+
 			TreePattern patternMarkerStmt1 = irp::markerStmt(pattern::any, pattern::any);
 			TreePattern patternMarkerStmt2 = irp::markerStmt(pattern::any, irp::atom(build.uintValue(31337)));
 			TreePattern patternMarkerStmt3 = irp::markerStmt(pattern::any, irp::atom(build.uintValue(42)));
@@ -337,48 +337,19 @@ namespace pattern {
 		EXPECT_TRUE(match);
 		ASSERT_TRUE(match->isVarBound("x"));
 		ASSERT_TRUE(match->isVarBound("y"));
-		EXPECT_EQ(stmt1.getAddressOfChild(0, 0), match->getVarBinding("x").getValue());
-		EXPECT_EQ(stmt1.getAddressOfChild(3, 0, 0), match->getVarBinding("y").getValue());
+		EXPECT_EQ(stmt1.getAddressOfChild(0, 1), match->getVarBinding("x").getValue());
+		EXPECT_EQ(stmt1.getAddressOfChild(3, 0, 1), match->getVarBinding("y").getValue());
 
 		match = pattern2.matchAddress(stmt2);
 		EXPECT_TRUE(match);
-		EXPECT_EQ(stmt2.getAddressOfChild(0, 0), match->getVarBinding("i").getValue());
-		EXPECT_EQ(stmt2.getAddressOfChild(0, 1), match->getVarBinding("x").getValue());
+		EXPECT_EQ(stmt2.getAddressOfChild(0, 1), match->getVarBinding("i").getValue());
+		EXPECT_EQ(stmt2.getAddressOfChild(0, 0, 1), match->getVarBinding("x").getValue());
 		EXPECT_EQ(stmt2.getAddressOfChild(1), match->getVarBinding("y").getValue());
 		EXPECT_EQ(stmt2.getAddressOfChild(2), match->getVarBinding("z").getValue());
 
 		EXPECT_EQ(toString(toVector<NodeAddress>(stmt2.getAddressOfChild(3, 0, 3, 0), stmt2.getAddressOfChild(3, 0, 3, 1))),
 		          toString(match->getVarBinding("b").getList()));
 	}
-
-	// TEST(IRPattern, whileStmt) {
-	//	NodeManager manager;
-	//	auto at = [&manager](string str) { return irp::atom(manager, str); };
-	//	auto ps = [&manager](string str) { return parse::parseStatement(manager, str); };
-	//
-	//	StatementPtr stmt1 = ps(" { decl ref<int<4>>:i = 30; while((i < 40)){ (i++); }; }");
-	//	StatementPtr stmt2 = ps(" while((ref<int<4>>:i < 40)){ { }; { decl int<4>:b = (i++);}; }");
-	//
-	//	auto tree1 = toTree(stmt1);
-	//	auto tree2 = toTree(stmt2);
-	//
-	//	TreePattern pattern1 = irp::compoundStmt(irp::declarationStmt(var("x"), at("30")) << irp::whileStmt(irp::callExpr(irp::literal("int.lt", any),
-	//								irp::callExpr(irp::literal("ref.deref", any), var("x") << *any) << *any), irp::compoundStmt(*any << irp::callExpr(any, var("x") <<
-	//*any))));
-	//	TreePattern pattern2 = irp::whileStmt(irp::callExpr(irp::literal("int.lt", any), irp::callExpr(irp::literal("ref.deref", any), var("x") << *any) <<
-	//*any),
-	//											 aT(irp::declarationStmt(any, aT(var("x")))));
-	//
-	//	/*MatchOpt mo = pattern1->isMatch(tree1);
-	//	if (mo){
-	//		MatchValue mv = mo->getVarBinding("x");
-	//		std::cout << mv.getTree()->getAttachedValue<NodePtr>();
-	//	}*/
-	//
-	//	EXPECT_PRED2(isMatch, pattern1, tree1) << *stmt1;
-	//	EXPECT_PRED2(isMatch, pattern2, tree2) << *stmt2;
-	//}
-
 
 	TEST(IRPattern, AbitrarilyNestedLoop) {
 		// create a pattern for an arbitrarily nested loop
@@ -694,7 +665,7 @@ namespace pattern {
 		ASSERT_TRUE(res3);
 		//	std::cout << "Match: " << *res3 << "\n";
 		EXPECT_EQ("AP(v0)", toString(res3->getVarBinding("x").getValue()));
-		EXPECT_EQ("[AP(int_add(v0, v1)),AP(int_add(v3, v0))]", toString(res3->getVarBinding("y").getList()));
+		EXPECT_EQ("[AP(decl ref<int<'a>,f,f,plain> : v0),AP(decl ref<int<'a>,f,f,plain> : v0)]", toString(res3->getVarBinding("y").getList()));
 
 		//	std::cout << "x=" << res->getVarBinding("x") << "\n";
 		//	std::cout << "y=" << res->getVarBinding("y") << "\n";
@@ -738,12 +709,12 @@ namespace pattern {
 		// match the pattern
 		auto res = pattern.matchPointer(node);
 		ASSERT_TRUE(res);
-		EXPECT_EQ("Match({x=[null,AP(v1),AP(v2),null,null]})", toString(*res));
+		EXPECT_EQ("Match({x=[null,AP(v1),AP(v2)]})", toString(*res));
 
 		// match the pattern to an address
 		auto resA = pattern.matchAddress(NodeAddress(node));
 		ASSERT_TRUE(resA);
-		EXPECT_EQ("Match({x=[null,0-1-0,0-2-0,null,null]})", toString(*resA));
+		EXPECT_EQ("Match({x=[null,0-1-1,0-2-1]})", toString(*resA));
 	}
 
 	TEST(PatternTests, LambdaAddressPattern) {
@@ -773,7 +744,7 @@ namespace pattern {
 		// match the pattern to an address
 		auto resA = pattern.matchAddress(NodeAddress(addresses[0].getRootNode()));
 		ASSERT_TRUE(resA);
-		EXPECT_EQ("Match({x=[null,null,0-2-0,null,null]})", toString(*resA));
+		EXPECT_EQ("Match({x=[null,null,0-2-1]})", toString(*resA));
 	}
 
 } // end namespace pattern

@@ -288,6 +288,16 @@ namespace core {
 			return ret;
 		}
 
+		/**
+		 * Finds all addresses with an appearance of *target* from the given root.
+		 *
+		 * @param target the element that the generated address points to
+		 * @param root the root node of the generated address
+		 * @param dfs tells whether depth-first-search strategy should be used (when true) or
+		 * breadth-first-search (when false)
+		 *
+		 * @returns the address found, or the null address if not possible
+		 */
 		static std::vector<Address<T>> findAll(const Pointer<T>& target, const NodePtr& root, bool dfs = true) {
 			bool visitTypes = (target->getNodeCategory() == NC_Type) || (target->getNodeCategory() == NC_Support) || (target->getNodeCategory() == NC_Value);
 			std::vector<Address<T>> ret;
@@ -296,7 +306,7 @@ namespace core {
 				if(*addr.getAddressedNode() == *target) ret.push_back(addr);
 			};
 
-			if (dfs) visitDepthFirstOnce(Address(root), search, true, visitTypes);
+			if (dfs) visitDepthFirst(Address(root), search, true, visitTypes);
 			else	 visitBreadthFirst(Address(root), search, visitTypes);
 			return ret;
 		}

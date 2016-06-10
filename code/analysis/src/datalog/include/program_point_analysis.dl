@@ -1,19 +1,18 @@
-#pragma once
+.using _ from ProgramPoint
+.using ControlFlow from ControlFlow
 
-#include "program_point.dl"
-#include "control_flow.dl"
 
 .comp ProgramPointAnalysis<ValueType> {
 
 	// --------- interface ----------
-	
+
 
 	// -- the value to be computed by this analysis --
-	.decl value ( s : stmt , e : exec_state , v : ValueType ) output
+	.member value ( s : stmt , e : exec_state , v : ValueType ) output
 
 	// a set of program points not to be crossed by this analysis
-	.decl intercepted ( s : stmt , e : exec_state ) 
-	
+	.member intercepted ( s : stmt , e : exec_state )
+
 	// ------------------------------
 
 	// standard forward

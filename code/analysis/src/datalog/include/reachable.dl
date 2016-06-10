@@ -1,7 +1,5 @@
-#pragma once
-
-#include "forward_decl.dl"
-#include "parent.dl"
+.using ParentOf from Parent
+.using boolean_value from ForwardDecl
 
 
 // marks all reachable statements that may be entered
@@ -17,7 +15,7 @@ ReachableIn( s ) :- Lambda(_,_,_,b), NodeList(b,0,s).
 ReachableIn( e ) :- BindExpr(_,_,e).
 
 // if a parent expression is reachable, so is the child (unless the parent is some control flow construct)
-ReachableIn( e ) :- ReachableIn(p), ParentOf( p, e ), 
+ReachableIn( e ) :- ReachableIn(p), ParentOf( p, e ),
 		!CompoundStmt(p), !IfStmt(p,_,_,_), !LambdaExpr(p,_,_,_), !BindExpr(p,_,_).
 
 // select condition branches in if statements
@@ -34,7 +32,7 @@ ReachableIn( s ) :- ParentOf( c, s ), CompoundStmt(c), NodeList(c,i,s), NodeList
 
 
 // everything except for a if, return, break or continue statement is left once entered
-ReachableOut( s ) :- ReachableIn( s ), !IfStmt(s,_,_,_), !ReturnStmt(s,_,_), !BreakStmt(s), !ContinueStmt(s), !CompoundStmt(s).
+ReachableOut( s ) :- ReachableIn( s ), !IfStmt(s,_,_,_), !ReturnStmt(s,_), !BreakStmt(s), !ContinueStmt(s), !CompoundStmt(s).
 
 // when reaching the last statement of a compound, we reach the end of the compound
 ReachableOut( c ) :- CompoundStmt(c), NodeListLength(c,i), NodeList(c,i-1,l), ReachableOut(l).

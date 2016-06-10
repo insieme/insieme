@@ -305,9 +305,9 @@ namespace omp {
 				} else if(LiteralPtr litFunExp = dynamic_pointer_cast<const Literal>(fun)) {
 					const string& funName = insieme::utils::demangle(litFunExp->getStringValue());
 					if(funName == "omp_get_thread_num") {
-						return build.getThreadId();
+						return build.numericCast(build.getThreadId(), basic.getInt4());
 					} else if(funName == "omp_get_num_threads") {
-						return build.getThreadGroupSize();
+						return build.numericCast(build.getThreadGroupSize(), basic.getInt4());
 					} else if(funName == "omp_get_max_threads") {
 						return build.numericCast(build.getDefaultThreads(), basic.getInt4());
 					} else if(funName == "omp_get_wtime") {
@@ -559,7 +559,7 @@ namespace omp {
 				VariablePtr pVar = build.variable(expType);
 				publicToPrivateMap[varExp] = pVar;
 				privateToPublicMap[pVar] = varExp;
-				DeclarationStmtPtr decl = build.declarationStmt(pVar, pVar);
+				DeclarationStmtPtr decl = build.declarationStmt(pVar);
 				if(contains(firstPrivates, varExp)) {
 					// make sure to actually get *copies* for firstprivate initialization, not copies of references
 					if(core::analysis::isRefType(expType)) {
@@ -702,7 +702,7 @@ namespace omp {
 			// if we don't find any orderedCountLit literals, we don't have to do anything
 			if(pushMap.empty()) { return origStmt; }
 			// create variable outside the parallel
-			auto countVarDecl = build.declarationStmt(orderedCountVar, orderedCountVar);
+			auto countVarDecl = build.declarationStmt(orderedCountVar);
 			// push ordered variable to where it is needed
 			auto newStmt = transform::pushInto(nodeMan, pushMap).as<CompoundStmtPtr>();
 			// build new compound and return it
@@ -776,7 +776,7 @@ namespace omp {
 			// implement single as pfor with 1 item
 			auto pforLambdaParams = toVector(build.variable(basic.getInt4()), build.variable(basic.getInt4()), build.variable(basic.getInt4()));
 			auto body = transform::extractLambda(nodeMan, stmtNode, pforLambdaParams);
-			auto pfor = build.pfor(body, build.intLit(0), build.intLit(1));
+			auto pfor = build.pfor(body, build.intLit(0), build.intLit(1), build.intLit(1));
 			replacements.push_back(pfor);
 			if(!singleP->hasNoWait()) { replacements.push_back(build.barrier()); }
 			return build.compoundStmt(replacements);

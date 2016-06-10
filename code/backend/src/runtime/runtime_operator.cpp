@@ -320,7 +320,7 @@ namespace runtime {
 		table[instExt.getInstrumentationInitRegions()] = OP_CONVERTER {
 			// just add info to context init
 			ContextHandlingFragment::get(context.getConverter())
-			    ->addInitExpression(format("    context->num_regions = %s;\n", call[0].as<core::LiteralPtr>()->getStringValue()));
+			    ->addInitExpression(format("    context->num_regions = %s;\n", core::transform::extractInitExprFromDecl(call[0]).as<core::LiteralPtr>()->getStringValue()));
 			return NULL; // this is not producing an expression
 		};
 

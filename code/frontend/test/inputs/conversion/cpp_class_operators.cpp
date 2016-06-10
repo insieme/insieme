@@ -82,14 +82,24 @@ def struct IMP_RefOpTest {
 	}
 };)"
 
+struct S {
+	int a;
+	~S() {
+		5;
+	}
+};
+
+void j(S& s) {
+	s = {5};
+}
 
 int main() {
 	; // this is required because of the clang compound source location bug
 
 	// call copy assignment
 	#pragma test expect_ir(SIMPLEST_IR,R"( {
-		var ref<IMP_Simplest,f,f,plain> v0 = IMP_Simplest::(v0);
-		var ref<IMP_Simplest,f,f,plain> v1 = IMP_Simplest::(v1);
+		var ref<IMP_Simplest,f,f,plain> v0 = IMP_Simplest::(ref_decl(type_lit(ref<IMP_Simplest,f,f,plain>)));
+		var ref<IMP_Simplest,f,f,plain> v1 = IMP_Simplest::(ref_decl(type_lit(ref<IMP_Simplest,f,f,plain>)));
 		v0.IMP__operator_assign_(ref_kind_cast(v1, type_lit(cpp_ref))) materialize;
 	} )")
 	{
@@ -99,7 +109,7 @@ int main() {
 
 	// call move assignment
 	#pragma test expect_ir(SIMPLEST_IR,R"( {
-		var ref<IMP_Simplest,f,f,plain> v0 = IMP_Simplest::(v0);
+		var ref<IMP_Simplest,f,f,plain> v0 = IMP_Simplest::(ref_decl(type_lit(ref<IMP_Simplest,f,f,plain>)));
 		v0.IMP__operator_assign_(ref_kind_cast(IMP_Simplest::(ref_temp(type_lit(IMP_Simplest))), type_lit(cpp_rref))) materialize;
 	} )")
 	{
@@ -109,8 +119,8 @@ int main() {
 
 	// addition
 	#pragma test expect_ir(ADDOPTEST_IR,R"( {
-		var ref<IMP_AddOpTest,f,f,plain> v0 = IMP_AddOpTest::(v0);
-		var ref<IMP_AddOpTest,f,f,plain> v1 = IMP_AddOpTest::(v1);
+		var ref<IMP_AddOpTest,f,f,plain> v0 = IMP_AddOpTest::(ref_decl(type_lit(ref<IMP_AddOpTest,f,f,plain>)));
+		var ref<IMP_AddOpTest,f,f,plain> v1 = IMP_AddOpTest::(ref_decl(type_lit(ref<IMP_AddOpTest,f,f,plain>)));
 		v0.IMP__operator_assign_(ref_kind_cast(v0.IMP__operator_plus_(ref_kind_cast(v1, type_lit(cpp_ref))) materialize, type_lit(cpp_rref))) materialize;
 	} )")
 	{
@@ -120,8 +130,8 @@ int main() {
 
 	// external addition
 	#pragma test expect_ir(ADDOPEXTERNTEST_IR,R"( {
-		var ref<IMP_AddOpExternTest,f,f,plain> v0 = IMP_AddOpExternTest::(v0);
-		var ref<IMP_AddOpExternTest,f,f,plain> v1 = IMP_AddOpExternTest::(v1);
+		var ref<IMP_AddOpExternTest,f,f,plain> v0 = IMP_AddOpExternTest::(ref_decl(type_lit(ref<IMP_AddOpExternTest,f,f,plain>)));
+		var ref<IMP_AddOpExternTest,f,f,plain> v1 = IMP_AddOpExternTest::(ref_decl(type_lit(ref<IMP_AddOpExternTest,f,f,plain>)));
 		v0.IMP__operator_assign_(ref_kind_cast(IMP__operator_plus_(ref_kind_cast(v0, type_lit(cpp_ref)), ref_kind_cast(v1, type_lit(cpp_ref))) materialize, type_lit(cpp_rref))) materialize;
 	} )")
 	{
@@ -130,13 +140,33 @@ int main() {
 	}
 
 	#pragma test expect_ir(REFOPTEST_IR,R"( {
-		var ref<IMP_RefOpTest,f,f,plain> v0 = IMP_RefOpTest::(v0);
-		var ref<IMP_RefOpTest,f,f,plain> v1 = IMP_RefOpTest::(v1);
+		var ref<IMP_RefOpTest,f,f,plain> v0 = IMP_RefOpTest::(ref_decl(type_lit(ref<IMP_RefOpTest,f,f,plain>)));
+		var ref<IMP_RefOpTest,f,f,plain> v1 = IMP_RefOpTest::(ref_decl(type_lit(ref<IMP_RefOpTest,f,f,plain>)));
 		v0.IMP__operator_plus_(ref_kind_cast(v1, type_lit(cpp_ref))) materialize .IMP__operator_plus_(ref_kind_cast(v1, type_lit(cpp_ref))) materialize ;
 	} )")
 	{
 		RefOpTest a, b;
 		a + b + b;
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_S {
+			a : int<4>;
+			dtor function () {
+				5;
+			}
+		};
+		def IMP_j = function (v0 : ref<IMP_S,f,f,cpp_ref>) -> unit {
+			ref_kind_cast(v0, type_lit(plain)).IMP__operator_assign_(ref_kind_cast(<ref<IMP_S,f,f,plain>>(ref_temp(type_lit(IMP_S))) {5}, type_lit(cpp_ref))) materialize ;
+		};
+		{
+			var ref<IMP_S,f,f,plain> v0 = IMP_S::(ref_decl(type_lit(ref<IMP_S,f,f,plain>)));
+			IMP_j(ref_kind_cast(v0, type_lit(cpp_ref)));
+		}
+	)")
+	{
+		S a;
+		j(a);
 	}
 
 	return 0;
