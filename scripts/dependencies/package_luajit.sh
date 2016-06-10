@@ -6,8 +6,6 @@ FILE="LuaJIT-$VERSION.tar.gz"
 URL="http://www.insieme-compiler.org/ext_libs/$FILE"
 SHA256SUM="55be6cb2d101ed38acca32c5b1f99ae345904b365b642203194c585d27bebd79"
 
-DEPENDS="gcc"
-
 pkg_extract() {
 	tar xf "$FILE"
 	mv "LuaJIT-$VERSION" "$PACKAGE"

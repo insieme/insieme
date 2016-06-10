@@ -6,8 +6,6 @@ FILE="$PACKAGE.tar.gz"
 URL="http://www.insieme-compiler.org/ext_libs/$FILE"
 SHA256SUM="537bc209ad05050399d5f268ba8f40e499f457cab9b3503f57600f9893819195"
 
-DEPENDS="gcc"
-
 pkg_configure() {
 	cd src
 	./configure --prefix="$PREFIX/$PACKAGE" --with-tests=ctests

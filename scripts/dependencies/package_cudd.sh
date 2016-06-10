@@ -6,8 +6,6 @@ FILE="$PACKAGE.tar.gz"
 URL="http://www.insieme-compiler.org/ext_libs/$FILE"
 SHA256SUM="9dd7c9926258e2557bbd61328d0e685b7ac508af300cc54175b5dec8138a7175"
 
-DEPENDS="gcc"
-
 pkg_configure() {
 	true
 }

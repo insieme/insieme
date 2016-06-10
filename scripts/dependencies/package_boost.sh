@@ -6,10 +6,6 @@ FILE="${NAME}_${VERSION//./_}.tar.bz2"
 URL="http://www.insieme-compiler.org/ext_libs/$FILE"
 SHA256SUM="c9ace2b8c81fa6703d1d17c7e478de3bc51101c5adbdeb3f6cb72cf3045a8529"
 
-DEPENDS="gcc"
-
-export PATH="$PREFIX/gcc-latest/bin:$PATH"
-
 BOOST_LIBS="filesystem,program_options,random,system,regex,thread,serialization,date_time,wave"
 
 pkg_extract() {

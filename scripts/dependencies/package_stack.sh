@@ -10,7 +10,7 @@ FILE_PB="$PACKAGE-linux-x86_64.tar.gz"
 URL_PB="https://github.com/commercialhaskell/stack/releases/download/v$VERSION/$FILE_PB"
 SHA256SUM_PB="fedf161622170801f29be5d5096ea30e253b2bba54f185607f568c44ee151e5a"
 
-DEPENDS="gcc gmp zlib"
+DEPENDS="gmp zlib"
 
 export CPATH="$PREFIX/gmp-latest/include:$PREFIX/zlib-latest/include"
 export LIBRARY_PATH="$PREFIX/gmp-latest/lib:$PREFIX/zlib-latest/lib"

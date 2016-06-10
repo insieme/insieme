@@ -1,13 +1,15 @@
 # default location
 export PREFIX="${PREFIX:-$HOME/libs}"
 
-# default environment variables
-export CC="$PREFIX/gcc-latest/bin/gcc"
-export CXX="$PREFIX/gcc-latest/bin/g++"
+# default compile flags
 export CFLAGS="-mtune=native -O3"
 export CXXFLAGS="-mtune=native -O3"
 export LDLAGS="-mtune=native -O3"
-export LD_LIBRARY_PATH="$PREFIX/gcc-latest/lib64"
+
+# default compiler (system)
+#export CC="$PREFIX/gcc-latest/bin/gcc"
+#export CXX="$PREFIX/gcc-latest/bin/g++"
+#export LD_LIBRARY_PATH="$PREFIX/gcc-latest/lib64"
 
 # parallel build
 export SLOTS="${SLOTS:-$(nproc)}"

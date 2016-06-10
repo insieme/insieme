@@ -6,11 +6,11 @@ FILE="$PACKAGE.zip"
 URL="http://www.dps.uibk.ac.at/~csaf7445/ext_libs/$FILE"
 SHA256SUM="35d4f7d8db604dfa1ba785fce3cefd439838f290d2618281a85ba79819ec19bc"
 
-DEPENDS="gcc autoconf automake bison flex libtool boost"
+DEPENDS="bison flex boost"
 
 export PATH="$PREFIX/autoconf-latest/bin:$PREFIX/automake-latest/bin:$PATH"
-export PATH="$PREFIX/bison-latest/bin:$PREFIX/flex-latest/bin:$PATH"
 export PATH="$PREFIX/libtool-latest/bin:$PATH"
+export PATH="$PREFIX/bison-latest/bin:$PREFIX/flex-latest/bin:$PATH"
 
 export BOOST_ROOT="$PREFIX/boost-latest"
 

@@ -5,5 +5,3 @@ PACKAGE="$NAME-$VERSION"
 FILE="$PACKAGE.tar.gz"
 URL="http://www.insieme-compiler.org/ext_libs/$FILE"
 SHA256SUM="71dd1b58158c935027104c830c019e48c73250708af5def45ea256c789318948"
-
-DEPENDS="gcc"
