@@ -97,6 +97,21 @@ namespace core {
 		//	EXPECT_EQ( f5->getValue(), f5_s->getValue() );
 	}
 
+	TEST(ExpressionsTest, Expressions) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+		{
+			auto expr = builder.expressions(ExpressionList());
+			EXPECT_EQ("[]", toString(*expr));
+		}
+		{
+			auto expr1 = builder.parseExpr("1");
+			auto expr2 = builder.parseExpr("2");
+			auto exprList = builder.expressions(toVector(expr1, expr2));
+			EXPECT_EQ("[1,2]", toString(*exprList));
+		}
+	}
+
 	TEST(ExpressionsTest, Variable) {
 		NodeManager manager;
 
@@ -137,17 +152,17 @@ namespace core {
 		basicExprTests(more, second, toVector<NodePtr>(second, more->getExpressions()));
 	}
 
-TEST(ExpressionTest, Parameters) {
-	NodeManager manager;
-	IRBuilder builder(manager);
+	TEST(ExpressionTest, Parameters) {
+		NodeManager manager;
+		IRBuilder builder(manager);
 
-	auto root = builder.parseStmt(""
-	                              "alias int = int<4>;"
-	                              "def f = (a : int, b : int) -> int { return 1; };"
-	                              "f(1,2);");
+		auto root = builder.parseStmt(""
+									  "alias int = int<4>;"
+									  "def f = (a : int, b : int) -> int { return 1; };"
+									  "f(1,2);");
 
-	EXPECT_EQ("AP([v1,v2])", toString(root.as<CallExprPtr>()->getFunctionExpr().as<LambdaExprPtr>()->getParameterList()));
-}
+		EXPECT_EQ("AP([v1,v2])", toString(root.as<CallExprPtr>()->getFunctionExpr().as<LambdaExprPtr>()->getParameterList()));
+	}
 
 	TEST(ExpressionsTest, Lambda) {
 		NodeManager manager;
