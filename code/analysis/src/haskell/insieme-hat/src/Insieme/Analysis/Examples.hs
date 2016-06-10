@@ -39,9 +39,9 @@ findDeclr start tree = evalState (findDeclr start) Map.empty
 
     declstmt :: NodeAddress -> State NodeCache (Maybe NodeAddress)
     declstmt addr = resolvememo addr >>= return . \case
-        Just (Node IR.DeclarationStmt [v, _]) ->
+        Just (Node IR.DeclarationStmt [_, v]) ->
             if v == org
-               then Just $ goDown 0 $ addr
+               then Just $ goDown 1 $ addr
                else Nothing
         _ -> Nothing
 
