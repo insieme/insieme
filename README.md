@@ -1,129 +1,117 @@
 # Insieme: Compiler and Runtime Infrastructure
-The Insieme compiler is a source-to-source compiler for C/C++ that supports portable parallel abstractions (OpenMP, MPI and OpenCL) for heterogeneous multi-core architectures. More details are available [here](http://insieme-compiler.org/mission.html).
+
+The Insieme compiler is a source-to-source compiler for C/C++ that supports
+portable parallel abstractions (OpenMP, MPI and OpenCL) for heterogeneous
+multi-core architectures. More details are available
+[here](http://insieme-compiler.org/mission.html).
 
 ## *IMPORTANT NOTE*
-The master branch of Insieme is currently undergoing severe changes and refactoring. Until these changes are complete, several features will be missing and all interfaces are in flux. If you just want to try Insieme as a user or want to do research building on top of its infrastructure please use the **inspire_1.3** branch.
+
+The master branch of Insieme is currently undergoing severe changes and
+refactoring. Until these changes are complete, several features will be missing
+and all interfaces are in flux. If you just want to try Insieme as a user or
+want to do research building on top of its infrastructure please use the
+**inspire_1.3** branch.
 
 ## Directory Structure
+
 Insieme contains 4 main sub-directories:
 
-* insieme
-  * /code -- Insieme compiler implementation
-  * /docs -- Insieme developer documentation
-  * /scripts -- Insieme environment installation scripts
-  * /test -- Insieme integration tests
+- `/code`    --- Insieme compiler implementation
+- `/docs`    --- Insieme developer documentation
+- `/scripts` --- Insieme utility scripts
+- `/test`    --- Insieme integration tests
 
-## Installation 
-Insieme is written in C++11 and relies on several third-party libraries: 
+## Installation
 
-### List of Required Libraries and Software
-Name 		| Version | Purpose |
---------|---------|------------|
-[G++](http://gcc.gnu.org/gcc-5/)	                                | >= 5.1   | Compiler |
-[CMake](http://www.cmake.org/)                                      | >= 3.2.x | Build System |
-[Google Test](https://code.google.com/p/googletest/)                | >= 1.7   | Unit testing - is installed/built by us - no need to install it|
-[Boost](http://www.boost.org/users/history/version_1_50_0.html)     | >= 1.50   | Utilities, regex, filesystem, program options|
-[LLVM/Clang](http://llvm.org/) 	                                    | = 3.6.2 ([patch](https://github.com/insieme/insieme/blob/master/scripts/patches/insieme-clang-3.6.2.patch)) | C/C++ frontend | 
-[CUDD](http://vlsi.colorado.edu/~fabio/CUDD/)	  	                  | >= 2.4.2 | Manipulation of decision diagrams |
-[LuaJIT](http://luajit.org/)                                  	    | >= 2.0.0 | Scripting |
-[Bison](https://www.gnu.org/software/bison/)                        | >= 3.0   | Inspire language parser |
-[Flex](http://flex.sourceforge.net/)                                | >= 2.5   | Inspire language scanner |
-[Ruby](http://www.ruby-lang.org/en/)                                | >= 2.0   | Scripting |
+### Dependencies
 
-### List of Optional Libraries and Software
-Name 		| Version | Purpose |
---------|---------|------------|
-[PAPI](http://icl.cs.utk.edu/papi/)	                                | >= 5.4.0 | Runtime system, for hardware information and event counters |
-[hwloc](http://www.open-mpi.org/projects/hwloc/)	                  | >= 1.10  | Runtime system, for system architecture information |
-[valgrind](http://valgrind.org/)	                  | >= 3.10  | Memory checks |
-
-### Preparing the Environment
-You can either install those packages manually (or via a package manager) or use the provided utility which takes care of building all dependencies from scratch and applies patches. 
-```
-cd scripts
-make PREFIX=/where/to/install 
-```
-All libraries will be installed in ``$PREFIX`` and a symbolic link is created with postfix '-latest' pointing to the newest installed version of a library (which simplifies the following CMake configuration steps). By default ``PREFIX=~/lib``; additionally the script performs a parallel build (``make -j$SLOTS``) using all availabe cores in the host architecture. You can change this behaviour by passing a different value for ``SLOTS`` to ``make``.
+A list of depdencies together with an installer and patches is provided inside
+`/scripts/dependencies`. This directory also houses a README which should be
+consulted when using Insieme for the first time.
 
 ### Building Insieme
-Insieme's build system is based on CMake. We assume that all dependencies installed in the same directory: ``$HOME/libs``
 
-```
-mkdir build
-cd build
+Insieme's build system is based on CMake. We assume that the environemnt is
+setup in the directory pointed to by `$INSIEME_LIBS_HOME` using the provided
+installer.
 
-# SET ENVIRONMENT 
-export PREFIX=$HOME/libs
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/papi-latest/lib:$LD_LIBRARY_PATH
-export PATH=$PREFIX/cmake-latest/bin:$PATH
+    $ export INSIEME_LIBS_HOME="$HOME/libs"
+    $ mkdir build
+    $ cd build
+    $ $INSIEME_LIBS_HOME/cmake-latest/bin/cmake ..
 
-# CREATE PROJECT MAKEFILE
-CXX=$PREFIX/gcc-latest/bin/g++ INSIEME_LIBS_HOME=$PREFIX $PREFIX/cmake-latest/bin/cmake ..
-```
+Some features of the compiler can be enabled / disabled by passing following
+options (as argument) to the `cmake` command:
 
-Several other options can be provided to enable/disable some of the compiler features:
-- ``-DDOCS=ON|OFF`` -- Enable/disable generation of documentation
-- ``-DCMAKE_BUILD_TYPE=Debug|Release|RelWithAsserts`` -- Set the build to be in Debug, Release or Release with asserts mode
-- ``-DUSE_ENERGY=ON|OFF`` -- Enable/disable energy measurement support
-- ``-DCONDUCT_MEMORY_CHECKS=ON|OFF`` -- Enable/disable valgrind memory checks for most unit tests
-(note: these variables must be passed as parameters to the ``cmake`` command, not set as environment variables)
+- Enable/disable generation of documentation
+    - `-DDOCS=ON|OFF`
+- Set the build to be in Debug, Release or Release with asserts mode
+    - `-DCMAKE_BUILD_TYPE=Debug|Release|RelWithAsserts`
+- Enable/disable energy measurement support
+    - `-DUSE_ENERGY=ON|OFF`
+- Enable/disable valgrind memory checks for most unit tests
+    - `-DCONDUCT_MEMORY_CHECKS=ON|OFF`
 
-If successful, CMake produces the set of Makefiles required to build the Insieme project. 
+If successful, CMake produces the set of Makefiles required to build the
+Insieme project.
 
-```
-make -j2 # Builds using two parallel jobs
-```
+    $ make -j2              # Builds using two parallel jobs
 
-Or you can alternatively change into a subfolder and only build that particular module of the compiler
-```
-cd core
-make
-```
+Or you can alternatively change into a subfolder and only build that particular
+module of the compiler.
+
+    $ cd core
+    $ make
 
 ### Running Unit Tests
 
-For certain unit- and integration tests tests to run, the environment has to be prepared (e.g. precompiling libraries to link against). This can be achieved by executing the following command:
-```
-./code/driver/integration_tests --preprocessing
-```
+For certain unit- and integration tests to run, the environment has to be
+prepared (e.g. precompiling libraries to link against). This can be achieved by
+executing the following command:
+
+    $ ./code/driver/integration_tests --preprocessing
 
 Unit tests can then be executed with:
-```
-make test ARGS=-j2 # Runs all unit tests using two parallel jobs
-```
+
+    $ make test ARGS=-j2    # Runs all unit tests using two parallel jobs
 
 or directly via CTest:
-```
-ctest -j2 # Runs all unit tests using two parallel jobs
-```
+
+    $ ctest -j2             # Runs all unit tests using two parallel jobs
 
 ### Running Integration Tests
 
-Integration tests can be executed using the custom runner compiled in the build directory:
-```
-./code/driver/integration_tests
-```
-Integration tests can be executed in parallel (``-w SLOTS``), and multiple times (``-r N``). For a full list of options use the ``-h`` argument or refer to the Insieme developer documentation. The mock run (``-m``) will give you an idea of the actual commands being invoked.
+Integration tests can be executed using the custom runner compiled in the build
+directory:
+
+    $ ./code/driver/integration_tests
+
+Integration tests can be executed in parallel (`-w SLOTS`), and multiple times
+(`-r N`). For a full list of options use the `-h` argument or refer to the
+Insieme developer documentation. The mock run (`-m`) will give you an idea of
+the actual commands being invoked.
 
 To clean up files generated in the preprocessing step, simply run:
-```
-./code/driver/integration_tests --postprocessing
-```
 
+    $ ./code/driver/integration_tests --postprocessing
 
-If everything was successful...
-**congratulations!**
-**You can start enjoying Insieme now!**
+If everything was successful... **congratulations! You can start enjoying
+Insieme now!**
 
 ### Compiling Application Codes
 
-The main executable provided by the Insieme framework is called ``insiemecc``. It can be used to replace e.g. occurrences of another compiler such as ``gcc`` in makefiles. It supports both source-to-source-only compilation, as well as full compilation by calling a backend compiler. For further information on its features and options, please refer to:
-```
-./code/driver/insiemecc --help
-```
+The main executable provided by the Insieme framework is called `insiemecc`. It
+can be used to replace e.g. occurrences of another compiler such as `gcc` in
+makefiles. It supports both source-to-source-only compilation, as well as full
+compilation by calling a backend compiler. For further information on its
+features and options, please refer to:
+
+    $ ./code/driver/insiemecc --help
 
 ### Installation
 
-Please, understand that the install command is not implemented since this is an on-going development framework.
-Instead of polluting your local setup, we prefer to use Insieme from the build directory.
-Install scripts may be provided in future releases.
+Please, understand that the install command is not implemented since this is an
+on-going development framework. Instead of polluting your local setup, we
+prefer to use Insieme from the build directory. Install scripts may be provided
+in future releases.

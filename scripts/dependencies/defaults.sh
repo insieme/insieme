@@ -6,7 +6,7 @@ export CFLAGS="-mtune=native -O3"
 export CXXFLAGS="-mtune=native -O3"
 export LDLAGS="-mtune=native -O3"
 
-# default compiler (system)
+# override compiler
 #export CC="$PREFIX/gcc-latest/bin/gcc"
 #export CXX="$PREFIX/gcc-latest/bin/g++"
 #export LD_LIBRARY_PATH="$PREFIX/gcc-latest/lib64"
