@@ -60,12 +60,16 @@ macro(souffle_run_dough input_dir output_dir)
 		set(dough_output_files ${dough_output_files} ${output_dir}/include/${analysis_name}.dl)
 	endforeach()
 
+	# Add raw dls to dependencies
+	set(raw_datalog_files ${raw_datalog_files} ${datalog_analysises_raw_dls} ${datalog_analysises_raw_include_dls})
+
 	# Execute on given input dir
 	add_custom_command(
 		COMMAND ${souffle_dough}
 		ARGS ${input_dir} ${output_dir}
 		COMMENT "Executing Dough, the Soufflé preprocessor"
 		WORKING_DIRECTORY ${input_dir}
+		DEPENDS ${raw_datalog_files}
 		OUTPUT ${dough_output_files}
 	)
 
@@ -94,16 +98,13 @@ macro(souffle_generate_cpp souffle_input_path souffle_dl_target souffle_include_
 		file(GLOB include_dl_dependencies ${souffle_include_path}/*.dl)
 	endif()
 
-	# Add raw dls to dependencies
-	set(include_dl_dependencies ${include_dl_dependencies} ${datalog_analysises_raw_dls} ${datalog_analysises_raw_include_dls})
-
 	# Custom command to compile DL files into CPP files using Soufflé
 	add_custom_command(
 		SOURCE ${souffle_input_file}
 		COMMAND ${souffle_binary}
 		ARGS -g ${souffle_output_file}.h ${souffle_input_file} ${include_argument}
 		COMMENT "Generating compiled soufflé datalog: ${souffle_dl_target}.h"
-		DEPENDS ${souffle_input_file} ${include_dl_dependencies}
+		DEPENDS ${souffle_input_file} ${dough_output_files}
 		IMPLICIT_DEPENDS C ${souffle_input_file}
 		WORKING_DIRECTORY ${souffle_output_path}
 		OUTPUT ${souffle_output_file}.h
