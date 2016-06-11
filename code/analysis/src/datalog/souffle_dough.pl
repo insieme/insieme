@@ -52,12 +52,12 @@ foreach my $filename (<*.$file_ext>) {
 		# Create mangles
 		foreach my $decl (@decls) {
 			my $new_decl = create_mangle($filename, $decl);
-			s/([^\w]?)$decl([^\w]+)/$1$new_decl$2/g foreach @lines;
+			s/(^|[\W])$decl([^\w]+)/$1$new_decl$2/g foreach @lines;
 		}
 		foreach my $init (@inits) {
 			my $new_init = create_mangle($filename, $init);
 			s/(\.$inittoken\s+)$init(\s*=\s*\w+)/$1$new_init$2/g foreach @lines;
-			s/([^\w]?)$init(\.\w+\s*\()/$1$new_init$2/g foreach @lines;
+			s/([^|\W]?)$init(\.\w+\s*\()/$1$new_init$2/g foreach @lines;
 		}
 	}
 
