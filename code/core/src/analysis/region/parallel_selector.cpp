@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -47,10 +47,10 @@ namespace core {
 namespace analysis {
 namespace region {
 
-	RegionList ParallelSelector::getRegions(const core::NodePtr& node) const {
+	RegionList ParallelSelector::getRegions(const core::NodeAddress& code) const {
 		RegionList res;
-		auto parallel = node->getNodeManager().getLangExtension<lang::ParallelExtension>().getParallel();
-		core::visitDepthFirst(core::NodeAddress(node), [&](const core::CallExprAddress& cur) -> bool {
+		auto parallel = code->getNodeManager().getLangExtension<lang::ParallelExtension>().getParallel();
+		core::visitDepthFirst(code, [&](const core::CallExprAddress& cur) -> bool {
 			if(*cur.getAddressedNode()->getFunctionExpr() != *parallel) { return false; }
 
 			core::JobExprAddress job = cur->getArgument(0).as<core::JobExprAddress>();
@@ -58,7 +58,7 @@ namespace region {
 
 			if(addr->getNodeType() == core::NT_BindExpr) { addr = addr.as<core::BindExprAddress>()->getCall()->getFunctionExpr(); }
 
-			if(addr->getNodeType() == core::NT_LambdaExpr) { res.push_back(addr.as<core::LambdaExprAddress>()->getBody()); }
+			if(addr->getNodeType() == core::NT_LambdaExpr) { res.push_back(Region(addr.as<core::LambdaExprAddress>()->getBody()));  }
 
 			return true;
 

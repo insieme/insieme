@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -180,7 +180,7 @@ namespace insieme {
 					}
 				};
 
-				// A constant value - that is lazyly evaluated
+				// A constant value - that is lazily evaluated
 				struct LazyConstant : public TreePattern {
 					typedef std::function<core::NodePtr(core::NodeManager&)> factory_type;
 
@@ -1419,28 +1419,29 @@ namespace insieme {
 				if(!pattern.mayBeType && isTypeOrValueOrParam(tree)) { return false; }
 
 				// use cache if possible
-				if(pattern.isVariableFree) {
-					CachedMatchResult cachRes = context.cachedMatch(pattern, tree);
-					if(cachRes != Unknown) {
-						bool res = (cachRes == Yes) && delayedCheck(context);
-						if(DEBUG) {
-							std::cout << "Matching " << pattern << " against " << tree << " with context " << context << " ... - from cache: " << res << "\n";
-						}
-						return res;
-					}
+				// TODO: re-enable, find a better solution of disabling/enabling pattern matcher cache
+				//if(pattern.isVariableFree) {
+				//	CachedMatchResult cachRes = context.cachedMatch(pattern, tree);
+				//	if(cachRes != Unknown) {
+				//		bool res = (cachRes == Yes) && delayedCheck(context);
+				//		if(DEBUG) {
+				//			std::cout << "Matching " << pattern << " against " << tree << " with context " << context << " ... - from cache: " << res << "\n";
+				//		}
+				//		return res;
+				//	}
 
-					// resolve without delayed checks and save result
-					std::function<bool(MatchContext<T>&)> accept = [](MatchContext<T>& context) { return true; };
-					bool res = match_internal(pattern, context, tree, accept);
-					context.addToCache(pattern, tree, res);
+				//	// resolve without delayed checks and save result
+				//	std::function<bool(MatchContext<T>&)> accept = [](MatchContext<T>& context) { return true; };
+				//	bool res = match_internal(pattern, context, tree, accept);
+				//	context.addToCache(pattern, tree, res);
 
-					// return result + delayed checks
-					res = res && delayedCheck(context);
-					if(DEBUG) {
-						std::cout << "Matching " << pattern << " against " << tree << " with context " << context << " ... - added to cache: " << res << "\n";
-					}
-					return res;
-				}
+				//	// return result + delayed checks
+				//	res = res && delayedCheck(context);
+				//	if(DEBUG) {
+				//		std::cout << "Matching " << pattern << " against " << tree << " with context " << context << " ... - added to cache: " << res << "\n";
+				//	}
+				//	return res;
+				//}
 
 				// for all the rest, use non-cached inner implementation
 				bool res = match_internal(pattern, context, tree, delayedCheck);

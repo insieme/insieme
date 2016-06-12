@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -173,14 +173,23 @@ METRIC(PAPI_VEC_DP, "PAPI_VEC_DP", unit, none);
 
 // derived metrics
 // TODO: placeholder, needs to be fixed with RAPL on kernels newer than 3.5
-METRIC(TOTAL_ENERGY, "total_energy", j, none);
+METRIC(TOTAL_CPU_ENERGY,			"total_cpu_energy",			j,			sum(Metric::CPU_ENERGY));
 METRIC(TOTAL_RESOURCE_USAGE, "total_resource_usage", unit, none);
-// METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(Metric::WALL_TIME));
-// METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(Metric::CPU_TIME));
-// METRIC(NUM_EXEC,				"total_num_exec",			unit,		sum(Metric::NUM_EXEC));
+METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(Metric::WALL_TIME));
+METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(Metric::CPU_TIME));
+METRIC(TOTAL_NUM_EXEC,				"total_num_exec",			unit,		sum(Metric::NUM_EXEC));
+
+METRIC(TOTAL_PAPI_TOT_INS,			"total_papi_tot_ins",		unit,		sum(Metric::PAPI_TOT_INS));
+METRIC(TOTAL_PAPI_BR_INS,			"total_papi_br_ins",		unit,		sum(Metric::PAPI_BR_INS));
+METRIC(TOTAL_PAPI_L3_TCM,			"total_papi_l3_tcm",		unit,		sum(Metric::PAPI_L3_TCM));
+METRIC(TOTAL_PAPI_L2_TCM,			"total_papi_l2_tcm",		unit,		sum(Metric::PAPI_L2_TCM));
+METRIC(TOTAL_PAPI_STL_ICY,			"total_papi_stl_icy",		unit,		sum(Metric::PAPI_STL_ICY));
 
 METRIC(AVG_WALL_TIME, "avg_wall_time", ns, div(Metric::WALL_TIME, Metric::NUM_EXEC));
 METRIC(AVG_CPU_TIME, "avg_cpu_time", ns, div(Metric::CPU_TIME, Metric::NUM_EXEC));
+
+METRIC(TOTAL_AVG_WALL_TIME,			"total_avg_wall_time",		ns,			div(Metric::TOTAL_WALL_TIME, Metric::TOTAL_NUM_EXEC));
+METRIC(TOTAL_AVG_CPU_ENERGY,		"total_avg_cpu_energy",		j,			div(Metric::TOTAL_CPU_ENERGY, Metric::TOTAL_NUM_EXEC));
 
 METRIC(PARALLELISM, "parallelism", unit, div(Metric::CPU_TIME, Metric::WALL_TIME));
 // METRIC(AVG_EFFICIENCY,				"avg_efficiency",			unit,		avg(l_div(l_div(Metric::CPU_TIME, Metric::WALL_TIME), Metric::NUM_WORKERS)));
