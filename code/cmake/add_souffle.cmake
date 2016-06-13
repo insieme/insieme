@@ -20,7 +20,7 @@ macro(configure_souffle)
 	include_directories(SYSTEM ${souffle_output_base})
 
 	# Find the Dough script, a preprocessor script
-	set(souffle_dough ${insieme_code_dir}/analysis/src/datalog/souffle_dough.pl)
+	set(souffle_dough ${insieme_code_dir}/analysis/src/datalog/souffle_dough.rb)
 
 	# Find Soufflé installation directory
 	set(souffle_home $ENV{INSIEME_LIBS_HOME}/souffle-latest CACHE PATH "Souffle Home Directory")
