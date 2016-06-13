@@ -62,7 +62,7 @@ namespace measure {
 	class Metric;
 	typedef const Metric* MetricPtr;
 
-	class MeasurementSetup;
+	struct MeasurementSetup;
 
 	// a type definition for the type used to index regions
 	typedef unsigned region_id;
