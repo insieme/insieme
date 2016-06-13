@@ -41,18 +41,19 @@
 
 #include <boost/filesystem.hpp>
 
-#include "insieme/driver/measure/measure.h"
-#include "insieme/utils/logging.h"
-
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/parallel.h"
+#include "insieme/core/printer/error_printer.h"
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/driver/measure/measure.h"
+
+#include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
-#include "insieme/core/checks/full_check.h"
-#include "insieme/core/printer/error_printer.h"
 
 namespace insieme {
 namespace driver {
@@ -61,9 +62,15 @@ namespace measure {
 	using namespace std;
 	using namespace core;
 
+
+	// re-use node manager to increase testing speed
+	NodeManager manager;
+	// use non-optimizing backend compiler to increase compilation speed
+	MeasurementSetup setup = getDefaultMeasurementSetup().withCompiler(utils::compiler::Compiler::getDefaultC99Compiler());
+
+
 	TEST(Measuring, MeasureExecutionTime) {
 		// create a small example code fragment
-		NodeManager manager;
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
 		                                      "	var ref<int<4>> sum = 0;"
@@ -77,16 +84,16 @@ namespace measure {
 		StatementAddress addr(stmt);
 
 		// measure execution time of this fragment
-		auto time = measure(addr, Metric::CPU_TIME);
+		auto time = measure(addr, Metric::CPU_TIME, setup);
+		ASSERT_EQ(1, time.size()) << "Expected results from exactly one run";
 
-		EXPECT_TRUE(time.isValid());
-		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
+		EXPECT_TRUE(time[0].isValid());
+		EXPECT_TRUE(time[0] > 0 * s) << "Actual time: " << time[0];
 	}
 
 
 	TEST(Measuring, MeasureExecutionTimePFor) {
 		// create a small example code fragment
-		NodeManager manager;
 		auto& basic = manager.getLangBasic();
 		auto& parExt = manager.getLangExtension<core::lang::ParallelExtension>();
 		IRBuilder builder(manager);
@@ -121,9 +128,10 @@ namespace measure {
 
 		// measure execution time of this fragment
 		auto res = measure(regions, toVector(Metric::WALL_TIME, Metric::CPU_TIME,
-		                                     Metric::PARALLELISM // Metric::AVG_NUM_WORKERS,
-		                                     // Metric::AVG_EFFICIENCY,  Metric::WEIGHTED_EFFICIENCY
-		                                     ));
+			                                 Metric::PARALLELISM // Metric::AVG_NUM_WORKERS,
+			                                                     // Metric::AVG_EFFICIENCY,  Metric::WEIGHTED_EFFICIENCY
+			                                 ),
+			               setup)[0];
 
 		//		std::cout << res << "\n";
 
@@ -163,19 +171,15 @@ namespace measure {
 	}
 
 	TEST(Measuring, NestedRegions) {
-		//		FIXME: this code produces a division by 0 (see sum / i )
-		//		any kind of hack i tried ended up in deadlock/infinite loop
-		//			this is related with measures, tests and runtime...
 
-		NodeManager manager;
 		IRBuilder builder(manager);
 
 		vector<NodeAddress> stmts = builder.parseAddressesStatement(""
 																	"def load = (n : int<4>)->int<4> {"
 																	"	var ref<int<4>> sum = 0;"
-																	"	for(int<4> i = 0 .. n) {"
+																	"	for(int<4> i = 1 .. n) {"
 																	"			sum = sum / i;"
-																	"		for(int<4> j = 0 .. 100000) {"
+																	"		for(int<4> j = 0 .. 100) {"
 																	"			sum = sum + j;"
 																	"		}"
 																	"	}"
@@ -183,13 +187,13 @@ namespace measure {
 																	"};"
 																	"{"
 		                                                            "	var ref<int<4>> res = 0;"
-		                                                            "	$for(int<4> i = 0 .. 5000) {"
-		                                                            "		$for(int<4> j = 0 .. 5000) {"
-		                                                            "			res = res + load(100000);"
+		                                                            "	$for(int<4> i = 0 .. 50) {"
+		                                                            "		$for(int<4> j = 0 .. 50) {"
+		                                                            "			res = res + load(100);"
 		                                                            "		}$"
-		                                                            "		$for(int<4> k = 0 .. 50) {"
-		                                                            "			$for(int<4> l = 0 .. 100) {"
-		                                                            "				res = res + load(100000);"
+		                                                            "		$for(int<4> k = 0 .. 5) {"
+		                                                            "			$for(int<4> l = 0 .. 10) {"
+		                                                            "				res = res + load(100);"
 		                                                            "			}$"
 		                                                            "		}$"
 		                                                            "	}$"
@@ -211,7 +215,8 @@ namespace measure {
 		// std::cout << "\n------------------------ Root: \n"; dump(root);
 
 		// measure execution times
-		auto res = measure(toVector<StatementAddress>(root, forI, forJ, forK, forL), toVector(Metric::WALL_TIME, Metric::CPU_TIME, Metric::NUM_EXEC));
+		auto res = measure(toVector<StatementAddress>(root, forI, forJ, forK, forL), toVector(Metric::WALL_TIME, Metric::CPU_TIME, Metric::NUM_EXEC),
+			               setup)[0];
 
 		// check whether data is valid
 		EXPECT_TRUE(res[root][Metric::WALL_TIME].isValid());
@@ -268,46 +273,50 @@ namespace measure {
 		// check number of executions
 		EXPECT_EQ(1, (int)res[root][Metric::NUM_EXEC].getValue());
 		EXPECT_EQ(1, (int)res[forI][Metric::NUM_EXEC].getValue());
-		EXPECT_EQ(5000, (int)res[forJ][Metric::NUM_EXEC].getValue());
-		EXPECT_EQ(5000, (int)res[forK][Metric::NUM_EXEC].getValue());
-		EXPECT_EQ(5000 * 50, (int)res[forL][Metric::NUM_EXEC].getValue());
+		EXPECT_EQ(50, (int)res[forJ][Metric::NUM_EXEC].getValue());
+		EXPECT_EQ(50, (int)res[forK][Metric::NUM_EXEC].getValue());
+		EXPECT_EQ(50 * 5, (int)res[forL][Metric::NUM_EXEC].getValue());
 	}
 
 	TEST(Measuring, MultipleExitPoints) {
-		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_TRUE(measure(builder.parseStmt("{ return; }"), Metric::WALL_TIME).isValid());
+		EXPECT_TRUE(measure(builder.parseStmt("{ return; }"), Metric::WALL_TIME, setup)[0].isValid());
 
-		EXPECT_TRUE(measure(builder.parseAddressesStatement("{ for(int<4> i= 0 .. 10) { ${ return; }$ } }")[0].as<core::StatementAddress>(), Metric::WALL_TIME)
-		                .isValid());
+		EXPECT_TRUE(measure(builder.parseAddressesStatement("{ for(int<4> i= 0 .. 10) { ${ return; }$ } }")[0].as<core::StatementAddress>(), Metric::WALL_TIME,
+			                setup)[0]
+			            .isValid());
 
-		EXPECT_TRUE(
-		    measure(builder.parseAddressesStatement("{ for(int<4> i= 0 .. 10) { ${ continue; }$ } }")[0].as<core::StatementAddress>(), Metric::WALL_TIME)
-		        .isValid());
+		EXPECT_TRUE(measure(builder.parseAddressesStatement("{ for(int<4> i= 0 .. 10) { ${ continue; }$ } }")[0].as<core::StatementAddress>(),
+			                Metric::WALL_TIME, setup)[0]
+			            .isValid());
 
-		EXPECT_TRUE(measure(builder.parseStmt("{ if(true) { return; } else { return; } }"), Metric::WALL_TIME).isValid());
+		EXPECT_TRUE(measure(builder.parseStmt("{ if(true) { return; } else { return; } }"), Metric::WALL_TIME, setup)[0].isValid());
 
 
 		// a return with a n expression
-		EXPECT_TRUE(
-		    measure(
-		        builder.parseAddressesStatement("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ return 1 + 2; }$ }; return 0; } (); }")[0].as<core::StatementAddress>(),
-		        Metric::WALL_TIME)
-		        .isValid());
+		EXPECT_TRUE(measure(builder.parseAddressesStatement("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ return 1 + 2; }$ }; return 0; } (); }")[0]
+			                    .as<core::StatementAddress>(),
+			                Metric::WALL_TIME, setup)[0]
+			            .isValid());
 
 
 		// two nested regions ending at the same point
-		vector<NodeAddress> addr = builder.parseAddressesStatement("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ 2 + 3; ${ return 1 + 2; }$ }$ } ; return 0; } (); }");
-		auto res = measure(toVector(addr[0].as<core::StatementAddress>(), addr[1].as<core::StatementAddress>()), toVector(Metric::WALL_TIME));
+		vector<NodeAddress> addr =
+			builder.parseAddressesStatement("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ 2 + 3; ${ return 1 + 2; }$ }$ } ; return 0; } (); }");
+		auto res =
+			measure(toVector(addr[0].as<core::StatementAddress>(), addr[1].as<core::StatementAddress>()), toVector(Metric::WALL_TIME), setup)[0];
 
 		EXPECT_TRUE(res[addr[0].as<core::StatementAddress>()][Metric::WALL_TIME].isValid());
 		EXPECT_TRUE(res[addr[1].as<core::StatementAddress>()][Metric::WALL_TIME].isValid());
 	}
 
-	TEST(Measuring, Measure) {
+	TEST(Measuring, MeasurePapi) {
+#ifndef USE_PAPI
+		std::cout << "Compiled without PAPI support, not testing PAPI measurements\n";
+		return;
+#else
 		// create a small example code fragment
-		NodeManager manager;
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
 		                                      "	var ref<int<4>> sum = 0;"
@@ -319,18 +328,8 @@ namespace measure {
 		EXPECT_TRUE(stmt);
 
 		StatementAddress addr(stmt);
-
-		// measure execution time of this fragment
-		auto time = measure(addr, Metric::WALL_TIME);
-
-		EXPECT_TRUE(time.isValid());
-		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
-
-#ifndef USE_PAPI
-		std::cout << "Compiled without PAPI support, not testing PAPI measurements\n";
-#else
 		// measure cache misses of this fragment
-		auto misses = measure(addr, toVector(Metric::PAPI_L1_DCM, Metric::PAPI_L2_TCM));
+		auto misses = measure(addr, toVector(Metric::PAPI_L1_DCM, Metric::PAPI_L2_TCM), setup)[0];
 
 		EXPECT_TRUE(misses[Metric::PAPI_L1_DCM].isValid());
 		EXPECT_TRUE(misses[Metric::PAPI_L1_DCM].getValue() > 0);
@@ -348,7 +347,6 @@ namespace measure {
 	// 		}
 	//
 	// 		// create a small example code fragment
-	// 		NodeManager manager;
 	// 		IRBuilder builder(manager);
 	// 		StatementPtr stmt = builder.parseStmt(
 	// 				"{"
@@ -384,7 +382,6 @@ namespace measure {
 
 	//	TEST(Measuring, MeasureParallel) {
 	//		// create a small example code fragment
-	//		NodeManager manager;
 	//		IRBuilder builder(manager);
 	//		StatementPtr stmt = builder.parseStmt(
 	//				"{"
@@ -440,7 +437,6 @@ namespace measure {
 
 	TEST(Measuring, MeasureMultipleRegionsMultipleMetrics) {
 		// create a small example code fragment
-		NodeManager manager;
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
 		                                      "	var ref<int<4>> sum = 0;"
@@ -479,7 +475,7 @@ namespace measure {
 		regions[for4] = 7;
 
 		// measure execution time of this fragment
-		auto res = measure(regions, metrics);
+		auto res = measure(regions, metrics, setup)[0];
 
 		ASSERT_EQ(9u, res.size()); // intermediate regions should be filled
 
@@ -500,7 +496,7 @@ namespace measure {
 
 
 		// conduct multiple runs
-		auto res2 = measure(regions, metrics, 5);
+		auto res2 = measure(regions, metrics, setup.withNumRuns(5));
 
 		ASSERT_EQ(5u, res2.size());
 
@@ -529,7 +525,6 @@ namespace measure {
 
 	TEST(Measuring, PapiCounterPartitioning) {
 		// create a small example code fragment
-		NodeManager manager;
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt("{"
 		                                      "	var ref<int<4>> sum = 0;"
@@ -549,7 +544,7 @@ namespace measure {
 		auto metrics = toVector(Metric::CPU_TIME, Metric::PAPI_L1_DCM, Metric::PAPI_L1_ICM, Metric::PAPI_L2_DCM, Metric::PAPI_L2_ICM, Metric::PAPI_L1_TCM,
 		                        Metric::PAPI_L2_TCM, Metric::PAPI_TLB_DM, Metric::PAPI_TLB_IM, Metric::PAPI_L1_LDM, Metric::PAPI_L1_STM, Metric::PAPI_L2_STM);
 
-		auto res = measure(addr, metrics);
+		auto res = measure(addr, metrics, setup.withCompiler(getDefaultCompilerForMeasurments()))[0];
 
 		EXPECT_EQ(metrics.size(), res.size());
 		for_each(metrics, [&](const MetricPtr& cur) { EXPECT_FALSE(res.find(cur) == res.end()); });
@@ -558,7 +553,7 @@ namespace measure {
 		auto time = res[Metric::CPU_TIME];
 
 		// run without additional parameters
-		auto time2 = measure(addr, Metric::CPU_TIME);
+		auto time2 = measure(addr, Metric::CPU_TIME, setup.withCompiler(getDefaultCompilerForMeasurments()))[0];
 
 		// the two times should roughly be the same
 		auto factor = Quantity(3);
@@ -572,7 +567,6 @@ namespace measure {
 	//
 	//	TEST(Measuring, MeasureRemoteSGE) {
 	//		// create a small example code fragment
-	//		NodeManager manager;
 	//		IRBuilder builder(manager);
 	//		StatementPtr stmt = builder.parseStmt(
 	//				"{"
@@ -598,7 +592,6 @@ namespace measure {
 	//
 	//	TEST(Measuring, MeasureRemotePBS) {
 	//		// create a small example code fragment
-	//		NodeManager manager;
 	//		IRBuilder builder(manager);
 	//		StatementPtr stmt = builder.parseStmt(
 	//				"{"

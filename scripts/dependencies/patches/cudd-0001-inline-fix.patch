@@ -1,6 +1,5 @@
-diff -rupN obj_orig//cuddObj.cc obj//cuddObj.cc
---- obj_orig//cuddObj.cc	2012-02-02 14:53:32.210106939 +0100
-+++ obj//cuddObj.cc	2012-02-02 14:55:53.471668626 +0100
+--- a/obj/cuddObj.cc
++++ b/obj/cuddObj.cc
 @@ -97,7 +97,7 @@ DD::DD(const DD &from) {
  DD::~DD() {}
  
@@ -61,9 +60,8 @@ diff -rupN obj_orig//cuddObj.cc obj//cuddObj.cc
  Cudd::checkReturnValue(
    const int result) const
  {
-diff -rupN obj_orig//cuddObj.hh obj//cuddObj.hh
---- obj_orig//cuddObj.hh	2012-02-02 14:53:32.210106939 +0100
-+++ obj//cuddObj.hh	2012-02-02 14:55:32.638488660 +0100
+--- a/obj/cuddObj.hh
++++ b/obj/cuddObj.hh
 @@ -103,17 +103,16 @@ class DD {
      friend class ZDD;
      Cudd *ddMgr;
