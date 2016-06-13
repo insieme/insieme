@@ -317,6 +317,12 @@ namespace conversion {
 
 	void DeclConverter::VisitVarDecl(const clang::VarDecl* var) {
 		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitVarDecl: " << dumpClang(var);
+
+		// if handled by a plugin, don't do anything else
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
+			if(!extension->VarDeclVisit(var, converter)) return;
+		}
+
 		// non-global variables are to be skipped
 		if(!var->hasGlobalStorage()) { return; }
 
@@ -346,6 +352,7 @@ namespace conversion {
 
 		// handle initialization if not extern
 		if(!var->hasExternalStorage()) {
+			std::cout << "global Var Type: " << *elemType << std::endl << dumpClang(var) << std::endl;
 			auto init = (var->getInit()) ? converter.convertInitExpr(var->getInit()) : builder.getZero(elemType);
 			init = utils::fixTempMemoryInInitExpression(globalLit, init);
 			core::annotations::attachName(globalLit, name);
@@ -418,6 +425,16 @@ namespace conversion {
 		for(auto spec : funcTempDecl->specializations()) {
 			VLOG(2) << "~~~~~~~ -> visit Specialization: " << dumpClang(spec);
 			Visit(spec);
+		}
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					 Namespace declarations
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	void DeclConverter::VisitNamespaceDecl(const clang::NamespaceDecl* namespaceDecl) {
+		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitNamespaceDecl: " << dumpClang(namespaceDecl);
+		for(auto decl : namespaceDecl->decls()) {
+			Visit(decl);
 		}
 	}
 

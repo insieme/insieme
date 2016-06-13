@@ -148,3 +148,13 @@ template<class CharT>
 void endl(basic_ostream<CharT>& os);
 
 using ostream = basic_ostream<char>;
+
+// statics ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename _Value>
+struct __numeric_traits_integer {
+	static _Value __min;
+};
+
+template<typename _Value>
+_Value __numeric_traits_integer<_Value>::__min;

@@ -109,6 +109,7 @@ namespace conversion {
 		void VisitLinkageSpec(const clang::LinkageSpecDecl* link);
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl);
 		void VisitFunctionTemplateDecl(const clang::FunctionTemplateDecl* funcTempDecl);
+		void VisitNamespaceDecl(const clang::NamespaceDecl* namespaceDecl);
 
 	};
 

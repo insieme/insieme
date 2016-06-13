@@ -65,3 +65,9 @@ struct RefMethTest {
 	}
 };
 
+struct StaticMember {
+	static int staticMem;
+};
+
+// literal checked for in true interception test
+int StaticMember::staticMem = 31337;
