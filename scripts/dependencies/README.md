@@ -97,15 +97,18 @@ A setup on an older version of CentOS (Minimal) has been tested too.
 
     $ su -c 'yum update'
     $ su -c 'yum groupinstall development'
-    $ su -c 'yum install ruby valgrind wget'
+    $ su -c 'yum install ruby time valgrind wget'
 
 Since CentOS 6 still uses GCC 4, we have to first install GCC 5. All following
-packages can be compiled with the newly installed GCC 5 by setting `CC`, `CXX`
-and `LD_LIBRARY_PATH` inside `defaults.sh`.
+packages can be compiled with the newly installed GCC 5 by setting `CC`, `CXX`,
+`PATH` and `LD_LIBRARY_PATH` inside `defaults.sh`.
 
     $ ./installer gcc
     $ vi defaults.sh
     $ ./installer
+
+`CC`, `CXX`, `PATH` and `LD_LIBRARY_PATH` should be set when building Insieme
+with newly installed GCC.
 
 ## Additional packages
 

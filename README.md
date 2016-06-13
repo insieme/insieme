@@ -37,6 +37,17 @@ setup in the directory pointed to by `$INSIEME_LIBS_HOME` using the provided
 installer.
 
     $ export INSIEME_LIBS_HOME="$HOME/libs"
+
+`CC`, `CXX`, `PATH` and `LD_LIBRARY_PATH` should be set when building Insieme
+with newly installed GCC.
+
+    $ export CC="$INSIEME_LIBS_HOME/gcc-latest/bin/gcc"
+    $ export CXX="$INSIEME_LIBS_HOME/gcc-latest/bin/g++"
+    $ export PATH="$INSIEME_LIBS_HOME/gcc-latest/bin:$PATH"
+    $ export LD_LIBRARY_PATH="$INSIEME_LIBS_HOME/gcc-latest/lib64"
+
+You can now setup a build directory using CMake:
+
     $ mkdir build
     $ cd build
     $ $INSIEME_LIBS_HOME/cmake-latest/bin/cmake ..

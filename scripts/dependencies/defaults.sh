@@ -9,6 +9,7 @@ export LDLAGS="-mtune=native -O3"
 # override compiler
 #export CC="$PREFIX/gcc-latest/bin/gcc"
 #export CXX="$PREFIX/gcc-latest/bin/g++"
+#export PATH="$PREFIX/gcc-latest/bin:$PATH"
 #export LD_LIBRARY_PATH="$PREFIX/gcc-latest/lib64"
 
 # parallel build
