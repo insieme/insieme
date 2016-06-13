@@ -367,45 +367,48 @@ int main(int argc, char** argv) {
 
 	LOG(INFO) << "Selected metrics: " << metrics;
 
-	utils::compiler::Compiler mpicc("mpicc");
-	mpicc.addFlag("-x c");
-	mpicc.addFlag("-Wall");
-	mpicc.addFlag("--std=gnu99");
-	mpicc.addFlag("-DIRT_USE_MPI");
-	mpicc.addFlag("-DIRT_USE_PAPI");
-	mpicc.addFlag("-O0");
-	mpicc.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi -lpfm");
+	auto measurementSetup = driver::measure::MeasurementSetup();
+	measurementSetup.compiler = utils::compiler::Compiler("mpicc");
+	measurementSetup.compiler.addFlag("-x c");
+	measurementSetup.compiler.addFlag("-Wall");
+	measurementSetup.compiler.addFlag("--std=gnu99");
+	measurementSetup.compiler.addFlag("-DIRT_USE_MPI");
+	measurementSetup.compiler.addFlag("-DIRT_USE_PAPI");
+	measurementSetup.compiler.addFlag("-O0");
+	measurementSetup.compiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi -lpfm");
 
 	// compile binary
-	const auto binary = dm::buildBinary(rootPtr, mpicc);
+	const auto binary = dm::buildBinary(rootPtr, measurementSetup.backend, measurementSetup.compiler);
 
 	using problemType = std::vector<unsigned>;
 	using resultType = vector<std::map<dm::region_id, std::map<dm::MetricPtr, dm::Quantity>>>;
 
 	vector<problemType> problemSizes;
-	const unsigned firstParam = 1024;
-	const unsigned secondParam = 128;
+	const unsigned firstParam = 128;
+	//const unsigned secondParam = 128;
 
-	for(unsigned i = 1; i <= 10; ++i) {
-		problemSizes.push_back({ firstParam * i, secondParam });
+	for(unsigned i = 1; i <= 100; ++i) {
+		problemSizes.push_back({ firstParam * i/*, secondParam*/ });
 	}
 
 	map<problemType, resultType> overallResults;
 
 	for(const auto& problemSize : problemSizes) {
 
-		std::map<string, string> env;
+		//std::map<string, string> env;
 		// fix number of worker threads to 1, relying on mpirun alone seems insufficient for thread concurrency control
-		env["IRT_NUM_WORKERS"] = "1";
-		env["IRT_INST_REGION_INSTRUMENTATION"] = "enabled";
+		measurementSetup.env["IRT_NUM_WORKERS"] = "1";
+		measurementSetup.env["IRT_INST_REGION_INSTRUMENTATION"] = "enabled";
 		// TODO: needs fixing, since it might clash with mpirun affinity masks
-		env["IRT_AFFINITY_POLICY"] = "IRT_AFFINITY_FILL";
+		measurementSetup.env["IRT_AFFINITY_POLICY"] = "IRT_AFFINITY_FILL";
 		// set problem sizes
 		//env["DEFAULT_NUM_STRING"] = std::to_string(problemSize.first);
 		//env["DEFAULT_NUM_QUERIES"] = std::to_string(problemSize.second);
 		// rely on mpirun to do process-core mapping
-		const string mpiRun = "mpirun -np 17 --map-by core --mca btl tcp,self";
-		const std::vector<string> params = ::transform(problemSize, [](const problemType::value_type problem) { return toString(problem); });
+		const string mpiRun = "mpirun -np 17 --map-by core";// --mca btl tcp, self";
+		measurementSetup.params = ::transform(problemSize, [](const problemType::value_type problem) { return toString(problem); });
+		measurementSetup.params.push_back("128");
+		measurementSetup.executor = make_shared<dm::LocalExecutor>(mpiRun);
 
 		const unsigned numRuns = 10;
 
@@ -414,7 +417,7 @@ int main(int argc, char** argv) {
 		while(result.size() < numRuns) {
 			const unsigned numRemainingRuns = numRuns - result.size();
 			timer = insieme::utils::Timer("Running measurement");
-			const resultType remainingResults = dm::measure(binary, metrics, numRemainingRuns, std::make_shared<dm::LocalExecutor>(mpiRun), env, params);
+			const resultType remainingResults = dm::measure(binary, metrics, numRemainingRuns, measurementSetup);
 			timer.stop(); LOG(INFO) << timer;
 			assert_gt(remainingResults.size(), 0) << "Expected at least a single result set but found none, bailing out";
 			addAll(result, remainingResults);
@@ -449,7 +452,7 @@ int main(int argc, char** argv) {
 		if(data.begin()->second.empty()) { std::cout << "No results!\n"; return; }
 		std::map<problemType, std::map<dm::region_id, std::map<dm::MetricPtr, dm::Quantity>>> aggregatedData;
 		du::openBoxTitle("Aggregated Results (median)");
-		std::cout << "problem\tregion_id\tregion_name";
+		std::cout << "problem\tregion_id\tregion_name\t";
 		// print all metrics in header
 		for(const auto& metric : data.begin()->second.front().begin()->second) {
 			std::cout << metric.first << "\t";

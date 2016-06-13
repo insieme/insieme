@@ -624,64 +624,56 @@ namespace measure {
 		return utils::compiler::Compiler::getOptimizedCompiler(compiler);
 	}
 
-	Quantity measure(const core::StatementPtr& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
-	                 const std::map<string, string>& env, const std::vector<string>& params) {
-		return measure(core::StatementAddress(stmt), metric, executor, compiler, env, params);
+	Quantity measure(const core::StatementPtr& stmt, const MetricPtr& metric, const MeasurementSetup& setup) {
+		return measure(core::StatementAddress(stmt), metric, setup);
 	}
 
-	vector<Quantity> measure(const core::StatementPtr& stmt, const MetricPtr& metric, unsigned numRuns, const ExecutorPtr& executor,
-	                         const utils::compiler::Compiler& compiler, const std::map<string, string>& env, const std::vector<string>& params) {
-		return measure(core::StatementAddress(stmt), metric, numRuns, executor, compiler, env, params);
+	vector<Quantity> measure(const core::StatementPtr& stmt, const MetricPtr& metric, unsigned numRuns, const MeasurementSetup& setup) {
+		return measure(core::StatementAddress(stmt), metric, numRuns, setup);
 	}
 
-	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
-	                 const std::map<string, string>& env, const std::vector<string>& params) {
-		return measure(stmt, toVector(metric), executor, compiler, env, params)[metric];
+	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const MeasurementSetup& setup) {
+		return measure(stmt, toVector(metric), setup)[metric];
 	}
 
-	vector<Quantity> measure(const core::StatementAddress& stmt, const MetricPtr& metric, unsigned numRuns, const ExecutorPtr& executor,
-	                         const utils::compiler::Compiler& compiler, const std::map<string, string>& env, const std::vector<string>& params) {
+	vector<Quantity> measure(const core::StatementAddress& stmt, const MetricPtr& metric, unsigned numRuns, const MeasurementSetup& setup) {
 		vector<Quantity> res;
-		for_each(measure(stmt, toVector(metric), numRuns, executor, compiler, env, params),
+		for_each(measure(stmt, toVector(metric), numRuns, setup),
 		         [&](const std::map<MetricPtr, Quantity>& cur) { res.push_back(cur.find(metric)->second); });
 		return res;
 	}
 
 
-	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics, const ExecutorPtr& executor,
-	                                      const utils::compiler::Compiler& compiler, const std::map<string, string>& env, const std::vector<string>& params) {
+	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics, const MeasurementSetup& setup) {
 		// pack given stmt pointer into region map
 		std::map<core::StatementAddress, region_id> regions;
 		regions[stmt] = 0;
 
 		// measure region and return result
-		return measure(regions, metrics, executor, compiler, env, params)[0];
+		return measure(regions, metrics, setup)[0];
 	}
 
 	vector<std::map<MetricPtr, Quantity>> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics, unsigned numRuns,
-	                                              const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env, const std::vector<string>& params) {
+		                                          const MeasurementSetup& setup) {
 		// pack given stmt pointer into region map
 		std::map<core::StatementAddress, region_id> regions;
 		regions[stmt] = 0;
 
 		// measure region and return result
 		vector<std::map<MetricPtr, Quantity>> res;
-		for_each(measure(regions, metrics, numRuns, executor, compiler, env, params),
+		for_each(measure(regions, metrics, numRuns, setup),
 		         [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& cur) { res.push_back(cur.find(0)->second); });
 		return res;
 	}
 
 	std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> measure(const vector<core::StatementAddress>& regions, const vector<MetricPtr>& metrices,
-	                                                                        const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
-	                                                                        const std::map<string, string>& env, const std::vector<string>& params) {
+		                                                                    const MeasurementSetup& setup) {
 		// use implementation accepting number of runs
-		return measure(regions, metrices, 1, executor, compiler, env, params)[0];
+		return measure(regions, metrices, 1, setup)[0];
 	}
 
-	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>> measure(const vector<core::StatementAddress>& regions,
-	                                                                                const vector<MetricPtr>& metrices, unsigned numRuns,
-	                                                                                const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
-	                                                                                const std::map<string, string>& env, const std::vector<string>& params) {
+	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>>
+	measure(const vector<core::StatementAddress>& regions, const vector<MetricPtr>& metrices, unsigned numRuns, const MeasurementSetup& setup) {
 		// create a stmt-address <-> region_id map
 		std::map<core::StatementAddress, region_id> mappedRegions;
 		region_id id = 0;
@@ -690,7 +682,7 @@ namespace measure {
 		}
 
 		// run measurements
-		auto data = measure(mappedRegions, metrices, numRuns, executor, compiler, env, params);
+		auto data = measure(mappedRegions, metrices, numRuns, setup);
 
 		// un-pack results
 		return ::transform(
@@ -705,9 +697,8 @@ namespace measure {
 
 
 	std::map<region_id, std::map<MetricPtr, Quantity>> measure(const std::map<core::StatementAddress, region_id>& regions, const vector<MetricPtr>& metrices,
-	                                                           const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
-	                                                           const std::map<string, string>& env, const std::vector<string>& params) {
-		return measure(regions, metrices, 1, executor, compiler, env, params)[0];
+		                                                       const MeasurementSetup& setup) {
+		return measure(regions, metrices, 1, setup)[0];
 	}
 
 	namespace {
@@ -887,14 +878,13 @@ namespace measure {
 
 
 	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(const std::map<core::StatementAddress, region_id>& regions,
-	                                                                   const vector<MetricPtr>& metrics, unsigned numRuns, const ExecutorPtr& executor,
-	                                                                   const utils::compiler::Compiler& compiler, const std::map<string, string>& env, const std::vector<string>& params) {
+	                                                                   const vector<MetricPtr>& metrics, unsigned numRuns, const MeasurementSetup& setup) {
 		// fast exit if no regions are specified or no runs have to be conducted
 		if(regions.empty() || numRuns == 0) { return vector<std::map<region_id, std::map<MetricPtr, Quantity>>>(numRuns); }
 
+		auto modifiedCompiler = setup.compiler;
 		// fix static scheduling
 		// TODO: it is no longer necessary to fix to static scheduling, should we keep it?
-		auto modifiedCompiler = compiler;
 		modifiedCompiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
 
 		// enable papi only if at least one metric requires it
@@ -903,7 +893,7 @@ namespace measure {
 			return false;
 		});
 
-		if(usePapi) { 
+		if(usePapi) {
 			#ifndef USE_PAPI
 				LOG(ERROR) << "PAPI events requested, but compiled without PAPI support";
 			#else
@@ -915,11 +905,11 @@ namespace measure {
 		auto instrumentedRoot = instrumentRegions(regions);
 
 		// build target code
-		auto binFile = buildBinary(instrumentedRoot, modifiedCompiler);
+		auto binFile = buildBinary(instrumentedRoot, setup.backend, modifiedCompiler);
 		assert_false(binFile.empty()) << "Unable to compile executable for measurement!";
 
 		// conduct measurement
-		auto res = measure(binFile, metrics, numRuns, executor, env, params);
+		auto res = measure(binFile, metrics, numRuns, setup);
 
 		// delete binary
 		if(boost::filesystem::exists(binFile)) { boost::filesystem::remove(binFile); }
@@ -928,7 +918,7 @@ namespace measure {
 	}
 
 	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(const std::string& binary, const vector<MetricPtr>& metrics, unsigned numRuns,
-	                                                                   const ExecutorPtr& executor, const std::map<string, string>& env, const std::vector<string>& params) {
+		                                                               const MeasurementSetup& setup) {
 		// check binary
 		assert_true(boost::filesystem::exists(binary)) << "Invalid executable specified for measurement!";
 
@@ -973,7 +963,7 @@ namespace measure {
 				assert_true(bfs::exists(workdir)) << "Working-Directory already present!";
 
 				// setup runtime system metric selection
-				std::map<string, string> mod_env = env;
+				std::map<string, string> mod_env = setup.env;
 				mod_env["IRT_INST_REGION_INSTRUMENTATION"] = "enabled";
 
 				string metric_selection;
@@ -990,7 +980,7 @@ namespace measure {
 				mod_env["IRT_INST_REGION_INSTRUMENTATION_TYPES"] = metric_selection;
 
 				// run code
-				int ret = executor->run(binary, mod_env, params, workdir.string());
+				int ret = setup.executor->run(binary, mod_env, setup.params, workdir.string());
 				if(ret != 0) {
 					LOG(WARNING) << "Unexpected executable return code " << ret;
 				}
@@ -1024,15 +1014,13 @@ namespace measure {
 		return res;
 	}
 
-	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measurePreinstrumented(const core::NodePtr& root,
-		                                                                              const vector<MetricPtr>& metrics, unsigned numRuns,
-		                                                                              const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
-		                                                                              const std::map<string, string>& env, const std::vector<string>& params) {
-		auto binary = buildBinary(root, compiler);
-		return measure(binary, metrics, numRuns, executor, env, params);
+	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measurePreinstrumented(const core::NodePtr& root, const vector<MetricPtr>& metrics,
+		                                                                              unsigned numRuns, const MeasurementSetup& setup) {
+		auto binary = buildBinary(root, setup.backend, setup.compiler);
+		return measure(binary, metrics, numRuns, setup);
 	}
 
-	std::string buildBinary(const core::NodePtr& root, const utils::compiler::Compiler& compilerSetup) {
+	std::string buildBinary(const core::NodePtr& root, const backend::runtime::RuntimeBackendPtr backend, const utils::compiler::Compiler& compiler) {
 
 		// create resulting program
 		core::ProgramPtr program;
@@ -1043,31 +1031,30 @@ namespace measure {
 		}
 
 		// create backend code
-		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
 		auto targetCode = backend->convert(program);
 
 		// customize compiler
-		utils::compiler::Compiler compiler = compilerSetup;
+		utils::compiler::Compiler modifiedCompiler = compiler;
 
 		// add flags required by the runtime
-		compiler.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "runtime/include");
-		compiler.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "common/include");
-		compiler.addFlag(string("-I ") + utils::getInsiemeLibsRootDir() + "papi-latest/include");
-		compiler.addFlag(string("-L ") + utils::getInsiemeLibsRootDir() + "papi-latest/lib/");
-		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
-		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
-		compiler.addFlag("-DIRT_WORKER_SLEEPING");
-		compiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
+		modifiedCompiler.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "runtime/include");
+		modifiedCompiler.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "common/include");
+		modifiedCompiler.addFlag(string("-I ") + utils::getInsiemeLibsRootDir() + "papi-latest/include");
+		modifiedCompiler.addFlag(string("-L ") + utils::getInsiemeLibsRootDir() + "papi-latest/lib/");
+		modifiedCompiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
+		modifiedCompiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
+		modifiedCompiler.addFlag("-DIRT_WORKER_SLEEPING");
+		modifiedCompiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
 		#ifdef USE_PAPI
-			compiler.addFlag("-DIRT_USE_PAPI");
-			compiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi");
+			modifiedCompiler.addFlag("-DIRT_USE_PAPI");
+			modifiedCompiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi");
 		#endif
-		compiler.addFlag("-ldl -lrt -lpthread -lm");
-		compiler.addFlag("-Wno-unused-but-set-variable");
-		compiler.addFlag("-Wno-unused-variable");
+		modifiedCompiler.addFlag("-ldl -lrt -lpthread -lm");
+		modifiedCompiler.addFlag("-Wno-unused-but-set-variable");
+		modifiedCompiler.addFlag("-Wno-unused-variable");
 
 		// compile code to binary
-		return utils::compiler::compileToBinary(*targetCode, compiler);
+		return utils::compiler::compileToBinary(*targetCode, modifiedCompiler);
 	}
 
 	void Measurements::add(worker_id worker, region_id region, const MetricPtr metric, const Quantity& value) {

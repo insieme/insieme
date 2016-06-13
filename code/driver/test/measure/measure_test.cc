@@ -51,6 +51,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/timer.h"
+#include "insieme/utils/compiler/compiler.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/error_printer.h"
 
@@ -277,29 +278,33 @@ namespace measure {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_TRUE(measure(builder.parseStmt("{ return; }"), Metric::WALL_TIME).isValid());
+		// use custom measurement setup to increase testing speed
+		auto measurementSetup = MeasurementSetup();
+		measurementSetup.compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 
-		EXPECT_TRUE(measure(builder.parseAddressesStatement("{ for(int<4> i= 0 .. 10) { ${ return; }$ } }")[0].as<core::StatementAddress>(), Metric::WALL_TIME)
+		EXPECT_TRUE(measure(builder.parseStmt("{ return; }"), Metric::WALL_TIME, measurementSetup).isValid());
+
+		EXPECT_TRUE(measure(builder.parseAddressesStatement("{ for(int<4> i= 0 .. 10) { ${ return; }$ } }")[0].as<core::StatementAddress>(), Metric::WALL_TIME, measurementSetup)
 		                .isValid());
 
 		EXPECT_TRUE(
-		    measure(builder.parseAddressesStatement("{ for(int<4> i= 0 .. 10) { ${ continue; }$ } }")[0].as<core::StatementAddress>(), Metric::WALL_TIME)
+		    measure(builder.parseAddressesStatement("{ for(int<4> i= 0 .. 10) { ${ continue; }$ } }")[0].as<core::StatementAddress>(), Metric::WALL_TIME, measurementSetup)
 		        .isValid());
 
-		EXPECT_TRUE(measure(builder.parseStmt("{ if(true) { return; } else { return; } }"), Metric::WALL_TIME).isValid());
+		EXPECT_TRUE(measure(builder.parseStmt("{ if(true) { return; } else { return; } }"), Metric::WALL_TIME, measurementSetup).isValid());
 
 
 		// a return with a n expression
 		EXPECT_TRUE(
 		    measure(
 		        builder.parseAddressesStatement("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ return 1 + 2; }$ }; return 0; } (); }")[0].as<core::StatementAddress>(),
-		        Metric::WALL_TIME)
+		        Metric::WALL_TIME, measurementSetup)
 		        .isValid());
 
 
 		// two nested regions ending at the same point
 		vector<NodeAddress> addr = builder.parseAddressesStatement("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ 2 + 3; ${ return 1 + 2; }$ }$ } ; return 0; } (); }");
-		auto res = measure(toVector(addr[0].as<core::StatementAddress>(), addr[1].as<core::StatementAddress>()), toVector(Metric::WALL_TIME));
+		auto res = measure(toVector(addr[0].as<core::StatementAddress>(), addr[1].as<core::StatementAddress>()), toVector(Metric::WALL_TIME), measurementSetup);
 
 		EXPECT_TRUE(res[addr[0].as<core::StatementAddress>()][Metric::WALL_TIME].isValid());
 		EXPECT_TRUE(res[addr[1].as<core::StatementAddress>()][Metric::WALL_TIME].isValid());
