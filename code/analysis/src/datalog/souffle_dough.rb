@@ -22,15 +22,6 @@ abort "Source dir (#{srcdir}) does not exist!" unless File.directory?(srcdir)
 abort "Destination dir (#{destdir}) does not exist!" unless File.directory?(destdir)
 abort "Invalid include dir (#{incdir}): Does not exist in '#{srcdir}'!" unless File.directory?(srcdir + "/" + incdir)
 
-# Step 1: Copy files
-source_files = Dir.glob(srcdir + "/*." + @file_ext)
-FileUtils.cp(source_files, destdir)
-
-include_files = Dir.glob(srcdir + "/" + incdir + "/*." + @file_ext)
-FileUtils.mkdir_p(destdir + "/" + incdir)
-FileUtils.cp(include_files, destdir + "/" + incdir)
-
-
 def extract_relation_name(name, input_arr)
   arr = input_arr.grep(/^\s*\.#{name}\s+/)
   arr.map! {|line| line.gsub(/^\s*\.#{name}\s+(\w+).*/, '\1') }
@@ -84,8 +75,22 @@ def convert_usings_to_includes(lines)
   end
 end
 
+
+# Step 1: Copy files
+source_files = Dir.glob(srcdir + "/*." + @file_ext)
+FileUtils.cp(source_files, destdir)
+
+include_files = Dir.glob(srcdir + "/" + incdir + "/*." + @file_ext)
+FileUtils.mkdir_p(destdir + "/" + incdir)
+FileUtils.cp(include_files, destdir + "/" + incdir)
+
+# Strip paths from filenames for further use
+source_files.map! {|filename| File.basename(filename) }
+include_files.map! {|filename| File.basename(filename) }
+
+# 
 # Step 2: Name-mangle declarations in header files
-Dir.chdir(destdir)
+Dir.chdir(destdir + "/" + incdir)
 include_files.each do |filename|
 
   puts "Header file: #{filename}" if verbose
@@ -121,7 +126,7 @@ include_files.each do |filename|
   convert_usings_to_includes(lines)
 
   # Change 'member' declarations back to decl and add pragma once
-  lines.each {|line| line.gsub(/(\s*\.)#{membertoken}([^\w]+)/, '\1decl\2') }
+  lines.map! {|line| line.gsub(/(\s*\.)#{membertoken}([^\w]+)/, '\1decl\2') }
   lines.unshift "#pragma once"
 
   # Done. Write new content to file
@@ -130,8 +135,11 @@ include_files.each do |filename|
   end
 
 end
+Dir.chdir(basedir)
+
 
 #Step 3: Name-mangle using-declarations in source files
+Dir.chdir(destdir)
 source_files.each do |filename|
 
   puts "Source file: #{filename}" if verbose
@@ -148,3 +156,5 @@ source_files.each do |filename|
   end
 
 end
+Dir.chdir(basedir)
+
