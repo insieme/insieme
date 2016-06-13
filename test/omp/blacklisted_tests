@@ -32,7 +32,6 @@ private_iterator
 # Disabling tests because they fail with assertion:
 # Global variable not inserted at global scope
 comd-omp
-dijkstra
 
 # Disabling tests because they fail with assertion:
 # OMP threadprivate not yet supported
@@ -44,11 +43,8 @@ threadprivate_static
 # Trying to look up function not previously declared
 datasharing
 privatized_global
-rec_global
 
 # Disabling tests because they fail to satisfy some semantic checks or errors
-critical
-functions
 global_firstprivate
 n_body
 ordered
