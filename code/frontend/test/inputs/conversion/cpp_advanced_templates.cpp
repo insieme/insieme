@@ -53,6 +53,14 @@ struct C {
 	T bla() { return T() + T2(); }
 };
 
+// const and non const templated method
+struct ConstNonConstInline {
+	template<class T>
+	T bla() { return T(); }
+	template<class T>
+	T bla() const { return T(); }
+};
+
 int main() {
 	;
 
@@ -107,6 +115,29 @@ int main() {
 	{
 		C<int> c;
 		c.bla<float>();
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_ConstNonConstInline {
+			function IMP_bla_int_returns_int = () -> int<4> {
+				return 0;
+			}
+			const function IMP_bla_int_returns_int = () -> int<4> {
+				return 0;
+			}
+		};
+		{
+			var ref<IMP_ConstNonConstInline,f,f,plain> v0 = IMP_ConstNonConstInline::(ref_decl(type_lit(ref<IMP_ConstNonConstInline,f,f,plain>)));
+			v0.IMP_bla_int_returns_int();
+			var ref<IMP_ConstNonConstInline,t,f,cpp_ref> v1 = v0;
+			v1.IMP_bla_int_returns_int();
+		}
+	)")
+	{
+		ConstNonConstInline c;
+		c.bla<int>();
+		const ConstNonConstInline& cr = c;
+		cr.bla<int>();
 	}
 
 	return 0;
