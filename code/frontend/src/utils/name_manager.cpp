@@ -77,8 +77,8 @@ namespace utils {
 		std::string filename = sm.getFilename(sl).str();
 		// canonicalize filename in case we refer to it from different relative locations
 		boost::filesystem::path path(filename);
-		path = boost::filesystem::canonical(path); 
-		
+		path = boost::filesystem::canonical(path);
+
 		ss << path.string();
 		ss << "_" << sm.getExpansionLineNumber(sl);
 		ss << "_" << sm.getExpansionColumnNumber(sl);
@@ -218,12 +218,11 @@ namespace utils {
 	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, bool cStyleName) {
 		std::string name = funcDecl->getQualifiedNameAsString();
 		if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
-			if (cStyleName) {
-				name = method->getNameAsString();
-			}
-			if(method->isVirtual()) {
+			if(!method->isStatic()) {
+				// no need to qualify method name
 				name = funcDecl->getNameAsString();
-			} else if(method->getParent()) {
+			}
+			if(method->getParent()) {
 				if(method->getParent()->isLambda()) { name = createNameForAnon("lambda", method->getParent(), funcDecl->getASTContext().getSourceManager()); }
 			}
 		}
@@ -240,13 +239,13 @@ namespace utils {
 
 		if(funcDecl->isTemplateInstantiation()) {
 			std::string returnType = getTypeString(funcDecl->getReturnType());
-			if (!cStyleName) {
+			if(!cStyleName) {
 				suffix << "_returns_" << returnType;
 			}
 		}
 
 		string suffixStr = suffix.str();
-		if (!cStyleName) {
+		if(!cStyleName) {
 			boost::algorithm::replace_all(suffixStr, " ", "_");
 		}
 

@@ -33,28 +33,80 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
-#include <initializer_list>
 
-#define S_IR R"(
-decl struct IMP_std_colon__colon_initializer_list_int;
-decl IMP_std_colon__colon_initializer_list_int::_M_array:ptr<int<4>,t,f>;
-decl IMP_std_colon__colon_initializer_list_int::_M_len:uint<8>;
-decl ctor:IMP_std_colon__colon_initializer_list_int::(ptr<int<4>,t,f>, uint<8>);
-decl IMP_begin_returns_const_iterator : const IMP_std_colon__colon_initializer_list_int::() -> (ref<array<int<4>,inf>,t,f,plain>,int<8>);
-decl IMP_end_returns_const_iterator : const IMP_std_colon__colon_initializer_list_int::() -> (ref<array<int<4>,inf>,t,f,plain>,int<8>);
-decl IMP_size_returns_size_type : const IMP_std_colon__colon_initializer_list_int::() -> uint<8>;
-def struct IMP_std_colon__colon_initializer_list_int {
-    _M_array : ptr<int<4>,t,f>;
-    _M_len : uint<8>;
-    ctor function (v1 : ref<ptr<int<4>,t,f>,f,f,plain>, v2 : ref<uint<8>,f,f,plain>) { }
+// template class method
+template<class T>
+struct A {
+	T bla() { return T(); }
 };
-)"
+
+// class templated method
+struct B {
+	template<class T>
+	T bla() { return T(); }
+};
+
+// template class templated method
+template<class T>
+struct C {
+	template<class T2>
+	T bla() { return T() + T2(); }
+};
 
 int main() {
-	//this IR test pragma is not correct yet. just committed for testing purposes.
-	#pragma test expect_ir(S_IR, R"({ var ref<IMP_std_colon__colon_initializer_list_int,f,f,plain> v0 =  IMP_std_colon__colon_initializer_list_int::(ref_decl(type_lit(ref<IMP_std_colon__colon_initializer_list_int,f,f,plain>)), ptr_from_array(<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1,2,3}), num_cast(3u, type_lit(uint<8>))); })")
+	;
+
+	#pragma test expect_ir(R"(
+		def struct IMP_A_int {
+			function IMP_bla_returns_int = () -> int<4> {
+				return 0;
+			}
+		};
+		{
+			var ref<IMP_A_int,f,f,plain> v0 = IMP_A_int::(ref_decl(type_lit(ref<IMP_A_int,f,f,plain>)));
+			v0.IMP_bla_returns_int();
+		}
+	)")
 	{
-		std::initializer_list<int> a = {1,2,3};
+		A<int> a;
+		a.bla();
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_B {
+			function IMP_bla_float_returns_float = () -> real<4> {
+				return 0.0f;
+			}
+			function IMP_bla_int_returns_int = () -> int<4> {
+				return 0;
+			}
+		};
+		{
+			var ref<IMP_B,f,f,plain> v0 = IMP_B::(ref_decl(type_lit(ref<IMP_B,f,f,plain>)));
+			v0.IMP_bla_int_returns_int();
+			v0.IMP_bla_float_returns_float();
+		}
+	)")
+	{
+		B b;
+		b.bla<int>();
+		b.bla<float>();
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_C_int {
+			function IMP_bla_float_returns_int = () -> int<4> {
+				return num_cast(num_cast(0, type_lit(real<4>))+0.0f, type_lit(int<4>));
+			}
+		};
+		{
+			var ref<IMP_C_int,f,f,plain> v0 = IMP_C_int::(ref_decl(type_lit(ref<IMP_C_int,f,f,plain>)));
+			v0.IMP_bla_float_returns_int();
+		}
+	)")
+	{
+		C<int> c;
+		c.bla<float>();
 	}
 
 	return 0;

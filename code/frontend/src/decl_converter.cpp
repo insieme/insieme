@@ -255,7 +255,7 @@ namespace conversion {
 		}
 		// non-default cases
 		else {
-			string name = insieme::utils::mangle(methDecl->getNameAsString());
+			string name =  utils::buildNameForFunction(methDecl);
 			auto funType = getFunMethodTypeInternal(converter, methDecl);
 			if(funType->getKind() == core::FK_CONSTRUCTOR) { ret.lit = builder.getLiteralForConstructor(funType); }
 			else if(funType->getKind() == core::FK_DESTRUCTOR) { ret.lit = builder.getLiteralForDestructor(funType); }
