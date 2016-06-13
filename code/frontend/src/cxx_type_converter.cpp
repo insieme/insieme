@@ -113,12 +113,13 @@ namespace conversion {
 		}
 		auto irParents = builder.parents(parents);
 
-		// get methods and isntantiated template methods
+		// get methods and instantiated template methods
 		std::vector<clang::CXXMethodDecl*> methodDecls;
 		std::copy(classDecl->method_begin(), classDecl->method_end(), std::back_inserter(methodDecls));
 		for(auto d : classDecl->decls()) {
 			if(clang::FunctionTemplateDecl* ftd = llvm::dyn_cast<clang::FunctionTemplateDecl>(d)) {
 				for(auto specialization : ftd->specializations()) {
+					if(!specialization->hasBody()) continue;
 					methodDecls.push_back(llvm::dyn_cast<clang::CXXMethodDecl>(specialization));
 				}
 			}

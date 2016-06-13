@@ -55,15 +55,15 @@ T getSizeOf() {
 }
 
 int main() {
-	//~ {
-		//~ A a;
-		//~ int i = a.getSizeOf<int, int>();
-		//~ double d = a.getSizeOf<double, double>();
-		//~ A b = a.getSizeOf<A, A>();
+	{
+		A a;
+		int i = a.getSizeOf<int, int>();
+		double d = a.getSizeOf<double, double>();
+		A b = a.getSizeOf<A, A>();
 	
-		//~ const A& ra = a;
-		//~ int i1 = ra.getSizeOf<int, int>();
-	//~ }
+		const A& ra = a;
+		int i1 = ra.getSizeOf<int, int>();
+	}
 	{
 		B b;
 		int i = b.getSizeOf<int, int>();
