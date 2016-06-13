@@ -357,7 +357,6 @@ namespace conversion {
 		core::ExpressionPtr irExpr;
 		LOG_EXPR_CONVERSION(callExpr, irExpr);
 
-		callExpr->dumpColor();
 		core::ExpressionPtr irCallee = converter.convertExpr(callExpr->getCallee());
 		frontend_assert_expr(core::lang::isPointer, irCallee) << "Expecting callee to be of function pointer type, is: " << *irCallee;
 

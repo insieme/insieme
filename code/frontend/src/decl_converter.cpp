@@ -352,7 +352,6 @@ namespace conversion {
 
 		// handle initialization if not extern
 		if(!var->hasExternalStorage()) {
-			std::cout << "global Var Type: " << *elemType << std::endl << dumpClang(var) << std::endl;
 			auto init = (var->getInit()) ? converter.convertInitExpr(var->getInit()) : builder.getZero(elemType);
 			init = utils::fixTempMemoryInInitExpression(globalLit, init);
 			core::annotations::attachName(globalLit, name);

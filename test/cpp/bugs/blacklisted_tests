@@ -41,7 +41,6 @@ stringstream
 tellg
 templated_casts
 templated_return_type
-template_integrals
 throw
 tr1_array
 try_catch
