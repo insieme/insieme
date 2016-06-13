@@ -34,40 +34,32 @@
  * regarding third party software licenses.
  */
 
-// intercepted
-namespace ns {
-	static int simpleFunc(int x) {
-		return x;
-	}
+struct Joerg {
 
-	struct S {
-		int a, b, c;
-		int memberFunc(int x) {
-			return x;
-		}
-	};
+	/*Joerg() { }*/
+
+	static Joerg* getInstanceOfBla() { return new Joerg(); }
+
+	void foo() {}
+};
+
+
+int main() {
+
+	int magic;
+
+	#pragma test expect_ir(R"(
+		decl struct IMP_Joerg;
+		decl IMP_Joerg_colon__colon_getInstanceOfBla : () -> ptr<IMP_Joerg>;
+		decl ctor:IMP_Joerg::();
+		decl IMP_foo:IMP_Joerg::() -> unit;
+		def struct IMP_Joerg {
+			ctor function () { }
+			function IMP_foo = () -> unit { }
+		};
+		def IMP_Joerg_colon__colon_getInstanceOfBla = function () -> ptr<IMP_Joerg> {
+			return ptr_from_ref(IMP_Joerg::(ref_new(type_lit(IMP_Joerg))));
+		};
+		ptr_to_ref(IMP_Joerg_colon__colon_getInstanceOfBla()).IMP_foo())")
+	Joerg::getInstanceOfBla()->foo();
 }
-
-static int x;
-int& refFunTest() {
-	return x;
-}
-
-struct RefOpTest {
-	RefOpTest& operator+(const RefOpTest& rhs) {
-		return *this;
-	}
-};
-
-struct RefMethTest {
-	RefMethTest& meth() {
-		return *this;
-	}
-};
-
-struct StaticMember {
-	static int staticMem;
-};
-
-// literal checked for in true interception test
-int StaticMember::staticMem = 31337;

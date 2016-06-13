@@ -34,40 +34,34 @@
  * regarding third party software licenses.
  */
 
-// intercepted
-namespace ns {
-	static int simpleFunc(int x) {
-		return x;
-	}
+namespace stefan {
 
-	struct S {
-		int a, b, c;
-		int memberFunc(int x) {
-			return x;
-		}
+	struct Joerg {
+		Joerg() { }
+
+		static Joerg* getInstanceOfBla() { return new Joerg(); }
+
+		void foo() {}
 	};
+
 }
 
-static int x;
-int& refFunTest() {
-	return x;
+int main() {
+
+	int magic;
+
+	#pragma test expect_ir(R"(
+		decl struct IMP_stefan_colon__colon_Joerg;
+		decl IMP_stefan_colon__colon_Joerg_colon__colon_getInstanceOfBla : () -> ptr<IMP_stefan_colon__colon_Joerg>;
+		decl ctor:IMP_stefan_colon__colon_Joerg::();
+		decl IMP_foo:IMP_stefan_colon__colon_Joerg::() -> unit;
+		def struct IMP_stefan_colon__colon_Joerg {
+			ctor function () { }
+			function IMP_foo = () -> unit { }
+		};
+		def IMP_stefan_colon__colon_Joerg_colon__colon_getInstanceOfBla = function () -> ptr<IMP_stefan_colon__colon_Joerg> {
+			return ptr_from_ref(IMP_stefan_colon__colon_Joerg::(ref_new(type_lit(IMP_stefan_colon__colon_Joerg))));
+		};
+		ptr_to_ref(IMP_stefan_colon__colon_Joerg_colon__colon_getInstanceOfBla()).IMP_foo())")
+	stefan::Joerg::getInstanceOfBla()->foo();
 }
-
-struct RefOpTest {
-	RefOpTest& operator+(const RefOpTest& rhs) {
-		return *this;
-	}
-};
-
-struct RefMethTest {
-	RefMethTest& meth() {
-		return *this;
-	}
-};
-
-struct StaticMember {
-	static int staticMem;
-};
-
-// literal checked for in true interception test
-int StaticMember::staticMem = 31337;

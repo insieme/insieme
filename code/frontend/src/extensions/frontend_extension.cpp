@@ -109,9 +109,12 @@ namespace extensions {
 		return true;
 	}
 
+	bool FrontendExtension::VarDeclVisit(const clang::VarDecl* decl, insieme::frontend::conversion::Converter& converter) {
+		return true;
+	}
 
 	insieme::core::ExpressionPtr FrontendExtension::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
-	                                                          insieme::frontend::conversion::Converter& converter) {
+		                                                      insieme::frontend::conversion::Converter& converter) {
 		return irExpr;
 	}
 

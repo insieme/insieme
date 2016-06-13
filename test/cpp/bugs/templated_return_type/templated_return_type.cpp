@@ -2,16 +2,12 @@
 
 class A {
     public:
-		template<typename R, typename T>
-        R getSizeOf() const;
+	template<typename R, typename T>
+	R getSizeOf() const;
 
-		template<typename R, typename T>
-        R getSizeOf() ; /*{
-            std::cout << "Size of given type: " << sizeof(T) << std::endl;
-            std::cout << "Size of given ret type: " << sizeof(R) << std::endl;
-            return R();
-        }
-        */
+	template<typename R, typename T>
+	R getSizeOf() ;
+    
         int mF() { return 0; }
 };
 
@@ -21,18 +17,18 @@ class B {
 
         template<typename R, typename T>
         R getSizeOf() {
-			std::cout << "B::getSizeOf" << std::endl;
-            std::cout << "Size of given type: " << sizeof(T) << std::endl;
-            std::cout << "Size of given ret type: " << sizeof(R) << std::endl;
-            return R();
+		std::cout << "B::getSizeOf" << std::endl;
+		std::cout << "Size of given type: " << sizeof(T) << std::endl;
+		std::cout << "Size of given ret type: " << sizeof(R) << std::endl;
+		return R();
         }
 
-		template<typename R, typename T>
+	template<typename R, typename T>
         R getSizeOf() const{
-			std::cout << "B::getSizeOf const" << std::endl;
-            std::cout << "CONST : Size of given type: " << sizeof(T) << std::endl;
-            std::cout << "CONST : Size of given ret type: " << sizeof(R) << std::endl;
-            return R();
+		std::cout << "B::getSizeOf const" << std::endl;
+		std::cout << "CONST : Size of given type: " << sizeof(T) << std::endl;
+		std::cout << "CONST : Size of given ret type: " << sizeof(R) << std::endl;
+		return R();
         }
 };
 
@@ -54,20 +50,20 @@ R A::getSizeOf() const{
 
 template<typename T>
 T getSizeOf() {
-    std::cout << "Size of given type: " << sizeof(T) << std::endl;
-    return T();
+	std::cout << "Size of given type: " << sizeof(T) << std::endl;
+	return T();
 }
 
 int main() {
-	{
-		A a;
-		int i = a.getSizeOf<int, int>();
-		double d = a.getSizeOf<double, double>();
-		A b = a.getSizeOf<A, A>();
+	//~ {
+		//~ A a;
+		//~ int i = a.getSizeOf<int, int>();
+		//~ double d = a.getSizeOf<double, double>();
+		//~ A b = a.getSizeOf<A, A>();
 	
-		const A& ra = a;
-		int i1 = ra.getSizeOf<int, int>();
-	}
+		//~ const A& ra = a;
+		//~ int i1 = ra.getSizeOf<int, int>();
+	//~ }
 	{
 		B b;
 		int i = b.getSizeOf<int, int>();

@@ -524,11 +524,8 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitSubstNonTypeTemplateParmExpr(const clang::SubstNonTypeTemplateParmExpr* substExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(substExpr, retIr);
-		//frontend_assert(substExpr->getReplacement()) << "template parameter cannot be substituted by nothing\n";
-		//retIr = Visit(substExpr->getReplacement());
-
-		assert_not_implemented();
-
+		frontend_assert(substExpr->getReplacement()) << "template parameter cannot be substituted by nothing\n";
+		retIr = Visit(substExpr->getReplacement());
 		return retIr;
 	}
 

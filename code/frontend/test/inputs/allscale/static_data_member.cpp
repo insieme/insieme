@@ -34,40 +34,19 @@
  * regarding third party software licenses.
  */
 
-// intercepted
-namespace ns {
-	static int simpleFunc(int x) {
-		return x;
-	}
+struct Joerg {
 
-	struct S {
-		int a, b, c;
-		int memberFunc(int x) {
-			return x;
-		}
-	};
+	static Joerg joerg;
+
+	static Joerg* getInstanceOfBla() { return &joerg; }
+
+};
+
+
+int main() {
+
+	int magic;
+
+	#pragma test expect_ir(R"(5)")
+	Joerg::getInstanceOfBla();
 }
-
-static int x;
-int& refFunTest() {
-	return x;
-}
-
-struct RefOpTest {
-	RefOpTest& operator+(const RefOpTest& rhs) {
-		return *this;
-	}
-};
-
-struct RefMethTest {
-	RefMethTest& meth() {
-		return *this;
-	}
-};
-
-struct StaticMember {
-	static int staticMem;
-};
-
-// literal checked for in true interception test
-int StaticMember::staticMem = 31337;

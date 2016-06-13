@@ -113,8 +113,19 @@ namespace conversion {
 		}
 		auto irParents = builder.parents(parents);
 
+		// get methods and isntantiated template methods
+		std::vector<clang::CXXMethodDecl*> methodDecls;
+		std::copy(classDecl->method_begin(), classDecl->method_end(), std::back_inserter(methodDecls));
+		for(auto d : classDecl->decls()) {
+			if(clang::FunctionTemplateDecl* ftd = llvm::dyn_cast<clang::FunctionTemplateDecl>(d)) {
+				for(auto specialization : ftd->specializations()) {
+					methodDecls.push_back(llvm::dyn_cast<clang::CXXMethodDecl>(specialization));
+				}
+			}
+		}
+
 		// add symbols for all methods to function manager before conversion
-		for(auto mem : classDecl->methods()) {
+		for(auto mem : methodDecls) {
 			mem = mem->getCanonicalDecl();
 			// deal with static methods as functions
 			if(mem->isStatic()) {
@@ -130,7 +141,7 @@ namespace conversion {
 		std::vector<core::ExpressionPtr> constructors;
 		core::LiteralPtr destructor = nullptr;
 		bool destructorVirtual = false;
-		for(auto mem : classDecl->methods()) {
+		for(auto mem : methodDecls) {
 			mem = mem->getCanonicalDecl();
 			// deal with static methods as functions
 			if(mem->isStatic()) {

@@ -34,40 +34,24 @@
  * regarding third party software licenses.
  */
 
-// intercepted
-namespace ns {
-	static int simpleFunc(int x) {
-		return x;
+#include "independent_test_utils.h"
+#include "insieme/frontend/extensions/opencl_frontend_extension.h"
+#include "insieme/frontend/extensions/variable_argument_list_extension.h"
+
+namespace insieme {
+namespace frontend {
+
+	TEST(AllScaleIndependentTest, DISABLED_GTestUndeclared) {
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/allscale/gtest_undeclared.cpp");
 	}
 
-	struct S {
-		int a, b, c;
-		int memberFunc(int x) {
-			return x;
-		}
-	};
-}
-
-static int x;
-int& refFunTest() {
-	return x;
-}
-
-struct RefOpTest {
-	RefOpTest& operator+(const RefOpTest& rhs) {
-		return *this;
+	TEST(AllScaleIndependentTest, DISABLED_DefaultConstructorDeclaration) {
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/allscale/default_constructor_declaration.cpp");
 	}
-};
 
-struct RefMethTest {
-	RefMethTest& meth() {
-		return *this;
+	TEST(AllScaleIndependentTest, DISABLED_StaticDataMember) {
+		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/allscale/static_data_member.cpp");
 	}
-};
 
-struct StaticMember {
-	static int staticMem;
-};
-
-// literal checked for in true interception test
-int StaticMember::staticMem = 31337;
+} // frontend namespace
+} // insieme namespace

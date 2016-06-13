@@ -41,6 +41,8 @@
 #include "insieme/annotations/c/include.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/tu/ir_translation_unit_io.h"
 
 namespace insieme {
 namespace frontend {
@@ -115,6 +117,7 @@ namespace frontend {
 
 	TEST(InterceptorTest, TrueInterception) {
 		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp");
 		job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 		job.registerFrontendExtension<extensions::InterceptorExtension>();
@@ -135,6 +138,9 @@ namespace frontend {
 		// check name of function/method literals
 		checkForFunctionName(code, "IMP_ns_colon__colon_simpleFunc", "ns::simpleFunc", "interceptor_header.h");
 		checkForFunctionName(code, "IMP_ns_colon__colon_S::IMP_memberFunc", "memberFunc", "interceptor_header.h");
+
+		// check that 31337 is not in the code (from global init which should be intercepted)
+		ASSERT_FALSE(core::analysis::contains(core::tu::toIR(manager, irTu), builder.stringValue("31337")));
 	}
 
 	TEST(InterceptorTest, TrueTemplateInterception) {

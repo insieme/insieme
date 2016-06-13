@@ -61,6 +61,11 @@ int bla<0, 1>() {
 	return 2;
 }
 
+template <int N>
+int giveN() {
+	return N;
+}
+
 template <typename T>
 class tempClass {
 	T val;
@@ -117,6 +122,16 @@ int main() {
 		var ref<IMP_tempClass_float,f,f,plain> v0 = IMP_tempClass_float::(ref_decl(type_lit(ref<IMP_tempClass_float,f,f,plain>)));
 	)")
 	tempClass<float> aFloat;
+
+	#pragma test expect_ir(R"(def IMP_giveN_5_returns_int = function () -> int<4> {
+		return 5;
+	};
+	{
+		IMP_giveN_5_returns_int();
+	})")
+	{
+		giveN<5>();
+	}
 
 	return 0;
 }

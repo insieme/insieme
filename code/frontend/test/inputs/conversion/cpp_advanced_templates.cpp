@@ -34,40 +34,80 @@
  * regarding third party software licenses.
  */
 
-// intercepted
-namespace ns {
-	static int simpleFunc(int x) {
-		return x;
-	}
+// template class method
+template<class T>
+struct A {
+	T bla() { return T(); }
+};
 
-	struct S {
-		int a, b, c;
-		int memberFunc(int x) {
-			return x;
+// class templated method
+struct B {
+	template<class T>
+	T bla() { return T(); }
+};
+
+// template class templated method
+template<class T>
+struct C {
+	template<class T2>
+	T bla() { return T() + T2(); }
+};
+
+int main() {
+	;
+
+	#pragma test expect_ir(R"(
+		def struct IMP_A_int {
+			function IMP_bla_returns_int = () -> int<4> {
+				return 0;
+			}
+		};
+		{
+			var ref<IMP_A_int,f,f,plain> v0 = IMP_A_int::(ref_decl(type_lit(ref<IMP_A_int,f,f,plain>)));
+			v0.IMP_bla_returns_int();
 		}
-	};
-}
-
-static int x;
-int& refFunTest() {
-	return x;
-}
-
-struct RefOpTest {
-	RefOpTest& operator+(const RefOpTest& rhs) {
-		return *this;
+	)")
+	{
+		A<int> a;
+		a.bla();
 	}
-};
 
-struct RefMethTest {
-	RefMethTest& meth() {
-		return *this;
+	#pragma test expect_ir(R"(
+		def struct IMP_B {
+			function IMP_bla_float_returns_float = () -> real<4> {
+				return 0.0f;
+			}
+			function IMP_bla_int_returns_int = () -> int<4> {
+				return 0;
+			}
+		};
+		{
+			var ref<IMP_B,f,f,plain> v0 = IMP_B::(ref_decl(type_lit(ref<IMP_B,f,f,plain>)));
+			v0.IMP_bla_int_returns_int();
+			v0.IMP_bla_float_returns_float();
+		}
+	)")
+	{
+		B b;
+		b.bla<int>();
+		b.bla<float>();
 	}
-};
 
-struct StaticMember {
-	static int staticMem;
-};
+	#pragma test expect_ir(R"(
+		def struct IMP_C_int {
+			function IMP_bla_float_returns_int = () -> int<4> {
+				return num_cast(num_cast(0, type_lit(real<4>))+0.0f, type_lit(int<4>));
+			}
+		};
+		{
+			var ref<IMP_C_int,f,f,plain> v0 = IMP_C_int::(ref_decl(type_lit(ref<IMP_C_int,f,f,plain>)));
+			v0.IMP_bla_float_returns_int();
+		}
+	)")
+	{
+		C<int> c;
+		c.bla<float>();
+	}
 
-// literal checked for in true interception test
-int StaticMember::staticMem = 31337;
+	return 0;
+}

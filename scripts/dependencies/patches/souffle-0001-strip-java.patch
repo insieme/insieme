@@ -1,0 +1,39 @@
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -8,7 +8,7 @@
+ ACLOCAL_AMFLAGS = -I m4
+ 
+ # directories
+-SUBDIRS = src tests prof
++SUBDIRS = src tests
+ 
+ # add doxygen support to the makefile
+ include $(top_srcdir)/aminclude.am
+--- a/configure.ac
++++ b/configure.ac
+@@ -36,9 +36,6 @@ AC_PROG_INSTALL
+ AC_PROG_MAKE_SET
+ AM_PROG_CC_STDC
+ AC_PROG_RANLIB
+-AX_PROG_JAVAC
+-AX_PROG_JAVA
+-AX_PROG_JAR
+ 
+ AM_PROG_LEX
+ AC_PROG_YACC
+@@ -99,7 +96,6 @@ AC_CONFIG_TESTDIR([tests])
+ AC_CONFIG_FILES([
+     Makefile
+     src/Makefile
+-    prof/Makefile
+     tests/Makefile
+     tests/atlocal
+ ])
+@@ -118,7 +114,6 @@ AC_CONFIG_LINKS([include/souffle/IterUtils.h:src/IterUtils.h])
+ AC_CONFIG_LINKS([include/souffle/Util.h:src/Util.h])
+ AC_CONFIG_LINKS([include/souffle/RamLogger.h:src/RamLogger.h])
+ AC_CONFIG_LINKS([include/souffle/SymbolTable.h:src/SymbolTable.h])
+-AC_CONFIG_LINKS([prof/souffle-profile:prof/souffle-profile])
+ 
+ AM_MISSING_PROG([AUTOM4TE], [autom4te])
+ 

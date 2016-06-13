@@ -40,9 +40,9 @@ decl struct IMP_std_colon__colon_initializer_list_int;
 decl IMP_std_colon__colon_initializer_list_int::_M_array:ptr<int<4>,t,f>;
 decl IMP_std_colon__colon_initializer_list_int::_M_len:uint<8>;
 decl ctor:IMP_std_colon__colon_initializer_list_int::(ptr<int<4>,t,f>, uint<8>);
-decl IMP_begin : const IMP_std_colon__colon_initializer_list_int::() -> (ref<array<int<4>,inf>,t,f,plain>,int<8>);
-decl IMP_end : const IMP_std_colon__colon_initializer_list_int::() -> (ref<array<int<4>,inf>,t,f,plain>,int<8>);
-decl IMP_size : const IMP_std_colon__colon_initializer_list_int::() -> uint<8>;
+decl IMP_begin_returns_const_iterator : const IMP_std_colon__colon_initializer_list_int::() -> (ref<array<int<4>,inf>,t,f,plain>,int<8>);
+decl IMP_end_returns_const_iterator : const IMP_std_colon__colon_initializer_list_int::() -> (ref<array<int<4>,inf>,t,f,plain>,int<8>);
+decl IMP_size_returns_size_type : const IMP_std_colon__colon_initializer_list_int::() -> uint<8>;
 def struct IMP_std_colon__colon_initializer_list_int {
     _M_array : ptr<int<4>,t,f>;
     _M_len : uint<8>;
