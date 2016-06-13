@@ -378,7 +378,7 @@ int main(int argc, char** argv) {
 	measurementSetup.compiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi -lpfm");
 
 	// compile binary
-	const auto binary = dm::buildBinary(rootPtr, measurementSetup.backend, measurementSetup.compiler);
+	const auto binary = dm::buildBinary(rootPtr, measurementSetup);
 
 	using problemType = std::vector<unsigned>;
 	using resultType = vector<std::map<dm::region_id, std::map<dm::MetricPtr, dm::Quantity>>>;
@@ -415,9 +415,9 @@ int main(int argc, char** argv) {
 		resultType result;
 
 		while(result.size() < numRuns) {
-			const unsigned numRemainingRuns = numRuns - result.size();
+			measurementSetup.numRuns = numRuns - result.size();
 			timer = insieme::utils::Timer("Running measurement");
-			const resultType remainingResults = dm::measure(binary, metrics, numRemainingRuns, measurementSetup);
+			const resultType remainingResults = dm::measure(binary, metrics, measurementSetup);
 			timer.stop(); LOG(INFO) << timer;
 			assert_gt(remainingResults.size(), 0) << "Expected at least a single result set but found none, bailing out";
 			addAll(result, remainingResults);
