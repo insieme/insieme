@@ -128,12 +128,16 @@ namespace conversion {
 		// add symbols for all methods to function manager before conversion
 		for(auto mem : methodDecls) {
 			mem = mem->getCanonicalDecl();
-			// deal with static methods as functions
+			if(mem->isStatic()) continue;
+			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields(), true);
+		}
+
+		// deal with static methods as functions (afterwards!)
+		for(auto mem : methodDecls) {
 			if(mem->isStatic()) {
 				converter.getDeclConverter()->VisitFunctionDecl(mem);
 				continue;
 			}
-			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields(), true);
 		}
 
 		// get methods, constructors and destructor

@@ -41,11 +41,11 @@
 namespace insieme {
 namespace frontend {
 
-	TEST(AllScaleIndependentTest, DISABLED_GTestUndeclared) {
+	TEST(AllScaleIndependentTest, GTestUndeclared) {
 		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/allscale/gtest_undeclared.cpp");
 	}
 
-	TEST(AllScaleIndependentTest, DISABLED_DefaultConstructorDeclaration) {
+	TEST(AllScaleIndependentTest, DefaultConstructorDeclaration) {
 		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/allscale/default_constructor_declaration.cpp");
 	}
 
