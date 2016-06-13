@@ -219,7 +219,7 @@ namespace runtime {
 
 			core::VariablePtr argc = builder.variable(builder.parseType("ref<int<4>>"));
 			core::VariablePtr argv = builder.variable(builder.parseType("ref<ref<ref<array<char,inf>>>>"));
-			vector<core::VariablePtr> params = toVector(argc, argv);
+			core::VariablePtr envp = builder.variable(builder.parseType("ref<ref<ref<array<char,inf>>>>"));
 
 			// ------------------- Add list of entry points --------------------------
 
@@ -235,10 +235,21 @@ namespace runtime {
 
 			core::VariablePtr var;
 
+			// --------------- Allow for different main signature  -------------------
+			// main(int argc, char** argv)
+			// vs.
+			// main(int argc, char** argv, char** envp)
+			bool envParamRequired = false;
+
 			// ------------------- Start standalone runtime  -------------------------
 
 			// create call to standalone runtime
 			if(!workItemImpls.empty()) {
+
+				envParamRequired = (program->getEntryPoints()[0]->getType().as<FunctionTypePtr>()->getParameterTypeList().size() == 3);
+
+				core::ExpressionList paramList = { builder.deref(argc), builder.deref(argv) };
+				if(envParamRequired) { paramList.push_back(builder.deref(envp)); }
 
 				// get result type
 				auto resultType = program->getEntryPoints()[0]->getType().as<FunctionTypePtr>()->getReturnType();
@@ -248,10 +259,10 @@ namespace runtime {
 				if (!basic.isUnit(resultType)) {
 					var = builder.variable(builder.refType(resultType));
 					stmts.push_back(builder.declarationStmt(var, builder.getZero(resultType)));
-					expr = builder.tupleExpr(toVector<core::ExpressionPtr>(builder.deref(argc), builder.deref(argv), var));
-				} else {
-					expr = builder.tupleExpr(toVector<core::ExpressionPtr>(builder.deref(argc), builder.deref(argv)));
+					paramList.push_back(var);
 				}
+
+				expr = builder.tupleExpr(paramList);
 
 				// construct light-weight data item tuple
 				core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(expr->getType());
@@ -262,16 +273,15 @@ namespace runtime {
 
 			// ------------------- Add return   -------------------------
 
-			stmts.push_back(builder.returnStmt((var)
-					? builder.deref(var).as<ExpressionPtr>()
-					: builder.intLit(0).as<ExpressionPtr>()
-				));
+			stmts.push_back(builder.returnStmt((var) ? builder.deref(var).as<ExpressionPtr>() : builder.intLit(0).as<ExpressionPtr>()));
 
 			// ------------------- Creation of new main function -------------------------
 
 
 			// create new main function
 			core::StatementPtr body = builder.compoundStmt(stmts);
+			vector<core::VariablePtr> params = toVector(argc, argv);
+			if(envParamRequired) { params.push_back(envp); }
 			core::ExpressionPtr main = builder.lambdaExpr(basic.getInt4(), params, body);
 
 			// return resulting program

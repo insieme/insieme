@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -262,7 +262,7 @@ void irt_inst_region_wg_init(irt_work_group* wg) {
 	memset((void*)wg->region_data_exits, 0, sizeof(uint64) * context->num_regions);
 	for(uint32 i = 0; i < context->num_regions; ++i) {
 		wg->region_data[i] = (irt_inst_region_wi_data*)malloc(sizeof(irt_inst_region_wi_data) * IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE);
-		memset((void*)wg->region_data[i], 0, sizeof(uint64) * IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE);
+		memset((void*)wg->region_data[i], 0, sizeof(irt_inst_region_wi_data) * IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE);
 	}
 }
 
@@ -565,7 +565,7 @@ void irt_inst_region_debug_output() {
 
 void irt_inst_region_output() {
 	FILE* outputfile = stderr;
-	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
+	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE] = "";
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
 	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) { outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV); }
@@ -577,7 +577,10 @@ void irt_inst_region_output() {
 
 	IRT_ASSERT(stat(outputprefix, &st) == 0, IRT_ERR_INSTRUMENTATION, "Error using directory %s for region data: %s", outputprefix, strerror(errno));
 
-	sprintf(outputfilename, "%s/worker_efficiency_log", outputprefix);
+	sprintf(outputfilename, "%s/worker_efficiency.log", outputprefix);
+#ifdef IRT_USE_MPI
+	sprintf(outputfilename + strlen(outputfilename), ".%s", getenv("OMPI_COMM_WORLD_RANK"));
+#endif
 
 	outputfile = fopen(outputfilename, "w");
 	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Unable to open region data file for writing: %s", strerror(errno));

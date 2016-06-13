@@ -80,24 +80,24 @@ namespace tu {
 	std::ostream& IRTranslationUnit::printTo(std::ostream& out) const {
 		static auto print = [](const core::NodePtr& node) { return toString(node); };
 		return out << "TU(\n\tTypes:\n\t\t"
-		           << join("\n\t\t", types,
-		                   [&](std::ostream& out, const std::pair<core::GenericTypePtr, core::TypePtr>& cur) { out << *cur.first << " => " << *cur.second; })
-		           << ",\n\tGlobals:\n\t\t" << join("\n\t\t", globals,
-		                                            [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) {
+			       << join("\n\t\t", types,
+			               [&](std::ostream& out, const std::pair<core::GenericTypePtr, core::TypePtr>& cur) { out << *cur.first << " => " << *cur.second; })
+			       << ",\n\tGlobals:\n\t\t" << join("\n\t\t", globals,
+			                                        [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) {
 			                                            out << *cur.first << ":" << *cur.first->getType() << " => ";
 			                                            if(cur.second) {
 				                                            out << print(cur.second);
 			                                            } else {
 				                                            out << "<uninitalized>";
 			                                            }
-			                                        })
-		           << ",\n\tInitializer:\n\t\t" << join("\n\t\t", initializer, [&](std::ostream& out, const core::StatementPtr& cur) { out << print(cur); })
-		           << ",\n\tFunctions:\n\t\t" << join("\n\t\t", functions,
-		                                              [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) {
-			                                              out << *cur.first << " : " << *cur.first->getType() << " => " << print(cur.second);
-			                                          })
-		           << ",\n\tEntry Points:\t{" << join(", ", entryPoints, [&](std::ostream& out, const core::LiteralPtr& cur) { out << *cur; })
-		           << "}\n)";
+				                                    })
+			       << ",\n\tInitializer:\n\t\t" << join("\n\t\t", initializer, [&](std::ostream& out, const core::StatementPtr& cur) { out << print(cur); })
+			       << ",\n\tFunctions:\n\t\t" << join("\n\t\t", functions,
+			                                          [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) {
+				                                          out << *cur.first << " : " << *cur.first->getType() << " => " << print(cur.second);
+				                                      })
+			       << ",\n\tEntry Points:\n\t\t{" << join(", ", entryPoints, [&](std::ostream& out, const core::LiteralPtr& cur) { out << *cur; }) << "}"
+			       << ",\n\tis C++:\n\t\t" << isCXX() << "\n)";
 	}
 
 	IRTranslationUnit IRTranslationUnit::toManager(core::NodeManager& manager) const {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -63,6 +63,7 @@ irt_lookup_test_id dummy_id_generator() {
 	id.thread = 0;
 	id.index = num++;
 	id.cached = NULL;
+	id.id_type = IRT_ID_lookup_test;
 	return id;
 }
 

@@ -47,6 +47,7 @@
 
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/parallel.h"
+#include "insieme/core/lang/pointer.h"
 
 namespace insieme {
 namespace core {
@@ -381,6 +382,10 @@ namespace pattern {
 		inline TreePattern refReinterpret(const TreePattern& refExpr = any, const TreePattern& type = any) {
 			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::ReferenceExtension>().getRefReinterpret(); }), refExpr,
 			                type);
+		}
+
+		inline TreePattern ptrFromRef(const TreePattern& refExpr = any) {
+			return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangExtension<lang::PointerExtension>().getPtrFromRef(); }), refExpr);
 		}
 
 		inline TreePattern unaryOp(const TreePattern& a) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -52,7 +52,7 @@ namespace measure {
 	namespace {
 
 		int runCommand(const std::string& cmd) {
-			LOG(DEBUG) << "Running " << cmd << "\n";
+			LOG(INFO) << "Running " << cmd << "\n";
 			//			return system((cmd + "> /dev/null").c_str());
 			return system(cmd.c_str());
 		}
@@ -67,14 +67,15 @@ namespace measure {
 	}
 
 
-	int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env, const string& dir) const {
-	// create output directory
-	#ifndef DISABLE_ENERGY
+	int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env, const std::vector<string>& params, const string& dir) const {
+#ifndef DISABLE_ENERGY
 		// set capabilities for energy measurements, required for kernel versions 3.7 and newer
 		// TODO: only do this for newer kernel versions or kernels that have this fix
 		runCommand("sudo setcap cap_sys_rawio=ep " + binary);
-		#endif
-		return runCommand(setupEnv(env) + " IRT_INST_OUTPUT_PATH=" + dir + " " + binary.c_str());
+#endif
+		std::stringstream ss;
+		ss << setupEnv(env) << " IRT_INST_OUTPUT_PATH=" << dir << " " << wrapper << " " << binary << " " << join(" ", params);
+		return runCommand(ss.str());
 	}
 
 	ExecutorPtr makeLocalExecutor() {
@@ -82,7 +83,7 @@ namespace measure {
 	}
 
 
-	int RemoteExecutor::run(const std::string& binary, const std::map<string, string>& env, const string& dir) const {
+	int RemoteExecutor::run(const std::string& binary, const std::map<string, string>& env, const std::vector<string>& params, const string& dir) const {
 		// extract name of file
 		boost::filesystem::path path = binary;
 		string binaryName = path.filename().string();
@@ -107,27 +108,32 @@ namespace measure {
 		if(res == 0) { res = runCommand("scp -q " + binary + " " + url + ":" + remoteDir); }
 
 		// execute binary
+		std::stringstream ss;
 		switch(system) {
 		case SSH:
 			if(res == 0) {
-				res = runCommand("ssh " + url + " \"cd " + remoteDir + " && " + setupEnv(env) + " ./" + binaryName + " && rm " + binaryName + "\"");
+				ss << "ssh " << url << " \"cd " << remoteDir << " && " << setupEnv(env) << " ./" << binaryName << " " << join(" ", params) << " && rm " << binaryName << "\"";
+				res = runCommand(ss.str());
 			}
 			break;
 		case SGE:
+			assert_fail() << "Not tested!";
 			if(res == 0) {
-				res =
-				    runCommand("ssh " + url + " \"cd " + remoteDir + " && qsub -sync yes -b yes -cwd -o std.out -e std.err -pe openmp 1 " + binaryName + "\"");
+				ss << "ssh " << url << " \"cd " << remoteDir << " && qsub -sync yes -b yes -cwd -o std.out -e std.err -pe openmp 1 " << binaryName << " " << join(" ", params) << "\"";
+				res = runCommand(ss.str());
 			}
 			if(res == 0) { res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\""); }
 			break;
 		case PBS:
 			assert_fail() << "Not tested!";
 			if(res == 0) {
-				res = runCommand("ssh " + url + " \"cd " + remoteDir + " && qsub -l select=1:ncpus=4:mem=2gb -W block=true -- ./" + binaryName + "\"");
+				ss << "ssh " << url << " \"cd " << remoteDir << " && qsub -l select=1:ncpus=4:mem=2gb -W block=true -- ./" << binaryName << " " << join(" ", params) << "\"";
+				res = runCommand(ss.str());
 			}
 			if(res == 0) { res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\""); }
 			break;
 		case LL:
+			assert_fail() << "Not tested!";
 			std::string jobscript = "#!/bin/bash\n"
 			                        "#@ energy_policy_tag=my_energy_tag\n"
 			                        "#@ max_perf_decrease_allowed=1\n"
@@ -149,7 +155,10 @@ namespace measure {
 			                                      ". /etc/profile\n"
 			                                      ". /etc/profile.d/modules.sh\n"
 			                        + setupEnv(env);
-			if(res == 0) { res = runCommand("ssh " + url + " \"cd " + remoteDir + " && echo \"" + jobscript + "\" | llsubmit -s -\""); }
+			if(res == 0) {
+				ss << "ssh " << url << " \"cd " << remoteDir << " && echo \"" << jobscript << "\" | llsubmit -s -\"";
+				res = runCommand(ss.str());
+			}
 			// std::cout << "ssh " + url + " \"cd " + remoteDir + " && echo \"" + jobscript + "\" | llsubmit -s -\"\n";
 			// if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && "  + setupEnv(env) + " ./" + binaryName + " && rm " + binaryName + "\"");
 			// if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");

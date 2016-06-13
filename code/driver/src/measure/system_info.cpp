@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -68,7 +68,7 @@ namespace measure {
 
 		const string workDir = ".";
 
-		const int ret = executor->run(binary, env, workDir);
+		const int ret = executor->run(binary, env, std::vector<string>(), workDir);
 		boost::filesystem::remove(binary);
 
 		if(ret != 0) { return ret; }
