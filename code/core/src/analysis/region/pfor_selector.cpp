@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -47,26 +47,26 @@ namespace core {
 namespace analysis {
 namespace region {
 
-	RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
+	RegionList PForBodySelector::getRegions(const core::NodeAddress& code) const {
 		RegionList res;
-		auto pfor = node->getNodeManager().getLangExtension<lang::ParallelExtension>().getPFor();
-		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur) -> bool {
+		auto pfor = code->getNodeManager().getLangExtension<lang::ParallelExtension>().getPFor();
+		core::visitDepthFirstPrunable(code, [&](const core::CallExprAddress& cur) -> bool {
 			if(*cur.getAddressedNode()->getFunctionExpr() != *pfor) { return false; }
 			core::ExpressionAddress body = cur->getArgument(4);
 			if(body->getNodeType() == core::NT_BindExpr) { body = body.as<core::BindExprAddress>()->getCall()->getFunctionExpr(); }
-			if(body->getNodeType() == core::NT_LambdaExpr) { res.push_back(body.as<core::LambdaExprAddress>()->getBody()); }
+			if(body->getNodeType() == core::NT_LambdaExpr) { res.push_back(Region(body.as<core::LambdaExprAddress>()->getBody())); }
 			return true;
 		}, false);
 
 		return res;
 	}
 
-	RegionList PForSelector::getRegions(const core::NodePtr& node) const {
+	RegionList PForSelector::getRegions(const core::NodeAddress& code) const {
 		RegionList res;
-		auto pfor = node->getNodeManager().getLangExtension<lang::ParallelExtension>().getPFor();
-		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur) -> bool {
+		auto pfor = code->getNodeManager().getLangExtension<lang::ParallelExtension>().getPFor();
+		core::visitDepthFirstPrunable(code, [&](const core::CallExprAddress& cur) -> bool {
 			if(*cur.getAddressedNode()->getFunctionExpr() != *pfor) { return false; }
-			res.push_back(cur);
+			res.push_back(Region(cur));
 			return true;
 		}, false);
 

@@ -63,6 +63,7 @@
 
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/tag.h"
+#include "insieme/annotations/c/declaration.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/name_mangling.h"
@@ -495,8 +496,7 @@ namespace backend {
 				return type_info_utils::createInfo(boolType, definition);
 			}
 
-			// handle intercepted types
-			if(annotations::c::hasIncludeAttached(ptr)) {
+			auto getNamedType = [&](const core::NodePtr& nodePtr){
 				std::string name = insieme::utils::demangle(ptr->getName()->getValue());
 				if(core::annotations::hasAttachedName(ptr)) {
 					name = core::annotations::getAttachedName(ptr);
@@ -504,22 +504,57 @@ namespace backend {
 						name = annotations::c::getAttachedCTag(ptr) + " " + name;
 					}
 				}
-				c_ast::NamedTypePtr namedType = manager.create<c_ast::NamedType>(manager.create<c_ast::Identifier>(name));
-				c_ast::CodeFragmentPtr definition = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), annotations::c::getAttachedInclude(ptr));
+				return manager.create<c_ast::NamedType>(manager.create<c_ast::Identifier>(name));
+			};
+
+			// handle intercepted types
+			if(annotations::c::hasIncludeAttached(ptr) || annotations::c::isDeclaration(ptr)) {
+				c_ast::NamedTypePtr namedType = getNamedType(ptr);
+				c_ast::CodeFragmentPtr definition;
+				if(annotations::c::hasIncludeAttached(ptr)) {
+					definition = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), annotations::c::getAttachedInclude(ptr));
+				}
 				// also handle optional template arguments
 				for(auto typeArg : ptr->getTypeParameterList()) {
 					auto tempParamType = converter.getTypeManager().getTemplateArgumentType(typeArg);
 					namedType->parameters.push_back(tempParamType);
 					// if argument type is not intercepted, add a dependency on its definition
 					auto tempParamTypeInfo = typeInfos.find(typeArg);
-					if(tempParamTypeInfo != typeInfos.end()) definition->addDependency(tempParamTypeInfo->second->definition);
+					if(tempParamTypeInfo != typeInfos.end()) {
+						assert_true(definition) << "Tried to add a dependency to non-existent definition";
+						definition->addDependency(tempParamTypeInfo->second->definition);
+					}
 				}
-				return type_info_utils::createInfo(namedType, definition);
+				// if there is a definition then use it, otherwise create a forward declaration
+				if(definition) {
+					return type_info_utils::createInfo(namedType, definition);
+				} else {
+					auto declCode = manager.create<c_ast::TypeDeclaration>(namedType);
+					c_ast::CodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), declCode);
+					return type_info_utils::createInfo(namedType, declaration);
+				}
 			}
 
 			// no match found => return unsupported type info
 			LOG(FATAL) << "Unsupported type: " << *ptr;
 			return type_info_utils::createUnsupportedInfo(manager, ptr);
+		}
+
+		namespace {
+			// a record is "C-style" if all of its members, constructors and its destructor are defaulted and not explicitly called
+			bool isCStyleRecord(const core::RecordPtr& rec) {
+				if(rec.hasAttachedValue<UsedMemberTag>()) return false;
+				for(auto c : rec->getConstructors()) {
+					if(!core::analysis::isaDefaultMember(c)) return false;
+				}
+				for(auto m : rec->getMemberFunctions()) {
+					if(!core::analysis::isaDefaultMember(m)) return false;
+				}
+				if(rec->hasDestructor()) {
+					if(!core::analysis::isaDefaultMember(rec->getDestructor())) return false;
+				}
+				return rec->getPureVirtualMemberFunctions().empty();
+			}
 		}
 
 		TagTypeInfo* TypeInfoStore::resolveRecordType(const core::TagTypePtr& tagType, const core::RecordPtr& ptr) {
@@ -611,43 +646,38 @@ namespace backend {
 			// extract the record type info
 			auto record = tagType->getRecord();
 
-			// add constructors, destructors and assignments to non-trivial classes
-			bool trivial = core::analysis::isTrivial(tagType);
-			if (!trivial) {
+			// add constructors, destructors and assignments, except if we are dealing with a C-style record (only default members)
+			if(isCStyleRecord(record)) return res;
 
-				// add constructors
-				for (const auto& ctor : record->getConstructors()) {
-					auto impl = (core::analysis::getObjectType(ctor->getType()).isa<core::TagTypeReferencePtr>()) ? tagType->peel(ctor) : ctor;
-					funMgr.getInfo(impl.as<core::LambdaExprPtr>());	// this will declare and define the constructor
-				}
-//				// TODO: explicitly delete missing constructors
-//				//if (!core::analysis::hasDefaultConstructor(tagType)) {
-//					//type->ctors.push_back(manager->create<c_ast::ConstructorPrototype>());
-//				//}
-//
-				// add destructors (only for structs)
-				if(record->hasDestructor()) {
-					auto dtor = record->getDestructor();
-					auto info = funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
-					info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
-				}
-				// TODO: explicitly delete missing destructor
+			// add constructors
+			for(const auto& ctor : record->getConstructors()) {
+				auto impl = (core::analysis::getObjectType(ctor->getType()).isa<core::TagTypeReferencePtr>()) ? tagType->peel(ctor) : ctor;
+				funMgr.getInfo(impl.as<core::LambdaExprPtr>()); // this will declare and define the constructor
+			}
+			//// TODO: explicitly delete missing constructors
+			//if (!core::analysis::hasDefaultConstructor(tagType)) {
+			//	type->ctors.push_back(manager->create<c_ast::ConstructorPrototype>());
+			//}
+			//
+			// add destructors (only for structs)
+			if(record->hasDestructor()) {
+				auto dtor = record->getDestructor();
+				auto info = funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
+				info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
+			}
+			// TODO: explicitly delete missing destructor
 
-				// add pure virtual function declarations
-				core::IRBuilder builder(ptr.getNodeManager());
-				for (const auto& pureVirtual : record->getPureVirtualMemberFunctions()) {
-					auto type = pureVirtual->getType();
-					type = (core::analysis::getObjectType(type).isa<core::TagTypeReferencePtr>()) ? tagType->peel(type) : type;
-					funMgr.getInfo(builder.pureVirtualMemberFunction(pureVirtual->getName(), type));
-				}
+			// add pure virtual function declarations
+			core::IRBuilder builder(ptr.getNodeManager());
+			for(const auto& pureVirtual : record->getPureVirtualMemberFunctions()) {
+				auto type = pureVirtual->getType();
+				type = (core::analysis::getObjectType(type).isa<core::TagTypeReferencePtr>()) ? tagType->peel(type) : type;
+				funMgr.getInfo(builder.pureVirtualMemberFunction(pureVirtual->getName(), type));
 			}
 
-			// add member functions (for trivial and non trivial classes)
-			for (const auto& member : record->getMemberFunctions()) {
-				if (!trivial || !core::analysis::isaDefaultMember(tagType, member)) {
-					funMgr.getInfo(tagType->peel(member));
-				}
-				// TODO: explicitly delete missing mem funs
+			// add member functions
+			for(const auto& member : record->getMemberFunctions()) {
+				funMgr.getInfo(tagType->peel(member));
 			}
 
 			// done
@@ -657,7 +687,7 @@ namespace backend {
 		const TagTypeInfo* TypeInfoStore::resolveTagType(const core::TagTypePtr& tagType) {
 
 			// handle recursive types
-			if (tagType->isRecursive()) {
+			if(tagType->isRecursive()) {
 				return resolveRecType(tagType);
 			}
 

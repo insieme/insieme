@@ -199,5 +199,14 @@ namespace backend {
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};
 
+	/**
+	 * Determines whether defaulted methods are ever called.
+	 * (because if so, they need to be generated in their respective structs even in case those structs are C-like otherwise)
+	 */
+	class DefaultedMemberCallMarker : public PreProcessor {
+	  public:
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+	};
+
 } // end namespace backend
 } // end namespace insieme

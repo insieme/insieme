@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -44,7 +44,7 @@ namespace backend {
 namespace opencl {
 
 	OffloadSupportPost::OffloadSupportPost(const transform::StepContext& sc) :
-		PostProcessor(), compatWritten(false), sc(sc)
+		PostProcessor(), sc(sc)
 	{ }
 
 	c_ast::NodePtr OffloadSupportPost::process(c_ast::CNodeManager& manager, const c_ast::NodePtr& node) {

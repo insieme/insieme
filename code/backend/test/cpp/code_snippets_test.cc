@@ -447,15 +447,12 @@ namespace backend {
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		// std::cout << "Converted: \n" << *converted << std::endl;
+		//std::cout << "Converted: \n" << *converted << std::endl;
 
 		// check presence of relevant code
 		auto code = toString(*converted);
 		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
 		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
-
-		// check definition of six essential functions
-		EXPECT_FALSE(containsSubString(code, "A()"));
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -492,9 +489,6 @@ namespace backend {
 		auto code = toString(*converted);
 		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
 		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
-
-		// check definition of six essential functions
-		EXPECT_FALSE(containsSubString(code, "A()"));
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -536,13 +530,8 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
 		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
 
-		// make sure no constructors are defined
-		EXPECT_FALSE(containsSubString(code, "A()"));
-		EXPECT_FALSE(containsSubString(code, "B()"));
-
-		// also, the definition of B is missing
+		// make sure the definition of B is missing
 		EXPECT_FALSE(containsSubString(code, "struct B {"));
-
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -679,7 +668,22 @@ namespace backend {
 //		}
 
 		// create a code fragment including some member functions
-		core::ProgramPtr program = builder.parseProgram(R"(
+		core::ProgramPtr programTrivial = builder.parseProgram(R"(
+				def struct IMP_S {
+					val : int<4>;
+				};
+
+				def IMP_j = function (v57 : ref<IMP_S,f,f,cpp_ref>) -> ref<IMP_S,f,f,cpp_ref> {
+					return ref_kind_cast(v57, type_lit(plain)).IMP__operator_assign_(ref_kind_cast(<ref<IMP_S,f,f,plain>>(ref_temp(type_lit(IMP_S))) {5}, type_lit(cpp_ref))) materialize ;
+				};
+
+				int<4> main() {
+					var ref<IMP_S> a;
+					IMP_j(ref_kind_cast(a, type_lit(cpp_ref)));
+					return 0;
+				}
+		)");
+		core::ProgramPtr programNonTrivial = builder.parseProgram(R"(
 				def struct IMP_S {
 					val : int<4>;
 					dtor() { 5;}
@@ -696,24 +700,27 @@ namespace backend {
 				}
 		)");
 
-		ASSERT_TRUE(program);
-		//std::cout << "Program: " << core::printer::PrettyPrinter(program, core::printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS) << std::endl;
-		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+		for(auto program : {programTrivial, programNonTrivial}) {
+			ASSERT_TRUE(program);
+			//std::cout << "Program: " << core::printer::PrettyPrinter(program, core::printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS) << std::endl;
+			EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
-		// use sequential backend to convert into C++ code
-		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-		ASSERT_TRUE((bool)converted);
-		//std::cout << "Converted: \n" << *converted << std::endl;
+			// use sequential backend to convert into C++ code
+			auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+			ASSERT_TRUE((bool)converted);
+			//std::cout << "Converted: \n" << *converted << std::endl;
 
-		// check presence of relevant code
-		auto code = toString(*converted);
-		EXPECT_PRED2(containsSubString, code, "IMP_S& IMP_j(IMP_S& v57)");
-		EXPECT_PRED2(containsSubString, code, "return v57.operator=((IMP_S){5});");
+			// check presence of relevant code
+			auto code = toString(*converted);
+			EXPECT_PRED2(containsSubString, code, "IMP_S& IMP_j(IMP_S& v57)");
+			EXPECT_PRED2(containsSubString, code, "return v57.operator=((IMP_S){5});");
+			EXPECT_PRED2(containsSubString, code, "IMP_S& operator=(IMP_S const& p2) = default;");
 
-		// try compiling the code fragment
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-		compiler.addFlag("-c"); // do not run the linker
-		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+			// try compiling the code fragment
+			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+			compiler.addFlag("-c"); // do not run the linker
+			EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+		}
 	}
 
 	TEST(CppSnippet, Constructors) {
@@ -805,7 +812,9 @@ namespace backend {
 
 		// check presence of relevant code
 		auto code = toString(*converted);
-		EXPECT_PRED2(notContainsSubString, code, "&");
+		EXPECT_PRED2(containsSubString, code, "S s0;");
+		EXPECT_PRED2(containsSubString, code, "S s1;");
+		EXPECT_PRED2(containsSubString, code, "S s2;");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -1054,9 +1063,9 @@ namespace backend {
 		// check presence of relevant code
 		auto code = toString(*converted);
 
-		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
-		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
-		EXPECT_FALSE(containsSubString(code, "~A"));			// no destructor for A
+		EXPECT_PRED2(containsSubString, code, "struct A");		    // struct definition
+		EXPECT_PRED2(containsSubString, code, "A a;");			    // variable definition
+		EXPECT_PRED2(notContainsSubString, code, "~A() {");			// don't implement destructor for A
 
 		EXPECT_PRED2(containsSubString, code, "struct B");			// struct definition
 		EXPECT_PRED2(containsSubString, code, "B b;");				// variable definition
