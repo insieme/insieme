@@ -173,10 +173,9 @@ namespace analysis {
 	/**
 	 * Determines whether the given member function is one of the default generated assignment operators for the given type.
 	 *
-	 * @param type the TagType to check
 	 * @param memberFunction the memberFunction to check
 	 */
-	bool isaDefaultMember(const TagTypePtr& type, const MemberFunctionPtr& memberFunction);
+	bool isaDefaultMember(const MemberFunctionPtr& memberFunction);
 
 	/**
 	* Obtains the object type this function is attached to in case it is a constructor, destructor

@@ -826,7 +826,7 @@ namespace backend {
 
 			// check for default members
 			auto classType = core::analysis::getObjectType(memberFun->getType()).as<core::TagTypePtr>();
-			if(core::analysis::isaDefaultMember(classType, memberFun)) {
+			if(core::analysis::isaDefaultMember(memberFun)) {
 
 				// set declaration to default
 				decl->flag = c_ast::BodyFlag::Default;
@@ -1117,7 +1117,7 @@ namespace backend {
 						auto mfun = cManager->create<c_ast::MemberFunction>(classDecl->name, info->function);
 						c_ast::BodyFlag flag = c_ast::BodyFlag::None;
 						for(auto mem: classType->getRecord()->getMemberFunctions()->getMembers()) {
-							if(classType->peel(mem->getImplementation()) == lambda && core::analysis::isaDefaultMember(classType, mem)) {
+							if(classType->peel(mem->getImplementation()) == lambda && core::analysis::isaDefaultMember(mem)) {
 								flag = c_ast::BodyFlag::Default;
 							}
 						}

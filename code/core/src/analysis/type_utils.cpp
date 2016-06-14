@@ -417,7 +417,7 @@ namespace analysis {
 		return record->hasDestructor() && isDefaultDestructor(record->getDestructor());
 	}
 
-	bool isaDefaultMember(const TagTypePtr& type, const MemberFunctionPtr& memberFunction) {
+	bool isaDefaultMember(const MemberFunctionPtr& memberFunction) {
 		//only assignment operators can be default member functions
 		if (memberFunction->getNameAsString() != utils::getMangledOperatorAssignName()) return false;
 

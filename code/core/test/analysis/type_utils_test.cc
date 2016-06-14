@@ -458,24 +458,24 @@ namespace analysis {
 
 		{
 			auto member = builder.getDefaultCopyAssignOperator(thisType, parents, fields);
-			EXPECT_TRUE(isaDefaultMember(record, member));
+			EXPECT_TRUE(core::analysis::isaDefaultMember(member));
 		}
 
 		{
 			auto member = builder.getDefaultMoveAssignOperator(thisType, parents, fields);
-			EXPECT_TRUE(isaDefaultMember(record, member));
+			EXPECT_TRUE(core::analysis::isaDefaultMember(member));
 		}
 
 		{
 			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_MEMBER_FUNCTION);
 			auto member = builder.memberFunction(false, "foo", builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp()));
-			EXPECT_FALSE(isaDefaultMember(record, member));
+			EXPECT_FALSE(core::analysis::isaDefaultMember(member));
 		}
 
 		{
 			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_MEMBER_FUNCTION);
 			auto member = builder.memberFunction(false, utils::getMangledOperatorAssignName(), builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp()));
-			EXPECT_FALSE(isaDefaultMember(record, member));
+			EXPECT_FALSE(core::analysis::isaDefaultMember(member));
 		}
 	}
 

@@ -492,7 +492,7 @@ namespace printer {
 							for (auto memberFunIn : memberFunctions) {
 								auto memberFun = tag->peel(memberFunIn);
 								if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
-									analysis::isaDefaultMember(tag, memberFun))
+									analysis::isaDefaultMember(memberFun))
 									continue;
 								if (auto member = memberFun->getImplementation().isa<LambdaExprPtr>()) {
 									newLine();
@@ -821,7 +821,7 @@ namespace printer {
 					// print all member functions
 					auto memberfuns = node->getMemberFunctions();
 					for (auto memberFun : memberfuns) {
-						if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(tagType, memberFun.getAddressedNode())) continue;
+						if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(memberFun.getAddressedNode())) continue;
 						if (auto impl = memberFun->getImplementation().isa<LambdaExprAddress>()) {
 							newLine();
 							if (memberFun->isVirtual()) out << "virtual ";
@@ -850,7 +850,7 @@ namespace printer {
 												  }) << ") -> ";
 							VISIT(impl->getFunctionType()->getReturnType());
 							out << " ";
-							if(analysis::isaDefaultMember(tagType, memberFun.getAddressedNode())) out << "= default;";
+							if(analysis::isaDefaultMember(memberFun.getAddressedNode())) out << "= default;";
 							else VISIT(impl->getBody());
 							thisStack.pop();
 						}
