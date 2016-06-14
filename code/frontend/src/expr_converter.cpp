@@ -130,7 +130,7 @@ namespace conversion {
 			core::IRBuilder builder(mgr);
 			core::ExpressionList initExps;
 			for(char c : s) {
-				initExps.push_back(builder.literal(format("'%s'",toString(insieme::utils::escapeChar(c))), mgr.getLangBasic().getChar()));
+				initExps.push_back(builder.literal(format("'%s'", toString(insieme::utils::escapeChar(c))), mgr.getLangBasic().getChar()));
 			}
 			initExps.push_back(builder.literal("'\\0'", mgr.getLangBasic().getChar()));
 			expr = builder.deref(builder.initExprTemp(converter.convertType(original->getType()).as<core::GenericTypePtr>(), initExps));
@@ -783,10 +783,16 @@ namespace conversion {
 			auto gT = converter.convertType(clangType).as<core::GenericTypePtr>();
 			frontend_assert(core::lang::isArray(gT)) << "Clang InitListExpr of unexpected generic type (should be array):\n" << dumpColor(gT);
 			core::ExpressionList initExps;
-			for(unsigned i = 0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
-				initExps.push_back(convertInitExpr(initList->getInit(i)));
+			// handle special case if init list holds a single string literal
+			if(initList->getNumInits() == 1 && llvm::dyn_cast<clang::StringLiteral>(initList->getInit(0))) {
+				retIr = convertInitExpr(initList->getInit(0));
+				return retIr;
+			} else {
+				for(unsigned i = 0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
+					initExps.push_back(convertInitExpr(initList->getInit(i)));
+				}
+				retIr = builder.initExprTemp(genType, initExps);
 			}
-			retIr = builder.initExprTemp(genType, initExps);
 		}
 		else if(clangType->isScalarType()) {
 			retIr = convertInitExpr(initList->getInit(0));
