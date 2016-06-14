@@ -2,25 +2,25 @@
 
 require "fileutils"
 
-srcdir = ARGV[0]
-destdir = ARGV[1]
+@srcdir = ARGV[0]
+@destdir = ARGV[1]
 
-incdir = "include"
-basedir = Dir.pwd
-verbose = true
+@incdir = "include"
+@basedir = Dir.pwd
+@verbose = true
 
 @file_ext = "dl"
-decltoken = "decl"
-comptoken = "comp"
+@decltoken = "decl"
 @inittoken = "init"
-membertoken = "member"
+@comptoken = "comp"
+@membertoken = "member"
 @usingtoken = "using"
 @mangle = "D474L06"
 
 abort "Dough takes exactly two arguments!" if ARGV.length != 2
-abort "Source dir (#{srcdir}) does not exist!" unless File.directory?(srcdir)
-abort "Destination dir (#{destdir}) does not exist!" unless File.directory?(destdir)
-abort "Invalid include dir (#{incdir}): Does not exist in '#{srcdir}'!" unless File.directory?(srcdir + "/" + incdir)
+abort "Source dir (#{@srcdir}) does not exist!" unless File.directory?(@srcdir)
+abort "Destination dir (#{@destdir}) does not exist!" unless File.directory?(@destdir)
+abort "Invalid include dir (#{@incdir}): Does not exist in '#{@srcdir}'!" unless File.directory?(@srcdir + "/" + @incdir)
 
 def extract_relation_name(name, input_arr)
   arr = input_arr.grep(/^\s*\.#{name}\s+/)
@@ -77,23 +77,23 @@ end
 
 
 # Step 1: Copy files
-source_files = Dir.glob(srcdir + "/*." + @file_ext)
-FileUtils.cp(source_files, destdir)
+source_files = Dir.glob(@srcdir + "/*." + @file_ext)
+FileUtils.cp(source_files, @destdir)
 
-include_files = Dir.glob(srcdir + "/" + incdir + "/*." + @file_ext)
-FileUtils.mkdir_p(destdir + "/" + incdir)
-FileUtils.cp(include_files, destdir + "/" + incdir)
+include_files = Dir.glob(@srcdir + "/" + @incdir + "/*." + @file_ext)
+FileUtils.mkdir_p(@destdir + "/" + @incdir)
+FileUtils.cp(include_files, @destdir + "/" + @incdir)
 
 # Strip paths from filenames for further use
 source_files.map! {|filename| File.basename(filename) }
 include_files.map! {|filename| File.basename(filename) }
 
-# 
+#
 # Step 2: Name-mangle declarations in header files
-Dir.chdir(destdir + "/" + incdir)
+Dir.chdir(@destdir + "/" + @incdir)
 include_files.each do |filename|
 
-  puts "Header file: #{filename}" if verbose
+  puts "Header file: #{filename}" if @verbose
 
   lines = File.read(filename).split("\n")
 
@@ -101,9 +101,9 @@ include_files.each do |filename|
   unless File.basename(filename) == "ir." + @file_ext then
 
     # Get all decls, inits and comps in this file
-    decls = extract_relation_name("decl", lines)
-    inits = extract_relation_name("init", lines)
-    comps = extract_relation_name("comp", lines)
+    decls = extract_relation_name(@decltoken, lines)
+    inits = extract_relation_name(@inittoken, lines)
+    comps = extract_relation_name(@comptoken, lines)
 
     decls.concat(comps)
 
@@ -126,7 +126,7 @@ include_files.each do |filename|
   convert_usings_to_includes(lines)
 
   # Change 'member' declarations back to decl and add pragma once
-  lines.map! {|line| line.gsub(/(\s*\.)#{membertoken}([^\w]+)/, '\1decl\2') }
+  lines.map! {|line| line.gsub(/(\s*\.)#{@membertoken}([^\w]+)/, '\1decl\2') }
   lines.unshift "#pragma once"
 
   # Done. Write new content to file
@@ -135,14 +135,14 @@ include_files.each do |filename|
   end
 
 end
-Dir.chdir(basedir)
+Dir.chdir(@basedir)
 
 
 #Step 3: Name-mangle using-declarations in source files
-Dir.chdir(destdir)
+Dir.chdir(@destdir)
 source_files.each do |filename|
 
-  puts "Source file: #{filename}" if verbose
+  puts "Source file: #{filename}" if @verbose
 
   lines = File.read(filename).split("\n")
 
@@ -156,5 +156,5 @@ source_files.each do |filename|
   end
 
 end
-Dir.chdir(basedir)
+Dir.chdir(@basedir)
 
