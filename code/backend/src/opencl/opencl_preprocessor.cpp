@@ -104,8 +104,8 @@ namespace opencl {
 
 				// obtain the static device information attached to the statement
 				auto deviceInfo = analysis::getDeviceInfo(stmt);
-
-				auto generated = transform::toOcl(converter, manager, root, callExpr, requirements, deviceInfo);
+				// call the generic lambda to ocl transformation code
+				auto generated = transform::toOcl(converter, transform::OclIngredients{fallback, requirements, deviceInfo});
 				std::copy(generated.begin(), generated.end(), std::back_inserter(variants));
 				// build a pick for the generated variants
 				auto pickExpr = builder.pickVariant(variants);

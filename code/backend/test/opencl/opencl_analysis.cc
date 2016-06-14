@@ -38,6 +38,7 @@
 
 #include "insieme/backend/addons/pointer_type.h"
 #include "insieme/backend/opencl/opencl_analysis.h"
+#include "insieme/backend/opencl/opencl_transform.h"
 
 #include "insieme/backend/converter.h"
 #include "insieme/backend/type_manager.h"
@@ -120,6 +121,34 @@ namespace opencl {
 		annos.push_back(std::make_shared<LoopAnnotation>(true));
 		addAnnotations(forStmt, annos);
 		EXPECT_TRUE(analysis::isIndependentStmt(forStmt));
+	}
+
+	TEST(isVariableRequirementOf, Basic) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto code = builder.parseStmt(R"(
+			{
+				var ref<int<4>,f,f> x = ref_temp_init(0);
+				for(int<4> i = 0 .. 10 : 1) { var ref<int<4>> y = ref_temp_init(*x); }
+			}
+		)");
+
+		core::ForStmtPtr forStmt;
+		core::visitDepthFirstOncePrunable(code, [&](const core::ForStmtPtr& stmt) {
+			forStmt = stmt;
+			return true;
+		});
+		EXPECT_TRUE(!!forStmt);
+
+		auto requirements = analysis::getVariableRequirements(mgr, code, forStmt);
+		EXPECT_GT(requirements.size(), 0);
+
+		auto callExpr = transform::outline(mgr, forStmt, requirements);
+		EXPECT_EQ(callExpr->getArgumentList().size(), 1);
+
+		auto lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
+		EXPECT_TRUE(analysis::isVariableRequirementOf(lambdaExpr, requirements));
 	}
 
 	TEST(DISABLED_getDependencyGraph, Basic) {
