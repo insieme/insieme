@@ -35,22 +35,20 @@
  */
 
 #include <gtest/gtest.h>
-#include "insieme/utils/container_utils.h"
-
-#include "insieme/core/ir_statements.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_address.h"
-
-#include "insieme/core/analysis/normalize.h"
-
-#include "insieme/utils/set_utils.h"
-#include "insieme/utils/test/test_utils.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/normalize.h"
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_statements.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/manipulation.h"
+
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/set_utils.h"
+#include "insieme/utils/string_utils.h"
 
 #include "ir_node_test.inc"
 

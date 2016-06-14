@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -248,7 +248,8 @@ bool compileToBinary(const VirtualPrintable& source, const string& targetFile, c
 	// delete source file - only if compilation was a success
 	if(boost::filesystem::exists(sourceFile)) {
 		if(success) {
-			boost::filesystem::remove(sourceFile);
+			std::cerr << "Source: " << sourceFile << std::endl;
+			//boost::filesystem::remove(sourceFile);
 		} else {
 			std::cerr << "Offending source code can be found in " << sourceFile << std::endl;
 		}

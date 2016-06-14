@@ -47,8 +47,6 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/utils/test/test_utils.h"
-
 namespace insieme {
 namespace core {
 namespace transform {
@@ -59,13 +57,13 @@ namespace transform {
 
 		CallExprAddress code = builder.parseAddressesProgram(R"1N5P1RE(
 			alias int = int<4>;
-			def fun = (a : int, b : int) -> int { 
-			  if(a<4) { return a + 2*b; } 
-			  return a - b; 
+			def fun = (a : int, b : int) -> int {
+			  if(a<4) { return a + 2*b; }
+			  return a - b;
 			};
 			int main() {
 				var ref<int,f,f,plain> x = 0;
-				$x = fun(3,6)$; 
+				$x = fun(3,6)$;
 			}
         )1N5P1RE")[0].as<CallExprAddress>();
 
