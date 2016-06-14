@@ -1095,14 +1095,14 @@ namespace backend {
 					if(funType.isConstructor()) {
 						// add constructor
 						auto ctor = cManager->create<c_ast::Constructor>(classDecl->name, info->function);
-						c_ast::BodyFlag flag = (core::analysis::isaDefaultConstructor(classType, lambda) ? c_ast::BodyFlag::Default : c_ast::BodyFlag::None);
+						c_ast::BodyFlag flag = (core::analysis::isaDefaultConstructor(lambda) ? c_ast::BodyFlag::Default : c_ast::BodyFlag::None);
 						auto decl = cManager->create<c_ast::ConstructorPrototype>(ctor, flag);
 						classDecl->ctors.push_back(decl);
 						info->declaration = decl;
 					} else if(funType.isDestructor()) {
 						// add destructor
 						assert_false(classDecl->dtor) << "Destructor already defined!";
-						bool defaultDtor = core::analysis::isDefaultDestructor(classType, lambda);
+						bool defaultDtor = core::analysis::isDefaultDestructor(lambda);
 						c_ast::BodyFlag flag = defaultDtor ? c_ast::BodyFlag::Default : c_ast::BodyFlag::None;
 						auto dtor = cManager->create<c_ast::Destructor>(classDecl->name, info->function);
 						auto decl = cManager->create<c_ast::DestructorPrototype>(dtor, flag);
@@ -1164,12 +1164,10 @@ namespace backend {
 				// skip default implementations
 				auto funType = lambda->getFunctionType();
 				if(funType->isConstructor()) {
-					auto classType = core::analysis::getObjectType(funType).as<core::TagTypePtr>();
-					if(core::analysis::isaDefaultConstructor(classType, lambda)) return;
+					if(core::analysis::isaDefaultConstructor(lambda)) return;
 				}
 				if(funType->isDestructor()) {
-					auto classType = core::analysis::getObjectType(funType).as<core::TagTypePtr>();
-					if(core::analysis::isDefaultDestructor(classType, lambda)) return;
+					if(core::analysis::isDefaultDestructor(lambda)) return;
 				}
 
 				// peel function and create function definition

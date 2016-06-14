@@ -394,15 +394,15 @@ namespace analysis {
 		return hasMemberOfType(type, utils::getMangledOperatorAssignName(), funType);
 	}
 
-	bool isaDefaultConstructor(const TagTypePtr& type, const ExpressionPtr& ctor) {
-		if(auto lambda = ctor.isa<LambdaExprPtr>()) {
+	bool isaDefaultConstructor(const ExpressionPtr& ctor) {
+		if (auto lambda = ctor.isa<LambdaExprPtr>()) {
 			return lambda->getType().as<FunctionTypePtr>().isConstructor() && isaDefaultMember(lambda);
 		}
 		return false;
 	}
 
-	bool isDefaultDestructor(const TagTypePtr& type, const ExpressionPtr& dtor) {
-		if(auto lambda = dtor.isa<LambdaExprPtr>()) {
+	bool isDefaultDestructor(const ExpressionPtr& dtor) {
+		if (auto lambda = dtor.isa<LambdaExprPtr>()) {
 			return lambda->getType().as<FunctionTypePtr>().isDestructor() && isaDefaultMember(lambda);
 		}
 		return false;
@@ -410,7 +410,11 @@ namespace analysis {
 
 	bool hasDefaultDestructor(const TagTypePtr& type) {
 		auto record = type->getRecord();
-		return record->hasDestructor() && isDefaultDestructor(type, record->getDestructor());
+		return hasDefaultDestructor(record);
+	}
+
+	bool hasDefaultDestructor(const RecordPtr& record) {
+		return record->hasDestructor() && isDefaultDestructor(record->getDestructor());
 	}
 
 	bool isaDefaultMember(const TagTypePtr& type, const MemberFunctionPtr& memberFunction) {

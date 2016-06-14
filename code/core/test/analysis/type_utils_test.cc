@@ -402,23 +402,23 @@ namespace analysis {
 
 		{
 			auto ctor = builder.getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
-			EXPECT_TRUE(isaDefaultConstructor(record, ctor));
+			EXPECT_TRUE(isaDefaultConstructor(ctor));
 		}
 
 		{
 			auto ctor = builder.getDefaultCopyConstructor(thisType, parents, fields).as<ExpressionPtr>();
-			EXPECT_TRUE(isaDefaultConstructor(record, ctor));
+			EXPECT_TRUE(isaDefaultConstructor(ctor));
 		}
 
 		{
 			auto ctor = builder.getDefaultMoveConstructor(thisType, parents, fields).as<ExpressionPtr>();
-			EXPECT_TRUE(isaDefaultConstructor(record, ctor));
+			EXPECT_TRUE(isaDefaultConstructor(ctor));
 		}
 
 		{
 			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_CONSTRUCTOR);
 			auto ctor = builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp());
-			EXPECT_FALSE(isaDefaultConstructor(record, ctor));
+			EXPECT_FALSE(isaDefaultConstructor(ctor));
 		}
 	}
 
@@ -485,11 +485,13 @@ namespace analysis {
 
 		auto A = builder.parseType("struct A { }").isa<TagTypePtr>();
 		EXPECT_TRUE(A);
-
+		bool(*hD1)(const TagTypePtr&) = hasDefaultDestructor;
+		bool(*hD2)(const RecordPtr&) = hasDefaultDestructor;
 		EXPECT_PRED1(hasDefaultConstructor, A);
 		EXPECT_PRED1(hasCopyConstructor, A);
 		EXPECT_PRED1(hasMoveConstructor, A);
-		EXPECT_PRED1(hasDefaultDestructor, A);
+		EXPECT_PRED1(hD1, A);
+		EXPECT_PRED1(hD2, A->getRecord());
 
 		EXPECT_PRED1(hasCopyAssignment, A);
 		EXPECT_PRED1(hasMoveAssignment, A);

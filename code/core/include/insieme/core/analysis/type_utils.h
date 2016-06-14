@@ -149,25 +149,26 @@ namespace analysis {
 	bool hasMoveAssignment(const TagTypePtr&);
 
 	/**
-	 * Determines whether the given constructor is one of the default generated ones for the given type.
-	 *
-	 * @param type the TagType to check
-	 * @param ctor the ctor to check
-	 */
-	bool isaDefaultConstructor(const TagTypePtr& type, const ExpressionPtr& ctor);
-
-	/**
-	* Determines whether the given destructor is a default destructor for the given type.
+	* Determines whether the given constructor is one of the default generated ones for the given type.
 	*
-	* @param type the TagType to check
-	* @param dtor the destructor to check
+	* @param ctor the ctor to check
 	*/
-	bool isDefaultDestructor(const TagTypePtr& type, const ExpressionPtr& dtor);
+	bool isaDefaultConstructor(const ExpressionPtr& ctor);
+
+	/*
+	* Determines whether the given expression is a destructor and if it is a default destructor
+	*/
+	bool isDefaultDestructor(const ExpressionPtr& dtor);
 
 	/**
 	 * Determines whether the given TagType has the default generated destructor.
 	 */
-	bool hasDefaultDestructor(const TagTypePtr& type);
+	bool hasDefaultDestructor(const TagTypePtr&);
+
+	/*
+	* Determines whether the given Record has the default generated destructor.
+	*/
+	bool hasDefaultDestructor(const RecordPtr&);
 
 	/**
 	 * Determines whether the given member function is one of the default generated assignment operators for the given type.
