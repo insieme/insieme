@@ -6,14 +6,15 @@
 
 // --- links callables to their return statements ---
 
-.decl ReturnValue( c : callable , e : expr )
+.decl ReturnValue( c : callable , e : node )
 
 
 // --- Definiton ---
 
 
 // for lambdas, those are the corresponding return statements
-//DISABLED DUE TO IR CHANGE ReturnValue( l, v ) :- ReturnOfLambda(l,r), ReturnStmt(r,_,v).
+ReturnValue( l, v ) :- ReturnOfLambda(l,r), ReturnStmt(r,v).
+
 
 // for bind expressions, it is the direct sub-expression
 ReturnValue( b , e ) :- BindExpr(b,_,e).

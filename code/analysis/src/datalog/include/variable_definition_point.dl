@@ -28,8 +28,6 @@ VariableDefinition(V) :- DeclarationStmt(_,_,V).
 // variables in catch clauses
 VariableDefinition(V) :- CatchClause(_,V,_).
 
-// variables in return statements
-//DISABLED DUE TO IR CHANGE VariableDefinition(V) :- ReturnStmt(_,_,V).
 
 
 // -- define an auxilary relation tracing the path from a variable to its definition point --

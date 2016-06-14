@@ -18,7 +18,7 @@ assignment(c) :- NamedConstruct("ref_assign", i), NodeIdentity(t,i), callGraph(c
 .decl simple_assignment ( e : expr ) output
 simple_assignment(c) :- CallExpr(c,f), NamedConstruct("ref_assign", i), NodeIdentity(f,i).
 
-// -- a realation identifying every deref operation --
+// -- a relation identifying every deref operation --
 .decl deref ( e : expr ) output
 deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 
@@ -43,7 +43,7 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 	// definitions of variables take the value at the definition
 
 	// declaration statements
-	value( v, p, b ) :- VariableDefinition(v), DeclarationStmt(_,d,v), Declaration(d,_,e), value(e,p,b).
+	value( v, p, b ) :- VariableDefinition(v), DeclarationStmt(_,d,v), value(d,p,b).
 
 	// bind parameters
 	value( v, d, b ) :-
@@ -51,15 +51,17 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 			callGraph(c,f),														// f is called by call site c
 			NodeList(c,i,a),value(a,d,b).  										// v get's assigned the value of the i-th argument of c
 
-	// return variables
-	//DISABLED DUE TO IR CHANGE value( v, p, b ) :- VariableDefinition(v), ReturnStmt(_,e,v), value(e,p,b).
-
 	// uses of variables correspond to the value of the definition point
 	value( v, p, b ) :- Variable(v,_,_), DefinitionPoint(d,v), value(d,p,b).
 
 	// free variables are undefined
 	value( v, DP_ROOT, b ) :- FreeVariable(v), unknown_value(b).
 
+	
+	// -- values of declarations --
+	
+	// for now, just take the value of the initializer expression (TODO: handle ctor calls and implicit conversions)
+	value( d, p, v ) :- Declaration(d,_,e), value(e,p,v). 
 
 
 	// -- value of call expressions --
@@ -88,7 +90,7 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 	memory_state.value( b, PRE, [[v,dp],d] ) :-
 			VariableDefinition(v), NodeList(p,i,v), Lambda(l,_,p,b),			// this variable is the i-th parameter of a lambda l
 			callGraph(c,l),														// l is called by call site c
-			NodeList(c,i,a),value(a,dp,d).  										// v get's assigned the value of the i-th argument of c
+			NodeList(c,i,a),value(a,dp,d).  									// v get's assigned the value of the i-th argument of c
 
 }
 
