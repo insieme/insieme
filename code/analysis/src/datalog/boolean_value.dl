@@ -11,39 +11,3 @@
 // link analysis with result
 result( v ) :- target_expr(n), boolean_value(n,DP_ROOT,v).
 
-
-
-// ---------- Analysis Specification -----------
-
-
-// create a data flow analysis instance for boolean values
-.init boolean = DataFlowAnalysis<bool>
-
-// define an alias
-boolean_value(n,p,v) :- boolean.value(n,p,v).
-
-// the value to be exhibited by any unknown value
-boolean.unknown_value( true ).
-boolean.unknown_value( false ).
-
-
-// -- empty list checks --
-.decl is_empty ( e : node )
-is_empty(e) :- Types(e), !NodeList(e,_,_).
-is_empty(e) :- Parents(e), !NodeList(e,_,_).
-
-
-// -- identify the boolean type --
-.decl is_boolean( t : node )
-is_boolean( n ) :- GenericType(n,"bool",a,b), is_empty(a), is_empty(b).
-
-
-// -- boolean value analysis --
-
-// -- assign values to literals --
-boolean.value( n , DP_ROOT, true ) :- Literal(n,t,"true"), is_boolean(t).
-boolean.value( n , DP_ROOT, false ) :- Literal(n,t,"false"), is_boolean(t).
-
-// all other literals have an unknown boolean value
-boolean.value( n, DP_ROOT, v ) :- Literal(n,t,_), !is_boolean(t), boolean.unknown_value(v).
-

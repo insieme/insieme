@@ -1,6 +1,5 @@
 .using _ from DataPath
 
-
 // the analysis assigning IR nodes boolean values
 .decl boolean_value( n : node , p : data_path, v : bool )
 
