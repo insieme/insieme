@@ -730,6 +730,21 @@ namespace printer {
 				}
 			}
 
+			PRINT(Field) {
+				visit(node->getName());
+				out << " : ";
+				visit(node->getType());
+			}
+
+			PRINT(Fields) {
+				if (!node.empty()) {
+					out << join(";", node, [&](std::ostream &out, const FieldAddress &cur) {
+						this->newLine();
+						visit(cur);
+					}) << ";";
+				}
+			}
+
 			PRINT(Record) {
 					const auto& tagType = node.getFirstParentOfType(NT_TagType).getAddressedNode().as<TagTypePtr>();
 
@@ -738,7 +753,6 @@ namespace printer {
 						out << " : ";
 						VISIT(cur->getType());
 					};
-
 
 					auto strct = analysis::isStruct(node);
 
@@ -768,29 +782,22 @@ namespace printer {
 					increaseIndent();
 
 					// print all fields
-					auto fields = node->getFields();
-					if (!fields.empty()) {
-						out << join(";", fields, [&](std::ostream &out, const FieldAddress &cur) {
-							this->newLine();
-							VISIT(cur->getName());
-							out << " : ";
-							VISIT(cur->getType());
-						}) << ";";
-					}
+					visit(node->getFields());
 
 					// print all constructors
-					auto constructors = node->getConstructors();
-					for(auto constr : constructors) {
-						if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS)
-							&& analysis::isaDefaultConstructor(constr.getAddressedNode())) continue;
+					for (auto constr : node->getConstructors()) {
+						if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
+							analysis::isaDefaultConstructor(constr.getAddressedNode())) continue;
 						if (auto ctor = constr.isa<LambdaExprAddress>()) {
 							this->newLine();
 							out << "ctor function ";
 							auto parameters = ctor->getParameterList();
 							thisStack.push(ctor->getParameterList().front());
 							out << "(" << join(", ", parameters.begin() + 1, parameters.end(), paramPrinter) << ") ";
-							if(analysis::isaDefaultConstructor(constr.getAddressedNode())) out << "= default;";
-							else VISIT(ctor->getBody());
+							if (analysis::isaDefaultConstructor(constr.getAddressedNode()))
+								out << "= default;";
+							else
+								VISIT(ctor->getBody());
 							thisStack.pop();
 						}
 					}
