@@ -106,7 +106,7 @@ namespace frontend {
 		 * A list of include directories containing system headers.
 		 */
 		insieme::utils::Lazy<vector<path>> systemHeaderSearchPath;
-		
+
 		/**
 		 * Retrieve list (lazy evaluation)
 		 */
@@ -486,14 +486,23 @@ namespace frontend {
 		core::tu::IRTranslationUnit toIRTranslationUnit(core::NodeManager& manager);
 
 		/**
-		 *
+		 * Set unparsed options that might be used by a backend compiler
+		 * @param unparsed options that might be used by a backend compiler
 		 */
 		void setUnparsedOptions(const std::vector<std::string>& unparsed) {
 			this->unparsedOptions = unparsed;
 		}
 
+		/**
+		 * Get unparsed options that might be used by a backend compiler
+		 * @return unparsed options that might be used by a backend compiler
+		 */
+		std::vector<std::string> getUnparsedOptions() const {
+			return this->unparsedOptions;
+		}
+
 		void registerExtensionFlags(boost::program_options::options_description& options);
-		
+
 		void registerDefaultExtensions();
 
 		/**
