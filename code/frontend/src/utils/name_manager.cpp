@@ -258,6 +258,9 @@ namespace utils {
 		if(varDecl->isStaticLocal()) {
 			return createNameForAnon(s + "_static_local", varDecl, sm);
 		}
+		if(varDecl->isStaticDataMember()) {
+			return insieme::utils::mangle(varDecl->getQualifiedNameAsString());
+		}
 		if(!s.empty()) { return s; }
 		return createNameForAnon("_global", varDecl, sm);
 	}

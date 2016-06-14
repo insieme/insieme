@@ -100,6 +100,15 @@ namespace conversion {
 		const clang::CXXRecordDecl* classDecl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(tagType->getDecl());
 		if(!classDecl || !classDecl->getDefinition()) { return genTy; }
 
+		// add static vars as globals
+		for(auto decl : classDecl->decls()) {
+			if(auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
+				if(varDecl->isStaticDataMember()) {
+					converter.getDeclConverter()->VisitVarDecl(varDecl);
+				}
+			}
+		}
+
 		// get struct type for easier manipulation
 		auto tagTy = retTy.as<core::TagTypePtr>();
 		auto recordTy = tagTy->getRecord();

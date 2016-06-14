@@ -59,9 +59,21 @@ struct Y {
 
 // static members ==============================================================================================================================================
 
+struct M {
+	static int a;
+};
+
+int M::a = 42;
+
+struct M2 {
+	static void b() {
+		a = 1;
+	}
+	static int a;
+};
 
 
-
+#pragma test expect_ir("REGEX_S", R"(.* <ref<int<4>,f,f,plain>>\(IMP_M_colon__colon_a\) \{42\}; .*)")
 int main() {
 	; // this is required because of the clang compound source location bug
 
@@ -112,7 +124,16 @@ int main() {
 		Y::a();
 	}
 
+
 	// static members ==========================================================================================================================================
+
+	#pragma test expect_ir(R"({ lit("IMP_M_colon__colon_a" : ref<int<4>,f,f,plain>) = 1; })")
+	{
+		M::a = 1;
+	}
+
+	M2 m2;
+	m2.b();
 
 	return 0;
 }

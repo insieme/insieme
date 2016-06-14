@@ -49,7 +49,7 @@ namespace frontend {
 		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/allscale/default_constructor_declaration.cpp");
 	}
 
-	TEST(AllScaleIndependentTest, DISABLED_StaticDataMember) {
+	TEST(AllScaleIndependentTest, StaticDataMember) {
 		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/allscale/static_data_member.cpp");
 	}
 
