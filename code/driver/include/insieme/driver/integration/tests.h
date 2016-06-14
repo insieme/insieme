@@ -47,6 +47,7 @@
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/config.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/frontend/frontend.h"
@@ -145,7 +146,13 @@ namespace integration {
 		                    const Properties& properties)
 		    : name(name), dir(dir), files(files), includeDirs(includeDirs), libDirs(libDirs), libNames(libNames),
 		      interceptedHeaderFileDirectories(interceptedHeaderFileDirectories), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL),
-		      enableCXX11(enableCXX11), properties(properties) {}
+		      enableCXX11(enableCXX11), properties(properties) {
+			if(enableOpenCL) {
+				// add the OpenCL specific directories
+				this->includeDirs.push_back(utils::getInsiemeLibsRootDir() + "opencl/include");
+				this->libDirs.push_back(utils::getInsiemeLibsRootDir() + "opencl/lib64/");
+			}
+		}
 
 		/**
 		 * Obtains the name of this test case.
