@@ -219,6 +219,16 @@ namespace extensions {
 		virtual bool FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter);
 
 		/**
+		 *  User provided clang variable decl visitor. Will be called before clang variable decl
+		 *  is visited by the insieme variable decl visitor. If the extension returns false,
+		 *  the standard visitor is not called.
+		 *  @param decl clang variable decl
+		 *  @param converter insieme conversion factory
+		 *  @return whether the standard conversion should take place
+		 */
+		virtual bool VarDeclVisit(const clang::VarDecl* decl, insieme::frontend::conversion::Converter& converter);
+
+		/**
 		 *  User provided clang expr visitor. Will be called after clang expression
 		 *  was visited by the insieme visitor. IR code can be modified after standard
 		 *  conversion took place.

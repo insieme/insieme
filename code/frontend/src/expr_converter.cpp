@@ -358,7 +358,7 @@ namespace conversion {
 		LOG_EXPR_CONVERSION(callExpr, irExpr);
 
 		core::ExpressionPtr irCallee = converter.convertExpr(callExpr->getCallee());
-		frontend_assert_expr(core::lang::isPointer, irCallee) << "Expecting callee to be of function pointer type";
+		frontend_assert_expr(core::lang::isPointer, irCallee) << "Expecting callee to be of function pointer type, is: " << *irCallee;
 
 		core::ExpressionList irArguments;
 		for(auto arg : callExpr->arguments()) {
@@ -595,7 +595,7 @@ namespace conversion {
 		case clang::BO_XorAssign: compAssignFunc = compOpExt.getCompAssignBitwiseXor(); break;
 		case clang::BO_ShlAssign: compAssignFunc = compOpExt.getCompAssignLeftShift();  break;
 		case clang::BO_ShrAssign: compAssignFunc = compOpExt.getCompAssignRightShift(); break;
-		default: assert_fail() << "Found unkonwn compound operator (Opcode: " << compOp->getOpcode() << ")";
+		default: assert_fail() << "Found unknown compound operator (Opcode: " << compOp->getOpcode() << ")";
 		}
 
 		// Special case where LHS is a char is handled in compound operators extension.

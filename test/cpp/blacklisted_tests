@@ -43,8 +43,6 @@ refs
 refs_ctor
 refs_obj
 return_types
-scope
-scoped_enum
 shadow_decl
 simpleSort
 sort

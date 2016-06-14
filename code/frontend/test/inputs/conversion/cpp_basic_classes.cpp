@@ -117,6 +117,11 @@ struct ClassWithStaticMethod {
 	static void bla() {}
 };
 
+struct ClassWithConstAndNonConstMethodInline {
+	void bla() {}
+	void bla() const {}
+};
+
 int main() {
 	; // this is required because of the clang compound source location bug
 
@@ -215,6 +220,25 @@ int main() {
 	})")
 	{
 		ClassWithStaticMethod::bla();
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_ClassWithConstAndNonConstMethodInline {
+			function IMP_bla = () -> unit { }
+			const function IMP_bla = () -> unit { }
+		};
+		{
+			var ref<IMP_ClassWithConstAndNonConstMethodInline,f,f,plain> v0 = IMP_ClassWithConstAndNonConstMethodInline::(ref_decl(type_lit(ref<IMP_ClassWithConstAndNonConstMethodInline,f,f,plain>)));
+			v0.IMP_bla();
+			var ref<IMP_ClassWithConstAndNonConstMethodInline,t,f,cpp_ref> v1 = v0;
+			v1.IMP_bla();
+		}
+	)")
+	{
+		ClassWithConstAndNonConstMethodInline c;
+		c.bla();
+		const ClassWithConstAndNonConstMethodInline& cr = c;
+		cr.bla();
 	}
 
 	return 0;

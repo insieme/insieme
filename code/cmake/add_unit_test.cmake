@@ -13,7 +13,7 @@ function(add_test_conditionally_parallel case_name_internal insieme_root_dir cur
 	endif(NOT NB_PROCESSORS)
 	math(EXPR NB_PROCESSOR_PART "${NB_PROCESSORS} / 2")
 
-	if(${case_name_internal} MATCHES ".*driver_integration.*" OR ${case_name_internal} MATCHES ".*snippets.*")
+	if(${case_name_internal} MATCHES ".*driver_integration.*" OR ${case_name_internal} MATCHES ".*driver_measure.*" OR ${case_name_internal} MATCHES ".*snippets.*")
 		add_test(NAME ${case_name_internal} 
 		COMMAND ${insieme_root_dir}/code/gtest-parallel.rb 
 			-w ${NB_PROCESSOR_PART}

@@ -118,8 +118,14 @@ namespace utils {
 		                                     const core::ExpressionPtr& memLoc) {
 		core::TypePtr resType = converter.convertType(constructExpr->getType());
 
-		VLOG(2) << "convertConstructExpr - ResType: \n" << dumpDetailColored(resType) << " recType:\n"
-			    << (*converter.getIRTranslationUnit().getTypes().find(resType.as<core::GenericTypePtr>())).second << "\n";
+		if(VLOG_IS_ON(2)) {
+			VLOG(2) << "convertConstructExpr - ResType: \n" << dumpDetailColored(resType);
+			auto types = converter.getIRTranslationUnit().getTypes();
+			auto t = types.find(resType.as<core::GenericTypePtr>());
+			if(t != types.end()) {
+				VLOG(2) << " - recType:\n" << *t->second << "\n";
+			}
+		}
 
 		// try to employ plugins for translation
 		for(auto extension : converter.getConversionSetup().getExtensions()) {

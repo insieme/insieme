@@ -40,9 +40,6 @@ static_non_copy
 stringstream
 tellg
 templated_casts
-templated_return_type
-template_integrals
-template_integrals_intercept
 throw
 tr1_array
 try_catch
@@ -57,3 +54,4 @@ vfunc
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
++templated_return_type

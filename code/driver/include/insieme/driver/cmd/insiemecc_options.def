@@ -56,7 +56,7 @@ FLAG("mark-scop", markScop, "mark SCoPs (Static COntrol Parts) in the IR (analys
 FLAG("no-warnings", noWarnings, "inhibit all warnings")
 FLAG("show-stats", showStatistics, "computes statistics regarding the composition of the IR")
 FLAG("use-pm", usePM, "perform code transformations using the Polyhedral Model")
-FLAG("version,v", version, "print full version string")
+FLAG("version", version, "print full version string")
 FLAG("dumpversion", dumpVersion, "print minimal version string")
 FLAG("win-cross-compile", winCrossCompile, "set cross compilation for a Windows target")
 FLAG("print-clang-ast", printClangAST, "print the clang AST")

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -110,7 +110,7 @@ namespace measure {
 		 * The functor to be used in case no aggregation is supported.
 		 */
 		struct none {
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// slightly hacky: the none() extractor can be used for metrics that do not require any
 				// aggregation, i.e. when a metric occurs exactly once - for metrics occurring more often,
 				// we'd lose information and hence bail out with an invalid quantity as a result
@@ -118,12 +118,11 @@ namespace measure {
 				if(res.size() == 1) {
 					return res[0];
 				} else {
+					LOG(WARNING) << "'none' functor only allows single quantities, but found " << res.size() << " for metric " << metric;
 					return Quantity::invalid(metric->getUnit());
 				}
 			}
-			std::set<MetricPtr> getDependencies() const {
-				return std::set<MetricPtr>();
-			};
+			std::set<MetricPtr> getDependencies() const { return std::set<MetricPtr>(); };
 		};
 
 		// ---- List-extracting expressions ---
@@ -134,7 +133,7 @@ namespace measure {
 		struct list {
 			MetricPtr a; // < the metric to be extracted for a region
 			list(MetricPtr a) : a(a) {}
-			vector<Quantity> operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			vector<Quantity> operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				return data.getAll(region, a);
 			}
 			std::set<MetricPtr> getDependencies() const {
@@ -167,7 +166,7 @@ namespace measure {
 		struct id {
 			MetricPtr metric;
 			id(MetricPtr metric) : metric(metric) {}
-			Quantity operator()(const Measurements& data, MetricPtr, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr, region_id region) const {
 				return metric->extract(data, region);
 			}
 			std::set<MetricPtr> getDependencies() const {
@@ -186,7 +185,7 @@ namespace measure {
 			binary_connector(const SourceA& a, const SourceB& b) : a(a), b(b) {}
 
 
-			typename lambda_traits<Operator>::result_type operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			typename lambda_traits<Operator>::result_type operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				Operator op;
 				return op(a(data, metric, region), b(data, metric, region));
 			}
@@ -312,7 +311,7 @@ namespace measure {
 		struct first_impl {
 			T list_extractor;
 			first_impl(T list_extractor) : list_extractor(list_extractor) {}
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// check whether there is something
 				vector<Quantity> list = list_extractor(data, metric, region);
 				if(list.empty()) { return Quantity::invalid(metric->getUnit()); }
@@ -352,7 +351,7 @@ namespace measure {
 		struct var_impl {
 			T list_extractor;
 			var_impl(T list_extractor) : list_extractor(list_extractor) {}
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// check whether there is something
 				vector<Quantity> list = list_extractor(data, metric, region);
 				if(list.empty()) { return Quantity::invalid(metric->getUnit()); }
@@ -401,7 +400,7 @@ namespace measure {
 		struct min_impl {
 			T list_extractor;
 			min_impl(T list_extractor) : list_extractor(list_extractor) {}
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// check whether there is something
 				vector<Quantity> list = list_extractor(data, metric, region);
 				if(list.empty()) { return Quantity::invalid(metric->getUnit()); }
@@ -442,7 +441,7 @@ namespace measure {
 		struct max_impl {
 			T list_extractor;
 			max_impl(T list_extractor) : list_extractor(list_extractor) {}
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// check whether there is something
 				vector<Quantity> list = list_extractor(data, metric, region);
 				if(list.empty()) { return Quantity::invalid(metric->getUnit()); }
@@ -483,7 +482,7 @@ namespace measure {
 		struct sum_impl {
 			T list_extractor;
 			sum_impl(T list_extractor) : list_extractor(list_extractor) {}
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// check whether there is something
 				vector<Quantity> list = list_extractor(data, metric, region);
 				if(list.empty()) { return Quantity::invalid(metric->getUnit()); }
@@ -522,7 +521,7 @@ namespace measure {
 		struct avg_impl {
 			T sub;
 			avg_impl(T sub) : sub(sub) {}
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+			Quantity operator()(const Measurements& data, const MetricPtr metric, region_id region) const {
 				// check whether there is something
 				auto list = sub(data, metric, region);
 				if(list.empty()) { return Quantity::invalid(unit); }
@@ -583,13 +582,14 @@ namespace measure {
 	}
 
 	std::set<MetricPtr> getDependencyClosureLeafs(const std::vector<MetricPtr>& metrics) {
+
 		// create resulting set
 		std::set<MetricPtr> res;
 
 		// the set of metrics already checked out
 		std::set<MetricPtr> checked;
 
-		// init metrics which's dependencies still need to be considered
+		// init metrics whose dependencies still need to be considered
 		std::vector<MetricPtr> toCheck = metrics;
 		while(!toCheck.empty()) {
 			// check out next
@@ -610,6 +610,8 @@ namespace measure {
 			if(subDep.empty()) { res.insert(cur); }
 		}
 
+		LOG(INFO) << "metric dependency closure leafs: " << res;
+
 		// return set containing closure of leafs
 		return res;
 	}
@@ -622,97 +624,35 @@ namespace measure {
 		return utils::compiler::Compiler::getOptimizedCompiler(compiler);
 	}
 
-	Quantity measure(const core::StatementPtr& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
-	                 const std::map<string, string>& env) {
-		return measure(core::StatementAddress(stmt), metric, executor, compiler, env);
+	MeasurementSetup getDefaultMeasurementSetup() {
+		return MeasurementSetup();
 	}
 
-	vector<Quantity> measure(const core::StatementPtr& stmt, const MetricPtr& metric, unsigned numRuns, const ExecutorPtr& executor,
-	                         const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
-		return measure(core::StatementAddress(stmt), metric, numRuns, executor, compiler, env);
+	vector<Quantity> measure(const core::StatementPtr& stmt, const MetricPtr& metric, const MeasurementSetup& setup) {
+		return measure(core::StatementAddress(stmt), metric, setup);
 	}
 
-	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
-	                 const std::map<string, string>& env) {
-		return measure(stmt, toVector(metric), executor, compiler, env)[metric];
-	}
-
-	vector<Quantity> measure(const core::StatementAddress& stmt, const MetricPtr& metric, unsigned numRuns, const ExecutorPtr& executor,
-	                         const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
+	vector<Quantity> measure(const core::StatementAddress& stmt, const MetricPtr& metric, const MeasurementSetup& setup) {
 		vector<Quantity> res;
-		for_each(measure(stmt, toVector(metric), numRuns, executor, compiler, env),
+		for_each(measure(stmt, toVector(metric), setup),
 		         [&](const std::map<MetricPtr, Quantity>& cur) { res.push_back(cur.find(metric)->second); });
 		return res;
 	}
 
-
-	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics, const ExecutorPtr& executor,
-	                                      const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
-		// pack given stmt pointer into region map
-		std::map<core::StatementAddress, region_id> regions;
-		regions[stmt] = 0;
-
-		// measure region and return result
-		return measure(regions, metrics, executor, compiler, env)[0];
-	}
-
-	vector<std::map<MetricPtr, Quantity>> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics, unsigned numRuns,
-	                                              const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
+	vector<std::map<MetricPtr, Quantity>> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics, const MeasurementSetup& setup) {
 		// pack given stmt pointer into region map
 		std::map<core::StatementAddress, region_id> regions;
 		regions[stmt] = 0;
 
 		// measure region and return result
 		vector<std::map<MetricPtr, Quantity>> res;
-		for_each(measure(regions, metrics, numRuns, executor, compiler, env),
+		for_each(measure(regions, metrics, setup),
 		         [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& cur) { res.push_back(cur.find(0)->second); });
 		return res;
 	}
 
-	std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> measure(const vector<core::StatementAddress>& regions, const vector<MetricPtr>& metrices,
-	                                                                        const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
-	                                                                        const std::map<string, string>& env) {
-		// use implementation accepting number of runs
-		return measure(regions, metrices, 1, executor, compiler, env)[0];
-	}
-
-	//	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>> measureAll(
-	//				const core::StatementAddress& stmt,
-	//				const vector<MetricPtr>& metrices,
-	//				unsigned numRuns, const ExecutorPtr& executor,
-	//				const utils::compiler::Compiler& compiler,
-	//				const std::map<string, string>& env) {
-	//
-	//			namespace iar = insieme::analysis::region;
-	//
-	//			iar::ForSelector forSelector;
-	//			vector<core::StatementAddress> regions = forSelector.getRegions(stmt.getAddressedNode());
-	//
-	//			// create a stmt-address <-> region_id map
-	//			std::map<core::StatementAddress, region_id> mappedRegions;
-	//			region_id id = 0;
-	//			for(const auto& cur : regions) {
-	//				mappedRegions[cur] = id++;
-	//			}
-	//
-	//			// run measurements
-	//			auto data = measure(mappedRegions, metrices, numRuns, executor, compiler, env);
-	//
-	//			// un-pack results
-	//			return ::transform(data, [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& data)->std::map<core::StatementAddress, std::map<MetricPtr,
-	//Quantity>> {
-	//				std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> res;
-	//				for(const auto& cur : data) {
-	//					res[regions[cur.first]] = cur.second;
-	//				}
-	//				return res;
-	//			});
-	//		}
-
-	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>> measure(const vector<core::StatementAddress>& regions,
-	                                                                                const vector<MetricPtr>& metrices, unsigned numRuns,
-	                                                                                const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
-	                                                                                const std::map<string, string>& env) {
+	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>>
+	measure(const vector<core::StatementAddress>& regions, const vector<MetricPtr>& metrices, const MeasurementSetup& setup) {
 		// create a stmt-address <-> region_id map
 		std::map<core::StatementAddress, region_id> mappedRegions;
 		region_id id = 0;
@@ -721,7 +661,7 @@ namespace measure {
 		}
 
 		// run measurements
-		auto data = measure(mappedRegions, metrices, numRuns, executor, compiler, env);
+		auto data = measure(mappedRegions, metrices, setup);
 
 		// un-pack results
 		return ::transform(
@@ -734,73 +674,7 @@ namespace measure {
 			});
 	}
 
-
-	std::map<region_id, std::map<MetricPtr, Quantity>> measure(const std::map<core::StatementAddress, region_id>& regions, const vector<MetricPtr>& metrices,
-	                                                           const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
-	                                                           const std::map<string, string>& env) {
-		return measure(regions, metrices, 1, executor, compiler, env)[0];
-	}
-
 	namespace {
-
-		//
-		//		TODO: enable the limitation of iterations
-		//
-		//		core::NodeAddress limitExecutionsInternal(const core::NodeAddress& address, unsigned maxIterations) {
-		//
-		//			if (address->getNodeType() != core::NT_ForStmt) {
-		//
-		//				// check whether there is still a parent node
-		//				if (address.isRoot()) {
-		//					return address;
-		//				}
-		//
-		//				// resolve recursively and restore path to given address
-		//				return limitExecutionsInternal(address.getParentAddress(), maxIterations).getAddressOfChild(address.getIndex());
-		//
-		//			}
-		//
-		//			// found surrounding for-stmt => fix boundaries
-		//			core::NodeManager& manager = address->getNodeManager();
-		//			core::IRBuilder builder(manager);
-		//
-		//			// a loop has been found => update loop boundaries
-		//			core::ForStmtPtr loop = address.as<core::ForStmtPtr>();
-		//
-		//			core::TypePtr type = loop->getIterator()->getType();
-		//			core::ExpressionPtr start = loop->getStart();
-		//			core::ExpressionPtr end = loop->getEnd();
-		//			core::ExpressionPtr step = loop->getStep();
-		//
-		//			core::ExpressionPtr maxIt = builder.literal(type, utils::numeric_cast<string>(maxIterations));
-		//
-		//			// define new end as min(upperBound, lowerBound + step * maxIterations)
-		//			core::ExpressionPtr newEnd = builder.min(end, builder.add(start, builder.mul(step, maxIt)));
-		//
-		//			// create new for loop
-		//			core::ForStmtPtr newLoop = builder.forStmt(loop->getIterator(), start, newEnd, step, loop->getBody());
-		//
-		//			// encapsulate into compound including exit-call
-		//			core::StatementPtr compound = builder.compoundStmt(newLoop,
-		//					builder.callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getExit(), builder.intLit(0))
-		//			);
-		//
-		//			// replace loop
-		//			core::NodeAddress res = core::transform::replaceAddress(manager, address, compound);
-		//
-		//			// update region address and return result
-		//			return res.as<core::CompoundStmtAddress>()->getStatement(0);
-		//		}
-		//
-		//		region::Region limitExecutions(const region::Region& region, unsigned maxIterations) {
-		//			assert_ne(maxIterations, 0) << "Need to be executed at least once!";
-		//
-		//			// if there is no context we cannot find a loop to limit
-		//			if (region.isRoot()) { return region; }
-		//
-		//			// use recursive helper function to conduct manipulation
-		//			return limitExecutionsInternal(region.getParentAddress(), maxIterations).getAddressOfChild(region.getIndex()).as<region::Region>();
-		//		}
 
 		/**
 		 * This function is simply wrapping the given statement into instrumented start / end
@@ -810,7 +684,7 @@ namespace measure {
 		 * @param id the ID to be used within the wrapping region boundaries.
 		 * @return the instrumented replacement for the given statement
 		 */
-		core::StatementPtr instrument(const core::StatementPtr& stmt, region_id id) {
+		core::StatementPtr instrumentStmt(const core::StatementPtr& stmt, region_id id) {
 			// instrument region
 			auto& manager = stmt->getNodeManager();
 			core::IRBuilder build(manager);
@@ -884,6 +758,44 @@ namespace measure {
 		}
 
 		/**
+		* This function instrumented a given map of addresses and region IDs
+		*
+		* @param regions the regions to be instrumented with the corresponding region IDs
+		* @return the root node of an IR holding instrumented versions of all regions
+		*/
+		core::NodePtr instrumentRegions(const std::map<core::StatementAddress, region_id>& regions) {
+			using region_pair = std::pair<core::StatementAddress, region_id>;
+			core::NodePtr root = regions.begin()->first.getRootNode();
+			core::NodeManager& manager = root->getNodeManager();
+
+			// sort addresses in descending order
+			vector<region_pair> sorted_regions(regions.begin(), regions.end());
+			std::sort(sorted_regions.rbegin(), sorted_regions.rend());
+
+			// replace all regions with optimized versions
+			for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
+				// obtain address with current root
+				core::StatementAddress tmp = cur.first.switchRoot(root);
+				// migrate autotuning information (and other annotations if present)
+				core::transform::utils::migrateAnnotations(cur.first, tmp);
+				// replace region
+				root = core::transform::replaceNode(manager, tmp, cur.first);
+			});
+
+			// replace all regions with instrumented versions
+			for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
+				// obtain address with current root
+				core::StatementAddress tmp = cur.first.switchRoot(root);
+				// instrument the new region
+				core::StatementPtr instrumentedTmp = instrumentStmt(tmp, cur.second);
+				// replace region
+				root = core::transform::replaceNode(manager, tmp, instrumentedTmp);
+			});
+
+			return root;
+		}
+
+		/**
 		 * Wraps the given code fragment into a program - to be processed by the backend.
 		 */
 		core::ProgramPtr wrapIntoProgram(const core::NodePtr& ptr) {
@@ -939,39 +851,38 @@ namespace measure {
 
 
 	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(const std::map<core::StatementAddress, region_id>& regions,
-	                                                                   const vector<MetricPtr>& metrics, unsigned numRuns, const ExecutorPtr& executor,
-	                                                                   const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
+	                                                                   const vector<MetricPtr>& metrics, const MeasurementSetup& setup) {
 		// fast exit if no regions are specified or no runs have to be conducted
-		if(regions.empty() || numRuns == 0) { return vector<std::map<region_id, std::map<MetricPtr, Quantity>>>(numRuns); }
+		if(regions.empty() || setup.numRuns == 0) { return vector<std::map<region_id, std::map<MetricPtr, Quantity>>>(setup.numRuns); }
 
+		auto modifiedSetup = setup;
 		// fix static scheduling
 		// TODO: it is no longer necessary to fix to static scheduling, should we keep it?
-		auto modifiedCompiler = compiler;
-		modifiedCompiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
+		modifiedSetup.compiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
 
 		// enable papi only if at least one metric requires it
-		bool usePapi = any(getDependencyClosureLeafs(metrics), [&](const MetricPtr& cur) {
+		bool usePapi = any(getDependencyClosureLeafs(metrics), [](const MetricPtr& cur) {
 			if(cur->getName().find("PAPI") != std::string::npos) { return true; }
 			return false;
 		});
 
-		if(usePapi) { 
+		if(usePapi) {
 			#ifndef USE_PAPI
 				LOG(ERROR) << "PAPI events requested, but compiled without PAPI support";
 			#else
-				modifiedCompiler.addFlag("-DIRT_USE_PAPI");
+				modifiedSetup.compiler.addFlag("-DIRT_USE_PAPI");
 			#endif
 		}
 
-		// build target code
-		auto binFile = buildBinary(regions, modifiedCompiler);
+		// instrument code
+		auto instrumentedRoot = instrumentRegions(regions);
 
-		//		// create the instrumented binary
-		//		auto binFile = buildBinary(regions, compiler);
-		if(binFile.empty()) { throw MeasureException("Unable to compiling executable for measurement!"); }
+		// build target code
+		auto binFile = buildBinary(instrumentedRoot, modifiedSetup);
+		assert_false(binFile.empty()) << "Unable to compile executable for measurement!";
 
 		// conduct measurement
-		auto res = measure(binFile, metrics, numRuns, executor, env);
+		auto res = measure(binFile, metrics, setup);
 
 		// delete binary
 		if(boost::filesystem::exists(binFile)) { boost::filesystem::remove(binFile); }
@@ -979,13 +890,13 @@ namespace measure {
 		return res;
 	}
 
-	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(const std::string& binary, const vector<MetricPtr>& metrics, unsigned numRuns,
-	                                                                   const ExecutorPtr& executor, const std::map<string, string>& env) {
+	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(const std::string& binary, const vector<MetricPtr>& metrics,
+		                                                               const MeasurementSetup& setup) {
 		// check binary
-		if(!boost::filesystem::exists(binary)) { throw MeasureException("Invalid executable specified for measurement!"); }
+		assert_true(boost::filesystem::exists(binary)) << "Invalid executable specified for measurement!";
 
 		// extract name of executable
-		std::string executable = bfs::path(binary).filename().string();
+		const std::string executable = bfs::path(binary).filename().string();
 
 		// partition the papi parameters
 		auto papiPartition = partitionPapiCounter(metrics);
@@ -994,34 +905,21 @@ namespace measure {
 		namespace idm = insieme::driver::measure;
 
 		papiPartition[0] = vector<MetricPtr>{
-		      idm::Metric::TOTAL_L1_DCM,
-		      idm::Metric::TOTAL_L2_DCM,
-		      idm::Metric::TOTAL_L3_TCM,
-		      idm::Metric::TOTAL_BR_MSP,
-		      idm::Metric::TOTAL_BR_PRC,
-		      idm::Metric::TOTAL_TOT_INS,
-		      idm::Metric::TOTAL_FDV_INS,
-		      idm::Metric::TOTAL_LD_INS,
+			idm::Metric::TOTAL_L1_DCM, idm::Metric::TOTAL_L2_DCM,  idm::Metric::TOTAL_L3_TCM,  idm::Metric::TOTAL_BR_MSP,
+			idm::Metric::TOTAL_BR_PRC, idm::Metric::TOTAL_TOT_INS, idm::Metric::TOTAL_FDV_INS, idm::Metric::TOTAL_LD_INS,
 		};
 
 		papiPartition[1] = vector<MetricPtr>{
-		      idm::Metric::TOTAL_FP_INS,
-		      idm::Metric::TOTAL_SR_INS,
-		      idm::Metric::TOTAL_L2_DCH,
-		      idm::Metric::TOTAL_FP_OPS,
-		      idm::Metric::TOTAL_VEC_SP,
+			idm::Metric::TOTAL_FP_INS, idm::Metric::TOTAL_SR_INS, idm::Metric::TOTAL_L2_DCH, idm::Metric::TOTAL_FP_OPS, idm::Metric::TOTAL_VEC_SP,
 		};
 
 		papiPartition[2] = vector<MetricPtr>{
-		      idm::Metric::TOTAL_VEC_DP,
-		      idm::Metric::TOTAL_STL_ICY,
-		      idm::Metric::TOTAL_TLB_DM,
-		      idm::Metric::TOTAL_TLB_IM,
+			idm::Metric::TOTAL_VEC_DP, idm::Metric::TOTAL_STL_ICY, idm::Metric::TOTAL_TLB_DM, idm::Metric::TOTAL_TLB_IM,
 		};*/
 
 		// run experiments and collect results
 		vector<std::map<region_id, std::map<MetricPtr, Quantity>>> res;
-		for(unsigned i = 0; i < numRuns; i++) {
+		for(unsigned i = 0; i < setup.numRuns; i++) {
 			// the data to be collected for this run
 			Measurements data;
 
@@ -1038,12 +936,12 @@ namespace measure {
 				assert_true(bfs::exists(workdir)) << "Working-Directory already present!";
 
 				// setup runtime system metric selection
-				std::map<string, string> mod_env = env;
+				std::map<string, string> mod_env = setup.env;
 				mod_env["IRT_INST_REGION_INSTRUMENTATION"] = "enabled";
 
 				string metric_selection;
-				for(auto metric : metrics) {
-					// only add non-papi metrics
+				for(auto metric : getDependencyClosureLeafs(metrics)) {
+					// only add non-papi metrics (identified by the PAPI prefix)
 					if(metric->getName().find("PAPI") != 0) { metric_selection += metric->getName() + ","; }
 				}
 				if(!paramList.empty()) { // only set if there are any parameters (otherwise collection is disabled)
@@ -1055,111 +953,89 @@ namespace measure {
 				mod_env["IRT_INST_REGION_INSTRUMENTATION_TYPES"] = metric_selection;
 
 				// run code
-				int ret = executor->run(binary, mod_env, workdir.string());
-				if(ret != 0) { throw MeasureException("Failed to run executable for measurements - return code error!"); }
+				int ret = setup.executor->run(binary, mod_env, setup.params, workdir.string());
+				if(ret != 0) {
+					LOG(WARNING) << "Unexpected executable return code " << ret;
+				}
 
 				// load data and merge it
-				data.mergeIn(loadResults(workdir));
+				if(ret == 0) {
+					data.mergeIn(loadResults(workdir));
+				}
 
 				// delete local files
 				if(boost::filesystem::exists(workdir)) { bfs::remove_all(workdir); }
 
 			});
 
-			// extract results
-			res.push_back(std::map<region_id, std::map<MetricPtr, Quantity>>());
-			auto& curRes = res.back();
-			for_each(data.getAllRegions(), [&](const region_id& region) {
-				for_each(metrics, [&](const MetricPtr& metric) {
-					// use extractor of metric to collect values
-					curRes[region][metric] = metric->extract(data, region);
-				});
-			});
+			if(!data.empty()) {
+				// extract results
+				res.push_back(std::map<region_id, std::map<MetricPtr, Quantity>>());
+				auto& curRes = res.back();
+				for(const auto& region : data.getAllRegions()) {
+				//for_each(data.getAllRegions(), [&](const region_id& region) {
+					for(const auto& metric : metrics) {
+					//for_each(metrics, [&](const MetricPtr& metric) {
+						// use extractor of metric to collect values
+						curRes[region][metric] = metric->extract(data, region);
+					}//);
+				}//);
+			}
 		}
 
 		// return result
 		return res;
 	}
 
-	std::string buildBinary(const core::StatementAddress& region, const utils::compiler::Compiler& compiler) {
-		std::map<core::StatementAddress, region_id> regions;
-		regions[region] = 0;
-		return buildBinary(regions, compiler);
+	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measurePreinstrumented(const core::NodePtr& root, const vector<MetricPtr>& metrics,
+		                                                                              const MeasurementSetup& setup) {
+		auto binary = buildBinary(root, setup);
+		return measure(binary, metrics, setup);
 	}
 
-
-	std::string buildBinary(const std::map<core::StatementAddress, region_id>& regions, const utils::compiler::Compiler& compilerSetup) {
-		core::NodeManager& manager = regions.begin()->first->getNodeManager();
-
-		core::NodePtr root = regions.begin()->first.getRootNode();
-
-		// sort addresses in descending order
-		typedef std::pair<core::StatementAddress, region_id> region_pair;
-		vector<region_pair> sorted_regions(regions.begin(), regions.end());
-		std::sort(sorted_regions.begin(), sorted_regions.end(),
-		          [](const region_pair& first, const region_pair& second) { return first.second > second.second; });
-		
-		// replace all regions with optimized versions
-		for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
-			// obtain address with current root
-			core::StatementAddress tmp = cur.first.switchRoot(root);
-			// migrate autotuning information (and other annotations if present)
-			core::transform::utils::migrateAnnotations(cur.first, tmp);
-			// replace region
-			root = core::transform::replaceNode(manager, tmp, cur.first);
-		});
-
-		// replace all regions with instrumented versions
-		for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
-			// obtain address with current root
-			core::StatementAddress tmp = cur.first.switchRoot(root);
-			// instrument the new region
-			core::StatementPtr instrumentedTmp = instrument(tmp, cur.second);
-			// replace region
-			root = core::transform::replaceNode(manager, tmp, instrumentedTmp);
-		});
+	std::string buildBinary(const core::NodePtr& root, const MeasurementSetup& setup) {
 
 		// create resulting program
 		core::ProgramPtr program;
 		if(root->getNodeType() == core::NT_LambdaExpr) {
-			program = core::Program::get(manager, toVector(root.as<core::ExpressionPtr>()));
+			program = core::Program::get(root->getNodeManager(), toVector(root.as<core::ExpressionPtr>()));
 		} else {
 			program = wrapIntoProgram(root);
 		}
 
 		// create backend code
-		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
+		auto backend = backend::runtime::RuntimeBackend::getDefault();
 		auto targetCode = backend->convert(program);
 
 		// customize compiler
-		utils::compiler::Compiler compiler = compilerSetup;
+		utils::compiler::Compiler modifiedCompiler = setup.compiler;
 
 		// add flags required by the runtime
-		compiler.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "runtime/include");
-		compiler.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "common/include");
-		compiler.addFlag(string("-I ") + utils::getInsiemeLibsRootDir() + "papi-latest/include");
-		compiler.addFlag(string("-L ") + utils::getInsiemeLibsRootDir() + "papi-latest/lib/");
-		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
-		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
-		compiler.addFlag("-DIRT_WORKER_SLEEPING");
-		compiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
+		modifiedCompiler.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "runtime/include");
+		modifiedCompiler.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "common/include");
+		modifiedCompiler.addFlag(string("-I ") + utils::getInsiemeLibsRootDir() + "papi-latest/include");
+		modifiedCompiler.addFlag(string("-L ") + utils::getInsiemeLibsRootDir() + "papi-latest/lib/");
+		modifiedCompiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
+		modifiedCompiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
+		modifiedCompiler.addFlag("-DIRT_WORKER_SLEEPING");
+		modifiedCompiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
 		#ifdef USE_PAPI
-			compiler.addFlag("-DIRT_USE_PAPI");
-			compiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi");
+			modifiedCompiler.addFlag("-DIRT_USE_PAPI");
+			modifiedCompiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi");
 		#endif
-		compiler.addFlag("-ldl -lrt -lpthread -lm");
-		compiler.addFlag("-Wno-unused-but-set-variable");
-		compiler.addFlag("-Wno-unused-variable");
+		modifiedCompiler.addFlag("-ldl -lrt -lpthread -lm");
+		modifiedCompiler.addFlag("-Wno-unused-but-set-variable");
+		modifiedCompiler.addFlag("-Wno-unused-variable");
 
 		// compile code to binary
-		return utils::compiler::compileToBinary(*targetCode, compiler);
+		return utils::compiler::compileToBinary(*targetCode, modifiedCompiler);
 	}
 
-	void Measurements::add(worker_id worker, region_id region, MetricPtr metric, const Quantity& value) {
+	void Measurements::add(worker_id worker, region_id region, const MetricPtr metric, const Quantity& value) {
 		workerDataStore[worker][region][metric].push_back(value); // just add value
 	}
 
-	void Measurements::add(region_id region, MetricPtr metric, const Quantity& value) {
+	void Measurements::add(region_id region, const MetricPtr metric, const Quantity& value) {
 		regionDataStore[region][metric].push_back(value);
 	}
 
@@ -1182,7 +1058,7 @@ namespace measure {
 		for_each(other.workerDataStore, [&](const WorkerDataStore::value_type& value) { mergeRegionData(workerDataStore[value.first], value.second); });
 	}
 
-	vector<Quantity> Measurements::getAll(region_id region, MetricPtr metric) const {
+	vector<Quantity> Measurements::getAll(region_id region, const MetricPtr metric) const {
 		vector<Quantity> res;
 
 		// a lambda merging region data
@@ -1232,7 +1108,7 @@ namespace measure {
 			return vector<string>(tok.begin(), tok.end());
 		}
 
-		void loadFile(const boost::filesystem::path& file, const std::function<void(region_id id, MetricPtr metric, const Quantity& value)>& add) {
+		void loadFile(const boost::filesystem::path& file, const std::function<void(region_id id, const MetricPtr metric, const Quantity& value)>& add) {
 			// check whether file exists
 			if(!boost::filesystem::exists(file)) { return; }
 
@@ -1292,11 +1168,29 @@ namespace measure {
 
 	Measurements loadResults(const boost::filesystem::path& directory) {
 		Measurements res;
+		const std::string fileBasename = "worker_efficiency.log";
 
-		// load the efficiency log
-		loadFile(directory / "worker_efficiency_log", [&](region_id region, MetricPtr metric, const Quantity& value) { res.add(region, metric, value); });
+		// try loading a single file in case only a single Insieme runtime was executed
+		loadFile(directory / fileBasename, [&](region_id region, const MetricPtr metric, const Quantity& value) { res.add(region, metric, value); });
 
-		// to avoid a warning
+		// if single file was not present
+		if(res.empty()) {
+			int index = -1;
+			bool stop = false;
+			// try checking for multiple files with ID suffix and stop at first unsuccessful file parsing
+			while(!stop) {
+				stop = true;
+				++index;
+				string filename = fileBasename + string(".") + std::to_string(index);
+				loadFile(directory / filename, [&](region_id region, const MetricPtr metric, const Quantity& value) {
+					// add to measurement data, with the index being the worker id
+					res.add(index, region, metric, value);
+					stop = false;
+				});
+			}
+			LOG(INFO) << "found " << index << " log files";
+		}
+
 		return res;
 	}
 

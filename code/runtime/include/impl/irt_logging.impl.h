@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -65,15 +65,16 @@ const char* _irt_time_string() {
 void irt_log_init() {
 	char* output_path = getenv("IRT_INST_OUTPUT_PATH");
 	char fn[] = "insieme_runtime.log";
-	char buffer[1024];
-	if(output_path != NULL) {
-		sprintf(buffer, "%s/%s", output_path, fn);
-	} else {
-		sprintf(buffer, "%s", fn);
-	}
+	char buffer[1024] = "";
+	if(output_path != NULL) { sprintf(buffer, "%s/", output_path); }
+	sprintf(buffer + strlen(buffer), "%s", fn);
+#ifdef IRT_USE_MPI
+	sprintf(buffer + strlen(buffer), ".%s", getenv("OMPI_COMM_WORLD_RANK"));
+#endif
+
 	irt_g_log_file = fopen(buffer, "w+");
 
-	IRT_ASSERT(irt_g_log_file != NULL, IRT_ERR_IO, "Unable to create insieme_runtime.log");
+	IRT_ASSERT(irt_g_log_file != NULL, IRT_ERR_IO, "Unable to create %s", buffer);
 
 	irt_log("# Runtime logging started on %s\n", _irt_time_string());
 
