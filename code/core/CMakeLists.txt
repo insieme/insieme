@@ -133,10 +133,5 @@ foreach ( case_file ${test_cases})
 		target_include_directories(${case_name} PRIVATE ${FLEX_INCLUDE_DIRS})
 	endif()
 	
-	# exclude lua tests from valgrind since it fails for versions newer than 3.7.0
-	set(VFLAG ${TRUE})
-	if(case_file MATCHES ".*lua.*")
-		set(VFLAG FALSE)
-	endif()
-	add_unit_test(${case_name} ${ut_prefix} ${VFLAG})
+	add_unit_test(${case_name} ${ut_prefix})
 endforeach(case_file)

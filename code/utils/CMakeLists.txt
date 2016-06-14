@@ -53,11 +53,6 @@ foreach ( case_file ${test_cases} )
 	target_link_libraries(${case_name} ${Boost_FILESYSTEM_LIBRARY})
 	target_link_libraries(${case_name} ${LUAJIT_LIBRARIES} )
 
-	# exclude lua tests from valgrind since it fails for versions newer than 3.7.0
-	set(VFLAG ${TRUE})
-	if(case_file MATCHES ".*lua.*")
-		set(VFLAG FALSE)
-	endif(case_file MATCHES ".*lua.*")
-	add_unit_test(${case_name} ${ut_prefix} ${VFLAG})
+	add_unit_test(${case_name} ${ut_prefix})
         
 endforeach(case_file)
