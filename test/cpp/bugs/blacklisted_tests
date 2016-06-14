@@ -30,12 +30,10 @@ non_default_static
 non_working
 options
 return_overload
-set_spetialization
+set_specialization
 static_cast_in_return
-static_data_member_in_one_tu
 static_data_member_struct
 static_in_template
-static_member
 static_non_copy
 stringstream
 tellg
