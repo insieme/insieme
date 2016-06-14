@@ -41,7 +41,7 @@
 #include "insieme/core/analysis/normalize.h"
 
 #include "insieme/utils/lua/lua.h"
-#include "insieme/utils/test/test_utils.h"
+#include "insieme/utils/string_utils.h"
 
 namespace insieme {
 namespace core {
