@@ -42,7 +42,7 @@
 #include "insieme/frontend/frontend.h"
 #include "insieme/utils/config.h"
 #include "insieme/utils/compiler/compiler.h"
-#include "insieme/utils/test/test_utils.h"
+
 
 namespace insieme {
 namespace driver {

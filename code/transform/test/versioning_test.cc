@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -43,7 +43,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/checks/full_check.h"
 
-#include "insieme/utils/test/test_utils.h"
+
 
 namespace insieme {
 namespace transform {
