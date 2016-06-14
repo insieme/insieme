@@ -322,7 +322,7 @@ namespace integration {
 			std::map<string, string> insiemeccFlags;
 			insiemeccFlags["use_libmath"] = "";
 			insiemeccFlags["use_libpthread"] = "";
-			insiemeccFlags["use_opencl"] = "--flib-icl -lOpenCL";
+			insiemeccFlags["use_opencl"] = "-fopencl=1 -lOpenCL";
 			insiemeccFlags["use_omp"] = "-fopenmp";
 			insiemeccFlags["standardFlags"] = "--log-level=INFO";
 			insiemeccFlags["use_o3"] = "-O3";

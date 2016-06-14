@@ -797,10 +797,11 @@ namespace integration {
 
 			if(!isExcluded(props["excludeSteps"], step) && !conflicts) { stepsToExecute.push_back(step); }
 
-			#ifndef USE_OPENCL
-			for(TestStep& step : stepsToExecute)
-				if(step.getName().find("_ocl_") != std::string::npos) { return vector<TestStep>(); }
-				#endif
+			if(!test.isEnableOpenCL()) {
+				// filter out all steps which are devoted to OpenCL
+				for(TestStep& step : stepsToExecute)
+					if(step.getName().find("_ocl_") != std::string::npos) { return vector<TestStep>(); }
+			}
 		}
 		return stepsToExecute;
 	}

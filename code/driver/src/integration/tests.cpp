@@ -99,7 +99,7 @@ namespace integration {
 			args.push_back(include);
 		}
 		if(isEnableOpenMP()) { args.push_back("-fopenmp"); }
-		if(isEnableOpenCL()) { args.push_back("--flib-icl -lOpenCL"); }
+		if(isEnableOpenCL()) { args.push_back("-fopencl=1 -lOpenCL"); }
 
 		driver::cmd::Options options = driver::cmd::Options::parse(args);
 		return options;
