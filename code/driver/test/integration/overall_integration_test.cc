@@ -141,14 +141,11 @@ namespace integration {
 			});
 		}
 
-		//TEST IF WE SHOULD CONTINUE WITH THE REMAINING TESTS
-		// skip OpenCL tests in case we have OpenCL disabled
-		#ifndef USE_OPENCL
+		// skip OpenCL tests as those are handeled via driver/integration_tests
 		if (testCase.isEnableOpenCL()) {
 			LOG(INFO) << "Skipping OpenCL test: " + testCase.getName();
 			return;
 		}
-		#endif
 
 		// each test might require some prerequisites which are checked here
 		if (!driver::integration::checkPrerequisites(testCase)) {

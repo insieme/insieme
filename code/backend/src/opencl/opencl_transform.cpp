@@ -219,6 +219,8 @@ namespace transform {
 		auto lambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(), parameter, body);
 		// migrate the annotations from stmt to lambda
 		core::transform::utils::migrateAnnotations(stmt, lambdaExpr);
+		// finally attach a marker to the constructed lambdaExpr
+		lambdaExpr->attachValue(detail::OutlineMarker{});
 		return builder.callExpr(manager.getLangBasic().getUnit(), lambdaExpr, args);
 	}
 
@@ -656,21 +658,20 @@ namespace transform {
 		return code;
 	}
 
-	std::vector<core::LambdaExprPtr> toOcl(const Converter& converter, core::NodeManager& manager, const core::NodePtr& code,
-										   const core::CallExprPtr& callExpr, const VariableRequirementList& requirements,
-										   const DeviceAnnotationPtr& deviceInfo) {
+	core::ExpressionList toOcl(const Converter& converter, const OclIngredients& ingredients) {
+		core::NodeManager& manager = converter.getNodeManager();
 		// even though the interface supports it, only one variant is generated
 		core::IRBuilder builder(manager);
-		std::vector<core::LambdaExprPtr> variants;
+		core::ExpressionList variants;
 
-		auto lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
+		auto lambdaExpr = ingredients.getLambdaExpr();
 		// log what we got as input to quickly check if outline worked right
 		LOG(INFO) << "trying to generate kernel for: " << dumpColor(lambdaExpr);
 		// context which is usable among all steps
 		StepContext context(converter);
 		context.setDefaultLambdaExpr(lambdaExpr);
 		context.setDefaultLWDataItemType(analysis::getLWDataItemType(lambdaExpr));
-		context.setDefaultRequirements(requirements);
+		context.setDefaultRequirements(ingredients.getVariableRequirements());
 		// all modifications applied to the lambda (which will ultimately yield OlcIR) are modeled as preProcessors
 		auto processor = makePreProcessorSequence(
 			getBasicPreProcessorSequence(),
@@ -694,6 +695,8 @@ namespace transform {
 		// which encapsultes the whole execution plan
 		lambdaExpr = builder.lambdaExpr(lambdaExpr->getFunctionType(), lambdaExpr->getParameterList(),
 			builder.compoundStmt(body));
+		// grab a pointer to the attached deviceInfo for further meta infos
+		auto deviceInfo = ingredients.getDeviceInfo();
 		// very important step:
 		// first of all, mark this variant as opencl capable.
 		// secondly, we take note which kernel this meta_info is about for future extendability

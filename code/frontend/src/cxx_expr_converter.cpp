@@ -152,10 +152,18 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(membExpr, retIr);
 
+		// handle calls to static methods like function calls would be handled
+		auto memberDecl = membExpr->getMemberDecl();
+		if(auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(memberDecl)) {
+			if(!converter.getFunMan()->contains(methDecl->getCanonicalDecl())) {
+				converter.getDeclConverter()->Visit(methDecl);
+			}
+			retIr = converter.getFunMan()->lookup(methDecl->getCanonicalDecl());
+			return retIr;
+		}
+
+		// handle normal data members
 		retIr = ExprConverter::VisitMemberExpr(membExpr);
-
-		// TODO: does this need to do anything special? If not, remove and add to header
-
 		return retIr;
 	}
 

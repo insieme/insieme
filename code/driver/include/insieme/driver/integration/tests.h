@@ -47,6 +47,7 @@
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/config.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/frontend/frontend.h"
@@ -145,7 +146,13 @@ namespace integration {
 		                    const Properties& properties)
 		    : name(name), dir(dir), files(files), includeDirs(includeDirs), libDirs(libDirs), libNames(libNames),
 		      interceptedHeaderFileDirectories(interceptedHeaderFileDirectories), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL),
-		      enableCXX11(enableCXX11), properties(properties) {}
+		      enableCXX11(enableCXX11), properties(properties) {
+			if(enableOpenCL) {
+				// add the OpenCL specific directories
+				this->includeDirs.push_back(utils::getInsiemeLibsRootDir() + "opencl/include");
+				this->libDirs.push_back(utils::getInsiemeLibsRootDir() + "opencl/lib64/");
+			}
+		}
 
 		/**
 		 * Obtains the name of this test case.
@@ -322,7 +329,7 @@ namespace integration {
 			std::map<string, string> insiemeccFlags;
 			insiemeccFlags["use_libmath"] = "";
 			insiemeccFlags["use_libpthread"] = "";
-			insiemeccFlags["use_opencl"] = "--flib-icl -lOpenCL";
+			insiemeccFlags["use_opencl"] = "-fopencl=1 -lOpenCL";
 			insiemeccFlags["use_omp"] = "-fopenmp";
 			insiemeccFlags["standardFlags"] = "--log-level=INFO";
 			insiemeccFlags["use_o3"] = "-O3";
