@@ -309,7 +309,7 @@ TEST(PrettyPrinter, Declarations) {
 	    "decl struct B;\n"
 	    "def struct A {\n"
 	    "};\n"
-	    "def struct B: [ public A ] {\n"
+	    "def struct B : [ public A ] {\n"
 	    "};\n"
 	    "B") << printer2;
 
