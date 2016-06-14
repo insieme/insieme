@@ -29,20 +29,19 @@ def extract_relation_name(name, input_arr)
 end
 
 def create_mangle(filename, decl)
-  filename = File.basename(filename)
-  filename.gsub!('.', '_')
-  return @mangle + "_" + filename + "_" + decl
+  escpaed_filename = filename.gsub(/[\/\.]/, '_')
+  return @mangle + "_" + escpaed_filename + "_" + decl
 end
 
 def camelcase_to_underscore(str)
-  return str.gsub(/(.)([A-Z])/, '\1_\2').downcase
+  return str.gsub(/([^\/])([A-Z])/, '\1_\2').downcase
 end
 
 def expand_using_decls(lines, filename)
   # Get all using-declarations
   usings = {}
   lines.each do |line|
-    next unless match = line.match(/^\s*\.#{@usingtoken}\s+(\w+)\s+from\s+(\w+)(?:\s+as\s+(\w+))?.*/)
+    next unless match = line.match(/^\s*\.#{@usingtoken}\s+(\w+)\s+from\s+(\w+(?:\/[\w]+)*)(?:\s+as\s+(\w+))?.*/)
     use, from, as = match.captures
     from = camelcase_to_underscore(from + "." + @file_ext)
     as = as ? as : use
@@ -66,29 +65,32 @@ def expand_using_decls(lines, filename)
   end
 end
 
-def convert_usings_to_includes(lines)
-  lines.unshift ".#{@usingtoken} _ from ir"
+def convert_usings_to_includes(lines, filename)
+  lines.unshift ".#{@usingtoken} _ from entities/ir"
   lines.each do |line|
-    line.gsub!(/^\s*\.#{@usingtoken}\s+\w+\s+from\s+(\w+)(?:\s+as\s+\w+)?.*/) do
-      '#include "' + camelcase_to_underscore(Regexp.last_match[1]) + '.' + @file_ext + '"'
+    line.gsub!(/^\s*\.#{@usingtoken}\s+\w+\s+from\s+(\w+(?:\/[\w]+)*)(?:\s+as\s+\w+)?.*/) do
+      target_filename = camelcase_to_underscore(Regexp.last_match[1]) + "." + @file_ext
+      target_filename_fullpath = @destdir + "/" + @incdir + "/" + target_filename
+      abort "\x1B[1;31mError:\033[0m Target file '#{target_filename}' does not exist!" unless File.file? target_filename_fullpath
+      '#include "' + target_filename + '"'
     end
   end
 end
 
 
 # Step 1: Copy files
-source_files = Dir.glob(@srcdir + "/*." + @file_ext)
+Dir.chdir @srcdir
+source_files = Dir.glob("*." + @file_ext)
 FileUtils.cp(source_files, @destdir)
 
-include_files = Dir.glob(@srcdir + "/" + @incdir + "/*." + @file_ext)
+Dir.chdir @incdir
+include_files = Dir.glob("**/*." + @file_ext)
 FileUtils.mkdir_p(@destdir + "/" + @incdir)
-FileUtils.cp(include_files, @destdir + "/" + @incdir)
+FileUtils.cp_r(".", @destdir + "/" + @incdir)
 
-# Strip paths from filenames for further use
-source_files.map! {|filename| File.basename(filename) }
-include_files.map! {|filename| File.basename(filename) }
+Dir.chdir @basedir
 
-#
+
 # Step 2: Name-mangle declarations in header files
 Dir.chdir(@destdir + "/" + @incdir)
 include_files.each do |filename|
@@ -98,7 +100,7 @@ include_files.each do |filename|
   lines = File.read(filename).split("\n")
 
   # Skip mangling for ir.dl
-  unless File.basename(filename) == "ir." + @file_ext then
+  unless filename == "entities/ir." + @file_ext then
 
     # Get all decls, inits and comps in this file
     decls = extract_relation_name(@decltoken, lines)
@@ -123,7 +125,7 @@ include_files.each do |filename|
 
   # Replace relation names according to using-declarations
   expand_using_decls(lines, filename)
-  convert_usings_to_includes(lines)
+  convert_usings_to_includes(lines, filename)
 
   # Change 'member' declarations back to decl and add pragma once
   lines.map! {|line| line.gsub(/(\s*\.)#{@membertoken}([^\w]+)/, '\1decl\2') }
@@ -148,7 +150,7 @@ source_files.each do |filename|
 
   # Replace relation names according to using-declarations
   expand_using_decls(lines, filename)
-  convert_usings_to_includes(lines)
+  convert_usings_to_includes(lines, filename)
 
   # Done. Write new content to file
   File.open(filename, "w") do |file|
