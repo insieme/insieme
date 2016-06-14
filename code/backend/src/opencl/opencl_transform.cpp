@@ -75,6 +75,8 @@ namespace transform {
 	using namespace insieme::annotations::opencl_ns;
 
 	namespace {
+		struct OutlineMarker {};
+
 		core::LiteralPtr toKernelLiteral(core::NodeManager& manager, const StepContext& sc, unsigned int id, const core::LambdaExprPtr& oclExpr) {
 			core::IRBuilder builder(manager);
 			// obtain the kernel backend which transforms oclExpr into a stringLit -- each call MUST allocate a fresh new backend!
@@ -219,6 +221,8 @@ namespace transform {
 		auto lambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(), parameter, body);
 		// migrate the annotations from stmt to lambda
 		core::transform::utils::migrateAnnotations(stmt, lambdaExpr);
+		// finally attach a marker to the constructed lambdaExpr
+		lambdaExpr->attachValue(OutlineMarker{});
 		return builder.callExpr(manager.getLangBasic().getUnit(), lambdaExpr, args);
 	}
 
@@ -664,6 +668,8 @@ namespace transform {
 		std::vector<core::LambdaExprPtr> variants;
 
 		auto lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
+		// check if the lambdaExpr was generated via transform::outline
+		assert_true(lambdaExpr->hasAttachedValue<OutlineMarker>()) << "toOcl called with lambda not constructed via specific outline!";
 		// log what we got as input to quickly check if outline worked right
 		LOG(INFO) << "trying to generate kernel for: " << dumpColor(lambdaExpr);
 		// context which is usable among all steps
