@@ -1,4 +1,4 @@
-.using ReturnOfLambda from EntryAndExitPoints
+.using ReturnOfLambda from Utils/EntryAndExitPoints
 
 
 // TODO: remove once the typing of the ir.dl is fixed

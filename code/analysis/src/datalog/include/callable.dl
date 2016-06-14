@@ -1,7 +1,7 @@
-.using callable_value from ForwardDecl
-.using ParentOf from Parent
-.using EqualNodes from Equality
-.using DataFlowAnalysis from DataFlowAnalysis
+.using callable_value from Templates/ForwardDecl
+.using ParentOf from Utils/Parent
+.using EqualNodes from Utils/Equality
+.using DataFlowAnalysis from Templates/DataFlowAnalysis
 
 
 // some additional results

@@ -1,4 +1,4 @@
-.using ParentOf from Parent
+.using ParentOf from Utils/Parent
 
 
 .decl TopLevelLambda ( id:node )   input

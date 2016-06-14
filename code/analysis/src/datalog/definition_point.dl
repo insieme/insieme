@@ -1,4 +1,4 @@
-.using DefinitionPoint from VariableDefinitionPoint
+.using DefinitionPoint from Utils/VariableDefinitionPoint
 
 
 // -- definie relation for the targeted variable --

@@ -1,4 +1,4 @@
-.using _ from Boolean
+.using _ from Entities/Boolean
 
 
 // -- basic value types --

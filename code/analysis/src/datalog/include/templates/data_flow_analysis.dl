@@ -1,13 +1,13 @@
 .using callGraph from Callable
-.using VariableDefinition from VariableDefinitionPoint
-.using DefinitionPoint from VariableDefinitionPoint
-.using FreeVariable from VariableDefinitionPoint
-.using callable_value from ForwardDecl
-.using reference_value from ForwardDecl
-.using ReturnValue from ReturnValue
-.using ReachableIn from Reachable
-.using concat from DataPath
-.using ProgramPointAnalysis from ProgramPointAnalysis
+.using VariableDefinition from Utils/VariableDefinitionPoint
+.using DefinitionPoint from Utils/VariableDefinitionPoint
+.using FreeVariable from Utils/VariableDefinitionPoint
+.using callable_value from Templates/ForwardDecl
+.using reference_value from Templates/ForwardDecl
+.using ReturnValue from Utils/ReturnValue
+.using ReachableIn from Utils/Reachable
+.using concat from Entities/DataPath
+.using ProgramPointAnalysis from Templates/ProgramPointAnalysis
 
 
 // -- a realation identifying every assignment --
@@ -57,11 +57,11 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 	// free variables are undefined
 	value( v, DP_ROOT, b ) :- FreeVariable(v), unknown_value(b).
 
-	
+
 	// -- values of declarations --
-	
+
 	// for now, just take the value of the initializer expression (TODO: handle ctor calls and implicit conversions)
-	value( d, p, v ) :- Declaration(d,_,e), value(e,p,v). 
+	value( d, p, v ) :- Declaration(d,_,e), value(e,p,v).
 
 
 	// -- value of call expressions --

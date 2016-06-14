@@ -1,5 +1,4 @@
-.using boolean_value from ForwardDecl
-.using DataFlowAnalysis from DataFlowAnalysis
+.using boolean_value from Templates/ForwardDecl
 
 
 // input parameters

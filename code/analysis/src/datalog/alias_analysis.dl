@@ -1,5 +1,5 @@
 .using _ from Callable
-.using reference_value from ForwardDecl
+.using reference_value from Templates/ForwardDecl
 
 
 // a relation to specify the terms which's target references shell be obtained

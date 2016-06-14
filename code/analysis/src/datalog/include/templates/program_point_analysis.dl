@@ -1,5 +1,5 @@
-.using _ from ProgramPoint
-.using ControlFlow from ControlFlow
+.using _ from Entities/ProgramPoint
+.using ControlFlow from Utils/ControlFlow
 
 
 .comp ProgramPointAnalysis<ValueType> {

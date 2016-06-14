@@ -1,5 +1,5 @@
-.using ParentOf from Parent
-.using boolean_value from ForwardDecl
+.using ParentOf from Utils/Parent
+.using boolean_value from Templates/ForwardDecl
 
 
 // marks all reachable statements that may be entered

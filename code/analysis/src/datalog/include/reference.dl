@@ -1,6 +1,6 @@
 .using callGraph from callable
-.using reference_value from forward_decl as ref_val
-.using DataFlowAnalysis from DataFlowAnalysis
+.using reference_value from Templates/ForwardDecl
+.using DataFlowAnalysis from Templates/DataFlowAnalysis
 
 
 // ---------- Analysis Specification -----------
@@ -8,7 +8,7 @@
 .init reference = DataFlowAnalysis <memory_location>
 
 // link to result set
-ref_val(n,p,v) :- reference.value(n,p,v).
+reference_value(n,p,v) :- reference.value(n,p,v).
 
 // the value to be exhibited by any unknown value
 reference.unknown_value ( X ) :- reference.value(_,_,X).

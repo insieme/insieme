@@ -1,6 +1,6 @@
-.using ReachableOut from Reachable
-.using ParentOf from Parent
-.using ReachableIn from Reachable
+.using ParentOf from Utils/Parent
+.using ReachableOut from Utils/Reachable
+.using ReachableIn from Utils/Reachable
 
 
 // --- compute entry and exit points of all callables---

@@ -71,7 +71,7 @@ def convert_usings_to_includes(lines, filename)
     line.gsub!(/^\s*\.#{@usingtoken}\s+\w+\s+from\s+(\w+(?:\/[\w]+)*)(?:\s+as\s+\w+)?.*/) do
       target_filename = camelcase_to_underscore(Regexp.last_match[1]) + "." + @file_ext
       target_filename_fullpath = @destdir + "/" + @incdir + "/" + target_filename
-      abort "\x1B[1;31mError:\033[0m Target file '#{target_filename}' does not exist!" unless File.file? target_filename_fullpath
+      puts "\x1B[1;31mError:\033[0m Target file '#{target_filename}' does not exist!" unless File.file? target_filename_fullpath
       '#include "' + target_filename + '"'
     end
   end

@@ -1,9 +1,9 @@
-.using _ from ProgramPoint
+.using _ from Entities/ProgramPoint
 .using callGraph from Callable
-.using callable_value from ForwardDecl
-.using boolean_value from ForwardDecl
-.using EntryPoint from EntryAndExitPoints
-.using ExitPoint from EntryAndExitPoints
+.using callable_value from Templates/ForwardDecl
+.using boolean_value from Templates/ForwardDecl
+.using EntryPoint from Utils/EntryAndExitPoints
+.using ExitPoint from Utils/EntryAndExitPoints
 
 
 // definies the control flow in a code fragment
