@@ -608,8 +608,12 @@ namespace printer {
 
 				if(printer.hasOption(PrettyPrinter::JUST_LOCAL_CONTEXT)) { letBindings.erase(node); }
 
-				// otherwise: print the rest
-				visit(NodeAddress(node));
+				if(auto p = node.isa<LambdaExprPtr>()) {
+					visit(NodeAddress(p->getReference()));
+				} else {
+					// otherwise: print the rest
+					visit(NodeAddress(node));
+				}
 			}
 
 			~InspirePrinter() {
@@ -941,7 +945,12 @@ namespace printer {
 				out << " ";
 				VISIT(var);
 				out << " = ";
-				VISIT(node->getInitialization());
+				auto init = node->getInitialization();
+				if(auto p = init.isa<LambdaExprPtr>()) {
+					out << lambdaNames[p->getReference()];
+				} else {
+					VISIT(node->getInitialization());
+				}
 			}
 
 			PRINT(CompoundStmt) {
@@ -1291,7 +1300,10 @@ namespace printer {
 				} else {
 					auto begin = args.begin() + (isMemberFun ? 1 : 0);
 					out << "(" << join(", ", begin, args.end(), [&](std::ostream& out, const NodeAddress& curParam) {
-						VISIT(curParam);
+						if (auto p = curParam.getAddressedNode().isa<LambdaExprPtr>()) {
+							out << lambdaNames[p->getReference()];
+						}
+						visit(curParam);
 					}) << ")";
 				}
 
