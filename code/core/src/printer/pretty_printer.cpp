@@ -724,32 +724,35 @@ namespace printer {
 
 				auto printer = [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); };
 
+				// print instantiation types
 				if(node->hasInstantiationTypes()) {
 					out << "<" << join(", ", node->getInstantiationTypeList(), printer) << ">";
 				}
 
+				// print the function type
 				if(node->isMember()) {
-					auto thisParam = node->getParameterType(0);
-					assert_true(lang::isReference(thisParam)) << "This param has to be a reference type";
-					lang::ReferenceType refTy(thisParam);
-					if (refTy.isConst()) out << "const ";
-					if (refTy.isVolatile()) out << "volatile ";
-					out << (node->isDestructor() ? "~" : "") << getObjectName(node) << "::";
-				}
-				if(node->isConstructor()) {
-					auto params = node->getParameterTypes();
-					out << "(" << join(", ", params.begin() + 1, params.end(), printer) << ")";
-				} else if(node->isDestructor()) {
-					out << "()";
-				} else if(node->isMemberFunction() || node->isVirtualMemberFunction()) {
-					auto parameterTypes = node->getParameterTypes();
-					out << "(" << join(", ", parameterTypes.begin() + 1, parameterTypes.end(), printer) << ")"
-							<< (node->isMemberFunction() ? " -> " : " ~> ");
-					VISIT(node->getReturnType());
+					if (node->isDestructor()) {
+						// print class type
+						out << "~" << getObjectName(node) << "::()";
+					} else {
+						auto params = node->getParameterTypes();
+						// print qualifier
+						assert_true(params.size() > 0);
+						printQualifiers(out, node->getParameterTypeList()[0].getAddressedNode());
+						// print class type
+						out << getObjectName(node) << "::";
+						// print function signature
+						if(node->isConstructor()) {
+							out << "(" << join(", ", params.begin() + 1, params.end(), printer) << ")";
+						} else if(node->isMemberFunction() || node->isVirtualMemberFunction()) {
+							out << "(" << join(", ", params.begin() + 1, params.end(), printer) << ")" << (node->isMemberFunction() ? " -> " : " ~> ");
+							visit(node->getReturnType());
+						}
+					}
 				} else {
 					out << "(" << join(", ", node->getParameterTypes(), printer) << ")";
 					out << ((node->isPlain()) ? " -> " : " => ");
-					VISIT(node->getReturnType());
+					visit(node->getReturnType());
 				}
 			}
 
