@@ -1,0 +1,6 @@
+
+// -- basic value types --
+.type char
+.type string
+.number_type int
+.number_type uint

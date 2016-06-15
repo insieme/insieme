@@ -43,6 +43,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/lang/lang.h"
+#include "insieme/core/lang/basic.h"
 #include "insieme/utils/logging.h"
 
 namespace insieme {
@@ -235,6 +236,15 @@ namespace framework {
 				int type = this->visit(var->getType());
 				const string& string_value = var->getStringValue();
 				insert("Literal", id, type, string_value);
+
+				// also fill in integer literals
+				auto& basic = var->getNodeManager().getLangBasic();
+				if (basic.isInt(var->getType())) {
+					// TODO: check range of integer (signed, unsigned, ...)
+					// 		=> assert if fail (do not insert in this case)
+					insert("IntegerLiteral", id, var->template getValueAs<int64_t>());
+				}
+
 				return id;
 			}
 

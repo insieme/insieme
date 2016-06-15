@@ -249,7 +249,7 @@ namespace datalog {
 
 	}
 
-	TEST(DISABLED_BooleanValue, Tuples) {
+	TEST(BooleanValue, Tuples) {
 
 		// some more complex example
 		auto code = R"(
@@ -261,6 +261,15 @@ namespace datalog {
 
 		EXPECT_TRUE(isTrue(code));
 
+		// try the other component
+		code = R"(
+			()->bool {
+				var ( bool , bool ) a = ( true, false );
+				return a.1;
+			}()
+		)";
+
+		EXPECT_TRUE(isFalse(code));
 
 	}
 

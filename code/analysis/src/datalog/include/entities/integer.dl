@@ -1,0 +1,4 @@
+.using _ from Entities/Boolean
+
+.type integer = [ defined : bool , value : number ]
+

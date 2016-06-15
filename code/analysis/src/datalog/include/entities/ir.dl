@@ -1,11 +1,5 @@
 .using _ from Entities/Boolean
-
-
-// -- basic value types --
-.type char
-.type string
-.number_type int
-.number_type uint
+.using _ from Entities/PrimitiveTypes
 
 
 // -- list  & misc node types
@@ -189,6 +183,7 @@
 .decl LambdaExpr      ( id:node , type:function_type , reference:lambda_ref, definition:lambda_def )          input
 .decl LambdaReference ( id:node , type:function_type , name:string )                                          input
 .decl Literal         ( id:node , type:type , string_value:string )                                           input
+.decl IntegerLiteral  ( id:node , value:number )                                                              input
 .decl TupleExpr       ( id:node , expressions:exprs )                                                         input
 .decl Variable        ( id:node , type:type , var_id:uint )                                                   input
 // piped through   .decl MarkerExpr ( id:node , expr_id:uint , sub_expression:expr                            input

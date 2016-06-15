@@ -1,0 +1,20 @@
+.using _ from Entities/Integer
+.using DataFlowAnalysis from Templates/DataFlowAnalysis
+
+		
+// the analysis assigning each expression reference values
+.decl integer_value( n : node , p : data_path , i : integer )
+
+
+// ---------- Analysis Specification -----------
+
+.init integer = DataFlowAnalysis <integer>
+
+// link to result set
+integer_value(n,p,v) :- integer.value(n,p,v).
+
+// the value to be exhibited by any unknown value
+integer.unknown_value ( [ false, 0 ] ).
+
+// the value of integer literals
+integer.value ( l , DP_ROOT, [ true, i ] ) :- IntegerLiteral( l , i ).
