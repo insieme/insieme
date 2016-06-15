@@ -1275,22 +1275,20 @@ namespace printer {
 			}
 
 			PRINT(BindExpr) {
-				out << "(" << join(",", node->getParameters(),[&](std::ostream& out, const ExpressionAddress& cur) {
-					VISIT(cur);
-					out << " : ";
-					VISIT(cur->getType());
-				}) << ")=> ";
-				VISIT(node->getCall());
+				out << "(";
+				printParameters(out, node->getParameters());
+				out << ") => ";
+				visit(node->getCall());
 			}
 
 			PRINT(CastExpr) {
 				if(printer.hasOption(PrettyPrinter::PRINT_CASTS)) {
 					out << "CAST(";
-					VISIT(node->getType());
+					visit(node->getType());
 					out << ") ";
-					VISIT(node->getSubExpression());
+					visit(node->getSubExpression());
 				} else {
-					VISIT(node->getSubExpression());
+					visit(node->getSubExpression());
 				}
 			}
 
