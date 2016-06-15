@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -104,16 +104,19 @@ namespace utils {
 	std::string unescapeString(const std::string& escapedString) {
 		std::stringstream ss;
 		auto str = escapedString;
-		if(boost::starts_with(str, "\"") && boost::ends_with(str, "\"")) str = str.substr(1, str.size()-2);
-		for(size_t i=0; i<str.length(); ++i) {
+		if(boost::starts_with(str, "\"") && boost::ends_with(str, "\"")) { str = str.substr(1, str.size() - 2); }
+		for(size_t i = 0; i < str.length(); ++i) {
 			for(auto p : escapedCharMapping) {
 				if(boost::starts_with(str.substr(i), p.first)) {
 					ss << p.second;
 					i += p.first.size();
-					continue;
+					break;
 				}
 			}
-			ss << str[i];
+			// if the last character was an escaped character, i was advanced beyond the end of the string
+			if(i < str.length()) {
+				ss << str[i];
+			}
 		}
 		return ss.str();
 	}
