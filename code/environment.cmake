@@ -121,16 +121,12 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	# SET(CMAKE_EXE_LINKER_FLAGS -pg)
 
 	include(CheckCXXCompilerFlag)
-	# check for -std=c++0x
-	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
-	# check for -std=c++11
-	check_cxx_compiler_flag( -std=c++11 CXX11_Support )
-	if(CXX11_Support)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-	elseif(CXX0X_Support)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+	# check for -std=c++14
+	check_cxx_compiler_flag( -std=c++14 CXX14_Support )
+	if(CXX14_Support)
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 	else()
-		message(WARNING "WARNING: -std=c++0x or -std=c++11 not supported by your compiler!" )
+		message(WARNING "WARNING: -std=c++14 not supported by your compiler!" )
 	endif()
 endif()
 
@@ -162,7 +158,7 @@ if (${CMAKE_CXX_COMPILER} MATCHES "clang")
 	set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC")
 	# CPP flags
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
   	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")	
@@ -177,16 +173,12 @@ if (${CMAKE_CXX_COMPILER} MATCHES "icpc")
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")
 	
 	include(CheckCXXCompilerFlag)
-	# check for -std=c++0x
-	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
-	# check for -std=c++11
-	check_cxx_compiler_flag( -std=c++11 CXX11_Support )
-	if(CXX11_Support)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-	elseif(CXX0X_Support)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+	# check for -std=c++14
+	check_cxx_compiler_flag( -std=c++14 CXX14_Support )
+	if(CXX14_Support)
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 	else()
-		message(WARNING  "WARNING: -std=c++0x not supported by your compiler!" )
+		message(WARNING  "WARNING: -std=c++14 not supported by your compiler!" )
 	endif()
 endif ()
 
