@@ -1063,10 +1063,42 @@ namespace printer {
 					out << "\" : ";
 					VISIT(node->getType());
 					out << ")";
-				}
-				else if(printer.hasOption(PrettyPrinter::PRINT_LITERAL_TYPES)) {
+				} else if(printer.hasOption(PrettyPrinter::PRINT_LITERAL_TYPES)) {
 					out << ":";
 					VISIT(node->getType());
+				}
+			}
+
+			PRINT(MemberFunction) {
+				if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(node.getAddressedNode())) return;
+				if (auto impl = node->getImplementation().isa<LambdaExprAddress>()) {
+					newLine();
+					if (node->isVirtual()) out << "virtual ";
+
+					const auto &params = impl->getParameterList();
+					assert_true(params.size() >= 1);
+
+					TypePtr thisParam = params[0].getAddressedNode()->getType();
+					assert_true(analysis::isRefType(thisParam));
+					if (analysis::isRefType(analysis::getReferencedType(thisParam))) {
+						thisParam = analysis::getReferencedType(thisParam);
+					}
+					const auto thisParamRef = lang::ReferenceType(thisParam);
+					if (thisParamRef.isConst()) { out << "const "; }
+					if (thisParamRef.isVolatile()) { out << "volatile "; }
+
+					out << "function " << node->getName()->getValue();
+					auto parameters = impl->getParameterList();
+					thisStack.push(parameters.front().getAddressedNode());
+
+					out << " = (";
+					printParameters(out, impl->getParameterList(), false);
+					out << ") -> ";
+					visit(impl->getFunctionType()->getReturnType());
+					out << " ";
+					if (analysis::isaDefaultMember(node.getAddressedNode())) out << "= default;";
+					else visit(impl->getBody());
+					thisStack.pop();
 				}
 			}
 
@@ -1076,11 +1108,54 @@ namespace printer {
 					out << lang::getConstructName(node);
 					return;
 				}
-				out << lambdaNames[node->getReference()];
+
+				// first we get the type of the lambda do determine, what we want to print
+				auto funType = node->getType();
+				auto nodePtr = node.getAddressedNode();
+
+				if(funType->isConstructor()) {
+					// check if lambda is a default constructor and printing for them is enabled
+					if(!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultConstructor(nodePtr)) return;
+
+					newLine();
+					out << "ctor function ";
+
+					//print the parameters
+					auto params = node->getParameterList();
+					out << "(";
+					printParameters(out, params, false);
+					out << ")";
+
+					// print of the implementation
+					if(analysis::isaDefaultConstructor(nodePtr)) {
+						out << " = default;";
+					} else {
+						thisStack.push(node->getParameterList().front());
+						out << " "; // whitespace between function type and compound statement
+						visit(node->getBody());
+						thisStack.pop();
+					}
+				} else if(funType->isDestructor()) {
+					// hint: as the information, if a destructor is virtual or not is stored in the RecordPtr
+					// we need to print the "dtor [virtual]" in the same part as the record is printed
+					out << "function () ";
+					if(analysis::isDefaultDestructor(nodePtr)) {
+						out << "= default;";
+					} else {
+						thisStack.push(node->getParameterList().front());
+						visit(NodeAddress(node->getBody()));
+						thisStack.pop();
+					}
+				} else {
+				}
 			}
 
 			PRINT(LambdaReference) {
-				out << node->getNameAsString();
+				if(lambdaNames.find(node.getAddressedNode()) != lambdaNames.end()) {
+					out << lambdaNames[node.getAddressedNode()];
+				} else {
+					out << node->getNameAsString();
+				}
 			}
 
 			PRINT(LambdaDefinition) {
