@@ -38,6 +38,7 @@
 
 #include <string>
 
+#include "insieme/utils/assert.h"
 #include "insieme/utils/character_escaping.h"
 
 namespace insieme {
@@ -92,7 +93,7 @@ namespace utils {
 	TEST(CharacterEscaping, CharToString) {
 
 		EXPECT_EQ(R"(\n)", escapedCharToString('\n'));
-		ASSERT_DEATH(escapedCharToString('b'), "Unsupported escaped character of value 98");
+		assert_decl(ASSERT_DEATH(escapedCharToString('b'), "Unsupported escaped character of value 98"););
 
 	}
 
