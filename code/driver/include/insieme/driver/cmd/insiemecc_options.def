@@ -83,7 +83,6 @@ OPTION("isystem", systemIncludePaths, std::vector<frontend::path>, std::vector<f
 OPTION("library-file,l", libraryFiles, std::vector<frontend::path>, std::vector<frontend::path>(), "linker flag(s)/file(s)")
 OPTION("library-path,L", libraryPaths, std::vector<frontend::path>, std::vector<frontend::path>(), "library search path(s)")
 OPTION("dump-kernel", dumpOclKernel, frontend::path, "a.cl", "dump OpenCL kernel")
-OPTION("optimization,O", optimization, std::string, std::string(), "optimization flag")
 OPTION("print-clang-ast-filter", clangASTDumpFilter, std::string, std::string(), "set a regular expression to filter the clang AST dump.")
 
 #undef FLAG

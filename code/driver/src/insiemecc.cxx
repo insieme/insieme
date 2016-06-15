@@ -37,8 +37,6 @@
 #include <string>
 #include <iomanip>
 
-#include <boost/algorithm/string.hpp>
-
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/utils/version.h"
@@ -52,7 +50,6 @@
 #include "insieme/driver/utils/driver_utils.h"
 
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/checks/ir_checks.h"
 
@@ -227,10 +224,6 @@ int main(int argc, char** argv) {
 	for(auto cur : options.job.getDefinitions()) {
 		compiler.addFlag(std::string("-D" + cur.first));
 	}
-
-	// if an optimization flag is set (e.g. -O3)
-	// set this flag in the backend compiler
-	if(!options.settings.optimization.empty()) { compiler.addFlag("-O" + options.settings.optimization); }
 
 	// check if the c++11 standard was set when calling insieme
 	// if yes, use the same standard in the backend compiler
