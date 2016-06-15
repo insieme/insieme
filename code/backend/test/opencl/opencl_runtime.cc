@@ -68,47 +68,28 @@ namespace opencl {
 				node->addAnnotation(std::make_shared<BaseAnnotation>(annos));
 			}
 		}
-		
+
 		void addDeviceAnnotation(const core::NodePtr& node, Device::Type type) {
 			BaseAnnotation::AnnotationList annos;
 			annos.push_back(std::make_shared<DeviceAnnotation>(std::make_shared<Device>(type)));
 			addAnnotations(node, annos);
 		}
-		
+
 		void addLoopAnnotation(const core::NodePtr& node, bool independent) {
 			BaseAnnotation::AnnotationList annos;
 			annos.push_back(std::make_shared<LoopAnnotation>(independent));
 			addAnnotations(node, annos);
 		}
-		
+
 		void addVariableRequirement(const core::NodePtr& node, const core::VariablePtr& var,
 									VariableRequirement::AccessMode accessMode, const core::ExpressionPtr& size,
 									const core::ExpressionPtr& start, const core::ExpressionPtr& end) {
 			VariableRangeList ranges;
 			ranges.push_back(std::make_shared<VariableRange>(size, start, end));
-			
+
 			BaseAnnotation::AnnotationList annos;
 			annos.push_back(std::make_shared<VariableRequirement>(var, accessMode, ranges));
 			addAnnotations(node, annos);
-		}
-
-		bool isOclHeaderAvail() {
-			auto compiler = utils::compiler::Compiler::getOpenCLCompiler();
-			compiler.addFlag("-E");
-			compiler.setSilent();
-
-			auto path = boost::filesystem::unique_path(
-				boost::filesystem::temp_directory_path() / "insieme-ocl-%%%%%%%%.h").string();
-
-			// write header to file
-			std::fstream file(path, std::fstream::out);
-			file << "#include <CL/cl.h>";
-			file.close();
-
-			auto result = system(compiler.getCommand({path}, "a.out").c_str());
-			// remove the temporary file as it is not needed anymore
-			boost::filesystem::remove(path);
-			return result == 0;
 		}
 	}
 
@@ -120,7 +101,7 @@ namespace opencl {
 		this test models the following C code:
 		note1: timex is emitted as it is not relevant for the functionality
 		note2: compound assignments have been manually stripped
-		
+
 		#include <stdio.h>
 		#include <stdlib.h>
 		#include <math.h>
@@ -143,7 +124,7 @@ namespace opencl {
 				__elapsed += (__t2.tv_usec - __t1.tv_usec) / 1000.0; \
 				fprintf(stdout, "%s: %.3f ms\n", __name, __elapsed); \
 			}
-		 
+
 		bool mat_is_equal(float *fst, float *snd, unsigned elements)
 		{
 			for (unsigned i = 0; i < elements; ++i) {
@@ -151,14 +132,14 @@ namespace opencl {
 			}
 			return true;
 		}
-		 
+
 		bool mat_is_value(float *mat, unsigned elements, float value)
 		{
 			for (unsigned i = 0; i < elements; ++i)
 				if (mat[i] != value) return false;
 			return true;
 		}
-		 
+
 		bool mat_init(float *mat, unsigned elements, float value)
 		{
 			TIMEX_BGN("mat_init_acc");
@@ -171,20 +152,20 @@ namespace opencl {
 			TIMEX_END();
 			return mat_is_value(mat, elements, value);
 		}
-		 
+
 		int main(int argc, char **argv)
 		{
 			const int M = 1000;
 			const int N = 1000;
 			const int P = 1000;
-		 
+
 			float *A = malloc(sizeof(*A)    * N * P);
 			float *B = malloc(sizeof(float) * M * P);
-			 
+
 			const size_t szFloat = sizeof(float);
 			float *C = malloc(szFloat       * M * N);
 			float *D = malloc(szFloat       * M * N);
-		 
+
 			bool result = true;
 			result &= mat_init(A, N * P, 2);
 			result &= mat_init(B, M * P, 3);
@@ -196,7 +177,7 @@ namespace opencl {
 					A[rand() % (N*P)] = (rand() % 10) + 1;
 					B[rand() % (M*P)] = (rand() % 10) + 1;
 				}
-				
+
 				TIMEX_BGN("mat_mult_acc");
 				// now do the matrix multiplication
 				#pragma opencl device type(ALL)
@@ -209,7 +190,7 @@ namespace opencl {
 						for (unsigned k = 0; k < P; ++k)
 							C[i*N+j] += A[i*P+k] * B[k*N+j];
 				TIMEX_END();
-		 
+
 				TIMEX_BGN("mat_mult_seq");
 				// check with cpu if mat computation is correct
 				for (unsigned i = 0; i < N; ++i)
@@ -219,7 +200,7 @@ namespace opencl {
 				TIMEX_END();
 				result = mat_is_equal(C, D, M*N);
 			}
-		 
+
 			free(A);
 			free(B);
 			free(C);
@@ -271,7 +252,7 @@ namespace opencl {
 				};
 				return 1!=0;
 			};
-			// Inspire Program 
+			// Inspire Program
 			int<4> function IMP_main (v91 : ref<int<4>,f,f,plain>, v92 : ref<ptr<ptr<char>>,f,f,plain>){
 				var ref<int<4>,t,f,plain> v93 = 1000;
 				var ref<int<4>,t,f,plain> v94 = 1000;
@@ -345,14 +326,14 @@ namespace opencl {
 		core::ForStmtAddressList markers;
 		core::visitDepthFirstOnce(core::NodeAddress(prog), [&](const core::ForStmtAddress& forStmt) { markers.push_back(forStmt); });
 		EXPECT_EQ(markers.size(), 8) << "failed to determine all for loops";
-		
+
 		// set the preferred device
 		addDeviceAnnotation(markers[2].getAddressedNode(), Device::Type::ALL);
 		// annotate the matrix multiplication loops with independence information
 		addLoopAnnotation(markers[2].getAddressedNode(), true);
 		addLoopAnnotation(markers[3].getAddressedNode(), true);
 		addLoopAnnotation(markers[4].getAddressedNode(), false);
-		
+
 		// set the preferred device
 		addDeviceAnnotation(markers[0].getAddressedNode(), Device::Type::ALL);
 		// annotate with independence information
@@ -370,7 +351,7 @@ namespace opencl {
 		EXPECT_NE(targetCode.find("get_global_id(1u)"), std::string::npos)
 			<< "failed to generate kernel: " << targetCode;
 		// check if we can compile the code, otherwise skip the execution
-		if (!isOclHeaderAvail()) {
+		if (!utils::compiler::isOpenCLAvailable()) {
 			std::cerr << "skipping OpenCL MatrixMultiplication Runtime Test as CL.h is not avail!" << std::endl;
 			return;
 		}

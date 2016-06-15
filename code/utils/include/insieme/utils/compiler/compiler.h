@@ -97,7 +97,7 @@ namespace compiler {
 		static Compiler getDefaultCppCompiler();
 
 		static Compiler getRuntimeCompiler(const Compiler& baseCompiler = getDefaultC99Compiler());
-		
+
 		static Compiler getOpenCLCompiler(const Compiler& baseCompiler = getDefaultC99Compiler());
 
 		static Compiler getOptimizedCompiler(const Compiler& base, const string& level = "3");
@@ -230,7 +230,12 @@ namespace compiler {
 		return compileToBinary(toVirtualPrintable(source), target, compiler);
 	}
 
-
+	/**
+	 * Determine if the currently executing instance of insieme has access to OpenCL headers
+	 *
+	 * @return true if available, false otherwise
+	 */
+	bool isOpenCLAvailable();
 } // end namespace: compiler
 } // end namespace: utils
 } // end namespace: insieme

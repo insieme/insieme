@@ -50,6 +50,7 @@
 #include "insieme/utils/assert.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/config.h"
+#include "insieme/utils/compiler/compiler.h"
 
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string.hpp>
@@ -797,10 +798,9 @@ namespace integration {
 
 			if(!isExcluded(props["excludeSteps"], step) && !conflicts) { stepsToExecute.push_back(step); }
 
-			#ifndef USE_OPENCL
-			if(test.isEnableOpenCL()) return vector<TestStep>();
-			#endif
-
+			// in case the test requires OpenCL but we do lack of e.g. headers, simply disable it
+			if(test.isEnableOpenCL() && !utils::compiler::isOpenCLAvailable()) return vector<TestStep>();
+			// in case the test is not an OpenCL one automatically remove all such devoted steps
 			if(!test.isEnableOpenCL()) {
 				// filter out all steps which are devoted to OpenCL
 				for(TestStep& step : stepsToExecute)
