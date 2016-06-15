@@ -16,6 +16,7 @@ require "fileutils"
 @membertoken = "member"
 @usingtoken = "using"
 @mangle = "D474L06"
+@ir_dl = "entities/ir"
 
 abort "Dough takes exactly two arguments!" if ARGV.length != 2
 abort "Source dir (#{@srcdir}) does not exist!" unless File.directory?(@srcdir)
@@ -66,7 +67,7 @@ def expand_using_decls(lines, filename)
 end
 
 def convert_usings_to_includes(lines, filename)
-  lines.unshift ".#{@usingtoken} _ from entities/ir"
+  lines.unshift ".#{@usingtoken} _ from " + @ir_dl
   lines.each do |line|
     line.gsub!(/^\s*\.#{@usingtoken}\s+\w+\s+from\s+(\w+(?:\/[\w]+)*)(?:\s+as\s+\w+)?.*/) do
       target_filename = camelcase_to_underscore(Regexp.last_match[1]) + "." + @file_ext
@@ -78,7 +79,9 @@ def convert_usings_to_includes(lines, filename)
 end
 
 
-# Step 1: Copy files
+# Step 1: Clean up dest dir and copy files
+FileUtils.rm_rf(Dir.glob(@destdir + "/*"))
+
 Dir.chdir @srcdir
 source_files = Dir.glob("*." + @file_ext)
 FileUtils.cp(source_files, @destdir)
@@ -100,7 +103,7 @@ include_files.each do |filename|
   lines = File.read(filename).split("\n")
 
   # Skip mangling for ir.dl
-  unless filename == "entities/ir." + @file_ext then
+  unless filename == @ir_dl + "." + @file_ext then
 
     # Get all decls, inits and comps in this file
     decls = extract_relation_name(@decltoken, lines)
