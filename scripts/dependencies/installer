@@ -22,16 +22,28 @@ install_pkg() {
 		source defaults.sh
 		source package_$1.sh
 		pkg_check_installed
+		PKG_TEMP=\$(mktemp -d)
+		pushd \$PKG_TEMP
+		echo "####   Downloading \$PACKAGE   ####"
 		pkg_download
+		echo "####   Extracting  \$PACKAGE   ####"
 		pkg_extract
 		pushd \$PACKAGE
+		echo "####   Preparing   \$PACKAGE   ####"
 		pkg_prepare
+		echo "####   Configuring \$PACKAGE   ####"
 		pkg_configure
+		echo "####   Building    \$PACKAGE   ####"
 		pkg_build
+		echo "####   Checking    \$PACKAGE   ####"
 		pkg_check
+		echo "####   Installing  \$PACKAGE   ####"
 		pkg_install
 		popd
+		echo "####   Cleaning    \$PACKAGE   ####"
 		pkg_cleanup
+		popd
+		rmdir \$PKG_TEMP
 	EOF
 }
 
