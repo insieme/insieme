@@ -47,21 +47,13 @@ endmacro(configure_souffle)
 macro(souffle_run_dough input_dir output_dir)
 
 	# Glob all the dl files to provide correct dependency creation
-	file(GLOB datalog_analysises_raw_dls         ${input_dir}/*.dl)
-	file(GLOB datalog_analysises_raw_include_dls ${input_dir}/include/*.dl)
+	file(GLOB_RECURSE raw_datalog_files ${input_dir}/*.dl)
 
-	foreach (analysis_file ${datalog_analysises_raw_dls})
-		get_filename_component(analysis_name ${analysis_file} NAME_WE)
-		set(dough_output_files ${dough_output_files} ${output_dir}/${analysis_name}.dl)
+	# Generate "dough output files", i.e. replace the input_dir with the output_dir path
+	foreach (analysis_file ${raw_datalog_files})
+		string(REPLACE ${input_dir} ${output_dir} next_dough_output_file ${analysis_file})
+		set(dough_output_files ${dough_output_files} ${next_dough_output_file})
 	endforeach()
-
-	foreach (analysis_file ${datalog_analysises_raw_include_dls})
-		get_filename_component(analysis_name ${analysis_file} NAME_WE)
-		set(dough_output_files ${dough_output_files} ${output_dir}/include/${analysis_name}.dl)
-	endforeach()
-
-	# Add raw dls to dependencies
-	set(raw_datalog_files ${raw_datalog_files} ${datalog_analysises_raw_dls} ${datalog_analysises_raw_include_dls})
 
 	# Execute on given input dir
 	add_custom_command(
@@ -72,6 +64,10 @@ macro(souffle_run_dough input_dir output_dir)
 		DEPENDS ${raw_datalog_files}
 		OUTPUT ${dough_output_files}
 	)
+
+	# Debug stuff -- uncomment to check if generated file lists are correct
+	# message("XXX RAW DATALOG FILES: ${raw_datalog_files}")
+	# message("XXX DOUGH OUTPUT FILES: ${dough_output_files}")
 
 endmacro(souffle_run_dough)
 
