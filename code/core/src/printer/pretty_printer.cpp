@@ -1670,7 +1670,7 @@ namespace printer {
 				OUT(")");
 			};
 			ADD_FORMATTER(refExt.getRefDelete()) {
-				OUT("delete(");
+				OUT("ref_delete(");
 				PRINT_ARG(0);
 				OUT(")");
 			};
