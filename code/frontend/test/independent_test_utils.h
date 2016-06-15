@@ -228,6 +228,8 @@ namespace frontend {
 					if(boost::starts_with(ex, regexKeyS)) {
 						auto res = ex.substr(regexKeyS.size());
 						boost::replace_all(res, " ", "\\s*");
+						boost::replace_all(res, "\t", "\\s*");
+						boost::replace_all(res, "\n", "\\s*");
 						re = boost::regex(res);
 					} else {
 						re = boost::regex(ex.substr(regexKey.size()));
