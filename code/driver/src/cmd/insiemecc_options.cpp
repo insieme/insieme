@@ -198,6 +198,7 @@ namespace cmd {
 
 			// --------------- Job Settings ---------------
 			res.job.setOption(fe::ConversionJob::NoWarnings, res.settings.noWarnings);
+			res.job.setOption(fe::ConversionJob::NoColor, res.settings.noColor);
 			res.job.setOption(fe::ConversionJob::WinCrossCompile, res.settings.winCrossCompile);
 			res.job.setOption(fe::ConversionJob::NoDefaultExtensions, res.settings.noDefaultExtensions);
 			res.job.setOption(fe::ConversionJob::DumpClangAST, res.settings.printClangAST);
@@ -240,28 +241,21 @@ namespace cmd {
 			// set clang AST dump filter regex
 			if(!res.settings.clangASTDumpFilter.empty()) { res.job.setClangASTDumpFilter(res.settings.clangASTDumpFilter); }
 
-			// insert
+			// set language standard
+			const std::map<std::string, frontend::ConversionSetup::Standard> languageStandardMapping = {{"auto", frontend::ConversionSetup::Auto},
+				                                                                                        {"c99", frontend::ConversionSetup::C99},
+				                                                                                        {"c++03", frontend::ConversionSetup::Cxx03},
+				                                                                                        {"c++11", frontend::ConversionSetup::Cxx11},
+				                                                                                        {"c++14", frontend::ConversionSetup::Cxx14}};
+
 			const std::string std = res.settings.standard.back();
 			if(res.settings.standard.size() > 1) { std::cerr << "Warning: Multiple standards set. Only considering last one: " << std << "\n"; }
-			if(std == "auto") {
-				res.job.setStandard(frontend::ConversionSetup::Auto);
-			} else if(std == "c99") {
-				res.job.setStandard(frontend::ConversionSetup::C99);
-			} else if(std == "c++98") {
-				res.job.setStandard(frontend::ConversionSetup::Cxx98);
-			} else if(std == "c++03") {
-				res.job.setStandard(frontend::ConversionSetup::Cxx03);
-			} else if(std == "c++0x") {
-				res.job.setStandard(frontend::ConversionSetup::Cxx11);
-				assert_true(res.job.isCxx());
-			} else if(std == "c++11") {
-				res.job.setStandard(frontend::ConversionSetup::Cxx11);
-				assert_true(res.job.isCxx());
-			} else if(std == "c++14") {
-				res.job.setStandard(frontend::ConversionSetup::Cxx14);
-				assert_true(res.job.isCxx());
+			if(::containsKey(languageStandardMapping, std)) {
+				res.job.setStandard(languageStandardMapping.at(std));
 			} else {
-				std::cerr << "Error: Unsupported standard: " << std << " - supported: auto, c99, c++98, c++03, c++11\n";
+				vector<string> standards;
+				::transform(languageStandardMapping, std::back_inserter(standards), [](const auto& entry) { return entry.first; });
+				std::cerr << "Error: Unsupported standard: " << std << " - supported are: " << join(", ", standards) << "\n";
 				res.valid = false;
 				return res;
 			}
@@ -270,16 +264,16 @@ namespace cmd {
 				if(res.settings.language == "c++") {
 					if(!res.job.isCxx()) {
 						// language should be c++ but we don't
-						// know what standard so lets takes c++03.
-						res.job.setStandard(frontend::ConversionSetup::Cxx03);
-						std::cerr << "Warning: Conflicting language setting and standard flag. Set standard to c++03\n";
+						// know what standard so lets takes c++11.
+						std::cerr << "Warning: Conflicting language setting and standard flag. Set standard to c++11\n";
+						res.job.setStandard(frontend::ConversionSetup::Cxx11);
 					}
 				} else if(res.settings.language == "c") {
 					if(res.job.isCxx()) {
 						// language should be c++ but we don't
 						// know what standard so lets takes C99.
-						res.job.setStandard(frontend::ConversionSetup::C99);
 						std::cerr << "Warning: Conflicting language setting and standard flag. Set standard to c99\n";
+						res.job.setStandard(frontend::ConversionSetup::C99);
 					}
 				} else {
 					std::cerr << "Error: Unsupported language setting: " << res.settings.language << " - supported: c, c++\n";
