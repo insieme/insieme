@@ -1,6 +1,8 @@
-.using boolean_value from Templates/ForwardDecl
 .using DataFlowAnalysis from Templates/DataFlowAnalysis
 
+		
+// the analysis assigning IR nodes boolean values
+.decl boolean_value( n : node , p : data_path, v : bool )
 
 // ---------- Analysis Specification -----------
 

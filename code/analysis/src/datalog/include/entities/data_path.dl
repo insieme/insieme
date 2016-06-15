@@ -25,10 +25,3 @@ all_data_paths ( t ) :- all_data_paths( [ _ , t ] ).
 .decl concat ( a : data_path , b : data_path , c : data_path )
 concat( DP_ROOT , p , p ) :- all_data_paths(p).
 concat( [ah,at] , b , [ah,r]) :- all_data_paths([ah,at]), concat(at,b,r).
-
-
-// a table computing string representations of data paths (for debugging)
-//.decl data_path_to_string ( p : data_path , s : symbol ) output
-//data_path_to_string( DP_ROOT, "_" ).
-//data_path_to_string( [ x , r ], cat(cat(x,"."),s) ) :- all_data_paths([x,r]), data_path_to_string(r,s).
-

@@ -1,12 +1,16 @@
+.using concat from Entities/DataPath
+
+.using callable_value from Callable
 .using callGraph from Callable
+.using reference_value from Reference
+
 .using VariableDefinition from Utils/VariableDefinitionPoint
 .using DefinitionPoint from Utils/VariableDefinitionPoint
 .using FreeVariable from Utils/VariableDefinitionPoint
-.using callable_value from Templates/ForwardDecl
-.using reference_value from Templates/ForwardDecl
+
 .using ReturnValue from Utils/ReturnValue
 .using ReachableIn from Utils/Reachable
-.using concat from Entities/DataPath
+		
 .using ProgramPointAnalysis from Templates/ProgramPointAnalysis
 
 
@@ -94,4 +98,4 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 
 }
 
-#include "reference.dl"
+// #include "reference.dl"

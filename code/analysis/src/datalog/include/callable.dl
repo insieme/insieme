@@ -1,9 +1,13 @@
-.using callable_value from Templates/ForwardDecl
+.using DataFlowAnalysis from Templates/DataFlowAnalysis
 .using ParentOf from Utils/Parent
 .using EqualNodes from Utils/Equality
-.using DataFlowAnalysis from Templates/DataFlowAnalysis
 
 
+// the analysis assigning IR nodes a callable value
+.type callable = lambda | call_expr
+.decl callable_value( n : node , p : data_path , v : callable )
+
+		
 // some additional results
 .decl callGraph ( n : call_expr , c : callable )
 

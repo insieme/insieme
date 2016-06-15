@@ -1,7 +1,7 @@
 .using _ from Entities/ProgramPoint
 .using callGraph from Callable
-.using callable_value from Templates/ForwardDecl
-.using boolean_value from Templates/ForwardDecl
+.using callable_value from Callable
+.using boolean_value from BooleanValue
 .using EntryPoint from Utils/EntryAndExitPoints
 .using ExitPoint from Utils/EntryAndExitPoints
 
