@@ -42,6 +42,7 @@
 
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/sequential/sequential_backend.h"
+#include "insieme/backend/opencl/opencl_backend.h"
 
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/checks/ir_checks.h"
@@ -202,7 +203,11 @@ namespace utils {
 	//***************************************************************************************
 	insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const cmd::Options& options) {
 		if(options.backendHint == cmd::BackendEnum::Sequential) { return be::sequential::SequentialBackend::getDefault(); }
-
+		if(options.backendHint == cmd::BackendEnum::OpenCL) {
+				auto config = std::make_shared<be::BackendConfig>();
+				config->dumpOclKernel = options.settings.dumpOclKernel.string();
+				return be::opencl::OpenCLBackend::getDefault(config);
+		}
 		return be::runtime::RuntimeBackend::getDefault();
 	}
 
