@@ -779,12 +779,6 @@ namespace printer {
 			PRINT(Record) {
 					const auto& tagType = node.getFirstParentOfType(NT_TagType).getAddressedNode().as<TagTypePtr>();
 
-					auto paramPrinter = [&](std::ostream &out, const VariableAddress &cur) {
-						VISIT(cur);
-						out << " : ";
-						VISIT(cur->getType());
-					};
-
 					auto strct = analysis::isStruct(node);
 
 					out << (strct ? "struct " : "union ");
@@ -1162,11 +1156,6 @@ namespace printer {
 
 
 			PRINT(Lambda) {
-				auto paramPrinter = [&](std::ostream& out, const VariableAddress& cur) {
-					VISIT(cur);
-					out << " : ";
-					VISIT(cur->getType());
-				};
 
 				auto funType = node->getType();
 				// print header ...
@@ -1177,7 +1166,9 @@ namespace printer {
 					out << " ";
 					VISIT(node->getParameters()->getElement(0));
 					auto parameters = node->getParameters();
-					out << " :: (" << join(", ", parameters.begin() + 1, parameters.end(), paramPrinter) << ") ";
+					out << " :: (";
+					printParameters(out, parameters, false);
+					out << ") ";
 					if (!node->getParameterList().empty())
 						thisStack.push(node->getParameterList().front());
 					// .. and body
@@ -1189,7 +1180,9 @@ namespace printer {
 					// print destructor header
 					VISIT(analysis::getObjectType(funType));
 					auto parameters = node->getParameters();
-					out << " :: (" << join(", ", parameters.begin() + 1, parameters.end(), paramPrinter) << ") ";
+					out << " :: (";
+					printParameters(out, parameters, false);
+					out << ") ";
 					if (!node->getParameterList().empty())
 						thisStack.push(node->getParameterList().front());
 					// .. and body
@@ -1202,8 +1195,10 @@ namespace printer {
 					out << "function ";
 					VISIT(analysis::getObjectType(funType));
 					auto parameters = node->getParameters();
-					out << "::(" << join(", ", parameters.begin() + 1, parameters.end(), paramPrinter) << ")"
-							<< (funType->isMemberFunction() ? " -> " : " ~> ");
+					out << " :: (";
+					printParameters(out, parameters, false);
+					out << ")";
+					out << (funType->isMemberFunction() ? " -> " : " ~> ");
 					VISIT(funType->getReturnType());
 					out << " ";
 					if (!node->getParameterList().empty())
@@ -1215,7 +1210,9 @@ namespace printer {
 
 				} else {
 					// print plain header function
-					out << "(" << join(", ", node->getParameterList(), paramPrinter) << ") -> ";
+					out << "(";
+					printParameters(out, node->getParameterList());
+					out << ") -> ";
 					VISIT(funType->getReturnType());
 					out << " ";
 					// .. and body
@@ -1278,18 +1275,18 @@ namespace printer {
 						const auto& refExt = call.getNodeManager().getLangExtension<lang::ReferenceExtension>();
 						if (analysis::isCallOf(call, refExt.getRefDeref())) {
 							out << "(";
-							VISIT(function);
+							visit(function);
 							out << ")";
 						} else {
-							VISIT(function);
+							visit(function);
 						}
 					} else if (functionPtr.isa<CastExprPtr>()) {
 						out << "(";
-						VISIT(function);
+						visit(function);
 						out << ")";
 					} else {
 						//Literal Expression
-						VISIT(function);
+						visit(function);
 					}
 				}
 
