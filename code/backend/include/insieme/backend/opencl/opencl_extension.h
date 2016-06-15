@@ -45,37 +45,88 @@
 namespace insieme {
 namespace backend {
 namespace opencl {
-	
+	namespace detail {
+		/**
+		 * Used to mark nodes which have been been already been checked by isKernelType()
+		 */
+		class KernelTypeMarker {
+			bool valid;
+		public:
+			KernelTypeMarker(bool valid = false) : valid(valid) {}
+			bool isValid() const { return valid; }
+			bool operator==(const KernelTypeMarker& other) const { return valid == other.valid;  }
+			bool operator!=(const KernelTypeMarker& other) const { return !(*this == other); }
+		};
+	}
+	/**
+	 * IR extension which encapsulates all additional constructs required to model OCL kernel code
+	 */
 	class OpenCLExtension : public core::lang::Extension {
 		friend class core::NodeManager;
 		OpenCLExtension(core::NodeManager& manager);
 	  public:
-		// import reference & ptr extension to utilize aliases
 		IMPORT_MODULE(core::lang::ReferenceExtension);
-
+		/**
+		 * Lambda which returns the effective NDRange
+		 * @param wi pointer to a irt_work_item
+		 */
 		TYPE_ALIAS("opencl_ndrange_fun", "(ref<irt_wi>)->opencl_ndrange");
+		/**
+		 * Lambda which returns the effective data_requirement of a specific argument
+		 * @param wi pointer to a irt_work_item
+		 * @param ndrange effective ndrange of the current kernel execution
+		 * @param argument index of the argument (0...N) for which the data_requirement shall be returned
+		 */
 		TYPE_ALIAS("opencl_data_requirement_fun", "(ref<irt_wi>, ref<opencl_ndrange>, uint<4>)->opencl_data_requirement");
+		/**
+		 * Lambda which returns the effective data_range for a specific dimension
+		 * @param wi pointer to a irt_work_item
+		 * @param ndrange effective ndrange of the current kernel execution
+		 * @param argument index of the argument (0...N) for which the data_requirement shall be returned
+		 */
 		TYPE_ALIAS("opencl_data_range_fun", "(ref<irt_wi>, ref<opencl_ndrange>, uint<4>, uint<4>)->opencl_data_range");
-
+		/**
+		 * As of now, a kernel id is represented by an uint32_t type
+		 */
 		TYPE_ALIAS("opencl_kernel_id", "uint<4>");
-
+		/**
+		 * Models a size_t which is not available in inspire_api/basic.def
+		 */
 		LANG_EXT_TYPE(SizeType, "opencl_size_type");
 		TYPE_ALIAS("opencl_size_type", "uint<8>");
-
-		// used to register a kernel source under the given id (which is an index within the global kernel table)
+		/**
+		 * IR construct to register an ocl kernel code which will be picked-up by the op-converter
+		 * @param id unique kernel id
+		 * @param source string literal which represents the final ocl kernel source code
+		 * @param routine string literal which names the entry point of the kernel, e.g. __insieme_fun0
+		 */
 		LANG_EXT_LITERAL(RegisterKernel, "opencl_register_kernel", "(opencl_kernel_id, 'source, 'routine)->unit");
-		// used to run a given kernel
+		/**
+		 * Execute the kernel, specified by the given id, synchronously with the given requirements, ndrange and optionals
+		 * @param id id of the kernel which shall be executed
+		 * @param ndrange_fun lambda which returns the effective ndrange
+		 * @param requirements list of lambdas where each one returns a data_requirement for a specific ndrange and argument
+		 * @param optionals var_list of optional arguments passed to the kernel at runtime
+		 */
 		LANG_EXT_LITERAL(ExecuteKernel, "opencl_execute_kernel", "(opencl_kernel_id, opencl_ndrange_fun, list<opencl_data_requirement_fun>, var_list)->unit");
-
+		/**
+		 * Models an NDRange which is constructed via opencl_make_ndrange
+		 */
 		LANG_EXT_TYPE(NDRange, "opencl_ndrange");
 		LANG_EXT_LITERAL(MakeNDRange, "opencl_make_ndrange", "(uint<4>, list<'goffset>, list<'gsize>, list<'lsize>)->opencl_ndrange");
-
+		/**
+		 * Models a Data Range which is constructed via opencl_make_data_range
+		 */
 		LANG_EXT_TYPE(DataRange, "opencl_data_range");
 		LANG_EXT_LITERAL(MakeDataRange, "opencl_make_data_range", "('size, 'start, 'end)->opencl_data_range");
-
+		/**
+		 * Models a Data Requirement which is constructed via opencl_make_data_requirement
+		 */
 		LANG_EXT_TYPE(DataRequirement, "opencl_data_requirement");
 		LANG_EXT_LITERAL(MakeDataRequirement, "opencl_make_data_requirement", "(type<'a>, uint<4>, opencl_data_range_fun, uint<4>)->opencl_data_requirement");
-
+		/**
+		 * Models an Optional which is constructed via opencl_make_optional
+		 */
 		LANG_EXT_TYPE(Optional, "opencl_optional");
 		LANG_EXT_LITERAL(MakeOptional, "opencl_make_optional", "('size, 'value, 'modifier)->opencl_optional");
 
