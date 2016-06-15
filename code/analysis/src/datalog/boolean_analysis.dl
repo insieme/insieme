@@ -1,5 +1,5 @@
 .using boolean_value from Templates/ForwardDecl
-.using _ from BooleanValueSpec
+.using _ from BooleanValue
 
 // input parameters
 .decl target_expr( n : node ) input

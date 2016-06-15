@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/datalog/boolean_value.h"
+#include "insieme/analysis/datalog/boolean_analysis.h"
 
 #include "insieme/analysis/datalog/framework/analysis_base.h"
 

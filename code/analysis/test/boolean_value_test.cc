@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/datalog/boolean_value.h"
+#include "insieme/analysis/datalog/boolean_analysis.h"
 #include "insieme/core/ir_builder.h"
 
 namespace insieme {

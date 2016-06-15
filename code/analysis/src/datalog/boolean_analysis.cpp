@@ -34,11 +34,11 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/datalog/boolean_value.h"
+#include "insieme/analysis/datalog/boolean_analysis.h"
 
 #include "insieme/analysis/datalog/framework/analysis_base.h"
 
-#include "souffle/gen/boolean_value.h"
+#include "souffle/gen/boolean_analysis.h"
 
 namespace insieme {
 namespace analysis {
@@ -54,7 +54,7 @@ namespace datalog {
 		const bool debug = false;
 
 		// instantiate the analysis
-		souffle::Sf_boolean_value analysis;
+		souffle::Sf_boolean_analysis analysis;
 
 		int targetID = 0;
 
