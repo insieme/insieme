@@ -142,7 +142,7 @@ namespace integration {
 		}
 
 		// skip OpenCL tests as those are handeled via driver/integration_tests
-		if (testCase.isEnableOpenCL()) {
+		if (testCase.isEnableOpenCL() && !utils::compiler::isOpenCLAvailable()) {
 			LOG(INFO) << "Skipping OpenCL test: " + testCase.getName();
 			return;
 		}

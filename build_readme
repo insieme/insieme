@@ -50,8 +50,6 @@ Various CMake options
 
 - DOCS=ON|OFF					: build insieme developer documentation (not doxygen)
 
-- USE_OPENCL=ON|OFF				: enable opencl
-
 - USE_ENERGY=ON|OFF				: enable energy measurement - papi
 
 

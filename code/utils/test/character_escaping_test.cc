@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,41 +36,73 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/backend/opencl/opencl_extension.h"
+#include <string>
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/lang/pointer.h"
-#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/utils/assert.h"
+#include "insieme/utils/character_escaping.h"
 
 namespace insieme {
-namespace backend {
-namespace opencl {
+namespace utils {
 
-    TEST(KernelType, Basic) {
-        core::NodeManager manager;
-        core::IRBuilder builder(manager);
+	using std::string;
 
-        auto varType = builder.typeVariable("a");
-        auto locType = builder.typeVariable("loc");
-        EXPECT_FALSE(isKernelType(varType));
+	TEST(CharacterEscaping, EscapeString) {
 
-        auto genType = buildKernelType(varType, KernelType::AddressSpace::Global);
-        EXPECT_FALSE(genType->hasAttachedValue<detail::KernelTypeMarker>());
-        EXPECT_TRUE(isKernelType(genType));
-        EXPECT_TRUE(genType->hasAttachedValue<detail::KernelTypeMarker>());
-        EXPECT_TRUE(isKernelType(genType));
+		auto abc = escapeString(R"(abc)");
+		EXPECT_EQ(3, abc.length());
+		EXPECT_EQ(R"(abc)", abc);
 
-        auto krnType = KernelType(genType);
-        EXPECT_EQ(krnType.getAddressSpace(), KernelType::AddressSpace::Global);
-        EXPECT_EQ(*krnType.getElementType(), *varType);
+		auto bs = escapeString(R"(\n)");
+		EXPECT_EQ(3, bs.length());
+		EXPECT_EQ(R"(\\n)", bs);
 
-        krnType = KernelType(builder.genericType("opencl_type",
-            toVector(varType.as<core::TypePtr>(), locType.as<core::TypePtr>())));
-        EXPECT_TRUE(isKernelType(krnType.toType()));
-        EXPECT_EQ(krnType.getAddressSpace(), KernelType::AddressSpace::Undefined);
-        EXPECT_EQ(*krnType.getElementType(), *varType);
-    }
+		auto large = escapeString(R"(bla\r\n\l\v\b)");
+		EXPECT_EQ(18, large.length());
+		EXPECT_EQ(R"(bla\\r\\n\\l\\v\\b)", large);
 
-} // end namespace opencl
-} // end namespace backend
+	}
+
+	TEST(CharacterEscaping, UnescapeString) {
+
+		auto abc = unescapeString(R"(abc)");
+		EXPECT_EQ(R"(abc)", abc);
+		EXPECT_EQ(3, abc.length());
+
+		auto squ = unescapeString(R"(\')");
+		EXPECT_EQ(R"(')", squ);
+		EXPECT_EQ(1, squ.length());
+
+		auto dqu = unescapeString(R"(\")");
+		EXPECT_EQ(R"(")", dqu);
+		EXPECT_EQ(1, dqu.length());
+
+		auto ze = unescapeString(R"(\\0)");
+		EXPECT_EQ(R"(\0)", ze);
+		EXPECT_EQ(2, ze.length());
+	}
+
+	TEST(CharacterEscaping, EscapeChar) {
+
+		EXPECT_EQ(R"(a)", escapeChar('a'));
+		EXPECT_EQ(R"(\n)", escapeChar('\n'));
+		EXPECT_EQ(R"(\0)", escapeChar('\0'));
+		EXPECT_EQ(R"(\\)", escapeChar('\\'));
+
+	}
+
+	TEST(CharacterEscaping, CharToString) {
+
+		EXPECT_EQ(R"(\n)", escapedCharToString('\n'));
+		assert_decl(ASSERT_DEATH(escapedCharToString('b'), "Unsupported escaped character of value 98"););
+
+	}
+
+	TEST(CharacterEscaping, StringToChar) {
+
+		EXPECT_EQ('\n', escapedStringToChar(R"(\n)"));
+		EXPECT_EQ('b', escapedStringToChar("b"));
+
+	}
+
+} // end namespace core
 } // end namespace insieme

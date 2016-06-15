@@ -58,6 +58,21 @@ int main() {
 	#pragma test expect_ir(R"(var ref<array<char,6>,f,f,plain> v0 = lit(""Hallo"":ref<array<char,6>,f,f>);)")
 	char hallo2[6] = "Hallo";
 
+	#pragma test expect_ir(R"(var ref<array<char,5>,f,f,plain> v0 =
+							  <ref<array<char,5>,f,f,plain>>(ref_decl(type_lit(ref<array<char,5>,f,f,plain>))) {'a', 'b', 'c', '\n', '\0'};)")
+	char abc[5] = { "abc\n" };
+
+	#pragma test expect_ir(R"(var ref<array<char,5>,f,f,plain> v0 =
+							  <ref<array<char,5>,f,f,plain>>(ref_decl(type_lit(ref<array<char,5>,f,f,plain>))) {'m', 'u', 'h', 'a', '\0'};)")
+	char muha[5] = { "muha" };
+
+	#pragma test expect_ir(R"(var ref<array<char,4>,f,f,plain> v0 =
+							  <ref<array<char,4>,f,f,plain>>(ref_decl(type_lit(ref<array<char,4>,f,f,plain>)))
+							  {num_cast(lit("'b'":int<4>), type_lit(char)),
+							   num_cast(lit("'c'":int<4>), type_lit(char)),
+							   num_cast(lit("'d'":int<4>), type_lit(char))};)")
+	char bcd[4] = { 'b', 'c', 'd' };
+
 	// QUALIFIERS //////////////////////////////////////////////////////////////
 
 	#pragma test expect_ir("var ref<int<4>,t,f> v0 = 5;")

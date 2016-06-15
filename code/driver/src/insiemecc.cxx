@@ -218,6 +218,11 @@ int main(int argc, char** argv) {
 		compiler.addFlag(cur);
 	}
 
+	// add unknown options - might be used by backend compiler
+	for(auto cur : options.job.getUnparsedOptions()) {
+		compiler.addFlag(cur);
+	}
+
 	// add definitions
 	for(auto cur : options.job.getDefinitions()) {
 		compiler.addFlag(std::string("-D" + cur.first));
@@ -226,7 +231,6 @@ int main(int argc, char** argv) {
 	// if an optimization flag is set (e.g. -O3)
 	// set this flag in the backend compiler
 	if(!options.settings.optimization.empty()) { compiler.addFlag("-O" + options.settings.optimization); }
-	if(options.settings.debug) { compiler.addFlag("-g3"); }
 
 	// check if the c++11 standard was set when calling insieme
 	// if yes, use the same standard in the backend compiler

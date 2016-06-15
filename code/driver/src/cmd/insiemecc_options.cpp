@@ -175,7 +175,7 @@ namespace cmd {
 				return res;
 			}
 
-			// unparsed flags - might be used by extensions
+			// unparsed flags - might be used by a backend compiler
 			res.job.setUnparsedOptions(unknown_flags);
 
 			// input files
