@@ -654,6 +654,33 @@ namespace printer {
 				depth--;
 			}
 
+			/*
+			* This is a block of helper functions
+			*/
+		private:
+			void printParameters(std::ostream& out, const VariableAddressList& list, bool printFirstParam = true) {
+				auto start = printFirstParam ? list.begin() : list.begin() + 1;
+				auto end = list.end();
+				out << join(", ", start, end, [&](std::ostream &out, const VariableAddress &curVar) {
+					visit(curVar);
+					out << " : ";
+					visit(curVar->getType());
+				});
+			}
+
+			void printQualifiers(std::ostream& out, const TypePtr& thisParam) {
+				assert_true(analysis::isRefType(thisParam));
+				auto thisParamCorrect = thisParam;
+				if (analysis::isRefType(analysis::getReferencedType(thisParamCorrect))) {
+					thisParamCorrect = analysis::getReferencedType(thisParamCorrect);
+				}
+				const auto thisParamRef = lang::ReferenceType(thisParamCorrect);
+				if (thisParamRef.isConst()) { out << "const "; }
+				if (thisParamRef.isVolatile()) { out << "volatile "; }
+			}
+
+		public:
+
 			/**
 			 * A macro simplifying the definition for print routine of some node type.
 			 */
