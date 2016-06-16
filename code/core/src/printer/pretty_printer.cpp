@@ -62,6 +62,7 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/parentheses.h"
 
@@ -807,6 +808,8 @@ namespace printer {
 
 				// print all constructors
 				for(auto constr : node->getConstructors()) {
+					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultConstructor(constr.getAddressedNode())) continue;
+					newLine();
 					visit(constr);
 				}
 
@@ -826,8 +829,9 @@ namespace printer {
 				}
 
 				// print all member functions
-				auto memberfuns = node->getMemberFunctions();
-				for(auto memberFun : memberfuns) {
+				for(auto memberFun : node->getMemberFunctions()) {
+					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(memberFun.getAddressedNode())) continue;
+					newLine();
 					visit(memberFun);
 				}
 
@@ -1065,7 +1069,6 @@ namespace printer {
 			PRINT(MemberFunction) {
 				if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(node.getAddressedNode())) return;
 				if (auto impl = node->getImplementation().isa<LambdaExprAddress>()) {
-					newLine();
 					if (node->isVirtual()) out << "virtual ";
 
 					const auto &params = impl->getParameterList();
@@ -1109,38 +1112,11 @@ namespace printer {
 				if(funType->isConstructor()) {
 					// check if lambda is a default constructor and printing for them is enabled
 					if(!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultConstructor(nodePtr)) return;
-
-					newLine();
-					out << "ctor function ";
-
-					//print the parameters
-					auto params = node->getParameterList();
-					out << "(";
-					printParameters(out, params, false);
-					out << ")";
-
-					// print of the implementation
-					if(analysis::isaDefaultConstructor(nodePtr)) {
-						out << " = default;";
-					} else {
-						thisStack.push(node->getParameterList().front());
-						out << " "; // whitespace between function type and compound statement
-						visit(node->getBody());
-						thisStack.pop();
-					}
 				} else if(funType->isDestructor()) {
-					// hint: as the information, if a destructor is virtual or not is stored in the RecordPtr
-					// we need to print the "dtor [virtual]" in the same part as the record is printed
-					out << "function () ";
-					if(analysis::isDefaultDestructor(nodePtr)) {
-						out << "= default;";
-					} else {
-						thisStack.push(node->getParameterList().front());
-						visit(NodeAddress(node->getBody()));
-						thisStack.pop();
-					}
-				} else {
+					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isDefaultDestructor(nodePtr)) return;
 				}
+
+				visit(node->getDefinition()->getBindingOf(node->getReference()));
 			}
 
 			PRINT(LambdaReference) {
@@ -1157,14 +1133,10 @@ namespace printer {
 
 				out << "{";
 				increaseIndent();
-				newLine();
-				std::size_t count = 0;
 				for_each(defs.begin(), defs.end(), [&](const LambdaBindingAddress& cur) {
-					visit(cur->getReference());
-					out << " = ";
-					visit(cur->getLambda());
+					newLine();
+					visit(cur);
 					out << ";";
-					if(count++ < defs.size() - 1) { this->newLine(); }
 				});
 
 				decreaseIndent();
@@ -1172,42 +1144,54 @@ namespace printer {
 				out << "}";
 			}
 
+			PRINT(LambdaBinding) {
+				// print the name of the function
+				auto funType = node->getLambda()->getType();
+				if (!funType->isConstructor() && !funType->isDestructor()) {
+					visit(node->getReference());
+					out << " = ";
+				}
+				// print the containing Lambda
+				visit(node->getLambda());
+			}
+
 
 			PRINT(Lambda) {
 
 				auto funType = node->getType();
-				// print header ...
+				auto nodePtr = node.getAddressedNode();
+
 				if(funType->isConstructor()) {
-					// print constructor header
-					out << "ctor ";
-					visit(analysis::getObjectType(funType));
-					out << " ";
-					visit(node->getParameters()->getElement(0));
-					auto parameters = node->getParameters();
-					out << " :: (";
-					printParameters(out, parameters, false);
-					out << ") ";
-					if (!node->getParameterList().empty())
-						thisStack.push(node->getParameterList().front());
-					// .. and body
-					visit(node->getBody());
-					if (!node->getParameterList().empty())
-						thisStack.pop();
+					out << "ctor function ";
 
+					//print the parameters
+					auto params = node->getParameterList();
+					out << "(";
+					printParameters(out, params, false);
+					out << ")";
+
+					// print of the implementation
+					if (analysis::isaDefaultMember(nodePtr)) {
+						out << " = default;";
+					}
+					else {
+						thisStack.push(node->getParameterList().front());
+						out << " "; // whitespace between function type and compound statement
+						visit(node->getBody());
+						thisStack.pop();
+					}
 				} else if(funType->isDestructor()) {
-					// print destructor header
-					visit(analysis::getObjectType(funType));
-					auto parameters = node->getParameters();
-					out << " :: (";
-					printParameters(out, parameters, false);
-					out << ") ";
-					if (!node->getParameterList().empty())
+					// hint: as the information, if a destructor is virtual or not is stored in the RecordPtr
+					// we need to print the "dtor [virtual]" in the same part as the record is printed
+					out << "function () ";
+					if (analysis::isaDefaultMember(nodePtr)) {
+						out << "= default;";
+					}
+					else {
 						thisStack.push(node->getParameterList().front());
-					// .. and body
-					visit(node->getBody());
-					if (!node->getParameterList().empty())
+						visit(NodeAddress(node->getBody()));
 						thisStack.pop();
-
+					}
 				} else if(funType->isMemberFunction() || funType->isVirtualMemberFunction()) {
 					// print member function header
 					out << "function ";
@@ -1317,8 +1301,9 @@ namespace printer {
 					out << "(" << join(", ", begin, args.end(), [&](std::ostream& out, const NodeAddress& curParam) {
 						if (auto p = curParam.getAddressedNode().isa<LambdaExprPtr>()) {
 							out << lambdaNames[p->getReference()];
+						} else {
+							visit(curParam);
 						}
-						visit(curParam);
 					}) << ")";
 				}
 
