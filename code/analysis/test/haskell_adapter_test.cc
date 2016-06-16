@@ -62,12 +62,12 @@ namespace haskell {
 		NodePtr root;
 
 		SimpleDeclaration() : builder(manager) {
-			root = builder.parseAddressesStatement(
+			root = builder.parseStmt(
 				"{ "
 				"   var int<4> x = 12; "
-				"   $x$; "
+				"   x; "
 				"} "
-			)[0].getRootNode();
+			);
 		}
 
 	};
@@ -95,16 +95,27 @@ namespace haskell {
 		EXPECT_EQ(addr.getDepth(), addr_hs.size() + 1);
 	}
 
+	TEST_F(HaskellAdapter, AddressTransfere) {
+		NodeAddress addr = NodeAddress(root).getAddressOfChild(1,0,1);
+		Address addr_hs = env.passAddress(addr);
+		NodeAddress addr_res = addr_hs.toNodeAddress(root);
+		EXPECT_EQ(addr,addr_res);
+	}
+
 	TEST_F(HaskellAdapter, FindDeclaration) {
 		auto tree = env.passTree(root);
 
-		// target
-		NodeAddress addrRoot(root);
-		auto var = env.passAddress(addrRoot.getAddressOfChild(1));
+		// get the targeted variable
+		CompoundStmtAddress addrRoot(root.as<CompoundStmtPtr>());
+		StatementAddress addrVar = addrRoot[1];
+		EXPECT_TRUE(addrVar.isa<VariableAddress>());
+
+		auto var = env.passAddress(addrVar);
+
 
 		boost::optional<Address> decl = env.findDeclr(tree, var);
 		EXPECT_TRUE(decl);
-		EXPECT_EQ(addrRoot.getAddressOfChild(0, 0), decl->toNodeAddress(root));
+		EXPECT_EQ(addrRoot[0].as<DeclarationStmtAddress>().getVariable(), decl->toNodeAddress(root));
 	}
 
 } // end namespace haskell
