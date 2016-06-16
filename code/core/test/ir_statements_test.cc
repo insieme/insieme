@@ -127,19 +127,19 @@ namespace core {
 		{
 			LiteralPtr intLit = builder.literal(builder.getLangBasic().getInt2(), "0x10");
 			boost::optional<unsigned long> val = intLit->getValueAs<unsigned long>();
-			assert_true(val) << "Type error: Cannot cast val to unsigned long!
+			assert_true(val) << "Type error: Cannot cast val to unsigned long!";
 ;			EXPECT_EQ(static_cast<unsigned>(16), *val);
 		}
 		{
 			LiteralPtr intLit = builder.literal(builder.getLangBasic().getInt2(), "-0x10");
 			boost::optional<short> val = intLit->getValueAs<short>();
-			assert_true(val) << "Type error: Cannot cast val to short!
+			assert_true(val) << "Type error: Cannot cast val to short!";
 ;			EXPECT_EQ(-16, *val);
 		}
 		{
 			LiteralPtr intLit = builder.literal(builder.getLangBasic().getInt2(), "010");
 			boost::optional<unsigned short> val = intLit->getValueAs<unsigned short>();
-			assert_true(val) << "Type error: Cannot cast val to unsigned!
+			assert_true(val) << "Type error: Cannot cast val to unsigned!";
 ;			EXPECT_EQ(static_cast<unsigned>(8), *val);
 		}
 	}
@@ -151,13 +151,13 @@ namespace core {
 		{
 			LiteralPtr floatLit = builder.literal(builder.getLangBasic().getFloat(), "0.4");
 			boost::optional<float> val = floatLit->getValueAs<float>();
-			assert_true(val) << "Type error: Cannot cast val to float!
+			assert_true(val) << "Type error: Cannot cast val to float!";
 ;			EXPECT_FLOAT_EQ(*val, 0.4);
 		}
 		{
 			LiteralPtr intLit = builder.literal(builder.getLangBasic().getDouble(), "0.00001");
 			boost::optional<double> val = intLit->getValueAs<double>();
-			assert_true(val) << "Type error: Cannot cast val to double!
+			assert_true(val) << "Type error: Cannot cast val to double!";
 ;			EXPECT_DOUBLE_EQ(*val, 0.00001);
 		}
 	}
