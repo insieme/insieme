@@ -104,6 +104,23 @@ namespace addons {
 				const TypeInfo& info = GET_TYPE_INFO(elementType);
 				context.getDependencies().insert(info.definition);
 
+				// get array type
+				core::lang::ArrayType arrT(elementType);
+
+				// handle array new undefined
+				if(LANG_EXT_REF.isCallOfRefNew(ARG(0))) {
+					return c_ast::newArrayCall(CONVERT_TYPE(arrT.getElementType()), CONVERT_EXPR(arrT.getSize().as<core::ExpressionPtr>()), nullptr);
+				}
+				// handle array new with init
+				if(auto initExp = ARG(0).isa<core::InitExprPtr>()) {
+					if(LANG_EXT_REF.isCallOfRefNew(initExp->getMemoryExpr())) {
+						c_ast::NodePtr cInit = CONVERT_EXPR(initExp);
+						// remove superfluous nested init generated due to array wrapping
+						if(core::lang::isFixedSizedArray(elementType)) cInit = cInit.as<c_ast::InitializerPtr>()->values[0];
+						return c_ast::newArrayCall(CONVERT_TYPE(arrT.getElementType()), CONVERT_EXPR(arrT.getSize().as<core::ExpressionPtr>()), cInit);
+					}
+				}
+
 				// access source
 				if(core::lang::isFixedSizedArray(elementType)) {
 					// special handling for string-literals ..

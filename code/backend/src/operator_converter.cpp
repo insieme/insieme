@@ -57,6 +57,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/complex.h"
 #include "insieme/core/lang/io.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
@@ -575,7 +576,6 @@ namespace backend {
 		};
 
 		res[refExt.getRefDelete()] = OP_CONVERTER {
-			// TODO: fix when frontend is producing correct code
 
 			// do not free non-heap variables
 			if(ARG(0)->getNodeType() == core::NT_Variable) {
@@ -596,16 +596,18 @@ namespace backend {
 				}
 			}
 
+			// handle array delete
+			if(core::lang::isArray(core::analysis::getReferencedType(ARG(0)->getType()))) {
+				assert_true(LANG_EXT_PTR.isCallOfPtrToArray(ARG(0)));
+				return c_ast::deleteArrayCall(CONVERT_EXPR(core::analysis::getArgument(ARG(0), 0)));
+			}
+
 			// add dependency to stdlib.h (contains the free)
 			ADD_HEADER("stdlib.h");
 
+
 			// construct argument
 			c_ast::ExpressionPtr arg = CONVERT_ARG(0);
-
-			if(core::lang::isArray(core::analysis::getReferencedType(ARG(0)->getType()))) {
-				// TODO: call array destructor instead!!
-			}
-
 			return c_ast::call(C_NODE_MANAGER->create("free"), arg);
 		};
 

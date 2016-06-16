@@ -1845,6 +1845,45 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 	}
 
+	TEST(CppSnippet, NewDeleteArrayFixed) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.parseProgram(R"(
+			def struct IMP_SimplestConstructor { };
+			int<4> main() {
+				var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(ref_new(type_lit(array<int<4>,50>)));
+				ref_delete(ptr_to_array(*i));
+				var ref<ptr<int<4>>,f,f,plain> j = ptr_from_array(<ref<array<int<4>,50>,f,f,plain>>(ref_new(type_lit(array<int<4>,50>))) {1, 2, 3});
+				ref_delete(ptr_to_array(*j));
+				var ref<ptr<array<int<4>,3>>,f,f,plain> k = ptr_from_array(ref_new(type_lit(array<array<int<4>,3>,50>)));
+				ref_delete(ptr_to_array(*k));
+
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		//std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "int32_t* i = new int32_t[50];");
+		EXPECT_PRED2(containsSubString, code, "delete[] i;");
+		EXPECT_PRED2(containsSubString, code, "int32_t* j = new int32_t[50]{1, 2, 3};");
+		EXPECT_PRED2(containsSubString, code, "delete[] j;");
+		EXPECT_PRED2(containsSubString, code, "__insieme_type_3* k = new __insieme_type_3[50];");
+		EXPECT_PRED2(containsSubString, code, "delete[] k;");
+
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
 	TEST(CppSnippet, DISABLED_InitializerList2) {
 		// something including a super-constructor call
 
