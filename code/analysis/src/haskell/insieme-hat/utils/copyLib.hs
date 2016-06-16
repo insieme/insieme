@@ -34,7 +34,6 @@ main = do
     isOod <- outOfDate latestts (args !! 0 </> "libHSinsieme-hat.so")
 
     -- copy original + simple name
-    putStrLn $ "Is ood: " ++ show isOod
     if isOod
         then do
             putStrLn $ "Copying over lib " ++ show latestlib
