@@ -1,2 +1,0 @@
-# ignore generated header files
-include/insieme/frontend/builtin_headers/*.h
