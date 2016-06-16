@@ -94,6 +94,9 @@ namespace datalog {
 		EXPECT_FALSE(isInt32("1."));         /* floating points */
 		EXPECT_FALSE(isInt32("1.0"));
 		EXPECT_FALSE(isInt32("1.337"));
+	}
+
+	TEST(IntegerAnalysis, DISABLED_Int32OverflowDetection) {
 		EXPECT_FALSE(isInt32("-2147483649")); /* invalid value range - int32 min - 1*/
 		EXPECT_FALSE(isInt32("2147483648"));  /* int32 max + 1 */
 		EXPECT_FALSE(isInt32("-4294967296")); /* int32 min << 2 */

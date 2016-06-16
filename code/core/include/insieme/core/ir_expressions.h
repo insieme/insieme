@@ -72,8 +72,7 @@ namespace core {
 		template <class T>
 		const boost::optional<T> getValueAs() const {
 			try {
-				// return utils::numeric_cast<T>(getStringValue());
-				return boost::lexical_cast<T>(getStringValue());
+				return utils::numeric_cast<T>(getStringValue());
 			} catch (const boost::bad_lexical_cast &) {
 				return {};
 			}
