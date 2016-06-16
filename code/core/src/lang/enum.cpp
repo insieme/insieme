@@ -129,8 +129,9 @@ namespace lang {
 		assert_true(isEnumEntry(type)) << "Given node " << *node << " is not an enum entry type!";
 
 		// process node type
-		*this = EnumEntry(type->getTypeParameter(0).as<GenericTypePtr>(),
-			type->getTypeParameter(1).as<NumericTypePtr>()->getValue().as<LiteralPtr>()->getValueAs<int64_t>());
+		boost::optional<int64_t> param1 = type->getTypeParameter(1).as<NumericTypePtr>()->getValue().as<LiteralPtr>()->getValueAs<int64_t>();
+		assert_true(param1) << "Type error: Cannot cast second parameter of EnumEntry to int64_t!";
+		*this = EnumEntry(type->getTypeParameter(0).as<GenericTypePtr>(), *param1);
 	}
 
 	bool EnumEntry::isEnumEntry(const NodePtr& node) {

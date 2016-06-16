@@ -70,8 +70,13 @@ namespace core {
 		 * according to the given type parameter.
 		 */
 		template <class T>
-		const T getValueAs() const {
-			return utils::numeric_cast<T>(getStringValue());
+		const boost::optional<T> getValueAs() const {
+			try {
+				// return utils::numeric_cast<T>(getStringValue());
+				return boost::lexical_cast<T>(getStringValue());
+			} catch (const boost::bad_lexical_cast &) {
+				return {};
+			}
 		}
 	IR_NODE_END()
 

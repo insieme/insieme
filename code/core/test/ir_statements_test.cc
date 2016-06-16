@@ -120,23 +120,27 @@ namespace core {
 
 		{
 			LiteralPtr intLit = builder.literal(builder.getLangBasic().getInt2(), "-10");
-			int val = intLit->getValueAs<int>();
-			EXPECT_EQ(val, -10);
+			boost::optional<int> val = intLit->getValueAs<int>();
+			assert_true(val) << "Type error: Cannot cast val to int!";
+			EXPECT_EQ(*val, -10);
 		}
 		{
 			LiteralPtr intLit = builder.literal(builder.getLangBasic().getInt2(), "0x10");
-			unsigned long val = intLit->getValueAs<unsigned long>();
-			EXPECT_EQ(static_cast<unsigned>(16), val);
+			boost::optional<unsigned long> val = intLit->getValueAs<unsigned long>();
+			assert_true(val) << "Type error: Cannot cast val to unsigned long!
+;			EXPECT_EQ(static_cast<unsigned>(16), *val);
 		}
 		{
 			LiteralPtr intLit = builder.literal(builder.getLangBasic().getInt2(), "-0x10");
-			short val = intLit->getValueAs<short>();
-			EXPECT_EQ(-16, val);
+			boost::optional<short> val = intLit->getValueAs<short>();
+			assert_true(val) << "Type error: Cannot cast val to short!
+;			EXPECT_EQ(-16, *val);
 		}
 		{
 			LiteralPtr intLit = builder.literal(builder.getLangBasic().getInt2(), "010");
-			unsigned short val = intLit->getValueAs<unsigned short>();
-			EXPECT_EQ(static_cast<unsigned>(8), val);
+			boost::optional<unsigned short> val = intLit->getValueAs<unsigned short>();
+			assert_true(val) << "Type error: Cannot cast val to unsigned!
+;			EXPECT_EQ(static_cast<unsigned>(8), *val);
 		}
 	}
 
@@ -146,13 +150,15 @@ namespace core {
 
 		{
 			LiteralPtr floatLit = builder.literal(builder.getLangBasic().getFloat(), "0.4");
-			float val = floatLit->getValueAs<float>();
-			EXPECT_FLOAT_EQ(val, 0.4);
+			boost::optional<float> val = floatLit->getValueAs<float>();
+			assert_true(val) << "Type error: Cannot cast val to float!
+;			EXPECT_FLOAT_EQ(*val, 0.4);
 		}
 		{
 			LiteralPtr intLit = builder.literal(builder.getLangBasic().getDouble(), "0.00001");
-			double val = intLit->getValueAs<double>();
-			EXPECT_DOUBLE_EQ(val, 0.00001);
+			boost::optional<double> val = intLit->getValueAs<double>();
+			assert_true(val) << "Type error: Cannot cast val to double!
+;			EXPECT_DOUBLE_EQ(*val, 0.00001);
 		}
 	}
 

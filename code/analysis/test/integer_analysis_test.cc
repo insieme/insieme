@@ -53,23 +53,21 @@ namespace datalog {
 		return builder;
 	}
 
-	template <typename T>
-	bool stringRepresentsNumber(const std::string &str) {
-		try {
-			boost::lexical_cast<T>(str);
-		} catch (boost::bad_lexical_cast &) {
-			return false;
-		}
-		return true;
-	}
-
-	template <typename T>
-	T convertStringToNumber(const std::string &str) {
-		return boost::lexical_cast<T>(str);
-	}
-
 	bool isInt32(const std::string &str) {
-		return stringRepresentsNumber<int32_t>(str);
+		auto &builder = getBuilder();
+		auto type = builder.parseType("int<4>");
+		auto lit = builder.literal(type, str);
+		auto &opt_num = lit->template getValueAs<int32_t>();
+		return !!opt_num;
+	}
+
+	int32_t getAsInt32(const std::string &str) {
+		auto &builder = getBuilder();
+		auto type = builder.parseType("int<4>");
+		auto lit = builder.literal(type, str);
+		auto &opt_num = lit->template getValueAs<int32_t>();
+		assert(opt_num);
+		return *opt_num;
 	}
 
 	TEST(IntegerAnalysis, Int32Check) {
@@ -82,8 +80,7 @@ namespace datalog {
 		EXPECT_TRUE(isInt32("2147483647"));  /* int32 max */
 
 		const std::string str = "267100722";
-		printf("Resulting number from string '%s': %d\n", str.c_str(),
-				convertStringToNumber<uint32_t>(str));
+		printf("Resulting number from string '%s': %d\n", str.c_str(), getAsInt32(str));
 
 		EXPECT_FALSE(isInt32(""));            /* empty */
 		EXPECT_FALSE(isInt32(" "));
