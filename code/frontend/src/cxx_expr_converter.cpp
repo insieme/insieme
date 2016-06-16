@@ -397,17 +397,33 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang::CXXDeleteExpr* deleteExpr) {
 		core::ExpressionPtr retExpr;
 		LOG_EXPR_CONVERSION(deleteExpr, retExpr);
+		auto& builder = converter.getIRBuilder();
 
 		// convert the target of our delete expr
 		core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
 		frontend_assert(core::lang::isPointer(exprToDelete)) << "\"delete\" called on non-pointer, not supported.";
 
-		// make sure we delete a ref array if we have an array delete
 		auto toDelete = core::lang::buildPtrToRef(exprToDelete);
-		if(deleteExpr->isArrayForm()) toDelete = core::lang::buildPtrToArray(exprToDelete);
+		// make sure we delete a ref array if we have an array delete
+		if(deleteExpr->isArrayForm()) {
+			toDelete = core::lang::buildPtrToArray(exprToDelete);
+		} else {
+			// build destructor call if required
+			auto irType = converter.convertType(deleteExpr->getDestroyedType());
+			if(auto genType = irType.isa<core::GenericTypePtr>()) {
+				const auto& tuT = converter.getIRTranslationUnit().getTypes();
+				auto ttIt = tuT.find(genType);
+				if(ttIt != tuT.cend()) {
+					auto rec = ttIt->second->getRecord();
+					if(rec->hasDestructor()) {
+						toDelete = builder.callExpr(rec->getDestructor(), toDelete);
+					}
+				}
+			}
+		}
 
 		// destructor calls are implicit in inspire 2.0, just like C++
-		retExpr = converter.getIRBuilder().refDelete(toDelete);
+		retExpr = builder.refDelete(toDelete);
 
 		return retExpr;
 	}

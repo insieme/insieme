@@ -34,9 +34,11 @@
  * regarding third party software licenses.
  */
 
-struct SimplestConstructor {
-	SimplestConstructor() = default;
-	~SimplestConstructor() = default;
+struct SimplestConstructor { };
+
+struct SlightlyLessSimpleConstructor {
+	int i;
+	SlightlyLessSimpleConstructor(int a) { i = a; }
 };
 
 #define SimplestConstructor_IR R"( def struct IMP_SimplestConstructor { }; )"
@@ -107,7 +109,7 @@ int main() {
 
 	#pragma test expect_ir(SimplestConstructor_IR, R"({
 		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor))));
-		ref_delete(ptr_to_ref(*v0));
+		ref_delete(IMP_SimplestConstructor::~(ptr_to_ref(*v0)));
 	})")
 	{
 		SimplestConstructor *simple = new SimplestConstructor;
@@ -121,6 +123,23 @@ int main() {
 	{
 		SimplestConstructor* arrsimple = new SimplestConstructor[3];
 		delete [] arrsimple;
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_SlightlyLessSimpleConstructor {
+			i : int<4>;
+			ctor function (v1 : ref<int<4>,f,f,plain>) {
+				(this).i = *v1;
+			}
+		};
+		{
+			var ref<ptr<IMP_SlightlyLessSimpleConstructor>,f,f,plain> v0 = ptr_from_ref(IMP_SlightlyLessSimpleConstructor::(ref_new(type_lit(IMP_SlightlyLessSimpleConstructor)), 42));
+			ref_delete(IMP_SlightlyLessSimpleConstructor::~(ptr_to_ref(*v0)));
+		}
+	)")
+	{
+		SlightlyLessSimpleConstructor *less = new SlightlyLessSimpleConstructor(42);
+		delete less;
 	}
 
 	// Variable size arrays ------------------------------------------------------------------------------------------------------------------------------------

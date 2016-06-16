@@ -1793,60 +1793,57 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 	}
 
-	//TODO this seems to hang in an endless loop
-	/*TEST(CppSnippet, DestructorCall) {
+	TEST(CppSnippet, NewDelete) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 
-		auto res = builder.parseProgram(
-		    R"(
-					alias int = int<4>;
+		auto res = builder.parseProgram(R"(
+			def struct IMP_SimplestConstructor { };
+			def struct IMP_SlightlyLessSimpleConstructor {
+				i : int<4>;
+				ctor function (v1 : ref<int<4>,f,f,plain>) {
+					(this).i = *v1;
+				}
+			};
+			int<4> main() {
 
-					def struct A {
+				var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_ref(ref_new(type_lit(int<4>)));
+				ref_delete(ptr_to_ref(*i));
+				var ref<ptr<int<4>,f,f>,f,f,plain> j = ptr_from_ref(ref_new_init(42));
+				ref_delete(ptr_to_ref(*j));
 
-						x : int;
+				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o1 = ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor))));
+				ref_delete(IMP_SimplestConstructor::~(ptr_to_ref(*o1)));
 
-						ctor (x : int) {
-							this.x = x;
-							print("Creating: %d\n", x);
-						}
+				var ref<ptr<IMP_SlightlyLessSimpleConstructor>,f,f,plain> o2 = ptr_from_ref(IMP_SlightlyLessSimpleConstructor::(ref_new(type_lit(IMP_SlightlyLessSimpleConstructor)), 42));
+				ref_delete(IMP_SlightlyLessSimpleConstructor::~(ptr_to_ref(*o2)));
 
-						dtor () {
-							print("Clearing: %d\n", *x);
-							x = 0;
-						}
-					};
-
-					int main() {
-
-						// create an un-initialized memory location
-						var ref<A> a = A::(a, 1);
-
-						// init using in-place constructor
-						A::(a, 2);
-
-						// invoke destructor
-						A::~(a);
-
-						return 0;
-					}
-				)");
+				return 0;
+			}
+		)");
 
 		ASSERT_TRUE(res);
 
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		// std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "(*a).A::~A()");
+		EXPECT_PRED2(containsSubString, code, "int32_t* i = (int32_t*)malloc(sizeof(int32_t));");
+		EXPECT_PRED2(containsSubString, code, "free(i);");
+		EXPECT_PRED2(containsSubString, code, "int32_t* j = _ref_new___insieme_type_2(42);");
+		EXPECT_PRED2(containsSubString, code, "free(j);");
+		EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o1 = new IMP_SimplestConstructor();");
+		EXPECT_PRED2(containsSubString, code, "delete o1;");
+		EXPECT_PRED2(containsSubString, code, "IMP_SlightlyLessSimpleConstructor* o2 = new IMP_SlightlyLessSimpleConstructor(42);");
+		EXPECT_PRED2(containsSubString, code, "delete o2;");
 
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-	}*/
+	}
 
 	TEST(CppSnippet, DISABLED_InitializerList2) {
 		// something including a super-constructor call
