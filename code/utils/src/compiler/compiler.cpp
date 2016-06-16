@@ -128,7 +128,7 @@ string Compiler::getCommand(const vector<string>& inputFiles, const string& outp
 	cmd << (incDirs.empty() ? "" : " -I") << join(" -I", incDirs);
 	cmd << (libs.getPaths().empty() ? "" : " -L") << join(" -L", libs.getPaths());
 	cmd << (libs.getLibs().empty() ? "" : " -l") << join(" -l", libs.getLibs());
-	cmd << " -o " << outputFile;
+	if(outputFile.size()) cmd << " -o " << outputFile;
 
 	// redirect streams if compilation should be 'silent'
 	if(silent) { cmd << " > /dev/null 2>&1"; }
@@ -256,6 +256,34 @@ bool compileToBinary(const VirtualPrintable& source, const string& targetFile, c
 	}
 
 	return success;
+}
+
+bool isOpenCLAvailable() {
+	// -1 not available
+	//  0 unknown, check is pending
+	// +1 available
+	static int result = 0;
+	// do we need to check for the first time?
+	if (result == 0) {
+		// assume that it is not available
+		result = -1;
+		// obtain an instance of the ocl compiler and set it to silent mode as
+		// we do not want to nag the user with the output
+		auto compiler = Compiler::getOpenCLCompiler();
+		compiler.addFlag("-E");
+		compiler.setSilent();
+		// generate a unique file in the temp directory and let the compiler resolve cl.h
+		auto path = boost::filesystem::unique_path(boost::filesystem::temp_directory_path() / "insieme-ocl-%%%%%%%%.h").string();
+		std::fstream file(path, std::fstream::out);
+		file << "#include <CL/cl.h>";
+		file.close();
+		// pass in an empty string as we do not want to generate an additional file
+		auto retVal = system(compiler.getCommand({path}, "").c_str());
+		if (retVal >= 0 && WEXITSTATUS(retVal) == 0) result = 1;
+		// remove the temporary file as it is not needed anymore
+		boost::filesystem::remove(path);
+	}
+	return result > 0;
 }
 
 } // end namespace compiler

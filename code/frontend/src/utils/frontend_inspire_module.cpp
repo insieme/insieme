@@ -60,7 +60,7 @@ namespace utils {
 		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
 		return builder.callExpr(core::analysis::getReferencedType(lhs->getType()), inspMod.getCStyleAssignment(), lhs, rhs);
 	}
-    
+
     ExpressionPtr buildCxxStyleAssignment(const ExpressionPtr& lhs, const ExpressionPtr& rhs) {
 		NodeManager& mgr = lhs->getNodeManager();
 		IRBuilder builder(mgr);
@@ -81,7 +81,7 @@ namespace utils {
 		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
 		return builder.callExpr(mgr.getLangBasic().getInt4(), inspMod.getBoolToInt(), b);
 	}
-	
+
 	core::ExpressionPtr buildObjectArrayNew(const core::TypePtr& objType, const core::ExpressionPtr& num, const core::ExpressionPtr& ctor) {
 		NodeManager& mgr = num->getNodeManager();
 		IRBuilder builder(mgr);

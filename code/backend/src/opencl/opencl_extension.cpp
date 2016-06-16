@@ -126,24 +126,28 @@ namespace opencl {
 	}
 
 	bool isKernelType(const core::NodePtr& node) {
-		// @TODO: implement caching like ReferenceMark
 		if (!node) return false;
 		// in case we are confronted with an expression, consider the resulting typedef
 		if (auto expr = node.isa<core::ExpressionPtr>()) return isKernelType(expr->getType());
 		// at this point we need to be sure to hold a type
 		auto type = node.isa<core::GenericTypePtr>();
 		if (!type) return false;
-
+		// check for a cached annotation
+		if (type->hasAttachedValue<detail::KernelTypeMarker>()) {
+			return type->getAttachedValue<detail::KernelTypeMarker>().isValid();
+		}
+		auto result = false;
 		core::NodeManager& manager = node->getNodeManager();
 		// grab a reference to the extension itself
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
 		// unify given type with template type
 		auto pattern = oclExt.getGenType().as<core::GenericTypePtr>();
 		auto sub = core::types::match(manager, type, pattern);
-		if (!sub) return false;
-
 		// also check if memloc is the 2nd type parameter
-		return isAddressSpaceMarker((*sub).applyTo(manager, pattern->getTypeParameter(1)));
+		if (sub) result = isAddressSpaceMarker((*sub).applyTo(manager, pattern->getTypeParameter(1)));
+		// attach the result to the type
+		type->attachValue(detail::KernelTypeMarker{result});
+		return result;
 	}
 
 	core::TypePtr buildKernelType(const core::TypePtr& elementType, KernelType::AddressSpace addressSpace) {

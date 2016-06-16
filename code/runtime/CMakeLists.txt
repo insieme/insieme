@@ -9,7 +9,6 @@ cmake_minimum_required(VERSION 3.2)
 if (WIN32)
 	option (USE_PTHREADS "Use the Pthread Win32 Library (requires PTHREAD_ROOT environment var)" OFF)
 endif()
-option (USE_OPENCL "Build Insieme Runtime with Opencl" OFF)
 
 #to find the custom modules (for find_package)
 #TODO better path
@@ -31,7 +30,7 @@ if(WIN32)
 	set (gtest_LIB "$ENV{GTEST_ROOT}/build/Debug/gtest.lib")
 	set (gtest_main_LIB "$ENV{GTEST_ROOT}/build/Debug/gtest_main.lib")
 	set (GTEST_INCLUDE_DIRS "$ENV{GTEST_ROOT}/include")
-	
+
 	if (CMAKE_CL_64) #64 bit apps
 		message(STATUS "Creating WIN x64 project")
 		set (WIN64ASM_OBJ "${CMAKE_CURRENT_SOURCE_DIR}/asm/win64asm.obj")
@@ -43,13 +42,13 @@ if(WIN32)
 			set (CMAKE_THREAD_LIBS_INIT "$ENV{PTHREAD_ROOT}/lib/x86/pthreadVC2.lib")
 		endif()
 	endif()
-	
+
 	#set include dir if pthreads shall be used
 	if (USE_PTHREADS)
-		set (PTHREAD_INCLUDE_DIRS "$ENV{PTHREAD_ROOT}/include")	
+		set (PTHREAD_INCLUDE_DIRS "$ENV{PTHREAD_ROOT}/include")
 	endif()
-	
-else() 
+
+else()
 	#only look for pthread lib on linux
 	find_package(Threads REQUIRED)
 
@@ -59,25 +58,25 @@ else()
 		add_definitions(-DIRT_USE_PAPI)
 	endif()
 endif()
-	
+
 # set compiler flags for gcc
-if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC 
+if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC
 		OR CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")
-	
+
 	# add flags for debug mode
 	set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0 -fPIC")
-  
+
 	# add flags for release mode
 	set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC")
-	
+
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SOURCE=700")
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 
 	include(CheckCCompilerFlag)
 	check_c_compiler_flag( -std=gnu99 C99_Support )
 	check_c_compiler_flag( -std=c11   C11_Support )
-	
+
 
 	#Compile with C11 and all warnings enabled, pedantic and warnings treated as errors for GCC>=4.9
 	#to avoid a problem with 4.8 and C11 we only want c11 with 4.9
@@ -143,31 +142,6 @@ if (MSVC)
 	endforeach(source_file)
 endif()
 
-# We also search for OpenCL in the SDK default location
-
-if ( USE_OPENCL )
-	find_library(OPENCL_LIBS NAMES OpenCL PATHS $ENV{OPENCL_ROOT}/lib/x86_64)
-	if ( ${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
-		set(USE_OPENCL OFF)
-		message(WARNING "OPENCL DISABLED, LIBRARY NOT FOUND")	
-	else ( ${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
-		add_definitions(-DUSE_OPENCL)
-		if ( USE_MPI_OPENCL )
-			add_definitions(-DREMOTE_MODE)
-		else ( USE_MPI_OPENCL )
-			add_definitions(-DLOCAL_MODE)	
-		endif ( USE_MPI_OPENCL )
-		message(STATUS "Found At: " ${OPENCL_LIBS})
-		message(STATUS "OPENCL ENABLED")
-		message(STATUS "USING ${OPENCL_LIBS}")
-		# list all include paths
-		include_directories(include/ $ENV{OPENCL_ROOT}/include/)			
-	endif(${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
-	
-else ( USE_OPENCL )
-	message(STATUS "OPENCL DISABLED")
-endif( USE_OPENCL )
-
 # create the runtime target
 add_executable(insieme_runtime ${insieme_runtime_srcs} ${insieme_runtime_incs} ${WIN64ASM_OBJ})
 
@@ -180,14 +154,9 @@ if(USE_PAPI)
 	target_include_directories(insieme_runtime PRIVATE ${PAPI_INCLUDE_DIRS})
 	target_link_libraries(insieme_runtime ${PAPI_LIBRARIES})
 endif()
-	
-
-if ( USE_OPENCL )
-	target_link_libraries(insieme_runtime ${OPENCL_LIBS})
-endif ( USE_OPENCL )
 
 #link pthread libraries for the insieme_runtime target
-if(NOT WIN32 OR USE_PTHREADS) 
+if(NOT WIN32 OR USE_PTHREADS)
 	target_link_libraries(insieme_runtime ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
@@ -255,7 +224,7 @@ endif()
 
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
-	
+
 	set ( case_name ${ut_prefix}_${case_name} )
 
 	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
@@ -275,27 +244,23 @@ foreach ( case_file ${test_cases})
 		endif ( USE_MPI_OPENCL )
 	endif()
 	link_hwloc(${case_name})
-		
-	if ( USE_OPENCL )
-		target_link_libraries(${case_name} ${OPENCL_LIBS})
-	endif ( USE_OPENCL )
-	
+
 	# disable valgrind for parallel test cases
 	set(VFLAG true)
 	if(case_name MATCHES ".*_par")
 		set(VFLAG FALSE)
 	endif(case_name MATCHES ".*_par")
-	
+
 	#disable valgrind for runtime unit tests
 	add_unit_test(${case_name} ${ut_prefix} FALSE)
-	
+
 endforeach(case_file)
 
 # handle manual (library) test cases
 file(GLOB test_cases test/manual_*.c)
 foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
-	
+
 	add_library(${case_name} SHARED ${case_file} ${WIN64ASM_OBJ})
 	target_link_libraries(${case_name} insieme_common)
 	if(NOT WIN32)
@@ -321,7 +286,7 @@ endforeach(case_file)
 file(GLOB test_cases test/standalone_*.c)
 foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
-	
+
 	include_directories(include/ $ENV{OPENCL_ROOT}/include/)
 	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
 	target_link_libraries(${case_name} insieme_common)
@@ -330,7 +295,7 @@ foreach (case_file ${test_cases})
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} rt)
 		target_link_libraries(${case_name} m)
-		
+
 		#papi header+libraries
 		if(USE_PAPI)
 			target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
@@ -343,8 +308,4 @@ foreach (case_file ${test_cases})
 		set_source_files_properties(${case_file} PROPERTIES LANGUAGE CXX)
 	endif()
 	link_hwloc(${case_name})
-	
-	if ( USE_OPENCL )
-    	target_link_libraries(${case_name} ${OPENCL_LIBS})
-	endif ( USE_OPENCL )
 endforeach(case_file)

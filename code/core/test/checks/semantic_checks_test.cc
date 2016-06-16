@@ -352,7 +352,6 @@ namespace checks {
 
 		auto checkResult = check(stmt, validInitExprMemLocationCheck);
 		EXPECT_FALSE(checkResult.empty());
-		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(0), EC_SEMANTIC_INVALID_INIT_MEMLOC, "", Message::ERROR));
 		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt).getAddressOfChild(1), EC_SEMANTIC_INVALID_INIT_MEMLOC, "", Message::ERROR));
 	}
 
