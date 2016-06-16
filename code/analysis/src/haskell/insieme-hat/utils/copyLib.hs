@@ -13,7 +13,7 @@ outOfDate ts dst = do
        then return True
        else do
            mtime <- getModificationTime dst
-           return $ mtime > ts
+           return $ mtime < ts
 
 main :: IO ()
 main = do
@@ -34,10 +34,12 @@ main = do
     isOod <- outOfDate latestts (args !! 0 </> "libHSinsieme-hat.so")
 
     -- copy original + simple name
+    putStrLn $ "Is ood: " ++ show isOod
     if isOod
         then do
+            putStrLn $ "Copying over lib " ++ show latestlib
             copyFile latestlib  (args !! 0 </> "libHSinsieme-hat.so")
-            setModificationTime (args !! 0 </> "libHSinsieme-hat.so") latestts
+            -- setModificationTime (args !! 0 </> "libHSinsieme-hat.so") latestts
             copyFile latestlib  (args !! 0 </> takeFileName latestlib)
-            setModificationTime (args !! 0 </> takeFileName latestlib) latestts
+            -- setModificationTime (args !! 0 </> takeFileName latestlib) latestts
         else return ()
