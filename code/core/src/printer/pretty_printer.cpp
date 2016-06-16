@@ -62,6 +62,7 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/parentheses.h"
 
@@ -395,8 +396,10 @@ namespace printer {
 						});
 					}
 
-					//second: print all function declarations
+					// visitedBinding is used to check, if some Bindings are already visited
 					utils::set::PointerSet<LambdaBindingPtr> visitedBindings;
+
+					//second: print all function declarations
 					visitDepthFirstOncePrunable(node, [&](const LambdaExprPtr& cur) {
 						// jump over this part, if lambda is derived, but printer don't have the option to print them
 						if(lang::isDerived(cur) && !printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL)) {
@@ -691,12 +694,6 @@ namespace printer {
 			#define PRINT(NodeType)                                                                                                                      \
 				virtual void visit##NodeType(const NodeType##Address& node)
 
-			/**
-			 * A macro for visiting the NodePtr
-			 */
-			#define VISIT(VNode) this->visit(VNode);
-
-
 			PRINT(Value) {
 				// identifiers can be directly printed
 				out << *node;
@@ -704,7 +701,7 @@ namespace printer {
 
 			PRINT(GenericType) {
 
-				auto printer = [&](std::ostream&, const ParentAddress& cur) { VISIT(cur); };
+				auto printer = [&](std::ostream&, const ParentAddress& cur) { visit(cur); };
 
 				out << *node->getName();
 				const auto& parent_types = node->getParents();
@@ -717,12 +714,12 @@ namespace printer {
 
 				if(types->empty()) { return; }
 
-				out << "<" << join(",", types, [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); }) << ">";
+				out << "<" << join(",", types, [&](std::ostream&, const TypeAddress& cur) { visit(cur); }) << ">";
 			}
 
 			PRINT(FunctionType) {
 
-				auto printer = [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); };
+				auto printer = [&](std::ostream&, const TypeAddress& cur) { visit(cur); };
 
 				// print instantiation types
 				if(node->hasInstantiationTypes()) {
@@ -758,9 +755,9 @@ namespace printer {
 
 			PRINT(TagType) {
 				if(node->getName()->getValue().compare("")) {
-					VISIT(node->getTag());
+					visit(node->getTag());
 				} else {
-					VISIT(node.getRecord());
+					visit(node.getRecord());
 				}
 			}
 
@@ -780,73 +777,73 @@ namespace printer {
 			}
 
 			PRINT(Record) {
-					const auto& tagType = node.getFirstParentOfType(NT_TagType).getAddressedNode().as<TagTypePtr>();
+				// print Record Type
+				auto strct = analysis::isStruct(node);
+				out << (strct ? "struct " : "union ");
 
-					auto strct = analysis::isStruct(node);
+				// print name
+				auto recordName = node->getName()->getValue();
+				if(recordName.compare("")) { out << recordName << " "; }
 
-					out << (strct ? "struct " : "union ");
-
-					auto recordName = node->getName()->getValue();
-
-					if (recordName.compare("")) {
-						out << recordName << " ";
+				// print parents including their qualifiers
+				if(strct) {
+					auto parents = node.as<StructAddress>()->getParents();
+					if(!parents.empty()) {
+						out << ": [ " << join(",", parents, [&](std::ostream& out, const ParentAddress& parent) {
+							if(parent->isVirtual()) { out << "virtual "; }
+							if(parent->isPrivate()) { out << "private "; }
+							if(parent->isPublic()) { out << "public "; }
+							if(parent->isProtected()) { out << "protected "; }
+							visit(parent->getType());
+						}) << " ] ";
 					}
+				}
 
-					if (strct) {
-						auto parents = node.as<StructAddress>()->getParents();
-						if (!parents.empty()) {
-							out << ": [ " << join(",", parents, [&](std::ostream &out, const ParentAddress &parent) {
-								if (parent->isVirtual()) { out << "virtual "; }
-								if (parent->isPrivate()) { out << "private "; }
-								if (parent->isPublic()) { out << "public "; }
-								if (parent->isProtected()) { out << "protected "; }
-								VISIT(parent->getType());
-							}) << " ] ";
-						}
-					}
+				// open new record scope
+				out << "{";
+				increaseIndent();
 
-					// open new record scope
-					out << "{";
-					increaseIndent();
+				// print all fields
+				visit(node->getFields());
 
-					// print all fields
-					visit(node->getFields());
-
-					// print all constructors
-					for (auto constr : node->getConstructors()) {
-						visit(constr);
-					}
-
-					// print the destructor definitions
-					if(node->hasDestructor()) {
-						if(auto dtor = node->getDestructor().isa<LambdaExprAddress>()) {
-							if (printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) || !analysis::isDefaultDestructor(dtor.getAddressedNode())) {
-								newLine();
-								out << "dtor ";
-								if (node->getDestructorVirtual() && node->getDestructorVirtual()->getValue()) { out << "virtual "; }
-								visit(dtor);
-							}
-						}
-					} else {
-						newLine();
-						out << "dtor function () = delete;";
-					}
-
-					// print all member functions
-					auto memberfuns = node->getMemberFunctions();
-					for (auto memberFun : memberfuns) {
-						visit(memberFun);
-					}
-
-					// TODO: print all pure virtual member functions
-
-					// close record scope
-					decreaseIndent();
+				// print all constructors
+				for(auto constr : node->getConstructors()) {
+					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultConstructor(constr.getAddressedNode())) continue;
 					newLine();
-					out << "}";
+					visit(constr);
+				}
+
+				// print the destructor definitions
+				if(node->hasDestructor()) {
+					if(auto dtor = node->getDestructor().isa<LambdaExprAddress>()) {
+						if(printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) || !analysis::isDefaultDestructor(dtor.getAddressedNode())) {
+							newLine();
+							out << "dtor ";
+							if(node->getDestructorVirtual() && node->getDestructorVirtual()->getValue()) { out << "virtual "; }
+							visit(dtor);
+						}
+					}
+				} else {
+					newLine();
+					out << "dtor function () = delete;";
+				}
+
+				// print all member functions
+				for(auto memberFun : node->getMemberFunctions()) {
+					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(memberFun.getAddressedNode())) continue;
+					newLine();
+					visit(memberFun);
+				}
+
+				// TODO: print all pure virtual member functions
+
+				// close record scope
+				decreaseIndent();
+				newLine();
+				out << "}";
 			}
 
-			PRINT(TupleType) { out << "(" << join(", ", node->getElementTypes(), [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); }) << ")"; }
+			PRINT(TupleType) { out << "(" << join(", ", node->getElementTypes(), [&](std::ostream&, const TypeAddress& cur) { visit(cur); }) << ")"; }
 
 			PRINT(Type) {
 				if (auto tagtype = node.isa<TagTypeAddress>()) {
@@ -863,21 +860,21 @@ namespace printer {
 			PRINT(ReturnStmt) {
 				out << "return ";
 				auto exp = node->getReturnExpr();
-				VISIT(exp);
+				visit(exp);
 			}
 
 			PRINT(ThrowStmt) {
 				out << "throw ";
-				VISIT(node->getThrowExpr());
+				visit(node->getThrowExpr());
 			}
 
 			PRINT(GotoStmt) {
 				out << "goto ";
-				VISIT(node->getLabel());
+				visit(node->getLabel());
 			}
 
 			PRINT(LabelStmt) {
-				VISIT(node->getLabel());
+				visit(node->getLabel());
 				out << ":";
 			}
 
@@ -885,15 +882,15 @@ namespace printer {
 				// print type
 				const auto& var = node->getVariable();
 				out << "var ";
-				VISIT(var->getType());
+				visit(var->getType());
 				out << " ";
-				VISIT(var);
+				visit(var);
 				out << " = ";
 				auto init = node->getInitialization();
 				if(auto p = init.isa<LambdaExprPtr>()) {
 					out << lambdaNames[p->getReference()];
 				} else {
-					VISIT(node->getInitialization());
+					visit(node->getInitialization());
 				}
 			}
 
@@ -908,11 +905,11 @@ namespace printer {
 				increaseIndent();
 				newLine();
 				for_each(list.begin(), list.end() - 1, [&](const NodeAddress& cur) {
-					VISIT(cur);
+					visit(cur);
 					out << ";";
-					this->newLine();
+					newLine();
 				});
-				VISIT(list.back());
+				visit(list.back());
 				out << ";";
 				decreaseIndent();
 				newLine();
@@ -922,53 +919,53 @@ namespace printer {
 			PRINT(WhileStmt) {
 				// variables can be directly printed
 				out << "while(";
-				VISIT(node->getCondition());
+				visit(node->getCondition());
 				out << ") ";
-				VISIT(node->getBody());
+				visit(node->getBody());
 			}
 
 			PRINT(ForStmt) {
 				// variables can be directly printed
 				out << "for( ";
-				VISIT(node->getIterator()->getType());
+				visit(node->getIterator()->getType());
 				out << " ";
-				VISIT(node->getIterator());
+				visit(node->getIterator());
 				out << " = ";
-				VISIT(node->getStart());
+				visit(node->getStart());
 				out << " .. ";
-				VISIT(node->getEnd());
+				visit(node->getEnd());
 				out << " : ";
-				VISIT(node->getStep());
+				visit(node->getStep());
 				out << ") ";
 
 				const auto& body = node->getBody();
 				if(body->getNodeType() != NT_CompoundStmt) {
 					increaseIndent();
 					this->newLine();
-					VISIT(body);
+					visit(body);
 					decreaseIndent();
 					this->newLine();
 				} else {
-					VISIT(body);
+					visit(body);
 				}
 			}
 
 			PRINT(IfStmt) {
 				// variables can be directly printed
 				out << "if(";
-				VISIT(node->getCondition());
+				visit(node->getCondition());
 				out << ") ";
-				VISIT(node->getThenBody());
+				visit(node->getThenBody());
 				if(!analysis::isNoOp(node->getElseBody())) {
 					out << " else ";
-					VISIT(node->getElseBody());
+					visit(node->getElseBody());
 				}
 			}
 
 			PRINT(SwitchStmt) {
 				// variables can be directly printed
 				out << "switch(";
-				VISIT(node->getSwitchExpr());
+				visit(node->getSwitchExpr());
 				out << ") {";
 				increaseIndent();
 				this->newLine();
@@ -976,16 +973,16 @@ namespace printer {
 				//print all cases
 				for_each(node->getCases()->getCases(), [&](const SwitchCaseAddress& cur) {
 					out << "case ";
-					VISIT(cur->getGuard());
+					visit(cur->getGuard());
 					out << ": ";
-					VISIT(cur->getBody());
+					visit(cur->getBody());
 					this->newLine();
 				});
 
 				// print the default case, if existing
 				if(!analysis::isNoOp(node->getDefaultCase())) {
 					out << "default: ";
-					VISIT(node->getDefaultCase());
+					visit(node->getDefaultCase());
 				}
 
 				decreaseIndent();
@@ -996,14 +993,14 @@ namespace printer {
 			PRINT(TryCatchStmt) {
 				// variables can be directly printed
 				out << "try ";
-				VISIT(node->getBody());
+				visit(node->getBody());
 				for(auto clause : node->getClauses()) {
 					out << " catch(";
-					VISIT(clause->getVariable());
+					visit(clause->getVariable());
 					out << " : ";
-					VISIT(clause->getVariable()->getType());
+					visit(clause->getVariable()->getType());
 					out << ") ";
-					VISIT(clause->getBody());
+					visit(clause->getBody());
 				}
 			}
 
@@ -1061,18 +1058,17 @@ namespace printer {
 
 				if(doFullSyntax) {
 					out << "\" : ";
-					VISIT(node->getType());
+					visit(node->getType());
 					out << ")";
 				} else if(printer.hasOption(PrettyPrinter::PRINT_LITERAL_TYPES)) {
 					out << ":";
-					VISIT(node->getType());
+					visit(node->getType());
 				}
 			}
 
 			PRINT(MemberFunction) {
 				if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(node.getAddressedNode())) return;
 				if (auto impl = node->getImplementation().isa<LambdaExprAddress>()) {
-					newLine();
 					if (node->isVirtual()) out << "virtual ";
 
 					const auto &params = impl->getParameterList();
@@ -1116,38 +1112,11 @@ namespace printer {
 				if(funType->isConstructor()) {
 					// check if lambda is a default constructor and printing for them is enabled
 					if(!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultConstructor(nodePtr)) return;
-
-					newLine();
-					out << "ctor function ";
-
-					//print the parameters
-					auto params = node->getParameterList();
-					out << "(";
-					printParameters(out, params, false);
-					out << ")";
-
-					// print of the implementation
-					if(analysis::isaDefaultConstructor(nodePtr)) {
-						out << " = default;";
-					} else {
-						thisStack.push(node->getParameterList().front());
-						out << " "; // whitespace between function type and compound statement
-						visit(node->getBody());
-						thisStack.pop();
-					}
 				} else if(funType->isDestructor()) {
-					// hint: as the information, if a destructor is virtual or not is stored in the RecordPtr
-					// we need to print the "dtor [virtual]" in the same part as the record is printed
-					out << "function () ";
-					if(analysis::isDefaultDestructor(nodePtr)) {
-						out << "= default;";
-					} else {
-						thisStack.push(node->getParameterList().front());
-						visit(NodeAddress(node->getBody()));
-						thisStack.pop();
-					}
-				} else {
+					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isDefaultDestructor(nodePtr)) return;
 				}
+
+				visit(node->getDefinition()->getBindingOf(node->getReference()));
 			}
 
 			PRINT(LambdaReference) {
@@ -1164,14 +1133,10 @@ namespace printer {
 
 				out << "{";
 				increaseIndent();
-				newLine();
-				std::size_t count = 0;
 				for_each(defs.begin(), defs.end(), [&](const LambdaBindingAddress& cur) {
-					VISIT(cur->getReference());
-					out << " = ";
-					VISIT(cur->getLambda());
+					newLine();
+					visit(cur);
 					out << ";";
-					if(count++ < defs.size() - 1) { this->newLine(); }
 				});
 
 				decreaseIndent();
@@ -1179,57 +1144,69 @@ namespace printer {
 				out << "}";
 			}
 
+			PRINT(LambdaBinding) {
+				// print the name of the function
+				auto funType = node->getLambda()->getType();
+				if (!funType->isConstructor() && !funType->isDestructor()) {
+					visit(node->getReference());
+					out << " = ";
+				}
+				// print the containing Lambda
+				visit(node->getLambda());
+			}
+
 
 			PRINT(Lambda) {
 
 				auto funType = node->getType();
-				// print header ...
+				auto nodePtr = node.getAddressedNode();
+
 				if(funType->isConstructor()) {
-					// print constructor header
-					out << "ctor ";
-					VISIT(analysis::getObjectType(funType));
-					out << " ";
-					VISIT(node->getParameters()->getElement(0));
-					auto parameters = node->getParameters();
-					out << " :: (";
-					printParameters(out, parameters, false);
-					out << ") ";
-					if (!node->getParameterList().empty())
-						thisStack.push(node->getParameterList().front());
-					// .. and body
-					VISIT(node->getBody());
-					if (!node->getParameterList().empty())
-						thisStack.pop();
+					out << "ctor function ";
 
+					//print the parameters
+					auto params = node->getParameterList();
+					out << "(";
+					printParameters(out, params, false);
+					out << ")";
+
+					// print of the implementation
+					if (analysis::isaDefaultMember(nodePtr)) {
+						out << " = default;";
+					}
+					else {
+						thisStack.push(node->getParameterList().front());
+						out << " "; // whitespace between function type and compound statement
+						visit(node->getBody());
+						thisStack.pop();
+					}
 				} else if(funType->isDestructor()) {
-					// print destructor header
-					VISIT(analysis::getObjectType(funType));
-					auto parameters = node->getParameters();
-					out << " :: (";
-					printParameters(out, parameters, false);
-					out << ") ";
-					if (!node->getParameterList().empty())
+					// hint: as the information, if a destructor is virtual or not is stored in the RecordPtr
+					// we need to print the "dtor [virtual]" in the same part as the record is printed
+					out << "function () ";
+					if (analysis::isaDefaultMember(nodePtr)) {
+						out << "= default;";
+					}
+					else {
 						thisStack.push(node->getParameterList().front());
-					// .. and body
-					VISIT(node->getBody());
-					if (!node->getParameterList().empty())
+						visit(NodeAddress(node->getBody()));
 						thisStack.pop();
-
+					}
 				} else if(funType->isMemberFunction() || funType->isVirtualMemberFunction()) {
 					// print member function header
 					out << "function ";
-					VISIT(analysis::getObjectType(funType));
+					visit(analysis::getObjectType(funType));
 					auto parameters = node->getParameters();
 					out << " :: (";
 					printParameters(out, parameters, false);
 					out << ")";
 					out << (funType->isMemberFunction() ? " -> " : " ~> ");
-					VISIT(funType->getReturnType());
+					visit(funType->getReturnType());
 					out << " ";
 					if (!node->getParameterList().empty())
 						thisStack.push(node->getParameterList().front());
 					// .. and body
-					VISIT(node->getBody());
+					visit(node->getBody());
 					if (!node->getParameterList().empty())
 						thisStack.pop();
 
@@ -1238,10 +1215,10 @@ namespace printer {
 					out << "(";
 					printParameters(out, node->getParameterList());
 					out << ") -> ";
-					VISIT(funType->getReturnType());
+					visit(funType->getReturnType());
 					out << " ";
 					// .. and body
-					VISIT(node->getBody());
+					visit(node->getBody());
 				}
 			}
 
@@ -1272,7 +1249,7 @@ namespace printer {
 						if (lambdaExpr->getType().as<FunctionTypePtr>().isMemberFunction()) {
 							isMemberFun = true;
 							auto arguments = node->getArgumentList();
-							VISIT(arguments[0]);
+							visit(arguments[0]);
 							out << ".";
 							//auto lambdaFunType = lambdaExpr->getType().as<FunctionTypePtr>();
 							out << lambdaNames[lambdaExpr->getReference()];
@@ -1324,8 +1301,9 @@ namespace printer {
 					out << "(" << join(", ", begin, args.end(), [&](std::ostream& out, const NodeAddress& curParam) {
 						if (auto p = curParam.getAddressedNode().isa<LambdaExprPtr>()) {
 							out << lambdaNames[p->getReference()];
+						} else {
+							visit(curParam);
 						}
-						visit(curParam);
 					}) << ")";
 				}
 
@@ -1354,31 +1332,31 @@ namespace printer {
 			}
 
 			PRINT(TupleExpr) {
-				out << "(" << ::join(", ", node->getExpressions(), [&](std::ostream&, const ExpressionAddress& cur) { VISIT(cur); }) << ")";
+				out << "(" << ::join(", ", node->getExpressions(), [&](std::ostream&, const ExpressionAddress& cur) { visit(cur); }) << ")";
 			}
 
 			PRINT(JobExpr) {
 				// prints the job expression quite similar to a switch expression
 				out << "job";
 				out << "(";
-				VISIT(node->getThreadNumRange());
+				visit(node->getThreadNumRange());
 				out << ")";
 				out << "{";
 				increaseIndent();
-				this->newLine();
-				VISIT(node->getBody());
+				newLine();
+				visit(node->getBody());
 				decreaseIndent();
-				this->newLine();
+				newLine();
 				out << "}";
 			}
 
 			PRINT(InitExpr) {
 				out << "<";
-				VISIT(node->getType());
+				visit(node->getType());
 				out << ">(";
-				VISIT(node->getMemoryExpr());
+				visit(node->getMemoryExpr());
 				out << ") {" <<	join(", ", node->getInitExprList(), [&](std::ostream& out, const ExpressionAddress& cur) {
-					VISIT(cur);
+					visit(cur);
 				}) << "}";
 			}
 
@@ -1391,15 +1369,15 @@ namespace printer {
 				for(const auto& point : node->getEntryPoints()) {
 					const auto& cur = point.isa<LambdaExprAddress>();
 					newLine();
-					VISIT(cur->getFunctionType()->getReturnType());
+					visit(cur->getFunctionType()->getReturnType());
 					auto parameters = cur->getParameterList();
 					out << " function " << lambdaNames[cur->getReference()] << " ("
 					<< join(", ", parameters, [&](std::ostream& out, const VariableAddress& curVar) {
-						VISIT(curVar);
+						visit(curVar);
 						out << " : ";
-						VISIT(curVar->getType());
+						visit(curVar->getType());
 					}) << ")";
-					VISIT(cur->getBody());
+					visit(cur->getBody());
 				}
 
 			}
