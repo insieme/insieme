@@ -75,7 +75,7 @@ namespace frontend {
 
 
 	bool ConversionSetup::isCxx(const path& file) const {
-		if(standard == Cxx03 || standard == Cxx11 || standard == Cxx14) { return true; }
+		if(standard == Cxx11 || standard == Cxx14) { return true; }
 		if(standard == C99) { return false; }
 		if(standard == Auto) { return ::contains(frontend::utils::cxxExtensions, boost::filesystem::extension(file)); }
 		assert_fail() << "Unable to determine whether given language standard is C++ or not";

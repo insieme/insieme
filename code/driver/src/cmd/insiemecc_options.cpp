@@ -244,7 +244,6 @@ namespace cmd {
 			// set language standard
 			const std::map<std::string, frontend::ConversionSetup::Standard> languageStandardMapping = {{"auto", frontend::ConversionSetup::Auto},
 				                                                                                        {"c99", frontend::ConversionSetup::C99},
-				                                                                                        {"c++03", frontend::ConversionSetup::Cxx03},
 				                                                                                        {"c++11", frontend::ConversionSetup::Cxx11},
 				                                                                                        {"c++14", frontend::ConversionSetup::Cxx14}};
 

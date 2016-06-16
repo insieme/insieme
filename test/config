@@ -14,7 +14,6 @@ use_c=0
 use_gnu90=0
 use_gnu99=0
 use_cpp=0
-use_cpp11=0
 use_c[ref_c_compile]=1
 use_c[insiemecc_run_c_compile]=1
 use_c[insiemecc_seq_c_compile]=1

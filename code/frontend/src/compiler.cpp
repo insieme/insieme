@@ -241,16 +241,13 @@ namespace frontend {
 		}
 
 		if((config.getStandard() == ConversionSetup::Auto && config.isCxx(file))
-		   || config.getStandard() == ConversionSetup::Cxx03
 		   || config.getStandard() == ConversionSetup::Cxx11
 		   || config.getStandard() == ConversionSetup::Cxx14) {
 			pimpl->m_isCXX = true;
 		}
 
 		if(pimpl->m_isCXX) {
-			if(config.getStandard() == ConversionSetup::Cxx03) {
-				CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx03);
-			} else if(config.getStandard() == ConversionSetup::Cxx14) {
+			if(config.getStandard() == ConversionSetup::Cxx14) {
 				CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx14);
 			} else {
 				// use c++11 by default

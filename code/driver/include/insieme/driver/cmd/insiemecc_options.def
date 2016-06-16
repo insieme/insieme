@@ -59,6 +59,7 @@ FLAG("version", version, "print full version string")
 FLAG("dumpversion", dumpVersion, "print minimal version string")
 FLAG("win-cross-compile", winCrossCompile, "set cross compilation for a Windows target")
 FLAG("print-clang-ast", printClangAST, "print the clang AST")
+FLAG("no-color", noColor, "force-disable highlighting of output")
 FLAG("fnodefaultextensions", noDefaultExtensions, "disables all frontend extensions that are enabled by default")
 
 FLAG("task-granularity-tuning", taskGranularityTuning, "enables multiverisoning of parallel tasks")

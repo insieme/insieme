@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -49,7 +49,7 @@ namespace sequential {
 	/**
 	 * The sequential backend aims on generating pure sequential code without
 	 * any dependencies to any runtime implementation. This backend converts
-	 * IR into pure C99 / C++98 target code.
+	 * IR into pure C99 / C++11 target code.
 	 */
 	class SequentialBackend : public Backend {
 	  public:
