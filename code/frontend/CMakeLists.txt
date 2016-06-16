@@ -12,7 +12,7 @@ insieme_glob_headers(insieme_frontend_incs include)
 
 # automatically run the script for generating builtin header files
 if(NOT MSVC)
-	execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby generate_builtins.rb --quiet --command "echo | ${CMAKE_CXX_COMPILER} -v -xc -E - 2>&1" --output ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/frontend/builtin_headers RESULT_VARIABLE generate_builtins_success)
+	execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby generate_builtins.rb --quiet --detect-input --output ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/frontend/builtin_headers RESULT_VARIABLE generate_builtins_success)
 
 	if (NOT ${generate_builtins_success} EQUAL 0)
 		message(FATAL_ERROR "Ruby generate_builtins.rb script failed to execute!")
