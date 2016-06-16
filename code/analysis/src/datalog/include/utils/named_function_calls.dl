@@ -1,0 +1,16 @@
+.using _ from Entities/DataPath
+.using callGraph from Callable
+
+		
+// ---------------- Declarations ------------------
+		
+// a relation marking calls as calls to named functions
+.decl CallToNamedFunction ( c : call_expr , n : string )
+
+
+
+// ------------------ Definitions ------------------
+
+CallToNamedFunction( c , n ) :- 
+	NamedConstruct(n, i), NodeIdentity(t,i), callGraph(c,t).
+	

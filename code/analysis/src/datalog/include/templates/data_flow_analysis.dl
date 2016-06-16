@@ -13,11 +13,13 @@
 .using ReachableIn from Utils/Reachable
 		
 .using ProgramPointAnalysis from Templates/ProgramPointAnalysis
+		
+.using CallToNamedFunction from Utils/NamedFunctionCalls
 
 
 // -- a realation identifying every assignment --
 .decl assignment ( e : expr ) output
-assignment(c) :- NamedConstruct("ref_assign", i), NodeIdentity(t,i), callGraph(c,t).
+assignment(c) :- CallToNamedFunction( c , "ref_assign" ).
 
 // -- an under-approximation of assignments, computed without data flow analysis --
 .decl simple_assignment ( e : expr ) output
@@ -25,7 +27,7 @@ simple_assignment(c) :- CallExpr(c,f), NamedConstruct("ref_assign", i), NodeIden
 
 // -- a relation identifying every deref operation --
 .decl deref ( e : expr ) output
-deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
+deref(c) :- CallToNamedFunction( c , "ref_deref" ).
 
 // -- a generic data flow analysis --
 .comp DataFlowAnalysis<ValueType> {
@@ -79,8 +81,8 @@ deref(c) :- NamedConstruct("ref_deref", i), NodeIdentity(t,i), callGraph(c,t).
 
 	value( t, [i,p], v ) :- TupleExpr(t,e), NodeList(e,i,c), value(c,p,v).
 	
-	value( c, p, v) :- CallExpr(c,f), callable_value(f,DP_ROOT,a), NamedConstruct("tuple_member_access", id), NodeIdentity(a,id), NodeList(c,0,t), NodeList(c,1,e), integer_value(e,DP_ROOT,[true,i]), value(t,[i,p],v).
-	value( c, p, v) :- CallExpr(c,f), callable_value(f,DP_ROOT,a), NamedConstruct("tuple_member_access", id), NodeIdentity(a,id), NodeList(c,0,t), NodeList(c,1,e), integer_value(e,DP_ROOT,[false,_]), value(t,[_,p],v).
+	value( c, p, v) :- CallToNamedFunction(c,"tuple_member_access"), NodeList(c,0,t), NodeList(c,1,e), integer_value(e,DP_ROOT,[true,i]), value(t,[i,p],v).
+	value( c, p, v) :- CallToNamedFunction(c,"tuple_member_access"), NodeList(c,0,t), NodeList(c,1,e), integer_value(e,DP_ROOT,[false,_]), value(t,[_,p],v).
 	
 
 	// ------ Memory Locations ------
