@@ -780,70 +780,66 @@ namespace printer {
 			}
 
 			PRINT(Record) {
-					const auto& tagType = node.getFirstParentOfType(NT_TagType).getAddressedNode().as<TagTypePtr>();
+				auto strct = analysis::isStruct(node);
 
-					auto strct = analysis::isStruct(node);
+				out << (strct ? "struct " : "union ");
 
-					out << (strct ? "struct " : "union ");
+				auto recordName = node->getName()->getValue();
 
-					auto recordName = node->getName()->getValue();
+				if(recordName.compare("")) { out << recordName << " "; }
 
-					if (recordName.compare("")) {
-						out << recordName << " ";
+				if(strct) {
+					auto parents = node.as<StructAddress>()->getParents();
+					if(!parents.empty()) {
+						out << ": [ " << join(",", parents, [&](std::ostream& out, const ParentAddress& parent) {
+							if(parent->isVirtual()) { out << "virtual "; }
+							if(parent->isPrivate()) { out << "private "; }
+							if(parent->isPublic()) { out << "public "; }
+							if(parent->isProtected()) { out << "protected "; }
+							VISIT(parent->getType());
+						}) << " ] ";
 					}
+				}
 
-					if (strct) {
-						auto parents = node.as<StructAddress>()->getParents();
-						if (!parents.empty()) {
-							out << ": [ " << join(",", parents, [&](std::ostream &out, const ParentAddress &parent) {
-								if (parent->isVirtual()) { out << "virtual "; }
-								if (parent->isPrivate()) { out << "private "; }
-								if (parent->isPublic()) { out << "public "; }
-								if (parent->isProtected()) { out << "protected "; }
-								VISIT(parent->getType());
-							}) << " ] ";
+				// open new record scope
+				out << "{";
+				increaseIndent();
+
+				// print all fields
+				visit(node->getFields());
+
+				// print all constructors
+				for(auto constr : node->getConstructors()) {
+					visit(constr);
+				}
+
+				// print the destructor definitions
+				if(node->hasDestructor()) {
+					if(auto dtor = node->getDestructor().isa<LambdaExprAddress>()) {
+						if(printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) || !analysis::isDefaultDestructor(dtor.getAddressedNode())) {
+							newLine();
+							out << "dtor ";
+							if(node->getDestructorVirtual() && node->getDestructorVirtual()->getValue()) { out << "virtual "; }
+							visit(dtor);
 						}
 					}
-
-					// open new record scope
-					out << "{";
-					increaseIndent();
-
-					// print all fields
-					visit(node->getFields());
-
-					// print all constructors
-					for (auto constr : node->getConstructors()) {
-						visit(constr);
-					}
-
-					// print the destructor definitions
-					if(node->hasDestructor()) {
-						if(auto dtor = node->getDestructor().isa<LambdaExprAddress>()) {
-							if (printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) || !analysis::isDefaultDestructor(dtor.getAddressedNode())) {
-								newLine();
-								out << "dtor ";
-								if (node->getDestructorVirtual() && node->getDestructorVirtual()->getValue()) { out << "virtual "; }
-								visit(dtor);
-							}
-						}
-					} else {
-						newLine();
-						out << "dtor function () = delete;";
-					}
-
-					// print all member functions
-					auto memberfuns = node->getMemberFunctions();
-					for (auto memberFun : memberfuns) {
-						visit(memberFun);
-					}
-
-					// TODO: print all pure virtual member functions
-
-					// close record scope
-					decreaseIndent();
+				} else {
 					newLine();
-					out << "}";
+					out << "dtor function () = delete;";
+				}
+
+				// print all member functions
+				auto memberfuns = node->getMemberFunctions();
+				for(auto memberFun : memberfuns) {
+					visit(memberFun);
+				}
+
+				// TODO: print all pure virtual member functions
+
+				// close record scope
+				decreaseIndent();
+				newLine();
+				out << "}";
 			}
 
 			PRINT(TupleType) { out << "(" << join(", ", node->getElementTypes(), [&](std::ostream&, const TypeAddress& cur) { VISIT(cur); }) << ")"; }
