@@ -609,7 +609,7 @@ namespace backend {
 			// create backend instance
 			auto be = sequential::SequentialBackend::getDefault();
 
-			// upbdate backend configuration
+			// update backend configuration
 			be->getConfiguration().addIRCodeAsComment = true;
 
 			LOG(INFO) << "Converting IR to C...";
