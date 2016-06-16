@@ -10,6 +10,13 @@ cmake_minimum_required(VERSION 3.2)
 file(GLOB_RECURSE insieme_frontend_srcs	src/*.cpp src/*.def src/*.inc )
 insieme_glob_headers(insieme_frontend_incs include)
 
+# automatically run the script for generating builtin header files
+execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby generate_builtins.rb --quiet --command "echo | ${CMAKE_CXX_COMPILER} -v -xc -E - 2>&1" --output ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/frontend/builtin_headers RESULT_VARIABLE generate_builtins_success)
+
+if (NOT ${generate_builtins_success} EQUAL 0)
+	message(FATAL_ERROR "Ruby generate_builtins.rb script failed to execute!")
+endif()
+
 # build the frontend library
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
 target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_dir})
