@@ -1,0 +1,11 @@
+		
+// ---------------- Declarations ------------------
+
+// A relation to report potential errors during the computation of a solution
+//    - a result will only be considered valid if no failure is reported
+.decl failure ( desc : symbol ) output
+
+
+// example error -- TODO: remove
+// failure( "Missing Input" ) :- !Parent(_,_).
+
