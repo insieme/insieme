@@ -193,7 +193,7 @@ IRBuilder builder(nm);
 
 	std::string res = ""
 			"decl struct A;\n"
-			"decl A::a:int<4>;\n"
+			"decl A::a : int<4>;\n"
 			"decl f:A::() -> int<4>;\n"
 			"def struct A {\n"
 			"    a : int<4>;\n"
@@ -241,7 +241,7 @@ IRBuilder builder(nm);
 
 std::string res2 = ""
 		"decl struct A;\n"
-		"decl A::a:int<4>;\n"
+		"decl A::a : int<4>;\n"
 		"decl f:A::() -> int<4>;\n"
 		"decl g:A::(() -> int<4>) -> unit;\n"
 		"def struct A {\n"
@@ -402,7 +402,7 @@ TEST(PrettyPrinter, Declarations) {
 
 		EXPECT_EQ(toString(printer), ""
 		"decl struct A;\n"
-		"decl A::a:int<4>;\n"
+		"decl A::a : int<4>;\n"
 		"def struct A {\n"
 		"    a : int<4>;\n"
 		"};\n"
@@ -424,8 +424,8 @@ TEST(PrettyPrinter, Declarations) {
 
 		EXPECT_EQ(toString(printer), ""
 		"decl struct A;\n"
-		"decl A::a:int<4>;\n"
-		"decl A::b:B;\n"
+		"decl A::a : int<4>;\n"
+		"decl A::b : B;\n"
 		"def struct A {\n"
 		"    a : int<4>;\n"
 		"    b : B;\n"
@@ -447,7 +447,7 @@ PrettyPrinter printer(type, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRIN
 							| PrettyPrinter::PRINT_DERIVED_IMPL);
 
 EXPECT_EQ(toString(printer), "decl struct A;\n"
-							 "decl A::a:int<4>;\n"
+							 "decl A::a : int<4>;\n"
 							 "decl ctor:A::();\n"
 							 "decl ctor:A::(int<4>);\n"
 							 "def struct A {\n"
@@ -479,8 +479,8 @@ TEST(PrettyPrinter, Structs) {
 		auto type = builder.parseType("struct s { a : int<4>; b : real<8>;}");
 
 		EXPECT_EQ("decl struct s;\n"
-	              "decl s::a:int<4>;\n"
-	              "decl s::b:real<8>;\n"
+	              "decl s::a : int<4>;\n"
+	              "decl s::b : real<8>;\n"
 	              "def struct s {\n"
 	              "    a : int<4>;\n"
 	              "    b : real<8>;\n"

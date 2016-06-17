@@ -595,7 +595,7 @@ namespace printer {
 
 									newLine();
 									out << "def " << tagname << " :: function " << funname << " = (";
-									printParameters(out, bindingAddress->getLambda->getParameters(), false);
+									printParameters(out, bindingAddress->getLambda()->getParameters(), false);
 									out << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
 									visit(NodeAddress(funType->getReturnType()));
 									out << " ";
