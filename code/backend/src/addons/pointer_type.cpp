@@ -98,30 +98,39 @@ namespace addons {
 			res[ext.getPtrFromArray()] = OP_CONVERTER {
 				// operator type: (ref<array<'a,'s>,'c,'v>) -> ptr<'a,'c,'v>
 
-				// add dependency to element type
 				core::lang::ReferenceType refType(ARG(0)->getType());
 				core::TypePtr elementType = refType.getElementType();
-				const TypeInfo& info = GET_TYPE_INFO(elementType);
-				context.getDependencies().insert(info.definition);
 
 				// get array type
 				core::lang::ArrayType arrT(elementType);
 
+				// helper to add element type dependency if required
+				auto convertAndAddDep = [&](const core::TypePtr& t) {
+					const TypeInfo& info = GET_TYPE_INFO(t);
+					context.getDependencies().insert(info.definition);
+					return CONVERT_TYPE(t);
+				};
+
 				// handle array new undefined
 				if(LANG_EXT_REF.isCallOfRefNew(ARG(0))) {
-					return c_ast::newArrayCall(CONVERT_TYPE(arrT.getElementType()), CONVERT_EXPR(arrT.getSize().as<core::ExpressionPtr>()), nullptr);
+					return c_ast::newArrayCall(convertAndAddDep(arrT.getElementType()), CONVERT_EXPR(arrT.getSize().as<core::ExpressionPtr>()), nullptr);
 				}
 				// handle array new with init
 				if(auto initExp = ARG(0).isa<core::InitExprPtr>()) {
 					if(LANG_EXT_REF.isCallOfRefNew(initExp->getMemoryExpr())) {
-						c_ast::NodePtr cInit = CONVERT_EXPR(initExp);
-						// remove superfluous nested init generated due to array wrapping
-						if(core::lang::isFixedSizedArray(elementType) && !cInit.as<c_ast::InitializerPtr>()->values.empty()) {
-							cInit = cInit.as<c_ast::InitializerPtr>()->values[0];
+						c_ast::InitializerPtr cInit = nullptr;
+						// create init expression
+						if(!initExp->getInitExprs().empty()) {
+							auto initElems = ::transform(initExp->getInitExprList(),
+								[&](const core::ExpressionPtr& cur) { return CONVERT_EXPR(cur).as<c_ast::NodePtr>(); });
+							cInit = c_ast::init(initElems);
 						}
-						return c_ast::newArrayCall(CONVERT_TYPE(arrT.getElementType()), CONVERT_EXPR(arrT.getSize().as<core::ExpressionPtr>()), cInit);
+						return c_ast::newArrayCall(convertAndAddDep(arrT.getElementType()), CONVERT_EXPR(arrT.getSize().as<core::ExpressionPtr>()), cInit);
 					}
 				}
+
+				// add dependency to element type
+				convertAndAddDep(elementType);
 
 				// access source
 				if(core::lang::isFixedSizedArray(elementType)) {
