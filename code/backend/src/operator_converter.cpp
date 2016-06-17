@@ -774,7 +774,12 @@ namespace backend {
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 
 			auto converted = CONVERT_ARG(0);
-			auto access = c_ast::access(c_ast::deref(converted), field);
+			auto thisObject = c_ast::deref(converted);
+			// deref of a cpp ref is implicit
+			if(core::lang::isCppReference(ARG(0)) || core::lang::isCppRValueReference(ARG(0))) {
+				thisObject = converted;
+			}
+			auto access = c_ast::access(thisObject, field);
 
 			// handle inner initExpr
 			if(ARG(0).isa<core::InitExprPtr>()) {

@@ -213,10 +213,20 @@ namespace backend {
 					lambda foo = () -> unit {}
 				};
 
+				def struct B {
+					v : int<4>;
+				};
+
+				def fun = (b : ref<B,t,f,cpp_ref>) -> unit {
+					auto a = b.v;
+				};
+
 				int<4> function IMP_main () {
 					var ref<A> a;
-					var ref<A,f,f,cpp_ref> b = a;
-					b.foo();
+					var ref<A,f,f,cpp_ref> a2 = a;
+					a2.foo();
+					var ref<B> b;
+					fun(ref_kind_cast(b,type_lit(cpp_ref)));
 					return 0;
 				}
 		)");
@@ -228,11 +238,12 @@ namespace backend {
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		// std::cout << "Converted: \n" << *converted << std::endl;
+		//std::cout << "Converted: \n" << *converted << std::endl;
 
 		// check presence of relevant code
 		auto code = utils::removeCppStyleComments(toString(*converted));
 		EXPECT_PRED2(notContainsSubString, code, "*");
+		EXPECT_PRED2(containsSubString, code, "int32_t const& a = b.v;");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

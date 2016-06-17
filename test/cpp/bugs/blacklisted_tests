@@ -1,7 +1,6 @@
 # Do not remove this file even if it does not blacklist any test.
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
-allocate_matrix
 array_bug
 boost_array
 boost_err_msg
@@ -9,8 +8,6 @@ boost_intercepted_naming
 boost_mutex
 boost_noncopyable
 boost_regex_search
-const_obj_init
-const_ref_arg
 const_ref_init
 const_type_modifier
 ctor_base_ptr
@@ -22,8 +19,6 @@ intercepted_baseclass
 isstream
 malformed_logical_operator
 mbstate
-mem_alloc_ctor
-member_function_as_field
 member_function_ptr_init
 merge_bugs
 non_default_static
