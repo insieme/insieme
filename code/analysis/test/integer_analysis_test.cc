@@ -103,6 +103,107 @@ namespace datalog {
 		EXPECT_FALSE(isInt32("4294967294"));  /* int32 max << 2 */
 	}
 
+	IntegerSet getValues(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
+		auto expr = getBuilder().parseExpr(code, symbols);
+//		std::cout << *expr << "\n";
+//		std::cout << dumpText(expr) << "\n";
+		return getIntegerValues(ExpressionAddress(expr));
+	}
+
+
+	TEST(IntegerAnalysis, Constants) {
+
+		// actual integer constants
+		EXPECT_EQ("{1}", toString(getValues("1")));
+		EXPECT_EQ("{2}", toString(getValues("2")));
+		EXPECT_EQ("{3}", toString(getValues("3")));
+
+		// other constants
+		EXPECT_EQ("{-all-}", toString(getValues("\"x\"")));
+		EXPECT_TRUE(getValues("\"x\"").isUniversal());
+
+	}
+
+	TEST(IntegerAnalysis, Arithmetic) {
+
+		// support simple operations
+		EXPECT_EQ("{3}", toString(getValues("1+2")));
+
+	}
+
+
+	TEST(IntegerAnalysis, FreeVariables) {
+
+		IRBuilder& builder = getBuilder();
+		SymbolTable symbols;
+		symbols["x"] = builder.variable(builder.parseType("int<4>"));
+
+		// check that the free variable "x" is neither definitely true nor false
+		EXPECT_TRUE(getValues("x",symbols).isUniversal());
+
+		// compute with unknown values
+		EXPECT_TRUE(getValues("x+5",symbols).isUniversal());
+
+	}
+
+	TEST(IntegerAnalysis, ReturnValue) {
+
+		// test whether the return value of a function is deduced properly
+		EXPECT_EQ("{15}",toString(getValues("()->int<4> { return 15; }()")));
+		EXPECT_EQ("{15}",toString(getValues("()->int<8> { return 15; }()")));
+		EXPECT_EQ("{15}",toString(getValues("()->uint<8> { return 15; }()")));
+
+	}
+
+	TEST(IntegerAnalysis, OneOutOfTwo) {
+
+		IRBuilder& builder = getBuilder();
+		SymbolTable symbols;
+		symbols["x"] = builder.variable(builder.parseType("bool"));
+
+		// test whether the return value of a function is deduced properly
+		EXPECT_EQ("{15,16}",toString(getValues("(y : bool)->int<4> { if (y) { return 15; } return 16; }(x)", symbols)));
+
+		// compute with multiple values
+		EXPECT_EQ("{20,21}",toString(getValues("(y : bool)->int<4> { if (y) { return 15; } return 16; }(x) + 5", symbols)));
+
+	}
+
+	TEST(IntegerAnalysis, LocalVariable) {
+
+		// test whether the return value of a function is deduced properly
+		EXPECT_EQ("{12}",toString(getValues("()->int<4> { var int<4> x = 12; return x; }()")));
+
+	}
+
+	TEST(IntegerAnalysis, ParameterPassing) {
+
+		// test whether the return value of a function is deduced properly
+		EXPECT_EQ("{12}",toString(getValues("(x : 'a)->'a { return x; }(12)")));
+
+		// check order of arguments
+		EXPECT_EQ("{12}",toString(getValues("(a : 'a , b : 'a )->'a { return a; }(12,14)")));
+		EXPECT_EQ("{14}",toString(getValues("(a : 'a , b : 'a )->'a { return b; }(12,14)")));
+
+	}
+
+
+	TEST(IntegerAnalysis, IntegerBasedControlFlow) {
+
+		IRBuilder& builder = getBuilder();
+		SymbolTable symbols;
+		symbols["x"] = builder.variable(builder.parseType("int<4>"));
+
+		// test whether the return value of a function is deduced properly
+		EXPECT_EQ("{1}",toString(getValues("(y : int<4>)->int<4> { if (y < 5) { return 1; } return 2; }(4)")));
+
+		EXPECT_EQ("{2}",toString(getValues("(y : int<4>)->int<4> { if (y < 5) { return 1; } return 2; }(8)")));
+
+		EXPECT_EQ("{1,2}",toString(getValues("(y : int<4>)->int<4> { if (y < 5) { return 1; } return 2; }(x)",symbols)));
+
+	}
+
+
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme

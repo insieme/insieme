@@ -33,6 +33,9 @@ callable.value( bind, DP_ROOT, bind ) :- BindExpr(bind,_,_).
 // literals with a function type are callable
 callable.value( lit, DP_ROOT, lit ) :- Literal(lit,type,_), FunctionType(type,_,_,_,_).
 
+// register function literals as known functions
+callable.known_literal( lit ) :- Literal(lit,type,_), FunctionType(type,_,_,_,_).
+
 // TODO: add support for recursive calls
 
 

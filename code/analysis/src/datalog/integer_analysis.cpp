@@ -34,66 +34,62 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/analysis/datalog/integer_analysis.h"
 
-#include "insieme/core/ir_address.h"
+#include "insieme/analysis/datalog/framework/analysis_base.h"
+
+#include "souffle/gen/integer_analysis.h"
 
 namespace insieme {
 namespace analysis {
 namespace datalog {
 
-	class IntegerSet;
+	IntegerSet getIntegerValues(const core::ExpressionAddress& expr) {
+		const bool debug = false;
 
-	IntegerSet getIntegerValues(const core::ExpressionAddress&);
+		// instantiate the analysis
+		souffle::Sf_integer_analysis analysis;
 
+		int targetID = 0;
 
-	bool isIntegerConstant(const core::ExpressionAddress&);
+		// fill in facts
+		framework::extractAddressFacts(analysis, expr.getRootNode(), [&](const core::NodeAddress& addr, int id) {
+			if (addr == expr) targetID = id;
+		});
 
+		// add targeted node
+		analysis.rel_target_expr.insert(targetID);
 
-	class IntegerSet {
+		// print debug information
+		if (debug) analysis.dumpInputs();
 
-		std::set<int> elements;
+		// run analysis
+		analysis.run();
 
-		bool all;
+		// print debug information
+		if (debug) analysis.dumpOutputs();
 
-		IntegerSet(bool all)
-			: elements(), all(all) {}
+		// read result
+		auto& not_defined = analysis.rel_result_is_not_defined;
+		auto& values = analysis.rel_result_value;
 
-	public:
+		// check whether the result is valid
+		assert_lt(0, not_defined.size() + values.size()) << "Incomplete analysis!";
 
-		IntegerSet()
-			: elements(), all(false) {}
+		// check whether the result is any integer
+		if (!not_defined.empty()) return IntegerSet::getAll();
 
-		static IntegerSet getAll() {
-			return IntegerSet(true);
+		// extract values
+		IntegerSet res;
+		for(const auto& cur : values) {
+			res.insert(cur[0]);
 		}
+		return res;
+	}
 
-		bool empty() const {
-			return !all && elements.empty();
-		}
-
-		std::size_t size() const {
-			return (all) ? std::numeric_limits<std::size_t>::max() : elements.size();
-		}
-
-		bool isUniversal() const {
-			return all;
-		}
-
-		void insert(int a) {
-			if (all) return;
-			elements.insert(a);
- 		}
-
-		friend std::ostream& operator<<(std::ostream& out, const IntegerSet& set) {
-			if (set.all) {
-				return out << "{-all-}";
-			}
-			return out << set.elements;
-		}
-
-	};
-
+	bool isIntegerConstant(const core::ExpressionAddress& expr) {
+		return getIntegerValues(expr).size() == 1;
+	}
 
 } // end namespace datalog
 } // end namespace analysis
