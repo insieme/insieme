@@ -449,6 +449,7 @@ namespace printer {
 								// branch for free defined function
 								if (binding->getReference()->getType().isMemberFunction()) { // free member functions
 									auto tagname = getObjectName(cur->getType());
+									// get the function name out of the lambda name
 									vector<std::string> splitstring;
 									boost::split(splitstring, lambdaNames[binding->getReference()],
 												 boost::is_any_of("::"));
@@ -480,9 +481,7 @@ namespace printer {
 							for (auto field : record->getFields()) {
 								newLine();
 								out << "decl " << tagName << "::";
-								visit(NodeAddress(field->getName()));
-								out << ":";
-								visit(NodeAddress(field->getType()));
+								visit(NodeAddress(field));
 								out << ";";
 							}
 
@@ -585,26 +584,19 @@ namespace printer {
 								if (funType->isConstructor()) {
 									auto tagname = std::get<0>(visitedFreeFunctions[binding->getReference()]);
 									auto funname = std::get<1>(visitedFreeFunctions[binding->getReference()]);
-									auto parameters = lambda.getParameterList();
 
 									newLine();
 									out << "def " << tagname << " :: " << funname << " = ";
 									visit(bindingAddress);
 									out << ";";
-
 								} else if (funType->isMemberFunction()) {
 									auto tagname = std::get<0>(visitedFreeFunctions[binding->getReference()]);
 									auto funname = std::get<1>(visitedFreeFunctions[binding->getReference()]);
-									auto parameters = lambda.getParameterList();
 
 									newLine();
-									out << "def " << tagname << " :: function " << funname << " = (" <<
-									join(", ", lambda->getParameters().begin() + 1, lambda->getParameters().end(),
-										 [&](std::ostream& out, const VariablePtr& curVar) {
-											 visit(NodeAddress(curVar));
-											 out << " : ";
-											 visit(NodeAddress(curVar->getType()));
-										 }) << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
+									out << "def " << tagname << " :: function " << funname << " = (";
+									printParameters(out, bindingAddress->getLambda->getParameters(), false);
+									out << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
 									visit(NodeAddress(funType->getReturnType()));
 									out << " ";
 									visit(bindingAddress->getLambda()->getBody());
@@ -1179,6 +1171,7 @@ namespace printer {
 				} else if(funType->isMemberFunction() || funType->isVirtualMemberFunction()) {
 					// print member function header
 					out << "function ";
+					assert_fail();
 					visit(analysis::getObjectType(funType));
 					auto parameters = node->getParameters();
 					out << " :: (";
