@@ -551,18 +551,8 @@ namespace printer {
 									return false;
 								} else {
 									newLine();
-									out << "def " << lambdaNames[binding->getReference()];
-
-									auto parameters = lambda.getParameterList();
-									out << " = function (" <<
-									join(", ", parameters, [&](std::ostream& out, const VariablePtr& curVar) {
-										visit(NodeAddress(curVar));
-										out << " : ";
-										visit(NodeAddress(curVar->getType()));
-									}) << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
-									visit(NodeAddress(funType->getReturnType()));
-									out << " ";
-									visit(bindingAddress->getLambda()->getBody());
+									out << "def ";
+									visit(bindingAddress);
 									out << ";";
 								}
 							} else if (visitedFreeFunctions.find(binding->getReference()) != visitedFreeFunctions.end()) {
@@ -573,17 +563,10 @@ namespace printer {
 									auto parameters = lambda.getParameterList();
 
 									newLine();
-									out << "def " << tagname << " :: ctor " << funname << " = function (" <<
-											join(", ", lambda->getParameters().begin() + 1, lambda->getParameters().end(),
-												 [&](std::ostream& out, const VariablePtr& curVar) {
-													 visit(NodeAddress(curVar));
-													 out << " : ";
-													 visit(NodeAddress(curVar->getType()));
-												 }) << ") ";
-									thisStack.push(lambda->getParameters().front());
-									visit(bindingAddress->getLambda()->getBody());
-									thisStack.pop();
+									out << "def " << tagname << " :: " << funname << " = ";
+									visit(bindingAddress);
 									out << ";";
+
 								} else if (funType->isMemberFunction()) {
 									auto tagname = std::get<0>(visitedFreeFunctions[binding->getReference()]);
 									auto funname = std::get<1>(visitedFreeFunctions[binding->getReference()]);
