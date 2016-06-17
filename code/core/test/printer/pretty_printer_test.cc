@@ -1016,12 +1016,12 @@ TEST(PrettyPrinter, FreeFunctions) {
 				  "}", toString(printer));
 	}
 
-	// free definition of a costructor
+	// free definition of a constructor
 	{
 		std::string input = ""
 				"def struct A {"
 				"};"
-				"def A :: ctor foo = () {};"
+				"def A :: foo = ctor () {};"
 				"{"
 				"  var ref<A> a = foo(a);"
 				"}";
@@ -1035,7 +1035,7 @@ TEST(PrettyPrinter, FreeFunctions) {
 		EXPECT_EQ("decl struct A;\n"
 				  "def struct A {\n"
 				  "};\n"
-				  "def A :: ctor foo = function () { };\n"
+				  "def A :: foo = ctor function () { };\n"
 				  "{\n"
 				  "    var ref<A,f,f,plain> v0 = foo(v0);\n"
 				  "}", toString(printer));
