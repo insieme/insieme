@@ -1329,6 +1329,12 @@ namespace printer {
 				if(core::analysis::isMaterializingCall(node)) {
 					out << " materialize ";
 				}
+
+				// print type if requested
+				if(printer.hasOption(PrettyPrinter::PRINT_CALL_EXPR_TYPES)) {
+					out << ":";
+					visit(node->getType());
+				}
 			}
 
 			PRINT(BindExpr) {
@@ -1609,31 +1615,6 @@ namespace printer {
 				PRINT_ARG(0);
 				OUT(" = ");
 				PRINT_ARG(1);
-			};
-			ADD_FORMATTER(refExt.getRefTemp()) {
-				OUT("ref_temp(");
-				PRINT_ARG(0);
-				OUT(")");
-			};
-			ADD_FORMATTER(refExt.getRefNew()) {
-				OUT("ref_new(");
-				PRINT_ARG(0);
-				OUT(")");
-			};
-			ADD_FORMATTER(refExt.getRefTempInit()) {
-				OUT("ref_temp_init(");
-				PRINT_ARG(0);
-				OUT(")");
-			};
-			ADD_FORMATTER(refExt.getRefNewInit()) {
-				OUT("ref_new_init(");
-				PRINT_ARG(0);
-				OUT(")");
-			};
-			ADD_FORMATTER(refExt.getRefDelete()) {
-				OUT("ref_delete(");
-				PRINT_ARG(0);
-				OUT(")");
 			};
 
 			ADD_FORMATTER(dpExt.getDataPathRoot()) { OUT("<>"); };
