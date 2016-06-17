@@ -1195,7 +1195,7 @@ namespace printer {
 
 				} else {
 					// print plain header function
-					out << "(";
+					out << "function (";
 					printParameters(out, node->getParameterList());
 					out << ") -> ";
 					visit(funType->getReturnType());
