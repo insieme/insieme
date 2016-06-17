@@ -289,7 +289,6 @@ namespace conversion {
 			frontend_assert(core::lang::isArray(subTy)) << "Expected array type, got " << *subTy;
 			auto arrTy = core::lang::ArrayType(subTy);
 
-			// need to implement this for non-const size (approach same as with C VLAs)
 			auto form = core::arithmetic::toFormula(newSize);
 			frontend_assert(form.isConstant()) << "Non const-sized new[] not yet implemented";
 			arrTy.setSize(form.getIntegerValue());
@@ -306,11 +305,16 @@ namespace conversion {
 			auto arrayLenBase = converter.convertExpr(newExpr->getArraySize());
 			auto arrayLenExpr = builder.numericCast(arrayLenBase, basic.getUIntInf());
 
-			// allocate constant sized arrays more simply
+			// allocate constant sized arrays types more simply
 			auto constArrayLen = core::arithmetic::toConstantInt(arrayLenExpr);
 			if(constArrayLen) {
 				auto irNewExp = builder.undefinedNew(core::lang::ArrayType::create(elemType, builder.uintLit(constArrayLen.get())));
-				if(newExpr->hasInitializer()) {
+				// for class types, we need to build an init expr even if no initializer is supplied, to call constructors implicitly
+				if(newExpr->getConstructExpr()) {
+					irNewExp = builder.initExpr(irNewExp);
+				}
+				// otherwise, only build initexpr if we have an initializer
+				else if(newExpr->hasInitializer()) {
 					core::ExpressionPtr initializerExpr = converter.convertInitExpr(newExpr->getInitializer());
 					// make sure we allocate the correct amount of array elements with partial initialization
 					irNewExp = resizeArrayCreate(converter, initializerExpr, arrayLenBase);
@@ -329,7 +333,11 @@ namespace conversion {
 			core::TypeList initFunParamTypes { basic.getUIntInf() };
 			core::VariableList initFunParams { arrLenVarParam };
 			core::ExpressionList initFunArguments { arrayLenExpr };
-			if(newExpr->hasInitializer()) {
+			// for class types, we need to build an init expr even if no initializer is supplied, to call constructors implicitly
+			if(newExpr->getConstructExpr()) {
+				arr = builder.initExpr(memloc);
+			}
+			else if(newExpr->hasInitializer()) {
 				// convert the initializer to a temporary init expression and then use its init expressions
 				auto tempInits = converter.convertInitExpr(newExpr->getInitializer());
 				if(tempInits->getNodeType() != core::NT_InitExpr) tempInits = core::analysis::getArgument(tempInits, 0);
@@ -362,12 +370,13 @@ namespace conversion {
 
 		frontend_assert(newExpr->getNumPlacementArgs() == 0) << "Placement new not yet supported";
 
-		// if no constructor is found, it is a new over a non-class type
 		core::TypePtr type = converter.convertType(newExpr->getAllocatedType());
-		if(!newExpr->getConstructExpr()) {
-			if(newExpr->isArray()) {
-				retExpr = buildArrayNew(converter, newExpr, type);
-			} else {
+
+		if(newExpr->isArray()) {
+			retExpr = buildArrayNew(converter, newExpr, type);
+		} else {
+			// if no constructor is found, it is a new over a non-class type
+			if(!newExpr->getConstructExpr()) {
 				// build new expression depending on whether or not we have an initializer expression
 				core::ExpressionPtr newExp;
 				if(newExpr->hasInitializer()) {
@@ -377,13 +386,8 @@ namespace conversion {
 				}
 				retExpr = core::lang::buildPtrFromRef(newExp);
 			}
-		}
-		// we have a constructor, so we are building a class
-		else {
-			if(newExpr->isArray()) {
-				retExpr = utils::buildObjectArrayNew(type, converter.convertExpr(newExpr->getArraySize()),
-					                                 converter.getFunMan()->lookup(newExpr->getConstructExpr()->getConstructor()));
-			} else {
+			// we have a constructor, so we are building a class
+			else {
 				retExpr = core::lang::buildPtrFromRef(convertConstructExprInternal(converter, newExpr->getConstructExpr(), false));
 			}
 		}

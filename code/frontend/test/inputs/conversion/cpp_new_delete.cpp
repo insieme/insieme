@@ -116,12 +116,23 @@ int main() {
 		delete simple;
 	}
 
-	#pragma test expect_ir("REGEX_S", R"(.*\{
-			var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = object_array_new\(type_lit\(IMP_SimplestConstructor\), 3, IMP_SimplestConstructor::ctor\);
-			ref_delete\(ptr_to_array\(\*v0\)\);
-	\})")
+	#pragma test expect_ir(SimplestConstructor_IR, R"({
+		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {});
+		ref_delete(ptr_to_array(*v0));
+	})")
 	{
 		SimplestConstructor* arrsimple = new SimplestConstructor[3];
+		delete [] arrsimple;
+	}
+
+	#pragma test expect_ir(SimplestConstructor_IR, R"({
+		var ref<IMP_SimplestConstructor,f,f,plain> v0 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
+		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v1 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))});
+		ref_delete(ptr_to_array(*v1));
+	})")
+	{
+		SimplestConstructor sc;
+		SimplestConstructor* arrsimple = new SimplestConstructor[3]{sc,sc};
 		delete [] arrsimple;
 	}
 
@@ -178,9 +189,24 @@ int main() {
 		delete [] arri;
 	}
 
-	#pragma test expect_ir(R"(
-		def struct IMP_SimplestConstructor {
+	#pragma test expect_ir(SimplestConstructor_IR, R"(
+		def new_arr_fun = function (v0 : ref<uint<inf>,f,f,plain>) -> ptr<IMP_SimplestConstructor> {
+			var uint<inf> v1 = *v0;
+			return ptr_from_array(<ref<array<IMP_SimplestConstructor,#v1>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,#v1>))) {});
 		};
+		{
+			var ref<int<4>,f,f,plain> v0 = 30;
+			var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v1 = new_arr_fun(num_cast(*v0+5, type_lit(uint<inf>)));
+			ref_delete(ptr_to_array(*v1));
+		}
+	)")
+	{
+		int x = 30;
+		SimplestConstructor* arri = new SimplestConstructor[x+5];
+		delete [] arri;
+	}
+
+	#pragma test expect_ir(SimplestConstructor_IR, R"(
 		def new_arr_fun = function (v0 : ref<uint<inf>,f,f,plain>, v1 : ref<IMP_SimplestConstructor,t,f,cpp_ref>, v2 : ref<IMP_SimplestConstructor,t,f,cpp_ref>) -> ptr<IMP_SimplestConstructor> {
 			var uint<inf> v3 = *v0;
 			return ptr_from_array(<ref<array<IMP_SimplestConstructor,#v3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,#v3>))) {*v1, *v2});

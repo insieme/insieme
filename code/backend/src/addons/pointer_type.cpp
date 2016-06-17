@@ -116,7 +116,9 @@ namespace addons {
 					if(LANG_EXT_REF.isCallOfRefNew(initExp->getMemoryExpr())) {
 						c_ast::NodePtr cInit = CONVERT_EXPR(initExp);
 						// remove superfluous nested init generated due to array wrapping
-						if(core::lang::isFixedSizedArray(elementType)) cInit = cInit.as<c_ast::InitializerPtr>()->values[0];
+						if(core::lang::isFixedSizedArray(elementType) && !cInit.as<c_ast::InitializerPtr>()->values.empty()) {
+							cInit = cInit.as<c_ast::InitializerPtr>()->values[0];
+						}
 						return c_ast::newArrayCall(CONVERT_TYPE(arrT.getElementType()), CONVERT_EXPR(arrT.getSize().as<core::ExpressionPtr>()), cInit);
 					}
 				}

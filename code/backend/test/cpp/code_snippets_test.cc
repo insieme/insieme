@@ -1859,6 +1859,11 @@ namespace backend {
 				var ref<ptr<array<int<4>,3>>,f,f,plain> k = ptr_from_array(ref_new(type_lit(array<array<int<4>,3>,50>)));
 				ref_delete(ptr_to_array(*k));
 
+				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o1 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {});
+				ref_delete(ptr_to_array(*o1));
+				var ref<IMP_SimplestConstructor,f,f,plain> v0 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
+				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o2 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))});
+				ref_delete(ptr_to_array(*o2));
 				return 0;
 			}
 		)");
@@ -1878,6 +1883,11 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, code, "delete[] j;");
 		EXPECT_PRED2(containsSubString, code, "__insieme_type_3* k = new __insieme_type_3[50];");
 		EXPECT_PRED2(containsSubString, code, "delete[] k;");
+
+		EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o1 = new IMP_SimplestConstructor[3]{};");
+		EXPECT_PRED2(containsSubString, code, "delete[] o1;");
+		EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o2 = new IMP_SimplestConstructor[3]{(IMP_SimplestConstructor const&)v0, (IMP_SimplestConstructor const&)v0};");
+		EXPECT_PRED2(containsSubString, code, "delete[] o2;");
 
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler.addFlag("-c"); // do not run the linker
