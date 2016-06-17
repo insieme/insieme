@@ -525,8 +525,8 @@ namespace checks {
 		}
 
 		// 3) check return type - which has to be matched with modified function return value.
-		TypePtr retType = analysis::normalize(substitution->applyTo(returnType));
-		TypePtr resType = analysis::normalize(address->getType());
+		TypePtr retType = substitution->applyTo(returnType);
+		TypePtr resType = address->getType();
 
 		if(typeMatchesWithOptionalMaterialization(manager, resType, retType)) return res;
 
