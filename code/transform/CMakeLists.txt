@@ -20,8 +20,6 @@ target_include_directories(insieme_transform SYSTEM PRIVATE ${Boost_INCLUDE_DIRS
 target_link_libraries(insieme_transform insieme_core)
 target_link_libraries(insieme_transform insieme_utils)
 
-cotire(insieme_transform)
-
 # =============================================  TESTING  =====================================
 set ( ut_prefix  ut_transform )
 file(GLOB_RECURSE test_cases test/*.cc)

@@ -35,8 +35,6 @@ insieme_find_package(NAME LUAJIT)
 target_include_directories(insieme_utils PUBLIC ${LUAJIT_INCLUDE_DIRS})
 target_link_libraries(insieme_utils ${LUAJIT_LIBRARIES})
 
-cotire(insieme_utils)
-
 # =============================================  TESTING  =====================================
 set ( ut_prefix  ut_utils )
 file(GLOB_RECURSE test_cases test/*.cc)

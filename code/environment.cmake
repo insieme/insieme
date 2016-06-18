@@ -28,6 +28,7 @@ include(default_library_configuration)
 include(insieme_find_package)
 include(insieme_glob_headers)
 include(add_unit_test)
+include(insieme_cotire)
 include(cotire)
 include(insieme_fix_case_name)
 

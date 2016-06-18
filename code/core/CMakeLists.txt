@@ -103,13 +103,6 @@ insieme_find_package(NAME Boost COMPONENTS regex)
 target_include_directories(insieme_core SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(insieme_core ${Boost_REGEX_LIBRARY})
 
-# include workaround header for cudd (which prevents cudd leaking macros) in prefix
-# prevent flex from being added to prefix
-set_target_properties(insieme_core PROPERTIES
-	COTIRE_PREFIX_HEADER_IGNORE_PATH "${CMAKE_SOURCE_DIR};${CMAKE_BINARY_DIR};${FLEX_INCLUDE_DIRS}"
-	COTIRE_PREFIX_HEADER_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/code/core/include/insieme/core/arithmetic/cudd")
-cotire(insieme_core)
-
 # =============================================  TESTING  =====================================
 set( ut_prefix  ut_core)
 file(GLOB_RECURSE test_cases test/*.cc)
