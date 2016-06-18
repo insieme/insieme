@@ -65,8 +65,6 @@ set ( insieme_analysis_include_dir       	${insieme_code_dir}/analysis/include )
 set ( insieme_transform_src_dir				${insieme_code_dir}/transform/src )
 set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include )
 
-set ( insieme_common_include_dir			${insieme_code_dir}/common/include )
-
 set ( insieme_runtime_src_dir				${insieme_code_dir}/runtime/src )
 set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 
@@ -159,7 +157,7 @@ if (${CMAKE_CXX_COMPILER} MATCHES "clang")
 	set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC")
 	# CPP flags
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -include ${insieme_common_include_dir}/insieme/common/utils/cxx14_workaround.h")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
   	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")	
