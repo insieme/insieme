@@ -226,6 +226,31 @@ namespace printer {
 
 			std::vector<std::pair<TypePtr,TypePtr>> aliases;
 
+			/*
+			* This is a block of helper functions
+			*/
+			void printParameters(std::ostream& out, const VariableAddressList& list, bool printFirstParam = true) {
+				auto start = printFirstParam ? list.begin() : list.begin() + 1;
+				auto end = list.end();
+				out << join(", ", start, end, [&](std::ostream &out, const VariableAddress &curVar) {
+					visit(curVar);
+					out << " : ";
+					visit(curVar->getType());
+				});
+			}
+
+			void printQualifiers(std::ostream& out, const TypePtr& thisParam) {
+				assert_true(analysis::isRefType(thisParam));
+				auto thisParamCorrect = thisParam;
+				if (analysis::isRefType(analysis::getReferencedType(thisParamCorrect))) {
+					thisParamCorrect = analysis::getReferencedType(thisParamCorrect);
+				}
+				const auto thisParamRef = lang::ReferenceType(thisParamCorrect);
+				if (thisParamRef.isConst()) { out << "const "; }
+				if (thisParamRef.isVolatile()) { out << "volatile "; }
+			}
+
+
 		  public:
 			/**
 			 * The output stream this printer is printing to.
@@ -424,6 +449,7 @@ namespace printer {
 								// branch for free defined function
 								if (binding->getReference()->getType().isMemberFunction()) { // free member functions
 									auto tagname = getObjectName(cur->getType());
+									// get the function name out of the lambda name
 									vector<std::string> splitstring;
 									boost::split(splitstring, lambdaNames[binding->getReference()],
 												 boost::is_any_of("::"));
@@ -455,9 +481,7 @@ namespace printer {
 							for (auto field : record->getFields()) {
 								newLine();
 								out << "decl " << tagName << "::";
-								visit(NodeAddress(field->getName()));
-								out << ":";
-								visit(NodeAddress(field->getType()));
+								visit(NodeAddress(field));
 								out << ";";
 							}
 
@@ -551,18 +575,8 @@ namespace printer {
 									return false;
 								} else {
 									newLine();
-									out << "def " << lambdaNames[binding->getReference()];
-
-									auto parameters = lambda.getParameterList();
-									out << " = function (" <<
-									join(", ", parameters, [&](std::ostream& out, const VariablePtr& curVar) {
-										visit(NodeAddress(curVar));
-										out << " : ";
-										visit(NodeAddress(curVar->getType()));
-									}) << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
-									visit(NodeAddress(funType->getReturnType()));
-									out << " ";
-									visit(bindingAddress->getLambda()->getBody());
+									out << "def ";
+									visit(bindingAddress);
 									out << ";";
 								}
 							} else if (visitedFreeFunctions.find(binding->getReference()) != visitedFreeFunctions.end()) {
@@ -570,33 +584,19 @@ namespace printer {
 								if (funType->isConstructor()) {
 									auto tagname = std::get<0>(visitedFreeFunctions[binding->getReference()]);
 									auto funname = std::get<1>(visitedFreeFunctions[binding->getReference()]);
-									auto parameters = lambda.getParameterList();
 
 									newLine();
-									out << "def " << tagname << " :: ctor " << funname << " = function (" <<
-											join(", ", lambda->getParameters().begin() + 1, lambda->getParameters().end(),
-												 [&](std::ostream& out, const VariablePtr& curVar) {
-													 visit(NodeAddress(curVar));
-													 out << " : ";
-													 visit(NodeAddress(curVar->getType()));
-												 }) << ") ";
-									thisStack.push(lambda->getParameters().front());
-									visit(bindingAddress->getLambda()->getBody());
-									thisStack.pop();
+									out << "def " << tagname << " :: " << funname << " = ";
+									visit(bindingAddress);
 									out << ";";
 								} else if (funType->isMemberFunction()) {
 									auto tagname = std::get<0>(visitedFreeFunctions[binding->getReference()]);
 									auto funname = std::get<1>(visitedFreeFunctions[binding->getReference()]);
-									auto parameters = lambda.getParameterList();
 
 									newLine();
-									out << "def " << tagname << " :: function " << funname << " = (" <<
-									join(", ", lambda->getParameters().begin() + 1, lambda->getParameters().end(),
-										 [&](std::ostream& out, const VariablePtr& curVar) {
-											 visit(NodeAddress(curVar));
-											 out << " : ";
-											 visit(NodeAddress(curVar->getType()));
-										 }) << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
+									out << "def " << tagname << " :: function " << funname << " = (";
+									printParameters(out, bindingAddress->getLambda()->getParameters(), false);
+									out << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
 									visit(NodeAddress(funType->getReturnType()));
 									out << " ";
 									visit(bindingAddress->getLambda()->getBody());
@@ -661,30 +661,6 @@ namespace printer {
 				depth--;
 			}
 
-			/*
-			* This is a block of helper functions
-			*/
-		private:
-			void printParameters(std::ostream& out, const VariableAddressList& list, bool printFirstParam = true) {
-				auto start = printFirstParam ? list.begin() : list.begin() + 1;
-				auto end = list.end();
-				out << join(", ", start, end, [&](std::ostream &out, const VariableAddress &curVar) {
-					visit(curVar);
-					out << " : ";
-					visit(curVar->getType());
-				});
-			}
-
-			void printQualifiers(std::ostream& out, const TypePtr& thisParam) {
-				assert_true(analysis::isRefType(thisParam));
-				auto thisParamCorrect = thisParam;
-				if (analysis::isRefType(analysis::getReferencedType(thisParamCorrect))) {
-					thisParamCorrect = analysis::getReferencedType(thisParamCorrect);
-				}
-				const auto thisParamRef = lang::ReferenceType(thisParamCorrect);
-				if (thisParamRef.isConst()) { out << "const "; }
-				if (thisParamRef.isVolatile()) { out << "volatile "; }
-			}
 
 		public:
 
@@ -1195,6 +1171,7 @@ namespace printer {
 				} else if(funType->isMemberFunction() || funType->isVirtualMemberFunction()) {
 					// print member function header
 					out << "function ";
+					assert_fail();
 					visit(analysis::getObjectType(funType));
 					auto parameters = node->getParameters();
 					out << " :: (";
@@ -1212,7 +1189,7 @@ namespace printer {
 
 				} else {
 					// print plain header function
-					out << "(";
+					out << "function (";
 					printParameters(out, node->getParameterList());
 					out << ") -> ";
 					visit(funType->getReturnType());
