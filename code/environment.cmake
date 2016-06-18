@@ -233,6 +233,20 @@ if(MSVC)
 	set(NB_PROCESSORS "1")
 endif()
 
+# -------------------------------------------- Set backend compilers if specified, default to gcc/g++ otherwise
+if( DEFINED ENV{INSIEME_C_BACKEND_COMPILER} )
+	set(INSIEME_C_BACKEND_COMPILER $ENV{INSIEME_C_BACKEND_COMPILER})
+else()
+	message(WARNING "INSIEME_C_BACKEND_COMPILER environment variable not set, defaulting to gcc in PATH")
+	set(INSIEME_C_BACKEND_COMPILER "gcc")
+endif()
+if( DEFINED ENV{INSIEME_CXX_BACKEND_COMPILER} )
+	set(INSIEME_CXX_BACKEND_COMPILER $ENV{INSIEME_CXX_BACKEND_COMPILER})
+else()
+	message(WARNING "INSIEME_CXX_BACKEND_COMPILER environment variable not set, defaulting to g++ in PATH")
+	set(INSIEME_CXX_BACKEND_COMPILER "g++")
+endif()
+
 # Define some colors for printing
 if(NOT WIN32)
   string(ASCII 27 PrintEsc)

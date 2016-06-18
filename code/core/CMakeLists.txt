@@ -12,10 +12,10 @@ file(GLOB_RECURSE insieme_core_yy src/*.y src/*.yy )
 file(GLOB_RECURSE insieme_core_ll src/*.l src/*.ll )
 
 # automatically run the script for generating IRBuilder interface
-execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb  RESULT_VARIABLE builderbuilderSuccess)
+execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb  RESULT_VARIABLE builderbuilderSuccess OUTPUT_VARIABLE builderbuilderOutput ERROR_VARIABLE builderbuilderOutput)
 
 if (NOT ${builderbuilderSuccess} EQUAL 0)
-	message(FATAL_ERROR "Ruby builder builder script failed to execute!")
+	message(FATAL_ERROR "Ruby builder builder script failed to execute, reason:\n${builderbuilderOutput}")
 endif()
 
 # =============================================  bison builds the parser  =====================================
