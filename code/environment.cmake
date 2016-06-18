@@ -13,11 +13,6 @@
 ENABLE_LANGUAGE(C)
 ENABLE_LANGUAGE(CXX)
 
-# setup std-include directories (to support some IDEs)
-if (GCC_INCLUDE_DIR) 
-	include_directories( ${GCC_INCLUDE_DIR} )
-endif()
-
 #custom findxxx modules
 list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
 
@@ -31,17 +26,6 @@ include(add_unit_test)
 include(insieme_cotire)
 include(cotire)
 include(insieme_fix_case_name)
-
-#if CBA_JOBS option was given, we query the number of cores, if no -j was specified this is the
-#uperlimit for parallel compile jobs
-if(DEFINED CBA_JOBS)
-	include(ProcessorCount)
-	ProcessorCount(jobs)
-	set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile_job_pool=${jobs} link_job_pool=${jobs})
-	get_property(job_pools GLOBAL PROPERTY JOB_POOLS)
-	set(CMAKE_JOB_POOL_COMPILE compile_job_pool)
-	set(CMAKE_JOB_POOL_LINK link_job_pool)
-endif()
 
 set ( insieme_core_src_dir 	            	${insieme_code_dir}/core/src )
 set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
@@ -76,6 +60,8 @@ find_program(TIME_EXECUTABLE time)
 if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC) 
 	message(FATAL_ERROR "Unable to locate time utility!")
 endif()
+
+#------------------------------------------------------------- set linking type to shared
 
 if(NOT LINKING_TYPE)
     set(LINKING_TYPE SHARED)
@@ -157,10 +143,10 @@ if (${CMAKE_CXX_COMPILER} MATCHES "clang")
 	set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC")
 	# CPP flags
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -include ${insieme_common_include_dir}/insieme/common/utils/cxx14_workaround.h")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-  	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -include ${insieme_common_include_dir}/insieme/common/utils/cxx14_workaround.h")
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")	
+  	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 endif ()
 
 # --------------------------- Intel Compiler -------------------------
@@ -168,8 +154,8 @@ if (${CMAKE_CXX_COMPILER} MATCHES "icpc")
 	# add general flags
 	add_definitions( -Wall )
 	
-  	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")
+  	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 	
 	include(CheckCXXCompilerFlag)
 	# check for -std=c++14
@@ -246,16 +232,6 @@ ProcessorCount(NB_PROCESSORS)
 if(MSVC)
 	set(NB_PROCESSORS "1")
 endif()
-
-#ninja job pools setting
-if( NOT DEFINED(CBA_JOBS) OR (CBA_JOBS) )
-	set(CBA_JOBS "1" CACHE STRING "number of parallel cba unit test jobs")
-endif()
-math(EXPR ALL_JOBS "${NB_PROCESSORS} + 2")
-set_property(GLOBAL PROPERTY JOB_POOLS cba_jobs=${CBA_JOBS} all_jobs=${ALL_JOBS} )
-set(CMAKE_JOB_POOL_COMPILE all_jobs)
-set(CMAKE_JOB_POOL_LINK all_jobs)
-
 
 # Define some colors for printing
 if(NOT WIN32)
