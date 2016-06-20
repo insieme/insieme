@@ -2,7 +2,6 @@
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
 CGAL_CFG_NO_CPP0X_ARRAY
-CGAL_CFG_NO_CPP0X_COPY_N
 CGAL_CFG_NO_CPP0X_DECLTYPE
 CGAL_CFG_NO_CPP0X_DELETED_AND_DEFAULT_FUNCTIONS
 CGAL_CFG_NO_CPP0X_INITIALIZER_LISTS
