@@ -986,6 +986,9 @@ namespace printer {
 				if(!thisStack.empty() && *node == *thisStack.top()) {
 					out << "this";
 				} else {
+					if (!node.isRoot() && node.getParentAddress().isa<TypeAddress>()) {
+						out << "#";
+					}
 					if(printer.hasOption(PrettyPrinter::USE_VARIABLE_NAME_ANNOTATIONS) && annotations::hasAttachedName(node)) {
 						out << annotations::getAttachedName(node);
 					} else {
