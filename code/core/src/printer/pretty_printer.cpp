@@ -823,6 +823,13 @@ namespace printer {
 				}
 			}
 
+			PRINT(NumericType) {
+				if (annotations::hasAttachedName(node)) {
+					out << annotations::getAttachedName(node);
+				}
+				visit(node->getValue());
+			}
+
 			PRINT(BreakStmt) { out << "break"; }
 
 			PRINT(ContinueStmt) { out << "continue"; }
