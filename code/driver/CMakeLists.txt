@@ -24,9 +24,6 @@ target_link_libraries(insieme_driver insieme_backend)
 target_link_libraries(insieme_driver insieme_transform) 
 target_link_libraries(insieme_driver insieme_annotations) 
 
-# required for llvm
-add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
-
 #custom target to build all drivers at once
 add_custom_target(drivers)
 
@@ -53,7 +50,6 @@ foreach ( exec_file ${executables})
 	target_link_libraries(${exec_name} insieme_annotations) 
 	target_link_libraries(${exec_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 
-	cotire(${exec_name})
 endforeach(exec_file)
 
 # integrations_tests uses insiemecc - so there is a dependency

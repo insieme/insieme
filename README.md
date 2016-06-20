@@ -27,8 +27,9 @@ Insieme contains 4 main sub-directories:
 ### Dependencies
 
 A list of depdencies together with an installer and patches is provided inside
-`/scripts/dependencies`. This directory also houses a README which should be
-consulted when using Insieme for the first time.
+`/scripts/dependencies`. This directory also houses a
+[README](scripts/dependencies/README.md) which should be consulted when using
+Insieme for the first time.
 
 ### Building Insieme
 
@@ -46,6 +47,11 @@ with newly installed GCC.
     $ export PATH="$INSIEME_LIBS_HOME/gcc-latest/bin:$PATH"
     $ export LD_LIBRARY_PATH="$INSIEME_LIBS_HOME/gcc-latest/lib64"
 
+Additionally, `INSIEME_C_BACKEND_COMPILER` and
+`INSIEME_CXX_BACKEND_COMPILER` should point to the desired source-to-binary
+compiler. If not set, they default to `gcc` and `g++` in your `PATH`
+respectively.
+
 You can now setup a build directory using CMake:
 
     $ mkdir build
@@ -61,6 +67,8 @@ options (as argument) to the `cmake` command:
     - `-DCMAKE_BUILD_TYPE=Debug|Release|RelWithAsserts`
 - Enable/disable energy measurement support
     - `-DUSE_ENERGY=ON|OFF`
+- Enable/disable PAPI measurement and hardware information support
+    - `-DUSE_PAPI=ON|OFF`
 - Enable/disable valgrind memory checks for most unit tests
     - `-DCONDUCT_MEMORY_CHECKS=ON|OFF`
 
@@ -112,10 +120,12 @@ Insieme now!**
 
 ### Compiling Application Codes
 
-The main executable provided by the Insieme framework is called `insiemecc`. It
-can be used to replace e.g. occurrences of another compiler such as `gcc` in
-makefiles. It supports both source-to-source-only compilation, as well as full
-compilation by calling a backend compiler. For further information on its
+The main executable provided by the Insieme framework is called `insiemecc`,
+located in `code/driver`. It can be used to replace e.g. occurrences of another
+compiler such as `gcc` in makefiles. It supports both source-to-source-only
+compilation, as well as full compilation by calling a backend compiler
+(specified via `INSIEME_C_BACKEND_COMPILER` and `INSIEME_CXX_BACKEND_COMPILER`,
+defaulting to `gcc` and `g++` in your `PATH`. For further information on its
 features and options, please refer to:
 
     $ ./code/driver/insiemecc --help

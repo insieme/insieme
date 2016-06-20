@@ -37,13 +37,12 @@
 #include <string>
 #include <iomanip>
 
-#include <boost/algorithm/string.hpp>
-
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/utils/version.h"
 
 #include "insieme/frontend/frontend.h"
+#include "insieme/frontend/utils/file_extensions.h"
 
 #include "insieme/backend/backend.h"
 
@@ -52,7 +51,6 @@
 #include "insieme/driver/utils/driver_utils.h"
 
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/checks/ir_checks.h"
 
@@ -88,9 +86,6 @@ int main(int argc, char** argv) {
 	vector<fe::path> libs;
 	vector<fe::path> extLibs;
 
-	set<string> cExtensions = { ".c", ".i", ".h" };
-	set<string> cplusplusExtensions = { ".C", ".cc", ".cp", ".cpp", ".CPP", ".cxx", ".c++", ".ii", ".H", ".hh", ".hp", ".hxx", ".hpp", ".HPP", ".h++", ".tcc" };
-
 	for(const fe::path& cur : options.job.getFiles()) {
 		auto ext = fs::extension(cur);
 		if(ext == ".o" || ext == ".so") {
@@ -99,7 +94,7 @@ int main(int argc, char** argv) {
 			} else {
 				extLibs.push_back(cur);
 			}
-		} else if (cExtensions.count(ext) || cplusplusExtensions.count(ext)) {
+		} else if (fe::utils::cExtensions.count(ext) || fe::utils::cxxExtensions.count(ext)) {
 			inputs.push_back(cur);
 		} else {
 			LOG(ERROR) << "Unrecognized file format: " << cur << "\n";
@@ -228,13 +223,12 @@ int main(int argc, char** argv) {
 		compiler.addFlag(std::string("-D" + cur.first));
 	}
 
-	// if an optimization flag is set (e.g. -O3)
-	// set this flag in the backend compiler
-	if(!options.settings.optimization.empty()) { compiler.addFlag("-O" + options.settings.optimization); }
-
-	// check if the c++11 standard was set when calling insieme
-	// if yes, use the same standard in the backend compiler
-	if(options.job.isCxx()) { compiler.addFlag("-std=c++0x"); }
+	// if we are compiling C++ code, we need to set the backend compiler standard
+	if(options.job.isCxx()) {
+		compiler.addFlag("-std=c++11");
+	} else {
+		compiler.addFlag("-std=c99");
+	}
 
 	return !cp::compileToBinary(*targetCode, options.settings.outFile.string(), compiler);
 }

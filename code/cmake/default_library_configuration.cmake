@@ -38,7 +38,7 @@ set(BISON_VERSION 3.0.0)
 set(FLEX_VERSION 2.5.35)
 
 #VALGRIND - used for memchecks
-set(VALGRIND_VERSION 3.10.0)
+set(VALGRIND_VERSION 3.11.0)
 
 #TODO: currently this happens everytime we include this cmake some where...
 #if the user provides a env{lib_version} for one of the libraries

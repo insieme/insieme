@@ -40,14 +40,15 @@
 
 #include "insieme/frontend/converter.h"
 #include "insieme/frontend/omp/omp_annotation.h"
-#include "insieme/core/tu/ir_translation_unit.h"
+#include "insieme/frontend/utils/file_extensions.h"
 
 #include "insieme/utils/config.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/compiler/compiler.h"
 
-#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 
 #include "insieme/frontend/extensions/builtin_function_extension.h"
 #include "insieme/frontend/extensions/cilk_extension.h"
@@ -74,8 +75,11 @@ namespace frontend {
 
 
 	bool ConversionSetup::isCxx(const path& file) const {
-		static std::set<string> CxxExtensions({".cpp", ".cxx", ".cc", ".C"});
-		return standard == Cxx03 || standard == Cxx98 || (standard == Auto && ::contains(CxxExtensions, boost::filesystem::extension(file)));
+		if(standard == Cxx11 || standard == Cxx14) { return true; }
+		if(standard == C99) { return false; }
+		if(standard == Auto) { return ::contains(frontend::utils::cxxExtensions, boost::filesystem::extension(file)); }
+		assert_fail() << "Unable to determine whether given language standard is C++ or not";
+		return false;
 	}
 
 	vector<path>& ConversionSetup::getSystemHeaderSearchPathInternal() {
@@ -210,12 +214,9 @@ namespace frontend {
 	}
 
 	bool ConversionJob::isCxx() const {
-		if(getStandard() == Standard::Cxx03 || getStandard() == Standard::Cxx98 || getStandard() == Standard::Cxx11 || getStandard() == Standard::Cxx14) { return true; }
-		if(getStandard() == Standard::C99) { return false; }
+		bool cppFile = any(files, [&](const path& cur) { return ConversionSetup::isCxx(cur); });
 
-		bool cppFile = any(files, [&](const path& cur) { return static_cast<const ConversionSetup&>(*this).isCxx(cur); });
-
-		bool cppLibs = any(libs, [&](const core::tu::IRTranslationUnit& tu) -> bool { return tu.isCXX(); });
+		bool cppLibs = any(libs, [](const core::tu::IRTranslationUnit& tu) { return tu.isCXX(); });
 
 		return cppFile || cppLibs;
 	}

@@ -819,7 +819,7 @@ namespace parser {
 
 		//free constructor
 		{
-			auto addresses = builder.parseAddressesStatement("def struct A { }; def A::ctor foo = () { 1; }; { var ref<A> a = $foo(a)$;}");
+			auto addresses = builder.parseAddressesStatement("def struct A { }; def A:: foo = ctor () { 1; }; { var ref<A> a = $foo(a)$;}");
 			ASSERT_EQ(1, addresses.size());
 			EXPECT_EQ("foo", addresses[0].getAddressedNode().as<CallExprPtr>()->getFunctionExpr().as<LambdaExprPtr>()->getReference()->getNameAsString());
 		}
@@ -1459,7 +1459,7 @@ namespace parser {
 		                               "  ctor(x : int<4>) { a = x; }"
 		                               "  lambda mfun = (x : int<4>) -> int<4> { return a; }"
 		                               "};"
-		                               "def A::ctor free_ctor = (x : int<4>) { a = x; };"
+		                               "def A:: free_ctor = ctor (x : int<4>) { a = x; };"
 		                               "def A::lambda free_mfun = (x : int<4>) -> int<4> { return a; };"
 		                               "{"
 		                               "  var ref<A> a1 = A::(a1, 10);"
@@ -1527,7 +1527,7 @@ namespace parser {
 		EXPECT_TRUE(builder.parseStmt("def struct A {"
 		                              "  ctor() { }"
 		                              "};"
-		                              "def A::ctor foo = () { };"
+		                              "def A:: foo = ctor () { };"
 		                              "{"
 		                              "  var ref<A> a;"
 		                              "}"));

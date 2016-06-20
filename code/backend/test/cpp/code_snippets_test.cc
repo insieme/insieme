@@ -702,7 +702,7 @@ namespace backend {
 					}
 				};
 
-				def A::ctor f = ( x : int, y : int, z : int ) {
+				def A:: f = ctor ( x : int, y : int, z : int ) {
 					<ref<int>>(this.x){x + y + z};
 				};
 

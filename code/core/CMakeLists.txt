@@ -12,10 +12,10 @@ file(GLOB_RECURSE insieme_core_yy src/*.y src/*.yy )
 file(GLOB_RECURSE insieme_core_ll src/*.l src/*.ll )
 
 # automatically run the script for generating IRBuilder interface
-execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb  RESULT_VARIABLE builderbuilderSuccess)
+execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb  RESULT_VARIABLE builderbuilderSuccess OUTPUT_VARIABLE builderbuilderOutput ERROR_VARIABLE builderbuilderOutput)
 
 if (NOT ${builderbuilderSuccess} EQUAL 0)
-	message(FATAL_ERROR "Ruby builder builder script failed to execute!")
+	message(FATAL_ERROR "Ruby builder builder script failed to execute, reason:\n${builderbuilderOutput}")
 endif()
 
 # =============================================  bison builds the parser  =====================================
@@ -103,13 +103,6 @@ insieme_find_package(NAME Boost COMPONENTS regex)
 target_include_directories(insieme_core SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(insieme_core ${Boost_REGEX_LIBRARY})
 
-# include workaround header for cudd (which prevents cudd leaking macros) in prefix
-# prevent flex from being added to prefix
-set_target_properties(insieme_core PROPERTIES
-	COTIRE_PREFIX_HEADER_IGNORE_PATH "${CMAKE_SOURCE_DIR};${CMAKE_BINARY_DIR};${FLEX_INCLUDE_DIRS}"
-	COTIRE_PREFIX_HEADER_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/code/core/include/insieme/core/arithmetic/cudd")
-cotire(insieme_core)
-
 # =============================================  TESTING  =====================================
 set( ut_prefix  ut_core)
 file(GLOB_RECURSE test_cases test/*.cc)
@@ -133,10 +126,5 @@ foreach ( case_file ${test_cases})
 		target_include_directories(${case_name} PRIVATE ${FLEX_INCLUDE_DIRS})
 	endif()
 	
-	# exclude lua tests from valgrind since it fails for versions newer than 3.7.0
-	set(VFLAG ${TRUE})
-	if(case_file MATCHES ".*lua.*")
-		set(VFLAG FALSE)
-	endif()
-	add_unit_test(${case_name} ${ut_prefix} ${VFLAG})
+	add_unit_test(${case_name} ${ut_prefix})
 endforeach(case_file)

@@ -202,13 +202,13 @@ namespace utils {
 	//									Backend selection
 	//***************************************************************************************
 	insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const cmd::Options& options) {
-		if(options.backendHint == cmd::BackendEnum::Sequential) { return be::sequential::SequentialBackend::getDefault(); }
+		if(options.backendHint == cmd::BackendEnum::Runtime) { return be::runtime::RuntimeBackend::getDefault(); }
 		if(options.backendHint == cmd::BackendEnum::OpenCL) {
 				auto config = std::make_shared<be::BackendConfig>();
 				config->dumpOclKernel = options.settings.dumpOclKernel.string();
 				return be::opencl::OpenCLBackend::getDefault(config);
 		}
-		return be::runtime::RuntimeBackend::getDefault();
+		return be::sequential::SequentialBackend::getDefault();
 	}
 
 } // end namespace utils
