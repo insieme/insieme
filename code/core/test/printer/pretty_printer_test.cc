@@ -124,7 +124,7 @@ TEST(PrettyPrinter, Wrapper) {
 	++it;
 
 	// 4 literal loc
-	EXPECT_EQ(builder.numericType(builder.literal("4",builder.getLangBasic().getUIntInf())), it->second);
+	EXPECT_EQ(builder.numericType(builder.literal("4",builder.getLangBasic().getUIntInf()))->getValue(), it->second);
 	EXPECT_EQ(SourceLocation(0, 9), it->first.first);
 	EXPECT_EQ(SourceLocation(0, 10), it->first.second);
 
@@ -921,7 +921,7 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"        fun(rfun(v4));\n"
 			"        lfun(v5);\n"
 			"        rfun(ref_temp_init(lfun(v6)));\n"
-			"    };\n"
+			"    }\n"
 			"}";
 
 	EXPECT_EQ(res, toString(PrettyPrinter(stmt, PrettyPrinter::PRINT_DEREFS))) << toString(PrettyPrinter(stmt, PrettyPrinter::PRINT_DEREFS));
@@ -941,7 +941,7 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"        fun(rfun(v4));\n"
 			"        lfun(v5);\n"
 			"        rfun(ref_temp_init(lfun(v6)));\n"
-			"    };\n"
+			"    }\n"
 			"}";
 
 	EXPECT_EQ(res2, toString(PrettyPrinter(stmt, PrettyPrinter::JUST_LOCAL_CONTEXT))) << toString(PrettyPrinter(stmt, PrettyPrinter::JUST_LOCAL_CONTEXT));
