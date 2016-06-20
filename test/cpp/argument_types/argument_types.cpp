@@ -2,6 +2,8 @@
 
 struct pod {
 	int x;
+	pod() : x(0) {}
+	pod(int x) : x(x) {}
 };
 
 struct nonpod {
@@ -45,7 +47,7 @@ int main() {
 	{ // pod
 		//call with lvalue
 		const pod p;
-		p1 = setX<const pod>(p);
+		pod p1 = setX<const pod>(p);
 		//call with init list expr
 		pod p2 = setX<const pod>({0});
 		//call with xvalue
