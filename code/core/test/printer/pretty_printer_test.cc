@@ -1187,6 +1187,17 @@ TEST(PrettyPrinter, LoopControlExpressions) {
 	}
 }
 
+TEST(PrettyPrinter, Throw) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	std::string input = "{\n    throw 1;\n}";
+	auto ir = b.parseStmt(input);
+
+	PrettyPrinter printer(ir);
+	EXPECT_EQ(input, toString(printer));
+}
+
 TEST(PrettyPrinter, MaxDepth) {
 	NodeManager nm;
 	IRBuilder b(nm);
