@@ -245,6 +245,14 @@ namespace printer {
 				if (thisParamRef.isVolatile()) { out << "volatile "; }
 			}
 
+			bool hasEndingCompoundStmt(const StatementAddress& stmt) {
+				auto nodeType = stmt->getNodeType();
+				if(nodeType == NodeType::NT_ForStmt || nodeType == NodeType::NT_IfStmt || nodeType == NodeType::NT_CompoundStmt
+				   || nodeType == NodeType::NT_SwitchStmt || nodeType == NodeType::NT_WhileStmt)
+					return true;
+
+				return false;
+			}
 
 		  public:
 			/**
