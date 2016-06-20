@@ -625,6 +625,16 @@ TEST(PrettyPrinter, Structs) {
 
 }
 
+TEST(PrettyPrinter, Variable) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	auto aType = builder.parseStmt("{var ref<int<4>> v123;\n var ref<#v123> b;}");
+	//dumpText(aType);
+	PrettyPrinter printer(aType);
+	EXPECT_EQ("{\n    var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n    var ref<#v1,f,f,plain> v2 = ref_decl(type_lit(ref<#v1,f,f,plain>));\n}", toString(printer)) << printer;
+}
+
 TEST(PrettyPrinter, StructSuperTypes) {
 	NodeManager manager;
 	IRBuilder builder(manager);
@@ -1135,4 +1145,79 @@ TEST(PrettyPrinter, MethodQualifiers) {
 	auto ir = builder.normalize(builder.parseStmt(input));
 	PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::FULL_LITERAL_SYNTAX);
 	EXPECT_EQ(input, toString(printer)) << printer;
+}
+
+TEST(PrettyPrinter, LoopControlExpressions) {
+	// in this test "break", "continue"... expressions are tested
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	{ // "break"
+		std::string input = ""
+			                "{\n"
+			                "    for( int<4> v0 = 0 .. 10 : 1) {\n"
+			                "        if(v0==1) {\n"
+			                "            break;\n"
+			                "        }\n"
+			                "    }\n"
+			                "}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+
+		PrettyPrinter printer(ir);
+
+		EXPECT_EQ(input, toString(printer)) << printer;
+	}
+
+	{ // "continue"
+		std::string input = ""
+			                "{\n"
+			                "    for( int<4> v0 = 0 .. 10 : 1) {\n"
+			                "        if(v0==1) {\n"
+			                "            continue;\n"
+			                "        }\n"
+			                "    }\n"
+			                "}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+
+		PrettyPrinter printer(ir);
+
+		EXPECT_EQ(input, toString(printer)) << printer;
+	}
+}
+
+TEST(PrettyPrinter, MaxDepth) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	std::string input = "{{{{{1;}}}}}";
+
+	auto ir = b.parseStmt(input);
+
+	PrettyPrinter printer1(ir, PrettyPrinter::OPTIONS_DEFAULT);
+	PrettyPrinter printer2(ir, PrettyPrinter::OPTIONS_DEFAULT, 1);
+
+	std::string res1 = ""
+                       "{\n"
+                       "    {\n"
+                       "        {\n"
+                       "            {\n"
+                       "                {\n"
+                       "                    1;\n"
+                       "                }\n"
+                       "            }\n"
+                       "        }\n"
+                       "    }\n"
+                       "}";
+
+	std::string res2 = ""
+	                   "{\n"
+	                   "    {\n"
+	                   "         ... \n"
+	                   "    }\n"
+	                   "}";
+
+	EXPECT_EQ(res1, toString(printer1)) << printer1;
+	EXPECT_EQ(res2, toString(printer2)) << printer2;
 }
