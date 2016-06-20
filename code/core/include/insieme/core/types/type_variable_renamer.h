@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -291,11 +291,11 @@ namespace types {
 	  private:
 
 		TypeVariablePtr getFreshVariable(NodeManager& manager) {
-			return TypeVariable::get(manager, format("v%d", (++varCounter)));
+			return TypeVariable::get(manager, format("insieme_renamed_fresh_type_var_%d", (++varCounter)));
 		}
 
 		GenericTypeVariablePtr getFreshGenericVariable(NodeManager& manager, const GenericTypeVariablePtr& var) {
-			return GenericTypeVariable::get(manager, format("v%d", (++varCounter)), var->getTypeParameter());
+			return GenericTypeVariable::get(manager, format("insieme_renamed_fresh_type_var_%d", (++varCounter)), var->getTypeParameter());
 		}
 	};
 
