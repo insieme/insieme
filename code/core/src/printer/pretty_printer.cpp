@@ -1019,21 +1019,23 @@ namespace printer {
 					out << str.substr(0, 3) << "..." << str.substr(str.size() - 3, str.size());
 				} else {
 					out << str;
-					auto& basic = node->getNodeManager().getLangBasic();
-					auto type = node->getType();
+					if (node.isRoot() || !node.getParentAddress().isa<NumericTypeAddress>()) { // print extension only when no type printing like int<4>
+						auto& basic = node->getNodeManager().getLangBasic();
+						auto type = node->getType();
 
-					if (basic.isFloat(type))  out << "f";
+						if (basic.isFloat(type))  out << "f";
 
-					if (basic.isUInt1(type))    out << "u";
-					if (basic.isUInt2(type))    out << "u";
-					if (basic.isUInt4(type))    out << "u";
-					if (basic.isUInt8(type))    out << "ul";
-					if (basic.isUInt16(type))   out << "ull";
-					if (basic.isUIntGen(type))  out << "u";
-					if (basic.isUIntInf(type))  out << "u";
+						if (basic.isUInt1(type))    out << "u";
+						if (basic.isUInt2(type))    out << "u";
+						if (basic.isUInt4(type))    out << "u";
+						if (basic.isUInt8(type))    out << "ul";
+						if (basic.isUInt16(type))   out << "ull";
+						if (basic.isUIntGen(type))  out << "u";
+						if (basic.isUIntInf(type))  out << "u";
 
-					if (basic.isInt8(type))     out << "l";
-					if (basic.isInt16(type))    out << "ll";
+						if (basic.isInt8(type))     out << "l";
+						if (basic.isInt16(type))    out << "ll";
+					}
 				}
 
 				if(doFullSyntax) {
