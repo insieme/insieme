@@ -184,6 +184,7 @@ namespace backend {
 					var ref<int<4>,f,f,cpp_ref> alb = bla;
 					IMP_test(alb);
 					bla + alb;
+					alb = 8;
 					return 0;
 				}
 		)");
@@ -195,11 +196,12 @@ namespace backend {
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		// std::cout << "Converted: \n" << *converted << std::endl;
+		//std::cout << "Converted: \n" << *converted << std::endl;
 
 		// check presence of relevant code
-		auto code = toString(*converted);
+		auto code = utils::removeCppStyleComments(toString(*converted));
 		EXPECT_PRED2(containsSubString, code, "IMP_test(alb)");
+		EXPECT_PRED2(notContainsSubString, code, "*");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

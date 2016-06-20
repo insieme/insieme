@@ -33,7 +33,6 @@ member_function_vector
 memb_func_ptr
 performance
 rec_memberfunc_pointer
-refs
 return_types
 shadow_decl
 simpleSort
