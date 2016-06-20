@@ -1154,6 +1154,11 @@ TEST(PrettyPrinter, LiteralPrinting) {
 
 	PrettyPrinter printerLiterals(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::FULL_LITERAL_SYNTAX);
 	EXPECT_EQ(input, toString(printerLiterals)) << printerLiterals;
+
+	auto lit = builder.literal("fuchsinsarestrongtheydontgetmocked", builder.refType(builder.structType()));
+	PrettyPrinter printer1(lit, PrettyPrinter::NAME_CONTRACTION);
+
+	EXPECT_EQ("fuc...ked", toString(printer1));
 }
 
 TEST(PrettyPrinter, MethodQualifiers) {
