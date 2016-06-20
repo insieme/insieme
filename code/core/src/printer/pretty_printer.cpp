@@ -199,11 +199,6 @@ namespace printer {
 			unsigned depth;
 
 			/**
-			 * A list of nodes being bound to names to make the code more readable.
-			 */
-			utils::map::PointerMap<NodePtr, std::string> letBindings;
-
-			/**
 			 * A stack used to keep track of the "this"-operator
 			 */
 			std::stack<VariablePtr> thisStack;
@@ -282,8 +277,6 @@ namespace printer {
 			 * The main entry point computing common sub-expressions before printing the actual code.
 			 */
 			void print(const NodePtr& node) {
-				// reset setup
-				letBindings.clear();
 
 				// get all entry-points
 				if (const auto& program = node.isa<ProgramPtr>()) {
@@ -609,8 +602,6 @@ namespace printer {
 					newLine();
 				}
 
-				if(printer.hasOption(PrettyPrinter::JUST_LOCAL_CONTEXT)) { letBindings.erase(node); }
-
 				if(auto p = node.isa<LambdaExprPtr>()) {
 					visit(NodeAddress(p->getReference()));
 				} else {
@@ -633,13 +624,6 @@ namespace printer {
 				// check whether this one is covered by the plug-in
 				if(printer.plugin.covers(element)) {
 					printer.plugin.print(out, element, *this);
-					return;
-				}
-
-				// check whether this one has been substituted
-				auto pos = letBindings.find(element);
-				if(pos != letBindings.end()) {
-					out << pos->second;
 					return;
 				}
 
