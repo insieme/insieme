@@ -645,6 +645,7 @@ namespace printer {
 					out << " ... ";
 					return;
 				}
+
 				depth++;
 				printAnnotations(element, true);
 				IRVisitor<void,Address>::visit(element);
@@ -670,18 +671,15 @@ namespace printer {
 			PRINT(GenericType) {
 
 				auto printer = [&](std::ostream&, const ParentAddress& cur) { visit(cur); };
+				const auto& parent_types = node->getParents();
+				const auto& types = node->getTypeParameter();
 
 				out << *node->getName();
-				const auto& parent_types = node->getParents();
-
 				if(!parent_types->empty()) {
 					out << " : [ " << join(", ", parent_types, printer) << " ]";
 				}
 
-				const auto& types = node->getTypeParameter();
-
 				if(types->empty()) { return; }
-
 				out << "<" << join(",", types, [&](std::ostream&, const TypeAddress& cur) { visit(cur); }) << ">";
 			}
 
@@ -845,16 +843,6 @@ namespace printer {
 				visit(node->getThrowExpr());
 			}
 
-			PRINT(GotoStmt) {
-				out << "goto ";
-				visit(node->getLabel());
-			}
-
-			PRINT(LabelStmt) {
-				visit(node->getLabel());
-				out << ":";
-			}
-
 			PRINT(DeclarationStmt) {
 				// print type
 				const auto& var = node->getVariable();
@@ -880,14 +868,11 @@ namespace printer {
 
 				out << "{";
 				increaseIndent();
-				newLine();
-				for_each(list.begin(), list.end() - 1, [&](const NodeAddress& cur) {
-					visit(cur);
-					out << ";";
+				for_each(list.begin(), list.end(), [&](const StatementAddress& cur) {
 					newLine();
+					visit(cur);
+					if(!hasEndingCompoundStmt(cur)) { out << ";"; }
 				});
-				visit(list.back());
-				out << ";";
 				decreaseIndent();
 				newLine();
 				out << "}";
@@ -914,17 +899,7 @@ namespace printer {
 				out << " : ";
 				visit(node->getStep());
 				out << ") ";
-
-				const auto& body = node->getBody();
-				if(body->getNodeType() != NT_CompoundStmt) {
-					increaseIndent();
-					this->newLine();
-					visit(body);
-					decreaseIndent();
-					this->newLine();
-				} else {
-					visit(body);
-				}
+				visit(node->getBody());
 			}
 
 			PRINT(IfStmt) {
