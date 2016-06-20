@@ -148,6 +148,33 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(CppSnippet, RefArrayReturn) {
+		core::ProgramPtr program = builder.parseProgram(R"(
+				def IMP_test = function () -> ref<array<int<4>,1>,f,f,cpp_ref> {
+					auto x = <ref<array<int<4>,1>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,1>,f,f,plain>))){};
+					return x;
+				};
+				int<4> main() {
+					IMP_test();
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 	TEST(CppSnippet, ReferenceVariableDeclaration) {
 		core::ProgramPtr program = builder.parseProgram(R"(
 				int<4> function IMP_main () {
@@ -1676,6 +1703,39 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, code, "return new IMP_SimplestConstructor[v1];");
 		EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* v3 = new_arr_fun_3((uint64_t)(var_6 + 5), (IMP_SimplestConstructor const&)var_7, (IMP_SimplestConstructor const&)v2);");
 		EXPECT_PRED2(containsSubString, code, "return new IMP_SimplestConstructor[v3]{v1, v2};");
+
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+	TEST(CppSnippet, ArrayStack) {
+		auto res = builder.parseProgram(R"(
+			def struct IMP_A {};
+			int<4> main() {
+				{
+					var ref<array<IMP_A,3>,f,f,plain> i = <ref<array<IMP_A,3>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3>,f,f,plain>))) {};
+				}
+				{
+					var ref<IMP_A,f,f,plain> a = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
+					var ref<IMP_A,f,f,plain> b = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
+					var ref<array<IMP_A,3>,f,f,plain> v2 = <ref<array<IMP_A,3>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3>,f,f,plain>))) {ref_cast(a, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(b, type_lit(t), type_lit(f), type_lit(cpp_ref))};
+				}
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		//std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "{}");
+		EXPECT_PRED2(containsSubString, code, "{{(IMP_A const&)a, (IMP_A const&)b}}");
 
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler.addFlag("-c"); // do not run the linker

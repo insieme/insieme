@@ -1028,7 +1028,6 @@ namespace backend {
 				case core::lang::ReferenceType::Kind::CppReference: {
 
 					assert_false(core::lang::isReference(elementType)) << "Unsupported references to references!";
-					assert_false(core::lang::isArray(elementType)) << "Unsupported references to arrays!";
 
 					// here we just add a reference to the nested type
 					res->lValueType = c_ast::ref(subType->lValueType, ref.isConst(), ref.isVolatile());
@@ -1041,7 +1040,6 @@ namespace backend {
 				case core::lang::ReferenceType::Kind::CppRValueReference: {
 
 					assert_false(core::lang::isReference(elementType)) << "Unsupported references to references!";
-					assert_false(core::lang::isArray(elementType)) << "Unsupported references to arrays!";
 
 					// here we just add a reference to the nested type
 					res->lValueType = c_ast::rvalue_ref(subType->lValueType, ref.isConst(), ref.isVolatile());
