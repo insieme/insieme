@@ -694,6 +694,32 @@ TEST(PrettyPrinter, FunctionTypes) {
 //	EXPECT_EQ("method C::(A, B) ~> R", toString(PrettyPrinter(funF)));
 }
 
+TEST(PrettyPrinter, Switch) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	std::string input = ""
+                        "{\n"
+                        "    switch(5) {\n"
+                        "        case 1: {\n"
+                        "            1;\n"
+                        "        }\n"
+                        "        case 2: {\n"
+                        "            2;\n"
+                        "        }\n"
+                        "        default: {\n"
+                        "            3;\n"
+                        "        }\n"
+                        "    }\n"
+                        "}";
+
+	auto ir = b.parseStmt(input);
+
+	PrettyPrinter printer(ir);
+
+	EXPECT_EQ(input, toString(printer));
+}
+
 TEST(PrettyPrinter, LambdaTypes) {
 	NodeManager manager;
 	IRBuilder builder(manager);
