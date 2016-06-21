@@ -36,6 +36,8 @@
 
 #include <gtest/gtest.h>
 
+#include <fstream>
+
 #include "insieme/analysis/datalog/boolean_analysis.h"
 #include "insieme/core/ir_builder.h"
 
@@ -270,6 +272,30 @@ namespace datalog {
 		)";
 
 		EXPECT_TRUE(isFalse(code));
+
+	}
+
+	TEST(BooleanValue, FailureDetection) {
+
+		auto& builder = getBuilder();
+
+		auto input = R"(()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; return *a; }())";
+		EXPECT_TRUE(isTrue(input));
+
+		input = "ref_deref";
+		EXPECT_TRUE(isTrue(input));
+
+		std::ofstream outputFile("/tmp/insieme_ir_text_dump.txt");
+		if (outputFile.is_open()) {
+			dumpText(builder.parse(input), outputFile, true);
+			outputFile.close();
+		}
+
+		input = "(x : 'a)-> 'a{ return x; }(ref_deref)";
+		EXPECT_TRUE(isTrue(input));
+
+		EXPECT_TRUE( isTrue("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; return *a; }()"));
+
 
 	}
 
