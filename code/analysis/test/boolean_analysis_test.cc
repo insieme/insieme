@@ -277,25 +277,15 @@ namespace datalog {
 
 	TEST(BooleanValue, FailureDetection) {
 
-		auto& builder = getBuilder();
-
-		auto input = R"(()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; return *a; }())";
-		EXPECT_TRUE(isTrue(input));
-
-		input = "ref_deref";
-		EXPECT_TRUE(isTrue(input));
-
-		std::ofstream outputFile("/tmp/insieme_ir_text_dump.txt");
-		if (outputFile.is_open()) {
-			dumpText(builder.parse(input), outputFile, true);
-			outputFile.close();
+		{
+			auto input = "ref_assign";
+			assert_decl(ASSERT_DEATH(isFalse(input), "Error: Found a ref_assign whose parent is not a CallExpr!"););
 		}
 
-		input = "(x : 'a)-> 'a{ return x; }(ref_deref)";
-		EXPECT_TRUE(isTrue(input));
-
-		EXPECT_TRUE( isTrue("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; return *a; }()"));
-
+		{
+			auto input = "(x : 'a)-> 'a{ return x; }(ref_assign)";
+			assert_decl(ASSERT_DEATH(isFalse(input), "Error: Found a ref_assign whose parent is not a CallExpr!"););
+		}
 
 	}
 

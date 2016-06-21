@@ -97,7 +97,7 @@ namespace framework {
 				if (entry.isa<core::ExpressionPtr>() && core::lang::isBuiltIn(entry)) {
 //					std::cout << "Named construct: " << core::lang::getConstructName(entry)
 //					          << " has unique id " << newIndex << " and address "
-//					          ir.dl<< core::NodeAddress(node) << "!" << std::endl;
+//					          << core::NodeAddress(node) << "!" << std::endl;
 					insert("NamedConstruct", core::lang::getConstructName(entry), newIndex);
 				}
 
