@@ -1344,21 +1344,21 @@ TEST(PrettyPrinter, ComparisonOperations) {
 	}
 
 	{
-		/*
-		// char comparison
-		std::string str_eq("\"a\"==\"b\"");
-		std::string str_ne("a!=b");
-		std::string str_lt("a<b");
-		std::string str_gt("a>b");
-		std::string str_le("a<=b");
-		std::string str_ge("a>=b");
 
-		auto ir_eq = b.parseExpr("char_eq(gen_char(a),gen_char(b))");
-		auto ir_ne = b.parseExpr("char_ne(a,b)");
-		auto ir_lt = b.parseExpr("char_lt(a,b)");
-		auto ir_gt = b.parseExpr("char_gt(a,b)");
-		auto ir_le = b.parseExpr("char_le(a,b)");
-		auto ir_ge = b.parseExpr("char_ge(a,b)");
+		// char comparison
+		std::string str_eq("\'a\'==\'b\'");
+		std::string str_ne("\'a\'!=\'b\'");
+		std::string str_lt("\'a\'<\'b\'");
+		std::string str_gt("\'a\'>\'b\'");
+		std::string str_le("\'a\'<=\'b\'");
+		std::string str_ge("\'a\'>=\'b\'");
+
+		auto ir_eq = b.parseExpr("char_eq(\'a\',\'b\')");
+		auto ir_ne = b.parseExpr("char_ne(\'a\',\'b\')");
+		auto ir_lt = b.parseExpr("char_lt(\'a\',\'b\')");
+		auto ir_gt = b.parseExpr("char_gt(\'a\',\'b\')");
+		auto ir_le = b.parseExpr("char_le(\'a\',\'b\')");
+		auto ir_ge = b.parseExpr("char_ge(\'a\',\'b\')");
 
 		EXPECT_EQ(str_eq, toString(PrettyPrinter(ir_eq)));
 		EXPECT_EQ(str_ne, toString(PrettyPrinter(ir_ne)));
@@ -1366,7 +1366,7 @@ TEST(PrettyPrinter, ComparisonOperations) {
 		EXPECT_EQ(str_gt, toString(PrettyPrinter(ir_gt)));
 		EXPECT_EQ(str_le, toString(PrettyPrinter(ir_le)));
 		EXPECT_EQ(str_ge, toString(PrettyPrinter(ir_ge)));
-		*/
+
 	}
 }
 
