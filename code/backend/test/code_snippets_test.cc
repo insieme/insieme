@@ -609,7 +609,7 @@ namespace backend {
 			// create backend instance
 			auto be = sequential::SequentialBackend::getDefault();
 
-			// upbdate backend configuration
+			// update backend configuration
 			be->getConfiguration().addIRCodeAsComment = true;
 
 			LOG(INFO) << "Converting IR to C...";
@@ -621,7 +621,7 @@ namespace backend {
 			EXPECT_PRED2(notContainsSubString, code, "<?>");
 			EXPECT_PRED2(notContainsSubString, code, "<a>");
 			EXPECT_PRED2(notContainsSubString, code, "UNSUPPORTED");
-			EXPECT_PRED2(containsSubString, code, "{main = () -> int<4> {\n        return g(f());\n    };\n}");
+			EXPECT_PRED2(containsSubString, code, "{main = function () -> int<4> {\n        return g(f());\n    };\n}");
 
 			// try compiling the code fragment
 			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

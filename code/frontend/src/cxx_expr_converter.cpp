@@ -276,9 +276,9 @@ namespace conversion {
 		/// Resize the array created by an array create call (required due to mismatched size reported for initializer expressions in new[])
 		core::ExpressionPtr resizeArrayCreate(const Converter& converter, core::ExpressionPtr createExpr, const core::ExpressionPtr& newSize) {
 			auto& nodeMan = createExpr->getNodeManager();
+			auto& builder = converter.getIRBuilder();
 			auto& refExt = nodeMan.getLangExtension<core::lang::ReferenceExtension>();
-			bool hasDeref = refExt.isCallOfRefDeref(createExpr);
-			if(hasDeref) createExpr = core::analysis::getArgument(createExpr, 0);
+			if(refExt.isCallOfRefDeref(createExpr)) createExpr = core::analysis::getArgument(createExpr, 0);
 
 			auto initExpr = createExpr.isa<core::InitExprPtr>();
 			frontend_assert(initExpr) << "Trying to resize array creation, but expression is not init";
@@ -289,14 +289,78 @@ namespace conversion {
 			frontend_assert(core::lang::isArray(subTy)) << "Expected array type, got " << *subTy;
 			auto arrTy = core::lang::ArrayType(subTy);
 
-			// need to implement this for non-const size (approach same as with C VLAs)
 			auto form = core::arithmetic::toFormula(newSize);
 			frontend_assert(form.isConstant()) << "Non const-sized new[] not yet implemented";
 			arrTy.setSize(form.getIntegerValue());
 
-			core::ExpressionPtr retIr = converter.getIRBuilder().initExprTemp(arrTy, initExpr.getInitExprList());
-			if(hasDeref) retIr = converter.getIRBuilder().deref(retIr);
+			core::ExpressionPtr retIr = builder.initExpr(builder.undefinedNew((core::GenericTypePtr)arrTy), initExpr.getInitExprList());
 			return retIr;
+		}
+	}
+
+	namespace {
+		core::ExpressionPtr buildArrayNew(Converter& converter, const clang::CXXNewExpr* newExpr, const core::TypePtr& elemType) {
+			auto& builder = converter.getIRBuilder();
+			auto& basic = converter.getNodeManager().getLangBasic();
+			auto arrayLenBase = converter.convertExpr(newExpr->getArraySize());
+			auto arrayLenExpr = builder.numericCast(arrayLenBase, basic.getUIntInf());
+
+			// allocate constant sized arrays types more simply
+			auto constArrayLen = core::arithmetic::toConstantInt(arrayLenExpr);
+			if(constArrayLen) {
+				auto irNewExp = builder.undefinedNew(core::lang::ArrayType::create(elemType, builder.uintLit(constArrayLen.get())));
+				// for class types, we need to build an init expr even if no initializer is supplied, to call constructors implicitly
+				if(newExpr->getConstructExpr()) {
+					irNewExp = builder.initExpr(irNewExp);
+				}
+				// otherwise, only build initexpr if we have an initializer
+				else if(newExpr->hasInitializer()) {
+					core::ExpressionPtr initializerExpr = converter.convertInitExpr(newExpr->getInitializer());
+					// make sure we allocate the correct amount of array elements with partial initialization
+					irNewExp = resizeArrayCreate(converter, initializerExpr, arrayLenBase);
+				}
+				return core::lang::buildPtrFromArray(irNewExp);
+			}
+
+			auto arrLenVarParam = builder.variable(builder.refType(basic.getUIntInf()));
+			auto arrLenVar = builder.variable(basic.getUIntInf());
+			auto arrType = core::lang::ArrayType::create(elemType, arrLenVar);
+			auto arrLenVarDecl = builder.declarationStmt(arrLenVar, builder.deref(arrLenVarParam));
+			// generate memory location
+			auto memloc = builder.undefinedNew(arrType);
+			auto arr = memloc;
+			// build our init function
+			core::TypeList initFunParamTypes { basic.getUIntInf() };
+			core::VariableList initFunParams { arrLenVarParam };
+			core::ExpressionList initFunArguments { arrayLenExpr };
+			// for class types, we need to build an init expr even if no initializer is supplied, to call constructors implicitly
+			if(newExpr->getConstructExpr()) {
+				arr = builder.initExpr(memloc);
+			}
+			else if(newExpr->hasInitializer()) {
+				// convert the initializer to a temporary init expression and then use its init expressions
+				auto tempInits = converter.convertInitExpr(newExpr->getInitializer());
+				if(tempInits->getNodeType() != core::NT_InitExpr) tempInits = core::analysis::getArgument(tempInits, 0);
+				for(auto expr : tempInits.as<core::InitExprPtr>()->getInitExprs()) {
+					auto exprType = expr->getType();
+					if(core::analysis::isRefType(exprType)) exprType = core::analysis::getReferencedType(exprType);
+					auto paramType = builder.refType(exprType, true, false, core::lang::ReferenceType::Kind::CppReference);
+					initFunParamTypes.push_back(paramType);
+					initFunParams.push_back(builder.variable(paramType));
+					initFunArguments.push_back(expr);
+				}
+				core::ExpressionList initList;
+				for(auto i = initFunParams.cbegin()+1; i != initFunParams.cend(); ++i) {
+					initList.push_back(builder.deref(*i));
+				}
+				arr = builder.initExpr(memloc, initList);
+			}
+			auto initFunRetType = core::lang::buildPtrType(elemType);
+			auto initFunType = builder.functionType(initFunParamTypes, initFunRetType);
+			auto initFunBody = builder.compoundStmt(arrLenVarDecl, builder.returnStmt(core::lang::buildPtrFromArray(arr), builder.refType(initFunRetType)));
+			auto initFun = builder.lambdaExpr(initFunType, initFunParams, initFunBody, "new_arr_fun");
+			// call the init function
+			return builder.callExpr(initFunRetType, initFun, initFunArguments);
 		}
 	}
 
@@ -306,34 +370,24 @@ namespace conversion {
 
 		frontend_assert(newExpr->getNumPlacementArgs() == 0) << "Placement new not yet supported";
 
-		// if no constructor is found, it is a new over a non-class type, can be any kind of pointer of array
 		core::TypePtr type = converter.convertType(newExpr->getAllocatedType());
-		if(!newExpr->getConstructExpr()) {
-			// for arrays, we need to allocate the right size
-			if(newExpr->isArray()) type = core::lang::ArrayType::create(type, converter.convertExpr(newExpr->getArraySize()));
 
-			// build new expression depending on whether or not we have an initializer expression
-			core::ExpressionPtr newExp;
-			if(newExpr->hasInitializer()) {
-				const clang::Expr* initializer = newExpr->getInitializer();
-				core::ExpressionPtr initializerExpr = converter.convertInitExpr(initializer);
-				frontend_assert(initializerExpr);
-				// make sure we allocate the correct amount of array elements with partial initialization
-				if(newExpr->isArray()) initializerExpr = resizeArrayCreate(converter, initializerExpr, converter.convertExpr(newExpr->getArraySize()));
-				newExp = builder.refNew(initializerExpr);
-			} else {
-				newExp = builder.undefinedNew(type);
+		if(newExpr->isArray()) {
+			retExpr = buildArrayNew(converter, newExpr, type);
+		} else {
+			// if no constructor is found, it is a new over a non-class type
+			if(!newExpr->getConstructExpr()) {
+				// build new expression depending on whether or not we have an initializer expression
+				core::ExpressionPtr newExp;
+				if(newExpr->hasInitializer()) {
+					newExp = builder.refNew(Visit(newExpr->getInitializer()));
+				} else {
+					newExp = builder.undefinedNew(type);
+				}
+				retExpr = core::lang::buildPtrFromRef(newExp);
 			}
-
-			// initialize pointer either from ref for scalars or from array
-			retExpr = newExpr->isArray() ? core::lang::buildPtrFromArray(newExp) : core::lang::buildPtrFromRef(newExp);
-		}
-		// we have a constructor, so we are building a class
-		else {
-			if(newExpr->isArray()) {
-				retExpr = utils::buildObjectArrayNew(type, converter.convertExpr(newExpr->getArraySize()),
-					                                 converter.getFunMan()->lookup(newExpr->getConstructExpr()->getConstructor()));
-			} else {
+			// we have a constructor, so we are building a class
+			else {
 				retExpr = core::lang::buildPtrFromRef(convertConstructExprInternal(converter, newExpr->getConstructExpr(), false));
 			}
 		}
@@ -347,17 +401,33 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang::CXXDeleteExpr* deleteExpr) {
 		core::ExpressionPtr retExpr;
 		LOG_EXPR_CONVERSION(deleteExpr, retExpr);
+		auto& builder = converter.getIRBuilder();
 
 		// convert the target of our delete expr
 		core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
 		frontend_assert(core::lang::isPointer(exprToDelete)) << "\"delete\" called on non-pointer, not supported.";
 
-		// make sure we delete a ref array if we have an array delete
 		auto toDelete = core::lang::buildPtrToRef(exprToDelete);
-		if(deleteExpr->isArrayForm()) toDelete = core::lang::buildPtrToArray(exprToDelete);
+		// make sure we delete a ref array if we have an array delete
+		if(deleteExpr->isArrayForm()) {
+			toDelete = core::lang::buildPtrToArray(exprToDelete);
+		} else {
+			// build destructor call if required
+			auto irType = converter.convertType(deleteExpr->getDestroyedType());
+			if(auto genType = irType.isa<core::GenericTypePtr>()) {
+				const auto& tuT = converter.getIRTranslationUnit().getTypes();
+				auto ttIt = tuT.find(genType);
+				if(ttIt != tuT.cend()) {
+					auto rec = ttIt->second->getRecord();
+					if(rec->hasDestructor()) {
+						toDelete = builder.callExpr(rec->getDestructor(), toDelete);
+					}
+				}
+			}
+		}
 
 		// destructor calls are implicit in inspire 2.0, just like C++
-		retExpr = converter.getIRBuilder().refDelete(toDelete);
+		retExpr = builder.refDelete(toDelete);
 
 		return retExpr;
 	}

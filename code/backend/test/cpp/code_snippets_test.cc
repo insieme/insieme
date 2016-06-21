@@ -40,20 +40,20 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/utils/compiler/compiler.h"
 
 #include "insieme/utils/logging.h"
 
-
 namespace insieme {
 namespace backend {
 
+	// global because it increases the testing speed by ~ factor 2
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
 
 	TEST(CppSnippet, CppReference) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
@@ -88,9 +88,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, CppRValueReference) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
@@ -123,9 +120,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, ReferenceParameter) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(R"(
 				def IMP_test = function (v1 : ref<int<4>,f,f,cpp_ref>) -> unit { };
 				int<4> function IMP_main (){
@@ -155,9 +149,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, ReferenceVariableDeclaration) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(R"(
 				int<4> function IMP_main () {
 					var ref<int<4>,f,f,plain> bla = 2;
@@ -186,9 +177,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, ReferenceVariableUse) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(R"(
 				def IMP_test = function (v1 : ref<int<4>,f,f,cpp_ref>) -> unit { };
 				int<4> function IMP_main () {
@@ -196,6 +184,7 @@ namespace backend {
 					var ref<int<4>,f,f,cpp_ref> alb = bla;
 					IMP_test(alb);
 					bla + alb;
+					alb = 8;
 					return 0;
 				}
 		)");
@@ -207,46 +196,11 @@ namespace backend {
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		// std::cout << "Converted: \n" << *converted << std::endl;
-
-		// check presence of relevant code
-		auto code = toString(*converted);
-		EXPECT_PRED2(containsSubString, code, "IMP_test(alb)");
-
-		// try compiling the code fragment
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-		compiler.addFlag("-c"); // do not run the linker
-		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
-	}
-
-	TEST(CppSnippet, ReferenceVariableMethodUse) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		core::ProgramPtr program = builder.parseProgram(R"(
-				def struct A {
-					lambda foo = () -> unit {}
-				};
-
-				int<4> function IMP_main () {
-					var ref<A> a;
-					var ref<A,f,f,cpp_ref> b = a;
-					b.foo();
-					return 0;
-				}
-		)");
-
-		ASSERT_TRUE(program);
-		// std::cout << "Program: " << dumpColor(program) << std::endl;
-		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
-
-		// use sequential backend to convert into C++ code
-		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-		ASSERT_TRUE((bool)converted);
-		// std::cout << "Converted: \n" << *converted << std::endl;
+		//std::cout << "Converted: \n" << *converted << std::endl;
 
 		// check presence of relevant code
 		auto code = utils::removeCppStyleComments(toString(*converted));
+		EXPECT_PRED2(containsSubString, code, "IMP_test(alb)");
 		EXPECT_PRED2(notContainsSubString, code, "*");
 
 		// try compiling the code fragment
@@ -255,10 +209,51 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
-	TEST(CppSnippet, RefPtrDecl) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
+	TEST(CppSnippet, ReferenceVariableMethodUse) {
+		core::ProgramPtr program = builder.parseProgram(R"(
+				def struct A {
+					lambda foo = () -> unit {}
+				};
 
+				def struct B {
+					v : int<4>;
+				};
+
+				def fun = (b : ref<B,t,f,cpp_ref>) -> unit {
+					auto a = b.v;
+				};
+
+				int<4> function IMP_main () {
+					var ref<A> a;
+					var ref<A,f,f,cpp_ref> a2 = a;
+					a2.foo();
+					var ref<B> b;
+					fun(ref_kind_cast(b,type_lit(cpp_ref)));
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = utils::removeCppStyleComments(toString(*converted));
+		EXPECT_PRED2(notContainsSubString, code, "*");
+		EXPECT_PRED2(containsSubString, code, "int32_t const& a = b.v;");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, RefPtrDecl) {
 		//int i;
 		//int* i_ptr = &i;
 		//int& i_ref = i;
@@ -300,9 +295,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, RefPtrFun) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		//int i;
 		//int* i_ptr = &i;
 		//int& i_ref = i;
@@ -344,9 +336,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, RefPtrRet) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(R"(
 			def gen_ref = function () -> ref<int<4>,f,f,cpp_ref> {
 				return ptr_to_ref(*lit("gr" : ref<ptr<int<4>>,f,f,plain>));
@@ -382,9 +371,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, MemberFunctions) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
@@ -425,10 +411,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, TrivialClass) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 
@@ -461,10 +443,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, RecursiveClass) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 
@@ -497,10 +475,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, MutualRecursiveClass) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 
@@ -540,10 +514,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, TheEssentialSix) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 
@@ -590,10 +560,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, TheEssentialSixMutualRecursion) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 
@@ -651,11 +617,7 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
-
 	TEST(CppSnippet, DefaultOperators) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 //		struct S {
 //		int a;
 //			~S() {
@@ -724,10 +686,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, Constructors) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 
@@ -744,7 +702,7 @@ namespace backend {
 					}
 				};
 
-				def A::ctor f = ( x : int, y : int, z : int ) {
+				def A:: f = ctor ( x : int, y : int, z : int ) {
 					<ref<int>>(this.x){x + y + z};
 				};
 
@@ -788,9 +746,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, InterceptedConstructors) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		auto program = builder.normalize(builder.parseProgram(R"(
 			def struct S {};
 			int<4> main() {
@@ -823,9 +778,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, ConstructorsInitConstructor) {
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
 		auto res = builder.normalize(builder.parseProgram(R"(
 			alias int = int<4>;
 
@@ -894,9 +846,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, ConstructorsChained) {
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
 		auto res = builder.normalize(builder.parseProgram(R"(
 			decl ctor:ChainedConstructor::(int<4>);
 			def struct ChainedConstructor {
@@ -937,9 +886,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, ConstructorsBase) {
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
 		auto res = builder.normalize(builder.parseProgram(R"(
 			def struct Base {
 				a : int<4>;
@@ -979,9 +925,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, Globals) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(R"(
 			def struct A {
 				x : int<4>;
@@ -1021,10 +964,6 @@ namespace backend {
 
 
 	TEST(CppSnippet, Destructor) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 
@@ -1085,10 +1024,6 @@ namespace backend {
 
 
 	TEST(CppSnippet, MemberFunctionsExausted) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 
@@ -1167,10 +1102,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, MemberFunctionsRecursive) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 
@@ -1225,10 +1156,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, PureVirtualMemberFunctions) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a code fragment including some member functions
 		core::ProgramPtr program = builder.parseProgram(R"(
 				alias int = int<4>;
 
@@ -1284,9 +1211,6 @@ namespace backend {
 
 
 	TEST(CppSnippet, Counter) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		// create a code fragment implementing a counter class
 		core::ProgramPtr program = builder.parseProgram(
 		    R"(
@@ -1355,9 +1279,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, Enum) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(R"( using "ext.enum";
 				int<4> function IMP_main () {
 					var ref<(type<enum_def<IMP_Bla,uint<8>,enum_entry<IMP_Bla_colon__colon_A,0>>>, uint<8>),f,f,plain> v0 = (type_lit(enum_def<IMP_Bla,uint<8>,enum_entry<IMP_Bla_colon__colon_A,0>>), 0ul);
@@ -1386,9 +1307,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, ImplicitInitConstructorSemantics) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(R"(
 			def struct IMP_A {
 				i : int<4>;
@@ -1430,9 +1348,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, ImplicitCallArgConstructorSemantics) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(R"(
 			def struct IMP_A {
 				i : int<4>;
@@ -1470,10 +1385,6 @@ namespace backend {
 	}
 
 	TEST(CppSnippet, DISABLED_Inheritance) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a code fragment implementing a counter class
 		core::ProgramPtr program = builder.parseProgram(
 		    R"(
 				alias int = int<4>;
@@ -1544,193 +1455,7 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
-//	TEST(CppSnippet, ClassMetaInfo) {
-//		core::NodeManager mgr;
-//		core::FrontendIRBuilder builder(mgr);
-//
-//		// create a class type
-//		auto counterType = builder.parseType("let Counter = struct { int<4> value; }; Counter");
-//		ASSERT_TRUE(counterType);
-//
-//		// create symbol map for remaining task
-//		std::map<string, core::NodePtr> symbols;
-//		symbols["Counter"] = counterType;
-//
-//		auto parseExpr = [&](const string& code) { return builder.parseExpr(code, symbols).as<core::LambdaExprPtr>(); };
-//		auto parseType = [&](const string& code) { return builder.parseType(code, symbols).as<core::FunctionTypePtr>(); };
-//
-//		// add member functions to meta info
-//		core::ClassMetaInfo info;
-//
-//
-//		// ------- Constructor ----------
-//
-//		// default
-//		info.addConstructor(parseExpr("lambda ctor Counter::() { }"));
-//
-//		// with value
-//		info.addConstructor(parseExpr("lambda ctor Counter::(int<4> x) { this.value = x; }"));
-//
-//		// copy constructor
-//		info.addConstructor(parseExpr("lambda ctor Counter::(ref<Counter> c) { this.value = *(c.value); }"));
-//
-//		// ------- member functions ----------
-//
-//		// a non-virtual, const function
-//		info.addMemberFunction("get", parseExpr("lambda Counter::()->int<4> { return *this.value; }"), false, true);
-//
-//		// a non-virtual, non-const function
-//		info.addMemberFunction("set", parseExpr("lambda Counter::(int<4> x)->unit { this.value = x; }"), false, false);
-//
-//		// a virtual, const function
-//		info.addMemberFunction("print", parseExpr(R"(lambda Counter::()->unit { print("%d\n", *this.value); })"), true, true);
-//
-//		// a virtual, non-const function
-//		info.addMemberFunction("clear", parseExpr("lambda Counter::()->unit { }"), true, false);
-//
-//		// a pure virtual, non-const function
-//		info.addMemberFunction("dummy1", builder.getPureVirtual(parseType("method Counter::()->int<4>")), true, false);
-//
-//		// a pure virtual, const function
-//		info.addMemberFunction("dummy2", builder.getPureVirtual(parseType("method Counter::()->int<4>")), true, true);
-//
-//		// std::cout << info << "\n";
-//
-//		// attach
-//		core::setMetaInfo(counterType, info);
-//
-//		// verify proper construction
-//		EXPECT_TRUE(core::checks::check(counterType).empty()) << core::checks::check(counterType);
-//
-//		// ------------ create code using the counter type --------
-//
-//		auto prog = builder.parseProgram("int<4> main() { decl ref<ref<Counter>> c; return *((*c).value); }", symbols);
-//
-//		EXPECT_TRUE(core::checks::check(prog).empty());
-//
-//		// generate code
-//		auto targetCode = sequential::SequentialBackend::getDefault()->convert(prog);
-//		ASSERT_TRUE((bool)targetCode);
-//
-//		// check generated code
-//		string code = toString(*targetCode);
-//		EXPECT_PRED2(containsSubString, code, "Counter();");
-//		EXPECT_PRED2(containsSubString, code, "Counter(int32_t p2);");
-//		EXPECT_PRED2(containsSubString, code, "Counter(Counter* p2);");
-//
-//		EXPECT_PRED2(containsSubString, code, "int32_t get() const;");
-//		EXPECT_PRED2(containsSubString, code, "void set(int32_t p2);");
-//		EXPECT_PRED2(containsSubString, code, "virtual void print() const;");
-//		EXPECT_PRED2(containsSubString, code, "virtual void clear();");
-//
-//		EXPECT_PRED2(containsSubString, code, "virtual int32_t dummy1() =0;");
-//		EXPECT_PRED2(containsSubString, code, "virtual int32_t dummy2() const =0;");
-//
-//		//		std::cout << *targetCode;
-//
-//		// try compiling the code fragment
-//		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-//		compiler.addFlag("-c"); // do not run the linker
-//		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-//
-//
-//		// -------------------------------------------- add destructor -----------------------------------------
-//
-//		info.setDestructor(parseExpr("lambda ~Counter::() {}"));
-//		core::setMetaInfo(counterType, info);
-//		EXPECT_TRUE(core::checks::check(counterType).empty()) << core::checks::check(counterType);
-//
-//		targetCode = sequential::SequentialBackend::getDefault()->convert(prog);
-//		ASSERT_TRUE((bool)targetCode);
-//
-//		//		std::cout << *targetCode;
-//
-//		// check generated code
-//		code = toString(*targetCode);
-//		EXPECT_PRED2(containsSubString, code, "~Counter();");
-//		EXPECT_PRED2(notContainsSubString, code, "virtual ~Counter();");
-//		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-//
-//
-//		// ---------------------------------------- add virtual destructor -----------------------------------------
-//
-//		info.setDestructorVirtual();
-//		core::setMetaInfo(counterType, info);
-//		EXPECT_TRUE(core::checks::check(counterType).empty()) << core::checks::check(counterType);
-//
-//		targetCode = sequential::SequentialBackend::getDefault()->convert(prog);
-//		ASSERT_TRUE((bool)targetCode);
-//
-//		//		std::cout << *targetCode;
-//
-//		// check generated code
-//		code = toString(*targetCode);
-//		EXPECT_PRED2(containsSubString, code, "virtual ~Counter();");
-//		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-//	}
-//
-//
-//	TEST(CppSnippet, VirtualFunctionCall) {
-//		core::NodeManager mgr;
-//		core::FrontendIRBuilder builder(mgr);
-//
-//		std::map<string, core::NodePtr> symbols;
-//
-//		// create a class A with a virtual function
-//		core::TypePtr classA = builder.parseType("let A = struct { }; A");
-//		symbols["A"] = classA;
-//
-//		auto funType = builder.parseType("method A::(int<4>)->int<4>", symbols).as<core::FunctionTypePtr>();
-//
-//		core::ClassMetaInfo infoA;
-//		infoA.addMemberFunction("f", builder.getPureVirtual(funType), true);
-//		core::setMetaInfo(classA, infoA);
-//
-//		// create a class B
-//		core::TypePtr classB = builder.parseType("let B = struct : A { }; B", symbols);
-//		symbols["B"] = classB;
-//
-//		core::ClassMetaInfo infoB;
-//		infoB.addMemberFunction("f", builder.parseExpr("lambda B::(int<4> x)->int<4> { return x + 1; }", symbols).as<core::LambdaExprPtr>(), true);
-//		core::setMetaInfo(classB, infoB);
-//
-//		auto res = builder.parseProgram(R"(
-//				let f = expr lit("f" : method A::(int<4>)->int<4>);
-//
-//				let ctorB1 = lambda ctor B::() { };
-//				let ctorB2 = lambda ctor B::(int<4> x) { };
-//
-//				int<4> main() {
-//					decl ref<A> x = ctorB1(new(undefined(B)));
-//					decl ref<A> y = ctorB2(new(undefined(B)), 5);
-//					x->f(3);
-//					delete(x);
-//					return 0;
-//				})",
-//		                                symbols);
-//
-//		ASSERT_TRUE(res);
-//
-//		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
-//
-//		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
-//		ASSERT_TRUE((bool)targetCode);
-//
-//		// std::cout << *targetCode;
-//
-//		// check generated code
-//		auto code = toString(*targetCode);
-//		EXPECT_PRED2(containsSubString, code, "(*x).f(3);");
-//
-//		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-//		compiler.addFlag("-c"); // do not run the linker
-//		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-//	}
-
 	TEST(CppSnippet, ConstructorCall) {
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
 		// create a example code using all 3 ctor variants
 		auto res = builder.parseProgram(
 		    R"(
@@ -1793,67 +1518,172 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 	}
 
-	//TODO this seems to hang in an endless loop
-	/*TEST(CppSnippet, DestructorCall) {
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
+	TEST(CppSnippet, NewDelete) {
+		auto res = builder.parseProgram(R"(
+			def struct IMP_SimplestConstructor { };
+			def struct IMP_SlightlyLessSimpleConstructor {
+				i : int<4>;
+				ctor function (v1 : ref<int<4>,f,f,plain>) {
+					(this).i = *v1;
+				}
+			};
+			int<4> main() {
 
-		auto res = builder.parseProgram(
-		    R"(
-					alias int = int<4>;
+				var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_ref(ref_new(type_lit(int<4>)));
+				ref_delete(ptr_to_ref(*i));
+				var ref<ptr<int<4>,f,f>,f,f,plain> j = ptr_from_ref(ref_new_init(42));
+				ref_delete(ptr_to_ref(*j));
 
-					def struct A {
+				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o1 = ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor))));
+				ref_delete(IMP_SimplestConstructor::~(ptr_to_ref(*o1)));
 
-						x : int;
+				var ref<ptr<IMP_SlightlyLessSimpleConstructor>,f,f,plain> o2 = ptr_from_ref(IMP_SlightlyLessSimpleConstructor::(ref_new(type_lit(IMP_SlightlyLessSimpleConstructor)), 42));
+				ref_delete(IMP_SlightlyLessSimpleConstructor::~(ptr_to_ref(*o2)));
 
-						ctor (x : int) {
-							this.x = x;
-							print("Creating: %d\n", x);
-						}
-
-						dtor () {
-							print("Clearing: %d\n", *x);
-							x = 0;
-						}
-					};
-
-					int main() {
-
-						// create an un-initialized memory location
-						var ref<A> a = A::(a, 1);
-
-						// init using in-place constructor
-						A::(a, 2);
-
-						// invoke destructor
-						A::~(a);
-
-						return 0;
-					}
-				)");
+				return 0;
+			}
+		)");
 
 		ASSERT_TRUE(res);
 
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		// std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "(*a).A::~A()");
+		EXPECT_PRED2(containsSubString, code, "int32_t* i = (int32_t*)malloc(sizeof(int32_t));");
+		EXPECT_PRED2(containsSubString, code, "free(i);");
+		EXPECT_PRED2(containsSubString, code, "int32_t* j = _ref_new___insieme_type_2(42);");
+		EXPECT_PRED2(containsSubString, code, "free(j);");
+		EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o1 = new IMP_SimplestConstructor();");
+		EXPECT_PRED2(containsSubString, code, "delete o1;");
+		EXPECT_PRED2(containsSubString, code, "IMP_SlightlyLessSimpleConstructor* o2 = new IMP_SlightlyLessSimpleConstructor(42);");
+		EXPECT_PRED2(containsSubString, code, "delete o2;");
 
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-	}*/
+	}
+
+	TEST(CppSnippet, NewDeleteArrayFixed) {
+		auto res = builder.parseProgram(R"(
+			def struct IMP_SimplestConstructor { };
+			int<4> main() {
+				var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(ref_new(type_lit(array<int<4>,50>)));
+				ref_delete(ptr_to_array(*i));
+				var ref<ptr<int<4>>,f,f,plain> j = ptr_from_array(<ref<array<int<4>,50>,f,f,plain>>(ref_new(type_lit(array<int<4>,50>))) {1, 2, 3});
+				ref_delete(ptr_to_array(*j));
+				var ref<ptr<array<int<4>,3>>,f,f,plain> k = ptr_from_array(ref_new(type_lit(array<array<int<4>,3>,50>)));
+				ref_delete(ptr_to_array(*k));
+
+				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o1 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {});
+				ref_delete(ptr_to_array(*o1));
+				var ref<IMP_SimplestConstructor,f,f,plain> v0 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
+				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o2 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))});
+				ref_delete(ptr_to_array(*o2));
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		//std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "int32_t* i = new int32_t[50];");
+		EXPECT_PRED2(containsSubString, code, "delete[] i;");
+		EXPECT_PRED2(containsSubString, code, "int32_t* j = new int32_t[50]{1, 2, 3};");
+		EXPECT_PRED2(containsSubString, code, "delete[] j;");
+		EXPECT_PRED2(containsSubString, code, "__insieme_type_2* k = new __insieme_type_2[50];");
+		EXPECT_PRED2(containsSubString, code, "delete[] k;");
+
+		EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o1 = new IMP_SimplestConstructor[3];");
+		EXPECT_PRED2(containsSubString, code, "delete[] o1;");
+		EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o2 = new IMP_SimplestConstructor[3]{(IMP_SimplestConstructor const&)v0, (IMP_SimplestConstructor const&)v0};");
+		EXPECT_PRED2(containsSubString, code, "delete[] o2;");
+
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+	TEST(CppSnippet, NewDeleteArrayVariable) {
+		auto res = builder.parseProgram(R"(
+			def struct IMP_SimplestConstructor { };
+			def new_arr_fun_0 = function (v0 : ref<uint<inf>,f,f,plain>) -> ptr<int<4>> {
+				var uint<inf> bla = *v0;
+				return ptr_from_array(ref_new(type_lit(array<int<4>,#bla>)));
+			};
+			def new_arr_fun_1 = function (v0 : ref<uint<inf>,f,f,plain>, v1 : ref<int<4>,t,f,cpp_ref>, v2 : ref<int<4>,t,f,cpp_ref>, v3 : ref<int<4>,t,f,cpp_ref>) -> ptr<int<4>> {
+				var uint<inf> v4 = *v0;
+				return ptr_from_array(<ref<array<int<4>,#v4>,f,f,plain>>(ref_new(type_lit(array<int<4>,#v4>))) {*v1, *v2, *v3});
+			};
+			def new_arr_fun_2 = function (v0 : ref<uint<inf>,f,f,plain>) -> ptr<IMP_SimplestConstructor> {
+				var uint<inf> v1 = *v0;
+				return ptr_from_array(<ref<array<IMP_SimplestConstructor,#v1>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,#v1>))) {});
+			};
+			def new_arr_fun_3 = function (v0 : ref<uint<inf>,f,f,plain>, v1 : ref<IMP_SimplestConstructor,t,f,cpp_ref>, v2 : ref<IMP_SimplestConstructor,t,f,cpp_ref>) -> ptr<IMP_SimplestConstructor> {
+				var uint<inf> v3 = *v0;
+				return ptr_from_array(<ref<array<IMP_SimplestConstructor,#v3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,#v3>))) {*v1, *v2});
+			};
+			int<4> main() {
+				{
+					var ref<int<4>,f,f,plain> v0 = 50;
+					var ref<ptr<int<4>>,f,f,plain> v1 = new_arr_fun_0(num_cast(*v0+5, type_lit(uint<inf>)));
+					ref_delete(ptr_to_array(*v1));
+				}
+				{
+					var ref<int<4>,f,f,plain> v0 = 50;
+					var ref<ptr<int<4>>,f,f,plain> v1 = new_arr_fun_1(num_cast(*v0+5, type_lit(uint<inf>)), 1, 2, 3);
+					ref_delete(ptr_to_array(*v1));
+				}
+				{
+					var ref<int<4>,f,f,plain> v0 = 30;
+					var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v1 = new_arr_fun_2(num_cast(*v0+5, type_lit(uint<inf>)));
+					ref_delete(ptr_to_array(*v1));
+				}
+				{
+					var ref<int<4>,f,f,plain> v0 = 50;
+					var ref<IMP_SimplestConstructor,f,f,plain> v1 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
+					var ref<IMP_SimplestConstructor,f,f,plain> v2 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
+					var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v3 = new_arr_fun_3(num_cast(*v0+5, type_lit(uint<inf>)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v2, type_lit(t), type_lit(f), type_lit(cpp_ref)));
+					ref_delete(ptr_to_array(*v3));
+				}
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		//std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "int32_t* v1 = new_arr_fun_0((uint64_t)(v0 + 5));");
+		EXPECT_PRED2(containsSubString, code, "return new int32_t[v1];");
+		EXPECT_PRED2(containsSubString, code, "int32_t* var_3 = new_arr_fun_1((uint64_t)(var_2 + 5), 1, 2, 3);");
+		EXPECT_PRED2(containsSubString, code, "return new int32_t[v4]{v1, v2, v3};");
+		EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* var_5 = new_arr_fun_2((uint64_t)(var_4 + 5))");
+		EXPECT_PRED2(containsSubString, code, "return new IMP_SimplestConstructor[v1];");
+		EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* v3 = new_arr_fun_3((uint64_t)(var_6 + 5), (IMP_SimplestConstructor const&)var_7, (IMP_SimplestConstructor const&)v2);");
+		EXPECT_PRED2(containsSubString, code, "return new IMP_SimplestConstructor[v3]{v1, v2};");
+
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
 
 	TEST(CppSnippet, DISABLED_InitializerList2) {
 		// something including a super-constructor call
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
 		auto res = builder.normalize(builder.parseProgram(
 		    R"(
 					alias int = int<4>;
@@ -1908,10 +1738,6 @@ namespace backend {
 
 	TEST(CppSnippet, DISABLED_InitializerList3) {
 		// something including a super-constructor call
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
 		auto res = builder.normalize(builder.parseProgram(
 		    R"(
 					alias int = int<4>;
@@ -1966,117 +1792,8 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 	}
 
-	//TODO asserts in a semantic check
-	/*TEST(CppSnippet, DISABLED_InitializerList4) {
-		// something including a non-parameter!
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
-		auto res = builder.normalize(builder.parseProgram(
-		    R"(
-					alias int = int<4>;
-
-					def struct A {
-
-						x : int;
-						y : int;
-
-						ctor (x : int, y : int) {
-							this.x = x;
-							this.y = this.x + y;
-						}
-					};
-
-					int main() {
-
-						// call constructor
-						var ref<A> b = A::(b, 1, 2);
-
-						return 0;
-					}
-				)"));
-
-		ASSERT_TRUE(res);
-		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
-
-		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
-		ASSERT_TRUE((bool)targetCode);
-
-		//		std::cout << *targetCode;
-
-		// check generated code
-		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "A b((1), (2));");
-		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x), y((*this).x + y) {");
-
-		// check whether code is compiling
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-		compiler.addFlag("-c"); // do not run the linker
-		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-	}*/
-
-	//TODO try/catch not supported by the parser atm
-	/*TEST(CppSnippet, DISABLED_Exceptions) {
-		// something including a non-parameter!
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
-		auto res = builder.normalize(builder.parseProgram(
-		    R"(
-					let short = int<2>;
-					let int = int<4>;
-
-					int main() {
-
-						try {
-
-							throw 4;
-
-						} catch (int x) {
-							print("Catched integer %d\n", x);
-						} catch (short y) {
-							print("Catched short %d\n", y);
-						} catch (ref<short> z) {
-							print("Catched short %d\n", *z);
-//						} catch (any a) {
-//							print("Catched something!\n");
-						 }
-
-						return 0;
-					}
-				)"));
-
-		ASSERT_TRUE(res);
-		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
-
-		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
-		ASSERT_TRUE((bool)targetCode);
-
-		// std::cout << *targetCode;
-
-		// check generated code
-		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "throw 4;");
-		EXPECT_PRED2(containsSubString, code, "} catch(int32_t x) {");
-		EXPECT_PRED2(containsSubString, code, "} catch(int16_t y) {");
-		EXPECT_PRED2(containsSubString, code, "} catch(int16_t* z) {");
-//		EXPECT_PRED2(containsSubString, code, "} catch(...) {");
-
-		// check whether code is compiling
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-		compiler.addFlag("-c"); // do not run the linker
-		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-	}*/
-
-
 	TEST(CppSnippet, DISABLED_StaticVariableConst) {
 		// something including a non-parameter!
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
 		auto& ext = mgr.getLangExtension<core::lang::StaticVariableExtension>();
 
 		std::map<string, core::NodePtr> symbols;
@@ -2116,10 +1833,6 @@ namespace backend {
 
 	TEST(CppSnippet, DISABLED_StaticVariable) {
 		// something including a non-parameter!
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
 		auto& ext = mgr.getLangExtension<core::lang::StaticVariableExtension>();
 
 		std::map<string, core::NodePtr> symbols;
@@ -2160,10 +1873,6 @@ namespace backend {
 
 	TEST(CppSnippet, DISABLED_StaticVariableSingle) {
 		// something including a non-parameter!
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
 		auto& ext = mgr.getLangExtension<core::lang::StaticVariableExtension>();
 
 		std::map<string, core::NodePtr> symbols;
@@ -2203,10 +1912,6 @@ namespace backend {
 
 	TEST(CppSnippet, DISABLED_StaticVariableDefaultCtor) {
 		// something including a non-parameter!
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
 		auto& ext = mgr.getLangExtension<core::lang::StaticVariableExtension>();
 
 		std::map<string, core::NodePtr> symbols;

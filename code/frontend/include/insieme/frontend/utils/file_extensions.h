@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,45 +34,24 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
-
-#include "insieme/frontend/frontend.h"
-
-#include "test_utils.inc"
+#include <set>
+#include <string>
 
 namespace insieme {
 namespace frontend {
+namespace utils {
 
-	TEST(SrcFileTest, HelloWorldTest) {
-		fs::path tmpFile;
-		{
-			// create a temporary source file
-			Source file(
-			    R"(
+	/**
+	 *  contains all file extensions that are used for C
+	 */
+	static const std::set<string> cExtensions = {".c", ".i", ".h"};
 
-					#include <stdio.h>
-					
-					int main() {
-						printf("Hello World\n"); 
-						return 0; 
-					}
-	
-					)");
+	/**
+	 *  contains all file extensions that are used for C++
+	 */
+	static const std::set<string> cxxExtensions = {".C", ".cc", ".cp", ".cpp", ".CPP", ".cxx", ".c++", ".ii",
+		                                           ".H", ".hh", ".hp", ".hxx", ".hpp", ".HPP", ".h++", ".tcc"};
 
-			// check whether there is a temporary file
-			tmpFile = file.getPath();
-			EXPECT_TRUE(fs::exists(tmpFile));
-
-			// parse temporary file
-			core::NodeManager manager;
-			ConversionJob job(file);
-			auto code = job.execute(manager);
-			EXPECT_TRUE(code);
-		}
-
-		// check whether temporary file has been properly removed
-		EXPECT_FALSE(fs::exists(tmpFile));
-	}
-
-} // end namespace frontend
-} // end namespace insieme
+} // namespace utils
+} // namespace frontend
+} // namespace insieme

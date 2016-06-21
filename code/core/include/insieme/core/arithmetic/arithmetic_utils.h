@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -53,6 +53,15 @@ namespace core {
 	namespace arithmetic {
 
 		class NotAFormulaException;
+
+		/**
+		 * A function converting a given expression into a constant int value, if possible.
+		 *
+		 * @param expr the expression to be converted
+		 * @return an optional integer
+		 *
+		 */
+		boost::optional<int64_t> toConstantInt(const ExpressionPtr& expr);
 
 		/**
 		 * A function converting a given expression into an equivalent formula.

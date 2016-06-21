@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,7 +34,9 @@
  * regarding third party software licenses.
  */
 
+#ifndef _GLIBCXX_USE_NANOSLEEP
 #define _GLIBCXX_USE_NANOSLEEP
+#endif
 #include <gtest/gtest.h>
 #include "insieme/utils/timer.h"
 #include "insieme/utils/tasks/insieme_tasks.h"

@@ -1,3 +1,4 @@
+use_cpp=1
 libPaths="${boost_lib}"
 libNames="boost_thread","boost_system"
 includes="${boost_include}","./"

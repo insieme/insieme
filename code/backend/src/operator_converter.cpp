@@ -57,6 +57,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/complex.h"
 #include "insieme/core/lang/io.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
@@ -77,13 +78,20 @@ namespace backend {
 
 	namespace {
 
+		c_ast::ExpressionPtr derefIfNotCppRef(const c_ast::ExpressionPtr& cExpr, const core::ExpressionPtr& irExpr) {
+			// deref of a cpp ref is implicit
+			if(core::lang::isCppReference(irExpr) || core::lang::isCppRValueReference(irExpr)) {
+				return cExpr;
+			}
+			// otherwise, a deref is required
+			return c_ast::deref(cExpr);
+		}
 
 		c_ast::ExpressionPtr getAssignmentTarget(ConversionContext& context, const core::ExpressionPtr& expr) {
 			// convert expression
 			c_ast::ExpressionPtr res = context.getConverter().getStmtConverter().convertExpression(context, expr);
 
-			// a deref is required (implicit in C)
-			return c_ast::deref(res);
+			return derefIfNotCppRef(res, expr);
 		}
 
 
@@ -442,12 +450,7 @@ namespace backend {
 				return CONVERT_ARG(0);
 			}
 
-			// deref of a cpp ref is implicit
-			if(core::lang::isCppReference(ARG(0)) || core::lang::isCppRValueReference(ARG(0))) {
-				return CONVERT_ARG(0);
-			}
-
-			return c_ast::deref(CONVERT_ARG(0));
+			return derefIfNotCppRef(CONVERT_ARG(0), ARG(0));
 		};
 
 		res[refExt.getRefAssign()] = OP_CONVERTER {
@@ -575,7 +578,6 @@ namespace backend {
 		};
 
 		res[refExt.getRefDelete()] = OP_CONVERTER {
-			// TODO: fix when frontend is producing correct code
 
 			// do not free non-heap variables
 			if(ARG(0)->getNodeType() == core::NT_Variable) {
@@ -596,16 +598,17 @@ namespace backend {
 				}
 			}
 
+			// handle array delete
+			if(core::lang::isArray(core::analysis::getReferencedType(ARG(0)->getType()))) {
+				assert_true(LANG_EXT_PTR.isCallOfPtrToArray(ARG(0)));
+				return c_ast::deleteArrayCall(CONVERT_EXPR(core::analysis::getArgument(ARG(0), 0)));
+			}
+
 			// add dependency to stdlib.h (contains the free)
 			ADD_HEADER("stdlib.h");
 
 			// construct argument
 			c_ast::ExpressionPtr arg = CONVERT_ARG(0);
-
-			if(core::lang::isArray(core::analysis::getReferencedType(ARG(0)->getType()))) {
-				// TODO: call array destructor instead!!
-			}
-
 			return c_ast::call(C_NODE_MANAGER->create("free"), arg);
 		};
 
@@ -772,7 +775,8 @@ namespace backend {
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 
 			auto converted = CONVERT_ARG(0);
-			auto access = c_ast::access(c_ast::deref(converted), field);
+			auto thisObject = derefIfNotCppRef(converted, ARG(0));
+			auto access = c_ast::access(thisObject, field);
 
 			// handle inner initExpr
 			if(ARG(0).isa<core::InitExprPtr>()) {

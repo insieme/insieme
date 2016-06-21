@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,62 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "insieme/core/ir_visitor.h"
-#include "insieme/core/checks/full_check.h"
+/** Workaroung for libstdc++/libc bug.
+ *  There's an inconsistency between libstdc++ and libc regarding whether 
+ *  ::gets is declared or not, which is only evident when using certain 
+ *  compilers and language settings 
+ *  (tested positively with clang 3.9 --std=c++14 and libc 2.17).
+ */
 
-#include "insieme/frontend/frontend.h"
-#include "test_utils.inc"
+#include <initializer_list>  // force libstdc++ to include its config
+#undef _GLIBCXX_HAVE_GETS    // correct broken config
 
-namespace insieme {
-namespace frontend {
-
-	using namespace core;
-
-	TEST(C89Declarations, Basic) {
-		NodeManager man;
-		IRBuilder builder(man);
-
-		fs::path tmpFile;
-		{
-			// create a temporary source file
-			Source file(
-			    R"(
-#include <stdio.h>
-
-// C89 / K&R style declarations
-int bla();
-char alb();
-unsigned foo();
-
-int main() {
-	int x;
-	float y;
-	char z;
-	// call with some parameters
-	bla(x);
-	alb(x,y);
-	foo(y,x,z);
-	return 0;
-}
-)");
-
-			// check whether there is a temporary file
-			tmpFile = file.getPath();
-			EXPECT_TRUE(fs::exists(tmpFile));
-
-			// parse temporary file
-			core::NodeManager manager;
-			ConversionJob job(file);
-			auto code = job.execute(manager);
-			EXPECT_TRUE(code);
-
-			// check that we adjusted the function types correctly
-			auto msg = insieme::core::checks::check(code);
-			EXPECT_EQ(msg.size(), 0);
-		}
-	}
-
-} // namespace frontend
-} // namespace insieme

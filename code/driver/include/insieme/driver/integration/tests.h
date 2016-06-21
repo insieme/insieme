@@ -118,11 +118,6 @@ namespace integration {
 		bool enableOpenCL;
 
 		/**
-		 * A flag indicating whether C++11 should be enabled within the frontend or not.
-		 */
-		bool enableCXX11;
-
-		/**
 		 * The properties configured for this test case.
 		 */
 		Properties properties;
@@ -142,11 +137,11 @@ namespace integration {
 		 */
 		IntegrationTestCase(const string& name, const frontend::path& dir, const vector<frontend::path>& files, const vector<frontend::path>& includeDirs,
 		                    const vector<frontend::path>& libDirs, const vector<string>& libNames,
-		                    const vector<frontend::path>& interceptedHeaderFileDirectories, bool enableOpenMP, bool enableOpenCL, bool enableCXX11,
+		                    const vector<frontend::path>& interceptedHeaderFileDirectories, bool enableOpenMP, bool enableOpenCL,
 		                    const Properties& properties)
 		    : name(name), dir(dir), files(files), includeDirs(includeDirs), libDirs(libDirs), libNames(libNames),
 		      interceptedHeaderFileDirectories(interceptedHeaderFileDirectories), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL),
-		      enableCXX11(enableCXX11), properties(properties) {
+		      properties(properties) {
 			if(enableOpenCL) {
 				// add the OpenCL specific directories
 				this->includeDirs.push_back(utils::getInsiemeLibsRootDir() + "opencl/include");
@@ -222,13 +217,6 @@ namespace integration {
 		 */
 		bool isEnableOpenCL() const {
 			return enableOpenCL;
-		}
-
-		/**
-		 * Determines whether the standard to use is C++11.
-		 */
-		bool isCXX11() const {
-			return enableCXX11;
 		}
 
 		/**
@@ -312,7 +300,7 @@ namespace integration {
 		 */
 		const vector<string> getCompilerArguments(std::string step) const {
 			// TODO move this to the right place
-			// TODO implement properties which exclude each other e.g. use_cpp and use_cpp11
+			// TODO implement properties which exclude each other
 			std::map<string, string> gccFlags;
 			gccFlags["use_libmath"] = "-lm";
 			gccFlags["use_libpthread"] = "-lpthread";
@@ -322,7 +310,6 @@ namespace integration {
 			gccFlags["use_o3"] = "-O3";
 			gccFlags["use_c"] = "--std=c99";
 			gccFlags["use_cpp"] = "--std=c++11";
-			gccFlags["use_cpp11"] = "--std=c++11";
 			gccFlags["use_gnu99"] = "--std=gnu99";
 			gccFlags["use_gnu90"] = "--std=gnu90";
 
@@ -336,8 +323,7 @@ namespace integration {
 			insiemeccFlags["use_c"] = "";
 			insiemeccFlags["use_gnu99"] = "";
 			insiemeccFlags["use_gnu90"] = "";
-			insiemeccFlags["use_cpp"] = "--std=c++03";
-			insiemeccFlags["use_cpp11"] = "--std=c++11";
+			insiemeccFlags["use_cpp"] = "--std=c++11";
 
 			std::map<string, map<string, string>> propFlags;
 			propFlags["gcc"] = gccFlags;
@@ -365,7 +351,7 @@ namespace integration {
 						std::cout << "WARNING: Property " << key << " not supported!" << std::endl;
 					}
 				}
-				if(propVal.compare("0") == 0 and flagMap.count(key) != 1) { std::cout << "WARNING: Property " << key << " ignored!" << std::endl; }
+				if(propVal.compare("0") == 0 && flagMap.count(key) != 1) { std::cout << "WARNING: Property " << key << " ignored!" << std::endl; }
 			}
 
 			// add remaining flags

@@ -59,6 +59,7 @@
 #define LANG_BASIC context.getConverter().getNodeManager().getLangBasic()
 #define LANG_EXT(EXTENSION) context.getConverter().getNodeManager().getLangExtension<EXTENSION>()
 #define LANG_EXT_REF LANG_EXT(core::lang::ReferenceExtension)
+#define LANG_EXT_PTR LANG_EXT(core::lang::PointerExtension)
 #define LANG_EXT_CPP LANG_EXT(core::lang::IRppExtensions)
 
 #define GET_TYPE_INFO(Type) context.getConverter().getTypeManager().getTypeInfo(Type)

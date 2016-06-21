@@ -1,6 +1,1 @@
-use_cpp=0
-use_cpp11=1
-use_cpp[insiemecc_cpp_sema]=0
-use_cpp[ref_cpp_compile]=0
-use_cpp[insiemecc_run_cpp_convert]=0
-use_cpp[insiemecc_seq_cpp_convert]=0
+use_cpp=1

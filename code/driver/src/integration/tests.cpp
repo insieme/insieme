@@ -71,10 +71,6 @@ namespace integration {
 			}
 
 			std::string step = TEST_STEP_INSIEMECC_RUN_C_CONVERT;
-			if(testCase.isCXX11()) {
-				options.job.setStandard(frontend::ConversionSetup::Cxx11);
-				step = TEST_STEP_INSIEMECC_RUN_CPP_CONVERT;
-			}
 
 			// add pre-processor definitions
 			for_each(testCase.getDefinitions(step), [&](const std::pair<string, string>& def) { options.job.setDefinition(def.first, def.second); });
@@ -156,7 +152,6 @@ namespace integration {
 
 			bool enableOpenMP = false;
 			bool enableOpenCL = false;
-			bool enableCXX11 = false;
 
 			// get the test directory -- if the testName is a existingPath skip appending rootDir
 			auto testDir = (fs::exists(fs::path(testName))) ? fs::path(testName) : fs::path(utils::getInsiemeSourceRootDir() + "../test") / testName;
@@ -241,7 +236,6 @@ namespace integration {
 				libNames.push_back(name);
 			}
 
-			enableCXX11 = prop.get<bool>("use_cpp11");
 			enableOpenMP = prop.get<bool>("use_omp");
 			enableOpenCL = prop.get<bool>("use_opencl");
 
@@ -267,7 +261,7 @@ namespace integration {
 
 			// add test case
 			return IntegrationTestCase(name, testCaseDir, files, includeDirs, libPaths, libNames,
-			                           interceptedHeaderFileDirectories, enableOpenMP, enableOpenCL, enableCXX11, prop);
+			                           interceptedHeaderFileDirectories, enableOpenMP, enableOpenCL, prop);
 		}
 
 

@@ -2,7 +2,7 @@
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
 pfor_pointer
-
+virtual_fun
 
 ####################################################################################
 # The following tests are not really blacklisted but take rather long to execute.  #

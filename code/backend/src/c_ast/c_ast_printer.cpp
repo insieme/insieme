@@ -553,6 +553,11 @@ namespace c_ast {
 				case TernaryOperation::TernaryCondition: {
 					return out << print(node->operandA) << "?" << print(node->operandB) << ":" << print(node->operandC);
 				}
+				case TernaryOperation::NewArray: {
+					out << "new " << print(node->operandA) << "[" << print(node->operandB) << "]";
+					if(node->operandC) out << print(node->operandC);
+					return out;
+				}
 				}
 
 				assert_fail() << "Invalid ternary operation encountered!";

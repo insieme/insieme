@@ -10,6 +10,15 @@ cmake_minimum_required(VERSION 3.2)
 file(GLOB_RECURSE insieme_frontend_srcs	src/*.cpp src/*.def src/*.inc )
 insieme_glob_headers(insieme_frontend_incs include)
 
+# automatically run the script for generating builtin header files
+if(NOT MSVC)
+	execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby generate_builtins.rb --quiet --detect-via-compiler ${INSIEME_CXX_BACKEND_COMPILER} --output ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/frontend/builtin_headers RESULT_VARIABLE generate_builtins_success OUTPUT_VARIABLE generate_builtins_output ERROR_VARIABLE generate_builtins_output)
+
+	if (NOT ${generate_builtins_success} EQUAL 0)
+		message(FATAL_ERROR "Ruby generate_builtins.rb script failed to execute, reason:\n${generate_builtins_output}")
+	endif()
+endif()
+
 # build the frontend library
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
 target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_dir})
@@ -37,12 +46,6 @@ target_link_libraries(insieme_frontend insieme_annotations)
 
 # required for llvm
 add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
-
-# prevent clang Preprocessor.h from being included in cotire header to enable privacy violation workaround
-set_target_properties(insieme_frontend PROPERTIES
-	COTIRE_PREFIX_HEADER_IGNORE_PATH "${CMAKE_SOURCE_DIR};${CMAKE_BINARY_DIR};${CLANG_INCLUDE_DIRS}/clang/Lex/Preprocessor.h;${CLANG_INCLUDE_DIRS}/clang/Parse/Parser.h"
-	COTIRE_PREFIX_HEADER_INCLUDE_PATH "/;${CLANG_INCLUDE_DIRS}/clang")
-cotire(insieme_frontend)
 
 # =============================================  TESTING  =====================================
 # add custom target for ut_fe test suite
