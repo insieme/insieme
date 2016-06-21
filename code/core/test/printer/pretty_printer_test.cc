@@ -41,6 +41,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/printer/lexer.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/pointer.h"
 
@@ -1492,4 +1493,98 @@ TEST(PrettyPrinter, MaxDepth) {
 
 	EXPECT_EQ(res1, toString(printer1)) << printer1;
 	EXPECT_EQ(res2, toString(printer2)) << printer2;
+}
+
+TEST(Lexer, Symbol) {
+	using namespace insieme::core::printer::detail;
+	char lex = 'b';
+	auto token = Token::createSymbol(lex);
+	EXPECT_EQ("(Symbol:b)", toString(token));
+}
+
+TEST(Lexer, Identifier) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createIdentifier(lex);
+	EXPECT_EQ("(Ident:bla)", toString(token));
+}
+
+TEST(Lexer, Keyword) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createKeyword(lex);
+	EXPECT_EQ("(Keyword:bla)", toString(token));
+}
+
+TEST(Lexer, BoolLiteral) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createLiteral(Token::Type::Bool_Literal, lex);
+	EXPECT_EQ("(BoolLit:bla)", toString(token));
+}
+
+TEST(Lexer, IntLiteral) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createLiteral(Token::Type::Int_Literal, lex);
+	EXPECT_EQ("(IntLit:bla)", toString(token));
+}
+
+TEST(Lexer, FloatLiteral) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createLiteral(Token::Type::Float_Literal, lex);
+	EXPECT_EQ("(FloatLit:bla)", toString(token));
+}
+
+TEST(Lexer, DoubleLiteral) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createLiteral(Token::Type::Double_Literal, lex);
+	EXPECT_EQ("(DoubleLit:bla)", toString(token));
+}
+
+TEST(Lexer, CharLiteral) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createLiteral(Token::Type::Char_Literal, lex);
+	EXPECT_EQ("(CharLit:bla)", toString(token));
+}
+
+TEST(Lexer, StringLiteral) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createLiteral(Token::Type::String_Literal, lex);
+	EXPECT_EQ("(StrLit:bla)", toString(token));
+}
+
+TEST(Lexer, Comment) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createComment(lex);
+	EXPECT_EQ("(Comment:bla)", toString(token));
+}
+
+TEST(Lexer, Whitespace) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createWhitespace(lex);
+	EXPECT_EQ("(WhiteSpace:bla)", toString(token));
+}
+
+TEST(Lexer, Comments) {
+	std::string comment1 = "/* This is just a comment */";
+	std::string comment2 = "// This is just a comment";
+
+	using namespace insieme::core::printer::detail;
+
+	auto token1 = lex(comment1, false);
+	EXPECT_EQ(1, token1.size());
+	EXPECT_EQ("(Comment:*/)", toString(token1[0]));
+
+	auto token2 = lex(comment2, false);
+	EXPECT_EQ(1, token2.size());
+	EXPECT_EQ("(Comment:// This is just a comment)", toString(token2[0]));
+	//std::cout << token2[1];
+
 }
