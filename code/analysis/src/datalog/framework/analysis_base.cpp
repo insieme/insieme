@@ -93,13 +93,13 @@ namespace framework {
 				int newIndex = uniqueIndex.size();
 				uniqueIndex[entry] = newIndex;
 
-//				// also add element to named constructs list
-//				if (entry.isa<core::ExpressionPtr>() && core::lang::isBuiltIn(entry)) {
+				// also add element to named constructs list
+				if (entry.isa<core::ExpressionPtr>() && core::lang::isBuiltIn(entry)) {
 //					std::cout << "Named construct: " << core::lang::getConstructName(entry)
 //					          << " has unique id " << newIndex << " and address "
 //					          ir.dl<< core::NodeAddress(node) << "!" << std::endl;
-//					insert("NamedConstruct", core::lang::getConstructName(entry), newIndex);
-//				}
+					insert("NamedConstruct", core::lang::getConstructName(entry), newIndex);
+				}
 
 				// done
 				return newIndex;
