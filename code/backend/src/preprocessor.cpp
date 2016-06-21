@@ -243,6 +243,50 @@ namespace backend {
 			return ret;
 		}, builtInLimiter);
 
+		// 3) init exprs
+		// this pass can be greatly simplified when we introduce declarations in init expressions
+
+		utils::map::PointerMap<core::TagTypeReferencePtr, core::TagTypePtr> ttAssignment;
+		visitDepthFirstOnce(retCode, [&ttAssignment](const core::TagTypePtr& tt){
+			const auto& ttRef = tt->getTag();
+			if(ttAssignment.find(ttRef) != ttAssignment.end()) {
+				assert_not_implemented()
+				    << "Case of non-unique tag type references not handled here, could be done but complex, and this code should be obsolete in the future";
+			}
+			ttAssignment[ttRef] = tt;
+		});
+
+		retCode = core::transform::transformBottomUpGen(retCode, [&ttAssignment](const core::InitExprPtr& init) {
+			auto initType = core::lang::ReferenceType(init->getType()).getElementType();
+			auto tt = initType.isa<core::TagTypePtr>();
+			if(auto ttRef = initType.isa<core::TagTypeReferencePtr>()) {
+				tt = ttAssignment[ttRef];
+			}
+			if(tt) {
+				core::TypeList targetTypes;
+				for(auto field: tt->getRecord()->getFields()->getFields()) {
+					targetTypes.push_back(field->getType());
+				}
+				core::ExpressionList newInits;
+				size_t i = 0;
+				for(auto expr: init->getInitExprList()) {
+					if(targetTypes.size() < i) break;
+					auto& ttype = targetTypes[i++];
+
+					if(cl::isReference(ttype) && cl::isReference(expr)) {
+						cl::ReferenceType varT(ttype), initT(expr);
+						if(!varT.isPlain() && initT.isPlain()) {
+							newInits.push_back(cl::buildRefKindCast(expr, varT.getKind()));
+							continue;
+						}
+					}
+					newInits.push_back(expr);
+				}
+				return core::IRBuilder(init->getNodeManager()).initExpr(init->getMemoryExpr(), newInits);
+			}
+			return init;
+		}, builtInLimiter);
+
 		return retCode;
 	}
 

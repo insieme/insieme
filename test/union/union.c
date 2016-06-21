@@ -10,13 +10,13 @@ http://publications.gbdirect.co.uk/c_book/chapter6/unions.html
 #define CHAR_TYPE       2
 #define INT_TYPE        3
 
-struct {
+struct g_s {
       int type_in_union;
-      union{
+      union g_u {
               float   un_float;
               char    un_char;
               int     un_int;
-      }vt_un;
+      } vt_un;
 } var_type;
 
 void

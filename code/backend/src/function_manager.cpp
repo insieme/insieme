@@ -1417,7 +1417,17 @@ namespace backend {
 				// set of identifiers already initialized
 				core::NodeSet initedFields;
 
-				auto isFieldInit = [&](const core::ExpressionPtr& memLoc) {
+				auto isFieldInit = [&](core::ExpressionPtr memLoc) {
+					if(memLoc == thisExp) {
+						// delegating constructors
+						return cmgr->create<c_ast::Identifier>(core::analysis::getTypeName(core::analysis::getReferencedType(thisExp)));
+					}
+					if(rExt.isCallOfRefParentCast(memLoc)) {
+						// base constructors
+						return cmgr->create<c_ast::Identifier>(
+						    core::analysis::getTypeName(core::analysis::getRepresentedType(core::analysis::getArgument(memLoc, 1))));
+					}
+					if(rExt.isCallOfRefDeref(memLoc)) memLoc = core::analysis::getArgument(memLoc, 0);
 					if(rExt.isCallOfRefMemberAccess(memLoc)) {
 						// field initializers
 						auto structExp = core::analysis::getArgument(memLoc, 0);
@@ -1428,13 +1438,6 @@ namespace backend {
 								return cmgr->create<c_ast::Identifier>(field->getStringValue());
 							}
 						}
-					} else if(memLoc == thisExp) {
-						// delegating constructors
-						return cmgr->create<c_ast::Identifier>(core::analysis::getTypeName(core::analysis::getReferencedType(thisExp)));
-					} else if(rExt.isCallOfRefParentCast(memLoc)) {
-						// base constructors
-						return cmgr->create<c_ast::Identifier>(
-						    core::analysis::getTypeName(core::analysis::getRepresentedType(core::analysis::getArgument(memLoc, 1))));
 					}
 					return c_ast::IdentifierPtr();
 				};

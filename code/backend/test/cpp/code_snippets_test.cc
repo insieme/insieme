@@ -148,6 +148,54 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
+	TEST(CppSnippet, ReferenceMember) {
+		core::ProgramPtr program = builder.parseProgram(R"(
+			def struct IMP_RefMember {
+				mem : ref<int<4>,t,f,cpp_ref>;
+				ctor function () {
+					<ref<int<4>,t,f,cpp_ref>>(*(this).mem) {0};
+					*(this).mem;
+				}
+			};
+			def struct IMP_A {
+				x : int<4>;
+				y : ref<int<4>,f,f,cpp_ref>;
+			};
+			int<4> main() {
+				var ref<IMP_RefMember,f,f,plain> refmem = IMP_RefMember::(ref_decl(type_lit(ref<IMP_RefMember,f,f,plain>)));
+
+				var ref<int<4>,f,f,plain> main_int = 0;
+				var ref<IMP_A,t,f,plain> a_instance = <ref<IMP_A,f,f,plain>>(ref_decl(type_lit(ref<IMP_A,t,f,plain>))) {1, main_int};
+				a_instance.x;
+				*a_instance.y;
+
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check absence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "const IMP_A a_instance = {1, main_int};");
+		EXPECT_PRED2(containsSubString, code, "a_instance.x;");
+		EXPECT_PRED2(containsSubString, code, "a_instance.y;");
+		EXPECT_PRED2(containsSubString, code, "IMP_RefMember::IMP_RefMember() : mem(0)");
+		EXPECT_PRED2(containsSubString, code, "(*this).mem;");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 	TEST(CppSnippet, RefArrayReturn) {
 		core::ProgramPtr program = builder.parseProgram(R"(
 				def IMP_test = function () -> ref<array<int<4>,1>,f,f,cpp_ref> {
