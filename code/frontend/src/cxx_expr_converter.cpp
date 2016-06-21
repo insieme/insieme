@@ -480,11 +480,8 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDefaultArgExpr(const clang::CXXDefaultArgExpr* defaultArgExpr) {
 		auto retIr = Visit(defaultArgExpr->getExpr());
 		LOG_EXPR_CONVERSION(defaultArgExpr, retIr);
-
-		// default arguments are handled just like any other argument
 		return retIr;
 	}
-
 
 	namespace {
 		core::ExpressionPtr convertMaterializingExpr(Converter& converter, core::ExpressionPtr retIr, const clang::Expr* materTempExpr) {
@@ -510,7 +507,6 @@ namespace conversion {
 			return retIr;
 		}
 	}
-
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					CXX Bind Temporary expr

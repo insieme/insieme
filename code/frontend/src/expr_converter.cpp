@@ -144,6 +144,9 @@ namespace conversion {
 		core::ExpressionPtr ret = converter.convertExpr(clangArgExprInput);
 		const clang::Expr* clangArgExpr = clangArgExprInput;
 
+		// skip over potential CXXDefaultArgExpr
+		auto defaultArg = llvm::dyn_cast<clang::CXXDefaultArgExpr>(clangArgExpr);
+		if(defaultArg) clangArgExpr = defaultArg->getExpr();
 		// skip over potential ExprWithCleanups
 		auto conWithCleanups = llvm::dyn_cast<clang::ExprWithCleanups>(clangArgExpr);
 		if(conWithCleanups) clangArgExpr = conWithCleanups->getSubExpr();
