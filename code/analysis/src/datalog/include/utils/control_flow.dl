@@ -93,9 +93,9 @@ ControlFlow( ProgramPoint( a , POST ), ProgramPoint( b ,  PRE ) ) :- CompoundStm
 
 // conditional statement
 ControlFlow( ProgramPoint( i ,  PRE ), ProgramPoint( c,  PRE ) ) :- IfStmt(i,c,_,_).
-ControlFlow( ProgramPoint( c , POST ), ProgramPoint( t,  PRE ) ) :- IfStmt(i,c,t,_), boolean_value(c,DP_ROOT,true).
+ControlFlow( ProgramPoint( c , POST ), ProgramPoint( t,  PRE ) ) :- IfStmt(_,c,t,_), boolean_value(c,DP_ROOT,true).
 ControlFlow( ProgramPoint( t , POST ), ProgramPoint( i, POST ) ) :- IfStmt(i,c,t,_), boolean_value(c,DP_ROOT,true).
-ControlFlow( ProgramPoint( c , POST ), ProgramPoint( e,  PRE ) ) :- IfStmt(i,c,_,e), boolean_value(c,DP_ROOT,false).
+ControlFlow( ProgramPoint( c , POST ), ProgramPoint( e,  PRE ) ) :- IfStmt(_,c,_,e), boolean_value(c,DP_ROOT,false).
 ControlFlow( ProgramPoint( e , POST ), ProgramPoint( i, POST ) ) :- IfStmt(i,c,_,e), boolean_value(c,DP_ROOT,false).
 
 // return statements
