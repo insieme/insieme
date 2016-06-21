@@ -963,6 +963,13 @@ namespace checks {
 			return tt;
 		};
 
+		// check if we are initializing a scalar
+		if(initExprs.size() == 1) {
+			if(typeMatchesWithOptionalMaterialization(mgr, refType, initExprs.front()->getType())) {
+				return res;
+			}
+		}
+
 		auto tagT = type.isa<TagTypePtr>();
 		if(tagT) {
 			// test struct types
@@ -1037,17 +1044,8 @@ namespace checks {
 			return res;
 		}
 
-		// assume we are trying a scalar
-		if(initExprs.size() != 1) {
-			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-				             format("Too many initialization expressions (%d expressions for scalar, expected 1)", initExprs.size()), Message::ERROR));
-			return res;
-		}
-		if(!typeMatchesWithOptionalMaterialization(mgr, refType, initExprs.front()->getType())) {
-			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-				             format("Invalid type of scalar initialization - expected type: \n%s, actual: \n%s", *refType, *initExprs.front()->getType()),
-				             Message::ERROR));
-		}
+		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+			             format("Invalid type of initialization - expected type: \n%s, actual: \n%s", *refType, toString(initExprs)), Message::ERROR));
 
 		return res;
 	}

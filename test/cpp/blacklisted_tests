@@ -3,7 +3,6 @@
 
 adv_op_overl
 alignof
-argument_types
 big
 boost
 cast
@@ -32,7 +31,6 @@ member_function_vector
 memb_func_ptr
 performance
 rec_memberfunc_pointer
-return_types
 shadow_decl
 simpleSort
 sort

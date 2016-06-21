@@ -270,7 +270,10 @@ namespace backend {
 				core::ExpressionList newInits;
 				size_t i = 0;
 				for(auto expr: init->getInitExprList()) {
-					if(targetTypes.size() < i) break;
+					if(targetTypes.size() <= i) {
+						newInits.push_back(expr);
+						continue;
+					}
 					auto& ttype = targetTypes[i++];
 
 					if(cl::isReference(ttype) && cl::isReference(expr)) {
