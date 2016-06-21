@@ -44,6 +44,8 @@
 #include "insieme/core/printer/lexer.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/printer/error_printer.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/analysis/attributes.h"
 
@@ -84,6 +86,18 @@ TEST(PrettyPrinter, Basic) {
 	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_DEREFS));
 	printerC.setOption(PrettyPrinter::PRINT_DEREFS, false);
 	EXPECT_FALSE(printerC.hasOption(PrettyPrinter::PRINT_DEREFS));
+}
+
+TEST(PrettyPrinter, ErrorPrinter) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	auto ir = b.parseStmt("{ var ref<uint<4>> a = lit(\"0\" : int<8>); }");
+	auto err = checks::check(ir);
+
+	ASSERT_TRUE(!err.empty());
+	dumpErrors(err);
+	EXPECT_EQ("Invalid type of initial value - expected: \nref<uint<4>,f,f,plain>, actual: \nint<8>", toString(err[0].getMessage()));
 }
 
 TEST(PrettyPrinter, Wrapper) {
