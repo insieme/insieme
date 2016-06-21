@@ -34,7 +34,6 @@
  * regarding third party software licenses.
  */
 
-// a trivial struct
 struct ThisTest {
 	ThisTest* getThis() { return this; }
 };
@@ -54,6 +53,16 @@ struct ThisTest2 {
 	lambda IMP_fB = () -> real<4> { return *v; }
 };)"
 
+struct RefMember {
+	const int& mem;
+	RefMember() : mem(0) { mem; }
+};
+
+struct A {
+	int x;
+	int& y;
+};
+
 int main() {
 
 	#pragma test expect_ir(STRUCT_THISTEST,R"({
@@ -70,6 +79,41 @@ int main() {
 	})")
 	{
 		ThisTest2 tt2;
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_RefMember {
+			mem : ref<int<4>,t,f,cpp_ref>;
+			ctor function () {
+				<ref<int<4>,t,f,cpp_ref>>(*(this).mem) {0};
+				*(this).mem;
+			}
+		};
+		{
+			var ref<IMP_RefMember,f,f,plain> v0 = IMP_RefMember::(ref_decl(type_lit(ref<IMP_RefMember,f,f,plain>)));
+		}
+	)")
+	{
+		RefMember r;
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_A {
+			x : int<4>;
+			y : ref<int<4>,f,f,cpp_ref>;
+		};
+		{
+			var ref<int<4>,f,f,plain> v0 = 0;
+			var ref<IMP_A,t,f,plain> v1 = <ref<IMP_A,f,f,plain>>(ref_decl(type_lit(ref<IMP_A,t,f,plain>))) {1, v0};
+			v1.x;
+			*v1.y;
+		}
+	)")
+	{
+		int i = 0;
+		const A a{1,i};
+		a.x;
+		a.y;
 	}
 
 	return 0;

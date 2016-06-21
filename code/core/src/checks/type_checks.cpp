@@ -1080,13 +1080,13 @@ namespace checks {
 		}
 
 		OptionalMessageList checkMemberAccess(const NodeAddress& address, const ExpressionPtr& structExpr, const StringValuePtr& identifier,
-			const TypePtr& elementType, bool isRefVersion) {
+			                                  const TypePtr& elementType, bool isRefVersion) {
 			OptionalMessageList res;
 
 			// check whether it is a struct at all
 			TypePtr exprType = structExpr->getType();
-			if (isRefVersion) {
-				if (analysis::isRefType(exprType)) {
+			if(isRefVersion) {
+				if(analysis::isRefType(exprType)) {
 					// extract element type
 					exprType = analysis::getReferencedType(exprType);
 				}
@@ -1101,7 +1101,14 @@ namespace checks {
 			// we allow; since we have no way to check the consistency of
 			// the requested element, everything is fine
 			auto tagType = exprType.isa<TagTypePtr>();
-			if (!tagType) return res;		// all fine
+			if(!tagType) {
+				// at least check for base types and references
+				if(lang::isReference(exprType) || lang::isBuiltIn(exprType)) {
+					add(res, Message(address, EC_TYPE_ACCESSING_MEMBER_OF_NON_RECORD_TYPE,
+						             format("Trying to access member of record, but got a reference or builtin type: %s", *exprType), Message::ERROR));
+				}
+				return res; // all else fine
+			}
 
 			// peel recursive type (this fixes the field types to be accessed)
 			if (tagType->isRecursive()) {
