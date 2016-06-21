@@ -581,6 +581,8 @@ TEST(PrettyPrinter, Structs) {
 									  "    dtor () {return;}"
 									  "}");
 
+		auto type2 = builder.parseType("struct s { dtor () = delete; }");
+
 		EXPECT_EQ("decl struct s;\n"
 		          "def struct s {\n"
 		          "};\n"
@@ -594,6 +596,12 @@ TEST(PrettyPrinter, Structs) {
 		          "    }\n"
 		          "};\n"
 		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+
+		EXPECT_EQ("decl struct s;\n"
+		          "def struct s {\n"
+		          "    dtor function () = delete;\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type2))) << toString(PrettyPrinter(type2));
 	}
 
 	{ // destructor virtual
