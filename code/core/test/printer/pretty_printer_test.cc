@@ -1140,6 +1140,228 @@ TEST(PrettyPrinter, MarkerTest) {
 	}
 }
 
+TEST(PrettyPrinter, ArithmeticExpr) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	{
+		// real
+		std::string add("2.0+3.0");
+		std::string sub("2.0-3.0");
+		std::string mul("2.0*3.0");
+		std::string div("2.0/3.0");
+
+		auto ir_add = b.parseExpr("real_add(2.0, 3.0)");
+		auto ir_sub = b.parseExpr("real_sub(2.0, 3.0)");
+		auto ir_mul = b.parseExpr("real_mul(2.0, 3.0)");
+		auto ir_div = b.parseExpr("real_div(2.0, 3.0)");
+
+		EXPECT_EQ(add, toString(PrettyPrinter(ir_add)));
+		EXPECT_EQ(sub, toString(PrettyPrinter(ir_sub)));
+		EXPECT_EQ(mul, toString(PrettyPrinter(ir_mul)));
+		EXPECT_EQ(div, toString(PrettyPrinter(ir_div)));
+	}
+
+
+	{
+		// unsigned
+		std::string str_add("2u+3u");
+		std::string str_sub("2u-3u");
+		std::string str_mul("2u*3u");
+		std::string str_div("2u/3u");
+		std::string str_mod("2u%3u");
+
+		auto ir_add = b.parseExpr("uint_add(2u, 3u)");
+		auto ir_sub = b.parseExpr("uint_sub(2u, 3u)");
+		auto ir_mul = b.parseExpr("uint_mul(2u, 3u)");
+		auto ir_div = b.parseExpr("uint_div(2u, 3u)");
+		auto ir_mod = b.parseExpr("uint_mod(2u, 3u)");
+
+		EXPECT_EQ(str_add, toString(PrettyPrinter(ir_add)));
+		EXPECT_EQ(str_sub, toString(PrettyPrinter(ir_sub)));
+		EXPECT_EQ(str_mul, toString(PrettyPrinter(ir_mul)));
+		EXPECT_EQ(str_div, toString(PrettyPrinter(ir_div)));
+		EXPECT_EQ(str_mod, toString(PrettyPrinter(ir_mod)));
+	}
+
+	{
+		// signed
+		std::string str_add("2+3");
+		std::string str_sub("2-3");
+		std::string str_mul("2*3");
+		std::string str_div("2/3");
+		std::string str_mod("2%3");
+
+		auto ir_add = b.parseExpr("int_add(2, 3)");
+		auto ir_sub = b.parseExpr("int_sub(2, 3)");
+		auto ir_mul = b.parseExpr("int_mul(2, 3)");
+		auto ir_div = b.parseExpr("int_div(2, 3)");
+		auto ir_mod = b.parseExpr("int_mod(2, 3)");
+
+		EXPECT_EQ(str_add, toString(PrettyPrinter(ir_add)));
+		EXPECT_EQ(str_sub, toString(PrettyPrinter(ir_sub)));
+		EXPECT_EQ(str_mul, toString(PrettyPrinter(ir_mul)));
+		EXPECT_EQ(str_div, toString(PrettyPrinter(ir_div)));
+		EXPECT_EQ(str_mod, toString(PrettyPrinter(ir_mod)));
+	}
+}
+
+TEST(PrettyPrinter, BitwiseExpr) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	{
+		// singed
+		std::string str_not("~2");
+		std::string str_and("2&3");
+		std::string str_or("2|3");
+		std::string str_xor("2^3");
+		std::string str_lsh("2<<3");
+		std::string str_rsh("2>>3");
+
+		auto ir_not = b.parseExpr("int_not(2)");
+		auto ir_and = b.parseExpr("int_and(2,3)");
+		auto ir_or  = b.parseExpr("int_or(2,3)");
+		auto ir_xor = b.parseExpr("int_xor(2,3)");
+		auto ir_lsh = b.parseExpr("int_lshift(2,3)");
+		auto ir_rsh = b.parseExpr("int_rshift(2,3)");
+
+		EXPECT_EQ(str_not, toString(PrettyPrinter(ir_not)));
+		EXPECT_EQ(str_and, toString(PrettyPrinter(ir_and)));
+		EXPECT_EQ(str_or, toString(PrettyPrinter(ir_or)));
+		EXPECT_EQ(str_xor, toString(PrettyPrinter(ir_xor)));
+		EXPECT_EQ(str_lsh, toString(PrettyPrinter(ir_lsh)));
+		EXPECT_EQ(str_rsh, toString(PrettyPrinter(ir_rsh)));
+	}
+
+	{
+		// unsinged
+		std::string str_not("~2u");
+		std::string str_and("2u&3u");
+		std::string str_or("2u|3u");
+		std::string str_xor("2u^3u");
+		std::string str_lsh("2u<<3u");
+		std::string str_rsh("2u>>3u");
+
+		auto ir_not = b.parseExpr("uint_not(2u)");
+		auto ir_and = b.parseExpr("uint_and(2u,3u)");
+		auto ir_or  = b.parseExpr("uint_or(2u,3u)");
+		auto ir_xor = b.parseExpr("uint_xor(2u,3u)");
+		auto ir_lsh = b.parseExpr("uint_lshift(2u,3u)");
+		auto ir_rsh = b.parseExpr("uint_rshift(2u,3u)");
+
+		EXPECT_EQ(str_not, toString(PrettyPrinter(ir_not)));
+		EXPECT_EQ(str_and, toString(PrettyPrinter(ir_and)));
+		EXPECT_EQ(str_or, toString(PrettyPrinter(ir_or)));
+		EXPECT_EQ(str_xor, toString(PrettyPrinter(ir_xor)));
+		EXPECT_EQ(str_lsh, toString(PrettyPrinter(ir_lsh)));
+		EXPECT_EQ(str_rsh, toString(PrettyPrinter(ir_rsh)));
+	}
+}
+
+TEST(PrettyPrinter, ComparisonOperations) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	{
+		// unsigned
+		std::string str_eq("2u==3u");
+		std::string str_ne("2u!=3u");
+		std::string str_lt("2u<3u");
+		std::string str_gt("2u>3u");
+		std::string str_le("2u<=3u");
+		std::string str_ge("2u>=3u");
+
+		auto ir_eq = b.parseExpr("uint_eq(2u,3u)");
+		auto ir_ne = b.parseExpr("uint_ne(2u,3u)");
+		auto ir_lt = b.parseExpr("uint_lt(2u,3u)");
+		auto ir_gt = b.parseExpr("uint_gt(2u,3u)");
+		auto ir_le = b.parseExpr("uint_le(2u,3u)");
+		auto ir_ge = b.parseExpr("uint_ge(2u,3u)");
+
+		EXPECT_EQ(str_eq, toString(PrettyPrinter(ir_eq)));
+		EXPECT_EQ(str_ne, toString(PrettyPrinter(ir_ne)));
+		EXPECT_EQ(str_lt, toString(PrettyPrinter(ir_lt)));
+		EXPECT_EQ(str_gt, toString(PrettyPrinter(ir_gt)));
+		EXPECT_EQ(str_le, toString(PrettyPrinter(ir_le)));
+		EXPECT_EQ(str_ge, toString(PrettyPrinter(ir_ge)));
+	}
+
+	{
+		// signed
+		std::string str_eq("2==3");
+		std::string str_ne("2!=3");
+		std::string str_lt("2<3");
+		std::string str_gt("2>3");
+		std::string str_le("2<=3");
+		std::string str_ge("2>=3");
+
+		auto ir_eq = b.parseExpr("int_eq(2,3)");
+		auto ir_ne = b.parseExpr("int_ne(2,3)");
+		auto ir_lt = b.parseExpr("int_lt(2,3)");
+		auto ir_gt = b.parseExpr("int_gt(2,3)");
+		auto ir_le = b.parseExpr("int_le(2,3)");
+		auto ir_ge = b.parseExpr("int_ge(2,3)");
+
+		EXPECT_EQ(str_eq, toString(PrettyPrinter(ir_eq)));
+		EXPECT_EQ(str_ne, toString(PrettyPrinter(ir_ne)));
+		EXPECT_EQ(str_lt, toString(PrettyPrinter(ir_lt)));
+		EXPECT_EQ(str_gt, toString(PrettyPrinter(ir_gt)));
+		EXPECT_EQ(str_le, toString(PrettyPrinter(ir_le)));
+		EXPECT_EQ(str_ge, toString(PrettyPrinter(ir_ge)));
+	}
+
+	{
+		// real comparison
+		std::string str_eq("2.0==3.0");
+		std::string str_ne("2.0!=3.0");
+		std::string str_lt("2.0<3.0");
+		std::string str_gt("2.0>3.0");
+		std::string str_le("2.0<=3.0");
+		std::string str_ge("2.0>=3.0");
+
+		auto ir_eq = b.parseExpr("real_eq(2.0,3.0)");
+		auto ir_ne = b.parseExpr("real_ne(2.0,3.0)");
+		auto ir_lt = b.parseExpr("real_lt(2.0,3.0)");
+		auto ir_gt = b.parseExpr("real_gt(2.0,3.0)");
+		auto ir_le = b.parseExpr("real_le(2.0,3.0)");
+		auto ir_ge = b.parseExpr("real_ge(2.0,3.0)");
+
+		EXPECT_EQ(str_eq, toString(PrettyPrinter(ir_eq)));
+		EXPECT_EQ(str_ne, toString(PrettyPrinter(ir_ne)));
+		EXPECT_EQ(str_lt, toString(PrettyPrinter(ir_lt)));
+		EXPECT_EQ(str_gt, toString(PrettyPrinter(ir_gt)));
+		EXPECT_EQ(str_le, toString(PrettyPrinter(ir_le)));
+		EXPECT_EQ(str_ge, toString(PrettyPrinter(ir_ge)));
+	}
+
+	{
+		/*
+		// char comparison
+		std::string str_eq("\"a\"==\"b\"");
+		std::string str_ne("a!=b");
+		std::string str_lt("a<b");
+		std::string str_gt("a>b");
+		std::string str_le("a<=b");
+		std::string str_ge("a>=b");
+
+		auto ir_eq = b.parseExpr("char_eq(gen_char(a),gen_char(b))");
+		auto ir_ne = b.parseExpr("char_ne(a,b)");
+		auto ir_lt = b.parseExpr("char_lt(a,b)");
+		auto ir_gt = b.parseExpr("char_gt(a,b)");
+		auto ir_le = b.parseExpr("char_le(a,b)");
+		auto ir_ge = b.parseExpr("char_ge(a,b)");
+
+		EXPECT_EQ(str_eq, toString(PrettyPrinter(ir_eq)));
+		EXPECT_EQ(str_ne, toString(PrettyPrinter(ir_ne)));
+		EXPECT_EQ(str_lt, toString(PrettyPrinter(ir_lt)));
+		EXPECT_EQ(str_gt, toString(PrettyPrinter(ir_gt)));
+		EXPECT_EQ(str_le, toString(PrettyPrinter(ir_le)));
+		EXPECT_EQ(str_ge, toString(PrettyPrinter(ir_ge)));
+		*/
+	}
+}
+
 TEST(PrettyPrinter, LiteralPrinting) {
 	NodeManager nm;
 	IRBuilder builder(nm);
