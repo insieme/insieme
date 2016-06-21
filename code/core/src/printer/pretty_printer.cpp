@@ -1149,25 +1149,21 @@ namespace printer {
 						visit(NodeAddress(node->getBody()));
 						thisStack.pop();
 					}
-				} else if(funType->isMemberFunction() || funType->isVirtualMemberFunction()) {
+				} else if(funType->isVirtualMemberFunction()) {
+					/*
 					// print member function header
 					out << "function ";
-					assert_fail();
 					visit(analysis::getObjectType(funType));
 					auto parameters = node->getParameters();
 					out << " :: (";
 					printParameters(out, parameters, false);
-					out << ")";
-					out << (funType->isMemberFunction() ? " -> " : " ~> ");
+					out << ") ~> ";
 					visit(funType->getReturnType());
 					out << " ";
-					if (!node->getParameterList().empty())
-						thisStack.push(node->getParameterList().front());
-					// .. and body
+					thisStack.push(node->getParameterList().front());
 					visit(node->getBody());
-					if (!node->getParameterList().empty())
-						thisStack.pop();
-
+					thisStack.pop();
+					*/
 				} else {
 					// print plain header function
 					out << "function (";
@@ -1538,18 +1534,14 @@ namespace printer {
 			#define ADD_FORMATTER(Literal)                                                                                                             \
 				res[Literal] = [](InspirePrinter & printer, const CallExprAddress& call)
 
-//			if(config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
-				ADD_FORMATTER(refExt.getRefDeref()) {
-					if (ARG(0).isa<VariableAddress>() && ARG(0).getAddressedNode() == printer.getTopOfThisStack()) {
-						PRINT_ARG(0);
-					} else {
-						OUT("*");
-						PRINT_ARG(0);
-					}
-				};
-//			} else {
-//				ADD_FORMATTER(refExt.getRefDeref()) { PRINT_ARG(0); };
-//			}
+			ADD_FORMATTER(refExt.getRefDeref()) {
+				if (ARG(0).isa<VariableAddress>() && ARG(0).getAddressedNode() == printer.getTopOfThisStack()) {
+					PRINT_ARG(0);
+				} else {
+					OUT("*");
+					PRINT_ARG(0);
+				}
+			};
 
 			ADD_FORMATTER(refExt.getRefAssign()) {
 				PRINT_ARG(0);
