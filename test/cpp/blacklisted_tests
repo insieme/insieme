@@ -10,7 +10,6 @@ cast_dynamic
 cast_reinterpret
 cast_static
 class_as_return_type_of_member_function_closing_rec_cycle
-ctor
 ctor_inherit
 ctor_return
 curiously_recurring_template_pattern
@@ -63,3 +62,4 @@ vfunc_single_inherit
 ####################################################################################
 
 +nested_class
++ctor

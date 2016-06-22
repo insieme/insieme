@@ -13,14 +13,14 @@ public:
 		printf("C()");
 		printf("mA 0 == %d mB 1 == %d\n", mA, mB);
 	}
-/*
+
 	// copy ctor
 	C(const C& c) {
 		mA = c.mA; mB = c.mB; mC = c.mC;
 		printf("C(cont C& c)");
 		printf("mA==c.mA -- %d == %d\n", mA, c.mA);
 		printf("mB==c.mB -- %d == %d\n", mB, c.mB);
-	}*/
+	}
 
 	// ctor + default args
 	// doing some "fancy" stuff in the initializer
@@ -136,12 +136,12 @@ int main() {
 	}
 	{
 		// D has comparable ctors as C but is used as member in E
-	//	printf("\nD:\n\n");
-	//	D d1;
-	//	D d2(10);
-	//
-	//	printf("\nD dA[3]:\n\n");
-	//	D dA[2];
+		printf("\nd:\n\n");
+		D d1;
+		D d2(10);
+	
+		printf("\nd da[3]:\n\n");
+		D da[2];
 	}
 	{
 		// Test class member init with ctor
@@ -154,9 +154,9 @@ int main() {
 		E eA[3];
 	}
 
-    {
-        Y y;
-    }
+	{
+		Y y;
+	}
 		
 	E e2(10, 10);
 	
