@@ -207,6 +207,20 @@ namespace new_core {
 			dumpDetail(E, buf);
 			EXPECT_EQ("x:B<A>\n", buf.str());
 		}
+
+		{
+			std::stringstream buf;
+			dumpDetailColored(E, buf);
+			EXPECT_EQ("\x1B[0mx\x1B[0m\x1B[33m:\x1B[0m\x1B[0mB\x1B[0m\x1B[33m<\x1B[0m\x1B[0mA\x1B[0m\x1B[33m>\x1B[0m\n", buf.str());
+		}
+
+		ExpressionPtr F = builder.parseExpr("def fun = function () -> unit {}; fun()");
+
+		{
+			std::stringstream buf;
+			dumpOneLine(F, buf);
+			EXPECT_EQ("fun()", buf.str());
+		}
 	}
 
 	TEST(Node, DumpPlainTest) {

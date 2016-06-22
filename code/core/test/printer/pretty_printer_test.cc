@@ -41,8 +41,11 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/printer/lexer.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/printer/error_printer.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/analysis/attributes.h"
 
@@ -85,6 +88,18 @@ TEST(PrettyPrinter, Basic) {
 	EXPECT_FALSE(printerC.hasOption(PrettyPrinter::PRINT_DEREFS));
 }
 
+TEST(PrettyPrinter, ErrorPrinter) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	auto ir = b.parseStmt("{ var ref<uint<4>> a = lit(\"0\" : int<8>); }");
+	auto err = checks::check(ir);
+
+	ASSERT_TRUE(!err.empty());
+	dumpErrors(err);
+	EXPECT_EQ("Invalid type of initial value - expected: \nref<uint<4>,f,f,plain>, actual: \nint<8>", toString(err[0].getMessage()));
+}
+
 TEST(PrettyPrinter, Wrapper) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -124,7 +139,7 @@ TEST(PrettyPrinter, Wrapper) {
 	++it;
 
 	// 4 literal loc
-	EXPECT_EQ(builder.numericType(builder.literal("4",builder.getLangBasic().getUIntInf())), it->second);
+	EXPECT_EQ(builder.numericType(builder.literal("4",builder.getLangBasic().getUIntInf()))->getValue(), it->second);
 	EXPECT_EQ(SourceLocation(0, 9), it->first.first);
 	EXPECT_EQ(SourceLocation(0, 10), it->first.second);
 
@@ -581,6 +596,8 @@ TEST(PrettyPrinter, Structs) {
 									  "    dtor () {return;}"
 									  "}");
 
+		auto type2 = builder.parseType("struct s { dtor () = delete; }");
+
 		EXPECT_EQ("decl struct s;\n"
 		          "def struct s {\n"
 		          "};\n"
@@ -594,6 +611,12 @@ TEST(PrettyPrinter, Structs) {
 		          "    }\n"
 		          "};\n"
 		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+
+		EXPECT_EQ("decl struct s;\n"
+		          "def struct s {\n"
+		          "    dtor function () = delete;\n"
+		          "};\n"
+		          "s", toString(PrettyPrinter(type2))) << toString(PrettyPrinter(type2));
 	}
 
 	{ // destructor virtual
@@ -623,6 +646,16 @@ TEST(PrettyPrinter, Structs) {
 		}
 
 
+}
+
+TEST(PrettyPrinter, Variable) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	auto aType = builder.parseStmt("{var ref<int<4>> v123;\n var ref<#v123> b;}");
+	//dumpText(aType);
+	PrettyPrinter printer(aType);
+	EXPECT_EQ("{\n    var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n    var ref<#v1,f,f,plain> v2 = ref_decl(type_lit(ref<#v1,f,f,plain>));\n}", toString(printer)) << printer;
 }
 
 TEST(PrettyPrinter, StructSuperTypes) {
@@ -682,6 +715,32 @@ TEST(PrettyPrinter, FunctionTypes) {
 //	EXPECT_EQ("~C::()", toString(PrettyPrinter(funD)));
 //	EXPECT_EQ("method C::(A, B) -> R", toString(PrettyPrinter(funE)));
 //	EXPECT_EQ("method C::(A, B) ~> R", toString(PrettyPrinter(funF)));
+}
+
+TEST(PrettyPrinter, Switch) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	std::string input = ""
+                        "{\n"
+                        "    switch(5) {\n"
+                        "        case 1: {\n"
+                        "            1;\n"
+                        "        }\n"
+                        "        case 2: {\n"
+                        "            2;\n"
+                        "        }\n"
+                        "        default: {\n"
+                        "            3;\n"
+                        "        }\n"
+                        "    }\n"
+                        "}";
+
+	auto ir = b.parseStmt(input);
+
+	PrettyPrinter printer(ir);
+
+	EXPECT_EQ(input, toString(printer));
 }
 
 TEST(PrettyPrinter, LambdaTypes) {
@@ -911,7 +970,7 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"        fun(rfun(v4));\n"
 			"        lfun(v5);\n"
 			"        rfun(ref_temp_init(lfun(v6)));\n"
-			"    };\n"
+			"    }\n"
 			"}";
 
 	EXPECT_EQ(res, toString(PrettyPrinter(stmt, PrettyPrinter::PRINT_DEREFS))) << toString(PrettyPrinter(stmt, PrettyPrinter::PRINT_DEREFS));
@@ -931,7 +990,7 @@ TEST(PrettyPrinter, JustOutermostScope) {
 			"        fun(rfun(v4));\n"
 			"        lfun(v5);\n"
 			"        rfun(ref_temp_init(lfun(v6)));\n"
-			"    };\n"
+			"    }\n"
 			"}";
 
 	EXPECT_EQ(res2, toString(PrettyPrinter(stmt, PrettyPrinter::JUST_LOCAL_CONTEXT))) << toString(PrettyPrinter(stmt, PrettyPrinter::JUST_LOCAL_CONTEXT));
@@ -1104,6 +1163,228 @@ TEST(PrettyPrinter, MarkerTest) {
 	}
 }
 
+TEST(PrettyPrinter, ArithmeticExpr) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	{
+		// real
+		std::string add("2.0+3.0");
+		std::string sub("2.0-3.0");
+		std::string mul("2.0*3.0");
+		std::string div("2.0/3.0");
+
+		auto ir_add = b.parseExpr("real_add(2.0, 3.0)");
+		auto ir_sub = b.parseExpr("real_sub(2.0, 3.0)");
+		auto ir_mul = b.parseExpr("real_mul(2.0, 3.0)");
+		auto ir_div = b.parseExpr("real_div(2.0, 3.0)");
+
+		EXPECT_EQ(add, toString(PrettyPrinter(ir_add)));
+		EXPECT_EQ(sub, toString(PrettyPrinter(ir_sub)));
+		EXPECT_EQ(mul, toString(PrettyPrinter(ir_mul)));
+		EXPECT_EQ(div, toString(PrettyPrinter(ir_div)));
+	}
+
+
+	{
+		// unsigned
+		std::string str_add("2u+3u");
+		std::string str_sub("2u-3u");
+		std::string str_mul("2u*3u");
+		std::string str_div("2u/3u");
+		std::string str_mod("2u%3u");
+
+		auto ir_add = b.parseExpr("uint_add(2u, 3u)");
+		auto ir_sub = b.parseExpr("uint_sub(2u, 3u)");
+		auto ir_mul = b.parseExpr("uint_mul(2u, 3u)");
+		auto ir_div = b.parseExpr("uint_div(2u, 3u)");
+		auto ir_mod = b.parseExpr("uint_mod(2u, 3u)");
+
+		EXPECT_EQ(str_add, toString(PrettyPrinter(ir_add)));
+		EXPECT_EQ(str_sub, toString(PrettyPrinter(ir_sub)));
+		EXPECT_EQ(str_mul, toString(PrettyPrinter(ir_mul)));
+		EXPECT_EQ(str_div, toString(PrettyPrinter(ir_div)));
+		EXPECT_EQ(str_mod, toString(PrettyPrinter(ir_mod)));
+	}
+
+	{
+		// signed
+		std::string str_add("2+3");
+		std::string str_sub("2-3");
+		std::string str_mul("2*3");
+		std::string str_div("2/3");
+		std::string str_mod("2%3");
+
+		auto ir_add = b.parseExpr("int_add(2, 3)");
+		auto ir_sub = b.parseExpr("int_sub(2, 3)");
+		auto ir_mul = b.parseExpr("int_mul(2, 3)");
+		auto ir_div = b.parseExpr("int_div(2, 3)");
+		auto ir_mod = b.parseExpr("int_mod(2, 3)");
+
+		EXPECT_EQ(str_add, toString(PrettyPrinter(ir_add)));
+		EXPECT_EQ(str_sub, toString(PrettyPrinter(ir_sub)));
+		EXPECT_EQ(str_mul, toString(PrettyPrinter(ir_mul)));
+		EXPECT_EQ(str_div, toString(PrettyPrinter(ir_div)));
+		EXPECT_EQ(str_mod, toString(PrettyPrinter(ir_mod)));
+	}
+}
+
+TEST(PrettyPrinter, BitwiseExpr) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	{
+		// singed
+		std::string str_not("~2");
+		std::string str_and("2&3");
+		std::string str_or("2|3");
+		std::string str_xor("2^3");
+		std::string str_lsh("2<<3");
+		std::string str_rsh("2>>3");
+
+		auto ir_not = b.parseExpr("int_not(2)");
+		auto ir_and = b.parseExpr("int_and(2,3)");
+		auto ir_or  = b.parseExpr("int_or(2,3)");
+		auto ir_xor = b.parseExpr("int_xor(2,3)");
+		auto ir_lsh = b.parseExpr("int_lshift(2,3)");
+		auto ir_rsh = b.parseExpr("int_rshift(2,3)");
+
+		EXPECT_EQ(str_not, toString(PrettyPrinter(ir_not)));
+		EXPECT_EQ(str_and, toString(PrettyPrinter(ir_and)));
+		EXPECT_EQ(str_or, toString(PrettyPrinter(ir_or)));
+		EXPECT_EQ(str_xor, toString(PrettyPrinter(ir_xor)));
+		EXPECT_EQ(str_lsh, toString(PrettyPrinter(ir_lsh)));
+		EXPECT_EQ(str_rsh, toString(PrettyPrinter(ir_rsh)));
+	}
+
+	{
+		// unsinged
+		std::string str_not("~2u");
+		std::string str_and("2u&3u");
+		std::string str_or("2u|3u");
+		std::string str_xor("2u^3u");
+		std::string str_lsh("2u<<3u");
+		std::string str_rsh("2u>>3u");
+
+		auto ir_not = b.parseExpr("uint_not(2u)");
+		auto ir_and = b.parseExpr("uint_and(2u,3u)");
+		auto ir_or  = b.parseExpr("uint_or(2u,3u)");
+		auto ir_xor = b.parseExpr("uint_xor(2u,3u)");
+		auto ir_lsh = b.parseExpr("uint_lshift(2u,3u)");
+		auto ir_rsh = b.parseExpr("uint_rshift(2u,3u)");
+
+		EXPECT_EQ(str_not, toString(PrettyPrinter(ir_not)));
+		EXPECT_EQ(str_and, toString(PrettyPrinter(ir_and)));
+		EXPECT_EQ(str_or, toString(PrettyPrinter(ir_or)));
+		EXPECT_EQ(str_xor, toString(PrettyPrinter(ir_xor)));
+		EXPECT_EQ(str_lsh, toString(PrettyPrinter(ir_lsh)));
+		EXPECT_EQ(str_rsh, toString(PrettyPrinter(ir_rsh)));
+	}
+}
+
+TEST(PrettyPrinter, ComparisonOperations) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	{
+		// unsigned
+		std::string str_eq("2u==3u");
+		std::string str_ne("2u!=3u");
+		std::string str_lt("2u<3u");
+		std::string str_gt("2u>3u");
+		std::string str_le("2u<=3u");
+		std::string str_ge("2u>=3u");
+
+		auto ir_eq = b.parseExpr("uint_eq(2u,3u)");
+		auto ir_ne = b.parseExpr("uint_ne(2u,3u)");
+		auto ir_lt = b.parseExpr("uint_lt(2u,3u)");
+		auto ir_gt = b.parseExpr("uint_gt(2u,3u)");
+		auto ir_le = b.parseExpr("uint_le(2u,3u)");
+		auto ir_ge = b.parseExpr("uint_ge(2u,3u)");
+
+		EXPECT_EQ(str_eq, toString(PrettyPrinter(ir_eq)));
+		EXPECT_EQ(str_ne, toString(PrettyPrinter(ir_ne)));
+		EXPECT_EQ(str_lt, toString(PrettyPrinter(ir_lt)));
+		EXPECT_EQ(str_gt, toString(PrettyPrinter(ir_gt)));
+		EXPECT_EQ(str_le, toString(PrettyPrinter(ir_le)));
+		EXPECT_EQ(str_ge, toString(PrettyPrinter(ir_ge)));
+	}
+
+	{
+		// signed
+		std::string str_eq("2==3");
+		std::string str_ne("2!=3");
+		std::string str_lt("2<3");
+		std::string str_gt("2>3");
+		std::string str_le("2<=3");
+		std::string str_ge("2>=3");
+
+		auto ir_eq = b.parseExpr("int_eq(2,3)");
+		auto ir_ne = b.parseExpr("int_ne(2,3)");
+		auto ir_lt = b.parseExpr("int_lt(2,3)");
+		auto ir_gt = b.parseExpr("int_gt(2,3)");
+		auto ir_le = b.parseExpr("int_le(2,3)");
+		auto ir_ge = b.parseExpr("int_ge(2,3)");
+
+		EXPECT_EQ(str_eq, toString(PrettyPrinter(ir_eq)));
+		EXPECT_EQ(str_ne, toString(PrettyPrinter(ir_ne)));
+		EXPECT_EQ(str_lt, toString(PrettyPrinter(ir_lt)));
+		EXPECT_EQ(str_gt, toString(PrettyPrinter(ir_gt)));
+		EXPECT_EQ(str_le, toString(PrettyPrinter(ir_le)));
+		EXPECT_EQ(str_ge, toString(PrettyPrinter(ir_ge)));
+	}
+
+	{
+		// real comparison
+		std::string str_eq("2.0==3.0");
+		std::string str_ne("2.0!=3.0");
+		std::string str_lt("2.0<3.0");
+		std::string str_gt("2.0>3.0");
+		std::string str_le("2.0<=3.0");
+		std::string str_ge("2.0>=3.0");
+
+		auto ir_eq = b.parseExpr("real_eq(2.0,3.0)");
+		auto ir_ne = b.parseExpr("real_ne(2.0,3.0)");
+		auto ir_lt = b.parseExpr("real_lt(2.0,3.0)");
+		auto ir_gt = b.parseExpr("real_gt(2.0,3.0)");
+		auto ir_le = b.parseExpr("real_le(2.0,3.0)");
+		auto ir_ge = b.parseExpr("real_ge(2.0,3.0)");
+
+		EXPECT_EQ(str_eq, toString(PrettyPrinter(ir_eq)));
+		EXPECT_EQ(str_ne, toString(PrettyPrinter(ir_ne)));
+		EXPECT_EQ(str_lt, toString(PrettyPrinter(ir_lt)));
+		EXPECT_EQ(str_gt, toString(PrettyPrinter(ir_gt)));
+		EXPECT_EQ(str_le, toString(PrettyPrinter(ir_le)));
+		EXPECT_EQ(str_ge, toString(PrettyPrinter(ir_ge)));
+	}
+
+	{
+
+		// char comparison
+		std::string str_eq("\'a\'==\'b\'");
+		std::string str_ne("\'a\'!=\'b\'");
+		std::string str_lt("\'a\'<\'b\'");
+		std::string str_gt("\'a\'>\'b\'");
+		std::string str_le("\'a\'<=\'b\'");
+		std::string str_ge("\'a\'>=\'b\'");
+
+		auto ir_eq = b.parseExpr("char_eq(\'a\',\'b\')");
+		auto ir_ne = b.parseExpr("char_ne(\'a\',\'b\')");
+		auto ir_lt = b.parseExpr("char_lt(\'a\',\'b\')");
+		auto ir_gt = b.parseExpr("char_gt(\'a\',\'b\')");
+		auto ir_le = b.parseExpr("char_le(\'a\',\'b\')");
+		auto ir_ge = b.parseExpr("char_ge(\'a\',\'b\')");
+
+		EXPECT_EQ(str_eq, toString(PrettyPrinter(ir_eq)));
+		EXPECT_EQ(str_ne, toString(PrettyPrinter(ir_ne)));
+		EXPECT_EQ(str_lt, toString(PrettyPrinter(ir_lt)));
+		EXPECT_EQ(str_gt, toString(PrettyPrinter(ir_gt)));
+		EXPECT_EQ(str_le, toString(PrettyPrinter(ir_le)));
+		EXPECT_EQ(str_ge, toString(PrettyPrinter(ir_ge)));
+
+	}
+}
+
 TEST(PrettyPrinter, LiteralPrinting) {
 	NodeManager nm;
 	IRBuilder builder(nm);
@@ -1118,6 +1399,11 @@ TEST(PrettyPrinter, LiteralPrinting) {
 
 	PrettyPrinter printerLiterals(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::FULL_LITERAL_SYNTAX);
 	EXPECT_EQ(input, toString(printerLiterals)) << printerLiterals;
+
+	auto lit = builder.literal("fuchsinsarestrongtheydontgetmocked", builder.refType(builder.structType()));
+	PrettyPrinter printer1(lit, PrettyPrinter::NAME_CONTRACTION);
+
+	EXPECT_EQ("fuc...ked", toString(printer1));
 }
 
 TEST(PrettyPrinter, MethodQualifiers) {
@@ -1135,4 +1421,184 @@ TEST(PrettyPrinter, MethodQualifiers) {
 	auto ir = builder.normalize(builder.parseStmt(input));
 	PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::FULL_LITERAL_SYNTAX);
 	EXPECT_EQ(input, toString(printer)) << printer;
+}
+
+TEST(PrettyPrinter, LoopControlExpressions) {
+	// in this test "break", "continue"... expressions are tested
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	{ // "break"
+		std::string input = ""
+			                "{\n"
+			                "    for( int<4> v0 = 0 .. 10 : 1) {\n"
+			                "        if(v0==1) {\n"
+			                "            break;\n"
+			                "        }\n"
+			                "    }\n"
+			                "}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+
+		PrettyPrinter printer(ir);
+
+		EXPECT_EQ(input, toString(printer)) << printer;
+	}
+
+	{ // "continue"
+		std::string input = ""
+			                "{\n"
+			                "    for( int<4> v0 = 0 .. 10 : 1) {\n"
+			                "        if(v0==1) {\n"
+			                "            continue;\n"
+			                "        }\n"
+			                "    }\n"
+			                "}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+
+		PrettyPrinter printer(ir);
+
+		EXPECT_EQ(input, toString(printer)) << printer;
+	}
+}
+
+TEST(PrettyPrinter, Throw) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	std::string input = "{\n    throw 1;\n}";
+	auto ir = b.parseStmt(input);
+
+	PrettyPrinter printer(ir);
+	EXPECT_EQ(input, toString(printer));
+}
+
+TEST(PrettyPrinter, MaxDepth) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	std::string input = "{{{{{1;}}}}}";
+
+	auto ir = b.parseStmt(input);
+
+	PrettyPrinter printer1(ir, PrettyPrinter::OPTIONS_DEFAULT);
+	PrettyPrinter printer2(ir, PrettyPrinter::OPTIONS_DEFAULT, 1);
+
+	std::string res1 = ""
+                       "{\n"
+                       "    {\n"
+                       "        {\n"
+                       "            {\n"
+                       "                {\n"
+                       "                    1;\n"
+                       "                }\n"
+                       "            }\n"
+                       "        }\n"
+                       "    }\n"
+                       "}";
+
+	std::string res2 = ""
+	                   "{\n"
+	                   "    {\n"
+	                   "         ... \n"
+	                   "    }\n"
+	                   "}";
+
+	EXPECT_EQ(res1, toString(printer1)) << printer1;
+	EXPECT_EQ(res2, toString(printer2)) << printer2;
+}
+
+TEST(Lexer, Symbol) {
+	using namespace insieme::core::printer::detail;
+	char lex = 'b';
+	auto token = Token::createSymbol(lex);
+	EXPECT_EQ("(Symbol:b)", toString(token));
+}
+
+TEST(Lexer, Identifier) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createIdentifier(lex);
+	EXPECT_EQ("(Ident:bla)", toString(token));
+}
+
+TEST(Lexer, Keyword) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createKeyword(lex);
+	EXPECT_EQ("(Keyword:bla)", toString(token));
+}
+
+TEST(Lexer, BoolLiteral) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createLiteral(Token::Type::Bool_Literal, lex);
+	EXPECT_EQ("(BoolLit:bla)", toString(token));
+}
+
+TEST(Lexer, IntLiteral) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createLiteral(Token::Type::Int_Literal, lex);
+	EXPECT_EQ("(IntLit:bla)", toString(token));
+}
+
+TEST(Lexer, FloatLiteral) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createLiteral(Token::Type::Float_Literal, lex);
+	EXPECT_EQ("(FloatLit:bla)", toString(token));
+}
+
+TEST(Lexer, DoubleLiteral) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createLiteral(Token::Type::Double_Literal, lex);
+	EXPECT_EQ("(DoubleLit:bla)", toString(token));
+}
+
+TEST(Lexer, CharLiteral) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createLiteral(Token::Type::Char_Literal, lex);
+	EXPECT_EQ("(CharLit:bla)", toString(token));
+}
+
+TEST(Lexer, StringLiteral) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createLiteral(Token::Type::String_Literal, lex);
+	EXPECT_EQ("(StrLit:bla)", toString(token));
+}
+
+TEST(Lexer, Comment) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createComment(lex);
+	EXPECT_EQ("(Comment:bla)", toString(token));
+}
+
+TEST(Lexer, Whitespace) {
+	using namespace insieme::core::printer::detail;
+	std::string lex = "bla";
+	auto token = Token::createWhitespace(lex);
+	EXPECT_EQ("(WhiteSpace:bla)", toString(token));
+}
+
+TEST(Lexer, Comments) {
+	std::string comment1 = "/* This is just a comment */";
+	std::string comment2 = "// This is just a comment";
+
+	using namespace insieme::core::printer::detail;
+
+	auto token1 = lex(comment1, false);
+	EXPECT_EQ(1, token1.size());
+	EXPECT_EQ("(Comment:*/)", toString(token1[0]));
+
+	auto token2 = lex(comment2, false);
+	EXPECT_EQ(1, token2.size());
+	EXPECT_EQ("(Comment:// This is just a comment)", toString(token2[0]));
+	//std::cout << token2[1];
+
 }

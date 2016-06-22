@@ -199,11 +199,6 @@ namespace printer {
 			unsigned depth;
 
 			/**
-			 * A list of nodes being bound to names to make the code more readable.
-			 */
-			utils::map::PointerMap<NodePtr, std::string> letBindings;
-
-			/**
 			 * A stack used to keep track of the "this"-operator
 			 */
 			std::stack<VariablePtr> thisStack;
@@ -250,6 +245,14 @@ namespace printer {
 				if (thisParamRef.isVolatile()) { out << "volatile "; }
 			}
 
+			bool hasEndingCompoundStmt(const StatementAddress& stmt) {
+				auto nodeType = stmt->getNodeType();
+				if(nodeType == NodeType::NT_ForStmt || nodeType == NodeType::NT_IfStmt || nodeType == NodeType::NT_CompoundStmt
+				   || nodeType == NodeType::NT_SwitchStmt || nodeType == NodeType::NT_WhileStmt)
+					return true;
+
+				return false;
+			}
 
 		  public:
 			/**
@@ -282,8 +285,6 @@ namespace printer {
 			 * The main entry point computing common sub-expressions before printing the actual code.
 			 */
 			void print(const NodePtr& node) {
-				// reset setup
-				letBindings.clear();
 
 				// get all entry-points
 				if (const auto& program = node.isa<ProgramPtr>()) {
@@ -609,8 +610,6 @@ namespace printer {
 					newLine();
 				}
 
-				if(printer.hasOption(PrettyPrinter::JUST_LOCAL_CONTEXT)) { letBindings.erase(node); }
-
 				if(auto p = node.isa<LambdaExprPtr>()) {
 					visit(NodeAddress(p->getReference()));
 				} else {
@@ -636,13 +635,6 @@ namespace printer {
 					return;
 				}
 
-				// check whether this one has been substituted
-				auto pos = letBindings.find(element);
-				if(pos != letBindings.end()) {
-					out << pos->second;
-					return;
-				}
-
 				// for types, apply reverse aliases
 				auto typePtr = element.getAddressedNode().isa<TypePtr>();
 				if(typePtr) {
@@ -653,6 +645,7 @@ namespace printer {
 					out << " ... ";
 					return;
 				}
+
 				depth++;
 				printAnnotations(element, true);
 				IRVisitor<void,Address>::visit(element);
@@ -678,18 +671,15 @@ namespace printer {
 			PRINT(GenericType) {
 
 				auto printer = [&](std::ostream&, const ParentAddress& cur) { visit(cur); };
+				const auto& parent_types = node->getParents();
+				const auto& types = node->getTypeParameter();
 
 				out << *node->getName();
-				const auto& parent_types = node->getParents();
-
 				if(!parent_types->empty()) {
 					out << " : [ " << join(", ", parent_types, printer) << " ]";
 				}
 
-				const auto& types = node->getTypeParameter();
-
 				if(types->empty()) { return; }
-
 				out << "<" << join(",", types, [&](std::ostream&, const TypeAddress& cur) { visit(cur); }) << ">";
 			}
 
@@ -831,6 +821,13 @@ namespace printer {
 				}
 			}
 
+			PRINT(NumericType) {
+				if (annotations::hasAttachedName(node)) {
+					out << annotations::getAttachedName(node);
+				}
+				visit(node->getValue());
+			}
+
 			PRINT(BreakStmt) { out << "break"; }
 
 			PRINT(ContinueStmt) { out << "continue"; }
@@ -844,16 +841,6 @@ namespace printer {
 			PRINT(ThrowStmt) {
 				out << "throw ";
 				visit(node->getThrowExpr());
-			}
-
-			PRINT(GotoStmt) {
-				out << "goto ";
-				visit(node->getLabel());
-			}
-
-			PRINT(LabelStmt) {
-				visit(node->getLabel());
-				out << ":";
 			}
 
 			PRINT(DeclarationStmt) {
@@ -881,14 +868,11 @@ namespace printer {
 
 				out << "{";
 				increaseIndent();
-				newLine();
-				for_each(list.begin(), list.end() - 1, [&](const NodeAddress& cur) {
-					visit(cur);
-					out << ";";
+				for_each(list.begin(), list.end(), [&](const StatementAddress& cur) {
 					newLine();
+					visit(cur);
+					if(!hasEndingCompoundStmt(cur)) { out << ";"; }
 				});
-				visit(list.back());
-				out << ";";
 				decreaseIndent();
 				newLine();
 				out << "}";
@@ -915,17 +899,7 @@ namespace printer {
 				out << " : ";
 				visit(node->getStep());
 				out << ") ";
-
-				const auto& body = node->getBody();
-				if(body->getNodeType() != NT_CompoundStmt) {
-					increaseIndent();
-					this->newLine();
-					visit(body);
-					decreaseIndent();
-					this->newLine();
-				} else {
-					visit(body);
-				}
+				visit(node->getBody());
 			}
 
 			PRINT(IfStmt) {
@@ -987,6 +961,9 @@ namespace printer {
 				if(!thisStack.empty() && *node == *thisStack.top()) {
 					out << "this";
 				} else {
+					if (!node.isRoot() && node.getParentAddress().isa<TypeAddress>()) {
+						out << "#";
+					}
 					if(printer.hasOption(PrettyPrinter::USE_VARIABLE_NAME_ANNOTATIONS) && annotations::hasAttachedName(node)) {
 						out << annotations::getAttachedName(node);
 					} else {
@@ -1017,21 +994,23 @@ namespace printer {
 					out << str.substr(0, 3) << "..." << str.substr(str.size() - 3, str.size());
 				} else {
 					out << str;
-					auto& basic = node->getNodeManager().getLangBasic();
-					auto type = node->getType();
+					if (node.isRoot() || !node.getParentAddress().isa<NumericTypeAddress>()) { // print extension only when no type printing like int<4>
+						auto& basic = node->getNodeManager().getLangBasic();
+						auto type = node->getType();
 
-					if (basic.isFloat(type))  out << "f";
+						if (basic.isFloat(type))  out << "f";
 
-					if (basic.isUInt1(type))    out << "u";
-					if (basic.isUInt2(type))    out << "u";
-					if (basic.isUInt4(type))    out << "u";
-					if (basic.isUInt8(type))    out << "ul";
-					if (basic.isUInt16(type))   out << "ull";
-					if (basic.isUIntGen(type))  out << "u";
-					if (basic.isUIntInf(type))  out << "u";
+						if (basic.isUInt1(type))    out << "u";
+						if (basic.isUInt2(type))    out << "u";
+						if (basic.isUInt4(type))    out << "u";
+						if (basic.isUInt8(type))    out << "ul";
+						if (basic.isUInt16(type))   out << "ull";
+						if (basic.isUIntGen(type))  out << "u";
+						if (basic.isUIntInf(type))  out << "u";
 
-					if (basic.isInt8(type))     out << "l";
-					if (basic.isInt16(type))    out << "ll";
+						if (basic.isInt8(type))     out << "l";
+						if (basic.isInt16(type))    out << "ll";
+					}
 				}
 
 				if(doFullSyntax) {
@@ -1170,25 +1149,21 @@ namespace printer {
 						visit(NodeAddress(node->getBody()));
 						thisStack.pop();
 					}
-				} else if(funType->isMemberFunction() || funType->isVirtualMemberFunction()) {
+				} else if(funType->isVirtualMemberFunction()) {
+					/*
 					// print member function header
 					out << "function ";
-					assert_fail();
 					visit(analysis::getObjectType(funType));
 					auto parameters = node->getParameters();
 					out << " :: (";
 					printParameters(out, parameters, false);
-					out << ")";
-					out << (funType->isMemberFunction() ? " -> " : " ~> ");
+					out << ") ~> ";
 					visit(funType->getReturnType());
 					out << " ";
-					if (!node->getParameterList().empty())
-						thisStack.push(node->getParameterList().front());
-					// .. and body
+					thisStack.push(node->getParameterList().front());
 					visit(node->getBody());
-					if (!node->getParameterList().empty())
-						thisStack.pop();
-
+					thisStack.pop();
+					*/
 				} else {
 					// print plain header function
 					out << "function (";
@@ -1559,18 +1534,14 @@ namespace printer {
 			#define ADD_FORMATTER(Literal)                                                                                                             \
 				res[Literal] = [](InspirePrinter & printer, const CallExprAddress& call)
 
-//			if(config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
-				ADD_FORMATTER(refExt.getRefDeref()) {
-					if (ARG(0).isa<VariableAddress>() && ARG(0).getAddressedNode() == printer.getTopOfThisStack()) {
-						PRINT_ARG(0);
-					} else {
-						OUT("*");
-						PRINT_ARG(0);
-					}
-				};
-//			} else {
-//				ADD_FORMATTER(refExt.getRefDeref()) { PRINT_ARG(0); };
-//			}
+			ADD_FORMATTER(refExt.getRefDeref()) {
+				if (ARG(0).isa<VariableAddress>() && ARG(0).getAddressedNode() == printer.getTopOfThisStack()) {
+					PRINT_ARG(0);
+				} else {
+					OUT("*");
+					PRINT_ARG(0);
+				}
+			};
 
 			ADD_FORMATTER(refExt.getRefAssign()) {
 				PRINT_ARG(0);
