@@ -257,7 +257,20 @@ namespace backend {
 		});
 
 		retCode = core::transform::transformBottomUpGen(retCode, [&ttAssignment](const core::InitExprPtr& init) {
+			core::IRBuilder builder(init->getNodeManager());
 			auto initType = core::lang::ReferenceType(init->getType()).getElementType();
+			// scalar init cpp references from plain references
+			if(init.getInitExprs().size() == 1) {
+				auto expr = init.getInitExprs().front();
+				auto ttype = init->getType();
+				if(cl::isReference(ttype) && cl::isReferenceTo(expr, initType)) {
+						cl::ReferenceType varT(ttype), initT(expr);
+						if(!varT.isPlain() && initT.isPlain()) {
+							return builder.initExpr(init->getMemoryExpr(), cl::buildRefKindCast(expr, varT.getKind()));
+						}
+				}
+			}
+			// init tagtypes
 			auto tt = initType.isa<core::TagTypePtr>();
 			if(auto ttRef = initType.isa<core::TagTypeReferencePtr>()) {
 				tt = ttAssignment[ttRef];
@@ -285,7 +298,7 @@ namespace backend {
 					}
 					newInits.push_back(expr);
 				}
-				return core::IRBuilder(init->getNodeManager()).initExpr(init->getMemoryExpr(), newInits);
+				return builder.initExpr(init->getMemoryExpr(), newInits);
 			}
 			return init;
 		}, builtInLimiter);
