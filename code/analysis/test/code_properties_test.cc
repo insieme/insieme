@@ -54,7 +54,7 @@ namespace datalog {
 
 	using namespace core;
 
-	TEST(CodeProperties, DumpTextToFile) {
+	TEST(CodeProperties, DISABLED_DumpTextToFile) {
 		using namespace driver::integration;
 
 		NodeManager mgr;
