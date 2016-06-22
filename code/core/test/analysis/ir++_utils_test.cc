@@ -101,6 +101,28 @@ namespace analysis {
 		EXPECT_FALSE(isaDefaultMember(extractLambda(addresses[7]))); // member function
 	}
 
+	TEST(IRppUtils, isIRpp) {
+		// checking, if, starting from a nodePtr, there are some object orientated constructs
+		NodeManager nm;
+		IRBuilder b(nm);
+
+		auto ir1 = b.parseType("def struct A {}; def struct B : [ public A ] {}; B");
+		EXPECT_TRUE(isIRpp(ir1));
+
+		auto ir2 = b.parseType("def struct A { ctor (v1: ref<int<4>>) {}}; A");
+		EXPECT_TRUE(isIRpp(ir2));
+
+		auto ir3 = b.parseStmt("{ throw 1; }");
+		EXPECT_TRUE(isIRpp(ir3));
+
+		auto ir4 = b.parseStmt("{ try {1;} catch (v1 : ref<int<4>>) {2;} }");
+		EXPECT_TRUE(isIRpp(ir4));
+
+		auto ir5 = b.parseType("int<4>");
+		EXPECT_FALSE(isIRpp(ir5));
+
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme
