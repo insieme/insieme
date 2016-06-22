@@ -149,27 +149,29 @@ namespace analysis {
 		}
 
 		auto aExp = nodeA.isa<ExpressionPtr>();
-		auto bExpr = nodeB.isa<ExpressionPtr>();
+		auto bExp = nodeB.isa<ExpressionPtr>();
 		if(aExp) {
-			if(aExp->getType() != bExpr->getType()) {
-				reportError("Expressions differ in type", "type", *aExp->getType(), *bExpr->getType());
+			if(bExp) {
+				if(aExp->getType() != bExp->getType()) { reportError("Expressions differ in type", "type", *aExp->getType(), *bExp->getType()); }
+			} else {
+				reportError("One is a Expression, the other not", "type", *aExp->getType(), FunctionTypePtr());
 			}
 		}
 
 		auto aVar = nodeA.isa<VariablePtr>();
 		auto bVar = nodeB.isa<VariablePtr>();
 		if(aVar) {
-			if(aVar->getId() != bVar->getId()) {
-				reportError("Variables differ in id", "id", aVar->getId(), bVar->getId());
+			if(bVar) {
+				if(aVar->getId() != bVar->getId()) { reportError("Variables differ in id", "id", aVar->getId(), bVar->getId()); }
+			} else {
+				reportError("One is a Variable, the other not", "variable", aVar->getId(), VariablePtr());
 			}
 		}
 
 		auto aString = nodeA.isa<StringValuePtr>();
 		auto bString = nodeB.isa<StringValuePtr>();
 		if(aString) {
-			if(aString->getValue() != bString->getValue()) {
-				reportError("StringValues differ", "val", aString->getValue(), bString->getValue());
-			}
+			if(aString->getValue() != bString->getValue()) { reportError("StringValues differ", "val", aString->getValue(), bString->getValue()); }
 		}
 
 		auto aChildren = nodeA->getChildList();
