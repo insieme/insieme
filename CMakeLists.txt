@@ -13,3 +13,8 @@ add_subdirectory(code)
 
 #integration tests
 add_subdirectory(test)
+
+
+# dummy target: Glob all files to show them in your IDE
+file(GLOB_RECURSE list_of_all_files build/code/[^.]*  code/[^.]* test/* scripts/[^.]*)
+add_custom_target(all_files_dummy SOURCES ${list_of_all_files})
