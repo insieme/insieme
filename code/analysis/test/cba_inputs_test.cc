@@ -36,72 +36,66 @@
 
 #include <gtest/gtest.h>
 
-#include <fstream>
-#include <sstream>
+#include <tuple>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
-#include "insieme/utils/config.h"
-#include "insieme/utils/petri_net/petri_net_io.h"
-
+#include "insieme/core/ir_node.h"
 #include "insieme/core/checks/full_check.h"
-#include "insieme/core/annotations/source_location.h"
 #include "insieme/core/printer/error_printer.h"
-
-#include "insieme/frontend/frontend.h"
-
-#include "insieme/analysis/cba/cba.h"
-#include "insieme/analysis/cba/analysis.h"
-#include "insieme/analysis/cba/parallel_analysis.h"
-
-#include "insieme/analysis/cba/analysis/references.h"
-#include "insieme/analysis/cba/analysis/arithmetic.h"
 
 #include "insieme/driver/cmd/insiemecc_options.h"
 
-#include "cba_test.inc.h"
+#include "insieme/utils/config.h"
+
+#include "common/backend_dispatcher.h"
 
 namespace insieme {
 namespace analysis {
-namespace cba {
 
-	// the directory to load input files from
-	const auto ROOT_DIR = SRC_ROOT_DIR "analysis/test/cba/inputs/";
-
-	using std::string;
-	using namespace insieme::core;
+	using namespace core;
+	using namespace dispatcher;
 	namespace fs = boost::filesystem;
-	namespace fe = insieme::frontend;
 
-	vector<string> getInputFiles();
+	// defining a struct which contains the settings for a specific test
+	struct TestCaseSettings {
+		TestCaseSettings(Backend b, string f) : backend(b), filename(f) {}
+		Backend backend;
+		string filename;
+	};
 
 	// the type definition (specifying the parameter type)
-	class CBAInputTest : public ::testing::TestWithParam<string> { };
+	class CBA_Inputs_Test : public ::testing::TestWithParam<TestCaseSettings> { };
 
-	namespace {
+	// the directory to load input files from
+	const auto ROOT_DIR = utils::getInsiemeSourceRootDir() + "analysis/test/cba_tests/";
 
-		bool containsValue(const std::set<Formula>& formula, int value) {
-			for(const auto& cur : formula) {
-				// if it is the unknown value => fits
-				if (!cur) return true;
+//	namespace {
 
-				// get the formula
-				const core::arithmetic::Formula& f = *cur.formula;
+//		bool containsValue(const std::set<Formula>& formula, int value) {
+//			for(const auto& cur : formula) {
+//				// if it is the unknown value => fits
+//				if (!cur) return true;
 
-				// check current value
-				if (f.isInteger() && f.getIntegerValue() == value) return true;
-				if (!f.isConstant()) return true;
-			}
-			return false;
-		}
+//				// get the formula
+//				const core::arithmetic::Formula& f = *cur.formula;
 
-	}
+//				// check current value
+//				if (f.isInteger() && f.getIntegerValue() == value) return true;
+//				if (!f.isConstant()) return true;
+//			}
+//			return false;
+//		}
+
+//	}
 
 	// define the test case pattern
-	TEST_P(CBAInputTest, C_Code) {
+	TEST_P(CBA_Inputs_Test, C_Code) {
 
-		string file = ROOT_DIR + string(GetParam());
+		struct TestCaseSettings settings = GetParam();
+
+		string file = ROOT_DIR + settings.filename;
 
 		SCOPED_TRACE(file);
 
@@ -111,8 +105,8 @@ namespace cba {
 
 		// load file using the frontend
 		NodeManager mgr;
-        std::vector<std::string> argv = {"compiler", file, "-fopenmp", "-fcilk"};
-        insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
+		std::vector<std::string> argv = {"compiler", file, "-fopenmp", "-fcilk"};
+		insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
 		auto prog = options.job.execute(mgr);
 
 		// running semantic checks
@@ -137,100 +131,100 @@ namespace cba {
 
 			// alias analysis
 			if (name == "cba_expect_is_alias") {
-				EXPECT_PRED2(isAlias, call[0], call[1])
-							<< *core::annotations::getLocation(call) << "\n"
-							<< "call[0] evaluates to " << cba::getValues(call[0], R) << "\n"
-							<< "call[1] evaluates to " << cba::getValues(call[1], R) << "\n";
-			} else if (name == "cba_expect_may_alias") {
-				EXPECT_PRED2(mayAlias, call[0], call[1])
-							<< *core::annotations::getLocation(call) << "\n"
-							<< "call[0] evaluates to " << cba::getValues(call[0], R) << "\n"
-							<< "call[1] evaluates to " << cba::getValues(call[1], R) << "\n";
-			} else if (name == "cba_expect_not_alias") {
-				EXPECT_PRED2(notAlias, call[0], call[1])
-							<< *core::annotations::getLocation(call) << "\n"
-							<< "call[0] evaluates to " << cba::getValues(call[0], R) << "\n"
-							<< "call[1] evaluates to " << cba::getValues(call[1], R) << "\n";
+//				EXPECT_PRED2(isAlias, call[0], call[1])
+//							<< *core::annotations::getLocation(call) << "\n"
+//							<< "call[0] evaluates to " << cba::getValues(call[0], R) << "\n"
+//							<< "call[1] evaluates to " << cba::getValues(call[1], R) << "\n";
+//			} else if (name == "cba_expect_may_alias") {
+//				EXPECT_PRED2(mayAlias, call[0], call[1])
+//							<< *core::annotations::getLocation(call) << "\n"
+//							<< "call[0] evaluates to " << cba::getValues(call[0], R) << "\n"
+//							<< "call[1] evaluates to " << cba::getValues(call[1], R) << "\n";
+//			} else if (name == "cba_expect_not_alias") {
+//				EXPECT_PRED2(notAlias, call[0], call[1])
+//							<< *core::annotations::getLocation(call) << "\n"
+//							<< "call[0] evaluates to " << cba::getValues(call[0], R) << "\n"
+//							<< "call[1] evaluates to " << cba::getValues(call[1], R) << "\n";
 
-			// arithmetic analysis
-			} else if (name == "cba_expect_undefined_int") {
-				const std::set<cba::Formula>& values = cba::getValues(call[0], A);
-				EXPECT_TRUE(values.find(Formula()) != values.end())
-							<< *core::annotations::getLocation(call) << "\n"
-							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
-			} else if (name == "cba_expect_eq_int") {
-				EXPECT_PRED2(isArithmeticEqual, call[0], call[1])
-							<< *core::annotations::getLocation(call) << "\n"
-							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
-							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
-			} else if (name == "cba_expect_ne_int") {
-				EXPECT_PRED2(notArithmeticEqual, call[0], call[1])
-							<< *core::annotations::getLocation(call) << "\n"
-							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
-							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
-			} else if (name == "cba_expect_may_eq_int") {
-				EXPECT_PRED2(mayArithmeticEqual, call[0], call[1])
-							<< *core::annotations::getLocation(call) << "\n"
-							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
-							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
+//			// arithmetic analysis
+//			} else if (name == "cba_expect_undefined_int") {
+//				const std::set<cba::Formula>& values = cba::getValues(call[0], A);
+//				EXPECT_TRUE(values.find(Formula()) != values.end())
+//							<< *core::annotations::getLocation(call) << "\n"
+//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
+//			} else if (name == "cba_expect_eq_int") {
+//				EXPECT_PRED2(isArithmeticEqual, call[0], call[1])
+//							<< *core::annotations::getLocation(call) << "\n"
+//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
+//							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
+//			} else if (name == "cba_expect_ne_int") {
+//				EXPECT_PRED2(notArithmeticEqual, call[0], call[1])
+//							<< *core::annotations::getLocation(call) << "\n"
+//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
+//							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
+//			} else if (name == "cba_expect_may_eq_int") {
+//				EXPECT_PRED2(mayArithmeticEqual, call[0], call[1])
+//							<< *core::annotations::getLocation(call) << "\n"
+//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
+//							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
 
-			} else if (name == "cba_expect_execution_net_num_places") {
-				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-				EXPECT_PRED2(containsValue, cba::getValues(call[0], A), net.getNumPlaces())
-							<< *core::annotations::getLocation(call) << "\n"
-							<< "number of places " << net.getNumPlaces() << "\n"
-							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
-			} else if (name == "cba_expect_execution_net_num_transitions") {
-				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-				EXPECT_PRED2(containsValue, cba::getValues(call[0], A), net.getNumTransitions())
-							<< *core::annotations::getLocation(call) << "\n"
-							<< "number of transitions " << net.getNumTransitions() << "\n"
-							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
-			} else if (name == "cba_expect_num_threads") {
-				const auto& list = getThreadList(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-				EXPECT_PRED2(containsValue, cba::getValues(call[0], A), list.size())
-							<< *core::annotations::getLocation(call) << "\n"
-							<< "number of threads " << list.size() << "\n"
-							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
+//			} else if (name == "cba_expect_execution_net_num_places") {
+//				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+//				EXPECT_PRED2(containsValue, cba::getValues(call[0], A), net.getNumPlaces())
+//							<< *core::annotations::getLocation(call) << "\n"
+//							<< "number of places " << net.getNumPlaces() << "\n"
+//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
+//			} else if (name == "cba_expect_execution_net_num_transitions") {
+//				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+//				EXPECT_PRED2(containsValue, cba::getValues(call[0], A), net.getNumTransitions())
+//							<< *core::annotations::getLocation(call) << "\n"
+//							<< "number of transitions " << net.getNumTransitions() << "\n"
+//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
+//			} else if (name == "cba_expect_num_threads") {
+//				const auto& list = getThreadList(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+//				EXPECT_PRED2(containsValue, cba::getValues(call[0], A), list.size())
+//							<< *core::annotations::getLocation(call) << "\n"
+//							<< "number of threads " << list.size() << "\n"
+//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
 
-			// debugging
-			} else if (name == "cba_print_code") {
-				// just dump the code
-				dumpPretty(prog);
-			} else if (name == "cba_print_constraints") {
-				// print the list of equations
-				printConstraints(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-			} else if (name == "cba_print_solution") {
-				// print the solution for the constraints
-				printSolution(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-			} else if (name == "cba_dump_equations") {
-				// dump the dot plot
-				createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-			} else if (name == "cba_dump_sync_points") {
-				// dump sync points
-				std::cout << "Sync Points:\n\t" << ::join("\n\t", getSyncPoints(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n\n";
-			} else if (name == "cba_dump_thread_list") {
-				// dump the list of threads
-				std::cout << "List of Threads:\n\t" << join("\n\t", getThreadList(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n\n";
-			} else if (name == "cba_dump_execution_net") {
-				// dump the dot plot of the execution net
-				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-				EXPECT_LT(1, net.getNumPlaces());
-				utils::petri_net::plot(net, "execution_net.svg");
-			} else if (name == "cba_dump_state_graph") {
-				// dump the dot plot of the execution net
-				const auto& states = getExecutionStateGraph(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-				EXPECT_LT(1, states.getNumStates());
-				utils::petri_net::plot(states, "state_graph.svg");
-			} else if (name == "cba_dump_thread_regions") {
-				// dump the list of thread regions
-				std::cout << "Thread Regions:\n\t" << join("\n\t", getThreadRegions(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n\n";
-			} else if (name == "cba_print_ref") {
-				// print the result of the reference analysis
-				std::cout << "References: " << cba::getValues(call[0], R) << " @ " << *core::annotations::getLocation(call) << "\n";
-			} else if (name == "cba_print_int") {
-				// print the result of the reference analysis
-				std::cout << "Values:     " << cba::getValues(call[0], A) << " @ " << *core::annotations::getLocation(call) << "\n";
+//			// debugging
+//			} else if (name == "cba_print_code") {
+//				// just dump the code
+//				dumpPretty(prog);
+//			} else if (name == "cba_print_constraints") {
+//				// print the list of equations
+//				printConstraints(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+//			} else if (name == "cba_print_solution") {
+//				// print the solution for the constraints
+//				printSolution(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+//			} else if (name == "cba_dump_equations") {
+//				// dump the dot plot
+//				createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+//			} else if (name == "cba_dump_sync_points") {
+//				// dump sync points
+//				std::cout << "Sync Points:\n\t" << ::join("\n\t", getSyncPoints(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n\n";
+//			} else if (name == "cba_dump_thread_list") {
+//				// dump the list of threads
+//				std::cout << "List of Threads:\n\t" << join("\n\t", getThreadList(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n\n";
+//			} else if (name == "cba_dump_execution_net") {
+//				// dump the dot plot of the execution net
+//				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+//				EXPECT_LT(1, net.getNumPlaces());
+//				utils::petri_net::plot(net, "execution_net.svg");
+//			} else if (name == "cba_dump_state_graph") {
+//				// dump the dot plot of the execution net
+//				const auto& states = getExecutionStateGraph(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+//				EXPECT_LT(1, states.getNumStates());
+//				utils::petri_net::plot(states, "state_graph.svg");
+//			} else if (name == "cba_dump_thread_regions") {
+//				// dump the list of thread regions
+//				std::cout << "Thread Regions:\n\t" << join("\n\t", getThreadRegions(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n\n";
+//			} else if (name == "cba_print_ref") {
+//				// print the result of the reference analysis
+//				std::cout << "References: " << cba::getValues(call[0], R) << " @ " << *core::annotations::getLocation(call) << "\n";
+//			} else if (name == "cba_print_int") {
+//				// print the result of the reference analysis
+//				std::cout << "Values:     " << cba::getValues(call[0], A) << " @ " << *core::annotations::getLocation(call) << "\n";
 
 			// the rest
 			} else {
@@ -241,12 +235,12 @@ namespace cba {
 		EXPECT_TRUE(testCount > 0) << "No tests encountered within file " << file;
 	}
 
-	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(InputFileChecks, CBAInputTest, ::testing::ValuesIn(getInputFiles()));
-
-
-	vector<string> getInputFiles() {
-		vector<string> res;
+	/*
+	 * Generate a list of configurations for the tests.
+	 * This is a cross-product of the cba_tests files and the Datalog/Haskell backends
+	 */
+	vector<TestCaseSettings> getInputSettings() {
+		vector<string> filenames;
 
 		fs::path root(ROOT_DIR);
 		assert_true(fs::is_directory(root));
@@ -254,14 +248,23 @@ namespace cba {
 		for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
 			fs::path file = it->path();
 			if (file.extension().string() == ".c") {
-				res.push_back(file.filename().string());
+				filenames.push_back(file.filename().string());
 			}
 		}
-		std::sort(res.begin(), res.end());
+		std::sort(filenames.begin(), filenames.end());
+
+		vector<TestCaseSettings> res;
+		for (const auto& filename : filenames) {
+			res.emplace_back(Backend::DATALOG, filename);
+			res.emplace_back(Backend::HASKELL, filename);
+		}
 
 		return res;
 	}
 
-} // end namespace cba
+	// instantiate the test case
+	INSTANTIATE_TEST_CASE_P(InputFileChecks, CBA_Inputs_Test, ::testing::ValuesIn(getInputSettings()));
+
+
 } // end namespace analysis
 } // end namespace insieme
