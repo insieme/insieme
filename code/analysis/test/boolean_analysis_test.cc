@@ -38,6 +38,7 @@
 
 #include <fstream>
 
+#include "insieme/analysis/datalog/framework/analysis_base.h"
 #include "insieme/analysis/datalog/boolean_analysis.h"
 #include "insieme/core/ir_builder.h"
 
@@ -279,12 +280,18 @@ namespace datalog {
 
 		{
 			auto input = "ref_assign";
-			assert_decl(ASSERT_DEATH(isFalse(input), "Error: Found a ref_assign whose parent is not a CallExpr!"););
+			ASSERT_THROW(isFalse(input), framework::AnalysisFailure);
+
+			try {
+				isFalse(input);
+			} catch (const framework::AnalysisFailure& af) {
+				EXPECT_STREQ("Encountered 1 failures during analysis:\n\tError: Found a ref_assign whose parent is not a CallExpr!", af.what());
+			}
 		}
 
 		{
 			auto input = "(x : 'a)-> 'a{ return x; }(ref_assign)";
-			assert_decl(ASSERT_DEATH(isFalse(input), "Error: Found a ref_assign whose parent is not a CallExpr!"););
+			ASSERT_THROW(isFalse(input), framework::AnalysisFailure);
 		}
 
 	}

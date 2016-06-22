@@ -85,6 +85,9 @@ namespace datalog {
 		// print debug information
 		if (debug) analysis.dumpOutputs();
 
+		// check for failures in analysis
+		framework::checkForFailures(analysis);
+
 		// read result
 		LocationMap res;
 		for(const auto& cur : analysis.rel_result) {

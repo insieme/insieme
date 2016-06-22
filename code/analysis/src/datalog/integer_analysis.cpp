@@ -69,6 +69,9 @@ namespace datalog {
 		// print debug information
 		if (debug) analysis.dumpOutputs();
 
+		// check for failures in analysis
+		framework::checkForFailures(analysis);
+
 		// read result
 		auto& not_defined = analysis.rel_result_is_not_defined;
 		auto& values = analysis.rel_result_value;
