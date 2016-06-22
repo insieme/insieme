@@ -36,9 +36,9 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/dataflow.h"
-
 #include "insieme/core/ir_builder.h"
+
+#include "common/backend_dispatcher.h"
 
 #include <iostream>
 
@@ -46,27 +46,7 @@ namespace insieme {
 namespace analysis {
 
 	using namespace core;
-
-	enum class Backend { DATALOG, HASKELL };
-
-	/*
-	 * A macro to create dispatcher functions for the different backends.
-	 * Needed because GTest can't generate parametrized tests if the parameter is a template argument.
-	 */
-	#define create_dispatcher_for(FUNC)                                                                             \
-	    core::VariableAddress dispatch_##FUNC(const core::VariableAddress& var, Backend backend) {                  \
-	        switch(backend) {                                                                                       \
-	        case Backend::DATALOG: return FUNC<Datalog>(var);                                                       \
-	        case Backend::HASKELL: return FUNC<Haskell>(var);                                                       \
-	        default: assert_not_implemented() << "Backend not implemented!";                                        \
-	        }                                                                                                       \
-	        return core::VariableAddress();                                                                         \
-	    }
-
-	/* List of the dynamic dispatchers that should be available */
-	create_dispatcher_for(getDefinitionPoint)
-
-	#undef create_dispatcher_for
+	using namespace dispatcher;
 
 	/**
 	 * GTest-specific class to enable parametrized tests
