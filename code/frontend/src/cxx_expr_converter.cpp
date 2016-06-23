@@ -50,7 +50,6 @@
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
-#include "insieme/frontend/utils/temporaries_lookup.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
