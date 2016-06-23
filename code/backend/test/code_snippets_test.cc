@@ -683,8 +683,8 @@ namespace backend {
 					alias int = int<4>;
 
 					decl struct B;
-					def struct A { value : int<4>; next : ref<B>; };
-					def struct B { value : int<4>; next : ref<A>; };
+					def struct A { value : int<4>; next : ref<B>; lambda getNext = () -> ref<B> { var ref<B> x; return x; } };
+					def struct B { value : int<4>; next : ref<A>; lambda getNext = () -> ref<A> { var ref<A> x; return x; } };
 
 					int main() {
 						var ref<A> x;
