@@ -71,5 +71,46 @@ namespace analysis {
 	 */
 
 
+	template<typename Framework, typename Analysis>
+	struct analysis;
+
+	template<typename Res, typename ... Args>
+	struct analysis_type {
+		using fun_type = Res(*)(const Args&...);
+
+		template<fun_type f>
+		struct with {
+			Res operator()(const Args& ... args) const {
+				return (*f)(args...);
+			}
+		};
+	};
+
+	struct getDefinitionPoint {};
+	struct areAliasAnalysis : public analysis_type<bool,core::ExpressionAddress,core::ExpressionAddress> {};
+	struct mayAliasAnalysis {};
+
+
+
+	struct DatalogEngine {};
+
+
+//	template<>
+//	struct analysis<Datalog,getDefinitionPoint> : public analysis_base<datalog::isAlias> {};
+
+//	template<>
+//	struct analysis<DatalogEngine,areAliasAnalysis> : public analysis_base<areAliasAnalysis, areAlias> {};
+
+	template<>
+	struct analysis<DatalogEngine,areAliasAnalysis> : public areAliasAnalysis::template with<areAlias> {};
+
+	inline void dummy() {
+
+		analysis<DatalogEngine,areAliasAnalysis> a;
+
+		a(core::ExpressionAddress(), core::ExpressionAddress());
+	}
+
+
 } // end namespace analysis
 } // end namespace insieme
