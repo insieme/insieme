@@ -54,21 +54,7 @@ namespace analysis {
 	 * @param var the VariableAddress of the root node whose subtree will be searched
 	 * @return the resulting definition point or an empty VariableAddress if none could be found
 	 */
-	template<typename Engine>
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var) {
-		return Engine::getDefinitionPoint(var);
-	}
 
-	template<typename Engine>
-	bool areAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-		return Engine::areAlias(a, b);
-	}
-
-	/*
-
-	 * Usage example:
-	 * getDefinitionPoint<Datalog>(root);
-	 */
 
 
 	template<typename Framework, typename Analysis>
@@ -86,23 +72,27 @@ namespace analysis {
 		};
 	};
 
-	struct getDefinitionPoint {};
-	struct areAliasAnalysis : public analysis_type<bool,core::ExpressionAddress,core::ExpressionAddress> {};
-	struct mayAliasAnalysis {};
-
-
-
 	struct DatalogEngine {};
 
-
-//	template<>
-//	struct analysis<Datalog,getDefinitionPoint> : public analysis_base<datalog::isAlias> {};
-
-//	template<>
-//	struct analysis<DatalogEngine,areAliasAnalysis> : public analysis_base<areAliasAnalysis, areAlias> {};
-
+	struct mayAliasAnalysis : public analysis_type<bool, core::ExpressionAddress, core::ExpressionAddress> {};
 	template<>
-	struct analysis<DatalogEngine,areAliasAnalysis> : public areAliasAnalysis::template with<areAlias> {};
+	struct analysis<DatalogEngine, mayAliasAnalysis> : public mayAliasAnalysis::template with<mayAlias> {};
+
+
+	#define add_cba_interface(ENGINE, ANALYSIS, RETURN, ...)                     \
+	    struct ANALYSIS##Analysis : public analysis_type<RETURN,__VA_ARGS__> {}; \
+	    template<>                                                               \
+	    struct analysis<ENGINE##Engine,ANALYSIS##Analysis>                       \
+	                    : public ANALYSIS##Analysis::template with<ANALYSIS> {}; \
+
+
+	add_cba_interface(Datalog, areAlias, bool, core::ExpressionAddress, core::ExpressionAddress)
+	add_cba_interface(Datalog, getDefinitionPoint, core::VariableAddress, core::VariableAddress)
+
+
+	#undef add_cba_interface
+
+
 
 	inline void dummy() {
 

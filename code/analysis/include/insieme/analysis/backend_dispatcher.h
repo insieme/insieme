@@ -56,8 +56,8 @@ namespace dispatcher {
 	 */
 	#define generate_dispatcher(FUNC, ...)                               \
 	    switch(backend) {                                                \
-	    case Backend::DATALOG: return FUNC<Datalog>(__VA_ARGS__);        \
-	    case Backend::HASKELL: return FUNC<Haskell>(__VA_ARGS__);        \
+	    case Backend::DATALOG: return analysis<DatalogEngine,getDefinitionPointAnalysis>(__VA_ARGS__);        \
+	    case Backend::HASKELL: return analysis<DatalogEngine,getDefinitionPointAnalysis>(__VA_ARGS__);        \
 	    default: assert_not_implemented() << "Backend not implemented!"; \
 	    }                                                                \
 	    return {};
@@ -70,7 +70,13 @@ namespace dispatcher {
 	 * which can be used with GTest. Add more functions as needed.
 	 */
 	core::VariableAddress dispatch_getDefinitionPoint(Backend backend, const core::VariableAddress &var) {
-		generate_dispatcher(getDefinitionPoint, var)
+//		generate_dispatcher(getDefinitionPoint, var)
+		switch(backend) {
+		case Backend::DATALOG: return analysis<DatalogEngine,getDefinitionPointAnalysis>(var);
+		case Backend::HASKELL: return analysis<DatalogEngine,getDefinitionPointAnalysis>(var);
+		default: assert_not_implemented() << "Backend not implemented!";
+		}
+		return {};
 	}
 
 	#define generate_function_pointer_dispatcher(FUNC, RET_VAL, ...)                  \
