@@ -37,9 +37,13 @@
 #include <gtest/gtest.h>
 
 #include <tuple>
+#include <fstream>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+
+#include "insieme/analysis/datalog/alias_analysis.h"
+#include "insieme/analysis/backend_dispatcher.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/checks/full_check.h"
@@ -48,8 +52,7 @@
 #include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "insieme/utils/config.h"
-
-#include "common/backend_dispatcher.h"
+#include "insieme/utils/name_mangling.h"
 
 namespace insieme {
 namespace analysis {
@@ -96,6 +99,16 @@ namespace analysis {
 		struct TestCaseSettings settings = GetParam();
 
 		string file = ROOT_DIR + settings.filename;
+		string backend_name;
+
+		switch (settings.backend) {
+		case Backend::DATALOG: backend_name = "Datalog"; break;
+		case Backend::HASKELL: backend_name = "Haskell"; break;
+		default: assert_fail() << "Unknown backend given!";
+		}
+
+		std::cout << "Testing " << settings.filename
+		          << " with " << backend_name << " backend." << std::endl;
 
 		SCOPED_TRACE(file);
 
@@ -113,6 +126,7 @@ namespace analysis {
 		auto res = core::checks::check(prog);
 		EXPECT_TRUE(res.empty()) << res << "\n------\n" << printer::dumpErrors(res);
 
+
 		// run CBA analysis
 		int testCount = 0;
 		visitDepthFirst(NodeAddress(prog), [&](const CallExprAddress& call) {
@@ -121,7 +135,7 @@ namespace analysis {
 			auto fun = call->getFunctionExpr();
 			if (!fun.isa<LiteralPtr>()) return;
 
-			const string& name = fun.as<LiteralPtr>()->getStringValue();
+			const string& name = utils::demangle(fun.as<LiteralPtr>()->getStringValue());
 
 			// check prefix of literal
 			if (!boost::starts_with(name, "cba_")) return;
@@ -131,20 +145,14 @@ namespace analysis {
 
 			// alias analysis
 			if (name == "cba_expect_is_alias") {
-//				EXPECT_PRED2(isAlias, call[0], call[1])
-//							<< *core::annotations::getLocation(call) << "\n"
-//							<< "call[0] evaluates to " << cba::getValues(call[0], R) << "\n"
-//							<< "call[1] evaluates to " << cba::getValues(call[1], R) << "\n";
-//			} else if (name == "cba_expect_may_alias") {
-//				EXPECT_PRED2(mayAlias, call[0], call[1])
-//							<< *core::annotations::getLocation(call) << "\n"
-//							<< "call[0] evaluates to " << cba::getValues(call[0], R) << "\n"
-//							<< "call[1] evaluates to " << cba::getValues(call[1], R) << "\n";
-//			} else if (name == "cba_expect_not_alias") {
-//				EXPECT_PRED2(notAlias, call[0], call[1])
-//							<< *core::annotations::getLocation(call) << "\n"
-//							<< "call[0] evaluates to " << cba::getValues(call[0], R) << "\n"
-//							<< "call[1] evaluates to " << cba::getValues(call[1], R) << "\n";
+				EXPECT_PRED2(get_areAlias(settings.backend), call.getArgument(0), call.getArgument(1))
+				                << *core::annotations::getLocation(call) << std::endl;
+			} else if (name == "cba_expect_may_alias") {
+				EXPECT_PRED2(get_mayAlias(settings.backend), call.getArgument(0), call.getArgument(1))
+							<< *core::annotations::getLocation(call) << std::endl;
+			} else if (name == "cba_expect_not_alias") {
+				EXPECT_PRED2(get_notAlias(settings.backend), call.getArgument(0), call.getArgument(1))
+							<< *core::annotations::getLocation(call) << std::endl;
 
 //			// arithmetic analysis
 //			} else if (name == "cba_expect_undefined_int") {

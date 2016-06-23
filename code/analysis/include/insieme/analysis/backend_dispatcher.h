@@ -38,7 +38,7 @@
 
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/analysis/dataflow.h"
+#include "insieme/analysis/cba_interface.h"
 
 namespace insieme {
 namespace analysis {
@@ -51,33 +51,50 @@ namespace dispatcher {
 
 
 	/*
-	 * A macro to create dispatcher functions for the different backends.
+	 * A macro to create dispatches for the different backends.
 	 * Needed because GTest can't generate parametrized tests if the parameter is a template argument.
 	 */
-	#define create_dispatcher_for(FUNC)                                                                             \
-	    core::VariableAddress dispatch_##FUNC(const core::VariableAddress& var, Backend backend) {                  \
-	        switch(backend) {                                                                                       \
-	        case Backend::DATALOG: return FUNC<Datalog>(var);                                                       \
-	        case Backend::HASKELL: return FUNC<Haskell>(var);                                                       \
-	        default: assert_not_implemented() << "Backend not implemented!";                                        \
-	        }                                                                                                       \
-	        return ::insieme::core::VariableAddress();                                                                         \
-	    }
+	#define generate_dispatcher(FUNC, ...)                               \
+	    switch(backend) {                                                \
+	    case Backend::DATALOG: return FUNC<Datalog>(__VA_ARGS__);        \
+	    case Backend::HASKELL: return FUNC<Haskell>(__VA_ARGS__);        \
+	    default: assert_not_implemented() << "Backend not implemented!"; \
+	    }                                                                \
+	    return {};
 
 
 	/*
 	 * List of the dynamic dispatchers that should be available.
-	 * This will provide functions of the form
-	 *     dispatcher::dispatch_myFunctionName( var, Backend={DATALOG,HASKELL} )
+	 * This should provide functions of the form
+	 *     dispatcher::dispatch_myFunctionName( Backend={DATALOG,HASKELL}, var1, var2, var3, ... )
 	 * which can be used with GTest. Add more functions as needed.
 	 */
-	create_dispatcher_for(getDefinitionPoint)
+	core::VariableAddress dispatch_getDefinitionPoint(Backend backend, const core::VariableAddress &var) {
+		generate_dispatcher(getDefinitionPoint, var)
+	}
+
+	#define generate_function_pointer_dispatcher(FUNC, RET_VAL, ...)                  \
+	    using FUNC##_signature = RET_VAL (*)(__VA_ARGS__);                            \
+	    FUNC##_signature get_##FUNC(Backend backend) {                                \
+	        switch(backend) {                                                         \
+	        case Backend::DATALOG: return ::insieme::analysis::datalog::FUNC;         \
+	        case Backend::HASKELL: return ::insieme::analysis::datalog::FUNC;         \
+	        default: assert_not_implemented() << "Backend not implemented!";          \
+	        }                                                                         \
+	        return nullptr;                                                           \
+	    }
+
+	generate_function_pointer_dispatcher(areAlias, bool, const core::ExpressionAddress&, const core::ExpressionAddress&)
+	generate_function_pointer_dispatcher(mayAlias, bool, const core::ExpressionAddress&, const core::ExpressionAddress&)
+	generate_function_pointer_dispatcher(notAlias, bool, const core::ExpressionAddress&, const core::ExpressionAddress&)
+
 
 
 	/*
 	 * Undefining the macro to avoid namespace pollution
 	 */
-	#undef create_dispatcher_for
+	#undef generate_dispatcher
+	#undef generate_function_pointer_dispatcher
 
 } // end namespace dispatcher
 } // end namespace analysis

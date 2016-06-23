@@ -38,6 +38,7 @@
 
 #include "insieme/utils/assert.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/analysis/datalog/alias_analysis.h"
 #include "insieme/analysis/datalog/code_properties.h"
 #include "insieme/analysis/haskell/dataflow.h"
 
@@ -56,6 +57,11 @@ namespace analysis {
 	template<typename Engine>
 	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var) {
 		return Engine::getDefinitionPoint(var);
+	}
+
+	template<typename Engine>
+	bool areAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+		return Engine::areAlias(a, b);
 	}
 
 	/*

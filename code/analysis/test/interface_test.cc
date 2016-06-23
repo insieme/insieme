@@ -36,9 +36,9 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ir_builder.h"
+#include "insieme/analysis/backend_dispatcher.h"
 
-#include "common/backend_dispatcher.h"
+#include "insieme/core/ir_builder.h"
 
 #include <iostream>
 
@@ -72,7 +72,7 @@ namespace analysis {
 		//std::cout << "Parameter: " << param << "\n";
 		//std::cout << "Variable:  " << var << "\n";
 
-		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		auto find = dispatch_getDefinitionPoint(GetParam(), var);
 		ASSERT_TRUE(find);
 		ASSERT_EQ(param, find);
 	}
@@ -112,10 +112,10 @@ namespace analysis {
 		auto declY = comp[1].as<DeclarationStmtAddress>()->getVariable();
 		auto declZ = comp[2].as<DeclarationStmtAddress>()->getVariable();
 
-		EXPECT_EQ(declX, dispatch_getDefinitionPoint(varX, GetParam()));
-		EXPECT_EQ(declY, dispatch_getDefinitionPoint(varY, GetParam()));
-		EXPECT_EQ(declZ, dispatch_getDefinitionPoint(varZ, GetParam()));
-		EXPECT_FALSE(dispatch_getDefinitionPoint(varW, GetParam()));
+		EXPECT_EQ(declX, dispatch_getDefinitionPoint(GetParam(), varX));
+		EXPECT_EQ(declY, dispatch_getDefinitionPoint(GetParam(), varY));
+		EXPECT_EQ(declZ, dispatch_getDefinitionPoint(GetParam(), varZ));
+		EXPECT_FALSE(dispatch_getDefinitionPoint(GetParam(), varW));
 	}
 
 	/**
@@ -156,10 +156,10 @@ namespace analysis {
 		auto declY1 = comp2[0].as<DeclarationStmtAddress>()->getVariable();
 		auto declY2 = comp1[2].as<DeclarationStmtAddress>()->getVariable();
 
-		EXPECT_EQ(declX1, dispatch_getDefinitionPoint(varX1, GetParam()));
-		EXPECT_EQ(declY1, dispatch_getDefinitionPoint(varY1, GetParam()));
-		EXPECT_EQ(declX1, dispatch_getDefinitionPoint(varX2, GetParam()));
-		EXPECT_EQ(declY2, dispatch_getDefinitionPoint(varY2, GetParam()));
+		EXPECT_EQ(declX1, dispatch_getDefinitionPoint(GetParam(), varX1));
+		EXPECT_EQ(declY1, dispatch_getDefinitionPoint(GetParam(), varY1));
+		EXPECT_EQ(declX1, dispatch_getDefinitionPoint(GetParam(), varX2));
+		EXPECT_EQ(declY2, dispatch_getDefinitionPoint(GetParam(), varY2));
 	}
 
 	TEST_P(CBA_Interface, DefinitionPoint_LambdaParameter) {
@@ -178,7 +178,7 @@ namespace analysis {
 		std::cout << "Parameter: " << param << "\n";
 		std::cout << "Variable:  " << var << "\n";
 
-		EXPECT_EQ(param, dispatch_getDefinitionPoint(var, GetParam()));
+		EXPECT_EQ(param, dispatch_getDefinitionPoint(GetParam(), var));
 
 	}
 
@@ -198,7 +198,7 @@ namespace analysis {
 		auto var = addresses[0].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
 		auto param = var.getParentAddress(4).as<LambdaAddress>()->getParameterList()[1];
 
-		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		auto find = dispatch_getDefinitionPoint(GetParam(), var);
 		ASSERT_TRUE(find);
 		ASSERT_EQ(param, find);
 	}
@@ -219,7 +219,7 @@ namespace analysis {
 		std::cout << "Parameter: " << param << "\n";
 		std::cout << "Variable:  " << var << "\n";
 
-		auto definition = dispatch_getDefinitionPoint(var, GetParam());
+		auto definition = dispatch_getDefinitionPoint(GetParam(), var);
 		EXPECT_TRUE(definition);
 		EXPECT_EQ(param, definition);
 
@@ -251,10 +251,10 @@ namespace analysis {
 		auto defY = decl->getVariable();
 		auto defW = bind->getParameters()[1];
 
-		EXPECT_EQ(defX,dispatch_getDefinitionPoint(x, GetParam()));
-		EXPECT_EQ(defY,dispatch_getDefinitionPoint(y, GetParam()));
-		EXPECT_FALSE(dispatch_getDefinitionPoint(z, GetParam()));
-		EXPECT_EQ(defW,dispatch_getDefinitionPoint(w, GetParam()));
+		EXPECT_EQ(defX,dispatch_getDefinitionPoint(GetParam(), x));
+		EXPECT_EQ(defY,dispatch_getDefinitionPoint(GetParam(), y));
+		EXPECT_FALSE(dispatch_getDefinitionPoint(GetParam(), z));
+		EXPECT_EQ(defW,dispatch_getDefinitionPoint(GetParam(), w));
 
 	}
 
@@ -281,8 +281,8 @@ namespace analysis {
 		auto bind = x.getRootAddress().as<BindExprAddress>();
 		auto defX = bind->getParameters()[0];
 
-		EXPECT_EQ(defX,dispatch_getDefinitionPoint(x, GetParam()));
-		EXPECT_FALSE(dispatch_getDefinitionPoint(y, GetParam()));
+		EXPECT_EQ(defX,dispatch_getDefinitionPoint(GetParam(), x));
+		EXPECT_FALSE(dispatch_getDefinitionPoint(GetParam(), y));
 
 	}
 
@@ -309,8 +309,8 @@ namespace analysis {
 		auto bind = x.getRootAddress().as<BindExprAddress>();
 		auto defY = bind->getParameters()[0];
 
-		EXPECT_FALSE(dispatch_getDefinitionPoint(x, GetParam()));
-		EXPECT_EQ(defY,dispatch_getDefinitionPoint(y, GetParam()));
+		EXPECT_FALSE(dispatch_getDefinitionPoint(GetParam(), x));
+		EXPECT_EQ(defY,dispatch_getDefinitionPoint(GetParam(), y));
 
 	}
 
@@ -327,7 +327,7 @@ namespace analysis {
 		auto var = addresses[0].as<VariableAddress>();
 		var = var.switchRoot(var);
 
-		EXPECT_FALSE(dispatch_getDefinitionPoint(var, GetParam()));
+		EXPECT_FALSE(dispatch_getDefinitionPoint(GetParam(), var));
 	}
 
 	TEST_P(CBA_Interface, DefinitionPoint_ForLoop) {
@@ -343,7 +343,7 @@ namespace analysis {
 		auto var = addresses[0].as<VariableAddress>();
 		auto param = var.getRootAddress().as<CompoundStmtAddress>()[0].as<ForStmtAddress>()->getDeclaration()->getVariable();
 
-		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		auto find = dispatch_getDefinitionPoint(GetParam(), var);
 		ASSERT_TRUE(find);
 		ASSERT_EQ(param, find);
 	}
@@ -361,7 +361,7 @@ namespace analysis {
 		auto var = addresses[0].as<VariableAddress>();
 		auto param = var.getRootAddress().as<CompoundStmtAddress>()[0].as<ForStmtAddress>()->getDeclaration()->getVariable();
 
-		auto find = dispatch_getDefinitionPoint(var, GetParam());
+		auto find = dispatch_getDefinitionPoint(GetParam(), var);
 		ASSERT_TRUE(find);
 		ASSERT_EQ(param, find);
 	}
