@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/datalog/boolean_analysis.h"
+#include "insieme/analysis/datalog/alias_analysis.h"
 
 #include "insieme/analysis/datalog/framework/analysis_base.h"
 
@@ -96,8 +96,9 @@ namespace datalog {
 
 	bool mayAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
 		auto data = getReferencedLocations({ a, b });
-		assert_false(data[a].empty()) << "Failure in analysis!";
-		assert_false(data[b].empty()) << "Failure in analysis!";
+		/* Note: Removing the asserts because they may wrongly report failures if there's dead code */
+		// assert_false(data[a].empty()) << "Failure in analysis!";
+		// assert_false(data[b].empty()) << "Failure in analysis!";
 		for(const auto& cur : data[a]) {
 			if (contains(data[b], cur)) return true;
 		}
@@ -106,8 +107,9 @@ namespace datalog {
 
 	bool areAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
 		auto data = getReferencedLocations({ a, b });
-		assert_false(data[a].empty()) << "Failure in analysis!";
-		assert_false(data[b].empty()) << "Failure in analysis!";
+		/* Note: Removing the asserts because they may wrongly report failures if there's dead code */
+		// assert_false(data[a].empty()) << "Failure in analysis!";
+		// assert_false(data[b].empty()) << "Failure in analysis!";
 		return data[a].size() == 1 && data[b].size() == 1 && data[a] == data[b];
 	}
 
