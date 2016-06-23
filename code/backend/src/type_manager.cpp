@@ -157,6 +157,7 @@ namespace backend {
 			// --------------- Internal resolution utilities -----------------
 
 			const TypeInfo* addInfo(const core::TypePtr& type, const TypeInfo* info);
+			void remInfo(const core::TypePtr& type);
 			const TypeInfo* resolveInternal(const core::TypePtr& type);
 			const TypeInfo* resolveTypeInternal(const core::TypePtr& type);
 
@@ -165,8 +166,6 @@ namespace backend {
 			const TypeInfo* resolveGenericType(const core::GenericTypePtr& ptr);
 
 			const TagTypeInfo* resolveTagType(const core::TagTypePtr& ptr);
-			const TagTypeInfo* resolveStructType(const core::TagTypePtr& ptr);
-			const TagTypeInfo* resolveUnionType(const core::TagTypePtr& ptr);
 
 			const TagTypeInfo* resolveTupleType(const core::TupleTypePtr& ptr);
 
@@ -183,11 +182,6 @@ namespace backend {
 			const FunctionTypeInfo* resolveThickFunctionType(const core::FunctionTypePtr& ptr);
 
 			const RefTypeInfo* resolveRefType(const core::GenericTypePtr& ptr);
-
-			const TagTypeInfo* resolveRecType(const core::TagTypePtr& ptr);
-			void resolveRecTypeDefinition(const core::TagTypeDefinitionPtr& ptr);
-
-			TagTypeInfo* resolveRecordType(const core::TagTypePtr&, const core::RecordPtr&);
 		};
 	}
 
@@ -316,6 +310,11 @@ namespace backend {
 			allInfos.insert(info);
 			return info;
 		}
+
+		void TypeInfoStore::remInfo(const core::TypePtr& type) {
+			typeInfos.erase(type);
+		}
+
 
 		// --------------------- Implementations of resolution utilities --------------------
 
@@ -557,239 +556,270 @@ namespace backend {
 			}
 		}
 
-		TagTypeInfo* TypeInfoStore::resolveRecordType(const core::TagTypePtr& tagType, const core::RecordPtr& ptr) {
-			assert_eq(tagType->getRecord(), ptr);
+		const TagTypeInfo* TypeInfoStore::resolveTagType(const core::TagTypePtr& tagType) {
 
-			// The resolution of a named composite type is based on 3 steps
-			//		- first, get a name for the resulting C struct / union
-			//		- create a code fragment including a declaration of the struct / union (no definition)
-			//		- create a code fragment including a definition of the struct / union
-			//		- the representation of the struct / union is the same internally and externally
+			// NOTE: we simply assume every tag type to be a recursive type
 
-			bool isStruct = ptr.isa<core::StructPtr>();
-
-			// get C node manager
+			// extract some managers required for the task
+			core::NodeManager& nodeManager = converter.getNodeManager();
 			auto manager = converter.getCNodeManager();
+			NameManager& nameManager = converter.getNameManager();
 			auto fragmentManager = converter.getFragmentManager();
 
-			// fetch a name for the composed type
-			string name = converter.getNameManager().getName(ptr, "type");
+			// the one common declaration block for all types in the recursive block
+			c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
 
-			// get struct and type name
-			c_ast::IdentifierPtr typeName = manager->create(name);
+			// get list of definitions in this tag type group
+			auto definitions = tagType->getDefinition();
 
-			// create the composite type
-			c_ast::NamedCompositeTypePtr type;
-			if(isStruct) {
-				type = manager->create<c_ast::StructType>(typeName);
-			} else {
-				type = manager->create<c_ast::UnionType>(typeName);
+			// an index of the defined types
+			std::map<core::TagTypeBindingPtr,c_ast::NamedCompositeTypePtr> typeDefinitions;
+			std::map<core::TagTypeBindingPtr,c_ast::CodeFragmentPtr> typeDefinitionFragments;
+			std::map<core::TagTypeBindingPtr,TagTypeInfo*> typeTypeInfos;
+
+			// A) create empty definitions for all the types in this recursive block
+			for(const core::TagTypeBindingPtr& def : definitions) {
+
+				// create recursive type represented by current definition
+				core::TagTypePtr tagType = core::TagType::get(nodeManager, def->getTag(), definitions);
+
+				// extract the record
+				const core::RecordPtr& record = def->getRecord();
+
+				// process this record
+				bool isStruct = record.isa<core::StructPtr>();
+
+				// fetch a name for the composed type
+				string name = nameManager.getName(record, "type");
+
+				// create identifier for struct and type name
+				c_ast::IdentifierPtr typeName = manager->create(name);
+
+				// create the composite type
+				c_ast::NamedCompositeTypePtr type;
+				if(isStruct) {
+					type = manager->create<c_ast::StructType>(typeName);
+				} else {
+					type = manager->create<c_ast::UnionType>(typeName);
+				}
+
+				// register type definition locally
+				typeDefinitions[def] = type;
+
+				// add declaration of this type to declarations of the group
+				declaration->appendCode(manager->create<c_ast::TypeDeclaration>(type));
+
+				// create definition of this named composite type
+				auto defCode = manager->create<c_ast::TypeDefinition>(type);
+				c_ast::CodeFragmentPtr definition = c_ast::CCodeFragment::createNew(fragmentManager, defCode);
+				definition->addDependency(declaration);
+
+				// register fragments locally
+				typeDefinitionFragments[def] = definition;
+
+				// create resulting type info
+				auto res = type_info_utils::createInfo<TagTypeInfo>(type, declaration, definition);
+
+				// register result locally
+				typeTypeInfos[def] = res;
+
+				// save current info (for recursive references)
+				addInfo(tagType, res);										// for the full tag type
+
+				// for recursive types, also add the produced information to the tag type reference
+				if (tagType->isRecursive()) {
+					// TODO: to support nested re-use of names, infos should be stored in a stack
+					addInfo(def->getTag(),res);								// for the tag type reference (temporary)
+				}
+
 			}
 
-			// create declaration of named composite type
-			auto declCode = manager->create<c_ast::TypeDeclaration>(type);
-			c_ast::CodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(fragmentManager, declCode);
 
-			// create definition of named composite type
-			auto defCode = manager->create<c_ast::TypeDefinition>(type);
-			c_ast::CodeFragmentPtr definition = c_ast::CCodeFragment::createNew(fragmentManager, defCode);
-			definition->addDependency(declaration);
+			// B) add members and member functions for all records in this type
+			for(const core::TagTypeBindingPtr& def : definitions) {
 
-			// create resulting type info
-			auto res = type_info_utils::createInfo<TagTypeInfo>(type, declaration, definition);
+				// extract the record
+				core::RecordPtr record = def->getRecord();
 
+				// get the definition of this type
+				c_ast::NamedCompositeTypePtr type = typeDefinitions[def];
 
-			// save current info (otherwise the following code will result in an infinite recursion)
-			addInfo(tagType, res);										// for the full tag type
+				// get definition fragment of this type
+				c_ast::CodeFragmentPtr definition = typeDefinitionFragments[def];
 
-			// ----- fields -----
-			for(const core::FieldPtr& entry : ptr->getFields()) {
-				// get the name of the member
-				c_ast::IdentifierPtr name = manager->create(insieme::utils::demangle(entry->getName()->getValue()));
-				core::TypePtr curType = entry->getType();
+				// ----- fields -----
+				for(const core::FieldPtr& entry : record->getFields()) {
 
-				// special handling of variable sized arrays within structs / unions
-				if(core::lang::isUnknownSizedArray(curType)) {
+					// get the name of the member
+					c_ast::IdentifierPtr name = manager->create(insieme::utils::demangle(entry->getName()->getValue()));
+					core::TypePtr curType = entry->getType();
 
-					// construct vector type to be used
-					core::TypePtr elementType = core::lang::ArrayType(curType).getElementType();
-					const TypeInfo* info = resolveType(elementType);
-					auto memberType = manager->create<c_ast::VectorType>(info->rValueType);
+					// special handling of variable sized arrays within structs / unions
+					if(core::lang::isUnknownSizedArray(curType)) {
 
-					// add member
-					type->elements.push_back(var(memberType, name));
+						// construct vector type to be used
+						core::TypePtr elementType = core::lang::ArrayType(curType).getElementType();
+						const TypeInfo* info = resolveType(elementType);
+						auto memberType = manager->create<c_ast::VectorType>(info->rValueType);
 
-					// remember definition
+						// add member
+						type->elements.push_back(var(memberType, name));
+
+						// remember definition
+						if(info->definition) {
+							definition->addDependency(info->definition);
+						}
+
+						continue;
+					}
+
+					// build up the type entry
+					const TypeInfo* info = resolveType(curType);
+					c_ast::TypePtr elementType = info->rValueType;
+					type->elements.push_back(var(elementType, name));
+
+					// remember definitions
 					if(info->definition) {
 						definition->addDependency(info->definition);
 					}
-
-					continue;
 				}
 
-				// build up the type entry
-				const TypeInfo* info = resolveType(curType);
-				c_ast::TypePtr elementType = info->rValueType;
-				type->elements.push_back(var(elementType, name));
+				// the function manager is required to convert member functions
+				auto& funMgr = converter.getFunctionManager();
 
-				// remember definitions
-				if(info->definition) {
-					definition->addDependency(info->definition);
+				// ----- members -------
+
+				// add constructors, destructors and assignments, except if we are dealing with a C-style record (only default members)
+				if(isCStyleRecord(record)) continue;
+
+				// add constructors
+				for(const auto& ctor : record->getConstructors()) {
+					auto impl = (core::analysis::getObjectType(ctor->getType()).isa<core::TagTypeReferencePtr>()) ? tagType->peel(ctor) : ctor;
+					funMgr.getInfo(impl.as<core::LambdaExprPtr>()); // this will declare and define the constructor
 				}
+				//// TODO: explicitly delete missing constructors
+				//if (!core::analysis::hasDefaultConstructor(tagType)) {
+				//	type->ctors.push_back(manager->create<c_ast::ConstructorPrototype>());
+				//}
+				//
+				// add destructors (only for structs)
+				if(record->hasDestructor()) {
+					auto dtor = record->getDestructor();
+					auto info = funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
+					info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
+				}
+				// TODO: explicitly delete missing destructor
+
+				// add pure virtual function declarations
+				core::IRBuilder builder(def->getNodeManager());
+				for(const auto& pureVirtual : record->getPureVirtualMemberFunctions()) {
+					auto type = pureVirtual->getType();
+					type = (core::analysis::getObjectType(type).isa<core::TagTypeReferencePtr>()) ? tagType->peel(type) : type;
+					funMgr.getInfo(builder.pureVirtualMemberFunction(pureVirtual->getName(), type));
+				}
+
+				// add member functions
+				for(const auto& member : record->getMemberFunctions()) {
+					funMgr.getInfo(tagType->peel(member));
+				}
+
+
+				// ----- struct or union specific elements -------
+
+				// get the currently produced type information
+				auto res = typeTypeInfos[def];
+
+				// add struct specific features
+				if (auto strct = record.isa<core::StructPtr>()) {
+
+					// ------------- C utilities -----------------
+
+					// define c ast nodes for constructor
+					c_ast::NodePtr ifdef = manager->create<c_ast::OpaqueCode>("#ifdef _MSC_VER");
+					c_ast::NodePtr endif = manager->create<c_ast::OpaqueCode>("#endif\n");
+
+
+					// create list of parameters
+					vector<c_ast::VariablePtr> params;
+					int i = 0;
+					for(const core::FieldPtr& cur : strct->getFields()) {
+						params.push_back(c_ast::var(resolveType(cur->getType())->rValueType, format("m%0d", i++)));
+					}
+
+					// create struct initialization
+					c_ast::VariablePtr resVar = c_ast::var(res->rValueType, "res");
+					vector<c_ast::NodePtr> elements(params.begin(), params.end());
+
+					c_ast::StatementPtr body =
+						c_ast::compound(manager->create<c_ast::VarDecl>(resVar, manager->create<c_ast::VectorInit>(elements)), c_ast::ret(resVar));
+
+					// create constructor (C-style)
+					string name = converter.getNameManager().getName(strct, "type");
+					c_ast::NodePtr ctr = manager->create<c_ast::Function>(c_ast::Function::INLINE, res->rValueType, manager->create(name + "_ctr"), params, body);
+
+					// add constructor (C-style)
+					res->constructors.push_back(c_ast::CCodeFragment::createNew(fragmentManager, toVector(ifdef, ctr, endif)));
+
+
+					// ----------------- C++ ---------------------
+
+					// add parent types
+					c_ast::StructTypePtr type = static_pointer_cast<c_ast::StructType>(res->lValueType);
+					for(auto parent : strct->getParents()) {
+						// resolve parent type
+						const TypeInfo* parentInfo = resolveType(parent->getType());
+
+						// add dependency
+						res->definition->addDependency(parentInfo->definition);
+
+						// add parent to struct definition
+						type->parents.push_back(manager->create<c_ast::Parent>(parent->isVirtual(), parentInfo->lValueType));
+					}
+
+
+				// add union specific features
+				} else if (auto unon = record.isa<core::UnionPtr>()) {
+
+					// create list of constructors for members
+					int i = 0;
+					for(const core::FieldPtr& cur : unon->getFields()) {
+						// define c ast nodes for constructor
+						c_ast::NodePtr ifdef = manager->create<c_ast::OpaqueCode>("#ifdef _MSC_VER");
+						c_ast::NodePtr endif = manager->create<c_ast::OpaqueCode>("#endif\n");
+
+
+						// create current parameter
+						c_ast::VariablePtr param = c_ast::var(resolveType(cur->getType())->rValueType, "value");
+
+						// create union initialization
+						c_ast::VariablePtr resVar = c_ast::var(res->rValueType, "res");
+
+						c_ast::StatementPtr body = c_ast::compound(
+							manager->create<c_ast::VarDecl>(resVar, manager->create<c_ast::VectorInit>(toVector<c_ast::NodePtr>(param))), c_ast::ret(resVar));
+
+						// create constructor
+						string name = converter.getNameManager().getName(unon, "type");
+						c_ast::NodePtr ctr = manager->create<c_ast::Function>(c_ast::Function::INLINE, res->rValueType, manager->create(format("%s_ctr_%d", name, i++)),
+																			  toVector(param), body);
+
+						// add constructor
+						res->constructors.push_back(c_ast::CCodeFragment::createNew(fragmentManager, toVector(ifdef, ctr, endif)));
+					}
+
+
+				} else {
+					assert_fail() << "Unsupported record type: " << record->getNodeType();
+				}
+
 			}
 
-			// the function manager is required to convert member functions
-			auto& funMgr = converter.getFunctionManager();
-
-			// ----- members -------
-
-			// extract the record type info
-			auto record = tagType->getRecord();
-
-			// add constructors, destructors and assignments, except if we are dealing with a C-style record (only default members)
-			if(isCStyleRecord(record)) return res;
-
-			// add constructors
-			for(const auto& ctor : record->getConstructors()) {
-				auto impl = (core::analysis::getObjectType(ctor->getType()).isa<core::TagTypeReferencePtr>()) ? tagType->peel(ctor) : ctor;
-				funMgr.getInfo(impl.as<core::LambdaExprPtr>()); // this will declare and define the constructor
-			}
-			//// TODO: explicitly delete missing constructors
-			//if (!core::analysis::hasDefaultConstructor(tagType)) {
-			//	type->ctors.push_back(manager->create<c_ast::ConstructorPrototype>());
-			//}
-			//
-			// add destructors (only for structs)
-			if(record->hasDestructor()) {
-				auto dtor = record->getDestructor();
-				auto info = funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
-				info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
-			}
-			// TODO: explicitly delete missing destructor
-
-			// add pure virtual function declarations
-			core::IRBuilder builder(ptr.getNodeManager());
-			for(const auto& pureVirtual : record->getPureVirtualMemberFunctions()) {
-				auto type = pureVirtual->getType();
-				type = (core::analysis::getObjectType(type).isa<core::TagTypeReferencePtr>()) ? tagType->peel(type) : type;
-				funMgr.getInfo(builder.pureVirtualMemberFunction(pureVirtual->getName(), type));
+			// C) remove temporary mappings
+			for(const core::TagTypeBindingPtr& def : definitions) {
+				remInfo(def->getTag());
 			}
 
-			// add member functions
-			for(const auto& member : record->getMemberFunctions()) {
-				funMgr.getInfo(tagType->peel(member));
-			}
-
-			// done
-			return res;
-		}
-
-		const TagTypeInfo* TypeInfoStore::resolveTagType(const core::TagTypePtr& tagType) {
-
-			// handle recursive types
-			if(tagType->isRecursive()) {
-				return resolveRecType(tagType);
-			}
-
-			// convert type -- struct and union specific
-			return (tagType.isStruct()) ? resolveStructType(tagType) : resolveUnionType(tagType);
-		}
-
-		const TagTypeInfo* TypeInfoStore::resolveStructType(const core::TagTypePtr& ptr) {
-			assert_true(ptr->isStruct()) << "Type: " << *ptr;
-
-			TagTypeInfo* res = resolveRecordType(ptr, ptr->getRecord());
-
-			// get C node manager
-			auto manager = converter.getCNodeManager();
-			auto fragmentManager = converter.getFragmentManager();
-
-
-			// ------------- C utilities -----------------
-
-			// define c ast nodes for constructor
-			c_ast::NodePtr ifdef = manager->create<c_ast::OpaqueCode>("#ifdef _MSC_VER");
-			c_ast::NodePtr endif = manager->create<c_ast::OpaqueCode>("#endif\n");
-
-
-			// create list of parameters
-			vector<c_ast::VariablePtr> params;
-			int i = 0;
-			for(const core::FieldPtr& cur : ptr->getFields()) {
-				params.push_back(c_ast::var(resolveType(cur->getType())->rValueType, format("m%0d", i++)));
-			}
-
-			// create struct initialization
-			c_ast::VariablePtr resVar = c_ast::var(res->rValueType, "res");
-			vector<c_ast::NodePtr> elements(params.begin(), params.end());
-
-			c_ast::StatementPtr body =
-			    c_ast::compound(manager->create<c_ast::VarDecl>(resVar, manager->create<c_ast::VectorInit>(elements)), c_ast::ret(resVar));
-
-			// create constructor (C-style)
-			string name = converter.getNameManager().getName(ptr, "type");
-			c_ast::NodePtr ctr = manager->create<c_ast::Function>(c_ast::Function::INLINE, res->rValueType, manager->create(name + "_ctr"), params, body);
-
-			// add constructor (C-style)
-			res->constructors.push_back(c_ast::CCodeFragment::createNew(fragmentManager, toVector(ifdef, ctr, endif)));
-
-
-			// ----------------- C++ ---------------------
-
-			// add parent types
-			c_ast::StructTypePtr type = static_pointer_cast<c_ast::StructType>(res->lValueType);
-			for(auto parent : ptr->getStruct()->getParents()) {
-				// resolve parent type
-				const TypeInfo* parentInfo = resolveType(parent->getType());
-
-				// add dependency
-				res->definition->addDependency(parentInfo->definition);
-
-				// add parent to struct definition
-				type->parents.push_back(manager->create<c_ast::Parent>(parent->isVirtual(), parentInfo->lValueType));
-			}
-
-			// done
-			return res;
-		}
-
-		const TagTypeInfo* TypeInfoStore::resolveUnionType(const core::TagTypePtr& ptr) {
-			assert_true(ptr->isUnion()) << "Type: " << *ptr;
-
-			TagTypeInfo* res = resolveRecordType(ptr, ptr->getRecord());
-
-			// get C node manager
-			auto manager = converter.getCNodeManager();
-			auto fragmentManager = converter.getFragmentManager();
-
-			// create list of constructors for members
-			int i = 0;
-			for(const core::FieldPtr& cur : ptr->getFields()) {
-				// define c ast nodes for constructor
-				c_ast::NodePtr ifdef = manager->create<c_ast::OpaqueCode>("#ifdef _MSC_VER");
-				c_ast::NodePtr endif = manager->create<c_ast::OpaqueCode>("#endif\n");
-
-
-				// create current parameter
-				c_ast::VariablePtr param = c_ast::var(resolveType(cur->getType())->rValueType, "value");
-
-				// create union initialization
-				c_ast::VariablePtr resVar = c_ast::var(res->rValueType, "res");
-
-				c_ast::StatementPtr body = c_ast::compound(
-				    manager->create<c_ast::VarDecl>(resVar, manager->create<c_ast::VectorInit>(toVector<c_ast::NodePtr>(param))), c_ast::ret(resVar));
-
-				// create constructor
-				string name = converter.getNameManager().getName(ptr, "type");
-				c_ast::NodePtr ctr = manager->create<c_ast::Function>(c_ast::Function::INLINE, res->rValueType, manager->create(format("%s_ctr_%d", name, i++)),
-				                                                      toVector(param), body);
-
-				// add constructor
-				res->constructors.push_back(c_ast::CCodeFragment::createNew(fragmentManager, toVector(ifdef, ctr, endif)));
-			}
-
-			// done
-			return res;
+			// return information for requested tag type
+			return resolveType(tagType);
 		}
 
 		const TagTypeInfo* TypeInfoStore::resolveTupleType(const core::TupleTypePtr& ptr) {
@@ -800,7 +830,7 @@ namespace backend {
 			transform(ptr->getElementTypes(), std::back_inserter(entries),
 			          [&](const core::TypePtr& cur) { return builder.field(builder.stringValue(format("c%d", counter++)), cur); });
 
-			return resolveStructType(builder.structType(entries));
+			return resolveTagType(builder.structType(entries));
 		}
 
 		const ArrayTypeInfo* TypeInfoStore::resolveArrayType(const core::GenericTypePtr& ptr) {
@@ -1409,96 +1439,6 @@ namespace backend {
 
 			// done
 			return res;
-		}
-
-
-		const TagTypeInfo* TypeInfoStore::resolveRecType(const core::TagTypePtr& ptr) {
-			assert_true(ptr->isRecursive());
-
-			// the magic is done by resolving the recursive type definition
-			resolveRecTypeDefinition(ptr->getDefinition());
-
-			// look up type again (now it should be known - otherwise this will loop infinitely :) )
-			return resolveType(ptr);
-		}
-
-		void TypeInfoStore::resolveRecTypeDefinition(const core::TagTypeDefinitionPtr& ptr) {
-			// extract some managers required for the task
-			core::NodeManager& nodeManager = converter.getNodeManager();
-			auto manager = converter.getCNodeManager();
-			NameManager& nameManager = converter.getNameManager();
-
-			// the one common declaration block for all types in the recursive block
-			c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
-
-			// A) create a type info instance for each defined type and add definition
-			for(const core::TagTypeBindingPtr& cur : ptr->getDefinitions()) {
-
-				// create recursive type represented by current type variable
-				core::TagTypePtr type = core::TagType::get(nodeManager, cur->getTag(), ptr);
-
-				// create prototype
-				c_ast::IdentifierPtr name = manager->create(nameManager.getName(type, "userdefined_rec_type"));
-				// create declaration code
-				c_ast::TypePtr cType;
-
-				if (cur->getRecord().isa<core::StructPtr>()) {
-					cType = manager->create<c_ast::StructType>(name);
-				} else if (cur->getRecord().isa<core::UnionPtr>()) {
-					cType = manager->create<c_ast::UnionType>(name);
-				} else {
-					assert_fail() << "Cannot support recursive type which isn't a struct or union!";
-				}
-
-				// add declaration
-				declaration->appendCode(manager->create<c_ast::TypeDeclaration>(cType));
-
-				// create type info block
-				TypeInfo* info = new TagTypeInfo();
-				info->declaration = declaration;
-				info->lValueType = cType;
-				info->rValueType = cType;
-				info->externalType = cType;
-
-				// create the definition block (empty so far)
-				info->definition = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
-
-				// register new type information
-				addInfo(cur->getTag(), info);
-			}
-
-			// B) unroll types and add definitions
-			for(const core::TagTypeBindingPtr& cur : ptr->getDefinitions()) {
-
-				// obtain current tag type
-				core::TagTypePtr recType = core::TagType::get(nodeManager, cur->getTag(), ptr);
-
-				// fix name of tag type
-				nameManager.setName(recType->getRecord(), nameManager.getName(recType));
-
-				// get reference to pointer within map (needs to be updated)
-				TypeInfo*& curInfo = const_cast<TypeInfo*&>(typeInfos.at(recType->getTag()));
-				TagTypeInfo* newInfo = const_cast<TagTypeInfo*>(resolveRecordType(recType, recType->getRecord()));
-
-				assert_true(curInfo && newInfo) << "Both should be available now!";
-				assert(curInfo != newInfo);
-
-				// remove dependency to old declaration (would produce duplicated declaration)
-				newInfo->definition->remDependency(newInfo->declaration);
-
-				// we move the definition part of the newInfo to the curInfo
-				curInfo->definition->addDependency(curInfo->declaration);
-				curInfo->definition->addDependency(newInfo->definition);
-
-				// also update lValue, rValue and external type
-				curInfo->lValueType = newInfo->lValueType;
-				curInfo->rValueType = newInfo->rValueType;
-				curInfo->externalType = newInfo->externalType;
-
-				// also re-direct the new setup (of the peeled which might be used in the future)
-				newInfo->declaration = curInfo->declaration;
-				newInfo->definition = curInfo->definition;
-			}
 		}
 
 		const TypeInfo* TypeInfoStore::resolveCVectorType(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size) {

@@ -386,9 +386,7 @@ namespace printer {
 					auto definition = cur->getDefinition();
 					for(auto& binding : definition->getDefinitions()) {
 						auto tag = binding->getTag();
-						visitedTagTypes.insert(builder.tagType(
-								tag,
-								builder.tagTypeDefinition({{tag, definition->getDefinitionOf(tag)}})));
+						visitedTagTypes.insert(builder.tagType(tag,definition));
 					}
 				});
 
