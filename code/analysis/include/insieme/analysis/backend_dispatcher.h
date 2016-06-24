@@ -50,17 +50,63 @@ namespace dispatcher {
 	enum class Backend { DATALOG, HASKELL };
 
 
-	/*
-	 * A macro to create dispatches for the different backends.
-	 * Needed because GTest can't generate parametrized tests if the parameter is a template argument.
+	/**
+	 * OVERVIEW: MACROS TO CREATE DISPATCHERS FOR THE DIFFERENT BACKENDS.
+	 *
+	 * The first macro (generate_dispatcher) returns code to be placed in a function body,
+	 * for a dispatcher function which actually performs the analysis and returns the result
+	 * of that analysis.
+	 *
+	 * The second macro (generate_fptr_dispatcher) generates a full function which returns
+	 * a function pointer to the analysis of the specified backend. The resulting function
+	 * will be of the form 'get_ANALYSISFUNC(Backend::Whatever)'.
 	 */
-	#define generate_dispatcher(FUNC, ...)                               \
-	    switch(backend) {                                                \
-	    case Backend::DATALOG: return analysis<DatalogEngine,getDefinitionPointAnalysis>(__VA_ARGS__);        \
-	    case Backend::HASKELL: return analysis<DatalogEngine,getDefinitionPointAnalysis>(__VA_ARGS__);        \
-	    default: assert_not_implemented() << "Backend not implemented!"; \
-	    }                                                                \
+
+
+
+	/**
+	 * Generate a function body (to be placed in a 'dispatcher_ANALYSISFUNC(Backend, params)' )
+	 * to quickly generate a dynamic dispatcher function. This is useful when the analysis has no
+	 * type information on which backend to use at compile-time.
+	 *
+	 * @param FUNC the function name of the analysis (e.g. getDefinitionPoint)
+	 * @param __VA_ARGS__ the parameters for the analysis function (e.g. var1, var2, var3)
+	 *
+	 * @return The analysis result or a default-constructed 'return-type' object
+	 */
+	#define generate_dispatcher(FUNC, ...)                                                                            \
+	    switch(backend) {                                                                                             \
+	    case Backend::DATALOG: return (analysis<datalogEngine,getDefinitionPointAnalysis>()).operator()(__VA_ARGS__); \
+	    case Backend::HASKELL: return (analysis<haskellEngine,getDefinitionPointAnalysis>()).operator()(__VA_ARGS__); \
+	    default: assert_not_implemented() << "Backend not implemented!";                                              \
+	    }                                                                                                             \
 	    return {};
+
+
+
+	/**
+	 * Generate a new dispatcher function which returns a pointer to the analysis function of the
+	 * specified backend. Again, this is useful when there is no backend type information available
+	 * at compile-time.
+	 *
+	 * @param FUNC the function name of the analysis (e.g. areAlias)
+	 * @param RET_VAL the return value of the analysis (e.g. bool)
+	 * @param __VA_ARGS__ the parameters of the analysis function (e.g. const core::ExpressionAddress&, const core::....)
+	 *
+	 * @return A function pointer to the desired analysis or a default-constructed 'return-type' object
+	 */
+	#define generate_fptr_dispatcher(FUNC, RET_VAL, ...)                   \
+	    using FUNC##_signature = RET_VAL (*)(__VA_ARGS__);                             \
+	    FUNC##_signature get_##FUNC(Backend backend) {                                 \
+	        switch(backend) {                                                          \
+	        case Backend::DATALOG: return &(analysis<datalogEngine,FUNC##Analysis>()); \
+	        case Backend::HASKELL: return &(analysis<haskellEngine,FUNC##Analysis>()); \
+	        default: assert_not_implemented() << "Backend not implemented!";           \
+	        }                                                                          \
+	        return {};                                                                 \
+	    }
+
+
 
 
 	/*
@@ -70,29 +116,20 @@ namespace dispatcher {
 	 * which can be used with GTest. Add more functions as needed.
 	 */
 	core::VariableAddress dispatch_getDefinitionPoint(Backend backend, const core::VariableAddress &var) {
-//		generate_dispatcher(getDefinitionPoint, var)
-		switch(backend) {
-		case Backend::DATALOG: return analysis<DatalogEngine,getDefinitionPointAnalysis>(var);
-		case Backend::HASKELL: return analysis<DatalogEngine,getDefinitionPointAnalysis>(var);
-		default: assert_not_implemented() << "Backend not implemented!";
-		}
-		return {};
+		generate_dispatcher(getDefinitionPoint, var)
 	}
 
-	#define generate_function_pointer_dispatcher(FUNC, RET_VAL, ...)                  \
-	    using FUNC##_signature = RET_VAL (*)(__VA_ARGS__);                            \
-	    FUNC##_signature get_##FUNC(Backend backend) {                                \
-	        switch(backend) {                                                         \
-	        case Backend::DATALOG: return ::insieme::analysis::datalog::FUNC;         \
-	        case Backend::HASKELL: return ::insieme::analysis::datalog::FUNC;         \
-	        default: assert_not_implemented() << "Backend not implemented!";          \
-	        }                                                                         \
-	        return nullptr;                                                           \
-	    }
 
-	generate_function_pointer_dispatcher(areAlias, bool, const core::ExpressionAddress&, const core::ExpressionAddress&)
-	generate_function_pointer_dispatcher(mayAlias, bool, const core::ExpressionAddress&, const core::ExpressionAddress&)
-	generate_function_pointer_dispatcher(notAlias, bool, const core::ExpressionAddress&, const core::ExpressionAddress&)
+	/*
+	 * List of the dynamic function-pointer dispatchers that should be available.
+	 * This should provide functions of the form
+	 *     dispatcher::get_myFunctionName( Backend={DATALOG,HASKELL}, var1, var2, var3, ... )
+	 * which can be used with GTest. Add more functions as needed.
+	 */
+	generate_fptr_dispatcher(areAlias, bool, const core::ExpressionAddress&, const core::ExpressionAddress&)
+	generate_fptr_dispatcher(mayAlias, bool, const core::ExpressionAddress&, const core::ExpressionAddress&)
+	generate_fptr_dispatcher(notAlias, bool, const core::ExpressionAddress&, const core::ExpressionAddress&)
+
 
 
 
@@ -100,7 +137,7 @@ namespace dispatcher {
 	 * Undefining the macro to avoid namespace pollution
 	 */
 	#undef generate_dispatcher
-	#undef generate_function_pointer_dispatcher
+	#undef generate_fptr_dispatcher
 
 } // end namespace dispatcher
 } // end namespace analysis

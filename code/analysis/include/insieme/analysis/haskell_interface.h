@@ -36,42 +36,42 @@
 
 #pragma once
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/ir_address.h"
+#include "insieme/analysis/haskell/dataflow.h"
 
 namespace insieme {
 namespace analysis {
-namespace datalog {
 
-	/**
-	 * Determines whether the given type is a polymorph type.
+	/*
+	 * Create a type for this backend
 	 */
-	bool isPolymorph(const core::TypePtr& type, bool debug = false);
+	struct haskellEngine {};
 
-	/**
-	 * Determine top level nodes
+	/*
+	 * Temporary hack: Create the missing CBAs to comply with the dynamic dispatcher
 	 */
-	bool getTopLevelNodes(const core::NodePtr& root, bool debug = false);
+	namespace haskell {
 
-	/**
-	 * Get exit points from a given lambda function
-	 */
-	std::vector<core::ReturnStmtAddress> performExitPointAnalysis(const core::LambdaPtr& rootLambda, bool debug = false);
+		#define alias_not_implemented \
+		        assert_not_implemented() << "Error: not implemented for Haskell backend!"; \
+		        return true;
 
-	/**
-	 * Get definition point for a certain variable if there is one
-	 */
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var, bool debug);
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var) {
-		return getDefinitionPoint(var, false);
+		bool areAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { alias_not_implemented }
+		bool mayAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { alias_not_implemented }
+		bool notAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { alias_not_implemented }
+
+		#undef alias_not_implemented
+
 	}
 
-	/**
-	 * Determines whether the statement a happens before statement b.
+	/*
+	 * List of CBAs that this backend provides
 	 */
-	bool happensBefore(const core::StatementAddress& a, const core::StatementAddress& b);
+	add_cba_implementation(haskell, areAlias)
+	add_cba_implementation(haskell, mayAlias)
+	add_cba_implementation(haskell, notAlias)
+	add_cba_implementation(haskell, getDefinitionPoint)
 
-} // end namespace datalog
+
 } // end namespace analysis
 } // end namespace insieme

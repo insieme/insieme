@@ -42,11 +42,7 @@ namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	struct Haskell {
-
-		static core::VariableAddress getDefinitionPoint(const core::VariableAddress& var);
-
-	};
+	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var);
 
 } // end namespace haskell
 } // end namespace analysis
