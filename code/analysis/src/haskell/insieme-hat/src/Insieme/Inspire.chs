@@ -6,7 +6,13 @@ import Control.Applicative
 import Insieme.Inspire.ThHelpers
 import Language.Haskell.TH
 
-#include "node_type_helper.h"
+#c
+#define CONCRETE(name) NT_##name,
+enum NodeType {
+#include "insieme/core/ir_nodes.def"
+};
+#undef CONCRETE
+#endc
 
 -- | NodeType taken from Insieme header files.
 {#enum NodeType {} deriving (Eq, Show)#}
