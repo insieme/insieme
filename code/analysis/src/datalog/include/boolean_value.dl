@@ -1,5 +1,6 @@
 .using DataFlowAnalysis from Templates/DataFlowAnalysis
-
+.using CallToNamedFunction from Utils/NamedFunctionCalls
+.using integer_value from IntegerValue
 		
 // the analysis assigning IR nodes boolean values
 .decl boolean_value( n : node , p : data_path, v : bool )
@@ -35,6 +36,41 @@ is_boolean( n ) :- GenericType(n,"bool",a,b), is_empty(a), is_empty(b).
 boolean.value( n , DP_ROOT, true ) :- Literal(n,t,"true"), is_boolean(t).
 boolean.value( n , DP_ROOT, false ) :- Literal(n,t,"false"), is_boolean(t).
 
-// all other literals have an unknown boolean value
-boolean.value( n, DP_ROOT, v ) :- Literal(n,t,_), !is_boolean(t), boolean.unknown_value(v).
+// -- let the data flow analysis know which literals are handled --
+boolean.known_literal(l) :- Literal(l,t,"true"), is_boolean(t).
+boolean.known_literal(l) :- Literal(l,t,"false"), is_boolean(t).
 
+// all other literals have an unknown boolean value
+//boolean.value( n, DP_ROOT, v ) :- Literal(n,t,_), !is_boolean(t), boolean.unknown_value(v).
+
+// --- support for comparison operators ---
+
+// should:
+//boolean.value( c , DP_ROOT , AND( AND( d_a , d_b ) , (v_a < v_b) )  ) :- 
+//	CallToNamedFunction( c , "int_lt"),
+//	NodeList(c,0,a), integer_value(a,DP_ROOT, [ d_a, v_a ]),
+//	NodeList(c,1,b), integer_value(b,DP_ROOT, [ d_b, v_b ]).
+
+// for now:
+boolean.value( c , DP_ROOT , true  ) :- 
+	CallToNamedFunction( c , "int_lt"),
+	NodeList(c,0,a), integer_value(a,DP_ROOT, [ true, v_a ]),
+	NodeList(c,1,b), integer_value(b,DP_ROOT, [ true, v_b ]), v_a < v_b.
+
+boolean.value( c , DP_ROOT , false  ) :- 
+	CallToNamedFunction( c , "int_lt"),
+	NodeList(c,0,a), integer_value(a,DP_ROOT, [ true, v_a ]),
+	NodeList(c,1,b), integer_value(b,DP_ROOT, [ true, v_b ]), !(v_a < v_b).
+
+boolean.value( c , DP_ROOT , v  ) :- 
+	CallToNamedFunction( c , "int_lt"),
+	NodeList(c,0,a), integer_value(a,DP_ROOT, [ false, _ ]), boolean.unknown_value(v).
+
+boolean.value( c , DP_ROOT , v  ) :- 
+	CallToNamedFunction( c , "int_lt"),
+	NodeList(c,1,b), integer_value(b,DP_ROOT, [ false, _ ]), boolean.unknown_value(v).
+	
+	
+boolean.known_named_function( "int_lt" ).
+
+// TODO: all other relational operators <=, !=, ==, >= , > for signed and unsigned

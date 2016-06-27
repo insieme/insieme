@@ -1094,7 +1094,7 @@ TEST(PrettyPrinter, MarkerTest) {
 				            "  $var int<4> a = $5$;$"
 				            "}";
 
-		boost::regex res_regex{"{\n    <m id=(\\d+)>1</m>;\n    <m id=(\\d+)>var int<4> v0 = <m id=(\\d+)>5</m></m>;\n}"};
+		boost::regex res_regex{"\n    <m id=(\\d+)>1</m>;\n    <m id=(\\d+)>var int<4> v0 = <m id=(\\d+)>5</m></m>;\n"};
 		boost::smatch res_what;
 
 		auto ir = builder.normalize(builder.parseStmt(input));

@@ -231,18 +231,32 @@ namespace framework {
 
 			// -- Expression Nodes --
 
+			template <typename T>
+			bool stringRepresentsNumber(const std::string &str) {
+				try {
+					boost::lexical_cast<T>(str);
+				} catch (boost::bad_lexical_cast &) {
+					return false;
+				}
+				return true;
+			}
+
+			template <typename T>
+			T convertStringToNumber(const std::string &str) {
+				return boost::lexical_cast<T>(str);
+			}
+
+
 			int visitLiteral(const Ptr<const core::Literal>& var) override {
 				int id = getFreshID(var);
 				int type = this->visit(var->getType());
 				const string& string_value = var->getStringValue();
 				insert("Literal", id, type, string_value);
 
-				// also fill in integer literals
-				auto& basic = var->getNodeManager().getLangBasic();
-				if (basic.isInt(var->getType())) {
-					// TODO: check range of integer (signed, unsigned, ...)
-					// 		=> assert if fail (do not insert in this case)
-					insert("IntegerLiteral", id, var->template getValueAs<int64_t>());
+				// Also fill in an integer literal if possible
+				const auto &opt_number_value = var->template getValueAs<int32_t>();
+				if (opt_number_value) {
+					insert("IntegerLiteral", id, opt_number_value.get());
 				}
 
 				return id;
@@ -625,6 +639,33 @@ namespace framework {
 		return FactExtractor<core::Address>(analysis,nodeIndexer).visit(core::NodeAddress(root));
 	}
 
+	void checkForFailures(souffle::Program& analysis) {
+
+		auto failures = analysis.getRelation("D474L06_utils_failure_dl_failure");
+		assert_true(failures) << "Failure relation in analysis not found!";
+
+		// extract failure messages
+		std::vector<std::string> msgs;
+		for(auto cur : *failures) {
+			std::string msg;
+			cur >> msg;
+			msgs.push_back(msg);
+		}
+
+		// check if there have been failures
+		if (msgs.empty()) return;
+
+		// throw failure exception
+		throw AnalysisFailure(msgs);
+
+	}
+
+	AnalysisFailure::AnalysisFailure(const std::vector<std::string>& failures) : failures(failures) {
+		std::stringstream s;
+		s << "Encountered " << failures.size() << " failures during analysis:\n\t";
+		s << join("\n\t", failures);
+		summary = s.str();
+	}
 
 } // end namespace framework
 } // end namespace datalog

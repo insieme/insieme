@@ -6,6 +6,7 @@
 #define false 0
 
 // define boolean operators
-#define not( X ) (1-X)
-#define and(X,Y) (X*Y)
-#define or(X,Y) not(and(not(X),not(Y)))
+#define NOT( X ) (1-(X))
+#define AND(X,Y) ((X)*(Y))
+#define OR(X,Y) NOT(AND(NOT(X),NOT(Y)))
+

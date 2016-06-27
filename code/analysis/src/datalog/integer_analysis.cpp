@@ -34,47 +34,31 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/datalog/boolean_analysis.h"
+#include "insieme/analysis/datalog/integer_analysis.h"
 
 #include "insieme/analysis/datalog/framework/analysis_base.h"
 
-#include "souffle/gen/alias_analysis.h"
+#include "souffle/gen/integer_analysis.h"
 
 namespace insieme {
 namespace analysis {
 namespace datalog {
 
-	using Locations = std::set<int>;
-	using LocationMap = std::map<core::ExpressionAddress,Locations>;
-
-	LocationMap getReferencedLocations(const std::vector<core::ExpressionAddress>& exprs) {
+	IntegerSet getIntegerValues(const core::ExpressionAddress& expr) {
 		const bool debug = false;
 
-		// check whether there is something to do
-		if (exprs.empty()) {
-			return LocationMap();
-		}
-
 		// instantiate the analysis
-		souffle::Sf_alias_analysis analysis;
+		souffle::Sf_integer_analysis analysis;
 
-		std::map<int,core::ExpressionAddress> index;
+		int targetID = 0;
 
 		// fill in facts
-		framework::extractAddressFacts(analysis, exprs[0].getRootNode(), [&](const core::NodeAddress& addr, int id) {
-			for(const auto& expr : exprs) {
-				if (expr == addr) {
-					// remember id
-					index[id] = addr.as<core::ExpressionAddress>();
-
-					// add targeted node
-					analysis.rel_targets.insert(id);
-
-					// done
-					return;
-				}
-			}
+		framework::extractAddressFacts(analysis, expr.getRootNode(), [&](const core::NodeAddress& addr, int id) {
+			if (addr == expr) targetID = id;
 		});
+
+		// add targeted node
+		analysis.rel_target_expr.insert(targetID);
 
 		// print debug information
 		if (debug) analysis.dumpInputs();
@@ -89,29 +73,25 @@ namespace datalog {
 		framework::checkForFailures(analysis);
 
 		// read result
-		LocationMap res;
-		for(const auto& cur : analysis.rel_result) {
-			res[index[cur[0]]].insert(cur[1]);
+		auto& not_defined = analysis.rel_result_is_not_defined;
+		auto& values = analysis.rel_result_value;
+
+		// check whether the result is valid
+		assert_lt(0, not_defined.size() + values.size()) << "Incomplete analysis!";
+
+		// check whether the result is any integer
+		if (!not_defined.empty()) return IntegerSet::getAll();
+
+		// extract values
+		IntegerSet res;
+		for(const auto& cur : values) {
+			res.insert(cur[0]);
 		}
 		return res;
 	}
 
-
-	bool mayAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-		auto data = getReferencedLocations({ a, b });
-		assert_false(data[a].empty()) << "Failure in analysis!";
-		assert_false(data[b].empty()) << "Failure in analysis!";
-		for(const auto& cur : data[a]) {
-			if (contains(data[b], cur)) return true;
-		}
-		return false;
-	}
-
-	bool areAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-		auto data = getReferencedLocations({ a, b });
-		assert_false(data[a].empty()) << "Failure in analysis!";
-		assert_false(data[b].empty()) << "Failure in analysis!";
-		return data[a].size() == 1 && data[b].size() == 1 && data[a] == data[b];
+	bool isIntegerConstant(const core::ExpressionAddress& expr) {
+		return getIntegerValues(expr).size() == 1;
 	}
 
 } // end namespace datalog

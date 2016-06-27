@@ -230,7 +230,9 @@ namespace lang {
 
 		unsigned getNumElements() const {
 			assert_true(isConstSize());
-			return size.as<LiteralPtr>()->getValueAs<unsigned>();
+			boost::optional<unsigned> res = size.as<LiteralPtr>()->getValueAs<unsigned>();
+			assert_true(res) << "Cast error: Cannot cast ArrayType size to unsigned!";
+			return *res;
 		}
 	};
 
@@ -266,7 +268,7 @@ namespace lang {
 		if(auto expr = node.isa<ExpressionPtr>()) { return getArrayElementType(expr->getType()); }
 		return ArrayType(node.as<GenericTypePtr>()).getElementType();
 	}
-	
+
 	static inline TypePtr getArraySize(const NodePtr& node) {
 		assert_true(isArray(node));
 		if(auto expr = node.isa<ExpressionPtr>()) { return getArraySize(expr->getType()); }

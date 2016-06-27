@@ -30,3 +30,9 @@ reference.value( a, DP_ROOT, [ a , DP_ROOT] ) :- Lambda(_,_,p,_), NodeList(p,_,a
 
 // and by return statements
 // TODO: cover this (after merge, this is different)
+
+// TODO: handle external references via literals properly
+//reference.known_literal(l) :- Literal(l,_,_).
+
+// list handled operators
+reference.known_named_function( "ref_alloc" ).
