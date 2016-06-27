@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/backend_dispatcher.h"
+#include "insieme/analysis/cba_interface.h"
 
 #include "insieme/core/ir_builder.h"
 
@@ -46,17 +46,38 @@ namespace insieme {
 namespace analysis {
 
 	using namespace core;
-	using namespace dispatcher;
+	using testing::Types;
+
+
 
 	/**
-	 * GTest-specific class to enable parametrized tests
+	 * GTest-specific class to enable parametrized tests.
+	 * The type-parametrized constructor fetches a function pointer to the
+	 * analysis from the appropriate CBA backend to be used in the tests below.
 	 */
-	class CBA_Interface : public ::testing::TestWithParam<Backend> { };
+	template <typename Backend>
+	class CBA_Interface : public testing::Test {
+	protected:
+		CBA_Interface() : getDefinitionPoint(&(analysis<Backend,getDefinitionPointAnalysis>())) {}
+		core::VariableAddress (*getDefinitionPoint)(const core::VariableAddress&);
+	};
+
+	/**
+	 * Type list of backends to be tested
+	 */
+	using CBA_Backends = Types<datalogEngine,haskellEngine>;
+
+	/**
+	 * Tell GTest that CBA_Interface tests shall be type-parametrized with CBA_Backends
+	 */
+	TYPED_TEST_CASE(CBA_Interface, CBA_Backends);
+
+
 
 	/**
 	 * Test the definition point interface
 	 */
-	TEST_P(CBA_Interface, DefinitionPoint_DeclarationStmt) {
+	TYPED_TEST(CBA_Interface, DefinitionPoint_DeclarationStmt) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -72,7 +93,7 @@ namespace analysis {
 		//std::cout << "Parameter: " << param << "\n";
 		//std::cout << "Variable:  " << var << "\n";
 
-		auto find = dispatch_getDefinitionPoint(GetParam(), var);
+		auto find = this->getDefinitionPoint(var);
 		ASSERT_TRUE(find);
 		ASSERT_EQ(param, find);
 	}
@@ -80,7 +101,7 @@ namespace analysis {
 	/**
 	 * Test the definition point interface
 	 */
-	TEST_P(CBA_Interface, DefinitionPoint_DeclarationStmt_2) {
+	TYPED_TEST(CBA_Interface, DefinitionPoint_DeclarationStmt_2) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -112,16 +133,16 @@ namespace analysis {
 		auto declY = comp[1].as<DeclarationStmtAddress>()->getVariable();
 		auto declZ = comp[2].as<DeclarationStmtAddress>()->getVariable();
 
-		EXPECT_EQ(declX, dispatch_getDefinitionPoint(GetParam(), varX));
-		EXPECT_EQ(declY, dispatch_getDefinitionPoint(GetParam(), varY));
-		EXPECT_EQ(declZ, dispatch_getDefinitionPoint(GetParam(), varZ));
-		EXPECT_FALSE(dispatch_getDefinitionPoint(GetParam(), varW));
+		EXPECT_EQ(declX, this->getDefinitionPoint(varX));
+		EXPECT_EQ(declY, this->getDefinitionPoint(varY));
+		EXPECT_EQ(declZ, this->getDefinitionPoint(varZ));
+		EXPECT_FALSE(this->getDefinitionPoint(varW));
 	}
 
 	/**
 	 * Test the definition point interface
 	 */
-	TEST_P(CBA_Interface, DefinitionPoint_DeclarationStmt_3) {
+	TYPED_TEST(CBA_Interface, DefinitionPoint_DeclarationStmt_3) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -156,13 +177,13 @@ namespace analysis {
 		auto declY1 = comp2[0].as<DeclarationStmtAddress>()->getVariable();
 		auto declY2 = comp1[2].as<DeclarationStmtAddress>()->getVariable();
 
-		EXPECT_EQ(declX1, dispatch_getDefinitionPoint(GetParam(), varX1));
-		EXPECT_EQ(declY1, dispatch_getDefinitionPoint(GetParam(), varY1));
-		EXPECT_EQ(declX1, dispatch_getDefinitionPoint(GetParam(), varX2));
-		EXPECT_EQ(declY2, dispatch_getDefinitionPoint(GetParam(), varY2));
+		EXPECT_EQ(declX1, this->getDefinitionPoint(varX1));
+		EXPECT_EQ(declY1, this->getDefinitionPoint(varY1));
+		EXPECT_EQ(declX1, this->getDefinitionPoint(varX2));
+		EXPECT_EQ(declY2, this->getDefinitionPoint(varY2));
 	}
 
-	TEST_P(CBA_Interface, DefinitionPoint_LambdaParameter) {
+	TYPED_TEST(CBA_Interface, DefinitionPoint_LambdaParameter) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -178,11 +199,11 @@ namespace analysis {
 		std::cout << "Parameter: " << param << "\n";
 		std::cout << "Variable:  " << var << "\n";
 
-		EXPECT_EQ(param, dispatch_getDefinitionPoint(GetParam(), var));
+		EXPECT_EQ(param, this->getDefinitionPoint(var));
 
 	}
 
-	TEST_P(CBA_Interface, DefinitionPoint_LambdaParameter_2) {
+	TYPED_TEST(CBA_Interface, DefinitionPoint_LambdaParameter_2) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -198,12 +219,12 @@ namespace analysis {
 		auto var = addresses[0].as<CallExprAddress>()->getArgument(0).as<VariableAddress>();
 		auto param = var.getParentAddress(4).as<LambdaAddress>()->getParameterList()[1];
 
-		auto find = dispatch_getDefinitionPoint(GetParam(), var);
+		auto find = this->getDefinitionPoint(var);
 		ASSERT_TRUE(find);
 		ASSERT_EQ(param, find);
 	}
 
-	TEST_P(CBA_Interface, DefinitionPoint_BindParameter) {
+	TYPED_TEST(CBA_Interface, DefinitionPoint_BindParameter) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -219,13 +240,13 @@ namespace analysis {
 		std::cout << "Parameter: " << param << "\n";
 		std::cout << "Variable:  " << var << "\n";
 
-		auto definition = dispatch_getDefinitionPoint(GetParam(), var);
+		auto definition = this->getDefinitionPoint(var);
 		EXPECT_TRUE(definition);
 		EXPECT_EQ(param, definition);
 
 	}
 
-	TEST_P(CBA_Interface, DefinitionPoint_BindParameter_2) {
+	TYPED_TEST(CBA_Interface, DefinitionPoint_BindParameter_2) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -251,14 +272,14 @@ namespace analysis {
 		auto defY = decl->getVariable();
 		auto defW = bind->getParameters()[1];
 
-		EXPECT_EQ(defX,dispatch_getDefinitionPoint(GetParam(), x));
-		EXPECT_EQ(defY,dispatch_getDefinitionPoint(GetParam(), y));
-		EXPECT_FALSE(dispatch_getDefinitionPoint(GetParam(), z));
-		EXPECT_EQ(defW,dispatch_getDefinitionPoint(GetParam(), w));
+		EXPECT_EQ(defX,this->getDefinitionPoint(x));
+		EXPECT_EQ(defY,this->getDefinitionPoint(y));
+		EXPECT_FALSE(this->getDefinitionPoint(z));
+		EXPECT_EQ(defW,this->getDefinitionPoint(w));
 
 	}
 
-	TEST_P(CBA_Interface, DefinitionPoint_BindParameter_3) {
+	TYPED_TEST(CBA_Interface, DefinitionPoint_BindParameter_3) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -281,12 +302,12 @@ namespace analysis {
 		auto bind = x.getRootAddress().as<BindExprAddress>();
 		auto defX = bind->getParameters()[0];
 
-		EXPECT_EQ(defX,dispatch_getDefinitionPoint(GetParam(), x));
-		EXPECT_FALSE(dispatch_getDefinitionPoint(GetParam(), y));
+		EXPECT_EQ(defX,this->getDefinitionPoint(x));
+		EXPECT_FALSE(this->getDefinitionPoint(y));
 
 	}
 
-	TEST_P(CBA_Interface, DefinitionPoint_BindParameter_4) {
+	TYPED_TEST(CBA_Interface, DefinitionPoint_BindParameter_4) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -309,12 +330,12 @@ namespace analysis {
 		auto bind = x.getRootAddress().as<BindExprAddress>();
 		auto defY = bind->getParameters()[0];
 
-		EXPECT_FALSE(dispatch_getDefinitionPoint(GetParam(), x));
-		EXPECT_EQ(defY,dispatch_getDefinitionPoint(GetParam(), y));
+		EXPECT_FALSE(this->getDefinitionPoint(x));
+		EXPECT_EQ(defY,this->getDefinitionPoint(y));
 
 	}
 
-	TEST_P(CBA_Interface, DefinitionPoint_Fail) {
+	TYPED_TEST(CBA_Interface, DefinitionPoint_Fail) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -327,10 +348,10 @@ namespace analysis {
 		auto var = addresses[0].as<VariableAddress>();
 		var = var.switchRoot(var);
 
-		EXPECT_FALSE(dispatch_getDefinitionPoint(GetParam(), var));
+		EXPECT_FALSE(this->getDefinitionPoint(var));
 	}
 
-	TEST_P(CBA_Interface, DefinitionPoint_ForLoop) {
+	TYPED_TEST(CBA_Interface, DefinitionPoint_ForLoop) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -343,12 +364,12 @@ namespace analysis {
 		auto var = addresses[0].as<VariableAddress>();
 		auto param = var.getRootAddress().as<CompoundStmtAddress>()[0].as<ForStmtAddress>()->getDeclaration()->getVariable();
 
-		auto find = dispatch_getDefinitionPoint(GetParam(), var);
+		auto find = this->getDefinitionPoint(var);
 		ASSERT_TRUE(find);
 		ASSERT_EQ(param, find);
 	}
 
-	TEST_P(CBA_Interface, DefinitionPoint_ForLoop_2) {
+	TYPED_TEST(CBA_Interface, DefinitionPoint_ForLoop_2) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -361,15 +382,10 @@ namespace analysis {
 		auto var = addresses[0].as<VariableAddress>();
 		auto param = var.getRootAddress().as<CompoundStmtAddress>()[0].as<ForStmtAddress>()->getDeclaration()->getVariable();
 
-		auto find = dispatch_getDefinitionPoint(GetParam(), var);
+		auto find = this->getDefinitionPoint(var);
 		ASSERT_TRUE(find);
 		ASSERT_EQ(param, find);
 	}
-
-	/**
-	 * GTest parametrized tests instantiation. Backends which should be tested are listed here.
-	 */
-	INSTANTIATE_TEST_CASE_P(CBA, CBA_Interface, ::testing::Values(Backend::DATALOG, Backend::HASKELL));
 
 } // end namespace analysis
 } // end namespace insieme
