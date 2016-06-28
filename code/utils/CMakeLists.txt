@@ -19,6 +19,8 @@ target_include_directories(insieme_utils PUBLIC include)
 if(MSVC)
 	include (GenerateExportHeader)
 	GENERATE_EXPORT_HEADER(insieme_utils)
+	else()
+	target_link_libraries(insieme_utils dl)
 endif()
 
 # lookup Boost library

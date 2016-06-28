@@ -20,6 +20,8 @@ add_custom_target(
         "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
         ${stack_home}/bin/stack setup
 
+    # TODO: we need c2hs, alex binaries
+
     # install dependencies and build package
     COMMAND ${CMAKE_COMMAND} -E env
         "STACK_ROOT=${stack_root}"
