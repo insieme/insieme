@@ -89,13 +89,13 @@ namespace analysis {
 
 
 	/**
-	 * A small helper macro: We use EXPECT_PRED2 all the time, but this fails if the
+	 * A small helper macro: We use EXPECT_* all the time, but this fails if the
 	 * selected backend throws a 'not implemented' exception. Hence, we wrap the
 	 * GTest call in a try-catch block for our convenience.
 	 */
-	#define EXPECT_PRED2_OR_CATCH(FUNC, ARG1, ARG2, MSG)                          \
+	#define TRY(EXPECT_SOMETHING)                          \
 	    try {                                                                     \
-	        EXPECT_PRED2(FUNC, ARG1, ARG2) << MSG << std::endl;                   \
+	        EXPECT_SOMETHING \
 	    } catch (not_implemented_exception e) {                                   \
 	        std::cerr << "Warning for " << name << ": " << e.what() << std::endl; \
 	    }
@@ -116,12 +116,20 @@ namespace analysis {
 		areAliasAnalysis::fun_type areAlias;
 		mayAliasAnalysis::fun_type mayAlias;
 		notAliasAnalysis::fun_type notAlias;
+		isTrueAnalysis::fun_type isTrue;
+		isFalseAnalysis::fun_type isFalse;
+		mayBeTrueAnalysis::fun_type mayBeTrue;
+		mayBeFalseAnalysis::fun_type mayBeFalse;
 
 	public:
 		ActualTest()
 		        : areAlias(&(analysis<Backend,areAliasAnalysis>()))
 		        , mayAlias(&(analysis<Backend,mayAliasAnalysis>()))
-		        , notAlias(&(analysis<Backend,notAliasAnalysis>())) {}
+		        , notAlias(&(analysis<Backend,notAliasAnalysis>()))
+			, isTrue(&(analysis<Backend,isTrueAnalysis>()))
+			, isFalse(&(analysis<Backend,isFalseAnalysis>()))
+			, mayBeTrue(&(analysis<Backend,mayBeTrueAnalysis>()))
+		        , mayBeFalse(&(analysis<Backend,mayBeFalseAnalysis>())) {}
 
 		void operator()(const std::string &filename) {
 			string file = ROOT_DIR + filename;
@@ -161,24 +169,28 @@ namespace analysis {
 
 				// alias analysis
 				if (name == "cba_expect_is_alias") {
-					EXPECT_PRED2_OR_CATCH(this->areAlias, call.getArgument(0), call.getArgument(1),
-					                      *core::annotations::getLocation(call))
+					TRY(EXPECT_PRED2(this->areAlias, call.getArgument(0), call.getArgument(1))
+					    <<  *core::annotations::getLocation(call) << std::endl;)
 				} else if (name == "cba_expect_may_alias") {
-					EXPECT_PRED2_OR_CATCH(this->mayAlias, call.getArgument(0), call.getArgument(1),
-					                      *core::annotations::getLocation(call))
+					TRY(EXPECT_PRED2(this->mayAlias, call.getArgument(0), call.getArgument(1))
+					    <<  *core::annotations::getLocation(call) << std::endl;)
 				} else if (name == "cba_expect_not_alias") {
-					EXPECT_PRED2_OR_CATCH(this->notAlias, call.getArgument(0), call.getArgument(1),
-					                      *core::annotations::getLocation(call))
+					TRY(EXPECT_PRED2(this->notAlias, call.getArgument(0), call.getArgument(1))
+					    <<  *core::annotations::getLocation(call) << std::endl;)
 
-					// boolean analysis
-				} else if (name == "cba_expect_is_true") {
-
-				} else if (name == "cba_expect_is_false") {
-
+				// boolean analysis
+				} else if (name == "cba_expect_true") {
+					TRY(EXPECT_PRED1(this->isTrue, call.getArgument(0))
+					    <<  *core::annotations::getLocation(call) << std::endl;)
+				} else if (name == "cba_expect_false") {
+					TRY(EXPECT_PRED1(this->isFalse, call.getArgument(0))
+					    <<  *core::annotations::getLocation(call) << std::endl;)
 				} else if (name == "cba_expect_may_be_true") {
-
+					TRY(EXPECT_PRED1(this->mayBeTrue, call.getArgument(0))
+					    <<  *core::annotations::getLocation(call) << std::endl;)
 				} else if (name == "cba_expect_may_be_false") {
-
+					TRY(EXPECT_PRED1(this->mayBeFalse, call.getArgument(0))
+					    <<  *core::annotations::getLocation(call) << std::endl;)
 
 
 	//			// arithmetic analysis
@@ -286,7 +298,7 @@ namespace analysis {
 	INSTANTIATE_TEST_CASE_P(InputFileChecks, CBA_Inputs_Test, ::testing::ValuesIn(getFilenames()));
 
 	// undef macros
-	#undef EXPECT_PRED2_OR_CATCH
+	#undef EXPECT_OR_CATCH
 
 
 } // end namespace analysis

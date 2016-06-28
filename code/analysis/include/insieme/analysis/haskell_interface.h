@@ -52,13 +52,18 @@ namespace analysis {
 	 */
 	namespace haskell {
 
-		#define alias_not_implemented \
+		#define throw_not_implemented \
 		        throw not_implemented_exception("Not implemented in Haskell backend!"); \
 		        return true;
 
-		bool areAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { alias_not_implemented }
-		bool mayAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { alias_not_implemented }
-		bool notAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { alias_not_implemented }
+		bool areAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { throw_not_implemented }
+		bool mayAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { throw_not_implemented }
+		bool notAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { throw_not_implemented }
+
+		bool isTrue(const core::ExpressionAddress& expr) { throw_not_implemented }
+		bool isFalse(const core::ExpressionAddress& expr) { throw_not_implemented }
+		bool mayBeTrue(const core::ExpressionAddress& expr) { throw_not_implemented }
+		bool mayBeFalse(const core::ExpressionAddress& expr) { throw_not_implemented }
 
 		#undef alias_not_implemented
 
@@ -70,7 +75,13 @@ namespace analysis {
 	add_cba_implementation(haskell, areAlias)
 	add_cba_implementation(haskell, mayAlias)
 	add_cba_implementation(haskell, notAlias)
+
 	add_cba_implementation(haskell, getDefinitionPoint)
+
+	add_cba_implementation(haskell, isTrue)
+	add_cba_implementation(haskell, isFalse)
+	add_cba_implementation(haskell, mayBeTrue)
+	add_cba_implementation(haskell, mayBeFalse)
 
 
 } // end namespace analysis

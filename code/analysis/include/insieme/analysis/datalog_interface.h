@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/datalog/alias_analysis.h"
+#include "insieme/analysis/datalog/boolean_analysis.h"
 #include "insieme/analysis/datalog/code_properties.h"
 
 namespace insieme {
@@ -53,7 +54,13 @@ namespace analysis {
 	add_cba_implementation(datalog, areAlias)
 	add_cba_implementation(datalog, mayAlias)
 	add_cba_implementation(datalog, notAlias)
+
 	add_cba_implementation(datalog, getDefinitionPoint)
+
+	add_cba_implementation(datalog, isTrue)
+	add_cba_implementation(datalog, isFalse)
+	add_cba_implementation(datalog, mayBeTrue)
+	add_cba_implementation(datalog, mayBeFalse)
 
 
 } // end namespace analysis

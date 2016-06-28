@@ -130,8 +130,13 @@ namespace analysis {
 	add_cba_analysis(areAlias, bool, core::ExpressionAddress, core::ExpressionAddress)
 	add_cba_analysis(mayAlias, bool, core::ExpressionAddress, core::ExpressionAddress)
 	add_cba_analysis(notAlias, bool, core::ExpressionAddress, core::ExpressionAddress)
-	add_cba_analysis(getDefinitionPoint, core::VariableAddress, core::VariableAddress);
 
+	add_cba_analysis(getDefinitionPoint, core::VariableAddress, core::VariableAddress)
+
+	add_cba_analysis(isTrue,     bool, core::ExpressionAddress)
+	add_cba_analysis(isFalse,    bool, core::ExpressionAddress)
+	add_cba_analysis(mayBeTrue,  bool, core::ExpressionAddress)
+	add_cba_analysis(mayBeFalse, bool, core::ExpressionAddress)
 
 } // end namespace analysis
 } // end namespace insieme

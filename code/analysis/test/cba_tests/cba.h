@@ -47,6 +47,12 @@ void cba_expect_is_alias(void* a, void* b);
 void cba_expect_not_alias(void* a, void* b);
 void cba_expect_may_alias(void* a, void* b);
 
+// boolean analysis
+void cba_expect_true(bool a);
+void cba_expect_false(bool a);
+void cba_expect_may_be_true(bool a);
+void cba_expect_may_be_false(bool a);
+
 // integer tests
 void cba_expect_undefined_int(int a);
 void cba_expect_eq_int(int a, int b);
@@ -72,7 +78,7 @@ void cba_print_int(int a);
 //void cba_expect_execution_net_num_transitions(int);
 
 // boolean tests (mapped to integer tests, since in C everything is an int)
-#define cba_expect_true(_c)             cba_expect_eq_int((_c!=0), 1)
-#define cba_expect_false(_c)            cba_expect_eq_int((_c==0), 1)
-#define cba_expect_may_be_true(_c)      cba_expect_may_eq_int((_c!=0), 1)
-#define cba_expect_may_be_false(_c)     cba_expect_may_eq_int((_c==0), 1)
+//#define cba_expect_true(_c)             cba_expect_eq_int((_c!=0), 1)
+//#define cba_expect_false(_c)            cba_expect_eq_int((_c==0), 1)
+//#define cba_expect_may_be_true(_c)      cba_expect_may_eq_int((_c!=0), 1)
+//#define cba_expect_may_be_false(_c)     cba_expect_may_eq_int((_c==0), 1)
