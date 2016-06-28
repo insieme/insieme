@@ -66,25 +66,6 @@ namespace analysis {
 	// the directory to load input files from
 	const auto ROOT_DIR = utils::getInsiemeSourceRootDir() + "analysis/test/cba_tests/";
 
-//	namespace {
-
-//		bool containsValue(const std::set<Formula>& formula, int value) {
-//			for(const auto& cur : formula) {
-//				// if it is the unknown value => fits
-//				if (!cur) return true;
-
-//				// get the formula
-//				const core::arithmetic::Formula& f = *cur.formula;
-
-//				// check current value
-//				if (f.isInteger() && f.getIntegerValue() == value) return true;
-//				if (!f.isConstant()) return true;
-//			}
-//			return false;
-//		}
-
-//	}
-
 
 
 	/**
@@ -239,39 +220,12 @@ namespace analysis {
 					    << "LHS IntegerSet evaluates to " << lhs << std::endl
 					    << "RHS IntegerSet evaluates to " << rhs << std::endl;)
 
-	//			} else if (name == "cba_expect_execution_net_num_places") {
-	//				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-	//				EXPECT_PRED2(containsValue, cba::getValues(call[0], A), net.getNumPlaces())
-	//							<< *core::annotations::getLocation(call) << "\n"
-	//							<< "number of places " << net.getNumPlaces() << "\n"
-	//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
-	//			} else if (name == "cba_expect_execution_net_num_transitions") {
-	//				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-	//				EXPECT_PRED2(containsValue, cba::getValues(call[0], A), net.getNumTransitions())
-	//							<< *core::annotations::getLocation(call) << "\n"
-	//							<< "number of transitions " << net.getNumTransitions() << "\n"
-	//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
-	//			} else if (name == "cba_expect_num_threads") {
-	//				const auto& list = getThreadList(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-	//				EXPECT_PRED2(containsValue, cba::getValues(call[0], A), list.size())
-	//							<< *core::annotations::getLocation(call) << "\n"
-	//							<< "number of threads " << list.size() << "\n"
-	//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
-
 
 				// debugging
 				} else if (name == "cba_print_code") {
 					// just dump the code
 					dumpPretty(prog);
-	//			} else if (name == "cba_print_solution") {
-	//				// print the solution for the constraints
-	//				printSolution(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-	//			} else if (name == "cba_print_ref") {
-	//				// print the result of the reference analysis
-	//				std::cout << "References: " << cba::getValues(call[0], R) << " @ " << *core::annotations::getLocation(call) << "\n";
-	//			} else if (name == "cba_print_int") {
-	//				// print the result of the reference analysis
-	//				std::cout << "Values:     " << cba::getValues(call[0], A) << " @ " << *core::annotations::getLocation(call) << "\n";
+
 
 				// the rest
 				} else {
