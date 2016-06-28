@@ -15,6 +15,9 @@ export LDLAGS="-mtune=native -O3"
 # parallel build
 export SLOTS="${SLOTS:-$(nproc)}"
 
+# location of this script
+export INSTALLER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 pkg_check_installed() {
 	if [[ -d "$PREFIX/$PACKAGE" ]]; then
 		echo "$NAME $VERSION already installed"
@@ -34,7 +37,7 @@ pkg_extract() {
 }
 
 pkg_prepare() {
-	find "../patches" -name "$NAME-*.patch" | sort | xargs -r -L 1 patch -p1 -N -i
+	find "$INSTALLER_DIR/patches" -name "$NAME-*.patch" | sort | xargs -r -L 1 patch -p1 -N -i
 }
 
 pkg_configure() {
