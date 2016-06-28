@@ -58,6 +58,45 @@ namespace framework {
 	 */
 	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer = [](const core::NodeAddress&,int){});
 
+	/**
+	 * Checks for failure states in the given analysis. If failures are encountered, an exception will be thrown.
+	 */
+	void checkForFailures(souffle::Program& analysis);
+
+
+	/**
+	 * The kind of exception thrown in case failures are detected.
+	 */
+	class AnalysisFailure : public std::exception {
+
+		// the list of failures detected during the evaluation
+		std::vector<std::string> failures;
+
+		// a summary of those errors
+		std::string summary;
+
+	public:
+
+		/**
+		 * Creates a new instance wrapping up the given failures.
+		 * The list of failures most not be empty.
+		 */
+		AnalysisFailure(const std::vector<std::string>& failures);
+
+		/**
+		 * Provides access to the internally recorded list of failure messages.
+		 */
+		const std::vector<std::string>& getFailureMessages() const {
+			return failures;
+		}
+
+		/**
+		 * Provides a readable summary for the identified errors.
+		 */
+		virtual const char* what() const throw() {
+			return summary.c_str();
+		}
+	};
 
 } // end namespace framework
 } // end namespace datalog

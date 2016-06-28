@@ -95,9 +95,6 @@ namespace framework {
 
 				// also add element to named constructs list
 				if (entry.isa<core::ExpressionPtr>() && core::lang::isBuiltIn(entry)) {
-//					std::cout << "Named construct: " << core::lang::getConstructName(entry)
-//					          << " has unique id " << newIndex << " and address "
-//					          << core::NodeAddress(node) << "!" << std::endl;
 					insert("NamedConstruct", core::lang::getConstructName(entry), newIndex);
 				}
 
@@ -642,6 +639,33 @@ namespace framework {
 		return FactExtractor<core::Address>(analysis,nodeIndexer).visit(core::NodeAddress(root));
 	}
 
+	void checkForFailures(souffle::Program& analysis) {
+
+		auto failures = analysis.getRelation("D474L06_utils_failure_dl_failure");
+		assert_true(failures) << "Failure relation in analysis not found!";
+
+		// extract failure messages
+		std::vector<std::string> msgs;
+		for(auto cur : *failures) {
+			std::string msg;
+			cur >> msg;
+			msgs.push_back(msg);
+		}
+
+		// check if there have been failures
+		if (msgs.empty()) return;
+
+		// throw failure exception
+		throw AnalysisFailure(msgs);
+
+	}
+
+	AnalysisFailure::AnalysisFailure(const std::vector<std::string>& failures) : failures(failures) {
+		std::stringstream s;
+		s << "Encountered " << failures.size() << " failures during analysis:\n\t";
+		s << join("\n\t", failures);
+		summary = s.str();
+	}
 
 } // end namespace framework
 } // end namespace datalog

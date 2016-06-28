@@ -75,17 +75,8 @@ namespace datalog {
 		// print debug information
 		if (debug) analysis.dumpOutputs();
 
-		// Check for failures in analysis and print them
-		auto failures = analysis.getRelation("D474L06_utils_failure_dl_failure");
-		if (failures != nullptr && failures->size() > 0) {
-			for(auto it = failures->begin(); it != failures->end(); ++it) {
-				std::string msg;
-				int target_rel;
-				*it >> msg >> target_rel;
-				std::cerr << msg << " at relation " << target_rel << "." << std::endl;
-			}
-		}
-		assert_eq(0, failures->size()) << "Failures in analysis detected, aborting...";
+		// check for failures in analysis
+		framework::checkForFailures(analysis);
 
 		// read result
 		auto& result = analysis.rel_result;
