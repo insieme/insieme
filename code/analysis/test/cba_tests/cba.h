@@ -55,24 +55,24 @@ void cba_expect_may_eq_int(int a, int b);
 
 // debugging
 void cba_print_code();
-void cba_print_constraints();
+//void cba_print_constraints();
 void cba_print_solution();
-void cba_dump_equations();
+//void cba_dump_equations();
 void cba_print_ref(void*);
 void cba_print_int(int a);
 
-void cba_dump_execution_net();
-void cba_dump_state_graph();
-void cba_dump_thread_regions();
-void cba_dump_sync_points();
-void cba_dump_thread_list();
+//void cba_dump_execution_net();
+//void cba_dump_state_graph();
+//void cba_dump_thread_regions();
+//void cba_dump_sync_points();
+//void cba_dump_thread_list();
 
-void cba_expect_num_threads(int);
-void cba_expect_execution_net_num_places(int);
-void cba_expect_execution_net_num_transitions(int);
+//void cba_expect_num_threads(int);
+//void cba_expect_execution_net_num_places(int);
+//void cba_expect_execution_net_num_transitions(int);
 
 // boolean tests (mapped to integer tests, since in C everything is an int)
-#define cba_expect_true(_c) 			cba_expect_eq_int((_c!=0), 1)
-#define cba_expect_false(_c) 			cba_expect_eq_int((_c==0), 1)
-#define cba_expect_may_be_true(_c) 		cba_expect_may_eq_int((_c!=0), 1)
-#define cba_expect_may_be_false(_c) 	cba_expect_may_eq_int((_c==0), 1)
+#define cba_expect_true(_c)             cba_expect_eq_int((_c!=0), 1)
+#define cba_expect_false(_c)            cba_expect_eq_int((_c==0), 1)
+#define cba_expect_may_be_true(_c)      cba_expect_may_eq_int((_c!=0), 1)
+#define cba_expect_may_be_false(_c)     cba_expect_may_eq_int((_c==0), 1)

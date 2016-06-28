@@ -47,14 +47,14 @@ namespace analysis {
 	struct haskellEngine {};
 
 	/*
-	 * Temporary hack: Create the missing CBAs to comply with the dynamic dispatcher
+	 * Create the missing CBAs to comply with the dispatcher.
+	 * Needed to avoid incomplete type errors during compilation.
 	 */
 	namespace haskell {
 
 		#define alias_not_implemented \
-		        assert_not_implemented() << "Error: not implemented for Haskell backend!"; \
+		        throw not_implemented_exception("Not implemented in Haskell backend!"); \
 		        return true;
-
 
 		bool areAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { alias_not_implemented }
 		bool mayAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { alias_not_implemented }

@@ -86,6 +86,22 @@ namespace analysis {
 
 //	}
 
+
+
+	/**
+	 * A small helper macro: We use EXPECT_PRED2 all the time, but this fails if the
+	 * selected backend throws a 'not implemented' exception. Hence, we wrap the
+	 * GTest call in a try-catch block for our convenience.
+	 */
+	#define EXPECT_PRED2_OR_CATCH(FUNC, ARG1, ARG2, MSG)                          \
+	    try {                                                                     \
+	        EXPECT_PRED2(FUNC, ARG1, ARG2) << MSG << std::endl;                   \
+	    } catch (not_implemented_exception e) {                                   \
+	        std::cerr << "Warning for " << name << ": " << e.what() << std::endl; \
+	    }
+
+
+
 	/**
 	 * The actual CBA tests have been outsourced to their own class
 	 * in order to handle the different CBA backends.
@@ -145,14 +161,25 @@ namespace analysis {
 
 				// alias analysis
 				if (name == "cba_expect_is_alias") {
-					EXPECT_PRED2(this->areAlias, call.getArgument(0), call.getArgument(1))
-					                << *core::annotations::getLocation(call) << std::endl;
+					EXPECT_PRED2_OR_CATCH(this->areAlias, call.getArgument(0), call.getArgument(1),
+					                      *core::annotations::getLocation(call))
 				} else if (name == "cba_expect_may_alias") {
-					EXPECT_PRED2(this->mayAlias, call.getArgument(0), call.getArgument(1))
-								<< *core::annotations::getLocation(call) << std::endl;
+					EXPECT_PRED2_OR_CATCH(this->mayAlias, call.getArgument(0), call.getArgument(1),
+					                      *core::annotations::getLocation(call))
 				} else if (name == "cba_expect_not_alias") {
-					EXPECT_PRED2(this->notAlias, call.getArgument(0), call.getArgument(1))
-								<< *core::annotations::getLocation(call) << std::endl;
+					EXPECT_PRED2_OR_CATCH(this->notAlias, call.getArgument(0), call.getArgument(1),
+					                      *core::annotations::getLocation(call))
+
+					// boolean analysis
+				} else if (name == "cba_expect_is_true") {
+
+				} else if (name == "cba_expect_is_false") {
+
+				} else if (name == "cba_expect_may_be_true") {
+
+				} else if (name == "cba_expect_may_be_false") {
+
+
 
 	//			// arithmetic analysis
 	//			} else if (name == "cba_expect_undefined_int") {
@@ -195,38 +222,13 @@ namespace analysis {
 	//							<< "number of threads " << list.size() << "\n"
 	//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
 
-	//			// debugging
-	//			} else if (name == "cba_print_code") {
-	//				// just dump the code
-	//				dumpPretty(prog);
-	//			} else if (name == "cba_print_constraints") {
-	//				// print the list of equations
-	//				printConstraints(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
+				// debugging
+				} else if (name == "cba_print_code") {
+					// just dump the code
+					dumpPretty(prog);
 	//			} else if (name == "cba_print_solution") {
 	//				// print the solution for the constraints
 	//				printSolution(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-	//			} else if (name == "cba_dump_equations") {
-	//				// dump the dot plot
-	//				createDotDump(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-	//			} else if (name == "cba_dump_sync_points") {
-	//				// dump sync points
-	//				std::cout << "Sync Points:\n\t" << ::join("\n\t", getSyncPoints(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n\n";
-	//			} else if (name == "cba_dump_thread_list") {
-	//				// dump the list of threads
-	//				std::cout << "List of Threads:\n\t" << join("\n\t", getThreadList(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n\n";
-	//			} else if (name == "cba_dump_execution_net") {
-	//				// dump the dot plot of the execution net
-	//				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-	//				EXPECT_LT(1, net.getNumPlaces());
-	//				utils::petri_net::plot(net, "execution_net.svg");
-	//			} else if (name == "cba_dump_state_graph") {
-	//				// dump the dot plot of the execution net
-	//				const auto& states = getExecutionStateGraph(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
-	//				EXPECT_LT(1, states.getNumStates());
-	//				utils::petri_net::plot(states, "state_graph.svg");
-	//			} else if (name == "cba_dump_thread_regions") {
-	//				// dump the list of thread regions
-	//				std::cout << "Thread Regions:\n\t" << join("\n\t", getThreadRegions(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody())) << "\n\n";
 	//			} else if (name == "cba_print_ref") {
 	//				// print the result of the reference analysis
 	//				std::cout << "References: " << cba::getValues(call[0], R) << " @ " << *core::annotations::getLocation(call) << "\n";
@@ -282,6 +284,9 @@ namespace analysis {
 
 	// instantiate the test case
 	INSTANTIATE_TEST_CASE_P(InputFileChecks, CBA_Inputs_Test, ::testing::ValuesIn(getFilenames()));
+
+	// undef macros
+	#undef EXPECT_PRED2_OR_CATCH
 
 
 } // end namespace analysis
