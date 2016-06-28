@@ -242,12 +242,12 @@ namespace analysis {
 	 * The test cases. One for each backend.
 	 * GTest is not able to mix type- and value-parametrized tests.
 	 */
-	TEST_P(CBA_Inputs_Test, Datalog) {
+	TEST_P(CBA_Inputs_Test, DISABLED_Datalog) {
 		ActualTest<datalogEngine> test;
 		test(GetParam());
 	}
 
-	TEST_P(CBA_Inputs_Test, Haskell) {
+	TEST_P(CBA_Inputs_Test, DISABLED_Haskell) {
 		ActualTest<haskellEngine> test;
 		test(GetParam());
 	}
