@@ -24,7 +24,7 @@ preprocessor_pattern = /^(#(?:if|else|endif).*)$/
 # tokens to be removed/ignored
 standard_tokens = %w(void char short int unsigned long float double const enum \*)
 
-$options = {:insieme_builtins_dir => nil, :command => nil, :std_include_dir => nil, :force => false, :quiet => false, :detect_via_compiler => nil}
+$options = {:insieme_builtins_dir => nil, :command => nil, :std_include_dirs => nil, :force => false, :quiet => false, :detect_via_compiler => nil}
 
 parser = OptionParser.new do|opts|
 	opts.banner = "Usage: ./generate_builtins.rb [options]"
@@ -40,8 +40,8 @@ parser = OptionParser.new do|opts|
 		$options[:detect_via_compiler] = detect;
 	end
 
-	opts.on('-i', '--input dir', String, 'Standard header include directory') do |std_inc_dir|
-		$options[:std_include_dir] = std_inc_dir;
+	opts.on('-i', '--input dirs', String, 'Standard header include directories (colon-separated)') do |std_inc_dirs|
+		$options[:std_include_dirs] = std_inc_dirs.split(":");
 	end
 
 	opts.on('-o', '--output dir', String, 'Insieme builtin header directory') do |insieme_builtins_dir|
@@ -72,13 +72,14 @@ def wrap_and_print(text, outfile)
 	end
 end
 
-if($options[:std_include_dir] == nil && $options[:detect_via_compiler])
+if($options[:std_include_dirs] == nil && $options[:detect_via_compiler])
 	compiler = "#{$options[:detect_via_compiler]}"
 	preprocessor_cmd = "echo | #{compiler} -v -xc -E - 2>&1"
 	preprocessor_output = `#{preprocessor_cmd}`
-	match = preprocessor_output.match(/#include <\.\.\.> search starts here:\n\s+([^\n]+)/)
+	# look for paths with a whitespace in front
+	match = preprocessor_output.scan(/(^ \/[^ ]*$)/)
 	if(match)
-		$options[:std_include_dir] = match[1]
+		$options[:std_include_dirs] = match.map{ |x| x[0].strip }
 	else
 		puts "Unable to parse preprocessor output from command \"#{preprocessor_cmd}\""
 		exit 1
@@ -88,57 +89,59 @@ end
 types = Set.new
 enums = Hash.new
 
-Dir.glob("#{$options[:std_include_dir]}/**/#{infile_pattern}").each do |infile|
+$options[:std_include_dirs].each do |directory|
+	Dir.glob("#{directory}/**/#{infile_pattern}").each do |infile|
 
-	if(!$options[:force] && File.file?("#{$options[:insieme_builtins_dir]}/#{File.basename(infile)}"))
-		puts "* Skipping already present #{$options[:insieme_builtins_dir]}/#{File.basename(infile)}\n" if !$options[:quiet]
-		next
-	end
+		if(!$options[:force] && File.file?("#{$options[:insieme_builtins_dir]}/#{File.basename(infile)}"))
+			puts "* Skipping already present #{$options[:insieme_builtins_dir]}/#{File.basename(infile)}\n" if !$options[:quiet]
+			next
+		end
 
-	content = File.open(infile, "r").read
-	
-	# merge function and preprocessor pattern in a union
-	stmt_match = content.scan(/(?:#{function_pattern})|(?:#{preprocessor_pattern})/)
-	
-	if stmt_match.size > 0
-
-		decls_out = ""
+		content = File.open(infile, "r").read
 		
-		# handle functions, add types as they appear in parameters or as return types
-		stmt_match.each do |func|
-			if(func[3] != nil)
-				# write preprocessor directives
-				decls_out += "#{func[3]}\n\n"
-			else
-				# write prototype declaration consisting of return type, identifier and paramter list
-				decls_out += "extern #{func[0]} #{func[1]} (#{func[2]});\n"
-				# add return type to set of types
-				types.add("#{func[0]}")
-				# add each parameter type to set of types
-				func[2].split(",").each do |param|
-					param_list = param.strip.split(" ")
-					# remove identifier if present, keep only type
-					param_list = param_list[0...-1] if param_list.size > 1
-					# add everything that is not an enum
-					types.add("#{param_list.join(" ")}")
+		# merge function and preprocessor pattern in a union
+		stmt_match = content.scan(/(?:#{function_pattern})|(?:#{preprocessor_pattern})/)
+		
+		if stmt_match.size > 0
+
+			decls_out = ""
+			
+			# handle functions, add types as they appear in parameters or as return types
+			stmt_match.each do |func|
+				if(func[3] != nil)
+					# write preprocessor directives
+					decls_out += "#{func[3]}\n\n"
+				else
+					# write prototype declaration consisting of return type, identifier and paramter list
+					decls_out += "extern #{func[0]} #{func[1]} (#{func[2]});\n"
+					# add return type to set of types
+					types.add("#{func[0]}")
+					# add each parameter type to set of types
+					func[2].split(",").each do |param|
+						param_list = param.strip.split(" ")
+						# remove identifier if present, keep only type
+						param_list = param_list[0...-1] if param_list.size > 1
+						# add everything that is not an enum
+						types.add("#{param_list.join(" ")}")
+					end
 				end
 			end
-		end
 
-		# save (possibly typedef'd) enums in hash
-		# key is enum's concatenated identifier (before and after enumerator list, as only one of them may appear at a time)
-		content.scan(enum_pattern).each do |x|
-			enums["#{x[1]}#{x[3]}"] = "#{x[0]} enum #{x[1]} #{x[2]} #{x[3]};\n"
-			# add enum names for later removal from types
-			standard_tokens.push("#{x[1]}#{x[3]}")
+			# save (possibly typedef'd) enums in hash
+			# key is enum's concatenated identifier (before and after enumerator list, as only one of them may appear at a time)
+			content.scan(enum_pattern).each do |x|
+				enums["#{x[1]}#{x[3]}"] = "#{x[0]} enum #{x[1]} #{x[2]} #{x[3]};\n"
+				# add enum names for later removal from types
+				standard_tokens.push("#{x[1]}#{x[3]}")
+			end
+			# need to convert to array for elements to be modifieable
+			types_arr = types.to_a
+			# remove standard tokens from types, keep what is left
+			types_arr.map!{ |x| x.gsub(/#{standard_tokens.join("|")}/,"").strip }.reject!{ |x| x.empty? }
+			types = types_arr.to_set
+			# put function declarations in file copies with the same name, write include directive for single file holding types and enums
+			wrap_and_print("#include <#{types_header_filename}>\n\n" + decls_out, "#{$options[:insieme_builtins_dir]}/#{File.basename(infile)}")
 		end
-		# need to convert to array for elements to be modifieable
-		types_arr = types.to_a
-		# remove standard tokens from types, keep what is left
-		types_arr.map!{ |x| x.gsub(/#{standard_tokens.join("|")}/,"").strip }.reject!{ |x| x.empty? }
-		types = types_arr.to_set
-		# put function declarations in file copies with the same name, write include directive for single file holding types and enums
-		wrap_and_print("#include <#{types_header_filename}>\n\n" + decls_out, "#{$options[:insieme_builtins_dir]}/#{File.basename(infile)}")
 	end
 end
 
