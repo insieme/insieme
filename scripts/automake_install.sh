@@ -17,8 +17,8 @@ export PATH=$NEW_AUTOCONF_PATH:$PATH
 
 rm -rf $PREFIX/automake-$VERSION
 echo "#### Downloading automake ####"
-# wget -nc http://www.dps.uibk.ac.at/~csaf7445/ext_libs/automake-$VERSION.tar.xz
-cp ~/automake-$VERSION.tar.xz .
+wget -nc http://ftp.gnu.org/gnu/automake/automake-${VERSION}.tar.xz
+#cp ~/automake-$VERSION.tar.xz .
 tar -xvf automake-$VERSION.tar.xz
 
 cd automake-$VERSION

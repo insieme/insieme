@@ -3,12 +3,12 @@
 
 set -e
 
-VERSION=1.54.0
-VERSION_FILENAME=1_54_0
+VERSION=1.59.0
+VERSION_FILENAME=1_59_0
 BOOST_LIBS=filesystem,program_options,random,system,regex,thread,serialization,date_time,wave
 
 ########################################################################
-##		                Boost
+##                              Boost
 ########################################################################
 
 if [ -d $PREFIX/boost-$VERSION ]; then
@@ -18,19 +18,19 @@ fi
 
 rm -Rf $PREFIX/boost-$VERSION
 echo "#### Downloading Boost library ####"
-cp ~/boost_$VERSION_FILENAME.tar.bz2 .
-#wget -nc http://www.insieme-compiler.org/ext_libs/boost_$VERSION_FILENAME.tar.bz2
+#cp ~/boost_$VERSION_FILENAME.tar.bz2 .
+wget -nc http://downloads.sourceforge.net/project/boost/boost/${VERSION}/boost_${VERSION_FILENAME}.tar.bz2
 
 RET=$?
 if [ $RET -ne 0 ]; then
-	exit $RET
+        exit $RET
 fi
 
 tar -xf boost_$VERSION_FILENAME.tar.bz2
 cd boost_$VERSION_FILENAME
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH 
-export LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH
+export LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH
 
 export PATH=$PREFIX/gcc-latest/bin:$PATH
 
@@ -39,17 +39,17 @@ mkdir $PREFIX/boost-$VERSION
 ./bootstrap.sh --prefix=$PREFIX/boost-$VERSION --with-libraries=$BOOST_LIBS
 
 if [ -f ./b2 ]; then
-	# newer boost versions
-	./b2 cxxflags="-mtune=native -O3" release install -j$SLOTS
+        # newer boost versions
+        ./b2 cxxflags="-mtune=native -O3" release install -j$SLOTS
 else
-	# older versions of boost (including 1.46.1)	
-	./bjam cxxflags="-mtune=native -O3" release install -j$SLOTS
+        # older versions of boost (including 1.46.1)
+        ./bjam cxxflags="-mtune=native -O3" release install -j$SLOTS
 fi
 
 # Check for failure
 RET=$?
 if [ $RET -ne 0 ]; then
-	exit $RET
+        exit $RET
 fi
 
 rm $PREFIX/boost-latest || true

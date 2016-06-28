@@ -48,6 +48,7 @@ CFLAGS="-mtune=native -O3" ../$PACKAGE/configure \
 		--with-gmp=$PREFIX/gmp-latest \
 		--with-mpfr=$PREFIX/mpfr-latest \
 		--with-mpc=$PREFIX/mpc-latest \
+		--without-isl \
 		--disable-multilib  \
 		--enable-lto
 

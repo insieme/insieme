@@ -15,8 +15,8 @@ fi
 
 rm -rf $PREFIX/autoconf-$VERSION
 echo "#### Downloading Autoconf ####"
-# wget -nc http://www.dps.uibk.ac.at/~csaf7445/ext_libs/autoconf-$VERSION.tar.bz2
-cp ~/autoconf-$VERSION.tar.bz2 .
+wget -nc http://ftp.gnu.org/gnu/autoconf/autoconf-${VERSION}.tar.bz2
+#cp ~/autoconf-$VERSION.tar.bz2 .
 tar -xvf autoconf-$VERSION.tar.bz2
 
 cd autoconf-$VERSION

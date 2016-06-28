@@ -15,8 +15,8 @@ fi
 
 rm -rf $PREFIX/libtool-$VERSION
 echo "#### Downloading Libtool ####"
-# wget -nc http://www.dps.uibk.ac.at/~csaf7445/ext_libs/libtool-$VERSION.tar.xz
-cp ~/libtool-$VERSION.tar.xz .
+wget -nc http://ftp.gnu.org/gnu/libtool/libtool-${VERSION}.tar.xz
+#cp ~/libtool-$VERSION.tar.xz .
 tar -xvf libtool-$VERSION.tar.xz
 
 cd libtool-$VERSION

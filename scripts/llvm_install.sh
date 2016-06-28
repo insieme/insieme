@@ -62,12 +62,12 @@ echo "*******************"
 echo "* Compiling CLANG *"
 echo "*******************"
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$LD_LIBRARY_PATH
 
 CFLAGS="-O3 -std=c++0x"
 CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CFLAGS LDFLAGS="-mtune=native -O3" \
 	$CURRENT/llvm-$VERSION.src/configure --prefix=$PREFIX/llvm-$VERSION --enable-shared=yes\
-  	 --enable-assert=yes --enable-debug-runtime=no --enable-debug-symbols=no --enable-optimized=yes
+  	 --enable-assert=yes --enable-debug-runtime=no --enable-debug-symbols=no --enable-optimized=yes --enable-bindings=none
 # --enable-doxygen=yes
 
 make REQUIRES_RTTI=1 clang-only -j$SLOTS
