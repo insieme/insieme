@@ -52,9 +52,9 @@ namespace analysis {
 	 */
 	namespace haskell {
 
-		#define throw_not_implemented \
-		        throw not_implemented_exception("Not implemented in Haskell backend!"); \
-		        return true;
+		#define throw_not_implemented                                               \
+		    throw not_implemented_exception("Not implemented in Haskell backend!"); \
+		    return {};
 
 		bool areAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { throw_not_implemented }
 		bool mayAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { throw_not_implemented }
@@ -64,6 +64,9 @@ namespace analysis {
 		bool isFalse(const core::ExpressionAddress& expr) { throw_not_implemented }
 		bool mayBeTrue(const core::ExpressionAddress& expr) { throw_not_implemented }
 		bool mayBeFalse(const core::ExpressionAddress& expr) { throw_not_implemented }
+
+		IntegerSet getIntegerValues(const core::ExpressionAddress& expr) { throw_not_implemented }
+		bool isIntegerConstant(const core::ExpressionAddress& expr) { throw_not_implemented }
 
 		#undef alias_not_implemented
 
@@ -83,6 +86,8 @@ namespace analysis {
 	add_cba_implementation(haskell, mayBeTrue)
 	add_cba_implementation(haskell, mayBeFalse)
 
+	add_cba_implementation(haskell, getIntegerValues)
+	add_cba_implementation(haskell, isIntegerConstant)
 
 } // end namespace analysis
 } // end namespace insieme

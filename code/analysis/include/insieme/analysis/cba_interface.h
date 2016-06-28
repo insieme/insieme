@@ -36,8 +36,9 @@
 
 #pragma once
 
-#include "insieme/utils/assert.h"
+#include "insieme/analysis/common/integer_set.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/utils/assert.h"
 
 
 /**
@@ -137,6 +138,9 @@ namespace analysis {
 	add_cba_analysis(isFalse,    bool, core::ExpressionAddress)
 	add_cba_analysis(mayBeTrue,  bool, core::ExpressionAddress)
 	add_cba_analysis(mayBeFalse, bool, core::ExpressionAddress)
+
+	add_cba_analysis(getIntegerValues,  IntegerSet, core::ExpressionAddress);
+	add_cba_analysis(isIntegerConstant, bool,       core::ExpressionAddress);
 
 } // end namespace analysis
 } // end namespace insieme

@@ -42,7 +42,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
-#include "insieme/analysis/datalog/alias_analysis.h"
 #include "insieme/analysis/cba_interface.h"
 
 #include "insieme/core/ir_node.h"
@@ -93,9 +92,9 @@ namespace analysis {
 	 * selected backend throws a 'not implemented' exception. Hence, we wrap the
 	 * GTest call in a try-catch block for our convenience.
 	 */
-	#define TRY(EXPECT_SOMETHING)                          \
+	#define TRY(EXPECT_SOMETHING)                                                 \
 	    try {                                                                     \
-	        EXPECT_SOMETHING \
+	        EXPECT_SOMETHING                                                      \
 	    } catch (not_implemented_exception e) {                                   \
 	        std::cerr << "Warning for " << name << ": " << e.what() << std::endl; \
 	    }
@@ -116,20 +115,30 @@ namespace analysis {
 		areAliasAnalysis::fun_type areAlias;
 		mayAliasAnalysis::fun_type mayAlias;
 		notAliasAnalysis::fun_type notAlias;
+
 		isTrueAnalysis::fun_type isTrue;
 		isFalseAnalysis::fun_type isFalse;
 		mayBeTrueAnalysis::fun_type mayBeTrue;
 		mayBeFalseAnalysis::fun_type mayBeFalse;
+
+		getIntegerValuesAnalysis::fun_type getIntegerValues;
+		isIntegerConstantAnalysis::fun_type isIntegerConstant;
+
 
 	public:
 		ActualTest()
 		        : areAlias(&(analysis<Backend,areAliasAnalysis>()))
 		        , mayAlias(&(analysis<Backend,mayAliasAnalysis>()))
 		        , notAlias(&(analysis<Backend,notAliasAnalysis>()))
-			, isTrue(&(analysis<Backend,isTrueAnalysis>()))
-			, isFalse(&(analysis<Backend,isFalseAnalysis>()))
-			, mayBeTrue(&(analysis<Backend,mayBeTrueAnalysis>()))
-		        , mayBeFalse(&(analysis<Backend,mayBeFalseAnalysis>())) {}
+
+		        , isTrue(&(analysis<Backend,isTrueAnalysis>()))
+		        , isFalse(&(analysis<Backend,isFalseAnalysis>()))
+		        , mayBeTrue(&(analysis<Backend,mayBeTrueAnalysis>()))
+		        , mayBeFalse(&(analysis<Backend,mayBeFalseAnalysis>()))
+
+		        , getIntegerValues(&(analysis<Backend,getIntegerValuesAnalysis>()))
+		        , isIntegerConstant(&(analysis<Backend,isIntegerConstantAnalysis>())) {}
+
 
 		void operator()(const std::string &filename) {
 			string file = ROOT_DIR + filename;
@@ -167,53 +176,68 @@ namespace analysis {
 				// check the predicate
 				testCount++;
 
+
 				// alias analysis
 				if (name == "cba_expect_is_alias") {
 					TRY(EXPECT_PRED2(this->areAlias, call.getArgument(0), call.getArgument(1))
-					    <<  *core::annotations::getLocation(call) << std::endl;)
+					    << *core::annotations::getLocation(call) << std::endl;)
 				} else if (name == "cba_expect_may_alias") {
 					TRY(EXPECT_PRED2(this->mayAlias, call.getArgument(0), call.getArgument(1))
-					    <<  *core::annotations::getLocation(call) << std::endl;)
+					    << *core::annotations::getLocation(call) << std::endl;)
 				} else if (name == "cba_expect_not_alias") {
 					TRY(EXPECT_PRED2(this->notAlias, call.getArgument(0), call.getArgument(1))
-					    <<  *core::annotations::getLocation(call) << std::endl;)
+					    << *core::annotations::getLocation(call) << std::endl;)
+
 
 				// boolean analysis
 				} else if (name == "cba_expect_true") {
 					TRY(EXPECT_PRED1(this->isTrue, call.getArgument(0))
-					    <<  *core::annotations::getLocation(call) << std::endl;)
+					    << *core::annotations::getLocation(call) << std::endl;)
 				} else if (name == "cba_expect_false") {
 					TRY(EXPECT_PRED1(this->isFalse, call.getArgument(0))
-					    <<  *core::annotations::getLocation(call) << std::endl;)
+					    << *core::annotations::getLocation(call) << std::endl;)
 				} else if (name == "cba_expect_may_be_true") {
 					TRY(EXPECT_PRED1(this->mayBeTrue, call.getArgument(0))
-					    <<  *core::annotations::getLocation(call) << std::endl;)
+					    << *core::annotations::getLocation(call) << std::endl;)
 				} else if (name == "cba_expect_may_be_false") {
 					TRY(EXPECT_PRED1(this->mayBeFalse, call.getArgument(0))
-					    <<  *core::annotations::getLocation(call) << std::endl;)
+					    << *core::annotations::getLocation(call) << std::endl;)
 
 
-	//			// arithmetic analysis
-	//			} else if (name == "cba_expect_undefined_int") {
-	//				const std::set<cba::Formula>& values = cba::getValues(call[0], A);
-	//				EXPECT_TRUE(values.find(Formula()) != values.end())
-	//							<< *core::annotations::getLocation(call) << "\n"
-	//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
-	//			} else if (name == "cba_expect_eq_int") {
-	//				EXPECT_PRED2(isArithmeticEqual, call[0], call[1])
-	//							<< *core::annotations::getLocation(call) << "\n"
-	//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
-	//							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
-	//			} else if (name == "cba_expect_ne_int") {
-	//				EXPECT_PRED2(notArithmeticEqual, call[0], call[1])
-	//							<< *core::annotations::getLocation(call) << "\n"
-	//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
-	//							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
-	//			} else if (name == "cba_expect_may_eq_int") {
-	//				EXPECT_PRED2(mayArithmeticEqual, call[0], call[1])
-	//							<< *core::annotations::getLocation(call) << "\n"
-	//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n"
-	//							<< "call[1] evaluates to " << cba::getValues(call[1], A) << "\n";
+				// arithmetic analysis
+				} else if (name == "cba_expect_undefined_int") {
+					std::cerr << "Performing " << name << std::endl;
+					IntegerSet res = this->getIntegerValues(call.getArgument(0));
+					TRY(EXPECT_TRUE(res.isUniversal())
+					    << *core::annotations::getLocation(call) << std::endl
+					    << "IntegerSet evaluates to " << res << std::endl;)
+
+				} else if (name == "cba_expect_eq_int") {
+					std::cerr << "Performing " << name << std::endl;
+					IntegerSet lhs = this->getIntegerValues(call.getArgument(0));
+					IntegerSet rhs = this->getIntegerValues(call.getArgument(1));
+					TRY(EXPECT_TRUE(lhs.will_equal(rhs))
+					    << *core::annotations::getLocation(call) << std::endl
+					    << "LHS IntegerSet evaluates to " << lhs << std::endl
+					    << "RHS IntegerSet evaluates to " << rhs << std::endl;)
+
+				} else if (name == "cba_expect_ne_int") {
+					std::cerr << "Performing " << name << std::endl;
+					IntegerSet lhs = this->getIntegerValues(call.getArgument(0));
+					IntegerSet rhs = this->getIntegerValues(call.getArgument(1));
+					TRY(EXPECT_TRUE(lhs.will_not_equal(rhs))
+					    << *core::annotations::getLocation(call) << std::endl
+					    << "LHS IntegerSet evaluates to " << lhs << std::endl
+					    << "RHS IntegerSet evaluates to " << rhs << std::endl;)
+
+				} else if (name == "cba_expect_may_eq_int") {
+					std::cerr << "Performing " << name << std::endl;
+					IntegerSet lhs = this->getIntegerValues(call.getArgument(0));
+					IntegerSet rhs = this->getIntegerValues(call.getArgument(1));
+					TRY(EXPECT_TRUE(lhs.may_equal(rhs))
+					    << *core::annotations::getLocation(call) << std::endl
+					    << "LHS IntegerSet evaluates to " << lhs << std::endl
+					    << "RHS IntegerSet evaluates to " << rhs << std::endl;)
 
 	//			} else if (name == "cba_expect_execution_net_num_places") {
 	//				const auto& net = getExecutionNet(ProgramAddress(prog)[0].as<LambdaExprAddress>()->getBody());
@@ -233,6 +257,7 @@ namespace analysis {
 	//							<< *core::annotations::getLocation(call) << "\n"
 	//							<< "number of threads " << list.size() << "\n"
 	//							<< "call[0] evaluates to " << cba::getValues(call[0], A) << "\n";
+
 
 				// debugging
 				} else if (name == "cba_print_code") {

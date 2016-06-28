@@ -36,35 +36,89 @@
 
 #pragma once
 
-#include "insieme/analysis/datalog/alias_analysis.h"
-#include "insieme/analysis/datalog/boolean_analysis.h"
-#include "insieme/analysis/datalog/code_properties.h"
-#include "insieme/analysis/datalog/integer_analysis.h"
+#include "insieme/core/ir_address.h"
 
 namespace insieme {
 namespace analysis {
 
-	/*
-	 * Create a type for this backend
-	 */
-	struct datalogEngine {};
+	class IntegerSet {
 
-	/*
-	 * List of CBAs that this backend provides
-	 */
-	add_cba_implementation(datalog, areAlias)
-	add_cba_implementation(datalog, mayAlias)
-	add_cba_implementation(datalog, notAlias)
+		std::set<int> elements;
 
-	add_cba_implementation(datalog, getDefinitionPoint)
+		bool all;
 
-	add_cba_implementation(datalog, isTrue)
-	add_cba_implementation(datalog, isFalse)
-	add_cba_implementation(datalog, mayBeTrue)
-	add_cba_implementation(datalog, mayBeFalse)
+		IntegerSet(bool all)
+			: elements(), all(all) {}
 
-	add_cba_implementation(datalog, getIntegerValues)
-	add_cba_implementation(datalog, isIntegerConstant)
+	public:
+
+		IntegerSet()
+			: elements(), all(false) {}
+
+		static IntegerSet getAll() {
+			return IntegerSet(true);
+		}
+
+		bool empty() const {
+			return !all && elements.empty();
+		}
+
+		std::size_t size() const {
+			return (all) ? std::numeric_limits<std::size_t>::max() : elements.size();
+		}
+
+		const std::set<int> &getElements() const {
+			return elements;
+		}
+
+		bool isUniversal() const {
+			return all;
+		}
+
+		void insert(int a) {
+			if (all) return;
+			elements.insert(a);
+ 		}
+
+		bool operator==(const IntegerSet &rhs) const {
+			/* Caution: checks equality of sets only */
+			return size() == rhs.size() && elements == rhs.getElements();
+		}
+
+		bool operator!=(const IntegerSet &rhs) const {
+			/* Caution: checks inequality of sets only */
+			return !(*this == rhs);
+		}
+
+		bool will_equal(const IntegerSet &rhs) const {
+			return size() == 1 && *this == rhs;
+		}
+
+		bool may_equal(const IntegerSet &rhs) const {
+			for (const int &mine : elements)
+				for (const int &theirs : rhs.getElements())
+					if (mine == theirs)
+						return true;
+			return false;
+		}
+
+		bool will_not_equal(const IntegerSet &rhs) const {
+			for (const int &mine : elements)
+				for (const int &theirs : rhs.getElements())
+					if (mine == theirs)
+						return false;
+			return true;
+		}
+
+		friend std::ostream& operator<<(std::ostream& out, const IntegerSet& set) {
+			if (set.all) {
+				return out << "{-all-}";
+			}
+			return out << set.elements;
+		}
+
+	};
 
 } // end namespace analysis
 } // end namespace insieme
+
