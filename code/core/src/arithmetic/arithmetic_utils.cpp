@@ -172,6 +172,14 @@ namespace arithmetic {
 	} // end anonymous namespace
 
 
+	boost::optional<int64_t> toConstantInt(const ExpressionPtr& expr) {
+		try {
+			auto form = toFormula(expr);
+			if(form.isInteger()) return form.getIntegerValue();
+		} catch(NotAFormulaException) {}
+		return {};
+	}
+
 	Formula toFormula(const ExpressionPtr& expr) {
 		// the magic is done by the formula converter
 		return FormulaConverter(expr->getNodeManager().getLangBasic()).visit(expr);

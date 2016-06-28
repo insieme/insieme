@@ -133,13 +133,25 @@ namespace analysis {
 		return builder.lambdaExpr(lambda->getType(), lambda->getParameterList(), builder.compoundStmt(newBody), lambda->getReference()->getNameAsString());
 	}
 
-	bool isaDefaultMember(const LambdaExprPtr& lambda) {
-		if (!lambda) return false;
-		if (!lambda->getFunctionType()->isMember()) return false;
-		auto body = lambda->getBody();
-		if (!body || body->size() < 1) return false;
-		auto first = body[0];
-		return first == getDefaultedMarker(IRBuilder(lambda->getNodeManager())) && first.hasAttachedValue<DefaultedTag>();
+	bool isaDefaultMember(const NodePtr& node) {
+		auto n = node;
+		if(auto mem = n.isa<MemberFunctionPtr>()) {
+			n = mem->getImplementation();
+		}
+		if (auto lambda = n.isa<LambdaExprPtr>()) {
+			if (!lambda->getFunctionType()->isMember()) return false;
+			auto body = lambda->getBody();
+			if (!body || body->size() < 1) return false;
+			auto first = body[0];
+			return first == getDefaultedMarker(IRBuilder(lambda->getNodeManager())) && first.hasAttachedValue<DefaultedTag>();
+		} else if (auto lambda = n.isa<LambdaPtr>()) {
+			if (!lambda->getType()->isMember()) return false;
+			auto body = lambda->getBody();
+			if (!body || body->size() < 1) return false;
+			auto first = body[0];
+			return first == getDefaultedMarker(IRBuilder(lambda->getNodeManager())) && first.hasAttachedValue<DefaultedTag>();
+		}
+		return false;
 	}
 
 } // end namespace analysis

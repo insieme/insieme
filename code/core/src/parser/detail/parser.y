@@ -393,8 +393,8 @@ pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" ":" pure_f
 
 //    -- free members -------------------------------------
 
-free_member_definition : "identifier" "::" "ctor" "identifier" "="          { driver.beginRecord(@$, $1); }
-                                           constructor_lambda               { $$ = driver.genFreeConstructor(@$, $4, $7); INSPIRE_GUARD(@$, $$) driver.endRecord(); }
+free_member_definition : "identifier" "::" "identifier" "=" "ctor"          { driver.beginRecord(@$, $1); }
+                                           constructor_lambda               { $$ = driver.genFreeConstructor(@$, $3, $7); INSPIRE_GUARD(@$, $$) driver.endRecord(); }
                        | "identifier" "::"                                  { driver.beginRecord(@$, $1); }
                                            member_function                  { INSPIRE_GUARD(@4, $4) $$ = $4; driver.endRecord(); }
                        ;

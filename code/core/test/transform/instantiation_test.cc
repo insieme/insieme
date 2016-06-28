@@ -43,7 +43,6 @@
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/core/analysis/ir_utils.h"
-#include "insieme/utils/test/test_utils.h"
 
 #include "insieme/core/printer/error_printer.h"
 

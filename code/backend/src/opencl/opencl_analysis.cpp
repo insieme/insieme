@@ -475,6 +475,18 @@ namespace analysis {
 		return result;
 	}
 
+	bool isVariableRequirementOf(const core::LambdaExprPtr& lambdaExpr, const VariableRequirementList& requirements) {
+		const auto& params = lambdaExpr->getParameterList();
+		for (const auto& requirement : requirements) {
+			// check if each free variable is coped by the lambdaExpr
+			for (const auto& free : getFreeVariables(lambdaExpr->getNodeManager(), requirement)) {
+				auto it = std::find_if(params.begin(), params.end(), [&](const core::VariablePtr& var) { return *var == *free; });
+				if (it == params.end()) return false;
+			}
+		}
+		return true;
+	}
+
 	core::VariableList getFreeVariables(core::NodeManager& manager, const core::StatementPtr& stmt,
 										const VariableRequirementList& requirements) {
 			// obtain a list of free variables within stmt

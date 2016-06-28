@@ -70,7 +70,7 @@ namespace utils {
 		: stdLibDirs(buildPathSet(stdLibDirs)), interceptedHeaderDirs(buildPathSet(interceptedHeaderDirs)), userIncludeDirs(buildPathSet(userIncludeDirs)),
 		  sm(srcMgr) {
 		VLOG(2) << "stdLibDirs: \n\t" << this->stdLibDirs;
-		VLOG(2) << "interceptedHedaerDirs: \n\t" << this->interceptedHeaderDirs;
+		VLOG(2) << "interceptedHeaderDirs: \n\t" << this->interceptedHeaderDirs;
 		VLOG(2) << "userIncludeDirs: \n\t" << this->userIncludeDirs;
 	}
 

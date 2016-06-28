@@ -524,7 +524,10 @@ namespace c_ast {
 	};
 
 	struct TernaryOperation : public Expression {
-		enum TernaryOp { TernaryCondition };
+		enum TernaryOp {
+			TernaryCondition,
+			NewArray
+		};
 
 		TernaryOp operation;
 		NodePtr operandA;

@@ -126,6 +126,7 @@ namespace c_ast {
 
 	static inline unsigned getPriority(TernaryOperation::TernaryOp op) {
 		switch(op) {
+		case TernaryOperation::NewArray: return 1;
 		case TernaryOperation::TernaryCondition: return 3;
 		}
 		assert_fail() << "Uncovered operator encountered!";
@@ -578,7 +579,8 @@ namespace c_ast {
 
 	// -- Ternary Operations -------------------------------------
 
-	inline ExpressionPtr ternaryOp(TernaryOperation::TernaryOp op, ExpressionPtr a, ExpressionPtr b, ExpressionPtr c) {
+	inline ExpressionPtr ternaryOp(TernaryOperation::TernaryOp op, NodePtr a, NodePtr b, NodePtr c) {
+		if(op == TernaryOperation::NewArray) return a->getManager()->create<TernaryOperation>(op, a, b, c);
 		assert_true(a && b && c && a->getManager() && a->getManager() == b->getManager() && a->getManager() == c->getManager()) << "Manager should match!";
 		a = (getPriority(a) <= getPriority(op)) ? parentheses(a) : a;
 		b = (getPriority(b) <= getPriority(op)) ? parentheses(b) : b;
@@ -588,6 +590,10 @@ namespace c_ast {
 
 	inline ExpressionPtr ite(ExpressionPtr condition, ExpressionPtr thenValue, ExpressionPtr elseValue) {
 		return ternaryOp(TernaryOperation::TernaryCondition, condition, thenValue, elseValue);
+	}
+
+	inline ExpressionPtr newArrayCall(NodePtr elem_type, NodePtr num_elems, NodePtr init) {
+		return ternaryOp(TernaryOperation::NewArray, elem_type, num_elems, init);
 	}
 
 	// -- Statements -------------------------------------

@@ -158,7 +158,7 @@ namespace parser {
 										  | PrettyPrinter::PRINT_DERIVED_IMPL);
 			std::ostringstream ss;
 			ss << printerA;
-			std::cout << printerA << std::endl;
+			//std::cout << printerA << std::endl;
 			auto type2 = builder.normalize(builder.parseExpr(ss.str()));
 			if(type2) {
 				PrettyPrinter printerB(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
@@ -270,6 +270,11 @@ namespace parser {
 				"def bar = (a : int<4>) -> int<4> { return foo(a); }; "
 				"def foo = (b : int<4>) -> int<4> { return bar(b); }; "
 				"foo"));
+		EXPECT_TRUE(test_expression(nm, ""
+			    "decl foo : (int<4>) -> int<4>; "
+			    "def bar = function (a : ref<int<4>,f,f,plain>) -> int<4> { return foo(a); }; "
+			    "def foo = (b : int<4>) -> int<4> { return bar(b); }; "
+			    "foo"));
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x) {
@@ -626,8 +631,8 @@ TEST(After_Before_Test, Let) {
 		EXPECT_TRUE(test_statement(nm, "def struct A {"
 				                       "  x : int<4>;"
 				                       "};"
-				                       "def A :: ctor foo1 = () {};"
-				                       "def A :: ctor foo2 = function (a : ref<int<4>>) {x = *a;};"
+				                       "def A :: foo1 = ctor () {};"
+				                       "def A :: foo2 = ctor function (a : ref<int<4>>) {x = *a;};"
 				                       "{"
 				                       "  var ref<A> a = foo1(a);"
 				                       "  var ref<A> b = foo2(b, 10);"

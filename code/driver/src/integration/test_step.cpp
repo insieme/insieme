@@ -50,6 +50,7 @@
 #include "insieme/utils/assert.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/config.h"
+#include "insieme/utils/compiler/compiler.h"
 
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string.hpp>
@@ -797,10 +798,14 @@ namespace integration {
 
 			if(!isExcluded(props["excludeSteps"], step) && !conflicts) { stepsToExecute.push_back(step); }
 
-			#ifndef USE_OPENCL
-			for(TestStep& step : stepsToExecute)
-				if(step.getName().find("_ocl_") != std::string::npos) { return vector<TestStep>(); }
-				#endif
+			// in case the test requires OpenCL but we do lack of e.g. headers, simply disable it
+			if(test.isEnableOpenCL() && !utils::compiler::isOpenCLAvailable()) return vector<TestStep>();
+			// in case the test is not an OpenCL one automatically remove all such devoted steps
+			if(!test.isEnableOpenCL()) {
+				// filter out all steps which are devoted to OpenCL
+				for(TestStep& step : stepsToExecute)
+					if(step.getName().find("_ocl_") != std::string::npos) { return vector<TestStep>(); }
+			}
 		}
 		return stepsToExecute;
 	}
@@ -1147,17 +1152,17 @@ namespace integration {
 		boost::tokenizer<boost::char_separator<char>> tok(error, sep);
 		for(boost::tokenizer<boost::char_separator<char>>::iterator beg = tok.begin(); beg != tok.end(); ++beg) {
 			string token(*beg);
-			if(token.find("WALLTIME") == 0) {
-				metricResults["walltime"] = atof(token.substr(8).c_str());
-			} else if(token.find("CPUTIME") == 0) {
-				metricResults["cputime"] = atof(token.substr(7).c_str());
+			if(token.find("WALLTIME") != token.npos) {
+				metricResults["walltime"] = atof(token.substr(token.find("WALLTIME") + 8).c_str());
+			} else if(token.find("CPUTIME") != token.npos) {
+				metricResults["cputime"] = atof(token.substr(token.find("CPUTIME") + 7).c_str());
 				// check if we approached the cpu time limit. If so, print a warning
 				if(((metricResults["cputime"])) / cpuTimeLimit > 0.95) {
 					std::cerr << "Killed by timeout, CPU time was " << metricResults["cputime"] << ", limit was " << cpuTimeLimit << " seconds\n";
 					metricResults["timeout"] = 1;
 				}
-			} else if(token.find("MEM") == 0) {
-				metricResults["mem"] = atof(token.substr(3).c_str());
+			} else if(token.find("MEM") != token.npos) {
+				metricResults["mem"] = atof(token.substr(token.find("MEM") + 3).c_str());
 			} else {
 				// check perf metrics, otherwise append to stderr
 				bool found = false;

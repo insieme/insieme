@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/backend/c_ast/c_code.h"
-#include "insieme/utils/test/test_utils.h"
+
 
 namespace insieme {
 namespace backend {

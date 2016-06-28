@@ -23,8 +23,6 @@ target_link_libraries(insieme_backend insieme_utils)
 target_link_libraries(insieme_backend insieme_annotations)
 target_link_libraries(insieme_backend insieme_transform)
 
-cotire(insieme_backend)
-
 # =============================================  TESTING  =====================================
 #target for backend unit_tests
 set(ut_prefix  ut_be )

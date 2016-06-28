@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -53,11 +53,46 @@ namespace region {
 
 
 	/**
-	 * At the moment, no more information regarding a region is required
-	 * than an address pointing to it. Hence, regions are typedefed to be
-	 * equivalent to NodeAddresses.
+	 * A region is defined via begin and end statement addresses of a single-entry single-exit piece of code. begin and end can also be the same in case of
+	 * representing a single statement.
 	 */
-	typedef core::StatementAddress Region;
+
+	class Region : public utils::Printable {
+		core::StatementAddress begin;
+		core::StatementAddress end;
+
+	  public:
+		/**
+		* Constructors for differing begin and end addresses, as well as a single address
+		*/
+		Region(const core::StatementAddress& begin, const core::StatementAddress& end) : begin(begin), end(end) {}
+
+		Region(const core::StatementAddress& single) : begin(single), end(single) {}
+
+		Region(const std::pair<core::StatementAddress, core::StatementAddress> region) : begin(region.first), end(region.second) {}
+
+		Region(const Region& other) : begin(other.begin), end(other.end) {}
+
+		core::StatementAddress getBegin() const { return begin; }
+
+		core::StatementAddress getEnd() const { return end; }
+
+		// sort according to addresses
+		bool operator<(Region other) const { return std::tie(begin, end) < std::tie(other.begin, other.end); }
+
+		bool operator==(Region other) const { return std::tie(begin, end) == std::tie(other.begin, other.end); }
+
+		bool operator>(Region other) const { return other < *this; }
+
+		bool operator>=(Region other) const { return !(*this < other); }
+
+		bool operator<=(Region other) const { return !(other < *this); }
+
+		bool operator!=(Region other) const { return !(other == *this); }
+
+		virtual std::ostream& printTo(std::ostream& out) const { return out << "[" << begin << "," << end << "]"; }
+	};
+
 	typedef vector<Region> RegionList;
 
 	/**
@@ -81,7 +116,7 @@ namespace region {
 		 * @return a list of addresses to the nodes forming the selected regions. The root
 		 * 		of all obtained addresses has to be equivalent to the given code region.
 		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const = 0;
+		virtual RegionList getRegions(const core::NodeAddress& code) const = 0;
 	};
 
 } // end namespace region

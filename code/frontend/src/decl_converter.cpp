@@ -138,8 +138,19 @@ namespace conversion {
 					// access IR field
 					auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
 					auto retType = converter.convertVarType(fieldDecl->getType().getUnqualifiedType());
+					auto fieldType = core::lang::ReferenceType(retType).getElementType();
+					// if Cpp ref or Cpp Rref then use that reference type as field type
+					bool unwrap = false;
+					if(!core::lang::isPlainReference(retType)) {
+						fieldType = retType;
+						retType = builder.refType(fieldType);
+						unwrap  = true;
+					}
 					irMember = builder.callExpr(retType, access, irThis, builder.getIdentifierLiteral(fieldDecl->getNameAsString()),
-													 builder.getTypeLiteral(core::lang::ReferenceType(retType).getElementType()));
+						                        builder.getTypeLiteral(fieldType));
+					if(unwrap) {
+						irMember = builder.deref(irMember);
+					}
 				}
 				// handle CXXDefaultInitExpr
 				auto clangInitExpr = init->getInit();
@@ -255,7 +266,7 @@ namespace conversion {
 		}
 		// non-default cases
 		else {
-			string name = insieme::utils::mangle(methDecl->getNameAsString());
+			string name =  utils::buildNameForFunction(methDecl);
 			auto funType = getFunMethodTypeInternal(converter, methDecl);
 			if(funType->getKind() == core::FK_CONSTRUCTOR) { ret.lit = builder.getLiteralForConstructor(funType); }
 			else if(funType->getKind() == core::FK_DESTRUCTOR) { ret.lit = builder.getLiteralForDestructor(funType); }
@@ -317,6 +328,12 @@ namespace conversion {
 
 	void DeclConverter::VisitVarDecl(const clang::VarDecl* var) {
 		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitVarDecl: " << dumpClang(var);
+
+		// if handled by a plugin, don't do anything else
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
+			if(!extension->VarDeclVisit(var, converter)) return;
+		}
+
 		// non-global variables are to be skipped
 		if(!var->hasGlobalStorage()) { return; }
 
@@ -418,6 +435,16 @@ namespace conversion {
 		for(auto spec : funcTempDecl->specializations()) {
 			VLOG(2) << "~~~~~~~ -> visit Specialization: " << dumpClang(spec);
 			Visit(spec);
+		}
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					 Namespace declarations
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	void DeclConverter::VisitNamespaceDecl(const clang::NamespaceDecl* namespaceDecl) {
+		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitNamespaceDecl: " << dumpClang(namespaceDecl);
+		for(auto decl : namespaceDecl->decls()) {
+			Visit(decl);
 		}
 	}
 

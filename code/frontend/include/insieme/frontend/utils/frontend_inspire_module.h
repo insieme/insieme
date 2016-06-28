@@ -64,7 +64,7 @@ namespace utils {
 		 */
 		FrontendInspireModule(core::NodeManager& manager);
 
-	  public:		
+	  public:
 
 		// Import constructs from core's reference extension
 		IMPORT_MODULE(core::lang::ReferenceExtension)
@@ -80,8 +80,6 @@ namespace utils {
 
 		/**
 		 * Implements a C++ style assignment (returning the assigned value)
-         *
-         * FIXME: assignment returns cpp_ref or plain? what happens with rs_ref?
 		 */
 		LANG_EXT_DERIVED(CxxStyleAssignment, "(lhs : ref<'a,f,'b,'c>, rhs : 'a) -> ref<'a,f,'b,'c> { lhs = rhs; return lhs; }")
 
@@ -94,28 +92,15 @@ namespace utils {
 		 * Implements the C bool semantics
 		 */
 		LANG_EXT_DERIVED(BoolToInt, "(b : bool) -> int<4> { if(b) { return 1; } else { return 0; } }")
-		
-		/**
-		 * Allocates an array of "n" objects of type "typ" and calls the constructor for each of them
-		 * (Intended to implement "new Bla[5]" semantics)
-		 */
-		LANG_EXT_DERIVED(ObjectArrayNew, 
-		"(typ : type<'a>, n : 'b, constructor : 'c::()) -> ptr<'a> {"
-		"	auto ret = ref_new(type_lit(array<'a,#n>));"
-		"	for(int<8> it = 0 ..  num_cast(n, type_lit(int<8>))) {"
-		"		constructor(ref_array_elem(ret, it));"
-		"	}"
-		"	return ptr_from_array(ret);"
-		"}")
 	};
 
 	// --------------------- Utilities ----------------------------
-	
+
 	/**
 	 * Creates a C-style assignment operation
 	 */
 	core::ExpressionPtr buildCStyleAssignment(const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs);
-	
+
 	/**
 	 * Creates a C++-style assignment operation
 	 */
@@ -125,16 +110,11 @@ namespace utils {
 	 * Creates a C-style comma operation
 	 */
 	core::ExpressionPtr buildCommaOperator(const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs);
-	
+
 	/**
 	 * Creates a an expression implementing C bool semantics
 	 */
 	core::ExpressionPtr buildBoolToInt(const core::ExpressionPtr& b);
-	
-	/**
-	 * Allocates an array of "num" objects of type "objType" and calls the constructor "ctor" for each of them
-	 */
-	core::ExpressionPtr buildObjectArrayNew(const core::TypePtr& objType, const core::ExpressionPtr& num, const core::ExpressionPtr& ctor);
 
 } // end namespace utils
 } // end namespace frontend

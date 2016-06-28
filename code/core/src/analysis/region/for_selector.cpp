@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -45,13 +45,13 @@ namespace core {
 namespace analysis {
 namespace region {
 
-	RegionList ForSelector::getRegions(const core::NodePtr& node) const {
+	RegionList ForSelector::getRegions(const core::NodeAddress& code) const {
 		RegionList res;
 
-		core::visitDepthFirst(core::NodeAddress(node), [&](const core::StatementAddress& cur) -> bool {
+		core::visitDepthFirst(code, [&](const core::StatementAddress& cur) -> bool {
 			if(cur.getAddressedNode()->getNodeType() != core::NT_ForStmt) { return false; }
 
-			res.push_back(cur);
+			res.push_back(Region(cur));
 
 			return true;
 		}, false);

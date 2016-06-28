@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -82,8 +82,8 @@ namespace lang {
 		                                  ""
 		                                  "(v : ref<type>, value : 'a)->ref<'a> { "
 		                                  "	if (*(v.initialized)) { return v.value; }"
-		                                  "	v.initialized = true;"
 		                                  "	v.value = value;"
+		                                  "	v.initialized = true;"
 		                                  "	return v.value;"
 		                                  "}");
 
@@ -94,8 +94,8 @@ namespace lang {
 		                                 ""
 		                                 "(v : ref<type>, value : ()=>'a)->ref<'a> { "
 		                                 "	if (*(v.initialized)) { return v.value; }"
-		                                 "	v.initialized = true;"
 		                                 "	v.value = value();"
+		                                 "	v.initialized = true;"
 		                                 "	return v.value;"
 		                                 "}");
 	};

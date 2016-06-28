@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -53,7 +53,7 @@ namespace region {
 		core::IRBuilder builder(manager);
 
 		// create some IR structure
-		const core::CompoundStmtPtr stmt = builder.compoundStmt(builder.breakStmt());
+		const core::CompoundStmtAddress stmt = core::CompoundStmtAddress(builder.compoundStmt(builder.breakStmt()));
 
 		DummyRegionSelector selector;
 		vector<Region> regions = selector.getRegions(stmt);

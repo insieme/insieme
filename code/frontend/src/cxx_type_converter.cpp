@@ -100,6 +100,15 @@ namespace conversion {
 		const clang::CXXRecordDecl* classDecl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(tagType->getDecl());
 		if(!classDecl || !classDecl->getDefinition()) { return genTy; }
 
+		// add static vars as globals
+		for(auto decl : classDecl->decls()) {
+			if(auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
+				if(varDecl->isStaticDataMember()) {
+					converter.getDeclConverter()->VisitVarDecl(varDecl);
+				}
+			}
+		}
+
 		// get struct type for easier manipulation
 		auto tagTy = retTy.as<core::TagTypePtr>();
 		auto recordTy = tagTy->getRecord();
@@ -113,15 +122,31 @@ namespace conversion {
 		}
 		auto irParents = builder.parents(parents);
 
+		// get methods and instantiated template methods
+		std::vector<clang::CXXMethodDecl*> methodDecls;
+		std::copy(classDecl->method_begin(), classDecl->method_end(), std::back_inserter(methodDecls));
+		for(auto d : classDecl->decls()) {
+			if(clang::FunctionTemplateDecl* ftd = llvm::dyn_cast<clang::FunctionTemplateDecl>(d)) {
+				for(auto specialization : ftd->specializations()) {
+					if(!specialization->hasBody()) continue;
+					methodDecls.push_back(llvm::dyn_cast<clang::CXXMethodDecl>(specialization));
+				}
+			}
+		}
+
 		// add symbols for all methods to function manager before conversion
-		for(auto mem : classDecl->methods()) {
+		for(auto mem : methodDecls) {
 			mem = mem->getCanonicalDecl();
-			// deal with static methods as functions
+			if(mem->isStatic()) continue;
+			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields(), true);
+		}
+
+		// deal with static methods as functions (afterwards!)
+		for(auto mem : methodDecls) {
 			if(mem->isStatic()) {
 				converter.getDeclConverter()->VisitFunctionDecl(mem);
 				continue;
 			}
-			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields(), true);
 		}
 
 		// get methods, constructors and destructor
@@ -130,7 +155,7 @@ namespace conversion {
 		std::vector<core::ExpressionPtr> constructors;
 		core::LiteralPtr destructor = nullptr;
 		bool destructorVirtual = false;
-		for(auto mem : classDecl->methods()) {
+		for(auto mem : methodDecls) {
 			mem = mem->getCanonicalDecl();
 			// deal with static methods as functions
 			if(mem->isStatic()) {

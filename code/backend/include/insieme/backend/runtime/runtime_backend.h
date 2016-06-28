@@ -49,7 +49,7 @@ namespace runtime {
 	/**
 	 * The facade for the backend capable of generating code to be used by the runtime backend.
 	 *
-	 * This backend converts the given IR representation into C99 / C++98 target code interacting with
+	 * This backend converts the given IR representation into C99 / C++11 target code interacting with
 	 * the Insieme Runtime environment.
 	 */
 	class RuntimeBackend : public Backend {

@@ -146,6 +146,12 @@ int main() {
 	#pragma test expect_ir("int_rshift(13, 14)")
 	13 >> 14;
 
+	#pragma test expect_ir("int_lshift(11, 12l)")
+	11 << 12l;
+
+	#pragma test expect_ir("int_rshift(13, 14ul)")
+	13 >> 14ul;
+
 	#pragma test expect_ir("int_and(15, 16)")
 	15 & 16;
 

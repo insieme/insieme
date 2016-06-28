@@ -1,0 +1,60 @@
+#!/bin/bash
+
+set -e
+
+resolve_dependencies() {
+	for pkg in $1; do
+		resolve_dependencies_for_pkg "$pkg"
+	done | awk '!unique[$_]++'
+}
+
+resolve_dependencies_for_pkg() {
+	local deps=$(echo "source package_$1.sh && echo -n \$DEPENDS" | bash -)
+	for pkg in $deps; do
+		resolve_dependencies_for_pkg "$pkg"
+	done
+	echo "$1"
+}
+
+install_pkg() {
+	bash - <<-EOF
+		set -e
+		source defaults.sh
+		source package_$1.sh
+		pkg_check_installed
+		PKG_TEMP=\$(mktemp -d)
+		pushd \$PKG_TEMP
+		echo "####   Downloading \$PACKAGE   ####"
+		pkg_download
+		echo "####   Extracting  \$PACKAGE   ####"
+		pkg_extract
+		pushd \$PACKAGE
+		echo "####   Preparing   \$PACKAGE   ####"
+		pkg_prepare
+		echo "####   Configuring \$PACKAGE   ####"
+		pkg_configure
+		echo "####   Building    \$PACKAGE   ####"
+		pkg_build
+		echo "####   Checking    \$PACKAGE   ####"
+		pkg_check
+		echo "####   Installing  \$PACKAGE   ####"
+		pkg_install
+		popd
+		echo "####   Cleaning    \$PACKAGE   ####"
+		pkg_cleanup
+		popd
+		rmdir \$PKG_TEMP
+	EOF
+}
+
+if [[ $# -eq 0 ]]; then
+	PACKAGES="llvm boost cmake luajit cudd bison flex papi hwloc"
+else
+	PACKAGES="$@"
+fi
+
+PACKAGES="$(resolve_dependencies "$PACKAGES")"
+
+for pkg in $PACKAGES; do
+	install_pkg "$pkg"
+done

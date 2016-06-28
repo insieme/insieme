@@ -55,6 +55,9 @@ namespace opencl {
         EXPECT_FALSE(isKernelType(varType));
 
         auto genType = buildKernelType(varType, KernelType::AddressSpace::Global);
+        EXPECT_FALSE(genType->hasAttachedValue<detail::KernelTypeMarker>());
+        EXPECT_TRUE(isKernelType(genType));
+        EXPECT_TRUE(genType->hasAttachedValue<detail::KernelTypeMarker>());
         EXPECT_TRUE(isKernelType(genType));
 
         auto krnType = KernelType(genType);
@@ -71,4 +74,3 @@ namespace opencl {
 } // end namespace opencl
 } // end namespace backend
 } // end namespace insieme
-
