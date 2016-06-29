@@ -21,6 +21,7 @@ install_pkg() {
 		set -e
 		source defaults.sh
 		source package_$1.sh
+		mkdir -p \$PREFIX
 		pkg_check_installed
 		PKG_TEMP=\$(mktemp -d)
 		pushd \$PKG_TEMP
