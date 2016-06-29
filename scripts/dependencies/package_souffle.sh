@@ -20,8 +20,8 @@ pkg_extract() {
 }
 
 pkg_prepare() {
-	find "../patches" -name "$NAME-*.patch" | sort | xargs -r -L 1 patch -p1 -N -i
-	cp "../patches/boost.m4" "m4/"
+	find "$INSTALLER_DIR/patches" -name "$NAME-*.patch" | sort | xargs -r -L 1 patch -p1 -N -i
+	cp "$INSTALLER_DIR/patches/boost.m4" "m4/"
 }
 
 pkg_configure() {
