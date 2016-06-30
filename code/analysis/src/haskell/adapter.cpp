@@ -106,6 +106,7 @@ namespace haskell {
 		return hat_addr_length(addr->ptr);
 	}
 
+        // Add the address contained in the Haskell buffer to the given root node, returning a proper NodeAddress.
 	NodeAddress Address::toNodeAddress(const NodePtr& root) const {
 		NodeAddress ret(root);
 		vector<size_t> dst(size());
