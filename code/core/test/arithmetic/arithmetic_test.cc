@@ -100,9 +100,16 @@ namespace arithmetic {
 		VariablePtr varB = builder.variable(type, 2);
 		VariablePtr varC = builder.variable(type, 3);
 
+		TypePtr str_type = builder.getLangBasic().getString();
+		auto str_A = builder.parseExpr("\"A\"");
+		auto str_B = builder.parseExpr("\"B\"");
+
 		EXPECT_PRED1(Value::isValue, varA);
 		EXPECT_PRED1(Value::isValue, varB);
 		EXPECT_PRED1(Value::isValue, varC);
+
+		EXPECT_PRED1(Value::isValue, str_A);
+		EXPECT_PRED1(Value::isValue, str_B);
 
 		// check < operator
 		EXPECT_LT(Value(varA), Value(varB));
