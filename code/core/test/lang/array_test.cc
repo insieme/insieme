@@ -51,6 +51,28 @@ namespace lang {
 		semanticCheckSecond(ext.getSymbols());
 	}
 
+	TEST(Array, setSize) {
+		NodeManager nm;
+		IRBuilder b(nm);
+
+		auto A = b.parseType("A");
+		auto B = b.parseType("array<A>");
+		auto C = b.parseType("array<A,5>");
+		auto D = b.parseType("array<A,v0>");
+
+
+		auto array = ArrayType(B);
+
+		auto lit = b.parseExpr("lit(\"5\" : uint<4>)");
+		array.setSize(lit);
+		EXPECT_EQ(5, array.getNumElements());
+
+		VariablePtr var = Variable::get(nm, nm.getLangBasic().getUIntInf());
+		array.setSize(var);
+		EXPECT_EQ(var, array.getSize().as<VariablePtr>());
+
+	}
+
 	TEST(Array, IsArray) {
 		NodeManager nm;
 		IRBuilder builder(nm);
