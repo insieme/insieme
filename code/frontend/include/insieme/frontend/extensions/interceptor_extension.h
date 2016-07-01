@@ -39,7 +39,6 @@
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/converter.h"
-#include "insieme/frontend/utils/interceptor.h"
 
 namespace insieme {
 namespace frontend {
@@ -56,7 +55,6 @@ namespace extensions {
 		InterceptorExtension();
 
 		virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options) override;
-
 		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const override;
 
 		// Extension Hooks
@@ -65,6 +63,7 @@ namespace extensions {
 		virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) override;
 
 		virtual bool FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter) override;
+		virtual bool VarDeclVisit(const clang::VarDecl* decl, insieme::frontend::conversion::Converter& converter) override;
 
 	};
 

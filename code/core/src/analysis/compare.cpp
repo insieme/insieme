@@ -36,12 +36,15 @@
 
 #include "insieme/core/analysis/compare.h"
 
-#include "insieme/core/ir_visitor.h"
-#include "insieme/utils/map_utils.h"
+#include <iomanip>
+
 #include "insieme/utils/logging.h"
+#include "insieme/utils/map_utils.h"
 #include "insieme/utils/string_utils.h"
 
+#include "insieme/core/annotations/source_location.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
@@ -117,6 +120,74 @@ namespace analysis {
 
 	bool equalNameless(const NodePtr& nodeA, const NodePtr& nodeB) {
 		return *nodeA == *nodeB || *wipeNames(nodeA) == *wipeNames(nodeB);
+	}
+
+	namespace {
+		NodePtr safeGetParent(NodeAddress addr, size_t up) {
+			up = std::min((size_t)addr.getDepth(), up);
+			return addr.getParentNode(up);
+		}
+	}
+
+	void irDiff(NodeAddress nodeA, NodeAddress nodeB, const string& nameA, const string& nameB, size_t contextSize) {
+		const auto& locString = core::annotations::getLocationString(nodeA);
+
+		auto maxLen = std::max(nameA.length(), nameB.length());
+
+		auto reportError = [&](const string& msg, const string& id, const auto& printForA, const auto& printForB) {
+			std::cout << "IRDIFF-----\n" << msg << ":" << std::endl
+				      << "\t" << id << " " << std::setw(maxLen) << nameA << ": " << printForA << "\n"
+				      << "\t" << id << " " << std::setw(maxLen) << nameB << ": " << printForB << "\n"
+				      << "\t" << std::setw(maxLen) << nameA << ": "
+				      << dumpColor(safeGetParent(nodeA, contextSize))
+				      << "\t" << std::setw(maxLen) << nameB << ": "
+				      << dumpColor(safeGetParent(nodeB, contextSize)) << "\tLOC(" << locString << ")\n";
+		};
+
+		if(nodeA->getNodeType() != nodeB->getNodeType()) {
+			reportError("Node types differ", "NT", nodeA->getNodeType(), nodeB->getNodeType());
+		}
+
+		auto aExp = nodeA.isa<ExpressionPtr>();
+		auto bExp = nodeB.isa<ExpressionPtr>();
+		if(aExp) {
+			if(bExp) {
+				if(aExp->getType() != bExp->getType()) { reportError("Expressions differ in type", "type", *aExp->getType(), *bExp->getType()); }
+			} else {
+				reportError("One is a Expression, the other not", "type", *aExp->getType(), FunctionTypePtr());
+			}
+		}
+
+		auto aVar = nodeA.isa<VariablePtr>();
+		auto bVar = nodeB.isa<VariablePtr>();
+		if(aVar) {
+			if(bVar) {
+				if(aVar->getId() != bVar->getId()) { reportError("Variables differ in id", "id", aVar->getId(), bVar->getId()); }
+			} else {
+				reportError("One is a Variable, the other not", "variable", aVar->getId(), VariablePtr());
+			}
+		}
+
+		auto aString = nodeA.isa<StringValuePtr>();
+		auto bString = nodeB.isa<StringValuePtr>();
+		if(aString) {
+			if(aString->getValue() != bString->getValue()) { reportError("StringValues differ", "val", aString->getValue(), bString->getValue()); }
+		}
+
+		auto aChildren = nodeA->getChildList();
+		auto bChildren = nodeB->getChildList();
+		if(aChildren.size() != bChildren.size()) {
+			reportError("Nodes differ in number of children (ABORTING)", "child count", aChildren.size(), bChildren.size());
+			return;
+		}
+
+		for(size_t i = 0; i < aChildren.size(); ++i) {
+			irDiff(aChildren[i], bChildren[i], nameA, nameB, contextSize);
+		}
+	}
+
+	void irDiff(NodePtr nodeA, NodePtr nodeB, const string& nameA, const string& nameB, size_t contextSize) {
+		irDiff(NodeAddress(nodeA), NodeAddress(nodeB), nameA, nameB, contextSize);
 	}
 
 } // namespace analysis

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,12 +36,12 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ir_builder.h"
-
 #include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/types/subtype_constraints.h"
 
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/checks/full_check.h"
 
 namespace insieme {
 namespace core {
@@ -831,6 +831,33 @@ namespace types {
 
 		EXPECT_EQ("'a", toString(*res->applyTo(builder.typeVariable("a"))));
 		EXPECT_EQ("'b", toString(*res->applyTo(builder.typeVariable("b"))));
+	}
+
+	TEST(TypeVariableDeduction, RenamingIssue) {
+		/**
+		 * This test fails if getFreshVariable (type variable renamer) returns e.g. "vN"
+		 * -> due to conflict with v2 in definition of ptr_ne
+		 */
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto ir = builder.parseProgram(R"(
+			def struct IMP_C {
+				mC : ptr<unit>;
+				ctor function () {
+					ptr_ne(*(this).mC, *(this).mC);
+				}
+			};
+			int<4> function IMP_main (){
+				var ref<IMP_C,f,f,plain> v54 = IMP_C::(ref_decl(type_lit(ref<IMP_C,f,f,plain>)));
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(ir);
+
+		EXPECT_TRUE(checks::check(ir).empty());
 	}
 
 } // end namespace analysis

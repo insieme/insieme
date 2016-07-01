@@ -53,6 +53,8 @@ namespace frontend {
 
 	TEST(CppIndependentTest, BasicTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_templates.cpp"); }
 
+	TEST(CppIndependentTest, AdvancedTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_advanced_templates.cpp"); }
+
 	TEST(CppIndependentTest, NewDelete) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_new_delete.cpp"); }
 
 	TEST(CppIndependentTest, DefaultArgs) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args.cpp"); }
@@ -70,6 +72,10 @@ namespace frontend {
 	TEST(CppIndependentTest, Constructors) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_constructors.cpp"); }
 
 	TEST(CppIndependentTest, RefPtr) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_ref_ptr.cpp"); }
+
+	TEST(CppIndependentTest, Static) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_static.cpp"); }
+
+	TEST(CppIndependentTest, StackInitialization) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_stack_initialization.cpp"); }
 
 } // fe namespace
 } // insieme namespace

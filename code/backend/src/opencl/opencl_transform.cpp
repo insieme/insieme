@@ -75,7 +75,7 @@ namespace transform {
 	using namespace insieme::annotations::opencl_ns;
 
 	namespace {
-		core::LiteralPtr toKernelLiteral(core::NodeManager& manager, const StepContext& sc, const core::LambdaExprPtr& oclExpr) {
+		core::LiteralPtr toKernelLiteral(core::NodeManager& manager, const StepContext& sc, unsigned int id, const core::LambdaExprPtr& oclExpr) {
 			core::IRBuilder builder(manager);
 			// obtain the kernel backend which transforms oclExpr into a stringLit -- each call MUST allocate a fresh new backend!
 			KernelBackendPtr backend = KernelBackend::getDefault(sc);
@@ -89,8 +89,19 @@ namespace transform {
 			} else {
 				ss << toString(*target);
 			}
+			// extract the generated code from the stringstream
+			auto code = ss.str();
+			// shall we dump the code?
+			auto dumpOclKernel = sc.getConverter().getBackendConfig().dumpOclKernel;
+			if (dumpOclKernel.size()) {
+				auto filePath = dumpOclKernel + std::to_string(id);
+				std::cout << "Dumping OpenCL kernel " << id << " ..." << std::endl;
+				// append the kernel id to generate a unique name
+				std::ofstream out(filePath);
+				out << code;
+			}
 			// dump the target code as string and put into IR lit
-			return builder.stringLit(ss.str());
+			return builder.stringLit(code);
 		}
 
 		core::ExpressionPtr identity(const core::ExpressionPtr& expr) {
@@ -208,6 +219,8 @@ namespace transform {
 		auto lambdaExpr = builder.lambdaExpr(manager.getLangBasic().getUnit(), parameter, body);
 		// migrate the annotations from stmt to lambda
 		core::transform::utils::migrateAnnotations(stmt, lambdaExpr);
+		// finally attach a marker to the constructed lambdaExpr
+		lambdaExpr->attachValue(detail::OutlineMarker{});
 		return builder.callExpr(manager.getLangBasic().getUnit(), lambdaExpr, args);
 	}
 
@@ -264,10 +277,10 @@ namespace transform {
 		core::IRBuilder builder(manager);
 		// grab a reference to the opencl extension
 		auto& oclExt = manager.getLangExtension<OpenCLExtension>();
-		// most important step here, transform the oclExpr into a literal
-		core::LiteralPtr literal = toKernelLiteral(manager, sc, oclExpr);
 		// generate a new unique id for this kernel
 		id = KernelTable::getNextUnique();
+		// most important step here, transform the oclExpr into a literal
+		core::LiteralPtr literal = toKernelLiteral(manager, sc, id, oclExpr);
 		// use the default IRBuilder to generate the callExpr
 		return builder.callExpr(manager.getLangBasic().getUnit(), oclExt.getRegisterKernel(),
 								builder.uintLit(id), core::lang::buildPtrFromArray(literal),
@@ -491,49 +504,6 @@ namespace transform {
 		return Step::process(converter, newLambdaExpr);
 	}
 
-	core::NodePtr StmtOptimizerStep::process(const Converter& converter, const core::NodePtr& node) {
-		auto lambdaExpr = node.isa<LambdaExprPtr>();
-		if (!lambdaExpr) return node;
-
-		// auto var = core::pattern::irp::atom(builder.typeVariable("a"));
-		auto rhs = core::pattern::irp::variable(core::pattern::any);
-		auto lhs = core::pattern::irp::variable(core::pattern::irp::refType(core::pattern::any));
-		// now construct the lambda pattern which represents the actual c/cpp_style_assignment
-		auto pattern = core::pattern::irp::lambda(
-			core::pattern::any, 				// return type
-			core::pattern::empty << lhs << rhs,	// arguments
-			core::pattern::aT( 					// body
-				core::pattern::irp::assignment(),
-				core::pattern::irp::returnStmt(core::pattern::any)
-				));
-
-		core::NodeMap replacements;
-		core::visitDepthFirstOnce(core::NodeAddress(lambdaExpr->getBody()), [&](const core::NodeAddress& addr) {
-			const core::NodePtr& target = addr.getAddressedNode();
-			// non-calls are not important
-			if (target->getNodeType() != core::NT_CallExpr) return;
-
-			auto callExpr = target.as<core::CallExprPtr>();
-			// if we call something else than a lambda we are not interested in it as well
-			if (auto callee = callExpr->getFunctionExpr().isa<core::LambdaExprPtr>()) {
-				// do not introduce a local var to hold the evaluated value -- only inline straight assignments
-				if (!addr.isRoot() && addr.getParentAddress().getAddressedNode()->getNodeType() == core::NT_CallExpr) return;
-				// if our parent is not a call & the pattern matches the replacement is valid
-				if (!pattern.match(callee->getLambda())) return;
-
-				replacements[target] = builder.assign(callExpr->getArgument(0), callExpr->getArgument(1));
-			}
-		});
-		// fast-path
-		if (replacements.empty()) return node;
-
-		auto newLambdaExpr= builder.lambdaExpr(manager.getLangBasic().getUnit(), lambdaExpr->getParameterList(),
-			core::transform::simplify(manager, core::transform::replaceAllGen(manager, lambdaExpr->getBody(), replacements), true));
-		// migrate the annotations -- but no need to fixup as only hthe body has changed
-		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
-		return Step::process(converter, newLambdaExpr);
-	}
-
 	namespace {
 		class ForLoopReplacer : public core::transform::CachedNodeMapping {
 			core::NodeManager& manager;
@@ -576,17 +546,17 @@ namespace transform {
 				globalWorkSizes.push_back(forStmt->getEnd());
 				// prepare the body -- thus we do a bottom up replacement
 				auto body = forStmt->getBody()->substitute(manager, *this);
-				stmts.push_back(builder.ifStmt(
+				auto cond = builder.logicAnd(
+					builder.ge(decl->getVariable(), forStmt->getStart()),
 					builder.logicAnd(
-						builder.ge(decl->getVariable(), forStmt->getStart()),
-						builder.logicAnd(
-							builder.lt(decl->getVariable(), forStmt->getEnd()),
-							builder.eq(
-								builder.mod(
-									builder.sub(decl->getVariable(), decl->getInitialization()),
-									forStmt->getStep()),
-								builder.numericCast(builder.uintLit(0), forStmt->getStep()->getType())))),
-					body));
+						builder.lt(decl->getVariable(), forStmt->getEnd()),
+						builder.eq(
+							builder.mod(
+								builder.sub(decl->getVariable(), decl->getInitialization()),
+								forStmt->getStep()),
+							builder.numericCast(builder.uintLit(0), forStmt->getStep()->getType()))));
+				// try to simplify the generated condition if possible
+				stmts.push_back(builder.ifStmt(core::transform::simplify(manager, cond), body));
 				return builder.compoundStmt(stmts);
 			}
 		};
@@ -688,26 +658,24 @@ namespace transform {
 		return code;
 	}
 
-	std::vector<core::LambdaExprPtr> toOcl(const Converter& converter, core::NodeManager& manager, const core::NodePtr& code,
-										   const core::CallExprPtr& callExpr, const VariableRequirementList& requirements,
-										   const DeviceAnnotationPtr& deviceInfo) {
+	core::ExpressionList toOcl(const Converter& converter, const OclIngredients& ingredients) {
+		core::NodeManager& manager = converter.getNodeManager();
 		// even though the interface supports it, only one variant is generated
 		core::IRBuilder builder(manager);
-		std::vector<core::LambdaExprPtr> variants;
+		core::ExpressionList variants;
 
-		auto lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
+		auto lambdaExpr = ingredients.getLambdaExpr();
 		// log what we got as input to quickly check if outline worked right
 		LOG(INFO) << "trying to generate kernel for: " << dumpColor(lambdaExpr);
 		// context which is usable among all steps
-		StepContext context;
+		StepContext context(converter);
 		context.setDefaultLambdaExpr(lambdaExpr);
 		context.setDefaultLWDataItemType(analysis::getLWDataItemType(lambdaExpr));
-		context.setDefaultRequirements(requirements);
+		context.setDefaultRequirements(ingredients.getVariableRequirements());
 		// all modifications applied to the lambda (which will ultimately yield OlcIR) are modeled as preProcessors
 		auto processor = makePreProcessorSequence(
 			getBasicPreProcessorSequence(),
 			makePreProcessor<FixParametersStep>(boost::ref(manager), boost::ref(context)),
-			makePreProcessor<StmtOptimizerStep>(boost::ref(manager), boost::ref(context)),
 			makePreProcessor<LoopOptimizerStep>(boost::ref(manager), boost::ref(context)),
 			makePreProcessor<TypeOptimizerStep>(boost::ref(manager), boost::ref(context)),
 			makePreProcessor<CallOptimizerStep>(boost::ref(manager), boost::ref(context)),
@@ -727,6 +695,8 @@ namespace transform {
 		// which encapsultes the whole execution plan
 		lambdaExpr = builder.lambdaExpr(lambdaExpr->getFunctionType(), lambdaExpr->getParameterList(),
 			builder.compoundStmt(body));
+		// grab a pointer to the attached deviceInfo for further meta infos
+		auto deviceInfo = ingredients.getDeviceInfo();
 		// very important step:
 		// first of all, mark this variant as opencl capable.
 		// secondly, we take note which kernel this meta_info is about for future extendability

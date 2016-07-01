@@ -228,4 +228,8 @@ int main() {
 
 	#pragma test expect_ir(R"(type_instantiation(type_lit(<IMP_TemplateWithMethod<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>, IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>>() -> unit), lit("IMP_variadicTemplateTemplateFun" : <'V_T_T_0_0...<>>() -> unit))())")
 	variadicTemplateTemplateFun<TemplateWithMethod, TemplateClass>();
+
+	// Global template instance ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	auto minint = __numeric_traits_integer<int>::__min;
 }

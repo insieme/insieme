@@ -58,6 +58,16 @@ namespace extensions {
 	InterceptorExtension::InterceptorExtension() {
 	}
 
+	FrontendExtension::flagHandler InterceptorExtension::registerFlag(boost::program_options::options_description& options) {
+		// create lambda
+		auto lambda = [&](const ConversionJob& job) {
+			// check if the default activated plugins have been deactivated manually
+			if(job.hasOption(frontend::ConversionJob::NoDefaultExtensions)) { return false; }
+			return true;
+		};
+		return lambda;
+	}
+
 	boost::optional<std::string> InterceptorExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
 		// interceptor needs to be the first extension in the extension list
 		if(setup.getExtensions().begin()->get() != this) {
@@ -436,22 +446,12 @@ namespace extensions {
 	}
 
 	bool InterceptorExtension::FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter) {
-		if(converter.getHeaderTagger()->isIntercepted(decl)) {
-			return false;
-		}
-		return true;
+		return !converter.getHeaderTagger()->isIntercepted(decl);
 	}
 
-	FrontendExtension::flagHandler InterceptorExtension::registerFlag(boost::program_options::options_description& options) {
-		// create lambda
-		auto lambda = [&](const ConversionJob& job) {
-			// check if the default activated plugins have been deactivated manually
-			if(job.hasOption(frontend::ConversionJob::NoDefaultExtensions)) { return false; }
-			return true;
-		};
-		return lambda;
+	bool InterceptorExtension::VarDeclVisit(const clang::VarDecl* decl, insieme::frontend::conversion::Converter& converter) {
+		return !converter.getHeaderTagger()->isIntercepted(decl);
 	}
-
 
 } // extensions
 } // frontend

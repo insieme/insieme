@@ -44,10 +44,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/checks/full_check.h"
 
-#include "insieme/utils/test/test_utils.h"
-
 #include "ir_dummy_annotations.inc"
-
 
 #include "insieme/utils/logging.h"
 #include "insieme/core/transform/manipulation_utils.h"

@@ -50,6 +50,7 @@ struct _irt_opencl_event_list {
 	unsigned max_events;
 	unsigned num_events;
 	cl_event *events;
+	const char *name;
 };
 typedef struct _irt_opencl_event_list irt_opencl_event_list;
 
@@ -63,7 +64,7 @@ bool irt_opencl_init_policy(irt_opencl_context *context);
 bool irt_opencl_init_logging(irt_opencl_context *context);
 bool irt_opencl_init_kernel_table(irt_opencl_context *context, irt_opencl_kernel_implementation **kernel_table);
 irt_opencl_context *irt_opencl_get_context(irt_context *context);
-void irt_opencl_dump_build_log(irt_opencl_device *device, cl_program program);
+void irt_opencl_dump_build_log(cl_int result, irt_opencl_device *device, cl_program program);
 bool irt_opencl_init_device(cl_device_id device_id, irt_opencl_platform *platform, irt_opencl_location location, irt_opencl_device *device);
 void irt_opencl_cleanup_device(irt_opencl_device *device);
 void irt_opencl_lock_device(irt_opencl_device *device);
@@ -83,7 +84,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 void irt_opencl_evaluate_ndrange(irt_opencl_device* device, irt_opencl_ndrange *ndrange);
 irt_work_item *irt_opencl_wi_get_current(unsigned id);
 size_t irt_opencl_round_up(size_t value, size_t multiple);
-irt_opencl_event_list *irt_opencl_event_list_create(unsigned max_events);
+irt_opencl_event_list *irt_opencl_event_list_create(unsigned max_events, const char *name);
 void irt_opencl_event_list_wait_and_free(irt_opencl_event_list *list);
 cl_event *irt_opencl_event_list_advance(irt_opencl_event_list *list);
 bool irt_opencl_location_is_equal(irt_opencl_location *fst, irt_opencl_location *snd);
@@ -91,6 +92,10 @@ opencl_info *irt_opencl_get_meta_info(unsigned id);
 opencl_info *irt_opencl_wi_get_meta_info(irt_work_item *wi, unsigned id);
 void irt_opencl_set_kernel_optionals(cl_kernel kernel, unsigned num_requirements, unsigned num_optionals, va_list optionals);
 cl_mem_flags irt_opencl_get_data_mode_flags(irt_opencl_data_mode mode);
+void irt_opencl_dump_profiling_info(cl_event event, const char *name);
+bool irt_opencl_check_log_level(enum irt_opencl_log_level level);
+void irt_opencl_vprintf(const char *format, va_list args);
+void irt_opencl_pprintf(const char *format, ...);
 
 /**
  * helper to iterate over all devices known to the runtime
@@ -99,17 +104,24 @@ cl_mem_flags irt_opencl_get_data_mode_flags(irt_opencl_data_mode mode);
 	for (irt_opencl_platform *__platform = context->platform; __platform != NULL; __platform = __platform->next) \
 		for (irt_opencl_device *device = __platform->device; device != NULL; device = device->next)
 
-void irt_opencl_printf(enum irt_opencl_log_level level, const char *format, ...)
+void irt_opencl_lprintf(enum irt_opencl_log_level level, const char *format, ...)
 {
-	irt_opencl_context *context = irt_opencl_get_context(irt_context_get_current());
-	/* as we have no globals, consult the context */
-	if (context->policy.log_level > level) return;
+	if (!irt_opencl_check_log_level(level))
+		return;
 
 	va_list args;
 	va_start(args, format);
 	vfprintf(stdout, format, args);
 	va_end(args);
 	fflush(stdout);
+}
+
+void irt_opencl_pprintf(const char *format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	vfprintf(stdout, format, args);
+	va_end(args);
 }
 
 bool irt_opencl_location_is_equal(irt_opencl_location *fst, irt_opencl_location *snd)
@@ -346,7 +358,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 			   irt_type_kind_get_name(IRT_T_STRUCT), irt_type_kind_get_name(capture_type->kind));
 
 	/* print out debugging information related to the device */
-	OCL_DEBUG("executing kernel %d on device %s at %u:%u\n",
+	OCL_INFO("executing kernel %d on device %s at %u-%u\n",
 		id, device->name, device->location.platform, device->location.device);
 
 	/* this will be required to locally wait on events  related to I/O*/
@@ -364,8 +376,7 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 		size_t size;
 	} reverse_offload[num_requirements];
 
-	uint64 start_ns = irt_time_ns();
-	event_io = irt_opencl_event_list_create(num_requirements);
+	event_io = irt_opencl_event_list_create(num_requirements, "copyin");
     /* obtain the associated ndrange for this particular execution */
     irt_opencl_ndrange nd = ndrange(wi);
     for (unsigned arg = 0; arg < num_requirements; ++arg) {
@@ -483,10 +494,11 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 
   /* wait until everythin is done */
 	clWaitForEvents(1, &event_krnl);
+	irt_opencl_dump_profiling_info(event_krnl, "kernel");
 	OCL_DEBUG("kernel execution has finished\n");
 
 	/* copy all required parts back */
-	event_io = irt_opencl_event_list_create(num_requirements);
+	event_io = irt_opencl_event_list_create(num_requirements, "copyout");
 	for (unsigned i = 0; i < num_requirements; ++i) {
 		if (reverse_offload[i].data == NULL)
 			continue;
@@ -506,7 +518,6 @@ void _irt_opencl_execute(unsigned id, irt_opencl_ndrange_func ndrange,
 	event_io = NULL;
 
 	OCL_DEBUG("read buffer has finished\n");
-	OCL_DEBUG("\ntotal time %" PRId64 " ns\n", irt_time_ns() - start_ns);
 	/* everything done .. release all buffers */
 	for (unsigned i = 0; i < num_requirements; ++i)
 		clReleaseMemObject(buffer[i]);
@@ -531,10 +542,14 @@ bool irt_opencl_init_device(cl_device_id device_id, irt_opencl_platform *platfor
 	device->device_id = device_id;
 	device->location = location;
 	device->platform = platform;
+
+	cl_command_queue_properties properties = 0;
+	properties |= CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
+	properties |= CL_QUEUE_PROFILING_ENABLE;
 	/* create a command queue for this device */
-	device->queue = clCreateCommandQueue(platform->context, device_id, 0, &result);
+	device->queue = clCreateCommandQueue(platform->context, device_id, properties, &result);
 	if (result != CL_SUCCESS) {
-		OCL_WARN("clCreateCommandQueue returned with %d\n", result);
+		OCL_ERROR("clCreateCommandQueue returned with %d\n", result);
 		goto error;
 	}
 	irt_spin_init(&device->lock);
@@ -589,7 +604,7 @@ bool irt_opencl_init_device(cl_device_id device_id, irt_opencl_platform *platfor
 	clGetDeviceInfo(device_id, CL_DEVICE_NAME, size, device->name, 0);
 
 	/* print out the name that we have feedback in the log */
-	OCL_INFO("initialized device %s at %u:%u\n", device->name, location.platform, location.device);
+	OCL_INFO("initialized device %s at %u-%u\n", device->name, location.platform, location.device);
 	return true;
 
 error:
@@ -607,26 +622,29 @@ void irt_opencl_unlock_device(irt_opencl_device *device)
 	irt_spin_unlock(&device->lock);
 }
 
-void irt_opencl_dump_build_log(irt_opencl_device *device, cl_program program)
+void irt_opencl_dump_build_log(cl_int result, irt_opencl_device *device, cl_program program)
 {
 	size_t len;
-	cl_int result;
+	cl_int res;
 	/* obtain the length of the log */
-	result = clGetProgramBuildInfo(program, device->device_id, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
-	if (result != CL_SUCCESS) {
-		OCL_WARN("failed to obtain build log due to: %d", result);
+	res = clGetProgramBuildInfo(program, device->device_id, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
+	if (res != CL_SUCCESS) {
+		OCL_ERROR("failed to obtain build log due to: %d", res);
 		return;
 	}
 
 	char *log = calloc(++len, sizeof(char));
-	result = clGetProgramBuildInfo(program, device->device_id, CL_PROGRAM_BUILD_LOG, len, log, NULL);
-	if (result != CL_SUCCESS) {
-		OCL_WARN("failed to obtain build log due to: %d", result);
+	res = clGetProgramBuildInfo(program, device->device_id, CL_PROGRAM_BUILD_LOG, len, log, NULL);
+	if (res != CL_SUCCESS) {
+		OCL_ERROR("failed to obtain build log due to: %d", res);
 		free(log);
 		return;
 	}
-	/* finally dump the issue */
-	OCL_WARN("%s\n\n", log);
+	/* finally dump the log, depending on output do it differently */
+	if (result != CL_SUCCESS)
+		OCL_WARN("%s\n\n", log);
+	else
+		OCL_DEBUG("%s\n\n", log);
 	free(log);
 }
 
@@ -715,7 +733,7 @@ bool irt_opencl_init_platform(irt_opencl_platform *platform)
 	OCL_DEBUG("initializing platform %d\n", platform->id);
 	platform->context = clCreateContextFromType(properties, CL_DEVICE_TYPE_ALL, NULL, NULL, &result);
 	if (result != CL_SUCCESS) {
-		OCL_WARN("clCreateContextFromType returned with %d\n", result);
+		OCL_ERROR("clCreateContextFromType returned with %d\n", result);
 		return false;
 	}
 
@@ -796,9 +814,9 @@ bool irt_opencl_init_kernel_data(irt_opencl_device *device, cl_program program, 
 	data->flags |= IRT_OPENCL_KERNEL_DATA_FLAG_BROKEN;
 	/* try to build the program for the associated device */
 	result = clBuildProgram(program, 1, &device->device_id, "", NULL, NULL);
+	irt_opencl_dump_build_log(result, device, program);
 	if (result != CL_SUCCESS) {
-    OCL_WARN("clBuildProgram returned with %d, build log follows:\n", result);
-		irt_opencl_dump_build_log(device, program);
+    OCL_WARN("clBuildProgram returned with %d, please refer the the latter build log!\n", result);
     return false;
 	}
 	/* associate the entry point */
@@ -860,7 +878,7 @@ bool irt_opencl_init_kernel_implementation(irt_opencl_context *context, unsigned
 			data = NULL;
 		} else {
 			/* kernels which do not compile are never kept in the context */
-			OCL_WARN("failed to compile kernel %d on device %s at %u:%u\n", id,
+			OCL_WARN("failed to compile kernel %d on device %s at %u-%u\n", id,
 				device->name, device->location.platform, device->location.device);
 		}
 
@@ -948,7 +966,7 @@ bool irt_opencl_init_policy(irt_opencl_context *context)
 		bool fail = true;
 		irt_opencl_location location;
 		/* parse the tuple (platform,device) */
-		if (sscanf(value, "%u:%u", &location.platform, &location.device) == 2) {
+		if (sscanf(value, "%u-%u", &location.platform, &location.device) == 2) {
 			/* check for validity */
 			foreach_device(context, device) {
 				if (irt_opencl_location_is_equal(&location, &device->location)) {
@@ -963,6 +981,8 @@ bool irt_opencl_init_policy(irt_opencl_context *context)
 		} else {
 			context->policy.location = location;
 			context->policy.select_kernel_data = &irt_opencl_select_kernel_data_user_defined;
+
+			OCL_INFO("using device %u-%u\n", location.platform, location.device);
 		}
 	}
 	return true;
@@ -1042,11 +1062,12 @@ size_t irt_opencl_round_up(size_t value, size_t multiple)
     return value + multiple - remainder;
 }
 
-irt_opencl_event_list *irt_opencl_event_list_create(unsigned max_events)
+irt_opencl_event_list *irt_opencl_event_list_create(unsigned max_events, const char *name)
 {
 	irt_opencl_event_list *list = malloc(sizeof(*list));
 	list->max_events = max_events;
 	list->num_events = 0;
+	list->name = name;
 	if (max_events)
 		list->events = malloc(sizeof(cl_event) * max_events);
 	else
@@ -1061,8 +1082,10 @@ void irt_opencl_event_list_wait_and_free(irt_opencl_event_list *list)
 
 	if (list->num_events) {
 		clWaitForEvents(list->num_events, list->events);
-		for (unsigned i = 0; i < list->num_events; ++i)
+		for (unsigned i = 0; i < list->num_events; ++i) {
+			irt_opencl_dump_profiling_info(list->events[i], list->name);
 			clReleaseEvent(list->events[i]);
+		}
 	}
 	/* free(NULL) is never an error */
 	free(list->events);
@@ -1077,6 +1100,36 @@ cl_event *irt_opencl_event_list_advance(irt_opencl_event_list *list)
 		return NULL;
 
 	return &list->events[list->num_events++];
+}
+
+void irt_opencl_dump_profiling_info(cl_event event, const char *name)
+{
+	if (!irt_opencl_check_log_level(IRT_OPENCL_LOG_LEVEL_INFO))
+		return;
+
+	struct profiling_info {
+		cl_profiling_info type;
+		const char *name;
+	};
+	static struct profiling_info info[] = {
+		{CL_PROFILING_COMMAND_QUEUED, "queued"},
+		{CL_PROFILING_COMMAND_SUBMIT, "submit"},
+		{CL_PROFILING_COMMAND_START, "start"},
+		{CL_PROFILING_COMMAND_END, "end"}
+	};
+	const unsigned count = sizeof(info) / sizeof(info[0]);
+	cl_ulong data[count];
+	for (unsigned i = 0; i < count; ++i) {
+		clGetEventProfilingInfo(event, info[i].type, sizeof(data[i]), &data[i], NULL);
+		OCL_PURE("%p: %s, %s %" PRId64 " ns (delta: %" PRId64 " ns)\n", event, name, info[i].name, data[i], i ? (data[i] - data[i-1]) : 0);
+	}
+}
+
+bool irt_opencl_check_log_level(enum irt_opencl_log_level level)
+{
+	irt_opencl_context *context = irt_opencl_get_context(irt_context_get_current());
+	/* as we have no globals, consult the context */
+	return !(context->policy.log_level > level);
 }
 
 #endif // ifndef __GUARD_IMPL_OPENCL_IMPL_H

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -67,28 +67,28 @@ namespace types {
 
 		// rename once => should produce new names
 		auto sub = renamer.mapVariables(varA);
-		EXPECT_EQ("{'a<->'v1}", toString(sub));
+		EXPECT_EQ("{'a<->'insieme_renamed_fresh_type_var_1}", toString(sub));
 
 		auto res = sub.applyForward(varA);
-		EXPECT_EQ("'v1", toString(*res));
+		EXPECT_EQ("'insieme_renamed_fresh_type_var_1", toString(*res));
 
 		// rename another type with the same renamer => should produce a different name
 		res = renamer.rename(varB);
-		EXPECT_EQ("'v2", toString(*res));
+		EXPECT_EQ("'insieme_renamed_fresh_type_var_2", toString(*res));
 
 		// rename a more complex type
 		renamer.reset();
-		EXPECT_EQ("T<'v1,'v2>", toString(*renamer.rename(genAB)));
+		EXPECT_EQ("T<'insieme_renamed_fresh_type_var_1,'insieme_renamed_fresh_type_var_2>", toString(*renamer.rename(genAB)));
 
 		// rename a type with multiple occurrences of the same variable
 		renamer.reset();
-		EXPECT_EQ("T<'v1,'v2,'v1>", toString(*renamer.rename(genABA)));
+		EXPECT_EQ("T<'insieme_renamed_fresh_type_var_1,'insieme_renamed_fresh_type_var_2,'insieme_renamed_fresh_type_var_1>", toString(*renamer.rename(genABA)));
 
 		renamer.reset();
-		EXPECT_EQ("T<'v1,'v2>", toString(*renamer.rename(genABx)));
+		EXPECT_EQ("T<'insieme_renamed_fresh_type_var_1,'insieme_renamed_fresh_type_var_2>", toString(*renamer.rename(genABx)));
 
 		renamer.reset();
-		EXPECT_EQ("T<'v1,'v2,'v1>", toString(*renamer.rename(genABAxyx)));
+		EXPECT_EQ("T<'insieme_renamed_fresh_type_var_1,'insieme_renamed_fresh_type_var_2,'insieme_renamed_fresh_type_var_1>", toString(*renamer.rename(genABAxyx)));
 
 
 		// test multiple types within a set
@@ -97,7 +97,9 @@ namespace types {
 		sub = renamer.mapVariables(manager, list);
 		vector<TypePtr> renamed;
 		::transform(list, std::back_inserter(renamed), [&](const TypePtr& cur) -> TypePtr { return sub.applyForward(cur); });
-		EXPECT_EQ("[AP('v1),AP(T<'v1,'v2>),AP(T<'v1,'v2,'v1>),AP('v2)]", toString(renamed));
+		EXPECT_EQ("[AP('insieme_renamed_fresh_type_var_1),AP(T<'insieme_renamed_fresh_type_var_1,'insieme_renamed_fresh_type_var_2>),AP(T<'insieme_renamed_"
+			      "fresh_type_var_1,'insieme_renamed_fresh_type_var_2,'insieme_renamed_fresh_type_var_1>),AP('insieme_renamed_fresh_type_var_2)]",
+			      toString(renamed));
 	}
 
 	TEST(TypeVariableRenamer, VariableMapping) {

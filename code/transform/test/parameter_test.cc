@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -38,7 +38,7 @@
 
 #include "insieme/transform/parameter.h"
 #include "insieme/utils/string_utils.h"
-#include "insieme/utils/test/test_utils.h"
+
 
 namespace insieme {
 namespace transform {

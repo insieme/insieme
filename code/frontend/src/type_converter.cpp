@@ -57,6 +57,7 @@
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/c/include.h"
+#include "insieme/annotations/c/declaration.h"
 
 using namespace clang;
 using namespace insieme;
@@ -349,16 +350,25 @@ namespace conversion {
 			core::IRBuilder builder(mgr);
 			auto& rMan = *converter.getRecordMan();
 			auto clangDecl = clangRecordTy->getDecl();
-			if(rMan.contains(clangDecl)) {
-				return rMan.lookup(clangDecl);
-			}
-			// first time we encounter this type
+			core::GenericTypePtr genTy;
 			string mangledName;
 			bool useName;
 			std::tie(mangledName, useName) = utils::getNameForTagDecl(converter, clangDecl);
-			auto genTy = builder.genericType(mangledName);
-			rMan.insert(clangDecl, genTy);
+			if(rMan.contains(clangDecl)) {
+				genTy = rMan.lookup(clangDecl);
+			} else {
+				// first time we encounter this type
+				genTy = builder.genericType(mangledName);
+				converter.applyHeaderTagging(genTy, clangDecl);
+				// make sure the generic type will be declared by the backend even if there is no visible definition
+				annotations::c::markDeclaration(genTy);
+				rMan.insert(clangDecl, genTy);
+			}
+			if(!clangDecl->isThisDeclarationADefinition() || converter.getIRTranslationUnit().hasType(genTy)) { return genTy; }
+
 			// build actual struct type (after insert!)
+			// insert dummy type in IR TU in case of recursive type definition, to be replaced with actual type
+			converter.getIRTranslationUnit().addType(genTy, builder.structType());
 			core::FieldList recordMembers;
 			for(auto mem : clangDecl->fields()) {
 				recordMembers.push_back(builder.field(insieme::frontend::utils::getNameForField(mem, converter.getSourceManager()), converter.convertType(mem->getType())));
@@ -367,14 +377,14 @@ namespace conversion {
 			core::TagTypePtr recordType = clangRecordTy->isUnionType() ? builder.unionType(compoundName, recordMembers)
 				                                                       : builder.structType(compoundName, recordMembers);
 			// attach necessary information for types defined in library headers
-			converter.applyHeaderTagging(recordType, clangRecordTy->getDecl());
+			converter.applyHeaderTagging(recordType, clangDecl);
             // we'll attach name only if available, this could be a problem if anonymous names are used
-            if (!clangRecordTy->getDecl()->getNameAsString().empty()) core::annotations::attachName(recordType, clangRecordTy->getDecl()->getNameAsString());
-			// add type to ir translation unit
-			converter.getIRTranslationUnit().addType(genTy, recordType);
+            if (!clangDecl->getNameAsString().empty()) core::annotations::attachName(recordType, clangDecl->getNameAsString());
+			// replace dummy type with actual type
+			converter.getIRTranslationUnit().replaceType(genTy, recordType);
 			return genTy;
 		}
-	} // annon namespace
+	} // anonymous namespace
 
 	core::TypePtr Converter::TypeConverter::VisitTagType(const TagType* tagType) {
 		VLOG(2) << "Converter::TypeConverter::VisitTagType " << tagType << std::endl;

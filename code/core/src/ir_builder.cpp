@@ -1486,6 +1486,11 @@ namespace core {
 				return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type));
 			}
 
+			// assume this is an intercepted member initializer, and use zero literal
+			if(type.isa<TypeVariablePtr>()) {
+				return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type));
+			}
+
 			// TODO: extend for more types
 			LOG(FATAL) << "Encountered unsupported type: " << *type;
 			assert_fail() << "Given type not supported yet!";

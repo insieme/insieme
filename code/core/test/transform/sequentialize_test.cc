@@ -46,7 +46,7 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/utils/test/test_utils.h"
+
 
 #include "insieme/core/lang/parallel.h"
 
@@ -91,8 +91,8 @@ namespace transform {
 		EXPECT_EQ("decl atomic_fetch_and_add : (ref<'a,f,'v,plain>, 'a) -> 'a;\n"
 				  "decl fun000 : (ref<'a,f,'v,plain>, 'a) -> 'a;\n"
 				  "def atomic_fetch_and_add = function (v0 : ref<ref<'a,f,'v,plain>,f,f,plain>, v1 : ref<'a,f,f,plain>) -> 'a {\n"
-				  "    (v2 : 'a)=> id(true);\n"
-				  "    (v3 : 'a)=> gen_add(v3, *v1);\n"
+				  "    (v2 : 'a) => id(true);\n"
+				  "    (v3 : 'a) => gen_add(v3, *v1);\n"
 				  "    return fun000(*v0, *v1);\n"
 				  "};\n"
 				  "def fun000 = function (v0 : ref<ref<'a,f,'v,plain>,f,f,plain>, v1 : ref<'a,f,f,plain>) -> 'a {\n"

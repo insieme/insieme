@@ -65,7 +65,7 @@ namespace tu {
 		typedef std::vector<core::ExpressionPtr> Initializer;
 
 		typedef std::vector<core::LiteralPtr> EntryPointList;
-		
+
 	  private:
 		core::NodeManager* mgr;
 
@@ -78,7 +78,7 @@ namespace tu {
 		Initializer initializer;
 
 		EntryPointList entryPoints;
-		
+
 		bool isCppCode;
 
 	  public:
@@ -115,6 +115,10 @@ namespace tu {
 
 		const EntryPointList& getEntryPoints() const {
 			return entryPoints;
+		}
+
+		bool hasType(const core::GenericTypePtr& genTy) const {
+			return types.find(genTy) != types.end();
 		}
 
 		// mutable getter:

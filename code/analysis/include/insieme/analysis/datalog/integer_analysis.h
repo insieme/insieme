@@ -36,63 +36,17 @@
 
 #pragma once
 
-#include "insieme/core/ir_address.h"
+#include "insieme/analysis/common/integer_set.h"
+
 
 namespace insieme {
 namespace analysis {
 namespace datalog {
 
-	class IntegerSet;
 
 	IntegerSet getIntegerValues(const core::ExpressionAddress&);
 
-
 	bool isIntegerConstant(const core::ExpressionAddress&);
-
-
-	class IntegerSet {
-
-		std::set<int> elements;
-
-		bool all;
-
-		IntegerSet(bool all)
-			: elements(), all(all) {}
-
-	public:
-
-		IntegerSet()
-			: elements(), all(false) {}
-
-		static IntegerSet getAll() {
-			return IntegerSet(true);
-		}
-
-		bool empty() const {
-			return !all && elements.empty();
-		}
-
-		std::size_t size() const {
-			return (all) ? std::numeric_limits<std::size_t>::max() : elements.size();
-		}
-
-		bool isUniversal() const {
-			return all;
-		}
-
-		void insert(int a) {
-			if (all) return;
-			elements.insert(a);
- 		}
-
-		friend std::ostream& operator<<(std::ostream& out, const IntegerSet& set) {
-			if (set.all) {
-				return out << "{-all-}";
-			}
-			return out << set.elements;
-		}
-
-	};
 
 
 } // end namespace datalog

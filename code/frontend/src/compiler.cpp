@@ -103,18 +103,18 @@ namespace {
 	}
 
 
-	void setDiagnosticClient(clang::CompilerInstance& clang, bool printDiagToConsole) {
+	void setDiagnosticClient(clang::CompilerInstance& clang, const ConversionSetup& config) {
 		// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the printer object!
 		clang::DiagnosticOptions* options = new clang::DiagnosticOptions();
 
 		// set diagnostic options for the error reporting
 		options->ShowLocation = 1;
 		options->ShowCarets = 1;
-		options->ShowColors = 1; // REMOVE FOR BETTER ERROR REPORT IN ECLIPSE
+		options->ShowColors = !config.hasOption(ConversionSetup::NoColor);
 		options->TabStop = 4;
 
 		DiagnosticConsumer* diagClient;
-		if(printDiagToConsole) {
+		if(config.hasOption(ConversionSetup::PrintDiag)) {
 			diagClient = new TextDiagnosticPrinter(llvm::errs(), options);
 		} else {
 			diagClient = new IgnoringDiagConsumer();
@@ -146,7 +146,7 @@ namespace frontend {
 	ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : pimpl(new ClangCompilerImpl) {
 		// assert_false(is_obj);
 		// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the diagOpts object!
-		setDiagnosticClient(pimpl->clang, config.hasOption(ConversionJob::PrintDiag));
+		setDiagnosticClient(pimpl->clang, config);
 
 		pimpl->clang.createFileManager();
 		pimpl->clang.createSourceManager(pimpl->clang.getFileManager());
@@ -224,10 +224,10 @@ namespace frontend {
 		LO.AltiVec = 1;
 		LO.LaxVectorConversions = 1;
 
-		// to eneable clang to parse gcc-builtins we need the hacked builtinheaders
+		// to enable clang to parse gcc-builtins we need the hacked builtinheaders
 		//	+	for some not builtins which are NOT supported by CLANG we give the signature (taken from GCC) as extern
 		//		functiondefinition
-		//	+	for some builtins with differeing signature (currently storelps/storehps/movntq) we hack the
+		//	+	for some builtins with differing signature (currently storelps/storehps/movntq) we hack the
 		//		intrinsic to use depending on the used compiler the correct casts
 		this->pimpl->clang.getHeaderSearchOpts().AddPath(utils::getInsiemeSourceRootDir() + "frontend/include/insieme/frontend/builtin_headers/", clang::frontend::Angled, false,
 		                                                 false);
@@ -240,23 +240,18 @@ namespace frontend {
 			CompilerInvocation::setLangDefaults(LO, clang::IK_C, clang::LangStandard::lang_gnu99);
 		}
 
-		if(config.getStandard() == ConversionSetup::Auto && config.isCxx(file)) { pimpl->m_isCXX = true; }
-		if(config.getStandard() == ConversionSetup::Cxx03 ||
-				config.getStandard() == ConversionSetup::Cxx98 ||
-				config.getStandard() == ConversionSetup::Cxx11 ||
-				config.getStandard() == ConversionSetup::Cxx14) {
+		if((config.getStandard() == ConversionSetup::Auto && config.isCxx(file))
+		   || config.getStandard() == ConversionSetup::Cxx11
+		   || config.getStandard() == ConversionSetup::Cxx14) {
 			pimpl->m_isCXX = true;
 		}
 
 		if(pimpl->m_isCXX) {
 			if(config.getStandard() == ConversionSetup::Cxx14) {
 				CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx14);
-			} else if(config.getStandard() == ConversionSetup::Cxx11) {
-				CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx11);
-			} else if(config.getStandard() == ConversionSetup::Cxx98) {
-				CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx98);
 			} else {
-				CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx03);
+				// use c++11 by default
+				CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx11);
 			}
 
 			// use the cxx header of the backend c++ compiler

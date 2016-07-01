@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -40,9 +40,9 @@
 
 namespace insieme {
 namespace frontend {
-	
+
 	TEST(IndependentTest, VariableLengthArrays) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_length_arrays.c", 
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_length_arrays.c",
 			[](ConversionJob& job) { job.registerFrontendExtension<extensions::VariableLengthArrayExtension>(); }
 		);
 	}

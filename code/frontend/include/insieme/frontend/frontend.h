@@ -84,12 +84,13 @@ namespace frontend {
 			NoWarnings = 1 << 3,
 			NoDefaultExtensions = 1 << 4,
 			DumpClangAST = 1 << 5,
+			NoColor = 1 << 6,
 		};
 
 		/**
 		 * A list of supported standards.
 		 */
-		enum Standard { Auto, C99, Cxx98, Cxx03, Cxx11, Cxx14 };
+		enum Standard { Auto, C99, Cxx11, Cxx14 };
 
 		/**
 		 * The default frontend configuration.
@@ -106,7 +107,7 @@ namespace frontend {
 		 * A list of include directories containing system headers.
 		 */
 		insieme::utils::Lazy<vector<path>> systemHeaderSearchPath;
-		
+
 		/**
 		 * Retrieve list (lazy evaluation)
 		 */
@@ -486,14 +487,23 @@ namespace frontend {
 		core::tu::IRTranslationUnit toIRTranslationUnit(core::NodeManager& manager);
 
 		/**
-		 *
+		 * Set unparsed options that might be used by a backend compiler
+		 * @param unparsed options that might be used by a backend compiler
 		 */
 		void setUnparsedOptions(const std::vector<std::string>& unparsed) {
 			this->unparsedOptions = unparsed;
 		}
 
+		/**
+		 * Get unparsed options that might be used by a backend compiler
+		 * @return unparsed options that might be used by a backend compiler
+		 */
+		std::vector<std::string> getUnparsedOptions() const {
+			return this->unparsedOptions;
+		}
+
 		void registerExtensionFlags(boost::program_options::options_description& options);
-		
+
 		void registerDefaultExtensions();
 
 		/**

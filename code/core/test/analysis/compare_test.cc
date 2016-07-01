@@ -46,15 +46,15 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
-	bool notEqNameless(const NodePtr& a, const NodePtr& b) { return !equalNameless(a,b); } 
+	bool notEqNameless(const NodePtr& a, const NodePtr& b) { return !equalNameless(a,b); }
 
 	TEST(EqualNameless, Basic) {
 		NodeManager nm;
 		IRBuilder builder(nm);
-		
+
 		auto expA = builder.parseExpr("7+5-3*8");
 		auto expB = builder.parseExpr("7+5-2*8");
-		
+
 		EXPECT_PRED2(equalNameless, expA, expA);
 		EXPECT_PRED2(notEqNameless, expA, expB);
 	}
@@ -62,21 +62,21 @@ namespace analysis {
 	TEST(EqualNameless, Lambdas) {
 		NodeManager nm;
 		IRBuilder builder(nm);
-		
+
 		auto expA = builder.parseExpr("def a = ()->() { 5; }; a()");
 		auto expB = builder.parseExpr("def b = ()->() { 5; }; b()");
 		auto expC = builder.parseExpr("def b = ()->() { 7; }; b()");
-		
+
 		EXPECT_NE(expA, expB);
 		EXPECT_PRED2(equalNameless, expA, expB);
 		EXPECT_NE(expB, expC);
 		EXPECT_PRED2(notEqNameless, expB, expC);
 	}
-	
+
 	TEST(EqualNameless, TagTypes) {
 		NodeManager nm;
 		IRBuilder builder(nm);
-		
+
 		string structStringA = R"(
 		def struct StructName {
 			a : int<4>;
@@ -99,23 +99,36 @@ namespace analysis {
 	TEST(EqualNameless, FalsePositive) {
 		NodeManager nm;
 		IRBuilder builder(nm);
-		
+
 		auto stmtA = builder.parseStmt("def a = ()->() { 5; }; def b = ()->() { 6; }; { a(); b(); }");
 		auto stmtB = builder.parseStmt("def b = ()->() { 6; }; def a = ()->() { 5; }; { a(); b(); }");
 		auto stmtC = builder.parseStmt("def a = ()->() { 6; }; def b = ()->() { 5; }; { a(); b(); }");
 		auto stmtD = builder.parseStmt("def b = ()->() { 5; }; def a = ()->() { 6; }; { b(); a(); }");
-		
+
 		EXPECT_NE(stmtA, stmtD);
 		EXPECT_PRED2(equalNameless, stmtA, stmtB);
 		EXPECT_PRED2(notEqNameless, stmtA, stmtC);
-		EXPECT_PRED2(equalNameless, stmtA, stmtD);	
+		EXPECT_PRED2(equalNameless, stmtA, stmtD);
 
 		EXPECT_PRED2(notEqNameless, stmtB, stmtC);
 		EXPECT_PRED2(equalNameless, stmtB, stmtD);
 
-		EXPECT_PRED2(notEqNameless, stmtC, stmtD);	
+		EXPECT_PRED2(notEqNameless, stmtC, stmtD);
 	}
-	
+
+	TEST(EqualName, This_test_has_no_name) {
+		// this test is only for coverage!!
+		// testing a debug function
+
+		NodeManager nm;
+		IRBuilder b(nm);
+
+		auto ir1 = b.parseExpr("def f = function () -> unit {}; def fun = function (v1 : ref<int<4>>) -> unit {f();v1;\"hello\";}; fun(2)");
+		auto ir2 = b.parseExpr("def fun = function (v2 : ref<int<4>>) -> unit {1;2;3;}; fun(1)");
+		irDiff(ir1, ir2, "ir1", "ir2", 1);
+
+	}
+
 } // namespace analysis
 } // namespace core
 } // namespace insieme

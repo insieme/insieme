@@ -52,6 +52,12 @@ namespace backend {
 		bool instrumentMainFunction;
 
 		bool addIRCodeAsComment;
+
+		/**
+		 * Indicates where the generated OpenCL kernel shall be dumped to.
+		 * If non-empty iff OpenCL backend is in use and the user supplied --dump-kernel flag
+		 */
+		std::string dumpOclKernel;
 	};
 
 	typedef std::shared_ptr<BackendConfig> BackendConfigPtr;

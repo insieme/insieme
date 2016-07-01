@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -53,7 +53,7 @@ namespace region {
 		/**
 		 * Selects all regions within the given code fragment.
 		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const;
+		virtual RegionList getRegions(const core::NodeAddress& code) const;
 	};
 
 	class PForSelector : public RegionSelector {
@@ -61,7 +61,7 @@ namespace region {
 		/**
 		 * Selects all regions within the given code fragment.
 		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const;
+		virtual RegionList getRegions(const core::NodeAddress& code) const;
 	};
 
 } // end namespace region

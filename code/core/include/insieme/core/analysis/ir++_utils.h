@@ -127,9 +127,9 @@ namespace analysis {
 	LambdaExprPtr markAsDefaultMember(const LambdaExprPtr& lambda);
 
 	/**
-	 * Checks whether the given lambda is marked as a default member
+	 * Checks whether the given node is a lambda or member function which is marked as a default member
 	 */
-	bool isaDefaultMember(const LambdaExprPtr& lambda);
+	bool isaDefaultMember(const NodePtr& node);
 
 } // end namespace analysis
 } // end namespace core

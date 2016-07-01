@@ -13,11 +13,6 @@
 ENABLE_LANGUAGE(C)
 ENABLE_LANGUAGE(CXX)
 
-# setup std-include directories (to support some IDEs)
-if (GCC_INCLUDE_DIR)
-	include_directories( ${GCC_INCLUDE_DIR} )
-endif()
-
 #custom findxxx modules
 list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
 
@@ -28,20 +23,10 @@ include(default_library_configuration)
 include(insieme_find_package)
 include(insieme_glob_headers)
 include(add_unit_test)
+include(insieme_cotire)
 include(cotire)
 include(insieme_fix_case_name)
 include(add_souffle)
-
-#if CBA_JOBS option was given, we query the number of cores, if no -j was specified this is the
-#uperlimit for parallel compile jobs
-if(DEFINED CBA_JOBS)
-	include(ProcessorCount)
-	ProcessorCount(jobs)
-	set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile_job_pool=${jobs} link_job_pool=${jobs})
-	get_property(job_pools GLOBAL PROPERTY JOB_POOLS)
-	set(CMAKE_JOB_POOL_COMPILE compile_job_pool)
-	set(CMAKE_JOB_POOL_LINK link_job_pool)
-endif()
 
 set ( insieme_core_src_dir 	            	${insieme_code_dir}/core/src )
 set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
@@ -65,8 +50,6 @@ set ( insieme_analysis_include_dir       	${insieme_code_dir}/analysis/include )
 set ( insieme_transform_src_dir				${insieme_code_dir}/transform/src )
 set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include )
 
-set ( insieme_common_include_dir			${insieme_code_dir}/common/include )
-
 set ( insieme_runtime_src_dir				${insieme_code_dir}/runtime/src )
 set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 
@@ -78,6 +61,8 @@ find_program(TIME_EXECUTABLE time)
 if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC)
 	message(FATAL_ERROR "Unable to locate time utility!")
 endif()
+
+#------------------------------------------------------------- set linking type to shared
 
 if(NOT LINKING_TYPE)
     set(LINKING_TYPE SHARED)
@@ -122,16 +107,12 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	# SET(CMAKE_EXE_LINKER_FLAGS -pg)
 
 	include(CheckCXXCompilerFlag)
-	# check for -std=c++0x
-	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
-	# check for -std=c++11
-	check_cxx_compiler_flag( -std=c++11 CXX11_Support )
-	if(CXX11_Support)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-	elseif(CXX0X_Support)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+	# check for -std=c++14
+	check_cxx_compiler_flag( -std=c++14 CXX14_Support )
+	if(CXX14_Support)
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 	else()
-		message(WARNING "WARNING: -std=c++0x or -std=c++11 not supported by your compiler!" )
+		message(WARNING "WARNING: -std=c++14 not supported by your compiler!" )
 	endif()
 endif()
 
@@ -163,31 +144,27 @@ if (${CMAKE_CXX_COMPILER} MATCHES "clang")
 	set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC")
 	# CPP flags
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -include ${insieme_common_include_dir}/insieme/common/utils/cxx14_workaround.h")
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")	
   	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")
 endif ()
 
 # --------------------------- Intel Compiler -------------------------
 if (${CMAKE_CXX_COMPILER} MATCHES "icpc")
 	# add general flags
 	add_definitions( -Wall )
-
-  	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+	
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")
-
+  	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+	
 	include(CheckCXXCompilerFlag)
-	# check for -std=c++0x
-	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
-	# check for -std=c++11
-	check_cxx_compiler_flag( -std=c++11 CXX11_Support )
-	if(CXX11_Support)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-	elseif(CXX0X_Support)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+	# check for -std=c++14
+	check_cxx_compiler_flag( -std=c++14 CXX14_Support )
+	if(CXX14_Support)
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 	else()
-		message(WARNING  "WARNING: -std=c++0x not supported by your compiler!" )
+		message(WARNING  "WARNING: -std=c++14 not supported by your compiler!" )
 	endif()
 endif ()
 
@@ -257,15 +234,19 @@ if(MSVC)
 	set(NB_PROCESSORS "1")
 endif()
 
-#ninja job pools setting
-if( NOT DEFINED(CBA_JOBS) OR (CBA_JOBS) )
-	set(CBA_JOBS "1" CACHE STRING "number of parallel cba unit test jobs")
+# -------------------------------------------- Set backend compilers if specified, default to gcc/g++ otherwise
+if( DEFINED ENV{INSIEME_C_BACKEND_COMPILER} )
+	set(INSIEME_C_BACKEND_COMPILER $ENV{INSIEME_C_BACKEND_COMPILER})
+else()
+	message(WARNING "INSIEME_C_BACKEND_COMPILER environment variable not set, defaulting to gcc in PATH")
+	set(INSIEME_C_BACKEND_COMPILER "gcc")
 endif()
-math(EXPR ALL_JOBS "${NB_PROCESSORS} + 2")
-set_property(GLOBAL PROPERTY JOB_POOLS cba_jobs=${CBA_JOBS} all_jobs=${ALL_JOBS} )
-set(CMAKE_JOB_POOL_COMPILE all_jobs)
-set(CMAKE_JOB_POOL_LINK all_jobs)
-
+if( DEFINED ENV{INSIEME_CXX_BACKEND_COMPILER} )
+	set(INSIEME_CXX_BACKEND_COMPILER $ENV{INSIEME_CXX_BACKEND_COMPILER})
+else()
+	message(WARNING "INSIEME_CXX_BACKEND_COMPILER environment variable not set, defaulting to g++ in PATH")
+	set(INSIEME_CXX_BACKEND_COMPILER "g++")
+endif()
 
 # Define some colors for printing
 if(NOT WIN32)

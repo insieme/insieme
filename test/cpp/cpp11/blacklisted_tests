@@ -3,7 +3,6 @@
 
 alignof
 async
-decltype
 function_type_template_arg
 init_list
 lambda

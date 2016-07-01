@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -84,14 +84,14 @@ namespace region {
 		};
 	}
 
-	RegionList SizeBasedRegionSelector::getRegions(const core::NodePtr& node) const {
+	RegionList SizeBasedRegionSelector::getRegions(const core::NodeAddress& code) const {
 		RegionList regions;
 
 		SizeCalculator calculator;
-		visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CompoundStmtAddress& comp) {
+		visitDepthFirstPrunable(code, [&](const core::CompoundStmtAddress& comp) {
 			unsigned size = calculator.estimateSize(comp.getAddressedNode());
 			if(minSize < size && size < maxSize) {
-				regions.push_back(comp);
+				regions.push_back(Region(comp));
 				return true;
 			}
 			return false;

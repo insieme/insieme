@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -43,6 +43,9 @@ int f(int x = 7) {
 void g(int x, unsigned y = 4u, char z = 'd') {}
 #define G_IR "def IMP_g = function (v0 : ref<int<4>,f,f,plain>, v1 : ref<uint<4>,f,f,plain>, v2 : ref<char,f,f,plain>) -> unit { }; "
 
+struct S {};
+void s(S s = S()) {};
+
 int main() {
 #pragma test expect_ir(F_IR, "IMP_f(4)")
 	f(4);
@@ -58,6 +61,13 @@ int main() {
 
 	#pragma test expect_ir(G_IR, R"(IMP_g(7, 4u, lit("'d'":char)))")
 	g(7);
+
+	#pragma test expect_ir(R"(
+		def struct IMP_S {};
+		def IMP_s = function (v0 : ref<IMP_S,f,f,plain>) -> unit { };
+		IMP_s(ref_cast(IMP_S::(ref_temp(type_lit(IMP_S))), type_lit(f), type_lit(f), type_lit(cpp_rref)))
+	)")
+	s();
 
 	return 0;
 }

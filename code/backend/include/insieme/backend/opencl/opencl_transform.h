@@ -44,6 +44,7 @@
 #include "insieme/backend/preprocessor.h"
 #include "insieme/backend/opencl/opencl_entities.h"
 #include "insieme/backend/opencl/opencl_extension.h"
+#include "insieme/backend/opencl/opencl_analysis.h"
 
 #include "insieme/utils/graph_utils.h"
 
@@ -53,6 +54,13 @@ namespace opencl {
 namespace transform {
 
 	using namespace insieme::annotations::opencl;
+
+	namespace detail {
+		/**
+		 * Used to mark nodes which have been extracted via transform::outline()
+		 */
+		struct OutlineMarker {};
+	}
 
 	/**
 	 * Represents a single kernel execution within a CallGraph which consists of:
@@ -113,7 +121,12 @@ namespace transform {
 		 * Name of the generated kernel which will be used by the runtime system to enqueue the execution
 		 */
 		std::string kernelName;
+		/**
+		 * Converter in which the transformation is executed
+		 */
+		 const Converter& converter;
 	public:
+		StepContext(const Converter& converter) : converter(converter) {}
 		void setDefaultLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { defaultLe = lambdaExpr; }
 		const core::LambdaExprPtr& getDefaultLambdaExpr() const { return defaultLe; }
 		void setDefaultLWDataItemType(const core::TypePtr& type) { defaultTy = type; }
@@ -126,6 +139,7 @@ namespace transform {
 		const std::set<KhrExtension>& getExtensions() const { return extensions; }
 		void setKernelName(const std::string& kernelName) { this->kernelName = kernelName; }
 		const std::string& getKernelName() const { return kernelName; }
+		const Converter& getConverter() const { return converter; }
 	};
 
 	/**
@@ -151,15 +165,6 @@ namespace transform {
 	 * if a data requirement uses additionally captured information.
 	 */
 	class FixParametersStep : public Step {
-	public:
-		using Step::Step;
-		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
-	};
-
-	/**
-	 * Tries to simplify the given code by e.g. inlining or using the core's functionality
-	 */
-	class StmtOptimizerStep : public Step {
 	public:
 		using Step::Step;
 		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override;
@@ -202,8 +207,8 @@ namespace transform {
 	};
 
 	/**
-     * Outlines the given statement and captures any expressions indirectly required by @requirements
-     */
+   * Outlines the given statement and captures any expressions indirectly required by @requirements
+   */
 	core::CallExprPtr outline(core::NodeManager& manager, const core::StatementPtr& stmt,
 							  VariableRequirementList& requirements);
 
@@ -280,12 +285,42 @@ namespace transform {
 	core::LambdaExprPtr toIR(core::NodeManager& manager, const StepContext& sc, const VariableRequirementPtr& var);
 
 	/**
-	 * Convert the given code, which must have been previously outlined via opencl::transform::outline(), into a set
-	 * of lambdaExprs which represent pickable WI-variants
+	 * Encapsulats all ingredients which are required to convert IR code into Ocl code
 	 */
-	std::vector<core::LambdaExprPtr> toOcl(const Converter& converter, core::NodeManager& manager, const core::NodePtr& code,
-										   const core::CallExprPtr& callExpr, const VariableRequirementList& requirements,
-										   const DeviceAnnotationPtr& deviceInfo);
+	class OclIngredients {
+		core::LambdaExprPtr lambdaExpr;
+		VariableRequirementList requirements;
+		DeviceAnnotationPtr deviceInfo;
+	public:
+		OclIngredients(const core::LambdaExprPtr& lambdaExpr, const VariableRequirementList& requirements, const DeviceAnnotationPtr& deviceInfo) :
+			lambdaExpr(lambdaExpr), requirements(requirements), deviceInfo(deviceInfo) {
+			// check if the lambdaExpr was generated via transform::outline()
+			assert_true(lambdaExpr->hasAttachedValue<detail::OutlineMarker>()) << "lambda not constructed via specific outline!";
+			// check if it is recursive as we do not support that currently
+			assert_true(!lambdaExpr->isRecursive()) << "lambda must not be recursive!";
+			// check if the requirements are fully defined by the lambdaExpr
+			assert_true(analysis::isVariableRequirementOf(lambdaExpr, requirements)) << "requirements are not fully defined by the given lambda!";
+		}
+		/**
+		 * Obtain the enclosed lambdaExpr
+		 */
+		const core::LambdaExprPtr& getLambdaExpr() const { return lambdaExpr; }
+		/**
+		 * Obtain a reference to the attached list of requirements
+		 */
+		const VariableRequirementList& getVariableRequirements() const { return requirements; }
+		/**
+		 * Obtain the attached, statically determined, evice info
+		 */
+		const DeviceAnnotationPtr& getDeviceInfo() const { return deviceInfo; }
+	};
+
+	/**
+	 * Convert the given code into a set of expressions which represent pickable WI-variants
+	 * @param converter converter in which's context the transformation is applied
+	 * @param ingredients all ingredients, expect for the converter, which are required
+	 */
+	core::ExpressionList toOcl(const Converter& converter, const OclIngredients& ingredients);
 }
 }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -368,6 +368,15 @@ namespace annotations {
 	template <typename T>
 	LocationOpt getLocation(const Address<T>& addr) {
 		return getLocation(addr.template as<NodeAddress>());
+	}
+
+	/**
+	 * Returns a string representation of the most precise location which can be found for "n".
+	 */
+	template <typename T>
+	static inline std::string getLocationString(const T& n) {
+		auto loc = core::annotations::getLocation(n);
+		return loc ? toString(*loc) : std::string("Location could not be found!");
 	}
 
 } // end namespace annotations

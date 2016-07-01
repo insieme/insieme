@@ -87,7 +87,13 @@ namespace analysis {
 	VariableRequirementList getVariableRequirements(core::NodeManager& manager, const core::NodePtr& code,
 																		 const core::StatementPtr& stmt);
 	/**
-     * Determines all free variables within stmt by taking into account the given requirements
+	 * Determine if the given requirements belong to the lambdaExpr and are fully defined by the latter
+	 * @param lambdaExpr lambda to check the requirements against
+	 * @param requirements list of requirements to check
+	 */
+	bool isVariableRequirementOf(const core::LambdaExprPtr& lambdaExpr, const VariableRequirementList& requirements);
+	/**
+	 * Determines all free variables within stmt by taking into account the given requirements
 	 */
 	core::VariableList getFreeVariables(core::NodeManager& manager, const core::StatementPtr& stmt,
 										const VariableRequirementList& requirements);
@@ -96,16 +102,15 @@ namespace analysis {
 	 */
 	bool isIndependentStmt(const core::StatementPtr& stmt);
 	/**
-     * Determine all offloadable statements within a given node
-     */
+	 * Determine all offloadable statements within a given node
+	 */
 	core::NodeList getOffloadAbleStmts(const core::NodePtr& node);
 	/**
-     * Determine the LWDataItemType for a given lambda
-     */
+	 * Determine the LWDataItemType for a given lambda
+	 */
 	core::TypePtr getLWDataItemType(const core::LambdaExprPtr& lambdaExpr);
-
 	/**
-     * Determine static device information for the given statement
+	 * Determine static device information for the given statement
 	 */
 	DeviceAnnotationPtr getDeviceInfo(const core::StatementPtr& stmt);
 

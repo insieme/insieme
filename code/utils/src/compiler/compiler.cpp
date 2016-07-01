@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -54,7 +54,7 @@ namespace compiler {
 namespace fs = boost::filesystem;
 
 Compiler Compiler::getDefaultC99Compiler() {
-	const char* envVar = std::getenv("INSIEME_C_COMPILER");
+	const char* envVar = std::getenv("INSIEME_C_BACKEND_COMPILER");
 	if(envVar == nullptr) { envVar = "gcc"; }
 	Compiler res(envVar);
 	res.addFlag("-x c");
@@ -64,7 +64,7 @@ Compiler Compiler::getDefaultC99Compiler() {
 }
 
 Compiler Compiler::getDefaultCppCompiler() {
-	const char* envVar = std::getenv("INSIEME_CXX_COMPILER");
+	const char* envVar = std::getenv("INSIEME_CXX_BACKEND_COMPILER");
 	if(envVar == nullptr) { envVar = "g++"; }
 
 	Compiler res(envVar);
@@ -128,7 +128,7 @@ string Compiler::getCommand(const vector<string>& inputFiles, const string& outp
 	cmd << (incDirs.empty() ? "" : " -I") << join(" -I", incDirs);
 	cmd << (libs.getPaths().empty() ? "" : " -L") << join(" -L", libs.getPaths());
 	cmd << (libs.getLibs().empty() ? "" : " -l") << join(" -l", libs.getLibs());
-	cmd << " -o " << outputFile;
+	if(outputFile.size()) cmd << " -o " << outputFile;
 
 	// redirect streams if compilation should be 'silent'
 	if(silent) { cmd << " > /dev/null 2>&1"; }
@@ -248,13 +248,42 @@ bool compileToBinary(const VirtualPrintable& source, const string& targetFile, c
 	// delete source file - only if compilation was a success
 	if(boost::filesystem::exists(sourceFile)) {
 		if(success) {
-			boost::filesystem::remove(sourceFile);
+			std::cerr << "Source: " << sourceFile << std::endl;
+			//boost::filesystem::remove(sourceFile);
 		} else {
 			std::cerr << "Offending source code can be found in " << sourceFile << std::endl;
 		}
 	}
 
 	return success;
+}
+
+bool isOpenCLAvailable() {
+	// -1 not available
+	//  0 unknown, check is pending
+	// +1 available
+	static int result = 0;
+	// do we need to check for the first time?
+	if (result == 0) {
+		// assume that it is not available
+		result = -1;
+		// obtain an instance of the ocl compiler and set it to silent mode as
+		// we do not want to nag the user with the output
+		auto compiler = Compiler::getOpenCLCompiler();
+		compiler.addFlag("-E");
+		compiler.setSilent();
+		// generate a unique file in the temp directory and let the compiler resolve cl.h
+		auto path = boost::filesystem::unique_path(boost::filesystem::temp_directory_path() / "insieme-ocl-%%%%%%%%.h").string();
+		std::fstream file(path, std::fstream::out);
+		file << "#include <CL/cl.h>";
+		file.close();
+		// pass in an empty string as we do not want to generate an additional file
+		auto retVal = system(compiler.getCommand({path}, "").c_str());
+		if (retVal >= 0 && WEXITSTATUS(retVal) == 0) result = 1;
+		// remove the temporary file as it is not needed anymore
+		boost::filesystem::remove(path);
+	}
+	return result > 0;
 }
 
 } // end namespace compiler

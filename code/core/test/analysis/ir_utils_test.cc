@@ -261,6 +261,27 @@ namespace analysis {
 		}
 	}
 
+	TEST(FreeVariables, VarInType) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// add some free variables
+		std::map<string, NodePtr> symbols;
+		symbols["v"] = builder.variable(manager.getLangBasic().getInt4(), 77);
+
+		TypePtr type = builder.parseType("array<int<4>,#v>", symbols);
+		ASSERT_TRUE(type);
+
+		NodePtr call = builder.parseExpr("() -> array<int<4>,#v> { return ref_temp(type_lit(array<int<4>,#v>)); }()", symbols);
+
+		NodePtr call2 = builder.parseExpr("(v0 : uint<inf>) -> ptr<int<4>> { var uint<inf> bla = v0; return ptr_from_array(ref_new(type_lit(array<int<4>,#bla>))); }(lit(\"5\":uint<inf>))");
+
+		// check free variable
+		EXPECT_EQ("[AP(v77)]", toString(getFreeVariables(type)));
+		EXPECT_EQ("[AP(v77)]", toString(getFreeVariables(call)));
+		EXPECT_EQ("[]", toString(getFreeVariables(call2)));
+	}
+
 
 	TEST(AllVariables, BindTest) {
 		NodeManager manager;
