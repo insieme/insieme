@@ -9,4 +9,4 @@ extra-deps:
 - attoparsec-binary-0.2
 - directory-1.2.6.3
 
-resolver: lts-5.13
+resolver: lts-6.4
