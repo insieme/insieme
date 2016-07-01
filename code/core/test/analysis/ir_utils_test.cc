@@ -393,7 +393,7 @@ namespace analysis {
 		auto expr4 = b.parseExpr("0ull");
 		auto expr5 = b.parseExpr("0l");
 		auto expr6 = b.parseExpr("0ll");
-		auto expr7 = b.parseExpr("0f");
+		auto expr7 = b.parseExpr("0.0f");
 		auto expr8 = b.parseExpr("lit(\"0\" : int<4>)");
 		auto expr9 = b.parseExpr("3");
 
@@ -413,15 +413,12 @@ namespace analysis {
 		NodeManager nm;
 		IRBuilder b(nm);
 
-		const auto& ext = nm.getLangExtension<core::lang::StaticVariableExtension>();
-
-		auto expr1 = b.parseExpr("int<4>");
-		auto expr2 = b.parseExpr("ref<int<4>>");
+		auto expr1 = b.parseAddressesStatement("{ var ref<int<4>> a; $a$; }");
+		auto e1 = expr1[0].getAddressedNode();
 
 		// TODO: include more tests!! positive tests....
 
-		EXPECT_FALSE(isStaticVar(expr1));
-		EXPECT_FALSE(isStaticVar(expr2));
+		EXPECT_FALSE(isStaticVar(e1.as<ExpressionPtr>()));
 	}
 
 	TEST(ExitPoints, Basic) {
