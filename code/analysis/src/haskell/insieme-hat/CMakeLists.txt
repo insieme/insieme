@@ -20,7 +20,17 @@ add_custom_target(
         "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
         ${stack_home}/bin/stack setup
 
-    # TODO: we need c2hs, alex binaries
+    # binarys like alex and c2hs have to be installed manually
+    COMMAND ${CMAKE_COMMAND} -E env
+        "STACK_ROOT=${stack_root}"
+        "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
+        "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
+        ${stack_home}/bin/stack build alex
+    COMMAND ${CMAKE_COMMAND} -E env
+        "STACK_ROOT=${stack_root}"
+        "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
+        "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
+        ${stack_home}/bin/stack build c2hs
 
     # install dependencies and build package
     COMMAND ${CMAKE_COMMAND} -E env
