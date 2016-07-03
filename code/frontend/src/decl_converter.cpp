@@ -138,8 +138,19 @@ namespace conversion {
 					// access IR field
 					auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
 					auto retType = converter.convertVarType(fieldDecl->getType().getUnqualifiedType());
+					auto fieldType = core::lang::ReferenceType(retType).getElementType();
+					// if Cpp ref or Cpp Rref then use that reference type as field type
+					bool unwrap = false;
+					if(!core::lang::isPlainReference(retType)) {
+						fieldType = retType;
+						retType = builder.refType(fieldType);
+						unwrap  = true;
+					}
 					irMember = builder.callExpr(retType, access, irThis, builder.getIdentifierLiteral(fieldDecl->getNameAsString()),
-													 builder.getTypeLiteral(core::lang::ReferenceType(retType).getElementType()));
+						                        builder.getTypeLiteral(fieldType));
+					if(unwrap) {
+						irMember = builder.deref(irMember);
+					}
 				}
 				// handle CXXDefaultInitExpr
 				auto clangInitExpr = init->getInit();

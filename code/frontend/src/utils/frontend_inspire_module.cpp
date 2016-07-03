@@ -82,14 +82,6 @@ namespace utils {
 		return builder.callExpr(mgr.getLangBasic().getInt4(), inspMod.getBoolToInt(), b);
 	}
 
-	core::ExpressionPtr buildObjectArrayNew(const core::TypePtr& objType, const core::ExpressionPtr& num, const core::ExpressionPtr& ctor) {
-		NodeManager& mgr = num->getNodeManager();
-		IRBuilder builder(mgr);
-		assert_pred1(mgr.getLangBasic().isInt, num->getType()) << "ObjectArrayNew must be called with size of integral type";
-		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
-		return builder.callExpr(lang::buildPtrType(objType), inspMod.getObjectArrayNew(), builder.getTypeLiteral(objType), num, ctor);
-	}
-
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme

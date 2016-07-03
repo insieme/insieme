@@ -1009,8 +1009,14 @@ namespace integration {
 			std::cerr << "Unable to fork, reason: " << strerror(errno) << "\n";
 		} else if(pid == 0) {
 			// soft and hard limit in seconds, will raise SIGXCPU and SIGKILL respectively afterwards, or only SIGKILL if they are equal
-			const struct rlimit cpuLimit = {cpuTimeLimit, cpuTimeLimit + 5};
-			if(setrlimit(RLIMIT_CPU, &cpuLimit) != 0) { std::cerr << strerror(errno); }
+			struct rlimit cpuLimit = { 0, 0 };
+			getrlimit(RLIMIT_CPU, &cpuLimit);
+			// set cpu time limit only if current setting is unlimited or at least larger than our own limit
+			if((cpuLimit.rlim_cur > cpuTimeLimit || cpuLimit.rlim_cur == RLIM_INFINITY) && (cpuLimit.rlim_max > cpuTimeLimit + 5 || cpuLimit.rlim_max == RLIM_INFINITY)) {
+				cpuLimit.rlim_cur = cpuTimeLimit;
+				cpuLimit.rlim_max = cpuTimeLimit + 5;
+				if(setrlimit(RLIMIT_CPU, &cpuLimit) != 0) { std::cerr << strerror(errno); }
+			}
 			// stdout and stderr redirection
 			int fdOut, fdErr;
 			if((fdOut = open(outFilePath.c_str(), O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR)) == -1) {
@@ -1152,17 +1158,17 @@ namespace integration {
 		boost::tokenizer<boost::char_separator<char>> tok(error, sep);
 		for(boost::tokenizer<boost::char_separator<char>>::iterator beg = tok.begin(); beg != tok.end(); ++beg) {
 			string token(*beg);
-			if(token.find("WALLTIME") == 0) {
-				metricResults["walltime"] = atof(token.substr(8).c_str());
-			} else if(token.find("CPUTIME") == 0) {
-				metricResults["cputime"] = atof(token.substr(7).c_str());
+			if(token.find("WALLTIME") != token.npos) {
+				metricResults["walltime"] = atof(token.substr(token.find("WALLTIME") + 8).c_str());
+			} else if(token.find("CPUTIME") != token.npos) {
+				metricResults["cputime"] = atof(token.substr(token.find("CPUTIME") + 7).c_str());
 				// check if we approached the cpu time limit. If so, print a warning
 				if(((metricResults["cputime"])) / cpuTimeLimit > 0.95) {
 					std::cerr << "Killed by timeout, CPU time was " << metricResults["cputime"] << ", limit was " << cpuTimeLimit << " seconds\n";
 					metricResults["timeout"] = 1;
 				}
-			} else if(token.find("MEM") == 0) {
-				metricResults["mem"] = atof(token.substr(3).c_str());
+			} else if(token.find("MEM") != token.npos) {
+				metricResults["mem"] = atof(token.substr(token.find("MEM") + 3).c_str());
 			} else {
 				// check perf metrics, otherwise append to stderr
 				bool found = false;

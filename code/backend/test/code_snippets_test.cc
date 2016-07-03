@@ -58,11 +58,11 @@
 namespace insieme {
 namespace backend {
 
+	// global because it increases the testing speed by ~ factor 2
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
 
 	TEST(FunctionCall, SimpleFunctions) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(
 				R"(
 				alias int = int<4>;
@@ -100,9 +100,6 @@ namespace backend {
 	}
 
 	TEST(FunctionCall, SimpleVarDecl) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(
 				R"(
 				int<4> main() {
@@ -135,9 +132,6 @@ namespace backend {
 	}
 
 	TEST(FunctionCall, Templates) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
 		                                                "  (dtype : type<'a>, size : type<'s>)->unit {"
 		                                                "    var ref<'a> v0;"
@@ -170,12 +164,8 @@ namespace backend {
 
 
 	TEST(FunctionCall, Pointwise) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		// Operation: array.pointwise
 		// Type: (('a,'b)->'c) -> (array<'a,'l>,array<'b,'l>)->array<'c,'l>
-
 		std::map<string, core::NodePtr> symbols;
 		symbols["v1"] = builder.parseExpr("*<ref<array<int<4>,4>>>{1,2,3,4}");
 		symbols["v2"] = builder.parseExpr("*<ref<array<int<4>,4>>>{5,6,7,8}");
@@ -202,11 +192,6 @@ namespace backend {
 
 
 	TEST(FunctionCall, TypeLiterals) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a function accepting a type literal
-
 		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
 		                                                "	(stype : type<'a>)->int<4> {"
 		                                                "		return 5;"
@@ -234,9 +219,6 @@ namespace backend {
 
 
 	TEST(FunctionCall, GenericFunctionAndTypeLiteral) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		// create a function accepting a type literal
 
 		core::ProgramPtr program = builder.parseProgram(R"(
@@ -246,7 +228,7 @@ namespace backend {
     			} (ref_null(type_lit(array<real<4>,12>),type_lit(f),type_lit(f)));
     			return 0;
     		}
-    )");
+		)");
 		ASSERT_TRUE(program);
 
 		LOG(DEBUG) << "Program: " << *program << std::endl;
@@ -268,13 +250,10 @@ namespace backend {
 
 
 	TEST(FunctionCall, RefNewCalls) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		// create a function accepting a type literal
-		core::TypePtr intType = manager.getLangBasic().getInt4();
+		core::TypePtr intType = mgr.getLangBasic().getInt4();
 		core::TypePtr type = builder.refType(intType);
-		core::VariablePtr var = builder.variable(type, 1);
+		core::VariablePtr var = builder.variable(type, 5017);
 
 		core::ExpressionPtr init = builder.undefinedNew(intType);
 		core::DeclarationStmtPtr decl = builder.declarationStmt(var, init);
@@ -285,17 +264,14 @@ namespace backend {
 
 		string code = toString(*converted);
 		EXPECT_PRED2(notContainsSubString, code, "<?>");
-		EXPECT_PRED2(containsSubString, code, "int32_t* var_1 = (int32_t*)malloc(sizeof(int32_t))");
+		EXPECT_PRED2(containsSubString, code, "int32_t* var_5017 = (int32_t*)malloc(sizeof(int32_t))");
 	}
 
 	TEST(FunctionCall, FixedSizedArrayInit) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		core::ExpressionPtr zero = builder.literal(manager.getLangBasic().getUInt8(), "0");
+		core::ExpressionPtr zero = builder.literal(mgr.getLangBasic().getUInt8(), "0");
 		core::ExpressionPtr offset = builder.parseExpr("<ref<array<uint<8>,3>>>{0ul,0ul,0ul}");
 		core::ExpressionPtr extFun = builder.parseExpr("lit(\"call_vector\" : (ref<array<uint<8>,3>>)->unit )");
-		core::ExpressionPtr call = builder.callExpr(manager.getLangBasic().getUnit(), extFun, toVector(offset));
+		core::ExpressionPtr call = builder.callExpr(mgr.getLangBasic().getUnit(), extFun, toVector(offset));
 
 		core::IRBuilder::EagerDefinitionMap symbols {{ "call", call }};
 
@@ -321,9 +297,6 @@ namespace backend {
 
 
 	TEST(Literals, BoolLiterals) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		// create a code fragment including the boolean constants
 		core::ProgramPtr program = builder.parseProgram("int<4> main() {"
 		                                                "	true;"
@@ -350,9 +323,6 @@ namespace backend {
 	}
 
 	TEST(Parallel, NestedLambdaTypeDeduction) {
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
 		core::ProgramPtr program = builder.parseProgram(
 		    R"(
 			alias int = int<4>;
@@ -389,9 +359,6 @@ namespace backend {
 
 
 	TEST(Arrays, Allocation) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		// create a code fragment allocating an array on the stack and using it
 		core::ProgramPtr program = builder.parseProgram(
 		    R"(
@@ -439,10 +406,6 @@ namespace backend {
 	}
 
 	TEST(PrimitiveType, LongLong) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a code fragment allocating an array on the stack and using it
 		core::ProgramPtr program = builder.parseProgram(
 		    R"(
 			alias longlong = int<16>;
@@ -479,9 +442,6 @@ namespace backend {
 
 
 	TEST(FunctionCall, GenericFunctionsWithLazy) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(R"(
 				def f = (a : ref<'a>, c : ('a)=>bool, v : ()=>'a)->ref<'a> {
 					if(c(*a)) {
@@ -524,9 +484,6 @@ namespace backend {
 	}
 
 	TEST(FunctionCall, PassLabmdaToBind) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram("def f = ()->int<4> { return 4; };"
 		                                                "def g = (a : ()=>'a)->'a { return a(); };"
 		                                                "int<4> main() {"
@@ -557,9 +514,6 @@ namespace backend {
 	}
 
 	TEST(Debugging, DebugCodePrinting) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram("alias int = int<4>;"
 		                                                ""
 		                                                "def f = ()->int { return 4; };"
@@ -632,9 +586,6 @@ namespace backend {
 	}
 
 	TEST(Types, RecursiveTypesSimple) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(
 				R"(
 					alias int = int<4>;
@@ -675,16 +626,13 @@ namespace backend {
 	}
 
 	TEST(Types, RecursiveTypesMutual) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(
 				R"(
 					alias int = int<4>;
 
 					decl struct B;
-					def struct A { value : int<4>; next : ref<B>; };
-					def struct B { value : int<4>; next : ref<A>; };
+					def struct A { value : int<4>; next : ref<B>; lambda getNext = () -> ref<B> { var ref<B> x; return x; } };
+					def struct B { value : int<4>; next : ref<A>; lambda getNext = () -> ref<A> { var ref<A> x; return x; } };
 
 					int main() {
 						var ref<A> x;
@@ -720,9 +668,6 @@ namespace backend {
 	}
 
 	TEST(Functions, RecursiveFunctionSimple) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(
 			R"(
 				alias int = int<4>;
@@ -764,9 +709,6 @@ namespace backend {
 	}
 
 	TEST(Functions, RecursiveFunctionMutual) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(
 			R"(
 				alias int = int<4>;
@@ -812,9 +754,6 @@ namespace backend {
 	}
 
 	TEST(Functions, RecursiveFunctionEvenOdd) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(
 			R"(
 				alias int = int<4>;
@@ -860,9 +799,6 @@ namespace backend {
 	}
 
 	TEST(Initialization, Array) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(
 			R"(
 			int<4> main() {
@@ -919,9 +855,6 @@ namespace backend {
 	}
 
 	TEST(Initialization, Struct) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(
 			R"(
 			def struct A { a : int<4>; b : real<4>; };
@@ -963,9 +896,6 @@ namespace backend {
 	}
 
 	TEST(Initialization, StructTemp) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(
 			R"(
 			def struct A { a : int<4>; b : real<4>; };
@@ -1004,9 +934,6 @@ namespace backend {
 	}
 
 	TEST(Initialization, Globals) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(R"(
 			def struct S { x: int<4>; y: uint<4>; };
 			int<4> main() {
@@ -1048,9 +975,6 @@ namespace backend {
 	}
 
 	TEST(Enum, Simple) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(
 			R"(using "ext.enum";
 			int<4> main() {
@@ -1084,9 +1008,6 @@ namespace backend {
 	}
 
 	TEST(Pointer, Simple) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(R"(
 			def fun = (i : ptr<int<4>>) -> unit {};
 			def pfun = () -> ptr<int<4>> {
@@ -1145,9 +1066,6 @@ namespace backend {
 	}
 
 	TEST(VariableDeclTypes, InitExpr) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(R"(
 		def union u {
 			i : int<4>;
@@ -1178,9 +1096,6 @@ namespace backend {
 	}
 
 	TEST(Pointers, Simple) {
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
 		core::ProgramPtr program = builder.parseProgram(R"string(
 		decl IMP___assert_fail : (ptr<char,t,f>, ptr<char,t,f>, uint<4>, ptr<char,t,f>) -> unit;
 		int<4> function IMP_main (v9 : ref<int<4>,f,f,plain>, v10 : ref<ptr<ptr<char>>,f,f,plain>){

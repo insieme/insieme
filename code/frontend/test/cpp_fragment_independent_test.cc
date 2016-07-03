@@ -75,5 +75,7 @@ namespace frontend {
 
 	TEST(CppIndependentTest, Static) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_static.cpp"); }
 
+	TEST(CppIndependentTest, StackInitialization) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_stack_initialization.cpp"); }
+
 } // fe namespace
 } // insieme namespace

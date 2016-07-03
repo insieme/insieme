@@ -50,7 +50,6 @@
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
-#include "insieme/frontend/utils/temporaries_lookup.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
@@ -289,7 +288,6 @@ namespace conversion {
 			frontend_assert(core::lang::isArray(subTy)) << "Expected array type, got " << *subTy;
 			auto arrTy = core::lang::ArrayType(subTy);
 
-			// need to implement this for non-const size (approach same as with C VLAs)
 			auto form = core::arithmetic::toFormula(newSize);
 			frontend_assert(form.isConstant()) << "Non const-sized new[] not yet implemented";
 			arrTy.setSize(form.getIntegerValue());
@@ -306,11 +304,16 @@ namespace conversion {
 			auto arrayLenBase = converter.convertExpr(newExpr->getArraySize());
 			auto arrayLenExpr = builder.numericCast(arrayLenBase, basic.getUIntInf());
 
-			// allocate constant sized arrays more simply
+			// allocate constant sized arrays types more simply
 			auto constArrayLen = core::arithmetic::toConstantInt(arrayLenExpr);
 			if(constArrayLen) {
 				auto irNewExp = builder.undefinedNew(core::lang::ArrayType::create(elemType, builder.uintLit(constArrayLen.get())));
-				if(newExpr->hasInitializer()) {
+				// for class types, we need to build an init expr even if no initializer is supplied, to call constructors implicitly
+				if(newExpr->getConstructExpr()) {
+					irNewExp = builder.initExpr(irNewExp);
+				}
+				// otherwise, only build initexpr if we have an initializer
+				else if(newExpr->hasInitializer()) {
 					core::ExpressionPtr initializerExpr = converter.convertInitExpr(newExpr->getInitializer());
 					// make sure we allocate the correct amount of array elements with partial initialization
 					irNewExp = resizeArrayCreate(converter, initializerExpr, arrayLenBase);
@@ -329,7 +332,11 @@ namespace conversion {
 			core::TypeList initFunParamTypes { basic.getUIntInf() };
 			core::VariableList initFunParams { arrLenVarParam };
 			core::ExpressionList initFunArguments { arrayLenExpr };
-			if(newExpr->hasInitializer()) {
+			// for class types, we need to build an init expr even if no initializer is supplied, to call constructors implicitly
+			if(newExpr->getConstructExpr()) {
+				arr = builder.initExpr(memloc);
+			}
+			else if(newExpr->hasInitializer()) {
 				// convert the initializer to a temporary init expression and then use its init expressions
 				auto tempInits = converter.convertInitExpr(newExpr->getInitializer());
 				if(tempInits->getNodeType() != core::NT_InitExpr) tempInits = core::analysis::getArgument(tempInits, 0);
@@ -362,12 +369,13 @@ namespace conversion {
 
 		frontend_assert(newExpr->getNumPlacementArgs() == 0) << "Placement new not yet supported";
 
-		// if no constructor is found, it is a new over a non-class type
 		core::TypePtr type = converter.convertType(newExpr->getAllocatedType());
-		if(!newExpr->getConstructExpr()) {
-			if(newExpr->isArray()) {
-				retExpr = buildArrayNew(converter, newExpr, type);
-			} else {
+
+		if(newExpr->isArray()) {
+			retExpr = buildArrayNew(converter, newExpr, type);
+		} else {
+			// if no constructor is found, it is a new over a non-class type
+			if(!newExpr->getConstructExpr()) {
 				// build new expression depending on whether or not we have an initializer expression
 				core::ExpressionPtr newExp;
 				if(newExpr->hasInitializer()) {
@@ -377,13 +385,8 @@ namespace conversion {
 				}
 				retExpr = core::lang::buildPtrFromRef(newExp);
 			}
-		}
-		// we have a constructor, so we are building a class
-		else {
-			if(newExpr->isArray()) {
-				retExpr = utils::buildObjectArrayNew(type, converter.convertExpr(newExpr->getArraySize()),
-					                                 converter.getFunMan()->lookup(newExpr->getConstructExpr()->getConstructor()));
-			} else {
+			// we have a constructor, so we are building a class
+			else {
 				retExpr = core::lang::buildPtrFromRef(convertConstructExprInternal(converter, newExpr->getConstructExpr(), false));
 			}
 		}
@@ -397,17 +400,33 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang::CXXDeleteExpr* deleteExpr) {
 		core::ExpressionPtr retExpr;
 		LOG_EXPR_CONVERSION(deleteExpr, retExpr);
+		auto& builder = converter.getIRBuilder();
 
 		// convert the target of our delete expr
 		core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
 		frontend_assert(core::lang::isPointer(exprToDelete)) << "\"delete\" called on non-pointer, not supported.";
 
-		// make sure we delete a ref array if we have an array delete
 		auto toDelete = core::lang::buildPtrToRef(exprToDelete);
-		if(deleteExpr->isArrayForm()) toDelete = core::lang::buildPtrToArray(exprToDelete);
+		// make sure we delete a ref array if we have an array delete
+		if(deleteExpr->isArrayForm()) {
+			toDelete = core::lang::buildPtrToArray(exprToDelete);
+		} else {
+			// build destructor call if required
+			auto irType = converter.convertType(deleteExpr->getDestroyedType());
+			if(auto genType = irType.isa<core::GenericTypePtr>()) {
+				const auto& tuT = converter.getIRTranslationUnit().getTypes();
+				auto ttIt = tuT.find(genType);
+				if(ttIt != tuT.cend()) {
+					auto rec = ttIt->second->getRecord();
+					if(rec->hasDestructor()) {
+						toDelete = builder.callExpr(rec->getDestructor(), toDelete);
+					}
+				}
+			}
+		}
 
 		// destructor calls are implicit in inspire 2.0, just like C++
-		retExpr = converter.getIRBuilder().refDelete(toDelete);
+		retExpr = builder.refDelete(toDelete);
 
 		return retExpr;
 	}
@@ -460,11 +479,8 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDefaultArgExpr(const clang::CXXDefaultArgExpr* defaultArgExpr) {
 		auto retIr = Visit(defaultArgExpr->getExpr());
 		LOG_EXPR_CONVERSION(defaultArgExpr, retIr);
-
-		// default arguments are handled just like any other argument
 		return retIr;
 	}
-
 
 	namespace {
 		core::ExpressionPtr convertMaterializingExpr(Converter& converter, core::ExpressionPtr retIr, const clang::Expr* materTempExpr) {
@@ -490,7 +506,6 @@ namespace conversion {
 			return retIr;
 		}
 	}
-
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					CXX Bind Temporary expr

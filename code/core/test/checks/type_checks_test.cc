@@ -681,6 +681,19 @@ namespace checks {
 		EXPECT_EQ(check(err, typeCheck).size(), 1);
 	}
 
+	TEST(MemberAccessCheck, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		auto stmt = builder.parseStmt(R"({
+			var ref<int<4>> a;
+			composite_member_access(a, lit("bla"), type_lit(int<4>));
+		})");
+
+		// conduct checks
+		CheckPtr typeCheck = makeRecursive(make_check<MemberAccessElementTypeCheck>());
+		EXPECT_EQ(check(stmt, typeCheck).size(), 1);
+	}
+
 	TEST(MemberAccessElementTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);

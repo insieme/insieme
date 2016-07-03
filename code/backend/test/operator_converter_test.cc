@@ -61,12 +61,12 @@ namespace backend {
 
 			alias int = int<4>;
 
-			alias pair = struct {
+			alias pair = struct A {
 				first : int;
 				second : int;
 			};
 
-			alias obj = struct {
+			alias obj = struct B {
 				a : int;
 				b : array<int,4>;
 				c : pair;

@@ -525,8 +525,8 @@ namespace checks {
 		}
 
 		// 3) check return type - which has to be matched with modified function return value.
-		TypePtr retType = analysis::normalize(substitution->applyTo(returnType));
-		TypePtr resType = analysis::normalize(address->getType());
+		TypePtr retType = substitution->applyTo(returnType);
+		TypePtr resType = address->getType();
 
 		if(typeMatchesWithOptionalMaterialization(manager, resType, retType)) return res;
 
@@ -963,6 +963,13 @@ namespace checks {
 			return tt;
 		};
 
+		// check if we are initializing a scalar
+		if(initExprs.size() == 1) {
+			if(typeMatchesWithOptionalMaterialization(mgr, refType, initExprs.front()->getType())) {
+				return res;
+			}
+		}
+
 		auto tagT = type.isa<TagTypePtr>();
 		if(tagT) {
 			// test struct types
@@ -1037,17 +1044,8 @@ namespace checks {
 			return res;
 		}
 
-		// assume we are trying a scalar
-		if(initExprs.size() != 1) {
-			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-				             format("Too many initialization expressions (%d expressions for scalar, expected 1)", initExprs.size()), Message::ERROR));
-			return res;
-		}
-		if(!typeMatchesWithOptionalMaterialization(mgr, refType, initExprs.front()->getType())) {
-			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-				             format("Invalid type of scalar initialization - expected type: \n%s, actual: \n%s", *refType, *initExprs.front()->getType()),
-				             Message::ERROR));
-		}
+		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+			             format("Invalid type of initialization - expected type: \n%s, actual: \n%s", *refType, toString(initExprs)), Message::ERROR));
 
 		return res;
 	}
@@ -1080,13 +1078,13 @@ namespace checks {
 		}
 
 		OptionalMessageList checkMemberAccess(const NodeAddress& address, const ExpressionPtr& structExpr, const StringValuePtr& identifier,
-			const TypePtr& elementType, bool isRefVersion) {
+			                                  const TypePtr& elementType, bool isRefVersion) {
 			OptionalMessageList res;
 
 			// check whether it is a struct at all
 			TypePtr exprType = structExpr->getType();
-			if (isRefVersion) {
-				if (analysis::isRefType(exprType)) {
+			if(isRefVersion) {
+				if(analysis::isRefType(exprType)) {
 					// extract element type
 					exprType = analysis::getReferencedType(exprType);
 				}
@@ -1101,7 +1099,14 @@ namespace checks {
 			// we allow; since we have no way to check the consistency of
 			// the requested element, everything is fine
 			auto tagType = exprType.isa<TagTypePtr>();
-			if (!tagType) return res;		// all fine
+			if(!tagType) {
+				// at least check for base types and references
+				if(lang::isReference(exprType) || lang::isBuiltIn(exprType)) {
+					add(res, Message(address, EC_TYPE_ACCESSING_MEMBER_OF_NON_RECORD_TYPE,
+						             format("Trying to access member of record, but got a reference or builtin type: %s", *exprType), Message::ERROR));
+				}
+				return res; // all else fine
+			}
 
 			// peel recursive type (this fixes the field types to be accessed)
 			if (tagType->isRecursive()) {

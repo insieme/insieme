@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -50,6 +50,17 @@ namespace analysis {
 	 * @return whether nodeA equals nodeB, disregarding tag names
 	 */
 	bool equalNameless(const NodePtr& nodeA, const NodePtr& nodeB);
+
+
+	/**
+	 * Compare two IR fragments and print their differences.
+	 *
+	 * @param nodeA the first ir fragment to be compared
+	 * @param nodeB the second ir fragment to be compared
+	 * @param nameA user-facing name for first ir fragment
+	 * @param nameB user-facing name for second ir fragment
+	 */
+	void irDiff(NodePtr nodeA, NodePtr nodeB, const string& nameA = "IR A", const string& nameB = "IR B", size_t contextSize = 0);
 
 } // namespace analysis
 } // namespace core

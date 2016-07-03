@@ -39,7 +39,6 @@
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/converter.h"
-#include "insieme/frontend/utils/interceptor.h"
 
 namespace insieme {
 namespace frontend {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,18 +34,50 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+struct A {
+};
 
-namespace insieme {
-namespace frontend {
-namespace utils {
+struct NonPod {
+	virtual ~NonPod() { 5; }
+};
 
-	/**
-	 *  search in the inner tree for the used temporaries
-	 */
-	std::vector<const clang::CXXTemporary*> lookupTemporaries(const clang::Expr* innerExpr);
+int main() {
+	; // this is required because of the clang compound source location bug
 
+	#pragma test expect_ir(R"(
+		def struct IMP_A {};
+		{
+			var ref<array<IMP_A,3>,f,f,plain> v0 = <ref<array<IMP_A,3>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3>,f,f,plain>))) {};
+		}
+	)")
+	{
+		A a[3];
+	}
 
-} // namespace utils
-} // namespace frontend
-} // namespace insieme
+	#pragma test expect_ir(R"(
+		def struct IMP_A {};
+		{
+			var ref<IMP_A,f,f,plain> v0 = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
+			var ref<IMP_A,f,f,plain> v1 = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
+			var ref<array<IMP_A,3>,f,f,plain> v2 = <ref<array<IMP_A,3>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3>,f,f,plain>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref))};
+		}
+	)")
+	{
+		A a1, a2;
+		A a[3] { a1, a2 };
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_NonPod {
+			dtor virtual function () { 5; }
+		};
+		{
+			var ref<array<IMP_NonPod,77>,f,f,plain> v0 = <ref<array<IMP_NonPod,77>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_NonPod,77>,f,f,plain>))) {};
+		}
+	)")
+	{
+		NonPod a[77];
+	}
+
+	return 0;
+}

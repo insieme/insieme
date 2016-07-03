@@ -118,6 +118,11 @@ namespace utils {
 		                                     const core::ExpressionPtr& memLoc) {
 		core::TypePtr resType = converter.convertType(constructExpr->getType());
 
+		if(constructExpr->getType()->isArrayType()) {
+			if(constructExpr->arguments().begin() != constructExpr->arguments().end()) assert_not_implemented();
+			return converter.getIRBuilder().initExpr(memLoc);
+		}
+
 		if(VLOG_IS_ON(2)) {
 			VLOG(2) << "convertConstructExpr - ResType: \n" << dumpDetailColored(resType);
 			auto types = converter.getIRTranslationUnit().getTypes();

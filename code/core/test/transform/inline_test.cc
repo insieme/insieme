@@ -76,7 +76,7 @@ namespace transform {
 
 		// std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
 
-		EXPECT_EQ("{{var ref<bool,f,f,plain> v1 = false;{if(3<4) {{v0 = 3+2*6;v1 = true;};};if(!*v1) {{v0 = 3-6;v1 = true;};};};};}",
+		EXPECT_EQ("{{var ref<bool,f,f,plain> v1 = false;{if(3<4) {{v0 = 3+2*6;v1 = true;}}if(!*v1) {{v0 = 3-6;v1 = true;}}}}}",
 		          toString(printer::PrettyPrinter(inlined, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}
@@ -109,7 +109,7 @@ namespace transform {
 		CompoundStmtPtr inlined = builder.normalize(inlineMultiReturnAssignment(mgr, code.getAddressedNode()));
 
 	printer::PrettyPrinter printer0(core::analysis::normalize(inlined), printer::PrettyPrinter::PRINT_SINGLE_LINE);
-		EXPECT_EQ("decl fun000 : (ref<bool,f,f,plain>) -> bool;def fun000 = function (v0 : ref<ref<bool,f,f,plain>,f,f,plain>) -> bool {return !**v0;};{{var ref<bool,f,f,plain> v1 = false;{if(3<4) {{v0 = 3+2*6;v1 = true;};};if(!*v1) {var ref<int<4>,f,f,plain> v2 = 3;while(true && !*v1) {v2 = *v2+1;if(*v2>6) {{v0 = *v2-6;v1 = true;};};};};};};}",
+		EXPECT_EQ("decl fun000 : (ref<bool,f,f,plain>) -> bool;def fun000 = function (v0 : ref<ref<bool,f,f,plain>,f,f,plain>) -> bool {return !**v0;};{{var ref<bool,f,f,plain> v1 = false;{if(3<4) {{v0 = 3+2*6;v1 = true;}}if(!*v1) {var ref<int<4>,f,f,plain> v2 = 3;while(true && !*v1) {v2 = *v2+1;if(*v2>6) {{v0 = *v2-6;v1 = true;}}}}}}}",
 			      toString(printer0));
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}
@@ -141,7 +141,7 @@ namespace transform {
 
 		// std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
 
-		EXPECT_EQ("decl fun000 : (ref<bool,f,f,plain>) -> bool;def fun000 = function (v0 : ref<ref<bool,f,f,plain>,f,f,plain>) -> bool {return !**v0;};{{var ref<bool,f,f,plain> v0 = false;{if(3<4) {{v0 = true;};};if(!*v0) {var ref<int<4>,f,f,plain> v1 = 3;while(true && !*v0) {v1 = *v1+1;if(*v1>6) {{v0 = true;};};};};};};}",
+		EXPECT_EQ("decl fun000 : (ref<bool,f,f,plain>) -> bool;def fun000 = function (v0 : ref<ref<bool,f,f,plain>,f,f,plain>) -> bool {return !**v0;};{{var ref<bool,f,f,plain> v0 = false;{if(3<4) {{v0 = true;}}if(!*v0) {var ref<int<4>,f,f,plain> v1 = 3;while(true && !*v0) {v1 = *v1+1;if(*v1>6) {{v0 = true;}}}}}}}",
 		          toString(printer::PrettyPrinter(core::analysis::normalize(inlined), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}

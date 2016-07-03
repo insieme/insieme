@@ -243,6 +243,66 @@ namespace backend {
 			return ret;
 		}, builtInLimiter);
 
+		// 3) init exprs
+		// this pass can be greatly simplified when we introduce declarations in init expressions
+
+		utils::map::PointerMap<core::TagTypeReferencePtr, core::TagTypePtr> ttAssignment;
+		visitDepthFirstOnce(retCode, [&ttAssignment](const core::TagTypePtr& tt){
+			const auto& ttRef = tt->getTag();
+			if(ttAssignment.find(ttRef) != ttAssignment.end()) {
+				assert_not_implemented()
+				    << "Case of non-unique tag type references not handled here, could be done but complex, and this code should be obsolete in the future";
+			}
+			ttAssignment[ttRef] = tt;
+		});
+
+		retCode = core::transform::transformBottomUpGen(retCode, [&ttAssignment](const core::InitExprPtr& init) {
+			core::IRBuilder builder(init->getNodeManager());
+			auto initType = core::lang::ReferenceType(init->getType()).getElementType();
+			// scalar init cpp references from plain references
+			if(init.getInitExprs().size() == 1) {
+				auto expr = init.getInitExprs().front();
+				auto ttype = init->getType();
+				if(cl::isReference(ttype) && cl::isReferenceTo(expr, initType)) {
+						cl::ReferenceType varT(ttype), initT(expr);
+						if(!varT.isPlain() && initT.isPlain()) {
+							return builder.initExpr(init->getMemoryExpr(), cl::buildRefKindCast(expr, varT.getKind()));
+						}
+				}
+			}
+			// init tagtypes
+			auto tt = initType.isa<core::TagTypePtr>();
+			if(auto ttRef = initType.isa<core::TagTypeReferencePtr>()) {
+				tt = ttAssignment[ttRef];
+			}
+			if(tt) {
+				core::TypeList targetTypes;
+				for(auto field: tt->getRecord()->getFields()->getFields()) {
+					targetTypes.push_back(field->getType());
+				}
+				core::ExpressionList newInits;
+				size_t i = 0;
+				for(auto expr: init->getInitExprList()) {
+					if(targetTypes.size() <= i) {
+						newInits.push_back(expr);
+						continue;
+					}
+					auto& ttype = targetTypes[i++];
+
+					if(cl::isReference(ttype) && cl::isReference(expr)) {
+						cl::ReferenceType varT(ttype), initT(expr);
+						if(!varT.isPlain() && initT.isPlain()) {
+							newInits.push_back(cl::buildRefKindCast(expr, varT.getKind()));
+							continue;
+						}
+					}
+					newInits.push_back(expr);
+				}
+				return builder.initExpr(init->getMemoryExpr(), newInits);
+			}
+			return init;
+		}, builtInLimiter);
+
 		return retCode;
 	}
 

@@ -812,8 +812,20 @@ namespace backend {
 
 		LambdaInfo* FunctionInfoStore::resolveMemberFunction(const core::MemberFunctionPtr& memberFun) {
 
-			// fix name
 			auto impl = memberFun->getImplementation();
+
+			// generate dummy lambda in cases of members without implementation (literals)
+			if(auto lit = impl.isa<core::LiteralPtr>()) {
+				core::IRBuilder builder(memberFun->getNodeManager());
+				auto funType = impl->getType().as<core::FunctionTypePtr>();
+				core::VariableList params = ::transform(funType->getParameterTypeList(), [&](const core::TypePtr t) { 
+					return builder.variable(core::transform::materialize(t)); 
+				});
+				// TODO generate assertion in this dummy body indicating that it should never be reached (build tool for this)
+				impl = builder.lambdaExpr(funType, params, builder.compoundStmt(builder.stringLit("DUMMY")));
+			}
+
+			// fix name
 			auto name = utils::demangle(memberFun->getNameAsString());
 			converter.getNameManager().setName(impl, name);
 
@@ -1417,7 +1429,17 @@ namespace backend {
 				// set of identifiers already initialized
 				core::NodeSet initedFields;
 
-				auto isFieldInit = [&](const core::ExpressionPtr& memLoc) {
+				auto isFieldInit = [&](core::ExpressionPtr memLoc) {
+					if(memLoc == thisExp) {
+						// delegating constructors
+						return cmgr->create<c_ast::Identifier>(core::analysis::getTypeName(core::analysis::getReferencedType(thisExp)));
+					}
+					if(rExt.isCallOfRefParentCast(memLoc)) {
+						// base constructors
+						return cmgr->create<c_ast::Identifier>(
+						    core::analysis::getTypeName(core::analysis::getRepresentedType(core::analysis::getArgument(memLoc, 1))));
+					}
+					if(rExt.isCallOfRefDeref(memLoc)) memLoc = core::analysis::getArgument(memLoc, 0);
 					if(rExt.isCallOfRefMemberAccess(memLoc)) {
 						// field initializers
 						auto structExp = core::analysis::getArgument(memLoc, 0);
@@ -1428,13 +1450,6 @@ namespace backend {
 								return cmgr->create<c_ast::Identifier>(field->getStringValue());
 							}
 						}
-					} else if(memLoc == thisExp) {
-						// delegating constructors
-						return cmgr->create<c_ast::Identifier>(core::analysis::getTypeName(core::analysis::getReferencedType(thisExp)));
-					} else if(rExt.isCallOfRefParentCast(memLoc)) {
-						// base constructors
-						return cmgr->create<c_ast::Identifier>(
-						    core::analysis::getTypeName(core::analysis::getRepresentedType(core::analysis::getArgument(memLoc, 1))));
 					}
 					return c_ast::IdentifierPtr();
 				};

@@ -47,6 +47,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/lang/static_vars.h"
 
 #include "insieme/utils/name_mangling.h"
 
@@ -261,6 +262,27 @@ namespace analysis {
 		}
 	}
 
+	TEST(FreeVariables, VarInType) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// add some free variables
+		std::map<string, NodePtr> symbols;
+		symbols["v"] = builder.variable(manager.getLangBasic().getInt4(), 77);
+
+		TypePtr type = builder.parseType("array<int<4>,#v>", symbols);
+		ASSERT_TRUE(type);
+
+		NodePtr call = builder.parseExpr("() -> array<int<4>,#v> { return ref_temp(type_lit(array<int<4>,#v>)); }()", symbols);
+
+		NodePtr call2 = builder.parseExpr("(v0 : uint<inf>) -> ptr<int<4>> { var uint<inf> bla = v0; return ptr_from_array(ref_new(type_lit(array<int<4>,#bla>))); }(lit(\"5\":uint<inf>))");
+
+		// check free variable
+		EXPECT_EQ("[AP(v77)]", toString(getFreeVariables(type)));
+		EXPECT_EQ("[AP(v77)]", toString(getFreeVariables(call)));
+		EXPECT_EQ("[]", toString(getFreeVariables(call2)));
+	}
+
 
 	TEST(AllVariables, BindTest) {
 		NodeManager manager;
@@ -344,6 +366,59 @@ namespace analysis {
 
 		TypePtr structType = builder.structType(toVector(builder.field("a", A), builder.field("d", D)));
 		EXPECT_EQ("[AP(A),AP(D<A,B>)]", toString(getElementTypes(structType)));
+	}
+
+	TEST(TypeUtils, isRefOf) {
+		NodeManager nm;
+		IRBuilder b(nm);
+
+		auto& basic = b.getLangBasic();
+
+		auto ir1 = b.parseType("ref<int<4>>");
+		auto ir2 = b.parseType("int<4>");
+		auto type = basic.getInt4();
+
+		EXPECT_FALSE(isRefOf(nullptr, type));
+		EXPECT_FALSE(isRefOf(ir2, type));
+		EXPECT_TRUE(isRefOf(ir1, type));
+	}
+
+	TEST(TypeUtils, isZero) {
+		NodeManager nm;
+		IRBuilder b(nm);
+
+		auto expr1 = b.parseExpr("0");
+		auto expr2 = b.parseExpr("0u");
+		auto expr3 = b.parseExpr("0ul");
+		auto expr4 = b.parseExpr("0ull");
+		auto expr5 = b.parseExpr("0l");
+		auto expr6 = b.parseExpr("0ll");
+		auto expr7 = b.parseExpr("0.0f");
+		auto expr8 = b.parseExpr("lit(\"0\" : int<4>)");
+		auto expr9 = b.parseExpr("3");
+
+		EXPECT_TRUE(isZero(expr1));
+		EXPECT_TRUE(isZero(expr2));
+		EXPECT_TRUE(isZero(expr3));
+		EXPECT_TRUE(isZero(expr4));
+		EXPECT_TRUE(isZero(expr5));
+		EXPECT_TRUE(isZero(expr6));
+		EXPECT_TRUE(isZero(expr7));
+		EXPECT_TRUE(isZero(expr8));
+		EXPECT_FALSE(isZero(expr9));
+
+	}
+
+	TEST(TypeUtils, isStaticVar) {
+		NodeManager nm;
+		IRBuilder b(nm);
+
+		auto expr1 = b.parseAddressesStatement("{ var ref<int<4>> a; $a$; }");
+		auto e1 = expr1[0].getAddressedNode();
+
+		// TODO: include more tests!! positive tests....
+
+		EXPECT_FALSE(isStaticVar(e1.as<ExpressionPtr>()));
 	}
 
 	TEST(ExitPoints, Basic) {
