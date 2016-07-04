@@ -134,7 +134,6 @@ namespace utils {
 			}
 			return in;
 		}
-
 	}
 
 	string mangle(string name, string file, unsigned line, unsigned column) {
@@ -159,7 +158,7 @@ namespace utils {
 		if(!keepLocation) {
 			auto loc = ret.find(mangleLocation);
 			if(loc != string::npos) {
-				ret = ret.substr(0,	loc-1);
+				ret = ret.substr(0, loc-1); // remove _ as well
 			}
 		}
 		return reverseReplacements(ret);

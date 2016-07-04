@@ -818,8 +818,8 @@ namespace backend {
 			if(auto lit = impl.isa<core::LiteralPtr>()) {
 				core::IRBuilder builder(memberFun->getNodeManager());
 				auto funType = impl->getType().as<core::FunctionTypePtr>();
-				core::VariableList params = ::transform(funType->getParameterTypeList(), [&](const core::TypePtr t) { 
-					return builder.variable(core::transform::materialize(t)); 
+				core::VariableList params = ::transform(funType->getParameterTypeList(), [&](const core::TypePtr t) {
+					return builder.variable(core::transform::materialize(t));
 				});
 				// TODO generate assertion in this dummy body indicating that it should never be reached (build tool for this)
 				impl = builder.lambdaExpr(funType, params, builder.compoundStmt(builder.stringLit("DUMMY")));
