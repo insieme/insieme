@@ -60,11 +60,6 @@ namespace analysis {
 		bool mayAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { throw_not_implemented }
 		bool notAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { throw_not_implemented }
 
-		bool isTrue(const core::ExpressionAddress& expr) { throw_not_implemented }
-		bool isFalse(const core::ExpressionAddress& expr) { throw_not_implemented }
-		bool mayBeTrue(const core::ExpressionAddress& expr) { throw_not_implemented }
-		bool mayBeFalse(const core::ExpressionAddress& expr) { throw_not_implemented }
-
 		IntegerSet getIntegerValues(const core::ExpressionAddress& expr) { throw_not_implemented }
 		bool isIntegerConstant(const core::ExpressionAddress& expr) { throw_not_implemented }
 

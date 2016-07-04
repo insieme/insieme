@@ -10,6 +10,7 @@ import Data.Maybe
 import Data.Tree
 import Insieme.Inspire.NodeAddress as Addr
 import qualified Data.Map as Map
+import qualified Insieme.Boolean as Boolean
 import qualified Insieme.Inspire as IR
 
 type NodeCache = Map.Map NodeAddress (Tree IR.Inspire)
@@ -82,3 +83,7 @@ findDeclr start tree = evalState (findDeclr start) Map.empty
        -> State NodeCache (Maybe NodeAddress)
 (<||>) = liftM2 (<|>)
 infixl 3 <||>
+
+-- TODO: implement
+checkBoolean :: NodeAddress -> Tree IR.Inspire -> Boolean.Result
+checkBoolean addr tree = Boolean.DontKnow

@@ -16,6 +16,7 @@ executable insieme-hat
                         Compiler.Analysis.Solver,
                         Compiler.Analysis.Values,
                         Insieme.Analysis.Examples,
+                        Insieme.Boolean,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
@@ -37,7 +38,8 @@ executable insieme-hat
                         attoparsec >=0.13
     hs-source-dirs:     src
     build-tools:        c2hs
-    include-dirs:       ../../../../core/include
+    include-dirs:       include,
+                        ../../../../core/include
     default-language:   Haskell2010
 
 library
@@ -49,6 +51,7 @@ library
                         Compiler.Analysis.Solver,
                         Compiler.Analysis.Values,
                         Insieme.Analysis.Examples,
+                        Insieme.Boolean,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
@@ -71,7 +74,8 @@ library
                         attoparsec >=0.13
     hs-source-dirs:     src
     build-tools:        c2hs
-    include-dirs:       ../../../../core/include
+    include-dirs:       include,
+                        ../../../../core/include
     default-language:   Haskell2010
 
 test-suite test

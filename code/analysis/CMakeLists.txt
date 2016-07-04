@@ -56,6 +56,7 @@ target_include_directories(insieme_analysis PUBLIC ${insieme_analysis_include_di
 
 # Haskell dependency
 add_dependencies(insieme_analysis insieme_analysis_haskell)
+target_include_directories(insieme_analysis SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/haskell/insieme-hat/include)
 target_link_libraries(insieme_analysis ${insieme_analysis_haskell})
 
 # lookup Boost library
@@ -80,6 +81,7 @@ foreach ( case_file ${test_cases})
 
 	set ( case_name ${ut_prefix}${case_subdir}_${case_name} )
 	add_executable(${case_name} ${case_file})
+	target_include_directories(${case_name} SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/haskell/insieme-hat/include)
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_analysis)

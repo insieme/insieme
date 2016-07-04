@@ -106,3 +106,14 @@ findDeclr tree_c addr_c = do
 foreign export ccall "hat_findDeclr"
     findDeclr :: StablePtr (Tree IR.Inspire) -> StablePtr Addr.NodeAddress
               -> IO (StablePtr Addr.NodeAddress)
+
+checkBoolean :: StablePtr (Tree IR.Inspire) -> StablePtr Addr.NodeAddress
+             -> IO (CInt)
+checkBoolean tree_c addr_c = do
+    tree <- deRefStablePtr tree_c
+    addr <- deRefStablePtr addr_c
+    return . fromIntegral . fromEnum $ Anal.checkBoolean addr tree
+
+foreign export ccall "hat_checkBoolean"
+    checkBoolean :: StablePtr (Tree IR.Inspire) -> StablePtr Addr.NodeAddress
+                 -> IO (CInt)

@@ -67,6 +67,7 @@ extern "C" {
 
 	// Analysis
 	StablePtr hat_findDeclr(const StablePtr tree, const StablePtr var);
+	int hat_checkBoolean(const StablePtr tree, const StablePtr expr);
 
 }
 
@@ -168,6 +169,11 @@ namespace haskell {
 			ret = make_shared<HSobject>(target_hs);
 		}
 		return ret;
+	}
+
+	BooleanAnalysisResult Environment::checkBoolean(Tree& tree, Address& expr) {
+		int res = hat_checkBoolean(tree.tree->ptr, expr.addr->ptr);
+		return static_cast<BooleanAnalysisResult>(res);
 	}
 
 } // end namespace haskell

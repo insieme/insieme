@@ -46,6 +46,8 @@ namespace insieme {
 namespace analysis {
 namespace haskell {
 
+	#include "boolean_analysis.h"
+
 	class HSobject;
 	class Tree;
 	class Address;
@@ -88,6 +90,7 @@ namespace haskell {
 		Address passAddress(const core::NodeAddress& addr);
 
 		boost::optional<Address> findDeclr(Tree& tree, Address& var);
+		BooleanAnalysisResult checkBoolean(Tree& tree, Address& expr);
 
 	};
 

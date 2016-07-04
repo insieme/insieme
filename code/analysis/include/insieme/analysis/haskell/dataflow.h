@@ -44,6 +44,14 @@ namespace haskell {
 
 	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var);
 
+	bool isTrue(const core::ExpressionAddress& expr);
+
+	bool isFalse(const core::ExpressionAddress& expr);
+
+	bool mayBeTrue(const core::ExpressionAddress& expr);
+
+	bool mayBeFalse(const core::ExpressionAddress& expr);
+
 } // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme

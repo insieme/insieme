@@ -58,6 +58,36 @@ namespace haskell {
 		return target->toNodeAddress(var.getRootNode()).as<VariableAddress>();
 	}
 
+	bool isTrue(const core::ExpressionAddress& expr) {
+		auto& env = Environment::getInstance();
+		auto tree = env.passTree(expr.getRootNode());
+		auto expr_addr = env.passAddress(expr);
+		return env.checkBoolean(tree, expr_addr) == BooleanAnalysisResult_AlwaysTrue;
+	}
+
+	bool isFalse(const core::ExpressionAddress& expr) {
+		auto& env = Environment::getInstance();
+		auto tree = env.passTree(expr.getRootNode());
+		auto expr_addr = env.passAddress(expr);
+		return env.checkBoolean(tree, expr_addr) == BooleanAnalysisResult_AlwaysFalse;
+	}
+
+	bool mayBeTrue(const core::ExpressionAddress& expr) {
+		auto& env = Environment::getInstance();
+		auto tree = env.passTree(expr.getRootNode());
+		auto expr_addr = env.passAddress(expr);
+		auto res = env.checkBoolean(tree, expr_addr);
+		return res == BooleanAnalysisResult_AlwaysTrue || res == BooleanAnalysisResult_DontKnow;
+	}
+
+	bool mayBeFalse(const core::ExpressionAddress& expr) {
+		auto& env = Environment::getInstance();
+		auto tree = env.passTree(expr.getRootNode());
+		auto expr_addr = env.passAddress(expr);
+		auto res = env.checkBoolean(tree, expr_addr);
+		return res == BooleanAnalysisResult_AlwaysFalse || res == BooleanAnalysisResult_DontKnow;
+	}
+
 } // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme
