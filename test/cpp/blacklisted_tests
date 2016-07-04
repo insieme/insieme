@@ -40,7 +40,6 @@ std_distance
 stl_intercept
 stl_list_iterator
 stl_read_file
-template1
 template3
 template_statics
 try_catch
