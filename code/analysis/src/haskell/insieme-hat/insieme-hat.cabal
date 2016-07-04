@@ -1,20 +1,21 @@
 name:               insieme-hat
-version:            0.1
--- synopsis:
--- description:
--- license:
-license-file:       LICENSE
-author:             Alex Hirsch
-maintainer:         alexander.hirsch@uibk.ac.at
--- copyright:
--- category:
+version:            0.2
+synopsis:           "Analysis framework based on ideas from the book: Principles of Program Analysis."
+license:            GPL-3
+author:             Thomas Prokosch <tprokos@dps.uibk.ac.at>
+maintainer:         Thomas Prokosch <tprokos@dps.uibk.ac.at>
 build-type:         Simple
--- extra-source-files:
 cabal-version:      >=1.10
 
 executable insieme-hat
     main-is:            Main.hs
-    other-modules:      Insieme.Analysis.Examples,
+    other-modules:      Compiler.Analysis,
+                        Compiler.Analysis.Constraint,
+                        Compiler.Analysis.Constraint.Dynamic,
+                        Compiler.Analysis.Dependence,
+                        Compiler.Analysis.Solver,
+                        Compiler.Analysis.Values,
+                        Insieme.Analysis.Examples,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
@@ -41,7 +42,13 @@ executable insieme-hat
 
 library
     exposed-modules:    Insieme.Adapter
-    other-modules:      Insieme.Analysis.Examples,
+    other-modules:      Compiler.Analysis,
+                        Compiler.Analysis.Constraint,
+                        Compiler.Analysis.Constraint.Dynamic,
+                        Compiler.Analysis.Dependence,
+                        Compiler.Analysis.Solver,
+                        Compiler.Analysis.Values,
+                        Insieme.Analysis.Examples,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
