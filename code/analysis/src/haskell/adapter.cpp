@@ -174,7 +174,7 @@ namespace haskell {
 
 	BooleanAnalysisResult Environment::checkBoolean(Tree& tree, Address& expr) {
 		auto res = static_cast<BooleanAnalysisResult>(hat_checkBoolean(tree.tree->ptr, expr.addr->ptr));
-		if (res == BooleanAnalysisResult_Error) {
+		if (res == BooleanAnalysisResult_Neither) {
 			std::vector<std::string> msgs{"Boolean Analysis Error"};
 			throw AnalysisFailure(msgs);
 		}

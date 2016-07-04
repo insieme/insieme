@@ -2,12 +2,15 @@
 
 module Insieme.Analysis.Examples where
 
+import Framework
+import Compiler.Analysis
 import Control.Applicative
 import Control.Monad
 import Control.Monad.State.Strict
 import Data.List
 import Data.Maybe
 import Data.Tree
+import Debug.Trace
 import Insieme.Inspire.NodeAddress as Addr
 import qualified Data.Map as Map
 import qualified Insieme.Boolean as Boolean
@@ -84,6 +87,36 @@ findDeclr start tree = evalState (findDeclr start) Map.empty
 (<||>) = liftM2 (<|>)
 infixl 3 <||>
 
--- TODO: implement
+
+-- Step 0: Define generic dataflow constraint generator
+dataflowvalue :: Tree IR.Inspire -> NodeAddress -> (Tree IR.Inspire -> NodeAddress -> AVar) -> Constr AVar -> (AVar -> Constr AVar) -> AVar
+dataflowvalue tree addr fun top forward =
+    trace "case" $ case resolve addr tree of
+        Just (Node IR.Literal _)  -> AVar 7 (\_ -> top)
+        Just (Node IR.Declaration [_, expr]) -> trace "decl" $ AVar 6 (\_ -> forward (fun tree (goDown 1 addr)))
+        Just (Node IR.Variable [_, index]) -> trace "var" $ case findDeclr addr tree of
+                                                Just addr' -> if addr' /= addr
+                                                                 then trace "neq" $ AVar 4 (\_ -> forward (fun tree addr'))
+                                                                 else trace "eq" $ case resolve (goUp addr) tree of
+                                                                        Just (Node IR.DeclarationStmt _) -> AVar 5 (\_ -> forward (fun tree (goDown 0 . goUp $ addr)))
+                                                                        _ -> error "foo"
+                                                _ -> AVar 3 (\_ -> top)
+        _ -> AVar 2 (\_ -> top)
+
+forward :: AVar -> Constr AVar
+forward pred = constr Nothing [pred] (id :: Boolean.Result -> Boolean.Result)
+
+end :: Constr AVar
+end = constr Nothing [] Boolean.Both
+
+-- Step 2: Define constraint generator
+boolvalue :: Tree IR.Inspire -> NodeAddress -> AVar
+boolvalue tree addr =
+    trace "case" $ case resolve addr tree of
+        Just (Node IR.Literal  [_, Node (IR.StringValue "true") []])  -> trace "true" $ AVar 0 (\_ -> constr Nothing [] Boolean.AlwaysTrue)
+        Just (Node IR.Literal  [_, Node (IR.StringValue "false") []]) -> trace "false" $ AVar 1 (\_ -> constr Nothing [] Boolean.AlwaysFalse)
+        _ -> dataflowvalue tree addr boolvalue end forward
+
+
 checkBoolean :: NodeAddress -> Tree IR.Inspire -> Boolean.Result
-checkBoolean addr tree = Boolean.DontKnow
+checkBoolean addr tree = resolve' (boolvalue tree addr) Boolean.Both

@@ -146,6 +146,14 @@ namespace analysis {
 
 	}
 
+	TYPED_TEST(BooleanValue, LocalVariableDecl) {
+
+		IRBuilder& builder = getBuilder();
+		auto res = builder.parseAddressesStatement("{ auto x = true; $x$; }")[0];
+		EXPECT_TRUE(this->impl_isTrue(res.as<VariableAddress>()));
+
+	}
+
 	TYPED_TEST(BooleanValue, ReturnValue) {
 
 		// test whether the return value of a function is deduced properly

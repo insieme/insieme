@@ -77,7 +77,7 @@ namespace haskell {
 		auto tree = env.passTree(expr.getRootNode());
 		auto expr_addr = env.passAddress(expr);
 		auto res = env.checkBoolean(tree, expr_addr);
-		return res == BooleanAnalysisResult_AlwaysTrue || res == BooleanAnalysisResult_DontKnow;
+		return res == BooleanAnalysisResult_AlwaysTrue || res == BooleanAnalysisResult_Both;
 	}
 
 	bool mayBeFalse(const core::ExpressionAddress& expr) {
@@ -85,7 +85,7 @@ namespace haskell {
 		auto tree = env.passTree(expr.getRootNode());
 		auto expr_addr = env.passAddress(expr);
 		auto res = env.checkBoolean(tree, expr_addr);
-		return res == BooleanAnalysisResult_AlwaysFalse || res == BooleanAnalysisResult_DontKnow;
+		return res == BooleanAnalysisResult_AlwaysFalse || res == BooleanAnalysisResult_Both;
 	}
 
 } // end namespace haskell
