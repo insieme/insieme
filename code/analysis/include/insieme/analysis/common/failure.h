@@ -36,34 +36,51 @@
 
 #pragma once
 
-#include "insieme/core/forward_decls.h"
-
-// -- forward declarations --
-namespace souffle {
-	class Program;
-} // end namespace souffle
+#include <exception>
+#include <string>
+#include <vector>
 
 namespace insieme {
 namespace analysis {
-namespace datalog {
-namespace framework {
 
 	/**
-	 * Extracts facts from the given root node and inserts them into the given program using node pointers.
+	 * The kind of exception thrown in case failures are detected.
 	 */
-	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer = [](const core::NodePtr&,int){});
+	class AnalysisFailure : public std::exception {
 
-	/**
-	 * Extracts facts from the given root node and inserts them into the given program using node addresses.
-	 */
-	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer = [](const core::NodeAddress&,int){});
+		// the list of failures detected during the evaluation
+		std::vector<std::string> failures;
 
-	/**
-	 * Checks for failure states in the given analysis. If failures are encountered, an exception will be thrown.
-	 */
-	void checkForFailures(souffle::Program& analysis);
+		// a summary of those errors
+		std::string summary;
 
-} // end namespace framework
-} // end namespace datalog
+	public:
+
+		/**
+		 * Creates a new instance wrapping up the given failures.
+		 * The list of failures most not be empty.
+		 */
+		AnalysisFailure(const std::vector<std::string>& failures) : failures(failures) {
+			std::stringstream s;
+			s << "Encountered " << failures.size() << " failures during analysis:\n\t";
+			s << join("\n\t", failures);
+			summary = s.str();
+		}
+
+		/**
+		 * Provides access to the internally recorded list of failure messages.
+		 */
+		const std::vector<std::string>& getFailureMessages() const {
+			return failures;
+		}
+
+		/**
+		 * Provides a readable summary for the identified errors.
+		 */
+		virtual const char* what() const throw() {
+			return summary.c_str();
+		}
+	};
+
 } // end namespace analysis
 } // end namespace insieme

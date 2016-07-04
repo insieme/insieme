@@ -38,6 +38,7 @@
 
 #include <souffle/SouffleInterface.h>
 
+#include "insieme/analysis/common/failure.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
@@ -658,13 +659,6 @@ namespace framework {
 		// throw failure exception
 		throw AnalysisFailure(msgs);
 
-	}
-
-	AnalysisFailure::AnalysisFailure(const std::vector<std::string>& failures) : failures(failures) {
-		std::stringstream s;
-		s << "Encountered " << failures.size() << " failures during analysis:\n\t";
-		s << join("\n\t", failures);
-		summary = s.str();
 	}
 
 } // end namespace framework

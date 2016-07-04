@@ -38,10 +38,7 @@
 
 #include "insieme/analysis/cba_interface.h"
 
-#include <fstream>
-
-// #include "insieme/analysis/datalog/framework/analysis_base.h"
-// #include "insieme/analysis/datalog/boolean_analysis.h"
+#include "insieme/analysis/common/failure.h"
 #include "insieme/core/ir_builder.h"
 
 namespace insieme {
@@ -306,27 +303,25 @@ namespace analysis {
 
 	}
 
-	/* TODO: Unify exception for all backends
 	TYPED_TEST(BooleanValue, FailureDetection) {
 
 		{
 			auto input = "ref_assign";
-			ASSERT_THROW(isFalse(input), framework::AnalysisFailure);
+			ASSERT_THROW(this->isFalse(input), AnalysisFailure);
 
 			try {
-				isFalse(input);
-			} catch (const framework::AnalysisFailure& af) {
+				this->isFalse(input);
+			} catch (const AnalysisFailure& af) {
 				EXPECT_STREQ("Encountered 1 failures during analysis:\n\tError: Found a ref_assign whose parent is not a CallExpr!", af.what());
 			}
 		}
 
 		{
 			auto input = "(x : 'a)-> 'a{ return x; }(ref_assign)";
-			ASSERT_THROW(isFalse(input), framework::AnalysisFailure);
+			ASSERT_THROW(this->isFalse(input), AnalysisFailure);
 		}
 
 	}
-	*/
 
 } // end namespace analysis
 } // end namespace insieme

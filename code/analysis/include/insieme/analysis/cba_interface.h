@@ -124,7 +124,6 @@ namespace analysis {
 		not_implemented_exception(const std::string &what) : std::logic_error(what) {}
 	};
 
-
 	/**
 	 * A list of the available analyses.
 	 */
