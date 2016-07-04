@@ -619,9 +619,6 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
 		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
 
-		// make sure the definition of B is missing
-		EXPECT_FALSE(containsSubString(code, "struct B {"));
-
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler.addFlag("-c"); // do not run the linker
