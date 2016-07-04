@@ -51,10 +51,11 @@ namespace measure {
 
 	namespace {
 
-		int runCommand(const std::string& cmd) {
-			LOG(INFO) << "Running " << cmd << "\n";
-			//			return system((cmd + "> /dev/null").c_str());
-			return system(cmd.c_str());
+		int runCommand(const std::string& cmd, bool silent) {
+			std::string modCmd = cmd;
+			if(silent) { modCmd.append(" > /dev/null"); }
+			LOG(INFO) << "Running " << modCmd << "\n";
+			return system(modCmd.c_str());
 		}
 
 		string setupEnv(const std::map<string, string>& env) {
@@ -67,15 +68,12 @@ namespace measure {
 	}
 
 
-	int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env, const std::vector<string>& params, const string& dir) const {
-#ifndef DISABLE_ENERGY
+	int LocalExecutor::run(const std::string& binary, const ExecutionSetup& setup) const {
 		// set capabilities for energy measurements, required for kernel versions 3.7 and newer
-		// TODO: only do this for newer kernel versions or kernels that have this fix
-		runCommand("sudo setcap cap_sys_rawio=ep " + binary);
-#endif
+		if(setup.requiresRawIOCapabilities) { runCommand("sudo setcap cap_sys_rawio=ep " + binary, true); }
 		std::stringstream ss;
-		ss << setupEnv(env) << " IRT_INST_OUTPUT_PATH=" << dir << " " << wrapper << " " << binary << " " << join(" ", params);
-		return runCommand(ss.str());
+		ss << setupEnv(setup.env) << " IRT_INST_OUTPUT_PATH=" << setup.outputDirectory << " " << wrapper << " " << binary << " " << join(" ", setup.params);
+		return runCommand(ss.str(), setup.silent);
 	}
 
 	ExecutorPtr makeLocalExecutor() {
@@ -83,13 +81,13 @@ namespace measure {
 	}
 
 
-	int RemoteExecutor::run(const std::string& binary, const std::map<string, string>& env, const std::vector<string>& params, const string& dir) const {
+	int RemoteExecutor::run(const std::string& binary, const ExecutionSetup& setup) const {
 		// extract name of file
 		boost::filesystem::path path = binary;
 		string binaryName = path.filename().string();
 
 		// extract directory name
-		string dirName = boost::filesystem::path(dir).filename().string();
+		string dirName = boost::filesystem::path(setup.outputDirectory).filename().string();
 		boost::uuids::uuid u = uuidGen();
 		dirName += toString(u);
 
@@ -102,35 +100,35 @@ namespace measure {
 		int res = 0;
 
 		// start by creating a remote working directory
-		if(res == 0) { res = runCommand("ssh " + url + " mkdir " + remoteDir); }
+		if(res == 0) { res = runCommand("ssh " + url + " mkdir " + remoteDir, setup.silent); }
 
 		// copy binary
-		if(res == 0) { res = runCommand("scp -q " + binary + " " + url + ":" + remoteDir); }
+		if(res == 0) { res = runCommand("scp -q " + binary + " " + url + ":" + remoteDir, setup.silent); }
 
 		// execute binary
 		std::stringstream ss;
 		switch(system) {
 		case SSH:
 			if(res == 0) {
-				ss << "ssh " << url << " \"cd " << remoteDir << " && " << setupEnv(env) << " ./" << binaryName << " " << join(" ", params) << " && rm " << binaryName << "\"";
-				res = runCommand(ss.str());
+				ss << "ssh " << url << " \"cd " << remoteDir << " && " << setupEnv(setup.env) << " ./" << binaryName << " " << join(" ", setup.params) << " && rm " << binaryName << "\"";
+				res = runCommand(ss.str(), setup.silent);
 			}
 			break;
 		case SGE:
 			assert_fail() << "Not tested!";
 			if(res == 0) {
-				ss << "ssh " << url << " \"cd " << remoteDir << " && qsub -sync yes -b yes -cwd -o std.out -e std.err -pe openmp 1 " << binaryName << " " << join(" ", params) << "\"";
-				res = runCommand(ss.str());
+				ss << "ssh " << url << " \"cd " << remoteDir << " && qsub -sync yes -b yes -cwd -o std.out -e std.err -pe openmp 1 " << binaryName << " " << join(" ", setup.params) << "\"";
+				res = runCommand(ss.str(), setup.silent);
 			}
-			if(res == 0) { res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\""); }
+			if(res == 0) { res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"", setup.silent); }
 			break;
 		case PBS:
 			assert_fail() << "Not tested!";
 			if(res == 0) {
-				ss << "ssh " << url << " \"cd " << remoteDir << " && qsub -l select=1:ncpus=4:mem=2gb -W block=true -- ./" << binaryName << " " << join(" ", params) << "\"";
-				res = runCommand(ss.str());
+				ss << "ssh " << url << " \"cd " << remoteDir << " && qsub -l select=1:ncpus=4:mem=2gb -W block=true -- ./" << binaryName << " " << join(" ", setup.params) << "\"";
+				res = runCommand(ss.str(), setup.silent);
 			}
-			if(res == 0) { res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\""); }
+			if(res == 0) { res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"", setup.silent); }
 			break;
 		case LL:
 			assert_fail() << "Not tested!";
@@ -154,10 +152,10 @@ namespace measure {
 			                                      "#@ queue\n"
 			                                      ". /etc/profile\n"
 			                                      ". /etc/profile.d/modules.sh\n"
-			                        + setupEnv(env);
+			                        + setupEnv(setup.env);
 			if(res == 0) {
 				ss << "ssh " << url << " \"cd " << remoteDir << " && echo \"" << jobscript << "\" | llsubmit -s -\"";
-				res = runCommand(ss.str());
+				res = runCommand(ss.str(), setup.silent);
 			}
 			// std::cout << "ssh " + url + " \"cd " + remoteDir + " && echo \"" + jobscript + "\" | llsubmit -s -\"\n";
 			// if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && "  + setupEnv(env) + " ./" + binaryName + " && rm " + binaryName + "\"");
@@ -166,16 +164,16 @@ namespace measure {
 		}
 
 		// copy back log files
-		if(res == 0) { res = runCommand("scp -q -r " + url + ":" + remoteDir + " ."); }
+		if(res == 0) { res = runCommand("scp -q -r " + url + ":" + remoteDir + " .", setup.silent); }
 
 		// move files locally
-		if(res == 0) { res = runCommand("mv -t " + dir + " _remote_" + dirName + "/*"); }
+		if(res == 0) { res = runCommand("mv -t " + setup.outputDirectory + " _remote_" + dirName + "/*", setup.silent); }
 
 		// delete local files
-		if(res == 0) { res = runCommand("rm -rf _remote_" + dirName); }
+		if(res == 0) { res = runCommand("rm -rf _remote_" + dirName, setup.silent); }
 
 		// delete remote working directory
-		if(res == 0) { res = runCommand("ssh " + url + " rm -rf " + remoteDir); }
+		if(res == 0) { res = runCommand("ssh " + url + " rm -rf " + remoteDir, setup.silent); }
 
 		return res;
 	}

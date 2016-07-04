@@ -18,7 +18,6 @@ list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/../cmake/")
 
 #find them in CMAKE_MODULE_PATH
 include(default_library_configuration)
-include(insieme_find_package)
 include(add_unit_test)
 
 # for win64 we need to add a assembly object file to each target, see below.

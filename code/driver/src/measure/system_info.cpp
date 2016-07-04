@@ -60,15 +60,16 @@ namespace measure {
 			string temp = "-D" + string(e.first) + "=" + string(e.second);
 			tempCompiler.addFlag(temp);
 		}
-		tempCompiler.addFlag(string("-I ") + utils::getInsiemeLibsRootDir() + "/papi-latest/include");
-		tempCompiler.addFlag(string("-L ") + utils::getInsiemeLibsRootDir() + "/papi-latest/lib/");
-		tempCompiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "/papi-latest/lib -lpapi");
+		tempCompiler.addFlag(string("-I ") + utils::getPapiRootDir() + "include");
+		tempCompiler.addFlag(string("-L ") + utils::getPapiRootDir() + "lib");
+		tempCompiler.addFlag(string("-Wl,-rpath,") + utils::getPapiRootDir() + "lib -lpapi");
 
 		auto binary = utils::compiler::compileToBinary(*target, tempCompiler);
 
 		const string workDir = ".";
 
-		const int ret = executor->run(binary, env, std::vector<string>(), workDir);
+		ExecutionSetup executionSetup = ExecutionSetup().withEnvironment(env).withOutputDirectory(workDir);
+		const int ret = executor->run(binary, executionSetup);
 		boost::filesystem::remove(binary);
 
 		if(ret != 0) { return ret; }

@@ -56,9 +56,63 @@ namespace measure {
 	typedef std::shared_ptr<Executor> ExecutorPtr;
 
 	/**
+	* A utility struct that holds execution environment, parameters, and other execution-related properties
+	*/
+	struct ExecutionSetup : public insieme::utils::Printable {
+		std::map<std::string, std::string> env;
+		std::vector<std::string> params;
+		std::string outputDirectory;
+		bool requiresRawIOCapabilities;
+		bool silent;
+
+		ExecutionSetup() : env(), params(), outputDirectory("."), requiresRawIOCapabilities(false), silent(false) {}
+
+		ExecutionSetup withEnvironment(const std::map<std::string, std::string> newEnvironment) const {
+			ExecutionSetup retVal = *this;
+			retVal.env = newEnvironment;
+			return retVal;
+		}
+
+		ExecutionSetup withParameters(const std::vector<std::string> newParameters) const {
+			ExecutionSetup retVal = *this;
+			retVal.params = newParameters;
+			return retVal;
+		}
+
+		ExecutionSetup withOutputDirectory(const std::string newDirectory) const {
+			ExecutionSetup retVal = *this;
+			retVal.outputDirectory = newDirectory;
+			return retVal;
+		}
+
+		ExecutionSetup withCapabilities(bool newRequiresRawIOCapabilities) const {
+			ExecutionSetup retVal = *this;
+			retVal.requiresRawIOCapabilities = newRequiresRawIOCapabilities;
+			return retVal;
+		}
+
+		ExecutionSetup withSilent(bool newSilent) const {
+			ExecutionSetup retVal = *this;
+			retVal.silent = newSilent;
+			return retVal;
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			out << "ExecutionSetup:\n";
+			out << "\tenv: " << env << "\n";
+			out << "\tparams: " << params << "\n";
+			out << "\toutputDirectory: " << outputDirectory << "\n";
+			out << "\trequiresRawIOCapabilities: " << toString(requiresRawIOCapabilities?"true":"false") << "\n";
+			out << "\tsilent: " << toString(silent ? "true" : "false") << "\n";
+			return out;
+		}
+
+	};
+
+	/**
 	 * The basic interface of an executor.
 	 */
-	class Executor {
+	class Executor : utils::Printable {
 	  public:
 		/**
 		* Holds a wrapper and its arguments to be prepended in the execution string (i.e. affinity tools, etc...)
@@ -78,12 +132,12 @@ namespace measure {
 		 * The conditions of the execution are defined by the actual implementations.
 		 *
 		 * @param binary the name of the binary to be executed
-		 * @param env some environment variables to be set
-		 * @param outputDirectory the directory the resulting logs will be written to
+		 * @param executionSetup the execution setup with which to run the specified binary
 		 * @return the return code of the binaries execution
 		 */
-		virtual int run(const std::string& binary, const std::map<string, string>& env = std::map<string, string>(), const std::vector<string>& params = std::vector<string>(),
-		                const std::string& outputDirectory = ".") const = 0;
+		virtual int run(const std::string& binary, const ExecutionSetup& executionSetup) const = 0;
+
+		virtual std::ostream& printTo(std::ostream& out) const = 0;
 	};
 
 	/**
@@ -101,7 +155,11 @@ namespace measure {
 		/**
 		 * Runs the given binary within the current working directory.
 		 */
-		virtual int run(const std::string& binary, const std::map<string, string>& env, const std::vector<string>& params, const string& dir) const;
+		virtual int run(const std::string& binary, const ExecutionSetup& executionSetup) const;
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "LocalExecutor(" << wrapper << ")";
+		}
 	};
 
 	/**
@@ -164,7 +222,11 @@ namespace measure {
 		/**
 		 * Runs the given binary on the specified remote machine.
 		 */
-		virtual int run(const std::string& binary, const std::map<string, string>& env, const std::vector<string>& params, const string& dir) const;
+		virtual int run(const std::string& binary, const ExecutionSetup& executionSetup) const;
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "RemoteExecutor(" << wrapper << ")";
+		}
 	};
 
 

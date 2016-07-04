@@ -82,7 +82,7 @@ namespace measure {
 	/**
 	 * A utility struct that holds measurement setup, environment and parameters
 	 */
-	struct MeasurementSetup {
+	struct MeasurementSetup : public insieme::utils::Printable {
 		backend::runtime::RuntimeBackendPtr backend;
 		utils::compiler::Compiler compiler;
 		ExecutorPtr executor;
@@ -123,6 +123,16 @@ namespace measure {
 			MeasurementSetup retVal = *this;
 			retVal.params = newParams;
 			return retVal;
+		}
+
+		std::ostream& printTo(std::ostream& out) const {
+			out << "MeasurementSetup:\n";
+			out << "\tCompiler: " << compiler << "\n";
+			out << "\tExecutor: " << *executor << "\n";
+			out << "\tnumRuns: " << numRuns << "\n";
+			out << "\tenv: " << env << "\n";
+			out << "\tparams: " << params << "\n";
+			return out;
 		}
 
 	};
