@@ -49,6 +49,8 @@ namespace frontend {
 
 	TEST(CppIndependentTest, BasicClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_classes.cpp"); }
 
+	TEST(CppIndependentTest, AdvancedClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_advanced_classes.cpp"); }
+
 	TEST(CppIndependentTest, ClassOperators) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_class_operators.cpp"); }
 
 	TEST(CppIndependentTest, BasicTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_templates.cpp"); }

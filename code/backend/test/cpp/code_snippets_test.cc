@@ -335,7 +335,7 @@ namespace backend {
 				};
 
 				def fun = (b : ref<B,t,f,cpp_ref>) -> unit {
-					auto a = b.v;
+					var ref<int<4>,t,f,cpp_ref> a = b.v;
 				};
 
 				int<4> function IMP_main () {
@@ -618,6 +618,9 @@ namespace backend {
 		auto code = toString(*converted);
 		EXPECT_PRED2(containsSubString, code, "struct A");		// struct definition
 		EXPECT_PRED2(containsSubString, code, "A a;");			// variable definition
+
+		// make sure the definition of B is missing
+		EXPECT_FALSE(containsSubString(code, "struct B {"));
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
