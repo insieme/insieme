@@ -108,6 +108,56 @@ namespace lang {
 		EXPECT_TRUE(c2.getErrors().empty());
 	}
 
+	TEST(Enum, enumChecks) {
+		NodeManager nm;
+		IRBuilder b(nm);
+		auto& basic = b.getLangBasic();
+
+		auto inttype = basic.getInt4();
+		auto genType = b.genericType("A");
+		auto deeptype = b.genericType("B", TypeList(inttype, inttype));
+
+		// check isEnumDefinition
+		EXPECT_FALSE(EnumDefinition::isEnumDefinition(inttype));
+		EXPECT_FALSE(EnumDefinition::isEnumDefinition(genType));
+		EXPECT_FALSE(EnumDefinition::isEnumDefinition(b.genericType("enum_def", TypeList(inttype, inttype))));
+		EXPECT_FALSE(EnumDefinition::isEnumDefinition(b.genericType("enum_def", TypeList(deeptype, inttype))));
+		EXPECT_FALSE(EnumDefinition::isEnumDefinition(b.genericType("enum_def", TypeList(inttype, deeptype))));
+		auto list = TypeList(inttype, deeptype);
+		list.push_back(inttype);
+		EXPECT_FALSE(EnumDefinition::isEnumDefinition(b.genericType("A", list)));
+	}
+
+	TEST(Enum, isEnumEntry) {
+		NodeManager nm;
+		IRBuilder b(nm);
+		auto& basic = b.getLangBasic();
+
+		auto inttype = basic.getInt4();
+		auto strtype = basic.getString();
+		auto numtype = b.numericType(1);
+		auto gentype = b.genericType("A");
+
+		auto list1 = TypeList();
+		list1.push_back(inttype);
+		list1.push_back(gentype);
+
+		auto list2 = TypeList();
+		list2.push_back(gentype);
+		list2.push_back(gentype);
+
+		auto list3 = TypeList();
+		list3.push_back(gentype);
+		list3.push_back(numtype);
+
+		EXPECT_FALSE(EnumEntry::isEnumEntry(inttype));
+		EXPECT_FALSE(EnumEntry::isEnumEntry(gentype));
+		EXPECT_FALSE(EnumEntry::isEnumEntry(b.genericType("A", list1)));
+		EXPECT_FALSE(EnumEntry::isEnumEntry(b.genericType("enum_entry", list1)));
+		EXPECT_FALSE(EnumEntry::isEnumEntry(b.genericType("enum_entry", list2)));
+		EXPECT_TRUE( EnumEntry::isEnumEntry(b.genericType("enum_entry", list3)));
+	}
+
 	TEST(Enum, EnumDerivedOps) {
 		NodeManager nm;
 		IRBuilder builder(nm);
