@@ -36,18 +36,19 @@
 
 #include <gtest/gtest.h>
 
+#include "insieme/analysis/cba_interface.h"
+
 #include <fstream>
 
-#include "insieme/analysis/datalog/framework/analysis_base.h"
-#include "insieme/analysis/datalog/boolean_analysis.h"
+// #include "insieme/analysis/datalog/framework/analysis_base.h"
+// #include "insieme/analysis/datalog/boolean_analysis.h"
 #include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace analysis {
-namespace datalog {
 
 	using namespace core;
-
+	using testing::Types;
 	using SymbolTable = std::map<std::string,core::NodePtr>;
 
 	IRBuilder& getBuilder() {
@@ -56,166 +57,195 @@ namespace datalog {
 		return builder;
 	}
 
-	bool isTrue(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
-		auto expr = getBuilder().parseExpr(code, symbols);
-//		std::cout << *expr << "\n";
-//		std::cout << dumpText(expr) << "\n";
-		return isTrue(ExpressionAddress(expr));
+	/**
+	 * GTest-specific class to enable parametrized tests.
+	 * The type-parametrized constructor fetches a function pointer to the
+	 * analysis from the appropriate CBA backend to be used in the tests below.
+	 */
+	template <typename Backend>
+	class BooleanValue : public testing::Test {
+
+	protected:
+
+		bool (*impl_isTrue)(const core::ExpressionAddress&);
+		bool (*impl_isFalse)(const core::ExpressionAddress&);
+		bool (*impl_mayBeTrue)(const core::ExpressionAddress&);
+		bool (*impl_mayBeFalse)(const core::ExpressionAddress&);
+
+		BooleanValue()
+			: impl_isTrue(&(analysis<Backend, isTrueAnalysis>())),
+			  impl_isFalse(&(analysis<Backend, isFalseAnalysis>())),
+			  impl_mayBeTrue(&(analysis<Backend, mayBeTrueAnalysis>())),
+			  impl_mayBeFalse(&(analysis<Backend, mayBeFalseAnalysis>())) {}
+
+		bool isTrue(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
+			auto expr = getBuilder().parseExpr(code, symbols);
+			return impl_isTrue(ExpressionAddress(expr));
+		}
+
+		bool isFalse(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
+			return impl_isFalse(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
+		}
+
+		bool mayBeTrue(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
+			return impl_mayBeTrue(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
+		}
+
+		bool mayBeFalse(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
+			return impl_mayBeFalse(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
+		}
+
+	};
+
+	/**
+	 * Type list of backends to be tested
+	 */
+	using CBA_Backends = Types<datalogEngine, haskellEngine>;
+
+	/**
+	 * Tell GTest that CBA_Interface tests shall be type-parametrized with CBA_Backends
+	 */
+	TYPED_TEST_CASE(BooleanValue, CBA_Backends);
+
+	TYPED_TEST(BooleanValue, Constants) {
+
+		EXPECT_TRUE(this->isTrue("true"));
+		EXPECT_TRUE(this->isFalse("false"));
+		EXPECT_TRUE(this->isTrue("true"));
+		EXPECT_TRUE(this->isFalse("false"));
+
+		EXPECT_TRUE(this->mayBeTrue("true"));
+		EXPECT_TRUE(this->mayBeFalse("false"));
+
+		EXPECT_FALSE(this->isTrue("false"));
+		EXPECT_FALSE(this->isFalse("true"));
+
+		EXPECT_FALSE(this->mayBeTrue("false"));
+		EXPECT_FALSE(this->mayBeFalse("true"));
+
 	}
 
-	bool isFalse(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
-		return isFalse(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
-	}
-
-	bool mayBeTrue(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
-		return mayBeTrue(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
-	}
-
-	bool mayBeFalse(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
-		return mayBeFalse(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
-	}
-
-
-	TEST(BooleanValue, Constants) {
-
-		EXPECT_TRUE(isTrue("true"));
-		EXPECT_TRUE(isFalse("false"));
-		EXPECT_TRUE(isTrue("true"));
-		EXPECT_TRUE(isFalse("false"));
-
-		EXPECT_TRUE(mayBeTrue("true"));
-		EXPECT_TRUE(mayBeFalse("false"));
-
-		EXPECT_FALSE(isTrue("false"));
-		EXPECT_FALSE(isFalse("true"));
-
-		EXPECT_FALSE(mayBeTrue("false"));
-		EXPECT_FALSE(mayBeFalse("true"));
-	}
-
-
-	TEST(BooleanValue, StringConstants) {
+	TYPED_TEST(BooleanValue, StringConstants) {
 
 		// check string constants (should be neither true nor false)
-		EXPECT_FALSE(isTrue("\"x\""));
-		EXPECT_FALSE(isFalse("\"x\""));
-		EXPECT_TRUE(mayBeTrue("\"x\""));
-		EXPECT_TRUE(mayBeFalse("\"x\""));
+		EXPECT_FALSE(this->isTrue("\"x\""));
+		EXPECT_FALSE(this->isFalse("\"x\""));
+		EXPECT_TRUE(this->mayBeTrue("\"x\""));
+		EXPECT_TRUE(this->mayBeFalse("\"x\""));
 
 	}
 
-	TEST(BooleanValue, FreeVariables) {
+	TYPED_TEST(BooleanValue, FreeVariables) {
 
 		IRBuilder& builder = getBuilder();
 		SymbolTable symbols;
 		symbols["x"] = builder.variable(builder.parseType("bool"));
 
 		// check that the free variable "x" is neither definitely true nor false
-		EXPECT_FALSE(isTrue("x",symbols));
-		EXPECT_FALSE(isFalse("x",symbols));
-		EXPECT_TRUE(mayBeTrue("x",symbols));
-		EXPECT_TRUE(mayBeFalse("x",symbols));
+		EXPECT_FALSE(this->isTrue("x",symbols));
+		EXPECT_FALSE(this->isFalse("x",symbols));
+		EXPECT_TRUE(this->mayBeTrue("x",symbols));
+		EXPECT_TRUE(this->mayBeFalse("x",symbols));
 
 	}
 
-	TEST(BooleanValue, ReturnValue) {
+	TYPED_TEST(BooleanValue, ReturnValue) {
 
 		// test whether the return value of a function is deduced properly
-		EXPECT_TRUE( isTrue("()->bool { return true; }()"));
-		EXPECT_TRUE(isFalse("()->bool { return false; }()"));
+		EXPECT_TRUE( this->isTrue("()->bool { return true; }()"));
+		EXPECT_TRUE(this->isFalse("()->bool { return false; }()"));
 
 	}
 
-	TEST(BooleanValue, LocalVariable) {
+	TYPED_TEST(BooleanValue, LocalVariable) {
 
 		// test whether the return value of a function is deduced properly
-		EXPECT_TRUE( isTrue("()->bool { var bool x = true; return x; }()"));
-		EXPECT_TRUE(isFalse("()->bool { var bool x = false; return x; }()"));
+		EXPECT_TRUE( this->isTrue("()->bool { var bool x = true; return x; }()"));
+		EXPECT_TRUE(this->isFalse("()->bool { var bool x = false; return x; }()"));
 
 	}
 
-	TEST(BooleanValue, ParameterPassing) {
+	TYPED_TEST(BooleanValue, ParameterPassing) {
 
 		// test whether the return value of a function is deduced properly
-		EXPECT_TRUE( isTrue("(x : 'a)->'a { return x; }(true)"));
-		EXPECT_TRUE(isFalse("(x : 'a)->'a { return x; }(false)"));
+		EXPECT_TRUE( this->isTrue("(x : 'a)->'a { return x; }(true)"));
+		EXPECT_TRUE(this->isFalse("(x : 'a)->'a { return x; }(false)"));
 
 		// check order of arguments
-		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { return a; }(true,false)"));
-		EXPECT_TRUE(isFalse("( a:'a, b:'a )->'a { return b; }(true,false)"));
+		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { return a; }(true,false)"));
+		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { return b; }(true,false)"));
 
 	}
 
-	TEST(BooleanValue, ParameterPassingToBind) {
+	TYPED_TEST(BooleanValue, ParameterPassingToBind) {
 
 		// test whether values can be passed to bind expressions
-		EXPECT_TRUE( isTrue("( (x : 'a)=> x )(true)"));
-		EXPECT_TRUE(isFalse("( (x : 'a)=> x )(false)"));
+		EXPECT_TRUE( this->isTrue("( (x : 'a)=> x )(true)"));
+		EXPECT_TRUE(this->isFalse("( (x : 'a)=> x )(false)"));
 
 	}
 
-	TEST(BooleanValue, ControlFlow) {
+	TYPED_TEST(BooleanValue, ControlFlow) {
 
 		// test whether control flow restrictions are considered
-		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(true,true)"));
-		EXPECT_TRUE(isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(true,false)"));
-		EXPECT_TRUE(isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(false,true)"));
-		EXPECT_TRUE(isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(false,false)"));
+		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(true,true)"));
+		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(true,false)"));
+		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(false,true)"));
+		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(false,false)"));
 
-		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(true,true)"));
-		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(true,false)"));
-		EXPECT_TRUE( isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(false,true)"));
-		EXPECT_TRUE(isFalse("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(false,false)"));
+		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(true,true)"));
+		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(true,false)"));
+		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(false,true)"));
+		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(false,false)"));
 
-		EXPECT_TRUE(isFalse("!true"));
-		EXPECT_TRUE( isTrue("!false"));
-
-	}
-
-	TEST(BooleanValue, HigherOrderFunction) {
-
-		EXPECT_TRUE( isTrue("( a: ('a)-> 'a, b:'a )->'a { return a(b); }(id,true)"));
+		EXPECT_TRUE(this->isFalse("!true"));
+		EXPECT_TRUE( this->isTrue("!false"));
 
 	}
 
+	TYPED_TEST(BooleanValue, HigherOrderFunction) {
 
-	TEST(BooleanValue, BoundValues) {
+		EXPECT_TRUE(this->isTrue("( a: ('a)-> 'a, b:'a )->'a { return a(b); }(id,true)"));
+
+	}
+
+	TYPED_TEST(BooleanValue, BoundValues) {
 
 		// check a simple constant value in a bind
-		EXPECT_TRUE( isTrue("(()=>true)()"));
-		EXPECT_TRUE(isFalse("(()=>false)()"));
+		EXPECT_TRUE( this->isTrue("(()=>true)()"));
+		EXPECT_TRUE(this->isFalse("(()=>false)()"));
 
 		// check whether higher functions work with closures
-		EXPECT_TRUE( isTrue("(f:()=>'a)->'a{ return f(); }(()=>true)"));
+		EXPECT_TRUE( this->isTrue("(f:()=>'a)->'a{ return f(); }(()=>true)"));
 
 		// check proper operation of lazy boolean connectors (based on closures)
-		EXPECT_TRUE( isTrue("true && true"));
-		EXPECT_TRUE(isFalse("true && false"));
-		EXPECT_TRUE(isFalse("false && true"));
-		EXPECT_TRUE(isFalse("false && false"));
+		EXPECT_TRUE( this->isTrue("true && true"));
+		EXPECT_TRUE(this->isFalse("true && false"));
+		EXPECT_TRUE(this->isFalse("false && true"));
+		EXPECT_TRUE(this->isFalse("false && false"));
 
-		EXPECT_TRUE( isTrue("true || true"));
-		EXPECT_TRUE( isTrue("true || false"));
-		EXPECT_TRUE( isTrue("false || true"));
-		EXPECT_TRUE(isFalse("false || false"));
+		EXPECT_TRUE( this->isTrue("true || true"));
+		EXPECT_TRUE( this->isTrue("true || false"));
+		EXPECT_TRUE( this->isTrue("false || true"));
+		EXPECT_TRUE(this->isFalse("false || false"));
 
 
 		// check the capturing of a variable
-		EXPECT_TRUE( isTrue("(x: 'a)->'a { return (f:()=>'a)->'a{ return f(); }(()=>x); }(true)"));
-		EXPECT_TRUE(isFalse("(x: 'a)->'a { return (f:()=>'a)->'a{ return f(); }(()=>x); }(false)"));
+		EXPECT_TRUE( this->isTrue("(x: 'a)->'a { return (f:()=>'a)->'a{ return f(); }(()=>x); }(true)"));
+		EXPECT_TRUE(this->isFalse("(x: 'a)->'a { return (f:()=>'a)->'a{ return f(); }(()=>x); }(false)"));
 
 		// check the parameter of a bind expression
-		EXPECT_TRUE( isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(true)); }(true)"));
-		EXPECT_TRUE( isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(x)); }(true)"));
-		EXPECT_TRUE( isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(y)); }(true)"));
-		EXPECT_TRUE( isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(x && y)); }(true)"));
+		EXPECT_TRUE( this->isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(true)); }(true)"));
+		EXPECT_TRUE( this->isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(x)); }(true)"));
+		EXPECT_TRUE( this->isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(y)); }(true)"));
+		EXPECT_TRUE( this->isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(x && y)); }(true)"));
 
 	}
 
-	TEST(BooleanValue, MemoryState) {
+	TYPED_TEST(BooleanValue, MemoryState) {
 
-		EXPECT_TRUE( isTrue("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; return *a; }()"));
-		EXPECT_TRUE(isFalse("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; a = !a; return *a; }()"));
+		EXPECT_TRUE( this->isTrue("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; return *a; }()"));
+		EXPECT_TRUE(this->isFalse("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; a = !a; return *a; }()"));
 
 
 		// some more complex example
@@ -231,11 +261,11 @@ namespace datalog {
 			}()
 		)";
 
-		EXPECT_TRUE(isTrue(code));
+		EXPECT_TRUE(this->isTrue(code));
 
 	}
 
-	TEST(BooleanValue, PassByReference) {
+	TYPED_TEST(BooleanValue, PassByReference) {
 
 		// some more complex example
 		auto code = R"(
@@ -248,11 +278,11 @@ namespace datalog {
 			}()
 		)";
 
-		EXPECT_TRUE(isTrue(code));
+		EXPECT_TRUE(this->isTrue(code));
 
 	}
 
-	TEST(BooleanValue, Tuples) {
+	TYPED_TEST(BooleanValue, Tuples) {
 
 		// some more complex example
 		auto code = R"(
@@ -262,7 +292,7 @@ namespace datalog {
 			}()
 		)";
 
-		EXPECT_TRUE(isTrue(code));
+		EXPECT_TRUE(this->isTrue(code));
 
 		// try the other component
 		code = R"(
@@ -272,11 +302,12 @@ namespace datalog {
 			}()
 		)";
 
-		EXPECT_TRUE(isFalse(code));
+		EXPECT_TRUE(this->isFalse(code));
 
 	}
 
-	TEST(BooleanValue, FailureDetection) {
+	/* TODO: Unify exception for all backends
+	TYPED_TEST(BooleanValue, FailureDetection) {
 
 		{
 			auto input = "ref_assign";
@@ -295,8 +326,8 @@ namespace datalog {
 		}
 
 	}
+	*/
 
-} // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme
 
