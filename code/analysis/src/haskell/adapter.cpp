@@ -36,6 +36,7 @@
 
 #include "insieme/analysis/haskell/adapter.h"
 
+#include "insieme/analysis/common/failure.h"
 #include "insieme/core/dump/binary_dump.h"
 
 #include <sstream>
@@ -172,8 +173,12 @@ namespace haskell {
 	}
 
 	BooleanAnalysisResult Environment::checkBoolean(Tree& tree, Address& expr) {
-		int res = hat_checkBoolean(tree.tree->ptr, expr.addr->ptr);
-		return static_cast<BooleanAnalysisResult>(res);
+		auto res = static_cast<BooleanAnalysisResult>(hat_checkBoolean(tree.tree->ptr, expr.addr->ptr));
+		if (res == BooleanAnalysisResult_Error) {
+			std::vector<std::string> msgs{"Boolean Analysis Error"};
+			throw AnalysisFailure(msgs);
+		}
+		return res;
 	}
 
 } // end namespace haskell
