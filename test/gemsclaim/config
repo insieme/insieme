@@ -1,2 +1,2 @@
-excludeSteps="*_cpp_*", "*_ocl_*"
+excludeSteps="*_cpp_*", "*_ocl_*","*_run_*"
 use_libmath=1
