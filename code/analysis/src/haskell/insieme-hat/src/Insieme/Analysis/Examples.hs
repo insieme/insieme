@@ -194,10 +194,11 @@ getLambda :: Tree IR.Inspire -> NodeAddress -> Maybe NodeAddress
 getLambda tree addr =
     case resolve addr tree of
         Just (Node IR.LambdaExpr [_, ref, Node IR.LambdaDefinition defs]) ->
-            Just . goDown 1 . goDown (findX ref defs) . goDown 2 $ addr
+            findLambda ref defs >>= walk addr
         _ -> Nothing
   where
-    findX ref defs = fromJust $ findIndex (\x -> ((!!0) . subForest $ x) == ref) defs
+    findLambda ref defs = findIndex ((ref==) . (!!0) . subForest) defs
+    walk addr x = Just . goDown 1 . goDown x . goDown 2 $ addr
 
 findEverything :: Tree IR.Inspire -> Callable.CallableSet
 findEverything tree = visit tree go' Set.empty
