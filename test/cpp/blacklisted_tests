@@ -27,11 +27,11 @@ memb_func_ptr
 performance
 rec_memberfunc_pointer
 shadow_decl
-simpleSort
+simple_sort
 sort
 static_assert
 static_data_member
-staticInitialization
+static_initialization
 static_var_init
 static_var_updates
 std_distance
@@ -40,7 +40,7 @@ stl_list_iterator
 stl_read_file
 template_statics
 try_catch
-try_catch_condOp
+try_catch_cond_op
 typeinfo_struct
 user_defined_cast
 vfunc_covariant_returnty
