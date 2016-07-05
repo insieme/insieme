@@ -494,6 +494,7 @@ namespace lang {
 	ExpressionPtr buildRefReinterpret(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 
 	bool isAnyRefCast(const NodePtr& node);
+	ExpressionPtr removeSurroundingRefCasts(const ExpressionPtr& node);
 
 	ExpressionPtr buildRefTemp(const TypePtr& type);
 	ExpressionPtr buildRefNull(const TypePtr& type);
