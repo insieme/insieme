@@ -6,7 +6,7 @@ import Framework
 import Compiler.Analysis
 import Control.Applicative
 import Control.Monad
-import Control.Monad.State.Strict
+import Control.Monad.State.Lazy
 import Data.List
 import Data.Maybe
 import Data.Tree
@@ -15,6 +15,10 @@ import Insieme.Inspire.NodeAddress as Addr
 import qualified Data.Map as Map
 import qualified Insieme.Boolean as Boolean
 import qualified Insieme.Inspire as IR
+
+--
+-- * Get Definition Point Analysis
+--
 
 type NodeCache = Map.Map NodeAddress (Tree IR.Inspire)
 
@@ -87,36 +91,72 @@ findDeclr start tree = evalState (findDeclr start) Map.empty
 (<||>) = liftM2 (<|>)
 infixl 3 <||>
 
+--
+-- * Boolean Value Analysis
+--
 
--- Step 0: Define generic dataflow constraint generator
-dataflowvalue :: Tree IR.Inspire -> NodeAddress -> (Tree IR.Inspire -> NodeAddress -> AVar) -> Constr AVar -> (AVar -> Constr AVar) -> AVar
-dataflowvalue tree addr fun top forward =
-    trace "case" $ case resolve addr tree of
-        Just (Node IR.Literal _)  -> AVar 7 (\_ -> top)
-        Just (Node IR.Declaration [_, expr]) -> trace "decl" $ AVar 6 (\_ -> forward (fun tree (goDown 1 addr)))
-        Just (Node IR.Variable [_, index]) -> trace "var" $ case findDeclr addr tree of
-                                                Just addr' -> if addr' /= addr
-                                                                 then trace "neq" $ AVar 4 (\_ -> forward (fun tree addr'))
-                                                                 else trace "eq" $ case resolve (goUp addr) tree of
-                                                                        Just (Node IR.DeclarationStmt _) -> AVar 5 (\_ -> forward (fun tree (goDown 0 . goUp $ addr)))
-                                                                        _ -> error "foo"
-                                                _ -> AVar 3 (\_ -> top)
-        _ -> AVar 2 (\_ -> top)
+dataflowValue :: Tree IR.Inspire
+              -> NodeAddress
+              -> (Tree IR.Inspire -> NodeAddress -> State Int AVar)
+              -> Constr AVar
+              -> (AVar -> Constr AVar)
+              -> State Int AVar
+dataflowValue tree addr fun top forward = do
+    count <- get
+    case resolve addr tree of
+        Just (Node IR.Literal _) ->
+            return $ AVar count (\_ -> top)
 
-forward :: AVar -> Constr AVar
-forward pred = constr Nothing [pred] (id :: Boolean.Result -> Boolean.Result)
+        Just (Node IR.Declaration _) -> do
+            modify (+1)
+            f <- fun tree (goDown 1 addr)
+            return $ AVar count (\_ -> forward f)
 
-end :: Constr AVar
-end = constr Nothing [] Boolean.Both
+        Just (Node IR.Variable _) -> do
+            case findDeclr addr tree of
+                Just declrAddr -> handleDeclr declrAddr
+                _ -> return $ AVar count (\_ -> top)
 
--- Step 2: Define constraint generator
-boolvalue :: Tree IR.Inspire -> NodeAddress -> AVar
-boolvalue tree addr =
-    trace "case" $ case resolve addr tree of
-        Just (Node IR.Literal  [_, Node (IR.StringValue "true") []])  -> trace "true" $ AVar 0 (\_ -> constr Nothing [] Boolean.AlwaysTrue)
-        Just (Node IR.Literal  [_, Node (IR.StringValue "false") []]) -> trace "false" $ AVar 1 (\_ -> constr Nothing [] Boolean.AlwaysFalse)
-        _ -> dataflowvalue tree addr boolvalue end forward
+        _ -> return $ AVar count (\_ -> top)
+
+  where
+    handleDeclr :: NodeAddress -> State Int AVar
+    handleDeclr declrAddr | declrAddr == addr = do
+        count <- get
+        modify (+1)
+        f <- fun tree declrAddr
+        return $ AVar count (\_ -> forward f)
+
+    handleDeclr declrAddr = do
+        count <- get
+        case resolve (goUp declrAddr) tree of
+            Just (Node IR.DeclarationStmt _) -> do
+                modify (+1)
+                f <- fun tree (goDown 0 . goUp $ declrAddr)
+                return $ AVar count (\_ -> forward f)
+            _ -> error "unhandled case"
+
+boolvalue :: Tree IR.Inspire -> NodeAddress -> State Int AVar
+boolvalue tree addr = do
+    count <- get
+    case resolve addr tree of
+        Just (Node IR.Literal [_, Node (IR.StringValue "true") _]) ->
+            return $ AVar count (\_ -> constr Nothing [] Boolean.AlwaysTrue)
+
+        Just (Node IR.Literal [_, Node (IR.StringValue "false") _]) ->
+            return $ AVar count (\_ -> constr Nothing [] Boolean.AlwaysFalse)
+
+        _ -> modify (+1) >> dataflowValue tree addr boolvalue end forward
+
+  where
+    forward :: AVar -> Constr AVar
+    forward pred = constr Nothing [pred] (id :: Boolean.Result -> Boolean.Result)
+
+    end :: Constr AVar
+    end = constr Nothing [] Boolean.Both
 
 
 checkBoolean :: NodeAddress -> Tree IR.Inspire -> Boolean.Result
-checkBoolean addr tree = resolve' (boolvalue tree addr) Boolean.Both
+checkBoolean addr tree = resolve' target Boolean.Both
+  where
+    target = evalState (boolvalue tree addr) 0
