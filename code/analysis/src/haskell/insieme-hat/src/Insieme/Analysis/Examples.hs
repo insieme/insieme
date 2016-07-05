@@ -199,6 +199,7 @@ getLambda tree addr =
   where
     findX ref defs = fromJust $ findIndex (\x -> ((!!0) . subForest $ x) == ref) defs
 
+-- TODO: remove
 findEverything :: Tree IR.Inspire -> Callable.CallableSet
 findEverything tree = visit tree go' Set.empty
 

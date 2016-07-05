@@ -1,0 +1,3 @@
+:set -isrc
+:set -w -fwarn-unused-imports
+--:set -fobject-code   -- http://stackoverflow.com/a/28899621
