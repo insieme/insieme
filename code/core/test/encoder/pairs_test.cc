@@ -47,6 +47,22 @@ namespace insieme {
 namespace core {
 namespace encoder {
 
+	TEST(Pairs, Basic) {
+		NodeManager nm;
+		IRBuilder b(nm);
+
+		auto& basic = nm.getLangBasic();
+
+		// create a pair
+		auto value = std::make_pair(1, 2u);
+		core::ExpressionPtr ir = toIR(nm, value);
+
+		EXPECT_TRUE(isPairType(ir->getType()));
+		EXPECT_EQ("int<4>", toString(*getFirstElementType(ir->getType())));
+		EXPECT_EQ("uint<4>", toString(*getSecondElementType(ir->getType())));
+		EXPECT_EQ("pair<int<4>,uint<4>>", toString(*getPairType(basic.getInt4(), basic.getUInt4())));
+	}
+
 	TEST(Pairs, LanguageExtension) {
 		NodeManager manager;
 		const PairExtension& ext = manager.getLangExtension<PairExtension>();

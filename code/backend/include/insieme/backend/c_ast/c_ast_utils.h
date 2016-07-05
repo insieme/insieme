@@ -41,6 +41,7 @@
 #include <vector>
 #include <cassert>
 
+#include "insieme/core/lang/reference.h"
 #include "insieme/backend/c_ast/c_ast.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/name_mangling.h"
@@ -328,6 +329,14 @@ namespace c_ast {
 			return static_pointer_cast<Expression>(static_pointer_cast<UnaryOperation>(sub)->operand);
 		});
 		return unaryOp(UnaryOperation::Indirection, expr);
+	}
+
+	inline ExpressionPtr derefIfNotImplicit(const ExpressionPtr& cExpr, const core::ExpressionPtr& irExpr) {
+		// deref of a cpp ref is implicit
+		if(core::lang::isCppReference(irExpr) || core::lang::isCppRValueReference(irExpr)) {
+			return cExpr;
+		}
+		return deref(cExpr);
 	}
 
 	inline ExpressionPtr ref(IdentifierPtr expr) {

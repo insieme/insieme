@@ -3,16 +3,11 @@
 
 adv_op_overl
 alignof
-anonymous_struct
-argument_types
 big
-boost
 cast
 cast_dynamic
 cast_reinterpret
 cast_static
-class_as_return_type_of_member_function_closing_rec_cycle
-ctor
 ctor_inherit
 ctor_return
 curiously_recurring_template_pattern
@@ -45,14 +40,12 @@ std_distance
 stl_intercept
 stl_list_iterator
 stl_read_file
-template1
 template3
 template_statics
 try_catch
 try_catch_condOp
 typeinfo_struct
 user_defined_cast
-vector_ctor
 vfunc_covariant_returnty
 vfunc_multiple_inherit
 vfunc_multiple_inherit_operators
@@ -66,3 +59,4 @@ vfunc_single_inherit
 ####################################################################################
 
 +nested_class
++ctor

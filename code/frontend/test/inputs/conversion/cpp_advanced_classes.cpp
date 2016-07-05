@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,18 +34,41 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+struct A {
+	A() : j(i) {}
+	int i;
+	int& j;
+};
 
-namespace insieme {
-namespace frontend {
-namespace utils {
+int main() {
+	; // this is required because of the clang compound source location bug
 
-	/**
-	 *  search in the inner tree for the used temporaries
-	 */
-	std::vector<const clang::CXXTemporary*> lookupTemporaries(const clang::Expr* innerExpr);
+	// check accesses with various ref kind combinations
+	#pragma test expect_ir(R"(
+		def struct IMP_A {
+			i : int<4>;
+			j : ref<int<4>,f,f,cpp_ref>;
+			ctor function () {
+				<ref<int<4>,f,f,cpp_ref>>(*(this).j) {(this).i};
+			}
+		};
+		{
+			var ref<IMP_A,f,f,plain> v0 = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
+			var ref<IMP_A,f,f,cpp_ref> v1 = v0;
+			v0.i;
+			*v0.j;
+			v1.i;
+			*v1.j;
+		}
+	)")
+	{
+		A a;
+		A& b = a;
+		a.i;
+		a.j;
+		b.i;
+		b.j;
+	}
 
-
-} // namespace utils
-} // namespace frontend
-} // namespace insieme
+	return 0;
+}

@@ -101,7 +101,8 @@ namespace frontend {
 		EXPECT_TRUE(checked) << "checkForTypeName: " << typeNodeIrSpec;
 	}
 
-	void checkForFunctionName(const NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName, const std::string& expectedHeaderName) {
+	void checkLiteralNameInternal(const NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName,
+	                              const std::string& expectedHeaderName, bool fun, const core::FunctionKind expectedKind) {
 		bool checked = false;
 		visitDepthFirstOnce(code, [&](const core::LiteralPtr& lit) {
 			if(lit->getValue()->getValue() == functionLiteralName) {
@@ -109,10 +110,26 @@ namespace frontend {
 				EXPECT_EQ(expectedAttachedName, core::annotations::getAttachedName(lit));
 				ASSERT_TRUE(insieme::annotations::c::hasIncludeAttached(lit));
 				EXPECT_EQ(expectedHeaderName, insieme::annotations::c::getAttachedInclude(lit));
+				if(fun) {
+					auto funType = lit->getType().isa<FunctionTypePtr>();
+					ASSERT_TRUE(funType);
+					EXPECT_EQ(funType->getKind(), expectedKind) << "Wrong kind for " << functionLiteralName;
+				}
 				checked = true;
 			}
 		}, true);
 		EXPECT_TRUE(checked) << "checkForFunctionName: " << functionLiteralName;
+	}
+
+
+	void checkForFunctionName(const NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName,
+	                          const std::string& expectedHeaderName, const core::FunctionKind expectedKind = core::FK_PLAIN) {
+		checkLiteralNameInternal(code, functionLiteralName, expectedAttachedName, expectedHeaderName, true, expectedKind);
+	}
+
+	void checkForLiteralName(const NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName,
+	                         const std::string& expectedHeaderName) {
+		checkLiteralNameInternal(code, functionLiteralName, expectedAttachedName, expectedHeaderName, false, core::FK_PLAIN);
 	}
 
 	TEST(InterceptorTest, TrueInterception) {
@@ -137,7 +154,7 @@ namespace frontend {
 
 		// check name of function/method literals
 		checkForFunctionName(code, "IMP_ns_colon__colon_simpleFunc", "ns::simpleFunc", "interceptor_header.h");
-		checkForFunctionName(code, "IMP_ns_colon__colon_S::IMP_memberFunc", "memberFunc", "interceptor_header.h");
+		checkForFunctionName(code, "IMP_ns_colon__colon_S::IMP_memberFunc", "memberFunc", "interceptor_header.h", core::FK_MEMBER_FUNCTION);
 
 		// check that 31337 is not in the code (from global init which should be intercepted)
 		ASSERT_FALSE(core::analysis::contains(core::tu::toIR(manager, irTu), builder.stringValue("31337")));
@@ -175,8 +192,8 @@ namespace frontend {
 		checkForFunctionName(code, "IMP_templateFunRet", "templateFunRet", "template_interception.h");
 		checkForFunctionName(code, "IMP_templateFunRetParam", "templateFunRetParam", "template_interception.h");
 		checkForFunctionName(code, "IMP_templateFun", "templateFun", "template_interception.h");
-		checkForFunctionName(code, "IMP_TemplateWithMethod::IMP_get", "get", "template_interception.h");
-		checkForFunctionName(code, "IMP_ClassWithTemplateMethod::IMP_get", "get", "template_interception.h");
+		checkForFunctionName(code, "IMP_TemplateWithMethod::IMP_get", "get", "template_interception.h", core::FK_MEMBER_FUNCTION);
+		checkForFunctionName(code, "IMP_ClassWithTemplateMethod::IMP_get", "get", "template_interception.h", core::FK_MEMBER_FUNCTION);
 		checkForFunctionName(code, "IMP_templateTemplateFun", "templateTemplateFun", "template_interception.h");
 		checkForFunctionName(code, "IMP_variadicTemplateFun", "variadicTemplateFun", "template_interception.h");
 		checkForFunctionName(code, "IMP_variadicTemplateTemplateFun", "variadicTemplateTemplateFun", "template_interception.h");
@@ -208,15 +225,17 @@ namespace frontend {
 		checkForTypeName(code, "IMP_std_colon__colon_vector<ref<real<8>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<real<8>,f,f,qualified>>,f,f,qualified>>", "std::vector", "vector");
 		checkForTypeName(code, "def struct IMP_Trivial {}; IMP_std_colon__colon_vector<ref<IMP_Trivial,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_Trivial,f,f,qualified>>,f,f,qualified>>", "std::vector", "vector");
 
-		// check name of function/method literals as well as globals
+		// check name and kind of function/method literals
 		checkForFunctionName(code, "IMP_gettimeofday", "gettimeofday", "sys/time.h");
-		checkForFunctionName(code, "IMP_std_colon__colon_vector::IMP_push_back", "push_back", "vector");
+		checkForFunctionName(code, "IMP_std_colon__colon_vector::IMP_push_back", "push_back", "vector", core::FK_MEMBER_FUNCTION);
 		checkForFunctionName(code, "IMP_std_colon__colon__operator_lshift_", "std::operator<<", "iostream");
-		checkForFunctionName(code, "IMP_std_colon__colon_cout", "std::cout", "iostream");
-		checkForFunctionName(code, "IMP_std_colon__colon_basic_ostream::IMP__operator_lshift_", "operator<<", "iostream");
-		checkForFunctionName(code, "IMP_std_colon__colon_launch_colon__colon_async", "std::launch::async", "future");
-		checkForFunctionName(code, "IMP_std_colon__colon_launch_colon__colon_deferred", "std::launch::deferred", "future");
-		checkForFunctionName(code, "IMP_std_colon__colon_vector::IMP_size", "size", "vector");
+		checkForFunctionName(code, "IMP_std_colon__colon_basic_ostream::IMP__operator_lshift_", "operator<<", "iostream", core::FK_MEMBER_FUNCTION);
+		checkForFunctionName(code, "IMP_std_colon__colon_vector::IMP_size", "size", "vector", core::FK_MEMBER_FUNCTION);
+
+		// check name of globals
+		checkForLiteralName(code, "IMP_std_colon__colon_launch_colon__colon_async", "std::launch::async", "future");
+		checkForLiteralName(code, "IMP_std_colon__colon_launch_colon__colon_deferred", "std::launch::deferred", "future");
+		checkForLiteralName(code, "IMP_std_colon__colon_cout", "std::cout", "iostream");
 	}
 
 } // fe namespace

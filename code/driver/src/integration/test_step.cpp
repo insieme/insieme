@@ -1009,8 +1009,14 @@ namespace integration {
 			std::cerr << "Unable to fork, reason: " << strerror(errno) << "\n";
 		} else if(pid == 0) {
 			// soft and hard limit in seconds, will raise SIGXCPU and SIGKILL respectively afterwards, or only SIGKILL if they are equal
-			const struct rlimit cpuLimit = {cpuTimeLimit, cpuTimeLimit + 5};
-			if(setrlimit(RLIMIT_CPU, &cpuLimit) != 0) { std::cerr << strerror(errno); }
+			struct rlimit cpuLimit = { 0, 0 };
+			getrlimit(RLIMIT_CPU, &cpuLimit);
+			// set cpu time limit only if current setting is unlimited or at least larger than our own limit
+			if((cpuLimit.rlim_cur > cpuTimeLimit || cpuLimit.rlim_cur == RLIM_INFINITY) && (cpuLimit.rlim_max > cpuTimeLimit + 5 || cpuLimit.rlim_max == RLIM_INFINITY)) {
+				cpuLimit.rlim_cur = cpuTimeLimit;
+				cpuLimit.rlim_max = cpuTimeLimit + 5;
+				if(setrlimit(RLIMIT_CPU, &cpuLimit) != 0) { std::cerr << strerror(errno); }
+			}
 			// stdout and stderr redirection
 			int fdOut, fdErr;
 			if((fdOut = open(outFilePath.c_str(), O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR)) == -1) {

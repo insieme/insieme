@@ -51,6 +51,28 @@ namespace lang {
 		semanticCheckSecond(ext.getSymbols());
 	}
 
+	TEST(Array, setSize) {
+		NodeManager nm;
+		IRBuilder b(nm);
+
+		auto A = b.parseType("A");
+		auto B = b.parseType("array<A>");
+		auto C = b.parseType("array<A,5>");
+		auto D = b.parseType("array<A,v0>");
+
+
+		auto array = ArrayType(B);
+
+		auto lit = b.parseExpr(R"( lit("5" : uint<4>) )");
+		array.setSize(lit.as<core::LiteralPtr>());
+		EXPECT_EQ(5, array.getNumElements());
+
+		VariablePtr var = Variable::get(nm, nm.getLangBasic().getUIntInf());
+		array.setSize(var);
+		EXPECT_EQ(var, array.getSize().as<VariablePtr>());
+
+	}
+
 	TEST(Array, IsArray) {
 		NodeManager nm;
 		IRBuilder builder(nm);
@@ -236,7 +258,7 @@ namespace lang {
         EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array2, init, f)->getType(), A);
         EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array3, init, f)->getType(), A);
         EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array4, init, f)->getType(), A);
-        
+
         // in/out different types
         EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array1, init2, f2));
         EXPECT_TRUE (builder.callExpr(A, ext.getArrayFold(), array2, init2, f2));
@@ -247,7 +269,7 @@ namespace lang {
         EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array2, init2, f2)->getType(), B);
         EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array3, init2, f2)->getType(), B);
         EXPECT_EQ (builder.callExpr(ext.getArrayFold(), array4, init2, f2)->getType(), B);
-      
+
     }
 
 	TEST(Array, Pointwise) {

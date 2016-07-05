@@ -116,7 +116,17 @@ public:
 	RegionDatabase() : regions(), index(0) { }
 
 	void addRegion(const cr::Region region, const std::string label) {
-		regions.insert(std::make_pair(index++, RegionAttribute(region, label)));
+		auto uniqueLabel = label;
+		unsigned counter = 0;
+		auto hasLabel = [&](const auto& entry) {
+			if(entry.second.label == uniqueLabel) { return true; }
+			return false;
+		};
+		while(any(regions, hasLabel)) {
+			uniqueLabel = boost::str(boost::format("%s_%u") % label % ++counter);
+		}
+
+		regions.insert(std::make_pair(index++, RegionAttribute(region, uniqueLabel)));
 	}
 
 	const RegionMap& getAllRegions() const {

@@ -34,40 +34,50 @@
  * regarding third party software licenses.
  */
 
-int f(int x = 7) {
-	return x;
-}
-#define F_IR "def IMP_f = function (v0 : ref<int<4>,f,f,plain>) -> int<4> { return *v0; }; "
+struct A {
+};
 
-
-void g(int x, unsigned y = 4u, char z = 'd') {}
-#define G_IR "def IMP_g = function (v0 : ref<int<4>,f,f,plain>, v1 : ref<uint<4>,f,f,plain>, v2 : ref<char,f,f,plain>) -> unit { }; "
-
-struct S {};
-void s(S s = S()) {};
+struct NonPod {
+	virtual ~NonPod() { 5; }
+};
 
 int main() {
-#pragma test expect_ir(F_IR, "IMP_f(4)")
-	f(4);
-
-	#pragma test expect_ir(F_IR, "IMP_f(7)")
-	f();
-
-	#pragma test expect_ir(G_IR, R"(IMP_g(4, 19u, lit("'s'":char)))")
-	g(4, 19u, 's');
-
-	#pragma test expect_ir(G_IR, R"(IMP_g(5, 12u, lit("'d'":char)))")
-	g(5, 12u);
-
-	#pragma test expect_ir(G_IR, R"(IMP_g(7, 4u, lit("'d'":char)))")
-	g(7);
+	; // this is required because of the clang compound source location bug
 
 	#pragma test expect_ir(R"(
-		def struct IMP_S {};
-		def IMP_s = function (v0 : ref<IMP_S,f,f,plain>) -> unit { };
-		IMP_s(ref_cast(IMP_S::(ref_temp(type_lit(IMP_S))), type_lit(f), type_lit(f), type_lit(cpp_rref)))
+		def struct IMP_A {};
+		{
+			var ref<array<IMP_A,3>,f,f,plain> v0 = <ref<array<IMP_A,3>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3>,f,f,plain>))) {};
+		}
 	)")
-	s();
+	{
+		A a[3];
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_A {};
+		{
+			var ref<IMP_A,f,f,plain> v0 = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
+			var ref<IMP_A,f,f,plain> v1 = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
+			var ref<array<IMP_A,3>,f,f,plain> v2 = <ref<array<IMP_A,3>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3>,f,f,plain>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref))};
+		}
+	)")
+	{
+		A a1, a2;
+		A a[3] { a1, a2 };
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_NonPod {
+			dtor virtual function () { 5; }
+		};
+		{
+			var ref<array<IMP_NonPod,77>,f,f,plain> v0 = <ref<array<IMP_NonPod,77>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_NonPod,77>,f,f,plain>))) {};
+		}
+	)")
+	{
+		NonPod a[77];
+	}
 
 	return 0;
 }

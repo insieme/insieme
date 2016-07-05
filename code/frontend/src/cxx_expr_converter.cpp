@@ -50,7 +50,6 @@
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
-#include "insieme/frontend/utils/temporaries_lookup.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
@@ -480,11 +479,8 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDefaultArgExpr(const clang::CXXDefaultArgExpr* defaultArgExpr) {
 		auto retIr = Visit(defaultArgExpr->getExpr());
 		LOG_EXPR_CONVERSION(defaultArgExpr, retIr);
-
-		// default arguments are handled just like any other argument
 		return retIr;
 	}
-
 
 	namespace {
 		core::ExpressionPtr convertMaterializingExpr(Converter& converter, core::ExpressionPtr retIr, const clang::Expr* materTempExpr) {
@@ -510,7 +506,6 @@ namespace conversion {
 			return retIr;
 		}
 	}
-
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					CXX Bind Temporary expr
