@@ -29,7 +29,7 @@ $(let
             | IntValue    Int
             | UIntValue   Int
             | StringValue String
-          deriving (Show, Eq, Ord)
+          deriving (Eq, Ord, Show, Read)
       |]
 
     extend :: Q [Dec] -> Q [Dec]
