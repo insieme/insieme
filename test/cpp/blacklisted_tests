@@ -9,11 +9,9 @@ cast_dynamic
 cast_reinterpret
 cast_static
 ctor_inherit
-ctor_return
 curiously_recurring_template_pattern
 curiously_recurring_template_pattern_2
 curiously_recurring_template_pattern_member_function
-dtor_return
 expr_with_cleanups
 inherit
 inherit_chained

@@ -1068,6 +1068,43 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 	}
 
+	TEST(CppSnippet, ReturnThisInConstructor) {
+		auto res = builder.parseProgram(R"(
+			def struct IMP_ConstructorReturn {
+				ctor () {
+					return this in ref<ref<IMP_ConstructorReturn>>;
+				}
+				dtor () {
+					return this in ref<ref<IMP_ConstructorReturn>>;
+				}
+				lambda IMP_f = () -> unit {
+					return;
+				}
+			};
+			int<4> main() {
+				var ref<IMP_ConstructorReturn,f,f,plain> v0 = IMP_ConstructorReturn::(ref_decl(type_lit(ref<IMP_ConstructorReturn,f,f,plain>)));
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+		//std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "return;");
+		EXPECT_PRED2(notContainsSubString, code, "return this");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
 	TEST(CppSnippet, Globals) {
 		core::ProgramPtr program = builder.parseProgram(R"(
 			def struct A {

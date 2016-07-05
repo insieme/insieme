@@ -853,7 +853,7 @@ continue : "continue" ";"                                                 { $$ =
 // -- return --
 
 return : "return" expression ";"                                          { $$ = driver.builder.returnStmt(driver.getScalar($2)); }
-       | "return" expression "in" type ";"                              { $$ = driver.builder.returnStmt(driver.getScalar($2), $4); }
+       | "return" expression "in" type ";"                                { $$ = driver.builder.returnStmt(driver.getScalar($2), $4); }
        | "return" ";"                                                     { $$ = driver.builder.returnStmt(); }
        ;
 

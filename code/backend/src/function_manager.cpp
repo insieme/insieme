@@ -1576,6 +1576,13 @@ namespace backend {
 					std::tie(initializer, body) = extractInitializer(converter, lambda, context);
 				}
 
+				// replace returns in constructors and destructors
+				if(lambda->getType()->isConstructor() || lambda->getType()->isDestructor()) {
+					body = core::transform::transformBottomUpGen(body, [](const core::ReturnStmtPtr& retStmt){
+						return core::IRBuilder(retStmt->getNodeManager()).returnStmt();
+					});
+				}
+
 				// convert the body code fragment and collect dependencies
 				c_ast::NodePtr code = converter.getStmtConverter().convert(context, body);
 				cBody = static_pointer_cast<c_ast::Statement>(code);

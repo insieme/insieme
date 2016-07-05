@@ -40,6 +40,18 @@ struct A {
 	int& j;
 };
 
+struct ConstructorReturn {
+	ConstructorReturn() {
+		return;
+	}
+	void f() {
+		return;
+	}
+	~ConstructorReturn() {
+		return;
+	}
+};
+
 int main() {
 	; // this is required because of the clang compound source location bug
 
@@ -68,6 +80,26 @@ int main() {
 		a.j;
 		b.i;
 		b.j;
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_ConstructorReturn {
+			ctor () {
+				return this in ref<ref<IMP_ConstructorReturn>>;
+			}
+			dtor () {
+				return this in ref<ref<IMP_ConstructorReturn>>;
+			}
+			lambda IMP_f = () -> unit {
+				return;
+			}
+		};
+		{
+			var ref<IMP_ConstructorReturn,f,f,plain> v0 = IMP_ConstructorReturn::(ref_decl(type_lit(ref<IMP_ConstructorReturn,f,f,plain>)));
+		}
+	)")
+	{
+		ConstructorReturn c;
 	}
 
 	return 0;
