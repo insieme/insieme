@@ -195,6 +195,10 @@ namespace backend {
 		return *(store->resolve(lambda));
 	}
 
+	const LambdaInfo& FunctionManager::getInfo(const core::TagTypePtr& tagType, const core::LambdaExprPtr& fun) {
+		return *(store->resolve(tagType,fun));
+	}
+
 	const LambdaInfo& FunctionManager::getInfo(const core::TagTypePtr& tagType, const core::MemberFunctionPtr& memberFun) {
 		return *(store->resolve(tagType,memberFun));
 	}

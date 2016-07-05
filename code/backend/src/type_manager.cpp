@@ -699,20 +699,21 @@ namespace backend {
 
 				// add constructors
 				for(const auto& ctor : record->getConstructors()) {
-					auto impl = (core::analysis::getObjectType(ctor->getType()).isa<core::TagTypeReferencePtr>()) ? tagType->peel(ctor) : ctor;
-					funMgr.getInfo(impl.as<core::LambdaExprPtr>()); // this will declare and define the constructor
+					funMgr.getInfo(tagType,ctor.as<core::LambdaExprPtr>());
 				}
+
 				//// TODO: explicitly delete missing constructors
 				//if (!core::analysis::hasDefaultConstructor(tagType)) {
 				//	type->ctors.push_back(manager->create<c_ast::ConstructorPrototype>());
 				//}
-				//
+
 				// add destructors (only for structs)
 				if(record->hasDestructor()) {
-					auto dtor = record->getDestructor();
-					auto info = funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
+					auto dtor = record->getDestructor().as<core::LambdaExprPtr>();
+					auto info = funMgr.getInfo(tagType,dtor);
 					info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
 				}
+
 				// TODO: explicitly delete missing destructor
 
 				// add pure virtual function declarations
