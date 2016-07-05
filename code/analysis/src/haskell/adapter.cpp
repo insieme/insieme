@@ -59,6 +59,7 @@ extern "C" {
 	// Tree functions
 	StablePtr hat_passTree(const char* dump, size_t length);
 	size_t hat_tree_length(const StablePtr dump);
+	void hat_tree_print(const StablePtr tree);
 	void hat_tree_printNode(const StablePtr tree, const StablePtr addr);
 
 	// Address functions
@@ -95,6 +96,10 @@ namespace haskell {
 	}
 
 	Tree::Tree(std::shared_ptr<HSobject> tree) : tree(tree) {}
+
+	void Tree::print() const {
+		hat_tree_print(tree->ptr);
+	}
 
 	void Tree::printNode(const Address& node) const {
 		hat_tree_printNode(tree->ptr, node.addr->ptr);

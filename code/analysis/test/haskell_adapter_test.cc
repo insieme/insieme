@@ -118,6 +118,37 @@ namespace haskell {
 		EXPECT_EQ(addrRoot[0].as<DeclarationStmtAddress>().getVariable(), decl->toNodeAddress(root));
 	}
 
+	TEST_F(HaskellAdapter, DISABLED_PrintTree) {
+		// This test is only used to generate tree for further debugging
+		StatementPtr stmt = builder.parseStmt(R"1N5P1RE(
+
+				decl lfun : (ref<int<4>>)->int<4>;
+				def fun = (arg : int<4>)->int<4> { return arg + 1; };
+				def rfun = (arg : ref<int<4>>)->int<4> { return *arg;};
+			{
+				var ref<int<4>> a;
+				var ref<int<4>> b;
+				var ref<int<4>> c;
+				var ref<int<4>> d;
+				var ref<int<4>> e;
+				var ref<int<4>> f;
+				var ref<int<4>> g;
+				{
+					a = 7;
+					fun(*b);
+					rfun(c);
+					fun(fun(*d));
+					fun(rfun(e));
+					lfun(f);
+					rfun(ref_temp_init(lfun(g)));
+				}
+			}
+		)1N5P1RE");
+
+		auto tree = env.passTree(stmt);
+		tree.print();
+	}
+
 } // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme
