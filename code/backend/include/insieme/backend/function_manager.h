@@ -87,7 +87,7 @@ namespace backend {
 
 		const LambdaInfo& getInfo(const core::LambdaExprPtr& lambda);
 
-		const LambdaInfo& getInfo(const core::MemberFunctionPtr& memberFun);
+		const LambdaInfo& getInfo(const core::TagTypePtr& tagType, const core::MemberFunctionPtr& memberFun);
 
 		const BindInfo& getInfo(const core::BindExprPtr& bind);
 

@@ -139,9 +139,22 @@ namespace backend {
 				return static_cast<result_type>(info);
 			}
 
+			template <
+				typename T,
+				typename result_type = typename info_trait<typename std::remove_const<typename T::element_type>::type>::type*
+			>
+			result_type resolve(const core::TagTypePtr& tagType, const T& node) {
+				// lookup information using internal mechanism and cast statically
+				ElementInfo* info = resolveInternal(tagType,node);
+				assert(dynamic_cast<result_type>(info));
+				return static_cast<result_type>(info);
+			}
+
 		  protected:
 
 			ElementInfo* resolveInternal(const core::NodePtr& expression);
+			ElementInfo* resolveInternal(const core::TagTypePtr& tagType, const core::LambdaExprPtr& member);
+			ElementInfo* resolveInternal(const core::TagTypePtr& tagType, const core::MemberFunctionPtr& member);
 
 			FunctionInfo* resolveLiteral(const core::LiteralPtr& literal);
 			FunctionInfo* resolvePureVirtualMember(const core::PureVirtualMemberFunctionPtr&);
@@ -182,8 +195,8 @@ namespace backend {
 		return *(store->resolve(lambda));
 	}
 
-	const LambdaInfo& FunctionManager::getInfo(const core::MemberFunctionPtr& memberFun) {
-		return *(store->resolve(memberFun));
+	const LambdaInfo& FunctionManager::getInfo(const core::TagTypePtr& tagType, const core::MemberFunctionPtr& memberFun) {
+		return *(store->resolve(tagType,memberFun));
 	}
 
 	const BindInfo& FunctionManager::getInfo(const core::BindExprPtr& bind) {
@@ -668,6 +681,7 @@ namespace backend {
 
 
 		ElementInfo* FunctionInfoStore::resolveInternal(const core::NodePtr& fun) {
+
 			// normalize all functions to avoid duplicates
 			core::NodePtr function = core::analysis::normalize(fun);
 
@@ -679,17 +693,16 @@ namespace backend {
 			auto& nameManager = converter.getNameManager();
 			nameManager.setName(function, nameManager.getName(fun));
 
-			// extract function type
+			// resolve all parameter types and the return type
 			auto funType = getFunctionType(function);
-			if (funType->isMember()) {
-				// make sure the object definition, ctors, dtors and member functions have already been resolved
-				// if this would not be the case, we could end up resolving e.g. a ctor while resolving the ctor itself
-
-				// we don't do this for intercepted types
-				if(!(fun.isa<core::LiteralPtr>() && annotations::c::hasIncludeAttached(fun))) {
-					converter.getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)); // ignore result
-				}
+			for(const auto& param : funType->getParameterTypes()) {
+				converter.getTypeManager().getTypeInfo(param);
 			}
+			converter.getTypeManager().getTypeInfo(funType->getReturnType());
+
+			// check whether the function has been resolved as a side-effect of resolving the types
+			pos = funInfos.find(function);
+			if (pos != funInfos.end()) { return pos->second; }
 
 			// obtain function information
 			ElementInfo* info;
@@ -713,6 +726,33 @@ namespace backend {
 			// return pointer to obtained information
 			return info;
 		}
+
+		ElementInfo* FunctionInfoStore::resolveInternal(const core::TagTypePtr& tagType, const core::LambdaExprPtr& fun) {
+
+			// resolve element
+			ElementInfo* info = resolveInternal(fun);
+
+			// attach result also to peeled version for this function
+			auto peeled = tagType->peel(fun);
+			funInfos.insert({core::analysis::normalize(peeled),info});
+
+			// done
+			return info;
+		}
+
+		ElementInfo* FunctionInfoStore::resolveInternal(const core::TagTypePtr& tagType, const core::MemberFunctionPtr& member) {
+
+			// resolve element
+			ElementInfo* info = resolveInternal(member);
+
+			// attach result also to peeled version for this function
+			auto peeled = tagType->peel(member->getImplementation());
+			funInfos.insert({core::analysis::normalize(peeled),info});
+
+			// done
+			return info;
+		}
+
 
 		FunctionInfo* FunctionInfoStore::resolveLiteral(const core::LiteralPtr& literal) {
 			assert_eq(literal->getType()->getNodeType(), core::NT_FunctionType) << "Only supporting literals with a function type!";
@@ -796,13 +836,14 @@ namespace backend {
 
 		FunctionInfo* FunctionInfoStore::resolvePureVirtualMember(const core::PureVirtualMemberFunctionPtr&  pureVirtualMemberFun) {
 
-			// create a literal of the propert type and resolve the literal
+			// create a literal of the proper type and resolve the literal
 			core::IRBuilder builder(pureVirtualMemberFun->getNodeManager());
 			return resolve(builder.literal(pureVirtualMemberFun->getName(), pureVirtualMemberFun->getType()));
 
 		}
 
 		LambdaInfo* FunctionInfoStore::resolveLambda(const core::LambdaExprPtr& lambda) {
+
 			// resolve lambda definitions
 			resolveLambdaDefinition(lambda->getDefinition());
 
@@ -825,7 +866,6 @@ namespace backend {
 			decl->isVirtual = memberFun->isVirtual();
 
 			// check for default members
-			auto classType = core::analysis::getObjectType(memberFun->getType()).as<core::TagTypePtr>();
 			if(core::analysis::isaDefaultMember(memberFun)) {
 
 				// set declaration to default
@@ -1050,10 +1090,10 @@ namespace backend {
 				info->definition = definitions;
 
 				// member functions are declared within object definition
-				core::TagTypePtr classType;
+				core::TypePtr classType;
 				c_ast::NamedCompositeTypePtr classDecl;
 				if(isMember) {
-					classType = core::analysis::getObjectType(funType).as<core::TagTypePtr>();
+					classType = core::analysis::getObjectType(funType);
 					const auto& typeInfo = typeManager.getTypeInfo(classType);
 					info->prototype = typeInfo.definition;
 					classDecl = typeInfo.lValueType.as<c_ast::NamedCompositeTypePtr>();
@@ -1116,10 +1156,8 @@ namespace backend {
 						assert_true(funType.isMemberFunction());
 						auto mfun = cManager->create<c_ast::MemberFunction>(classDecl->name, info->function);
 						c_ast::BodyFlag flag = c_ast::BodyFlag::None;
-						for(auto mem: classType->getRecord()->getMemberFunctions()->getMembers()) {
-							if(classType->peel(mem->getImplementation()) == lambda && core::analysis::isaDefaultMember(mem)) {
-								flag = c_ast::BodyFlag::Default;
-							}
+						if (core::analysis::isaDefaultMember(lambda)) {
+							flag = c_ast::BodyFlag::Default;
 						}
 						auto decl = cManager->create<c_ast::MemberFunctionPrototype>(mfun, flag);
 

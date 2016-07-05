@@ -498,6 +498,7 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, ConversionContext& context) {
+
 		// goal: create a variable declaration and register new variable within variable manager
 		auto manager = converter.getCNodeManager();
 		core::IRBuilder builder(ptr->getNodeManager());
