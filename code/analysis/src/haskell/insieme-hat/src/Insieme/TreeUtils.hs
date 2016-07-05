@@ -20,12 +20,8 @@ collectCallable addr (Node n _) s =
 
 -- | Fold the given 'Tree'. The accumulator function takes the subtree
 -- and the address of this subtree in the base tree.
-foldTree :: Monoid a => (Tree t -> NodeAddress -> a -> a) -> Tree t -> a
-foldTree collect tree = visit tree Seq.empty mempty
-  where
-    visit tree base acc = foldr branch acc (subtrees base tree)
-    subtrees addr tree = zip [goDown i addr | i <- [0..]] (subForest tree)
-    branch (a, t) acc = collect t a (visit t a acc)
+foldTree :: Monoid a => (NodeAddress -> Tree t -> a -> a) -> Tree t -> a
+foldTree = flip foldTreePrune noPrune
 
 -- | Disables pruning for 'foldTreePrune'.
 noPrune :: a -> b -> Bool
