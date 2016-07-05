@@ -59,6 +59,7 @@ namespace haskell {
 		Tree(std::shared_ptr<HSobject> tree);
 
 		std::size_t size() const;
+		void print() const;
 		void printNode(const Address& addr) const;
 
 	};

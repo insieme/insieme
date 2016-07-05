@@ -44,6 +44,13 @@ treeLength tree_c = fromIntegral . length <$> deRefStablePtr tree_c
 foreign export ccall "hat_tree_length"
     treeLength :: StablePtr (Tree IR.Inspire) -> IO CSize
 
+-- | Print default representation of the given tree.
+printTree :: StablePtr (Tree IR.Inspire) -> IO ()
+printTree tree_c = deRefStablePtr tree_c >>= print
+
+foreign export ccall "hat_tree_print"
+    printTree :: StablePtr (Tree IR.Inspire) -> IO ()
+
 -- | 2-dimensional drawing of the Inspire subtree located at the given
 -- address.
 printNode :: StablePtr (Tree IR.Inspire) -> StablePtr Addr.NodeAddress -> IO ()
