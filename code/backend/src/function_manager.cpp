@@ -826,7 +826,7 @@ namespace backend {
 			}
 
 			// fix name
-			auto name = utils::demangle(memberFun->getNameAsString());
+			auto name = utils::demangleToIdentifier(memberFun->getNameAsString());
 			converter.getNameManager().setName(impl, name);
 
 			// convert implementation

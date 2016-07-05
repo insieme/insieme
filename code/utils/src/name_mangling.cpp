@@ -55,82 +55,97 @@ namespace utils {
 		static const string mangleLocation = "IMLOC";
 		static const string mangleEmpty = "EMPTY";
 
-		std::vector<std::pair<string, string>> replacements = {
-		                                                       {"operator<<=", "_operator_lshift_assign_"},
-		                                                       {"operator>>=", "_operator_rshift_assign_"},
-		                                                       {"operator->*", "_operator_memberpointer_"},
-		                                                       {"operator+=",  "_operator_plus_assign_"},
-		                                                       {"operator-=",  "_operator_minus_assign_"},
-		                                                       {"operator*=",  "_operator_mult_assign_"},
-		                                                       {"operator/=",  "_operator_div_assign_"},
-		                                                       {"operator%=",  "_operator_mod_assign_"},
-		                                                       {"operator^=",  "_operator_xor_assign_"},
-		                                                       {"operator&=",  "_operator_and_assign_"},
-		                                                       {"operator|=",  "_operator_or_assign_"},
-		                                                       {"operator<<",  "_operator_lshift_"},
-		                                                       {"operator>>",  "_operator_rshift_"},
-		                                                       {"operator==",  "_operator_eq_"},
-		                                                       {"operator!=",  "_operator_neq_"},
-		                                                       {"operator<=",  "_operator_le_"},
-		                                                       {"operator>=",  "_operator_ge_"},
-		                                                       {"operator&&",  "_operator_land_"},
-		                                                       {"operator||",  "_operator_lor_"},
-		                                                       {"operator++",  "_operator_inc_"},
-		                                                       {"operator--",  "_operator_dec_"},
-		                                                       {"operator->",  "_operator_member_"},
-		                                                       {"operator()",  "_operator_call_"},
-		                                                       {"operator[]",  "_operator_subscript_"},
-		                                                       {"operator+",   "_operator_plus_"},
-		                                                       {"operator-",   "_operator_minus_"},
-		                                                       {"operator*",   "_operator_mult_"},
-		                                                       {"operator/",   "_operator_div_"},
-		                                                       {"operator%",   "_operator_mod_"},
-		                                                       {"operator^",   "_operator_xor_"},
-		                                                       {"operator&",   "_operator_and_"},
-		                                                       {"operator|",   "_operator_or_"},
-		                                                       {"operator~",   "_operator_complement_"},
-		                                                       {"operator=",   "_operator_assign_"},
-		                                                       {"operator<",   "_operator_lt_"},
-		                                                       {"operator>",   "_operator_gt_"},
-		                                                       {"operator,",   "_operator_comma_"},
-		                                                       {"<", "_lt_"},
-		                                                       {">", "_gt_"},
-		                                                       {":", "_colon_"},
-		                                                       {" ", "_space_"},
-		                                                       {"(", "_lparen_"},
-		                                                       {")", "_rparen_"},
-		                                                       {"[", "_lbracket_"},
-		                                                       {"]", "_rbracket_"},
-		                                                       {",", "_comma_"},
-		                                                       {"*", "_star_"},
-		                                                       {"&", "_ampersand_"},
-		                                                       {".", "_dot_"},
-		                                                       {"+", "_plus_"},
-		                                                       {"/", "_slash_"},
-		                                                       {"-", "_minus_"},
-		                                                       {"~", "_wave_"},
-		                                                       {manglePrefix, "_not_really_an_imp_philipp_what_are_you_talking_about_sorry_"},
-		                                                       {mangleLocation, "_not_really_mangle_location_"},
-		                                                       {mangleEmpty, "_not_really_mangle_empty_"}
+		using StringPairs = std::vector<std::pair<string, string>>;
+
+		const StringPairs operators = {
+			{"operator<<=", "_operator_lshift_assign_"},
+			{"operator>>=", "_operator_rshift_assign_"},
+			{"operator->*", "_operator_memberpointer_"},
+			{"operator+=",  "_operator_plus_assign_"},
+			{"operator-=",  "_operator_minus_assign_"},
+			{"operator*=",  "_operator_mult_assign_"},
+			{"operator/=",  "_operator_div_assign_"},
+			{"operator%=",  "_operator_mod_assign_"},
+			{"operator^=",  "_operator_xor_assign_"},
+			{"operator&=",  "_operator_and_assign_"},
+			{"operator|=",  "_operator_or_assign_"},
+			{"operator<<",  "_operator_lshift_"},
+			{"operator>>",  "_operator_rshift_"},
+			{"operator==",  "_operator_eq_"},
+			{"operator!=",  "_operator_neq_"},
+			{"operator<=",  "_operator_le_"},
+			{"operator>=",  "_operator_ge_"},
+			{"operator&&",  "_operator_land_"},
+			{"operator||",  "_operator_lor_"},
+			{"operator++",  "_operator_inc_"},
+			{"operator--",  "_operator_dec_"},
+			{"operator->",  "_operator_member_"},
+			{"operator()",  "_operator_call_"},
+			{"operator[]",  "_operator_subscript_"},
+			{"operator+",   "_operator_plus_"},
+			{"operator-",   "_operator_minus_"},
+			{"operator*",   "_operator_mult_"},
+			{"operator/",   "_operator_div_"},
+			{"operator%",   "_operator_mod_"},
+			{"operator^",   "_operator_xor_"},
+			{"operator&",   "_operator_and_"},
+			{"operator|",   "_operator_or_"},
+			{"operator~",   "_operator_complement_"},
+			{"operator=",   "_operator_assign_"},
+			{"operator<",   "_operator_lt_"},
+			{"operator>",   "_operator_gt_"},
+			{"operator,",   "_operator_comma_"}
 		};
 
+		const StringPairs mangling = {
+			{"<", "_lt_"},
+			{">", "_gt_"},
+			{":", "_colon_"},
+			{" ", "_space_"},
+			{"(", "_lparen_"},
+			{")", "_rparen_"},
+			{"[", "_lbracket_"},
+			{"]", "_rbracket_"},
+			{",", "_comma_"},
+			{"*", "_star_"},
+			{"&", "_ampersand_"},
+			{".", "_dot_"},
+			{"+", "_plus_"},
+			{"/", "_slash_"},
+			{"-", "_minus_"},
+			{"~", "_wave_"},
+			{manglePrefix, "_not_really_an_imp_philipp_what_are_you_talking_about_sorry_"},
+			{mangleLocation, "_not_really_mangle_location_"},
+			{mangleEmpty, "_not_really_mangle_empty_"}
+		};
+
+		StringPairs replacements;
+
+		const StringPairs& getReplacements() {
+			if(replacements.empty()) {
+				std::copy(operators.cbegin(), operators.cend(), std::back_inserter(replacements));
+				std::copy(mangling.cbegin(), mangling.cend(), std::back_inserter(replacements));
+			}
+			return replacements;
+		}
+
 		string applyReplacements(string in) {
-			for(auto& mapping : replacements) {
+			for(auto& mapping : getReplacements()) {
 				boost::replace_all(in, mapping.first, mapping.second);
 			}
 			return in;
 		}
 
 		string reverseReplacements(string in) {
-			for(auto& mapping : replacements) {
+			for(auto& mapping : getReplacements()) {
 				boost::replace_all(in, mapping.second, mapping.first);
 			}
 			return in;
 		}
 
-		string replaceToNil(string in) {
-			for(auto& mapping : replacements) {
-				boost::replace_all(in, mapping.first, "");
+		string removeMangled(string in) {
+			for(auto& mapping : mangling) {
+				boost::replace_all(in, mapping.second, "");
 			}
 			return in;
 		}
@@ -165,8 +180,8 @@ namespace utils {
 	}
 
 	string demangleToIdentifier(string name, bool keepLocation) {
-		auto demangled = demangle(name, keepLocation);
-		return replaceToNil(demangled);
+		auto str = removeMangled(name);
+		return demangle(str, keepLocation);
 	}
 
 	const string& getMangledOperatorAssignName() {
