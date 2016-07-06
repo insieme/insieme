@@ -34,7 +34,7 @@ foldTreePrune :: Monoid a
                 -> (NodeAddress -> Tree t -> Bool)     -- ^ prune subtrees?
                 -> Tree t                            -- ^ initial tree
                 -> a                                 -- ^ accumulated result
-foldTreePrune collect keep tree = visit (Seq.singleton 0) tree mempty
+foldTreePrune collect keep tree = visit  Seq.empty tree mempty
   where
     visit base tree acc = if keep base tree
                           then collect base tree $ visitsub base tree acc
