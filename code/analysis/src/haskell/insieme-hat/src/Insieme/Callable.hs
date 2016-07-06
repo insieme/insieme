@@ -18,5 +18,6 @@ data Callable =
 type CallableSet = Set.Set Callable
 
 instance Lattice CallableSet where
-    bot = Set.empty
+    bot  = Set.empty
+    -- top  = error "top CallableSet undefined"   -- TODO
     join = Set.union

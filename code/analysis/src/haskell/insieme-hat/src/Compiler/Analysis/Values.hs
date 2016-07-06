@@ -28,6 +28,8 @@ class Eq v => Lattice v where
   bot  :: v
   -- | combine elements (think: 'Data.List.union')
   join :: v -> v -> v
+  -- | top element
+  -- top  :: v   -- TODO
 
 -- | Commonly, lists are lattices through list union.
 instance Eq v => Lattice [v] where
