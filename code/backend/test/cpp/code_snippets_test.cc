@@ -829,32 +829,71 @@ namespace backend {
 		}
 	}
 
+	TEST(CppSnippet, ConversionOperator) {
+		core::ProgramPtr program = builder.parseProgram(R"(
+			def struct IMP_ConversionOperator {
+				x : int<4>;
+				function IMP__conversion_operator_int = () -> int<4> {
+					return *(this).x;
+				}
+				function IMP__conversion_operator_int_space__star_ = () -> ptr<int<4>> {
+					return ptr_from_ref((this).x);
+				}
+			};
+			int<4> main() {
+				var ref<IMP_ConversionOperator,f,f,plain> cv = IMP_ConversionOperator::(ref_decl(type_lit(ref<IMP_ConversionOperator,f,f,plain>)));
+				var ref<int<4>,f,f,plain> a = cv.IMP__conversion_operator_int();
+				var ref<ptr<int<4>>,f,f,plain> b = cv.IMP__conversion_operator_int_space__star_();
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "int32_t a = cv.operator int();");
+		EXPECT_PRED2(containsSubString, code, "int32_t* b = cv.operator int *();");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 	TEST(CppSnippet, Constructors) {
 		core::ProgramPtr program = builder.parseProgram(R"(
-				alias int = int<4>;
+			alias int = int<4>;
 
-				def struct A {
-					x : int;
-					ctor( ) {
-						<ref<int>>(this.x){12};
-					}
-					ctor( x : int ) {
-						<ref<int>>(this.x){x};
-					}
-					ctor( x : int , y : int ) {
-						<ref<int>>(this.x){x + y};
-					}
-				};
-
-				def A:: f = ctor ( x : int, y : int, z : int ) {
-					<ref<int>>(this.x){x + y + z};
-				};
-
-				int main() {
-					var ref<A> a;
-					var ref<A> b = f(b, 1, 2, 3);
-					return 0;
+			def struct A {
+				x : int;
+				ctor( ) {
+					<ref<int>>(this.x){12};
 				}
+				ctor( x : int ) {
+					<ref<int>>(this.x){x};
+				}
+				ctor( x : int , y : int ) {
+					<ref<int>>(this.x){x + y};
+				}
+			};
+
+			def A:: f = ctor ( x : int, y : int, z : int ) {
+				<ref<int>>(this.x){x + y + z};
+			};
+
+			int main() {
+				var ref<A> a;
+				var ref<A> b = f(b, 1, 2, 3);
+				return 0;
+			}
 		)");
 
 		ASSERT_TRUE(program);

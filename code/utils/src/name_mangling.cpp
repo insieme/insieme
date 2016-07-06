@@ -51,7 +51,7 @@ namespace utils {
 
 	namespace {
 
-		static const string manglePrefix = "IMP";
+		static const string manglePrefix = "IMP_";
 		static const string mangleLocation = "IMLOC";
 		static const string mangleEmpty = "EMPTY";
 
@@ -94,7 +94,8 @@ namespace utils {
 			{"operator=",   "_operator_assign_"},
 			{"operator<",   "_operator_lt_"},
 			{"operator>",   "_operator_gt_"},
-			{"operator,",   "_operator_comma_"}
+			{"operator,",   "_operator_comma_"},
+			{"operator ",   "_conversion_operator_"}
 		};
 
 		const StringPairs mangling = {
@@ -152,23 +153,22 @@ namespace utils {
 	}
 
 	string mangle(string name, string file, unsigned line, unsigned column) {
-		// in order to correctly handle empty names
-		if(name.empty()) return mangle(file, line, column);
-		return format("%s_%s_%s_%s_%u_%u", manglePrefix, applyReplacements(name), mangleLocation, applyReplacements(file), line, column);
+		if(name.empty()) name = mangleEmpty;
+		else name = applyReplacements(name);
+		return format("%s%s_%s_%s_%u_%u", manglePrefix, name, mangleLocation, applyReplacements(file), line, column);
 	}
 
 	string mangle(string file, unsigned line, unsigned column) {
-		// we cannot call the other mangle function here as it would replace mangleEmpty
-		return format("%s_%s_%s_%s_%u_%u", manglePrefix, mangleEmpty, mangleLocation, applyReplacements(file), line, column);
+		return mangle("", file, line, column);
 	}
 
 	string mangle(string name) {
-		return format("%s_%s", manglePrefix, applyReplacements(name));
+		return format("%s%s", manglePrefix, applyReplacements(name));
 	}
 
 	string demangle(string name, bool keepLocation) {
 		if(!boost::starts_with(name, manglePrefix)) return name;
-		auto ret = name.substr(manglePrefix.size()+1);
+		auto ret = name.substr(manglePrefix.size());
 		if(boost::starts_with(ret, mangleEmpty)) return "";
 		if(!keepLocation) {
 			auto loc = ret.find(mangleLocation);
@@ -180,6 +180,12 @@ namespace utils {
 	}
 
 	string demangleToIdentifier(string name, bool keepLocation) {
+		// special case for conversion operators
+		static string convOpMangled = mangle("operator ");
+		if(boost::starts_with(name, convOpMangled)) {
+			return demangle(name);
+		}
+		// default case
 		auto str = removeMangled(name);
 		return demangle(str, keepLocation);
 	}
