@@ -58,7 +58,7 @@ namespace analysis {
 	template <typename Backend>
 	class CBA_Interface : public testing::Test {
 	protected:
-		CBA_Interface() : getDefinitionPoint(&(analysis<Backend,getDefinitionPointAnalysis>())) {}
+		CBA_Interface() : getDefinitionPoint(&(analysis<getDefinitionPointAnalysis,Backend>())) {}
 		core::VariableAddress (*getDefinitionPoint)(const core::VariableAddress&);
 	};
 

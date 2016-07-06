@@ -108,17 +108,17 @@ namespace analysis {
 
 	public:
 		ActualTest()
-		        : areAlias(&(analysis<Backend,areAliasAnalysis>()))
-		        , mayAlias(&(analysis<Backend,mayAliasAnalysis>()))
-		        , notAlias(&(analysis<Backend,notAliasAnalysis>()))
+		        : areAlias(&(analysis<areAliasAnalysis,Backend>()))
+		        , mayAlias(&(analysis<mayAliasAnalysis,Backend>()))
+		        , notAlias(&(analysis<notAliasAnalysis,Backend>()))
 
-		        , isTrue(&(analysis<Backend,isTrueAnalysis>()))
-		        , isFalse(&(analysis<Backend,isFalseAnalysis>()))
-		        , mayBeTrue(&(analysis<Backend,mayBeTrueAnalysis>()))
-		        , mayBeFalse(&(analysis<Backend,mayBeFalseAnalysis>()))
+		        , isTrue(&(analysis<isTrueAnalysis,Backend>()))
+		        , isFalse(&(analysis<isFalseAnalysis,Backend>()))
+		        , mayBeTrue(&(analysis<mayBeTrueAnalysis,Backend>()))
+		        , mayBeFalse(&(analysis<mayBeFalseAnalysis,Backend>()))
 
-		        , getIntegerValues(&(analysis<Backend,getIntegerValuesAnalysis>()))
-		        , isIntegerConstant(&(analysis<Backend,isIntegerConstantAnalysis>())) {}
+		        , getIntegerValues(&(analysis<getIntegerValuesAnalysis,Backend>()))
+		        , isIntegerConstant(&(analysis<isIntegerConstantAnalysis,Backend>())) {}
 
 
 		void operator()(const std::string &filename) {

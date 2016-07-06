@@ -70,10 +70,10 @@ namespace analysis {
 		bool (*impl_mayBeFalse)(const core::ExpressionAddress&);
 
 		BooleanValue()
-			: impl_isTrue(&(analysis<Backend, isTrueAnalysis>())),
-			  impl_isFalse(&(analysis<Backend, isFalseAnalysis>())),
-			  impl_mayBeTrue(&(analysis<Backend, mayBeTrueAnalysis>())),
-			  impl_mayBeFalse(&(analysis<Backend, mayBeFalseAnalysis>())) {}
+			: impl_isTrue(&(analysis<isTrueAnalysis,Backend>())),
+			  impl_isFalse(&(analysis<isFalseAnalysis,Backend>())),
+			  impl_mayBeTrue(&(analysis<mayBeTrueAnalysis,Backend>())),
+			  impl_mayBeFalse(&(analysis<mayBeFalseAnalysis,Backend>())) {}
 
 		bool isTrue(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
 			auto expr = getBuilder().parseExpr(code, symbols);

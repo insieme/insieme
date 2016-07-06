@@ -81,7 +81,7 @@
  */
 #define add_cba_implementation(ENGINE, ANALYSIS)                                   \
     template<>                                                                     \
-    struct analysis<ENGINE##Engine,ANALYSIS##Analysis>                             \
+    struct analysis<ANALYSIS##Analysis,ENGINE##Engine>                             \
                     : public ANALYSIS##Analysis::template with<ENGINE::ANALYSIS> {};
 
 
@@ -96,7 +96,7 @@ namespace analysis {
 	 * - operator() to run the actual analysis, or
 	 * - operator&  to get a pointer to the actual analysis implementation
 	 */
-	template<typename Framework, typename Analysis>
+	template<typename Analysis,typename Framework>
 	struct analysis;
 
 
