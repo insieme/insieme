@@ -49,6 +49,7 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/printer/error_printer.h"
+#include "insieme/core/transform/node_replacer.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/state/variable_manager.h"
@@ -85,10 +86,80 @@ namespace frontend {
 			return "";
 		}
 
+		/*
+		 * Returns a new tree derived from the given actual tree.
+		 * Both given trees have to have an identical structure.
+		 * The StringValue(prefixes) "__any_string__" in expected can be anything in actual, and will be replaced with the matching StringValue(prefixes)
+		 * from the expected tree. the Suffixes (delimited by "::") will keep the same.
+		 *
+		 * As an example, calling the function with the following trees:
+		 * expected:                                          actual:
+		 * - someRoot                                         - someRoot
+		 *   `- "__any_string__1"                               `- "SomeStringInActual"
+		 *   `- 4                                               `- 20
+		 *   `- someNode                                        `- someNode
+		 *      `- someChild                                       `- someChild
+		 *      |  `- 8                                            |  `- 1000
+		 *      |  `- "__any_string__2::ExpectedSuffix"            |  `- "AnotherString::ActualSuffix"
+		 *      `- "__any_string__1::FooSuffix"                    `- "SomeStringInActual::BarSuffix"
+		 *      `- "__any_string__2"                               `- "AnotherString"
+		 *      `- someLeaf                                        `- someLeaf
+		 *
+		 * Will return the following tree:
+		 * - someRoot
+		 *   `- "__any_string__1"
+		 *   `- 20
+		 *   `- someNode
+		 *      `- someChild
+		 *      |  `- 1000
+		 *      |  `- "__any_string__2::ActualSuffix"
+		 *      `- "__any_string__1::BarSuffix"
+		 *      `- "__any_string__2"
+		 *      `- someLeaf
+		 */
+		static inline NodePtr replaceAnyStringsInActual(const NodePtr& expected, const NodePtr& actual) {
+			NodeManager& mgr = expected.getNodeManager();
+			IRBuilder builder(mgr);
+
+			static const std::string markerPrefix = "__any_string__";
+
+			std::map<NodeAddress, NodePtr> replacements;
+			std::map<std::string, std::string> nameMappings;
+
+			visitDepthFirst(NodeAddress(expected), [&](const StringValueAddress& addr) {
+				auto& expectedName = addr->getValue();
+				if(boost::starts_with(expectedName, markerPrefix)) {
+					auto targetAddr = addr.switchRoot(actual);
+					if (!targetAddr || !targetAddr.isa<StringValueAddress>()) {
+						assert_fail() << "Invalid tree structure";
+					}
+					//if we found an instance without any appended member name
+					if(!boost::contains(expectedName, "::")) {
+						//add it to our mapping
+						nameMappings[targetAddr->getValue()] = expectedName;
+						replacements[targetAddr] = addr.getAddressedNode();
+
+						//otherwise we have to replace only a part of the string
+					} else {
+						auto& targetName = targetAddr->getValue();
+						auto seperatorIndex = targetName.find("::");
+						auto prefix = targetName.substr(0, seperatorIndex);
+						replacements[targetAddr] = builder.stringValue(nameMappings[prefix] + targetName.substr(seperatorIndex));
+					}
+				}
+			}, true, true);
+
+			if(replacements.empty()) {
+				return actual;
+			}
+			return core::transform::replaceAll(mgr, replacements);
+		}
+
 		static inline void checkExpected(NodePtr expected, NodePtr actual, const NodeAddress& addr) {
 			ASSERT_TRUE(actual) << "Actual IR pointer null!";
 			ASSERT_TRUE(expected) << "Expected IR pointer null (likely parser error)!\n"
 			                      << "  Location: " << *core::annotations::getLocation(addr) << "\n";
+
 			IRBuilder builder(expected->getNodeManager());
 			bool eIsExp = expected.isa<ExpressionPtr>();
 			bool aIsExp = actual.isa<ExpressionPtr>();
@@ -100,7 +171,33 @@ namespace frontend {
 				return core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_DEFAULT | core::printer::PrettyPrinter::USE_COLOR
 				                                              | core::printer::PrettyPrinter::PRINT_DEREFS | core::printer::PrettyPrinter::FULL_LITERAL_SYNTAX);
 			};
-			EXPECT_EQ(expected, actual) << "\tLocation     : " << core::annotations::getLocationString(addr) << "\n"
+			const auto emptyStringValue = builder.stringValue("");
+			auto removeStringValues = [&emptyStringValue](const NodePtr& root) {
+				return core::transform::transformBottomUpGen(root, [&emptyStringValue](const StringValuePtr& stringValue){
+					return emptyStringValue;
+				}, core::transform::globalReplacement);
+			};
+
+			// first we check whether the given trees are identical
+			bool result = (expected == actual);
+
+			// if this isn't the case we compare them with a special handling for StringValues, which might be different and are tagged with a special marker
+			if(!result) {
+				// first we create copies of both trees which have all their StringValues set to "", so we actually only compare their structure
+				auto expectedCopy = removeStringValues(expected);
+				auto actualCopy = removeStringValues(actual);
+
+				// if the copies are not identical now, the trees differ structurally
+				result = (expectedCopy == actualCopy);
+
+				// if they are identical, we compare them with a special treatment for our string markers
+				if(result) {
+					actual = replaceAnyStringsInActual(expected, actual);
+					result = (expected == actual);
+				}
+			}
+
+			EXPECT_TRUE(result)         << "\tLocation     : " << core::annotations::getLocationString(addr) << "\n"
 			                            << "\tActual Pretty: " << print(actual) << "\n"
 			                            << "\tExpect Pretty: " << print(expected) << "\n"
 			                            //<< "\tActual Text: " << dumpText(actual) << "\n"
