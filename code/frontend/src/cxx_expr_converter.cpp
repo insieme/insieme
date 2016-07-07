@@ -764,6 +764,24 @@ namespace conversion {
 		return retIr;
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//		LambdaExpr ( [](){} )
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr Converter::CXXExprConverter::VisitLambdaExpr(const clang::LambdaExpr* lExpr) {
+		core::ExpressionPtr retIr;
+		LOG_EXPR_CONVERSION(lExpr, retIr);
+
+		auto genTy = converter.convertType(clang::QualType(lExpr->getLambdaClass()->getTypeForDecl(), 0)).as<core::GenericTypePtr>();
+
+		core::ExpressionList initExprs;
+		for(auto capture: lExpr->capture_inits()) {
+			initExprs.push_back(converter.convertExpr(capture));
+		}
+
+		// generate init expr of the lambda type
+		return builder.initExprTemp(genTy, initExprs);
+	}
+
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace
