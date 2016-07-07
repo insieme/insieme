@@ -140,7 +140,14 @@ int main() {
 	// ENUM TYPES //////////////////////////////////////////////////////////////
 
 	typedef enum { Bla, Alb } enum_t;
-	#pragma test expect_ir("REGEX", R"(.*var ref<\(type<enum_def<IMP_enum_t_IMLOC.*,int<4>,enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Bla,0>,enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Alb,1>>>, int<4>\),f,f,plain> v0 = .*)")
+	#pragma test expect_ir(R"(
+		var ref<(type<enum_def<__any_string__,int<4>,
+				enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Bla,0>,
+				enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Alb,1>>>, int<4>),f,f,plain> v0 =
+			ref_decl(type_lit(ref<(type<enum_def<__any_string__,int<4>,
+					enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Bla,0>,
+					enum_entry<IMP_main_lparen__rparen__colon__colon__colon__colon_Alb,1>>>, int<4>),f,f,plain>));
+	)")
 	enum_t enu;
 	enum { XY, ZR } bla;
 
@@ -150,13 +157,28 @@ int main() {
 	struct { int i; } swi_anon;
 
 	typedef struct swi_s { int i; } swi_t;
-	#pragma test expect_ir("REGEX", R"(.*ref<\w+swi_s\w+,f,f,plain> v0 = .*)")
+	#pragma test expect_ir(R"(
+		def struct __any_string__ {
+			i : int<4>;
+		};
+		var ref<__any_string__,f,f,plain> v0 = ref_decl(type_lit(ref<__any_string__,f,f,plain>));
+	)")
 	swi_t swi_1;
-	#pragma test expect_ir("REGEX", R"(.*ref<\w+swi_s\w+,f,f,plain> v0 = .*)")
+	#pragma test expect_ir(R"(
+		def struct __any_string__ {
+			i : int<4>;
+		};
+		var ref<__any_string__,f,f,plain> v0 = ref_decl(type_lit(ref<__any_string__,f,f,plain>));
+	)")
 	struct swi_s swi_2;
 
 	typedef union { int i; } union_t;
-	#pragma test expect_ir("REGEX", R"(.*ref<\w+union_t\w+,f,f,plain> v0 = .*)")
+	#pragma test expect_ir(R"(
+		def union __any_string__ {
+			i : int<4>;
+		};
+		var ref<__any_string__,f,f,plain> v0 = ref_decl(type_lit(ref<__any_string__,f,f,plain>));
+	)")
 	union_t uni;
 
 	#pragma test expect_ir("REGEX_S", R"(.*ref<union \{ \w+ : struct \{ a : int<4>; b : int<4>; \}; v : array<int<4>,2>; \},f,f,plain> v0.*)")
