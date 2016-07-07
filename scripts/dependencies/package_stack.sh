@@ -15,7 +15,6 @@ DEPENDS="gmp zlib"
 export CPATH="$PREFIX/gmp-latest/include:$PREFIX/zlib-latest/include"
 export LIBRARY_PATH="$PREFIX/gmp-latest/lib:$PREFIX/zlib-latest/lib"
 export LD_LIBRARY_PATH="$PREFIX/gmp-latest/lib:$PREFIX/zlib-latest/lib"
-export STACK_ROOT="$(cd "$(dirname "$1")"; pwd)/$(basename "$1")/$PACKAGE-linux-x86_64/stack-root"
 
 pkg_download() {
 	wget -nc "$URL"
@@ -30,11 +29,11 @@ pkg_extract() {
 }
 
 pkg_configure() {
-	"../$PACKAGE-linux-x86_64/stack" setup
+	STACK_ROOT="$PKG_TEMP/stack-root" "../$PACKAGE-linux-x86_64/stack" setup
 }
 
 pkg_build() {
-	"../$PACKAGE-linux-x86_64/stack" build
+	STACK_ROOT="$PKG_TEMP/stack-root" "../$PACKAGE-linux-x86_64/stack" build
 }
 
 pkg_install() {
