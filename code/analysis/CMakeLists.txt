@@ -45,6 +45,7 @@ link_directories(${CMAKE_CURRENT_BINARY_DIR}/src/haskell/insieme-hat)
 
 # add directories containing libffi, libHSrts and gmp
 link_directories(${LIBHSRTS_DIR})
+link_directories(${LIBHSRTS_DIR2})
 link_directories(${GMP_ROOT}/lib)
 
 
