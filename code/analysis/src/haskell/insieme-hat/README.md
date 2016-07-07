@@ -39,6 +39,9 @@ usual:
     export LIBRARY_PATH="$INSIEME_LIBS_HOME/gmp-latest/lib:$INSIEME_LIBS_HOME/zlib-latest/lib:$LIBRARY_PATH"
     export LD_LIBRARY_PATH="$INSIEME_LIBS_HOME/gmp-latest/lib:$INSIEME_LIBS_HOME/zlib-latest/lib:$LD_LIBRARY_PATH"
 
+**Note: Certain paths and flags have to be updated when using different version
+GHC.**
+
 ## Development Workflow
 
 While the Haskell package can not be used as standalone (for now), it is not
@@ -65,6 +68,15 @@ Haskell and vice versa. A pointer to the resulting Haskell object is returned,
 which can be used as a handle inside the C/C++ part. This handle can be passed,
 for instance, to one of the analysis function.
 
+## Builiding Internal Documentation
+
+While `stack` can run `haddock` on a whole package it only takes exposed
+modules into account and there is no way to pass a `--internal` flag as you
+could do with `cabal`. A simple workaround is to move all modules from the
+`other-modules` list of the `library` section in `insieme-hat.cabal` to
+`exposed-modules` and run `stack haddock --no-haddock-deps`. The resulting
+files will be located inside `.stack-work/doc/.../insieme-hat`.
+
 ## Known Issues
 
 ### Package Hash in library name
@@ -82,7 +94,7 @@ referred to by the renamed one.
 
 [^1]: see <https://www.vex.net/~trebla/haskell/sicp.xhtml>
 
-## `stack build` .. `make`
+### `stack build` .. `make`
 
 When building the Haskell package manually with by issuing `stack build` the
 Haskell runtime environment will not be linked. If one now builds INSIEME
@@ -92,4 +104,5 @@ recompile the library despite a different flag
 in a linking error later on.
 
 Just insert a newline in any source file of the Haskell project and run `make`
-again. `stack` should now rebuild the shared library.
+again. `stack` should now rebuild the shared library. If this does not help,
+remove the `.stack-work` folder and run `make`.
