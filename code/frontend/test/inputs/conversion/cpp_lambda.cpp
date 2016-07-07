@@ -35,18 +35,31 @@
  */
 
 int main() {
+	;
 
-	#pragma test expect_ir(R"({})")
+	#pragma test expect_ir(R"(
+		decl struct __any_string__;
+		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen__rparen_:const __any_string__::() -> ptr<() -> unit,t,f>;
+		def struct __any_string__ {
+			const function IMP__operator_call_ = () -> unit {
+				5;
+			}
+		};
+		{
+			var ref<__any_string__,f,f,plain> v0 = <ref<__any_string__,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
+			v0.IMP__operator_call_();
+		}
+	)")
 	{
 		auto l1 = []{ 5; };
 		l1();
 	}
 
-	#pragma test expect_ir(R"({})")
-	{
-		int captureCopy;
-		auto l1 = [captureCopy]{ captureCopy; };
-	}
+//	#pragma test expect_ir(R"({})")
+//	{
+//		int captureCopy;
+//		auto l1 = [captureCopy]{ captureCopy; };
+//	}
 
 	//{
 	//	int captureRef;
@@ -67,9 +80,21 @@ int main() {
 	//	auto l1 = [captureCopy,&captureRef](int param){ 5; };
 	//}
 
-	//{
-	//	auto l1 = []{ return 5; };
-	//}
+	#pragma test expect_ir(R"(
+		decl struct __any_string__;
+		decl IMP__conversion_operator_int_space__lparen__star__rparen__lparen__rparen_:const __any_string__::() -> ptr<() -> int<4>,t,f>;
+		def struct __any_string__ {
+				const function IMP__operator_call_ = () -> int<4> {
+						return 5;
+				}
+		};
+		{
+				var ref<__any_string__,f,f,plain> v0 = <ref<__any_string__,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
+		}
+	)")
+	{
+		auto l1 = []{ return 5; };
+	}
 
 	return 0;
 }

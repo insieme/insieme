@@ -225,9 +225,6 @@ namespace utils {
 				// no need to qualify method name
 				name = funcDecl->getNameAsString();
 			}
-			if(method->getParent()) {
-				if(method->getParent()->isLambda()) { name = createNameForAnon("lambda", method->getParent(), funcDecl->getASTContext().getSourceManager()); }
-			}
 		}
 
 		// mangle name
