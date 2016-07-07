@@ -47,5 +47,5 @@ pkg_install() {
 }
 
 pkg_cleanup() {
-	rm -rf "$PACKAGE" "$PACKAGE-linux-x86_64" "$FILE" "$FILE_PB"
+	rm -rf "$PACKAGE" "$PACKAGE-linux-x86_64" "stack-root" "$FILE" "$FILE_PB"
 }
