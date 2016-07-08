@@ -771,12 +771,14 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(lExpr, retIr);
 
-		auto genTy = converter.convertType(clang::QualType(lExpr->getLambdaClass()->getTypeForDecl(), 0)).as<core::GenericTypePtr>();
-
+		// gather init expressions
 		core::ExpressionList initExprs;
 		for(auto capture: lExpr->capture_inits()) {
 			initExprs.push_back(converter.convertExpr(capture));
 		}
+
+		// translate implicitly created class
+		auto genTy = converter.convertType(clang::QualType(lExpr->getLambdaClass()->getTypeForDecl(), 0)).as<core::GenericTypePtr>();
 
 		// generate init expr of the lambda type
 		return builder.initExprTemp(genTy, initExprs);

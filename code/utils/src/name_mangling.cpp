@@ -155,7 +155,8 @@ namespace utils {
 	string mangle(string name, string file, unsigned line, unsigned column) {
 		if(name.empty()) name = mangleEmpty;
 		else name = applyReplacements(name);
-		return format("%s%s_%s_%s_%u_%u", manglePrefix, name, mangleLocation, applyReplacements(file), line, column);
+		//return format("%s%s_%s_%s_%u_%u", manglePrefix, name, mangleLocation, applyReplacements(file), line, column);
+		return format("%s%s", manglePrefix, name);
 	}
 
 	string mangle(string file, unsigned line, unsigned column) {

@@ -34,67 +34,144 @@
  * regarding third party software licenses.
  */
 
+//struct C {
+//	int x;
+//
+//	C() {
+//		#pragma test expect_ir(R"(
+//			{}
+//		)")
+//		auto l = [this]{
+//			x;
+//		};
+//	}
+//};
+
 int main() {
 	;
 
-	#pragma test expect_ir(R"(
-		decl struct __any_string__;
-		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen__rparen_:const __any_string__::() -> ptr<() -> unit,t,f>;
-		def struct __any_string__ {
-			const function IMP__operator_call_ = () -> unit {
-				5;
-			}
-		};
-		{
-			var ref<__any_string__,f,f,plain> v0 = <ref<__any_string__,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
-			v0.IMP__operator_call_();
-		}
-	)")
-	{
-		auto l1 = []{ 5; };
-		l1();
-	}
-
-//	#pragma test expect_ir(R"({})")
-//	{
-//		int captureCopy;
-//		auto l1 = [captureCopy]{ captureCopy; };
-//	}
-
+	//#pragma test expect_ir(R"(
+	//	decl struct __any_string__;
+	//	decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen__rparen_:const __any_string__::() -> ptr<() -> unit,t,f>;
+	//	def struct __any_string__ {
+	//		const function IMP__operator_call_ = () -> unit {
+	//			5;
+	//		}
+	//	};
+	//	{
+	//		var ref<__any_string__,f,f,plain> v0 = <ref<__any_string__,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
+	//		v0.IMP__operator_call_();
+	//	}
+	//)")
 	//{
-	//	int captureRef;
-	//	auto l1 = [&captureRef]{ captureRef; };
+	//	auto l1 = []{ 5; };
+	//	l1();
 	//}
 
+	//#pragma test expect_ir(R"(
+	//	def struct __any_string__class {
+	//		capture_0 : int<4>;
+	//		const function IMP__operator_call_ = () -> unit {
+	//			(this).capture_0;
+	//		}
+	//	};
+	//	{
+	//		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+	//		var ref<__any_string__class,f,f,plain> v1 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {*v0};
+	//	}
+	//)")
+	//{
+	//	int captureCopy;
+	//	auto l1 = [captureCopy]{ captureCopy; };
+	//}
+
+	//#pragma test expect_ir(R"(
+	//	def struct __any_string__class {
+	//		capture_0 : int<4>;
+	//		function IMP__operator_call_ = () -> unit {
+	//			(this).capture_0 = 5;
+	//		}
+	//	};
+	//	{
+	//		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+	//		var ref<__any_string__class,f,f,plain> v1 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {*v0};
+	//	}
+	//)")
+	//{
+	//	int captureCopy;
+	//	auto l1 = [captureCopy]() mutable { captureCopy = 5; };
+	//}
+
+	//#pragma test expect_ir(R"(
+	//	def struct __any_string__class {
+	//		__any_string__field : ref<int<4>,f,f,cpp_ref>;
+	//		const function IMP__operator_call_ = () -> unit {
+	//			*(this).__any_string__field = 5;
+	//		}
+	//	};
+	//	{
+	//		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+	//		var ref<__any_string__class,f,f,plain> v1 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {v0};
+	//	}
+	//)")
+	//{
+	//	int captureRef;
+	//	auto l1 = [&captureRef]{ captureRef = 5; };
+	//}
+
+	//#pragma test expect_ir(R"(
+	//	decl struct __any_string__class;
+	//	decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen_int_rparen_:const __any_string__class::() -> ptr<(int<4>) -> unit,t,f>;
+	//	def struct __any_string__class {
+	//		const function IMP__operator_call_ = (v1 : ref<int<4>,f,f,plain>) -> unit {
+	//			v1;
+	//		}
+	//	};
+	//	{
+	//		var ref<__any_string__class,f,f,plain> v0 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
+	//	}
+	//)")
 	//{
 	//	auto l1 = [](int param){ param; };
 	//}
 
-	//{
-	//	auto l1 = [](int& param){ param; };
-	//}
-
+	//#pragma test expect_ir(R"(
+	//	def struct __any_string__class {
+	//		capture_0 : int<4>;
+	//		capture_1 : ref<int<4>,f,f,cpp_ref>;
+	//		const function IMP__operator_call_ = (v1 : ref<int<4>,f,f,plain>) -> unit {
+	//			5;
+	//		}
+	//	};
+	//	{
+	//		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+	//		var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+	//		var ref<__any_string__class,f,f,plain> v2 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {*v0, v1};
+	//	}
+	//)")
 	//{
 	//	int captureCopy;
 	//	int captureRef;
 	//	auto l1 = [captureCopy,&captureRef](int param){ 5; };
 	//}
 
-	#pragma test expect_ir(R"(
-		decl struct __any_string__;
-		decl IMP__conversion_operator_int_space__lparen__star__rparen__lparen__rparen_:const __any_string__::() -> ptr<() -> int<4>,t,f>;
-		def struct __any_string__ {
-				const function IMP__operator_call_ = () -> int<4> {
-						return 5;
-				}
-		};
-		{
-				var ref<__any_string__,f,f,plain> v0 = <ref<__any_string__,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
-		}
-	)")
-	{
-		auto l1 = []{ return 5; };
-	}
+	//#pragma test expect_ir(R"(
+	//	decl struct __any_string__;
+	//	decl IMP__conversion_operator_int_space__lparen__star__rparen__lparen__rparen_:const __any_string__::() -> ptr<() -> int<4>,t,f>;
+	//	def struct __any_string__ {
+	//			const function IMP__operator_call_ = () -> int<4> {
+	//					return 5;
+	//			}
+	//	};
+	//	{
+	//			var ref<__any_string__,f,f,plain> v0 = <ref<__any_string__,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
+	//	}
+	//)")
+	//{
+	//	auto l1 = []{ return 5; };
+	//}
+
+	C c;
 
 	return 0;
 }

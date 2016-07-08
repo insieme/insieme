@@ -49,6 +49,10 @@ namespace state {
 
 	/// Manages variable identities from clang to its INSPIRE translation
 	class VariableManager {
+	public:
+		/// map from clang VarDecl to functor which generates the access to that variable upon being passed the current "this" IR representation
+		using LambdaScope = std::map<const clang::VarDecl*, std::function<core::ExpressionPtr(core::ExpressionPtr)>>;
+
 	private:
 		Converter& converter;
 
@@ -68,6 +72,9 @@ namespace state {
 		/// IR variables for locals and literals for globals
 		std::vector<Scope> storage;
 
+		/// Internal storage for lambda captures
+		std::vector<LambdaScope> lambdaScopes;
+
 	public:
 		VariableManager(Converter& converter);
 
@@ -83,15 +90,20 @@ namespace state {
 		/// Set the "this" expression for the current scope
 		void setThis(const core::ExpressionPtr& thisVar);
 		/// Get the "this" expression for the current scope
-		core::ExpressionPtr getThis();
+		core::ExpressionPtr getThis() const;
 
 		/// Set the return type for the current scope
 		void setRetType(const core::TypePtr& retType);
 		/// Get the return type for the current scope
 		core::TypePtr getRetType();
 
-		/// get the number of visible declarations in current scope (for testing)
+		/// Get the number of visible declarations in current scope (for testing)
 		size_t numVisibleDeclarations() const;
+
+		/// Push a new lambda scope
+		void pushLambda(const LambdaScope& lambdaScope);
+		/// Pop a lambda scope
+		void popLambda();
 	};
 
 } // end namespace state

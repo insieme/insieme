@@ -72,6 +72,7 @@ namespace utils {
 	}
 
 	std::string getLocationAsString(const clang::SourceLocation sl, const clang::SourceManager& sm) {
+		return "";
 		std::stringstream ss;
 
 		std::string filename = sm.getFilename(sl).str();
@@ -272,6 +273,9 @@ namespace utils {
 	}
 
 	std::string getNameForField(const clang::FieldDecl* fieldDecl, const clang::SourceManager& sm) {
+		if(fieldDecl->isImplicit()) {
+			return format("capture_%u", fieldDecl->getFieldIndex());
+		}
         string fieldName = fieldDecl->getNameAsString();
 		if(fieldName.empty() || fieldDecl->isAnonymousStructOrUnion()) {
 			auto fileName = sm.getFilename(fieldDecl->getLocStart()).str();

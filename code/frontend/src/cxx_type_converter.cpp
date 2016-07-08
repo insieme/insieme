@@ -42,6 +42,7 @@
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/state/record_manager.h"
 #include "insieme/frontend/state/function_manager.h"
+#include "insieme/frontend/state/variable_manager.h"
 
 #include "insieme/utils/name_mangling.h"
 #include "insieme/utils/numeric_cast.h"
@@ -60,6 +61,32 @@ using namespace insieme;
 namespace insieme {
 namespace frontend {
 namespace conversion {
+
+	namespace {
+		state::VariableManager::LambdaScope generateLambdaMapping(const Converter& converter, const clang::CXXRecordDecl* classDecl) {
+			state::VariableManager::LambdaScope lScope;
+			if(!classDecl->isLambda()) return lScope;
+			llvm::DenseMap<const clang::VarDecl*, clang::FieldDecl*> clangCaptures;
+			clang::FieldDecl *thisField;
+			classDecl->getCaptureFields(clangCaptures, thisField);
+			for(auto capture: clangCaptures) {
+				// build a lambda which builds the field access when provided with the this expression
+				lScope[capture.first] = [capture, &converter](const core::ExpressionPtr& thisExpr) {
+					auto& builder = converter.getIRBuilder();
+					auto fieldDecl = capture.second;
+					string memName = frontend::utils::getNameForField(fieldDecl, converter.getSourceManager());
+					auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+					auto retType = converter.convertType(capture.second->getType()); // suspect
+					core::ExpressionPtr mem = builder.callExpr(access, builder.deref(thisExpr), builder.getIdentifierLiteral(memName),
+						                                       builder.getTypeLiteral(retType));
+					if(core::lang::isCppReference(retType) || core::lang::isCppRValueReference(retType)) mem = builder.deref(mem);
+					return mem;
+				};
+			}
+			return lScope;
+		}
+	}
+
 	//---------------------------------------------------------------------------------------------------------------------
 	//										CXX CLANG TYPE CONVERTER
 	//---------------------------------------------------------------------------------------------------------------------
@@ -149,6 +176,9 @@ namespace conversion {
 			}
 		}
 
+		// before method translation: push lambda mapping in case of lambda
+		converter.getVarMan()->pushLambda(generateLambdaMapping(converter, classDecl));
+
 		// get methods, constructors and destructor
 		std::vector<core::MemberFunctionPtr> members;
 		std::vector<core::PureVirtualMemberFunctionPtr> pvMembers;
@@ -179,6 +209,9 @@ namespace conversion {
 				members.push_back(convDecl.memFun);
 			}
 		}
+
+		// after method translation: pop lambda scope in case it was a lambda class
+		converter.getVarMan()->popLambda();
 
 		// create new structTy/unionTy
 		if(tagTy->isStruct()) {

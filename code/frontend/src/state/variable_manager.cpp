@@ -47,6 +47,12 @@ namespace state {
 	VariableManager::VariableManager(Converter& converter) : converter(converter) { pushScope(false); }
 
 	core::ExpressionPtr VariableManager::lookup(const clang::VarDecl* varDecl) const {
+		// lookup in innermost lambda scope if available
+		if(lambdaScopes.size()>=1) {
+			auto f = lambdaScopes.back().find(varDecl);
+			if(f != lambdaScopes.back().cend()) return f->second(getThis());
+		}
+
 		// lookup globals in outermost scope
 		if(varDecl->hasGlobalStorage() && !varDecl->isStaticLocal()) {
 			frontend_assert(::containsKey(storage.front().variables, varDecl)) << "Trying to look up global variable not previously declared: "
@@ -92,7 +98,7 @@ namespace state {
 		storage.back().thisExpr = thisVar;
 	}
 
-	core::ExpressionPtr VariableManager::getThis() {
+	core::ExpressionPtr VariableManager::getThis() const {
 		// lookup this in all applicable scopes starting from innermost
 		for(auto it = storage.crbegin(); it != storage.crend(); ++it) {
 			if(it->thisExpr) return it->thisExpr;
@@ -117,6 +123,15 @@ namespace state {
 
 		frontend_assert(false) << "Trying to look up return type, but not defined";
 		return {};
+	}
+
+	void VariableManager::pushLambda(const LambdaScope& lambdaScope) {
+		lambdaScopes.push_back(lambdaScope);
+	}
+
+	void VariableManager::popLambda() {
+		frontend_assert(!lambdaScopes.empty()) << "Trying to pop lambda scope, but none open";
+		lambdaScopes.pop_back();
 	}
 
 } // end namespace state
