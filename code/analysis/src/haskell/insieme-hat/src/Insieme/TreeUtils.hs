@@ -38,7 +38,7 @@ foldTreePrune collect keep tree = visit (mkNodeAddress [] tree) mempty
                      then collect base $ visitsub base acc
                      else acc
     visitsub base acc = foldr visit acc (subtrees base)
-    subtrees addr = [goDown i addr | i <- [0..(length . subForest . getNode $ addr)]]
+    subtrees addr = [goDown i addr | i <- [0..((-1) . length . subForest . getNode $ addr)]]
 
 -- some examples
 excoll a (Node n _) = Set.insert (a, n)
