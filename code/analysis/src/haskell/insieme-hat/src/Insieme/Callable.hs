@@ -4,16 +4,19 @@
 module Insieme.Callable where
 
 import Compiler.Analysis
-import Data.Tree
 import Insieme.Inspire.NodeAddress
 import qualified Data.Set as Set
-import qualified Insieme.Inspire as IR
 
 data Callable =
       Lambda NodeAddress
     | Literal NodeAddress
     | Closure NodeAddress
- deriving (Eq, Ord, Show)
+ deriving (Eq, Ord)
+
+instance Show Callable where
+    show (Lambda na) = prettyShow na
+    show (Literal na) = prettyShow na
+    show (Closure na) = prettyShow na
 
 type CallableSet = Set.Set Callable
 

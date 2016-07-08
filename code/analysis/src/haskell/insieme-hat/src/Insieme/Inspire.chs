@@ -2,7 +2,6 @@
 
 module Insieme.Inspire where
 
-import Control.Applicative
 import Insieme.Inspire.ThHelpers
 import Language.Haskell.TH
 

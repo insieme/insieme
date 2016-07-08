@@ -60,7 +60,6 @@ namespace haskell {
 
 		std::size_t size() const;
 		void print() const;
-		void printNode(const Address& addr) const;
 
 	};
 
@@ -71,6 +70,7 @@ namespace haskell {
 		Address(std::shared_ptr<HSobject> addr);
 
 		std::size_t size() const;
+		void printNode() const;
 		core::NodeAddress toNodeAddress(const core::NodePtr& root) const;
 
 	};
@@ -88,10 +88,10 @@ namespace haskell {
 		static Environment& getInstance();
 
 		Tree passTree(const core::NodePtr& root);
-		Address passAddress(const core::NodeAddress& addr);
+		Address passAddress(const core::NodeAddress& addr, const Tree& tree);
 
-		boost::optional<Address> findDeclr(Tree& tree, Address& var);
-		BooleanAnalysisResult checkBoolean(Tree& tree, Address& expr);
+		boost::optional<Address> findDeclr(const Address& var);
+		BooleanAnalysisResult checkBoolean(const Address& expr);
 
 	};
 

@@ -53,17 +53,14 @@ foreign export ccall "hat_tree_print"
 
 -- | 2-dimensional drawing of the Inspire subtree located at the given
 -- address.
-printNode :: StablePtr (Tree IR.Inspire) -> StablePtr Addr.NodeAddress -> IO ()
-printNode tree_c addr_c = do
-    tree <- deRefStablePtr tree_c
+printNode :: StablePtr Addr.NodeAddress -> IO ()
+printNode addr_c = do
     addr <- deRefStablePtr addr_c
-    case Addr.resolve addr $ Addr.addressTree tree of
-        Just t  -> putStrLn $ drawTree $ show <$> t
-        Nothing -> putStrLn "Invalid NodeAddress for given tree"
+    putStrLn . drawTree $ show <$> Addr.getNode addr
 
 foreign export ccall "hat_tree_printNode"
-    printNode :: StablePtr (Tree IR.Inspire) -> StablePtr Addr.NodeAddress
-              -> IO ()
+    printNode :: StablePtr Addr.NodeAddress -> IO ()
+
 
 --
 -- * Address
@@ -71,18 +68,22 @@ foreign export ccall "hat_tree_printNode"
 
 -- | Return a stable C pointer to a Haskell vector containing the
 -- given NodeAddress.
-passAddress :: Ptr CSize -> CSize -> IO (StablePtr Addr.NodeAddress)
-passAddress path_c length_c = do
+passAddress :: StablePtr (Tree IR.Inspire) -> Ptr CSize -> CSize
+            -> IO (StablePtr Addr.NodeAddress)
+passAddress tree_c path_c length_c = do
+    tree <- deRefStablePtr tree_c
     path <- peekArray (fromIntegral length_c) path_c
-    let addr = Addr.fromList (fromIntegral <$> path)
-    newStablePtr addr
+    newStablePtr $ Addr.mkNodeAddress (fromIntegral <$> path) tree
 
 foreign export ccall "hat_passAddress"
-    passAddress :: Ptr CSize -> CSize -> IO (StablePtr Addr.NodeAddress)
+    passAddress :: StablePtr (Tree IR.Inspire) -> Ptr CSize -> CSize
+                -> IO (StablePtr Addr.NodeAddress)
 
 -- | Return the size of the buffer representing the Haskell NodeAddress.
 addrLength :: StablePtr Addr.NodeAddress -> IO CSize
-addrLength addr_c = fromIntegral . Addr.length <$> deRefStablePtr addr_c
+addrLength addr_c = do
+    addr <- deRefStablePtr addr_c
+    return . fromIntegral . length . Addr.getAddress $ addr
 
 foreign export ccall "hat_addr_length"
     addrLength :: StablePtr Addr.NodeAddress -> IO CSize
@@ -92,7 +93,7 @@ foreign export ccall "hat_addr_length"
 addrToArray :: StablePtr Addr.NodeAddress -> Ptr CSize -> IO ()
 addrToArray addr_c dst = do
     addr <- deRefStablePtr addr_c
-    pokeArray dst $ fromIntegral <$> toList addr
+    pokeArray dst $ fromIntegral <$> Addr.getAddress addr
 
 foreign export ccall "hat_addr_toArray"
     addrToArray :: StablePtr Addr.NodeAddress -> Ptr CSize -> IO ()
@@ -101,26 +102,20 @@ foreign export ccall "hat_addr_toArray"
 -- * Analysis
 --
 
-findDeclr :: StablePtr (Tree IR.Inspire) -> StablePtr Addr.NodeAddress
-          -> IO (StablePtr Addr.NodeAddress)
-findDeclr tree_c addr_c = do
-    tree <- deRefStablePtr tree_c
+findDeclr :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
+findDeclr addr_c = do
     addr <- deRefStablePtr addr_c
-    case Anal.findDeclr addr tree of
+    case Anal.findDeclr addr of
         Nothing -> return $ castPtrToStablePtr nullPtr
         Just a  -> newStablePtr a
 
 foreign export ccall "hat_findDeclr"
-    findDeclr :: StablePtr (Tree IR.Inspire) -> StablePtr Addr.NodeAddress
-              -> IO (StablePtr Addr.NodeAddress)
+    findDeclr :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
 
-checkBoolean :: StablePtr (Tree IR.Inspire) -> StablePtr Addr.NodeAddress
-             -> IO (CInt)
-checkBoolean tree_c addr_c = do
-    tree <- deRefStablePtr tree_c
+checkBoolean :: StablePtr Addr.NodeAddress -> IO (CInt)
+checkBoolean addr_c = do
     addr <- deRefStablePtr addr_c
-    return . fromIntegral . fromEnum $ Anal.checkBoolean addr tree
+    return . fromIntegral . fromEnum . Anal.checkBoolean $ addr
 
 foreign export ccall "hat_checkBoolean"
-    checkBoolean :: StablePtr (Tree IR.Inspire) -> StablePtr Addr.NodeAddress
-                 -> IO (CInt)
+    checkBoolean :: StablePtr Addr.NodeAddress -> IO (CInt)

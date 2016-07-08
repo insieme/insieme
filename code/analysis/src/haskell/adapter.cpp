@@ -60,16 +60,16 @@ extern "C" {
 	StablePtr hat_passTree(const char* dump, size_t length);
 	size_t hat_tree_length(const StablePtr dump);
 	void hat_tree_print(const StablePtr tree);
-	void hat_tree_printNode(const StablePtr tree, const StablePtr addr);
+	void hat_tree_printNode(const StablePtr addr);
 
 	// Address functions
-	StablePtr hat_passAddress(const size_t* path, size_t length);
+	StablePtr hat_passAddress(const StablePtr tree, const size_t* path, size_t length);
 	size_t hat_addr_length(const StablePtr addr);
 	void hat_addr_toArray(const StablePtr addr, size_t* dst);
 
 	// Analysis
-	StablePtr hat_findDeclr(const StablePtr tree, const StablePtr var);
-	int hat_checkBoolean(const StablePtr tree, const StablePtr expr);
+	StablePtr hat_findDeclr(const StablePtr var);
+	int hat_checkBoolean(const StablePtr expr);
 
 }
 
@@ -101,16 +101,16 @@ namespace haskell {
 		hat_tree_print(tree->ptr);
 	}
 
-	void Tree::printNode(const Address& node) const {
-		hat_tree_printNode(tree->ptr, node.addr->ptr);
-	}
-
 	// ------------------------------------------------------------ Address
 
 	Address::Address(std::shared_ptr<HSobject> addr) : addr(addr) {}
 
 	size_t Address::size() const {
 		return hat_addr_length(addr->ptr);
+	}
+
+	void Address::printNode() const {
+		hat_tree_printNode(addr->ptr);
 	}
 
 	// Add the address contained in the Haskell buffer to the given root node,
@@ -157,7 +157,7 @@ namespace haskell {
 		return make_shared<HSobject>(hat_passTree(dumpcs, dumps.size()));
 	}
 
-	Address Environment::passAddress(const NodeAddress& addr) {
+	Address Environment::passAddress(const NodeAddress& addr, const Tree& tree) {
 		// empty address corresponds to root node in Haskell
 		size_t length_c = addr.getDepth() - 1;
 		vector<size_t> addr_c(length_c);
@@ -166,19 +166,19 @@ namespace haskell {
 			addr_c[i] = addr.getParentAddress(length_c - 1 - i).getIndex();
 		}
 
-		return make_shared<HSobject>(hat_passAddress(addr_c.data(), length_c));
+		return make_shared<HSobject>(hat_passAddress(tree.tree->ptr, addr_c.data(), length_c));
 	}
 
-	boost::optional<Address> Environment::findDeclr(Tree& tree, Address& var) {
+	boost::optional<Address> Environment::findDeclr(const Address& var) {
 		boost::optional<Address> ret;
-		if (StablePtr target_hs = hat_findDeclr(tree.tree->ptr, var.addr->ptr)) {
+		if (StablePtr target_hs = hat_findDeclr(var.addr->ptr)) {
 			ret = make_shared<HSobject>(target_hs);
 		}
 		return ret;
 	}
 
-	BooleanAnalysisResult Environment::checkBoolean(Tree& tree, Address& expr) {
-		auto res = static_cast<BooleanAnalysisResult>(hat_checkBoolean(tree.tree->ptr, expr.addr->ptr));
+	BooleanAnalysisResult Environment::checkBoolean(const Address& expr) {
+		auto res = static_cast<BooleanAnalysisResult>(hat_checkBoolean(expr.addr->ptr));
 		if (res == BooleanAnalysisResult_Neither) {
 			std::vector<std::string> msgs{"Boolean Analysis Error"};
 			throw AnalysisFailure(msgs);
