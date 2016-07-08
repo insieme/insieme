@@ -175,6 +175,8 @@ namespace parser {
 
 			std::vector<RecordStackEntry> currentRecordStack;
 
+			std::vector<VariablePtr> thisStack;
+
 			std::vector<StringValuePtr> temporaryAnonymousNames;
 
 			const ParserIRExtension& parserIRExtension;
@@ -289,11 +291,6 @@ namespace parser {
 			 */
 			void registerField(const location l, const std::string& recordName, const std::string& fieldName, const TypePtr& fieldType);
 
-		  private:
-			/**
-			 * Replaces every occurrences of the this literal in the body with the correct usage of the given thisParam
-			 */
-			StatementPtr replaceThisInBody(const location& l, const StatementPtr& body, const VariablePtr& thisParam);
 		  public:
 
 			/**
@@ -394,7 +391,8 @@ namespace parser {
 			/**
 			 * registers the given parameters in the current scope using the names attached to them
 			 */
-			void registerParameters(const location& l, const VariableList& params);
+			void registerParameters(const location& l, const VariableList& params, bool _const = false, bool _volatile = false);
+			void unregisterParameters();
 
 			/**
 			 * constructs a job expression with the given range
