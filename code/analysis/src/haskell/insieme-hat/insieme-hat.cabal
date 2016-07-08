@@ -23,7 +23,8 @@ executable insieme-hat
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.ThHelpers,
                         Insieme.TreeUtils,
-                        Framework
+                        Framework,
+                        Solver
     build-depends:      base >=4.7,
                         mtl >=2.2,
                         lens >=4.13,
@@ -33,7 +34,8 @@ executable insieme-hat
                         template-haskell >=2.9,
                         transformers >=0.4,
                         attoparsec-binary >=0.2,
-                        attoparsec >=0.13
+                        attoparsec >=0.13,
+                        hashable >= 1.2.4
     hs-source-dirs:     src
     include-dirs:       include,
                         ../../../../core/include
@@ -54,7 +56,8 @@ library
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.ThHelpers,
-                        Framework
+                        Framework,
+                        Solver
     build-depends:      base >=4.7,
                         mtl >=2.2,
                         lens >=4.13,
@@ -64,7 +67,8 @@ library
                         template-haskell >=2.9,
                         transformers >=0.4,
                         attoparsec-binary >=0.2,
-                        attoparsec >=0.13
+                        attoparsec >=0.13,
+                        hashable >= 1.2.4
     hs-source-dirs:     src
     include-dirs:       include,
                         ../../../../core/include

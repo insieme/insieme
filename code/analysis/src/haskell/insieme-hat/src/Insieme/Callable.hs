@@ -3,7 +3,7 @@
 
 module Insieme.Callable where
 
-import Compiler.Analysis
+import Solver
 import Data.Tree
 import Insieme.Inspire.NodeAddress
 import qualified Data.Set as Set
@@ -18,6 +18,5 @@ data Callable =
 type CallableSet = Set.Set Callable
 
 instance Lattice CallableSet where
-    bot  = Set.empty
-    -- top  = error "top CallableSet undefined"   -- TODO
-    join = Set.union
+    join [] = Set.empty
+    join xs = foldr1 Set.union xs

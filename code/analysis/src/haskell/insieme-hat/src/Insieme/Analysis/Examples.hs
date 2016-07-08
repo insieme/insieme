@@ -2,7 +2,7 @@
 
 module Insieme.Analysis.Examples where
 
-import Compiler.Analysis
+-- import Compiler.Analysis
 import Control.Applicative
 import Control.Monad
 import Control.Monad.State.Lazy
@@ -18,6 +18,7 @@ import qualified Data.Set as Set
 import qualified Insieme.Boolean as Boolean
 import qualified Insieme.Callable as Callable
 import qualified Insieme.Inspire as IR
+import qualified Solver
 
 --
 -- * Get Definition Point Analysis
@@ -98,75 +99,59 @@ infixl 3 <||>
 -- * Boolean Value Analysis
 --
 
-dataflowValue :: Tree IR.Inspire
-              -> NodeAddress
-              -> (Tree IR.Inspire -> NodeAddress -> State Int AVar)
-              -> Constr AVar
-              -> (AVar -> Constr AVar)
-              -> State Int AVar
-dataflowValue tree addr fun top forward = do
-    count <- get
-    case resolve addr tree of
-        Just (Node IR.Literal _) ->
-            return $ AVar count (\_ -> top)
 
-        Just (Node IR.Declaration _) -> do
-            modify (+1)
-            f <- fun tree (goDown 1 addr)
-            return $ AVar count (\_ -> forward f)
+dataflowValue :: (Solver.Lattice a)
+         => NodeAddress -> Tree IR.Inspire
+         -> a
+         -> (NodeAddress -> Tree IR.Inspire -> Solver.TypedVar a)
+         -> Solver.TypedVar a
+dataflowValue addr tree top analysis = case resolve addr tree of
+    Just (Node IR.Literal _) -> Solver.mkVariable (addrIdent addr) [] top
 
-        Just (Node IR.Variable _) -> do
-            case findDeclr addr tree of
-                Just declrAddr -> handleDeclr declrAddr
-                _ -> return $ AVar count (\_ -> top)
+    Just (Node IR.Declaration _) -> var
+      where
+        var = Solver.mkVariable (addrIdent addr) [con] Solver.bot
+        con = Solver.forward (analysis (goDown 1 addr) tree) var
 
-        _ -> return $ AVar count (\_ -> top)
+    Just (Node IR.Variable _) -> case findDeclr addr tree of
+        Just declrAddr -> handleDeclr declrAddr
+        _              -> Solver.mkVariable (addrIdent addr) [] top
 
+    _ -> Solver.mkVariable (addrIdent addr) [] top
   where
-    handleDeclr :: NodeAddress -> State Int AVar
-    handleDeclr declrAddr | declrAddr == addr = do
-        count <- get
-        modify (+1)
-        f <- fun tree declrAddr
-        return $ AVar count (\_ -> forward f)
+    handleDeclr declrAddr | declrAddr == addr = var
+      where
+        var = Solver.mkVariable (addrIdent addr) [constraint] Solver.bot
+        constraint = Solver.forward (analysis (goDown 1 addr) tree) var
 
-    handleDeclr declrAddr = do
-        count <- get
-        case resolve (goUp declrAddr) tree of
-            Just (Node IR.DeclarationStmt _) -> do
-                modify (+1)
-                f <- fun tree (goDown 0 . goUp $ declrAddr)
-                return $ AVar count (\_ -> forward f)
-            _ -> error "unhandled case"
-
-boolvalue :: Tree IR.Inspire -> NodeAddress -> State Int AVar
-boolvalue tree addr = do
-    count <- get
-    case resolve addr tree of
-        Just (Node IR.Literal [_, Node (IR.StringValue "true") _]) ->
-            return $ AVar count (\_ -> constr Nothing [] Boolean.AlwaysTrue)
-
-        Just (Node IR.Literal [_, Node (IR.StringValue "false") _]) ->
-            return $ AVar count (\_ -> constr Nothing [] Boolean.AlwaysFalse)
-
-        _ -> modify (+1) >> dataflowValue tree addr boolvalue end forward
-
-  where
-    forward :: AVar -> Constr AVar
-    forward pred = constr Nothing [pred] (id :: Boolean.Result -> Boolean.Result)
-
-    end :: Constr AVar
-    end = constr Nothing [] Boolean.Both
-
+    handleDeclr declrAddr = case resolve (goUp declrAddr) tree of
+        Just (Node IR.DeclarationStmt _) -> var
+          where
+            var = Solver.mkVariable (addrIdent addr) [constraint] Solver.bot
+            constraint = Solver.forward (analysis (goDown 0 . goUp $ declrAddr) tree) var
+        _ -> error "unhandled case"
 
 checkBoolean :: NodeAddress -> Tree IR.Inspire -> Boolean.Result
-checkBoolean addr tree = resolve' target Boolean.Both
+checkBoolean addr tree = Solver.resolve $ analysis addr tree
   where
-    target = evalState (boolvalue tree addr) 0
+    analysis :: NodeAddress -> Tree IR.Inspire -> Solver.TypedVar Boolean.Result
+    analysis addr tree = case resolve addr tree of
+        Just (Node IR.Literal [_, Node (IR.StringValue "true") _]) ->
+            Solver.mkVariable (addrIdent addr) [] Boolean.AlwaysTrue
+
+        Just (Node IR.Literal [_, Node (IR.StringValue "false") _]) ->
+            Solver.mkVariable (addrIdent addr) [] Boolean.AlwaysFalse
+
+        _ -> dataflowValue addr tree Boolean.Both analysis
+
+addrIdent :: NodeAddress -> Solver.Identifier
+addrIdent = Solver.mkIdentifier . show
 
 --
 -- * Callable Analysis
 --
+
+{-
 
 callableValue :: Tree IR.Inspire -> NodeAddress -> State Int AVar
 callableValue tree addr = do
@@ -218,3 +203,5 @@ findEverything tree = visit tree go' Set.empty
     go' (Node IR.Literal  _) addr s = Set.insert (Callable.Literal addr) s
     go' (Node IR.BindExpr _) addr s = Set.insert (Callable.Closure addr) s
     go' _ _ s = s
+
+-}
