@@ -68,7 +68,7 @@ Haskell and vice versa. A pointer to the resulting Haskell object is returned,
 which can be used as a handle inside the C/C++ part. This handle can be passed,
 for instance, to one of the analysis function.
 
-## Builiding Internal Documentation
+## Building Internal Documentation
 
 While `stack` can run `haddock` on a whole package it only takes exposed
 modules into account and there is no way to pass a `--internal` flag as you
