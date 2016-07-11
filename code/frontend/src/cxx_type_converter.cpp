@@ -63,6 +63,17 @@ namespace frontend {
 namespace conversion {
 
 	namespace {
+
+		core::ExpressionPtr generateLambdaCaptureAccess(const Converter& converter, const clang::FieldDecl* fieldDecl, const core::ExpressionPtr& thisExpr) {
+			auto& builder = converter.getIRBuilder();
+			string memName = frontend::utils::getNameForField(fieldDecl, converter.getSourceManager());
+			auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+			auto retType = converter.convertType(fieldDecl->getType());
+			core::ExpressionPtr mem = builder.callExpr(access, thisExpr, builder.getIdentifierLiteral(memName), builder.getTypeLiteral(retType));
+			if(core::lang::isCppReference(retType) || core::lang::isCppRValueReference(retType)) mem = builder.deref(mem);
+			return mem;
+		}
+
 		/// build a mapping of captured lambda parameters to functors which generate an IR access for them within the lambda context
 		/// -> used in variable manager when resolving decl refs and this expressions
 		state::VariableManager::LambdaScope generateLambdaMapping(const Converter& converter, const clang::CXXRecordDecl* classDecl) {
@@ -74,27 +85,12 @@ namespace conversion {
 			for(auto capture: clangCaptures) {
 				// build a lambda which builds the field access when provided with the this expression
 				lScope[capture.first] = [capture, &converter](const core::ExpressionPtr& thisExpr) {
-					auto& builder = converter.getIRBuilder();
-					auto fieldDecl = capture.second;
-					string memName = frontend::utils::getNameForField(fieldDecl, converter.getSourceManager());
-					auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
-					auto retType = converter.convertType(capture.second->getType());
-					core::ExpressionPtr mem = builder.callExpr(access, thisExpr, builder.getIdentifierLiteral(memName),
-						                                       builder.getTypeLiteral(retType));
-					if(core::lang::isCppReference(retType) || core::lang::isCppRValueReference(retType)) mem = builder.deref(mem);
-					return mem;
+					return generateLambdaCaptureAccess(converter, capture.second, thisExpr);
 				};
 			}
 			if(thisField) {
 				lScope.setThisGenerator([thisField, &converter](const core::ExpressionPtr& thisExpr) {
-					auto& builder = converter.getIRBuilder();
-					string memName = frontend::utils::getNameForField(thisField, converter.getSourceManager());
-					auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
-					auto retType = converter.convertType(thisField->getType());
-					core::ExpressionPtr mem = builder.callExpr(access, thisExpr, builder.getIdentifierLiteral(memName),
-						                                       builder.getTypeLiteral(retType));
-					if(core::lang::isCppReference(retType) || core::lang::isCppRValueReference(retType)) mem = builder.deref(mem);
-					return mem;
+					return generateLambdaCaptureAccess(converter, thisField, thisExpr);
 				});
 			}
 			return lScope;
