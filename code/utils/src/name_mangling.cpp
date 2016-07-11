@@ -155,8 +155,7 @@ namespace utils {
 	string mangle(string name, string file, unsigned line, unsigned column) {
 		if(name.empty()) name = mangleEmpty;
 		else name = applyReplacements(name);
-		//return format("%s%s_%s_%s_%u_%u", manglePrefix, name, mangleLocation, applyReplacements(file), line, column);
-		return format("%s%s", manglePrefix, name);
+		return format("%s%s_%s_%s_%u_%u", manglePrefix, name, mangleLocation, applyReplacements(file), line, column);
 	}
 
 	string mangle(string file, unsigned line, unsigned column) {
@@ -193,6 +192,11 @@ namespace utils {
 
 	const string& getMangledOperatorAssignName() {
 		static string result = mangle("operator=");
+		return result;
+	}
+
+	const std::string& getMangledAnonymousIndicator() {
+		static string result = applyReplacements("(anonymous");
 		return result;
 	}
 }

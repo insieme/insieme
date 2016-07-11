@@ -67,6 +67,8 @@ namespace frontend {
 
 	TEST(CppIndependentTest, Lambda) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda.cpp"); }
 
+	TEST(CppIndependentTest, Naming) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_naming.cpp"); }
+
 	TEST(CppIndependentTest, NewDelete) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_new_delete.cpp"); }
 
 	TEST(CppIndependentTest, ObjectPassing) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_object_passing.cpp"); }

@@ -34,39 +34,33 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+struct {
+	static void foo() { 5; }
+} f;
 
-#include <string>
+struct {
+	static void foo() { 42; }
+} b;
 
-namespace insieme {
-namespace utils {
+int main() {
+	;
 
-	/// Format string "name" to be usable as an identifier, and encode file, line and column information in it
-	///
-	std::string mangle(std::string name, std::string file, unsigned line, unsigned column);
+	#pragma test expect_ir(R"(
+		def __any_string__first_foo = function () -> unit {
+			5;
+		};
+		def __any_string__second_foo = function () -> unit {
+			42;
+		};
+		{
+			__any_string__first_foo();
+			__any_string__second_foo();
+		}
+	)")
+	{
+		f.foo();
+		b.foo();
+	}
 
-	/// Retrieve a mangled "name" for an anonymous identifier
-	///
-	std::string mangle(std::string file, unsigned line, unsigned column);
-
-	/// Format string "name" to be usable as an identifier
-	///
-	std::string mangle(std::string name);
-
-	/// Retrieve the original name from the mangled representation.
-	///
-	std::string demangle(std::string name, bool keepLocation = false);
-
-	/// Retrieve a valid C/CPP name from the mangled representation.
-	///
-	std::string demangleToIdentifier(std::string name, bool keepLocation = false);
-
-	/// Returns the mangled name for the assignment operator.
-	///
-	const std::string& getMangledOperatorAssignName();
-
-	/// Returns a string which (if present) indicates that the name was generated for something anonymous.
-	///
-	const std::string& getMangledAnonymousIndicator();
-}
+	return 0;
 }

@@ -72,7 +72,6 @@ namespace utils {
 	}
 
 	std::string getLocationAsString(const clang::SourceLocation sl, const clang::SourceManager& sm) {
-		return "";
 		std::stringstream ss;
 
 		std::string filename = sm.getFilename(sl).str();
@@ -216,7 +215,7 @@ namespace utils {
 		return buildNameSuffixForTemplateInternal(tempArgs.asArray(), astContext, cStyleName);
 	}
 
-	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, bool cStyleName) {
+	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, const conversion::Converter& converter, bool cStyleName) {
 		// operator= should not have silly suffixes for templates
 		if(funcDecl->getNameAsString() == "operator=") cStyleName = true;
 
@@ -230,6 +229,11 @@ namespace utils {
 
 		// mangle name
 		name = insieme::utils::mangle(name);
+
+		// adjust name for things in anonymous namespaces
+		if(boost::contains(name, insieme::utils::getMangledAnonymousIndicator())) {
+			name = createNameForAnon(name, funcDecl, converter.getSourceManager());
+		}
 
 		// build a suffix for template instantiations
 		std::stringstream suffix;

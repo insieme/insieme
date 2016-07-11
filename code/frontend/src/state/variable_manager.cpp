@@ -54,10 +54,11 @@ namespace state {
 			auto f = lambdaScopes.back().find(varDecl);
 			if(f != lambdaScopes.back().cend()) {
 				// push empty lambda scope to ensure standard handling of "this" lookup (rather than getting the intercepted "this")
+				auto generator = f->second;
 				lambdaScopes.push_back(LambdaScope());
-				auto ret = f->second(getThis());
+				auto actualThis = getThis();
 				lambdaScopes.pop_back();
-				return ret;
+				return generator(actualThis);
 			}
 		}
 

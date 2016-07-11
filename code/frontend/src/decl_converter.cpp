@@ -220,7 +220,7 @@ namespace conversion {
 	}
 
 	core::ExpressionPtr DeclConverter::convertFunctionDecl(const clang::FunctionDecl* funcDecl, string name, bool genLiteral) const {
-		if(name.empty()) name = insieme::utils::mangle(funcDecl->getNameAsString());
+		if(name.empty()) name = utils::buildNameForFunction(funcDecl, converter);
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
 		if(genLiteral) {
 			return converter.getIRBuilder().literal(name, funType);
@@ -266,7 +266,7 @@ namespace conversion {
 		}
 		// non-default cases
 		else {
-			string name =  utils::buildNameForFunction(methDecl);
+			string name =  utils::buildNameForFunction(methDecl, converter);
 			auto funType = getFunMethodTypeInternal(converter, methDecl);
 			if(funType->getKind() == core::FK_CONSTRUCTOR) { ret.lit = builder.getLiteralForConstructor(funType); }
 			else if(funType->getKind() == core::FK_DESTRUCTOR) { ret.lit = builder.getLiteralForDestructor(funType); }
@@ -406,7 +406,7 @@ namespace conversion {
 
 		// convert prototype
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
-		auto name = utils::buildNameForFunction(funcDecl);
+		auto name = utils::buildNameForFunction(funcDecl, converter);
 		core::LiteralPtr irLit = builder.literal(name, funType);
 		// add required annotations
 		if(inExternC) { annotations::c::markAsExternC(irLit); }
