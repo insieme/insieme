@@ -50,8 +50,22 @@ namespace state {
 	/// Manages variable identities from clang to its INSPIRE translation
 	class VariableManager {
 	public:
+		using AccessGenerator = std::function<core::ExpressionPtr(core::ExpressionPtr)>;
+
 		/// map from clang VarDecl to functor which generates the access to that variable upon being passed the current "this" IR representation
-		using LambdaScope = std::map<const clang::VarDecl*, std::function<core::ExpressionPtr(core::ExpressionPtr)>>;
+		class LambdaScope : public std::map<const clang::VarDecl*, AccessGenerator> {
+			AccessGenerator thisGenerator;
+			bool hasThis_ = false;
+		public:
+			void setThisGenerator(AccessGenerator gen) {
+				thisGenerator = gen;
+				hasThis_ = true;
+			}
+			const AccessGenerator& getThisGenerator() const {
+				return thisGenerator;
+			}
+			bool hasThis() const { return hasThis_; }
+		};
 
 	private:
 		Converter& converter;
@@ -73,7 +87,7 @@ namespace state {
 		std::vector<Scope> storage;
 
 		/// Internal storage for lambda captures
-		std::vector<LambdaScope> lambdaScopes;
+		mutable std::vector<LambdaScope> lambdaScopes;
 
 	public:
 		VariableManager(Converter& converter);

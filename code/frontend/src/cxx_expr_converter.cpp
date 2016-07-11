@@ -441,7 +441,7 @@ namespace conversion {
 		// obtain current "this" from variable manager
 		auto thisRef = converter.getVarMan()->getThis();
 		// this is a pointer, not a reference
-		retIr = core::lang::buildPtrFromRef(converter.getIRBuilder().deref(thisRef));
+		retIr = core::lang::buildPtrFromRef(thisRef);
 
 		return retIr;
 	}

@@ -129,7 +129,7 @@ namespace conversion {
 			core::IRBuilder builder(converter.getNodeManager());
 			core::StatementList retStmts;
 			for(const auto& init: constrDecl->inits()) {
-				auto irThis = builder.deref(converter.getVarMan()->getThis());
+				auto irThis = converter.getVarMan()->getThis();
 				auto irMember = irThis;
 
 				// check if field or delegating initialization

@@ -34,18 +34,15 @@
  * regarding third party software licenses.
  */
 
-//struct C {
-//	int x;
-//
-//	C() {
-//		#pragma test expect_ir(R"(
-//			{}
-//		)")
-//		auto l = [this]{
-//			x;
-//		};
-//	}
-//};
+struct C {
+	int x;
+
+	C() {
+		auto l = [this]{
+			x;
+		};
+	}
+};
 
 int main() {
 	;
@@ -171,6 +168,23 @@ int main() {
 	//	auto l1 = []{ return 5; };
 	//}
 
+	#pragma test expect_ir(R"(
+		decl struct IMP_C;
+		decl IMP_C::x : int<4>;
+		def struct __any_string__class {
+			capture_0 : ptr<IMP_C>;
+			const function IMP__operator_call_ = () -> unit {
+				ptr_to_ref(*(this).capture_0).x;
+			}
+		};
+		def struct IMP_C {
+			x : int<4>;
+			ctor function () {
+				var ref<__any_string__class,f,f,plain> v1 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {ptr_from_ref(this)};
+			}
+		};
+		var ref<IMP_C,f,f,plain> v0 = IMP_C::(ref_decl(type_lit(ref<IMP_C,f,f,plain>)));
+	)")
 	C c;
 
 	return 0;

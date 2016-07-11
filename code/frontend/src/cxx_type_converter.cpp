@@ -76,12 +76,24 @@ namespace conversion {
 					auto fieldDecl = capture.second;
 					string memName = frontend::utils::getNameForField(fieldDecl, converter.getSourceManager());
 					auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
-					auto retType = converter.convertType(capture.second->getType()); // suspect
-					core::ExpressionPtr mem = builder.callExpr(access, builder.deref(thisExpr), builder.getIdentifierLiteral(memName),
+					auto retType = converter.convertType(capture.second->getType());
+					core::ExpressionPtr mem = builder.callExpr(access, thisExpr, builder.getIdentifierLiteral(memName),
 						                                       builder.getTypeLiteral(retType));
 					if(core::lang::isCppReference(retType) || core::lang::isCppRValueReference(retType)) mem = builder.deref(mem);
 					return mem;
 				};
+			}
+			if(thisField) {
+				lScope.setThisGenerator([thisField, &converter](const core::ExpressionPtr& thisExpr) {
+					auto& builder = converter.getIRBuilder();
+					string memName = frontend::utils::getNameForField(thisField, converter.getSourceManager());
+					auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+					auto retType = converter.convertType(thisField->getType());
+					core::ExpressionPtr mem = builder.callExpr(access, thisExpr, builder.getIdentifierLiteral(memName),
+						                                       builder.getTypeLiteral(retType));
+					if(core::lang::isCppReference(retType) || core::lang::isCppRValueReference(retType)) mem = builder.deref(mem);
+					return mem;
+				});
 			}
 			return lScope;
 		}

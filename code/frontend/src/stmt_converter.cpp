@@ -176,7 +176,7 @@ namespace conversion {
 		}
 		// case of return in a constructor or destructor
 		else if(converter.getVarMan()->getRetType() && !isUnitRet) {
-			irRetStmt = builder.returnStmt(builder.deref(converter.getVarMan()->getThis()), retType);
+			irRetStmt = builder.returnStmt(converter.getVarMan()->getThis(), retType);
 		}
 
 		retIr.push_back(irRetStmt);
