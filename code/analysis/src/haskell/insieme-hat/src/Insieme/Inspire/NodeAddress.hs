@@ -1,66 +1,70 @@
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE ViewPatterns #-}
-
 module Insieme.Inspire.NodeAddress (
     NodeAddress,
-    Seq.fromList,
-    Seq.length,
-    Seq.null,
+    mkNodeAddress,
+    getAddress,
+    getNode,
+    getParent,
+    getRoot,
+    prettyShow,
     goUp,
     goDown,
     goLeft,
-    goRight,
-    resolve,
-    addressTree,
-    pattern Empty,
-    pattern (:<:),
-    pattern (:>:),
+    goRight
 ) where
 
-import Data.Maybe
-import Data.Sequence as Seq
 import Data.Tree
-import Insieme.Inspire
+import qualified Insieme.Inspire as IR
 
--- | Represents a path along a tree to a specific node.
-type NodeAddress = Seq Int
+data NodeAddress = NodeAddress [Int] (Tree IR.Inspire) (Maybe NodeAddress)
 
-pattern Empty     <- (viewl -> EmptyL  )
-pattern x  :<: xs <- (viewl -> x  :< xs)
-pattern xs :>: x  <- (viewr -> xs :> x )
+instance Eq NodeAddress where
+    na@(NodeAddress a _ _) == nb@(NodeAddress b _ _) = (a == b) && (getRoot na == getRoot nb)
 
-infixr 5 :<:
-infixl 5 :>:
+instance Ord NodeAddress where
+    (NodeAddress a _ _) <= (NodeAddress b _ _) = a <= b
+
+-- | Create a 'NodeAddress' from a list of indizes and a root node.
+mkNodeAddress :: [Int] -> Tree IR.Inspire -> NodeAddress
+mkNodeAddress xs tree = mkNodeAddress' xs tree Nothing
+
+-- | Create a 'NodeAddress' from a list of indizes, a node and a parent
+-- 'NodeAddress'.
+mkNodeAddress' :: [Int] -> Tree IR.Inspire -> Maybe NodeAddress -> NodeAddress
+mkNodeAddress' xs tree parent = mkNodeAddress' xs [] tree parent
+  where
+    mkNodeAddress' []     ys tree             parent = NodeAddress ys tree parent
+    mkNodeAddress' (x:xs) ys tree@(Node _ ns) parent = mkNodeAddress' xs (ys ++ [x]) (ns !! x) na
+      where
+        na = Just $ NodeAddress ys tree parent
+
+getAddress :: NodeAddress -> [Int]
+getAddress (NodeAddress na _ _) = na
+
+getNode :: NodeAddress -> Tree IR.Inspire
+getNode (NodeAddress _ node _) = node
+
+getParent :: NodeAddress -> Maybe NodeAddress
+getParent (NodeAddress _ _ parent) = parent
+
+getRoot :: NodeAddress -> Tree IR.Inspire
+getRoot (NodeAddress _ n Nothing      ) = n
+getRoot (NodeAddress _ _ (Just parent)) = getRoot parent
+
+prettyShow :: NodeAddress -> String
+prettyShow (NodeAddress na _ _ ) = '0' : concat ['-' : show x | x <- na]
 
 goUp :: NodeAddress -> NodeAddress
-goUp (xs :>: _) = xs
-goUp  xs        = xs
+goUp na@(NodeAddress _ _ Nothing  ) = na
+goUp    (NodeAddress _ _ (Just na)) = na
 
 goDown :: Int -> NodeAddress -> NodeAddress
-goDown x xs = xs |> x
+goDown x parent@(NodeAddress xs (Node _ ns) _)= NodeAddress (xs ++ [x]) (ns !! x) (Just parent)
 
 goLeft :: NodeAddress -> NodeAddress
-goLeft (xs :>: 0) = xs |> 0
-goLeft (xs :>: x) = xs |> x - 1
-goLeft  xs        = xs
+goLeft na@(NodeAddress xs _ _            ) | last xs == 0 = na
+goLeft na@(NodeAddress xs _ Nothing      ) = na
+goLeft    (NodeAddress xs _ (Just parent)) = goDown (last xs - 1) parent
 
 goRight :: NodeAddress -> NodeAddress
-goRight (xs :>: x) = xs |> x + 1
-goRight  xs        = xs
-
--- | Traverse the tree @t@ along a given 'NodeAddress'.
-resolve :: NodeAddress -> Tree a -> Maybe (Tree a)
-resolve Empty      t           = Just t
-resolve (x :<: xs) (Node _ ns) = if x < Prelude.length ns
-                                 then resolve xs (ns !! x)
-                                 else Nothing
-
--- | Pair each node of the given tree with its corresponding 'NodeAddress'.
-addressTree :: Tree a -> Tree (a, NodeAddress)
-addressTree = addressTree empty
-  where
-    addressTree :: NodeAddress -> Tree a -> Tree (a, NodeAddress)
-    addressTree as (Node t ts) = Node (t, as) (mergeAddr as <$> Prelude.zip ts [0..])
-
-    mergeAddr :: NodeAddress -> (Tree a, Int) -> Tree (a, NodeAddress)
-    mergeAddr as (t, a) = addressTree (as |> a) t
+goRight na@(NodeAddress _  _ Nothing      ) = na
+goRight    (NodeAddress xs _ (Just parent)) = goDown (last xs + 1) parent

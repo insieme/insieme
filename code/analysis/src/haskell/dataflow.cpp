@@ -48,9 +48,9 @@ namespace haskell {
 		auto& env = Environment::getInstance();
 
 		auto tree = env.passTree(var.getRootNode());
-		auto var_addr = env.passAddress(var);
+		auto var_addr = env.passAddress(var, tree);
 
-		auto target = env.findDeclr(tree, var_addr);
+		auto target = env.findDeclr(var_addr);
 		if (!target) {
 			return {};
 		}
@@ -61,30 +61,30 @@ namespace haskell {
 	bool isTrue(const core::ExpressionAddress& expr) {
 		auto& env = Environment::getInstance();
 		auto tree = env.passTree(expr.getRootNode());
-		auto expr_addr = env.passAddress(expr);
-		return env.checkBoolean(tree, expr_addr) == BooleanAnalysisResult_AlwaysTrue;
+		auto expr_addr = env.passAddress(expr, tree);
+		return env.checkBoolean(expr_addr) == BooleanAnalysisResult_AlwaysTrue;
 	}
 
 	bool isFalse(const core::ExpressionAddress& expr) {
 		auto& env = Environment::getInstance();
 		auto tree = env.passTree(expr.getRootNode());
-		auto expr_addr = env.passAddress(expr);
-		return env.checkBoolean(tree, expr_addr) == BooleanAnalysisResult_AlwaysFalse;
+		auto expr_addr = env.passAddress(expr, tree);
+		return env.checkBoolean(expr_addr) == BooleanAnalysisResult_AlwaysFalse;
 	}
 
 	bool mayBeTrue(const core::ExpressionAddress& expr) {
 		auto& env = Environment::getInstance();
 		auto tree = env.passTree(expr.getRootNode());
-		auto expr_addr = env.passAddress(expr);
-		auto res = env.checkBoolean(tree, expr_addr);
+		auto expr_addr = env.passAddress(expr, tree);
+		auto res = env.checkBoolean(expr_addr);
 		return res == BooleanAnalysisResult_AlwaysTrue || res == BooleanAnalysisResult_Both;
 	}
 
 	bool mayBeFalse(const core::ExpressionAddress& expr) {
 		auto& env = Environment::getInstance();
 		auto tree = env.passTree(expr.getRootNode());
-		auto expr_addr = env.passAddress(expr);
-		auto res = env.checkBoolean(tree, expr_addr);
+		auto expr_addr = env.passAddress(expr, tree);
+		auto res = env.checkBoolean(expr_addr);
 		return res == BooleanAnalysisResult_AlwaysFalse || res == BooleanAnalysisResult_Both;
 	}
 

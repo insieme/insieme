@@ -24,96 +24,66 @@ import qualified Solver
 -- * Get Definition Point Analysis
 --
 
-type NodeCache = Map.Map NodeAddress (Tree IR.Inspire)
-
-findDeclr :: NodeAddress -> Tree IR.Inspire -> Maybe NodeAddress
-findDeclr start tree = evalState (findDeclr start) Map.empty
+findDeclr :: NodeAddress -> Maybe NodeAddress
+findDeclr start = findDeclr start
   where
-    org = fromJust $ resolve start tree
+    org = getNode start
 
-    resolvememo :: NodeAddress -> State NodeCache (Maybe (Tree IR.Inspire))
-    resolvememo addr = do
-        memo <- get
-        case Map.lookup addr memo of
-          Just node -> return $ Just node
-          Nothing   -> do
-              case resolve addr tree of
-                Nothing   -> return $ Nothing
-                Just node -> do
-                    modify (Map.insert addr node)
-                    return $ Just node
+    findDeclr :: NodeAddress -> Maybe NodeAddress
+    findDeclr addr = case getNode addr of
+        Node IR.Lambda _ -> lambda addr
+        _ -> declstmt addr <|> forstmt addr <|> bindexpr addr <|>
+             compstmt addr <|> nextlevel addr
 
-    findDeclr :: NodeAddress -> State NodeCache (Maybe NodeAddress)
-    findDeclr addr = resolvememo addr >>= \case
-        Just (Node IR.Lambda _) -> lambda addr
-        _ -> declstmt addr <||> forstmt addr <||> bindexpr addr <||>
-             compstmt addr <||> nextlevel addr
-
-    declstmt :: NodeAddress -> State NodeCache (Maybe NodeAddress)
-    declstmt addr = resolvememo addr >>= return . \case
-        Just (Node IR.DeclarationStmt [_, v]) ->
-            if v == org
-               then Just $ goDown 1 $ addr
-               else Nothing
+    declstmt :: NodeAddress -> Maybe NodeAddress
+    declstmt addr = case getNode addr of
+        Node IR.DeclarationStmt [_, v] | v == org -> Just $ goDown 1 addr
         _ -> Nothing
 
-    forstmt :: NodeAddress -> State NodeCache (Maybe NodeAddress)
-    forstmt addr = resolvememo addr >>= \case
-        Just (Node IR.ForStmt _) -> declstmt $ goDown 0 $ addr
-        _ -> return Nothing
-
-    lambda :: NodeAddress -> State NodeCache (Maybe NodeAddress)
-    lambda addr = resolvememo addr >>= return . \case
-        Just (Node IR.Lambda [_, Node IR.Parameters ps, _]) ->
-            (\i -> goDown i $ goDown 1 $ addr) <$> findIndex (==org) ps
+    forstmt :: NodeAddress -> Maybe NodeAddress
+    forstmt addr = case getNode addr of
+        Node IR.ForStmt _ -> declstmt $ goDown 0 addr
         _ -> Nothing
 
-    bindexpr :: NodeAddress -> State NodeCache (Maybe NodeAddress)
-    bindexpr addr = resolvememo addr >>= return . \case
-        Just (Node IR.BindExpr [_, Node IR.Parameters ps, _]) ->
-            (\i -> goDown i $ goDown 1 $ addr) <$> findIndex (==org) ps
+    lambda :: NodeAddress -> Maybe NodeAddress
+    lambda addr = case getNode addr of
+        Node IR.Lambda [_, Node IR.Parameters ps, _] ->
+            (\i -> goDown i . goDown 1 $ addr) <$> findIndex (==org) ps
         _ -> Nothing
 
-    compstmt :: NodeAddress -> State NodeCache (Maybe NodeAddress)
-    compstmt addr = resolvememo (goUp addr) >>= \case
-        Just (Node IR.CompoundStmt _) ->
-            case addr of
-                _ :>: 0 -> return Nothing
-                _ :>: _ -> findDeclr $ goLeft $ addr
-                _       -> return Nothing
-        _ -> return Nothing
+    bindexpr :: NodeAddress -> Maybe NodeAddress
+    bindexpr addr = case getNode addr of
+        Node IR.BindExpr [_, Node IR.Parameters ps, _] ->
+            (\i -> goDown i . goDown 1 $ addr) <$> findIndex (==org) ps
+        _ -> Nothing
 
-    nextlevel :: NodeAddress -> State NodeCache (Maybe NodeAddress)
-    nextlevel addr =
-        if Addr.null addr
-           then return Nothing
-           else findDeclr $ goUp $ addr
+    compstmt :: NodeAddress -> Maybe NodeAddress
+    compstmt addr = getNode <$> getParent addr >>= \case
+        Node IR.CompoundStmt _ | last (getAddress addr) == 0 -> Nothing
+        Node IR.CompoundStmt _ -> findDeclr $ goLeft addr
+        _ -> Nothing
 
-(<||>) :: State NodeCache (Maybe NodeAddress)
-       -> State NodeCache (Maybe NodeAddress)
-       -> State NodeCache (Maybe NodeAddress)
-(<||>) = liftM2 (<|>)
-infixl 3 <||>
+    nextlevel :: NodeAddress -> Maybe NodeAddress
+    nextlevel addr = getParent addr >>= findDeclr
 
 --
 -- * Boolean Value Analysis
 --
 
-
 dataflowValue :: (Solver.Lattice a)
-         => NodeAddress -> Tree IR.Inspire
+         => NodeAddress
          -> a
-         -> (NodeAddress -> Tree IR.Inspire -> Solver.TypedVar a)
+         -> (NodeAddress -> Solver.TypedVar a)
          -> Solver.TypedVar a
-dataflowValue addr tree top analysis = case resolve addr tree of
-    Just (Node IR.Literal _) -> Solver.mkVariable (addrIdent addr) [] top
+dataflowValue addr top analysis = case getNode addr of
+    Node IR.Literal _ -> Solver.mkVariable (addrIdent addr) [] top
 
-    Just (Node IR.Declaration _) -> var
+    Node IR.Declaration _ -> var
       where
         var = Solver.mkVariable (addrIdent addr) [con] Solver.bot
-        con = Solver.forward (analysis (goDown 1 addr) tree) var
+        con = Solver.forward (analysis (goDown 1 addr)) var
 
-    Just (Node IR.Variable _) -> case findDeclr addr tree of
+    Node IR.Variable _ -> case findDeclr addr of
         Just declrAddr -> handleDeclr declrAddr
         _              -> Solver.mkVariable (addrIdent addr) [] top
 
@@ -122,30 +92,31 @@ dataflowValue addr tree top analysis = case resolve addr tree of
     handleDeclr declrAddr | declrAddr == addr = var
       where
         var = Solver.mkVariable (addrIdent addr) [constraint] Solver.bot
-        constraint = Solver.forward (analysis (goDown 1 addr) tree) var
+        constraint = Solver.forward (analysis (goDown 1 addr)) var
 
-    handleDeclr declrAddr = case resolve (goUp declrAddr) tree of
-        Just (Node IR.DeclarationStmt _) -> var
+    handleDeclr declrAddr = case getNode (goUp declrAddr) of
+        Node IR.DeclarationStmt _ -> var
           where
             var = Solver.mkVariable (addrIdent addr) [constraint] Solver.bot
-            constraint = Solver.forward (analysis (goDown 0 . goUp $ declrAddr) tree) var
+            constraint = Solver.forward (analysis (goDown 0 . goUp $ declrAddr)) var
         _ -> error "unhandled case"
 
-checkBoolean :: NodeAddress -> Tree IR.Inspire -> Boolean.Result
-checkBoolean addr tree = Solver.resolve $ analysis addr tree
-  where
-    analysis :: NodeAddress -> Tree IR.Inspire -> Solver.TypedVar Boolean.Result
-    analysis addr tree = case resolve addr tree of
-        Just (Node IR.Literal [_, Node (IR.StringValue "true") _]) ->
-            Solver.mkVariable (addrIdent addr) [] Boolean.AlwaysTrue
 
-        Just (Node IR.Literal [_, Node (IR.StringValue "false") _]) ->
-            Solver.mkVariable (addrIdent addr) [] Boolean.AlwaysFalse
+booleanValue :: NodeAddress -> Solver.TypedVar Boolean.Result
+booleanValue addr = case getNode addr of
+    Node IR.Literal [_, Node (IR.StringValue "true") _] ->
+        Solver.mkVariable (addrIdent addr) [] Boolean.AlwaysTrue
 
-        _ -> dataflowValue addr tree Boolean.Both analysis
+    Node IR.Literal [_, Node (IR.StringValue "false") _] ->
+        Solver.mkVariable (addrIdent addr) [] Boolean.AlwaysFalse
+
+    _ -> dataflowValue addr Boolean.Both booleanValue
+
+checkBoolean :: NodeAddress -> Boolean.Result
+checkBoolean addr = Solver.resolve $ booleanValue addr
 
 addrIdent :: NodeAddress -> Solver.Identifier
-addrIdent = Solver.mkIdentifier . show
+addrIdent = Solver.mkIdentifier . prettyShow
 
 --
 -- * Callable Analysis

@@ -90,14 +90,16 @@ namespace haskell {
 	}
 
 	TEST_F(HaskellAdapter, AddressLength) {
+		auto tree = env.passTree(root);
 		NodeAddress addr = NodeAddress(root).getAddressOfChild(0, 0, 0, 0);
-		Address addr_hs = env.passAddress(addr);
+		Address addr_hs = env.passAddress(addr, tree);
 		EXPECT_EQ(addr.getDepth(), addr_hs.size() + 1);
 	}
 
 	TEST_F(HaskellAdapter, AddressTransfere) {
-		NodeAddress addr = NodeAddress(root).getAddressOfChild(1,0,1);
-		Address addr_hs = env.passAddress(addr);
+		auto tree = env.passTree(root);
+		NodeAddress addr = NodeAddress(root).getAddressOfChild(1, 0, 1);
+		Address addr_hs = env.passAddress(addr, tree);
 		NodeAddress addr_res = addr_hs.toNodeAddress(root);
 		EXPECT_EQ(addr,addr_res);
 	}
@@ -110,10 +112,10 @@ namespace haskell {
 		StatementAddress addrVar = addrRoot[1];
 		EXPECT_TRUE(addrVar.isa<VariableAddress>());
 
-		auto var = env.passAddress(addrVar);
+		auto var = env.passAddress(addrVar, tree);
 
 
-		boost::optional<Address> decl = env.findDeclr(tree, var);
+		boost::optional<Address> decl = env.findDeclr(var);
 		EXPECT_TRUE(decl);
 		EXPECT_EQ(addrRoot[0].as<DeclarationStmtAddress>().getVariable(), decl->toNodeAddress(root));
 	}
