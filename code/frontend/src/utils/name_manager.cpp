@@ -277,7 +277,7 @@ namespace utils {
 	}
 
 	std::string getNameForField(const clang::FieldDecl* fieldDecl, const clang::SourceManager& sm) {
-		if(fieldDecl->isImplicit()) {
+		if(fieldDecl->isImplicit() && !fieldDecl->isAnonymousStructOrUnion()) {
 			return format("capture_%u", fieldDecl->getFieldIndex());
 		}
         string fieldName = fieldDecl->getNameAsString();
