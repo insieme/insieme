@@ -2,6 +2,15 @@
 # This file sets up some general variables and include paths for the build environment common to both runtime and compiler
 #
 
+# --------------------------------------------------------------------- including libraries
+# set up insieme lib home either from THIRD_PARTY_LIBS_HOME or INSIEME_LIBS_HOME env var
+if ( DEFINED ENV{THIRD_PARTY_LIBS_HOME} )
+	set(THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third party library home" )
+elseif ( DEFINED ENV{INSIEME_LIBS_HOME} )
+	set(THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third party library home" )
+endif()
+
+
 # get code root directory (based on current file name path)
 get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
 get_filename_component( insieme_root_dir ${insieme_code_dir} PATH )
@@ -62,14 +71,6 @@ endif (NOT MSVC)
 
 # toggle shared vs. static MSVC runtime library linking
 option(MSVC_SHARED_RUNTIME "Use shared MSVC runtime linking" ON)
-
-# --------------------------------------------------------------------- including libraries
-# set up insieme lib home either from THIRD_PARTY_LIBS_HOME or INSIEME_LIBS_HOME env var
-if ( DEFINED ENV{THIRD_PARTY_LIBS_HOME} )
-	set(THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third party library home" )
-elseif ( DEFINED ENV{INSIEME_LIBS_HOME} )
-	set(THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third party library home" )
-endif()
 
 add_definitions("-DINSIEME_LIBS_HOME=\"${THIRD_PARTY_LIBS_HOME}/\"")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS")
