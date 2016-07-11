@@ -39,6 +39,11 @@
 #include <map>
 #include <boost/uuid/random_generator.hpp>
 
+#include "insieme/driver/measure/hardware.h"
+
+#include "insieme/utils/printable.h"
+#include "insieme/utils/map_utils.h"
+
 /**
  * Within this header file some utilities enabling the execution of
  * code fragments using the insieme runtime and its instrumentation
@@ -59,27 +64,35 @@ namespace measure {
 	* A utility struct that holds execution environment, parameters, and other execution-related properties
 	*/
 	struct ExecutionSetup : public insieme::utils::Printable {
-		std::map<std::string, std::string> env;
-		std::vector<std::string> params;
-		std::string outputDirectory;
+		Machine machine;
+		std::map<string, string> env;
+		std::vector<string> params;
+		string outputDirectory;
 		bool requiresRawIOCapabilities;
+		bool requiresBinaryCopying;
 		bool silent;
 
-		ExecutionSetup() : env(), params(), outputDirectory("."), requiresRawIOCapabilities(false), silent(false) {}
+		ExecutionSetup() : machine(), env(), params(), outputDirectory("."), requiresRawIOCapabilities(false), requiresBinaryCopying(true), silent(false) {}
 
-		ExecutionSetup withEnvironment(const std::map<std::string, std::string> newEnvironment) const {
+		ExecutionSetup withMachine(const Machine newMachine) const {
+			ExecutionSetup retVal = *this;
+			retVal.machine = newMachine;
+			return retVal;
+		}
+
+		ExecutionSetup withEnvironment(const std::map<string, string> newEnvironment) const {
 			ExecutionSetup retVal = *this;
 			retVal.env = newEnvironment;
 			return retVal;
 		}
 
-		ExecutionSetup withParameters(const std::vector<std::string> newParameters) const {
+		ExecutionSetup withParameters(const std::vector<string> newParameters) const {
 			ExecutionSetup retVal = *this;
 			retVal.params = newParameters;
 			return retVal;
 		}
 
-		ExecutionSetup withOutputDirectory(const std::string newDirectory) const {
+		ExecutionSetup withOutputDirectory(const string newDirectory) const {
 			ExecutionSetup retVal = *this;
 			retVal.outputDirectory = newDirectory;
 			return retVal;
@@ -91,6 +104,12 @@ namespace measure {
 			return retVal;
 		}
 
+		ExecutionSetup withBinaryCopying(bool newRequiresBinaryCopying) const {
+			ExecutionSetup retVal = *this;
+			retVal.requiresBinaryCopying = newRequiresBinaryCopying;
+			return retVal;
+		}
+
 		ExecutionSetup withSilent(bool newSilent) const {
 			ExecutionSetup retVal = *this;
 			retVal.silent = newSilent;
@@ -99,6 +118,7 @@ namespace measure {
 
 		std::ostream& printTo(std::ostream& out) const {
 			out << "ExecutionSetup:\n";
+			out << "\tmachine: " << machine << "\n";
 			out << "\tenv: " << env << "\n";
 			out << "\tparams: " << params << "\n";
 			out << "\toutputDirectory: " << outputDirectory << "\n";
@@ -113,6 +133,12 @@ namespace measure {
 	 * The basic interface of an executor.
 	 */
 	class Executor : utils::Printable {
+	  protected:
+		/**
+		* Universally unique ID generator used in working directory name generation.
+		*/
+		mutable boost::uuids::random_generator uuidGen;
+
 	  public:
 		/**
 		* Holds a wrapper and its arguments to be prepended in the execution string (i.e. affinity tools, etc...)
@@ -123,7 +149,7 @@ namespace measure {
 		* Creates an executor with a given wrapper if present
 		* @param wrapper a wrapper program (and its arguments, if any) to be prepended in the execution string
 		*/
-		Executor(const std::string& wrapper = "") : wrapper(wrapper) { }
+		Executor(const string& wrapper = "") : wrapper(wrapper) { }
 
 		virtual ~Executor(){};
 
@@ -135,7 +161,7 @@ namespace measure {
 		 * @param executionSetup the execution setup with which to run the specified binary
 		 * @return the return code of the binaries execution
 		 */
-		virtual int run(const std::string& binary, const ExecutionSetup& executionSetup) const = 0;
+		virtual int run(const string& binary, const ExecutionSetup& executionSetup) const = 0;
 
 		virtual std::ostream& printTo(std::ostream& out) const = 0;
 	};
@@ -150,12 +176,12 @@ namespace measure {
 		   * Creates an executor with a given wrapper if present
 		   * @param wrapper a wrapper program (and its arguments, if any) to be prepended in the execution string
 		   */
-		  LocalExecutor(const std::string& wrapper = "") : Executor(wrapper) { }
+		  LocalExecutor(const string& wrapper = "") : Executor(wrapper) { }
 
 		/**
 		 * Runs the given binary within the current working directory.
 		 */
-		virtual int run(const std::string& binary, const ExecutionSetup& executionSetup) const;
+		virtual int run(const string& binary, const ExecutionSetup& executionSetup) const;
 
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << "LocalExecutor(" << wrapper << ")";
@@ -168,43 +194,26 @@ namespace measure {
 	ExecutorPtr makeLocalExecutor();
 
 	/**
-	 * This executor is running binaries on a remote machine. The binary will be copied
-	 * to a remote working directory (using scp), executed on the remote machine using
-	 * some form of job-processing system and the resulting files will be moved back to
-	 * the local working directory.
+	 * This executor runs binaries on a remote machine. The binary will be copied to
+	 * a remote working directory (using scp), executed on the remote machine and the
+	 * resulting files will be moved back to the local working directory (using rsync).
 	 */
 	class RemoteExecutor : public Executor {
-	  public:
-		/**
-		 * The list of supported job-submission systems.
-		 */
-		enum JobSystem { SSH, SGE, PBS, LL };
-
 	  private:
-		/**
-		 * The system used for running remote applications.
-		 */
-		JobSystem system;
-
 		/**
 		 * The remote hostname on which the binary should be executed.
 		 */
-		std::string hostname;
+		string hostname;
 
 		/**
 		 * The user name to be used to login on the remote machine.
 		 */
-		std::string username;
+		string username;
 
 		/**
 		 * The working directory on the remote machine.
 		 */
-		std::string workdir;
-
-		/**
-		 * Universally unique ID generator used in working directory name generation.
-		 */
-		mutable boost::uuids::random_generator uuidGen;
+		string workdir;
 
 	  public:
 		/**
@@ -214,35 +223,56 @@ namespace measure {
 		 * @param username the user to be used to log in to the remote machine (the authentication should use a certificate)
 		 * 					if empty, the current users user name will be used
 		 * @param remoteWorkDir the working directory to be used on the remote system.
-		 * @param system the system to be used to run binaries on the remote host
 		 */
-		RemoteExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp", JobSystem system = SSH, const std::string& wrapper = "")
-		    : Executor(wrapper), system(system), hostname(hostname), username(username), workdir(remoteWorkDir) {}
+		RemoteExecutor(const string& hostname, const string& username = "", const string& remoteWorkDir = "/tmp", const string& wrapper = "")
+		    : Executor(wrapper), hostname(hostname), username(username), workdir(remoteWorkDir) {}
 
 		/**
-		 * Runs the given binary on the specified remote machine.
+		 * Copies the given binary to the remote machine and executes it.
+		 * @param binary the name of the binary to be executed
+		 * @param executionSetup the execution setup with which to run the specified binary
 		 */
-		virtual int run(const std::string& binary, const ExecutionSetup& executionSetup) const;
+		virtual int run(const string& binary, const ExecutionSetup& executionSetup) const;
 
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << "RemoteExecutor(" << wrapper << ")";
 		}
 	};
+	/**
+	* This executor runs binaries on a remote machine using mpi. The binary will be copied
+	* to each participating compute node (using scp), executed using mpirun and the
+	* resulting files will be moved back to the local working directory (using rsync).
+	*/
+	class MPIExecutor : public Executor {
+	  private:
 
+	  public:
+		/**
+		* Creates a new instance of an MPI executor.
+		*
+		* @param wrapper a wrapper program (and its arguments, if any) to be prepended in the execution string
+		*/
+		MPIExecutor(const string& wrapper = "") : Executor(wrapper) {}
+
+		/**
+		* Copies the given binary to each participating compute node and executes it using mpirun.
+		* @param binary the name of the binary to be executed
+		* @param executionSetup the execution setup with which to run the specified binary
+		*/
+		virtual int run(const string& binary, const ExecutionSetup& executionSetup) const;
+
+		virtual std::ostream& printTo(std::ostream& out) const { return out << "MPIExecutor(" << wrapper << ")"; }
+	};
 
 	/**
 	 * A factory function for a remote executor.
 	 */
-	ExecutorPtr makeRemoteExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp",
-	                               RemoteExecutor::JobSystem system = RemoteExecutor::SSH);
+	ExecutorPtr makeRemoteExecutor(const string& hostname, const string& username = "", const string& remoteWorkDir = "/tmp");
 
 	/**
-	 * Specialized factory functions for specific remote execution systems.
+	 * A factory function for an MPI executor.
 	 */
-	ExecutorPtr makeRemoteSSHExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp");
-	ExecutorPtr makeRemoteSGEExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp");
-	ExecutorPtr makeRemotePBSExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp");
-	ExecutorPtr makeRemoteLLExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp/di72zen");
+	ExecutorPtr makeMPIExecutor(const string& wrapper = "");
 
 
 } // end namespace measure

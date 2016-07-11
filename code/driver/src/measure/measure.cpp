@@ -816,7 +816,7 @@ namespace measure {
 		}
 
 
-		vector<vector<MetricPtr>> partitionPapiCounter(const vector<MetricPtr>& metric, const ExecutorPtr executor) {
+		vector<vector<MetricPtr>> partitionPapiCounter(const vector<MetricPtr>& metric, const MeasurementSetup& setup) {
 			// compute closure and filter out PAPI counters
 			std::set<MetricPtr> dep;
 			for_each(getDependencyClosureLeafs(metric), [&](const MetricPtr& cur) {
@@ -828,11 +828,10 @@ namespace measure {
 			// if PAPI is present, query papi_event_chooser for valid PAPI counter groupings
 			// if PAPI is not present, fall back to one at a time
 			if(!utils::getPapiRootDir().empty()) {
-				ExecutionSetup executionSetup = ExecutionSetup().withSilent(true);
 				std::vector<string> params = {"PRESET"};
 				for(const auto& entry : dep) {
 					params.push_back(toString(entry));
-					if(executor->run(utils::getPapiRootDir() + "/bin/papi_event_chooser", executionSetup.withParameters(params)) != 0) {
+					if(setup.executor->run(utils::getPapiRootDir() + "/bin/papi_event_chooser", setup.executionSetup.withParameters(params).withBinaryCopying(false)) != 0) {
 						// is not successful, append to next res list and start new params list
 						params = {"PRESET", toString(entry)};
 						res.push_back(vector<MetricPtr>());
@@ -907,13 +906,13 @@ namespace measure {
 	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(const std::string& binary, const vector<MetricPtr>& metrics,
 		                                                               const MeasurementSetup& setup) {
 		// check binary
-		assert_true(boost::filesystem::exists(binary)) << "Invalid executable specified for measurement!";
+		assert_true(boost::filesystem::exists(binary)) << "Invalid executable specified for measurement! Executable was " << binary;
 
 		// extract name of executable
 		const std::string executable = bfs::path(binary).filename().string();
 
 		// partition the papi parameters
-		auto papiPartition = partitionPapiCounter(metrics, setup.executor);
+		auto papiPartition = partitionPapiCounter(metrics, setup);
 
 		// run experiments and collect results
 		vector<std::map<region_id, std::map<MetricPtr, Quantity>>> res;
@@ -933,7 +932,7 @@ namespace measure {
 				assert_true(bfs::exists(workdir)) << "Working-Directory already present!";
 
 				// setup runtime system metric selection
-				std::map<string, string> mod_env = setup.env;
+				std::map<string, string> mod_env = setup.executionSetup.env;
 				mod_env["IRT_INST_REGION_INSTRUMENTATION"] = "enabled";
 
 				string metric_selection;
@@ -952,9 +951,10 @@ namespace measure {
 				mod_env["IRT_INST_REGION_INSTRUMENTATION_TYPES"] = metric_selection;
 
 				// run code
-				ExecutionSetup executionSetup = ExecutionSetup().withEnvironment(mod_env).withParameters(setup.params).withOutputDirectory(toString(workdir));
+				ExecutionSetup executionSetup = setup.executionSetup.withEnvironment(mod_env).withOutputDirectory(workdir.string()).withCapabilities(energyMetricsPresent);
+
 				// energy metrics require rawio capabilities
-				int ret = setup.executor->run(binary, executionSetup.withCapabilities(energyMetricsPresent));
+				int ret = setup.executor->run(binary, executionSetup);
 				if(ret != 0) { LOG(WARNING) << "Unexpected executable return code " << ret; }
 
 				// load data and merge it
@@ -962,6 +962,7 @@ namespace measure {
 
 				// delete local files
 				if(boost::filesystem::exists(workdir)) { bfs::remove_all(workdir); }
+
 			}
 
 			if(!data.empty()) {
@@ -1183,6 +1184,7 @@ namespace measure {
 				});
 			}
 			LOG(INFO) << "found " << index << " log files";
+			assert_gt(index, 0) << " found no log files!";
 		}
 
 		return res;

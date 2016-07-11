@@ -86,13 +86,12 @@ namespace measure {
 		backend::runtime::RuntimeBackendPtr backend;
 		utils::compiler::Compiler compiler;
 		ExecutorPtr executor;
+		ExecutionSetup executionSetup;
 		unsigned numRuns;
-		std::map<std::string, std::string> env;
-		std::vector<std::string> params;
 
 		MeasurementSetup()
 			: backend(backend::runtime::RuntimeBackend::getDefault()), compiler(getDefaultCompilerForMeasurments()),
-			  executor(std::make_shared<LocalExecutor>()), numRuns(1), env(), params() {
+			  executor(std::make_shared<LocalExecutor>()), executionSetup(), numRuns(1) {
 		}
 
 		MeasurementSetup withCompiler(const utils::compiler::Compiler newCompiler) const {
@@ -113,15 +112,9 @@ namespace measure {
 			return retVal;
 		}
 
-		MeasurementSetup withEnvironment(const std::map<std::string, std::string> newEnv) const {
+		MeasurementSetup withExecutionSetup(const ExecutionSetup newExecutionSetup) const {
 			MeasurementSetup retVal = *this;
-			retVal.env = newEnv;
-			return retVal;
-		}
-
-		MeasurementSetup withParameters(const std::vector<std::string> newParams) const {
-			MeasurementSetup retVal = *this;
-			retVal.params = newParams;
+			retVal.executionSetup = newExecutionSetup;
 			return retVal;
 		}
 
@@ -130,8 +123,7 @@ namespace measure {
 			out << "\tCompiler: " << compiler << "\n";
 			out << "\tExecutor: " << *executor << "\n";
 			out << "\tnumRuns: " << numRuns << "\n";
-			out << "\tenv: " << env << "\n";
-			out << "\tparams: " << params << "\n";
+			out << "\texecSetup: " << executionSetup << "\n";
 			return out;
 		}
 
