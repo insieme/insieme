@@ -42,7 +42,6 @@ template_statics
 try_catch
 try_catch_cond_op
 typeinfo_struct
-user_defined_cast
 vfunc_covariant_returnty
 vfunc_multiple_inherit
 vfunc_multiple_inherit_operators
