@@ -32,19 +32,19 @@ struct B{
 //NO DTOR -- 
 struct C {
 	int m;
-	C(int x=0):m(x) { } // std::cout << "C()" << std::endl; }
-	C(const C& o) : m(o.m) { } // std::cout << "C(const C&)" << std::endl; }
-	C& operator= (C o) { return *this; } // m=o.m; std::cout << "operator=(C)" << std::endl; return *this; }
+	C(int x=0):m(x) {  std::cout << "C()" << std::endl; }
+	C(const C& o) : m(o.m) {  std::cout << "C(const C&)" << std::endl; }
+	C& operator= (C o) { m=o.m; std::cout << "operator=(C)" << std::endl; return *this; }
 };
 
 //DTOR -- results in expr-with-cleanups
 //which can introduce materialize operations
 struct S {
 	int m;
-	S(int x=0):m(x) { }//std::cout << "S()" << std::endl; }
-	S(const S& o) : m(o.m) {} // std::cout << "S(const S&)" << std::endl; }
-	S& operator= (S o) { return *this; } // m=o.m; std::cout << "operator=(S)" << std::endl; return *this; }
-	~S() { } // std::cout << "~S()" << std::endl; }
+	S(int x=0):m(x) { std::cout << "S()" << std::endl; }
+	S(const S& o) : m(o.m) { std::cout << "S(const S&)" << std::endl; }
+	S& operator= (S o) { m=o.m; std::cout << "operator=(S)" << std::endl; return *this; }
+	~S() { std::cout << "~S()" << std::endl; }
 };
 
 const S& cr_cr_f(const S& s) { 
@@ -129,8 +129,6 @@ int main (){
 	}
 	{
 		std::cout << " test 6 " <<std::endl;
-		//FIXME expects const_cpp_ref gets refstruct	
-		//NO EXPR WITH CLEANUP
 		const C &rc(0);
 		rc.m;
 		const C &rc1 = C();
@@ -152,14 +150,12 @@ int main (){
 		std::cout << " test 8 " <<std::endl;
 		C c;
 		const C &rc1 = c;
-		//FIXME expects const_cpp_ref gets refstruct	
-		//const C &rc3 = C(rc1);
+		const C &rc3 = C(rc1);
 		C &rs2 = c;
 		const C &rc4 = cs_cs_fC(c);
 		const C &rc5 = cs_s_fC(c);
 		const C &rc6 = s_s_fC(c);
 		const C &rc7 = s_cs_fC(c);
-
 	}
 
 	return 0;

@@ -44,6 +44,7 @@
 #include "insieme/core/types/match.h"
 #include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/transform/manipulation.h"
 
 namespace insieme {
 namespace core {
@@ -385,6 +386,12 @@ namespace lang {
 		if(auto call = expr.isa<CallExprPtr>()) funExpr = call->getFunctionExpr();
 		return refExt.isRefCast(funExpr) || refExt.isRefConstCast(funExpr) || refExt.isRefVolatileCast(funExpr) || refExt.isRefKindCast(funExpr)
 			   || refExt.isRefReinterpret(funExpr) || refExt.isRefParentCast(funExpr);
+	}
+
+	ExpressionPtr removeSurroundingRefCasts(const ExpressionPtr& node) {
+		auto ret = node;
+		while(isAnyRefCast(ret)) ret = core::transform::extractArg(ret, 0);
+		return ret;
 	}
 
 	ExpressionPtr buildRefTemp(const TypePtr& type) {

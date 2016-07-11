@@ -216,6 +216,9 @@ namespace utils {
 	}
 
 	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, bool cStyleName) {
+		// operator= should not have silly suffixes for templates
+		if(funcDecl->getNameAsString() == "operator=") cStyleName = true;
+
 		std::string name = funcDecl->getQualifiedNameAsString();
 		if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
 			if(!method->isStatic()) {
@@ -237,11 +240,8 @@ namespace utils {
 			suffix << buildNameSuffixForTemplate(*funcDecl->getTemplateSpecializationArgs(), funcDecl->getASTContext());
 		}
 
-		if(funcDecl->isTemplateInstantiation()) {
-			std::string returnType = getTypeString(funcDecl->getReturnType());
-			if(!cStyleName) {
-				suffix << "_returns_" << returnType;
-			}
+		if(!cStyleName && funcDecl->isTemplateInstantiation()) {
+			suffix << "_returns_" << getTypeString(funcDecl->getReturnType());
 		}
 
 		string suffixStr = suffix.str();

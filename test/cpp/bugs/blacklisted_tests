@@ -8,7 +8,6 @@ boost_intercepted_naming
 boost_mutex
 boost_noncopyable
 boost_regex_search
-const_ref_init
 const_type_modifier
 ctor_base_ptr
 ctor_inherit
@@ -47,3 +46,4 @@ vfunc
 ####################################################################################
 
 +templated_return_type
++const_ref_init

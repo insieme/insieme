@@ -335,7 +335,7 @@ namespace backend {
 				};
 
 				def fun = (b : ref<B,t,f,cpp_ref>) -> unit {
-					auto a = b.v;
+					var ref<int<4>,t,f,cpp_ref> a = b.v;
 				};
 
 				int<4> function IMP_main () {
@@ -361,6 +361,38 @@ namespace backend {
 		auto code = utils::removeCppStyleComments(toString(*converted));
 		EXPECT_PRED2(notContainsSubString, code, "*");
 		EXPECT_PRED2(containsSubString, code, "int32_t const& a = b.v;");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
+	TEST(CppSnippet, ReferenceConstructorCall) {
+		core::ProgramPtr program = builder.parseProgram(R"(
+				def struct IMP_S {
+				};
+
+				int<4> function IMP_main () {
+					var ref<IMP_S,t,f,cpp_ref> v324 = IMP_S::(ref_cast(ref_decl(type_lit(ref<IMP_S,t,f,cpp_ref>)), type_lit(f), type_lit(f), type_lit(plain)));
+					return 0;
+				}
+		)");
+
+		ASSERT_TRUE(program);
+		// std::cout << "Program: " << dumpColor(program) << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		//std::cout << "Converted: \n" << *converted << std::endl;
+
+		// check presence of relevant code
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "v324 = IMP_S()");
+		EXPECT_PRED2(notContainsSubString, code, "new");
+		EXPECT_PRED2(notContainsSubString, code, "alloca(");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -1029,6 +1061,43 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, code, "Derived::Derived() : Base(5) { }");
 		EXPECT_PRED2(notContainsSubString, utils::removeCppStyleComments(code), "*");
 		EXPECT_PRED2(notContainsSubString, code, "new ");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+	TEST(CppSnippet, ReturnThisInConstructor) {
+		auto res = builder.parseProgram(R"(
+			def struct IMP_ConstructorReturn {
+				ctor () {
+					return this in ref<ref<IMP_ConstructorReturn>>;
+				}
+				dtor () {
+					return this in ref<ref<IMP_ConstructorReturn>>;
+				}
+				lambda IMP_f = () -> unit {
+					return;
+				}
+			};
+			int<4> main() {
+				var ref<IMP_ConstructorReturn,f,f,plain> v0 = IMP_ConstructorReturn::(ref_decl(type_lit(ref<IMP_ConstructorReturn,f,f,plain>)));
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+		//std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "return;");
+		EXPECT_PRED2(notContainsSubString, code, "return this");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

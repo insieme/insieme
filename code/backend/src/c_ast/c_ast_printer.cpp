@@ -271,7 +271,9 @@ namespace c_ast {
 					out << printParam(node->varInit[0].first);
 
 					// add constructor call if necessary
-					if(ConstructorCallPtr call = node->varInit[0].second.isa<ConstructorCallPtr>()) {
+					ConstructorCallPtr call = node->varInit[0].second.isa<ConstructorCallPtr>();
+					auto vt = node->varInit[0].first->type;
+					if(call && !vt.isa<c_ast::ReferenceTypePtr>() && !vt.isa<c_ast::RValueReferenceTypePtr>()) {
 						// do nothing if it is default constructed
 						if(call->arguments.empty()) { return out; }
 

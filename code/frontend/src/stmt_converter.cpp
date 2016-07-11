@@ -159,12 +159,24 @@ namespace conversion {
 		LOG_STMT_CONVERSION(retStmt, retIr);
 
 		auto irRetStmt = builder.returnStmt();
+		core::TypePtr retType = converter.getVarMan()->getRetType();
+		bool isUnitRet = converter.getNodeManager().getLangBasic().isUnit(retType);
 
 		// check if we have a return value
 		if(clang::Expr* expr = retStmt->getRetValue()) {
 			auto returnExpr = converter.convertCxxArgExpr(expr);
-			returnExpr = utils::fixTempMemoryInInitExpression(core::lang::buildRefDecl(converter.getVarMan()->getRetType()), returnExpr);
-			irRetStmt = builder.returnStmt(returnExpr, converter.getVarMan()->getRetType());
+			// case of return void_function();
+			if(isUnitRet) {
+				retIr.push_back(returnExpr);
+				retIr.push_back(builder.returnStmt());
+				return retIr;
+			}
+			returnExpr = utils::fixTempMemoryInInitExpression(core::lang::buildRefDecl(retType), returnExpr);
+			irRetStmt = builder.returnStmt(returnExpr, retType);
+		}
+		// case of return in a constructor or destructor
+		else if(converter.getVarMan()->getRetType() && !isUnitRet) {
+			irRetStmt = builder.returnStmt(builder.deref(converter.getVarMan()->getThis()), retType);
 		}
 
 		retIr.push_back(irRetStmt);

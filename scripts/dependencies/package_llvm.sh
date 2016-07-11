@@ -31,7 +31,8 @@ pkg_configure() {
 		--enable-debug-runtime=no \
 		--enable-debug-symbols=no \
 		--enable-optimized=yes \
-		--enable-shared=yes
+		--enable-shared=yes \
+		--enable-bindings=none
 }
 
 pkg_build() {

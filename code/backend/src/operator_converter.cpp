@@ -74,28 +74,13 @@ namespace backend {
 			auto& basic = type->getNodeManager().getLangBasic();
 			return basic.isChar(type) || basic.isBool(type) || basic.isScalarType(type);
 		}
-	} // anon
-
-	namespace {
-
-		c_ast::ExpressionPtr derefIfNotImplicit(const c_ast::ExpressionPtr& cExpr, const core::ExpressionPtr& irExpr) {
-
-			// deref of a cpp ref is implicit
-			if(core::lang::isCppReference(irExpr) || core::lang::isCppRValueReference(irExpr)) {
-				return cExpr;
-			}
-
-			// otherwise, a deref is required
-			return c_ast::deref(cExpr);
-		}
 
 		c_ast::ExpressionPtr getAssignmentTarget(ConversionContext& context, const core::ExpressionPtr& expr) {
 			// convert expression
 			c_ast::ExpressionPtr res = context.getConverter().getStmtConverter().convertExpression(context, expr);
 
-			return derefIfNotImplicit(res, expr);
+			return c_ast::derefIfNotImplicit(res, expr);
 		}
-
 
 		core::ExpressionPtr inlineLazy(const core::NodePtr& lazy) {
 			core::NodeManager& manager = lazy->getNodeManager();
@@ -452,7 +437,7 @@ namespace backend {
 				return CONVERT_ARG(0);
 			}
 
-			return derefIfNotImplicit(CONVERT_ARG(0), ARG(0));
+			return c_ast::derefIfNotImplicit(CONVERT_ARG(0), ARG(0));
 		};
 
 		res[refExt.getRefAssign()] = OP_CONVERTER {
@@ -732,7 +717,7 @@ namespace backend {
 			// access source
 			auto src = CONVERT_ARG(0);
 			if (core::lang::isFixedSizedArray(arrayType)) {
-				src = c_ast::access(derefIfNotImplicit(src, ARG(0)), "data");
+				src = c_ast::access(c_ast::derefIfNotImplicit(src, ARG(0)), "data");
 			}
 
 			// generated code &(X[Y])
@@ -777,7 +762,7 @@ namespace backend {
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 
 			auto converted = CONVERT_ARG(0);
-			auto thisObject = derefIfNotImplicit(converted, ARG(0));
+			auto thisObject = c_ast::derefIfNotImplicit(converted, ARG(0));
 			auto access = c_ast::access(thisObject, field);
 
 			// handle inner initExpr
@@ -830,7 +815,7 @@ namespace backend {
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(string("c") + static_pointer_cast<const core::Literal>(index)->getStringValue());
 
 			// access the type
-			return c_ast::ref(c_ast::access(derefIfNotImplicit(CONVERT_ARG(0), ARG(0)), field));
+			return c_ast::ref(c_ast::access(c_ast::derefIfNotImplicit(CONVERT_ARG(0), ARG(0)), field));
 		};
 
 

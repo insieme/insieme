@@ -474,12 +474,30 @@ int main() {
 		int x, y;
 	} Image;
 
-	#pragma test expect_ir("REGEX_S", R"(.*<ref<IMP_Image_IMLOC_.*> .* \{0u, 0, 0\} = \*<ref<IMP_Image_IMLOC_.*> .* \{1u, 1, 1\}.*)")
+	#pragma test expect_ir(R"(
+		def struct __any_string__ {
+			data : uint<4>;
+			x : int<4>;
+			y : int<4>;
+		};
+		{
+			<ref<__any_string__,f,f,plain>>(ref_temp(type_lit(__any_string__))) {0u, 0, 0} = *<ref<__any_string__,f,f,plain>>(ref_temp(type_lit(__any_string__))) {1u, 1, 1};
+		}
+	)")
 	{
 		(Image){0u, 0, 0} = (Image){1u, 1, 1};
 	}
 
-	#pragma test expect_ir("REGEX_S", R"(.*<ref<IMP_Image_IMLOC_.*> .* \{0u, 0, 0\}.x = 1.*)")
+	#pragma test expect_ir(R"(
+		def struct __any_string__ {
+			data : uint<4>;
+			x : int<4>;
+			y : int<4>;
+		};
+		{
+			<ref<__any_string__,f,f,plain>>(ref_temp(type_lit(__any_string__))) {0u, 0, 0}.x = 1;
+		}
+	)")
 	{
 		(Image){0u, 0, 0}.x = 1;
 	}

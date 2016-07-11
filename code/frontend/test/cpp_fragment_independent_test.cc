@@ -49,6 +49,8 @@ namespace frontend {
 
 	TEST(CppIndependentTest, BasicClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_classes.cpp"); }
 
+	TEST(CppIndependentTest, AdvancedClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_advanced_classes.cpp"); }
+
 	TEST(CppIndependentTest, ClassOperators) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_class_operators.cpp"); }
 
 	TEST(CppIndependentTest, BasicTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_templates.cpp"); }
@@ -64,6 +66,8 @@ namespace frontend {
 	TEST(CppIndependentTest, This) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_this.cpp"); }
 
 	TEST(CppIndependentTest, Return) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_return.cpp"); }
+
+	TEST(CppIndependentTest, ReturnStmt) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_return_stmt.cpp"); }
 
 	TEST(CppIndependentTest, InitializerList) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_initializer_list.cpp"); }
 

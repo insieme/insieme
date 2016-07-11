@@ -58,7 +58,6 @@ int main (){
 		std::cout << value << ":" << b.getRefValue() << ":" << b.getRefValue() << ":" << b.getValue() << std::endl;
 
 	}
-	/*
 	{
 		float value =4;
 		Obj<float> a(value);
@@ -74,5 +73,4 @@ int main (){
 		value++;
 		std::cout << value << ":" << *b.getRefValue() << ":" << *b.getRefValue() << ":" << *b.getValue() << std::endl;
 	}
-	*/
 }
