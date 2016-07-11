@@ -21,6 +21,12 @@ collectCallable addr s =
 foldTree :: Monoid a => (NodeAddress -> a -> a) -> Tree IR.Inspire -> a
 foldTree = flip foldTreePrune noPrune
 
+-- | Fold the given 'Tree'. The accumulator function takes the subtree
+-- and the address of this subtree in the base tree.
+foldAddress :: Monoid a => (NodeAddress -> a -> a) -> NodeAddress -> a
+foldAddress = flip foldAddressPrune noPrune
+
+
 -- | Disables pruning for 'foldTreePrune'.
 noPrune :: NodeAddress -> Bool
 noPrune _ = True
@@ -32,13 +38,26 @@ foldTreePrune :: Monoid a
                 -> (NodeAddress -> Bool)        -- ^ prune subtrees?
                 -> Tree IR.Inspire              -- ^ initial tree
                 -> a                            -- ^ accumulated result
-foldTreePrune collect keep tree = visit (mkNodeAddress [] tree) mempty
+foldTreePrune collect prune tree = foldAddressPrune collect prune (mkNodeAddress [] tree)
+
+
+-- | Like 'foldTree' but is able to not follow entire subtrees when
+-- the pruning function returns 'False'.
+foldAddressPrune :: Monoid a
+                => (NodeAddress -> a -> a)      -- ^ aggregation function
+                -> (NodeAddress -> Bool)        -- ^ prune subtrees?
+                -> NodeAddress                  -- ^ the root of the fold operation
+                -> a                            -- ^ accumulated result
+foldAddressPrune collect prune addr = visit addr mempty
   where
-    visit base acc = if keep base
-                     then collect base $ visitsub base acc
-                     else acc
+    visit base acc = if prune base
+                     then acc
+                     else collect base $ visitsub base acc
     visitsub base acc = foldr visit acc (subtrees base)
-    subtrees addr = [goDown i addr | i <- [0..((-1) . length . subForest . getNode $ addr)]]
+    subtrees addr = [goDown i addr | i <- [0..(length . subForest . getNode $ addr) - 1]]
+
+
+
 
 -- some examples
 excoll a (Node n _) = Set.insert (a, n)

@@ -56,7 +56,7 @@ library
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.ThHelpers,
-                        Framework,
+                        Insieme.TreeUtils,
                         Solver
     build-depends:      base >=4.7,
                         mtl >=2.2,

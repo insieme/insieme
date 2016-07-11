@@ -18,6 +18,7 @@ import qualified Data.Set as Set
 import qualified Insieme.Boolean as Boolean
 import qualified Insieme.Callable as Callable
 import qualified Insieme.Inspire as IR
+import Insieme.TreeUtils
 import qualified Solver
 
 --
@@ -66,9 +67,15 @@ findDeclr start = findDeclr start
     nextlevel :: NodeAddress -> Maybe NodeAddress
     nextlevel addr = getParent addr >>= findDeclr
 
+
 --
--- * Boolean Value Analysis
+-- * Generic Data Flow Value Analysis
 --
+
+
+addrIdent :: NodeAddress -> Solver.Identifier
+addrIdent = Solver.mkIdentifier . prettyShow
+
 
 dataflowValue :: (Solver.Lattice a)
          => NodeAddress
@@ -76,7 +83,6 @@ dataflowValue :: (Solver.Lattice a)
          -> (NodeAddress -> Solver.TypedVar a)
          -> Solver.TypedVar a
 dataflowValue addr top analysis = case getNode addr of
-    Node IR.Literal _ -> Solver.mkVariable (addrIdent addr) [] top
 
     Node IR.Declaration _ -> var
       where
@@ -87,7 +93,18 @@ dataflowValue addr top analysis = case getNode addr of
         Just declrAddr -> handleDeclr declrAddr
         _              -> Solver.mkVariable (addrIdent addr) [] top
 
+    Node IR.CallExpr _ -> var
+      where
+        var = Solver.mkVariable (addrIdent addr) [con] Solver.bot
+        con = Solver.createConstraint dep val var
+        
+        trg = callableValue (goDown 1 addr)
+        dep a = (Solver.toVar trg) : (map Solver.toVar (getReturnVars a))
+        val a = Solver.join $ map (Solver.get a) (getReturnVars a) 
+        getReturnVars a = Set.fold (\c l -> (map (\a -> analysis a) (getReturnPoints c)) ++ l ) [] (Solver.get a trg)
+
     _ -> Solver.mkVariable (addrIdent addr) [] top
+    
   where
     handleDeclr declrAddr | declrAddr == addr = var
       where
@@ -102,6 +119,31 @@ dataflowValue addr top analysis = case getNode addr of
         _ -> error "unhandled case"
 
 
+getReturnPoints :: Callable.Callable -> [NodeAddress]
+getReturnPoints (Callable.Closure x ) = [goDown 2 x] 
+getReturnPoints (Callable.Literal x ) = undefined
+getReturnPoints (Callable.Lambda x ) = collectReturnPoints x
+
+
+collectReturnPoints :: NodeAddress -> [NodeAddress]
+collectReturnPoints = foldAddressPrune collector filter
+    where
+        filter cur = 
+            case getNode cur of
+                Node IR.LambdaExpr _ -> True
+                _ -> False
+        collector cur returns =
+            case getNode cur of 
+                Node IR.ReturnStmt _ -> (goDown 0 cur : returns)
+                _ -> returns
+        
+
+
+
+--
+-- * Boolean Value Analysis
+--
+
 booleanValue :: NodeAddress -> Solver.TypedVar Boolean.Result
 booleanValue addr = case getNode addr of
     Node IR.Literal [_, Node (IR.StringValue "true") _] ->
@@ -112,67 +154,49 @@ booleanValue addr = case getNode addr of
 
     _ -> dataflowValue addr Boolean.Both booleanValue
 
+
 checkBoolean :: NodeAddress -> Boolean.Result
 checkBoolean addr = Solver.resolve $ booleanValue addr
 
-addrIdent :: NodeAddress -> Solver.Identifier
-addrIdent = Solver.mkIdentifier . prettyShow
+
+
+
 
 --
 -- * Callable Analysis
 --
 
-{-
+callableValue :: NodeAddress -> Solver.TypedVar Callable.CallableSet
+callableValue addr = case getNode addr of
+    Node IR.LambdaExpr _ ->
+        Solver.mkVariable (addrIdent addr) [] (Set.singleton (Callable.Lambda (fromJust $ getLambda addr )))
 
-callableValue :: Tree IR.Inspire -> NodeAddress -> State Int AVar
-callableValue tree addr = do
-    count <- get
-    case resolve addr tree of
-        Just (Node IR.LambdaExpr _) ->
-            return $ AVar count (\_ -> constr Nothing [] (Set.singleton (Callable.Lambda (fromJust $ getLambda tree addr))))
+    Node IR.BindExpr _ ->
+        Solver.mkVariable (addrIdent addr) [] (Set.singleton (Callable.Closure addr))
 
-        Just (Node IR.Literal _) ->
-            return $ AVar count (\_ -> constr Nothing [] (Set.singleton (Callable.Literal addr)))
+    Node IR.Literal _ ->
+        Solver.mkVariable (addrIdent addr) [] (Set.singleton (Callable.Literal addr))
 
-        Just (Node IR.BindExpr _) ->
-            return $ AVar count (\_ -> constr Nothing [] (Set.singleton (Callable.Closure addr)))
-
-        _ -> modify (+1) >> dataflowValue tree addr callableValue end forward
+    _ -> dataflowValue addr allCallables callableValue
 
   where
-    forward :: AVar -> Constr AVar
-    forward pred = constr Nothing [pred] (id :: Callable.CallableSet -> Callable.CallableSet)
+    allCallables = Set.fromList $ foldTree collector (getRoot addr)
+    collector cur callables = case getNode cur of
+        Node IR.Lambda _   -> ((Callable.Lambda  cur) : callables)
+        Node IR.BindExpr _ -> ((Callable.Closure cur) : callables)
+        Node IR.Literal _  -> ((Callable.Literal cur) : callables)
+        _ -> callables  
 
-    end :: Constr AVar
-    end = constr Nothing [] (findEverything tree)
 
-getLambda :: Tree IR.Inspire -> NodeAddress -> Maybe NodeAddress
-getLambda tree addr =
-    case resolve addr tree of
-        Just (Node IR.LambdaExpr [_, ref, Node IR.LambdaDefinition defs]) ->
+
+getLambda :: NodeAddress -> Maybe NodeAddress
+getLambda addr =
+    case getNode addr of
+        Node IR.LambdaExpr [_, ref, Node IR.LambdaDefinition defs] ->
             findLambda ref defs >>= walk addr
         _ -> Nothing
   where
     findLambda ref defs = findIndex ((ref==) . (!!0) . subForest) defs
     walk addr x = Just . goDown 1 . goDown x . goDown 2 $ addr
 
--- TODO: remove
-findEverything :: Tree IR.Inspire -> Callable.CallableSet
-findEverything tree = visit tree go' Set.empty
 
-  where
-
-    visit :: Tree IR.Inspire -> (Tree IR.Inspire -> NodeAddress -> a -> a) -> a -> a
-    visit tree go s = visit' tree Seq.empty go s
-
-    visit' :: Tree IR.Inspire -> NodeAddress -> (Tree IR.Inspire -> NodeAddress -> a -> a)
-           -> a -> a
-    visit' tree addr go s = foldr (\(t, i) s' -> go t (goDown i addr) (visit' t (goDown i addr) go s') ) s (Prelude.zip (subForest tree) [0..])
-
-    go' :: Tree IR.Inspire -> NodeAddress -> Callable.CallableSet -> Callable.CallableSet
-    go' (Node IR.Lambda   _) addr s = Set.insert (Callable.Lambda  addr) s
-    go' (Node IR.Literal  _) addr s = Set.insert (Callable.Literal addr) s
-    go' (Node IR.BindExpr _) addr s = Set.insert (Callable.Closure addr) s
-    go' _ _ s = s
-
--}
