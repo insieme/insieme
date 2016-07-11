@@ -109,17 +109,13 @@ dataflowValue addr fun top forward = do
                 return $ AVar count (\_ -> forward f)
             _ -> error "unhandled case"
 
-boolvalue :: NodeAddress -> State Int AVar
-boolvalue addr = do
+boolvalue :: NodeAddress -> Map.Map String (Tree IR.Inspire) -> State Int AVar
+boolvalue addr builtins = do
     count <- get
-    case getNode addr of
-        Node IR.Literal [_, Node (IR.StringValue "true") _] ->
-            return $ AVar count (\_ -> constr Nothing [] Boolean.AlwaysTrue)
-
-        Node IR.Literal [_, Node (IR.StringValue "false") _] ->
-            return $ AVar count (\_ -> constr Nothing [] Boolean.AlwaysFalse)
-
-        _ -> modify (+1) >> dataflowValue addr boolvalue end forward
+    case () of _
+                | lookup "true"  -> return $ AVar count (\_ -> constr Nothing [] Boolean.AlwaysTrue)
+                | lookup "false" -> return $ AVar count (\_ -> constr Nothing [] Boolean.AlwaysFalse)
+                | otherwise      -> modify (+1) >> dataflowValue addr (\a -> boolvalue a builtins) end forward
 
   where
     forward :: AVar -> Constr AVar
@@ -128,11 +124,15 @@ boolvalue addr = do
     end :: Constr AVar
     end = constr Nothing [] Boolean.Both
 
+    lookup :: String -> Bool
+    lookup key = Map.findWithDefault False key $ (== getNode addr) <$> builtins
+    lookup key = fromMaybe False ((== getNode addr) <$> Map.lookup key builtins)
 
-checkBoolean :: NodeAddress -> Boolean.Result
-checkBoolean addr = resolve' target Boolean.Both
+
+checkBoolean :: NodeAddress -> IR.TreePackage -> Boolean.Result
+checkBoolean addr tree = resolve' target Boolean.Both
   where
-    target = evalState (boolvalue addr) 0
+    target = evalState (boolvalue addr (IR.getBuiltins tree)) 0
 
 --
 -- * Callable Analysis

@@ -72,7 +72,7 @@ extern "C" {
 
 	// Analysis
 	StablePtr hat_findDeclr(const StablePtr var);
-	int hat_checkBoolean(const StablePtr expr);
+	int hat_checkBoolean(const StablePtr expr, const StablePtr tree);
 
 }
 
@@ -219,8 +219,8 @@ namespace haskell {
 		return ret;
 	}
 
-	BooleanAnalysisResult Environment::checkBoolean(const Address& expr) {
-		auto res = static_cast<BooleanAnalysisResult>(hat_checkBoolean(expr.addr->ptr));
+	BooleanAnalysisResult Environment::checkBoolean(const Address& expr, const Tree& tree) {
+		auto res = static_cast<BooleanAnalysisResult>(hat_checkBoolean(expr.addr->ptr, tree.tree->ptr));
 		if (res == BooleanAnalysisResult_Neither) {
 			std::vector<std::string> msgs{"Boolean Analysis Error"};
 			throw AnalysisFailure(msgs);

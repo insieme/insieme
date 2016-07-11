@@ -92,7 +92,7 @@ namespace haskell {
 		Address passAddress(const core::NodeAddress& addr, const Tree& tree);
 
 		boost::optional<Address> findDeclr(const Address& var);
-		BooleanAnalysisResult checkBoolean(const Address& expr);
+		BooleanAnalysisResult checkBoolean(const Address& expr, const Tree& tree);
 
 	};
 

@@ -2,6 +2,8 @@
 
 module Insieme.Inspire where
 
+import Data.Map (Map)
+import Data.Tree (Tree)
 import Insieme.Inspire.ThHelpers
 import Language.Haskell.TH
 
@@ -87,3 +89,8 @@ $(let
     (++) <$> extend baseFromNodeType genClauseFromNodeType
          <*> extend baseToNodeType   genClauseToNodeType
  )
+
+data TreePackage = TreePackage {
+    getTree     :: Tree Inspire,
+    getBuiltins :: Map String (Tree Inspire)
+}

@@ -22,7 +22,7 @@ import qualified Insieme.Inspire as IR
 import Prelude hiding (take)
 
 -- | Parse binary dump.
-parseBinaryDump :: BS.ByteString -> Either String (Tree IR.Inspire)
+parseBinaryDump :: BS.ByteString -> Either String (IR.TreePackage)
 parseBinaryDump = parseOnly $ do
     -- parse components
     parseHeader
@@ -35,7 +35,7 @@ parseBinaryDump = parseOnly $ do
     let nodes    = connectDumpNodes dumpNodes
     let builtins = resolve nodes <$> dumpBuiltins
 
-    return $ connectDumpNodes dumpNodes
+    return $ IR.TreePackage (connectDumpNodes dumpNodes) builtins
 
   where
       resolve :: Tree IR.Inspire -> [Int] -> Tree IR.Inspire
