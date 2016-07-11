@@ -210,6 +210,10 @@ namespace conversion {
 
 		const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
+		// first, translate class decl if that hasn't happened yet
+		auto record = callExpr->getRecordDecl();
+		if(record) converter.getDeclConverter()->VisitRecordDecl(record);
+
 		if(!methodDecl) {
 			// member function pointer call
 			frontend_assert(false) << "Member function pointer call not implemented";
