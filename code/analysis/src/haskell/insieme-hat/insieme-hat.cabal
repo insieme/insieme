@@ -24,16 +24,17 @@ executable insieme-hat
                         Insieme.Inspire.ThHelpers,
                         Insieme.TreeUtils,
                         Framework
-    build-depends:      base >=4.7,
-                        mtl >=2.2,
-                        lens >=4.13,
-                        containers >=0.5,
-                        pretty-show >=1.6,
-                        bytestring >=0.10,
-                        template-haskell >=2.9,
-                        transformers >=0.4,
+    build-depends:      attoparsec >=0.13,
                         attoparsec-binary >=0.2,
-                        attoparsec >=0.13
+                        base >=4.7,
+                        bytestring >=0.10,
+                        containers >=0.5,
+                        lens >=4.13,
+                        mtl >=2.2,
+                        pretty-show >=1.6,
+                        split >= 0.2.3.1,
+                        template-haskell >=2.9,
+                        transformers >=0.4
     hs-source-dirs:     src
     include-dirs:       include,
                         ../../../../core/include
@@ -55,16 +56,17 @@ library
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.ThHelpers,
                         Framework
-    build-depends:      base >=4.7,
-                        mtl >=2.2,
-                        lens >=4.13,
-                        containers >=0.5,
-                        pretty-show >=1.6,
-                        bytestring >=0.10,
-                        template-haskell >=2.9,
-                        transformers >=0.4,
+    build-depends:      attoparsec >=0.13,
                         attoparsec-binary >=0.2,
-                        attoparsec >=0.13
+                        base >=4.7,
+                        bytestring >=0.10,
+                        containers >=0.5,
+                        lens >=4.13,
+                        mtl >=2.2,
+                        pretty-show >=1.6,
+                        split >= 0.2.3.1,
+                        template-haskell >=2.9,
+                        transformers >=0.4
     hs-source-dirs:     src
     include-dirs:       include,
                         ../../../../core/include

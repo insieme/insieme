@@ -55,8 +55,9 @@ namespace haskell {
 	struct Tree {
 
 		std::shared_ptr<HSobject> tree;
+		const core::NodePtr& original;
 
-		Tree(std::shared_ptr<HSobject> tree);
+		Tree(std::shared_ptr<HSobject> tree, const core::NodePtr& original);
 
 		std::size_t size() const;
 		void print() const;
@@ -91,7 +92,7 @@ namespace haskell {
 		Address passAddress(const core::NodeAddress& addr, const Tree& tree);
 
 		boost::optional<Address> findDeclr(const Address& var);
-		BooleanAnalysisResult checkBoolean(const Address& expr);
+		BooleanAnalysisResult checkBoolean(const Address& expr, const Tree& tree);
 
 	};
 

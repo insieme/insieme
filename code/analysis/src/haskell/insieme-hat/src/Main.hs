@@ -1,6 +1,7 @@
 module Main where
 
 import qualified Data.ByteString as BS
+import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryParser as BinPar
 
 main :: IO ()
@@ -11,4 +12,4 @@ main = do
     -- run parser
     let Right tree = BinPar.parseBinaryDump dump
 
-    print $ length tree
+    print . length . IR.getTree $ tree
