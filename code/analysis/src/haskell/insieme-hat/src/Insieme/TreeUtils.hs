@@ -29,7 +29,7 @@ foldAddress = flip foldAddressPrune noPrune
 
 -- | Disables pruning for 'foldTreePrune'.
 noPrune :: NodeAddress -> Bool
-noPrune _ = True
+noPrune _ = False
 
 -- | Like 'foldTree' but is able to not follow entire subtrees when
 -- the pruning function returns 'False'.

@@ -14,9 +14,9 @@ data Callable =
  deriving (Eq, Ord)
 
 instance Show Callable where
-    show (Lambda na) = prettyShow na
-    show (Literal na) = prettyShow na
-    show (Closure na) = prettyShow na
+    show (Lambda na) = "Lambda@" ++ (prettyShow na)
+    show (Literal na) = "Literal@" ++ (prettyShow na)
+    show (Closure na) = "Closure@" ++ (prettyShow na)
 
 type CallableSet = Set.Set Callable
 

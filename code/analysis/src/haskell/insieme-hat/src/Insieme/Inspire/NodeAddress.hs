@@ -2,6 +2,7 @@ module Insieme.Inspire.NodeAddress (
     NodeAddress,
     mkNodeAddress,
     getAddress,
+    getIndex,
     getNode,
     getParent,
     getRoot,
@@ -39,6 +40,9 @@ mkNodeAddress' xs tree parent = mkNodeAddress' xs [] tree parent
 
 getAddress :: NodeAddress -> [Int]
 getAddress (NodeAddress na _ _) = na
+
+getIndex :: NodeAddress -> Int
+getIndex a = last $ getAddress a
 
 getNode :: NodeAddress -> Tree IR.Inspire
 getNode (NodeAddress _ node _) = node
