@@ -146,12 +146,6 @@ namespace haskell {
 		return instance;
 	}
 
-	// TODO: use unexported functions from binary dumper
-	template <typename T>
-	void write(ostream& out, T value) {
-		out.write((char*) &value, sizeof(T));
-	}
-
 	Tree Environment::passTree(const NodePtr& root) {
 		// create a in-memory stream
 		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
@@ -175,16 +169,10 @@ namespace haskell {
 		});
 
 		// attach builtins
-		write<uint32_t>(buffer, builtins.size());
+		write<length_t>(buffer, builtins.size());
 		for (auto& builtin : builtins) {
-			// dump key
-			write<uint32_t>(buffer, builtin.first.length());
-			buffer.write(builtin.first.c_str(), builtin.first.length());
-
-			// dump value
-			string addr = toString(builtin.second);
-			write<uint32_t>(buffer, addr.length());
-			buffer.write(addr.c_str(), addr.length());
+			dumpString(buffer, builtin.first);
+			dumpString(buffer, toString(builtin.second));
 		}
 
 		// get data as C string
