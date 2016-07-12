@@ -68,34 +68,32 @@ findDeclr start = findDeclr start
     nextlevel addr = getParent addr >>= findDeclr
 
 
+
 --
 -- * Generic Data Flow Value Analysis
 --
 
 
-addrIdent :: NodeAddress -> Solver.Identifier
-addrIdent = Solver.mkIdentifier . prettyShow
-
-
 dataflowValue :: (Solver.Lattice a)
-         => NodeAddress
-         -> a
-         -> (NodeAddress -> Solver.TypedVar a)
-         -> Solver.TypedVar a
-dataflowValue addr top analysis = case getNode addr of
+         => NodeAddress                                     -- ^ the address of the node for which to compute a variable representing the data flow value
+         -> a                                               -- ^ the top value of the lattice
+         -> (NodeAddress -> Solver.Identifier)              -- ^ a variable ID generator function
+         -> (NodeAddress -> Solver.TypedVar a)              -- ^ a variable generator function for referenced variables
+         -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
+dataflowValue addr top idGen analysis = case getNode addr of
 
     Node IR.Declaration _ -> var
       where
-        var = Solver.mkVariable (addrIdent addr) [con] Solver.bot
+        var = Solver.mkVariable (idGen addr) [con] Solver.bot
         con = Solver.forward (analysis (goDown 1 addr)) var
 
     Node IR.Variable _ -> case findDeclr addr of
         Just declrAddr -> handleDeclr declrAddr
-        _              -> Solver.mkVariable (addrIdent addr) [] top
+        _              -> Solver.mkVariable (idGen addr) [] top
 
     Node IR.CallExpr _ -> var
       where
-        var = Solver.mkVariable (addrIdent addr) [con,con2] Solver.bot
+        var = Solver.mkVariable (idGen addr) [con,con2] Solver.bot
         con = Solver.createConstraint dep val var
         
         trg = callableValue (goDown 1 addr)
@@ -113,7 +111,7 @@ dataflowValue addr top analysis = case getNode addr of
         trgRef = analysis $ goDown 2 addr
         -- end temporary fix
 
-    _ -> Solver.mkVariable (addrIdent addr) [] top
+    _ -> Solver.mkVariable (idGen addr) [] top
     
   where
 
@@ -121,12 +119,12 @@ dataflowValue addr top analysis = case getNode addr of
     
         Node IR.DeclarationStmt _ -> var
           where
-            var = Solver.mkVariable (addrIdent addr) [constraint] Solver.bot
+            var = Solver.mkVariable (idGen addr) [constraint] Solver.bot
             constraint = Solver.forward (analysis (goDown 0 . goUp $ declrAddr)) var
             
         Node IR.Parameters _ -> var
           where 
-            var = Solver.mkVariable (addrIdent addr) [con] Solver.bot
+            var = Solver.mkVariable (idGen addr) [con] Solver.bot
             con = Solver.createConstraint dep val var
             
             n = getIndex declrAddr
@@ -185,12 +183,16 @@ booleanValue :: NodeAddress -> Solver.TypedVar Boolean.Result
 --booleanValue a | trace ("Resolving boolean value for " ++ (prettyShow a ) ) False = undefined
 booleanValue addr = case getNode addr of
     Node IR.Literal [_, Node (IR.StringValue "true") _] ->
-        Solver.mkVariable (addrIdent addr) [] Boolean.AlwaysTrue
+        Solver.mkVariable (idGen addr) [] Boolean.AlwaysTrue
 
     Node IR.Literal [_, Node (IR.StringValue "false") _] ->
-        Solver.mkVariable (addrIdent addr) [] Boolean.AlwaysFalse
+        Solver.mkVariable (idGen addr) [] Boolean.AlwaysFalse
 
-    _ -> dataflowValue addr Boolean.Both booleanValue
+    _ -> dataflowValue addr Boolean.Both idGen booleanValue
+
+  where
+
+    idGen = Solver.mkIdentifier . ("B"++) . prettyShow
 
 
 checkBoolean :: NodeAddress -> Boolean.Result
@@ -208,17 +210,20 @@ callableValue :: NodeAddress -> Solver.TypedVar Callable.CallableSet
 --callableValue a | trace ("Resolving callable value for " ++ (prettyShow a ) ) False = undefined
 callableValue addr = case getNode addr of
     Node IR.LambdaExpr _ ->
-        Solver.mkVariable (addrIdent addr) [] (Set.singleton (Callable.Lambda (fromJust $ getLambda addr )))
+        Solver.mkVariable (idGen addr) [] (Set.singleton (Callable.Lambda (fromJust $ getLambda addr )))
 
     Node IR.BindExpr _ ->
-        Solver.mkVariable (addrIdent addr) [] (Set.singleton (Callable.Closure addr))
+        Solver.mkVariable (idGen addr) [] (Set.singleton (Callable.Closure addr))
 
     Node IR.Literal _ ->
-        Solver.mkVariable (addrIdent addr) [] (Set.singleton (Callable.Literal addr))
+        Solver.mkVariable (idGen addr) [] (Set.singleton (Callable.Literal addr))
 
-    _ -> dataflowValue addr allCallables callableValue
+    _ -> dataflowValue addr allCallables idGen callableValue
 
   where
+
+    idGen = Solver.mkIdentifier . ("C"++) . prettyShow
+
     allCallables = Set.fromList $ foldTree collector (getRoot addr)
     collector cur callables = case getNode cur of
         Node IR.Lambda _   -> ((Callable.Lambda  cur) : callables)
