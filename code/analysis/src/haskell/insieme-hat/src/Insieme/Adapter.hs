@@ -2,12 +2,14 @@
 
 module Insieme.Adapter where
 
+import Control.Exception
 import Data.Foldable
 import Data.Maybe
 import Data.Tree
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
+import Insieme.Boolean
 import qualified Data.ByteString.Char8 as BS8
 import qualified Insieme.Analysis.Examples as Anal
 import qualified Insieme.Inspire as IR
@@ -113,11 +115,20 @@ foreign export ccall "hat_findDeclr"
 
 checkBoolean :: StablePtr Addr.NodeAddress -> StablePtr IR.TreePackage
              -> IO (CInt)
-checkBoolean addr_c tree_c = do
+checkBoolean addr_c tree_c = handleAll (return . fromIntegral . fromEnum $ Both) $ do
     addr <- deRefStablePtr addr_c
     tree <- deRefStablePtr tree_c
-    return . fromIntegral . fromEnum $ Anal.checkBoolean addr tree
+    evaluate . fromIntegral . fromEnum $ Anal.checkBoolean addr tree
 
 foreign export ccall "hat_checkBoolean"
     checkBoolean :: StablePtr Addr.NodeAddress -> StablePtr IR.TreePackage
                  -> IO (CInt)
+
+--
+-- * Utilities
+--
+
+handleAll :: IO a -> IO a -> IO a
+handleAll dummy action = catch action $ \e -> do
+    putStrLn $ "Exception: " ++ show (e :: SomeException)
+    dummy
