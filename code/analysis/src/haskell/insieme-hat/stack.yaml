@@ -8,5 +8,6 @@ packages:
 extra-deps:
 - attoparsec-binary-0.2
 - directory-1.2.6.3
+- unsafe-0.0
 
 resolver: lts-6.4

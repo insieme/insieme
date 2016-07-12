@@ -5,6 +5,7 @@ module Insieme.Inspire.NodeAddress (
     getIndex,
     getNode,
     getParent,
+    isRoot,
     getRoot,
     prettyShow,
     goUp,
@@ -49,6 +50,10 @@ getNode (NodeAddress _ node _) = node
 
 getParent :: NodeAddress -> Maybe NodeAddress
 getParent (NodeAddress _ _ parent) = parent
+
+isRoot :: NodeAddress -> Bool
+isRoot (NodeAddress _ _ Nothing ) = True
+isRoot (NodeAddress _ _ _       ) = False 
 
 getRoot :: NodeAddress -> Tree IR.Inspire
 getRoot (NodeAddress _ n Nothing      ) = n

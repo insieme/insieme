@@ -19,6 +19,7 @@ import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Callable as Callable
 import Insieme.Analysis.Callable
 
+import Insieme.Analysis.Reachable
 
 
 --
@@ -49,9 +50,15 @@ dataflowValue addr top idGen analysis = case getNode addr of
         con = Solver.createConstraint dep val var
         
         trg = callableValue (goDown 1 addr)
-        dep a = (Solver.toVar trg) : (map Solver.toVar (getReturnVars a))
-        val a = Solver.join $ map (Solver.get a) (getReturnVars a) 
-        getReturnVars a = Set.fold (\c l -> (map (\a -> analysis a) (getReturnPoints c)) ++ l ) [] (Solver.get a trg)
+        dep a = (Solver.toVar trg) : ( (map Solver.toVar (getReturnReachVars a)) ++ (map Solver.toVar (getReturnValueVars a)) )
+        val a = Solver.join $ map (Solver.get a) (getReturnValueVars a) 
+        
+        getReturnReachVars a = Set.fold (\c l -> (map (\a -> reachableIn a) (getReturnPoints c)) ++ l ) [] (Solver.get a trg)
+        
+        getReturnValueVars a = Set.fold 
+                (\c l ->
+                     foldr (\r l -> if toBool $ Solver.get a (reachableIn r) then (analysis r) : l else l ) l (getReturnPoints c)
+                ) [] (Solver.get a trg)
 
         -- temporary fix to support ref_deref before supporting referencences
         con2 = Solver.createConstraint dep2 val2 var
