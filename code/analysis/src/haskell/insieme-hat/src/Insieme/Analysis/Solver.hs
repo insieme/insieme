@@ -1,5 +1,41 @@
 
-module Insieme.Analysis.Solver where
+module Insieme.Analysis.Solver (
+    
+    -- lattices
+    Lattice,
+    join,
+    bot,
+    less,
+    
+    -- identifiers
+    Identifier,
+    mkIdentifier,
+    
+    -- variables
+    Var,
+    TypedVar,
+    mkVariable,
+    toVar,
+    
+    -- assignments
+    Assignment,
+    get,
+    set,
+    
+    -- solver
+    resolve,
+    solve,
+    
+    -- constraints
+    createConstraint,
+    forward,
+    forwardIf,
+    constant,
+    
+    -- debugging
+    dumpAssignment
+    
+) where
 
 import Debug.Trace
 import Data.List
@@ -19,16 +55,16 @@ import qualified Data.Hashable as Hash
 class (Eq v, Show v, Typeable v) => Lattice v where
         {-# MINIMAL join #-}
         -- | combine elements
-        join :: [v] -> v                -- need to be provided by implementations
+        join :: [v] -> v                    -- need to be provided by implementations
         -- | binary join
         merge :: v -> v -> v                -- a binary version of the join
-        merge a b = join [ a , b ]        -- its default implementation derived from join
+        merge a b = join [ a , b ]          -- its default implementation derived from join
         -- | bottom element
-        bot  :: v                        -- the bottom element of the join
-        bot = join []                        -- default implementation
+        bot  :: v                           -- the bottom element of the join
+        bot = join []                       -- default implementation
         -- | induced order
-        less :: v -> v -> Bool                -- determines whether one element of the lattice is less than another
-        less a b = (a `merge` b) == b        -- default implementation
+        less :: v -> v -> Bool              -- determines whether one element of the lattice is less than another
+        less a b = (a `merge` b) == b       -- default implementation
 
 
 -- Identifier -----
@@ -123,31 +159,41 @@ toDotGraph a@( Assignment m ) = "digraph G {\n\t"
         "\n}"
     where 
         
+        -- a function collecting all variables a variable is depending on
+        dep v = foldr (\c l -> (dependingOn c a) ++ l) [] (constraints v)
+        
         -- list of all keys in map
         keys = Map.keys m
         
+        -- list of all variables in the analysis 
+        allVars = Set.toList $ collect keys Set.empty
+            where 
+                collect [] s = s
+                collect (v:vs) s = if Set.member v s 
+                                   then collect vs s
+                                   else collect ((dep v) ++ vs) (Set.insert v s)
+        
         -- the keys (=variables) associated with an index
-        vars = Prelude.zip [0..] keys 
+        vars = Prelude.zip [0..] allVars 
         
         -- a reverse lookup map for vars
         rev = Map.fromList $ map swap vars
         
         -- a lookup function for rev
-        index v = Map.lookup v rev 
+        index v = fromJust $ Map.lookup v rev 
         
         -- computes the list of dependencies
         deps = foldr go [] vars
             where 
-                go = (\v l -> (foldr (\s l -> let i = index s in if isJust i then (fst v, fromJust i) : l else l) [] (dep $ snd v )) ++ l)
-                dep v = foldr (\c l -> (dependingOn c a) ++ l) [] (constraints v)
+                go = (\v l -> (foldr (\s l -> (fst v, index s) : l ) [] (dep $ snd v )) ++ l)
 
                   
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
-dumpAssignment :: Assignment -> String
-dumpAssignment a = performIO $ do 
-         writeFile "graph.dot" $ toDotGraph a
-         runCommand "dot -Tpdf graph.dot -o graph.pdf"
-         return "Dumped Graph!"
+dumpAssignment :: Assignment -> String -> String
+dumpAssignment a file = performIO $ do 
+         writeFile (file ++ ".dot") $ toDotGraph a
+         runCommand ("dot -Tpdf " ++ file ++ ".dot -o " ++ file ++ ".pdf")
+         return ("Dumped assignment into file " ++ file ++ ".pdf!")
 
 
 -- Constraints ---------------------------------------------
@@ -186,11 +232,11 @@ getDep (Dependencies d) v = fromMaybe Set.empty $ Map.lookup v d
 
 -- solve for a single value
 resolve :: (Lattice a) => TypedVar a -> a
-resolve tv@(TypedVar v) = get (solve [v]) tv
+resolve tv@(TypedVar v) = get (solve empty [v]) tv
 
 -- solve for a set of variables (with empty seed)
-solve :: [Var] -> Assignment
-solve vs = solveStep empty (Set.fromList vs) emptyDep vs
+solve :: Assignment -> [Var] -> Assignment
+solve init vs = solveStep init (Set.fromList vs) emptyDep vs
 
 
 -- solve for a set of variables with an initial assignment
@@ -208,7 +254,7 @@ solveStep :: Assignment -> Set.Set Var -> Dependencies -> [Var] -> Assignment
 
 -- empty work list
 solveStep a _ _ [] = a                                        -- work list is empty
---solveStep a _ _ [] = trace (dumpAssignment a) $ a                                        -- work list is empty
+--solveStep a _ _ [] = trace (dumpAssignment a "graph") $ a                                        -- work list is empty
 
 -- compute next element in work list
 solveStep a k d (v:vs) = solveStep resAss resKnown resDep (ds ++ vs)
@@ -262,35 +308,3 @@ constant x b = createConstraint (\_ -> []) (\a -> x) b
 
 
 --------------------------------------------------------------
-
--- testing data
-
-instance Lattice Bool where
-        join = foldr (||) False
-
-instance Lattice Int where
-        join = foldr (+) 0
-
-
-a = empty
-v1 = mkVariable (mkIdentifier "v1") [] 0         :: TypedVar Int
-v2 = mkVariable (mkIdentifier "v2") [] False         :: TypedVar Bool
-
-a1 = set a v1 12
-a2 = set a1 v2 True
-
--- example evaluation
-
--- this is the example analysis computing a chain of boolean values
-demo :: Int -> TypedVar Bool
-demo i = var
-        where 
-                var = mkVariable (mkIdentifier $ "v" ++ (show i)) [constraint] False
-                constraint = case i of
-                        0 -> constant True var                                -- terminal case
-                        _ -> forward (demo (i-1)) var                        -- reference predecessor
-
-
-run :: IO ()
-run = print $ resolve $ demo 10
-
