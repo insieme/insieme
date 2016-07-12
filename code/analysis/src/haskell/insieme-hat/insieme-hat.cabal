@@ -20,6 +20,7 @@ executable insieme-hat
                         Insieme.Analysis.Solver,
                         Insieme.Analysis.Boolean,
                         Insieme.Analysis.Callable,
+                        Insieme.Analysis.Reachable,
                         Insieme.Analysis.Framework.Dataflow,
                         Insieme.Boolean,
                         Insieme.Callable,
@@ -39,7 +40,9 @@ executable insieme-hat
                         transformers >=0.4,
                         attoparsec-binary >=0.2,
                         attoparsec >=0.13,
-                        hashable >= 1.2.4
+                        hashable >= 1.2.4,
+                        unsafe >= 0.0,
+                        process >= 1.2.3
     hs-source-dirs:     src
     include-dirs:       include,
                         ../../../../core/include
@@ -58,6 +61,7 @@ library
                         Insieme.Analysis.Solver,
                         Insieme.Analysis.Boolean,
                         Insieme.Analysis.Callable,
+                        Insieme.Analysis.Reachable,
                         Insieme.Analysis.Framework.Dataflow,
                         Insieme.Boolean,
                         Insieme.Callable,
@@ -76,7 +80,9 @@ library
                         transformers >=0.4,
                         attoparsec-binary >=0.2,
                         attoparsec >=0.13,
-                        hashable >= 1.2.4
+                        hashable >= 1.2.4,
+                        unsafe >= 0.0,
+                        process >= 1.2.3
     hs-source-dirs:     src
     include-dirs:       include,
                         ../../../../core/include

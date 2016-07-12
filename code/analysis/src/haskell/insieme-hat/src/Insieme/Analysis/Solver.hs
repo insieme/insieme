@@ -2,8 +2,12 @@
 module Insieme.Analysis.Solver where
 
 import Debug.Trace
+import Data.List
 import Data.Dynamic
+import Data.Tuple
 import Data.Maybe
+import System.Unsafe
+import System.Process
 --import qualified Data.Map.Lazy as Map
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -12,7 +16,7 @@ import qualified Data.Hashable as Hash
 
 -- Lattice --------------------------------------------------
 
-class (Eq v,Typeable v) => Lattice v where
+class (Eq v, Show v, Typeable v) => Lattice v where
         {-# MINIMAL join #-}
         -- | combine elements
         join :: [v] -> v                -- need to be provided by implementations
@@ -48,8 +52,9 @@ mkIdentifier s = Identifier (Hash.hash s) s
 -- general variables (management)
 data Var = Var {
                 index :: Identifier,                 -- the variable identifier
-                constraints :: [Constraint],        -- the list of constraints
-                bottom :: Dynamic                -- the bottom value for this variable
+                constraints :: [Constraint],         -- the list of constraints
+                bottom :: Dynamic,                   -- the bottom value for this variable
+                valuePrint :: Assignment -> String   -- a utility for unpacking an printing a value assigned to this variable
         }
         
 instance Eq Var where
@@ -67,7 +72,10 @@ newtype TypedVar a = TypedVar Var
         deriving ( Show, Eq, Ord )
         
 mkVariable :: (Lattice a) => Identifier -> [Constraint] -> a -> TypedVar a
-mkVariable i cs b = TypedVar ( Var i cs ( toDyn b ) )
+mkVariable i cs b = var 
+    where 
+        var = TypedVar ( Var i cs ( toDyn b ) print )
+        print = (\a -> show $ get a var )
 
 toVar :: TypedVar a -> Var
 toVar (TypedVar x) = x
@@ -76,7 +84,15 @@ toVar (TypedVar x) = x
 -- Assignments ----------------------------------------------
 
 newtype Assignment = Assignment ( Map.Map Var Dynamic )
-        deriving Show
+
+instance Show Assignment where 
+    show a@( Assignment m ) = "Assignemnet {\n\t"
+            ++
+            ( intercalate ",\n\t" ( map (\v -> (show v) ++ " = " ++ (valuePrint v a) ) vars ) )
+            ++ 
+            "\n}"
+        where 
+            vars = Map.keys m
 
 
 empty :: Assignment
@@ -91,6 +107,47 @@ get (Assignment m) (TypedVar v) =
 -- updates the value for the given variable stored within the given assignment
 set :: (Typeable a) => Assignment -> TypedVar a -> a -> Assignment
 set (Assignment a) (TypedVar v) d = Assignment (Map.insert v (toDyn d) a)
+
+-- prints the current assignment as a graph
+toDotGraph :: Assignment -> String
+toDotGraph a@( Assignment m ) = "digraph G {\n\t"
+        ++
+        -- define nodes
+        ( intercalate "\n\t" ( map (\v -> "v" ++ (show $ fst v ) ++ " [label=\"" ++ (show $ snd v) ++ " = " ++ (valuePrint (snd v) a) ++ "\"];" ) vars ) )
+        ++
+        "\n\t"
+        ++
+        -- define edges
+        ( intercalate "\n\t" ( map (\d -> "v" ++ (show $ fst d) ++ " -> v" ++ (show $ snd d) ++ ";" ) deps ) )
+        ++
+        "\n}"
+    where 
+        
+        -- list of all keys in map
+        keys = Map.keys m
+        
+        -- the keys (=variables) associated with an index
+        vars = Prelude.zip [0..] keys 
+        
+        -- a reverse lookup map for vars
+        rev = Map.fromList $ map swap vars
+        
+        -- a lookup function for rev
+        index v = Map.lookup v rev 
+        
+        -- computes the list of dependencies
+        deps = foldr go [] vars
+            where 
+                go = (\v l -> (foldr (\s l -> let i = index s in if isJust i then (fst v, fromJust i) : l else l) [] (dep $ snd v )) ++ l)
+                dep v = foldr (\c l -> (dependingOn c a) ++ l) [] (constraints v)
+
+                  
+-- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
+dumpAssignment :: Assignment -> String
+dumpAssignment a = performIO $ do 
+         writeFile "graph.dot" $ toDotGraph a
+         runCommand "dot -Tpdf graph.dot -o graph.pdf"
+         return "Dumped Graph!"
 
 
 -- Constraints ---------------------------------------------
@@ -151,6 +208,7 @@ solveStep :: Assignment -> Set.Set Var -> Dependencies -> [Var] -> Assignment
 
 -- empty work list
 solveStep a _ _ [] = a                                        -- work list is empty
+--solveStep a _ _ [] = trace (dumpAssignment a) $ a                                        -- work list is empty
 
 -- compute next element in work list
 solveStep a k d (v:vs) = solveStep resAss resKnown resDep (ds ++ vs)
@@ -187,6 +245,15 @@ createConstraint dep limit trg@(TypedVar var) = Constraint dep update var
 -- creates a constraint of the form   A[a] \in A[b]
 forward :: (Lattice a) => TypedVar a -> TypedVar a -> Constraint
 forward a@(TypedVar v) b = createConstraint (\_ -> [v]) (\a' -> get a' a) b
+
+
+-- creates a constraint of the form  x \sub A[a] => A[b] \in A[c]
+forwardIf :: (Lattice a, Lattice b) => a -> TypedVar a -> TypedVar b -> TypedVar b -> Constraint
+forwardIf a b@(TypedVar v1) c@(TypedVar v2) d = createConstraint dep upt d
+    where 
+        dep = (\a' -> if less a $ get a' b then [v1,v2] else [v1] )
+        upt = (\a' -> if less a $ get a' b then get a' c else bot )
+
 
 -- creates a constraint of the form  x \in A[b]
 constant :: (Lattice a) => a -> TypedVar a -> Constraint
