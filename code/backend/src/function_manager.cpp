@@ -40,6 +40,8 @@
 #include <tuple>
 #include <functional>
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include "insieme/backend/converter.h"
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/statement_converter.h"
@@ -872,7 +874,15 @@ namespace backend {
 			}
 
 			// fix name
+			c_ast::CodeFragmentPtr nameDependency;
 			auto name = utils::demangleToIdentifier(memberFun->getNameAsString());
+			// for user-defined conversion operators, we need to generate their type representation from the actual return type,
+			// because function pointer types need to be typedef'd
+			if(boost::starts_with(name, "operator ")) {
+				auto retTypeInfo = converter.getTypeManager().getTypeInfo(impl->getType().as<core::FunctionTypePtr>()->getReturnType());
+				name = format("operator %s", *retTypeInfo.rValueType);
+				nameDependency = retTypeInfo.declaration;
+			}
 			converter.getNameManager().setName(impl, name);
 
 			// convert implementation
@@ -884,13 +894,15 @@ namespace backend {
 
 			// check for default members
 			if(core::analysis::isaDefaultMember(memberFun)) {
-
 				// set declaration to default
 				decl->flag = c_ast::BodyFlag::Default;
 
 				// delete definition by removing the prototypes requirement towards the definition
 				res->prototype->remRequirement(res->definition);
 			}
+
+			// add potentially required dependency for the name
+			if(nameDependency) res->prototype->addDependency(nameDependency);
 
 			// done
 			return res;

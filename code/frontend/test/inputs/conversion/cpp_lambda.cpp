@@ -179,12 +179,12 @@ int main() {
 		decl struct __any_string__;
 		decl IMP__conversion_operator_int_space__lparen__star__rparen__lparen__rparen_:const __any_string__::() -> ptr<() -> int<4>,t,f>;
 		def struct __any_string__ {
-				const function IMP__operator_call_ = () -> int<4> {
-						return 5;
-				}
+			const function IMP__operator_call_ = () -> int<4> {
+				return 5;
+			}
 		};
 		{
-				var ref<__any_string__,f,f,plain> v0 = <ref<__any_string__,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
+			var ref<__any_string__,f,f,plain> v0 = <ref<__any_string__,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
 		}
 	)")
 	{
