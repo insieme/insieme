@@ -97,5 +97,10 @@ int main() {
 	)")
 	foo();
 
+	#pragma test expect_ir(R"(
+		var ref<int<4>,f,f,plain> v0 = *v0+1;
+	)")
+	int x = x+1;
+
 	return 0;
 }

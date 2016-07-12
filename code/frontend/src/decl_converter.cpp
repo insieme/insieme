@@ -67,6 +67,8 @@ namespace conversion {
 	DeclConverter::ConvertedVarDecl DeclConverter::convertVarDecl(const clang::VarDecl* varDecl) const {
 		auto irType = converter.convertVarType(varDecl->getType());
 		auto var = builder.variable(irType);
+		// variable insertion is required prior to translation of the init expression, as it might use it
+		if(!varDecl->hasGlobalStorage()) converter.getVarMan()->insert(varDecl, var);
 		if(varDecl->getInit()) {
 			return {var, converter.convertCxxArgExpr(varDecl->getInit())};
 		} else {
@@ -198,7 +200,6 @@ namespace conversion {
 				for(auto param : funcDecl->parameters()) {
 					auto irParam = converter.getDeclConverter()->convertVarDecl(param);
 					params.push_back(irParam.first);
-					converter.getVarMan()->insert(param, irParam.first);
 				}
 				// convert body and build full expression (must be within scope!)
 				auto bodyRange = builder.wrapBody(converter.convertStmt(funcDecl->getBody())).getStatements();

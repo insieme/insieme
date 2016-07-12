@@ -121,7 +121,6 @@ namespace conversion {
 			// convert decl
 			auto convertedDecl = converter.getDeclConverter()->convertVarDecl(varDecl);
 			auto refDecl = core::lang::buildRefDecl(convertedDecl.first->getType());
-			converter.getVarMan()->insert(varDecl, convertedDecl.first);
 			// check if we have an init expression
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
