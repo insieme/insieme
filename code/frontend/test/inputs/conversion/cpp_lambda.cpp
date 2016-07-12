@@ -348,7 +348,16 @@ int main() {
 	/// //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Direct Lambda Call with capture
 
 	#pragma test expect_ir(R"(
-		{}
+		def struct __any_string__class {
+			capture_0 : int<4>;
+			const function IMP__operator_call_ = () -> unit {
+				(this).capture_0;
+			}
+		};
+		{
+			var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+			<ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {*v0}.IMP__operator_call_();
+		}
 	)")
 	{
 		int n;
@@ -356,21 +365,6 @@ int main() {
 			n;
 		}();
 	}
-
-	/// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Recursive Lambda
-
-//	#pragma test expect_ir(R"(
-//		{}
-//	)")
-//	{
-//		auto fib = [&](int x) {
-//			if(x <= 2) {
-//				return x;
-//			}
-//			return fib(x - 1) + fib(x - 2);
-//		};
-//		fib(4);
-//	}
 
 	return 0;
 }

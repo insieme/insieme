@@ -244,6 +244,16 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(callExpr, retIr);
 
+		// first, translate class decl if that hasn't happened yet
+		if(auto calleeDecl = callExpr->getCalleeDecl()) {
+			if(auto memDecl = llvm::dyn_cast<clang::CXXMethodDecl>(calleeDecl)) {
+				auto thisType = memDecl->getThisType(converter.getCompiler().getASTContext()).getTypePtr();
+				auto recType = llvm::dyn_cast<clang::RecordType>(llvm::dyn_cast<clang::PointerType>(thisType)->getPointeeType().getTypePtr());
+				auto recordDecl = recType->getDecl();
+				converter.getDeclConverter()->VisitRecordDecl(recordDecl);
+			}
+		}
+
 		retIr = VisitCallExpr(callExpr);
 		return retIr;
 	}
