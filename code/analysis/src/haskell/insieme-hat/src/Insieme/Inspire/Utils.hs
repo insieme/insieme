@@ -1,11 +1,23 @@
-module Insieme.TreeUtils where
+{-# LANGUAGE LambdaCase #-}
 
+module Insieme.Inspire.Utils (
+    foldTree,
+    foldAddress,
+    foldTreePrune,
+    foldAddressPrune,
+    findDeclr
+) where
+
+import Control.Applicative
+import Data.List
 import Data.Tree
 import Insieme.Callable as Callable
 import Insieme.Inspire.NodeAddress
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import qualified Insieme.Inspire as IR
+
+
 
 collectCallable :: NodeAddress -> Callable.CallableSet -> Callable.CallableSet
 collectCallable addr s =
@@ -55,6 +67,57 @@ foldAddressPrune collect prune addr = visit addr mempty
                      else collect base $ visitsub base acc
     visitsub base acc = foldr visit acc (subtrees base)
     subtrees addr = [goDown i addr | i <- [0..(length . subForest . getNode $ addr) - 1]]
+
+
+
+
+--
+-- * Get Definition Point Analysis
+--
+
+findDeclr :: NodeAddress -> Maybe NodeAddress
+findDeclr start = findDeclr start
+  where
+    org = getNode start
+
+    findDeclr :: NodeAddress -> Maybe NodeAddress
+    findDeclr addr = case getNode addr of
+        Node IR.Lambda _ -> lambda addr
+        _ -> declstmt addr <|> forstmt addr <|> bindexpr addr <|>
+             compstmt addr <|> nextlevel addr
+
+    declstmt :: NodeAddress -> Maybe NodeAddress
+    declstmt addr = case getNode addr of
+        Node IR.DeclarationStmt [_, v] | v == org -> Just $ goDown 1 addr
+        _ -> Nothing
+
+    forstmt :: NodeAddress -> Maybe NodeAddress
+    forstmt addr = case getNode addr of
+        Node IR.ForStmt _ -> declstmt $ goDown 0 addr
+        _ -> Nothing
+
+    lambda :: NodeAddress -> Maybe NodeAddress
+    lambda addr = case getNode addr of
+        Node IR.Lambda [_, Node IR.Parameters ps, _] ->
+            (\i -> goDown i . goDown 1 $ addr) <$> findIndex (==org) ps
+        _ -> Nothing
+
+    bindexpr :: NodeAddress -> Maybe NodeAddress
+    bindexpr addr = case getNode addr of
+        Node IR.BindExpr [_, Node IR.Parameters ps, _] ->
+            (\i -> goDown i . goDown 1 $ addr) <$> findIndex (==org) ps
+        _ -> Nothing
+
+    compstmt :: NodeAddress -> Maybe NodeAddress
+    compstmt addr = getNode <$> getParent addr >>= \case
+        Node IR.CompoundStmt _ | last (getAddress addr) == 0 -> Nothing
+        Node IR.CompoundStmt _ -> findDeclr $ goLeft addr
+        _ -> Nothing
+
+    nextlevel :: NodeAddress -> Maybe NodeAddress
+    nextlevel addr = getParent addr >>= findDeclr
+
+
 
 
 

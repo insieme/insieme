@@ -9,22 +9,26 @@ cabal-version:      >=1.10
 
 executable insieme-hat
     main-is:            Main.hs
-    other-modules:      Compiler.Analysis,
+    other-modules:      
+                        Compiler.Analysis,
                         Compiler.Analysis.Constraint,
                         Compiler.Analysis.Constraint.Dynamic,
                         Compiler.Analysis.Dependence,
                         Compiler.Analysis.Solver,
                         Compiler.Analysis.Values,
                         Insieme.Analysis.Examples,
+                        Insieme.Analysis.Solver,
+                        Insieme.Analysis.Boolean,
+                        Insieme.Analysis.Callable,
+                        Insieme.Analysis.Framework.Dataflow,
                         Insieme.Boolean,
                         Insieme.Callable,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.ThHelpers,
-                        Insieme.TreeUtils,
-                        Framework,
-                        Solver
+                        Insieme.Inspire.Utils,
+                        Framework
     build-depends:      base >=4.7,
                         mtl >=2.2,
                         lens >=4.13,
@@ -43,21 +47,25 @@ executable insieme-hat
 
 library
     exposed-modules:    Insieme.Adapter
-    other-modules:      Compiler.Analysis,
+    other-modules:      
+                        Compiler.Analysis,
                         Compiler.Analysis.Constraint,
                         Compiler.Analysis.Constraint.Dynamic,
                         Compiler.Analysis.Dependence,
                         Compiler.Analysis.Solver,
                         Compiler.Analysis.Values,
                         Insieme.Analysis.Examples,
+                        Insieme.Analysis.Solver,
+                        Insieme.Analysis.Boolean,
+                        Insieme.Analysis.Callable,
+                        Insieme.Analysis.Framework.Dataflow,
                         Insieme.Boolean,
                         Insieme.Callable,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.ThHelpers,
-                        Insieme.TreeUtils,
-                        Solver
+                        Insieme.Inspire.Utils
     build-depends:      base >=4.7,
                         mtl >=2.2,
                         lens >=4.13,

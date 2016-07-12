@@ -3,7 +3,7 @@
 
 module Insieme.Callable where
 
-import Solver
+import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
 import qualified Data.Set as Set
 

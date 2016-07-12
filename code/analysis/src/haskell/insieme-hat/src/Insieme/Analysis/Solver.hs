@@ -1,5 +1,5 @@
 
-module Solver where
+module Insieme.Analysis.Solver where
 
 import Debug.Trace
 import Data.Dynamic

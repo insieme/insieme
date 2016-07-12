@@ -1,6 +1,6 @@
 module Insieme.Boolean where
 
-import Solver
+import Insieme.Analysis.Solver
 
 #include "boolean_analysis.h"
 
