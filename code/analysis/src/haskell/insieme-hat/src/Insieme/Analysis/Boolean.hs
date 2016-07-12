@@ -6,16 +6,12 @@ module Insieme.Analysis.Boolean (
 
 import qualified Insieme.Analysis.Solver as Solver
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
-import qualified Insieme.Boolean as Boolean
 
-import Insieme.Inspire.NodeAddress
---import Data.List
 import Data.Tree
---import Data.Maybe
---import qualified Data.Set as Set
+import Insieme.Inspire.NodeAddress
 import qualified Insieme.Inspire as IR
---import Insieme.Inspire.Utils
 
+import qualified Insieme.Boolean as Boolean
 
 
 --

@@ -3,17 +3,19 @@ module Insieme.Analysis.Callable (
     callableValue
 ) where
 
-import qualified Insieme.Analysis.Solver as Solver
-import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
-import qualified Insieme.Callable as Callable
-import Insieme.Inspire.NodeAddress
 import Data.List
 import Data.Tree
 import Data.Maybe
 import qualified Data.Set as Set
+
+import qualified Insieme.Analysis.Solver as Solver
+import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
+
+import Insieme.Inspire.NodeAddress
 import qualified Insieme.Inspire as IR
 import Insieme.Inspire.Utils
 
+import qualified Insieme.Callable as Callable
 
 
 --

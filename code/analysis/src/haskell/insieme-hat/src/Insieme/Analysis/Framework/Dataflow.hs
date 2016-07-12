@@ -9,12 +9,15 @@ import Data.Tree
 import Data.Maybe
 import Debug.Trace
 import qualified Data.Set as Set
+
 import qualified Insieme.Inspire as IR
 import Insieme.Inspire.Utils
-import qualified Insieme.Callable as Callable
 import Insieme.Inspire.NodeAddress
-import Insieme.Analysis.Callable
+
 import qualified Insieme.Analysis.Solver as Solver
+
+import qualified Insieme.Callable as Callable
+import Insieme.Analysis.Callable
 
 
 
