@@ -125,7 +125,6 @@ boolvalue addr builtins = do
     end = constr Nothing [] Boolean.Both
 
     lookup :: String -> Bool
-    lookup key = Map.findWithDefault False key $ (== getNode addr) <$> builtins
     lookup key = fromMaybe False ((== getNode addr) <$> Map.lookup key builtins)
 
 
