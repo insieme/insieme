@@ -795,7 +795,36 @@ namespace backend {
 		compiler.addFlag("-lm");
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
 
+	TEST(Functions, FunTypeDecls) {
+		core::ProgramPtr program = builder.parseProgram(R"(
+			int<4> main() {
+				var ref<ptr<(int<4>) -> unit,t,f>,f,f,plain> v0;
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(program);
+
+		// check for semantic errors
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// create backend instance
+		auto be = sequential::SequentialBackend::getDefault();
+
+		auto converted = be->convert(program);
+		string code = toString(*converted);
+		//std::cout << "Converted:\n" << code;
+
+		EXPECT_PRED2(containsSubString, code, "typedef __insieme_type_1* __insieme_type_2;");
+		EXPECT_PRED2(containsSubString, code, "__insieme_type_2 v0");
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-lm");
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 	}
 
 	TEST(Initialization, Array) {

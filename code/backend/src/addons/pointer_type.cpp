@@ -39,6 +39,7 @@
 #include "insieme/backend/converter.h"
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/function_manager.h"
+#include "insieme/backend/name_manager.h"
 #include "insieme/backend/operator_converter.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
@@ -59,7 +60,7 @@ namespace addons {
 
 		const TypeInfo* PointerTypeHandler(const Converter& converter, const core::TypePtr& type) {
 			// only interested in pointers
-			if (!core::lang::isPointer(type)) return nullptr;
+			if(!core::lang::isPointer(type)) return nullptr;
 
 			// parse the pointer type
 			core::lang::PointerType ptr(type);
@@ -73,9 +74,15 @@ namespace addons {
 			// create pointer type
 			auto cType = c_ast::ptr(c_ast::qualify(elementInfo.lValueType, ptr.isConst(), ptr.isVolatile()));
 
-			// function pointers must not be qualified (calls to const function pointers are ignored by GCC)
-			if (auto fun = ptr.getElementType().isa<core::FunctionTypePtr>()) {
-				if (fun.isPlain()) cType = c_ast::ptr(elementInfo.lValueType);
+			if(auto fun = ptr.getElementType().isa<core::FunctionTypePtr>()) {
+				// function pointers must not be qualified (calls to const function pointers are ignored by GCC)
+				if(fun.isPlain()) cType = c_ast::ptr(elementInfo.lValueType);
+				// function pointers must be typedef'ed in case they are used in C++ in a conversion operator definition
+				c_ast::IdentifierPtr funcTypeName = converter.getCNodeManager()->create(converter.getNameManager().getName(type));
+				c_ast::TypeDefinitionPtr def = converter.getCNodeManager()->create<c_ast::TypeDefinition>(cType, funcTypeName);
+				auto typedefCode = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def);
+				typedefCode->addDependency(elementInfo.declaration);
+				return type_info_utils::createInfo(converter.getCNodeManager()->create<c_ast::NamedType>(funcTypeName), typedefCode);
 			}
 
 			// build up and return resulting type information
