@@ -6,7 +6,6 @@ async
 function_type_template_arg
 init_list
 lambda
-lambda_to_funptr
 range_for
 rvalue
 stdinitlistexpr

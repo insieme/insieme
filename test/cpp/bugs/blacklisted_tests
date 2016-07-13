@@ -31,7 +31,6 @@ static_in_template
 static_non_copy
 stringstream
 tellg
-templated_casts
 throw
 tr1_array
 try_catch
