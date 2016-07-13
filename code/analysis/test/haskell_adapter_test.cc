@@ -115,7 +115,7 @@ namespace haskell {
 		auto var = env.passAddress(addrVar, tree);
 
 
-		boost::optional<Address> decl = env.findDeclr(var);
+		boost::optional<Address> decl = env.findDecl(var);
 		EXPECT_TRUE(decl);
 		EXPECT_EQ(addrRoot[0].as<DeclarationStmtAddress>().getVariable(), decl->toNodeAddress(root));
 	}

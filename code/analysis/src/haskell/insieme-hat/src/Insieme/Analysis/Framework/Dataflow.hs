@@ -39,7 +39,7 @@ dataflowValue addr top idGen analysis = case getNode addr of
         var = Solver.mkVariable (idGen addr) [con] Solver.bot
         con = Solver.forward (analysis (goDown 1 addr)) var
 
-    Node IR.Variable _ -> case findDeclr addr of
+    Node IR.Variable _ -> case findDecl addr of
         Just declrAddr -> handleDeclr declrAddr
         _              -> Solver.mkVariable (idGen addr) [] top
 

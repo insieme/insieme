@@ -5,7 +5,7 @@ module Insieme.Inspire.Utils (
     foldAddress,
     foldTreePrune,
     foldAddressPrune,
-    findDeclr
+    findDecl
 ) where
 
 import Control.Applicative
@@ -75,13 +75,13 @@ foldAddressPrune collect prune addr = visit addr mempty
 -- * Get Definition Point Analysis
 --
 
-findDeclr :: NodeAddress -> Maybe NodeAddress
-findDeclr start = findDeclr start
+findDecl :: NodeAddress -> Maybe NodeAddress
+findDecl start = findDecl start
   where
     org = getNode start
 
-    findDeclr :: NodeAddress -> Maybe NodeAddress
-    findDeclr addr = case getNode addr of
+    findDecl :: NodeAddress -> Maybe NodeAddress
+    findDecl addr = case getNode addr of
         Node IR.Lambda _ -> lambda addr
         _ -> declstmt addr <|> forstmt addr <|> bindexpr addr <|>
              compstmt addr <|> nextlevel addr
@@ -111,11 +111,11 @@ findDeclr start = findDeclr start
     compstmt :: NodeAddress -> Maybe NodeAddress
     compstmt addr = getNode <$> getParent addr >>= \case
         Node IR.CompoundStmt _ | last (getAddress addr) == 0 -> Nothing
-        Node IR.CompoundStmt _ -> findDeclr $ goLeft addr
+        Node IR.CompoundStmt _ -> findDecl $ goLeft addr
         _ -> Nothing
 
     nextlevel :: NodeAddress -> Maybe NodeAddress
-    nextlevel addr = getParent addr >>= findDeclr
+    nextlevel addr = getParent addr >>= findDecl
 
 
 

@@ -103,15 +103,15 @@ foreign export ccall "hat_addr_toArray"
 -- * Analysis
 --
 
-findDeclr :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
-findDeclr addr_c = do
+findDecl :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
+findDecl addr_c = do
     addr <- deRefStablePtr addr_c
-    case IRUtils.findDeclr addr of
+    case IRUtils.findDecl addr of
         Nothing -> return $ castPtrToStablePtr nullPtr
         Just a  -> newStablePtr a
 
-foreign export ccall "hat_findDeclr"
-    findDeclr :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
+foreign export ccall "hat_findDecl"
+    findDecl :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
 
 checkBoolean :: StablePtr Addr.NodeAddress -> IO (CInt)
 checkBoolean addr_c = do

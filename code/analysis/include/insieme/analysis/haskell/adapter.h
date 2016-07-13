@@ -90,7 +90,7 @@ namespace haskell {
 		Tree passTree(const core::NodePtr& root);
 		Address passAddress(const core::NodeAddress& addr, const Tree& tree);
 
-		boost::optional<Address> findDeclr(const Address& var);
+		boost::optional<Address> findDecl(const Address& var);
 		BooleanAnalysisResult checkBoolean(const Address& expr);
 
 	};

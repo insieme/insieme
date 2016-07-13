@@ -68,7 +68,7 @@ extern "C" {
 	void hat_addr_toArray(const StablePtr addr, size_t* dst);
 
 	// Analysis
-	StablePtr hat_findDeclr(const StablePtr var);
+	StablePtr hat_findDecl(const StablePtr var);
 	int hat_checkBoolean(const StablePtr expr);
 
 }
@@ -169,9 +169,9 @@ namespace haskell {
 		return make_shared<HSobject>(hat_passAddress(tree.tree->ptr, addr_c.data(), length_c));
 	}
 
-	boost::optional<Address> Environment::findDeclr(const Address& var) {
+	boost::optional<Address> Environment::findDecl(const Address& var) {
 		boost::optional<Address> ret;
-		if (StablePtr target_hs = hat_findDeclr(var.addr->ptr)) {
+		if (StablePtr target_hs = hat_findDecl(var.addr->ptr)) {
 			ret = make_shared<HSobject>(target_hs);
 		}
 		return ret;

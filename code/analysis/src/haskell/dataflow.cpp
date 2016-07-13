@@ -50,7 +50,7 @@ namespace haskell {
 		auto tree = env.passTree(var.getRootNode());
 		auto var_addr = env.passAddress(var, tree);
 
-		auto target = env.findDeclr(var_addr);
+		auto target = env.findDecl(var_addr);
 		if (!target) {
 			return {};
 		}
