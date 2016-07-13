@@ -103,6 +103,5 @@ recompile the library despite a different flag
 (`--ghc-options='-lHSrts-ghc7.10.3'`) has been provided this time. This results
 in a linking error later on.
 
-Just insert a newline in any source file of the Haskell project and run `make`
-again. `stack` should now rebuild the shared library. If this does not help,
-remove the `.stack-work` folder and run `make`.
+Just run `stack clean` inside the Haskell project before running `make` again.
+If this does not help remove the `.stack-work` directory and run `make`.
