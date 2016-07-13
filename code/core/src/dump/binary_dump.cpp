@@ -83,30 +83,6 @@ namespace binary {
 
 	namespace {
 
-		/**
-		 * The magic number stored at the head of all encodings.
-		 */
-		const uint64_t MAGIC_NUMBER = 0x494e5350495245; // HEX version of INSPIRE
-
-		// some type definitions
-		typedef uint32_t length_t;
-		typedef uint16_t type_t;
-		typedef uint32_t index_t;
-
-		// some convenience utilities
-		template <typename T>
-		void write(std::ostream& out, T value) {
-			out.write((char*)&value, sizeof(T));
-		}
-
-		template <typename T>
-		T read(std::istream& in) {
-			T value = 0;
-			in.read((char*)&value, sizeof(T));
-			return value;
-		}
-
-
 		// -- writer --
 
 		/**
@@ -209,11 +185,7 @@ namespace binary {
 			 * Dumps a string to the given output stream.
 			 */
 			void dumpString(std::ostream& out, const string& str) {
-				// write the string content
-				write<length_t>(out, str.length());
-
-				// write string (not including \0)
-				out.write(str.c_str(), str.length());
+				binary::dumpString(out, str);
 			}
 
 			/**
@@ -576,6 +548,14 @@ namespace binary {
 			// dump path
 			dumpPathIndices(out, path);
 		}
+	}
+
+	void dumpString(std::ostream& out, const string& str) {
+		// write the string content
+		write<length_t>(out, str.length());
+
+		// write string (not including \0)
+		out.write(str.c_str(), str.length());
 	}
 
 	void dumpIR(std::ostream& out, const NodePtr& ir, const AnnotationConverterRegister& converterRegister) {

@@ -65,6 +65,7 @@ namespace haskell {
 			root = builder.parseStmt(
 				"{ "
 				"   var int<4> x = 12; "
+				"   2 + 3; "
 				"   x; "
 				"} "
 			);
@@ -109,11 +110,10 @@ namespace haskell {
 
 		// get the targeted variable
 		CompoundStmtAddress addrRoot(root.as<CompoundStmtPtr>());
-		StatementAddress addrVar = addrRoot[1];
+		StatementAddress addrVar = addrRoot[2];
 		EXPECT_TRUE(addrVar.isa<VariableAddress>());
 
 		auto var = env.passAddress(addrVar, tree);
-
 
 		boost::optional<Address> decl = env.findDecl(var);
 		EXPECT_TRUE(decl);

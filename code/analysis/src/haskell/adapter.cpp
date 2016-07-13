@@ -38,7 +38,10 @@
 
 #include "insieme/analysis/common/failure.h"
 #include "insieme/core/dump/binary_dump.h"
+#include "insieme/core/lang/lang.h"
 
+#include <cstdint>
+#include <map>
 #include <sstream>
 #include <vector>
 
@@ -69,7 +72,7 @@ extern "C" {
 
 	// Analysis
 	StablePtr hat_findDecl(const StablePtr var);
-	int hat_checkBoolean(const StablePtr expr);
+	int hat_checkBoolean(const StablePtr expr, const StablePtr tree);
 
 }
 
@@ -91,11 +94,12 @@ namespace haskell {
 
 	// ------------------------------------------------------------ Tree
 
+	Tree::Tree(std::shared_ptr<HSobject> tree, const NodePtr& original)
+		: tree(tree), original(original) {}
+
 	size_t Tree::size() const {
 		return hat_tree_length(tree->ptr);
 	}
-
-	Tree::Tree(std::shared_ptr<HSobject> tree) : tree(tree) {}
 
 	void Tree::print() const {
 		hat_tree_print(tree->ptr);
@@ -149,15 +153,41 @@ namespace haskell {
 		// dump IR using a binary format
 		dumpIR(buffer, root);
 
+		// find builtins
+		NodeSet covered;
+		map<string, NodeAddress> builtins;
+		visitDepthFirstOnce(NodeAddress(root), [&] (const ExpressionAddress& expr) {
+			if (covered.contains(expr.getAddressedNode())) {
+				return;
+			}
+
+			covered.insert(expr.getAddressedNode());
+
+			if (core::lang::isBuiltIn(expr)) {
+				builtins[core::lang::getConstructName(expr)] = expr;
+			}
+		});
+
+		// attach builtins
+		write<length_t>(buffer, builtins.size());
+		for (auto& builtin : builtins) {
+			dumpString(buffer, builtin.first);
+			dumpString(buffer, toString(builtin.second));
+		}
+
 		// get data as C string
 		const string dumps = buffer.str();
 		const char* dumpcs = dumps.c_str();
 
 		// pass to Haskell
-		return make_shared<HSobject>(hat_passTree(dumpcs, dumps.size()));
+		auto tree = make_shared<HSobject>(hat_passTree(dumpcs, dumps.size()));
+		return {tree, root};
 	}
 
 	Address Environment::passAddress(const NodeAddress& addr, const Tree& tree) {
+		// check if NodeAddress is related given tree
+		assert_eq(tree.original, addr.getRootNode()) << "NodeAddress' root does not match given tree";
+
 		// empty address corresponds to root node in Haskell
 		size_t length_c = addr.getDepth() - 1;
 		vector<size_t> addr_c(length_c);
@@ -177,8 +207,8 @@ namespace haskell {
 		return ret;
 	}
 
-	BooleanAnalysisResult Environment::checkBoolean(const Address& expr) {
-		auto res = static_cast<BooleanAnalysisResult>(hat_checkBoolean(expr.addr->ptr));
+	BooleanAnalysisResult Environment::checkBoolean(const Address& expr, const Tree& tree) {
+		auto res = static_cast<BooleanAnalysisResult>(hat_checkBoolean(expr.addr->ptr, tree.tree->ptr));
 		if (res == BooleanAnalysisResult_Neither) {
 			std::vector<std::string> msgs{"Boolean Analysis Error"};
 			throw AnalysisFailure(msgs);

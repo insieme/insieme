@@ -10,24 +10,37 @@ import Control.Monad.State.Strict
 import Data.Attoparsec.Binary
 import Data.Attoparsec.ByteString
 import Data.Char (chr)
+import Data.List.Split (splitOn)
 import Data.Tree
 import Data.Word
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.IntMap as IntMap
+import qualified Data.Map.Strict as Map
 import qualified Insieme.Inspire as IR
 
 import Prelude hiding (take)
 
 -- | Parse binary dump.
-parseBinaryDump :: BS.ByteString -> Either String (Tree IR.Inspire)
-parseBinaryDump = parseOnly go
+parseBinaryDump :: BS.ByteString -> Either String (IR.TreePackage)
+parseBinaryDump = parseOnly $ do
+    -- parse components
+    parseHeader
+    n            <- anyInt32
+    dumpNodes    <- IntMap.fromList <$> zip [0..] <$> count n parseDumpNode
+    m            <- anyInt32
+    dumpBuiltins <- Map.fromList <$> count m parseBuiltin
+
+    -- connect components
+    let nodes    = connectDumpNodes dumpNodes
+    let builtins = resolve nodes <$> dumpBuiltins
+
+    return $ IR.TreePackage (connectDumpNodes dumpNodes) builtins
+
   where
-    go = do
-        parseHeader
-        n         <- anyInt32
-        dumpNodes <- IntMap.fromList <$> zip [0..] <$> count n parseDumpNode
-        return $ connectDumpNodes dumpNodes
+      resolve :: Tree IR.Inspire -> [Int] -> Tree IR.Inspire
+      resolve node []     = node
+      resolve node (x:xs) = resolve (subForest node !! x) xs
 
 --
 -- * Parsing the header
@@ -79,6 +92,12 @@ parseDumpNode = do
     count a anyWord64le
 
     return $ n
+
+parseBuiltin :: Parser (String, [Int])
+parseBuiltin = do
+    key <- parseString
+    val <- tail . splitOn "-" <$> parseString
+    return (key, read <$> val)
 
 connectDumpNodes :: IntMap.IntMap DumpNode -> Tree IR.Inspire
 connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
