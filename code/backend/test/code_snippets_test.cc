@@ -286,7 +286,7 @@ namespace backend {
 		LOG(DEBUG) << "Converted: \n" << *converted << std::endl;
 
 		string code = toString(*converted);
-		EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t(*)[3])(&(__insieme_type_2){{(uint64_t)0, (uint64_t)0, (uint64_t)0}}))");
+		EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t(*)[3])(&INS_INIT(__insieme_type_2){{(uint64_t)0, (uint64_t)0, (uint64_t)0}}))");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
@@ -828,31 +828,29 @@ namespace backend {
 	}
 
 	TEST(Initialization, Array) {
-		core::ProgramPtr program = builder.parseProgram(
-			R"(
+		core::ProgramPtr program = builder.parseProgram(R"(
 			int<4> main() {
-				var ref<array<int<4>,5>,f,f> v0 = *<ref<array<int<4>,5>,f,f,plain>>(v0) {1,2,3,4,5};
+				var ref<array<int<4>,5>,f,f> v0 = <ref<array<int<4>,5>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5>,f,f,plain>))) {1,2,3,4,5};
 				//int arr_all[5] = {1,2,3,4,5};
 
-				var ref<array<int<4>,5>,f,f> v1 = *<ref<array<int<4>,5>,f,f,plain>>(v1) {1,2};
+				var ref<array<int<4>,5>,f,f> v1 = <ref<array<int<4>,5>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5>,f,f,plain>))) {1,2};
 				//int arr_partial[5] = {1,2};
 
-				var ref<array<int<4>,5>,f,f> v2 = *<ref<array<int<4>,5>,f,f,plain>>(v2) {0};
+				var ref<array<int<4>,5>,f,f> v2 = <ref<array<int<4>,5>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5>,f,f,plain>))) {0};
 				//int arr_zero[5] = {0};
 
-				var ref<array<int<4>,3>,f,f> v3 = *<ref<array<int<4>,3>,f,f,plain>>(v3) {0,1,2};
+				var ref<array<int<4>,3>,f,f> v3 = <ref<array<int<4>,3>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3>,f,f,plain>))) {0,1,2};
 				//int arr_implied[] = {0,1,2};
 
-				var ref<array<array<int<4>,3>,2>,f,f> v4 = *<ref<array<array<int<4>,3>,2>,f,f,plain>>(v4) {*<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1,2,3},*<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5,6}};
+				var ref<array<array<int<4>,3>,2>,f,f> v4 = <ref<array<array<int<4>,3>,2>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3>,2>,f,f>))) {<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1,2,3},<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5,6}};
 				//int arr_multi[2][3] = {{1,2,3}, {4,5,6}};
 
-				var ref<array<array<int<4>,3>,2>,f,f,plain> v5 = *<ref<array<array<int<4>,3>,2>,f,f,plain>>(v5) {*<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1},*<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5}};
-				//int arr_multi[2][3] = {{1}, {4,5}};
+				var ref<array<array<int<4>,3>,2>,f,f,plain> v5 = <ref<array<array<int<4>,3>,2>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3>,2>,f,f,plain>))) {<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1},<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5}};
+				//int arr_multi_partial[2][3] = {{1}, {4,5}};
 
 				return 0;
 			}
-			)"
-		);
+		)");
 
 		ASSERT_TRUE(program);
 
@@ -884,21 +882,22 @@ namespace backend {
 	}
 
 	TEST(Initialization, Struct) {
-		core::ProgramPtr program = builder.parseProgram(
-			R"(
+		core::ProgramPtr program = builder.parseProgram(R"(
 			def struct A { a : int<4>; b : real<4>; };
 			def struct B { a : int<4>; b : real<4>; c : uint<4>; };
+			def struct C { };
 			int<4> main() {
-				var ref<A> v0 = *<ref<A>>(v0){ 1, 1.0f };
+				var ref<A> v0 = <ref<A>>(ref_decl(type_lit(ref<A>))){ 1, 1.0f };
 				//{ struct { int a; float b; } sif = { 1, 1.0f }; }
 
-				var ref<B> v1 = *<ref<B>>(v1){ 1, 1.0f, 2u };
+				var ref<B> v1 = <ref<B>>(ref_decl(type_lit(ref<B>))){ 1, 1.0f, 2u };
 				//{ struct { int a; float b; unsigned c; } sifc = { .a = 1, .c = 2u }; }
+
+				var ref<C> v2 = <ref<C>>(ref_decl(type_lit(ref<C>))){};
 
 				return 0;
 			}
-			)"
-		);
+		)");
 
 		ASSERT_TRUE(program);
 
@@ -916,6 +915,7 @@ namespace backend {
 
 		EXPECT_PRED2(containsSubString, code, "A v0 = {1, 1.0f}");
 		EXPECT_PRED2(containsSubString, code, "B v1 = {1, 1.0f, 2u}");
+		EXPECT_PRED2(containsSubString, code, "C v2 = {}");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -968,7 +968,7 @@ namespace backend {
 			int<4> main() {
 				<ref<int<4>,f,f,plain>>(lit("initedGlobal" : ref<int<4>,f,f,plain>)) {5};
 				<ref<S,f,f,plain>>(lit("y" : ref<S,f,f,plain>)) {1, 5u};
-				<ref<array<S,3>,f,f,plain>>(lit("klaus_test" : ref<array<S,3>,t,f,plain>)) {*<ref<S,f,f,plain>>(ref_temp(type_lit(S))) {1, 2u}, *<ref<S,f,f,plain>>(ref_temp(type_lit(S))) {3, 4u}, *<ref<S,f,f,plain>>(ref_temp(type_lit(S))) {5, 6u}};
+				<ref<array<S,3>,f,f,plain>>(lit("klaus_test" : ref<array<S,3>,t,f,plain>)) {<ref<S,f,f,plain>>(ref_temp(type_lit(S))) {1, 2u}, <ref<S,f,f,plain>>(ref_temp(type_lit(S))) {3, 4u}, <ref<S,f,f,plain>>(ref_temp(type_lit(S))) {5, 6u}};
 				<ref<array<char,255>,f,f,plain>>(lit("char_arr" : ref<array<char,255>,f,f,plain>)) {'\0'};
 				<ref<array<int<4>,2>,f,f,plain>>(lit("arr" : ref<array<int<4>,2>,f,f,plain>)) {42, 43};
 
@@ -994,7 +994,7 @@ namespace backend {
 
 		string code = toString(*converted);
 
-		EXPECT_PRED2(containsSubString, code, "{{1, 2u}, {3, 4u}, {5, 6u}}");
+		EXPECT_PRED2(containsSubString, code, "{{{1, 2u}, {3, 4u}, {5, 6u}}}");
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

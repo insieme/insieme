@@ -179,7 +179,7 @@ namespace conversion {
 		}
 		// if we are directly using an init list as an argument, the generated Inspire code has a superfluous deref
 		// (we are initializing the value of the function argument directly without any copies!)
-		if(llvm::isa<clang::InitListExpr>(clangArgExprInput)) ret = core::analysis::getArgument(ret, 0);
+		if(llvm::isa<clang::InitListExpr>(clangArgExprInput) && ret.isa<core::CallExprPtr>()) ret = core::analysis::getArgument(ret, 0);
 		// if a target type is given, and it is a value type, replace plain ref initializers to initialize that memory location
 		if(targetType && !core::analysis::isRefType(targetType) && core::transform::materialize(targetType) == ret->getType()) {
 			ret = utils::fixTempMemoryInInitExpression(core::lang::buildRefDecl(builder.refType(targetType)), ret);
@@ -840,8 +840,15 @@ namespace conversion {
 			retIr = VisitInitListExpr(initList);
 			if(compLitExpr->isLValue()) {
 				auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-				if(refExt.isCallOfRefDeref(retIr)) retIr = core::analysis::getArgument(retIr, 0);
-				else retIr = builder.refTemp(retIr);
+				if(refExt.isCallOfRefDeref(retIr)) {
+					retIr = core::analysis::getArgument(retIr, 0);
+					if(auto initExpr = retIr.as<core::InitExprPtr>()) {
+						retIr = builder.initExpr(utils::buildFERefTemp(core::analysis::getReferencedType(retIr->getType())), initExpr->getInitExprList());
+					}
+				}
+				else {
+					retIr = builder.refTemp(retIr);
+				}
 			}
 		}
 

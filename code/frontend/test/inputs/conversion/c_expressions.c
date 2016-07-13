@@ -443,7 +443,7 @@ int main() {
 	// check direct R-value access
 	#pragma test expect_ir(R"(
 		def struct IMP_simple_struct { i: int<4>; };
-		def IMP_generate_struct = () -> IMP_simple_struct { return <ref<IMP_simple_struct>>(ref_decl(type_lit(ref<IMP_simple_struct>))) {0} in IMP_simple_struct; };
+		def IMP_generate_struct = () -> IMP_simple_struct { return *<ref<IMP_simple_struct>>(ref_temp(type_lit(IMP_simple_struct))) {0} in IMP_simple_struct; };
 		IMP_generate_struct().i+5
 	)")
 	generate_struct().i + 5;

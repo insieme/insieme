@@ -819,7 +819,7 @@ namespace backend {
 			// check presence of relevant code
 			auto code = toString(*converted);
 			EXPECT_PRED2(containsSubString, code, "IMP_S& IMP_j(IMP_S& v57)");
-			EXPECT_PRED2(containsSubString, code, "return v57.operator=((IMP_S){5});");
+			EXPECT_PRED2(containsSubString, code, "return v57.operator=(INS_INIT(IMP_S){5});");
 			EXPECT_PRED2(containsSubString, code, "IMP_S& operator=(IMP_S const& p2) = default;");
 
 			// try compiling the code fragment
@@ -1935,56 +1935,6 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 	}
 
-	TEST(CppSnippet, DISABLED_InitializerList2) {
-		// something including a super-constructor call
-		auto res = builder.normalize(builder.parseProgram(R"(
-			alias int = int<4>;
-
-			def struct A {
-				x : int;
-
-				ctor (x : int) {
-					this.x = x;
-				}
-			};
-
-			def struct B : [A] {
-				y : int;
-
-				ctor (x : int, y : int) {
-					A::(this, x);
-					this.y = y;
-				}
-			}
-
-			int main() {
-				// call constructor
-				var ref<B> b = B::(b, 1, 2);
-
-				return 0;
-			}
-		)"));
-
-		ASSERT_TRUE(res);
-		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
-
-		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
-		ASSERT_TRUE((bool)targetCode);
-
-		//		std::cout << *targetCode;
-
-		// check generated code
-		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "B b((1), (2));");
-		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x) : x(x) {");
-		EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t y) : A(x), y(y) {");
-
-		// check whether code is compiling
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-		compiler.addFlag("-c"); // do not run the linker
-		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-	}
-
 	TEST(CppSnippet, LambdaBasic) {
 		auto res = builder.parseProgram(R"(
 			def struct lambda_class {
@@ -2049,6 +1999,88 @@ namespace backend {
 		// check generated code
 		auto code = toString(*targetCode);
 		//EXPECT_PRED2(containsSubString, code, "(lambda_class){v0, v1}.operator()(42);");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+	TEST(CppSnippet, InitializationOptions) {
+		auto res = builder.parseProgram(R"(
+			def struct IMP_D {
+				i : int<4>;
+			};
+			def IMP_dfun = function (v0 : ref<IMP_D,f,f,plain>) -> unit { };
+			int<4> main() {
+				var ref<IMP_D,f,f,plain> v0 = <ref<IMP_D,f,f,plain>>(ref_decl(type_lit(ref<IMP_D,f,f,plain>))) {1};
+				var ref<IMP_D,f,f,plain> v1 = <ref<IMP_D,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_D)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {1};
+				IMP_dfun(<ref<IMP_D,f,f,plain>>(ref_decl(type_lit(ref<IMP_D,f,f,plain>))) {1});
+				IMP_dfun(<ref<IMP_D,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_D)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {1});
+				return 0;
+			}
+		)");
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		//EXPECT_PRED2(containsSubString, code, "(lambda_class){v0, v1}.operator()(42);");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+	TEST(CppSnippet, DISABLED_InitializerList2) {
+		// something including a super-constructor call
+		auto res = builder.normalize(builder.parseProgram(R"(
+			alias int = int<4>;
+
+			def struct A {
+				x : int;
+
+				ctor (x : int) {
+					this.x = x;
+				}
+			};
+
+			def struct B : [A] {
+				y : int;
+
+				ctor (x : int, y : int) {
+					A::(this, x);
+					this.y = y;
+				}
+			}
+
+			int main() {
+				// call constructor
+				var ref<B> b = B::(b, 1, 2);
+
+				return 0;
+			}
+		)"));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		//		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "B b((1), (2));");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x) : x(x) {");
+		EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t y) : A(x), y(y) {");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
