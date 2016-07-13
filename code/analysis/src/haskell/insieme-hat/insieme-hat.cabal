@@ -40,7 +40,6 @@ executable insieme-hat
                         attoparsec-binary >=0.2,
                         attoparsec >=0.13,
                         hashable >= 1.2.4,
-                        unsafe >= 0.0,
                         process >= 1.2.3
     hs-source-dirs:     src
     include-dirs:       include,
@@ -79,7 +78,6 @@ library
                         attoparsec-binary >=0.2,
                         attoparsec >=0.13,
                         hashable >= 1.2.4,
-                        unsafe >= 0.0,
                         process >= 1.2.3
     hs-source-dirs:     src
     include-dirs:       include,

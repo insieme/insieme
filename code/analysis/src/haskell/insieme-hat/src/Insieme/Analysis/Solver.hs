@@ -42,7 +42,7 @@ import Data.List
 import Data.Dynamic
 import Data.Tuple
 import Data.Maybe
-import System.Unsafe
+import System.IO.Unsafe (unsafePerformIO)
 import System.Process
 --import qualified Data.Map.Lazy as Map
 import qualified Data.Map.Strict as Map
@@ -190,7 +190,7 @@ toDotGraph a@( Assignment m ) = "digraph G {\n\t"
                   
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
 dumpAssignment :: Assignment -> String -> String
-dumpAssignment a file = performIO $ do 
+dumpAssignment a file = unsafePerformIO $ do
          writeFile (file ++ ".dot") $ toDotGraph a
          runCommand ("dot -Tpdf " ++ file ++ ".dot -o " ++ file ++ ".pdf")
          return ("Dumped assignment into file " ++ file ++ ".pdf!")
