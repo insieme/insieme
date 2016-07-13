@@ -9,23 +9,16 @@ cabal-version:      >=1.10
 
 executable insieme-hat
     main-is:            Main.hs
-    other-modules:      Compiler.Analysis,
-                        Compiler.Analysis.Constraint,
-                        Compiler.Analysis.Constraint.Dynamic,
-                        Compiler.Analysis.Dependence,
-                        Compiler.Analysis.Solver,
-                        Compiler.Analysis.Values,
-                        Insieme.Analysis.Solver,
-                        Insieme.Analysis.Boolean,
+    other-modules:      Insieme.Analysis.Boolean,
                         Insieme.Analysis.Callable,
-                        Insieme.Analysis.Reachable,
                         Insieme.Analysis.Framework.Dataflow,
+                        Insieme.Analysis.Reachable,
+                        Insieme.Analysis.Solver,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.ThHelpers,
-                        Insieme.Inspire.Utils,
-                        Framework
+                        Insieme.Inspire.Utils
     build-depends:      attoparsec >=0.13,
                         attoparsec-binary >=0.2,
                         base >=4.7,
@@ -46,23 +39,16 @@ executable insieme-hat
 
 library
     exposed-modules:    Insieme.Adapter
-    other-modules:      Compiler.Analysis,
-                        Compiler.Analysis.Constraint,
-                        Compiler.Analysis.Constraint.Dynamic,
-                        Compiler.Analysis.Dependence,
-                        Compiler.Analysis.Solver,
-                        Compiler.Analysis.Values,
-                        Insieme.Analysis.Solver,
-                        Insieme.Analysis.Boolean,
+    other-modules:      Insieme.Analysis.Boolean,
                         Insieme.Analysis.Callable,
-                        Insieme.Analysis.Reachable,
                         Insieme.Analysis.Framework.Dataflow,
+                        Insieme.Analysis.Reachable,
+                        Insieme.Analysis.Solver,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.ThHelpers,
-                        Insieme.Inspire.Utils,
-                        Framework
+                        Insieme.Inspire.Utils
     build-depends:      attoparsec >=0.13,
                         attoparsec-binary >=0.2,
                         base >=4.7,
