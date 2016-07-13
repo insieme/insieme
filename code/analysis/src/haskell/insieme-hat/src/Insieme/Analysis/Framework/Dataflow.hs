@@ -16,8 +16,7 @@ import Insieme.Inspire.NodeAddress
 
 import qualified Insieme.Analysis.Solver as Solver
 
-import qualified Insieme.Callable as Callable
-import Insieme.Analysis.Callable
+import qualified Insieme.Analysis.Callable as Callable
 
 import Insieme.Analysis.Reachable
 
@@ -49,7 +48,7 @@ dataflowValue addr top idGen analysis = case getNode addr of
         var = Solver.mkVariable (idGen addr) [con,con2] Solver.bot
         con = Solver.createConstraint dep val var
         
-        trg = callableValue (goDown 1 addr)
+        trg = Callable.callableValue (goDown 1 addr)
         dep a = (Solver.toVar trg) : ( (map Solver.toVar (getReturnReachVars a)) ++ (map Solver.toVar (getReturnValueVars a)) )
         val a = Solver.join $ map (Solver.get a) (getReturnValueVars a) 
         
@@ -93,7 +92,7 @@ dataflowValue addr top idGen analysis = case getNode addr of
                 Node IR.CallExpr _  -> a : calls
                 _                   -> calls 
             
-            allTrgVars = map (\c -> (c , callableValue $ goDown 1 c ) ) allCalls           
+            allTrgVars = map (\c -> (c , Callable.callableValue $ goDown 1 c ) ) allCalls           
             
             callableAddr = goUp $ goUp declrAddr
             callable = case getNode callableAddr of

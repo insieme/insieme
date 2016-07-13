@@ -15,8 +15,7 @@ import qualified Insieme.Analysis.Solver as Solver
 import Insieme.Inspire.NodeAddress
 import qualified Insieme.Inspire as IR
 
-import Insieme.Boolean as Boolean
-import Insieme.Analysis.Boolean
+import qualified Insieme.Analysis.Boolean as Boolean
 
 --
 -- * Reachable Lattice
@@ -57,15 +56,15 @@ reachableIn a = case getNode parent of
             var = Solver.mkVariable (idGen a) [con] Solver.bot
             con = case getIndex a of
                 0 -> Solver.forward (reachableIn parent) var
-                1 -> Solver.forwardIf Boolean.AlwaysTrue  (booleanValue $ goDown 0 parent) (reachableOut $ goDown 0 parent) var
-                2 -> Solver.forwardIf Boolean.AlwaysFalse (booleanValue $ goDown 0 parent) (reachableOut $ goDown 0 parent) var 
+                1 -> Solver.forwardIf Boolean.AlwaysTrue  (Boolean.booleanValue $ goDown 0 parent) (reachableOut $ goDown 0 parent) var
+                2 -> Solver.forwardIf Boolean.AlwaysFalse (Boolean.booleanValue $ goDown 0 parent) (reachableOut $ goDown 0 parent) var 
         
     Node IR.WhileStmt _ -> var
         where
             var = Solver.mkVariable (idGen a) [con] Solver.bot
             con = case getIndex a of
                 0 -> Solver.forward (reachableIn parent) var
-                1 -> Solver.forwardIf Boolean.AlwaysTrue  (booleanValue $ goDown 0 parent) (reachableOut $ goDown 0 parent) var
+                1 -> Solver.forwardIf Boolean.AlwaysTrue  (Boolean.booleanValue $ goDown 0 parent) (reachableOut $ goDown 0 parent) var
 
     -- for all others: if the parent is reachable, so is this node
     _ -> var
@@ -119,7 +118,7 @@ reachableOut a = case getNode a of
     Node IR.WhileStmt _ -> var
         where
             var = Solver.mkVariable (idGen a) [cnt] Solver.bot
-            cnt = Solver.forwardIf Boolean.AlwaysFalse (booleanValue $ goDown 0 a) (reachableOut $ goDown 0 a) var
+            cnt = Solver.forwardIf Boolean.AlwaysFalse (Boolean.booleanValue $ goDown 0 a) (reachableOut $ goDown 0 a) var
 
             
     -- everything else: if the begin is reachable, so is the end

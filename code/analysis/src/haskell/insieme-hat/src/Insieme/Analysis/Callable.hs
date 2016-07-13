@@ -1,60 +1,75 @@
+{-# LANGUAGE FlexibleInstances #-}
 
-module Insieme.Analysis.Callable (
-    callableValue
-) where
+module Insieme.Analysis.Callable where
 
 import Data.List
-import Data.Tree
 import Data.Maybe
-import qualified Data.Set as Set
-
-import qualified Insieme.Analysis.Solver as Solver
-import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
-
+import Data.Tree
 import Insieme.Inspire.NodeAddress
+import qualified Data.Set as Set
+import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
-import Insieme.Inspire.Utils
 
-import qualified Insieme.Callable as Callable
+import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
+import {-# SOURCE #-} Insieme.Inspire.Utils
 
+--
+-- * Callable Results
+--
+
+data Callable =
+      Lambda NodeAddress
+    | Literal NodeAddress
+    | Closure NodeAddress
+ deriving (Eq, Ord)
+
+instance Show Callable where
+    show (Lambda na) = "Lambda@" ++ (prettyShow na)
+    show (Literal na) = "Literal@" ++ (prettyShow na)
+    show (Closure na) = "Closure@" ++ (prettyShow na)
+
+type CallableSet = Set.Set Callable
+
+--
+-- * Callable Lattice
+--
+
+instance Solver.Lattice CallableSet where
+    join [] = Set.empty
+    join xs = foldr1 Set.union xs
 
 --
 -- * Callable Analysis
 --
 
-callableValue :: NodeAddress -> Solver.TypedVar Callable.CallableSet
---callableValue a | trace ("Resolving callable value for " ++ (prettyShow a ) ) False = undefined
+callableValue :: NodeAddress -> Solver.TypedVar CallableSet
 callableValue addr = case getNode addr of
     Node IR.LambdaExpr _ ->
-        Solver.mkVariable (idGen addr) [] (Set.singleton (Callable.Lambda (fromJust $ getLambda addr )))
+        Solver.mkVariable (idGen addr) [] (Set.singleton (Lambda (fromJust $ getLambda addr )))
 
     Node IR.BindExpr _ ->
-        Solver.mkVariable (idGen addr) [] (Set.singleton (Callable.Closure addr))
+        Solver.mkVariable (idGen addr) [] (Set.singleton (Closure addr))
 
     Node IR.Literal _ ->
-        Solver.mkVariable (idGen addr) [] (Set.singleton (Callable.Literal addr))
+        Solver.mkVariable (idGen addr) [] (Set.singleton (Literal addr))
 
     _ -> dataflowValue addr allCallables idGen callableValue
 
   where
-
     idGen = Solver.mkIdentifier . ("C"++) . prettyShow
 
     allCallables = Set.fromList $ foldTree collector (getRoot addr)
     collector cur callables = case getNode cur of
-        Node IR.Lambda _   -> ((Callable.Lambda  cur) : callables)
-        Node IR.BindExpr _ -> ((Callable.Closure cur) : callables)
-        Node IR.Literal _  -> ((Callable.Literal cur) : callables)
-        _ -> callables  
-
-
+        Node IR.Lambda _   -> ((Lambda  cur) : callables)
+        Node IR.BindExpr _ -> ((Closure cur) : callables)
+        Node IR.Literal _  -> ((Literal cur) : callables)
+        _ -> callables
 
 getLambda :: NodeAddress -> Maybe NodeAddress
-getLambda addr =
-    case getNode addr of
-        Node IR.LambdaExpr [_, ref, Node IR.LambdaDefinition defs] ->
-            findLambda ref defs >>= walk addr
-        _ -> Nothing
+getLambda addr = case getNode addr of
+    Node IR.LambdaExpr [_, ref, Node IR.LambdaDefinition defs] ->
+        findLambdaIndex ref defs >>= walk addr
+    _ -> Nothing
   where
-    findLambda ref defs = findIndex ((ref==) . (!!0) . subForest) defs
-    walk addr x = Just . goDown 1 . goDown x . goDown 2 $ addr
+    findLambdaIndex ref defs = findIndex ((ref==) . (!!0) . subForest) defs
+    walk addr i = Just . goDown 1 . goDown i . goDown 2 $ addr

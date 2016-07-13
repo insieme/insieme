@@ -9,8 +9,7 @@ cabal-version:      >=1.10
 
 executable insieme-hat
     main-is:            Main.hs
-    other-modules:      
-                        Compiler.Analysis,
+    other-modules:      Compiler.Analysis,
                         Compiler.Analysis.Constraint,
                         Compiler.Analysis.Constraint.Dynamic,
                         Compiler.Analysis.Dependence,
@@ -21,8 +20,6 @@ executable insieme-hat
                         Insieme.Analysis.Callable,
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.Framework.Dataflow,
-                        Insieme.Boolean,
-                        Insieme.Callable,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
@@ -48,8 +45,7 @@ executable insieme-hat
 
 library
     exposed-modules:    Insieme.Adapter
-    other-modules:      
-                        Compiler.Analysis,
+    other-modules:      Compiler.Analysis,
                         Compiler.Analysis.Constraint,
                         Compiler.Analysis.Constraint.Dynamic,
                         Compiler.Analysis.Dependence,
@@ -60,8 +56,6 @@ library
                         Insieme.Analysis.Callable,
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.Framework.Dataflow,
-                        Insieme.Boolean,
-                        Insieme.Callable,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,

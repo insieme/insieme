@@ -11,7 +11,7 @@ module Insieme.Inspire.Utils (
 import Control.Applicative
 import Data.List
 import Data.Tree
-import Insieme.Callable as Callable
+import Insieme.Analysis.Callable as Callable
 import Insieme.Inspire.NodeAddress
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
