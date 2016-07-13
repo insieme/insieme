@@ -40,11 +40,8 @@ instance Solver.Lattice Result where
 booleanValue :: NodeAddress -> Solver.TypedVar Result
 booleanValue addr =
     case () of _
-                | lookup "true"  -> Solver.mkVariable (idGen addr) [] AlwaysTrue
-                | lookup "false" -> Solver.mkVariable (idGen addr) [] AlwaysFalse
+                | isBuiltin addr "true"  -> Solver.mkVariable (idGen addr) [] AlwaysTrue
+                | isBuiltin addr "false" -> Solver.mkVariable (idGen addr) [] AlwaysFalse
                 | otherwise      -> dataflowValue addr Both idGen booleanValue
   where
     idGen = Solver.mkIdentifier . ("B"++) . prettyShow
-
-    lookup :: String -> Bool
-    lookup key = fromMaybe False ((== getNode addr) <$> Map.lookup key (IR.getBuiltins $ getIR addr))

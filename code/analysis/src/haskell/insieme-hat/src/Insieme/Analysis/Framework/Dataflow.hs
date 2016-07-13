@@ -61,9 +61,7 @@ dataflowValue addr top idGen analysis = case getNode addr of
 
         -- temporary fix to support ref_deref before supporting referencences
         con2 = Solver.createConstraint dep2 val2 var
-        isDeref = case getNode (goDown 1 addr) of 
-            Node IR.Literal [_, Node (IR.StringValue "ref_deref") _  ] -> True
-            _ -> False
+        isDeref = isBuiltin (goDown 1 addr) "ref_deref" 
         dep2 a = if isDeref then [Solver.toVar trgRef] else [] 
         val2 a = if isDeref then (Solver.get a trgRef) else Solver.bot  
         trgRef = analysis $ goDown 2 addr

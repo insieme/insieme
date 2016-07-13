@@ -13,11 +13,14 @@ module Insieme.Inspire.NodeAddress (
     goUp,
     goDown,
     goLeft,
-    goRight
+    goRight,
+    isBuiltin
 ) where
 
+import Data.Maybe
 import Data.List (foldl')
 import Data.Tree
+import qualified Data.Map as Map
 import qualified Insieme.Inspire as IR
 
 data NodeAddress = NodeAddress [Int] IR.Inspire (Maybe NodeAddress)
@@ -76,3 +79,9 @@ goLeft    (NodeAddress xs _ (Just parent)) = goDown (last xs - 1) parent
 goRight :: NodeAddress -> NodeAddress
 goRight na@(NodeAddress _  _ Nothing      ) = na
 goRight    (NodeAddress xs _ (Just parent)) = goDown (last xs + 1) parent
+
+lookupBuiltin :: NodeAddress -> String -> Maybe (Tree IR.NodeType)
+lookupBuiltin addr needle = Map.lookup needle (IR.getBuiltins $ getIR addr)
+
+isBuiltin :: NodeAddress -> String -> Bool
+isBuiltin addr needle = fromMaybe False $ (== getNode addr) <$> lookupBuiltin addr needle
