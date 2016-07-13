@@ -1994,11 +1994,11 @@ namespace backend {
 
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
-		//EXPECT_PRED2(containsSubString, code, "(lambda_class){v0, v1}.operator()(42);");
+		EXPECT_PRED2(containsSubString, code, "__insieme_type_2 v0 = INS_INIT(__any_string__class){}.operator __insieme_type_2()");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();

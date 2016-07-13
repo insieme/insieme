@@ -90,7 +90,7 @@ namespace c_ast {
 			<< "#define INS_INIT(_v_) (_v_)\n"
 			<< "#endif\n";
 
-		out << "\n/* ------- Program Code --------- */";
+		out << "\n/* ------- Program Code --------- */\n\n";
 
 		// print topological sorted list of fragments
 		for_each(fragments, [&out](const CodeFragmentPtr& cur) { out << *cur; });

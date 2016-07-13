@@ -320,7 +320,7 @@ namespace backend {
 				vector<c_ast::NodePtr> args = c_call->arguments;
 				assert_eq(args.size(), 1u);
 				auto obj = args[0].as<c_ast::ExpressionPtr>();
-				if(core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
+				if(!irCallArgs[0].isa<core::InitExprPtr>() && core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
 
 				// extract class type
 				auto classType = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)).lValueType;
@@ -337,7 +337,8 @@ namespace backend {
 				assert_false(args.empty());
 
 				auto obj = args[0].as<c_ast::ExpressionPtr>();
-				if(core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
+				dumpColor(irCallArgs[0]);
+				if(!irCallArgs[0].isa<core::InitExprPtr>() && core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
 				args.erase(args.begin());
 
 				res = c_ast::memberCall(obj, c_call->function, args, c_call->instantiationTypes);
