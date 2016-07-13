@@ -44,6 +44,9 @@ int foo() { return true; }
 using philipp = int;
 using driver = philipp;
 
+struct D { int i; };
+void dfun(D d) { }
+
 int main() {
 	#pragma test expect_ir("{ var ref<bool> v0; v0 = true; v0 = false; }")
 	{
@@ -101,6 +104,26 @@ int main() {
 		var ref<int<4>,f,f,plain> v0 = *v0+1;
 	)")
 	int x = x+1;
+
+	#pragma test expect_ir(R"(
+		def struct IMP_D {
+			i : int<4>;
+		};
+		def IMP_dfun = function (v0 : ref<IMP_D,f,f,plain>) -> unit { };
+		{
+			var ref<IMP_D,f,f,plain> v0 = <ref<IMP_D,f,f,plain>>(ref_decl(type_lit(ref<IMP_D,f,f,plain>))) {1};
+			var ref<IMP_D,f,f,plain> v1 = <ref<IMP_D,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_D)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {1};
+			IMP_dfun(<ref<IMP_D,f,f,plain>>(ref_decl(type_lit(ref<IMP_D,f,f,plain>))) {1});
+			IMP_dfun(<ref<IMP_D,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_D)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {1});
+		}
+	)")
+	{
+		D d1 {1};
+		D d2 = D{1};
+
+		dfun({1});
+		dfun(D{1});
+	}
 
 	return 0;
 }

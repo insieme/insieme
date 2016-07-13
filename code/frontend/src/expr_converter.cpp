@@ -177,6 +177,9 @@ namespace conversion {
 			auto retRef = core::lang::ReferenceType(ret->getType());
 			ret = core::lang::buildRefKindCast(ret, targetRef.getKind());
 		}
+		// if we are directly using an init list as an argument, the generated Inspire code has a superfluous deref
+		// (we are initializing the value of the function argument directly without any copies!)
+		if(llvm::isa<clang::InitListExpr>(clangArgExprInput)) ret = core::analysis::getArgument(ret, 0);
 		// if a target type is given, and it is a value type, replace plain ref initializers to initialize that memory location
 		if(targetType && !core::analysis::isRefType(targetType) && core::transform::materialize(targetType) == ret->getType()) {
 			ret = utils::fixTempMemoryInInitExpression(core::lang::buildRefDecl(builder.refType(targetType)), ret);
