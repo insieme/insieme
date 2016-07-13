@@ -8,11 +8,13 @@ import Data.Tree
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
+import Insieme.Analysis.Boolean
 import qualified Data.ByteString.Char8 as BS8
-import qualified Insieme.Analysis.Examples as Anal
+import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
+import qualified Insieme.Inspire.Utils as IRUtils
 
 --
 -- * HSobject
@@ -104,7 +106,7 @@ foreign export ccall "hat_addr_toArray"
 findDeclr :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
 findDeclr addr_c = do
     addr <- deRefStablePtr addr_c
-    case Anal.findDeclr addr of
+    case IRUtils.findDeclr addr of
         Nothing -> return $ castPtrToStablePtr nullPtr
         Just a  -> newStablePtr a
 
@@ -114,7 +116,7 @@ foreign export ccall "hat_findDeclr"
 checkBoolean :: StablePtr Addr.NodeAddress -> IO (CInt)
 checkBoolean addr_c = do
     addr <- deRefStablePtr addr_c
-    return . fromIntegral . fromEnum . Anal.checkBoolean $ addr
+    return . fromIntegral . fromEnum . Solver.resolve . booleanValue $ addr
 
 foreign export ccall "hat_checkBoolean"
     checkBoolean :: StablePtr Addr.NodeAddress -> IO (CInt)
