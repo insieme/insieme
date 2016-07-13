@@ -69,7 +69,9 @@ goUp na@(NodeAddress _ _ Nothing  ) = na
 goUp    (NodeAddress _ _ (Just na)) = na
 
 goDown :: Int -> NodeAddress -> NodeAddress
-goDown x parent@(NodeAddress xs ir _)= NodeAddress (xs ++ [x]) ir{IR.getTree = (subForest $ IR.getTree ir) !! x} (Just parent)
+goDown x parent@(NodeAddress xs ir _) = NodeAddress (xs ++ [x]) ir' (Just parent)
+  where
+    ir' = ir{IR.getTree = (subForest $ IR.getTree ir) !! x}
 
 goLeft :: NodeAddress -> NodeAddress
 goLeft na@(NodeAddress xs _ _            ) | last xs == 0 = na
