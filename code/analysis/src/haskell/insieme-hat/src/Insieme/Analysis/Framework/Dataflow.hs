@@ -87,7 +87,7 @@ dataflowValue addr top idGen analysis = case getNode addr of
             
             n = getIndex declrAddr
             
-            allCalls = foldTree collector (getRoot declrAddr) 
+            allCalls = foldTree collector (getRootIR declrAddr) 
             collector a calls = case getNode a of
                 Node IR.CallExpr _  -> a : calls
                 _                   -> calls 

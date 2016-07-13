@@ -11,26 +11,14 @@ module Insieme.Inspire.Utils (
 import Control.Applicative
 import Data.List
 import Data.Tree
-import Insieme.Analysis.Callable as Callable
 import Insieme.Inspire.NodeAddress
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import qualified Insieme.Inspire as IR
 
-
-
-collectCallable :: NodeAddress -> Callable.CallableSet -> Callable.CallableSet
-collectCallable addr s =
-  let ins e s = Set.insert (e addr) s in
-   case rootLabel (getNode addr) of
-    IR.Lambda -> ins Callable.Lambda s
-    IR.Literal -> ins Callable.Literal s
-    IR.BindExpr -> ins Callable.Closure s
-    _ -> s
-
 -- | Fold the given 'Tree'. The accumulator function takes the subtree
 -- and the address of this subtree in the base tree.
-foldTree :: Monoid a => (NodeAddress -> a -> a) -> Tree IR.Inspire -> a
+foldTree :: Monoid a => (NodeAddress -> a -> a) -> IR.Inspire -> a
 foldTree = flip foldTreePrune noPrune
 
 -- | Fold the given 'Tree'. The accumulator function takes the subtree
@@ -48,7 +36,7 @@ noPrune _ = False
 foldTreePrune :: Monoid a
                 => (NodeAddress -> a -> a)      -- ^ aggregation function
                 -> (NodeAddress -> Bool)        -- ^ prune subtrees?
-                -> Tree IR.Inspire              -- ^ initial tree
+                -> IR.Inspire                   -- ^ initial tree
                 -> a                            -- ^ accumulated result
 foldTreePrune collect prune tree = foldAddressPrune collect prune (mkNodeAddress [] tree)
 

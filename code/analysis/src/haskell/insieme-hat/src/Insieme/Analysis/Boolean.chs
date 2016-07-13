@@ -1,7 +1,9 @@
 module Insieme.Analysis.Boolean where
 
+import Data.Maybe
 import Data.Tree
 import Insieme.Inspire.NodeAddress
+import qualified Data.Map as Map
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 
@@ -36,14 +38,13 @@ instance Solver.Lattice Result where
 --
 
 booleanValue :: NodeAddress -> Solver.TypedVar Result
-booleanValue addr = case getNode addr of
-    Node IR.Literal [_, Node (IR.StringValue "true") _] ->
-        Solver.mkVariable (idGen addr) [] AlwaysTrue
-
-    Node IR.Literal [_, Node (IR.StringValue "false") _] ->
-        Solver.mkVariable (idGen addr) [] AlwaysFalse
-
-    _ -> dataflowValue addr Both idGen booleanValue
-
+booleanValue addr =
+    case () of _
+                | lookup "true"  -> Solver.mkVariable (idGen addr) [] AlwaysTrue
+                | lookup "false" -> Solver.mkVariable (idGen addr) [] AlwaysFalse
+                | otherwise      -> dataflowValue addr Both idGen booleanValue
   where
     idGen = Solver.mkIdentifier . ("B"++) . prettyShow
+
+    lookup :: String -> Bool
+    lookup key = fromMaybe False ((== getNode addr) <$> Map.lookup key (IR.getBuiltins $ getIR addr))

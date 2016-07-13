@@ -10,6 +10,6 @@ main = do
     dump <- BS.getContents
 
     -- run parser
-    let Right tree = BinPar.parseBinaryDump dump
+    let Right ir = BinPar.parseBinaryDump dump
 
-    print . length . IR.getTree $ tree
+    print . length . IR.getTree $ ir

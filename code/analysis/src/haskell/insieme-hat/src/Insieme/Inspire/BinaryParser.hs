@@ -22,7 +22,7 @@ import qualified Insieme.Inspire as IR
 import Prelude hiding (take)
 
 -- | Parse binary dump.
-parseBinaryDump :: BS.ByteString -> Either String (IR.TreePackage)
+parseBinaryDump :: BS.ByteString -> Either String (IR.Inspire)
 parseBinaryDump = parseOnly $ do
     -- parse components
     parseHeader
@@ -35,10 +35,10 @@ parseBinaryDump = parseOnly $ do
     let nodes    = connectDumpNodes dumpNodes
     let builtins = resolve nodes <$> dumpBuiltins
 
-    return $ IR.TreePackage (connectDumpNodes dumpNodes) builtins
+    return $ IR.Inspire (connectDumpNodes dumpNodes) builtins
 
   where
-      resolve :: Tree IR.Inspire -> [Int] -> Tree IR.Inspire
+      resolve :: Tree IR.NodeType -> [Int] -> Tree IR.NodeType
       resolve node []     = node
       resolve node (x:xs) = resolve (subForest node !! x) xs
 
@@ -65,7 +65,7 @@ parseConverters = do
 -- * Parsing the body
 --
 
-data DumpNode = DumpNode IR.Inspire [Int]
+data DumpNode = DumpNode IR.NodeType [Int]
 
 parseDumpNode :: Parser DumpNode
 parseDumpNode = do
@@ -99,10 +99,10 @@ parseBuiltin = do
     val <- tail . splitOn "-" <$> parseString
     return (key, read <$> val)
 
-connectDumpNodes :: IntMap.IntMap DumpNode -> Tree IR.Inspire
+connectDumpNodes :: IntMap.IntMap DumpNode -> Tree IR.NodeType
 connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
   where
-    go :: Int -> State (IntMap.IntMap (Tree IR.Inspire)) (Tree IR.Inspire)
+    go :: Int -> State (IntMap.IntMap (Tree IR.NodeType)) (Tree IR.NodeType)
     go index = do
         memo <- get
         case IntMap.lookup index memo of

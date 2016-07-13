@@ -9,14 +9,14 @@ import Language.Haskell.TH
 
 #c
 #define CONCRETE(name) NT_##name,
-enum NodeType {
+enum C_NodeType {
 #include "insieme/core/ir_nodes.def"
 };
 #undef CONCRETE
 #endc
 
 -- | NodeType taken from Insieme header files.
-{#enum NodeType {} deriving (Eq, Show)#}
+{#enum C_NodeType {} deriving (Eq, Show)#}
 
 -- | Generates Inspire data structure.
 $(let
@@ -24,7 +24,7 @@ $(let
     base :: Q [Dec]
     base =
       [d|
-        data Inspire =
+        data NodeType =
               BoolValue   Bool
             | CharValue   Char
             | IntValue    Int
@@ -36,7 +36,7 @@ $(let
     extend :: Q [Dec] -> Q [Dec]
     extend base = do
         [DataD [] n [] cons ds]       <- base
-        TyConI (DataD [] _ [] nt_cons _) <- reify ''NodeType
+        TyConI (DataD [] _ [] nt_cons _) <- reify ''C_NodeType
         let cons' = genCons <$> filter (not . isLeaf) nt_cons
         return $ [DataD [] n [] (cons ++ cons') ds]
 
@@ -53,7 +53,7 @@ $(let
     baseFromNodeType :: Q [Dec]
     baseFromNodeType =
       [d|
-        fromNodeType :: NodeType -> Inspire
+        fromNodeType :: C_NodeType -> NodeType
         fromNodeType NT_BoolValue   = BoolValue False
         fromNodeType NT_CharValue   = CharValue ' '
         fromNodeType NT_IntValue    = IntValue 0
@@ -64,7 +64,7 @@ $(let
     baseToNodeType :: Q [Dec]
     baseToNodeType =
       [d|
-        toNodeType :: Inspire -> NodeType
+        toNodeType :: NodeType -> C_NodeType
         toNodeType (BoolValue   _) = NT_BoolValue
         toNodeType (CharValue   _) = NT_CharValue
         toNodeType (IntValue    _) = NT_IntValue
@@ -75,7 +75,7 @@ $(let
     extend :: Q [Dec] -> (Con -> Clause) -> Q [Dec]
     extend base gen = do
         [d, FunD n cls]               <- base
-        TyConI (DataD [] _ [] cons _) <- reify ''NodeType
+        TyConI (DataD [] _ [] cons _) <- reify ''C_NodeType
         let cls' = gen <$> filter (not . isLeaf) cons
         return $ [d,FunD n (cls ++ cls')]
 
@@ -90,7 +90,9 @@ $(let
          <*> extend baseToNodeType   genClauseToNodeType
  )
 
-data TreePackage = TreePackage {
-    getTree     :: Tree Inspire,
-    getBuiltins :: Map String (Tree Inspire)
+type SymbolTable = Map String (Tree NodeType)
+
+data Inspire = Inspire {
+    getTree     :: Tree NodeType,
+    getBuiltins :: SymbolTable
 }

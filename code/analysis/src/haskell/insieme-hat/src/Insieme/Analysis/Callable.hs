@@ -6,12 +6,12 @@ import Data.List
 import Data.Maybe
 import Data.Tree
 import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.Utils
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
-import {-# SOURCE #-} Insieme.Inspire.Utils
 
 --
 -- * Callable Results
@@ -58,7 +58,7 @@ callableValue addr = case getNode addr of
   where
     idGen = Solver.mkIdentifier . ("C"++) . prettyShow
 
-    allCallables = Set.fromList $ foldTree collector (getRoot addr)
+    allCallables = Set.fromList $ foldTree collector (getRootIR addr)
     collector cur callables = case getNode cur of
         Node IR.Lambda _   -> ((Lambda  cur) : callables)
         Node IR.BindExpr _ -> ((Closure cur) : callables)
