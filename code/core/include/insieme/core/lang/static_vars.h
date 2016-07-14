@@ -69,7 +69,7 @@ namespace lang {
 		/**
 		 * A function ..
 		 */
-		LANG_EXT_DERIVED(CreateStatic, "alias type = struct __static_var { initialized : bool; value : 'a; }; "
+		LANG_EXT_DERIVED(StaticCreate, "alias type = struct __static_var { initialized : bool; value : 'a; }; "
 		                               ""
 		                               "(res : ref<type>)->unit { "
 		                               "	res.initialized = false;"
@@ -78,7 +78,7 @@ namespace lang {
 		/**
 		 * An alternative version for a variable being initialized by a constant value.
 		 */
-		LANG_EXT_DERIVED(InitStaticConst, "alias type = struct __static_var { initialized : bool; value : 'a; }; "
+		LANG_EXT_DERIVED(StaticInitConst, "alias type = struct __static_var { initialized : bool; value : 'a; }; "
 		                                  ""
 		                                  "(v : ref<type>, value : 'a)->ref<'a> { "
 		                                  "	if (*(v.initialized)) { return v.value; }"
@@ -90,7 +90,7 @@ namespace lang {
 		/**
 		 * A function ..
 		 */
-		LANG_EXT_DERIVED(InitStaticLazy, "alias type = struct __static_var { initialized : bool; value : 'a; }; "
+		LANG_EXT_DERIVED(StaticInitLazy, "alias type = struct __static_var { initialized : bool; value : 'a; }; "
 		                                 ""
 		                                 "(v : ref<type>, value : ()=>'a)->ref<'a> { "
 		                                 "	if (*(v.initialized)) { return v.value; }"

@@ -337,7 +337,6 @@ namespace backend {
 				assert_false(args.empty());
 
 				auto obj = args[0].as<c_ast::ExpressionPtr>();
-				dumpColor(irCallArgs[0]);
 				if(!irCallArgs[0].isa<core::InitExprPtr>() && core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
 				args.erase(args.begin());
 
