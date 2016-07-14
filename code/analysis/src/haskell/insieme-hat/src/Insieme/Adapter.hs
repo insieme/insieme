@@ -101,6 +101,22 @@ foreign export ccall "hat_addr_toArray"
     addrToArray :: StablePtr Addr.NodeAddress -> Ptr CSize -> IO ()
 
 --
+-- * Parse IR
+--
+
+parseIR :: String -> IO IR.Inspire
+parseIR ircode = do
+    ptr_ir <- BS8.useAsCStringLen (BS8.pack ircode) parseIR_c'
+    ir     <- deRefStablePtr ptr_ir
+    freeStablePtr ptr_ir
+    return ir
+  where
+    parseIR_c' (s,l) = parseIR_c s (fromIntegral l)
+
+foreign import ccall "hat_parseIR"
+    parseIR_c :: CString -> CSize -> IO (StablePtr IR.Inspire)
+
+--
 -- * Analysis
 --
 

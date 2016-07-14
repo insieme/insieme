@@ -38,6 +38,7 @@
 
 #include "insieme/analysis/common/failure.h"
 #include "insieme/core/dump/binary_dump.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/lang.h"
 
 #include <cstdint>
@@ -133,6 +134,45 @@ namespace haskell {
 
 	// ------------------------------------------------------------ Environment
 
+	namespace detail {
+		StablePtr passIR(const NodePtr& root) {
+			// create a in-memory stream
+			stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+			// dump IR using a binary format
+			dumpIR(buffer, root);
+
+			// find builtins
+			NodeSet covered;
+			map<string, NodeAddress> builtins;
+			visitDepthFirstOnce(NodeAddress(root), [&] (const ExpressionAddress& expr) {
+				if (covered.contains(expr.getAddressedNode())) {
+					return;
+				}
+
+				covered.insert(expr.getAddressedNode());
+
+				if (core::lang::isBuiltIn(expr)) {
+					builtins[core::lang::getConstructName(expr)] = expr;
+				}
+			});
+
+			// attach builtins
+			write<length_t>(buffer, builtins.size());
+			for (auto& builtin : builtins) {
+				dumpString(buffer, builtin.first);
+				dumpString(buffer, toString(builtin.second));
+			}
+
+			// get data as C string
+			const string dumps = buffer.str();
+			const char* dumpcs = dumps.c_str();
+
+			// pass to Haskell
+			return hat_passIR(dumpcs, dumps.size());
+		}
+	}
+
 	Environment::Environment() {
 		hs_init(0, nullptr);
 	}
@@ -147,41 +187,7 @@ namespace haskell {
 	}
 
 	IR Environment::passIR(const NodePtr& root) {
-		// create a in-memory stream
-		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-
-		// dump IR using a binary format
-		dumpIR(buffer, root);
-
-		// find builtins
-		NodeSet covered;
-		map<string, NodeAddress> builtins;
-		visitDepthFirstOnce(NodeAddress(root), [&] (const ExpressionAddress& expr) {
-			if (covered.contains(expr.getAddressedNode())) {
-				return;
-			}
-
-			covered.insert(expr.getAddressedNode());
-
-			if (core::lang::isBuiltIn(expr)) {
-				builtins[core::lang::getConstructName(expr)] = expr;
-			}
-		});
-
-		// attach builtins
-		write<length_t>(buffer, builtins.size());
-		for (auto& builtin : builtins) {
-			dumpString(buffer, builtin.first);
-			dumpString(buffer, toString(builtin.second));
-		}
-
-		// get data as C string
-		const string dumps = buffer.str();
-		const char* dumpcs = dumps.c_str();
-
-		// pass to Haskell
-		auto ir = make_shared<HSobject>(hat_passIR(dumpcs, dumps.size()));
-		return {ir, root};
+		return {make_shared<HSobject>(detail::passIR(root)), root};
 	}
 
 	Address Environment::passAddress(const NodeAddress& addr, const IR& ir) {
@@ -219,3 +225,12 @@ namespace haskell {
 } // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme
+
+extern "C" {
+	StablePtr hat_parseIR(const char* ircode, size_t length) {
+		insieme::core::NodeManager nm;
+		insieme::core::IRBuilder builder(nm);
+		auto root = builder.parseStmt(std::string(ircode, length));
+		return insieme::analysis::haskell::detail::passIR(root);
+	}
+}
