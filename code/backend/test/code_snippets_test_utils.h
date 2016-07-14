@@ -34,23 +34,29 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 /**
- * This macro can be used to run backend snippet tests
+ * This macro can be used to run backend snippet tests. Normally one would use the macro defined below which uses the sequential backend by default
+ *
  * IR_PROGRAM            the IR to be converted by the backend
+ * BACKEND               the backend to use (e.g. sequential::SequentialBackend::getDefault() or runtime::RuntimeBackend::getDefault() )
  * PRINT_BACKEND_CODE    a boolean flag specifying whether to print the generated backend code or not
  * COMPILER              the compiler to use (mostly either utils::compiler::Compiler::getDefaultCppCompiler() or
  *                                            utils::compiler::Compiler::getDefaultC99Compiler() )
- * COMPARISON_ACTIONS    a block of code to check the result. can use the variable 'code' which contains the generated code
+ * COMPARISON_ACTIONS    a block of code to check the result. can use the variable 'code' which contains the generated code.
+ *                       The variable 'originalCode' will contain the code as the backend generated it - including all comments
  */
-#define DO_TEST(IR_PROGRAM, PRINT_BACKEND_CODE, COMPILER, COMPARISON_ACTIONS) \
+#define DO_TEST_WITH_BACKEND(IR_PROGRAM, BACKEND, PRINT_BACKEND_CODE, COMPILER, COMPARISON_ACTIONS) \
 	core::ProgramPtr program = builder.normalize(builder.parseProgram(IR_PROGRAM)); \
 	/* check program */ \
 	ASSERT_TRUE(program); \
 	ASSERT_TRUE(core::checks::check(program).empty()) << core::checks::check(program); \
 	/* convert program */ \
-	auto converted = sequential::SequentialBackend::getDefault()->convert(program); \
+	auto converted = BACKEND->convert(program); \
 	ASSERT_TRUE((bool)converted); \
-	auto code = utils::removeCppStyleComments(toString(*converted)); \
+	auto originalCode = toString(*converted); \
+	auto code = utils::removeCppStyleComments(originalCode); \
 	if(PRINT_BACKEND_CODE) std::cout << "Converted code produced by sequential backend: =======\n" << code << "\n============================\n"; \
 	/* perform comparisons */ \
 	COMPARISON_ACTIONS \
@@ -58,3 +64,6 @@
 	utils::compiler::Compiler compiler = COMPILER; \
 	compiler.addFlag("-c"); /* do not run the linker */ \
 	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+
+#define DO_TEST(IR_PROGRAM, PRINT_BACKEND_CODE, COMPILER, COMPARISON_ACTIONS) \
+	DO_TEST_WITH_BACKEND(IR_PROGRAM, sequential::SequentialBackend::getDefault(), PRINT_BACKEND_CODE, COMPILER, COMPARISON_ACTIONS)
