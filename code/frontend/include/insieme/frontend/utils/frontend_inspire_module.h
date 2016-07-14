@@ -92,6 +92,11 @@ namespace utils {
 		 * Implements the C bool semantics
 		 */
 		LANG_EXT_DERIVED(BoolToInt, "(b : bool) -> int<4> { if(b) { return 1; } else { return 0; } }")
+
+		/**
+		 * Persistent ref-temp (not replaced by normal FE mechanisms)
+		 */
+		LANG_EXT_LITERAL(FERefTemp, "fe_ref_temp", "(type<'a>) -> ref<'a,f,f>")
 	};
 
 	// --------------------- Utilities ----------------------------
@@ -115,6 +120,8 @@ namespace utils {
 	 * Creates a an expression implementing C bool semantics
 	 */
 	core::ExpressionPtr buildBoolToInt(const core::ExpressionPtr& b);
+
+	core::ExpressionPtr buildFERefTemp(const core::TypePtr& t);
 
 } // end namespace utils
 } // end namespace frontend

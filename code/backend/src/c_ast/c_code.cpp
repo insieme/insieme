@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -82,6 +82,15 @@ namespace c_ast {
 		});
 
 		out << "\n";
+
+		// print macro definition for unified C/C++ in-place initialization
+		out << "#ifdef __cplusplus\n"
+			<< "#define INS_INIT(_v_) _v_\n"
+			<< "#else\n"
+			<< "#define INS_INIT(_v_) (_v_)\n"
+			<< "#endif\n";
+
+		out << "\n/* ------- Program Code --------- */\n\n";
 
 		// print topological sorted list of fragments
 		for_each(fragments, [&out](const CodeFragmentPtr& cur) { out << *cur; });

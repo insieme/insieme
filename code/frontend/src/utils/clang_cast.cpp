@@ -409,11 +409,9 @@ namespace utils {
 		//	{ return builder.callExpr(targetTy, gen.getNullFunc(), builder.getTypeLiteral(targetTy)); }
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_UserDefinedConversion:
-		//	/*case clang::CK_UserDefinedConversion - Conversion using a user defined type conversion function.i
-		//	* struct A { operator int(); }; int i = int(A());
-		//	* */
-		//	{ return converter.convertExpr(castExpr->getSubExpr()); }
+		// clang::CK_UserDefinedConversion - Conversion using a user defined type conversion function
+		case clang::CK_UserDefinedConversion:
+			return expr;
 
 		//case clang::CK_AtomicToNonAtomic:
 		//case clang::CK_NonAtomicToAtomic:

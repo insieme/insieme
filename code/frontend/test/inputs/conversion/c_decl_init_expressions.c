@@ -116,10 +116,10 @@ int main() {
 	#pragma test expect_ir("var ref<array<int<4>,3>,f,f> v0 = <ref<array<int<4>,3>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3>,f,f,plain>))) {0,1,2};")
 	int arr_implied[] = {0,1,2};
 
-	#pragma test expect_ir("var ref<array<array<int<4>,3>,2>,f,f> v0 = <ref<array<array<int<4>,3>,2>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3>,2>,f,f>))) {*<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1,2,3},*<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5,6}};")
+	#pragma test expect_ir("var ref<array<array<int<4>,3>,2>,f,f> v0 = <ref<array<array<int<4>,3>,2>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3>,2>,f,f>))) {<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1,2,3},<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5,6}};")
 	int arr_multi[2][3] = {{1,2,3}, {4,5,6}};
 
-	#pragma test expect_ir("var ref<array<array<int<4>,3>,2>,f,f,plain> v0 = <ref<array<array<int<4>,3>,2>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3>,2>,f,f,plain>))) {*<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1},*<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5}};")
+	#pragma test expect_ir("var ref<array<array<int<4>,3>,2>,f,f,plain> v0 = <ref<array<array<int<4>,3>,2>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3>,2>,f,f,plain>))) {<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1},<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5}};")
 	int arr_multi_partial[2][3] = {{1}, {4,5}};
 
 	// STRUCT TYPES //////////////////////////////////////////////////////////////

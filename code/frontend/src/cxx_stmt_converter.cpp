@@ -61,7 +61,7 @@ namespace conversion {
 	//---------------------------------------------------------------------------------------------------------------------
 
 	stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
-		VLOG(2) << "CXXStmtConverter";
+		VLOG(2) << "CXXStmtConverter:\n" << dumpClang(stmt, converter.getSourceManager());
 		return BaseVisit(stmt, [&](clang::Stmt* stmt) { return StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt); });
 	}
 

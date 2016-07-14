@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -100,4 +100,6 @@ TEST(NameMangling, OperatorManglingPrecedence) {
 	EXPECT_EQ("IMP__operator_member_",        mangle("operator->"));
 	EXPECT_EQ("IMP__operator_call_",          mangle("operator()"));
 	EXPECT_EQ("IMP__operator_subscript_",     mangle("operator[]"));
+	EXPECT_EQ("IMP__conversion_operator_",    mangle("operator "));
+	EXPECT_EQ("IMP__conversion_operator_int", mangle("operator int"));
 }

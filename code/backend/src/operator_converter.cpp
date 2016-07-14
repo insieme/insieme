@@ -464,8 +464,7 @@ namespace backend {
 		};
 
 		res[refExt.getRefDecl()] = OP_CONVERTER {
-			assert_fail() << "ref_decl calls should have been eliminated by the preprocessor";
-			return CONVERT_ARG(0);
+			return C_NODE_MANAGER->create<c_ast::Literal>("ref_decl_node__should_not_appear_in_final_code");
 		};
 
 		res[refExt.getRefTempInit()] = OP_CONVERTER {

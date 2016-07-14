@@ -66,11 +66,10 @@ namespace c_ast {
 		// the actual printer of the C AST
 		class CPrinter {
 			string indentStep;
-			int indent;
-			bool makeTypesImplicit;
+			int indent = 0;
 
 		  public:
-			CPrinter(const string& indentStep = "    ") : indentStep(indentStep), indent(0), makeTypesImplicit(false) {}
+			CPrinter(const string& indentStep = "    ") : indentStep(indentStep) {}
 
 			std::ostream& print(NodePtr node, std::ostream& out) {
 				if(!node) { return out; }
@@ -258,11 +257,7 @@ namespace c_ast {
 				// a utility function printing the init part
 				auto printInit = [&](const c_ast::ExpressionPtr& expr) {
 					if(!expr) { return; }
-
-					// disable explicit types for init values since those are inferred automatically
-					makeTypesImplicit = true;
 					out << " = " << print(expr);
-					makeTypesImplicit = false;
 				};
 
 				// handle single-variable declaration ...
@@ -433,21 +428,18 @@ namespace c_ast {
 			}
 
 			PRINT(Initializer) {
-				if(!makeTypesImplicit && node->type) { out << "(" << print(node->type) << ")"; }
+				if(node->type) { out << "INS_INIT(" << print(node->type) << ")"; }
 				return out << "{" << join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << "}";
 			}
 
 			PRINT(DesignatedInitializer) {
-				if(!makeTypesImplicit) out << "(" << print(node->type) << ")";
+				out << "INS_INIT(" << print(node->type) << ")";
 				out << "{ ";
 				// special handling for anonymous inner records
 				if(!node->member->name.empty()) {
 					out << "." << print(node->member) << " = ";
-				} else {
-					makeTypesImplicit = true;
 				}
 				out << print(node->value) << " }";
-				if(node->member->name.empty()) makeTypesImplicit = false;
 				return out;
 			}
 
@@ -673,10 +665,7 @@ namespace c_ast {
 				}
 
 				if(node->init) {
-					// disable explicit types for init values since those are inferred automatically
-					makeTypesImplicit = true;
 					out << " = " << print(node->init);
-					makeTypesImplicit = false;
 				}
 				return out << ";\n";
 			}
