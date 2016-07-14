@@ -1,6 +1,4 @@
 #include <iostream>
-#include <functional>
-
 
 //don't worry about the strange
 //if checks in the following methods.
@@ -64,16 +62,6 @@ int sum_ptr(int* a, int* b) {
         return *a+*b;
     };
     return sumr()+sumv();
-}
-
-int rec_lambda_refcap(int n) {
-    std::function<int (int)> x = [&](int y)->int {
-        std::cout << "lambda call: " << y << std::endl;
-        if(y==n) 
-            return y;
-        return x(y-1);
-    };
-    return x(3);
 }
 
 //recursive lambda that captures itself
@@ -230,10 +218,6 @@ int main (){
         int a=10;
         int b=20;
         std::cout << "arguments from function ref: " << sum_ptr(&a,&b) << std::endl;
-    }
-
-    {
-        std::cout << "recursive lambda refcap: " << rec_lambda_refcap(0) << std::endl;
     }
 
     //create two lambdas with different return types

@@ -192,10 +192,24 @@ namespace extensions {
 
 			// convert to literal depending on whether we are dealing with a function or a method
 			auto litConverter = [&converter, &builder](const clang::FunctionDecl* funDecl) {
+				core::LiteralPtr lit;
+
 				if(auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl)) {
-					return converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
+					lit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
+				} else {
+					lit = builder.literal(utils::buildNameForFunction(funDecl, converter), converter.convertType(funDecl->getType()));
 				}
-				return builder.literal(utils::buildNameForFunction(funDecl, converter), converter.convertType(funDecl->getType()));
+
+				// special case handling for std::function operator() calls
+				if(boost::starts_with(lit.as<core::LiteralPtr>()->getStringValue(), "IMP_std_colon__colon_function::IMP__operator_call_")) {
+					auto litFunType = lit->getType().as<core::FunctionTypePtr>();
+					if(core::analysis::isGeneric(litFunType->getReturnType())) {
+						auto retType = builder.typeVariable("__std_fun_ret_type");
+						lit = builder.literal(lit.getValue(), builder.functionType(litFunType->getParameterTypes(), retType, litFunType->getKind()));
+					}
+				}
+
+				return lit;
 			};
 
 			core::ExpressionPtr lit = litConverter(funDecl);
@@ -244,6 +258,7 @@ namespace extensions {
 			}
 			// translate uninstantiated pattern instead of instantiated version
 			auto pattern = funDecl->getTemplateInstantiationPattern();
+
 			auto genericFunLit = litConverter(pattern);
 			auto genericFunType = genericFunLit->getType().as<core::FunctionTypePtr>();
 			genericFunType = builder.functionType(genericFunType->getParameterTypes(), genericFunType->getReturnType(), genericFunType->getKind(),

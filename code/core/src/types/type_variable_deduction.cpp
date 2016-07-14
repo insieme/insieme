@@ -121,6 +121,14 @@ namespace types {
 					super::visit(node,other);
 				}
 
+				void visitTypeVariable(const TypeVariablePtr& varType, const NodePtr& other) override {
+
+					// if type variable, everything of length 1 is allowed -> constrain variadic types
+					if(other.isa<VariadicTypeVariablePtr>() || other.isa<VariadicGenericTypeVariablePtr>()) {
+						result.addConstraint(other.as<TypePtr>(), 1);
+					}
+				}
+
 				void visitGenericType(const GenericTypePtr& genType, const NodePtr& other) override {
 
 					// if other side is a generic type ...
@@ -129,7 +137,6 @@ namespace types {
 					} else if (auto otherGenVar = other.isa<GenericTypeVariablePtr>()) {
 						collectFromLists(genType->getTypeParameterList(), otherGenVar->getTypeParameter());
 					}
-
 				}
 
 				void visitTupleType(const TupleTypePtr& tuple, const NodePtr& other) override {

@@ -324,10 +324,10 @@ namespace backend {
 			int<4> main() {
 				var ref<int<4>> a = 1;
 				var ref<real<4>> b = 2.0f;
-	
+
 				f(a, (a : int<4>)=> true, ()=>3);
 				f(b, (b : real<4>)=> true, ()=>4.0f);
-	
+
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
