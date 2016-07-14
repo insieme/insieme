@@ -55,7 +55,7 @@ namespace haskell {
 	struct Tree {
 
 		std::shared_ptr<HSobject> tree;
-		const core::NodePtr& original;
+		core::NodePtr original;
 
 		Tree(std::shared_ptr<HSobject> tree, const core::NodePtr& original);
 
