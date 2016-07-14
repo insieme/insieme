@@ -49,18 +49,18 @@ namespace haskell {
 	#include "boolean_analysis.h"
 
 	class HSobject;
-	class Tree;
+	class IR;
 	class Address;
 
-	struct Tree {
+	struct IR {
 
-		std::shared_ptr<HSobject> tree;
+		std::shared_ptr<HSobject> ir;
 		core::NodePtr original;
 
-		Tree(std::shared_ptr<HSobject> tree, const core::NodePtr& original);
+		IR(std::shared_ptr<HSobject> ir, const core::NodePtr& original);
 
 		std::size_t size() const;
-		void print() const;
+		void printTree() const;
 
 	};
 
@@ -88,11 +88,11 @@ namespace haskell {
 
 		static Environment& getInstance();
 
-		Tree passTree(const core::NodePtr& root);
-		Address passAddress(const core::NodeAddress& addr, const Tree& tree);
+		IR passIR(const core::NodePtr& root);
+		Address passAddress(const core::NodeAddress& addr, const IR& ir);
 
 		boost::optional<Address> findDecl(const Address& var);
-		BooleanAnalysisResult checkBoolean(const Address& expr, const Tree& tree);
+		BooleanAnalysisResult checkBoolean(const Address& expr, const IR& ir);
 
 	};
 
