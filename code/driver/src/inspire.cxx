@@ -47,6 +47,8 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/parser/ir_parser.h"
+#include "insieme/core/dump/binary_haskell.h"
+#include "insieme/core/lang/lang.h"
 #include "insieme/utils/timer.h"
 #include "insieme/utils/compiler/compiler.h"
 
@@ -68,6 +70,8 @@ namespace bfs = boost::filesystem;
  */
 struct CmdOptions {
 	bool valid;
+	bool haskell;
+	bool statement;
 	string inputFile;
 	string outFile;
 	string dumpFile;
@@ -83,8 +87,6 @@ CmdOptions parseCommandLine(int argc, char** argv);
  * The Insieme Inspire Parser
  */
 int main(int argc, char** argv) {
-	cout << " --- Insieme Inspire Parser, Version 0.0..01beta ---- \n";
-
 	CmdOptions options = parseCommandLine(argc, argv);
 	if(!options.valid) { return 1; }
 
@@ -96,9 +98,11 @@ int main(int argc, char** argv) {
 
 	// load input file
 	std::stringstream ss;
-	ss << fstream(options.inputFile).rdbuf();
-
-	//		std::cout << "Code: \n" << ss.str() << "\n";
+	if(options.inputFile == "-") {
+		ss << std::cin.rdbuf();
+	} else {
+		ss << fstream(options.inputFile).rdbuf();
+	}
 
 	// parse input
 	NodeManager manager;
@@ -106,7 +110,11 @@ int main(int argc, char** argv) {
 	NodePtr res;
 	insieme::utils::Timer timer;
 	try {
-		res = core::parser::parseProgram(manager, ss.str(), true);
+		if(options.statement) {
+			res = core::parser::parseStmt(manager, ss.str(), true);
+		} else {
+			res = core::parser::parseProgram(manager, ss.str(), true);
+		}
 		if(!res) {
 			std::cout << "Unknown parsing error!\n";
 			return 1;
@@ -115,7 +123,6 @@ int main(int argc, char** argv) {
 		std::cout << "Parsing error encountered: " << pe.what() << "\n";
 		return 1;
 	}
-	double time = timer.stop();
 
 	if(!options.dumpFile.empty()) {
 		std::ofstream out(options.dumpFile);
@@ -123,12 +130,16 @@ int main(int argc, char** argv) {
 	}
 
 	// std::cout << core::printer::PrettyPrinter(res) << "\n";
-	std::cout << "Parsing took " << time << "sec.\n";
 
 	auto msg = checks::check(res);
 	if(msg.size() > 0) {
 		std::cout << "Encountered issues:\n" << msg << "\n";
 		return 1;
+	}
+
+	if(options.haskell) {
+		dump::binary::haskell::dumpIR(std::cout, res);
+		return 0;
 	}
 
 	// convert to target code and compile code
@@ -161,9 +172,13 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 
 	// define options
 	bpo::options_description desc("Supported Parameters");
-	desc.add_options()("help,h", "produce help message")("input,i", bpo::value<string>()->default_value(""), "the code file to be parsed")(
-	    "output,o", bpo::value<string>()->default_value("a.out"), "the binary build from the code")("dump-ir,d", bpo::value<string>()->default_value(""),
-	                                                                                                "file to dump the IR to");
+	desc.add_options()
+		("help,h", "produce help message")
+		("input,i", bpo::value<string>()->default_value(""), "the code file to be parsed")
+		("output,o", bpo::value<string>()->default_value("a.out"), "the binary build from the code")
+		("dump-ir,d", bpo::value<string>()->default_value(""), "file to dump the IR to")
+		("statement,s", "parse only a statement instead of a whole program")
+		("haskell,k", "just dump binary for Haskell");
 
 	// define positional options (all options not being named)
 	bpo::positional_options_description pos;
@@ -183,8 +198,16 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 		return fail;
 	}
 
-	CmdOptions res;
+	// check whether version was requested
+	if(map.count("version")) {
+		cout << " --- Insieme Inspire Parser, Version 0.0..02beta ---- \n";
+		return fail;
+	}
+
+	CmdOptions res = {0};
 	res.valid = true;
+	res.haskell = map.count("haskell") == 1;
+	res.statement = map.count("statement") == 1;
 	res.inputFile = map["input"].as<string>();
 	res.outFile = map["output"].as<string>();
 	res.dumpFile = map["dump-ir"].as<string>();
