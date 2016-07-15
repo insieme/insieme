@@ -37,9 +37,8 @@
 #include "insieme/analysis/haskell/adapter.h"
 
 #include "insieme/analysis/common/failure.h"
-#include "insieme/core/dump/binary_dump.h"
+#include "insieme/core/dump/binary_haskell.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/lang/lang.h"
 
 #include <cstdint>
 #include <map>
@@ -48,7 +47,7 @@
 
 using namespace std;
 using namespace insieme::core;
-using namespace insieme::core::dump::binary;
+using namespace insieme::core::dump::binary::haskell;
 
 extern "C" {
 
@@ -141,28 +140,6 @@ namespace haskell {
 
 			// dump IR using a binary format
 			dumpIR(buffer, root);
-
-			// find builtins
-			NodeSet covered;
-			map<string, NodeAddress> builtins;
-			visitDepthFirstOnce(NodeAddress(root), [&] (const ExpressionAddress& expr) {
-				if (covered.contains(expr.getAddressedNode())) {
-					return;
-				}
-
-				covered.insert(expr.getAddressedNode());
-
-				if (core::lang::isBuiltIn(expr)) {
-					builtins[core::lang::getConstructName(expr)] = expr;
-				}
-			});
-
-			// attach builtins
-			write<length_t>(buffer, builtins.size());
-			for (auto& builtin : builtins) {
-				dumpString(buffer, builtin.first);
-				dumpString(buffer, toString(builtin.second));
-			}
 
 			// get data as C string
 			const string dumps = buffer.str();

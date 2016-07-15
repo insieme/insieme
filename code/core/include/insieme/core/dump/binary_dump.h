@@ -36,8 +36,7 @@
 
 #pragma once
 
-#include <ostream>
-#include <istream>
+#include <iostream>
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_address.h"
@@ -57,43 +56,6 @@ namespace binary {
 	* The magic number stored at the head of all encodings.
 	*/
 	const uint64_t MAGIC_NUMBER = 0x494e5350495245; // HEX version of INSPIRE
-
-	// some type definitions
-	typedef uint32_t length_t;
-	typedef uint16_t type_t;
-	typedef uint32_t index_t;
-
-	/**
-	 * Writes a value binary encoded to the given output stream.
-	 *
-	 * @param out the stream to be writing to
-	 * @param value the value to be written
-	 */
-	template <typename T>
-	void write(std::ostream& out, T value) {
-		out.write((char*) &value, sizeof(T));
-	}
-
-	/**
-	 * Reads a value binary encoded from the given input stream.
-	 *
-	 * @param in the stream to be reading from
-	 * @return read value
-	 */
-	template <typename T>
-	T read(std::istream& in) {
-		T value = 0;
-		in.read((char*) &value, sizeof(T));
-		return value;
-	}
-
-	/**
-	 * Writes a string binary encoded, length prefixed to the given output stream.
-	 *
-	 * @param out the stream to be writing to
-	 * @param str the string to be written
-	 */
-	void dumpString(std::ostream& out, const string& str);
 
 	/**
 	 * Writes a binary encoding of the given IR node into the given output stream.

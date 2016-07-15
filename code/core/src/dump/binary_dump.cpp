@@ -43,8 +43,11 @@
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/dump/binary_utils.h"
 
 #include "insieme/utils/map_utils.h"
+
+using namespace insieme::core::dump::binary::utils;
 
 namespace insieme {
 namespace core {
@@ -139,7 +142,7 @@ namespace binary {
 			 * An reverse index, assigning every node its index
 			 * within the node list and a the list of annotations mapped to their index.
 			 */
-			utils::map::PointerMap<NodePtr, pair<index_t, std::map<NodeAnnotationPtr, index_t>>> index;
+			insieme::utils::map::PointerMap<NodePtr, pair<index_t, std::map<NodeAnnotationPtr, index_t>>> index;
 
 			/**
 			 * The register of annotation converters to be utilized for the encoding.
@@ -181,13 +184,6 @@ namespace binary {
 			}
 
 		  private:
-			/**
-			 * Dumps a string to the given output stream.
-			 */
-			void dumpString(std::ostream& out, const string& str) {
-				binary::dumpString(out, str);
-			}
-
 			/**
 			 * Dumps a single annotation converter instance (the name of the converter).
 			 */
@@ -548,14 +544,6 @@ namespace binary {
 			// dump path
 			dumpPathIndices(out, path);
 		}
-	}
-
-	void dumpString(std::ostream& out, const string& str) {
-		// write the string content
-		write<length_t>(out, str.length());
-
-		// write string (not including \0)
-		out.write(str.c_str(), str.length());
 	}
 
 	void dumpIR(std::ostream& out, const NodePtr& ir, const AnnotationConverterRegister& converterRegister) {
