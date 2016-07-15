@@ -25,14 +25,22 @@ import Insieme.Analysis.Reachable
 -- * Generic Data Flow Value Analysis
 --
 
+data OperatorHandler a = OpHandler {
+    operator  :: Tree IR.NodeType, 
+    dependsOn :: Solver.Assignment -> [Solver.Var],
+    getValue  :: Solver.Assignment -> a
+}
+
+
 
 dataflowValue :: (Solver.Lattice a)
          => NodeAddress                                     -- ^ the address of the node for which to compute a variable representing the data flow value
          -> a                                               -- ^ the top value of the lattice
          -> (NodeAddress -> Solver.Identifier)              -- ^ a variable ID generator function
          -> (NodeAddress -> Solver.TypedVar a)              -- ^ a variable generator function for referenced variables
+         -> [OperatorHandler a]                             -- ^ TODO: add support for those operator handlers
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
-dataflowValue addr top idGen analysis = case getNode addr of
+dataflowValue addr top idGen analysis ops = case getNode addr of
 
     Node IR.Declaration _ -> var
       where

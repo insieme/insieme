@@ -11,6 +11,8 @@ executable insieme-hat
     main-is:            Main.hs
     other-modules:      Insieme.Analysis.Boolean,
                         Insieme.Analysis.Callable,
+                        Insieme.Analysis.DataPath,
+                        Insieme.Analysis.Reference,
                         Insieme.Analysis.Framework.Dataflow,
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.Solver,
@@ -41,6 +43,8 @@ library
     exposed-modules:    Insieme.Adapter
     other-modules:      Insieme.Analysis.Boolean,
                         Insieme.Analysis.Callable,
+                        Insieme.Analysis.DataPath,
+                        Insieme.Analysis.Reference,
                         Insieme.Analysis.Framework.Dataflow,
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.Solver,

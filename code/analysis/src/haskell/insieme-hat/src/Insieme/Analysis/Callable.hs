@@ -28,11 +28,11 @@ instance Show Callable where
     show (Literal na) = "Literal@" ++ (prettyShow na)
     show (Closure na) = "Closure@" ++ (prettyShow na)
 
-type CallableSet = Set.Set Callable
-
 --
 -- * Callable Lattice
 --
+
+type CallableSet = Set.Set Callable
 
 instance Solver.Lattice CallableSet where
     join [] = Set.empty
@@ -53,7 +53,7 @@ callableValue addr = case getNode addr of
     Node IR.Literal _ ->
         Solver.mkVariable (idGen addr) [] (Set.singleton (Literal addr))
 
-    _ -> dataflowValue addr allCallables idGen callableValue
+    _ -> dataflowValue addr allCallables idGen callableValue []
 
   where
     idGen = Solver.mkIdentifier . ("C"++) . prettyShow

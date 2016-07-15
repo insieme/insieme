@@ -30,6 +30,9 @@ instance Eq NodeAddress where
 
 instance Ord NodeAddress where
     (NodeAddress a _ _) <= (NodeAddress b _ _) = a <= b
+    
+instance Show NodeAddress where
+    show = prettyShow
 
 -- | Create a 'NodeAddress' from a list of indizes and a root node.
 mkNodeAddress :: [Int] -> IR.Inspire -> NodeAddress
