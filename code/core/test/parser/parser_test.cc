@@ -1121,6 +1121,27 @@ namespace parser {
 		}
 	}
 
+	TEST(IR_Parser, ThisMemberAccess) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		{
+			auto addresses = builder.parseAddressesType(R"(
+				def struct A {
+					a : int<4>;
+					const lambda foo = () -> unit { $this.a$; $a$; }
+				};
+				A
+			)");
+			ASSERT_EQ(2, addresses.size());
+			ASSERT_TRUE(core::lang::isReference(addresses[0]));
+			EXPECT_TRUE(core::lang::ReferenceType(addresses[0]).isConst());
+			ASSERT_TRUE(core::lang::isReference(addresses[1]));
+			EXPECT_TRUE(core::lang::ReferenceType(addresses[1]).isConst());
+		}
+
+	}
+
 	TEST(IR_Parser, MemberFunctionLookup) {
 		NodeManager nm;
 		IRBuilder builder(nm);

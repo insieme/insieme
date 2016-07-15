@@ -49,6 +49,24 @@ namespace state {
 
 	/// Manages variable identities from clang to its INSPIRE translation
 	class VariableManager {
+	public:
+		using AccessGenerator = std::function<core::ExpressionPtr(core::ExpressionPtr)>;
+
+		/// map from clang VarDecl to functor which generates the access to that variable upon being passed the current "this" IR representation
+		class LambdaScope : public std::map<const clang::VarDecl*, AccessGenerator> {
+			AccessGenerator thisGenerator;
+			bool hasThis_ = false;
+		public:
+			void setThisGenerator(AccessGenerator gen) {
+				thisGenerator = gen;
+				hasThis_ = true;
+			}
+			const AccessGenerator& getThisGenerator() const {
+				return thisGenerator;
+			}
+			bool hasThis() const { return hasThis_; }
+		};
+
 	private:
 		Converter& converter;
 
@@ -68,6 +86,9 @@ namespace state {
 		/// IR variables for locals and literals for globals
 		std::vector<Scope> storage;
 
+		/// Internal storage for lambda captures
+		mutable std::vector<LambdaScope> lambdaScopes;
+
 	public:
 		VariableManager(Converter& converter);
 
@@ -83,15 +104,20 @@ namespace state {
 		/// Set the "this" expression for the current scope
 		void setThis(const core::ExpressionPtr& thisVar);
 		/// Get the "this" expression for the current scope
-		core::ExpressionPtr getThis();
+		core::ExpressionPtr getThis() const;
 
 		/// Set the return type for the current scope
 		void setRetType(const core::TypePtr& retType);
 		/// Get the return type for the current scope
 		core::TypePtr getRetType();
 
-		/// get the number of visible declarations in current scope (for testing)
+		/// Get the number of visible declarations in current scope (for testing)
 		size_t numVisibleDeclarations() const;
+
+		/// Push a new lambda scope
+		void pushLambda(const LambdaScope& lambdaScope);
+		/// Pop a lambda scope
+		void popLambda();
 	};
 
 } // end namespace state

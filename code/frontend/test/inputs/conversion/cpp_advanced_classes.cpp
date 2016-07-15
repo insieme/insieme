@@ -52,6 +52,12 @@ struct ConstructorReturn {
 	}
 };
 
+struct ConversionOperator {
+	int x;
+	operator int() { return x; }
+	operator int*() { return &x; }
+};
+
 int main() {
 	; // this is required because of the clang compound source location bug
 
@@ -100,6 +106,28 @@ int main() {
 	)")
 	{
 		ConstructorReturn c;
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_ConversionOperator {
+			x : int<4>;
+			function IMP__conversion_operator_int = () -> int<4> {
+				return *(this).x;
+			}
+			function IMP__conversion_operator_int_space__star_ = () -> ptr<int<4>> {
+				return ptr_from_ref((this).x);
+			}
+		};
+		{
+			var ref<IMP_ConversionOperator,f,f,plain> v0 = IMP_ConversionOperator::(ref_decl(type_lit(ref<IMP_ConversionOperator,f,f,plain>)));
+			var ref<int<4>,f,f,plain> v1 = v0.IMP__conversion_operator_int();
+			var ref<ptr<int<4>>,f,f,plain> v2 = v0.IMP__conversion_operator_int_space__star_();
+		}
+	)")
+	{
+		ConversionOperator cv;
+		int x = cv;
+		int* y = cv;
 	}
 
 	return 0;

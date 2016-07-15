@@ -34,37 +34,33 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/frontend_ir_builder.h"
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/analysis/ir++_utils.h"
+struct {
+	static void foo() { 5; }
+} f;
 
-#include "insieme/core/lang/static_vars.h"
+struct {
+	static void foo() { 42; }
+} b;
 
-#include "insieme/core/ir_builder.h"
+int main() {
+	;
 
-namespace insieme {
-namespace core {
-
-
-	ExpressionPtr FrontendIRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant) const {
-		const lang::StaticVariableExtension& ext = getNodeManager().getLangExtension<lang::StaticVariableExtension>();
-
-		assert_true(analysis::isRefType(staticVariable.getType()));
-		assert_true(ext.isStaticType(analysis::getReferencedType(staticVariable->getType())));
-
-		if(constant) {
-			return callExpr(refType(initValue->getType()), ext.getStaticInitConst(), staticVariable, initValue);
-		} else {
-			return callExpr(refType(initValue->getType()), ext.getStaticInitLazy(), staticVariable, wrapLazy(initValue));
+	#pragma test expect_ir(R"(
+		def __any_string__first_foo = function () -> unit {
+			5;
+		};
+		def __any_string__second_foo = function () -> unit {
+			42;
+		};
+		{
+			__any_string__first_foo();
+			__any_string__second_foo();
 		}
+	)")
+	{
+		f.foo();
+		b.foo();
 	}
 
-	StatementPtr FrontendIRBuilder::createStaticVariable(const LiteralPtr& staticVariable) const {
-		const lang::StaticVariableExtension& ext = getNodeManager().getLangExtension<lang::StaticVariableExtension>();
-
-		return callExpr(ext.getStaticCreate(), staticVariable);
-	}
-
-
-} // namespace core
-} // namespace insieme
+	return 0;
+}

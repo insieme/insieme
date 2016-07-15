@@ -59,7 +59,7 @@ namespace utils {
 			core::CallExprAddress call(initExpIn.as<core::CallExprPtr>());
 			assert_ge(call->getNumArguments(), 1) << "Ill-formed constructor call. Missing this argument";
 			if(refExt.isCallOfRefTemp(call->getArgument(0))) {
-				// we replace the first parameter (which has been created as ref_temp) by the variable to initialize
+				// we replace the first parameter (which has been created as ref_temp) by the memory space being initialized
 				return core::transform::replaceNode(
 					       initExpIn->getNodeManager(), call->getArgument(0),
 					       core::lang::buildRefCast(memLoc, call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(0)))
@@ -72,7 +72,6 @@ namespace utils {
 		if(auto initInitExpr = initExp.isa<core::InitExprAddress>()) {
 			auto memExprAddr = initInitExpr->getMemoryExpr();
 			if(refExt.isCallOfRefTemp(memExprAddr)) {
-				// we replace the memory address to be initialized with the variable being declared
 				return core::transform::replaceNode(initExp->getNodeManager(), memExprAddr, memLoc).as<core::ExpressionPtr>();
 			}
 		}

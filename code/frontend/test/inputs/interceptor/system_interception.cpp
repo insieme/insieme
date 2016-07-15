@@ -162,7 +162,6 @@ int main() {
 		InitListTest il;
 	}
 
-
 	#pragma test expect_ir(R"(
 		var ref<IMP_std_colon__colon_pair<ref<int<4>,f,f,qualified>,ref<bool,f,f,qualified>>,f,f,plain> v0 =
 			ref_cast(type_instantiation(type_lit(<ref<int<4>,f,f,qualified>, ref<bool,f,f,qualified>>(ref<int<4>,f,f,cpp_rref>, ref<bool,f,f,cpp_rref>) -> IMP_std_colon__colon_pair<ref<int<4>,f,f,qualified>,ref<bool,f,f,qualified>>),
@@ -170,4 +169,14 @@ int main() {
 					(12, true) materialize, type_lit(f), type_lit(f), type_lit(cpp_rref));
 	)")
 	std::pair<int,bool> x = std::make_pair(12, true);
+
+	// std::function
+	#pragma test expect_ir(R"({
+		var ref<IMP_std_colon__colon_function<ref<(int<4>) -> int<4>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_std_colon__colon_function::ctor" : IMP_std_colon__colon_function<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::())(ref_decl(type_lit(ref<IMP_std_colon__colon_function<ref<(int<4>) -> int<4>,f,f,qualified>>,f,f,plain>)));
+		type_instantiation(type_lit(const IMP_std_colon__colon_function<ref<(int<4>)->int<4>,f,f,qualified>>::(int<4>) -> int<4>), lit("IMP_std_colon__colon_function::IMP__operator_call_" : const IMP_std_colon__colon_function<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::('V_T_0_1...) -> '__std_fun_ret_type))(v0, 1);
+	})")
+	{
+		std::function<int (int)> x;
+		x(1);
+	}
 }

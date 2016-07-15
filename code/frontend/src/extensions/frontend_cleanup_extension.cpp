@@ -186,6 +186,19 @@ namespace extensions {
 				   }).as<ProgramPtr>();
 			return prog;
 		}
+
+		//////////////////////////////////////////////////////////////////////////
+		// Replace FE ref temps with real ref temps
+		// =======================================================================
+		ProgramPtr replaceFERefTemp(ProgramPtr prog) {
+			auto& mgr = prog->getNodeManager();
+			auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
+			auto& feExt = mgr.getLangExtension<utils::FrontendInspireModule>();
+			return core::transform::transformBottomUpGen(prog, [&](const core::LiteralPtr& lit) -> core::ExpressionPtr {
+				if(feExt.isFERefTemp(lit)) return refExt.getRefTemp();
+				return lit;
+			}, core::transform::globalReplacement);
+		}
 	}
 
 	boost::optional<std::string> FrontendCleanupExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
@@ -207,6 +220,7 @@ namespace extensions {
 		prog = removeSuperfluousBoolToInt(prog);
 		prog = removeCAndCppStyleAssignments(prog);
 		prog = replaceZeroStructInits(prog);
+		prog = replaceFERefTemp(prog);
 
 		return prog;
 	}

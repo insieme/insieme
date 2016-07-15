@@ -269,9 +269,9 @@ namespace backend {
 		EXPECT_EQ("name", toC(info.rValueType));
 		EXPECT_EQ("int32_t[24]", toC(info.externalType));
 		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("(name){X}", toC(info.internalize(cManager, lit)));
+		EXPECT_EQ("INS_INIT(name){X}", toC(info.internalize(cManager, lit)));
 		EXPECT_EQ("Y.data", toC(info.externalize(cManager, expr)));
-		EXPECT_EQ("(name){Y}", toC(info.internalize(cManager, expr)));
+		EXPECT_EQ("INS_INIT(name){Y}", toC(info.internalize(cManager, expr)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_PRED2(containsSubString, toC(info.definition), "struct name");
@@ -1137,7 +1137,7 @@ namespace backend {
 		             "static inline float name_call(name* closure, int32_t p1, bool p2) {\n    return closure->call(closure, p1, p2);\n}\n");
 
 		EXPECT_PRED2(containsSubString, toC(info.constructor), "static inline name* name_ctr(name* target, float(* call)(name*,int32_t,bool)) {\n"
-		                                                       "    *target = (name){call};\n"
+		                                                       "    *target = INS_INIT(name){call};\n"
 		                                                       "    return target;\n"
 		                                                       "}");
 

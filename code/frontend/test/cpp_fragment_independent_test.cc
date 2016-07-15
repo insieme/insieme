@@ -39,7 +39,21 @@
 namespace insieme {
 namespace frontend {
 
+	TEST(CppIndependentTest, AdvancedClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_advanced_classes.cpp"); }
+
+	TEST(CppIndependentTest, AdvancedTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_advanced_templates.cpp"); }
+
+	TEST(CppIndependentTest, BasicClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_classes.cpp"); }
+
+	TEST(CppIndependentTest, BasicTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_templates.cpp"); }
+
 	TEST(CppIndependentTest, BasicTypes) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_types.cpp"); }
+
+	TEST(CppIndependentTest, ClassOperators) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_class_operators.cpp"); }
+
+	TEST(CppIndependentTest, Constructors) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_constructors.cpp"); }
+
+	TEST(CppIndependentTest, DefaultArgs) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args.cpp"); }
 
 	TEST(CppIndependentTest, Enum) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_enum.cpp"); }
 
@@ -47,39 +61,29 @@ namespace frontend {
 
 	TEST(CppIndependentTest, ExpressionsRef) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions_ref.cpp"); }
 
-	TEST(CppIndependentTest, BasicClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_classes.cpp"); }
+	TEST(CppIndependentTest, Globals) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_globals.cpp"); }
 
-	TEST(CppIndependentTest, AdvancedClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_advanced_classes.cpp"); }
+	TEST(CppIndependentTest, InitializerList) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_initializer_list.cpp"); }
 
-	TEST(CppIndependentTest, ClassOperators) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_class_operators.cpp"); }
+	TEST(CppIndependentTest, Lambda) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda.cpp"); }
 
-	TEST(CppIndependentTest, BasicTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_templates.cpp"); }
-
-	TEST(CppIndependentTest, AdvancedTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_advanced_templates.cpp"); }
+	TEST(CppIndependentTest, Naming) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_naming.cpp"); }
 
 	TEST(CppIndependentTest, NewDelete) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_new_delete.cpp"); }
 
-	TEST(CppIndependentTest, DefaultArgs) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args.cpp"); }
-
 	TEST(CppIndependentTest, ObjectPassing) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_object_passing.cpp"); }
 
-	TEST(CppIndependentTest, This) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_this.cpp"); }
+	TEST(CppIndependentTest, RefPtr) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_ref_ptr.cpp"); }
 
 	TEST(CppIndependentTest, Return) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_return.cpp"); }
 
 	TEST(CppIndependentTest, ReturnStmt) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_return_stmt.cpp"); }
 
-	TEST(CppIndependentTest, InitializerList) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_initializer_list.cpp"); }
-
-	TEST(CppIndependentTest, Globals) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_globals.cpp"); }
-
-	TEST(CppIndependentTest, Constructors) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_constructors.cpp"); }
-
-	TEST(CppIndependentTest, RefPtr) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_ref_ptr.cpp"); }
+	TEST(CppIndependentTest, StackInitialization) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_stack_initialization.cpp"); }
 
 	TEST(CppIndependentTest, Static) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_static.cpp"); }
 
-	TEST(CppIndependentTest, StackInitialization) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_stack_initialization.cpp"); }
+	TEST(CppIndependentTest, This) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_this.cpp"); }
 
 } // fe namespace
 } // insieme namespace
