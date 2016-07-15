@@ -5,13 +5,17 @@ module Insieme.Inspire.Utils (
     foldAddress,
     foldTreePrune,
     foldAddressPrune,
+    parseIR,
     findDecl
 ) where
 
 import Control.Applicative
 import Data.List
 import Data.Tree
+import Insieme.Inspire.BinaryParser
 import Insieme.Inspire.NodeAddress
+import System.Process
+import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import qualified Insieme.Inspire as IR
@@ -56,8 +60,16 @@ foldAddressPrune collect prune addr = visit addr mempty
     visitsub base acc = foldr visit acc (subtrees base)
     subtrees addr = [goDown i addr | i <- [0..(length . subForest . getNode $ addr) - 1]]
 
+--
+-- * Parse IR code
+--
 
-
+-- | Parse a given IR statement using the inspire binary.
+parseIR :: String -> IO IR.Inspire
+parseIR ircode = do
+    irb <- readProcess "inspire" ["-i", "-", "-k", "-s"] ircode
+    let (Right ir) = parseBinaryDump (BS8.pack irb)
+    return ir
 
 --
 -- * Get Definition Point Analysis
