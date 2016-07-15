@@ -472,23 +472,24 @@ namespace conversion {
 			}
 		};
 
-		// iterate throw statements inside of switch
-		clang::CompoundStmt* compStmt = dyn_cast<clang::CompoundStmt>(switchStmt->getBody());
-		frontend_assert(compStmt) << "Switch statement doesn't contain a compound stmt";
-		for(auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it) {
-			clang::Stmt* currStmt = *it;
-			// if is a case stmt, create a literal and open it
+		// iterate over statements inside of switch
+		auto body = switchStmt->getBody();
+		vector<clang::Stmt*> subStatments;
+		clang::CompoundStmt* compStmt = dyn_cast<clang::CompoundStmt>(body);
+		if(compStmt) std::copy(compStmt->body_begin(), compStmt->body_end(), std::back_inserter(subStatments));
+		else subStatments.push_back(body);
+		for(auto currStmt : subStatments) {
+			// if it is a case stmt, create a literal and open it
 			if(const clang::SwitchCase* switchCaseStmt = llvm::dyn_cast<clang::SwitchCase>(currStmt)) {
 				lookForCases(switchCaseStmt);
 				continue;
 			} else if(const clang::DeclStmt* declStmt = llvm::dyn_cast<clang::DeclStmt>(currStmt)) {
-				// collect all declarations which are in the switch body and add them (without init) to
-				// the cases
+				// collect all declarations which are in the switch body and add them (without init) to the cases
 				handleDeclStmt(declStmt);
 				continue;
 			}
 
-			// if is whatever other kind of stmt append it to each of the open cases list
+			// if it is whatever other kind of stmt append it to each of the open cases list
 			addStmtToOpenCases(converter.convertStmt(currStmt));
 		}
 

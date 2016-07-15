@@ -129,6 +129,21 @@ int main() {
 		}
 	}
 
+	#pragma test expect_ir(R"({
+			var ref<int<4>,f,f,plain> v0 = 0;
+			switch(*v0) {
+				case 0: {
+					break;
+				}
+			}
+			switch(*v0) { }
+		})")
+	{
+		int a = 0;
+		switch(a) case 0: break;
+		switch(a) a=7;
+	}
+
 	#pragma test expect_ir(R"({ var ref<int<4>,f,f> v0;
 		switch(c_style_assignment(v0, 0)) {
 			case 0: { return 5 in ref<int<4>>; }
