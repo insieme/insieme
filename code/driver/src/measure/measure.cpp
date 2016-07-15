@@ -940,7 +940,7 @@ namespace measure {
 				for(const auto& metric : getDependencyClosureLeafs(metrics)) {
 					// only add non-papi metrics (identified by the PAPI prefix)
 					if(metric->getName().find("PAPI") != 0) { metric_selection += metric->getName() + ","; }
-					if(metric->getName().find("ENERGY") != 0) { energyMetricsPresent = true; }
+					if(metric->getName().find("ENERGY") != string::npos) { energyMetricsPresent = true; }
 				}
 				if(!paramList.empty()) { // only set if there are any parameters (otherwise collection is disabled)
 					metric_selection += getPapiCounterSelector(paramList);
