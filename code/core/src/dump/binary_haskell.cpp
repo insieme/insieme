@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,68 +34,50 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/core/dump/binary_haskell.h"
 
-#include "insieme/core/ir_address.h"
-#include "insieme/core/ir_node.h"
+#include <map>
 
-#include <boost/optional.hpp>
-#include <memory>
+#include "insieme/core/dump/binary_dump.h"
+#include "insieme/core/dump/binary_utils.h"
+#include "insieme/core/lang/lang.h"
+
+using namespace insieme::core::dump::binary::utils;
 
 namespace insieme {
-namespace analysis {
+namespace core {
+namespace dump {
+namespace binary {
 namespace haskell {
 
-	#include "boolean_analysis.h"
+	void dumpIR(std::ostream& out, const NodePtr& root) {
+		binary::dumpIR(out, root);
 
-	class HSobject;
-	class IR;
-	class Address;
+		// find builtins
+		NodeSet covered;
+		std::map<string, NodeAddress> builtins;
+		visitDepthFirstOnce(NodeAddress(root), [&] (const ExpressionAddress& expr) {
+			if (covered.contains(expr.getAddressedNode())) {
+				return;
+			}
 
-	struct IR {
+			covered.insert(expr.getAddressedNode());
 
-		std::shared_ptr<HSobject> ir;
-		core::NodePtr original;
+			if (core::lang::isBuiltIn(expr)) {
+				builtins[core::lang::getConstructName(expr)] = expr;
+			}
+		});
 
-		IR(std::shared_ptr<HSobject> ir, const core::NodePtr& original);
-
-		std::size_t size() const;
-		void printTree() const;
-
-	};
-
-	struct Address {
-
-		std::shared_ptr<HSobject> addr;
-
-		Address(std::shared_ptr<HSobject> addr);
-
-		std::size_t size() const;
-		void printNode() const;
-		core::NodeAddress toNodeAddress(const core::NodePtr& root) const;
-
-	};
-
-	class Environment {
-
-		Environment();
-
-	public:
-
-		~Environment();
-		Environment(const Environment&) = delete;
-		void operator=(const Environment&) = delete;
-
-		static Environment& getInstance();
-
-		IR passIR(const core::NodePtr& root);
-		Address passAddress(const core::NodeAddress& addr, const IR& ir);
-
-		boost::optional<Address> findDecl(const Address& var);
-		BooleanAnalysisResult checkBoolean(const Address& expr, const IR& ir);
-
-	};
+		// attach builtins
+		write<length_t>(out, builtins.size());
+		for (auto& builtin : builtins) {
+			utils::dumpString(out, builtin.first);
+			utils::dumpString(out, toString(builtin.second));
+		}
+	}
 
 } // end namespace haskell
-} // end namespace analysis
+} // end namespace binary
+} // end namespace dump
+} // end namespace core
 } // end namespace insieme

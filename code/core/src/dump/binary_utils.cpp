@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,68 +34,24 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/ir_address.h"
-#include "insieme/core/ir_node.h"
-
-#include <boost/optional.hpp>
-#include <memory>
+#include "insieme/core/dump/binary_utils.h"
 
 namespace insieme {
-namespace analysis {
-namespace haskell {
+namespace core {
+namespace dump {
+namespace binary {
+namespace utils {
 
-	#include "boolean_analysis.h"
+	void dumpString(std::ostream& out, const std::string& str) {
+		// write the string content
+		write<length_t>(out, str.length());
 
-	class HSobject;
-	class IR;
-	class Address;
+		// write string (not including \0)
+		out.write(str.c_str(), str.length());
+	}
 
-	struct IR {
-
-		std::shared_ptr<HSobject> ir;
-		core::NodePtr original;
-
-		IR(std::shared_ptr<HSobject> ir, const core::NodePtr& original);
-
-		std::size_t size() const;
-		void printTree() const;
-
-	};
-
-	struct Address {
-
-		std::shared_ptr<HSobject> addr;
-
-		Address(std::shared_ptr<HSobject> addr);
-
-		std::size_t size() const;
-		void printNode() const;
-		core::NodeAddress toNodeAddress(const core::NodePtr& root) const;
-
-	};
-
-	class Environment {
-
-		Environment();
-
-	public:
-
-		~Environment();
-		Environment(const Environment&) = delete;
-		void operator=(const Environment&) = delete;
-
-		static Environment& getInstance();
-
-		IR passIR(const core::NodePtr& root);
-		Address passAddress(const core::NodeAddress& addr, const IR& ir);
-
-		boost::optional<Address> findDecl(const Address& var);
-		BooleanAnalysisResult checkBoolean(const Address& expr, const IR& ir);
-
-	};
-
-} // end namespace haskell
-} // end namespace analysis
+} // end namespace utils
+} // end namespace binary
+} // end namespace dump
+} // end namespace core
 } // end namespace insieme

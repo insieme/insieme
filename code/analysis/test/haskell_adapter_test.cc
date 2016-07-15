@@ -79,7 +79,7 @@ namespace haskell {
 		public SimpleDeclaration {};
 
 	TEST_F(HaskellAdapter, NodeCount) {
-		auto tree = env.passTree(root);
+		auto ir = env.passIR(root);
 
 		// calculate overall node count
 		size_t nodeCount = 0;
@@ -87,33 +87,33 @@ namespace haskell {
 				nodeCount++;
 		}, true, true);
 
-		EXPECT_EQ(nodeCount, tree.size());
+		EXPECT_EQ(nodeCount, ir.size());
 	}
 
 	TEST_F(HaskellAdapter, AddressLength) {
-		auto tree = env.passTree(root);
+		auto ir = env.passIR(root);
 		NodeAddress addr = NodeAddress(root).getAddressOfChild(0, 0, 0, 0);
-		Address addr_hs = env.passAddress(addr, tree);
+		Address addr_hs = env.passAddress(addr, ir);
 		EXPECT_EQ(addr.getDepth(), addr_hs.size() + 1);
 	}
 
 	TEST_F(HaskellAdapter, AddressTransfere) {
-		auto tree = env.passTree(root);
+		auto ir = env.passIR(root);
 		NodeAddress addr = NodeAddress(root).getAddressOfChild(1, 0, 1);
-		Address addr_hs = env.passAddress(addr, tree);
+		Address addr_hs = env.passAddress(addr, ir);
 		NodeAddress addr_res = addr_hs.toNodeAddress(root);
 		EXPECT_EQ(addr,addr_res);
 	}
 
 	TEST_F(HaskellAdapter, FindDeclaration) {
-		auto tree = env.passTree(root);
+		auto ir = env.passIR(root);
 
 		// get the targeted variable
 		CompoundStmtAddress addrRoot(root.as<CompoundStmtPtr>());
 		StatementAddress addrVar = addrRoot[2];
 		EXPECT_TRUE(addrVar.isa<VariableAddress>());
 
-		auto var = env.passAddress(addrVar, tree);
+		auto var = env.passAddress(addrVar, ir);
 
 		boost::optional<Address> decl = env.findDecl(var);
 		EXPECT_TRUE(decl);
@@ -147,8 +147,8 @@ namespace haskell {
 			}
 		)1N5P1RE");
 
-		auto tree = env.passTree(stmt);
-		tree.print();
+		auto ir = env.passIR(stmt);
+		ir.printTree();
 	}
 
 } // end namespace haskell

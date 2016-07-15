@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,66 +36,54 @@
 
 #pragma once
 
-#include "insieme/core/ir_address.h"
-#include "insieme/core/ir_node.h"
-
-#include <boost/optional.hpp>
-#include <memory>
+#include <iostream>
+#include <string>
 
 namespace insieme {
-namespace analysis {
-namespace haskell {
+namespace core {
+namespace dump {
+namespace binary {
+namespace utils {
 
-	#include "boolean_analysis.h"
+	// some type definitions
+	typedef uint32_t length_t;
+	typedef uint16_t type_t;
+	typedef uint32_t index_t;
 
-	class HSobject;
-	class IR;
-	class Address;
+	/**
+	* Writes a value binary encoded to the given output stream.
+	*
+	* @param out the stream to be writing to
+	* @param value the value to be written
+	*/
+	template <typename T>
+	void write(std::ostream& out, T value) {
+		out.write((char*) &value, sizeof(T));
+	}
 
-	struct IR {
+	/**
+	* Reads a value binary encoded from the given input stream.
+	*
+	* @param in the stream to be reading from
+	* @return read value
+	*/
+	template <typename T>
+	T read(std::istream& in) {
+		T value = 0;
+		in.read((char*) &value, sizeof(T));
+		return value;
+	}
 
-		std::shared_ptr<HSobject> ir;
-		core::NodePtr original;
+	/**
+	* Writes a string binary encoded, length prefixed to the given output stream.
+	*
+	* @param out the stream to be writing to
+	* @param str the string to be written
+	*/
+	void dumpString(std::ostream& out, const std::string& str);
 
-		IR(std::shared_ptr<HSobject> ir, const core::NodePtr& original);
-
-		std::size_t size() const;
-		void printTree() const;
-
-	};
-
-	struct Address {
-
-		std::shared_ptr<HSobject> addr;
-
-		Address(std::shared_ptr<HSobject> addr);
-
-		std::size_t size() const;
-		void printNode() const;
-		core::NodeAddress toNodeAddress(const core::NodePtr& root) const;
-
-	};
-
-	class Environment {
-
-		Environment();
-
-	public:
-
-		~Environment();
-		Environment(const Environment&) = delete;
-		void operator=(const Environment&) = delete;
-
-		static Environment& getInstance();
-
-		IR passIR(const core::NodePtr& root);
-		Address passAddress(const core::NodeAddress& addr, const IR& ir);
-
-		boost::optional<Address> findDecl(const Address& var);
-		BooleanAnalysisResult checkBoolean(const Address& expr, const IR& ir);
-
-	};
-
-} // end namespace haskell
-} // end namespace analysis
+} // end namespace utils
+} // end namespace binary
+} // end namespace dump
+} // end namespace core
 } // end namespace insieme

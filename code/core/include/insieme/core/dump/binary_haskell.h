@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,66 +36,28 @@
 
 #pragma once
 
-#include "insieme/core/ir_address.h"
-#include "insieme/core/ir_node.h"
+#include <ostream>
 
-#include <boost/optional.hpp>
-#include <memory>
+#include "insieme/core/ir.h"
 
 namespace insieme {
-namespace analysis {
+namespace core {
+namespace dump {
+namespace binary {
 namespace haskell {
 
-	#include "boolean_analysis.h"
-
-	class HSobject;
-	class IR;
-	class Address;
-
-	struct IR {
-
-		std::shared_ptr<HSobject> ir;
-		core::NodePtr original;
-
-		IR(std::shared_ptr<HSobject> ir, const core::NodePtr& original);
-
-		std::size_t size() const;
-		void printTree() const;
-
-	};
-
-	struct Address {
-
-		std::shared_ptr<HSobject> addr;
-
-		Address(std::shared_ptr<HSobject> addr);
-
-		std::size_t size() const;
-		void printNode() const;
-		core::NodeAddress toNodeAddress(const core::NodePtr& root) const;
-
-	};
-
-	class Environment {
-
-		Environment();
-
-	public:
-
-		~Environment();
-		Environment(const Environment&) = delete;
-		void operator=(const Environment&) = delete;
-
-		static Environment& getInstance();
-
-		IR passIR(const core::NodePtr& root);
-		Address passAddress(const core::NodeAddress& addr, const IR& ir);
-
-		boost::optional<Address> findDecl(const Address& var);
-		BooleanAnalysisResult checkBoolean(const Address& expr, const IR& ir);
-
-	};
+	/**
+	* Writes a binary encoding of the given IR node into the given output stream.
+	* This variant is used specifically for the Haskell adapter and includes
+	* builtins.
+	*
+	* @param out the stream to be writing to
+	* @param ir the code fragment to be written
+	*/
+	void dumpIR(std::ostream& out, const NodePtr& ir);
 
 } // end namespace haskell
-} // end namespace analysis
+} // end namespace binary
+} // end namespace dump
+} // end namespace core
 } // end namespace insieme

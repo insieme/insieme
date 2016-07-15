@@ -37,8 +37,8 @@
 #include "insieme/analysis/haskell/adapter.h"
 
 #include "insieme/analysis/common/failure.h"
-#include "insieme/core/dump/binary_dump.h"
-#include "insieme/core/lang/lang.h"
+#include "insieme/core/dump/binary_haskell.h"
+#include "insieme/core/ir_builder.h"
 
 #include <cstdint>
 #include <map>
@@ -47,7 +47,7 @@
 
 using namespace std;
 using namespace insieme::core;
-using namespace insieme::core::dump::binary;
+using namespace insieme::core::dump::binary::haskell;
 
 extern "C" {
 
@@ -59,20 +59,20 @@ extern "C" {
 	void hs_init(int, char*[]);
 	void hs_exit(void);
 
-	// Tree functions
-	StablePtr hat_passTree(const char* dump, size_t length);
-	size_t hat_tree_length(const StablePtr dump);
-	void hat_tree_print(const StablePtr tree);
-	void hat_tree_printNode(const StablePtr addr);
+	// IR functions
+	StablePtr hat_passIR(const char* dump, size_t length);
+	size_t hat_IR_length(const StablePtr dump);
+	void hat_IR_printTree(const StablePtr ir);
+	void hat_IR_printNode(const StablePtr addr);
 
 	// Address functions
-	StablePtr hat_passAddress(const StablePtr tree, const size_t* path, size_t length);
+	StablePtr hat_passAddress(const StablePtr ir, const size_t* path, size_t length);
 	size_t hat_addr_length(const StablePtr addr);
 	void hat_addr_toArray(const StablePtr addr, size_t* dst);
 
 	// Analysis
 	StablePtr hat_findDecl(const StablePtr var);
-	int hat_checkBoolean(const StablePtr expr, const StablePtr tree);
+	int hat_checkBoolean(const StablePtr expr, const StablePtr ir);
 
 }
 
@@ -94,15 +94,15 @@ namespace haskell {
 
 	// ------------------------------------------------------------ Tree
 
-	Tree::Tree(std::shared_ptr<HSobject> tree, const NodePtr& original)
-		: tree(tree), original(original) {}
+	IR::IR(std::shared_ptr<HSobject> ir, const NodePtr& original)
+		: ir(ir), original(original) {}
 
-	size_t Tree::size() const {
-		return hat_tree_length(tree->ptr);
+	size_t IR::size() const {
+		return hat_IR_length(ir->ptr);
 	}
 
-	void Tree::print() const {
-		hat_tree_print(tree->ptr);
+	void IR::printTree() const {
+		hat_IR_printTree(ir->ptr);
 	}
 
 	// ------------------------------------------------------------ Address
@@ -114,7 +114,7 @@ namespace haskell {
 	}
 
 	void Address::printNode() const {
-		hat_tree_printNode(addr->ptr);
+		hat_IR_printNode(addr->ptr);
 	}
 
 	// Add the address contained in the Haskell buffer to the given root node,
@@ -133,6 +133,23 @@ namespace haskell {
 
 	// ------------------------------------------------------------ Environment
 
+	namespace detail {
+		StablePtr passIR(const NodePtr& root) {
+			// create a in-memory stream
+			stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+			// dump IR using a binary format
+			dumpIR(buffer, root);
+
+			// get data as C string
+			const string dumps = buffer.str();
+			const char* dumpcs = dumps.c_str();
+
+			// pass to Haskell
+			return hat_passIR(dumpcs, dumps.size());
+		}
+	}
+
 	Environment::Environment() {
 		hs_init(0, nullptr);
 	}
@@ -146,47 +163,13 @@ namespace haskell {
 		return instance;
 	}
 
-	Tree Environment::passTree(const NodePtr& root) {
-		// create a in-memory stream
-		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-
-		// dump IR using a binary format
-		dumpIR(buffer, root);
-
-		// find builtins
-		NodeSet covered;
-		map<string, NodeAddress> builtins;
-		visitDepthFirstOnce(NodeAddress(root), [&] (const ExpressionAddress& expr) {
-			if (covered.contains(expr.getAddressedNode())) {
-				return;
-			}
-
-			covered.insert(expr.getAddressedNode());
-
-			if (core::lang::isBuiltIn(expr)) {
-				builtins[core::lang::getConstructName(expr)] = expr;
-			}
-		});
-
-		// attach builtins
-		write<length_t>(buffer, builtins.size());
-		for (auto& builtin : builtins) {
-			dumpString(buffer, builtin.first);
-			dumpString(buffer, toString(builtin.second));
-		}
-
-		// get data as C string
-		const string dumps = buffer.str();
-		const char* dumpcs = dumps.c_str();
-
-		// pass to Haskell
-		auto tree = make_shared<HSobject>(hat_passTree(dumpcs, dumps.size()));
-		return {tree, root};
+	IR Environment::passIR(const NodePtr& root) {
+		return {make_shared<HSobject>(detail::passIR(root)), root};
 	}
 
-	Address Environment::passAddress(const NodeAddress& addr, const Tree& tree) {
+	Address Environment::passAddress(const NodeAddress& addr, const IR& ir) {
 		// check if NodeAddress is related given tree
-		assert_eq(tree.original, addr.getRootNode()) << "NodeAddress' root does not match given tree";
+		assert_eq(ir.original, addr.getRootNode()) << "NodeAddress' root does not match given tree";
 
 		// empty address corresponds to root node in Haskell
 		size_t length_c = addr.getDepth() - 1;
@@ -196,7 +179,7 @@ namespace haskell {
 			addr_c[i] = addr.getParentAddress(length_c - 1 - i).getIndex();
 		}
 
-		return make_shared<HSobject>(hat_passAddress(tree.tree->ptr, addr_c.data(), length_c));
+		return make_shared<HSobject>(hat_passAddress(ir.ir->ptr, addr_c.data(), length_c));
 	}
 
 	boost::optional<Address> Environment::findDecl(const Address& var) {
@@ -207,8 +190,8 @@ namespace haskell {
 		return ret;
 	}
 
-	BooleanAnalysisResult Environment::checkBoolean(const Address& expr, const Tree& tree) {
-		auto res = static_cast<BooleanAnalysisResult>(hat_checkBoolean(expr.addr->ptr, tree.tree->ptr));
+	BooleanAnalysisResult Environment::checkBoolean(const Address& expr, const IR& ir) {
+		auto res = static_cast<BooleanAnalysisResult>(hat_checkBoolean(expr.addr->ptr, ir.ir->ptr));
 		if (res == BooleanAnalysisResult_Neither) {
 			std::vector<std::string> msgs{"Boolean Analysis Error"};
 			throw AnalysisFailure(msgs);
@@ -219,3 +202,12 @@ namespace haskell {
 } // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme
+
+extern "C" {
+	StablePtr hat_parseIR(const char* ircode, size_t length) {
+		insieme::core::NodeManager nm;
+		insieme::core::IRBuilder builder(nm);
+		auto root = builder.parseStmt(std::string(ircode, length));
+		return insieme::analysis::haskell::detail::passIR(root);
+	}
+}
