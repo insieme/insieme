@@ -562,60 +562,6 @@ namespace measure {
 		//		EXPECT_LT(time, factor*time2);
 	}
 
-	//
-	//	DISABLED DUE TO REQUIRED USER PRIVILEGES
-	//
-	//	TEST(Measuring, MeasureRemoteSGE) {
-	//		// create a small example code fragment
-	//		IRBuilder builder(manager);
-	//		StatementPtr stmt = builder.parseStmt(
-	//				"{"
-	//				"	decl ref<int<4>> sum = var(0);"
-	//				"	for(uint<4> i = 10 .. 50 : 1) {"
-	//				"		sum = sum + 1;"
-	//				"	}"
-	//				"}"
-	//		);
-	//
-	//		EXPECT_TRUE(stmt);
-	//
-	//		StatementAddress addr(stmt);
-	//		auto executor = makeRemoteSGEExecutor("leo3.uibk.ac.at", "c7031057", "/scratch/c7031057");
-	//
-	//		// measure execution time of this fragment
-	//		auto time = measure(addr, Metric::CPU_TIME, executor);
-	//
-	//		ASSERT_TRUE(time.isValid());
-	//		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
-	//
-	//	}
-	//
-	//	TEST(Measuring, MeasureRemotePBS) {
-	//		// create a small example code fragment
-	//		IRBuilder builder(manager);
-	//		StatementPtr stmt = builder.parseStmt(
-	//				"{"
-	//				"	decl ref<int<4>> sum = var(0);"
-	//				"	for(uint<4> i = 10 .. 50 : 1) {"
-	//				"		sum = sum + 1;"
-	//				"	}"
-	//				"}"
-	//		);
-	//
-	//		EXPECT_TRUE(stmt);
-	//
-	//		StatementAddress addr(stmt);
-	//		auto executor = makeRemotePBSExecutor("mach.uibk.ac.at", "c7031057", "/scratch/c703/c7031057");
-	//
-	//		// measure execution time of this fragment
-	//		auto time = measure(addr, Metric::CPU_TIME, executor);
-	//
-	//		ASSERT_TRUE(time.isValid());
-	//		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
-	//
-	//	}
-
-
 } // end namespace measure
 } // end namespace driver
 } // end namespace insieme
