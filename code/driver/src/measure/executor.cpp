@@ -51,8 +51,10 @@ namespace insieme {
 namespace driver {
 namespace measure {
 
-
 	namespace {
+
+		const std::string rsyncCmd = "rsync --whole-file --quiet --archive";
+		const std::string setcapCmd = "sudo setcap cap_sys_rawio=ep";
 
 		int runCommand(const std::string& cmd, bool silent) {
 			std::string modCmd = cmd;
@@ -73,7 +75,7 @@ namespace measure {
 
 	int LocalExecutor::run(const std::string& binary, const ExecutionSetup& setup) const {
 		// set capabilities for energy measurements, required for kernel versions 3.7 and newer
-		if(setup.requiresRawIOCapabilities) { runCommand("sudo setcap cap_sys_rawio=ep " + binary, true); }
+		if(setup.requiresRawIOCapabilities) { runCommand(setcapCmd + " " + binary, true); }
 		std::stringstream ss;
 		ss << setupEnv(setup.env) << " IRT_INST_OUTPUT_PATH=" << setup.outputDirectory << " " << wrapper << " " << binary << " " << join(" ", setup.params);
 		return runCommand(ss.str(), setup.silent);
@@ -121,7 +123,7 @@ namespace measure {
 
 		// copy back remote directory
 		// use rsync since it is as fast as scp, does not fail on empty directories and supports moving instead of copying
-		res = runCommand("rsync --quiet --archive --remove-source-files " + url + ":" + remoteDir + "/ " + setup.outputDirectory, setup.silent);
+		res = runCommand(rsyncCmd + " --remove-source-files " + url + ":" + remoteDir + "/ " + setup.outputDirectory, setup.silent);
 		assert_eq(res, 0) << "Failed to move generated files with rsync from " << remoteDir << " on " << url << " to " << setup.outputDirectory;
 		res = runCommand("ssh " + url + " rm -rf " + remoteDir, setup.silent);
 		assert_eq(res, 0) << "Failed to delete remote directory " << remoteDir << " on " << url;
@@ -144,15 +146,16 @@ namespace measure {
 		std::stringstream ss;
 		// copy binary to all hosts
 		for(const auto& h : setup.machine.getNodes()) {
-			res = runCommand("ssh " + h.getHostname() + " mkdir -p " + remoteWorkDir, setup.silent);
-			assert_eq(res, 0) << "Failed to create directory " << remoteWorkDir << " on " << h.getHostname();
 			if(setup.requiresBinaryCopying) {
-				res = runCommand("scp -q " + binary + " " + h.getHostname() + ":" + remoteWorkDir, setup.silent);
+				res = runCommand(rsyncCmd + " " + binary + " " + h.getHostname() + ":" + remoteWorkDir + "/", setup.silent);
 				assert_eq(res, 0) << "Failed to copy binary " << binary << " to " << h.getHostname() << ":" << remoteWorkDir;
 				if(setup.requiresRawIOCapabilities) {
-					res = runCommand("ssh -q -tt " + h.getHostname() + " sudo setcap cap_sys_rawio=ep " + newBinaryLocation, setup.silent);
+					res = runCommand("ssh -q -tt " + h.getHostname() + " " + setcapCmd + " " + newBinaryLocation, setup.silent);
 					assert_eq(res, 0) << "Failed to set rawio capabilities for binary " << newBinaryLocation << " on " << h.getHostname();
 				}
+			} else {
+				res = runCommand("ssh " + h.getHostname() + " mkdir -p " + remoteWorkDir, setup.silent);
+				assert_eq(res, 0) << "Failed to create directory " << remoteWorkDir << " on " << h.getHostname();
 			}
 		}
 
@@ -177,7 +180,7 @@ namespace measure {
 		// collect generated files
 		for(const auto& h : setup.machine.getNodes()) {
 			// use rsync since it is as fast as scp, does not fail on empty directories and supports moving instead of copying
-			res = runCommand("rsync --whole-file --quiet --archive --remove-source-files " + h.getHostname() + ":" + remoteWorkDir + "/ " + setup.outputDirectory, setup.silent);
+			res = runCommand(rsyncCmd + " --remove-source-files " + h.getHostname() + ":" + remoteWorkDir + "/ " + setup.outputDirectory, setup.silent);
 			assert_eq(res, 0) << "Failed to move generated files with rsync from " << remoteWorkDir << " on " << h.getHostname() << " to " << setup.outputDirectory;
 			res = runCommand("ssh " + h.getHostname() + " rm -rf " + remoteWorkDir, setup.silent);
 			assert_eq(res, 0) << "Failed to delete remote directory " << remoteWorkDir << " on " << h.getHostname();
