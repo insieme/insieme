@@ -5,7 +5,6 @@ alignof
 async
 function_type_template_arg
 init_list
-range_for
 rvalue
 stdinitlistexpr
 
