@@ -45,6 +45,7 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
@@ -148,6 +149,40 @@ namespace utils {
 		// return call
 		auto retType = constructorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
 		return utils::buildCxxMethodCall(converter, retType, constructorLambda, memLoc, constructExpr->arguments());
+	}
+
+	core::StatementPtr addIncrementExprBeforeAllExitPoints(const core::StatementPtr& body, const core::StatementPtr& incrementExpression) {
+		core::IRBuilder builder(incrementExpression.getNodeManager());
+
+		core::StatementList newBody;
+		if(body) newBody.push_back(body);
+
+		// add the increment expression at the end of the body
+		newBody.push_back(incrementExpression);
+
+		if(body) {
+			auto& origBody = newBody.front();
+
+			// and also in front of every continue statement
+			auto exitPoints = core::analysis::getExitPoints(origBody);
+
+			// sort those points in a reverse order
+			std::sort(exitPoints.rbegin(), exitPoints.rend());
+
+			// add increments in front of all continue calls
+			for(const auto& cur : exitPoints) {
+				if (cur.isa<core::ContinueStmtAddress>()) {
+					// insert increment before the continue stmt
+					if(cur.isRoot()) {
+						origBody = builder.compoundStmt(incrementExpression, cur.as<core::StatementPtr>());
+					} else {
+						origBody = core::transform::insertBefore(origBody->getNodeManager(), cur.switchRoot(origBody), incrementExpression).as<core::StatementPtr>();
+					}
+				}
+			}
+		}
+
+		return stmtutils::aggregateStmts(builder, newBody);
 	}
 
 } // end namespace utils
