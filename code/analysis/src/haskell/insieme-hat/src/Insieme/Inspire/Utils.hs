@@ -67,7 +67,7 @@ foldAddressPrune collect prune addr = visit addr mempty
 -- | Parse a given IR statement using the inspire binary.
 parseIR :: String -> IO IR.Inspire
 parseIR ircode = do
-    irb <- readProcess "inspire" ["-i", "-", "-k", "-s"] ircode
+    irb <- readProcess "inspire" ["-s", "-i", "-", "-k", "-"] ircode
     let (Right ir) = parseBinaryDump (BS8.pack irb)
     return ir
 

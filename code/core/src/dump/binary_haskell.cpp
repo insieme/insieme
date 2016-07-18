@@ -56,21 +56,17 @@ namespace haskell {
 		// find builtins
 		NodeSet covered;
 		std::map<string, NodeAddress> builtins;
-		visitDepthFirstOnce(NodeAddress(root), [&] (const ExpressionAddress& expr) {
-			if (covered.contains(expr.getAddressedNode())) {
-				return;
-			}
+		visitDepthFirstOnce(NodeAddress(root), [&](const ExpressionAddress& expr) {
+			if(covered.contains(expr.getAddressedNode())) return;
 
 			covered.insert(expr.getAddressedNode());
 
-			if (core::lang::isBuiltIn(expr)) {
-				builtins[core::lang::getConstructName(expr)] = expr;
-			}
+			if(core::lang::isBuiltIn(expr)) builtins[core::lang::getConstructName(expr)] = expr;
 		});
 
 		// attach builtins
 		write<length_t>(out, builtins.size());
-		for (auto& builtin : builtins) {
+		for(auto& builtin : builtins) {
 			utils::dumpString(out, builtin.first);
 			utils::dumpString(out, toString(builtin.second));
 		}
