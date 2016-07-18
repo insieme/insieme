@@ -45,6 +45,7 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/parser/ir_parser.h"
+#include <insieme/core/dump/json_dump.h>
 #include "insieme/core/dump/binary_dump.h"
 #include "insieme/core/dump/binary_haskell.h"
 #include "insieme/utils/compiler/compiler.h"
@@ -70,6 +71,7 @@ struct CmdOptions {
 	string inputFile;
 	string outFile;
 	string dumpFile;
+	string dumpJson;
 	string binaryDumpFile;
 	string haskellBinaryDumpFile;
 };
@@ -91,6 +93,7 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 		("input,i", bpo::value<string>()->default_value(""), "the code file to be parsed")
 		("output,o", bpo::value<string>()->default_value(""), "the binary build from the code")
 		("dump-ir,d", bpo::value<string>()->default_value(""), "file to dump the IR to")
+		("json-dump-ir,j", bpo::value<string>()->default_value(""), "file to dump the IR to (JSON format)")
 		("binary-dump-ir,b", bpo::value<string>()->default_value(""), "file to dump the IR to (binary format)")
 		("haskell-binary-dump-ir,k", bpo::value<string>()->default_value(""), "file to dump the IR to (binary format for Haskell)");
 
@@ -109,7 +112,7 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	}
 
 	if(map.count("version")) {
-		cout << "Insieme Inspire Parser Version 0.0.2\n";
+		cout << "Insieme Inspire Parser Version 0.0.3\n";
 		return fail;
 	}
 
@@ -129,6 +132,7 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	res.inputFile = map["input"].as<string>();
 	res.outFile = map["output"].as<string>();
 	res.dumpFile = map["dump-ir"].as<string>();
+	res.dumpJson = map["json-dump-ir"].as<string>();
 	res.binaryDumpFile = map["binary-dump-ir"].as<string>();
 	res.haskellBinaryDumpFile = map["haskell-binary-dump-ir"].as<string>();
 
@@ -180,6 +184,14 @@ int main(int argc, char** argv) {
 		cout << dumpPretty(res) << endl;
 	} else if(!options.dumpFile.empty()) {
 		ofstream(options.dumpFile) << dumpPretty(res) << endl;
+	}
+
+	// dump IR json
+	if(options.dumpJson == "-") {
+		dump::json::dumpIR(cout, res);
+	} else if(!options.dumpJson.empty()) {
+		ofstream out(options.dumpJson);
+		dump::json::dumpIR(out, res);
 	}
 
 	// binary dump IR
