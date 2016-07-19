@@ -61,7 +61,7 @@ namespace json {
 		out << "\"root\" : \"" << ir.ptr << "\",\n\t";
 
 		// and the rest
-		out << join(",\n\t",nodes,[](std::ostream& out, const NodePtr& cur) {
+		out << join("\t",nodes,[](std::ostream& out, const NodePtr& cur) {
 			out << "\"" << cur.ptr << "\" : {\n";
 				out << "\t\t\"Kind\" : \"" << cur->getNodeType() << "\",\n";
 				if (auto val = cur.isa<ValuePtr>()) {
@@ -70,13 +70,11 @@ namespace json {
 				out << "\t\t\"Children\" : [" << join(",",cur->getChildList(), [](std::ostream& out, const NodePtr& child){
 					out << "\"" << child.ptr << "\"";
 				}) << "]\n";
-			out << "\t}";
+			out << "\t},\n";
 		});
 
-		out << "\n}\n";
-
 		// Annotation dump:
-		out << "{";
+		out << "\"annotations\": {";
 		bool first = true;
 		visitDepthFirst(NodeAddress(ir),[&](const NodeAddress& cur) {
 			// read info
@@ -88,8 +86,9 @@ namespace json {
 			out << "\n\t\"" << cur << "\" : \"" << annotation << "\"";
 
 		},true,true);
-		out << "\n}\n";
+		out << "\n\t}\n";
 
+		out << "}\n";
 	}
 
 } // end namespace binary
