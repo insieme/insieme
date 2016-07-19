@@ -731,6 +731,8 @@ namespace conversion {
 		frontend_assert(recordType && recordDecl) << "failed to get the std::initializer_list type declaration.";
 		auto thisVar = core::lang::buildRefTemp(initListIRType);
 
+		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+
 		//extract size of sub expr
 		frontend_assert(llvm::isa<clang::ConstantArrayType>(subExType)) << "std::initializer_list sub expression has no constant size array type.";
 		auto numElements = llvm::cast<clang::ConstantArrayType>(subExType)->getSize().getSExtValue();
@@ -749,9 +751,31 @@ namespace conversion {
 				for(const core::TypePtr& type : funType->getParameterTypes()) {
 					params.push_back(builder.variable(core::transform::materialize(type)));
 				}
+
+				auto ptrType = core::analysis::getReferencedType(params[1]);
+				auto memberType = core::lang::PointerType(ptrType).getElementType();
+				std::map<string, core::NodePtr> symbols {
+					{ "_m_array", builder.callExpr(refExt.getRefMemberAccess(), builder.deref(params[0]), builder.getIdentifierLiteral("_M_array"), builder.getTypeLiteral(ptrType)) },
+					{ "_m_length", builder.callExpr(refExt.getRefMemberAccess(), builder.deref(params[0]), builder.getIdentifierLiteral("_M_len"), builder.getTypeLiteral(builder.getLangBasic().getUInt8())) },
+					{ "_member_type", memberType },
+					{ "_array", builder.deref(params[1]) },
+					{ "_length", builder.deref(params[2]) },
+				};
+
+				auto body = builder.parseStmt(R"({
+					var uint<inf> array_len = num_cast(_length,type_lit(uint<inf>));
+					_m_array = ptr_from_array(ref_const_cast(ref_new(type_lit(array<_member_type,#array_len>)),type_lit(t)));
+					_m_length = _length;
+					for(uint<8> it = 0ul .. _length) {
+//						ref_const_cast(ptr_subscript(*_m_array, num_cast(it,type_lit(int<8>))), type_lit(f)) = ref_kind_cast(ptr_subscript(_array, num_cast(it,type_lit(int<8>))), type_lit(cpp_ref));
+						ref_const_cast(ptr_subscript(*_m_array, num_cast(it,type_lit(int<8>))), type_lit(f)) = *ptr_subscript(_array, num_cast(it,type_lit(int<8>)));
+					}
+				})", symbols);
+
 				//add the ctor implementation to the IR TU --> std::initializer_list<T>(T* t, size_t s) { }
-				lam = builder.lambdaExpr(funType, params, builder.compoundStmt());
+				lam = builder.lambdaExpr(funType, params, body);
 				//build call to the specific constructor
+
 				retIr = builder.callExpr(funType->getReturnType(), ctorLiteral, args);
 			} else if(ctorDecl->isDefaultConstructor()) {
 				// ctor decl: constexpr initializer_list<T>()

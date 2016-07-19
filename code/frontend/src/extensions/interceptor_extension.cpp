@@ -384,7 +384,6 @@ namespace extensions {
 		return nullptr;
 	}
 
-
 	core::TypePtr InterceptorExtension::Visit(const clang::QualType& typeIn, insieme::frontend::conversion::Converter& converter) {
 		clang::QualType type = typeIn;
 		const core::IRBuilder& builder = converter.getIRBuilder();
@@ -420,6 +419,7 @@ namespace extensions {
 		if(auto tt = llvm::dyn_cast<clang::TagType>(type->getCanonicalTypeUnqualified())) {
 			// do not intercept enums, they are simple
 			if(tt->isEnumeralType()) return nullptr;
+
 			auto decl = tt->getDecl();
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				auto genType = converter.getIRBuilder().genericType(utils::getNameForTagDecl(converter, decl).first);
