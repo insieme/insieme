@@ -766,11 +766,11 @@ namespace conversion {
 
 				auto body = builder.parseStmt(R"({
 					var uint<inf> array_len = num_cast(_length,type_lit(uint<inf>));
-					_m_array = ptr_from_array(ref_const_cast(ref_new(type_lit(array<_member_type,#array_len>)),type_lit(t)));
+					_m_array = ptr_const_cast(ptr_from_array(ref_new(type_lit(array<_member_type,#array_len>))),type_lit(t));
 					_m_length = _length;
-					for(uint<8> it = 0ul .. _length) {
+					for(int<8> it = 0l .. num_cast(_length, type_lit(int<8>))) {
 //						ref_const_cast(ptr_subscript(*_m_array, num_cast(it,type_lit(int<8>))), type_lit(f)) = ref_kind_cast(ptr_subscript(_array, num_cast(it,type_lit(int<8>))), type_lit(cpp_ref));
-						ref_const_cast(ptr_subscript(*_m_array, num_cast(it,type_lit(int<8>))), type_lit(f)) = *ptr_subscript(_array, num_cast(it,type_lit(int<8>)));
+						ptr_subscript(ptr_const_cast(*_m_array, type_lit(f)), it) = *ptr_subscript(_array, it);
 					}
 				})", symbols);
 

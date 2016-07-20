@@ -64,10 +64,10 @@ int main() {
 			}
 			ctor function (v1 : ref<ptr<int<4>,t,f>,f,f,plain>, v2 : ref<uint<8>,f,f,plain>) {
 				var uint<inf> v3 = num_cast(*v2, type_lit(uint<inf>));
-				(this)._M_array = ptr_from_array(ref_const_cast(ref_new(type_lit(array<int<4>,#v3>)), type_lit(t)));
+				(this)._M_array = ptr_const_cast(ptr_from_array(ref_new(type_lit(array<int<4>,#v3>))), type_lit(t));
 				(this)._M_len = *v2;
-				for( uint<8> v4 = 0ul .. *v2 : 1ul) {
-					ref_const_cast(ptr_subscript(*(this)._M_array, num_cast(v4, type_lit(int<8>))), type_lit(f)) = *ptr_subscript(*v1, num_cast(v4, type_lit(int<8>)));
+				for( int<8> v4 = 0l .. num_cast(*v2, type_lit(int<8>)) : 1l) {
+					ptr_subscript(ptr_const_cast(*(this)._M_array, type_lit(f)), v4) = *ptr_subscript(*v1, v4);
 				}
 			}
 			dtor function () {
@@ -114,10 +114,10 @@ int main() {
 			}
 			ctor function (v1 : ref<ptr<int<4>,t,f>,f,f,plain>, v2 : ref<uint<8>,f,f,plain>) {
 				var uint<inf> v3 = num_cast(*v2, type_lit(uint<inf>));
-				(this)._M_array = ptr_from_array(ref_const_cast(ref_new(type_lit(array<int<4>,#v3>)), type_lit(t)));
+				(this)._M_array = ptr_const_cast(ptr_from_array(ref_new(type_lit(array<int<4>,#v3>))), type_lit(t));
 				(this)._M_len = *v2;
-				for( uint<8> v4 = 0ul .. *v2 : 1ul) {
-					ref_const_cast(ptr_subscript(*(this)._M_array, num_cast(v4, type_lit(int<8>))), type_lit(f)) = *ptr_subscript(*v1, num_cast(v4, type_lit(int<8>)));
+				for( int<8> v4 = 0l .. num_cast(*v2, type_lit(int<8>)) : 1l) {
+					ptr_subscript(ptr_const_cast(*(this)._M_array, type_lit(f)), v4) = *ptr_subscript(*v1, v4);
 				}
 			}
 			dtor function () {
