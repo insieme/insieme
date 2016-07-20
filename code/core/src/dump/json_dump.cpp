@@ -38,7 +38,10 @@
 
 #include <vector>
 
+#include "boost/algorithm/string/replace.hpp"
+
 #include "insieme/core/ir_visitor.h"
+#include "insieme/utils/character_escaping.h"
 
 namespace insieme {
 namespace core {
@@ -64,8 +67,10 @@ namespace json {
 		out << join("\t",nodes,[](std::ostream& out, const NodePtr& cur) {
 			out << "\"" << cur.ptr << "\" : {\n";
 				out << "\t\t\"Kind\" : \"" << cur->getNodeType() << "\",\n";
-				if (auto val = cur.isa<ValuePtr>()) {
-					out << "\t\t\"Value\" : \"" << val->getValue() << "\",\n";
+				if(auto val = cur.isa<ValuePtr>()) {
+					std::string value = toString(val->getValue());
+					boost::replace_all(value, "'", "`");
+					out << "\t\t\"Value\" : \"" << utils::escapeString(value) << "\",\n";
 				}
 				out << "\t\t\"Children\" : [" << join(",",cur->getChildList(), [](std::ostream& out, const NodePtr& child){
 					out << "\"" << child.ptr << "\"";
