@@ -37,25 +37,7 @@
 #include <initializer_list>
 
 #define S_IR R"(
-decl struct IMP_std_colon__colon_initializer_list_int;
-decl IMP_std_colon__colon_initializer_list_int::_M_array:ptr<int<4>,t,f>;
-decl IMP_std_colon__colon_initializer_list_int::_M_len:uint<8>;
-decl ctor:IMP_std_colon__colon_initializer_list_int::(ptr<int<4>,t,f>, uint<8>);
-decl IMP_begin_returns_const_iterator : const IMP_std_colon__colon_initializer_list_int::() -> (ref<array<int<4>,inf>,t,f,plain>,int<8>);
-decl IMP_end_returns_const_iterator : const IMP_std_colon__colon_initializer_list_int::() -> (ref<array<int<4>,inf>,t,f,plain>,int<8>);
-decl IMP_size_returns_size_type : const IMP_std_colon__colon_initializer_list_int::() -> uint<8>;
-def struct IMP_std_colon__colon_initializer_list_int {
-    _M_array : ptr<int<4>,t,f>;
-    _M_len : uint<8>;
-    ctor function (v1 : ref<ptr<int<4>,t,f>,f,f,plain>, v2 : ref<uint<8>,f,f,plain>) {
-        var uint<inf> v3 = num_cast(*v2, type_lit(uint<inf>));
-        (this)._M_array = ptr_from_array(ref_const_cast(ref_new(type_lit(array<int<4>,#v3>)), type_lit(t)));
-        (this)._M_len = *v2;
-        for( uint<8> v4 = 0ul .. *v2 : 1ul) {
-            ref_const_cast(ptr_subscript(*(this)._M_array, num_cast(v4, type_lit(int<8>))), type_lit(f)) = *ptr_subscript(*v1, num_cast(v4, type_lit(int<8>)));
-        }
-    }
-};
+
 )"
 
 struct S {
@@ -71,8 +53,42 @@ struct S {
 int main() {
 	;
 
-	// this IR test pragma is not correct yet. just committed for testing purposes.
-	#pragma test expect_ir(S_IR, R"({ var ref<IMP_std_colon__colon_initializer_list_int,f,f,plain> v0 =  IMP_std_colon__colon_initializer_list_int::(ref_decl(type_lit(ref<IMP_std_colon__colon_initializer_list_int,f,f,plain>)), ptr_from_array(<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1,2,3}), num_cast(3u, type_lit(uint<8>))); })")
+	#pragma test expect_ir(S_IR, R"(
+		decl struct IMP_std_colon__colon_initializer_list_int;
+		decl IMP_size_returns_size_type:const IMP_std_colon__colon_initializer_list_int::() -> uint<8>;
+		def struct IMP_std_colon__colon_initializer_list_int {
+			_M_array : ptr<int<4>,t,f>;
+			_M_len : uint<8>;
+			ctor function () {
+				(this)._M_len = 0ul;
+			}
+			ctor function (v1 : ref<ptr<int<4>,t,f>,f,f,plain>, v2 : ref<uint<8>,f,f,plain>) {
+				var uint<inf> v3 = num_cast(*v2, type_lit(uint<inf>));
+				(this)._M_array = ptr_from_array(ref_const_cast(ref_new(type_lit(array<int<4>,#v3>)), type_lit(t)));
+				(this)._M_len = *v2;
+				for( uint<8> v4 = 0ul .. *v2 : 1ul) {
+					ref_const_cast(ptr_subscript(*(this)._M_array, num_cast(v4, type_lit(int<8>))), type_lit(f)) = *ptr_subscript(*v1, num_cast(v4, type_lit(int<8>)));
+				}
+			}
+			dtor function () {
+				if(*(this)._M_len!=0ul) {
+					ref_delete(ptr_to_ref(ptr_const_cast(*(this)._M_array, type_lit(f))));
+				}
+			}
+			const function IMP_begin_returns_const_iterator = () -> ptr<int<4>,t,f> {
+				return *(this)._M_array;
+			}
+			const function IMP_end_returns_const_iterator = () -> ptr<int<4>,t,f> {
+				return ptr_add(this.IMP_begin_returns_const_iterator(), num_cast(this.IMP_size_returns_size_type(), type_lit(int<8>)));
+			}
+			const function IMP_size_returns_size_type = () -> uint<8> {
+				return *(this)._M_len;
+			}
+		};
+		{
+			var ref<IMP_std_colon__colon_initializer_list_int,f,f,plain> v0 =  IMP_std_colon__colon_initializer_list_int::(ref_decl(type_lit(ref<IMP_std_colon__colon_initializer_list_int,f,f,plain>)), ptr_from_array(<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1,2,3}), num_cast(3u, type_lit(uint<8>)));
+		}
+	)")
 	{
 		std::initializer_list<int> a = {1,2,3};
 	}
@@ -82,7 +98,9 @@ int main() {
 		decl struct IMP_S;
 		decl IMP_std_colon__colon_initializer_list_int::_M_array : ptr<int<4>,t,f>;
 		decl IMP_std_colon__colon_initializer_list_int::_M_len : uint<8>;
+		decl ctor:IMP_std_colon__colon_initializer_list_int::();
 		decl ctor:IMP_std_colon__colon_initializer_list_int::(ptr<int<4>,t,f>, uint<8>);
+		decl dtor:~IMP_std_colon__colon_initializer_list_int::();
 		decl IMP_begin_returns_const_iterator:const IMP_std_colon__colon_initializer_list_int::() -> ptr<int<4>,t,f>;
 		decl IMP_end_returns_const_iterator:const IMP_std_colon__colon_initializer_list_int::() -> ptr<int<4>,t,f>;
 		decl IMP_size_returns_size_type:const IMP_std_colon__colon_initializer_list_int::() -> uint<8>;
@@ -91,12 +109,20 @@ int main() {
 		def struct IMP_std_colon__colon_initializer_list_int {
 			_M_array : ptr<int<4>,t,f>;
 			_M_len : uint<8>;
+			ctor function () {
+				(this)._M_len = 0ul;
+			}
 			ctor function (v1 : ref<ptr<int<4>,t,f>,f,f,plain>, v2 : ref<uint<8>,f,f,plain>) {
 				var uint<inf> v3 = num_cast(*v2, type_lit(uint<inf>));
 				(this)._M_array = ptr_from_array(ref_const_cast(ref_new(type_lit(array<int<4>,#v3>)), type_lit(t)));
 				(this)._M_len = *v2;
 				for( uint<8> v4 = 0ul .. *v2 : 1ul) {
 					ref_const_cast(ptr_subscript(*(this)._M_array, num_cast(v4, type_lit(int<8>))), type_lit(f)) = *ptr_subscript(*v1, num_cast(v4, type_lit(int<8>)));
+				}
+			}
+			dtor function () {
+				if(*(this)._M_len!=0ul) {
+					ref_delete(ptr_to_ref(ptr_const_cast(*(this)._M_array, type_lit(f))));
 				}
 			}
 			const function IMP_begin_returns_const_iterator = () -> ptr<int<4>,t,f> {

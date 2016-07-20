@@ -737,6 +737,8 @@ namespace conversion {
 		frontend_assert(llvm::isa<clang::ConstantArrayType>(subExType)) << "std::initializer_list sub expression has no constant size array type.";
 		auto numElements = llvm::cast<clang::ConstantArrayType>(subExType)->getSize().getSExtValue();
 
+		// The pointer type of our member field. Will be set during ctor creation and used for dtor creation below
+		core::TypePtr ptrType;
 		//generate and insert mandatory std::initializer_list<T> ctors
 		for(auto ctorDecl : recordDecl->ctors()) {
 			core::LiteralPtr ctorLiteral = converter.getFunMan()->lookup(ctorDecl);
@@ -752,7 +754,7 @@ namespace conversion {
 					params.push_back(builder.variable(core::transform::materialize(type)));
 				}
 
-				auto ptrType = core::analysis::getReferencedType(params[1]);
+				ptrType = core::analysis::getReferencedType(params[1]);
 				auto memberType = core::lang::PointerType(ptrType).getElementType();
 				std::map<string, core::NodePtr> symbols {
 					{ "_m_array", builder.callExpr(refExt.getRefMemberAccess(), builder.deref(params[0]), builder.getIdentifierLiteral("_M_array"), builder.getTypeLiteral(ptrType)) },
@@ -779,23 +781,52 @@ namespace conversion {
 				retIr = builder.callExpr(funType->getReturnType(), ctorLiteral, args);
 			} else if(ctorDecl->isDefaultConstructor()) {
 				// ctor decl: constexpr initializer_list<T>()
-				auto typeMap = converter.getIRTranslationUnit().getTypes();
-				const auto typeMapIt = typeMap.find(initListIRType.as<core::GenericTypePtr>());
-				frontend_assert(typeMapIt != typeMap.end()) << "cannot extract IR tag type for std::initializer_list<T>.";
-				const core::TagTypePtr tagType = typeMapIt->second;
-				//create and add default constructor
-				lam = builder.getDefaultConstructor(thisVar->getType(), {}, tagType->getStruct()->getFields());
+				auto funType = ctorLiteral->getType().as<core::FunctionTypePtr>();
+				core::VariableList params { builder.variable(core::transform::materialize(funType->getParameterTypes()[0])) };
+
+				// create the body of the default ctor
+				std::map<string, core::NodePtr> symbols {
+					{ "_m_length", builder.callExpr(refExt.getRefMemberAccess(), builder.deref(params[0]), builder.getIdentifierLiteral("_M_len"), builder.getTypeLiteral(builder.getLangBasic().getUInt8())) },
+				};
+				auto body = builder.parseStmt(R"({
+					_m_length = 0ul;
+				})", symbols);
+
+				//create default constructor
+				lam = builder.lambdaExpr(funType, params, body);
 			}
 			if(lam) converter.getIRTranslationUnit().addFunction(ctorLiteral, lam);
 		}
 
 		//generate dtor
-		if(recordDecl->getDestructor()) {
-			core::LiteralPtr dtorLiteral = converter.getFunMan()->lookup(recordDecl->getDestructor());
-			//create and add default destructor
-			auto lam = builder.getDefaultDestructor(thisVar->getType());
-			converter.getIRTranslationUnit().addFunction(dtorLiteral, lam);
-		}
+		frontend_assert(ptrType) << "Pointer type hasn't been set already while creating the ctor bodies";
+		auto dtorThisType = builder.refType(initListIRType);
+		auto funType = builder.functionType(toVector<core::TypePtr>(dtorThisType), dtorThisType, core::FunctionKind::FK_DESTRUCTOR);
+		core::LiteralPtr dtorLiteral = builder.getLiteralForDestructor(funType);
+		core::VariableList params { builder.variable(core::transform::materialize(funType->getParameterTypes()[0])) };
+
+		// create the body of the default ctor
+		std::map<string, core::NodePtr> symbols {
+			{ "_m_array", builder.callExpr(refExt.getRefMemberAccess(), builder.deref(params[0]), builder.getIdentifierLiteral("_M_array"), builder.getTypeLiteral(ptrType)) },
+			{ "_m_length", builder.callExpr(refExt.getRefMemberAccess(), builder.deref(params[0]), builder.getIdentifierLiteral("_M_len"), builder.getTypeLiteral(builder.getLangBasic().getUInt8())) },
+		};
+		auto body = builder.parseStmt(R"({
+			if(*_m_length != 0ul) {
+				ref_delete(ptr_to_ref(ptr_const_cast(*_m_array, type_lit(f))));
+			}
+		})", symbols);
+
+		//create and add default destructor
+		auto lam = builder.lambdaExpr(funType, params, body);
+		converter.getIRTranslationUnit().addFunction(dtorLiteral, lam);
+
+		//now we have to replace the whole type to make sure the dtor is present
+		auto key = initListIRType.as<core::GenericTypePtr>();
+		const auto& oldRecord = converter.getIRTranslationUnit().getTypes().at(key)->getStruct();
+		frontend_assert(oldRecord) << "Record has not been stored in TU previously";
+		auto newRecord = builder.structType(oldRecord->getName(), oldRecord->getParents(), oldRecord->getFields(), oldRecord->getConstructors(),
+		                                    dtorLiteral, builder.boolValue(false), oldRecord->getMemberFunctions(), oldRecord->getPureVirtualMemberFunctions());
+		converter.getIRTranslationUnit().replaceType(key, newRecord);
 
 		//return call to special constructor
 		frontend_assert(retIr) << "failed to convert std::initializer_list expression.";
