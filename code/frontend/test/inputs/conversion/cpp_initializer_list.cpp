@@ -72,7 +72,7 @@ int main() {
 			}
 			dtor function () {
 				if(*(this)._M_len!=0ul) {
-					ref_delete(ptr_to_ref(ptr_const_cast(*(this)._M_array, type_lit(f))));
+					ref_delete(ptr_to_array(ptr_const_cast(*(this)._M_array, type_lit(f))));
 				}
 			}
 			const function IMP_begin_returns_const_iterator = () -> ptr<int<4>,t,f> {
@@ -122,7 +122,7 @@ int main() {
 			}
 			dtor function () {
 				if(*(this)._M_len!=0ul) {
-					ref_delete(ptr_to_ref(ptr_const_cast(*(this)._M_array, type_lit(f))));
+					ref_delete(ptr_to_array(ptr_const_cast(*(this)._M_array, type_lit(f))));
 				}
 			}
 			const function IMP_begin_returns_const_iterator = () -> ptr<int<4>,t,f> {

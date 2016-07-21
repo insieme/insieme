@@ -779,6 +779,7 @@ namespace conversion {
 				//build call to the specific constructor
 
 				retIr = builder.callExpr(funType->getReturnType(), ctorLiteral, args);
+
 			} else if(ctorDecl->isDefaultConstructor()) {
 				// ctor decl: constexpr initializer_list<T>()
 				auto funType = ctorLiteral->getType().as<core::FunctionTypePtr>();
@@ -812,7 +813,7 @@ namespace conversion {
 		};
 		auto body = builder.parseStmt(R"({
 			if(*_m_length != 0ul) {
-				ref_delete(ptr_to_ref(ptr_const_cast(*_m_array, type_lit(f))));
+				ref_delete(ptr_to_array(ptr_const_cast(*_m_array, type_lit(f))));
 			}
 		})", symbols);
 
