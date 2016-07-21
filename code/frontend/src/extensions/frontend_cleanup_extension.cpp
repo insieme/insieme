@@ -61,6 +61,8 @@
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
+#include "insieme/utils/name_mangling.h"
+
 #include "insieme/utils/assert.h"
 
 #include <functional>
@@ -199,6 +201,30 @@ namespace extensions {
 				return lit;
 			}, core::transform::globalReplacement);
 		}
+
+		//////////////////////////////////////////////////////////////////////////
+		// Replace all copies of std::initializer_list with a call to the copy constructor
+		// =======================================================================
+		ProgramPtr replaceStdInitListCopies(ProgramPtr prog) {
+			auto mangledName = insieme::utils::mangle("std::initializer_list");
+			auto& mgr = prog->getNodeManager();
+			core::IRBuilder builder(mgr);
+			return core::transform::transformBottomUpGen(prog, [&](const core::DeclarationPtr& decl) {
+				const auto& type = decl->getType();
+				const auto& expr = decl->getInitialization();
+
+				if(core::lang::isPlainReference(type) && core::lang::isReference(expr)) {
+					auto elementType = core::analysis::getReferencedType(type);
+					if(auto tagT = elementType.isa<core::TagTypePtr>()) {
+						if(boost::starts_with(tagT->getName()->getValue(), mangledName)) {
+							auto targetType = core::lang::ReferenceType::create(elementType, true, false, core::lang::ReferenceType::Kind::CppReference);
+							return builder.declaration(type, core::lang::buildRefCast(expr, targetType));
+						}
+					}
+				}
+				return decl;
+			}, core::transform::globalReplacement);
+		}
 	}
 
 	boost::optional<std::string> FrontendCleanupExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
@@ -221,6 +247,7 @@ namespace extensions {
 		prog = removeCAndCppStyleAssignments(prog);
 		prog = replaceZeroStructInits(prog);
 		prog = replaceFERefTemp(prog);
+		prog = replaceStdInitListCopies(prog);
 
 		return prog;
 	}

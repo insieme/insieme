@@ -1,22 +1,27 @@
 #include <iostream>
+#include <initializer_list>
 
-template <class T>
-struct S {
-	S(std::initializer_list<T> l) {
-		std::cout << "constructed with a " << l.size() << "-element list\n";
-		for(auto i : l) {
-			std::cout << i << std::endl;
+//simple cases
+struct T {
+	T(std::initializer_list<int> l) {
+		for(auto e : l) {
+			std::cout << "T: " << e << std::endl;
 		}
 	}
 };
 
+void f(std::initializer_list<int> l) {
+	for(auto e : l) {
+		std::cout << "f: " << e << std::endl;
+	}
+}
 
 int main (){
 
-	// C++11 init list constructor
-	{
-		S<int> collection = {1,5,7,8};
-	}
+	//simple cases
+	T({ 5 });
+	T{42,43};
+	f({ 5 });
 
 	return 0;
 }
