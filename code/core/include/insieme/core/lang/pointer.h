@@ -319,6 +319,26 @@ namespace lang {
 
 		LANG_EXT_DERIVED_WITH_NAME(PtrPreDec, "ptr_pre_dec", "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { p = ptr_sub(*p, 1l); return *p; }")
 
+
+		// -- object array memory management --
+
+		// allocates an array of some object type and calls constructor for each element
+		LANG_EXT_DERIVED(PtrNewConstructedObjectArray, R"(
+			(mem_type : type<'a>, size : uint<8>, constructor : 'mem_type::()) -> ptr<'mem_type,f,f> {
+				var uint<inf> local_size = num_cast(size, type_lit(uint<inf>));
+				auto arr = ptr_from_array(ref_new(type_lit(array<'mem_type,#local_size>)));
+				for(uint<8> i = num_cast(0, type_lit(uint<8>))..size) {
+					constructor(ptr_subscript(arr, num_cast(i,type_lit(int<8>))));
+				}
+				return arr;
+			}
+		)")
+
+		// calls destructor for each element of constructed array and frees memory
+		// black C++ magic, needs more thought to implement as derived (e.g. generate struct with size and ptr in allocation, navigate up from ptr here)
+		LANG_EXT_LITERAL(PtrDeleteConstructedObjectArray, "ptr_delete_constructed_object_array", R"(
+			(ptr<'mem_type,f,f>, ~mem_type::()) -> unit
+		)")
 	};
 
 
@@ -426,6 +446,10 @@ namespace lang {
 	ExpressionPtr buildPtrSubscript(const ExpressionPtr& ptrExpr, const ExpressionPtr& subscriptExpr);
 	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& lhs, const ExpressionPtr& rhs);
 	ExpressionPtr buildPtrOperation(BasicGenerator::Operator op, const ExpressionPtr& ptrExpr);
+
+	// object array management
+	ExpressionPtr buildPtrNewConstructedObjectArray(const TypePtr& elemType, const ExpressionPtr& size, const ExpressionPtr& constructor);
+	ExpressionPtr buildPtrDeleteConstructedObjectArray(const ExpressionPtr& ptrExpr, const ExpressionPtr& destructor);
 
 } // end namespace lang
 } // end namespace core
