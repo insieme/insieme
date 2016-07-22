@@ -36,9 +36,6 @@
 
 #include <initializer_list>
 
-#define S_IR R"(
-
-)"
 
 struct S {
 	int i1;
@@ -51,10 +48,21 @@ struct S {
 
 void f(std::initializer_list<int> l) {}
 
+struct TestObj {
+	TestObj() { 5; }
+	TestObj(const TestObj& other) { 5; }
+	TestObj(TestObj&& other) { 5; }
+	~TestObj() { 5; }
+};
+
+struct T2 {
+	T2(std::initializer_list<TestObj> l) {}
+};
+
 int main() {
 	;
 
-	#pragma test expect_ir(S_IR, R"(
+	#pragma test expect_ir(R"(
 		decl struct IMP_std_colon__colon_initializer_list_int;
 		decl IMP_size_returns_size_type:const IMP_std_colon__colon_initializer_list_int::() -> uint<8>;
 		def struct IMP_std_colon__colon_initializer_list_int {
@@ -188,6 +196,58 @@ int main() {
 	)")
 	{
 		f({ 5 });
+	}
+
+	#pragma test expect_ir(R"(
+		decl struct IMP_std_colon__colon_initializer_list_struct_TestObj;
+		decl IMP_size_returns_size_type:const IMP_std_colon__colon_initializer_list_struct_TestObj::() -> uint<8>;
+		decl IMP_end_returns_const_iterator:const IMP_std_colon__colon_initializer_list_struct_TestObj::() -> ptr<IMP_TestObj,t,f>;
+		decl IMP_begin_returns_const_iterator:const IMP_std_colon__colon_initializer_list_struct_TestObj::() -> ptr<IMP_TestObj,t,f>;
+		def struct IMP_std_colon__colon_initializer_list_struct_TestObj {
+				_M_array : ptr<IMP_TestObj,t,f>;
+				_M_len : uint<8>;
+				ctor function () {
+						(this)._M_len = 0ul;
+				}
+				ctor function (v1 : ref<ptr<IMP_TestObj,t,f>,f,f,plain>, v2 : ref<uint<8>,f,f,plain>) {
+						var uint<inf> v3 = num_cast(*v2, type_lit(uint<inf>));
+						(this)._M_array = ptr_const_cast(ptr_from_array(ref_new(type_lit(array<IMP_TestObj,#v3>))), type_lit(t));
+						(this)._M_len = *v2;
+						for( int<8> v4 = 0l .. num_cast(*v2, type_lit(int<8>)) : 1l) {
+								ref_assign(ptr_subscript(ptr_const_cast(*(this)._M_array, type_lit(f)), v4), ref_cast(ptr_subscript(*v1, v4), type_lit(t), type_lit(f), type_lit(cpp_ref)));
+						}
+				}
+				dtor function () {
+						if(*(this)._M_len!=0ul) {
+								ref_delete(ptr_to_array(ptr_const_cast(*(this)._M_array, type_lit(f))));
+						}
+				}
+		};
+		def struct IMP_T2 {
+				ctor function (v1 : ref<IMP_std_colon__colon_initializer_list_struct_TestObj,f,f,plain>) { }
+		};
+		def struct IMP_TestObj {
+				ctor function () {
+						5;
+				}
+				ctor function (v1 : ref<IMP_TestObj,t,f,cpp_ref>) {
+						5;
+				}
+				ctor function (v1 : ref<IMP_TestObj,f,f,cpp_rref>) {
+						5;
+				}
+				dtor function () {
+						5;
+				}
+		};
+		{
+				var ref<IMP_TestObj,f,f,plain> v0 = IMP_TestObj::(ref_decl(type_lit(ref<IMP_TestObj,f,f,plain>)));
+				IMP_T2::(ref_temp(type_lit(IMP_T2)), ref_cast(IMP_std_colon__colon_initializer_list_struct_TestObj::(ref_decl(type_lit(ref<IMP_std_colon__colon_initializer_list_struct_TestObj,f,f,plain>)), ptr_from_array(<ref<array<IMP_TestObj,2>,f,f,plain>>(ref_temp(type_lit(array<IMP_TestObj,2>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))}), num_cast(2u, type_lit(uint<8>))), type_lit(t), type_lit(f), type_lit(cpp_ref)));
+		}
+	)")
+	{
+		TestObj obj;
+		T2({ obj, obj });
 	}
 
 	return 0;

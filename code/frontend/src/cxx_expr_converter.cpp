@@ -764,15 +764,25 @@ namespace conversion {
 					{ "_length", builder.deref(params[2]) },
 				};
 
-				auto body = builder.parseStmt(R"({
-					var uint<inf> array_len = num_cast(_length,type_lit(uint<inf>));
-					_m_array = ptr_const_cast(ptr_from_array(ref_new(type_lit(array<_member_type,#array_len>))),type_lit(t));
-					_m_length = _length;
-					for(int<8> it = 0l .. num_cast(_length, type_lit(int<8>))) {
-//						ref_const_cast(ptr_subscript(*_m_array, num_cast(it,type_lit(int<8>))), type_lit(f)) = ref_kind_cast(ptr_subscript(_array, num_cast(it,type_lit(int<8>))), type_lit(cpp_ref));
-						ptr_subscript(ptr_const_cast(*_m_array, type_lit(f)), it) = *ptr_subscript(_array, it);
+				// check whether we need to copy the elements or can simply assign them
+				bool copyElements = false;
+				auto tuIt = converter.getIRTranslationUnit().getTypes().find(memberType.as<core::GenericTypePtr>());
+				if(tuIt != converter.getIRTranslationUnit().getTypes().cend() && !core::analysis::isTrivial(tuIt->second)) {
+					copyElements = true;
+				}
+
+				auto body = builder.parseStmt(std::string("") + R"(
+					{
+						var uint<inf> array_len = num_cast(_length,type_lit(uint<inf>));
+						_m_array = ptr_const_cast(ptr_from_array(ref_new(type_lit(array<_member_type,#array_len>))),type_lit(t));
+						_m_length = _length;
+						for(int<8> it = 0l .. num_cast(_length, type_lit(int<8>))) { )" +
+						(copyElements ?
+								R"( ref_assign(ptr_subscript(ptr_const_cast(*_m_array, type_lit(f)), it), ref_cast(ptr_subscript(_array, it), type_lit(t), type_lit(f), type_lit(cpp_ref))); )" :
+								R"( ptr_subscript(ptr_const_cast(*_m_array, type_lit(f)), it) = *ptr_subscript(_array, it); )") + R"(
+						}
 					}
-				})", symbols);
+				)", symbols);
 
 				//add the ctor implementation to the IR TU --> std::initializer_list<T>(T* t, size_t s) { }
 				lam = builder.lambdaExpr(funType, params, body);
