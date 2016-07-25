@@ -1195,11 +1195,11 @@ namespace backend {
 		DO_TEST(R"(
 			def struct IMP_SimplestConstructor { };
 			int<4> main() {
-				var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(ref_new(type_lit(array<int<4>,50>)));
+				var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(<ref<array<int<4>,50>,f,f,plain>>(ref_new(type_lit(array<int<4>,50>))) {});
 				ref_delete(ptr_to_array(*i));
 				var ref<ptr<int<4>>,f,f,plain> j = ptr_from_array(<ref<array<int<4>,50>,f,f,plain>>(ref_new(type_lit(array<int<4>,50>))) {1, 2, 3});
 				ref_delete(ptr_to_array(*j));
-				var ref<ptr<array<int<4>,3>>,f,f,plain> k = ptr_from_array(ref_new(type_lit(array<array<int<4>,3>,50>)));
+				var ref<ptr<array<int<4>,3>>,f,f,plain> k = ptr_from_array(<ref<array<array<int<4>,3>,50>,f,f,plain>>(ref_new(type_lit(array<array<int<4>,3>,50>))) {});
 				ref_delete(ptr_to_array(*k));
 
 				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o1 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {});
@@ -1207,6 +1207,12 @@ namespace backend {
 				var ref<IMP_SimplestConstructor,f,f,plain> v0 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
 				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o2 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))});
 				ref_delete(ptr_to_array(*o2));
+
+				// arrays created with ref_new not nested inside an init expr should be allocated with malloc and free'd with free
+				var ref<ptr<int<4>,f,f>,f,f,plain> i_malloc = ptr_from_array(ref_new(type_lit(array<int<4>,50>)));
+				ref_delete(ptr_to_ref(*i_malloc));
+				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o_malloc = ptr_from_array(ref_new(type_lit(array<IMP_SimplestConstructor,3>)));
+				ref_delete(ptr_to_ref(*o_malloc));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
@@ -1221,6 +1227,12 @@ namespace backend {
 			EXPECT_PRED2(containsSubString, code, "delete[] o1;");
 			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o2 = new IMP_SimplestConstructor[3]{(IMP_SimplestConstructor const&)v0, (IMP_SimplestConstructor const&)v0};");
 			EXPECT_PRED2(containsSubString, code, "delete[] o2;");
+
+			// arrays created with ref_new not nested inside an init expr should be allocated with malloc and free'd with free
+			EXPECT_PRED2(containsSubString, code, "int32_t* i_malloc = malloc(sizeof(int32_t) * 50);");
+			EXPECT_PRED2(containsSubString, code, "free(i_malloc);");
+			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o_malloc = malloc(sizeof(IMP_SimplestConstructor) * 3);");
+			EXPECT_PRED2(containsSubString, code, "free(o_malloc);");
 		})
 	}
 
@@ -1229,7 +1241,7 @@ namespace backend {
 			def struct IMP_SimplestConstructor { };
 			def new_arr_fun_0 = function (v0 : ref<uint<inf>,f,f,plain>) -> ptr<int<4>> {
 				var uint<inf> bla = *v0;
-				return ptr_from_array(ref_new(type_lit(array<int<4>,#bla>)));
+				return ptr_from_array(<ref<array<int<4>,#bla>,f,f,plain>>(ref_new(type_lit(array<int<4>,#bla>))) {});
 			};
 			def new_arr_fun_1 = function (v0 : ref<uint<inf>,f,f,plain>, v1 : ref<int<4>,t,f,cpp_ref>, v2 : ref<int<4>,t,f,cpp_ref>, v3 : ref<int<4>,t,f,cpp_ref>) -> ptr<int<4>> {
 				var uint<inf> v4 = *v0;

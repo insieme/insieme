@@ -309,9 +309,7 @@ namespace conversion {
 			core::ExpressionPtr retIr = builder.initExpr(builder.undefinedNew((core::GenericTypePtr)arrTy), initExpr.getInitExprList());
 			return retIr;
 		}
-	}
 
-	namespace {
 		core::ExpressionPtr buildArrayNew(Converter& converter, const clang::CXXNewExpr* newExpr, const core::TypePtr& elemType) {
 			auto& builder = converter.getIRBuilder();
 			auto& basic = converter.getNodeManager().getLangBasic();
@@ -323,10 +321,11 @@ namespace conversion {
 			if(constArrayLen) {
 				auto irNewExp = builder.undefinedNew(core::lang::ArrayType::create(elemType, builder.uintLit(constArrayLen.get())));
 				// for class types, we need to build an init expr even if no initializer is supplied, to call constructors implicitly
-				if(newExpr->getConstructExpr()) {
+				// also if we don't have any initializer, we build an empty initexpr to correctly identify this in the backend again
+				if(newExpr->getConstructExpr() || !newExpr->hasInitializer()) {
 					irNewExp = builder.initExpr(irNewExp);
 				}
-				// otherwise, only build initexpr if we have an initializer
+				// otherwise, build initexpr for the initializer
 				else if(newExpr->hasInitializer()) {
 					core::ExpressionPtr initializerExpr = converter.convertInitExpr(newExpr->getInitializer());
 					// make sure we allocate the correct amount of array elements with partial initialization
@@ -347,7 +346,8 @@ namespace conversion {
 			core::VariableList initFunParams { arrLenVarParam };
 			core::ExpressionList initFunArguments { arrayLenExpr };
 			// for class types, we need to build an init expr even if no initializer is supplied, to call constructors implicitly
-			if(newExpr->getConstructExpr()) {
+			// also if we don't have any initializer, we build an empty initexpr to correctly identify this in the backend again
+			if(newExpr->getConstructExpr() || !newExpr->hasInitializer()) {
 				arr = builder.initExpr(memloc);
 			}
 			else if(newExpr->hasInitializer()) {
