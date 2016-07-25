@@ -499,12 +499,7 @@ namespace backend {
 		};
 
 		res[refExt.getRefNew()] = OP_CONVERTER {
-			ADD_HEADER("stdlib.h"); // for 'malloc'
-			core::GenericTypePtr resType = call->getType().as<core::GenericTypePtr>();
-			c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(core::analysis::getReferencedType(resType)));
-			auto cType = CONVERT_TYPE(resType);
-			auto mallocNode = c_ast::call(C_NODE_MANAGER->create("malloc"), size);
-			return c_ast::cast(cType, mallocNode);
+			return c_ast::mallocCall(context, core::analysis::getReferencedType(call->getType()));
 		};
 
 		res[refExt.getRefNewInit()] = OP_CONVERTER {
@@ -590,12 +585,8 @@ namespace backend {
 				return c_ast::deleteArrayCall(CONVERT_EXPR(core::analysis::getArgument(ARG(0), 0)));
 			}
 
-			// add dependency to stdlib.h (contains the free)
-			ADD_HEADER("stdlib.h");
-
-			// construct argument
-			c_ast::ExpressionPtr arg = CONVERT_ARG(0);
-			return c_ast::call(C_NODE_MANAGER->create("free"), arg);
+			// everything else will be free'd with a call to stdlib's free function
+			return c_ast::freeCall(context, CONVERT_ARG(0));
 		};
 
 		res[refExt.getRefReinterpret()] = OP_CONVERTER {

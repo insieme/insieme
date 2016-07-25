@@ -1229,9 +1229,9 @@ namespace backend {
 			EXPECT_PRED2(containsSubString, code, "delete[] o2;");
 
 			// arrays created with ref_new not nested inside an init expr should be allocated with malloc and free'd with free
-			EXPECT_PRED2(containsSubString, code, "int32_t* i_malloc = malloc(sizeof(int32_t) * 50);");
+			EXPECT_PRED2(containsSubString, code, "int32_t* i_malloc = (int32_t*)malloc(sizeof(int32_t) * 50);");
 			EXPECT_PRED2(containsSubString, code, "free(i_malloc);");
-			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o_malloc = malloc(sizeof(IMP_SimplestConstructor) * 3);");
+			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o_malloc = (IMP_SimplestConstructor*)malloc(sizeof(IMP_SimplestConstructor) * 3);");
 			EXPECT_PRED2(containsSubString, code, "free(o_malloc);");
 		})
 	}

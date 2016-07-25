@@ -122,9 +122,7 @@ namespace addons {
 
 				// handle array new undefined
 				if(LANG_EXT_REF.isCallOfRefNew(ARG(0))) {
-					ADD_HEADER("stdlib.h");
-					auto size = c_ast::mul(c_ast::sizeOf(CONVERT_TYPE(arrT.getElementType())), CONVERT_EXPR(arrT.getSize().as<core::ExpressionPtr>()));
-					return c_ast::call(C_NODE_MANAGER->create("malloc"), size);
+					return c_ast::mallocCall(context, arrT.getElementType(), arrT.getSize().as<core::ExpressionPtr>());
 				}
 				// handle array new with init
 				if(auto initExp = ARG(0).isa<core::InitExprPtr>()) {
