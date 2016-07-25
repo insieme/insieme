@@ -384,26 +384,6 @@ namespace lang {
 		return ExpressionPtr();
 	}
 
-
-	ExpressionPtr buildPtrNewConstructedObjectArray(const TypePtr& elemType, const ExpressionPtr& size, const ExpressionPtr& constructor) {
-		auto ctorType = constructor->getType().isa<FunctionTypePtr>();
-		assert_true(ctorType && ctorType->isConstructor() && ctorType->getParameterTypeList().size() == 1);
-		assert_true(analysis::getReferencedType(ctorType->getReturnType()) == elemType);
-		IRBuilder builder(elemType->getNodeManager());
-		auto& pExt = elemType->getNodeManager().getLangExtension<PointerExtension>();
-		return builder.callExpr(pExt.getPtrNewConstructedObjectArray(), builder.getTypeLiteral(elemType),
-			                    builder.numericCast(size, builder.getLangBasic().getUInt8()), constructor);
-	}
-
-	ExpressionPtr buildPtrDeleteConstructedObjectArray(const ExpressionPtr& ptrExpr, const ExpressionPtr& destructor) {
-		assert_pred1(isPointer, ptrExpr) << "Trying to build a ptr_delete_constructed_object_array from non-ptr.";
-		auto dtorType = destructor->getType().isa<FunctionTypePtr>();
-		assert_true(dtorType && dtorType->isDestructor() && dtorType->getParameterTypeList().size() == 1);
-		IRBuilder builder(ptrExpr->getNodeManager());
-		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
-		return builder.callExpr(pExt.getPtrDeleteConstructedObjectArray(), ptrExpr, destructor);
-	}
-
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
