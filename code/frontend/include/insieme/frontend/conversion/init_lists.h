@@ -49,6 +49,9 @@ namespace conversion {
 
 	class Converter;
 
+	/// This function is responsible for the translation of std::initializer_list. The translation of clang for std::initializer_list isn't exactly
+	/// what we need and thus needs to be slightly modified. The function will return a CallExp to the ctor which creates an instance
+	/// of the std::initializer_list
 	core::ExpressionPtr convertCxxStdInitializerListExpr(Converter& converter, const clang::CXXStdInitializerListExpr* stdInitListExpr);
 
 } // End namespace utils
