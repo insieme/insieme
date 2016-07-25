@@ -101,7 +101,7 @@ namespace backend {
 
 			void bindFragment(const string& name, const CodeFragmentPtr& fragment) {
 				assert_true(contains(fragments, fragment.ptr)) << "Cannot bind fragment not maintained by this manager!";
-				__attr_unused auto res = namedFragments.insert(std::make_pair(name, fragment.ptr));
+				__insieme_unused auto res = namedFragments.insert(std::make_pair(name, fragment.ptr));
 				assert_true(res.second) << "Name already in use!!";
 			}
 		};

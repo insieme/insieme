@@ -70,6 +70,8 @@ namespace cmd = insieme::driver::cmd;
 namespace du = insieme::driver::utils;
 
 int main(int argc, char** argv) {
+	std::cout << "Insieme compiler - Version: " << utils::getVersion() << "\n";
+
 	// Step 1: parse input parameters
 	std::vector<std::string> arguments(argv, argv + argc);
 	cmd::Options options = cmd::Options::parse(arguments);
@@ -79,8 +81,6 @@ int main(int argc, char** argv) {
 
 	// if e.g. help was specified, exit with zero
 	if(options.gracefulExit) { return 0; }
-
-	std::cout << "Insieme compiler - Version: " << utils::getVersion() << "\n";
 
 	// Step 2: filter input files
 	vector<fe::path> inputs;

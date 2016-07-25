@@ -171,7 +171,8 @@ class InstanceManager : private boost::noncopyable {
 
 		// clone element (to ensure private copy)
 		const S* newElement = clone(instance);
-		__attr_unused auto check = storage.insert(newElement);
+
+		__insieme_unused auto check = storage.insert(newElement);
 
 		// ensure this is a clone
 		assert_ne(instance, newElement);

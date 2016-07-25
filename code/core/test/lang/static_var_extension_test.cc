@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -51,7 +51,7 @@ namespace lang {
 		NodeManager nm;
 
 		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
-		auto element = ext.getCreateStatic();
+		auto element = ext.getStaticCreate();
 		dump(element);
 
 		// just check whether the code is not exhibiting errors
@@ -62,7 +62,7 @@ namespace lang {
 		NodeManager nm;
 
 		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
-		auto element = ext.getInitStaticConst();
+		auto element = ext.getStaticInitConst();
 		dump(element);
 
 		// just check whether the code is not exhibiting errors
@@ -73,7 +73,7 @@ namespace lang {
 		NodeManager nm;
 
 		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
-		auto element = ext.getInitStaticLazy();
+		auto element = ext.getStaticInitLazy();
 		dump(element);
 
 		// just check whether the code is not exhibiting errors

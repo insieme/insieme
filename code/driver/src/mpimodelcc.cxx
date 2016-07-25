@@ -116,7 +116,17 @@ public:
 	RegionDatabase() : regions(), index(0) { }
 
 	void addRegion(const cr::Region region, const std::string label) {
-		regions.insert(std::make_pair(index++, RegionAttribute(region, label)));
+		auto uniqueLabel = label;
+		unsigned counter = 0;
+		auto hasLabel = [&](const auto& entry) {
+			if(entry.second.label == uniqueLabel) { return true; }
+			return false;
+		};
+		while(any(regions, hasLabel)) {
+			uniqueLabel = boost::str(boost::format("%s_%u") % label % ++counter);
+		}
+
+		regions.insert(std::make_pair(index++, RegionAttribute(region, uniqueLabel)));
 	}
 
 	const RegionMap& getAllRegions() const {
@@ -289,9 +299,6 @@ int main(int argc, char** argv) {
 		return dr::loadLib(mgr, cur);
 	}));
 
-	//options.job.setDefinition("STRING_LEN", "100" );
-	//options.job.setDefinition("QUERY_LEN", "20");
-
 	// if it is compile only or if it should become an object file => save it
 	if(options.settings.compileOnly || createSharedObject) {
 		auto res = options.job.toIRTranslationUnit(mgr);
@@ -361,8 +368,8 @@ int main(int argc, char** argv) {
 	LOG(INFO) << "Compiling and measuring ...\n";
 
 	std::vector<dm::MetricPtr> metrics = {dm::Metric::TOTAL_WALL_TIME,     dm::Metric::TOTAL_NUM_EXEC,       dm::Metric::TOTAL_CPU_ENERGY,
-	                                      dm::Metric::TOTAL_AVG_WALL_TIME, dm::Metric::TOTAL_AVG_CPU_ENERGY, dm::Metric::TOTAL_PAPI_TOT_INS,
-	                                      dm::Metric::TOTAL_PAPI_L3_TCM,   dm::Metric::TOTAL_PAPI_L2_TCM/*,    dm::Metric::TOTAL_PAPI_BR_INS,
+	                                      dm::Metric::TOTAL_AVG_WALL_TIME, dm::Metric::TOTAL_AVG_CPU_ENERGY, /*dm::Metric::TOTAL_PAPI_TOT_INS,
+	                                      dm::Metric::TOTAL_PAPI_L3_TCM,   dm::Metric::TOTAL_PAPI_L2_TCM,    dm::Metric::TOTAL_PAPI_BR_INS,
 	                                      dm::Metric::TOTAL_PAPI_STL_ICY*/};
 
 	LOG(INFO) << "Selected metrics: " << metrics;
@@ -375,116 +382,128 @@ int main(int argc, char** argv) {
 	measurementSetup.compiler.addFlag("-DIRT_USE_MPI");
 	measurementSetup.compiler.addFlag("-DIRT_USE_PAPI");
 	measurementSetup.compiler.addFlag("-O0");
-	measurementSetup.compiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi -lpfm");
+	measurementSetup.compiler.addFlag(string("-Wl,-rpath,") + utils::getPapiRootDir() + "lib -lpapi -lpfm");
 
 	// compile binary
 	const auto binary = dm::buildBinary(rootPtr, measurementSetup);
 
-	using problemType = std::vector<unsigned>;
+	using problemType = unsigned;
+	using machineSizeType = unsigned;
+	using machineType = dm::Machine;
 	using resultType = vector<std::map<dm::region_id, std::map<dm::MetricPtr, dm::Quantity>>>;
 
 	vector<problemType> problemSizes;
-	const unsigned firstParam = 128;
+	vector<machineType> machines;
+	const unsigned firstParam = 256;
 	//const unsigned secondParam = 128;
 
-	for(unsigned i = 1; i <= 100; ++i) {
-		problemSizes.push_back({ firstParam * i/*, secondParam*/ });
+	for(unsigned i = 1; i <= 1; ++i) {
+		problemSizes.push_back(firstParam * i/*, secondParam*/);
 	}
 
-	map<problemType, resultType> overallResults;
+	//machines.push_back(dm::Machine("ortler", { dm::Node("o5", 3) }));
+	machines.push_back(dm::Machine("ortler", { dm::Node("o4", 5), dm::Node("o5", 4) }));
+	//machines.push_back(dm::Machine("ortler", { dm::Node("o5", 9) }));
+	//machines.push_back(dm::Machine("ortler", { dm::Node("o4", 3) }));
+	//machines.push_back(dm::Machine("ortler", { dm::Node("o5", 17) }));
+	//machines.push_back(dm::Machine("ortler", { dm::Node("o4", 16), dm::Node("o5", 17) }));
 
-	for(const auto& problemSize : problemSizes) {
+	map<machineSizeType, map<problemType, resultType>> overallResults;
 
-		//std::map<string, string> env;
-		// fix number of worker threads to 1, relying on mpirun alone seems insufficient for thread concurrency control
-		measurementSetup.env["IRT_NUM_WORKERS"] = "1";
-		measurementSetup.env["IRT_INST_REGION_INSTRUMENTATION"] = "enabled";
-		// TODO: needs fixing, since it might clash with mpirun affinity masks
-		measurementSetup.env["IRT_AFFINITY_POLICY"] = "IRT_AFFINITY_FILL";
-		// set problem sizes
-		//env["DEFAULT_NUM_STRING"] = std::to_string(problemSize.first);
-		//env["DEFAULT_NUM_QUERIES"] = std::to_string(problemSize.second);
-		// rely on mpirun to do process-core mapping
-		const string mpiRun = "mpirun -np 17 --map-by core";// --mca btl tcp, self";
-		measurementSetup.params = ::transform(problemSize, [](const problemType::value_type problem) { return toString(problem); });
-		measurementSetup.params.push_back("128");
-		measurementSetup.executor = make_shared<dm::LocalExecutor>(mpiRun);
+	for(const auto& machine : machines) {
+		const unsigned machineSize = machine.getNumCores();
+		for(const auto& problemSize : problemSizes) {
 
-		const unsigned numRuns = 10;
+			// fix number of worker threads to 1, relying on mpirun alone seems insufficient for thread concurrency control
+			measurementSetup.executionSetup.env["IRT_NUM_WORKERS"] = "1";
+			measurementSetup.executionSetup.env["IRT_INST_REGION_INSTRUMENTATION"] = "enabled";
+			// TODO: needs fixing, since it might clash with mpirun affinity masks
+			measurementSetup.executionSetup.env["IRT_AFFINITY_POLICY"] = "IRT_AFFINITY_FILL";
+			// set problem sizes
+			measurementSetup.executionSetup.params = { toString(problemSize), "128" };
+			measurementSetup.executionSetup.machine = machine;
+			measurementSetup.executor = dm::makeMPIExecutor();
 
-		resultType result;
+			const unsigned numRuns = 1;
 
-		while(result.size() < numRuns) {
-			measurementSetup.numRuns = numRuns - result.size();
-			timer = insieme::utils::Timer("Running measurement");
-			const resultType remainingResults = dm::measure(binary, metrics, measurementSetup);
-			timer.stop(); LOG(INFO) << timer;
-			assert_gt(remainingResults.size(), 0) << "Expected at least a single result set but found none, bailing out";
-			addAll(result, remainingResults);
+			resultType result;
+
+			while(result.size() < numRuns) {
+				measurementSetup.numRuns = numRuns - result.size();
+				LOG(INFO) << measurementSetup << "\n";
+				timer = insieme::utils::Timer("Running measurement");
+				const resultType remainingResults = dm::measure(binary, metrics, measurementSetup);
+				timer.stop(); LOG(INFO) << timer;
+				assert_gt(remainingResults.size(), 0) << "Expected at least a single result set but found none, bailing out";
+				addAll(result, remainingResults);
+			}
+
+			assert_eq(result.size(), numRuns) << "Unexpected result structure!\n";
+
+			LOG(INFO) << "Measurement done for machine " << machine << " and problem size " << problemSize << ", processing data ...\n";
+
+			overallResults[machineSize][problemSize] = result;
+
 		}
-
-		assert_eq(result.size(), numRuns) << "Unexpected result structure!\n";
-
-		LOG(INFO) << "Measurement done for problem size " << problemSize << ", processing data ...\n";
-
-		overallResults[problemSize] = result;
-
 	}
 
-
-	auto resultPrinterFull = [&](const std::map<problemType, resultType> data) {
+	auto resultPrinterFull = [&](const map<machineSizeType, map<problemType, resultType>> data) {
 		du::openBoxTitle("Full Results");
-		for(const auto& problem : data) {
-			std::cout << "Data for problem size: " << problem.first << "\n";
-			for(unsigned run = 0; run < problem.second.size(); ++run) {
-				const auto program = problem.second.at(run);
-				for(const auto& region : program) {
-					std::cout << boost::format("%10d %2d %4d\t(%24s)\t %s") % problem.first % run % region.first
-					                 % regionDatabase.getAllRegions().at(region.first).label % regionDatabase.getAllRegions().at(region.first).region;
-					std::cout << region.second << "\n";
+		for(const auto& machine : data) {
+			for(const auto& problem : machine.second) {
+				std::cout << "Data for problem size: " << problem.first << "\n";
+				for(unsigned run = 0; run < problem.second.size(); ++run) {
+					const auto program = problem.second.at(run);
+					for(const auto& region : program) {
+						std::cout << boost::format("%3d %10d %2d %4d\t%24s\t %s") % machine.first % problem.first % run % region.first
+							% regionDatabase.getAllRegions().at(region.first).label % regionDatabase.getAllRegions().at(region.first).region;
+						std::cout << region.second << "\n";
+					}
 				}
 			}
 		}
 	};
 
-	auto resultPrinterAggregated = [&](const std::map<problemType, resultType> data) {
+	auto resultPrinterAggregated = [&](const map<machineSizeType, map<problemType, resultType>> data) {
 		if(data.empty()) { std::cout << "No results!\n"; return; }
 		if(data.begin()->second.empty()) { std::cout << "No results!\n"; return; }
-		std::map<problemType, std::map<dm::region_id, std::map<dm::MetricPtr, dm::Quantity>>> aggregatedData;
+		std::map<machineSizeType, map<problemType, std::map<dm::region_id, std::map<dm::MetricPtr, dm::Quantity>>>> aggregatedData;
 		du::openBoxTitle("Aggregated Results (median)");
-		std::cout << "problem\tregion_id\tregion_name\t";
+		std::cout << "machine\tproblem\tregion_id\tregion_name\t";
 		// print all metrics in header
-		for(const auto& metric : data.begin()->second.front().begin()->second) {
+		for(const auto& metric : data.begin()->second.begin()->second.front().begin()->second) {
 			std::cout << metric.first << "\t";
 		}
 		std::cout << "\n";
-		for(const auto& problem : data) {
-			//std::cout << "Data for problem size: " << problem.first << "\n";
-			std::map<dm::region_id, std::map<dm::MetricPtr, std::vector<dm::Quantity>>> tempData;
-			// convert structure to be able to sort lists of metric data
-			for(unsigned run = 0; run < problem.second.size(); ++run) {
-				const auto program = problem.second.at(run);
-				for(const auto& region : program) {
-					for(const auto& metric : region.second) {
-						tempData[region.first][metric.first].push_back(metric.second);
+		for(const auto& machine : data) {
+			for(const auto& problem : machine.second) {
+				//std::cout << "Data for problem size: " << problem.first << "\n";
+				std::map<dm::region_id, std::map<dm::MetricPtr, std::vector<dm::Quantity>>> tempData;
+				// convert structure to be able to sort lists of metric data
+				for(unsigned run = 0; run < problem.second.size(); ++run) {
+					const auto program = problem.second.at(run);
+					for(const auto& region : program) {
+						for(const auto& metric : region.second) {
+							tempData[region.first][metric.first].push_back(metric.second);
+						}
 					}
 				}
-			}
-			// sort quantities per metric in ascending order
-			for(auto& region : tempData) {
-				for(auto& metric : region.second) {
-					std::sort(metric.second.begin(), metric.second.end(), [](const dm::Quantity& a, const dm::Quantity& b) { return a < b; });
+				// sort quantities per metric in ascending order
+				for(auto& region : tempData) {
+					for(auto& metric : region.second) {
+						std::sort(metric.second.begin(), metric.second.end(), [](const dm::Quantity& a, const dm::Quantity& b) { return a < b; });
+					}
 				}
-			}
-			// take median
-			for(const auto& region : tempData) {
-				std::cout << boost::format("%10d %4d\t(%24s)\t") % problem.first % region.first % regionDatabase.getAllRegions().at(region.first).label;
-				for(const auto& metric : region.second) {
-					aggregatedData[problem.first][region.first][metric.first] = tempData[region.first][metric.first][ tempData[region.first][metric.first].size() / 2 ];
-					std::cout << boost::format(" %20s") % aggregatedData[problem.first][region.first][metric.first];
+				// take median
+				for(const auto& region : tempData) {
+					std::cout << boost::format("%3d %10d %4d\t%24s\t") % machine.first % problem.first % region.first % regionDatabase.getAllRegions().at(region.first).label;
+					for(const auto& metric : region.second) {
+						aggregatedData[machine.first][problem.first][region.first][metric.first] = tempData[region.first][metric.first][tempData[region.first][metric.first].size() / 2];
+						std::cout << boost::format(" %20s") % aggregatedData[machine.first][problem.first][region.first][metric.first];
+					}
+					std::cout << "\n";
+					//std::cout << aggregatedData[problem.first][region.first] << "\n";
 				}
-				std::cout << "\n";
-				//std::cout << aggregatedData[problem.first][region.first] << "\n";
 			}
 		}
 	};

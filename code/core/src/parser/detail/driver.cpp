@@ -65,6 +65,7 @@
 #include "insieme/core/lang/extension_registry.h"
 
 #include "insieme/utils/name_mangling.h"
+#include "insieme/utils/functional_utils.h"
 
 // this last one is generated and the path will be provided to the command
 #include "inspire_parser.hpp"
@@ -520,7 +521,6 @@ namespace parser {
 
 		LambdaExprPtr InspireDriver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body,
 			                                   const FunctionKind functionKind) {
-			// TODO: cast returns to appropriate type
 
 			auto paramTypes = getParamTypesForLambdaAndFunction(l, params);
 			if(paramTypes.size() != params.size()) { return nullptr; }
@@ -592,14 +592,6 @@ namespace parser {
 			if(!isSymbolDeclaredInGlobalScope(memberName)) { declareSymbolInGlobalScope(l, memberName, key); }
 		}
 
-		StatementPtr InspireDriver::replaceThisInBody(const location& l, const StatementPtr& body, const VariablePtr& thisParam) {
-			if (inLambda) {
-				return transform::replaceAll(mgr, body, genThis(l), thisParam).as<StatementPtr>();
-			} else {
-				return transform::replaceAll(mgr, body, genThis(l), builder.deref(thisParam)).as<StatementPtr>();
-			}
-		}
-
 		/**
 		 * generates a constructor for the currently defined record type
 		 */
@@ -632,13 +624,9 @@ namespace parser {
 		LambdaExprPtr InspireDriver::genConstructorLambda(const location& l, const VariableList& params, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
-			// get this-type (which is ref<ref in case of a function
-			auto thisType = getThisTypeForLambdaAndFunction(false, false);
-			auto thisParam = builder.variable(thisType);
-
 			// create full parameter list
 			VariableList ctorParams;
-			ctorParams.push_back(thisParam);
+			ctorParams.push_back(thisStack.back());
 			for(const auto& cur : params) {
 				ctorParams.push_back(cur);
 			}
@@ -646,14 +634,11 @@ namespace parser {
 			auto paramTypes = getParamTypesForLambdaAndFunction(l, ctorParams);
 			if(paramTypes.size() != params.size() + 1) { return nullptr; }
 
-			// update body
-			auto newBody = replaceThisInBody(l, body, thisParam);
-
 			// create constructor type
 			auto ctorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_CONSTRUCTOR);
 
 			// create the constructor
-			transform::LambdaIngredients ingredients{ctorParams, newBody};
+			transform::LambdaIngredients ingredients{ctorParams, body};
 			if(inLambda) {
 				// replace all variables in the body by their implicitly materialized version
 				ingredients = transform::materialize(ingredients);
@@ -669,24 +654,16 @@ namespace parser {
 
 			if(body == getParserDefaultCompound()) return nullptr;
 
-			// get this-type (which is ref<ref in case of a function
-			auto thisType = getThisTypeForLambdaAndFunction(false, false);
-			auto thisParam = builder.variable(thisType);
-
 			// create full parameter list
-			VariableList params = {thisParam};
-
+			VariableList params = {thisStack.back()};
 			auto paramTypes = getParamTypesForLambdaAndFunction(l, params);
 			if(paramTypes.size() != 1) { return nullptr; }
-
-			// update body
-			auto newBody = replaceThisInBody(l, body, thisParam);
 
 			// create destructor type
 			auto dtorType = builder.functionType(paramTypes, builder.refType(getThisType()), FK_DESTRUCTOR);
 
 			// create the destructor
-			transform::LambdaIngredients ingredients{params, newBody};
+			transform::LambdaIngredients ingredients{params, body};
 			if(inLambda) {
 				// replace all variables in the body by their implicitly materialized version
 				ingredients = transform::materialize(ingredients);
@@ -709,24 +686,16 @@ namespace parser {
 			// return a member function containing a special literal if the body indicates to default this function
 			if(body == getParserDefaultCompound()) return builder.memberFunction(false, name, parserIRExtension.getDefaultedBodyMarker());
 
-			// get this-type (which is ref<ref in case of a function
-			auto thisType = getThisTypeForLambdaAndFunction(cnst, voltile);
-			auto thisParam = builder.variable(thisType);
-
 			// create full parameter list
-			VariableList fullParams;
-			fullParams.push_back(thisParam);
+			VariableList fullParams { thisStack.back() };
 			for(const auto& cur : params) {
 				fullParams.push_back(cur);
 			}
 
-			// update body
-			auto newBody = replaceThisInBody(l, body, thisParam);
-
 			// create the member function
-			auto fun = genLambda(l, fullParams, retType, newBody, FK_MEMBER_FUNCTION);
+			auto fun = genLambda(l, fullParams, retType, body, FK_MEMBER_FUNCTION);
 			//ensure that the lambda got created without errors
-			if (!fun) {
+			if(!fun) {
 				return nullptr;
 			}
 
@@ -1042,9 +1011,22 @@ namespace parser {
 			return variable;
 		}
 
-		void InspireDriver::registerParameters(const location& l, const VariableList& params) {
+		void InspireDriver::registerParameters(const location& l, const VariableList& params, bool _const, bool _volatile) {
 			for(const auto& variable : params) {
 				declareSymbol(l, annotations::getAttachedName(variable), variable);
+			}
+			// get this-type (which is ref<ref in case of a function
+			if(isInRecordType()) {
+				auto thisType = getThisTypeForLambdaAndFunction(_const, _volatile);
+				auto thisParam = builder.variable(thisType);
+				thisStack.push_back(thisParam);
+			}
+		}
+
+		void InspireDriver::unregisterParameters() {
+			if(isInRecordType()) {
+				assert_false(thisStack.empty());
+				thisStack.pop_back();
 			}
 		}
 
@@ -1235,7 +1217,8 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genThis(const location& l) {
-			return builder.literal("this", builder.refType(getThisType()));
+			assert_false(thisStack.empty());
+			return inLambda ? thisStack.back() : builder.deref(thisStack.back());
 		}
 
 		namespace {

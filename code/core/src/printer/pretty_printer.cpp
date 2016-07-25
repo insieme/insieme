@@ -218,6 +218,7 @@ namespace printer {
 			utils::map::PointerMap<LambdaReferencePtr, std::tuple<std::string, std::string>> visitedFreeFunctions;
 			utils::set::PointerSet<LambdaReferencePtr> visitedMemberFunctions;
 			utils::set::PointerSet<LambdaReferencePtr> visitedConstructors;
+			utils::set::PointerSet<LiteralPtr> literalMemberFunctions;
 
 			std::vector<std::pair<TypePtr,TypePtr>> aliases;
 
@@ -342,6 +343,8 @@ namespace printer {
 								// later used to find out which member functions are not visited -> free defined memFuns
 								visitedMemberFunctions.insert(lambdaBinding->getReference());
 								visitedMemberFunctions.insert(cur->peel(lambdaBinding)->getReference());
+							} else if (const auto& literal = memberFun->getImplementation().isa<LiteralPtr>()) {
+								literalMemberFunctions.insert(literal);
 							}
 						}
 
@@ -351,6 +354,8 @@ namespace printer {
 							if (auto ctor = constr.isa<LambdaExprPtr>()) {
 								visitedMemberFunctions.insert(ctor->getReference());
 								visitedMemberFunctions.insert(cur->peel(ctor)->getReference());
+							} else if (auto literal = constr.isa<LiteralPtr>()) {
+								literalMemberFunctions.insert(literal);
 							}
 						}
 					}
@@ -532,7 +537,17 @@ namespace printer {
 						}
 					}
 
-					//fourth: print all record definitions
+					//fourth: print all member functions which are just literals
+					for(auto& literal : literalMemberFunctions) {
+						newLine();
+						vector<std::string> splitstring;
+						boost::split(splitstring, literal->getStringValue(), boost::is_any_of("::"));
+						out << "decl " << splitstring[2] << ":";
+						visit(NodeAddress(literal->getType()));
+						out << ";";
+					}
+
+					//fifth: print all record definitions
 					for(auto& tag : visitedTagTypes) {
 						if (auto record = tag.getRecord().isa<RecordPtr>()) {
 							//auto& recordName = record->getName()->getValue();
@@ -545,7 +560,7 @@ namespace printer {
 						}
 					}
 
-					//fifth: print all definitions for functions
+					//sixth: print all definitions for functions
 					visitedBindings.clear();
 					visitDepthFirstOncePrunable(node, [&](const LambdaExprPtr& cur) {
 						// jump over this part, if lambda is derived, but printer don't have the option to print them

@@ -234,7 +234,7 @@ namespace conversion {
 			core::annotations::attachName(node, ("operator" + operatorAsString));
 		} else if(!funcDecl->getNameAsString().empty()) {
 			// annotate with the C name of the function
-			core::annotations::attachName(node, (utils::buildNameForFunction(funcDecl)));
+			core::annotations::attachName(node, utils::buildNameForFunction(funcDecl, *this));
 		}
 		if(core::annotations::hasAttachedName(node)) { VLOG(2) << "attachedName: " << core::annotations::getAttachedName(node); }
 
@@ -272,7 +272,7 @@ namespace conversion {
 					core::annotations::attachName(node, name);
 				}
 				else if(auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
-					string name = insieme::utils::demangle(utils::buildNameForFunction(funDecl, true));
+					string name = insieme::utils::demangle(utils::buildNameForFunction(funDecl, *this, true));
 					core::annotations::attachName(node, name);
 				}
 				else if(auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {

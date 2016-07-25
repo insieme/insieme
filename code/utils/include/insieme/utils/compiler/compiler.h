@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -44,6 +44,7 @@
 #include "insieme/utils/abstraction.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/string_utils.h"
 
 namespace insieme {
 namespace utils {
@@ -78,7 +79,7 @@ namespace compiler {
 		}
 	};
 
-	class Compiler {
+	class Compiler : public Printable {
 		string executable;
 
 		vector<string> flags;
@@ -134,6 +135,11 @@ namespace compiler {
 		}
 
 		string getCommand(const vector<string>& inputFiles, const string& outputFile) const;
+
+		std::ostream& printTo(std::ostream& out) const {
+			return out << executable << " " << join(" ", flags);
+		}
+
 	};
 
 	const vector<string> getDefaultCIncludePaths();

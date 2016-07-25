@@ -254,14 +254,16 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
 		    RefArrayElement, "ref_array_elem",
-		    "(r : ref<array<'a,'s>,'c,'v,plain>, i : int<8>) -> ref<'a,'c,'v,plain> { return ref_narrow(r, dp_element(dp_root(type_lit(array<'a,'s>)), i)); }")
+		    "(r : ref<array<'a,'s>,'c,'v,plain>, i : int<8>) -> ref<'a,'c,'v, plain> { return ref_narrow(r, dp_element(dp_root(type_lit(array<'a,'s>)), i)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a member of a struct / union.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(
-		    RefMemberAccess, "ref_member_access",
-		    "(r : ref<'a,'c,'v,'k>, name : identifier, type : type<'b>) -> ref<'b,'c,'v,'k> { return ref_narrow(r, dp_member(dp_root(type_lit('a)), name, type)); }")
+			RefMemberAccess, "ref_member_access",
+			"(r : ref<'a,'c,'v,'k>, name : identifier, type : type<'b>) -> ref<'b,'c,'v, plain> {                    "
+			"    return ref_kind_cast(ref_narrow(r, dp_member(dp_root(type_lit('a)), name, type)), type_lit(plain)); "
+			"}")
 
 		/**
 		 * A derived reference navigation operator providing access to a components of a tuple.
@@ -492,6 +494,7 @@ namespace lang {
 	ExpressionPtr buildRefReinterpret(const ExpressionPtr& refExpr, const TypePtr& targetTy);
 
 	bool isAnyRefCast(const NodePtr& node);
+	ExpressionPtr removeSurroundingRefCasts(const ExpressionPtr& node);
 
 	ExpressionPtr buildRefTemp(const TypePtr& type);
 	ExpressionPtr buildRefNull(const TypePtr& type);

@@ -65,6 +65,10 @@ namespace utils {
 	///
 	core::ExpressionPtr convertConstructExpr(conversion::Converter& converter, const clang::CXXConstructExpr* constructExpr, const core::ExpressionPtr& memLoc);
 
+	/// Modify the body of a for loop to contain the given update expression before every possible exit point
+	///
+	core::StatementPtr addIncrementExprBeforeAllExitPoints(const core::StatementPtr& body, const core::StatementPtr& incrementExpression);
+
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme

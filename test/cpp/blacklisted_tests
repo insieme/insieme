@@ -9,11 +9,9 @@ cast_dynamic
 cast_reinterpret
 cast_static
 ctor_inherit
-ctor_return
 curiously_recurring_template_pattern
 curiously_recurring_template_pattern_2
 curiously_recurring_template_pattern_member_function
-dtor_return
 expr_with_cleanups
 inherit
 inherit_chained
@@ -29,24 +27,21 @@ memb_func_ptr
 performance
 rec_memberfunc_pointer
 shadow_decl
-simpleSort
+simple_sort
 sort
 static_assert
 static_data_member
-staticInitialization
+static_initialization
 static_var_init
 static_var_updates
 std_distance
 stl_intercept
 stl_list_iterator
 stl_read_file
-template1
-template3
 template_statics
 try_catch
-try_catch_condOp
+try_catch_cond_op
 typeinfo_struct
-user_defined_cast
 vfunc_covariant_returnty
 vfunc_multiple_inherit
 vfunc_multiple_inherit_operators
@@ -59,5 +54,4 @@ vfunc_single_inherit
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
-+nested_class
 +ctor

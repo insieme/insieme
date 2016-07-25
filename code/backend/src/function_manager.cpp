@@ -40,6 +40,8 @@
 #include <tuple>
 #include <functional>
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include "insieme/backend/converter.h"
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/statement_converter.h"
@@ -139,9 +141,22 @@ namespace backend {
 				return static_cast<result_type>(info);
 			}
 
+			template <
+				typename T,
+				typename result_type = typename info_trait<typename std::remove_const<typename T::element_type>::type>::type*
+			>
+			result_type resolve(const core::TagTypePtr& tagType, const T& node) {
+				// lookup information using internal mechanism and cast statically
+				ElementInfo* info = resolveInternal(tagType,node);
+				assert(dynamic_cast<result_type>(info));
+				return static_cast<result_type>(info);
+			}
+
 		  protected:
 
 			ElementInfo* resolveInternal(const core::NodePtr& expression);
+			ElementInfo* resolveInternal(const core::TagTypePtr& tagType, const core::LambdaExprPtr& member);
+			ElementInfo* resolveInternal(const core::TagTypePtr& tagType, const core::MemberFunctionPtr& member);
 
 			FunctionInfo* resolveLiteral(const core::LiteralPtr& literal);
 			FunctionInfo* resolvePureVirtualMember(const core::PureVirtualMemberFunctionPtr&);
@@ -182,8 +197,12 @@ namespace backend {
 		return *(store->resolve(lambda));
 	}
 
-	const LambdaInfo& FunctionManager::getInfo(const core::MemberFunctionPtr& memberFun) {
-		return *(store->resolve(memberFun));
+	const LambdaInfo& FunctionManager::getInfo(const core::TagTypePtr& tagType, const core::LambdaExprPtr& fun) {
+		return *(store->resolve(tagType,fun));
+	}
+
+	const LambdaInfo& FunctionManager::getInfo(const core::TagTypePtr& tagType, const core::MemberFunctionPtr& memberFun) {
+		return *(store->resolve(tagType,memberFun));
 	}
 
 	const BindInfo& FunctionManager::getInfo(const core::BindExprPtr& bind) {
@@ -249,7 +268,7 @@ namespace backend {
 			// extract type of target function
 			const core::FunctionTypePtr funType = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>();
 
-			auto irCallArgs = core::transform::extractArgExprsFromCall(call);
+			auto irCallArgs = call->getArgumentList();
 
 			// ----------------- constructor call ---------------
 
@@ -268,15 +287,16 @@ namespace backend {
 				// distinguish memory location to be utilized
 				// case a) create object on stack => default
 
+				auto thisArg = core::lang::removeSurroundingRefCasts(irCallArgs[0]);
+
 				// case b) create object on heap
-				bool isOnHeap = core::analysis::isCallOf(irCallArgs[0], refs.getRefNew());
+				bool isOnHeap = core::analysis::isCallOf(thisArg, refs.getRefNew());
 
 				// case c) create object in-place (placement new)
-				c_ast::ExpressionPtr loc =
-				    (!core::analysis::isCallOf(irCallArgs[0], refs.getRefTemp()) && !core::analysis::isCallOf(irCallArgs[0], refs.getRefTempInit())
-				     && !core::analysis::isCallOf(irCallArgs[0], refs.getRefNew()))
-				        ? location.as<c_ast::ExpressionPtr>()
-				        : c_ast::ExpressionPtr();
+				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(thisArg, refs.getRefTemp()) && !core::analysis::isCallOf(thisArg, refs.getRefTempInit())
+				                            && !core::analysis::isCallOf(thisArg, refs.getRefNew()) && !core::analysis::isCallOf(thisArg, refs.getRefDecl()))
+				                               ? location.as<c_ast::ExpressionPtr>()
+				                               : c_ast::ExpressionPtr();
 
 				// to get support for the placement new the new header is required
 				if(loc) { context.addInclude("<new>"); }
@@ -300,7 +320,7 @@ namespace backend {
 				vector<c_ast::NodePtr> args = c_call->arguments;
 				assert_eq(args.size(), 1u);
 				auto obj = args[0].as<c_ast::ExpressionPtr>();
-				if(core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
+				if(!irCallArgs[0].isa<core::InitExprPtr>() && core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
 
 				// extract class type
 				auto classType = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)).lValueType;
@@ -317,7 +337,7 @@ namespace backend {
 				assert_false(args.empty());
 
 				auto obj = args[0].as<c_ast::ExpressionPtr>();
-				if(core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
+				if(!irCallArgs[0].isa<core::InitExprPtr>() && core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
 				args.erase(args.begin());
 
 				res = c_ast::memberCall(obj, c_call->function, args, c_call->instantiationTypes);
@@ -345,7 +365,7 @@ namespace backend {
 			const core::FunctionTypePtr& funType = core::static_pointer_cast<const core::FunctionType>(type);
 
 			const core::TypeList& paramTypes = funType->getParameterTypes()->getElements();
-			const core::ExpressionList& args = core::transform::extractArgExprsFromCall(call);
+			const core::ExpressionList& args = call->getArgumentList();
 
 			// check number of arguments
 			if(paramTypes.size() != args.size()) {
@@ -439,7 +459,7 @@ namespace backend {
 
 			// produce call to external literal
 			c_ast::CallPtr res = c_ast::call(info.function->name, info.instantiationTypes);
-			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), core::transform::extractArgExprsFromCall(call), true);
+			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArgumentList(), true);
 
 			// add dependencies
 			context.getDependencies().insert(info.prototype);
@@ -465,7 +485,7 @@ namespace backend {
 
 			// produce call to internal lambda
 			c_ast::CallPtr c_call = c_ast::call(info.function->name, info.instantiationTypes);
-			appendAsArguments(context, c_call, materializeTypeList(extractCallTypeList(call)), core::transform::extractArgExprsFromCall(call), false);
+			appendAsArguments(context, c_call, materializeTypeList(extractCallTypeList(call)), call->getArgumentList(), false);
 
 			// handle potential member calls
 			auto ret = handleMemberCall(call, c_call, context);
@@ -478,7 +498,7 @@ namespace backend {
 		if(funType->isPlain()) {
 			// add call to function pointer (which is the value)
 			c_ast::CallPtr res = c_ast::call(c_ast::parentheses(getValue(call->getFunctionExpr(), context)));
-			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), core::transform::extractArgExprsFromCall(call), false);
+			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArgumentList(), false);
 			return res;
 		}
 
@@ -499,7 +519,7 @@ namespace backend {
 			c_ast::CallPtr res = c_ast::call(funcExpr, info.instantiationTypes);
 			core::TypeList types = extractCallTypeList(call);
 			types.erase(types.begin());
-			core::ExpressionList args = core::transform::extractArgExprsFromCall(call);
+			core::ExpressionList args = call->getArgumentList();
 			args.erase(args.begin());
 			appendAsArguments(context, res, materializeTypeList(types), args, false);
 			return res;
@@ -517,7 +537,7 @@ namespace backend {
 
 		const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(funType);
 		c_ast::CallPtr res = c_ast::call(typeInfo.callerName, c_ast::cast(typeInfo.rValueType, value));
-		appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), core::transform::extractArgExprsFromCall(call), false);
+		appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArgumentList(), false);
 
 		// add dependencies
 		context.getDependencies().insert(typeInfo.caller);
@@ -668,6 +688,7 @@ namespace backend {
 
 
 		ElementInfo* FunctionInfoStore::resolveInternal(const core::NodePtr& fun) {
+
 			// normalize all functions to avoid duplicates
 			core::NodePtr function = core::analysis::normalize(fun);
 
@@ -679,17 +700,16 @@ namespace backend {
 			auto& nameManager = converter.getNameManager();
 			nameManager.setName(function, nameManager.getName(fun));
 
-			// extract function type
+			// resolve all parameter types and the return type
 			auto funType = getFunctionType(function);
-			if (funType->isMember()) {
-				// make sure the object definition, ctors, dtors and member functions have already been resolved
-				// if this would not be the case, we could end up resolving e.g. a ctor while resolving the ctor itself
-
-				// we don't do this for intercepted types
-				if(!(fun.isa<core::LiteralPtr>() && annotations::c::hasIncludeAttached(fun))) {
-					converter.getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)); // ignore result
-				}
+			for(const auto& param : funType->getParameterTypes()) {
+				converter.getTypeManager().getTypeInfo(param);
 			}
+			converter.getTypeManager().getTypeInfo(funType->getReturnType());
+
+			// check whether the function has been resolved as a side-effect of resolving the types
+			pos = funInfos.find(function);
+			if (pos != funInfos.end()) { return pos->second; }
 
 			// obtain function information
 			ElementInfo* info;
@@ -713,6 +733,33 @@ namespace backend {
 			// return pointer to obtained information
 			return info;
 		}
+
+		ElementInfo* FunctionInfoStore::resolveInternal(const core::TagTypePtr& tagType, const core::LambdaExprPtr& fun) {
+
+			// resolve element
+			ElementInfo* info = resolveInternal(fun);
+
+			// attach result also to peeled version for this function
+			auto peeled = tagType->peel(fun);
+			funInfos.insert({core::analysis::normalize(peeled),info});
+
+			// done
+			return info;
+		}
+
+		ElementInfo* FunctionInfoStore::resolveInternal(const core::TagTypePtr& tagType, const core::MemberFunctionPtr& member) {
+
+			// resolve element
+			ElementInfo* info = resolveInternal(member);
+
+			// attach result also to peeled version for this function
+			auto peeled = tagType->peel(member->getImplementation());
+			funInfos.insert({core::analysis::normalize(peeled),info});
+
+			// done
+			return info;
+		}
+
 
 		FunctionInfo* FunctionInfoStore::resolveLiteral(const core::LiteralPtr& literal) {
 			assert_eq(literal->getType()->getNodeType(), core::NT_FunctionType) << "Only supporting literals with a function type!";
@@ -796,13 +843,14 @@ namespace backend {
 
 		FunctionInfo* FunctionInfoStore::resolvePureVirtualMember(const core::PureVirtualMemberFunctionPtr&  pureVirtualMemberFun) {
 
-			// create a literal of the propert type and resolve the literal
+			// create a literal of the proper type and resolve the literal
 			core::IRBuilder builder(pureVirtualMemberFun->getNodeManager());
 			return resolve(builder.literal(pureVirtualMemberFun->getName(), pureVirtualMemberFun->getType()));
 
 		}
 
 		LambdaInfo* FunctionInfoStore::resolveLambda(const core::LambdaExprPtr& lambda) {
+
 			// resolve lambda definitions
 			resolveLambdaDefinition(lambda->getDefinition());
 
@@ -812,9 +860,29 @@ namespace backend {
 
 		LambdaInfo* FunctionInfoStore::resolveMemberFunction(const core::MemberFunctionPtr& memberFun) {
 
-			// fix name
 			auto impl = memberFun->getImplementation();
-			auto name = utils::demangle(memberFun->getNameAsString());
+
+			// generate dummy lambda in cases of members without implementation (literals)
+			if(auto lit = impl.isa<core::LiteralPtr>()) {
+				core::IRBuilder builder(memberFun->getNodeManager());
+				auto funType = impl->getType().as<core::FunctionTypePtr>();
+				core::VariableList params = ::transform(funType->getParameterTypeList(), [&](const core::TypePtr t) {
+					return builder.variable(core::transform::materialize(t));
+				});
+				// TODO generate assertion in this dummy body indicating that it should never be reached (build tool for this)
+				impl = builder.lambdaExpr(funType, params, builder.compoundStmt(builder.stringLit("DUMMY")));
+			}
+
+			// fix name
+			c_ast::CodeFragmentPtr nameDependency;
+			auto name = utils::demangleToIdentifier(memberFun->getNameAsString());
+			// for user-defined conversion operators, we need to generate their type representation from the actual return type,
+			// because function pointer types need to be typedef'd
+			if(boost::starts_with(name, "operator ")) {
+				auto retTypeInfo = converter.getTypeManager().getTypeInfo(impl->getType().as<core::FunctionTypePtr>()->getReturnType());
+				name = format("operator %s", *retTypeInfo.rValueType);
+				nameDependency = retTypeInfo.declaration;
+			}
 			converter.getNameManager().setName(impl, name);
 
 			// convert implementation
@@ -825,15 +893,16 @@ namespace backend {
 			decl->isVirtual = memberFun->isVirtual();
 
 			// check for default members
-			auto classType = core::analysis::getObjectType(memberFun->getType()).as<core::TagTypePtr>();
 			if(core::analysis::isaDefaultMember(memberFun)) {
-
 				// set declaration to default
 				decl->flag = c_ast::BodyFlag::Default;
 
 				// delete definition by removing the prototypes requirement towards the definition
 				res->prototype->remRequirement(res->definition);
 			}
+
+			// add potentially required dependency for the name
+			if(nameDependency) res->prototype->addDependency(nameDependency);
 
 			// done
 			return res;
@@ -869,7 +938,7 @@ namespace backend {
 				fun = core::transform::instantiate(mgr, fun.as<core::LambdaExprPtr>(), map);
 
 				// replace call with call to instantiated function
-				call = core::IRBuilder(call->getNodeManager()).callExpr(call->getType(), fun, core::transform::extractArgExprsFromCall(call));
+				call = core::IRBuilder(call->getNodeManager()).callExpr(call->getType(), fun, call->getArgumentList());
 			}
 
 			// create a map between expressions in the IR and parameter / captured variable names in C
@@ -884,7 +953,7 @@ namespace backend {
 
 			// add arguments of call
 			int argumentCounter = 0;
-			const vector<core::ExpressionPtr>& args = core::transform::extractArgExprsFromCall(call);
+			const vector<core::ExpressionPtr>& args = call->getArgumentList();
 			for_each(args, [&](const core::ExpressionPtr& cur) {
 				variableMap[cur] = var(typeManager.getTypeInfo(cur->getType()).rValueType, format("c%d", ++argumentCounter));
 			});
@@ -1050,10 +1119,10 @@ namespace backend {
 				info->definition = definitions;
 
 				// member functions are declared within object definition
-				core::TagTypePtr classType;
+				core::TypePtr classType;
 				c_ast::NamedCompositeTypePtr classDecl;
 				if(isMember) {
-					classType = core::analysis::getObjectType(funType).as<core::TagTypePtr>();
+					classType = core::analysis::getObjectType(funType);
 					const auto& typeInfo = typeManager.getTypeInfo(classType);
 					info->prototype = typeInfo.definition;
 					classDecl = typeInfo.lValueType.as<c_ast::NamedCompositeTypePtr>();
@@ -1116,10 +1185,8 @@ namespace backend {
 						assert_true(funType.isMemberFunction());
 						auto mfun = cManager->create<c_ast::MemberFunction>(classDecl->name, info->function);
 						c_ast::BodyFlag flag = c_ast::BodyFlag::None;
-						for(auto mem: classType->getRecord()->getMemberFunctions()->getMembers()) {
-							if(classType->peel(mem->getImplementation()) == lambda && core::analysis::isaDefaultMember(mem)) {
-								flag = c_ast::BodyFlag::Default;
-							}
+						if (core::analysis::isaDefaultMember(lambda)) {
+							flag = c_ast::BodyFlag::Default;
 						}
 						auto decl = cManager->create<c_ast::MemberFunctionPrototype>(mfun, flag);
 
@@ -1253,7 +1320,7 @@ namespace backend {
 						values.push_back(call->getArgument(1)); // that is the value
 					} else {
 						// it is a constructor call => collect all arguments but the first
-						auto args = core::transform::extractArgExprsFromCall(call);
+						auto args = call->getArgumentList();
 						values.insert(values.end(), args.begin() + 1, args.end());
 					}
 				}
@@ -1561,6 +1628,13 @@ namespace backend {
 				if(funType->isConstructor()) {
 					// collect initializer values + remove from body
 					std::tie(initializer, body) = extractInitializer(converter, lambda, context);
+				}
+
+				// replace returns in constructors and destructors
+				if(lambda->getType()->isConstructor() || lambda->getType()->isDestructor()) {
+					body = core::transform::transformBottomUpGen(body, [](const core::ReturnStmtPtr& retStmt){
+						return core::IRBuilder(retStmt->getNodeManager()).returnStmt();
+					});
 				}
 
 				// convert the body code fragment and collect dependencies

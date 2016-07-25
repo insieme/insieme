@@ -64,5 +64,9 @@ namespace utils {
 	/// Returns the mangled name for the assignment operator.
 	///
 	const std::string& getMangledOperatorAssignName();
+
+	/// Returns a string which (if present) indicates that the name was generated for something anonymous.
+	///
+	const std::string& getMangledAnonymousIndicator();
 }
 }

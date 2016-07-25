@@ -963,7 +963,7 @@ namespace analysis {
 		auto type = var->getType();
 		if(!isRefType(type)) { return false; }
 
-		if(const LiteralPtr lit = var.as<LiteralPtr>()) {
+		if(const LiteralPtr lit = var.isa<LiteralPtr>()) {
 			const lang::StaticVariableExtension& ext = var->getNodeManager().getLangExtension<lang::StaticVariableExtension>();
 			return (ext.isStaticType(getReferencedType(type)));
 		} else {

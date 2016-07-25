@@ -86,16 +86,13 @@ namespace backend {
 			auto typeInfo = converter.getTypeManager().getTypeInfo(innerType);
 			context.addDependency(typeInfo.definition);
 
+			auto& rExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+
 			// get type
 			c_ast::TypePtr type = typeInfo.rValueType;
-
-			// special case.. empty struct: instead (<type>)(<members>) we use *((<type>*)(0))
-			if(auto stp = core::analysis::isStruct(innerType)) {
-				if(!stp->getFields().size()) {
-					auto cmgr = context.getConverter().getCNodeManager();
-					auto zero = cmgr->create("0");
-					return c_ast::deref(c_ast::cast(c_ast::ptr(type), zero));
-				}
+			// omit type if we are initializing memory allocated by ref_decl or from a global (it is implicit, and we need to prevent temporary construction)
+			if(rExt.isCallOfRefDecl(ptr->getMemoryExpr()) || ptr->getMemoryExpr().isa<core::LiteralPtr>()) {
+				type = nullptr;
 			}
 
 			// handle unions
@@ -112,15 +109,21 @@ namespace backend {
 					initValue->type = nullptr;
 				}
 
-				return c_ast::init(type, value);
+				return converter.getCNodeManager()->create<c_ast::Initializer>(type, toVector<c_ast::NodePtr>(value));
 			}
 
 			// create init expression
-			c_ast::InitializerPtr init = c_ast::init(type);
+			c_ast::InitializerPtr init = converter.getCNodeManager()->create<c_ast::Initializer>(type);
 
 			// append initialization values
-			::transform(ptr->getInitExprList(), std::back_inserter(init->values),
-			            [&](const core::ExpressionPtr& cur) { return converter.getStmtConverter().convertExpression(context, cur); });
+			::transform(ptr->getInitExprList(), std::back_inserter(init->values), [&](const core::ExpressionPtr& cur) {
+				auto conv = converter.getStmtConverter().convertExpression(context, cur);
+				// disable explicit types for nested init values since those are inferred automatically
+				if(auto nestedInit = conv.isa<c_ast::InitializerPtr>()) {
+					nestedInit->type = nullptr;
+				}
+				return conv;
+			});
 
 			// support empty initialization
 			if(init->values.empty()) { return init; }
@@ -132,7 +135,9 @@ namespace backend {
 			}
 
 			// if array, initialize inner data member
-			if(core::lang::isFixedSizedArray(innerType)) init = c_ast::init(type, c_ast::init(init->values));
+			if(core::lang::isFixedSizedArray(innerType)) {
+				init = converter.getCNodeManager()->create<c_ast::Initializer>(type, toVector<c_ast::NodePtr>(c_ast::init(init->values)));
+			}
 
 			// return completed
 			return init;
@@ -498,6 +503,7 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, ConversionContext& context) {
+
 		// goal: create a variable declaration and register new variable within variable manager
 		auto manager = converter.getCNodeManager();
 		core::IRBuilder builder(ptr->getNodeManager());
@@ -506,7 +512,7 @@ namespace backend {
 		core::VariablePtr var = ptr->getVariable();
 
 		core::ExpressionPtr init = ptr->getInitialization();
-		bool undefinedInit = refExt.isCallOfRefTemp(init);
+		bool undefinedInit = refExt.isCallOfRefTemp(init) || refExt.isCallOfRefDecl(init);
 
 		core::TypePtr plainType = var->getType();
 
@@ -554,8 +560,6 @@ namespace backend {
 
 	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::TypePtr& targetType, const core::ExpressionPtr& init) {
 		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-
-		// TODO: handle initUndefine and init struct cases
 
 		core::ExpressionPtr initValue = init;
 
@@ -707,9 +711,8 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context) {
-		// wrap sub-expression into return expression
+		// special handling for unit-return
 		if(converter.getNodeManager().getLangBasic().isUnitConstant(ptr->getReturnExpr())) {
-			// special handling for unit-return
 			return converter.getCNodeManager()->create<c_ast::Return>();
 		}
 

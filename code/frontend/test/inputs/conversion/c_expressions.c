@@ -443,7 +443,7 @@ int main() {
 	// check direct R-value access
 	#pragma test expect_ir(R"(
 		def struct IMP_simple_struct { i: int<4>; };
-		def IMP_generate_struct = () -> IMP_simple_struct { return <ref<IMP_simple_struct>>(ref_decl(type_lit(ref<IMP_simple_struct>))) {0} in IMP_simple_struct; };
+		def IMP_generate_struct = () -> IMP_simple_struct { return *<ref<IMP_simple_struct>>(ref_temp(type_lit(IMP_simple_struct))) {0} in IMP_simple_struct; };
 		IMP_generate_struct().i+5
 	)")
 	generate_struct().i + 5;
@@ -474,12 +474,30 @@ int main() {
 		int x, y;
 	} Image;
 
-	#pragma test expect_ir("REGEX_S", R"(.*<ref<IMP_Image_IMLOC_.*> .* \{0u, 0, 0\} = \*<ref<IMP_Image_IMLOC_.*> .* \{1u, 1, 1\}.*)")
+	#pragma test expect_ir(R"(
+		def struct __any_string__ {
+			data : uint<4>;
+			x : int<4>;
+			y : int<4>;
+		};
+		{
+			<ref<__any_string__,f,f,plain>>(ref_temp(type_lit(__any_string__))) {0u, 0, 0} = *<ref<__any_string__,f,f,plain>>(ref_temp(type_lit(__any_string__))) {1u, 1, 1};
+		}
+	)")
 	{
 		(Image){0u, 0, 0} = (Image){1u, 1, 1};
 	}
 
-	#pragma test expect_ir("REGEX_S", R"(.*<ref<IMP_Image_IMLOC_.*> .* \{0u, 0, 0\}.x = 1.*)")
+	#pragma test expect_ir(R"(
+		def struct __any_string__ {
+			data : uint<4>;
+			x : int<4>;
+			y : int<4>;
+		};
+		{
+			<ref<__any_string__,f,f,plain>>(ref_temp(type_lit(__any_string__))) {0u, 0, 0}.x = 1;
+		}
+	)")
 	{
 		(Image){0u, 0, 0}.x = 1;
 	}

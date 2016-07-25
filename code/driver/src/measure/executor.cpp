@@ -34,13 +34,16 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/measure/measure.h"
+#include "insieme/driver/measure/executor.h"
 
 #include <memory>
+#include <set>
 #include <boost/filesystem.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+
+#include "insieme/driver/measure/hardware.h"
 
 #include "insieme/utils/logging.h"
 
@@ -51,10 +54,11 @@ namespace measure {
 
 	namespace {
 
-		int runCommand(const std::string& cmd) {
-			LOG(INFO) << "Running " << cmd << "\n";
-			//			return system((cmd + "> /dev/null").c_str());
-			return system(cmd.c_str());
+		int runCommand(const std::string& cmd, bool silent) {
+			std::string modCmd = cmd;
+			if(silent) { modCmd.append(" > /dev/null"); }
+			LOG(INFO) << "Running " << modCmd << "\n";
+			return system(modCmd.c_str());
 		}
 
 		string setupEnv(const std::map<string, string>& env) {
@@ -67,29 +71,22 @@ namespace measure {
 	}
 
 
-	int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env, const std::vector<string>& params, const string& dir) const {
-#ifndef DISABLE_ENERGY
+	int LocalExecutor::run(const std::string& binary, const ExecutionSetup& setup) const {
 		// set capabilities for energy measurements, required for kernel versions 3.7 and newer
-		// TODO: only do this for newer kernel versions or kernels that have this fix
-		runCommand("sudo setcap cap_sys_rawio=ep " + binary);
-#endif
+		if(setup.requiresRawIOCapabilities) { runCommand("sudo setcap cap_sys_rawio=ep " + binary, true); }
 		std::stringstream ss;
-		ss << setupEnv(env) << " IRT_INST_OUTPUT_PATH=" << dir << " " << wrapper << " " << binary << " " << join(" ", params);
-		return runCommand(ss.str());
+		ss << setupEnv(setup.env) << " IRT_INST_OUTPUT_PATH=" << setup.outputDirectory << " " << wrapper << " " << binary << " " << join(" ", setup.params);
+		return runCommand(ss.str(), setup.silent);
 	}
 
 	ExecutorPtr makeLocalExecutor() {
 		return std::make_shared<LocalExecutor>();
 	}
 
-
-	int RemoteExecutor::run(const std::string& binary, const std::map<string, string>& env, const std::vector<string>& params, const string& dir) const {
-		// extract name of file
-		boost::filesystem::path path = binary;
-		string binaryName = path.filename().string();
+	int RemoteExecutor::run(const std::string& binary, const ExecutionSetup& setup) const {
 
 		// extract directory name
-		string dirName = boost::filesystem::path(dir).filename().string();
+		string dirName = boost::filesystem::path(setup.outputDirectory).filename().string();
 		boost::uuids::uuid u = uuidGen();
 		dirName += toString(u);
 
@@ -102,106 +99,98 @@ namespace measure {
 		int res = 0;
 
 		// start by creating a remote working directory
-		if(res == 0) { res = runCommand("ssh " + url + " mkdir " + remoteDir); }
+		res = runCommand("ssh " + url + " mkdir " + remoteDir, setup.silent);
+		assert_eq(res, 0) << "Failed to create remote directory " << remoteDir << " on " << url;
 
-		// copy binary
-		if(res == 0) { res = runCommand("scp -q " + binary + " " + url + ":" + remoteDir); }
+		string binaryName = binary;
+		if(setup.requiresBinaryCopying) {
+			// copy binary if required
+			res = runCommand("scp -q " + binary + " " + url + ":" + remoteDir, setup.silent);
+			assert_eq(res, 0) << "Failed to copy binary " << binary << " to " << url << ":" << remoteDir;
+			// change path to new relative location of new binary
+			binaryName = string("./") + boost::filesystem::path(binaryName).filename().string();
+		}
 
 		// execute binary
 		std::stringstream ss;
-		switch(system) {
-		case SSH:
-			if(res == 0) {
-				ss << "ssh " << url << " \"cd " << remoteDir << " && " << setupEnv(env) << " ./" << binaryName << " " << join(" ", params) << " && rm " << binaryName << "\"";
-				res = runCommand(ss.str());
-			}
-			break;
-		case SGE:
-			assert_fail() << "Not tested!";
-			if(res == 0) {
-				ss << "ssh " << url << " \"cd " << remoteDir << " && qsub -sync yes -b yes -cwd -o std.out -e std.err -pe openmp 1 " << binaryName << " " << join(" ", params) << "\"";
-				res = runCommand(ss.str());
-			}
-			if(res == 0) { res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\""); }
-			break;
-		case PBS:
-			assert_fail() << "Not tested!";
-			if(res == 0) {
-				ss << "ssh " << url << " \"cd " << remoteDir << " && qsub -l select=1:ncpus=4:mem=2gb -W block=true -- ./" << binaryName << " " << join(" ", params) << "\"";
-				res = runCommand(ss.str());
-			}
-			if(res == 0) { res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\""); }
-			break;
-		case LL:
-			assert_fail() << "Not tested!";
-			std::string jobscript = "#!/bin/bash\n"
-			                        "#@ energy_policy_tag=my_energy_tag\n"
-			                        "#@ max_perf_decrease_allowed=1\n"
-			                        "#@ wall_clock_limit = 00:05:00\n"
-			                        "#@ job_name = insieme\n"
-			                        "#@ job_type = parallel\n"
-			                        "#@ class = test\n"
-			                        "#@ node = 1\n"
-			                        "#@ total_tasks = 1\n"
-			                        "#@ node_usage = not_shared\n"
-			                        "#@ initialdir = "
-			                        + remoteDir + "\n"
-			                                      "#@ output = job$(jobid).out\n"
-			                                      "#@ error = job$(jobid).err\n"
-			                                      "#@ notification=error\n"
-			                                      "#@ notify_user=philipp.gschwandtner@uibk.ac.at\n"
-			                                      "#@ restart=no\n"
-			                                      "#@ queue\n"
-			                                      ". /etc/profile\n"
-			                                      ". /etc/profile.d/modules.sh\n"
-			                        + setupEnv(env);
-			if(res == 0) {
-				ss << "ssh " << url << " \"cd " << remoteDir << " && echo \"" << jobscript << "\" | llsubmit -s -\"";
-				res = runCommand(ss.str());
-			}
-			// std::cout << "ssh " + url + " \"cd " + remoteDir + " && echo \"" + jobscript + "\" | llsubmit -s -\"\n";
-			// if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && "  + setupEnv(env) + " ./" + binaryName + " && rm " + binaryName + "\"");
-			// if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
-			break;
-		}
+		ss << "ssh " << url << " \"cd " << remoteDir << " && " << setupEnv(setup.env) << " " << binaryName << " " << join(" ", setup.params);
+		if(setup.requiresBinaryCopying) { ss << " && rm " << binaryName; }
+		ss << "\"";
+		res = runCommand(ss.str(), setup.silent);
+		assert_eq(res, 0) << "Failed to execute binary" << binaryName << " on " << url;
 
-		// copy back log files
-		if(res == 0) { res = runCommand("scp -q -r " + url + ":" + remoteDir + " ."); }
-
-		// move files locally
-		if(res == 0) { res = runCommand("mv -t " + dir + " _remote_" + dirName + "/*"); }
-
-		// delete local files
-		if(res == 0) { res = runCommand("rm -rf _remote_" + dirName); }
-
-		// delete remote working directory
-		if(res == 0) { res = runCommand("ssh " + url + " rm -rf " + remoteDir); }
+		// copy back remote directory
+		// use rsync since it is as fast as scp, does not fail on empty directories and supports moving instead of copying
+		res = runCommand("rsync --quiet --archive --remove-source-files " + url + ":" + remoteDir + "/ " + setup.outputDirectory, setup.silent);
+		assert_eq(res, 0) << "Failed to move generated files with rsync from " << remoteDir << " on " << url << " to " << setup.outputDirectory;
+		res = runCommand("ssh " + url + " rm -rf " + remoteDir, setup.silent);
+		assert_eq(res, 0) << "Failed to delete remote directory " << remoteDir << " on " << url;
 
 		return res;
 	}
 
+	int MPIExecutor::run(const std::string& binary, const ExecutionSetup& setup) const {
+		int res = 0;
 
-	ExecutorPtr makeRemoteExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir,
-	                               RemoteExecutor::JobSystem system) {
-		return std::make_shared<RemoteExecutor>(hostname, username, remoteWorkDir, system);
+		// extract directory name
+		string dirName = boost::filesystem::path(setup.outputDirectory).filename().string();
+		boost::uuids::uuid u = uuidGen();
+		dirName += toString(u);
+		string newBinaryLocation = binary;
+
+		const std::string remoteWorkDir = "/tmp/" + dirName;
+		if(setup.requiresBinaryCopying) { newBinaryLocation = remoteWorkDir + "/" + boost::filesystem::path(binary).filename().string(); }
+
+		std::stringstream ss;
+		// copy binary to all hosts
+		for(const auto& h : setup.machine.getNodes()) {
+			res = runCommand("ssh " + h.getHostname() + " mkdir -p " + remoteWorkDir, setup.silent);
+			assert_eq(res, 0) << "Failed to create directory " << remoteWorkDir << " on " << h.getHostname();
+			if(setup.requiresBinaryCopying) {
+				res = runCommand("scp -q " + binary + " " + h.getHostname() + ":" + remoteWorkDir, setup.silent);
+				assert_eq(res, 0) << "Failed to copy binary " << binary << " to " << h.getHostname() << ":" << remoteWorkDir;
+				if(setup.requiresRawIOCapabilities) {
+					res = runCommand("ssh -q -tt " + h.getHostname() + " sudo setcap cap_sys_rawio=ep " + newBinaryLocation, setup.silent);
+					assert_eq(res, 0) << "Failed to set rawio capabilities for binary " << newBinaryLocation << " on " << h.getHostname();
+				}
+			}
+		}
+
+		std::vector<std::string> hosts;
+		for(const auto& n : setup.machine.getNodes()) {
+			for(unsigned i = 0; i < n.getNumCores(); ++i) {
+				hosts.push_back(n.getHostname());
+			}
+		}
+		std::stringstream mpirun;
+		mpirun << "mpirun -wdir " << remoteWorkDir << " -np " << setup.machine.getNumCores() << " --map-by core --host " << join(",", hosts);
+		// forward all environment variables
+		for(const auto& e : setup.env) {
+			mpirun << " -x " << e.first;
+		}
+		ss << " " << setupEnv(setup.env) << " " << mpirun.str() << " " << newBinaryLocation << " " << join(" ", setup.params);
+
+		// run mpi program
+		res = runCommand(ss.str(), setup.silent);
+		assert_eq(res, 0) << "Failed to run MPI job";
+
+		// collect generated files
+		for(const auto& h : setup.machine.getNodes()) {
+			// use rsync since it is as fast as scp, does not fail on empty directories and supports moving instead of copying
+			res = runCommand("rsync --whole-file --quiet --archive --remove-source-files " + h.getHostname() + ":" + remoteWorkDir + "/ " + setup.outputDirectory, setup.silent);
+			assert_eq(res, 0) << "Failed to move generated files with rsync from " << remoteWorkDir << " on " << h.getHostname() << " to " << setup.outputDirectory;
+			res = runCommand("ssh " + h.getHostname() + " rm -rf " + remoteWorkDir, setup.silent);
+			assert_eq(res, 0) << "Failed to delete remote directory " << remoteWorkDir << " on " << h.getHostname();
+		}
+
+		return res;
 	}
 
-	ExecutorPtr makeRemoteSSHExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
-		return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::SSH);
+	ExecutorPtr makeRemoteExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
+		return std::make_shared<RemoteExecutor>(hostname, username, remoteWorkDir);
 	}
 
-	ExecutorPtr makeRemoteSGEExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
-		return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::SGE);
-	}
-
-	ExecutorPtr makeRemotePBSExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
-		return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::PBS);
-	}
-
-	ExecutorPtr makeRemoteLLExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
-		return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::LL);
-	}
-
+	ExecutorPtr makeMPIExecutor(const std::string& wrapper) { return std::make_shared<MPIExecutor>(wrapper); }
 
 } // end namespace measure
 } // end namespace driver

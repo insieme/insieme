@@ -203,7 +203,7 @@ namespace backend {
 		}
 
 		// insert into data structures
-		__attr_unused auto res = names->insert(make_pair(ptr, name));
+		__insieme_unused auto res = names->insert(make_pair(ptr, name));
 
 		// disabled since name collisions might happen with overloaded member functions!
 		// assert_true((res.second || res.first->second == name)) << "Tried to alter name after already being bound!";

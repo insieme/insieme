@@ -210,6 +210,10 @@ namespace conversion {
 
 		const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
+		// first, translate class decl if that hasn't happened yet
+		auto record = callExpr->getRecordDecl();
+		if(record) converter.getDeclConverter()->VisitRecordDecl(record);
+
 		if(!methodDecl) {
 			// member function pointer call
 			frontend_assert(false) << "Member function pointer call not implemented";
@@ -239,6 +243,16 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const clang::CXXOperatorCallExpr* callExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(callExpr, retIr);
+
+		// first, translate class decl if that hasn't happened yet
+		if(auto calleeDecl = callExpr->getCalleeDecl()) {
+			if(auto memDecl = llvm::dyn_cast<clang::CXXMethodDecl>(calleeDecl)) {
+				auto thisType = memDecl->getThisType(converter.getCompiler().getASTContext()).getTypePtr();
+				auto recType = llvm::dyn_cast<clang::RecordType>(llvm::dyn_cast<clang::PointerType>(thisType)->getPointeeType().getTypePtr());
+				auto recordDecl = recType->getDecl();
+				converter.getDeclConverter()->VisitRecordDecl(recordDecl);
+			}
+		}
 
 		retIr = VisitCallExpr(callExpr);
 		return retIr;
@@ -441,7 +455,7 @@ namespace conversion {
 		// obtain current "this" from variable manager
 		auto thisRef = converter.getVarMan()->getThis();
 		// this is a pointer, not a reference
-		retIr = core::lang::buildPtrFromRef(converter.getIRBuilder().deref(thisRef));
+		retIr = core::lang::buildPtrFromRef(thisRef);
 
 		return retIr;
 	}
@@ -762,6 +776,26 @@ namespace conversion {
 		//return call to special constructor
 		frontend_assert(retIr) << "failed to convert std::initializer_list expression.";
 		return retIr;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//		LambdaExpr ( [](){} )
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr Converter::CXXExprConverter::VisitLambdaExpr(const clang::LambdaExpr* lExpr) {
+		core::ExpressionPtr retIr;
+		LOG_EXPR_CONVERSION(lExpr, retIr);
+
+		// gather init expressions
+		core::ExpressionList initExprs;
+		for(auto capture: lExpr->capture_inits()) {
+			initExprs.push_back(converter.convertExpr(capture));
+		}
+
+		// translate implicitly created class
+		auto genTy = converter.convertType(clang::QualType(lExpr->getLambdaClass()->getTypeForDecl(), 0)).as<core::GenericTypePtr>();
+
+		// generate init expr of the lambda type
+		return builder.initExprTemp(genTy, initExprs);
 	}
 
 } // End conversion namespace

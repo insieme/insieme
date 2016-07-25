@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -60,7 +60,7 @@ namespace extensions {
 						auto tyList = core::TypeList();
 						tyList.push_back(builder.typeVariable("a"));
 						auto type = builder.functionType(tyList, builder.getLangBasic().getInt4());
-						auto ret = builder.literal(type, insieme::frontend::utils::buildNameForFunction(funcDecl));
+						auto ret = builder.literal(type, insieme::frontend::utils::buildNameForFunction(funcDecl, converter));
 						// tell the compiler that this builtin is included somewhere else, even if it is not true
 						annotations::c::attachInclude(ret, "stdint.h");
 						return ret.as<core::ExpressionPtr>();

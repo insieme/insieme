@@ -5,9 +5,6 @@ alignof
 async
 function_type_template_arg
 init_list
-lambda
-lambda_to_funptr
-range_for
 rvalue
 stdinitlistexpr
 
@@ -19,3 +16,4 @@ stdinitlistexpr
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
++lambda

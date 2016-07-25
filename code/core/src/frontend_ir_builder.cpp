@@ -53,16 +53,16 @@ namespace core {
 		assert_true(ext.isStaticType(analysis::getReferencedType(staticVariable->getType())));
 
 		if(constant) {
-			return callExpr(refType(initValue->getType()), ext.getInitStaticConst(), staticVariable, initValue);
+			return callExpr(refType(initValue->getType()), ext.getStaticInitConst(), staticVariable, initValue);
 		} else {
-			return callExpr(refType(initValue->getType()), ext.getInitStaticLazy(), staticVariable, wrapLazy(initValue));
+			return callExpr(refType(initValue->getType()), ext.getStaticInitLazy(), staticVariable, wrapLazy(initValue));
 		}
 	}
 
 	StatementPtr FrontendIRBuilder::createStaticVariable(const LiteralPtr& staticVariable) const {
 		const lang::StaticVariableExtension& ext = getNodeManager().getLangExtension<lang::StaticVariableExtension>();
 
-		return callExpr(ext.getCreateStatic(), staticVariable);
+		return callExpr(ext.getStaticCreate(), staticVariable);
 	}
 
 

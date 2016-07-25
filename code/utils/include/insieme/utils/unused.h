@@ -38,7 +38,7 @@
  * Just defines a nicer alternative to the attribute syntax.
  */
 #ifdef __GNUC__
-#define __attr_unused __attribute__((unused))
+#define __insieme_unused __attribute__((unused))
 #else
-#define __attr_unused
+#define __insieme_unused
 #endif

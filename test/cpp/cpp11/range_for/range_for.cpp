@@ -16,4 +16,10 @@ int main(){
 
 	for (auto& x : v)
 		cout << x.a << endl;
+
+	int v2[] = {1, 2, 3};
+	for (auto& x : v2) {
+		if (x == 2) continue;
+		cout << x << endl;
+	}
 }

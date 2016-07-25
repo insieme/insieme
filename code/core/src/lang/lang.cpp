@@ -121,7 +121,7 @@ namespace {
 	};
 
 	// register the converter into the central annotation converter registry
-	__attr_unused bool reg = dump::AnnotationConverterRegister::getDefault().registerConverter<BuiltInTagConverter,BuiltInTag>();
+	__insieme_unused bool reg = dump::AnnotationConverterRegister::getDefault().registerConverter<BuiltInTagConverter,BuiltInTag>();
 
 }
 

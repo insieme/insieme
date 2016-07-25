@@ -40,6 +40,8 @@
 
 #include "insieme/utils/container_utils.h"
 
+#include "insieme/core/lang/pointer.h"
+
 namespace insieme {
 namespace frontend {
 namespace state {
@@ -47,6 +49,19 @@ namespace state {
 	VariableManager::VariableManager(Converter& converter) : converter(converter) { pushScope(false); }
 
 	core::ExpressionPtr VariableManager::lookup(const clang::VarDecl* varDecl) const {
+		// lookup in innermost lambda scope if available
+		if(lambdaScopes.size()>=1) {
+			auto f = lambdaScopes.back().find(varDecl);
+			if(f != lambdaScopes.back().cend()) {
+				// push empty lambda scope to ensure standard handling of "this" lookup (rather than getting the intercepted "this")
+				auto generator = f->second;
+				lambdaScopes.push_back(LambdaScope());
+				auto actualThis = getThis();
+				lambdaScopes.pop_back();
+				return generator(actualThis);
+			}
+		}
+
 		// lookup globals in outermost scope
 		if(varDecl->hasGlobalStorage() && !varDecl->isStaticLocal()) {
 			frontend_assert(::containsKey(storage.front().variables, varDecl)) << "Trying to look up global variable not previously declared: "
@@ -92,12 +107,27 @@ namespace state {
 		storage.back().thisExpr = thisVar;
 	}
 
-	core::ExpressionPtr VariableManager::getThis() {
+	core::ExpressionPtr VariableManager::getThis() const {
+		core::ExpressionPtr ret;
+
 		// lookup this in all applicable scopes starting from innermost
 		for(auto it = storage.crbegin(); it != storage.crend(); ++it) {
-			if(it->thisExpr) return it->thisExpr;
+			if(it->thisExpr) {
+				ret = it->thisExpr;
+				break;
+			}
 			if(!it->nested) break;
 		}
+
+		// deref once
+		ret = core::IRBuilder(ret.getNodeManager()).deref(ret);
+
+		// if in lambda with captures, use that "this"
+		if(ret && lambdaScopes.size()>=1 && lambdaScopes.back().hasThis()) {
+			ret = core::lang::buildPtrToRef(core::IRBuilder(ret.getNodeManager()).deref(lambdaScopes.back().getThisGenerator()(ret)));
+		}
+
+		if(ret) return ret;
 
 		frontend_assert(false) << "Trying to look up \"this\" variable, but not defined in any applicable scope";
 		return {};
@@ -117,6 +147,15 @@ namespace state {
 
 		frontend_assert(false) << "Trying to look up return type, but not defined";
 		return {};
+	}
+
+	void VariableManager::pushLambda(const LambdaScope& lambdaScope) {
+		lambdaScopes.push_back(lambdaScope);
+	}
+
+	void VariableManager::popLambda() {
+		frontend_assert(!lambdaScopes.empty()) << "Trying to pop lambda scope, but none open";
+		lambdaScopes.pop_back();
 	}
 
 } // end namespace state

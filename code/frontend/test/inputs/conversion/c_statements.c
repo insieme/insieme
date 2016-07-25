@@ -129,6 +129,21 @@ int main() {
 		}
 	}
 
+	#pragma test expect_ir(R"({
+			var ref<int<4>,f,f,plain> v0 = 0;
+			switch(*v0) {
+				case 0: {
+					break;
+				}
+			}
+			switch(*v0) { }
+		})")
+	{
+		int a = 0;
+		switch(a) case 0: break;
+		switch(a) a=7;
+	}
+
 	#pragma test expect_ir(R"({ var ref<int<4>,f,f> v0;
 		switch(c_style_assignment(v0, 0)) {
 			case 0: { return 5 in ref<int<4>>; }
@@ -143,17 +158,17 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({ {
-        var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
-        switch(0) {
-            default: {
-                break;
-            }
-        };
-    }; })")
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+		switch(0) {
+			default: {
+				break;
+			}
+		};
+	}; })")
 	{
 		switch(0) {
-			int a;
-			default: break;
+		int a;
+		default: break;
 		}
 	}
 
@@ -210,7 +225,7 @@ int main() {
 		}
 	}
 
-    #pragma test expect_ir("{ var ref<int<4>,f,f> v0 = 0; { while(true) { break; gen_post_inc(v0); } } }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v0 = 0; { while(true) { break; gen_post_inc(v0); } } }")
 	{
 		int i = 0;
 		for(;; i++) {
@@ -226,7 +241,7 @@ int main() {
 		}
 	}
 
-    #pragma test expect_ir("{ { while(true) { break; } } }")
+	#pragma test expect_ir("{ { while(true) { break; } } }")
 	{
 		for(;;) {
 			break;

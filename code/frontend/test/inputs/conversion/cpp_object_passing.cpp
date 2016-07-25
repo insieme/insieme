@@ -87,7 +87,7 @@ void validateTrivial() {
 
 	// pass temporary
 	#pragma test expect_ir(STRUCT_TRIVIAL,CONSUME_TRIVIAL, R"(
-		{ IMP_consume_struct_Trivial_returns_void(*<ref<IMP_Trivial>> {12}); }
+		{ IMP_consume_struct_Trivial_returns_void(<ref<IMP_Trivial>>(ref_decl(type_lit(ref<IMP_Trivial,f,f,plain>))){12}); }
 	)")
 	{ consume<T>({12}); }
 
