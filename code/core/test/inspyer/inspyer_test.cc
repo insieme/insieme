@@ -38,13 +38,13 @@
 
 #include "insieme/core/inspyer/inspyer.h"
 
-#include "insieme/core/ir_address.h"
-#include "insieme/core/ir_builder.h"
+#include <sstream>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
-#include <sstream>
+#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_builder.h"
 
 using namespace std;
 using namespace boost::property_tree;

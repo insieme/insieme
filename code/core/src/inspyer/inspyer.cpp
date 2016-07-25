@@ -36,12 +36,13 @@
 
 #include "insieme/core/inspyer/inspyer.h"
 
-#include "insieme/core/dump/json_dump.h"
-#include "insieme/utils/assert.h"
-#include "insieme/utils/string_utils.h"
-
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+
+#include "insieme/core/dump/json_dump.h"
+
+#include "insieme/utils/assert.h"
+#include "insieme/utils/string_utils.h"
 
 using namespace boost::property_tree;
 using namespace std;
