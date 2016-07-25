@@ -51,6 +51,27 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
+	namespace {
+		template<typename BodyGenerator>
+		void buildMemberFunction(Converter& converter, const core::LiteralPtr& literal, const BodyGenerator bodyGenerator) {
+			auto& builder = converter.getIRBuilder();
+
+			// extract function type and param types
+			auto funType = literal->getType().as<core::FunctionTypePtr>();
+			core::VariableList params;
+			for(const core::TypePtr& type : funType->getParameterTypes()) {
+				params.push_back(builder.variable(core::transform::materialize(type)));
+			}
+
+			// generate the body
+			auto body = bodyGenerator(params);
+
+			// add the ctor/dtor implementation to the IR TU
+			auto lambda = builder.lambdaExpr(funType, params, body);
+			converter.getIRTranslationUnit().addFunction(literal, lambda);
+		}
+	}
+
 	core::ExpressionPtr convertCxxStdInitializerListExpr(Converter& converter, const clang::CXXStdInitializerListExpr* stdInitListExpr) {
 		core::ExpressionPtr retIr;
 
@@ -60,13 +81,6 @@ namespace conversion {
 
 		auto buildMemberAccess = [&builder, &refExt](const core::ExpressionPtr& thisVar, const std::string memberName, const core::TypePtr& memberType) {
 			return builder.callExpr(refExt.getRefMemberAccess(), builder.deref(thisVar), builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
-		};
-		auto getParams = [&builder](const core::FunctionTypePtr& funType) {
-			core::VariableList params;
-			for(const core::TypePtr& type : funType->getParameterTypes()) {
-				params.push_back(builder.variable(core::transform::materialize(type)));
-			}
-			return params;
 		};
 
 		//convert sub expression and types
@@ -92,69 +106,48 @@ namespace conversion {
 			// this will also be the ctor which get's called on creation and thus we return a complete call to it
 			if(ctorDecl->getNumParams() == 2) {
 				// ctor decl: constexpr initializer_list<T>(T* x, size_t s)
+				buildMemberFunction(converter, ctorLiteral, [&](const core::VariableList params) {
+					// store member field pointer type for later use
+					ptrType = core::analysis::getReferencedType(params[1]);
 
-				// extract function type and param types
-				auto funType = ctorLiteral->getType().as<core::FunctionTypePtr>();
-				core::VariableList params = getParams(funType);
-
-				// store member field pointer type for later use
-				ptrType = core::analysis::getReferencedType(params[1]);
-
-				// build a symbol table to parse the body, as we can't really use the parser to fully generate the ctor
-				auto memberType = core::lang::PointerType(ptrType).getElementType();
-				std::map<string, core::NodePtr> symbols {
-					{ "_m_array", buildMemberAccess(params[0], "_M_array", ptrType) },
-					{ "_m_length", buildMemberAccess(params[0], "_M_len", lengthFieldType) },
-					{ "_member_type", memberType },
-					{ "_array", builder.deref(params[1]) },
-					{ "_length", builder.deref(params[2]) },
-				};
-				// check whether we need to copy the elements or can simply assign them
-				bool copyElements = false;
-				auto tuIt = converter.getIRTranslationUnit().getTypes().find(memberType.as<core::GenericTypePtr>());
-				if(tuIt != converter.getIRTranslationUnit().getTypes().cend() && !core::analysis::isTrivial(tuIt->second)) {
-					copyElements = true;
-				}
-				auto body = builder.parseStmt(std::string("") + R"(
-					{
-						var uint<inf> array_len = num_cast(_length,type_lit(uint<inf>));
-						_m_array = ptr_const_cast(ptr_from_array(ref_new(type_lit(array<_member_type,#array_len>))),type_lit(t));
-						_m_length = _length;
-						for(int<8> it = 0l .. num_cast(_length, type_lit(int<8>))) { )" +
-						(copyElements ?
-								R"( ref_assign(ptr_subscript(ptr_const_cast(*_m_array, type_lit(f)), it), ref_cast(ptr_subscript(_array, it), type_lit(t), type_lit(f), type_lit(cpp_ref))); )" :
-								R"( ptr_subscript(ptr_const_cast(*_m_array, type_lit(f)), it) = *ptr_subscript(_array, it); )") + R"(
+					// build a symbol table to parse the body, as we can't really use the parser to fully generate the ctor
+					auto memberType = core::lang::PointerType(ptrType).getElementType();
+					// check whether we need to copy the elements or can simply assign them
+					bool copyElements = false;
+					auto tuIt = converter.getIRTranslationUnit().getTypes().find(memberType.as<core::GenericTypePtr>());
+					if(tuIt != converter.getIRTranslationUnit().getTypes().cend() && !core::analysis::isTrivial(tuIt->second)) copyElements = true;
+					// parse the body using a symbol table, as we can't really write the full IR
+					return builder.parseStmt(std::string("") + R"(
+						{
+							var uint<inf> array_len = num_cast(_length,type_lit(uint<inf>));
+							_m_array = ptr_const_cast(ptr_from_array(ref_new(type_lit(array<_member_type,#array_len>))),type_lit(t));
+							_m_length = _length;
+							for(int<8> it = 0l .. num_cast(_length, type_lit(int<8>))) { )" +
+							(copyElements ?
+									R"( ref_assign(ptr_subscript(ptr_const_cast(*_m_array, type_lit(f)), it), ref_cast(ptr_subscript(_array, it), type_lit(t), type_lit(f), type_lit(cpp_ref))); )" :
+									R"( ptr_subscript(ptr_const_cast(*_m_array, type_lit(f)), it) = *ptr_subscript(_array, it); )") + R"(
+							}
 						}
-					}
-				)", symbols);
-
-				// add the ctor implementation to the IR TU
-				auto lambda = builder.lambdaExpr(funType, params, body);
-				converter.getIRTranslationUnit().addFunction(ctorLiteral, lambda);
+					)", {
+						{ "_m_array", buildMemberAccess(params[0], "_M_array", ptrType) },
+						{ "_m_length", buildMemberAccess(params[0], "_M_len", lengthFieldType) },
+						{ "_member_type", memberType },
+						{ "_array", builder.deref(params[1]) },
+						{ "_length", builder.deref(params[2]) },
+					});
+				});
 
 				// build call to the specific constructor
 				core::ExpressionList args { thisVar, core::lang::buildPtrFromArray(subEx), builder.numericCast(builder.uintLit(numElements), lengthFieldType) };
-				retIr = builder.callExpr(funType->getReturnType(), ctorLiteral, args);
+				retIr = builder.callExpr(ctorLiteral->getType().as<core::FunctionTypePtr>()->getReturnType(), ctorLiteral, args);
 
 				// The default ctor will just initialize the length to zero in it's body
 			} else if(ctorDecl->isDefaultConstructor()) {
 				// ctor decl: constexpr initializer_list<T>()
-
-				// extract function type and param types
-				auto funType = ctorLiteral->getType().as<core::FunctionTypePtr>();
-				core::VariableList params = getParams(funType);
-
-				// build a symbol table to parse the body, as we can't really use the parser to fully generate the ctor
-				std::map<string, core::NodePtr> symbols {
-					{ "_m_length", buildMemberAccess(params[0], "_M_len", lengthFieldType) },
-				};
-				auto body = builder.parseStmt(R"({
-					_m_length = 0ul;
-				})", symbols);
-
-				// add the ctor implementation to the IR TU
-				auto lambda = builder.lambdaExpr(funType, params, body);
-				converter.getIRTranslationUnit().addFunction(ctorLiteral, lambda);
+				buildMemberFunction(converter, ctorLiteral, [&](const core::VariableList params) {
+					// parse the body using a symbol table, as we can't really write the full IR
+					return builder.parseStmt(R"({ _m_length = 0ul; })", { { "_m_length", buildMemberAccess(params[0], "_M_len", lengthFieldType) } });
+				});
 			}
 		}
 
@@ -163,22 +156,18 @@ namespace conversion {
 		auto dtorThisType = builder.refType(initListIRType);
 		auto funType = builder.functionType(toVector<core::TypePtr>(dtorThisType), dtorThisType, core::FunctionKind::FK_DESTRUCTOR);
 		core::LiteralPtr dtorLiteral = builder.getLiteralForDestructor(funType);
-		core::VariableList params = getParams(funType);
 
-		// build a symbol table to parse the body, as we can't really use the parser to fully generate the dtor
-		std::map<string, core::NodePtr> symbols {
-			{ "_m_array", buildMemberAccess(params[0], "_M_array", ptrType) },
-			{ "_m_length", buildMemberAccess(params[0], "_M_len", lengthFieldType) },
-		};
-		auto body = builder.parseStmt(R"({
-			if(*_m_length != 0ul) {
-				ref_delete(ptr_to_ref(ptr_const_cast(*_m_array, type_lit(f))));
-			}
-		})", symbols);
-
-		// add the dtor implementation to the IR TU
-		auto lam = builder.lambdaExpr(funType, params, body);
-		converter.getIRTranslationUnit().addFunction(dtorLiteral, lam);
+		buildMemberFunction(converter, dtorLiteral, [&](const core::VariableList params) {
+			// parse the body using a symbol table, as we can't really write the full IR
+			return builder.parseStmt(R"({
+				if(*_m_length != 0ul) {
+					ref_delete(ptr_to_ref(ptr_const_cast(*_m_array, type_lit(f))));
+				}
+			})", {
+				{ "_m_array", buildMemberAccess(params[0], "_M_array", ptrType) },
+				{ "_m_length", buildMemberAccess(params[0], "_M_len", lengthFieldType) },
+			});
+		});
 
 		// now we have to replace the whole type in the IrTU
 		auto key = initListIRType.as<core::GenericTypePtr>();
