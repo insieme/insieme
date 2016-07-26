@@ -381,7 +381,7 @@ int main(int argc, char** argv) {
 	measurementSetup.compiler.addFlag("--std=gnu99");
 	measurementSetup.compiler.addFlag("-DIRT_USE_MPI");
 	measurementSetup.compiler.addFlag("-DIRT_USE_PAPI");
-	measurementSetup.compiler.addFlag("-O0");
+	measurementSetup.compiler.addFlag("-O3");
 	measurementSetup.compiler.addFlag(string("-Wl,-rpath,") + utils::getPapiRootDir() + "lib -lpapi -lpfm");
 
 	// compile binary
@@ -397,16 +397,24 @@ int main(int argc, char** argv) {
 	const unsigned firstParam = 256;
 	//const unsigned secondParam = 128;
 
-	for(unsigned i = 1; i <= 1; ++i) {
-		problemSizes.push_back(firstParam * i/*, secondParam*/);
+	for(unsigned i = 8; i <= 8; ++i) {
+		problemSizes.push_back(firstParam * std::pow(2, i)/*, secondParam*/);
 	}
 
-	//machines.push_back(dm::Machine("ortler", { dm::Node("o5", 3) }));
-	machines.push_back(dm::Machine("ortler", { dm::Node("o4", 5), dm::Node("o5", 4) }));
-	//machines.push_back(dm::Machine("ortler", { dm::Node("o5", 9) }));
-	//machines.push_back(dm::Machine("ortler", { dm::Node("o4", 3) }));
-	//machines.push_back(dm::Machine("ortler", { dm::Node("o5", 17) }));
-	//machines.push_back(dm::Machine("ortler", { dm::Node("o4", 16), dm::Node("o5", 17) }));
+	machines.push_back(dm::Machine("ortler", { dm::Node("o4", 1), dm::Node("o5", 1) }));
+	machines.push_back(dm::Machine("ortler", { dm::Node("o4", 2), dm::Node("o5", 2) }));
+	machines.push_back(dm::Machine("ortler", { dm::Node("o4", 4), dm::Node("o5", 4) }));
+	machines.push_back(dm::Machine("ortler", { dm::Node("o4", 8), dm::Node("o5", 8) }));
+	machines.push_back(dm::Machine("ortler", { dm::Node("o4", 16), dm::Node("o5", 16) }));
+	machines.push_back(dm::Machine("ortler", { dm::Node("o4", 32), dm::Node("o5", 32) }));
+
+	//machines.push_back(dm::Machine("ortler", { dm::Node("o4", 8), dm::Node("o5", 8) }));
+
+	//machines.push_back(dm::Machine("ortler", { dm::Node("o5", 2) }));
+	//machines.push_back(dm::Machine("ortler", { dm::Node("o5", 4) }));
+	//machines.push_back(dm::Machine("ortler", { dm::Node("o5", 8) }));
+	//machines.push_back(dm::Machine("ortler", { dm::Node("o5", 16) }));
+	//machines.push_back(dm::Machine("ortler", { dm::Node("o5", 32) }));
 
 	map<machineSizeType, map<problemType, resultType>> overallResults;
 
@@ -422,15 +430,15 @@ int main(int argc, char** argv) {
 			// set problem sizes
 			measurementSetup.executionSetup.params = { toString(problemSize), "128" };
 			measurementSetup.executionSetup.machine = machine;
-			measurementSetup.executor = dm::makeMPIExecutor();
+			measurementSetup.executor = dm::makeMPIExecutor("--bind-to core --map-by core");
+			std::cout << measurementSetup << std::endl;
 
-			const unsigned numRuns = 1;
+			const unsigned numRuns = 5;
 
 			resultType result;
 
 			while(result.size() < numRuns) {
 				measurementSetup.numRuns = numRuns - result.size();
-				LOG(INFO) << measurementSetup << "\n";
 				timer = insieme::utils::Timer("Running measurement");
 				const resultType remainingResults = dm::measure(binary, metrics, measurementSetup);
 				timer.stop(); LOG(INFO) << timer;

@@ -166,7 +166,7 @@ namespace measure {
 			}
 		}
 		std::stringstream mpirun;
-		mpirun << "mpirun -wdir " << remoteWorkDir << " -np " << setup.machine.getNumCores() << " --map-by core --host " << join(",", hosts);
+		mpirun << "mpirun -wdir " << remoteWorkDir << " -np " << setup.machine.getNumCores() << " " << options << " --host " << join(",", hosts);
 		// forward all environment variables
 		for(const auto& e : setup.env) {
 			mpirun << " -x " << e.first;
@@ -193,7 +193,7 @@ namespace measure {
 		return std::make_shared<RemoteExecutor>(hostname, username, remoteWorkDir);
 	}
 
-	ExecutorPtr makeMPIExecutor(const std::string& wrapper) { return std::make_shared<MPIExecutor>(wrapper); }
+	ExecutorPtr makeMPIExecutor(const std::string& options) { return std::make_shared<MPIExecutor>(options); }
 
 } // end namespace measure
 } // end namespace driver
