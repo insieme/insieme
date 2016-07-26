@@ -68,19 +68,27 @@ int main() {
 		def struct IMP_std_colon__colon_initializer_list_int {
 			_M_array : ptr<int<4>,t,f>;
 			_M_len : uint<8>;
+			_M_original : bool;
 			ctor function () {
 				(this)._M_len = 0ul;
+				(this)._M_original = true;
+			}
+			ctor function (v1 : ref<IMP_std_colon__colon_initializer_list_int,t,f,cpp_ref>) {
+				(this)._M_array = *v1._M_array;
+				(this)._M_len = *v1._M_len;
+				(this)._M_original = false;
 			}
 			ctor function (v1 : ref<ptr<int<4>,t,f>,f,f,plain>, v2 : ref<uint<8>,f,f,plain>) {
 				var uint<inf> v3 = num_cast(*v2, type_lit(uint<inf>));
 				(this)._M_array = ptr_const_cast(ptr_from_array(ref_new(type_lit(array<int<4>,#v3>))), type_lit(t));
 				(this)._M_len = *v2;
+				(this)._M_original = true;
 				for( int<8> v4 = 0l .. num_cast(*v2, type_lit(int<8>)) : 1l) {
 					ptr_subscript(ptr_const_cast(*(this)._M_array, type_lit(f)), v4) = *ptr_subscript(*v1, v4);
 				}
 			}
 			dtor function () {
-				if(*(this)._M_len!=0ul) {
+				if(*(this)._M_original && *(this)._M_len!=0ul) {
 					ref_delete(ptr_to_ref(ptr_const_cast(*(this)._M_array, type_lit(f))));
 				}
 			}
@@ -108,19 +116,27 @@ int main() {
 		def struct IMP_std_colon__colon_initializer_list_int {
 			_M_array : ptr<int<4>,t,f>;
 			_M_len : uint<8>;
+			_M_original : bool;
 			ctor function () {
 				(this)._M_len = 0ul;
+				(this)._M_original = true;
+			}
+			ctor function (v1 : ref<IMP_std_colon__colon_initializer_list_int,t,f,cpp_ref>) {
+				(this)._M_array = *v1._M_array;
+				(this)._M_len = *v1._M_len;
+				(this)._M_original = false;
 			}
 			ctor function (v1 : ref<ptr<int<4>,t,f>,f,f,plain>, v2 : ref<uint<8>,f,f,plain>) {
 				var uint<inf> v3 = num_cast(*v2, type_lit(uint<inf>));
 				(this)._M_array = ptr_const_cast(ptr_from_array(ref_new(type_lit(array<int<4>,#v3>))), type_lit(t));
 				(this)._M_len = *v2;
+				(this)._M_original = true;
 				for( int<8> v4 = 0l .. num_cast(*v2, type_lit(int<8>)) : 1l) {
 					ptr_subscript(ptr_const_cast(*(this)._M_array, type_lit(f)), v4) = *ptr_subscript(*v1, v4);
 				}
 			}
 			dtor function () {
-				if(*(this)._M_len!=0ul) {
+				if(*(this)._M_original && *(this)._M_len!=0ul) {
 					ref_delete(ptr_to_ref(ptr_const_cast(*(this)._M_array, type_lit(f))));
 				}
 			}
@@ -163,19 +179,27 @@ int main() {
 		def struct IMP_std_colon__colon_initializer_list_int {
 			_M_array : ptr<int<4>,t,f>;
 			_M_len : uint<8>;
+			_M_original : bool;
 			ctor function () {
 				(this)._M_len = 0ul;
+				(this)._M_original = true;
+			}
+			ctor function (v1 : ref<IMP_std_colon__colon_initializer_list_int,t,f,cpp_ref>) {
+				(this)._M_array = *v1._M_array;
+				(this)._M_len = *v1._M_len;
+				(this)._M_original = false;
 			}
 			ctor function (v1 : ref<ptr<int<4>,t,f>,f,f,plain>, v2 : ref<uint<8>,f,f,plain>) {
 				var uint<inf> v3 = num_cast(*v2, type_lit(uint<inf>));
 				(this)._M_array = ptr_const_cast(ptr_from_array(ref_new(type_lit(array<int<4>,#v3>))), type_lit(t));
 				(this)._M_len = *v2;
+				(this)._M_original = true;
 				for( int<8> v4 = 0l .. num_cast(*v2, type_lit(int<8>)) : 1l) {
 					ptr_subscript(ptr_const_cast(*(this)._M_array, type_lit(f)), v4) = *ptr_subscript(*v1, v4);
 				}
 			}
 			dtor function () {
-				if(*(this)._M_len!=0ul) {
+				if(*(this)._M_original && *(this)._M_len!=0ul) {
 					ref_delete(ptr_to_ref(ptr_const_cast(*(this)._M_array, type_lit(f))));
 				}
 			}
@@ -206,19 +230,27 @@ int main() {
 		def struct IMP_std_colon__colon_initializer_list_struct_TestObj {
 			_M_array : ptr<IMP_TestObj,t,f>;
 			_M_len : uint<8>;
+			_M_original : bool;
 			ctor function () {
 				(this)._M_len = 0ul;
+				(this)._M_original = true;
+			}
+			ctor function (v1 : ref<IMP_std_colon__colon_initializer_list_struct_TestObj,t,f,cpp_ref>) {
+				(this)._M_array = *v1._M_array;
+				(this)._M_len = *v1._M_len;
+				(this)._M_original = false;
 			}
 			ctor function (v1 : ref<ptr<IMP_TestObj,t,f>,f,f,plain>, v2 : ref<uint<8>,f,f,plain>) {
 				var uint<inf> v3 = num_cast(*v2, type_lit(uint<inf>));
 				(this)._M_array = ptr_const_cast(ptr_from_array(ref_new(type_lit(array<IMP_TestObj,#v3>))), type_lit(t));
 				(this)._M_len = *v2;
+				(this)._M_original = true;
 				for( int<8> v4 = 0l .. num_cast(*v2, type_lit(int<8>)) : 1l) {
 					ref_assign(ptr_subscript(ptr_const_cast(*(this)._M_array, type_lit(f)), v4), ref_cast(ptr_subscript(*v1, v4), type_lit(t), type_lit(f), type_lit(cpp_ref)));
 				}
 			}
 			dtor function () {
-				if(*(this)._M_len!=0ul) {
+				if(*(this)._M_original && *(this)._M_len!=0ul) {
 					ref_delete(ptr_to_ref(ptr_const_cast(*(this)._M_array, type_lit(f))));
 				}
 			}
