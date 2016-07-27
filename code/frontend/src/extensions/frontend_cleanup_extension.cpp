@@ -208,12 +208,16 @@ namespace extensions {
 		ProgramPtr replaceStdInitListCopies(ProgramPtr prog) {
 			auto mangledName = insieme::utils::mangle("std::initializer_list");
 			auto& mgr = prog->getNodeManager();
+			auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
 			core::IRBuilder builder(mgr);
 			return core::transform::transformBottomUpGen(prog, [&](const core::DeclarationPtr& decl) {
 				const auto& type = decl->getType();
 				const auto& expr = decl->getInitialization();
 
-				if(core::lang::isPlainReference(type) && core::lang::isReference(expr)) {
+				// add ref_casts to force copy construction of init_lists, since this is implicit in cpp
+				// however, do not copy construct in case we are just creating a new init_list right here
+				if(core::lang::isPlainReference(type) && core::lang::isReference(expr)
+						&& !(core::analysis::isConstructorCall(expr) && refExt.isCallOfRefDecl(core::analysis::getArgument(expr, 0)))) {
 					auto elementType = core::analysis::getReferencedType(type);
 					if(auto tagT = elementType.isa<core::TagTypePtr>()) {
 						if(boost::starts_with(tagT->getName()->getValue(), mangledName)) {
