@@ -34,11 +34,37 @@
  * regarding third party software licenses.
  */
 
-/**
- * Just defines a nicer alternative to the attribute syntax.
- */
-#ifdef __GNUC__
-#define __insieme_unused __attribute__((unused))
-#else
-#define __insieme_unused
-#endif
+#pragma once
+
+#include <ostream>
+#include <istream>
+
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/dump/dump.h"
+#include "insieme/core/dump/annotations.h"
+
+#include "insieme/utils/printable.h"
+
+
+namespace insieme {
+namespace core {
+namespace dump {
+
+namespace json {
+
+	/**
+	 * Writes a binary encoding of the given IR node into the given output stream.
+	 *
+	 * @param out the stream to be writing to
+	 * @param ir the code fragment to be written
+	 * @param infoAnnotator provides extra information for individual addresses -- no information by default
+	 */
+	void dumpIR(std::ostream& out, const NodePtr& ir, const std::function<std::string(NodeAddress)>& infoAnnotator = [](const NodeAddress&)->std::string { return ""; });
+
+
+} // end namespace json
+
+} // end namespace dump
+} // end namespace core
+} // end namespace insieme

@@ -34,11 +34,54 @@
  * regarding third party software licenses.
  */
 
-/**
- * Just defines a nicer alternative to the attribute syntax.
- */
-#ifdef __GNUC__
-#define __insieme_unused __attribute__((unused))
-#else
-#define __insieme_unused
-#endif
+#pragma once
+
+#include "insieme/core/ir_address.h"
+
+#include <map>
+#include <ostream>
+#include <set>
+#include <string>
+
+namespace insieme {
+namespace core {
+namespace inspyer {
+
+	class MetaGenerator {
+	  private:
+		NodePtr root;
+		std::set<NodeAddress> bookmarks;
+		std::set<NodeAddress> expands;
+		std::set<NodeAddress> highlights;
+		std::map<NodeAddress, std::string> labels;
+		std::map<NodeAddress, std::string> bodies;
+
+		void checkRoot(const NodePtr root);
+
+	  public:
+		explicit MetaGenerator(const NodePtr root);
+		void addBookmark(const NodeAddress addr);
+		void addExpand(const NodeAddress addr);
+		void addHighlight(const NodeAddress addr);
+		void addLabel(const NodeAddress addr, const std::string label);
+		void addBody(const NodeAddress addr, const std::string body);
+		void dump(std::ostream& out);
+	};
+
+	void addBookmark(const NodeAddress addr);
+
+	void addExpand(const NodeAddress addr);
+
+	void addHighlight(const NodeAddress addr);
+
+	void addLabel(const NodeAddress addr, const std::string label);
+
+	void addBody(const NodeAddress addr, const std::string body);
+
+	void dumpTree(std::ostream& out, const NodePtr root);
+
+	void dumpMeta(std::ostream& out);
+
+} // end namespace inspyer
+} // end namespace core
+} // end namespace insieme

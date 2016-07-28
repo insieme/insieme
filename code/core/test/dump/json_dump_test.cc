@@ -34,11 +34,36 @@
  * regarding third party software licenses.
  */
 
-/**
- * Just defines a nicer alternative to the attribute syntax.
- */
-#ifdef __GNUC__
-#define __insieme_unused __attribute__((unused))
-#else
-#define __insieme_unused
-#endif
+#include <gtest/gtest.h>
+
+#include "insieme/core/dump/json_dump.h"
+
+#include <iostream>
+
+#include "insieme/core/ir_builder.h"
+
+using namespace std;
+
+namespace insieme {
+namespace core {
+namespace dump {
+namespace json {
+
+	TEST(JsonDump, Store) {
+		// create a code fragment using manager A
+		NodeManager managerA;
+		IRBuilder builder(managerA);
+
+		// print the plain json dump
+		json::dumpIR(std::cout, builder.parseType("int<4>"));
+
+		// print the json dump + extra information
+		json::dumpIR(std::cout, builder.parseType("int<4>"), [](const NodeAddress& cur)->std::string {
+			return (cur.isa<TypePtr>()) ? "TYPE!" : "";
+		});
+	}
+
+} // end namespace json
+} // end namespace dump
+} // end namespace core
+} // end namespace insieme
