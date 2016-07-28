@@ -212,16 +212,19 @@ namespace extensions {
 			core::IRBuilder builder(mgr);
 			return core::transform::transformBottomUpGen(prog, [&](const core::DeclarationPtr& decl) {
 				const auto& type = decl->getType();
-				const auto& expr = decl->getInitialization();
+				auto expr = decl->getInitialization();
 
 				// add ref_casts to force copy construction of init_lists, since this is implicit in cpp
-				// however, do not copy construct in case we are just creating a new init_list right here
-				if(core::lang::isPlainReference(type) && core::lang::isReference(expr)
-						&& !(core::analysis::isConstructorCall(expr) && refExt.isCallOfRefDecl(core::analysis::getArgument(expr, 0)))) {
+				if(core::lang::isPlainReference(type) && core::lang::isReference(expr)) {
 					auto elementType = core::analysis::getReferencedType(type);
 					if(auto tagT = elementType.isa<core::TagTypePtr>()) {
 						if(boost::starts_with(tagT->getName()->getValue(), mangledName)) {
 							auto targetType = core::lang::ReferenceType::create(elementType, true, false, core::lang::ReferenceType::Kind::CppReference);
+							// however, replace ref_decl with ref_temp inside ctor calls which should be casted
+							if(core::analysis::isConstructorCall(expr) && refExt.isCallOfRefDecl(core::analysis::getArgument(expr, 0))) {
+								core::CallExprAddress exprAddr(expr.as<core::CallExprPtr>());
+								expr = core::transform::replaceNode(mgr, exprAddr->getArgument(0), core::lang::buildRefTemp(type)).as<core::ExpressionPtr>();
+							}
 							return builder.declaration(type, core::lang::buildRefCast(expr, targetType));
 						}
 					}

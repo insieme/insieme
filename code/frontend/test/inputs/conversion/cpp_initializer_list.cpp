@@ -124,7 +124,7 @@ int main() {
 
 	#pragma test expect_ir(int_IR, R"(
 		{
-			var ref<IMP_std_colon__colon_initializer_list_int,f,f,plain> v0 = IMP_std_colon__colon_initializer_list_int::(ref_decl(type_lit(ref<IMP_std_colon__colon_initializer_list_int,f,f,plain>)), 1, 2, 3);
+			var ref<IMP_std_colon__colon_initializer_list_int,f,f,plain> v0 = ref_cast(IMP_std_colon__colon_initializer_list_int::(ref_temp(type_lit(IMP_std_colon__colon_initializer_list_int)), 1, 2, 3), type_lit(t), type_lit(f), type_lit(cpp_ref));
 		}
 	)")
 	{
@@ -158,7 +158,7 @@ int main() {
 	#pragma test expect_ir(int_IR, R"(
 		def IMP_f = function (v0 : ref<IMP_std_colon__colon_initializer_list_int,f,f,plain>) -> unit { };
 		{
-			IMP_f(IMP_std_colon__colon_initializer_list_int::(ref_decl(type_lit(ref<IMP_std_colon__colon_initializer_list_int,f,f,plain>)), 5));
+			IMP_f(ref_cast(IMP_std_colon__colon_initializer_list_int::(ref_temp(type_lit(IMP_std_colon__colon_initializer_list_int)), 5), type_lit(t), type_lit(f), type_lit(cpp_ref)));
 		}
 	)")
 	{
@@ -229,7 +229,7 @@ int main() {
 		};
 		{
 			var ref<IMP_TestObj,f,f,plain> v0 = IMP_TestObj::(ref_decl(type_lit(ref<IMP_TestObj,f,f,plain>)));
-			IMP_T2::(ref_temp(type_lit(IMP_T2)), IMP_std_colon__colon_initializer_list_struct_TestObj::(ref_decl(type_lit(ref<IMP_std_colon__colon_initializer_list_struct_TestObj,f,f,plain>)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))));
+			IMP_T2::(ref_temp(type_lit(IMP_T2)), ref_cast(IMP_std_colon__colon_initializer_list_struct_TestObj::(ref_temp(type_lit(IMP_std_colon__colon_initializer_list_struct_TestObj)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))), type_lit(t), type_lit(f), type_lit(cpp_ref)));
 		}
 	)")
 	{
