@@ -30,6 +30,14 @@ struct TestObj {
 	~TestObj() {
 		std::cout << "Destroy TestObj" << std::endl;
 	}
+	TestObj& operator= (const TestObj& other) {
+		std::cout << "Copy assign TestObj" << std::endl;
+		return *this;
+	}
+	TestObj& operator= (TestObj&& other) {
+		std::cout << "Move assign TestObj" << std::endl;
+		return *this;
+	}
 };
 
 struct T2 {

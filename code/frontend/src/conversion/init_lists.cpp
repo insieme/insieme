@@ -264,6 +264,7 @@ namespace conversion {
 		                                    oldRecord->getPureVirtualMemberFunctions());
 		converter.getIRTranslationUnit().replaceType(key, newRecord);
 
+		if(stdInitListExpr->isRValue()) retIr = builder.deref(retIr);
 		return retIr;
 	}
 

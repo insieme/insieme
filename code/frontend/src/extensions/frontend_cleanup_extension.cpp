@@ -215,11 +215,12 @@ namespace extensions {
 				auto expr = decl->getInitialization();
 
 				// add ref_casts to force copy construction of init_lists, since this is implicit in cpp
-				if(core::lang::isPlainReference(type) && core::lang::isReference(expr)) {
-					auto elementType = core::analysis::getReferencedType(type);
+				if(core::lang::isPlainReference(type) && refExt.isCallOfRefDeref(expr)) {
+					auto elementType = expr->getType();
 					if(auto tagT = elementType.isa<core::TagTypePtr>()) {
 						if(boost::starts_with(tagT->getName()->getValue(), mangledName)) {
 							auto targetType = core::lang::ReferenceType::create(elementType, true, false, core::lang::ReferenceType::Kind::CppReference);
+							expr = core::analysis::getArgument(expr, 0);
 							// however, replace ref_decl with ref_temp inside ctor calls which should be casted
 							if(core::analysis::isConstructorCall(expr) && refExt.isCallOfRefDecl(core::analysis::getArgument(expr, 0))) {
 								core::CallExprAddress exprAddr(expr.as<core::CallExprPtr>());
