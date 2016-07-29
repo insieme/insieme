@@ -297,7 +297,7 @@ namespace c_ast {
 	}
 
 	inline MemberCallPtr memberCall(NodePtr obj, NodePtr fun, const vector<NodePtr>& args = vector<NodePtr>(), const vector<TypePtr>& instantiationTypes = vector<TypePtr>()) {
-		if(getPriority(obj) < 15) { obj = parentheses(obj); }
+		if(getPriority(obj) < getPriority(BinaryOperation::MemberAccess)) { obj = parentheses(obj); }
 		return fun->getManager()->create<c_ast::MemberCall>(fun, obj, args, instantiationTypes);
 	}
 
@@ -306,7 +306,7 @@ namespace c_ast {
 	}
 
 	inline DestructorCallPtr dtorCall(TypePtr classType, ExpressionPtr obj, bool isVirtual = true) {
-		if(getPriority(obj) < 15) { obj = parentheses(obj); }
+		if(getPriority(obj) < getPriority(BinaryOperation::MemberAccess)) { obj = parentheses(obj); }
 		return classType->getManager()->create<c_ast::DestructorCall>(classType, obj, isVirtual);
 	}
 
