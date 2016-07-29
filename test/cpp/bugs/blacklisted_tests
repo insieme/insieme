@@ -9,8 +9,6 @@ boost_mutex
 boost_noncopyable
 boost_regex_search
 const_type_modifier
-ctor_base_ptr
-ctor_inherit
 def_initialization
 if_decl
 indirect_member_init
