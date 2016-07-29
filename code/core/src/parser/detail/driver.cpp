@@ -1076,7 +1076,7 @@ namespace parser {
 				return nullptr;
 			}
 
-			return builder.refParent(scalarExpr, type);
+			return core::lang::buildRefParentCast(scalarExpr, type);
 		}
 
 		DeclarationStmtPtr InspireDriver::genVariableDefinition(const location& l, const TypePtr& type, const std::string name, const ExpressionPtr& init) {
