@@ -651,6 +651,12 @@ namespace backend {
 			return CONVERT_ARG(0);
 		};
 
+		res[refExt.getRefParentCast()] = OP_CONVERTER {
+			c_ast::TypePtr type = CONVERT_TYPE(call->getType());
+			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
+			return GET_TYPE_INFO(call->getType()).internalize(C_NODE_MANAGER, c_ast::cast(type, value));
+		};
+
 		// -- support narrow and expand --
 
 		res[refExt.getRefNarrow()] = OP_CONVERTER {
@@ -807,18 +813,6 @@ namespace backend {
 			// access the type
 			return c_ast::ref(c_ast::access(c_ast::derefIfNotImplicit(CONVERT_ARG(0), ARG(0)), field));
 		};
-
-
-		// -- pointer --
-
-		/*
-		        res[basic.getRefIsNull()] = OP_CONVERTER {
-		            // Operator Type:  (array<'a,1>) -> bool
-		            // generated code: X == 0
-		            auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Int32);
-		            return c_ast::eq(CONVERT_ARG(0), c_ast::lit(intType,"0"));
-		        };
-		*/
 
 		// -- others --
 
@@ -1139,28 +1133,6 @@ namespace backend {
 //			};
 //
 //			res[irppExt.getMemberPointerCheck()] = OP_CONVERTER { return CONVERT_ARG(0); };
-//
-//			res[irppExt.getStdInitListExpr()] = OP_CONVERTER {
-//				// get type of the init list expression elements
-//				const core::TypePtr type = core::analysis::getRepresentedType(ARG(1));
-//				const TypeInfo& info = GET_TYPE_INFO(type);
-//				// retrieve the list of init values
-//				auto values = (insieme::core::encoder::toValue<vector<insieme::core::ExpressionPtr>, core::encoder::DirectExprListConverter>(ARG(0)));
-//				// convert the list elements
-//				auto converted = ::transform(values, [&](const core::ExpressionPtr& cur) -> c_ast::NodePtr {
-//					c_ast::ExpressionPtr no = CONVERT_EXPR(cur);
-//					// in a bracket initalization we cannot use references, we have to use values
-//					if(c_ast::isUnaryOp(no, c_ast::UnaryOperation::Reference)) { no = c_ast::deref(no); }
-//					return no;
-//				});
-//				// create the {val1, val2, ...} init list
-//				c_ast::InitializerPtr initializer = c_ast::init(info.rValueType, converted);
-//				// avoid explicit type printing
-//				initializer->explicitType = false;
-//				std::vector<c_ast::NodePtr> args{initializer};
-//				// return the ctor call of the given type (e.g., std::vector) and the init list as argument
-//				return c_ast::ctorCall(info.rValueType, args);
-//			};
 //		}
 
 		#include "insieme/backend/operator_converter_end.inc"

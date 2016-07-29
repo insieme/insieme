@@ -1053,58 +1053,54 @@ namespace backend {
 		})
 	}
 
-	TEST(CppSnippet, DISABLED_Inheritance) {
+	TEST(CppSnippet, Inheritance) {
 		DO_TEST(R"(
-			alias int = int<4>;
-
-			def struct A {
-				x : int;
+			def struct IMP_Base {
+				a : int<4>;
+				function IMP_foo = () -> unit {
+					(this).a = 5;
+				}
 			};
-
-			def struct B : [A] {
-				y : int;
+			def struct IMP_Derived : [ public IMP_Base ] {
+				b : int<4>;
+				function IMP_bar = () -> unit {
+					ptr_to_ref(ptr_parent_cast(ptr_from_ref(this), type_lit(IMP_Base))).a = 6;
+					(this).b = 6;
+				}
 			};
-
-			def struct C : [B] {
-				z : int;
+			def struct IMP_DerivedSpecifyingFoo : [ public IMP_Derived ] {
+				c : int<4>;
+				function IMP_foo = () -> unit {
+					ptr_to_ref(ptr_parent_cast(ptr_from_ref(this), type_lit(IMP_Base))).a = 7;
+					(this).c = 7;
+				}
 			};
+			int<4> main() {
+				var ref<IMP_Base,f,f,plain> v0 = IMP_Base::(ref_decl(type_lit(ref<IMP_Base,f,f,plain>)));
+				var ref<IMP_Derived,f,f,plain> v1 = IMP_Derived::(ref_decl(type_lit(ref<IMP_Derived,f,f,plain>)));
+				var ref<IMP_DerivedSpecifyingFoo,f,f,plain> v2 = IMP_DerivedSpecifyingFoo::(ref_decl(type_lit(ref<IMP_DerivedSpecifyingFoo,f,f,plain>)));
 
-			int main() {
-				// -------- handle an instance of A --------
-				var ref<A> a;
-				a.x = 1;
+				// value
+				ref_parent_cast(v1, type_lit(IMP_Base)).IMP_foo();
 
-				// -------- handle an instance of B --------
-				var ref<B> b;
+				// pointer
+				var ref<ptr<IMP_Derived>,f,f,plain> v_ptr = ptr_from_ref(v1);
+				ptr_to_ref(ptr_parent_cast(*v_ptr, type_lit(IMP_Base))).IMP_foo();
 
-				// direct access
-				b.as(A).x = 1;
-				b.y = 2;
-
-				// indirect access of A's x
-				auto bA = b.as(A);
-				bA.x = 3;
-
-				// -------- handle an instance of C --------
-				var ref<C> c;
-
-				// access B's A's x
-				c.as(B).as(A).x = 1;
-
-				// access B's y
-				c.as(B).y = 2;
-
-				// access C's z
-				c.z = 3;
-
-				print("x = %d\n", *(c.as(B).as(A).x));
-				print("y = %d\n", *(c.as(B).y));
-				print("z = %d\n", *c.z);
+				// cpp reference
+				var ref<IMP_Derived,f,f,cpp_ref> v_cppref = v1;
+				ref_parent_cast(v_cppref, type_lit(IMP_Base)).IMP_foo();
 
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			;
+			EXPECT_PRED2(containsSubString, code, "(*(IMP_Base*)(&v1)).foo();");
+			EXPECT_PRED2(containsSubString, code, "IMP_Derived* v_ptr = &v1;");
+			EXPECT_PRED2(containsSubString, code, "(*(IMP_Base*)v_ptr).foo();");
+			EXPECT_PRED2(containsSubString, code, "IMP_Derived& v_cppref = v1;");
+			EXPECT_PRED2(containsSubString, code, "((IMP_Base&)v_cppref).foo();");
+			EXPECT_PRED2(containsSubString, code, "(*(IMP_Base*)this).a = 6;");
+			EXPECT_PRED2(containsSubString, code, "(*(IMP_Base*)this).a = 7;");
 		})
 	}
 
@@ -1370,81 +1366,6 @@ namespace backend {
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			;
-		})
-	}
-
-	TEST(CppSnippet, DISABLED_InitializerList2) {
-		// something including a super-constructor call
-		DO_TEST(R"(
-			alias int = int<4>;
-
-			def struct A {
-				x : int;
-
-				ctor (x : int) {
-					this.x = x;
-				}
-			};
-
-			def struct B : [A] {
-				y : int;
-
-				ctor (x : int, y : int) {
-					A::(this, x);
-					this.y = y;
-				}
-			}
-
-			int main() {
-				// call constructor
-				var ref<B> b = B::(b, 1, 2);
-
-				return 0;
-			}
-		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			EXPECT_PRED2(containsSubString, code, "B b((1), (2));");
-			EXPECT_PRED2(containsSubString, code, "A::A(int32_t x) : x(x) {");
-			EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t y) : A(x), y(y) {");
-		})
-	}
-
-	TEST(CppSnippet, DISABLED_InitializerList3) {
-		// something including a super-constructor call
-		DO_TEST(R"(
-			alias int = int<4>;
-
-			def struct A {
-
-				x : int;
-				y : int;
-
-				ctor (x : int, y : int) {
-					this.x = x;
-					this.y = y;
-				}
-			};
-
-			def struct B : [A] {
-
-				z : int;
-
-				ctor (x : int, y : int, z : int) {
-					A::(this, x, y + z);
-					this.z = z;
-				}
-			};
-
-			int main() {
-
-				// call constructor
-				var ref<B> b = B::(b, 1, 2, 3);
-
-				return 0;
-			}
-		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			EXPECT_PRED2(containsSubString, code, "B b((1), (2), (3));");
-			EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x), y(y) {");
-			EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t y, int32_t z) : A(x, y + z), z(z) {");
 		})
 	}
 

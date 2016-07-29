@@ -180,6 +180,7 @@ namespace addons {
 
 			res[ext.getPtrCast()] = cast;
 			res[ext.getPtrReinterpret()] = cast;
+			res[ext.getPtrParentCast()] = cast;
 			res[ext.getPtrConstCast()] = cast;
 			res[ext.getPtrVolatileCast()] = cast;
 
