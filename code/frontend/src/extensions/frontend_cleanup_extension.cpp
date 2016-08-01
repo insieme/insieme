@@ -76,8 +76,111 @@ namespace extensions {
 	namespace irp = pattern::irp;
 
 	namespace {
+		//// TU steps ------------------------------------------------------------------------------------------------------------------------------------
+
+		//////////////////////////////////////////////////////////////////////////
+		// Remove superfluous bool_to_int calls (from the frontend inspire module)
+		// =======================================================================
+		//
+		// These are generated to ensure valid C-style semantics, but can be removed if they are unnecessary in the final IR.
+		//
+		core::ExpressionPtr removeSuperfluousBoolToInt(const core::ExpressionPtr& ir) {
+			auto& mgr = ir->getNodeManager();
+			auto& inspModule = mgr.getLangExtension<frontend::utils::FrontendInspireModule>();
+
+			return irp::replaceAllAddr(irp::callExpr(inspModule.getBoolToInt(), icp::anyList), ir, [&](const NodeAddress& matchingAddress) -> NodePtr {
+				auto call = matchingAddress.getAddressedNode().as<CallExprPtr>();
+				auto arg0 = call->getArgument(0);
+				// ensure unused (currently simply check parent)
+				if(matchingAddress.getDepth()>0 && matchingAddress.getParentNode().isa<CompoundStmtPtr>()) {
+					core::transform::utils::migrateAnnotations(call, arg0);
+					return arg0;
+				}
+				// else keep call
+				return call;
+			}).as<core::ExpressionPtr>();
+		}
+
+		//////////////////////////////////////////////////////////////////////////
+		// Find and replace c and cpp style assignments if ret val not needed
+		// =======================================================================
+		core::ExpressionPtr removeCAndCppStyleAssignments(const core::ExpressionPtr& ir) {
+			auto& mgr = ir->getNodeManager();
+			core::IRBuilder builder(mgr);
+			auto& feExt = mgr.getLangExtension<utils::FrontendInspireModule>();
+
+			return core::transform::transformBottomUpGen(ir, [&](const core::CompoundStmtPtr& compound) {
+				StatementList newStmts;
+				for(auto stmt : compound.getStatements()) {
+					if(feExt.isCallOfCStyleAssignment(stmt) || feExt.isCallOfCxxStyleAssignment(stmt)) {
+						newStmts.push_back(builder.assign(core::analysis::getArgument(stmt, 0), core::analysis::getArgument(stmt, 1)));
+					} else {
+						newStmts.push_back(stmt);
+					}
+				}
+				return builder.compoundStmt(newStmts);
+			}, core::transform::globalReplacement);
+		}
+
+		//////////////////////////////////////////////////////////////////////////
+		// Replace FE ref temps with real ref temps
+		// =======================================================================
+		core::ExpressionPtr replaceFERefTemp(const core::ExpressionPtr& ir) {
+			auto& mgr = ir->getNodeManager();
+			auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
+			auto& feExt = mgr.getLangExtension<utils::FrontendInspireModule>();
+			return core::transform::transformBottomUpGen(ir, [&](const core::LiteralPtr& lit) -> core::ExpressionPtr {
+				if(feExt.isFERefTemp(lit)) return refExt.getRefTemp();
+				return lit;
+			}, core::transform::globalReplacement);
+		}
+
+		//////////////////////////////////////////////////////////////////////////
+		// Replace all copies of std::initializer_list with a call to the copy constructor
+		// =======================================================================
+		core::ExpressionPtr replaceStdInitListCopies(const core::ExpressionPtr& ir) {
+			auto mangledName = insieme::utils::mangle("std::initializer_list");
+			auto& mgr = ir->getNodeManager();
+			auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
+			core::IRBuilder builder(mgr);
+			return core::transform::transformBottomUpGen(ir, [&](const core::DeclarationPtr& decl) {
+				const auto& type = decl->getType();
+				auto expr = decl->getInitialization();
+
+				// add ref_casts to force copy construction of init_lists, since this is implicit in cpp
+				if(core::lang::isPlainReference(type) && refExt.isCallOfRefDeref(expr)) {
+					auto elementType = expr->getType();
+					if(auto tagT = elementType.isa<core::GenericTypePtr>()) {
+						if(boost::starts_with(tagT->getName()->getValue(), mangledName)) {
+							auto targetType = core::lang::ReferenceType::create(elementType, true, false, core::lang::ReferenceType::Kind::CppReference);
+							expr = core::analysis::getArgument(expr, 0);
+							// however, replace ref_decl with ref_temp inside ctor calls which should be casted
+							if(core::analysis::isConstructorCall(expr) && refExt.isCallOfRefDecl(core::analysis::getArgument(expr, 0))) {
+								core::CallExprAddress exprAddr(expr.as<core::CallExprPtr>());
+								expr = core::transform::replaceNode(mgr, exprAddr->getArgument(0), core::lang::buildRefTemp(type)).as<core::ExpressionPtr>();
+							}
+							return builder.declaration(type, core::lang::buildRefCast(expr, targetType));
+						}
+					}
+				}
+				return decl;
+			}, core::transform::globalReplacement);
+		}
+
+		//// ProgramPtr steps ----------------------------------------------------------------------------------------------------------------------------
+
+		class TypeCanonicalizer : public core::transform::CachedNodeMapping {
+			virtual const NodePtr resolveElement(const NodePtr& ptr) override {
+				auto tt = ptr.isa<core::TagTypePtr>();
+				if(tt) {
+					return core::analysis::getCanonicalType(tt);
+				}
+				return ptr->substitute(ptr->getNodeManager(), *this);
+			}
+		};
+
 		//////////////////////////////////////////////////////////////////////
-		// Assure return statements for "Main" functions typed as int
+		// Assure return statements for "main" functions typed as int
 		// ==========================================================
 		//
 		// In C, it's allowed for the main function to by typed as () -> int, but not actually contain a "return x".
@@ -116,64 +219,6 @@ namespace extensions {
 		}
 
 		//////////////////////////////////////////////////////////////////////////
-		// Remove superfluous bool_to_int calls (from the frontend inspire module)
-		// =======================================================================
-		//
-		// These are generated to ensure valid C-style semantics, but can be removed if they are unnecessary in the final IR.
-		//
-		ProgramPtr removeSuperfluousBoolToInt(ProgramPtr prog) {
-			auto& mgr = prog->getNodeManager();
-			auto& inspModule = mgr.getLangExtension<frontend::utils::FrontendInspireModule>();
-
-			prog = irp::replaceAllAddr(irp::callExpr(inspModule.getBoolToInt(), icp::anyList), prog, [&](const NodeAddress& matchingAddress) -> NodePtr {
-				auto call = matchingAddress.getAddressedNode().as<CallExprPtr>();
-				auto arg0 = call->getArgument(0);
-				// ensure unused (currently simply check parent)
-				if(matchingAddress.getDepth()>0 && matchingAddress.getParentNode().isa<CompoundStmtPtr>()) {
-					core::transform::utils::migrateAnnotations(call, arg0);
-					return arg0;
-				}
-				// else keep call
-				return call;
-			}).as<ProgramPtr>();
-
-			return prog;
-		}
-
-		//////////////////////////////////////////////////////////////////////////
-		// Find and replace c and cpp style assignments if ret val not needed
-		// =======================================================================
-		ProgramPtr removeCAndCppStyleAssignments(ProgramPtr prog) {
-			auto& mgr = prog->getNodeManager();
-			core::IRBuilder builder(mgr);
-			auto& feExt = mgr.getLangExtension<utils::FrontendInspireModule>();
-
-			prog = core::transform::transformBottomUpGen(prog, [&](const core::CompoundStmtPtr& compound) {
-				StatementList newStmts;
-				for(auto stmt : compound.getStatements()) {
-					if(feExt.isCallOfCStyleAssignment(stmt) || feExt.isCallOfCxxStyleAssignment(stmt)) {
-						newStmts.push_back(builder.assign(core::analysis::getArgument(stmt,0), core::analysis::getArgument(stmt,1)));
-					} else {
-						newStmts.push_back(stmt);
-					}
-				}
-				return builder.compoundStmt(newStmts);
-			}, core::transform::globalReplacement);
-
-			return prog;
-		}
-
-		class TypeCanonicalizer : public core::transform::CachedNodeMapping {
-			virtual const NodePtr resolveElement(const NodePtr& ptr) override {
-				auto tt = ptr.isa<core::TagTypePtr>();
-				if(tt) {
-					return core::analysis::getCanonicalType(tt);
-				}
-				return ptr->substitute(ptr->getNodeManager(), *this);
-			}
-		};
-
-		//////////////////////////////////////////////////////////////////////////
 		// Find and replace zero inits of tag types (which can only occur for global inits)
 		// =======================================================================
 		ProgramPtr replaceZeroStructInits(ProgramPtr prog) {
@@ -187,51 +232,6 @@ namespace extensions {
 					   return call;
 				   }).as<ProgramPtr>();
 			return prog;
-		}
-
-		//////////////////////////////////////////////////////////////////////////
-		// Replace FE ref temps with real ref temps
-		// =======================================================================
-		ProgramPtr replaceFERefTemp(ProgramPtr prog) {
-			auto& mgr = prog->getNodeManager();
-			auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
-			auto& feExt = mgr.getLangExtension<utils::FrontendInspireModule>();
-			return core::transform::transformBottomUpGen(prog, [&](const core::LiteralPtr& lit) -> core::ExpressionPtr {
-				if(feExt.isFERefTemp(lit)) return refExt.getRefTemp();
-				return lit;
-			}, core::transform::globalReplacement);
-		}
-
-		//////////////////////////////////////////////////////////////////////////
-		// Replace all copies of std::initializer_list with a call to the copy constructor
-		// =======================================================================
-		ProgramPtr replaceStdInitListCopies(ProgramPtr prog) {
-			auto mangledName = insieme::utils::mangle("std::initializer_list");
-			auto& mgr = prog->getNodeManager();
-			auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
-			core::IRBuilder builder(mgr);
-			return core::transform::transformBottomUpGen(prog, [&](const core::DeclarationPtr& decl) {
-				const auto& type = decl->getType();
-				auto expr = decl->getInitialization();
-
-				// add ref_casts to force copy construction of init_lists, since this is implicit in cpp
-				if(core::lang::isPlainReference(type) && refExt.isCallOfRefDeref(expr)) {
-					auto elementType = expr->getType();
-					if(auto tagT = elementType.isa<core::TagTypePtr>()) {
-						if(boost::starts_with(tagT->getName()->getValue(), mangledName)) {
-							auto targetType = core::lang::ReferenceType::create(elementType, true, false, core::lang::ReferenceType::Kind::CppReference);
-							expr = core::analysis::getArgument(expr, 0);
-							// however, replace ref_decl with ref_temp inside ctor calls which should be casted
-							if(core::analysis::isConstructorCall(expr) && refExt.isCallOfRefDecl(core::analysis::getArgument(expr, 0))) {
-								core::CallExprAddress exprAddr(expr.as<core::CallExprPtr>());
-								expr = core::transform::replaceNode(mgr, exprAddr->getArgument(0), core::lang::buildRefTemp(type)).as<core::ExpressionPtr>();
-							}
-							return builder.declaration(type, core::lang::buildRefCast(expr, targetType));
-						}
-					}
-				}
-				return decl;
-			}, core::transform::globalReplacement);
 		}
 	}
 
@@ -247,15 +247,22 @@ namespace extensions {
 		return boost::optional<std::string>();
 	}
 
+	core::tu::IRTranslationUnit FrontendCleanupExtension::IRVisit(core::tu::IRTranslationUnit& tu) {
+		auto ir = core::tu::toIR(tu.getNodeManager(), tu);
+
+		ir = removeSuperfluousBoolToInt(ir);
+		ir = removeCAndCppStyleAssignments(ir);
+		ir = replaceFERefTemp(ir);
+		ir = replaceStdInitListCopies(ir);
+
+		return core::tu::fromIR(ir);
+	}
+
 	insieme::core::ProgramPtr FrontendCleanupExtension::IRVisit(insieme::core::ProgramPtr& prog) {
 
 		prog = TypeCanonicalizer().map(prog);
 		prog = mainReturnCorrection(prog);
-		prog = removeSuperfluousBoolToInt(prog);
-		prog = removeCAndCppStyleAssignments(prog);
 		prog = replaceZeroStructInits(prog);
-		prog = replaceFERefTemp(prog);
-		prog = replaceStdInitListCopies(prog);
 
 		return prog;
 	}
