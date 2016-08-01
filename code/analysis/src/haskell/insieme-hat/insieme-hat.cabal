@@ -9,11 +9,17 @@ cabal-version:      >=1.10
 
 executable insieme-hat
     main-is:            Main.hs
-    other-modules:      Insieme.Analysis.Boolean,
+    other-modules:      Insieme.Analysis.Entities.ProgramPoint,
+                        Insieme.Analysis.Boolean,
                         Insieme.Analysis.Callable,
+                        Insieme.Analysis.CallSite,
                         Insieme.Analysis.DataPath,
+                        Insieme.Analysis.ExitPoint,
+                        Insieme.Analysis.Predecessor,
                         Insieme.Analysis.Reference,
                         Insieme.Analysis.Framework.Dataflow,
+                        Insieme.Analysis.Framework.ProgramPoint,
+                        Insieme.Analysis.Framework.MemoryState,
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.Solver,
                         Insieme.Inspire,
@@ -41,11 +47,17 @@ executable insieme-hat
 
 library
     exposed-modules:    Insieme.Adapter
-    other-modules:      Insieme.Analysis.Boolean,
+    other-modules:      Insieme.Analysis.Entities.ProgramPoint,
+                        Insieme.Analysis.Boolean,
                         Insieme.Analysis.Callable,
+                        Insieme.Analysis.CallSite,
                         Insieme.Analysis.DataPath,
+                        Insieme.Analysis.ExitPoint,
+                        Insieme.Analysis.Predecessor,
                         Insieme.Analysis.Reference,
                         Insieme.Analysis.Framework.Dataflow,
+                        Insieme.Analysis.Framework.ProgramPoint,
+                        Insieme.Analysis.Framework.MemoryState,
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.Solver,
                         Insieme.Inspire,
