@@ -28,6 +28,11 @@ instance Show Callable where
     show (Literal na) = "Literal@" ++ (prettyShow na)
     show (Closure na) = "Closure@" ++ (prettyShow na)
 
+toAddress :: Callable -> NodeAddress
+toAddress (Lambda a) = a
+toAddress (Literal a) = a
+toAddress (Closure a) = a
+
 --
 -- * Callable Lattice
 --

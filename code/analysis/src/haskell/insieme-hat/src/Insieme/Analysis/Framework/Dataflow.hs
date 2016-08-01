@@ -17,6 +17,8 @@ import Insieme.Inspire.NodeAddress
 import qualified Insieme.Analysis.Solver as Solver
 
 import qualified Insieme.Analysis.Callable as Callable
+import qualified Insieme.Analysis.CallSite as CallSite
+import qualified Insieme.Analysis.ExitPoint as ExitPoint
 
 import Insieme.Analysis.Reachable
 
@@ -57,15 +59,17 @@ dataflowValue addr top idGen analysis ops = case getNode addr of
         con = Solver.createConstraint dep val var
         
         trg = Callable.callableValue (goDown 1 addr)
-        dep a = (Solver.toVar trg) : ( (map Solver.toVar (getReturnReachVars a)) ++ (map Solver.toVar (getReturnValueVars a)) )
+        dep a = (Solver.toVar trg) : ( (map Solver.toVar (getExitPointVars a)) ++ (map Solver.toVar (getReturnValueVars a)) )
         val a = Solver.join $ map (Solver.get a) (getReturnValueVars a) 
         
-        getReturnReachVars a = Set.fold (\c l -> (map (\a -> reachableIn a) (getReturnPoints c)) ++ l ) [] (Solver.get a trg)
+        getExitPointVars a = Set.fold go [] (Solver.get a trg)
+            where
+                go = (\c l -> (ExitPoint.exitPoints $ Callable.toAddress c) : l)
+                
+        getReturnValueVars a = foldr go [] $ map (Solver.get a) (getExitPointVars a)
+            where 
+                go = \e l -> foldr (\(ExitPoint.ExitPoint r) l -> analysis r : l) l e
         
-        getReturnValueVars a = Set.fold 
-                (\c l ->
-                     foldr (\r l -> if toBool $ Solver.get a (reachableIn r) then (analysis r) : l else l ) l (getReturnPoints c)
-                ) [] (Solver.get a trg)
 
         -- temporary fix to support ref_deref before supporting referencences
         con2 = Solver.createConstraint dep2 val2 var
@@ -93,46 +97,16 @@ dataflowValue addr top idGen analysis ops = case getNode addr of
             
             n = getIndex declrAddr
             
-            allCalls = foldTree collector (getRootIR declrAddr) 
-            collector a calls = case getNode a of
-                Node IR.CallExpr _  -> a : calls
-                _                   -> calls 
+            callSiteVar = CallSite.callSites (goUp $ goUp declrAddr)
             
-            allTrgVars = map (\c -> (c , Callable.callableValue $ goDown 1 c ) ) allCalls           
-            
-            callableAddr = goUp $ goUp declrAddr
-            callable = case getNode callableAddr of
-                Node IR.Lambda _   -> Callable.Lambda callableAddr
-                Node IR.BindExpr _ ->  Callable.Closure callableAddr
-            
-            dep a = (map Solver.toVar (map snd allTrgVars)) ++ (map Solver.toVar (getArgumentVars a)) 
+            dep a = (Solver.toVar callSiteVar) : (map Solver.toVar (getArgumentVars a)) 
             val a = Solver.join $ map (Solver.get a) (getArgumentVars a)
-            getArgumentVars a = foldr go [] allTrgVars
-                where
-                    go = \(call,var) list ->  
-                            if (Set.member callable (Solver.get a var)) 
-                            then (analysis $ goDown (n+2) call) : list 
-                            else list
+            
+            getArgumentVars a = foldr go [] $ Solver.get a callSiteVar
+                where 
+                    go = \(CallSite.CallSite call) list -> (analysis $ goDown (n+2) call) : list
                 
             
         _ -> trace " Unhandled Variable parent!" $ error "unhandled case"
 
 
-getReturnPoints :: Callable.Callable -> [NodeAddress]
-getReturnPoints (Callable.Closure x ) = [goDown 2 x] 
-getReturnPoints (Callable.Literal x ) = [] --trace "Inspecting a literal" $ error "No return point in literals implemented!"
-getReturnPoints (Callable.Lambda x ) = collectReturnPoints x
-
-
-collectReturnPoints :: NodeAddress -> [NodeAddress]
-collectReturnPoints = foldAddressPrune collector filter
-    where
-        filter cur = 
-            case getNode cur of
-                Node IR.LambdaExpr _ -> True
-                _ -> False
-        collector cur returns =
-            case getNode cur of 
-                Node IR.ReturnStmt _ -> (goDown 0 cur : returns)
-                _ -> returns
-        
