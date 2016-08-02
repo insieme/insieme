@@ -583,7 +583,7 @@ namespace core {
 		}
 		template <typename S>
 		bool operator<=(const Address<S>& other) const {
-			return *this < other || this == other;
+			return *this == other || *this < other;
 		}
 		template <typename S>
 		bool operator>=(const Address<S>& other) const {
@@ -731,12 +731,9 @@ namespace core {
 	 */
 	template <class T, class N>
 	bool isChildOf(const Address<const T>& src, const Address<const N>& trg) {
-		// if the root node is not the same, we can already reply to the question
-		if(src.getRootNode() != trg.getRootNode()) { return false; }
-		// if it is the same node we are looking at, just return true
-		if(src.getPath() == trg.getPath()) { return true; }
+		// check the length of the address
 		if(src.getDepth() > trg.getDepth()) { return false; }
-
+		// compare the path (that's it)
 		return src.getPath() == trg.getParentAddress(trg.getDepth() - src.getDepth()).getPath();
 	}
 
