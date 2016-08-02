@@ -380,23 +380,23 @@ int main() {
 	#pragma test expect_ir(R"(
 		def struct __any_string__class_int {
 			capture_0 : ref<int<4>,f,f,cpp_ref>;
-			const function IMP__operator_call__returns_void = () -> unit {
+			const function IMP__operator_call_ = () -> unit {
 				*(this).capture_0;
 			}
 		};
 		def struct __any_string__class_real {
 			capture_0 : ref<real<4>,f,f,cpp_ref>;
-			const function IMP__operator_call__returns_void = () -> unit {
+			const function IMP__operator_call_ = () -> unit {
 				*(this).capture_0;
 			}
 		};
 		def IMP_templateFunWithLambda_int_returns_void = function () -> unit {
 			var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
-			<ref<__any_string__class_int,f,f,plain>>(ref_temp(type_lit(__any_string__class_int))) {v0}.IMP__operator_call__returns_void();
+			<ref<__any_string__class_int,f,f,plain>>(ref_temp(type_lit(__any_string__class_int))) {v0}.IMP__operator_call_();
 		};
 		def IMP_templateFunWithLambda_float_returns_void = function () -> unit {
 			var ref<real<4>,f,f,plain> v0 = ref_decl(type_lit(ref<real<4>,f,f,plain>));
-			<ref<__any_string__class_real,f,f,plain>>(ref_temp(type_lit(__any_string__class_real))) {v0}.IMP__operator_call__returns_void();
+			<ref<__any_string__class_real,f,f,plain>>(ref_temp(type_lit(__any_string__class_real))) {v0}.IMP__operator_call_();
 		};
 		{
 			IMP_templateFunWithLambda_int_returns_void();

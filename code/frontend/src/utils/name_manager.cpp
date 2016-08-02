@@ -243,7 +243,9 @@ namespace utils {
 		}
 
 		if(!cStyleName && funcDecl->isTemplateInstantiation()) {
-			suffix << "_returns_" << getTypeString(funcDecl->getReturnType());
+			if(!boost::starts_with(funcDecl->getNameAsString(), "operator")) {
+				suffix << "_returns_" << getTypeString(funcDecl->getReturnType());
+			}
 		}
 
 		string suffixStr = suffix.str();
