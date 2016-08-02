@@ -161,7 +161,7 @@ namespace types {
 					// map tuple types to type lists, convert those, and move back
 					NodeManager& mgr = element->getNodeManager();
 					auto types = Types::get(mgr, tuple->getElementTypes());
-					auto newTypes = resolveElement(types).as<TypesPtr>();
+					auto newTypes = map(types).as<TypesPtr>();
 					return TupleType::get(mgr, newTypes->getTypes());
 				}
 
@@ -175,7 +175,7 @@ namespace types {
 								for (const auto& cur : *expanded) {
 									list.push_back(cur);
 								}
-								return resolveElement(Types::get(element->getNodeManager(), list));
+								return map(Types::get(element->getNodeManager(), list));
 							}
 						} else if (auto vvar = types.back().isa<VariadicGenericTypeVariablePtr>()) {
 							if (auto expanded = substitution[vvar]) {
@@ -184,7 +184,7 @@ namespace types {
 								for (const auto& cur : *expanded) {
 									list.push_back(GenericTypeVariable::get(manager, cur->getVarName(), vvar->getTypeParameter()));
 								}
-								return resolveElement(Types::get(element->getNodeManager(), list));
+								return map(Types::get(element->getNodeManager(), list));
 							}
 						}
 					}
@@ -205,9 +205,9 @@ namespace types {
 					if (TypePtr replacement = substitution[var]) {
 						// found! => replace, but only type family name
 						if (auto genType = replacement.isa<GenericTypePtr>()) {
-							return resolveElement(GenericType::get(manager, genType->getName(), var->getTypeParameter()));
+							return map(GenericType::get(manager, genType->getName(), var->getTypeParameter()).as<TypePtr>());
 						} else if (auto gvar = replacement.isa<GenericTypeVariablePtr>()) {
-							return resolveElement(GenericTypeVariable::get(manager, gvar->getVarName(), var->getTypeParameter()));
+							return map(GenericTypeVariable::get(manager, gvar->getVarName(), var->getTypeParameter()).as<TypePtr>());
 						}
 						assert_fail() << "Invalid mapping of " << *var << ": " << *replacement << " of type " << replacement->getNodeType();
 					}
