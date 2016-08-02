@@ -142,6 +142,13 @@ namespace conversion {
 			return convertCxxArgExpr(clangArgExpr, paramTypeList[i++]);
 		});
 
+		// Implicit materialization of this argument is not performed in clang AST
+		if(funType->isMember()) {
+			if(!core::lang::isReference(newArgs[0])) {
+				newArgs[0] = frontend::utils::convertMaterializingExpr(converter, newArgs[0]);
+			}
+		}
+
 		return builder.callExpr(convertExprType(callExpr), funExp, newArgs);
 	}
 
@@ -228,6 +235,7 @@ namespace conversion {
 				thisObj = core::lang::buildPtrToRef(thisObj);
 			}
 
+			// Implicit materialization of this argument is not performed in clang AST
 			if(!core::lang::isReference(thisObj)) {
 				thisObj = frontend::utils::convertMaterializingExpr(converter, thisObj);
 			}
