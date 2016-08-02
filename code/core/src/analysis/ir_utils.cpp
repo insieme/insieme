@@ -1175,7 +1175,7 @@ namespace analysis {
 				return none;
 			}
 
-			bool equalUnder(const NodeAddress& a, const NodeAddress& b, const EqualityClasses& classes, const std::map<NodeAddress, unsigned>& index, bool topLevel = true) {
+			bool equalUnder(const NodeAddress& a, const NodeAddress& b, const EqualityClasses& classes, const std::unordered_map<NodeAddress, unsigned>& index, bool topLevel = true) {
 
 				// if it is the same address, it is always the same
 				if (a == b) return true;
@@ -1237,22 +1237,6 @@ namespace analysis {
 
 				return res;
 			}
-
-			struct CannotReachTagTypeTag {};
-
-			struct CannotReachTagTypeTagger : public CachedVisitor<bool> {
-				CannotReachTagTypeTagger() : CachedVisitor<bool>(true) {}
-
-				virtual bool resolve(const NodePtr& node) {
-					bool ret = false;
-					if(node->hasAttachedValue<CannotReachTagTypeTag>()) return false;
-					if(node->getNodeType() == NT_TagType) return true;
-					if(node->getNodeType() == NT_TagTypeReference) return true;
-					ret = ::any(node.getChildList(), [&](const NodePtr& child) { return visit(child); });
-					if(!ret) node->attachValue<CannotReachTagTypeTag>();
-					return ret;
-				}
-			};
 
 			bool isDecendant(const NodeAddress& child, const std::vector<RecordAddress>& anchesters, std::set<NodeAddress>& visited) {
 
@@ -1423,7 +1407,7 @@ namespace analysis {
 			// function specific debugging flag
 			static const bool debug = false;
 
-			// 1) get a list of all record types and tag type references in the given type (second most time consuming part)
+			// 1) get a list of all record types and tag type references in the given type
 			vector<RecordAddress> records = collectAllRecords(type);
 
 			// print some debugging
@@ -1441,11 +1425,22 @@ namespace analysis {
 
 			// 2) compute equivalence classes of those records
 			EqualityClasses classes(records.size());
-			std::map<NodeAddress, unsigned> recordToId;
+			std::unordered_map<NodeAddress, unsigned> recordToId;
 			for (unsigned i = 0; i < records.size(); ++i) {
 				recordToId[records[i]] = i;
 			}
 
+			// run a quick pre-filter to reduce number of comparisons in accurate class computation
+			for(unsigned i = 0; i<records.size(); ++i) {
+				for (unsigned j = i + 1; j < records.size(); ++j) {
+					// check name of records
+					if (*records[i].getAddressedNode()->getName() != *records[j].getAddressedNode()->getName()) {
+						classes.markDifferent(i,j);
+					}
+				}
+			}
+
+			// make an accurate comparison for each pair of records
 			bool changed = true;
 			while (changed) {
 				changed = false;
@@ -1478,7 +1473,7 @@ namespace analysis {
 			}
 
 
-			// 3) compute dependencies between equivalence classes (MOST time consuming part!)
+			// 3) compute dependencies between equivalence classes
 			using EquivalenceClass = std::vector<RecordAddress>;
 			utils::graph::Graph<EquivalenceClass> depGraph;
 
