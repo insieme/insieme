@@ -151,6 +151,29 @@ namespace utils {
 		return utils::buildCxxMethodCall(converter, retType, constructorLambda, memLoc, constructExpr->arguments());
 	}
 
+	core::ExpressionPtr convertMaterializingExpr(conversion::Converter& converter, core::ExpressionPtr retIr) {
+		auto& builder = converter.getIRBuilder();
+		// if we are materializing the rvalue result of a non-built-in function call, do it
+		auto subCall = retIr.isa<core::CallExprPtr>();
+		if(subCall) {
+			// if we are already materialized everything is fine
+			if(core::lang::isPlainReference(retIr->getType())) return retIr;
+			// otherwise, materialize
+
+			// if call to deref, simply remove it
+			auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+			if(refExt.isCallOfRefDeref(retIr)) {
+				retIr = subCall->getArgument(0);
+				return retIr;
+			}
+			// otherwise, materialize call if not built in
+			if(!core::lang::isBuiltIn(subCall->getFunctionExpr())) {
+				retIr = builder.callExpr(builder.refType(retIr->getType()), subCall->getFunctionExpr(), subCall->getArgumentDeclarations());
+			}
+		}
+		return retIr;
+	}
+
 	core::StatementPtr addIncrementExprBeforeAllExitPoints(const core::StatementPtr& body, const core::StatementPtr& incrementExpression) {
 		core::IRBuilder builder(incrementExpression.getNodeManager());
 
