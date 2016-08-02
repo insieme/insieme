@@ -1358,6 +1358,63 @@ namespace analysis {
 			}
 		}
 
+
+		namespace {
+
+			const vector<RecordAddress>& collectAllRecordsInternal(const NodePtr& root, const NodePtr& cur, std::map<NodePtr,vector<RecordAddress>>& cache) {
+
+				// check cache
+				auto pos = cache.find(cur);
+				if (pos != cache.end()) return pos->second;
+
+				// collect records for this node
+				auto& records = cache[cur];
+
+				// if it is a built-in we stop here
+				if (core::lang::isBuiltIn(cur)) return records;
+
+				// check whether this is already a canonical tag type
+				if (cur != root) {
+					if (auto tagType = cur.isa<TagTypePtr>()) {
+						if (!hasFreeTagTypeReferences(tagType)) {
+							auto cannoncial = getCanonicalType(tagType);
+							if (*cannoncial == *tagType) {
+								for(const auto& def : TagTypeAddress(tagType)->getDefinition()) {
+									records.push_back(def->getRecord());
+								}
+								return records;
+							}
+						}
+					}
+				}
+
+				// if this node is a record, add it to the result set
+				if (cur.isa<RecordPtr>()) {
+					records.push_back(RecordAddress(cur));
+				}
+
+				// collect records from sub-nodes
+				for(const auto& child : NodeAddress(cur).getChildList()) {
+					for(const auto& rec : collectAllRecordsInternal(root,child,cache)) {
+						records.push_back(concat(child,rec));
+					}
+				}
+				return records;
+			}
+
+
+			/**
+			 * Collects a list of addresses pointing to nested records within the given node.
+			 */
+			vector<RecordAddress> collectAllRecords(const NodePtr& root) {
+				// run everything through an internal, cached collector
+				std::map<NodePtr,vector<RecordAddress>> cache;
+				return collectAllRecordsInternal(root, root, cache);
+			}
+
+		}
+
+
 		TypePtr normalizeRecursiveTypes(const TypePtr& type) {
 			// This function is converting recursive types into their most compact form.
 			// Thus, (partially) unrolled or peeled fragments will be identified as such
@@ -1367,39 +1424,7 @@ namespace analysis {
 			static const bool debug = false;
 
 			// 1) get a list of all record types and tag type references in the given type (second most time consuming part)
-
-			// mark types that do not contain a tag reference anywhere
-			CannotReachTagTypeTagger tagger;
-			tagger(type); // preprocessing pass to add annotations used to speed up steps 1)
-
-			vector<RecordAddress> records;
-			visitDepthFirstPrunable(TypeAddress(type), [&](const NodeAddress& node)->Action {
-
-				// ignore built in types
-				if(core::lang::isBuiltIn(node)) return Action::Prune;
-
-				// ignore nodes that do not contain tag type references
-				if(node->hasAttachedValue<CannotReachTagTypeTag>()) return Action::Prune;
-
-				// ignore nested, canonical tag types
-				if(auto tagType = node.isa<TagTypePtr>()) {
-					if (tagType != type) {
-						if (!hasFreeTagTypeReferences(tagType)) {
-							auto cannonical = getCanonicalType(tagType);
-							if (*cannonical == *tagType) {
-								for(const auto& cur : node.as<TagTypeAddress>()->getDefinition()) {
-									records.push_back(cur->getRecord());
-								}
-								return Action::Prune;
-							}
-						}
-					}
-				}
-
-				// collect all encountered records
-				if(auto record = node.isa<RecordAddress>()) records.push_back(record);
-				return Action::Descent;
-			}, true);
+			vector<RecordAddress> records = collectAllRecords(type);
 
 			// print some debugging
 			if (debug) {
