@@ -88,6 +88,35 @@ namespace types {
 			 */
 			const NodePtr resolveElement(const NodePtr& element) override {
 
+				//TODO cache?
+				auto freeTypeVars = visitDepthFirstOnceInterruptible(element, [&](const NodePtr& node) {
+					if(auto typeVar = node.isa<TypeVariablePtr>()) {
+						if(substitution[typeVar]) {
+							return true;
+						}
+					}
+					if(auto typeVar = node.isa<GenericTypeVariablePtr>()) {
+						if(substitution[typeVar]) {
+							return true;
+						}
+					}
+					if(auto typeVar = node.isa<VariadicTypeVariablePtr>()) {
+						if(substitution[typeVar]) {
+							return true;
+						}
+					}
+					if(auto typeVar = node.isa<VariadicGenericTypeVariablePtr>()) {
+						if(substitution[typeVar]) {
+							return true;
+						}
+					}
+					return false;
+				}, true, true);
+
+				if(!freeTypeVars) {
+					return element;
+				}
+
 				// prune area of influence
 				if (element != root && (
 						element.isa<LambdaExprPtr>() ||

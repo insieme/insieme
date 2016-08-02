@@ -307,6 +307,10 @@ namespace analysis {
 				return res;
 			}
 
+			TypeList visitTagTypeReference(const TagTypeReferencePtr& type) override {
+				return {};
+			}
+
 			TypeList visitType(const TypePtr& type) override {
 				assert_fail() << "Unsupported type encountered: " << *type << "\n";
 				return TypeList();
@@ -974,7 +978,6 @@ namespace analysis {
 
 	const std::set<TagTypeReferencePtr>& getFreeTagTypeReferences(const TagTypePtr& tagType) {
 
-		// TODO: cache
 		struct FreeTagTypeReferences {
 			std::set<TagTypeReferencePtr> references;
 			bool operator==(const FreeTagTypeReferences& other) const {
@@ -1378,7 +1381,7 @@ namespace analysis {
 				// ignore nodes that do not contain tag type references
 				if(node->hasAttachedValue<CannotReachTagTypeTag>()) return Action::Prune;
 
-				// ignore nested, cannonical tag types
+				// ignore nested, canonical tag types
 				if(auto tagType = node.isa<TagTypePtr>()) {
 					if (tagType != type) {
 						if (!hasFreeTagTypeReferences(tagType)) {

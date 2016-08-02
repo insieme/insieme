@@ -682,6 +682,9 @@ namespace types {
 			// realized using a recursive lambda visitor
 			IRVisitor<>* rec;
 			auto collector = makeLambdaVisitor([&](const NodePtr& cur) {
+				if(cur.isa<ExpressionPtr>()) {
+					return;
+				}
 				NodeType kind = cur->getNodeType();
 				switch(kind) {
 				case NT_TypeVariable: {
