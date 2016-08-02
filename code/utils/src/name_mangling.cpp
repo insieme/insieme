@@ -94,6 +94,7 @@ namespace utils {
 			{"operator=",   "_operator_assign_"},
 			{"operator<",   "_operator_lt_"},
 			{"operator>",   "_operator_gt_"},
+			{"operator!",   "_operator_not_"},
 			{"operator,",   "_operator_comma_"},
 			{"operator ",   "_conversion_operator_"}
 		};
