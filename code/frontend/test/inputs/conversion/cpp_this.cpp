@@ -63,6 +63,14 @@ struct A {
 	int& y;
 };
 
+struct B {
+	void m() {}
+};
+
+B makeB() {
+	return {};
+}
+
 int main() {
 
 	#pragma test expect_ir(STRUCT_THISTEST,R"({
@@ -114,6 +122,22 @@ int main() {
 		const A a{1,i};
 		a.x;
 		a.y;
+	}
+
+	// method call on rvalue
+	#pragma test expect_ir(R"(
+		def struct IMP_B {
+			function IMP_m = () -> unit { }
+		};
+		def IMP_makeB = function () -> IMP_B {
+			return <ref<IMP_B,f,f,plain>>(ref_decl(type_lit(ref<IMP_B,f,f,plain>))) {};
+		};
+		{
+			IMP_makeB() materialize .IMP_m();
+		}
+	)")
+	{
+		makeB().m();
 	}
 
 	return 0;

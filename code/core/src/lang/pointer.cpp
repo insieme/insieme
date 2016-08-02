@@ -138,18 +138,16 @@ namespace lang {
 
 	namespace {
 		bool isPointerInternal(const TupleTypePtr& type) {
-
-			// simple approach: use matching
 			NodeManager& mgr = type.getNodeManager();
-			const PointerExtension& ext = mgr.getLangExtension<PointerExtension>();
+			auto& basic = mgr.getLangBasic();
 
-			// unify given type with template type
-			auto ref = ext.getGenPtr();
-			auto sub = types::match(mgr, type, ref);
-			if (!sub) return false;
-
-			// check instantiation
-			return isValidBooleanMarker(extractConstMarker(type)) && isValidBooleanMarker(extractVolatileMarker(type));
+			// check properties directly
+			return type->getElements().size() == 2
+				&& basic.isInt8(type->getElement(1))
+				&& isReference(type->getElement(0))
+				&& isArray(core::analysis::getReferencedType(type->getElement(0)))
+				&& isValidBooleanMarker(extractConstMarker(type))
+				&& isValidBooleanMarker(extractVolatileMarker(type));
 		}
 
 	}

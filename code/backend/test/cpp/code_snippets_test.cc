@@ -335,15 +335,23 @@ namespace backend {
 				}
 			};
 
+			def struct IMP_B {
+				function IMP_m = () -> unit { }
+			};
+			def IMP_makeB = function () -> IMP_B {
+				return <ref<IMP_B,f,f,plain>>(ref_decl(type_lit(ref<IMP_B,f,f,plain>))) {};
+			};
+
 			int main() {
 				var ref<Math> m;
 
 				print("%d\n", m->id(12));
 				print("%d\n", m->sum(12, 14));
+				IMP_makeB() materialize .IMP_m();
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			;
+			EXPECT_PRED2(containsSubString, code, "IMP_makeB().m()");
 		})
 	}
 
