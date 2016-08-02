@@ -243,7 +243,9 @@ namespace utils {
 		}
 
 		if(!cStyleName && funcDecl->isTemplateInstantiation()) {
-			suffix << "_returns_" << getTypeString(funcDecl->getReturnType());
+			if(!boost::starts_with(funcDecl->getNameAsString(), "operator")) {
+				suffix << "_returns_" << getTypeString(funcDecl->getReturnType());
+			}
 		}
 
 		string suffixStr = suffix.str();
@@ -297,8 +299,18 @@ namespace utils {
 		auto canon = tagDecl->getCanonicalDecl();
 		// try to use name, if not available try to use typedef name, otherwise no name
 		string name = utils::createNameForAnon("__anon_tagtype_", tagDecl, converter.getSourceManager());
+
 		if(canon->getDeclName() && !canon->getDeclName().isEmpty()) name = canon->getQualifiedNameAsString();
 		else if(canon->hasNameForLinkage()) name = canon->getTypedefNameForAnonDecl()->getQualifiedNameAsString();
+		else {
+			// for anonymous structs created to implement lambdas, encode capture type names in name (
+			auto rec = llvm::dyn_cast<clang::RecordDecl>(tagDecl);
+			if(rec && rec->isLambda()) {
+				for(auto capture : rec->fields()) {
+					name = name + "_" + getTypeString(capture->getType(), false);
+				}
+			}
+		}
 
 		// encode template parameters in name
 		auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(tagDecl);

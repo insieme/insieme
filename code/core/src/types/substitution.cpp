@@ -71,6 +71,11 @@ namespace types {
 			 */
 			NodePtr root;
 
+			/**
+			 * A cache for storing whether a given node contains free type variables or not.
+			 */
+			std::map<NodePtr,bool> containsTypeVarsCache;
+
 		  public:
 			/**
 			 * Creates a new instance of this class wrapping the given substitution.
@@ -88,32 +93,39 @@ namespace types {
 			 */
 			const NodePtr resolveElement(const NodePtr& element) override {
 
-				//TODO cache?
-				auto freeTypeVars = visitDepthFirstOnceInterruptible(element, [&](const NodePtr& node) {
+				// determine whether the current node is free of type variables
+				auto containsTypeVars = visitDepthFirstOnceInterruptible(element, [&](const NodePtr& node) {
+
+					auto pos = containsTypeVarsCache.find(node);
+					if (pos != containsTypeVarsCache.end()) {
+						return pos->second;
+					}
+
+					bool& res = containsTypeVarsCache[node];
 					if(auto typeVar = node.isa<TypeVariablePtr>()) {
 						if(substitution[typeVar]) {
-							return true;
+							return res = true;
 						}
 					}
 					if(auto typeVar = node.isa<GenericTypeVariablePtr>()) {
 						if(substitution[typeVar]) {
-							return true;
+							return res = true;
 						}
 					}
 					if(auto typeVar = node.isa<VariadicTypeVariablePtr>()) {
 						if(substitution[typeVar]) {
-							return true;
+							return res = true;
 						}
 					}
 					if(auto typeVar = node.isa<VariadicGenericTypeVariablePtr>()) {
 						if(substitution[typeVar]) {
-							return true;
+							return res = true;
 						}
 					}
-					return false;
+					return res = false;
 				}, true, true);
 
-				if(!freeTypeVars) {
+				if(!containsTypeVars) {
 					return element;
 				}
 
