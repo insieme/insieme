@@ -638,6 +638,12 @@ namespace backend {
 
 			if(srcRefKind == core::lang::ReferenceType::Kind::Plain) {
 				if(trgRefKind == core::lang::ReferenceType::Kind::CppReference || trgRefKind == core::lang::ReferenceType::Kind::CppRValueReference) {
+					// special handling for string literal arguments
+					if(auto lit = ARG(0).isa<core::LiteralPtr>()) {
+						if(lit->getStringValue()[0] == '"') {
+							return c_ast::deref(c_ast::cast(CONVERT_TYPE(lit->getType()), CONVERT_ARG(0)));
+						}
+					}
 					return c_ast::deref(CONVERT_ARG(0));
 				}
 			}

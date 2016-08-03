@@ -773,7 +773,7 @@ namespace backend {
 
 			// ------------------------ resolve function ---------------------
 
-			std::string name = insieme::utils::demangle(literal->getStringValue());
+			std::string name = insieme::utils::demangleToIdentifier(literal->getStringValue());
 			if(core::annotations::hasAttachedName(literal)) name = core::annotations::getAttachedName(literal);
 			FunctionCodeInfo fun = resolveFunction(manager->create(name), funType, core::LambdaPtr(), true);
 			res->function = fun.function;
