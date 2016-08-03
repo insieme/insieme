@@ -85,6 +85,8 @@ namespace frontend {
 
 	TEST(CppIndependentTest, ReturnStmt) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_return_stmt.cpp"); }
 
+	TEST(CppIndependentTest, RValueXValue) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_rvalue_xvalue.cpp"); }
+
 	TEST(CppIndependentTest, StackInitialization) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_stack_initialization.cpp"); }
 
 	TEST(CppIndependentTest, Statements) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_statements.cpp", [](ConversionJob& job) {

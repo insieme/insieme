@@ -659,8 +659,7 @@ namespace backend {
 
 		res[refExt.getRefParentCast()] = OP_CONVERTER {
 			c_ast::TypePtr type = CONVERT_TYPE(call->getType());
-			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
-			return GET_TYPE_INFO(call->getType()).internalize(C_NODE_MANAGER, c_ast::cast(type, value));
+			return c_ast::cast(type, CONVERT_ARG(0));
 		};
 
 		// -- support narrow and expand --

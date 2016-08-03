@@ -756,6 +756,32 @@ namespace backend {
 		})
 	}
 
+	TEST(CppSnippet, ConstructorsBaseMove) {
+		DO_TEST(R"(
+			decl IMP_move : (ref<IMP_Derived,f,f,cpp_ref>) -> ref<IMP_Derived,f,f,cpp_rref>;
+			def struct IMP_Base {
+			};
+			def struct IMP_Derived : [ public IMP_Base ] {
+				ctor function () {
+					IMP_Base::(ref_parent_cast(this, type_lit(IMP_Base)));
+				}
+				ctor function (v1 : ref<IMP_Derived,f,f,cpp_rref>) {
+					IMP_Base::(ref_parent_cast(this, type_lit(IMP_Base)), ref_parent_cast(IMP_move(ref_kind_cast(v1, type_lit(cpp_ref))), type_lit(IMP_Base)));
+				}
+			};
+			def IMP_move = function (v86 : ref<IMP_Derived,f,f,cpp_ref>) -> ref<IMP_Derived,f,f,cpp_rref> {
+				return ref_cast(v86, type_lit(f), type_lit(f), type_lit(cpp_rref));
+			};
+			int<4> function IMP_main (){
+				var ref<IMP_Derived,f,f,plain> v0 = IMP_Derived::(ref_decl(type_lit(ref<IMP_Derived,f,f,plain>)));
+				var ref<IMP_Derived,f,f,plain> v1 = IMP_move(ref_kind_cast(v0, type_lit(cpp_ref)));
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, ": IMP_Base((IMP_Base&&)IMP_move(v1))");
+		})
+	}
+
 	TEST(CppSnippet, ReturnThisInConstructor) {
 		DO_TEST(R"(
 			def struct IMP_ConstructorReturn {
