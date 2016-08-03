@@ -1423,6 +1423,57 @@ namespace analysis {
 			// if there are no records or a single record => we are done
 			if (records.size() <= 1) return type;
 
+			// 2) sample list of records down to some represents
+			std::map<RecordAddress,vector<RecordAddress>> representsMap;
+			{
+				// the list of represents selected
+				vector<RecordAddress> represents;
+
+				// the key used to merge represents (same record, identical enclosing two enclosing tag type definitions)
+				using Key = std::tuple<TagTypeDefinitionAddress,TagTypeDefinitionPtr,RecordPtr>;
+
+				// the index for locating represents
+				std::map<Key,RecordAddress> index;
+				for(const auto& cur : records) {
+
+					// get first enclosing tag type defintion
+					NodeAddress t = cur;
+					while(t && !t.isa<TagTypeDefinitionAddress>()) t = (t.isRoot()) ? TagTypeDefinitionAddress() : t.getParentAddress();
+					TagTypeDefinitionPtr innerDef = t.getAddressedNode().as<TagTypeDefinitionPtr>();
+
+					// get second enclosing tag type definition
+					t = (t.isRoot()) ? TagTypeDefinitionAddress() : t.getParentAddress();
+					while(t && !t.isa<TagTypeDefinitionAddress>()) t = (t.isRoot()) ? TagTypeDefinitionAddress() : t.getParentAddress();
+					TagTypeDefinitionAddress context = (t) ? t.as<TagTypeDefinitionAddress>() : TagTypeDefinitionAddress();
+
+					// check whether this key is already present
+					Key key(context,innerDef,cur);
+					auto pos = index.find(key);
+					if (pos != index.end()) {
+						// re-use existing represent
+						representsMap[pos->second].push_back(cur);
+						continue;
+					}
+
+					// create new group and make current record its represent
+					index[key] = cur;
+					represents.push_back(cur);
+					representsMap[cur].push_back(cur);
+				}
+
+				// make list of represents the new list of records
+				records = std::move(represents);
+			}
+
+			if (debug) {
+				std::cout << "Num Represents: " << records.size() << "\n";
+				int i = 0;
+				for (const auto& cur : records) {
+					std::cout << "\t" << i << ": " << cur << " = " << *cur << "\n";
+					i++;
+				}
+			}
+
 			// 2) compute equivalence classes of those records
 			EqualityClasses classes(records.size());
 			std::unordered_map<NodeAddress, unsigned> recordToId;
@@ -1540,15 +1591,20 @@ namespace analysis {
 					auto tag = getTagForClass(cls);
 
 					// for all others add a temporary replacement
-					for (const auto& record : cls) {
+					for (const auto& represent : cls) {
 
-						// get enclosing tag type
-						auto tagType = getEnclosingTagType(record);
-						if (!tagType) continue;
+						// expand the represent to the full list of represented records
+						for(const auto& record : representsMap[represent]) {
 
-						// substitute this tag type with the common tag type reference of this group
-						assert_true(tagType.isValid());
-						replacements[tagType] = tag;
+							// get enclosing tag type
+							auto tagType = getEnclosingTagType(record);
+							if (!tagType) continue;
+
+							// substitute this tag type with the common tag type reference of this group
+							assert_true(tagType.isValid());
+							replacements[tagType] = tag;
+
+						}
 					}
 
 				}
@@ -1612,9 +1668,12 @@ namespace analysis {
 					auto tagType = builder.tagType(tag, def);
 
 					// register resulting tag types
-					for (const auto& cur : cls) {
-						auto type = getEnclosingTagType(cur);
-						if (type) replacements[type] = tagType;
+					for (const auto& represent : cls) {
+						// expand the represent to the full list of represented records
+						for(const auto& cur : representsMap[represent]) {
+							auto type = getEnclosingTagType(cur);
+							if (type) replacements[type] = tagType;
+						}
 					}
 				}
 			}
