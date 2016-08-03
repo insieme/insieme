@@ -539,15 +539,42 @@ namespace core {
 			return this->getAttachedValue<RecursiveTypeMarker>().value;
 		}
 
-		bool res = false;
-		for(const auto& cur : this->getDefinition()) {
-			auto set = getFreeTagTypeReferencesInFields(cur->getRecord().as<NodePtr>());
-			auto pos = set.find(getTag());
-			if (pos != set.end()) {
-				res = true;
-				break;
+
+		// the list of referenced tag type references
+		std::set<TagTypeReferencePtr> referenced;
+
+		// the set of resolved tag type references
+		std::set<TagTypeReferencePtr> covered;
+		std::vector<TagTypeReferencePtr> worklist;
+
+		// start with this type
+		worklist.push_back(this->getTag());
+		covered.insert(this->getTag());
+
+		// compute closure
+		while(!worklist.empty()) {
+
+			// get next tag
+			TagTypeReferencePtr next = worklist.back();
+			worklist.pop_back();
+
+			// resolve this tag
+			auto def = this->getDefinition()->getDefinitionOf(next);
+			if (!def) continue;
+
+			// process result
+			auto set = getFreeTagTypeReferencesInFields(def);
+			for(const auto& cur : set) {
+				if (covered.insert(cur).second) worklist.push_back(cur);
 			}
+
+			// add computed set to result set
+			referenced.insert(set.begin(), set.end());
 		}
+
+		// check whether the local reference is referenced
+		auto pos = referenced.find(this->getTag());
+		bool res = (pos != referenced.end());
 
 		// attach result to node
 		this->attachValue((RecursiveTypeMarker){res});
