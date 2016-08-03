@@ -19,19 +19,11 @@ instance (Eq c, Ord v) => Ord (Formula c v) where
 instance Functor (Formula c) where
     fmap f = Formula . map (fmap f) . terms
 
-instance (Integral c, Ord v) => NumOrd (Formula c v) where
-    numCompare a b =
-        if not (isConst diff)
-            then Sometimes
-            else fromOrdering $ compare (coeff . head . terms $ diff) 0
-      where
-        diff = normalize $ addFormula' a (scaleFormula' (-1) b)
-
 convert :: (Integral c, Integral c', Ord v) => Formula c v -> Formula c' v
 convert = Formula . map convertTerm . terms
 
 normalize :: (Integral c, Ord v) => Formula c v -> Formula c v
-normalize = Formula . ensureZero . filter ((/=0) . coeff) . map merge
+normalize = Formula . filter ((/=0) . coeff) . map merge
                     . groupBy (\x y -> product x == product y)
                     . sort . map normalizeTerm . terms
   where
@@ -46,12 +38,13 @@ isConst :: Formula c v -> Bool
 isConst = all termIsConst . terms
 
 zero :: (Integral c, Ord v) => Formula c v
-zero = Formula [Term 0 (Product [])]
+zero = Formula []
 
 one :: (Integral c, Ord v) => Formula c v
 one = Formula [Term 1 (Product [])]
 
 mkConst :: (Integral c, Ord v) => c -> Formula c v
+mkConst 0 = zero
 mkConst c = Formula [Term c (Product [])]
 
 mkVar :: (Integral c, Ord v) => v -> Formula c v
@@ -190,6 +183,16 @@ fromOrdering :: Ordering -> NumOrdering
 fromOrdering LT = NumLT
 fromOrdering EQ = NumEQ
 fromOrdering GT = NumGT
+
+instance (Integral c, Ord v) => NumOrd (Formula c v) where
+    numCompare a b =
+        if diff == zero
+            then NumEQ
+            else if not (isConst diff)
+                then Sometimes
+                else fromOrdering $ compare (coeff . head . terms $ diff) 0
+      where
+        diff = addFormula a (scaleFormula' (-1) b)
 
 --
 -- * Examples

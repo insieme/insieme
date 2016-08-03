@@ -37,6 +37,8 @@
 #include "insieme/analysis/haskell/adapter.h"
 
 #include "insieme/analysis/common/failure.h"
+
+#include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/dump/binary_haskell.h"
 #include "insieme/core/ir_builder.h"
 
@@ -51,8 +53,9 @@ using namespace insieme::core::dump::binary::haskell;
 
 extern "C" {
 
+	using insieme::analysis::haskell::StablePtr;
+
 	// Haskell object management
-	typedef void* StablePtr;
 	void hat_freeStablePtr(StablePtr ptr);
 
 	// environment bracket
@@ -80,19 +83,15 @@ namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	struct HSobject {
+	// ------------------------------------------------------------ StablePtr
 
-		StablePtr ptr;
+	HSobject::HSobject(StablePtr ptr) : ptr(ptr) {}
 
-		HSobject(StablePtr ptr) : ptr(ptr) {}
+	HSobject::~HSobject() {
+		hat_freeStablePtr(ptr);
+	}
 
-		~HSobject() {
-			hat_freeStablePtr(ptr);
-		}
-
-	};
-
-	// ------------------------------------------------------------ Tree
+	// ------------------------------------------------------------ IR
 
 	IR::IR(std::shared_ptr<HSobject> ir, const NodePtr& original)
 		: ir(ir), original(original) {}
@@ -163,6 +162,14 @@ namespace haskell {
 		return instance;
 	}
 
+	NodePtr Environment::getRoot() {
+		return root;
+	}
+
+	void Environment::setRoot(NodePtr root) {
+		this->root = root;
+	}
+
 	IR Environment::passIR(const NodePtr& root) {
 		return {make_shared<HSobject>(detail::passIR(root)), root};
 	}
@@ -204,10 +211,58 @@ namespace haskell {
 } // end namespace insieme
 
 extern "C" {
+
+	using namespace insieme::analysis::haskell;
+
 	StablePtr hat_parseIR(const char* ircode, size_t length) {
 		insieme::core::NodeManager nm;
 		insieme::core::IRBuilder builder(nm);
 		auto root = builder.parseStmt(std::string(ircode, length));
 		return insieme::analysis::haskell::detail::passIR(root);
 	}
+
+	// ------------------------------------------------------------ Arithmetic
+
+	arithmetic::Value* hat_arithmetic_value(const size_t* addr_hs, size_t length) {
+		auto& env = Environment::getInstance();
+
+		// build NodeAddress
+		NodeAddress addr(env.getRoot());
+		for(size_t i = 0; i < length; i++) {
+			addr = addr.getAddressOfChild(addr_hs[i]);
+		}
+
+		return new arithmetic::Value(addr.as<ExpressionPtr>());
+	}
+
+	arithmetic::Product::Factor* hat_arithemtic_factor(arithmetic::Value* value, int exponent) {
+		auto ret = new pair<arithmetic::Value, int>(*value, exponent);
+		delete value;
+		return ret;
+	}
+
+	arithmetic::Product* hat_arithmetic_product(const arithmetic::Product::Factor** factors, size_t length) {
+		auto ret = new arithmetic::Product();
+		for(size_t i = 0; i < length; i++) {
+			*ret *= arithmetic::Product(factors[i]->first, factors[i]->second);
+			delete factors[i];
+		}
+		return ret;
+	}
+
+	arithmetic::Formula::Term* hat_arithmetic_term(arithmetic::Product* term, int64_t coeff) {
+		auto ret = new pair<arithmetic::Product, arithmetic::Rational>(*term, arithmetic::Rational(coeff));
+		delete term;
+		return ret;
+	}
+
+	arithmetic::Formula* hat_arithmetic_formula(const arithmetic::Formula::Term** terms, size_t length) {
+		auto ret = new arithmetic::Formula();
+		for(size_t i = 0; i < length; i++) {
+			*ret += arithmetic::Formula(terms[i]->first, terms[i]->second);
+			delete terms[i];
+		}
+		return ret;
+	}
+
 }

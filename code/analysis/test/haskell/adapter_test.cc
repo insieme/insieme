@@ -37,6 +37,8 @@
 #include <gtest/gtest.h>
 
 #include "insieme/analysis/haskell/adapter.h"
+
+#include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/dump/binary_dump.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_builder.h"
@@ -45,6 +47,18 @@
 using namespace std;
 using namespace insieme::core;
 using namespace insieme::core::dump;
+
+extern "C" {
+
+	using insieme::analysis::haskell::StablePtr;
+
+	// Arithmetic
+	arithmetic::Formula* hat_test_formulaZero();
+	arithmetic::Formula* hat_test_formulaOne();
+	arithmetic::Formula* hat_test_formulaExample1(const StablePtr addr);
+	arithmetic::Formula* hat_test_formulaExample2(const StablePtr addr);
+
+}
 
 namespace insieme {
 namespace analysis {
@@ -118,6 +132,40 @@ namespace haskell {
 		boost::optional<Address> decl = env.findDecl(var);
 		EXPECT_TRUE(decl);
 		EXPECT_EQ(addrRoot[0].as<DeclarationStmtAddress>().getVariable(), decl->toNodeAddress(root));
+	}
+
+	TEST_F(HaskellAdapter, FormulaZero) {
+		arithmetic::Formula* formula = hat_test_formulaZero();
+		EXPECT_EQ(arithmetic::Formula(), *formula);
+		delete formula;
+	}
+
+	TEST_F(HaskellAdapter, FormulaOne) {
+		arithmetic::Formula* formula = hat_test_formulaOne();
+		EXPECT_EQ(arithmetic::Formula(1), *formula);
+		delete formula;
+	}
+
+	TEST_F(HaskellAdapter, FormulaExample1) {
+		IR ir_hs = env.passIR(root);
+		NodeAddress addr = NodeAddress(root).getAddressOfChild(0, 1);
+		Address addr_hs = env.passAddress(addr, ir_hs);
+
+		env.setRoot(root);
+		arithmetic::Formula* formula = hat_test_formulaExample1(addr_hs.addr->ptr);
+		EXPECT_STREQ("2*v1^2", toString(*formula).c_str());
+		delete formula;
+	}
+
+	TEST_F(HaskellAdapter, FormulaExample2) {
+		IR ir_hs = env.passIR(root);
+		NodeAddress addr = NodeAddress(root).getAddressOfChild(0, 1);
+		Address addr_hs = env.passAddress(addr, ir_hs);
+
+		env.setRoot(root);
+		arithmetic::Formula* formula = hat_test_formulaExample2(addr_hs.addr->ptr);
+		EXPECT_STREQ("2*v1^6+1", toString(*formula).c_str());
+		delete formula;
 	}
 
 	TEST_F(HaskellAdapter, DISABLED_PrintTree) {

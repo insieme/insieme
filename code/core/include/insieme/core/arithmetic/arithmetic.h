@@ -429,7 +429,7 @@ namespace arithmetic {
 		 * This method is required by the printable interface and allows
 		 * instances of this class to be printed to some output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
+		std::ostream& printTo(std::ostream& out) const;
 	};
 
 
@@ -698,7 +698,7 @@ namespace arithmetic {
 		 * This method is required by the printable interface and allows
 		 * instances of this class to be printed to some output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
+		std::ostream& printTo(std::ostream& out) const;
 	};
 
 
@@ -1112,7 +1112,7 @@ namespace arithmetic {
 		 * Allows this formula to be printed to some output stream via
 		 * the Printable interface of the utilities.
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
+		std::ostream& printTo(std::ostream& out) const;
 
 		/**
 		 * Provides access to the internally maintained list of terms.
@@ -1402,7 +1402,7 @@ namespace arithmetic {
 		 * This method is required by the printable interface and allows
 		 * instances of this class to be printed to some output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
+		std::ostream& printTo(std::ostream& out) const {
 			return out << formula << " <= 0";
 		}
 	};
@@ -1619,7 +1619,7 @@ namespace arithmetic {
 		 * This method is required by the printable interface and allows
 		 * instances of this class to be printed to some output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
+		std::ostream& printTo(std::ostream& out) const;
 	};
 
 
@@ -1865,7 +1865,7 @@ namespace arithmetic {
 		 * This method is required by the printable interface and allows
 		 * instances of this class to be printed to some output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
+		std::ostream& printTo(std::ostream& out) const;
 	};
 
 

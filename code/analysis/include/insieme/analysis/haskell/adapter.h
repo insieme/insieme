@@ -47,8 +47,20 @@ namespace analysis {
 namespace haskell {
 
 	#include "boolean_analysis.h"
+	#include "numeric_ordering.h"
 
-	class HSobject;
+	typedef void* StablePtr;
+
+	struct HSobject {
+
+		StablePtr ptr;
+
+		HSobject(StablePtr ptr);
+
+		~HSobject();
+
+	};
+
 	class IR;
 	class Address;
 
@@ -80,6 +92,8 @@ namespace haskell {
 
 		Environment();
 
+		core::NodePtr root;
+
 	public:
 
 		~Environment();
@@ -87,6 +101,9 @@ namespace haskell {
 		void operator=(const Environment&) = delete;
 
 		static Environment& getInstance();
+
+		core::NodePtr getRoot();
+		void setRoot(core::NodePtr root);
 
 		IR passIR(const core::NodePtr& root);
 		Address passAddress(const core::NodeAddress& addr, const IR& ir);

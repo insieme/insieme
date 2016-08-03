@@ -2,6 +2,7 @@
 
 module Insieme.Adapter where
 
+import Control.Monad
 import Control.Exception
 import Data.Foldable
 import Data.Maybe
@@ -9,9 +10,11 @@ import Data.Tree
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
+import Foreign.Marshal.Array
 import Insieme.Analysis.Boolean
 import qualified Data.ByteString.Char8 as BS8
 import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Arithmetic as Arith
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
@@ -140,6 +143,95 @@ checkBoolean addr_c ir_c = handleAll (return . fromIntegral . fromEnum $ Both) $
 foreign export ccall "hat_checkBoolean"
     checkBoolean :: StablePtr Addr.NodeAddress -> StablePtr IR.Inspire
                  -> IO (CInt)
+
+--
+-- * Arithemtic
+--
+
+type CArithmeticValue = ()
+type CArithmeticFactor = ()
+type CArithmeticProduct = ()
+type CArithmeticTerm = ()
+type CArithmeticFormula = ()
+
+foreign import ccall "hat_arithmetic_value"
+    arithmeticValue :: Ptr CSize -> CSize -> IO (Ptr CArithmeticValue)
+
+foreign import ccall "hat_arithemtic_factor"
+    arithemticFactor :: Ptr CArithmeticValue -> CInt -> IO (Ptr CArithmeticFactor)
+
+foreign import ccall "hat_arithmetic_product"
+    arithmeticProduct :: Ptr (Ptr CArithmeticFactor) -> CSize -> IO (Ptr CArithmeticProduct)
+
+foreign import ccall "hat_arithmetic_term"
+    arithmeticTerm :: Ptr CArithmeticProduct -> CULong -> IO (Ptr CArithmeticTerm)
+
+foreign import ccall "hat_arithmetic_formula"
+    arithmeticFormula :: Ptr (Ptr CArithmeticTerm) -> CSize -> IO (Ptr CArithmeticFormula)
+
+
+passFormula :: Integral c => Arith.Formula c Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
+passFormula formula = do
+    terms <- forM (Arith.terms formula) passTerm
+    withArrayLen' terms arithmeticFormula
+  where
+    passTerm :: Integral c => Arith.Term c Addr.NodeAddress -> IO (Ptr CArithmeticTerm)
+    passTerm term = do
+        product <- passProduct (Arith.product term)
+        arithmeticTerm product (fromIntegral $ Arith.coeff term)
+
+    passProduct :: Integral c => Arith.Product c Addr.NodeAddress -> IO (Ptr CArithmeticProduct)
+    passProduct product = do
+        factors <- forM (Arith.factors product) passFactor
+        withArrayLen' factors arithmeticProduct
+
+    passFactor :: Integral c => Arith.Factor c Addr.NodeAddress -> IO (Ptr CArithmeticFactor)
+    passFactor factor = do
+        value <- passValue (Arith.base factor)
+        arithemticFactor value (fromIntegral $ Arith.exponent factor)
+
+    passValue :: Addr.NodeAddress -> IO (Ptr CArithmeticValue)
+    passValue addr = withArrayLen' (fromIntegral <$> Addr.getAddress addr) arithmeticValue
+
+    withArrayLen' :: Storable a => [a] -> (Ptr a -> CSize -> IO b) -> IO b
+    withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
+
+
+--
+-- * Arithmetic Tests
+--
+
+testFormulaZero :: IO (Ptr CArithmeticFormula)
+testFormulaZero = passFormula Arith.zero
+
+foreign export ccall "hat_test_formulaZero"
+    testFormulaZero :: IO (Ptr CArithmeticFormula)
+
+
+testFormulaOne :: IO (Ptr CArithmeticFormula)
+testFormulaOne = passFormula Arith.one
+
+foreign export ccall "hat_test_formulaOne"
+    testFormulaOne :: IO (Ptr CArithmeticFormula)
+
+
+testFormulaExample1 :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
+testFormulaExample1 addr_c = do
+    addr <- deRefStablePtr addr_c
+    passFormula $ Arith.Formula [Arith.Term 2 (Arith.Product [Arith.Factor addr 2])]
+
+foreign export ccall "hat_test_formulaExample1"
+    testFormulaExample1 :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
+
+
+testFormulaExample2 :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
+testFormulaExample2 addr_c = do
+    addr <- deRefStablePtr addr_c
+    passFormula $ Arith.Formula [ Arith.Term 1 (Arith.Product []), Arith.Term 2 (Arith.Product [Arith.Factor addr 2, Arith.Factor addr 4]) ]
+
+foreign export ccall "hat_test_formulaExample2"
+    testFormulaExample2 :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
+
 
 --
 -- * Utilities
