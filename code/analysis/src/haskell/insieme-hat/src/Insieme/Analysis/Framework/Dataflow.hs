@@ -59,8 +59,15 @@ dataflowValue addr top idGen analysis ops = case getNode addr of
         con = Solver.createConstraint dep val var
         
         trg = Callable.callableValue (goDown 1 addr)
-        dep a = (Solver.toVar trg) : ( (map Solver.toVar (getExitPointVars a)) ++ (map Solver.toVar (getReturnValueVars a)) )
-        val a = Solver.join $ map (Solver.get a) (getReturnValueVars a) 
+        dep a = (Solver.toVar trg) : ( 
+                    (map Solver.toVar (getExitPointVars a)) ++ 
+                    (map Solver.toVar (getReturnValueVars a)) ++ 
+                    (getOperatorDependencies a)
+                )
+        val a = Solver.join $ (map (Solver.get a) (getReturnValueVars a)) ++ (getOperatorValue a) 
+        
+        
+        -- support for calls to lambda and closures --
         
         getExitPointVars a = Set.fold go [] (Solver.get a trg)
             where
@@ -70,6 +77,20 @@ dataflowValue addr top idGen analysis ops = case getNode addr of
             where 
                 go = \e l -> foldr (\(ExitPoint.ExitPoint r) l -> analysis r : l) l e
         
+        -- operator support --
+        
+        getActiveOperators a = filter f ops
+            where 
+                f = \o -> any (\l -> getNode (Callable.toAddress l) == operator o) literals
+                literals = Set.toList $ Solver.get a trg
+        
+        getOperatorDependencies a = concat $ map go $ getActiveOperators a
+            where
+                go = \o -> dependsOn o a
+        
+        getOperatorValue a = map go $ getActiveOperators a
+            where
+                go = \o -> getValue o a
 
         -- temporary fix to support ref_deref before supporting referencences
         con2 = Solver.createConstraint dep2 val2 var
