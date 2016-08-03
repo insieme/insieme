@@ -338,30 +338,38 @@ namespace transform {
 				// cut of nested lambdas
 				if (cur.isa<LambdaExprPtr>()) return true;		// prune
 
+				auto handleParamAccess = [&](VariablePtr var) {
+					// get position of parameter
+					std::size_t idx = std::find(params.begin(), params.end(), var) - params.begin();
+
+					// get the argument
+					auto arg = call[idx];
+
+					// added to accessed variables
+					auto firstUsage = accessedArguments.insert(idx).second;
+
+					// update success flag
+					success &= (core::analysis::isSideEffectFree(arg) || firstUsage);
+
+					// register replacement
+					replacements[cur] = extractInitExprFromDecl(call[idx]);
+				};
+
 				// check if current node is a parameter access
 				if (analysis::isCallOf(cur, deref)) {
 					// check for parameters
 					if (auto var = cur.as<CallExprPtr>()->getArgument(0).isa<VariablePtr>()) {
 						if (::contains(params, var)) {
-
-							// get position of parameter
-							std::size_t idx = std::find(params.begin(), params.end(), var) - params.begin();
-
-							// get the argument
-							auto arg = call[idx];
-
-							// added to accessed variables
-							auto firstUsage = accessedArguments.insert(idx).second;
-
-							// update success flag
-							success &= (core::analysis::isSideEffectFree(arg) || firstUsage);
-
-							// register replacement
-							replacements[cur] = extractInitExprFromDecl(call[idx]);
-
+							handleParamAccess(var);
 							// no more descent required here
 							return true;
 						}
+					}
+				} else if(auto var = cur.isa<VariablePtr>()) {
+					if((lang::isCppReference(var) || lang::isCppRValueReference(var)) && ::contains(params, var)) {
+						handleParamAccess(var);
+						// no more descent required here
+						return true;
 					}
 				}
 

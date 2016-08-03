@@ -208,6 +208,23 @@ namespace backend {
 		})
 	}
 
+	TEST(CppSnippet, ReferenceLazyUse) {
+		DO_TEST(R"(
+			def struct S {
+				mem : int<4>;
+			};
+
+			int<4> main() {
+				var ref<S> y;
+				var ref<S,t,f,cpp_ref> x = y;
+				x.mem == 0 && x.mem == 1;
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "x.mem == 0 && x.mem == 1;");
+		})
+	}
+
 	TEST(CppSnippet, ReferenceVariableMethodUse) {
 		DO_TEST(R"(
 			def struct A {
