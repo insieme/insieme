@@ -292,7 +292,8 @@ namespace extensions {
 					auto funType = convMethodLit->getType().as<core::FunctionTypePtr>();
 					auto retType = calleePair.second;
 					auto thisArg = thisArgFactory(retType);
-					if(!core::lang::isReference(thisArg)) thisArg = frontend::utils::convertMaterializingExpr(converter, thisArg);
+					// Implicit materialization of this argument is not performed in clang AST
+					thisArg = frontend::utils::prepareThisExpr(converter, thisArg);
 					VLOG(2) << "Interceptor: intercepted clang method/constructor call\n" << dumpClang(decl) << "\n";
 					auto retCall = utils::buildCxxMethodCall(converter, retType, convMethodLit, thisArg, args);
 					return retCall;

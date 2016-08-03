@@ -69,6 +69,10 @@ namespace utils {
 	///
 	core::ExpressionPtr convertMaterializingExpr(conversion::Converter& converter, core::ExpressionPtr retIr);
 
+	/// Prepare the given 'this' argument if necessary
+	///
+	core::ExpressionPtr prepareThisExpr(conversion::Converter& converter, core::ExpressionPtr thisArg);
+
 	/// Modify the body of a for loop to contain the given update expression before every possible exit point
 	///
 	core::StatementPtr addIncrementExprBeforeAllExitPoints(const core::StatementPtr& body, const core::StatementPtr& incrementExpression);

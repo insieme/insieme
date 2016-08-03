@@ -119,6 +119,16 @@ int main() {
 		a.size();
 	}
 
+	// check call to intercepted pointer type
+	#pragma test expect_ir(R"({
+		var ref<ptr<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>>,f,f,plain> v0 = ref_decl(type_lit(ref<ptr<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>>,f,f,plain>));
+		lit("IMP_std_colon__colon_vector::IMP_size" : const IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::() -> uint<8>)(ptr_to_ref(*v0));
+	})")
+	{
+		std::vector<int>* a;
+		a->size();
+	}
+
 	// check partial template specialization
 	#pragma test expect_ir(R"({
 		var ref<IMP_std_colon__colon_vector<ref<bool,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<bool,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::())(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<bool,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<bool,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));

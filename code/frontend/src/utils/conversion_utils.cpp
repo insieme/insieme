@@ -45,6 +45,7 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
@@ -172,6 +173,12 @@ namespace utils {
 			}
 		}
 		return retIr;
+	}
+
+	core::ExpressionPtr prepareThisExpr(conversion::Converter& converter, core::ExpressionPtr thisArg) {
+		if(core::lang::isPointer(thisArg)) thisArg = core::lang::buildPtrToRef(thisArg);
+		if(!core::lang::isReference(thisArg)) thisArg = frontend::utils::convertMaterializingExpr(converter, thisArg);
+		return thisArg;
 	}
 
 	core::StatementPtr addIncrementExprBeforeAllExitPoints(const core::StatementPtr& body, const core::StatementPtr& incrementExpression) {

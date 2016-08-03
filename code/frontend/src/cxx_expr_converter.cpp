@@ -144,9 +144,7 @@ namespace conversion {
 
 		// Implicit materialization of this argument is not performed in clang AST
 		if(funType->isMember()) {
-			if(!core::lang::isReference(newArgs[0])) {
-				newArgs[0] = frontend::utils::convertMaterializingExpr(converter, newArgs[0]);
-			}
+			newArgs[0] = frontend::utils::prepareThisExpr(converter, newArgs[0]);
 		}
 
 		return builder.callExpr(convertExprType(callExpr), funExp, newArgs);
@@ -231,14 +229,8 @@ namespace conversion {
 
 			// get the "this" object and add to arguments
 			core::ExpressionPtr thisObj = Visit(callExpr->getImplicitObjectArgument());
-			if(core::lang::isPointer(thisObj)) {
-				thisObj = core::lang::buildPtrToRef(thisObj);
-			}
-
 			// Implicit materialization of this argument is not performed in clang AST
-			if(!core::lang::isReference(thisObj)) {
-				thisObj = frontend::utils::convertMaterializingExpr(converter, thisObj);
-			}
+			thisObj = frontend::utils::prepareThisExpr(converter, thisObj);
 
 			// build call and we are done
 			auto retType = convertExprType(callExpr);
