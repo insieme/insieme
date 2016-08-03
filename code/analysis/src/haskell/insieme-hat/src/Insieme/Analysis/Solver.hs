@@ -4,6 +4,7 @@ module Insieme.Analysis.Solver (
     -- lattices
     Lattice,
     join,
+    merge,
     bot,
     less,
     
@@ -53,9 +54,11 @@ import qualified Data.Hashable as Hash
 -- Lattice --------------------------------------------------
 
 class (Eq v, Show v, Typeable v) => Lattice v where
-        {-# MINIMAL join #-}
+        {-# MINIMAL join | merge, bot #-}
         -- | combine elements
         join :: [v] -> v                    -- need to be provided by implementations
+        join [] = bot                       -- a default implementation for the join operator
+        join xs = foldr1 merge xs           -- a default implementation for the join operator
         -- | binary join
         merge :: v -> v -> v                -- a binary version of the join
         merge a b = join [ a , b ]          -- its default implementation derived from join

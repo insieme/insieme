@@ -42,6 +42,9 @@ booleanValue addr =
     case () of _
                 | isBuiltin addr "true"  -> Solver.mkVariable (idGen addr) [] AlwaysTrue
                 | isBuiltin addr "false" -> Solver.mkVariable (idGen addr) [] AlwaysFalse
-                | otherwise      -> dataflowValue addr Both idGen booleanValue []
+                | otherwise      -> dataflowValue addr analysis []
   where
-    idGen = Solver.mkIdentifier . ("B"++) . prettyShow
+  
+    analysis = DataFlowAnalysis "B" booleanValue Both
+  
+    idGen = mkVarIdentifier analysis

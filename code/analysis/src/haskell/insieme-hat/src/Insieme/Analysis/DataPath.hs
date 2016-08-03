@@ -52,11 +52,13 @@ dataPathValue :: NodeAddress -> TypedVar DataPathSet
 dataPathValue addr = 
     case () of _
                 | isBuiltin addr "dp_root"  -> mkVariable (idGen addr) [] (Set.singleton Root)
-                | otherwise                 -> dataflowValue addr top idGen dataPathValue []
+                | otherwise                 -> dataflowValue addr analysis []
                 
   where
   
-    idGen = mkIdentifier . ("DP"++) . prettyShow
+    analysis = DataFlowAnalysis "DP" dataPathValue top
+  
+    idGen = mkVarIdentifier analysis
   
     top = Set.empty     -- TODO: compute actual top
   

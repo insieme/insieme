@@ -58,10 +58,13 @@ callableValue addr = case getNode addr of
     Node IR.Literal _ ->
         Solver.mkVariable (idGen addr) [] (Set.singleton (Literal addr))
 
-    _ -> dataflowValue addr allCallables idGen callableValue []
+    _ -> dataflowValue addr analysis []
 
   where
-    idGen = Solver.mkIdentifier . ("C"++) . prettyShow
+  
+    analysis = DataFlowAnalysis "C" callableValue allCallables
+  
+    idGen = mkVarIdentifier analysis
 
     allCallables = Set.fromList $ foldTree collector (getRootIR addr)
     collector cur callables = case getNode cur of
