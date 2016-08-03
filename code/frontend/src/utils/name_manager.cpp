@@ -227,11 +227,8 @@ namespace utils {
 			}
 		}
 
-		// mangle name
-		name = insieme::utils::mangle(name);
-
 		// adjust name for things in anonymous namespaces
-		if(boost::contains(name, insieme::utils::getMangledAnonymousIndicator())) {
+		if(boost::contains(name, "(anonymous")) {
 			name = createNameForAnon(name, funcDecl, converter.getSourceManager());
 		}
 
@@ -252,7 +249,7 @@ namespace utils {
 		}
 
 		// all done
-		return name + suffixStr;
+		return insieme::utils::mangle(name + suffixStr);
 	}
 
 	std::string getNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm) {

@@ -67,6 +67,9 @@ int giveN() {
 }
 
 template <typename T>
+void takeT(const T& t) {}
+
+template <typename T>
 class tempClass {
 	T val;
 };
@@ -131,6 +134,16 @@ int main() {
 	})")
 	{
 		giveN<5>();
+	}
+
+	#pragma test expect_ir(R"(
+		def IMP_takeT_char__lbracket_5_rbracket__returns_void = function (v0 : ref<array<char,5>,t,f,cpp_ref>) -> unit { };
+		{
+			IMP_takeT_char__lbracket_5_rbracket__returns_void(ref_kind_cast(lit(""test"" : ref<array<char,5>,t,f,plain>), type_lit(cpp_ref)));
+		}
+	)")
+	{
+		takeT("test");
 	}
 
 	return 0;
