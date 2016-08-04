@@ -19,6 +19,7 @@ insieme_find_package(NAME Boost)
 target_include_directories(insieme_backend SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
 target_link_libraries(insieme_backend insieme_core)
+target_link_libraries(insieme_backend insieme_common)
 target_link_libraries(insieme_backend insieme_utils)
 target_link_libraries(insieme_backend insieme_annotations)
 target_link_libraries(insieme_backend insieme_transform)
@@ -42,6 +43,7 @@ foreach ( case_file ${test_cases})
 	#dependency on test suit target
 	add_dependencies(${ut_prefix} ${case_name})
 
+	target_link_libraries(${case_name} insieme_common)
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_utils)

@@ -40,6 +40,7 @@ target_include_directories(insieme_frontend PUBLIC ${LLVM_INCLUDE_DIRS})
 
 # add dependencies
 target_link_libraries(insieme_frontend insieme_core)
+target_link_libraries(insieme_frontend insieme_common)
 target_link_libraries(insieme_frontend insieme_utils)
 target_link_libraries(insieme_frontend insieme_transform)
 target_link_libraries(insieme_frontend insieme_annotations)
@@ -65,6 +66,7 @@ foreach ( case_file ${test_cases})
 	add_dependencies(${ut_prefix} ${case_name})
 
 	target_link_libraries(${case_name} insieme_frontend)
+	target_link_libraries(${case_name} insieme_common)
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
 	#target_link_libraries(${case_name} insieme_driver)
