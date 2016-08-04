@@ -529,6 +529,10 @@ namespace backend {
 				for(auto typeArg : ptr->getTypeParameterList()) {
 					auto tempParamType = converter.getTypeManager().getTemplateArgumentType(typeArg);
 					namedType->parameters.push_back(tempParamType);
+
+					// we need to drop qualified-refs here in order to then correctly generate a dependency to the definition of the type
+					if(core::lang::isQualifiedReference(typeArg)) typeArg = core::analysis::getReferencedType(typeArg);
+
 					// if argument type is not intercepted, add a dependency on its definition
 					auto tempParamTypeInfo = getInfo(typeArg);
 					if (tempParamTypeInfo) {
