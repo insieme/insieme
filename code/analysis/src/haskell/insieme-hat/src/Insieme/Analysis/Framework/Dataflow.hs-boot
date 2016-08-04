@@ -1,5 +1,5 @@
 module Insieme.Analysis.Framework.Dataflow (
-    DataFlowAnalysis(DataFlowAnalysis),
+    DataFlowAnalysis(DataFlowAnalysis,analysisID,variableGenerator,topValue),
     mkVarIdentifier,
     dataflowValue
 ) where

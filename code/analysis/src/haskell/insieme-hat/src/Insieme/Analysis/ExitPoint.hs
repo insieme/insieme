@@ -47,17 +47,29 @@ exitPoints addr = case getNode addr of
             var = Solver.mkVariable id [con] Solver.bot
             con = Solver.createConstraint dep val var
             
-            dep a = (map Solver.toVar (getReturnReachVars a))
-            val a = foldr go Set.empty returns
+            dep a = (Solver.toVar endOfBodyReachable) : (map Solver.toVar (getReturnReachVars a))
+            val a = exits
                 where
-                    go = \r s -> 
-                        if Reachable.toBool $ Solver.get a (Reachable.reachableIn r) 
-                        then Set.insert (ExitPoint r) s
-                        else s 
+                    exits = 
+                        if Reachable.toBool $ Solver.get a endOfBodyReachable 
+                        then Set.insert (ExitPoint body) reachableReturns
+                        else reachableReturns
+                
+                    reachableReturns = foldr go Set.empty returns
+                        where
+                            go = \r s -> 
+                                if Reachable.toBool $ Solver.get a (Reachable.reachableIn r) 
+                                then Set.insert (ExitPoint r) s
+                                else s 
 
             returns = collectReturns addr
 
             getReturnReachVars a = map (\a -> Reachable.reachableIn a) returns
+            
+            body = (goDown 2 addr)
+            
+            endOfBodyReachable = Reachable.reachableOut body
+            
     
     -- for bind expressions: use nested call expression
     Node IR.BindExpr _ -> Solver.mkVariable id [] $ Set.singleton $ ExitPoint $ goDown 2 addr 

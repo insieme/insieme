@@ -34,7 +34,7 @@ module Insieme.Analysis.Solver (
     constant,
     
     -- debugging
-    dumpAssignment
+    dumpSolverState
     
 ) where
 
@@ -103,7 +103,7 @@ instance Ord Var where
         compare a b = compare (index a) (index b)
 
 instance Show Var where
-        show v = show (index v)
+        show v = show (index v) 
 
 
 -- typed variables (user interaction)
@@ -148,8 +148,10 @@ set :: (Typeable a) => Assignment -> TypedVar a -> a -> Assignment
 set (Assignment a) (TypedVar v) d = Assignment (Map.insert v (toDyn d) a)
 
 -- prints the current assignment as a graph
-toDotGraph :: Assignment -> String
-toDotGraph a@( Assignment m ) = "digraph G {\n\t"
+toDotGraph :: Assignment -> Set.Set Var -> String
+toDotGraph a@( Assignment m ) varSet = "digraph G {\n\t"
+        ++
+        "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
         ++
         -- define nodes
         ( intercalate "\n\t" ( map (\v -> "v" ++ (show $ fst v ) ++ " [label=\"" ++ (show $ snd v) ++ " = " ++ (valuePrint (snd v) a) ++ "\"];" ) vars ) )
@@ -169,21 +171,17 @@ toDotGraph a@( Assignment m ) = "digraph G {\n\t"
         keys = Map.keys m
         
         -- list of all variables in the analysis 
-        allVars = Set.toList $ collect keys Set.empty
-            where 
-                collect [] s = s
-                collect (v:vs) s = if Set.member v s 
-                                   then collect vs s
-                                   else collect ((dep v) ++ vs) (Set.insert v s)
+        allVars = Set.toList $ varSet
         
         -- the keys (=variables) associated with an index
-        vars = Prelude.zip [0..] allVars 
+        vars = Prelude.zip [1..] allVars 
         
         -- a reverse lookup map for vars
         rev = Map.fromList $ map swap vars
         
         -- a lookup function for rev
-        index v = fromJust $ Map.lookup v rev 
+        --index v = trace ((show v) ++ " => " ++ (show $ Map.lookup v rev)) $ fromJust $ Map.lookup v rev
+        index v = fromMaybe 0 $ Map.lookup v rev 
         
         -- computes the list of dependencies
         deps = foldr go [] vars
@@ -192,9 +190,9 @@ toDotGraph a@( Assignment m ) = "digraph G {\n\t"
 
                   
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
-dumpAssignment :: Assignment -> String -> String
-dumpAssignment a file = unsafePerformIO $ do
-         writeFile (file ++ ".dot") $ toDotGraph a
+dumpSolverState :: Assignment -> Set.Set Var -> String -> String
+dumpSolverState a v file = unsafePerformIO $ do
+         writeFile (file ++ ".dot") $ toDotGraph a v
          runCommand ("dot -Tpdf " ++ file ++ ".dot -o " ++ file ++ ".pdf")
          return ("Dumped assignment into file " ++ file ++ ".pdf!")
 
@@ -257,7 +255,7 @@ solveStep :: Assignment -> Set.Set Var -> Dependencies -> [Var] -> Assignment
 
 -- empty work list
 solveStep a _ _ [] = a                                        -- work list is empty
---solveStep a _ _ [] = trace (dumpAssignment a "graph") $ a                                        -- work list is empty
+-- solveStep a v _ [] = trace (dumpSolverState a v "graph") $ a                                        -- work list is empty
 
 -- compute next element in work list
 solveStep a k d (v:vs) = solveStep resAss resKnown resDep (ds ++ vs)
@@ -266,8 +264,8 @@ solveStep a k d (v:vs) = solveStep resAss resKnown resDep (ds ++ vs)
                 (resAss,resKnown,resDep,ds) = foldr processConstraint (a,k,d,[]) ( constraints v )  -- update all constraints of current variable
                 processConstraint c (a,k,d,dv) = case ( update c $ a ) of 
                         (a',None)         -> (a',nk,nd,nv)                                        -- nothing changed, we are fine
-                        (a',Increment)         -> (a',nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- add depending variables to work list
-                        (a',Reset)         -> undefined                                                -- TODO: support local resets
+                        (a',Increment)    -> (a',nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- add depending variables to work list
+                        (a',Reset)        -> undefined                                            -- TODO: support local resets
                         where
                                 trg = target c                                
                                 dep = dependingOn c a

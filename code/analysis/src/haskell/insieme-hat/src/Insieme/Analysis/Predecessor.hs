@@ -52,7 +52,7 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
             else ProgramPoint (goDown (i+1) parent) Post   -- eval arguments in reverse order
     
     Node IR.CompoundStmt stmts -> single $
-            if i == 0                                        -- if it is the first statement
+            if i == 0                                      -- if it is the first statement
             then ProgramPoint parent Pre                   -- then go to the pre-state of the compound statement
             else ProgramPoint (goDown (i-1) parent) Post   -- else to the post state of the previous statement
     
@@ -60,7 +60,16 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
     
     Node IR.BindExpr _ -> call_sites
     
-    _ -> trace ( " Unhandled Pre Program Point: " ++ (show p) ) $ error "unhandled case"
+    Node IR.Declaration _ -> single $ ProgramPoint parent Pre
+    
+    Node IR.DeclarationStmt _ -> single $ ProgramPoint parent Pre
+    
+    Node IR.ReturnStmt _ -> single $ ProgramPoint parent Pre
+    
+    Node IR.IfStmt _ | i == 0 -> single $ ProgramPoint parent Pre
+    Node IR.IfStmt _ -> single $ ProgramPoint (goDown 0 parent) Post        -- todo: make dependent on result of conditional expression
+    
+    _ -> trace ( " Unhandled Pre Program Point: " ++ (show p) ++ " for parent " ++ (show $ getNode parent) ) $ error "unhandled case"
     
   where
   
@@ -82,7 +91,7 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
     
     
 -- Predecessor rules for internal program points:    
-predecessor  p@(ProgramPoint a Internal) = case getNode a of
+predecessor  p@(ProgramPoint addr Internal) = case getNode addr of
 
     -- link to exit points of potential target functions
     Node IR.CallExpr _ -> var 
@@ -92,11 +101,21 @@ predecessor  p@(ProgramPoint a Internal) = case getNode a of
             con = Solver.createConstraint dep val var
          
             dep a = Solver.toVar callableVar : map Solver.toVar (exitPointVars a)
-            val a = foldr go [] (exitPointVars a)
+            val a = (if callsLiteral then [litPredecessor] else []) ++ nonLiteralExit
                 where
-                    go = \e l -> foldr (\(ExitPoint r) l -> (ProgramPoint r Post) : l) l (Solver.get a e)
+                    nonLiteralExit = foldr go [] (exitPointVars a)
+                        where
+                            go = \e l -> foldr (\(ExitPoint r) l -> (ProgramPoint r Post) : l) l (Solver.get a e)
+                    
+                    callsLiteral = any isLiteral (Solver.get a callableVar)
+                        where
+                            isLiteral (Literal _) = True
+                            isLiteral _ = False
+                            
+                    litPredecessor = ProgramPoint (goDown 1 addr) Post
+                    
          
-            callableVar = callableValue (goDown 1 a)
+            callableVar = callableValue (goDown 1 addr)
             
             exitPointVars a = foldr (\t l -> exitPoints (toAddress t) : l) [] (Solver.get a callableVar)
                 
@@ -117,15 +136,22 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
     -- call expressions are switching from Internal to Post
     Node IR.CallExpr _ -> single $ ProgramPoint a Internal
     
+    -- declarationns are done once the init expression is done
+    Node IR.Declaration _ -> single $ ProgramPoint (goDown 1 a) Post
+    
     -- compound statements
     Node IR.CompoundStmt []    -> pre
     Node IR.CompoundStmt stmts -> single $ ProgramPoint (goDown ((length stmts) - 1) a) Post
     
-    _ -> trace ( " Unhandled Post Program Point: " ++ (show p) ) $ error "unhandled case"
+    -- declaration statement
+    Node IR.DeclarationStmt _ -> single $ ProgramPoint (goDown 0 a) Post
+    
+    _ -> trace ( " Unhandled Post Program Point: " ++ (show p) ++ " for node " ++ (show $ getNode a) ) $ error "unhandled case"
     
   where
   
-    single p = Solver.mkVariable (idGen p) [] [p] 
+    single :: ProgramPoint -> Solver.TypedVar PredecessorList
+    single x = Solver.mkVariable (idGen p) [] [x] 
     
     pre = single $ ProgramPoint a Pre
 

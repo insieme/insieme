@@ -2,6 +2,7 @@
 
 module Insieme.Analysis.Framework.MemoryState where
 
+import Debug.Trace
 import Data.Foldable
 import Insieme.Inspire.NodeAddress
 
@@ -14,6 +15,7 @@ import Insieme.Analysis.Reference
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Solver as Solver
 
+import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 
 
 data MemoryLocation = MemoryLocation NodeAddress
@@ -26,20 +28,27 @@ data MemoryState = MemoryState ProgramPoint MemoryLocation
 
 memoryStateValue :: (Solver.Lattice a)
          => MemoryState                                     -- ^ the program point and memory location interested in
-         -> a                                               -- ^ the top value of the processed lattice
-         -> (NodeAddress -> Solver.Identifier)              -- ^ the variable ID generator function of the associated value analysis
-         -> NodeAddress -> Solver.TypedVar a                -- ^ the associated value analysis
+         -> DataFlowAnalysis a                              -- ^ the underlying data flow analysis this memory state analysis is cooperating with
          -> Solver.TypedVar a                               -- ^ the analysis variable representing the requested state
 
-memoryStateValue (MemoryState pp@(ProgramPoint addr _) ml@(MemoryLocation loc)) top analysisIdGen analysis = var
+memoryStateValue ms@(MemoryState pp@(ProgramPoint addr _) ml@(MemoryLocation loc)) analysis = var
+
     where
-          var = undefined  
---        var = Solver.mkVariable (idGen pp) [con] Solver.bot
---        con = Solver.createConstraint dep val var
---        
---        idGen pp = Solver.mkIdentifier  
 
+          -- extend the underlysing analysis's identifier for the memory state identifier          
+          varId = Solver.mkIdentifier $ ('M' : analysisID analysis) ++ (show ms) 
+        
+          var = Solver.mkVariable varId [con] Solver.bot
+          con = Solver.createConstraint dep val var
 
+          dep a = (Solver.toVar reachingDefVar) : (map Solver.toVar $ definingValueVars a)
+          val a = Solver.join $ map (Solver.get a) (definingValueVars a)
+
+          reachingDefVar = reachingDefinitions ms
+          
+          definingValueVars a = foldr go [] $ Solver.get a reachingDefVar
+            where
+                go (Definition addr) l = (variableGenerator analysis $ goDown 3 addr) : l  
 
 
 

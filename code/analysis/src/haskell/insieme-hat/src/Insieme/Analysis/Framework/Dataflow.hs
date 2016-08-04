@@ -1,6 +1,6 @@
 
 module Insieme.Analysis.Framework.Dataflow (
-    DataFlowAnalysis(DataFlowAnalysis),
+    DataFlowAnalysis(DataFlowAnalysis,analysisID,variableGenerator,topValue),
     mkVarIdentifier,
     dataflowValue
 ) where
@@ -22,11 +22,13 @@ import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.CallSite as CallSite
 import qualified Insieme.Analysis.ExitPoint as ExitPoint
+import qualified Insieme.Analysis.Reference as Reference
 
 import Insieme.Analysis.Reachable
 
+import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-
+import Insieme.Analysis.Framework.MemoryState
 
 
 --
@@ -91,7 +93,7 @@ dataflowValue addr analysis ops = case getNode addr of
         
         -- operator support --
         
-        getActiveOperators a = filter f ops
+        getActiveOperators a = filter f extOps
             where 
                 f o = any (\l -> covers o (Callable.toAddress l)) literals
                 literals = Solver.get a trg
@@ -152,4 +154,26 @@ dataflowValue addr analysis ops = case getNode addr of
             
         _ -> trace " Unhandled Variable parent!" $ error "unhandled case"
 
+    -- add support for predefined operator handlers --
+    
+    extOps = readHandler : ops
+    
+    -- support the ref_deref operation (read)
+    
+    readHandler = OperatorHandler cov dep val
 
+    cov a = isBuiltin a "ref_deref"
+    
+    dep a = (Solver.toVar targetRefVar) : (map Solver.toVar $ readValueVars a)
+    
+    val a = Solver.join $ map (Solver.get a) (readValueVars a)
+    
+    targetRefVar = Reference.referenceValue $ goDown 2 addr
+    
+    readValueVars a = foldr go [] $ Solver.get a targetRefVar
+        where
+            go r l = (memoryStateValue (MemoryState (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis) : l
+     
+    
+    
+            

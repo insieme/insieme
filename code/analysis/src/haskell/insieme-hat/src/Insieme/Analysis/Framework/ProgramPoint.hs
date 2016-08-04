@@ -31,7 +31,7 @@ programPointValue :: (Solver.Lattice a)
 programPointValue pp@(ProgramPoint a p) idGen analysis ops = case getNode a of
     
         -- allow operator handlers to intercept the interpretation of calls
-        Node IR.CallExpr _ | p == Post -> var
+        Node IR.CallExpr _ | p == Post -> ivar
             where
                 
                 -- create a variable and an intertangled constraint

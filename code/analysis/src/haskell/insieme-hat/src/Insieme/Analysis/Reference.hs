@@ -6,8 +6,8 @@ import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
 import qualified Data.Set as Set
 
-import Insieme.Analysis.Framework.Dataflow
-
+import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
+import Insieme.Analysis.Framework.Utils.OperatorHandler
 
 --
 -- * DataPaths
@@ -60,4 +60,16 @@ instance Lattice ReferenceSet where
 --
 
 referenceValue :: NodeAddress -> TypedVar ReferenceSet
-referenceValue addr = undefined
+referenceValue addr = dataflowValue addr analysis [createHandler]
+    where
+        analysis = DataFlowAnalysis "R" referenceValue top
+        
+        top = Set.empty             -- TODO: replace by a real top value!
+        
+        createHandler = OperatorHandler cov dep val
+        
+        cov a = any (isBuiltin a) ["ref_alloc","ref_decl"]
+        
+        dep a = []
+        
+        val a = Set.singleton $ Reference addr Root
