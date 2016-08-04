@@ -506,7 +506,9 @@ namespace backend {
 			}
 
 			auto getNamedType = [&](const core::NodePtr& nodePtr){
-				std::string name = insieme::utils::demangle(ptr->getName()->getValue());
+				std::string name = ptr->getName()->getValue();
+				// only demangle the name for intercepted types
+				if(annotations::c::hasIncludeAttached(nodePtr)) name = insieme::utils::demangle(name);
 				if(core::annotations::hasAttachedName(ptr)) {
 					name = core::annotations::getAttachedName(ptr);
 					if(annotations::c::hasAttachedCTag(ptr)) {
@@ -516,7 +518,7 @@ namespace backend {
 				return manager.create<c_ast::NamedType>(manager.create<c_ast::Identifier>(name));
 			};
 
-			// handle intercepted types
+			// handle intercepted types and pure declarations
 			if(annotations::c::hasIncludeAttached(ptr) || annotations::c::isDeclaration(ptr)) {
 				c_ast::NamedTypePtr namedType = getNamedType(ptr);
 				c_ast::CodeFragmentPtr definition;
