@@ -558,21 +558,21 @@ namespace c_ast {
 				return out;
 			}
 
+			PRINT(ExplicitInstantiation) {
+				// <subexpr> "<" instantiation types ">"
+				out << print(node->subExpr);
+				return out << "<" << join(", ", node->instantiationTypes, [&](std::ostream& out, const TypePtr& cur) { out << print(cur); }) << " >";
+			}
+
 			PRINT(Call) {
 				// <function> ( <arguments> )
 				out << print(node->function);
-				if (!node->instantiationTypes.empty()) {
-					out << "<" << join(", ", node->instantiationTypes, [&](std::ostream& out, const TypePtr& cur) { out << print(cur); }) << " >";
-				}
 				return out << "(" << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << ")";
 			}
 
 			PRINT(MemberCall) {
 				// <obj> . <function> ( <arguments> )
 				out << print(node->object) << "." << print(node->memberFun);
-				if (!node->instantiationTypes.empty()) {
-					out << "<" << join(", ", node->instantiationTypes, [&](std::ostream& out, const TypePtr& cur) { out << print(cur); }) << " >";
-				}
 				return out << "(" << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << ")";
 			}
 

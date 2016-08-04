@@ -296,9 +296,9 @@ namespace c_ast {
 		return fun->getManager()->create<c_ast::Call>(fun, args);
 	}
 
-	inline MemberCallPtr memberCall(NodePtr obj, NodePtr fun, const vector<NodePtr>& args = vector<NodePtr>(), const vector<TypePtr>& instantiationTypes = vector<TypePtr>()) {
+	inline MemberCallPtr memberCall(NodePtr obj, NodePtr fun, const vector<NodePtr>& args = vector<NodePtr>()) {
 		if(getPriority(obj) < getPriority(BinaryOperation::MemberAccess)) { obj = parentheses(obj); }
-		return fun->getManager()->create<c_ast::MemberCall>(fun, obj, args, instantiationTypes);
+		return fun->getManager()->create<c_ast::MemberCall>(fun, obj, args);
 	}
 
 	inline ConstructorCallPtr ctorCall(TypePtr classType, const vector<NodePtr>& args = vector<NodePtr>(), ExpressionPtr location = ExpressionPtr()) {
