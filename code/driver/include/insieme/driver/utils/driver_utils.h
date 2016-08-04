@@ -46,6 +46,8 @@
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/backend/opencl/opencl_backend.h"
 
+#include "insieme/common/env_vars.h"
+
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/inspyer/inspyer.h"
@@ -159,7 +161,7 @@ namespace utils {
 
 		auto errors = list.getAll();
 
-		if(!errors.empty() && getenv("INSIEME_SEMA_INSPYER") != nullptr) {
+		if(!errors.empty() && getenv(INSIEME_SEMA_INSPYER) != nullptr) {
 			std::string jsonFile = "insieme_sema_inspyer.json";
 			std::string metaFile = "insieme_sema_inspyer_meta.json";
 			std::cout << "Semantic errors encountered. Dumping JSON representation of program to file " << jsonFile << " ... ";

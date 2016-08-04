@@ -38,3 +38,6 @@
 
 // disable full semantic checks
 #define INSIEME_NO_SEMA "INSIEME_NO_SEMA"
+
+// create JSON dumps for inspyer tool on semantic errors
+#define INSIEME_SEMA_INSPYER "INSIEME_SEMA_INSPYER"
