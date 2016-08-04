@@ -217,7 +217,7 @@ namespace utils {
 
 	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, const conversion::Converter& converter, bool cStyleName) {
 		// operator= should not have silly suffixes for templates
-		if(funcDecl->getNameAsString() == "operator=") cStyleName = true;
+		if(boost::starts_with(funcDecl->getNameAsString(), "operator")) cStyleName = true;
 
 		std::string name = funcDecl->getQualifiedNameAsString();
 		if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
@@ -227,11 +227,8 @@ namespace utils {
 			}
 		}
 
-		// mangle name
-		name = insieme::utils::mangle(name);
-
 		// adjust name for things in anonymous namespaces
-		if(boost::contains(name, insieme::utils::getMangledAnonymousIndicator())) {
+		if(boost::contains(name, "(anonymous")) {
 			name = createNameForAnon(name, funcDecl, converter.getSourceManager());
 		}
 
@@ -252,7 +249,7 @@ namespace utils {
 		}
 
 		// all done
-		return name + suffixStr;
+		return insieme::utils::mangle(name + suffixStr);
 	}
 
 	std::string getNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm) {
@@ -297,8 +294,18 @@ namespace utils {
 		auto canon = tagDecl->getCanonicalDecl();
 		// try to use name, if not available try to use typedef name, otherwise no name
 		string name = utils::createNameForAnon("__anon_tagtype_", tagDecl, converter.getSourceManager());
+
 		if(canon->getDeclName() && !canon->getDeclName().isEmpty()) name = canon->getQualifiedNameAsString();
 		else if(canon->hasNameForLinkage()) name = canon->getTypedefNameForAnonDecl()->getQualifiedNameAsString();
+		else {
+			// for anonymous structs created to implement lambdas, encode capture type names in name (
+			auto rec = llvm::dyn_cast<clang::RecordDecl>(tagDecl);
+			if(rec && rec->isLambda()) {
+				for(auto capture : rec->fields()) {
+					name = name + "_" + getTypeString(capture->getType(), false);
+				}
+			}
+		}
 
 		// encode template parameters in name
 		auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(tagDecl);

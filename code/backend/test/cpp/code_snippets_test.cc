@@ -179,6 +179,21 @@ namespace backend {
 		})
 	}
 
+	TEST(CppSnippet, RefArrayParameter) {
+		DO_TEST(R"(
+			def IMP_takeT_char__lbracket_5_rbracket__returns_void = function (v0 : ref<array<char,5>,t,f,cpp_ref>) -> unit { };
+			def IMP_takeT_int__lbracket_3_rbracket__returns_void = function (v0 : ref<array<int<4>,3>,t,f,cpp_ref>) -> unit { };
+			int<4> main() {
+				IMP_takeT_char__lbracket_5_rbracket__returns_void(ref_kind_cast(lit(""test"" : ref<array<char,5>,t,f,plain>), type_lit(cpp_ref)));
+				var ref<array<int<4>,3>,f,f,plain> v0 = <ref<array<int<4>,3>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3>,f,f,plain>))) {1, 2, 3};
+				IMP_takeT_int__lbracket_3_rbracket__returns_void(ref_kind_cast(v0, type_lit(cpp_ref)));
+				return 0;
+			}
+		)", true, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			;
+		})
+	}
+
 	TEST(CppSnippet, ReferenceVariableDeclaration) {
 		DO_TEST(R"(
 			int<4> function IMP_main () {
@@ -205,6 +220,23 @@ namespace backend {
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			EXPECT_PRED2(containsSubString, code, "IMP_test(alb)");
 			EXPECT_PRED2(notContainsSubString, code, "*");
+		})
+	}
+
+	TEST(CppSnippet, ReferenceLazyUse) {
+		DO_TEST(R"(
+			def struct S {
+				mem : int<4>;
+			};
+
+			int<4> main() {
+				var ref<S> y;
+				var ref<S,t,f,cpp_ref> x = y;
+				x.mem == 0 && x.mem == 1;
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "x.mem == 0 && x.mem == 1;");
 		})
 	}
 
@@ -335,15 +367,23 @@ namespace backend {
 				}
 			};
 
+			def struct IMP_B {
+				function IMP_m = () -> unit { }
+			};
+			def IMP_makeB = function () -> IMP_B {
+				return <ref<IMP_B,f,f,plain>>(ref_decl(type_lit(ref<IMP_B,f,f,plain>))) {};
+			};
+
 			int main() {
 				var ref<Math> m;
 
 				print("%d\n", m->id(12));
 				print("%d\n", m->sum(12, 14));
+				IMP_makeB() materialize .IMP_m();
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			;
+			EXPECT_PRED2(containsSubString, code, "IMP_makeB().m()");
 		})
 	}
 
@@ -713,6 +753,32 @@ namespace backend {
 			EXPECT_PRED2(containsSubString, code, "Derived::Derived() : Base(5) { }");
 			EXPECT_PRED2(notContainsSubString, utils::removeCppStyleComments(code), "*");
 			EXPECT_PRED2(notContainsSubString, code, "new ");
+		})
+	}
+
+	TEST(CppSnippet, ConstructorsBaseMove) {
+		DO_TEST(R"(
+			decl IMP_move : (ref<IMP_Derived,f,f,cpp_ref>) -> ref<IMP_Derived,f,f,cpp_rref>;
+			def struct IMP_Base {
+			};
+			def struct IMP_Derived : [ public IMP_Base ] {
+				ctor function () {
+					IMP_Base::(ref_parent_cast(this, type_lit(IMP_Base)));
+				}
+				ctor function (v1 : ref<IMP_Derived,f,f,cpp_rref>) {
+					IMP_Base::(ref_parent_cast(this, type_lit(IMP_Base)), ref_parent_cast(IMP_move(ref_kind_cast(v1, type_lit(cpp_ref))), type_lit(IMP_Base)));
+				}
+			};
+			def IMP_move = function (v86 : ref<IMP_Derived,f,f,cpp_ref>) -> ref<IMP_Derived,f,f,cpp_rref> {
+				return ref_cast(v86, type_lit(f), type_lit(f), type_lit(cpp_rref));
+			};
+			int<4> function IMP_main (){
+				var ref<IMP_Derived,f,f,plain> v0 = IMP_Derived::(ref_decl(type_lit(ref<IMP_Derived,f,f,plain>)));
+				var ref<IMP_Derived,f,f,plain> v1 = IMP_move(ref_kind_cast(v0, type_lit(cpp_ref)));
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, ": IMP_Base((IMP_Base&&)IMP_move(v1))");
 		})
 	}
 
@@ -1367,6 +1433,21 @@ namespace backend {
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			;
 		})
+	}
+
+	TEST(CppSnippet, InterceptedTemplateFunctionPointer) {
+		auto prog = builder.parseProgram(R"(
+			int<4> main() {
+				ptr_of_function(type_instantiation(type_lit(<ref<int<4>,f,f,qualified>, ref<real<4>,f,f,qualified>>(real<4>) -> int<4>),
+								lit("IMP_templateFunRetParam" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>('T_0_1) -> 'T_0_0)));
+				return 0;
+			}
+		)");
+		ASSERT_TRUE(prog);
+		auto converted = sequential::SequentialBackend::getDefault()->convert(prog);
+		ASSERT_TRUE((bool)converted);
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "templateFunRetParam<int32_t, float >");
 	}
 
 	TEST(CppSnippet, DISABLED_StaticVariableConst) {

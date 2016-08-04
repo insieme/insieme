@@ -322,8 +322,13 @@ namespace backend {
 			if(!lit) assert_fail() << "type instantiation should either be handled at call site or apply to function pointer literal";
 			auto replacementLit = core::IRBuilder(NODE_MANAGER).literal(lit->getValue(), call->getType());
 			core::transform::utils::migrateAnnotations(lit, replacementLit);
-			// TODO: add explicit instantiation arguments for function pointers
-			return CONVERT_EXPR(replacementLit);
+			auto ret = CONVERT_EXPR(replacementLit);
+			// perform explicit instantiation if required
+			auto explicitInstantiationList = ::transform(call->getType().as<core::FunctionTypePtr>()->getInstantiationTypeList(), [&](const core::TypePtr& t){
+				return CONVERT_TYPE(t);
+			});
+			if(!explicitInstantiationList.empty()) ret = C_NODE_MANAGER->create<c_ast::ExplicitInstantiation>(ret, explicitInstantiationList);
+			return ret;
 		};
 
 		// -- reals --
@@ -638,6 +643,12 @@ namespace backend {
 
 			if(srcRefKind == core::lang::ReferenceType::Kind::Plain) {
 				if(trgRefKind == core::lang::ReferenceType::Kind::CppReference || trgRefKind == core::lang::ReferenceType::Kind::CppRValueReference) {
+					// special handling for string literal arguments
+					if(auto lit = ARG(0).isa<core::LiteralPtr>()) {
+						if(lit->getStringValue()[0] == '"') {
+							return c_ast::deref(c_ast::cast(CONVERT_TYPE(lit->getType()), CONVERT_ARG(0)));
+						}
+					}
 					return c_ast::deref(CONVERT_ARG(0));
 				}
 			}
@@ -653,8 +664,7 @@ namespace backend {
 
 		res[refExt.getRefParentCast()] = OP_CONVERTER {
 			c_ast::TypePtr type = CONVERT_TYPE(call->getType());
-			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
-			return GET_TYPE_INFO(call->getType()).internalize(C_NODE_MANAGER, c_ast::cast(type, value));
+			return c_ast::cast(type, CONVERT_ARG(0));
 		};
 
 		// -- support narrow and expand --

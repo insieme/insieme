@@ -1,7 +1,6 @@
 # Do not remove this file even if it does not blacklist any test.
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
-adv_op_overl
 alignof
 big
 cast
@@ -19,14 +18,12 @@ memb_func_ptr
 performance
 rec_memberfunc_pointer
 shadow_decl
-simple_sort
 sort
 static_assert
 static_data_member
 static_initialization
 static_var_init
 static_var_updates
-std_distance
 stl_intercept
 stl_list_iterator
 stl_read_file
@@ -46,5 +43,3 @@ vfunc_single_inherit
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
-+ctor
-+mem_alloc_ctor_inherit

@@ -340,7 +340,7 @@ namespace backend {
 				if(!irCallArgs[0].isa<core::InitExprPtr>() && core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
 				args.erase(args.begin());
 
-				res = c_ast::memberCall(obj, c_call->function, args, c_call->instantiationTypes);
+				res = c_ast::memberCall(obj, c_call->function, args);
 			}
 
 			// --------------- virtual member function call -------------
@@ -422,6 +422,19 @@ namespace backend {
 			return call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterTypeList();
 		};
 
+		c_ast::NodePtr instantiateCall(const c_ast::NodePtr& innerCall, const std::vector<c_ast::TypePtr>& instantiationTypes) {
+			auto mgr = innerCall->getManager();
+			if(instantiationTypes.empty()) return innerCall;
+			if(auto funCall = innerCall.isa<c_ast::CallPtr>()) {
+				return c_ast::call(mgr->create<c_ast::ExplicitInstantiation>(funCall->function, instantiationTypes), funCall->arguments);
+			}
+			if(auto memCall = innerCall.isa<c_ast::MemberCallPtr>()) {
+				return c_ast::memberCall(memCall->object, mgr->create<c_ast::ExplicitInstantiation>(memCall->memberFun, instantiationTypes),
+				                         memCall->arguments);
+			}
+			assert_not_implemented();
+			return {};
+		}
 	}
 
 	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& in, ConversionContext& context) {
@@ -458,7 +471,7 @@ namespace backend {
 			const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
 
 			// produce call to external literal
-			c_ast::CallPtr res = c_ast::call(info.function->name, info.instantiationTypes);
+			c_ast::CallPtr res = c_ast::call(info.function->name);
 			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArgumentList(), true);
 
 			// add dependencies
@@ -466,6 +479,7 @@ namespace backend {
 
 			// return external function call
 			auto ret = handleMemberCall(call, res, context);
+			ret = instantiateCall(ret, info.instantiationTypes);
 			return ret;
 		}
 
@@ -484,7 +498,7 @@ namespace backend {
 			// -------------- standard function call ------------
 
 			// produce call to internal lambda
-			c_ast::CallPtr c_call = c_ast::call(info.function->name, info.instantiationTypes);
+			c_ast::CallPtr c_call = c_ast::call(info.function->name);
 			appendAsArguments(context, c_call, materializeTypeList(extractCallTypeList(call)), call->getArgumentList(), false);
 
 			// handle potential member calls
@@ -506,9 +520,6 @@ namespace backend {
 		if(funType->isMemberFunction()) {
 			// add call to function pointer (which is the value)
 
-			// obtain lambda information
-			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
-
 			// extract first parameter of the function, it is the target object
 			c_ast::ExpressionPtr trgObj = converter.getStmtConverter().convertExpression(context, core::transform::extractInitExprFromDecl(call[0]));
 
@@ -516,7 +527,7 @@ namespace backend {
 			c_ast::ExpressionPtr funcExpr = c_ast::parentheses(c_ast::pointerToMember(trgObj, getValue(call->getFunctionExpr(), context)));
 
 			// the call is a call to the member function with the n-1 tail arguments
-			c_ast::CallPtr res = c_ast::call(funcExpr, info.instantiationTypes);
+			c_ast::CallPtr res = c_ast::call(funcExpr);
 			core::TypeList types = extractCallTypeList(call);
 			types.erase(types.begin());
 			core::ExpressionList args = call->getArgumentList();
@@ -773,7 +784,7 @@ namespace backend {
 
 			// ------------------------ resolve function ---------------------
 
-			std::string name = insieme::utils::demangle(literal->getStringValue());
+			std::string name = insieme::utils::demangleToIdentifier(literal->getStringValue());
 			if(core::annotations::hasAttachedName(literal)) name = core::annotations::getAttachedName(literal);
 			FunctionCodeInfo fun = resolveFunction(manager->create(name), funType, core::LambdaPtr(), true);
 			res->function = fun.function;
