@@ -36,68 +36,72 @@
 
 #include "insieme/core/dump/json_dump.h"
 
+#include <string>
 #include <vector>
 
-#include "boost/algorithm/string/replace.hpp"
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/utils/character_escaping.h"
 
+using namespace std;
+using namespace boost::property_tree;
+
 namespace insieme {
 namespace core {
 namespace dump {
-
 namespace json {
 
 	void dumpIR(std::ostream& out, const NodePtr& ir, const std::function<std::string(NodeAddress)>& infoAnnotator) {
-
 		// create list of all nodes
 		std::vector<NodePtr> nodes;
 		visitDepthFirstOnce(ir,[&](const NodePtr& cur) {
 			nodes.push_back(cur);
 		},true,true);
 
-		// IR dump
-		out << "{\n\t";
+		// put root node
+		ptree root;
+		root.put<string>("", toString(ir.ptr));
 
-		// mark root note
-		out << "\"root\" : \"" << ir.ptr << "\",\n\t";
+		// put node list
+		ptree dump;
+		dump.push_back(make_pair("root", root));
+		for(auto& node : nodes) {
+			ptree e;
+			e.put<string>("Kind", toString(node->getNodeType()));
 
-		// and the rest
-		out << join("\t",nodes,[](std::ostream& out, const NodePtr& cur) {
-			out << "\"" << cur.ptr << "\" : {\n";
-				out << "\t\t\"Kind\" : \"" << cur->getNodeType() << "\",\n";
-				if(auto val = cur.isa<ValuePtr>()) {
-					std::string value = toString(val->getValue());
-					boost::replace_all(value, "'", "`");
-					out << "\t\t\"Value\" : \"" << utils::escapeString(value) << "\",\n";
-				}
-				out << "\t\t\"Children\" : [" << join(",",cur->getChildList(), [](std::ostream& out, const NodePtr& child){
-					out << "\"" << child.ptr << "\"";
-				}) << "]\n";
-			out << "\t},\n";
-		});
+			if(auto val = node.isa<ValuePtr>()) e.put<string>("Value", toString(val->getValue()));
 
-		// Annotation dump:
-		out << "\"annotations\": {";
-		bool first = true;
-		visitDepthFirst(NodeAddress(ir),[&](const NodeAddress& cur) {
+			ptree children;
+			for(auto& child : node->getChildList()) {
+				ptree e;
+				e.put<string>("", toString(child.ptr));
+				children.push_back(make_pair("", e));
+			}
+			if(!children.empty()) e.push_back(make_pair("Children", children));
+
+			dump.push_back(make_pair(toString(node.ptr), e));
+		}
+
+		// put annotations (if any)
+		ptree annotations;
+		visitDepthFirst(NodeAddress(ir), [&] (const NodeAddress& node) {
 			// read info
-			auto annotation = infoAnnotator(cur);
-			if (annotation.empty()) return;
+			auto annotation = infoAnnotator(node);
+			if(annotation.empty()) return;
 
-			// add information
-			if (!first) { out << ","; } else { first = false; }
-			out << "\n\t\"" << cur << "\" : \"" << annotation << "\"";
+			// add info
+			ptree info;
+			info.put<string>("", annotation);
+			annotations.push_back(make_pair(toString(node), info));
+		}, true, true);
+		if(!annotations.empty()) dump.push_back(make_pair("annotations", annotations));
 
-		},true,true);
-		out << "\n\t}\n";
-
-		out << "}\n";
+		write_json(out, dump);
 	}
 
-} // end namespace binary
-
+} // end namespace json
 } // end namespace dump
 } // end namespace core
 } // end namespace insieme

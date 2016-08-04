@@ -280,6 +280,17 @@ namespace lang {
 		return builder.callExpr(pExt.getPtrReinterpret(), ptrExpr, builder.getTypeLiteral(newElementType));
 	}
 
+	ExpressionPtr buildPtrParentCast(const ExpressionPtr& ptrExpr, const TypePtr& parentType) {
+		assert_pred1(core::lang::isPointer, ptrExpr) << "Trying to build a ptr parent cast from non-ptr.";
+		PointerType srcTy(ptrExpr->getType());
+		// early exit if there is nothing to do
+		if(srcTy.getElementType() == parentType) return ptrExpr;
+		// otherwise, build parent cast
+		IRBuilder builder(ptrExpr->getNodeManager());
+		auto& pExt = ptrExpr->getNodeManager().getLangExtension<PointerExtension>();
+		return builder.callExpr(pExt.getPtrParentCast(), ptrExpr, builder.getTypeLiteral(parentType));
+	}
+
 	ExpressionPtr buildPtrDeref(const ExpressionPtr& ptrExpr) {
 		assert_pred1(isPointer, ptrExpr) << "Trying to build ptr_deref from non-ptr type.";
 		IRBuilder builder(ptrExpr->getNodeManager());

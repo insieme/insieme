@@ -38,18 +38,16 @@
 
 #include "insieme/core/dump/json_dump.h"
 
-#include <sstream>
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/encoder/encoder.h"
+#include <iostream>
 
-using std::shared_ptr;
+#include "insieme/core/ir_builder.h"
+
+using namespace std;
 
 namespace insieme {
 namespace core {
 namespace dump {
-
-	using namespace std;
-
+namespace json {
 
 	TEST(JsonDump, Store) {
 		// create a code fragment using manager A
@@ -65,6 +63,7 @@ namespace dump {
 		});
 	}
 
+} // end namespace json
 } // end namespace dump
 } // end namespace core
 } // end namespace insieme

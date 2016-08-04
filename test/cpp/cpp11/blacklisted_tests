@@ -4,7 +4,6 @@
 alignof
 async
 function_type_template_arg
-init_list
 rvalue
 stdinitlistexpr
 
@@ -17,3 +16,4 @@ stdinitlistexpr
 ####################################################################################
 
 +lambda
++init_list

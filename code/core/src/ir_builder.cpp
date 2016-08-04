@@ -1184,23 +1184,6 @@ namespace core {
 		return callExpr(access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
 	}
 
-	CallExprPtr IRBuilderBaseModule::refParent(const ExpressionPtr& structExpr, const TypePtr& parent) const {
-		// check some pre-conditions
-		TypePtr type = structExpr->getType();
-		assert_pred1(analysis::isRefType, type) << "Cannot deref non-ref type";
-		type = analysis::getReferencedType(type);
-
-		assert_true(type->getNodeType() == core::NT_TagType || type->getNodeType() == core::NT_GenericType);
-
-		// compute result type
-		core::TypePtr resType = refType(parent);
-
-		// build up access operation
-		auto narrow = manager.getLangExtension<lang::ReferenceExtension>().getRefNarrow();
-		auto dataPath = datapath::DataPathBuilder(type).parent(parent).getPath();
-		return callExpr(resType, narrow, structExpr, dataPath);
-	}
-
 	CallExprPtr IRBuilderBaseModule::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
 		unsigned idx = extractNumberFromExpression(component);
 		return accessComponent(tupleExpr, idx);
