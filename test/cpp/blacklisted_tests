@@ -8,19 +8,11 @@ cast
 cast_dynamic
 cast_reinterpret
 cast_static
-ctor_inherit
 curiously_recurring_template_pattern
 curiously_recurring_template_pattern_2
 curiously_recurring_template_pattern_member_function
 expr_with_cleanups
-inherit
 inherit_chained
-inherit_multiple
-inherit_ptr
-inherit_single
-inherit_single_dynmem
-inherit_virtual
-mem_alloc_ctor_inherit
 member_data_pointer
 member_function_vector
 memb_func_ptr
@@ -55,3 +47,4 @@ vfunc_single_inherit
 ####################################################################################
 
 +ctor
++mem_alloc_ctor_inherit

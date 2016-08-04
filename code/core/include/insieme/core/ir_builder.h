@@ -579,11 +579,6 @@ namespace core {
 		CallExprPtr refMember(const ExpressionPtr& structExpr, const string& member) const;
 
 		/**
-		 * Creates an expression obtaining a references to a parent of a struct expression.
-		 */
-		CallExprPtr refParent(const ExpressionPtr& structExpr, const TypePtr& parent) const;
-
-		/**
 		 * Creates an expression accessing the given component of the given tuple value.
 		 */
 		CallExprPtr accessComponent(ExpressionPtr tupleExpr, unsigned component) const;

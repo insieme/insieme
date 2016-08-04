@@ -34,38 +34,26 @@
  * regarding third party software licenses.
  */
 
-# some configuration options 
-compiler[ref_c_compile]=@INSIEME_C_BACKEND_COMPILER@
-compiler[ref_cpp_compile]=@INSIEME_CXX_BACKEND_COMPILER@
-compiler[insiemecc_c_sema]=@PROJECT_BINARY_DIR@/driver/insiemecc
-compiler[insiemecc_cpp_sema]=@PROJECT_BINARY_DIR@/driver/insiemecc
-compiler[insiemecc_run_c_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
-compiler[insiemecc_run_cpp_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
-compiler[insiemecc_run_c_compile]=@INSIEME_C_BACKEND_COMPILER@
-compiler[insiemecc_run_cpp_compile]=@INSIEME_CXX_BACKEND_COMPILER@
-compiler[insiemecc_seq_c_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
-compiler[insiemecc_seq_cpp_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
-compiler[insiemecc_seq_c_compile]=@INSIEME_C_BACKEND_COMPILER@
-compiler[insiemecc_seq_cpp_compile]=@INSIEME_CXX_BACKEND_COMPILER@
-compiler[insiemecc_ocl_c_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
-compiler[insiemecc_ocl_c_compile]=@INSIEME_C_BACKEND_COMPILER@
+#pragma once
 
-# frontend code interception configuration seed
-intercepted_header_file_dirs=
+#include "insieme/core/ir_expressions.h"
 
-# boost environment
-boost_include=@Boost_INCLUDE_DIRS@
-boost_lib=@Boost_LIBRARY_DIRS@
 
-# third party libraries
-third_party_libs_home=@THIRD_PARTY_LIBS_HOME@
+namespace clang {
+	class CXXStdInitializerListExpr;
+}
 
-# result comparison script
-compareOutputScript=@insieme_root_dir@/test/compareOutput
+namespace insieme {
+namespace frontend {
+namespace conversion {
 
-# time utility
-time_executable=@TIME_EXECUTABLE@
+	class Converter;
 
-# setup insieme runtime compiler flags
-use_libmath[insiemecc_run_c_compile]=1
-use_libpthread[insiemecc_run_c_compile]=1
+	/// This function is responsible for the translation of std::initializer_list. The translation of clang for std::initializer_list isn't exactly
+	/// what we need and thus needs to be slightly modified. The function will return a CallExp to the ctor which creates an instance
+	/// of the std::initializer_list
+	core::ExpressionPtr convertCxxStdInitializerListExpr(Converter& converter, const clang::CXXStdInitializerListExpr* stdInitListExpr);
+
+} // End namespace utils
+} // End namespace frontend
+} // End namespace insieme

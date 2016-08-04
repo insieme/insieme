@@ -185,7 +185,6 @@ namespace lang {
 		 */
 		LANG_EXT_LITERAL(RefOfFunction, "ref_of_function", "('a) -> ref<'a,t,f>")
 
-
 		// -- access --
 
 		/**

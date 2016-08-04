@@ -18,5 +18,5 @@ if [ $# -eq 3 ]; then
 	# execute awk with process substitution and feed output to diff
 	diff <(awk "$3" $1) <(awk "$3" $2)
 else
-	diff <(sort $1) <(sort $2)
+	diff $1 $2
 fi

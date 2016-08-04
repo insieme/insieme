@@ -41,8 +41,13 @@
 #include <vector>
 #include <cassert>
 
-#include "insieme/core/lang/reference.h"
 #include "insieme/backend/c_ast/c_ast.h"
+#include "insieme/backend/converter.h"
+#include "insieme/backend/statement_converter.h"
+
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/pointer.h"
+
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/name_mangling.h"
 
@@ -292,7 +297,7 @@ namespace c_ast {
 	}
 
 	inline MemberCallPtr memberCall(NodePtr obj, NodePtr fun, const vector<NodePtr>& args = vector<NodePtr>(), const vector<TypePtr>& instantiationTypes = vector<TypePtr>()) {
-		if(getPriority(obj) < 15) { obj = parentheses(obj); }
+		if(getPriority(obj) < getPriority(BinaryOperation::MemberAccess)) { obj = parentheses(obj); }
 		return fun->getManager()->create<c_ast::MemberCall>(fun, obj, args, instantiationTypes);
 	}
 
@@ -301,7 +306,7 @@ namespace c_ast {
 	}
 
 	inline DestructorCallPtr dtorCall(TypePtr classType, ExpressionPtr obj, bool isVirtual = true) {
-		if(getPriority(obj) < 15) { obj = parentheses(obj); }
+		if(getPriority(obj) < getPriority(BinaryOperation::MemberAccess)) { obj = parentheses(obj); }
 		return classType->getManager()->create<c_ast::DestructorCall>(classType, obj, isVirtual);
 	}
 
@@ -615,6 +620,34 @@ namespace c_ast {
 	template <typename... E>
 	inline CompoundPtr compound(NodePtr first, E... rest) {
 		return first->getManager()->create<Compound>(first, rest...);
+	}
+
+	inline ExpressionPtr mallocCall(ConversionContext& context, const core::TypePtr type, const core::ExpressionPtr& elementCount = core::ExpressionPtr()) {
+		auto& converter = context.getConverter();
+		auto& stmtConverter = converter.getStmtConverter();
+
+		// we need an include
+		context.getIncludes().insert("stdlib.h");
+
+		// convert the type and a matching pointer type for the result
+		auto ptrType = core::lang::PointerType::create(type);
+		auto cPtrType = stmtConverter.convertType(context, ptrType);
+
+		//convert the size expression correctly
+		c_ast::ExpressionPtr sizeExpr = c_ast::sizeOf(stmtConverter.convertType(context, type));
+		if(elementCount) sizeExpr = c_ast::mul(sizeExpr, stmtConverter.convertExpression(context, elementCount));
+
+		// build the malloc call and cast the result
+		return c_ast::cast(cPtrType, c_ast::call(converter.getCNodeManager()->create("malloc"), sizeExpr));
+	}
+
+	inline ExpressionPtr freeCall(ConversionContext& context, const c_ast::ExpressionPtr arg) {
+		auto& converter = context.getConverter();
+
+		// we need an include
+		context.getIncludes().insert("stdlib.h");
+
+		return c_ast::call(converter.getCNodeManager()->create("free"), arg);
 	}
 
 	// -- Some tests ----------------------------------------

@@ -65,9 +65,13 @@ namespace frontend {
 
 	TEST(CppIndependentTest, Globals) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_globals.cpp"); }
 
-	TEST(CppIndependentTest, InitializerList) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_initializer_list.cpp"); }
+	TEST(CppIndependentTest, InitializerList) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_initializer_list.cpp", [](ConversionJob& job) {
+		job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+	}); }
 
 	TEST(CppIndependentTest, Lambda) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda.cpp"); }
+
+	TEST(CppIndependentTest, MemberCalls) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_member_calls.cpp"); }
 
 	TEST(CppIndependentTest, Naming) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_naming.cpp"); }
 

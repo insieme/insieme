@@ -55,6 +55,10 @@ namespace insieme {
 namespace core {
 
 	bool detail::semanticNodeLessThan(const core::NodePtr& a, const core::NodePtr& b) {
+		if (a->getNodeType() != b->getNodeType()) {
+			return a->getNodeType() > b->getNodeType();
+		}
+
 		if(a->getNodeType() == NT_MemberFunction && b->getNodeType() == NT_MemberFunction) {
 			auto aMem = a.as<MemberFunctionPtr>();
 			auto bMem = b.as<MemberFunctionPtr>();

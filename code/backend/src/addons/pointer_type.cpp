@@ -122,7 +122,7 @@ namespace addons {
 
 				// handle array new undefined
 				if(LANG_EXT_REF.isCallOfRefNew(ARG(0))) {
-					return c_ast::newArrayCall(convertAndAddDep(arrT.getElementType()), CONVERT_EXPR(arrT.getSize().as<core::ExpressionPtr>()), nullptr);
+					return c_ast::mallocCall(context, arrT.getElementType(), arrT.getSize().as<core::ExpressionPtr>());
 				}
 				// handle array new with init
 				if(auto initExp = ARG(0).isa<core::InitExprPtr>()) {
@@ -180,6 +180,7 @@ namespace addons {
 
 			res[ext.getPtrCast()] = cast;
 			res[ext.getPtrReinterpret()] = cast;
+			res[ext.getPtrParentCast()] = cast;
 			res[ext.getPtrConstCast()] = cast;
 			res[ext.getPtrVolatileCast()] = cast;
 

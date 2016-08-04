@@ -277,7 +277,7 @@ namespace backend {
 				vector<c_ast::NodePtr> args = c_call->arguments;
 				assert_false(args.empty());
 
-				const auto& refs = call->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+				const auto& refExt = call->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 				auto location = args[0];
 				args.erase(args.begin());
 
@@ -290,13 +290,13 @@ namespace backend {
 				auto thisArg = core::lang::removeSurroundingRefCasts(irCallArgs[0]);
 
 				// case b) create object on heap
-				bool isOnHeap = core::analysis::isCallOf(thisArg, refs.getRefNew());
+				bool isOnHeap = refExt.isCallOfRefNew(thisArg);
 
 				// case c) create object in-place (placement new)
-				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(thisArg, refs.getRefTemp()) && !core::analysis::isCallOf(thisArg, refs.getRefTempInit())
-				                            && !core::analysis::isCallOf(thisArg, refs.getRefNew()) && !core::analysis::isCallOf(thisArg, refs.getRefDecl()))
-				                               ? location.as<c_ast::ExpressionPtr>()
-				                               : c_ast::ExpressionPtr();
+				c_ast::ExpressionPtr loc = (refExt.isCallOfRefTemp(thisArg) || refExt.isCallOfRefTempInit(thisArg)
+				                            || refExt.isCallOfRefNew(thisArg) || refExt.isCallOfRefDecl(thisArg))
+				                               ? c_ast::ExpressionPtr()
+				                               : location.as<c_ast::ExpressionPtr>();
 
 				// to get support for the placement new the new header is required
 				if(loc) { context.addInclude("<new>"); }

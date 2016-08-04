@@ -38,6 +38,7 @@
 
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/decl_converter.h"
+#include "insieme/frontend/conversion/init_lists.h"
 #include "insieme/frontend/state/function_manager.h"
 #include "insieme/frontend/state/record_manager.h"
 #include "insieme/frontend/state/variable_manager.h"
@@ -309,9 +310,7 @@ namespace conversion {
 			core::ExpressionPtr retIr = builder.initExpr(builder.undefinedNew((core::GenericTypePtr)arrTy), initExpr.getInitExprList());
 			return retIr;
 		}
-	}
 
-	namespace {
 		core::ExpressionPtr buildArrayNew(Converter& converter, const clang::CXXNewExpr* newExpr, const core::TypePtr& elemType) {
 			auto& builder = converter.getIRBuilder();
 			auto& basic = converter.getNodeManager().getLangBasic();
@@ -323,10 +322,11 @@ namespace conversion {
 			if(constArrayLen) {
 				auto irNewExp = builder.undefinedNew(core::lang::ArrayType::create(elemType, builder.uintLit(constArrayLen.get())));
 				// for class types, we need to build an init expr even if no initializer is supplied, to call constructors implicitly
-				if(newExpr->getConstructExpr()) {
+				// also if we don't have any initializer, we build an empty initexpr to correctly identify this in the backend again
+				if(newExpr->getConstructExpr() || !newExpr->hasInitializer()) {
 					irNewExp = builder.initExpr(irNewExp);
 				}
-				// otherwise, only build initexpr if we have an initializer
+				// otherwise, build initexpr for the initializer
 				else if(newExpr->hasInitializer()) {
 					core::ExpressionPtr initializerExpr = converter.convertInitExpr(newExpr->getInitializer());
 					// make sure we allocate the correct amount of array elements with partial initialization
@@ -347,7 +347,8 @@ namespace conversion {
 			core::VariableList initFunParams { arrLenVarParam };
 			core::ExpressionList initFunArguments { arrayLenExpr };
 			// for class types, we need to build an init expr even if no initializer is supplied, to call constructors implicitly
-			if(newExpr->getConstructExpr()) {
+			// also if we don't have any initializer, we build an empty initexpr to correctly identify this in the backend again
+			if(newExpr->getConstructExpr() || !newExpr->hasInitializer()) {
 				arr = builder.initExpr(memloc);
 			}
 			else if(newExpr->hasInitializer()) {
@@ -722,59 +723,9 @@ namespace conversion {
 	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXStdInitializerListExpr(const clang::CXXStdInitializerListExpr* stdInitListExpr) {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(stdInitListExpr, retIr);
-		//convert sub expression and types
-		auto subEx = converter.convertExpr(stdInitListExpr->getSubExpr());
-		auto subExType = stdInitListExpr->getSubExpr()->getType().getTypePtr();
-		auto initListIRType = converter.convertType(stdInitListExpr->getType());
-		auto recordType = llvm::dyn_cast<clang::RecordType>(stdInitListExpr->getType().getTypePtr()->getUnqualifiedDesugaredType());
-		auto recordDecl = recordType->getAsCXXRecordDecl();
-		frontend_assert(recordType && recordDecl) << "failed to get the std::initializer_list type declaration.";
-		auto thisVar = core::lang::buildRefTemp(initListIRType);
 
-		//extract size of sub expr
-		frontend_assert(llvm::isa<clang::ConstantArrayType>(subExType)) << "std::initializer_list sub expression has no constant size array type.";
-		auto numElements = llvm::cast<clang::ConstantArrayType>(subExType)->getSize().getSExtValue();
+		retIr = conversion::convertCxxStdInitializerListExpr(converter, stdInitListExpr);
 
-		//generate and insert mandatory std::initializer_list<T> ctors
-		for(auto ctorDecl : recordDecl->ctors()) {
-			core::LiteralPtr ctorLiteral = converter.getFunMan()->lookup(ctorDecl);
-			core::LambdaExprPtr lam;
-			if(ctorDecl->getNumParams() == 2) {
-				//ctor decl: constexpr initializer_list<T>(T* x, size_t s)
-				//create list of arguments (this type, array sub expression, and size of array)
-				core::ExpressionList args { thisVar, core::lang::buildPtrFromArray(subEx),
-				builder.numericCast(builder.uintLit(numElements), builder.getLangBasic().getUInt8()) };
-				auto funType = ctorLiteral->getType().as<core::FunctionTypePtr>();
-				core::VariableList params;
-				for(const core::TypePtr& type : funType->getParameterTypes()) {
-					params.push_back(builder.variable(core::transform::materialize(type)));
-				}
-				//add the ctor implementation to the IR TU --> std::initializer_list<T>(T* t, size_t s) { }
-				lam = builder.lambdaExpr(funType, params, builder.compoundStmt());
-				//build call to the specific constructor
-				retIr = builder.callExpr(funType->getReturnType(), ctorLiteral, args);
-			} else if(ctorDecl->isDefaultConstructor()) {
-				// ctor decl: constexpr initializer_list<T>()
-				auto typeMap = converter.getIRTranslationUnit().getTypes();
-				const auto typeMapIt = typeMap.find(initListIRType.as<core::GenericTypePtr>());
-				frontend_assert(typeMapIt != typeMap.end()) << "cannot extract IR tag type for std::initializer_list<T>.";
-				const core::TagTypePtr tagType = typeMapIt->second;
-				//create and add default constructor
-				lam = builder.getDefaultConstructor(thisVar->getType(), {}, tagType->getStruct()->getFields());
-			}
-			if(lam) converter.getIRTranslationUnit().addFunction(ctorLiteral, lam);
-		}
-
-		//generate dtor
-		if(recordDecl->getDestructor()) {
-			core::LiteralPtr dtorLiteral = converter.getFunMan()->lookup(recordDecl->getDestructor());
-			//create and add default destructor
-			auto lam = builder.getDefaultDestructor(thisVar->getType());
-			converter.getIRTranslationUnit().addFunction(dtorLiteral, lam);
-		}
-
-		//return call to special constructor
-		frontend_assert(retIr) << "failed to convert std::initializer_list expression.";
 		return retIr;
 	}
 

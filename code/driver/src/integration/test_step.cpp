@@ -456,7 +456,7 @@ namespace integration {
 				TestSetup set = setup;
 
 				// define comparison script
-				cmd << props["sortdiff"];
+				cmd << props["compareOutputScript"];
 
 				// determine backend
 				string be = getBackendKey(backend);
@@ -503,7 +503,7 @@ namespace integration {
 				TestSetup set = setup;
 
 				// define comparison script
-				cmd << props["sortdiff"];
+				cmd << props["compareOutputScript"];
 
 				// get execution dir
 				string executionDirectory = test.getDirectory().string();

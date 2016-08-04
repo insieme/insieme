@@ -1,47 +1,81 @@
 #include <iostream>
-#include <vector>
+#include <initializer_list>
 
-//struct Object {
-//	float first;
-//	int second;
-//};
-
-template <class T>
-struct S {
-	std::vector<T> v;
-
-	S(std::initializer_list<T> l) : v(l) {
-		std::cout << "constructed with a " << l.size() << "-element list\n";
+//simple cases
+struct T {
+	T(std::initializer_list<int> l) {
+		for(auto e : l) {
+			std::cout << "T: " << e << std::endl;
+		}
 	}
-//
-//	void append(std::initializer_list<T> l) {
-//		v.insert(v.end(), l.begin(), l.end());
-//	}
-//
-//	std::pair<const T*, std::size_t> c_arr() const {
-//		return {&v[0], v.size()};  // list-initialization in return statement
-//	}
 };
 
+void f(std::initializer_list<int> l) {
+	for(auto e : l) {
+		std::cout << "f: " << e << std::endl;
+	}
+}
+
+//more complicated semantics
+struct TestObj {
+	TestObj() {
+		std::cout << "Construct TestObj" << std::endl;
+	}
+	TestObj(const TestObj& other) {
+		std::cout << "Copy construct TestObj" << std::endl;
+	}
+	TestObj(TestObj&& other) {
+		std::cout << "Move construct TestObj" << std::endl;
+	}
+	~TestObj() {
+		std::cout << "Destroy TestObj" << std::endl;
+	}
+	TestObj& operator= (const TestObj& other) {
+		std::cout << "Copy assign TestObj" << std::endl;
+		return *this;
+	}
+	TestObj& operator= (TestObj&& other) {
+		std::cout << "Move assign TestObj" << std::endl;
+		return *this;
+	}
+};
+
+struct T2 {
+	T2(std::initializer_list<TestObj> l) {}
+};
+
+void f2(std::initializer_list<TestObj> l) {}
 
 int main (){
 
-	// C++03 standar initialization
-//	{
-//		Object scalar = {0.43f, 10}; //One Object, with first=0.43f and second=10
-//
-//		std::cout << "scalar: " << scalar.first << " " << scalar.second << std::endl;
-//
-//		Object anArray[] = {{13.4f, 3}, {43.28f, 29}, {5.934f, 17}}; //An array of three Objects
-//
-//		for (int i=0; i<3; i++)
-//			std::cout << "scalar: " << anArray[i].first << " " << anArray[i].second << std::endl;
-//	}
+	//simple cases
+	T({ 5 });
+	T{42,43};
+	f({ 5 });
 
-	// C++11 init list constructor
+	//more complicated semantics
+	TestObj obj;
+	std::cout << 1 << std::endl;
+	T2({ obj, obj });
+	std::cout << 2 << std::endl;
+	std::initializer_list<TestObj> a{ obj };
+	std::cout << 3 << std::endl;
+	auto b = a;
+	std::cout << 4 << std::endl;
+	T2 t2(a);
+	std::cout << 5 << std::endl;
+	f2(b);
+	std::cout << 6 << std::endl;
+	std::initializer_list<TestObj> d;
 	{
-		S<int> collection = {1,5,7,8};
+		std::initializer_list<TestObj> c{ obj };
+		std::cout << 7 << std::endl;
+		d = c;
+		std::cout << 8 << std::endl;
+		std::initializer_list<TestObj> e(c);
+		std::cout << 9 << std::endl;
 	}
+	std::cout << 10 << std::endl;
 
 	return 0;
 }
