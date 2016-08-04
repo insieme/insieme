@@ -180,8 +180,8 @@ namespace extensions {
 			}
 		}
 
-		std::pair<core::ExpressionPtr, core::TypePtr> generateCallee(conversion::Converter& converter, const clang::Decl* decl,
-			                                                         const clang::Expr* clangExpr = nullptr) {
+		std::pair<core::ExpressionPtr, core::TypePtr> generateCallee(conversion::Converter& converter, const clang::Decl* decl, const clang::Expr* clangExpr,
+			                                                         const clang::ASTTemplateArgumentListInfo* explicitTemplateArgs) {
 			const core::IRBuilder& builder(converter.getIRBuilder());
 
 			auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl);
@@ -259,10 +259,18 @@ namespace extensions {
 			// translate uninstantiated pattern instead of instantiated version
 			auto pattern = funDecl->getTemplateInstantiationPattern();
 
+			// only provide explicit instantiation list if one was provided by the user
+			auto explicitInstantiationTypes = builder.types(templateConcreteParams);
+			auto explicitGenericTypeParams = builder.types(templateGenericParams);
+			if(templateDecl && !explicitTemplateArgs) {
+				explicitInstantiationTypes = builder.types({});
+				explicitGenericTypeParams = builder.types({});
+			}
+
 			auto genericFunLit = litConverter(pattern);
 			auto genericFunType = genericFunLit->getType().as<core::FunctionTypePtr>();
 			genericFunType = builder.functionType(genericFunType->getParameterTypes(), genericFunType->getReturnType(), genericFunType->getKind(),
-													builder.types(templateGenericParams));
+				                                  explicitGenericTypeParams);
 			auto innerLit = builder.literal(genericFunLit->getValue(), genericFunType);
 			converter.applyHeaderTagging(innerLit, decl);
 
@@ -275,19 +283,19 @@ namespace extensions {
 			}
 
 			concreteFunctionType = builder.functionType(concreteFunctionType->getParameterTypes(), concreteFunctionType->getReturnType(),
-				                                        concreteFunctionType->getKind(), builder.types(templateConcreteParams));
+				                                        concreteFunctionType->getKind(), explicitInstantiationTypes);
 
 			return {builder.callExpr(builder.getLangBasic().getTypeInstantiation(), builder.getTypeLiteral(concreteFunctionType), innerLit),
 				    concreteFunctionType->getReturnType()};
 		}
 
 		core::CallExprPtr interceptMethodCall(conversion::Converter& converter, const clang::Decl* decl,
-			                                  std::function<core::ExpressionPtr(const core::TypePtr&)> thisArgFactory,
-			                                  clang::CallExpr::arg_const_range args, const clang::Expr* clangExpr = nullptr) {
+			                                  std::function<core::ExpressionPtr(const core::TypePtr&)> thisArgFactory, clang::CallExpr::arg_const_range args,
+			                                  const clang::Expr* clangExpr, const clang::ASTTemplateArgumentListInfo* explicitTemplateArgs) {
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
 				if(methDecl) {
-					auto calleePair = generateCallee(converter, decl, clangExpr);
+					auto calleePair = generateCallee(converter, decl, clangExpr, explicitTemplateArgs);
 					auto convMethodLit = calleePair.first;
 					auto funType = convMethodLit->getType().as<core::FunctionTypePtr>();
 					auto retType = calleePair.second;
@@ -328,7 +336,7 @@ namespace extensions {
 			if(converter.getHeaderTagger()->isIntercepted(decl)) {
 				// translate functions
 				if(llvm::dyn_cast<clang::FunctionDecl>(decl)) {
-					core::ExpressionPtr lit = generateCallee(converter, decl, nullptr).first;
+					core::ExpressionPtr lit = generateCallee(converter, decl, nullptr, dr->getOptionalExplicitTemplateArgs()).first;
 					VLOG(2) << "Interceptor: intercepted clang fun\n" << dumpClang(decl) << " -> converted to literal: " << *lit << " of type "
 						    << *lit->getType() << "\n";
 					return lit;
@@ -355,30 +363,36 @@ namespace extensions {
 			}
 		}
 		// member calls and their variants
+		const clang::ASTTemplateArgumentListInfo* explicitTemplateArgs = nullptr;
 		if(auto construct = llvm::dyn_cast<clang::CXXConstructExpr>(expr)) {
 			auto thisFactory = [&](const core::TypePtr& retType){ return core::lang::buildRefTemp(retType); };
-			return interceptMethodCall(converter, construct->getConstructor(), thisFactory, construct->arguments());
+			return interceptMethodCall(converter, construct->getConstructor(), thisFactory, construct->arguments(), nullptr, explicitTemplateArgs);
 		}
 		if(auto newExp = llvm::dyn_cast<clang::CXXNewExpr>(expr)) {
 			if(auto construct = newExp->getConstructExpr()) {
 				auto thisFactory = [&](const core::TypePtr& retType){ return builder.undefinedNew(retType); };
-				auto ret = interceptMethodCall(converter, construct->getConstructor(), thisFactory, construct->arguments());
+				auto ret = interceptMethodCall(converter, construct->getConstructor(), thisFactory, construct->arguments(), nullptr, explicitTemplateArgs);
 				if(ret) return core::lang::buildPtrFromRef(ret);
 			}
 		}
 		if(auto memberCall = llvm::dyn_cast<clang::CXXMemberCallExpr>(expr)) {
-			auto thisFactory = [&](const core::TypePtr& retType){ return converter.convertExpr(memberCall->getImplicitObjectArgument()); };
-			return fixMaterializedReturnType(converter, memberCall,
-				                             interceptMethodCall(converter, memberCall->getCalleeDecl(), thisFactory, memberCall->arguments(), memberCall));
+			auto callee = llvm::dyn_cast<clang::MemberExpr>(memberCall->getCallee());
+			if(callee) explicitTemplateArgs = callee->getOptionalExplicitTemplateArgs();
+			auto thisFactory = [&](const core::TypePtr& retType) { return converter.convertExpr(memberCall->getImplicitObjectArgument()); };
+			return fixMaterializedReturnType(converter, memberCall, interceptMethodCall(converter, memberCall->getCalleeDecl(), thisFactory,
+				                                                                        memberCall->arguments(), memberCall, explicitTemplateArgs));
 		}
 		if(auto operatorCall = llvm::dyn_cast<clang::CXXOperatorCallExpr>(expr)) {
 			auto decl = operatorCall->getCalleeDecl();
+			auto callee = llvm::dyn_cast<clang::MemberExpr>(operatorCall->getCallee());
+			if(callee) explicitTemplateArgs = callee->getOptionalExplicitTemplateArgs();
 			if(decl) {
 				if(llvm::dyn_cast<clang::CXXMethodDecl>(decl)) {
 					auto argList = operatorCall->arguments();
-					auto thisFactory = [&](const core::TypePtr& retType){ return converter.convertExpr(*argList.begin()); };
-					decltype(argList) remainder(argList.begin()+1, argList.end());
-					return fixMaterializedReturnType(converter, operatorCall, interceptMethodCall(converter, decl, thisFactory, remainder, operatorCall));
+					auto thisFactory = [&](const core::TypePtr& retType) { return converter.convertExpr(*argList.begin()); };
+					decltype(argList) remainder(argList.begin() + 1, argList.end());
+					return fixMaterializedReturnType(converter, operatorCall,
+						                             interceptMethodCall(converter, decl, thisFactory, remainder, operatorCall, explicitTemplateArgs));
 				}
 			}
 		}
