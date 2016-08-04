@@ -42,6 +42,11 @@ struct C {
 			x;
 		};
 	}
+
+	//TODO potential resolver bug
+	/*void test() {
+		[&](){ x + 1; }();
+	}*/
 };
 
 template<typename T>
@@ -217,9 +222,15 @@ int main() {
 				var ref<__any_string__class,f,f,plain> v1 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {ptr_from_ref(this)};
 			}
 		};
-		var ref<IMP_C,f,f,plain> v0 = IMP_C::(ref_decl(type_lit(ref<IMP_C,f,f,plain>)));
+		{
+			var ref<IMP_C,f,f,plain> v0 = IMP_C::(ref_decl(type_lit(ref<IMP_C,f,f,plain>)));
+		}
 	)")
-	C c;
+	{
+		C c;
+		//TODO potential resolver bug
+		//c.test();
+	}
 
 	/// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Nested Lambda
 
