@@ -209,6 +209,8 @@ namespace backend {
 	namespace cl = core::lang;
 
 	core::NodePtr RefCastIntroducer::process(const Converter& converter, const core::NodePtr& code) {
+		core::IRBuilder builder(code->getNodeManager());
+
 		auto builtInLimiter = [](const core::NodePtr& cur) {
 			if(core::lang::isBuiltIn(cur)) return core::transform::ReplaceAction::Prune;
 			return core::transform::ReplaceAction::Process;
@@ -246,13 +248,16 @@ namespace backend {
 		// this pass can be greatly simplified when we introduce declarations in init expressions
 
 		utils::map::PointerMap<core::TagTypeReferencePtr, core::TagTypePtr> ttAssignment;
-		visitDepthFirstOnce(retCode, [&ttAssignment](const core::TagTypePtr& tt){
-			const auto& ttRef = tt->getTag();
-			if(ttAssignment.find(ttRef) != ttAssignment.end()) {
-				assert_not_implemented()
-				    << "Case of non-unique tag type references not handled here, could be done but complex, and this code should be obsolete in the future";
+		visitDepthFirstOnce(retCode, [&](const core::TagTypeDefinitionPtr& td){
+			for(const auto& ttb : td->getDefinitions()) {
+				const auto& ttRef = ttb->getTag();
+				auto tt = builder.tagType(ttRef, td);
+				if(ttAssignment.find(ttRef) != ttAssignment.end() && ttAssignment[ttRef] != tt) {
+					assert_not_implemented()
+							<< "Case of non-unique tag type references not handled here, could be done but complex, and this code should be obsolete in the future";
+				}
+				ttAssignment[ttRef] = tt;
 			}
-			ttAssignment[ttRef] = tt;
 		});
 
 		retCode = core::transform::transformBottomUpGen(retCode, [&ttAssignment](const core::InitExprPtr& init) {
