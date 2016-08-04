@@ -3,7 +3,6 @@
 
 CGAL_CFG_ARRAY_MEMBER_INITIALIZATION_BUG
 CGAL_CFG_ISTREAM_INT_BUG
-CGAL_CFG_LONGNAME_BUG
 CGAL_CFG_NESTED_CLASS_FRIEND_DECLARATION_BUG
 CGAL_CFG_NO_LIMITS
 CGAL_CFG_NO_STL
@@ -20,3 +19,4 @@ CGAL_CFG_USING_BASE_MEMBER_BUG_2
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
++ CGAL_CFG_LONGNAME_BUG

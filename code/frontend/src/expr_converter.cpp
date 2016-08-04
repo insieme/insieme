@@ -112,8 +112,10 @@ namespace conversion {
 	core::TypePtr Converter::ExprConverter::convertExprType(const clang::Expr* expr) {
 		auto qType = expr->getType();
 		auto irType = converter.convertType(qType);
-		if(expr->getValueKind() == clang::VK_LValue || expr->getValueKind() == clang::VK_XValue) {
+		if(expr->getValueKind() == clang::VK_LValue) {
 			irType = builder.refType(irType, qType.isConstQualified(), qType.isVolatileQualified());
+		} else if(expr->getValueKind() == clang::VK_XValue) {
+			irType = builder.refType(irType, qType.isConstQualified(), qType.isVolatileQualified(), core::lang::ReferenceType::Kind::CppRValueReference);
 		}
 		return irType;
 	}

@@ -699,7 +699,10 @@ namespace backend {
 
 				// add constructors
 				for(const auto& ctor : record->getConstructors()) {
-					funMgr.getInfo(tagType,ctor.as<core::LambdaExprPtr>());
+					// skip ctors which are Literals
+					if(ctor.isa<core::LambdaExprPtr>()) {
+						funMgr.getInfo(tagType,ctor.as<core::LambdaExprPtr>());
+					}
 				}
 
 				//// TODO: explicitly delete missing constructors
@@ -709,9 +712,12 @@ namespace backend {
 
 				// add destructors (only for structs)
 				if(record->hasDestructor()) {
-					auto dtor = record->getDestructor().as<core::LambdaExprPtr>();
-					auto info = funMgr.getInfo(tagType,dtor);
-					info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
+					// skip dtor which is a Literal
+					if(record->getDestructor().isa<core::LambdaExprPtr>()) {
+						auto dtor = record->getDestructor().as<core::LambdaExprPtr>();
+						auto info = funMgr.getInfo(tagType,dtor);
+						info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
+					}
 				}
 
 				// TODO: explicitly delete missing destructor

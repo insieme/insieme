@@ -104,22 +104,15 @@ namespace lang {
 
 	namespace {
 
-		bool isArrayTypeInternal(const TypePtr& type) {
+		bool isArrayTypeInternal(const GenericTypePtr& arr) {
 
-			// simple approach: use unification
-			NodeManager& mgr = type.getNodeManager();
-			const ArrayExtension& ext = mgr.getLangExtension<ArrayExtension>();
+			// check properties
+			if(arr->getTypeParameter().size()!=2) return false;
+			auto size = arr->getTypeParameter(1);
 
-			// unify given type with template type
-			auto ref = ext.getGenArray().as<GenericTypePtr>();
-			auto sub = types::match(mgr, type, ref);
-			if (!sub) return false;
-
-			// check instantiation
-			const types::Substitution& map = *sub;
-			auto size = map.applyTo(ref->getTypeParameter(1));
-			return size.isa<TypeVariablePtr>() || size.isa<NumericTypePtr>() || isInf(size);
-
+			return arr->getParents().empty()
+				&& arr->getName()->getValue() == "array"
+				&& (size.isa<TypeVariablePtr>() || size.isa<NumericTypePtr>() || isInf(size));
 		}
 
 	}

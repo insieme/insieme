@@ -394,18 +394,22 @@ namespace c_ast {
 		return operation == other.operation && *operandA == *other.operandA && *operandB == *other.operandB && *operandC == *other.operandC;
 	}
 
+	bool ExplicitInstantiation::equals(const Node& node) const {
+		assert(dynamic_cast<const ExplicitInstantiation*>(&node));
+		auto other = static_cast<const ExplicitInstantiation&>(node);
+		return *subExpr == *other.subExpr && ::equals(instantiationTypes, other.instantiationTypes, equal_target<TypePtr>());
+	}
+
 	bool Call::equals(const Node& node) const {
 		assert(dynamic_cast<const Call*>(&node));
 		auto other = static_cast<const Call&>(node);
-		return *function == *other.function && ::equals(arguments, other.arguments, equal_target<NodePtr>())
-				&& ::equals(instantiationTypes, other.instantiationTypes, equal_target<TypePtr>());
+		return *function == *other.function && ::equals(arguments, other.arguments, equal_target<NodePtr>());
 	}
 
 	bool MemberCall::equals(const Node& node) const {
 		assert(dynamic_cast<const MemberCall*>(&node));
 		auto other = static_cast<const MemberCall&>(node);
-		return *memberFun == *other.memberFun && *object == *other.object && ::equals(arguments, other.arguments, equal_target<NodePtr>())
-				&& ::equals(instantiationTypes, other.instantiationTypes, equal_target<TypePtr>());
+		return *memberFun == *other.memberFun && *object == *other.object && ::equals(arguments, other.arguments, equal_target<NodePtr>());
 	}
 
 	bool ConstructorCall::equals(const Node& node) const {

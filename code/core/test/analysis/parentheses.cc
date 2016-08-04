@@ -66,8 +66,6 @@ namespace analysis {
 														  insieme::core::printer::PrettyPrinter::OPTIONS_DEFAULT |
 														  insieme::core::printer::PrettyPrinter::PRINT_CASTS |
 														  insieme::core::printer::PrettyPrinter::PRINT_DEREFS |
-														  insieme::core::printer::PrettyPrinter::PRINT_MARKERS |
-														  insieme::core::printer::PrettyPrinter::PRINT_ANNOTATIONS |
 														  insieme::core::printer::PrettyPrinter::NO_LIST_SUGAR |
 														  insieme::core::printer::PrettyPrinter::PRINT_ATTRIBUTES |
 														  insieme::core::printer::PrettyPrinter::NO_EVAL_LAZY |

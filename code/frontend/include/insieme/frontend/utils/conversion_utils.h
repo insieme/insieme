@@ -65,6 +65,14 @@ namespace utils {
 	///
 	core::ExpressionPtr convertConstructExpr(conversion::Converter& converter, const clang::CXXConstructExpr* constructExpr, const core::ExpressionPtr& memLoc);
 
+	/// Materialize "retIr" if possible
+	///
+	core::ExpressionPtr convertMaterializingExpr(conversion::Converter& converter, core::ExpressionPtr retIr);
+
+	/// Prepare the given 'this' argument if necessary
+	///
+	core::ExpressionPtr prepareThisExpr(conversion::Converter& converter, core::ExpressionPtr thisArg);
+
 	/// Modify the body of a for loop to contain the given update expression before every possible exit point
 	///
 	core::StatementPtr addIncrementExprBeforeAllExitPoints(const core::StatementPtr& body, const core::StatementPtr& incrementExpression);
