@@ -105,6 +105,10 @@ namespace analysis {
 		getIntegerValuesAnalysis::fun_type getIntegerValues;
 		isIntegerConstantAnalysis::fun_type isIntegerConstant;
 
+		areEqualIntegerAnalysis::fun_type areEqualIntegers;
+		areNotEqualIntegerAnalysis::fun_type areNotEqualIntegers;
+		mayBeEqualIntegerAnalysis::fun_type mayBeEqualIntegers;
+		mayBeNotEqualIntegerAnalysis::fun_type mayBeNotEqualIntegers;
 
 	public:
 		ActualTest()
@@ -118,7 +122,11 @@ namespace analysis {
 		        , mayBeFalse(&(analysis<mayBeFalseAnalysis,Backend>()))
 
 		        , getIntegerValues(&(analysis<getIntegerValuesAnalysis,Backend>()))
-		        , isIntegerConstant(&(analysis<isIntegerConstantAnalysis,Backend>())) {}
+		        , isIntegerConstant(&(analysis<isIntegerConstantAnalysis,Backend>()))
+				, areEqualIntegers(&(analysis<areEqualIntegerAnalysis,Backend>()))
+				, areNotEqualIntegers(&(analysis<areNotEqualIntegerAnalysis,Backend>()))
+				, mayBeEqualIntegers(&(analysis<mayBeEqualIntegerAnalysis,Backend>()))
+				, mayBeNotEqualIntegers(&(analysis<mayBeNotEqualIntegerAnalysis,Backend>())) {}
 
 
 		void operator()(const std::string &filename) {
@@ -197,7 +205,7 @@ namespace analysis {
 					std::cerr << "Performing " << name << std::endl;
 					IntegerSet lhs = this->getIntegerValues(call.getArgument(0));
 					IntegerSet rhs = this->getIntegerValues(call.getArgument(1));
-					TRY(EXPECT_TRUE(lhs.will_equal(rhs))
+					TRY(EXPECT_TRUE(integer::areEqual(call.getArgument(0),call.getArgument(1)))
 					    << *core::annotations::getLocation(call) << std::endl
 					    << "LHS IntegerSet evaluates to " << lhs << std::endl
 					    << "RHS IntegerSet evaluates to " << rhs << std::endl;)

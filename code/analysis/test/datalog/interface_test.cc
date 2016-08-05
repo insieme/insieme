@@ -34,27 +34,25 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/analysis/cba_interface.h"
-#include "insieme/analysis/haskell/dataflow.h"
+#include "insieme/analysis/datalog_interface.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace analysis {
 
-	/*
-	 * Create a type for this backend.
-	 */
-	struct HaskellEngine {};
+	TEST(Interface, Compiling) {
+		// if it compiles, this test is passed :)
+	}
 
+	TEST(Interface, BooleanAnalysis) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 
-	// --- Boolean Analysis ---
-
-	register_analysis_implementation( HaskellEngine , isTrue,     haskell::isTrue     );
-	register_analysis_implementation( HaskellEngine , isFalse,    haskell::isFalse    );
-	register_analysis_implementation( HaskellEngine , mayBeTrue,  haskell::mayBeTrue  );
-	register_analysis_implementation( HaskellEngine , mayBeFalse, haskell::mayBeFalse );
-
+		// check some basic analysis
+		EXPECT_TRUE(isTrue<DatalogEngine>(core::ExpressionAddress(builder.parseExpr("true"))));
+	}
 
 } // end namespace analysis
 } // end namespace insieme

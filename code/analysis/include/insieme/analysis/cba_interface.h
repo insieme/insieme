@@ -36,125 +36,55 @@
 
 #pragma once
 
+#include "insieme/analysis/common/interface_tools.h"
+
 #include "insieme/analysis/common/integer_set.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/utils/assert.h"
 
-
-/**
- * OVERVIEW: ADDING A NEW ANALYSIS TO THE CBA INTERFACE
- *
- * There are two macros:
- *
- * - add_cba_analysis specifies the name of the analysis function (ANALYSIS, e.g. getDefinitionPoint),
- *     the return value (RETURN, e.g. bool) and the parameters that the function takes (__VA_ARGS__).
- *
- * - add_cba_implementation links a backend to an analysis, using the parameters ENGINE (e.g. datalog, has to
- *     be lower-case!) and ANALYSIS (e.g. getDefinitionPoint, as given to the first macro).
- *
- * Each backend creates a 'struct backendEngine {}' (lower-case first character!) in it's own interface file.
- * Then it implements the desired analyses in it's own namespace. Finally, the analyses are made
- * available to the CBA interface using the add_cba_implementation macro, and the 'mybackend_interface.h'
- * file is included at the bottom of this file.
- *
- * Note: Unimplemented analyses have to be created and linked as well, if you plan to use the dynamic backend
- * dispatcher which is used in those tests that are common for all backends.
- */
-
-
-/**
- * Declare an analysis using this macro
- *
- * @param ANALYSIS the function name (e.g. getDefinitionPoint)
- * @param RETURN the return value of the analysis (e.g. core::ExpressionAddress)
- * @param __VA_ARGS__ the parameters that the analysis function takes (e.g. core::ExpressionAddress)
- */
-#define add_cba_analysis(ANALYSIS, RETURN, ...)                            \
-    struct ANALYSIS##Analysis : public analysis_type<RETURN,__VA_ARGS__> {};
-
-
-/**
- * Declare that some Backend implements some analysis
- *
- * @param ENGINE the backend which provides this analysis (e.g. datalog, written in lower-case like it's namespace!)
- * @param ANALYSIS the implemented analysis (e.g. areAlias, as declared in the first macro
- */
-#define add_cba_implementation(ENGINE, ANALYSIS)                                   \
-    template<>                                                                     \
-    struct analysis<ANALYSIS##Analysis,ENGINE##Engine>                             \
-                    : public ANALYSIS##Analysis::template with<ENGINE::ANALYSIS> {};
-
-
 namespace insieme {
 namespace analysis {
 
-
 	/**
-	 * The struct which is specialized to each declared implementation. In the end,
-	 * there will be a struct typed as 'analysis<mybackend,myCBAfunc>', which has to
-	 * be default-constructed and then called with
-	 * - operator() to run the actual analysis, or
-	 * - operator&  to get a pointer to the actual analysis implementation
+	 * Each of the following declarations creates a function of the following signatures:
+	 *
+	 * 		template<typename Backend>
+	 * 		<res> <name>(<args ...>) { .. };
+	 *
+	 * To be utilized, one of the backend interface headers has to be included, and the corresponding
+	 * backend has to be passed as a template parameter to the given function.
 	 */
-	template<typename Analysis,typename Framework>
-	struct analysis;
 
 
-	/**
-	 * The static analysis dispatcher. By using a combination of template magic and the
-	 * macros defined above, this struct provides the actual implementation of the 'analysis' struct.
-	 */
-	template<typename Res, typename ... Args>
-	struct analysis_type {
-		using fun_type = Res(*)(const Args&...);
+	// --- Alias Analysis ---
 
-		template<fun_type f>
-		struct with {
-			Res operator()(const Args& ... args) const {
-				return (*f)(args...);
-			}
-			fun_type operator&() const {
-				return f;
-			}
-		};
-	};
+    //                | Name    | Res | Arguments                                        |
+	declare_analysis_2( areAlias, bool, core::ExpressionAddress, core::ExpressionAddress );
+	declare_analysis_2( mayAlias, bool, core::ExpressionAddress, core::ExpressionAddress );
+	declare_analysis_2( notAlias, bool, core::ExpressionAddress, core::ExpressionAddress );
 
 
-	struct not_implemented_exception : public std::logic_error {
-		not_implemented_exception(const std::string &what) : std::logic_error(what) {}
-	};
+	// --- Boolean Analysis ---
 
-	/**
-	 * A list of the available analyses.
-	 */
-	add_cba_analysis(areAlias, bool, core::ExpressionAddress, core::ExpressionAddress)
-	add_cba_analysis(mayAlias, bool, core::ExpressionAddress, core::ExpressionAddress)
-	add_cba_analysis(notAlias, bool, core::ExpressionAddress, core::ExpressionAddress)
+	//                | Name       | Res | Argument              |
+	declare_analysis_1( isTrue,     bool, core::ExpressionAddress)
+	declare_analysis_1( isFalse,    bool, core::ExpressionAddress)
+	declare_analysis_1( mayBeTrue,  bool, core::ExpressionAddress)
+	declare_analysis_1( mayBeFalse, bool, core::ExpressionAddress)
 
-	add_cba_analysis(getDefinitionPoint, core::VariableAddress, core::VariableAddress)
 
-	add_cba_analysis(isTrue,     bool, core::ExpressionAddress)
-	add_cba_analysis(isFalse,    bool, core::ExpressionAddress)
-	add_cba_analysis(mayBeTrue,  bool, core::ExpressionAddress)
-	add_cba_analysis(mayBeFalse, bool, core::ExpressionAddress)
+	// --- Simple Integer Analysis ---
 
-	add_cba_analysis(getIntegerValues,  IntegerSet, core::ExpressionAddress);
-	add_cba_analysis(isIntegerConstant, bool,       core::ExpressionAddress);
+	//                | Name                  | Res       | Argument             |
+	declare_analysis_1( getIntegerValues,     IntegerSet, core::ExpressionAddress);
+	declare_analysis_1( isIntegerConstant,    bool,       core::ExpressionAddress);
+
+	//                | Name                | Res | Arguments                                       |
+	declare_analysis_2( areEqualInteger,      bool, core::ExpressionAddress, core::ExpressionAddress);
+	declare_analysis_2( areNotEqualInteger,   bool, core::ExpressionAddress, core::ExpressionAddress);
+	declare_analysis_2( mayBeEqualInteger,    bool, core::ExpressionAddress, core::ExpressionAddress);
+	declare_analysis_2( mayBeNotEqualInteger, bool, core::ExpressionAddress, core::ExpressionAddress);
+
 
 } // end namespace analysis
 } // end namespace insieme
-
-
-/**
- * Inclusion of the different backends. Each backend has its own interface file,
- * where it declares which analyses it implements.
- */
-#include "insieme/analysis/datalog_interface.h"
-#include "insieme/analysis/haskell_interface.h"
-
-
-/**
- * Done. Avoid namespace pollution
- */
-#undef add_cba_analysis
-#undef add_cba_implementation

@@ -34,27 +34,28 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/analysis/cba_interface.h"
+#include "insieme/analysis/haskell_interface.h"
 #include "insieme/analysis/haskell/dataflow.h"
+
+#include "../common/definition_point_test.inc"
 
 namespace insieme {
 namespace analysis {
 
-	/*
-	 * Create a type for this backend.
+	template<>
+	struct getDefinitionPointImpl<HaskellEngine> {
+		core::VariableAddress operator()(const core::VariableAddress& var) {
+			return haskell::getDefinitionPoint(var);
+		}
+	};
+
+	/**
+	 * Run the definition point tests using the haskell backend.
 	 */
-	struct HaskellEngine {};
-
-
-	// --- Boolean Analysis ---
-
-	register_analysis_implementation( HaskellEngine , isTrue,     haskell::isTrue     );
-	register_analysis_implementation( HaskellEngine , isFalse,    haskell::isFalse    );
-	register_analysis_implementation( HaskellEngine , mayBeTrue,  haskell::mayBeTrue  );
-	register_analysis_implementation( HaskellEngine , mayBeFalse, haskell::mayBeFalse );
-
+	INSTANTIATE_TYPED_TEST_CASE_P(Haskell, DefinitionPoint, HaskellEngine);
 
 } // end namespace analysis
 } // end namespace insieme
+

@@ -36,88 +36,12 @@
 
 #pragma once
 
-#include "insieme/core/ir_address.h"
+#include "insieme/analysis/common/set.h"
 
 namespace insieme {
 namespace analysis {
 
-	class IntegerSet {
-
-		std::set<int> elements;
-
-		bool all;
-
-		IntegerSet(bool all)
-			: elements(), all(all) {}
-
-	public:
-
-		IntegerSet()
-			: elements(), all(false) {}
-
-		static IntegerSet getAll() {
-			return IntegerSet(true);
-		}
-
-		bool empty() const {
-			return !all && elements.empty();
-		}
-
-		std::size_t size() const {
-			return (all) ? std::numeric_limits<std::size_t>::max() : elements.size();
-		}
-
-		const std::set<int> &getElements() const {
-			return elements;
-		}
-
-		bool isUniversal() const {
-			return all;
-		}
-
-		void insert(int a) {
-			if (all) return;
-			elements.insert(a);
- 		}
-
-		bool operator==(const IntegerSet &rhs) const {
-			/* Caution: checks equality of sets only */
-			return size() == rhs.size() && elements == rhs.getElements();
-		}
-
-		bool operator!=(const IntegerSet &rhs) const {
-			/* Caution: checks inequality of sets only */
-			return !(*this == rhs);
-		}
-
-		bool will_equal(const IntegerSet &rhs) const {
-			return size() == 1 && *this == rhs;
-		}
-
-		bool may_equal(const IntegerSet &rhs) const {
-			for (const int &mine : elements)
-				for (const int &theirs : rhs.getElements())
-					if (mine == theirs)
-						return true;
-			return false;
-		}
-
-		bool will_not_equal(const IntegerSet &rhs) const {
-			for (const int &mine : elements)
-				for (const int &theirs : rhs.getElements())
-					if (mine == theirs)
-						return false;
-			return true;
-		}
-
-		friend std::ostream& operator<<(std::ostream& out, const IntegerSet& set) {
-			if (set.all) {
-				return out << "{-all-}";
-			}
-			return out << set.elements;
-		}
-
-	};
+	using IntegerSet = Set<int>;
 
 } // end namespace analysis
 } // end namespace insieme

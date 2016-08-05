@@ -34,27 +34,20 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/analysis/cba_interface.h"
-#include "insieme/analysis/haskell/dataflow.h"
+#include "insieme/analysis/haskell_interface.h"
+
+#include "../common/boolean_analysis_test.inc"
 
 namespace insieme {
 namespace analysis {
 
-	/*
-	 * Create a type for this backend.
+	/**
+	 * Run the boolean value tests using the haskell backend.
 	 */
-	struct HaskellEngine {};
-
-
-	// --- Boolean Analysis ---
-
-	register_analysis_implementation( HaskellEngine , isTrue,     haskell::isTrue     );
-	register_analysis_implementation( HaskellEngine , isFalse,    haskell::isFalse    );
-	register_analysis_implementation( HaskellEngine , mayBeTrue,  haskell::mayBeTrue  );
-	register_analysis_implementation( HaskellEngine , mayBeFalse, haskell::mayBeFalse );
-
+	INSTANTIATE_TYPED_TEST_CASE_P(Haskell, BooleanValue, HaskellEngine);
 
 } // end namespace analysis
 } // end namespace insieme
+

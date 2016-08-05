@@ -64,47 +64,28 @@ namespace analysis {
 
 	protected:
 
-		bool (*impl_isTrue)(const core::ExpressionAddress&);
-		bool (*impl_isFalse)(const core::ExpressionAddress&);
-		bool (*impl_mayBeTrue)(const core::ExpressionAddress&);
-		bool (*impl_mayBeFalse)(const core::ExpressionAddress&);
-
-		BooleanValue()
-			: impl_isTrue(&(analysis<isTrueAnalysis,Backend>())),
-			  impl_isFalse(&(analysis<isFalseAnalysis,Backend>())),
-			  impl_mayBeTrue(&(analysis<mayBeTrueAnalysis,Backend>())),
-			  impl_mayBeFalse(&(analysis<mayBeFalseAnalysis,Backend>())) {}
-
 		bool isTrue(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
 			auto expr = getBuilder().parseExpr(code, symbols);
-			return impl_isTrue(ExpressionAddress(expr));
+			return insieme::analysis::isTrue<Backend>(ExpressionAddress(expr));
 		}
 
 		bool isFalse(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
-			return impl_isFalse(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
+			return insieme::analysis::isFalse<Backend>(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
 		}
 
 		bool mayBeTrue(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
-			return impl_mayBeTrue(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
+			return insieme::analysis::mayBeTrue<Backend>(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
 		}
 
 		bool mayBeFalse(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
-			return impl_mayBeFalse(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
+			return insieme::analysis::mayBeFalse<Backend>(ExpressionAddress(getBuilder().parseExpr(code, symbols)));
 		}
 
 	};
 
-	/**
-	 * Type list of backends to be tested
-	 */
-	using CBA_Backends = Types<datalogEngine, haskellEngine>;
+	TYPED_TEST_CASE_P(BooleanValue);
 
-	/**
-	 * Tell GTest that CBA_Interface tests shall be type-parametrized with CBA_Backends
-	 */
-	TYPED_TEST_CASE(BooleanValue, CBA_Backends);
-
-	TYPED_TEST(BooleanValue, Constants) {
+	TYPED_TEST_P(BooleanValue, Constants) {
 
 		EXPECT_TRUE(this->isTrue("true"));
 		EXPECT_TRUE(this->isFalse("false"));
@@ -122,7 +103,7 @@ namespace analysis {
 
 	}
 
-	TYPED_TEST(BooleanValue, StringConstants) {
+	TYPED_TEST_P(BooleanValue, StringConstants) {
 
 		// check string constants (should be neither true nor false)
 		EXPECT_FALSE(this->isTrue("\"x\""));
@@ -132,7 +113,7 @@ namespace analysis {
 
 	}
 
-	TYPED_TEST(BooleanValue, FreeVariables) {
+	TYPED_TEST_P(BooleanValue, FreeVariables) {
 
 		IRBuilder& builder = getBuilder();
 		SymbolTable symbols;
@@ -146,15 +127,15 @@ namespace analysis {
 
 	}
 
-	TYPED_TEST(BooleanValue, LocalVariableDecl) {
+	TYPED_TEST_P(BooleanValue, LocalVariableDecl) {
 
 		IRBuilder& builder = getBuilder();
 		auto res = builder.parseAddressesStatement("{ auto x = true; $x$; }")[0];
-		EXPECT_TRUE(this->impl_isTrue(res.as<VariableAddress>()));
+		EXPECT_TRUE(insieme::analysis::isTrue<TypeParam>(res.as<VariableAddress>()));
 
 	}
 
-	TYPED_TEST(BooleanValue, ReturnValue) {
+	TYPED_TEST_P(BooleanValue, ReturnValue) {
 
 		// test whether the return value of a function is deduced properly
 		EXPECT_TRUE( this->isTrue("()->bool { return true; }()"));
@@ -162,7 +143,7 @@ namespace analysis {
 
 	}
 
-	TYPED_TEST(BooleanValue, LocalVariable) {
+	TYPED_TEST_P(BooleanValue, LocalVariable) {
 
 		// test whether the return value of a function is deduced properly
 		EXPECT_TRUE( this->isTrue("()->bool { var bool x = true; return x; }()"));
@@ -170,7 +151,7 @@ namespace analysis {
 
 	}
 
-	TYPED_TEST(BooleanValue, ParameterPassing) {
+	TYPED_TEST_P(BooleanValue, ParameterPassing) {
 
 		// test whether the return value of a function is deduced properly
 		EXPECT_TRUE( this->isTrue("(x : 'a)->'a { return x; }(true)"));
@@ -182,7 +163,7 @@ namespace analysis {
 
 	}
 
-	TYPED_TEST(BooleanValue, ParameterPassingToBind) {
+	TYPED_TEST_P(BooleanValue, ParameterPassingToBind) {
 
 		// test whether values can be passed to bind expressions
 		EXPECT_TRUE( this->isTrue("( (x : 'a)=> x )(true)"));
@@ -190,7 +171,7 @@ namespace analysis {
 
 	}
 
-	TYPED_TEST(BooleanValue, ControlFlow) {
+	TYPED_TEST_P(BooleanValue, ControlFlow) {
 
 		// test whether control flow restrictions are considered
 		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(true,true)"));
@@ -208,13 +189,13 @@ namespace analysis {
 
 	}
 
-	TYPED_TEST(BooleanValue, HigherOrderFunction) {
+	TYPED_TEST_P(BooleanValue, HigherOrderFunction) {
 
 		EXPECT_TRUE(this->isTrue("( a: ('a)-> 'a, b:'a )->'a { return a(b); }(id,true)"));
 
 	}
 
-	TYPED_TEST(BooleanValue, BoundValues) {
+	TYPED_TEST_P(BooleanValue, BoundValues) {
 
 		// check a simple constant value in a bind
 		EXPECT_TRUE( this->isTrue("(()=>true)()"));
@@ -247,7 +228,7 @@ namespace analysis {
 
 	}
 
-	TYPED_TEST(BooleanValue, MemoryState) {
+	TYPED_TEST_P(BooleanValue, MemoryState) {
 
 		EXPECT_TRUE( this->isTrue("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; return *a; }()"));
 		EXPECT_TRUE(this->isFalse("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; a = !a; return *a; }()"));
@@ -270,7 +251,7 @@ namespace analysis {
 
 	}
 
-	TYPED_TEST(BooleanValue, PassByReference) {
+	TYPED_TEST_P(BooleanValue, PassByReference) {
 
 		// some more complex example
 		auto code = R"(
@@ -287,7 +268,7 @@ namespace analysis {
 
 	}
 
-	TYPED_TEST(BooleanValue, Tuples) {
+	TYPED_TEST_P(BooleanValue, Tuples) {
 
 		// some more complex example
 		auto code = R"(
@@ -311,7 +292,7 @@ namespace analysis {
 
 	}
 
-	TYPED_TEST(BooleanValue, FailureDetection) {
+	TYPED_TEST_P(BooleanValue, FailureDetection) {
 
 		{
 			auto input = "ref_assign";
@@ -331,6 +312,24 @@ namespace analysis {
 		}
 
 	}
+
+	REGISTER_TYPED_TEST_CASE_P(BooleanValue,
+			Constants,
+			StringConstants,
+			FreeVariables,
+			LocalVariableDecl,
+			ReturnValue,
+			LocalVariable,
+			ParameterPassing,
+			ParameterPassingToBind,
+			ControlFlow,
+			HigherOrderFunction,
+			BoundValues,
+			MemoryState,
+			PassByReference,
+			Tuples,
+			FailureDetection
+	);
 
 } // end namespace analysis
 } // end namespace insieme

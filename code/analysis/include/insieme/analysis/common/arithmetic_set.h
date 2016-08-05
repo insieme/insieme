@@ -36,25 +36,14 @@
 
 #pragma once
 
-#include "insieme/analysis/cba_interface.h"
-#include "insieme/analysis/haskell/dataflow.h"
+#include "insieme/analysis/common/set.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 
 namespace insieme {
 namespace analysis {
 
-	/*
-	 * Create a type for this backend.
-	 */
-	struct HaskellEngine {};
-
-
-	// --- Boolean Analysis ---
-
-	register_analysis_implementation( HaskellEngine , isTrue,     haskell::isTrue     );
-	register_analysis_implementation( HaskellEngine , isFalse,    haskell::isFalse    );
-	register_analysis_implementation( HaskellEngine , mayBeTrue,  haskell::mayBeTrue  );
-	register_analysis_implementation( HaskellEngine , mayBeFalse, haskell::mayBeFalse );
-
+	using ArithmeticSet = Set<core::arithmetic::Formula>;
 
 } // end namespace analysis
 } // end namespace insieme
+
