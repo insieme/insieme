@@ -369,6 +369,8 @@ namespace extensions {
 			return interceptMethodCall(converter, construct->getConstructor(), thisFactory, construct->arguments(), nullptr, explicitTemplateArgs);
 		}
 		if(auto newExp = llvm::dyn_cast<clang::CXXNewExpr>(expr)) {
+			// array case does not need to be intercepted -- only needs type, which is intercepted further down in the AST
+			if(newExp->isArray()) return nullptr;
 			if(auto construct = newExp->getConstructExpr()) {
 				auto thisFactory = [&](const core::TypePtr& retType){ return builder.undefinedNew(retType); };
 				auto ret = interceptMethodCall(converter, construct->getConstructor(), thisFactory, construct->arguments(), nullptr, explicitTemplateArgs);

@@ -188,4 +188,12 @@ int main() {
 		std::map<int,int> m;
 		m.find(1) != m.find(2);
 	}
+
+	// array new of intercepted type
+	#pragma test expect_ir(R"({
+		ptr_from_array(<ref<array<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,5>,f,f,plain>>(ref_new(type_lit(array<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,5>))) {});
+	})")
+	{
+		new std::vector<int>[5];
+	}
 }
