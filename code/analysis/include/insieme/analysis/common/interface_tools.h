@@ -22,6 +22,11 @@ namespace analysis {
 			// a utility struct for generating wrapper and dispatcher functions
 			template<fun_type impl>
 			struct with {
+
+				// mark this analysis as being available
+				enum { available = true };
+
+				// run the analysis
 				Res operator()(const Args& ... args) const {
 					return (*impl)(args...);
 				}
@@ -34,7 +39,9 @@ namespace analysis {
 		 * implementations within different backends.
 		 */
 		template<typename Analysis, typename Backend>
-		struct analysis_binding;
+		struct analysis_binding {
+			enum { available = false };		// used to identify unmapped analysis
+		};
 
 	} // end namespace detail
 
@@ -46,7 +53,10 @@ namespace analysis {
 	 */
 	#define declare_analysis( NAME, RESULT, ... ) \
 		namespace detail { struct NAME##_Analysis : public analysis_type<RESULT,__VA_ARGS__> {}; } \
-		template<typename Backend, typename ... Args> RESULT NAME(const Args& ... args) { return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(args...); }
+		template<typename Backend, typename ... Args> RESULT NAME(const Args& ... args) { \
+			static_assert(detail::analysis_binding<detail::NAME##_Analysis,Backend>::available, "The analysis " #NAME " is not available for the selected backend!"); \
+			return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(args...); \
+		}
 
 
 	/**
@@ -56,7 +66,10 @@ namespace analysis {
 	 */
 	#define declare_analysis_0( NAME, RESULT ) \
 		namespace detail { struct NAME##_Analysis : public analysis_type<RESULT> {}; } \
-		template<typename Backend> RESULT NAME() { return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(); }
+		template<typename Backend> RESULT NAME() { \
+			static_assert(detail::analysis_binding<detail::NAME##_Analysis,Backend>::available, "The analysis " #NAME " is not available for the selected backend!"); \
+			return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(); \
+		}
 
 	/**
 	 * A macro to declare an analysis with one argument
@@ -66,7 +79,10 @@ namespace analysis {
 	 */
 	#define declare_analysis_1( NAME, RESULT , A1 ) \
 		namespace detail { struct NAME##_Analysis : public analysis_type<RESULT,A1> {}; } \
-		template<typename Backend> RESULT NAME(const A1& a) { return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(a); }
+		template<typename Backend> RESULT NAME(const A1& a) { \
+			static_assert(detail::analysis_binding<detail::NAME##_Analysis,Backend>::available, "The analysis " #NAME " is not available for the selected backend!"); \
+			return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(a); \
+		}
 
 	/**
 	 * A macro to declare an analysis with two arguments
@@ -77,7 +93,10 @@ namespace analysis {
 	 */
 	#define declare_analysis_2( NAME, RESULT , A1 , A2 ) \
 		namespace detail { struct NAME##_Analysis : public analysis_type<RESULT,A1,A2> {}; } \
-		template<typename Backend> RESULT NAME(const A1& a, const A2& b) { return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(a,b); }
+		template<typename Backend> RESULT NAME(const A1& a, const A2& b) { \
+			static_assert(detail::analysis_binding<detail::NAME##_Analysis,Backend>::available, "The analysis " #NAME " is not available for the selected backend!"); \
+			return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(a,b); \
+		}
 
 
 	/**
