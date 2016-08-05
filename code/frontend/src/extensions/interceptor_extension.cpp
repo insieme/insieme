@@ -377,6 +377,18 @@ namespace extensions {
 				if(ret) return core::lang::buildPtrFromRef(ret);
 			}
 		}
+		if(auto delExp = llvm::dyn_cast<clang::CXXDeleteExpr>(expr)) {
+			auto qt = delExp->getDestroyedType();
+			if(auto delType = llvm::dyn_cast<clang::TagType>(qt.getCanonicalType())) {
+				if(converter.getHeaderTagger()->isIntercepted(delType->getDecl())) {
+					auto exprToDelete = converter.convertExpr(delExp->getArgument());
+					if(delExp->isArrayForm()) return builder.refDelete(core::lang::buildPtrToArray(exprToDelete));
+					core::TypePtr thisType = builder.refType(converter.convertType(qt));
+					auto destructor = builder.getLiteralForDestructor(builder.functionType(toVector(thisType), thisType, core::FK_DESTRUCTOR));
+					return builder.refDelete(builder.callExpr(destructor, core::lang::buildPtrToRef(exprToDelete)));
+				}
+			}
+		}
 		if(auto memberCall = llvm::dyn_cast<clang::CXXMemberCallExpr>(expr)) {
 			auto callee = llvm::dyn_cast<clang::MemberExpr>(memberCall->getCallee());
 			if(callee) explicitTemplateArgs = callee->getOptionalExplicitTemplateArgs();
