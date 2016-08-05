@@ -28,7 +28,8 @@ executable insieme-hat
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.ThHelpers,
-                        Insieme.Inspire.Utils
+                        Insieme.Inspire.Utils,
+                        Insieme.Utils.ParseInt
     build-depends:      attoparsec >=0.13,
                         attoparsec-binary >=0.2,
                         base >=4.7,
@@ -68,7 +69,8 @@ library
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.ThHelpers,
-                        Insieme.Inspire.Utils
+                        Insieme.Inspire.Utils,
+                        Insieme.Utils.ParseInt
     build-depends:      attoparsec >=0.13,
                         attoparsec-binary >=0.2,
                         base >=4.7,
