@@ -49,6 +49,37 @@ namespace analysis {
 	 */
 	INSTANTIATE_TYPED_TEST_CASE_P(Datalog, BooleanValue, DatalogEngine);
 
+
+	TEST(DataflowAnalysis, FailureDetection) {
+		using namespace core;
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto analyse = [&](const std::string& code) {
+			auto expr = builder.parseExpr(code);
+			datalog::isFalse(ExpressionAddress(expr));
+		};
+
+		{
+			auto input = "ref_assign";
+			ASSERT_THROW(analyse(input), AnalysisFailure);
+
+			try {
+				analyse(input);
+			} catch (const AnalysisFailure& af) {
+				// TODO: better checking of error string
+				//EXPECT_STREQ("Encountered 1 failures during analysis:\n\tError: Found a ref_assign whose parent is not a CallExpr!", af.what());
+			}
+		}
+
+		{
+			auto input = "(x : 'a)-> 'a{ return x; }(ref_assign)";
+			ASSERT_THROW(analyse(input), AnalysisFailure);
+		}
+
+	}
+
 } // end namespace analysis
 } // end namespace insieme
 

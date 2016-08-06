@@ -292,26 +292,6 @@ namespace analysis {
 
 	}
 
-	TYPED_TEST_P(BooleanValue, FailureDetection) {
-
-		{
-			auto input = "ref_assign";
-			ASSERT_THROW(this->isFalse(input), AnalysisFailure);
-
-			try {
-				this->isFalse(input);
-			} catch (const AnalysisFailure& af) {
-				// TODO: better checking of error string
-				//EXPECT_STREQ("Encountered 1 failures during analysis:\n\tError: Found a ref_assign whose parent is not a CallExpr!", af.what());
-			}
-		}
-
-		{
-			auto input = "(x : 'a)-> 'a{ return x; }(ref_assign)";
-			ASSERT_THROW(this->isFalse(input), AnalysisFailure);
-		}
-
-	}
 
 	REGISTER_TYPED_TEST_CASE_P(BooleanValue,
 			Constants,
@@ -327,8 +307,7 @@ namespace analysis {
 			BoundValues,
 			MemoryState,
 			PassByReference,
-			Tuples,
-			FailureDetection
+			Tuples
 	);
 
 } // end namespace analysis
