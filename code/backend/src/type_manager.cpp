@@ -109,6 +109,9 @@ namespace backend {
 
 			std::set<const TypeInfo*> allInfos;
 
+			// a set of type infos currently under definition
+			std::set<c_ast::CodeFragmentPtr> inDefinition;
+
 		  public:
 			TypeInfoStore(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& typeHandlers)
 			    : converter(converter), includeTable(includeTable), typeHandlers(typeHandlers), typeInfos(), allInfos() {}
@@ -537,7 +540,11 @@ namespace backend {
 					auto tempParamTypeInfo = getInfo(typeArg);
 					if (tempParamTypeInfo) {
 						assert_true(definition) << "Tried to add a dependency to non-existent definition";
-						definition->addDependency(tempParamTypeInfo->definition);
+						auto def = tempParamTypeInfo->definition;
+						if (contains(inDefinition, def)) {
+							def = tempParamTypeInfo->declaration;
+						}
+						definition->addDependency(def);
 					}
 				}
 				// if there is a definition then use it, otherwise create a forward declaration
@@ -632,6 +639,9 @@ namespace backend {
 
 				// register fragments locally
 				typeDefinitionFragments[def] = definition;
+
+				// remember as currently under definition
+				inDefinition.insert(definition);
 
 				// create resulting type info
 				auto res = type_info_utils::createInfo<TagTypeInfo>(type, declaration, definition);
@@ -834,6 +844,11 @@ namespace backend {
 			// C) remove temporary mappings
 			for(const core::TagTypeBindingPtr& def : definitions) {
 				remInfo(def->getTag());
+			}
+
+			// remove in-definition status
+			for(const auto& cur : typeDefinitionFragments) {
+				inDefinition.erase(cur.second);
 			}
 
 			// return information for requested tag type
