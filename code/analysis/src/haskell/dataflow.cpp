@@ -88,6 +88,11 @@ namespace haskell {
 		return res == BooleanAnalysisResult_AlwaysFalse || res == BooleanAnalysisResult_Both;
 	}
 
+	ArithmeticSet getArithmeticValue(const core::ExpressionAddress& expr) {
+		// TODO: implement
+		return ArithmeticSet();
+	}
+
 } // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme

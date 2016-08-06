@@ -38,9 +38,11 @@
 
 #include "insieme/analysis/common/interface_tools.h"
 
-#include "insieme/analysis/common/integer_set.h"
-#include "insieme/core/ir_address.h"
 #include "insieme/utils/assert.h"
+#include "insieme/core/ir_address.h"
+
+#include "insieme/analysis/common/arithmetic_set.h"
+#include "insieme/analysis/common/integer_set.h"
 
 namespace insieme {
 namespace analysis {
@@ -84,6 +86,12 @@ namespace analysis {
 	declare_analysis_2( areNotEqualInteger,   bool, core::ExpressionAddress, core::ExpressionAddress);
 	declare_analysis_2( mayBeEqualInteger,    bool, core::ExpressionAddress, core::ExpressionAddress);
 	declare_analysis_2( mayBeNotEqualInteger, bool, core::ExpressionAddress, core::ExpressionAddress);
+
+
+	// --- Symbolic Integer Analysis ---
+
+	//                | Name                  | Res          | Arguments             |
+	declare_analysis_1( getArithmeticValue,   ArithmeticSet, core::ExpressionAddress );
 
 
 } // end namespace analysis

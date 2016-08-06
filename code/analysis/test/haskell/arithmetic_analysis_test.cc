@@ -34,32 +34,20 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/analysis/cba_interface.h"
-#include "insieme/analysis/haskell/dataflow.h"
+#include "insieme/analysis/haskell_interface.h"
+
+#include "../common/arithmetic_analysis_test.inc"
 
 namespace insieme {
 namespace analysis {
 
-	/*
-	 * Create a type for this backend.
+	/**
+	 * Run the arithmetic value tests using the haskell backend.
 	 */
-	struct HaskellEngine {};
-
-
-	// --- Boolean Analysis ---
-
-	register_analysis_implementation( HaskellEngine , isTrue,     haskell::isTrue     );
-	register_analysis_implementation( HaskellEngine , isFalse,    haskell::isFalse    );
-	register_analysis_implementation( HaskellEngine , mayBeTrue,  haskell::mayBeTrue  );
-	register_analysis_implementation( HaskellEngine , mayBeFalse, haskell::mayBeFalse );
-
-
-	// --- Symbolic Integer Analysis ---
-
-	register_analysis_implementation( HaskellEngine , getArithmeticValue, haskell::getArithmeticValue );
-
+	INSTANTIATE_TYPED_TEST_CASE_P(Haskell, ArithmeticValue, HaskellEngine);
 
 } // end namespace analysis
 } // end namespace insieme
+

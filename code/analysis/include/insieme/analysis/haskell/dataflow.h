@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/ir_address.h"
+#include "insieme/analysis/common/arithmetic_set.h"
 
 namespace insieme {
 namespace analysis {
@@ -51,6 +52,8 @@ namespace haskell {
 	bool mayBeTrue(const core::ExpressionAddress& expr);
 
 	bool mayBeFalse(const core::ExpressionAddress& expr);
+
+	ArithmeticSet getArithmeticValue(const core::ExpressionAddress& expr);
 
 } // end namespace haskell
 } // end namespace analysis
