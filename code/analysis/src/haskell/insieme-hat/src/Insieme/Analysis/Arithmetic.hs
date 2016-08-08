@@ -80,7 +80,7 @@ arithmeticValue addr = case Addr.getNode addr of
 
     dep a = Solver.toVar <$> [lhs, rhs]
 
-    val op a = BSet.map (uncurry op) $ BSet.cartProduct (Solver.get a lhs) (Solver.get a rhs)
+    val op a = (BSet.lift2 op) (Solver.get a lhs) (Solver.get a rhs)
 
 
     isIntType :: Tree IR.NodeType -> Bool

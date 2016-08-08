@@ -13,6 +13,7 @@ module Insieme.Utils.BoundSet (
     union,
     cartProduct,
     map,
+    lift2,
     getBound,
 ) where
 
@@ -88,6 +89,14 @@ cartProduct bs@(BoundSet x) (BoundSet y) = fromList prod
 map :: (IsBound bb, Ord b) => (a -> b) -> BoundSet bb a -> BoundSet bb b
 map _ Universe     = Universe
 map f (BoundSet x) = BoundSet (Set.map f x)
+
+lift2 :: (IsBound bb, Ord a, Ord b, Ord c)
+      => (a -> b -> c) -> (BoundSet bb a -> BoundSet bb b -> BoundSet bb c)
+lift2 _    Universe     _            = Universe
+lift2 _    _            Universe     = Universe
+lift2 f bs@(BoundSet x) (BoundSet y) = fromList prod
+  where
+      prod = [f u v | u <- Set.toList x, v <- Set.toList y]
 
 getBound :: IsBound b => BoundSet b a -> Int
 getBound bs = bound bs
