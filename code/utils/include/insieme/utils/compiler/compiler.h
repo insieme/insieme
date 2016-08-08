@@ -130,6 +130,10 @@ namespace compiler {
 			libs.addLib(lib);
 		}
 
+		void addLibrary(const string& lib) {
+			libs.addLib(lib);
+		}
+
 		void addIncludeDir(const string& path) {
 			incDirs.push_back(path);
 		}

@@ -196,11 +196,16 @@ int main(int argc, char** argv) {
 	default: compiler = cp::Compiler::getRuntimeCompiler(compiler);
 	}
 
-	// add needed library flags
+	// add needed external library flags
 	for(auto cur : extLibs) {
 		string libname = cur.filename().string();
 		// add libraries by splitting their paths, truncating the filename of the library in the process (lib*.so*)
 		compiler.addExternalLibrary(cur.parent_path().string(), libname.substr(3, libname.find(".") - 3));
+	}
+
+	// add library flags
+	for(auto lib : options.settings.libraryFiles) {
+		compiler.addLibrary(lib.string());
 	}
 
 	// add needed includeDirs for intercepted stuff
