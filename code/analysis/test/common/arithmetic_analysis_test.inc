@@ -307,7 +307,7 @@ namespace analysis {
 	TYPED_TEST_P(ArithmeticValue, ReturnValue) {
 
 		// test whether the return value of a function is deduced properly
-		EXPECT_EQ("{5}", toString(this->getValue("()->int<4> { return 5; }")));
+		EXPECT_EQ("{5}", toString(this->getValue("()->int<4> { return 5; }()")));
 
 	}
 
