@@ -12,7 +12,7 @@ import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Utils.BoundSet as BSet
 
-import Insieme.Analysis.Framework.Dataflow
+import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 
 --
 -- * Arithemtic Symbol
