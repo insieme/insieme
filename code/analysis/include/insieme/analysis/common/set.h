@@ -45,10 +45,10 @@
 namespace insieme {
 namespace analysis {
 
-	template<typename Elem>
+	template<typename Elem, typename Compare = std::less<Elem>>
 	class Set {
 
-		std::set<Elem> elements;
+		std::set<Elem,Compare> elements;
 
 		bool all;
 

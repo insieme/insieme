@@ -34,30 +34,32 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
+
+#include "insieme/analysis/datalog/alias_analysis.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/analysis/common/set.h"
-#include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/analysis/common/arithmetic_set.h"
 
 namespace insieme {
 namespace analysis {
+namespace datalog {
 
-	namespace detail {
+	TEST(Set,ArithmeticSet) {
+		using namespace core;
 
-		/**
-		 * We have to use this comparator since formula has an overloaded
-		 * operator < for other purposes.
-		 */
-		struct formula_comparator {
-			bool operator()(const core::arithmetic::Formula& a, const core::arithmetic::Formula& b) const {
-				return a.lessThan(b);
-			}
-		};
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		// check whether the insertion works
+		ArithmeticSet s;
+		s.insert(arithmetic::Formula(12));
 
 	}
 
-	using ArithmeticSet = Set<core::arithmetic::Formula,detail::formula_comparator>;
 
+} // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme
 
