@@ -53,6 +53,7 @@ using namespace insieme::core::dump::binary::haskell;
 
 extern "C" {
 
+	using insieme::analysis::ArithmeticSet;
 	using insieme::analysis::haskell::StablePtr;
 
 	// Haskell object management
@@ -75,7 +76,8 @@ extern "C" {
 
 	// Analysis
 	StablePtr hat_findDecl(const StablePtr var);
-	int hat_checkBoolean(const StablePtr expr, const StablePtr ir);
+	int hat_checkBoolean(const StablePtr expr);
+	ArithmeticSet* hat_arithmeticValue(const StablePtr expr);
 
 }
 
@@ -197,13 +199,17 @@ namespace haskell {
 		return ret;
 	}
 
-	BooleanAnalysisResult Environment::checkBoolean(const Address& expr, const IR& ir) {
-		auto res = static_cast<BooleanAnalysisResult>(hat_checkBoolean(expr.addr->ptr, ir.ir->ptr));
+	BooleanAnalysisResult Environment::checkBoolean(const Address& expr) {
+		auto res = static_cast<BooleanAnalysisResult>(hat_checkBoolean(expr.addr->ptr));
 		if (res == BooleanAnalysisResult_Neither) {
 			std::vector<std::string> msgs{"Boolean Analysis Error"};
 			throw AnalysisFailure(msgs);
 		}
 		return res;
+	}
+
+	ArithmeticSet* Environment::arithmeticValue(const Address& expr) {
+		return hat_arithmeticValue(expr.addr->ptr);
 	}
 
 } // end namespace haskell
@@ -212,6 +218,7 @@ namespace haskell {
 
 extern "C" {
 
+	using insieme::analysis::ArithmeticSet;
 	using namespace insieme::analysis::haskell;
 
 	StablePtr hat_parseIR(const char* ircode, size_t length) {
@@ -261,6 +268,19 @@ extern "C" {
 		for(size_t i = 0; i < length; i++) {
 			*ret += arithmetic::Formula(terms[i]->first, terms[i]->second);
 			delete terms[i];
+		}
+		return ret;
+	}
+
+	ArithmeticSet* hat_arithmetic_set(const arithmetic::Formula** formulas, int length) {
+		if(length < 0) {
+			return new ArithmeticSet(ArithmeticSet::getUniversal());
+		}
+
+		auto ret = new ArithmeticSet();
+		for(int i = 0; i < length; i++) {
+			ret->insert(*formulas[i]);
+			delete formulas[i];
 		}
 		return ret;
 	}

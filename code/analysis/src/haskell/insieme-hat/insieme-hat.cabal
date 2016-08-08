@@ -10,6 +10,7 @@ cabal-version:      >=1.10
 executable insieme-hat
     main-is:            Main.hs
     other-modules:      Insieme.Analysis.Entities.ProgramPoint,
+                        Insieme.Analysis.Arithmetic,
                         Insieme.Analysis.Boolean,
                         Insieme.Analysis.Callable,
                         Insieme.Analysis.CallSite,
@@ -52,6 +53,7 @@ executable insieme-hat
 library
     exposed-modules:    Insieme.Adapter
     other-modules:      Insieme.Analysis.Entities.ProgramPoint,
+                        Insieme.Analysis.Arithmetic,
                         Insieme.Analysis.Boolean,
                         Insieme.Analysis.Callable,
                         Insieme.Analysis.CallSite,

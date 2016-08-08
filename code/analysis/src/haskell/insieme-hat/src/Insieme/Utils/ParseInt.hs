@@ -3,6 +3,7 @@ module Insieme.Utils.ParseInt where
 import Data.Char
 import Data.Int
 import Data.List
+import Data.Maybe
 import Data.Word
 import Numeric
 import Unsafe.Coerce
@@ -67,26 +68,32 @@ instance Integral CInt where
     toInteger (CUInt  x) = toInteger x
     toInteger (CULong x) = toInteger x
 
-parseInt :: String -> CInt
-parseInt input =
-    case normalizeSuffix . head . readInt $ input of
-      (num, "u")   -> CUInt  (fromIntegral num :: Word32)
-      (num, "l")   -> CLong  (fromIntegral num :: Int64)
-      (num, "lu")  -> CULong (fromIntegral num :: Word64)
-      (num, "ll")  -> CLong  (fromIntegral num :: Int64)
-      (num, "llu") -> CULong (fromIntegral num :: Word64)
-      (num, _)     -> CInt   (fromIntegral num :: Int32)
+parseInt :: String -> Maybe CInt
+parseInt input = (toCInt . normalizeSuffix) <$> (listToMaybe . readInt $ input)
   where
     readInt input =
         case input of
             ('+':'0':'x':xs) -> readHex xs
+            ('+':'0':[])     -> readDec "0"
             ('+':'0':xs)     -> readOct xs
             ('+':xs)         -> readDec xs
             ('-':'0':'x':xs) -> fmap invert (readHex xs)
+            ('-':'0':[])     -> readDec "0"
             ('-':'0':xs)     -> fmap invert (readOct xs)
             ('-':xs)         -> fmap invert (readDec xs)
             ('0':'x':xs)     -> readHex xs
+            ('0':[])         -> readDec "0"
             ('0':xs)         -> readOct xs
             _                -> readDec input
+
+    toCInt pair = case pair of
+        (num, "u")   -> CUInt  (fromIntegral num :: Word32)
+        (num, "l")   -> CLong  (fromIntegral num :: Int64)
+        (num, "lu")  -> CULong (fromIntegral num :: Word64)
+        (num, "ll")  -> CLong  (fromIntegral num :: Int64)
+        (num, "llu") -> CULong (fromIntegral num :: Word64)
+        (num, _)     -> CInt   (fromIntegral num :: Int32)
+
     invert (num, suffix) = (-num, suffix)
+
     normalizeSuffix (num, suffix) = (num, sort $ map toLower suffix)

@@ -1,10 +1,10 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Insieme.Utils.BoundSet (
+    IsBound,
     Bound10,
     Bound100,
     BoundSet(Universe),
     empty,
+    singleton,
     member,
     size,
     isUniverse,
@@ -16,6 +16,7 @@ module Insieme.Utils.BoundSet (
     getBound,
 ) where
 
+import Data.Typeable
 import qualified Data.Set as Set
 
 import Prelude hiding (map)
@@ -24,7 +25,7 @@ import Prelude hiding (map)
 -- * Bounds
 --
 
-class IsBound b where
+class Typeable b => IsBound b where
     bound :: p b a -> Int
 
 data Bound10 = Bound10
@@ -44,6 +45,9 @@ data BoundSet bb a = Universe | BoundSet (Set.Set a)
 
 empty :: BoundSet bb a
 empty = BoundSet Set.empty
+
+singleton :: a -> BoundSet bb a
+singleton = BoundSet . Set.singleton
 
 member :: Ord a => a -> BoundSet bb a -> Bool
 member _ Universe      = True

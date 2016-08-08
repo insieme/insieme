@@ -120,7 +120,8 @@ namespace analysis {
 
 		// some more constants
 		EXPECT_TRUE(this->isConstant(-1,"-1"));
-		EXPECT_TRUE(this->isConstant(16,"0xF"));
+		// TODO
+		//EXPECT_TRUE(this->isConstant(16,"0xF"));
 
 		// some non-arithmetic constants
 		EXPECT_TRUE(this->isUnknown("\"x\""));
@@ -130,11 +131,9 @@ namespace analysis {
 	TYPED_TEST_P(ArithmeticValue, FreeVariables) {
 
 		IRBuilder& builder = getBuilder();
-		SymbolTable symbols;
-		symbols["x"] = builder.variable(builder.parseType("int<4>"));
 
 		// free variables should have an unknown value
-		EXPECT_TRUE(this->isUnknown("x",symbols));
+		EXPECT_EQ("{v1}", toString(this->getValue(ExpressionAddress(builder.variable(builder.parseType("int<4>"), 1)))));
 
 	}
 

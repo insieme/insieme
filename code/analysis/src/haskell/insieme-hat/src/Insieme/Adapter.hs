@@ -7,11 +7,13 @@ import Control.Exception
 import Data.Foldable
 import Data.Maybe
 import Data.Tree
+import Debug.Trace
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
 import Foreign.Marshal.Array
-import Insieme.Analysis.Boolean
+import qualified Insieme.Analysis.Boolean as AnBoolean
+import qualified Insieme.Analysis.Arithmetic as AnArith
 import qualified Data.ByteString.Char8 as BS8
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Arithmetic as Arith
@@ -19,6 +21,7 @@ import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Inspire.Utils as IRUtils
+import qualified Insieme.Utils.BoundSet as BSet
 
 --
 -- * HSobject
@@ -133,16 +136,23 @@ findDecl addr_c = do
 foreign export ccall "hat_findDecl"
     findDecl :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
 
-checkBoolean :: StablePtr Addr.NodeAddress -> StablePtr IR.Inspire
-             -> IO (CInt)
-checkBoolean addr_c ir_c = handleAll (return . fromIntegral . fromEnum $ Both) $ do
+checkBoolean :: StablePtr Addr.NodeAddress -> IO (CInt)
+checkBoolean addr_c = handleAll (return . fromIntegral . fromEnum $ AnBoolean.Both) $ do
     addr <- deRefStablePtr addr_c
-    ir   <- deRefStablePtr ir_c
-    evaluate . fromIntegral . fromEnum . Solver.resolve . booleanValue $ addr
+    evaluate . fromIntegral . fromEnum . Solver.resolve . AnBoolean.booleanValue $ addr
 
 foreign export ccall "hat_checkBoolean"
-    checkBoolean :: StablePtr Addr.NodeAddress -> StablePtr IR.Inspire
-                 -> IO (CInt)
+    checkBoolean :: StablePtr Addr.NodeAddress -> IO (CInt)
+
+arithValue :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticSet)
+arithValue addr_c = do
+    addr <- deRefStablePtr addr_c
+    let results = Solver.resolve (AnArith.arithmeticValue addr)
+    passFormulaSet $ BSet.map (fmap AnArith.getAddr) results
+
+foreign export ccall "hat_arithmeticValue"
+    arithValue :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticSet)
+
 
 --
 -- * Arithemtic
@@ -153,6 +163,7 @@ type CArithmeticFactor = ()
 type CArithmeticProduct = ()
 type CArithmeticTerm = ()
 type CArithmeticFormula = ()
+type CArithmeticSet = ()
 
 foreign import ccall "hat_arithmetic_value"
     arithmeticValue :: Ptr CSize -> CSize -> IO (Ptr CArithmeticValue)
@@ -168,6 +179,9 @@ foreign import ccall "hat_arithmetic_term"
 
 foreign import ccall "hat_arithmetic_formula"
     arithmeticFormula :: Ptr (Ptr CArithmeticTerm) -> CSize -> IO (Ptr CArithmeticFormula)
+
+foreign import ccall "hat_arithmetic_set"
+    arithmeticSet :: Ptr (Ptr CArithmeticFormula) -> CInt -> IO (Ptr CArithmeticSet)
 
 
 passFormula :: Integral c => Arith.Formula c Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
@@ -194,6 +208,17 @@ passFormula formula = do
     passValue addr = withArrayLen' (fromIntegral <$> Addr.getAddress addr) arithmeticValue
 
     withArrayLen' :: Storable a => [a] -> (Ptr a -> CSize -> IO b) -> IO b
+    withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
+
+
+passFormulaSet :: Integral c => BSet.BoundSet bb (Arith.Formula c Addr.NodeAddress)
+               -> IO (Ptr CArithmeticSet)
+passFormulaSet BSet.Universe = arithmeticSet nullPtr (-1)
+passFormulaSet bs = do
+    formulas <- mapM passFormula (BSet.toList bs)
+    withArrayLen' formulas arithmeticSet
+  where
+    withArrayLen' :: Storable a => [a] -> (Ptr a -> CInt -> IO b) -> IO b
     withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
 
 

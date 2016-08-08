@@ -62,21 +62,21 @@ namespace haskell {
 		auto& env = Environment::getInstance();
 		auto ir = env.passIR(expr.getRootNode());
 		auto expr_addr = env.passAddress(expr, ir);
-		return env.checkBoolean(expr_addr, ir) == BooleanAnalysisResult_AlwaysTrue;
+		return env.checkBoolean(expr_addr) == BooleanAnalysisResult_AlwaysTrue;
 	}
 
 	bool isFalse(const core::ExpressionAddress& expr) {
 		auto& env = Environment::getInstance();
 		auto ir = env.passIR(expr.getRootNode());
 		auto expr_addr = env.passAddress(expr, ir);
-		return env.checkBoolean(expr_addr, ir) == BooleanAnalysisResult_AlwaysFalse;
+		return env.checkBoolean(expr_addr) == BooleanAnalysisResult_AlwaysFalse;
 	}
 
 	bool mayBeTrue(const core::ExpressionAddress& expr) {
 		auto& env = Environment::getInstance();
 		auto ir = env.passIR(expr.getRootNode());
 		auto expr_addr = env.passAddress(expr, ir);
-		auto res = env.checkBoolean(expr_addr, ir);
+		auto res = env.checkBoolean(expr_addr);
 		return res == BooleanAnalysisResult_AlwaysTrue || res == BooleanAnalysisResult_Both;
 	}
 
@@ -84,13 +84,20 @@ namespace haskell {
 		auto& env = Environment::getInstance();
 		auto ir = env.passIR(expr.getRootNode());
 		auto expr_addr = env.passAddress(expr, ir);
-		auto res = env.checkBoolean(expr_addr, ir);
+		auto res = env.checkBoolean(expr_addr);
 		return res == BooleanAnalysisResult_AlwaysFalse || res == BooleanAnalysisResult_Both;
 	}
 
 	ArithmeticSet getArithmeticValue(const core::ExpressionAddress& expr) {
-		// TODO: implement
-		return ArithmeticSet();
+		auto& env = Environment::getInstance();
+		env.setRoot(expr.getRootNode());
+		auto ir = env.passIR(expr.getRootNode());
+		auto expr_addr = env.passAddress(expr, ir);
+		auto res_ptr = env.arithmeticValue(expr_addr);
+
+		ArithmeticSet res(std::move(*res_ptr));
+		delete res_ptr;
+		return res;
 	}
 
 } // end namespace haskell

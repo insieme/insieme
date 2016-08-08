@@ -6,10 +6,12 @@ module Insieme.Inspire.Utils (
     foldTreePrune,
     foldAddressPrune,
     parseIR,
-    findDecl
+    findDecl,
+    isFreeVariable
 ) where
 
 import Control.Applicative
+import Data.Maybe
 import Data.List
 import Data.Tree
 import Insieme.Inspire.BinaryParser
@@ -118,8 +120,8 @@ findDecl start = findDecl start
     nextlevel addr = getParent addr >>= findDecl
 
 
-
-
+isFreeVariable :: NodeAddress -> Bool
+isFreeVariable = isNothing . findDecl
 
 
 -- some examples

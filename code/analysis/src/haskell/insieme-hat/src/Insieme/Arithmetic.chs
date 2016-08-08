@@ -11,13 +11,16 @@ import Prelude hiding (exponent, product)
 -- | Something like @-2 * x^2 * y^3 + 5 * z^1@ where 'c' denotes the type
 -- of coefficients and exponents, and 'v' the type of variables.
 data Formula c v = Formula { terms :: [Term c v] }
-  deriving (Show, Eq)
+  deriving (Eq)
 
 instance (Eq c, Ord v) => Ord (Formula c v) where
     compare = comparing terms
 
 instance Functor (Formula c) where
     fmap f = Formula . map (fmap f) . terms
+
+instance (Integral c, Show c, Show v) => Show (Formula c v) where
+    show = prettyShow
 
 convert :: (Integral c, Integral c', Ord v) => Formula c v -> Formula c' v
 convert = Formula . map convertTerm . terms
@@ -129,6 +132,9 @@ scaleTerm s (Term c p) = Term (s * c) p
 
 addFormula :: (Integral c, Ord v) => Formula c v-> Formula c v -> Formula c v
 addFormula a b = normalize $ addFormula' a b
+
+subFormula :: (Integral c, Ord v) => Formula c v-> Formula c v -> Formula c v
+subFormula a b = normalize $ addFormula' a (scaleFormula' (-1) b)
 
 sumFormula :: (Integral c, Ord v) => [Formula c v] -> Formula c v
 sumFormula = normalize . foldr1 addFormula'

@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include "insieme/analysis/common/arithmetic_set.h"
+
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_node.h"
 
@@ -109,7 +111,8 @@ namespace haskell {
 		Address passAddress(const core::NodeAddress& addr, const IR& ir);
 
 		boost::optional<Address> findDecl(const Address& var);
-		BooleanAnalysisResult checkBoolean(const Address& expr, const IR& ir);
+		BooleanAnalysisResult checkBoolean(const Address& expr);
+		ArithmeticSet* arithmeticValue(const Address& expr);
 
 	};
 
