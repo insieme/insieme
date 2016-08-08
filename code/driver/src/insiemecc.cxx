@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
 
 	// if we are compiling C++ code, we need to set the backend compiler standard
 	if(options.job.isCxx()) {
-		compiler.addFlag("-std=c++11");
+		compiler.addFlag("-std=c++14");
 	} else {
 		compiler.addFlag("-std=c99");
 	}
