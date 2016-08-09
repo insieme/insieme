@@ -1,7 +1,8 @@
-module Insieme.Arithmetic where
+module Insieme.Utils.Arithmetic where
 
 import Data.List hiding (product)
 import Data.Ord
+
 import Prelude hiding (exponent, product)
 
 --
