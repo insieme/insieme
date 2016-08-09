@@ -97,7 +97,9 @@ test-suite test
     hs-source-dirs:     tests, src
     main-is:            test.hs
     other-modules:      BoundSet,
+                        Formula,
                         ParseInt,
+                        Insieme.Utils.Arithmetic,
                         Insieme.Utils.BoundSet,
                         Insieme.Utils.ParseInt
     build-depends:      base >= 4.7,

@@ -16,12 +16,12 @@ boundSetTests = testGroup "BoundSet"
     , testCase "Universe  15"  $ BSet.isUniverse b15 @?= True
     , testCase "Universe  50"  $ BSet.isUniverse b50 @?= False
     , testCase "Universe 105"  $ BSet.isUniverse b105 @?= True
-    , testCase "Union 5 0"     $ BSet.union b5 empty @?= b5
+    , testCase "Union 5  0"    $ BSet.union b5 empty @?= b5
     , testCase "Union 5 15"    $ BSet.union b5 b15 @?= Universe
-    , testCase "cartProd 1 5"  $ BSet.cartProduct b1 b5 @?= BSet.fromList [(x, y) | x <- [1], y <- [1..5]]
+    , testCase "cartProd 1  5" $ BSet.cartProduct b1 b5 @?= BSet.fromList [(x, y) | x <- [1], y <- [1..5]]
     , testCase "cartProd 1 15" $ BSet.cartProduct b1 b15 @?= Universe
     , testCase "map 1"         $ BSet.map succ b1 @?= BSet.singleton 2
-    , testCase "getBound 5"    $ BSet.getBound b5 @?= 10
+    , testCase "getBound  5"   $ BSet.getBound b5 @?= 10
     , testCase "getBound 50"   $ BSet.getBound b50 @?= 100
     ]
 

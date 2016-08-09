@@ -1,5 +1,6 @@
 module Insieme.Utils.Arithmetic where
 
+import Control.Applicative
 import Data.List hiding (product)
 import Data.Ord
 
@@ -32,11 +33,12 @@ normalize = Formula . filter ((/=0) . coeff) . map merge
                     . sort . map normalizeTerm . terms
   where
     merge ts = Term (sum $ coeff <$> ts) (product . head $ ts)
-    ensureZero [] = [Term 0 (Product[])]
-    ensureZero xs = xs
 
 prettyShow :: (Integral c, Show c, Show v) => Formula c v -> String
-prettyShow (Formula ts) = intercalate " + " $ prettyShowTerm <$> ts
+prettyShow (Formula ts) = unempty . intercalate " + " $ prettyShowTerm <$> ts
+  where
+    unempty "" = "0"
+    unempty xs = xs
 
 isConst :: Formula c v -> Bool
 isConst = all termIsConst . terms
@@ -118,6 +120,8 @@ normalizeTerm :: (Integral c, Ord v) => Term c v -> Term c v
 normalizeTerm (Term c p) = Term c (normalizeProduct p)
 
 prettyShowTerm :: (Integral c, Show c, Show v) => Term c v -> String
+prettyShowTerm (Term c (Product [])) = show c
+prettyShowTerm (Term c p) | fromIntegral c == 1 = prettyShowProduct p
 prettyShowTerm (Term c p) = show c ++ " " ++ prettyShowProduct p
 
 termIsConst :: Term c v -> Bool
@@ -196,22 +200,3 @@ instance (Integral c, Ord v) => NumOrd (Formula c v) where
                 else fromOrdering $ compare (coeff . head . terms $ diff) 0
       where
         diff = addFormula a (scaleFormula' (-1) b)
-
-
---
--- * Examples
---
-
-fa = Factor 'a' 2
-fb = Factor 'b' 2
-fx = Factor 'x' 2
-fy = Factor 'y' 3
-fz = Factor 'z' 1
-t1 = Term 2 (Product [fx])
-t2 = Term 5 (Product [fy])
-t3 = Term 2 (Product [fz])
-t4 = Term (-1) (Product [fa])
-t5 = Term 4 (Product [fb])
-t6 = Term 7 (Product [fx])
-f1 = Formula [t1, t2, t3]
-f2 = Formula [t4, t5, t6]

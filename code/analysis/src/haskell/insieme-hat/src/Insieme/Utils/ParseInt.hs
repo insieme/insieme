@@ -11,7 +11,13 @@ data CInt = CInt32  Int32
           | CInt64  Int64
           | CUInt32 Word32
           | CUInt64 Word64
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
+
+instance Show CInt where
+    show (CInt32  x) = show x
+    show (CInt64  x) = show x
+    show (CUInt32 x) = show x
+    show (CUInt64 x) = show x
 
 instance Num CInt where
     (CInt32  x) + (CInt32  y) = CInt32  $ x + y
