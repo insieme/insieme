@@ -49,7 +49,6 @@ namespace analysis {
 namespace haskell {
 
 	#include "boolean_analysis.h"
-	#include "numeric_ordering.h"
 
 	typedef void* StablePtr;
 

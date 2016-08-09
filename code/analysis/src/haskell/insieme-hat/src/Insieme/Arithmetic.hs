@@ -175,12 +175,8 @@ mulTerms t = map (mulTerm t)
 -- * Numeric Order
 --
 
-#include "numeric_ordering.h"
-
-{#enum NumericOrdering as NumOrdering {}
-  with prefix = "NumericOrdering_"
-  deriving (Eq, Read, Show)
- #}
+data NumOrdering = NumLT | NumEQ | NumGT | Sometimes
+  deriving (Eq, Ord, Enum, Read, Show)
 
 class NumOrd a where
     numCompare :: a -> a -> NumOrdering
@@ -199,6 +195,7 @@ instance (Integral c, Ord v) => NumOrd (Formula c v) where
                 else fromOrdering $ compare (coeff . head . terms $ diff) 0
       where
         diff = addFormula a (scaleFormula' (-1) b)
+
 
 --
 -- * Examples
