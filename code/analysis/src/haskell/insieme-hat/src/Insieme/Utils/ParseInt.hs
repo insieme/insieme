@@ -6,67 +6,66 @@ import Data.List
 import Data.Maybe
 import Data.Word
 import Numeric
-import Unsafe.Coerce
 
-data CInt = CInt   Int32
-          | CLong  Int64
-          | CUInt  Word32
-          | CULong Word64
+data CInt = CInt32  Int32
+          | CInt64  Int64
+          | CUInt32 Word32
+          | CUInt64 Word64
   deriving (Eq, Ord, Show)
 
 instance Num CInt where
-    (CInt   x) + (CInt   y) = CInt   $ x + y
-    (CLong  x) + (CLong  y) = CLong  $ x + y
-    (CUInt  x) + (CUInt  y) = CUInt  $ x + y
-    (CULong x) + (CULong y) = CULong $ x + y
-    _          + _          = error "Cannot mix types"
+    (CInt32  x) + (CInt32  y) = CInt32  $ x + y
+    (CInt64  x) + (CInt64  y) = CInt64  $ x + y
+    (CUInt32 x) + (CUInt32 y) = CUInt32 $ x + y
+    (CUInt64 x) + (CUInt64 y) = CUInt64 $ x + y
+    _           + _           = error "Cannot mix types"
 
-    (CInt   x) * (CInt   y) = CInt   $ x * y
-    (CLong  x) * (CLong  y) = CLong  $ x * y
-    (CUInt  x) * (CUInt  y) = CUInt  $ x * y
-    (CULong x) * (CULong y) = CULong $ x * y
-    _          * _          = error "Cannot mix types"
+    (CInt32  x) * (CInt32  y) = CInt32  $ x * y
+    (CInt64  x) * (CInt64  y) = CInt64  $ x * y
+    (CUInt32 x) * (CUInt32 y) = CUInt32 $ x * y
+    (CUInt64 x) * (CUInt64 y) = CUInt64 $ x * y
+    _           * _           = error "Cannot mix types"
 
-    abs (CInt   x) = CInt   $ abs x
-    abs (CLong  x) = CLong  $ abs x
-    abs (CUInt  x) = CUInt  $ abs x
-    abs (CULong x) = CULong $ abs x
+    abs (CInt32  x) = CInt32  $ abs x
+    abs (CInt64  x) = CInt64  $ abs x
+    abs (CUInt32 x) = CUInt32 $ abs x
+    abs (CUInt64 x) = CUInt64 $ abs x
 
-    signum (CInt   x) = CInt   $ signum x
-    signum (CLong  x) = CLong  $ signum x
-    signum (CUInt  x) = CUInt  $ signum x
-    signum (CULong x) = CULong $ signum x
+    signum (CInt32  x) = CInt32  $ signum x
+    signum (CInt64  x) = CInt64  $ signum x
+    signum (CUInt32 x) = CUInt32 $ signum x
+    signum (CUInt64 x) = CUInt64 $ signum x
 
-    fromInteger x = CInt (fromInteger x)
+    fromInteger x = CInt32 (fromInteger x)
 
-    negate (CInt   x) = CInt   $ negate x
-    negate (CLong  x) = CLong  $ negate x
-    negate (CUInt  x) = CUInt  $ negate x
-    negate (CULong x) = CULong $ negate x
+    negate (CInt32  x) = CInt32  $ negate x
+    negate (CInt64  x) = CInt64  $ negate x
+    negate (CUInt32 x) = CUInt32 $ negate x
+    negate (CUInt64 x) = CUInt64 $ negate x
 
 instance Enum CInt where
-    fromEnum (CInt x) = fromIntegral x
-    fromEnum _        = error "fromEnum only supported for CInt"
+    fromEnum (CInt32 x) = fromIntegral x
+    fromEnum _          = error "fromEnum only supported for CInt"
 
-    toEnum = CInt . fromIntegral
+    toEnum = CInt32 . fromIntegral
 
 instance Real CInt where
-    toRational (CInt   x) = toRational x
-    toRational (CLong  x) = toRational x
-    toRational (CUInt  x) = toRational x
-    toRational (CULong x) = toRational x
+    toRational (CInt32  x) = toRational x
+    toRational (CInt64  x) = toRational x
+    toRational (CUInt32 x) = toRational x
+    toRational (CUInt64 x) = toRational x
 
 instance Integral CInt where
-    quotRem (CInt   x) (CInt   y) = (\(x, y) -> (CInt   x, CInt   y)) (quotRem x y)
-    quotRem (CLong  x) (CLong  y) = (\(x, y) -> (CLong  x, CLong  y)) (quotRem x y)
-    quotRem (CUInt  x) (CUInt  y) = (\(x, y) -> (CUInt  x, CUInt  y)) (quotRem x y)
-    quotRem (CULong x) (CULong y) = (\(x, y) -> (CULong x, CULong y)) (quotRem x y)
-    quotRem _          _          = error "Cannot mix types"
+    quotRem (CInt32  x) (CInt32  y) = (\(x, y) -> (CInt32  x, CInt32  y)) (quotRem x y)
+    quotRem (CInt64  x) (CInt64  y) = (\(x, y) -> (CInt64  x, CInt64  y)) (quotRem x y)
+    quotRem (CUInt32 x) (CUInt32 y) = (\(x, y) -> (CUInt32 x, CUInt32 y)) (quotRem x y)
+    quotRem (CUInt64 x) (CUInt64 y) = (\(x, y) -> (CUInt64 x, CUInt64 y)) (quotRem x y)
+    quotRem _           _           = error "Cannot mix types"
 
-    toInteger (CInt   x) = toInteger x
-    toInteger (CLong  x) = toInteger x
-    toInteger (CUInt  x) = toInteger x
-    toInteger (CULong x) = toInteger x
+    toInteger (CInt32  x) = toInteger x
+    toInteger (CInt64  x) = toInteger x
+    toInteger (CUInt32 x) = toInteger x
+    toInteger (CUInt64 x) = toInteger x
 
 parseInt :: String -> Maybe CInt
 parseInt input = (toCInt . normalizeSuffix) <$> (listToMaybe . readInt $ input)
@@ -74,25 +73,22 @@ parseInt input = (toCInt . normalizeSuffix) <$> (listToMaybe . readInt $ input)
     readInt input =
         case input of
             ('+':'0':'x':xs) -> readHex xs
-            ('+':'0':[])     -> readDec "0"
-            ('+':'0':xs)     -> readOct xs
+            ('+':'0':xs)     -> readOct ("0" ++ xs)
             ('+':xs)         -> readDec xs
-            ('-':'0':'x':xs) -> fmap invert (readHex xs)
-            ('-':'0':[])     -> readDec "0"
-            ('-':'0':xs)     -> fmap invert (readOct xs)
-            ('-':xs)         -> fmap invert (readDec xs)
+            ('-':'0':'x':xs) -> invert <$> readHex xs
+            ('-':'0':xs)     -> invert <$> readOct ("0" ++ xs)
+            ('-':xs)         -> invert <$> readDec xs
             ('0':'x':xs)     -> readHex xs
-            ('0':[])         -> readDec "0"
-            ('0':xs)         -> readOct xs
+            ('0':xs)         -> readOct ("0" ++ xs)
             _                -> readDec input
 
     toCInt pair = case pair of
-        (num, "u")   -> CUInt  (fromIntegral num :: Word32)
-        (num, "l")   -> CLong  (fromIntegral num :: Int64)
-        (num, "lu")  -> CULong (fromIntegral num :: Word64)
-        (num, "ll")  -> CLong  (fromIntegral num :: Int64)
-        (num, "llu") -> CULong (fromIntegral num :: Word64)
-        (num, _)     -> CInt   (fromIntegral num :: Int32)
+        (num, "u")   -> CUInt32 (fromIntegral num :: Word32)
+        (num, "l")   -> CInt64  (fromIntegral num :: Int64)
+        (num, "lu")  -> CUInt64 (fromIntegral num :: Word64)
+        (num, "ll")  -> CInt64  (fromIntegral num :: Int64)
+        (num, "llu") -> CUInt64 (fromIntegral num :: Word64)
+        (num, _)     -> CInt32  (fromIntegral num :: Int32)
 
     invert (num, suffix) = (-num, suffix)
 
