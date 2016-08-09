@@ -40,6 +40,11 @@ prettyShow (Formula ts) = intercalate " + " $ prettyShowTerm <$> ts
 isConst :: Formula c v -> Bool
 isConst = all termIsConst . terms
 
+toConstant :: (Integral c) => Formula c v -> Maybe c
+toConstant (Formula [])                    = Just 0
+toConstant (Formula [Term c (Product [])]) = Just c  
+toConstant _                               = Nothing 
+
 zero :: (Integral c, Ord v) => Formula c v
 zero = Formula []
 

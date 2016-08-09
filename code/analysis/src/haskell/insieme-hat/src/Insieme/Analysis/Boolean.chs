@@ -12,6 +12,9 @@ import qualified Insieme.Inspire as IR
 import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Framework.PropertySpace.Tree as PSTree
+import Insieme.Analysis.Framework.PropertySpace.FieldIndex
 
 --
 -- * Boolean Value Results
@@ -41,15 +44,17 @@ instance Solver.Lattice Result where
 -- * Boolean Value Analysis
 --
 
-booleanValue :: NodeAddress -> Solver.TypedVar Result
+booleanValue :: NodeAddress -> Solver.TypedVar (PSTree.Tree SimpleFieldIndex Result)
 booleanValue addr =
     case () of _
-                | isBuiltin addr "true"  -> Solver.mkVariable (idGen addr) [] AlwaysTrue
-                | isBuiltin addr "false" -> Solver.mkVariable (idGen addr) [] AlwaysFalse
+                | isBuiltin addr "true"  -> Solver.mkVariable (idGen addr) [] $ compose AlwaysTrue
+                | isBuiltin addr "false" -> Solver.mkVariable (idGen addr) [] $ compose AlwaysFalse
                 | otherwise      -> dataflowValue addr analysis ops
   where
 
-    analysis = DataFlowAnalysis "B" booleanValue Both
+    compose = ComposedValue.toComposed 
+
+    analysis = DataFlowAnalysis "B" booleanValue (compose Both)
     idGen = mkVarIdentifier analysis
 
     ops = [ lt, le, eq, ne, ge, gt ]
@@ -111,6 +116,6 @@ booleanValue addr =
 
     val op a = combine (Solver.get a lhs) (Solver.get a rhs)
       where
-        combine BSet.Universe _ = Both
-        combine _ BSet.Universe = Both
-        combine x y = Solver.join [ u `op` v | u <- BSet.toList x, v <- BSet.toList y]
+        combine BSet.Universe _ = compose Both
+        combine _ BSet.Universe = compose Both
+        combine x y = compose . Solver.join $ [ u `op` v | u <- BSet.toList x, v <- BSet.toList y]

@@ -23,6 +23,8 @@ import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Inspire.Utils as IRUtils
 import qualified Insieme.Utils.BoundSet as BSet
 
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+
 --
 -- * HSobject
 --
@@ -139,7 +141,7 @@ foreign export ccall "hat_findDecl"
 checkBoolean :: StablePtr Addr.NodeAddress -> IO (CInt)
 checkBoolean addr_c = handleAll (return . fromIntegral . fromEnum $ AnBoolean.Both) $ do
     addr <- deRefStablePtr addr_c
-    evaluate . fromIntegral . fromEnum . Solver.resolve . AnBoolean.booleanValue $ addr
+    evaluate . fromIntegral . fromEnum . ComposedValue.toValue .  Solver.resolve . AnBoolean.booleanValue $ addr
 
 foreign export ccall "hat_checkBoolean"
     checkBoolean :: StablePtr Addr.NodeAddress -> IO (CInt)

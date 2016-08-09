@@ -20,6 +20,7 @@ import Insieme.Analysis.CallSite
 import Insieme.Analysis.ExitPoint
 import qualified Insieme.Inspire as IR
 
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
 
 --
@@ -155,7 +156,7 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
  
             dep a = [Solver.toVar conditionValueVar]
             
-            val a = case Solver.get a conditionValueVar of
+            val a = case ComposedValue.toValue $ Solver.get a conditionValueVar of
                 Neither     -> []
                 AlwaysTrue  -> [thenBranch]
                 AlwaysFalse -> [elseBranch]
