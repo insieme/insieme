@@ -96,6 +96,10 @@ library
 test-suite test
     hs-source-dirs:     tests, src
     main-is:            test.hs
+    other-modules:      BoundSet,
+                        ParseInt,
+                        Insieme.Utils.BoundSet,
+                        Insieme.Utils.ParseInt
     build-depends:      base >= 4.7,
                         containers >=0.5,
                         tasty >= 0.11,
