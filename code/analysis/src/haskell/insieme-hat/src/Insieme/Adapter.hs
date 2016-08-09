@@ -2,8 +2,8 @@
 
 module Insieme.Adapter where
 
-import Control.Monad
 import Control.Exception
+import Control.Monad
 import Data.Foldable
 import Data.Maybe
 import Data.Tree
@@ -12,15 +12,15 @@ import Foreign
 import Foreign.C.String
 import Foreign.C.Types
 import Foreign.Marshal.Array
-import qualified Insieme.Analysis.Boolean as AnBoolean
-import qualified Insieme.Analysis.Arithmetic as AnArith
 import qualified Data.ByteString.Char8 as BS8
+import qualified Insieme.Analysis.Arithmetic as Arith
+import qualified Insieme.Analysis.Boolean as AnBoolean
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Arithmetic as Arith
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Inspire.Utils as IRUtils
+import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Utils.BoundSet as BSet
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -149,8 +149,8 @@ foreign export ccall "hat_checkBoolean"
 arithValue :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticSet)
 arithValue addr_c = do
     addr <- deRefStablePtr addr_c
-    let results = Solver.resolve (AnArith.arithmeticValue addr)
-    passFormulaSet $ BSet.map (fmap AnArith.getAddr) results
+    let results = Solver.resolve (Arith.arithmeticValue addr)
+    passFormulaSet $ BSet.map (fmap Arith.getAddr) results
 
 foreign export ccall "hat_arithmeticValue"
     arithValue :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticSet)
@@ -186,25 +186,25 @@ foreign import ccall "hat_arithmetic_set"
     arithmeticSet :: Ptr (Ptr CArithmeticFormula) -> CInt -> IO (Ptr CArithmeticSet)
 
 
-passFormula :: Integral c => Arith.Formula c Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
+passFormula :: Integral c => Ar.Formula c Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
 passFormula formula = do
-    terms <- forM (Arith.terms formula) passTerm
+    terms <- forM (Ar.terms formula) passTerm
     withArrayLen' terms arithmeticFormula
   where
-    passTerm :: Integral c => Arith.Term c Addr.NodeAddress -> IO (Ptr CArithmeticTerm)
+    passTerm :: Integral c => Ar.Term c Addr.NodeAddress -> IO (Ptr CArithmeticTerm)
     passTerm term = do
-        product <- passProduct (Arith.product term)
-        arithmeticTerm product (fromIntegral $ Arith.coeff term)
+        product <- passProduct (Ar.product term)
+        arithmeticTerm product (fromIntegral $ Ar.coeff term)
 
-    passProduct :: Integral c => Arith.Product c Addr.NodeAddress -> IO (Ptr CArithmeticProduct)
+    passProduct :: Integral c => Ar.Product c Addr.NodeAddress -> IO (Ptr CArithmeticProduct)
     passProduct product = do
-        factors <- forM (Arith.factors product) passFactor
+        factors <- forM (Ar.factors product) passFactor
         withArrayLen' factors arithmeticProduct
 
-    passFactor :: Integral c => Arith.Factor c Addr.NodeAddress -> IO (Ptr CArithmeticFactor)
+    passFactor :: Integral c => Ar.Factor c Addr.NodeAddress -> IO (Ptr CArithmeticFactor)
     passFactor factor = do
-        value <- passValue (Arith.base factor)
-        arithemticFactor value (fromIntegral $ Arith.exponent factor)
+        value <- passValue (Ar.base factor)
+        arithemticFactor value (fromIntegral $ Ar.exponent factor)
 
     passValue :: Addr.NodeAddress -> IO (Ptr CArithmeticValue)
     passValue addr = withArrayLen' (fromIntegral <$> Addr.getAddress addr) arithmeticValue
@@ -213,7 +213,7 @@ passFormula formula = do
     withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
 
 
-passFormulaSet :: Integral c => BSet.BoundSet bb (Arith.Formula c Addr.NodeAddress)
+passFormulaSet :: Integral c => BSet.BoundSet bb (Ar.Formula c Addr.NodeAddress)
                -> IO (Ptr CArithmeticSet)
 passFormulaSet BSet.Universe = arithmeticSet nullPtr (-1)
 passFormulaSet bs = do
@@ -229,14 +229,14 @@ passFormulaSet bs = do
 --
 
 testFormulaZero :: IO (Ptr CArithmeticFormula)
-testFormulaZero = passFormula Arith.zero
+testFormulaZero = passFormula Ar.zero
 
 foreign export ccall "hat_test_formulaZero"
     testFormulaZero :: IO (Ptr CArithmeticFormula)
 
 
 testFormulaOne :: IO (Ptr CArithmeticFormula)
-testFormulaOne = passFormula Arith.one
+testFormulaOne = passFormula Ar.one
 
 foreign export ccall "hat_test_formulaOne"
     testFormulaOne :: IO (Ptr CArithmeticFormula)
@@ -245,7 +245,7 @@ foreign export ccall "hat_test_formulaOne"
 testFormulaExample1 :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
 testFormulaExample1 addr_c = do
     addr <- deRefStablePtr addr_c
-    passFormula $ Arith.Formula [Arith.Term 2 (Arith.Product [Arith.Factor addr 2])]
+    passFormula $ Ar.Formula [Ar.Term 2 (Ar.Product [Ar.Factor addr 2])]
 
 foreign export ccall "hat_test_formulaExample1"
     testFormulaExample1 :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
@@ -254,7 +254,7 @@ foreign export ccall "hat_test_formulaExample1"
 testFormulaExample2 :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
 testFormulaExample2 addr_c = do
     addr <- deRefStablePtr addr_c
-    passFormula $ Arith.Formula [ Arith.Term 1 (Arith.Product []), Arith.Term 2 (Arith.Product [Arith.Factor addr 2, Arith.Factor addr 4]) ]
+    passFormula $ Ar.Formula [ Ar.Term 1 (Ar.Product []), Ar.Term 2 (Ar.Product [Ar.Factor addr 2, Ar.Factor addr 4]) ]
 
 foreign export ccall "hat_test_formulaExample2"
     testFormulaExample2 :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticFormula)

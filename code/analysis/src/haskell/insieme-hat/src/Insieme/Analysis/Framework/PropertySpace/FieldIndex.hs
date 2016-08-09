@@ -14,7 +14,7 @@ module Insieme.Analysis.Framework.PropertySpace.FieldIndex (
 ) where
 
 import Data.Typeable
-import Insieme.Arithmetic
+import Insieme.Utils.Arithmetic
 import Insieme.Analysis.Arithmetic
  
 import qualified Data.Set as Set

@@ -4,8 +4,8 @@ import Data.Maybe
 import Data.Tree
 import Insieme.Analysis.Arithmetic
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-import Insieme.Arithmetic
 import Insieme.Inspire.NodeAddress
+import Insieme.Utils.Arithmetic (NumOrdering(..), numCompare)
 import qualified Data.Map as Map
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
