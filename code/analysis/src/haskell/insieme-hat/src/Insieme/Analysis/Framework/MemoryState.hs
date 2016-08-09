@@ -3,6 +3,7 @@
 module Insieme.Analysis.Framework.MemoryState where
 
 import Debug.Trace
+import Data.Tree
 import Data.Foldable
 import Insieme.Inspire.NodeAddress
 
@@ -13,6 +14,7 @@ import Insieme.Analysis.Predecessor
 import Insieme.Analysis.Reference
 
 import qualified Data.Set as Set
+import qualified Insieme.Inspire as IR
 import qualified Insieme.Analysis.Solver as Solver
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
@@ -48,13 +50,14 @@ memoryStateValue ms@(MemoryState pp@(ProgramPoint addr _) ml@(MemoryLocation loc
           
           definingValueVars a = foldr go [] $ Solver.get a reachingDefVar
             where
-                go (Definition addr) l = (variableGenerator analysis $ goDown 3 addr) : l  
-
+                go (Assignment  addr) l = (variableGenerator analysis $ goDown 3 addr) : l  
+                go (Declaration addr) l = (variableGenerator analysis $ goDown 1 addr) : l 
 
 
 -- define the lattice of definitions
 
-newtype Definition = Definition NodeAddress
+data Definition = Assignment NodeAddress
+                | Declaration NodeAddress 
     deriving (Eq,Ord,Show)
     
 type Definitions = Set.Set Definition
@@ -62,15 +65,24 @@ type Definitions = Set.Set Definition
 instance Solver.Lattice Definitions where
     bot = Set.empty
     merge = Set.union
+    
+    
+toAddress :: Definition -> NodeAddress
+toAddress (Assignment addr)  = addr
+toAddress (Declaration addr) = addr
 
 
 -- reaching definitions
 
 reachingDefinitions :: MemoryState -> Solver.TypedVar Definitions 
-reachingDefinitions (MemoryState pp@(ProgramPoint addr _) ml@(MemoryLocation loc)) = 
+reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case getNode addr of 
+
+        -- a declaration could be an assignment if it is materializing
+        d@(Node IR.Declaration _) | addr == loc && p == Post && isMaterializing d -> 
+            Solver.mkVariable (idGen addr) [] (Set.singleton $ Declaration addr)
         
-        -- the magic is covered by the generic program point value constraint generator    
-        programPointValue pp idGen analysis [handler]
+        -- for all the others, the magic is covered by the generic program point value constraint generator    
+        _ -> programPointValue pp idGen analysis [handler]
         
     where
     
@@ -91,12 +103,12 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr _) ml@(MemoryLocation loc
         val a = if isEmptyRef a then Solver.bot                             -- the target reference is not yet determined - wait
                 else if isActive a then                                     -- it is referencing this memory location => do something
                     (if isSingleRef a 
-                        then Set.singleton $ Definition addr                -- it only references this memory location 
-                        else Set.insert (Definition addr) $ pval a          -- it references this and other memory locations
+                        then Set.singleton $ Assignment addr                -- it only references this memory location 
+                        else Set.insert (Assignment addr) $ pval a          -- it references this and other memory locations
                     ) 
                 else pval a                                                 -- it does not reference this memory location => no change to reachable definitions
         
-        targetRefVar = referenceValue $ goDown 2 addr
+        targetRefVar = referenceValue $ goDown 1 $ goDown 2 addr            -- here we have to skip the potentially materializing declaration!
         
         isActive a = any pred $ Solver.get a targetRefVar
             where

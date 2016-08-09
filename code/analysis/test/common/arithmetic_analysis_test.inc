@@ -68,6 +68,10 @@ namespace analysis {
 			return insieme::analysis::getArithmeticValue<Backend>(expr);
 		}
 
+		ArithmeticSet getValue(const core::ExpressionPtr& expr) {
+			return getValue(core::ExpressionAddress(expr));
+		}
+
 		ArithmeticSet getValue(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
 			auto expr = getBuilder().parseExpr(code, symbols);
 			return getValue(ExpressionAddress(expr));
@@ -120,8 +124,10 @@ namespace analysis {
 
 		// some more constants
 		EXPECT_TRUE(this->isConstant(-1,"-1"));
-		// TODO
-		//EXPECT_TRUE(this->isConstant(16,"0xF"));
+
+		// some other formats
+		EXPECT_EQ("{15}", toString(this->getValue(getBuilder().literal("0xF", getBuilder().parseType("int<4>")))));
+		EXPECT_EQ("{10}", toString(this->getValue(getBuilder().literal("012", getBuilder().parseType("int<4>")))));
 
 		// some non-arithmetic constants
 		EXPECT_TRUE(this->isUnknown("\"x\""));
@@ -166,10 +172,10 @@ namespace analysis {
 				"	2*x+4*y;"
 				"	2*x+4*y+e;"
 
-				"	var ref<int<4>> z = 10;"
-				"	var ref<int<4>> w = 5;"
-				"	var ref<int<4>> a = z;"
-				"	var ref<ref<int<4>>> p = z;"
+				"	var ref<int<4>> z = 10;"			// L=13
+				"	var ref<int<4>> w = 5;"				// L=14
+				"	var ref<int<4>> a = z;"				// L=15
+				"	var ref<ref<int<4>>> p = z;"		// L=16
 
 				"	*z;"
 				"	*p+2*z;"

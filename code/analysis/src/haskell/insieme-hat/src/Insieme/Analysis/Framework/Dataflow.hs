@@ -57,18 +57,13 @@ dataflowValue :: (Solver.Lattice a)
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
 dataflowValue addr analysis ops = case getNode addr of
 
-    Node IR.Declaration _ -> var
-      where
-        var = Solver.mkVariable (idGen addr) [con] Solver.bot
-        con = Solver.forward (varGen (goDown 1 addr)) var
-
     Node IR.Variable _ -> case findDecl addr of
         Just declrAddr -> handleDeclr declrAddr
         _              -> Solver.mkVariable (idGen addr) [] top
 
     Node IR.CallExpr _ -> var
       where
-        var = Solver.mkVariable (idGen addr) [con,con2] Solver.bot
+        var = Solver.mkVariable (idGen addr) [con] Solver.bot
         con = Solver.createConstraint dep val var
         
         trg = Callable.callableValue (goDown 1 addr)
@@ -108,13 +103,19 @@ dataflowValue addr analysis ops = case getNode addr of
 
         -- TODO: if there is a call to any unintercepted literal, add top to the result
 
-        -- temporary fix to support ref_deref before supporting referencences
-        con2 = Solver.createConstraint dep2 val2 var
-        isDeref = isBuiltin (goDown 1 addr) "ref_deref" 
-        dep2 a = if isDeref then [Solver.toVar trgRef] else [] 
-        val2 a = if isDeref then (Solver.get a trgRef) else Solver.bot  
-        trgRef = varGen $ goDown 2 addr
-        -- end temporary fix
+
+
+    decl@(Node IR.Declaration _) -> var
+      where
+        var = Solver.mkVariable (idGen addr) [con] Solver.bot
+        
+        con = Solver.forward 
+            (
+                if Reference.isMaterializing decl
+                then memoryStateValue (MemoryState (ProgramPoint addr Post) (MemoryLocation addr)) analysis
+                else varGen (goDown 1 addr)
+            ) 
+            var
 
 
     _ -> Solver.mkVariable (idGen addr) [] top
@@ -161,19 +162,19 @@ dataflowValue addr analysis ops = case getNode addr of
     -- support the ref_deref operation (read)
     
     readHandler = OperatorHandler cov dep val
-
-    cov a = isBuiltin a "ref_deref"
-    
-    dep a = (Solver.toVar targetRefVar) : (map Solver.toVar $ readValueVars a)
-    
-    val a = Solver.join $ map (Solver.get a) (readValueVars a)
-    
-    targetRefVar = Reference.referenceValue $ goDown 2 addr
-    
-    readValueVars a = foldr go [] $ Solver.get a targetRefVar
-        where
-            go r l = (memoryStateValue (MemoryState (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis) : l
-     
+        where 
+            cov a = isBuiltin a "ref_deref"
+            
+            dep a = (Solver.toVar targetRefVar) : (map Solver.toVar $ readValueVars a)
+            
+            val a = Solver.join $ map (Solver.get a) (readValueVars a)
+            
+            targetRefVar = Reference.referenceValue $ goDown 1 $ goDown 2 addr          -- here we have to skip the potentially materializing declaration!
+            
+            readValueVars a = foldr go [] $ Solver.get a targetRefVar
+                where
+                    go r l = (memoryStateValue (MemoryState (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis) : l
+             
     
     
             

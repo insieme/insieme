@@ -2,9 +2,11 @@
 
 module Insieme.Analysis.Reference where
 
+import Data.Tree
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
 import qualified Data.Set as Set
+import qualified Insieme.Inspire as IR
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
@@ -60,16 +62,55 @@ instance Lattice ReferenceSet where
 --
 
 referenceValue :: NodeAddress -> TypedVar ReferenceSet
-referenceValue addr = dataflowValue addr analysis [createHandler]
+referenceValue addr = case getNode addr of 
+
+        d@(Node IR.Declaration _) ->  
+            if isMaterializing d
+            then mkVariable (idGen addr) [] (Set.singleton $ Reference addr Root)
+            else dataflowValue addr analysis opsHandler                    
+
+        _ -> dataflowValue addr analysis opsHandler
+        
     where
+    
         analysis = DataFlowAnalysis "R" referenceValue top
+        idGen = mkVarIdentifier analysis
         
         top = Set.empty             -- TODO: replace by a real top value!
         
-        createHandler = OperatorHandler cov dep val
+        opsHandler = [ allocHandler , declHandler ]
         
-        cov a = any (isBuiltin a) ["ref_alloc","ref_decl"]
+        allocHandler = OperatorHandler cov dep val
+            where 
+                cov a = isBuiltin a "ref_alloc"
+                val a = Set.singleton $ Reference addr Root
+
+        declHandler = OperatorHandler cov dep val
+            where 
+                cov a = isBuiltin a "ref_decl"
+                val a = Set.singleton $ Reference (getEnclosingDecl addr) Root
         
         dep a = []
         
-        val a = Set.singleton $ Reference addr Root
+
+-- Tests whether an IR node represents a reference type or not
+isReference :: Tree IR.NodeType -> Bool
+isReference (Node IR.GenericType ((Node (IR.StringValue "ref") _) : _)) = True
+isReference _                                                           = False
+        
+getTypeParam :: Int -> Tree IR.NodeType -> Tree IR.NodeType
+getTypeParam i (Node IR.GenericType ( _ : _ : (Node IR.Types params) : [] )) = params !! i
+        
+sameNumReferences :: Tree IR.NodeType -> Tree IR.NodeType -> Bool
+sameNumReferences a b | (not . isReference $ a) && (not . isReference $ b) = True
+sameNumReferences a b | isReference a && isReference b = sameNumReferences (getTypeParam 0 a) (getTypeParam 0 b)
+sameNumReferences _ _ = False
+
+-- TODO: count number of nested refs in type and init type instead
+isMaterializing :: Tree IR.NodeType -> Bool
+isMaterializing decl@(Node IR.Declaration [declType,Node _ (initType:_)]) = not $ sameNumReferences declType initType
+
+getEnclosingDecl :: NodeAddress -> NodeAddress
+getEnclosingDecl addr = case getNode addr of
+    Node IR.Declaration _ -> addr
+    _                     -> getEnclosingDecl addr

@@ -14,6 +14,7 @@ import Debug.Trace
 import Data.Tree
 import Data.Maybe
 import Insieme.Inspire.NodeAddress
+import Insieme.Analysis.Boolean
 import Insieme.Analysis.Callable
 import Insieme.Analysis.CallSite
 import Insieme.Analysis.ExitPoint
@@ -145,6 +146,29 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
     
     -- declaration statement
     Node IR.DeclarationStmt _ -> single $ ProgramPoint (goDown 0 a) Post
+    
+    -- conditional statement
+    Node IR.IfStmt _ -> var
+        where
+            var = Solver.mkVariable (idGen p) [con] []
+            con = Solver.createConstraint dep val var
+ 
+            dep a = [Solver.toVar conditionValueVar]
+            
+            val a = case Solver.get a conditionValueVar of
+                Neither     -> []
+                AlwaysTrue  -> [thenBranch]
+                AlwaysFalse -> [elseBranch]
+                Both        -> [thenBranch,elseBranch]  
+            
+            conditionValueVar = booleanValue $ goDown 0 a
+            
+            thenBranch = ProgramPoint (goDown 1 a) Post
+            elseBranch = ProgramPoint (goDown 2 a) Post 
+    
+    -- return statement
+    Node IR.ReturnStmt _ -> single $ ProgramPoint (goDown 0 a) Post
+    
     
     _ -> trace ( " Unhandled Post Program Point: " ++ (show p) ++ " for node " ++ (show $ getNode a) ) $ error "unhandled case"
     
