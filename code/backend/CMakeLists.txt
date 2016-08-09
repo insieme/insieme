@@ -43,11 +43,6 @@ foreach ( case_file ${test_cases})
 	#dependency on test suit target
 	add_dependencies(${ut_prefix} ${case_name})
 
-	target_link_libraries(${case_name} insieme_common)
-	target_link_libraries(${case_name} insieme_core)
-	target_link_libraries(${case_name} insieme_annotations)
-	target_link_libraries(${case_name} insieme_utils)
-	target_link_libraries(${case_name} insieme_transform)
 	target_link_libraries(${case_name} insieme_backend)
 	
 	if(${case_name} STREQUAL ut_be_opencl_test OR

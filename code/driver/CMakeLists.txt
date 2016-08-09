@@ -43,15 +43,7 @@ foreach ( exec_file ${executables})
 	#target drivers depends on all driver
 	add_dependencies(drivers ${exec_name})
 
-	target_link_libraries(${exec_name} insieme_driver) 
-	target_link_libraries(${exec_name} insieme_utils) 
-	target_link_libraries(${exec_name} insieme_common) 
-	target_link_libraries(${exec_name} insieme_core) 
-	target_link_libraries(${exec_name} insieme_frontend) 
-	target_link_libraries(${exec_name} insieme_backend) 
-	target_link_libraries(${exec_name} insieme_transform) 
-	target_link_libraries(${exec_name} insieme_annotations) 
-	target_link_libraries(${exec_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
+	target_link_libraries(${exec_name} insieme_driver)
 
 endforeach(exec_file)
 
