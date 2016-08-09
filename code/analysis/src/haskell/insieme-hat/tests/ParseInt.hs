@@ -102,7 +102,6 @@ hexs = testGroup "Hexadecimals"
     , check "-0x1B3l"  $ Just (CInt64  (-435))
     , check "-0x1b3u"  $ Just (CUInt32 (-435))
     , check "-0x1B3ul" $ Just (CUInt64 (-435))
-
     ]
 
 check input expect = testCase input $ parseInt input @?= expect
