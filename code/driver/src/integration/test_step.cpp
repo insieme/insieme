@@ -52,6 +52,8 @@
 #include "insieme/utils/config.h"
 #include "insieme/utils/compiler/compiler.h"
 
+#include "insieme/common/env_vars.h"
+
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/regex.hpp>
@@ -64,8 +66,6 @@ namespace integration {
 	using namespace std;
 
 	namespace {
-
-		namespace {
 
 		namespace fs = boost::filesystem;
 
@@ -92,8 +92,18 @@ namespace integration {
 			return "xxx";
 		}
 
-
-		// TODO MAKE FLAGS STEP SPECIFIC
+		std::string getBackendCompilerString(const Language& l, const PropertyView& props) {
+			if(l == Language::C) {
+				if(getenv(INSIEME_C_BACKEND_COMPILER) != nullptr) {
+					return utils::compiler::getDefaultCCompilerExecutable();
+				}
+			} else {
+				if(getenv(INSIEME_CXX_BACKEND_COMPILER) != nullptr) {
+					return utils::compiler::getDefaultCxxCompilerExecutable();
+				}
+			}
+			return props["compiler"];
+		}
 
 		TestStep createRefCompStep(const string& name, Language l) {
 			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
@@ -103,7 +113,7 @@ namespace integration {
 				TestSetup set = setup;
 
 				// start with executable
-				cmd << props["compiler"];
+				cmd << getBackendCompilerString(l, props);
 
 				// add input files
 				for(const auto& cur : test.getFiles()) {
@@ -338,7 +348,7 @@ namespace integration {
 				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
 
 				// start with executable
-				cmd << props["compiler"];
+				cmd << getBackendCompilerString(l, props);
 
 				// determine backend
 				string be = getBackendKey(backend);
@@ -528,8 +538,6 @@ namespace integration {
 				return runner.runCommand(name, set, props, cmd.str());
 			}, deps, CHECK);
 		}
-		}
-
 
 		// create steps for statistics mode
 		std::map<std::string, TestStep> createFullStepList(int statThreads, bool schedule) {

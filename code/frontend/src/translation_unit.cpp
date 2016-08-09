@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -54,20 +54,20 @@ using namespace clang;
 
 namespace {
 
-    /** 
+    /**
      * this class guarantees release of resources when using the parserproxy.
      * TODO: Idealy ParserProxy should dissapear or turn into something which is
      * more standard.
      */
     struct ParserProxyRAII {
-            ParserProxyRAII(clang::Parser* p){ 
+            ParserProxyRAII(clang::Parser* p){
                 ParserProxy::init(p);
-                p->Initialize(); 
+                p->Initialize();
             }
             ParserProxyRAII(const ParserProxyRAII&) = delete;
             ParserProxyRAII& operator=(const ParserProxyRAII&) = delete;
-            ~ParserProxyRAII(){ 
-		        ParserProxy::discard(); 
+            ~ParserProxyRAII(){
+		        ParserProxy::discard();
             }
     };
 

@@ -41,3 +41,7 @@
 
 // create JSON dumps for inspyer tool on semantic errors
 #define INSIEME_SEMA_INSPYER "INSIEME_SEMA_INSPYER"
+
+// set backend compilers to use in insiemecc and unit/integration testing
+#define INSIEME_C_BACKEND_COMPILER "INSIEME_C_BACKEND_COMPILER"
+#define INSIEME_CXX_BACKEND_COMPILER "INSIEME_CXX_BACKEND_COMPILER"

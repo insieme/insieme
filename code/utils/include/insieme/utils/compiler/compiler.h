@@ -50,6 +50,9 @@ namespace insieme {
 namespace utils {
 namespace compiler {
 
+	const char* getDefaultCCompilerExecutable();
+	const char* getDefaultCxxCompilerExecutable();
+
 	// some common abbreviations
 	using std::string;
 	using std::vector;
