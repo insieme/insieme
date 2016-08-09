@@ -264,9 +264,9 @@ namespace frontend {
 					auto irString = ::toString(printer::PrettyPrinter(builder.normalize(node), printer::PrettyPrinter::OPTIONS_DEFAULT
 					                                                                               | printer::PrettyPrinter::PRINT_DERIVED_IMPL
 					                                                                               | printer::PrettyPrinter::PRINT_DEREFS));
-					EXPECT_TRUE(boost::regex_match(irString.begin(), irString.end(), re)) << "Location : " << core::annotations::getLocationString(node) << "\n"
-					                                                                      << "IR String: " << irString << "\n"
-					                                                                      << "Regex    : " << re << "\n";
+					EXPECT_TRUE(boost::regex_match(irString, re)) << "Location : " << core::annotations::getLocationString(node) << "\n"
+					                                              << "IR String: " << irString << "\n"
+					                                              << "Regex    : " << re << "\n";
 				}
 				// --------------------------------------------------------------------------------------------------------------------- String Compare =======|
 				else if(boost::starts_with(ex, stringKey)) {
