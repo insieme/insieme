@@ -36,12 +36,12 @@
 
 #pragma once
 
-/** Workaround for libstdc++/libc bug.
- *  There's an inconsistency between libstdc++ and libc regarding whether
- *  ::gets is declared or not, which is only evident when using certain
- *  compilers and language settings
- *  (tested positively with clang 3.9 --std=c++14 and libc 2.17).
- */
+// disable full semantic checks
+#define INSIEME_NO_SEMA "INSIEME_NO_SEMA"
 
-#include <initializer_list>  // force libstdc++ to include its config
-#undef _GLIBCXX_HAVE_GETS    // correct broken config
+// create JSON dumps for inspyer tool on semantic errors
+#define INSIEME_SEMA_INSPYER "INSIEME_SEMA_INSPYER"
+
+// set backend compilers to use in insiemecc and unit/integration testing
+#define INSIEME_C_BACKEND_COMPILER "INSIEME_C_BACKEND_COMPILER"
+#define INSIEME_CXX_BACKEND_COMPILER "INSIEME_CXX_BACKEND_COMPILER"

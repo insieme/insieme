@@ -71,8 +71,8 @@ namespace du = insieme::driver::utils;
 	std::cout.flush(); \
 	core::checks::MessageList checkResult; \
 	auto time = TIME(checkResult = core::checks::check(program, core::checks::makeVisitOnce(core::checks::make_check<core::checks::CHECK_NAME>()))); \
-	if(checkResult.size() != 0) std::cout << "Semantic errors encountered!\n\n"; \
-	std::cout << " took: " << time << " seconds\n"; }
+	if(checkResult.size() != 0) std::cout << "Semantic errors encountered!\n\n" << checkResult << std::endl; \
+	std::cout << "took: " << time << " seconds\n"; }
 
 
 int main(int argc, char** argv) {
@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
 		std::cout << "Benchmarking execution of check ... " << std::endl;
 
 		time = TIME(
-		TIME_CHECK(CallExprTypeCheck);
+		TIME_CHECK(DeclarationTypeCheck);
 		TIME_CHECK(KeywordCheck);
 		TIME_CHECK(FunctionKindCheck);
 		TIME_CHECK(ParentCheck);
@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
 		TIME_CHECK(LiteralFormatCheck);
 
 		TIME_CHECK(ReturnTypeCheck);
-		TIME_CHECK(DeclarationTypeCheck);
+		TIME_CHECK(CallExprTypeCheck);
 		);
 
 		std::cout << "done (took " << time << " seconds)\n";

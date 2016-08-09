@@ -23,13 +23,13 @@ if(MSVC)
 	target_link_libraries(insieme_utils dl)
 endif()
 
+target_link_libraries(insieme_utils insieme_common)
+
 # lookup Boost library
 insieme_find_package(NAME Boost COMPONENTS filesystem system regex) 
 target_include_directories(insieme_utils SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
-# add boost_filesystem library
-target_link_libraries( insieme_utils ${Boost_FILESYSTEM_LIBRARY})
-target_link_libraries( insieme_utils ${Boost_SYSTEM_LIBRARY})
-# add boost_regex library
+target_link_libraries(insieme_utils ${Boost_FILESYSTEM_LIBRARY})
+target_link_libraries(insieme_utils ${Boost_SYSTEM_LIBRARY})
 target_link_libraries(insieme_utils ${Boost_REGEX_LIBRARY})
 
 # lookup LuaJIT library
@@ -48,10 +48,6 @@ foreach ( case_file ${test_cases} )
 	set ( case_name ${ut_prefix}${case_subdir}_${case_name} )
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} insieme_utils)
-	target_link_libraries(${case_name} ${Boost_LIBRARIES})
-	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
-	target_link_libraries(${case_name} ${Boost_FILESYSTEM_LIBRARY})
-	target_link_libraries(${case_name} ${LUAJIT_LIBRARIES} )
 
 	add_unit_test(${case_name} ${ut_prefix})
         

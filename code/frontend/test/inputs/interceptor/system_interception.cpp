@@ -188,4 +188,24 @@ int main() {
 		std::map<int,int> m;
 		m.find(1) != m.find(2);
 	}
+
+	// new/delete of intercepted type
+	#pragma test expect_ir(R"({
+		var ref<ptr<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>>,f,f,plain> v0 = ptr_from_ref(lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::())(ref_new(type_lit(IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>))));
+		ref_delete(lit("IMP_std_colon__colon_vector::dtor" : ~IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>::())(ptr_to_ref(*v0)));
+	})")
+	{
+		std::vector<int> *x = new std::vector<int>;
+		delete x;
+	}
+
+	// array new/delete of intercepted type
+	#pragma test expect_ir(R"({
+		var ref<ptr<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>>,f,f,plain> v0 = ptr_from_array(<ref<array<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,5>,f,f,plain>>(ref_new(type_lit(array<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,5>))) {});
+		ref_delete(ptr_to_array(*v0));
+	})")
+	{
+		std::vector<int> *arr = new std::vector<int>[5];
+		delete [] arr;
+	}
 }

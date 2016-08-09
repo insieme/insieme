@@ -309,7 +309,7 @@ namespace integration {
 			gccFlags["standardFlags"] = "-fshow-column -Wall -lrt -pipe";
 			gccFlags["use_o3"] = "-O3";
 			gccFlags["use_c"] = "--std=c99";
-			gccFlags["use_cpp"] = "--std=c++11";
+			gccFlags["use_cpp"] = "--std=c++14";
 			gccFlags["use_gnu99"] = "--std=gnu99";
 			gccFlags["use_gnu90"] = "--std=gnu90";
 
@@ -323,7 +323,7 @@ namespace integration {
 			insiemeccFlags["use_c"] = "";
 			insiemeccFlags["use_gnu99"] = "";
 			insiemeccFlags["use_gnu90"] = "";
-			insiemeccFlags["use_cpp"] = "--std=c++11";
+			insiemeccFlags["use_cpp"] = "--std=c++14";
 
 			std::map<string, map<string, string>> propFlags;
 			propFlags["gcc"] = gccFlags;

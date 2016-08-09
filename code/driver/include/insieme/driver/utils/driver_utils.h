@@ -40,12 +40,17 @@
 #include <string>
 #include <vector>
 
+#include <boost/algorithm/string/replace.hpp>
+
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/backend/opencl/opencl_backend.h"
 
+#include "insieme/common/env_vars.h"
+
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/inspyer/inspyer.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_statistic.h"
 #include "insieme/core/printer/error_printer.h"
@@ -155,6 +160,29 @@ namespace utils {
 		iu::measureTimeFor<INFO>("Semantic Checks ", [&]() { list = core::checks::check(program); });
 
 		auto errors = list.getAll();
+
+		if(!errors.empty() && getenv(INSIEME_SEMA_INSPYER) != nullptr) {
+			std::string jsonFile = "insieme_sema_inspyer.json";
+			std::string metaFile = "insieme_sema_inspyer_meta.json";
+			std::cout << "Semantic errors encountered. Dumping JSON representation of program to file " << jsonFile << " ... ";
+			std::cout.flush();
+			std::ofstream jsonOut(jsonFile);
+			core::inspyer::dumpTree(jsonOut, program);
+			std::cout << "done." << std::endl;
+
+			std::cout << "Dumping JSON meta file with error bookmarks to file " << metaFile << " ... ";
+			std::cout.flush();
+			for(auto error : errors) {
+				core::inspyer::addBookmark(error.getOrigin());
+				std::string msg = error.getMessage();
+				boost::algorithm::replace_all(msg, "<", "&lt;");
+				core::inspyer::addBody(error.getOrigin(), std::string("<pre>") + msg + "</pre>");
+			}
+			std::ofstream metaOut(metaFile);
+			core::inspyer::dumpMeta(metaOut);
+			std::cout << "done." << std::endl;
+		}
+
 		std::sort(errors.begin(), errors.end());
 		for_each(errors, [&](const core::checks::Message& cur) {
 			LOG(ERROR) << cur;

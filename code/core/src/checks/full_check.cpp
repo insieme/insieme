@@ -36,6 +36,8 @@
 
 #include "insieme/core/checks/full_check.h"
 
+#include "insieme/common/env_vars.h"
+
 #include "insieme/core/checks/imperative_checks.h"
 #include "insieme/core/checks/type_checks.h"
 #include "insieme/core/checks/semantic_checks.h"
@@ -106,6 +108,10 @@ namespace checks {
 	}
 
 	CheckPtr getFullCheck() {
+		// don't run the checks if the user requested this with the environment variable
+		if(getenv(INSIEME_NO_SEMA)) {
+			return combine({});
+		}
 		// share common check-instance (initialization is thread save in C++11)
 		static const CheckPtr fullChecks = buildFullCheck();
 		return fullChecks;

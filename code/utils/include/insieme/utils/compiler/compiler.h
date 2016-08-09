@@ -50,6 +50,9 @@ namespace insieme {
 namespace utils {
 namespace compiler {
 
+	const char* getDefaultCCompilerExecutable();
+	const char* getDefaultCxxCompilerExecutable();
+
 	// some common abbreviations
 	using std::string;
 	using std::vector;
@@ -127,6 +130,10 @@ namespace compiler {
 
 		void addExternalLibrary(const string& path, const string& lib) {
 			libs.addPath(path);
+			libs.addLib(lib);
+		}
+
+		void addLibrary(const string& lib) {
 			libs.addLib(lib);
 		}
 

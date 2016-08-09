@@ -369,10 +369,24 @@ namespace extensions {
 			return interceptMethodCall(converter, construct->getConstructor(), thisFactory, construct->arguments(), nullptr, explicitTemplateArgs);
 		}
 		if(auto newExp = llvm::dyn_cast<clang::CXXNewExpr>(expr)) {
+			// array case does not need to be intercepted -- only needs type, which is intercepted further down in the AST
+			if(newExp->isArray()) return nullptr;
 			if(auto construct = newExp->getConstructExpr()) {
 				auto thisFactory = [&](const core::TypePtr& retType){ return builder.undefinedNew(retType); };
 				auto ret = interceptMethodCall(converter, construct->getConstructor(), thisFactory, construct->arguments(), nullptr, explicitTemplateArgs);
 				if(ret) return core::lang::buildPtrFromRef(ret);
+			}
+		}
+		if(auto delExp = llvm::dyn_cast<clang::CXXDeleteExpr>(expr)) {
+			auto qt = delExp->getDestroyedType();
+			if(auto delType = llvm::dyn_cast<clang::TagType>(qt.getCanonicalType())) {
+				if(converter.getHeaderTagger()->isIntercepted(delType->getDecl())) {
+					auto exprToDelete = converter.convertExpr(delExp->getArgument());
+					if(delExp->isArrayForm()) return builder.refDelete(core::lang::buildPtrToArray(exprToDelete));
+					core::TypePtr thisType = builder.refType(converter.convertType(qt));
+					auto destructor = builder.getLiteralForDestructor(builder.functionType(toVector(thisType), thisType, core::FK_DESTRUCTOR));
+					return builder.refDelete(builder.callExpr(destructor, core::lang::buildPtrToRef(exprToDelete)));
+				}
 			}
 		}
 		if(auto memberCall = llvm::dyn_cast<clang::CXXMemberCallExpr>(expr)) {
