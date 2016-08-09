@@ -38,7 +38,7 @@
 
 #include <set>
 #include <map>
-#include <boost/regex.hpp>
+#include <regex>
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
@@ -1742,11 +1742,11 @@ namespace analysis {
 
 		// ... or a zero literal ..
 		if(value->getNodeType() == core::NT_Literal) {
-			boost::regex zeroRegex(R"(((-?0*)u?(l|ll)?)|(-?0\.0*[fF]*))", (boost::regex::flag_type)(boost::regex::optimize | boost::regex::ECMAScript));
+			std::regex zeroRegex(R"(((-?0*)u?(l|ll)?)|(-?0\.0*[fF]*))", (std::regex::flag_type)(std::regex::optimize | std::regex::ECMAScript));
 
 			const string& strValue = static_pointer_cast<const core::Literal>(value)->getStringValue();
 
-			if(boost::regex_match(strValue, zeroRegex)) { return true; }
+			if(std::regex_match(strValue, zeroRegex)) { return true; }
 		}
 
 		// ... or the ref_null literal

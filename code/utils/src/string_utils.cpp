@@ -36,7 +36,7 @@
 
 #include "insieme/utils/string_utils.h"
 
-#include <boost/regex.hpp>
+#include <regex>
 
 std::vector<string> split(const string& str) {
 	using namespace std;
@@ -86,8 +86,8 @@ namespace insieme {
 namespace utils {
 
 	string removeCppStyleComments(const string& in) {
-		const static boost::regex comments(R"((//.*?$)|(/\*.*?\*/))");
-		return boost::regex_replace(in, comments, "");
+		const static std::regex comments(R"((//.*?$)|(/\*.*?\*/))");
+		return std::regex_replace(in, comments, "");
 	}
 }
 }

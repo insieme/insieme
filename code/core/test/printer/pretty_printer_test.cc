@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 #include <string>
-#include <boost/regex.hpp>
+#include <regex>
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
@@ -1152,14 +1152,14 @@ TEST(PrettyPrinter, MarkerTest) {
 				            "  $var int<4> a = $5$;$"
 				            "}";
 
-		boost::regex res { "\\{\n    <m id=\\d+>1</m>;\n    <m id=\\d+>var int<4> v0 = <m id=\\d+>5</m></m>;\n\\}" };
+		std::regex res { "\\{\n    <m id=\\d+>1</m>;\n    <m id=\\d+>var int<4> v0 = <m id=\\d+>5</m></m>;\n\\}" };
 
 		auto ir = builder.normalize(builder.parseStmt(input));
 		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 								  | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES
 								  | PrettyPrinter::PRINT_MARKERS);
 
-		EXPECT_TRUE(boost::regex_match(toString(printer), res)) << printer;
+		EXPECT_TRUE(std::regex_match(toString(printer), res)) << printer;
 	}
 }
 

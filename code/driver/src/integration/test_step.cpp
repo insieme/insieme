@@ -56,7 +56,7 @@
 
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/regex.hpp>
+#include <regex>
 #include <boost/tokenizer.hpp>
 
 namespace insieme {
@@ -771,8 +771,8 @@ namespace integration {
 			assert_true(it.find("\\E") == string::npos);
 			string tmp("\\Q" + it + "\\E");
 			boost::replace_all(tmp, "*", "\\E.*\\Q");
-			boost::regex reg(tmp, boost::regex::perl);
-			if(boost::regex_match(step.getName(), reg)) { return true; }
+			std::regex reg(tmp, std::regex_constants::ECMAScript);
+			if(std::regex_match(step.getName(), reg)) { return true; }
 		}
 		return false;
 	}
@@ -974,8 +974,8 @@ namespace integration {
 		}
 
 		// match the name of each environment variable with the syntax ${NAME}
-		boost::regex reg("\\$\\{([^\\}]*)");
-		boost::match_flag_type flags = boost::match_default;
+		std::regex reg("\\$\\{([^\\}]*)");
+		std::regex_constants::match_flag_type flags = std::regex_constants::match_default;
 
 		// iterate through Insieme environment setup, expand variables and merge everything with the environment map
 		for(auto s : environmentVec) {
@@ -983,11 +983,11 @@ namespace integration {
 				string varName = s.substr(0, s.find("="));
 				string varValue = s.substr(s.find("=") + 1, string::npos);
 				string expandedVarValue;
-				boost::match_results<std::string::const_iterator> what;
+				std::match_results<std::string::const_iterator> what;
 				string::const_iterator begin = varValue.begin();
 				string::const_iterator end = varValue.end();
-				while(boost::regex_search(begin, end, what, reg, flags)) {
-					boost::replace_all(varValue, string("${" + what[1] + "}"), environmentMap[what[1]]);
+				while(std::regex_search(begin, end, what, reg, flags)) {
+					boost::replace_all(varValue, string("${" + what[1].str() + "}"), environmentMap[what[1]]);
 					begin = what[0].second;
 				}
 				// replace if already present, i.e. normal shell behavior

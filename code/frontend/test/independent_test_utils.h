@@ -37,9 +37,9 @@
 #include <string>
 #include <fstream>
 #include <functional>
+#include <regex>
 
 #include <gtest/gtest.h>
-#include <boost/regex.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
@@ -251,22 +251,25 @@ namespace frontend {
 
 				// -------------------------------------------------------------------------------------------------------------------------- Regex ===========|
 				if(boost::starts_with(ex, regexKey)) {
-					boost::regex re;
+					string regexString;
 					if(boost::starts_with(ex, regexKeyS)) {
-						auto res = ex.substr(regexKeyS.size());
-						boost::replace_all(res, " ", "\\s*");
-						boost::replace_all(res, "\t", "\\s*");
-						boost::replace_all(res, "\n", "\\s*");
-						re = boost::regex(res);
+						regexString = ex.substr(regexKeyS.size());
+						boost::replace_all(regexString, " ", "[\\s\\r\\n]*");
+						boost::replace_all(regexString, "\t", "[\\s\\r\\n]*");
+						boost::replace_all(regexString, "\n", "[\\s\\r\\n]*");
 					} else {
-						re = boost::regex(ex.substr(regexKey.size()));
+						regexString = ex.substr(regexKey.size());
 					}
+					// make . behave as in multi-line mode
+					boost::replace_all(regexString, "\\.", "__INSIEME_ESCAPE_BACKSLASH_DOT");
+					boost::replace_all(regexString, ".", "(?:.|\\r|\\n)");
+					boost::replace_all(regexString, "__INSIEME_ESCAPE_BACKSLASH_DOT", "\\.");
+					std::regex re(regexString);
 					auto irString = ::toString(printer::PrettyPrinter(builder.normalize(node), printer::PrettyPrinter::OPTIONS_DEFAULT
 					                                                                               | printer::PrettyPrinter::PRINT_DERIVED_IMPL
 					                                                                               | printer::PrettyPrinter::PRINT_DEREFS));
-					EXPECT_TRUE(boost::regex_match(irString, re)) << "Location : " << core::annotations::getLocationString(node) << "\n"
-					                                              << "IR String: " << irString << "\n"
-					                                              << "Regex    : " << re << "\n";
+					EXPECT_TRUE(std::regex_match(irString, re)) << "Location : " << core::annotations::getLocationString(node) << "\n"
+					                                              << "IR String: " << irString << "\n";
 				}
 				// --------------------------------------------------------------------------------------------------------------------- String Compare =======|
 				else if(boost::starts_with(ex, stringKey)) {

@@ -36,7 +36,7 @@
 
 #include "insieme/frontend/translation_unit.h"
 
-#include <boost/regex.hpp>
+#include <regex>
 
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/pragma/handler.h"
@@ -146,7 +146,7 @@ namespace frontend {
 				// iterate through the declarations inside and print (maybe)
 				for(auto it = declCtx->decls_begin(); it != declCtx->decls_end(); ++it) {
 					if(const clang::FunctionDecl* funDecl = llvm::dyn_cast<clang::FunctionDecl>(*it)) {
-						if(boost::regex_match(funDecl->getNameAsString(), boost::regex(filter))) { funDecl->dumpColor(); }
+						if(std::regex_match(funDecl->getNameAsString(), std::regex(filter))) { funDecl->dumpColor(); }
 					}
 				}
 			}

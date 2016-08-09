@@ -34,13 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include "boost/regex.hpp"
-
-#include "insieme/core/ir_node.h"
-
-#include "insieme/driver/integration/tests.h"
 #include "insieme/driver/measure/system_info.h"
 
+#include <regex>
+
+#include "insieme/core/ir_node.h"
+#include "insieme/driver/integration/tests.h"
 #include "insieme/utils/config.h"
 
 namespace insieme {
@@ -132,12 +131,12 @@ namespace measure {
 	vector<string> SystemInfo::queryGenericString(const string& regexString) const {
 		vector<string> retval;
 
-		boost::regex regex(regexString.c_str());
-		boost::match_results<string::const_iterator> matches;
+		std::regex regex(regexString.c_str());
+		std::match_results<string::const_iterator> matches;
 
 		string::const_iterator start = data.begin();
 
-		while(boost::regex_search(start, data.cend(), matches, regex)) {
+		while(std::regex_search(start, data.cend(), matches, regex)) {
 			// save all capturing groups
 			for(unsigned i = 1; i < matches.size(); ++i) {
 				retval.push_back(matches[i]);

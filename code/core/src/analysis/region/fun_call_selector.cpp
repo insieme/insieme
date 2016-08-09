@@ -38,7 +38,7 @@
 
 #include <string.h>
 
-#include <boost/regex.hpp>
+#include <regex>
 
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir_visitor.h"
@@ -73,7 +73,7 @@ namespace region {
 				}
 			}
 
-			if(boost::regex_search(name, boost::regex(nameSubString, boost::regex_constants::ECMAScript))) {
+			if(std::regex_search(name, std::regex(nameSubString, std::regex_constants::ECMAScript))) {
 				res.push_back(Region(cur));
 				return true;
 			}
