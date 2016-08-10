@@ -6,12 +6,15 @@ module Insieme.Analysis.Framework.Dataflow (
 ) where
 
 
+import Data.Int
 import Data.Foldable
 import Data.List
 import Data.Tree
 import Data.Maybe
 import Debug.Trace
 import qualified Data.Set as Set
+
+import qualified Insieme.Utils.BoundSet as BSet
 
 import qualified Insieme.Inspire as IR
 import Insieme.Inspire.Utils
@@ -23,9 +26,12 @@ import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.CallSite as CallSite
 import qualified Insieme.Analysis.ExitPoint as ExitPoint
 import qualified Insieme.Analysis.Reference as Reference
+import qualified Insieme.Analysis.Arithmetic as Arithmetic
 
 import Insieme.Analysis.Reachable
 
+import Insieme.Analysis.Entities.DataPath
+import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Framework.MemoryState
@@ -105,6 +111,18 @@ dataflowValue addr analysis ops = case getNode addr of
         -- TODO: if there is a call to any unintercepted literal, add top to the result
 
 
+    Node IR.TupleExpr [_,Node IR.Expressions args] -> var
+        where
+            var = Solver.mkVariable (idGen addr) [con] Solver.bot
+            con = Solver.createConstraint dep val var
+            
+            dep _ = Solver.toVar <$> componentValueVars
+            val a = ComposedValue.composeElements $ zip (component <$> [0 :: Int32 ..]) (map (Solver.get a) componentValueVars) 
+            
+            componentValueVars = go <$> [0 .. ((length args) - 1) ]
+                where
+                    go i = varGen (goDown i $ goDown 1 $ addr)
+                    
 
     decl@(Node IR.Declaration _) -> var
       where
@@ -161,7 +179,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
     -- add support for predefined operator handlers --
     
-    extOps = readHandler : ops
+    extOps = readHandler : tupleMemberAccessHandler : ops
     
     -- support the ref_deref operation (read)
     
@@ -178,6 +196,36 @@ dataflowValue addr analysis ops = case getNode addr of
             readValueVars a = map go $ Set.toList $ ComposedValue.toValue $ Solver.get a targetRefVar
                 where
                     go r = memoryStateValue (MemoryState (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis
+
+             
+    -- support the tuple_member_access operation (read from tuple component)
+    
+    tupleMemberAccessHandler  = OperatorHandler cov dep val
+        where 
+            cov a = isBuiltin a "tuple_member_access"
+            
+            dep a = Solver.toVar indexValueVar : Solver.toVar tupleValueVar : []
+            
+            val a = if BSet.isUniverse indices 
+                    then top 
+                    else Solver.join $ map go dataPaths
+                where                    
+                    
+                    indices = ComposedValue.toValue (Solver.get a indexValueVar)
+                    
+                    fieldIndices = index <$> (BSet.toList indices)
+                    
+                    dataPaths = step <$> fieldIndices
+                    
+                    tupleValue = Solver.get a tupleValueVar
+                    
+                    go i = ComposedValue.getElement i tupleValue
+                    
+                    
+            indexValueVar = Arithmetic.arithmeticValue $ goDown 3 addr
+
+            tupleValueVar = varGen $ goDown 2 addr
+            
              
     
     

@@ -42,9 +42,7 @@ instance (FieldIndex i, Solver.Lattice a) => ComposedValue (Tree i a) i a where
     toValue t        = trace ("Invalid access to composed tree!") $ Solver.bot    -- TODO: this should return Solver.top, but this is not defined yet
     
     -- build a tree with nested elements
-    composeFields l = Node $ Map.fromList $ map convert l
-        where
-            convert (s,c) = (field s, c)
+    composeElements l = Node $ Map.fromList l
             
     -- obtain an addressed value within a tree
     getElement (DataPath []) t     = t

@@ -20,6 +20,8 @@ instance (Show i) => Show (DataPath i) where
 -- a token representing an empty path
 root = DataPath []
 
+step :: i -> DataPath i
+step i = DataPath [i]
 
 -- concatenation of paths
 concatPath :: DataPath i -> DataPath i -> DataPath i

@@ -14,8 +14,8 @@ class (Solver.Lattice c, FieldIndex i, Solver.Lattice v) => ComposedValue c i v 
     toComposed :: v -> c
     toValue    :: c -> v
     
-    composeFields :: [(String,c)] -> c
-    
     setElement :: DataPath i -> c -> c -> c
-    getElement :: DataPath i -> c -> c 
+    getElement :: DataPath i -> c -> c
+     
+    composeElements :: [(i,c)] -> c
     

@@ -41,8 +41,6 @@
 #include "insieme/analysis/common/failure.h"
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/core/dump/json_dump.h"
-
 namespace insieme {
 namespace analysis {
 
@@ -68,7 +66,6 @@ namespace analysis {
 
 		bool isTrue(const std::string& code, const SymbolTable& symbols = SymbolTable()) {
 			auto expr = getBuilder().parseExpr(code, symbols);
-			core::dump::json::dumpIR("ir.json", expr);
 			return insieme::analysis::isTrue<Backend>(ExpressionAddress(expr));
 		}
 

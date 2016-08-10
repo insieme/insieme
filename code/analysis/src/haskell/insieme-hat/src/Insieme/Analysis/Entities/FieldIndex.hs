@@ -7,14 +7,17 @@ module Insieme.Analysis.Entities.FieldIndex (
     project,
     field,
     index,
+    component,
     
     -- an example implementation
     SimpleFieldIndex
     
 ) where
 
+import Data.Int
 import Data.Typeable
 import Insieme.Utils.Arithmetic
+import Insieme.Utils.ParseInt
 import Insieme.Analysis.Entities.SymbolicFormula
  
 import qualified Data.Set as Set
@@ -27,6 +30,8 @@ class (Eq v, Ord v, Show v, Typeable v) => FieldIndex v where
         field :: String -> v
         index :: SymbolicFormula -> v
 
+        component :: Int32 -> v
+        component = index . mkConst . CInt32
 
 
 -- A simple field index example --
