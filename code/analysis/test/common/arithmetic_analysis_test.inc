@@ -190,11 +190,11 @@ namespace analysis {
 				"	2*x+1 == (2+1)*x;"
 				"	2*x < e;"
 
-//				// ternary operator
-//				"	(x<2)?1:2;"				// x is 2 => should be 2
-//				"	(x<3)?1:2;"				// x is 2 => should be 1
-//				"	(x<y)?1:2;"				// y is 3 => should be 1
-//				"	(x<e)?1:2;"				// unknown => should be {1,2}
+				// ternary operator
+				"	(x<2)?1:2;"				// x is 2 => should be 2
+				"	(x<3)?1:2;"				// x is 2 => should be 1
+				"	(x<y)?1:2;"				// x is 2, y is 3 => should be 1
+				"	(x<e)?1:2;"				// x is 2, e is unknown => should be {1,2}
 
 				"}",
 				symbols
@@ -231,38 +231,41 @@ namespace analysis {
 		EXPECT_TRUE(this->isFalse(code[24].as<ExpressionAddress>()));
 		EXPECT_TRUE( this->isBoth(code[25].as<ExpressionAddress>()));
 
+		// ternary operator
+		EXPECT_EQ("{2}", toString(this->getValue(code[26].as<ExpressionAddress>())));
+		EXPECT_EQ("{1}", toString(this->getValue(code[27].as<ExpressionAddress>())));
+		EXPECT_EQ("{1}", toString(this->getValue(code[28].as<ExpressionAddress>())));
+		EXPECT_EQ("{1,2}", toString(this->getValue(code[29].as<ExpressionAddress>())));
+
 	}
 
-//		TEST(CBA, Arithmetic_102) {
-//
-//			NodeManager manager;
-//			IRBuilder builder(manager);
-//
-//			auto in = builder.parseStmt(
-//				"{"
-//				"	let int = int<4>;"
-//				"	decl ref<int> a = var(3);"
-//				"	decl ref<int> b = var(9 + (a * 5));"
-//				"	decl ref<int> c;"
-//				"	"
-//				"	c = b * 4;"
-//				"	if (c > 10) {"
-//				"		c = c - 10;"
-//				"	}"
-//				"	c * (60 + a);"
-//				"}"
-//			).as<CompoundStmtPtr>();
-//
-//			ASSERT_TRUE(in);
-//			CompoundStmtAddress code(in);
-//
-//			CBA analysis(code);
-//
-//			// check values
-//			EXPECT_EQ("{5418}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
-//
-//	//		createDotDump(analysis);
-//		}
+	TYPED_TEST_P(ArithmeticValue, Arithmetic_102) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+			"{"
+			"	var ref<int<4>> a = 3;"
+			"	var ref<int<4>> b = 9 + (a * 5);"
+			"	var ref<int<4>> c;"
+			"	"
+			"	c = b * 4;"
+			"	if (c > 10) {"
+			"		c = c - 10;"
+			"	}"
+			"	c * (60 + a);"
+			"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		// check values
+		EXPECT_EQ("{5418}", toString(this->getValue(code[5].as<ExpressionAddress>())));
+
+		//createDotDump(analysis);
+	}
 //
 //		TEST(CBA, Arithmetic_103) {
 //
@@ -470,7 +473,7 @@ namespace analysis {
 			Constants,
 			FreeVariables,
 			Arithmetic_101,
-//			Arithmetic_102,
+			Arithmetic_102,
 //			Arithmetic_103,
 			LocalVariableDecl,
 			ReturnValue,

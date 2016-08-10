@@ -47,7 +47,7 @@ addFormulas = testGroup "Add Formulas"
 
 
 mulFormulas = testGroup "Multiply Formulas"
-    [ testCase "square" $ mul f1 f1 @?= "4 'a'^4 + 20 'a'^2 'y'^3 + 8 'a'^2 'z'^1 + 25 'y'^6 + 20 'y'^3 'z'^1 + 4 'z'^2"
+    [ testCase "square" $ mul f1 f1 @?= "20 'a'^2 'y'^3 + 8 'a'^2 'z'^1 + 4 'a'^4 + 20 'y'^3 'z'^1 + 25 'y'^6 + 4 'z'^2"
     ]
   where
     mul :: Formula Int Char -> Formula Int Char -> String

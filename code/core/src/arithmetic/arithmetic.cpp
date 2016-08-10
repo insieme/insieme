@@ -580,9 +580,7 @@ namespace arithmetic {
 
 	bool Formula::lessThan(const Formula& other) const {
 		// compare included terms lexicographically
-		return this != &other && lexicographical_compare(terms, other.terms, [](const Term& a, const Term& b) {
-			       return a.first < b.first || (a.first == b.first && a.second > b.second);
-			   });
+		return this != &other && lexicographical_compare(terms, other.terms);
 	}
 
 	Rational Formula::operator[](const Product& product) const {
