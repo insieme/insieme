@@ -31,7 +31,7 @@ Insieme is written in C++11 and relies on several third-party libraries:
 | [G++]         | >= 5.1    | Compiler                                                            |
 | [CMake]       | >= 3.2.x  | Build System                                                        |
 | [Google Test] | >= 1.7    | Unit testing --- is installed/built by us --- no need to install it |
-| [Boost]       | >= 1.50   | Utilities, regex, filesystem, program options, ...                  |
+| [Boost]       | >= 1.50   | Utilities, filesystem, program options, ...                         |
 | [LLVM/Clang]  | = 3.6.2\* | C/C++ frontend                                                      |
 | [CUDD]        | >= 2.4.2  | Manipulation of decision diagrams                                   |
 | [LuaJIT]      | >= 2.0.0  | Scripting                                                           |

@@ -28,7 +28,6 @@ insieme_find_package(NAME Boost COMPONENTS filesystem system regex)
 target_include_directories(insieme_utils SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries(insieme_utils ${Boost_FILESYSTEM_LIBRARY})
 target_link_libraries(insieme_utils ${Boost_SYSTEM_LIBRARY})
-target_link_libraries(insieme_utils ${Boost_REGEX_LIBRARY})
 
 # lookup LuaJIT library
 insieme_find_package(NAME LUAJIT)
