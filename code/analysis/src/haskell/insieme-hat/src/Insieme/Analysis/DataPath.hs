@@ -6,42 +6,19 @@ import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
 import qualified Data.Set as Set
 
+import Insieme.Analysis.Entities.DataPath
 import Insieme.Analysis.Framework.Dataflow
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
-import Insieme.Analysis.Framework.PropertySpace.FieldIndex
-
-
---
--- * DataPaths
---
-
-data DataPath =
-      Root
-    | Field DataPath String
-    | Element DataPath Int 
-  deriving (Eq,Ord)
-  
-
-instance Show DataPath where
-    show Root = "⊥"
-    show (Field d f) = (show d) ++ "." ++ f
-    show (Element d i) = (show d) ++ "." ++ (show i)
-    
--- concatenation of paths
-concatPath :: DataPath -> DataPath -> DataPath
-concatPath a         Root  =                          a
-concatPath a (  Field b s) =   Field (concatPath a b) s
-concatPath a (Element b i) = Element (concatPath a b) i 
-
+import Insieme.Analysis.Entities.FieldIndex
 
 
 --
 -- * DataPath Lattice
 --
 
-type DataPathSet = Set.Set DataPath
+type DataPathSet = Set.Set (DataPath SimpleFieldIndex)
 
 instance Lattice DataPathSet where
     join [] = Set.empty
@@ -55,7 +32,7 @@ instance Lattice DataPathSet where
 dataPathValue :: NodeAddress -> TypedVar (ValueTree.Tree SimpleFieldIndex DataPathSet)
 dataPathValue addr = 
     case () of _
-                | isBuiltin addr "dp_root"  -> mkVariable (idGen addr) [] (compose $ Set.singleton Root)
+                | isBuiltin addr "dp_root"  -> mkVariable (idGen addr) [] (compose $ Set.singleton root)
                 | otherwise                 -> dataflowValue addr analysis []
                 
   where

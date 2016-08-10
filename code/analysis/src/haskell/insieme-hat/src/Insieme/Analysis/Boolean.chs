@@ -14,7 +14,7 @@ import qualified Insieme.Utils.BoundSet as BSet
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
-import Insieme.Analysis.Framework.PropertySpace.FieldIndex
+import Insieme.Analysis.Entities.FieldIndex
 
 --
 -- * Boolean Value Results

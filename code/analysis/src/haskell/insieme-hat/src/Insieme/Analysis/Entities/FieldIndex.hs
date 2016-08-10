@@ -1,5 +1,5 @@
 
-module Insieme.Analysis.Framework.PropertySpace.FieldIndex (
+module Insieme.Analysis.Entities.FieldIndex (
     
     -- a type class for field indices
     FieldIndex,

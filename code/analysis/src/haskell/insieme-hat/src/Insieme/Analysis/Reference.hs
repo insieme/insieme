@@ -12,7 +12,7 @@ import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
-import Insieme.Analysis.Framework.PropertySpace.FieldIndex
+import Insieme.Analysis.Entities.FieldIndex
 
 --
 -- * DataPaths

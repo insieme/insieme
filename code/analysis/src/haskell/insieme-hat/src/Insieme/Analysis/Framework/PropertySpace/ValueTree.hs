@@ -1,17 +1,18 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Insieme.Analysis.Framework.PropertySpace.ValueTree where
+module Insieme.Analysis.Framework.PropertySpace.ValueTree (
+    Tree
+) where
 
 import Debug.Trace
 import Data.Maybe
 import Data.Typeable
-import Insieme.Analysis.Framework.PropertySpace.FieldIndex
+import Insieme.Analysis.Entities.DataPath
+import Insieme.Analysis.Entities.FieldIndex
 import qualified Data.Map as Map
 import qualified Insieme.Analysis.Solver as Solver
 import Insieme.Analysis.Framework.PropertySpace.ComposedValue
-
-import Insieme.Arithmetic
 
 
 
@@ -30,36 +31,64 @@ instance (Show i, Show a) => Show (Tree i a) where
               
 
 
-instance (FieldIndex i, Solver.Lattice a) => ComposedValue (Tree i a) a where
+instance (FieldIndex i, Solver.Lattice a) => ComposedValue (Tree i a) i a where
 
-    toComposed = treeFromValue
-    toValue    = treeToValue
+    -- build a tree with a leaf-level value
+    toComposed = Leaf
     
---    composeFields :: [(String,c v)] -> c v
---    accessField   :: String -> c v -> c v
---    
---    setIndex :: SymbolicFormula -> c v -> c v -> c v
---    getIndex :: SymbolicFormula -> c v -> c v 
+    -- extract a value from a tree
+    toValue Empty    = Solver.bot
+    toValue (Leaf a) = a
+    toValue t        = trace ("Invalid access to composed tree!") $ Solver.bot    -- TODO: this should return Solver.top, but this is not defined yet
+    
+    -- build a tree with nested elements
+    composeFields l = Node $ Map.fromList $ map convert l
+        where
+            convert (s,c) = (field s, c)
+            
+    -- obtain an addressed value within a tree
+    getElement (DataPath []) t     = t
+    getElement (DataPath (i:is)) t = get i (getElement (DataPath is) t)  
+    
+    
+    -- update a field in the tree
+    setElement (DataPath p) v t = setElement' (reverse p) v t
+        where
+            setElement' [] v t = v
+            setElement' (x:xs) v t = set x (setElement' xs v (get x t)) t
+             
+        
+--    setElement (DataPath (i::is)) v t = 
+    
+    
+        
+  
 
+-- | make every tree instance a lattice
+instance (FieldIndex i, Solver.Lattice a) => Solver.Lattice (Tree i a) where
+    bot   = Empty
+    merge = mergeTree
 
-treeFromValue :: a -> Tree i a
-treeFromValue a = Leaf a
-
-
-treeToValue :: (Solver.Lattice a) => Tree i a -> a
-treeToValue Empty    = Solver.bot
-treeToValue (Leaf a) = a
-treeToValue t        = trace ("Invalid access to composed tree!") $ Solver.bot    -- TODO: this should return Solver.top, but this is not defined yet
 
               
--- | looks up the value of a certain index field in a tree
-get :: (FieldIndex i, Solver.Lattice a) => Tree i a -> i -> Tree i a
-get (Node m) i = r
+-- | looks up the value of a sub tree
+get :: (FieldIndex i, Solver.Lattice a) => i -> Tree i a -> Tree i a
+get _ Empty        = Empty
+get _ Inconsistent = Inconsistent 
+get _ (Leaf _)     = Empty
+get i (Node m)     = r
     where
         k = project (Map.keys m) i
         r = Solver.join $ map extract k
             where
                 extract k = fromMaybe Solver.bot $ Map.lookup k m 
+
+-- | updates the value of a sub tree
+set :: (Ord i) => i -> Tree i a -> Tree i a -> Tree i a
+set i v Empty        = Node $ Map.singleton i v
+set i v Inconsistent = Inconsistent 
+set _ _ (Leaf _)     = Inconsistent
+set i v (Node m)     = Node $ Map.insert i v m
 
 
 -- | merges two value trees
@@ -83,11 +112,15 @@ mergeTree a@(Node m) b@(Node n)  = r
         r = case k of
                 Just k -> Node $ Map.fromList $ map fuse k
                     where
-                        fuse k = ( k, mergeTree (get a k) (get b k) ) 
+                        fuse k = ( k, mergeTree (get k a) (get k b) ) 
                 Nothing -> Inconsistent
 
 
--- | make every tree instance a lattice
-instance (FieldIndex i, Solver.Lattice a) => Solver.Lattice (Tree i a) where
-    bot   = Empty
-    merge = mergeTree
+-- instance Solver.Lattice String where 
+--     bot = ""
+--     merge a b = a ++ b
+-- 
+-- 
+-- p1 = (DataPath [field "B",field "A"]) :: DataPath SimpleFieldIndex
+-- p2 = (DataPath [field "D",field "C"]) :: DataPath SimpleFieldIndex
+-- p = concatPath p1 p2
