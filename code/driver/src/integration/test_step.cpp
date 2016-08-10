@@ -123,7 +123,7 @@ namespace integration {
 				// disable multithreading
 				set.numThreads = 0;
 
-				std::vector<string> flags = test.getCompilerArguments(name, l == Language::CPP);
+				std::vector<string> flags = test.getCompilerArguments(name, true, l == Language::CPP);
 				// get all flags defined by properties
 				for(string s : flags) {
 					cmd << " " << s;
@@ -237,7 +237,7 @@ namespace integration {
 				// disable multithreading
 				set.numThreads = 0;
 
-				std::vector<string> flags = test.getCompilerArguments(name, l == Language::CPP);
+				std::vector<string> flags = test.getCompilerArguments(name, false, l == Language::CPP);
 				// get all flags defined by properties
 				for(string s : flags) {
 					cmd << " " << s;
@@ -293,7 +293,7 @@ namespace integration {
 					cmd << " " << cur.string();
 				}
 
-				std::vector<string> flags = test.getCompilerArguments(name, l == Language::CPP);
+				std::vector<string> flags = test.getCompilerArguments(name, false, l == Language::CPP);
 				// get all flags defined by properties
 				for(string s : flags) {
 					cmd << " " << s;
@@ -370,7 +370,7 @@ namespace integration {
 				// disable multithreading
 				set.numThreads = 0;
 
-				std::vector<string> flags = test.getCompilerArguments(name, l == Language::CPP);
+				std::vector<string> flags = test.getCompilerArguments(name, true, l == Language::CPP);
 				// get all flags defined by properties
 				for(string s : flags) {
 					cmd << " " << s;

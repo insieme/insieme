@@ -132,7 +132,7 @@ namespace integration {
 		return defs;
 	}
 
-	const vector<string> IntegrationTestCase::getCompilerArguments(std::string step, bool isCpp) const {
+	const vector<string> IntegrationTestCase::getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const {
 		// TODO move this to the right place
 		// TODO implement properties which exclude each other
 		std::map<string, string> gccFlags;
@@ -169,7 +169,9 @@ namespace integration {
 		propFlags["clang"] = gccFlags;
 		propFlags["clang++"] = gccFlags;
 
-		boost::filesystem::path comp(driver::integration::getBackendCompilerString(properties.get("compiler", step), isCpp));
+		auto compilerPath = properties.get("compiler", step);
+		if(considerEnvVars) compilerPath = driver::integration::getBackendCompilerString(compilerPath, isCpp);
+		boost::filesystem::path comp(compilerPath);
 		map<std::string, std::string> flagMap = propFlags[comp.filename().string()];
 
 		vector<string> compArgs;

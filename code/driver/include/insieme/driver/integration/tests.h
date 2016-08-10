@@ -280,7 +280,7 @@ namespace integration {
 		/**
 		 * Obtains a list of additional arguments to be passed on to the compiler when building the test case.
 		 */
-		const vector<string> getCompilerArguments(std::string step, bool isCpp) const;
+		const vector<string> getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const;
 	};
 
 	// an optional type wrapping a test case

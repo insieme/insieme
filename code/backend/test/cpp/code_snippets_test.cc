@@ -1431,7 +1431,7 @@ namespace backend {
 				IMP_dfun(<ref<IMP_D,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_D)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {1});
 				return 0;
 			}
-		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+		)", true, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			;
 		})
 	}
