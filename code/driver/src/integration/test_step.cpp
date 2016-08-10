@@ -52,8 +52,6 @@
 #include "insieme/utils/config.h"
 #include "insieme/utils/compiler/compiler.h"
 
-#include "insieme/common/env_vars.h"
-
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string.hpp>
 #include <regex>
@@ -92,19 +90,6 @@ namespace integration {
 			return "xxx";
 		}
 
-		std::string getBackendCompilerString(const Language& l, const PropertyView& props) {
-			if(l == Language::C) {
-				if(getenv(INSIEME_C_BACKEND_COMPILER) != nullptr) {
-					return utils::compiler::getDefaultCCompilerExecutable();
-				}
-			} else {
-				if(getenv(INSIEME_CXX_BACKEND_COMPILER) != nullptr) {
-					return utils::compiler::getDefaultCxxCompilerExecutable();
-				}
-			}
-			return props["compiler"];
-		}
-
 		TestStep createRefCompStep(const string& name, Language l) {
 			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				auto props = test.getPropertiesFor(name);
@@ -113,7 +98,7 @@ namespace integration {
 				TestSetup set = setup;
 
 				// start with executable
-				cmd << getBackendCompilerString(l, props);
+				cmd << driver::integration::getBackendCompilerString(props["compiler"], l == Language::CPP);
 
 				// add input files
 				for(const auto& cur : test.getFiles()) {
@@ -138,7 +123,7 @@ namespace integration {
 				// disable multithreading
 				set.numThreads = 0;
 
-				std::vector<string> flags = test.getCompilerArguments(name);
+				std::vector<string> flags = test.getCompilerArguments(name, l == Language::CPP);
 				// get all flags defined by properties
 				for(string s : flags) {
 					cmd << " " << s;
@@ -252,7 +237,7 @@ namespace integration {
 				// disable multithreading
 				set.numThreads = 0;
 
-				std::vector<string> flags = test.getCompilerArguments(name);
+				std::vector<string> flags = test.getCompilerArguments(name, l == Language::CPP);
 				// get all flags defined by properties
 				for(string s : flags) {
 					cmd << " " << s;
@@ -308,7 +293,7 @@ namespace integration {
 					cmd << " " << cur.string();
 				}
 
-				std::vector<string> flags = test.getCompilerArguments(name);
+				std::vector<string> flags = test.getCompilerArguments(name, l == Language::CPP);
 				// get all flags defined by properties
 				for(string s : flags) {
 					cmd << " " << s;
@@ -348,7 +333,7 @@ namespace integration {
 				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
 
 				// start with executable
-				cmd << getBackendCompilerString(l, props);
+				cmd << driver::integration::getBackendCompilerString(props["compiler"], l == Language::CPP);
 
 				// determine backend
 				string be = getBackendKey(backend);
@@ -385,7 +370,7 @@ namespace integration {
 				// disable multithreading
 				set.numThreads = 0;
 
-				std::vector<string> flags = test.getCompilerArguments(name);
+				std::vector<string> flags = test.getCompilerArguments(name, l == Language::CPP);
 				// get all flags defined by properties
 				for(string s : flags) {
 					cmd << " " << s;
