@@ -86,7 +86,7 @@ namespace insieme {
 namespace utils {
 
 	string removeCppStyleComments(const string& in) {
-		const static std::regex comments(R"((//.*?$)|(/\*.*?\*/))");
+		const static std::regex comments(R"((//.*)|(/\*(?:.|\r|\n)*?\*/))");
 		return std::regex_replace(in, comments, "");
 	}
 }

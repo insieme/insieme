@@ -768,10 +768,9 @@ namespace integration {
 		boost::tokenizer<boost::char_separator<char>> tokens(excludes, sep);
 
 		for(const string& it : tokens) {
-			assert_true(it.find("\\E") == string::npos);
-			string tmp("\\Q" + it + "\\E");
-			boost::replace_all(tmp, "*", "\\E.*\\Q");
-			std::regex reg(tmp, std::regex_constants::ECMAScript);
+			string tmp(it);
+			boost::replace_all(tmp, "*", ".*");
+			std::regex reg(tmp);
 			if(std::regex_match(step.getName(), reg)) { return true; }
 		}
 		return false;
