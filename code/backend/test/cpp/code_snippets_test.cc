@@ -1250,6 +1250,7 @@ namespace backend {
 			EXPECT_PRED2(containsSubString, code, "delete o1;");
 			EXPECT_PRED2(containsSubString, code, "IMP_SlightlyLessSimpleConstructor* o2 = new IMP_SlightlyLessSimpleConstructor(42);");
 			EXPECT_PRED2(containsSubString, code, "delete o2;");
+			EXPECT_PRED2(notContainsSubString, code, "= malloc("); // make sure there are no malloc calls with result not cast to the right type
 		})
 	}
 
