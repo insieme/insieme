@@ -190,11 +190,11 @@ namespace analysis {
 				"	2*x+1 == (2+1)*x;"
 				"	2*x < e;"
 
-//				// ternary operator
-//				"	(x<2)?1:2;"				// x is 2 => should be 2
-//				"	(x<3)?1:2;"				// x is 2 => should be 1
-//				"	(x<y)?1:2;"				// y is 3 => should be 1
-//				"	(x<e)?1:2;"				// unknown => should be {1,2}
+				// ternary operator
+				"	(x<2)?1:2;"				// x is 2 => should be 2
+				"	(x<3)?1:2;"				// x is 2 => should be 1
+				"	(x<y)?1:2;"				// x is 2, y is 3 => should be 1
+				"	(x<e)?1:2;"				// x is 2, e is unknown => should be {1,2}
 
 				"}",
 				symbols
@@ -230,6 +230,12 @@ namespace analysis {
 		EXPECT_TRUE( this->isTrue(code[23].as<ExpressionAddress>()));
 		EXPECT_TRUE(this->isFalse(code[24].as<ExpressionAddress>()));
 		EXPECT_TRUE( this->isBoth(code[25].as<ExpressionAddress>()));
+
+		// ternary operator
+		EXPECT_EQ("{2}", toString(this->getValue(code[26].as<ExpressionAddress>())));
+		EXPECT_EQ("{1}", toString(this->getValue(code[27].as<ExpressionAddress>())));
+		EXPECT_EQ("{1}", toString(this->getValue(code[28].as<ExpressionAddress>())));
+		EXPECT_EQ("{1,2}", toString(this->getValue(code[29].as<ExpressionAddress>())));
 
 	}
 

@@ -13,10 +13,7 @@ import Prelude hiding (exponent, product)
 -- | Something like @-2 * x^2 * y^3 + 5 * z^1@ where 'c' denotes the type
 -- of coefficients and exponents, and 'v' the type of variables.
 data Formula c v = Formula { terms :: [Term c v] }
-  deriving (Eq)
-
-instance (Eq c, Ord v) => Ord (Formula c v) where
-    compare = comparing terms
+  deriving (Eq, Ord)
 
 instance Functor (Formula c) where
     fmap f = Formula . map (fmap f) . terms
@@ -28,9 +25,12 @@ convert :: (Integral c, Integral c', Ord v) => Formula c v -> Formula c' v
 convert = Formula . map convertTerm . terms
 
 normalize :: (Integral c, Ord v) => Formula c v -> Formula c v
-normalize = Formula . filter ((/=0) . coeff) . map merge
+normalize = Formula . filter ((/=0) . coeff)
+                    . map merge
                     . groupBy (\x y -> product x == product y)
-                    . sort . map normalizeTerm . terms
+                    . sortOn product
+                    . map normalizeTerm
+                    . terms
   where
     merge ts = Term (sum $ coeff <$> ts) (product . head $ ts)
 
@@ -69,13 +69,13 @@ mkVar v = Formula [Term 1 (Product [Factor v 1])]
 -- | Something like @x^2@
 data Factor c v = Factor { base     :: v,
                            exponent :: c }
-  deriving (Show, Eq)
-
-instance (Eq c, Ord v) => Ord (Factor c v) where
-    compare = comparing base
+  deriving (Eq, Ord, Show)
 
 instance Functor (Factor c) where
     fmap f (Factor b e) = Factor (f b) e
+
+compareFactor :: (Ord v) => Factor c v -> Factor c v-> Ordering
+compareFactor = comparing base
 
 convertFactor :: (Integral c, Integral c', Ord v) => Factor c v -> Factor c' v
 convertFactor (Factor b e) = Factor b (fromIntegral e)
@@ -85,10 +85,7 @@ prettyShowFactor (Factor b e) = show b ++ "^" ++ show e
 
 -- | Something like @x^2 * y^3@
 data Product c v = Product { factors :: [Factor c v] }
-  deriving (Show, Eq)
-
-instance (Eq c, Ord v) => Ord (Product c v) where
-    compare = comparing factors
+  deriving (Eq, Ord, Show)
 
 instance Functor (Product c) where
     fmap f = Product . map (fmap f) . factors
@@ -98,9 +95,11 @@ convertProduct :: (Integral c, Integral c', Ord v)
 convertProduct = Product . map convertFactor . factors
 
 normalizeProduct :: (Integral c, Ord v) => Product c v -> Product c v
-normalizeProduct = Product . filter ((/=0) . exponent) . map merge
+normalizeProduct = Product . filter ((/=0) . exponent)
+                           . map merge
                            . groupBy (\x y -> base x == base y)
-                           . sort . factors
+                           . sortOn base
+                           . factors
   where
     merge fs = Factor (base . head $ fs) (sum $ exponent <$> fs)
 
@@ -110,10 +109,7 @@ prettyShowProduct = intercalate " " . map prettyShowFactor . factors
 -- | Something like @-2 * x^2 * y^3@
 data Term c v = Term { coeff   :: c,
                        product :: Product c v}
-  deriving (Show, Eq)
-
-instance (Eq c, Ord v) => Ord (Term c v) where
-    compare = comparing product
+  deriving (Eq, Ord, Show)
 
 instance Functor (Term c) where
     fmap f (Term c ps) = Term c (fmap f ps)
