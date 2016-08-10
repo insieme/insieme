@@ -12,6 +12,9 @@ import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
+import Insieme.Analysis.Framework.PropertySpace.FieldIndex
 
 --
 -- * Callable Results
@@ -47,24 +50,26 @@ instance Solver.Lattice CallableSet where
 -- * Callable Analysis
 --
 
-callableValue :: NodeAddress -> Solver.TypedVar CallableSet
+callableValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex CallableSet)
 callableValue addr = case getNode addr of
     Node IR.LambdaExpr _ ->
-        Solver.mkVariable (idGen addr) [] (Set.singleton (Lambda (fromJust $ getLambda addr )))
+        Solver.mkVariable (idGen addr) [] (compose $ Set.singleton (Lambda (fromJust $ getLambda addr )))
 
     Node IR.BindExpr _ ->
-        Solver.mkVariable (idGen addr) [] (Set.singleton (Closure addr))
+        Solver.mkVariable (idGen addr) [] (compose $ Set.singleton (Closure addr))
 
     Node IR.Literal _ ->
-        Solver.mkVariable (idGen addr) [] (Set.singleton (Literal addr))
+        Solver.mkVariable (idGen addr) [] (compose $ Set.singleton (Literal addr))
 
     _ -> dataflowValue addr analysis []
 
   where
   
-    analysis = DataFlowAnalysis "C" callableValue allCallables
+    analysis = DataFlowAnalysis "C" callableValue $ compose allCallables
   
     idGen = mkVarIdentifier analysis
+
+    compose = ComposedValue.toComposed
 
     allCallables = Set.fromList $ foldTree collector (getRootIR addr)
     collector cur callables = case getNode cur of

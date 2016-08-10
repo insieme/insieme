@@ -3,6 +3,7 @@
 module Insieme.Analysis.Arithmetic where
 
 import Data.Tree
+import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Inspire.Utils (isFreeVariable)
 import Insieme.Utils.ParseInt
@@ -13,30 +14,15 @@ import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
+import Insieme.Analysis.Framework.PropertySpace.FieldIndex
 
---
--- * Arithemtic Symbol
---
-
-data Symbol = Constant {getNode :: (Tree IR.NodeType), getAddr :: Addr.NodeAddress }
-            | Variable {getNode :: (Tree IR.NodeType), getAddr :: Addr.NodeAddress }
-
-instance Eq Symbol where
-    x == y = (getNode x) == (getNode y)
-
-instance Ord Symbol where
-    compare x y = compare (getNode x) (getNode y)
-
-instance Show Symbol where
-    show (Constant (Node IR.Literal  [_, Node (IR.StringValue v) _]) _) = v
-    show (Variable (Node IR.Variable [_, Node (IR.UIntValue   v) _]) _) = "v" ++ show v
-    show _ = "???"
 
 --
 -- * Arithemtic Lattice
 --
 
-type SymbolicFormula = Ar.Formula CInt Symbol
 type SymbolicFormulaSet b = BSet.BoundSet b SymbolicFormula
 
 instance BSet.IsBound b => Solver.Lattice (SymbolicFormulaSet b)  where
@@ -47,19 +33,22 @@ instance BSet.IsBound b => Solver.Lattice (SymbolicFormulaSet b)  where
 -- * Arithemtic Value Analysis
 --
 
-arithmeticValue :: Addr.NodeAddress -> Solver.TypedVar (SymbolicFormulaSet BSet.Bound10)
+arithmeticValue :: Addr.NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex (SymbolicFormulaSet BSet.Bound10))
 arithmeticValue addr = case Addr.getNode addr of
     Node IR.Literal [t, Node (IR.StringValue v) _] | isIntType t -> case parseInt v of
-        Just cint -> Solver.mkVariable (idGen addr) [] (BSet.singleton $ Ar.mkConst cint)
-        Nothing   -> Solver.mkVariable (idGen addr) [] (BSet.singleton $ Ar.mkVar $ Constant (Addr.getNode addr) addr)
+        Just cint -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkConst cint)
+        Nothing   -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNode addr) addr)
 
     Node IR.Variable (t:_) | isIntType t && isFreeVariable addr ->
-        Solver.mkVariable (idGen addr) [] (BSet.singleton $ Ar.mkVar $ Variable (Addr.getNode addr) addr)
+        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Variable (Addr.getNode addr) addr)
 
     _ -> dataflowValue addr analysis ops
   where
-    analysis = DataFlowAnalysis "A" arithmeticValue BSet.Universe
+    analysis = DataFlowAnalysis "A" arithmeticValue (compose $ BSet.Universe)
     idGen = mkVarIdentifier analysis
+
+    compose = ComposedValue.toComposed
+    extract = ComposedValue.toValue
 
     ops = [ add, mul, sub ]
 
@@ -80,7 +69,7 @@ arithmeticValue addr = case Addr.getNode addr of
 
     dep a = Solver.toVar <$> [lhs, rhs]
 
-    val op a = (BSet.lift2 op) (Solver.get a lhs) (Solver.get a rhs)
+    val op a = compose $ (BSet.lift2 op) (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
 
 
     isIntType :: Tree IR.NodeType -> Bool

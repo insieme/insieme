@@ -18,6 +18,7 @@ import qualified Insieme.Inspire as IR
 import qualified Insieme.Analysis.Solver as Solver
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
 
 data MemoryLocation = MemoryLocation NodeAddress
@@ -28,10 +29,10 @@ data MemoryState = MemoryState ProgramPoint MemoryLocation
 
 
 
-memoryStateValue :: (Solver.Lattice a)
-         => MemoryState                                     -- ^ the program point and memory location interested in
-         -> DataFlowAnalysis a                              -- ^ the underlying data flow analysis this memory state analysis is cooperating with
-         -> Solver.TypedVar a                               -- ^ the analysis variable representing the requested state
+memoryStateValue :: (Solver.Lattice v)
+         => MemoryState                                 -- ^ the program point and memory location interested in
+         -> DataFlowAnalysis v                          -- ^ the underlying data flow analysis this memory state analysis is cooperating with
+         -> Solver.TypedVar v                           -- ^ the analysis variable representing the requested state
 
 memoryStateValue ms@(MemoryState pp@(ProgramPoint addr _) ml@(MemoryLocation loc)) analysis = var
 
@@ -48,10 +49,11 @@ memoryStateValue ms@(MemoryState pp@(ProgramPoint addr _) ml@(MemoryLocation loc
 
           reachingDefVar = reachingDefinitions ms
           
-          definingValueVars a = foldr go [] $ Solver.get a reachingDefVar
+          definingValueVars a = map go $ Set.toList $ Solver.get a reachingDefVar
             where
-                go (Assignment  addr) l = (variableGenerator analysis $ goDown 3 addr) : l  
-                go (Declaration addr) l = (variableGenerator analysis $ goDown 1 addr) : l 
+                go (Assignment  addr) = (variableGenerator analysis $ goDown 3 addr)  
+                go (Declaration addr) = (variableGenerator analysis $ goDown 1 addr)
+                -- go (Declaration addr) = (variableGenerator analysis $ addr) 
 
 
 -- define the lattice of definitions
@@ -90,6 +92,8 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
     
         idGen pp = Solver.mkIdentifier $ ("RD-" ++ (show ml) ++ "@" ++ (show pp)) 
         
+        extract = ComposedValue.toValue
+        
         -- a handler for intercepting the interpretation of the ref_assign operator --
         
         handler = OperatorHandler cov dep val
@@ -110,13 +114,13 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
         
         targetRefVar = referenceValue $ goDown 1 $ goDown 2 addr            -- here we have to skip the potentially materializing declaration!
         
-        isActive a = any pred $ Solver.get a targetRefVar
+        isActive a = any pred $ extract $ Solver.get a targetRefVar
             where
                 pred (Reference cp _) = cp == loc  
         
-        isEmptyRef a = Set.null $ Solver.get a targetRefVar        
+        isEmptyRef a = Set.null $ extract $ Solver.get a targetRefVar        
         
-        isSingleRef a = (==1) . Set.size $ Solver.get a targetRefVar
+        isSingleRef a = (==1) . Set.size $ extract $ Solver.get a targetRefVar
                 
         (pdep,pval) = mkPredecessorConstraintCredentials pp analysis
 

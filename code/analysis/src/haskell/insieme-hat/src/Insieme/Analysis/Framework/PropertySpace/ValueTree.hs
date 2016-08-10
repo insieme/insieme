@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Insieme.Analysis.Framework.PropertySpace.Tree where
+module Insieme.Analysis.Framework.PropertySpace.ValueTree where
 
 import Debug.Trace
 import Data.Maybe
@@ -30,7 +30,7 @@ instance (Show i, Show a) => Show (Tree i a) where
               
 
 
-instance (FieldIndex i, Solver.Lattice a) => ComposedValue (Tree i) a where
+instance (FieldIndex i, Solver.Lattice a) => ComposedValue (Tree i a) a where
 
     toComposed = treeFromValue
     toValue    = treeToValue

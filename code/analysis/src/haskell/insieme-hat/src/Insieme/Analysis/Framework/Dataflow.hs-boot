@@ -8,6 +8,7 @@ import Insieme.Inspire.NodeAddress
 import qualified Insieme.Analysis.Solver as Solver
 
 import Insieme.Analysis.Framework.Utils.OperatorHandler
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
 --
 -- * Generic Data Flow Value Analysis
@@ -26,7 +27,7 @@ mkVarIdentifier :: DataFlowAnalysis a -> NodeAddress -> Solver.Identifier
 -- * Generic Data Flow Value Analysis
 --
 
-dataflowValue :: (Solver.Lattice a)
+dataflowValue :: (ComposedValue.ComposedValue a v, Solver.Lattice a)
          => NodeAddress                                     -- ^ the address of the node for which to compute a variable representing the data flow value
          -> DataFlowAnalysis a                              -- ^ the summar of the analysis to be performed be realized by this function
          -> [OperatorHandler a]                             -- ^ allows selected operators to be intercepted and interpreted

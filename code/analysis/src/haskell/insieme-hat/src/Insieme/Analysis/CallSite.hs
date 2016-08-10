@@ -10,6 +10,7 @@ import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
 --
 -- * CallSite Results
@@ -67,6 +68,6 @@ callSites addr = case getNode addr of
     val a = foldr go Set.empty allTrgVars
         where
             go = \(call,var) set ->
-                if (Set.member callable (Solver.get a var))
+                if (Set.member callable (ComposedValue.toValue $ Solver.get a var))
                 then Set.insert (CallSite call) set 
                 else set

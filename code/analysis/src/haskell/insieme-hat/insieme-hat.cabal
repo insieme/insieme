@@ -10,6 +10,7 @@ cabal-version:      >=1.10
 executable insieme-hat
     main-is:            Main.hs
     other-modules:      Insieme.Analysis.Entities.ProgramPoint,
+                        Insieme.Analysis.Entities.SymbolicFormula,
                         Insieme.Analysis.Arithmetic,
                         Insieme.Analysis.Boolean,
                         Insieme.Analysis.Callable,
@@ -24,7 +25,7 @@ executable insieme-hat
                         Insieme.Analysis.Framework.Utils.OperatorHandler,
                         Insieme.Analysis.Framework.PropertySpace.ComposedValue,
                         Insieme.Analysis.Framework.PropertySpace.FieldIndex,
-                        Insieme.Analysis.Framework.PropertySpace.Tree,
+                        Insieme.Analysis.Framework.PropertySpace.ValueTree,
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.Solver,
                         Insieme.Inspire,
@@ -56,6 +57,7 @@ executable insieme-hat
 library
     exposed-modules:    Insieme.Adapter
     other-modules:      Insieme.Analysis.Entities.ProgramPoint,
+                        Insieme.Analysis.Entities.SymbolicFormula,
                         Insieme.Analysis.Arithmetic,
                         Insieme.Analysis.Boolean,
                         Insieme.Analysis.Callable,
@@ -70,7 +72,7 @@ library
                         Insieme.Analysis.Framework.Utils.OperatorHandler,
                         Insieme.Analysis.Framework.PropertySpace.ComposedValue,
                         Insieme.Analysis.Framework.PropertySpace.FieldIndex,
-                        Insieme.Analysis.Framework.PropertySpace.Tree,
+                        Insieme.Analysis.Framework.PropertySpace.ValueTree,
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.Solver,
                         Insieme.Inspire,

@@ -98,6 +98,8 @@ predecessor  p@(ProgramPoint addr Internal) = case getNode addr of
     -- link to exit points of potential target functions
     Node IR.CallExpr _ -> var 
         where
+        
+            extract = ComposedValue.toValue
          
             var = Solver.mkVariable (idGen p) [con] []
             con = Solver.createConstraint dep val var
@@ -109,7 +111,7 @@ predecessor  p@(ProgramPoint addr Internal) = case getNode addr of
                         where
                             go = \e l -> foldr (\(ExitPoint r) l -> (ProgramPoint r Post) : l) l (Solver.get a e)
                     
-                    callsLiteral = any isLiteral (Solver.get a callableVar)
+                    callsLiteral = any isLiteral (extract $ Solver.get a callableVar)
                         where
                             isLiteral (Literal _) = True
                             isLiteral _ = False
@@ -119,7 +121,7 @@ predecessor  p@(ProgramPoint addr Internal) = case getNode addr of
          
             callableVar = callableValue (goDown 1 addr)
             
-            exitPointVars a = foldr (\t l -> exitPoints (toAddress t) : l) [] (Solver.get a callableVar)
+            exitPointVars a = foldr (\t l -> exitPoints (toAddress t) : l) [] (extract $ Solver.get a callableVar)
                 
     _ -> trace ( " Unhandled Internal Program Point: " ++ (show p) ) $ error "unhandled case"
 

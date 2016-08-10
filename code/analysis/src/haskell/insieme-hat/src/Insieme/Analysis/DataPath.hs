@@ -8,6 +8,10 @@ import qualified Data.Set as Set
 
 import Insieme.Analysis.Framework.Dataflow
 
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
+import Insieme.Analysis.Framework.PropertySpace.FieldIndex
+
 
 --
 -- * DataPaths
@@ -48,10 +52,10 @@ instance Lattice DataPathSet where
 -- * DataPath Analysis
 --
 
-dataPathValue :: NodeAddress -> TypedVar DataPathSet
+dataPathValue :: NodeAddress -> TypedVar (ValueTree.Tree SimpleFieldIndex DataPathSet)
 dataPathValue addr = 
     case () of _
-                | isBuiltin addr "dp_root"  -> mkVariable (idGen addr) [] (Set.singleton Root)
+                | isBuiltin addr "dp_root"  -> mkVariable (idGen addr) [] (compose $ Set.singleton Root)
                 | otherwise                 -> dataflowValue addr analysis []
                 
   where
@@ -60,5 +64,7 @@ dataPathValue addr =
   
     idGen = mkVarIdentifier analysis
   
-    top = Set.empty     -- TODO: compute actual top
+    top = compose Set.empty     -- TODO: compute actual top
+    
+    compose = ComposedValue.toComposed
   

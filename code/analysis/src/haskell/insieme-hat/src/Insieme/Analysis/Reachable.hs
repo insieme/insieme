@@ -17,7 +17,6 @@ import qualified Insieme.Inspire as IR
 
 import qualified Insieme.Analysis.Boolean as Boolean
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-import qualified Insieme.Analysis.Framework.PropertySpace.Tree as PSTree
 
 --
 -- * Reachable Lattice

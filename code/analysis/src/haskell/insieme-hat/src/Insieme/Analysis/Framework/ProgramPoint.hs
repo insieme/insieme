@@ -14,6 +14,7 @@ import qualified Insieme.Analysis.Solver as Solver
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 
 import qualified Insieme.Inspire as IR
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
 
 --
@@ -33,6 +34,8 @@ programPointValue pp@(ProgramPoint a p) idGen analysis ops = case getNode a of
         -- allow operator handlers to intercept the interpretation of calls
         Node IR.CallExpr _ | p == Post -> ivar
             where
+            
+                extract = ComposedValue.toValue
                 
                 -- create a variable and an intertangled constraint
                 ivar = Solver.mkVariable (idGen pp) [icon] Solver.bot
@@ -50,7 +53,7 @@ programPointValue pp@(ProgramPoint a p) idGen analysis ops = case getNode a of
                 -- test whether any operator handlers are active
                 getActiveHandlers a = filter fit ops
                     where
-                        targets = Solver.get a targetVar
+                        targets = extract $ Solver.get a targetVar
                         fit o = any ( \t -> covers o $ toAddress t ) targets 
                     
                 

@@ -30,6 +30,7 @@ import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Framework.MemoryState
 
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
 --
 -- * Data Flow Analysis summary
@@ -50,7 +51,7 @@ mkVarIdentifier a n = Solver.mkIdentifier $ (analysisID a) ++ (prettyShow n)
 -- * Generic Data Flow Value Analysis
 --
 
-dataflowValue :: (Solver.Lattice a)
+dataflowValue :: (ComposedValue.ComposedValue a v, Solver.Lattice a)
          => NodeAddress                                     -- ^ the address of the node for which to compute a variable representing the data flow value
          -> DataFlowAnalysis a                              -- ^ the summar of the analysis to be performed be realized by this function
          -> [OperatorHandler a]                             -- ^ allows selected operators to be intercepted and interpreted
@@ -77,7 +78,7 @@ dataflowValue addr analysis ops = case getNode addr of
         
         -- support for calls to lambda and closures --
         
-        getExitPointVars a = Set.fold go [] (Solver.get a trg)
+        getExitPointVars a = Set.fold go [] (ComposedValue.toValue $ Solver.get a trg)
             where
                 go c l = (ExitPoint.exitPoints $ Callable.toAddress c) : l
                 
@@ -91,7 +92,7 @@ dataflowValue addr analysis ops = case getNode addr of
         getActiveOperators a = filter f extOps
             where 
                 f o = any (\l -> covers o (Callable.toAddress l)) literals
-                literals = Solver.get a trg
+                literals = ComposedValue.toValue $ Solver.get a trg
         
         getOperatorDependencies a = concat $ map go $ getActiveOperators a
             where
@@ -127,7 +128,10 @@ dataflowValue addr analysis ops = case getNode addr of
     idGen = mkVarIdentifier analysis
     
     varGen = variableGenerator analysis
-  
+    
+    compose = ComposedValue.toComposed
+    extract = ComposedValue.toValue
+    
 
     handleDeclr declrAddr = case getNode (goUp declrAddr) of
     
@@ -146,7 +150,7 @@ dataflowValue addr analysis ops = case getNode addr of
             callSiteVar = CallSite.callSites (goUp $ goUp declrAddr)
             
             dep a = (Solver.toVar callSiteVar) : (map Solver.toVar (getArgumentVars a)) 
-            val a = Solver.join $ map (Solver.get a) (getArgumentVars a)
+            val a = compose $ Solver.join $ map (extract . Solver.get a) (getArgumentVars a)
             
             getArgumentVars a = foldr go [] $ Solver.get a callSiteVar
                 where 
@@ -167,13 +171,13 @@ dataflowValue addr analysis ops = case getNode addr of
             
             dep a = (Solver.toVar targetRefVar) : (map Solver.toVar $ readValueVars a)
             
-            val a = Solver.join $ map (Solver.get a) (readValueVars a)
+            val a = compose $ Solver.join $ map (extract . Solver.get a) (readValueVars a)
             
             targetRefVar = Reference.referenceValue $ goDown 1 $ goDown 2 addr          -- here we have to skip the potentially materializing declaration!
             
-            readValueVars a = foldr go [] $ Solver.get a targetRefVar
+            readValueVars a = map go $ Set.toList $ ComposedValue.toValue $ Solver.get a targetRefVar
                 where
-                    go r l = (memoryStateValue (MemoryState (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis) : l
+                    go r = memoryStateValue (MemoryState (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis
              
     
     

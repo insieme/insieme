@@ -23,6 +23,7 @@ import qualified Insieme.Inspire.Utils as IRUtils
 import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Utils.BoundSet as BSet
 
+import qualified Insieme.Analysis.Entities.SymbolicFormula as SymbolicFormula
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
 --
@@ -149,8 +150,8 @@ foreign export ccall "hat_checkBoolean"
 arithValue :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticSet)
 arithValue addr_c = do
     addr <- deRefStablePtr addr_c
-    let results = Solver.resolve (Arith.arithmeticValue addr)
-    passFormulaSet $ BSet.map (fmap Arith.getAddr) results
+    let results = ComposedValue.toValue $ Solver.resolve (Arith.arithmeticValue addr)
+    passFormulaSet $ BSet.map (fmap SymbolicFormula.getAddr) results
 
 foreign export ccall "hat_arithmeticValue"
     arithValue :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticSet)

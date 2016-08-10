@@ -13,7 +13,7 @@ import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-import qualified Insieme.Analysis.Framework.PropertySpace.Tree as PSTree
+import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import Insieme.Analysis.Framework.PropertySpace.FieldIndex
 
 --
@@ -44,7 +44,7 @@ instance Solver.Lattice Result where
 -- * Boolean Value Analysis
 --
 
-booleanValue :: NodeAddress -> Solver.TypedVar (PSTree.Tree SimpleFieldIndex Result)
+booleanValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex Result)
 booleanValue addr =
     case () of _
                 | isBuiltin addr "true"  -> Solver.mkVariable (idGen addr) [] $ compose AlwaysTrue
@@ -53,6 +53,7 @@ booleanValue addr =
   where
 
     compose = ComposedValue.toComposed 
+    extract = ComposedValue.toValue
 
     analysis = DataFlowAnalysis "B" booleanValue (compose Both)
     idGen = mkVarIdentifier analysis
@@ -114,7 +115,7 @@ booleanValue addr =
 
     dep a = Solver.toVar <$> [lhs, rhs]
 
-    val op a = combine (Solver.get a lhs) (Solver.get a rhs)
+    val op a = combine (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
       where
         combine BSet.Universe _ = compose Both
         combine _ BSet.Universe = compose Both

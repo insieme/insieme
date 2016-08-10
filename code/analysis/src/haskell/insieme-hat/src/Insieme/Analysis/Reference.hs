@@ -10,6 +10,9 @@ import qualified Insieme.Inspire as IR
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
+import Insieme.Analysis.Framework.PropertySpace.FieldIndex
 
 --
 -- * DataPaths
@@ -61,12 +64,12 @@ instance Lattice ReferenceSet where
 -- * Reference Analysis
 --
 
-referenceValue :: NodeAddress -> TypedVar ReferenceSet
+referenceValue :: NodeAddress -> TypedVar (ValueTree.Tree SimpleFieldIndex ReferenceSet)
 referenceValue addr = case getNode addr of 
 
         d@(Node IR.Declaration _) ->  
             if isMaterializing d
-            then mkVariable (idGen addr) [] (Set.singleton $ Reference addr Root)
+            then mkVariable (idGen addr) [] (compose $ Set.singleton $ Reference addr Root)
             else dataflowValue addr analysis opsHandler                    
 
         _ -> dataflowValue addr analysis opsHandler
@@ -76,19 +79,21 @@ referenceValue addr = case getNode addr of
         analysis = DataFlowAnalysis "R" referenceValue top
         idGen = mkVarIdentifier analysis
         
-        top = Set.empty             -- TODO: replace by a real top value!
+        compose = ComposedValue.toComposed
+        
+        top = compose Set.empty             -- TODO: replace by a real top value!
         
         opsHandler = [ allocHandler , declHandler ]
         
         allocHandler = OperatorHandler cov dep val
             where 
                 cov a = isBuiltin a "ref_alloc"
-                val a = Set.singleton $ Reference addr Root
+                val a = compose $ Set.singleton $ Reference addr Root
 
         declHandler = OperatorHandler cov dep val
             where 
                 cov a = isBuiltin a "ref_decl"
-                val a = Set.singleton $ Reference (getEnclosingDecl addr) Root
+                val a = compose $ Set.singleton $ Reference (getEnclosingDecl addr) Root
         
         dep a = []
         
