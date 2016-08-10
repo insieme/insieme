@@ -2,6 +2,7 @@
 
 module Insieme.Analysis.Reference where
 
+import Data.Maybe
 import Data.Tree
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
@@ -118,4 +119,5 @@ isMaterializing decl@(Node IR.Declaration [declType,Node _ (initType:_)]) = not 
 getEnclosingDecl :: NodeAddress -> NodeAddress
 getEnclosingDecl addr = case getNode addr of
     Node IR.Declaration _ -> addr
-    _                     -> getEnclosingDecl addr
+    _ | isRoot addr       -> error "getEnclosingDecl has no parent to go to"
+    _                     -> getEnclosingDecl $ fromJust $ getParent addr
