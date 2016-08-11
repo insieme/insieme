@@ -2,6 +2,7 @@
 
 module Insieme.Analysis.Reference where
 
+import Data.Typeable
 import Data.Maybe
 import Data.Tree
 import Insieme.Analysis.Solver
@@ -15,27 +16,9 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import Insieme.Analysis.Entities.FieldIndex
 
---
--- * DataPaths
---
 
-data DataPath =
-      Root
-    | Field DataPath String
-    | Element DataPath Int 
-  deriving (Eq,Ord)
-  
-
-instance Show DataPath where
-    show Root = "⊥"
-    show (Field d f) = (show d) ++ "." ++ f
-    show (Element d i) = (show d) ++ "." ++ (show i)
-    
--- concatenation of paths
-concatPath :: DataPath -> DataPath -> DataPath
-concatPath a         Root  =                          a
-concatPath a (  Field b s) =   Field (concatPath a b) s
-concatPath a (Element b i) = Element (concatPath a b) i 
+import qualified Insieme.Analysis.Entities.DataPath as DP
+import Insieme.Analysis.DataPath
 
 
 
@@ -43,9 +26,9 @@ concatPath a (Element b i) = Element (concatPath a b) i
 -- * References
 --
 
-data Reference = Reference {
+data Reference i = Reference {
         creationPoint :: NodeAddress,
-        dataPath      :: DataPath
+        dataPath      :: DP.DataPath i
     }
   deriving (Eq,Ord,Show)
 
@@ -54,9 +37,9 @@ data Reference = Reference {
 -- * Reference Lattice
 --
 
-type ReferenceSet = Set.Set Reference
+type ReferenceSet i = Set.Set (Reference i)
 
-instance Lattice ReferenceSet where
+instance (Eq i,Ord i,Show i,Typeable i) => Lattice (ReferenceSet i) where
     join [] = Set.empty
     join xs = foldr1 Set.union xs
     
@@ -65,12 +48,12 @@ instance Lattice ReferenceSet where
 -- * Reference Analysis
 --
 
-referenceValue :: NodeAddress -> TypedVar (ValueTree.Tree SimpleFieldIndex ReferenceSet)
+referenceValue :: NodeAddress -> TypedVar (ValueTree.Tree SimpleFieldIndex (ReferenceSet SimpleFieldIndex))
 referenceValue addr = case getNode addr of 
 
         d@(Node IR.Declaration _) ->  
             if isMaterializing d
-            then mkVariable (idGen addr) [] (compose $ Set.singleton $ Reference addr Root)
+            then mkVariable (idGen addr) [] (compose $ Set.singleton $ Reference addr DP.root)
             else dataflowValue addr analysis opsHandler                    
 
         _ -> dataflowValue addr analysis opsHandler
@@ -84,19 +67,40 @@ referenceValue addr = case getNode addr of
         
         top = compose Set.empty             -- TODO: replace by a real top value!
         
-        opsHandler = [ allocHandler , declHandler ]
+        opsHandler = [ allocHandler , declHandler , refNarrow , refExpand ]
         
-        allocHandler = OperatorHandler cov dep val
+        allocHandler = OperatorHandler cov noDep val
             where 
                 cov a = isBuiltin a "ref_alloc"
-                val a = compose $ Set.singleton $ Reference addr Root
+                val a = compose $ Set.singleton $ Reference addr DP.root
 
-        declHandler = OperatorHandler cov dep val
+        declHandler = OperatorHandler cov noDep val
             where 
                 cov a = isBuiltin a "ref_decl"
-                val a = compose $ Set.singleton $ Reference (getEnclosingDecl addr) Root
+                val a = compose $ Set.singleton $ Reference (getEnclosingDecl addr) DP.root
         
-        dep a = []
+        refNarrow = OperatorHandler cov subRefDep val
+            where 
+                cov a = isBuiltin a "ref_narrow"
+                val a = compose $ Set.fromList [ Reference l (DP.append p d)  | Reference l p <- baseRefVal a, d <- dataPathVal a]
+        
+        refExpand = OperatorHandler cov subRefDep val
+            where 
+                cov a = isBuiltin a "ref_expand"
+                val a = compose $ Set.fromList [ Reference l (DP.append p (DP.invert d))  | Reference l p <- baseRefVal a, d <- dataPathVal a]
+        
+        
+        noDep a = []
+        
+        subRefDep a = [toVar baseRefVar, toVar dataPathVar] 
+        
+        baseRefVar   = referenceValue $ goDown 2 addr
+        baseRefVal a = Set.toList $ ComposedValue.toValue $ get a baseRefVar
+        
+        dataPathVar   = dataPathValue $ goDown 3 addr
+        dataPathVal a = Set.toList $ ComposedValue.toValue $ get a dataPathVar
+        
+        
         
 
 -- Tests whether an IR node represents a reference type or not
