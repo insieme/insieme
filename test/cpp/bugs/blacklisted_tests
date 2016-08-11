@@ -14,11 +14,9 @@ intercepted_baseclass
 isstream
 mbstate
 member_function_ptr_init
-merge_bugs
 non_default_static
 non_working
 options
-set_specialization
 static_data_member_struct
 static_in_template
 static_non_copy

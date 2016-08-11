@@ -18,7 +18,6 @@ memb_func_ptr
 performance
 rec_memberfunc_pointer
 shadow_decl
-sort
 static_assert
 static_data_member
 static_initialization

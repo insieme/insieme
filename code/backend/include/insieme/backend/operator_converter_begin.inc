@@ -78,8 +78,7 @@
  *
  * @param N the index of the argument to be printed
  */
-#define CONVERT_ARG(N) CONVERT_EXPR(ARG(N))
-// FIXME should be CONVERTER.getStmtConverter().convertInitExpression(context, call[N]->getType(), call[N]->getInitialization())
+#define CONVERT_ARG(N) CONVERTER.getStmtConverter().convertInitExpression(context, call[N]->getType(), call[N]->getInitialization())
 
 /**
  * A macro triggering the conversion of the type of the current call.
