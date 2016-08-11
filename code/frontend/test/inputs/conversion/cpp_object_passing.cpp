@@ -373,10 +373,45 @@ void validateNonTrivial() {
 	//{ T t, &r = t; consume<const T&&>(r); } // pass reference  - NOT ALLOWED
 }
 
+struct WithSingleArgConstructor {
+	int x;
+	WithSingleArgConstructor(int x) : x(x) {}
+};
+
+WithSingleArgConstructor setX(WithSingleArgConstructor p) {
+	auto p1 = p;
+	p1.x = 10;
+	return p1;
+}
+
+void validateSpecial() {
+	;
+	#pragma test expect_ir(R"(
+		def struct IMP_WithSingleArgConstructor {
+			x : int<4>;
+			ctor function (v1 : ref<int<4>,f,f,plain>) {
+				<ref<int<4>,f,f,plain>>((this).x) {*v1};
+			}
+		};
+		def IMP_setX = function (v0 : ref<IMP_WithSingleArgConstructor,f,f,plain>) -> IMP_WithSingleArgConstructor {
+			var ref<IMP_WithSingleArgConstructor,f,f,plain> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref));
+			v1.x = 10;
+			return ref_cast(v1, type_lit(f), type_lit(f), type_lit(cpp_rref));
+		};
+		{
+			var ref<IMP_WithSingleArgConstructor,f,f,plain> v0 = ref_cast(IMP_setX(IMP_WithSingleArgConstructor::(ref_decl(type_lit(ref<IMP_WithSingleArgConstructor,f,f,plain>)), 0)) materialize , type_lit(f), type_lit(f), type_lit(cpp_rref));
+		}
+	)")
+	{
+		WithSingleArgConstructor a = setX({0});
+	}
+}
+
 int main() {
 
 	validateTrivial();
 	validateNonTrivial();
+	validateSpecial();
 
 	return 0;
 }
