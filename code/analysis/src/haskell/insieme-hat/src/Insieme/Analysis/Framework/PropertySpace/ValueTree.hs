@@ -35,29 +35,36 @@ instance (FieldIndex i, Solver.Lattice a) => ComposedValue (Tree i a) i a where
 
     -- build a tree with a leaf-level value
     toComposed = Leaf
+
     
     -- extract a value from a tree
     toValue Empty    = Solver.bot
     toValue (Leaf a) = a
     toValue t        = trace ("Invalid access to composed tree!") $ Solver.bot    -- TODO: this should return Solver.top, but this is not defined yet
     
+
     -- build a tree with nested elements
     composeElements l = Node $ Map.fromList l
             
+
     -- obtain an addressed value within a tree
-    getElement (DataPath []) t     = t
-    getElement (DataPath (i:is)) t = get i (getElement (DataPath is) t)  
-    
+    getElement dp t | isRoot dp   = t
+    getElement dp t | isNarrow dp = get i (getElement (narrow is) t)
+        where
+            (i:is) = getPath dp
+    getElement _ _ = Inconsistent
+
     
     -- update a field in the tree
-    setElement (DataPath p) v t = setElement' (reverse p) v t
+    setElement dp v t | isNarrow dp = setElement' (reverse p) v t
         where
+            p = getPath dp
+            
             setElement' [] v t = v
             setElement' (x:xs) v t = set x (setElement' xs v (get x t)) t
-             
-        
---    setElement (DataPath (i::is)) v t = 
     
+    setElement _ _ _ = Inconsistent
+        
     
         
   
