@@ -41,6 +41,9 @@
 #include "insieme/analysis/common/failure.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/analysis/ir_utils.h"
+
 namespace insieme {
 namespace analysis {
 
@@ -147,7 +150,7 @@ namespace analysis {
 
 		// test whether the return value of a function is deduced properly
 		EXPECT_TRUE( this->isTrue("()->bool { var bool x = true; return x; }()"));
-//		EXPECT_TRUE(this->isFalse("()->bool { var bool x = false; return x; }()"));
+		EXPECT_TRUE(this->isFalse("()->bool { var bool x = false; return x; }()"));
 
 	}
 

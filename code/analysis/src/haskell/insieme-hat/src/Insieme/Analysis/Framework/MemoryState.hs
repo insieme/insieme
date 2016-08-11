@@ -51,15 +51,16 @@ memoryStateValue ms@(MemoryState pp@(ProgramPoint addr _) ml@(MemoryLocation loc
           
           definingValueVars a = map go $ Set.toList $ Solver.get a reachingDefVar
             where
-                go (Assignment  addr) = (variableGenerator analysis $ goDown 3 addr)  
-                go (Declaration addr) = (variableGenerator analysis $ goDown 1 addr)
-                -- go (Declaration addr) = (variableGenerator analysis $ addr) 
+                go (Assignment        addr) = (variableGenerator analysis $ goDown 3 addr)  
+                go (Declaration       addr) = (variableGenerator analysis $ goDown 1 addr)
+                go (MaterializingCall addr) = (variableGenerator analysis $ addr)
 
 
 -- define the lattice of definitions
 
 data Definition = Assignment NodeAddress
                 | Declaration NodeAddress 
+                | MaterializingCall NodeAddress
     deriving (Eq,Ord,Show)
     
 type Definitions = Set.Set Definition
@@ -70,8 +71,9 @@ instance Solver.Lattice Definitions where
     
     
 toAddress :: Definition -> NodeAddress
-toAddress (Assignment addr)  = addr
-toAddress (Declaration addr) = addr
+toAddress (Assignment addr)        = addr
+toAddress (Declaration addr)       = addr
+toAddress (MaterializingCall addr) = addr
 
 
 -- reaching definitions
@@ -80,8 +82,12 @@ reachingDefinitions :: MemoryState -> Solver.TypedVar Definitions
 reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case getNode addr of 
 
         -- a declaration could be an assignment if it is materializing
-        d@(Node IR.Declaration _) | addr == loc && p == Post && isMaterializing d -> 
+        d@(Node IR.Declaration _) | addr == loc && p == Post && isMaterializingDeclaration d -> 
             Solver.mkVariable (idGen addr) [] (Set.singleton $ Declaration addr)
+        
+        -- a call could be an assignment if it is materializing
+        c@(Node IR.CallExpr _) | addr == loc && p == Post && isMaterializingCall c -> 
+            Solver.mkVariable (idGen addr) [] (Set.singleton $ MaterializingCall addr)
         
         -- for all the others, the magic is covered by the generic program point value constraint generator    
         _ -> programPointValue pp idGen analysis [handler]

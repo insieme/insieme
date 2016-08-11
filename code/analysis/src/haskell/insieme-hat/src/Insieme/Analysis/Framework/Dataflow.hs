@@ -70,8 +70,8 @@ dataflowValue addr analysis ops = case getNode addr of
 
     Node IR.CallExpr _ -> var
       where
-        var = Solver.mkVariable (idGen addr) [con] Solver.bot
-        con = Solver.createConstraint dep val var
+        var = Solver.mkVariable (idGen addr) [knownTargets,unknownTarget] Solver.bot
+        knownTargets = Solver.createConstraint dep val var
         
         trg = Callable.callableValue (goDown 1 addr)
         dep a = (Solver.toVar trg) : ( 
@@ -88,9 +88,14 @@ dataflowValue addr analysis ops = case getNode addr of
             where
                 go c l = (ExitPoint.exitPoints $ Callable.toAddress c) : l
                 
-        getReturnValueVars a = foldr go [] $ map (Solver.get a) (getExitPointVars a)
+        getReturnValueVars a = concat $ map go $ map (toList . Solver.get a) (getExitPointVars a)
             where 
-                go e l = foldr (\(ExitPoint.ExitPoint r) l -> varGen r : l) l e
+                go e = map resolve e
+                
+                resolve (ExitPoint.ExitPoint r) = case getNode r of
+                    Node IR.Declaration  _ -> memoryStateValue (MemoryState (ProgramPoint r Post) (MemoryLocation r)) analysis
+                    _                      -> varGen r
+                    
         
         
         -- operator support --
@@ -108,7 +113,24 @@ dataflowValue addr analysis ops = case getNode addr of
             where
                 go o = getValue o a
 
-        -- TODO: if there is a call to any unintercepted literal, add top to the result
+
+        -- support calls to unknown literal --
+        
+        unknownTarget = Solver.createConstraint dep val var
+            where
+                dep a = [Solver.toVar trg]
+                val a = if hasUnknownTarget then top else Solver.bot
+                    where 
+                        
+                        targets = Set.toList $ ComposedValue.toValue $ Solver.get a trg
+                        
+                        uncoveredLiterals = filter f $ targets
+                            where
+                                f (Callable.Literal a) = not $ any (\h -> covers h a) extOps
+                                f _                    = False
+                         
+                        hasUnknownTarget = (not . null) uncoveredLiterals
+
 
 
     Node IR.TupleExpr [_,Node IR.Expressions args] -> var
@@ -130,7 +152,7 @@ dataflowValue addr analysis ops = case getNode addr of
         
         con = Solver.forward 
             (
-                if Reference.isMaterializing decl
+                if Reference.isMaterializingDeclaration decl
                 then memoryStateValue (MemoryState (ProgramPoint addr Post) (MemoryLocation addr)) analysis
                 else varGen (goDown 1 addr)
             ) 
@@ -227,6 +249,3 @@ dataflowValue addr analysis ops = case getNode addr of
             tupleValueVar = varGen $ goDown 2 addr
             
              
-    
-    
-            

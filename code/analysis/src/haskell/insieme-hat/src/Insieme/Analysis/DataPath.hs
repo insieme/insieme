@@ -38,10 +38,7 @@ instance Solver.Lattice DataPathSet where
 --
 
 dataPathValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex DataPathSet)
-dataPathValue addr = 
-    case () of _
-                | isBuiltin addr "dp_root"  -> Solver.mkVariable (idGen addr) [] (compose $ Set.singleton root)
-                | otherwise                 -> dataflowValue addr analysis ops
+dataPathValue addr = dataflowValue addr analysis ops
                 
   where
   
@@ -55,7 +52,17 @@ dataPathValue addr =
     
     -- add operator support
     
-    ops = [member,element] -- TODO: add parent
+    ops = [ rootOp, member, element] -- TODO: add parent
+    
+    -- handle the data path root constructore --
+    rootOp = OperatorHandler cov dep val
+      where
+        cov a = isBuiltin a "dp_root"
+        
+        dep a = []
+         
+        val a = compose $ Set.singleton root
+    
     
     -- the handler for the member access path constructore --
     member = OperatorHandler cov dep val

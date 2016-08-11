@@ -2,6 +2,7 @@
 
 module Insieme.Analysis.Reference where
 
+import Debug.Trace
 import Data.Typeable
 import Data.Maybe
 import Data.Tree
@@ -51,10 +52,12 @@ instance (Eq i,Ord i,Show i,Typeable i) => Lattice (ReferenceSet i) where
 referenceValue :: NodeAddress -> TypedVar (ValueTree.Tree SimpleFieldIndex (ReferenceSet SimpleFieldIndex))
 referenceValue addr = case getNode addr of 
 
-        d@(Node IR.Declaration _) ->  
-            if isMaterializing d
-            then mkVariable (idGen addr) [] (compose $ Set.singleton $ Reference addr DP.root)
-            else dataflowValue addr analysis opsHandler                    
+        d@(Node IR.Declaration _) | isMaterializingDeclaration d ->  
+            mkVariable (idGen addr) [] (compose $ Set.singleton $ Reference addr DP.root)
+
+        c@(Node IR.CallExpr _) | isMaterializingCall c -> 
+            trace ("Found materializing call: " ++ (show addr)) $
+            mkVariable (idGen addr) [] (compose $ Set.singleton $ Reference addr DP.root)
 
         _ -> dataflowValue addr analysis opsHandler
         
@@ -67,7 +70,7 @@ referenceValue addr = case getNode addr of
         
         top = compose Set.empty             -- TODO: replace by a real top value!
         
-        opsHandler = [ allocHandler , declHandler , refNarrow , refExpand ]
+        opsHandler = [ allocHandler , declHandler , refNarrow , refExpand , refCast ]
         
         allocHandler = OperatorHandler cov noDep val
             where 
@@ -89,12 +92,17 @@ referenceValue addr = case getNode addr of
                 cov a = isBuiltin a "ref_expand"
                 val a = compose $ Set.fromList [ Reference l (DP.append p (DP.invert d))  | Reference l p <- baseRefVal a, d <- dataPathVal a]
         
+        refCast = OperatorHandler cov dep val
+            where 
+                cov a = isBuiltin a "ref_cast"
+                dep _ = [toVar baseRefVar]
+                val a = get a baseRefVar
         
         noDep a = []
         
         subRefDep a = [toVar baseRefVar, toVar dataPathVar] 
         
-        baseRefVar   = referenceValue $ goDown 2 addr
+        baseRefVar   = referenceValue $ goDown 1 $ goDown 2 addr
         baseRefVal a = Set.toList $ ComposedValue.toValue $ get a baseRefVar
         
         dataPathVar   = dataPathValue $ goDown 3 addr
@@ -111,14 +119,23 @@ isReference _                                                           = False
 getTypeParam :: Int -> Tree IR.NodeType -> Tree IR.NodeType
 getTypeParam i (Node IR.GenericType ( _ : _ : (Node IR.Types params) : [] )) = params !! i
         
-sameNumReferences :: Tree IR.NodeType -> Tree IR.NodeType -> Bool
-sameNumReferences a b | (not . isReference $ a) && (not . isReference $ b) = True
-sameNumReferences a b | isReference a && isReference b = sameNumReferences (getTypeParam 0 a) (getTypeParam 0 b)
-sameNumReferences _ _ = False
+hasMoreReferences :: Tree IR.NodeType -> Tree IR.NodeType -> Bool
+hasMoreReferences a b | isReference a && (not . isReference $ b) = True
+hasMoreReferences a b | isReference a && isReference b = hasMoreReferences (getTypeParam 0 a) (getTypeParam 0 b)
+hasMoreReferences _ _ = False
 
--- TODO: count number of nested refs in type and init type instead
-isMaterializing :: Tree IR.NodeType -> Bool
-isMaterializing decl@(Node IR.Declaration [declType,Node _ (initType:_)]) = not $ sameNumReferences declType initType
+
+-- tests whether the given node is a materializing declaration
+isMaterializingDeclaration :: Tree IR.NodeType -> Bool
+isMaterializingDeclaration (Node IR.Declaration [declType,Node _ (initType:_)]) = hasMoreReferences declType initType
+isMaterializingDeclaration _ = False
+
+
+-- tests whether the given node is a materializing call
+isMaterializingCall :: Tree IR.NodeType -> Bool
+isMaterializingCall _ = False        -- the default, for now - TODO: implement real check
+-- isMaterializingCall (Node IR.CallExpr ( resType : (Node _ ((Node IR.FunctionType (_:retType:_)):_)) : _)) = hasMoreReferences resType retType 
+-- isMaterializingCall _ = False
 
 getEnclosingDecl :: NodeAddress -> NodeAddress
 getEnclosingDecl addr = case getNode addr of

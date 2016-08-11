@@ -20,7 +20,11 @@ import Insieme.Analysis.Entities.FieldIndex
 --
 
 data Identifier = Identifier String
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord)
+
+
+instance Show Identifier where
+    show (Identifier s) = s
 
 
 toString :: Identifier -> String

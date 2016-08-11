@@ -54,16 +54,16 @@ namespace analysis {
 
 	protected:
 
-		bool areAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-			return insieme::analysis::areAlias<Backend>(a,b);
+		bool areAlias(const core::StatementAddress& a, const core::StatementAddress& b) {
+			return insieme::analysis::areAlias<Backend>(a.as<ExpressionAddress>(),b.as<ExpressionAddress>());
 		}
 
-		bool mayAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-			return insieme::analysis::mayAlias<Backend>(a,b);
+		bool mayAlias(const core::StatementAddress& a, const core::StatementAddress& b) {
+			return insieme::analysis::mayAlias<Backend>(a.as<ExpressionAddress>(),b.as<ExpressionAddress>());
 		}
 
-		bool notAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-			return insieme::analysis::notAlias<Backend>(a,b);
+		bool notAlias(const core::StatementAddress& a, const core::StatementAddress& b) {
+			return insieme::analysis::notAlias<Backend>(a.as<ExpressionAddress>(),b.as<ExpressionAddress>());
 		}
 
 	};
@@ -106,6 +106,29 @@ namespace analysis {
 		EXPECT_TRUE(this->mayAlias(x2,x3));
 	}
 
+	TYPED_TEST_P(AliasAnalysis, Forwarding) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto stmt = builder.parseStmt(
+				"{"
+				"	var ref<A> a = ref_new(type_lit(A));"
+				"	"
+				"	a;"
+				"	( x : ref<A>) -> ref<A> { return x; } (a);"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(stmt);
+
+		auto comp = CompoundStmtAddress(stmt);
+
+		// check that the given statements are aliases
+		EXPECT_TRUE(this->areAlias(comp[1], comp[1]));
+		EXPECT_TRUE(this->areAlias(comp[1], comp[2]));
+
+	}
+
 	TYPED_TEST_P(AliasAnalysis, MultipleReferences) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
@@ -145,6 +168,7 @@ namespace analysis {
 
 	REGISTER_TYPED_TEST_CASE_P(AliasAnalysis,
 			Basic,
+			Forwarding,
 			MultipleReferences
 	);
 

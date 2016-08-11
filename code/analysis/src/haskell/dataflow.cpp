@@ -103,7 +103,7 @@ namespace haskell {
 	}
 
 	bool mayAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
-		return checkAlias(x, y) == AliasAnalysisResult_MayAlias;
+		return checkAlias(x, y) != AliasAnalysisResult_NotAlias;
 	}
 
 	bool notAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
