@@ -13,6 +13,7 @@ import Foreign.C.String
 import Foreign.C.Types
 import Foreign.Marshal.Array
 import qualified Data.ByteString.Char8 as BS8
+import qualified Insieme.Analysis.Alias as Alias
 import qualified Insieme.Analysis.Arithmetic as Arith
 import qualified Insieme.Analysis.Boolean as AnBoolean
 import qualified Insieme.Analysis.Solver as Solver
@@ -156,6 +157,14 @@ arithValue addr_c = do
 foreign export ccall "hat_arithmeticValue"
     arithValue :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticSet)
 
+checkAlias :: StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO CInt
+checkAlias x_c y_c = do
+    x <- deRefStablePtr x_c
+    y <- deRefStablePtr y_c
+    return $ fromIntegral $ fromEnum $ Alias.checkAlias x y
+
+foreign export ccall "hat_checkAlias"
+    checkAlias :: StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO CInt
 
 --
 -- * Arithemtic

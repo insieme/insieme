@@ -78,6 +78,7 @@ extern "C" {
 	StablePtr hat_findDecl(const StablePtr var);
 	int hat_checkBoolean(const StablePtr expr);
 	ArithmeticSet* hat_arithmeticValue(const StablePtr expr);
+	int hat_checkAlias(const StablePtr x, const StablePtr y);
 
 }
 
@@ -210,6 +211,10 @@ namespace haskell {
 
 	ArithmeticSet* Environment::arithmeticValue(const Address& expr) {
 		return hat_arithmeticValue(expr.addr->ptr);
+	}
+
+	AliasAnalysisResult Environment::checkAlias(const Address& x, const Address& y) {
+		return static_cast<AliasAnalysisResult>(hat_checkAlias(x.addr->ptr, y.addr->ptr));
 	}
 
 } // end namespace haskell
