@@ -38,6 +38,8 @@
 
 #include "insieme/analysis/haskell/adapter.h"
 
+#include "insieme/utils/assert.h"
+
 using namespace insieme::core;
 
 namespace insieme {
@@ -58,34 +60,54 @@ namespace haskell {
 		return target->toNodeAddress(var.getRootNode()).as<VariableAddress>();
 	}
 
+	namespace {
+		BooleanAnalysisResult checkBoolean(const ExpressionAddress& expr) {
+			auto& env = Environment::getInstance();
+			auto ir = env.passIR(expr.getRootNode());
+			auto expr_hs = env.passAddress(expr, ir);
+			return env.checkBoolean(expr_hs);
+		}
+	}
+
 	bool isTrue(const core::ExpressionAddress& expr) {
-		auto& env = Environment::getInstance();
-		auto ir = env.passIR(expr.getRootNode());
-		auto expr_addr = env.passAddress(expr, ir);
-		return env.checkBoolean(expr_addr) == BooleanAnalysisResult_AlwaysTrue;
+		return checkBoolean(expr) == BooleanAnalysisResult_AlwaysTrue;
 	}
 
 	bool isFalse(const core::ExpressionAddress& expr) {
-		auto& env = Environment::getInstance();
-		auto ir = env.passIR(expr.getRootNode());
-		auto expr_addr = env.passAddress(expr, ir);
-		return env.checkBoolean(expr_addr) == BooleanAnalysisResult_AlwaysFalse;
+		return checkBoolean(expr) == BooleanAnalysisResult_AlwaysFalse;
 	}
 
 	bool mayBeTrue(const core::ExpressionAddress& expr) {
-		auto& env = Environment::getInstance();
-		auto ir = env.passIR(expr.getRootNode());
-		auto expr_addr = env.passAddress(expr, ir);
-		auto res = env.checkBoolean(expr_addr);
+		auto res = checkBoolean(expr);
 		return res == BooleanAnalysisResult_AlwaysTrue || res == BooleanAnalysisResult_Both;
 	}
 
 	bool mayBeFalse(const core::ExpressionAddress& expr) {
-		auto& env = Environment::getInstance();
-		auto ir = env.passIR(expr.getRootNode());
-		auto expr_addr = env.passAddress(expr, ir);
-		auto res = env.checkBoolean(expr_addr);
+		auto res = checkBoolean(expr);
 		return res == BooleanAnalysisResult_AlwaysFalse || res == BooleanAnalysisResult_Both;
+	}
+
+	namespace {
+		AliasAnalysisResult checkAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
+			assert_eq(x.getRootNode(), y.getRootNode());
+			auto& env = Environment::getInstance();
+			auto ir = env.passIR(x.getRootNode());
+			auto x_hs = env.passAddress(x, ir);
+			auto y_hs = env.passAddress(y, ir);
+			return env.checkAlias(x_hs, y_hs);
+		}
+	}
+
+	bool areAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
+		return checkAlias(x, y) == AliasAnalysisResult_AreAlias;
+	}
+
+	bool mayAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
+		return checkAlias(x, y) == AliasAnalysisResult_MayAlias;
+	}
+
+	bool notAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
+		return checkAlias(x, y) == AliasAnalysisResult_NotAlias;
 	}
 
 	ArithmeticSet getArithmeticValue(const core::ExpressionAddress& expr) {

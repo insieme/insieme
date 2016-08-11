@@ -53,6 +53,12 @@ namespace haskell {
 
 	bool mayBeFalse(const core::ExpressionAddress& expr);
 
+	bool areAlias(const core::ExpressionAddress& x, const core::ExpressionAddress& y);
+
+	bool mayAlias(const core::ExpressionAddress& x, const core::ExpressionAddress& y);
+
+	bool notAlias(const core::ExpressionAddress& x, const core::ExpressionAddress& y);
+
 	ArithmeticSet getArithmeticValue(const core::ExpressionAddress& expr);
 
 } // end namespace haskell

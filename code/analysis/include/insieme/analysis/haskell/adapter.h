@@ -48,6 +48,7 @@ namespace insieme {
 namespace analysis {
 namespace haskell {
 
+	#include "alias_analysis.h"
 	#include "boolean_analysis.h"
 
 	typedef void* StablePtr;
@@ -112,6 +113,7 @@ namespace haskell {
 		boost::optional<Address> findDecl(const Address& var);
 		BooleanAnalysisResult checkBoolean(const Address& expr);
 		ArithmeticSet* arithmeticValue(const Address& expr);
+		AliasAnalysisResult checkAlias(const Address& x, const Address& y);
 
 	};
 

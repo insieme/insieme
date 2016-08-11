@@ -42,6 +42,11 @@ arithmeticValue addr = case Addr.getNode addr of
     Node IR.Variable (t:_) | isIntType t && isFreeVariable addr ->
         Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Variable (Addr.getNode addr) addr)
 
+    Node IR.CastExpr (t:_) | isIntType t -> var
+      where
+        var = Solver.mkVariable (idGen addr) [con] Solver.bot
+        con = Solver.forward (arithmeticValue $ Addr.goDown 1 addr) var
+
     _ -> dataflowValue addr analysis ops
   where
     analysis = DataFlowAnalysis "A" arithmeticValue (compose $ BSet.Universe)

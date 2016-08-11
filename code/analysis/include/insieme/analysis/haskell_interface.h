@@ -47,18 +47,24 @@ namespace analysis {
 	 */
 	struct HaskellEngine {};
 
+	// --- Alias Analysis ---
+
+	register_analysis_implementation(HaskellEngine, areAlias, haskell::areAlias);
+	register_analysis_implementation(HaskellEngine, mayAlias, haskell::mayAlias);
+	register_analysis_implementation(HaskellEngine, notAlias, haskell::notAlias);
+
 
 	// --- Boolean Analysis ---
 
-	register_analysis_implementation( HaskellEngine , isTrue,     haskell::isTrue     );
-	register_analysis_implementation( HaskellEngine , isFalse,    haskell::isFalse    );
-	register_analysis_implementation( HaskellEngine , mayBeTrue,  haskell::mayBeTrue  );
-	register_analysis_implementation( HaskellEngine , mayBeFalse, haskell::mayBeFalse );
+	register_analysis_implementation(HaskellEngine , isTrue,     haskell::isTrue    );
+	register_analysis_implementation(HaskellEngine , isFalse,    haskell::isFalse   );
+	register_analysis_implementation(HaskellEngine , mayBeTrue,  haskell::mayBeTrue );
+	register_analysis_implementation(HaskellEngine , mayBeFalse, haskell::mayBeFalse);
 
 
 	// --- Symbolic Integer Analysis ---
 
-	register_analysis_implementation( HaskellEngine , getArithmeticValue, haskell::getArithmeticValue );
+	register_analysis_implementation(HaskellEngine , getArithmeticValue, haskell::getArithmeticValue);
 
 
 } // end namespace analysis
