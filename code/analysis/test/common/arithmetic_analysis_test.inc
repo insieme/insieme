@@ -103,12 +103,33 @@ namespace analysis {
 			return insieme::analysis::isTrue<Backend>(expr);
 		}
 
+		bool isTrue(const string& ir) {
+			NodeManager mgr;
+			IRBuilder builder(mgr);
+			auto in = builder.parseExpr(ir);
+			return isTrue(ExpressionAddress(in));
+		}
+
 		bool isBoth(const core::ExpressionAddress& expr) {
 			return insieme::analysis::mayBeTrue<Backend>(expr) && insieme::analysis::mayBeFalse<Backend>(expr);
 		}
 
+		bool isBoth(const string& ir) {
+			NodeManager mgr;
+			IRBuilder builder(mgr);
+			auto in = builder.parseExpr(ir);
+			return isBoth(ExpressionAddress(in));
+		}
+
 		bool isFalse(const core::ExpressionAddress& expr) {
 			return insieme::analysis::isFalse<Backend>(expr);
+		}
+
+		bool isFalse(const string& ir) {
+			NodeManager mgr;
+			IRBuilder builder(mgr);
+			auto in = builder.parseExpr(ir);
+			return isFalse(ExpressionAddress(in));
 		}
 
 	};
@@ -266,42 +287,39 @@ namespace analysis {
 
 		//createDotDump(analysis);
 	}
-//
-//		TEST(CBA, Arithmetic_103) {
-//
-//			NodeManager manager;
-//			IRBuilder builder(manager);
-//
-//			auto in = builder.parseStmt(
-//				"{"
-//				"	let int = int<4>;"
-//				"	let f = expr lit(\"xyz\": () -> int);"
-//				"	f();"
-//				"}"
-//			).as<CompoundStmtPtr>();
-//
-//			ASSERT_TRUE(in);
-//			CompoundStmtAddress code(in);
-//
-//			CBA analysis(code);
-//
-//			// check values
-//	//		EXPECT_EQ("{-unknown-}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), A)));
-//
-//	//		createDotDump(analysis);
-//		}
-//
-//		TEST(CBA, Arithmetic_Cast) {
-//			NodeManager mgr;
-//			IRBuilder builder(mgr);
-//			auto& base = builder.getLangBasic();
-//
-//			ExpressionAddress expr(builder.castExpr(base.getInt4(), builder.intLit(12)));
-//
-//			EXPECT_EQ("cast<int<4>>(12)", toString(*expr));
-//
-//			EXPECT_EQ("{12}", toString(getValues(expr, A)));
-//		}
+
+		TYPED_TEST_P(ArithmeticValue, Arithmetic_103) {
+
+			NodeManager mgr;
+			IRBuilder builder(mgr);
+
+			auto in = builder.parseStmt(
+				"{"
+				"	auto f = lit(\"xyz\": () -> int<4>);"
+				"	f();"
+				"}"
+			).as<CompoundStmtPtr>();
+
+			ASSERT_TRUE(in);
+			CompoundStmtAddress code(in);
+
+			// check values
+			EXPECT_EQ("{-all-}", toString(this->getValue(code[1].as<ExpressionAddress>())));
+
+			//createDotDump(analysis);
+		}
+
+		TYPED_TEST_P(ArithmeticValue, Arithmetic_Cast) {
+			NodeManager mgr;
+			IRBuilder builder(mgr);
+			auto& base = builder.getLangBasic();
+
+			ExpressionAddress expr(builder.castExpr(base.getInt4(), builder.intLit(12)));
+
+			EXPECT_EQ("cast<int<4>>(12)", toString(*expr));
+
+			EXPECT_EQ("{12}", toString(this->getValue(expr)));
+		}
 
 
 
@@ -320,131 +338,130 @@ namespace analysis {
 
 	}
 
-//	TYPED_TEST_P(ArithmeticValue, LocalVariable) {
-//
-//		// test whether the return value of a function is deduced properly
-//		EXPECT_TRUE( this->isTrue("()->bool { var bool x = true; return x; }()"));
-//		EXPECT_TRUE(this->isFalse("()->bool { var bool x = false; return x; }()"));
-//
-//	}
-//
-//	TYPED_TEST_P(ArithmeticValue, ParameterPassing) {
-//
-//		// test whether the return value of a function is deduced properly
-//		EXPECT_TRUE( this->isTrue("(x : 'a)->'a { return x; }(true)"));
-//		EXPECT_TRUE(this->isFalse("(x : 'a)->'a { return x; }(false)"));
-//
-//		// check order of arguments
-//		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { return a; }(true,false)"));
-//		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { return b; }(true,false)"));
-//
-//	}
-//
-//	TYPED_TEST_P(ArithmeticValue, ParameterPassingToBind) {
-//
-//		// test whether values can be passed to bind expressions
-//		EXPECT_TRUE( this->isTrue("( (x : 'a)=> x )(true)"));
-//		EXPECT_TRUE(this->isFalse("( (x : 'a)=> x )(false)"));
-//
-//	}
-//
-//	TYPED_TEST_P(ArithmeticValue, ControlFlow) {
-//
-//		// test whether control flow restrictions are considered
-//		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(true,true)"));
-//		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(true,false)"));
-//		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(false,true)"));
-//		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(false,false)"));
-//
-//		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(true,true)"));
-//		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(true,false)"));
-//		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(false,true)"));
-//		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(false,false)"));
-//
-//		EXPECT_TRUE(this->isFalse("!true"));
-//		EXPECT_TRUE( this->isTrue("!false"));
-//
-//	}
-//
-//	TYPED_TEST_P(ArithmeticValue, HigherOrderFunction) {
-//
-//		EXPECT_TRUE(this->isTrue("( a: ('a)-> 'a, b:'a )->'a { return a(b); }(id,true)"));
-//
-//	}
-//
-//	TYPED_TEST_P(ArithmeticValue, BoundValues) {
-//
-//		// check a simple constant value in a bind
-//		EXPECT_TRUE( this->isTrue("(()=>true)()"));
-//		EXPECT_TRUE(this->isFalse("(()=>false)()"));
-//
-//		// check whether higher functions work with closures
-//		EXPECT_TRUE( this->isTrue("(f:()=>'a)->'a{ return f(); }(()=>true)"));
-//
-//		// check proper operation of lazy boolean connectors (based on closures)
-//		EXPECT_TRUE( this->isTrue("true && true"));
-//		EXPECT_TRUE(this->isFalse("true && false"));
-//		EXPECT_TRUE(this->isFalse("false && true"));
-//		EXPECT_TRUE(this->isFalse("false && false"));
-//
-//		EXPECT_TRUE( this->isTrue("true || true"));
-//		EXPECT_TRUE( this->isTrue("true || false"));
-//		EXPECT_TRUE( this->isTrue("false || true"));
-//		EXPECT_TRUE(this->isFalse("false || false"));
-//
-//
-//		// check the capturing of a variable
-//		EXPECT_TRUE( this->isTrue("(x: 'a)->'a { return (f:()=>'a)->'a{ return f(); }(()=>x); }(true)"));
-//		EXPECT_TRUE(this->isFalse("(x: 'a)->'a { return (f:()=>'a)->'a{ return f(); }(()=>x); }(false)"));
-//
-//		// check the parameter of a bind expression
-//		EXPECT_TRUE( this->isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(true)); }(true)"));
-//		EXPECT_TRUE( this->isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(x)); }(true)"));
-//		EXPECT_TRUE( this->isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(y)); }(true)"));
-//		EXPECT_TRUE( this->isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(x && y)); }(true)"));
-//
-//	}
-//
-//	TYPED_TEST_P(ArithmeticValue, MemoryState) {
-//
-//		EXPECT_TRUE( this->isTrue("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; return *a; }()"));
-//		EXPECT_TRUE(this->isFalse("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; a = !a; return *a; }()"));
-//
-//
-//		// some more complex example
-//		auto code = R"(
-//			let negate = ( a : ref<bool> )->unit { a = !a; } in
-//			()->bool {
-//				var ref<bool> a = ref_new(type_lit(bool));
-//				a = false;
-//				negate(a);
-//				negate(a);
-//				negate(a);
-//				return *a;
-//			}()
-//		)";
-//
-//		EXPECT_TRUE(this->isTrue(code));
-//
-//	}
-//
-//	TYPED_TEST_P(ArithmeticValue, PassByReference) {
-//
-//		// some more complex example
-//		auto code = R"(
-//			let forward = ( a : ref<bool> )->bool { return *a; } in
-//			()->bool {
-//				var ref<bool> a = ref_new(type_lit(bool));
-//				a = true;
-//				a = forward(a);
-//				return *a;
-//			}()
-//		)";
-//
-//		EXPECT_TRUE(this->isTrue(code));
-//
-//	}
-//
+	TYPED_TEST_P(ArithmeticValue, LocalVariable) {
+
+		// test whether the return value of a function is deduced properly
+		EXPECT_TRUE( this->isTrue("()->bool { var bool x = true; return x; }()"));
+		EXPECT_TRUE(this->isFalse("()->bool { var bool x = false; return x; }()"));
+
+	}
+
+	TYPED_TEST_P(ArithmeticValue, ParameterPassing) {
+
+		// test whether the return value of a function is deduced properly
+		EXPECT_TRUE( this->isTrue("(x : 'a)->'a { return x; }(true)"));
+		EXPECT_TRUE(this->isFalse("(x : 'a)->'a { return x; }(false)"));
+
+		// check order of arguments
+		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { return a; }(true,false)"));
+		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { return b; }(true,false)"));
+
+	}
+
+	TYPED_TEST_P(ArithmeticValue, ParameterPassingToBind) {
+
+		// test whether values can be passed to bind expressions
+		EXPECT_TRUE( this->isTrue("( (x : 'a)=> x )(true)"));
+		EXPECT_TRUE(this->isFalse("( (x : 'a)=> x )(false)"));
+
+	}
+
+	TYPED_TEST_P(ArithmeticValue, ControlFlow) {
+
+		// test whether control flow restrictions are considered
+		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(true,true)"));
+		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(true,false)"));
+		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(false,true)"));
+		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { if (a) { return b; } return false; }(false,false)"));
+
+		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(true,true)"));
+		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(true,false)"));
+		EXPECT_TRUE( this->isTrue("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(false,true)"));
+		EXPECT_TRUE(this->isFalse("( a:'a, b:'a )->'a { if (a) { return true; } return b; }(false,false)"));
+
+		EXPECT_TRUE(this->isFalse("!true"));
+		EXPECT_TRUE( this->isTrue("!false"));
+
+	}
+
+	TYPED_TEST_P(ArithmeticValue, HigherOrderFunction) {
+
+		EXPECT_TRUE(this->isTrue("( a: ('a)-> 'a, b:'a )->'a { return a(b); }(id,true)"));
+
+	}
+
+	TYPED_TEST_P(ArithmeticValue, BoundValues) {
+
+		// check a simple constant value in a bind
+		EXPECT_TRUE( this->isTrue("(()=>true)()"));
+		EXPECT_TRUE(this->isFalse("(()=>false)()"));
+
+		// check whether higher functions work with closures
+		EXPECT_TRUE( this->isTrue("(f:()=>'a)->'a{ return f(); }(()=>true)"));
+
+		// check proper operation of lazy boolean connectors (based on closures)
+		EXPECT_TRUE( this->isTrue("true && true"));
+		EXPECT_TRUE(this->isFalse("true && false"));
+		EXPECT_TRUE(this->isFalse("false && true"));
+		EXPECT_TRUE(this->isFalse("false && false"));
+
+		EXPECT_TRUE( this->isTrue("true || true"));
+		EXPECT_TRUE( this->isTrue("true || false"));
+		EXPECT_TRUE( this->isTrue("false || true"));
+		EXPECT_TRUE(this->isFalse("false || false"));
+
+
+		// check the capturing of a variable
+		EXPECT_TRUE( this->isTrue("(x: 'a)->'a { return (f:()=>'a)->'a{ return f(); }(()=>x); }(true)"));
+		EXPECT_TRUE(this->isFalse("(x: 'a)->'a { return (f:()=>'a)->'a{ return f(); }(()=>x); }(false)"));
+
+		// check the parameter of a bind expression
+		EXPECT_TRUE( this->isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(true)); }(true)"));
+		EXPECT_TRUE( this->isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(x)); }(true)"));
+		EXPECT_TRUE( this->isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(y)); }(true)"));
+		EXPECT_TRUE( this->isTrue("(x: bool)->bool { return (f:('a)=>'a)->'a{ return f(true); }((y:bool)=>(x && y)); }(true)"));
+
+	}
+
+	TYPED_TEST_P(ArithmeticValue, MemoryState) {
+
+		EXPECT_TRUE( this->isTrue("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; return *a; }()"));
+		EXPECT_TRUE(this->isFalse("()->bool{ var ref<bool> a = ref_new(type_lit(bool)); a = true; a = !a; return *a; }()"));
+
+		// some more complex example
+		auto code = R"(
+			let negate = ( a : ref<bool> )->unit { a = !a; } in
+			()->bool {
+				var ref<bool> a = ref_new(type_lit(bool));
+				a = false;
+				negate(a);
+				negate(a);
+				negate(a);
+				return *a;
+			}()
+		)";
+
+		EXPECT_TRUE(this->isTrue(code));
+
+	}
+
+	TYPED_TEST_P(ArithmeticValue, PassByReference) {
+
+		// some more complex example
+		auto code = R"(
+			let forward = ( a : ref<bool> )->bool { return *a; } in
+			()->bool {
+				var ref<bool> a = ref_new(type_lit(bool));
+				a = true;
+				a = forward(a);
+				return *a;
+			}()
+		)";
+
+		EXPECT_TRUE(this->isTrue(code));
+
+	}
+
 	TYPED_TEST_P(ArithmeticValue, Tuples) {
 
 		// some more complex example
@@ -455,7 +472,7 @@ namespace analysis {
 			}()
 		)";
 
-		EXPECT_TRUE(this->isConstant(1,code));
+		EXPECT_TRUE(this->isConstant(1, code));
 
 		// try the other component
 		code = R"(
@@ -465,7 +482,7 @@ namespace analysis {
 			}()
 		)";
 
-		EXPECT_TRUE(this->isConstant(2,code));
+		EXPECT_TRUE(this->isConstant(2, code));
 
 	}
 
@@ -474,17 +491,18 @@ namespace analysis {
 			FreeVariables,
 			Arithmetic_101,
 			Arithmetic_102,
-//			Arithmetic_103,
+			Arithmetic_103,
+			Arithmetic_Cast,
 			LocalVariableDecl,
 			ReturnValue,
-//			LocalVariable,
-//			ParameterPassing,
-//			ParameterPassingToBind,
-//			ControlFlow,
-//			HigherOrderFunction,
-//			BoundValues,
-//			MemoryState,
-//			PassByReference,
+			LocalVariable,
+			ParameterPassing,
+			ParameterPassingToBind,
+			ControlFlow,
+			HigherOrderFunction,
+			BoundValues,
+			MemoryState,
+			PassByReference,
 			Tuples
 	);
 
