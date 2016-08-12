@@ -13,6 +13,7 @@ import qualified Insieme.Analysis.Solver as Solver
 
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 
+import qualified Insieme.Utils.UnboundSet as USet
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
@@ -29,7 +30,7 @@ programPointValue :: (Solver.Lattice a)
          -> [OperatorHandler a]                             -- ^ a list of operator handlers to intercept the interpretation of certain operators
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
 
-programPointValue pp@(ProgramPoint a p) idGen analysis ops = case getNode a of
+programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNode addr of
     
         -- allow operator handlers to intercept the interpretation of calls
         Node IR.CallExpr _ | p == Post -> ivar
@@ -48,12 +49,18 @@ programPointValue pp@(ProgramPoint a p) idGen analysis ops = case getNode a of
                 ival a = if isHandlerActive a then operatorVal a else val a 
                 
                 -- the variable storing the target of the call
-                targetVar = callableValue (goDown 1 a)
+                targetVar = callableValue (goDown 1 addr)
                 
                 -- test whether any operator handlers are active
                 getActiveHandlers a = filter fit ops
                     where
-                        targets = extract $ Solver.get a targetVar
+                        callables = extract $ Solver.get a targetVar
+                    
+                        targets = USet.toSet $ 
+                            if USet.isUniverse callables 
+                            then collectAllCallables addr  
+                            else callables
+                            
                         fit o = any ( \t -> covers o $ toAddress t ) targets 
                     
                 

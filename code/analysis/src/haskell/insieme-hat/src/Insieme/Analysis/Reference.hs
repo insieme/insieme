@@ -11,6 +11,8 @@ import Insieme.Inspire.NodeAddress
 import qualified Data.Set as Set
 import qualified Insieme.Inspire as IR
 
+import qualified Insieme.Utils.UnboundSet as USet
+
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -38,26 +40,29 @@ data Reference i = Reference {
 -- * Reference Lattice
 --
 
-type ReferenceSet i = Set.Set (Reference i)
+type ReferenceSet i = USet.UnboundSet (Reference i)
 
 instance (Eq i,Ord i,Show i,Typeable i) => Lattice (ReferenceSet i) where
-    join [] = Set.empty
-    join xs = foldr1 Set.union xs
-    
+    bot   = USet.empty
+    merge = USet.union
+
+instance (Eq i,Ord i,Show i,Typeable i) => ExtLattice (ReferenceSet i) where
+    top   = USet.Universe
+        
     
 --
 -- * Reference Analysis
 --
 
-referenceValue :: NodeAddress -> TypedVar (ValueTree.Tree SimpleFieldIndex (ReferenceSet SimpleFieldIndex))
+referenceValue :: (FieldIndex i) => NodeAddress -> TypedVar (ValueTree.Tree i (ReferenceSet i))
 referenceValue addr = case getNode addr of 
 
         d@(Node IR.Declaration _) | isMaterializingDeclaration d ->  
-            mkVariable (idGen addr) [] (compose $ Set.singleton $ Reference addr DP.root)
+            mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference addr DP.root)
 
         c@(Node IR.CallExpr _) | isMaterializingCall c -> 
             trace ("Found materializing call: " ++ (show addr)) $
-            mkVariable (idGen addr) [] (compose $ Set.singleton $ Reference addr DP.root)
+            mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference addr DP.root)
 
         _ -> dataflowValue addr analysis opsHandler
         
@@ -68,29 +73,29 @@ referenceValue addr = case getNode addr of
         
         compose = ComposedValue.toComposed
         
-        top = compose Set.empty             -- TODO: replace by a real top value!
+        top = compose USet.Universe
         
         opsHandler = [ allocHandler , declHandler , refNarrow , refExpand , refCast ]
         
         allocHandler = OperatorHandler cov noDep val
             where 
                 cov a = isBuiltin a "ref_alloc"
-                val a = compose $ Set.singleton $ Reference addr DP.root
+                val a = compose $ USet.singleton $ Reference addr DP.root
 
         declHandler = OperatorHandler cov noDep val
             where 
                 cov a = isBuiltin a "ref_decl"
-                val a = compose $ Set.singleton $ Reference (getEnclosingDecl addr) DP.root
+                val a = compose $ USet.singleton $ Reference (getEnclosingDecl addr) DP.root
         
         refNarrow = OperatorHandler cov subRefDep val
             where 
                 cov a = isBuiltin a "ref_narrow"
-                val a = compose $ Set.fromList [ Reference l (DP.append p d)  | Reference l p <- baseRefVal a, d <- dataPathVal a]
+                val a = compose $ USet.fromList [ Reference l (DP.append p d)  | Reference l p <- baseRefVal a, d <- dataPathVal a]
         
         refExpand = OperatorHandler cov subRefDep val
             where 
                 cov a = isBuiltin a "ref_expand"
-                val a = compose $ Set.fromList [ Reference l (DP.append p (DP.invert d))  | Reference l p <- baseRefVal a, d <- dataPathVal a]
+                val a = compose $ USet.fromList [ Reference l (DP.append p (DP.invert d))  | Reference l p <- baseRefVal a, d <- dataPathVal a]
         
         refCast = OperatorHandler cov dep val
             where 
@@ -103,10 +108,10 @@ referenceValue addr = case getNode addr of
         subRefDep a = [toVar baseRefVar, toVar dataPathVar] 
         
         baseRefVar   = referenceValue $ goDown 1 $ goDown 2 addr
-        baseRefVal a = Set.toList $ ComposedValue.toValue $ get a baseRefVar
+        baseRefVal a = USet.toList $ ComposedValue.toValue $ get a baseRefVar
         
         dataPathVar   = dataPathValue $ goDown 3 addr
-        dataPathVal a = Set.toList $ ComposedValue.toValue $ get a dataPathVar
+        dataPathVal a = USet.toList $ ComposedValue.toValue $ get a dataPathVar
         
         
         

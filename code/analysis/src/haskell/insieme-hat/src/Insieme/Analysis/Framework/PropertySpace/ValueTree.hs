@@ -31,7 +31,7 @@ instance (Show i, Show a) => Show (Tree i a) where
               
 
 
-instance (FieldIndex i, Solver.Lattice a) => ComposedValue (Tree i a) i a where
+instance (FieldIndex i, Solver.ExtLattice a) => ComposedValue (Tree i a) i a where
 
     -- build a tree with a leaf-level value
     toComposed = Leaf
@@ -40,7 +40,7 @@ instance (FieldIndex i, Solver.Lattice a) => ComposedValue (Tree i a) i a where
     -- extract a value from a tree
     toValue Empty    = Solver.bot
     toValue (Leaf a) = a
-    toValue t        = trace ("Invalid access to composed tree!") $ Solver.bot    -- TODO: this should return Solver.top, but this is not defined yet
+    toValue t        = Solver.top
     
 
     -- build a tree with nested elements
@@ -65,22 +65,23 @@ instance (FieldIndex i, Solver.Lattice a) => ComposedValue (Tree i a) i a where
     
     setElement _ _ _ = Inconsistent
         
-    
+    top = Inconsistent
         
-  
 
 -- | make every tree instance a lattice
 instance (FieldIndex i, Solver.Lattice a) => Solver.Lattice (Tree i a) where
     bot   = Empty
     merge = mergeTree
+  
+
+-- | make every tree instance an extended lattice
+instance (FieldIndex i, Solver.ExtLattice a) => Solver.ExtLattice (Tree i a) where
+    top   = Inconsistent
 
 
               
 -- | looks up the value of a sub tree
 get :: (FieldIndex i, Solver.Lattice a) => i -> Tree i a -> Tree i a
-get _ Empty        = Empty
-get _ Inconsistent = Inconsistent 
-get _ (Leaf _)     = Empty
 get i (Node m)     = r
     where
         k = project (Map.keys m) i
@@ -88,10 +89,13 @@ get i (Node m)     = r
             where
                 extract k = fromMaybe Solver.bot $ Map.lookup k m 
 
+get _ Empty        = Empty
+get _ _            = Inconsistent
+
 -- | updates the value of a sub tree
 set :: (Ord i) => i -> Tree i a -> Tree i a -> Tree i a
 set i v Empty        = Node $ Map.singleton i v
-set i v Inconsistent = Inconsistent 
+set i v Inconsistent = Node $ Map.singleton i v
 set _ _ (Leaf _)     = Inconsistent
 set i v (Node m)     = Node $ Map.insert i v m
 
@@ -120,12 +124,3 @@ mergeTree a@(Node m) b@(Node n)  = r
                         fuse k = ( k, mergeTree (get k a) (get k b) ) 
                 Nothing -> Inconsistent
 
-
--- instance Solver.Lattice String where 
---     bot = ""
---     merge a b = a ++ b
--- 
--- 
--- p1 = (DataPath [field "B",field "A"]) :: DataPath SimpleFieldIndex
--- p2 = (DataPath [field "D",field "C"]) :: DataPath SimpleFieldIndex
--- p = concatPath p1 p2

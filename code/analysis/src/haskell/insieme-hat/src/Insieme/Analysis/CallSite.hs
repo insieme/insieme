@@ -9,6 +9,8 @@ import qualified Data.Set as Set
 import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
+import qualified Insieme.Utils.UnboundSet as USet
+
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
@@ -29,8 +31,8 @@ instance Show CallSite where
 type CallSiteSet = Set.Set CallSite
 
 instance Solver.Lattice CallSiteSet where
-    join [] = Set.empty
-    join xs = foldr1 Set.union xs
+    bot   = Set.empty
+    merge = Set.union
 
 --
 -- * CallSite Analysis
@@ -68,6 +70,6 @@ callSites addr = case getNode addr of
     val a = foldr go Set.empty allTrgVars
         where
             go = \(call,var) set ->
-                if (Set.member callable (ComposedValue.toValue $ Solver.get a var))
+                if (USet.member callable (ComposedValue.toValue $ Solver.get a var))
                 then Set.insert (CallSite call) set 
                 else set

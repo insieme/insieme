@@ -26,9 +26,12 @@ import Insieme.Analysis.Entities.FieldIndex
 type SymbolicFormulaSet b = BSet.BoundSet b SymbolicFormula
 
 instance BSet.IsBound b => Solver.Lattice (SymbolicFormulaSet b)  where
-    join [] = BSet.empty
-    join xs = foldr1 BSet.union xs
+    bot   = BSet.empty
+    merge = BSet.union
 
+instance BSet.IsBound b => Solver.ExtLattice (SymbolicFormulaSet b)  where
+    top   = BSet.Universe
+    
 --
 -- * Arithemtic Value Analysis
 --

@@ -27,7 +27,7 @@ mkVarIdentifier :: DataFlowAnalysis a -> NodeAddress -> Solver.Identifier
 -- * Generic Data Flow Value Analysis
 --
 
-dataflowValue :: (ComposedValue.ComposedValue a i v, Solver.Lattice a)
+dataflowValue :: (ComposedValue.ComposedValue a i v)
          => NodeAddress                                     -- ^ the address of the node for which to compute a variable representing the data flow value
          -> DataFlowAnalysis a                              -- ^ the summar of the analysis to be performed be realized by this function
          -> [OperatorHandler a]                             -- ^ allows selected operators to be intercepted and interpreted

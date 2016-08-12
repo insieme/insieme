@@ -122,6 +122,7 @@ namespace analysis {
 				"	a;"												// 6. block (l=35-37)
 				"	q;"                                             // testing expanding data paths
 				"	q[0];"
+				"	q[1];"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -182,6 +183,7 @@ namespace analysis {
 		EXPECT_TRUE(areAlias(comp[35], comp[35]));
 		EXPECT_TRUE(notAlias(comp[35], comp[36]));
 		EXPECT_TRUE(areAlias(comp[35], comp[37]));
+		EXPECT_TRUE(notAlias(comp[35], comp[38]));
 	}
 
 } // end namespace analysis

@@ -6,9 +6,9 @@ import Data.List
 import Data.Tree
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils (foldTree)
-import qualified Data.Set as Set
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
+import qualified Insieme.Utils.UnboundSet as USet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -35,11 +35,15 @@ toString (Identifier s) = s
 -- * Identifier Lattice
 --
 
-type IdentifierSet = Set.Set Identifier
+type IdentifierSet = USet.UnboundSet Identifier
 
 instance Solver.Lattice IdentifierSet where
-    bot   = Set.empty
-    merge = Set.union
+    bot   = USet.empty
+    merge = USet.union
+
+instance Solver.ExtLattice IdentifierSet where
+    top   = USet.Universe
+
 
 --
 -- * Identifier Analysis
@@ -49,19 +53,14 @@ identifierValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldInd
 identifierValue addr = case getNode addr of
 
     Node IR.Literal [_,Node (IR.StringValue x) _] ->
-        Solver.mkVariable (idGen addr) [] (compose $ Set.singleton (Identifier x))
+        Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Identifier x))
 
     _ -> dataflowValue addr analysis []
 
   where
   
-    analysis = DataFlowAnalysis "ID" identifierValue $ compose allIdentifier
+    analysis = DataFlowAnalysis "ID" identifierValue $ compose USet.Universe
   
     idGen = mkVarIdentifier analysis
 
     compose = ComposedValue.toComposed
-
-    allIdentifier = Set.fromList $ foldTree collector (getRootIR addr)
-    collector cur identifier = case getNode cur of
-        Node (IR.StringValue x) _  -> (Identifier x : identifier)
-        _ -> identifier

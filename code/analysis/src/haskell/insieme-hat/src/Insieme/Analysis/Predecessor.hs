@@ -19,6 +19,7 @@ import Insieme.Analysis.Callable
 import Insieme.Analysis.CallSite
 import Insieme.Analysis.ExitPoint
 import qualified Insieme.Inspire as IR
+import qualified Insieme.Utils.UnboundSet as USet
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
@@ -111,7 +112,7 @@ predecessor  p@(ProgramPoint addr Internal) = case getNode addr of
                         where
                             go = \e l -> foldr (\(ExitPoint r) l -> (ProgramPoint r Post) : l) l (Solver.get a e)
                     
-                    callsLiteral = any isLiteral (extract $ Solver.get a callableVar)
+                    callsLiteral = any isLiteral (callableVal a)
                         where
                             isLiteral (Literal _) = True
                             isLiteral _ = False
@@ -120,8 +121,17 @@ predecessor  p@(ProgramPoint addr Internal) = case getNode addr of
                     
          
             callableVar = callableValue (goDown 1 addr)
+            callableVal a = USet.toSet $ 
+                    if USet.isUniverse callables 
+                    then collectAllCallables addr 
+                    else callables 
+                where
+                    callables = extract $ Solver.get a callableVar
             
-            exitPointVars a = foldr (\t l -> exitPoints (toAddress t) : l) [] (extract $ Solver.get a callableVar)
+            
+            exitPointVars a = foldr (\t l -> exitPoints (toAddress t) : l) [] (callableVal a)
+            
+            
                 
     _ -> trace ( " Unhandled Internal Program Point: " ++ (show p) ) $ error "unhandled case"
 

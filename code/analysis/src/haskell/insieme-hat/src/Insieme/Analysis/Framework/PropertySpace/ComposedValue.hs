@@ -9,7 +9,7 @@ import Insieme.Analysis.Entities.FieldIndex
 import qualified Insieme.Analysis.Solver as Solver
 
 
-class (Solver.Lattice c, FieldIndex i, Solver.Lattice v) => ComposedValue c i v | c -> i v where
+class (Solver.ExtLattice c, FieldIndex i, Solver.ExtLattice v) => ComposedValue c i v | c -> i v where
 
     toComposed :: v -> c
     toValue    :: c -> v
@@ -18,4 +18,6 @@ class (Solver.Lattice c, FieldIndex i, Solver.Lattice v) => ComposedValue c i v 
     getElement :: DataPath i -> c -> c
      
     composeElements :: [(i,c)] -> c
+    
+    top :: c
     

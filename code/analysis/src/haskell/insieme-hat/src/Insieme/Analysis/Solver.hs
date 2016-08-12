@@ -8,6 +8,9 @@ module Insieme.Analysis.Solver (
     bot,
     less,
     
+    ExtLattice,
+    top,
+    
     -- identifiers
     Identifier,
     mkIdentifier,
@@ -51,8 +54,10 @@ import qualified Data.Set as Set
 import qualified Data.Hashable as Hash
 
 
+
 -- Lattice --------------------------------------------------
 
+-- this is actually a bound join-semilattice
 class (Eq v, Show v, Typeable v) => Lattice v where
         {-# MINIMAL join | merge, bot #-}
         -- | combine elements
@@ -68,6 +73,11 @@ class (Eq v, Show v, Typeable v) => Lattice v where
         -- | induced order
         less :: v -> v -> Bool              -- determines whether one element of the lattice is less than another
         less a b = (a `merge` b) == b       -- default implementation
+
+
+class (Lattice v) => ExtLattice v where
+        -- | top element
+        top  :: v                           -- the top element of this lattice
 
 
 -- Identifier -----
@@ -180,7 +190,6 @@ toDotGraph a@( Assignment m ) varSet = "digraph G {\n\t"
         rev = Map.fromList $ map swap vars
         
         -- a lookup function for rev
-        --index v = trace ((show v) ++ " => " ++ (show $ Map.lookup v rev)) $ fromJust $ Map.lookup v rev
         index v = fromMaybe 0 $ Map.lookup v rev 
         
         -- computes the list of dependencies
@@ -193,7 +202,7 @@ toDotGraph a@( Assignment m ) varSet = "digraph G {\n\t"
 dumpSolverState :: Assignment -> Set.Set Var -> String -> String
 dumpSolverState a v file = unsafePerformIO $ do
          writeFile (file ++ ".dot") $ toDotGraph a v
-         runCommand ("dot -Tpdf " ++ file ++ ".dot -o " ++ file ++ ".pdf")
+         system ("dot -Tpdf " ++ file ++ ".dot -o " ++ file ++ ".pdf")
          return ("Dumped assignment into file " ++ file ++ ".pdf!")
 
 

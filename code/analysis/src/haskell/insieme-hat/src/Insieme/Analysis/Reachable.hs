@@ -26,9 +26,9 @@ newtype Reachable = Reachable Bool
     deriving (Eq,Show)
 
 instance Solver.Lattice Reachable where
-    join = foldr or (Reachable False)
-        where
-            or (Reachable a) (Reachable c) = Reachable $ a || c 
+    bot = Reachable False
+    merge (Reachable a) (Reachable b) = Reachable $ a || b
+
 
 toBool :: Reachable -> Bool
 toBool (Reachable b) = b

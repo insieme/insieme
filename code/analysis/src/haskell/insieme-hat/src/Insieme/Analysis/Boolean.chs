@@ -32,13 +32,17 @@ import Insieme.Analysis.Entities.FieldIndex
 --
 
 instance Solver.Lattice Result where
-    join [] = Neither
-    join xs = foldr1 join' xs
-      where
-        join' Neither x = x
-        join' x Neither = x
-        join' x y | x == y = x
-        join' _ _ = Both
+    bot = Neither
+    
+    merge Neither x = x
+    merge x Neither = x
+    merge x y | x == y = x
+    merge _ _ = Both
+
+
+instance Solver.ExtLattice Result where
+    top = Both
+
 
 --
 -- * Boolean Value Analysis

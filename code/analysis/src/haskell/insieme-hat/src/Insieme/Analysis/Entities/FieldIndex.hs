@@ -40,7 +40,12 @@ data SimpleFieldIndex =
               Field String
             | Index Int
             | UnknownIndex
-    deriving(Eq,Ord,Show,Typeable)
+    deriving(Eq,Ord,Typeable)
+    
+instance Show SimpleFieldIndex where
+    show (Field s) = s
+    show (Index i) = "[" ++ (show i) ++ "]"
+    show UnknownIndex = "[*]"
     
 
 -- | Merges the list of simple field indices of the two given lists    

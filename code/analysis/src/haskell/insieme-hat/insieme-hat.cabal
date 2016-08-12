@@ -38,7 +38,8 @@ executable insieme-hat
                         Insieme.Inspire.Utils,
                         Insieme.Utils.Arithmetic,
                         Insieme.Utils.ParseInt,
-                        Insieme.Utils.BoundSet
+                        Insieme.Utils.BoundSet,
+                        Insieme.Utils.UnboundSet
     build-depends:      attoparsec >=0.13,
                         attoparsec-binary >=0.2,
                         base >=4.7,
@@ -88,7 +89,8 @@ library
                         Insieme.Inspire.Utils,
                         Insieme.Utils.Arithmetic,
                         Insieme.Utils.ParseInt,
-                        Insieme.Utils.BoundSet
+                        Insieme.Utils.BoundSet,
+                        Insieme.Utils.UnboundSet
     build-depends:      attoparsec >=0.13,
                         attoparsec-binary >=0.2,
                         base >=4.7,

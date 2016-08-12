@@ -11,6 +11,7 @@ import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 
 import qualified Insieme.Utils.BoundSet as BSet
+import qualified Insieme.Utils.UnboundSet as USet
 
 import Insieme.Analysis.Identifier
 import Insieme.Analysis.Arithmetic
@@ -26,18 +27,21 @@ import Insieme.Analysis.Entities.FieldIndex
 -- * DataPath Lattice
 --
 
-type DataPathSet = Set.Set (DataPath SimpleFieldIndex)
+type DataPathSet i = USet.UnboundSet (DataPath i)
 
-instance Solver.Lattice DataPathSet where
-    join [] = Set.empty
-    join xs = foldr1 Set.union xs
+instance (FieldIndex i) => Solver.Lattice (DataPathSet i) where
+    bot   = USet.empty
+    merge = USet.union
+
+instance (FieldIndex i) => Solver.ExtLattice (DataPathSet i) where
+    top = USet.Universe
     
     
 --
 -- * DataPath Analysis
 --
 
-dataPathValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex DataPathSet)
+dataPathValue :: (FieldIndex i) => NodeAddress -> Solver.TypedVar (ValueTree.Tree i (DataPathSet i))
 dataPathValue addr = dataflowValue addr analysis ops
                 
   where
@@ -46,7 +50,7 @@ dataPathValue addr = dataflowValue addr analysis ops
   
     idGen = mkVarIdentifier analysis
   
-    top = compose Set.empty     -- TODO: compute actual top
+    top = compose USet.Universe
     
     compose = ComposedValue.toComposed
     
@@ -61,7 +65,7 @@ dataPathValue addr = dataflowValue addr analysis ops
         
         dep a = []
          
-        val a = compose $ Set.singleton root
+        val a = compose $ USet.singleton root
     
     
     -- the handler for the member access path constructore --
@@ -71,9 +75,9 @@ dataPathValue addr = dataflowValue addr analysis ops
         
         dep a = (Solver.toVar nestedPathVar) : (Solver.toVar fieldNameVar) : []
          
-        val a = compose $ Set.fromList [ append p ((step . field) i) | p <- paths a, i <- identifier ]
+        val a = compose $ USet.fromList [ append p ((step . field) i) | p <- paths a, i <- identifier ]
             where
-                identifier = toString <$> (Set.toList $ ComposedValue.toValue $ Solver.get a fieldNameVar)
+                identifier = toString <$> (USet.toList $ ComposedValue.toValue $ Solver.get a fieldNameVar)
                 
         fieldNameVar = identifierValue $ goDown 3 addr
     
@@ -85,7 +89,7 @@ dataPathValue addr = dataflowValue addr analysis ops
         
         dep a = (Solver.toVar nestedPathVar) : (Solver.toVar indexVar) : []
          
-        val a = compose $ Set.fromList [ append p ((step . index) i) | p <- paths a, i <- indices ]
+        val a = compose $ USet.fromList [ append p ((step . index) i) | p <- paths a, i <- indices ]
             where
                 indices = BSet.toList $ ComposedValue.toValue $ Solver.get a indexVar
                 
@@ -96,4 +100,4 @@ dataPathValue addr = dataflowValue addr analysis ops
     
     nestedPathVar = dataPathValue $ goDown 2 addr
     
-    paths a  =  Set.toList $ ComposedValue.toValue $ Solver.get a nestedPathVar
+    paths a  =  USet.toList $ ComposedValue.toValue $ Solver.get a nestedPathVar

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 
 module Insieme.Analysis.Framework.Dataflow (
     DataFlowAnalysis(DataFlowAnalysis,analysisID,variableGenerator,topValue),
@@ -36,6 +37,7 @@ import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Framework.MemoryState
 
+import qualified Insieme.Utils.UnboundSet as USet
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
 --
@@ -57,7 +59,7 @@ mkVarIdentifier a n = Solver.mkIdentifier $ (analysisID a) ++ (prettyShow n)
 -- * Generic Data Flow Value Analysis
 --
 
-dataflowValue :: (ComposedValue.ComposedValue a i v, Solver.Lattice a)
+dataflowValue :: (ComposedValue.ComposedValue a i v)
          => NodeAddress                                     -- ^ the address of the node for which to compute a variable representing the data flow value
          -> DataFlowAnalysis a                              -- ^ the summar of the analysis to be performed be realized by this function
          -> [OperatorHandler a]                             -- ^ allows selected operators to be intercepted and interpreted
@@ -79,12 +81,12 @@ dataflowValue addr analysis ops = case getNode addr of
                     (map Solver.toVar (getReturnValueVars a)) ++ 
                     (getOperatorDependencies a)
                 )
-        val a = Solver.join $ (map (Solver.get a) (getReturnValueVars a)) ++ (getOperatorValue a) 
+        val a = Solver.join $ (map (Solver.get a) (getReturnValueVars a)) ++ (getOperatorValue a)
         
         
         -- support for calls to lambda and closures --
         
-        getExitPointVars a = Set.fold go [] (ComposedValue.toValue $ Solver.get a trg)
+        getExitPointVars a = Set.fold go [] (USet.toSet $ ComposedValue.toValue $ Solver.get a trg)
             where
                 go c l = (ExitPoint.exitPoints $ Callable.toAddress c) : l
                 
@@ -103,7 +105,7 @@ dataflowValue addr analysis ops = case getNode addr of
         getActiveOperators a = filter f extOps
             where 
                 f o = any (\l -> covers o (Callable.toAddress l)) literals
-                literals = ComposedValue.toValue $ Solver.get a trg
+                literals = USet.toSet $ ComposedValue.toValue $ Solver.get a trg
         
         getOperatorDependencies a = concat $ map go $ getActiveOperators a
             where
@@ -122,7 +124,7 @@ dataflowValue addr analysis ops = case getNode addr of
                 val a = if hasUnknownTarget then top else Solver.bot
                     where 
                         
-                        targets = Set.toList $ ComposedValue.toValue $ Solver.get a trg
+                        targets = USet.toList $ ComposedValue.toValue $ Solver.get a trg
                         
                         uncoveredLiterals = filter f $ targets
                             where
@@ -211,13 +213,16 @@ dataflowValue addr analysis ops = case getNode addr of
             
             dep a = (Solver.toVar targetRefVar) : (map Solver.toVar $ readValueVars a)
             
-            val a = compose $ Solver.join $ map (extract . Solver.get a) (readValueVars a)
+            val a = Solver.join $ map go $ targetRefVal a 
+                where 
+                    go r = ComposedValue.getElement (Reference.dataPath r) $ Solver.get a (memStateVarOf r)
             
             targetRefVar = Reference.referenceValue $ goDown 1 $ goDown 2 addr          -- here we have to skip the potentially materializing declaration!
+            targetRefVal a = USet.toList $ ComposedValue.toValue $ Solver.get a targetRefVar
             
-            readValueVars a = map go $ Set.toList $ ComposedValue.toValue $ Solver.get a targetRefVar
-                where
-                    go r = memoryStateValue (MemoryState (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis
+            readValueVars a = map memStateVarOf $ targetRefVal a
+                    
+            memStateVarOf r = memoryStateValue (MemoryState (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis
 
              
     -- support the tuple_member_access operation (read from tuple component)

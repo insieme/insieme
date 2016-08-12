@@ -1,10 +1,13 @@
 module Insieme.Analysis.Alias where
 
 import Data.Set as Set
+import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Reference
 import Insieme.Inspire.NodeAddress
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+
+import qualified Insieme.Utils.UnboundSet as USet
 
 #include "alias_analysis.h"
 
@@ -16,7 +19,9 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 checkAlias :: NodeAddress -> NodeAddress -> Results
 checkAlias x y = checkAlias' (toSetReference x) (toSetReference y)
   where
-    toSetReference = ComposedValue.toValue . Solver.resolve . referenceValue
+    -- here we determine the kind of filed index to be used for the reference analysis
+    toSetReference :: NodeAddress -> Set (Reference SimpleFieldIndex)
+    toSetReference = USet.toSet . ComposedValue.toValue . Solver.resolve . referenceValue
 
 
 checkAlias' :: Eq i => Set (Reference i) -> Set (Reference i) -> Results
