@@ -73,6 +73,7 @@ namespace analysis {
 				"def struct A {"
 				"	x : int<4>;"
 				"	y : bool;"
+				"	z : array<struct { a : int<4>; b : int<4>; },12>;"
 				"};"
 				""
 				"{"
@@ -91,6 +92,36 @@ namespace analysis {
 				"	b.x;"
 				"	c.x;"
 				"	(*p).x;"
+				"	"
+				"	var ref<array<A,10>> l = ref_new(type_lit(array<A,10>));"
+				"	var ref<array<A,10>> k = ref_new(type_lit(array<A,10>));"
+				"	var ref<array<A,10>> m = l;"
+				"	"
+				"	l;"				// third block (l=16-18)
+				"	k;"
+				"	m;"
+				"	"
+				"	l[0];"			// 4. block (l=19-24)
+				"	l[1];"
+				"	k[0];"
+				"	k[1];"
+				"	m[0];"
+				"	m[1];"
+				"	"
+				"	a.z;"			// 5. block (l=25-33)
+				"	b.z;"
+				"	c.z;"
+				"	a.z[0];"
+				"	a.z[1];"
+				"	a.z[0].a;"
+				"	a.z[0].b;"
+				"	a.z[1].a;"
+				"	(*p).z[1].a;"
+				"	"
+				"	var ref<array<A>> q = ref_scalar_to_ref_array(a);"
+				"	a;"												// 6. block (l=35-37)
+				"	q;"                                             // testing expanding data paths
+				"	q[0];"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -112,6 +143,45 @@ namespace analysis {
 		EXPECT_TRUE(areAlias(comp[9], comp[11]));
 		EXPECT_TRUE(areAlias(comp[9], comp[12]));
 
+		// third block
+		EXPECT_TRUE(areAlias(comp[16], comp[16]));
+		EXPECT_TRUE(notAlias(comp[16], comp[17]));
+		EXPECT_TRUE(areAlias(comp[16], comp[18]));
+
+		// 4. block
+		EXPECT_TRUE(areAlias(comp[19], comp[19]));
+		EXPECT_TRUE(notAlias(comp[19], comp[20]));
+
+		EXPECT_TRUE(areAlias(comp[21], comp[21]));
+		EXPECT_TRUE(notAlias(comp[21], comp[22]));
+
+		EXPECT_TRUE(areAlias(comp[23], comp[23]));
+		EXPECT_TRUE(notAlias(comp[23], comp[24]));
+
+		EXPECT_TRUE(notAlias(comp[19], comp[21]));
+		EXPECT_TRUE(notAlias(comp[19], comp[22]));
+		EXPECT_TRUE(areAlias(comp[19], comp[23]));
+		EXPECT_TRUE(notAlias(comp[19], comp[24]));
+
+		// 5. block
+		EXPECT_TRUE(areAlias(comp[25], comp[25]));
+		EXPECT_TRUE(notAlias(comp[25], comp[26]));
+		EXPECT_TRUE(areAlias(comp[25], comp[27]));
+
+		EXPECT_TRUE(areAlias(comp[28], comp[28]));
+		EXPECT_TRUE(notAlias(comp[28], comp[29]));
+		EXPECT_TRUE(notAlias(comp[28], comp[30]));
+
+		EXPECT_TRUE(areAlias(comp[30], comp[30]));
+		EXPECT_TRUE(notAlias(comp[30], comp[31]));
+		EXPECT_TRUE(notAlias(comp[30], comp[32]));
+
+		EXPECT_TRUE(areAlias(comp[32], comp[33]));
+
+		// 6. block
+		EXPECT_TRUE(areAlias(comp[35], comp[35]));
+		EXPECT_TRUE(notAlias(comp[35], comp[36]));
+		EXPECT_TRUE(areAlias(comp[35], comp[37]));
 	}
 
 } // end namespace analysis
