@@ -48,7 +48,7 @@ namespace analysis {
 	template<typename Elem, typename Compare = std::less<Elem>>
 	class Set {
 
-		std::set<Elem,Compare> elements;
+		std::set<Elem, Compare> elements;
 
 		bool all;
 
@@ -60,10 +60,10 @@ namespace analysis {
 		Set()
 			: elements(), all(false) {}
 
-		Set(const std::set<Elem>& set)
+		Set(const std::set<Elem, Compare>& set)
 			: elements(set), all(false) {}
 
-		Set(std::set<Elem>&& set)
+		Set(std::set<Elem, Compare>&& set)
 			: elements(std::move(set)), all(false) {}
 
 		Set(const Set&) = default;
@@ -85,7 +85,7 @@ namespace analysis {
 			return elements.size();
 		}
 
-		const std::set<int> &getElements() const {
+		const std::set<Elem, Compare>& getElements() const {
 			assert_false(isUniversal());
 			return elements;
 		}
@@ -130,35 +130,35 @@ namespace analysis {
 	};
 
 
-	template<typename Elem>
-	Set<Elem> merge(const Set<Elem>& a, const Set<Elem>& b) {
-		if (a.isUniversal() || b.isUniversal()) return Set<Elem>::getUniversal();
+	template <typename Elem, typename Compare>
+	Set<Elem, Compare> merge(const Set<Elem, Compare>& a, const Set<Elem, Compare>& b) {
+		if(a.isUniversal() || b.isUniversal()) return Set<Elem, Compare>::getUniversal();
 		const auto& sa = a.getElements();
 		const auto& sb = b.getElements();
-		if (sa.empty()) return b;
-		if (sb.empty()) return a;
-		std::set<Elem> res;
-		std::set_union(sa.begin(),sa.end(),sb.begin(),sb.end(),res.begin());
-		return Set<Elem>(std::move(res));
+		if(sa.empty()) return b;
+		if(sb.empty()) return a;
+		std::vector<Elem> res;
+		std::set_union(sa.begin(), sa.end(), sb.begin(), sb.end(), res.begin(), Compare());
+		return std::set<Elem, Compare>(res.begin(), res.end());
 	}
 
 
-	template<typename Elem>
-	Set<Elem> intersect(const Set<Elem>& a, const Set<Elem>& b) {
+	template <typename Elem, typename Compare>
+	Set<Elem, Compare> intersect(const Set<Elem, Compare>& a, const Set<Elem, Compare>& b) {
 		// handle universal sets
-		if (a.isUniversal()) return b;
-		if (b.isUniversal()) return a;
+		if(a.isUniversal()) return b;
+		if(b.isUniversal()) return a;
 
 		// handle explicit sets
 		const auto& sa = a.getElements();
 		const auto& sb = b.getElements();
-		if (sa.empty()) return a;
-		if (sb.empty()) return b;
+		if(sa.empty()) return a;
+		if(sb.empty()) return b;
 
 		// compute the intersection
-		std::set<Elem> res;
-		std::set_intersection(sa.begin(),sa.end(),sb.begin(),sb.end(),res.begin());
-		return Set<Elem>(std::move(res));
+		std::vector<Elem> res;
+		std::set_intersection(sa.begin(), sa.end(), sb.begin(), sb.end(), res.begin(), Compare());
+		return std::set<Elem, Compare>(res.begin(), res.end());
 	}
 
 } // end namespace analysis
