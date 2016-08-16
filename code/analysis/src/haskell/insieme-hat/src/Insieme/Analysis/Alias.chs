@@ -1,5 +1,6 @@
 module Insieme.Analysis.Alias where
 
+import Debug.Trace
 import Data.Set as Set
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Reference
@@ -17,23 +18,29 @@ import qualified Insieme.Utils.UnboundSet as USet
  #}
 
 checkAlias :: NodeAddress -> NodeAddress -> Results
-checkAlias x y = checkAlias' (toSetReference x) (toSetReference y)
+checkAlias x y = checkAlias' (traceShowId $ toSetReference x) (traceShowId $ toSetReference y)
   where
     -- here we determine the kind of filed index to be used for the reference analysis
-    toSetReference :: NodeAddress -> Set (Reference SimpleFieldIndex)
-    toSetReference = USet.toSet . ComposedValue.toValue . Solver.resolve . referenceValue
+    toSetReference :: NodeAddress -> USet.UnboundSet (Reference SimpleFieldIndex)
+    toSetReference = ComposedValue.toValue . Solver.resolve . referenceValue
 
 
-checkAlias' :: Eq i => Set (Reference i) -> Set (Reference i) -> Results
+checkAlias' :: Eq i => USet.UnboundSet (Reference i) -> USet.UnboundSet (Reference i) -> Results
+
+checkAlias' USet.Universe s | USet.null s = NotAlias
+checkAlias' USet.Universe s               = MayAlias
+
+checkAlias' s USet.Universe  = checkAlias' USet.Universe s
+
 
 checkAlias' x y | areSingleton = areAlias (toReference x) (toReference y)
   where
-    areSingleton = Set.size x == 1 && Set.size y == 1
-    toReference = head . Set.toList
+    areSingleton = USet.size x == 1 && USet.size y == 1
+    toReference = head . USet.toList
 
 checkAlias' x y = if any (==AreAlias) u then MayAlias else NotAlias
   where
-    u = [areAlias u v | u <- Set.toList x, v <- Set.toList y]
+    u = [areAlias u v | u <- USet.toList x, v <- USet.toList y]
 
 
 areAlias :: Eq i => Reference i -> Reference i -> Results

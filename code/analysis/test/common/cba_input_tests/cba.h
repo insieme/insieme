@@ -61,9 +61,6 @@ void cba_expect_may_eq_int(int a, int b);
 
 // debugging
 void cba_print_code();
-//void cba_print_constraints();
-void cba_print_solution();
-//void cba_dump_equations();
 void cba_print_ref(void*);
 void cba_print_int(int a);
 

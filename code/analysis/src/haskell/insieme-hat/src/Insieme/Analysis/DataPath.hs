@@ -74,10 +74,11 @@ dataPathValue addr = dataflowValue addr analysis ops
         cov a = isBuiltin a "dp_member"
         
         dep a = (Solver.toVar nestedPathVar) : (Solver.toVar fieldNameVar) : []
-         
-        val a = compose $ USet.fromList [ append p ((step . field) i) | p <- paths a, i <- identifier ]
+        
+        val a = compose $ combine (paths a) fieldNames
             where
-                identifier = toString <$> (USet.toList $ ComposedValue.toValue $ Solver.get a fieldNameVar)
+                combine = USet.lift2 $ \p i -> append p ((step . field) (toString i))
+                fieldNames = ComposedValue.toValue $ Solver.get a fieldNameVar
                 
         fieldNameVar = identifierValue $ goDown 3 addr
     
@@ -88,10 +89,11 @@ dataPathValue addr = dataflowValue addr analysis ops
         cov a = any (isBuiltin a) ["dp_element","dp_component"]
         
         dep a = (Solver.toVar nestedPathVar) : (Solver.toVar indexVar) : []
-         
-        val a = compose $ USet.fromList [ append p ((step . index) i) | p <- paths a, i <- indices ]
+        
+        val a = compose $ combine (paths a) indexes 
             where
-                indices = BSet.toList $ ComposedValue.toValue $ Solver.get a indexVar
+                combine = USet.lift2 $ \p i -> append p ((step . index) i)
+                indexes = BSet.toUnboundSet $ ComposedValue.toValue $ Solver.get a indexVar 
                 
         indexVar = arithmeticValue $ goDown 3 addr
     
@@ -100,4 +102,4 @@ dataPathValue addr = dataflowValue addr analysis ops
     
     nestedPathVar = dataPathValue $ goDown 2 addr
     
-    paths a  =  USet.toList $ ComposedValue.toValue $ Solver.get a nestedPathVar
+    paths a = ComposedValue.toValue $ Solver.get a nestedPathVar

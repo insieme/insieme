@@ -121,7 +121,21 @@ findDecl start = findDecl start
 
 
 isFreeVariable :: NodeAddress -> Bool
-isFreeVariable = isNothing . findDecl
+isFreeVariable v = isNothing decl || isEntryPointParam decl
+    where
+        decl = findDecl v
+        
+        isEntryPointParam (Just v) = case getNode $ fromJust $ getParent v of
+            Node IR.Parameters _ -> (not . hasEnclosingCall) v
+            _                    -> False
+            
+        isEntryPointParam Nothing  = False
+        
+        hasEnclosingCall a = case getNode a of
+            Node IR.CallExpr _ -> True
+            _                  -> (not . isRoot) a && (hasEnclosingCall (fromJust $ getParent a))
+
+
 
 
 -- some examples

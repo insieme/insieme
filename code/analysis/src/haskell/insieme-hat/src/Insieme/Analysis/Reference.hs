@@ -90,12 +90,14 @@ referenceValue addr = case getNode addr of
         refNarrow = OperatorHandler cov subRefDep val
             where 
                 cov a = isBuiltin a "ref_narrow"
-                val a = compose $ USet.fromList [ Reference l (DP.append p d)  | Reference l p <- baseRefVal a, d <- dataPathVal a]
+                val a = compose $ narrow (baseRefVal a) (dataPathVal a)
+                narrow = USet.lift2 $ \(Reference l p) d -> Reference l (DP.append p d)
         
         refExpand = OperatorHandler cov subRefDep val
             where 
                 cov a = isBuiltin a "ref_expand"
-                val a = compose $ USet.fromList [ Reference l (DP.append p (DP.invert d))  | Reference l p <- baseRefVal a, d <- dataPathVal a]
+                val a = compose $ expand (baseRefVal a) (dataPathVal a)
+                expand = USet.lift2 $ \(Reference l p) d -> Reference l (DP.append p (DP.invert d))
         
         refCast = OperatorHandler cov dep val
             where 
@@ -108,10 +110,10 @@ referenceValue addr = case getNode addr of
         subRefDep a = [toVar baseRefVar, toVar dataPathVar] 
         
         baseRefVar   = referenceValue $ goDown 1 $ goDown 2 addr
-        baseRefVal a = USet.toList $ ComposedValue.toValue $ get a baseRefVar
+        baseRefVal a = ComposedValue.toValue $ get a baseRefVar
         
         dataPathVar   = dataPathValue $ goDown 3 addr
-        dataPathVal a = USet.toList $ ComposedValue.toValue $ get a dataPathVar
+        dataPathVal a = ComposedValue.toValue $ get a dataPathVar
         
         
         

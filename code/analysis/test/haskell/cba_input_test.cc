@@ -94,35 +94,31 @@ namespace analysis {
 
 		// boolean
 		bool isTrue(const core::ExpressionAddress& x) {
-			return insieme::analysis::isTrue<Backend>(x);
+			return eqConstant(1,x);
 		}
 
 		bool isFalse(const core::ExpressionAddress& x) {
-			return insieme::analysis::isFalse<Backend>(x);
+			return eqConstant(0,x);
 		}
 
 		bool mayBeTrue(const core::ExpressionAddress& x) {
-			return insieme::analysis::mayBeTrue<Backend>(x);
+			return getValue(x).contains(1);
 		}
 
 		bool mayBeFalse(const core::ExpressionAddress& x) {
-			return insieme::analysis::mayBeFalse<Backend>(x);
+			return getValue(x).contains(0);
 		}
 
 		bool eqConstant(int c, const core::ExpressionAddress& x) {
 			auto values = this->getValue(x);
 
-			EXPECT_FALSE(values.isUniversal());
 			if (values.isUniversal()) return false;
 
-			EXPECT_EQ(1, values.size()) << values;
 			if (values.size() != 1) return false;
 
 			auto& value = *values.begin();
-			EXPECT_TRUE(value.isConstant()) << value;
 			if (!value.isConstant()) return false;
 
-			EXPECT_EQ(c, value.getIntegerValue());
 			return c == value.getIntegerValue();
 		}
 
@@ -212,7 +208,9 @@ namespace analysis {
 					std::cerr << "Performing " << name << std::endl;
 					ArithmeticSet lhs = this->getValue(call.getArgument(0));
 					ArithmeticSet rhs = this->getValue(call.getArgument(1));
-					EXPECT_TRUE(lhs == rhs)
+					EXPECT_FALSE(lhs.empty());
+					EXPECT_FALSE(rhs.empty());
+					EXPECT_TRUE(!lhs.empty() && lhs == rhs)
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "LHS ArithmeticSet evaluates to " << lhs << std::endl
 						<< "RHS ArithmeticSet evaluates to " << rhs << std::endl;
@@ -221,6 +219,8 @@ namespace analysis {
 					std::cerr << "Performing " << name << std::endl;
 					ArithmeticSet lhs = this->getValue(call.getArgument(0));
 					ArithmeticSet rhs = this->getValue(call.getArgument(1));
+					EXPECT_FALSE(lhs.empty());
+					EXPECT_FALSE(rhs.empty());
 					EXPECT_TRUE(lhs != rhs)
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "LHS ArithmeticSet evaluates to " << lhs << std::endl
@@ -230,6 +230,8 @@ namespace analysis {
 					std::cerr << "Performing " << name << std::endl;
 					ArithmeticSet lhs = this->getValue(call.getArgument(0));
 					ArithmeticSet rhs = this->getValue(call.getArgument(1));
+					EXPECT_FALSE(lhs.empty());
+					EXPECT_FALSE(rhs.empty());
 					ArithmeticSet inter = intersect(lhs, rhs);
 					EXPECT_TRUE(lhs.isUniversal() || rhs.isUniversal() || inter.size() > 0)
 						<< *core::annotations::getLocation(call) << std::endl
@@ -240,6 +242,10 @@ namespace analysis {
 				} else if (name == "cba_print_code") {
 					// just dump the code
 					dumpPretty(prog);
+
+				} else if (name == "cba_print_int") {
+					// print the deduced value of the argument
+					std::cout << call << " = " << this->getValue(call.getArgument(0)) << "\n";
 
 				// the rest
 				} else {

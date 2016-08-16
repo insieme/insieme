@@ -4,20 +4,24 @@ module Insieme.Utils.UnboundSet (
     singleton,
     member,
     size,
+    null,
     isUniverse,
+    fromSet,
     fromList,
     toSet,
     toList,
     insert,
     union,
     map,
-    lift2
+    lift,
+    lift2,
+    fromUnboundSet
 ) where
 
 import Data.Typeable
 import qualified Data.Set as Set
 
-import Prelude hiding (map)
+import Prelude hiding (map,null)
 
 
 --
@@ -41,19 +45,26 @@ size :: UnboundSet a -> Int
 size Universe       = error "Size of Universe does not fit into Int"
 size (UnboundSet x) = Set.size x
 
+null :: UnboundSet a -> Bool
+null  Universe      = False
+null (UnboundSet s) = Set.null s
+
 isUniverse :: UnboundSet a -> Bool
 isUniverse Universe = True
 isUniverse _        = False
+
+fromSet :: Set.Set a -> UnboundSet a
+fromSet s = UnboundSet s
 
 fromList :: (Ord a) => [a] -> UnboundSet a
 fromList = UnboundSet . Set.fromList
 
 toSet :: UnboundSet a -> Set.Set a
-toSet  Universe      = error "Cannot convert Uiverse to set"
+toSet  Universe      = error "Cannot convert Universe :: UnboundSet to set"
 toSet (UnboundSet s) = s
 
 toList :: UnboundSet a -> [a]
-toList Universe       = error "Cannot convet Universe to list"
+toList Universe       = error "Cannot convert Universe :: UnboundSet to list"
 toList (UnboundSet x) = Set.toList x
 
 insert :: (Ord a) => a -> UnboundSet a -> UnboundSet a
@@ -70,6 +81,12 @@ map :: (Ord b) => (a -> b) -> UnboundSet a -> UnboundSet b
 map _ Universe     = Universe
 map f (UnboundSet x) = UnboundSet (Set.map f x)
 
+lift :: (Ord a, Ord b)
+      => (a -> b) -> (UnboundSet a -> UnboundSet b)
+lift _  Universe      = Universe
+lift f (UnboundSet x) = UnboundSet (Set.map f x)
+
+
 lift2 :: (Ord a, Ord b, Ord c)
       => (a -> b -> c) -> (UnboundSet a -> UnboundSet b -> UnboundSet c)
 lift2 _    Universe     _            = Universe
@@ -77,3 +94,9 @@ lift2 _    _            Universe     = Universe
 lift2 f (UnboundSet x) (UnboundSet y) = fromList prod
   where
       prod = [f u v | u <- Set.toList x, v <- Set.toList y]
+      
+      
+fromUnboundSet :: b -> (UnboundSet a -> b) -> UnboundSet a -> b
+fromUnboundSet d _ Universe = d
+fromUnboundSet _ f s        = f s
+      

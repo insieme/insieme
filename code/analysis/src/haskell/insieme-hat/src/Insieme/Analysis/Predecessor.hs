@@ -77,7 +77,7 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
     Node IR.IfStmt _ | i == 0 -> single $ ProgramPoint parent Pre
     Node IR.IfStmt _ -> single $ ProgramPoint (goDown 0 parent) Post        -- todo: make dependent on result of conditional expression
     
-    _ -> trace ( " Unhandled Pre Program Point: " ++ (show p) ++ " for parent " ++ (show $ getNode parent) ) $ error "unhandled case"
+    _ -> trace ( " Unhandled Pre Program Point: " ++ (show p) ++ " for parent " ++ (show $ rootLabel $ getNode parent) ) $ error "unhandled case"
     
   where
   
@@ -161,6 +161,10 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
     -- declarationns are done once the init expression is done
     Node IR.Declaration _ -> single $ ProgramPoint (goDown 1 a) Post
     
+    -- handle lists of expressions
+    Node IR.Expressions  [] -> single $ ProgramPoint a Pre 
+    Node IR.Expressions sub -> single $ ProgramPoint (goDown ((length sub) - 1) a) Post
+    
     -- compound statements
     Node IR.CompoundStmt []    -> pre
     Node IR.CompoundStmt stmts -> single $ ProgramPoint (goDown ((length stmts) - 1) a) Post
@@ -191,7 +195,7 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
     Node IR.ReturnStmt _ -> single $ ProgramPoint (goDown 0 a) Post
     
     
-    _ -> trace ( " Unhandled Post Program Point: " ++ (show p) ++ " for node " ++ (show $ getNode a) ) $ error "unhandled case"
+    _ -> trace ( " Unhandled Post Program Point: " ++ (show p) ++ " for node " ++ (show $ rootLabel $ getNode a) ) $ error "unhandled case"
     
   where
   

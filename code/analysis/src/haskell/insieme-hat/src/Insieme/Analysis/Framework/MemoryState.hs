@@ -43,11 +43,11 @@ data Definition i = Creation
                 | PerfectAssignment NodeAddress
     deriving (Eq,Ord,Show)
     
-type Definitions i = Set.Set (Definition i)
+type Definitions i = USet.UnboundSet (Definition i)
 
 instance (FieldIndex i) => Solver.Lattice (Definitions i) where
-    bot = Set.empty
-    merge = Set.union
+    bot = USet.empty
+    merge = USet.union
     
 
 -- memory state analysis
@@ -69,18 +69,19 @@ memoryStateValue ms@(MemoryState pp@(ProgramPoint addr _) ml@(MemoryLocation loc
         
         dep a = (Solver.toVar reachingDefVar) : 
                    (
-                     if Set.member Creation $ reachingDefVal a then [] 
+                     if USet.member Creation $ reachingDefVal a then [] 
                      else (map Solver.toVar $ definingValueVars a) ++ (partialAssingDep a)
                    )
                    
-        val a = if Set.member Creation $ reachingDefVal a then ComposedValue.top 
+        val a = if USet.member Creation $ reachingDefVal a then ComposedValue.top 
                 else Solver.join $ (partialAssingVal a) : (map (Solver.get a) (definingValueVars a)) 
         
 
         reachingDefVar = reachingDefinitions ms
         reachingDefVal a = Solver.get a reachingDefVar
         
-        definingValueVars a = concat $ map go $ Set.toList $ reachingDefVal a
+        definingValueVars a = 
+                USet.fromUnboundSet [] ( concat . (map go) . USet.toList ) $ reachingDefVal a
             where
                 go (Declaration       addr) = [variableGenerator analysis $ goDown 1 addr]
                 go (MaterializingCall addr) = [variableGenerator analysis $ addr]         
@@ -90,7 +91,8 @@ memoryStateValue ms@(MemoryState pp@(ProgramPoint addr _) ml@(MemoryLocation loc
         
         -- partial assignment support --
         
-        partialAssignments a = filter pred $ Set.toList $ reachingDefVal a
+        partialAssignments a =
+                USet.fromUnboundSet [] ( (filter pred) . USet.toList ) $ reachingDefVal a
             where
                 pred (Assignment _ _) = True
                 pred _                = False 
@@ -131,15 +133,15 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
 
         -- a declaration could be an assignment if it is materializing
         d@(Node IR.Declaration _) | addr == loc && p == Post && isMaterializingDeclaration d -> 
-            Solver.mkVariable (idGen addr) [] (Set.singleton $ Declaration addr)
+            Solver.mkVariable (idGen addr) [] (USet.singleton $ Declaration addr)
         
         -- a call could be an assignment if it is materializing
         c@(Node IR.CallExpr _) | addr == loc && p == Post && isMaterializingCall c -> 
-            Solver.mkVariable (idGen addr) [] (Set.singleton $ MaterializingCall addr)
+            Solver.mkVariable (idGen addr) [] (USet.singleton $ MaterializingCall addr)
         
         -- the call could also be the creation point if it is not materializing
         c@(Node IR.CallExpr _) | addr == loc && p == Post -> 
-            Solver.mkVariable (idGen addr) [] (Set.singleton Creation)
+            Solver.mkVariable (idGen addr) [] (USet.singleton Creation)
         
         -- for all the others, the magic is covered by the generic program point value constraint generator    
         _ -> programPointValue pp idGen analysis [assignHandler]
@@ -166,25 +168,29 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
                         else if isActive a then                                     -- it is referencing this memory location => do something
                             (if isSingleRef a 
                                 then collectLocalDefs a                             -- it only references this memory location 
-                                else Set.union (collectLocalDefs a) $ pval a        -- it references this and other memory locations
+                                else USet.union (collectLocalDefs a) $ pval a       -- it references this and other memory locations
                             ) 
                         else pval a                                                 -- it does not reference this memory location => no change to reachable definitions
                 
                 targetRefVar = referenceValue $ goDown 1 $ goDown 2 addr            -- here we have to skip the potentially materializing declaration!
-                targetRefVal a = USet.toSet $ extract $ Solver.get a targetRefVar
+                targetRefVal a = extract $ Solver.get a targetRefVar
                 
-                isActive a = any pred $ targetRefVal a
+                isActive a = (USet.isUniverse refs) || (any pred $ USet.toSet refs)
                     where
+                        refs = targetRefVal a
                         pred (Reference cp _) = cp == loc  
                 
-                isEmptyRef a = Set.null $ targetRefVal a        
+                isEmptyRef a = USet.null $ targetRefVal a        
                 
-                isSingleRef a = all pred $ targetRefVal a
+                isSingleRef a = ((not . USet.isUniverse) refs) && (all pred $ USet.toSet refs)
                     where
+                        refs = targetRefVal a
                         pred (Reference l _) = l == loc
                 
-                collectLocalDefs a = Set.fromList $ concat $ map go $ Set.toList $ targetRefVal a
+                collectLocalDefs a = if USet.isUniverse targets then USet.Universe
+                        else USet.fromList $ concat $ map go $ USet.toList $ targets
                     where
+                        targets = targetRefVal a
                         go (Reference cp dp) | (cp == loc) && (DP.isRoot dp) = [PerfectAssignment addr]
                         go (Reference cp dp) | cp == loc = [Assignment addr dp]
                         go _                             = []

@@ -10,6 +10,7 @@ module Insieme.Utils.BoundSet (
     isUniverse,
     fromList,
     toList,
+    toUnboundSet,
     union,
     cartProduct,
     map,
@@ -19,6 +20,7 @@ module Insieme.Utils.BoundSet (
 
 import Data.Typeable
 import qualified Data.Set as Set
+import qualified Insieme.Utils.UnboundSet as USet
 
 import Prelude hiding (map)
 
@@ -70,6 +72,10 @@ fromList as = union set empty
 toList :: BoundSet bb a -> [a]
 toList Universe     = error "Cannot convet Universe to list"
 toList (BoundSet x) = Set.toList x
+
+toUnboundSet :: BoundSet bb a -> USet.UnboundSet a
+toUnboundSet Universe     = USet.Universe
+toUnboundSet (BoundSet x) = USet.fromSet x
 
 union :: (IsBound bb, Ord a) => BoundSet bb a -> BoundSet bb a -> BoundSet bb a
 union    Universe     _            = Universe

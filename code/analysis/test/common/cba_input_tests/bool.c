@@ -53,6 +53,10 @@ int main(int argc, char** argv) {
 	cba_expect_true(12 < 14);
 	cba_expect_true(12+argc < 14+argc);
 
+	// also the negative version
+	cba_expect_false(12 > 14);
+	cba_expect_false(12+argc > 14+argc);
+
 	// dealing with unknown values
 	cba_expect_may_be_true(12 < argc);
 	cba_expect_may_be_false(12 < argc);

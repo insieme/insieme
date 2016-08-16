@@ -99,6 +99,10 @@ namespace analysis {
 			elements.insert(a);
  		}
 
+		bool contains(const Elem& a) const {
+			return all || (elements.find(a) != elements.end());
+		}
+
 		auto begin() const -> decltype(elements.begin()) {
 			assert_false(isUniversal());
 			return elements.begin();

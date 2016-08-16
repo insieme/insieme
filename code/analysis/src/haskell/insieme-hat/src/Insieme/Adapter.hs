@@ -158,10 +158,10 @@ foreign export ccall "hat_arithmeticValue"
     arithValue :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticSet)
 
 checkAlias :: StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO CInt
-checkAlias x_c y_c = do
+checkAlias x_c y_c = handleAll (return . fromIntegral . fromEnum $ Alias.MayAlias) $ do
     x <- deRefStablePtr x_c
     y <- deRefStablePtr y_c
-    return $ fromIntegral $ fromEnum $ Alias.checkAlias x y
+    evaluate $ fromIntegral $ fromEnum $ Alias.checkAlias x y
 
 foreign export ccall "hat_checkAlias"
     checkAlias :: StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO CInt
