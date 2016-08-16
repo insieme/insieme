@@ -54,18 +54,23 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
             then ProgramPoint parent Pre                   -- start with last argument
             else ProgramPoint (goDown (i+1) parent) Post   -- eval arguments in reverse order
     
-    Node IR.CompoundStmt stmts -> single $
-            if i == 0                                      -- if it is the first statement
-            then ProgramPoint parent Pre                   -- then go to the pre-state of the compound statement
-            else ProgramPoint (goDown (i-1) parent) Post   -- else to the post state of the previous statement
-    
     Node IR.Lambda   _ -> call_sites
     
     Node IR.BindExpr _ -> call_sites
     
+    Node IR.TupleExpr _ -> single $ ProgramPoint parent Pre
+    
+    Node IR.Expressions _ | i == 0 -> single $ ProgramPoint parent Pre
+    Node IR.Expressions _          -> single $ ProgramPoint (goDown (i-1) parent) Post
+    
     Node IR.Declaration _ -> single $ ProgramPoint parent Pre
     
     Node IR.DeclarationStmt _ -> single $ ProgramPoint parent Pre
+    
+    Node IR.CompoundStmt stmts -> single $
+            if i == 0                                      -- if it is the first statement
+            then ProgramPoint parent Pre                   -- then go to the pre-state of the compound statement
+            else ProgramPoint (goDown (i-1) parent) Post   -- else to the post state of the previous statement
     
     Node IR.ReturnStmt _ -> single $ ProgramPoint parent Pre
     
@@ -149,6 +154,9 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
     
     -- call expressions are switching from Internal to Post
     Node IR.CallExpr _ -> single $ ProgramPoint a Internal
+
+    -- for tuple expressions, the predecessor is the end of the epxressions
+    Node IR.TupleExpr        _ -> single $ ProgramPoint (goDown 1 a) Post
     
     -- declarationns are done once the init expression is done
     Node IR.Declaration _ -> single $ ProgramPoint (goDown 1 a) Post
