@@ -96,6 +96,40 @@ namespace analysis {
 
 	}
 
+	TEST(MemoryStateAnalysis, TupleReadWrite) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto stmt = builder.parseStmt(
+				"{"
+				"	var ref<(bool,bool)> a = ref_new(type_lit((bool,bool)));"
+				"	"
+				"	*(a.0);"				// should be undefined
+				"	*(a.1);"				// should be undefined
+				"	a.0 = true;"
+				"	a.1 = false;"
+				"	*(a.0);"				// should be true now
+				"	*(a.1);"				// should be false now
+				"	a = (false,true);"
+				"	*(a.0);"				// should be false now
+				"	*(a.1);"				// should be true now
+				"}"
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(stmt);
+
+		auto comp = CompoundStmtAddress(stmt);
+
+		EXPECT_TRUE(isUndefined(comp[1]));
+		EXPECT_TRUE(isUndefined(comp[2]));
+
+		EXPECT_TRUE(isTrue(comp[5]));
+		EXPECT_TRUE(isFalse(comp[6]));
+
+		EXPECT_TRUE(isFalse(comp[8]));
+		EXPECT_TRUE(isTrue(comp[9]));
+	}
+
 } // end namespace analysis
 } // end namespace insieme
 
