@@ -54,10 +54,6 @@ int main(int argc, char** argv) {
 	// let's start with something simple
 	cba_expect_eq_int(1,1);
 
-	cba_print_code();
-	cba_print_int(1);
-	cba_print_int(argc);
-
 	// a little more challenging
 	int a = 10;
 	int b = 12;

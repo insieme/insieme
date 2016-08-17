@@ -164,6 +164,23 @@ namespace analysis {
 
 	}
 
+	TYPED_TEST_P(ArithmeticValue, SideEffectFreeExpressions) {
+
+		IRBuilder& builder = getBuilder();
+		std::map<std::string,NodePtr> symbols;
+		symbols["x"] = builder.literal("x",builder.parseType("int<4>"));
+		symbols["r"] = builder.literal("r",builder.parseType("ref<int<4>>"));
+
+		// free variables should have an unknown value
+		EXPECT_EQ("{x}",   toString(this->getValue(builder.parseExpr("x", symbols))));
+		EXPECT_EQ("{x+2}", toString(this->getValue(builder.parseExpr("x+2", symbols))));
+
+		EXPECT_EQ("{*r}",     toString(this->getValue(builder.parseExpr("*r", symbols))));
+		EXPECT_EQ("{*r+2}",   toString(this->getValue(builder.parseExpr("*r+2", symbols))));
+		EXPECT_EQ("{x+*r+2}", toString(this->getValue(builder.parseExpr("*r+2+x", symbols))));
+
+	}
+
 	TYPED_TEST_P(ArithmeticValue, Arithmetic_101) {
 
 		NodeManager mgr;
@@ -489,6 +506,7 @@ namespace analysis {
 	REGISTER_TYPED_TEST_CASE_P(ArithmeticValue,
 			Constants,
 			FreeVariables,
+			SideEffectFreeExpressions,
 			Arithmetic_101,
 			Arithmetic_102,
 			Arithmetic_103,

@@ -7,6 +7,7 @@ module Insieme.Inspire.Utils (
     foldAddressPrune,
     parseIR,
     findDecl,
+    getType,
     isFreeVariable
 ) where
 
@@ -85,8 +86,13 @@ findDecl start = findDecl start
     findDecl :: NodeAddress -> Maybe NodeAddress
     findDecl addr = case getNode addr of
         Node IR.Lambda _ -> lambda addr
-        _ -> declstmt addr <|> forstmt addr <|> bindexpr addr <|>
-             compstmt addr <|> nextlevel addr
+        _ -> parameter addr <|> declstmt addr <|> forstmt addr   <|> 
+             bindexpr addr  <|> compstmt addr <|> nextlevel addr
+
+    parameter :: NodeAddress -> Maybe NodeAddress
+    parameter addr = case getNode addr of
+        Node IR.Parameters _ -> Just start
+        _ -> Nothing
 
     declstmt :: NodeAddress -> Maybe NodeAddress
     declstmt addr = case getNode addr of
@@ -120,16 +126,37 @@ findDecl start = findDecl start
     nextlevel addr = getParent addr >>= findDecl
 
 
+
+getType :: Tree IR.NodeType -> Maybe (Tree IR.NodeType)
+getType (Node IR.Literal         (t:_)) = Just t
+getType (Node IR.Variable        (t:_)) = Just t
+getType (Node IR.CallExpr        (t:_)) = Just t
+getType (Node IR.LambdaExpr      (t:_)) = Just t
+getType (Node IR.LambdaReference (t:_)) = Just t
+getType (Node IR.BindExpr        (t:_)) = Just t
+getType (Node IR.CastExpr        (t:_)) = Just t
+getType (Node IR.TupleExpr       (t:_)) = Just t
+getType (Node IR.InitExpr        (t:_)) = Just t
+getType (Node IR.JobExpr         (t:_)) = Just t
+getType _ = Nothing
+
+
+
+
+isVariable :: NodeAddress -> Bool
+isVariable a = case getNode a of 
+    Node IR.Variable _ -> True
+    _                  -> False
+
 isFreeVariable :: NodeAddress -> Bool
-isFreeVariable v = isNothing decl || isEntryPointParam decl
+isFreeVariable v | (not . isVariable) v = False 
+isFreeVariable v = isNothing decl || (isEntryPointParam $ fromJust decl)
     where
         decl = findDecl v
         
-        isEntryPointParam (Just v) = case getNode $ fromJust $ getParent v of
+        isEntryPointParam v = case getNode $ fromJust $ getParent v of
             Node IR.Parameters _ -> (not . hasEnclosingCall) v
             _                    -> False
-            
-        isEntryPointParam Nothing  = False
         
         hasEnclosingCall a = case getNode a of
             Node IR.CallExpr _ -> True

@@ -5,7 +5,7 @@ module Insieme.Analysis.Arithmetic where
 import Data.Tree
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-import Insieme.Inspire.Utils (isFreeVariable)
+import Insieme.Inspire.Utils (isFreeVariable,getType)
 import Insieme.Utils.ParseInt
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
@@ -50,7 +50,12 @@ arithmeticValue addr = case Addr.getNode addr of
         var = Solver.mkVariable (idGen addr) [con] Solver.bot
         con = Solver.forward (arithmeticValue $ Addr.goDown 1 addr) var
 
+    n@_ | isIntExpr && isSideEffectFree addr -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNode addr) addr)
+        where
+            isIntExpr = maybe False isIntType (getType $ n)
+     
     _ -> dataflowValue addr analysis ops
+    
   where
     analysis = DataFlowAnalysis "A" arithmeticValue (compose $ BSet.Universe)
     idGen = mkVarIdentifier analysis
@@ -80,7 +85,19 @@ arithmeticValue addr = case Addr.getNode addr of
     val op a = compose $ (BSet.lift2 op) (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
 
 
-    isIntType :: Tree IR.NodeType -> Bool
-    isIntType (Node IR.GenericType (Node (IR.StringValue "int" ) _:_)) = True
-    isIntType (Node IR.GenericType (Node (IR.StringValue "uint") _:_)) = True
-    isIntType _ = False
+
+isIntType :: Tree IR.NodeType -> Bool
+isIntType (Node IR.GenericType (Node (IR.StringValue "int" ) _:_)) = True
+isIntType (Node IR.GenericType (Node (IR.StringValue "uint") _:_)) = True
+isIntType _ = False
+
+    
+-- TODO: provide a improved implementation of this filter
+    
+isSideEffectFree :: Addr.NodeAddress -> Bool
+isSideEffectFree a = case Addr.getNode a of
+    Node IR.Literal _  -> True
+    Node IR.Variable _ -> isFreeVariable a
+    Node IR.CallExpr _ -> (Addr.isBuiltin (Addr.goDown 1 a) "ref_deref") && (isSideEffectFree $ Addr.goDown 1 $ Addr.goDown 2 a)
+    _                  -> False
+    
