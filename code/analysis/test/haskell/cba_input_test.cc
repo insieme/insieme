@@ -52,6 +52,10 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/error_printer.h"
 
+#include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/pointer.h"
+#include "insieme/core/transform/node_replacer.h"
+
 #include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "insieme/utils/config.h"
@@ -59,6 +63,64 @@
 
 namespace insieme {
 namespace analysis {
+
+	class CBAInputTestExt : public core::lang::Extension {
+
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
+
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		CBAInputTestExt(core::NodeManager& manager) : core::lang::Extension(manager) {}
+
+	public:
+
+		// this extension is based upon the symbols defined by the pointer module
+		IMPORT_MODULE(core::lang::PointerExtension);
+
+		LANG_EXT_LITERAL(RefAreAlias,"cba_expect_ref_are_alias","(ref<'a>,ref<'a>)->unit");
+		LANG_EXT_LITERAL(RefMayAlias,"cba_expect_ref_may_alias","(ref<'a>,ref<'a>)->unit");
+		LANG_EXT_LITERAL(RefNotAlias,"cba_expect_ref_not_alias","(ref<'a>,ref<'a>)->unit");
+
+		LANG_EXT_DERIVED(PtrAreAlias,
+				"  (a : ptr<'a>, b : ptr<'a>) -> unit {                         "
+				"		cba_expect_ref_are_alias(ptr_to_ref(a),ptr_to_ref(b));  "
+				"  }                                                            "
+		)
+
+		LANG_EXT_DERIVED(PtrMayAlias,
+				"  (a : ptr<'a>, b : ptr<'a>) -> unit {                         "
+				"		cba_expect_ref_may_alias(ptr_to_ref(a),ptr_to_ref(b));  "
+				"  }                                                            "
+		)
+
+		LANG_EXT_DERIVED(PtrNotAlias,
+				"  (a : ptr<'a>, b : ptr<'a>) -> unit {                         "
+				"		cba_expect_ref_not_alias(ptr_to_ref(a),ptr_to_ref(b));  "
+				"  }                                                            "
+		)
+
+	};
+
+	core::ProgramPtr postProcessing(const core::ProgramPtr& prog) {
+		const auto& ext = prog.getNodeManager().getLangExtension<CBAInputTestExt>();
+		return core::transform::transformBottomUpGen(prog, [&](const core::LiteralPtr& lit)->core::ExpressionPtr {
+			const string& name = utils::demangle(lit->getStringValue());
+			if (name == "cba_expect_is_alias") {
+				return ext.getPtrAreAlias();
+			}
+			if (name == "cba_expect_may_alias") {
+				return ext.getPtrMayAlias();
+			}
+			if (name == "cba_expect_not_alias") {
+				return ext.getPtrNotAlias();
+			}
+			return lit;
+		}, core::transform::globalReplacement);
+	}
 
 	using namespace core;
 	using testing::Types;
@@ -144,7 +206,9 @@ namespace analysis {
 			NodeManager mgr;
 			std::vector<std::string> argv = {"compiler", file, "-fopenmp", "-fcilk"};
 			insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
+
 			auto prog = options.job.execute(mgr);
+			prog = postProcessing(prog);
 
 			std::cout << "done" << std::endl;
 
@@ -170,13 +234,14 @@ namespace analysis {
 				testCount++;
 
 				// alias analysis
-				if (name == "cba_expect_is_alias") {
+				if (name == "cba_expect_ref_are_alias") {
+					std::cout << *call.getArgument(0) << "\n";
 					EXPECT_TRUE(this->areAlias(call.getArgument(0), call.getArgument(1)))
 					<< *core::annotations::getLocation(call) << std::endl;
-				} else if (name == "cba_expect_may_alias") {
+				} else if (name == "cba_expect_ref_may_alias") {
 					EXPECT_TRUE(this->mayAlias(call.getArgument(0), call.getArgument(1)))
 						<< *core::annotations::getLocation(call) << std::endl;
-				} else if (name == "cba_expect_not_alias") {
+				} else if (name == "cba_expect_ref_not_alias") {
 					EXPECT_TRUE(this->notAlias(call.getArgument(0), call.getArgument(1)))
 						<< *core::annotations::getLocation(call) << std::endl;
 

@@ -75,7 +75,7 @@ referenceValue addr = case getNode addr of
         
         top = compose USet.Universe
         
-        opsHandler = [ allocHandler , declHandler , refNarrow , refExpand , refCast ]
+        opsHandler = [ allocHandler , declHandler , refNarrow , refExpand , refCast , refReinterpret ]
         
         allocHandler = OperatorHandler cov noDep val
             where 
@@ -104,6 +104,12 @@ referenceValue addr = case getNode addr of
                 cov a = isBuiltin a "ref_cast"
                 dep _ = [toVar baseRefVar]
                 val a = get a baseRefVar
+        
+        refReinterpret = OperatorHandler cov dep val
+            where
+                cov a = isBuiltin a "ref_reinterpret"
+                dep _ = [toVar baseRefVar]
+                val a = get a baseRefVar            -- TODO: check when this conversion is actually valid
         
         noDep a = []
         
