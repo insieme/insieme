@@ -12,6 +12,7 @@ module Insieme.Utils.BoundSet (
     toList,
     toUnboundSet,
     union,
+    intersection,
     cartProduct,
     map,
     lift2,
@@ -83,6 +84,11 @@ union    _            Universe     = Universe
 union bs@(BoundSet x) (BoundSet y) = if Set.size u > bound bs then Universe else BoundSet u
   where
     u = Set.union x y
+
+intersection :: (IsBound bb, Ord a) => BoundSet bb a -> BoundSet bb a -> BoundSet bb a
+intersection    Universe     x            = x
+intersection    x            Universe     = x
+intersection bs@(BoundSet x) (BoundSet y) = BoundSet $ Set.intersection x y
 
 cartProduct :: (IsBound bb, Ord a, Ord b)
             => BoundSet bb a -> BoundSet bb b -> BoundSet bb (a, b)
