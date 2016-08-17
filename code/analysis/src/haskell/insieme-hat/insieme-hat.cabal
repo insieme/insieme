@@ -52,6 +52,8 @@ executable insieme-hat
                         process >= 1.2.3,
                         split >= 0.2.3.1,
                         template-haskell >=2.9,
+                        text >= 1.2,
+                        text-format >= 0.3,
                         transformers >=0.4
     hs-source-dirs:     src
     include-dirs:       include,
