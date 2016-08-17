@@ -3,6 +3,7 @@
 module Insieme.Analysis.Arithmetic where
 
 import Data.Tree
+import Data.Typeable
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Inspire.Utils (isFreeVariable,getType)
@@ -31,9 +32,21 @@ instance BSet.IsBound b => Solver.Lattice (SymbolicFormulaSet b)  where
 
 instance BSet.IsBound b => Solver.ExtLattice (SymbolicFormulaSet b)  where
     top   = BSet.Universe
-    
+  
+  
+  
 --
 -- * Arithemtic Value Analysis
+--
+
+data ArithmeticAnalysis = ArithmeticAnalysis
+    deriving (Typeable)
+
+arithmeticAnalysis = Solver.mkAnalysisIdentifier ArithmeticAnalysis "A"
+
+
+--
+-- * Arithemtic Value Variable Generator
 --
 
 arithmeticValue :: Addr.NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex (SymbolicFormulaSet BSet.Bound10))
@@ -57,7 +70,7 @@ arithmeticValue addr = case Addr.getNode addr of
     _ -> dataflowValue addr analysis ops
     
   where
-    analysis = DataFlowAnalysis "A" arithmeticValue (compose $ BSet.Universe)
+    analysis = DataFlowAnalysis ArithmeticAnalysis arithmeticAnalysis arithmeticValue (compose $ BSet.Universe)
     idGen = mkVarIdentifier analysis
 
     compose = ComposedValue.toComposed

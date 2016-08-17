@@ -12,6 +12,7 @@ import qualified Insieme.Analysis.Solver as Solver
 
 import Debug.Trace
 import Data.Tree
+import Data.Typeable
 import Data.Maybe
 import Insieme.Inspire.NodeAddress
 import Insieme.Analysis.Boolean
@@ -34,10 +35,20 @@ instance Solver.Lattice PredecessorList where
     join [] = []
     join xs = foldr1 (++) xs
 
+
 --
 -- * Predecessor Analysis
 --
 
+data PredecessorAnalysis = PredecessorAnalysis
+    deriving (Typeable)
+
+predecessorAnalysis = Solver.mkAnalysisIdentifier PredecessorAnalysis "pred_of"
+
+
+--
+-- * Predecessor Variable Generator
+--
 
 predecessor :: ProgramPoint -> Solver.TypedVar PredecessorList
 
@@ -207,4 +218,4 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
 
 -- variable ID generator
 idGen :: ProgramPoint -> Solver.Identifier
-idGen p = Solver.mkIdentifier $ "pred_of:" ++ (show p)
+idGen (ProgramPoint a p) = Solver.mkIdentifier predecessorAnalysis a (show p)

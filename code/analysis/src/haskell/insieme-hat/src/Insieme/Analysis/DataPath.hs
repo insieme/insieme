@@ -2,6 +2,7 @@
 
 module Insieme.Analysis.DataPath where
 
+import Data.Typeable
 
 import Insieme.Inspire.NodeAddress
 import qualified Data.Set as Set
@@ -41,12 +42,23 @@ instance (FieldIndex i) => Solver.ExtLattice (DataPathSet i) where
 -- * DataPath Analysis
 --
 
+
+data DataPathAnalysis = DataPathAnalysis
+    deriving (Typeable)
+
+dataPathAnalysis = Solver.mkAnalysisIdentifier DataPathAnalysis "DP"
+
+
+--
+-- * DataPath Variable Generator
+--
+
 dataPathValue :: (FieldIndex i) => NodeAddress -> Solver.TypedVar (ValueTree.Tree i (DataPathSet i))
 dataPathValue addr = dataflowValue addr analysis ops
                 
   where
   
-    analysis = DataFlowAnalysis "DP" dataPathValue top
+    analysis = DataFlowAnalysis DataPathAnalysis dataPathAnalysis dataPathValue top
   
     idGen = mkVarIdentifier analysis
   

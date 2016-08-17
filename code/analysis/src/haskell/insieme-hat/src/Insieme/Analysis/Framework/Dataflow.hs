@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Insieme.Analysis.Framework.Dataflow (
-    DataFlowAnalysis(DataFlowAnalysis,analysisID,variableGenerator,topValue),
+    DataFlowAnalysis(DataFlowAnalysis,analysis,analysisIdentifier,variableGenerator,topValue),
     mkVarIdentifier,
     dataflowValue
 ) where
@@ -11,6 +11,7 @@ import Data.Int
 import Data.Foldable
 import Data.List
 import Data.Tree
+import Data.Typeable
 import Data.Maybe
 import Debug.Trace
 import qualified Data.Set as Set
@@ -44,24 +45,25 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 -- * Data Flow Analysis summary
 --
 
-data DataFlowAnalysis a = DataFlowAnalysis {
-    analysisID         :: String,                               -- ^ an identifier for the represented analysis
-    variableGenerator  :: NodeAddress -> Solver.TypedVar a,     -- ^ the variable generator of the represented analysis
-    topValue           :: a                                     -- ^ the top value of this analysis
+data DataFlowAnalysis a v = DataFlowAnalysis {
+    analysis           :: a,                                    -- ^ the analysis type token
+    analysisIdentifier :: Solver.AnalysisIdentifier,            -- ^ the analysis identifier
+    variableGenerator  :: NodeAddress -> Solver.TypedVar v,     -- ^ the variable generator of the represented analysis
+    topValue           :: v                                     -- ^ the top value of this analysis
 }
 
 -- a function creation an identifier for a variable of a data flow analysis
-mkVarIdentifier :: DataFlowAnalysis a -> NodeAddress -> Solver.Identifier
-mkVarIdentifier a n = Solver.mkIdentifier $ (analysisID a) ++ (prettyShow n)
+mkVarIdentifier :: DataFlowAnalysis a v -> NodeAddress -> Solver.Identifier
+mkVarIdentifier a n = Solver.mkIdentifier (analysisIdentifier a) n ""
 
 
 --
 -- * Generic Data Flow Value Analysis
 --
 
-dataflowValue :: (ComposedValue.ComposedValue a i v)
+dataflowValue :: (ComposedValue.ComposedValue a i v, Typeable d)
          => NodeAddress                                     -- ^ the address of the node for which to compute a variable representing the data flow value
-         -> DataFlowAnalysis a                              -- ^ the summar of the analysis to be performed be realized by this function
+         -> DataFlowAnalysis d a                            -- ^ the summar of the analysis to be performed be realized by this function
          -> [OperatorHandler a]                             -- ^ allows selected operators to be intercepted and interpreted
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
 dataflowValue addr analysis ops = case getNode addr of

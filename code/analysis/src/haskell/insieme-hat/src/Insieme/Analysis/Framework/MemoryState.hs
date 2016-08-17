@@ -1,9 +1,11 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Insieme.Analysis.Framework.MemoryState where
 
 import Debug.Trace
 import Data.Tree
+import Data.Typeable
 import Data.Foldable
 import Insieme.Inspire.NodeAddress
 
@@ -50,19 +52,33 @@ instance (FieldIndex i) => Solver.Lattice (Definitions i) where
     merge = USet.union
     
 
--- memory state analysis
 
-memoryStateValue :: (ComposedValue.ComposedValue v i a)
+--
+-- * Memory State Analysis
+--
+
+data MemoryStateAnalysis a = MemoryStateAnalysis a
+    deriving (Typeable)
+
+memoryStateAnalysis :: (Typeable a, Typeable v) => DataFlowAnalysis a v -> Solver.AnalysisIdentifier
+memoryStateAnalysis a = Solver.mkAnalysisIdentifier (MemoryStateAnalysis a) ('M' : (show $ analysisIdentifier a) )
+
+
+--
+-- * Memory State Variable Generator
+--
+
+memoryStateValue :: (ComposedValue.ComposedValue v i a, Typeable d)
          => MemoryState                                 -- ^ the program point and memory location interested in
-         -> DataFlowAnalysis v                          -- ^ the underlying data flow analysis this memory state analysis is cooperating with
+         -> DataFlowAnalysis d v                        -- ^ the underlying data flow analysis this memory state analysis is cooperating with
          -> Solver.TypedVar v                           -- ^ the analysis variable representing the requested state
 
-memoryStateValue ms@(MemoryState pp@(ProgramPoint addr _) ml@(MemoryLocation loc)) analysis = var
+memoryStateValue ms@(MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) analysis = var
 
     where
 
         -- extend the underlysing analysis's identifier for the memory state identifier          
-        varId = Solver.mkIdentifier $ ('M' : analysisID analysis) ++ (show ms) 
+        varId = Solver.mkIdentifier (memoryStateAnalysis analysis) addr ("/" ++ (show p) ++ " " ++ show ml)
         
         var = Solver.mkVariable varId [con] Solver.bot
         con = Solver.createConstraint dep val var
@@ -126,7 +142,20 @@ memoryStateValue ms@(MemoryState pp@(ProgramPoint addr _) ml@(MemoryLocation loc
 
 
 
--- reaching definitions
+
+--
+-- * Reaching Definition Analysis
+--
+
+data ReachingDefinitionAnalysis = ReachingDefinitionAnalysis
+    deriving (Typeable)
+
+reachingDefinitionAnalysis = Solver.mkAnalysisIdentifier ReachingDefinitionAnalysis "RD"
+
+
+--
+-- * Reaching Definition Variable Generator
+--
 
 reachingDefinitions :: (FieldIndex i) => MemoryState -> Solver.TypedVar (Definitions i) 
 reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case getNode addr of 
@@ -150,7 +179,7 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
     
         analysis pp = reachingDefinitions (MemoryState pp ml)
     
-        idGen pp = Solver.mkIdentifier $ ("RD-" ++ (show ml) ++ "@" ++ (show pp)) 
+        idGen pp = Solver.mkIdentifier reachingDefinitionAnalysis addr $ ("/" ++ (show pp) ++ " for " ++ (show ml)) 
         
         extract = ComposedValue.toValue
         

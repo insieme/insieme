@@ -8,6 +8,7 @@ module Insieme.Analysis.Reachable (
 
 
 import Data.Tree
+import Data.Typeable
 import Data.Maybe
 
 import qualified Insieme.Analysis.Solver as Solver
@@ -33,8 +34,19 @@ instance Solver.Lattice Reachable where
 toBool :: Reachable -> Bool
 toBool (Reachable b) = b
 
+
 --
 -- * Reachable-In Analysis
+--
+
+data ReachableInAnalysis = ReachableInAnalysis
+    deriving (Typeable)
+
+reachableInAnalysis = Solver.mkAnalysisIdentifier ReachableInAnalysis "R[in]"
+
+
+--
+-- * Reachable-In Variable Generator
 --
 reachableIn :: NodeAddress -> Solver.TypedVar Reachable
 
@@ -83,11 +95,22 @@ reachableIn a = case getNode parent of
 
 
 
-reachableInIdGen = Solver.mkIdentifier . ("R[in]"++) . prettyShow
+reachableInIdGen a = Solver.mkIdentifier reachableInAnalysis a ""
+
 
 
 --
 -- * Reachable-Out Analysis
+--
+
+data ReachableOutAnalysis = ReachableOutAnalysis
+    deriving (Typeable)
+
+reachableOutAnalysis = Solver.mkAnalysisIdentifier ReachableOutAnalysis "R[out]"
+
+
+--
+-- * Reachable-Out Variable Generator
 --
 reachableOut :: NodeAddress -> Solver.TypedVar Reachable
 reachableOut a = case getNode a of
@@ -132,5 +155,5 @@ reachableOut a = case getNode a of
 
     where
         
-        idGen = Solver.mkIdentifier . ("R[out]"++) . prettyShow
+        idGen a = Solver.mkIdentifier reachableOutAnalysis a ""
         

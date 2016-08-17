@@ -63,6 +63,7 @@ void cba_expect_may_eq_int(int a, int b);
 void cba_print_code();
 void cba_print_ref(void*);
 void cba_print_int(int a);
+void cba_dump_json();
 
 //void cba_dump_execution_net();
 //void cba_dump_state_graph();

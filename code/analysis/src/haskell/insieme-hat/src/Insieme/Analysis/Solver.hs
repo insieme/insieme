@@ -11,6 +11,10 @@ module Insieme.Analysis.Solver (
     ExtLattice,
     top,
     
+    -- analysis identifiers
+    AnalysisIdentifier,
+    mkAnalysisIdentifier,
+    
     -- identifiers
     Identifier,
     mkIdentifier,
@@ -44,6 +48,8 @@ module Insieme.Analysis.Solver (
 import Debug.Trace
 import Data.List
 import Data.Dynamic
+import Data.Typeable
+import Data.Function
 import Data.Tuple
 import Data.Maybe
 import System.IO.Unsafe (unsafePerformIO)
@@ -53,6 +59,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Hashable as Hash
 
+import Insieme.Inspire.NodeAddress
 
 
 -- Lattice --------------------------------------------------
@@ -80,20 +87,56 @@ class (Lattice v) => ExtLattice v where
         top  :: v                           -- the top element of this lattice
 
 
+
+
+-- Analysis Identifier -----
+
+data AnalysisIdentifier = AnalysisIdentifier {
+    idToken :: TypeRep,
+    idName  :: String
+}
+
+instance Eq AnalysisIdentifier where
+    (==) = (==) `on` idToken 
+
+instance Ord AnalysisIdentifier where
+    compare = compare `on` idToken
+    
+instance Show AnalysisIdentifier where
+    show = idName
+
+
+mkAnalysisIdentifier :: (Typeable a) => a -> String -> AnalysisIdentifier
+mkAnalysisIdentifier a n = AnalysisIdentifier (typeOf a) n
+
+
 -- Identifier -----
 
-data Identifier = Identifier Int String
-        deriving (Eq, Ord)
+data Identifier = Identifier {
+    analysis :: AnalysisIdentifier,
+    address  :: NodeAddress,
+    extra    :: String
+}
+    
+
+instance Eq Identifier where
+    (==) (Identifier a1 n1 s1) (Identifier a2 n2 s2) =
+            a1 == a2 && (getAddress n1) == (getAddress n2) && s1 == s2 
+
+instance Ord Identifier where
+    compare (Identifier a1 n1 s1) (Identifier a2 n2 s2) =
+            if r1 == EQ then if r2 == EQ then r3 else r2 else r1 
+        where 
+            r1 = compare a1 a2
+            r2 = compare (getAddress n1) (getAddress n2)
+            r3 = compare s1 s2 
 
 instance Show Identifier where
-        show (Identifier _ s) = s
+        show (Identifier a n s) = (show a) ++ "@" ++ (prettyShow n) ++ "/" ++ s
 
-instance Hash.Hashable Identifier where
-        hashWithSalt salt (Identifier i _ ) = Hash.hashWithSalt salt i
-        hash (Identifier i _ ) = i
 
-mkIdentifier :: String -> Identifier
-mkIdentifier s = Identifier (Hash.hash s) s
+mkIdentifier :: AnalysisIdentifier -> NodeAddress -> String -> Identifier
+mkIdentifier a n s = Identifier a n s
 
 
 -- Analysis Variables ---------------------------------------
@@ -137,7 +180,7 @@ newtype Assignment = Assignment ( Map.Map Var Dynamic )
 instance Show Assignment where 
     show a@( Assignment m ) = "Assignemnet {\n\t"
             ++
-            ( intercalate ",\n\t" ( map (\v -> (show v) ++ " = " ++ (valuePrint v a) ) vars ) )
+            ( intercalate ",\n\t\t" ( map (\v -> (show v) ++ " = " ++ (valuePrint v a) ) vars ) )
             ++ 
             "\n}"
         where 
@@ -156,6 +199,9 @@ get (Assignment m) (TypedVar v) =
 -- updates the value for the given variable stored within the given assignment
 set :: (Typeable a) => Assignment -> TypedVar a -> a -> Assignment
 set (Assignment a) (TypedVar v) d = Assignment (Map.insert v (toDyn d) a)
+
+
+-- Debugging --
 
 -- prints the current assignment as a graph
 toDotGraph :: Assignment -> Set.Set Var -> String
@@ -204,6 +250,38 @@ dumpSolverState a v file = unsafePerformIO $ do
          writeFile (file ++ ".dot") $ toDotGraph a v
          system ("dot -Tpdf " ++ file ++ ".dot -o " ++ file ++ ".pdf")
          return ("Dumped assignment into file " ++ file ++ ".pdf!")
+
+
+toJsonMetaFile :: Assignment -> Set.Set Var -> String
+toJsonMetaFile a@( Assignment m ) vars = "{\n"
+        ++
+        "    \"bodies\": {\n"
+        ++
+        ( intercalate ",\n" ( map print $ Map.toList store ) )
+        ++
+        "\n    }\n}"
+    where
+        
+        addr = address . index
+        
+        store = foldr go Map.empty vars
+            where
+                go v m = Map.insert k (msg : Map.findWithDefault [] k m) m
+                    where
+                        k = (addr v)
+                        i = index v
+                        ext = if null . extra $ i then "" else '/' : extra i
+                        msg = (show . analysis $ i) ++ ext ++ 
+                            " = " ++ (valuePrint v a)     
+ 
+        print (a,ms) = "      \"" ++ (show a) ++ "\" : \"" ++ ( intercalate "<br>" ms) ++ "\""
+
+ 
+
+dumpToJsonFile :: Assignment -> Set.Set Var -> String -> String
+dumpToJsonFile a v file = unsafePerformIO $ do
+         writeFile (file ++ ".json") $ toJsonMetaFile a v
+         return ("Dumped assignment into file " ++ file ++ ".json!")
 
 
 -- Constraints ---------------------------------------------
@@ -263,7 +341,8 @@ solveStep :: Assignment -> Set.Set Var -> Dependencies -> [Var] -> Assignment
 -- solveStep a _ _ wl | trace ("Step: " ++ (show wl) ++ " " ++ (show a)) False = undefined
 
 -- empty work list
-solveStep a _ _ [] = a                                        -- work list is empty
+-- solveStep a _ _ [] = a                                        -- work list is empty
+solveStep a v _ [] = trace (dumpToJsonFile a v "ass_meta") $ a                                       -- work list is empty
 -- solveStep a v _ [] = trace (dumpSolverState a v "graph") $ a                                        -- work list is empty
 
 -- compute next element in work list

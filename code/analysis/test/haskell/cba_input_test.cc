@@ -51,6 +51,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/error_printer.h"
+#include "insieme/core/dump/json_dump.h"
 
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/lang/pointer.h"
@@ -235,14 +236,19 @@ namespace analysis {
 
 				// alias analysis
 				if (name == "cba_expect_ref_are_alias") {
-					std::cout << *call.getArgument(0) << "\n";
 					EXPECT_TRUE(this->areAlias(call.getArgument(0), call.getArgument(1)))
-					<< *core::annotations::getLocation(call) << std::endl;
+						<< "lhs = " << call.getArgument(0) << "\n"
+						<< "rhs = " << call.getArgument(1) << "\n"
+						<< *core::annotations::getLocation(call) << std::endl;
 				} else if (name == "cba_expect_ref_may_alias") {
 					EXPECT_TRUE(this->mayAlias(call.getArgument(0), call.getArgument(1)))
+						<< "lhs = " << call.getArgument(0) << "\n"
+						<< "rhs = " << call.getArgument(1) << "\n"
 						<< *core::annotations::getLocation(call) << std::endl;
 				} else if (name == "cba_expect_ref_not_alias") {
 					EXPECT_TRUE(this->notAlias(call.getArgument(0), call.getArgument(1)))
+						<< "lhs = " << call.getArgument(0) << "\n"
+						<< "rhs = " << call.getArgument(1) << "\n"
 						<< *core::annotations::getLocation(call) << std::endl;
 
 
@@ -307,6 +313,10 @@ namespace analysis {
 				} else if (name == "cba_print_code") {
 					// just dump the code
 					dumpPretty(prog);
+
+				} else if (name == "cba_dump_json") {
+					// just dump the code as a json file
+					core::dump::json::dumpIR("code.json", prog);
 
 				} else if (name == "cba_print_int") {
 					// print the deduced value of the argument

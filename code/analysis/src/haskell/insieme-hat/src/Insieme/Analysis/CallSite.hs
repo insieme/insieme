@@ -3,6 +3,7 @@
 module Insieme.Analysis.CallSite where
 
 import Data.Tree
+import Data.Typeable
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
 import qualified Data.Set as Set
@@ -34,8 +35,19 @@ instance Solver.Lattice CallSiteSet where
     bot   = Set.empty
     merge = Set.union
 
+
 --
 -- * CallSite Analysis
+--
+
+data CallSiteAnalysis = CallSiteAnalysis
+    deriving (Typeable)
+
+callSiteAnalysis = Solver.mkAnalysisIdentifier CallSiteAnalysis "CS"
+
+
+--
+-- * CallSite Variable Generator
 --
 
 callSites :: NodeAddress -> Solver.TypedVar CallSiteSet
@@ -50,7 +62,7 @@ callSites addr = case getNode addr of
         
   where
   
-    id = Solver.mkIdentifier . ("CS"++) . prettyShow $ addr
+    id = Solver.mkIdentifier callSiteAnalysis addr ""
         
     var = Solver.mkVariable id [con] Solver.bot
     con = Solver.createConstraint dep val var

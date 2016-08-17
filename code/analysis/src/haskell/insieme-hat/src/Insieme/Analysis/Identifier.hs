@@ -4,6 +4,7 @@ module Insieme.Analysis.Identifier where
 
 import Data.List
 import Data.Tree
+import Data.Typeable
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils (foldTree)
 import qualified Insieme.Analysis.Solver as Solver
@@ -49,6 +50,15 @@ instance Solver.ExtLattice IdentifierSet where
 -- * Identifier Analysis
 --
 
+data IdentifierAnalysis = IdentifierAnalysis
+    deriving (Typeable)
+
+identifierAnalysis = Solver.mkAnalysisIdentifier IdentifierAnalysis "I"
+
+--
+-- * Identifier Variable Generator
+--
+
 identifierValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex IdentifierSet)
 identifierValue addr = case getNode addr of
 
@@ -59,7 +69,7 @@ identifierValue addr = case getNode addr of
 
   where
   
-    analysis = DataFlowAnalysis "ID" identifierValue $ compose USet.Universe
+    analysis = DataFlowAnalysis IdentifierAnalysis identifierAnalysis identifierValue $ compose USet.Universe
   
     idGen = mkVarIdentifier analysis
 

@@ -6,6 +6,7 @@ import Debug.Trace
 import Data.Typeable
 import Data.Maybe
 import Data.Tree
+import Data.Typeable
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
 import qualified Data.Set as Set
@@ -54,6 +55,17 @@ instance (Eq i,Ord i,Show i,Typeable i) => ExtLattice (ReferenceSet i) where
 -- * Reference Analysis
 --
 
+
+data ReferenceAnalysis = ReferenceAnalysis
+    deriving (Typeable)
+
+referenceAnalysis = mkAnalysisIdentifier ReferenceAnalysis "R"
+
+
+--
+-- * Reference Variable Generator
+--
+
 referenceValue :: (FieldIndex i) => NodeAddress -> TypedVar (ValueTree.Tree i (ReferenceSet i))
 referenceValue addr = case getNode addr of 
 
@@ -68,7 +80,7 @@ referenceValue addr = case getNode addr of
         
     where
     
-        analysis = DataFlowAnalysis "R" referenceValue top
+        analysis = DataFlowAnalysis ReferenceAnalysis referenceAnalysis referenceValue top
         idGen = mkVarIdentifier analysis
         
         compose = ComposedValue.toComposed

@@ -5,6 +5,7 @@ module Insieme.Analysis.Callable where
 import Data.List
 import Data.Maybe
 import Data.Tree
+import Data.Typeable
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
 import qualified Insieme.Analysis.Solver as Solver
@@ -49,8 +50,19 @@ instance Solver.Lattice CallableSet where
 instance Solver.ExtLattice CallableSet where
     top   = USet.Universe
 
+
 --
 -- * Callable Analysis
+--
+
+data CallableAnalysis = CallableAnalysis
+    deriving (Typeable)
+
+callableAnalysis = Solver.mkAnalysisIdentifier CallableAnalysis "C"
+
+
+--
+-- * Callable Variable Generator
 --
 
 callableValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex CallableSet)
@@ -68,7 +80,7 @@ callableValue addr = case getNode addr of
 
   where
   
-    analysis = DataFlowAnalysis "C" callableValue $ compose USet.Universe
+    analysis = DataFlowAnalysis CallableAnalysis callableAnalysis callableValue $ compose USet.Universe
   
     idGen = mkVarIdentifier analysis
 

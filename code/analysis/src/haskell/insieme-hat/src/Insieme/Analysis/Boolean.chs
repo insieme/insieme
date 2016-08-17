@@ -2,6 +2,7 @@ module Insieme.Analysis.Boolean where
 
 import Data.Maybe
 import Data.Tree
+import Data.Typeable
 import Insieme.Analysis.Arithmetic
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Inspire.NodeAddress
@@ -48,6 +49,17 @@ instance Solver.ExtLattice Result where
 -- * Boolean Value Analysis
 --
 
+
+data BooleanAnalysis = BooleanAnalysis
+    deriving (Typeable)
+
+booleanAnalysis = Solver.mkAnalysisIdentifier BooleanAnalysis "B"
+
+
+--
+-- * Boolean Value Variable Generator
+--
+
 booleanValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex Result)
 booleanValue addr =
     case () of _
@@ -59,7 +71,7 @@ booleanValue addr =
     compose = ComposedValue.toComposed 
     extract = ComposedValue.toValue
 
-    analysis = DataFlowAnalysis "B" booleanValue (compose Both)
+    analysis = DataFlowAnalysis BooleanAnalysis booleanAnalysis booleanValue (compose Both)
     idGen = mkVarIdentifier analysis
 
     ops = [ lt, le, eq, ne, ge, gt ]

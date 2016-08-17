@@ -5,6 +5,7 @@ module Insieme.Analysis.ExitPoint where
 import Data.List
 import Data.Maybe
 import Data.Tree
+import Data.Typeable
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
 import qualified Data.Set as Set
@@ -34,8 +35,19 @@ instance Solver.Lattice ExitPointSet where
     join [] = Set.empty
     join xs = foldr1 Set.union xs
 
+
 --
 -- * ExitPoint Analysis
+--
+
+data ExitPointAnalysis = ExitPointAnalysis
+    deriving (Typeable)
+
+exitPointAnalysis = Solver.mkAnalysisIdentifier ExitPointAnalysis "EP"
+
+
+--
+-- * ExitPoint Variable Generator
 --
 
 exitPoints :: NodeAddress -> Solver.TypedVar ExitPointSet
@@ -79,7 +91,7 @@ exitPoints addr = case getNode addr of
         
   where
   
-    id = Solver.mkIdentifier . ("EP"++) . prettyShow $ addr
+    id = Solver.mkIdentifier exitPointAnalysis addr ""
     
     
 
