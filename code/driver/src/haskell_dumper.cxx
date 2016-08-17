@@ -42,9 +42,14 @@
 
 #include "insieme/core/dump/binary_haskell.h"
 #include "insieme/core/dump/json_dump.h"
+#include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/pointer.h"
+#include "insieme/core/transform/node_replacer.h"
+
+#include "insieme/utils/name_mangling.h"
 
 using namespace std;
-namespace co = insieme::core;
+using namespace insieme;
 namespace fe = insieme::frontend;
 namespace opts = boost::program_options;
 
@@ -54,6 +59,52 @@ struct CmdOptions {
 	string dumpBinaryHaskell;
 	string dumpJson;
 };
+
+class CBAInputTestExt : public core::lang::Extension {
+	/**
+	 * Allow the node manager to create instances of this class.
+	 */
+	friend class core::NodeManager;
+
+	/**
+	 * Creates a new instance based on the given node manager.
+	 */
+	CBAInputTestExt(core::NodeManager& manager) : core::lang::Extension(manager) {}
+
+  public:
+	// this extension is based upon the symbols defined by the pointer module
+	IMPORT_MODULE(core::lang::PointerExtension);
+
+	LANG_EXT_LITERAL(RefAreAlias, "IMP_cba_expect_ref_are_alias", "(ref<'a>,ref<'a>)->unit");
+	LANG_EXT_LITERAL(RefMayAlias, "IMP_cba_expect_ref_may_alias", "(ref<'a>,ref<'a>)->unit");
+	LANG_EXT_LITERAL(RefNotAlias, "IMP_cba_expect_ref_not_alias", "(ref<'a>,ref<'a>)->unit");
+
+	LANG_EXT_DERIVED(PtrAreAlias, "  (a : ptr<'a>, b : ptr<'a>) -> unit {                         "
+	                              "               IMP_cba_expect_ref_are_alias(ptr_to_ref(a),ptr_to_ref(b));  "
+	                              "  }                                                            ")
+
+	LANG_EXT_DERIVED(PtrMayAlias, "  (a : ptr<'a>, b : ptr<'a>) -> unit {                         "
+	                              "               IMP_cba_expect_ref_may_alias(ptr_to_ref(a),ptr_to_ref(b));  "
+	                              "  }                                                            ")
+
+	LANG_EXT_DERIVED(PtrNotAlias, "  (a : ptr<'a>, b : ptr<'a>) -> unit {                         "
+	                              "               IMP_cba_expect_ref_not_alias(ptr_to_ref(a),ptr_to_ref(b));  "
+	                              "  }                                                            ")
+};
+
+core::ProgramPtr postProcessing(const core::ProgramPtr& prog) {
+	const auto& ext = prog.getNodeManager().getLangExtension<CBAInputTestExt>();
+	return core::transform::transformBottomUpGen(prog,
+	                                             [&](const core::LiteralPtr& lit) -> core::ExpressionPtr {
+		                                             const string& name = utils::demangle(lit->getStringValue());
+		                                             if(name == "cba_expect_is_alias") { return ext.getPtrAreAlias(); }
+		                                             if(name == "cba_expect_may_alias") { return ext.getPtrMayAlias(); }
+		                                             if(name == "cba_expect_not_alias") { return ext.getPtrNotAlias(); }
+		                                             return lit;
+		                                         },
+	                                             core::transform::globalReplacement);
+}
+
 
 CmdOptions parseCommandLine(int argc, char** argv) {
 	CmdOptions fail = {0};
@@ -104,17 +155,18 @@ int main(int argc, char** argv) {
 	job.setFiles({options.inputFile});
 
 	// parse input code
-	co::NodeManager mgr;
+	core::NodeManager mgr;
 	auto program = job.execute(mgr);
+	program = postProcessing(program);
 
 	if(!options.dumpBinaryHaskell.empty()) {
 		ofstream out(options.dumpBinaryHaskell);
-		co::dump::binary::haskell::dumpIR(out, program);
+		core::dump::binary::haskell::dumpIR(out, program);
 	}
 
 	if(!options.dumpJson.empty()) {
 		ofstream out(options.dumpJson);
-		co::dump::json::dumpIR(out, program);
+		core::dump::json::dumpIR(out, program);
 	}
 
 	return 0;

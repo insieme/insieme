@@ -71,14 +71,14 @@ findAnalysis addr acc =
     analysis s = case s of
 
         -- alias
-        "IMP_cba_expect_is_alias" | res_alias == Alias.AreAlias -> Ok
-        "IMP_cba_expect_is_alias" -> Fail
+        "IMP_cba_expect_ref_are_alias" | res_alias == Alias.AreAlias -> Ok
+        "IMP_cba_expect_ref_are_alias" -> Fail
 
-        "IMP_cba_expect_may_alias" | res_alias == Alias.MayAlias -> Ok
-        "IMP_cba_expect_isy_alias" -> Fail
+        "IMP_cba_expect_ref_may_alias" | res_alias == Alias.MayAlias -> Ok
+        "IMP_cba_expect_ref_may_alias" -> Fail
 
-        "IMP_cba_expect_not_alias" | res_alias == Alias.NotAlias -> Ok
-        "IMP_cba_expect_ist_alias" -> Fail
+        "IMP_cba_expect_ref_not_alias" | res_alias == Alias.NotAlias -> Ok
+        "IMP_cba_expect_ref_not_alias" -> Fail
 
         -- boolean
         "IMP_cba_expect_true" | res_boolean == AnBoolean.AlwaysTrue -> Ok
