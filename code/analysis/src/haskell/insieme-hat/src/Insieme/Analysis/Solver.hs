@@ -341,8 +341,8 @@ solveStep :: Assignment -> Set.Set Var -> Dependencies -> [Var] -> Assignment
 -- solveStep a _ _ wl | trace ("Step: " ++ (show wl) ++ " " ++ (show a)) False = undefined
 
 -- empty work list
--- solveStep a _ _ [] = a                                        -- work list is empty
-solveStep a v _ [] = trace (dumpToJsonFile a v "ass_meta") $ a                                       -- work list is empty
+solveStep a _ _ [] = a                                        -- work list is empty
+-- solveStep a v _ [] = trace (dumpToJsonFile a v "ass_meta") $ a                                       -- work list is empty
 -- solveStep a v _ [] = trace (dumpSolverState a v "graph") $ a                                        -- work list is empty
 
 -- compute next element in work list
