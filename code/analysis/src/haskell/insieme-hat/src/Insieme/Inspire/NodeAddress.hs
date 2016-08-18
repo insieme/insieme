@@ -26,7 +26,8 @@ import qualified Insieme.Inspire as IR
 data NodeAddress = NodeAddress [Int] IR.Inspire (Maybe NodeAddress)
 
 instance Eq NodeAddress where
-    na@(NodeAddress a _ _) == nb@(NodeAddress b _ _) = (a == b) && (getRoot na == getRoot nb)
+    -- TODO implement NodePath
+    na@(NodeAddress a _ _) == nb@(NodeAddress b _ _) = (a == b) -- && (getRoot na == getRoot nb)
 
 instance Ord NodeAddress where
     (NodeAddress a _ _) <= (NodeAddress b _ _) = a <= b
