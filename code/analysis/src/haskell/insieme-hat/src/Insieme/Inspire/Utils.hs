@@ -118,7 +118,7 @@ findDecl start = findDecl start
 
     compstmt :: NodeAddress -> Maybe NodeAddress
     compstmt addr = getNode <$> getParent addr >>= \case
-        Node IR.CompoundStmt _ | last (getAddress addr) == 0 -> Nothing
+        Node IR.CompoundStmt _ | getIndex addr == 0 -> Nothing
         Node IR.CompoundStmt _ -> findDecl $ goLeft addr
         _ -> Nothing
 

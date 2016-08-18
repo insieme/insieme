@@ -42,7 +42,7 @@ getAddress :: NodeAddress -> [Int]
 getAddress (NodeAddress na _ _) = na
 
 getIndex :: NodeAddress -> Int
-getIndex a = last $ getAddress a
+getIndex (NodeAddress na _ _) = head na
 
 getIR :: NodeAddress -> IR.Inspire
 getIR (NodeAddress _ ir _) = ir
@@ -65,25 +65,25 @@ getRootIR (NodeAddress _ ir Nothing      ) = ir
 getRootIR (NodeAddress _ _  (Just parent)) = getRootIR parent
 
 prettyShow :: NodeAddress -> String
-prettyShow (NodeAddress na _ _ ) = '0' : concat ['-' : show x | x <- na]
+prettyShow (NodeAddress na _ _ ) = '0' : concat ['-' : show x | x <- reverse na]
 
 goUp :: NodeAddress -> NodeAddress
 goUp na@(NodeAddress _ _ Nothing  ) = na
 goUp    (NodeAddress _ _ (Just na)) = na
 
 goDown :: Int -> NodeAddress -> NodeAddress
-goDown x parent@(NodeAddress xs ir _) = NodeAddress (xs ++ [x]) ir' (Just parent)
+goDown x parent@(NodeAddress xs ir _) = NodeAddress (x : xs) ir' (Just parent)
   where
     ir' = ir{IR.getTree = (subForest $ IR.getTree ir) !! x}
 
 goLeft :: NodeAddress -> NodeAddress
-goLeft na@(NodeAddress xs _ _            ) | last xs == 0 = na
+goLeft na@(NodeAddress xs _ _            ) | head xs == 0 = na
 goLeft na@(NodeAddress xs _ Nothing      ) = na
-goLeft    (NodeAddress xs _ (Just parent)) = goDown (last xs - 1) parent
+goLeft    (NodeAddress xs _ (Just parent)) = goDown (head xs - 1) parent
 
 goRight :: NodeAddress -> NodeAddress
 goRight na@(NodeAddress _  _ Nothing      ) = na
-goRight    (NodeAddress xs _ (Just parent)) = goDown (last xs + 1) parent
+goRight    (NodeAddress xs _ (Just parent)) = goDown (head xs + 1) parent
 
 lookupBuiltin :: NodeAddress -> String -> Maybe (Tree IR.NodeType)
 lookupBuiltin addr needle = Map.lookup needle (IR.getBuiltins $ getIR addr)

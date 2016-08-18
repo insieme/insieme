@@ -105,7 +105,7 @@ foreign export ccall "hat_addr_length"
 addrToArray :: StablePtr Addr.NodeAddress -> Ptr CSize -> IO ()
 addrToArray addr_c dst = do
     addr <- deRefStablePtr addr_c
-    pokeArray dst $ fromIntegral <$> Addr.getAddress addr
+    pokeArray dst $ reverse $ fromIntegral <$> Addr.getAddress addr
 
 foreign export ccall "hat_addr_toArray"
     addrToArray :: StablePtr Addr.NodeAddress -> Ptr CSize -> IO ()
@@ -217,7 +217,7 @@ passFormula formula = do
         arithemticFactor value (fromIntegral $ Ar.exponent factor)
 
     passValue :: Addr.NodeAddress -> IO (Ptr CArithmeticValue)
-    passValue addr = withArrayLen' (fromIntegral <$> Addr.getAddress addr) arithmeticValue
+    passValue addr = withArrayLen' (reverse $ fromIntegral <$> Addr.getAddress addr) arithmeticValue
 
     withArrayLen' :: Storable a => [a] -> (Ptr a -> CSize -> IO b) -> IO b
     withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
