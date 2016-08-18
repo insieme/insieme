@@ -115,28 +115,36 @@ mkAnalysisIdentifier a n = AnalysisIdentifier (typeOf a) n
 data Identifier = Identifier {
     analysis :: AnalysisIdentifier,
     address  :: NodeAddress,
-    extra    :: String
+    extra    :: String,
+    hash     :: Int
 }
     
 
 instance Eq Identifier where
-    (==) (Identifier a1 n1 s1) (Identifier a2 n2 s2) =
-            a1 == a2 && (getAddress n1) == (getAddress n2) && s1 == s2 
+    (==) (Identifier a1 n1 s1 h1) (Identifier a2 n2 s2 h2) =
+            h1 == h2 && a1 == a2 && (getAddress n1) == (getAddress n2) && s1 == s2
 
 instance Ord Identifier where
-    compare (Identifier a1 n1 s1) (Identifier a2 n2 s2) =
-            if r1 == EQ then if r2 == EQ then r3 else r2 else r1 
+    compare (Identifier a1 n1 s1 h1) (Identifier a2 n2 s2 h2) =
+            if r0 == EQ
+               then if r1 == EQ then if r2 == EQ then r3 else r2 else r1
+               else r0
         where 
+            r0 = compare h1 h2
             r1 = compare a1 a2
             r2 = compare (getAddress n1) (getAddress n2)
             r3 = compare s1 s2 
 
 instance Show Identifier where
-        show (Identifier a n s) = (show a) ++ "@" ++ (prettyShow n) ++ "/" ++ s
+        show (Identifier a n s _) = (show a) ++ "@" ++ (prettyShow n) ++ "/" ++ s
 
 
 mkIdentifier :: AnalysisIdentifier -> NodeAddress -> String -> Identifier
-mkIdentifier a n s = Identifier a n s
+mkIdentifier a n s = Identifier a n s h
+  where
+    h1 = Hash.hash $ idName a
+    h2 = Hash.hashWithSalt h1 $ getAddress n
+    h = Hash.hashWithSalt h2 s
 
 
 -- Analysis Variables ---------------------------------------
