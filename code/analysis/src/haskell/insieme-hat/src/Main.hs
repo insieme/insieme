@@ -34,17 +34,18 @@ main = do
 
     let res = Utils.foldTree go ir
 
-    print $ length $ filter (=="error") res
-    print $ length $ filter (=="ok") res
+    print $ length $ filter (=='e') res
+    print $ length $ filter (=='u') res
+    print $ length $ filter (=='o') res
 
  where
-    go :: Addr.NodeAddress -> [String] -> [String]
+    go :: Addr.NodeAddress -> [Char] -> [Char]
     go addr xs = case Addr.getNode addr of
 
-        Node IR.CallExpr _ | Addr.isBuiltin (Addr.goDown 1 addr) "ref_deref" ->
-            if USet.null res
-               then "error" : xs
-               else "ok" : xs
+        Node IR.CallExpr _ | Addr.isBuiltin (Addr.goDown 1 addr) "ref_deref" -> case () of
+                _ | USet.null res       -> 'e' : xs
+                _ | USet.isUniverse res -> 'u' : xs
+                _                       -> 'o' : xs
 
         _ -> xs
 
