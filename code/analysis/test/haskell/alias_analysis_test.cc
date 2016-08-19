@@ -188,7 +188,7 @@ namespace analysis {
 		EXPECT_TRUE(notAlias(comp[35], comp[38]));
 	}
 
-	TEST(AdvancedAliasAnalysis, Pointer) {
+	TEST(AdvancedAliasAnalysis, PointerRefConversion) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -207,6 +207,36 @@ namespace analysis {
 
 		EXPECT_TRUE(areAlias(comp[2], comp[2]));
 	}
+
+
+	TEST(AdvancedAliasAnalysis, PointerFromRef) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto stmt = builder.parseStmt(
+				"{"
+				"	var ref<A> a = ref_new(type_lit(A)); "
+				"	var ref<A> b = ref_new(type_lit(A)); "
+				"	var ref<ptr<A>> p = ptr_from_ref(a); "
+				"	"
+				"	ptr_to_ref(*p);"
+				"	p = ptr_from_ref(b);"
+				"	ptr_to_ref(*p);"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(stmt);
+
+		auto comp = CompoundStmtAddress(stmt);
+
+		core::dump::json::dumpIR("code.json", stmt);
+
+//		EXPECT_TRUE(areAlias(comp[3], comp[3]));
+		EXPECT_TRUE(areAlias(comp[5], comp[5]));
+
+//		EXPECT_TRUE(notAlias(comp[3], comp[5]));
+	}
+
 
 } // end namespace analysis
 } // end namespace insieme

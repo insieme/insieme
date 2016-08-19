@@ -78,7 +78,7 @@ memoryStateValue ms@(MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
     where
 
         -- extend the underlysing analysis's identifier for the memory state identifier          
-        varId = Solver.mkIdentifier (memoryStateAnalysis analysis) addr ("/" ++ (show p) ++ " " ++ show ml)
+        varId = Solver.mkIdentifier (memoryStateAnalysis analysis) addr ((show p) ++ " " ++ show ml)
         
         var = Solver.mkVariable varId [con] Solver.bot
         con = Solver.createConstraint dep val var
@@ -101,9 +101,13 @@ memoryStateValue ms@(MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
             where
                 go (Declaration       addr) = [variableGenerator analysis $ goDown 1 addr]
                 go (MaterializingCall addr) = [variableGenerator analysis $ addr]         
-                go (PerfectAssignment addr) = [variableGenerator analysis $ goDown 3 addr]
+                go (PerfectAssignment addr) = [getDeclaredValueVar $ goDown 3 addr]
                 go _                        = []
         
+                getDeclaredValueVar addr =
+                    if isMaterializingDeclaration $ getNode addr
+                    then memoryStateValue (MemoryState (ProgramPoint addr Post) (MemoryLocation addr)) analysis
+                    else variableGenerator analysis (goDown 1 addr)
         
         -- partial assignment support --
         
