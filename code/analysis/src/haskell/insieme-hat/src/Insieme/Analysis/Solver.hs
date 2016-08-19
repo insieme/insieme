@@ -320,7 +320,7 @@ emptyDep = Dependencies Map.empty
 
 addDep :: Dependencies -> Var -> [Var] -> Dependencies
 addDep d _ [] = d
-addDep d@(Dependencies m) t (v:vs) = addDep (Dependencies (Map.insertWith Set.union v (Set.singleton t) m)) t vs
+addDep d@(Dependencies m) t (v:vs) = addDep (Dependencies (Map.insertWith (\_ s -> Set.insert t s) v (Set.singleton t) m)) t vs
 
 getDep :: Dependencies -> Var -> Set.Set Var
 getDep (Dependencies d) v = fromMaybe Set.empty $ Map.lookup v d 
