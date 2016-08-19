@@ -142,7 +142,7 @@ namespace analysis {
 		if(sa.empty()) return b;
 		if(sb.empty()) return a;
 		std::vector<Elem> res;
-		std::set_union(sa.begin(), sa.end(), sb.begin(), sb.end(), res.begin(), Compare());
+		std::set_union(sa.begin(), sa.end(), sb.begin(), sb.end(), std::back_inserter(res), Compare());
 		return std::set<Elem, Compare>(res.begin(), res.end());
 	}
 
@@ -161,7 +161,7 @@ namespace analysis {
 
 		// compute the intersection
 		std::vector<Elem> res;
-		std::set_intersection(sa.begin(), sa.end(), sb.begin(), sb.end(), res.begin(), Compare());
+		std::set_intersection(sa.begin(), sa.end(), sb.begin(), sb.end(), std::back_inserter(res), Compare());
 		return std::set<Elem, Compare>(res.begin(), res.end());
 	}
 

@@ -106,9 +106,6 @@ mergeTree :: (FieldIndex i, Solver.Lattice a) => Tree i a -> Tree i a -> Tree i 
 mergeTree Empty a = a
 mergeTree a Empty = a
 
-mergeTree Inconsistent _ = Inconsistent
-mergeTree _ Inconsistent = Inconsistent
-
 mergeTree (Leaf a) (Leaf b)  = Leaf $ Solver.merge a b 
 
 mergeTree a@(Node m) b@(Node n)  = r
@@ -124,3 +121,6 @@ mergeTree a@(Node m) b@(Node n)  = r
                         fuse k = ( k, mergeTree (get k a) (get k b) ) 
                 Nothing -> Inconsistent
 
+
+-- mergeTree a b = trace ("Unsupported merge of " ++ (show a) ++ " and " ++ (show b)) Inconsistent
+mergeTree a b = Inconsistent 

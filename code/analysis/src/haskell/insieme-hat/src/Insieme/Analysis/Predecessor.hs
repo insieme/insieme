@@ -74,6 +74,8 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
     Node IR.InitExpr _ | i == 1 -> single $ ProgramPoint (goDown 2 parent) Post
     Node IR.InitExpr _          -> single $ ProgramPoint parent Pre
     
+    Node IR.CastExpr _ -> single $ ProgramPoint parent Pre
+    
     Node IR.Expressions _ | i == 0 -> single $ ProgramPoint parent Pre
     Node IR.Expressions _          -> single $ ProgramPoint (goDown (i-1) parent) Post
     
@@ -174,6 +176,7 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
     Node IR.LambdaExpr       _ -> pre
     Node IR.LambdaReference  _ -> pre
     Node IR.BindExpr         _ -> pre
+    Node IR.JobExpr          _ -> pre
     
     -- call expressions are switching from Internal to Post
     Node IR.CallExpr _ -> single $ ProgramPoint a Internal
@@ -183,6 +186,9 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
     
     -- for initialization expressions, we finish with the first sub-expression
     Node IR.InitExpr         _ -> single $ ProgramPoint (goDown 1 a) Post
+
+    -- cast expressions just process the nested node
+    Node IR.CastExpr _ -> single $ ProgramPoint (goDown 1 a) Post
     
     -- declarationns are done once the init expression is done
     Node IR.Declaration _ -> single $ ProgramPoint (goDown 1 a) Post
