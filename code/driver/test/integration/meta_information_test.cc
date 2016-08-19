@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -115,7 +115,7 @@ namespace insieme {
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 
 		// add extra compiler flags from test case
-		for(const auto& flag : testCase.getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_COMPILE)) {
+		for(const auto& flag : testCase.getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_COMPILE, true, false)) {
 			compiler.addFlag(flag);
 		}
 
@@ -185,7 +185,7 @@ namespace insieme {
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 
 		// add extra compiler flags from test case
-		for(const auto& flag : testCase.getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_COMPILE)) {
+		for(const auto& flag : testCase.getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_COMPILE, true, false)) {
 			compiler.addFlag(flag);
 		}
 

@@ -30,7 +30,6 @@ target_link_libraries(insieme_frontend ${Boost_SERIALIZATION_LIBRARY})
 target_link_libraries(insieme_frontend ${Boost_FILESYSTEM_LIBRARY})
 target_link_libraries(insieme_frontend ${Boost_SYSTEM_LIBRARY})
 target_link_libraries(insieme_frontend ${Boost_PROGRAM_OPTIONS_LIBRARY})
-target_link_libraries(insieme_frontend ${Boost_REGEX_LIBRARY})
 
 # lookup LLVM/CLANG library+header
 insieme_find_package(NAME LLVM)

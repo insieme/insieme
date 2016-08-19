@@ -192,8 +192,8 @@ int main (int argc, char **argv){
 		srand(1234);
 		vector<int> vData(sizes[i]);
 		for (size_t j=0; j < sizes[i]; j++) {
-		//	vData[j] = rand()%1000;
-		vData.insert(vData.end(), rand()%1000);
+			//	vData[j] = rand()%1000;
+			vData.insert(vData.end(), rand()%1000);
 		}
 
 		testAlgorithms(vData);

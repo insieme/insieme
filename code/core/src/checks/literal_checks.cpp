@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,7 +36,7 @@
 
 #include "insieme/core/checks/literal_checks.h"
 
-#include <boost/regex.hpp>
+#include <regex>
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_builder.h"
@@ -49,15 +49,15 @@ namespace checks {
 	namespace {
 
 	// the flags to be passed to the regex construction
-	#define FLAGS (boost::regex::flag_type)(boost::regex::optimize | boost::regex::ECMAScript)
+	#define FLAGS (std::regex::flag_type)(std::regex::optimize | std::regex::ECMAScript)
 
 		// some static regex expressions to be utilized by literal format checks
-		boost::regex floatRegex(R"((-?[0-9]+((\.[0-9]+)?(((E|e)(\+|-)[0-9]+)|f)?)?)|(0x[0-9]+\.[0-9]+p(\+|-)[0-9]+))", FLAGS);
-		boost::regex doubleRegex(R"((-?[0-9]+((\.[0-9]+)?(((E|e)(\+|-)[0-9]+))?)?)|(0x[0-9]+\.[0-9]+p(\+|-)[0-9]+))", FLAGS);
+		std::regex floatRegex(R"((-?[0-9]+((\.[0-9]+)?(((E|e)(\+|-)[0-9]+)|f)?)?)|(0x[0-9]+\.[0-9]+p(\+|-)[0-9]+))", FLAGS);
+		std::regex doubleRegex(R"((-?[0-9]+((\.[0-9]+)?(((E|e)(\+|-)[0-9]+))?)?)|(0x[0-9]+\.[0-9]+p(\+|-)[0-9]+))", FLAGS);
 		
 		// allow char literals
-		boost::regex signedAndCharRegex(R"(((-?(0|[1-9][0-9]*))(l|ll)?)|('\\?.'))", FLAGS);
-		boost::regex unsignedRegex(R"((0|[1-9][0-9]*)u?(l|ll)?)", FLAGS);
+		std::regex signedAndCharRegex(R"(((-?(0|[1-9][0-9]*))(l|ll)?)|('\\?.'))", FLAGS);
+		std::regex unsignedRegex(R"((0|[1-9][0-9]*)u?(l|ll)?)", FLAGS);
 	}
 
 
@@ -99,7 +99,7 @@ namespace checks {
 		}
 
 		// check pattern of specific types
-		boost::regex* pattern = 0;
+		std::regex* pattern = 0;
 
 		if(basic.isReal4(type)) { pattern = &floatRegex; }
 		if(basic.isReal8(type)) { pattern = &doubleRegex; }
@@ -108,7 +108,7 @@ namespace checks {
 		if(basic.isUnsignedInt(type)) { pattern = &unsignedRegex; }
 
 		// check pattern
-		if(pattern && !boost::regex_match(value, *pattern)) {
+		if(pattern && !std::regex_match(value, *pattern)) {
 			addError(format("value %s does not match type %s format", value, toString(*type)));
 			return res;
 		}

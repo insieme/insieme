@@ -3,8 +3,6 @@
 struct order;
 
 struct order{
-
-
 	bool operator() (int* a, int *b){
 		return *a > *b;
 	}
@@ -12,10 +10,7 @@ struct order{
 
 
 int main (){
-
 	std::set<int*, order> collection;
-	
-
 	return 0;
 }
 

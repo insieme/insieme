@@ -805,6 +805,29 @@ namespace backend {
 		})
 	}
 
+	TEST(CppSnippet, DirectStackParamConstruction) {
+		DO_TEST(R"(
+			def struct IMP_WithSingleArgConstructor {
+				x : int<4>;
+				ctor function (v1 : ref<int<4>,f,f,plain>) {
+					<ref<int<4>,f,f,plain>>((this).x) {*v1};
+				}
+			};
+			def IMP_setX = function (v0 : ref<IMP_WithSingleArgConstructor,f,f,plain>) -> IMP_WithSingleArgConstructor {
+				var ref<IMP_WithSingleArgConstructor,f,f,plain> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref));
+				v1.x = 10;
+				return ref_cast(v1, type_lit(f), type_lit(f), type_lit(cpp_rref));
+			};
+			int<4> main() {
+				var ref<IMP_WithSingleArgConstructor,f,f,plain> v0 = ref_cast(IMP_setX(IMP_WithSingleArgConstructor::(ref_decl(type_lit(ref<IMP_WithSingleArgConstructor,f,f,plain>)), 0)) materialize , type_lit(f), type_lit(f), type_lit(cpp_rref));
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(notContainsSubString, code, "&IMP_WithSingleArgConstructor");
+			EXPECT_PRED2(containsSubString, code, "{0}");
+		})
+	}
+
 	TEST(CppSnippet, Globals) {
 		DO_TEST(R"(
 			def struct A {
@@ -1250,6 +1273,7 @@ namespace backend {
 			EXPECT_PRED2(containsSubString, code, "delete o1;");
 			EXPECT_PRED2(containsSubString, code, "IMP_SlightlyLessSimpleConstructor* o2 = new IMP_SlightlyLessSimpleConstructor(42);");
 			EXPECT_PRED2(containsSubString, code, "delete o2;");
+			EXPECT_PRED2(notContainsSubString, code, "= malloc("); // make sure there are no malloc calls with result not cast to the right type
 		})
 	}
 
@@ -1430,7 +1454,7 @@ namespace backend {
 				IMP_dfun(<ref<IMP_D,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_D)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {1});
 				return 0;
 			}
-		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+		)", true, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			;
 		})
 	}

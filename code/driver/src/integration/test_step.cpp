@@ -52,11 +52,9 @@
 #include "insieme/utils/config.h"
 #include "insieme/utils/compiler/compiler.h"
 
-#include "insieme/common/env_vars.h"
-
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/regex.hpp>
+#include <regex>
 #include <boost/tokenizer.hpp>
 
 namespace insieme {
@@ -92,19 +90,6 @@ namespace integration {
 			return "xxx";
 		}
 
-		std::string getBackendCompilerString(const Language& l, const PropertyView& props) {
-			if(l == Language::C) {
-				if(getenv(INSIEME_C_BACKEND_COMPILER) != nullptr) {
-					return utils::compiler::getDefaultCCompilerExecutable();
-				}
-			} else {
-				if(getenv(INSIEME_CXX_BACKEND_COMPILER) != nullptr) {
-					return utils::compiler::getDefaultCxxCompilerExecutable();
-				}
-			}
-			return props["compiler"];
-		}
-
 		TestStep createRefCompStep(const string& name, Language l) {
 			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				auto props = test.getPropertiesFor(name);
@@ -113,7 +98,7 @@ namespace integration {
 				TestSetup set = setup;
 
 				// start with executable
-				cmd << getBackendCompilerString(l, props);
+				cmd << driver::integration::getBackendCompilerString(props["compiler"], l == Language::CPP);
 
 				// add input files
 				for(const auto& cur : test.getFiles()) {
@@ -138,7 +123,7 @@ namespace integration {
 				// disable multithreading
 				set.numThreads = 0;
 
-				std::vector<string> flags = test.getCompilerArguments(name);
+				std::vector<string> flags = test.getCompilerArguments(name, true, l == Language::CPP);
 				// get all flags defined by properties
 				for(string s : flags) {
 					cmd << " " << s;
@@ -252,7 +237,7 @@ namespace integration {
 				// disable multithreading
 				set.numThreads = 0;
 
-				std::vector<string> flags = test.getCompilerArguments(name);
+				std::vector<string> flags = test.getCompilerArguments(name, false, l == Language::CPP);
 				// get all flags defined by properties
 				for(string s : flags) {
 					cmd << " " << s;
@@ -308,7 +293,7 @@ namespace integration {
 					cmd << " " << cur.string();
 				}
 
-				std::vector<string> flags = test.getCompilerArguments(name);
+				std::vector<string> flags = test.getCompilerArguments(name, false, l == Language::CPP);
 				// get all flags defined by properties
 				for(string s : flags) {
 					cmd << " " << s;
@@ -348,7 +333,7 @@ namespace integration {
 				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
 
 				// start with executable
-				cmd << getBackendCompilerString(l, props);
+				cmd << driver::integration::getBackendCompilerString(props["compiler"], l == Language::CPP);
 
 				// determine backend
 				string be = getBackendKey(backend);
@@ -385,7 +370,7 @@ namespace integration {
 				// disable multithreading
 				set.numThreads = 0;
 
-				std::vector<string> flags = test.getCompilerArguments(name);
+				std::vector<string> flags = test.getCompilerArguments(name, true, l == Language::CPP);
 				// get all flags defined by properties
 				for(string s : flags) {
 					cmd << " " << s;
@@ -768,11 +753,10 @@ namespace integration {
 		boost::tokenizer<boost::char_separator<char>> tokens(excludes, sep);
 
 		for(const string& it : tokens) {
-			assert_true(it.find("\\E") == string::npos);
-			string tmp("\\Q" + it + "\\E");
-			boost::replace_all(tmp, "*", "\\E.*\\Q");
-			boost::regex reg(tmp, boost::regex::perl);
-			if(boost::regex_match(step.getName(), reg)) { return true; }
+			string tmp(it);
+			boost::replace_all(tmp, "*", ".*");
+			std::regex reg(tmp);
+			if(std::regex_match(step.getName(), reg)) { return true; }
 		}
 		return false;
 	}
@@ -974,8 +958,8 @@ namespace integration {
 		}
 
 		// match the name of each environment variable with the syntax ${NAME}
-		boost::regex reg("\\$\\{([^\\}]*)");
-		boost::match_flag_type flags = boost::match_default;
+		std::regex reg("\\$\\{([^\\}]*)");
+		std::regex_constants::match_flag_type flags = std::regex_constants::match_default;
 
 		// iterate through Insieme environment setup, expand variables and merge everything with the environment map
 		for(auto s : environmentVec) {
@@ -983,11 +967,11 @@ namespace integration {
 				string varName = s.substr(0, s.find("="));
 				string varValue = s.substr(s.find("=") + 1, string::npos);
 				string expandedVarValue;
-				boost::match_results<std::string::const_iterator> what;
+				std::match_results<std::string::const_iterator> what;
 				string::const_iterator begin = varValue.begin();
 				string::const_iterator end = varValue.end();
-				while(boost::regex_search(begin, end, what, reg, flags)) {
-					boost::replace_all(varValue, string("${" + what[1] + "}"), environmentMap[what[1]]);
+				while(std::regex_search(begin, end, what, reg, flags)) {
+					boost::replace_all(varValue, string("${" + what[1].str() + "}"), environmentMap[what[1]]);
 					begin = what[0].second;
 				}
 				// replace if already present, i.e. normal shell behavior

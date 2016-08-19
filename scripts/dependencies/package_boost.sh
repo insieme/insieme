@@ -6,7 +6,7 @@ FILE="${NAME}_${VERSION//./_}.tar.bz2"
 URL="http://downloads.sourceforge.net/project/boost/boost/$VERSION/$FILE"
 SHA256SUM="727a932322d94287b62abb1bd2d41723eec4356a7728909e38adb65ca25241ca"
 
-BOOST_LIBS="filesystem,program_options,random,system,regex,thread,serialization,date_time,wave"
+BOOST_LIBS="filesystem,program_options,system,serialization"
 
 pkg_extract() {
 	tar xf "$FILE"

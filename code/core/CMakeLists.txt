@@ -102,7 +102,6 @@ target_include_directories(insieme_core PUBLIC ${CUDD_INCLUDE_DIRS} )
 # lookup Boost library
 insieme_find_package(NAME Boost COMPONENTS regex) 
 target_include_directories(insieme_core SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
-target_link_libraries(insieme_core ${Boost_REGEX_LIBRARY})
 
 # =============================================  TESTING  =====================================
 set( ut_prefix  ut_core)

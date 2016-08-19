@@ -1325,6 +1325,10 @@ namespace transform {
 				return core::lang::buildRefTemp(core::analysis::getReferencedType(call->getType())).as<core::CallExprPtr>();
 			}
 			return call;
+		}, [](const core::NodePtr& node) {
+			// we don't want to convert within deeper calls
+			if(node.isa<CallExprPtr>()) return core::transform::ReplaceAction::Prune;
+			return core::transform::ReplaceAction::Process;
 		});
 		return ret;
 	}

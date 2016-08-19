@@ -1175,7 +1175,7 @@ namespace backend {
 
 			// ---------------- add a new operator ------------------------
 
-			if (ref.isPlain()) {
+			if(ref.isPlain()) {
 
 				string newOpName = "_ref_new_" + converter.getNameManager().getName(ptr);
 				res->newOperatorName = manager->create(newOpName);
@@ -1187,7 +1187,7 @@ namespace backend {
 				std::stringstream code;
 				code << "/* New Operator for type " << toString(*ptr) << "*/ \n"
 					"static inline " << resultTypeName << " " << newOpName << "(" << valueTypeName << " value) {\n"
-					<< resultTypeName << " res = malloc(sizeof(" << valueTypeName << "));\n"
+					"    " << resultTypeName << " res = (" << resultTypeName << ")malloc(sizeof(" << valueTypeName << "));\n"
 					"    *res = value;\n"
 					"    return res;\n"
 					"}\n";
@@ -1201,7 +1201,6 @@ namespace backend {
 
 				// add include for malloc
 				res->newOperator->addInclude(string("stdlib.h"));
-
 			}
 
 			// done
