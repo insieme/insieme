@@ -71,6 +71,9 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
     
     Node IR.TupleExpr _ -> single $ ProgramPoint parent Pre
     
+    Node IR.InitExpr _ | i == 1 -> single $ ProgramPoint (goDown 2 parent) Post
+    Node IR.InitExpr _          -> single $ ProgramPoint parent Pre
+    
     Node IR.Expressions _ | i == 0 -> single $ ProgramPoint parent Pre
     Node IR.Expressions _          -> single $ ProgramPoint (goDown (i-1) parent) Post
     
@@ -83,10 +86,16 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
             then ProgramPoint parent Pre                   -- then go to the pre-state of the compound statement
             else ProgramPoint (goDown (i-1) parent) Post   -- else to the post state of the previous statement
     
-    Node IR.ReturnStmt _ -> single $ ProgramPoint parent Pre
-    
     Node IR.IfStmt _ | i == 0 -> single $ ProgramPoint parent Pre
     Node IR.IfStmt _ -> single $ ProgramPoint (goDown 0 parent) Post        -- todo: make dependent on result of conditional expression
+
+    -- for loops --
+    Node IR.ForStmt _ | i == 0 -> single $ ProgramPoint parent Pre                                                              -- declarations
+    Node IR.ForStmt _ | i == 1 -> single $ ProgramPoint (goDown 0 parent) Post                                                  -- end value
+    Node IR.ForStmt _ | i == 2 -> single $ ProgramPoint (goDown 1 parent) Post                                                  -- step value
+    Node IR.ForStmt _ | i == 3 -> multiple $ [ProgramPoint (goDown 2 parent) Post, ProgramPoint (goDown 3 parent) Post ]        -- body - TODO: add support for continue
+    
+    Node IR.ReturnStmt _ -> single $ ProgramPoint parent Pre
     
     _ -> trace ( " Unhandled Pre Program Point: " ++ (show p) ++ " for parent " ++ (show $ rootLabel $ getNode parent) ) $ error "unhandled case"
     
@@ -95,8 +104,11 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
     parent = fromJust $ getParent a
     i = getIndex a
   
+    multiple :: [ProgramPoint] -> Solver.TypedVar PredecessorList
+    multiple x = Solver.mkVariable (idGen p) [] x 
+  
     single :: ProgramPoint -> Solver.TypedVar PredecessorList
-    single x = Solver.mkVariable (idGen p) [] [x] 
+    single x = multiple [x] 
     
     call_sites = Solver.mkVariable (idGen p) [con] []
     con = Solver.createConstraint dep val call_sites
@@ -169,6 +181,9 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
     -- for tuple expressions, the predecessor is the end of the epxressions
     Node IR.TupleExpr        _ -> single $ ProgramPoint (goDown 1 a) Post
     
+    -- for initialization expressions, we finish with the first sub-expression
+    Node IR.InitExpr         _ -> single $ ProgramPoint (goDown 1 a) Post
+    
     -- declarationns are done once the init expression is done
     Node IR.Declaration _ -> single $ ProgramPoint (goDown 1 a) Post
     
@@ -202,6 +217,9 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
             thenBranch = ProgramPoint (goDown 1 a) Post
             elseBranch = ProgramPoint (goDown 2 a) Post 
     
+    -- for loop statement 
+    Node IR.ForStmt _ -> multiple [ ProgramPoint (goDown 2 a) Post , ProgramPoint (goDown 3 a) Post ]
+    
     -- return statement
     Node IR.ReturnStmt _ -> single $ ProgramPoint (goDown 0 a) Post
     
@@ -210,8 +228,11 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
     
   where
   
+    multiple :: [ProgramPoint] -> Solver.TypedVar PredecessorList
+    multiple x = Solver.mkVariable (idGen p) [] x 
+    
     single :: ProgramPoint -> Solver.TypedVar PredecessorList
-    single x = Solver.mkVariable (idGen p) [] [x] 
+    single x = multiple [x] 
     
     pre = single $ ProgramPoint a Pre
 
