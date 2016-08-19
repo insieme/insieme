@@ -39,6 +39,8 @@
 
 #include "insieme/analysis/haskell_interface.h"
 
+#include "insieme/core/dump/json_dump.h"
+
 #include "../common/alias_analysis_test.inc"
 
 namespace insieme {
@@ -184,6 +186,26 @@ namespace analysis {
 		EXPECT_TRUE(notAlias(comp[35], comp[36]));
 		EXPECT_TRUE(areAlias(comp[35], comp[37]));
 		EXPECT_TRUE(notAlias(comp[35], comp[38]));
+	}
+
+	TEST(AdvancedAliasAnalysis, Pointer) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto stmt = builder.parseStmt(
+				"{"
+				"	var ref<A> a = ref_new(type_lit(A)); "
+				"	var ptr<A> p = ptr_from_ref(a); "
+				"	"
+				"	ptr_to_ref(p);"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(stmt);
+
+		auto comp = CompoundStmtAddress(stmt);
+
+		EXPECT_TRUE(areAlias(comp[2], comp[2]));
 	}
 
 } // end namespace analysis

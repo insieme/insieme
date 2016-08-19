@@ -1,6 +1,5 @@
 module Insieme.Analysis.Alias where
 
-import Debug.Trace
 import Data.Set as Set
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Reference
@@ -18,7 +17,7 @@ import qualified Insieme.Utils.UnboundSet as USet
  #}
 
 checkAlias :: NodeAddress -> NodeAddress -> Results
-checkAlias x y = checkAlias' (traceShowId $ toSetReference x) (traceShowId $ toSetReference y)
+checkAlias x y = checkAlias' (toSetReference x) (toSetReference y)
   where
     -- here we determine the kind of filed index to be used for the reference analysis
     toSetReference :: NodeAddress -> USet.UnboundSet (Reference SimpleFieldIndex)

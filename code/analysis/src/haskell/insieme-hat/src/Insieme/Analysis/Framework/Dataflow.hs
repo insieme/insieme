@@ -263,6 +263,6 @@ dataflowValue addr analysis ops = case getNode addr of
                     
             indexValueVar = Arithmetic.arithmeticValue $ goDown 3 addr
 
-            tupleValueVar = varGen $ goDown 2 addr
+            tupleValueVar = varGen $ goDown 1 $ goDown 2 addr
             
              
