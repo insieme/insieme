@@ -367,7 +367,7 @@ solveStep a k d (v:vs) = solveStep resAss resKnown resDep (ds ++ vs)
                                 trg = target c                                
                                 dep = dependingOn c a
                                 newVars = (Set.fromList dep) `Set.difference` k
-                                nk = (Set.fromList dep) `Set.union` k
+                                nk = newVars `Set.union` k
                                 nd = addDep d trg dep
                                 nv = ( Set.elems $ newVars) ++ dv
 
