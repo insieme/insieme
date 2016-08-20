@@ -32,6 +32,7 @@ module Insieme.Analysis.Solver (
     
     -- solver
     resolve,
+    resolveAll,
     solve,
     
     -- constraints
@@ -328,7 +329,16 @@ getDep (Dependencies d) v = fromMaybe Set.empty $ Map.lookup v d
 
 -- solve for a single value
 resolve :: (Lattice a) => TypedVar a -> a
-resolve tv@(TypedVar v) = get (solve empty [v]) tv
+resolve tv = head $ resolveAll [tv]
+
+
+-- solve for a list of variables
+resolveAll :: (Lattice a) => [TypedVar a] -> [a]
+resolveAll tvs = res <$> tvs 
+    where
+        ass = solve empty (toVar <$> tvs)
+        res = get ass
+
 
 -- solve for a set of variables (with empty seed)
 solve :: Assignment -> [Var] -> Assignment
@@ -355,10 +365,10 @@ solveStep :: Assignment -> Set.Set Var -> Dependencies -> [Var] -> Assignment
 solveStep a _ _ [] = a                                                                                                   -- work list is empty
 
 -- compute next element in work list
-solveStep a k d (v:vs) = solveStep resAss resKnown resDep (ds ++ vs)
+solveStep a k d (v:vs) = solveStep resAss resKnown resDep ds
         where
                 -- each constraint extends the result, the dependencies, and the vars to update
-                (resAss,resKnown,resDep,ds) = foldr processConstraint (a,k,d,[]) ( constraints v )  -- update all constraints of current variable
+                (resAss,resKnown,resDep,ds) = foldr processConstraint (a,k,d,vs) ( constraints v )  -- update all constraints of current variable
                 processConstraint c (a,k,d,dv) = case ( update c $ a ) of 
                         (a',None)         -> (a',nk,nd,nv)                                        -- nothing changed, we are fine
                         (a',Increment)    -> (a',nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- add depending variables to work list

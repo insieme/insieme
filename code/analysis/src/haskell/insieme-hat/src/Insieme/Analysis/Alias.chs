@@ -17,11 +17,11 @@ import qualified Insieme.Utils.UnboundSet as USet
  #}
 
 checkAlias :: NodeAddress -> NodeAddress -> Results
-checkAlias x y = checkAlias' (toSetReference x) (toSetReference y)
+checkAlias x y = checkAlias' rx ry
   where
     -- here we determine the kind of filed index to be used for the reference analysis
-    toSetReference :: NodeAddress -> USet.UnboundSet (Reference SimpleFieldIndex)
-    toSetReference = ComposedValue.toValue . Solver.resolve . referenceValue
+    rx :: USet.UnboundSet (Reference SimpleFieldIndex)
+    (rx:ry:[]) = ComposedValue.toValue <$> Solver.resolveAll [ referenceValue x, referenceValue y ]
 
 
 checkAlias' :: Eq i => USet.UnboundSet (Reference i) -> USet.UnboundSet (Reference i) -> Results
