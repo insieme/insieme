@@ -5,7 +5,7 @@
 #
 
 
-for f in `git diff --cached --name-only | grep -i "code/.*\.\(h\|hpp\|hxx\|c\|cpp\|cxx\|cl\|cc\|inc\|def\|in\)$"` ; do
+for f in `git diff --cached --name-only | grep -i "code/.*\.\(h\|hpp\|hxx\|c\|cpp\|cxx\|cl\|cc\|inc\|def\|in\|hs\|chs\)$"` ; do
 
 	# files which have execute permissions (as happens when edited via a Samba share) should have them removed
 	if [ -x "$f" ]; then
@@ -16,13 +16,18 @@ for f in `git diff --cached --name-only | grep -i "code/.*\.\(h\|hpp\|hxx\|c\|cp
 	# check whether disk version is the same as the version to be commited
 	git diff --quiet $f
 	upToDate=$?
-	
+
 	# adding license to file (if not present)
-	ruby ./scripts/license/licensor.rb ./scripts/license/license_header.txt $f
+	if [ ${f: -3} == ".hs" ] || [ ${f: -4} == ".chs" ]; then
+		header="./scripts/license/license_header_haskell.txt"
+	else
+		header="./scripts/license/license_header.txt"
+	fi
+	ruby ./scripts/license/licensor.rb $header $f
 	licened=$?
 
 	# check whether modification can / needs to be commited
-	if [ $licened -eq 0 ] ; then 
+	if [ $licened -eq 0 ] ; then
 		if [ $upToDate -eq 0 ] ; then
 			# newly licented file can be commited
 			git add $f

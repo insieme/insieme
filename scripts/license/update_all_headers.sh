@@ -17,7 +17,11 @@ find $ROOT_DIR/ \( \
 	-ipath "$ROOT_DIR/code*.inc" -or \
 	-ipath "$ROOT_DIR/code*.def" -or \
 	-ipath "$ROOT_DIR/code*.in" \
-    \) \
-    | xargs -r -n 1 -P 8 ruby ./licensor.rb ./license_header.txt
+	\) \
+	| xargs -r -n 1 -P 8 ruby ./licensor.rb ./license_header.txt
 
-
+find $ROOT_DIR/ \( \
+	-ipath "$ROOT_DIR/code*.hs" -or \
+	-ipath "$ROOT_DIR/code*.chs" \
+	\) \
+	| xargs -r -n 1 -P 8 ruby ./licensor.rb ./license_header_haskell.txt
