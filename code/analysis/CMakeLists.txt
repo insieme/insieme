@@ -36,8 +36,10 @@ set( stack_home $ENV{INSIEME_LIBS_HOME}/stack-latest CACHE PATH "Stack Home Dire
 insieme_find_package(NAME GMP)
 
 # check for (patched) haskell stack
-if(NOT EXISTS ${stack_home}/bin/stack)
-	MESSAGE(FATAL_ERROR "Coulnd't find patched Haskell stack")
+if(NOT (${CMAKE_GENERATOR} MATCHES "Visual Studio"))
+    if(NOT EXISTS ${stack_home}/bin/stack)
+        MESSAGE(FATAL_ERROR "Coulnd't find patched Haskell stack")
+    endif()
 endif()
 
 add_subdirectory(src/haskell/insieme-hat)
