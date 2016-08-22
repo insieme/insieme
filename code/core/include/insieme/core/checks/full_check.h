@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -51,10 +51,7 @@ namespace checks {
 	/**
 	 * Allies all known semantic checks on the given node and returns the obtained message list.
 	 */
-	inline MessageList check(const NodePtr& node) {
-		return check(node, getFullCheck());
-	}
-
+	MessageList check(const NodePtr& node);
 
 } // end namespace checks
 } // end namespace core
