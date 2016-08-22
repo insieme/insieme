@@ -243,7 +243,7 @@
 %type <ExpressionPtr>                  call actual_call
 %type <LambdaExprPtr>                  lambda constructor_lambda
 %type <BindExprPtr>                    bind
-%type <ExpressionPtr>                  parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
+%type <ExpressionPtr>                  parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression mem_lambda_reference
 
 %type <VariablePtr>                    parameter
 %type <VariableList>                   parameters non_empty_parameters non_empty_bind_parameters
@@ -580,6 +580,7 @@ plain_expression : variable                                               { $$ =
                  | binary_op                                              { $$ = $1; }
                  | ternary_op                                             { $$ = $1; }
                  | this_expression                                        { $$ = $1; }
+                 | mem_lambda_reference                                   { $$ = $1; }
                  ;
 
 typed_expressions : non_empty_typed_expressions                           { $$ = $1; }
@@ -735,6 +736,9 @@ ternary_op : expression "?" expression ":" expression                     { $$ =
 
 this_expression : "this"                                                  { $$ = driver.genThis(@$); }
                 ;
+
+mem_lambda_reference : "identifier" "::" "identifier"                     { $$ = driver.genMemLambdaReference(@$, $1, $3); }
+                     ;
 
 
 //    -- statements --------------------------------------
