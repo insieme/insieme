@@ -70,7 +70,7 @@ target_link_libraries(insieme_analysis insieme_core)
 target_link_libraries(insieme_analysis insieme_driver)
 target_link_libraries(insieme_analysis insieme_utils)
 
-cotire(insieme_analysis)
+#cotire(insieme_analysis)
 
 
 # =============================================  TESTING  =====================================
