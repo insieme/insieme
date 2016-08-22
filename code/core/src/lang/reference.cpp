@@ -410,6 +410,14 @@ namespace lang {
 		return builder.callExpr(type, refExt.getRefDecl(), builder.getTypeLiteral(type));
 	}
 
+	bool isRefMathOp(const NodePtr& node) {
+		if(auto call = node.isa<core::CallExprPtr>()) {
+			return isRefMathOp(call->getFunctionExpr());
+		}
+		auto& rExt = node->getNodeManager().getLangExtension<ReferenceExtension>();
+		return rExt.isGenPostDec(node) || rExt.isGenPostInc(node) || rExt.isGenPreDec(node) || rExt.isGenPreInc(node);
+	}
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

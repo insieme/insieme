@@ -465,6 +465,8 @@ namespace parser {
 			 */
 			ExpressionPtr genThis(const location& l);
 
+			ExpressionPtr genMemLambdaReference(const location& l, const string& structName, const string& lambdaName);
+
 		  private:
 			GenericTypePtr getThisTypeForLambdaAndFunction(const bool cnst, const bool voltile);
 

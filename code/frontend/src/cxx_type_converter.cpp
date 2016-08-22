@@ -37,6 +37,7 @@
 #include "insieme/frontend/type_converter.h"
 
 #include "insieme/frontend/decl_converter.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/macros.h"
@@ -428,25 +429,21 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(memPointerTy, retTy);
 		retTy = convert(memPointerTy->getPointeeType());
-		//core::TypePtr memTy = converter.lookupTypeDetails(retTy);
-		//core::TypePtr classTy = convert(memPointerTy->getClass()->getCanonicalTypeInternal());
 
-		//if(memPointerTy->isMemberFunctionPointer()) {
-		//	frontend_assert(memTy.isa<core::FunctionTypePtr>()) << " no function type could be retrieved for pointed type\n";
+		if(memPointerTy->isMemberFunctionPointer()) {
+			auto memFunTy = retTy.as<core::FunctionTypePtr>();
+			auto funProto = llvm::dyn_cast<clang::FunctionProtoType>(memPointerTy->getPointeeType());
 
-		//	// prepend this obj to the param list
-		//	core::TypeList paramTypes = memTy.as<core::FunctionTypePtr>()->getParameterTypes();
-		//	paramTypes.insert(paramTypes.begin(), builder.refType(classTy));
-		//	core::TypePtr returnTy = memTy.as<core::FunctionTypePtr>()->getReturnType();
+			// prepend this obj to the param list
+			auto thisTy = frontend::utils::getThisType(funProto, converter.convertType(clang::QualType(memPointerTy->getClass(), 0)));
+			core::TypeList paramTypes = memFunTy->getParameterTypes();
+			paramTypes.insert(paramTypes.begin(), thisTy);
+			core::TypePtr returnTy = memFunTy->getReturnType();
 
-		//	// generate new member function type
-		//	return retTy = builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION);
-		//} else {
-		//	frontend_assert(memPointerTy->isMemberDataPointer());
-		//	return retTy = core::analysis::getMemberPointer(classTy, memTy);
-		//}
+			// generate new member function type (fun ptr/ref types are const by convention in INSPIRE)
+			retTy = builder.ptrType(builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION), true);
+		}
 
-		assert_not_implemented();
 		return retTy;
 	}
 

@@ -1221,6 +1221,28 @@ namespace parser {
 			return inLambda ? thisStack.back() : builder.deref(thisStack.back());
 		}
 
+		ExpressionPtr InspireDriver::genMemLambdaReference(const location& l, const string& structName, const string& lambdaName) {
+			auto lookupTy = findType(l, structName);
+			auto genTy = lookupTy ? lookupTy.isa<core::GenericTypePtr>() : nullptr;
+			if(!genTy) {
+				error(l, format("Symbol %s is not a struct type declared previously", structName));
+				return nullptr;
+			}
+			auto structTyIt = tu.getTypes().find(genTy);
+			if(structTyIt == tu.getTypes().end()) {
+				error(l, format("Struct %s not found in current TU", structName));
+				return nullptr;
+			}
+			auto structTy = structTyIt->second;
+			for(const auto& memFun : structTy->getRecord()->getMemberFunctions()->getMembers()) {
+				if(memFun->getNameAsString() == lambdaName) {
+					return memFun->getImplementation();
+				}
+			}
+			error(l, format("Struct %s does not contain member function %s", structName, lambdaName));
+			return nullptr;
+		}
+
 		namespace {
 			bool isDeletedBody(const InspireDriver& driver, const ExpressionPtr& lambda) {
 				auto lambdaExpr = lambda.isa<LambdaExprPtr>();

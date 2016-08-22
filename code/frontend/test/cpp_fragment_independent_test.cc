@@ -65,13 +65,13 @@ namespace frontend {
 
 	TEST(CppIndependentTest, Globals) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_globals.cpp"); }
 
-	TEST(CppIndependentTest, InitializerList) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_initializer_list.cpp", [](ConversionJob& job) {
-		job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
-	}); }
+	TEST(CppIndependentTest, InitializerList) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_initializer_list.cpp"); }
 
 	TEST(CppIndependentTest, Lambda) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda.cpp"); }
 
 	TEST(CppIndependentTest, MemberCalls) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_member_calls.cpp"); }
+
+	TEST(CppIndependentTest, MemFunPtr) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_mem_fun_ptr.cpp"); }
 
 	TEST(CppIndependentTest, Naming) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_naming.cpp"); }
 
@@ -90,6 +90,7 @@ namespace frontend {
 	TEST(CppIndependentTest, StackInitialization) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_stack_initialization.cpp"); }
 
 	TEST(CppIndependentTest, Statements) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_statements.cpp", [](ConversionJob& job) {
+		// Requires interceptor extension (test extension needs to be last)
 		job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 	}); }
 

@@ -34,25 +34,42 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+struct A {
+	void foo() const {};
+};
 
-#include "insieme/core/checks/ir_checks.h"
+struct B {
+	float bla(int a) { return 5.0f; };
+};
 
-namespace insieme {
-namespace core {
-namespace checks {
+int main() {
+	;
 
+	#pragma test expect_ir(R"(
+		def struct IMP_A {
+			const function IMP_foo = () -> unit { }
+		};
+		{
+			var ref<ptr<const IMP_A::() -> unit,t,f>,f,f,plain> v0 = ptr_of_function(IMP_A::IMP_foo);
+		}
+	)")
+	{
+		auto f = &A::foo;
+	}
 
-	/**
-	 * Obtains a combined check case containing all the checks defined within this header file.
-	 */
-	CheckPtr getFullCheck();
+	#pragma test expect_ir(R"(
+		def struct IMP_B {
+			function IMP_bla = (v1 : ref<int<4>,f,f,plain>) -> real<4> {
+				return 5.0E+0f;
+			}
+		};
+		{
+			var ref<ptr<IMP_B::(int<4>) -> real<4>,t,f>,f,f,plain> v0 = ptr_of_function(IMP_B::IMP_bla);
+		}
+	)")
+	{
+		auto f = &B::bla;
+	}
 
-	/**
-	 * Allies all known semantic checks on the given node and returns the obtained message list.
-	 */
-	MessageList check(const NodePtr& node);
-
-} // end namespace checks
-} // end namespace core
-} // end namespace insieme
+	return 0;
+}

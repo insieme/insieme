@@ -784,6 +784,13 @@ namespace parser {
 
 			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
 		}
+
+		{ // check lookup of member lambdas
+			auto expr = builder.parseExpr("def struct S { lambda foo = () -> unit { 42; } }; S::foo");
+
+			ASSERT_TRUE(expr);
+			ASSERT_TRUE(checks::check(expr).empty()) << checks::check(expr);
+		}
 	}
 
 	TEST(IR_Parser, LambdaNames) {
