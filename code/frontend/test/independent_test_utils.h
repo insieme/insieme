@@ -197,14 +197,13 @@ namespace frontend {
 				}
 			}
 
-			EXPECT_TRUE(result)         << "\tLocation     : " << core::annotations::getLocationString(addr) << "\n"
-			                            << "\tActual Pretty: " << print(actual) << "\n"
-			                            << "\tExpect Pretty: " << print(expected) << "\n"
-			                            //<< "\tActual Text: " << dumpText(actual) << "\n"
-			                            //<< "\tExpect Text: " << dumpText(expected) << "\n"
-			                            << "\tActual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
-			                            << "\tExpected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-"))
-			                            << "\n";
+			EXPECT_TRUE(result) << "\tLocation     : " << core::annotations::getLocationString(addr) << "\n"
+			                    << "\tActual Pretty: " << print(actual) << "\n"
+			                    << "\tExpect Pretty: " << print(expected) << "\n"
+			                    //<< "\tActual Text: " << dumpText(actual) << "\n"
+			                    //<< "\tExpect Text: " << dumpText(expected) << "\n"
+			                    << "\tActual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
+			                    << "\tExpected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-")) << "\n";
 
 			if(getenv("INSIEME_IRDIFF") != nullptr && expected != actual) {
 				core::analysis::irDiff(actual, expected, "CodeIR", "PragmaIR");

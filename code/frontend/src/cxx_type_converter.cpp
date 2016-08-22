@@ -424,29 +424,39 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//                 MEMBER POINTER TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	namespace {
+		core::TypePtr getThisType(Converter& converter, const clang::FunctionProtoType* funProto, const clang::Type* thisType) {
+			auto irClassTy = converter.convertType(clang::QualType(thisType, 0));
+			auto refKind = core::lang::ReferenceType::Kind::Plain;
+			switch(funProto->getRefQualifier()) {
+			case clang::RefQualifierKind::RQ_LValue: refKind = core::lang::ReferenceType::Kind::CppReference; break;
+			case clang::RefQualifierKind::RQ_RValue: refKind = core::lang::ReferenceType::Kind::CppRValueReference; break;
+			case clang::RefQualifierKind::RQ_None: break; // stop warnings
+			}
+			return core::lang::buildRefType(irClassTy, funProto->isConst(), funProto->isVolatile(), refKind);
+		}
+	}
+
 	core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::MemberPointerType* memPointerTy) {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(memPointerTy, retTy);
 		retTy = convert(memPointerTy->getPointeeType());
-		//core::TypePtr memTy = converter.lookupTypeDetails(retTy);
-		//core::TypePtr classTy = convert(memPointerTy->getClass()->getCanonicalTypeInternal());
 
-		//if(memPointerTy->isMemberFunctionPointer()) {
-		//	frontend_assert(memTy.isa<core::FunctionTypePtr>()) << " no function type could be retrieved for pointed type\n";
+		if(memPointerTy->isMemberFunctionPointer()) {
+			auto memFunTy = retTy.as<core::FunctionTypePtr>();
+			auto funProto = llvm::dyn_cast<clang::FunctionProtoType>(memPointerTy->getPointeeType());
 
-		//	// prepend this obj to the param list
-		//	core::TypeList paramTypes = memTy.as<core::FunctionTypePtr>()->getParameterTypes();
-		//	paramTypes.insert(paramTypes.begin(), builder.refType(classTy));
-		//	core::TypePtr returnTy = memTy.as<core::FunctionTypePtr>()->getReturnType();
+			// prepend this obj to the param list
+			auto thisTy = getThisType(converter, funProto, memPointerTy->getClass());
+			core::TypeList paramTypes = memFunTy->getParameterTypes();
+			paramTypes.insert(paramTypes.begin(), thisTy);
+			core::TypePtr returnTy = memFunTy->getReturnType();
 
-		//	// generate new member function type
-		//	return retTy = builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION);
-		//} else {
-		//	frontend_assert(memPointerTy->isMemberDataPointer());
-		//	return retTy = core::analysis::getMemberPointer(classTy, memTy);
-		//}
+			// generate new member function type (fun ptr/ref types are const by convention in INSPIRE)
+			retTy = builder.ptrType(builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION), true);
+		}
 
-		assert_not_implemented();
 		return retTy;
 	}
 
