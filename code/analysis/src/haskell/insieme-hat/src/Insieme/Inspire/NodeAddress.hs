@@ -37,11 +37,12 @@
 module Insieme.Inspire.NodeAddress (
     NodeAddress,
     mkNodeAddress,
-    getAddress,
-    getIndex,
+    getPathReversed,
     getIR,
-    getNode,
     getParent,
+    getPath,
+    getIndex,
+    getNode,
     isRoot,
     getRoot,
     getRootIR,
@@ -56,18 +57,22 @@ module Insieme.Inspire.NodeAddress (
 import Data.Maybe
 import Data.List (foldl')
 import Data.Tree
+import Data.Function (on)
 import qualified Data.Map as Map
 import qualified Insieme.Inspire as IR
 
-data NodeAddress = NodeAddress [Int] IR.Inspire (Maybe NodeAddress)
+type NodePath = [Int]
+
+data NodeAddress = NodeAddress { getPathReversed :: NodePath,
+                                 getIR           :: IR.Inspire,
+                                 getParent       :: Maybe NodeAddress }
 
 instance Eq NodeAddress where
-    -- TODO implement NodePath
-    na@(NodeAddress a _ _) == nb@(NodeAddress b _ _) = (a == b) -- && (getRoot na == getRoot nb)
+    (==) = (==) `on` getPathReversed
 
 instance Ord NodeAddress where
-    (NodeAddress a _ _) <= (NodeAddress b _ _) = a <= b
-    
+    compare = compare `on` getPathReversed
+
 instance Show NodeAddress where
     show = prettyShow
 
@@ -75,24 +80,18 @@ instance Show NodeAddress where
 mkNodeAddress :: [Int] -> IR.Inspire -> NodeAddress
 mkNodeAddress xs ir = foldl' (flip goDown) (NodeAddress [] ir Nothing) xs
 
-getAddress :: NodeAddress -> [Int]
-getAddress (NodeAddress na _ _) = na
+-- | Slow, use 'getPathReversed' where possible
+getPath :: NodeAddress -> NodePath
+getPath = reverse . getPathReversed
 
 getIndex :: NodeAddress -> Int
-getIndex (NodeAddress na _ _) = head na
-
-getIR :: NodeAddress -> IR.Inspire
-getIR (NodeAddress _ ir _) = ir
+getIndex = head . getPathReversed
 
 getNode :: NodeAddress -> Tree IR.NodeType
 getNode = IR.getTree . getIR
 
-getParent :: NodeAddress -> Maybe NodeAddress
-getParent (NodeAddress _ _ parent) = parent
-
 isRoot :: NodeAddress -> Bool
-isRoot (NodeAddress _ _ Nothing ) = True
-isRoot (NodeAddress _ _ _       ) = False
+isRoot = isNothing . getParent
 
 getRoot :: NodeAddress -> Tree IR.NodeType
 getRoot = IR.getTree . getRootIR
@@ -102,7 +101,7 @@ getRootIR (NodeAddress _ ir Nothing      ) = ir
 getRootIR (NodeAddress _ _  (Just parent)) = getRootIR parent
 
 prettyShow :: NodeAddress -> String
-prettyShow (NodeAddress na _ _ ) = '0' : concat ['-' : show x | x <- reverse na]
+prettyShow na = '0' : concat ['-' : show x | x <- getPath na]
 
 goUp :: NodeAddress -> NodeAddress
 goUp na@(NodeAddress _ _ Nothing  ) = na

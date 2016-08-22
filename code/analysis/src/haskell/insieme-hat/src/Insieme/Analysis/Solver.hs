@@ -158,7 +158,7 @@ data Identifier = Identifier {
 
 instance Eq Identifier where
     (==) (Identifier a1 n1 s1 h1) (Identifier a2 n2 s2 h2) =
-            h1 == h2 && a1 == a2 && (getAddress n1) == (getAddress n2) && s1 == s2
+            h1 == h2 && a1 == a2 && (getPathReversed n1) == (getPathReversed n2) && s1 == s2
 
 instance Ord Identifier where
     compare (Identifier a1 n1 s1 h1) (Identifier a2 n2 s2 h2) =
@@ -168,7 +168,7 @@ instance Ord Identifier where
         where 
             r0 = compare h1 h2
             r1 = compare a1 a2
-            r2 = compare (getAddress n1) (getAddress n2)
+            r2 = compare (getPathReversed n1) (getPathReversed n2)
             r3 = compare s1 s2 
 
 instance Show Identifier where
@@ -179,7 +179,7 @@ mkIdentifier :: AnalysisIdentifier -> NodeAddress -> String -> Identifier
 mkIdentifier a n s = Identifier a n s h
   where
     h1 = Hash.hash $ idName a
-    h2 = Hash.hashWithSalt h1 $ getAddress n
+    h2 = Hash.hashWithSalt h1 $ getPathReversed n
     h = Hash.hashWithSalt h2 s
 
 
