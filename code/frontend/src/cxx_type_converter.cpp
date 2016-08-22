@@ -37,6 +37,7 @@
 #include "insieme/frontend/type_converter.h"
 
 #include "insieme/frontend/decl_converter.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/macros.h"
@@ -424,20 +425,6 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//                 MEMBER POINTER TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	namespace {
-		core::TypePtr getThisType(Converter& converter, const clang::FunctionProtoType* funProto, const clang::Type* thisType) {
-			auto irClassTy = converter.convertType(clang::QualType(thisType, 0));
-			auto refKind = core::lang::ReferenceType::Kind::Plain;
-			switch(funProto->getRefQualifier()) {
-			case clang::RefQualifierKind::RQ_LValue: refKind = core::lang::ReferenceType::Kind::CppReference; break;
-			case clang::RefQualifierKind::RQ_RValue: refKind = core::lang::ReferenceType::Kind::CppRValueReference; break;
-			case clang::RefQualifierKind::RQ_None: break; // stop warnings
-			}
-			return core::lang::buildRefType(irClassTy, funProto->isConst(), funProto->isVolatile(), refKind);
-		}
-	}
-
 	core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::MemberPointerType* memPointerTy) {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(memPointerTy, retTy);
@@ -448,7 +435,7 @@ namespace conversion {
 			auto funProto = llvm::dyn_cast<clang::FunctionProtoType>(memPointerTy->getPointeeType());
 
 			// prepend this obj to the param list
-			auto thisTy = getThisType(converter, funProto, memPointerTy->getClass());
+			auto thisTy = frontend::utils::getThisType(funProto, converter.convertType(clang::QualType(memPointerTy->getClass(), 0)));
 			core::TypeList paramTypes = memFunTy->getParameterTypes();
 			paramTypes.insert(paramTypes.begin(), thisTy);
 			core::TypePtr returnTy = memFunTy->getReturnType();
