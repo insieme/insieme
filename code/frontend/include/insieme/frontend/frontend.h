@@ -167,9 +167,10 @@ namespace frontend {
 		 * For use in e.g. isPrerequisiteMissing
 		 */
 		template <class ExtensionType>
-		bool hasExtension() {
-			for(auto extPtr : getExtensions()) {
-				if(typeid(ExtensionType) == typeid(extPtr)) { return true; }
+		bool hasExtension() const {
+			for(const auto& extPtr : getExtensions()) {
+				const auto& extVal = *extPtr;
+				if(typeid(ExtensionType) == typeid(extVal)) { return true; }
 			}
 			return false;
 		}
