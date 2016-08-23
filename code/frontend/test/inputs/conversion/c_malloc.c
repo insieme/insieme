@@ -68,5 +68,25 @@ int main() {
 		char* a = (char*)malloc(sizeof(char) * 30);
 	}
 
+	//===------------------------------------------------------------------------------------------------------------------------------------------- FREE ---===
+
+	#pragma test expect_ir(R"({
+		var ref<ptr<unit>,f,f,plain> v0 = malloc_wrapper(num_cast(5, type_lit(uint<8>)));
+		free_wrapper(*v0);
+	})")
+	{
+		void* a = malloc(5);
+		free(a);
+	}
+
+	#pragma test expect_ir(R"({
+		var ref<ptr<char>,f,f,plain> v0 = ptr_reinterpret(malloc_wrapper(sizeof(type_lit(char))*num_cast(30, type_lit(uint<8>))), type_lit(char));
+		free_wrapper(ptr_reinterpret(*v0, type_lit(unit)));
+	})")
+	{
+		char* a = (char*)malloc(sizeof(char) * 30);
+		free(a);
+	}
+
 	return 0;
 }

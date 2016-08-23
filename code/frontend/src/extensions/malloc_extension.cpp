@@ -63,11 +63,14 @@ namespace extensions {
 		auto& nodeMan = tu.getNodeManager();
 		auto& feExt = nodeMan.getLangExtension<utils::FrontendInspireModule>();
 		auto irTu = core::tu::toIR(nodeMan, tu);
-		irTu = core::transform::transformBottomUpGen(irTu, [&feExt](const core::LiteralPtr& mallocLit) -> core::ExpressionPtr {
-			if(insieme::utils::demangle(mallocLit->getStringValue()) == "malloc") {
+		irTu = core::transform::transformBottomUpGen(irTu, [&feExt](const core::LiteralPtr& lit) -> core::ExpressionPtr {
+			if(insieme::utils::demangle(lit->getStringValue()) == "malloc") {
 				return feExt.getMallocWrapper();
 			}
-			return mallocLit;
+			if(insieme::utils::demangle(lit->getStringValue()) == "free") {
+				return feExt.getFreeWrapper();
+			}
+			return lit;
 		}, core::transform::globalReplacement);
 		return core::tu::fromIR(irTu);
 	}

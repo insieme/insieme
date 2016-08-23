@@ -312,7 +312,7 @@ namespace backend {
 
 			def f = ()->int { return 4; };
 			def g = (x : int)->int { return x + 2; };
-			
+
 			int main() {
 				return g(f());
 			}
@@ -620,6 +620,28 @@ namespace backend {
 			}
 		)string", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
 			EXPECT_PRED2(notContainsSubString, code, "ptr_");
+		})
+	}
+
+	TEST(Memory, MallocFree) {
+		// char* a = (char*)malloc(sizeof(char) * 30);
+		// free(a);
+		DO_TEST(R"(
+			def malloc_wrapper = (size : uint<8>) -> ptr<unit> {
+				var uint<inf> si = size;
+				return ptr_reinterpret(ptr_from_array(ref_new(type_lit(array<uint<1>,#si>))), type_lit(unit));
+			};
+
+			def free_wrapper = (trg : ptr<unit>) -> unit { ref_delete(ptr_to_ref(trg)); };
+
+			int<4> main() {
+				var ref<ptr<char>,f,f,plain> v0 = ptr_reinterpret(malloc_wrapper(sizeof(type_lit(char))*num_cast(30, type_lit(uint<8>))), type_lit(char));
+				free_wrapper(ptr_reinterpret(*v0, type_lit(unit)));
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
+			EXPECT_PRED2(containsSubString, code, "(char*)malloc_wrapper(sizeof(char) * (uint64_t)30)");
+			EXPECT_PRED2(containsSubString, code, "free_wrapper((void*)v0)");
 		})
 	}
 
