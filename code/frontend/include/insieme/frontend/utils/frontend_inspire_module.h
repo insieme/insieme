@@ -97,6 +97,14 @@ namespace utils {
 		 * Persistent ref-temp (not replaced by normal FE mechanisms)
 		 */
 		LANG_EXT_LITERAL(FERefTemp, "fe_ref_temp", "(type<'a>) -> ref<'a,f,f>")
+
+		/**
+		 * Semantic translation of malloc (allocate an array of elements on the heap)
+		 */
+		LANG_EXT_DERIVED(MallocWrapper, R"((size : uint<8>) -> ptr<unit> {
+			var uint<inf> si = size;
+			return ptr_reinterpret(ptr_from_array(ref_new(type_lit(array<uint<1>,#si>))), type_lit(unit));
+		})");
 	};
 
 	// --------------------- Utilities ----------------------------
