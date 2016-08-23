@@ -64,139 +64,51 @@ namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	struct Env {
-		Environment& env;
-		Env() : env(Environment::getInstance()) {}
-	};
-
 	struct SimpleDeclaration {
-
 		NodeManager manager;
 		IRBuilder builder;
 		NodePtr root;
 
 		SimpleDeclaration() : builder(manager) {
-			root = builder.parseStmt(
-				"{ "
-				"   var int<4> x = 12; "
-				"   2 + 3; "
-				"   x; "
-				"} "
-			);
+			root = builder.parseStmt("{ "
+				                     "   var int<4> x = 12; "
+				                     "   2 + 3; "
+				                     "   x; "
+				                     "} ");
 		}
-
 	};
 
-	class HaskellAdapter :
+	class HaskellContext :
 		public ::testing::Test,
-		public Env,
 		public SimpleDeclaration {};
 
-	TEST_F(HaskellAdapter, NodeCount) {
-		auto ir = env.passIR(root);
-
-		// calculate overall node count
-		size_t nodeCount = 0;
-		visitDepthFirst(NodeAddress(root), [&] (const NodeAddress& n) {
-				nodeCount++;
-		}, true, true);
-
-		EXPECT_EQ(nodeCount, ir.size());
+	TEST_F(HaskellContext, Construction) {
+		Context ctx(root);
 	}
 
-	TEST_F(HaskellAdapter, AddressLength) {
-		auto ir = env.passIR(root);
-		NodeAddress addr = NodeAddress(root).getAddressOfChild(0, 0, 0, 0);
-		Address addr_hs = env.passAddress(addr, ir);
-		EXPECT_EQ(addr.getDepth(), addr_hs.size() + 1);
-	}
-
-	TEST_F(HaskellAdapter, AddressTransfere) {
-		auto ir = env.passIR(root);
-		NodeAddress addr = NodeAddress(root).getAddressOfChild(1, 0, 1);
-		Address addr_hs = env.passAddress(addr, ir);
-		NodeAddress addr_res = addr_hs.toNodeAddress(root);
-		EXPECT_EQ(addr,addr_res);
-	}
-
-	TEST_F(HaskellAdapter, FindDeclaration) {
-		auto ir = env.passIR(root);
+	TEST_F(HaskellContext, GetDefinitionPoint) {
+		Context ctx(root);
 
 		// get the targeted variable
 		CompoundStmtAddress addrRoot(root.as<CompoundStmtPtr>());
 		StatementAddress addrVar = addrRoot[2];
 		EXPECT_TRUE(addrVar.isa<VariableAddress>());
 
-		auto var = env.passAddress(addrVar, ir);
-
-		boost::optional<Address> decl = env.findDecl(var);
-		EXPECT_TRUE(decl);
-		EXPECT_EQ(addrRoot[0].as<DeclarationStmtAddress>().getVariable(), decl->toNodeAddress(root));
+		VariableAddress def = ctx.getDefinitionPoint(addrVar.as<VariableAddress>());
+		EXPECT_TRUE(def);
+		EXPECT_EQ(addrRoot[0].as<DeclarationStmtAddress>().getVariable(), def);
 	}
 
-	TEST_F(HaskellAdapter, FormulaZero) {
+	TEST_F(HaskellContext, FormulaZero) {
 		arithmetic::Formula* formula = hat_test_formulaZero();
 		EXPECT_EQ(arithmetic::Formula(), *formula);
 		delete formula;
 	}
 
-	TEST_F(HaskellAdapter, FormulaOne) {
+	TEST_F(HaskellContext, FormulaOne) {
 		arithmetic::Formula* formula = hat_test_formulaOne();
 		EXPECT_EQ(arithmetic::Formula(1), *formula);
 		delete formula;
-	}
-
-	TEST_F(HaskellAdapter, FormulaExample1) {
-		IR ir_hs = env.passIR(root);
-		NodeAddress addr = NodeAddress(root).getAddressOfChild(0, 1);
-		Address addr_hs = env.passAddress(addr, ir_hs);
-
-		env.setRoot(root);
-		arithmetic::Formula* formula = hat_test_formulaExample1(addr_hs.addr->ptr);
-		EXPECT_STREQ("2*v1^2", toString(*formula).c_str());
-		delete formula;
-	}
-
-	TEST_F(HaskellAdapter, FormulaExample2) {
-		IR ir_hs = env.passIR(root);
-		NodeAddress addr = NodeAddress(root).getAddressOfChild(0, 1);
-		Address addr_hs = env.passAddress(addr, ir_hs);
-
-		env.setRoot(root);
-		arithmetic::Formula* formula = hat_test_formulaExample2(addr_hs.addr->ptr);
-		EXPECT_STREQ("2*v1^6+1", toString(*formula).c_str());
-		delete formula;
-	}
-
-	TEST_F(HaskellAdapter, DISABLED_PrintTree) {
-		// This test is only used to generate tree for further debugging
-		StatementPtr stmt = builder.parseStmt(R"1N5P1RE(
-
-				decl lfun : (ref<int<4>>)->int<4>;
-				def fun = (arg : int<4>)->int<4> { return arg + 1; };
-				def rfun = (arg : ref<int<4>>)->int<4> { return *arg;};
-			{
-				var ref<int<4>> a;
-				var ref<int<4>> b;
-				var ref<int<4>> c;
-				var ref<int<4>> d;
-				var ref<int<4>> e;
-				var ref<int<4>> f;
-				var ref<int<4>> g;
-				{
-					a = 7;
-					fun(*b);
-					rfun(c);
-					fun(fun(*d));
-					fun(rfun(e));
-					lfun(f);
-					rfun(ref_temp_init(lfun(g)));
-				}
-			}
-		)1N5P1RE");
-
-		auto ir = env.passIR(stmt);
-		ir.printTree();
 	}
 
 } // end namespace haskell

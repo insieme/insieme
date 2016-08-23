@@ -107,8 +107,8 @@ foldAddressPrune collect prune addr = visit addr mempty
 parseIR :: String -> IO IR.Inspire
 parseIR ircode = do
     irb <- readProcess "inspire" ["-s", "-i", "-", "-k", "-"] ircode
-    let (Right ir) = parseBinaryDump (BS8.pack irb)
-    return ir
+    let Right (tree, builtins) = parseBinaryDump (BS8.pack irb)
+    return $ IR.Inspire tree builtins
 
 --
 -- * Get Definition Point Analysis

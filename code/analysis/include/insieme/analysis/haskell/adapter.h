@@ -39,9 +39,7 @@
 #include "insieme/analysis/common/arithmetic_set.h"
 
 #include "insieme/core/ir_address.h"
-#include "insieme/core/ir_node.h"
 
-#include <boost/optional.hpp>
 #include <memory>
 
 namespace insieme {
@@ -53,68 +51,32 @@ namespace haskell {
 
 	typedef void* StablePtr;
 
-	struct HSobject {
-
-		StablePtr ptr;
-
-		HSobject(StablePtr ptr);
-
-		~HSobject();
-
-	};
-
-	class IR;
-	class Address;
-
-	struct IR {
-
-		std::shared_ptr<HSobject> ir;
-		core::NodePtr original;
-
-		IR(std::shared_ptr<HSobject> ir, const core::NodePtr& original);
-
-		std::size_t size() const;
-		void printTree() const;
-
-	};
-
-	struct Address {
-
-		std::shared_ptr<HSobject> addr;
-
-		Address(std::shared_ptr<HSobject> addr);
-
-		std::size_t size() const;
-		void printNode() const;
-		core::NodeAddress toNodeAddress(const core::NodePtr& root) const;
-
-	};
-
-	class Environment {
-
-		Environment();
+	class Context {
+		StablePtr context_hs;
 
 		core::NodePtr root;
 
-	public:
+		std::map<const core::NodeAddress, StablePtr> addresses;
 
-		~Environment();
-		Environment(const Environment&) = delete;
-		void operator=(const Environment&) = delete;
+	  public:
+		explicit Context(core::NodePtr root);
+		~Context();
 
-		static Environment& getInstance();
+		// move semantics
+		Context(Context&& other);
+		Context& operator=(Context&& other);
 
-		core::NodePtr getRoot();
-		void setRoot(core::NodePtr root);
+		core::NodePtr getRoot() const;
 
-		IR passIR(const core::NodePtr& root);
-		Address passAddress(const core::NodeAddress& addr, const IR& ir);
+		// analysis
+		core::VariableAddress getDefinitionPoint(const core::VariableAddress& var);
+		BooleanAnalysisResult checkBoolean(const core::ExpressionAddress& expr);
+		AliasAnalysisResult checkAlias(const core::ExpressionAddress& x, const core::ExpressionAddress& y);
+		ArithmeticSet arithmeticValue(const core::ExpressionAddress& expr);
 
-		boost::optional<Address> findDecl(const Address& var);
-		BooleanAnalysisResult checkBoolean(const Address& expr);
-		ArithmeticSet* arithmeticValue(const Address& expr);
-		AliasAnalysisResult checkAlias(const Address& x, const Address& y);
-
+	  private:
+		StablePtr addNodeAddress(const core::NodeAddress& addr);
+		core::NodeAddress getNodeAddress(StablePtr addr) const;
 	};
 
 } // end namespace haskell

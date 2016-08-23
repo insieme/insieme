@@ -66,7 +66,9 @@ main = do
     dump <- BS.getContents
 
     -- run parser
-    let Right ir = BinPar.parseBinaryDump dump
+    let Right (tree, builtins) = BinPar.parseBinaryDump dump
+
+    let ir = IR.Inspire tree builtins
 
     let res = Utils.foldTree go ir
 

@@ -53,12 +53,13 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.IntMap as IntMap
 import qualified Data.Map.Strict as Map
+import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
 
 import Prelude hiding (take)
 
 -- | Parse binary dump.
-parseBinaryDump :: BS.ByteString -> Either String (IR.Inspire)
+parseBinaryDump :: BS.ByteString -> Either String (Tree IR.NodeType, Ctx.Builtins)
 parseBinaryDump = parseOnly $ do
     -- parse components
     parseHeader
@@ -71,7 +72,7 @@ parseBinaryDump = parseOnly $ do
     let nodes    = connectDumpNodes dumpNodes
     let builtins = resolve nodes <$> dumpBuiltins
 
-    return $ IR.Inspire (connectDumpNodes dumpNodes) builtins
+    return (connectDumpNodes dumpNodes, builtins)
 
   where
       resolve :: Tree IR.NodeType -> [Int] -> Tree IR.NodeType

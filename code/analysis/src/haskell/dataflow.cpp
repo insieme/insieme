@@ -47,25 +47,14 @@ namespace analysis {
 namespace haskell {
 
 	VariableAddress getDefinitionPoint(const VariableAddress& var) {
-		auto& env = Environment::getInstance();
-
-		auto ir = env.passIR(var.getRootNode());
-		auto var_addr = env.passAddress(var, ir);
-
-		auto target = env.findDecl(var_addr);
-		if (!target) {
-			return {};
-		}
-
-		return target->toNodeAddress(var.getRootNode()).as<VariableAddress>();
+		Context ctx(var.getRootNode());
+		return ctx.getDefinitionPoint(var);
 	}
 
 	namespace {
 		BooleanAnalysisResult checkBoolean(const ExpressionAddress& expr) {
-			auto& env = Environment::getInstance();
-			auto ir = env.passIR(expr.getRootNode());
-			auto expr_hs = env.passAddress(expr, ir);
-			return env.checkBoolean(expr_hs);
+			Context ctx(expr.getRootNode());
+			return ctx.checkBoolean(expr);
 		}
 	}
 
@@ -90,11 +79,8 @@ namespace haskell {
 	namespace {
 		AliasAnalysisResult checkAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
 			assert_eq(x.getRootNode(), y.getRootNode());
-			auto& env = Environment::getInstance();
-			auto ir = env.passIR(x.getRootNode());
-			auto x_hs = env.passAddress(x, ir);
-			auto y_hs = env.passAddress(y, ir);
-			return env.checkAlias(x_hs, y_hs);
+			Context ctx(x.getRootNode());
+			return ctx.checkAlias(x, y);
 		}
 	}
 
@@ -111,15 +97,8 @@ namespace haskell {
 	}
 
 	ArithmeticSet getArithmeticValue(const core::ExpressionAddress& expr) {
-		auto& env = Environment::getInstance();
-		env.setRoot(expr.getRootNode());
-		auto ir = env.passIR(expr.getRootNode());
-		auto expr_addr = env.passAddress(expr, ir);
-		auto res_ptr = env.arithmeticValue(expr_addr);
-
-		ArithmeticSet res(std::move(*res_ptr));
-		delete res_ptr;
-		return res;
+		Context ctx(expr.getRootNode());
+		return ctx.arithmeticValue(expr);
 	}
 
 } // end namespace haskell
