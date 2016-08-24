@@ -18,42 +18,39 @@ add_custom_target(
         "STACK_ROOT=${stack_root}"
         "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
         "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        ${stack_home}/bin/stack setup
+        ${stack_home}/bin/stack --ghc-variant standard setup
 
     # binarys like alex and c2hs have to be installed manually
     COMMAND ${CMAKE_COMMAND} -E env
         "STACK_ROOT=${stack_root}"
         "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
         "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        ${stack_home}/bin/stack build alex
+        ${stack_home}/bin/stack --ghc-variant standard build alex
     COMMAND ${CMAKE_COMMAND} -E env
         "STACK_ROOT=${stack_root}"
         "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
         "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        ${stack_home}/bin/stack build c2hs
+        ${stack_home}/bin/stack --ghc-variant standard build c2hs
 
     # install dependencies and build package
     COMMAND ${CMAKE_COMMAND} -E env
         "STACK_ROOT=${stack_root}"
         "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
         "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        ${stack_home}/bin/stack build --ghc-options='-lHSrts-ghc7.10.3'
+        ${stack_home}/bin/stack --ghc-variant standard build --ghc-options='-lHSrts-ghc7.10.3'
 
     # copy library (package key in name) to binary dir
     COMMAND ${CMAKE_COMMAND} -E env
         "STACK_ROOT=${stack_root}"
         "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
         "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        ${stack_home}/bin/stack runhaskell --package Glob --package directory utils/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}
+        ${stack_home}/bin/stack --ghc-variant standard runhaskell --package Glob --package directory utils/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}
 
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# exports
-# for some strange reason stack sometimes chooses ghc-gmp4
+# runtime library exports
 set(LIBHSRTS_DIR  ${stack_root}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts PARENT_SCOPE)
-set(LIBHSRTS2_DIR ${stack_root}/programs/x86_64-linux/ghc-gmp4-7.10.3/lib/ghc-7.10.3/rts PARENT_SCOPE)
 set(LIBHSRTS  ${stack_root}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts/libHSrts-ghc7.10.3.so PARENT_SCOPE)
-set(LIBHSRTS2 ${stack_root}/programs/x86_64-linux/ghc-gmp4-7.10.3/lib/ghc-7.10.3/rts/libHSrts-ghc7.10.3.so PARENT_SCOPE)
 
 set(insieme_analysis_haskell ${CMAKE_CURRENT_BINARY_DIR}/libHSinsieme-hat.so PARENT_SCOPE)
