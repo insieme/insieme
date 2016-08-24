@@ -483,6 +483,8 @@ namespace parser {
 
 			TypeList getParamTypesForLambdaAndFunction(const location& l, const VariableList& params);
 
+			ExpressionPtr genJobInternal(const location& l, const ExpressionPtr& expr, const std::function<ExpressionPtr(const ExpressionPtr&)>& jobGenerator);
+
 		  public:
 
 			/*
