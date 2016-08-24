@@ -47,7 +47,7 @@ link_directories(${CMAKE_CURRENT_BINARY_DIR}/src/haskell/insieme-hat)
 
 # add directories containing libffi, libHSrts and gmp
 link_directories(${LIBHSRTS_DIR})
-link_directories(${LIBHSRTS_DIR2})
+link_directories(${LIBHSRTS2_DIR})
 link_directories(${GMP_ROOT}/lib)
 
 
@@ -88,6 +88,11 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_analysis)
+
+	# Gold linker does not automatically resolve libHSrts depdency from
+	# insieme_analysis lib, need to specify them explicitly.
+	target_link_libraries(${case_name} ${LIBHSRTS})
+	target_link_libraries(${case_name} ${LIBHSRTS2})
 
 	add_unit_test(${case_name} ${ut_prefix})
 endforeach(case_file)

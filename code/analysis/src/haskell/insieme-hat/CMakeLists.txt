@@ -52,5 +52,8 @@ add_custom_target(
 # exports
 # for some strange reason stack sometimes chooses ghc-gmp4
 set(LIBHSRTS_DIR  ${stack_root}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts PARENT_SCOPE)
-set(LIBHSRTS_DIR2 ${stack_root}/programs/x86_64-linux/ghc-gmp4-7.10.3/lib/ghc-7.10.3/rts PARENT_SCOPE)
+set(LIBHSRTS2_DIR ${stack_root}/programs/x86_64-linux/ghc-gmp4-7.10.3/lib/ghc-7.10.3/rts PARENT_SCOPE)
+set(LIBHSRTS  ${stack_root}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts/libHSrts-ghc7.10.3.so PARENT_SCOPE)
+set(LIBHSRTS2 ${stack_root}/programs/x86_64-linux/ghc-gmp4-7.10.3/lib/ghc-7.10.3/rts/libHSrts-ghc7.10.3.so PARENT_SCOPE)
+
 set(insieme_analysis_haskell ${CMAKE_CURRENT_BINARY_DIR}/libHSinsieme-hat.so PARENT_SCOPE)
