@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -51,6 +51,7 @@ namespace extensions {
 	class FrontendCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
 	  public:
 		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
+		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu);
 		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 	};
 

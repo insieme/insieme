@@ -217,6 +217,7 @@ AST_TERMINAL(BinaryOperation, Expression)
 AST_TERMINAL(TernaryOperation, Expression)
 
 AST_TERMINAL(Parentheses, Expression)
+AST_TERMINAL(ExplicitInstantiation, Expression)
 AST_TERMINAL(Call, Expression)
 AST_TERMINAL(MemberCall, Expression)
 AST_TERMINAL(ConstructorCall, Expression)

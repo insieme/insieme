@@ -80,12 +80,12 @@ namespace addons {
 			/**
 			 * A literal masking the initialization of a static literal using constants.
 			 */
-			LANG_EXT_LITERAL(InitStaticConst, "BE_InitStaticConst", "('a, 'b)->ref<'a>");
+			LANG_EXT_LITERAL(StaticInitConst, "BE_StaticInitConst", "('a, 'b)->ref<'a>");
 
 			/**
 			 * A literal masking the initialization of a static literal using lazy expressions.
 			 */
-			LANG_EXT_LITERAL(InitStaticLazy, "BE_InitStaticLazy", "(()=>'a, 'b)->ref<'a>");
+			LANG_EXT_LITERAL(StaticInitLazy, "BE_StaticInitLazy", "(()=>'a, 'b)->ref<'a>");
 		};
 
 		// a marker for annotation for globals only only initialized once
@@ -101,7 +101,7 @@ namespace addons {
 				std::map<core::LiteralPtr, std::set<core::CallExprPtr>> inits;
 				auto collector = [&](const core::CallExprPtr& call) {
 					// only interested in init-static-lazy calls
-					if(core::analysis::isCallOf(call, ext.getInitStaticLazy())) { inits[core::transform::extractInitExprFromDecl(call[0]).as<core::LiteralPtr>()].insert(call); }
+					if(core::analysis::isCallOf(call, ext.getStaticInitLazy())) { inits[core::transform::extractInitExprFromDecl(call[0]).as<core::LiteralPtr>()].insert(call); }
 				};
 
 				// search all InitStaticLazy calls
@@ -126,14 +126,14 @@ namespace addons {
 
 			#include "insieme/backend/operator_converter_begin.inc"
 
-			res[ext.getCreateStatic()] = OP_CONVERTER {
+			res[ext.getStaticCreate()] = OP_CONVERTER {
 				return nullptr; // no instruction required at this point
 			};
 
 
 			// -------------------- Constant initialization -----------------------
 
-			res[ext.getInitStaticConst()] = OP_CONVERTER {
+			res[ext.getStaticInitConst()] = OP_CONVERTER {
 
 				// we have to build a new function for this init call containing a static variable
 				//
@@ -150,13 +150,13 @@ namespace addons {
 				auto fun = call->getFunctionExpr().as<core::LambdaExprPtr>();
 				auto retType = call->getType();
 
-				LOG(DEBUG) << "ext.getInitStaticConst() retType" << *retType << "\n";
+				LOG(DEBUG) << "ext.getStaticInitConst() retType" << *retType << "\n";
 
 				auto& mgr = NODE_MANAGER;
 				auto& ext = mgr.getLangExtension<StaticVarBackendExtension>();
 				core::IRBuilder builder(mgr);
 
-				auto init = builder.callExpr(builder.refType(call[1]->getType()), ext.getInitStaticConst(), toVector(call[1], call[0]));
+				auto init = builder.callExpr(builder.refType(call[1]->getType()), ext.getStaticInitConst(), toVector(call[1], call[0]));
 				auto lambda = builder.lambdaExpr(retType, core::VariableList(), init);
 
 				// this function call is equivalent to a call to the new artificial lambda
@@ -165,7 +165,7 @@ namespace addons {
 				return CONVERT_EXPR(ret);
 			};
 
-			res[ext2.getInitStaticConst()] = OP_CONVERTER {
+			res[ext2.getStaticInitConst()] = OP_CONVERTER {
 				// a call to this is translated to the following:
 				//
 				//			static A a = lazy();
@@ -173,7 +173,7 @@ namespace addons {
 				//
 				// where A is the type of the resulting object.
 				auto A = core::lang::ReferenceType(call).getElementType();
-				LOG(DEBUG) << "ext2.getInitStaticConst() A:\n" << *A << "\n";
+				LOG(DEBUG) << "ext2.getStaticInitConst() A:\n" << *A << "\n";
 
 				// get meta-type
 				auto& infoA = GET_TYPE_INFO(A);
@@ -224,8 +224,8 @@ namespace addons {
 
 			// ---------------- lazy initialization -------------------------
 
-			res[ext.getInitStaticLazy()] = OP_CONVERTER {
-				LOG(DEBUG) << "--------------------------\n------ ext.getInitStaticLazy()\n";
+			res[ext.getStaticInitLazy()] = OP_CONVERTER {
+				LOG(DEBUG) << "--------------------------\n------ ext.getStaticInitLazy()\n";
 				LOG(DEBUG) << "call type: " << call->getType() << "\n";
 
 				// we have to build a new function for this init call containing a static variable
@@ -256,21 +256,21 @@ namespace addons {
 					LOG(DEBUG) << "value:\n" << dumpColor(ARG(1)) << "\n value type: " << dumpColor(ARG(1)->getType()) << "\n";
 					LOG(DEBUG) << "value TEXT:\n" << dumpText(ARG(1)) << "\n";
 
-					auto init = builder.callExpr(retType, ext.getInitStaticConst(), value, core::transform::extractInitExprFromDecl(call[0]));
+					auto init = builder.callExpr(retType, ext.getStaticInitConst(), value, core::transform::extractInitExprFromDecl(call[0]));
 					LOG(DEBUG) << ">>>>>>>INIT: \n" << dumpPretty(init) << " : " << init->getType() << "\n";
 					auto lambda = builder.lambdaExpr(retType, core::VariableList(), init);
 					LOG(DEBUG) << ">>>>>>>LAMBDA: \n" << dumpPretty(lambda) << " : " << lambda->getType() << "\n";
 
 					// this function call is equivalent to a call to the new artificial lambda
 					auto rcall = builder.callExpr(retType, lambda);
-					LOG(DEBUG) << "ext.getInitStaticLazy() BUILT1:\n" << *rcall << "\n";
+					LOG(DEBUG) << "ext.getStaticInitLazy() BUILT1:\n" << *rcall << "\n";
 					return CONVERT_EXPR(rcall);
 				}
 
 				auto param = fun->getParameterList()[1];
 				param = core::transform::replaceAllGen(mgr, param, {{builder.typeVariable("a"), core::analysis::getReferencedType(retType)}});
 
-				auto init = builder.callExpr(builder.refType(builder.deref(param)->getType()), ext.getInitStaticLazy(), builder.deref(param),
+				auto init = builder.callExpr(builder.refType(builder.deref(param)->getType()), ext.getStaticInitLazy(), builder.deref(param),
 					                         core::transform::extractInitExprFromDecl(call[0]));
 				LOG(DEBUG) << ">>>>>>>INIT: \n" << dumpPretty(init) << " : " << init->getType() << "\n";
 				auto newFunTy = builder.functionType(param->getType(), init->getType());
@@ -280,11 +280,11 @@ namespace addons {
 
 				// this function call is equivalent to a call to the new artificial lambda
 				auto rcall = builder.callExpr(newFunTy->getReturnType(), lambda, core::transform::extractInitExprFromDecl(call[1]));
-				LOG(DEBUG) << "ext.getInitStaticLazy() BUILT2:\n" << *rcall << "\n";
+				LOG(DEBUG) << "ext.getStaticInitLazy() BUILT2:\n" << *rcall << "\n";
 				return CONVERT_EXPR(rcall);
 			};
 
-			res[ext2.getInitStaticLazy()] = OP_CONVERTER {
+			res[ext2.getStaticInitLazy()] = OP_CONVERTER {
 				// a call to this is translated to the following:
 				//
 				//			static A a = lazy();

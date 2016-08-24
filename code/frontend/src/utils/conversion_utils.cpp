@@ -45,6 +45,8 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/pointer.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
@@ -59,7 +61,7 @@ namespace utils {
 			core::CallExprAddress call(initExpIn.as<core::CallExprPtr>());
 			assert_ge(call->getNumArguments(), 1) << "Ill-formed constructor call. Missing this argument";
 			if(refExt.isCallOfRefTemp(call->getArgument(0))) {
-				// we replace the first parameter (which has been created as ref_temp) by the variable to initialize
+				// we replace the first parameter (which has been created as ref_temp) by the memory space being initialized
 				return core::transform::replaceNode(
 					       initExpIn->getNodeManager(), call->getArgument(0),
 					       core::lang::buildRefCast(memLoc, call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(0)))
@@ -72,7 +74,6 @@ namespace utils {
 		if(auto initInitExpr = initExp.isa<core::InitExprAddress>()) {
 			auto memExprAddr = initInitExpr->getMemoryExpr();
 			if(refExt.isCallOfRefTemp(memExprAddr)) {
-				// we replace the memory address to be initialized with the variable being declared
 				return core::transform::replaceNode(initExp->getNodeManager(), memExprAddr, memLoc).as<core::ExpressionPtr>();
 			}
 		}
@@ -149,6 +150,69 @@ namespace utils {
 		// return call
 		auto retType = constructorLambda->getType().as<core::FunctionTypePtr>()->getReturnType();
 		return utils::buildCxxMethodCall(converter, retType, constructorLambda, memLoc, constructExpr->arguments());
+	}
+
+	core::ExpressionPtr convertMaterializingExpr(conversion::Converter& converter, core::ExpressionPtr retIr) {
+		auto& builder = converter.getIRBuilder();
+		// if we are materializing the rvalue result of a non-built-in function call, do it
+		auto subCall = retIr.isa<core::CallExprPtr>();
+		if(subCall) {
+			// if we are already materialized everything is fine
+			if(core::lang::isPlainReference(retIr->getType())) return retIr;
+			// otherwise, materialize
+
+			// if call to deref, simply remove it
+			auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+			if(refExt.isCallOfRefDeref(retIr)) {
+				retIr = subCall->getArgument(0);
+				return retIr;
+			}
+			// otherwise, materialize call if not built in
+			if(!core::lang::isBuiltIn(subCall->getFunctionExpr())) {
+				retIr = builder.callExpr(builder.refType(retIr->getType()), subCall->getFunctionExpr(), subCall->getArgumentDeclarations());
+			}
+		}
+		return retIr;
+	}
+
+	core::ExpressionPtr prepareThisExpr(conversion::Converter& converter, core::ExpressionPtr thisArg) {
+		if(core::lang::isPointer(thisArg)) thisArg = core::lang::buildPtrToRef(thisArg);
+		if(!core::lang::isReference(thisArg)) thisArg = frontend::utils::convertMaterializingExpr(converter, thisArg);
+		return thisArg;
+	}
+
+	core::StatementPtr addIncrementExprBeforeAllExitPoints(const core::StatementPtr& body, const core::StatementPtr& incrementExpression) {
+		core::IRBuilder builder(incrementExpression.getNodeManager());
+
+		core::StatementList newBody;
+		if(body) newBody.push_back(body);
+
+		// add the increment expression at the end of the body
+		newBody.push_back(incrementExpression);
+
+		if(body) {
+			auto& origBody = newBody.front();
+
+			// and also in front of every continue statement
+			auto exitPoints = core::analysis::getExitPoints(origBody);
+
+			// sort those points in a reverse order
+			std::sort(exitPoints.rbegin(), exitPoints.rend());
+
+			// add increments in front of all continue calls
+			for(const auto& cur : exitPoints) {
+				if (cur.isa<core::ContinueStmtAddress>()) {
+					// insert increment before the continue stmt
+					if(cur.isRoot()) {
+						origBody = builder.compoundStmt(incrementExpression, cur.as<core::StatementPtr>());
+					} else {
+						origBody = core::transform::insertBefore(origBody->getNodeManager(), cur.switchRoot(origBody), incrementExpression).as<core::StatementPtr>();
+					}
+				}
+			}
+		}
+
+		return stmtutils::aggregateStmts(builder, newBody);
 	}
 
 } // end namespace utils

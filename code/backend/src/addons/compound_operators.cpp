@@ -122,10 +122,10 @@ namespace addons {
 			res[cOBExt.getCompoundRefDeref()] = OP_CONVERTER { return CONVERT_ARG(0); };
 
 			// Part B: A macro for all the compOps to generate an appropriate AST
-			#define COMP_OP_CONVERSION_RULE(EXT_NAME, C_AST_NAME)                                  \
-				res[ext.get##EXT_NAME()] = OP_CONVERTER {                                      \
-					return c_ast::binaryOp(c_ast::BinaryOperation::C_AST_NAME,             \
-					                       c_ast::deref(CONVERT_ARG(0)), CONVERT_ARG(1));  \
+			#define COMP_OP_CONVERSION_RULE(EXT_NAME, C_AST_NAME)                                               \
+				res[ext.get##EXT_NAME()] = OP_CONVERTER {                                                       \
+					return c_ast::binaryOp(c_ast::BinaryOperation::C_AST_NAME,                                  \
+					                       c_ast::derefIfNotImplicit(CONVERT_ARG(0), ARG(0)), CONVERT_ARG(1));  \
 				};
 
 			COMP_OP_CONVERSION_RULE(CompAssignAdd,        AdditionAssign)

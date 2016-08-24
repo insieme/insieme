@@ -557,9 +557,9 @@ namespace pragma {
 			}
 		};
 
-		__unused static MatchNodeGenerator<expr_p> expr;
-		__unused static MatchNodeGenerator<var_p> var;
-		__unused static MatchNodeGenerator<cpp_string_lit_p> cpp_string_lit;
+		__insieme_unused static MatchNodeGenerator<expr_p> expr;
+		__insieme_unused static MatchNodeGenerator<var_p> var;
+		__insieme_unused static MatchNodeGenerator<cpp_string_lit_p> cpp_string_lit;
 
 	} // End tok namespace
 } // End pragma namespace

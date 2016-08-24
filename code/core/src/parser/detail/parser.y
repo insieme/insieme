@@ -243,7 +243,7 @@
 %type <ExpressionPtr>                  call actual_call
 %type <LambdaExprPtr>                  lambda constructor_lambda
 %type <BindExprPtr>                    bind
-%type <ExpressionPtr>                  parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression
+%type <ExpressionPtr>                  parallel_expression list_expression initializer unary_op binary_op ternary_op this_expression mem_lambda_reference
 
 %type <VariablePtr>                    parameter
 %type <VariableList>                   parameters non_empty_parameters non_empty_bind_parameters
@@ -312,9 +312,9 @@ definition : "def" record_definition                                        { $$
            ;
 
 main : type "identifier" "(" parameters                                     { driver.openScope(); driver.registerParameters(@4, $4); }
-                                        ")" compound_statement              { $$ = driver.builder.createProgram({driver.genFunctionDefinition(@$, $2, driver.genLambda(@$, $4, $1, $7))}); driver.closeScope(); }
+                                        ")" compound_statement              { $$ = driver.builder.createProgram({driver.genFunctionDefinition(@$, $2, driver.genLambda(@$, $4, $1, $7))}); driver.unregisterParameters(); driver.closeScope(); }
      | type "function" "identifier" "(" parameters                          { driver.inLambda = false; driver.openScope(); driver.registerParameters(@5, $5); }
-                                        ")" compound_statement              { $$ = driver.builder.createProgram({driver.genFunctionDefinition(@$, $3, driver.genLambda(@$, $5, $1, $8))}); driver.closeScope(); driver.inLambda = true; }
+                                        ")" compound_statement              { $$ = driver.builder.createProgram({driver.genFunctionDefinition(@$, $3, driver.genLambda(@$, $5, $1, $8))}); driver.unregisterParameters(); driver.closeScope(); driver.inLambda = true; }
      ;
 
 //    -- record_declarations -------------------------------------
@@ -350,14 +350,15 @@ compound_no_scope_default_delete : compound_statement_no_scope              { $$
                                  ;
 
 constructor_lambda : "(" parameters                                         { driver.openScope(); driver.registerParameters(@2, $2); }
-                         ")" compound_no_scope_default_delete               { $$ = driver.genConstructorLambda(@$, $2, $5); driver.closeScope(); }
-                   | "function" "(" parameters                              { driver.openScope(); driver.registerParameters(@2, $3); driver.inLambda = false; }
-                         ")" compound_no_scope_default_delete               { $$ = driver.genConstructorLambda(@$, $3, $6); driver.closeScope(); driver.inLambda = true; }
+                         ")" compound_no_scope_default_delete               { $$ = driver.genConstructorLambda(@$, $2, $5); driver.unregisterParameters(); driver.closeScope(); }
+                   | "function" "(" parameters                              { driver.inLambda = false; driver.openScope(); driver.registerParameters(@2, $3); }
+                         ")" compound_no_scope_default_delete               { $$ = driver.genConstructorLambda(@$, $3, $6); driver.unregisterParameters(); driver.closeScope(); driver.inLambda = true; }
                    ;
 
-destructor : "dtor" virtual_flag "(" ")" compound_no_scope_default_delete   { driver.openScope(); $$ = std::make_pair(driver.genDestructor(@$, $5), $2); driver.closeScope(); }
-           | "dtor" virtual_flag "function"                                 { driver.openScope(); driver.inLambda = false; }
-                                   "(" ")" compound_no_scope_default_delete { $$ = std::make_pair(driver.genDestructor(@$, $7), $2); driver.inLambda = true; driver.closeScope(); }
+destructor : "dtor" virtual_flag                                            { driver.openScope(); driver.registerParameters(@2, {}); }
+                                   "(" ")" compound_no_scope_default_delete { $$ = std::make_pair(driver.genDestructor(@$, $6), $2); driver.unregisterParameters(); driver.closeScope(); }
+           | "dtor" virtual_flag "function"                                 { driver.inLambda = false; driver.openScope(); driver.registerParameters(@2, {}); }
+                                   "(" ")" compound_no_scope_default_delete { $$ = std::make_pair(driver.genDestructor(@$, $7), $2); driver.unregisterParameters(); driver.closeScope(); driver.inLambda = true; }
            |                                                                { $$ = std::make_pair(LambdaExprPtr(), false); }
            ;
 
@@ -365,11 +366,11 @@ member_functions : member_functions member_function                         { IN
                  |                                                          { $$ = MemberFunctionList(); }
                  ;
 
-member_function : virtual_flag cv_flags lambda_or_function "identifier" "=" "(" ")"     { driver.openScope(); driver.inLambda = $3; }
-                      "->" type compound_no_scope_default_delete            { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, VariableList(), $10, $11); driver.inLambda = true; driver.closeScope(); }
+member_function : virtual_flag cv_flags lambda_or_function "identifier" "=" "(" ")"     { driver.inLambda = $3; driver.openScope(); driver.registerParameters(@2, {}, $2.first, $2.second); }
+                      "->" type compound_no_scope_default_delete            { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, VariableList(), $10, $11); driver.unregisterParameters(); driver.closeScope(); driver.inLambda = true; }
                 | virtual_flag cv_flags lambda_or_function "identifier" "=" "(" non_empty_parameters
-                                                                                        { driver.openScope(); driver.registerParameters(@7, $7); driver.inLambda = $3; }
-                      ")" "->" type compound_no_scope_default_delete        { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $7, $11, $12); driver.closeScope(); driver.inLambda = true; }
+                                                                                        { driver.inLambda = $3; driver.openScope(); driver.registerParameters(@7, $7, $2.first, $2.second); }
+                      ")" "->" type compound_no_scope_default_delete        { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $7, $11, $12); driver.unregisterParameters(); driver.closeScope(); driver.inLambda = true; }
 				;
 
 virtual_flag : "virtual"                                                    { $$ = true; }
@@ -579,6 +580,7 @@ plain_expression : variable                                               { $$ =
                  | binary_op                                              { $$ = $1; }
                  | ternary_op                                             { $$ = $1; }
                  | this_expression                                        { $$ = $1; }
+                 | mem_lambda_reference                                   { $$ = $1; }
                  ;
 
 typed_expressions : non_empty_typed_expressions                           { $$ = $1; }
@@ -638,9 +640,9 @@ lambda : "(" ")" "->" type compound_statement                                  {
        | "function" "(" ")"                                                    { driver.inLambda = false; }
                             "->" type compound_statement                       { $$ = driver.genLambda(@$, VariableList(), $6, $7); driver.inLambda = true; }
        | "(" non_empty_parameters ")"                                          { driver.openScope(); driver.registerParameters(@2, $2); }
-                                      "->" type compound_statement_no_scope    { $$ = driver.genLambda(@$, $2, $6, $7); driver.closeScope(); }
+                                      "->" type compound_statement_no_scope    { $$ = driver.genLambda(@$, $2, $6, $7); driver.unregisterParameters(); driver.closeScope(); }
        | "function" "(" non_empty_parameters ")"                               { driver.openScope(); driver.registerParameters(@3, $3); driver.inLambda = false; }
-                                      "->" type compound_statement_no_scope    { $$ = driver.genLambda(@$, $3, $7, $8); driver.closeScope(); driver.inLambda = true; }
+                                      "->" type compound_statement_no_scope    { $$ = driver.genLambda(@$, $3, $7, $8); driver.unregisterParameters(); driver.closeScope(); driver.inLambda = true; }
        ;
 
 parameters : non_empty_parameters                                         { $$ = $1; }
@@ -734,6 +736,9 @@ ternary_op : expression "?" expression ":" expression                     { $$ =
 
 this_expression : "this"                                                  { $$ = driver.genThis(@$); }
                 ;
+
+mem_lambda_reference : "identifier" "::" "identifier"                     { $$ = driver.genMemLambdaReference(@$, $1, $3); }
+                     ;
 
 
 //    -- statements --------------------------------------
@@ -834,7 +839,7 @@ catch_clauses : catch_clauses catch_clause                                { $1.p
 
 catch_clause : "catch" "(" ")" compound_statement                         { $$ = driver.builder.catchClause(VariablePtr(), $4); }
              | "catch" "(" parameter ")"                                  { driver.openScope(); driver.registerParameters(@3, toVector($3)); }
-                                         compound_statement_no_scope      { $$ = driver.builder.catchClause($3, $6); driver.closeScope(); }
+                                         compound_statement_no_scope      { $$ = driver.builder.catchClause($3, $6); driver.unregisterParameters(); driver.closeScope(); }
              ;
 
 throw_statement : "throw" expression ";"                                  { $$ = driver.builder.throwStmt($2); }
@@ -853,7 +858,7 @@ continue : "continue" ";"                                                 { $$ =
 // -- return --
 
 return : "return" expression ";"                                          { $$ = driver.builder.returnStmt(driver.getScalar($2)); }
-       | "return" expression "in" type ";"                              { $$ = driver.builder.returnStmt(driver.getScalar($2), $4); }
+       | "return" expression "in" type ";"                                { $$ = driver.builder.returnStmt(driver.getScalar($2), $4); }
        | "return" ";"                                                     { $$ = driver.builder.returnStmt(); }
        ;
 

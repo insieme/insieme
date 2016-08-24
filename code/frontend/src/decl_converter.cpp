@@ -67,6 +67,8 @@ namespace conversion {
 	DeclConverter::ConvertedVarDecl DeclConverter::convertVarDecl(const clang::VarDecl* varDecl) const {
 		auto irType = converter.convertVarType(varDecl->getType());
 		auto var = builder.variable(irType);
+		// variable insertion is required prior to translation of the init expression, as it might use it
+		if(!varDecl->hasGlobalStorage()) converter.getVarMan()->insert(varDecl, var);
 		if(varDecl->getInit()) {
 			return {var, converter.convertCxxArgExpr(varDecl->getInit())};
 		} else {
@@ -83,13 +85,7 @@ namespace conversion {
 
 		core::TypePtr getThisType(Converter& converter, const clang::CXXMethodDecl* methDecl) {
 			auto parentType = converter.convertType(converter.getCompiler().getASTContext().getRecordType(methDecl->getParent()));
-			auto refKind = core::lang::ReferenceType::Kind::Plain;
-			switch(methDecl->getRefQualifier()) {
-			case clang::RefQualifierKind::RQ_LValue: refKind = core::lang::ReferenceType::Kind::CppReference; break;
-			case clang::RefQualifierKind::RQ_RValue: refKind = core::lang::ReferenceType::Kind::CppRValueReference; break;
-			case clang::RefQualifierKind::RQ_None: break; // stop warnings
-			}
-			return core::lang::buildRefType(parentType, methDecl->isConst(), methDecl->isVolatile(), refKind);
+			return frontend::utils::getThisType(methDecl, parentType);
 		}
 
 		core::FunctionTypePtr getFunMethodTypeInternal(Converter& converter, const clang::FunctionDecl* funDecl) {
@@ -129,7 +125,7 @@ namespace conversion {
 			core::IRBuilder builder(converter.getNodeManager());
 			core::StatementList retStmts;
 			for(const auto& init: constrDecl->inits()) {
-				auto irThis = builder.deref(converter.getVarMan()->getThis());
+				auto irThis = converter.getVarMan()->getThis();
 				auto irMember = irThis;
 
 				// check if field or delegating initialization
@@ -198,7 +194,6 @@ namespace conversion {
 				for(auto param : funcDecl->parameters()) {
 					auto irParam = converter.getDeclConverter()->convertVarDecl(param);
 					params.push_back(irParam.first);
-					converter.getVarMan()->insert(param, irParam.first);
 				}
 				// convert body and build full expression (must be within scope!)
 				auto bodyRange = builder.wrapBody(converter.convertStmt(funcDecl->getBody())).getStatements();
@@ -220,7 +215,7 @@ namespace conversion {
 	}
 
 	core::ExpressionPtr DeclConverter::convertFunctionDecl(const clang::FunctionDecl* funcDecl, string name, bool genLiteral) const {
-		if(name.empty()) name = insieme::utils::mangle(funcDecl->getNameAsString());
+		if(name.empty()) name = utils::buildNameForFunction(funcDecl, converter);
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
 		if(genLiteral) {
 			return converter.getIRBuilder().literal(name, funType);
@@ -266,7 +261,7 @@ namespace conversion {
 		}
 		// non-default cases
 		else {
-			string name =  utils::buildNameForFunction(methDecl);
+			string name =  utils::buildNameForFunction(methDecl, converter);
 			auto funType = getFunMethodTypeInternal(converter, methDecl);
 			if(funType->getKind() == core::FK_CONSTRUCTOR) { ret.lit = builder.getLiteralForConstructor(funType); }
 			else if(funType->getKind() == core::FK_DESTRUCTOR) { ret.lit = builder.getLiteralForDestructor(funType); }
@@ -406,7 +401,7 @@ namespace conversion {
 
 		// convert prototype
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
-		auto name = utils::buildNameForFunction(funcDecl);
+		auto name = utils::buildNameForFunction(funcDecl, converter);
 		core::LiteralPtr irLit = builder.literal(name, funType);
 		// add required annotations
 		if(inExternC) { annotations::c::markAsExternC(irLit); }

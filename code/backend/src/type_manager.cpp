@@ -105,9 +105,12 @@ namespace backend {
 
 			TypeHandlerList typeHandlers;
 
-			utils::map::PointerMap<core::TypePtr, const TypeInfo*> typeInfos; // < may contain duplicates
+			utils::map::PointerMap<core::TypePtr, std::vector<const TypeInfo*>> typeInfos; // < may contain duplicates
 
 			std::set<const TypeInfo*> allInfos;
+
+			// a set of type infos currently under definition
+			std::set<c_ast::CodeFragmentPtr> inDefinition;
 
 		  public:
 			TypeInfoStore(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& typeHandlers)
@@ -157,7 +160,9 @@ namespace backend {
 			// --------------- Internal resolution utilities -----------------
 
 			const TypeInfo* addInfo(const core::TypePtr& type, const TypeInfo* info);
+			const TypeInfo* getInfo(const core::TypePtr& type) const;
 			void remInfo(const core::TypePtr& type);
+
 			const TypeInfo* resolveInternal(const core::TypePtr& type);
 			const TypeInfo* resolveTypeInternal(const core::TypePtr& type);
 
@@ -301,18 +306,27 @@ namespace backend {
 
 		const TypeInfo* TypeInfoStore::addInfo(const core::TypePtr& type, const TypeInfo* info) {
 
-
 			// register type information
-			assert_true(typeInfos.find(type) == typeInfos.end() || typeInfos.find(type)->second == info)
-				<< "Previous definition of type " << type->getNodeHashValue() << " = " << *type << " already present!";
-
-			typeInfos.insert(std::make_pair(type, info));
+			typeInfos[type].push_back(info);
 			allInfos.insert(info);
 			return info;
 		}
 
+		const TypeInfo* TypeInfoStore::getInfo(const core::TypePtr& type) const {
+			auto pos = typeInfos.find(type);
+			return (pos != typeInfos.end()) ? pos->second.back() : nullptr;
+		}
+
 		void TypeInfoStore::remInfo(const core::TypePtr& type) {
-			typeInfos.erase(type);
+			// check if there are any infos
+			auto pos = typeInfos.find(type);
+			if (pos == typeInfos.end()) return;
+
+			// remove last element
+			pos->second.pop_back();
+
+			// remove empty lists
+			if (pos->second.empty()) typeInfos.erase(type);
 		}
 
 
@@ -324,8 +338,7 @@ namespace backend {
 			auto type = core::analysis::normalize(core::analysis::getCanonicalType(in));
 
 			// lookup information within cache
-			auto pos = typeInfos.find(type);
-			if (pos != typeInfos.end()) return pos->second;
+			if (auto info = getInfo(type)) return info;
 
 			// resolve information if there is no information yet
 			auto info = resolveTypeInternal(type);
@@ -496,7 +509,9 @@ namespace backend {
 			}
 
 			auto getNamedType = [&](const core::NodePtr& nodePtr){
-				std::string name = insieme::utils::demangle(ptr->getName()->getValue());
+				std::string name = ptr->getName()->getValue();
+				// only demangle the name for intercepted types
+				if(annotations::c::hasIncludeAttached(nodePtr)) name = insieme::utils::demangle(name);
 				if(core::annotations::hasAttachedName(ptr)) {
 					name = core::annotations::getAttachedName(ptr);
 					if(annotations::c::hasAttachedCTag(ptr)) {
@@ -506,7 +521,7 @@ namespace backend {
 				return manager.create<c_ast::NamedType>(manager.create<c_ast::Identifier>(name));
 			};
 
-			// handle intercepted types
+			// handle intercepted types and pure declarations
 			if(annotations::c::hasIncludeAttached(ptr) || annotations::c::isDeclaration(ptr)) {
 				c_ast::NamedTypePtr namedType = getNamedType(ptr);
 				c_ast::CodeFragmentPtr definition;
@@ -517,11 +532,19 @@ namespace backend {
 				for(auto typeArg : ptr->getTypeParameterList()) {
 					auto tempParamType = converter.getTypeManager().getTemplateArgumentType(typeArg);
 					namedType->parameters.push_back(tempParamType);
+
+					// we need to drop qualified-refs here in order to then correctly generate a dependency to the definition of the type
+					if(core::lang::isQualifiedReference(typeArg)) typeArg = core::analysis::getReferencedType(typeArg);
+
 					// if argument type is not intercepted, add a dependency on its definition
-					auto tempParamTypeInfo = typeInfos.find(typeArg);
-					if(tempParamTypeInfo != typeInfos.end()) {
+					auto tempParamTypeInfo = getInfo(typeArg);
+					if (tempParamTypeInfo) {
 						assert_true(definition) << "Tried to add a dependency to non-existent definition";
-						definition->addDependency(tempParamTypeInfo->second->definition);
+						auto def = tempParamTypeInfo->definition;
+						if (contains(inDefinition, def)) {
+							def = tempParamTypeInfo->declaration;
+						}
+						definition->addDependency(def);
 					}
 				}
 				// if there is a definition then use it, otherwise create a forward declaration
@@ -617,6 +640,9 @@ namespace backend {
 				// register fragments locally
 				typeDefinitionFragments[def] = definition;
 
+				// remember as currently under definition
+				inDefinition.insert(definition);
+
 				// create resulting type info
 				auto res = type_info_utils::createInfo<TagTypeInfo>(type, declaration, definition);
 
@@ -624,13 +650,8 @@ namespace backend {
 				typeTypeInfos[def] = res;
 
 				// save current info (for recursive references)
-				addInfo(tagType, res);										// for the full tag type
-
-				// for recursive types, also add the produced information to the tag type reference
-				if (tagType->isRecursive()) {
-					// TODO: to support nested re-use of names, infos should be stored in a stack
-					addInfo(def->getTag(),res);								// for the tag type reference (temporary)
-				}
+				addInfo(tagType, res);									// for the full tag type
+				addInfo(def->getTag(),res);								// for the tag type reference (temporary)
 
 			}
 
@@ -694,20 +715,27 @@ namespace backend {
 
 				// add constructors
 				for(const auto& ctor : record->getConstructors()) {
-					auto impl = (core::analysis::getObjectType(ctor->getType()).isa<core::TagTypeReferencePtr>()) ? tagType->peel(ctor) : ctor;
-					funMgr.getInfo(impl.as<core::LambdaExprPtr>()); // this will declare and define the constructor
+					// skip ctors which are Literals
+					if(ctor.isa<core::LambdaExprPtr>()) {
+						funMgr.getInfo(tagType,ctor.as<core::LambdaExprPtr>());
+					}
 				}
+
 				//// TODO: explicitly delete missing constructors
 				//if (!core::analysis::hasDefaultConstructor(tagType)) {
 				//	type->ctors.push_back(manager->create<c_ast::ConstructorPrototype>());
 				//}
-				//
+
 				// add destructors (only for structs)
 				if(record->hasDestructor()) {
-					auto dtor = record->getDestructor();
-					auto info = funMgr.getInfo(tagType->peel(dtor).as<core::LambdaExprPtr>());
-					info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
+					// skip dtor which is a Literal
+					if(record->getDestructor().isa<core::LambdaExprPtr>()) {
+						auto dtor = record->getDestructor().as<core::LambdaExprPtr>();
+						auto info = funMgr.getInfo(tagType,dtor);
+						info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
+					}
 				}
+
 				// TODO: explicitly delete missing destructor
 
 				// add pure virtual function declarations
@@ -720,7 +748,7 @@ namespace backend {
 
 				// add member functions
 				for(const auto& member : record->getMemberFunctions()) {
-					funMgr.getInfo(tagType->peel(member));
+					funMgr.getInfo(tagType, member);
 				}
 
 
@@ -818,6 +846,11 @@ namespace backend {
 				remInfo(def->getTag());
 			}
 
+			// remove in-definition status
+			for(const auto& cur : typeDefinitionFragments) {
+				inDefinition.erase(cur.second);
+			}
+
 			// return information for requested tag type
 			return resolveType(tagType);
 		}
@@ -870,10 +903,9 @@ namespace backend {
 			assert_true(elementTypeInfo);
 
 			// check whether the type has been resolved while resolving the sub-type
-			auto pos = typeInfos.find(ptr);
-			if(pos != typeInfos.end()) {
-				assert(dynamic_cast<const ArrayTypeInfo*>(pos->second));
-				return static_cast<const ArrayTypeInfo*>(pos->second);
+			if (auto info = getInfo(ptr)) {
+				assert(dynamic_cast<const ArrayTypeInfo*>(info));
+				return static_cast<const ArrayTypeInfo*>(info);
 			}
 
 			// get the c-ast node manager
@@ -933,10 +965,9 @@ namespace backend {
 			assert_true(elementTypeInfo);
 
 			// check whether this array type has been resolved while resolving the sub-type (due to recursion)
-			auto pos = typeInfos.find(ptr);
-			if(pos != typeInfos.end()) {
-				assert_true(dynamic_cast<const ArrayTypeInfo*>(pos->second));
-				return static_cast<const ArrayTypeInfo*>(pos->second);
+			if (auto info = getInfo(ptr)) {
+				assert_true(dynamic_cast<const ArrayTypeInfo*>(info));
+				return static_cast<const ArrayTypeInfo*>(info);
 			}
 
 			// create array type information
@@ -1032,10 +1063,9 @@ namespace backend {
 			const TypeInfo* subType = resolveType(elementType);
 
 			// check whether this ref type has been resolved while resolving the sub-type (due to recursion)
-			auto pos = typeInfos.find(ptr);
-			if(pos != typeInfos.end()) {
-				assert(dynamic_cast<const RefTypeInfo*>(pos->second));
-				return static_cast<const RefTypeInfo*>(pos->second);
+			if (auto info = getInfo(ptr)) {
+				assert(dynamic_cast<const RefTypeInfo*>(info));
+				return static_cast<const RefTypeInfo*>(info);
 			}
 
 			// create result
@@ -1145,7 +1175,7 @@ namespace backend {
 
 			// ---------------- add a new operator ------------------------
 
-			if (ref.isPlain()) {
+			if(ref.isPlain()) {
 
 				string newOpName = "_ref_new_" + converter.getNameManager().getName(ptr);
 				res->newOperatorName = manager->create(newOpName);
@@ -1157,7 +1187,7 @@ namespace backend {
 				std::stringstream code;
 				code << "/* New Operator for type " << toString(*ptr) << "*/ \n"
 					"static inline " << resultTypeName << " " << newOpName << "(" << valueTypeName << " value) {\n"
-					<< resultTypeName << " res = malloc(sizeof(" << valueTypeName << "));\n"
+					"    " << resultTypeName << " res = (" << resultTypeName << ")malloc(sizeof(" << valueTypeName << "));\n"
 					"    *res = value;\n"
 					"    return res;\n"
 					"}\n";
@@ -1171,7 +1201,6 @@ namespace backend {
 
 				// add include for malloc
 				res->newOperator->addInclude(string("stdlib.h"));
-
 			}
 
 			// done

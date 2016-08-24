@@ -784,6 +784,13 @@ namespace parser {
 
 			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
 		}
+
+		{ // check lookup of member lambdas
+			auto expr = builder.parseExpr("def struct S { lambda foo = () -> unit { 42; } }; S::foo");
+
+			ASSERT_TRUE(expr);
+			ASSERT_TRUE(checks::check(expr).empty()) << checks::check(expr);
+		}
 	}
 
 	TEST(IR_Parser, LambdaNames) {
@@ -1119,6 +1126,27 @@ namespace parser {
 
 			EXPECT_EQ(checks::check(addresses[0].getRootNode()).size(), 0);
 		}
+	}
+
+	TEST(IR_Parser, ThisMemberAccess) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		{
+			auto addresses = builder.parseAddressesType(R"(
+				def struct A {
+					a : int<4>;
+					const lambda foo = () -> unit { $this.a$; $a$; }
+				};
+				A
+			)");
+			ASSERT_EQ(2, addresses.size());
+			ASSERT_TRUE(core::lang::isReference(addresses[0]));
+			EXPECT_TRUE(core::lang::ReferenceType(addresses[0]).isConst());
+			ASSERT_TRUE(core::lang::isReference(addresses[1]));
+			EXPECT_TRUE(core::lang::ReferenceType(addresses[1]).isConst());
+		}
+
 	}
 
 	TEST(IR_Parser, MemberFunctionLookup) {

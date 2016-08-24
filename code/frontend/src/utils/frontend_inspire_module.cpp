@@ -82,6 +82,13 @@ namespace utils {
 		return builder.callExpr(mgr.getLangBasic().getInt4(), inspMod.getBoolToInt(), b);
 	}
 
+	core::ExpressionPtr buildFERefTemp(const core::TypePtr& t) {
+		NodeManager& mgr = t->getNodeManager();
+		IRBuilder builder(mgr);
+		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
+		return builder.callExpr(inspMod.getFERefTemp(), builder.getTypeLiteral(t));
+	}
+
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme

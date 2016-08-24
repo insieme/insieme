@@ -37,11 +37,13 @@
 #include "insieme/frontend/type_converter.h"
 
 #include "insieme/frontend/decl_converter.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/state/record_manager.h"
 #include "insieme/frontend/state/function_manager.h"
+#include "insieme/frontend/state/variable_manager.h"
 
 #include "insieme/utils/name_mangling.h"
 #include "insieme/utils/numeric_cast.h"
@@ -60,6 +62,67 @@ using namespace insieme;
 namespace insieme {
 namespace frontend {
 namespace conversion {
+
+	namespace {
+
+		core::ExpressionPtr generateLambdaCaptureAccess(const Converter& converter, const clang::FieldDecl* fieldDecl, const core::ExpressionPtr& thisExpr) {
+			auto& builder = converter.getIRBuilder();
+			string memName = frontend::utils::getNameForField(fieldDecl, converter.getSourceManager());
+			auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
+			auto retType = converter.convertType(fieldDecl->getType());
+			core::ExpressionPtr mem = builder.callExpr(access, thisExpr, builder.getIdentifierLiteral(memName), builder.getTypeLiteral(retType));
+			if(core::lang::isCppReference(retType) || core::lang::isCppRValueReference(retType)) mem = builder.deref(mem);
+			return mem;
+		}
+
+		/// build a mapping of captured lambda parameters to functors which generate an IR access for them within the lambda context
+		/// -> used in variable manager when resolving decl refs and this expressions
+		state::VariableManager::LambdaScope generateLambdaMapping(const Converter& converter, const clang::CXXRecordDecl* classDecl) {
+			state::VariableManager::LambdaScope lScope;
+			if(!classDecl->isLambda()) return lScope;
+			llvm::DenseMap<const clang::VarDecl*, clang::FieldDecl*> clangCaptures;
+			clang::FieldDecl *thisField;
+			classDecl->getCaptureFields(clangCaptures, thisField);
+			for(auto capture: clangCaptures) {
+				// build a lambda which builds the field access when provided with the this expression
+				lScope[capture.first] = [capture, &converter](const core::ExpressionPtr& thisExpr) {
+					return generateLambdaCaptureAccess(converter, capture.second, thisExpr);
+				};
+			}
+			if(thisField) {
+				lScope.setThisGenerator([thisField, &converter](const core::ExpressionPtr& thisExpr) {
+					return generateLambdaCaptureAccess(converter, thisField, thisExpr);
+				});
+			}
+			return lScope;
+		}
+
+		/// for C++ Lambdas which support implicit conversion to function pointers, clang generates an "__invoke" static method with an empty body
+		/// here we generate this body by copying the operator() body (static variables need to be multiversioning-safe in INSPIRE)
+		void generateLambdaInvokeOperator(const std::vector<clang::CXXMethodDecl*>& methodDecls, const clang::CXXRecordDecl* classDecl,
+			                              const core::MemberFunctionList& members, Converter& converter) {
+			auto& builder = converter.getIRBuilder();
+			// deal with the invoke operator on lambdas
+			for(auto mem : methodDecls) {
+				mem = mem->getCanonicalDecl();
+				// if we have an automatically generated static "__invoke" function in a lambda, copy its body from operator()
+				if(classDecl->isLambda() && mem->getNameAsString() == "__invoke" && mem->hasBody()) {
+					auto opIt = std::find_if(members.cbegin(), members.cend(), [&](const core::MemberFunctionPtr& mf) {
+						return boost::starts_with(mf->getNameAsString(), insieme::utils::mangle("operator()"));
+					});
+					frontend_assert(opIt != members.cend());
+					auto translatedLiteral = converter.getFunMan()->lookup(mem);
+					auto translatedOperator = converter.getIRTranslationUnit().getFunctions()[(*opIt)->getImplementation().as<core::LiteralPtr>()];
+					core::VariableList params;
+					std::copy(translatedOperator->getParameterList().begin() + 1, translatedOperator->getParameterList().end(), std::back_inserter(params));
+					core::LambdaExprPtr replacement = builder.lambdaExpr(translatedLiteral->getType().as<core::FunctionTypePtr>(), params,
+						                                                 translatedOperator->getBody(), translatedLiteral->getStringValue());
+					converter.getIRTranslationUnit().replaceFunction(translatedLiteral, replacement);
+				}
+			}
+		}
+	}
+
 	//---------------------------------------------------------------------------------------------------------------------
 	//										CXX CLANG TYPE CONVERTER
 	//---------------------------------------------------------------------------------------------------------------------
@@ -136,18 +199,19 @@ namespace conversion {
 
 		// add symbols for all methods to function manager before conversion
 		for(auto mem : methodDecls) {
-			mem = mem->getCanonicalDecl();
 			if(mem->isStatic()) continue;
-			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields(), true);
+			converter.getDeclConverter()->convertMethodDecl(mem->getCanonicalDecl(), irParents, recordTy->getFields(), true);
 		}
 
 		// deal with static methods as functions (afterwards!)
 		for(auto mem : methodDecls) {
 			if(mem->isStatic()) {
-				converter.getDeclConverter()->VisitFunctionDecl(mem);
-				continue;
+				converter.getDeclConverter()->VisitFunctionDecl(mem->getCanonicalDecl());
 			}
 		}
+
+		// before method translation: push lambda mapping in case of lambda
+		converter.getVarMan()->pushLambda(generateLambdaMapping(converter, classDecl));
 
 		// get methods, constructors and destructor
 		std::vector<core::MemberFunctionPtr> members;
@@ -157,11 +221,7 @@ namespace conversion {
 		bool destructorVirtual = false;
 		for(auto mem : methodDecls) {
 			mem = mem->getCanonicalDecl();
-			// deal with static methods as functions
-			if(mem->isStatic()) {
-				converter.getDeclConverter()->VisitFunctionDecl(mem);
-				continue;
-			}
+			if(mem->isStatic()) continue;
 			// actual methods
 			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields());
 			if(convDecl.lambda) {
@@ -179,6 +239,10 @@ namespace conversion {
 				members.push_back(convDecl.memFun);
 			}
 		}
+
+		// after method translation: generate invoke and pop lambda scope in case it was a lambda class
+		generateLambdaInvokeOperator(methodDecls, classDecl, members, converter);
+		converter.getVarMan()->popLambda();
 
 		// create new structTy/unionTy
 		if(tagTy->isStruct()) {
@@ -365,25 +429,21 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(memPointerTy, retTy);
 		retTy = convert(memPointerTy->getPointeeType());
-		//core::TypePtr memTy = converter.lookupTypeDetails(retTy);
-		//core::TypePtr classTy = convert(memPointerTy->getClass()->getCanonicalTypeInternal());
 
-		//if(memPointerTy->isMemberFunctionPointer()) {
-		//	frontend_assert(memTy.isa<core::FunctionTypePtr>()) << " no function type could be retrieved for pointed type\n";
+		if(memPointerTy->isMemberFunctionPointer()) {
+			auto memFunTy = retTy.as<core::FunctionTypePtr>();
+			auto funProto = llvm::dyn_cast<clang::FunctionProtoType>(memPointerTy->getPointeeType());
 
-		//	// prepend this obj to the param list
-		//	core::TypeList paramTypes = memTy.as<core::FunctionTypePtr>()->getParameterTypes();
-		//	paramTypes.insert(paramTypes.begin(), builder.refType(classTy));
-		//	core::TypePtr returnTy = memTy.as<core::FunctionTypePtr>()->getReturnType();
+			// prepend this obj to the param list
+			auto thisTy = frontend::utils::getThisType(funProto, converter.convertType(clang::QualType(memPointerTy->getClass(), 0)));
+			core::TypeList paramTypes = memFunTy->getParameterTypes();
+			paramTypes.insert(paramTypes.begin(), thisTy);
+			core::TypePtr returnTy = memFunTy->getReturnType();
 
-		//	// generate new member function type
-		//	return retTy = builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION);
-		//} else {
-		//	frontend_assert(memPointerTy->isMemberDataPointer());
-		//	return retTy = core::analysis::getMemberPointer(classTy, memTy);
-		//}
+			// generate new member function type (fun ptr/ref types are const by convention in INSPIRE)
+			retTy = builder.ptrType(builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION), true);
+		}
 
-		assert_not_implemented();
 		return retTy;
 	}
 

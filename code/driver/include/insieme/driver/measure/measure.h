@@ -82,17 +82,16 @@ namespace measure {
 	/**
 	 * A utility struct that holds measurement setup, environment and parameters
 	 */
-	struct MeasurementSetup {
+	struct MeasurementSetup : public insieme::utils::Printable {
 		backend::runtime::RuntimeBackendPtr backend;
 		utils::compiler::Compiler compiler;
 		ExecutorPtr executor;
+		ExecutionSetup executionSetup;
 		unsigned numRuns;
-		std::map<std::string, std::string> env;
-		std::vector<std::string> params;
 
 		MeasurementSetup()
 			: backend(backend::runtime::RuntimeBackend::getDefault()), compiler(getDefaultCompilerForMeasurments()),
-			  executor(std::make_shared<LocalExecutor>()), numRuns(1), env(), params() {
+			  executor(std::make_shared<LocalExecutor>()), executionSetup(), numRuns(1) {
 		}
 
 		MeasurementSetup withCompiler(const utils::compiler::Compiler newCompiler) const {
@@ -113,16 +112,19 @@ namespace measure {
 			return retVal;
 		}
 
-		MeasurementSetup withEnvironment(const std::map<std::string, std::string> newEnv) const {
+		MeasurementSetup withExecutionSetup(const ExecutionSetup newExecutionSetup) const {
 			MeasurementSetup retVal = *this;
-			retVal.env = newEnv;
+			retVal.executionSetup = newExecutionSetup;
 			return retVal;
 		}
 
-		MeasurementSetup withParameters(const std::vector<std::string> newParams) const {
-			MeasurementSetup retVal = *this;
-			retVal.params = newParams;
-			return retVal;
+		std::ostream& printTo(std::ostream& out) const {
+			out << "MeasurementSetup:\n";
+			out << "\tCompiler: " << compiler << "\n";
+			out << "\tExecutor: " << *executor << "\n";
+			out << "\tnumRuns: " << numRuns << "\n";
+			out << "\texecSetup: " << executionSetup << "\n";
+			return out;
 		}
 
 	};

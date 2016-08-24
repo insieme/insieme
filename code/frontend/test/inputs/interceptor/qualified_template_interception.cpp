@@ -46,7 +46,7 @@ int main() {
 	#pragma test expect_ir(R"(type_instantiation(type_lit(<ref<int<4>,t,f,qualified>>() -> int<4>), lit("IMP_trivialTemplateFun" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>() -> 'T_0_0))())")
 	trivialTemplateFun<const int>();
 
-	#pragma test expect_ir(R"(type_instantiation(type_lit(<ref<int<4>,f,t,cpp_rref>>() -> ref<int<4>,f,t,cpp_rref>), lit("IMP_trivialTemplateFun" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>() -> 'T_0_0))() materialize)")
+	#pragma test expect_ir(R"(type_instantiation(type_lit(<ref<int<4>,f,t,cpp_rref>>() -> ref<int<4>,f,t,cpp_rref>), lit("IMP_trivialTemplateFun" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>() -> 'T_0_0))())")
 	trivialTemplateFun<volatile int&&>();
 
 }

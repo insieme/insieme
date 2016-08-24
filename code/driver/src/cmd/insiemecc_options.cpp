@@ -241,20 +241,27 @@ namespace cmd {
 			// set clang AST dump filter regex
 			if(!res.settings.clangASTDumpFilter.empty()) { res.job.setClangASTDumpFilter(res.settings.clangASTDumpFilter); }
 
-			// set language standard
-			const std::map<std::string, frontend::ConversionSetup::Standard> languageStandardMapping = {{"auto", frontend::ConversionSetup::Auto},
-				                                                                                        {"c99", frontend::ConversionSetup::C99},
-				                                                                                        {"c++11", frontend::ConversionSetup::Cxx11},
-				                                                                                        {"c++14", frontend::ConversionSetup::Cxx14}};
+			// valid language standards, bool denotes whether accepted only for compatibility reasons with certain build systems and alike
+			const std::map<string, pair<bool, frontend::ConversionSetup::Standard>> languageStandardMapping = {
+				{"auto", make_pair(true, frontend::ConversionSetup::Auto)},    {"c90", make_pair(false, frontend::ConversionSetup::C99)},
+				{"c99", make_pair(true, frontend::ConversionSetup::C99)},      {"c11", make_pair(false, frontend::ConversionSetup::C99)},
+				{"c++98", make_pair(false, frontend::ConversionSetup::Cxx11)}, {"c++03", make_pair(false, frontend::ConversionSetup::Cxx11)},
+				{"c++11", make_pair(true, frontend::ConversionSetup::Cxx11)},  {"c++14", make_pair(true, frontend::ConversionSetup::Cxx14)}};
+
+			vector<string> supportedStandards;
+			for(const auto& e : languageStandardMapping) {
+				if(e.second.first) { supportedStandards.push_back(e.first); }
+			}
 
 			const std::string std = res.settings.standard.back();
 			if(res.settings.standard.size() > 1) { std::cerr << "Warning: Multiple standards set. Only considering last one: " << std << "\n"; }
 			if(::containsKey(languageStandardMapping, std)) {
-				res.job.setStandard(languageStandardMapping.at(std));
+				if(!languageStandardMapping.at(std).first) {
+					std::cerr << "Warning: Standard " << std << " not explicitly supported - supported are: " << join(", ", supportedStandards) << "\n";
+				}
+				res.job.setStandard(languageStandardMapping.at(std).second);
 			} else {
-				vector<string> standards;
-				::transform(languageStandardMapping, std::back_inserter(standards), [](const auto& entry) { return entry.first; });
-				std::cerr << "Error: Unsupported standard: " << std << " - supported are: " << join(", ", standards) << "\n";
+				std::cerr << "Error: Unsupported standard: " << std << " - supported are: " << join(", ", supportedStandards) << "\n";
 				res.valid = false;
 				return res;
 			}

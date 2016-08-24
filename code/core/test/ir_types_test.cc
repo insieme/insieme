@@ -397,12 +397,16 @@ namespace core {
 
 		EXPECT_PRED1(isNotRecursive, builder.parseType("decl struct A; decl struct B; def struct A { x : ref<A>; }; def struct B { y : ref<A>; }; B"));
 
-		// check overloaded tag-type variables
-		auto tagType = builder.parseType("let A = struct { x : ref<A>; } in "
-		                                 "let B = struct { y : ref<A>; } in "
-		                                 "B")
-		                   .as<TagTypePtr>();
-		tagType = core::transform::replaceNode(manager, TagTypeAddress(tagType)->getTag(), builder.tagTypeReference("A")).as<TagTypePtr>();
+		// -- discovered bug case --
+
+		TagTypePtr tagType = builder.parseType(
+				"decl struct A; "
+				"decl struct B; "
+				"def struct A { x : int<4>; }; "
+				"def struct B { x : ref<A>; ctor( b : ref<B>) {} }; "
+				"A"
+		).as<TagTypePtr>();
+
 		EXPECT_PRED1(isNotRecursive, tagType);
 	}
 

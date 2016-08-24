@@ -74,28 +74,13 @@ namespace backend {
 			auto& basic = type->getNodeManager().getLangBasic();
 			return basic.isChar(type) || basic.isBool(type) || basic.isScalarType(type);
 		}
-	} // anon
-
-	namespace {
-
-		c_ast::ExpressionPtr derefIfNotImplicit(const c_ast::ExpressionPtr& cExpr, const core::ExpressionPtr& irExpr) {
-
-			// deref of a cpp ref is implicit
-			if(core::lang::isCppReference(irExpr) || core::lang::isCppRValueReference(irExpr)) {
-				return cExpr;
-			}
-
-			// otherwise, a deref is required
-			return c_ast::deref(cExpr);
-		}
 
 		c_ast::ExpressionPtr getAssignmentTarget(ConversionContext& context, const core::ExpressionPtr& expr) {
 			// convert expression
 			c_ast::ExpressionPtr res = context.getConverter().getStmtConverter().convertExpression(context, expr);
 
-			return derefIfNotImplicit(res, expr);
+			return c_ast::derefIfNotImplicit(res, expr);
 		}
-
 
 		core::ExpressionPtr inlineLazy(const core::NodePtr& lazy) {
 			core::NodeManager& manager = lazy->getNodeManager();
@@ -337,8 +322,13 @@ namespace backend {
 			if(!lit) assert_fail() << "type instantiation should either be handled at call site or apply to function pointer literal";
 			auto replacementLit = core::IRBuilder(NODE_MANAGER).literal(lit->getValue(), call->getType());
 			core::transform::utils::migrateAnnotations(lit, replacementLit);
-			// TODO: add explicit instantiation arguments for function pointers
-			return CONVERT_EXPR(replacementLit);
+			auto ret = CONVERT_EXPR(replacementLit);
+			// perform explicit instantiation if required
+			auto explicitInstantiationList = ::transform(call->getType().as<core::FunctionTypePtr>()->getInstantiationTypeList(), [&](const core::TypePtr& t){
+				return CONVERT_TYPE(t);
+			});
+			if(!explicitInstantiationList.empty()) ret = C_NODE_MANAGER->create<c_ast::ExplicitInstantiation>(ret, explicitInstantiationList);
+			return ret;
 		};
 
 		// -- reals --
@@ -452,7 +442,7 @@ namespace backend {
 				return CONVERT_ARG(0);
 			}
 
-			return derefIfNotImplicit(CONVERT_ARG(0), ARG(0));
+			return c_ast::derefIfNotImplicit(CONVERT_ARG(0), ARG(0));
 		};
 
 		res[refExt.getRefAssign()] = OP_CONVERTER {
@@ -479,8 +469,7 @@ namespace backend {
 		};
 
 		res[refExt.getRefDecl()] = OP_CONVERTER {
-			assert_fail() << "ref_decl calls should have been eliminated by the preprocessor";
-			return CONVERT_ARG(0);
+			return C_NODE_MANAGER->create<c_ast::Literal>("ref_decl_node__should_not_appear_in_final_code");
 		};
 
 		res[refExt.getRefTempInit()] = OP_CONVERTER {
@@ -515,12 +504,7 @@ namespace backend {
 		};
 
 		res[refExt.getRefNew()] = OP_CONVERTER {
-			ADD_HEADER("stdlib.h"); // for 'malloc'
-			core::GenericTypePtr resType = call->getType().as<core::GenericTypePtr>();
-			c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(core::analysis::getReferencedType(resType)));
-			auto cType = CONVERT_TYPE(resType);
-			auto mallocNode = c_ast::call(C_NODE_MANAGER->create("malloc"), size);
-			return c_ast::cast(cType, mallocNode);
+			return c_ast::mallocCall(context, core::analysis::getReferencedType(call->getType()));
 		};
 
 		res[refExt.getRefNewInit()] = OP_CONVERTER {
@@ -543,7 +527,7 @@ namespace backend {
 					// Create code similar to this:
 					// 		(A*)memcpy(malloc(sizeof(A) + sizeof(float) * v2), &(struct A){ v2 }, sizeof(A))
 
-					__unused auto& arrayExt = LANG_EXT(core::lang::ArrayExtension);
+					__insieme_unused auto& arrayExt = LANG_EXT(core::lang::ArrayExtension);
 
 					assert_eq(ARG(0)->getNodeType(), core::NT_InitExpr) << "Only supporting struct expressions as initializer value so far!";
 					core::InitExprPtr initValue = ARG(0).as<core::InitExprPtr>();
@@ -606,12 +590,8 @@ namespace backend {
 				return c_ast::deleteArrayCall(CONVERT_EXPR(core::analysis::getArgument(ARG(0), 0)));
 			}
 
-			// add dependency to stdlib.h (contains the free)
-			ADD_HEADER("stdlib.h");
-
-			// construct argument
-			c_ast::ExpressionPtr arg = CONVERT_ARG(0);
-			return c_ast::call(C_NODE_MANAGER->create("free"), arg);
+			// everything else will be free'd with a call to stdlib's free function
+			return c_ast::freeCall(context, CONVERT_ARG(0));
 		};
 
 		res[refExt.getRefReinterpret()] = OP_CONVERTER {
@@ -663,6 +643,12 @@ namespace backend {
 
 			if(srcRefKind == core::lang::ReferenceType::Kind::Plain) {
 				if(trgRefKind == core::lang::ReferenceType::Kind::CppReference || trgRefKind == core::lang::ReferenceType::Kind::CppRValueReference) {
+					// special handling for string literal arguments
+					if(auto lit = ARG(0).isa<core::LiteralPtr>()) {
+						if(lit->getStringValue()[0] == '"') {
+							return c_ast::deref(c_ast::cast(CONVERT_TYPE(lit->getType()), CONVERT_ARG(0)));
+						}
+					}
 					return c_ast::deref(CONVERT_ARG(0));
 				}
 			}
@@ -674,6 +660,11 @@ namespace backend {
 			}
 
 			return CONVERT_ARG(0);
+		};
+
+		res[refExt.getRefParentCast()] = OP_CONVERTER {
+			c_ast::TypePtr type = CONVERT_TYPE(call->getType());
+			return c_ast::cast(type, CONVERT_ARG(0));
 		};
 
 		// -- support narrow and expand --
@@ -732,7 +723,7 @@ namespace backend {
 			// access source
 			auto src = CONVERT_ARG(0);
 			if (core::lang::isFixedSizedArray(arrayType)) {
-				src = c_ast::access(derefIfNotImplicit(src, ARG(0)), "data");
+				src = c_ast::access(c_ast::derefIfNotImplicit(src, ARG(0)), "data");
 			}
 
 			// generated code &(X[Y])
@@ -777,7 +768,7 @@ namespace backend {
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 
 			auto converted = CONVERT_ARG(0);
-			auto thisObject = derefIfNotImplicit(converted, ARG(0));
+			auto thisObject = c_ast::derefIfNotImplicit(converted, ARG(0));
 			auto access = c_ast::access(thisObject, field);
 
 			// handle inner initExpr
@@ -830,20 +821,8 @@ namespace backend {
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(string("c") + static_pointer_cast<const core::Literal>(index)->getStringValue());
 
 			// access the type
-			return c_ast::ref(c_ast::access(derefIfNotImplicit(CONVERT_ARG(0), ARG(0)), field));
+			return c_ast::ref(c_ast::access(c_ast::derefIfNotImplicit(CONVERT_ARG(0), ARG(0)), field));
 		};
-
-
-		// -- pointer --
-
-		/*
-		        res[basic.getRefIsNull()] = OP_CONVERTER {
-		            // Operator Type:  (array<'a,1>) -> bool
-		            // generated code: X == 0
-		            auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Int32);
-		            return c_ast::eq(CONVERT_ARG(0), c_ast::lit(intType,"0"));
-		        };
-		*/
 
 		// -- others --
 
@@ -1164,28 +1143,6 @@ namespace backend {
 //			};
 //
 //			res[irppExt.getMemberPointerCheck()] = OP_CONVERTER { return CONVERT_ARG(0); };
-//
-//			res[irppExt.getStdInitListExpr()] = OP_CONVERTER {
-//				// get type of the init list expression elements
-//				const core::TypePtr type = core::analysis::getRepresentedType(ARG(1));
-//				const TypeInfo& info = GET_TYPE_INFO(type);
-//				// retrieve the list of init values
-//				auto values = (insieme::core::encoder::toValue<vector<insieme::core::ExpressionPtr>, core::encoder::DirectExprListConverter>(ARG(0)));
-//				// convert the list elements
-//				auto converted = ::transform(values, [&](const core::ExpressionPtr& cur) -> c_ast::NodePtr {
-//					c_ast::ExpressionPtr no = CONVERT_EXPR(cur);
-//					// in a bracket initalization we cannot use references, we have to use values
-//					if(c_ast::isUnaryOp(no, c_ast::UnaryOperation::Reference)) { no = c_ast::deref(no); }
-//					return no;
-//				});
-//				// create the {val1, val2, ...} init list
-//				c_ast::InitializerPtr initializer = c_ast::init(info.rValueType, converted);
-//				// avoid explicit type printing
-//				initializer->explicitType = false;
-//				std::vector<c_ast::NodePtr> args{initializer};
-//				// return the ctor call of the given type (e.g., std::vector) and the init list as argument
-//				return c_ast::ctorCall(info.rValueType, args);
-//			};
 //		}
 
 		#include "insieme/backend/operator_converter_end.inc"

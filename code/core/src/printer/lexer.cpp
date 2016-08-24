@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,7 +36,7 @@
 
 #include "insieme/core/printer/lexer.h"
 
-#include <boost/regex.hpp>
+#include <regex>
 #include <boost/tokenizer.hpp>
 
 #include "insieme/utils/container_utils.h"
@@ -51,7 +51,7 @@ namespace printer {
 
 			// - the tokenizer implementation conducting the lexing -
 
-			using boost::regex;
+			using std::regex;
 
 			/**
 			 * This struct is realizing the tokenizer function identifying
@@ -99,8 +99,8 @@ namespace printer {
 					// check one after another whether regexes are matching the current prefix
 					for(const LiteralType& cur : literalTypes) {
 						// search for the current regex at the beginning of the rest of the code
-						boost::match_results<InputIterator> m;
-						bool found = boost::regex_search(next, end, m, cur.rx, boost::match_flag_type::match_continuous);
+						std::match_results<InputIterator> m;
+						bool found = std::regex_search(next, end, m, cur.rx, std::regex_constants::match_continuous);
 
 						if(!found) { continue; }
 

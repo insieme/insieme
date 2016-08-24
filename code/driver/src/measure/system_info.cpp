@@ -34,13 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include "boost/regex.hpp"
-
-#include "insieme/core/ir_node.h"
-
-#include "insieme/driver/integration/tests.h"
 #include "insieme/driver/measure/system_info.h"
 
+#include <regex>
+
+#include "insieme/core/ir_node.h"
+#include "insieme/driver/integration/tests.h"
 #include "insieme/utils/config.h"
 
 namespace insieme {
@@ -60,15 +59,16 @@ namespace measure {
 			string temp = "-D" + string(e.first) + "=" + string(e.second);
 			tempCompiler.addFlag(temp);
 		}
-		tempCompiler.addFlag(string("-I ") + utils::getInsiemeLibsRootDir() + "/papi-latest/include");
-		tempCompiler.addFlag(string("-L ") + utils::getInsiemeLibsRootDir() + "/papi-latest/lib/");
-		tempCompiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "/papi-latest/lib -lpapi");
+		tempCompiler.addFlag(string("-I ") + utils::getPapiRootDir() + "include");
+		tempCompiler.addFlag(string("-L ") + utils::getPapiRootDir() + "lib");
+		tempCompiler.addFlag(string("-Wl,-rpath,") + utils::getPapiRootDir() + "lib -lpapi");
 
 		auto binary = utils::compiler::compileToBinary(*target, tempCompiler);
 
 		const string workDir = ".";
 
-		const int ret = executor->run(binary, env, std::vector<string>(), workDir);
+		ExecutionSetup executionSetup = ExecutionSetup().withEnvironment(env).withOutputDirectory(workDir);
+		const int ret = executor->run(binary, executionSetup);
 		boost::filesystem::remove(binary);
 
 		if(ret != 0) { return ret; }
@@ -131,12 +131,12 @@ namespace measure {
 	vector<string> SystemInfo::queryGenericString(const string& regexString) const {
 		vector<string> retval;
 
-		boost::regex regex(regexString.c_str());
-		boost::match_results<string::const_iterator> matches;
+		std::regex regex(regexString.c_str());
+		std::match_results<string::const_iterator> matches;
 
 		string::const_iterator start = data.begin();
 
-		while(boost::regex_search(start, data.cend(), matches, regex)) {
+		while(std::regex_search(start, data.cend(), matches, regex)) {
 			// save all capturing groups
 			for(unsigned i = 1; i < matches.size(); ++i) {
 				retval.push_back(matches[i]);

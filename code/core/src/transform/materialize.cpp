@@ -48,10 +48,13 @@ namespace transform {
 	TypePtr materialize(const TypePtr& type) {
 
 		// check for null pointer
-		if (!type) return type;
+		if(!type) return type;
+
+		// check for unit
+		if(type->getNodeManager().getLangBasic().isUnit(type)) return type;
 
 		// do not materialize references
-		if (lang::isCppReference(type)||lang::isCppRValueReference(type)) {
+		if(lang::isCppReference(type)||lang::isCppRValueReference(type)) {
 			return type;
 		}
 

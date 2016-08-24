@@ -201,6 +201,7 @@ namespace frontend {
 
 	TEST(InterceptorTest, TrueSystemInterception) {
 		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp");
 		job.registerFrontendExtension<extensions::InterceptorExtension>();
 		job.registerFrontendExtension<extensions::TestPragmaExtension>(); // necessary to parse pragmas
@@ -236,6 +237,9 @@ namespace frontend {
 		checkForLiteralName(code, "IMP_std_colon__colon_launch_colon__colon_async", "std::launch::async", "future");
 		checkForLiteralName(code, "IMP_std_colon__colon_launch_colon__colon_deferred", "std::launch::deferred", "future");
 		checkForLiteralName(code, "IMP_std_colon__colon_cout", "std::cout", "iostream");
+
+		// check for std::function operator() return type
+		EXPECT_TRUE(core::analysis::contains(code, builder.typeVariable("__std_fun_ret_type")));
 	}
 
 } // fe namespace

@@ -275,90 +275,12 @@ namespace integration {
 		/**
 		 * Obtains the list of macro definitions to be passed on the the frontend.
 		*/
-		const map<string, string> getDefinitions(std::string step) const {
-			std::map<string, string> defs;
-			boost::char_separator<char> sep("\",");
-			std::string defStr = properties.get("definitions", step);
-
-			boost::tokenizer<boost::char_separator<char>> tokens = boost::tokenizer<boost::char_separator<char>>(defStr, sep);
-			for(const auto& t : tokens) {
-				std::string name = t;
-				if(!name.empty()) {
-					if(name.find("=") != std::string::npos) {
-						defs[name.substr(0, name.find("="))] = name.substr(name.find("=") + 1);
-					} else {
-						defs[name] = "1";
-					}
-				}
-			}
-			return defs;
-		}
-
+		const map<string, string> getDefinitions(std::string step) const;
 
 		/**
 		 * Obtains a list of additional arguments to be passed on to the compiler when building the test case.
 		 */
-		const vector<string> getCompilerArguments(std::string step) const {
-			// TODO move this to the right place
-			// TODO implement properties which exclude each other
-			std::map<string, string> gccFlags;
-			gccFlags["use_libmath"] = "-lm";
-			gccFlags["use_libpthread"] = "-lpthread";
-			gccFlags["use_opencl"] = "-lOpenCL";
-			gccFlags["use_omp"] = "-fopenmp";
-			gccFlags["standardFlags"] = "-fshow-column -Wall -lrt -pipe";
-			gccFlags["use_o3"] = "-O3";
-			gccFlags["use_c"] = "--std=c99";
-			gccFlags["use_cpp"] = "--std=c++11";
-			gccFlags["use_gnu99"] = "--std=gnu99";
-			gccFlags["use_gnu90"] = "--std=gnu90";
-
-			std::map<string, string> insiemeccFlags;
-			insiemeccFlags["use_libmath"] = "";
-			insiemeccFlags["use_libpthread"] = "";
-			insiemeccFlags["use_opencl"] = "-fopencl=1 -lOpenCL";
-			insiemeccFlags["use_omp"] = "-fopenmp";
-			insiemeccFlags["standardFlags"] = "--log-level=INFO";
-			insiemeccFlags["use_o3"] = "-O3";
-			insiemeccFlags["use_c"] = "";
-			insiemeccFlags["use_gnu99"] = "";
-			insiemeccFlags["use_gnu90"] = "";
-			insiemeccFlags["use_cpp"] = "--std=c++11";
-
-			std::map<string, map<string, string>> propFlags;
-			propFlags["gcc"] = gccFlags;
-
-			gccFlags["standardFlags"] += " -fpermissive";
-
-			propFlags["g++"] = gccFlags;
-			propFlags["insiemecc"] = insiemeccFlags;
-
-			boost::filesystem::path comp(properties.get("compiler", step));
-			std::string cmd = " ";
-			map<std::string, std::string> flagMap = propFlags[comp.filename().string()];
-
-			vector<string> compArgs;
-			compArgs.push_back(flagMap["standardFlags"]);
-
-			for(const auto& key : properties.getKeys()) {
-				string propVal = properties.get(key, step);
-				// check if property is switched on
-				if(propVal.compare("1") == 0) {
-					// check if property is supported
-					if(flagMap.count(key) == 1) {
-						compArgs.push_back(flagMap[key]);
-					} else {
-						std::cout << "WARNING: Property " << key << " not supported!" << std::endl;
-					}
-				}
-				if(propVal.compare("0") == 0 && flagMap.count(key) != 1) { std::cout << "WARNING: Property " << key << " ignored!" << std::endl; }
-			}
-
-			// add remaining flags
-			compArgs.push_back(properties.get("compFlags", step));
-
-			return compArgs;
-		}
+		const vector<string> getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const;
 	};
 
 	// an optional type wrapping a test case
@@ -366,6 +288,11 @@ namespace integration {
 
 	// an enum describing the different modes which test cases to load
 	enum LoadTestCaseMode { ENABLED_TESTS, ENABLED_AND_LONG_TESTS, LONG_TESTS, BLACKLISTED_TESTS, ALL_TESTS };
+
+	/** returns the name/path to the backend compiler to use depending on the passed language and compiler name/path.
+	 * This function will give precedence to the INSIEME_C(XX)_BACKEND_COMPILER environment variables
+	 */
+	std::string getBackendCompilerString(const string& compilerProperty, bool isCpp);
 
 	/**
 	 * Obtains a full list of all test cases available within the system.

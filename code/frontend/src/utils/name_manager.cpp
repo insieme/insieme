@@ -215,20 +215,22 @@ namespace utils {
 		return buildNameSuffixForTemplateInternal(tempArgs.asArray(), astContext, cStyleName);
 	}
 
-	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, bool cStyleName) {
+	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, const conversion::Converter& converter, bool cStyleName) {
+		// operator= should not have silly suffixes for templates
+		if(boost::starts_with(funcDecl->getNameAsString(), "operator")) cStyleName = true;
+
 		std::string name = funcDecl->getQualifiedNameAsString();
 		if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
 			if(!method->isStatic()) {
 				// no need to qualify method name
 				name = funcDecl->getNameAsString();
 			}
-			if(method->getParent()) {
-				if(method->getParent()->isLambda()) { name = createNameForAnon("lambda", method->getParent(), funcDecl->getASTContext().getSourceManager()); }
-			}
 		}
 
-		// mangle name
-		name = insieme::utils::mangle(name);
+		// adjust name for things in anonymous namespaces
+		if(boost::contains(name, "(anonymous")) {
+			name = createNameForAnon(name, funcDecl, converter.getSourceManager());
+		}
 
 		// build a suffix for template instantiations
 		std::stringstream suffix;
@@ -237,11 +239,8 @@ namespace utils {
 			suffix << buildNameSuffixForTemplate(*funcDecl->getTemplateSpecializationArgs(), funcDecl->getASTContext());
 		}
 
-		if(funcDecl->isTemplateInstantiation()) {
-			std::string returnType = getTypeString(funcDecl->getReturnType());
-			if(!cStyleName) {
-				suffix << "_returns_" << returnType;
-			}
+		if(!cStyleName && funcDecl->isTemplateInstantiation()) {
+			suffix << "_returns_" << getTypeString(funcDecl->getReturnType());
 		}
 
 		string suffixStr = suffix.str();
@@ -250,7 +249,7 @@ namespace utils {
 		}
 
 		// all done
-		return name + suffixStr;
+		return insieme::utils::mangle(name + suffixStr);
 	}
 
 	std::string getNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm) {
@@ -275,6 +274,9 @@ namespace utils {
 	}
 
 	std::string getNameForField(const clang::FieldDecl* fieldDecl, const clang::SourceManager& sm) {
+		if(fieldDecl->isImplicit() && !fieldDecl->isAnonymousStructOrUnion()) {
+			return format("capture_%u", fieldDecl->getFieldIndex());
+		}
         string fieldName = fieldDecl->getNameAsString();
 		if(fieldName.empty() || fieldDecl->isAnonymousStructOrUnion()) {
 			auto fileName = sm.getFilename(fieldDecl->getLocStart()).str();
@@ -292,8 +294,18 @@ namespace utils {
 		auto canon = tagDecl->getCanonicalDecl();
 		// try to use name, if not available try to use typedef name, otherwise no name
 		string name = utils::createNameForAnon("__anon_tagtype_", tagDecl, converter.getSourceManager());
+
 		if(canon->getDeclName() && !canon->getDeclName().isEmpty()) name = canon->getQualifiedNameAsString();
 		else if(canon->hasNameForLinkage()) name = canon->getTypedefNameForAnonDecl()->getQualifiedNameAsString();
+		else {
+			// for anonymous structs created to implement lambdas, encode capture type names in name (
+			auto rec = llvm::dyn_cast<clang::RecordDecl>(tagDecl);
+			if(rec && rec->isLambda()) {
+				for(auto capture : rec->fields()) {
+					name = name + "_" + getTypeString(capture->getType(), false);
+				}
+			}
+		}
 
 		// encode template parameters in name
 		auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(tagDecl);

@@ -63,7 +63,7 @@ namespace extensions {
 		pragma::node* stripEod(pragma::node* eodDelimited) {
 			pragma::concat* eodConcat = dynamic_cast<pragma::concat*>(eodDelimited);
 			assert_true(eodConcat != nullptr) << "Tried to strip an eod from a token sequence which is not a concat.";
-			__unused auto seceod = dynamic_cast<decltype(tok::eod)*>(eodConcat->second);
+			__insieme_unused auto seceod = dynamic_cast<decltype(tok::eod)*>(eodConcat->second);
 			assert_true(seceod != nullptr) << "Tried to strip an eod from a token sequence not ending on eod.";
 			return eodConcat->first;
 		}

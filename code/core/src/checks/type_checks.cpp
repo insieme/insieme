@@ -45,6 +45,7 @@
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/materialize.h"
+#include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/types/type_variable_deduction.h"
 
@@ -354,7 +355,7 @@ namespace checks {
 
 		// iterate over all the constructors and check their types
 		for (auto& constructor : address->getRecord()->getConstructors()) {
-			checkMemberType(address, constructor.getAddressedNode().as<LambdaExprPtr>()->getFunctionType(), FK_CONSTRUCTOR, false, res, EC_TYPE_INVALID_CONSTRUCTOR_TYPE, "Invalid constructor type");
+			checkMemberType(address, constructor.getAddressedNode()->getType().as<FunctionTypePtr>(), FK_CONSTRUCTOR, false, res, EC_TYPE_INVALID_CONSTRUCTOR_TYPE, "Invalid constructor type");
 		}
 
 		return res;
@@ -368,7 +369,7 @@ namespace checks {
 
 		std::set<FunctionTypePtr> constructorTypes;
 		for (const auto& ctor : address->getRecord()->getConstructors()) {
-			const auto& type = ctor.getAddressedNode().as<LambdaExprPtr>()->getFunctionType();
+			const auto& type = ctor.getAddressedNode()->getType().as<FunctionTypePtr>();
 			auto inserted = constructorTypes.insert(type);
 
 			if (!inserted.second) {
@@ -384,7 +385,7 @@ namespace checks {
 		auto record = address.getAddressedNode()->getRecord();
 
 		if(record->hasDestructor()) {
-			checkMemberType(address, record->getDestructor().as<LambdaExprPtr>()->getFunctionType(), FK_DESTRUCTOR, false, res,
+			checkMemberType(address, record->getDestructor()->getType().as<FunctionTypePtr>(), FK_DESTRUCTOR, false, res,
 				            EC_TYPE_INVALID_DESTRUCTOR_TYPE, "Invalid destructor type");
 		}
 
@@ -941,6 +942,28 @@ namespace checks {
 		return res;
 	}
 
+	namespace {
+		template<typename T>
+		T nominalize(const T& input) {
+			return core::transform::transformBottomUpGen(input, [](const core::TagTypePtr& tt) { return tt->getTag(); }, core::transform::globalReplacement);
+		}
+
+		core::TagTypePtr findTagTypeForReference(const TypePtr type, const NodeAddress& location) {
+			// if we have a reference rather than the actual tag type, find it
+			TagTypePtr tagT = nullptr;
+			if(auto tagR = type.isa<TagTypeReferencePtr>()) {
+				visitPathBottomUpInterruptible(location, [&tagR, &tagT](const TagTypeDefinitionPtr& ttDef) {
+					if(::any(ttDef.getDefinitions(), [&tagR](const TagTypeBindingPtr& ttb){ return ttb->getTag() == tagR; })) {
+						tagT = IRBuilder(ttDef.getNodeManager()).tagType(tagR, ttDef);
+						return true;
+					}
+					return false;
+				});
+			}
+			return tagT;
+		}
+	}
+
 	OptionalMessageList InitExprTypeCheck::visitInitExpr(const InitExprAddress& address) {
 		OptionalMessageList res;
 		auto& mgr = address->getNodeManager();
@@ -971,6 +994,9 @@ namespace checks {
 		}
 
 		auto tagT = type.isa<TagTypePtr>();
+		if(!tagT) {
+			tagT = findTagTypeForReference(type, address);
+		}
 		if(tagT) {
 			// test struct types
 			core::StructPtr structType = analysis::isStruct(tagT->peel());
@@ -986,8 +1012,8 @@ namespace checks {
 				// check type of values within init expression
 				unsigned i = 0;
 				for(const auto& cur : initExprs) {
-					core::TypePtr requiredType = fields[i++]->getType();
-					core::TypePtr isType = cur->getType();
+					core::TypePtr requiredType = nominalize(fields[i++]->getType());
+					core::TypePtr isType = nominalize(cur->getType());
 					if(!typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
 						add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 										 format("Invalid type of struct-member initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
@@ -1006,10 +1032,10 @@ namespace checks {
 					return res;
 				}
 				// check that its type matches any of the union types
-				core::TypePtr isType = initExprs.front()->getType();
+				core::TypePtr isType = nominalize(initExprs.front()->getType());
 				bool matchesAny = false;
 				for(const auto& field : unionType->getFields()) {
-					if(typeMatchesWithOptionalMaterialization(mgr, materialize(field->getType()), isType)) matchesAny = true;
+					if(typeMatchesWithOptionalMaterialization(mgr, materialize(nominalize(field->getType())), isType)) matchesAny = true;
 				}
 				if(!matchesAny) {
 					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
@@ -1094,22 +1120,23 @@ namespace checks {
 				}
 			}
 
-
-			// Accessing an element from anything else than a tag type
-			// we allow; since we have no way to check the consistency of
-			// the requested element, everything is fine
 			auto tagType = exprType.isa<TagTypePtr>();
 			if(!tagType) {
 				// at least check for base types and references
 				if(lang::isReference(exprType) || lang::isBuiltIn(exprType)) {
 					add(res, Message(address, EC_TYPE_ACCESSING_MEMBER_OF_NON_RECORD_TYPE,
-						             format("Trying to access member of record, but got a reference or builtin type: %s", *exprType), Message::ERROR));
+						             format("Trying to access (%s) member of record, but got a reference or builtin type: %s",
+						                    isRefVersion ? "Ref version" : "Non-ref version", *exprType),
+						             Message::ERROR));
 				}
-				return res; // all else fine
+				// Accessing an element from anything else than a tag type
+				// we allow; since we have no way to check the consistency of
+				// the requested element, everything is fine
+				return res;
 			}
 
 			// peel recursive type (this fixes the field types to be accessed)
-			if (tagType->isRecursive()) {
+			if(tagType->isRecursive()) {
 				tagType = tagType->peel();
 			}
 

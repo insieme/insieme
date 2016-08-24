@@ -36,6 +36,8 @@
 
 #include "insieme/frontend/stmt_converter.h"
 
+#include "insieme/frontend/state/variable_manager.h"
+
 #include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/macros.h"
@@ -61,7 +63,7 @@ namespace conversion {
 	//---------------------------------------------------------------------------------------------------------------------
 
 	stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
-		VLOG(2) << "CXXStmtConverter";
+		VLOG(2) << "CXXStmtConverter:\n" << dumpClang(stmt, converter.getSourceManager());
 		return BaseVisit(stmt, [&](clang::Stmt* stmt) { return StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt); });
 	}
 
@@ -143,9 +145,33 @@ namespace conversion {
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
-		frontend_assert(false && "ForRange -- Currently not supported!");
-		return stmtutils::StmtWrapper();
+	stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* forStmt) {
+		stmtutils::StmtWrapper stmt;
+		LOG_STMT_CONVERSION(forStmt, stmt);
+
+		converter.getVarMan()->pushScope(true);
+
+		// convert all the necessary parts
+		auto irRangeStmt = converter.convertStmt(forStmt->getRangeStmt());
+		auto irBeginEnd = converter.convertStmt(forStmt->getBeginEndStmt());
+		auto irCondition = converter.convertExpr(forStmt->getCond());
+		auto irIncrement = converter.convertExpr(forStmt->getInc());
+		auto irLoopVar = converter.convertStmt(forStmt->getLoopVarStmt());
+		auto irInnerBody = converter.convertStmt(forStmt->getBody());
+
+		// and build the IR to represent the loop
+		irInnerBody = frontend::utils::addIncrementExprBeforeAllExitPoints(irInnerBody, irIncrement);
+		auto irLoopBody = builder.compoundStmt(irLoopVar, irInnerBody);
+
+		auto irLoop = builder.whileStmt(irCondition, irLoopBody);
+		core::StatementList irBeginEndList = irBeginEnd.as<core::CompoundStmtPtr>()->getStatements();
+		stmt.push_back(irRangeStmt);
+		std::copy(irBeginEndList.cbegin(), irBeginEndList.cend(), std::back_inserter(stmt));
+		stmt.push_back(irLoop);
+
+		converter.getVarMan()->popScope();
+
+		return stmt;
 	}
 
 }

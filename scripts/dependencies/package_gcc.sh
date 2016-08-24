@@ -17,6 +17,7 @@ pkg_configure() {
 		--with-mpc="$PREFIX/mpc-latest" \
 		--with-mpfr="$PREFIX/mpfr-latest" \
 		--enable-languages="c,c++" \
+		--without-isl \
 		--disable-multilib \
 		--enable-lto
 }

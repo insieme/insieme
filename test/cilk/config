@@ -2,3 +2,4 @@ compFlags[insiemecc_c_sema]=--cilk
 compFlags[insiemecc_cpp_sema]=--cilk
 compFlags[insiemecc_run_c_convert]=--cilk
 compFlags[insiemecc_seq_c_convert]=--cilk
+excludeSteps="*_ocl_*","*_cpp_*"

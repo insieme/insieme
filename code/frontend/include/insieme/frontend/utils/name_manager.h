@@ -90,7 +90,7 @@ namespace utils {
 	 * @param cStyleName whether to build a name suitable for usage in a C program or for the IR
 	 * @return unique string value
 	 */
-	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, bool cStyleName = false);
+	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, const conversion::Converter& converter, bool cStyleName = false);
 
 	std::string getNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm);
 

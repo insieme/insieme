@@ -816,23 +816,35 @@ namespace measure {
 		}
 
 
-		vector<vector<MetricPtr>> partitionPapiCounter(const vector<MetricPtr>& metric) {
+		vector<vector<MetricPtr>> partitionPapiCounter(const vector<MetricPtr>& metric, const MeasurementSetup& setup) {
 			// compute closure and filter out PAPI counters
 			std::set<MetricPtr> dep;
 			for_each(getDependencyClosureLeafs(metric), [&](const MetricPtr& cur) {
 				if(boost::algorithm::starts_with(cur->getName(), "PAPI")) { dep.insert(cur); }
 			});
 
-			// pack counters into groups (TODO: use PAPI library to ensure combinations are valid)
-			vector<vector<MetricPtr>> res;
-			res.push_back(vector<MetricPtr>());
-			for(auto cur = dep.begin(); cur != dep.end(); cur++) {
-				if(res.back().size() == 1u) { // 1 to be sure to avoid conflicts for now
-					res.push_back(vector<MetricPtr>());
-				}
-				res.back().push_back(*cur);
-			}
+			vector<vector<MetricPtr>> res = { vector<MetricPtr>() };
 
+			// if PAPI is present, query papi_event_chooser for valid PAPI counter groupings
+			// if PAPI is not present, fall back to one at a time
+			if(!utils::getPapiRootDir().empty()) {
+				std::vector<string> params = {"PRESET"};
+				for(const auto& entry : dep) {
+					params.push_back(toString(entry));
+					if(setup.executor->run(utils::getPapiRootDir() + "/bin/papi_event_chooser", setup.executionSetup.withParameters(params).withBinaryCopying(false)) != 0) {
+						// is not successful, append to next res list and start new params list
+						params = {"PRESET", toString(entry)};
+						res.push_back(vector<MetricPtr>());
+					}
+					res.back().push_back(entry);
+				}
+			} else {
+				for(const auto& cur : dep) {
+					// 1 to be sure to avoid conflicts
+					if(res.back().size() == 1u) { res.push_back(vector<MetricPtr>()); }
+					res.back().push_back(cur);
+				}
+			}
 			return res;
 		}
 
@@ -847,7 +859,8 @@ namespace measure {
 			res << join(",", dep, [](std::ostream& out, const MetricPtr& cur) { out << cur->getName(); });
 			return res.str();
 		}
-	}
+
+	} // end anonymous namespace
 
 
 	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(const std::map<core::StatementAddress, region_id>& regions,
@@ -893,29 +906,13 @@ namespace measure {
 	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(const std::string& binary, const vector<MetricPtr>& metrics,
 		                                                               const MeasurementSetup& setup) {
 		// check binary
-		assert_true(boost::filesystem::exists(binary)) << "Invalid executable specified for measurement!";
+		assert_true(boost::filesystem::exists(binary)) << "Invalid executable specified for measurement! Executable was " << binary;
 
 		// extract name of executable
 		const std::string executable = bfs::path(binary).filename().string();
 
 		// partition the papi parameters
-		auto papiPartition = partitionPapiCounter(metrics);
-		/*auto papiPartition = vector<vector<MetricPtr> >(3);
-
-		namespace idm = insieme::driver::measure;
-
-		papiPartition[0] = vector<MetricPtr>{
-			idm::Metric::TOTAL_L1_DCM, idm::Metric::TOTAL_L2_DCM,  idm::Metric::TOTAL_L3_TCM,  idm::Metric::TOTAL_BR_MSP,
-			idm::Metric::TOTAL_BR_PRC, idm::Metric::TOTAL_TOT_INS, idm::Metric::TOTAL_FDV_INS, idm::Metric::TOTAL_LD_INS,
-		};
-
-		papiPartition[1] = vector<MetricPtr>{
-			idm::Metric::TOTAL_FP_INS, idm::Metric::TOTAL_SR_INS, idm::Metric::TOTAL_L2_DCH, idm::Metric::TOTAL_FP_OPS, idm::Metric::TOTAL_VEC_SP,
-		};
-
-		papiPartition[2] = vector<MetricPtr>{
-			idm::Metric::TOTAL_VEC_DP, idm::Metric::TOTAL_STL_ICY, idm::Metric::TOTAL_TLB_DM, idm::Metric::TOTAL_TLB_IM,
-		};*/
+		auto papiPartition = partitionPapiCounter(metrics, setup);
 
 		// run experiments and collect results
 		vector<std::map<region_id, std::map<MetricPtr, Quantity>>> res;
@@ -924,8 +921,7 @@ namespace measure {
 			Measurements data;
 
 			// run once for each parameter sub-set computed by the partitioning
-			for_each(papiPartition, [&](const vector<MetricPtr>& paramList) {
-
+			for(const auto& paramList : papiPartition) {
 				// create a directory
 				int counter = 2;
 				auto workdir = bfs::path(".") / ("work_dir_" + executable);
@@ -936,13 +932,15 @@ namespace measure {
 				assert_true(bfs::exists(workdir)) << "Working-Directory already present!";
 
 				// setup runtime system metric selection
-				std::map<string, string> mod_env = setup.env;
+				std::map<string, string> mod_env = setup.executionSetup.env;
 				mod_env["IRT_INST_REGION_INSTRUMENTATION"] = "enabled";
 
 				string metric_selection;
-				for(auto metric : getDependencyClosureLeafs(metrics)) {
+				bool energyMetricsPresent = false;
+				for(const auto& metric : getDependencyClosureLeafs(metrics)) {
 					// only add non-papi metrics (identified by the PAPI prefix)
 					if(metric->getName().find("PAPI") != 0) { metric_selection += metric->getName() + ","; }
+					if(metric->getName().find("ENERGY") != string::npos) { energyMetricsPresent = true; }
 				}
 				if(!paramList.empty()) { // only set if there are any parameters (otherwise collection is disabled)
 					metric_selection += getPapiCounterSelector(paramList);
@@ -953,33 +951,30 @@ namespace measure {
 				mod_env["IRT_INST_REGION_INSTRUMENTATION_TYPES"] = metric_selection;
 
 				// run code
-				int ret = setup.executor->run(binary, mod_env, setup.params, workdir.string());
-				if(ret != 0) {
-					LOG(WARNING) << "Unexpected executable return code " << ret;
-				}
+				ExecutionSetup executionSetup = setup.executionSetup.withEnvironment(mod_env).withOutputDirectory(workdir.string()).withCapabilities(energyMetricsPresent);
+
+				// energy metrics require rawio capabilities
+				int ret = setup.executor->run(binary, executionSetup);
+				if(ret != 0) { LOG(WARNING) << "Unexpected executable return code " << ret; }
 
 				// load data and merge it
-				if(ret == 0) {
-					data.mergeIn(loadResults(workdir));
-				}
+				if(ret == 0) { data.mergeIn(loadResults(workdir)); }
 
 				// delete local files
 				if(boost::filesystem::exists(workdir)) { bfs::remove_all(workdir); }
 
-			});
+			}
 
 			if(!data.empty()) {
 				// extract results
 				res.push_back(std::map<region_id, std::map<MetricPtr, Quantity>>());
 				auto& curRes = res.back();
 				for(const auto& region : data.getAllRegions()) {
-				//for_each(data.getAllRegions(), [&](const region_id& region) {
 					for(const auto& metric : metrics) {
-					//for_each(metrics, [&](const MetricPtr& metric) {
 						// use extractor of metric to collect values
 						curRes[region][metric] = metric->extract(data, region);
-					}//);
-				}//);
+					}
+				}
 			}
 		}
 
@@ -1013,15 +1008,15 @@ namespace measure {
 		// add flags required by the runtime
 		modifiedCompiler.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "runtime/include");
 		modifiedCompiler.addFlag(string("-I ") + utils::getInsiemeSourceRootDir() + "common/include");
-		modifiedCompiler.addFlag(string("-I ") + utils::getInsiemeLibsRootDir() + "papi-latest/include");
-		modifiedCompiler.addFlag(string("-L ") + utils::getInsiemeLibsRootDir() + "papi-latest/lib/");
+		modifiedCompiler.addFlag(string("-I ") + utils::getPapiRootDir() + "include");
+		modifiedCompiler.addFlag(string("-L ") + utils::getPapiRootDir() + "lib");
 		modifiedCompiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
 		modifiedCompiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
 		modifiedCompiler.addFlag("-DIRT_WORKER_SLEEPING");
 		modifiedCompiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
 		#ifdef USE_PAPI
 			modifiedCompiler.addFlag("-DIRT_USE_PAPI");
-			modifiedCompiler.addFlag(string("-Wl,-rpath,") + utils::getInsiemeLibsRootDir() + "papi-latest/lib -lpapi");
+			modifiedCompiler.addFlag(string("-Wl,-rpath,") + utils::getPapiRootDir() + "lib -lpapi");
 		#endif
 		modifiedCompiler.addFlag("-ldl -lrt -lpthread -lm");
 		modifiedCompiler.addFlag("-Wno-unused-but-set-variable");
@@ -1189,6 +1184,7 @@ namespace measure {
 				});
 			}
 			LOG(INFO) << "found " << index << " log files";
+			assert_gt(index, 0) << " found no log files!";
 		}
 
 		return res;

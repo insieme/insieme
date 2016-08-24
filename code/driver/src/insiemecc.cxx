@@ -69,6 +69,8 @@ namespace cmd = insieme::driver::cmd;
 namespace du = insieme::driver::utils;
 
 int main(int argc, char** argv) {
+	std::cout << "Insieme compiler - Version: " << utils::getVersion() << "\n";
+
 	// Step 1: parse input parameters
 	std::vector<std::string> arguments(argv, argv + argc);
 	cmd::Options options = cmd::Options::parse(arguments);
@@ -78,8 +80,6 @@ int main(int argc, char** argv) {
 
 	// if e.g. help was specified, exit with zero
 	if(options.gracefulExit) { return 0; }
-
-	std::cout << "Insieme compiler - Version: " << utils::getVersion() << "\n";
 
 	// Step 2: filter input files
 	vector<fe::path> inputs;
@@ -196,11 +196,16 @@ int main(int argc, char** argv) {
 	default: compiler = cp::Compiler::getRuntimeCompiler(compiler);
 	}
 
-	// add needed library flags
+	// add needed external library flags
 	for(auto cur : extLibs) {
 		string libname = cur.filename().string();
 		// add libraries by splitting their paths, truncating the filename of the library in the process (lib*.so*)
 		compiler.addExternalLibrary(cur.parent_path().string(), libname.substr(3, libname.find(".") - 3));
+	}
+
+	// add library flags
+	for(auto lib : options.settings.libraryFiles) {
+		compiler.addLibrary(lib.string());
 	}
 
 	// add needed includeDirs for intercepted stuff
@@ -225,7 +230,7 @@ int main(int argc, char** argv) {
 
 	// if we are compiling C++ code, we need to set the backend compiler standard
 	if(options.job.isCxx()) {
-		compiler.addFlag("-std=c++11");
+		compiler.addFlag("-std=c++14");
 	} else {
 		compiler.addFlag("-std=c99");
 	}

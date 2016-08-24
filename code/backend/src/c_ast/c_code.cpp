@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -82,6 +82,27 @@ namespace c_ast {
 		});
 
 		out << "\n";
+
+		// print macro definition for unified C/C++ in-place initialization
+		out << "#ifdef __cplusplus\n"
+			<< "#define INS_INIT(_v_) _v_\n"
+			<< "#else\n"
+			<< "#define INS_INIT(_v_) (_v_)\n"
+			<< "#endif\n";
+
+		// print C++14 workaround
+		out << R"(#ifdef __cplusplus
+				/** Workaround for libstdc++/libc bug.
+				 *  There's an inconsistency between libstdc++ and libc regarding whether
+				 *  ::gets is declared or not, which is only evident when using certain
+				 *  compilers and language settings
+				 *  (tested positively with clang 3.9 --std=c++14 and libc 2.17).
+				 */
+				#include <initializer_list>  // force libstdc++ to include its config
+				#undef _GLIBCXX_HAVE_GETS    // correct broken config)"
+			<< "\n#endif\n";
+
+		out << "\n/* ------- Program Code --------- */\n\n";
 
 		// print topological sorted list of fragments
 		for_each(fragments, [&out](const CodeFragmentPtr& cur) { out << *cur; });
