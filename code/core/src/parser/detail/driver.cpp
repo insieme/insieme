@@ -1041,6 +1041,27 @@ namespace parser {
 			return builder.jobExpr(getScalar(lowerBound), getScalar(upperBound), bind);
 		}
 
+		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound,
+			                                    const ExpressionPtr& modExpr, const ExpressionPtr& expr) {
+			auto scalarExpr = getScalar(expr);
+			if(!scalarExpr.isa<CallExprPtr>()) {
+				error(l, "expression in job must be a call expression");
+				return nullptr;
+			}
+			auto bind = builder.bindExpr(VariableList(), scalarExpr.as<CallExprPtr>());
+			return builder.jobExpr(getScalar(lowerBound), getScalar(upperBound), getScalar(modExpr), bind);
+		}
+
+		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& expr) {
+			auto scalarExpr = getScalar(expr);
+			if(!scalarExpr.isa<CallExprPtr>()) {
+				error(l, "expression in job must be a call expression");
+				return nullptr;
+			}
+			auto bind = builder.bindExpr(VariableList(), scalarExpr.as<CallExprPtr>());
+			return builder.jobExprUnbounded(getScalar(lowerBound), bind);
+		}
+
 		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& expr) {
 			auto scalarExpr = getScalar(expr);
 			if(!scalarExpr.isa<CallExprPtr>()) {

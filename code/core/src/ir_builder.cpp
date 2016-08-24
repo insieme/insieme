@@ -1031,6 +1031,19 @@ namespace core {
 		return jobExpr(type, threadNumRange, body);
 	}
 
+	JobExprPtr IRBuilderBaseModule::jobExpr(const ExpressionPtr& rangeLowerBound, const ExpressionPtr& rangeUpperBound, const ExpressionPtr& rangeMod,
+	                                        const ExpressionPtr& body) const {
+		GenericTypePtr type = static_pointer_cast<GenericTypePtr>(manager.getLangBasic().getJob());
+		const ExpressionPtr threadNumRange = getThreadNumRange(rangeLowerBound, rangeUpperBound, rangeMod);
+		return jobExpr(type, threadNumRange, body);
+	}
+
+	JobExprPtr IRBuilderBaseModule::jobExprUnbounded(const ExpressionPtr& rangeLowerBound, const ExpressionPtr& body) const {
+		GenericTypePtr type = static_pointer_cast<GenericTypePtr>(manager.getLangBasic().getJob());
+		const ExpressionPtr threadNumRange = getThreadNumRange(rangeLowerBound);
+		return jobExpr(type, threadNumRange, body);
+	}
+
 	namespace {
 
 		bool isJobBody(const NodePtr& node) {
@@ -1083,7 +1096,11 @@ namespace core {
 		TypePtr type = manager.getLangBasic().getUInt8();
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateBoundRange(), numericCast(min, type), numericCast(max, type));
 	}
-
+	CallExprPtr IRBuilderBaseModule::getThreadNumRange(const ExpressionPtr& min, const ExpressionPtr& max, const ExpressionPtr& mod) const {
+		TypePtr type = manager.getLangBasic().getUInt8();
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateBoundRangeMod(), numericCast(min, type), numericCast(max, type),
+		                numericCast(mod, type));
+	}
 
 	CallExprPtr IRBuilderBaseModule::getThreadGroup(ExpressionPtr level) const {
 		if(!level) { level = uintLit(0); }
