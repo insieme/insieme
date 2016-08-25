@@ -34,19 +34,54 @@
  * regarding third party software licenses.
  */
 
-extern void printf(const char*, ...);
-
 int main() {
-	int a = 666;
+	int magic;
 
-	#pragma omp parallel
+	#pragma test expect_ir(R"(
+		def __any_string__parfun = function (v0 : ref<ref<int<4>,f,f,plain>,f,f,plain>) -> unit {
+			{
+				var ref<int<4>,f,f,plain> v1 = **v0;
+			}
+			merge_all();
+		};
+		{
+			var ref<int<4>,f,f,plain> v0 = 42;
+			{
+				merge(parallel(job[1ul...] => __any_string__parfun(v0)));
+			}
+		}
+	)")
 	{
-		int b;
-		printf("hell world #%d/%d\n", a, b);
+		int a = 42;
+		#pragma omp parallel
+		{
+			int i = a;
+		}
+	}
 
-		#pragma omp for
-		for(int i = 0; i < 100; ++i) {
-			printf("%d", i + a);
+	#pragma test expect_ir(R"(
+		def __any_string__parfun = function (v0 : ref<ref<int<4>,f,f,plain>,f,f,plain>) -> unit {
+			var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+			{
+				var ref<int<4>,f,f,plain> v2 = **v0;
+				v1 = 5;
+			}
+			merge_all();
+		};
+		{
+			var ref<int<4>,f,f,plain> v0 = 42;
+			var ref<int<4>,f,f,plain> v1 = 1337;
+			{
+				merge(parallel(job[1ul...] => __any_string__parfun(v0)));
+			}
+		}
+	)")
+	{
+		int a = 42, b = 1337;
+		#pragma omp parallel shared(a) private(b)
+		{
+			int i = a;
+			b = 5;
 		}
 	}
 }
