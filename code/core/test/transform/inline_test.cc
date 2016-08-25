@@ -146,6 +146,39 @@ namespace transform {
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}
 
+	TEST(Manipulation, inlineMultiReturn) {
+		NodeManager nm;
+		IRBuilder b(nm);
+
+		// test: if callexpr is refassign
+		{
+			auto ir = b.parseAddressesStatement(R"( def fun = () -> int<4> { return 1; }; { var ref<int<4>> a; $a = fun()$; } )")[0].as<CallExprAddress>();
+
+			ASSERT_TRUE(ir);
+			EXPECT_TRUE(check(ir, checks::getFullCheck()).empty()) << check(ir, checks::getFullCheck());
+
+			auto result = inlineMultiReturn(nm, ir);
+
+			EXPECT_EQ("{{var ref<bool,f,f,plain> v0 = false;{{v1 = 1;v0 = true;}}}}",
+				toString(printer::PrettyPrinter(core::analysis::normalize(result), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
+		}
+
+		// test: if callexpr is not a refassign
+		{
+			auto ir = b.parseAddressesStatement(R"( def fun = () -> int<4> { var ref<int<4>> a = 3; return 1+2+a; }; { var ref<int<4>> a; $fun()$; } )")[0].as<CallExprAddress>();
+
+			ASSERT_TRUE(ir);
+			EXPECT_TRUE(check(ir, checks::getFullCheck()).empty()) << check(ir, checks::getFullCheck());
+
+			auto result = inlineMultiReturn(nm, ir);
+
+
+			EXPECT_EQ("{{var ref<bool,f,f,plain> v0 = false;{var ref<int<4>,f,f,plain> v1 = 3;{v0 = true;}}}}",
+				toString(printer::PrettyPrinter(core::analysis::normalize(result), printer::PrettyPrinter::PRINT_SINGLE_LINE))) <<
+				toString(printer::PrettyPrinter(core::analysis::normalize(result), printer::PrettyPrinter::PRINT_SINGLE_LINE));
+		}
+	}
+
 } // end namespace transform
 } // end namespace core
 } // end namespace insieme
