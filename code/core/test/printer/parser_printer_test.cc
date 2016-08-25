@@ -170,7 +170,6 @@ namespace parser {
 
 				auto type3 = builder.normalize(builder.parseExpr(ss1.str()));
 
-
 				if(analysis::equalNameless(builder.normalize(type1), builder.normalize(type2))) {
 					dumpColor(type2);
 					return true;
@@ -279,25 +278,17 @@ namespace parser {
 		                                "foo"));
 
 		// job expressions
-		EXPECT_TRUE(test_expression(nm, R"(
-		                                def f = () -> int { return 0; };
-		                                job [] => f()
-		                                )"));
+		EXPECT_TRUE(test_expression(nm, "def f = () -> int { return 0; };"
+		                                "job [] => f()"));
 
-		EXPECT_TRUE(test_expression(nm, R"(
-		                                def f = () -> unit {};
-		                                job [0ul .. 5ul] => f()
-		                                )"));
+		EXPECT_TRUE(test_expression(nm, "def f = () -> unit {};"
+		                                "job [0ul .. 5ul] => f()"));
 
-		EXPECT_TRUE(test_expression(nm, R"(
-		                                def f = () -> unit {};
-		                                job [0ul .. 8ul : 2ul ] => f()
-		                                )"));
+		EXPECT_TRUE(test_expression(nm, "def f = () -> unit {};"
+		                                "job [0ul .. 8ul : 2ul ] => f()"));
 
-		EXPECT_TRUE(test_expression(nm, R"(
-		                                def f = () -> unit {};
-		                                job [42ul ...] => f()
-		                                )"));
+		EXPECT_TRUE(test_expression(nm, "def f = () -> unit {};"
+		                                "job [42ul ...] => f()"));
 
 
 	}
