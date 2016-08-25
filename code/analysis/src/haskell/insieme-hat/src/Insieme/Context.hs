@@ -39,10 +39,10 @@ module Insieme.Context (
     Builtins,
     Context,
     mkContext,
+    mkDummyContext,
     getCContext,
     getTree,
     getBuiltins,
-    getInspire
 ) where
 
 import Data.Map
@@ -60,6 +60,5 @@ data Context = Context { getCContext :: CContext,
 mkContext :: CContext -> Tree IR.NodeType -> Builtins -> Context
 mkContext = Context
 
--- TODO remove
-getInspire :: Context -> IR.Inspire
-getInspire ctx = IR.Inspire (getTree ctx) (getBuiltins ctx)
+mkDummyContext :: Tree IR.NodeType -> Builtins -> Context
+mkDummyContext = Context nullPtr

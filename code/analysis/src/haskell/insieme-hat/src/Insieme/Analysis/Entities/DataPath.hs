@@ -54,7 +54,6 @@ module Insieme.Analysis.Entities.DataPath (
 ) where
 
 import Data.List
-import Insieme.Analysis.Entities.FieldIndex
 
 --
 -- * DataPaths

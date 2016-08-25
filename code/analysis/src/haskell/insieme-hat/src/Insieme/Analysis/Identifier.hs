@@ -38,11 +38,9 @@
 
 module Insieme.Analysis.Identifier where
 
-import Data.List
 import Data.Tree
 import Data.Typeable
 import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Utils (foldTree)
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Utils.UnboundSet as USet

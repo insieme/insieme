@@ -42,10 +42,8 @@ import Debug.Trace
 import Data.Typeable
 import Data.Maybe
 import Data.Tree
-import Data.Typeable
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
-import qualified Data.Set as Set
 import qualified Insieme.Inspire as IR
 
 import qualified Insieme.Utils.UnboundSet as USet

@@ -39,7 +39,6 @@
 
 module Insieme.Inspire where
 
-import Data.Map (Map)
 import Data.Tree (Tree(..))
 import Insieme.Inspire.ThHelpers
 import Language.Haskell.TH
@@ -126,13 +125,6 @@ $(let
     (++) <$> extend baseFromNodeType genClauseFromNodeType
          <*> extend baseToNodeType   genClauseToNodeType
  )
-
-type SymbolTable = Map String (Tree NodeType)
-
-data Inspire = Inspire {
-    getTree     :: Tree NodeType,
-    getBuiltins :: SymbolTable
-}
 
 instance Ord (Tree NodeType) where
     compare (Node x xs) (Node y ys) = if x == y then compare xs ys else compare x y

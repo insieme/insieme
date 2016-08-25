@@ -45,10 +45,8 @@ module Insieme.Analysis.Framework.Dataflow (
 
 import Data.Int
 import Data.Foldable
-import Data.List
 import Data.Tree
 import Data.Typeable
-import Data.Maybe
 import Debug.Trace
 import qualified Data.Set as Set
 
@@ -65,8 +63,6 @@ import qualified Insieme.Analysis.CallSite as CallSite
 import qualified Insieme.Analysis.ExitPoint as ExitPoint
 import qualified Insieme.Analysis.Reference as Reference
 import qualified Insieme.Analysis.Arithmetic as Arithmetic
-
-import Insieme.Analysis.Reachable
 
 import Insieme.Analysis.Entities.DataPath
 import Insieme.Analysis.Entities.FieldIndex

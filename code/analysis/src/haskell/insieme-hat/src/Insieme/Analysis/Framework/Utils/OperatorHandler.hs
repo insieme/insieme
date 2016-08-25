@@ -36,7 +36,6 @@
 
 module Insieme.Analysis.Framework.Utils.OperatorHandler where
 
-import Data.Tree
 import Insieme.Inspire.NodeAddress
 import qualified Insieme.Analysis.Solver as Solver
 

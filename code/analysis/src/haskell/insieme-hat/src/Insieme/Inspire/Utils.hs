@@ -48,8 +48,8 @@ module Insieme.Inspire.Utils (
 ) where
 
 import Control.Applicative
-import Data.Maybe
 import Data.List
+import Data.Maybe
 import Data.Tree
 import Insieme.Inspire.BinaryParser
 import Insieme.Inspire.NodeAddress
@@ -57,11 +57,12 @@ import System.Process
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
+import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
 
 -- | Fold the given 'Tree'. The accumulator function takes the subtree
 -- and the address of this subtree in the base tree.
-foldTree :: Monoid a => (NodeAddress -> a -> a) -> IR.Inspire -> a
+foldTree :: Monoid a => (NodeAddress -> a -> a) -> Ctx.Context -> a
 foldTree = flip foldTreePrune noPrune
 
 -- | Fold the given 'Tree'. The accumulator function takes the subtree
@@ -79,9 +80,9 @@ noPrune _ = False
 foldTreePrune :: Monoid a
                 => (NodeAddress -> a -> a)      -- ^ aggregation function
                 -> (NodeAddress -> Bool)        -- ^ prune subtrees?
-                -> IR.Inspire                   -- ^ initial tree
+                -> Ctx.Context                  -- ^ current context
                 -> a                            -- ^ accumulated result
-foldTreePrune collect prune tree = foldAddressPrune collect prune (mkNodeAddress [] tree)
+foldTreePrune collect prune ctx = foldAddressPrune collect prune (mkNodeAddress [] ctx)
 
 
 -- | Like 'foldTree' but is able to not follow entire subtrees when
@@ -104,11 +105,11 @@ foldAddressPrune collect prune addr = visit addr mempty
 --
 
 -- | Parse a given IR statement using the inspire binary.
-parseIR :: String -> IO IR.Inspire
+parseIR :: String -> IO (Tree IR.NodeType, Ctx.Builtins)
 parseIR ircode = do
     irb <- readProcess "inspire" ["-s", "-i", "-", "-k", "-"] ircode
-    let Right (tree, builtins) = parseBinaryDump (BS8.pack irb)
-    return $ IR.Inspire tree builtins
+    let Right res  = parseBinaryDump (BS8.pack irb)
+    return res
 
 --
 -- * Get Definition Point Analysis
@@ -122,7 +123,7 @@ findDecl start = findDecl start
     findDecl :: NodeAddress -> Maybe NodeAddress
     findDecl addr = case getNode addr of
         Node IR.Lambda _ -> lambda addr
-        _ -> parameter addr <|> declstmt addr <|> forstmt addr   <|> 
+        _ -> parameter addr <|> declstmt addr <|> forstmt addr   <|>
              bindexpr addr  <|> compstmt addr <|> nextlevel addr
 
     parameter :: NodeAddress -> Maybe NodeAddress
@@ -180,20 +181,20 @@ getType _ = Nothing
 
 
 isVariable :: NodeAddress -> Bool
-isVariable a = case getNode a of 
+isVariable a = case getNode a of
     Node IR.Variable _ -> True
     _                  -> False
 
 isFreeVariable :: NodeAddress -> Bool
-isFreeVariable v | (not . isVariable) v = False 
+isFreeVariable v | (not . isVariable) v = False
 isFreeVariable v = isNothing decl || (isEntryPointParam $ fromJust decl)
     where
         decl = findDecl v
-        
+
         isEntryPointParam v = case getNode $ fromJust $ getParent v of
             Node IR.Parameters _ -> (not . hasEnclosingCall) v
             _                    -> False
-        
+
         hasEnclosingCall a = case getNode a of
             Node IR.CallExpr _ -> True
             _                  -> (not . isRoot) a && (hasEnclosingCall (fromJust $ getParent a))

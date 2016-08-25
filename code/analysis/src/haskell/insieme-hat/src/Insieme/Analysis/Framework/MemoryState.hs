@@ -39,26 +39,21 @@
 
 module Insieme.Analysis.Framework.MemoryState where
 
-import Debug.Trace
 import Data.Tree
 import Data.Typeable
-import Data.Foldable
 import Insieme.Inspire.NodeAddress
 
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.ProgramPoint
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-import Insieme.Analysis.Predecessor
 import Insieme.Analysis.Reference
 
-import qualified Data.Set as Set
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Utils.UnboundSet as USet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import Insieme.Analysis.Entities.DataPath hiding (isRoot)
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import Insieme.Analysis.Entities.FieldIndex

@@ -45,7 +45,6 @@ import Data.Typeable
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
 import qualified Data.Set as Set
-import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.Reachable as Reachable
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
@@ -88,58 +87,57 @@ exitPointAnalysis = Solver.mkAnalysisIdentifier ExitPointAnalysis "EP"
 
 exitPoints :: NodeAddress -> Solver.TypedVar ExitPointSet
 exitPoints addr = case getNode addr of
-    
+
     -- for lambdas: collect all reachable return statements and end of body
     Node IR.Lambda   _ -> var
         where
             var = Solver.mkVariable id [con] Solver.bot
             con = Solver.createConstraint dep val var
-            
+
             dep a = (Solver.toVar endOfBodyReachable) : (map Solver.toVar (getReturnReachVars a))
             val a = exits
                 where
-                    exits = 
-                        if Reachable.toBool $ Solver.get a endOfBodyReachable 
+                    exits =
+                        if Reachable.toBool $ Solver.get a endOfBodyReachable
                         then Set.insert (ExitPoint body) reachableReturns
                         else reachableReturns
-                
+
                     reachableReturns = foldr go Set.empty returns
                         where
-                            go = \r s -> 
-                                if Reachable.toBool $ Solver.get a (Reachable.reachableIn r) 
+                            go = \r s ->
+                                if Reachable.toBool $ Solver.get a (Reachable.reachableIn r)
                                 then Set.insert (ExitPoint r) s
-                                else s 
+                                else s
 
             returns = collectReturns addr
 
             getReturnReachVars a = map (\a -> Reachable.reachableIn a) returns
-            
+
             body = (goDown 2 addr)
-            
+
             endOfBodyReachable = Reachable.reachableOut body
-            
-    
+
+
     -- for bind expressions: use nested call expression
-    Node IR.BindExpr _ -> Solver.mkVariable id [] $ Set.singleton $ ExitPoint $ goDown 2 addr 
-    
+    Node IR.BindExpr _ -> Solver.mkVariable id [] $ Set.singleton $ ExitPoint $ goDown 2 addr
+
     -- everything else has no call sites
     _ -> Solver.mkVariable id [] Solver.bot
-        
+
   where
-  
+
     id = Solver.mkIdentifier exitPointAnalysis addr ""
-    
-    
+
+
 
 collectReturns :: NodeAddress -> [NodeAddress]
 collectReturns = foldAddressPrune collector filter
     where
-        filter cur = 
+        filter cur =
             case getNode cur of
                 Node IR.LambdaExpr _ -> True
                 _ -> False
         collector cur returns =
-            case getNode cur of 
+            case getNode cur of
                 Node IR.ReturnStmt _ -> (goDown 0 cur : returns)
                 _ -> returns
-    

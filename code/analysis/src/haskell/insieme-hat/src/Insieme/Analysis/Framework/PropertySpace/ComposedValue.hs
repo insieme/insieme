@@ -39,7 +39,6 @@
 
 module Insieme.Analysis.Framework.PropertySpace.ComposedValue where
 
-import Data.Typeable
 import Insieme.Analysis.Entities.DataPath
 import Insieme.Analysis.Entities.FieldIndex
 import qualified Insieme.Analysis.Solver as Solver

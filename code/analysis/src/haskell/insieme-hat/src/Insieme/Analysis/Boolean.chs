@@ -36,16 +36,12 @@
 
 module Insieme.Analysis.Boolean where
 
-import Data.Maybe
-import Data.Tree
 import Data.Typeable
 import Insieme.Analysis.Arithmetic
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Inspire.NodeAddress
 import Insieme.Utils.Arithmetic (NumOrdering(..), numCompare)
-import qualified Data.Map as Map
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Inspire as IR
 import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow

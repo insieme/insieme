@@ -38,14 +38,13 @@ module Insieme.Inspire.NodeAddress (
     NodeAddress,
     mkNodeAddress,
     getPathReversed,
-    getIR,
+    getNode,
+    getContext,
     getParent,
     getPath,
     getIndex,
-    getNode,
     isRoot,
     getRoot,
-    getRootIR,
     prettyShow,
     goUp,
     goDown,
@@ -59,12 +58,14 @@ import Data.List (foldl')
 import Data.Tree
 import Data.Function (on)
 import qualified Data.Map as Map
+import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
 
 type NodePath = [Int]
 
 data NodeAddress = NodeAddress { getPathReversed :: NodePath,
-                                 getIR           :: IR.Inspire,
+                                 getNode         :: Tree IR.NodeType,
+                                 getContext      :: Ctx.Context,
                                  getParent       :: Maybe NodeAddress }
 
 instance Eq NodeAddress where
@@ -77,8 +78,10 @@ instance Show NodeAddress where
     show = prettyShow
 
 -- | Create a 'NodeAddress' from a list of indizes and a root node.
-mkNodeAddress :: [Int] -> IR.Inspire -> NodeAddress
-mkNodeAddress xs ir = foldl' (flip goDown) (NodeAddress [] ir Nothing) xs
+mkNodeAddress :: [Int] -> Ctx.Context -> NodeAddress
+mkNodeAddress xs ctx = foldl' (flip goDown) (NodeAddress [] root ctx Nothing) xs
+  where
+    root = Ctx.getTree ctx
 
 -- | Slow, use 'getPathReversed' where possible
 getPath :: NodeAddress -> NodePath
@@ -87,42 +90,34 @@ getPath = reverse . getPathReversed
 getIndex :: NodeAddress -> Int
 getIndex = head . getPathReversed
 
-getNode :: NodeAddress -> Tree IR.NodeType
-getNode = IR.getTree . getIR
-
 isRoot :: NodeAddress -> Bool
 isRoot = isNothing . getParent
 
 getRoot :: NodeAddress -> Tree IR.NodeType
-getRoot = IR.getTree . getRootIR
-
-getRootIR :: NodeAddress -> IR.Inspire
-getRootIR (NodeAddress _ ir Nothing      ) = ir
-getRootIR (NodeAddress _ _  (Just parent)) = getRootIR parent
+getRoot = Ctx.getTree . getContext
 
 prettyShow :: NodeAddress -> String
 prettyShow na = '0' : concat ['-' : show x | x <- getPath na]
 
 goUp :: NodeAddress -> NodeAddress
-goUp na@(NodeAddress _ _ Nothing  ) = na
-goUp    (NodeAddress _ _ (Just na)) = na
+goUp na = fromMaybe na (getParent na)
 
 goDown :: Int -> NodeAddress -> NodeAddress
-goDown x parent@(NodeAddress xs ir _) = NodeAddress (x : xs) ir' (Just parent)
+goDown x parent@(NodeAddress xs n ctx _) = NodeAddress (x : xs) n' ctx (Just parent)
   where
-    ir' = ir{IR.getTree = (subForest $ IR.getTree ir) !! x}
+    n' = subForest n !! x
 
 goLeft :: NodeAddress -> NodeAddress
-goLeft na@(NodeAddress xs _ _            ) | head xs == 0 = na
-goLeft na@(NodeAddress xs _ Nothing      ) = na
-goLeft    (NodeAddress xs _ (Just parent)) = goDown (head xs - 1) parent
+goLeft na@(NodeAddress xs _ _ _            ) | head xs == 0 = na
+goLeft na@(NodeAddress xs _ _ Nothing      ) = na
+goLeft    (NodeAddress xs _ _ (Just parent)) = goDown (head xs - 1) parent
 
 goRight :: NodeAddress -> NodeAddress
-goRight na@(NodeAddress _  _ Nothing      ) = na
-goRight    (NodeAddress xs _ (Just parent)) = goDown (head xs + 1) parent
+goRight na@(NodeAddress _  _ _ Nothing      ) = na
+goRight    (NodeAddress xs _ _ (Just parent)) = goDown (head xs + 1) parent
 
 lookupBuiltin :: NodeAddress -> String -> Maybe (Tree IR.NodeType)
-lookupBuiltin addr needle = Map.lookup needle (IR.getBuiltins $ getIR addr)
+lookupBuiltin addr needle = Map.lookup needle (Ctx.getBuiltins $ getContext addr)
 
 isBuiltin :: NodeAddress -> String -> Bool
 isBuiltin addr needle = fromMaybe False $ (== getNode addr) <$> lookupBuiltin addr needle

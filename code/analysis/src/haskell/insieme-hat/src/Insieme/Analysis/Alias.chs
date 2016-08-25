@@ -36,7 +36,6 @@
 
 module Insieme.Analysis.Alias where
 
-import Data.Set as Set
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Reference
 import Insieme.Inspire.NodeAddress

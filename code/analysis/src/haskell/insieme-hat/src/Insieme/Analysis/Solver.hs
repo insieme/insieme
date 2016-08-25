@@ -84,7 +84,6 @@ module Insieme.Analysis.Solver (
 import Debug.Trace
 import Data.List
 import Data.Dynamic
-import Data.Typeable
 import Data.Function
 import Data.Tuple
 import Data.Maybe

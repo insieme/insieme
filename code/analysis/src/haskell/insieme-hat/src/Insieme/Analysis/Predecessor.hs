@@ -50,7 +50,6 @@ import Debug.Trace
 import Data.Tree
 import Data.Typeable
 import Data.Maybe
-import Insieme.Inspire.NodeAddress
 import Insieme.Analysis.Boolean
 import Insieme.Analysis.Callable
 import Insieme.Analysis.CallSite

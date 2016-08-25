@@ -54,7 +54,6 @@ module Insieme.Utils.UnboundSet (
     fromUnboundSet
 ) where
 
-import Data.Typeable
 import qualified Data.Set as Set
 
 import Prelude hiding (map,null)
