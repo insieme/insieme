@@ -16,31 +16,30 @@ Building INSIEME as usual will invoke `stack` to build this Haskell package,
 produce a shared library which can then be linked with the C/C++ part. The
 environment variables `STACK_ROOT`, `LIBRARY_PATH` and `LD_LIBRARY_PATH` are
 set for each call so `stack` finds GMP and zlib and places downloaded
-components inside `$PREFIX/stack-latest/stack-root_$USER`.
+components inside `$PREFIX/stack-latest/stack-root_$USER`. Additionally we set
+the GHC variant to `standard` to ensure same paths across different systems.
 
 **Note: The user executing the build process (and hence `stack`) requires write
 permissions to `$PREFIX/stack-latest/`.**
 
 Following commands are used to build the Haskell package:
 
-    $ stack setup           # Get the appropriate GHC for your project
-    $ stack build alex      # Install alex binary
-    $ stack build c2hs      # Install c2hs binary
-    $ stack build           # Build the project (includes getting dependencies)
+    $ stack --ghc-variant standard setup           # Get the appropriate GHC for your project
+    $ stack --ghc-variant standard build alex      # Install alex binary
+    $ stack --ghc-variant standard build c2hs      # Install c2hs binary
+    $ stack --ghc-variant standard build           # Build the project (includes getting dependencies)
 
-Building via CMAKE will pass the `-lHSrts-ghc7.10.3` flag to GHC so the Haskell
-runtime environment will be linked. This is important when later linking
-together the INSIEME analysis shared library. Assuming `INSIEME_LIBS_HOME` is
-set accordingly, one can set following environment variables to use `stack` as
-usual:
+Note that CMake will link target binaries not only with the resulting
+`insieme_analysis` library, but also with `libHSrts-ghcx.x.x` which contains
+the Haskell runtime.
+
+Assuming `INSIEME_LIBS_HOME` is set accordingly, one can set following
+environment variables to use `stack` as usual:
 
     export PATH="$INSIEME_LIBS_HOME/stack-latest/bin:$PATH"
     export STACK_ROOT="$INSIEME_LIBS_HOME/stack-latest/stack-root_$USER"
     export LIBRARY_PATH="$INSIEME_LIBS_HOME/gmp-latest/lib:$INSIEME_LIBS_HOME/zlib-latest/lib:$LIBRARY_PATH"
     export LD_LIBRARY_PATH="$INSIEME_LIBS_HOME/gmp-latest/lib:$INSIEME_LIBS_HOME/zlib-latest/lib:$LD_LIBRARY_PATH"
-
-**Note: Certain paths and flags have to be updated when using different version
-GHC.**
 
 ## Development Workflow
 
@@ -62,11 +61,6 @@ again.
 Tests located in the analysis part of INSIEME also include unit-tests utilizing
 the Haskell package via the adapter. The adapter builds a bridge between C/C++
 and Haskell via Haskell's foreign function interface (ffi).
-
-Relevant C++ objects like an IR tree or a `NodeAddress` can be passed over to
-Haskell and vice versa. A pointer to the resulting Haskell object is returned,
-which can be used as a handle inside the C/C++ part. This handle can be passed,
-for instance, to one of the analysis function.
 
 ## Building Internal Documentation
 
@@ -93,15 +87,3 @@ over twice (renamed and original). CMake refers to the renamed library
 referred to by the renamed one.
 
 [^1]: see <https://www.vex.net/~trebla/haskell/sicp.xhtml>
-
-### `stack build` .. `make`
-
-When building the Haskell package manually with by issuing `stack build` the
-Haskell runtime environment will not be linked. If one now builds INSIEME
-without doing any changes to the Haskell source code, `stack` will not
-recompile the library despite a different flag
-(`--ghc-options='-lHSrts-ghc7.10.3'`) has been provided this time. This results
-in a linking error later on.
-
-Just run `stack clean` inside the Haskell project before running `make` again.
-If this does not help remove the `.stack-work` directory and run `make`.
