@@ -42,6 +42,10 @@
 #include <list>
 #include <memory>
 
+#include <boost/program_options.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/optional.hpp>
+
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_program.h"
 
@@ -50,9 +54,6 @@
 #include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 
 #include "insieme/utils/printable.h"
-
-#include <boost/program_options.hpp>
-#include <boost/filesystem/path.hpp>
 
 namespace insieme {
 
@@ -523,6 +524,15 @@ namespace frontend {
 		void registerFrontendExtension(boost::program_options::options_description& options) {
 			auto extensionPtr = std::make_shared<T>();
 			extensions.push_back({extensionPtr, extensionPtr->registerFlag(options)});
+		};
+
+		/**
+		 *  Force given frontend extension to be loaded, ignoring any flags.
+		 */
+		template <class T>
+		void forceFrontendExtension() {
+			auto extensionPtr = std::make_shared<T>();
+			extensions.push_back({extensionPtr, [](const ConversionJob&){ return true; }});
 		};
 
 		/**

@@ -660,7 +660,7 @@ namespace omp {
 
 			resultStmts.push_back(mergeCall);
 			// if clause handling
-			assert(par->hasIf() == false && "OMP parallel if clause not supported");
+			assert_false(par->hasIf()) << "OMP parallel if clause not supported";
 
 			StatementPtr ret = build.compoundStmt(resultStmts);
 			// add code for "ordered" pfors in this parallel, if any

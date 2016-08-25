@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,67 +34,18 @@
  * regarding third party software licenses.
  */
 
-#pragma insieme mark
-int simpleRegion() {
-	int a = 0, n = 0;
+int main() {
+	int a, n;
+	#pragma omp parallel for private(a)
+	for(int i = 0; i < 10; i++) {
+		a += i;
+	}
 
-	/*We need target clause because region directive without clauses is ignored*/
-	#pragma omp region target(accelerator)
-	{ int x = 3; }
-
-	return 0;
-}
-
-#pragma insieme mark
-int objective() {
-	int a = 0, n = 0;
-
-	#pragma omp region objective(0.1 * E + 0.3 * P + 0.6 * T + 0 * Q)
-	{ int x = 3; }
-
-	#pragma omp task objective( : E < 10)
-	{ int x = 4; }
-
-	#pragma omp parallel objective(0.1 * E + 0.2 * P + 0.7 * T + 0 * Q : T < 3; P > 22)
-	{ int x = 5; }
-
-	return 0;
-}
-
-#pragma insieme mark
-int param() {
-	int a = 0, n = 0;
-	int A[3];
-
-	#pragma omp region param(a, range(0 : 10 : 2))
-	{ int x = a; }
-
-	#pragma omp parallel param(a, enum(A : 3))
-	{ int x = a; }
-
-	return 0;
-}
-
-#pragma insieme mark
-int target() {
-	int a = 0, n = 0;
-	int A[3];
-
-	#pragma omp region target(accelerator)
-	{ int x = a; }
-
-	#pragma omp parallel target(accelerator : 0, 1 ... 8 : 12)
-	{ int x = a; }
-
-	return 0;
-}
-
-#pragma insieme mark
-int firstLocal() {
-	int a = 5;
-
-	#pragma omp region firstlocal(a)
-	{ int x = a + 3; }
-
-	return 0;
+	#pragma omp parallel
+	{
+	#pragma omp for firstprivate(a) nowait
+		for(a = 0; a < n; a++) {
+		#pragma omp barrier
+		}
+	}
 }

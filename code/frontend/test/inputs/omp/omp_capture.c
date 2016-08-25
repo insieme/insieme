@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,18 +34,19 @@
  * regarding third party software licenses.
  */
 
+extern void printf(const char*, ...);
+
 int main() {
-	int a, n;
-	#pragma omp parallel for private(a)
-	for(int i = 0; i < 10; i++) {
-		a += i;
-	}
+	int a = 666;
 
 	#pragma omp parallel
 	{
-	#pragma omp for firstprivate(a) nowait
-		for(a = 0; a < n; a++) {
-		#pragma omp barrier
+		int b;
+		printf("hell world #%d/%d\n", a, b);
+
+		#pragma omp for
+		for(int i = 0; i < 100; ++i) {
+			printf("%d", i + a);
 		}
 	}
 }

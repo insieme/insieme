@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -35,12 +35,53 @@
  */
 
 int main() {
-	int a = 666;
+	int i;
 
-	#pragma omp parallel
+	//===--------------------------------------------------------------------------------------------------------------------------------------- PARALLEL ---===
+
+	#pragma test expect_ir(R"(
+		def __any_string__parfun = function () -> unit {
+			5;
+		};
+		{
+			{
+				merge(parallel( job[1ul...] => __any_string__parfun() ));
+			}
+		}
+	)")
 	{
-		int b;
-		printf("hell world #%d/%d\n", a, b);
-		#pragma omp barrier
+		#pragma omp parallel
+		{
+			5;
+		}
 	}
+
+	//===----------------------------------------------------------------------------------------------------------------------------------------- SINGLE ---===
+
+	#pragma test expect_ir(R"(
+		def __any_string__loopfun = function () -> unit {
+			5;
+		};
+		def __any_string__parfun = function () -> unit {
+			{
+				pfor(get_thread_group(0u), 0, 1, 1, (v0 : int<4>, v1 : int<4>, v2 : int<4>) => __any_string__loopfun());
+				barrier(get_thread_group(0u));
+			}
+		};
+		{
+			{
+				merge(parallel( job[1ul...] => __any_string__parfun() ));
+			}
+		}
+	)")
+	{
+		#pragma omp parallel
+		{
+			#pragma omp single
+			{
+				5;
+			}
+		}
+	}
+
 }
