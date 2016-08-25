@@ -400,6 +400,17 @@ namespace parser {
 			ExpressionPtr genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& expr);
 
 			/**
+			 * constructs a job expression with a minimum, maximum, and modulo
+			 */
+			ExpressionPtr genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound,
+			                                    const ExpressionPtr& modExpr, const ExpressionPtr& expr);
+
+			/**
+			 * constructs a job expression with a minimum but no maximum
+			 */
+			ExpressionPtr genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& expr);
+
+			/**
 			 * constructs a job expression with a range from one to infinite
 			 */
 			ExpressionPtr genJobExpr(const location& l, const ExpressionPtr& expr);
@@ -471,6 +482,8 @@ namespace parser {
 			GenericTypePtr getThisTypeForLambdaAndFunction(const bool cnst, const bool voltile);
 
 			TypeList getParamTypesForLambdaAndFunction(const location& l, const VariableList& params);
+
+			ExpressionPtr genJobInternal(const location& l, const ExpressionPtr& expr, const std::function<ExpressionPtr(const ExpressionPtr&)>& jobGenerator);
 
 		  public:
 

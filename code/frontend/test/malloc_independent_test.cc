@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,67 +34,22 @@
  * regarding third party software licenses.
  */
 
-#pragma insieme mark
-int simpleRegion() {
-	int a = 0, n = 0;
+#include "independent_test_utils.h"
 
-	/*We need target clause because region directive without clauses is ignored*/
-	#pragma omp region target(accelerator)
-	{ int x = 3; }
+#include "insieme/frontend/extensions/malloc_extension.h"
+#include "insieme/frontend/extensions/interceptor_extension.h"
 
-	return 0;
-}
+namespace insieme {
+namespace frontend {
 
-#pragma insieme mark
-int objective() {
-	int a = 0, n = 0;
+	TEST(IndependentTest, Malloc) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_malloc.c",
+			[](ConversionJob& job) {
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+			job.registerFrontendExtension<extensions::MallocExtension>();
+		}
+		);
+	}
 
-	#pragma omp region objective(0.1 * E + 0.3 * P + 0.6 * T + 0 * Q)
-	{ int x = 3; }
-
-	#pragma omp task objective( : E < 10)
-	{ int x = 4; }
-
-	#pragma omp parallel objective(0.1 * E + 0.2 * P + 0.7 * T + 0 * Q : T < 3; P > 22)
-	{ int x = 5; }
-
-	return 0;
-}
-
-#pragma insieme mark
-int param() {
-	int a = 0, n = 0;
-	int A[3];
-
-	#pragma omp region param(a, range(0 : 10 : 2))
-	{ int x = a; }
-
-	#pragma omp parallel param(a, enum(A : 3))
-	{ int x = a; }
-
-	return 0;
-}
-
-#pragma insieme mark
-int target() {
-	int a = 0, n = 0;
-	int A[3];
-
-	#pragma omp region target(accelerator)
-	{ int x = a; }
-
-	#pragma omp parallel target(accelerator : 0, 1 ... 8 : 12)
-	{ int x = a; }
-
-	return 0;
-}
-
-#pragma insieme mark
-int firstLocal() {
-	int a = 5;
-
-	#pragma omp region firstlocal(a)
-	{ int x = a + 3; }
-
-	return 0;
-}
+} // fe namespace
+} // insieme namespace

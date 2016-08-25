@@ -523,6 +523,9 @@ namespace core {
 		// Create a job expression
 		JobExprPtr jobExpr(const ExpressionPtr& threadNumRange, const ExpressionPtr& body) const;
 		JobExprPtr jobExpr(const ExpressionPtr& rangeLowerBound, const ExpressionPtr& rangeUpperBound, const ExpressionPtr& body) const;
+		JobExprPtr jobExpr(const ExpressionPtr& rangeLowerBound, const ExpressionPtr& rangeUpperBound, const ExpressionPtr& rangeMod,
+		                   const ExpressionPtr& body) const;
+		JobExprPtr jobExprUnbounded(const ExpressionPtr& rangeLowerBound, const ExpressionPtr& body) const;
 		JobExprPtr jobExpr(const StatementPtr& stmt, int numThreads = -1) const;
 
 		// Create a marker expression
@@ -536,6 +539,7 @@ namespace core {
 		CallExprPtr getThreadNumRange(unsigned min, unsigned max) const;
 		CallExprPtr getThreadNumRange(const ExpressionPtr& min) const;
 		CallExprPtr getThreadNumRange(const ExpressionPtr& min, const ExpressionPtr& max) const;
+		CallExprPtr getThreadNumRange(const ExpressionPtr& min, const ExpressionPtr& max, const ExpressionPtr& mod) const;
 
 		// Direct call expression of getThreadGroup
 		CallExprPtr getThreadGroup(ExpressionPtr level = ExpressionPtr()) const;

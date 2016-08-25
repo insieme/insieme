@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,19 +34,28 @@
  * regarding third party software licenses.
  */
 
-extern void printf(const char*, ...);
+#include <gtest/gtest.h>
 
-int main() {
-	int a = 666;
+#include "insieme/frontend/frontend.h"
+#include "insieme/frontend/extensions/variable_argument_list_extension.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
 
-	#pragma omp parallel
-	{
-		int b;
-		printf("hell world #%d/%d\n", a, b);
+namespace insieme {
+namespace frontend {
 
-		#pragma omp for
-		for(int i = 0; i < 100; ++i) {
-			printf("%d", i + a);
-		}
+	TEST(ConversionSetup, HasExtension) {
+		ConversionJob job;
+
+		EXPECT_FALSE(job.hasExtension<extensions::VariableArgumentListExtension>());
+		job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
+		job.frontendExtensionInit();
+		EXPECT_TRUE(job.hasExtension<extensions::VariableArgumentListExtension>());
+
+		EXPECT_FALSE(job.hasExtension<extensions::TestPragmaExtension>());
+		job.registerFrontendExtension<extensions::TestPragmaExtension>();
+		job.frontendExtensionInit();
+		EXPECT_TRUE(job.hasExtension<extensions::TestPragmaExtension>());
 	}
-}
+
+} // fe namespace
+} // insieme namespace

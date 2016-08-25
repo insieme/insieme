@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,18 +34,26 @@
  * regarding third party software licenses.
  */
 
-int main() {
-	int a, n;
-	#pragma omp parallel for private(a)
-	for(int i = 0; i < 10; i++) {
-		a += i;
-	}
+#include "independent_test_utils.h"
 
-	#pragma omp parallel
-	{
-	#pragma omp for firstprivate(a) nowait
-		for(a = 0; a < n; a++) {
-		#pragma omp barrier
+#include "insieme/frontend/extensions/omp_frontend_extension.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
+
+namespace insieme {
+namespace frontend {
+
+	namespace {
+		void runOmpTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](ConversionJob& job) {}) {
+			runIndependentTestOn(fn, [&jobModifier](ConversionJob& job) {
+				job.forceFrontendExtension<extensions::OmpFrontendExtension>();
+				jobModifier(job);
+			});
 		}
 	}
-}
+
+	TEST(Conversion, OpenMP) {
+		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_basic.c");
+	}
+
+} // fe namespace
+} // insieme namespace

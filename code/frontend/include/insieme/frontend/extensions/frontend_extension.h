@@ -266,14 +266,6 @@ namespace extensions {
 
 
 		/*****************POST CLANG STAGE*****************/
-		/**
-		 *  User provided IR visitor. Will be called after clang to IR conversion took
-		 *  place. Takes the whole insieme program (that contains all translation units)
-		 *  as an argument and returns a modified or non modified program.
-		 *  @param prog insieme program
-		 *  @return modified insieme program. If prog is returned no modification is done
-		 */
-		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 
 		/**
 		 *  User provided IR visitor. Will be called after clang to IR conversion took
@@ -283,6 +275,15 @@ namespace extensions {
 		 *  @return modified insieme translation unit. If tu is returned no modification is done
 		 */
 		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu);
+
+		/**
+		 *  User provided IR visitor. Will be called after clang to IR conversion took
+		 *  place. Takes the whole insieme program (that contains all translation units)
+		 *  as an argument and returns a modified or non modified program.
+		 *  @param prog insieme program
+		 *  @return modified insieme program. If prog is returned no modification is done
+		 */
+		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 
 		/*****************PRAGMA HANDLING*****************/
 		/**

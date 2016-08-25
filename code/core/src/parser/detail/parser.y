@@ -677,6 +677,8 @@ let_expression : "let" "identifier" "=" expression                        { driv
 // -- parallel expressions --
 
 parallel_expression : "job" "[" expression ".." expression "]" "=>" expression  { $$ = driver.genJobExpr(@$, $3, $5, $8); }
+                    | "job" "[" expression ".." expression ":" expression "]" "=>" expression  { $$ = driver.genJobExpr(@$, $3, $5, $7, $10); }
+                    | "job" "[" expression "..." "]" "=>" expression            { $$ = driver.genJobExpr(@$, $3, $7); }
                     | "job" "[" "]" "=>" expression                             { $$ = driver.genJobExpr(@$, $5); }
                     | "job" compound_statement                                  { $$ = driver.builder.jobExpr($2, -1); }
                     | "spawn" expression                                        { $$ = driver.builder.parallel(driver.getScalar($2), 1); }
