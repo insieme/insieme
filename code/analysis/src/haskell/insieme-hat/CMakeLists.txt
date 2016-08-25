@@ -37,7 +37,7 @@ add_custom_target(
         "STACK_ROOT=${stack_root}"
         "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
         "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        ${stack_home}/bin/stack --ghc-variant standard build --ghc-options='-lHSrts-ghc7.10.3'
+        ${stack_home}/bin/stack --ghc-variant standard build
 
     # copy library (package key in name) to binary dir
     COMMAND ${CMAKE_COMMAND} -E env
