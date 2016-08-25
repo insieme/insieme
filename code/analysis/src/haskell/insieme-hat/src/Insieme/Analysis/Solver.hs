@@ -1,11 +1,54 @@
+{-
+ - Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
+ -                Institute of Computer Science,
+ -               University of Innsbruck, Austria
+ -
+ - This file is part of the INSIEME Compiler and Runtime System.
+ -
+ - We provide the software of this file (below described as "INSIEME")
+ - under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ - validity or performance.  We reserve the right to update, modify,
+ - or discontinue this software at any time.  We shall have no
+ - obligation to supply such updates or modifications or any other
+ - form of support to you.
+ -
+ - If you require different license terms for your intended use of the
+ - software, e.g. for proprietary commercial or industrial use, please
+ - contact us at:
+ -                   insieme@dps.uibk.ac.at
+ -
+ - We kindly ask you to acknowledge the use of this software in any
+ - publication or other disclosure of results by referring to the
+ - following citation:
+ -
+ - H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ - T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ - for Parallel Codes, in Proc. of the Intl. Conference for High
+ - Performance Computing, Networking, Storage and Analysis (SC 2012),
+ - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ -
+ - All copyright notices must be kept intact.
+ -
+ - INSIEME depends on several third party software packages. Please
+ - refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ - regarding third party software licenses.
+ -}
 
 module Insieme.Analysis.Solver (
     
     -- lattices
     Lattice,
     join,
+    merge,
     bot,
     less,
+    
+    ExtLattice,
+    top,
+    
+    -- analysis identifiers
+    AnalysisIdentifier,
+    mkAnalysisIdentifier,
     
     -- identifiers
     Identifier,
@@ -24,6 +67,7 @@ module Insieme.Analysis.Solver (
     
     -- solver
     resolve,
+    resolveAll,
     solve,
     
     -- constraints
@@ -33,13 +77,15 @@ module Insieme.Analysis.Solver (
     constant,
     
     -- debugging
-    dumpAssignment
+    dumpSolverState
     
 ) where
 
 import Debug.Trace
 import Data.List
 import Data.Dynamic
+import Data.Typeable
+import Data.Function
 import Data.Tuple
 import Data.Maybe
 import System.IO.Unsafe (unsafePerformIO)
@@ -49,13 +95,18 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Hashable as Hash
 
+import Insieme.Inspire.NodeAddress
+
 
 -- Lattice --------------------------------------------------
 
+-- this is actually a bound join-semilattice
 class (Eq v, Show v, Typeable v) => Lattice v where
-        {-# MINIMAL join #-}
+        {-# MINIMAL join | merge, bot #-}
         -- | combine elements
         join :: [v] -> v                    -- need to be provided by implementations
+        join [] = bot                       -- a default implementation for the join operator
+        join xs = foldr1 merge xs           -- a default implementation for the join operator
         -- | binary join
         merge :: v -> v -> v                -- a binary version of the join
         merge a b = join [ a , b ]          -- its default implementation derived from join
@@ -67,20 +118,69 @@ class (Eq v, Show v, Typeable v) => Lattice v where
         less a b = (a `merge` b) == b       -- default implementation
 
 
+class (Lattice v) => ExtLattice v where
+        -- | top element
+        top  :: v                           -- the top element of this lattice
+
+
+
+
+-- Analysis Identifier -----
+
+data AnalysisIdentifier = AnalysisIdentifier {
+    idToken :: TypeRep,
+    idName  :: String
+}
+
+instance Eq AnalysisIdentifier where
+    (==) = (==) `on` idToken 
+
+instance Ord AnalysisIdentifier where
+    compare = compare `on` idToken
+    
+instance Show AnalysisIdentifier where
+    show = idName
+
+
+mkAnalysisIdentifier :: (Typeable a) => a -> String -> AnalysisIdentifier
+mkAnalysisIdentifier a n = AnalysisIdentifier (typeOf a) n
+
+
 -- Identifier -----
 
-data Identifier = Identifier Int String
-        deriving (Eq, Ord)
+data Identifier = Identifier {
+    analysis :: AnalysisIdentifier,
+    address  :: NodeAddress,
+    extra    :: String,
+    hash     :: Int
+}
+    
+
+instance Eq Identifier where
+    (==) (Identifier a1 n1 s1 h1) (Identifier a2 n2 s2 h2) =
+            h1 == h2 && a1 == a2 && (getPathReversed n1) == (getPathReversed n2) && s1 == s2
+
+instance Ord Identifier where
+    compare (Identifier a1 n1 s1 h1) (Identifier a2 n2 s2 h2) =
+            if r0 == EQ
+               then if r1 == EQ then if r2 == EQ then r3 else r2 else r1
+               else r0
+        where 
+            r0 = compare h1 h2
+            r1 = compare a1 a2
+            r2 = compare (getPathReversed n1) (getPathReversed n2)
+            r3 = compare s1 s2 
 
 instance Show Identifier where
-        show (Identifier _ s) = s
+        show (Identifier a n s _) = (show a) ++ "@" ++ (prettyShow n) ++ "/" ++ s
 
-instance Hash.Hashable Identifier where
-        hashWithSalt salt (Identifier i _ ) = Hash.hashWithSalt salt i
-        hash (Identifier i _ ) = i
 
-mkIdentifier :: String -> Identifier
-mkIdentifier s = Identifier (Hash.hash s) s
+mkIdentifier :: AnalysisIdentifier -> NodeAddress -> String -> Identifier
+mkIdentifier a n s = Identifier a n s h
+  where
+    h1 = Hash.hash $ idName a
+    h2 = Hash.hashWithSalt h1 $ getPathReversed n
+    h = Hash.hashWithSalt h2 s
 
 
 -- Analysis Variables ---------------------------------------
@@ -100,7 +200,7 @@ instance Ord Var where
         compare a b = compare (index a) (index b)
 
 instance Show Var where
-        show v = show (index v)
+        show v = show (index v) 
 
 
 -- typed variables (user interaction)
@@ -124,7 +224,7 @@ newtype Assignment = Assignment ( Map.Map Var Dynamic )
 instance Show Assignment where 
     show a@( Assignment m ) = "Assignemnet {\n\t"
             ++
-            ( intercalate ",\n\t" ( map (\v -> (show v) ++ " = " ++ (valuePrint v a) ) vars ) )
+            ( intercalate ",\n\t\t" ( map (\v -> (show v) ++ " = " ++ (valuePrint v a) ) vars ) )
             ++ 
             "\n}"
         where 
@@ -144,9 +244,14 @@ get (Assignment m) (TypedVar v) =
 set :: (Typeable a) => Assignment -> TypedVar a -> a -> Assignment
 set (Assignment a) (TypedVar v) d = Assignment (Map.insert v (toDyn d) a)
 
+
+-- Debugging --
+
 -- prints the current assignment as a graph
-toDotGraph :: Assignment -> String
-toDotGraph a@( Assignment m ) = "digraph G {\n\t"
+toDotGraph :: Assignment -> Set.Set Var -> String
+toDotGraph a@( Assignment m ) varSet = "digraph G {\n\t"
+        ++
+        "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
         ++
         -- define nodes
         ( intercalate "\n\t" ( map (\v -> "v" ++ (show $ fst v ) ++ " [label=\"" ++ (show $ snd v) ++ " = " ++ (valuePrint (snd v) a) ++ "\"];" ) vars ) )
@@ -166,21 +271,16 @@ toDotGraph a@( Assignment m ) = "digraph G {\n\t"
         keys = Map.keys m
         
         -- list of all variables in the analysis 
-        allVars = Set.toList $ collect keys Set.empty
-            where 
-                collect [] s = s
-                collect (v:vs) s = if Set.member v s 
-                                   then collect vs s
-                                   else collect ((dep v) ++ vs) (Set.insert v s)
+        allVars = Set.toList $ varSet
         
         -- the keys (=variables) associated with an index
-        vars = Prelude.zip [0..] allVars 
+        vars = Prelude.zip [1..] allVars 
         
         -- a reverse lookup map for vars
         rev = Map.fromList $ map swap vars
         
         -- a lookup function for rev
-        index v = fromJust $ Map.lookup v rev 
+        index v = fromMaybe 0 $ Map.lookup v rev 
         
         -- computes the list of dependencies
         deps = foldr go [] vars
@@ -189,11 +289,43 @@ toDotGraph a@( Assignment m ) = "digraph G {\n\t"
 
                   
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
-dumpAssignment :: Assignment -> String -> String
-dumpAssignment a file = unsafePerformIO $ do
-         writeFile (file ++ ".dot") $ toDotGraph a
-         runCommand ("dot -Tpdf " ++ file ++ ".dot -o " ++ file ++ ".pdf")
+dumpSolverState :: Assignment -> Set.Set Var -> String -> String
+dumpSolverState a v file = unsafePerformIO $ do
+         writeFile (file ++ ".dot") $ toDotGraph a v
+         system ("dot -Tpdf " ++ file ++ ".dot -o " ++ file ++ ".pdf")
          return ("Dumped assignment into file " ++ file ++ ".pdf!")
+
+
+toJsonMetaFile :: Assignment -> Set.Set Var -> String
+toJsonMetaFile a@( Assignment m ) vars = "{\n"
+        ++
+        "    \"bodies\": {\n"
+        ++
+        ( intercalate ",\n" ( map print $ Map.toList store ) )
+        ++
+        "\n    }\n}"
+    where
+        
+        addr = address . index
+        
+        store = foldr go Map.empty vars
+            where
+                go v m = Map.insert k (msg : Map.findWithDefault [] k m) m
+                    where
+                        k = (addr v)
+                        i = index v
+                        ext = if null . extra $ i then "" else '/' : extra i
+                        msg = (show . analysis $ i) ++ ext ++ 
+                            " = " ++ (valuePrint v a)     
+ 
+        print (a,ms) = "      \"" ++ (show a) ++ "\" : \"" ++ ( intercalate "<br>" ms) ++ "\""
+
+ 
+
+dumpToJsonFile :: Assignment -> Set.Set Var -> String -> String
+dumpToJsonFile a v file = unsafePerformIO $ do
+         writeFile (file ++ ".json") $ toJsonMetaFile a v
+         return ("Dumped assignment into file " ++ file ++ ".json!")
 
 
 -- Constraints ---------------------------------------------
@@ -224,7 +356,7 @@ emptyDep = Dependencies Map.empty
 
 addDep :: Dependencies -> Var -> [Var] -> Dependencies
 addDep d _ [] = d
-addDep d@(Dependencies m) t (v:vs) = addDep (Dependencies (Map.insert v (Set.insert t (getDep d v)) m)) t vs
+addDep d@(Dependencies m) t (v:vs) = addDep (Dependencies (Map.insertWith (\_ s -> Set.insert t s) v (Set.singleton t) m)) t vs
 
 getDep :: Dependencies -> Var -> Set.Set Var
 getDep (Dependencies d) v = fromMaybe Set.empty $ Map.lookup v d 
@@ -232,7 +364,16 @@ getDep (Dependencies d) v = fromMaybe Set.empty $ Map.lookup v d
 
 -- solve for a single value
 resolve :: (Lattice a) => TypedVar a -> a
-resolve tv@(TypedVar v) = get (solve empty [v]) tv
+resolve tv = head $ resolveAll [tv]
+
+
+-- solve for a list of variables
+resolveAll :: (Lattice a) => [TypedVar a] -> [a]
+resolveAll tvs = res <$> tvs 
+    where
+        ass = solve empty (toVar <$> tvs)
+        res = get ass
+
 
 -- solve for a set of variables (with empty seed)
 solve :: Assignment -> [Var] -> Assignment
@@ -253,23 +394,25 @@ solveStep :: Assignment -> Set.Set Var -> Dependencies -> [Var] -> Assignment
 -- solveStep a _ _ wl | trace ("Step: " ++ (show wl) ++ " " ++ (show a)) False = undefined
 
 -- empty work list
-solveStep a _ _ [] = a                                        -- work list is empty
---solveStep a _ _ [] = trace (dumpAssignment a "graph") $ a                                        -- work list is empty
+-- solveStep a v _ [] | trace (dumpToJsonFile a v "ass_meta") $ False = undefined                                        -- debugging assignment as meta-info for JSON dump
+-- solveStep a v _ [] | trace (dumpSolverState a v "graph") $ False = undefined                                          -- debugging assignment as a graph plot
+-- solveStep a v _ [] | trace (dumpSolverState a v "graph") $ trace (dumpToJsonFile a v "ass_meta") $ False = undefined  -- debugging both
+solveStep a _ _ [] = a                                                                                                   -- work list is empty
 
 -- compute next element in work list
-solveStep a k d (v:vs) = solveStep resAss resKnown resDep (ds ++ vs)
+solveStep a k d (v:vs) = solveStep resAss resKnown resDep ds
         where
                 -- each constraint extends the result, the dependencies, and the vars to update
-                (resAss,resKnown,resDep,ds) = foldr processConstraint (a,k,d,[]) ( constraints v )  -- update all constraints of current variable
+                (resAss,resKnown,resDep,ds) = foldr processConstraint (a,k,d,vs) ( constraints v )  -- update all constraints of current variable
                 processConstraint c (a,k,d,dv) = case ( update c $ a ) of 
                         (a',None)         -> (a',nk,nd,nv)                                        -- nothing changed, we are fine
-                        (a',Increment)         -> (a',nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- add depending variables to work list
-                        (a',Reset)         -> undefined                                                -- TODO: support local resets
+                        (a',Increment)    -> (a',nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- add depending variables to work list
+                        (a',Reset)        -> undefined                                            -- TODO: support local resets
                         where
                                 trg = target c                                
                                 dep = dependingOn c a
                                 newVars = (Set.fromList dep) `Set.difference` k
-                                nk = (Set.fromList dep) `Set.union` k
+                                nk = newVars `Set.union` k
                                 nd = addDep d trg dep
                                 nv = ( Set.elems $ newVars) ++ dv
 

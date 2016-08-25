@@ -34,28 +34,29 @@
  * regarding third party software licenses.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
 
-#include "cba.h"
+#include <gtest/gtest.h>
 
-int main(int argc, char** argv) {
+#include "insieme/analysis/datalog_interface.h"
+#include "insieme/analysis/datalog/code_properties.h"
 
-	// very simple stuff
-	cba_expect_true(true);
-	cba_expect_may_be_true(true);
-	cba_expect_false(false);
-	cba_expect_may_be_false(false);
+#include "../common/definition_point_test.inc"
 
+namespace insieme {
+namespace analysis {
 
-	// something more challenging
-	cba_expect_true(12 < 14);
-	cba_expect_true(12+argc < 14+argc);
+	template<>
+	struct getDefinitionPointImpl<DatalogEngine> {
+		core::VariableAddress operator()(const core::VariableAddress& var) {
+			return datalog::getDefinitionPoint(var);
+		}
+	};
 
-	// dealing with unknown values
-	cba_expect_may_be_true(12 < argc);
-	cba_expect_may_be_false(12 < argc);
+	/**
+	 * Run the definition point tests using the datalog backend.
+	 */
+	INSTANTIATE_TYPED_TEST_CASE_P(Datalog, DefinitionPoint, DatalogEngine);
 
-	return 0;
-}
+} // end namespace analysis
+} // end namespace insieme
+

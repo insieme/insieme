@@ -183,7 +183,8 @@ namespace lang {
 		/**
 		 * A built-in abstract operator obtaining references to functions.
 		 */
-		LANG_EXT_LITERAL(RefOfFunction, "ref_of_function", "('a) -> ref<'a,t,f>")
+		LANG_EXT_DERIVED_WITH_NAME(RefOfFunction, "ref_of_function", "(f : 'a) -> ref<'a,t,f> { return ref_new_init(f); }")
+
 
 		// -- access --
 

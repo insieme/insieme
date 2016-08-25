@@ -12,7 +12,7 @@ EOS
 
 # The license recognition:
 # A comment at the start of the file, which contains "COPYRIGHT"
-LICENSE_REGEXP = /\A\s*\/\*.*?COPYRIGHT.*?\*\//mi
+LICENSE_REGEXP = /\A\s*(\/\*|\{-).*?COPYRIGHT.*?(\*\/|-\})/mi
 
 if(ARGV.length < 2 || ARGV.length > 3)
 	puts(INFO)

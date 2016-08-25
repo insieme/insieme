@@ -37,10 +37,14 @@
 #include "insieme/analysis/haskell/adapter.h"
 
 #include "insieme/analysis/common/failure.h"
+
+#include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/dump/binary_haskell.h"
 #include "insieme/core/ir_builder.h"
 
-#include <cstdint>
+#include "insieme/utils/assert.h"
+#include "insieme/utils/container_utils.h"
+
 #include <map>
 #include <sstream>
 #include <vector>
@@ -51,28 +55,30 @@ using namespace insieme::core::dump::binary::haskell;
 
 extern "C" {
 
-	// Haskell object management
-	typedef void* StablePtr;
-	void hat_freeStablePtr(StablePtr ptr);
+	using insieme::analysis::ArithmeticSet;
+	using insieme::analysis::haskell::Context;
+	using insieme::analysis::haskell::StablePtr;
 
-	// environment bracket
+	// Haskell Runtime
 	void hs_init(int, char*[]);
 	void hs_exit(void);
 
-	// IR functions
-	StablePtr hat_passIR(const char* dump, size_t length);
-	size_t hat_IR_length(const StablePtr dump);
-	void hat_IR_printTree(const StablePtr ir);
-	void hat_IR_printNode(const StablePtr addr);
+	// Haskell Object Management
+	void hat_freeStablePtr(StablePtr ptr);
 
-	// Address functions
-	StablePtr hat_passAddress(const StablePtr ir, const size_t* path, size_t length);
-	size_t hat_addr_length(const StablePtr addr);
-	void hat_addr_toArray(const StablePtr addr, size_t* dst);
+	// Haskell Context
+	StablePtr hat_initialize_context(const Context* ctx_c, const char* dump_c, size_t size_c);
+
+	// NodePath
+	StablePtr hat_mk_node_address(StablePtr ctx_hs, const size_t* path_c, size_t length_c);
+	size_t hat_node_path_length(StablePtr addr_hs);
+	void hat_node_path_poke(StablePtr addr_hs, size_t* path_c);
 
 	// Analysis
-	StablePtr hat_findDecl(const StablePtr var);
-	int hat_checkBoolean(const StablePtr expr, const StablePtr ir);
+	StablePtr hat_find_declaration(const StablePtr var_hs);
+	int hat_check_boolean(const StablePtr expr_hs);
+	int hat_check_alias(const StablePtr x_hs, const StablePtr y_hs);
+	ArithmeticSet* hat_arithmetic_value(Context* ctx_c, const StablePtr expr_hs);
 
 }
 
@@ -80,134 +86,176 @@ namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	struct HSobject {
+	// ------------------------------------------------------------ Context
+	Context::Context(NodePtr root) : root(root) {
+		// create a in-memory stream
+		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
 
-		StablePtr ptr;
+		// dump IR using a binary format (includes builtins)
+		dumpIR(buffer, root);
 
-		HSobject(StablePtr ptr) : ptr(ptr) {}
+		// get data as C string
+		const string dump = buffer.str();
+		const char* dump_c = dump.c_str();
 
-		~HSobject() {
-			hat_freeStablePtr(ptr);
+		// pass to Haskell
+		context_hs = hat_initialize_context(this, dump_c, dump.size());
+		assert_true(context_hs) << "could not initialize Haskell context";
+	}
+
+	Context::~Context() {
+		for(auto pair : addresses) {
+			hat_freeStablePtr(pair.second);
 		}
-
-	};
-
-	// ------------------------------------------------------------ Tree
-
-	IR::IR(std::shared_ptr<HSobject> ir, const NodePtr& original)
-		: ir(ir), original(original) {}
-
-	size_t IR::size() const {
-		return hat_IR_length(ir->ptr);
+		hat_freeStablePtr(context_hs);
 	}
 
-	void IR::printTree() const {
-		hat_IR_printTree(ir->ptr);
+	Context::Context(Context&& other) : context_hs(other.context_hs), root(other.root) {}
+
+	Context& Context::operator=(Context&& other) {
+		root = other.root;
+		context_hs = other.context_hs;
+		return *this;
 	}
 
-	// ------------------------------------------------------------ Address
+	NodePtr Context::getRoot() const { return root; }
 
-	Address::Address(std::shared_ptr<HSobject> addr) : addr(addr) {}
-
-	size_t Address::size() const {
-		return hat_addr_length(addr->ptr);
+	VariableAddress Context::getDefinitionPoint(const VariableAddress& var) {
+		StablePtr var_hs = addNodeAddress(var);
+		StablePtr def = hat_find_declaration(var_hs);
+		if(!def) return {};
+		return getNodeAddress(def).as<VariableAddress>();
 	}
 
-	void Address::printNode() const {
-		hat_IR_printNode(addr->ptr);
-	}
-
-	// Add the address contained in the Haskell buffer to the given root node,
-	// returning a proper NodeAddress.
-	NodeAddress Address::toNodeAddress(const NodePtr& root) const {
-		NodeAddress ret(root);
-		vector<size_t> dst(size());
-		hat_addr_toArray(addr->ptr, dst.data());
-
-		for (auto i : dst) {
-			ret = ret.getAddressOfChild(i);
-		}
-
-		return ret;
-	}
-
-	// ------------------------------------------------------------ Environment
-
-	namespace detail {
-		StablePtr passIR(const NodePtr& root) {
-			// create a in-memory stream
-			stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-
-			// dump IR using a binary format
-			dumpIR(buffer, root);
-
-			// get data as C string
-			const string dumps = buffer.str();
-			const char* dumpcs = dumps.c_str();
-
-			// pass to Haskell
-			return hat_passIR(dumpcs, dumps.size());
-		}
-	}
-
-	Environment::Environment() {
-		hs_init(0, nullptr);
-	}
-
-	Environment::~Environment() {
-		hs_exit();
-	}
-
-	Environment& Environment::getInstance() {
-		static Environment instance;
-		return instance;
-	}
-
-	IR Environment::passIR(const NodePtr& root) {
-		return {make_shared<HSobject>(detail::passIR(root)), root};
-	}
-
-	Address Environment::passAddress(const NodeAddress& addr, const IR& ir) {
-		// check if NodeAddress is related given tree
-		assert_eq(ir.original, addr.getRootNode()) << "NodeAddress' root does not match given tree";
-
-		// empty address corresponds to root node in Haskell
-		size_t length_c = addr.getDepth() - 1;
-		vector<size_t> addr_c(length_c);
-
-		for (size_t i = 0; i < length_c; i++) {
-			addr_c[i] = addr.getParentAddress(length_c - 1 - i).getIndex();
-		}
-
-		return make_shared<HSobject>(hat_passAddress(ir.ir->ptr, addr_c.data(), length_c));
-	}
-
-	boost::optional<Address> Environment::findDecl(const Address& var) {
-		boost::optional<Address> ret;
-		if (StablePtr target_hs = hat_findDecl(var.addr->ptr)) {
-			ret = make_shared<HSobject>(target_hs);
-		}
-		return ret;
-	}
-
-	BooleanAnalysisResult Environment::checkBoolean(const Address& expr, const IR& ir) {
-		auto res = static_cast<BooleanAnalysisResult>(hat_checkBoolean(expr.addr->ptr, ir.ir->ptr));
-		if (res == BooleanAnalysisResult_Neither) {
+	BooleanAnalysisResult Context::checkBoolean(const ExpressionAddress& expr) {
+		StablePtr expr_hs = addNodeAddress(expr);
+		auto res = static_cast<BooleanAnalysisResult>(hat_check_boolean(expr_hs));
+		if(res == BooleanAnalysisResult_Neither) {
 			std::vector<std::string> msgs{"Boolean Analysis Error"};
 			throw AnalysisFailure(msgs);
 		}
 		return res;
 	}
 
+	AliasAnalysisResult Context::checkAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
+		StablePtr x_hs = addNodeAddress(x);
+		StablePtr y_hs = addNodeAddress(y);
+		return static_cast<AliasAnalysisResult>(hat_check_alias(x_hs, y_hs));
+	}
+
+	ArithmeticSet Context::arithmeticValue(const ExpressionAddress& expr) {
+		StablePtr expr_hs = addNodeAddress(expr);
+		ArithmeticSet* res_ptr = hat_arithmetic_value(this, expr_hs);
+		ArithmeticSet res(std::move(*res_ptr));
+		delete res_ptr;
+		return res;
+	}
+
+	StablePtr Context::addNodeAddress(const NodeAddress& addr) {
+		assert_eq(root, addr.getRootNode()) << "root node does not match this context";
+
+		// check if address has already been moved to Haskell
+		if(containsKey(addresses, addr)) return addresses[addr];
+
+		// empty address corresponds to root node in Haskell
+		size_t length_c = addr.getDepth() - 1;
+		vector<size_t> path_c(length_c);
+
+		for(size_t i = 0; i < length_c; i++) {
+			path_c[i] = addr.getParentAddress(length_c - 1 - i).getIndex();
+		}
+
+		StablePtr addr_hs = hat_mk_node_address(context_hs, path_c.data(), length_c);
+		assert_true(addr_hs) << "could not pass NodePath to Haskell";
+
+		addresses[addr] = addr_hs;
+		return addr_hs;
+	}
+
+	NodeAddress Context::getNodeAddress(StablePtr addr_hs) const {
+		vector<size_t> dst(hat_node_path_length(addr_hs));
+		hat_node_path_poke(addr_hs, dst.data());
+
+		NodeAddress addr(root);
+		for(auto i : dst) {
+			addr = addr.getAddressOfChild(i);
+		}
+
+		return addr;
+	}
+
+	// ------------------------------------------------------------ Runtime
+	// Apparently GHC does no longer support calling `hs_exit` from a destructor.
+	// Because of this the runtime is initialized and de-initialized by the static
+	// instance `rt` of this class.
+	class Runtime {
+	  public:
+		Runtime() { hs_init(0, nullptr); }
+
+		~Runtime() { hs_exit(); }
+	} rt;
+
 } // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme
 
 extern "C" {
-	StablePtr hat_parseIR(const char* ircode, size_t length) {
-		insieme::core::NodeManager nm;
-		insieme::core::IRBuilder builder(nm);
-		auto root = builder.parseStmt(std::string(ircode, length));
-		return insieme::analysis::haskell::detail::passIR(root);
+
+	using insieme::analysis::ArithmeticSet;
+	using namespace insieme::analysis::haskell;
+
+	arithmetic::Value* hat_mk_arithmetic_value(Context* ctx_c, const size_t* addr_hs, size_t length_hs) {
+		assert_true(ctx_c) << "hat_mk_arithmetic_value called without context";
+		// build NodeAddress
+		NodeAddress addr(ctx_c->getRoot());
+		for(size_t i = 0; i < length_hs; i++) {
+			addr = addr.getAddressOfChild(addr_hs[i]);
+		}
+
+		return new arithmetic::Value(addr.as<ExpressionPtr>());
 	}
+
+	arithmetic::Product::Factor* hat_mk_arithemtic_factor(arithmetic::Value* value_c, int exponent) {
+		auto ret = new pair<arithmetic::Value, int>(*value_c, exponent);
+		delete value_c;
+		return ret;
+	}
+
+	arithmetic::Product* hat_mk_arithmetic_product(const arithmetic::Product::Factor** factors_c, size_t length) {
+		auto ret = new arithmetic::Product();
+		for(size_t i = 0; i < length; i++) {
+			*ret *= arithmetic::Product(factors_c[i]->first, factors_c[i]->second);
+			delete factors_c[i];
+		}
+		return ret;
+	}
+
+	arithmetic::Formula::Term* hat_mk_arithmetic_term(arithmetic::Product* term_c, int64_t coeff) {
+		auto ret = new pair<arithmetic::Product, arithmetic::Rational>(*term_c, arithmetic::Rational(coeff));
+		delete term_c;
+		return ret;
+	}
+
+	arithmetic::Formula* hat_mk_arithmetic_formula(const arithmetic::Formula::Term** terms_c, size_t length) {
+		auto ret = new arithmetic::Formula();
+		for(size_t i = 0; i < length; i++) {
+			*ret += arithmetic::Formula(terms_c[i]->first, terms_c[i]->second);
+			delete terms_c[i];
+		}
+		return ret;
+	}
+
+	ArithmeticSet* hat_mk_arithmetic_set(const arithmetic::Formula** formulas_c, int length) {
+		if(length < 0) {
+			return new ArithmeticSet(ArithmeticSet::getUniversal());
+		}
+
+		auto ret = new ArithmeticSet();
+		for(int i = 0; i < length; i++) {
+			ret->insert(*formulas_c[i]);
+			delete formulas_c[i];
+		}
+		return ret;
+	}
+
 }

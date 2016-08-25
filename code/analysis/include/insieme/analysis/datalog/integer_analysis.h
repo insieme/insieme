@@ -37,17 +37,27 @@
 #pragma once
 
 #include "insieme/analysis/common/integer_set.h"
-
+#include "insieme/core/ir_expressions.h"
 
 namespace insieme {
 namespace analysis {
 namespace datalog {
 
-
 	IntegerSet getIntegerValues(const core::ExpressionAddress&);
 
 	bool isIntegerConstant(const core::ExpressionAddress&);
 
+	namespace integer {
+
+		bool areEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+
+		bool mayEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+
+		bool areNotEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+
+		bool mayNotEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+
+	}
 
 } // end namespace datalog
 } // end namespace analysis

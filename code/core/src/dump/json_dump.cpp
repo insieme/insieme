@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -38,6 +38,7 @@
 
 #include <string>
 #include <vector>
+#include <fstream>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -52,6 +53,12 @@ namespace insieme {
 namespace core {
 namespace dump {
 namespace json {
+
+
+	void dumpIR(const std::string& filename, const NodePtr& ir, const std::function<std::string(NodeAddress)>& infoAnnotator) {
+		std::ofstream out(filename);
+		dumpIR(out, ir, infoAnnotator);
+	}
 
 	void dumpIR(std::ostream& out, const NodePtr& ir, const std::function<std::string(NodeAddress)>& infoAnnotator) {
 		// create list of all nodes

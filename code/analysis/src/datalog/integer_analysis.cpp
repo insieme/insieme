@@ -37,8 +37,10 @@
 #include "insieme/analysis/datalog/integer_analysis.h"
 
 #include "insieme/analysis/datalog/framework/analysis_base.h"
+#include "insieme/core/ir_address.h"
 
 #include "souffle/gen/integer_analysis.h"
+
 
 namespace insieme {
 namespace analysis {
@@ -80,7 +82,7 @@ namespace datalog {
 		assert_lt(0, not_defined.size() + values.size()) << "Incomplete analysis!";
 
 		// check whether the result is any integer
-		if (!not_defined.empty()) return IntegerSet::getAll();
+		if (!not_defined.empty()) return IntegerSet::getUniversal();
 
 		// extract values
 		IntegerSet res;
@@ -93,6 +95,33 @@ namespace datalog {
 	bool isIntegerConstant(const core::ExpressionAddress& expr) {
 		return getIntegerValues(expr).size() == 1;
 	}
+
+
+
+	namespace integer {
+
+		bool areEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+			assert_not_implemented();
+			return false;
+		}
+
+		bool mayEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+			assert_not_implemented();
+			return false;
+		}
+
+		bool areNotEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+			assert_not_implemented();
+			return false;
+		}
+
+		bool mayNotEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+			assert_not_implemented();
+			return false;
+		}
+
+	}
+
 
 } // end namespace datalog
 } // end namespace analysis

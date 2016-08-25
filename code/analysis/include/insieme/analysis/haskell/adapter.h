@@ -36,64 +36,47 @@
 
 #pragma once
 
-#include "insieme/core/ir_address.h"
-#include "insieme/core/ir_node.h"
+#include "insieme/analysis/common/arithmetic_set.h"
 
-#include <boost/optional.hpp>
+#include "insieme/core/ir_address.h"
+
 #include <memory>
 
 namespace insieme {
 namespace analysis {
 namespace haskell {
 
+	#include "alias_analysis.h"
 	#include "boolean_analysis.h"
 
-	class HSobject;
-	class IR;
-	class Address;
+	typedef void* StablePtr;
 
-	struct IR {
+	class Context {
+		StablePtr context_hs;
 
-		std::shared_ptr<HSobject> ir;
-		core::NodePtr original;
+		core::NodePtr root;
 
-		IR(std::shared_ptr<HSobject> ir, const core::NodePtr& original);
+		std::map<const core::NodeAddress, StablePtr> addresses;
 
-		std::size_t size() const;
-		void printTree() const;
+	  public:
+		explicit Context(core::NodePtr root);
+		~Context();
 
-	};
+		// move semantics
+		Context(Context&& other);
+		Context& operator=(Context&& other);
 
-	struct Address {
+		core::NodePtr getRoot() const;
 
-		std::shared_ptr<HSobject> addr;
+		// analysis
+		core::VariableAddress getDefinitionPoint(const core::VariableAddress& var);
+		BooleanAnalysisResult checkBoolean(const core::ExpressionAddress& expr);
+		AliasAnalysisResult checkAlias(const core::ExpressionAddress& x, const core::ExpressionAddress& y);
+		ArithmeticSet arithmeticValue(const core::ExpressionAddress& expr);
 
-		Address(std::shared_ptr<HSobject> addr);
-
-		std::size_t size() const;
-		void printNode() const;
-		core::NodeAddress toNodeAddress(const core::NodePtr& root) const;
-
-	};
-
-	class Environment {
-
-		Environment();
-
-	public:
-
-		~Environment();
-		Environment(const Environment&) = delete;
-		void operator=(const Environment&) = delete;
-
-		static Environment& getInstance();
-
-		IR passIR(const core::NodePtr& root);
-		Address passAddress(const core::NodeAddress& addr, const IR& ir);
-
-		boost::optional<Address> findDecl(const Address& var);
-		BooleanAnalysisResult checkBoolean(const Address& expr, const IR& ir);
-
+	  private:
+		StablePtr addNodeAddress(const core::NodeAddress& addr);
+		core::NodeAddress getNodeAddress(StablePtr addr) const;
 	};
 
 } // end namespace haskell

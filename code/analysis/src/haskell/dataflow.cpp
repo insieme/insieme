@@ -38,6 +38,8 @@
 
 #include "insieme/analysis/haskell/adapter.h"
 
+#include "insieme/utils/assert.h"
+
 using namespace insieme::core;
 
 namespace insieme {
@@ -45,47 +47,58 @@ namespace analysis {
 namespace haskell {
 
 	VariableAddress getDefinitionPoint(const VariableAddress& var) {
-		auto& env = Environment::getInstance();
+		Context ctx(var.getRootNode());
+		return ctx.getDefinitionPoint(var);
+	}
 
-		auto ir = env.passIR(var.getRootNode());
-		auto var_addr = env.passAddress(var, ir);
-
-		auto target = env.findDecl(var_addr);
-		if (!target) {
-			return {};
+	namespace {
+		BooleanAnalysisResult checkBoolean(const ExpressionAddress& expr) {
+			Context ctx(expr.getRootNode());
+			return ctx.checkBoolean(expr);
 		}
-
-		return target->toNodeAddress(var.getRootNode()).as<VariableAddress>();
 	}
 
 	bool isTrue(const core::ExpressionAddress& expr) {
-		auto& env = Environment::getInstance();
-		auto ir = env.passIR(expr.getRootNode());
-		auto expr_addr = env.passAddress(expr, ir);
-		return env.checkBoolean(expr_addr, ir) == BooleanAnalysisResult_AlwaysTrue;
+		return checkBoolean(expr) == BooleanAnalysisResult_AlwaysTrue;
 	}
 
 	bool isFalse(const core::ExpressionAddress& expr) {
-		auto& env = Environment::getInstance();
-		auto ir = env.passIR(expr.getRootNode());
-		auto expr_addr = env.passAddress(expr, ir);
-		return env.checkBoolean(expr_addr, ir) == BooleanAnalysisResult_AlwaysFalse;
+		return checkBoolean(expr) == BooleanAnalysisResult_AlwaysFalse;
 	}
 
 	bool mayBeTrue(const core::ExpressionAddress& expr) {
-		auto& env = Environment::getInstance();
-		auto ir = env.passIR(expr.getRootNode());
-		auto expr_addr = env.passAddress(expr, ir);
-		auto res = env.checkBoolean(expr_addr, ir);
+		auto res = checkBoolean(expr);
 		return res == BooleanAnalysisResult_AlwaysTrue || res == BooleanAnalysisResult_Both;
 	}
 
 	bool mayBeFalse(const core::ExpressionAddress& expr) {
-		auto& env = Environment::getInstance();
-		auto ir = env.passIR(expr.getRootNode());
-		auto expr_addr = env.passAddress(expr, ir);
-		auto res = env.checkBoolean(expr_addr, ir);
+		auto res = checkBoolean(expr);
 		return res == BooleanAnalysisResult_AlwaysFalse || res == BooleanAnalysisResult_Both;
+	}
+
+	namespace {
+		AliasAnalysisResult checkAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
+			assert_eq(x.getRootNode(), y.getRootNode());
+			Context ctx(x.getRootNode());
+			return ctx.checkAlias(x, y);
+		}
+	}
+
+	bool areAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
+		return checkAlias(x, y) == AliasAnalysisResult_AreAlias;
+	}
+
+	bool mayAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
+		return checkAlias(x, y) != AliasAnalysisResult_NotAlias;
+	}
+
+	bool notAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
+		return checkAlias(x, y) == AliasAnalysisResult_NotAlias;
+	}
+
+	ArithmeticSet getArithmeticValue(const core::ExpressionAddress& expr) {
+		Context ctx(expr.getRootNode());
+		return ctx.arithmeticValue(expr);
 	}
 
 } // end namespace haskell

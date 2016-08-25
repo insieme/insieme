@@ -258,7 +258,7 @@ namespace datalog {
 	}
 
 
-	TEST(CodeProperties, LargerCode) {
+	TEST(CodeProperties, DISABLED_LargerCode) {
 		using namespace driver::integration;
 
 		core::NodeManager mgr;

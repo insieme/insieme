@@ -34,25 +34,30 @@
  * regarding third party software licenses.
  */
 
-#include "cba.h"
+#pragma once
 
-int main() {
+#include "insieme/analysis/common/set.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 
-	int a = 10;
-	int b = 12;
-	int* c = &a;
-	int** d = &c;
+namespace insieme {
+namespace analysis {
 
-	cba_expect_is_alias(&a,c);
-	cba_expect_not_alias(&b,c);
-	cba_expect_is_alias(*d,c);
+	namespace detail {
 
-	c = &b;
+		/**
+		 * We have to use this comparator since formula has an overloaded
+		 * operator < for other purposes.
+		 */
+		struct formula_comparator {
+			bool operator()(const core::arithmetic::Formula& a, const core::arithmetic::Formula& b) const {
+				return a.lessThan(b);
+			}
+		};
 
-	cba_expect_not_alias(&a,c);
-	cba_expect_is_alias(&b,c);
-	cba_expect_is_alias(*d,c);
-	cba_expect_is_alias(*d,c);
+	}
 
-	return 0;
-}
+	using ArithmeticSet = Set<core::arithmetic::Formula,detail::formula_comparator>;
+
+} // end namespace analysis
+} // end namespace insieme
+

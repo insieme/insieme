@@ -34,51 +34,70 @@
  * regarding third party software licenses.
  */
 
-/**
- * A header file forming the interface for the CBA test cases.
- */
+#include <gtest/gtest.h>
 
-#define bool int
-#define true (1)
-#define false (0)
+#include "insieme/analysis/haskell_interface.h"
 
-// alias tests
-void cba_expect_is_alias(void* a, void* b);
-void cba_expect_not_alias(void* a, void* b);
-void cba_expect_may_alias(void* a, void* b);
+#include "../common/boolean_analysis_test.inc"
 
-// boolean analysis
-void cba_expect_true(bool a);
-void cba_expect_false(bool a);
-void cba_expect_may_be_true(bool a);
-void cba_expect_may_be_false(bool a);
+namespace insieme {
+namespace analysis {
 
-// integer tests
-void cba_expect_undefined_int(int a);
-void cba_expect_eq_int(int a, int b);
-void cba_expect_ne_int(int a, int b);
-void cba_expect_may_eq_int(int a, int b);
+	/**
+	 * Run the boolean value tests using the haskell backend.
+	 */
+	INSTANTIATE_TYPED_TEST_CASE_P(Haskell, BooleanValue, HaskellEngine);
 
-// debugging
-void cba_print_code();
-//void cba_print_constraints();
-void cba_print_solution();
-//void cba_dump_equations();
-void cba_print_ref(void*);
-void cba_print_int(int a);
 
-//void cba_dump_execution_net();
-//void cba_dump_state_graph();
-//void cba_dump_thread_regions();
-//void cba_dump_sync_points();
-//void cba_dump_thread_list();
+	bool isTrue(const StatementAddress& stmt) {
+		return isTrue<HaskellEngine>(stmt.as<ExpressionAddress>());
+	}
 
-//void cba_expect_num_threads(int);
-//void cba_expect_execution_net_num_places(int);
-//void cba_expect_execution_net_num_transitions(int);
+	bool isFalse(const StatementAddress& stmt) {
+		return isFalse<HaskellEngine>(stmt.as<ExpressionAddress>());
+	}
 
-// boolean tests (mapped to integer tests, since in C everything is an int)
-//#define cba_expect_true(_c)             cba_expect_eq_int((_c!=0), 1)
-//#define cba_expect_false(_c)            cba_expect_eq_int((_c==0), 1)
-//#define cba_expect_may_be_true(_c)      cba_expect_may_eq_int((_c!=0), 1)
-//#define cba_expect_may_be_false(_c)     cba_expect_may_eq_int((_c==0), 1)
+	TEST(AdvancedBooleanAnalysis, FunctionReferences) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto stmt = builder.parseStmt(
+				"def always = ()->bool {"
+				"	return true;"
+				"};"
+				""
+				"def never = ()->bool {"
+				"	return false;"
+				"};"
+				""
+				"{"
+				"	always();"
+				"	never();"
+				"	"
+				"	var ref<()->bool> f = always;"
+				"	(*f)();"
+				"	f = never;"
+				"	(*f)();"
+				"	"
+				"	var ref<()->bool> g = ref_of_function(always);"
+				"	(*g)();"
+				""
+				"}"
+		).as<CompoundStmtPtr>();
+
+		auto comp = CompoundStmtAddress(stmt);
+
+		EXPECT_TRUE(isTrue(comp[0]));
+		EXPECT_TRUE(isFalse(comp[1]));
+
+		EXPECT_TRUE(isTrue(comp[3]));
+		EXPECT_TRUE(isFalse(comp[5]));
+
+		EXPECT_TRUE(isTrue(comp[7]));
+
+
+	}
+
+} // end namespace analysis
+} // end namespace insieme
+

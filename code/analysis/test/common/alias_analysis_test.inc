@@ -41,51 +41,95 @@
 
 namespace insieme {
 namespace analysis {
-namespace datalog {
 
 	using namespace core;
 
 	using SymbolTable = std::map<std::string,core::NodePtr>;
 
+	/**
+	 * A generic test case for alias analysis.
+	 */
+	template <typename Backend>
+	class AliasAnalysis : public testing::Test {
 
-	TEST(AliasAnalysis, Basic) {
+	protected:
+
+		bool areAlias(const core::StatementAddress& a, const core::StatementAddress& b) {
+			return insieme::analysis::areAlias<Backend>(a.as<ExpressionAddress>(),b.as<ExpressionAddress>());
+		}
+
+		bool mayAlias(const core::StatementAddress& a, const core::StatementAddress& b) {
+			return insieme::analysis::mayAlias<Backend>(a.as<ExpressionAddress>(),b.as<ExpressionAddress>());
+		}
+
+		bool notAlias(const core::StatementAddress& a, const core::StatementAddress& b) {
+			return insieme::analysis::notAlias<Backend>(a.as<ExpressionAddress>(),b.as<ExpressionAddress>());
+		}
+
+	};
+
+	TYPED_TEST_CASE_P(AliasAnalysis);
+
+	TYPED_TEST_P(AliasAnalysis, Basic) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto addresses = builder.parseAddressesStatement(
+		auto stmt = builder.parseStmt(
 				"{"
 				"	var ref<bool> x = ref_new(type_lit(bool));"
-				"	$x$;"
-				"	$x$;"
+				"	x;"
+				"	x;"
 				"}"
-		);
+		).as<CompoundStmtPtr>();
 
-		EXPECT_EQ(2,addresses.size());
+		auto compound = CompoundStmtAddress(stmt);
+		auto x1 = compound[0].as<DeclarationStmtAddress>()->getVariable();
+		auto x2 = compound[1].as<VariableAddress>();
+		auto x3 = compound[2].as<VariableAddress>();
 
-		auto x1 = addresses[0].getRootAddress().as<CompoundStmtAddress>()[0].as<DeclarationStmtAddress>()->getVariable();
-		auto x2 = addresses[0].as<VariableAddress>();
-		auto x3 = addresses[1].as<VariableAddress>();
+		EXPECT_TRUE(this->areAlias(x1,x1));
+		EXPECT_TRUE(this->mayAlias(x1,x1));
 
-		EXPECT_TRUE(areAlias(x1,x1));
-		EXPECT_TRUE(mayAlias(x1,x1));
+		EXPECT_TRUE(this->areAlias(x2,x2));
+		EXPECT_TRUE(this->mayAlias(x2,x2));
 
-		EXPECT_TRUE(areAlias(x2,x2));
-		EXPECT_TRUE(mayAlias(x2,x2));
+		EXPECT_TRUE(this->areAlias(x3,x3));
+		EXPECT_TRUE(this->mayAlias(x3,x3));
 
-		EXPECT_TRUE(areAlias(x3,x3));
-		EXPECT_TRUE(mayAlias(x3,x3));
+		EXPECT_TRUE(this->areAlias(x1,x2));
+		EXPECT_TRUE(this->mayAlias(x1,x2));
 
-		EXPECT_TRUE(areAlias(x1,x2));
-		EXPECT_TRUE(mayAlias(x1,x2));
+		EXPECT_TRUE(this->areAlias(x1,x3));
+		EXPECT_TRUE(this->mayAlias(x1,x3));
 
-		EXPECT_TRUE(areAlias(x1,x3));
-		EXPECT_TRUE(mayAlias(x1,x3));
-
-		EXPECT_TRUE(areAlias(x2,x3));
-		EXPECT_TRUE(mayAlias(x2,x3));
+		EXPECT_TRUE(this->areAlias(x2,x3));
+		EXPECT_TRUE(this->mayAlias(x2,x3));
 	}
 
-	TEST(AliasAnalysis, MultipleReferences) {
+	TYPED_TEST_P(AliasAnalysis, Forwarding) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto stmt = builder.parseStmt(
+				"{"
+				"	var ref<A> a = ref_new(type_lit(A));"
+				"	"
+				"	a;"
+				"	( x : ref<A>) -> ref<A> { return x; } (a);"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(stmt);
+
+		auto comp = CompoundStmtAddress(stmt);
+
+		// check that the given statements are aliases
+		EXPECT_TRUE(this->areAlias(comp[1], comp[1]));
+		EXPECT_TRUE(this->areAlias(comp[1], comp[2]));
+
+	}
+
+	TYPED_TEST_P(AliasAnalysis, MultipleReferences) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -106,14 +150,14 @@ namespace datalog {
 		auto y = addresses[1].as<VariableAddress>();
 		auto z = addresses[2].as<VariableAddress>();
 
-		EXPECT_FALSE(areAlias(x,y));
-		EXPECT_FALSE(mayAlias(x,y));
+		EXPECT_FALSE(this->areAlias(x,y));
+		EXPECT_FALSE(this->mayAlias(x,y));
 
-		EXPECT_TRUE(areAlias(x,z));
-		EXPECT_TRUE(mayAlias(x,z));
+		EXPECT_TRUE(this->areAlias(x,z));
+		EXPECT_TRUE(this->mayAlias(x,z));
 
-		EXPECT_FALSE(areAlias(y,z));
-		EXPECT_FALSE(mayAlias(y,z));
+		EXPECT_FALSE(this->areAlias(y,z));
+		EXPECT_FALSE(this->mayAlias(y,z));
 
 	}
 
@@ -121,7 +165,13 @@ namespace datalog {
 
 	// TODO: test free variables
 
-} // end namespace datalog
+
+	REGISTER_TYPED_TEST_CASE_P(AliasAnalysis,
+			Basic,
+			Forwarding,
+			MultipleReferences
+	);
+
 } // end namespace analysis
 } // end namespace insieme
 

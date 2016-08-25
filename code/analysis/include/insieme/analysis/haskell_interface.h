@@ -36,53 +36,36 @@
 
 #pragma once
 
+#include "insieme/analysis/cba_interface.h"
 #include "insieme/analysis/haskell/dataflow.h"
 
 namespace insieme {
 namespace analysis {
 
 	/*
-	 * Create a type for this backend
+	 * Create a type for this backend.
 	 */
-	struct haskellEngine {};
+	struct HaskellEngine {};
 
-	/*
-	 * Create the missing CBAs to comply with the dispatcher.
-	 * Needed to avoid incomplete type errors during compilation.
-	 */
-	namespace haskell {
+	// --- Alias Analysis ---
 
-		#define throw_not_implemented                                               \
-		    throw not_implemented_exception("Not implemented in Haskell backend!"); \
-		    return {};
+	register_analysis_implementation(HaskellEngine, areAlias, haskell::areAlias);
+	register_analysis_implementation(HaskellEngine, mayAlias, haskell::mayAlias);
+	register_analysis_implementation(HaskellEngine, notAlias, haskell::notAlias);
 
-		bool areAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { throw_not_implemented }
-		bool mayAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { throw_not_implemented }
-		bool notAlias(const core::ExpressionAddress &a, const core::ExpressionAddress &b) { throw_not_implemented }
 
-		IntegerSet getIntegerValues(const core::ExpressionAddress& expr) { throw_not_implemented }
-		bool isIntegerConstant(const core::ExpressionAddress& expr) { throw_not_implemented }
+	// --- Boolean Analysis ---
 
-		#undef alias_not_implemented
+	register_analysis_implementation(HaskellEngine , isTrue,     haskell::isTrue    );
+	register_analysis_implementation(HaskellEngine , isFalse,    haskell::isFalse   );
+	register_analysis_implementation(HaskellEngine , mayBeTrue,  haskell::mayBeTrue );
+	register_analysis_implementation(HaskellEngine , mayBeFalse, haskell::mayBeFalse);
 
-	}
 
-	/*
-	 * List of CBAs that this backend provides
-	 */
-	add_cba_implementation(haskell, areAlias)
-	add_cba_implementation(haskell, mayAlias)
-	add_cba_implementation(haskell, notAlias)
+	// --- Symbolic Integer Analysis ---
 
-	add_cba_implementation(haskell, getDefinitionPoint)
+	register_analysis_implementation(HaskellEngine , getArithmeticValue, haskell::getArithmeticValue);
 
-	add_cba_implementation(haskell, isTrue)
-	add_cba_implementation(haskell, isFalse)
-	add_cba_implementation(haskell, mayBeTrue)
-	add_cba_implementation(haskell, mayBeFalse)
-
-	add_cba_implementation(haskell, getIntegerValues)
-	add_cba_implementation(haskell, isIntegerConstant)
 
 } // end namespace analysis
 } // end namespace insieme

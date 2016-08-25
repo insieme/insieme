@@ -34,47 +34,27 @@
  * regarding third party software licenses.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
-
 #include "cba.h"
 
-int min(int a, int b) {
-	if (a < b) return a;
-	return b;
-}
+int main() {
 
-int max(int a, int b) {
-	return (a == min(a,b)) ? b : a;
-}
-
-int main(int argc, char** argv) {
-
-	// let's start with something simple
-	cba_expect_eq_int(1,1);
-
-	// a little more challenging
 	int a = 10;
 	int b = 12;
-	cba_expect_ne_int(a,b);
-	cba_expect_eq_int(a+2, b);
+	int* c = &a;
+	int** d = &c;
 
-	// with some unknown value
-	cba_expect_ne_int(a+argc,b+argc);
-	cba_expect_eq_int(a+2+argc, b+argc);
+	cba_print_code();
+	cba_expect_is_alias(&a,&a);
+	cba_expect_is_alias(&a,c);
+	cba_expect_not_alias(&b,c);
+	cba_expect_is_alias(*d,c);
 
+	c = &b;
 
-	// including function calls
-	cba_expect_eq_int(a,min(a,b));
-	cba_expect_eq_int(b,max(a,b));
-
-	// even more tricky
-	cba_expect_eq_int(a+argc,min(a+argc,b+argc));
-
-	// and after an update
-	a = 14;
-	cba_expect_eq_int(b+argc,min(a+argc,b+argc));
+	cba_expect_not_alias(&a,c);
+	cba_expect_is_alias(&b,c);
+	cba_expect_is_alias(*d,c);
+	cba_expect_is_alias(*d,c);
 
 	return 0;
 }

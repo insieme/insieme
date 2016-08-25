@@ -1,3 +1,39 @@
+{-
+ - Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
+ -                Institute of Computer Science,
+ -               University of Innsbruck, Austria
+ -
+ - This file is part of the INSIEME Compiler and Runtime System.
+ -
+ - We provide the software of this file (below described as "INSIEME")
+ - under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ - validity or performance.  We reserve the right to update, modify,
+ - or discontinue this software at any time.  We shall have no
+ - obligation to supply such updates or modifications or any other
+ - form of support to you.
+ -
+ - If you require different license terms for your intended use of the
+ - software, e.g. for proprietary commercial or industrial use, please
+ - contact us at:
+ -                   insieme@dps.uibk.ac.at
+ -
+ - We kindly ask you to acknowledge the use of this software in any
+ - publication or other disclosure of results by referring to the
+ - following citation:
+ -
+ - H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ - T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ - for Parallel Codes, in Proc. of the Intl. Conference for High
+ - Performance Computing, Networking, Storage and Analysis (SC 2012),
+ - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ -
+ - All copyright notices must be kept intact.
+ -
+ - INSIEME depends on several third party software packages. Please
+ - refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ - regarding third party software licenses.
+ -}
+
 {-# LANGUAGE LambdaCase #-}
 
 module Insieme.Inspire.Utils (
@@ -6,10 +42,13 @@ module Insieme.Inspire.Utils (
     foldTreePrune,
     foldAddressPrune,
     parseIR,
-    findDecl
+    findDecl,
+    getType,
+    isFreeVariable
 ) where
 
 import Control.Applicative
+import Data.Maybe
 import Data.List
 import Data.Tree
 import Insieme.Inspire.BinaryParser
@@ -68,8 +107,8 @@ foldAddressPrune collect prune addr = visit addr mempty
 parseIR :: String -> IO IR.Inspire
 parseIR ircode = do
     irb <- readProcess "inspire" ["-s", "-i", "-", "-k", "-"] ircode
-    let (Right ir) = parseBinaryDump (BS8.pack irb)
-    return ir
+    let Right (tree, builtins) = parseBinaryDump (BS8.pack irb)
+    return $ IR.Inspire tree builtins
 
 --
 -- * Get Definition Point Analysis
@@ -83,8 +122,13 @@ findDecl start = findDecl start
     findDecl :: NodeAddress -> Maybe NodeAddress
     findDecl addr = case getNode addr of
         Node IR.Lambda _ -> lambda addr
-        _ -> declstmt addr <|> forstmt addr <|> bindexpr addr <|>
-             compstmt addr <|> nextlevel addr
+        _ -> parameter addr <|> declstmt addr <|> forstmt addr   <|> 
+             bindexpr addr  <|> compstmt addr <|> nextlevel addr
+
+    parameter :: NodeAddress -> Maybe NodeAddress
+    parameter addr = case getNode addr of
+        Node IR.Parameters _ -> Just start
+        _ -> Nothing
 
     declstmt :: NodeAddress -> Maybe NodeAddress
     declstmt addr = case getNode addr of
@@ -110,7 +154,7 @@ findDecl start = findDecl start
 
     compstmt :: NodeAddress -> Maybe NodeAddress
     compstmt addr = getNode <$> getParent addr >>= \case
-        Node IR.CompoundStmt _ | last (getAddress addr) == 0 -> Nothing
+        Node IR.CompoundStmt _ | getIndex addr == 0 -> Nothing
         Node IR.CompoundStmt _ -> findDecl $ goLeft addr
         _ -> Nothing
 
@@ -118,6 +162,41 @@ findDecl start = findDecl start
     nextlevel addr = getParent addr >>= findDecl
 
 
+
+getType :: Tree IR.NodeType -> Maybe (Tree IR.NodeType)
+getType (Node IR.Literal         (t:_)) = Just t
+getType (Node IR.Variable        (t:_)) = Just t
+getType (Node IR.CallExpr        (t:_)) = Just t
+getType (Node IR.LambdaExpr      (t:_)) = Just t
+getType (Node IR.LambdaReference (t:_)) = Just t
+getType (Node IR.BindExpr        (t:_)) = Just t
+getType (Node IR.CastExpr        (t:_)) = Just t
+getType (Node IR.TupleExpr       (t:_)) = Just t
+getType (Node IR.InitExpr        (t:_)) = Just t
+getType (Node IR.JobExpr         (t:_)) = Just t
+getType _ = Nothing
+
+
+
+
+isVariable :: NodeAddress -> Bool
+isVariable a = case getNode a of 
+    Node IR.Variable _ -> True
+    _                  -> False
+
+isFreeVariable :: NodeAddress -> Bool
+isFreeVariable v | (not . isVariable) v = False 
+isFreeVariable v = isNothing decl || (isEntryPointParam $ fromJust decl)
+    where
+        decl = findDecl v
+        
+        isEntryPointParam v = case getNode $ fromJust $ getParent v of
+            Node IR.Parameters _ -> (not . hasEnclosingCall) v
+            _                    -> False
+        
+        hasEnclosingCall a = case getNode a of
+            Node IR.CallExpr _ -> True
+            _                  -> (not . isRoot) a && (hasEnclosingCall (fromJust $ getParent a))
 
 
 

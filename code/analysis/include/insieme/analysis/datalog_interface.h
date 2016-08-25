@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include "insieme/analysis/cba_interface.h"
 #include "insieme/analysis/datalog/alias_analysis.h"
 #include "insieme/analysis/datalog/boolean_analysis.h"
 #include "insieme/analysis/datalog/code_properties.h"
@@ -47,24 +48,34 @@ namespace analysis {
 	/*
 	 * Create a type for this backend
 	 */
-	struct datalogEngine {};
+	struct DatalogEngine {};
 
-	/*
-	 * List of CBAs that this backend provides
-	 */
-	add_cba_implementation(datalog, areAlias)
-	add_cba_implementation(datalog, mayAlias)
-	add_cba_implementation(datalog, notAlias)
 
-	add_cba_implementation(datalog, getDefinitionPoint)
+	// --- Alias Analysis ---
 
-	add_cba_implementation(datalog, isTrue)
-	add_cba_implementation(datalog, isFalse)
-	add_cba_implementation(datalog, mayBeTrue)
-	add_cba_implementation(datalog, mayBeFalse)
+	register_analysis_implementation( DatalogEngine , areAlias, datalog::areAlias );
+	register_analysis_implementation( DatalogEngine , mayAlias, datalog::mayAlias );
+	register_analysis_implementation( DatalogEngine , notAlias, datalog::notAlias );
 
-	add_cba_implementation(datalog, getIntegerValues)
-	add_cba_implementation(datalog, isIntegerConstant)
+
+	// --- Boolean Analysis ---
+
+	register_analysis_implementation( DatalogEngine , isTrue,     datalog::isTrue     );
+	register_analysis_implementation( DatalogEngine , isFalse,    datalog::isFalse    );
+	register_analysis_implementation( DatalogEngine , mayBeTrue,  datalog::mayBeTrue  );
+	register_analysis_implementation( DatalogEngine , mayBeFalse, datalog::mayBeFalse );
+
+
+	// --- Simple Integer Analysis ---
+
+	register_analysis_implementation( DatalogEngine , getIntegerValues,  datalog::getIntegerValues  );
+	register_analysis_implementation( DatalogEngine , isIntegerConstant, datalog::isIntegerConstant );
+
+	register_analysis_implementation( DatalogEngine , areEqualInteger,      datalog::integer::areEqual    );
+	register_analysis_implementation( DatalogEngine , areNotEqualInteger,   datalog::integer::areNotEqual );
+	register_analysis_implementation( DatalogEngine , mayBeEqualInteger,    datalog::integer::mayEqual    );
+	register_analysis_implementation( DatalogEngine , mayBeNotEqualInteger, datalog::integer::mayNotEqual );
+
 
 } // end namespace analysis
 } // end namespace insieme

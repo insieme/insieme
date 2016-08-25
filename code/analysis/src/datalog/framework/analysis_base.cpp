@@ -68,6 +68,8 @@ namespace framework {
 		template<template <class Target> class Ptr = core::Pointer>
 		class FactExtractor : public core::IRVisitor<int,Ptr> {
 
+			using super = core::IRVisitor<int,Ptr>;
+
 			using NodeIndexer = std::function<void(Ptr<const core::Node>,int)>;
 
 			NodeIndexer indexer;
@@ -77,6 +79,8 @@ namespace framework {
 			souffle::Program& analysis;
 
 			std::map<core::NodePtr,int> uniqueIndex;
+
+			std::map<core::TypePtr,int> typeCache;
 
 		public:
 
@@ -108,6 +112,20 @@ namespace framework {
 				indexer(core::NodeAddress(node),res);
 				insert("NodeIdentity", res, getUniqueID(node));
 				return res;
+			}
+
+			int visit(const Ptr<const core::Node>& node) override {
+
+				// check type cache
+				auto type = node.template isa<Ptr<const core::Type>>();
+				if (!type) return super::visit(node);
+
+				// look up cache
+				auto pos = typeCache.find(type);
+				if (pos != typeCache.end()) return pos->second;
+
+				// resolve and cache
+				return typeCache[type] = super::visit(node);
 			}
 
 
