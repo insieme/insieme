@@ -1951,8 +1951,6 @@ namespace printer {
 				}
 			};
 
-			ADD_FORMATTER(parExt.getBarrier()) { OUT("barrier()"); };
-
 			ADD_FORMATTER(parExt.getAtomic()) {
 				OUT("atomic(");
 				PRINT_ARG(0);

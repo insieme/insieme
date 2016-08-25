@@ -778,7 +778,7 @@ namespace analysis {
 			def taskfun = (v : int) -> unit {
 				if(v == 0) { return; }
 				taskfun(v-1);
-				mergeAll();
+				merge_all();
 			};
 			unit main() {
 				taskfun(1);
@@ -797,7 +797,7 @@ namespace analysis {
 			def taskfun = (v : int) -> unit {
 				if(v == 0) { return; }
 				parallel(job [1..1] => taskfun(v-1));
-				mergeAll();
+				merge_all();
 			};
 			unit main() {
 				taskfun(1);

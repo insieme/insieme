@@ -59,7 +59,7 @@ namespace tasks {
             def taskfun = (v: int) -> unit {
                 if(v == 0) {return;}
                 parallel(job [1..1] => taskfun(v-1));
-				mergeAll();
+				merge_all();
             };
 
             unit main() {
@@ -83,7 +83,7 @@ namespace tasks {
 		EXPECT_TRUE(!core::analysis::isParallel(definitions[3]));
 		// check that superfluous merges are removed
 		EXPECT_TRUE(core::analysis::isParallel(definitions[2]));
-		EXPECT_EQ(core::analysis::countInstances(definitions[2], builder.parseExpr("mergeAll()")), 1);
+		EXPECT_EQ(core::analysis::countInstances(definitions[2], builder.parseExpr("merge_all()")), 1);
 	}
 
 	TEST(GranularityTuning, Mutual) {
@@ -96,12 +96,12 @@ namespace tasks {
 			def tf1 = (v: int) -> unit {
 				if(v == 0) {return;}
 				parallel(job [1..1] => tf2(v-1));
-				mergeAll();
+				merge_all();
 			};
 			def tf2 = (v: int) -> unit {
 				if(v == 0) {return;}
 				parallel(job [1..1] => tf1(v-1));
-				mergeAll();
+				merge_all();
 			};
 
 			unit main() {
@@ -125,12 +125,12 @@ namespace tasks {
 		EXPECT_TRUE(!core::analysis::isParallel(definitions[3]));
 		// check that superfluous merges are removed
 		EXPECT_TRUE(core::analysis::isParallel(definitions[2]));
-		EXPECT_EQ(core::analysis::countInstances(definitions[2], builder.parseExpr("mergeAll()")), 1);
+		EXPECT_EQ(core::analysis::countInstances(definitions[2], builder.parseExpr("merge_all()")), 1);
 		// check that last version of fun2 is sequential
 		EXPECT_TRUE(!core::analysis::isParallel(definitions[7]));
 		// check that superfluous merges are removed
 		EXPECT_TRUE(core::analysis::isParallel(definitions[6]));
-		EXPECT_EQ(core::analysis::countInstances(definitions[6], builder.parseExpr("mergeAll()")), 1);
+		EXPECT_EQ(core::analysis::countInstances(definitions[6], builder.parseExpr("merge_all()")), 1);
 	}
 
 } // end namespace tasks
