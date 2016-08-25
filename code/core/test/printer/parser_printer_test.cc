@@ -196,6 +196,7 @@ namespace parser {
 
 	TEST(After_Before_Test, Expressions) {
 	NodeManager nm;
+
 		EXPECT_TRUE(test_expression(nm, "1"));
 		EXPECT_TRUE(test_expression(nm, "1u"));
 		EXPECT_TRUE(test_expression(nm, "1l"));
@@ -254,27 +255,51 @@ namespace parser {
 		EXPECT_TRUE(test_expression(nm, "100-200-300"));
 
 		EXPECT_TRUE(test_expression(nm, ""
-				"decl foo : () -> unit; "
-				"def bar = () -> unit { foo(); }; "
-				"def foo = () -> unit { bar(); }; "
-				"foo"));
+		                                "decl foo : () -> unit; "
+		                                "def bar = () -> unit { foo(); }; "
+		                                "def foo = () -> unit { bar(); }; "
+		                                "foo"));
 
 		EXPECT_TRUE(test_expression(nm, ""
-				"decl foo : () -> unit; "
-				"def bar = () -> unit { foo(); }; "
-				"def foo = () -> unit { bar(); }; "
-				"bar"));
+		                                "decl foo : () -> unit; "
+		                                "def bar = () -> unit { foo(); }; "
+		                                "def foo = () -> unit { bar(); }; "
+		                                "bar"));
 
 		EXPECT_TRUE(test_expression(nm, ""
-				"decl foo : (int<4>) -> int<4>; "
-				"def bar = (a : int<4>) -> int<4> { return foo(a); }; "
-				"def foo = (b : int<4>) -> int<4> { return bar(b); }; "
-				"foo"));
+		                                "decl foo : (int<4>) -> int<4>; "
+		                                "def bar = (a : int<4>) -> int<4> { return foo(a); }; "
+		                                "def foo = (b : int<4>) -> int<4> { return bar(b); }; "
+		                                "foo"));
+
 		EXPECT_TRUE(test_expression(nm, ""
-			    "decl foo : (int<4>) -> int<4>; "
-			    "def bar = function (a : ref<int<4>,f,f,plain>) -> int<4> { return foo(a); }; "
-			    "def foo = (b : int<4>) -> int<4> { return bar(b); }; "
-			    "foo"));
+		                                "decl foo : (int<4>) -> int<4>; "
+		                                "def bar = function (a : ref<int<4>,f,f,plain>) -> int<4> { return foo(a); }; "
+		                                "def foo = (b : int<4>) -> int<4> { return bar(b); }; "
+		                                "foo"));
+
+		// job expressions
+		EXPECT_TRUE(test_expression(nm, R"(
+		                                def f = () -> int { return 0; };
+		                                job [] => f()
+		                                )"));
+
+		EXPECT_TRUE(test_expression(nm, R"(
+		                                def f = () -> unit {};
+		                                job [0ul .. 5ul] => f()
+		                                )"));
+
+		EXPECT_TRUE(test_expression(nm, R"(
+		                                def f = () -> unit {};
+		                                job [0ul .. 8ul : 2ul ] => f()
+		                                )"));
+
+		EXPECT_TRUE(test_expression(nm, R"(
+		                                def f = () -> unit {};
+		                                job [42ul ...] => f()
+		                                )"));
+
+
 	}
 
 	bool test_statement(NodeManager& nm, const std::string& x) {

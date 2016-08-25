@@ -1310,17 +1310,35 @@ namespace printer {
 
 			PRINT(JobExpr) {
 				// prints the job expression quite similar to a switch expression
+				const lang::ParallelExtension& parExt = node->getNodeManager().getLangExtension<lang::ParallelExtension>();
 				out << "job";
-				out << "(";
-				visit(node->getThreadNumRange());
-				out << ")";
-				out << "{";
-				increaseIndent();
+
+				out << "[";
+
+				if(!parExt.isCreateMinRange(node->getThreadNumRange().as<CallExprAddress>()->getFunctionExpr().as<NodePtr>())) {
+					// get min/max out of the ThreadNumRange
+					auto min = node->getThreadNumRange().as<CallExprAddress>()->getArgument(0);
+					auto max = node->getThreadNumRange().as<CallExprAddress>()->getArgument(1);
+					visit(min);
+					out << " .. ";
+					visit(max);
+
+					// check if there is a modulo expression
+					if(node->getThreadNumRange().as<CallExprAddress>()->getNumArguments() == 3) {
+						auto mod = node->getThreadNumRange().as<CallExprAddress>()->getArgument(2);
+						out << " : ";
+						visit(mod);
+					}
+				} else if (node->getThreadNumRange().as<CallExprAddress>()->getNumArguments() == 1) {
+					auto min = node->getThreadNumRange().as<CallExprAddress>()->getArgument(0);
+					visit(min);
+					out << " ... ";
+				}
+				out << "] => ";
+				if (auto bind = node->getBody().isa<BindExprAddress>()) {
+					visit(bind->getCall());
+				}
 				newLine();
-				visit(node->getBody());
-				decreaseIndent();
-				newLine();
-				out << "}";
 			}
 
 			PRINT(InitExpr) {
@@ -1929,7 +1947,7 @@ namespace printer {
 			ADD_FORMATTER(parExt.getCreateBoundRange()) {
 				OUT("[");
 				PRINT_ARG(0);
-				OUT("-");
+				OUT(" .. ");
 				PRINT_ARG(1);
 				OUT("]");
 			};
