@@ -40,14 +40,9 @@ module Insieme.Adapter where
 
 import Control.Exception
 import Control.Monad
-import Data.Foldable
-import Data.Maybe
-import Data.Tree
-import Debug.Trace
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
-import Foreign.Marshal.Array
 import qualified Data.ByteString.Char8 as BS8
 import qualified Insieme.Analysis.Alias as Alias
 import qualified Insieme.Analysis.Arithmetic as Arith
@@ -56,7 +51,6 @@ import qualified Insieme.Analysis.Entities.SymbolicFormula as SymbolicFormula
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Context as Ctx
-import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Inspire.Utils as IRUtils

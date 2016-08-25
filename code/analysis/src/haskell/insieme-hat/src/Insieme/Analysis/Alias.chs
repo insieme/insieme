@@ -62,7 +62,7 @@ checkAlias x y = checkAlias' rx ry
 checkAlias' :: Eq i => USet.UnboundSet (Reference i) -> USet.UnboundSet (Reference i) -> Results
 
 checkAlias' USet.Universe s | USet.null s = NotAlias
-checkAlias' USet.Universe s               = MayAlias
+checkAlias' USet.Universe _               = MayAlias
 
 checkAlias' s USet.Universe  = checkAlias' USet.Universe s
 

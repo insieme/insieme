@@ -41,7 +41,7 @@ import Data.Int
 import Data.List
 import Data.Maybe
 import Data.Word
-import Numeric
+import Numeric (readOct, readDec, readHex)
 
 data CInt = CInt32  Int32
           | CInt64  Int64
@@ -98,10 +98,10 @@ instance Real CInt where
     toRational (CUInt64 x) = toRational x
 
 instance Integral CInt where
-    quotRem (CInt32  x) (CInt32  y) = (\(x, y) -> (CInt32  x, CInt32  y)) (quotRem x y)
-    quotRem (CInt64  x) (CInt64  y) = (\(x, y) -> (CInt64  x, CInt64  y)) (quotRem x y)
-    quotRem (CUInt32 x) (CUInt32 y) = (\(x, y) -> (CUInt32 x, CUInt32 y)) (quotRem x y)
-    quotRem (CUInt64 x) (CUInt64 y) = (\(x, y) -> (CUInt64 x, CUInt64 y)) (quotRem x y)
+    quotRem (CInt32  x) (CInt32  y) = (\(u, v) -> (CInt32  u, CInt32  v)) (quotRem x y)
+    quotRem (CInt64  x) (CInt64  y) = (\(u, v) -> (CInt64  u, CInt64  v)) (quotRem x y)
+    quotRem (CUInt32 x) (CUInt32 y) = (\(u, v) -> (CUInt32 u, CUInt32 v)) (quotRem x y)
+    quotRem (CUInt64 x) (CUInt64 y) = (\(u, v) -> (CUInt64 u, CUInt64 v)) (quotRem x y)
     quotRem _           _           = error "Cannot mix types"
 
     toInteger (CInt32  x) = toInteger x
@@ -110,10 +110,11 @@ instance Integral CInt where
     toInteger (CUInt64 x) = toInteger x
 
 parseInt :: String -> Maybe CInt
-parseInt input = (toCInt . normalizeSuffix) <$> (listToMaybe . readInt $ input)
+parseInt input = (toCInt . normalizeSuffix) <$> (listToMaybe $ readInt input)
   where
-    readInt input =
-        case input of
+    readInt :: String -> [(Integer, String)]
+    readInt int =
+        case int of
             ('+':'0':'x':xs) -> readHex xs
             ('+':'0':xs)     -> readOct ("0" ++ xs)
             ('+':xs)         -> readDec xs

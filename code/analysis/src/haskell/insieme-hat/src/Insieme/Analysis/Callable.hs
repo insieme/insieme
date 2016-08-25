@@ -94,6 +94,7 @@ instance Solver.ExtLattice CallableSet where
 data CallableAnalysis = CallableAnalysis
     deriving (Typeable)
 
+callableAnalysis :: Solver.AnalysisIdentifier
 callableAnalysis = Solver.mkAnalysisIdentifier CallableAnalysis "C"
 
 
@@ -115,9 +116,9 @@ callableValue addr = case getNode addr of
     _ -> dataflowValue addr analysis []
 
   where
-  
+
     analysis = DataFlowAnalysis CallableAnalysis callableAnalysis callableValue $ compose USet.Universe
-  
+
     idGen = mkVarIdentifier analysis
 
     compose = ComposedValue.toComposed

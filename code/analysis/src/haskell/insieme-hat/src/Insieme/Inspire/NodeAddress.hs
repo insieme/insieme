@@ -109,7 +109,7 @@ goDown x parent@(NodeAddress xs n ctx _) = NodeAddress (x : xs) n' ctx (Just par
 
 goLeft :: NodeAddress -> NodeAddress
 goLeft na@(NodeAddress xs _ _ _            ) | head xs == 0 = na
-goLeft na@(NodeAddress xs _ _ Nothing      ) = na
+goLeft na@(NodeAddress _  _ _ Nothing      ) = na
 goLeft    (NodeAddress xs _ _ (Just parent)) = goDown (head xs - 1) parent
 
 goRight :: NodeAddress -> NodeAddress

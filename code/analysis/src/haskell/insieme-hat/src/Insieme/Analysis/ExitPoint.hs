@@ -38,8 +38,6 @@
 
 module Insieme.Analysis.ExitPoint where
 
-import Data.List
-import Data.Maybe
 import Data.Tree
 import Data.Typeable
 import Insieme.Inspire.NodeAddress
@@ -78,6 +76,7 @@ instance Solver.Lattice ExitPointSet where
 data ExitPointAnalysis = ExitPointAnalysis
     deriving (Typeable)
 
+exitPointAnalysis :: Solver.AnalysisIdentifier
 exitPointAnalysis = Solver.mkAnalysisIdentifier ExitPointAnalysis "EP"
 
 

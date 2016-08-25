@@ -85,6 +85,7 @@ instance Solver.ExtLattice Result where
 data BooleanAnalysis = BooleanAnalysis
     deriving (Typeable)
 
+booleanAnalysis :: Solver.AnalysisIdentifier
 booleanAnalysis = Solver.mkAnalysisIdentifier BooleanAnalysis "B"
 
 

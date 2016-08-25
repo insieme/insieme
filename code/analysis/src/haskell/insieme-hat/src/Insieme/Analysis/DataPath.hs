@@ -81,6 +81,7 @@ instance (FieldIndex i) => Solver.ExtLattice (DataPathSet i) where
 data DataPathAnalysis = DataPathAnalysis
     deriving (Typeable)
 
+dataPathAnalysis :: Solver.AnalysisIdentifier
 dataPathAnalysis = Solver.mkAnalysisIdentifier DataPathAnalysis "DP"
 
 
@@ -94,8 +95,6 @@ dataPathValue addr = dataflowValue addr analysis ops
   where
 
     analysis = DataFlowAnalysis DataPathAnalysis dataPathAnalysis dataPathValue top
-
-    idGen = mkVarIdentifier analysis
 
     top = compose USet.Universe
 

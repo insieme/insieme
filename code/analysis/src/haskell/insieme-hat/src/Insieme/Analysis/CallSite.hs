@@ -79,6 +79,7 @@ instance Solver.Lattice CallSiteSet where
 data CallSiteAnalysis = CallSiteAnalysis
     deriving (Typeable)
 
+callSiteAnalysis :: Solver.AnalysisIdentifier
 callSiteAnalysis = Solver.mkAnalysisIdentifier CallSiteAnalysis "CS"
 
 
@@ -112,7 +113,8 @@ callSites addr = case getNode addr of
 
     callable = case getNode addr of
         Node IR.Lambda _   -> Callable.Lambda addr
-        Node IR.BindExpr _ ->  Callable.Closure addr
+        Node IR.BindExpr _ -> Callable.Closure addr
+        _                  -> error "unexpected NodeType"
 
     dep a = map Solver.toVar (map snd allTrgVars)
     val a = foldr go Set.empty allTrgVars

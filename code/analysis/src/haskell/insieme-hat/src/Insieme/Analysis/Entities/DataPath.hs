@@ -38,19 +38,20 @@ module Insieme.Analysis.Entities.DataPath (
 
     DataPath(),
     root,
+    invalid,
     step,
     narrow,
     expand,
-    
+
     isRoot,
     isInvalid,
     isNarrow,
     isExpand,
     getPath,
-    
+
     append,
     invert
-    
+
 ) where
 
 import Data.List
@@ -60,13 +61,13 @@ import Data.List
 --
 
 
-data DataPath i = 
+data DataPath i =
           Root
         | Narrow [i]
-        | Expand [i] 
+        | Expand [i]
         | Invalid
   deriving (Eq,Ord)
-  
+
 
 instance (Show i) => Show (DataPath i) where
     show  Root      = "⊥"
@@ -76,9 +77,11 @@ instance (Show i) => Show (DataPath i) where
 
 
 -- a token for an empty path
+root :: DataPath i
 root = Root
 
--- a token for an invalid path 
+-- a token for an invalid path
+invalid :: DataPath i
 invalid = Invalid
 
 
@@ -109,18 +112,19 @@ isInvalid _       = False
 isNarrow :: DataPath i -> Bool
 isNarrow  Root      = True
 isNarrow (Narrow _) = True
-isNarrow  _         = False 
+isNarrow  _         = False
 
 isExpand :: DataPath i -> Bool
 isExpand  Root      = True
 isExpand (Expand _) = True
-isExpand  _         = False 
+isExpand  _         = False
 
 
 getPath :: DataPath i -> [i]
 getPath  Root      = []
 getPath (Narrow p) = p
 getPath (Expand p) = p
+getPath Invalid    = error "invalid path"
 
 
 -- concatenation of paths
@@ -139,7 +143,7 @@ append (Narrow (x:xs)) (Expand [y])    | x == y = Narrow xs
 append (Narrow (x:xs)) (Expand (y:ys)) | x == y = append (Narrow xs) (Expand ys)
 append (Narrow _)      (Expand _)               = Invalid
 
-append a@(Expand _) b@(Narrow _) = invert $ append (invert a) (invert b) 
+append a@(Expand _) b@(Narrow _) = invert $ append (invert a) (invert b)
 
 
 

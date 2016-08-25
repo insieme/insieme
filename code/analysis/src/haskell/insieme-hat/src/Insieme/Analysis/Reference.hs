@@ -83,8 +83,8 @@ instance (Eq i,Ord i,Show i,Typeable i) => Lattice (ReferenceSet i) where
 
 instance (Eq i,Ord i,Show i,Typeable i) => ExtLattice (ReferenceSet i) where
     top   = USet.Universe
-        
-    
+
+
 --
 -- * Reference Analysis
 --
@@ -93,6 +93,7 @@ instance (Eq i,Ord i,Show i,Typeable i) => ExtLattice (ReferenceSet i) where
 data ReferenceAnalysis = ReferenceAnalysis
     deriving (Typeable)
 
+referenceAnalysis :: AnalysisIdentifier
 referenceAnalysis = mkAnalysisIdentifier ReferenceAnalysis "R"
 
 
@@ -101,83 +102,84 @@ referenceAnalysis = mkAnalysisIdentifier ReferenceAnalysis "R"
 --
 
 referenceValue :: (FieldIndex i) => NodeAddress -> TypedVar (ValueTree.Tree i (ReferenceSet i))
-referenceValue addr = case getNode addr of 
+referenceValue addr = case getNode addr of
 
-        d@(Node IR.Declaration _) | isMaterializingDeclaration d ->  
+        d@(Node IR.Declaration _) | isMaterializingDeclaration d ->
             mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference addr DP.root)
 
-        c@(Node IR.CallExpr _) | isMaterializingCall c -> 
+        c@(Node IR.CallExpr _) | isMaterializingCall c ->
             trace ("Found materializing call: " ++ (show addr)) $
             mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference addr DP.root)
 
         _ -> dataflowValue addr analysis opsHandler
-        
+
     where
-    
+
         analysis = DataFlowAnalysis ReferenceAnalysis referenceAnalysis referenceValue top
         idGen = mkVarIdentifier analysis
-        
+
         compose = ComposedValue.toComposed
-        
+
         top = compose USet.Universe
-        
+
         opsHandler = [ allocHandler , declHandler , refNarrow , refExpand , refCast , refReinterpret ]
-        
+
         allocHandler = OperatorHandler cov noDep val
-            where 
+            where
                 cov a = isBuiltin a "ref_alloc"
                 val a = compose $ USet.singleton $ Reference addr DP.root
 
         declHandler = OperatorHandler cov noDep val
-            where 
+            where
                 cov a = isBuiltin a "ref_decl"
                 val a = compose $ USet.singleton $ Reference (getEnclosingDecl addr) DP.root
-        
+
         refNarrow = OperatorHandler cov subRefDep val
-            where 
+            where
                 cov a = isBuiltin a "ref_narrow"
                 val a = compose $ narrow (baseRefVal a) (dataPathVal a)
                 narrow = USet.lift2 $ \(Reference l p) d -> Reference l (DP.append p d)
-        
+
         refExpand = OperatorHandler cov subRefDep val
-            where 
+            where
                 cov a = isBuiltin a "ref_expand"
                 val a = compose $ expand (baseRefVal a) (dataPathVal a)
                 expand = USet.lift2 $ \(Reference l p) d -> Reference l (DP.append p (DP.invert d))
-        
+
         refCast = OperatorHandler cov dep val
-            where 
+            where
                 cov a = isBuiltin a "ref_cast"
                 dep _ = [toVar baseRefVar]
                 val a = get a baseRefVar
-        
+
         refReinterpret = OperatorHandler cov dep val
             where
                 cov a = isBuiltin a "ref_reinterpret"
                 dep _ = [toVar baseRefVar]
                 val a = get a baseRefVar            -- TODO: check when this conversion is actually valid
-        
+
         noDep a = []
-        
-        subRefDep a = [toVar baseRefVar, toVar dataPathVar] 
-        
+
+        subRefDep a = [toVar baseRefVar, toVar dataPathVar]
+
         baseRefVar   = referenceValue $ goDown 1 $ goDown 2 addr
         baseRefVal a = ComposedValue.toValue $ get a baseRefVar
-        
+
         dataPathVar   = dataPathValue $ goDown 3 addr
         dataPathVal a = ComposedValue.toValue $ get a dataPathVar
-        
-        
-        
+
+
+
 
 -- Tests whether an IR node represents a reference type or not
 isReference :: Tree IR.NodeType -> Bool
 isReference (Node IR.GenericType ((Node (IR.StringValue "ref") _) : _)) = True
 isReference _                                                           = False
-        
+
 getTypeParam :: Int -> Tree IR.NodeType -> Tree IR.NodeType
 getTypeParam i (Node IR.GenericType ( _ : _ : (Node IR.Types params) : [] )) = params !! i
-        
+getTypeParam _ _ = error "unexpected NodeType"
+
 hasMoreReferences :: Tree IR.NodeType -> Tree IR.NodeType -> Bool
 hasMoreReferences a b | isReference a && (not . isReference $ b) = True
 hasMoreReferences a b | isReference a && isReference b = hasMoreReferences (getTypeParam 0 a) (getTypeParam 0 b)
@@ -193,7 +195,7 @@ isMaterializingDeclaration _ = False
 -- tests whether the given node is a materializing call
 isMaterializingCall :: Tree IR.NodeType -> Bool
 isMaterializingCall _ = False        -- the default, for now - TODO: implement real check
--- isMaterializingCall (Node IR.CallExpr ( resType : (Node _ ((Node IR.FunctionType (_:retType:_)):_)) : _)) = hasMoreReferences resType retType 
+-- isMaterializingCall (Node IR.CallExpr ( resType : (Node _ ((Node IR.FunctionType (_:retType:_)):_)) : _)) = hasMoreReferences resType retType
 -- isMaterializingCall _ = False
 
 getEnclosingDecl :: NodeAddress -> NodeAddress

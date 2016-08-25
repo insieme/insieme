@@ -35,50 +35,50 @@
  -}
 
 module Insieme.Analysis.Solver (
-    
+
     -- lattices
     Lattice,
     join,
     merge,
     bot,
     less,
-    
+
     ExtLattice,
     top,
-    
+
     -- analysis identifiers
     AnalysisIdentifier,
     mkAnalysisIdentifier,
-    
+
     -- identifiers
     Identifier,
     mkIdentifier,
-    
+
     -- variables
     Var,
     TypedVar,
     mkVariable,
     toVar,
-    
+
     -- assignments
     Assignment,
     get,
     set,
-    
+
     -- solver
     resolve,
     resolveAll,
     solve,
-    
+
     -- constraints
     createConstraint,
     forward,
     forwardIf,
     constant,
-    
+
     -- debugging
     dumpSolverState
-    
+
 ) where
 
 import Debug.Trace
@@ -132,11 +132,11 @@ data AnalysisIdentifier = AnalysisIdentifier {
 }
 
 instance Eq AnalysisIdentifier where
-    (==) = (==) `on` idToken 
+    (==) = (==) `on` idToken
 
 instance Ord AnalysisIdentifier where
     compare = compare `on` idToken
-    
+
 instance Show AnalysisIdentifier where
     show = idName
 
@@ -153,7 +153,7 @@ data Identifier = Identifier {
     extra    :: String,
     hash     :: Int
 }
-    
+
 
 instance Eq Identifier where
     (==) (Identifier a1 n1 s1 h1) (Identifier a2 n2 s2 h2) =
@@ -164,11 +164,11 @@ instance Ord Identifier where
             if r0 == EQ
                then if r1 == EQ then if r2 == EQ then r3 else r2 else r1
                else r0
-        where 
+        where
             r0 = compare h1 h2
             r1 = compare a1 a2
             r2 = compare (getPathReversed n1) (getPathReversed n2)
-            r3 = compare s1 s2 
+            r3 = compare s1 s2
 
 instance Show Identifier where
         show (Identifier a n s _) = (show a) ++ "@" ++ (prettyShow n) ++ "/" ++ s
@@ -191,7 +191,7 @@ data Var = Var {
                 bottom :: Dynamic,                   -- the bottom value for this variable
                 valuePrint :: Assignment -> String   -- a utility for unpacking an printing a value assigned to this variable
         }
-        
+
 instance Eq Var where
         (==) a b = (index a) == (index b)
 
@@ -199,16 +199,16 @@ instance Ord Var where
         compare a b = compare (index a) (index b)
 
 instance Show Var where
-        show v = show (index v) 
+        show v = show (index v)
 
 
 -- typed variables (user interaction)
 newtype TypedVar a = TypedVar Var
         deriving ( Show, Eq, Ord )
-        
+
 mkVariable :: (Lattice a) => Identifier -> [Constraint] -> a -> TypedVar a
-mkVariable i cs b = var 
-    where 
+mkVariable i cs b = var
+    where
         var = TypedVar ( Var i cs ( toDyn b ) print )
         print = (\a -> show $ get a var )
 
@@ -220,13 +220,13 @@ toVar (TypedVar x) = x
 
 newtype Assignment = Assignment ( Map.Map Var Dynamic )
 
-instance Show Assignment where 
+instance Show Assignment where
     show a@( Assignment m ) = "Assignemnet {\n\t"
             ++
             ( intercalate ",\n\t\t" ( map (\v -> (show v) ++ " = " ++ (valuePrint v a) ) vars ) )
-            ++ 
+            ++
             "\n}"
-        where 
+        where
             vars = Map.keys m
 
 
@@ -236,7 +236,7 @@ empty = Assignment Map.empty
 -- retrieves a value from the assignment
 -- if the value is not present, the bottom value of the variable will be returned
 get :: (Typeable a) => Assignment -> TypedVar a -> a
-get (Assignment m) (TypedVar v) = 
+get (Assignment m) (TypedVar v) =
         fromJust $ (fromDynamic :: ((Typeable a) => Dynamic -> (Maybe a)) ) $ fromMaybe (bottom v) (Map.lookup v m)
 
 -- updates the value for the given variable stored within the given assignment
@@ -261,32 +261,32 @@ toDotGraph a@( Assignment m ) varSet = "digraph G {\n\t"
         ( intercalate "\n\t" ( map (\d -> "v" ++ (show $ fst d) ++ " -> v" ++ (show $ snd d) ++ ";" ) deps ) )
         ++
         "\n}"
-    where 
-        
+    where
+
         -- a function collecting all variables a variable is depending on
         dep v = foldr (\c l -> (dependingOn c a) ++ l) [] (constraints v)
-        
+
         -- list of all keys in map
         keys = Map.keys m
-        
-        -- list of all variables in the analysis 
+
+        -- list of all variables in the analysis
         allVars = Set.toList $ varSet
-        
+
         -- the keys (=variables) associated with an index
-        vars = Prelude.zip [1..] allVars 
-        
+        vars = Prelude.zip [1..] allVars
+
         -- a reverse lookup map for vars
         rev = Map.fromList $ map swap vars
-        
+
         -- a lookup function for rev
-        index v = fromMaybe 0 $ Map.lookup v rev 
-        
+        index v = fromMaybe 0 $ Map.lookup v rev
+
         -- computes the list of dependencies
         deps = foldr go [] vars
-            where 
+            where
                 go = (\v l -> (foldr (\s l -> (fst v, index s) : l ) [] (dep $ snd v )) ++ l)
 
-                  
+
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
 dumpSolverState :: Assignment -> Set.Set Var -> String -> String
 dumpSolverState a v file = unsafePerformIO $ do
@@ -304,9 +304,9 @@ toJsonMetaFile a@( Assignment m ) vars = "{\n"
         ++
         "\n    }\n}"
     where
-        
+
         addr = address . index
-        
+
         store = foldr go Map.empty vars
             where
                 go v m = Map.insert k (msg : Map.findWithDefault [] k m) m
@@ -314,12 +314,12 @@ toJsonMetaFile a@( Assignment m ) vars = "{\n"
                         k = (addr v)
                         i = index v
                         ext = if null . extra $ i then "" else '/' : extra i
-                        msg = (show . analysis $ i) ++ ext ++ 
-                            " = " ++ (valuePrint v a)     
- 
+                        msg = (show . analysis $ i) ++ ext ++
+                            " = " ++ (valuePrint v a)
+
         print (a,ms) = "      \"" ++ (show a) ++ "\" : \"" ++ ( intercalate "<br>" ms) ++ "\""
 
- 
+
 
 dumpToJsonFile :: Assignment -> Set.Set Var -> String -> String
 dumpToJsonFile a v file = unsafePerformIO $ do
@@ -329,7 +329,7 @@ dumpToJsonFile a v file = unsafePerformIO $ do
 
 -- Constraints ---------------------------------------------
 
-data Event = 
+data Event =
           None                        -- ^ an update had no effect
         | Increment                -- ^ an update was an incremental update
         | Reset                        -- ^ an update was not incremental
@@ -358,7 +358,7 @@ addDep d _ [] = d
 addDep d@(Dependencies m) t (v:vs) = addDep (Dependencies (Map.insertWith (\_ s -> Set.insert t s) v (Set.singleton t) m)) t vs
 
 getDep :: Dependencies -> Var -> Set.Set Var
-getDep (Dependencies d) v = fromMaybe Set.empty $ Map.lookup v d 
+getDep (Dependencies d) v = fromMaybe Set.empty $ Map.lookup v d
 
 
 -- solve for a single value
@@ -368,7 +368,7 @@ resolve tv = head $ resolveAll [tv]
 
 -- solve for a list of variables
 resolveAll :: (Lattice a) => [TypedVar a] -> [a]
-resolveAll tvs = res <$> tvs 
+resolveAll tvs = res <$> tvs
     where
         ass = solve empty (toVar <$> tvs)
         res = get ass
@@ -403,12 +403,12 @@ solveStep a k d (v:vs) = solveStep resAss resKnown resDep ds
         where
                 -- each constraint extends the result, the dependencies, and the vars to update
                 (resAss,resKnown,resDep,ds) = foldr processConstraint (a,k,d,vs) ( constraints v )  -- update all constraints of current variable
-                processConstraint c (a,k,d,dv) = case ( update c $ a ) of 
+                processConstraint c (a,k,d,dv) = case ( update c $ a ) of
                         (a',None)         -> (a',nk,nd,nv)                                        -- nothing changed, we are fine
                         (a',Increment)    -> (a',nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- add depending variables to work list
                         (a',Reset)        -> undefined                                            -- TODO: support local resets
                         where
-                                trg = target c                                
+                                trg = target c
                                 dep = dependingOn c a
                                 newVars = (Set.fromList dep) `Set.difference` k
                                 nk = newVars `Set.union` k
@@ -438,7 +438,7 @@ forward a@(TypedVar v) b = createConstraint (\_ -> [v]) (\a' -> get a' a) b
 -- creates a constraint of the form  x \sub A[a] => A[b] \in A[c]
 forwardIf :: (Lattice a, Lattice b) => a -> TypedVar a -> TypedVar b -> TypedVar b -> Constraint
 forwardIf a b@(TypedVar v1) c@(TypedVar v2) d = createConstraint dep upt d
-    where 
+    where
         dep = (\a' -> if less a $ get a' b then [v1,v2] else [v1] )
         upt = (\a' -> if less a $ get a' b then get a' c else bot )
 

@@ -77,6 +77,7 @@ toBool (Reachable b) = b
 data ReachableInAnalysis = ReachableInAnalysis
     deriving (Typeable)
 
+reachableInAnalysis :: Solver.AnalysisIdentifier
 reachableInAnalysis = Solver.mkAnalysisIdentifier ReachableInAnalysis "R[in]"
 
 
@@ -92,10 +93,10 @@ reachableIn a = case getNode parent of
     Node IR.Lambda _ -> Solver.mkVariable (idGen a) [] (Reachable True)
 
     Node IR.CompoundStmt _ -> var
-        where 
+        where
             n = getIndex a
             var = Solver.mkVariable (idGen a) [con] Solver.bot
-            con = if n == 0 
+            con = if n == 0
                 then Solver.forward (reachableIn parent) var
                 else Solver.forward (reachableOut $ goDown (n-1) parent) var
 
@@ -105,14 +106,16 @@ reachableIn a = case getNode parent of
             con = case getIndex a of
                 0 -> Solver.forward (reachableIn parent) var
                 1 -> Solver.forwardIf (compose Boolean.AlwaysTrue)  (Boolean.booleanValue $ goDown 0 parent) (reachableOut $ goDown 0 parent) var
-                2 -> Solver.forwardIf (compose Boolean.AlwaysFalse) (Boolean.booleanValue $ goDown 0 parent) (reachableOut $ goDown 0 parent) var 
-        
+                2 -> Solver.forwardIf (compose Boolean.AlwaysFalse) (Boolean.booleanValue $ goDown 0 parent) (reachableOut $ goDown 0 parent) var
+                _ -> error "index out of bound"
+
     Node IR.WhileStmt _ -> var
         where
             var = Solver.mkVariable (idGen a) [con] Solver.bot
             con = case getIndex a of
                 0 -> Solver.forward (reachableIn parent) var
                 1 -> Solver.forwardIf (compose Boolean.AlwaysTrue)  (Boolean.booleanValue $ goDown 0 parent) (reachableOut $ goDown 0 parent) var
+                _ -> error "index out of bound"
 
     -- for all others: if the parent is reachable, so is this node
     _ -> var
@@ -120,16 +123,17 @@ reachableIn a = case getNode parent of
             var = Solver.mkVariable (idGen a) [con] Solver.bot
             con = Solver.forward (reachableIn parent) var
 
-    where 
-        
+    where
+
         parent = fromJust $ getParent a
-        
+
         idGen = reachableInIdGen
-        
+
         compose = ComposedValue.toComposed
 
 
 
+reachableInIdGen :: NodeAddress -> Solver.Identifier
 reachableInIdGen a = Solver.mkIdentifier reachableInAnalysis a ""
 
 
@@ -141,6 +145,7 @@ reachableInIdGen a = Solver.mkIdentifier reachableInAnalysis a ""
 data ReachableOutAnalysis = ReachableOutAnalysis
     deriving (Typeable)
 
+reachableOutAnalysis :: Solver.AnalysisIdentifier
 reachableOutAnalysis = Solver.mkAnalysisIdentifier ReachableOutAnalysis "R[out]"
 
 
@@ -160,13 +165,13 @@ reachableOut a = case getNode a of
     Node IR.BreakStmt _ -> Solver.mkVariable (idGen a) [] Solver.bot
 
     -- a commound statement ends if the last statement ends
-    Node IR.CompoundStmt ns -> var 
+    Node IR.CompoundStmt ns -> var
         where
             size = length ns
             var = Solver.mkVariable (idGen a) [cnt] Solver.bot
-            cnt = if size == 0 
-                then Solver.forward (reachableIn a) var 
-                else Solver.forward (reachableOut $ goDown ( (length ns) - 1 ) a) var 
+            cnt = if size == 0
+                then Solver.forward (reachableIn a) var
+                else Solver.forward (reachableOut $ goDown ( (length ns) - 1 ) a) var
 
     -- the end of a if is reached if any of the bodies is finished
     Node IR.IfStmt _ -> var
@@ -181,14 +186,14 @@ reachableOut a = case getNode a of
             var = Solver.mkVariable (idGen a) [cnt] Solver.bot
             cnt = Solver.forwardIf (ComposedValue.toComposed Boolean.AlwaysFalse) (Boolean.booleanValue $ goDown 0 a) (reachableOut $ goDown 0 a) var
 
-            
+
     -- everything else: if the begin is reachable, so is the end
     _ -> var
-        where 
+        where
             var = Solver.mkVariable (idGen a) [con] Solver.bot
             con = Solver.forward (reachableIn a) var
 
     where
-        
+
         idGen a = Solver.mkIdentifier reachableOutAnalysis a ""
-        
+

@@ -78,6 +78,7 @@ instance BSet.IsBound b => Solver.ExtLattice (SymbolicFormulaSet b)  where
 data ArithmeticAnalysis = ArithmeticAnalysis
     deriving (Typeable)
 
+arithmeticAnalysis :: Solver.AnalysisIdentifier
 arithmeticAnalysis = Solver.mkAnalysisIdentifier ArithmeticAnalysis "A"
 
 

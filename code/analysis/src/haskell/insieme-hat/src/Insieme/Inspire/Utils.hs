@@ -203,7 +203,7 @@ isFreeVariable v = isNothing decl || (isEntryPointParam $ fromJust decl)
 
 
 -- some examples
-excoll a (Node n _) = Set.insert (a, n)
-extree = unfoldTree
-         (\i -> (i, if i>2 then [i `div` 2, i `div` 2 -1] else [])) 8
-exprune s t = Seq.length s <= 2
+--excoll a (Node n _) = Set.insert (a, n)
+--extree = unfoldTree
+--         (\i -> (i, if i>2 then [i `div` 2, i `div` 2 -1] else [])) 8
+--exprune s t = Seq.length s <= 2

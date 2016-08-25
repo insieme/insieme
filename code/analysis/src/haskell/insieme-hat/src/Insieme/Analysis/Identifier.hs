@@ -87,6 +87,7 @@ instance Solver.ExtLattice IdentifierSet where
 data IdentifierAnalysis = IdentifierAnalysis
     deriving (Typeable)
 
+identifierAnalysis :: Solver.AnalysisIdentifier
 identifierAnalysis = Solver.mkAnalysisIdentifier IdentifierAnalysis "I"
 
 --
@@ -102,9 +103,9 @@ identifierValue addr = case getNode addr of
     _ -> dataflowValue addr analysis []
 
   where
-  
+
     analysis = DataFlowAnalysis IdentifierAnalysis identifierAnalysis identifierValue $ compose USet.Universe
-  
+
     idGen = mkVarIdentifier analysis
 
     compose = ComposedValue.toComposed

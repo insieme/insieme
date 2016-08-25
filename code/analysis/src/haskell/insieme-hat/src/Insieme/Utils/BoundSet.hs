@@ -122,15 +122,15 @@ union bs@(BoundSet x) (BoundSet y) = if Set.size u > bound bs then Universe else
     u = Set.union x y
 
 intersection :: (IsBound bb, Ord a) => BoundSet bb a -> BoundSet bb a -> BoundSet bb a
-intersection    Universe     x            = x
-intersection    x            Universe     = x
-intersection bs@(BoundSet x) (BoundSet y) = BoundSet $ Set.intersection x y
+intersection Universe     x            = x
+intersection x            Universe     = x
+intersection (BoundSet x) (BoundSet y) = BoundSet $ Set.intersection x y
 
 cartProduct :: (IsBound bb, Ord a, Ord b)
             => BoundSet bb a -> BoundSet bb b -> BoundSet bb (a, b)
-cartProduct    Universe     _            = Universe
-cartProduct    _            Universe     = Universe
-cartProduct bs@(BoundSet x) (BoundSet y) = fromList prod
+cartProduct Universe     _            = Universe
+cartProduct _            Universe     = Universe
+cartProduct (BoundSet x) (BoundSet y) = fromList prod
   where
      prod = [(u, v) | u <- Set.toList x, v <- Set.toList y]
 
@@ -140,9 +140,9 @@ map f (BoundSet x) = BoundSet (Set.map f x)
 
 lift2 :: (IsBound bb, Ord a, Ord b, Ord c)
       => (a -> b -> c) -> (BoundSet bb a -> BoundSet bb b -> BoundSet bb c)
-lift2 _    Universe     _            = Universe
-lift2 _    _            Universe     = Universe
-lift2 f bs@(BoundSet x) (BoundSet y) = fromList prod
+lift2 _ Universe     _            = Universe
+lift2 _ _            Universe     = Universe
+lift2 f (BoundSet x) (BoundSet y) = fromList prod
   where
       prod = [f u v | u <- Set.toList x, v <- Set.toList y]
 

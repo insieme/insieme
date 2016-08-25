@@ -78,6 +78,7 @@ $(let
 
     genCons :: Con -> Con
     genCons (NormalC n _) = NormalC (removePrefix "NT_" n) []
+    genCons _             = error "unexpected Con"
 
   in
     extend base
@@ -117,9 +118,11 @@ $(let
 
     genClauseFromNodeType :: Con -> Clause
     genClauseFromNodeType (NormalC n _) = Clause [ConP n []] (NormalB (ConE (removePrefix "NT_" n))) []
+    genClauseFromNodeType _             = error "unexpected Con"
 
     genClauseToNodeType :: Con -> Clause
     genClauseToNodeType (NormalC n _) = Clause [ConP (removePrefix "NT_" n) []] (NormalB (ConE n)) []
+    genClauseToNodeType _             = error "unexpected Con"
 
   in
     (++) <$> extend baseFromNodeType genClauseFromNodeType
