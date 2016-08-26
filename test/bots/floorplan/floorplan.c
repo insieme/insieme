@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <alloca.h>
 #include "app-desc.h"
 #include "bots.h"
 
@@ -291,7 +292,7 @@ int add_cell(int id, coor FOOTPRINT, ibrd BOARD, struct cell *CELLS,int level) {
 	shared(FOOTPRINT,BOARD,CELLS,MIN_AREA,MIN_FOOTPRINT,N,BEST_BOARD,nnc,bots_verbose_mode) \
 	if(level<bots_cutoff_value)
 			{
-				struct cell cells[N+1];
+				struct cell* cells = alloca(sizeof(struct cell)*(N+1));
 				memcpy(cells,CELLS,sizeof(struct cell)*(N+1));
 				/* extent of shape */
 				cells[id].top = NWS[j][0];
@@ -533,7 +534,7 @@ int add_cell(int id, coor FOOTPRINT, ibrd BOARD, struct cell *CELLS) {
 	firstprivate(NWS,i,j,id,nn) \
 	shared(FOOTPRINT,BOARD,CELLS,MIN_AREA,MIN_FOOTPRINT,N,BEST_BOARD,nnc,bots_verbose_mode) 
 			{
-				struct cell cells[N+1];
+				struct cell *cells = alloca(sizeof(struct cell)*(N+1));
 				memcpy(cells,CELLS,sizeof(struct cell)*(N+1));
 				/* extent of shape */
 				cells[id].top = NWS[j][0];
