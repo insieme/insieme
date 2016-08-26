@@ -165,7 +165,7 @@ int main() {
 	//===------------------------------------------------------------------------------------------------------------------------------------- MISC CASTS ---===
 
 	// NoOp - casting between identical types
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v0; *v0; }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v0; v0; }")
 	{
 		int x;
 		(int)x;

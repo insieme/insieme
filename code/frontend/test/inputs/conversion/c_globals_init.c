@@ -58,8 +58,8 @@ def IMP_main = ()->int<4> {
     <ref<array<char,255>,f,f,plain>>(lit("char_arr" : ref<array<char,255>,f,f,plain>)) {'\0'};
     <ref<array<int<4>,2>,f,f,plain>>(lit("arr" : ref<array<int<4>,2>,f,f,plain>)) {42, 43};
 
-	*lit("initedGlobal":ref<int<4>>);
-	*lit("y":ref<IMP_S>);
+	lit("initedGlobal":ref<int<4>>);
+	lit("y":ref<IMP_S>);
 	ptr_from_array(lit("klaus_test":ref<array<IMP_S,3>,t,f>));
 	ptr_from_array(lit("char_arr":ref<array<char,255>,f,f>));
 	ptr_from_array(lit("arr":ref<array<int<4>,2>,f,f>));

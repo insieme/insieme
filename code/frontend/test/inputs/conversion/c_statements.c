@@ -174,7 +174,7 @@ int main() {
 
 	int magic;
 
-	#pragma test expect_ir("{var ref<int<4>,f,f> v0; { v0 = 0; while(*v0 < 10) { *v0; gen_post_inc(v0); } } }")
+	#pragma test expect_ir("{var ref<int<4>,f,f> v0; { v0 = 0; while(*v0 < 10) { v0; gen_post_inc(v0); } } }")
 	{
 		int i;
 		for(i = 0; i < 10; i++) {
@@ -182,34 +182,34 @@ int main() {
 		}
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f> v0 = 2; while(*v0 < 5) { *v0; *comp_assign_add(v0, 1); } } }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f> v0 = 2; while(*v0 < 5) { v0; comp_assign_add(v0, 1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1) {
 			k;
 		}
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f> v0 = 2; while(*v0 < 5) { *v0; *comp_assign_add(v0, 1); } } }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f> v0 = 2; while(*v0 < 5) { v0; comp_assign_add(v0, 1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1) k;
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f> v0 = 2; while(*v0 < 5) { *comp_assign_add(v0, 1); } } }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f> v0 = 2; while(*v0 < 5) { comp_assign_add(v0, 1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1);
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f> v0 = 2; while(*v0 < 5) { *comp_assign_add(v0, 1); } } }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f> v0 = 2; while(*v0 < 5) { comp_assign_add(v0, 1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1) { }
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f> v0 = 2; while(*v0 < 5) { { *comp_assign_add(v0, 1); continue; } *comp_assign_add(v0, 1); } } }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f> v0 = 2; while(*v0 < 5) { { comp_assign_add(v0, 1); continue; } comp_assign_add(v0, 1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1) { continue; }
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f> v0 = 2; while(*v0 < 5) { { if (*v0 == 3) { *comp_assign_add(v0, 1); continue; }; if (*v0 == 4) { *comp_assign_add(v0, 1); continue; }; } *comp_assign_add(v0, 1); } } }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; {{ var ref<int<4>,f,f> v0 = 2; while(*v0 < 5) { { if (*v0 == 3) { comp_assign_add(v0, 1); continue; }; if (*v0 == 4) { comp_assign_add(v0, 1); continue; }; } comp_assign_add(v0, 1); } } }")
 	{
 		for(int k = 2; k < 5; k+=1) {
 			if (k==3) continue;
@@ -217,7 +217,7 @@ int main() {
 		}
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>,f,f> v0 = 0; { while(*v0 < 10) { *v0; gen_post_inc(v0); } } }")
+	#pragma test expect_ir("{ var ref<int<4>,f,f> v0 = 0; { while(*v0 < 10) { v0; gen_post_inc(v0); } } }")
 	{
 		int i = 0;
 		for(; i < 10; i++) {

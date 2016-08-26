@@ -74,9 +74,9 @@ int main() {
 			var ref<IMP_A,f,f,plain> v0 = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
 			var ref<IMP_A,f,f,cpp_ref> v1 = v0;
 			v0.i;
-			*v0.j;
+			v0.j;
 			v1.i;
-			*v1.j;
+			v1.j;
 		}
 	)")
 	{
