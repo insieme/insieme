@@ -84,4 +84,13 @@ int main() {
 			b = 5;
 		}
 	}
+
+	//{
+	//	int num = 8;
+	//	int arr[num];
+	//	#pragma omp parallel
+	//	{
+	//		arr[3] = 0;
+	//	}
+	//}
 }

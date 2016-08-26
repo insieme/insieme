@@ -46,6 +46,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/core/lang/parallel.h"
+#include "insieme/core/lang/compound_operators.h"
 
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -105,12 +106,14 @@ namespace transform {
 			IRBuilder builder;
 			const lang::BasicGenerator& basic;
 			const lang::ParallelExtension& parExt;
+			const lang::CompoundOpsExtension& compExt;
 
 			bool removeSyncOps;
 
 		  public:
 			Sequentializer(NodeManager& manager, bool removeSyncOps)
-			    : manager(manager), builder(manager), basic(manager.getLangBasic()), parExt(manager.getLangExtension<lang::ParallelExtension>()), removeSyncOps(removeSyncOps) {}
+				: manager(manager), builder(manager), basic(manager.getLangBasic()), parExt(manager.getLangExtension<lang::ParallelExtension>()),
+				  compExt(manager.getLangExtension<lang::CompoundOpsExtension>()), removeSyncOps(removeSyncOps) {}
 
 			virtual const NodePtr resolveElement(const NodePtr& ptr) {
 				// skip types
@@ -121,7 +124,7 @@ namespace transform {
 		  protected:
 			StatementPtr handleCall(const CallExprPtr& call) {
 				const auto& fun = call->getFunctionExpr();
-				auto args = call->getArgumentList();
+				auto args = core::transform::extractArgExprsFromCall(call);
 
 				// skip merge expressions if possible
 				if(parExt.isMerge(fun)) {
@@ -172,6 +175,13 @@ namespace transform {
 				if(parExt.isLockInit(fun)) { return builder.getNoOp(); }
 
 				// and atomics
+				auto rT = builder.refType(call->getType());
+				if(parExt.isAtomicAddAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignAdd(), args[0], args[1]));
+				if(parExt.isAtomicSubAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignSubtract(), args[0], args[1]));
+				if(parExt.isAtomicAndAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignBitwiseAnd(), args[0], args[1]));
+				if(parExt.isAtomicOrAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignBitwiseOr(), args[0], args[1]));
+				if(parExt.isAtomicXorAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignBitwiseXor(), args[0], args[1]));
+
 				if(parExt.isAtomic(fun)) {
 					// fix generic parameters within atomic body definition
 					core::CallExprPtr newCall = call;
