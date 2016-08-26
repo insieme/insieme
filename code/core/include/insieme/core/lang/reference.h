@@ -185,7 +185,6 @@ namespace lang {
 		 */
 		LANG_EXT_LITERAL(RefOfFunction, "ref_of_function", "('a) -> ref<'a,t,f>")
 
-
 		// -- access --
 
 		/**
@@ -499,6 +498,9 @@ namespace lang {
 	ExpressionPtr buildRefTemp(const TypePtr& type);
 	ExpressionPtr buildRefNull(const TypePtr& type);
 	ExpressionPtr buildRefDecl(const TypePtr& type);
+
+	/// Returns true is node is either GenPreInc, GenPostInc, GenPreDec or GenPostDec, or a call to any of them
+	bool isRefMathOp(const NodePtr& node);
 
 } // end namespace lang
 } // end namespace core

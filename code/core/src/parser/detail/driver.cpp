@@ -1030,25 +1030,36 @@ namespace parser {
 			}
 		}
 
-		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound,
-			                                    const ExpressionPtr& expr) {
+
+		ExpressionPtr InspireDriver::genJobInternal(const location& l, const ExpressionPtr& expr,
+			                                        const std::function<ExpressionPtr(const ExpressionPtr&)>& jobGenerator) {
 			auto scalarExpr = getScalar(expr);
 			if(!scalarExpr.isa<CallExprPtr>()) {
 				error(l, "expression in job must be a call expression");
 				return nullptr;
 			}
 			auto bind = builder.bindExpr(VariableList(), scalarExpr.as<CallExprPtr>());
-			return builder.jobExpr(getScalar(lowerBound), getScalar(upperBound), bind);
+			return jobGenerator(bind);
+		}
+
+		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound,
+			                                    const ExpressionPtr& expr) {
+			return genJobInternal(l, expr, [&](const ExpressionPtr& bind) { return builder.jobExpr(getScalar(lowerBound), getScalar(upperBound), bind); });
+		}
+
+		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound,
+			                                    const ExpressionPtr& modExpr, const ExpressionPtr& expr) {
+			return genJobInternal(l, expr, [&](const ExpressionPtr& bind) {
+				return builder.jobExpr(getScalar(lowerBound), getScalar(upperBound), getScalar(modExpr), bind);
+			});
+		}
+
+		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& lowerBound, const ExpressionPtr& expr) {
+			return genJobInternal(l, expr, [&](const ExpressionPtr& bind) { return builder.jobExprUnbounded(getScalar(lowerBound), bind); });
 		}
 
 		ExpressionPtr InspireDriver::genJobExpr(const location& l, const ExpressionPtr& expr) {
-			auto scalarExpr = getScalar(expr);
-			if(!scalarExpr.isa<CallExprPtr>()) {
-				error(l, "expression in job must be a call expression");
-				return nullptr;
-			}
-			auto bind = builder.bindExpr(VariableList(), scalarExpr.as<CallExprPtr>());
-			return builder.jobExpr(builder.getThreadNumRange(1), bind.as<ExpressionPtr>());
+			return genJobInternal(l, expr, [&](const ExpressionPtr& bind) { return builder.jobExpr(builder.getThreadNumRange(1), bind.as<ExpressionPtr>()); });
 		}
 
 		ExpressionPtr InspireDriver::genSync(const location& l, const ExpressionPtr& expr) {
@@ -1076,7 +1087,7 @@ namespace parser {
 				return nullptr;
 			}
 
-			return builder.refParent(scalarExpr, type);
+			return core::lang::buildRefParentCast(scalarExpr, type);
 		}
 
 		DeclarationStmtPtr InspireDriver::genVariableDefinition(const location& l, const TypePtr& type, const std::string name, const ExpressionPtr& init) {
@@ -1219,6 +1230,28 @@ namespace parser {
 		ExpressionPtr InspireDriver::genThis(const location& l) {
 			assert_false(thisStack.empty());
 			return inLambda ? thisStack.back() : builder.deref(thisStack.back());
+		}
+
+		ExpressionPtr InspireDriver::genMemLambdaReference(const location& l, const string& structName, const string& lambdaName) {
+			auto lookupTy = findType(l, structName);
+			auto genTy = lookupTy ? lookupTy.isa<core::GenericTypePtr>() : nullptr;
+			if(!genTy) {
+				error(l, format("Symbol %s is not a struct type declared previously", structName));
+				return nullptr;
+			}
+			auto structTyIt = tu.getTypes().find(genTy);
+			if(structTyIt == tu.getTypes().end()) {
+				error(l, format("Struct %s not found in current TU", structName));
+				return nullptr;
+			}
+			auto structTy = structTyIt->second;
+			for(const auto& memFun : structTy->getRecord()->getMemberFunctions()->getMembers()) {
+				if(memFun->getNameAsString() == lambdaName) {
+					return memFun->getImplementation();
+				}
+			}
+			error(l, format("Struct %s does not contain member function %s", structName, lambdaName));
+			return nullptr;
 		}
 
 		namespace {

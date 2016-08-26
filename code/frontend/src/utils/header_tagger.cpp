@@ -326,6 +326,10 @@ namespace utils {
 
 	bool HeaderTagger::isIntercepted(const clang::Decl* decl) const	{
 		auto location = decl->getLocation();
+		// we do not want to intercept initializer lsits
+		if(auto namedDecl = llvm::dyn_cast<clang::NamedDecl>(decl)) {
+			if(boost::starts_with(namedDecl->getQualifiedNameAsString(), "std::initializer_list")) return false;
+		}
 		return isStdLibHeader(location) || isInterceptedLibHeader(location);
 	}
 

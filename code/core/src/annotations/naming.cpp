@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -86,7 +86,6 @@ const string& getAttachedName(const NodePtr& node) {
 
 void attachName(const NodePtr& node, const string& name) {
 	assert_false(name.empty()) << "Annotated name must not be empty!";
-	if (name.empty()) std::cerr << "WARNING: Annotated empty name!! -- TODO: fix this and re-enable assertion\n";
 	node->attachValue(NameTag(name));
 }
 

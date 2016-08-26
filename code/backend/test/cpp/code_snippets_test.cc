@@ -179,6 +179,21 @@ namespace backend {
 		})
 	}
 
+	TEST(CppSnippet, RefArrayParameter) {
+		DO_TEST(R"(
+			def IMP_takeT_char__lbracket_5_rbracket__returns_void = function (v0 : ref<array<char,5>,t,f,cpp_ref>) -> unit { };
+			def IMP_takeT_int__lbracket_3_rbracket__returns_void = function (v0 : ref<array<int<4>,3>,t,f,cpp_ref>) -> unit { };
+			int<4> main() {
+				IMP_takeT_char__lbracket_5_rbracket__returns_void(ref_kind_cast(lit(""test"" : ref<array<char,5>,t,f,plain>), type_lit(cpp_ref)));
+				var ref<array<int<4>,3>,f,f,plain> v0 = <ref<array<int<4>,3>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3>,f,f,plain>))) {1, 2, 3};
+				IMP_takeT_int__lbracket_3_rbracket__returns_void(ref_kind_cast(v0, type_lit(cpp_ref)));
+				return 0;
+			}
+		)", true, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			;
+		})
+	}
+
 	TEST(CppSnippet, ReferenceVariableDeclaration) {
 		DO_TEST(R"(
 			int<4> function IMP_main () {
@@ -205,6 +220,23 @@ namespace backend {
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			EXPECT_PRED2(containsSubString, code, "IMP_test(alb)");
 			EXPECT_PRED2(notContainsSubString, code, "*");
+		})
+	}
+
+	TEST(CppSnippet, ReferenceLazyUse) {
+		DO_TEST(R"(
+			def struct S {
+				mem : int<4>;
+			};
+
+			int<4> main() {
+				var ref<S> y;
+				var ref<S,t,f,cpp_ref> x = y;
+				x.mem == 0 && x.mem == 1;
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "x.mem == 0 && x.mem == 1;");
 		})
 	}
 
@@ -335,15 +367,23 @@ namespace backend {
 				}
 			};
 
+			def struct IMP_B {
+				function IMP_m = () -> unit { }
+			};
+			def IMP_makeB = function () -> IMP_B {
+				return <ref<IMP_B,f,f,plain>>(ref_decl(type_lit(ref<IMP_B,f,f,plain>))) {};
+			};
+
 			int main() {
 				var ref<Math> m;
 
 				print("%d\n", m->id(12));
 				print("%d\n", m->sum(12, 14));
+				IMP_makeB() materialize .IMP_m();
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			;
+			EXPECT_PRED2(containsSubString, code, "IMP_makeB().m()");
 		})
 	}
 
@@ -716,6 +756,32 @@ namespace backend {
 		})
 	}
 
+	TEST(CppSnippet, ConstructorsBaseMove) {
+		DO_TEST(R"(
+			decl IMP_move : (ref<IMP_Derived,f,f,cpp_ref>) -> ref<IMP_Derived,f,f,cpp_rref>;
+			def struct IMP_Base {
+			};
+			def struct IMP_Derived : [ public IMP_Base ] {
+				ctor function () {
+					IMP_Base::(ref_parent_cast(this, type_lit(IMP_Base)));
+				}
+				ctor function (v1 : ref<IMP_Derived,f,f,cpp_rref>) {
+					IMP_Base::(ref_parent_cast(this, type_lit(IMP_Base)), ref_parent_cast(IMP_move(ref_kind_cast(v1, type_lit(cpp_ref))), type_lit(IMP_Base)));
+				}
+			};
+			def IMP_move = function (v86 : ref<IMP_Derived,f,f,cpp_ref>) -> ref<IMP_Derived,f,f,cpp_rref> {
+				return ref_cast(v86, type_lit(f), type_lit(f), type_lit(cpp_rref));
+			};
+			int<4> function IMP_main (){
+				var ref<IMP_Derived,f,f,plain> v0 = IMP_Derived::(ref_decl(type_lit(ref<IMP_Derived,f,f,plain>)));
+				var ref<IMP_Derived,f,f,plain> v1 = IMP_move(ref_kind_cast(v0, type_lit(cpp_ref)));
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, ": IMP_Base((IMP_Base&&)IMP_move(v1))");
+		})
+	}
+
 	TEST(CppSnippet, ReturnThisInConstructor) {
 		DO_TEST(R"(
 			def struct IMP_ConstructorReturn {
@@ -736,6 +802,29 @@ namespace backend {
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			EXPECT_PRED2(containsSubString, code, "return;");
 			EXPECT_PRED2(notContainsSubString, code, "return this");
+		})
+	}
+
+	TEST(CppSnippet, DirectStackParamConstruction) {
+		DO_TEST(R"(
+			def struct IMP_WithSingleArgConstructor {
+				x : int<4>;
+				ctor function (v1 : ref<int<4>,f,f,plain>) {
+					<ref<int<4>,f,f,plain>>((this).x) {*v1};
+				}
+			};
+			def IMP_setX = function (v0 : ref<IMP_WithSingleArgConstructor,f,f,plain>) -> IMP_WithSingleArgConstructor {
+				var ref<IMP_WithSingleArgConstructor,f,f,plain> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref));
+				v1.x = 10;
+				return ref_cast(v1, type_lit(f), type_lit(f), type_lit(cpp_rref));
+			};
+			int<4> main() {
+				var ref<IMP_WithSingleArgConstructor,f,f,plain> v0 = ref_cast(IMP_setX(IMP_WithSingleArgConstructor::(ref_decl(type_lit(ref<IMP_WithSingleArgConstructor,f,f,plain>)), 0)) materialize , type_lit(f), type_lit(f), type_lit(cpp_rref));
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(notContainsSubString, code, "&IMP_WithSingleArgConstructor");
+			EXPECT_PRED2(containsSubString, code, "{0}");
 		})
 	}
 
@@ -1053,58 +1142,54 @@ namespace backend {
 		})
 	}
 
-	TEST(CppSnippet, DISABLED_Inheritance) {
+	TEST(CppSnippet, Inheritance) {
 		DO_TEST(R"(
-			alias int = int<4>;
-
-			def struct A {
-				x : int;
+			def struct IMP_Base {
+				a : int<4>;
+				function IMP_foo = () -> unit {
+					(this).a = 5;
+				}
 			};
-
-			def struct B : [A] {
-				y : int;
+			def struct IMP_Derived : [ public IMP_Base ] {
+				b : int<4>;
+				function IMP_bar = () -> unit {
+					ptr_to_ref(ptr_parent_cast(ptr_from_ref(this), type_lit(IMP_Base))).a = 6;
+					(this).b = 6;
+				}
 			};
-
-			def struct C : [B] {
-				z : int;
+			def struct IMP_DerivedSpecifyingFoo : [ public IMP_Derived ] {
+				c : int<4>;
+				function IMP_foo = () -> unit {
+					ptr_to_ref(ptr_parent_cast(ptr_from_ref(this), type_lit(IMP_Base))).a = 7;
+					(this).c = 7;
+				}
 			};
+			int<4> main() {
+				var ref<IMP_Base,f,f,plain> v0 = IMP_Base::(ref_decl(type_lit(ref<IMP_Base,f,f,plain>)));
+				var ref<IMP_Derived,f,f,plain> v1 = IMP_Derived::(ref_decl(type_lit(ref<IMP_Derived,f,f,plain>)));
+				var ref<IMP_DerivedSpecifyingFoo,f,f,plain> v2 = IMP_DerivedSpecifyingFoo::(ref_decl(type_lit(ref<IMP_DerivedSpecifyingFoo,f,f,plain>)));
 
-			int main() {
-				// -------- handle an instance of A --------
-				var ref<A> a;
-				a.x = 1;
+				// value
+				ref_parent_cast(v1, type_lit(IMP_Base)).IMP_foo();
 
-				// -------- handle an instance of B --------
-				var ref<B> b;
+				// pointer
+				var ref<ptr<IMP_Derived>,f,f,plain> v_ptr = ptr_from_ref(v1);
+				ptr_to_ref(ptr_parent_cast(*v_ptr, type_lit(IMP_Base))).IMP_foo();
 
-				// direct access
-				b.as(A).x = 1;
-				b.y = 2;
-
-				// indirect access of A's x
-				auto bA = b.as(A);
-				bA.x = 3;
-
-				// -------- handle an instance of C --------
-				var ref<C> c;
-
-				// access B's A's x
-				c.as(B).as(A).x = 1;
-
-				// access B's y
-				c.as(B).y = 2;
-
-				// access C's z
-				c.z = 3;
-
-				print("x = %d\n", *(c.as(B).as(A).x));
-				print("y = %d\n", *(c.as(B).y));
-				print("z = %d\n", *c.z);
+				// cpp reference
+				var ref<IMP_Derived,f,f,cpp_ref> v_cppref = v1;
+				ref_parent_cast(v_cppref, type_lit(IMP_Base)).IMP_foo();
 
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			;
+			EXPECT_PRED2(containsSubString, code, "(*(IMP_Base*)(&v1)).foo();");
+			EXPECT_PRED2(containsSubString, code, "IMP_Derived* v_ptr = &v1;");
+			EXPECT_PRED2(containsSubString, code, "(*(IMP_Base*)v_ptr).foo();");
+			EXPECT_PRED2(containsSubString, code, "IMP_Derived& v_cppref = v1;");
+			EXPECT_PRED2(containsSubString, code, "((IMP_Base&)v_cppref).foo();");
+			EXPECT_PRED2(containsSubString, code, "(*(IMP_Base*)this).a = 6;");
+			EXPECT_PRED2(containsSubString, code, "(*(IMP_Base*)this).a = 7;");
 		})
 	}
 
@@ -1188,6 +1273,7 @@ namespace backend {
 			EXPECT_PRED2(containsSubString, code, "delete o1;");
 			EXPECT_PRED2(containsSubString, code, "IMP_SlightlyLessSimpleConstructor* o2 = new IMP_SlightlyLessSimpleConstructor(42);");
 			EXPECT_PRED2(containsSubString, code, "delete o2;");
+			EXPECT_PRED2(notContainsSubString, code, "= malloc("); // make sure there are no malloc calls with result not cast to the right type
 		})
 	}
 
@@ -1195,11 +1281,11 @@ namespace backend {
 		DO_TEST(R"(
 			def struct IMP_SimplestConstructor { };
 			int<4> main() {
-				var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(ref_new(type_lit(array<int<4>,50>)));
+				var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(<ref<array<int<4>,50>,f,f,plain>>(ref_new(type_lit(array<int<4>,50>))) {});
 				ref_delete(ptr_to_array(*i));
 				var ref<ptr<int<4>>,f,f,plain> j = ptr_from_array(<ref<array<int<4>,50>,f,f,plain>>(ref_new(type_lit(array<int<4>,50>))) {1, 2, 3});
 				ref_delete(ptr_to_array(*j));
-				var ref<ptr<array<int<4>,3>>,f,f,plain> k = ptr_from_array(ref_new(type_lit(array<array<int<4>,3>,50>)));
+				var ref<ptr<array<int<4>,3>>,f,f,plain> k = ptr_from_array(<ref<array<array<int<4>,3>,50>,f,f,plain>>(ref_new(type_lit(array<array<int<4>,3>,50>))) {});
 				ref_delete(ptr_to_array(*k));
 
 				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o1 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {});
@@ -1207,6 +1293,12 @@ namespace backend {
 				var ref<IMP_SimplestConstructor,f,f,plain> v0 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
 				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o2 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))});
 				ref_delete(ptr_to_array(*o2));
+
+				// arrays created with ref_new not nested inside an init expr should be allocated with malloc and free'd with free
+				var ref<ptr<int<4>,f,f>,f,f,plain> i_malloc = ptr_from_array(ref_new(type_lit(array<int<4>,50>)));
+				ref_delete(ptr_to_ref(*i_malloc));
+				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o_malloc = ptr_from_array(ref_new(type_lit(array<IMP_SimplestConstructor,3>)));
+				ref_delete(ptr_to_ref(*o_malloc));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
@@ -1221,6 +1313,12 @@ namespace backend {
 			EXPECT_PRED2(containsSubString, code, "delete[] o1;");
 			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o2 = new IMP_SimplestConstructor[3]{(IMP_SimplestConstructor const&)v0, (IMP_SimplestConstructor const&)v0};");
 			EXPECT_PRED2(containsSubString, code, "delete[] o2;");
+
+			// arrays created with ref_new not nested inside an init expr should be allocated with malloc and free'd with free
+			EXPECT_PRED2(containsSubString, code, "int32_t* i_malloc = (int32_t*)malloc(sizeof(int32_t) * 50);");
+			EXPECT_PRED2(containsSubString, code, "free(i_malloc);");
+			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o_malloc = (IMP_SimplestConstructor*)malloc(sizeof(IMP_SimplestConstructor) * 3);");
+			EXPECT_PRED2(containsSubString, code, "free(o_malloc);");
 		})
 	}
 
@@ -1229,7 +1327,7 @@ namespace backend {
 			def struct IMP_SimplestConstructor { };
 			def new_arr_fun_0 = function (v0 : ref<uint<inf>,f,f,plain>) -> ptr<int<4>> {
 				var uint<inf> bla = *v0;
-				return ptr_from_array(ref_new(type_lit(array<int<4>,#bla>)));
+				return ptr_from_array(<ref<array<int<4>,#bla>,f,f,plain>>(ref_new(type_lit(array<int<4>,#bla>))) {});
 			};
 			def new_arr_fun_1 = function (v0 : ref<uint<inf>,f,f,plain>, v1 : ref<int<4>,t,f,cpp_ref>, v2 : ref<int<4>,t,f,cpp_ref>, v3 : ref<int<4>,t,f,cpp_ref>) -> ptr<int<4>> {
 				var uint<inf> v4 = *v0;
@@ -1356,84 +1454,24 @@ namespace backend {
 				IMP_dfun(<ref<IMP_D,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_D)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {1});
 				return 0;
 			}
-		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+		)", true, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			;
 		})
 	}
 
-	TEST(CppSnippet, DISABLED_InitializerList2) {
-		// something including a super-constructor call
-		DO_TEST(R"(
-			alias int = int<4>;
-
-			def struct A {
-				x : int;
-
-				ctor (x : int) {
-					this.x = x;
-				}
-			};
-
-			def struct B : [A] {
-				y : int;
-
-				ctor (x : int, y : int) {
-					A::(this, x);
-					this.y = y;
-				}
-			}
-
-			int main() {
-				// call constructor
-				var ref<B> b = B::(b, 1, 2);
-
+	TEST(CppSnippet, InterceptedTemplateFunctionPointer) {
+		auto prog = builder.parseProgram(R"(
+			int<4> main() {
+				ptr_of_function(type_instantiation(type_lit(<ref<int<4>,f,f,qualified>, ref<real<4>,f,f,qualified>>(real<4>) -> int<4>),
+								lit("IMP_templateFunRetParam" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>('T_0_1) -> 'T_0_0)));
 				return 0;
 			}
-		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			EXPECT_PRED2(containsSubString, code, "B b((1), (2));");
-			EXPECT_PRED2(containsSubString, code, "A::A(int32_t x) : x(x) {");
-			EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t y) : A(x), y(y) {");
-		})
-	}
-
-	TEST(CppSnippet, DISABLED_InitializerList3) {
-		// something including a super-constructor call
-		DO_TEST(R"(
-			alias int = int<4>;
-
-			def struct A {
-
-				x : int;
-				y : int;
-
-				ctor (x : int, y : int) {
-					this.x = x;
-					this.y = y;
-				}
-			};
-
-			def struct B : [A] {
-
-				z : int;
-
-				ctor (x : int, y : int, z : int) {
-					A::(this, x, y + z);
-					this.z = z;
-				}
-			};
-
-			int main() {
-
-				// call constructor
-				var ref<B> b = B::(b, 1, 2, 3);
-
-				return 0;
-			}
-		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			EXPECT_PRED2(containsSubString, code, "B b((1), (2), (3));");
-			EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x), y(y) {");
-			EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t y, int32_t z) : A(x, y + z), z(z) {");
-		})
+		)");
+		ASSERT_TRUE(prog);
+		auto converted = sequential::SequentialBackend::getDefault()->convert(prog);
+		ASSERT_TRUE((bool)converted);
+		auto code = toString(*converted);
+		EXPECT_PRED2(containsSubString, code, "templateFunRetParam<int32_t, float >");
 	}
 
 	TEST(CppSnippet, DISABLED_StaticVariableConst) {

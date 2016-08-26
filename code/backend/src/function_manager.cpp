@@ -216,6 +216,23 @@ namespace backend {
 
 	namespace {
 
+		// deal with a very specific case: construction of an object in-place as the argument to a function (without any copies being created)
+		// in IR, this manifests as a call which takes a non-materializing constructor with a ref_decl as its this parameter as an argument
+		// in C++, it's implemented by performing an in-place construction using the {} syntax
+		c_ast::ExpressionPtr checkDirectConstruction(ConversionContext& context, const core::TypePtr& targetT, const core::ExpressionPtr& arg) {
+			if(!targetT) return {};
+			if(!(core::lang::isPlainReference(targetT) && core::lang::isPlainReference(arg))) return {};
+			if(!core::analysis::isConstructorCall(arg)) return {};
+			auto thisArg = core::analysis::getArgument(arg, 0);
+			if(!targetT->getNodeManager().getLangExtension<core::lang::ReferenceExtension>().isCallOfRefDecl(thisArg)) return {};
+			// build init expression -- shortcut by building constructor call and taking its arguments
+			StmtConverter& stmtConverter = context.getConverter().getStmtConverter();
+			auto conCall = stmtConverter.convert(context, arg);
+			if(!conCall.isa<c_ast::ConstructorCallPtr>()) conCall = conCall.as<c_ast::UnaryOperationPtr>()->operand;
+			auto constructorCall = conCall.as<c_ast::ConstructorCallPtr>();
+			return c_ast::init(constructorCall->arguments);
+		}
+
 		void appendAsArguments(ConversionContext& context, c_ast::CallPtr& call, const core::TypeList& targetTypes, const core::ExpressionList& arguments,
 		                       bool external) {
 			// collect some manager references
@@ -243,6 +260,12 @@ namespace backend {
 				// test if the current argument is a type literal
 				if(core::analysis::isTypeLiteralType(cur->getType())) {
 					return; // skip those parameters
+				}
+
+				// test for direct construction
+				if(auto direct = checkDirectConstruction(context, targetType, cur)) {
+					call->arguments.push_back(direct);
+					return;
 				}
 
 				// convert the argument (externalize if necessary)
@@ -277,7 +300,7 @@ namespace backend {
 				vector<c_ast::NodePtr> args = c_call->arguments;
 				assert_false(args.empty());
 
-				const auto& refs = call->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+				const auto& refExt = call->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 				auto location = args[0];
 				args.erase(args.begin());
 
@@ -290,13 +313,13 @@ namespace backend {
 				auto thisArg = core::lang::removeSurroundingRefCasts(irCallArgs[0]);
 
 				// case b) create object on heap
-				bool isOnHeap = core::analysis::isCallOf(thisArg, refs.getRefNew());
+				bool isOnHeap = refExt.isCallOfRefNew(thisArg);
 
 				// case c) create object in-place (placement new)
-				c_ast::ExpressionPtr loc = (!core::analysis::isCallOf(thisArg, refs.getRefTemp()) && !core::analysis::isCallOf(thisArg, refs.getRefTempInit())
-				                            && !core::analysis::isCallOf(thisArg, refs.getRefNew()) && !core::analysis::isCallOf(thisArg, refs.getRefDecl()))
-				                               ? location.as<c_ast::ExpressionPtr>()
-				                               : c_ast::ExpressionPtr();
+				c_ast::ExpressionPtr loc = (refExt.isCallOfRefTemp(thisArg) || refExt.isCallOfRefTempInit(thisArg)
+				                            || refExt.isCallOfRefNew(thisArg) || refExt.isCallOfRefDecl(thisArg))
+				                               ? c_ast::ExpressionPtr()
+				                               : location.as<c_ast::ExpressionPtr>();
 
 				// to get support for the placement new the new header is required
 				if(loc) { context.addInclude("<new>"); }
@@ -340,7 +363,7 @@ namespace backend {
 				if(!irCallArgs[0].isa<core::InitExprPtr>() && core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
 				args.erase(args.begin());
 
-				res = c_ast::memberCall(obj, c_call->function, args, c_call->instantiationTypes);
+				res = c_ast::memberCall(obj, c_call->function, args);
 			}
 
 			// --------------- virtual member function call -------------
@@ -422,6 +445,19 @@ namespace backend {
 			return call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterTypeList();
 		};
 
+		c_ast::NodePtr instantiateCall(const c_ast::NodePtr& innerCall, const std::vector<c_ast::TypePtr>& instantiationTypes) {
+			auto mgr = innerCall->getManager();
+			if(instantiationTypes.empty()) return innerCall;
+			if(auto funCall = innerCall.isa<c_ast::CallPtr>()) {
+				return c_ast::call(mgr->create<c_ast::ExplicitInstantiation>(funCall->function, instantiationTypes), funCall->arguments);
+			}
+			if(auto memCall = innerCall.isa<c_ast::MemberCallPtr>()) {
+				return c_ast::memberCall(memCall->object, mgr->create<c_ast::ExplicitInstantiation>(memCall->memberFun, instantiationTypes),
+				                         memCall->arguments);
+			}
+			assert_not_implemented();
+			return {};
+		}
 	}
 
 	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& in, ConversionContext& context) {
@@ -458,7 +494,7 @@ namespace backend {
 			const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
 
 			// produce call to external literal
-			c_ast::CallPtr res = c_ast::call(info.function->name, info.instantiationTypes);
+			c_ast::CallPtr res = c_ast::call(info.function->name);
 			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArgumentList(), true);
 
 			// add dependencies
@@ -466,6 +502,7 @@ namespace backend {
 
 			// return external function call
 			auto ret = handleMemberCall(call, res, context);
+			ret = instantiateCall(ret, info.instantiationTypes);
 			return ret;
 		}
 
@@ -484,7 +521,7 @@ namespace backend {
 			// -------------- standard function call ------------
 
 			// produce call to internal lambda
-			c_ast::CallPtr c_call = c_ast::call(info.function->name, info.instantiationTypes);
+			c_ast::CallPtr c_call = c_ast::call(info.function->name);
 			appendAsArguments(context, c_call, materializeTypeList(extractCallTypeList(call)), call->getArgumentList(), false);
 
 			// handle potential member calls
@@ -506,9 +543,6 @@ namespace backend {
 		if(funType->isMemberFunction()) {
 			// add call to function pointer (which is the value)
 
-			// obtain lambda information
-			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
-
 			// extract first parameter of the function, it is the target object
 			c_ast::ExpressionPtr trgObj = converter.getStmtConverter().convertExpression(context, core::transform::extractInitExprFromDecl(call[0]));
 
@@ -516,7 +550,7 @@ namespace backend {
 			c_ast::ExpressionPtr funcExpr = c_ast::parentheses(c_ast::pointerToMember(trgObj, getValue(call->getFunctionExpr(), context)));
 
 			// the call is a call to the member function with the n-1 tail arguments
-			c_ast::CallPtr res = c_ast::call(funcExpr, info.instantiationTypes);
+			c_ast::CallPtr res = c_ast::call(funcExpr);
 			core::TypeList types = extractCallTypeList(call);
 			types.erase(types.begin());
 			core::ExpressionList args = call->getArgumentList();
@@ -773,7 +807,7 @@ namespace backend {
 
 			// ------------------------ resolve function ---------------------
 
-			std::string name = insieme::utils::demangle(literal->getStringValue());
+			std::string name = insieme::utils::demangleToIdentifier(literal->getStringValue());
 			if(core::annotations::hasAttachedName(literal)) name = core::annotations::getAttachedName(literal);
 			FunctionCodeInfo fun = resolveFunction(manager->create(name), funType, core::LambdaPtr(), true);
 			res->function = fun.function;

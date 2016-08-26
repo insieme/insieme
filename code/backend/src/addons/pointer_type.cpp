@@ -45,6 +45,8 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/statement_converter.h"
 
+#include "insieme/annotations/c/include.h"
+
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/array.h"
@@ -120,7 +122,7 @@ namespace addons {
 
 				// handle array new undefined
 				if(LANG_EXT_REF.isCallOfRefNew(ARG(0))) {
-					return c_ast::newArrayCall(convertAndAddDep(arrT.getElementType()), CONVERT_EXPR(arrT.getSize().as<core::ExpressionPtr>()), nullptr);
+					return c_ast::mallocCall(context, arrT.getElementType(), arrT.getSize().as<core::ExpressionPtr>());
 				}
 				// handle array new with init
 				if(auto initExp = ARG(0).isa<core::InitExprPtr>()) {
@@ -150,9 +152,18 @@ namespace addons {
 					auto converted = CONVERT_ARG(0);
 					// if directly nested init expression, we need to get its address
 					if(ARG(0).isa<core::InitExprPtr>()) converted = c_ast::ref(converted);
-					//TODO Think about a nicer solution here. This line replaces the following one to also support arrays in system defined structs
-					return c_ast::cast(CONVERT_TYPE(call->getType()), converted);
-					//return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data");
+
+					// If we have an intercepted type or ref_member_access of intercepted types, we must not access the "data" member of the insieme structs
+					auto arg = ARG(0);
+					if(annotations::c::hasIncludeAttached(arg)
+							|| (LANG_EXT_REF.isCallOfRefMemberAccess(arg) && annotations::c::hasIncludeAttached(
+									core::analysis::getReferencedType(core::analysis::getArgument(arg, 0)->getType())))) {
+						return c_ast::cast(CONVERT_TYPE(call->getType()), converted);
+
+						// every other access is a normal fixed size array and we actually should access the data member of the struct we created for it
+					} else {
+						return c_ast::access(c_ast::derefIfNotImplicit(converted, ARG(0)), "data");
+					}
 				}
 
 				// otherwise references and pointers are the same
@@ -169,6 +180,7 @@ namespace addons {
 
 			res[ext.getPtrCast()] = cast;
 			res[ext.getPtrReinterpret()] = cast;
+			res[ext.getPtrParentCast()] = cast;
 			res[ext.getPtrConstCast()] = cast;
 			res[ext.getPtrVolatileCast()] = cast;
 

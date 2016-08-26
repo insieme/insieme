@@ -181,7 +181,21 @@ int main() {
 	)")
 	union_t uni;
 
-	#pragma test expect_ir("REGEX_S", R"(.*ref<union \{ \w+ : struct \{ a : int<4>; b : int<4>; \}; v : array<int<4>,2>; \},f,f,plain> v0.*)")
+	#pragma test expect_ir(R"(
+		var ref<union {
+			__any_string__s : struct {
+				a : int<4>;
+				b : int<4>;
+			};
+			v : array<int<4>,2>;
+		},f,f,plain> v0 = ref_decl(type_lit(ref<union {
+			__any_string__s : struct {
+				a : int<4>;
+				b : int<4>;
+			};
+			v : array<int<4>,2>;
+		},f,f,plain>));
+	)")
 	union { struct { int a; int b; }; int v[2]; } anonymous_inner;
 
 	#pragma test expect_ir("REGEX", R"(.*\*v\d+\.\w+EMPTY\w+\.a.*)")

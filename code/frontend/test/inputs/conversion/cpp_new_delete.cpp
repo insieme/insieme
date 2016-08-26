@@ -79,7 +79,7 @@ int main() {
 	// Base type arrays ----------------------------------------------------------------------------------------------------------------------------------------
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(ref_new(type_lit(array<int<4>,50>)));
+		var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(<ref<array<int<4>,50>,f,f,plain>>(ref_new(type_lit(array<int<4>,50>))) {});
 		ref_delete(ptr_to_array(*i));
 	})")
 	{
@@ -97,7 +97,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<array<int<4>,3>>,f,f,plain> v0 = ptr_from_array(ref_new(type_lit(array<array<int<4>,3>,50>)));
+		var ref<ptr<array<int<4>,3>>,f,f,plain> v0 = ptr_from_array(<ref<array<array<int<4>,3>,50>,f,f,plain>>(ref_new(type_lit(array<array<int<4>,3>,50>))) {});
 		ref_delete(ptr_to_array(*v0));
 	})")
 	{
@@ -158,7 +158,7 @@ int main() {
 	#pragma test expect_ir(R"(
 		def new_arr_fun = function (v0 : ref<uint<inf>,f,f,plain>) -> ptr<int<4>> {
 			var uint<inf> v1 = *v0;
-			return ptr_from_array(ref_new(type_lit(array<int<4>,#v1>)));
+			return ptr_from_array(<ref<array<int<4>,#v1>,f,f,plain>>(ref_new(type_lit(array<int<4>,#v1>))) {});
 		};
 		{
 			var ref<int<4>,f,f,plain> v0 = 50;

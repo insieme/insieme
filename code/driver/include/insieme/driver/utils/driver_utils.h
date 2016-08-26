@@ -40,6 +40,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/algorithm/string/replace.hpp>
+
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/backend/opencl/opencl_backend.h"
@@ -155,6 +157,7 @@ namespace utils {
 		iu::measureTimeFor<INFO>("Semantic Checks ", [&]() { list = core::checks::check(program); });
 
 		auto errors = list.getAll();
+
 		std::sort(errors.begin(), errors.end());
 		for_each(errors, [&](const core::checks::Message& cur) {
 			LOG(ERROR) << cur;

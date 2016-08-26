@@ -198,53 +198,29 @@ namespace conversion {
 			condExpr = builder.boolLit(true);
 		}
 
-		core::StatementList newBody;
+		core::StatementPtr newBody;
 
 		// only generate non-empty body in IR if not a clang::NullStmt (for() ;) and not an empty compound (for() { })
 		clang::Stmt* clangBody = forStmt->getBody();
 		if(clangBody && !dyn_cast<clang::NullStmt>(clangBody)) {
 			stmtutils::StmtWrapper irOldBody = converter.convertStmtToWrapper(clangBody);
 			if(auto compound = irOldBody.getSingleStmt().isa<core::CompoundStmtPtr>()) {
-				if(!compound->empty()) { newBody.push_back(aggregateStmts(builder, irOldBody)); }
+				if(!compound->empty()) { newBody = aggregateStmts(builder, irOldBody); }
 			} else {
-				newBody.push_back(irOldBody.getSingleStmt());
+				newBody = irOldBody.getSingleStmt();
 			}
 		}
-
-		// at this point there should be a single-statement body
-		assert_le(newBody.size(),1);
 
 		if(forStmt->getInc()) {
 			// convert increment statement
 			auto incStmt = converter.convertExpr(forStmt->getInc()).as<core::StatementPtr>();
-			// add at the end of the statement
-			newBody.push_back(incStmt);
-
-			// if there was an original body ...
-			if (newBody.size() == 2) {
-				auto& origBody = newBody.front();
-
-				// and also in front of every continue statement
-				auto exitPoints = core::analysis::getExitPoints(origBody);
-
-				// sort those points in a reverse order
-				std::sort(exitPoints.rbegin(), exitPoints.rend());
-
-				// add increments in front of all continue calls
-				for(const auto& cur : exitPoints) {
-					if (cur.isa<core::ContinueStmtPtr>()) {
-						// insert increment before the continue stmt
-						if(cur.isRoot()) {
-							origBody = builder.compoundStmt(incStmt, cur.as<core::StatementPtr>());
-						} else {
-							origBody = core::transform::insertBefore(origBody->getNodeManager(), cur.switchRoot(origBody), incStmt).as<core::StatementPtr>();
-						}
-					}
-				}
-			}
+			newBody = frontend::utils::addIncrementExprBeforeAllExitPoints(newBody, incStmt);
 		}
 
-		retStmt.push_back(builder.whileStmt(condExpr, stmtutils::aggregateStmts(builder, newBody)));
+		// if we still have no body (because we had no body and no increment
+		if(!newBody) newBody = builder.compoundStmt();
+
+		retStmt.push_back(builder.whileStmt(condExpr, newBody));
 
 		// compound statement required for correct scoping of variables declared in init statement of for header
 		return builder.compoundStmt(retStmt);
@@ -472,23 +448,24 @@ namespace conversion {
 			}
 		};
 
-		// iterate throw statements inside of switch
-		clang::CompoundStmt* compStmt = dyn_cast<clang::CompoundStmt>(switchStmt->getBody());
-		frontend_assert(compStmt) << "Switch statement doesn't contain a compound stmt";
-		for(auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it) {
-			clang::Stmt* currStmt = *it;
-			// if is a case stmt, create a literal and open it
+		// iterate over statements inside of switch
+		auto body = switchStmt->getBody();
+		vector<clang::Stmt*> subStatments;
+		clang::CompoundStmt* compStmt = dyn_cast<clang::CompoundStmt>(body);
+		if(compStmt) std::copy(compStmt->body_begin(), compStmt->body_end(), std::back_inserter(subStatments));
+		else subStatments.push_back(body);
+		for(auto currStmt : subStatments) {
+			// if it is a case stmt, create a literal and open it
 			if(const clang::SwitchCase* switchCaseStmt = llvm::dyn_cast<clang::SwitchCase>(currStmt)) {
 				lookForCases(switchCaseStmt);
 				continue;
 			} else if(const clang::DeclStmt* declStmt = llvm::dyn_cast<clang::DeclStmt>(currStmt)) {
-				// collect all declarations which are in the switch body and add them (without init) to
-				// the cases
+				// collect all declarations which are in the switch body and add them (without init) to the cases
 				handleDeclStmt(declStmt);
 				continue;
 			}
 
-			// if is whatever other kind of stmt append it to each of the open cases list
+			// if it is whatever other kind of stmt append it to each of the open cases list
 			addStmtToOpenCases(converter.convertStmt(currStmt));
 		}
 

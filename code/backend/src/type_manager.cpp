@@ -109,6 +109,9 @@ namespace backend {
 
 			std::set<const TypeInfo*> allInfos;
 
+			// a set of type infos currently under definition
+			std::set<c_ast::CodeFragmentPtr> inDefinition;
+
 		  public:
 			TypeInfoStore(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& typeHandlers)
 			    : converter(converter), includeTable(includeTable), typeHandlers(typeHandlers), typeInfos(), allInfos() {}
@@ -506,7 +509,9 @@ namespace backend {
 			}
 
 			auto getNamedType = [&](const core::NodePtr& nodePtr){
-				std::string name = insieme::utils::demangle(ptr->getName()->getValue());
+				std::string name = ptr->getName()->getValue();
+				// only demangle the name for intercepted types
+				if(annotations::c::hasIncludeAttached(nodePtr)) name = insieme::utils::demangle(name);
 				if(core::annotations::hasAttachedName(ptr)) {
 					name = core::annotations::getAttachedName(ptr);
 					if(annotations::c::hasAttachedCTag(ptr)) {
@@ -516,7 +521,7 @@ namespace backend {
 				return manager.create<c_ast::NamedType>(manager.create<c_ast::Identifier>(name));
 			};
 
-			// handle intercepted types
+			// handle intercepted types and pure declarations
 			if(annotations::c::hasIncludeAttached(ptr) || annotations::c::isDeclaration(ptr)) {
 				c_ast::NamedTypePtr namedType = getNamedType(ptr);
 				c_ast::CodeFragmentPtr definition;
@@ -527,11 +532,19 @@ namespace backend {
 				for(auto typeArg : ptr->getTypeParameterList()) {
 					auto tempParamType = converter.getTypeManager().getTemplateArgumentType(typeArg);
 					namedType->parameters.push_back(tempParamType);
+
+					// we need to drop qualified-refs here in order to then correctly generate a dependency to the definition of the type
+					if(core::lang::isQualifiedReference(typeArg)) typeArg = core::analysis::getReferencedType(typeArg);
+
 					// if argument type is not intercepted, add a dependency on its definition
 					auto tempParamTypeInfo = getInfo(typeArg);
 					if (tempParamTypeInfo) {
 						assert_true(definition) << "Tried to add a dependency to non-existent definition";
-						definition->addDependency(tempParamTypeInfo->definition);
+						auto def = tempParamTypeInfo->definition;
+						if (contains(inDefinition, def)) {
+							def = tempParamTypeInfo->declaration;
+						}
+						definition->addDependency(def);
 					}
 				}
 				// if there is a definition then use it, otherwise create a forward declaration
@@ -627,6 +640,9 @@ namespace backend {
 				// register fragments locally
 				typeDefinitionFragments[def] = definition;
 
+				// remember as currently under definition
+				inDefinition.insert(definition);
+
 				// create resulting type info
 				auto res = type_info_utils::createInfo<TagTypeInfo>(type, declaration, definition);
 
@@ -699,7 +715,10 @@ namespace backend {
 
 				// add constructors
 				for(const auto& ctor : record->getConstructors()) {
-					funMgr.getInfo(tagType,ctor.as<core::LambdaExprPtr>());
+					// skip ctors which are Literals
+					if(ctor.isa<core::LambdaExprPtr>()) {
+						funMgr.getInfo(tagType,ctor.as<core::LambdaExprPtr>());
+					}
 				}
 
 				//// TODO: explicitly delete missing constructors
@@ -709,9 +728,12 @@ namespace backend {
 
 				// add destructors (only for structs)
 				if(record->hasDestructor()) {
-					auto dtor = record->getDestructor().as<core::LambdaExprPtr>();
-					auto info = funMgr.getInfo(tagType,dtor);
-					info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
+					// skip dtor which is a Literal
+					if(record->getDestructor().isa<core::LambdaExprPtr>()) {
+						auto dtor = record->getDestructor().as<core::LambdaExprPtr>();
+						auto info = funMgr.getInfo(tagType,dtor);
+						info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
+					}
 				}
 
 				// TODO: explicitly delete missing destructor
@@ -822,6 +844,11 @@ namespace backend {
 			// C) remove temporary mappings
 			for(const core::TagTypeBindingPtr& def : definitions) {
 				remInfo(def->getTag());
+			}
+
+			// remove in-definition status
+			for(const auto& cur : typeDefinitionFragments) {
+				inDefinition.erase(cur.second);
 			}
 
 			// return information for requested tag type
@@ -1148,7 +1175,7 @@ namespace backend {
 
 			// ---------------- add a new operator ------------------------
 
-			if (ref.isPlain()) {
+			if(ref.isPlain()) {
 
 				string newOpName = "_ref_new_" + converter.getNameManager().getName(ptr);
 				res->newOperatorName = manager->create(newOpName);
@@ -1160,7 +1187,7 @@ namespace backend {
 				std::stringstream code;
 				code << "/* New Operator for type " << toString(*ptr) << "*/ \n"
 					"static inline " << resultTypeName << " " << newOpName << "(" << valueTypeName << " value) {\n"
-					<< resultTypeName << " res = malloc(sizeof(" << valueTypeName << "));\n"
+					"    " << resultTypeName << " res = (" << resultTypeName << ")malloc(sizeof(" << valueTypeName << "));\n"
 					"    *res = value;\n"
 					"    return res;\n"
 					"}\n";
@@ -1174,7 +1201,6 @@ namespace backend {
 
 				// add include for malloc
 				res->newOperator->addInclude(string("stdlib.h"));
-
 			}
 
 			// done

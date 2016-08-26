@@ -30,8 +30,7 @@ foreach ( case_file ${test_cases})
 	
 	set ( case_name ${ut_prefix}${case_subdir}_${case_name} )	
 	add_executable(${case_name} ${case_file})
-	target_link_libraries(${case_name} insieme_core)
-	target_link_libraries(${case_name} insieme_utils)
+	
 	target_link_libraries(${case_name} insieme_transform)
 	
 	add_unit_test(${case_name} ${ut_prefix})

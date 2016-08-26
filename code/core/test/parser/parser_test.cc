@@ -39,13 +39,12 @@
 
 #include "insieme/core/parser/detail/driver.h"
 
+#include "insieme/core/analysis/compare.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
-
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/analysis/compare.h"
-
-#include "insieme/core/checks/full_check.h"
+#include "insieme/core/lang/parallel.h"
 
 #include "insieme/utils/name_mangling.h"
 
@@ -783,6 +782,13 @@ namespace parser {
 			ASSERT_TRUE(checks::check(type2).empty()) << checks::check(type2);
 
 			EXPECT_EQ(builder.normalize(type1), builder.normalize(type2));
+		}
+
+		{ // check lookup of member lambdas
+			auto expr = builder.parseExpr("def struct S { lambda foo = () -> unit { 42; } }; S::foo");
+
+			ASSERT_TRUE(expr);
+			ASSERT_TRUE(checks::check(expr).empty()) << checks::check(expr);
 		}
 	}
 
@@ -1609,6 +1615,45 @@ namespace parser {
 		auto type = builder.parseType(classA);
 		EXPECT_TRUE(checks::check(type).empty()) << checks::check(type);
 		EXPECT_TRUE(toString(type).find(",a()->unit,") != std::string::npos);
+	}
+
+	TEST(IR_Parser, Job) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+		auto& parExt = nm.getLangExtension<lang::ParallelExtension>();
+
+		{
+			auto exp = builder.parseExpr(R"(def foo = () -> unit { 5; }; job[] => foo())");
+			ASSERT_TRUE(exp);
+			EXPECT_TRUE(checks::check(exp).empty()) << checks::check(exp);
+			ASSERT_TRUE(exp.isa<JobExprPtr>());
+			auto range = exp.as<JobExprPtr>()->getThreadNumRange();
+			EXPECT_TRUE(parExt.isCallOfCreateMinRange(range)) << range;
+		}
+		{
+			auto exp = builder.parseExpr(R"(def foo = () -> unit { 7; }; job[2...] => foo())");
+			ASSERT_TRUE(exp);
+			EXPECT_TRUE(checks::check(exp).empty()) << checks::check(exp);
+			ASSERT_TRUE(exp.isa<JobExprPtr>());
+			auto range = exp.as<JobExprPtr>()->getThreadNumRange();
+			EXPECT_TRUE(parExt.isCallOfCreateMinRange(range)) << range;
+		}
+		{
+			auto exp = builder.parseExpr(R"(def foo = () -> unit { 8; }; job[40..42] => foo())");
+			ASSERT_TRUE(exp);
+			EXPECT_TRUE(checks::check(exp).empty()) << checks::check(exp);
+			ASSERT_TRUE(exp.isa<JobExprPtr>());
+			auto range = exp.as<JobExprPtr>()->getThreadNumRange();
+			EXPECT_TRUE(parExt.isCallOfCreateBoundRange(range)) << range;
+		}
+		{
+			auto exp = builder.parseExpr(R"(def foo = () -> unit { 8; }; job[4..16:4] => foo())");
+			ASSERT_TRUE(exp);
+			EXPECT_TRUE(checks::check(exp).empty()) << checks::check(exp);
+			ASSERT_TRUE(exp.isa<JobExprPtr>());
+			auto range = exp.as<JobExprPtr>()->getThreadNumRange();
+			EXPECT_TRUE(parExt.isCallOfCreateBoundRangeMod(range)) << range;
+		}
 	}
 
 	TEST(IR_Parser, MaterializeCall) {

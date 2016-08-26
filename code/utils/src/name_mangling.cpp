@@ -41,6 +41,7 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
 
 namespace insieme {
@@ -94,6 +95,7 @@ namespace utils {
 			{"operator=",   "_operator_assign_"},
 			{"operator<",   "_operator_lt_"},
 			{"operator>",   "_operator_gt_"},
+			{"operator!",   "_operator_not_"},
 			{"operator,",   "_operator_comma_"},
 			{"operator ",   "_conversion_operator_"}
 		};
@@ -176,7 +178,8 @@ namespace utils {
 				ret = ret.substr(0, loc-1); // remove _ as well
 			}
 		}
-		return reverseReplacements(ret);
+		ret = reverseReplacements(ret);
+		return ret;
 	}
 
 	string demangleToIdentifier(string name, bool keepLocation) {
@@ -185,6 +188,11 @@ namespace utils {
 		if(boost::starts_with(name, convOpMangled)) {
 			return demangle(name);
 		}
+
+		// special case for all the other operators
+		auto demangledName = demangle(name);
+		if(::any(operators, [&](const auto& pair) { return pair.first == demangledName; })) return demangledName;
+
 		// default case
 		auto str = removeMangled(name);
 		return demangle(str, keepLocation);

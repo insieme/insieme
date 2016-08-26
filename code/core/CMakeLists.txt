@@ -91,6 +91,7 @@ target_include_directories(insieme_core PRIVATE ${BISON_OUTPUT_PATH})
 target_include_directories(insieme_core PRIVATE ${FLEX_INCLUDE_DIRS})
 
 # add dependencies
+target_link_libraries(insieme_core insieme_common)
 target_link_libraries(insieme_core insieme_utils)
 
 # lookup CUDD library
@@ -101,7 +102,6 @@ target_include_directories(insieme_core PUBLIC ${CUDD_INCLUDE_DIRS} )
 # lookup Boost library
 insieme_find_package(NAME Boost COMPONENTS regex) 
 target_include_directories(insieme_core SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
-target_link_libraries(insieme_core ${Boost_REGEX_LIBRARY})
 
 # =============================================  TESTING  =====================================
 set( ut_prefix  ut_core)
@@ -114,9 +114,6 @@ foreach ( case_file ${test_cases})
 	set ( case_name ${ut_prefix}${case_subdir}_${case_name} )
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} insieme_core)
-	target_link_libraries(${case_name} insieme_utils)
-	target_link_libraries(${case_name} ${CUDD_LIBRARIES})
-	target_link_libraries(${case_name} ${Boost_REGEX_LIBRARY})
 	target_include_directories(${case_name} PUBLIC test/include/)
 	
 	#the parser unit-tests need the bison/flex include directories

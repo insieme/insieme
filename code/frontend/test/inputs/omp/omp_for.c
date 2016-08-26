@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,19 +34,18 @@
  * regarding third party software licenses.
  */
 
-#include <stdio.h>
 int main() {
-#pragma omp parallel
-	{ ; }
+	int a, n;
+	#pragma omp parallel for private(a)
+	for(int i = 0; i < 10; i++) {
+		a += i;
+	}
 
-	int a, b;
-	#pragma omp parallel private(a) default(shared) private(b)
-	{}
-
-	#pragma omp master
-	printf("hello world\n");
-
-	for(int i = 0; i < 10; i++)
-	#pragma omp single
-		printf("HELLO again!");
+	#pragma omp parallel
+	{
+	#pragma omp for firstprivate(a) nowait
+		for(a = 0; a < n; a++) {
+		#pragma omp barrier
+		}
+	}
 }

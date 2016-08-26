@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,18 +34,22 @@
  * regarding third party software licenses.
  */
 
-int main() {
-	int a, n;
-	#pragma omp parallel for private(a)
-	for(int i = 0; i < 10; i++) {
-		a += i;
+#include "independent_test_utils.h"
+
+#include "insieme/frontend/extensions/malloc_extension.h"
+#include "insieme/frontend/extensions/interceptor_extension.h"
+
+namespace insieme {
+namespace frontend {
+
+	TEST(IndependentTest, Malloc) {
+		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_malloc.c",
+			[](ConversionJob& job) {
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+			job.registerFrontendExtension<extensions::MallocExtension>();
+		}
+		);
 	}
 
-	#pragma omp parallel
-	{
-	#pragma omp for firstprivate(a) nowait
-		for(a = 0; a < n; a++) {
-		#pragma omp barrier
-		}
-	}
-}
+} // fe namespace
+} // insieme namespace

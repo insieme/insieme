@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,19 +34,14 @@
  * regarding third party software licenses.
  */
 
-extern void printf(const char*, ...);
+#pragma once
 
-int main() {
-	int a = 666;
+// disable full semantic checks
+#define INSIEME_NO_SEMA "INSIEME_NO_SEMA"
 
-	#pragma omp parallel
-	{
-		int b;
-		printf("hell world #%d/%d\n", a, b);
+// create JSON dumps for inspyer tool on semantic errors
+#define INSIEME_SEMA_INSPYER "INSIEME_SEMA_INSPYER"
 
-		#pragma omp for
-		for(int i = 0; i < 100; ++i) {
-			printf("%d", i + a);
-		}
-	}
-}
+// set backend compilers to use in insiemecc and unit/integration testing
+#define INSIEME_C_BACKEND_COMPILER "INSIEME_C_BACKEND_COMPILER"
+#define INSIEME_CXX_BACKEND_COMPILER "INSIEME_CXX_BACKEND_COMPILER"

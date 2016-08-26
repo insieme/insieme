@@ -37,9 +37,9 @@
 #include "insieme/utils/logging.h"
 
 #include <stdexcept>
+#include <regex>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/regex.hpp>
 
 #include "insieme/utils/assert.h"
 
@@ -91,10 +91,10 @@ namespace logger_details {
 			return 0;
 		}
 
-		boost::regex getFilterFromEnv() {
+		std::regex getFilterFromEnv() {
 			auto filter = getenv(LOG_FILTER_ENV);
-			if(filter != nullptr) { return boost::regex(filter); }
-			return boost::regex(".*");
+			if(filter != nullptr) { return std::regex(filter); }
+			return std::regex(".*");
 		}
 
 
@@ -114,7 +114,7 @@ namespace logger_details {
 			std::recursive_mutex lock;
 			Level level;
 			unsigned short verbosity;
-			boost::regex filter;
+			std::regex filter;
 
 			Setup()
 				: out(&std::cout), lock(),
@@ -137,7 +137,7 @@ namespace logger_details {
 	// -- log filter handling --
 
 	bool isIncludedInFilter(const char* fullFunctionName) {
-		return boost::regex_search(fullFunctionName, Setup::get().filter);
+		return std::regex_search(fullFunctionName, Setup::get().filter);
 	}
 
 	Level getLogLevel() {

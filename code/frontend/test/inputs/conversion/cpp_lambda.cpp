@@ -42,6 +42,11 @@ struct C {
 			x;
 		};
 	}
+
+	//TODO potential resolver bug
+	/*void test() {
+		[&](){ x + 1; }();
+	}*/
 };
 
 template<typename T>
@@ -51,6 +56,15 @@ void takeLambda(T lam) {
 
 void takeLambdaAsFunction(void (*lam)()) {
 	lam();
+}
+
+
+template<typename M>
+void templateFunWithLambda() {
+	M a;
+	[&](){
+		a;
+	}();
 }
 
 int main() {
@@ -208,9 +222,15 @@ int main() {
 				var ref<__any_string__class,f,f,plain> v1 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {ptr_from_ref(this)};
 			}
 		};
-		var ref<IMP_C,f,f,plain> v0 = IMP_C::(ref_decl(type_lit(ref<IMP_C,f,f,plain>)));
+		{
+			var ref<IMP_C,f,f,plain> v0 = IMP_C::(ref_decl(type_lit(ref<IMP_C,f,f,plain>)));
+		}
 	)")
-	C c;
+	{
+		C c;
+		//TODO potential resolver bug
+		//c.test();
+	}
 
 	/// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Nested Lambda
 
@@ -364,6 +384,39 @@ int main() {
 		[n]() {
 			n;
 		}();
+	}
+
+	/// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Lambda specified in template
+
+	#pragma test expect_ir(R"(
+		def struct __any_string__class_int {
+			capture_0 : ref<int<4>,f,f,cpp_ref>;
+			const function IMP__operator_call_ = () -> unit {
+				*(this).capture_0;
+			}
+		};
+		def struct __any_string__class_real {
+			capture_0 : ref<real<4>,f,f,cpp_ref>;
+			const function IMP__operator_call_ = () -> unit {
+				*(this).capture_0;
+			}
+		};
+		def IMP_templateFunWithLambda_int_returns_void = function () -> unit {
+			var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+			<ref<__any_string__class_int,f,f,plain>>(ref_temp(type_lit(__any_string__class_int))) {v0}.IMP__operator_call_();
+		};
+		def IMP_templateFunWithLambda_float_returns_void = function () -> unit {
+			var ref<real<4>,f,f,plain> v0 = ref_decl(type_lit(ref<real<4>,f,f,plain>));
+			<ref<__any_string__class_real,f,f,plain>>(ref_temp(type_lit(__any_string__class_real))) {v0}.IMP__operator_call_();
+		};
+		{
+			IMP_templateFunWithLambda_int_returns_void();
+			IMP_templateFunWithLambda_float_returns_void();
+		}
+	)")
+	{
+		templateFunWithLambda<int>();
+		templateFunWithLambda<float>();
 	}
 
 	return 0;

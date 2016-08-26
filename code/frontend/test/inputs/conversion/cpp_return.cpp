@@ -171,8 +171,8 @@ void intTest() {
 	#pragma test expect_ir(X_FUNS, R"({
 		var ref<int<4>,f,f,plain> v0 = IMP_x1();
 		var ref<int<4>,f,f,plain> v1 = *IMP_x2() materialize;
-		var ref<int<4>,f,f,plain> v2 = *IMP_x3() materialize;
-		var ref<int<4>,f,f,plain> v3 = *IMP_x4() materialize;
+		var ref<int<4>,f,f,plain> v2 = *IMP_x3();
+		var ref<int<4>,f,f,plain> v3 = *IMP_x4();
 	})")
 	{
 		int a = x1();
@@ -184,8 +184,8 @@ void intTest() {
 	#pragma test expect_ir(X_FUNS, R"({
 		var ref<int<4>,t,f,cpp_ref> v0 = IMP_x1() materialize;
 		var ref<int<4>,t,f,cpp_ref> v1 = IMP_x2() materialize;
-		var ref<int<4>,t,f,cpp_ref> v2 = IMP_x3() materialize;
-		var ref<int<4>,t,f,cpp_ref> v3 = IMP_x4() materialize;
+		var ref<int<4>,t,f,cpp_ref> v2 = IMP_x3();
+		var ref<int<4>,t,f,cpp_ref> v3 = IMP_x4();
 	})")
 	{
 		const int& a = x1();
@@ -196,7 +196,7 @@ void intTest() {
 
 	#pragma test expect_ir(X_FUNS, R"({
 		var ref<int<4>,f,f,cpp_rref> v0 = IMP_x1() materialize;
-		var ref<int<4>,f,f,cpp_rref> v2 = IMP_x3() materialize;
+		var ref<int<4>,f,f,cpp_rref> v2 = IMP_x3();
 	})")
 	{
 		int&& a = x1();
@@ -207,8 +207,8 @@ void intTest() {
 
 	#pragma test expect_ir(X_FUNS, R"({
 		var ref<int<4>,t,f,cpp_rref> v0 = IMP_x1() materialize;
-		var ref<int<4>,t,f,cpp_rref> v2 = IMP_x3() materialize;
-		var ref<int<4>,t,f,cpp_rref> v3 = IMP_x4() materialize;
+		var ref<int<4>,t,f,cpp_rref> v2 = IMP_x3();
+		var ref<int<4>,t,f,cpp_rref> v3 = IMP_x4();
 	})")
 	{
 		const int&& a = x1();
@@ -221,8 +221,8 @@ void trivialTest() {
 	#pragma test expect_ir(Y_FUNS, R"({
 		var ref<IMP_Trivial,f,f,plain> v0 = ref_cast(IMP_y1() materialize, type_lit(f), type_lit(f), type_lit(cpp_rref));
 		var ref<IMP_Trivial,f,f,plain> v1 = ref_cast(IMP_y2() materialize, type_lit(t), type_lit(f), type_lit(cpp_ref));
-		var ref<IMP_Trivial,f,f,plain> v2 = ref_cast(IMP_y3() materialize, type_lit(f), type_lit(f), type_lit(cpp_rref));
-		var ref<IMP_Trivial,f,f,plain> v3 = ref_cast(IMP_y4() materialize, type_lit(t), type_lit(f), type_lit(cpp_ref));
+		var ref<IMP_Trivial,f,f,plain> v2 = IMP_y3();
+		var ref<IMP_Trivial,f,f,plain> v3 = ref_cast(IMP_y4(), type_lit(t), type_lit(f), type_lit(cpp_ref));
 	})")
 	{
 		Trivial a = y1();
@@ -233,8 +233,8 @@ void trivialTest() {
 	#pragma test expect_ir(Y_FUNS, R"({
 		var ref<IMP_Trivial,t,f,cpp_ref> v0 = IMP_y1() materialize;
 		var ref<IMP_Trivial,t,f,cpp_ref> v1 = IMP_y2() materialize;
-		var ref<IMP_Trivial,t,f,cpp_ref> v2 = IMP_y3() materialize;
-		var ref<IMP_Trivial,t,f,cpp_ref> v3 = IMP_y4() materialize;
+		var ref<IMP_Trivial,t,f,cpp_ref> v2 = IMP_y3();
+		var ref<IMP_Trivial,t,f,cpp_ref> v3 = IMP_y4();
 	})")
 	{
 		const Trivial& a = y1();
@@ -244,7 +244,7 @@ void trivialTest() {
 	}
 	#pragma test expect_ir(Y_FUNS, R"({
 		var ref<IMP_Trivial,f,f,cpp_rref> v0 = IMP_y1() materialize;
-		var ref<IMP_Trivial,f,f,cpp_rref> v1 = IMP_y3() materialize;
+		var ref<IMP_Trivial,f,f,cpp_rref> v1 = IMP_y3();
 	})")
 	{
 		Trivial&& a = y1();
@@ -254,8 +254,8 @@ void trivialTest() {
 	}
 	#pragma test expect_ir(Y_FUNS, R"({
 		var ref<IMP_Trivial,t,f,cpp_rref> v0 = IMP_y1() materialize;
-		var ref<IMP_Trivial,t,f,cpp_rref> v1 = IMP_y3() materialize;
-		var ref<IMP_Trivial,t,f,cpp_rref> v2 = IMP_y4() materialize;
+		var ref<IMP_Trivial,t,f,cpp_rref> v1 = IMP_y3();
+		var ref<IMP_Trivial,t,f,cpp_rref> v2 = IMP_y4();
 	})")
 	{
 		const Trivial&& a = y1();
@@ -269,8 +269,8 @@ void nonTrivialTest() {
 	#pragma test expect_ir(Z_FUNS, R"({
 		var ref<IMP_NonTrivial,f,f,plain> v0 = ref_cast(IMP_z1() materialize , type_lit(t), type_lit(f), type_lit(cpp_ref));
 		var ref<IMP_NonTrivial,f,f,plain> v1 = ref_cast(IMP_z2() materialize , type_lit(t), type_lit(f), type_lit(cpp_ref));
-		var ref<IMP_NonTrivial,f,f,plain> v2 = ref_cast(IMP_z3() materialize , type_lit(t), type_lit(f), type_lit(cpp_ref));
-		var ref<IMP_NonTrivial,f,f,plain> v3 = ref_cast(IMP_z4() materialize , type_lit(t), type_lit(f), type_lit(cpp_ref));
+		var ref<IMP_NonTrivial,f,f,plain> v2 = ref_cast(IMP_z3() , type_lit(t), type_lit(f), type_lit(cpp_ref));
+		var ref<IMP_NonTrivial,f,f,plain> v3 = ref_cast(IMP_z4() , type_lit(t), type_lit(f), type_lit(cpp_ref));
 	})")
 	{
 		NonTrivial a = z1();
@@ -281,8 +281,8 @@ void nonTrivialTest() {
 	#pragma test expect_ir(Z_FUNS, R"({
 		var ref<IMP_NonTrivial,t,f,cpp_ref> v0 = IMP_z1() materialize;
 		var ref<IMP_NonTrivial,t,f,cpp_ref> v1 = IMP_z2() materialize;
-		var ref<IMP_NonTrivial,t,f,cpp_ref> v2 = IMP_z3() materialize;
-		var ref<IMP_NonTrivial,t,f,cpp_ref> v3 = IMP_z4() materialize;
+		var ref<IMP_NonTrivial,t,f,cpp_ref> v2 = IMP_z3();
+		var ref<IMP_NonTrivial,t,f,cpp_ref> v3 = IMP_z4();
 	})")
 	{
 		const NonTrivial& a = z1();
@@ -292,7 +292,7 @@ void nonTrivialTest() {
 	}
 	#pragma test expect_ir(Z_FUNS, R"({
 		var ref<IMP_NonTrivial,f,f,cpp_rref> v0 = IMP_z1() materialize;
-		var ref<IMP_NonTrivial,f,f,cpp_rref> v1 = IMP_z3() materialize;
+		var ref<IMP_NonTrivial,f,f,cpp_rref> v1 = IMP_z3();
 	})")
 	{
 		NonTrivial&& a = z1();
@@ -302,8 +302,8 @@ void nonTrivialTest() {
 	}
 	#pragma test expect_ir(Z_FUNS, R"({
 		var ref<IMP_NonTrivial,t,f,cpp_rref> v0 = IMP_z1() materialize;
-		var ref<IMP_NonTrivial,t,f,cpp_rref> v1 = IMP_z3() materialize;
-		var ref<IMP_NonTrivial,t,f,cpp_rref> v2 = IMP_z4() materialize;
+		var ref<IMP_NonTrivial,t,f,cpp_rref> v1 = IMP_z3();
+		var ref<IMP_NonTrivial,t,f,cpp_rref> v2 = IMP_z4();
 	})")
 	{
 		const NonTrivial&& a = z1();
@@ -359,10 +359,10 @@ void returnVariableTest() {
 				IMP_v4() materialize ;
 				IMP_v5();
 				IMP_v6();
-				IMP_v7() materialize ;
-				IMP_v8() materialize ;
-				IMP_v9() materialize ;
-				IMP_v10() materialize ;
+				IMP_v7();
+				IMP_v8();
+				IMP_v9();
+				IMP_v10();
 		}
 	)")
 	{

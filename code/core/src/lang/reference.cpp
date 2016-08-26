@@ -176,29 +176,18 @@ namespace lang {
 
 	namespace {
 
-		bool isReferenceInternal(const TypePtr& node) {
+		bool isReferenceInternal(const GenericTypePtr& ref) {
 
 			// make sure the node is an actual type
-			assert_true(node);
-
-			// check type
-			auto type = node.isa<GenericTypePtr>();
-			if (!type) return false;
-
-			// simple approach: use unification
-			NodeManager& mgr = node.getNodeManager();
-			const ReferenceExtension& ext = mgr.getLangExtension<ReferenceExtension>();
-
-			// unify given type with template type
-			auto ref = ext.getGenRef().as<GenericTypePtr>();
-			auto sub = types::match(mgr, type, ref);
-			if (!sub) return false;
+			assert_true(ref);
 
 			// check instantiation
-			const types::Substitution& map = *sub;
-			return isValidBooleanMarker(map.applyTo(ref->getTypeParameter(1))) &&
-				isValidBooleanMarker(map.applyTo(ref->getTypeParameter(2))) &&
-				isRefMarker(map.applyTo(ref->getTypeParameter(3)));
+			return ref->getParents().empty() &&
+				ref->getTypeParameter().size() == 4 &&
+				ref->getName()->getValue() == "ref" &&
+				isValidBooleanMarker(ref->getTypeParameter(1)) &&
+				isValidBooleanMarker(ref->getTypeParameter(2)) &&
+				isRefMarker(ref->getTypeParameter(3));
 		}
 
 	}
@@ -220,7 +209,7 @@ namespace lang {
 		if (auto expr = node.isa<ExpressionPtr>()) return isReference(expr->getType());
 
 		// now it needs to be a type
-		auto type = node.isa<TypePtr>();
+		auto type = node.isa<GenericTypePtr>();
 		if (!type) return false;
 
 		// check for a cached annotation
@@ -419,6 +408,14 @@ namespace lang {
 		IRBuilder builder(type->getNodeManager());
 		auto& refExt = type->getNodeManager().getLangExtension<lang::ReferenceExtension>();
 		return builder.callExpr(type, refExt.getRefDecl(), builder.getTypeLiteral(type));
+	}
+
+	bool isRefMathOp(const NodePtr& node) {
+		if(auto call = node.isa<core::CallExprPtr>()) {
+			return isRefMathOp(call->getFunctionExpr());
+		}
+		auto& rExt = node->getNodeManager().getLangExtension<ReferenceExtension>();
+		return rExt.isGenPostDec(node) || rExt.isGenPostInc(node) || rExt.isGenPreDec(node) || rExt.isGenPreInc(node);
 	}
 
 } // end namespace lang

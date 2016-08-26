@@ -24,7 +24,7 @@ add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_
 target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_dir})
 
 # lookup Boost library
-insieme_find_package(NAME Boost COMPONENTS serialization filesystem system program_options) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+insieme_find_package(NAME Boost COMPONENTS serialization filesystem system program_options regex)
 target_include_directories(insieme_frontend SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(insieme_frontend ${Boost_SERIALIZATION_LIBRARY})
 target_link_libraries(insieme_frontend ${Boost_FILESYSTEM_LIBRARY})
@@ -40,6 +40,7 @@ target_include_directories(insieme_frontend PUBLIC ${LLVM_INCLUDE_DIRS})
 
 # add dependencies
 target_link_libraries(insieme_frontend insieme_core)
+target_link_libraries(insieme_frontend insieme_common)
 target_link_libraries(insieme_frontend insieme_utils)
 target_link_libraries(insieme_frontend insieme_transform)
 target_link_libraries(insieme_frontend insieme_annotations)
@@ -65,14 +66,6 @@ foreach ( case_file ${test_cases})
 	add_dependencies(${ut_prefix} ${case_name})
 
 	target_link_libraries(${case_name} insieme_frontend)
-	target_link_libraries(${case_name} insieme_core)
-	target_link_libraries(${case_name} insieme_utils)
-	#target_link_libraries(${case_name} insieme_driver)
-	#target_link_libraries(${case_name} insieme_backend)
-	#target_link_libraries(${case_name} insieme_transform)
-	target_link_libraries(${case_name} insieme_annotations)
-	target_link_libraries(${case_name} ${CLANG_LIBRARIES})
-	target_link_libraries(${case_name} ${LLVM_LIBRARIES})
 	
 	add_unit_test(${case_name} ${ut_prefix}) 
 endforeach(case_file)

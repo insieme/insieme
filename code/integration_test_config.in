@@ -61,7 +61,7 @@ boost_lib=@Boost_LIBRARY_DIRS@
 third_party_libs_home=@THIRD_PARTY_LIBS_HOME@
 
 # result comparison script
-sortdiff=@insieme_root_dir@/test/sortdiff
+compareOutputScript=@insieme_root_dir@/test/compareOutput
 
 # time utility
 time_executable=@TIME_EXECUTABLE@

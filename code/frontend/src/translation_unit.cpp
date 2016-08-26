@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,7 +36,7 @@
 
 #include "insieme/frontend/translation_unit.h"
 
-#include <boost/regex.hpp>
+#include <regex>
 
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/pragma/handler.h"
@@ -54,20 +54,20 @@ using namespace clang;
 
 namespace {
 
-    /** 
+    /**
      * this class guarantees release of resources when using the parserproxy.
      * TODO: Idealy ParserProxy should dissapear or turn into something which is
      * more standard.
      */
     struct ParserProxyRAII {
-            ParserProxyRAII(clang::Parser* p){ 
+            ParserProxyRAII(clang::Parser* p){
                 ParserProxy::init(p);
-                p->Initialize(); 
+                p->Initialize();
             }
             ParserProxyRAII(const ParserProxyRAII&) = delete;
             ParserProxyRAII& operator=(const ParserProxyRAII&) = delete;
-            ~ParserProxyRAII(){ 
-		        ParserProxy::discard(); 
+            ~ParserProxyRAII(){
+		        ParserProxy::discard();
             }
     };
 
@@ -146,7 +146,7 @@ namespace frontend {
 				// iterate through the declarations inside and print (maybe)
 				for(auto it = declCtx->decls_begin(); it != declCtx->decls_end(); ++it) {
 					if(const clang::FunctionDecl* funDecl = llvm::dyn_cast<clang::FunctionDecl>(*it)) {
-						if(boost::regex_match(funDecl->getNameAsString(), boost::regex(filter))) { funDecl->dumpColor(); }
+						if(std::regex_match(funDecl->getNameAsString(), std::regex(filter))) { funDecl->dumpColor(); }
 					}
 				}
 			}

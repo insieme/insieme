@@ -71,6 +71,11 @@ namespace types {
 			 */
 			NodePtr root;
 
+			/**
+			 * A cache for storing whether a given node contains free type variables or not.
+			 */
+			std::map<NodePtr,bool> containsTypeVarsCache;
+
 		  public:
 			/**
 			 * Creates a new instance of this class wrapping the given substitution.
@@ -87,6 +92,42 @@ namespace types {
 			 * @param element the node to be resolved
 			 */
 			const NodePtr resolveElement(const NodePtr& element) override {
+
+				// determine whether the current node is free of type variables
+				auto containsTypeVars = visitDepthFirstOnceInterruptible(element, [&](const NodePtr& node) {
+
+					auto pos = containsTypeVarsCache.find(node);
+					if (pos != containsTypeVarsCache.end()) {
+						return pos->second;
+					}
+
+					bool& res = containsTypeVarsCache[node];
+					if(auto typeVar = node.isa<TypeVariablePtr>()) {
+						if(substitution[typeVar]) {
+							return res = true;
+						}
+					}
+					if(auto typeVar = node.isa<GenericTypeVariablePtr>()) {
+						if(substitution[typeVar]) {
+							return res = true;
+						}
+					}
+					if(auto typeVar = node.isa<VariadicTypeVariablePtr>()) {
+						if(substitution[typeVar]) {
+							return res = true;
+						}
+					}
+					if(auto typeVar = node.isa<VariadicGenericTypeVariablePtr>()) {
+						if(substitution[typeVar]) {
+							return res = true;
+						}
+					}
+					return res = false;
+				}, true, true);
+
+				if(!containsTypeVars) {
+					return element;
+				}
 
 				// prune area of influence
 				if (element != root && (
@@ -120,7 +161,7 @@ namespace types {
 					// map tuple types to type lists, convert those, and move back
 					NodeManager& mgr = element->getNodeManager();
 					auto types = Types::get(mgr, tuple->getElementTypes());
-					auto newTypes = resolveElement(types).as<TypesPtr>();
+					auto newTypes = map(types).as<TypesPtr>();
 					return TupleType::get(mgr, newTypes->getTypes());
 				}
 
@@ -134,7 +175,7 @@ namespace types {
 								for (const auto& cur : *expanded) {
 									list.push_back(cur);
 								}
-								return resolveElement(Types::get(element->getNodeManager(), list));
+								return map(Types::get(element->getNodeManager(), list));
 							}
 						} else if (auto vvar = types.back().isa<VariadicGenericTypeVariablePtr>()) {
 							if (auto expanded = substitution[vvar]) {
@@ -143,7 +184,7 @@ namespace types {
 								for (const auto& cur : *expanded) {
 									list.push_back(GenericTypeVariable::get(manager, cur->getVarName(), vvar->getTypeParameter()));
 								}
-								return resolveElement(Types::get(element->getNodeManager(), list));
+								return map(Types::get(element->getNodeManager(), list));
 							}
 						}
 					}
@@ -164,9 +205,9 @@ namespace types {
 					if (TypePtr replacement = substitution[var]) {
 						// found! => replace, but only type family name
 						if (auto genType = replacement.isa<GenericTypePtr>()) {
-							return resolveElement(GenericType::get(manager, genType->getName(), var->getTypeParameter()));
+							return map(GenericType::get(manager, genType->getName(), var->getTypeParameter()).as<TypePtr>());
 						} else if (auto gvar = replacement.isa<GenericTypeVariablePtr>()) {
-							return resolveElement(GenericTypeVariable::get(manager, gvar->getVarName(), var->getTypeParameter()));
+							return map(GenericTypeVariable::get(manager, gvar->getVarName(), var->getTypeParameter()).as<TypePtr>());
 						}
 						assert_fail() << "Invalid mapping of " << *var << ": " << *replacement << " of type " << replacement->getNodeType();
 					}

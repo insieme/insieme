@@ -885,7 +885,22 @@ namespace core {
 		// FIXME argument order
 		const auto& basic = manager.getLangBasic();
 		auto& parExt = manager.getLangExtension<lang::ParallelExtension>();
-		assert_true(manager.getLangExtension<lang::ReferenceExtension>().isRefAssign(assignment->getFunctionExpr())) << "Trying to build atomic assignment from non-assigment";
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+
+		assert_true(assignment->getNumArguments() >= 1) << "Unsupported atomic assignment structure - call needs at least one argument";
+
+		// handle pre/post increment
+		if(lang::isRefMathOp(assignment)) {
+			const auto &lhs = assignment->getArgument(0);
+			const auto one = literal("1", analysis::getReferencedType(lhs));
+			if(refExt.isCallOfGenPreInc(assignment)) return callExpr(parExt.getAtomicAddAndFetch(), lhs, one);
+			if(refExt.isCallOfGenPostInc(assignment)) return callExpr(parExt.getAtomicFetchAndAdd(), lhs, one);
+			if(refExt.isCallOfGenPreDec(assignment)) return callExpr(parExt.getAtomicSubAndFetch(), lhs, one);
+			if(refExt.isCallOfGenPostDec(assignment)) return callExpr(parExt.getAtomicFetchAndSub(), lhs, one);
+		}
+
+		assert_true(refExt.isRefAssign(assignment->getFunctionExpr()))
+		    << "Trying to build atomic assignment from non-assigment:" << dumpColor(assignment);
 
 		const auto &lhs = assignment->getArgument(0), &rhs = assignment->getArgument(1);
 		const auto& lhsDeref = deref(lhs);
@@ -1016,6 +1031,19 @@ namespace core {
 		return jobExpr(type, threadNumRange, body);
 	}
 
+	JobExprPtr IRBuilderBaseModule::jobExpr(const ExpressionPtr& rangeLowerBound, const ExpressionPtr& rangeUpperBound, const ExpressionPtr& rangeMod,
+	                                        const ExpressionPtr& body) const {
+		GenericTypePtr type = static_pointer_cast<GenericTypePtr>(manager.getLangBasic().getJob());
+		const ExpressionPtr threadNumRange = getThreadNumRange(rangeLowerBound, rangeUpperBound, rangeMod);
+		return jobExpr(type, threadNumRange, body);
+	}
+
+	JobExprPtr IRBuilderBaseModule::jobExprUnbounded(const ExpressionPtr& rangeLowerBound, const ExpressionPtr& body) const {
+		GenericTypePtr type = static_pointer_cast<GenericTypePtr>(manager.getLangBasic().getJob());
+		const ExpressionPtr threadNumRange = getThreadNumRange(rangeLowerBound);
+		return jobExpr(type, threadNumRange, body);
+	}
+
 	namespace {
 
 		bool isJobBody(const NodePtr& node) {
@@ -1068,7 +1096,11 @@ namespace core {
 		TypePtr type = manager.getLangBasic().getUInt8();
 		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateBoundRange(), numericCast(min, type), numericCast(max, type));
 	}
-
+	CallExprPtr IRBuilderBaseModule::getThreadNumRange(const ExpressionPtr& min, const ExpressionPtr& max, const ExpressionPtr& mod) const {
+		TypePtr type = manager.getLangBasic().getUInt8();
+		return callExpr(manager.getLangExtension<lang::ParallelExtension>().getCreateBoundRangeMod(), numericCast(min, type), numericCast(max, type),
+		                numericCast(mod, type));
+	}
 
 	CallExprPtr IRBuilderBaseModule::getThreadGroup(ExpressionPtr level) const {
 		if(!level) { level = uintLit(0); }
@@ -1182,23 +1214,6 @@ namespace core {
 		// create access instruction
 		core::ExpressionPtr access = manager.getLangExtension<lang::ReferenceExtension>().getRefMemberAccess();
 		return callExpr(access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
-	}
-
-	CallExprPtr IRBuilderBaseModule::refParent(const ExpressionPtr& structExpr, const TypePtr& parent) const {
-		// check some pre-conditions
-		TypePtr type = structExpr->getType();
-		assert_pred1(analysis::isRefType, type) << "Cannot deref non-ref type";
-		type = analysis::getReferencedType(type);
-
-		assert_true(type->getNodeType() == core::NT_TagType || type->getNodeType() == core::NT_GenericType);
-
-		// compute result type
-		core::TypePtr resType = refType(parent);
-
-		// build up access operation
-		auto narrow = manager.getLangExtension<lang::ReferenceExtension>().getRefNarrow();
-		auto dataPath = datapath::DataPathBuilder(type).parent(parent).getPath();
-		return callExpr(resType, narrow, structExpr, dataPath);
 	}
 
 	CallExprPtr IRBuilderBaseModule::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {

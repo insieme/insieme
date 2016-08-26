@@ -39,6 +39,7 @@
 #include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/tu/ir_translation_unit_io.h"
 
 namespace insieme {
 namespace frontend {
@@ -51,11 +52,10 @@ namespace frontend {
 		// add FE module symbols for use in test cases
 		auto symbols = mgr.getLangExtension<frontend::utils::FrontendInspireModule>().getSymbols();
 
-		auto prog = builder.parseProgram(R"(
-			alias int = int<4>;
-			int main() {
-				var ref<int> v0;
-				var ref<int> v1;
+		core::ExpressionPtr prog = builder.parseExpr(R"(
+			def main = () -> int<4> {
+				var ref<int<4>> v0;
+				var ref<int<4>> v1;
 				c_style_assignment(v0, 5);
 				c_style_assignment(v0, c_style_assignment(v1, 1));
 
@@ -66,20 +66,27 @@ namespace frontend {
 
 				cxx_style_assignment(v0, 2);
 				return 0;
-			}
+			};
+			main
 		)", symbols);
 
 		auto res = checks::check(prog);
 		ASSERT_TRUE(res.empty()) << res;
 
-		FrontendCleanupExtension cleanup;
-		prog = cleanup.IRVisit(prog);
+		auto lit = builder.literal(builder.stringValue("main"), prog->getType());
+		core::tu::IRTranslationUnit tu(mgr);
+		tu.addFunction(lit, prog.as<core::LambdaExprPtr>());
+		tu.addEntryPoints(lit);
 
+		FrontendCleanupExtension cleanup;
+		tu = cleanup.IRVisit(tu);
+
+		prog = tu.resolve(lit).as<core::ExpressionPtr>();
 		res = checks::check(prog);
 		ASSERT_TRUE(res.empty()) << "Semantic error after cleanup:\n" << res;
 
 		// check that only assignments for which the return value is used (that is, the parent is an expression or declaration) remain
-		visitDepthFirst(core::ProgramAddress(prog), [&](const core::CallExprAddress& call) {
+		visitDepthFirst(core::ExpressionAddress(prog), [&](const core::CallExprAddress& call) {
 			if(feExt.isCallOfCStyleAssignment(call) || feExt.isCallOfCxxStyleAssignment(call)) {
 				auto parentCategory = call.getParentNode().getNodeCategory();
 				if(call.getParentNode().getNodeType() == core::NT_Declaration && call.getDepth() >= 2) parentCategory = call.getParentNode(2).getNodeCategory();

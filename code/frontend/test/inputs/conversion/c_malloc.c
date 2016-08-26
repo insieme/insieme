@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,31 +34,59 @@
  * regarding third party software licenses.
  */
 
-#include <stdio.h>
-#include <assert.h>
-
-#define A_SIZE 64
+#include <stdlib.h>
 
 int main() {
-	int a[A_SIZE];
-	int b[A_SIZE];
-	int c[A_SIZE];
-	for(unsigned i = 0; i < A_SIZE; ++i) {
-		a[i] = i;
-		b[i] = A_SIZE - i;
-		c[i] = 0;
-	}
 
-	#pragma omp parallel
+	#pragma test expect_ir(R"({
+		var ref<ptr<unit>,f,f,plain> v0 = malloc_wrapper(num_cast(5, type_lit(uint<8>)));
+	})")
 	{
-		printf("Hello from thread %d!\n", omp_get_thread_num());
-		#pragma omp for
-		for(unsigned i = 0; i < A_SIZE; ++i) {
-			c[i] = a[i] + b[i];
-		}
+		void* a = malloc(5);
 	}
 
-	for(unsigned i = 0; i < A_SIZE; ++i) {
-		assert(c[i] == A_SIZE);
+	#pragma test expect_ir(R"({
+		var ref<ptr<unit>,f,f,plain> v0 = malloc_wrapper(sizeof(type_lit(int<4>)));
+	})")
+	{
+		void* a = malloc(sizeof(int));
 	}
+
+	// implicit casting
+	#pragma test expect_ir(R"({
+		var ref<ptr<int<4>>,f,f,plain> v0 = ptr_reinterpret(malloc_wrapper(sizeof(type_lit(int<4>))*num_cast(10, type_lit(uint<8>))), type_lit(int<4>));
+	})")
+	{
+		int* a = malloc(sizeof(int)*10);
+	}
+
+	// explicit casting
+	#pragma test expect_ir(R"({
+		var ref<ptr<char>,f,f,plain> v0 = ptr_reinterpret(malloc_wrapper(sizeof(type_lit(char))*num_cast(30, type_lit(uint<8>))), type_lit(char));
+	})")
+	{
+		char* a = (char*)malloc(sizeof(char) * 30);
+	}
+
+	//===------------------------------------------------------------------------------------------------------------------------------------------- FREE ---===
+
+	#pragma test expect_ir(R"({
+		var ref<ptr<unit>,f,f,plain> v0 = malloc_wrapper(num_cast(5, type_lit(uint<8>)));
+		free_wrapper(*v0);
+	})")
+	{
+		void* a = malloc(5);
+		free(a);
+	}
+
+	#pragma test expect_ir(R"({
+		var ref<ptr<char>,f,f,plain> v0 = ptr_reinterpret(malloc_wrapper(sizeof(type_lit(char))*num_cast(30, type_lit(uint<8>))), type_lit(char));
+		free_wrapper(ptr_reinterpret(*v0, type_lit(unit)));
+	})")
+	{
+		char* a = (char*)malloc(sizeof(char) * 30);
+		free(a);
+	}
+
+	return 0;
 }

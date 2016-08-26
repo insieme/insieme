@@ -86,7 +86,7 @@ namespace utils {
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	core::ExpressionPtr performClangCastOnIR(insieme::frontend::conversion::Converter& converter, const clang::CastExpr* castExpr) {
 		core::ExpressionPtr expr = converter.convertExpr(castExpr->getSubExpr());
-		core::TypePtr targetTy = converter.convertType(castExpr->getType());
+		core::TypePtr targetTy = converter.convertExprType(castExpr);
 		core::TypePtr exprTy = expr->getType();
 
 		if(VLOG_IS_ON(2)) {
@@ -112,19 +112,16 @@ namespace utils {
 		// A conversion which causes the extraction of an r-value from the operand gl-value.
 		// The result of an r-value conversion is always unqualified.
 		// IR: this is the same as ref_deref: ref<a'> -> a'
-		case clang::CK_LValueToRValue:
-            {
-            assert_true(core::lang::isReference(expr->getType())) << " no L to R in non-refencene types: " << expr << " : " << expr->getType();
+		case clang::CK_LValueToRValue: {
+			assert_true(core::lang::isReference(expr->getType())) << " no L to R in non-refencene types: " << expr << " : " << expr->getType();
 			return builder.deref(expr);
-            }
+		}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// Numerical value type conversions
 		// handled by IR numeric_cast
 		case clang::CK_IntegralCast:
-			if(builder.getLangBasic().isBool(expr->getType())) {
-				expr = utils::buildBoolToInt(expr);
-			}
+			if(builder.getLangBasic().isBool(expr->getType())) { expr = utils::buildBoolToInt(expr); }
 		case clang::CK_IntegralToFloating:
 		case clang::CK_FloatingToIntegral:
 		case clang::CK_FloatingCast:
@@ -268,42 +265,21 @@ namespace utils {
 		//		return core::analysis::getMemberPointerCheck(expr);
 		//	}
 
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-		////  PARTIALY IMPLEMENTED
-		////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 		///////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//case clang::CK_UncheckedDerivedToBase:
-		//case clang::CK_DerivedToBase:
-		//	// A conversion from a C++ class pointer to a base class pointer. A *a = new B();
-		//	{
-		//		// TODO: do we need to check if is pointerType?
-		//		// in case of pointer, the inner expression is modeled as ref< array < C, 1> >
-		//		// it is needed to deref the first element
-		//		expr = getCArrayElemRef(builder, expr);
-
-		//		// unwrap CppRef if CppRef
-		//		if(core::analysis::isAnyCppRef(exprTy)) { expr = core::analysis::unwrapCppRef(expr); }
-
-		//		clang::CastExpr::path_const_iterator it;
-		//		for(it = castExpr->path_begin(); it != castExpr->path_end(); ++it) {
-		//			core::TypePtr targetTy = converter.convertType((*it)->getType());
-		//			// if it is no ref we have to materialize it, otherwise refParent cannot be called
-		//			if(expr->getType()->getNodeType() != core::NT_RefType) {
-		//				// expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), expr);
-		//				expr = builder.refVar(expr);
-		//			}
-		//			expr = builder.refParent(expr, targetTy);
-		//		}
-
-		//		if(castExpr->getType().getTypePtr()->isPointerType()) {
-		//			// is a pointer type -> return pointer
-		//			expr = builder.callExpr(gen.getScalarToArray(), expr);
-		//		}
-
-		//		VLOG(2) << "cast resoult: \n" << dumpPretty(expr) << " \n of type: " << expr->getType();
-		//		return expr;
-		//	}
+		// A conversion from a C++ class pointer to a base class pointer. A *a = new B();
+		case clang::CK_UncheckedDerivedToBase:
+		case clang::CK_DerivedToBase: {
+			if(core::lang::isPointer(expr)) {
+				frontend_assert(core::lang::isPointer(targetTy));
+				return core::lang::buildPtrParentCast(expr, core::lang::PointerType(targetTy).getElementType());
+			}
+			if(core::lang::isReference(expr)) {
+				frontend_assert(core::lang::isReference(targetTy));
+				return core::lang::buildRefParentCast(expr, core::lang::ReferenceType(targetTy).getElementType());
+			}
+			frontend_assert(false) << "DerivedToBase cast on non-ptr/reference:\n" << dumpPretty(expr) << "\n -> of type: " << *expr->getType();
+			return expr;
+		}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//case clang::CK_BaseToDerived:

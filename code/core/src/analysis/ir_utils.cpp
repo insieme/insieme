@@ -38,7 +38,7 @@
 
 #include <set>
 #include <map>
-#include <boost/regex.hpp>
+#include <regex>
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
@@ -305,6 +305,10 @@ namespace analysis {
 					res.push_back(field->getType());
 				}
 				return res;
+			}
+
+			TypeList visitTagTypeReference(const TagTypeReferencePtr& type) override {
+				return {};
 			}
 
 			TypeList visitType(const TypePtr& type) override {
@@ -974,7 +978,6 @@ namespace analysis {
 
 	const std::set<TagTypeReferencePtr>& getFreeTagTypeReferences(const TagTypePtr& tagType) {
 
-		// TODO: cache
 		struct FreeTagTypeReferences {
 			std::set<TagTypeReferencePtr> references;
 			bool operator==(const FreeTagTypeReferences& other) const {
@@ -1172,7 +1175,7 @@ namespace analysis {
 				return none;
 			}
 
-			bool equalUnder(const NodeAddress& a, const NodeAddress& b, const EqualityClasses& classes, const std::map<NodeAddress, unsigned>& index, bool topLevel = true) {
+			bool equalUnder(const NodeAddress& a, const NodeAddress& b, const EqualityClasses& classes, const std::unordered_map<NodeAddress, unsigned>& index, bool topLevel = true) {
 
 				// if it is the same address, it is always the same
 				if (a == b) return true;
@@ -1234,22 +1237,6 @@ namespace analysis {
 
 				return res;
 			}
-
-			struct CannotReachTagTypeTag {};
-
-			struct CannotReachTagTypeTagger : public CachedVisitor<bool> {
-				CannotReachTagTypeTagger() : CachedVisitor<bool>(true) {}
-
-				virtual bool resolve(const NodePtr& node) {
-					bool ret = false;
-					if(node->hasAttachedValue<CannotReachTagTypeTag>()) return false;
-					if(node->getNodeType() == NT_TagType) return true;
-					if(node->getNodeType() == NT_TagTypeReference) return true;
-					ret = ::any(node.getChildList(), [&](const NodePtr& child) { return visit(child); });
-					if(!ret) node->attachValue<CannotReachTagTypeTag>();
-					return ret;
-				}
-			};
 
 			bool isDecendant(const NodeAddress& child, const std::vector<RecordAddress>& anchesters, std::set<NodeAddress>& visited) {
 
@@ -1355,6 +1342,63 @@ namespace analysis {
 			}
 		}
 
+
+		namespace {
+
+			const vector<RecordAddress>& collectAllRecordsInternal(const NodePtr& root, const NodePtr& cur, std::map<NodePtr,vector<RecordAddress>>& cache) {
+
+				// check cache
+				auto pos = cache.find(cur);
+				if (pos != cache.end()) return pos->second;
+
+				// collect records for this node
+				auto& records = cache[cur];
+
+				// if it is a built-in we stop here
+				if (core::lang::isBuiltIn(cur)) return records;
+
+				// check whether this is already a canonical tag type
+				if (cur != root) {
+					if (auto tagType = cur.isa<TagTypePtr>()) {
+						if (!hasFreeTagTypeReferences(tagType)) {
+							auto cannoncial = getCanonicalType(tagType);
+							if (*cannoncial == *tagType) {
+								for(const auto& def : TagTypeAddress(tagType)->getDefinition()) {
+									records.push_back(def->getRecord());
+								}
+								return records;
+							}
+						}
+					}
+				}
+
+				// if this node is a record, add it to the result set
+				if (cur.isa<RecordPtr>()) {
+					records.push_back(RecordAddress(cur));
+				}
+
+				// collect records from sub-nodes
+				for(const auto& child : NodeAddress(cur).getChildList()) {
+					for(const auto& rec : collectAllRecordsInternal(root,child,cache)) {
+						records.push_back(concat(child,rec));
+					}
+				}
+				return records;
+			}
+
+
+			/**
+			 * Collects a list of addresses pointing to nested records within the given node.
+			 */
+			vector<RecordAddress> collectAllRecords(const NodePtr& root) {
+				// run everything through an internal, cached collector
+				std::map<NodePtr,vector<RecordAddress>> cache;
+				return collectAllRecordsInternal(root, root, cache);
+			}
+
+		}
+
+
 		TypePtr normalizeRecursiveTypes(const TypePtr& type) {
 			// This function is converting recursive types into their most compact form.
 			// Thus, (partially) unrolled or peeled fragments will be identified as such
@@ -1363,40 +1407,8 @@ namespace analysis {
 			// function specific debugging flag
 			static const bool debug = false;
 
-			// 1) get a list of all record types and tag type references in the given type (second most time consuming part)
-
-			// mark types that do not contain a tag reference anywhere
-			CannotReachTagTypeTagger tagger;
-			tagger(type); // preprocessing pass to add annotations used to speed up steps 1)
-
-			vector<RecordAddress> records;
-			visitDepthFirstPrunable(TypeAddress(type), [&](const NodeAddress& node)->Action {
-
-				// ignore built in types
-				if(core::lang::isBuiltIn(node)) return Action::Prune;
-
-				// ignore nodes that do not contain tag type references
-				if(node->hasAttachedValue<CannotReachTagTypeTag>()) return Action::Prune;
-
-				// ignore nested, cannonical tag types
-				if(auto tagType = node.isa<TagTypePtr>()) {
-					if (tagType != type) {
-						if (!hasFreeTagTypeReferences(tagType)) {
-							auto cannonical = getCanonicalType(tagType);
-							if (*cannonical == *tagType) {
-								for(const auto& cur : node.as<TagTypeAddress>()->getDefinition()) {
-									records.push_back(cur->getRecord());
-								}
-								return Action::Prune;
-							}
-						}
-					}
-				}
-
-				// collect all encountered records
-				if(auto record = node.isa<RecordAddress>()) records.push_back(record);
-				return Action::Descent;
-			}, true);
+			// 1) get a list of all record types and tag type references in the given type
+			vector<RecordAddress> records = collectAllRecords(type);
 
 			// print some debugging
 			if (debug) {
@@ -1411,13 +1423,75 @@ namespace analysis {
 			// if there are no records or a single record => we are done
 			if (records.size() <= 1) return type;
 
+			// 2) sample list of records down to some represents
+			std::map<RecordAddress,vector<RecordAddress>> representsMap;
+			{
+				// the list of represents selected
+				vector<RecordAddress> represents;
+
+				// the key used to merge represents (same record, identical enclosing two enclosing tag type definitions)
+				using Key = std::tuple<TagTypeDefinitionAddress,TagTypeDefinitionPtr,RecordPtr>;
+
+				// the index for locating represents
+				std::map<Key,RecordAddress> index;
+				for(const auto& cur : records) {
+
+					// get first enclosing tag type defintion
+					NodeAddress t = cur;
+					while(t && !t.isa<TagTypeDefinitionAddress>()) t = (t.isRoot()) ? TagTypeDefinitionAddress() : t.getParentAddress();
+					TagTypeDefinitionPtr innerDef = t.getAddressedNode().as<TagTypeDefinitionPtr>();
+
+					// get second enclosing tag type definition
+					t = (t.isRoot()) ? TagTypeDefinitionAddress() : t.getParentAddress();
+					while(t && !t.isa<TagTypeDefinitionAddress>()) t = (t.isRoot()) ? TagTypeDefinitionAddress() : t.getParentAddress();
+					TagTypeDefinitionAddress context = (t) ? t.as<TagTypeDefinitionAddress>() : TagTypeDefinitionAddress();
+
+					// check whether this key is already present
+					Key key(context,innerDef,cur);
+					auto pos = index.find(key);
+					if (pos != index.end()) {
+						// re-use existing represent
+						representsMap[pos->second].push_back(cur);
+						continue;
+					}
+
+					// create new group and make current record its represent
+					index[key] = cur;
+					represents.push_back(cur);
+					representsMap[cur].push_back(cur);
+				}
+
+				// make list of represents the new list of records
+				records = std::move(represents);
+			}
+
+			if (debug) {
+				std::cout << "Num Represents: " << records.size() << "\n";
+				int i = 0;
+				for (const auto& cur : records) {
+					std::cout << "\t" << i << ": " << cur << " = " << *cur << "\n";
+					i++;
+				}
+			}
+
 			// 2) compute equivalence classes of those records
 			EqualityClasses classes(records.size());
-			std::map<NodeAddress, unsigned> recordToId;
+			std::unordered_map<NodeAddress, unsigned> recordToId;
 			for (unsigned i = 0; i < records.size(); ++i) {
 				recordToId[records[i]] = i;
 			}
 
+			// run a quick pre-filter to reduce number of comparisons in accurate class computation
+			for(unsigned i = 0; i<records.size(); ++i) {
+				for (unsigned j = i + 1; j < records.size(); ++j) {
+					// check name of records
+					if (*records[i].getAddressedNode()->getName() != *records[j].getAddressedNode()->getName()) {
+						classes.markDifferent(i,j);
+					}
+				}
+			}
+
+			// make an accurate comparison for each pair of records
 			bool changed = true;
 			while (changed) {
 				changed = false;
@@ -1450,7 +1524,7 @@ namespace analysis {
 			}
 
 
-			// 3) compute dependencies between equivalence classes (MOST time consuming part!)
+			// 3) compute dependencies between equivalence classes
 			using EquivalenceClass = std::vector<RecordAddress>;
 			utils::graph::Graph<EquivalenceClass> depGraph;
 
@@ -1517,15 +1591,20 @@ namespace analysis {
 					auto tag = getTagForClass(cls);
 
 					// for all others add a temporary replacement
-					for (const auto& record : cls) {
+					for (const auto& represent : cls) {
 
-						// get enclosing tag type
-						auto tagType = getEnclosingTagType(record);
-						if (!tagType) continue;
+						// expand the represent to the full list of represented records
+						for(const auto& record : representsMap[represent]) {
 
-						// substitute this tag type with the common tag type reference of this group
-						assert_true(tagType.isValid());
-						replacements[tagType] = tag;
+							// get enclosing tag type
+							auto tagType = getEnclosingTagType(record);
+							if (!tagType) continue;
+
+							// substitute this tag type with the common tag type reference of this group
+							assert_true(tagType.isValid());
+							replacements[tagType] = tag;
+
+						}
 					}
 
 				}
@@ -1589,9 +1668,12 @@ namespace analysis {
 					auto tagType = builder.tagType(tag, def);
 
 					// register resulting tag types
-					for (const auto& cur : cls) {
-						auto type = getEnclosingTagType(cur);
-						if (type) replacements[type] = tagType;
+					for (const auto& represent : cls) {
+						// expand the represent to the full list of represented records
+						for(const auto& cur : representsMap[represent]) {
+							auto type = getEnclosingTagType(cur);
+							if (type) replacements[type] = tagType;
+						}
 					}
 				}
 			}
@@ -1660,11 +1742,11 @@ namespace analysis {
 
 		// ... or a zero literal ..
 		if(value->getNodeType() == core::NT_Literal) {
-			boost::regex zeroRegex(R"(((-?0*)u?(l|ll)?)|(-?0\.0*[fF]*))", (boost::regex::flag_type)(boost::regex::optimize | boost::regex::ECMAScript));
+			std::regex zeroRegex(R"(((-?0*)u?(l|ll)?)|(-?0\.0*[fF]*))", (std::regex::flag_type)(std::regex::optimize | std::regex::ECMAScript));
 
 			const string& strValue = static_pointer_cast<const core::Literal>(value)->getStringValue();
 
-			if(boost::regex_match(strValue, zeroRegex)) { return true; }
+			if(std::regex_match(strValue, zeroRegex)) { return true; }
 		}
 
 		// ... or the ref_null literal

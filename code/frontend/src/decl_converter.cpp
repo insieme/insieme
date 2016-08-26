@@ -85,13 +85,7 @@ namespace conversion {
 
 		core::TypePtr getThisType(Converter& converter, const clang::CXXMethodDecl* methDecl) {
 			auto parentType = converter.convertType(converter.getCompiler().getASTContext().getRecordType(methDecl->getParent()));
-			auto refKind = core::lang::ReferenceType::Kind::Plain;
-			switch(methDecl->getRefQualifier()) {
-			case clang::RefQualifierKind::RQ_LValue: refKind = core::lang::ReferenceType::Kind::CppReference; break;
-			case clang::RefQualifierKind::RQ_RValue: refKind = core::lang::ReferenceType::Kind::CppRValueReference; break;
-			case clang::RefQualifierKind::RQ_None: break; // stop warnings
-			}
-			return core::lang::buildRefType(parentType, methDecl->isConst(), methDecl->isVolatile(), refKind);
+			return frontend::utils::getThisType(methDecl, parentType);
 		}
 
 		core::FunctionTypePtr getFunMethodTypeInternal(Converter& converter, const clang::FunctionDecl* funDecl) {

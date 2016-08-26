@@ -355,7 +355,7 @@ namespace checks {
 
 		// iterate over all the constructors and check their types
 		for (auto& constructor : address->getRecord()->getConstructors()) {
-			checkMemberType(address, constructor.getAddressedNode().as<LambdaExprPtr>()->getFunctionType(), FK_CONSTRUCTOR, false, res, EC_TYPE_INVALID_CONSTRUCTOR_TYPE, "Invalid constructor type");
+			checkMemberType(address, constructor.getAddressedNode()->getType().as<FunctionTypePtr>(), FK_CONSTRUCTOR, false, res, EC_TYPE_INVALID_CONSTRUCTOR_TYPE, "Invalid constructor type");
 		}
 
 		return res;
@@ -369,7 +369,7 @@ namespace checks {
 
 		std::set<FunctionTypePtr> constructorTypes;
 		for (const auto& ctor : address->getRecord()->getConstructors()) {
-			const auto& type = ctor.getAddressedNode().as<LambdaExprPtr>()->getFunctionType();
+			const auto& type = ctor.getAddressedNode()->getType().as<FunctionTypePtr>();
 			auto inserted = constructorTypes.insert(type);
 
 			if (!inserted.second) {
@@ -385,7 +385,7 @@ namespace checks {
 		auto record = address.getAddressedNode()->getRecord();
 
 		if(record->hasDestructor()) {
-			checkMemberType(address, record->getDestructor().as<LambdaExprPtr>()->getFunctionType(), FK_DESTRUCTOR, false, res,
+			checkMemberType(address, record->getDestructor()->getType().as<FunctionTypePtr>(), FK_DESTRUCTOR, false, res,
 				            EC_TYPE_INVALID_DESTRUCTOR_TYPE, "Invalid destructor type");
 		}
 
