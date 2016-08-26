@@ -94,6 +94,7 @@ namespace omp {
 		IRBuilder build;
 		const lang::BasicGenerator& basic;
 		const lang::ParallelExtension& parExt;
+		const lang::ReferenceExtension& refExt;
 		us::PointerSet<CompoundStmtPtr> toFlatten; // set of compound statements to flatten one step further up
 
 		// this stack is used to keep track of which variables are shared in enclosing constructs, to correctly parallelize
@@ -104,7 +105,8 @@ namespace omp {
 
 	  public:
 		OMPSemaMapper(NodeManager& nodeMan)
-			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()), toFlatten(),
+			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()),
+			  refExt(nodeMan.getLangExtension<lang::ReferenceExtension>()), toFlatten(),
 			  orderedCountLit(build.literal("ordered_counter", build.refType(basic.getInt8(), false, true))),
 			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())) {}
 
@@ -818,6 +820,7 @@ namespace omp {
 		NodePtr handleAtomic(const StatementPtr& stmtNode, const AtomicPtr& atomicP) {
 			CallExprPtr call = dynamic_pointer_cast<CallExprPtr>(stmtNode);
 			if(!call) { cerr << printer::PrettyPrinter(stmtNode) << std::endl; }
+			if(refExt.isCallOfRefDeref(call)) call = core::analysis::getArgument(call, 0).isa<core::CallExprPtr>();
 			assert_true(call) << "Unhandled OMP atomic";
 			auto at = build.atomicAssignment(call);
 			// std::cout << "ATOMIC: \n" << printer::PrettyPrinter(at, printer::PrettyPrinter::NO_LET_BINDINGS);
