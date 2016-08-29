@@ -66,6 +66,18 @@ namespace analysis {
 		return notAlias<HaskellEngine>(a.as<ExpressionAddress>(), b.as<ExpressionAddress>());
 	}
 
+	bool areAlias(haskell::Context& ctxt, const StatementAddress& a, const StatementAddress& b) {
+		return areAlias<HaskellEngine>(ctxt, a.as<ExpressionAddress>(), b.as<ExpressionAddress>());
+	}
+
+	bool mayAlias(haskell::Context& ctxt, const StatementAddress& a, const StatementAddress& b) {
+		return mayAlias<HaskellEngine>(ctxt, a.as<ExpressionAddress>(), b.as<ExpressionAddress>());
+	}
+
+	bool notAlias(haskell::Context& ctxt, const StatementAddress& a, const StatementAddress& b) {
+		return notAlias<HaskellEngine>(ctxt, a.as<ExpressionAddress>(), b.as<ExpressionAddress>());
+	}
+
 
 	TEST(AdvancedAliasAnalysis, ComponentReferences) {
 		NodeManager mgr;
@@ -132,60 +144,62 @@ namespace analysis {
 
 		auto comp = CompoundStmtAddress(stmt);
 
+		haskell::Context ctxt;
+
 		// first block
-		EXPECT_TRUE(areAlias(comp[4], comp[4]));
-		EXPECT_TRUE(notAlias(comp[4], comp[5]));
-		EXPECT_TRUE(areAlias(comp[4], comp[6]));
-		EXPECT_TRUE(notAlias(comp[4], comp[7]));
-		EXPECT_TRUE(areAlias(comp[4], comp[8]));
-		EXPECT_TRUE(areAlias(comp[6], comp[8]));
+		EXPECT_TRUE(areAlias(ctxt, comp[4], comp[4]));
+		EXPECT_TRUE(notAlias(ctxt, comp[4], comp[5]));
+		EXPECT_TRUE(areAlias(ctxt, comp[4], comp[6]));
+		EXPECT_TRUE(notAlias(ctxt, comp[4], comp[7]));
+		EXPECT_TRUE(areAlias(ctxt, comp[4], comp[8]));
+		EXPECT_TRUE(areAlias(ctxt, comp[6], comp[8]));
 
 		// second block
-		EXPECT_TRUE(areAlias(comp[9], comp[ 9]));
-		EXPECT_TRUE(notAlias(comp[9], comp[10]));
-		EXPECT_TRUE(areAlias(comp[9], comp[11]));
-		EXPECT_TRUE(areAlias(comp[9], comp[12]));
+		EXPECT_TRUE(areAlias(ctxt, comp[9], comp[ 9]));
+		EXPECT_TRUE(notAlias(ctxt, comp[9], comp[10]));
+		EXPECT_TRUE(areAlias(ctxt, comp[9], comp[11]));
+		EXPECT_TRUE(areAlias(ctxt, comp[9], comp[12]));
 
 		// third block
-		EXPECT_TRUE(areAlias(comp[16], comp[16]));
-		EXPECT_TRUE(notAlias(comp[16], comp[17]));
-		EXPECT_TRUE(areAlias(comp[16], comp[18]));
+		EXPECT_TRUE(areAlias(ctxt, comp[16], comp[16]));
+		EXPECT_TRUE(notAlias(ctxt, comp[16], comp[17]));
+		EXPECT_TRUE(areAlias(ctxt, comp[16], comp[18]));
 
 		// 4. block
-		EXPECT_TRUE(areAlias(comp[19], comp[19]));
-		EXPECT_TRUE(notAlias(comp[19], comp[20]));
+		EXPECT_TRUE(areAlias(ctxt, comp[19], comp[19]));
+		EXPECT_TRUE(notAlias(ctxt, comp[19], comp[20]));
 
-		EXPECT_TRUE(areAlias(comp[21], comp[21]));
-		EXPECT_TRUE(notAlias(comp[21], comp[22]));
+		EXPECT_TRUE(areAlias(ctxt, comp[21], comp[21]));
+		EXPECT_TRUE(notAlias(ctxt, comp[21], comp[22]));
 
-		EXPECT_TRUE(areAlias(comp[23], comp[23]));
-		EXPECT_TRUE(notAlias(comp[23], comp[24]));
+		EXPECT_TRUE(areAlias(ctxt, comp[23], comp[23]));
+		EXPECT_TRUE(notAlias(ctxt, comp[23], comp[24]));
 
-		EXPECT_TRUE(notAlias(comp[19], comp[21]));
-		EXPECT_TRUE(notAlias(comp[19], comp[22]));
-		EXPECT_TRUE(areAlias(comp[19], comp[23]));
-		EXPECT_TRUE(notAlias(comp[19], comp[24]));
+		EXPECT_TRUE(notAlias(ctxt, comp[19], comp[21]));
+		EXPECT_TRUE(notAlias(ctxt, comp[19], comp[22]));
+		EXPECT_TRUE(areAlias(ctxt, comp[19], comp[23]));
+		EXPECT_TRUE(notAlias(ctxt, comp[19], comp[24]));
 
 		// 5. block
-		EXPECT_TRUE(areAlias(comp[25], comp[25]));
-		EXPECT_TRUE(notAlias(comp[25], comp[26]));
-		EXPECT_TRUE(areAlias(comp[25], comp[27]));
+		EXPECT_TRUE(areAlias(ctxt, comp[25], comp[25]));
+		EXPECT_TRUE(notAlias(ctxt, comp[25], comp[26]));
+		EXPECT_TRUE(areAlias(ctxt, comp[25], comp[27]));
 
-		EXPECT_TRUE(areAlias(comp[28], comp[28]));
-		EXPECT_TRUE(notAlias(comp[28], comp[29]));
-		EXPECT_TRUE(notAlias(comp[28], comp[30]));
+		EXPECT_TRUE(areAlias(ctxt, comp[28], comp[28]));
+		EXPECT_TRUE(notAlias(ctxt, comp[28], comp[29]));
+		EXPECT_TRUE(notAlias(ctxt, comp[28], comp[30]));
 
-		EXPECT_TRUE(areAlias(comp[30], comp[30]));
-		EXPECT_TRUE(notAlias(comp[30], comp[31]));
-		EXPECT_TRUE(notAlias(comp[30], comp[32]));
+		EXPECT_TRUE(areAlias(ctxt, comp[30], comp[30]));
+		EXPECT_TRUE(notAlias(ctxt, comp[30], comp[31]));
+		EXPECT_TRUE(notAlias(ctxt, comp[30], comp[32]));
 
-		EXPECT_TRUE(areAlias(comp[32], comp[33]));
+		EXPECT_TRUE(areAlias(ctxt, comp[32], comp[33]));
 
 		// 6. block
-		EXPECT_TRUE(areAlias(comp[35], comp[35]));
-		EXPECT_TRUE(notAlias(comp[35], comp[36]));
-		EXPECT_TRUE(areAlias(comp[35], comp[37]));
-		EXPECT_TRUE(notAlias(comp[35], comp[38]));
+		EXPECT_TRUE(areAlias(ctxt, comp[35], comp[35]));
+		EXPECT_TRUE(notAlias(ctxt, comp[35], comp[36]));
+		EXPECT_TRUE(areAlias(ctxt, comp[35], comp[37]));
+		EXPECT_TRUE(notAlias(ctxt, comp[35], comp[38]));
 	}
 
 	TEST(AdvancedAliasAnalysis, PointerRefConversion) {

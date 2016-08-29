@@ -140,19 +140,21 @@ namespace analysis {
 	template <typename Backend>
 	class ActualTest {
 
+		typename Backend::context_type ctxt;
+
 		private:
 
 		// alias
 		bool areAlias(const core::ExpressionAddress& x, const core::ExpressionAddress& y) {
-			return insieme::analysis::areAlias<Backend>(x, y);
+			return insieme::analysis::areAlias<Backend>(ctxt, x, y);
 		}
 
 		bool mayAlias(const core::ExpressionAddress& x, const core::ExpressionAddress& y) {
-			return insieme::analysis::mayAlias<Backend>(x, y);
+			return insieme::analysis::mayAlias<Backend>(ctxt, x, y);
 		}
 
 		bool notAlias(const core::ExpressionAddress& x, const core::ExpressionAddress& y) {
-			return insieme::analysis::notAlias<Backend>(x, y);
+			return insieme::analysis::notAlias<Backend>(ctxt, x, y);
 		}
 
 		// boolean
@@ -186,7 +188,7 @@ namespace analysis {
 		}
 
 		ArithmeticSet getValue(const core::ExpressionAddress& x) {
-			return insieme::analysis::getArithmeticValue<Backend>(x);
+			return insieme::analysis::getArithmeticValue<Backend>(ctxt, x);
 		}
 
 	public:

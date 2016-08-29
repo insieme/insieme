@@ -35,7 +35,7 @@ set(LUAJIT_VERSION 2.0.3)
 set(GTEST_VERSION 1.7.0)
 
 #BOOST - used everywhere except for runtime...
-set(BOOST_VERSION 1.50.0)
+set(BOOST_VERSION 1.59.0)
 
 #BISON - used in core
 set(BISON_VERSION 3.0.0)
