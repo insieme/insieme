@@ -36,50 +36,50 @@
 
 #pragma once
 
+#include <map>
+
 #include "insieme/core/ir_address.h"
-#include "insieme/analysis/datalog/context.h"
 
 namespace insieme {
 namespace analysis {
-namespace datalog {
+namespace haskell {
 
-	/**
-	 * Determines whether the two given expressions may reference the same object.
-	 * Both expression addresses need to be rooted by the same node.
-	 *
-	 * @param c an analysis context for cached values (for performance)
-	 * @param a the first expression
-	 * @param b the second expression
-	 * @return true if they may reference the same object, false otherwise
-	 */
-	bool mayAlias(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+	typedef void* StablePtr;
+	typedef void* HaskellNodeAddress;
 
-	/**
-	 * Determines whether the two given expressions are for sure referencing the same object.
-	 * Both expression addresses need to be rooted by the same node.
-	 *
-	 * @param c an analysis context for cached values (for performance)
-	 * @param a the first expression
-	 * @param b the second expression
-	 * @return true if they are referencing the same object, otherwise false
-	 */
-	bool areAlias(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+	class Context {
 
-	/**
-	 * Determines whether the two given expressions do certainly NOT reference the same object.
-	 * Both expression addresses need to be rooted by the same node.
-	 * Hint: This is the converse of 'mayAlias'
-	 *
-	 * @param c an analysis context for cached values (for performance)
-	 * @param a the first expression
-	 * @param b the second expression
-	 * @return true if they certainly do not reference the same object, false otherwise
-	 */
-	bool notAlias(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-		return !mayAlias(c, a, b);
-	}
+		StablePtr context_hs;
 
+		core::NodePtr root;
 
-} // end namespace datalog
+		std::map<core::NodeAddress, HaskellNodeAddress> addresses;
+
+	  public:
+
+		Context();
+		Context(const core::NodePtr& node);
+		~Context();
+
+		// move semantics
+		Context(const Context& other) = delete;
+		Context(Context&& other) = default;
+
+		Context& operator=(const Context& other) = delete;
+		Context& operator=(Context&& other) = default;
+
+		void setRoot(const core::NodePtr&);
+		core::NodePtr getRoot() const;
+
+		HaskellNodeAddress resolveNodeAddress(const core::NodeAddress& addr);
+		core::NodeAddress resolveNodeAddress(const HaskellNodeAddress& addr);
+
+	  private:
+
+		void clear();
+
+	};
+
+} // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme

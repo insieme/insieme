@@ -39,6 +39,8 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
 
+#include "insieme/analysis/datalog/context.h"
+
 namespace insieme {
 namespace analysis {
 namespace datalog {

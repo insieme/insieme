@@ -37,29 +37,17 @@
 #pragma once
 
 #include "insieme/core/ir_address.h"
-#include "insieme/analysis/common/arithmetic_set.h"
+#include "insieme/analysis/haskell/context.h"
 
 namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var);
+	bool areAlias(Context&, const core::ExpressionAddress& x, const core::ExpressionAddress& y);
 
-	bool isTrue(const core::ExpressionAddress& expr);
+	bool mayAlias(Context&, const core::ExpressionAddress& x, const core::ExpressionAddress& y);
 
-	bool isFalse(const core::ExpressionAddress& expr);
-
-	bool mayBeTrue(const core::ExpressionAddress& expr);
-
-	bool mayBeFalse(const core::ExpressionAddress& expr);
-
-	bool areAlias(const core::ExpressionAddress& x, const core::ExpressionAddress& y);
-
-	bool mayAlias(const core::ExpressionAddress& x, const core::ExpressionAddress& y);
-
-	bool notAlias(const core::ExpressionAddress& x, const core::ExpressionAddress& y);
-
-	ArithmeticSet getArithmeticValue(const core::ExpressionAddress& expr);
+	bool notAlias(Context&, const core::ExpressionAddress& x, const core::ExpressionAddress& y);
 
 } // end namespace haskell
 } // end namespace analysis

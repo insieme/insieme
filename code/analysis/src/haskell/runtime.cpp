@@ -34,29 +34,30 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
 
-#include "insieme/analysis/haskell_interface.h"
-#include "insieme/analysis/haskell/code_properties.h"
+extern "C" {
 
-#include "../common/definition_point_test.inc"
+	// Haskell Runtime
+	void hs_init(int, char*[]);
+	void hs_exit(void);
+
+}
 
 namespace insieme {
 namespace analysis {
+namespace haskell {
 
-	template<>
-	struct getDefinitionPointImpl<HaskellEngine> {
-		haskell::Context ctxt;
-		core::VariableAddress operator()(const core::VariableAddress& var) {
-			return haskell::getDefinitionPoint(ctxt,var);
-		}
-	};
+	// ------------------------------------------------------------ Runtime
+	// Apparently GHC does no longer support calling `hs_exit` from a destructor.
+	// Because of this the runtime is initialized and de-initialized by the static
+	// instance `rt` of this class.
+	class Runtime {
+	  public:
+		Runtime() { hs_init(0, nullptr); }
 
-	/**
-	 * Run the definition point tests using the haskell backend.
-	 */
-	INSTANTIATE_TYPED_TEST_CASE_P(Haskell, DefinitionPoint, HaskellEngine);
+		~Runtime() { hs_exit(); }
+	} rt;
 
+} // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme
-

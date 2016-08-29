@@ -37,19 +37,20 @@
 #pragma once
 
 #include "insieme/core/ir_address.h"
+#include "insieme/analysis/datalog/context.h"
 
 namespace insieme {
 namespace analysis {
 namespace datalog {
 
 
-	bool isTrue(const core::ExpressionAddress& expr);
+	bool isTrue(Context&, const core::ExpressionAddress& expr);
 
-	bool isFalse(const core::ExpressionAddress& expr);
+	bool isFalse(Context&, const core::ExpressionAddress& expr);
 
-	bool mayBeTrue(const core::ExpressionAddress& expr);
+	bool mayBeTrue(Context&, const core::ExpressionAddress& expr);
 
-	bool mayBeFalse(const core::ExpressionAddress& expr);
+	bool mayBeFalse(Context&, const core::ExpressionAddress& expr);
 
 
 } // end namespace datalog

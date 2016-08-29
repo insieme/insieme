@@ -36,7 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/haskell/adapter.h"
+#include "insieme/analysis/haskell/context.h"
+#include "insieme/analysis/haskell/code_properties.h"
 
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/dump/binary_dump.h"
@@ -94,7 +95,7 @@ namespace haskell {
 		StatementAddress addrVar = addrRoot[2];
 		EXPECT_TRUE(addrVar.isa<VariableAddress>());
 
-		VariableAddress def = ctx.getDefinitionPoint(addrVar.as<VariableAddress>());
+		VariableAddress def = getDefinitionPoint(ctx,addrVar.as<VariableAddress>());
 		EXPECT_TRUE(def);
 		EXPECT_EQ(addrRoot[0].as<DeclarationStmtAddress>().getVariable(), def);
 	}

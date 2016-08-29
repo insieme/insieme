@@ -39,23 +39,25 @@
 #include "insieme/analysis/common/integer_set.h"
 #include "insieme/core/ir_expressions.h"
 
+#include "insieme/analysis/datalog/context.h"
+
 namespace insieme {
 namespace analysis {
 namespace datalog {
 
-	IntegerSet getIntegerValues(const core::ExpressionAddress&);
+	IntegerSet getIntegerValues(Context&, const core::ExpressionAddress&);
 
-	bool isIntegerConstant(const core::ExpressionAddress&);
+	bool isIntegerConstant(Context&, const core::ExpressionAddress&);
 
 	namespace integer {
 
-		bool areEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+		bool areEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
 
-		bool mayEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+		bool mayEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
 
-		bool areNotEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+		bool areNotEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
 
-		bool mayNotEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+		bool mayNotEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
 
 	}
 

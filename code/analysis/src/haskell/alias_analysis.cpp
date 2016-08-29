@@ -34,50 +34,44 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/analysis/haskell/alias_analysis.h"
 
-#include "insieme/analysis/common/arithmetic_set.h"
+extern "C" {
 
-#include "insieme/core/ir_address.h"
+	namespace hat = insieme::analysis::haskell;
 
-#include <memory>
+	// Analysis
+	int hat_check_alias(const hat::HaskellNodeAddress x_hs, const hat::HaskellNodeAddress y_hs);
+
+}
 
 namespace insieme {
 namespace analysis {
 namespace haskell {
 
+	using namespace insieme::core;
+
+
 	#include "alias_analysis.h"
-	#include "boolean_analysis.h"
 
-	typedef void* StablePtr;
+	AliasAnalysisResult checkAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
+		auto x_hs = ctxt.resolveNodeAddress(x);
+		auto y_hs = ctxt.resolveNodeAddress(y);
+		return static_cast<AliasAnalysisResult>(hat_check_alias(x_hs, y_hs));
+	}
 
-	class Context {
-		StablePtr context_hs;
 
-		core::NodePtr root;
+	bool areAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
+		return checkAlias(ctxt, x, y) == AliasAnalysisResult_AreAlias;
+	}
 
-		std::map<const core::NodeAddress, StablePtr> addresses;
+	bool mayAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
+		return checkAlias(ctxt, x, y) != AliasAnalysisResult_NotAlias;
+	}
 
-	  public:
-		explicit Context(core::NodePtr root);
-		~Context();
-
-		// move semantics
-		Context(Context&& other);
-		Context& operator=(Context&& other);
-
-		core::NodePtr getRoot() const;
-
-		// analysis
-		core::VariableAddress getDefinitionPoint(const core::VariableAddress& var);
-		BooleanAnalysisResult checkBoolean(const core::ExpressionAddress& expr);
-		AliasAnalysisResult checkAlias(const core::ExpressionAddress& x, const core::ExpressionAddress& y);
-		ArithmeticSet arithmeticValue(const core::ExpressionAddress& expr);
-
-	  private:
-		StablePtr addNodeAddress(const core::NodeAddress& addr);
-		core::NodeAddress getNodeAddress(StablePtr addr) const;
-	};
+	bool notAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
+		return checkAlias(ctxt, x, y) == AliasAnalysisResult_NotAlias;
+	}
 
 } // end namespace haskell
 } // end namespace analysis

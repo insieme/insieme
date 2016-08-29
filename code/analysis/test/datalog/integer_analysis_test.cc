@@ -107,7 +107,8 @@ namespace datalog {
 		auto expr = getBuilder().parseExpr(code, symbols);
 //		std::cout << *expr << "\n";
 //		std::cout << dumpText(expr) << "\n";
-		return getIntegerValues(ExpressionAddress(expr));
+		datalog::Context ctxt;
+		return getIntegerValues(ctxt,ExpressionAddress(expr));
 	}
 
 

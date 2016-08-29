@@ -46,7 +46,7 @@ namespace insieme {
 namespace analysis {
 namespace datalog {
 
-	IntegerSet getIntegerValues(const core::ExpressionAddress& expr) {
+	IntegerSet getIntegerValues(Context&, const core::ExpressionAddress& expr) {
 		const bool debug = false;
 
 		// instantiate the analysis
@@ -92,30 +92,30 @@ namespace datalog {
 		return res;
 	}
 
-	bool isIntegerConstant(const core::ExpressionAddress& expr) {
-		return getIntegerValues(expr).size() == 1;
+	bool isIntegerConstant(Context& c, const core::ExpressionAddress& expr) {
+		return getIntegerValues(c, expr).size() == 1;
 	}
 
 
 
 	namespace integer {
 
-		bool areEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+		bool areEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
 			assert_not_implemented();
 			return false;
 		}
 
-		bool mayEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+		bool mayEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
 			assert_not_implemented();
 			return false;
 		}
 
-		bool areNotEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+		bool areNotEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
 			assert_not_implemented();
 			return false;
 		}
 
-		bool mayNotEqual(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+		bool mayNotEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
 			assert_not_implemented();
 			return false;
 		}

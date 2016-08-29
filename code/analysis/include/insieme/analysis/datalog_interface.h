@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/analysis/cba_interface.h"
+#include "insieme/analysis/datalog/context.h"
 #include "insieme/analysis/datalog/alias_analysis.h"
 #include "insieme/analysis/datalog/boolean_analysis.h"
 #include "insieme/analysis/datalog/code_properties.h"
@@ -48,7 +49,7 @@ namespace analysis {
 	/*
 	 * Create a type for this backend
 	 */
-	struct DatalogEngine {};
+	struct DatalogEngine : public analysis_engine<datalog::Context> {};
 
 
 	// --- Alias Analysis ---

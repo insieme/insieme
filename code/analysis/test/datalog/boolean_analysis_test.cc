@@ -58,7 +58,8 @@ namespace analysis {
 
 		auto analyse = [&](const std::string& code) {
 			auto expr = builder.parseExpr(code);
-			datalog::isFalse(ExpressionAddress(expr));
+			datalog::Context ctxt;
+			datalog::isFalse(ctxt, ExpressionAddress(expr));
 		};
 
 		{

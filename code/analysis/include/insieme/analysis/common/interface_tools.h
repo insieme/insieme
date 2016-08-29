@@ -45,6 +45,18 @@ namespace analysis {
 
 	// -----------------------------------------------------------------------------------------------------------
 
+
+	/**
+	 * A base class for all analysis engines.
+	 */
+	template<typename Ctxt>
+	struct analysis_engine {
+		using context_type = Ctxt;
+	};
+
+
+	// -----------------------------------------------------------------------------------------------------------
+
 	// some internal constructs for creating the facade
 	namespace detail {
 
@@ -52,22 +64,30 @@ namespace analysis {
 		template<typename Res, typename ... Args>
 		struct analysis_type {
 
-			// the signature of an implementing function
-			using fun_type = Res(*)(const Args&...);
+			// a utility struct for adding backend information
+			template<typename Backend>
+			struct by {
 
-			// a utility struct for generating wrapper and dispatcher functions
-			template<fun_type impl>
-			struct with {
+				// the context type to be used by this backend
+				using ctxt_type = typename Backend::context_type;
 
-				// mark this analysis as being available
-				enum { available = true };
+				// the signature of an implementing function
+				using fun_type = Res(*)(ctxt_type&, const Args&...);
 
-				// run the analysis
-				Res operator()(const Args& ... args) const {
-					return (*impl)(args...);
-				}
+				// a utility struct for generating wrapper and dispatcher functions
+				template<fun_type impl>
+				struct with {
+
+					// mark this analysis as being available
+					enum { available = true };
+
+					// run the analysis
+					Res operator()(ctxt_type& ctxt, const Args& ... args) const {
+						return (*impl)(ctxt, args...);
+					}
+				};
+
 			};
-
 		};
 
 		/**
@@ -89,23 +109,15 @@ namespace analysis {
 	 */
 	#define declare_analysis( NAME, RESULT, ... ) \
 		namespace detail { struct NAME##_Analysis : public analysis_type<RESULT,__VA_ARGS__> {}; } \
+		template<typename Backend, typename ... Args> RESULT NAME(typename Backend::context_type& ctxt, const Args& ... args) { \
+			static_assert(detail::analysis_binding<detail::NAME##_Analysis,Backend>::available, "The analysis " #NAME " is not available for the selected backend!"); \
+			return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(ctxt,args...); \
+		} \
 		template<typename Backend, typename ... Args> RESULT NAME(const Args& ... args) { \
-			static_assert(detail::analysis_binding<detail::NAME##_Analysis,Backend>::available, "The analysis " #NAME " is not available for the selected backend!"); \
-			return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(args...); \
+			typename Backend::context_type ctxt; \
+			return NAME<Backend>(ctxt, args... ); \
 		}
 
-
-	/**
-	 * A macro to declare an analysis with no arguments
-	 * @param NAME the name of the analysis
-	 * @param RESULT the type of result produced by the analysis
-	 */
-	#define declare_analysis_0( NAME, RESULT ) \
-		namespace detail { struct NAME##_Analysis : public analysis_type<RESULT> {}; } \
-		template<typename Backend> RESULT NAME() { \
-			static_assert(detail::analysis_binding<detail::NAME##_Analysis,Backend>::available, "The analysis " #NAME " is not available for the selected backend!"); \
-			return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(); \
-		}
 
 	/**
 	 * A macro to declare an analysis with one argument
@@ -115,9 +127,13 @@ namespace analysis {
 	 */
 	#define declare_analysis_1( NAME, RESULT , A1 ) \
 		namespace detail { struct NAME##_Analysis : public analysis_type<RESULT,A1> {}; } \
-		template<typename Backend> RESULT NAME(const A1& a) { \
+		template<typename Backend> RESULT NAME(typename Backend::context_type& ctxt, const A1& a) { \
 			static_assert(detail::analysis_binding<detail::NAME##_Analysis,Backend>::available, "The analysis " #NAME " is not available for the selected backend!"); \
-			return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(a); \
+			return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(ctxt,a); \
+		} \
+		template<typename Backend> RESULT NAME(const A1& a) { \
+			typename Backend::context_type ctxt; \
+			return NAME<Backend>(ctxt, a); \
 		}
 
 	/**
@@ -129,9 +145,13 @@ namespace analysis {
 	 */
 	#define declare_analysis_2( NAME, RESULT , A1 , A2 ) \
 		namespace detail { struct NAME##_Analysis : public analysis_type<RESULT,A1,A2> {}; } \
-		template<typename Backend> RESULT NAME(const A1& a, const A2& b) { \
+		template<typename Backend> RESULT NAME(typename Backend::context_type& ctxt, const A1& a, const A2& b) { \
 			static_assert(detail::analysis_binding<detail::NAME##_Analysis,Backend>::available, "The analysis " #NAME " is not available for the selected backend!"); \
-			return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(a,b); \
+			return detail::analysis_binding<detail::NAME##_Analysis,Backend>()(ctxt,a,b); \
+		} \
+		template<typename Backend> RESULT NAME(const A1& a, const A2& b) { \
+			typename Backend::context_type ctxt; \
+			return NAME<Backend>(ctxt, a, b); \
 		}
 
 
@@ -142,7 +162,7 @@ namespace analysis {
 	 * @param FUNCTION the function implementing the analysis
 	 */
 	#define register_analysis_implementation( BACKEND, NAME, FUNCTION ) \
-		namespace detail { template<> struct analysis_binding<NAME##_Analysis,BACKEND> : public NAME##_Analysis::template with<FUNCTION> {}; }
+		namespace detail { template<> struct analysis_binding<NAME##_Analysis,BACKEND> : public NAME##_Analysis::template by<BACKEND>::template with<FUNCTION> {}; }
 
 
 } // end of namespace analysis

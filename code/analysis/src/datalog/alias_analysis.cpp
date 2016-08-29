@@ -97,7 +97,7 @@ namespace datalog {
 	}
 
 
-	bool mayAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+	bool mayAlias(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
 		auto data = getReferencedLocations({ a, b });
 		/* Note: Removing the asserts because they may wrongly report failures if there's dead code */
 		// assert_false(data[a].empty()) << "Failure in analysis!";
@@ -108,7 +108,7 @@ namespace datalog {
 		return false;
 	}
 
-	bool areAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+	bool areAlias(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
 		auto data = getReferencedLocations({ a, b });
 		/* Note: Removing the asserts because they may wrongly report failures if there's dead code */
 		// assert_false(data[a].empty()) << "Failure in analysis!";

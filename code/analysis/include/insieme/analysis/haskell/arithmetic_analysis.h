@@ -37,49 +37,16 @@
 #pragma once
 
 #include "insieme/core/ir_address.h"
-#include "insieme/analysis/datalog/context.h"
+
+#include "insieme/analysis/common/arithmetic_set.h"
+#include "insieme/analysis/haskell/context.h"
 
 namespace insieme {
 namespace analysis {
-namespace datalog {
+namespace haskell {
 
-	/**
-	 * Determines whether the two given expressions may reference the same object.
-	 * Both expression addresses need to be rooted by the same node.
-	 *
-	 * @param c an analysis context for cached values (for performance)
-	 * @param a the first expression
-	 * @param b the second expression
-	 * @return true if they may reference the same object, false otherwise
-	 */
-	bool mayAlias(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+	ArithmeticSet getArithmeticValue(Context&, const core::ExpressionAddress& expr);
 
-	/**
-	 * Determines whether the two given expressions are for sure referencing the same object.
-	 * Both expression addresses need to be rooted by the same node.
-	 *
-	 * @param c an analysis context for cached values (for performance)
-	 * @param a the first expression
-	 * @param b the second expression
-	 * @return true if they are referencing the same object, otherwise false
-	 */
-	bool areAlias(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
-
-	/**
-	 * Determines whether the two given expressions do certainly NOT reference the same object.
-	 * Both expression addresses need to be rooted by the same node.
-	 * Hint: This is the converse of 'mayAlias'
-	 *
-	 * @param c an analysis context for cached values (for performance)
-	 * @param a the first expression
-	 * @param b the second expression
-	 * @return true if they certainly do not reference the same object, false otherwise
-	 */
-	bool notAlias(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-		return !mayAlias(c, a, b);
-	}
-
-
-} // end namespace datalog
+} // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme

@@ -37,7 +37,11 @@
 #pragma once
 
 #include "insieme/analysis/cba_interface.h"
-#include "insieme/analysis/haskell/dataflow.h"
+#include "insieme/analysis/haskell/context.h"
+
+#include "insieme/analysis/haskell/alias_analysis.h"
+#include "insieme/analysis/haskell/arithmetic_analysis.h"
+#include "insieme/analysis/haskell/boolean_analysis.h"
 
 namespace insieme {
 namespace analysis {
@@ -45,7 +49,7 @@ namespace analysis {
 	/*
 	 * Create a type for this backend.
 	 */
-	struct HaskellEngine {};
+	struct HaskellEngine : public analysis_engine<haskell::Context> {};
 
 	// --- Alias Analysis ---
 

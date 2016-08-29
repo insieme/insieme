@@ -34,71 +34,50 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/haskell/dataflow.h"
+#include "insieme/analysis/haskell/boolean_analysis.h"
+#include "insieme/analysis/common/failure.h"
 
-#include "insieme/analysis/haskell/adapter.h"
+extern "C" {
 
-#include "insieme/utils/assert.h"
+	namespace hat = insieme::analysis::haskell;
 
-using namespace insieme::core;
+	// Analysis
+	int hat_check_boolean(const hat::HaskellNodeAddress expr_hs);
+
+}
 
 namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	VariableAddress getDefinitionPoint(const VariableAddress& var) {
-		Context ctx(var.getRootNode());
-		return ctx.getDefinitionPoint(var);
-	}
+	#include "boolean_analysis.h"
 
-	namespace {
-		BooleanAnalysisResult checkBoolean(const ExpressionAddress& expr) {
-			Context ctx(expr.getRootNode());
-			return ctx.checkBoolean(expr);
+	BooleanAnalysisResult checkBoolean(Context& ctxt, const core::ExpressionAddress& expr) {
+		auto expr_hs = ctxt.resolveNodeAddress(expr);
+		auto res = static_cast<BooleanAnalysisResult>(hat_check_boolean(expr_hs));
+		if(res == BooleanAnalysisResult_Neither) {
+			std::vector<std::string> msgs{"Boolean Analysis Error"};
+			throw AnalysisFailure(msgs);
 		}
+		return res;
 	}
 
-	bool isTrue(const core::ExpressionAddress& expr) {
-		return checkBoolean(expr) == BooleanAnalysisResult_AlwaysTrue;
+	bool isTrue(Context& ctxt, const core::ExpressionAddress& expr) {
+		return checkBoolean(ctxt, expr) == BooleanAnalysisResult_AlwaysTrue;
 	}
 
-	bool isFalse(const core::ExpressionAddress& expr) {
-		return checkBoolean(expr) == BooleanAnalysisResult_AlwaysFalse;
+	bool isFalse(Context& ctxt, const core::ExpressionAddress& expr) {
+		return checkBoolean(ctxt, expr) == BooleanAnalysisResult_AlwaysFalse;
 	}
 
-	bool mayBeTrue(const core::ExpressionAddress& expr) {
-		auto res = checkBoolean(expr);
+	bool mayBeTrue(Context& ctxt, const core::ExpressionAddress& expr) {
+		auto res = checkBoolean(ctxt, expr);
 		return res == BooleanAnalysisResult_AlwaysTrue || res == BooleanAnalysisResult_Both;
 	}
 
-	bool mayBeFalse(const core::ExpressionAddress& expr) {
-		auto res = checkBoolean(expr);
+	bool mayBeFalse(Context& ctxt, const core::ExpressionAddress& expr) {
+		auto res = checkBoolean(ctxt, expr);
 		return res == BooleanAnalysisResult_AlwaysFalse || res == BooleanAnalysisResult_Both;
-	}
-
-	namespace {
-		AliasAnalysisResult checkAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
-			assert_eq(x.getRootNode(), y.getRootNode());
-			Context ctx(x.getRootNode());
-			return ctx.checkAlias(x, y);
-		}
-	}
-
-	bool areAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
-		return checkAlias(x, y) == AliasAnalysisResult_AreAlias;
-	}
-
-	bool mayAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
-		return checkAlias(x, y) != AliasAnalysisResult_NotAlias;
-	}
-
-	bool notAlias(const ExpressionAddress& x, const ExpressionAddress& y) {
-		return checkAlias(x, y) == AliasAnalysisResult_NotAlias;
-	}
-
-	ArithmeticSet getArithmeticValue(const core::ExpressionAddress& expr) {
-		Context ctx(expr.getRootNode());
-		return ctx.arithmeticValue(expr);
 	}
 
 } // end namespace haskell

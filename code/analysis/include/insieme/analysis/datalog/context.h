@@ -34,78 +34,18 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/datalog/boolean_analysis.h"
-
-#include "insieme/analysis/datalog/framework/analysis_base.h"
-
-#include "souffle/gen/boolean_analysis.h"
+#pragma once
 
 namespace insieme {
 namespace analysis {
 namespace datalog {
 
-	enum Result {
-		TRUE,
-		FALSE,
-		TRUE_OR_FALSE
+	/**
+	 * The context for datalog analysis.
+	 */
+	class Context {
+		// empty so far
 	};
-
-	Result getBoolValue(Context&, const core::ExpressionAddress& expr) {
-		const bool debug = false;
-
-		// instantiate the analysis
-		souffle::Sf_boolean_analysis analysis;
-
-		int targetID = 0;
-
-		// fill in facts
-		framework::extractAddressFacts(analysis, expr.getRootNode(), [&](const core::NodeAddress& addr, int id) {
-			if (addr == expr) targetID = id;
-		});
-
-		// add targeted node
-		analysis.rel_target_expr.insert(targetID);
-
-		// print debug information
-		if (debug) analysis.dumpInputs();
-
-		// run analysis
-		analysis.run();
-
-		// print debug information
-		if (debug) analysis.dumpOutputs();
-
-		// check for failures in analysis
-		framework::checkForFailures(analysis);
-
-		// read result
-		auto& result = analysis.rel_result;
-		assert_le(1, result.size()) << "Incomplete analysis!";
-
-		// if it is true or false => we don't know
-		if (result.size() != 1) return TRUE_OR_FALSE;
-
-		// read the single entry in the result set
-		auto value = (*result.begin())[0];
-		return (value) ? TRUE : FALSE;
-	}
-
-
-	bool isTrue(Context& c, const core::ExpressionAddress& expr) {
-		return getBoolValue(c,expr) == TRUE;
-	}
-
-	bool isFalse(Context& c, const core::ExpressionAddress& expr) {
-		return getBoolValue(c,expr) == FALSE;
-	}
-
-	bool mayBeTrue(Context& c, const core::ExpressionAddress& expr) {
-		return getBoolValue(c,expr) != FALSE;
-	}
-
-	bool mayBeFalse(Context& c, const core::ExpressionAddress& expr) {
-		return getBoolValue(c,expr) != TRUE;
-	}
 
 } // end namespace datalog
 } // end namespace analysis

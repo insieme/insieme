@@ -34,29 +34,27 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
-
-#include "insieme/analysis/haskell_interface.h"
 #include "insieme/analysis/haskell/code_properties.h"
 
-#include "../common/definition_point_test.inc"
+extern "C" {
+
+	namespace hat = insieme::analysis::haskell;
+
+	// Analysis
+	hat::HaskellNodeAddress hat_find_declaration(const hat::HaskellNodeAddress var_hs);
+
+}
 
 namespace insieme {
 namespace analysis {
+namespace haskell {
 
-	template<>
-	struct getDefinitionPointImpl<HaskellEngine> {
-		haskell::Context ctxt;
-		core::VariableAddress operator()(const core::VariableAddress& var) {
-			return haskell::getDefinitionPoint(ctxt,var);
-		}
-	};
+	core::VariableAddress getDefinitionPoint(Context& ctxt, const core::VariableAddress& var) {
+		auto var_hs = ctxt.resolveNodeAddress(var);
+		auto def = hat_find_declaration(var_hs);
+		return ctxt.resolveNodeAddress(def).as<core::VariableAddress>();
+	}
 
-	/**
-	 * Run the definition point tests using the haskell backend.
-	 */
-	INSTANTIATE_TYPED_TEST_CASE_P(Haskell, DefinitionPoint, HaskellEngine);
-
+} // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme
-
