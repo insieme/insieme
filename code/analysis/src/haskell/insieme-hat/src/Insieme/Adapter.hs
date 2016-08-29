@@ -71,8 +71,8 @@ foreign export ccall "hat_freeStablePtr"
 initializeContext :: Ctx.CContext -> CString -> CSize -> IO (StablePtr Ctx.Context)
 initializeContext context_c dump_c size_c = do
     dump <- BS8.packCStringLen (dump_c, fromIntegral size_c)
-    let Right (tree, builtins) = BinPar.parseBinaryDump dump
-    newStablePtr $ Ctx.mkContext context_c tree builtins
+    let Right ir = BinPar.parseBinaryDump dump
+    newStablePtr $ Ctx.mkContext context_c ir
 
 foreign export ccall "hat_initialize_context"
     initializeContext :: Ctx.CContext -> CString -> CSize
@@ -83,7 +83,7 @@ mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize
 mkNodeAddress ctx_hs path_c length_c = do
     ctx  <- deRefStablePtr ctx_hs
     path <- peekArray (fromIntegral length_c) path_c
-    newStablePtr $ Addr.mkNodeAddress (fromIntegral <$> path) ctx
+    newStablePtr $ Addr.mkNodeAddress (fromIntegral <$> path) (Ctx.getInspire ctx)
 
 foreign export ccall "hat_mk_node_address"
     mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize

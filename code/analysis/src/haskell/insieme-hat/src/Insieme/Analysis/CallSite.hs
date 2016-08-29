@@ -104,7 +104,7 @@ callSites addr = case getNode addr of
     var = Solver.mkVariable id [con] Solver.bot
     con = Solver.createConstraint dep val var
 
-    allCalls = foldTree collector (getContext addr)
+    allCalls = foldTree collector (getInspire addr)
     collector a calls = case getNode a of
         Node IR.CallExpr _  -> a : calls
         _                   -> calls

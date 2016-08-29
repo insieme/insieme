@@ -44,7 +44,6 @@ import qualified Data.ByteString as BS
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Reference as Ref
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
@@ -59,11 +58,9 @@ main = do
     dump <- BS.getContents
 
     -- run parser
-    let Right (tree, builtins) = BinPar.parseBinaryDump dump
+    let Right ir = BinPar.parseBinaryDump dump
 
-    let ctx = Ctx.mkDummyContext tree builtins
-
-    let res = Utils.foldTree go ctx
+    let res = Utils.foldTree go ir
 
     print $ length $ filter (=='e') res
     print $ length $ filter (=='u') res
