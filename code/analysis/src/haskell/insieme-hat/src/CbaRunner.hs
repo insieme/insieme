@@ -95,7 +95,7 @@ findAnalysis addr acc =
         Node IR.CallExpr (_:Node IR.Literal [_, Node (IR.StringValue s ) _]:_) | isPrefixOf "IMP_cba_expect" s -> AnalysisRun addr s (analysis s) : acc
         _ -> acc
   where
-    resolve a = ComposedValue.toValue . Solver.resolve . a
+    resolve a = ComposedValue.toValue . fst . (Solver.resolve Solver.initState) . a
 
     res_boolean = resolve AnBoolean.booleanValue $ Addr.goDown 2 addr
 

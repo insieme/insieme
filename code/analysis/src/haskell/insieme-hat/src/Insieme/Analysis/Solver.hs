@@ -65,6 +65,11 @@ module Insieme.Analysis.Solver (
     get,
     set,
 
+    -- solver state
+    SolverState,
+    initState,
+    assignment,
+
     -- solver
     resolve,
     resolveAll,
@@ -244,89 +249,6 @@ set :: (Typeable a) => Assignment -> TypedVar a -> a -> Assignment
 set (Assignment a) (TypedVar v) d = Assignment (Map.insert v (toDyn d) a)
 
 
--- Debugging --
-
--- prints the current assignment as a graph
-toDotGraph :: Assignment -> Set.Set Var -> String
-toDotGraph a@( Assignment m ) varSet = "digraph G {\n\t"
-        ++
-        "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
-        ++
-        -- define nodes
-        ( intercalate "\n\t" ( map (\v -> "v" ++ (show $ fst v ) ++ " [label=\"" ++ (show $ snd v) ++ " = " ++ (valuePrint (snd v) a) ++ "\"];" ) vars ) )
-        ++
-        "\n\t"
-        ++
-        -- define edges
-        ( intercalate "\n\t" ( map (\d -> "v" ++ (show $ fst d) ++ " -> v" ++ (show $ snd d) ++ ";" ) deps ) )
-        ++
-        "\n}"
-    where
-
-        -- a function collecting all variables a variable is depending on
-        dep v = foldr (\c l -> (dependingOn c a) ++ l) [] (constraints v)
-
-        -- list of all keys in map
-        keys = Map.keys m
-
-        -- list of all variables in the analysis
-        allVars = Set.toList $ varSet
-
-        -- the keys (=variables) associated with an index
-        vars = Prelude.zip [1..] allVars
-
-        -- a reverse lookup map for vars
-        rev = Map.fromList $ map swap vars
-
-        -- a lookup function for rev
-        index v = fromMaybe 0 $ Map.lookup v rev
-
-        -- computes the list of dependencies
-        deps = foldr go [] vars
-            where
-                go = (\v l -> (foldr (\s l -> (fst v, index s) : l ) [] (dep $ snd v )) ++ l)
-
-
--- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
-dumpSolverState :: Assignment -> Set.Set Var -> String -> String
-dumpSolverState a v file = unsafePerformIO $ do
-         writeFile (file ++ ".dot") $ toDotGraph a v
-         system ("dot -Tpdf " ++ file ++ ".dot -o " ++ file ++ ".pdf")
-         return ("Dumped assignment into file " ++ file ++ ".pdf!")
-
-
-toJsonMetaFile :: Assignment -> Set.Set Var -> String
-toJsonMetaFile a@( Assignment m ) vars = "{\n"
-        ++
-        "    \"bodies\": {\n"
-        ++
-        ( intercalate ",\n" ( map print $ Map.toList store ) )
-        ++
-        "\n    }\n}"
-    where
-
-        addr = address . index
-
-        store = foldr go Map.empty vars
-            where
-                go v m = Map.insert k (msg : Map.findWithDefault [] k m) m
-                    where
-                        k = (addr v)
-                        i = index v
-                        ext = if null . extra $ i then "" else '/' : extra i
-                        msg = (show . analysis $ i) ++ ext ++
-                            " = " ++ (valuePrint v a)
-
-        print (a,ms) = "      \"" ++ (show a) ++ "\" : \"" ++ ( intercalate "<br>" ms) ++ "\""
-
-
-
-dumpToJsonFile :: Assignment -> Set.Set Var -> String -> String
-dumpToJsonFile a v file = unsafePerformIO $ do
-         writeFile (file ++ ".json") $ toJsonMetaFile a v
-         return ("Dumped assignment into file " ++ file ++ ".json!")
-
-
 -- Constraints ---------------------------------------------
 
 data Event =
@@ -347,6 +269,17 @@ data Constraint = Constraint {
 
 -- Solver ---------------------------------------------------
 
+-- a aggregation of the 'state' of a solver for incremental analysis
+
+data SolverState = SolverState {
+        assignment :: Assignment,
+        knownVariables :: Set.Set Var 
+        -- note: variable dependencies need not to be stored
+    } 
+
+initState = SolverState empty Set.empty
+
+
 -- a utility to maintain dependencies between variables
 data Dependencies = Dependencies (Map.Map Var (Set.Set Var))
         deriving Show
@@ -362,44 +295,46 @@ getDep (Dependencies d) v = fromMaybe Set.empty $ Map.lookup v d
 
 
 -- solve for a single value
-resolve :: (Lattice a) => TypedVar a -> a
-resolve tv = head $ resolveAll [tv]
+resolve :: (Lattice a) => SolverState -> TypedVar a -> (a,SolverState)
+resolve i tv = (r,s)
+    where
+        (l,s) = resolveAll i [tv]
+        r = head l
 
 
 -- solve for a list of variables
-resolveAll :: (Lattice a) => [TypedVar a] -> [a]
-resolveAll tvs = res <$> tvs
+resolveAll :: (Lattice a) => SolverState -> [TypedVar a] -> ([a],SolverState)
+resolveAll i tvs = (res <$> tvs,s)
     where
-        ass = solve empty (toVar <$> tvs)
+        s = solve i (toVar <$> tvs)
+        ass = assignment s 
         res = get ass
 
 
--- solve for a set of variables (with empty seed)
-solve :: Assignment -> [Var] -> Assignment
-solve init vs = solveStep init (Set.fromList vs) emptyDep vs
+-- solve for a set of variables
+solve :: SolverState -> [Var] -> SolverState
+solve init vs = solveStep (init {knownVariables = known_vars}) emptyDep vs
+    where
+        known_vars = Set.union (Set.fromList vs) (knownVariables init)  
 
 
 -- solve for a set of variables with an initial assignment
 -- (the variable list is the work list)
 -- Parameters:
---        current assignment
---        set of covered variables
+--        the current state (assignment and known variables)
 --        dependencies between variables
 --        work list
-solveStep :: Assignment -> Set.Set Var -> Dependencies -> [Var] -> Assignment
+solveStep :: SolverState -> Dependencies -> [Var] -> SolverState
 
--- debug solver state development
--- solveStep a k d wl | trace ("Step: " ++ (show wl) ++ " " ++ (show k) ++ " " ++ (show a) ++ " " ++ (show d)) False = (undefined :: Assignment)
--- solveStep a _ _ wl | trace ("Step: " ++ (show wl) ++ " " ++ (show a)) False = undefined
 
 -- empty work list
--- solveStep a v _ [] | trace (dumpToJsonFile a v "ass_meta") $ False = undefined                                        -- debugging assignment as meta-info for JSON dump
--- solveStep a v _ [] | trace (dumpSolverState a v "graph") $ False = undefined                                          -- debugging assignment as a graph plot
--- solveStep a v _ [] | trace (dumpSolverState a v "graph") $ trace (dumpToJsonFile a v "ass_meta") $ False = undefined  -- debugging both
-solveStep a _ _ [] = a                                                                                                   -- work list is empty
+-- solveStep s _ [] | trace (dumpToJsonFile s "ass_meta") $ False = undefined                                        -- debugging assignment as meta-info for JSON dump
+-- solveStep s _ [] | trace (dumpSolverState s "graph") $ False = undefined                                          -- debugging assignment as a graph plot
+-- solveStep s _ [] | trace (dumpSolverState s "graph") $ trace (dumpToJsonFile a v "ass_meta") $ False = undefined  -- debugging both
+solveStep s _ [] = s                                                                                                 -- work list is empty
 
 -- compute next element in work list
-solveStep a k d (v:vs) = solveStep resAss resKnown resDep ds
+solveStep (SolverState a k) d (v:vs) = solveStep (SolverState resAss resKnown) resDep ds
         where
                 -- each constraint extends the result, the dependencies, and the vars to update
                 (resAss,resKnown,resDep,ds) = foldr processConstraint (a,k,d,vs) ( constraints v )  -- update all constraints of current variable
@@ -450,3 +385,87 @@ constant x b = createConstraint (\_ -> []) (\a -> x) b
 
 
 --------------------------------------------------------------
+
+
+-- Debugging --
+
+-- prints the current assignment as a graph
+toDotGraph :: SolverState -> String
+toDotGraph (SolverState a@( Assignment m ) varSet) = "digraph G {\n\t"
+        ++
+        "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
+        ++
+        -- define nodes
+        ( intercalate "\n\t" ( map (\v -> "v" ++ (show $ fst v ) ++ " [label=\"" ++ (show $ snd v) ++ " = " ++ (valuePrint (snd v) a) ++ "\"];" ) vars ) )
+        ++
+        "\n\t"
+        ++
+        -- define edges
+        ( intercalate "\n\t" ( map (\d -> "v" ++ (show $ fst d) ++ " -> v" ++ (show $ snd d) ++ ";" ) deps ) )
+        ++
+        "\n}"
+    where
+
+        -- a function collecting all variables a variable is depending on
+        dep v = foldr (\c l -> (dependingOn c a) ++ l) [] (constraints v)
+
+        -- list of all keys in map
+        keys = Map.keys m
+
+        -- list of all variables in the analysis
+        allVars = Set.toList $ varSet
+
+        -- the keys (=variables) associated with an index
+        vars = Prelude.zip [1..] allVars
+
+        -- a reverse lookup map for vars
+        rev = Map.fromList $ map swap vars
+
+        -- a lookup function for rev
+        index v = fromMaybe 0 $ Map.lookup v rev
+
+        -- computes the list of dependencies
+        deps = foldr go [] vars
+            where
+                go = (\v l -> (foldr (\s l -> (fst v, index s) : l ) [] (dep $ snd v )) ++ l)
+
+
+-- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
+dumpSolverState :: SolverState -> String -> String
+dumpSolverState s file = unsafePerformIO $ do
+         writeFile (file ++ ".dot") $ toDotGraph s
+         system ("dot -Tpdf " ++ file ++ ".dot -o " ++ file ++ ".pdf")
+         return ("Dumped assignment into file " ++ file ++ ".pdf!")
+
+
+toJsonMetaFile :: SolverState -> String
+toJsonMetaFile (SolverState a@( Assignment m ) vars) = "{\n"
+        ++
+        "    \"bodies\": {\n"
+        ++
+        ( intercalate ",\n" ( map print $ Map.toList store ) )
+        ++
+        "\n    }\n}"
+    where
+
+        addr = address . index
+
+        store = foldr go Map.empty vars
+            where
+                go v m = Map.insert k (msg : Map.findWithDefault [] k m) m
+                    where
+                        k = (addr v)
+                        i = index v
+                        ext = if null . extra $ i then "" else '/' : extra i
+                        msg = (show . analysis $ i) ++ ext ++
+                            " = " ++ (valuePrint v a)
+
+        print (a,ms) = "      \"" ++ (show a) ++ "\" : \"" ++ ( intercalate "<br>" ms) ++ "\""
+
+
+
+dumpToJsonFile :: SolverState -> String -> String
+dumpToJsonFile s file = unsafePerformIO $ do
+         writeFile (file ++ ".json") $ toJsonMetaFile s
+         return ("Dumped assignment into file " ++ file ++ ".json!")
+

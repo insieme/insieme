@@ -122,8 +122,9 @@ foreign export ccall "hat_find_declaration"
 checkBoolean :: StablePtr Addr.NodeAddress -> IO (CInt)
 checkBoolean expr_hs = handleAll (return $ fromIntegral $ fromEnum AnBoolean.Both) $ do
     expr <- deRefStablePtr expr_hs
-    evaluate $ fromIntegral $ fromEnum $ ComposedValue.toValue
-             $ Solver.resolve $ AnBoolean.booleanValue expr
+    let (res,_) = Solver.resolve Solver.initState $ AnBoolean.booleanValue expr
+    evaluate $ fromIntegral $ fromEnum $ ComposedValue.toValue res
+            
 
 foreign export ccall "hat_check_boolean"
     checkBoolean :: StablePtr Addr.NodeAddress -> IO (CInt)
@@ -140,7 +141,8 @@ foreign export ccall "hat_check_alias"
 arithValue :: Ctx.CContext -> StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticSet)
 arithValue ctx_c expr_hs = do
     expr <- deRefStablePtr expr_hs
-    let results = ComposedValue.toValue $ Solver.resolve (Arith.arithmeticValue expr)
+    let (res,_) = Solver.resolve Solver.initState (Arith.arithmeticValue expr)
+    let results = ComposedValue.toValue res
     passFormulaSet ctx_c $ BSet.map (fmap SymbolicFormula.getAddr) results
 
 foreign export ccall "hat_arithmetic_value"

@@ -56,7 +56,9 @@ checkAlias x y = checkAlias' rx ry
   where
     -- here we determine the kind of filed index to be used for the reference analysis
     rx :: USet.UnboundSet (Reference SimpleFieldIndex)
-    (rx:ry:[]) = ComposedValue.toValue <$> Solver.resolveAll [ referenceValue x, referenceValue y ]
+    (rx:ry:[]) = ComposedValue.toValue <$> res
+        where
+            (res,_) = Solver.resolveAll Solver.initState [ referenceValue x, referenceValue y ]
 
 
 checkAlias' :: Eq i => USet.UnboundSet (Reference i) -> USet.UnboundSet (Reference i) -> Results

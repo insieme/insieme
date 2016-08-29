@@ -79,4 +79,4 @@ main = do
 
       where
         res :: USet.UnboundSet (Ref.Reference SimpleFieldIndex)
-        res = ComposedValue.toValue $ Solver.resolve (Ref.referenceValue $ Addr.goDown 2 addr)
+        res = ComposedValue.toValue $ fst $ Solver.resolve Solver.initState (Ref.referenceValue $ Addr.goDown 2 addr)
