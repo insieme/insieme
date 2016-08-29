@@ -40,8 +40,6 @@
 
 #include "insieme/core/ir_address.h"
 
-#include <memory>
-
 namespace insieme {
 namespace analysis {
 namespace haskell {

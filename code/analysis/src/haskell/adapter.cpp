@@ -112,11 +112,7 @@ namespace haskell {
 
 	Context::Context(Context&& other) : context_hs(other.context_hs), root(other.root) {}
 
-	Context& Context::operator=(Context&& other) {
-		root = other.root;
-		context_hs = other.context_hs;
-		return *this;
-	}
+	Context& Context::operator=(Context&& other) = default;
 
 	NodePtr Context::getRoot() const { return root; }
 
