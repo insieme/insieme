@@ -36,29 +36,32 @@
 
 module Insieme.Context (
     CContext,
-    Builtins,
     Context,
     mkContext,
     mkDummyContext,
     getCContext,
+    getInspire,
     getTree,
     getBuiltins,
 ) where
 
-import Data.Map
 import Data.Tree (Tree(..))
 import Foreign.Ptr
 import qualified Insieme.Inspire as IR
 
 type CContext = Ptr ()
-type Builtins = Map String (Tree IR.NodeType)
 
 data Context = Context { getCContext :: CContext,
-                         getTree     :: Tree IR.NodeType,
-                         getBuiltins :: Builtins }
+                         getInspire  :: IR.Inspire }
 
-mkContext :: CContext -> Tree IR.NodeType -> Builtins -> Context
+getTree :: Context -> Tree IR.NodeType
+getTree = IR.getTree . getInspire
+
+getBuiltins :: Context -> IR.Builtins
+getBuiltins = IR.getBuiltins . getInspire
+
+mkContext :: CContext -> IR.Inspire -> Context
 mkContext = Context
 
-mkDummyContext :: Tree IR.NodeType -> Builtins -> Context
+mkDummyContext :: IR.Inspire -> Context
 mkDummyContext = Context nullPtr

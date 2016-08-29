@@ -57,12 +57,11 @@ import System.Process
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
-import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
 
 -- | Fold the given 'Tree'. The accumulator function takes the subtree
 -- and the address of this subtree in the base tree.
-foldTree :: Monoid a => (NodeAddress -> a -> a) -> Ctx.Context -> a
+foldTree :: Monoid a => (NodeAddress -> a -> a) -> IR.Inspire -> a
 foldTree = flip foldTreePrune noPrune
 
 -- | Fold the given 'Tree'. The accumulator function takes the subtree
@@ -80,9 +79,9 @@ noPrune _ = False
 foldTreePrune :: Monoid a
                 => (NodeAddress -> a -> a)      -- ^ aggregation function
                 -> (NodeAddress -> Bool)        -- ^ prune subtrees?
-                -> Ctx.Context                  -- ^ current context
+                -> IR.Inspire                   -- ^ current inspire representation
                 -> a                            -- ^ accumulated result
-foldTreePrune collect prune ctx = foldAddressPrune collect prune (mkNodeAddress [] ctx)
+foldTreePrune collect prune ir = foldAddressPrune collect prune (mkNodeAddress [] ir)
 
 
 -- | Like 'foldTree' but is able to not follow entire subtrees when
@@ -105,11 +104,11 @@ foldAddressPrune collect prune addr = visit addr mempty
 --
 
 -- | Parse a given IR statement using the inspire binary.
-parseIR :: String -> IO (Tree IR.NodeType, Ctx.Builtins)
+parseIR :: String -> IO IR.Inspire
 parseIR ircode = do
     irb <- readProcess "inspire" ["-s", "-i", "-", "-k", "-"] ircode
-    let Right res  = parseBinaryDump (BS8.pack irb)
-    return res
+    let Right ir = parseBinaryDump (BS8.pack irb)
+    return ir
 
 --
 -- * Get Definition Point Analysis

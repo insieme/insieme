@@ -126,7 +126,7 @@ callableValue addr = case getNode addr of
 
 -- | a utility to collect all callables of a program
 collectAllCallables :: NodeAddress -> CallableSet
-collectAllCallables addr = USet.fromList $ foldTree collector (getContext addr)
+collectAllCallables addr = USet.fromList $ foldTree collector (getInspire addr)
     where
         collector cur callables = case getNode cur of
             Node IR.Lambda _   -> ((Lambda  cur) : callables)
