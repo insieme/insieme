@@ -38,28 +38,28 @@
 #include <tuple>
 
 #include "insieme/core/transform/manipulation.h"
-#include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/materialize.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_cached_visitor.h"
 
+#include "insieme/core/lang/parallel.h"
+#include "insieme/core/lang/pointer.h"
+
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/lists.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/set_utils.h"
-
-#include "insieme/core/printer/pretty_printer.h"
-
-#include "insieme/core/lang/parallel.h"
 
 namespace insieme {
 namespace core {
@@ -271,7 +271,9 @@ namespace transform {
 			auto res = tryInlineToExpr(manager, intermediateCall);
 
 			// only if both steps worked, the bind could be inlined
-			if (res != intermediateCall) return res;
+			if(res != intermediateCall) {
+				return res;
+			}
 
 			// fallback => stick to bind call
 			return call;
@@ -332,11 +334,12 @@ namespace transform {
 
 			bool success = true;
 			const auto& params = lambda->getParameterList();
-			auto deref = manager.getLangExtension<lang::ReferenceExtension>().getRefDeref();
+			auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+			IRBuilder builder(manager);
 			visitDepthFirstPrunable(ExpressionAddress(body), [&](const NodeAddress& cur)->bool {
 
-				// cut of nested lambdas
-				if (cur.isa<LambdaExprPtr>()) return true;		// prune
+				// cut off nested lambdas
+				if(cur.isa<LambdaExprPtr>()) return true; // prune
 
 				auto handleParamAccess = [&](VariablePtr var) {
 					// get position of parameter
@@ -353,13 +356,18 @@ namespace transform {
 
 					// register replacement
 					replacements[cur] = extractInitExprFromDecl(call[idx]);
+
+					// if we have a ref -> ref parameter passing case, we need to deref again
+					if(refExt.isCallOfRefDeref(cur) && replacements[cur].as<core::ExpressionPtr>()->getType() == var->getType()) {
+						replacements[cur] = builder.deref(replacements[cur].as<core::ExpressionPtr>());
+					}
 				};
 
 				// check if current node is a parameter access
-				if (analysis::isCallOf(cur, deref)) {
+				if(refExt.isCallOfRefDeref(cur)) {
 					// check for parameters
-					if (auto var = cur.as<CallExprPtr>()->getArgument(0).isa<VariablePtr>()) {
-						if (::contains(params, var)) {
+					if(auto var = cur.as<CallExprPtr>()->getArgument(0).isa<VariablePtr>()) {
+						if(::contains(params, var)) {
 							handleParamAccess(var);
 							// no more descent required here
 							return true;
@@ -830,11 +838,20 @@ namespace transform {
 		IRBuilder builder(manager);
 		um::PointerMap<VariablePtr, ExpressionPtr> replacements;
 		VariableList parameter;
-		for_each(free, [&](const VariablePtr& cur) {
-			auto param = builder.variable(builder.refType(cur->getType()));
+		TypeList paramTypes;
+		for(const VariablePtr& cur : free) {
+			auto curT = cur->getType();
+			auto param = builder.variable(builder.refType(curT));
 			replacements[cur] = builder.deref(param);
+			if(lang::isReference(curT) && lang::isPointer(analysis::getReferencedType(curT))) {
+				param = builder.variable(curT);
+				replacements[cur] = param;
+				paramTypes.push_back(analysis::getReferencedType(curT));
+			} else {
+				paramTypes.push_back(curT);
+			}
 			parameter.push_back(param);
-		});
+		};
 		StatementPtr body = replaceVarsGen(manager, stmt, replacements);
 
 		// determine return type if necessary
@@ -842,7 +859,7 @@ namespace transform {
 		if(allowReturns) { retType = analysis::autoReturnType(manager, builder.compoundStmt(body)); }
 
 		// create lambda accepting all free variables as arguments
-		auto funType = builder.functionType(extractTypes(free), retType);
+		auto funType = builder.functionType(paramTypes, retType);
 		LambdaExprPtr lambda = builder.lambdaExpr(funType, parameter, body);
 
 		// create call to this lambda
