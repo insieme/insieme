@@ -41,6 +41,7 @@ module Insieme.Context (
     mkDummyContext,
     getCContext,
     getInspire,
+    getSolverState,
     getTree,
     getBuiltins,
 ) where
@@ -48,11 +49,13 @@ module Insieme.Context (
 import Data.Tree (Tree(..))
 import Foreign.Ptr
 import qualified Insieme.Inspire as IR
+import qualified Insieme.Analysis.Solver as Solver
 
 type CContext = Ptr ()
 
 data Context = Context { getCContext :: CContext,
-                         getInspire  :: IR.Inspire }
+                         getInspire  :: IR.Inspire,
+                         getSolverState :: Solver.SolverState }
 
 getTree :: Context -> Tree IR.NodeType
 getTree = IR.getTree . getInspire
@@ -61,7 +64,7 @@ getBuiltins :: Context -> IR.Builtins
 getBuiltins = IR.getBuiltins . getInspire
 
 mkContext :: CContext -> IR.Inspire -> Context
-mkContext = Context
+mkContext i c = Context i c Solver.initState
 
 mkDummyContext :: IR.Inspire -> Context
-mkDummyContext = Context nullPtr
+mkDummyContext = mkContext nullPtr

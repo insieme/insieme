@@ -105,6 +105,10 @@ nodePathPoke addr_hs path_c = do
 foreign export ccall "hat_node_path_poke"
     nodePathPoke :: StablePtr Addr.NodeAddress -> Ptr CSize -> IO ()
 
+foreign import ccall "hat_update_context"
+    updateContext :: Ctx.CContext -> StablePtr Ctx.Context -> IO ()
+
+
 --
 -- * Analysis
 --
@@ -119,34 +123,47 @@ findDecl var_hs = do
 foreign export ccall "hat_find_declaration"
     findDecl :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
 
-checkBoolean :: StablePtr Addr.NodeAddress -> IO (CInt)
-checkBoolean expr_hs = handleAll (return $ fromIntegral $ fromEnum AnBoolean.Both) $ do
+checkBoolean :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CInt)
+checkBoolean ctx_hs expr_hs = handleAll (return $ fromIntegral $ fromEnum AnBoolean.Both) $ do
+    ctx <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
-    let (res,_) = Solver.resolve Solver.initState $ AnBoolean.booleanValue expr
+    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) $ AnBoolean.booleanValue expr
+    let ctx_c = Ctx.getCContext ctx
+    ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+    updateContext ctx_c ctx_nhs
     evaluate $ fromIntegral $ fromEnum $ ComposedValue.toValue res
             
 
 foreign export ccall "hat_check_boolean"
-    checkBoolean :: StablePtr Addr.NodeAddress -> IO (CInt)
+    checkBoolean :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CInt)
 
-checkAlias :: StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO CInt
-checkAlias x_hs y_hs = handleAll (return . fromIntegral . fromEnum $ Alias.MayAlias) $ do
+checkAlias :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO CInt
+checkAlias ctx_hs x_hs y_hs = handleAll (return . fromIntegral . fromEnum $ Alias.MayAlias) $ do
+    ctx <- deRefStablePtr ctx_hs
     x <- deRefStablePtr x_hs
     y <- deRefStablePtr y_hs
-    evaluate $ fromIntegral $ fromEnum $ Alias.checkAlias x y
+    let (res,ns) = Alias.checkAlias (Ctx.getSolverState ctx) x y
+    let ctx_c = Ctx.getCContext ctx
+    ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+    updateContext ctx_c ctx_nhs
+    evaluate $ fromIntegral $ fromEnum res
 
 foreign export ccall "hat_check_alias"
-    checkAlias :: StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO CInt
+    checkAlias :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO CInt
 
-arithValue :: Ctx.CContext -> StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticSet)
-arithValue ctx_c expr_hs = do
+arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticSet)
+arithValue ctx_hs expr_hs = do
+    ctx <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
-    let (res,_) = Solver.resolve Solver.initState (Arith.arithmeticValue expr)
+    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Arith.arithmeticValue expr)
     let results = ComposedValue.toValue res
+    let ctx_c = Ctx.getCContext ctx
+    ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+    updateContext ctx_c ctx_nhs
     passFormulaSet ctx_c $ BSet.map (fmap SymbolicFormula.getAddr) results
 
 foreign export ccall "hat_arithmetic_value"
-    arithValue :: Ctx.CContext -> StablePtr Addr.NodeAddress
+    arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress
                -> IO (Ptr CArithmeticSet)
 
 --

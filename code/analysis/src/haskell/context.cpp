@@ -63,6 +63,8 @@ extern "C" {
 
 	// Haskell Context
 	StablePtr hat_initialize_context(const Context* ctx_c, const char* dump_c, size_t size_c);
+	void hat_update_context(Context* trg, StablePtr hs_context);
+
 
 	// NodePath
 	StablePtr hat_mk_node_address(StablePtr ctx_hs, const size_t* path_c, size_t length_c);
@@ -85,6 +87,16 @@ namespace haskell {
 
 	Context::~Context() {
 		clear();
+	}
+
+	StablePtr Context::getHaskellContext() const {
+		assert_true(context_hs) << "Context not initialized!";
+		return context_hs;
+	}
+
+	void Context::setHaskellContext(StablePtr new_ctxt) {
+		if (context_hs) hat_freeStablePtr(context_hs);
+		context_hs = new_ctxt;
 	}
 
 	NodePtr Context::getRoot() const {
@@ -185,3 +197,11 @@ namespace haskell {
 } // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme
+
+extern "C" {
+
+	void hat_update_context(Context* trg, StablePtr hs_context) {
+		trg->setHaskellContext(hs_context);
+	}
+
+}

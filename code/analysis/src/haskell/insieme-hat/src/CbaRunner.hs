@@ -102,7 +102,7 @@ findAnalysis addr acc =
     res_arithme   = resolve Arith.arithmeticValue $ Addr.goDown 2 addr
     res_arithme_2 = resolve Arith.arithmeticValue $ Addr.goDown 3 addr
 
-    res_alias = Alias.checkAlias (Addr.goDown 2 addr) ( Addr.goDown 3 addr)
+    res_alias = fst $ Alias.checkAlias Solver.initState (Addr.goDown 2 addr) ( Addr.goDown 3 addr)
 
     analysis s = case s of
 

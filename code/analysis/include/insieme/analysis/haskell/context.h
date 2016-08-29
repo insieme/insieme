@@ -68,6 +68,9 @@ namespace haskell {
 		Context& operator=(const Context& other) = delete;
 		Context& operator=(Context&& other) = default;
 
+		StablePtr getHaskellContext() const;
+		void setHaskellContext(StablePtr);
+
 		void setRoot(const core::NodePtr&);
 		core::NodePtr getRoot() const;
 

@@ -51,14 +51,13 @@ import qualified Insieme.Utils.UnboundSet as USet
   deriving (Eq, Show)
  #}
 
-checkAlias :: NodeAddress -> NodeAddress -> Results
-checkAlias x y = checkAlias' rx ry
+checkAlias :: Solver.SolverState -> NodeAddress -> NodeAddress -> (Results,Solver.SolverState)
+checkAlias init x y = (checkAlias' rx ry, final)
   where
     -- here we determine the kind of filed index to be used for the reference analysis
     rx :: USet.UnboundSet (Reference SimpleFieldIndex)
     (rx:ry:[]) = ComposedValue.toValue <$> res
-        where
-            (res,_) = Solver.resolveAll Solver.initState [ referenceValue x, referenceValue y ]
+    (res,final) = Solver.resolveAll init [ referenceValue x, referenceValue y ]
 
 
 checkAlias' :: Eq i => USet.UnboundSet (Reference i) -> USet.UnboundSet (Reference i) -> Results
