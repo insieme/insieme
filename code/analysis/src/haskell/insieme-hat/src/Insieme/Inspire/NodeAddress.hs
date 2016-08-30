@@ -38,11 +38,12 @@ module Insieme.Inspire.NodeAddress (
     NodeAddress,
     mkNodeAddress,
     getPathReversed,
-    getNode,
+    getNodePair,
     getInspire,
     getParent,
     getPath,
     getIndex,
+    getNode,
     isRoot,
     getRoot,
     prettyShow,
@@ -63,12 +64,13 @@ import qualified Insieme.Inspire as IR
 type NodePath = [Int]
 
 data NodeAddress = NodeAddress { getPathReversed :: NodePath,
-                                 getNode         :: Tree IR.NodeType,
+                                 getNodePair     :: Tree (Int, IR.NodeType),
                                  getInspire      :: IR.Inspire,
                                  getParent       :: Maybe NodeAddress }
 
 instance Eq NodeAddress where
-    (==) = (==) `on` getPathReversed
+    x == y = (fst $ rootLabel $ getNodePair x) == (fst $ rootLabel $ getNodePair y)
+                && getPathReversed x == getPathReversed y
 
 instance Ord NodeAddress where
     compare = compare `on` getPathReversed
@@ -89,10 +91,13 @@ getPath = reverse . getPathReversed
 getIndex :: NodeAddress -> Int
 getIndex = head . getPathReversed
 
+getNode :: NodeAddress -> Tree IR.NodeType
+getNode addr = snd <$> getNodePair addr
+
 isRoot :: NodeAddress -> Bool
 isRoot = isNothing . getParent
 
-getRoot :: NodeAddress -> Tree IR.NodeType
+getRoot :: NodeAddress -> Tree (Int, IR.NodeType)
 getRoot = IR.getTree . getInspire
 
 prettyShow :: NodeAddress -> String
@@ -115,8 +120,8 @@ goRight :: NodeAddress -> NodeAddress
 goRight na@(NodeAddress _  _ _ Nothing      ) = na
 goRight    (NodeAddress xs _ _ (Just parent)) = goDown (head xs + 1) parent
 
-lookupBuiltin :: NodeAddress -> String -> Maybe (Tree IR.NodeType)
+lookupBuiltin :: NodeAddress -> String -> Maybe (Tree (Int, IR.NodeType))
 lookupBuiltin addr needle = Map.lookup needle (IR.getBuiltins $ getInspire addr)
 
 isBuiltin :: NodeAddress -> String -> Bool
-isBuiltin addr needle = fromMaybe False $ (== getNode addr) <$> lookupBuiltin addr needle
+isBuiltin addr needle = fromMaybe False $ (== getNodePair addr) <$> lookupBuiltin addr needle

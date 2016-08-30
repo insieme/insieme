@@ -71,10 +71,10 @@ parseBinaryDump = parseOnly $ do
     let nodes    = connectDumpNodes dumpNodes
     let builtins = resolve nodes <$> dumpBuiltins
 
-    return $ IR.Inspire (connectDumpNodes dumpNodes) builtins
+    return $ IR.Inspire nodes builtins
 
   where
-      resolve :: Tree IR.NodeType -> [Int] -> Tree IR.NodeType
+      resolve :: Tree (Int, IR.NodeType) -> [Int] -> Tree (Int, IR.NodeType)
       resolve node []     = node
       resolve node (x:xs) = resolve (subForest node !! x) xs
 
@@ -135,10 +135,10 @@ parseBuiltin = do
     val <- tail . splitOn "-" <$> parseString
     return (key, read <$> val)
 
-connectDumpNodes :: IntMap.IntMap DumpNode -> Tree IR.NodeType
+connectDumpNodes :: IntMap.IntMap DumpNode -> Tree (Int, IR.NodeType)
 connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
   where
-    go :: Int -> State (IntMap.IntMap (Tree IR.NodeType)) (Tree IR.NodeType)
+    go :: Int -> State (IntMap.IntMap (Tree (Int, IR.NodeType))) (Tree (Int, IR.NodeType))
     go index = do
         memo <- get
         case IntMap.lookup index memo of
@@ -146,7 +146,7 @@ connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
             Nothing -> do
                 let (DumpNode irnode is) = dumpNodes IntMap.! index
                 children <- mapM go is
-                let n = Node irnode children
+                let n = Node (index, irnode) children
                 modify (IntMap.insert index n)
                 return n
 
