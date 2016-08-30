@@ -355,7 +355,10 @@ solveStep (SolverState a k) d (v:vs) = solveStep (SolverState resAss resKnown) r
 -- Utils ---------------------------------------------------
 
 
--- a simple constraint factory
+-- | A simple constraint factory, taking as arguments
+--   * a function to return the dependent variables of this constraint,
+--   * the current value of the constraint,
+--   * and the target variable for this constraint.
 createConstraint :: (Lattice a) => ( Assignment -> [Var] ) -> ( Assignment -> a ) -> TypedVar a -> Constraint
 createConstraint dep limit trg@(TypedVar var) = Constraint dep update var
         where
