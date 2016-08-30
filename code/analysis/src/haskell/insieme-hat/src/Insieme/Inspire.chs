@@ -130,11 +130,11 @@ $(let
          <*> extend baseToNodeType   genClauseToNodeType
  )
 
-instance Ord (Tree NodeType) where
-    compare (Node x xs) (Node y ys) = if x == y then compare xs ys else compare x y
+instance Ord (Tree (Int, NodeType)) where
+    compare (Node (x, _) _) (Node (y, _) _) = compare x y
 
 
-type Builtins = Map String (Tree NodeType)
+type Builtins = Map String (Tree (Int, NodeType))
 
-data Inspire = Inspire { getTree     :: Tree NodeType,
+data Inspire = Inspire { getTree     :: Tree (Int, NodeType),
                          getBuiltins :: Builtins }
