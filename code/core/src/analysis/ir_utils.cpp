@@ -345,6 +345,10 @@ namespace analysis {
 				return {};
 			}
 
+			TypeList visitNumericType(const NumericTypePtr& type) override {
+				return {};
+			}
+
 			TypeList visitType(const TypePtr& type) override {
 				assert_fail() << "Unsupported type encountered: " << *type << "\n";
 				return TypeList();

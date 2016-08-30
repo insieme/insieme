@@ -366,6 +366,10 @@ namespace analysis {
 
 		TypePtr structType = builder.structType(toVector(builder.field("a", A), builder.field("d", D)));
 		EXPECT_EQ("[AP(A),AP(D<A,B>)]", toString(getElementTypes(structType)));
+
+		TypePtr numericType = builder.numericType(27);
+		EXPECT_EQ("[]", toString(getElementTypes(numericType)));
+
 	}
 
 	TEST(TypeUtils, isRefOf) {
@@ -515,6 +519,8 @@ namespace analysis {
 		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>,t,t,plain>", "5")));
 		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<'a>>", "6")));
 		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<'a>", "7")));
+
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<()=>'b>", "()-> int<4> { return 0; }")));
 
 		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>>", R"(lit("a":ref<int<4>>))")));
 		EXPECT_FALSE(isMaterializingDecl(buildDecl("int<4>", R"(42)")));
