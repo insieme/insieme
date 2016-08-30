@@ -94,6 +94,7 @@ import Data.Tuple
 import Data.Maybe
 import System.IO.Unsafe (unsafePerformIO)
 import System.Process
+import Text.Printf
 --import qualified Data.Map.Lazy as Map
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -328,10 +329,11 @@ solveStep :: SolverState -> Dependencies -> [Var] -> SolverState
 
 
 -- empty work list
--- solveStep s _ [] | trace (dumpToJsonFile s "ass_meta") $ False = undefined                                        -- debugging assignment as meta-info for JSON dump
--- solveStep s _ [] | trace (dumpSolverState s "graph") $ False = undefined                                          -- debugging assignment as a graph plot
--- solveStep s _ [] | trace (dumpSolverState s "graph") $ trace (dumpToJsonFile a v "ass_meta") $ False = undefined  -- debugging both
-solveStep s _ [] = s                                                                                                 -- work list is empty
+-- solveStep s _ [] | trace (dumpToJsonFile s "ass_meta") $ False = undefined                                           -- debugging assignment as meta-info for JSON dump
+-- solveStep s _ [] | trace (dumpSolverState s "graph") $ False = undefined                                             -- debugging assignment as a graph plot
+-- solveStep s _ [] | trace (dumpSolverState s "graph") $ trace (dumpToJsonFile a v "ass_meta") $ False = undefined     -- debugging both
+-- solveStep s _ [] | trace (showVarStatistic s) $ False = undefined                                                    -- debugging performance data
+solveStep s _ [] = s                                                                                                    -- work list is empty
 
 -- compute next element in work list
 solveStep (SolverState a k) d (v:vs) = solveStep (SolverState resAss resKnown) resDep ds
@@ -468,4 +470,21 @@ dumpToJsonFile :: SolverState -> String -> String
 dumpToJsonFile s file = unsafePerformIO $ do
          writeFile (file ++ ".json") $ toJsonMetaFile s
          return ("Dumped assignment into file " ++ file ++ ".json!")
+
+
+showVarStatistic :: SolverState -> String
+showVarStatistic s = 
+        "----- Variable Statistic -----\n" ++
+        ( intercalate "\n" (map print $ Map.toList grouped)) ++
+        "\n------------------------------\n" ++
+        "       Total: " ++ (printf "%8d" $ Set.size vars ) ++
+        "\n------------------------------"
+    where
+        vars = knownVariables s
+        
+        grouped = foldr go Map.empty vars
+            where
+                go v m = Map.insertWith (+) ( analysis . index $ v ) (1::Int) m
+        
+        print (a,c) = printf "     %8s %8d" ((show a) ++ ":") c
 
