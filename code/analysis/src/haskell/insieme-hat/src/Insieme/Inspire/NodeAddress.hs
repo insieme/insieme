@@ -71,9 +71,14 @@ data NodeAddress = NodeAddress { getPathReversed :: NodePath,
 instance Eq NodeAddress where
     x == y = (fst $ rootLabel $ getNodePair x) == (fst $ rootLabel $ getNodePair y)
                 && getPathReversed x == getPathReversed y
+                && (fst $ rootLabel $ getRoot x) == (fst $ rootLabel $ getRoot y)
 
 instance Ord NodeAddress where
-    compare = compare `on` getPathReversed
+    compare x y = if r1 == EQ then if r2 == EQ then r3 else r2 else r1 
+        where
+            r1 = compare (fst $ rootLabel $ getNodePair x) (fst $ rootLabel $ getNodePair y)
+            r2 = compare (getPathReversed x) (getPathReversed y)
+            r3 = compare (fst $ rootLabel $ getRoot x) (fst $ rootLabel $ getRoot y)
 
 instance Show NodeAddress where
     show = prettyShow

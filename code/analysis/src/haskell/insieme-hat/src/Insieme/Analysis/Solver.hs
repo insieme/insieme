@@ -163,7 +163,7 @@ data Identifier = Identifier {
 
 instance Eq Identifier where
     (==) (Identifier a1 n1 s1 h1) (Identifier a2 n2 s2 h2) =
-            h1 == h2 && a1 == a2 && (getPathReversed n1) == (getPathReversed n2) && s1 == s2
+            h1 == h2 && n1 == n2 && a1 == a2 && s1 == s2
 
 instance Ord Identifier where
     compare (Identifier a1 n1 s1 h1) (Identifier a2 n2 s2 h2) =
@@ -172,8 +172,8 @@ instance Ord Identifier where
                else r0
         where
             r0 = compare h1 h2
-            r1 = compare a1 a2
-            r2 = compare (getPathReversed n1) (getPathReversed n2)
+            r1 = compare n1 n2
+            r2 = compare a1 a2
             r3 = compare s1 s2
 
 instance Show Identifier where
