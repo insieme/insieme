@@ -127,18 +127,23 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
     Node IR.IfStmt _ | i == 0 -> single $ ProgramPoint parent Pre
     Node IR.IfStmt _ -> single $ ProgramPoint (goDown 0 parent) Post        -- todo: make dependent on result of conditional expression
 
-    -- for loops --
-    Node IR.ForStmt _ | i == 0 -> single $ ProgramPoint parent Pre                                                              -- declarations
-    Node IR.ForStmt _ | i == 1 -> single $ ProgramPoint (goDown 0 parent) Post                                                  -- end value
-    Node IR.ForStmt _ | i == 2 -> single $ ProgramPoint (goDown 1 parent) Post                                                  -- step value
-    Node IR.ForStmt _ | i == 3 -> multiple $ [ProgramPoint (goDown 2 parent) Post, ProgramPoint (goDown 3 parent) Post ]        -- body - TODO: add support for continue
+    Node IR.ForStmt _   -- TODO: add support for continue
+      | i == 0 -> single $ ProgramPoint parent Pre                 -- declarations
+      | i == 1 -> single $ ProgramPoint (goDown 0 parent) Post     -- end value
+      | i == 2 -> single $ ProgramPoint (goDown 1 parent) Post     -- step value
+      | i == 3 -> multiple [ ProgramPoint (goDown 2 parent) Post   -- step is predecessor of body
+                         , ProgramPoint (goDown 3 parent) Post ] -- body (n-1) before body (n)
+
+    Node IR.WhileStmt _   -- TODO: add support for continue
+      | i == 0 -> multiple [ ProgramPoint parent Pre               -- eval cond when entering while
+                         , ProgramPoint (goDown 1 parent) Post ] -- cond after loop body
+      | i == 1 -> single $ ProgramPoint (goDown 0 parent) Post     -- body only after condition
 
     Node IR.ReturnStmt _ -> single $ ProgramPoint parent Pre
 
-    _ -> trace ( " Unhandled Pre Program Point: " ++ (show p) ++ " for parent " ++ (show $ rootLabel $ getNode parent) ) $ error "unhandled case"
+    _ -> trace("Unhandled Pre Program Point: " ++ show p ++ " for parent " ++ show (rootLabel $ getNode parent)) $ error "unhandled case"
 
   where
-
     parent = fromJust $ getParent a
     i = getIndex a
 
@@ -260,7 +265,11 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
             elseBranch = ProgramPoint (goDown 2 a) Post
 
     -- for loop statement
-    Node IR.ForStmt _ -> multiple [ ProgramPoint (goDown 2 a) Post , ProgramPoint (goDown 3 a) Post ]
+    Node IR.ForStmt _ -> multiple [ ProgramPoint (goDown 2 a) Post     -- step when loop never entered
+                                 , ProgramPoint (goDown 3 a) Post ]   -- body when loop was run
+
+    -- evaluate condition as a last step in a while stmt
+    Node IR.WhileStmt _ -> single $ ProgramPoint (goDown 0 a) Post
 
     -- return statement
     Node IR.ReturnStmt _ -> single $ ProgramPoint (goDown 0 a) Post
