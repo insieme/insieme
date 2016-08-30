@@ -57,7 +57,7 @@ data Context = Context { getCContext :: CContext,
                          getInspire  :: IR.Inspire,
                          getSolverState :: Solver.SolverState }
 
-getTree :: Context -> Tree IR.NodeType
+getTree :: Context -> Tree (Int, IR.NodeType)
 getTree = IR.getTree . getInspire
 
 getBuiltins :: Context -> IR.Builtins

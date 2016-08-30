@@ -90,17 +90,17 @@ arithmeticValue :: Addr.NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFie
 arithmeticValue addr = case Addr.getNode addr of
     Node IR.Literal [t, Node (IR.StringValue v) _] | isIntType t -> case parseInt v of
         Just cint -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkConst cint)
-        Nothing   -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNode addr) addr)
+        Nothing   -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNodePair addr) addr)
 
     Node IR.Variable (t:_) | isIntType t && isFreeVariable addr ->
-        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Variable (Addr.getNode addr) addr)
+        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Variable (Addr.getNodePair addr) addr)
 
     Node IR.CastExpr (t:_) | isIntType t -> var
       where
         var = Solver.mkVariable (idGen addr) [con] Solver.bot
         con = Solver.forward (arithmeticValue $ Addr.goDown 1 addr) var
 
-    n@_ | isIntExpr && isSideEffectFree addr -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNode addr) addr)
+    n@_ | isIntExpr && isSideEffectFree addr -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNodePair addr) addr)
         where
             isIntExpr = maybe False isIntType (getType $ n)
      
