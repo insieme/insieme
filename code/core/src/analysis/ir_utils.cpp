@@ -153,6 +153,40 @@ namespace analysis {
 		return !analysis::equalTypes(callType, funType) && types::getTypeVariableInstantiation(call->getNodeManager(), callType, transform::materialize(funType));
 	}
 
+	namespace {
+		bool isOptionallyCastRefDecl(const ExpressionPtr& expr) {
+			auto& rExt = expr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+			if(rExt.isCallOfRefDecl(expr)) return true;
+			if(lang::isAnyRefCast(expr)) return isOptionallyCastRefDecl(getArgument(expr,0));
+			return false;
+		}
+	}
+
+	bool isMaterializingDecl(const NodePtr& candidate) {
+		auto decl = candidate.isa<DeclarationPtr>();
+		if(!decl) return false;
+		auto dT = decl->getType();
+
+		// only plain reference declarations can be materializing
+		if(!lang::isPlainReference(dT)) return false;
+		auto init = decl->getInitialization();
+
+		// case 1: a constructor call with ref_decl is materializing
+		if(analysis::isConstructorCall(init) && isOptionallyCastRefDecl(getArgument(init, 0))) return true;
+
+		// case 2: an init expression with a ref_decl memory location is materializing
+		auto initExp = init.isa<InitExprPtr>();
+		if(initExp && isOptionallyCastRefDecl(initExp->getMemoryExpr())) return true;
+
+		// case 3: if the inner type of the declaration ref type matches the type of the init expression, we have a materialization
+		//  - e.g. ref<int<4>> initialized by "0":int<4> (but also ref<int<'a>> initialized by the same value)
+		auto innerType = getReferencedType(dT);
+		if(types::isMatchable(init->getType(), innerType)) return true;
+
+		// not a materializing case
+		return false;
+	}
+
 	bool isNoOp(const StatementPtr& candidate) {
 		// check for null
 		if(!candidate) { return false; }

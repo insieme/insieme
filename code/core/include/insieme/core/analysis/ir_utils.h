@@ -92,8 +92,15 @@ namespace analysis {
 
 	/**
 	 * Tests whether the given call is materializing its result
+	 * (this is the case if the function returns a value type but the return value of the call is a reference to that type)
 	 */
 	bool isMaterializingCall(const NodePtr& candidate);
+
+	/**
+	 * Tests whether the given declaration allocates new memory
+	 * (this is the case if a plain reference type is declared and not just initialized as an alias to an existing memory location)
+	 */
+	bool isMaterializingDecl(const NodePtr& candidate);
 
 	/**
 	 * A utility function to extract an argument from the given call expression.

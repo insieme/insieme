@@ -505,6 +505,26 @@ namespace analysis {
 		EXPECT_FALSE(isMaterializingCall(call4));
 	}
 
+	TEST(IsMaterializingDecl, Basic) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto buildDecl = [&](const string& type, const string& init) { return builder.declaration(builder.parseType(type), builder.parseExpr(init)); };
+
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>>", "4")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>,t,t,plain>", "5")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<'a>>", "6")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<'a>", "7")));
+
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>>", R"(lit("a":ref<int<4>>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("int<4>", R"(42)")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,f,cpp_ref>", R"(42)")));
+
+		string structA = "def struct A { ctor () { } }; ";
+		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "A::(ref_decl(type_lit(ref<A>)))")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "<ref<A>>(ref_decl(type_lit(ref<A>))){}")));
+	}
+
 	namespace {
 		bool readOnly(const StatementPtr& stmt, const VariablePtr& var) {
 			return isReadOnly(stmt, var);
