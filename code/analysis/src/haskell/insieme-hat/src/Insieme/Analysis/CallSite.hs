@@ -38,6 +38,7 @@
 
 module Insieme.Analysis.CallSite where
 
+import Data.Maybe
 import Data.Tree
 import Data.Typeable
 import Insieme.Inspire.NodeAddress
@@ -101,25 +102,53 @@ callSites addr = case getNode addr of
 
     id = Solver.mkIdentifier callSiteAnalysis addr ""
 
-    var = Solver.mkVariable id [con] Solver.bot
-    con = Solver.createConstraint dep val var
+    -- navigate to the enclosing expression    
+    e = case getNode addr of 
+        Node IR.Lambda   _ -> fromJust $ getParent =<< getParent =<< getParent addr 
+        Node IR.BindExpr _ -> addr
+    
+    i = getIndex e
+    p = fromJust $ getParent e
+    
+    isCall a = case getNode a of
+        Node IR.CallExpr _ -> True
+        _                  -> False
+    
 
-    allCalls = foldTree collector (getInspire addr)
-    collector a calls = case getNode a of
-        Node IR.CallExpr _  -> a : calls
-        _                   -> calls
-
-    allTrgVars = map (\c -> (c , Callable.callableValue $ goDown 1 c ) ) allCalls
-
-    callable = case getNode addr of
-        Node IR.Lambda _   -> Callable.Lambda addr
-        Node IR.BindExpr _ -> Callable.Closure addr
-        _                  -> error "unexpected NodeType"
-
-    dep a = map Solver.toVar (map snd allTrgVars)
-    val a = foldr go Set.empty allTrgVars
+    -- distinguish binding case --    
+    var =
+        if isRoot addr then noCallSitesVar
+        else if i == 1 && isCall p then staticCallSiteVar
+        else allCallSitesVar
+    
+    noCallSitesVar = Solver.mkVariable id [] Solver.bot
+    
+    staticCallSiteVar = Solver.mkVariable id [] (Set.singleton $ CallSite p)
+    
+    allCallSitesVar = Solver.mkVariable id [con] Solver.bot
         where
-            go = \(call,var) set ->
-                if (USet.member callable (ComposedValue.toValue $ Solver.get a var))
-                then Set.insert (CallSite call) set
-                else set
+            con = Solver.createConstraint dep val var
+        
+            allCalls = foldTree collector (getInspire addr)
+            collector a calls = case getNode a of
+                Node IR.CallExpr _  -> case getNode $ goDown 1 a of
+                    Node IR.Lambda   _ -> calls
+                    Node IR.BindExpr _ -> calls
+                    Node IR.Literal  _ -> calls
+                    _                  -> a : calls
+                _                   -> calls
+        
+            allTrgVars = map (\c -> (c , Callable.callableValue $ goDown 1 c ) ) allCalls
+        
+            callable = case getNode addr of
+                Node IR.Lambda _   -> Callable.Lambda addr
+                Node IR.BindExpr _ -> Callable.Closure addr
+                _                  -> error "unexpected NodeType"
+        
+            dep a = map Solver.toVar (map snd allTrgVars)
+            val a = foldr go Set.empty allTrgVars
+                where
+                    go = \(call,var) set ->
+                        if (USet.member callable (ComposedValue.toValue $ Solver.get a var))
+                        then Set.insert (CallSite call) set
+                        else set
