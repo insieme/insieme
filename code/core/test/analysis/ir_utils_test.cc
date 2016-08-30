@@ -515,7 +515,9 @@ namespace analysis {
 
 		auto buildDecl = [&](const string& type, const string& init) { return builder.declaration(builder.parseType(type), builder.parseExpr(init)); };
 
-		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>>", "4")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>>", "2")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<8>>", "3")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<8>>", "4u")));
 		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>,t,t,plain>", "5")));
 		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<'a>>", "6")));
 		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<'a>", "7")));

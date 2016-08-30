@@ -409,9 +409,7 @@ namespace types {
 				const FunctionTypePtr& funTypeB = b.as<FunctionTypePtr>();
 
 				// check function kind
-				if (funTypeA->getKind() != funTypeB->getKind()) {
-					if(!(funTypeA->getKind() == FK_PLAIN && funTypeB->getKind() == FK_CLOSURE)) return unmatchable;
-				}
+				if (funTypeA->getKind() != funTypeB->getKind()) return unmatchable;
 
 				// process parameter first
 				if (!matchTypes(manager, funTypeA->getParameterTypes(), funTypeB->getParameterTypes(), res)) return unmatchable;

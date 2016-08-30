@@ -181,7 +181,7 @@ namespace analysis {
 		// case 3: if the inner type of the declaration ref type matches the type of the init expression, we have a materialization
 		//  - e.g. ref<int<4>> initialized by "0":int<4> (but also ref<int<'a>> initialized by the same value)
 		auto innerType = getReferencedType(dT);
-		if(types::isMatchable(init->getType(), innerType)) return true;
+		if(types::getTypeVariableInstantiation(decl->getNodeManager(), innerType, init->getType(), false)) return true;
 
 		// not a materializing case
 		return false;
