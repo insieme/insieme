@@ -1,2 +1,0 @@
-src/IOR.c src/utilities.c src/parse_options.c src/aiori-POSIX.c src/aiori-noMPIIO.c src/aiori-noHDF5.c src/aiori-noNCMPI.c
-
