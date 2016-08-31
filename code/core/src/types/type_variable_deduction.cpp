@@ -977,8 +977,10 @@ namespace types {
 
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypeList& parameter, const TypeList& arguments, bool allowMaterialization) {
 
+		using ResultMap = std::map<std::tuple<TypeList, TypeList, bool>, SubstitutionOpt>;
+
 		struct ResultCache {
-			mutable std::map<std::pair<TypeList, TypeList>, SubstitutionOpt> results;
+			mutable ResultMap results;
 			bool operator==(const ResultCache& other) const {
 				assert_fail() << "Should never be reached!";
 				return false;
@@ -1001,11 +1003,12 @@ namespace types {
 		for (const auto& cur : arguments) args.push_back(manager.get(cur));
 
 		// look up cache
-		auto pos = cache.find({ params,args });
+		ResultMap::key_type key { params, args, allowMaterialization };
+		auto pos = cache.find(key);
 		if (pos != cache.end()) return pos->second;
 
 		// resolve internal, cache, and return result
-		return cache[{params, args}] = getTypeVariableInstantiationInternal(manager, params, args, allowMaterialization);
+		return cache[key] = getTypeVariableInstantiationInternal(manager, params, args, allowMaterialization);
 	}
 
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypePtr& parameter, const TypePtr& argument, bool allowMaterialization) {
