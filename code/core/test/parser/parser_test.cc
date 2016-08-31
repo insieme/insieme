@@ -1257,9 +1257,9 @@ namespace parser {
 
 		const std::string testString = "var ref<A,t,f,cpp_ref> a_ref;"
 		                               "var ref<A,f,f,cpp_rref> a_rref;"
-		                               "var ref<A,f,f,plain> a = A::(a);"                          //call the default constructor
-		                               "var ref<A,f,f,plain> a_copy = A::(a_copy, a_ref);"         //call the copy constructor
-		                               "var ref<A,f,f,plain> a_move = A::(a_move, a_rref);"        //call the move constructor
+		                               "var ref<A,f,f,plain> a = A::(ref_decl(type_lit(ref<A>)));"                     //call the default constructor
+		                               "var ref<A,f,f,plain> a_copy = A::(ref_decl(type_lit(ref<A>)), a_ref);"         //call the copy constructor
+		                               "var ref<A,f,f,plain> a_move = A::(ref_decl(type_lit(ref<A>)), a_rref);"        //call the move constructor
 		                               "A::~(a);"                                                  //call the default destructor
 		                               "a." + utils::getMangledOperatorAssignName() + "(a_ref);"   //call the default copy assignment operator
 		                               "a." + utils::getMangledOperatorAssignName() + "(a_rref);"; //call the default move assignment operator

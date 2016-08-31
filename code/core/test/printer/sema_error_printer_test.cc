@@ -153,7 +153,7 @@ TEST(ErrorPrinter, error) {
 
 	std::stringstream ss;
 	dumpErrors(msgs, ss);
-	EXPECT_EQ("\x1B[33mv1 = 1\x1B[0m\n------- \n\x1B[31mERROR: \x1B[37mInvalid argument type(s) \n\texpected: \n\t\t(ref<'a,f,'v,'k>,'a)\n\tactual: \n\t\t(int<4>,int<4>)\n\tfunction type: \n\t\t((ref<'a,f,'v,'k>,'a)->unit)\x1B[0m\n-------\n\n",
+	EXPECT_EQ("\x1B[33mv1 = 1\x1B[0m\n------- \n\x1B[31mERROR: \x1B[37mInvalid non-materializing argument: \n\t\tdecl ref<ref<'a,f,'v,'k>,f,f,plain> : v1\n\t\t - init expr of type int<4>\x1B[0m\n-------\n\n",
 	          ss.str());
 
 	std::cout << ss.str() << std::endl;
