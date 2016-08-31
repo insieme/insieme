@@ -46,6 +46,7 @@
 #include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -182,6 +183,9 @@ namespace analysis {
 		//  - e.g. ref<int<4>> initialized by "0":int<4> (but also ref<int<'a>> initialized by the same value)
 		auto innerType = getReferencedType(dT);
 		if(types::getTypeVariableInstantiation(decl->getNodeManager(), innerType, init->getType(), false)) return true;
+
+		// case 4: we could have materialization by implicit constructor call
+		if(analysis::hasConstructorAccepting(innerType, init->getType())) return true;
 
 		// not a materializing case
 		return false;

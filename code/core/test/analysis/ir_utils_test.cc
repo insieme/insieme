@@ -528,9 +528,10 @@ namespace analysis {
 		EXPECT_FALSE(isMaterializingDecl(buildDecl("int<4>", R"(42)")));
 		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,f,cpp_ref>", R"(42)")));
 
-		string structA = "def struct A { ctor () { } }; ";
+		string structA = "def struct A { ctor () { } ctor (p : real<8>) { } }; ";
 		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "A::(ref_decl(type_lit(ref<A>)))")));
 		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "<ref<A>>(ref_decl(type_lit(ref<A>))){}")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "4.0")));
 	}
 
 	namespace {
