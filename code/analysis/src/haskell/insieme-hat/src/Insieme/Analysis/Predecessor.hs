@@ -41,24 +41,19 @@ module Insieme.Analysis.Predecessor (
     predecessor
 ) where
 
-
-import Insieme.Analysis.Entities.ProgramPoint
-import Insieme.Inspire.NodeAddress
-import qualified Insieme.Analysis.Solver as Solver
-
-import Debug.Trace
+import Data.Maybe
 import Data.Tree
 import Data.Typeable
-import Data.Maybe
 import Insieme.Analysis.Boolean
-import Insieme.Analysis.Callable
 import Insieme.Analysis.CallSite
+import Insieme.Analysis.Callable
+import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.ExitPoint
+import Insieme.Inspire.NodeAddress
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Utils.UnboundSet as USet
-
-import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-
 
 --
 -- * Predecessor Lattice
@@ -97,7 +92,7 @@ predecessor p@(ProgramPoint a Pre) | isRoot a = var
 predecessor p@(ProgramPoint a Pre) = case getNode parent of
 
     Node IR.CallExpr children -> single $
-            if i == (length children) - 1
+            if i == length children-1
             then ProgramPoint parent Pre                   -- start with last argument
             else ProgramPoint (goDown (i+1) parent) Post   -- eval arguments in reverse order
 
@@ -139,16 +134,21 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
                          , ProgramPoint (goDown 1 parent) Post ] -- cond after loop body
       | i == 1 -> single $ ProgramPoint (goDown 0 parent) Post     -- body only after condition
 
+    Node IR.SwitchStmt _
+      | i == 0     -> single $ ProgramPoint parent Pre       -- swtch expr is first
+      | otherwise -> single $ ProgramPoint (nghbr 0) Post   -- expr before branching
+
     Node IR.ReturnStmt _ -> single $ ProgramPoint parent Pre
 
-    _ -> trace("Unhandled Pre Program Point: " ++ show p ++ " for parent " ++ show (rootLabel $ getNode parent)) $ error "unhandled case"
+    _ -> unhandled "Pre" p (rootLabel $ getNode parent)
 
   where
     parent = fromJust $ getParent a
+    nghbr i = goDown i parent   -- get the i'th neighbor
     i = getIndex a
 
     multiple :: [ProgramPoint] -> Solver.TypedVar PredecessorList
-    multiple x = Solver.mkVariable (idGen p) [] x
+    multiple = Solver.mkVariable (idGen p) []
 
     single :: ProgramPoint -> Solver.TypedVar PredecessorList
     single x = multiple [x]
@@ -158,8 +158,7 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
 
     dep a = [Solver.toVar callSitesVar]
     val a = foldr go [] $ Solver.get a callSitesVar
-        where
-            go = \(CallSite call) list -> (ProgramPoint (goDown 1 call) Post) : list
+    go (CallSite call) list = ProgramPoint (goDown 1 call) Post : list
 
     callSitesVar = callSites parent
 
@@ -177,11 +176,10 @@ predecessor  p@(ProgramPoint addr Internal) = case getNode addr of
             con = Solver.createConstraint dep val var
 
             dep a = Solver.toVar callableVar : map Solver.toVar (exitPointVars a)
-            val a = (if callsLiteral then [litPredecessor] else []) ++ nonLiteralExit
+            val a = [litPredecessor | callsLiteral] ++ nonLiteralExit
                 where
                     nonLiteralExit = foldr go [] (exitPointVars a)
-                        where
-                            go = \e l -> foldr (\(ExitPoint r) l -> (ProgramPoint r Post) : l) l (Solver.get a e)
+                    go e l = foldr (\(ExitPoint r) l -> ProgramPoint r Post : l) l (Solver.get a e)
 
                     callsLiteral = any isLiteral (callableVal a)
                         where
@@ -202,11 +200,7 @@ predecessor  p@(ProgramPoint addr Internal) = case getNode addr of
 
             exitPointVars a = foldr (\t l -> exitPoints (toAddress t) : l) [] (callableVal a)
 
-
-
-    _ -> trace ( " Unhandled Internal Program Point: " ++ (show p) ) $ error "unhandled case"
-
-
+    _ -> unhandled "Internal" p (rootLabel . getNode . fromJust . getParent $ addr)
 
 -- Predecessor rules for post program points:
 predecessor p@(ProgramPoint a Post) = case getNode a of
@@ -236,11 +230,11 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
 
     -- handle lists of expressions
     Node IR.Expressions  [] -> single $ ProgramPoint a Pre
-    Node IR.Expressions sub -> single $ ProgramPoint (goDown ((length sub) - 1) a) Post
+    Node IR.Expressions sub -> single $ ProgramPoint (goDown (length sub-1) a) Post
 
     -- compound statements
     Node IR.CompoundStmt []    -> pre
-    Node IR.CompoundStmt stmts -> single $ ProgramPoint (goDown ((length stmts) - 1) a) Post
+    Node IR.CompoundStmt stmts -> single $ ProgramPoint (goDown (length stmts-1) a) Post
 
     -- declaration statement
     Node IR.DeclarationStmt _ -> single $ ProgramPoint (goDown 0 a) Post
@@ -265,22 +259,28 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
             elseBranch = ProgramPoint (goDown 2 a) Post
 
     -- for loop statement
-    Node IR.ForStmt _ -> multiple [ ProgramPoint (goDown 2 a) Post     -- step when loop never entered
-                                 , ProgramPoint (goDown 3 a) Post ]   -- body when loop was run
+    Node IR.ForStmt _ -> multiple
+      [ ProgramPoint (goDown 2 a) Post     -- loop never entered
+      , ProgramPoint (goDown 3 a) Post ]   -- body when loop was run
 
-    -- evaluate condition as a last step in a while stmt
+    -- while stmts evaluate their condition as a last step
     Node IR.WhileStmt _ -> single $ ProgramPoint (goDown 0 a) Post
+
+    -- switch stmts have executed the default branch, or any of the cases
+    Node IR.SwitchStmt _ -> multiple $ map (`ProgramPoint` Post) $
+      goDown 2 a :
+      [ goDown 1 $ goDown i cses | i <- enumFromTo 0 (children cses-1)]
+      where cses = goDown 1 a
 
     -- return statement
     Node IR.ReturnStmt _ -> single $ ProgramPoint (goDown 0 a) Post
 
-
-    _ -> trace ( " Unhandled Post Program Point: " ++ (show p) ++ " for node " ++ (show $ rootLabel $ getNode a) ) $ error "unhandled case"
+    _ -> unhandled "Post" p (rootLabel $ getNode a)
 
   where
 
     multiple :: [ProgramPoint] -> Solver.TypedVar PredecessorList
-    multiple x = Solver.mkVariable (idGen p) [] x
+    multiple = Solver.mkVariable (idGen p) []
 
     single :: ProgramPoint -> Solver.TypedVar PredecessorList
     single x = multiple [x]
@@ -291,3 +291,8 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
 -- variable ID generator
 idGen :: ProgramPoint -> Solver.Identifier
 idGen (ProgramPoint a p) = Solver.mkIdentifier predecessorAnalysis a (show p)
+
+-- | Unhandled cases should print an error message for easier debugging.
+unhandled :: String -> ProgramPoint -> IR.NodeType -> Solver.TypedVar PredecessorList
+unhandled pos p parent = error . unwords $
+  ["Unhandled", pos, "Program Point:", show p, "for parent", show parent]

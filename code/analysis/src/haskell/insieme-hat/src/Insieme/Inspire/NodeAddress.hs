@@ -42,6 +42,7 @@ module Insieme.Inspire.NodeAddress (
     getInspire,
     getParent,
     getPath,
+    children,
     getIndex,
     getNode,
     isRoot,
@@ -87,6 +88,10 @@ mkNodeAddress xs ir = foldl' (flip goDown) (NodeAddress [] root ir Nothing) xs
 -- | Slow, use 'getPathReversed' where possible
 getPath :: NodeAddress -> NodePath
 getPath = reverse . getPathReversed
+
+-- | Get the number of children of a given node.
+children :: NodeAddress -> Int
+children (NodeAddress _ n _ _) = length $ subForest n
 
 getIndex :: NodeAddress -> Int
 getIndex = head . getPathReversed
