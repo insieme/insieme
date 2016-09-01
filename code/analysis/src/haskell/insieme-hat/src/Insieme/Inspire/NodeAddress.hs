@@ -91,7 +91,7 @@ getPath = reverse . getPathReversed
 
 -- | Get the number of children of a given node.
 children :: NodeAddress -> Int
-children (NodeAddress _ n _ _) = length $ subForest n
+children = length . subForest . getNodePair
 
 getIndex :: NodeAddress -> Int
 getIndex = head . getPathReversed
