@@ -45,6 +45,7 @@
 #include "insieme/core/analysis/compare.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/annotations/naming.h"
 #include "insieme/core/types/subtype_constraints.h"
 
 #include "insieme/core/transform/node_replacer.h"
@@ -326,9 +327,19 @@ namespace analysis {
 
 	boost::optional<ExpressionPtr> hasConstructorAccepting(const TypePtr& type, const TypePtr& paramType) {
 
+		// check if the given type is an intercepted type
+		// -> if so, assume everything is in order
+		// (this is unsafe, but the only way to avoid it is to only partially intercept types, which is very challenging to implement for templates)
+		auto genType = type.isa<GenericTypePtr>();
+		if(genType && core::annotations::hasAttachedName(genType)) {
+			return ExpressionPtr();
+		}
+
 		// check that the given type is a tag type
 		auto tagType = type.isa<TagTypePtr>();
-		if(!tagType) return {};
+		if(!tagType) {
+			return {};
+		}
 
 		// unpeel
 		auto canonicalTagType = analysis::getCanonicalType(type).as<TagTypePtr>();

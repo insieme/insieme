@@ -704,39 +704,6 @@ namespace core {
 		EXPECT_EQ("{ref<int<4>,f,f,plain> v0 = v10; ref<int<4>,f,f,plain> v1 = int_add(v10, v20); int_add(ref_deref(v0), ref_deref(v1)); int_sub(ref_deref(v1), ref_deref(v0));}", toString(*inlined));
 	}
 
-	TEST(Manipulation, InlineRefPassing) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-		auto& refExt = mgr.getLangExtension<lang::ReferenceExtension>();
-
-		// ref->ref case
-		{
-			ExpressionPtr call = builder.parseExpr(R"(
-				def test = function (a : ref<int<4>>) -> unit { *a; };
-				test(lit("glob":ref<int<4>>))
-			)");
-			ASSERT_TRUE(call && call.isa<CallExprPtr>());
-			EXPECT_EQ(checks::check(call).size(), 0) << checks::check(call);
-			auto inlined = transform::tryInlineToExpr(mgr, call.as<CallExprPtr>());
-			EXPECT_NE(call, inlined);
-			EXPECT_EQ(checks::check(inlined).size(), 0) << checks::check(inlined);
-			EXPECT_TRUE(refExt.isCallOfRefDeref(inlined)); // this is the crucial point of this test (we can not lose the deref in a ref->ref passing case)
-		}
-		// base case (value -> ref)
-		{
-			ExpressionPtr call = builder.parseExpr(R"(
-				def test = function (a : ref<int<4>>) -> unit { *a; };
-				test(lit("1":int<4>))
-			)");
-			ASSERT_TRUE(call && call.isa<CallExprPtr>());
-			EXPECT_EQ(checks::check(call).size(), 0) << checks::check(call);
-			auto inlined = transform::tryInlineToExpr(mgr, call.as<CallExprPtr>());
-			EXPECT_NE(call, inlined);
-			EXPECT_EQ(checks::check(inlined).size(), 0) << checks::check(inlined);
-			EXPECT_FALSE(refExt.isCallOfRefDeref(inlined));
-		}
-	}
-
 	TEST(Manipulation, InlineITE) {
 		// An expression of type fun(int x) { return (x<10)?x-1:x+1; } should be inline-able.
 		// Issue: multiple uses of the variable x within the body
