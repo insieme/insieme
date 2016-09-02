@@ -100,7 +100,6 @@ target_link_libraries(insieme_core ${CUDD_LIBRARIES})
 target_include_directories(insieme_core PUBLIC ${CUDD_INCLUDE_DIRS} )
 
 # lookup Boost library
-insieme_find_package(NAME Boost COMPONENTS regex) 
 target_include_directories(insieme_core SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
 # =============================================  TESTING  =====================================
