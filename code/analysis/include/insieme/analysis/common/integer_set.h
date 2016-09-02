@@ -37,11 +37,23 @@
 #pragma once
 
 #include "insieme/analysis/common/set.h"
+#include "insieme/analysis/common/arithmetic_set.h"
 
 namespace insieme {
 namespace analysis {
 
 	using IntegerSet = Set<int>;
+
+	/*
+	 * Conversion function from IntegerSet to ArithmeticSet
+	 */
+	ArithmeticSet IntegerToArithmeticSet(const IntegerSet &in) {
+		if (in.isUniversal())
+			return ArithmeticSet::getUniversal();
+
+		ArithmeticSet::SetType values(in.begin(), in.end());
+		return ArithmeticSet(values);
+	}
 
 } // end namespace analysis
 } // end namespace insieme

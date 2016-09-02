@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <set>
 #include <ostream>
+#include <vector>
 
 #include "insieme/utils/assert.h"
 
@@ -48,7 +49,11 @@ namespace analysis {
 	template<typename Elem, typename Compare = std::less<Elem>>
 	class Set {
 
-		std::set<Elem, Compare> elements;
+	public:
+		using SetType = std::set<Elem, Compare>;
+
+	private:
+		SetType elements;
 
 		bool all;
 
@@ -60,10 +65,10 @@ namespace analysis {
 		Set()
 			: elements(), all(false) {}
 
-		Set(const std::set<Elem, Compare>& set)
+		Set(const SetType& set)
 			: elements(set), all(false) {}
 
-		Set(std::set<Elem, Compare>&& set)
+		Set(SetType&& set)
 			: elements(std::move(set)), all(false) {}
 
 		Set(const Set&) = default;
@@ -85,7 +90,7 @@ namespace analysis {
 			return elements.size();
 		}
 
-		const std::set<Elem, Compare>& getElements() const {
+		const SetType& getElements() const {
 			assert_false(isUniversal());
 			return elements;
 		}
