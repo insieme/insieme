@@ -44,6 +44,7 @@ module Insieme.Inspire.Utils (
     parseIR,
     findDecl,
     getType,
+    isType,
     isFreeVariable
 ) where
 
@@ -69,10 +70,9 @@ foldTree = flip foldTreePrune noPrune
 foldAddress :: Monoid a => (NodeAddress -> a -> a) -> NodeAddress -> a
 foldAddress = flip foldAddressPrune noPrune
 
-
 -- | Disables pruning for 'foldTreePrune'.
 noPrune :: NodeAddress -> Bool
-noPrune _ = False
+noPrune = const False
 
 -- | Like 'foldTree' but is able to not follow entire subtrees when
 -- the pruning function returns 'False'.
@@ -176,8 +176,11 @@ getType (Node IR.InitExpr        (t:_)) = Just t
 getType (Node IR.JobExpr         (t:_)) = Just t
 getType _ = Nothing
 
-
-
+-- | Return 'True' if the given node is a type.
+isType :: NodeAddress -> Bool
+isType = flip elem tp . nodeType
+  where tp = [ IR.FunctionType, IR.GenericType, IR.TupleType
+             , IR.NumericType, IR.TagType, IR.Types ]
 
 isVariable :: NodeAddress -> Bool
 isVariable a = case getNode a of

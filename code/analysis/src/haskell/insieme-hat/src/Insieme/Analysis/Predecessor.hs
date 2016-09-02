@@ -41,6 +41,7 @@ module Insieme.Analysis.Predecessor (
     predecessor
 ) where
 
+import Control.Monad (liftM2)
 import Data.Maybe
 import Data.Tree
 import Data.Typeable
@@ -50,6 +51,7 @@ import Insieme.Analysis.Callable
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.ExitPoint
 import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.Utils
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
@@ -129,14 +131,27 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
       | i == 3 -> multiple [ ProgramPoint (goDown 2 parent) Post   -- step is predecessor of body
                          , ProgramPoint (goDown 3 parent) Post ] -- body (n-1) before body (n)
 
-    Node IR.WhileStmt _   -- TODO: add support for continue
-      | i == 0 -> multiple [ ProgramPoint parent Pre               -- eval cond when entering while
-                         , ProgramPoint (goDown 1 parent) Post ] -- cond after loop body
-      | i == 1 -> single $ ProgramPoint (goDown 0 parent) Post     -- body only after condition
+    Node IR.WhileStmt _
+      -- cond of while is evaluated 1. after entering while, 2. after
+      -- regular loop, and 3. after a continue
+      | i == 0 -> multiple $
+                [ ProgramPoint parent Pre                -- entering
+                , ProgramPoint (goDown 1 parent) Post]   -- regular loop
+                ++ map (`ProgramPoint` Post)             -- all continues
+                       (foldAddressPrune
+                        ((++) . isContinue)
+                        prune a)
+      -- body of a while is evaluated only after the condition
+      | i == 1 -> single $ ProgramPoint (goDown 0 parent) Post
+      where isContinue n = [n | nodeType n == IR.ContinueStmt]
+            prune = liftM2 (||) isType (flip elem extra . nodeType)
+            extra = [IR.WhileStmt, IR.ForStmt, IR.LambdaExpr]
 
     Node IR.SwitchStmt _
-      | i == 0     -> single $ ProgramPoint parent Pre       -- swtch expr is first
-      | otherwise -> single $ ProgramPoint (nghbr 0) Post   -- expr before branching
+      -- pred of the switch expression is the switch stmt itself
+      | i == 0     -> single $ ProgramPoint parent Pre
+      -- pred of a branch always is the switch expression
+      | otherwise -> single $ ProgramPoint (nghbr 0) Post
 
     Node IR.ReturnStmt _ -> single $ ProgramPoint parent Pre
 
@@ -265,6 +280,9 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
 
     -- while stmts evaluate their condition as a last step
     Node IR.WhileStmt _ -> single $ ProgramPoint (goDown 0 a) Post
+
+    -- moving backwards after continue stmt we jump to its beginning
+    Node IR.ContinueStmt _ -> pre
 
     -- switch stmts have executed the default branch, or any of the cases
     Node IR.SwitchStmt _ -> multiple $ map (`ProgramPoint` Post) $
