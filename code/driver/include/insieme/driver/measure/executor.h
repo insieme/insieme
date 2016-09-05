@@ -245,14 +245,17 @@ namespace measure {
 	*/
 	class MPIExecutor : public Executor {
 	  private:
-
+		/**
+		* Additional parameters for mpirun
+		*/
+		string options;
 	  public:
 		/**
 		* Creates a new instance of an MPI executor.
 		*
 		* @param wrapper a wrapper program (and its arguments, if any) to be prepended in the execution string
 		*/
-		MPIExecutor(const string& wrapper = "") : Executor(wrapper) {}
+		MPIExecutor(const string& options = "") : Executor(""), options(options) {}
 
 		/**
 		* Copies the given binary to each participating compute node and executes it using mpirun.
@@ -261,7 +264,7 @@ namespace measure {
 		*/
 		virtual int run(const string& binary, const ExecutionSetup& executionSetup) const;
 
-		virtual std::ostream& printTo(std::ostream& out) const { return out << "MPIExecutor(" << wrapper << ")"; }
+		virtual std::ostream& printTo(std::ostream& out) const { return out << "MPIExecutor(" << options << ")"; }
 	};
 
 	/**
@@ -272,7 +275,7 @@ namespace measure {
 	/**
 	 * A factory function for an MPI executor.
 	 */
-	ExecutorPtr makeMPIExecutor(const string& wrapper = "");
+	ExecutorPtr makeMPIExecutor(const string& options = "");
 
 
 } // end namespace measure
