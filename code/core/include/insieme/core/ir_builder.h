@@ -266,7 +266,7 @@ namespace core {
 
 		// --- Imported Standard Factory Methods from Node Types ---
 
-		#include "ir_builder.inl"
+		#include "insieme/core/generated/ir_builder.h"
 
 		// --- Handle value classes ---
 
