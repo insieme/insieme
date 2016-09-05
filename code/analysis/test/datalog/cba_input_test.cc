@@ -340,7 +340,7 @@ namespace analysis {
 	// the type definition (specifying the parameter type)
 	class CBA_Inputs_Test : public ::testing::TestWithParam<std::string> { };
 
-	TEST_P(CBA_Inputs_Test, Datalog) {
+	TEST_P(CBA_Inputs_Test, DISABLED_Datalog) {
 		ActualTest<DatalogEngine> test;
 		test(GetParam());
 	}
