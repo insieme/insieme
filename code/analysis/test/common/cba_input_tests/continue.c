@@ -39,9 +39,21 @@
 int main(int argc, char** argv) {
     int a = 2;
     cba_expect_eq_int(a, 2);
+
+    // while-continue
     do {
         continue;
     } while (true);
     cba_expect_eq_int(a, 2);
+
+    // for-continue
+    int b = 3;
+    cba_expect_eq_int(b, 3);
+    for (int i=0; i<5; i++) {
+        continue;
+        b = 4;
+    }
+    cba_expect_eq_int(a, 2);
+    cba_expect_may_eq_int(b, 3);
     return 0;
 }

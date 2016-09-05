@@ -85,7 +85,7 @@ predecessorAnalysis = Solver.mkAnalysisIdentifier PredecessorAnalysis "pred_of"
 
 predecessor :: ProgramPoint -> Solver.TypedVar PredecessorList
 
--- Predecessor rules for pre program points:
+-- | Predecessor rules for pre program points
 predecessor p@(ProgramPoint a Pre) | isRoot a = var
     where
         var = Solver.mkVariable (idGen p) [] []
@@ -95,8 +95,10 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
 
     Node IR.CallExpr children -> single $
             if i == length children-1
-            then ProgramPoint parent Pre                   -- start with last argument
-            else ProgramPoint (goDown (i+1) parent) Post   -- eval arguments in reverse order
+            -- start with last argument
+            then ProgramPoint parent Pre
+            -- eval arguments in reverse order
+            else ProgramPoint (goDown (i+1) parent) Post
 
     Node IR.Lambda   _ -> call_sites
 
@@ -104,32 +106,43 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
 
     Node IR.TupleExpr _ -> single $ ProgramPoint parent Pre
 
-    Node IR.InitExpr _ | i == 1 -> single $ ProgramPoint (goDown 2 parent) Post
-    Node IR.InitExpr _          -> single $ ProgramPoint parent Pre
+    Node IR.InitExpr _
+      | i == 1     -> single $ ProgramPoint (goDown 2 parent) Post
+      | otherwise -> single $ ProgramPoint parent Pre
 
     Node IR.CastExpr _ -> single $ ProgramPoint parent Pre
 
-    Node IR.Expressions _ | i == 0 -> single $ ProgramPoint parent Pre
-    Node IR.Expressions _          -> single $ ProgramPoint (goDown (i-1) parent) Post
+    Node IR.Expressions _
+      | i == 0     -> single $ ProgramPoint parent Pre
+      | otherwise -> single $ ProgramPoint (goDown (i-1) parent) Post
 
     Node IR.Declaration _ -> single $ ProgramPoint parent Pre
 
     Node IR.DeclarationStmt _ -> single $ ProgramPoint parent Pre
 
     Node IR.CompoundStmt _ -> single $
-            if i == 0                                      -- if it is the first statement
-            then ProgramPoint parent Pre                   -- then go to the pre-state of the compound statement
-            else ProgramPoint (goDown (i-1) parent) Post   -- else to the post state of the previous statement
+      -- if it is the first statement
+      if i == 0
+      -- then go to the pre-state of the compound statement
+      then ProgramPoint parent Pre
+      -- else to the post state of the previous statement
+      else ProgramPoint (goDown (i-1) parent) Post
 
     Node IR.IfStmt _ | i == 0 -> single $ ProgramPoint parent Pre
     Node IR.IfStmt _ -> single $ ProgramPoint (goDown 0 parent) Post        -- todo: make dependent on result of conditional expression
 
-    Node IR.ForStmt _   -- TODO: add support for continue
-      | i == 0 -> single $ ProgramPoint parent Pre                 -- declarations
-      | i == 1 -> single $ ProgramPoint (goDown 0 parent) Post     -- end value
-      | i == 2 -> single $ ProgramPoint (goDown 1 parent) Post     -- step value
-      | i == 3 -> multiple [ ProgramPoint (goDown 2 parent) Post   -- step is predecessor of body
-                         , ProgramPoint (goDown 3 parent) Post ] -- body (n-1) before body (n)
+    Node IR.ForStmt _
+      -- pred of declarations is loop itself
+      | i == 0 -> single $ ProgramPoint parent Pre
+      -- pred of end value is declaration block
+      | i == 1 -> single $ ProgramPoint (goDown 0 parent) Post
+      -- pred of step value is end value
+      | i == 2 -> single $ ProgramPoint (goDown 1 parent) Post
+      -- pred of body is 1. step value, 2. previous body, or 3. continue stmt
+      | i == 3 -> multiple $
+                [ ProgramPoint (goDown 2 parent) Post    -- step
+                , ProgramPoint (goDown 3 parent) Post]   -- body (n-1)
+                ++ postContinueStmt a                    -- all continues
 
     Node IR.WhileStmt _
       -- cond of while is evaluated 1. after entering while, 2. after
@@ -137,15 +150,9 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
       | i == 0 -> multiple $
                 [ ProgramPoint parent Pre                -- entering
                 , ProgramPoint (goDown 1 parent) Post]   -- regular loop
-                ++ map (`ProgramPoint` Post)             -- all continues
-                       (foldAddressPrune
-                        ((++) . isContinue)
-                        prune a)
+                ++ postContinueStmt a                    -- all continues
       -- body of a while is evaluated only after the condition
       | i == 1 -> single $ ProgramPoint (goDown 0 parent) Post
-      where isContinue n = [n | nodeType n == IR.ContinueStmt]
-            prune = liftM2 (||) isType (flip elem extra . nodeType)
-            extra = [IR.WhileStmt, IR.ForStmt, IR.LambdaExpr]
 
     Node IR.SwitchStmt _
       -- pred of the switch expression is the switch stmt itself
@@ -178,7 +185,7 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
     callSitesVar = callSites parent
 
 
--- Predecessor rules for internal program points:
+-- | Predecessor rules for internal program points.
 predecessor  p@(ProgramPoint addr Internal) = case getNode addr of
 
     -- link to exit points of potential target functions
@@ -217,7 +224,7 @@ predecessor  p@(ProgramPoint addr Internal) = case getNode addr of
 
     _ -> unhandled "Internal" p (rootLabel . getNode . fromJust . getParent $ addr)
 
--- Predecessor rules for post program points:
+-- | Predecessor rules for post program points.
 predecessor p@(ProgramPoint a Post) = case getNode a of
 
     -- basic expressions are directly switching from Pre to Post
@@ -305,6 +312,15 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
 
     pre = single $ ProgramPoint a Pre
 
+-- | 'Post' 'ProgramPoint's for all 'ContinueStmt' nodes directly
+-- below the given address.
+postContinueStmt :: NodeAddress -> [ProgramPoint]
+postContinueStmt a =
+  map (`ProgramPoint` Post) (foldAddressPrune ((++) . isContinue) prune a)
+  where
+    isContinue n = [n | nodeType n == IR.ContinueStmt]
+    prune = liftM2 (||) isType (flip elem extra . nodeType)
+    extra = [IR.WhileStmt, IR.ForStmt, IR.LambdaExpr]
 
 -- variable ID generator
 idGen :: ProgramPoint -> Solver.Identifier
