@@ -1,3 +1,26 @@
+require "fileutils"
+
+# Get output directory
+output_dir = ARGV[0]
+abort "BuilderBuilder: Provide the output directory as first argument!" if ARGV.length != 1
+abort "BuilderBuilder: Given output directory (#{output_dir}) does not exist!" unless File.directory?(output_dir)
+
+# Target files
+sigcache_file         = "#{output_dir}/signatures.cache"
+irbuilder_header_file = "#{output_dir}/include/insieme/core/generated/ir_builder.inl"
+irbuilder_impl_file   = "#{output_dir}/include/insieme/core/generated/ir_builder_impl.inl"
+
+# Make sure directories exist for target files
+def create_dir_if_not_exists(filename)
+	dirname = File.dirname(filename)
+	FileUtils.mkdir_p(dirname) unless File.directory?(dirname)
+end
+
+create_dir_if_not_exists(sigcache_file)
+create_dir_if_not_exists(irbuilder_header_file)
+create_dir_if_not_exists(irbuilder_impl_file)
+
+# Bootstrapping done. Run actual script
 signatures = []
 
 simpleGetterExp = /static (.*?) get\((.*?)& manager *?\)/
@@ -32,18 +55,18 @@ Dir["**/ir_*.h"].each { |header|
 signatures = signatures.sort_by { |s| s[0] }
 
 sigcache = ""
-if File.exists?("signatures.cache")
-	sigcache = IO.read("signatures.cache").strip
+if File.exists?(sigcache_file)
+	sigcache = IO.read(sigcache_file).strip
 end
 newsigs = signatures.to_s.strip
 
 if sigcache == newsigs
 	# puts "Builderbuilder.rb : no change in signatures detected, skipping file generation."
 else 
-	File.open("signatures.cache", "w+") { |sigfile| sigfile.puts(newsigs) }
+	File.open(sigcache_file, "w+") { |sigfile| sigfile.puts(newsigs) }
 
-	File.open("include/insieme/core/ir_builder.inl", "w+") { |inlFile|
-	File.open("src/ir_builder_impl.inl", "w+") { |inlFileImpl|
+	File.open(irbuilder_header_file, "w+") { |inlFile|
+	File.open(irbuilder_impl_file, "w+") { |inlFileImpl|
 		signatures.each { |sig|
 			typeName = sig[0][0..-4]
 			funName = typeName.sub(/[A-Z]/) {|c| c.downcase}

@@ -12,16 +12,30 @@ insieme_glob_headers(insieme_frontend_incs include)
 
 # automatically run the script for generating builtin header files
 if(NOT MSVC)
-	execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby generate_builtins.rb --quiet --detect-via-compiler ${INSIEME_CXX_BACKEND_COMPILER} --output ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/frontend/builtin_headers RESULT_VARIABLE generate_builtins_success OUTPUT_VARIABLE generate_builtins_output ERROR_VARIABLE generate_builtins_output)
+	set(generate_builtins_output_dir_base ${CMAKE_CURRENT_BINARY_DIR}/assets)
+	set(generate_builtins_output_dir_rest include/insieme/frontend/builtin_headers)
+	set(generate_builtins_output_dir ${generate_builtins_output_dir_base}/${generate_builtins_output_dir_rest})
+
+	file(MAKE_DIRECTORY ${generate_builtins_output_dir_base})
+
+	execute_process(
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		COMMAND ruby generate_builtins.rb --quiet --detect-via-compiler ${INSIEME_CXX_BACKEND_COMPILER} --output ${generate_builtins_output_dir}
+		RESULT_VARIABLE generate_builtins_success
+		OUTPUT_VARIABLE generate_builtins_output
+		ERROR_VARIABLE generate_builtins_output)
 
 	if (NOT ${generate_builtins_success} EQUAL 0)
 		message(FATAL_ERROR "Ruby generate_builtins.rb script failed to execute, reason:\n${generate_builtins_output}")
 	endif()
+
+	file(GLOB_RECURSE generate_builtins_generated_files ${generate_builtins_output_dir_base}/*)
 endif()
 
 # build the frontend library
-add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
+add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} ${generate_builtins_generated_files} )
 target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_dir})
+target_include_directories(insieme_frontend PUBLIC ${generate_builtins_output_dir_base}/include)
 
 # lookup Boost library
 insieme_find_package(NAME Boost COMPONENTS serialization filesystem system program_options regex)
@@ -56,9 +70,9 @@ add_custom_target(${ut_prefix})
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
-	
+
 	insieme_fix_case_name( case_subdir ${case_file} )
-	
+
 	set ( case_name ${ut_prefix}${case_subdir}_${case_name} )
 	add_executable(${case_name} ${case_file})
 
@@ -66,6 +80,6 @@ foreach ( case_file ${test_cases})
 	add_dependencies(${ut_prefix} ${case_name})
 
 	target_link_libraries(${case_name} insieme_frontend)
-	
-	add_unit_test(${case_name} ${ut_prefix}) 
+
+	add_unit_test(${case_name} ${ut_prefix})
 endforeach(case_file)
