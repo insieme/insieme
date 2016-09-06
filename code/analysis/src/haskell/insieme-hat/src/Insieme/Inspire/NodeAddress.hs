@@ -51,6 +51,7 @@ module Insieme.Inspire.NodeAddress (
     prettyShow,
     goUp,
     goDown,
+    goRel,
     goLeft,
     goRight,
     isBuiltin
@@ -119,6 +120,14 @@ goDown :: Int -> NodeAddress -> NodeAddress
 goDown x parent@(NodeAddress xs n ir _) = NodeAddress (x : xs) n' ir (Just parent)
   where
     n' = subForest n !! x
+
+-- | Return a node address relative to the given one; a negative
+-- integer means going up so many levels; zero or a positive integer
+-- means going to the respective child.
+goRel :: [Int] -> NodeAddress -> NodeAddress
+goRel []     = id
+goRel (i:is) | i < 0 = goRel is . last . take (-i) . iterate goUp
+             | i >= 0 = goRel is . goDown i
 
 goLeft :: NodeAddress -> NodeAddress
 goLeft na@(NodeAddress xs _ _ _            ) | head xs == 0 = na
