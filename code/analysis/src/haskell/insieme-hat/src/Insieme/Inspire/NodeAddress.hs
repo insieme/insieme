@@ -126,7 +126,7 @@ goDown x parent@(NodeAddress xs n ir _) = NodeAddress (x : xs) n' ir (Just paren
 -- means going to the respective child.
 goRel :: [Int] -> NodeAddress -> NodeAddress
 goRel []     = id
-goRel (i:is) | i < 0 = goRel is . last . take (-i) . iterate goUp
+goRel (i:is) | i < 0 = goRel is . last . take (1-i) . iterate goUp
              | i >= 0 = goRel is . goDown i
 
 goLeft :: NodeAddress -> NodeAddress
