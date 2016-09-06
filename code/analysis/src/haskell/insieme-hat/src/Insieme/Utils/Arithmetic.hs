@@ -38,6 +38,7 @@ module Insieme.Utils.Arithmetic where
 
 import Control.Applicative
 import Data.List hiding (product)
+import Data.Maybe
 import Data.Ord
 
 import Prelude hiding (exponent, product)
@@ -75,6 +76,9 @@ prettyShow (Formula ts) = unempty . intercalate " + " $ prettyShowTerm <$> ts
   where
     unempty "" = "0"
     unempty xs = xs
+
+isZero :: Formula c v -> Bool
+isZero = null . terms
 
 isConst :: Formula c v -> Bool
 isConst = all termIsConst . terms
@@ -167,7 +171,6 @@ termIsConst = null . factors . product
 scaleTerm :: (Integral c) => c -> Term c v -> Term c v
 scaleTerm s (Term c p) = Term (s * c) p
 
-
 --
 -- * Operations
 --
@@ -190,6 +193,11 @@ mulFormula a b = normalize $ mulFormula' a b
 productFormula :: (Integral c, Ord v) => [Formula c v] -> Formula c v
 productFormula = normalize . foldr1 mulFormula'
 
+divFormula :: (Integral c, Ord v) => Formula c v -> Formula c v -> Formula c v
+divFormula x y = normalize $ divFormula' x y
+
+modFormula :: (Integral c, Ord v) => Formula c v -> Formula c v -> Formula c v
+modFormula x y = normalize $ modFormula' x y
 
 --
 -- * Utility
@@ -212,6 +220,32 @@ mulTerm (Term a b) (Term c d) = Term (a * c) (Product $ factors b ++ factors d)
 mulTerms :: (Integral c) => Term c v -> [Term c v] -> [Term c v]
 mulTerms t = map (mulTerm t)
 
+divTerm :: (Integral c) => c -> Term c v -> Term c v
+divTerm s (Term c p) = Term (c `div` s) p
+
+canDivide :: (Integral c) => Formula c v -> Formula c v -> Bool
+canDivide _ y | isZero y        = False
+canDivide _ y | not (isConst y) = False
+canDivide x y = all ((== 0) . (`mod` c) . coeff) $ terms x
+  where
+    c = fromJust $ toConstant y
+
+divFormula' :: (Integral c) => Formula c v -> Formula c v -> Formula c v
+divFormula' _ y | isZero y        = error "division by zero"
+divFormula' _ y | not (isConst y) = error "division by non-const not implemented"
+divFormula' x y = Formula $ map (divTerm c) $ terms x
+  where
+    c = fromJust $ toConstant y
+
+modTerm :: (Integral c) => c -> Term c v -> Term c v
+modTerm s (Term c p) = Term (c `mod` s) p
+
+modFormula' :: (Integral c) => Formula c v -> Formula c v -> Formula c v
+modFormula' _ y | isZero y        = error "modulo by zero"
+modFormula' _ y | not (isConst y) = error "modulo by non-const not implemented"
+modFormula' x y = Formula $ map (modTerm c) $ terms x
+  where
+    c = fromJust $ toConstant y
 
 --
 -- * Numeric Order
