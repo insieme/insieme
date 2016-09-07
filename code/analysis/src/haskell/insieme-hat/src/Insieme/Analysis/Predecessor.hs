@@ -66,7 +66,6 @@ instance Solver.Lattice PredecessorList where
     join [] = []
     join xs = foldr1 (++) xs
 
-
 --
 -- * Predecessor Analysis
 --
@@ -82,14 +81,16 @@ predecessorAnalysis = Solver.mkAnalysisIdentifier PredecessorAnalysis "pred_of"
 -- * Predecessor Variable Generator
 --
 
+-- | Given a program point (Pre, Post, or Internal), give the
+-- predecessors for it as a constraint.
 predecessor :: ProgramPoint -> Solver.TypedVar PredecessorList
 
--- | Predecessor rules for pre program points
+-- Predecessor rules for the program root node
 predecessor p@(ProgramPoint a Pre) | isRoot a = var
     where
         var = Solver.mkVariable (idGen p) [] []
 
-
+-- Predecessor rules for pre program points
 predecessor p@(ProgramPoint a Pre) = case getNode parent of
 
     Node IR.CallExpr children -> single $
@@ -171,81 +172,68 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
   where
     parent = fromJust $ getParent a
     i = getIndex a
-
-    multiple :: [ProgramPoint] -> Solver.TypedVar PredecessorList
-    multiple = Solver.mkVariable (idGen p) []
-
-    single :: ProgramPoint -> Solver.TypedVar PredecessorList
-    single x = multiple [x]
-
+    single = single' p
+    multiple = multiple' p
     call_sites = Solver.mkVariable (idGen p) [con] []
     con = Solver.createConstraint dep val call_sites
-
     dep a = [Solver.toVar callSitesVar]
     val a = foldr go [] $ Solver.get a callSitesVar
     go (CallSite call) list = ProgramPoint (goDown 1 call) Post : list
-
     callSitesVar = callSites parent
 
 
--- | Predecessor rules for internal program points.
+-- Predecessor rules for internal program points.
 predecessor  p@(ProgramPoint addr Internal) = case getNode addr of
 
     -- link to exit points of potential target functions
     Node IR.CallExpr _ -> var
-        where
+      where
+        extract = ComposedValue.toValue
+        var = Solver.mkVariable (idGen p) [con] []
+        con = Solver.createConstraint dep val var
+        dep a = Solver.toVar callableVar : map Solver.toVar (exitPointVars a)
+        val a = [litPredecessor | callsLiteral] ++ nonLiteralExit
+          where
+            nonLiteralExit = foldr go [] (exitPointVars a)
+            go e l = foldr (\(ExitPoint r) l -> ProgramPoint r Post : l)
+                     l (Solver.get a e)
+            callsLiteral = any isLiteral (callableVal a)
+              where
+                isLiteral (Literal _) = True
+                isLiteral _ = False
+            litPredecessor = ProgramPoint (goDown 1 addr) Post
+        callableVar = callableValue (goDown 1 addr)
+        callableVal a = USet.toSet $
+                if USet.isUniverse callables
+                then collectAllCallables addr
+                else callables
+            where
+              callables = extract $ Solver.get a callableVar
+        exitPointVars a =
+          foldr (\t l -> exitPoints (toAddress t) : l) [] (callableVal a)
 
-            extract = ComposedValue.toValue
+    _ -> unhandled "Internal" p
+        (rootLabel . getNode . fromJust . getParent $ addr)
 
-            var = Solver.mkVariable (idGen p) [con] []
-            con = Solver.createConstraint dep val var
-
-            dep a = Solver.toVar callableVar : map Solver.toVar (exitPointVars a)
-            val a = [litPredecessor | callsLiteral] ++ nonLiteralExit
-                where
-                    nonLiteralExit = foldr go [] (exitPointVars a)
-                    go e l = foldr (\(ExitPoint r) l -> ProgramPoint r Post : l) l (Solver.get a e)
-
-                    callsLiteral = any isLiteral (callableVal a)
-                        where
-                            isLiteral (Literal _) = True
-                            isLiteral _ = False
-
-                    litPredecessor = ProgramPoint (goDown 1 addr) Post
-
-
-            callableVar = callableValue (goDown 1 addr)
-            callableVal a = USet.toSet $
-                    if USet.isUniverse callables
-                    then collectAllCallables addr
-                    else callables
-                where
-                    callables = extract $ Solver.get a callableVar
-
-
-            exitPointVars a = foldr (\t l -> exitPoints (toAddress t) : l) [] (callableVal a)
-
-    _ -> unhandled "Internal" p (rootLabel . getNode . fromJust . getParent $ addr)
-
--- | Predecessor rules for post program points.
+-- Predecessor rules for post program points.
 predecessor p@(ProgramPoint a Post) = case getNode a of
 
     -- basic expressions are directly switching from Pre to Post
-    Node IR.Variable         _ -> pre
-    Node IR.Literal          _ -> pre
-    Node IR.LambdaExpr       _ -> pre
-    Node IR.LambdaReference  _ -> pre
-    Node IR.BindExpr         _ -> pre
-    Node IR.JobExpr          _ -> pre
+    Node IR.Variable        _ -> pre
+    Node IR.Literal         _ -> pre
+    Node IR.LambdaExpr      _ -> pre
+    Node IR.LambdaReference _ -> pre
+    Node IR.BindExpr        _ -> pre
+    Node IR.JobExpr         _ -> pre
 
     -- call expressions are switching from Internal to Post
     Node IR.CallExpr _ -> single $ ProgramPoint a Internal
 
     -- for tuple expressions, the predecessor is the end of the epxressions
-    Node IR.TupleExpr        _ -> single $ ProgramPoint (goDown 1 a) Post
+    Node IR.TupleExpr _ -> single $ ProgramPoint (goDown 1 a) Post
 
     -- for initialization expressions, we finish with the first sub-expression
-    Node IR.InitExpr         _ -> single $ ProgramPoint (goDown 1 a) Post
+    Node IR.InitExpr _ -> single $ ProgramPoint (goDown 1 a) Post
 
     -- cast expressions just process the nested node
     Node IR.CastExpr _ -> single $ ProgramPoint (goDown 1 a) Post
@@ -255,33 +243,31 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
 
     -- handle lists of expressions
     Node IR.Expressions  [] -> single $ ProgramPoint a Pre
-    Node IR.Expressions sub -> single $ ProgramPoint (goDown (length sub-1) a) Post
+    Node IR.Expressions sub ->
+      single $ ProgramPoint (goDown (length sub-1) a) Post
 
     -- compound statements
-    Node IR.CompoundStmt []    -> pre
-    Node IR.CompoundStmt stmts -> single $ ProgramPoint (goDown (length stmts-1) a) Post
+    Node IR.CompoundStmt [] -> pre
+    Node IR.CompoundStmt stmts ->
+      single $ ProgramPoint (goDown (length stmts-1) a) Post
 
     -- declaration statement
     Node IR.DeclarationStmt _ -> single $ ProgramPoint (goDown 0 a) Post
 
     -- conditional statement
     Node IR.IfStmt _ -> var
-        where
-            var = Solver.mkVariable (idGen p) [con] []
-            con = Solver.createConstraint dep val var
-
-            dep a = [Solver.toVar conditionValueVar]
-
-            val a = case ComposedValue.toValue $ Solver.get a conditionValueVar of
-                Neither     -> []
-                AlwaysTrue  -> [thenBranch]
-                AlwaysFalse -> [elseBranch]
-                Both        -> [thenBranch,elseBranch]
-
-            conditionValueVar = booleanValue $ goDown 0 a
-
-            thenBranch = ProgramPoint (goDown 1 a) Post
-            elseBranch = ProgramPoint (goDown 2 a) Post
+      where
+        var = Solver.mkVariable (idGen p) [con] []
+        con = Solver.createConstraint dep val var
+        dep a = [Solver.toVar conditionValueVar]
+        val a = case ComposedValue.toValue (Solver.get a conditionValueVar) of
+                  Neither     -> []
+                  AlwaysTrue  -> [thenBranch]
+                  AlwaysFalse -> [elseBranch]
+                  Both        -> [thenBranch,elseBranch]
+        conditionValueVar = booleanValue $ goDown 0 a
+        thenBranch = ProgramPoint (goDown 1 a) Post
+        elseBranch = ProgramPoint (goDown 2 a) Post
 
     -- for loop statement
     Node IR.ForStmt _ -> multiple
@@ -317,14 +303,17 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
     _ -> unhandled "Post" p (rootLabel $ getNode a)
 
   where
-
-    multiple :: [ProgramPoint] -> Solver.TypedVar PredecessorList
-    multiple = Solver.mkVariable (idGen p) []
-
-    single :: ProgramPoint -> Solver.TypedVar PredecessorList
-    single x = multiple [x]
-
+    multiple = multiple' p
+    single = single' p
     pre = single $ ProgramPoint a Pre
+
+-- | Create a dependence to multiple program points.
+multiple' :: ProgramPoint -> [ProgramPoint] -> Solver.TypedVar PredecessorList
+multiple' p = Solver.mkVariable (idGen p) []
+
+-- | Create a dependence to a program point.
+single' :: ProgramPoint -> ProgramPoint -> Solver.TypedVar PredecessorList
+single' p x = multiple' p [x]
 
 -- | 'Post' 'ProgramPoint's for all 'ContinueStmt' nodes directly
 -- below the given address.
@@ -333,11 +322,12 @@ postContinueStmt a = map (`ProgramPoint` Post)
                      (collectAddr IR.ContinueStmt (extra ++ listTypes) a)
   where extra = [IR.WhileStmt, IR.ForStmt, IR.LambdaExpr]
 
--- variable ID generator
+-- | Variable ID generator
 idGen :: ProgramPoint -> Solver.Identifier
 idGen (ProgramPoint a p) = Solver.mkIdentifier predecessorAnalysis a (show p)
 
 -- | Unhandled cases should print an error message for easier debugging.
-unhandled :: String -> ProgramPoint -> IR.NodeType -> Solver.TypedVar PredecessorList
+unhandled :: String -> ProgramPoint -> IR.NodeType
+          -> Solver.TypedVar PredecessorList
 unhandled pos p parent = error . unwords $
   ["Unhandled", pos, "Program Point:", show p, "for parent", show parent]
