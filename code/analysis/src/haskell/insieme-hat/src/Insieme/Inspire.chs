@@ -39,7 +39,6 @@
 
 module Insieme.Inspire where
 
-import Debug.Trace
 import Data.Map (Map)
 import Data.Tree (Tree(..))
 import Insieme.Inspire.ThHelpers
@@ -218,6 +217,4 @@ toNodeKind SwitchCases                  = Support
 toNodeKind CatchClause                  = Support
 toNodeKind Parameters                   = Support
 toNodeKind Expressions                  = Support
-                         
-toNodeKind x = trace ("Missing support for node type: " ++ (show x)) undefined
                          
