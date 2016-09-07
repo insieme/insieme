@@ -66,10 +66,13 @@ int main(int argc, char** argv) {
 	cba_expect_ne_int(a+argc,b+argc);
 	cba_expect_eq_int(a+2+argc, b+argc);
 
-
 	// including function calls
 	cba_expect_eq_int(a,min(a,b));
 	cba_expect_eq_int(b,max(a,b));
+
+	// simple integer division (modulo always 0)
+	cba_expect_eq_int(max(a,b)/2, 6);
+	cba_expect_eq_int(min(a,b)%2, 0);
 
 	// even more tricky
 	cba_expect_eq_int(a+argc,min(a+argc,b+argc));
