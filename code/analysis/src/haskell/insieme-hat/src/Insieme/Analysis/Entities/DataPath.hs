@@ -36,7 +36,7 @@
 
 module Insieme.Analysis.Entities.DataPath (
 
-    DataPath(),
+    DataPath(Root,Invalid),
     root,
     invalid,
     step,

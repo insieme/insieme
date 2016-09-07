@@ -34,42 +34,52 @@
  * regarding third party software licenses.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
+#include <gtest/gtest.h>
 
-#include "cba.h"
+#include "insieme/analysis/haskell_interface.h"
+#include "insieme/core/ir_builder.h"
 
-typedef struct {
-	int x;
-	int y;
-} point;
+namespace insieme {
+namespace analysis {
 
+	using namespace core;
 
-int main(int argc, char** argv) {
+	bool isTrue(const StatementAddress& stmt) {
+		return isTrue<HaskellEngine>(stmt.as<ExpressionAddress>());
+	}
 
-	// test an array of scalars
-	int a[5];
+	bool isFalse(const StatementAddress& stmt) {
+		return isFalse<HaskellEngine>(stmt.as<ExpressionAddress>());
+	}
 
-	a[0] = 10;
-	a[1] = 12;
-	a[2] = 14;
-	a[3] = argc;
+	TEST(AccessPathAnalysis, RefNew) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
 
-	cba_expect_eq_int(a[0]+2, a[1]);
-	cba_expect_eq_int(a[0]+argc, 10+a[3]);
+		auto stmt = builder.parseStmt(
+				"{"
+				"	var ref<bool> a = ref_new(type_lit(bool));"
+				"	a = false;"
+				"	var ref<bool> b = ref_new(type_lit(bool));"
+				"	( x : ref<bool>) -> unit {"
+				"		x = true;"
+				"	}(b);"
+				"	( x : ref<bool>, y : ref<bool>) -> unit {"
+				"		( x : ref<bool>, y : ref<bool> ) -> unit {"
+				"			y = true;"
+				"		}(y,x);"
+				"	}(a,b);"
+				"	*a;"
+//				"	*b;"
+				"}"
+		).as<CompoundStmtPtr>();
 
+		auto comp = CompoundStmtAddress(stmt);
 
-	// test an array of points
-	point p[3];
-	p[0] = (point) { 0, 1 };
-	p[1] = (point) { 1, argc };
-	p[2] = (point) { argc, 2 };
+		EXPECT_TRUE(isTrue(comp[5]));
 
-	cba_expect_eq_int(p[0].y, p[1].x);
-	cba_expect_eq_int(p[1].y, p[2].x);
+	}
 
-	cba_expect_is_alias(&(p[0]), &(p[0]));
+} // end namespace analysis
+} // end namespace insieme
 
-	return 0;
-}

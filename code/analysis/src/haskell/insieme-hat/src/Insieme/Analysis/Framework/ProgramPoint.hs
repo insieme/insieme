@@ -130,7 +130,7 @@ mkPredecessorConstraintCredentials :: (Solver.Lattice a)
 mkPredecessorConstraintCredentials pp analysis = (dep,val)
     where
         predecessorVar = predecessor pp
-        predecessorStateVars a = map (\p -> analysis p) (Solver.get a predecessorVar)
+        predecessorStateVars a = map analysis (Solver.get a predecessorVar)
 
         dep a = (Solver.toVar predecessorVar) : map Solver.toVar (predecessorStateVars a)
         val a = Solver.join $ map (Solver.get a) (predecessorStateVars a)

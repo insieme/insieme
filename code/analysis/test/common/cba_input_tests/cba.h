@@ -55,6 +55,7 @@ void cba_expect_may_be_false(bool a);
 
 // integer tests
 void cba_expect_undefined_int(int a);
+void cba_expect_defined_int(int a);
 void cba_expect_eq_int(int a, int b);
 void cba_expect_ne_int(int a, int b);
 void cba_expect_may_eq_int(int a, int b);

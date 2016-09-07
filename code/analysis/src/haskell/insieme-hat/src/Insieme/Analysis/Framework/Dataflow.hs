@@ -37,8 +37,18 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Insieme.Analysis.Framework.Dataflow (
-    DataFlowAnalysis(DataFlowAnalysis,analysis,analysisIdentifier,variableGenerator,topValue),
+    DataFlowAnalysis(
+        DataFlowAnalysis,
+        analysisIdentifier,
+        variableGenerator,
+        topValue,
+        freeVariableHandler,
+        entryPointParameterHandler,
+        initialValueHandler
+    ),
+    mkDataFlowAnalysis,
     mkVarIdentifier,
+    mkConstant,
     dataflowValue
 ) where
 
@@ -78,15 +88,36 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 --
 
 data DataFlowAnalysis a v = DataFlowAnalysis {
-    analysis           :: a,                                    -- ^ the analysis type token
-    analysisIdentifier :: Solver.AnalysisIdentifier,            -- ^ the analysis identifier
-    variableGenerator  :: NodeAddress -> Solver.TypedVar v,     -- ^ the variable generator of the represented analysis
-    topValue           :: v                                     -- ^ the top value of this analysis
+    analysis                   :: a,                                    -- ^ the analysis type token
+    analysisIdentifier         :: Solver.AnalysisIdentifier,            -- ^ the analysis identifier
+    variableGenerator          :: NodeAddress -> Solver.TypedVar v,     -- ^ the variable generator of the represented analysis
+    topValue                   :: v,                                    -- ^ the top value of this analysis
+    freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a free variable 
+    entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a entry point parameter
+    initialValueHandler        :: NodeAddress -> v                      -- ^ a function computing the initial value of a memory location 
 }
+
+-- a function creating a simple data flow analysis
+mkDataFlowAnalysis :: (Typeable a, Solver.ExtLattice v) => a -> String -> (NodeAddress -> Solver.TypedVar v) -> DataFlowAnalysis a v
+mkDataFlowAnalysis a s g = res
+    where
+        res = DataFlowAnalysis a aid g top justTop justTop (\_ -> top)
+        aid = (Solver.mkAnalysisIdentifier a s)
+        justTop a = mkConstant res a top 
+        top = Solver.top
+
 
 -- a function creation an identifier for a variable of a data flow analysis
 mkVarIdentifier :: DataFlowAnalysis a v -> NodeAddress -> Solver.Identifier
 mkVarIdentifier a n = Solver.mkIdentifier (analysisIdentifier a) n ""
+
+
+-- a function creating a data flow analysis variable representing a constant value 
+mkConstant :: (Typeable a, Solver.ExtLattice v) => DataFlowAnalysis a v -> NodeAddress -> v -> Solver.TypedVar v 
+mkConstant a n v = var
+    where
+        var = Solver.mkVariable (idGen n) [] v
+        idGen = mkVarIdentifier a   
 
 
 --
@@ -100,14 +131,9 @@ dataflowValue :: (ComposedValue.ComposedValue a i v, Typeable d)
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
 dataflowValue addr analysis ops = case getNode addr of
 
-
     Node IR.Variable _ -> case findDecl addr of
-            Just declrAddr -> if isFreeVariable declrAddr
-                                then freeVar
-                                else handleDeclr declrAddr
-            _              -> freeVar
-        where
-            freeVar = Solver.mkVariable (idGen addr) [] top
+            Just declrAddr -> handleDeclr declrAddr              -- this variable is declared, use declared value
+            _              -> freeVariableHandler analysis addr  -- it is a free variable, ask the analysis what to do with it
 
 
     Node IR.CallExpr _ -> var
@@ -202,7 +228,7 @@ dataflowValue addr analysis ops = case getNode addr of
             var
 
 
-    _ -> Solver.mkVariable (idGen addr) [] top
+    _ -> unknown
 
   where
 
@@ -212,9 +238,13 @@ dataflowValue addr analysis ops = case getNode addr of
 
     varGen = variableGenerator analysis
 
+    unknown = Solver.mkVariable (idGen addr) [] top
+
     compose = ComposedValue.toComposed
     extract = ComposedValue.toValue
 
+
+    -- variable declaration handler
 
     handleDeclr declrAddr = case getNode (goUp declrAddr) of
 
@@ -223,7 +253,12 @@ dataflowValue addr analysis ops = case getNode addr of
             var = Solver.mkVariable (idGen addr) [constraint] Solver.bot
             constraint = Solver.forward (varGen (goDown 0 . goUp $ declrAddr)) var
 
-        Node IR.Parameters _ -> var
+        Node IR.Parameters _ -> 
+            
+            if isEntryPointParameter declrAddr                           
+                then entryPointParameterHandler analysis declrAddr
+                else var   
+            
           where
             var = Solver.mkVariable (idGen addr) [con] Solver.bot
             con = Solver.createConstraint dep val var

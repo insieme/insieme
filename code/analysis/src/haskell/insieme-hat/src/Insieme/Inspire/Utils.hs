@@ -44,7 +44,10 @@ module Insieme.Inspire.Utils (
     parseIR,
     findDecl,
     getType,
-    isFreeVariable
+    isType,
+    isFreeVariable,
+    isEntryPoint,
+    isEntryPointParameter
 ) where
 
 import Control.Applicative
@@ -174,9 +177,12 @@ getType (Node IR.CastExpr        (t:_)) = Just t
 getType (Node IR.TupleExpr       (t:_)) = Just t
 getType (Node IR.InitExpr        (t:_)) = Just t
 getType (Node IR.JobExpr         (t:_)) = Just t
+getType (Node IR.MarkerExpr      (t:_)) = Just t
 getType _ = Nothing
 
 
+isType :: Tree IR.NodeType -> Bool
+isType (Node x _) = IR.toNodeKind x == IR.Type
 
 
 isVariable :: NodeAddress -> Bool
@@ -186,19 +192,30 @@ isVariable a = case getNode a of
 
 isFreeVariable :: NodeAddress -> Bool
 isFreeVariable v | (not . isVariable) v = False
-isFreeVariable v = isNothing decl || (isEntryPointParam $ fromJust decl)
+isFreeVariable v = isNothing decl
     where
         decl = findDecl v
 
-        isEntryPointParam v = case getNode $ fromJust $ getParent v of
-            Node IR.Parameters _ -> (not . hasEnclosingCall) v
+hasEnclosingStatement :: NodeAddress -> Bool
+hasEnclosingStatement a = case getNode a of
+    Node n _ | IR.toNodeKind n == IR.Statement -> True
+    Node n _ | n /= IR.LambdaExpr && n /= IR.Variable && IR.toNodeKind n == IR.Expression -> True
+    _ -> not (isRoot a) && (hasEnclosingStatement (fromJust $ getParent a)) 
+
+
+isEntryPoint :: NodeAddress -> Bool
+isEntryPoint a = case getNode a of
+    Node IR.CompoundStmt _ -> isRoot a || (not $ hasEnclosingStatement $ fromJust $ getParent a)
+    _                      -> isRoot a
+
+
+isEntryPointParameter :: NodeAddress -> Bool
+isEntryPointParameter v | (not . isVariable) v = False
+isEntryPointParameter v | isRoot v = False
+isEntryPointParameter v = case getNode $ fromJust $ getParent v of
+            Node IR.Parameters _ -> not $ hasEnclosingStatement v
             _                    -> False
-
-        hasEnclosingCall a = case getNode a of
-            Node IR.CallExpr _ -> True
-            _                  -> (not . isRoot) a && (hasEnclosingCall (fromJust $ getParent a))
-
-
+    
 
 
 -- some examples

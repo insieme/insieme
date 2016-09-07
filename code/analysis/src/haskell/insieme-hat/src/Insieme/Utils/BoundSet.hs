@@ -43,10 +43,13 @@ module Insieme.Utils.BoundSet (
     singleton,
     member,
     size,
+    null,
     isUniverse,
+    fromSet,
     fromList,
     toList,
     toUnboundSet,
+    fromUnboundSet,
     union,
     intersection,
     cartProduct,
@@ -59,7 +62,7 @@ import Data.Typeable
 import qualified Data.Set as Set
 import qualified Insieme.Utils.UnboundSet as USet
 
-import Prelude hiding (map)
+import Prelude hiding (map,null)
 
 --
 -- * Bounds
@@ -81,7 +84,7 @@ instance IsBound Bound100 where
 --
 
 data BoundSet bb a = Universe | BoundSet (Set.Set a)
-  deriving (Eq, Show)
+  deriving (Eq, Show, Ord)
 
 empty :: BoundSet bb a
 empty = BoundSet Set.empty
@@ -97,9 +100,19 @@ size :: BoundSet bb a -> Int
 size Universe     = error "Size of Universe does not fit into Int"
 size (BoundSet x) = Set.size x
 
+null :: BoundSet bb a -> Bool
+null  Universe    = False
+null (BoundSet s) = Set.null s
+
 isUniverse :: BoundSet bb a -> Bool
 isUniverse Universe = True
 isUniverse _        = False
+
+fromSet :: (IsBound bb, Ord a) => Set.Set a -> BoundSet bb a
+fromSet s = union set empty
+    where
+        set = BoundSet s 
+
 
 fromList :: (IsBound bb, Ord a) => [a] -> BoundSet bb a
 fromList as = union set empty
@@ -113,6 +126,10 @@ toList (BoundSet x) = Set.toList x
 toUnboundSet :: BoundSet bb a -> USet.UnboundSet a
 toUnboundSet Universe     = USet.Universe
 toUnboundSet (BoundSet x) = USet.fromSet x
+
+fromUnboundSet :: (IsBound bb, Ord a) => USet.UnboundSet a -> BoundSet bb a
+fromUnboundSet USet.Universe = Universe
+fromUnboundSet s             = fromSet . USet.toSet $ s
 
 union :: (IsBound bb, Ord a) => BoundSet bb a -> BoundSet bb a -> BoundSet bb a
 union    Universe     _            = Universe

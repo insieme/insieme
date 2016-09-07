@@ -9,10 +9,12 @@ cabal-version:      >=1.10
 
 executable insieme-hat
     main-is:            Main.hs
-    other-modules:      Insieme.Analysis.Entities.DataPath,
+    other-modules:      Insieme.Analysis.Entities.AccessPath,
+                        Insieme.Analysis.Entities.DataPath,
                         Insieme.Analysis.Entities.FieldIndex,
                         Insieme.Analysis.Entities.ProgramPoint,
                         Insieme.Analysis.Entities.SymbolicFormula,
+                        Insieme.Analysis.AccessPath,
                         Insieme.Analysis.Alias,
                         Insieme.Analysis.Arithmetic,
                         Insieme.Analysis.Boolean,
@@ -31,6 +33,7 @@ executable insieme-hat
                         Insieme.Analysis.Framework.PropertySpace.ValueTree,
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.Solver,
+                        Insieme.Analysis.WriteSetSummary,
                         Insieme.Context,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
@@ -61,10 +64,12 @@ executable insieme-hat
 
 executable cba_runner
     main-is:            CbaRunner.hs
-    other-modules:      Insieme.Analysis.Entities.DataPath,
+    other-modules:      Insieme.Analysis.Entities.AccessPath,
+                        Insieme.Analysis.Entities.DataPath,
                         Insieme.Analysis.Entities.FieldIndex,
                         Insieme.Analysis.Entities.ProgramPoint,
                         Insieme.Analysis.Entities.SymbolicFormula,
+                        Insieme.Analysis.AccessPath,
                         Insieme.Analysis.Alias,
                         Insieme.Analysis.Arithmetic,
                         Insieme.Analysis.Boolean,
@@ -83,6 +88,7 @@ executable cba_runner
                         Insieme.Analysis.Framework.PropertySpace.ValueTree,
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.Solver,
+                        Insieme.Analysis.WriteSetSummary,
                         Insieme.Context,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
@@ -115,10 +121,12 @@ executable cba_runner
 
 library
     exposed-modules:    Insieme.Adapter
-    other-modules:      Insieme.Analysis.Entities.DataPath,
+    other-modules:      Insieme.Analysis.Entities.AccessPath,
+                        Insieme.Analysis.Entities.DataPath,
                         Insieme.Analysis.Entities.FieldIndex,
                         Insieme.Analysis.Entities.ProgramPoint,
                         Insieme.Analysis.Entities.SymbolicFormula,
+                        Insieme.Analysis.AccessPath,
                         Insieme.Analysis.Alias,
                         Insieme.Analysis.Arithmetic,
                         Insieme.Analysis.Boolean,
@@ -137,6 +145,7 @@ library
                         Insieme.Analysis.Framework.PropertySpace.ValueTree,
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.Solver,
+                        Insieme.Analysis.WriteSetSummary,
                         Insieme.Context,
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,

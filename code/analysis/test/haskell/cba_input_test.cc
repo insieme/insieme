@@ -219,7 +219,6 @@ namespace analysis {
 			auto res = core::checks::check(prog);
 			EXPECT_TRUE(res.empty()) << res << "\n------\n" << printer::dumpErrors(res);
 
-
 			// run CBA analysis
 			int testCount = 0;
 			visitDepthFirst(NodeAddress(prog), [&](const CallExprAddress& call) {
@@ -274,6 +273,13 @@ namespace analysis {
 					std::cerr << "Performing " << name << std::endl;
 					ArithmeticSet res = this->getValue(call.getArgument(0));
 					EXPECT_TRUE(res.isUniversal())
+						<< *core::annotations::getLocation(call) << std::endl
+						<< "ArithmeticSet evaluates to " << res << std::endl;
+
+				} else if (name == "cba_expect_defined_int") {
+					std::cerr << "Performing " << name << std::endl;
+					ArithmeticSet res = this->getValue(call.getArgument(0));
+					EXPECT_TRUE(!res.isUniversal() && res.size() == 1)
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "ArithmeticSet evaluates to " << res << std::endl;
 
