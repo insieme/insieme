@@ -42,7 +42,7 @@ import Data.Tree
 import Data.Typeable
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-import Insieme.Inspire.Utils (isFreeVariable,getType)
+import Insieme.Inspire.Utils (isLoopIterator,isFreeVariable,getType)
 import Insieme.Utils.ParseInt
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
@@ -91,6 +91,8 @@ arithmeticValue addr = case Addr.getNode addr of
     Node IR.Literal [t, Node (IR.StringValue v) _] | isIntType t -> case parseInt v of
         Just cint -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkConst cint)
         Nothing   -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNodePair addr) addr)
+
+    Node IR.Variable _ | isLoopIterator addr -> Solver.mkVariable (idGen addr) [] (compose $ BSet.Universe)
 
     Node IR.Variable (t:_) | isIntType t && isFreeVariable addr ->
         Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Variable (Addr.getNodePair addr) addr)

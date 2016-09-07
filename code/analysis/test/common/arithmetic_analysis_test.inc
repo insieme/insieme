@@ -367,7 +367,17 @@ namespace analysis {
 		EXPECT_EQ("{12}", toString(this->getValue(expr)));
 	}
 
-
+	TYPED_TEST_P(ArithmeticValue, ForLoop) {
+		IRBuilder& builder = getBuilder();
+		auto in = builder.parseAddressesStatement("{"
+		                                          "    for(int<4> i = 0 .. 100 : 1) {"
+		                                          "        $i$;"
+		                                          "    }"
+		                                          "}")[0];
+		EXPECT_NE("{0}", toString(this->getValue(in.as<ExpressionAddress>())));
+		EXPECT_NE("{1}", toString(this->getValue(in.as<ExpressionAddress>())));
+		EXPECT_NE("{100}", toString(this->getValue(in.as<ExpressionAddress>())));
+	}
 
 	TYPED_TEST_P(ArithmeticValue, LocalVariableDecl) {
 
@@ -541,6 +551,7 @@ namespace analysis {
 			Arithmetic_103,
 			Arithmetic_104,
 			Arithmetic_Cast,
+			ForLoop,
 			LocalVariableDecl,
 			ReturnValue,
 			LocalVariable,

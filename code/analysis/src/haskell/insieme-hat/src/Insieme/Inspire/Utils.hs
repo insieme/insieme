@@ -43,6 +43,7 @@ module Insieme.Inspire.Utils (
     foldAddressPrune,
     parseIR,
     findDecl,
+    isLoopIterator,
     getType,
     isType,
     listTypes,
@@ -162,6 +163,10 @@ findDecl start = findDecl start
     nextlevel :: NodeAddress -> Maybe NodeAddress
     nextlevel addr = getParent addr >>= findDecl
 
+
+-- | Returns 'True' if given variable (in declaration) is a loop iterator.
+isLoopIterator :: NodeAddress -> Bool
+isLoopIterator = (==IR.ForStmt) . nodeType . goUp . goUp
 
 
 getType :: Tree IR.NodeType -> Maybe (Tree IR.NodeType)
