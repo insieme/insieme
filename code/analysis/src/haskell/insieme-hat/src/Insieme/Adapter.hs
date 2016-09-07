@@ -92,7 +92,7 @@ foreign export ccall "hat_mk_node_address"
 nodePathLength :: StablePtr Addr.NodeAddress -> IO CSize
 nodePathLength addr_hs = do
     addr <- deRefStablePtr addr_hs
-    return $ fromIntegral $ length $ Addr.getPathReversed addr
+    return $ fromIntegral $ length $ Addr.getAbsolutePath addr
 
 foreign export ccall "hat_node_path_length"
     nodePathLength :: StablePtr Addr.NodeAddress -> IO CSize
@@ -100,7 +100,7 @@ foreign export ccall "hat_node_path_length"
 nodePathPoke :: StablePtr Addr.NodeAddress -> Ptr CSize -> IO ()
 nodePathPoke addr_hs path_c = do
     addr <- deRefStablePtr addr_hs
-    pokeArray path_c $ fromIntegral <$> Addr.getPath addr
+    pokeArray path_c $ fromIntegral <$> Addr.getAbsolutePath addr
 
 foreign export ccall "hat_node_path_poke"
     nodePathPoke :: StablePtr Addr.NodeAddress -> Ptr CSize -> IO ()
@@ -217,7 +217,7 @@ passFormula ctx_c formula_hs = do
         arithemticFactor value_c (fromIntegral $ Ar.exponent factor_hs)
 
     passValue :: Addr.NodeAddress -> IO (Ptr CArithmeticValue)
-    passValue addr_hs = withArrayLen' (fromIntegral <$> Addr.getPath addr_hs) (arithmeticValue ctx_c)
+    passValue addr_hs = withArrayLen' (fromIntegral <$> Addr.getAbsolutePath addr_hs) (arithmeticValue ctx_c)
 
     withArrayLen' :: Storable a => [a] -> (Ptr a -> CSize -> IO b) -> IO b
     withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
