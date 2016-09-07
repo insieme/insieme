@@ -34,27 +34,21 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "cba.h"
 
-#include "insieme/analysis/common/set.h"
-#include "insieme/analysis/common/arithmetic_set.h"
-
-namespace insieme {
-namespace analysis {
-
-	using IntegerSet = Set<int>;
-
-	/*
-	 * Conversion function from IntegerSet to ArithmeticSet
-	 */
-	ArithmeticSet IntegerToArithmeticSet(const IntegerSet &in) {
-		if (in.isUniversal())
-			return ArithmeticSet::getUniversal();
-
-		ArithmeticSet::SetType values(in.begin(), in.end());
-		return ArithmeticSet(values);
-	}
-
-} // end namespace analysis
-} // end namespace insieme
-
+int main(int argc, char** argv) {
+    int a = 2;
+    int b = 5;
+    cba_expect_eq_int(a, 2);
+    cba_expect_eq_int(b, 5);
+    switch (a) {
+    default: b=a;
+    /* case 1:         break; */
+    /* case 2:  a=a+1; break; */
+    /* case 3:  a=a+2; break; */
+    /* default: a+=a-1; */
+    }
+    cba_expect_eq_int(a, 2);
+    cba_expect_eq_int(b, 2);
+    return 0;
+}

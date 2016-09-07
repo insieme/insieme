@@ -46,6 +46,7 @@ formulaTests = testGroup "Formula"
     , normFormulas
     , addFormulas
     , mulFormulas
+    , divFormulas
     ]
 
 
@@ -92,6 +93,20 @@ mulFormulas = testGroup "Multiply Formulas"
     norm :: Formula Int Char -> String
     norm = prettyShow . normalize
 
+divFormulas = testGroup "Divide Formulas"
+    [ testCase "canDivide 1" $ canDivide f3 two @?= True
+    , testCase "canDivide 2" $ canDivide f1 two @?= False
+    , testCase "divFormula"  $ divide f3 two @?= "'a'^2 + 2 'b'^2 + 'z'^1"
+    , testCase "modFormula"  $ modulo f1 two @?= "'y'^3"
+    ]
+  where
+    divide :: Formula Int Char -> Formula Int Char -> String
+    divide x y = prettyShow $ divFormula x y
+
+    modulo :: Formula Int Char -> Formula Int Char -> String
+    modulo x y = prettyShow $ modFormula x y
+
+    two = mkConst 2
 
 fa = Factor 'a' 2
 fb = Factor 'b' 2
@@ -107,3 +122,5 @@ t5 = Term 4 (Product [fb])
 t6 = Term 7 (Product [fx])
 f1 = Formula [t1, t2, t3]
 f2 = Formula [t4, t5, t6]
+
+f3 = Formula [t1, t3, t5]

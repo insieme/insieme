@@ -42,7 +42,7 @@ import Data.Tree
 import Data.Typeable
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-import Insieme.Inspire.Utils (isFreeVariable,getType)
+import Insieme.Inspire.Utils (isLoopIterator,isFreeVariable,getType)
 import Insieme.Utils.ParseInt
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
@@ -68,9 +68,9 @@ instance BSet.IsBound b => Solver.Lattice (SymbolicFormulaSet b)  where
 
 instance BSet.IsBound b => Solver.ExtLattice (SymbolicFormulaSet b)  where
     top   = BSet.Universe
-  
-  
-  
+
+
+
 --
 -- * Arithemtic Value Analysis
 --
@@ -90,6 +90,8 @@ arithmeticValue addr = case Addr.getNode addr of
         Just cint -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkConst cint)
         Nothing   -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNodePair addr) addr)
 
+    Node IR.Variable _ | isLoopIterator addr -> Solver.mkVariable (idGen addr) [] (compose $ BSet.Universe)
+
     Node IR.Variable (t:_) | isIntType t && isFreeVariable addr ->
         Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Variable (Addr.getNodePair addr) addr)
 
@@ -97,9 +99,9 @@ arithmeticValue addr = case Addr.getNode addr of
       where
         var = Solver.mkVariable (idGen addr) [con] Solver.bot
         con = Solver.forward (arithmeticValue $ Addr.goDown 1 addr) var
-     
+
     _ -> dataflowValue addr analysis ops
-    
+
   where
   
     analysis = (mkDataFlowAnalysis ArithmeticAnalysis "A" arithmeticValue) {
@@ -111,19 +113,34 @@ arithmeticValue addr = case Addr.getNode addr of
     compose = ComposedValue.toComposed
     extract = ComposedValue.toValue
 
-    ops = [ add, mul, sub ]
+    ops = [ add, mul, sub, div, mod]
 
     add = OperatorHandler cov dep (val Ar.addFormula)
       where
-        cov a = any (Addr.isBuiltin a) ["int_add", "uint_add"]
+        cov a = any (Addr.isBuiltin a) ["int_add", "uint_add", "gen_add"]
 
     mul = OperatorHandler cov dep (val Ar.mulFormula)
       where
-        cov a = any (Addr.isBuiltin a) ["int_mul", "uint_mul"]
+        cov a = any (Addr.isBuiltin a) ["int_mul", "uint_mul", "gen_mul"]
 
     sub = OperatorHandler cov dep (val Ar.subFormula)
       where
-        cov a = any (Addr.isBuiltin a) ["int_sub", "uint_sub"]
+        cov a = any (Addr.isBuiltin a) ["int_sub", "uint_sub", "gen_sub"]
+
+    div = OperatorHandler cov dep val
+      where
+        cov a = any (Addr.isBuiltin a) ["int_div", "uint_div", "gen_div"]
+        val a = compose $ tryDiv (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
+
+        tryDiv x y = if all (uncurry Ar.canDivide) (BSet.toList prod)
+                        then BSet.map (uncurry Ar.divFormula) prod
+                        else BSet.Universe
+          where
+            prod = BSet.cartProduct x y
+
+    mod = OperatorHandler cov dep (val Ar.modFormula)
+      where
+        cov a = any (Addr.isBuiltin a) ["int_mod", "uint_mod", "gen_mod"]
 
     lhs = arithmeticValue $ Addr.goDown 2 addr
     rhs = arithmeticValue $ Addr.goDown 3 addr
@@ -139,13 +156,13 @@ isIntType (Node IR.GenericType (Node (IR.StringValue "int" ) _:_)) = True
 isIntType (Node IR.GenericType (Node (IR.StringValue "uint") _:_)) = True
 isIntType _ = False
 
-    
+
 -- TODO: provide a improved implementation of this filter
-    
+
 isSideEffectFree :: Addr.NodeAddress -> Bool
 isSideEffectFree a = case Addr.getNode a of
     Node IR.Literal _  -> True
     Node IR.Variable _ -> isFreeVariable a
     Node IR.CallExpr _ -> (Addr.isBuiltin (Addr.goDown 1 a) "ref_deref") && (isSideEffectFree $ Addr.goDown 1 $ Addr.goDown 2 a)
     _                  -> False
-    
+

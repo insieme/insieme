@@ -144,6 +144,8 @@ if (${CMAKE_CXX_COMPILER} MATCHES "clang")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -include ${insieme_common_include_dir}/insieme/common/utils/cxx14_workaround.h")
+	# conform to the same template unfolding depth limit as GCC 6.2
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-depth-900")
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")	
   	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 endif ()

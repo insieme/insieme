@@ -36,25 +36,68 @@
 
 #pragma once
 
-#include "insieme/analysis/common/set.h"
-#include "insieme/analysis/common/arithmetic_set.h"
+#include <boost/serialization/access.hpp>
+
+#include "insieme/driver/measure/measure.h"
+#include "insieme/utils/printable.h"
 
 namespace insieme {
-namespace analysis {
-
-	using IntegerSet = Set<int>;
+namespace driver {
+namespace measure {
 
 	/*
-	 * Conversion function from IntegerSet to ArithmeticSet
+	 * A light metric class to serialize limited information of driver::measure::Metric
 	 */
-	ArithmeticSet IntegerToArithmeticSet(const IntegerSet &in) {
-		if (in.isUniversal())
-			return ArithmeticSet::getUniversal();
+	class LightweightMetric : public utils::Printable {
 
-		ArithmeticSet::SetType values(in.begin(), in.end());
-		return ArithmeticSet(values);
-	}
+	  public:
 
-} // end namespace analysis
+		std::string name;
+
+		LightweightMetric(const MetricPtr& metric) : name(metric->getName()) {}
+		LightweightMetric() : name() {}
+
+		std::ostream& printTo(std::ostream& out) const { return out << name; }
+
+		bool operator<(const LightweightMetric other) const { return name < other.name; }
+
+	  private:
+
+	  	friend class boost::serialization::access;
+
+	  	template<typename Archive>
+	  	void serialize(Archive& archive, const unsigned int version) {
+			archive& name;
+		}
+
+	};
+
+	/*
+	 * A light quantity class to serialize limited information of driver::measure::Quantity
+	 */
+	class LightweightQuantity : public utils::Printable {
+
+	  public:
+
+		double value;
+
+		LightweightQuantity(const Quantity& quantity) : value(quantity.getValue()) {}
+		LightweightQuantity() : value() {}
+
+		std::ostream& printTo(std::ostream& out) const { return out << value; }
+
+	  private:
+
+		friend class boost::serialization::access;
+
+	  	template<typename Archive>
+	  	void serialize(Archive& archive, const unsigned int version) {
+			archive& value;
+		}
+
+	};
+
+} // end namespace measure
+} // end namespace driver
 } // end namespace insieme
 

@@ -43,6 +43,7 @@ module Insieme.Inspire.Utils (
     foldAddressPrune,
     parseIR,
     findDecl,
+    isLoopIterator,
     getType,
     isType,
     isFreeVariable,
@@ -72,10 +73,9 @@ foldTree = flip foldTreePrune noPrune
 foldAddress :: Monoid a => (NodeAddress -> a -> a) -> NodeAddress -> a
 foldAddress = flip foldAddressPrune noPrune
 
-
 -- | Disables pruning for 'foldTreePrune'.
 noPrune :: NodeAddress -> Bool
-noPrune _ = False
+noPrune = const False
 
 -- | Like 'foldTree' but is able to not follow entire subtrees when
 -- the pruning function returns 'False'.
@@ -165,6 +165,10 @@ findDecl start = findDecl start
     nextlevel addr = getParent addr >>= findDecl
 
 
+-- | Returns 'True' if given variable (in declaration) is a loop iterator.
+isLoopIterator :: NodeAddress -> Bool
+isLoopIterator = (==IR.ForStmt) . nodeType . goUp . goUp
+
 
 getType :: Tree IR.NodeType -> Maybe (Tree IR.NodeType)
 getType (Node IR.Literal         (t:_)) = Just t
@@ -181,6 +185,7 @@ getType (Node IR.MarkerExpr      (t:_)) = Just t
 getType _ = Nothing
 
 
+-- | Return 'True' if the given node is a type.
 isType :: Tree IR.NodeType -> Bool
 isType (Node x _) = IR.toNodeKind x == IR.Type
 

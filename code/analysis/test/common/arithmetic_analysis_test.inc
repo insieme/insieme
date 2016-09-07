@@ -305,40 +305,79 @@ namespace analysis {
 		//createDotDump(analysis);
 	}
 
-		TYPED_TEST_P(ArithmeticValue, Arithmetic_103) {
+	TYPED_TEST_P(ArithmeticValue, Arithmetic_103) {
 
-			NodeManager mgr;
-			IRBuilder builder(mgr);
+		NodeManager mgr;
+		IRBuilder builder(mgr);
 
-			auto in = builder.parseStmt(
-				"{"
-				"	auto f = lit(\"xyz\": () -> int<4>);"
-				"	f();"
-				"}"
-			).as<CompoundStmtPtr>();
+		auto in = builder.parseStmt(
+			"{"
+			"	auto f = lit(\"xyz\": () -> int<4>);"
+			"	f();"
+			"}"
+		).as<CompoundStmtPtr>();
 
-			ASSERT_TRUE(in);
-			CompoundStmtAddress code(in);
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
 
-			// check values
-			EXPECT_EQ("{-all-}", toString(this->getValue(code[1].as<ExpressionAddress>())));
+		// check values
+		EXPECT_EQ("{-all-}", toString(this->getValue(code[1].as<ExpressionAddress>())));
 
-			//createDotDump(analysis);
-		}
+		//createDotDump(analysis);
+	}
 
-		TYPED_TEST_P(ArithmeticValue, Arithmetic_Cast) {
-			NodeManager mgr;
-			IRBuilder builder(mgr);
-			auto& base = builder.getLangBasic();
+	TYPED_TEST_P(ArithmeticValue, Arithmetic_104) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
 
-			ExpressionAddress expr(builder.castExpr(base.getInt4(), builder.intLit(12)));
+		auto in = builder
+		              .parseStmt("{"
+		                         "    var ref<int<4>> id = 2;"
+		                         "    var ref<int<4>> size = 100;"
+		                         "    var ref<int<4>> numProcs = 4;"
+		                         "    var ref<int<4>> from = id * size / numProcs;"
+		                         "    var ref<int<4>> to = (id + 1) * size / numProcs;"
+		                         "    var ref<int<4>> step = (size + 1) % id;"
+		                         "    for(int<4> i = from .. to : step) { }"
+		                         "}")
+		              .as<CompoundStmtPtr>();
 
-			EXPECT_EQ("cast<int<4>>(12)", toString(*expr));
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+		ForStmtAddress forStmt = code[6].as<ForStmtAddress>();
 
-			EXPECT_EQ("{12}", toString(this->getValue(expr)));
-		}
+		// check values
+		EXPECT_EQ("{50}", toString(this->getValue(forStmt.getStart())));
+		EXPECT_EQ("{75}", toString(this->getValue(forStmt.getEnd())));
+		EXPECT_EQ("{1}", toString(this->getValue(forStmt.getStep())));
+
+		// createDotDump(analysis);
+	}
 
 
+	TYPED_TEST_P(ArithmeticValue, Arithmetic_Cast) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto& base = builder.getLangBasic();
+
+		ExpressionAddress expr(builder.castExpr(base.getInt4(), builder.intLit(12)));
+
+		EXPECT_EQ("cast<int<4>>(12)", toString(*expr));
+
+		EXPECT_EQ("{12}", toString(this->getValue(expr)));
+	}
+
+	TYPED_TEST_P(ArithmeticValue, ForLoop) {
+		IRBuilder& builder = getBuilder();
+		auto in = builder.parseAddressesStatement("{"
+		                                          "    for(int<4> i = 0 .. 100 : 1) {"
+		                                          "        $i$;"
+		                                          "    }"
+		                                          "}")[0];
+		EXPECT_NE("{0}", toString(this->getValue(in.as<ExpressionAddress>())));
+		EXPECT_NE("{1}", toString(this->getValue(in.as<ExpressionAddress>())));
+		EXPECT_NE("{100}", toString(this->getValue(in.as<ExpressionAddress>())));
+	}
 
 	TYPED_TEST_P(ArithmeticValue, LocalVariableDecl) {
 
@@ -510,7 +549,9 @@ namespace analysis {
 			Arithmetic_101,
 			Arithmetic_102,
 			Arithmetic_103,
+			Arithmetic_104,
 			Arithmetic_Cast,
+			ForLoop,
 			LocalVariableDecl,
 			ReturnValue,
 			LocalVariable,

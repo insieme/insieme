@@ -43,14 +43,17 @@ module Insieme.Inspire.NodeAddress (
     getParent,
     getPath,
     getAbsolutePath,
+    children,
     getIndex,
     getNode,
+    nodeType,
     isRoot,
     getRoot,
     isChildOf,
     prettyShow,
     goUp,
     goDown,
+    goRel,
     goLeft,
     goRight,
     crop,
@@ -102,11 +105,18 @@ getPath = reverse . getPathReversed
 getAbsolutePath :: NodeAddress -> NodePath
 getAbsolutePath a =  reverse $ getPathReversed a ++ getAbsoluteRootPath a
 
+-- | Get the number of children of a given node.
+children :: NodeAddress -> Int
+children = length . subForest . getNodePair
+
 getIndex :: NodeAddress -> Int
 getIndex = head . getPathReversed
 
 getNode :: NodeAddress -> Tree IR.NodeType
 getNode addr = snd <$> getNodePair addr
+
+nodeType :: NodeAddress -> IR.NodeType
+nodeType = rootLabel . getNode
 
 isRoot :: NodeAddress -> Bool
 isRoot = isNothing . getParent
@@ -127,6 +137,14 @@ goDown :: Int -> NodeAddress -> NodeAddress
 goDown x parent@(NodeAddress xs n ir _ r) = NodeAddress (x : xs) n' ir (Just parent) r
   where
     n' = subForest n !! x
+
+-- | Return a node address relative to the given one; a negative
+-- integer means going up so many levels; zero or a positive integer
+-- means going to the respective child.
+goRel :: [Int] -> NodeAddress -> NodeAddress
+goRel []     = id
+goRel (i:is) | i < 0 = goRel is . last . take (1-i) . iterate goUp
+             | i >= 0 = goRel is . goDown i
 
 goLeft :: NodeAddress -> NodeAddress
 goLeft na@(NodeAddress xs _ _ _             _ ) | head xs == 0 = na
