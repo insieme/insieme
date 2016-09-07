@@ -59,7 +59,9 @@ module Insieme.Analysis.Solver (
     TypedVar,
     mkVariable,
     toVar,
-
+    getDependencies,
+    getLimit,
+    
     -- assignments
     Assignment,
     get,
@@ -77,6 +79,7 @@ module Insieme.Analysis.Solver (
 
     -- constraints
     createConstraint,
+    createEqualityConstraint,
     forward,
     forwardIf,
     constant,
@@ -222,6 +225,19 @@ toVar :: TypedVar a -> Var
 toVar (TypedVar x) = x
 
 
+getDependencies :: Assignment -> TypedVar a -> [Var]
+getDependencies a v = concat $ (go <$> (constraints . toVar) v)
+    where
+        go c = dependingOn c a 
+
+getLimit :: (Lattice a) => Assignment -> TypedVar a -> a
+getLimit a v = join (go <$> (constraints . toVar) v)
+    where
+        go c = get a' v
+            where
+                (a',_) = update c a 
+
+
 -- Assignments ----------------------------------------------
 
 newtype Assignment = Assignment ( Map.Map Var Dynamic )
@@ -250,19 +266,28 @@ set :: (Typeable a) => Assignment -> TypedVar a -> a -> Assignment
 set (Assignment a) (TypedVar v) d = Assignment (Map.insert v (toDyn d) a)
 
 
+-- resets the values of the given variables within the given assignment
+reset :: Assignment -> Set.Set Var -> Assignment
+reset (Assignment a) vars = Assignment $ Map.union reseted a
+    where 
+        reseted = Map.fromList (go <$> Set.toList vars)
+        go v = (v,bottom v)
+ 
+
 -- Constraints ---------------------------------------------
 
 data Event =
           None                        -- ^ an update had no effect
-        | Increment                -- ^ an update was an incremental update
-        | Reset                        -- ^ an update was not incremental
+        | Increment                   -- ^ an update was an incremental update
+        | Reset                       -- ^ an update was not incremental
 
 
 
 data Constraint = Constraint {
-        dependingOn :: Assignment -> [Var],
-        update :: (Assignment -> (Assignment,Event)),
-        target :: Var
+        dependingOn         :: Assignment -> [Var],
+        update              :: (Assignment -> (Assignment,Event)),       -- update the assignment, a reset is allowed       
+        updateWithoutReset  :: (Assignment -> (Assignment,Event)),       -- update the assignment, a reset is not allowed
+        target              :: Var
    }
 
 
@@ -293,6 +318,14 @@ addDep d@(Dependencies m) t (v:vs) = addDep (Dependencies (Map.insertWith (\_ s 
 
 getDep :: Dependencies -> Var -> Set.Set Var
 getDep (Dependencies d) v = fromMaybe Set.empty $ Map.lookup v d
+
+getAllDep :: Dependencies -> Var -> Set.Set Var
+getAllDep d v = collect d [v] Set.empty
+    where
+        collect d [] s = s
+        collect d (v:vs) s = collect d ((Set.toList $ Set.difference dep s) ++ vs) (Set.union dep s)
+            where
+                dep = getDep d v 
 
 
 -- solve for a single value
@@ -331,7 +364,7 @@ solveStep :: SolverState -> Dependencies -> [Var] -> SolverState
 -- empty work list
 -- solveStep s _ [] | trace (dumpToJsonFile s "ass_meta") $ False = undefined                                           -- debugging assignment as meta-info for JSON dump
 -- solveStep s _ [] | trace (dumpSolverState s "graph") $ False = undefined                                             -- debugging assignment as a graph plot
--- solveStep s _ [] | trace (dumpSolverState s "graph") $ trace (dumpToJsonFile a v "ass_meta") $ False = undefined     -- debugging both
+-- solveStep s _ [] | trace (dumpSolverState s "graph") $ trace (dumpToJsonFile s "ass_meta") $ False = undefined       -- debugging both
 -- solveStep s _ [] | trace (showVarStatistic s) $ False = undefined                                                    -- debugging performance data
 solveStep s _ [] = s                                                                                                    -- work list is empty
 
@@ -340,17 +373,26 @@ solveStep (SolverState a k) d (v:vs) = solveStep (SolverState resAss resKnown) r
         where
                 -- each constraint extends the result, the dependencies, and the vars to update
                 (resAss,resKnown,resDep,ds) = foldr processConstraint (a,k,d,vs) ( constraints v )  -- update all constraints of current variable
-                processConstraint c (a,k,d,dv) = case ( update c $ a ) of
+                processConstraint c (a,k,d,dv) = case ( update c a ) of
+                        
                         (a',None)         -> (a',nk,nd,nv)                                        -- nothing changed, we are fine
+                        
                         (a',Increment)    -> (a',nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- add depending variables to work list
-                        (a',Reset)        -> undefined                                            -- TODO: support local resets
-                        where
-                                trg = target c
-                                dep = dependingOn c a
-                                newVars = (Set.fromList dep) `Set.difference` k
-                                nk = newVars `Set.union` k
-                                nd = addDep d trg dep
-                                nv = ( Set.elems $ newVars) ++ dv
+                        
+                        (a',Reset)        -> (ra,nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- handling a local reset
+                            where 
+                                dep = getAllDep nd trg
+                                ra = if not $ Set.member trg dep                                  -- if variable is not indirectly depending on itself  
+                                    then reset a' dep                                             -- reset all depending variables to their bottom value 
+                                    else fst $ updateWithoutReset c a                             -- otherwise insist on merging reseted value with current state
+                                        
+                    where
+                            trg = target c
+                            dep = dependingOn c a
+                            newVars = (Set.fromList dep) `Set.difference` k
+                            nk = newVars `Set.union` k
+                            nd = addDep d trg dep
+                            nv = ( Set.elems $ newVars) ++ dv
 
 
 
@@ -362,13 +404,35 @@ solveStep (SolverState a k) d (v:vs) = solveStep (SolverState resAss resKnown) r
 --   * the current value of the constraint,
 --   * and the target variable for this constraint.
 createConstraint :: (Lattice a) => ( Assignment -> [Var] ) -> ( Assignment -> a ) -> TypedVar a -> Constraint
-createConstraint dep limit trg@(TypedVar var) = Constraint dep update var
-        where
-                update = (\a -> let value = limit a in                                                -- the value from the constraint
-                                let current = get a trg in                                        -- the current value in the assignment
-                                if  value `less` current then (a,None)                                 -- nothing changed
-                                else ((set a trg (value `merge` current) ) , Increment)                -- an incremental change
-                        )
+createConstraint dep limit trg@(TypedVar var) = Constraint dep update update var
+    where
+        update a = case () of
+                _ | value `less` current -> (                                a,      None)    -- nothing changed                                    
+                _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change                              
+            where 
+                value = limit a                                                               -- the value from the constraint      
+                current = get a trg                                                           -- the current value in the assignment
+
+                
+-- creates a constraint of the form f(A) = A[b] enforcing equality
+createEqualityConstraint dep limit trg@(TypedVar var) = Constraint dep update forceUpdate var
+    where
+        update a = case () of
+                _ | value `less` current -> (              a,      None)    -- nothing changed                                    
+                _ | current `less` value -> (set a trg value, Increment)    -- an incremental change                              
+                _                        -> (set a trg value,     Reset)    -- a reseting change, heading in a different direction
+            where 
+                value = limit a                                             -- the value from the constraint      
+                current = get a trg                                         -- the current value in the assignment
+
+        forceUpdate a = case () of
+                _ | value `less` current -> (                                a,      None)    -- nothing changed                                    
+                _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change                              
+            where 
+                value = limit a                                                               -- the value from the constraint      
+                current = get a trg                                                           -- the current value in the assignment
+
+
 
 -- creates a constraint of the form   A[a] \in A[b]
 forward :: (Lattice a) => TypedVar a -> TypedVar a -> Constraint
