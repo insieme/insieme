@@ -39,6 +39,7 @@
 
 module Insieme.Analysis.Framework.MemoryState where
 
+import Debug.Trace
 import Data.Tree
 import Data.Typeable
 import Insieme.Inspire.NodeAddress
@@ -46,10 +47,16 @@ import Insieme.Inspire.NodeAddress
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.ProgramPoint
 import Insieme.Analysis.Framework.Utils.OperatorHandler
+
+import Insieme.Analysis.AccessPath
 import Insieme.Analysis.Reference
+import Insieme.Analysis.Callable
+import qualified Insieme.Analysis.WriteSetSummary as WS
 
 import qualified Insieme.Inspire as IR
+import qualified Insieme.Inspire.Utils as IR
 import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Utils.BoundSet as BSet
 import qualified Insieme.Utils.UnboundSet as USet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
@@ -57,6 +64,7 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 import Insieme.Analysis.Entities.DataPath hiding (isRoot)
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import Insieme.Analysis.Entities.FieldIndex
+
 
 
 data MemoryLocation = MemoryLocation NodeAddress
@@ -69,7 +77,8 @@ data MemoryState = MemoryState ProgramPoint MemoryLocation
 
 -- define the lattice of definitions
 
-data Definition i = Creation
+data Definition i = Initial 
+                | Creation
                 | Declaration NodeAddress
                 | MaterializingCall NodeAddress
                 | Assignment NodeAddress (DataPath i)
@@ -120,8 +129,12 @@ memoryStateValue ms@(MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
                      else (map Solver.toVar $ definingValueVars a) ++ (partialAssingDep a)
                    )
 
-        val a = if USet.member Creation $ reachingDefVal a then ComposedValue.top
-                else Solver.join $ (partialAssingVal a) : (map (Solver.get a) (definingValueVars a))
+        val a = if USet.member Initial $ reachingDefVal a then Solver.merge init value else value
+            where
+                init = initialValueHandler analysis loc
+            
+                value = if USet.member Creation $ reachingDefVal a then ComposedValue.top
+                        else Solver.join $ (partialAssingVal a) : (map (Solver.get a) (definingValueVars a))
 
 
         reachingDefVar = reachingDefinitions ms
@@ -199,7 +212,7 @@ reachingDefinitions :: (FieldIndex i) => MemoryState -> Solver.TypedVar (Definit
 reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case getNode addr of
 
         -- a declaration could be an assignment if it is materializing
-        d@(Node IR.Declaration _) | addr == loc && p == Post && isMaterializingDeclaration d ->
+        d@(Node IR.Declaration _) | addr == loc && p == Post ->
             Solver.mkVariable (idGen addr) [] (USet.singleton $ Declaration addr)
 
         -- a call could be an assignment if it is materializing
@@ -210,16 +223,70 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
         c@(Node IR.CallExpr _) | addr == loc && p == Post ->
             Solver.mkVariable (idGen addr) [] (USet.singleton Creation)
 
+        -- the entry point is the creation of everything that reaches this point
+        _ | p == Pre && IR.isEntryPoint addr -> 
+            Solver.mkVariable (idGen addr) [] (USet.singleton $ Initial)
+
+{--
+        -- to prune the set of variables, we check whether the invoced callable may update the traced reference
+        c@(Node IR.CallExpr _) | p == Internal && (not $ loc `isChildOf` addr)-> var
+            where
+                var = Solver.mkVariable (idGenExt pp "switch") [con] Solver.bot
+                con = Solver.createEqualityConstraint dep val var
+                
+                -- TODO: in this implementation, if one of the target functions may update the reference, 
+                -- all are walked through. This may be reduced to selected functions.
+                
+                dep a = (Solver.toVar callableVar) :  
+                            (if canSkipCallable a then [Solver.toVar skipPredecessorVar] else nonSkipPredecessorVars a) ++ 
+                            (Solver.toVar . snd <$> writeSetSummaryVars a)
+                    
+                val a = if canSkipCallable a then skipPredecessorVal a else nonSkipPredecessorVal a 
+                
+                callableVar = callableValue $ goDown 1 addr
+                callableVal a = ComposedValue.toValue $ Solver.get a callableVar
+                
+                -- a function obtaining the list of write-set summary variables depending on
+                writeSetSummaryVars a = if USet.isUniverse targetSet then [] else go <$> targetList
+                    where 
+                        targetSet = callableVal a
+                        targetList = USet.toList targetSet
+                        
+                        go :: Callable -> (Callable, Solver.TypedVar (WS.WriteSet SimpleFieldIndex))
+                        go c = (c, WS.writeSetSummary $ toAddress c)
+    
+                -- a test whether the called callees can be short-cutted            
+                canSkipCallable a = if USet.isUniverse targetSet then False else res  
+                    where
+                        targetSet = callableVal a
+                        -- TODO: make this a stronger condition
+                        res = all (WS.null . Solver.get a) (snd <$> writeSetSummaryVars a)
+                
+                -- utils for skip case --
+                
+                skipPredecessorVar = reachingDefinitions $ MemoryState (ProgramPoint (goDown 1 addr) Post) ml
+                skipPredecessorVal a = Solver.get a skipPredecessorVar 
+                
+                -- utils for non-skip case --
+                
+                nonSkipPredecessorVars a = Solver.getDependencies a defaultVar
+                nonSkipPredecessorVal a = Solver.getLimit a defaultVar 
+-}                 
+                
+
         -- for all the others, the magic is covered by the generic program point value constraint generator
-        _ -> programPointValue pp idGen analysis [assignHandler]
+        _ -> defaultVar
 
     where
 
         analysis pp = reachingDefinitions (MemoryState pp ml)
 
-        idGen pp = Solver.mkIdentifier reachingDefinitionAnalysis addr $ ("/" ++ (show pp) ++ " for " ++ (show ml))
+        idGenExt pp s = Solver.mkIdentifier reachingDefinitionAnalysis addr $ ("/" ++ (show pp) ++ " for " ++ (show ml) ++ s)
+        idGen pp = idGenExt pp ""
 
         extract = ComposedValue.toValue
+        
+        defaultVar = programPointValue pp idGen analysis [assignHandler]
 
         -- a handler for intercepting the interpretation of the ref_assign operator --
 

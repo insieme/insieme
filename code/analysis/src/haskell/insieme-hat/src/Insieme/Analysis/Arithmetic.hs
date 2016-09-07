@@ -78,9 +78,6 @@ instance BSet.IsBound b => Solver.ExtLattice (SymbolicFormulaSet b)  where
 data ArithmeticAnalysis = ArithmeticAnalysis
     deriving (Typeable)
 
-arithmeticAnalysis :: Solver.AnalysisIdentifier
-arithmeticAnalysis = Solver.mkAnalysisIdentifier ArithmeticAnalysis "A"
-
 
 --
 -- * Arithemtic Value Variable Generator
@@ -88,6 +85,7 @@ arithmeticAnalysis = Solver.mkAnalysisIdentifier ArithmeticAnalysis "A"
 
 arithmeticValue :: Addr.NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex (SymbolicFormulaSet BSet.Bound10))
 arithmeticValue addr = case Addr.getNode addr of
+
     Node IR.Literal [t, Node (IR.StringValue v) _] | isIntType t -> case parseInt v of
         Just cint -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkConst cint)
         Nothing   -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNodePair addr) addr)
@@ -102,14 +100,14 @@ arithmeticValue addr = case Addr.getNode addr of
         var = Solver.mkVariable (idGen addr) [con] Solver.bot
         con = Solver.forward (arithmeticValue $ Addr.goDown 1 addr) var
 
-    n@_ | isIntExpr && isSideEffectFree addr -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNodePair addr) addr)
-        where
-            isIntExpr = maybe False isIntType (getType $ n)
-
     _ -> dataflowValue addr analysis ops
 
   where
-    analysis = DataFlowAnalysis ArithmeticAnalysis arithmeticAnalysis arithmeticValue (compose $ BSet.Universe)
+  
+    analysis = (mkDataFlowAnalysis ArithmeticAnalysis "A" arithmeticValue) {
+        initialValueHandler = \a -> compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNodePair a) a
+    }
+    
     idGen = mkVarIdentifier analysis
 
     compose = ComposedValue.toComposed

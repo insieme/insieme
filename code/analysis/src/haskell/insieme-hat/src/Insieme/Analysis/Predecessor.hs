@@ -280,7 +280,7 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
       goDown 0 a:                          -- condition
       collectAddr IR.BreakStmt prune a     -- all subordinate 'BreakStmt's
       where
-        prune = [IR.SwitchStmt, IR.WhileStmt] ++ listTypes
+        prune = [(== IR.SwitchStmt), (== IR.WhileStmt), isType]
 
     -- moving backwards after continue stmt we jump to its beginning
     Node IR.ContinueStmt _ -> pre
@@ -292,7 +292,7 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
       collectAddr IR.BreakStmt prune a ++  -- break statements
       [goRel [1, i, 1] a | i <- enumFromTo 0 (children (goDown 1 a)-1)] -- case
       where
-        prune = [IR.SwitchStmt, IR.WhileStmt] ++ listTypes
+        prune = [(== IR.SwitchStmt), (== IR.WhileStmt), isType]
 
     -- moving backwards after break stmt we jump to its beginning
     Node IR.BreakStmt _ -> pre
@@ -319,8 +319,8 @@ single' p x = multiple' p [x]
 -- below the given address.
 postContinueStmt :: NodeAddress -> [ProgramPoint]
 postContinueStmt a = map (`ProgramPoint` Post)
-                     (collectAddr IR.ContinueStmt (extra ++ listTypes) a)
-  where extra = [IR.WhileStmt, IR.ForStmt, IR.LambdaExpr]
+                     (collectAddr IR.ContinueStmt prune a)
+  where prune = [(== IR.WhileStmt), (== IR.ForStmt), (== IR.LambdaExpr), isType]
 
 -- | Variable ID generator
 idGen :: ProgramPoint -> Solver.Identifier

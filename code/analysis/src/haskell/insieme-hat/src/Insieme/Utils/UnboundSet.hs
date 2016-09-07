@@ -64,7 +64,7 @@ import Prelude hiding (map,null)
 --
 
 data UnboundSet a = Universe | UnboundSet (Set.Set a)
-  deriving (Eq,Show)
+  deriving (Eq,Show,Ord)
 
 empty :: UnboundSet a
 empty = UnboundSet Set.empty

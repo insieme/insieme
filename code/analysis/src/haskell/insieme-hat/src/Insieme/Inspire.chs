@@ -138,3 +138,83 @@ type Builtins = Map String (Tree (Int, NodeType))
 
 data Inspire = Inspire { getTree     :: Tree (Int, NodeType),
                          getBuiltins :: Builtins }
+
+
+
+----- Node Kind List ----
+
+data NodeKind =
+        Value | Type | Expression | Statement | TranslationUnit | Support
+    deriving (Eq,Ord,Show)
+    
+toNodeKind :: NodeType -> NodeKind
+
+toNodeKind (BoolValue _)   = Value
+toNodeKind (CharValue _)   = Value
+toNodeKind (IntValue _)    = Value
+toNodeKind (UIntValue _)   = Value
+toNodeKind (StringValue _) = Value
+
+toNodeKind FunctionType                = Type
+toNodeKind TupleType                   = Type
+toNodeKind GenericType                 = Type
+toNodeKind NumericType                 = Type
+toNodeKind TagType                     = Type
+toNodeKind TagTypeReference            = Type
+toNodeKind TypeVariable                = Type
+toNodeKind VariadicTypeVariable        = Type
+toNodeKind GenericTypeVariable         = Type
+toNodeKind VariadicGenericTypeVariable = Type
+
+toNodeKind Literal         = Expression
+toNodeKind Variable        = Expression
+toNodeKind CallExpr        = Expression
+toNodeKind LambdaExpr      = Expression
+toNodeKind LambdaReference = Expression
+toNodeKind BindExpr        = Expression
+toNodeKind CastExpr        = Expression
+toNodeKind TupleExpr       = Expression
+toNodeKind InitExpr        = Expression
+toNodeKind JobExpr         = Expression
+toNodeKind MarkerExpr      = Expression
+
+toNodeKind BreakStmt       = Statement
+toNodeKind ContinueStmt    = Statement
+toNodeKind ReturnStmt      = Statement
+toNodeKind DeclarationStmt = Statement
+toNodeKind CompoundStmt    = Statement
+toNodeKind WhileStmt       = Statement
+toNodeKind ForStmt         = Statement
+toNodeKind IfStmt          = Statement
+toNodeKind SwitchStmt      = Statement
+toNodeKind ThrowStmt       = Statement
+toNodeKind TryCatchStmt    = Statement
+toNodeKind LabelStmt       = Statement
+toNodeKind GotoStmt        = Statement
+toNodeKind MarkerStmt      = Statement
+
+toNodeKind Program = TranslationUnit
+
+toNodeKind Types                        = Support
+toNodeKind TagTypeBinding               = Support
+toNodeKind TagTypeDefinition            = Support
+toNodeKind Declaration                  = Support
+toNodeKind Struct                       = Support
+toNodeKind Union                        = Support
+toNodeKind Field                        = Support
+toNodeKind Fields                       = Support
+toNodeKind MemberFunction               = Support
+toNodeKind MemberFunctions              = Support
+toNodeKind PureVirtualMemberFunction    = Support
+toNodeKind PureVirtualMemberFunctions   = Support
+toNodeKind Parent                       = Support
+toNodeKind Parents                      = Support
+toNodeKind Lambda                       = Support
+toNodeKind LambdaBinding                = Support
+toNodeKind LambdaDefinition             = Support
+toNodeKind SwitchCase                   = Support
+toNodeKind SwitchCases                  = Support
+toNodeKind CatchClause                  = Support
+toNodeKind Parameters                   = Support
+toNodeKind Expressions                  = Support
+                         

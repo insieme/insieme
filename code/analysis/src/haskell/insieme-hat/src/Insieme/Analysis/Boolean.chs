@@ -104,7 +104,7 @@ booleanValue addr =
     compose = ComposedValue.toComposed 
     extract = ComposedValue.toValue
 
-    analysis = DataFlowAnalysis BooleanAnalysis booleanAnalysis booleanValue (compose Both)
+    analysis = mkDataFlowAnalysis BooleanAnalysis "B" booleanValue
     idGen = mkVarIdentifier analysis
 
     ops = [ lt, le, eq, ne, ge, gt ]

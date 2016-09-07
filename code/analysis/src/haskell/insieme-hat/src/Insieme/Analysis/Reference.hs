@@ -38,7 +38,6 @@
 
 module Insieme.Analysis.Reference where
 
-import Debug.Trace
 import Data.Typeable
 import Data.Maybe
 import Data.Tree
@@ -93,9 +92,6 @@ instance (Eq i,Ord i,Show i,Typeable i) => ExtLattice (ReferenceSet i) where
 data ReferenceAnalysis = ReferenceAnalysis
     deriving (Typeable)
 
-referenceAnalysis :: AnalysisIdentifier
-referenceAnalysis = mkAnalysisIdentifier ReferenceAnalysis "R"
-
 
 --
 -- * Reference Variable Generator
@@ -104,23 +100,28 @@ referenceAnalysis = mkAnalysisIdentifier ReferenceAnalysis "R"
 referenceValue :: (FieldIndex i) => NodeAddress -> TypedVar (ValueTree.Tree i (ReferenceSet i))
 referenceValue addr = case getNode addr of
 
+        l@(Node IR.Literal _) ->
+            mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference (crop addr) DP.root)
+
         d@(Node IR.Declaration _) | isMaterializingDeclaration d ->
             mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference addr DP.root)
 
         c@(Node IR.CallExpr _) | isMaterializingCall c ->
-            trace ("Found materializing call: " ++ (show addr)) $
             mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference addr DP.root)
 
         _ -> dataflowValue addr analysis opsHandler
 
     where
 
-        analysis = DataFlowAnalysis ReferenceAnalysis referenceAnalysis referenceValue top
+        analysis = (mkDataFlowAnalysis ReferenceAnalysis "R" referenceValue){
+            entryPointParameterHandler=epParamHandler
+        }
+        
+        epParamHandler a = mkConstant analysis a $ compose $ USet.singleton $ Reference a DP.root
+
         idGen = mkVarIdentifier analysis
 
         compose = ComposedValue.toComposed
-
-        top = compose USet.Universe
 
         opsHandler = [ allocHandler , declHandler , refNarrow , refExpand , refCast , refReinterpret ]
 

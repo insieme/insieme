@@ -37,6 +37,7 @@
 #include "insieme/analysis/haskell/arithmetic_analysis.h"
 
 #include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/lang/reference.h"
 
 extern "C" {
 
@@ -80,7 +81,14 @@ extern "C" {
 			addr = addr.getAddressOfChild(addr_hs[i]);
 		}
 
-		return new arithmetic::Value(addr.as<ExpressionPtr>());
+		// add de-ref operations (assumed implicitly by analysis)
+		ExpressionPtr expr = addr.as<ExpressionPtr>();
+		while(lang::isReference(expr)) {
+			expr = lang::buildRefDeref(expr);
+		}
+
+		// build value
+		return new arithmetic::Value(expr);
 	}
 
 	arithmetic::Product::Factor* hat_mk_arithemtic_factor(arithmetic::Value* value_c, int exponent) {
