@@ -44,6 +44,7 @@ module Insieme.Inspire.Utils (
     parseIR,
     findDecl,
     getType,
+    isType,
     listTypes,
     isFreeVariable
 ) where
@@ -175,6 +176,10 @@ getType (Node IR.TupleExpr       (t:_)) = Just t
 getType (Node IR.InitExpr        (t:_)) = Just t
 getType (Node IR.JobExpr         (t:_)) = Just t
 getType _ = Nothing
+
+-- | Return 'True' if the given node is a type.
+isType :: NodeAddress -> Bool
+isType = (`elem` listTypes) . nodeType
 
 -- | Return a list of node types which are Type nodes.
 listTypes :: [IR.NodeType]
