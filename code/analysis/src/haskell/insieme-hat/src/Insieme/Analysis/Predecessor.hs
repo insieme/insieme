@@ -158,7 +158,10 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
       -- pred of the switch expression is the switch stmt itself
       | i == 0     -> single $ ProgramPoint parent Pre
       -- pred of a branch always is the switch expression
-      | otherwise -> single $ ProgramPoint (nghbr 0) Post
+      | otherwise -> single $ ProgramPoint (goRel [-1, 0] a) Post
+
+    -- after processing a lone BreakStmt we end up here; go to switch expr
+    Node IR.SwitchCase _ -> single . flip ProgramPoint Post $ goRel [-3, 0] a
 
     Node IR.ReturnStmt _ -> single $ ProgramPoint parent Pre
 
@@ -166,7 +169,6 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
 
   where
     parent = fromJust $ getParent a
-    nghbr i = goDown i parent   -- get the i'th neighbor
     i = getIndex a
 
     multiple :: [ProgramPoint] -> Solver.TypedVar PredecessorList
@@ -291,11 +293,18 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
     -- moving backwards after continue stmt we jump to its beginning
     Node IR.ContinueStmt _ -> pre
 
-    -- switch stmts have executed the default branch, or any of the cases
+    -- switch stmts have executed either 1. the default branch, 2. one
+    -- of the breaks, or 3. one of the cases without a break
+    -- TODO: switch without cases, default?! (callexpr?)
     Node IR.SwitchStmt _ -> multiple $ map (`ProgramPoint` Post) $
-      goDown 2 a :
-      [ goDown 1 $ goDown i cses | i <- enumFromTo 0 (children cses-1)]
-      where cses = goDown 1 a
+      goDown 2 a :                         -- default branch
+      collectAddr IR.BreakStmt prune a ++  -- break statements
+      [goRel [1, i, 1] a | i <- enumFromTo 0 (children (goDown 1 a)-1)] -- case
+      where
+        prune = [IR.SwitchStmt, IR.WhileStmt] ++ listTypes
+
+    -- moving backwards after break stmt we jump to its beginning
+    Node IR.BreakStmt _ -> pre
 
     -- return statement
     Node IR.ReturnStmt _ -> single $ ProgramPoint (goDown 0 a) Post
@@ -312,15 +321,18 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
 
     pre = single $ ProgramPoint a Pre
 
+-- | Collect all nodes of the given 'IR.NodeType' but prune the tree
+-- when encountering one of the 'IR.NodeType's.
+collectAddr :: IR.NodeType -> [IR.NodeType] -> NodeAddress -> [NodeAddress]
+collectAddr ty prune = foldAddressPrune cmpTy (flip elem prune . nodeType)
+  where cmpTy n = ([n | nodeType n == ty] ++)
+
 -- | 'Post' 'ProgramPoint's for all 'ContinueStmt' nodes directly
 -- below the given address.
 postContinueStmt :: NodeAddress -> [ProgramPoint]
-postContinueStmt a =
-  map (`ProgramPoint` Post) (foldAddressPrune ((++) . isContinue) prune a)
-  where
-    isContinue n = [n | nodeType n == IR.ContinueStmt]
-    prune = liftM2 (||) isType (flip elem extra . nodeType)
-    extra = [IR.WhileStmt, IR.ForStmt, IR.LambdaExpr]
+postContinueStmt a = map (`ProgramPoint` Post)
+                     (collectAddr IR.ContinueStmt (extra ++ listTypes) a)
+  where extra = [IR.WhileStmt, IR.ForStmt, IR.LambdaExpr]
 
 -- variable ID generator
 idGen :: ProgramPoint -> Solver.Identifier
