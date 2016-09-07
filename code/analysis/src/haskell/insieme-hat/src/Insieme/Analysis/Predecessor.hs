@@ -41,7 +41,6 @@ module Insieme.Analysis.Predecessor (
     predecessor
 ) where
 
-import Control.Monad (liftM2)
 import Data.Maybe
 import Data.Tree
 import Data.Typeable
@@ -128,8 +127,10 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
       -- else to the post state of the previous statement
       else ProgramPoint (goDown (i-1) parent) Post
 
-    Node IR.IfStmt _ | i == 0 -> single $ ProgramPoint parent Pre
-    Node IR.IfStmt _ -> single $ ProgramPoint (goDown 0 parent) Post        -- todo: make dependent on result of conditional expression
+    Node IR.IfStmt _
+      | i == 0     -> single $ ProgramPoint parent Pre
+      -- TODO: make dependent on result of conditional expression
+      | otherwise -> single $ ProgramPoint (goDown 0 parent) Post
 
     Node IR.ForStmt _
       -- pred of declarations is loop itself
@@ -287,15 +288,19 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
       [ ProgramPoint (goDown 2 a) Post     -- loop never entered
       , ProgramPoint (goDown 3 a) Post ]   -- body when loop was run
 
-    -- while stmts evaluate their condition as a last step
-    Node IR.WhileStmt _ -> single $ ProgramPoint (goDown 0 a) Post
+    -- while stmts evaluate as a last step either 1. their condition,
+    -- or 2. a BreakStmt
+    Node IR.WhileStmt _ -> multiple $ map (`ProgramPoint` Post) $
+      goDown 0 a:                          -- condition
+      collectAddr IR.BreakStmt prune a     -- all subordinate 'BreakStmt's
+      where
+        prune = [IR.SwitchStmt, IR.WhileStmt] ++ listTypes
 
     -- moving backwards after continue stmt we jump to its beginning
     Node IR.ContinueStmt _ -> pre
 
     -- switch stmts have executed either 1. the default branch, 2. one
     -- of the breaks, or 3. one of the cases without a break
-    -- TODO: switch without cases, default?! (callexpr?)
     Node IR.SwitchStmt _ -> multiple $ map (`ProgramPoint` Post) $
       goDown 2 a :                         -- default branch
       collectAddr IR.BreakStmt prune a ++  -- break statements
@@ -320,12 +325,6 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
     single x = multiple [x]
 
     pre = single $ ProgramPoint a Pre
-
--- | Collect all nodes of the given 'IR.NodeType' but prune the tree
--- when encountering one of the 'IR.NodeType's.
-collectAddr :: IR.NodeType -> [IR.NodeType] -> NodeAddress -> [NodeAddress]
-collectAddr ty prune = foldAddressPrune cmpTy (flip elem prune . nodeType)
-  where cmpTy n = ([n | nodeType n == ty] ++)
 
 -- | 'Post' 'ProgramPoint's for all 'ContinueStmt' nodes directly
 -- below the given address.

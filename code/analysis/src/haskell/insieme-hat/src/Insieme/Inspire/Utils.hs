@@ -37,6 +37,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Insieme.Inspire.Utils (
+    collectAddr,
     foldTree,
     foldAddress,
     foldTreePrune,
@@ -58,9 +59,13 @@ import Insieme.Inspire.BinaryParser
 import Insieme.Inspire.NodeAddress
 import System.Process
 import qualified Data.ByteString.Char8 as BS8
-import qualified Data.Sequence as Seq
-import qualified Data.Set as Set
 import qualified Insieme.Inspire as IR
+
+-- | Collect all nodes of the given 'IR.NodeType' but prune the tree
+-- when encountering one of the other 'IR.NodeType's.
+collectAddr :: IR.NodeType -> [IR.NodeType] -> NodeAddress -> [NodeAddress]
+collectAddr ty prune = foldAddressPrune cmpTy (flip elem prune . nodeType)
+  where cmpTy n = ([n | nodeType n == ty] ++)
 
 -- | Fold the given 'Tree'. The accumulator function takes the subtree
 -- and the address of this subtree in the base tree.
@@ -145,13 +150,13 @@ findDecl start = findDecl start
     lambda :: NodeAddress -> Maybe NodeAddress
     lambda addr = case getNode addr of
         Node IR.Lambda [_, Node IR.Parameters ps, _] ->
-            (\i -> goDown i . goDown 1 $ addr) <$> findIndex (==org) ps
+            (\i -> goDown i . goDown 1 $ addr) <$> elemIndex org ps
         _ -> Nothing
 
     bindexpr :: NodeAddress -> Maybe NodeAddress
     bindexpr addr = case getNode addr of
         Node IR.BindExpr [_, Node IR.Parameters ps, _] ->
-            (\i -> goDown i . goDown 1 $ addr) <$> findIndex (==org) ps
+            (\i -> goDown i . goDown 1 $ addr) <$> elemIndex org ps
         _ -> Nothing
 
     compstmt :: NodeAddress -> Maybe NodeAddress
