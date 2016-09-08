@@ -37,6 +37,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Insieme.Inspire.Utils (
+    collectAddr,
     foldTree,
     foldAddress,
     foldTreePrune,
@@ -59,9 +60,15 @@ import Insieme.Inspire.BinaryParser
 import Insieme.Inspire.NodeAddress
 import System.Process
 import qualified Data.ByteString.Char8 as BS8
-import qualified Data.Sequence as Seq
-import qualified Data.Set as Set
 import qualified Insieme.Inspire as IR
+
+-- | Collect all nodes of the given 'IR.NodeType' but prune the tree
+-- when encountering one of the other 'IR.NodeType's.
+collectAddr :: IR.NodeType -> [IR.NodeType -> Bool] -> NodeAddress -> [NodeAddress]
+collectAddr ty prune = foldAddressPrune cmpAddTy matchPruneTy
+  where
+    cmpAddTy n = ([n | nodeType n == ty] ++)
+    matchPruneTy = or . (\n -> map ($n) prune) . nodeType
 
 -- | Fold the given 'Tree'. The accumulator function takes the subtree
 -- and the address of this subtree in the base tree.
@@ -146,13 +153,13 @@ findDecl start = findDecl start
     lambda :: NodeAddress -> Maybe NodeAddress
     lambda addr = case getNode addr of
         Node IR.Lambda [_, Node IR.Parameters ps, _] ->
-            (\i -> goDown i . goDown 1 $ addr) <$> findIndex (==org) ps
+            (\i -> goDown i . goDown 1 $ addr) <$> elemIndex org ps
         _ -> Nothing
 
     bindexpr :: NodeAddress -> Maybe NodeAddress
     bindexpr addr = case getNode addr of
         Node IR.BindExpr [_, Node IR.Parameters ps, _] ->
-            (\i -> goDown i . goDown 1 $ addr) <$> findIndex (==org) ps
+            (\i -> goDown i . goDown 1 $ addr) <$> elemIndex org ps
         _ -> Nothing
 
     compstmt :: NodeAddress -> Maybe NodeAddress
@@ -186,9 +193,8 @@ getType _ = Nothing
 
 
 -- | Return 'True' if the given node is a type.
-isType :: Tree IR.NodeType -> Bool
-isType (Node x _) = IR.toNodeKind x == IR.Type
-
+isType :: IR.NodeType -> Bool
+isType = (IR.Type ==) . IR.toNodeKind
 
 isVariable :: NodeAddress -> Bool
 isVariable a = case getNode a of
@@ -197,22 +203,19 @@ isVariable a = case getNode a of
 
 isFreeVariable :: NodeAddress -> Bool
 isFreeVariable v | (not . isVariable) v = False
-isFreeVariable v = isNothing decl
-    where
-        decl = findDecl v
+isFreeVariable v = isNothing (findDecl v)
 
 hasEnclosingStatement :: NodeAddress -> Bool
 hasEnclosingStatement a = case getNode a of
     Node n _ | IR.toNodeKind n == IR.Statement -> True
     Node n _ | n /= IR.LambdaExpr && n /= IR.Variable && IR.toNodeKind n == IR.Expression -> True
-    _ -> not (isRoot a) && (hasEnclosingStatement (fromJust $ getParent a)) 
+    _ -> not (isRoot a) && hasEnclosingStatement (fromJust $ getParent a)
 
 
 isEntryPoint :: NodeAddress -> Bool
 isEntryPoint a = case getNode a of
-    Node IR.CompoundStmt _ -> isRoot a || (not $ hasEnclosingStatement $ fromJust $ getParent a)
+    Node IR.CompoundStmt _ -> isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
     _                      -> isRoot a
-
 
 isEntryPointParameter :: NodeAddress -> Bool
 isEntryPointParameter v | (not . isVariable) v = False
@@ -220,8 +223,6 @@ isEntryPointParameter v | isRoot v = False
 isEntryPointParameter v = case getNode $ fromJust $ getParent v of
             Node IR.Parameters _ -> not $ hasEnclosingStatement v
             _                    -> False
-    
-
 
 -- some examples
 --excoll a (Node n _) = Set.insert (a, n)

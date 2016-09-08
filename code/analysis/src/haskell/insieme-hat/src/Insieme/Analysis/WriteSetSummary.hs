@@ -184,7 +184,7 @@ writeSetSummary addr = case getNode addr of
                         
                         filter cur = case getNode cur of
                             Node IR.Lambda _ -> cur /= addr
-                            n@_              -> IRUtils.isType n
+                            n@_              -> IRUtils.isType (rootLabel n)
                             
                         collect cur l = case getNode cur of
                             Node IR.CallExpr _ -> cur : l

@@ -4,8 +4,15 @@ cmake_minimum_required(VERSION 3.2)
 insieme_find_package(NAME GMP)
 insieme_find_package(NAME ZLIB)
 
-set( stack_home $ENV{INSIEME_LIBS_HOME}/stack-latest CACHE PATH "Stack Home Directory" )
-set( stack_root ${stack_home}/stack-root_$ENV{USER} )
+set(stack_home $ENV{INSIEME_LIBS_HOME}/stack-latest CACHE PATH "Stack Home Directory")
+set(stack_root ${stack_home}/stack-root_$ENV{USER})
+
+# check for (patched) haskell stack
+if(NOT (${CMAKE_GENERATOR} MATCHES "Visual Studio"))
+    if(NOT EXISTS ${stack_home}/bin/stack)
+        MESSAGE(FATAL_ERROR "Coulnd't find patched Haskell stack")
+    endif()
+endif()
 
 add_custom_target(
     insieme_analysis_haskell
@@ -50,7 +57,7 @@ add_custom_target(
 )
 
 # runtime library exports
-set(LIBHSRTS_DIR  ${stack_root}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts PARENT_SCOPE)
-set(LIBHSRTS  ${stack_root}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts/libHSrts-ghc7.10.3.so PARENT_SCOPE)
+set(LIBHSRTS_DIR ${stack_root}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts PARENT_SCOPE)
+set(LIBHSRTS ${stack_root}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts/libHSrts-ghc7.10.3.so PARENT_SCOPE)
 
 set(insieme_analysis_haskell ${CMAKE_CURRENT_BINARY_DIR}/libHSinsieme-hat.so PARENT_SCOPE)

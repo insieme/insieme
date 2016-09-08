@@ -36,7 +36,6 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/datalog/alias_analysis.h"
 #include "insieme/core/ir_builder.h"
 
 namespace insieme {

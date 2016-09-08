@@ -38,13 +38,12 @@
 
 int main(int argc, char** argv) {
     int a = 2;
-    int b = 5;
-    cba_expect_eq_int(a, 2);
-    cba_expect_eq_int(b, 5);
+    int b = 0;
+    cba_expect_eq_int(b, 0);
     switch (a) {
-    default: b=a;
+    case 1:      break;
+    case 2: b=1; break;
     }
-    cba_expect_eq_int(a, 2);
-    cba_expect_eq_int(b, 2);
+    cba_expect_may_eq_int(b, 1);
     return 0;
 }
