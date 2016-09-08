@@ -34,86 +34,81 @@
  * regarding third party software licenses.
  */
 
+void testParam(int* a) {
+	int magic;
+
+	#pragma omp parallel
+	#pragma omp single
+	#pragma omp task untied
+	{
+		*a = 1;
+	}
+}
+
+
 int main() {
 	int magic;
 
 	#pragma test expect_ir(R"(
-		def __any_string__parfun = function (v0 : ref<ref<int<4>,f,f,plain>,f,f,plain>) -> unit {
+		def __any_string__task_fun = function () -> unit {
 			{
-				var ref<int<4>,f,f,plain> v1 = **v0;
+				42;
+			}
+		};
+		def __any_string__single_fun = function () -> unit {
+			parallel(job[1ul..1ul] => __any_string__task_fun());
+		};
+		def __any_string__parallel_fun = function () -> unit {
+			{
+				pfor(get_thread_group(0u), 0, 1, 1, (v0 : int<4>, v1 : int<4>, v2 : int<4>) => __any_string__single_fun());
+				barrier(get_thread_group(0u));
 			}
 			merge_all();
 		};
 		{
-			var ref<int<4>,f,f,plain> v0 = 42;
 			{
-				merge(parallel(job[1ul...] => __any_string__parfun(v0)));
+				merge(parallel(job[1ul...] => __any_string__parallel_fun()));
 			}
 		}
 	)")
 	{
-		int a = 42;
 		#pragma omp parallel
+		#pragma omp single
+		#pragma omp task untied
 		{
-			int i = a;
+			42;
 		}
 	}
 
 	#pragma test expect_ir(R"(
-		def __any_string__parfun = function (v0 : ref<ref<int<4>,f,f,plain>,f,f,plain>) -> unit {
+		def __any_string__task_fun = function (v0 : ref<ptr<int<4>>,f,f,plain>) -> unit {
+			{
+				ptr_to_ref(*v0) = 1;
+			}
+		};
+		def __any_string__single_fun = function (v0 : ref<ptr<int<4>>,f,f,plain>) -> unit {
+			parallel(job[1ul..1ul] => __any_string__task_fun(*v0));
+		};
+		def __any_string__parallel_fun = function (v0 : ref<ptr<int<4>>,f,f,plain>) -> unit {
+			{
+				pfor(get_thread_group(0u), 0, 1, 1, (v1 : int<4>, v2 : int<4>, v3 : int<4>) => __any_string__single_fun(*v0));
+				barrier(get_thread_group(0u));
+			}
+			merge_all();
+		};
+		def IMP_testParam = function (v0 : ref<ptr<int<4>>,f,f,plain>) -> unit {
 			var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 			{
-				var ref<int<4>,f,f,plain> v2 = **v0;
-				v1 = 5;
+				merge(parallel(job[1ul...] => __any_string__parallel_fun(*v0)));
 			}
-			merge_all();
 		};
 		{
-			var ref<int<4>,f,f,plain> v0 = 42;
-			var ref<int<4>,f,f,plain> v1 = 1337;
-			{
-				merge(parallel(job[1ul...] => __any_string__parfun(v0)));
-			}
+			var ref<int<4>,f,f,plain> v0 = 0;
+			IMP_testParam(ptr_from_ref(v0));
 		}
 	)")
 	{
-		int a = 42, b = 1337;
-		#pragma omp parallel shared(a) private(b)
-		{
-			int i = a;
-			b = 5;
-		}
+		int p = 0;
+		testParam(&p);
 	}
-
-	#pragma test expect_ir(R"(
-		def __any_string__parfun = function (v0 : ref<ptr<int<4>>,f,f,plain>) -> unit {
-			{
-				ptr_to_ref(*v0) = 5;
-			}
-			merge_all();
-		};
-		{
-			var ref<int<4>,f,f,plain> v0 = 42;
-			var ref<ptr<int<4>>,f,f,plain> v1 = ptr_from_ref(v0);
-			{
-				merge(parallel(job[1ul...] => __any_string__parfun(*v1)));
-			}
-		}
-	)")
-	{
-		int a = 42, *b = &a;
-		#pragma omp parallel shared(b)
-		{
-			*b = 5;
-		}
-	}
-
-	//{
-	//	int num = 8;
-	//	int arr[num];
-	//	#pragma omp parallel
-	//	{
-	//		arr[3] = 0;
-	//	}
-	//}
 }
