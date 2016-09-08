@@ -645,5 +645,21 @@ namespace backend {
 		})
 	}
 
+	TEST(Assignment, CStyle) {
+		DO_TEST(R"(
+			def c_style_assignment = (lhs : ref<'a,f,'b>, rhs : 'a) -> 'a { lhs = rhs; return *lhs; };
+			int<4> function IMP_main() {
+				var ref<int<4>,f,f,plain> v9 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+				var ref<int<4>,f,f,plain> v10 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+				var ref<int<4>,f,f,plain> v11 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+				v9 = c_style_assignment(v10, c_style_assignment(v11, 1));
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
+			EXPECT_PRED2(containsSubString, code, "c_style_assignment");
+			EXPECT_PRED2(notContainsSubString, code, "+=");
+		})
+	}
+
 } // namespace backend
 } // namespace insieme

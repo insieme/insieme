@@ -77,7 +77,8 @@ namespace backend {
 		core::NodePtr processed = getPreProcessor()->process(*this, source);
 
 		assert_true(core::checks::check(processed).empty())
-			<< "Errors introduced by pre-processors: " << core::printer::dumpErrors(core::checks::check(processed));
+			<< "Errors introduced by backend pre-processors: " << core::printer::dumpErrors(core::checks::check(processed))
+			<< "Active backend Preprocessors: "<< *getPreProcessor() << std::endl;
 
 		timer.stop();
 		LOG(INFO) << timer;
