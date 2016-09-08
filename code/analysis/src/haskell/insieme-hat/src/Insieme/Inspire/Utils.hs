@@ -67,8 +67,8 @@ import qualified Insieme.Inspire as IR
 collectAddr :: IR.NodeType -> [IR.NodeType -> Bool] -> NodeAddress -> [NodeAddress]
 collectAddr ty prune = foldAddressPrune cmpAddTy matchPruneTy
   where
-    cmpAddTy n = ([n | nodeType n == ty] ++)
-    matchPruneTy = or . (\n -> map ($n) prune) . nodeType
+    cmpAddTy n = ([n | getNodeType n == ty] ++)
+    matchPruneTy = or . (\n -> map ($n) prune) . getNodeType
 
 -- | Fold the given 'Tree'. The accumulator function takes the subtree
 -- and the address of this subtree in the base tree.
@@ -174,7 +174,7 @@ findDecl start = findDecl start
 
 -- | Returns 'True' if given variable (in declaration) is a loop iterator.
 isLoopIterator :: NodeAddress -> Bool
-isLoopIterator = (==IR.ForStmt) . nodeType . goUp . goUp
+isLoopIterator = (==IR.ForStmt) . getNodeType . goUp . goUp
 
 
 getType :: Tree IR.NodeType -> Maybe (Tree IR.NodeType)
