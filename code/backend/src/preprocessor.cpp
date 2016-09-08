@@ -96,6 +96,10 @@ namespace backend {
 		return res;
 	}
 
+	std::ostream& PreProcessingSequence::printTo(std::ostream& out) const {
+		return out << join(", ", preprocessor, [](std::ostream& out, const PreProcessorPtr& pre) { out << *pre; });
+	}
+
 
 	// ------- concrete pre-processing step implementations ---------
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -47,6 +47,8 @@ namespace opencl {
 	public:
 		OffloadSupportPre();
 		core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code) override;
+
+		virtual std::ostream& printTo(std::ostream& out) const override { return out << "opencl::OffloadSupportPre"; }
 	};
 
 } // end namespace opencl
