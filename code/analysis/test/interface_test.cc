@@ -45,5 +45,17 @@ namespace analysis {
 		// if it compiles, this test is passed :)
 	}
 
+#ifdef INSIEME_ANALYSIS_DATALOG
+	TEST(Interface, DatalogEngine) {
+		// only enabled if Datalog is enabled
+	}
+#endif
+
+#ifdef INSIEME_ANALYSIS_HASKELL
+	TEST(Interface, HaskellEngine) {
+		// only enabled if Haskell is enabled
+	}
+#endif
+
 } // end namespace analysis
 } // end namespace insieme

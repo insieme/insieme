@@ -4,6 +4,7 @@
 project(insieme_analysis CXX)
 message(STATUS "========== configure analysis =============")
 cmake_minimum_required(VERSION 3.2)
+
 # Setup common source files
 set(insieme_analysis_srcs "")
 file(GLOB_RECURSE insieme_analysis_incs include/insieme/analysis/cba_interface.h include/insieme/analysis/common/*.h)
