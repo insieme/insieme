@@ -46,6 +46,7 @@ module Insieme.Inspire.NodeAddress (
     children,
     getIndex,
     getNode,
+    getNodeType,
     nodeType,
     isRoot,
     getRoot,
@@ -114,6 +115,9 @@ getIndex = head . getPathReversed
 
 getNode :: NodeAddress -> Tree IR.NodeType
 getNode addr = snd <$> getNodePair addr
+
+getNodeType :: NodeAddress -> IR.NodeType
+getNodeType = snd . rootLabel . getNodePair
 
 nodeType :: NodeAddress -> IR.NodeType
 nodeType = rootLabel . getNode

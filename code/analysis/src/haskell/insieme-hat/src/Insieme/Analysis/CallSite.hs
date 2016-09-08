@@ -111,10 +111,7 @@ callSites addr = case getNode addr of
     i = getIndex e
     p = fromJust $ getParent e
     
-    isCall a = case getNode a of
-        Node IR.CallExpr _ -> True
-        _                  -> False
-    
+    isCall a = getNodeType a == IR.CallExpr
 
     -- distinguish binding case --    
     var =
@@ -132,13 +129,13 @@ callSites addr = case getNode addr of
                 def = fromJust $ getParent $ fromJust $ getParent addr 
                 res = foldAddressPrune agg filter def
                 
-                agg n l = case getNode n of
-                    Node IR.LambdaReference _ | isUse -> n : l --- TODO: filter out refs in bindings
+                agg n l = case getNodeType n of
+                    IR.LambdaReference | isUse -> n : l --- TODO: filter out refs in bindings
                         where 
-                            isUse = getNode n == ref && (rootLabel . getNode . fromJust . getParent) n /= IR.LambdaBinding
+                            isUse = getNode n == ref && (getNodeType . fromJust . getParent) n /= IR.LambdaBinding
                     _                                            -> l 
                 
-                filter n = isType (getNode n) || (IR.LambdaExpr == (rootLabel $ getNode n))      -- TODO: support for lambda references exceeding local scope  
+                filter n = isType (getNodeType n) || (IR.LambdaExpr == (getNodeType n))      -- TODO: support for lambda references exceeding local scope  
     
     
     isStaticallyBound = i == 1 && isCall p && all check recReferences
@@ -155,12 +152,12 @@ callSites addr = case getNode addr of
             con = Solver.createConstraint dep val var
         
             allCalls = foldTree collector (getInspire addr)
-            collector a calls = case getNode a of
-                Node IR.CallExpr _  -> case getNode $ goDown 1 a of
-                    Node IR.Lambda   _        -> calls
-                    Node IR.BindExpr _        -> calls
-                    Node IR.Literal  _        -> calls
-                    Node IR.LambdaReference _ -> calls
+            collector a calls = case getNodeType a of
+                IR.CallExpr -> case getNodeType $ goDown 1 a of
+                    IR.Lambda          -> calls
+                    IR.BindExpr        -> calls
+                    IR.Literal         -> calls
+                    IR.LambdaReference -> calls
                     _                         -> a : calls
                 _                   -> calls
         
