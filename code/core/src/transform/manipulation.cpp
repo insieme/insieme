@@ -837,7 +837,8 @@ namespace transform {
 		// rename free variables within body using restricted scope
 		IRBuilder builder(manager);
 		um::PointerMap<VariablePtr, ExpressionPtr> replacements;
-		VariableList parameter;
+		VariableList parameters;
+		ExpressionList arguments;
 		TypeList paramTypes;
 		for(const VariablePtr& cur : free) {
 			auto curT = cur->getType();
@@ -847,10 +848,12 @@ namespace transform {
 				param = builder.variable(curT);
 				replacements[cur] = param;
 				paramTypes.push_back(analysis::getReferencedType(curT));
+				arguments.push_back(builder.deref(cur));
 			} else {
 				paramTypes.push_back(curT);
+				arguments.push_back(cur);
 			}
-			parameter.push_back(param);
+			parameters.push_back(param);
 		};
 		StatementPtr body = replaceVarsGen(manager, stmt, replacements);
 
@@ -860,10 +863,10 @@ namespace transform {
 
 		// create lambda accepting all free variables as arguments
 		auto funType = builder.functionType(paramTypes, retType);
-		LambdaExprPtr lambda = builder.lambdaExpr(funType, parameter, body);
+		LambdaExprPtr lambda = builder.lambdaExpr(funType, parameters, body);
 
 		// create call to this lambda
-		return builder.callExpr(retType, lambda, convertList<Expression>(free));
+		return builder.callExpr(retType, lambda, arguments);
 	}
 
 	CallExprPtr outline(NodeManager& manager, const ExpressionPtr& expr) {

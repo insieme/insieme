@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -92,7 +92,7 @@ namespace lang {
 	 * this extension in arbitrary IR code during parsing, as well as in other extensions.
 	 */
 	class Extension : private boost::noncopyable {
-		
+
 		/**
 		 * The list of all symbols visible to the definitions of the local primitives,
 		 * including the local symbols.
@@ -116,7 +116,7 @@ namespace lang {
 		mutable type_alias_map local_type_aliases;
 
 	  protected:
-		  
+
 		/**
 		 * The manager this extension is maintained by.
 		 */
@@ -419,7 +419,6 @@ namespace lang {
 		}                                                                                                                                                      \
 		const bool is##NAME(const insieme::core::NodePtr& node) const {                                                                                        \
 			if(!node) return false;                                                                                                                            \
-			if(auto expr = node.isa<core::LambdaExprPtr>()) return core::types::isMatchable(expr->getType(), get##NAME()->getType());                          \
 			return *node == *get##NAME();                                                                                                                      \
 		} 																																					   \
 		const insieme::core::CallExprPtr isCallOf##NAME(const insieme::core::NodePtr& node) const {                                                            \
