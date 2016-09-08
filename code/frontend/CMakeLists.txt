@@ -38,7 +38,7 @@ target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_di
 target_include_directories(insieme_frontend PUBLIC ${generate_builtins_output_dir_base}/include)
 
 # lookup Boost library
-insieme_find_package(NAME Boost COMPONENTS serialization filesystem system program_options regex)
+insieme_find_package(NAME Boost COMPONENTS serialization filesystem system program_options)
 target_include_directories(insieme_frontend SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(insieme_frontend ${Boost_SERIALIZATION_LIBRARY})
 target_link_libraries(insieme_frontend ${Boost_FILESYSTEM_LIBRARY})
