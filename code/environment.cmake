@@ -214,6 +214,10 @@ endif()
 #
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINSIEME_VERSION=\"\\\"${insieme_version}\\\"\"")
 
+# --------------------------------------------------------- Analysis Backends
+option(ANALYSIS_DATALOG "Enable Datalog engine for analysis" ON)
+option(ANALYSIS_HASKELL "Enable Haskell engine for analysis" ON)
+
 # --------------------------------------------------------- Valgrind / GTest testing suite
 # avoid multiple import
 if (NOT MEMORY_CHECK_SETUP)
