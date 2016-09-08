@@ -361,6 +361,8 @@ solve init vs = solveStep (init {knownVariables = known_vars}) emptyDep vs
 solveStep :: SolverState -> Dependencies -> [Var] -> SolverState
 
 
+-- solveStep _ _ (q:qs) | trace ("WS-length: " ++ (show $ (length qs) + 1) ++ " next: " ++ (show q)) $ False = undefined
+
 -- empty work list
 -- solveStep s _ [] | trace (dumpToJsonFile s "ass_meta") $ False = undefined                                           -- debugging assignment as meta-info for JSON dump
 -- solveStep s _ [] | trace (dumpSolverState s "graph") $ False = undefined                                             -- debugging assignment as a graph plot
@@ -544,7 +546,7 @@ showVarStatistic s =
         "----- Variable Statistic -----\n" ++
         ( intercalate "\n" (map print $ Map.toList grouped)) ++
         "\n------------------------------\n" ++
-        "       Total: " ++ (printf "%8d" $ Set.size vars ) ++
+        "         Total: " ++ (printf "%8d" $ Set.size vars ) ++
         "\n------------------------------"
     where
         vars = knownVariables s
@@ -553,5 +555,5 @@ showVarStatistic s =
             where
                 go v m = Map.insertWith (+) ( analysis . index $ v ) (1::Int) m
         
-        print (a,c) = printf "     %8s %8d" ((show a) ++ ":") c
+        print (a,c) = printf "     %10s %8d" ((show a) ++ ":") c
 

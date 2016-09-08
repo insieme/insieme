@@ -100,9 +100,13 @@ accessPathValue addr = case getNode addr of
 
   where
 
-    analysis = mkDataFlowAnalysis AccessPathAnalysis "AP" accessPathValue
+    analysis = (mkDataFlowAnalysis AccessPathAnalysis "AP" accessPathValue) {
+        initialValueHandler = initValueHandler
+    }
 
     compose = ComposedValue.toComposed
+
+    initValueHandler a = compose $ BSet.singleton $ AP.parameter $ getIndex a 
 
     -- add operator support
 

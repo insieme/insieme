@@ -41,6 +41,10 @@ module Insieme.Analysis.WriteSetSummary (
 
     WriteSet,
     null,
+    isUnknown,
+    
+    toAccessPaths,
+    parameters,
     
     writeSetSummary
     
@@ -80,7 +84,7 @@ data WriteSet i =
           Known (Map.Map AP.BaseVar (AccessPathSet i))
         | Unknown
     deriving(Eq,Ord,Show)
-
+    
 
 -- an empty write set value
 empty :: WriteSet i
@@ -198,6 +202,9 @@ writeSetSummary addr = case getNode addr of
         -- compute write sets for calls        
         Node IR.CallExpr _ -> var
             where
+            
+                myTrace s a = trace (s ++ (show a)) a
+            
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
                         
@@ -211,16 +218,18 @@ writeSetSummary addr = case getNode addr of
                 callTargetVar = callableValue $ goDown 1 addr
                 
                 -- a test whether there are unknown call targets
-                hasUniversalTarget a = USet.isUniverse $ ComposedValue.toValue $ Solver.get a callTargetVar 
+                hasUniversalTarget a = traceShowId $ USet.isUniverse $ ComposedValue.toValue $ Solver.get a callTargetVar 
                 
                 -- the variables for the write sets of callables
-                writeSetVars a = if hasUniversalTarget a then [] else list
+                writeSetVars a = if hasUniversalTarget a then [] else trace ("Number of write-set-vars: " ++ (show $ length list )) $ list
                     where
                         trgs = ComposedValue.toValue $ Solver.get a callTargetVar
-                        list = writeSetSummary . crop . toAddress <$> USet.toList trgs
+                        list = writeSetSummary . crop . toAddress <$> USet.toList (trace ("Number of targets " ++ (show $ USet.size trgs)) $ trgs)
                 
                 -- a test to see whether there are none unknown write sets
-                hasUnknownWriteSet a = hasUniversalTarget a || any isUnknown (Solver.get a <$> (writeSetVars a `asTypeOf` [var]))
+                hasUnknownWriteSet a = trace ("HasCheckedCondition: " ++ (show res)) $ res
+                    where
+                        res = hasUniversalTarget a || (myTrace "Any done: " $ any isUnknown ((\v -> myTrace "Loaded Variable: " $ Solver.get a v) <$> (myTrace "List of Variables " $ writeSetVars a `asTypeOf` [var])))
                 
                 -- a function to retrieve the list of needed access path arguments
                 getNeededArguments a = if hasUnknownWriteSet a then [] else list
@@ -236,15 +245,15 @@ writeSetSummary addr = case getNode addr of
                         go i = (i,accessPathValue $ goDown (i+2) addr) 
                 
                 -- aggregate write set of all potential target functions
-                aggregateWriteSets a = trace ((show $ idGen addr) ++ " has unknown write sets: " ++ (show $ hasUnknownWriteSet a)) $ if hasUnknownWriteSet a then Unknown else res
+                aggregateWriteSets a = if hasUnknownWriteSet (trace "Start checking condition " a) then Unknown else res
                     where
                         args = Map.fromList $ (go <$> argVars a)
                             where
                                 go (i,v) = (i,ComposedValue.toValue $ Solver.get a v)
                                 
                         ws = Solver.get a <$> (writeSetVars a `asTypeOf` [var])
-                        ws' =  bindAccessPaths args <$> ws
-                        res = Solver.join ws'
+                        ws' =  bindAccessPaths args <$> ((trace ("Loaded " ++ (show $ length ws) ++ " write set summaries")) $ ws)
+                        res = Solver.join $ trace ("Joining " ++ (show $ length ws') ++ " write set summaries") $ ws'
         
         
         _ | isRoot addr -> everything 

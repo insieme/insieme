@@ -76,7 +76,7 @@ data AccessPath i =
     deriving (Eq,Ord)
 
 instance (Show i) => Show (AccessPath i) where
-    show (AccessPath b s) = "*(" ++ (show b) ++ (concat $ (++ "->") . show <$> reverse s) ++ ")"
+    show (AccessPath b s) = (show b) ++ (concat $ (++ ".*") . tail . show <$> reverse s) ++ ")"
     show  Local           = "local"
     show  Unknown         = "?"
 
@@ -94,6 +94,7 @@ global g = AccessPath (Global g) [DP.Root]
 
 local :: AccessPath i
 local = Local
+
 
 
 -- manipulation
@@ -119,5 +120,5 @@ extend Unknown _ = Unknown
 extend _ Unknown = Unknown
 extend Local   _ = Local
 extend _   Local = Local
-extend (AccessPath v a) (AccessPath _ b) = AccessPath v (a ++ b)
+extend (AccessPath v a) (AccessPath _ b) = AccessPath v (a ++ (tail b))
  

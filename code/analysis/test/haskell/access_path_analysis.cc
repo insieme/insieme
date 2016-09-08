@@ -39,6 +39,8 @@
 #include "insieme/analysis/haskell_interface.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/core/dump/json_dump.h"
+
 namespace insieme {
 namespace analysis {
 
@@ -66,7 +68,7 @@ namespace analysis {
 				"	}(b);"
 				"	( x : ref<bool>, y : ref<bool>) -> unit {"
 				"		( x : ref<bool>, y : ref<bool> ) -> unit {"
-				"			y = true;"
+				"			x = true;"
 				"		}(y,x);"
 				"	}(a,b);"
 				"	*a;"
@@ -74,9 +76,11 @@ namespace analysis {
 				"}"
 		).as<CompoundStmtPtr>();
 
+		core::dump::json::dumpIR("code.json", stmt);
+
 		auto comp = CompoundStmtAddress(stmt);
 
-		EXPECT_TRUE(isTrue(comp[5]));
+		EXPECT_TRUE(isFalse(comp[5]));
 
 	}
 

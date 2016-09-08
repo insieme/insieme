@@ -58,13 +58,20 @@ import qualified Insieme.Analysis.Entities.DataPath as DP
 import Insieme.Analysis.DataPath
 
 
+--
+-- * Location
+--
+
+type Location = NodeAddress
+
+
 
 --
 -- * References
 --
 
 data Reference i = Reference {
-        creationPoint :: NodeAddress,
+        creationPoint :: Location,
         dataPath      :: DP.DataPath i
     }
   deriving (Eq,Ord,Show)

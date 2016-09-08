@@ -35,6 +35,7 @@
  -}
 
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Insieme.Analysis.Framework.MemoryState where
@@ -61,7 +62,9 @@ import qualified Insieme.Utils.UnboundSet as USet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import Insieme.Analysis.Entities.DataPath hiding (isRoot)
+import qualified Insieme.Analysis.Entities.AccessPath as AP
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import Insieme.Analysis.Entities.FieldIndex
 
@@ -227,40 +230,22 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
         _ | p == Pre && IR.isEntryPoint addr -> 
             Solver.mkVariable (idGen addr) [] (USet.singleton $ Initial)
 
-{--
+{-
         -- to prune the set of variables, we check whether the invoced callable may update the traced reference
         c@(Node IR.CallExpr _) | p == Internal && (not $ loc `isChildOf` addr)-> var
             where
                 var = Solver.mkVariable (idGenExt pp "switch") [con] Solver.bot
                 con = Solver.createEqualityConstraint dep val var
                 
-                -- TODO: in this implementation, if one of the target functions may update the reference, 
-                -- all are walked through. This may be reduced to selected functions.
+                dep a = (Solver.toVar writeSetVar) : 
+                    if canSkipCallable a then [Solver.toVar skipPredecessorVar] else nonSkipPredecessorVars a
                 
-                dep a = (Solver.toVar callableVar) :  
-                            (if canSkipCallable a then [Solver.toVar skipPredecessorVar] else nonSkipPredecessorVars a) ++ 
-                            (Solver.toVar . snd <$> writeSetSummaryVars a)
-                    
-                val a = if canSkipCallable a then skipPredecessorVal a else nonSkipPredecessorVal a 
+                val a = if canSkipCallable a then skipPredecessorVal a else nonSkipPredecessorVal a
                 
-                callableVar = callableValue $ goDown 1 addr
-                callableVal a = ComposedValue.toValue $ Solver.get a callableVar
+                writeSetVar = writeSet addr
+                writeSetVal a = Solver.get a writeSetVar
                 
-                -- a function obtaining the list of write-set summary variables depending on
-                writeSetSummaryVars a = if USet.isUniverse targetSet then [] else go <$> targetList
-                    where 
-                        targetSet = callableVal a
-                        targetList = USet.toList targetSet
-                        
-                        go :: Callable -> (Callable, Solver.TypedVar (WS.WriteSet SimpleFieldIndex))
-                        go c = (c, WS.writeSetSummary $ toAddress c)
-    
-                -- a test whether the called callees can be short-cutted            
-                canSkipCallable a = if USet.isUniverse targetSet then False else res  
-                    where
-                        targetSet = callableVal a
-                        -- TODO: make this a stronger condition
-                        res = all (WS.null . Solver.get a) (snd <$> writeSetSummaryVars a)
+                canSkipCallable = not . USet.member loc . writeSetVal 
                 
                 -- utils for skip case --
                 
@@ -271,8 +256,7 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
                 
                 nonSkipPredecessorVars a = Solver.getDependencies a defaultVar
                 nonSkipPredecessorVal a = Solver.getLimit a defaultVar 
--}                 
-                
+-}
 
         -- for all the others, the magic is covered by the generic program point value constraint generator
         _ -> defaultVar
@@ -331,6 +315,79 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
 
                 (pdep,pval) = mkPredecessorConstraintCredentials pp analysis
 
+
+
+
+--
+-- * Write Set Analysis
+--
+
+data WriteSetAnalysis = WriteSetAnalysis
+    deriving (Typeable)
+
+writeSetAnalysis :: Solver.AnalysisIdentifier
+writeSetAnalysis = Solver.mkAnalysisIdentifier WriteSetAnalysis "WriteSet"
+
+
+
+instance Solver.Lattice (USet.UnboundSet Location) where
+    bot = USet.empty
+    merge = USet.union
+
+
+-- an analysis computing the set of memory locations written by a expression
+writeSet :: NodeAddress -> Solver.TypedVar (USet.UnboundSet Location)  
+writeSet addr = case getNodeType addr of
+        
+        IR.CallExpr -> var
+            where
+                var = Solver.mkVariable (idGen addr) [con] USet.empty
+                con = Solver.createConstraint dep val var
+                
+                dep a = (Solver.toVar targetVar) : (Solver.toVar <$> writeSetSummaryVars a) ++ (Solver.toVar <$> refVars a)
+                val a = if unknown then USet.Universe else res
+                    where
+                        wss = writeSetSummaryVal a
+                        aps = WS.toAccessPaths wss 
+                        
+                        unknown = (WS.isUnknown wss) || (any infinite $ refVars a) || (any tooLong aps)
+                            where
+                                infinite r = USet.isUniverse $ ComposedValue.toValue $ Solver.get a r
+                                tooLong (AP.AccessPath _ d) = length d > 1 
+                        
+                        res = foldr go USet.empty (WS.parameters wss)
+                            where
+                                go x s = USet.union s $ USet.map toLoc $ ComposedValue.toValue $ Solver.get a $ refVar x
+                                toLoc :: Reference SimpleFieldIndex -> Location
+                                toLoc (Reference l _ ) = l
+
+                refVar :: Int -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex (ReferenceSet SimpleFieldIndex))                        
+                refVar x = referenceValue $ goDown 1 $ goDown (x+2) addr
+                
+                targetVar = callableValue $ goDown 1 addr
+                targetVal a = ComposedValue.toValue $ Solver.get a targetVar
+                
+                writeSetSummaryVars :: Solver.Assignment -> [Solver.TypedVar (WS.WriteSet SimpleFieldIndex)]
+                writeSetSummaryVars a = if USet.isUniverse trgs then [] else list
+                    where
+                        trgs = targetVal a
+                        list = go <$> USet.toList trgs
+                        go = WS.writeSetSummary . crop . toAddress
+                
+                writeSetSummaryVal a = Solver.join $ (Solver.get a) <$> writeSetSummaryVars a
+                
+                refVars a = if WS.isUnknown wss then [] else res 
+                     where
+                        wss = writeSetSummaryVal a
+                        res = refVar <$> WS.parameters wss
+        
+        _ -> empty
+        
+    where
+        
+        empty = Solver.mkVariable (idGen addr) [] (USet.empty) 
+
+        idGen a = Solver.mkIdentifier writeSetAnalysis a ""
 
 
 -- killed definitions
