@@ -1,1 +1,0 @@
--std=c99 -DDOUBLE -DDO_MPI -g -O5

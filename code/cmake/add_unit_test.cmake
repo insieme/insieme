@@ -64,8 +64,8 @@ macro ( add_unit_test case_name ut_prefix )
 		# This is rather hacky as maybe we should already forward some more variables which we don't know of yet until they might actually be needed and things will break.
 		# For now this works and we haven't really found a nicer way to do this.
 		ExternalProject_Add(googletest
-			URL http://googletest.googlecode.com/files/gtest-${GTEST_VERSION}.zip
-			URL_HASH SHA256=247ca18dd83f53deb1328be17e4b1be31514cedfc1e3424f672bf11fd7e0d60d
+			URL http://insieme-compiler.org/ext_libs/gtest-1.7.0.tar.gz
+			URL_HASH SHA256=f73a6546fdf9fce9ff93a5015e0333a8af3062a152a9ad6bcb772c96687016cc
 			PREFIX ${GTEST_PREFIX} 
 			INSTALL_COMMAND "" #make gtest gtest_main
 			CMAKE_ARGS -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_C_COMPILER_ARG1=${CMAKE_C_COMPILER_ARG1} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_CXX_COMPILER_ARG1=${CMAKE_CXX_COMPILER_ARG1} -Dgtest_force_shared_crt=${MSVC_SHARED_RUNTIME} -DBUILD_SHARED_LIBS=${googletest_BUILD_SHARED_LIBS}

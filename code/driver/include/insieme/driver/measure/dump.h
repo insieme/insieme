@@ -36,34 +36,68 @@
 
 #pragma once
 
-#include <boost/filesystem/path.hpp>
+#include <boost/serialization/access.hpp>
+
+#include "insieme/driver/measure/measure.h"
+#include "insieme/utils/printable.h"
 
 namespace insieme {
-namespace utils {
+namespace driver {
+namespace measure {
 
-	using std::string;
+	/*
+	 * A light metric class to serialize limited information of driver::measure::Metric
+	 */
+	class LightweightMetric : public utils::Printable {
 
-	const boost::filesystem::path up("../");
+	  public:
 
-	inline string getInsiemeSourceRootDir() {
-		return (boost::filesystem::path(__FILE__).parent_path() / up / up / up / up).string();
-	}
+		std::string name;
 
-	inline string getInsiemeLibsRootDir() {
-		return string(INSIEME_LIBS_HOME); // INSIEME_LIBS_HOME is supplied by cmake
-	}
+		LightweightMetric(const MetricPtr& metric) : name(metric->getName()) {}
+		LightweightMetric() : name() {}
 
-	inline string getInsiemeBuildRootDir() {
-		return string(INSIEME_BUILD_ROOT); // INSIEME_BUILD_ROOT is supplied by cmake
-	}
+		std::ostream& printTo(std::ostream& out) const { return out << name; }
 
-	inline string getPapiRootDir() {
-	#ifdef PAPI_ROOT_DIR
-		return string(PAPI_ROOT_DIR); // PAPI_ROOT_DIR is supplied by cmake
-	#else
-		return string("");
-	#endif
-	}
+		bool operator<(const LightweightMetric other) const { return name < other.name; }
 
-} // end namespace utils
+	  private:
+
+	  	friend class boost::serialization::access;
+
+	  	template<typename Archive>
+	  	void serialize(Archive& archive, const unsigned int version) {
+			archive& name;
+		}
+
+	};
+
+	/*
+	 * A light quantity class to serialize limited information of driver::measure::Quantity
+	 */
+	class LightweightQuantity : public utils::Printable {
+
+	  public:
+
+		double value;
+
+		LightweightQuantity(const Quantity& quantity) : value(quantity.getValue()) {}
+		LightweightQuantity() : value() {}
+
+		std::ostream& printTo(std::ostream& out) const { return out << value; }
+
+	  private:
+
+		friend class boost::serialization::access;
+
+	  	template<typename Archive>
+	  	void serialize(Archive& archive, const unsigned int version) {
+			archive& value;
+		}
+
+	};
+
+} // end namespace measure
+} // end namespace driver
 } // end namespace insieme
+

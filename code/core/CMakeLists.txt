@@ -12,14 +12,27 @@ file(GLOB_RECURSE insieme_core_yy src/*.y src/*.yy )
 file(GLOB_RECURSE insieme_core_ll src/*.l src/*.ll )
 
 # automatically run the script for generating IRBuilder interface
-execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb  RESULT_VARIABLE builderbuilderSuccess OUTPUT_VARIABLE builderbuilderOutput ERROR_VARIABLE builderbuilderOutput)
+set(builderbuilder_script_dir ${insieme_code_dir}/core)
+set(builderbuilder_output_dir ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
-if (NOT ${builderbuilderSuccess} EQUAL 0)
-	message(FATAL_ERROR "Ruby builder builder script failed to execute, reason:\n${builderbuilderOutput}")
+file(MAKE_DIRECTORY ${builderbuilder_output_dir})
+
+execute_process(
+	WORKING_DIRECTORY ${builderbuilder_script_dir}
+	COMMAND           ruby builderbuilder.rb ${builderbuilder_output_dir}
+	RESULT_VARIABLE   builderbuilder_success
+	OUTPUT_VARIABLE   builderbuilder_output
+	ERROR_VARIABLE    builderbuilder_output)
+
+if(NOT ${builderbuilder_success} EQUAL 0)
+	message(FATAL_ERROR "Ruby builder builder script failed to execute, reason:\n${builderbuilder_output}")
 endif()
 
+file(GLOB_RECURSE builderbuilder_generated_files ${builderbuilder_output_dir}/*)
+
+
 # =============================================  bison builds the parser  =====================================
-if(NOT MSVC) 
+if(NOT MSVC)
 	insieme_find_package(NAME BISON)
 	IF(BISON_EXECUTABLE-NOTFOUND)
 	    message(FATAL_ERROR "bison not found")
@@ -39,8 +52,8 @@ if(NOT MSVC)
 	      ARGS -d -v
 		    --report=all
 		   -o ${BISON_O_FILE}
-		   --graph 
-		  ${BISON_INPUT} 
+		   --graph
+		  ${BISON_INPUT}
 	      COMMENT "Generating inspire parser"
 	      DEPENDS ${BISON_INPUT}
 	      WORKING_DIRECTORY ${BISON_OUTPUT_PATH}
@@ -65,7 +78,7 @@ if(NOT MSVC)
 	      SOURCE ${FLEX_INPUT}
 	      COMMAND ${FLEX_EXECUTABLE}
 	      ARGS -o ${FLEX_OUTPUT}
-		  ${FLEX_INPUT} 
+		  ${FLEX_INPUT}
 	      COMMENT "Generating inspire scanner"
 	      DEPENDS ${FLEX_INPUT}
 	      WORKING_DIRECTORY ${FLEX_OUTPUT_PATH}
@@ -84,8 +97,9 @@ endif()
 # =============================================  build insieme core .so  =====================================
 
 # Build the core library
-add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${FLEX_OUTPUT} ${BISON_OUTPUT})
+add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${builderbuilder_generated_files} ${FLEX_OUTPUT} ${BISON_OUTPUT})
 target_include_directories(insieme_core PUBLIC ${insieme_core_include_dir} )
+target_include_directories(insieme_core PUBLIC ${builderbuilder_output_dir}/include)
 target_include_directories(insieme_core PRIVATE ${FLEX_OUTPUT_PATH})
 target_include_directories(insieme_core PRIVATE ${BISON_OUTPUT_PATH})
 target_include_directories(insieme_core PRIVATE ${FLEX_INCLUDE_DIRS})
@@ -96,7 +110,7 @@ target_link_libraries(insieme_core insieme_utils)
 
 # lookup CUDD library
 insieme_find_package(NAME CUDD)
-target_link_libraries(insieme_core ${CUDD_LIBRARIES}) 
+target_link_libraries(insieme_core ${CUDD_LIBRARIES})
 target_include_directories(insieme_core PUBLIC ${CUDD_INCLUDE_DIRS} )
 
 # lookup Boost library
@@ -108,20 +122,20 @@ set( ut_prefix  ut_core)
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
-	
+
 	insieme_fix_case_name( case_subdir ${case_file} )
-	
+
 	set ( case_name ${ut_prefix}${case_subdir}_${case_name} )
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} insieme_core)
 	target_include_directories(${case_name} PUBLIC test/include/)
-	
+
 	#the parser unit-tests need the bison/flex include directories
 	if(case_file MATCHES ".*parser.*")
 		target_include_directories(${case_name} PRIVATE ${FLEX_OUTPUT_PATH})
 		target_include_directories(${case_name} PRIVATE ${BISON_OUTPUT_PATH})
 		target_include_directories(${case_name} PRIVATE ${FLEX_INCLUDE_DIRS})
 	endif()
-	
+
 	add_unit_test(${case_name} ${ut_prefix})
 endforeach(case_file)

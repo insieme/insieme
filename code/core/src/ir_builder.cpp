@@ -262,7 +262,7 @@ namespace core {
 
 	// ---------------------------- Standard Nodes -----------------------------------
 
-	#include "ir_builder_impl.inl"
+	#include "insieme/core/generated/ir_builder_impl.inl"
 
 	StringValuePtr IRBuilderBaseModule::stringValue(const char* str) const {
 		return stringValue(string(str));

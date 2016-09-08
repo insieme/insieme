@@ -73,6 +73,7 @@ endif (NOT MSVC)
 option(MSVC_SHARED_RUNTIME "Use shared MSVC runtime linking" ON)
 
 add_definitions("-DINSIEME_LIBS_HOME=\"${THIRD_PARTY_LIBS_HOME}/\"")
+add_definitions("-DINSIEME_BUILD_ROOT=\"${CMAKE_BINARY_DIR}/\"")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS")
 
 # Visual Studio customization
