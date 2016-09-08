@@ -67,37 +67,37 @@ namespace transform {
 		T lowerThreadIDs(const T& code) {
 			// TODO: consider nested job expressions and do not lower contained getThreadID calls
 			return makeCachedLambdaMapper([](const NodePtr& cur) -> NodePtr {
-				       if(cur->getNodeType() != NT_CallExpr) return cur;
+					   if(cur->getNodeType() != NT_CallExpr) return cur;
 
-				       // some preparation
-				       NodeManager& mgr = cur->getNodeManager();
-				       auto& parExt = mgr.getLangExtension<lang::ParallelExtension>();
-				       IRBuilder builder(mgr);
-				       auto call = cur.as<CallExprPtr>();
+					   // some preparation
+					   NodeManager& mgr = cur->getNodeManager();
+					   auto& parExt = mgr.getLangExtension<lang::ParallelExtension>();
+					   IRBuilder builder(mgr);
+					   auto call = cur.as<CallExprPtr>();
 
-				       // a function reducing the level expression by 1
-				       auto decLevel = [](const ExpressionPtr& level) -> ExpressionPtr {
-					       auto formula = arithmetic::toFormula(level);
-					       assert_true(formula.isConstant()) << "Accessing thread-group using non-constant level index not supported!";
-					       if(formula.isZero()) return ExpressionPtr();
-					       return arithmetic::toIR(level->getNodeManager(), formula - 1);
+					   // a function reducing the level expression by 1
+					   auto decLevel = [](const ExpressionPtr& level) -> ExpressionPtr {
+						   auto formula = arithmetic::toFormula(level);
+						   assert_true(formula.isConstant()) << "Accessing thread-group using non-constant level index not supported!";
+						   if(formula.isZero()) return ExpressionPtr();
+						   return arithmetic::toIR(level->getNodeManager(), formula - 1);
 					   };
 
-				       // handle getThreadID
-				       if(analysis::isCallOf(call, parExt.getGetThreadId())) {
-					       if(ExpressionPtr newLevel = decLevel(call->getArgument(0))) { return builder.getThreadId(newLevel); }
-					       return builder.literal("0", call->getType());
-				       }
+					   // handle getThreadID
+					   if(analysis::isCallOf(call, parExt.getGetThreadId())) {
+						   if(ExpressionPtr newLevel = decLevel(call->getArgument(0))) { return builder.getThreadId(newLevel); }
+						   return builder.literal("0", call->getType());
+					   }
 
-				       // handle group size
-				       if(analysis::isCallOf(call, parExt.getGetGroupSize())) {
-					       if(ExpressionPtr newLevel = decLevel(call->getArgument(0))) { return builder.getThreadGroupSize(newLevel); }
-					       return builder.literal("1", call->getType());
-				       }
+					   // handle group size
+					   if(analysis::isCallOf(call, parExt.getGetGroupSize())) {
+						   if(ExpressionPtr newLevel = decLevel(call->getArgument(0))) { return builder.getThreadGroupSize(newLevel); }
+						   return builder.literal("1", call->getType());
+					   }
 
-				       return cur;
+					   return cur;
 				   })
-			    .map(code);
+				.map(code);
 		}
 
 
@@ -122,6 +122,21 @@ namespace transform {
 			}
 
 		  protected:
+
+			ExpressionPtr preHandleCall(const CallExprPtr& call) {
+				const auto& fun = call->getFunctionExpr();
+				auto args = core::transform::extractArgExprsFromCall(call);
+
+				// preprocess compound atomics
+				auto rT = builder.refType(call->getType());
+				if(parExt.isAtomicAddAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignAdd(), args[0], args[1]));
+				if(parExt.isAtomicSubAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignSubtract(), args[0], args[1]));
+				if(parExt.isAtomicAndAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignBitwiseAnd(), args[0], args[1]));
+				if(parExt.isAtomicOrAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignBitwiseOr(), args[0], args[1]));
+				if(parExt.isAtomicXorAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignBitwiseXor(), args[0], args[1]));
+				return call;
+			}
+
 			StatementPtr handleCall(const CallExprPtr& call) {
 				const auto& fun = call->getFunctionExpr();
 				auto args = core::transform::extractArgExprsFromCall(call);
@@ -175,13 +190,6 @@ namespace transform {
 				if(parExt.isLockInit(fun)) { return builder.getNoOp(); }
 
 				// and atomics
-				auto rT = builder.refType(call->getType());
-				if(parExt.isAtomicAddAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignAdd(), args[0], args[1]));
-				if(parExt.isAtomicSubAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignSubtract(), args[0], args[1]));
-				if(parExt.isAtomicAndAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignBitwiseAnd(), args[0], args[1]));
-				if(parExt.isAtomicOrAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignBitwiseOr(), args[0], args[1]));
-				if(parExt.isAtomicXorAndFetch(fun)) return builder.deref(builder.callExpr(rT, compExt.getCompAssignBitwiseXor(), args[0], args[1]));
-
 				if(parExt.isAtomic(fun)) {
 					// fix generic parameters within atomic body definition
 					core::CallExprPtr newCall = call;
@@ -248,6 +256,9 @@ namespace transform {
 			StatementPtr visitStatement(const StatementPtr& curStmt) {
 				// start with current statement
 				StatementPtr stmt = curStmt;
+
+				// preprocess calls
+				if(stmt->getNodeType() == NT_CallExpr) { stmt = preHandleCall(static_pointer_cast<CallExprPtr>(stmt)); }
 
 				// start by resolve stmt recursively
 				stmt = stmt->substitute(manager, *this);

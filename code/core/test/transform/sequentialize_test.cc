@@ -76,13 +76,13 @@ namespace transform {
 		StatementPtr code = analysis::normalize(builder.parseStmt("alias int = int<4>;"
 		                                                          "{"
 		                                                          "	var ref<int> a = 2;"
-		                                                          "	atomic_fetch_and_add(a, 10);"
+		                                                          "	atomic_add_and_fetch(a, 10);"
 		                                                          "}")
 		                                            .as<StatementPtr>());
 
 		ASSERT_TRUE(code);
 
-		EXPECT_EQ("{var ref<int<4>,f,f,plain> v0 = 2;atomic_fetch_and_add(v0, 10);}",
+		EXPECT_EQ("{var ref<int<4>,f,f,plain> v0 = 2;atomic_add_and_fetch(v0, 10);}",
 		          toString(printer::PrettyPrinter(code, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(code, checks::getFullCheck()).empty()) << check(code, checks::getFullCheck());
 
