@@ -1,7 +1,6 @@
 # Do not remove this file even if it does not blacklist any test.
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
-barrier_numthreads #deadlock
 flood_simulator
 gemsclaim # disabled here because the test takes quite long
 mergeSort
@@ -24,9 +23,6 @@ vivid
 ziggurat
 
 tasks
-
-atomic
-private_iterator
 
 comd-omp
 copyin
