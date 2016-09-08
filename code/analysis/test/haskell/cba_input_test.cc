@@ -283,6 +283,13 @@ namespace analysis {
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "ArithmeticSet evaluates to " << res << std::endl;
 
+				} else if (name == "cba_expect_finite_int") {
+					std::cerr << "Performing " << name << std::endl;
+					ArithmeticSet res = this->getValue(call.getArgument(0));
+					EXPECT_TRUE(!res.isUniversal())
+						<< *core::annotations::getLocation(call) << std::endl
+						<< "ArithmeticSet evaluates to " << res << std::endl;
+
 				} else if (name == "cba_expect_eq_int") {
 					std::cerr << "Performing " << name << std::endl;
 					ArithmeticSet lhs = this->getValue(call.getArgument(0));

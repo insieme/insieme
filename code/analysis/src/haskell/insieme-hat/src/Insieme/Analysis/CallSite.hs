@@ -38,6 +38,7 @@
 
 module Insieme.Analysis.CallSite where
 
+import Debug.Trace
 import Data.Maybe
 import Data.Tree
 import Data.Typeable
@@ -118,12 +119,36 @@ callSites addr = case getNode addr of
     -- distinguish binding case --    
     var =
         if isRoot addr then noCallSitesVar
-        else if i == 1 && isCall p then staticCallSiteVar
+        else if isStaticallyBound then staticCallSiteVar
         else allCallSitesVar
     
     noCallSitesVar = Solver.mkVariable id [] Solver.bot
     
-    staticCallSiteVar = Solver.mkVariable id [] (Set.singleton $ CallSite p)
+    recReferences = case getNode addr of
+        Node IR.BindExpr _ -> []          -- bind can not be recursive
+        Node IR.Lambda _   -> if isRoot p then [] else res
+            where
+                ref = getNode $ goDown 0 $ fromJust $ getParent addr
+                def = fromJust $ getParent $ fromJust $ getParent addr 
+                res = foldAddressPrune agg filter def
+                
+                agg n l = case getNode n of
+                    Node IR.LambdaReference _ | isUse -> n : l --- TODO: filter out refs in bindings
+                        where 
+                            isUse = getNode n == ref && (rootLabel . getNode . fromJust . getParent) n /= IR.LambdaBinding
+                    _                                            -> l 
+                
+                filter n = isType (getNode n) || (IR.LambdaExpr == (rootLabel $ getNode n))      -- TODO: support for lambda references exceeding local scope  
+    
+    
+    isStaticallyBound = i == 1 && isCall p && all check recReferences
+        where
+            check a = getIndex a == 1 && (isCall $ fromJust $ getParent a)
+    
+    staticCallSiteVar = Solver.mkVariable id [] (res)
+        where
+            res = Set.fromList $ CallSite p : recCalls
+            recCalls = (CallSite . fromJust . getParent) <$> recReferences 
     
     allCallSitesVar = Solver.mkVariable id [con] Solver.bot
         where
@@ -132,10 +157,11 @@ callSites addr = case getNode addr of
             allCalls = foldTree collector (getInspire addr)
             collector a calls = case getNode a of
                 Node IR.CallExpr _  -> case getNode $ goDown 1 a of
-                    Node IR.Lambda   _ -> calls
-                    Node IR.BindExpr _ -> calls
-                    Node IR.Literal  _ -> calls
-                    _                  -> a : calls
+                    Node IR.Lambda   _        -> calls
+                    Node IR.BindExpr _        -> calls
+                    Node IR.Literal  _        -> calls
+                    Node IR.LambdaReference _ -> calls
+                    _                         -> a : calls
                 _                   -> calls
         
             allTrgVars = map (\c -> (c , Callable.callableValue $ goDown 1 c ) ) allCalls
