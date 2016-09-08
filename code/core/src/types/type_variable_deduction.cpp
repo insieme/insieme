@@ -771,8 +771,9 @@ namespace types {
 			// ----------------------------------------------------------------------------------------------
 
 			TypeList materializedArguments = arguments;
-			if(allowMaterialization) {
-				for (size_t i = 0; i < parameter.size(); i++) {
+			for (size_t i = 0; i < parameter.size(); i++) {
+
+				if(allowMaterialization) {
 
 					bool isRefArg = lang::isReference(arguments[i]);
 					bool isRefParam = lang::isReference(parameter[i]);
@@ -838,15 +839,15 @@ namespace types {
 						// update argument
 						materializedArguments[i] = argType.toType();
 					}
+				}
 
-					// promote qualifiers on pointers (TODO: better solution to this)
-					if(lang::isPointer(arguments[i]) && lang::isPointer(parameter[i])) {
-						lang::PointerType argType(arguments[i]);
-						lang::PointerType paramType(parameter[i]);
-						if(paramType.isConst() && !argType.isConst()) { argType.setConst(true); }
-						if(paramType.isVolatile() && !argType.isVolatile()) { argType.setVolatile(true); }
-						materializedArguments[i] = argType;
-					}
+				// promote qualifiers on pointers (TODO: better solution to this)
+				if(lang::isPointer(arguments[i]) && lang::isPointer(parameter[i])) {
+					lang::PointerType argType(arguments[i]);
+					lang::PointerType paramType(parameter[i]);
+					if(paramType.isConst() && !argType.isConst()) { argType.setConst(true); }
+					if(paramType.isVolatile() && !argType.isVolatile()) { argType.setVolatile(true); }
+					materializedArguments[i] = argType;
 				}
 			}
 
