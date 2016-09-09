@@ -51,7 +51,7 @@ namespace backend {
 	 * transformed into target code. The generic interface defines the basic interface
 	 * according to the composite and command pattern.
 	 */
-	class PreProcessor {
+	class PreProcessor : public utils::VirtualPrintable {
 	  public:
 		/**
 		 * A virtual destructor to support pointers to polymorph sub-classes.
@@ -135,6 +135,8 @@ namespace backend {
 		 * @return the result of the pre-processing step.
 		 */
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+
+		virtual std::ostream& printTo(std::ostream& out) const;
 	};
 
 	/**
@@ -155,6 +157,8 @@ namespace backend {
 	class NoPreProcessing : public PreProcessor {
 	  public:
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+
+		virtual std::ostream& printTo(std::ostream& out) const { return out << "NoPreProcessing"; }
 	};
 
 	/**
@@ -163,6 +167,8 @@ namespace backend {
 	class InlinePointwise : public PreProcessor {
 	  public:
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+
+		virtual std::ostream& printTo(std::ostream& out) const { return out << "InlinePointwise"; }
 	};
 
 	/**
@@ -172,6 +178,8 @@ namespace backend {
 	class CorrectRecVariableUsage : public PreProcessor {
 	  public:
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+
+		virtual std::ostream& printTo(std::ostream& out) const { return out << "CorrectRecVariableUsage"; }
 	};
 
 	/**
@@ -181,6 +189,8 @@ namespace backend {
 	class RecursiveLambdaInstantiator : public PreProcessor {
 	  public:
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+
+		virtual std::ostream& printTo(std::ostream& out) const { return out << "RecursiveLambdaInstantiator"; }
 	};
 
 	/**
@@ -189,6 +199,8 @@ namespace backend {
 	class RefCastIntroducer : public PreProcessor {
 	  public:
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+
+		virtual std::ostream& printTo(std::ostream& out) const { return out << "RefCastIntroducer"; }
 	};
 
 	/**
@@ -198,6 +210,8 @@ namespace backend {
 	class DefaultedMemberCallMarker : public PreProcessor {
 	  public:
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+
+		virtual std::ostream& printTo(std::ostream& out) const { return out << "DefaultedMemberCallMarker"; }
 	};
 
 } // end namespace backend

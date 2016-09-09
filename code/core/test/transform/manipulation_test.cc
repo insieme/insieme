@@ -692,7 +692,6 @@ namespace core {
 		ExpressionPtr fun = builder.normalize(builder.parseExpr("(x : int<4>, y : int<4>) -> unit { x+y; y-x; }"));
 		EXPECT_EQ("rec _.{_=fun(ref<int<4>,f,f,plain> v0, ref<int<4>,f,f,plain> v1) {int_add(ref_deref(v0), ref_deref(v1)); int_sub(ref_deref(v1), ref_deref(v0));}}", toString(*fun));
 
-
 		// -- create a call --
 
 		VariablePtr v1 = builder.variable(type, 10);

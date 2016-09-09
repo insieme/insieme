@@ -1,7 +1,6 @@
 # Do not remove this file even if it does not blacklist any test.
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
-barrier_numthreads #deadlock
 flood_simulator
 gemsclaim # disabled here because the test takes quite long
 mergeSort
@@ -23,36 +22,16 @@ velvet
 vivid
 ziggurat
 
+tasks
 
-# Disabling tests because they fail with assertion:
-# Trying to build atomic assignment from non-assigment
-atomic
-private_iterator
-
-# Disabling tests because they fail with assertion:
-# Global variable not inserted at global scope
 comd-omp
-
-# Disabling tests because they fail with assertion:
-# OMP threadprivate not yet supported
 copyin
 threadprivate
 threadprivate_static
-
-# Disabling tests because they fail with assertion:
-# Trying to look up function not previously declared
-datasharing
-privatized_global
-
-# Disabling tests because they fail to satisfy some semantic checks or errors
-global_firstprivate
 n_body
 ordered
 simple
-
-# Disabling tests because OMP doesn't seem to work at the moment
 gemm
-heated_plate
 nested_pfor_irregular
 reduction_all
 

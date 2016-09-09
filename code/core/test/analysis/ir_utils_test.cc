@@ -366,6 +366,10 @@ namespace analysis {
 
 		TypePtr structType = builder.structType(toVector(builder.field("a", A), builder.field("d", D)));
 		EXPECT_EQ("[AP(A),AP(D<A,B>)]", toString(getElementTypes(structType)));
+
+		TypePtr numericType = builder.numericType(27);
+		EXPECT_EQ("[]", toString(getElementTypes(numericType)));
+
 	}
 
 	TEST(TypeUtils, isRefOf) {
@@ -503,6 +507,42 @@ namespace analysis {
 			"fun(1);"
 		);
 		EXPECT_FALSE(isMaterializingCall(call4));
+	}
+
+	TEST(IsMaterializingDecl, Basic) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto buildDecl = [&](const string& type, const string& init) { return builder.declaration(builder.parseType(type), builder.parseExpr(init)); };
+
+		// basic & subtyping
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>>", "2")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<8>>", "3")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<8>>", "4u")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>,t,t,plain>", "5")));
+
+		// type variables
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<'a>>", "6")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<'a>", "7")));
+
+		// mapping functions to binds
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<()=>'b>", "()-> int<4> { return 0; }")));
+
+		// pointer qualifier addition is allowed
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<ptr<int<4>,t,f>>", R"(lit("p":ptr<int<4>,f,f>))")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<ptr<'a,t,f>>", R"(lit("p":ptr<int<4>,f,f>))")));
+
+		// classes and structs materializing by (1) construction, (2) init expressions, or (3) implicit constructor calls
+		string structA = "def struct A { ctor () { } ctor (p : real<8>) { } }; ";
+		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "A::(ref_decl(type_lit(ref<A>)))")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "<ref<A>>(ref_decl(type_lit(ref<A>))){}")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "4.0")));
+
+		// cases which are NOT materializing
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>>", R"(lit("a":ref<int<4>>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("int<4>", R"(42)")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,f,cpp_ref>", R"(42)")));
+
 	}
 
 	namespace {

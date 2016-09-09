@@ -198,6 +198,6 @@ int main() {
 	)")
 	union { struct { int a; int b; }; int v[2]; } anonymous_inner;
 
-	#pragma test expect_ir("REGEX", R"(.*\*v\d+\.\w+EMPTY\w+\.a.*)")
+	#pragma test expect_ir("REGEX", R"(.*v\d+\.\w+EMPTY\w+\.a.*)")
 	anonymous_inner.a;
 }

@@ -56,7 +56,7 @@ namespace types {
 			// the simple cases first
 			if (pattern.isa<TypeVariablePtr>()) return true;		// everything matches this
 
-			// the other case is a generic type variable 
+			// the other case is a generic type variable
 			if (auto pattern_var = pattern.isa<GenericTypeVariablePtr>()) {
 
 				// the value needs to be a type or a matching variable
@@ -97,15 +97,15 @@ namespace types {
 			// for concrete types, check the structure
 			if (auto genPattern = pattern.isa<GenericTypePtr>()) {
 				if (auto genValue = value.isa<GenericTypePtr>()) {
-					return 
-						genValue->getName() == genPattern->getName() && 
+					return
+						genValue->getName() == genPattern->getName() &&
 						genValue->getTypeParameter().size() == genPattern->getTypeParameter().size() &&
 						all(make_paired_range(genValue->getTypeParameter(), genPattern->getTypeParameter()), [](const std::pair<TypePtr,TypePtr>& cur) {
 							return hasMatchingStructure(cur.first, cur.second);
 						});
 				}
 			}
-			
+
 			// everything else is not a valid pattern, and thus not fitting
 			return false;
 		}
@@ -116,7 +116,7 @@ namespace types {
 		bool matchParameters(NodeManager& manager, const TypePtr& a, const TypePtr& b, Substitution& solution);
 
 		bool matchTypes(NodeManager& manager, const TypesPtr& a, const TypesPtr& b, Substitution& solution);
-		
+
 		bool matchTypes(NodeManager& manager, const TypeList& a, const TypeList& b, Substitution& solution);
 
 
@@ -133,7 +133,7 @@ namespace types {
 			bool OK = true;
 			bool unmatchable = false;
 
-			// get a mutable copy 
+			// get a mutable copy
 			TypeList typeParamsA = a;
 			TypeList typeParamsB = b;
 
@@ -264,15 +264,15 @@ namespace types {
 
 		bool matchTypes(NodeManager& manager, const TypePtr& type, const TypePtr& pattern, Substitution& res) {
 			static const bool DEBUG = false;
-			
+
 			bool OK = true;
 			bool unmatchable = false;
 
 			if (DEBUG) std::cout << "\nMatching " << *type << " with " << *pattern << ", current substitution: " << res << "\n";
-			
+
 			TypePtr a = type;  // the value
 			TypePtr b = res.applyTo(pattern); // the pattern
-									  
+
 			if (DEBUG) std::cout << "Matching " << *a << " with " << *b << "\n";
 
 
@@ -286,7 +286,7 @@ namespace types {
 			if (typeOfB == NT_TypeVariable) {
 				// matching: map variable to value
 				auto var = b.as<TypeVariablePtr>();
-				
+
 				// convert current pair into substitution
 				Substitution mapping(var, a);
 
@@ -303,7 +303,7 @@ namespace types {
 
 				// check whether variable should be skipped
 				auto var = b.as<GenericTypeVariablePtr>();
-				
+
 				// convert current pair into substitution
 				Substitution mapping(var, a);
 
@@ -413,7 +413,7 @@ namespace types {
 
 				// process parameter first
 				if (!matchTypes(manager, funTypeA->getParameterTypes(), funTypeB->getParameterTypes(), res)) return unmatchable;
-				
+
 				// then return type
 				if (!matchTypes(manager, funTypeA->getReturnType(), funTypeB->getReturnType(), res)) return unmatchable;
 
@@ -462,7 +462,7 @@ namespace types {
 		}
 
 
-	} // end namespace 
+	} // end namespace
 
 
 

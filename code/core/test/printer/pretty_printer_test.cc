@@ -99,7 +99,8 @@ TEST(PrettyPrinter, ErrorPrinter) {
 
 	ASSERT_TRUE(!err.empty());
 	dumpErrors(err);
-	EXPECT_EQ("Invalid type of initial value - expected: \nref<uint<4>,f,f,plain>, actual: \nint<8>", toString(err[0].getMessage()));
+	EXPECT_EQ("Invalid initialization - types do not match\n - initialized type: ref<uint<4>,f,f,plain>\n - init expr type  : int<8>",
+	          toString(err[0].getMessage()));
 }
 
 TEST(PrettyPrinter, Wrapper) {

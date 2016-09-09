@@ -41,7 +41,10 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		def __any_string__parfun = function () -> unit {
-			5;
+			{
+				5;
+			}
+			merge_all();
 		};
 		{
 			{
@@ -63,10 +66,11 @@ int main() {
 			5;
 		};
 		def __any_string__parfun = function () -> unit {
-			{
+			{ {
 				pfor(get_thread_group(0u), 0, 1, 1, (v0 : int<4>, v1 : int<4>, v2 : int<4>) => __any_string__loopfun());
 				barrier(get_thread_group(0u));
-			}
+			} }
+			merge_all();
 		};
 		{
 			{

@@ -68,7 +68,7 @@ int main() {
 		&x;
 	}
 
-	#pragma test expect_ir("{ var ref<ptr<int<4>,f,f>,f,f> v0; *ptr_to_ref(*v0); }")
+	#pragma test expect_ir("{ var ref<ptr<int<4>,f,f>,f,f> v0; ptr_to_ref(*v0); }")
 	{
 		int* x;
 		*x;
@@ -214,31 +214,31 @@ int main() {
 
 	// one dimension
 
-	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ref_deref(ptr_subscript(ptr_from_array(v0), 1)); }")
+	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ptr_subscript(ptr_from_array(v0), 1); }")
 	{
 		int a[5];
 		a[1];
 	}
 
-	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ref_deref(ptr_subscript(ptr_from_array(v0), num_cast(1ull, type_lit(int<8>)))); }")
+	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ptr_subscript(ptr_from_array(v0), num_cast(1ull, type_lit(int<8>))); }")
 	{
 		int a[5ull];
 		a[1ull];
 	}
 
-	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ref_deref(ptr_subscript(ptr_from_array(v0), -1)); }")
+	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ptr_subscript(ptr_from_array(v0), -1); }")
 	{
 		int a[5];
 		a[-1];
 	}
 
-	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ref_deref(ptr_subscript(ptr_from_array(v0), 1)); }")
+	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ptr_subscript(ptr_from_array(v0), 1); }")
 	{
 		int a[5];
 		1[a];
 	}
 
-	#pragma test expect_ir("{ var ref<array<int<4>,1>,f,f> v0; ref_deref(ptr_to_ref(ptr_from_array(v0))); }")
+	#pragma test expect_ir("{ var ref<array<int<4>,1>,f,f> v0; ptr_to_ref(ptr_from_array(v0)); }")
 	{
 		int a[1];
 		*a;
@@ -306,7 +306,7 @@ int main() {
 
 	// multidimensional
 
-	#pragma test expect_ir("{ var ref<array<array<int<4>,3>,2>,f,f> v0; ref_deref(ptr_subscript(ptr_from_array(ptr_subscript(ptr_from_array(v0), 1)), 2)); }")
+	#pragma test expect_ir("{ var ref<array<array<int<4>,3>,2>,f,f> v0; ptr_subscript(ptr_from_array(ptr_subscript(ptr_from_array(v0), 1)), 2); }")
 	{
 		int a[2][3];
 		a[1][2];
@@ -321,67 +321,67 @@ int main() {
 
 	// COMPOUND //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_add(v1, 1); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_add(v1, 1); }")
 	{
 		int a = 1;
 		a += 1;
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_subtract(v1, 2); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_subtract(v1, 2); }")
 	{
 		int a = 1;
 		a -= 2;
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_divide(v1, 1); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_divide(v1, 1); }")
 	{
 		int a = 1;
 		a /= 1;
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_multiply(v1, 5); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_multiply(v1, 5); }")
 	{
 		int a = 1;
 		a *= 5;
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_modulo(v1, 5); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_modulo(v1, 5); }")
 	{
 		int a = 1;
 		a %= 5;
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_bitwise_and(v1, 5); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_bitwise_and(v1, 5); }")
 	{
 		int a = 1;
 		a &= 5;
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_bitwise_or(v1, 5); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_bitwise_or(v1, 5); }")
 	{
 		int a = 1;
 		a |= 5;
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<char,f,f> v1 = num_cast(0, type_lit(char)); *comp_assign_bitwise_or(v1, 1); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<char,f,f> v1 = num_cast(0, type_lit(char)); comp_assign_bitwise_or(v1, 1); }")
 	{
 		char a = 0;
 		a |= 1;
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_bitwise_xor(v1, 5); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_bitwise_xor(v1, 5); }")
 	{
 		int a = 1;
 		a ^= 5;
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_left_shift(v1, 5); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_left_shift(v1, 5); }")
 	{
 		int a = 1;
 		a <<= 5;
 	}
 
-	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; *comp_assign_right_shift(v1, 5); }")
+	#pragma test expect_ir("using \"ext.compound_ops\"; { var ref<int<4>,f,f> v1 = 1; comp_assign_right_shift(v1, 5); }")
 	{
 		int a = 1;
 		a >>= 5;

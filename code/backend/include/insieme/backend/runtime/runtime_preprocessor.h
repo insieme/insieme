@@ -51,7 +51,9 @@ namespace runtime {
 	 */
 	class StandaloneWrapper : public PreProcessor {
 	  public:
-		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
+		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code) override;
+
+		virtual std::ostream& printTo(std::ostream& out) const override { return out << "StandaloneWrapper"; }
 	};
 
 	/**
@@ -64,7 +66,9 @@ namespace runtime {
 	class WorkItemizer : public PreProcessor {
 	  public:
 		WorkItemizer() {}
-		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
+		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code) override;
+
+		virtual std::ostream& printTo(std::ostream& out) const override { return out << "WorkItemizer"; }
 	};
 
 	/**
@@ -72,7 +76,9 @@ namespace runtime {
 	 * instrumentation init-function forwarding this information to the init_context method.
 	 */
 	struct InstrumentationSupport : public PreProcessor {
-		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
+		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code) override;
+
+		virtual std::ostream& printTo(std::ostream& out) const override { return out << "InstrumentationSupport"; }
 	};
 
 } // end namespace runtime

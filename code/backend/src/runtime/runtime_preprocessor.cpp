@@ -356,7 +356,7 @@ namespace runtime {
 		 * is started.
 		 */
 		void visitLambdaExpr(const core::LambdaExprPtr& lambda) {
-			// break recursive decent when new scope is reached
+			// break recursive descent when new scope is reached
 		}
 
 		/**

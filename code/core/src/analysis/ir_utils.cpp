@@ -46,6 +46,7 @@
 #include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -150,7 +151,56 @@ namespace analysis {
 		auto callType = call->getType();
 		auto function = call->getFunctionExpr();
 		auto funType = function->getType().as<FunctionTypePtr>()->getReturnType();
+
 		return !analysis::equalTypes(callType, funType) && types::getTypeVariableInstantiation(call->getNodeManager(), callType, transform::materialize(funType));
+	}
+
+	namespace {
+		bool isOptionallyCastRefDecl(const ExpressionPtr& expr) {
+			auto& rExt = expr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+			if(rExt.isCallOfRefDecl(expr)) return true;
+			if(lang::isAnyRefCast(expr)) return isOptionallyCastRefDecl(getArgument(expr,0));
+			return false;
+		}
+	}
+
+	bool isMaterializingDecl(const NodePtr& candidate) {
+		auto decl = candidate.isa<DeclarationPtr>();
+		if(!decl) return false;
+		auto dT = decl->getType();
+
+		// only plain reference declarations can be materializing
+		if(!lang::isPlainReference(dT)) return false;
+		auto init = decl->getInitialization();
+
+		// case 1: a constructor call with ref_decl is materializing
+		if(analysis::isConstructorCall(init) && isOptionallyCastRefDecl(getArgument(init, 0))) return true;
+
+		// case 2: an init expression with a ref_decl memory location is materializing
+		auto initExp = init.isa<InitExprPtr>();
+		if(initExp && isOptionallyCastRefDecl(initExp->getMemoryExpr())) return true;
+
+		// case 3: if the inner type of the declaration ref type matches the type of the init expression, we have a materialization
+		//  - e.g. ref<int<4>> initialized by "0":int<4> (but also ref<int<'a>> initialized by the same value)
+		auto innerType = getReferencedType(dT);
+		auto initType = init->getType();
+		// if the init type is a reference and the inner target type is a plain ref, adjust init type
+		if((lang::isCppReference(initType) || lang::isCppRValueReference(initType)) && lang::isPlainReference(innerType)) {
+			initType = lang::ReferenceType::create(core::analysis::getReferencedType(initType));
+		}
+		// if both types are reference types, unify their qualifiers
+		if(lang::isReference(initType) && lang::isReference(innerType)) {
+			auto innerRef = core::lang::ReferenceType(innerType);
+			auto initRef = core::lang::ReferenceType(initType);
+			initType = lang::ReferenceType::create(initRef.getElementType(), innerRef.isConst(), innerRef.isVolatile(), initRef.getKind());
+		}
+		if(types::getTypeVariableInstantiation(decl->getNodeManager(), innerType, initType, false)) return true;
+
+		// case 4: we could have materialization by implicit constructor call
+		if(analysis::hasConstructorAccepting(innerType, init->getType())) return true;
+
+		// not a materializing case
+		return false;
 	}
 
 	bool isNoOp(const StatementPtr& candidate) {
@@ -308,6 +358,10 @@ namespace analysis {
 			}
 
 			TypeList visitTagTypeReference(const TagTypeReferencePtr& type) override {
+				return {};
+			}
+
+			TypeList visitNumericType(const NumericTypePtr& type) override {
 				return {};
 			}
 

@@ -497,7 +497,7 @@ namespace checks {
 		const TypeList& parameterTypes = functionType->getParameterTypes()->getTypes();
 		const TypePtr& returnType = functionType->getReturnType();
 
-		// Obtain argument type
+		// Obtain argument types
 		TypeList argumentTypes;
 		::transform(address.as<CallExprPtr>()->getArgumentList(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
 
@@ -512,7 +512,17 @@ namespace checks {
 			return res;
 		}
 
-		// 2) check types of arguments => using variable deduction
+		// 2) check that all parameter declarations are either materializing or cpp/rrefs
+		for(const auto& decl : address->getArgumentDeclarations()) {
+			if(!analysis::isMaterializingDecl(decl) && !lang::isCppReference(decl->getType()) && !lang::isCppRValueReference(decl->getType())) {
+				add(res, Message(address, EC_TYPE_INVALID_ARGUMENT_TYPE,
+					             format("Invalid non-materializing argument: \n\t%s\n\t - init expr of type %s", *decl, *decl->getInitialization()->getType()),
+					             Message::ERROR));
+				return res;
+			}
+		}
+
+		// 3) check types of arguments => using variable deduction
 		auto substitution = types::getTypeVariableInstantiation(manager, address);
 
 		if(!substitution) {
@@ -525,7 +535,7 @@ namespace checks {
 			return res;
 		}
 
-		// 3) check return type - which has to be matched with modified function return value.
+		// 4) check return type - which has to be matched with modified function return value.
 		TypePtr retType = substitution->applyTo(returnType);
 		TypePtr resType = address->getType();
 
@@ -821,8 +831,10 @@ namespace checks {
 
 		if(typeMatchesWithOptionalMaterialization(address->getNodeManager(), variableType, initType)) { return res; }
 
-		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-			             format("Invalid type of initial value - expected: \n%s, actual: \n%s", *variableType, *initType), Message::ERROR));
+		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, format("Invalid initialization - types do not match\n"
+			                                                                  " - initialized type: %s\n - init expr type  : %s",
+			                                                                  *variableType, *initType),
+			             Message::ERROR));
 		return res;
 	}
 

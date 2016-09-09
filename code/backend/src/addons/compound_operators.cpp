@@ -86,7 +86,7 @@ namespace addons {
 		 * If so, it re-wraps this compOp in a 'compound_ref_deref', using the backend extension defined above.
 		 */
 		class RemoveDerefForCompOps : public PreProcessor {
-			virtual core::NodePtr process(const Converter& Converter, const core::NodePtr& code) {
+			virtual core::NodePtr process(const Converter& Converter, const core::NodePtr& code) override {
 				auto& nm = code->getNodeManager();
 				core::IRBuilder builder(nm);
 
@@ -106,6 +106,8 @@ namespace addons {
 					return call;
 				}, core::transform::globalReplacement);
 			}
+
+			virtual std::ostream& printTo(std::ostream& out) const override { return out << "RemoveDerefForCompOps"; }
 		};
 
 		/**

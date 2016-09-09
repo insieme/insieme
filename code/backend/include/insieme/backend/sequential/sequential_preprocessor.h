@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -48,7 +48,9 @@ namespace sequential {
 	 */
 	class Sequentializer : public PreProcessor {
 	  public:
-		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
+		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code) override;
+
+		virtual std::ostream& printTo(std::ostream& out) const override { return out << "Sequentializer"; }
 	};
 
 } // end namespace runtime

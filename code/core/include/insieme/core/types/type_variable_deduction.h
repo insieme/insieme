@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -53,10 +53,11 @@ namespace types {
 	 * @param manager the node manager to be used for temporary IR nodes
 	 * @param parameter the type of the parameter
 	 * @param argument the type of the argument
+	 * @param allowMaterialization whether to allow implicit materialization during instantiation
 	 * @return a type-variable substitution mapping for the type variables within the parameter or an uninitialized option
 	 * 		   if no such substitution exists.
 	 */
-	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypePtr& parameter, const TypePtr& argument);
+	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypePtr& parameter, const TypePtr& argument, bool allowMaterialization = true);
 
 	/**
 	 * Tries to compute a valid type variable substitution for a call to a function accepting the given parameter types using
@@ -65,9 +66,10 @@ namespace types {
 	 * @param manager the node manager to be used for temporary IR nodes
 	 * @param parameter the list of parameter types accepted by the function
 	 * @param arguments the list of argument types passed to the function
+	 * @param allowMaterialization whether to allow implicit materialization during instantiation
 	 * @return a type-variable substitution mapping all the variables to argument specific types
 	 */
-	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypeList& parameter, const TypeList& arguments);
+	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypeList& parameter, const TypeList& arguments, bool allowMaterialization = true);
 
 	/**
 	 * Tries to compute a valid type variable substitution for a call to a function of the given type using the given argument
@@ -76,19 +78,21 @@ namespace types {
 	 * @param manager the node manager to be used for temporary IR nodes
 	 * @param function the function to be invoked
 	 * @param arguments the list of argument types passed to the function
+	 * @param allowMaterialization whether to allow implicit materialization during instantiation
 	 * @return a type-variable substitution mapping all the variables to argument specific types
 	 */
-	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const FunctionTypePtr& function, const TypeList& arguments);
+	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const FunctionTypePtr& function, const TypeList& arguments, bool allowMaterialization = true);
 
 	/**
 	 * Tries to obtain the type variable instantiation implied by the given call.
 	 *
 	 * @param manager the node manager to be used for temporary IR nodes
 	 * @param call the call to be analyzed
+	 * @param allowMaterialization whether to allow implicit materialization during instantiation
 	 * @return a type-variable substitution mapping the type variables to their substitutions or null if no
 	 * 			valid substitution could be derived
 	 */
-	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const CallExprPtr& call);
+	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const CallExprPtr& call, bool allowMaterialization = true);
 
 
 } // end namespace types

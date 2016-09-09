@@ -94,7 +94,7 @@ namespace addons {
 
 		// a pre-processor marking all static variables only used once
 		class StaticInitVisitor : public PreProcessor {
-			virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code) {
+			virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code) override {
 				core::NodeManager& mgr = code->getNodeManager();
 				auto& ext = mgr.getLangExtension<core::lang::StaticVariableExtension>();
 
@@ -114,6 +114,10 @@ namespace addons {
 
 				// that's it
 				return code;
+			}
+
+			virtual std::ostream& printTo(std::ostream& out) const override {
+				return out << "StaticInitVisitor";
 			}
 		};
 

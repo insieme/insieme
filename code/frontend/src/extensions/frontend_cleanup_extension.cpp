@@ -42,6 +42,7 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/enum.h"
+#include "insieme/core/lang/compound_operators.h"
 #include "insieme/core/pattern/ir_generator.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
@@ -79,44 +80,27 @@ namespace extensions {
 		//// TU steps ------------------------------------------------------------------------------------------------------------------------------------
 
 		//////////////////////////////////////////////////////////////////////////
-		// Remove superfluous bool_to_int calls (from the frontend inspire module)
+		// Simplify calls which have no side effects if their return value is clearly unused (in compound)
 		// =======================================================================
-		//
-		// These are generated to ensure valid C-style semantics, but can be removed if they are unnecessary in the final IR.
-		//
-		core::ExpressionPtr removeSuperfluousBoolToInt(const core::ExpressionPtr& ir) {
-			auto& mgr = ir->getNodeManager();
-			auto& inspModule = mgr.getLangExtension<frontend::utils::FrontendInspireModule>();
-
-			return irp::replaceAllAddr(irp::callExpr(inspModule.getBoolToInt(), icp::anyList), ir, [&](const NodeAddress& matchingAddress) -> NodePtr {
-				auto call = matchingAddress.getAddressedNode().as<CallExprPtr>();
-				auto arg0 = call->getArgument(0);
-				// ensure unused (currently simply check parent)
-				if(matchingAddress.getDepth()>0 && matchingAddress.getParentNode().isa<CompoundStmtPtr>()) {
-					core::transform::utils::migrateAnnotations(call, arg0);
-					return arg0;
-				}
-				// else keep call
-				return call;
-			}).as<core::ExpressionPtr>();
-		}
-
-		//////////////////////////////////////////////////////////////////////////
-		// Find and replace c and cpp style assignments if ret val not needed
-		// =======================================================================
-		core::ExpressionPtr removeCAndCppStyleAssignments(const core::ExpressionPtr& ir) {
+		core::ExpressionPtr simplifyExpressionsInCompoundStatements(const core::ExpressionPtr& ir) {
 			auto& mgr = ir->getNodeManager();
 			core::IRBuilder builder(mgr);
 			auto& feExt = mgr.getLangExtension<utils::FrontendInspireModule>();
+			auto& rExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
 
 			return core::transform::transformBottomUpGen(ir, [&](const core::CompoundStmtPtr& compound) {
 				StatementList newStmts;
 				for(auto stmt : compound.getStatements()) {
+					auto replacement = stmt;
 					if(feExt.isCallOfCStyleAssignment(stmt) || feExt.isCallOfCxxStyleAssignment(stmt)) {
-						newStmts.push_back(builder.assign(core::analysis::getArgument(stmt, 0), core::analysis::getArgument(stmt, 1)));
-					} else {
-						newStmts.push_back(stmt);
+						replacement = builder.assign(core::analysis::getArgument(stmt, 0), core::analysis::getArgument(stmt, 1));
+					} else if(rExt.isCallOfRefDeref(stmt)) {
+						replacement = core::analysis::getArgument(stmt, 0);
+					} else if(feExt.isCallOfBoolToInt(stmt)) {
+						replacement = core::analysis::getArgument(stmt, 0);
 					}
+					core::transform::utils::migrateAnnotations(stmt, replacement);
+					newStmts.push_back(replacement);
 				}
 				return builder.compoundStmt(newStmts);
 			}, core::transform::globalReplacement);
@@ -250,8 +234,7 @@ namespace extensions {
 	core::tu::IRTranslationUnit FrontendCleanupExtension::IRVisit(core::tu::IRTranslationUnit& tu) {
 		auto ir = core::tu::toIR(tu.getNodeManager(), tu);
 
-		ir = removeSuperfluousBoolToInt(ir);
-		ir = removeCAndCppStyleAssignments(ir);
+		ir = simplifyExpressionsInCompoundStatements(ir);
 		ir = replaceFERefTemp(ir);
 		ir = replaceStdInitListCopies(ir);
 

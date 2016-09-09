@@ -53,6 +53,10 @@ namespace utils {
 		return string(INSIEME_LIBS_HOME); // INSIEME_LIBS_HOME is supplied by cmake
 	}
 
+	inline string getInsiemeBuildRootDir() {
+		return string(INSIEME_BUILD_ROOT); // INSIEME_BUILD_ROOT is supplied by cmake
+	}
+
 	inline string getPapiRootDir() {
 	#ifdef PAPI_ROOT_DIR
 		return string(PAPI_ROOT_DIR); // PAPI_ROOT_DIR is supplied by cmake
