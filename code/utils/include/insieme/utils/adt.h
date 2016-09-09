@@ -55,7 +55,7 @@ namespace utils {
 	struct Variant;
 
 	template<typename ... Variants>
-	struct ADT;
+	class ADT;
 
 
 
@@ -745,7 +745,7 @@ namespace utils {
 		auto res = new detail::adt_data<ADT::arity>(
 			kind, sizeof...(Fields),
 			{
-				detail::adt_value_encoder<Fields>().pack(fields)...
+				{detail::adt_value_encoder<Fields>().pack(fields)...}
 			}
 		);
 		#pragma GCC diagnostic pop
