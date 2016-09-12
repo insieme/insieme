@@ -59,6 +59,10 @@ Insieme is written in C++11 and relies on several third-party libraries:
 | [PAPI]     | >= 5.4.0 | Runtime system, for hardware information and event counters |
 | [hwloc]    | >= 1.10  | Runtime system, for system architecture information         |
 | [valgrind] | >= 3.11  | Memory checks                                               |
+| [Soufflé]  | \*       | Datalog Analsysis Engine                                    |
+| [Stack]    | 1.0.4\*  | Haskell Analsysis Engine                                    |
+
+\* Use Insieme's dependency installer
 
 [PAPI]: <http://icl.cs.utk.edu/papi/>
 [hwloc]: <http://www.open-mpi.org/projects/hwloc/>
