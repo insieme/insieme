@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -60,26 +60,26 @@ namespace lang {
 		BooleanMarkerExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
-		LANG_EXT_TYPE_WITH_NAME(True, "true_marker", "t");
+		LANG_EXT_TYPE(TrueMarker, "t");
 
-		LANG_EXT_TYPE_WITH_NAME(False, "false_marker", "f");
+		LANG_EXT_TYPE(FalseMarker, "f");
 		
 		core::TypePtr getMarkerType(bool value) const {
-			return value ? getTrue() : getFalse();
+			return value ? getTrueMarker() : getFalseMarker();
 		}
 
 		core::ExpressionPtr getMarkerTypeLiteral(bool value) const {
 			IRBuilder builder(manager);
-			return value ? builder.getTypeLiteral(getTrue()) : builder.getTypeLiteral(getFalse());
+			return value ? builder.getTypeLiteral(getTrueMarker()) : builder.getTypeLiteral(getFalseMarker());
 		}
 	};
 
 	static inline bool isTrueMarker(const NodePtr& node) {
-		return node && node->getNodeManager().getLangExtension<BooleanMarkerExtension>().isTrue(node);
+		return node && node->getNodeManager().getLangExtension<BooleanMarkerExtension>().isTrueMarker(node);
 	}
 
 	static inline bool isFalseMarker(const NodePtr& node) {
-		return node && node->getNodeManager().getLangExtension<BooleanMarkerExtension>().isFalse(node);
+		return node && node->getNodeManager().getLangExtension<BooleanMarkerExtension>().isFalseMarker(node);
 	}
 
 	static inline bool isValidBooleanMarker(const TypePtr& type) {

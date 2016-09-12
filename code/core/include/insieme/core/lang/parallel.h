@@ -118,9 +118,11 @@ namespace lang {
 		 * The single work-sharing construct distributing workload among the threads of a group.
 		 * This construct is a derived one to model its 'effect' for the analysis.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(PFor, "pfor", "(g : threadgroup, a : int<'a>, b : int<'a>, c : int<'a>, f : (int<'a>, int<'a>, int<'a>)=>'b)->unit {"
-			                                     "			f(a,b,c);                                                                                  "
-			                                     "}                                                                                                    ")
+		LANG_EXT_DERIVED_WITH_NAME(PFor, "pfor", R"(
+			(g : threadgroup, a : int<'a>, b : int<'a>, c : int<'a>, f : (int<'a>, int<'a>, int<'a>)=>'b)->unit {
+				f(a,b,c);
+			}
+		)")
 
 		/**
 		 * The single collective data distribution construct enabling threads of a work-group to distribute data
@@ -135,21 +137,22 @@ namespace lang {
 		 * A derived operator implementing a barrier among the threads of an enclosing thread group based on a
 		 * redistribute call by utilizing its synchronizing side-effect.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(Barrier, "barrier",
-					"(g : threadgroup)->unit {                                                                        "
-					"	redistribute(g, 0, (_ : ref<array<int<4>>>, _ : uint<8>, _ : uint<8>)->unit { });             "
-					"}                                                                                                ")
+		LANG_EXT_DERIVED(Barrier, R"(
+			(g : threadgroup)->unit {
+				redistribute(g, 0, (_ : ref<array<int<4>>>, _ : uint<8>, _ : uint<8>)->unit { });
+			}
+		)")
 
 		/**
 		 * A derived operator implementing a reduction among the threads of a thread group where every thread
 		 * is contributing an element and a reduction operation and all threads receive the aggregated value.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(PReduce, "preduce",
-			"(g : threadgroup, v : 'a, op : ('b,'a)->'b, init : 'b)->'b {                                                                          "
-			"   return redistribute(g, v,                                                                                                          "
-			"            (data : ref<array<'a>>, size : uint<8>, tid : uint<8>) => array_reduce(data, num_cast(size, type_lit(int<8>)), op, init)  "
-			"          );                                                                                                                          "
-			"}                                                                                                                                     ")
+		LANG_EXT_DERIVED_WITH_NAME(PReduce, "preduce", R"(
+			(g : threadgroup, v : 'a, op : ('b,'a)->'b, init : 'b)->'b {
+				return redistribute(g, v,
+				                    (data : ref<array<'a>>, size : uint<8>, tid : uint<8>) => array_reduce(data, num_cast(size, type_lit(int<8>)), op, init));
+			}
+		)")
 
 
 		// -- Thread Group Size Handling ------------------------------------------------------------------------------------
@@ -216,13 +219,15 @@ namespace lang {
 		 * to be evaluated by the analysis framework. However, the synchronizing effect
 		 * is 'implicit' and needs to be covered by the framework itself.
 		 */
-		LANG_EXT_DERIVED(Atomic, "(v : ref<'a, f,'v>, p : ('a)=>bool, f : ('a)=>'a)->'a { "
-			                     "    auto res = *v;                                      "
-			                     "    if (p(*v)) {                                        "
-			                     "        v = f(*v);                                      "
-			                     "    }                                                   "
-			                     "    return res;                                         "
-			                     "}                                                       ")
+		LANG_EXT_DERIVED(Atomic, R"(
+			(v : ref<'a, f,'v>, p : ('a)=>bool, f : ('a)=>'a)->'a {
+				auto res = *v;
+				if (p(*v)) {
+					v = f(*v);
+				}
+				return res;
+			}
+		)")
 
 
 		// -- Atomic Operators ----------------------------------------------------------------------------------------------
@@ -230,84 +235,115 @@ namespace lang {
 
 		// arithmetic
 
-		LANG_EXT_DERIVED(AtomicFetchAndAdd, "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
-			                                "	let test = (_ : 'a)=>true; "
-			                                "	let apply = (x : 'a)=>x+exp; "
-			                                "	return atomic(v, test, apply); "
-			                                "}  ")
+		LANG_EXT_DERIVED(AtomicFetchAndAdd, R"(
+			(v : ref<'a,f,'v>, exp : 'a) -> 'a {
+				let test = (_ : 'a)=>true;
+				let apply = (x : 'a)=>x+exp;
+				return atomic(v, test, apply);
+			}
+		)")
 
-		LANG_EXT_DERIVED(AtomicAddAndFetch, "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
-			                                "	return atomic_fetch_and_add(v, exp) + exp; "
-			                                "}  ")
+		LANG_EXT_DERIVED(AtomicAddAndFetch, R"(
+			(v : ref<'a,f,'v>, exp : 'a) -> 'a {
+				return atomic_fetch_and_add(v, exp) + exp;
+			}
+		)")
 
-		LANG_EXT_DERIVED(AtomicFetchAndSub, "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
-			                                "	let test = (_ : 'a)=>true; "
-			                                "	let apply = (x : 'a)=>x-exp; "
-			                                "	return atomic(v, test, apply); "
-			                                "}  ")
+		LANG_EXT_DERIVED(AtomicFetchAndSub, R"(
+			(v : ref<'a,f,'v>, exp : 'a) -> 'a {
+				let test = (_ : 'a)=>true;
+				let apply = (x : 'a)=>x-exp;
+				return atomic(v, test, apply);
+			}
+		)")
 
-		LANG_EXT_DERIVED(AtomicSubAndFetch, "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
-			                                "	return atomic_fetch_and_sub(v, exp) - exp; "
-			                                "}  ")
+		LANG_EXT_DERIVED(AtomicSubAndFetch, R"(
+			(v : ref<'a,f,'v>, exp : 'a) -> 'a {
+				return atomic_fetch_and_sub(v, exp) - exp;
+			}
+		)")
 
 		// bitwise
 
-		LANG_EXT_DERIVED(AtomicFetchAndAnd, "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
-			                                "	let test = (_ : 'a) => true; "
-			                                "	let apply = (x : 'a) => x & exp; "
-			                                "	return atomic(v, test, apply); "
-			                                "}  ")
+		LANG_EXT_DERIVED(AtomicFetchAndAnd, R"(
+			(v : ref<'a,f,'v>, exp : 'a) -> 'a {
+				let test = (_ : 'a) => true;
+				let apply = (x : 'a) => x & exp;
+				return atomic(v, test, apply);
+			}
+		)")
 
-		LANG_EXT_DERIVED(AtomicAndAndFetch, "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
-			                                "	return atomic_fetch_and_and(v, exp) & exp; "
-			                                "}  ")
+		LANG_EXT_DERIVED(AtomicAndAndFetch, R"(
+			(v : ref<'a,f,'v>, exp : 'a) -> 'a {
+				return atomic_fetch_and_and(v, exp) & exp;
+			}
+		)")
 
-		LANG_EXT_DERIVED(AtomicFetchAndOr, "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
-			                               "	let test = (_ : 'a) => true; "
-			                               "	let apply = (x : 'a) => x | exp; "
-			                               "	return atomic(v, test, apply); "
-			                               "}  ")
+		LANG_EXT_DERIVED(AtomicFetchAndOr, R"(
+			(v : ref<'a,f,'v>, exp : 'a) -> 'a {
+				let test = (_ : 'a) => true;
+				let apply = (x : 'a) => x | exp;
+				return atomic(v, test, apply);
+			}
+		)")
 
-		LANG_EXT_DERIVED(AtomicOrAndFetch, "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
-			                               "	return atomic_fetch_and_or(v, exp) | exp; "
-			                               "}  ")
+		LANG_EXT_DERIVED(AtomicOrAndFetch, R"(
+			(v : ref<'a,f,'v>, exp : 'a) -> 'a {
+				return atomic_fetch_and_or(v, exp) | exp;
+			}
+		)")
 
-		LANG_EXT_DERIVED(AtomicFetchAndXor, "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
-			                                "	let test = (_ : 'a) => true; "
-			                                "	let apply = (x : 'a) => x ^ exp; "
-			                                "	return atomic(v, test, apply); "
-			                                "}  ")
+		LANG_EXT_DERIVED(AtomicFetchAndXor, R"(
+			(v : ref<'a,f,'v>, exp : 'a) -> 'a {
+				let test = (_ : 'a) => true;
+				let apply = (x : 'a) => x ^ exp;
+				return atomic(v, test, apply);
+			}
+		)")
 
-		LANG_EXT_DERIVED(AtomicXorAndFetch, "(v : ref<'a,f,'v>, exp : 'a) -> 'a { "
-			                                "	return atomic_fetch_and_xor(v, exp) ^ exp; "
-			                                "}  ")
+		LANG_EXT_DERIVED(AtomicXorAndFetch, R"(
+			(v : ref<'a,f,'v>, exp : 'a) -> 'a {
+				return atomic_fetch_and_xor(v, exp) ^ exp;
+			}
+		)")
 
 		// test and set
 
-		LANG_EXT_DERIVED(AtomicValCompareAndSwap, "(v : ref<'a,f,'v>, _old : 'a, _new : 'a) -> 'a { "
-			                                      "	let test = (x : 'a) => x == _old; "
-			                                      "	let apply = (_ : 'a) => _new; "
-			                                      "	return atomic(v, test, apply); "
-			                                      "}  ")
+		LANG_EXT_DERIVED(AtomicValCompareAndSwap, R"(
+			(v : ref<'a,f,'v>, _old : 'a, _new : 'a) -> 'a {
+				let test = (x : 'a) => x == _old;
+				let apply = (_ : 'a) => _new;
+				return atomic(v, test, apply);
+			}
+		)")
 
-		LANG_EXT_DERIVED(AtomicBoolCompareAndSwap, "(v : ref<'a,f,'v>, _old : 'a, _new : 'a) -> bool { "
-			                                       "	let test = (x : 'a) => x == _old; "
-			                                       "	let apply = (_ : 'a) => _new; "
-			                                       "	return atomic(v, test, apply) == _new; "
-			                                       "}  ")
+		LANG_EXT_DERIVED(AtomicBoolCompareAndSwap, R"(
+			(v : ref<'a,f,'v>, _old : 'a, _new : 'a) -> bool {
+				let test = (x : 'a) => x == _old;
+				let apply = (_ : 'a) => _new;
+				return atomic(v, test, apply) == _new;
+			}
+		)")
 
 
 		// An extension representing a busy waiting loop
-		LANG_EXT_DERIVED(BusyLoop, "(condition : ()=>bool) -> unit { while(condition()) { } }");
+		LANG_EXT_DERIVED(BusyLoop, R"(
+			(condition : ()=>bool) -> unit {
+				while(condition()) { }
+			}
+		)")
 
 
 		// Derived helpers
 
-		LANG_EXT_DERIVED(GetDefaultThreads, "() -> uint<4> {"
-			                                "    var ref<uint<4>> nt = 0u;"
-			                                "    merge(parallel(job { if(get_thread_id(0u)==0u) { nt = get_group_size(0u); } }));"
-			                                "    return *nt;"
-			                                "}")
+		LANG_EXT_DERIVED(GetDefaultThreads, R"(
+			() -> uint<4> {
+				var ref<uint<4>> nt = 0u;
+				merge(parallel(job { if(get_thread_id(0u)==0u) { nt = get_group_size(0u); } }));
+				return *nt;
+			}
+		)")
+
 	};
 
 } // end namespace lang

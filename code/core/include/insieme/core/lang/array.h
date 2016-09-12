@@ -74,11 +74,6 @@ namespace lang {
 
 		// -------------------- arrays ---------------------------
 
-		/**
-		 * The generic array type template e.g. utilized as a reference for is-array checks.
-		 */
-		LANG_EXT_TYPE_WITH_NAME(GenArray, "generic_array_template", "array<'a,'s>");
-
 
 		/**
 		 * A type alias for arrays with undefined size.
@@ -100,32 +95,28 @@ namespace lang {
 		/**
 		 * A derived operator conducting a reduction over the elements of a given array.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(ArrayReduce, "array_reduce",
-				    "                                                                                             "
-					"   (data : ref<array<'a,'s>,'v,'c,plain>, size : int<8>, op : ('b,'a)->'b, init : 'b)->'b {  "
-					"   	var ref<'b,f,f,plain> res = init;                                                     "
-					"   	for(int<8> i = 0 .. size) {                                                           "
-					"   		res = op(*res, *(data[i]));                                                       "
-					"   	}                                                                                     "
-					"   	return *res;                                                                          "
-					"   }                                                                                         "
-				    "                                                                                             "
-		)
+		LANG_EXT_DERIVED(ArrayReduce, R"(
+			(data : ref<array<'a,'s>,'v,'c,plain>, size : int<8>, op : ('b,'a)->'b, init : 'b) -> 'b {
+				var ref<'b,f,f,plain> res = init;
+				for(int<8> i = 0 .. size) {
+					res = op(*res, *(data[i]));
+				}
+				return *res;
+			}
+		)")
 
 		/**
 		 * A derived operator conducting a fold operation over a fixed sized array.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(ArrayFold, "array_fold",
-					"                                                                                             "
-					"   (data : array<'a,'s>, init : 'b, op : ('b,'a)->'b)->'b {                                  "
-					"   	var ref<'b,f,f,plain> res = init;                                                     "
-					"   	for(int<8> i = 0 .. type_to_int(type_lit('s))) {                                      "
-					"   		res = op(*res, data[i]);                                                          "
-					"   	}                                                                                     "
-					"   	return *res;                                                                          "
-					"   }                                                                                         "
-					"                                                                                             "
-		)
+		LANG_EXT_DERIVED(ArrayFold, R"(
+			(data : array<'a,'s>, init : 'b, op : ('b,'a)->'b) -> 'b {
+				var ref<'b,f,f,plain> res = init;
+				for(int<8> i = 0 .. type_to_int(type_lit('s))) {
+					res = op(*res, data[i]);
+				}
+				return *res;
+			}
+		)")
 
 		/**
 		 * A higher level function converting a scalar operation to a pointwise operation on arrays.
