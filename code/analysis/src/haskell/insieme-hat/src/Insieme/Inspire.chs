@@ -36,13 +36,15 @@
 
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Insieme.Inspire where
 
+import Data.Function (on)
 import Data.Map (Map)
-import Data.Tree (Tree(..))
 import Insieme.Inspire.ThHelpers
 import Language.Haskell.TH
+import qualified Data.Tree as T
 
 #c
 #define CONCRETE(name) NT_##name,
@@ -130,18 +132,44 @@ $(let
          <*> extend baseToNodeType   genClauseToNodeType
  )
 
-instance Ord (Tree (Int, NodeType)) where
-    compare (Node (x, _) _) (Node (y, _) _) = compare x y
+instance Ord Tree where
+    compare = compare `on` getID
 
+--
+-- * Tree
+--
 
-type Builtins = Map String (Tree (Int, NodeType))
+type Tree = T.Tree (Int, NodeType)
 
-data Inspire = Inspire { getTree     :: Tree (Int, NodeType),
+pattern NT x y <- T.Node (_, x) y
+
+mkNode :: (Int, NodeType) -> [Tree] -> Tree
+mkNode = T.Node
+
+getID :: Tree -> Int
+getID = fst . T.rootLabel
+
+getNodeType :: Tree -> NodeType
+getNodeType = snd . T.rootLabel
+
+getNodePair :: Tree -> (Int, NodeType)
+getNodePair = T.rootLabel
+
+getChildren :: Tree -> [Tree]
+getChildren = T.subForest
+
+--
+-- * Inspire
+--
+
+type Builtins = Map String Tree
+
+data Inspire = Inspire { getTree     :: Tree,
                          getBuiltins :: Builtins }
 
-
-
------ Node Kind List ----
+--
+-- * Node Kinds
+-- 
 
 data NodeKind =
         Value | Type | Expression | Statement | TranslationUnit | Support

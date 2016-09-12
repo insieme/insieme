@@ -26,7 +26,7 @@ endif()
 target_link_libraries(insieme_utils insieme_common)
 
 # lookup Boost library
-insieme_find_package(NAME Boost COMPONENTS filesystem system regex) 
+insieme_find_package(NAME Boost COMPONENTS filesystem system) 
 target_include_directories(insieme_utils SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries(insieme_utils ${Boost_FILESYSTEM_LIBRARY})
 target_link_libraries(insieme_utils ${Boost_SYSTEM_LIBRARY})

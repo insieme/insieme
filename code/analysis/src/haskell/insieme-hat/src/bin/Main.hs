@@ -38,7 +38,6 @@
 
 module Main where
 
-import Data.Tree (Tree(Node))
 import Insieme.Analysis.Entities.FieldIndex (SimpleFieldIndex)
 import qualified Data.ByteString as BS
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -68,9 +67,9 @@ main = do
 
  where
     go :: Addr.NodeAddress -> [Char] -> [Char]
-    go addr xs = case Addr.getNode addr of
+    go addr xs = case Addr.getNodePair addr of
 
-        Node IR.CallExpr _ | Addr.isBuiltin (Addr.goDown 1 addr) "ref_deref" -> case () of
+        IR.NT IR.CallExpr _ | Addr.isBuiltin (Addr.goDown 1 addr) "ref_deref" -> case () of
                 _ | USet.null res       -> 'e' : xs
                 _ | USet.isUniverse res -> 'u' : xs
                 _                       -> 'o' : xs

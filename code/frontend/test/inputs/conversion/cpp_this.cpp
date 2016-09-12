@@ -95,7 +95,7 @@ int main() {
 			mem : ref<int<4>,t,f,cpp_ref>;
 			ctor function () {
 				<ref<int<4>,t,f,cpp_ref>>(*(this).mem) {0};
-				*(this).mem;
+				(this).mem;
 			}
 		};
 		{
@@ -115,7 +115,7 @@ int main() {
 			var ref<int<4>,f,f,plain> v0 = 0;
 			var ref<IMP_A,t,f,plain> v1 = <ref<IMP_A,f,f,plain>>(ref_decl(type_lit(ref<IMP_A,t,f,plain>))) {1, v0};
 			v1.x;
-			*v1.y;
+			v1.y;
 		}
 	)")
 	{

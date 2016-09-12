@@ -42,18 +42,17 @@ module Insieme.Analysis.WriteSetSummary (
     WriteSet,
     null,
     isUnknown,
-    
+
     toAccessPaths,
     parameters,
-    
+
     writeSetSummary
-    
+
 ) where
 
 import Prelude hiding (null)
 
-import Data.List hiding (union,null)
-import Data.Tree
+import Debug.Trace
 import Data.Typeable
 import Insieme.Inspire.NodeAddress
 import Insieme.Analysis.Entities.FieldIndex
@@ -80,11 +79,11 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 -- * WriteSet Lattice
 --
 
-data WriteSet i = 
+data WriteSet i =
           Known (Map.Map AP.BaseVar (AccessPathSet i))
         | Unknown
     deriving(Eq,Ord,Show)
-    
+
 
 -- an empty write set value
 empty :: WriteSet i
@@ -101,16 +100,16 @@ isUnknown _       = False
 -- a union operation of write sets
 union :: (FieldIndex i) => WriteSet i -> WriteSet i -> WriteSet i
 union Unknown _ = Unknown
-union _ Unknown = Unknown 
+union _ Unknown = Unknown
 union (Known a) (Known b) = Known (Map.unionWith BSet.union a b)
 
 fromAccessPath :: AP.AccessPath i -> WriteSet i
 fromAccessPath AP.Local              = empty
 fromAccessPath AP.Unknown            = Unknown
-fromAccessPath p@(AP.AccessPath v _) = Known (Map.singleton v (BSet.singleton p)) 
+fromAccessPath p@(AP.AccessPath v _) = Known (Map.singleton v (BSet.singleton p))
 
 fromAccessPaths :: (FieldIndex i) => [AP.AccessPath i] -> WriteSet i
-fromAccessPaths xs = foldr union empty (fromAccessPath <$> xs) 
+fromAccessPaths xs = foldr union empty (fromAccessPath <$> xs)
 
 toAccessPaths :: WriteSet i -> [AP.AccessPath i]
 toAccessPaths (Known s) = foldr (++) [] (BSet.toList . snd <$> Map.toList s)
@@ -121,7 +120,7 @@ parameters (Known b) = toInt <$> filter params (Map.keys b)
     where
         params (AP.Parameter _) = True
         params _ = False
-        
+
         toInt (AP.Parameter x) = x
 
 
@@ -132,7 +131,7 @@ bindAccessPaths a b = fromAccessPaths $ concat (bind <$> toAccessPaths b)
         bind p@(AP.AccessPath (AP.Global _) _)    = [p]
         bind p@(AP.AccessPath (AP.Parameter i) _) = case Map.lookup i a of
             Just s -> if BSet.isUniverse s then [AP.Unknown] else (\x -> AP.extend x p) <$> BSet.toList s
-            Nothing -> error "Needed parameter not provided!"   
+            Nothing -> error "Needed parameter not provided!"
 
 
 -- make write sets valid lattices
@@ -157,101 +156,101 @@ writeSetAnalysis = Solver.mkAnalysisIdentifier WriteSetAnalysis "WS"
 --
 
 writeSetSummary :: (FieldIndex i) => NodeAddress -> Solver.TypedVar (WriteSet i)
-writeSetSummary addr = case getNode addr of
-        
+writeSetSummary addr = case getNodePair addr of
+
         -- ref_assign writes to location addressed by first argument
-        Node IR.Literal _ | isRoot addr && isBuiltin addr "ref_assign" -> var                       
+        IR.NT IR.Literal _ | isRoot addr && isBuiltin addr "ref_assign" -> var
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
-                
+
                 dep _ = []
                 val a = fromAccessPath $ AP.parameter 0
-                
-            
+
+
         -- all other literals => no write sets
-        Node IR.Literal _ | isRoot addr -> nothing                                                
-        
-        
+        IR.NT IR.Literal _ | isRoot addr -> nothing
+
+
         -- for lambdas, all call sites of the body have to be aggregated
-        Node IR.Lambda _ | isContextFree addr -> var
+        IR.NT IR.Lambda _ | isContextFree addr -> var
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
-                
-                dep a = Solver.toVar <$> writeSetVars 
+
+                dep a = Solver.toVar <$> writeSetVars
                 val a = Solver.join $ (Solver.get a <$> writeSetVars)
-                
+
                 -- get list of calls within current lambda --
                 calls = IRUtils.foldAddressPrune collect filter addr
                     where
-                        
-                        filter cur = case getNode cur of
-                            Node IR.Lambda _ -> cur /= addr
-                            n@_              -> IRUtils.isType (rootLabel n)
-                            
-                        collect cur l = case getNode cur of
-                            Node IR.CallExpr _ -> cur : l
+
+                        filter cur = case getNodePair cur of
+                            IR.NT IR.Lambda _ -> cur /= addr
+                            IR.NT n         _ -> IRUtils.isType n
+
+                        collect cur l = case getNodePair cur of
+                            IR.NT IR.CallExpr _ -> cur : l
                             _                  -> l
-                
-                
+
+
                 -- get list of write sets at calls
-                writeSetVars = writeSetSummary <$> calls 
-                
-                
-        -- compute write sets for calls        
-        Node IR.CallExpr _ | isContextFree addr -> var
+                writeSetVars = writeSetSummary <$> calls
+
+
+        -- compute write sets for calls
+        IR.NT IR.CallExpr _ | isContextFree addr -> var
             where
-            
+
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
-                        
-                dep a = (Solver.toVar callTargetVar) 
-                            : (Solver.toVar <$> ((writeSetVars a) `asTypeOf` [var])) 
+
+                dep a = (Solver.toVar callTargetVar)
+                            : (Solver.toVar <$> ((writeSetVars a) `asTypeOf` [var]))
                             ++ (Solver.toVar . snd <$> argVars a )
-                            
+
                 val a = aggregateWriteSets a
-                
+
                 -- the variable describing the call target
                 callTargetVar = callableValue $ goDown 1 addr
-                
+
                 -- a test whether there are unknown call targets
-                hasUniversalTarget a = USet.isUniverse $ ComposedValue.toValue $ Solver.get a callTargetVar 
-                
+                hasUniversalTarget a = USet.isUniverse $ ComposedValue.toValue $ Solver.get a callTargetVar
+
                 -- the variables for the write sets of callables
                 writeSetVars a = if hasUniversalTarget a then [] else list
                     where
                         trgs = filter (`isChildOf` addr) $ toAddress <$> (USet.toList $ ComposedValue.toValue $ Solver.get a callTargetVar)
                         list = writeSetSummary . dropContext <$> trgs
-                
+
                 -- a test to see whether there are none unknown write sets
                 hasUnknownWriteSet a = hasUniversalTarget a || (any isUnknown $ (Solver.get a) <$> (writeSetVars a `asTypeOf` [var]))
-                
+
                 -- a function to retrieve the list of needed access path arguments
                 getNeededArguments a = if hasUnknownWriteSet a then [] else list
                     where
                         list = Set.toList $ Set.fromList $ args
                         args = concat $ (go <$> (writeSetVars a `asTypeOf` [var]))
-                        go v = parameters $ Solver.get a v 
-                
+                        go v = parameters $ Solver.get a v
+
                 -- argument variables
                 argVars a = if hasUnknownWriteSet a then [] else list
                     where
                         list = go <$> getNeededArguments a
-                        go i = (i,accessPathValue $ goDown (i+2) addr) 
-                
+                        go i = (i,accessPathValue $ goDown (i+2) addr)
+
                 -- aggregate write set of all potential target functions
                 aggregateWriteSets a = if hasUnknownWriteSet a then Unknown else res
                     where
                         args = Map.fromList $ (go <$> argVars a)
                             where
                                 go (i,v) = (i,ComposedValue.toValue $ Solver.get a v)
-                                
+
                         ws = Solver.get a <$> (writeSetVars a `asTypeOf` [var])
                         res = Solver.join $ bindAccessPaths args <$> ws
-        
-        
-        _ | isRoot addr -> everything 
+
+
+        _ | isRoot addr -> everything
 
 
         _ -> var
@@ -260,24 +259,24 @@ writeSetSummary addr = case getNode addr of
                 con = Solver.forward (writeSetSummary contextFreeAddr) var
 
   where
-    
+
     contextFreeAddr = dropContext addr
     isContextFree a = contextFreeAddr == a
-    
+
     nothing    = Solver.mkVariable (idGen addr) [] empty
     everything = Solver.mkVariable (idGen addr) [] Unknown
-    
-    idGen a = Solver.mkIdentifier writeSetAnalysis a "" 
-    
 
-    
+    idGen a = Solver.mkIdentifier writeSetAnalysis a ""
+
+
+
 dropContext :: NodeAddress -> NodeAddress
 dropContext addr = case getNodeType addr of
 
         IR.Literal -> crop addr
-    
+
         IR.LambdaDefinition -> crop addr
-    
+
         _ | isRoot addr -> addr
-    
+
         _ -> goDown (getIndex addr) $ dropContext $ goUp addr

@@ -37,26 +37,26 @@
 #include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 
-#include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/transform/manipulation.h"
-#include "insieme/core/transform/manipulation_utils.h"
-#include "insieme/core/lang/basic.h"
+#include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/annotations/naming.h"
+#include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/ir_mapper.h"
 #include "insieme/core/lang/array.h"
+#include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"
-#include "insieme/core/ir_mapper.h"
-#include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/arithmetic/arithmetic.h"
-#include "insieme/core/analysis/attributes.h"
-#include "insieme/core/annotations/naming.h"
+#include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/utils/set_utils.h"
-#include "insieme/utils/logging.h"
 #include "insieme/utils/annotation.h"
-#include "insieme/utils/timer.h"
+#include "insieme/utils/logging.h"
 #include "insieme/utils/name_mangling.h"
+#include "insieme/utils/set_utils.h"
+#include "insieme/utils/timer.h"
 
 #include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
@@ -94,6 +94,7 @@ namespace omp {
 		IRBuilder build;
 		const lang::BasicGenerator& basic;
 		const lang::ParallelExtension& parExt;
+		const lang::ReferenceExtension& refExt;
 		us::PointerSet<CompoundStmtPtr> toFlatten; // set of compound statements to flatten one step further up
 
 		// this stack is used to keep track of which variables are shared in enclosing constructs, to correctly parallelize
@@ -104,7 +105,8 @@ namespace omp {
 
 	  public:
 		OMPSemaMapper(NodeManager& nodeMan)
-			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()), toFlatten(),
+			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()),
+			  refExt(nodeMan.getLangExtension<lang::ReferenceExtension>()), toFlatten(),
 			  orderedCountLit(build.literal("ordered_counter", build.refType(basic.getInt8(), false, true))),
 			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())) {}
 
@@ -549,12 +551,14 @@ namespace omp {
 				lastPrivates.insert(lastPrivates.end(), forP->getLastPrivate().begin(), forP->getLastPrivate().end());
 				allp.insert(allp.end(), forP->getLastPrivate().begin(), forP->getLastPrivate().end());
 			}
-			if(clause->hasPrivate()) { allp.insert(allp.end(), clause->getPrivate().begin(), clause->getPrivate().end()); }
+			if(clause->hasPrivate()) {
+				allp.insert(allp.end(), clause->getPrivate().begin(), clause->getPrivate().end());
+			}
 			if(clause->hasReduction()) { allp.insert(allp.end(), clause->getReduction().getVars().begin(), clause->getReduction().getVars().end()); }
 			NodeMap publicToPrivateMap;
 			NodeMap privateToPublicMap;
 			// implement private copies where required
-			for_each(allp, [&](const ExpressionPtr& varExp) {
+			for(const auto& varExp : allp) {
 				const auto& expType = varExp->getType();
 				VariablePtr pVar = build.variable(expType);
 				publicToPrivateMap[varExp] = pVar;
@@ -576,7 +580,7 @@ namespace omp {
 				}
 				if(contains(lastPrivates, varExp)) { ifStmtBodyLast.push_back(build.assign(varExp, build.deref(pVar))); }
 				replacements.push_back(decl);
-			});
+			}
 			// pFor firstprivate semantics require additional barrier
 			if(forP && clause->hasFirstPrivate()) { replacements.push_back(build.barrier()); }
 			// implement copyin for threadprivate vars
@@ -649,7 +653,7 @@ namespace omp {
 			StatementList postFix;
 			postFix.push_back(build.mergeAll());
 			auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts, postFix);
-			auto parLambda = transform::extractLambda(nodeMan, stmtNode);
+			auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
 			// mark printf as unordered
 			parLambda = markUnordered(parLambda).as<BindExprPtr>();
 			auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
@@ -671,7 +675,7 @@ namespace omp {
 		NodePtr handleTask(const StatementPtr& stmtNode, const TaskPtr& par) {
 			StatementList resultStmts;
 			auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts);
-			auto parLambda = transform::extractLambda(nodeMan, stmtNode);
+			auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
 			auto range = build.getThreadNumRange(1, 1); // range for tasks is always 1
 
 			JobExprPtr jobExp = build.jobExpr(range, parLambda.as<ExpressionPtr>());
@@ -816,6 +820,7 @@ namespace omp {
 		NodePtr handleAtomic(const StatementPtr& stmtNode, const AtomicPtr& atomicP) {
 			CallExprPtr call = dynamic_pointer_cast<CallExprPtr>(stmtNode);
 			if(!call) { cerr << printer::PrettyPrinter(stmtNode) << std::endl; }
+			if(refExt.isCallOfRefDeref(call)) call = core::analysis::getArgument(call, 0).isa<core::CallExprPtr>();
 			assert_true(call) << "Unhandled OMP atomic";
 			auto at = build.atomicAssignment(call);
 			// std::cout << "ATOMIC: \n" << printer::PrettyPrinter(at, printer::PrettyPrinter::NO_LET_BINDINGS);

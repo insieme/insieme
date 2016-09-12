@@ -107,11 +107,11 @@ namespace runtime {
 		Converter converter(manager, "RuntimeBackend", getConfiguration());
 
 		// set up pre-processing
-		PreProcessorPtr preprocessor = makePreProcessor<PreProcessingSequence>(
-		    getBasicPreProcessorSequence(),
-		    makePreProcessor<runtime::InstrumentationSupport>(), // needs to be before the conversion to work-items
-		    makePreProcessor<runtime::WorkItemizer>(),
-			makePreProcessor<runtime::StandaloneWrapper>());
+		PreProcessorPtr preprocessor =
+			makePreProcessor<PreProcessingSequence>(getBasicPreProcessorSequence(),
+			                                        makePreProcessor<runtime::InstrumentationSupport>(), // needs to be before the conversion to work-items
+			                                        makePreProcessor<runtime::WorkItemizer>(),
+			                                        makePreProcessor<runtime::StandaloneWrapper>());
 		converter.setPreProcessor(preprocessor);
 
 		// Prepare managers

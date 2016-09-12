@@ -1320,25 +1320,24 @@ namespace printer {
 					auto min = node->getThreadNumRange().as<CallExprAddress>()->getArgument(0);
 					auto max = node->getThreadNumRange().as<CallExprAddress>()->getArgument(1);
 					visit(min);
-					out << " .. ";
+					out << "..";
 					visit(max);
 
 					// check if there is a modulo expression
 					if(node->getThreadNumRange().as<CallExprAddress>()->getNumArguments() == 3) {
 						auto mod = node->getThreadNumRange().as<CallExprAddress>()->getArgument(2);
-						out << " : ";
+						out << ":";
 						visit(mod);
 					}
 				} else if (node->getThreadNumRange().as<CallExprAddress>()->getNumArguments() == 1) {
 					auto min = node->getThreadNumRange().as<CallExprAddress>()->getArgument(0);
 					visit(min);
-					out << " ... ";
+					out << "...";
 				}
 				out << "] => ";
 				if (auto bind = node->getBody().isa<BindExprAddress>()) {
 					visit(bind->getCall());
 				}
-				newLine();
 			}
 
 			PRINT(InitExpr) {

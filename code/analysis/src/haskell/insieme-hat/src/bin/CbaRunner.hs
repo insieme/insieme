@@ -42,7 +42,6 @@ import Control.Monad
 import Data.List
 import Data.Text.Format as Fmt
 import Data.Text.Lazy.Builder (fromString)
-import Data.Tree (Tree(Node))
 import Debug.Trace
 import qualified Data.ByteString as BS
 import qualified Insieme.Analysis.Alias as Alias
@@ -91,8 +90,8 @@ data AnalysisResult = Ok | Inaccurate | Fail
 
 findAnalysis :: Addr.NodeAddress -> [AnalysisRun] -> [AnalysisRun]
 findAnalysis addr acc =
-    case Addr.getNode addr of
-        Node IR.CallExpr (_:Node IR.Literal [_, Node (IR.StringValue s ) _]:_) | isPrefixOf "IMP_cba_expect" s -> AnalysisRun addr s (analysis s) : acc
+    case Addr.getNodePair addr of
+        IR.NT IR.CallExpr (_:IR.NT IR.Literal [_, IR.NT (IR.StringValue s ) _]:_) | isPrefixOf "IMP_cba_expect" s -> AnalysisRun addr s (analysis s) : acc
         _ -> acc
   where
     resolve a = ComposedValue.toValue . fst . (Solver.resolve Solver.initState) . a

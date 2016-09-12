@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -37,8 +37,14 @@
 #include "insieme/core/checks/ir_checks.h"
 
 #include <algorithm>
-#include "insieme/utils/container_utils.h"
+#include <fstream>
+
+#include <boost/algorithm/string/replace.hpp>
+
+#include "insieme/common/env_vars.h"
 #include "insieme/core/annotations/source_location.h"
+#include "insieme/core/inspyer/inspyer.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace core {
@@ -387,6 +393,30 @@ namespace checks {
 		// collect messages ..
 		auto res = check->visit(NodeAddress(node));
 		if(res) {
+
+			if(getenv(INSIEME_SEMA_INSPYER) != nullptr) {
+				auto errors = res->getAll();
+				std::string jsonFile = "insieme_sema_inspyer.json";
+				std::string metaFile = "insieme_sema_inspyer_meta.json";
+				std::cout << "Semantic errors encountered. Dumping JSON representation of program to file " << jsonFile << " ... ";
+				std::cout.flush();
+				std::ofstream jsonOut(jsonFile);
+				core::inspyer::dumpTree(jsonOut, node);
+				std::cout << "done." << std::endl;
+
+				std::cout << "Dumping JSON meta file with error bookmarks to file " << metaFile << " ... ";
+				std::cout.flush();
+				for(auto error : errors) {
+					core::inspyer::addBookmark(error.getOrigin());
+					std::string msg = error.getMessage();
+					boost::algorithm::replace_all(msg, "<", "&lt;");
+					core::inspyer::addBody(error.getOrigin(), std::string("<pre>") + msg + "</pre>");
+				}
+				std::ofstream metaOut(metaFile);
+				core::inspyer::dumpMeta(metaOut);
+				std::cout << "done." << std::endl;
+			}
+
 			// => list is not empty ... return list
 			return *res;
 		}

@@ -76,34 +76,19 @@ namespace transform {
 		StatementPtr code = analysis::normalize(builder.parseStmt("alias int = int<4>;"
 		                                                          "{"
 		                                                          "	var ref<int> a = 2;"
-		                                                          "	atomic_fetch_and_add(a, 10);"
+		                                                          "	atomic_add_and_fetch(a, 10);"
 		                                                          "}")
 		                                            .as<StatementPtr>());
 
 		ASSERT_TRUE(code);
 
-		EXPECT_EQ("{var ref<int<4>,f,f,plain> v0 = 2;atomic_fetch_and_add(v0, 10);}",
+		EXPECT_EQ("{var ref<int<4>,f,f,plain> v0 = 2;atomic_add_and_fetch(v0, 10);}",
 		          toString(printer::PrettyPrinter(code, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		EXPECT_TRUE(check(code, checks::getFullCheck()).empty()) << check(code, checks::getFullCheck());
 
 
 		auto res = analysis::normalize(transform::trySequentialize(mgr, code));
-		EXPECT_EQ("decl atomic_fetch_and_add : (ref<'a,f,'v,plain>, 'a) -> 'a;\n"
-				  "decl fun000 : (ref<'a,f,'v,plain>, 'a) -> 'a;\n"
-				  "def atomic_fetch_and_add = function (v0 : ref<ref<'a,f,'v,plain>,f,f,plain>, v1 : ref<'a,f,f,plain>) -> 'a {\n"
-				  "    (v2 : 'a) => id(true);\n"
-				  "    (v3 : 'a) => gen_add(v3, *v1);\n"
-				  "    return fun000(*v0, *v1);\n"
-				  "};\n"
-				  "def fun000 = function (v0 : ref<ref<'a,f,'v,plain>,f,f,plain>, v1 : ref<'a,f,f,plain>) -> 'a {\n"
-				  "    var 'a v2 = **v0;\n"
-				  "    *v0 = gen_add(**v0, *v1);\n"
-				  "    return v2;\n"
-				  "};\n"
-				  "{\n"
-				  "    var ref<int<4>,f,f,plain> v0 = 2;\n"
-				  "    atomic_fetch_and_add(v0, 10);\n"
-				  "}", toString(printer::PrettyPrinter(res))) << printer::PrettyPrinter(res);
+		EXPECT_EQ("{\n    var ref<int<4>,f,f,plain> v0 = 2;\n    *comp_assign_add(v0, 10);\n}", toString(printer::PrettyPrinter(res))) << printer::PrettyPrinter(res);
 
 		EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
 

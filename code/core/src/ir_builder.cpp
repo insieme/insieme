@@ -64,6 +64,7 @@
 
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/channel.h"
+#include "insieme/core/lang/compound_operators.h"
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/io.h"
 #include "insieme/core/lang/parallel.h"
@@ -882,7 +883,6 @@ namespace core {
 	}
 
 	CallExprPtr IRBuilderBaseModule::atomicAssignment(const CallExprPtr& assignment) {
-		// FIXME argument order
 		const auto& basic = manager.getLangBasic();
 		auto& parExt = manager.getLangExtension<lang::ParallelExtension>();
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
@@ -891,12 +891,25 @@ namespace core {
 
 		// handle pre/post increment
 		if(lang::isRefMathOp(assignment)) {
-			const auto &lhs = assignment->getArgument(0);
+			const auto& lhs = assignment->getArgument(0);
 			const auto one = literal("1", analysis::getReferencedType(lhs));
 			if(refExt.isCallOfGenPreInc(assignment)) return callExpr(parExt.getAtomicAddAndFetch(), lhs, one);
 			if(refExt.isCallOfGenPostInc(assignment)) return callExpr(parExt.getAtomicFetchAndAdd(), lhs, one);
 			if(refExt.isCallOfGenPreDec(assignment)) return callExpr(parExt.getAtomicSubAndFetch(), lhs, one);
 			if(refExt.isCallOfGenPostDec(assignment)) return callExpr(parExt.getAtomicFetchAndSub(), lhs, one);
+		}
+
+		// handle compound assignment
+		if(lang::isCompoundAssignmentOperation(assignment)) {
+			auto& cE = manager.getLangExtension<lang::CompoundOpsExtension>();
+			const auto& lhs = assignment->getArgument(0);
+			const auto& rhs = assignment->getArgument(1);
+			if(cE.isCallOfCompAssignAdd(assignment)) return callExpr(parExt.getAtomicAddAndFetch(), lhs, rhs);
+			if(cE.isCallOfCompAssignSubtract(assignment)) return callExpr(parExt.getAtomicSubAndFetch(), lhs, rhs);
+			if(cE.isCallOfCompAssignBitwiseAnd(assignment)) return callExpr(parExt.getAtomicAndAndFetch(), lhs, rhs);
+			if(cE.isCallOfCompAssignBitwiseOr(assignment)) return callExpr(parExt.getAtomicOrAndFetch(), lhs, rhs);
+			if(cE.isCallOfCompAssignBitwiseXor(assignment)) return callExpr(parExt.getAtomicXorAndFetch(), lhs, rhs);
+			assert_fail() << "Unsupported atomic operation:\n" << dumpColor(assignment);
 		}
 
 		assert_true(refExt.isRefAssign(assignment->getFunctionExpr()))

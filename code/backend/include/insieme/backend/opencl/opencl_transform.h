@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -157,6 +157,8 @@ namespace transform {
 			context(context), oclExt(manager.getLangExtension<OpenCLExtension>())
 		{}
 		core::NodePtr process(const Converter& converter, const core::NodePtr& code) override { return code; }
+
+		virtual std::ostream& printTo(std::ostream& out) const override { return out << "OpenCLStep"; }
 	};
 
 	/**
@@ -285,7 +287,7 @@ namespace transform {
 	core::LambdaExprPtr toIR(core::NodeManager& manager, const StepContext& sc, const VariableRequirementPtr& var);
 
 	/**
-	 * Encapsulats all ingredients which are required to convert IR code into Ocl code
+	 * Encapsulates all ingredients which are required to convert IR code into Ocl code
 	 */
 	class OclIngredients {
 		core::LambdaExprPtr lambdaExpr;

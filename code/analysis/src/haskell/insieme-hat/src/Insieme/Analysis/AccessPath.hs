@@ -39,7 +39,6 @@
 module Insieme.Analysis.AccessPath where
 
 import Data.Typeable
-import Data.Tree
 
 import Insieme.Inspire.NodeAddress
 import qualified Insieme.Inspire as IR
@@ -88,9 +87,9 @@ data AccessPathAnalysis = AccessPathAnalysis
 --
 
 accessPathValue :: (FieldIndex i) => NodeAddress -> Solver.TypedVar (ValueTree.Tree i (AccessPathSet i))
-accessPathValue addr = case getNode addr of 
+accessPathValue addr = case getNodePair addr of 
 
-    Node IR.Variable _ -> dataflowValue addr analysis ops
+    IR.NT IR.Variable _ -> dataflowValue addr analysis ops
 
     _ -> dataflowValue addr analysis ops
 

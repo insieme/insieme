@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -119,6 +119,8 @@ namespace opencl {
 			core::NodePtr process(const Converter& converter, const core::NodePtr& code) override {
 				return OffloadReplacer(converter, code).map(code);
 			}
+
+			virtual std::ostream& printTo(std::ostream& out) const override { return out << "opencl::OffloadReplacerStep"; }
 		};
 
 		class OffloadIRDumperStep : public PreProcessor {
@@ -135,6 +137,8 @@ namespace opencl {
 				srcFile.close();
 				return code;
 			}
+
+			virtual std::ostream& printTo(std::ostream& out) const override { return out << "opencl::OffloadIRDumperStep"; }
 		};
 	}
 

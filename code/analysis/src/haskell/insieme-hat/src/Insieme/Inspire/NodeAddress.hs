@@ -46,7 +46,6 @@ module Insieme.Inspire.NodeAddress (
     depth,
     numChildren,
     getIndex,
-    getNode,
     getNodeType,
     isRoot,
     getRoot,
@@ -61,34 +60,38 @@ module Insieme.Inspire.NodeAddress (
     isBuiltin
 ) where
 
-
-import Data.Maybe
-import Data.List (foldl',isSuffixOf)
-import Data.Tree
 import Data.Function (on)
+import Data.List (foldl',isSuffixOf)
+import Data.Maybe
+import Data.Tree (Tree)
 import qualified Data.Map as Map
 import qualified Insieme.Inspire as IR
 
 type NodePath = [Int]
 
 data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
-                                 getNodePair         :: Tree (Int, IR.NodeType),
+                                 getNodePair         :: IR.Tree,
                                  getInspire          :: IR.Inspire,
-                                 getParent           :: Maybe NodeAddress, 
-                                 getAbsoluteRootPath :: NodePath
-                                 }
+                                 getParent           :: Maybe NodeAddress,
+                                 getAbsoluteRootPath :: NodePath }
 
 instance Eq NodeAddress where
-    x == y = (fst $ rootLabel $ getNodePair x) == (fst $ rootLabel $ getNodePair y)
-                && getPathReversed x == getPathReversed y
-                && (fst $ rootLabel $ getRoot x) == (fst $ rootLabel $ getRoot y)
+    x == y = nodeID x == nodeID y
+             && getPathReversed x == getPathReversed y
+             && rootID x == rootID y
+      where
+        nodeID = IR.getID . getNodePair
+        rootID = IR.getID . getRoot
 
 instance Ord NodeAddress where
-    compare x y = if r1 == EQ then if r2 == EQ then r3 else r2 else r1 
+    compare x y = if r1 == EQ then if r2 == EQ then r3 else r2 else r1
         where
-            r1 = compare (fst $ rootLabel $ getNodePair x) (fst $ rootLabel $ getNodePair y)
+            r1 = compare (nodeID x) (nodeID y)
             r2 = compare (getPathReversed x) (getPathReversed y)
-            r3 = compare (fst $ rootLabel $ getRoot x) (fst $ rootLabel $ getRoot y)
+            r3 = compare (rootID x) (rootID y)
+
+            nodeID = IR.getID . getNodePair
+            rootID = IR.getID . getRoot
 
 instance Show NodeAddress where
     show = prettyShow
@@ -107,11 +110,11 @@ getAbsolutePath :: NodeAddress -> NodePath
 getAbsolutePath a =  reverse $ getPathReversed a ++ getAbsoluteRootPath a
 
 depth :: NodeAddress -> Int
-depth = length . getPathReversed 
+depth = length . getPathReversed
 
 -- | Get the number of children of a given node.
 numChildren :: NodeAddress -> Int
-numChildren = length . subForest . getNodePair
+numChildren = length . IR.getChildren . getNodePair
 
 getIndex :: NodeAddress -> Int
 getIndex = head . getPathReversed
@@ -120,12 +123,12 @@ getNode :: NodeAddress -> Tree IR.NodeType
 getNode addr = snd <$> getNodePair addr
 
 getNodeType :: NodeAddress -> IR.NodeType
-getNodeType = snd . rootLabel . getNodePair
+getNodeType = IR.getNodeType . getNodePair
 
 isRoot :: NodeAddress -> Bool
 isRoot = isNothing . getParent
 
-getRoot :: NodeAddress -> Tree (Int, IR.NodeType)
+getRoot :: NodeAddress -> IR.Tree
 getRoot = IR.getTree . getInspire
 
 isChildOf :: NodeAddress -> NodeAddress -> Bool
@@ -140,7 +143,7 @@ goUp na = fromJust (getParent na)
 goDown :: Int -> NodeAddress -> NodeAddress
 goDown x parent@(NodeAddress xs n ir _ r) = NodeAddress (x : xs) n' ir (Just parent) r
   where
-    n' = subForest n !! x
+    n' = IR.getChildren n !! x
 
 -- | Return a node address relative to the given one; a negative
 -- integer means going up so many levels; zero or a positive integer

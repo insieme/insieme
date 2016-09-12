@@ -55,7 +55,6 @@ module Insieme.Analysis.Framework.Dataflow (
 
 import Data.Int
 import Data.Foldable
-import Data.Tree
 import Data.Typeable
 import Debug.Trace
 import qualified Data.Set as Set
@@ -129,14 +128,14 @@ dataflowValue :: (ComposedValue.ComposedValue a i v, Typeable d)
          -> DataFlowAnalysis d a                            -- ^ the summar of the analysis to be performed be realized by this function
          -> [OperatorHandler a]                             -- ^ allows selected operators to be intercepted and interpreted
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
-dataflowValue addr analysis ops = case getNode addr of
+dataflowValue addr analysis ops = case getNodePair addr of
 
-    Node IR.Variable _ -> case findDecl addr of
+    IR.NT IR.Variable _ -> case findDecl addr of
             Just declrAddr -> handleDeclr declrAddr              -- this variable is declared, use declared value
             _              -> freeVariableHandler analysis addr  -- it is a free variable, ask the analysis what to do with it
 
 
-    Node IR.CallExpr _ -> var
+    IR.NT IR.CallExpr _ -> var
       where
         var = Solver.mkVariable (idGen addr) [knownTargets,unknownTarget] Solver.bot
         knownTargets = Solver.createConstraint dep val var
@@ -161,8 +160,8 @@ dataflowValue addr analysis ops = case getNode addr of
             where
                 go e = map resolve e
 
-                resolve (ExitPoint.ExitPoint r) = case getNode r of
-                    Node IR.Declaration  _ -> memoryStateValue (MemoryState (ProgramPoint r Post) (MemoryLocation r)) analysis
+                resolve (ExitPoint.ExitPoint r) = case getNodePair r of
+                    IR.NT IR.Declaration  _ -> memoryStateValue (MemoryState (ProgramPoint r Post) (MemoryLocation r)) analysis
                     _                      -> varGen r
 
 
@@ -202,7 +201,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
 
 
-    Node IR.TupleExpr [_,Node IR.Expressions args] -> var
+    IR.NT IR.TupleExpr [_,IR.NT IR.Expressions args] -> var
         where
             var = Solver.mkVariable (idGen addr) [con] Solver.bot
             con = Solver.createConstraint dep val var
@@ -215,7 +214,7 @@ dataflowValue addr analysis ops = case getNode addr of
                     go i = varGen (goDown i $ goDown 1 $ addr)
 
 
-    decl@(Node IR.Declaration _) -> var
+    decl@(IR.NT IR.Declaration _) -> var
       where
         var = Solver.mkVariable (idGen addr) [con] Solver.bot
 
@@ -246,14 +245,14 @@ dataflowValue addr analysis ops = case getNode addr of
 
     -- variable declaration handler
 
-    handleDeclr declrAddr = case getNode (goUp declrAddr) of
+    handleDeclr declrAddr = case getNodePair (goUp declrAddr) of
 
-        Node IR.DeclarationStmt _ -> var
+        IR.NT IR.DeclarationStmt _ -> var
           where
             var = Solver.mkVariable (idGen addr) [constraint] Solver.bot
             constraint = Solver.forward (varGen (goDown 0 . goUp $ declrAddr)) var
 
-        Node IR.Parameters _ -> 
+        IR.NT IR.Parameters _ -> 
             
             if isEntryPointParameter declrAddr                           
                 then entryPointParameterHandler analysis declrAddr

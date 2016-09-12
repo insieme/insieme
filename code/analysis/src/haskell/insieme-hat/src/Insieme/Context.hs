@@ -46,7 +46,6 @@ module Insieme.Context (
     getBuiltins,
 ) where
 
-import Data.Tree (Tree(..))
 import Foreign.Ptr
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Analysis.Solver as Solver
@@ -57,7 +56,7 @@ data Context = Context { getCContext :: CContext,
                          getInspire  :: IR.Inspire,
                          getSolverState :: Solver.SolverState }
 
-getTree :: Context -> Tree (Int, IR.NodeType)
+getTree :: Context -> IR.Tree
 getTree = IR.getTree . getInspire
 
 getBuiltins :: Context -> IR.Builtins
