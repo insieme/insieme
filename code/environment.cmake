@@ -217,12 +217,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINSIEME_VERSION=\"\\\"${insieme_versio
 # --------------------------------------------------------- Analysis Backends
 option(ANALYSIS_DATALOG "Enable Datalog engine for analysis" ON)
 if(ANALYSIS_DATALOG)
-    add_definitions(-DINSIEME_ANALYSIS_DATALOG)
+	add_definitions(-DINSIEME_ANALYSIS_DATALOG)
 endif()
 
 option(ANALYSIS_HASKELL "Enable Haskell engine for analysis" ON)
 if(ANALYSIS_HASKELL)
-    add_definitions(-DINSIEME_ANALYSIS_HASKELL)
+	add_definitions(-DINSIEME_ANALYSIS_HASKELL)
 endif()
 
 # --------------------------------------------------------- Valgrind / GTest testing suite
