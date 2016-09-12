@@ -288,7 +288,7 @@ predecessor p@(ProgramPoint a Post) = case getNodePair a of
     IR.NT IR.SwitchStmt _ -> multiple $ map (`ProgramPoint` Post) $
       goDown 2 a :                         -- default branch
       collectAddr IR.BreakStmt prune a ++  -- break statements
-      [goRel [1, i, 1] a | i <- enumFromTo 0 (getChildrenLength (goDown 1 a) - 1)] -- case
+      [goRel [1, i, 1] a | i <- enumFromTo 0 (numChildren (goDown 1 a)-1)] -- case
       where
         prune = [(== IR.SwitchStmt), (== IR.WhileStmt), isType]
 

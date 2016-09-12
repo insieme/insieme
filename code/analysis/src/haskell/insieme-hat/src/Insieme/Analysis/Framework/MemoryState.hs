@@ -229,7 +229,6 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
         _ | p == Pre && IR.isEntryPoint addr -> 
             Solver.mkVariable (idGen addr) [] (USet.singleton $ Initial)
 
-{-
         -- to prune the set of variables, we check whether the invoced callable may update the traced reference
         c@(IR.NT IR.CallExpr _) | p == Internal && (not $ loc `isChildOf` addr)-> var
             where
@@ -255,7 +254,7 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
                 
                 nonSkipPredecessorVars a = Solver.getDependencies a defaultVar
                 nonSkipPredecessorVal a = Solver.getLimit a defaultVar 
--}
+
 
         -- for all the others, the magic is covered by the generic program point value constraint generator
         _ -> defaultVar
@@ -371,7 +370,7 @@ writeSet addr = case getNodeType addr of
                     where
                         trgs = targetVal a
                         list = go <$> USet.toList trgs
-                        go = WS.writeSetSummary . crop . toAddress
+                        go = WS.writeSetSummary . toAddress
                 
                 writeSetSummaryVal a = Solver.join $ (Solver.get a) <$> writeSetSummaryVars a
                 

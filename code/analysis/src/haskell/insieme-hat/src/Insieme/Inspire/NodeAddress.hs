@@ -43,9 +43,9 @@ module Insieme.Inspire.NodeAddress (
     getParent,
     getPath,
     getAbsolutePath,
-    getChildrenLength,
+    depth,
+    numChildren,
     getIndex,
-    --getNode,
     getNodeType,
     isRoot,
     getRoot,
@@ -109,8 +109,12 @@ getPath = reverse . getPathReversed
 getAbsolutePath :: NodeAddress -> NodePath
 getAbsolutePath a =  reverse $ getPathReversed a ++ getAbsoluteRootPath a
 
-getChildrenLength :: NodeAddress -> Int
-getChildrenLength = length . IR.getChildren . getNodePair
+depth :: NodeAddress -> Int
+depth = length . getPathReversed
+
+-- | Get the number of children of a given node.
+numChildren :: NodeAddress -> Int
+numChildren = length . IR.getChildren . getNodePair
 
 getIndex :: NodeAddress -> Int
 getIndex = head . getPathReversed
@@ -134,7 +138,7 @@ prettyShow :: NodeAddress -> String
 prettyShow na = '0' : concat ['-' : show x | x <- getPath na]
 
 goUp :: NodeAddress -> NodeAddress
-goUp na = fromMaybe na (getParent na)
+goUp na = fromJust (getParent na)
 
 goDown :: Int -> NodeAddress -> NodeAddress
 goDown x parent@(NodeAddress xs n ir _ r) = NodeAddress (x : xs) n' ir (Just parent) r

@@ -106,7 +106,7 @@ foldAddressPrune collect prune addr = visit addr mempty
                      then acc
                      else collect base $ visitsub base acc
     visitsub base acc = foldr visit acc (subtrees base)
-    subtrees addr = [goDown i addr | i <- [0..(getChildrenLength addr) - 1]]
+    subtrees addr = [goDown i addr | i <- [0..(numChildren addr) - 1]]
 
 --
 -- * Parse IR code
@@ -173,7 +173,7 @@ findDecl start = findDecl start
 
 -- | Returns 'True' if given variable (in declaration) is a loop iterator.
 isLoopIterator :: NodeAddress -> Bool
-isLoopIterator = (==IR.ForStmt) . getNodeType . goUp . goUp
+isLoopIterator a = (depth a >= 2) && ((==IR.ForStmt) $ getNodeType $ goUp $ goUp a)
 
 
 getType :: IR.Tree -> Maybe IR.NodeType
