@@ -1,0 +1,17 @@
+// a type for the phase of the execution of a statement
+.number_type exec_state
+
+// some exec_state constants
+#define PRE 0		// < the statement is starting its evaluation
+#define INT 1		// < the statement is in an intermediate state (only some)
+#define POST 2		// < the statement ended its evaluation
+
+
+// a program point is a statement and its execution state
+//#define ProgramPoint( S, P ) [ S , P ]
+//.type program_point = [ s : stmt, e : exec_state ]
+
+
+#define ProgramPoint( S, P )  S , P
+.type program_point = [ s : stmt, e : exec_state ]
+

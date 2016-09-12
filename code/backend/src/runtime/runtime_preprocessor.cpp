@@ -172,7 +172,7 @@ namespace runtime {
 			unsigned counter = 0;
 			::transform(entryType->getParameterTypes()->getElements(), std::back_inserter(argList), [&](const core::TypePtr& type) {
 				return builder.callExpr(type, extensions.getGetWorkItemArgument(), toVector<core::ExpressionPtr>(builder.deref(workItem), core::encoder::toIR(manager, counter++),
-				                                                                                            paramTypes, builder.getTypeLiteral(type)));
+															    paramTypes, builder.getTypeLiteral(type)));
 			});
 
 			// produce replacement
@@ -907,8 +907,10 @@ namespace runtime {
 			// take first argument
 			auto arg0 = core::transform::extractInitExprFromDecl(call[0]);
 			assert_eq(arg0->getNodeType(), core::NT_Literal) << "Region ID is expected to be a literal!";
-			unsigned regionId = arg0.as<core::LiteralPtr>()->getValueAs<unsigned>();
-			if(max < regionId) { max = regionId; }
+			boost::optional<unsigned> regionId = arg0.as<core::LiteralPtr>()->getValueAs<unsigned>();
+			assert_true(regionId) << "Cast error: Cannot cast region ID to unsigned!";
+			if(max < *regionId) { max = *regionId; }
+
 		});
 
 		// OMP+ instrumentationRegionStart calls will be added in a later preprocessing phase

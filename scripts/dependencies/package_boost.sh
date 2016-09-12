@@ -1,12 +1,12 @@
 NAME="boost"
-VERSION="1.50.0"
+VERSION="1.59.0"
 PACKAGE="$NAME-$VERSION"
 
 FILE="${NAME}_${VERSION//./_}.tar.bz2"
-URL="http://www.insieme-compiler.org/ext_libs/$FILE"
-SHA256SUM="c9ace2b8c81fa6703d1d17c7e478de3bc51101c5adbdeb3f6cb72cf3045a8529"
+URL="http://downloads.sourceforge.net/project/boost/boost/$VERSION/$FILE"
+SHA256SUM="727a932322d94287b62abb1bd2d41723eec4356a7728909e38adb65ca25241ca"
 
-BOOST_LIBS="filesystem,program_options,system,serialization"
+BOOST_LIBS="filesystem,program_options,regex,system,serialization,thread"
 
 pkg_extract() {
 	tar xf "$FILE"

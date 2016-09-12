@@ -48,6 +48,7 @@ elseif(BUILD_CLANG)
 
 	include(environment.cmake)
 
+	add_subdirectory(analysis)
 	add_subdirectory(common)
 	add_subdirectory(utils)
 	add_subdirectory(core)

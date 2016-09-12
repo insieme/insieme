@@ -38,6 +38,8 @@
 #include <string>
 #include <regex>
 
+#include <boost/regex.hpp>
+
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/printer/pretty_printer.h"

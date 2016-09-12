@@ -22,6 +22,12 @@ set(HWLOC_VERSION 1.10.1)
 #CUDD - used by: core
 set(CUDD_VERSION 2.4.2)
 
+#GMP - used by: analysis
+set(GMP_VERSION 6.0.0)
+
+#ZLIB - used by: analysis
+set(ZLIB_VERSION 1.2.8)
+
 #LUAJIT - used by: utils
 set(LUAJIT_VERSION 2.0.3)
 
@@ -29,7 +35,7 @@ set(LUAJIT_VERSION 2.0.3)
 set(GTEST_VERSION 1.7.0)
 
 #BOOST - used everywhere except for runtime...
-set(BOOST_VERSION 1.50.0)
+set(BOOST_VERSION 1.59.0)
 
 #BISON - used in core
 set(BISON_VERSION 3.0.0)
@@ -44,7 +50,7 @@ set(VALGRIND_VERSION 3.11.0)
 #if the user provides a env{lib_version} for one of the libraries
 # we overwrite the default
 list(APPEND LIB_VERSIONS LLVM_VERSION PAPI_VERSION
-	CUDD_VERSION LUAJIT_VERSION
+	CUDD_VERSION GMP_VERSION ZLIB_VERSION LUAJIT_VERSION
 	GTEST_VERSION BOOST_VERSION BISON_VERSION FLEX_VERSION HWLOC_VERSION VALGRIND_VERSION)
 
 foreach(libversion ${LIB_VERSIONS})

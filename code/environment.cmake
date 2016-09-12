@@ -24,6 +24,7 @@ include(add_unit_test)
 include(insieme_cotire)
 include(cotire)
 include(insieme_fix_case_name)
+include(add_souffle)
 
 set ( insieme_core_src_dir 	            	${insieme_code_dir}/core/src )
 set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
@@ -55,7 +56,7 @@ set ( insieme_playground_include_dir       	${insieme_code_dir}/playground/inclu
 
 # -------------------------------------------------------------- find location of utilities
 find_program(TIME_EXECUTABLE time)
-if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC) 
+if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC)
 	message(FATAL_ERROR "Unable to locate time utility!")
 endif()
 
@@ -95,7 +96,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 
 	# add flags for debug mode
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")
-  
+
 	# add flags for release mode
 	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
@@ -119,7 +120,7 @@ if (CMAKE_COMPILER_IS_GNUC)
 
 	# add flags for debug mode
 	set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g3 -O0 -fPIC")
-  
+
 	# add flags for release mode
 	set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC")
 
@@ -212,6 +213,17 @@ endif()
 # add insieme version definition (add_definitions escapes back-quotes)
 #
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINSIEME_VERSION=\"\\\"${insieme_version}\\\"\"")
+
+# --------------------------------------------------------- Analysis Backends
+option(ANALYSIS_DATALOG "Enable Datalog engine for analysis" OFF)
+if(ANALYSIS_DATALOG)
+    add_definitions(-DINSIEME_ANALYSIS_DATALOG)
+endif()
+
+option(ANALYSIS_HASKELL "Enable Haskell engine for analysis" OFF)
+if(ANALYSIS_HASKELL)
+    add_definitions(-DINSIEME_ANALYSIS_HASKELL)
+endif()
 
 # --------------------------------------------------------- Valgrind / GTest testing suite
 # avoid multiple import

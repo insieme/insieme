@@ -1,0 +1,11 @@
+.using DefinitionPoint from Utils/VariableDefinitionPoint
+
+
+// -- definie relation for the targeted variable --
+.decl target ( var : variable ) input
+
+// -- define the relation for the resulting definition point
+.decl DefinitionPointResult ( var : variable ) output
+
+// link the input with the output
+DefinitionPointResult(X) :- target(V), DefinitionPoint(X,V).

@@ -74,6 +74,7 @@ OPTION("cross-compile-dir", crossCompileDir, std::string, std::string(), "set sy
 OPTION("definitions,D", definitions, std::vector<std::string>, std::vector<std::string>(), "definition(s)")
 OPTION("dump-cfg", dumpCFG, frontend::path, "a.dot", "print dot graph of the CFG")
 OPTION("dump-ir", dumpIR, frontend::path, "a.ir", "dump intermediate representation")
+OPTION("dump-json", dumpJSON, frontend::path, "a.json", "dump intermediate representation (JSON)")
 OPTION("dump-trg", dumpTRG, frontend::path, "a.c", "dump target code")
 OPTION("dump-trg-only", dumpTRGOnly, frontend::path, "a.c", "dump target code and stop afterwards")
 OPTION("dump-tu", dumpTU, frontend::path, "a.tu", "dump translation unit")

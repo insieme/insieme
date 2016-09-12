@@ -1,0 +1,41 @@
+.using ParentOf from Utils/Parent
+.using boolean_value from BooleanValue
+
+
+// marks all reachable statements that may be entered
+.decl ReachableIn( s : stmt )
+
+// marks all reachable statemetns that may be exited
+.decl ReachableOut( s : stmt )
+
+// for simplicity: assume the entry point of every lambda is reachable
+ReachableIn( s ) :- Lambda(_,_,_,b), NodeList(b,0,s).
+
+// also for simplicity: assume the entry point of every bind is reachable
+ReachableIn( e ) :- BindExpr(_,_,e).
+
+// if a parent expression is reachable, so is the child (unless the parent is some control flow construct)
+ReachableIn( e ) :- ReachableIn(p), ParentOf( p, e ),
+		!CompoundStmt(p), !IfStmt(p,_,_,_), !LambdaExpr(p,_,_,_), !BindExpr(p,_,_).
+
+// select condition branches in if statements
+ReachableIn( c ) :- IfStmt( i, c, _, _ ), ReachableIn(i).
+ReachableIn( t ) :- IfStmt( i, c, t, _ ), ReachableIn(i), boolean_value(c, DP_ROOT, true).
+ReachableIn( e ) :- IfStmt( i, c, _, e ), ReachableIn(i), boolean_value(c, DP_ROOT, false).
+
+ReachableOut( i ) :- IfStmt( i, _, t, _ ), ReachableOut(t).
+ReachableOut( i ) :- IfStmt( i, _, _, e ), ReachableOut(e).
+
+// compound expressions are processed in order
+ReachableIn( s ) :- ParentOf( c, s ), CompoundStmt(c), NodeList(c,0,s), ReachableIn(c).		// the first statement in a compound is reachable if the compound is reachable
+ReachableIn( s ) :- ParentOf( c, s ), CompoundStmt(c), NodeList(c,i,s), NodeList(c,i-1,p), ReachableOut(p).
+
+
+// everything except for a if, return, break or continue statement is left once entered
+ReachableOut( s ) :- ReachableIn( s ), !IfStmt(s,_,_,_), !ReturnStmt(s,_), !BreakStmt(s), !ContinueStmt(s), !CompoundStmt(s).
+
+// when reaching the last statement of a compound, we reach the end of the compound
+ReachableOut( c ) :- CompoundStmt(c), NodeListLength(c,i), NodeList(c,i-1,l), ReachableOut(l).
+
+// also empty compound statements will finish if reached
+ReachableOut( c ) :- ReachableIn(c), CompoundStmt(c), !NodeList(c,_,_).

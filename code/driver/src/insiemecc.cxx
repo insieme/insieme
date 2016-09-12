@@ -53,6 +53,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/dump/json_dump.h"
 
 #include "insieme/transform/tasks/granularity_tuning.h"
 
@@ -152,6 +153,11 @@ int main(int argc, char** argv) {
 		std::cout << "Dumping intermediate representation ...\n";
 		std::ofstream out(options.settings.dumpIR.string());
 		out << co::printer::PrettyPrinter(program, co::printer::PrettyPrinter::PRINT_DEREFS);
+	}
+
+	if(!options.settings.dumpJSON.empty()) {
+		std::ofstream out(options.settings.dumpJSON.string());
+		co::dump::json::dumpIR(out, program);
 	}
 
 	core::checks::MessageList errors;

@@ -1,0 +1,19 @@
+.using ControlFlow from Utils/ControlFlow
+
+.comp ProgramPointAnalysis<ValueType> {
+
+	// --------- interface ----------
+
+
+	// -- the value to be computed by this analysis --
+	.member value ( s : stmt , e : exec_state , v : ValueType ) output
+
+	// a set of program points not to be crossed by this analysis
+	.member intercepted ( s : stmt , e : exec_state )
+
+	// ------------------------------
+
+	// standard forward
+	value( ProgramPoint( bs , be ) , v ) :- value( as, ae, v ), !intercepted( as, ae ), ControlFlow( ProgramPoint( as , ae ) , ProgramPoint( bs, be ) ).
+
+}

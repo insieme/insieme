@@ -1,0 +1,12 @@
+// define a basic boolean type
+.number_type bool
+
+// define true/false constants
+#define true 1
+#define false 0
+
+// define boolean operators
+#define NOT( X ) (1-(X))
+#define AND(X,Y) ((X)*(Y))
+#define OR(X,Y) NOT(AND(NOT(X),NOT(Y)))
+

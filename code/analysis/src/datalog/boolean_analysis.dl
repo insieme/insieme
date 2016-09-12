@@ -1,0 +1,11 @@
+.using boolean_value from BooleanValue
+
+// input parameters
+.decl target_expr( n : node ) input
+
+// output values
+.decl result( v : bool ) output
+
+// link analysis with result
+result( v ) :- target_expr(n), boolean_value(n,DP_ROOT,v).
+

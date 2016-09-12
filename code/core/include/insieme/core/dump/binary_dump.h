@@ -36,8 +36,7 @@
 
 #pragma once
 
-#include <ostream>
-#include <istream>
+#include <iostream>
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_address.h"
@@ -52,6 +51,11 @@ namespace core {
 namespace dump {
 
 namespace binary {
+
+	/**
+	* The magic number stored at the head of all encodings.
+	*/
+	const uint64_t MAGIC_NUMBER = 0x494e5350495245; // HEX version of INSPIRE
 
 	/**
 	 * Writes a binary encoding of the given IR node into the given output stream.

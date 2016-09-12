@@ -43,8 +43,11 @@
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/dump/binary_utils.h"
 
 #include "insieme/utils/map_utils.h"
+
+using namespace insieme::core::dump::binary::utils;
 
 namespace insieme {
 namespace core {
@@ -82,30 +85,6 @@ namespace binary {
 
 
 	namespace {
-
-		/**
-		 * The magic number stored at the head of all encodings.
-		 */
-		const uint64_t MAGIC_NUMBER = 0x494e5350495245; // HEX version of INSPIRE
-
-		// some type definitions
-		typedef uint32_t length_t;
-		typedef uint16_t type_t;
-		typedef uint32_t index_t;
-
-		// some convenience utilities
-		template <typename T>
-		void write(std::ostream& out, T value) {
-			out.write((char*)&value, sizeof(T));
-		}
-
-		template <typename T>
-		T read(std::istream& in) {
-			T value = 0;
-			in.read((char*)&value, sizeof(T));
-			return value;
-		}
-
 
 		// -- writer --
 
@@ -163,7 +142,7 @@ namespace binary {
 			 * An reverse index, assigning every node its index
 			 * within the node list and a the list of annotations mapped to their index.
 			 */
-			utils::map::PointerMap<NodePtr, pair<index_t, std::map<NodeAnnotationPtr, index_t>>> index;
+			insieme::utils::map::PointerMap<NodePtr, pair<index_t, std::map<NodeAnnotationPtr, index_t>>> index;
 
 			/**
 			 * The register of annotation converters to be utilized for the encoding.
@@ -205,17 +184,6 @@ namespace binary {
 			}
 
 		  private:
-			/**
-			 * Dumps a string to the given output stream.
-			 */
-			void dumpString(std::ostream& out, const string& str) {
-				// write the string content
-				write<length_t>(out, str.length());
-
-				// write string (not including \0)
-				out.write(str.c_str(), str.length());
-			}
-
 			/**
 			 * Dumps a single annotation converter instance (the name of the converter).
 			 */

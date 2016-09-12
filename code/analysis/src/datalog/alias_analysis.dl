@@ -1,0 +1,15 @@
+.using _ from Callable
+.using reference_value from Reference
+
+
+// a relation to specify the terms which's target references shell be obtained
+.decl targets ( s : stmt ) input
+
+// the result relation mapping each term to a set of referenced memory locations
+.decl result ( x : stmt , r : memory_location) output
+
+// ------------------
+
+// compute results
+result( x , r ) :- targets(x), reference_value(x,DP_ROOT,r).
+

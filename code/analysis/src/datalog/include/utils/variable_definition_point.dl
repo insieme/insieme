@@ -1,0 +1,69 @@
+.using ParentOf from Utils/Parent
+.using EqualNodes from Utils/Equality
+
+
+// ------ Definition Point ---------
+
+
+// all defined variables
+.decl VariableDefinition ( var : variable )
+
+// links from all defined variables to all their uses
+.decl DefinitionPoint ( definition : variable, var : variable )
+
+// a list of free variables
+.decl FreeVariable ( var : variable )
+
+// ---------------------------------
+
+
+// -- define definition points --
+
+// parameters are variable definitions
+VariableDefinition(V) :- Parameters(P), ParentOf(P,V).
+
+// variables in declrations are definitions
+VariableDefinition(V) :- DeclarationStmt(_,_,V).
+
+// variables in catch clauses
+VariableDefinition(V) :- CatchClause(_,V,_).
+
+
+
+// -- define an auxilary relation tracing the path from a variable to its definition point --
+
+.decl DefinitionPointTrace( n : node, v : variable , position : number )
+
+DefinitionPointTrace(V,V,-1) :- Variable(V,_,_), !VariableDefinition(V).
+
+DefinitionPointTrace(P,V,-1) :- DefinitionPointTrace(N,V,-1), ParentOf(P,N), !CompoundStmt(P), !Lambda(P,_,_,_), !BindExpr(P,_,_).
+
+DefinitionPointTrace(P,V,-1) :- DefinitionPointTrace(N,V,-1), ParentOf(P,N), BindExpr(P,A,_), !NodeList(A,_,X), EqualNodes(X,V).
+
+DefinitionPointTrace(C,V,N) :- DefinitionPointTrace(F,V,-1), ParentOf(C,F), CompoundStmt(C), NodeList(C,N,F).
+
+DefinitionPointTrace(C,V,N-1) :- DefinitionPointTrace(C,V,N), N >= 0, NodeList(C,N,P), !DeclarationStmt(P,_,X), EqualNodes(X,V).
+
+
+// -- link variables to their definition points --
+
+// link definition points to themselfs
+DefinitionPoint(V,V) :- VariableDefinition(V).
+
+// link all other variables to their definition points using the definition point trace
+// - ending in a declaration statement
+DefinitionPoint(X,V) :- DefinitionPointTrace(C,V,N), NodeList(C,N,D), DeclarationStmt(D,_,X), EqualNodes(X,V).
+
+// - ending in a lambda parameter
+DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ParentOf(L,F), Lambda(L,_,P,_), NodeList(P,_,X), EqualNodes(X,V).
+
+// - ending in a bind parameter list
+DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ParentOf(B,F), BindExpr(B,P,_), NodeList(P,_,X), EqualNodes(X,V).
+
+// - ending in a for loop
+DefinitionPoint(X,V) :- DefinitionPointTrace(F,V,-1), ForStmt(_,D,_,_,F), DeclarationStmt(D,_,X), EqualNodes(X,V).
+
+
+// -- define free variables ---
+
+FreeVariable(V) :- Variable(V,_,_), !DefinitionPoint(_,V).

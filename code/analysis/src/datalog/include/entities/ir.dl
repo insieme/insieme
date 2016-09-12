@@ -1,0 +1,236 @@
+.using _ from Entities/Boolean
+.using _ from Entities/PrimitiveTypes
+
+
+// -- list  & misc node types
+.number_type child_index
+.number_type function_kind
+.number_type unique_node_id
+
+
+// -- program type --
+
+.number_type program
+
+
+// -- type types --
+
+.number_type generic_type
+.number_type tuple_type
+.number_type function_type
+.number_type type_variable
+.number_type variadic_type_variable
+.number_type generic_type_variable
+.number_type variadic_generic_type_variable
+.number_type numeric_type
+.number_type tag_type
+.number_type tag_type_ref
+
+.type type = generic_type
+           | tuple_type
+           | function_type
+           | type_variable
+           | variadic_type_variable
+           | generic_type_variable
+           | variadic_generic_type_variable
+           | numeric_type
+           | tag_type
+           | tag_type_ref
+
+
+// -- record types --
+
+.number_type struct
+.number_type union
+
+.type record = struct
+             | union
+
+
+// -- expression types --
+
+.number_type literal
+.number_type variable
+.number_type call_expr
+.number_type bind_expr
+.number_type cast_expr
+.number_type init_expr
+.number_type job_expr
+.number_type lambda_expr
+.number_type lambda_ref
+.number_type tuple_expr
+
+.type expr = literal
+           | variable
+           | call_expr
+           | bind_expr
+           | cast_expr
+           | init_expr
+           | job_expr
+           | lambda_expr
+           | lambda_ref
+           | tuple_expr
+
+
+// -- statement types --
+
+.number_type if_stmt
+.number_type compound_stmt
+.number_type decl_stmt
+
+.type stmt = expr
+           | if_stmt
+           | compound_stmt
+           | decl_stmt
+
+
+
+// -- support types --
+
+.number_type types
+.number_type parents
+.number_type tag_type_def
+.number_type lambda_def
+.number_type lambda
+.number_type exprs
+.number_type parameters
+.number_type switch_cases
+.number_type fields
+.number_type member_funcs
+.number_type pure_virt_member_funcs
+.number_type declaration
+
+
+.type support = types
+              | exprs
+              | parents
+              | record
+              | tag_type_def
+              | lambda_def
+              | lambda
+              | parameters
+              | switch_cases
+              | fields
+              | member_funcs
+              | pure_virt_member_funcs
+              | declaration
+
+
+// -- node type --
+
+.type node = program
+           | type
+           | record
+           | expr
+           | stmt
+           | support
+
+
+
+// List Node
+
+.decl NodeList ( list:node , idx:child_index , element:node )                                                 input
+.decl NodeListLength( list:node, length : number )                                                            input
+
+
+// Unique Node Identity Relation
+
+.decl NodeIdentity (  id:node , uid:unique_node_id )                                                          input
+
+
+
+// Program Node
+
+.decl Program                     ( id:node )                                                                 input
+
+
+
+// Type Nodes
+
+.decl FunctionType                ( id:node , parameter_types:types, return_type:type
+                                  , kind:function_kind , instantiation_types:types )                          input
+.decl GenericType                 ( id:node , name:string , parents:parents , params:types )                  input
+.decl GenericTypeVariable         ( id:node , var_name:string , type_parameter:types )                        input
+.decl NumericType                 ( id:node , value:expr )                                                    input
+.decl TagType                     ( id:node , tag:tag_type_ref, definition:tag_type_def )                     input
+.decl TagTypeReference            ( id:node , name:string )                                                   input
+.decl TupleType                   ( id:node )                                                                 input
+.decl TypeVariable                ( id:node , var_name:string )                                               input
+.decl VariadicGenericTypeVariable ( id:node , var_name:string , type_parameter:types )                        input
+.decl VariadicTypeVariable        ( id:node , var_name:string )                                               input
+
+
+
+// Record-Type Nodes
+
+#define RecordTypeContents name:string , fields:fields , ctors:exprs , dtor_opt:exprs , destructor_virtual:bool \
+                         , member_functions:member_funcs , pure_virtual_member_functions:pure_virt_member_funcs
+
+.decl Struct ( id:node , RecordTypeContents , parents:parents )                                               input
+.decl Union  ( id:node , RecordTypeContents )                                                                 input
+
+#undef RecordTypeContents
+
+
+
+// Expression Nodes
+
+.decl BindExpr        ( id:node , parameters:parameters , call:call_expr )                                    input
+.decl CallExpr        ( id:node , function_expr:expr )                                                        input
+.decl CastExpr        ( id:node , sub_expression:expr )                                                       input
+.decl InitExpr        ( id:node , memory_expr:expr , init_exprs:exprs )                                       input
+.decl JobExpr         ( id:node , thread_num_range:node , body:node )                                         input
+.decl LambdaExpr      ( id:node , type:function_type , reference:lambda_ref, definition:lambda_def )          input
+.decl LambdaReference ( id:node , type:function_type , name:string )                                          input
+.decl Literal         ( id:node , type:type , string_value:string )                                           input
+.decl IntegerLiteral  ( id:node , value:number )                                                              input
+.decl TupleExpr       ( id:node , expressions:exprs )                                                         input
+.decl Variable        ( id:node , type:type , var_id:uint )                                                   input
+// piped through   .decl MarkerExpr ( id:node , expr_id:uint , sub_expression:expr                            input
+
+
+
+// Statement Nodes
+
+.decl BreakStmt       ( id:node )                                                                             input
+.decl CompoundStmt    ( id:node )                                                                             input
+.decl ContinueStmt    ( id:node )                                                                             input
+.decl DeclarationStmt ( id:node , declaration:declaration , variable:variable )                               input
+.decl ForStmt         ( id:node , declaration:decl_stmt , end:expr , step:expr , body:compound_stmt )         input
+.decl IfStmt          ( id:node , condition:expr , then_body:compound_stmt, else_body:compound_stmt )         input
+.decl ReturnStmt      ( id:node , return_decl:declaration )                                                   input
+.decl SwitchStmt      ( id:node , switch_expr:expr , cases:switch_cases , default_case:compound_stmt )        input
+.decl ThrowStmt       ( id:node , throw_expr:expr )                                                           input
+.decl TryCatchStmt    ( id:node , body:compound_stmt )                                                        input
+.decl WhileStmt       ( id:node , condition:expr , body:compound_stmt )                                       input
+// obsolete        .decl GotoStmt ( id:node , label:string )                                                  input
+// obsolete        .decl LabelStmt ( id:node ,  label:string )                                                input
+// piped through   .decl MarkerStmt ( id:node , stmt_id:uint , sub_statement:stmt )                           input
+
+
+
+// Support Nodes
+
+.decl CatchClause                ( id:node , variable:variable , body:compound_stmt )                         input
+.decl Declaration                ( id:node , type:type , initialization:expr )                                input
+.decl Expressions                ( id:node )                                                                  input
+.decl Field                      ( id:node , name:string , type:type )                                        input
+.decl Fields                     ( id:node )                                                                  input
+.decl Lambda                     ( id:node , type:function_type , parameters:parameters, body:compound_stmt ) input
+.decl LambdaBinding              ( id:node , reference:lambda_ref , lambda:lambda )                           input
+.decl LambdaDefinition           ( id:node )                                                                  input
+.decl MemberFunction             ( id:node , name:string , virtual_flag:bool , implementation:expr )          input
+.decl MemberFunctions            ( id:node )                                                                  input
+.decl Parameters                 ( id:node )                                                                  input
+.decl Parent                     ( id:node , virtual:bool , access_specifier_kind:uint , type:type )          input
+.decl Parents                    ( id:node )                                                                  input
+.decl PureVirtualMemberFunction  ( id:node , name:string , type:function_type )                               input
+.decl PureVirtualMemberFunctions ( id:node )                                                                  input
+.decl SwitchCase                 ( id:node , guard:literal , body:compound_stmt )                             input
+.decl SwitchCases                ( id:node )                                                                  input
+.decl TagTypeBinding             ( id:node , tag:tag_type_ref, record:record )                                input
+.decl TagTypeDefinition          ( id:node )                                                                  input
+.decl Types                      ( id:node )                                                                  input
+
+// associating names to known constructs (built-ins)
+.decl NamedConstruct( name : string , uid : unique_node_id )                                                  input

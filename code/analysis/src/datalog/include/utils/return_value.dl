@@ -1,0 +1,20 @@
+.using ReturnOfLambda from Utils/EntryAndExitPoints
+
+
+// TODO: remove once the typing of the ir.dl is fixed
+.type return_stmt = node
+
+// --- links callables to their return statements ---
+
+.decl ReturnValue( c : callable , e : node )
+
+
+// --- Definiton ---
+
+
+// for lambdas, those are the corresponding return statements
+ReturnValue( l, v ) :- ReturnOfLambda(l,r), ReturnStmt(r,v).
+
+
+// for bind expressions, it is the direct sub-expression
+ReturnValue( b , e ) :- BindExpr(b,_,e).

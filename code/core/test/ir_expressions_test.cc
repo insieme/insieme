@@ -252,11 +252,11 @@ namespace core {
 		LambdaExprPtr simple = builder.lambdaExpr(functionType, toVector(x), builder.returnStmt(builder.boolLit("true")));
 		EXPECT_FALSE(simple->isRecursive());
 
-		EXPECT_EQ("rec even.{even=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(odd(v3));};}, odd=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) "
-		          "{return false;} else {return bool_not(even(v3));};}}",
+		EXPECT_EQ("rec even.{even=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) {return true;} else {return rec bool_not.{bool_not=fun(ref<bool,f,f,plain> v0) {if(ref_deref(v0)) {return false;} else {return true;};}}(odd(v3));};}, odd=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) "
+		          "{return false;} else {return rec bool_not.{bool_not=fun(ref<bool,f,f,plain> v0) {if(ref_deref(v0)) {return false;} else {return true;};}}(even(v3));};}}",
 		          toString(*even));
-		EXPECT_EQ("rec odd.{even=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(odd(v3));};}, odd=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) "
-		          "{return false;} else {return bool_not(even(v3));};}}",
+		EXPECT_EQ("rec odd.{even=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) {return true;} else {return rec bool_not.{bool_not=fun(ref<bool,f,f,plain> v0) {if(ref_deref(v0)) {return false;} else {return true;};}}(odd(v3));};}, odd=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) "
+		          "{return false;} else {return rec bool_not.{bool_not=fun(ref<bool,f,f,plain> v0) {if(ref_deref(v0)) {return false;} else {return true;};}}(even(v3));};}}",
 		          toString(*odd));
 	}
 

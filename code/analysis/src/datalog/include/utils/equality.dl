@@ -1,0 +1,9 @@
+// ---- node equality ---
+
+// determines whether two nodes a and b are structually identical
+.decl EqualNodes ( a : node , b : node )
+
+
+// -- definition --
+
+EqualNodes( n1, n2 ) :- NodeIdentity(n1,id), NodeIdentity(n2,id).

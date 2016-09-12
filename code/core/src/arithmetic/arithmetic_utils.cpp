@@ -415,9 +415,11 @@ namespace arithmetic {
 			// if both are signed / unsigned
 			if(t1->getFamilyName() == t2->getFamilyName()) {
 				if(p1->isConstant() && p2->isConstant()) {
-					int n1 = p1->getValue().as<LiteralPtr>()->getValueAs<int>();
-					int n2 = p2->getValue().as<LiteralPtr>()->getValueAs<int>();
-					return (n1 < n2) ? b : a;
+					boost::optional<int> n1 = p1->getValue().as<LiteralPtr>()->getValueAs<int>();
+					boost::optional<int> n2 = p2->getValue().as<LiteralPtr>()->getValueAs<int>();
+					assert_true(n1) << "Cast error: Cannot cast LiteralPtr 'n1' to int!";
+					assert_true(n2) << "Cast error: Cannot cast LiteralPtr 'n2' to int!";
+					return (*n1 < *n2) ? b : a;
 				}
 			}
 

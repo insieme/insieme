@@ -768,7 +768,7 @@ namespace core {
 		 */
 		FixedSizeNodeHelper(const NodeList& children) {
 			// verify the proper composition of the child node list
-			assert_true(checkChildList(children) || printChildListTypes(children)) 
+			assert_true(checkChildList(children) || printChildListTypes(children))
 				<< "Invalid composition of Child-Nodes discovered!\n" << "list: " << children << "\n";
 		}
 
@@ -1360,7 +1360,7 @@ struct IRDump : public insieme::utils::Printable {
 };
 
 IRDump dump(const insieme::core::NodePtr&, std::ostream& out = std::cout);
-IRDump dumpText(const insieme::core::NodePtr&, std::ostream& out = std::cout);
+IRDump dumpText(const insieme::core::NodePtr&, std::ostream& out = std::cout, bool printAddresses = false);
 IRDump dumpColor(const insieme::core::NodePtr&, std::ostream& out = std::cout, bool noLet = false);
 IRDump dumpOneLine(const insieme::core::NodePtr&, std::ostream& out = std::cout);
 IRDump dumpPretty(const insieme::core::NodePtr&, std::ostream& out = std::cout);

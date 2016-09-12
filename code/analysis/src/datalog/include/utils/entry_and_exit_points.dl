@@ -1,0 +1,50 @@
+.using ParentOf from Utils/Parent
+.using ReachableOut from Utils/Reachable
+.using ReachableIn from Utils/Reachable
+
+
+// --- compute entry and exit points of all callables---
+
+.decl EntryPoint( c : callable, s : stmt )
+.decl ExitPoint ( c : callable, s : stmt ) output
+
+
+// - an auxiliary relation to link returns to enclosing lambda
+.decl ReturnOfLambda( l : lambda, r : return_stmt )
+
+
+// --- Definiton ---
+
+// the entry point of a lambda is the body
+EntryPoint( l , b ) :- Lambda(l,_,_,b).
+
+// the entry point of a closure is the call expression
+EntryPoint( b , c ) :- BindExpr(b,_,c).
+
+// the entry point of a literal is the literal itself
+EntryPoint( l, l ) :- Literal(l,_,_).
+
+
+// -------
+
+// the exit point of a lambda is every reachable return
+ExitPoint( l, r ) :- ReturnOfLambda( l, r ).
+
+// the end of the body of a lambda is an exit point, if reachable
+ExitPoint( l , b ) :- Lambda(l,_,_,b), ReachableOut(b).
+
+// the exit point of a closure is the call expression
+ExitPoint( b, c ) :- BindExpr( b, _, c ).
+
+// the exit point of a literal is the literal itself
+ExitPoint( l, l ) :- Literal(l,_,_).
+
+
+// -------
+
+
+.decl ReturnParent( r : return_stmt, p : node )
+ReturnParent( r, r ) :- ReturnStmt(r,_).
+ReturnParent( r, p ) :- ReturnParent(r,s), ParentOf(p,s), !Lambda(s,_,_,_).
+
+ReturnOfLambda(l,r) :- Lambda(l,_,_,_), ReturnParent(r,l), ReachableIn(r).

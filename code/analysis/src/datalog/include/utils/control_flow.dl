@@ -1,0 +1,112 @@
+.using _ from Entities/ProgramPoint
+.using callGraph from Callable
+.using callable_value from Callable
+.using boolean_value from BooleanValue
+.using EntryPoint from Utils/EntryAndExitPoints
+.using ExitPoint from Utils/EntryAndExitPoints
+
+
+// definies the control flow in a code fragment
+//.decl ControlFlow( before : program_point , after : program_point ) output
+.decl ControlFlow( before_stmt : stmt, before_state : exec_state , after_stmt : stmt, after_state : exec_state ) output
+
+
+// ---------------------
+
+// -- Expressions --
+
+
+// - Variables -
+ControlFlow( ProgramPoint( v, PRE ), ProgramPoint( v, POST )) :- Variable(v,_,_).
+
+// - Literal -
+ControlFlow( ProgramPoint( l, PRE ), ProgramPoint( l, POST )) :- Literal(l,_,_).
+
+
+// - Call Expr -- start evaluation with last argument, function after last argument
+
+// evaluate last argument first
+ControlFlow( ProgramPoint( c, PRE ), ProgramPoint( a, PRE ) ) :- CallExpr(c,_), NodeListLength(c,i), NodeList(c,i-1,a).
+
+// after each argument, the one before is processed
+ControlFlow( ProgramPoint( a, POST ), ProgramPoint( b, PRE ) ) :- CallExpr(c,_), NodeList(c,i,a), NodeList(c,i-1,b).
+
+// the first argument is followed by the function call target
+ControlFlow( ProgramPoint( a, POST ), ProgramPoint( f, PRE ) ) :- CallExpr(c,f), NodeList(c,0,a).
+
+// if there are no arguments, start immediately with function call target
+ControlFlow( ProgramPoint( c, PRE ), ProgramPoint( f , PRE ) ) :- CallExpr(c,f), NodeListLength(c,0).
+
+// adter the evaluation of the function call target: jump to called function
+ControlFlow( ProgramPoint( f, POST ), ProgramPoint( b, PRE ) ) :- CallExpr(_,f), callable_value(f,DP_ROOT,t), EntryPoint(t,b).
+
+// at the end of the called function, bring the call expression in an intermediate state
+ControlFlow( ProgramPoint( b, POST ), ProgramPoint( c, INT ) ) :- CallExpr(c,f), callable_value(f,DP_ROOT,t), ExitPoint(t,b).
+
+// from the intermediate state, continue with the POST state of the call
+ControlFlow( ProgramPoint( c, INT ), ProgramPoint( c, POST ) ) :- CallExpr(c,_).
+
+
+// - Lambda Expr -
+ControlFlow( ProgramPoint( l, PRE ), ProgramPoint( l, POST )) :- LambdaExpr(l,_,_,_).
+
+// - Lambda Reference -
+ControlFlow( ProgramPoint( l, PRE ), ProgramPoint( l, POST )) :- LambdaReference(l,_,_).
+
+// - Bind Expr -
+ControlFlow( ProgramPoint( b, PRE ), ProgramPoint( b, POST )) :- BindExpr(b,_,_).
+
+// - Cast Expr -
+ControlFlow( ProgramPoint( c,  PRE ), ProgramPoint( e,  PRE )) :- CastExpr(c,e).
+ControlFlow( ProgramPoint( e, POST ), ProgramPoint( c, POST )) :- CastExpr(c,e).
+
+// - Init Expr -
+ControlFlow( ProgramPoint( i,  PRE ), ProgramPoint( a,  PRE )) :- InitExpr(i,_,e), NodeListLength(e,s), NodeList(e,s-1,a).
+ControlFlow( ProgramPoint( a, POST ), ProgramPoint( b,  PRE )) :- InitExpr(_,_,e), NodeList(e,i,a), NodeList(e,i-1,b).
+ControlFlow( ProgramPoint( a, POST ), ProgramPoint( m,  PRE )) :- InitExpr(_,m,e), NodeList(e,0,a).
+
+ControlFlow( ProgramPoint( i,  PRE ), ProgramPoint( m,  PRE )) :- InitExpr(i,m,e), NodeListLength(e,0).
+ControlFlow( ProgramPoint( m, POST ), ProgramPoint( i,  POST )) :- InitExpr(i,m,_).
+
+// - Tuple Expr -
+ControlFlow( ProgramPoint( t,  PRE ), ProgramPoint( a,  PRE )) :- TupleExpr(t,e), NodeListLength(e,s), NodeList(e,s-1,a).
+ControlFlow( ProgramPoint( a, POST ), ProgramPoint( b,  PRE )) :- TupleExpr(_,e), NodeList(e,i,a), NodeList(e,i-1,b).
+ControlFlow( ProgramPoint( a, POST ), ProgramPoint( t, POST )) :- TupleExpr(t,e), NodeList(e,0,a).
+
+ControlFlow( ProgramPoint( t, PRE ), ProgramPoint( t, POST )) :- TupleExpr(t,e), NodeListLength(e,0).
+
+
+
+//.decl JobExpr         ( id:node , thread_num_range:node , body:node )                                         input
+//.decl TupleExpr       ( id:node , expressions:exprs )                                                         input
+
+
+// -- Statements --
+
+// compound statements
+ControlFlow( ProgramPoint( c ,  PRE ), ProgramPoint( s ,  PRE ) ) :- CompoundStmt(c), NodeList(c,0,s).
+ControlFlow( ProgramPoint( s , POST ), ProgramPoint( c , POST ) ) :- CompoundStmt(c), NodeListLength(c,i), NodeList(c,i-1,s).
+ControlFlow( ProgramPoint( c ,  PRE ), ProgramPoint( c , POST ) ) :- CompoundStmt(c), NodeListLength(c,0).
+
+// statements within compound statements
+ControlFlow( ProgramPoint( a , POST ), ProgramPoint( b ,  PRE ) ) :- CompoundStmt(c), NodeList(c,i,a), NodeList(c,i+1,b).
+
+// conditional statement
+ControlFlow( ProgramPoint( i ,  PRE ), ProgramPoint( c,  PRE ) ) :- IfStmt(i,c,_,_).
+ControlFlow( ProgramPoint( c , POST ), ProgramPoint( t,  PRE ) ) :- IfStmt(_,c,t,_), boolean_value(c,DP_ROOT,true).
+ControlFlow( ProgramPoint( t , POST ), ProgramPoint( i, POST ) ) :- IfStmt(i,c,t,_), boolean_value(c,DP_ROOT,true).
+ControlFlow( ProgramPoint( c , POST ), ProgramPoint( e,  PRE ) ) :- IfStmt(_,c,_,e), boolean_value(c,DP_ROOT,false).
+ControlFlow( ProgramPoint( e , POST ), ProgramPoint( i, POST ) ) :- IfStmt(i,c,_,e), boolean_value(c,DP_ROOT,false).
+
+// return statements
+ControlFlow( ProgramPoint( r ,  PRE ), ProgramPoint( e ,  PRE ) ) :- ReturnStmt(r,d), Declaration(d,_,e).
+ControlFlow( ProgramPoint( e , POST ), ProgramPoint( c ,   INT ) ) :- ReturnStmt(r,d), Declaration(d,_,e), ExitPoint(l,r), callGraph(c,l).
+
+
+// Declarations
+ControlFlow( ProgramPoint( d,  PRE ), ProgramPoint( i,  PRE )) :- Declaration(d,_,i).
+ControlFlow( ProgramPoint( i, POST ), ProgramPoint( d, POST )) :- Declaration(d,_,i).
+
+
+// TODO: argument evaluation right-2-left
+// TODO: provide other options for evaluation orders

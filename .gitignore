@@ -11,6 +11,8 @@ build*/
 *.so
 *.so.*
 *.orig
+*.chs.h
+*.i
 /nbproject/private/
 create*.sh
 worker_event_log.*

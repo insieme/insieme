@@ -1,0 +1,40 @@
+.using _ from Entities/Integer
+.using DataFlowAnalysis from Templates/DataFlowAnalysis
+.using CallToNamedFunction from Utils/NamedFunctionCalls
+
+		
+// the analysis assigning each expression reference values
+.decl integer_value( n : node , p : data_path , i : integer )
+
+
+// ---------- Analysis Specification -----------
+
+.init integer = DataFlowAnalysis <integer>
+
+// link to result set
+integer_value(n,p,v) :- integer.value(n,p,v).
+
+// -- A) define unknown value --
+
+// the value to be exhibited by any unknown value
+integer.unknown_value ( [ false, 0 ] ).
+
+// -- B) define literals --
+
+// the value of integer literals
+integer.value ( l , DP_ROOT, [ true, i ] ) :- IntegerLiteral( l , i ).
+
+// -- let the data flow analysis know which literals are handled --
+integer.known_literal(l) :- IntegerLiteral(l,_).
+
+
+// -- C) define operators --
+integer.value ( c, DP_ROOT, [ AND(def_a,def_b) , val_a + val_b ]) :- 
+	CallToNamedFunction( c , "int_add"), 
+	NodeList(c,0,a), integer.value(a,DP_ROOT,[def_a,val_a]),
+	NodeList(c,1,b), integer.value(b,DP_ROOT,[def_b,val_b]).
+
+// the value of integer literals
+integer.known_named_function( "int_add" ).
+
+

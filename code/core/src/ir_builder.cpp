@@ -690,7 +690,7 @@ namespace core {
 	}
 
 	LiteralPtr IRBuilderBaseModule::boolLit(bool value) const {
-		return literal(getLangBasic().getBool(), (value) ? "true" : "false");
+		return (value) ? getLangBasic().getTrue() : getLangBasic().getFalse();
 	}
 
 	LiteralPtr IRBuilderBaseModule::floatLit(const string& value) const {

@@ -1,0 +1,38 @@
+
+// --------------------------- public -----------------------------
+
+
+// the type utilized to model data paths within objects
+.type data_path = [ s : number , p : data_path ]
+
+// an empty data path constant
+#define DP_ROOT nil
+
+// a table comuting concatenations of data paths
+.decl concat ( a : data_path , b : data_path , c : data_path )
+
+
+
+// ------------------------- internal ---------------------------
+
+concat( DP_ROOT , p , p ) :- all_data_paths(p).
+concat( [ah,at] , b , [ah,r]) :- all_data_paths([ah,at]), concat(at,b,r).
+					
+// TODO: compute all possible data paths from the type system
+.decl data_paths_in_type ( t : type , d : data_path )
+data_paths_in_type ( t, DP_ROOT ) :- GenericType(t,_,_,_).
+data_paths_in_type ( t, DP_ROOT ) :- FunctionType(t,_,_,_,_).
+data_paths_in_type ( t, DP_ROOT ) :- NumericType(t,_).
+
+data_paths_in_type ( t, DP_ROOT ) :- TupleType(t).
+data_paths_in_type ( t, [ h, p] ) :- TupleType(t), NodeList(t,h,c), data_paths_in_type(c,p).
+
+data_paths_in_type ( t , DP_ROOT ) :- TagType(t,_,_).
+data_paths_in_type ( t , [ h, p] ) :- TagType(t,_,d), NodeList(d,_,b), TagTypeBinding(b,_,r), Struct(r,_,f,_,_,_,_,_,_), NodeList(f,h,c), data_paths_in_type(c,p).
+data_paths_in_type ( t , [ h, p] ) :- TagType(t,_,d), NodeList(d,_,b), TagTypeBinding(b,_,r), Union(r,_,f,_,_,_,_,_), NodeList(f,h,c), data_paths_in_type(c,p).
+
+// a list of all data paths
+.decl all_data_paths ( p : data_path )
+all_data_paths ( p ) :- data_paths_in_type( _ , p ).
+all_data_paths ( t ) :- all_data_paths( [ _ , t ] ).
+

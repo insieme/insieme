@@ -81,8 +81,12 @@ namespace lang {
 	}
 
 	const string& getConstructName(const NodePtr& node) {
-		assert_true(isDerived(node)) << "Node not marked as being a derived construct!";
-		return node->getAttachedValue<DerivedTag>().name;
+		// for derived constructs
+		if(isDerived(node)) { return node->getAttachedValue<DerivedTag>().name; }
+		// also: support built-in constructs
+		assert_true(isBuiltIn(node) && node.isa<LiteralPtr>()) << "Error for " << *node << " of type " << node->getNodeType()
+		                                                       << "\nNode is neither a derived nor built-in literal!";
+		return node.as<LiteralPtr>()->getValue()->getValue();
 	}
 
 	NodePtr markAsDerived(const NodePtr& node, const string& name) {

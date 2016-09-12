@@ -1,0 +1,38 @@
+.using _ from Entities/DataPath
+.using DataFlowAnalysis from Templates/DataFlowAnalysis
+.using callGraph from Callable
+
+		
+// the analysis assigning each expression reference values
+.type memory_location = [ c : stmt , p : data_path ] 		// the creation point + sub-reference
+.decl reference_value( n : node , p : data_path , r : memory_location )
+
+
+// ---------- Analysis Specification -----------
+
+.init reference = DataFlowAnalysis <memory_location>
+
+// link to result set
+reference_value(n,p,v) :- reference.value(n,p,v).
+
+// the value to be exhibited by any unknown value
+reference.unknown_value ( X ) :- reference.value(_,_,X).
+reference.unknown_value ( -1 ).			// two values not covered anywhere (=outside the application)
+reference.unknown_value ( -2 ).
+
+
+// references are created by calls to ref_alloc
+reference.value( c, DP_ROOT, [ c , DP_ROOT ] ) :- callGraph(c,t),NodeIdentity(t,x),NamedConstruct("ref_alloc",x).
+
+// and by function parameters
+// TODO: cover this (after merge, this is different)
+reference.value( a, DP_ROOT, [ a , DP_ROOT] ) :- Lambda(_,_,p,_), NodeList(p,_,a).
+
+// and by return statements
+// TODO: cover this (after merge, this is different)
+
+// TODO: handle external references via literals properly
+//reference.known_literal(l) :- Literal(l,_,_).
+
+// list handled operators
+reference.known_named_function( "ref_alloc" ).

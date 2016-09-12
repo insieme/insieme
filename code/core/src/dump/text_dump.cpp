@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -109,17 +109,21 @@ namespace text {
 		/**
 		 * The text dumper is converting a given IR node into a text-based
 		 * human readable format. The dumped structure represents the full
-		 * IR tree and is not exploiting the sharing properties of the the DAG.
+		 * IR tree and is not exploiting the sharing properties of the DAG.
+		 * The template parameter is meant to be instantiated to either a
+		 * NodePtr or a NodeAddress.
 		 */
+		template<class NodeAccess = NodePtr>
 		class TextDumper {
 		  public:
-			void dump(std::ostream& out, const NodePtr& ir) {
+			void dump(std::ostream& out, const NodeAccess& ir) {
 				dump(out, 0, ir);
 			}
 
-			void dump(std::ostream& out, int level, const NodePtr& cur) {
+			void dump(std::ostream& out, int level, const NodeAccess& cur) {
 				// start with indentation and node type
-				out << times("    ", level) << "(" << cur->getNodeType() << " ";
+				out << times("    ", level) << "(";
+				printNodeName(out, cur);
 
 				if(cur->isValue()) {
 					// dump value
@@ -135,11 +139,22 @@ namespace text {
 
 				// process child list
 				out << "|";
-				for_each(cur->getChildList(), [&](const NodePtr& child) {
+				for_each(cur->getChildList(), [&](const NodeAccess& child) {
 					out << "\n";
 					dump(out, level + 1, child);
 				});
 				out << "\n" << times("    ", level) << ")";
+			}
+
+		 private:
+			std::ostream& printNodeName(std::ostream& out, const NodePtr& cur) {
+				out << cur->getNodeType() << " ";
+				return out;
+			}
+
+			std::ostream& printNodeName(std::ostream& out, const NodeAddress& cur) {
+				out << cur->getNodeType() << " <" << cur << "> ";
+				return out;
 			}
 		};
 
@@ -368,12 +383,19 @@ namespace text {
 	}
 
 	void dumpIR(std::ostream& out, const NodePtr& ir) {
-		TextDumper().dump(out, ir);
+		TextDumper<NodePtr>().dump(out, ir);
 	}
 
-	void dumpAddress(std::ostream& out, const NodeAddress& address) {
-		// just dump full IR tree ...
-		dumpIR(out, address.getRootNode());
+	void dumpIR(std::ostream& out, const NodeAddress& ir) {
+		TextDumper<NodeAddress>().dump(out, ir);
+	}
+
+	void dumpAddress(std::ostream& out, const NodeAddress& address, const bool printAddresses) {
+		// just dump full IR tree, with or without addresses ...
+		if (printAddresses)
+			dumpIR(out, address.getRootAddress());
+		else
+			dumpIR(out, address.getRootNode());
 
 		// finish with a new-line
 		out << "\n";
@@ -383,7 +405,6 @@ namespace text {
 			dumpPath(out, address.getPath());
 		}
 	}
-
 
 	NodePtr loadIR(std::istream& in, core::NodeManager& manager) {
 		return loadAddress(in, manager).getAddressedNode();

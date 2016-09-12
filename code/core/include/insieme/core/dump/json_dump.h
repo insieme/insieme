@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -54,13 +54,22 @@ namespace dump {
 namespace json {
 
 	/**
-	 * Writes a binary encoding of the given IR node into the given output stream.
+	 * Writes a JSON encoding of the given IR node into the given output stream.
 	 *
 	 * @param out the stream to be writing to
 	 * @param ir the code fragment to be written
 	 * @param infoAnnotator provides extra information for individual addresses -- no information by default
 	 */
 	void dumpIR(std::ostream& out, const NodePtr& ir, const std::function<std::string(NodeAddress)>& infoAnnotator = [](const NodeAddress&)->std::string { return ""; });
+
+	/**
+	 * Writes a JSON encoding of the given IR node into a file of the given name.
+	 *
+	 * @param filename the file to dump the given IR to
+	 * @param ir the code fragment to be written
+	 * @param infoAnnotator provides extra information for individual addresses -- no information by default
+	 */
+	void dumpIR(const std::string& filename, const NodePtr& ir, const std::function<std::string(NodeAddress)>& infoAnnotator = [](const NodeAddress&)->std::string { return ""; });
 
 
 } // end namespace json

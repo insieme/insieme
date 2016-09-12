@@ -1,0 +1,144 @@
+.using concat from Entities/DataPath
+
+.using callable_value from Callable
+.using callGraph from Callable
+.using reference_value from Reference
+.using integer_value from IntegerValue
+
+.using VariableDefinition from Utils/VariableDefinitionPoint
+.using DefinitionPoint from Utils/VariableDefinitionPoint
+.using FreeVariable from Utils/VariableDefinitionPoint
+
+.using ReturnValue from Utils/ReturnValue
+.using ReachableIn from Utils/Reachable
+
+.using ProgramPointAnalysis from Templates/ProgramPointAnalysis
+
+.using CallToNamedFunction from Utils/NamedFunctionCalls
+
+.using failure from Utils/Failure
+
+
+// -- a realation identifying every assignment --
+.decl assignment ( e : expr ) output
+assignment(c) :- CallToNamedFunction( c , "ref_assign" ).
+
+// -- an under-approximation of assignments, computed without data flow analysis --
+.decl simple_assignment ( e : expr ) output
+simple_assignment(c) :- CallExpr(c,f), NamedConstruct("ref_assign", i), NodeIdentity(f,i).
+
+// -- a relation identifying every deref operation --
+.decl deref ( e : expr ) output
+deref(c) :- CallToNamedFunction( c , "ref_deref" ).
+
+// Report a failure if we find a ref_assign which is not the child of a CallExpr
+failure( "Error: Found a ref_assign whose parent is not a CallExpr!", id) :-
+	NamedConstruct("ref_assign",uid), NodeIdentity(id,uid), !CallExpr(_,id).
+
+// -- a generic data flow analysis --
+.comp DataFlowAnalysis<ValueType> {
+
+	// --------- interface ----------
+
+
+	// the values to be assigned to all unknown values
+	.member unknown_value( v : ValueType )
+
+	// the list of known literals (defined externally)
+	.member known_literal( l : node )
+
+	// the list of known operators (defined externally)
+	.member known_function( o : node )
+
+	// the list of known named operators
+	.member known_named_function( n : string )
+
+	// -- the value to be computed by this analysis --
+	.member value ( n : node , p : data_path , v : ValueType ) output
+
+
+	// ------------------------------
+
+	// -- known functions --
+
+	// all functions are known functions
+	known_function(l) :- Lambda(l,_,_,_).
+	known_function(b) :- BindExpr(b,_,_).
+	known_function(f) :- known_named_function(n), NamedConstruct(n,i), NodeIdentity(f,i), Literal(f,_,_).
+
+	// also, some functions are handled by this component
+	known_named_function( "ref_assign" ).
+	known_named_function( "ref_deref" ).
+	known_named_function( "tuple_member_access" ).
+
+
+	// -- value of variables --
+
+	// definitions of variables take the value at the definition
+
+	// declaration statements
+	value( v, p, b ) :- VariableDefinition(v), DeclarationStmt(_,d,v), value(d,p,b).
+
+	// bind parameters
+	value( v, d, b ) :-
+			VariableDefinition(v), NodeList(p,i,v), BindExpr(f,p,_),  // this variable is the i-th parameter of a bind expression f
+			callGraph(c,f),	                                          // f is called by call site c
+			NodeList(c,i,a),value(a,d,b).                             // v get's assigned the value of the i-th argument of c
+
+	// uses of variables correspond to the value of the definition point
+	value( v, p, b ) :- Variable(v,_,_), DefinitionPoint(d,v), value(d,p,b).
+
+	// free variables are undefined
+	value( v, DP_ROOT, b ) :- FreeVariable(v), unknown_value(b).
+
+
+	// -- values of unknown literals --
+	value ( l , DP_ROOT , v ) :- Literal(l,_,_), !known_literal(l), unknown_value(v).
+
+
+	// -- values of declarations --
+
+	// for now, just take the value of the initializer expression (TODO: handle ctor calls and implicit conversions)
+	value( d, p, v ) :- Declaration(d,_,e), value(e,p,v).
+
+
+	// -- value of call expressions --
+
+	value( c, p, v ) :- CallExpr(c,f), callable_value(f,DP_ROOT,t), ReturnValue(t,r), ReachableIn(r), value(r,p,v).
+
+	value( c, DP_ROOT, u ) :- CallExpr(c,f), callable_value(f,DP_ROOT,l), !known_function(l), unknown_value(u).
+
+
+	// -- value of tuple expressions --
+
+	value( t, [i,p], v ) :- TupleExpr(t,e), NodeList(e,i,c), value(c,p,v).
+
+	value( c, p, v) :- CallToNamedFunction(c,"tuple_member_access"), NodeList(c,0,t), NodeList(c,1,e), integer_value(e,DP_ROOT,[true,i]), value(t,[i,p],v).
+	value( c, p, v) :- CallToNamedFunction(c,"tuple_member_access"), NodeList(c,0,t), NodeList(c,1,e), integer_value(e,DP_ROOT,[false,_]), value(t,[_,p],v).
+
+
+	// ------ Memory Locations ------
+
+	// using a program point analysis to trace the memory location state
+	.type memory_state = [ m : memory_location, v : ValueType ]
+	.init memory_state = ProgramPointAnalysis<memory_state>
+
+
+	// read value from a memory location
+	value( c, vp, v ) :- deref(c), NodeList(c,0,t), reference_value(t,DP_ROOT, [m,rp]), memory_state.value(c,INT,[[m,p],v]), concat(rp,vp,p).
+
+	// write values to memory locations (perfect assignment)
+	memory_state.intercepted( c , INT ) :- simple_assignment(c).
+	memory_state.value(c,POST,[[m,p],v]) :- assignment(c), NodeList(c,0,t), NodeList(c,1,e), reference_value(t,DP_ROOT,[m,p]), value(e,DP_ROOT,v).
+	memory_state.value(c,POST,s) :- assignment(c), NodeList(c,0,t), reference_value(t,DP_ROOT,[m1,p1]), reference_value(t,DP_ROOT,[m2,p2]), (m1!=m2 ; p1!=p2), memory_state.value(c,INT,s).
+
+
+	// pass function argument to memory location of parameter
+	memory_state.value( b, PRE, [[v,dp],d] ) :-
+			VariableDefinition(v), NodeList(p,i,v), Lambda(l,_,p,b),      // this variable is the i-th parameter of a lambda l
+			callGraph(c,l),                                               // l is called by call site c
+			NodeList(c,i,a),value(a,dp,d).                                // v get's assigned the value of the i-th argument of c
+
+}
+
+// #include "reference.dl"

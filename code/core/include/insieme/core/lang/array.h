@@ -230,7 +230,9 @@ namespace lang {
 
 		unsigned getNumElements() const {
 			assert_true(isConstSize());
-			return size.as<LiteralPtr>()->getValueAs<unsigned>();
+			boost::optional<unsigned> res = size.as<LiteralPtr>()->getValueAs<unsigned>();
+			assert_true(res) << "Cast error: Cannot cast ArrayType size to unsigned!";
+			return *res;
 		}
 	};
 
