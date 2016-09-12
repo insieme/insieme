@@ -174,7 +174,7 @@ findDecl start = findDecl start
 
 -- | Returns 'True' if given variable (in declaration) is a loop iterator.
 isLoopIterator :: NodeAddress -> Bool
-isLoopIterator = (==IR.ForStmt) . getNodeType . goUp . goUp
+isLoopIterator a = (depth a >= 2) && ((==IR.ForStmt) $ getNodeType $ goUp $ goUp a)
 
 
 getType :: Tree IR.NodeType -> Maybe (Tree IR.NodeType)
