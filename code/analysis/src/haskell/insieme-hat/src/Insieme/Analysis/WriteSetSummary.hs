@@ -53,7 +53,6 @@ module Insieme.Analysis.WriteSetSummary (
 import Prelude hiding (null)
 
 import Debug.Trace
-import Data.Tree
 import Data.Typeable
 import Insieme.Inspire.NodeAddress
 import Insieme.Analysis.Entities.FieldIndex
@@ -157,10 +156,10 @@ writeSetAnalysis = Solver.mkAnalysisIdentifier WriteSetAnalysis "WS"
 --
 
 writeSetSummary :: (FieldIndex i) => NodeAddress -> Solver.TypedVar (WriteSet i)
-writeSetSummary addr = case getNode addr of
+writeSetSummary addr = case getNodePair addr of
         
         -- ref_assign writes to location addressed by first argument
-        Node IR.Literal _ | isRoot addr && isBuiltin addr "ref_assign" -> var                       
+        IR.NT IR.Literal _ | isRoot addr && isBuiltin addr "ref_assign" -> var                       
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
@@ -170,11 +169,11 @@ writeSetSummary addr = case getNode addr of
                 
             
         -- all other literals => no write sets
-        Node IR.Literal _ | isRoot addr -> nothing                                                
+        IR.NT IR.Literal _ | isRoot addr -> nothing                                                
         
         
         -- for lambdas, all call sites of the body have to be aggregated
-        Node IR.Lambda _ | isRoot addr -> var
+        IR.NT IR.Lambda _ | isRoot addr -> var
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
@@ -186,12 +185,12 @@ writeSetSummary addr = case getNode addr of
                 calls = IRUtils.foldAddressPrune collect filter addr
                     where
                         
-                        filter cur = case getNode cur of
-                            Node IR.Lambda _ -> cur /= addr
-                            n@_              -> IRUtils.isType (rootLabel n)
+                        filter cur = case getNodePair cur of
+                            IR.NT IR.Lambda _ -> cur /= addr
+                            IR.NT n         _ -> IRUtils.isType n
                             
-                        collect cur l = case getNode cur of
-                            Node IR.CallExpr _ -> cur : l
+                        collect cur l = case getNodePair cur of
+                            IR.NT IR.CallExpr _ -> cur : l
                             _                  -> l
                 
                 
@@ -200,7 +199,7 @@ writeSetSummary addr = case getNode addr of
                 
                 
         -- compute write sets for calls        
-        Node IR.CallExpr _ -> var
+        IR.NT IR.CallExpr _ -> var
             where
             
                 myTrace s a = trace (s ++ (show a)) a

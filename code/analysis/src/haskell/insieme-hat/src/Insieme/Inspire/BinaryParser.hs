@@ -47,7 +47,7 @@ import Data.Attoparsec.Binary
 import Data.Attoparsec.ByteString
 import Data.Char (chr)
 import Data.List.Split (splitOn)
-import Data.Tree
+import Data.Tree (Tree(..))
 import Data.Word
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
@@ -74,7 +74,7 @@ parseBinaryDump = parseOnly $ do
     return $ IR.Inspire nodes builtins
 
   where
-      resolve :: Tree (Int, IR.NodeType) -> [Int] -> Tree (Int, IR.NodeType)
+      resolve :: IR.Tree -> [Int] -> IR.Tree
       resolve node []     = node
       resolve node (x:xs) = resolve (subForest node !! x) xs
 
@@ -135,10 +135,10 @@ parseBuiltin = do
     val <- tail . splitOn "-" <$> parseString
     return (key, read <$> val)
 
-connectDumpNodes :: IntMap.IntMap DumpNode -> Tree (Int, IR.NodeType)
+connectDumpNodes :: IntMap.IntMap DumpNode -> IR.Tree
 connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
   where
-    go :: Int -> State (IntMap.IntMap (Tree (Int, IR.NodeType))) (Tree (Int, IR.NodeType))
+    go :: Int -> State (IntMap.IntMap IR.Tree) IR.Tree
     go index = do
         memo <- get
         case IntMap.lookup index memo of

@@ -38,7 +38,6 @@
 
 module Insieme.Analysis.ExitPoint where
 
-import Data.Tree
 import Data.Typeable
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
@@ -85,10 +84,10 @@ exitPointAnalysis = Solver.mkAnalysisIdentifier ExitPointAnalysis "EP"
 --
 
 exitPoints :: NodeAddress -> Solver.TypedVar ExitPointSet
-exitPoints addr = case getNode addr of
+exitPoints addr = case getNodePair addr of
 
     -- for lambdas: collect all reachable return statements and end of body
-    Node IR.Lambda   _ -> var
+    IR.NT IR.Lambda   _ -> var
         where
             var = Solver.mkVariable id [con] Solver.bot
             con = Solver.createConstraint dep val var
@@ -118,7 +117,7 @@ exitPoints addr = case getNode addr of
 
 
     -- for bind expressions: use nested call expression
-    Node IR.BindExpr _ -> Solver.mkVariable id [] $ Set.singleton $ ExitPoint $ goDown 2 addr
+    IR.NT IR.BindExpr _ -> Solver.mkVariable id [] $ Set.singleton $ ExitPoint $ goDown 2 addr
 
     -- everything else has no call sites
     _ -> Solver.mkVariable id [] Solver.bot
@@ -133,10 +132,10 @@ collectReturns :: NodeAddress -> [NodeAddress]
 collectReturns = foldAddressPrune collector filter
     where
         filter cur =
-            case getNode cur of
-                Node IR.LambdaExpr _ -> True
+            case getNodePair cur of
+                IR.NT IR.LambdaExpr _ -> True
                 _ -> False
         collector cur returns =
-            case getNode cur of
-                Node IR.ReturnStmt _ -> (goDown 0 cur : returns)
+            case getNodePair cur of
+                IR.NT IR.ReturnStmt _ -> (goDown 0 cur : returns)
                 _ -> returns

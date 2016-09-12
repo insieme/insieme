@@ -40,7 +40,6 @@ module Insieme.Analysis.CallSite where
 
 import Debug.Trace
 import Data.Maybe
-import Data.Tree
 import Data.Typeable
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
@@ -90,11 +89,11 @@ callSiteAnalysis = Solver.mkAnalysisIdentifier CallSiteAnalysis "CS"
 --
 
 callSites :: NodeAddress -> Solver.TypedVar CallSiteSet
-callSites addr = case getNode addr of
+callSites addr = case getNodePair addr of
 
     -- for lambdas and bind exressions: collect all call sites
-    Node IR.Lambda   _ -> var
-    Node IR.BindExpr _ -> var
+    IR.NT IR.Lambda   _ -> var
+    IR.NT IR.BindExpr _ -> var
 
     -- everything else has no call sites
     _ -> Solver.mkVariable id [] Solver.bot
@@ -104,9 +103,9 @@ callSites addr = case getNode addr of
     id = Solver.mkIdentifier callSiteAnalysis addr ""
 
     -- navigate to the enclosing expression    
-    e = case getNode addr of 
-        Node IR.Lambda   _ -> fromJust $ getParent =<< getParent =<< getParent addr 
-        Node IR.BindExpr _ -> addr
+    e = case getNodePair addr of 
+        IR.NT IR.Lambda   _ -> fromJust $ getParent =<< getParent =<< getParent addr 
+        IR.NT IR.BindExpr _ -> addr
     
     i = getIndex e
     p = fromJust $ getParent e
@@ -121,18 +120,18 @@ callSites addr = case getNode addr of
     
     noCallSitesVar = Solver.mkVariable id [] Solver.bot
     
-    recReferences = case getNode addr of
-        Node IR.BindExpr _ -> []          -- bind can not be recursive
-        Node IR.Lambda _   -> if isRoot p then [] else res
+    recReferences = case getNodePair addr of
+        IR.NT IR.BindExpr _ -> []          -- bind can not be recursive
+        IR.NT IR.Lambda _   -> if isRoot p then [] else res
             where
-                ref = getNode $ goDown 0 $ fromJust $ getParent addr
+                ref = getNodePair $ goDown 0 $ fromJust $ getParent addr
                 def = fromJust $ getParent $ fromJust $ getParent addr 
                 res = foldAddressPrune agg filter def
                 
                 agg n l = case getNodeType n of
                     IR.LambdaReference | isUse -> n : l --- TODO: filter out refs in bindings
                         where 
-                            isUse = getNode n == ref && (getNodeType . fromJust . getParent) n /= IR.LambdaBinding
+                            isUse = getNodePair n == ref && (getNodeType . fromJust . getParent) n /= IR.LambdaBinding
                     _                                            -> l 
                 
                 filter n = isType (getNodeType n) || (IR.LambdaExpr == (getNodeType n))      -- TODO: support for lambda references exceeding local scope  
@@ -163,9 +162,9 @@ callSites addr = case getNode addr of
         
             allTrgVars = map (\c -> (c , Callable.callableValue $ goDown 1 c ) ) allCalls
         
-            callable = case getNode addr of
-                Node IR.Lambda _   -> Callable.Lambda addr
-                Node IR.BindExpr _ -> Callable.Closure addr
+            callable = case getNodePair addr of
+                IR.NT IR.Lambda _   -> Callable.Lambda addr
+                IR.NT IR.BindExpr _ -> Callable.Closure addr
                 _                  -> error "unexpected NodeType"
         
             dep a = map Solver.toVar (map snd allTrgVars)

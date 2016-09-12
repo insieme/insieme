@@ -40,7 +40,6 @@ module Insieme.Analysis.Reference where
 
 import Data.Typeable
 import Data.Maybe
-import Data.Tree
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
 import qualified Insieme.Inspire as IR
@@ -105,15 +104,15 @@ data ReferenceAnalysis = ReferenceAnalysis
 --
 
 referenceValue :: (FieldIndex i) => NodeAddress -> TypedVar (ValueTree.Tree i (ReferenceSet i))
-referenceValue addr = case getNode addr of
+referenceValue addr = case getNodePair addr of
 
-        l@(Node IR.Literal _) ->
+        l@(IR.NT IR.Literal _) ->
             mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference (crop addr) DP.root)
 
-        d@(Node IR.Declaration _) | isMaterializingDeclaration d ->
+        d@(IR.NT IR.Declaration _) | isMaterializingDeclaration d ->
             mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference addr DP.root)
 
-        c@(Node IR.CallExpr _) | isMaterializingCall c ->
+        c@(IR.NT IR.CallExpr _) | isMaterializingCall c ->
             mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference addr DP.root)
 
         _ -> dataflowValue addr analysis opsHandler
@@ -180,34 +179,34 @@ referenceValue addr = case getNode addr of
 
 
 -- Tests whether an IR node represents a reference type or not
-isReference :: Tree IR.NodeType -> Bool
-isReference (Node IR.GenericType ((Node (IR.StringValue "ref") _) : _)) = True
-isReference _                                                           = False
+isReference :: IR.Tree -> Bool
+isReference (IR.NT IR.GenericType ((IR.NT (IR.StringValue "ref") _) : _)) = True
+isReference _                                                             = False
 
-getTypeParam :: Int -> Tree IR.NodeType -> Tree IR.NodeType
-getTypeParam i (Node IR.GenericType ( _ : _ : (Node IR.Types params) : [] )) = params !! i
+getTypeParam :: Int -> IR.Tree -> IR.Tree
+getTypeParam i (IR.NT IR.GenericType ( _ : _ : (IR.NT IR.Types params) : [] )) = params !! i
 getTypeParam _ _ = error "unexpected NodeType"
 
-hasMoreReferences :: Tree IR.NodeType -> Tree IR.NodeType -> Bool
+hasMoreReferences :: IR.Tree -> IR.Tree -> Bool
 hasMoreReferences a b | isReference a && (not . isReference $ b) = True
 hasMoreReferences a b | isReference a && isReference b = hasMoreReferences (getTypeParam 0 a) (getTypeParam 0 b)
 hasMoreReferences _ _ = False
 
 
 -- tests whether the given node is a materializing declaration
-isMaterializingDeclaration :: Tree IR.NodeType -> Bool
-isMaterializingDeclaration (Node IR.Declaration [declType,Node _ (initType:_)]) = hasMoreReferences declType initType
+isMaterializingDeclaration :: IR.Tree -> Bool
+isMaterializingDeclaration (IR.NT IR.Declaration [declType,IR.NT _ (initType:_)]) = hasMoreReferences declType initType
 isMaterializingDeclaration _ = False
 
 
 -- tests whether the given node is a materializing call
-isMaterializingCall :: Tree IR.NodeType -> Bool
+isMaterializingCall :: IR.Tree -> Bool
 isMaterializingCall _ = False        -- the default, for now - TODO: implement real check
--- isMaterializingCall (Node IR.CallExpr ( resType : (Node _ ((Node IR.FunctionType (_:retType:_)):_)) : _)) = hasMoreReferences resType retType
+-- isMaterializingCall (IR.NT IR.CallExpr ( resType : (IR.NT _ ((IR.NT IR.FunctionType (_:retType:_)):_)) : _)) = hasMoreReferences resType retType
 -- isMaterializingCall _ = False
 
 getEnclosingDecl :: NodeAddress -> NodeAddress
-getEnclosingDecl addr = case getNode addr of
-    Node IR.Declaration _ -> addr
+getEnclosingDecl addr = case getNodePair addr of
+    IR.NT IR.Declaration _ -> addr
     _ | isRoot addr       -> error "getEnclosingDecl has no parent to go to"
     _                     -> getEnclosingDecl $ fromJust $ getParent addr

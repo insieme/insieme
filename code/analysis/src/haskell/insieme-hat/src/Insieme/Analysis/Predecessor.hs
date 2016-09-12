@@ -42,7 +42,6 @@ module Insieme.Analysis.Predecessor (
 ) where
 
 import Data.Maybe
-import Data.Tree
 import Data.Typeable
 import Insieme.Analysis.Boolean
 import Insieme.Analysis.CallSite
@@ -91,36 +90,36 @@ predecessor p@(ProgramPoint a Pre) | isRoot a = var
         var = Solver.mkVariable (idGen p) [] []
 
 -- Predecessor rules for pre program points
-predecessor p@(ProgramPoint a Pre) = case getNode parent of
+predecessor p@(ProgramPoint a Pre) = case getNodePair parent of
 
-    Node IR.CallExpr children -> single $
+    IR.NT IR.CallExpr children -> single $
             if i == length children-1
             -- start with last argument
             then ProgramPoint parent Pre
             -- eval arguments in reverse order
             else ProgramPoint (goDown (i+1) parent) Post
 
-    Node IR.Lambda   _ -> call_sites
+    IR.NT IR.Lambda   _ -> call_sites
 
-    Node IR.BindExpr _ -> call_sites
+    IR.NT IR.BindExpr _ -> call_sites
 
-    Node IR.TupleExpr _ -> single $ ProgramPoint parent Pre
+    IR.NT IR.TupleExpr _ -> single $ ProgramPoint parent Pre
 
-    Node IR.InitExpr _
+    IR.NT IR.InitExpr _
       | i == 1     -> single $ ProgramPoint (goDown 2 parent) Post
       | otherwise -> single $ ProgramPoint parent Pre
 
-    Node IR.CastExpr _ -> single $ ProgramPoint parent Pre
+    IR.NT IR.CastExpr _ -> single $ ProgramPoint parent Pre
 
-    Node IR.Expressions _
+    IR.NT IR.Expressions _
       | i == 0     -> single $ ProgramPoint parent Pre
       | otherwise -> single $ ProgramPoint (goDown (i-1) parent) Post
 
-    Node IR.Declaration _ -> single $ ProgramPoint parent Pre
+    IR.NT IR.Declaration _ -> single $ ProgramPoint parent Pre
 
-    Node IR.DeclarationStmt _ -> single $ ProgramPoint parent Pre
+    IR.NT IR.DeclarationStmt _ -> single $ ProgramPoint parent Pre
 
-    Node IR.CompoundStmt _ -> single $
+    IR.NT IR.CompoundStmt _ -> single $
       -- if it is the first statement
       if i == 0
       -- then go to the pre-state of the compound statement
@@ -128,12 +127,12 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
       -- else to the post state of the previous statement
       else ProgramPoint (goDown (i-1) parent) Post
 
-    Node IR.IfStmt _
+    IR.NT IR.IfStmt _
       | i == 0     -> single $ ProgramPoint parent Pre
       -- TODO: make dependent on result of conditional expression
       | otherwise -> single $ ProgramPoint (goDown 0 parent) Post
 
-    Node IR.ForStmt _
+    IR.NT IR.ForStmt _
       -- pred of declarations is loop itself
       | i == 0 -> single $ ProgramPoint parent Pre
       -- pred of end value is declaration block
@@ -146,7 +145,7 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
                 , ProgramPoint (goDown 3 parent) Post]   -- body (n-1)
                 ++ postContinueStmt a                    -- all continues
 
-    Node IR.WhileStmt _
+    IR.NT IR.WhileStmt _
       -- cond of while is evaluated 1. after entering while, 2. after
       -- regular loop, and 3. after a continue
       | i == 0 -> multiple $
@@ -156,18 +155,18 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
       -- body of a while is evaluated only after the condition
       | i == 1 -> single $ ProgramPoint (goDown 0 parent) Post
 
-    Node IR.SwitchStmt _
+    IR.NT IR.SwitchStmt _
       -- pred of the switch expression is the switch stmt itself
       | i == 0     -> single $ ProgramPoint parent Pre
       -- pred of a branch always is the switch expression
       | otherwise -> single $ ProgramPoint (goRel [-1, 0] a) Post
 
     -- after processing a lone BreakStmt we end up here; go to switch expr
-    Node IR.SwitchCase _ -> single . flip ProgramPoint Post $ goRel [-3, 0] a
+    IR.NT IR.SwitchCase _ -> single . flip ProgramPoint Post $ goRel [-3, 0] a
 
-    Node IR.ReturnStmt _ -> single $ ProgramPoint parent Pre
+    IR.NT IR.ReturnStmt _ -> single $ ProgramPoint parent Pre
 
-    _ -> unhandled "Pre" p (rootLabel $ getNode parent)
+    _ -> unhandled "Pre" p (getNodeType parent)
 
   where
     parent = fromJust $ getParent a
@@ -183,10 +182,10 @@ predecessor p@(ProgramPoint a Pre) = case getNode parent of
 
 
 -- Predecessor rules for internal program points.
-predecessor  p@(ProgramPoint addr Internal) = case getNode addr of
+predecessor  p@(ProgramPoint addr Internal) = case getNodePair addr of
 
     -- link to exit points of potential target functions
-    Node IR.CallExpr _ -> var
+    IR.NT IR.CallExpr _ -> var
       where
         extract = ComposedValue.toValue
         var = Solver.mkVariable (idGen p) [con] []
@@ -212,50 +211,49 @@ predecessor  p@(ProgramPoint addr Internal) = case getNode addr of
         exitPointVars a =
           foldr (\t l -> exitPoints (toAddress t) : l) [] (callableVal a)
 
-    _ -> unhandled "Internal" p
-        (rootLabel . getNode . fromJust . getParent $ addr)
+    _ -> unhandled "Internal" p (getNodeType $ fromJust $ getParent addr)
 
 -- Predecessor rules for post program points.
-predecessor p@(ProgramPoint a Post) = case getNode a of
+predecessor p@(ProgramPoint a Post) = case getNodePair a of
 
     -- basic expressions are directly switching from Pre to Post
-    Node IR.Variable        _ -> pre
-    Node IR.Literal         _ -> pre
-    Node IR.LambdaExpr      _ -> pre
-    Node IR.LambdaReference _ -> pre
-    Node IR.BindExpr        _ -> pre
-    Node IR.JobExpr         _ -> pre
+    IR.NT IR.Variable        _ -> pre
+    IR.NT IR.Literal         _ -> pre
+    IR.NT IR.LambdaExpr      _ -> pre
+    IR.NT IR.LambdaReference _ -> pre
+    IR.NT IR.BindExpr        _ -> pre
+    IR.NT IR.JobExpr         _ -> pre
 
     -- call expressions are switching from Internal to Post
-    Node IR.CallExpr _ -> single $ ProgramPoint a Internal
+    IR.NT IR.CallExpr _ -> single $ ProgramPoint a Internal
 
     -- for tuple expressions, the predecessor is the end of the epxressions
-    Node IR.TupleExpr _ -> single $ ProgramPoint (goDown 1 a) Post
+    IR.NT IR.TupleExpr _ -> single $ ProgramPoint (goDown 1 a) Post
 
     -- for initialization expressions, we finish with the first sub-expression
-    Node IR.InitExpr _ -> single $ ProgramPoint (goDown 1 a) Post
+    IR.NT IR.InitExpr _ -> single $ ProgramPoint (goDown 1 a) Post
 
     -- cast expressions just process the nested node
-    Node IR.CastExpr _ -> single $ ProgramPoint (goDown 1 a) Post
+    IR.NT IR.CastExpr _ -> single $ ProgramPoint (goDown 1 a) Post
 
     -- declarationns are done once the init expression is done
-    Node IR.Declaration _ -> single $ ProgramPoint (goDown 1 a) Post
+    IR.NT IR.Declaration _ -> single $ ProgramPoint (goDown 1 a) Post
 
     -- handle lists of expressions
-    Node IR.Expressions  [] -> single $ ProgramPoint a Pre
-    Node IR.Expressions sub ->
+    IR.NT IR.Expressions  [] -> single $ ProgramPoint a Pre
+    IR.NT IR.Expressions sub ->
       single $ ProgramPoint (goDown (length sub-1) a) Post
 
     -- compound statements
-    Node IR.CompoundStmt [] -> pre
-    Node IR.CompoundStmt stmts ->
+    IR.NT IR.CompoundStmt [] -> pre
+    IR.NT IR.CompoundStmt stmts ->
       single $ ProgramPoint (goDown (length stmts-1) a) Post
 
     -- declaration statement
-    Node IR.DeclarationStmt _ -> single $ ProgramPoint (goDown 0 a) Post
+    IR.NT IR.DeclarationStmt _ -> single $ ProgramPoint (goDown 0 a) Post
 
     -- conditional statement
-    Node IR.IfStmt _ -> var
+    IR.NT IR.IfStmt _ -> var
       where
         var = Solver.mkVariable (idGen p) [con] []
         con = Solver.createConstraint dep val var
@@ -270,37 +268,37 @@ predecessor p@(ProgramPoint a Post) = case getNode a of
         elseBranch = ProgramPoint (goDown 2 a) Post
 
     -- for loop statement
-    Node IR.ForStmt _ -> multiple
+    IR.NT IR.ForStmt _ -> multiple
       [ ProgramPoint (goDown 2 a) Post     -- loop never entered
       , ProgramPoint (goDown 3 a) Post ]   -- body when loop was run
 
     -- while stmts evaluate as a last step either 1. their condition,
     -- or 2. a BreakStmt
-    Node IR.WhileStmt _ -> multiple $ map (`ProgramPoint` Post) $
+    IR.NT IR.WhileStmt _ -> multiple $ map (`ProgramPoint` Post) $
       goDown 0 a:                          -- condition
       collectAddr IR.BreakStmt prune a     -- all subordinate 'BreakStmt's
       where
         prune = [(== IR.SwitchStmt), (== IR.WhileStmt), isType]
 
     -- moving backwards after continue stmt we jump to its beginning
-    Node IR.ContinueStmt _ -> pre
+    IR.NT IR.ContinueStmt _ -> pre
 
     -- switch stmts have executed either 1. the default branch, 2. one
     -- of the breaks, or 3. one of the cases without a break
-    Node IR.SwitchStmt _ -> multiple $ map (`ProgramPoint` Post) $
+    IR.NT IR.SwitchStmt _ -> multiple $ map (`ProgramPoint` Post) $
       goDown 2 a :                         -- default branch
       collectAddr IR.BreakStmt prune a ++  -- break statements
-      [goRel [1, i, 1] a | i <- enumFromTo 0 (children (goDown 1 a)-1)] -- case
+      [goRel [1, i, 1] a | i <- enumFromTo 0 (getChildrenLength (goDown 1 a) - 1)] -- case
       where
         prune = [(== IR.SwitchStmt), (== IR.WhileStmt), isType]
 
     -- moving backwards after break stmt we jump to its beginning
-    Node IR.BreakStmt _ -> pre
+    IR.NT IR.BreakStmt _ -> pre
 
     -- return statement
-    Node IR.ReturnStmt _ -> single $ ProgramPoint (goDown 0 a) Post
+    IR.NT IR.ReturnStmt _ -> single $ ProgramPoint (goDown 0 a) Post
 
-    _ -> unhandled "Post" p (rootLabel $ getNode a)
+    _ -> unhandled "Post" p (getNodeType a)
 
   where
     multiple = multiple' p

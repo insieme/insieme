@@ -40,7 +40,6 @@ module Insieme.Analysis.Callable where
 
 import Data.List
 import Data.Maybe
-import Data.Tree
 import Data.Typeable
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
@@ -100,17 +99,17 @@ data CallableAnalysis = CallableAnalysis
 --
 
 callableValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex CallableSet)
-callableValue addr = case getNode addr of
-    Node IR.LambdaExpr _ ->
+callableValue addr = case getNodePair addr of
+    IR.NT IR.LambdaExpr _ ->
         Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Lambda (fromJust $ getLambda addr )))
 
-    Node IR.LambdaReference _ -> 
+    IR.NT IR.LambdaReference _ -> 
         Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Lambda (getLambda4Ref addr)))
 
-    Node IR.BindExpr _ ->
+    IR.NT IR.BindExpr _ ->
         Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Closure addr))
 
-    Node IR.Literal _ ->
+    IR.NT IR.Literal _ ->
         Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Literal addr))
 
     _ -> dataflowValue addr analysis []
@@ -123,13 +122,13 @@ callableValue addr = case getNode addr of
 
     compose = ComposedValue.toComposed
 
-    getLambda4Ref r = search (getNode r) r
+    getLambda4Ref r = search (getNodePair r) r
         where
-            search r cur = case getNode cur of
-                Node IR.LambdaDefinition cs -> goDown 1 $ goDown pos cur
+            search r cur = case getNodePair cur of
+                IR.NT IR.LambdaDefinition cs -> goDown 1 $ goDown pos cur
                     where
                         pos = fromJust $ findIndex filter cs
-                        filter (Node IR.LambdaBinding [a,b]) = a == r
+                        filter (IR.NT IR.LambdaBinding [a,b]) = a == r
                 _                         -> search r $ goUp cur  
 
 
@@ -137,18 +136,18 @@ callableValue addr = case getNode addr of
 collectAllCallables :: NodeAddress -> CallableSet
 collectAllCallables addr = USet.fromList $ foldTree collector (getInspire addr)
     where
-        collector cur callables = case getNode cur of
-            Node IR.Lambda _   -> ((Lambda  cur) : callables)
-            Node IR.BindExpr _ -> ((Closure cur) : callables)
-            Node IR.Literal _  -> ((Literal cur) : callables)
+        collector cur callables = case getNodePair cur of
+            IR.NT IR.Lambda _   -> ((Lambda  cur) : callables)
+            IR.NT IR.BindExpr _ -> ((Closure cur) : callables)
+            IR.NT IR.Literal _  -> ((Literal cur) : callables)
             _ -> callables
 
 
 getLambda :: NodeAddress -> Maybe NodeAddress
-getLambda addr = case getNode addr of
-    Node IR.LambdaExpr [_, ref, Node IR.LambdaDefinition defs] ->
+getLambda addr = case getNodePair addr of
+    IR.NT IR.LambdaExpr [_, ref, IR.NT IR.LambdaDefinition defs] ->
         findLambdaIndex ref defs >>= walk addr
     _ -> Nothing
   where
-    findLambdaIndex ref defs = findIndex ((ref==) . (!!0) . subForest) defs
+    findLambdaIndex ref defs = findIndex ((ref==) . (!!0) . IR.getChildren) defs
     walk addr i = Just . goDown 1 . goDown i . goDown 2 $ addr

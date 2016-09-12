@@ -51,7 +51,6 @@ module Insieme.Analysis.Entities.AccessPath (
 ) where
 
 import Data.List
-import Data.Tree
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import qualified Insieme.Inspire as IR
 
@@ -62,7 +61,7 @@ import qualified Insieme.Inspire as IR
 
 data BaseVar =
           Parameter Int
-        | Global (Tree (Int,IR.NodeType))
+        | Global IR.Tree
     deriving (Eq,Ord)
 
 instance Show BaseVar where
@@ -89,7 +88,7 @@ unknown = Unknown
 parameter :: Int -> AccessPath i
 parameter i = AccessPath (Parameter i) [DP.Root]
 
-global :: (Tree (Int,IR.NodeType)) -> AccessPath i
+global :: IR.Tree -> AccessPath i
 global g = AccessPath (Global g) [DP.Root]
 
 local :: AccessPath i

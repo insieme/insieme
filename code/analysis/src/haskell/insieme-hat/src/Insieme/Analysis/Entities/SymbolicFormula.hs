@@ -38,7 +38,6 @@
 
 module Insieme.Analysis.Entities.SymbolicFormula where
 
-import Data.Tree
 import Insieme.Utils.ParseInt
 import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Inspire as IR
@@ -48,9 +47,9 @@ import qualified Insieme.Inspire.NodeAddress as Addr
 -- * Arithemtic Symbol
 --
 
-data Symbol = Constant {getNode :: (Tree (Int, IR.NodeType)),
+data Symbol = Constant {getNode :: IR.Tree,
                         getAddr :: Addr.NodeAddress }
-            | Variable {getNode :: (Tree (Int, IR.NodeType)),
+            | Variable {getNode :: IR.Tree,
                         getAddr :: Addr.NodeAddress }
 
 instance Eq Symbol where
@@ -60,8 +59,8 @@ instance Ord Symbol where
     compare x y = compare (getNode x) (getNode y)
 
 instance Show Symbol where
-    show (Constant (Node (_, IR.Literal)  [_, Node (_, IR.StringValue v) _]) _) = v
-    show (Variable (Node (_, IR.Variable) [_, Node (_, IR.UIntValue   v) _]) _) = "v" ++ show v
+    show (Constant (IR.NT IR.Literal  [_, IR.NT (IR.StringValue v) _]) _) = v
+    show (Variable (IR.NT IR.Variable [_, IR.NT (IR.UIntValue   v) _]) _) = "v" ++ show v
     show _ = "???"
 
 type SymbolicFormula = Ar.Formula CInt Symbol

@@ -7,7 +7,6 @@ maintainer:         Thomas Prokosch <tprokos@dps.uibk.ac.at>
 build-type:         Simple
 cabal-version:      >= 1.10
 
-
 library
     hs-source-dirs:     src
     exposed-modules:    Insieme.Adapter,
@@ -106,6 +105,9 @@ executable cba_runner
 test-suite test
     main-is:            test.hs
     hs-source-dirs:     tests
+    other-modules:      BoundSet,
+                        Formula,
+                        ParseInt
     build-depends:      insieme-hat >= 0.2,
                         base >= 4.7,
                         containers >= 0.5,

@@ -38,7 +38,6 @@
 
 module Insieme.Analysis.Arithmetic where
 
-import Data.Tree
 import Data.Typeable
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
@@ -84,18 +83,18 @@ data ArithmeticAnalysis = ArithmeticAnalysis
 --
 
 arithmeticValue :: Addr.NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex (SymbolicFormulaSet BSet.Bound10))
-arithmeticValue addr = case Addr.getNode addr of
+arithmeticValue addr = case Addr.getNodePair addr of
 
-    Node IR.Literal [t, Node (IR.StringValue v) _] | isIntType t -> case parseInt v of
+    IR.NT IR.Literal [t, IR.NT (IR.StringValue v) _] | isIntType t -> case parseInt v of
         Just cint -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkConst cint)
         Nothing   -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNodePair addr) addr)
 
-    Node IR.Variable _ | isLoopIterator addr -> Solver.mkVariable (idGen addr) [] (compose $ BSet.Universe)
+    IR.NT IR.Variable _ | isLoopIterator addr -> Solver.mkVariable (idGen addr) [] (compose $ BSet.Universe)
 
-    Node IR.Variable (t:_) | isIntType t && isFreeVariable addr ->
+    IR.NT IR.Variable (t:_) | isIntType t && isFreeVariable addr ->
         Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Variable (Addr.getNodePair addr) addr)
 
-    Node IR.CastExpr (t:_) | isIntType t -> var
+    IR.NT IR.CastExpr (t:_) | isIntType t -> var
       where
         var = Solver.mkVariable (idGen addr) [con] Solver.bot
         con = Solver.forward (arithmeticValue $ Addr.goDown 1 addr) var
@@ -151,18 +150,18 @@ arithmeticValue addr = case Addr.getNode addr of
 
 
 
-isIntType :: Tree IR.NodeType -> Bool
-isIntType (Node IR.GenericType (Node (IR.StringValue "int" ) _:_)) = True
-isIntType (Node IR.GenericType (Node (IR.StringValue "uint") _:_)) = True
+isIntType :: IR.Tree -> Bool
+isIntType (IR.NT IR.GenericType (IR.NT (IR.StringValue "int" ) _:_)) = True
+isIntType (IR.NT IR.GenericType (IR.NT (IR.StringValue "uint") _:_)) = True
 isIntType _ = False
 
 
 -- TODO: provide a improved implementation of this filter
 
 isSideEffectFree :: Addr.NodeAddress -> Bool
-isSideEffectFree a = case Addr.getNode a of
-    Node IR.Literal _  -> True
-    Node IR.Variable _ -> isFreeVariable a
-    Node IR.CallExpr _ -> (Addr.isBuiltin (Addr.goDown 1 a) "ref_deref") && (isSideEffectFree $ Addr.goDown 1 $ Addr.goDown 2 a)
-    _                  -> False
+isSideEffectFree a = case Addr.getNodePair a of
+    IR.NT IR.Literal _  -> True
+    IR.NT IR.Variable _ -> isFreeVariable a
+    IR.NT IR.CallExpr _ -> (Addr.isBuiltin (Addr.goDown 1 a) "ref_deref") && (isSideEffectFree $ Addr.goDown 1 $ Addr.goDown 2 a)
+    _                   -> False
 

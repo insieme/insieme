@@ -38,7 +38,6 @@
 
 module Insieme.Analysis.Identifier where
 
-import Data.Tree
 import Data.Typeable
 import Insieme.Inspire.NodeAddress
 import qualified Insieme.Analysis.Solver as Solver
@@ -93,9 +92,9 @@ data IdentifierAnalysis = IdentifierAnalysis
 --
 
 identifierValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex IdentifierSet)
-identifierValue addr = case getNode addr of
+identifierValue addr = case getNodePair addr of
 
-    Node IR.Literal [_,Node (IR.StringValue x) _] ->
+    IR.NT IR.Literal [_, IR.NT (IR.StringValue x) _] ->
         Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Identifier x))
 
     _ -> dataflowValue addr analysis []

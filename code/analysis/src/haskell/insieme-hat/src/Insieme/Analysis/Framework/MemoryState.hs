@@ -41,7 +41,6 @@
 module Insieme.Analysis.Framework.MemoryState where
 
 import Debug.Trace
-import Data.Tree
 import Data.Typeable
 import Insieme.Inspire.NodeAddress
 
@@ -152,7 +151,7 @@ memoryStateValue ms@(MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
                 go _                        = []
 
                 getDeclaredValueVar addr =
-                    if isMaterializingDeclaration $ getNode addr
+                    if isMaterializingDeclaration $ getNodePair addr
                     then memoryStateValue (MemoryState (ProgramPoint addr Post) (MemoryLocation addr)) analysis
                     else variableGenerator analysis (goDown 1 addr)
 
@@ -212,18 +211,18 @@ reachingDefinitionAnalysis = Solver.mkAnalysisIdentifier ReachingDefinitionAnaly
 --
 
 reachingDefinitions :: (FieldIndex i) => MemoryState -> Solver.TypedVar (Definitions i)
-reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case getNode addr of
+reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case getNodePair addr of
 
         -- a declaration could be an assignment if it is materializing
-        d@(Node IR.Declaration _) | addr == loc && p == Post ->
+        d@(IR.NT IR.Declaration _) | addr == loc && p == Post ->
             Solver.mkVariable (idGen addr) [] (USet.singleton $ Declaration addr)
 
         -- a call could be an assignment if it is materializing
-        c@(Node IR.CallExpr _) | addr == loc && p == Post && isMaterializingCall c ->
+        c@(IR.NT IR.CallExpr _) | addr == loc && p == Post && isMaterializingCall c ->
             Solver.mkVariable (idGen addr) [] (USet.singleton $ MaterializingCall addr)
 
         -- the call could also be the creation point if it is not materializing
-        c@(Node IR.CallExpr _) | addr == loc && p == Post ->
+        c@(IR.NT IR.CallExpr _) | addr == loc && p == Post ->
             Solver.mkVariable (idGen addr) [] (USet.singleton Creation)
 
         -- the entry point is the creation of everything that reaches this point
@@ -232,7 +231,7 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
 
 {-
         -- to prune the set of variables, we check whether the invoced callable may update the traced reference
-        c@(Node IR.CallExpr _) | p == Internal && (not $ loc `isChildOf` addr)-> var
+        c@(IR.NT IR.CallExpr _) | p == Internal && (not $ loc `isChildOf` addr)-> var
             where
                 var = Solver.mkVariable (idGenExt pp "switch") [con] Solver.bot
                 con = Solver.createEqualityConstraint dep val var

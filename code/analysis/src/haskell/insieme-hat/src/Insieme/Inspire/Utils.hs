@@ -55,7 +55,6 @@ module Insieme.Inspire.Utils (
 import Control.Applicative
 import Data.List
 import Data.Maybe
-import Data.Tree
 import Insieme.Inspire.BinaryParser
 import Insieme.Inspire.NodeAddress
 import System.Process
@@ -107,7 +106,7 @@ foldAddressPrune collect prune addr = visit addr mempty
                      then acc
                      else collect base $ visitsub base acc
     visitsub base acc = foldr visit acc (subtrees base)
-    subtrees addr = [goDown i addr | i <- [0..(length . subForest . getNode $ addr) - 1]]
+    subtrees addr = [goDown i addr | i <- [0..(getChildrenLength addr) - 1]]
 
 --
 -- * Parse IR code
@@ -127,45 +126,45 @@ parseIR ircode = do
 findDecl :: NodeAddress -> Maybe NodeAddress
 findDecl start = findDecl start
   where
-    org = getNode start
+    org = getNodePair start
 
     findDecl :: NodeAddress -> Maybe NodeAddress
-    findDecl addr = case getNode addr of
-        Node IR.Lambda _ -> lambda addr
+    findDecl addr = case getNodePair addr of
+        IR.NT IR.Lambda _ -> lambda addr
         _ -> parameter addr <|> declstmt addr <|> forstmt addr   <|>
              bindexpr addr  <|> compstmt addr <|> nextlevel addr
 
     parameter :: NodeAddress -> Maybe NodeAddress
-    parameter addr = case getNode addr of
-        Node IR.Parameters _ -> Just start
+    parameter addr = case getNodePair addr of
+        IR.NT IR.Parameters _ -> Just start
         _ -> Nothing
 
     declstmt :: NodeAddress -> Maybe NodeAddress
-    declstmt addr = case getNode addr of
-        Node IR.DeclarationStmt [_, v] | v == org -> Just $ goDown 1 addr
+    declstmt addr = case getNodePair addr of
+        IR.NT IR.DeclarationStmt [_, v] | v == org -> Just $ goDown 1 addr
         _ -> Nothing
 
     forstmt :: NodeAddress -> Maybe NodeAddress
-    forstmt addr = case getNode addr of
-        Node IR.ForStmt _ -> declstmt $ goDown 0 addr
+    forstmt addr = case getNodePair addr of
+        IR.NT IR.ForStmt _ -> declstmt $ goDown 0 addr
         _ -> Nothing
 
     lambda :: NodeAddress -> Maybe NodeAddress
-    lambda addr = case getNode addr of
-        Node IR.Lambda [_, Node IR.Parameters ps, _] ->
+    lambda addr = case getNodePair addr of
+        IR.NT IR.Lambda [_, IR.NT IR.Parameters ps, _] ->
             (\i -> goDown i . goDown 1 $ addr) <$> elemIndex org ps
         _ -> Nothing
 
     bindexpr :: NodeAddress -> Maybe NodeAddress
-    bindexpr addr = case getNode addr of
-        Node IR.BindExpr [_, Node IR.Parameters ps, _] ->
+    bindexpr addr = case getNodePair addr of
+        IR.NT IR.BindExpr [_, IR.NT IR.Parameters ps, _] ->
             (\i -> goDown i . goDown 1 $ addr) <$> elemIndex org ps
         _ -> Nothing
 
     compstmt :: NodeAddress -> Maybe NodeAddress
-    compstmt addr = getNode <$> getParent addr >>= \case
-        Node IR.CompoundStmt _ | getIndex addr == 0 -> Nothing
-        Node IR.CompoundStmt _ -> findDecl $ goLeft addr
+    compstmt addr = getNodePair <$> getParent addr >>= \case
+        IR.NT IR.CompoundStmt _ | getIndex addr == 0 -> Nothing
+        IR.NT IR.CompoundStmt _ -> findDecl $ goLeft addr
         _ -> Nothing
 
     nextlevel :: NodeAddress -> Maybe NodeAddress
@@ -177,52 +176,49 @@ isLoopIterator :: NodeAddress -> Bool
 isLoopIterator = (==IR.ForStmt) . getNodeType . goUp . goUp
 
 
-getType :: Tree IR.NodeType -> Maybe (Tree IR.NodeType)
-getType (Node IR.Literal         (t:_)) = Just t
-getType (Node IR.Variable        (t:_)) = Just t
-getType (Node IR.CallExpr        (t:_)) = Just t
-getType (Node IR.LambdaExpr      (t:_)) = Just t
-getType (Node IR.LambdaReference (t:_)) = Just t
-getType (Node IR.BindExpr        (t:_)) = Just t
-getType (Node IR.CastExpr        (t:_)) = Just t
-getType (Node IR.TupleExpr       (t:_)) = Just t
-getType (Node IR.InitExpr        (t:_)) = Just t
-getType (Node IR.JobExpr         (t:_)) = Just t
-getType (Node IR.MarkerExpr      (t:_)) = Just t
+getType :: IR.Tree -> Maybe IR.NodeType
+getType (IR.NT IR.Literal         (t:_)) = Just $ IR.getNodeType t
+getType (IR.NT IR.Variable        (t:_)) = Just $ IR.getNodeType t
+getType (IR.NT IR.CallExpr        (t:_)) = Just $ IR.getNodeType t
+getType (IR.NT IR.LambdaExpr      (t:_)) = Just $ IR.getNodeType t
+getType (IR.NT IR.LambdaReference (t:_)) = Just $ IR.getNodeType t
+getType (IR.NT IR.BindExpr        (t:_)) = Just $ IR.getNodeType t
+getType (IR.NT IR.CastExpr        (t:_)) = Just $ IR.getNodeType t
+getType (IR.NT IR.TupleExpr       (t:_)) = Just $ IR.getNodeType t
+getType (IR.NT IR.InitExpr        (t:_)) = Just $ IR.getNodeType t
+getType (IR.NT IR.JobExpr         (t:_)) = Just $ IR.getNodeType t
+getType (IR.NT IR.MarkerExpr      (t:_)) = Just $ IR.getNodeType t
 getType _ = Nothing
 
 
 -- | Return 'True' if the given node is a type.
 isType :: IR.NodeType -> Bool
-isType = (IR.Type ==) . IR.toNodeKind
+isType = (IR.Type==) . IR.toNodeKind
 
 isVariable :: NodeAddress -> Bool
-isVariable a = case getNode a of
-    Node IR.Variable _ -> True
-    _                  -> False
+isVariable = (==IR.Variable) . getNodeType
 
 isFreeVariable :: NodeAddress -> Bool
 isFreeVariable v | (not . isVariable) v = False
 isFreeVariable v = isNothing (findDecl v)
 
 hasEnclosingStatement :: NodeAddress -> Bool
-hasEnclosingStatement a = case getNode a of
-    Node n _ | IR.toNodeKind n == IR.Statement -> True
-    Node n _ | n /= IR.LambdaExpr && n /= IR.Variable && IR.toNodeKind n == IR.Expression -> True
+hasEnclosingStatement a = case getNodePair a of
+    IR.NT n _ | (IR.toNodeKind n) == IR.Statement -> True
+    IR.NT n _ | n /= IR.LambdaExpr && n /= IR.Variable && (IR.toNodeKind n) == IR.Expression -> True
     _ -> not (isRoot a) && hasEnclosingStatement (fromJust $ getParent a)
 
-
 isEntryPoint :: NodeAddress -> Bool
-isEntryPoint a = case getNode a of
-    Node IR.CompoundStmt _ -> isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
-    _                      -> isRoot a
+isEntryPoint a = case getNodePair a of
+    IR.NT IR.CompoundStmt _ -> isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
+    _                       -> isRoot a
 
 isEntryPointParameter :: NodeAddress -> Bool
 isEntryPointParameter v | (not . isVariable) v = False
 isEntryPointParameter v | isRoot v = False
-isEntryPointParameter v = case getNode $ fromJust $ getParent v of
-            Node IR.Parameters _ -> not $ hasEnclosingStatement v
-            _                    -> False
+isEntryPointParameter v = case getNodePair $ fromJust $ getParent v of
+            IR.NT IR.Parameters _ -> not $ hasEnclosingStatement v
+            _                     -> False
 
 -- some examples
 --excoll a (Node n _) = Set.insert (a, n)
