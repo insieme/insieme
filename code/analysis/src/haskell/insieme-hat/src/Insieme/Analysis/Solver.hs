@@ -89,6 +89,8 @@ module Insieme.Analysis.Solver (
 
 ) where
 
+import Control.Exception
+
 import Debug.Trace
 import Data.List
 import Data.Dynamic
@@ -96,6 +98,7 @@ import Data.Function
 import Data.Tuple
 import Data.Maybe
 import System.IO.Unsafe (unsafePerformIO)
+import System.CPUTime
 import System.Process
 import Text.Printf
 --import qualified Data.Map.Lazy as Map
@@ -299,11 +302,13 @@ data Constraint = Constraint {
 
 data SolverState = SolverState {
         assignment :: Assignment,
-        knownVariables :: Set.Set Var 
-        -- note: variable dependencies need not to be stored
+        knownVariables :: Set.Set Var,         
+        -- for performance evaluation
+        numSteps :: Map.Map AnalysisIdentifier Int,                     
+        cpuTimes :: Map.Map AnalysisIdentifier Integer
     } 
 
-initState = SolverState empty Set.empty
+initState = SolverState empty Set.empty Map.empty Map.empty
 
 
 -- a utility to maintain dependencies between variables
@@ -367,14 +372,20 @@ solveStep :: SolverState -> Dependencies -> [Var] -> SolverState
 -- solveStep s _ [] | trace (dumpToJsonFile s "ass_meta") $ False = undefined                                           -- debugging assignment as meta-info for JSON dump
 -- solveStep s _ [] | trace (dumpSolverState s "graph") $ False = undefined                                             -- debugging assignment as a graph plot
 -- solveStep s _ [] | trace (dumpSolverState s "graph") $ trace (dumpToJsonFile s "ass_meta") $ False = undefined       -- debugging both
--- solveStep s _ [] | trace (showVarStatistic s) $ False = undefined                                                    -- debugging performance data
+-- solveStep s _ [] | trace (showSolverStatistic s) $ False = undefined                                                 -- debugging performance data
 solveStep s _ [] = s                                                                                                    -- work list is empty
 
 -- compute next element in work list
-solveStep (SolverState a k) d (v:vs) = solveStep (SolverState resAss resKnown) resDep ds
+solveStep (SolverState a k i t) d (v:vs) = solveStep (SolverState resAss resKnown ni nt) resDep ds
         where
+                -- profiling --
+                ((resAss,resKnown,resDep,ds),dt) = measure go ()
+                nt = Map.insertWith (+) aid dt t
+                ni = Map.insertWith (+) aid  1 i
+                aid = analysis $ index v
+                
                 -- each constraint extends the result, the dependencies, and the vars to update
-                (resAss,resKnown,resDep,ds) = foldr processConstraint (a,k,d,vs) ( constraints v )  -- update all constraints of current variable
+                go _ = foldr processConstraint (a,k,d,vs) ( constraints v )  -- update all constraints of current variable
                 processConstraint c (a,k,d,dv) = case ( update c a ) of
                         
                         (a',None)         -> (a',nk,nd,nv)                                        -- nothing changed, we are fine
@@ -457,12 +468,21 @@ constant x b = createConstraint (\_ -> []) (\a -> x) b
 
 --------------------------------------------------------------
 
+-- Profiling --
+
+measure :: (a -> b) -> a -> (b,Integer)
+measure f p = unsafePerformIO $ do    
+        t1 <- getCPUTime
+        r  <- evaluate $! f p
+        t2 <- getCPUTime 
+        return (r,t2-t1)
+
 
 -- Debugging --
 
 -- prints the current assignment as a graph
 toDotGraph :: SolverState -> String
-toDotGraph (SolverState a@( Assignment m ) varSet) = "digraph G {\n\t"
+toDotGraph (SolverState a@( Assignment m ) varSet _ _) = "digraph G {\n\t"
         ++
         "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
         ++
@@ -510,7 +530,7 @@ dumpSolverState s file = unsafePerformIO $ do
 
 
 toJsonMetaFile :: SolverState -> String
-toJsonMetaFile (SolverState a@( Assignment m ) vars) = "{\n"
+toJsonMetaFile (SolverState a@( Assignment m ) vars _ _) = "{\n"
         ++
         "    \"bodies\": {\n"
         ++
@@ -541,13 +561,17 @@ dumpToJsonFile s file = unsafePerformIO $ do
          return ("Dumped assignment into file " ++ file ++ ".json!")
 
 
-showVarStatistic :: SolverState -> String
-showVarStatistic s = 
-        "----- Variable Statistic -----\n" ++
+showSolverStatistic :: SolverState -> String
+showSolverStatistic s = 
+        "==================================================== Solver Statistic ====================================================\n" ++
+        "       Analysis                #Vars              Updates          Updates/Var            ~Time[us]        ~Time/Var[us]" ++
+        "\n==========================================================================================================================\n" ++
         ( intercalate "\n" (map print $ Map.toList grouped)) ++
-        "\n------------------------------\n" ++
-        "         Total: " ++ (printf "%8d" $ Set.size vars ) ++
-        "\n------------------------------"
+        "\n--------------------------------------------------------------------------------------------------------------------------\n" ++
+        "         Total: " ++ (printf "%20d" numVars) ++ 
+                        (printf " %20d" totalUpdates) ++ (printf " %20.3f" avgUpdates) ++ 
+                        (printf " %20d" totalTime) ++ (printf " %20.3f" avgTime) ++
+        "\n==========================================================================================================================\n"
     where
         vars = knownVariables s
         
@@ -555,5 +579,23 @@ showVarStatistic s =
             where
                 go v m = Map.insertWith (+) ( analysis . index $ v ) (1::Int) m
         
-        print (a,c) = printf "     %10s %8d" ((show a) ++ ":") c
+        print (a,c) = printf "     %10s %20d %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime 
+            where
+                name = ((show a) ++ ":")
+            
+                totalUpdates = Map.findWithDefault 0 a $ numSteps s
+                avgUpdates = ((fromIntegral totalUpdates) / (fromIntegral c)) :: Float
+            
+                totalTime = toMs $ Map.findWithDefault 0 a $ cpuTimes s
+                avgTime = ((fromIntegral totalTime) / (fromIntegral c)) :: Float
 
+
+        numVars = Set.size vars
+        
+        totalUpdates = foldr (+) 0 (numSteps s)
+        avgUpdates = ((fromIntegral totalUpdates) / (fromIntegral numVars)) :: Float
+        
+        totalTime = toMs $ foldr (+) 0 (cpuTimes s)
+        avgTime = ((fromIntegral totalTime) / (fromIntegral numVars)) :: Float
+        
+        toMs a = a `div` 1000000

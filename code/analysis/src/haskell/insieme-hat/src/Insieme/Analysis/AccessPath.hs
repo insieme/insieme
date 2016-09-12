@@ -90,10 +90,6 @@ data AccessPathAnalysis = AccessPathAnalysis
 accessPathValue :: (FieldIndex i) => NodeAddress -> Solver.TypedVar (ValueTree.Tree i (AccessPathSet i))
 accessPathValue addr = case getNode addr of 
 
---    Node IR.Literal _  -> var
---        where
---            var = 
-
     Node IR.Variable _ -> dataflowValue addr analysis ops
 
     _ -> dataflowValue addr analysis ops
