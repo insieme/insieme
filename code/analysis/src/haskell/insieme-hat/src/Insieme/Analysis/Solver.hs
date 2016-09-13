@@ -106,6 +106,8 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Hashable as Hash
 
+import qualified Data.ByteString.Char8 as BS
+
 import Insieme.Inspire.NodeAddress
 
 
@@ -162,7 +164,7 @@ mkAnalysisIdentifier a n = AnalysisIdentifier (typeOf a) n
 data Identifier = Identifier {
     analysis :: AnalysisIdentifier,
     address  :: NodeAddress,
-    extra    :: String,
+    extra    :: BS.ByteString,
     hash     :: Int
 }
 
@@ -183,12 +185,13 @@ instance Ord Identifier where
             r3 = compare s1 s2
 
 instance Show Identifier where
-        show (Identifier a n s _) = (show a) ++ "@" ++ (prettyShow n) ++ "/" ++ s
+        show (Identifier a n s _) = (show a) ++ "@" ++ (prettyShow n) ++ "/" ++ (BS.unpack s)
 
 
 mkIdentifier :: AnalysisIdentifier -> NodeAddress -> String -> Identifier
-mkIdentifier a n s = Identifier a n s h
+mkIdentifier a n s = Identifier a n bs h
   where
+    bs = BS.pack s
     h1 = Hash.hash $ idName a
     h2 = Hash.hashWithSalt h1 $ getPathReversed n
     h = Hash.hashWithSalt h2 s
@@ -547,7 +550,8 @@ toJsonMetaFile (SolverState a@( Assignment m ) vars _ _) = "{\n"
                     where
                         k = (addr v)
                         i = index v
-                        ext = if null . extra $ i then "" else '/' : extra i
+                        s = BS.unpack $ extra i
+                        ext = if null s then "" else '/' : s
                         msg = (show . analysis $ i) ++ ext ++
                             " = " ++ (valuePrint v a)
 
