@@ -159,12 +159,16 @@ int main(int argc, char** argv) {
 	auto program = job.execute(mgr);
 	program = postProcessing(program);
 
-	if(!options.dumpBinaryHaskell.empty()) {
+	if(options.dumpBinaryHaskell == "-") {
+		core::dump::binary::haskell::dumpIR(cout, program);
+	} else if(!options.dumpBinaryHaskell.empty()) {
 		ofstream out(options.dumpBinaryHaskell);
 		core::dump::binary::haskell::dumpIR(out, program);
 	}
 
-	if(!options.dumpJson.empty()) {
+	if(options.dumpJson == "-") {
+		core::dump::json::dumpIR(cout, program);
+	} else if(!options.dumpJson.empty()) {
 		ofstream out(options.dumpJson);
 		core::dump::json::dumpIR(out, program);
 	}
