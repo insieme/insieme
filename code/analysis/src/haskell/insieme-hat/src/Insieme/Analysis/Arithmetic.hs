@@ -159,9 +159,9 @@ isIntType _ = False
 -- TODO: provide a improved implementation of this filter
 
 isSideEffectFree :: Addr.NodeAddress -> Bool
-isSideEffectFree a = case Addr.getNodePair a of
-    IR.NT IR.Literal _  -> True
-    IR.NT IR.Variable _ -> isFreeVariable a
-    IR.NT IR.CallExpr _ -> (Addr.isBuiltin (Addr.goDown 1 a) "ref_deref") && (isSideEffectFree $ Addr.goDown 1 $ Addr.goDown 2 a)
-    _                   -> False
+isSideEffectFree a = case Addr.getNodeType a of
+    IR.Literal  -> True
+    IR.Variable -> isFreeVariable a
+    IR.CallExpr -> (Addr.isBuiltin (Addr.goDown 1 a) "ref_deref") && (isSideEffectFree $ Addr.goDown 1 $ Addr.goDown 2 a)
+    _           -> False
 

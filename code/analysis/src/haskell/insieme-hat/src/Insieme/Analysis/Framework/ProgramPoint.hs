@@ -62,10 +62,10 @@ programPointValue :: (Solver.Lattice a)
          -> [OperatorHandler a]                             -- ^ a list of operator handlers to intercept the interpretation of certain operators
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
 
-programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNodePair addr of
+programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNodeType addr of
 
         -- allow operator handlers to intercept the interpretation of calls
-        IR.NT IR.CallExpr _ | p == Post -> ivar
+        IR.CallExpr | p == Post -> ivar
             where
 
                 extract = ComposedValue.toValue

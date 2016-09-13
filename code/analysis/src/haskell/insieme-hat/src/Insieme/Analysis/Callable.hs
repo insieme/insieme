@@ -99,17 +99,17 @@ data CallableAnalysis = CallableAnalysis
 --
 
 callableValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex CallableSet)
-callableValue addr = case getNodePair addr of
-    IR.NT IR.LambdaExpr _ ->
+callableValue addr = case getNodeType addr of
+    IR.LambdaExpr ->
         Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Lambda (fromJust $ getLambda addr )))
 
-    IR.NT IR.LambdaReference _ -> 
+    IR.LambdaReference -> 
         Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Lambda (getLambda4Ref addr)))
 
-    IR.NT IR.BindExpr _ ->
+    IR.BindExpr ->
         Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Closure addr))
 
-    IR.NT IR.Literal _ ->
+    IR.Literal ->
         Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Literal addr))
 
     _ -> dataflowValue addr analysis []
@@ -136,10 +136,10 @@ callableValue addr = case getNodePair addr of
 collectAllCallables :: NodeAddress -> CallableSet
 collectAllCallables addr = USet.fromList $ foldTree collector (getInspire addr)
     where
-        collector cur callables = case getNodePair cur of
-            IR.NT IR.Lambda _   -> ((Lambda  cur) : callables)
-            IR.NT IR.BindExpr _ -> ((Closure cur) : callables)
-            IR.NT IR.Literal _  -> ((Literal cur) : callables)
+        collector cur callables = case getNodeType cur of
+            IR.Lambda   -> ((Lambda  cur) : callables)
+            IR.BindExpr -> ((Closure cur) : callables)
+            IR.Literal  -> ((Literal cur) : callables)
             _ -> callables
 
 

@@ -156,10 +156,10 @@ writeSetAnalysis = Solver.mkAnalysisIdentifier WriteSetAnalysis "WS"
 --
 
 writeSetSummary :: (FieldIndex i) => NodeAddress -> Solver.TypedVar (WriteSet i)
-writeSetSummary addr = case getNodePair addr of
+writeSetSummary addr = case getNodeType addr of
 
         -- ref_assign writes to location addressed by first argument
-        IR.NT IR.Literal _ | isRoot addr && isBuiltin addr "ref_assign" -> var
+        IR.Literal | isRoot addr && isBuiltin addr "ref_assign" -> var
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
@@ -169,11 +169,11 @@ writeSetSummary addr = case getNodePair addr of
 
 
         -- all other literals => no write sets
-        IR.NT IR.Literal _ | isRoot addr -> nothing
+        IR.Literal | isRoot addr -> nothing
 
 
         -- for lambdas, all call sites of the body have to be aggregated
-        IR.NT IR.Lambda _ | isContextFree addr -> var
+        IR.Lambda | isContextFree addr -> var
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
@@ -199,7 +199,7 @@ writeSetSummary addr = case getNodePair addr of
 
 
         -- compute write sets for calls
-        IR.NT IR.CallExpr _ | isContextFree addr -> var
+        IR.CallExpr | isContextFree addr -> var
             where
 
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot

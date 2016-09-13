@@ -44,7 +44,6 @@ import Data.Function (on)
 import Data.Map (Map)
 import Insieme.Inspire.ThHelpers
 import Language.Haskell.TH
-import qualified Data.Tree as T
 
 #c
 #define CONCRETE(name) NT_##name,
@@ -132,31 +131,30 @@ $(let
          <*> extend baseToNodeType   genClauseToNodeType
  )
 
-instance Ord Tree where
-    compare = compare `on` getID
-
 --
 -- * Tree
 --
 
-type Tree = T.Tree (Int, NodeType)
+data Tree = Tree { getNodePair :: (Int, NodeType),
+                   getChildren :: [Tree]           }
+  deriving (Show)
 
-pattern NT x y <- T.Node (_, x) y
+instance Eq Tree where
+    (==) = (==) `on` getID
+
+instance Ord Tree where
+    compare = compare `on` getID
+
+pattern NT x y <- Tree (_, x) y
 
 mkNode :: (Int, NodeType) -> [Tree] -> Tree
-mkNode = T.Node
+mkNode = Tree
 
 getID :: Tree -> Int
-getID = fst . T.rootLabel
+getID = fst . getNodePair
 
 getNodeType :: Tree -> NodeType
-getNodeType = snd . T.rootLabel
-
-getNodePair :: Tree -> (Int, NodeType)
-getNodePair = T.rootLabel
-
-getChildren :: Tree -> [Tree]
-getChildren = T.subForest
+getNodeType = snd . getNodePair
 
 --
 -- * Inspire
