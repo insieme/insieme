@@ -127,53 +127,64 @@ analysis a =
         -- alias
         "IMP_cba_expect_ref_are_alias" -> do
             res <- aliasAnalysis a
-            return a{getResult = if res == Alias.AreAlias then Ok else Fail}
+            return a{getResult = boolToResult $ res == Alias.AreAlias}
 
         "IMP_cba_expect_ref_may_alias" -> do
             res <- aliasAnalysis a
-            return a{getResult = if res == Alias.MayAlias then Ok else Fail}
+            return a{getResult = boolToResult $ res == Alias.MayAlias}
 
         "IMP_cba_expect_ref_not_alias" -> do
             res <- aliasAnalysis a
-            return a{getResult = if res == Alias.NotAlias then Ok else Fail}
+            return a{getResult = boolToResult $ res == Alias.NotAlias}
 
         -- boolean
         "IMP_cba_expect_true" -> do
             res <- boolAnalysis a
-            return a{getResult = if res == AnBoolean.AlwaysTrue then Ok else Fail}
+            return a{getResult = boolToResult $ res == AnBoolean.AlwaysTrue}
 
         "IMP_cba_expect_false" -> do
             res <- boolAnalysis a
-            return a{getResult = if res == AnBoolean.AlwaysFalse then Ok else Fail}
+            return a{getResult = boolToResult $ res == AnBoolean.AlwaysFalse}
 
         "IMP_cba_expect_may_be_true" -> do
             res <- boolAnalysis a
-            return a{getResult = if res `elem` [AnBoolean.AlwaysTrue, AnBoolean.Both] then Ok else Fail}
+            return a{getResult = boolToResult $ res `elem` [AnBoolean.AlwaysTrue, AnBoolean.Both]}
 
         "IMP_cba_expect_may_be_false" -> do
             res <- boolAnalysis a
-            return a{getResult = if res `elem` [AnBoolean.AlwaysFalse, AnBoolean.Both] then Ok else Fail}
+            return a{getResult = boolToResult $ res `elem` [AnBoolean.AlwaysFalse, AnBoolean.Both]}
 
+        -- arithmetic
         "IMP_cba_expect_undefined_int" -> do
             res <- arithAnalysis a
             return $ case () of _
                                  | BSet.isUniverse res -> a{getResult = Ok}
                                  | BSet.size res > 0   -> a{getResult = Inaccurate}
                                  | otherwise           -> a{getResult = Fail}
+
+        "IMP_cba_expect_defined_int" -> do
+            res <- arithAnalysis a
+            return $ a{getResult = boolToResult $ not (BSet.isUniverse res) && BSet.size res == 1}
+
+        "IMP_cba_expect_finite_int" -> do
+            res <- arithAnalysis a
+            return $ a{getResult = boolToResult $ not $ BSet.isUniverse res}
+
         "IMP_cba_expect_eq_int" -> do
             (lhs, rhs) <- arithAnalysis2 a
-            return a{getResult = if all (==NumEQ) $ BSet.toList $ BSet.lift2 numCompare lhs rhs then Ok else Fail}
+            return a{getResult = boolToResult $ all (==NumEQ) $ BSet.toList $ BSet.lift2 numCompare lhs rhs}
 
         "IMP_cba_expect_ne_int" -> do
             (lhs, rhs) <- arithAnalysis2 a
-            return a{getResult = if notElem NumEQ $ BSet.toList $ BSet.lift2 numCompare lhs rhs then Ok else Fail}
-
+            return a{getResult = boolToResult $ notElem NumEQ $ BSet.toList $ BSet.lift2 numCompare lhs rhs}
 
         "IMP_cba_expect_may_eq_int" -> do
             (lhs, rhs) <- arithAnalysis2 a
-            return $ case () of _
-                                 | BSet.isUniverse lhs || BSet.isUniverse rhs -> a{getResult = Ok}
-                                 | BSet.size (BSet.intersection lhs rhs) > 0  -> a{getResult = Ok}
-                                 | otherwise                                  -> a{getResult = Fail}
+            return a{getResult = boolToResult $ BSet.isUniverse lhs || BSet.isUniverse rhs || BSet.size (BSet.intersection lhs rhs) > 0}
 
         _ -> return a -- error "Unsupported Analysis"
+
+  where
+    boolToResult :: Bool -> AnalysisResult
+    boolToResult True  = Ok
+    boolToResult False = Fail
