@@ -93,7 +93,7 @@ predecessor p@(ProgramPoint a Pre) | isRoot a = var
 predecessor p@(ProgramPoint a Pre) = case getNodeType parent of
 
     IR.CallExpr -> single $
-            if i == (numChildren a) - 1
+            if i == (numChildren parent) - 1
             -- start with last argument
             then ProgramPoint parent Pre
             -- eval arguments in reverse order
