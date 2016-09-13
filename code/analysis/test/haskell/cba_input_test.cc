@@ -51,6 +51,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/error_printer.h"
+#include "insieme/core/dump/binary_haskell.h"
 #include "insieme/core/dump/json_dump.h"
 
 #include "insieme/core/lang/extension.h"
@@ -330,8 +331,9 @@ namespace analysis {
 					dumpPretty(prog);
 
 				} else if (name == "cba_dump_json") {
-					// just dump the code as a json file
-					core::dump::json::dumpIR("code.json", prog);
+                                        core::dump::json::dumpIR(filename+".json", prog);
+                                        core::dump::binary::haskell::dumpIR(filename+".binir", prog);
+
 
 				} else if (name == "cba_print_int") {
 					// print the deduced value of the argument

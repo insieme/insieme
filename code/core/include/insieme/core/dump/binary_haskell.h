@@ -56,6 +56,8 @@ namespace haskell {
 	*/
 	void dumpIR(std::ostream& out, const NodePtr& ir);
 
+	/** Dump IR to the given file name. */
+	void dumpIR(const std::string &filename, const NodePtr &ir);
 } // end namespace haskell
 } // end namespace binary
 } // end namespace dump
