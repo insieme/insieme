@@ -327,8 +327,15 @@ instance Show IndexedVar where
     show (IndexedVar _ v) = show v
     
 
+
 data VariableIndex = VariableIndex (Map.Map Var IndexedVar)
 
+
+numVars :: VariableIndex -> Int
+numVars (VariableIndex m) = Map.size m
+
+knownVariables :: VariableIndex -> Set.Set Var
+knownVariables (VariableIndex m) = Map.keysSet m
 
 varToIndex :: VariableIndex -> Var -> (IndexedVar,VariableIndex)
 varToIndex (VariableIndex m) v = (res, VariableIndex nm)
@@ -358,14 +365,13 @@ varsToIndex i vs = foldr go ([],i) vs
 
 data SolverState = SolverState {
         assignment :: Assignment,
-        variableIndex :: VariableIndex,
-        knownVariables :: Set.Set IndexedVar,         
+        variableIndex :: VariableIndex,        
         -- for performance evaluation
         numSteps :: Map.Map AnalysisIdentifier Int,                     
         cpuTimes :: Map.Map AnalysisIdentifier Integer
     } 
 
-initState = SolverState empty (VariableIndex Map.empty) Set.empty Map.empty Map.empty
+initState = SolverState empty (VariableIndex Map.empty) Map.empty Map.empty
 
 
 
@@ -410,10 +416,9 @@ resolveAll i tvs = (res <$> tvs,s)
 
 -- solve for a set of variables
 solve :: SolverState -> [Var] -> SolverState
-solve init vs = solveStep (init {variableIndex = nindex, knownVariables = known_vars}) emptyDep ivs
+solve init vs = solveStep (init {variableIndex = nindex}) emptyDep ivs
     where
-        (ivs,nindex) = varsToIndex (variableIndex init) vs
-        known_vars = Set.union (Set.fromList ivs) (knownVariables init)  
+        (ivs,nindex) = varsToIndex (variableIndex init) vs  
 
 
 -- solve for a set of variables with an initial assignment
@@ -435,23 +440,23 @@ solveStep :: SolverState -> Dependencies -> [IndexedVar] -> SolverState
 solveStep s _ [] = s                                                                                                    -- work list is empty
 
 -- compute next element in work list
-solveStep (SolverState a i k u t) d (v:vs) = solveStep (SolverState resAss resIndex resKnown nu nt) resDep ds
+solveStep (SolverState a i u t) d (v:vs) = solveStep (SolverState resAss resIndex nu nt) resDep ds
         where
                 -- profiling --
-                ((resAss,resIndex,resKnown,resDep,ds),dt) = measure go ()
+                ((resAss,resIndex,resDep,ds),dt) = measure go ()
                 nt = Map.insertWith (+) aid dt t
                 nu = Map.insertWith (+) aid  1 u
                 aid = analysis $ index $ indexToVar v
                 
                 -- each constraint extends the result, the dependencies, and the vars to update
-                go _ = foldr processConstraint (a,i,k,d,vs) ( constraints $ indexToVar v )  -- update all constraints of current variable
-                processConstraint c (a,i,k,d,dv) = case ( update c a ) of
+                go _ = foldr processConstraint (a,i,d,vs) ( constraints $ indexToVar v )  -- update all constraints of current variable
+                processConstraint c (a,i,d,dv) = case ( update c a ) of
                         
-                        (a',None)         -> (a',ni,nk,nd,nv)                                        -- nothing changed, we are fine
+                        (a',None)         -> (a',ni,nd,nv)                                        -- nothing changed, we are fine
                         
-                        (a',Increment)    -> (a',ni,nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- add depending variables to work list
+                        (a',Increment)    -> (a',ni,nd, (Set.elems $ getDep nd trg) ++ nv)        -- add depending variables to work list
                         
-                        (a',Reset)        -> (ra,ni,nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- handling a local reset
+                        (a',Reset)        -> (ra,ni,nd, (Set.elems $ getDep nd trg) ++ nv)        -- handling a local reset
                             where 
                                 dep = getAllDep nd trg
                                 ra = if not $ Set.member trg dep                                  -- if variable is not indirectly depending on itself  
@@ -462,10 +467,13 @@ solveStep (SolverState a i k u t) d (v:vs) = solveStep (SolverState resAss resIn
                             trg = v
                             dep = dependingOn c a
                             (idep,ni) = varsToIndex i dep
-                            newVars = (Set.fromList idep) `Set.difference` k
-                            nk = newVars `Set.union` k
+                            
+                            newVarsList = filter f idep
+                                where 
+                                    f iv = toIndex iv >= numVars i
+                                    
                             nd = addDep d trg idep
-                            nv = ( Set.elems $ newVars) ++ dv
+                            nv = newVarsList ++ dv
 
 
 
@@ -542,7 +550,7 @@ measure f p = unsafePerformIO $ do
 
 -- prints the current assignment as a graph
 toDotGraph :: SolverState -> String
-toDotGraph (SolverState a@( Assignment m ) varIndex varSet _ _) = "digraph G {\n\t"
+toDotGraph (SolverState a@( Assignment m ) varIndex _ _) = "digraph G {\n\t"
         ++
         "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
         ++
@@ -556,6 +564,9 @@ toDotGraph (SolverState a@( Assignment m ) varIndex varSet _ _) = "digraph G {\n
         ++
         "\n}"
     where
+    
+        -- get set of known variables
+        varSet = knownVariables varIndex
 
         -- a function collecting all variables a variable is depending on
         dep v = foldr (\c l -> (dependingOn c a) ++ l) [] (constraints v)
@@ -564,7 +575,7 @@ toDotGraph (SolverState a@( Assignment m ) varIndex varSet _ _) = "digraph G {\n
         keys = Map.keys m
 
         -- list of all variables in the analysis
-        allVars = indexToVar <$> (Set.toList $ varSet)
+        allVars = Set.toList $ varSet
 
         -- the keys (=variables) associated with an index
         vars = Prelude.zip [1..] allVars
@@ -590,7 +601,7 @@ dumpSolverState s file = unsafePerformIO $ do
 
 
 toJsonMetaFile :: SolverState -> String
-toJsonMetaFile (SolverState a@( Assignment m ) varIndex vars _ _) = "{\n"
+toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _) = "{\n"
         ++
         "    \"bodies\": {\n"
         ++
@@ -600,12 +611,13 @@ toJsonMetaFile (SolverState a@( Assignment m ) varIndex vars _ _) = "{\n"
     where
 
         addr = address . index
+        
+        vars = knownVariables varIndex
 
         store = foldr go Map.empty vars
             where
-                go iv m = Map.insert k (msg : Map.findWithDefault [] k m) m
+                go v m = Map.insert k (msg : Map.findWithDefault [] k m) m
                     where
-                        v = indexToVar iv
                         k = (addr v)
                         i = index v
                         s = BS.unpack $ extra i
@@ -635,11 +647,11 @@ showSolverStatistic s =
                         (printf " %20d" totalTime) ++ (printf " %20.3f" avgTime) ++
         "\n==========================================================================================================================\n"
     where
-        vars = knownVariables s
+        vars = knownVariables $ variableIndex s
         
         grouped = foldr go Map.empty vars
             where
-                go v m = Map.insertWith (+) ( analysis . index . indexToVar $ v ) (1::Int) m
+                go v m = Map.insertWith (+) ( analysis . index $ v ) (1::Int) m
         
         print (a,c) = printf "     %10s %20d %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime 
             where
