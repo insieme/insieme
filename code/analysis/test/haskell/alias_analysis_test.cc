@@ -34,13 +34,10 @@
  * regarding third party software licenses.
  */
 
-
 #include <gtest/gtest.h>
-
 #include "insieme/analysis/haskell_interface.h"
-
+#include "insieme/core/dump/binary_haskell.h"
 #include "insieme/core/dump/json_dump.h"
-
 #include "../common/alias_analysis_test.inc"
 
 namespace insieme {
@@ -141,6 +138,8 @@ namespace analysis {
 		).as<CompoundStmtPtr>();
 
 		EXPECT_TRUE(stmt);
+		core::dump::binary::haskell::dumpIR("comprefs.binir", stmt);
+		core::dump::json::dumpIR("comprefs.json", stmt);
 
 		auto comp = CompoundStmtAddress(stmt);
 
@@ -242,8 +241,6 @@ namespace analysis {
 		EXPECT_TRUE(stmt);
 
 		auto comp = CompoundStmtAddress(stmt);
-
-		core::dump::json::dumpIR("code.json", stmt);
 
 //		EXPECT_TRUE(areAlias(comp[3], comp[3]));
 		EXPECT_TRUE(areAlias(comp[5], comp[5]));

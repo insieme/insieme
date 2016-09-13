@@ -37,6 +37,7 @@
 #include "insieme/core/dump/binary_haskell.h"
 
 #include <map>
+#include <fstream>
 
 #include "insieme/core/dump/binary_dump.h"
 #include "insieme/core/dump/binary_utils.h"
@@ -49,6 +50,11 @@ namespace core {
 namespace dump {
 namespace binary {
 namespace haskell {
+
+	void dumpIR(const std::string &filename, const NodePtr &ir) {
+		std::ofstream out(filename);
+		dumpIR(out, ir);
+	}
 
 	void dumpIR(std::ostream& out, const NodePtr& root) {
 		binary::dumpIR(out, root);
