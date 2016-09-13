@@ -104,15 +104,15 @@ data ReferenceAnalysis = ReferenceAnalysis
 --
 
 referenceValue :: (FieldIndex i) => NodeAddress -> TypedVar (ValueTree.Tree i (ReferenceSet i))
-referenceValue addr = case getNodePair addr of
+referenceValue addr = case getNodeType addr of
 
-        l@(IR.NT IR.Literal _) ->
+        IR.Literal ->
             mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference (crop addr) DP.root)
 
-        d@(IR.NT IR.Declaration _) | isMaterializingDeclaration d ->
+        IR.Declaration | isMaterializingDeclaration (getNodePair addr) ->
             mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference addr DP.root)
 
-        c@(IR.NT IR.CallExpr _) | isMaterializingCall c ->
+        IR.CallExpr | isMaterializingCall (getNodePair addr) ->
             mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference addr DP.root)
 
         _ -> dataflowValue addr analysis opsHandler
@@ -206,7 +206,7 @@ isMaterializingCall _ = False        -- the default, for now - TODO: implement r
 -- isMaterializingCall _ = False
 
 getEnclosingDecl :: NodeAddress -> NodeAddress
-getEnclosingDecl addr = case getNodePair addr of
-    IR.NT IR.Declaration _ -> addr
-    _ | isRoot addr       -> error "getEnclosingDecl has no parent to go to"
-    _                     -> getEnclosingDecl $ fromJust $ getParent addr
+getEnclosingDecl addr = case getNodeType addr of
+    IR.Declaration  -> addr
+    _ | isRoot addr -> error "getEnclosingDecl has no parent to go to"
+    _               -> getEnclosingDecl $ fromJust $ getParent addr

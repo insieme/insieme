@@ -47,7 +47,6 @@ import Data.Attoparsec.Binary
 import Data.Attoparsec.ByteString
 import Data.Char (chr)
 import Data.List.Split (splitOn)
-import Data.Tree (Tree(..))
 import Data.Word
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
@@ -76,7 +75,7 @@ parseBinaryDump = parseOnly $ do
   where
       resolve :: IR.Tree -> [Int] -> IR.Tree
       resolve node []     = node
-      resolve node (x:xs) = resolve (subForest node !! x) xs
+      resolve node (x:xs) = resolve (IR.getChildren node !! x) xs
 
 --
 -- * Parsing the header
@@ -146,7 +145,7 @@ connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
             Nothing -> do
                 let (DumpNode irnode is) = dumpNodes IntMap.! index
                 children <- mapM go is
-                let n = Node (index, irnode) children
+                let n = IR.mkNode (index, irnode) children
                 modify (IntMap.insert index n)
                 return n
 

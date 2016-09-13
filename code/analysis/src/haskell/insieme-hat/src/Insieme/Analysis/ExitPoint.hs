@@ -84,10 +84,10 @@ exitPointAnalysis = Solver.mkAnalysisIdentifier ExitPointAnalysis "EP"
 --
 
 exitPoints :: NodeAddress -> Solver.TypedVar ExitPointSet
-exitPoints addr = case getNodePair addr of
+exitPoints addr = case getNodeType addr of
 
     -- for lambdas: collect all reachable return statements and end of body
-    IR.NT IR.Lambda   _ -> var
+    IR.Lambda -> var
         where
             var = Solver.mkVariable id [con] Solver.bot
             con = Solver.createConstraint dep val var
@@ -117,7 +117,7 @@ exitPoints addr = case getNodePair addr of
 
 
     -- for bind expressions: use nested call expression
-    IR.NT IR.BindExpr _ -> Solver.mkVariable id [] $ Set.singleton $ ExitPoint $ goDown 2 addr
+    IR.BindExpr -> Solver.mkVariable id [] $ Set.singleton $ ExitPoint $ goDown 2 addr
 
     -- everything else has no call sites
     _ -> Solver.mkVariable id [] Solver.bot
@@ -130,12 +130,8 @@ exitPoints addr = case getNodePair addr of
 
 collectReturns :: NodeAddress -> [NodeAddress]
 collectReturns = foldAddressPrune collector filter
-    where
-        filter cur =
-            case getNodePair cur of
-                IR.NT IR.LambdaExpr _ -> True
-                _ -> False
-        collector cur returns =
-            case getNodePair cur of
-                IR.NT IR.ReturnStmt _ -> (goDown 0 cur : returns)
-                _ -> returns
+  where
+    filter cur = getNodeType cur == IR.LambdaExpr
+    collector cur returns = if getNodeType cur == IR.ReturnStmt
+                               then (goDown 0 cur : returns)
+                               else returns

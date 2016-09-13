@@ -89,11 +89,11 @@ callSiteAnalysis = Solver.mkAnalysisIdentifier CallSiteAnalysis "CS"
 --
 
 callSites :: NodeAddress -> Solver.TypedVar CallSiteSet
-callSites addr = case getNodePair addr of
+callSites addr = case getNodeType addr of
 
     -- for lambdas and bind exressions: collect all call sites
-    IR.NT IR.Lambda   _ -> var
-    IR.NT IR.BindExpr _ -> var
+    IR.Lambda   -> var
+    IR.BindExpr -> var
 
     -- everything else has no call sites
     _ -> Solver.mkVariable id [] Solver.bot
@@ -103,9 +103,9 @@ callSites addr = case getNodePair addr of
     id = Solver.mkIdentifier callSiteAnalysis addr ""
 
     -- navigate to the enclosing expression    
-    e = case getNodePair addr of 
-        IR.NT IR.Lambda   _ -> fromJust $ getParent =<< getParent =<< getParent addr 
-        IR.NT IR.BindExpr _ -> addr
+    e = case getNodeType addr of 
+        IR.Lambda   -> fromJust $ getParent =<< getParent =<< getParent addr 
+        IR.BindExpr -> addr
     
     i = getIndex e
     p = fromJust $ getParent e
@@ -120,9 +120,9 @@ callSites addr = case getNodePair addr of
     
     noCallSitesVar = Solver.mkVariable id [] Solver.bot
     
-    recReferences = case getNodePair addr of
-        IR.NT IR.BindExpr _ -> []          -- bind can not be recursive
-        IR.NT IR.Lambda _   -> if isRoot p then [] else res
+    recReferences = case getNodeType addr of
+        IR.BindExpr -> []          -- bind can not be recursive
+        IR.Lambda   -> if isRoot p then [] else res
             where
                 ref = getNodePair $ goDown 0 $ fromJust $ getParent addr
                 def = fromJust $ getParent $ fromJust $ getParent addr 
@@ -162,10 +162,10 @@ callSites addr = case getNodePair addr of
         
             allTrgVars = map (\c -> (c , Callable.callableValue $ goDown 1 c ) ) allCalls
         
-            callable = case getNodePair addr of
-                IR.NT IR.Lambda _   -> Callable.Lambda addr
-                IR.NT IR.BindExpr _ -> Callable.Closure addr
-                _                  -> error "unexpected NodeType"
+            callable = case getNodeType addr of
+                IR.Lambda   -> Callable.Lambda addr
+                IR.BindExpr -> Callable.Closure addr
+                _           -> error "unexpected NodeType"
         
             dep a = map Solver.toVar (map snd allTrgVars)
             val a = foldr go Set.empty allTrgVars

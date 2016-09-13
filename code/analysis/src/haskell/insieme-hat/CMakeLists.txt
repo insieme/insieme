@@ -14,6 +14,15 @@ if(NOT (${CMAKE_GENERATOR} MATCHES "Visual Studio"))
     endif()
 endif()
 
+# calling stack
+set(stack
+    ${CMAKE_COMMAND} -E env
+    "STACK_ROOT=${stack_root}"
+    "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
+    "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
+    ${stack_home}/bin/stack --ghc-variant standard
+)
+
 add_custom_target(
     insieme_analysis_haskell
 
@@ -21,37 +30,18 @@ add_custom_target(
     COMMAND ${CMAKE_COMMAND} -E make_directory ${stack_root}
 
     # install adequate ghc / cabal lib
-    COMMAND ${CMAKE_COMMAND} -E env
-        "STACK_ROOT=${stack_root}"
-        "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        ${stack_home}/bin/stack --ghc-variant standard setup
+    COMMAND ${stack} setup
 
-    # binarys like alex and c2hs have to be installed manually
-    COMMAND ${CMAKE_COMMAND} -E env
-        "STACK_ROOT=${stack_root}"
-        "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        ${stack_home}/bin/stack --ghc-variant standard build alex
-    COMMAND ${CMAKE_COMMAND} -E env
-        "STACK_ROOT=${stack_root}"
-        "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        ${stack_home}/bin/stack --ghc-variant standard build c2hs
+    # binarys like alex and c2hs have to be installed manually, do not merge
+    # these lines
+    COMMAND ${stack} build alex
+    COMMAND ${stack} build c2hs
 
     # install dependencies and build package
-    COMMAND ${CMAKE_COMMAND} -E env
-        "STACK_ROOT=${stack_root}"
-        "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        ${stack_home}/bin/stack --ghc-variant standard build
+    COMMAND ${stack} build
 
     # copy library (package key in name) to binary dir
-    COMMAND ${CMAKE_COMMAND} -E env
-        "STACK_ROOT=${stack_root}"
-        "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-        ${stack_home}/bin/stack --ghc-variant standard runhaskell --package Glob --package directory utils/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${stack} runhaskell utils/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}
 
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )

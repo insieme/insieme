@@ -63,7 +63,6 @@ module Insieme.Inspire.NodeAddress (
 import Data.Function (on)
 import Data.List (foldl',isSuffixOf)
 import Data.Maybe
-import Data.Tree (Tree)
 import qualified Data.Map as Map
 import qualified Insieme.Inspire as IR
 
@@ -119,9 +118,6 @@ numChildren = length . IR.getChildren . getNodePair
 getIndex :: NodeAddress -> Int
 getIndex = head . getPathReversed
 
-getNode :: NodeAddress -> Tree IR.NodeType
-getNode addr = snd <$> getNodePair addr
-
 getNodeType :: NodeAddress -> IR.NodeType
 getNodeType = IR.getNodeType . getNodePair
 
@@ -165,7 +161,7 @@ goRight    (NodeAddress xs _ _ (Just parent) _ ) = goDown (head xs + 1) parent
 crop :: NodeAddress -> NodeAddress
 crop a = NodeAddress [] (getNodePair a) ( (getInspire a){IR.getTree=getNodePair a} ) Nothing ((getPathReversed a) ++ (getAbsoluteRootPath a))
 
-lookupBuiltin :: NodeAddress -> String -> Maybe (Tree (Int, IR.NodeType))
+lookupBuiltin :: NodeAddress -> String -> Maybe IR.Tree
 lookupBuiltin addr needle = Map.lookup needle (IR.getBuiltins $ getInspire addr)
 
 isBuiltin :: NodeAddress -> String -> Bool

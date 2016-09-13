@@ -211,18 +211,18 @@ reachingDefinitionAnalysis = Solver.mkAnalysisIdentifier ReachingDefinitionAnaly
 --
 
 reachingDefinitions :: (FieldIndex i) => MemoryState -> Solver.TypedVar (Definitions i)
-reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case getNodePair addr of
+reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case getNodeType addr of
 
         -- a declaration could be an assignment if it is materializing
-        d@(IR.NT IR.Declaration _) | addr == loc && p == Post ->
+        IR.Declaration | addr == loc && p == Post ->
             Solver.mkVariable (idGen addr) [] (USet.singleton $ Declaration addr)
 
         -- a call could be an assignment if it is materializing
-        c@(IR.NT IR.CallExpr _) | addr == loc && p == Post && isMaterializingCall c ->
+        IR.CallExpr | addr == loc && p == Post && isMaterializingCall (getNodePair addr) ->
             Solver.mkVariable (idGen addr) [] (USet.singleton $ MaterializingCall addr)
 
         -- the call could also be the creation point if it is not materializing
-        c@(IR.NT IR.CallExpr _) | addr == loc && p == Post ->
+        IR.CallExpr | addr == loc && p == Post ->
             Solver.mkVariable (idGen addr) [] (USet.singleton Creation)
 
         -- the entry point is the creation of everything that reaches this point
@@ -230,7 +230,7 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
             Solver.mkVariable (idGen addr) [] (USet.singleton $ Initial)
 
         -- to prune the set of variables, we check whether the invoced callable may update the traced reference
-        c@(IR.NT IR.CallExpr _) | p == Internal && (not $ loc `isChildOf` addr)-> var
+        IR.CallExpr | p == Internal && (not $ loc `isChildOf` addr)-> var
             where
                 var = Solver.mkVariable (idGenExt pp "switch") [con] Solver.bot
                 con = Solver.createEqualityConstraint dep val var

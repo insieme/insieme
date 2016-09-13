@@ -56,6 +56,21 @@ Setting `STACK_ROOT` to the same value as in `CMakeLists.txt` (given the same
 user) prevents you from re-downloading all dependencies and build requirements
 again.
 
+## Profiling
+
+Profiling is not supported over the foreign function interface. Use the
+`cba_runner` binary for this purpose. Additionally the `haskell_dumper` driver
+is required, hence you must first build insieme (the Haskell engine maybe
+turned OFF for this). Assuming the `haskell_dumper` is located in your path use
+following commands to issue a profiling run:
+
+    $ stack build --profile
+    $ haskell_dumper -i /path/to/cba_test.c -d cba_test.irbh
+    $ stack exec cba_runner -- +RTS -p < cba_test.irbh
+
+After running these commands you should find a textfile named `cba_runner.prof`
+containg profiling information.
+
 ## Testing via C/C++
 
 Tests located in the analysis part of INSIEME also include unit-tests utilizing

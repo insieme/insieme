@@ -245,14 +245,14 @@ dataflowValue addr analysis ops = case getNodePair addr of
 
     -- variable declaration handler
 
-    handleDeclr declrAddr = case getNodePair (goUp declrAddr) of
+    handleDeclr declrAddr = case getNodeType (goUp declrAddr) of
 
-        IR.NT IR.DeclarationStmt _ -> var
+        IR.DeclarationStmt -> var
           where
             var = Solver.mkVariable (idGen addr) [constraint] Solver.bot
             constraint = Solver.forward (varGen (goDown 0 . goUp $ declrAddr)) var
 
-        IR.NT IR.Parameters _ -> 
+        IR.Parameters -> 
             
             if isEntryPointParameter declrAddr                           
                 then entryPointParameterHandler analysis declrAddr
