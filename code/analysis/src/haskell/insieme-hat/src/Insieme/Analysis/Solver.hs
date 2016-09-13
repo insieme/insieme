@@ -103,6 +103,7 @@ import System.Process
 import Text.Printf
 --import qualified Data.Map.Lazy as Map
 import qualified Data.Map.Strict as Map
+import qualified Data.IntMap as IntMap
 import qualified Data.Set as Set
 import qualified Data.Hashable as Hash
 
@@ -273,11 +274,13 @@ set (Assignment a) (TypedVar v) d = Assignment (Map.insert v (toDyn d) a)
 
 
 -- resets the values of the given variables within the given assignment
-reset :: Assignment -> Set.Set Var -> Assignment
+reset :: Assignment -> Set.Set IndexedVar -> Assignment
 reset (Assignment a) vars = Assignment $ Map.union reseted a
     where 
         reseted = Map.fromList (go <$> Set.toList vars)
-        go v = (v,bottom v)
+        go iv = (v,bottom v)
+            where
+                v = indexToVar iv
  
 
 -- Constraints ---------------------------------------------
@@ -299,35 +302,87 @@ data Constraint = Constraint {
 
 
 
+
+-- Variable Index -----------------------------------------------
+
+
+-- a utility for indexing variables
+data IndexedVar = IndexedVar Int Var
+
+          
+indexToVar :: IndexedVar -> Var
+indexToVar (IndexedVar _ v) = v
+
+toIndex :: IndexedVar -> Int
+toIndex (IndexedVar i _ ) = i
+
+
+instance Eq IndexedVar where
+    (IndexedVar a _) == (IndexedVar b _) = a == b
+    
+instance Ord IndexedVar where
+    compare (IndexedVar a _) (IndexedVar b _) = compare a b
+
+instance Show IndexedVar where
+    show (IndexedVar _ v) = show v
+    
+
+data VariableIndex = VariableIndex (Map.Map Var IndexedVar)
+
+
+varToIndex :: VariableIndex -> Var -> (IndexedVar,VariableIndex)
+varToIndex (VariableIndex m) v = (res, VariableIndex nm)
+    where
+        
+        (ri,nm) = Map.insertLookupWithKey old v ni m
+            where
+                old _ _ o = o
+        
+        ni = IndexedVar (Map.size m) v           -- the new indexed variable, if necessary
+        
+        res = fromMaybe ni ri
+
+
+varsToIndex :: VariableIndex -> [Var] -> ([IndexedVar],VariableIndex)
+varsToIndex i vs = foldr go ([],i) vs
+    where
+        go v (rs,i') = (r:rs,i'')
+            where
+                (r,i'') = varToIndex i' v 
+
+
+
 -- Solver ---------------------------------------------------
 
 -- a aggregation of the 'state' of a solver for incremental analysis
 
 data SolverState = SolverState {
         assignment :: Assignment,
-        knownVariables :: Set.Set Var,         
+        variableIndex :: VariableIndex,
+        knownVariables :: Set.Set IndexedVar,         
         -- for performance evaluation
         numSteps :: Map.Map AnalysisIdentifier Int,                     
         cpuTimes :: Map.Map AnalysisIdentifier Integer
     } 
 
-initState = SolverState empty Set.empty Map.empty Map.empty
+initState = SolverState empty (VariableIndex Map.empty) Set.empty Map.empty Map.empty
+
 
 
 -- a utility to maintain dependencies between variables
-data Dependencies = Dependencies (Map.Map Var (Set.Set Var))
+data Dependencies = Dependencies (IntMap.IntMap (Set.Set IndexedVar))
         deriving Show
 
-emptyDep = Dependencies Map.empty
+emptyDep = Dependencies IntMap.empty
 
-addDep :: Dependencies -> Var -> [Var] -> Dependencies
+addDep :: Dependencies -> IndexedVar -> [IndexedVar] -> Dependencies
 addDep d _ [] = d
-addDep d@(Dependencies m) t (v:vs) = addDep (Dependencies (Map.insertWith (\_ s -> Set.insert t s) v (Set.singleton t) m)) t vs
+addDep d@(Dependencies m) t (v:vs) = addDep (Dependencies (IntMap.insertWith (\_ s -> Set.insert t s) (toIndex v) (Set.singleton t) m)) t vs
 
-getDep :: Dependencies -> Var -> Set.Set Var
-getDep (Dependencies d) v = fromMaybe Set.empty $ Map.lookup v d
+getDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
+getDep (Dependencies d) v = fromMaybe Set.empty $ IntMap.lookup (toIndex v) d
 
-getAllDep :: Dependencies -> Var -> Set.Set Var
+getAllDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
 getAllDep d v = collect d [v] Set.empty
     where
         collect d [] s = s
@@ -355,9 +410,10 @@ resolveAll i tvs = (res <$> tvs,s)
 
 -- solve for a set of variables
 solve :: SolverState -> [Var] -> SolverState
-solve init vs = solveStep (init {knownVariables = known_vars}) emptyDep vs
+solve init vs = solveStep (init {variableIndex = nindex, knownVariables = known_vars}) emptyDep ivs
     where
-        known_vars = Set.union (Set.fromList vs) (knownVariables init)  
+        (ivs,nindex) = varsToIndex (variableIndex init) vs
+        known_vars = Set.union (Set.fromList ivs) (knownVariables init)  
 
 
 -- solve for a set of variables with an initial assignment
@@ -366,7 +422,7 @@ solve init vs = solveStep (init {knownVariables = known_vars}) emptyDep vs
 --        the current state (assignment and known variables)
 --        dependencies between variables
 --        work list
-solveStep :: SolverState -> Dependencies -> [Var] -> SolverState
+solveStep :: SolverState -> Dependencies -> [IndexedVar] -> SolverState
 
 
 -- solveStep _ _ (q:qs) | trace ("WS-length: " ++ (show $ (length qs) + 1) ++ " next: " ++ (show q)) $ False = undefined
@@ -379,23 +435,23 @@ solveStep :: SolverState -> Dependencies -> [Var] -> SolverState
 solveStep s _ [] = s                                                                                                    -- work list is empty
 
 -- compute next element in work list
-solveStep (SolverState a k i t) d (v:vs) = solveStep (SolverState resAss resKnown ni nt) resDep ds
+solveStep (SolverState a i k u t) d (v:vs) = solveStep (SolverState resAss resIndex resKnown nu nt) resDep ds
         where
                 -- profiling --
-                ((resAss,resKnown,resDep,ds),dt) = measure go ()
+                ((resAss,resIndex,resKnown,resDep,ds),dt) = measure go ()
                 nt = Map.insertWith (+) aid dt t
-                ni = Map.insertWith (+) aid  1 i
-                aid = analysis $ index v
+                nu = Map.insertWith (+) aid  1 u
+                aid = analysis $ index $ indexToVar v
                 
                 -- each constraint extends the result, the dependencies, and the vars to update
-                go _ = foldr processConstraint (a,k,d,vs) ( constraints v )  -- update all constraints of current variable
-                processConstraint c (a,k,d,dv) = case ( update c a ) of
+                go _ = foldr processConstraint (a,i,k,d,vs) ( constraints $ indexToVar v )  -- update all constraints of current variable
+                processConstraint c (a,i,k,d,dv) = case ( update c a ) of
                         
-                        (a',None)         -> (a',nk,nd,nv)                                        -- nothing changed, we are fine
+                        (a',None)         -> (a',ni,nk,nd,nv)                                        -- nothing changed, we are fine
                         
-                        (a',Increment)    -> (a',nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- add depending variables to work list
+                        (a',Increment)    -> (a',ni,nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- add depending variables to work list
                         
-                        (a',Reset)        -> (ra,nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- handling a local reset
+                        (a',Reset)        -> (ra,ni,nk,nd, (Set.elems $ getDep nd trg) ++ nv)        -- handling a local reset
                             where 
                                 dep = getAllDep nd trg
                                 ra = if not $ Set.member trg dep                                  -- if variable is not indirectly depending on itself  
@@ -403,11 +459,12 @@ solveStep (SolverState a k i t) d (v:vs) = solveStep (SolverState resAss resKnow
                                     else fst $ updateWithoutReset c a                             -- otherwise insist on merging reseted value with current state
                                         
                     where
-                            trg = target c
+                            trg = v
                             dep = dependingOn c a
-                            newVars = (Set.fromList dep) `Set.difference` k
+                            (idep,ni) = varsToIndex i dep
+                            newVars = (Set.fromList idep) `Set.difference` k
                             nk = newVars `Set.union` k
-                            nd = addDep d trg dep
+                            nd = addDep d trg idep
                             nv = ( Set.elems $ newVars) ++ dv
 
 
@@ -485,7 +542,7 @@ measure f p = unsafePerformIO $ do
 
 -- prints the current assignment as a graph
 toDotGraph :: SolverState -> String
-toDotGraph (SolverState a@( Assignment m ) varSet _ _) = "digraph G {\n\t"
+toDotGraph (SolverState a@( Assignment m ) varIndex varSet _ _) = "digraph G {\n\t"
         ++
         "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
         ++
@@ -507,7 +564,7 @@ toDotGraph (SolverState a@( Assignment m ) varSet _ _) = "digraph G {\n\t"
         keys = Map.keys m
 
         -- list of all variables in the analysis
-        allVars = Set.toList $ varSet
+        allVars = indexToVar <$> (Set.toList $ varSet)
 
         -- the keys (=variables) associated with an index
         vars = Prelude.zip [1..] allVars
@@ -533,7 +590,7 @@ dumpSolverState s file = unsafePerformIO $ do
 
 
 toJsonMetaFile :: SolverState -> String
-toJsonMetaFile (SolverState a@( Assignment m ) vars _ _) = "{\n"
+toJsonMetaFile (SolverState a@( Assignment m ) varIndex vars _ _) = "{\n"
         ++
         "    \"bodies\": {\n"
         ++
@@ -546,8 +603,9 @@ toJsonMetaFile (SolverState a@( Assignment m ) vars _ _) = "{\n"
 
         store = foldr go Map.empty vars
             where
-                go v m = Map.insert k (msg : Map.findWithDefault [] k m) m
+                go iv m = Map.insert k (msg : Map.findWithDefault [] k m) m
                     where
+                        v = indexToVar iv
                         k = (addr v)
                         i = index v
                         s = BS.unpack $ extra i
@@ -581,7 +639,7 @@ showSolverStatistic s =
         
         grouped = foldr go Map.empty vars
             where
-                go v m = Map.insertWith (+) ( analysis . index $ v ) (1::Int) m
+                go v m = Map.insertWith (+) ( analysis . index . indexToVar $ v ) (1::Int) m
         
         print (a,c) = printf "     %10s %20d %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime 
             where
