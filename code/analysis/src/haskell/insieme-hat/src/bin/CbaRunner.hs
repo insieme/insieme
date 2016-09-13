@@ -192,4 +192,4 @@ analysis a =
                                  | BSet.size (BSet.intersection lhs rhs) > 0  -> a{getResult = Ok}
                                  | otherwise                                  -> a{getResult = Fail}
 
-        _ -> error "Unsupported Analysis"
+        _ -> return a -- error "Unsupported Analysis"
