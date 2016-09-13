@@ -107,7 +107,7 @@ findAnalysis addr acc =
 aliasAnalysis :: AnalysisRun -> State Solver.SolverState Alias.Results
 aliasAnalysis a = do
     state <- get
-    let (res, state') = Alias.checkAlias state (Addr.goDown 2 $ getAddr a) (Addr.goDown 3 $ getAddr a)
+    let (res, state') = Alias.checkAlias state (Addr.goDown 1 $ Addr.goDown 2 $ getAddr a) (Addr.goDown 1 $ Addr.goDown 3 $ getAddr a)
     put state'
     return res
 
