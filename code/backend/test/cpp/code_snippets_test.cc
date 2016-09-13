@@ -387,6 +387,23 @@ namespace backend {
 		})
 	}
 
+	TEST(CppSnippet, MemberFunctionsOnlyDeclared) {
+		DO_TEST(R"(
+			decl struct Foo;
+			decl test : Foo::() -> unit;
+			def struct Foo { }; // function test is only declared
+
+			int<4> main() {
+				var ref<Foo> foo;
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "include <assert.h>");
+			EXPECT_PRED2(containsSubString, code, "assert(");
+			EXPECT_PRED2(containsSubString, code, "\"This is an Insieme generated dummy function which should never be called\"");
+		})
+	}
+
 	TEST(CppSnippet, TrivialClass) {
 		DO_TEST(R"(
 			alias int = int<4>;

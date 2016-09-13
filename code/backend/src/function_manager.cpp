@@ -458,6 +458,21 @@ namespace backend {
 			assert_not_implemented();
 			return {};
 		}
+
+		core::ExpressionPtr generateDummyLambda(const core::FunctionTypePtr funType, const core::VariableList params) {
+			core::IRBuilder builder(funType.getNodeManager());
+			const auto& basic = builder.getLangBasic();
+
+			//auto body = builder.compoundStmt(builder.stringLit("DUMMY"));
+			auto unit = basic.getUnit();
+			auto callee = builder.literal("assert", builder.functionType(toVector<core::TypePtr>(basic.getInt4()), unit));
+			annotations::c::attachInclude(callee, "assert.h");
+			auto arg = builder.callExpr(basic.getBoolLAnd(), basic.getFalse(),
+			                            builder.wrapLazy(builder.castExpr(basic.getBool(),builder.stringLit("This is an Insieme generated dummy function which should never be called"))));
+			auto call = builder.callExpr(unit, callee, arg);
+
+			return builder.lambdaExpr(funType, params, builder.compoundStmt(call));
+		}
 	}
 
 	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& in, ConversionContext& context) {
@@ -903,8 +918,7 @@ namespace backend {
 				core::VariableList params = ::transform(funType->getParameterTypeList(), [&](const core::TypePtr t) {
 					return builder.variable(core::transform::materialize(t));
 				});
-				// TODO generate assertion in this dummy body indicating that it should never be reached (build tool for this)
-				impl = builder.lambdaExpr(funType, params, builder.compoundStmt(builder.stringLit("DUMMY")));
+				impl = generateDummyLambda(funType, params);
 			}
 
 			// fix name
