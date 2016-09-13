@@ -263,7 +263,7 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
 
         analysis pp = reachingDefinitions (MemoryState pp ml)
 
-        idGenExt pp s = Solver.mkIdentifier reachingDefinitionAnalysis addr $ ("/" ++ (show pp) ++ " for " ++ (show ml) ++ s)
+        idGenExt pp s = Solver.mkIdentifierFromList reachingDefinitionAnalysis [addr,loc] $ ("/" ++ (show p) ++ s)
         idGen pp = idGenExt pp ""
 
         extract = ComposedValue.toValue

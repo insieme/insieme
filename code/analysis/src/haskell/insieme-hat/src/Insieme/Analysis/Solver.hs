@@ -53,6 +53,7 @@ module Insieme.Analysis.Solver (
     -- identifiers
     Identifier,
     mkIdentifier,
+    mkIdentifierFromList,
 
     -- variables
     Var,
@@ -164,7 +165,7 @@ mkAnalysisIdentifier a n = AnalysisIdentifier (typeOf a) n
 
 data Identifier = Identifier {
     analysis :: AnalysisIdentifier,
-    address  :: NodeAddress,
+    address  :: [NodeAddress],
     extra    :: BS.ByteString,
     hash     :: Int
 }
@@ -186,16 +187,20 @@ instance Ord Identifier where
             r3 = compare s1 s2
 
 instance Show Identifier where
-        show (Identifier a n s _) = (show a) ++ "@" ++ (prettyShow n) ++ "/" ++ (BS.unpack s)
+        show (Identifier a [] s _) = (show a) ++ "/" ++ (BS.unpack s)
+        show (Identifier a ns s _) = (show a) ++ "@" ++ (intercalate "/" (prettyShow <$> ns)) ++ (BS.unpack s)
 
 
-mkIdentifier :: AnalysisIdentifier -> NodeAddress -> String -> Identifier
-mkIdentifier a n s = Identifier a n bs h
+mkIdentifierFromList :: AnalysisIdentifier -> [NodeAddress] -> String -> Identifier
+mkIdentifierFromList a n s = Identifier a n bs h
   where
     bs = BS.pack s
     h1 = Hash.hash $ idName a
-    h2 = Hash.hashWithSalt h1 $ getPathReversed n
+    h2 = Hash.hashWithSalt h1 $ getPathReversed <$> n
     h = Hash.hashWithSalt h2 s
+
+mkIdentifier :: AnalysisIdentifier -> NodeAddress -> String -> Identifier
+mkIdentifier a n s = mkIdentifierFromList a [n] s
 
 
 -- Analysis Variables ---------------------------------------
@@ -616,9 +621,9 @@ toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _) = "{\n"
 
         store = foldr go Map.empty vars
             where
-                go v m = Map.insert k (msg : Map.findWithDefault [] k m) m
+                go v m = if null $ addr v then m else Map.insert k (msg : Map.findWithDefault [] k m) m
                     where
-                        k = (addr v)
+                        k = (head $ addr v)
                         i = index v
                         s = BS.unpack $ extra i
                         ext = if null s then "" else '/' : s
