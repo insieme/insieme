@@ -61,9 +61,9 @@ main = do
 
     let res = Utils.foldTree go ir
 
-    print $ length $ filter (=='e') res
-    print $ length $ filter (=='u') res
-    print $ length $ filter (=='o') res
+    putStr $ "Errors:  " ++ (show $ length $ filter (=='e') res) ++ "\n"
+    putStr $ "Unknown: " ++ (show $ length $ filter (=='u') res) ++ "\n"
+    putStr $ "OK:      " ++ (show $ length $ filter (=='o') res) ++ "\n"
 
  where
     go :: Addr.NodeAddress -> [Char] -> [Char]
@@ -78,4 +78,4 @@ main = do
 
       where
         res :: USet.UnboundSet (Ref.Reference SimpleFieldIndex)
-        res = ComposedValue.toValue $ fst $ Solver.resolve Solver.initState (Ref.referenceValue $ Addr.goDown 2 addr)
+        res = ComposedValue.toValue $ fst $ Solver.resolve Solver.initState (Ref.referenceValue $ Addr.goDown 1 $ Addr.goDown 2 addr)
