@@ -92,8 +92,10 @@ module Insieme.Analysis.Solver (
 
 import Control.Exception
 
+import Prelude hiding (lookup)
+
 import Debug.Trace
-import Data.List
+import Data.List hiding (insert,lookup) 
 import Data.Dynamic
 import Data.Function
 import Data.Tuple
@@ -250,9 +252,41 @@ getLimit a v = join (go <$> (constraints . toVar) v)
                 (a',_) = update c a 
 
 
+
+-- Analysis Variable Maps -----------------------------------
+
+newtype VarMap a = VarMap (IntMap.IntMap (Map.Map Var a))
+    
+emptyVarMap = VarMap IntMap.empty
+
+lookup :: Var -> VarMap a -> Maybe a
+lookup k (VarMap m) = (Map.lookup k) =<< (IntMap.lookup (hash $ index k) m)
+
+insert :: Var -> a -> VarMap a -> VarMap a
+insert k v (VarMap m) = VarMap (IntMap.insertWith go (hash $ index k) (Map.singleton k v) m)
+    where
+        go n o = Map.insert k v o
+
+insertAll :: [(Var,a)] -> VarMap a -> VarMap a
+insertAll [] m = m
+insertAll ((k,v):xs) m = insertAll xs $ insert k v m 
+                
+
+keys :: VarMap a -> [Var]
+keys (VarMap m) = foldr go [] m
+    where 
+        go im l = (Map.keys im) ++ l 
+
+
+keysSet :: VarMap a -> Set.Set Var
+keysSet (VarMap m) = foldr go Set.empty m
+    where 
+        go im s = Set.union (Map.keysSet im) s 
+
+
 -- Assignments ----------------------------------------------
 
-newtype Assignment = Assignment ( Map.Map Var Dynamic )
+newtype Assignment = Assignment ( VarMap Dynamic )
 
 instance Show Assignment where
     show a@( Assignment m ) = "Assignemnet {\n\t"
@@ -261,31 +295,33 @@ instance Show Assignment where
             ++
             "\n}"
         where
-            vars = Map.keys m
+            vars = keys m
 
 
 empty :: Assignment
-empty = Assignment Map.empty
+empty = Assignment emptyVarMap
 
 -- retrieves a value from the assignment
 -- if the value is not present, the bottom value of the variable will be returned
 get :: (Typeable a) => Assignment -> TypedVar a -> a
 get (Assignment m) (TypedVar v) =
-        fromJust $ (fromDynamic :: ((Typeable a) => Dynamic -> (Maybe a)) ) $ fromMaybe (bottom v) (Map.lookup v m)
+        fromJust $ (fromDynamic :: ((Typeable a) => Dynamic -> (Maybe a)) ) $ fromMaybe (bottom v) (lookup v m)
+
 
 -- updates the value for the given variable stored within the given assignment
 set :: (Typeable a) => Assignment -> TypedVar a -> a -> Assignment
-set (Assignment a) (TypedVar v) d = Assignment (Map.insert v (toDyn d) a)
+set (Assignment a) (TypedVar v) d = Assignment (insert v (toDyn d) a)
 
 
 -- resets the values of the given variables within the given assignment
 reset :: Assignment -> Set.Set IndexedVar -> Assignment
-reset (Assignment a) vars = Assignment $ Map.union reseted a
-    where 
-        reseted = Map.fromList (go <$> Set.toList vars)
+reset (Assignment m) vars = Assignment $ insertAll reseted m 
+    where
+        reseted = go <$> Set.toList vars
         go iv = (v,bottom v)
             where
                 v = indexToVar iv
+
  
 
 -- Constraints ---------------------------------------------
@@ -333,26 +369,30 @@ instance Show IndexedVar where
     
 
 
-data VariableIndex = VariableIndex (Map.Map Var IndexedVar)
+data VariableIndex = VariableIndex Int (VarMap IndexedVar)
 
+emptyVarIndex :: VariableIndex
+emptyVarIndex = VariableIndex 0 emptyVarMap
 
 numVars :: VariableIndex -> Int
-numVars (VariableIndex m) = Map.size m
+numVars (VariableIndex n _) = n
 
 knownVariables :: VariableIndex -> Set.Set Var
-knownVariables (VariableIndex m) = Map.keysSet m
+knownVariables (VariableIndex _ m) = keysSet m
 
 varToIndex :: VariableIndex -> Var -> (IndexedVar,VariableIndex)
-varToIndex (VariableIndex m) v = (res, VariableIndex nm)
+varToIndex (VariableIndex n m) v = (res, VariableIndex nn nm)
     where
+    
+        ri = lookup v m
         
-        (ri,nm) = Map.insertLookupWithKey old v ni m
-            where
-                old _ _ o = o
+        nm = if isNothing ri then insert v ni m else m
         
-        ni = IndexedVar (Map.size m) v           -- the new indexed variable, if necessary
+        ni = IndexedVar n v           -- the new indexed variable, if necessary
         
         res = fromMaybe ni ri
+        
+        nn = if isNothing ri then n+1 else n
 
 
 varsToIndex :: VariableIndex -> [Var] -> ([IndexedVar],VariableIndex)
@@ -376,7 +416,7 @@ data SolverState = SolverState {
         cpuTimes :: Map.Map AnalysisIdentifier Integer
     } 
 
-initState = SolverState empty (VariableIndex Map.empty) Map.empty Map.empty
+initState = SolverState empty emptyVarIndex Map.empty Map.empty
 
 
 
@@ -575,9 +615,6 @@ toDotGraph (SolverState a@( Assignment m ) varIndex _ _) = "digraph G {\n\t"
 
         -- a function collecting all variables a variable is depending on
         dep v = foldr (\c l -> (dependingOn c a) ++ l) [] (constraints v)
-
-        -- list of all keys in map
-        keys = Map.keys m
 
         -- list of all variables in the analysis
         allVars = Set.toList $ varSet
