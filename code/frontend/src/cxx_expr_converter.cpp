@@ -369,7 +369,7 @@ namespace conversion {
 				}
 				core::ExpressionList initList;
 				for(auto i = initFunParams.cbegin()+1; i != initFunParams.cend(); ++i) {
-					initList.push_back(builder.deref(*i));
+					initList.push_back(*i);
 				}
 				arr = builder.initExpr(memloc, initList);
 			}
