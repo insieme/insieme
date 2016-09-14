@@ -82,14 +82,11 @@ Tests located in the analysis part of INSIEME also include unit-tests utilizing
 the Haskell package via the adapter. The adapter builds a bridge between C/C++
 and Haskell via Haskell's foreign function interface (ffi).
 
-## Building Internal Documentation
+## Documentation
 
-While `stack` can run `haddock` on a whole package it only takes exposed
-modules into account and there is no way to pass a `--internal` flag as you
-could do with `cabal`. A simple workaround is to move all modules from the
-`other-modules` list of the `library` section in `insieme-hat.cabal` to
-`exposed-modules` and run `stack haddock --no-haddock-deps`. The resulting
-files will be located inside `.stack-work/doc/.../insieme-hat`.
+Simply run `stack haddock` to produce source code documentation, all modules of
+the library are exposed. You can find the result at
+`.stack-work/install/.../doc/insieme-hat-$VERSION/index.html`.
 
 ## Known Issues
 
