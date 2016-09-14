@@ -71,6 +71,11 @@ following commands to issue a profiling run:
 After running these commands you should find a textfile named `cba_runner.prof`
 containg profiling information.
 
+When profiling has been enabled, one can also pass `-xc` to print a stack trace
+upon encouenring an error.
+
+    $ stack exec cba_runner -- +RTS -xc < cba_test.irbh
+
 ## Testing via C/C++
 
 Tests located in the analysis part of INSIEME also include unit-tests utilizing

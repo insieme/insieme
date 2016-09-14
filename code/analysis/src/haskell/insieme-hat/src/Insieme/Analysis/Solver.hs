@@ -100,6 +100,7 @@ import Data.Dynamic
 import Data.Function
 import Data.Tuple
 import Data.Maybe
+import System.Directory (doesFileExist)
 import System.IO.Unsafe (unsafePerformIO)
 import System.CPUTime
 import System.Process
@@ -479,8 +480,8 @@ solveStep :: SolverState -> Dependencies -> [IndexedVar] -> SolverState
 
 -- empty work list
 -- solveStep s _ [] | trace (dumpToJsonFile s "ass_meta") $ False = undefined                                           -- debugging assignment as meta-info for JSON dump
--- solveStep s _ [] | trace (dumpSolverState s "graph") $ False = undefined                                             -- debugging assignment as a graph plot
--- solveStep s _ [] | trace (dumpSolverState s "graph") $ trace (dumpToJsonFile s "ass_meta") $ False = undefined       -- debugging both
+-- solveStep s _ [] | trace (dumpSolverState False s "graph") False = undefined                                             -- debugging assignment as a graph plot
+-- solveStep s _ [] | trace (dumpSolverState True s "graph") $ trace (dumpToJsonFile s "ass_meta") $ False = undefined       -- debugging both
 -- solveStep s _ [] | trace (showSolverStatistic s) $ False = undefined                                                 -- debugging performance data
 solveStep s _ [] = s                                                                                                    -- work list is empty
 
@@ -635,12 +636,28 @@ toDotGraph (SolverState a@( Assignment m ) varIndex _ _) = "digraph G {\n\t"
 
 
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
-dumpSolverState :: SolverState -> String -> String
-dumpSolverState s file = unsafePerformIO $ do
-         writeFile (file ++ ".dot") $ toDotGraph s
-         system ("dot -Tpdf " ++ file ++ ".dot -o " ++ file ++ ".pdf")
-         return ("Dumped assignment into file " ++ file ++ ".pdf!")
+dumpSolverState :: Bool -> SolverState -> String -> String
+dumpSolverState overwrite s f = unsafePerformIO $ do
+  dot <- if not overwrite then nonexistFile f "dot" else return (f ++ ".dot")
+  let pdf = replaceSuffix dot "pdf"
+  writeFile dot (toDotGraph s)
+  system ("dot -Tpdf " ++ dot ++ " -o " ++ pdf)
+  return ("Dumped assignment into " ++ pdf)
 
+-- | Replace existing suffix in a file name with a new suffix.
+replaceSuffix :: FilePath -> String -> FilePath
+replaceSuffix fn suf = reverse (dropWhile (/= '.') $ reverse fn) ++ suf
+
+-- | Generate a file name which does not exist yet. The arguments to
+-- this function is the file name base, and the file extension.
+nonexistFile :: String -> String -> IO String
+nonexistFile base ext = tryFile names
+    where
+      tryFile (f:fs) =
+        doesFileExist f >>= \e -> if e then tryFile fs else return f
+      names  = simple : [ iter n | n <- [ 1.. ]]
+      simple = concat [base, ".", ext]
+      iter n = concat [base, "-", show n, ".", ext]
 
 toJsonMetaFile :: SolverState -> String
 toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _) = "{\n"
