@@ -165,4 +165,6 @@ lookupBuiltin :: NodeAddress -> String -> Maybe IR.Tree
 lookupBuiltin addr needle = Map.lookup needle (IR.getBuiltins $ getInspire addr)
 
 isBuiltin :: NodeAddress -> String -> Bool
-isBuiltin addr needle = fromMaybe False $ (== getNodePair addr) <$> lookupBuiltin addr needle
+isBuiltin addr needle = case getNodeType addr of
+    IR.Lambda | depth addr >= 3 -> isBuiltin (goUp $ goUp $ goUp $ addr) needle 
+    _         -> fromMaybe False $ (== getNodePair addr) <$> lookupBuiltin addr needle

@@ -229,8 +229,14 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
         _ | p == Pre && IR.isEntryPoint addr -> 
             Solver.mkVariable (idGen addr) [] (USet.singleton $ Initial)
 
+        -- skip everything that can statically be considered assignment free
+        _ | p == Post && isAssignmentFree addr && (not isParentOfLocation) -> var
+            where
+                var = Solver.mkVariable (idGen addr) [con] Solver.bot
+                con = Solver.forward (reachingDefinitions $ MemoryState (ProgramPoint addr Pre) ml) var
+
         -- to prune the set of variables, we check whether the invoced callable may update the traced reference
-        IR.CallExpr | p == Internal && (not $ loc `isChildOf` addr)-> var
+        IR.CallExpr | p == Internal && (not isParentOfLocation)-> var
             where
                 var = Solver.mkVariable (idGenExt pp "switch") [con] Solver.bot
                 con = Solver.createEqualityConstraint dep val var
@@ -260,6 +266,8 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
         _ -> defaultVar
 
     where
+
+        isParentOfLocation = loc `isChildOf` addr
 
         analysis pp = reachingDefinitions (MemoryState pp ml)
 
@@ -314,6 +322,45 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
                 (pdep,pval) = mkPredecessorConstraintCredentials pp analysis
 
 
+-- A filter for the reaching definition analysis --
+
+isAssignmentFree :: NodeAddress -> Bool
+isAssignmentFree addr = case getNodeType addr of
+
+        IR.Literal     -> True
+                       
+        IR.Variable    -> True
+                       
+        IR.CallExpr    -> isAssignmentFreeFunction (goDown 1 addr) && 
+                            all isAssignmentFree [ goDown x addr | x <- [1 .. (numChildren addr - 1)] ]
+                       
+        IR.LambdaExpr  -> True
+                       
+        IR.BindExpr    -> True
+
+        IR.Declaration -> isAssignmentFree $ goDown 1 addr
+        
+        _ -> False
+
+        
+
+isAssignmentFreeFunction :: NodeAddress -> Bool
+isAssignmentFreeFunction addr = case getNodeType addr of
+    
+    IR.Literal -> not $ isBuiltin addr "ref_assign"
+    
+    IR.LambdaExpr -> any (isBuiltin addr) [
+                                "ite",
+                                "ref_scalar_to_ref_array",
+                                "ref_array_elem",
+                                "ptr_from_ref",
+                                "ptr_to_ref",
+                                "ptr_from_array",
+                                "ptr_to_array",
+                                "ptr_reinterpret"
+                        ] 
+
+    _ -> False
 
 
 --
@@ -386,6 +433,7 @@ writeSet addr = case getNodeType addr of
         empty = Solver.mkVariable (idGen addr) [] (USet.empty) 
 
         idGen a = Solver.mkIdentifier writeSetAnalysis a ""
+
 
 
 -- killed definitions

@@ -63,6 +63,8 @@
 #include "insieme/utils/config.h"
 #include "insieme/utils/name_mangling.h"
 
+#include "insieme/core/ir_statistic.h"
+
 namespace insieme {
 namespace analysis {
 
@@ -219,6 +221,32 @@ namespace analysis {
 			// running semantic checks
 			auto res = core::checks::check(prog);
 			EXPECT_TRUE(res.empty()) << res << "\n------\n" << printer::dumpErrors(res);
+
+//			mgr.getLangExtension<core::lang::ReferenceExtension>().getSymbols();
+//			mgr.getLangExtension<core::lang::PointerExtension>().getSymbols();
+//
+//			core::visitDepthFirstOnce(prog, [](const LambdaExprPtr& lambda) {
+//				if (core::lang::isBuiltIn(lambda)) {
+//					std::cout << core::lang::getConstructName(lambda) << "\n";
+//				}
+//			});
+//
+//			std::map<NodePtr,int> counter;
+//			core::visitDepthFirst(prog, [&](const NodePtr& node) {
+//				if (core::lang::isBuiltIn(node)) {
+//					counter[node]++;
+//				}
+//			});
+//
+//			std::cout << "\nBuilt-In Statistics:\n";
+//			for(const auto& cur : counter) {
+//				std::cout << core::lang::getConstructName(cur.first) << "/" << cur.first->getNodeType() << ": " << cur.second << "\n";
+//			}
+//			std::cout << "\n";
+//
+//			std::cout << core::IRStatistic::evaluate(prog) << "\n";
+
+//			dumpText(prog);
 
 			// run CBA analysis
 			int testCount = 0;

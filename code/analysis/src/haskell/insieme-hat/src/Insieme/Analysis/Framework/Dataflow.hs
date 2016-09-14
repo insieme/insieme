@@ -151,10 +151,14 @@ dataflowValue addr analysis ops = case getNodePair addr of
 
         -- support for calls to lambda and closures --
 
-        getExitPointVars a = if USet.isUniverse targets then [] else Set.fold go [] (USet.toSet $ targets)
+        getExitPointVars a = if USet.isUniverse targets then [] else Set.fold go [] uninterceptedTargets
             where
                 targets = ComposedValue.toValue $ Solver.get a trg
                 go c l = (ExitPoint.exitPoints $ Callable.toAddress c) : l
+
+                uninterceptedTargets = Set.filter (not . covered) (USet.toSet targets)
+                covered (Callable.Lambda addr) = any (\o -> covers o addr) extOps
+                covered _ = False
 
         getReturnValueVars a = concat $ map go $ map (toList . Solver.get a) (getExitPointVars a)
             where

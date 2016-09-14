@@ -44,6 +44,8 @@ import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
 import qualified Insieme.Inspire as IR
 
+import Insieme.Utils.Arithmetic
+import qualified Insieme.Utils.BoundSet as BSet
 import qualified Insieme.Utils.UnboundSet as USet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
@@ -51,9 +53,11 @@ import Insieme.Analysis.Framework.Utils.OperatorHandler
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import Insieme.Analysis.Entities.FieldIndex
+import Insieme.Analysis.Entities.SymbolicFormula
 
 
 import qualified Insieme.Analysis.Entities.DataPath as DP
+import Insieme.Analysis.Arithmetic
 import Insieme.Analysis.DataPath
 
 
@@ -129,7 +133,7 @@ referenceValue addr = case getNodeType addr of
 
         compose = ComposedValue.toComposed
 
-        opsHandler = [ allocHandler , declHandler , refNarrow , refExpand , refCast , refReinterpret ]
+        opsHandler = [ allocHandler , declHandler , refNarrow , refExpand , refCast , refReinterpret , ptrToRef ]
 
         allocHandler = OperatorHandler cov noDep val
             where
@@ -164,6 +168,19 @@ referenceValue addr = case getNodeType addr of
                 cov a = isBuiltin a "ref_reinterpret"
                 dep _ = [toVar baseRefVar]
                 val a = get a baseRefVar            -- TODO: check when this conversion is actually valid
+
+        ptrToRef = OperatorHandler cov dep val
+            where
+                cov a = isBuiltin a "ptr_to_ref"
+                dep _ = [toVar baseRefVar, toVar offsetVar]
+                val a = compose $ access (baseRefVal a) (offsetVal a)
+                
+                baseRefVal a = ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 0) $ get a baseRefVar 
+                
+                offsetVar = arithmeticValue $ goDown 1 $ goDown 2 addr
+                offsetVal a = BSet.toUnboundSet $ ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 1) $ get a offsetVar
+                
+                access = USet.lift2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ index offset))  
 
         noDep a = []
 
