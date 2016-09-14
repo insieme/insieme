@@ -480,8 +480,8 @@ solveStep :: SolverState -> Dependencies -> [IndexedVar] -> SolverState
 
 -- empty work list
 -- solveStep s _ [] | trace (dumpToJsonFile s "ass_meta") $ False = undefined                                           -- debugging assignment as meta-info for JSON dump
--- solveStep s _ [] | trace (dumpSolverState False s "graph") False = undefined                                             -- debugging assignment as a graph plot
--- solveStep s _ [] | trace (dumpSolverState True s "graph") $ trace (dumpToJsonFile s "ass_meta") $ False = undefined       -- debugging both
+-- solveStep s _ [] | trace (dumpSolverState False s "graph") False = undefined                                         -- debugging assignment as a graph plot
+-- solveStep s _ [] | trace (dumpSolverState True s "graph") $ trace (dumpToJsonFile s "ass_meta") $ False = undefined  -- debugging both
 -- solveStep s _ [] | trace (showSolverStatistic s) $ False = undefined                                                 -- debugging performance data
 solveStep s _ [] = s                                                                                                    -- work list is empty
 
