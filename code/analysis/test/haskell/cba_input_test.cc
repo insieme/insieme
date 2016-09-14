@@ -43,8 +43,9 @@
 #include <tuple>
 #include <fstream>
 
-#include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/optional.hpp>
 
 #include "insieme/analysis/cba_interface.h"
 
@@ -162,32 +163,42 @@ namespace analysis {
 
 		// boolean
 		bool isTrue(const core::ExpressionAddress& x) {
-			return eqConstant(1,x);
+			return !getValue(x).contains(0);
 		}
 
 		bool isFalse(const core::ExpressionAddress& x) {
-			return eqConstant(0,x);
+			return eqConstant(0, x);
 		}
 
 		bool mayBeTrue(const core::ExpressionAddress& x) {
-			return getValue(x).contains(1);
+			return neConstant(0, x);
 		}
 
 		bool mayBeFalse(const core::ExpressionAddress& x) {
 			return getValue(x).contains(0);
 		}
 
-		bool eqConstant(int c, const core::ExpressionAddress& x) {
+		boost::optional<int> getConstant(const core::ExpressionAddress& x) {
 			auto values = this->getValue(x);
 
-			if (values.isUniversal()) return false;
+			if(values.isUniversal()) return {};
 
-			if (values.size() != 1) return false;
+			if(values.size() != 1) return {};
 
 			auto& value = *values.begin();
-			if (!value.isConstant()) return false;
+			if(!value.isConstant()) return {};
 
-			return c == value.getIntegerValue();
+			return value.getIntegerValue();
+		}
+
+		bool eqConstant(int c, const core::ExpressionAddress& x) {
+			auto value = getConstant(x);
+			return value ? *value == c : false;
+		}
+
+		bool neConstant(int c, const core::ExpressionAddress& x) {
+			auto value = getConstant(x);
+			return value ? *value != c : true;
 		}
 
 		ArithmeticSet getValue(const core::ExpressionAddress& x) {

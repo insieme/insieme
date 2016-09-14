@@ -44,6 +44,7 @@ int main(int argc, char** argv) {
 
 	// very simple stuff
 	cba_expect_true(true);
+	cba_expect_true(2);
 	cba_expect_may_be_true(true);
 	cba_expect_false(false);
 	cba_expect_may_be_false(false);
