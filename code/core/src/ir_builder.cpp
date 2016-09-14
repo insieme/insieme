@@ -1400,7 +1400,7 @@ namespace core {
 	LiteralPtr IRBuilderBaseModule::minus(const LiteralPtr& lit) const {
 		assert_true(getLangBasic().isScalarType(lit->getType())) << "Can not change sign of non-scalar type!";
 
-		// update type of literal to support unsigned
+		// update type of literal to support signed
 		TypePtr type = toSigned(*this, lit->getType().as<GenericTypePtr>());
 
 		// update string value of literal
@@ -1422,7 +1422,7 @@ namespace core {
 		// check literal type
 		if(a->getNodeType() == NT_Literal) { return minus(a.as<LiteralPtr>()); }
 
-		// update type of literal to support unsigned
+		// update type of literal to support signed
 		TypePtr type = toSigned(*this, a->getType().as<GenericTypePtr>());
 
 		ExpressionPtr value = numericCast(a,type);

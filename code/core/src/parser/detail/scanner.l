@@ -40,19 +40,22 @@ type_var      [\'][a-zA-Z0-9_]*
 tag_ref       [\^][a-zA-Z0-9_]*
 
 /* Note: the original string regex was: \"(\\.|[^"])*\"
- * We had to create an alternative one which puts the strin in double quotes on each side, in order to enable the parsing of
+ * We had to create an alternative one which puts the string in double quotes on each side, in order to enable the parsing of
  * string literals (which are real strings - not real values or so) and also pass on the enclosing quotes to the builder.
+ *
+ * Some corner cases for float and double literals are not covered here, as they result in wrong parsing combined with the
+ * member access usage of '.'
  */
 string        \"(\\.|[^"])*\"|\"(\"(\\.|[^"])*\")\"
 char          [\'][\\a-zA-Z0-9_][a-zA-Z0-9_]?[\']
-float         [0-9]+"."[0-9]+([eE][+\-]?[0-9]+)?f
-double        [0-9]+"."[0-9]+([eE][+\-]?[0-9]+)?
-ulong         [0-9]+ul
-long          [0-9]+l
-longlong      [0-9]+ll
-ulonglong     [0-9]+ull
-uint          [0-9]+u
-int           [0-9]+
+float         ((0|[1-9][0-9]*)f)|((0|[1-9][0-9]*)"."[0-9]+([eE][+\-]?[0-9]+)?f)
+double        ((0|[1-9][0-9]*)d)|((0|[1-9][0-9]*)"."[0-9]+([eE][+\-]?[0-9]+)?d?)
+ulonglong     (0|([1-9][0-9]*))ull
+longlong      (0|([1-9][0-9]*))ll
+ulong         (0|([1-9][0-9]*))ul
+long          (0|([1-9][0-9]*))l
+uint          (0|([1-9][0-9]*))u
+int           (0|([1-9][0-9]*))
 blank         [ \t]
 
 

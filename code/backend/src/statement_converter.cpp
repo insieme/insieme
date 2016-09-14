@@ -65,6 +65,8 @@
 
 #include "insieme/utils/logging.h"
 
+#include <boost/algorithm/string.hpp>
+
 namespace insieme {
 namespace backend {
 
@@ -314,23 +316,28 @@ namespace backend {
 			const string& value = ptr->getStringValue();
 
 			// things that need not be extra-casted (default values)
-			if(basic.isInt4(type) || basic.isReal8(type) || basic.isIntInf(type) || basic.isUIntInf(type)) { return res; }
+			if(basic.isInt4(type) || basic.isIntInf(type) || basic.isUIntInf(type)) { return res; }
 
-			// add a f in case it is a float literal and it is missing
+			// add an 'f' suffix in case it is a float literal and it is missing, fix integral float literals
 			if(basic.isReal4(type)) {
-				if(*value.rbegin() != 'f') {
-					res = toLiteral(value + "f");
-					// add a ".0" if we have an integer in a float literal
-					if(!any(value, [](const string::value_type& ch) { return ch == '.' || ch == 'e'; })) { res = toLiteral(value + ".0f"); }
-				}
-				return res;
+				string literalValue = value;
+				if(!boost::contains(literalValue, ".")) literalValue += ".0";
+				if(*literalValue.rbegin() != 'f') literalValue += 'f';
+				return toLiteral(literalValue);
+
+				// fix integral double literals
+			} else if(basic.isReal8(type)) {
+				string literalValue = value;
+				if(!boost::contains(literalValue, ".")) literalValue += ".0";
+				return toLiteral(literalValue);
 			}
 
-			// add a u in case it is a signed literal and it is missing
-			if(basic.isUInt4(type)) {
-				if(*value.rbegin() != 'u') { res = toLiteral(value + "u"); }
-				return res;
-			}
+			// add the correct suffixes if they are missing
+			if(basic.isUInt4(type) && *value.rbegin() != 'u') return toLiteral(value + "u");
+			if(basic.isInt8(type) && *value.rbegin() != 'l') return toLiteral(value + "l");
+			if(basic.isUInt8(type) && !boost::ends_with(value, "ul")) return toLiteral(value + "ul");
+			if(basic.isInt16(type) && !boost::ends_with(value, "ll")) return toLiteral(value + "ll");
+			if(basic.isUInt16(type) && !boost::ends_with(value, "ull")) return toLiteral(value + "ull");
 
 			// fall-back solution: use an explicit cast
 			auto info = converter.getTypeManager().getTypeInfo(type);

@@ -172,7 +172,7 @@ namespace backend {
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
-			EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t(*)[3])(&INS_INIT(__insieme_type_2){{(uint64_t)0, (uint64_t)0, (uint64_t)0}}))");
+			EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t(*)[3])(&INS_INIT(__insieme_type_2){{0ul, 0ul, 0ul}}))");
 		})
 	}
 
@@ -184,6 +184,57 @@ namespace backend {
 		})", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
 			EXPECT_PRED2(containsSubString, code, "true");
 			EXPECT_PRED2(containsSubString, code, "false");
+		})
+	}
+
+	TEST(Literals, NumericLiterals) {
+		DO_TEST(R"(int<4> main() {
+			lit("1" : int<1>) * lit("-1" : int<1>);
+			lit("2" : uint<1>);
+			lit("3" : int<2>) * lit("-3" : int<2>);
+			lit("4" : uint<2>);
+			5 * -5;
+			6u;
+			7l * -7l;
+			8ul;
+			9ll *  -9ll;
+			10ull;
+			11f * -11f;
+			12.0f * -12.0f;
+			13d * -13d;
+			14.0d * -14.0d;
+			15.0 * -15.0;
+			return 0;
+		})", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
+			// casts to smaller types
+			EXPECT_PRED2(containsSubString, code, "(int8_t)1 * (int8_t)-1;");
+			EXPECT_PRED2(containsSubString, code, "(uint8_t)2;");
+			EXPECT_PRED2(containsSubString, code, "(int16_t)3 * (int16_t)-3;");
+			EXPECT_PRED2(containsSubString, code, "(uint16_t)4;");
+
+			// no casts to larger and floating point types - the corresponding literals should be used
+			EXPECT_PRED2(containsSubString, code, "5 * -5;");
+			EXPECT_PRED2(containsSubString, code, "6u;");
+			EXPECT_PRED2(containsSubString, code, "7l * -7l;");
+			EXPECT_PRED2(containsSubString, code, "8ul;");
+			EXPECT_PRED2(containsSubString, code, "9ll * -9ll;");
+			EXPECT_PRED2(containsSubString, code, "10ull;");
+			EXPECT_PRED2(containsSubString, code, "11.0f * -11.0f;");
+			EXPECT_PRED2(containsSubString, code, "12.0f * -12.0f;");
+			EXPECT_PRED2(containsSubString, code, "13.0 * -13.0;");
+			EXPECT_PRED2(containsSubString, code, "14.0 * -14.0;");
+			EXPECT_PRED2(containsSubString, code, "15.0 * -15.0;");
+
+			EXPECT_PRED2(notContainsSubString, code, "(long)");
+			EXPECT_PRED2(notContainsSubString, code, "(int64_t)");
+			EXPECT_PRED2(notContainsSubString, code, "(unsigned long)");
+			EXPECT_PRED2(notContainsSubString, code, "(uint64_t)");
+			EXPECT_PRED2(notContainsSubString, code, "(long long)");
+			EXPECT_PRED2(notContainsSubString, code, "(int128_t)");
+			EXPECT_PRED2(notContainsSubString, code, "(unsigned long long)");
+			EXPECT_PRED2(notContainsSubString, code, "(uint128_t)");
+			EXPECT_PRED2(notContainsSubString, code, "(float)");
+			EXPECT_PRED2(notContainsSubString, code, "(double)");
 		})
 	}
 
@@ -248,23 +299,6 @@ namespace backend {
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
 			EXPECT_PRED2(containsSubString, code, "__insieme_type_1 a;");
 			EXPECT_PRED2(containsSubString, code, "__insieme_type_1* b = (__insieme_type_1*)malloc(sizeof(__insieme_type_1));");
-		})
-	}
-
-	TEST(PrimitiveType, LongLong) {
-		DO_TEST(R"(
-			alias longlong = int<16>;
-
-			int<4> main() {
-				// just create a long-long variable
-				var int<16> a = 10l;
-				// just create a long-long variable
-				var uint<16> b = 10ul;
-				return 0;
-			}
-		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
-			EXPECT_PRED2(containsSubString, code, "long long a = (int64_t)10;");
-			EXPECT_PRED2(containsSubString, code, "unsigned long long b = (uint64_t)10;");
 		})
 	}
 
