@@ -133,7 +133,7 @@ referenceValue addr = case getNodeType addr of
 
         compose = ComposedValue.toComposed
 
-        opsHandler = [ allocHandler , declHandler , refNarrow , refExpand , refCast , refReinterpret , ptrToRef ]
+        opsHandler = [ allocHandler , declHandler , refNarrow , refExpand , refCast , refReinterpret , ptrToRef , ptrFromRef ]
 
         allocHandler = OperatorHandler cov noDep val
             where
@@ -181,6 +181,16 @@ referenceValue addr = case getNodeType addr of
                 offsetVal a = BSet.toUnboundSet $ ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 1) $ get a offsetVar
                 
                 access = USet.lift2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ index offset))  
+
+        ptrFromRef = OperatorHandler cov dep val
+            where
+                cov a = isBuiltin a "ptr_from_ref"
+                dep _ = [toVar baseRefVar]
+                val a = ComposedValue.composeElements [(component 0,compose res)]
+                    where
+                        res = lower $ baseRefVal a
+                        lower = USet.lift $ \(Reference l p) -> Reference l (DP.append p (DP.invert $ DP.step $ component 0))
+
 
         noDep a = []
 
