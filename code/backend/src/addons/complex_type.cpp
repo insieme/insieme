@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -58,7 +58,6 @@ namespace addons {
 	namespace {
 
 		bool isComplexType(const core::TypePtr& type) {
-			// check whether it is a cpp reference
 			const core::StructPtr& structType = core::analysis::isStruct(type);
 			if(!structType) { return false; }
 			if(!(structType->getFields().size() == 2)) { return false; }
@@ -71,15 +70,15 @@ namespace addons {
 		}
 
 
-		const TypeInfo* ComplexTypeHandler(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* ComplexTypeHandler(ConversionContext& context, const core::TypePtr& type) {
 			if(!isComplexType(type)) { return NULL; }
 
 			// build up TypeInfo for complex type
-			TypeManager& typeManager = converter.getTypeManager();
+			TypeManager& typeManager = context.getConverter().getTypeManager();
 
 			const core::StructPtr& structType = core::analysis::isStruct(type);
 			const core::FieldPtr t1 = structType->getFields()[0];
-			const TypeInfo& baseInfo = typeManager.getTypeInfo(t1->getType());
+			const TypeInfo& baseInfo = typeManager.getTypeInfo(context, t1->getType());
 
 			// copy base information
 			TypeInfo* refInfo = new TypeInfo(baseInfo);
@@ -92,7 +91,7 @@ namespace addons {
 			refInfo->externalType = c_ast::complexType(refInfo->externalType);
 
 			// add the header dummy
-			c_ast::CodeFragmentPtr decl = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), "complex.h");
+			c_ast::CodeFragmentPtr decl = c_ast::IncludeFragment::createNew(context.getConverter().getFragmentManager(), "complex.h");
 			refInfo->declaration = decl;
 			refInfo->definition = decl;
 

@@ -69,7 +69,7 @@ namespace backend {
 
 	TypeIncludeTable getBasicTypeIncludeTable();
 
-	typedef std::function<const TypeInfo*(const Converter&, const core::TypePtr&)> TypeHandler;
+	typedef std::function<const TypeInfo*(ConversionContext&, const core::TypePtr&)> TypeHandler;
 
 	typedef vector<TypeHandler> TypeHandlerList;
 
@@ -92,27 +92,27 @@ namespace backend {
 
 		~TypeManager();
 
-		const TypeInfo& getTypeInfo(const core::TypePtr&);
+		const TypeInfo& getTypeInfo(ConversionContext& context, const core::TypePtr&);
 
-		const TagTypeInfo& getTypeInfo(const core::TagTypePtr&);
+		const TagTypeInfo& getTypeInfo(ConversionContext& context, const core::TagTypePtr&);
 
-		const TagTypeInfo& getTypeInfo(const core::TupleTypePtr&);
+		const TagTypeInfo& getTypeInfo(ConversionContext& context, const core::TupleTypePtr&);
 
-		const FunctionTypeInfo& getTypeInfo(const core::FunctionTypePtr&);
+		const FunctionTypeInfo& getTypeInfo(ConversionContext& context, const core::FunctionTypePtr&);
 
-		const RefTypeInfo& getRefTypeInfo(const core::GenericTypePtr&);
+		const RefTypeInfo& getRefTypeInfo(ConversionContext& context, const core::GenericTypePtr&);
 
-		const ArrayTypeInfo& getArrayTypeInfo(const core::GenericTypePtr& type);
+		const ArrayTypeInfo& getArrayTypeInfo(ConversionContext& context, const core::GenericTypePtr& type);
 
-		const ChannelTypeInfo& getChannelTypeInfo(const core::GenericTypePtr& type);
+		const ChannelTypeInfo& getChannelTypeInfo(ConversionContext& context, const core::GenericTypePtr& type);
 
-		const TypeInfo& getCVectorTypeInfo(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size);
+		const TypeInfo& getCVectorTypeInfo(ConversionContext& context, const core::TypePtr& elementType, const c_ast::ExpressionPtr& size);
 
 		// this one is only working for already resolved types
 		const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type);
 
 		// get type for use in template argument list
-		const c_ast::TypePtr getTemplateArgumentType(const core::TypePtr& type);
+		const c_ast::TypePtr getTemplateArgumentType(ConversionContext& context, const core::TypePtr& type);
 
 		// ----------------------- Management -----------------------
 

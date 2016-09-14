@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -45,6 +45,7 @@ namespace insieme {
 namespace backend {
 
 	class Converter;
+	class ConversionContext;
 	struct TypeInfo;
 
 	struct VariableInfo {
@@ -67,9 +68,9 @@ namespace backend {
 
 		const VariableInfo& getInfo(const core::VariablePtr& var) const;
 
-		const VariableInfo& addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location);
+		const VariableInfo& addInfo(ConversionContext& context, const core::VariablePtr& var, VariableInfo::MemoryLocation location);
 
-		const VariableInfo& addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location, const TypeInfo& typeInfo);
+		const VariableInfo& addInfo(ConversionContext& context, const core::VariablePtr& var, VariableInfo::MemoryLocation location, const TypeInfo& typeInfo);
 
 		void remInfo(const core::VariablePtr& var);
 	};

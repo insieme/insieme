@@ -302,6 +302,19 @@ namespace backend {
 		})
 	}
 
+	TEST(Arrays, VLAs) {
+		DO_TEST(R"(
+			int<4> main() {
+				var ref<int<4>,f,f> v0 = 3;
+				var uint<inf> l = num_cast(*v0,type_lit(uint<inf>));
+				var ref<array<real<4>,#l>,f,f> arr;
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
+			EXPECT_PRED2(containsSubString, code, "float arr[l];");
+		})
+	}
+
 	TEST(FunctionCall, GenericFunctionsWithLazy) {
 		DO_TEST(R"(
 			def f = (a : ref<'a>, c : ('a)=>bool, v : ()=>'a)->ref<'a> {

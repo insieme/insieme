@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -62,31 +62,31 @@ namespace addons {
 
 	namespace {
 
-		const TypeInfo* handleVarArgsType(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* handleVarArgsType(ConversionContext& context, const core::TypePtr& type) {
 			auto& ext = type->getNodeManager().getLangExtension<core::lang::VarArgsExtension>();
 
 			// check whether this is the type of interest
 			if (!ext.isVarList(type)) return nullptr;
 
 			// build up TypeInfo for complex type
-			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+			c_ast::CNodeManager& manager = *context.getConverter().getCNodeManager();
 
 			// create the resulting type representation
 			return type_info_utils::createInfo(manager.create<c_ast::VarArgsType>());
 		}
 
-		const TypeInfo* handleVaListType(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* handleVaListType(ConversionContext& context, const core::TypePtr& type) {
 			auto& ext = type->getNodeManager().getLangExtension<core::lang::VarArgsExtension>();
 
 			// check whether this is the type of interest
 			if (!ext.isVarList(type)) return nullptr;
 
 			// build up TypeInfo for complex type
-			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+			c_ast::CNodeManager& manager = *context.getConverter().getCNodeManager();
 
 			// create the resulting type representation
 			auto res = type_info_utils::createInfo(manager, "va_list");
-			c_ast::CodeFragmentPtr decl = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), "stdarg.h");
+			c_ast::CodeFragmentPtr decl = c_ast::IncludeFragment::createNew(context.getConverter().getFragmentManager(), "stdarg.h");
 			res->declaration = decl;
 			res->definition = decl;
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -47,14 +47,14 @@ namespace addons {
 
 	namespace {
 
-		const TypeInfo* LongLongTypeHandler(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* LongLongTypeHandler(ConversionContext& context, const core::TypePtr& type) {
 			const TypeInfo* skip = nullptr;
 
 			// intercept 128-bit types and convert them to the long-long type
 			const auto& base = type->getNodeManager().getLangBasic();
 
 			// get the c-node manager
-			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+			c_ast::CNodeManager& manager = *context.getConverter().getCNodeManager();
 
 			// check for the two special types
 			if(base.isInt16(type)) { return type_info_utils::createInfo(manager, c_ast::PrimitiveType::LongLong); }

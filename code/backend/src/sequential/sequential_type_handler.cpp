@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -47,7 +47,9 @@ namespace sequential {
 
 	namespace {
 
-		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* handleType(ConversionContext& context, const core::TypePtr& type) {
+			const Converter& converter = context.getConverter();
+
 			// handle jobs
 			const core::lang::ParallelExtension& ext = converter.getNodeManager().getLangExtension<core::lang::ParallelExtension>();
 
