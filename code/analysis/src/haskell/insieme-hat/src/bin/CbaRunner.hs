@@ -43,19 +43,16 @@ import Data.ByteString (getContents)
 import Data.List (isPrefixOf)
 import Data.Text.Format as Fmt
 import Data.Text.Lazy.Builder (fromString)
-
+import Insieme.Inspire.BinaryParser (parseBinaryDump)
+import Insieme.Inspire.Utils (foldTree)
+import Insieme.Utils.Arithmetic (NumOrdering(NumEQ), numCompare)
 import qualified Insieme.Analysis.Alias as Alias
 import qualified Insieme.Analysis.Arithmetic as Arith
 import qualified Insieme.Analysis.Boolean as AnBoolean
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as CV
 import qualified Insieme.Analysis.Solver as Solver
-
 import qualified Insieme.Inspire as IR
-import Insieme.Inspire.BinaryParser (parseBinaryDump)
 import qualified Insieme.Inspire.NodeAddress as Addr
-import Insieme.Inspire.Utils (foldTree)
-
-import Insieme.Utils.Arithmetic (NumOrdering(NumEQ), numCompare)
 import qualified Insieme.Utils.BoundSet as BSet
 
 main :: IO ()
@@ -72,10 +69,10 @@ main = do
     res  = fromString . show . getResult
     line x = Fmt.print "{} {}: {}\n" [cba x, addr x, res x]
 
-data AnalysisRun = AnalysisRun
-  { getAddr      :: Addr.NodeAddress
-  , getCbaExpect :: String
-  , getResult    :: AnalysisResult } deriving (Eq, Show)
+data AnalysisRun = AnalysisRun { getAddr      :: Addr.NodeAddress,
+                                 getCbaExpect :: String,
+                                 getResult    :: AnalysisResult }
+  deriving (Eq, Show)
 
 data AnalysisResult = Ok | Inaccurate | Fail | Pending
   deriving (Eq, Show, Read)
@@ -172,15 +169,26 @@ analysis a =
 
         "IMP_cba_expect_eq_int" -> do
             (lhs, rhs) <- arithAnalysis2 a
-            return a{getResult = boolToResult $ all (==NumEQ) $ BSet.toList $ BSet.lift2 numCompare lhs rhs}
+            return $ case () of _
+                                 | BSet.isUniverse lhs && BSet.isUniverse rhs -> a{getResult = Ok}
+                                 | BSet.isUniverse lhs || BSet.isUniverse rhs -> a{getResult = Fail}
+                                 | BSet.null lhs || BSet.null rhs             -> a{getResult = Fail}
+                                 | otherwise -> a{getResult = boolToResult $ all (==NumEQ) $ BSet.toList $ BSet.lift2 numCompare lhs rhs}
 
         "IMP_cba_expect_ne_int" -> do
             (lhs, rhs) <- arithAnalysis2 a
-            return a{getResult = boolToResult $ notElem NumEQ $ BSet.toList $ BSet.lift2 numCompare lhs rhs}
+            return $ case () of _
+                                 | BSet.isUniverse lhs && BSet.isUniverse rhs -> a{getResult = Fail}
+                                 | BSet.isUniverse lhs || BSet.isUniverse rhs -> a{getResult = Ok}
+                                 | BSet.null lhs || BSet.null rhs -> a{getResult = Fail}
+                                 | otherwise -> a{getResult = boolToResult $ notElem NumEQ $ BSet.toList $ BSet.lift2 numCompare lhs rhs}
 
         "IMP_cba_expect_may_eq_int" -> do
             (lhs, rhs) <- arithAnalysis2 a
-            return a{getResult = boolToResult $ BSet.isUniverse lhs || BSet.isUniverse rhs || BSet.size (BSet.intersection lhs rhs) > 0}
+            return $ case () of _
+                                 | BSet.isUniverse lhs || BSet.isUniverse rhs -> a{getResult = Ok}
+                                 | BSet.null lhs || BSet.null rhs             -> a{getResult = Fail}
+                                 | otherwise -> a{getResult = boolToResult $ BSet.size (BSet.intersection lhs rhs) > 0}
 
         _ -> return a -- error "Unsupported Analysis"
 
