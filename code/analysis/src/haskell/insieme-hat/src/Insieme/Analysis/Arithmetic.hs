@@ -112,7 +112,7 @@ arithmeticValue addr = case Addr.getNodePair addr of
     compose = ComposedValue.toComposed
     extract = ComposedValue.toValue
 
-    ops = [ add, mul, sub, div, mod]
+    ops = [ add, mul, sub, div, mod, ptrFromRef]
 
     add = OperatorHandler cov dep (val Ar.addFormula)
       where
@@ -140,6 +140,16 @@ arithmeticValue addr = case Addr.getNodePair addr of
     mod = OperatorHandler cov dep (val Ar.modFormula)
       where
         cov a = any (Addr.isBuiltin a) ["int_mod", "uint_mod", "gen_mod"]
+
+    ptrFromRef = OperatorHandler cov dep val
+      where
+        cov a = Addr.isBuiltin a "ptr_from_ref"
+        dep _ = []
+        val a = ComposedValue.composeElements [(component 1,compose res)]
+          where
+            res = BSet.singleton $ Ar.mkConst 0
+            
+
 
     lhs = arithmeticValue $ Addr.goDown 2 addr
     rhs = arithmeticValue $ Addr.goDown 3 addr
