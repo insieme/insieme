@@ -401,7 +401,7 @@ namespace backend {
 				fragmentManager->bindFragment(fragmentName, declaration);
 
 				// get type info
-				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getReferencedType(type));
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(type);
 
 				// add external declaration
 				auto& cManager = converter.getCNodeManager();

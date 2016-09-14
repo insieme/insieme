@@ -373,6 +373,23 @@ namespace backend {
 		}
 	}
 
+	TEST(Types, ConstVolatileGlobals) {
+		DO_TEST(R"(
+			int<4> main() {
+				lit("p" : ref<int<4>,f,f>);
+				lit("c" : ref<int<4>,t,f>);
+				lit("v" : ref<int<4>,f,t>);
+				lit("cv": ref<int<4>,t,t>);
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
+			EXPECT_PRED2(containsSubString, code, "int32_t p;");
+			EXPECT_PRED2(containsSubString, code, "const int32_t c;");
+			EXPECT_PRED2(containsSubString, code, "volatile int32_t v;");
+			EXPECT_PRED2(containsSubString, code, "const volatile int32_t cv;");
+		})
+	}
+
 	TEST(Types, RecursiveTypesSimple) {
 		DO_TEST(R"(
 			alias int = int<4>;
