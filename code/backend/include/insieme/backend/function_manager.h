@@ -81,23 +81,23 @@ namespace backend {
 
 		~FunctionManager();
 
-		const FunctionInfo& getInfo(const core::LiteralPtr& literal);
+		const FunctionInfo& getInfo(ConversionContext& context, const core::LiteralPtr& literal);
 
-		const FunctionInfo& getInfo(const core::PureVirtualMemberFunctionPtr& fun);
+		const FunctionInfo& getInfo(ConversionContext& context, const core::PureVirtualMemberFunctionPtr& fun);
 
-		const LambdaInfo& getInfo(const core::LambdaExprPtr& lambda);
+		const LambdaInfo& getInfo(ConversionContext& context, const core::LambdaExprPtr& lambda);
 
-		const LambdaInfo& getInfo(const core::TagTypePtr& tagType, const core::LambdaExprPtr& lambda);
+		const LambdaInfo& getInfo(ConversionContext& context, const core::TagTypePtr& tagType, const core::LambdaExprPtr& lambda);
 
-		const LambdaInfo& getInfo(const core::TagTypePtr& tagType, const core::MemberFunctionPtr& memberFun);
+		const LambdaInfo& getInfo(ConversionContext& context, const core::TagTypePtr& tagType, const core::MemberFunctionPtr& memberFun);
 
-		const BindInfo& getInfo(const core::BindExprPtr& bind);
+		const BindInfo& getInfo(ConversionContext& context, const core::BindExprPtr& bind);
 
-		const c_ast::NodePtr getCall(const core::CallExprPtr& call, ConversionContext& context);
+		const c_ast::NodePtr getCall(ConversionContext& context, const core::CallExprPtr& call);
 
-		const c_ast::ExpressionPtr getValue(const core::ExpressionPtr& fun, ConversionContext& context);
+		const c_ast::ExpressionPtr getValue(ConversionContext& context, const core::ExpressionPtr& fun);
 
-		const c_ast::ExpressionPtr getValue(const core::BindExprPtr& bind, ConversionContext& context);
+		const c_ast::ExpressionPtr getValue(ConversionContext& context, const core::BindExprPtr& bind);
 
 		const boost::optional<string> getHeaderFor(const string& function) const;
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -306,9 +306,9 @@ namespace runtime {
 			if(cur.type->getNodeType() != c_ast::NT_StructType) return;
 			// the type does not consit of components, omit the table as well
 			if(cur.components.empty()) return;
-			
+
 			out << "size_t g_type_" << cur.index << "_components_offset[] = {";
-			for_each(cur.type.as<c_ast::NamedCompositeTypePtr>()->elements, [&](const c_ast::VariablePtr& var) { 
+			for_each(cur.type.as<c_ast::NamedCompositeTypePtr>()->elements, [&](const c_ast::VariablePtr& var) {
 				out << "offsetof(" << toC(cur.type) << ", " << var->name->name << "), ";
 			});
 			out << "};\n";
@@ -346,10 +346,10 @@ namespace runtime {
 		return out << "\n};\n\n";
 	}
 
-	unsigned TypeTable::registerType(const core::TypePtr& type) {
+	unsigned TypeTable::registerType(ConversionContext& context, const core::TypePtr& type) {
 		// look up type information
 		TypeManager& typeManager = converter.getTypeManager();
-		const TypeInfo& info = typeManager.getTypeInfo(type);
+		const TypeInfo& info = typeManager.getTypeInfo(context, type);
 
 		// add dependency to type definition
 		addDependency(info.definition);
@@ -410,7 +410,7 @@ namespace runtime {
 		return static_pointer_cast<ImplementationTable>(res);
 	}
 
-	unsigned ImplementationTable::registerWorkItemImpl(const core::ExpressionPtr& implementation) {
+	unsigned ImplementationTable::registerWorkItemImpl(ConversionContext& context, const core::ExpressionPtr& implementation) {
 		// check whether implementation has already been resolved
 		auto pos = index.find(implementation);
 		if(pos != index.end()) { return pos->second; }
@@ -425,7 +425,7 @@ namespace runtime {
 		for_each(impl.getVariants(), [&](const WorkItemVariant& cur) {
 
 			// resolve entry point
-			const FunctionInfo& entryInfo = funManager.getInfo(cur.getImplementation());
+			const FunctionInfo& entryInfo = funManager.getInfo(context, cur.getImplementation());
 
 			// make this fragment depending on the entry point
 			this->addDependency(entryInfo.prototype);
@@ -441,7 +441,7 @@ namespace runtime {
 		for_each(impl.getVariants(), [&](const WorkItemVariant& cur) {
 
 			// get the implementation function
-			c_ast::FunctionPtr impl = funManager.getInfo(cur.getImplementation()).function;
+			c_ast::FunctionPtr impl = funManager.getInfo(context, cur.getImplementation()).function;
 
 			// get id of this variation
 			unsigned var_id = variants.size();
@@ -586,7 +586,7 @@ namespace runtime {
 				}
 
 				// add data
-				c_ast::TypePtr elementType = converter.getTypeManager().getTypeInfo(list[0]->getType()).lValueType;
+				c_ast::TypePtr elementType = converter.getTypeManager().getTypeInfo(context, list[0]->getType()).lValueType;
 				c_ast::InitializerPtr data =
 				    converter.getCNodeManager()->create<c_ast::Initializer>(converter.getCNodeManager()->create<c_ast::VectorType>(elementType));
 				init->values.push_back(data);

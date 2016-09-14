@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -54,9 +54,10 @@ namespace opencl {
 
 	namespace {
 
-		const TypeInfo* handleHostType(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* handleHostType(ConversionContext& context, const core::TypePtr& type) {
+			const Converter& converter = context.getConverter();
 			auto& oclExt = converter.getNodeManager().getLangExtension<OpenCLExtension>();
-			
+
 			if (oclExt.isSizeType(type)) {
 				return type_info_utils::createInfo(converter.getFragmentManager(), "size_t", "stdio.h");
 			} else if(oclExt.isDataRequirement(type)) {
@@ -81,14 +82,15 @@ namespace opencl {
 			return false;
 		}
 
-		const TypeInfo* handleKrnlType(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* handleKrnlType(ConversionContext& context, const core::TypePtr& type) {
+			const Converter& converter = context.getConverter();
 			static bool inRecursion = false;
 			// regardless of implicit wrapping, it a user-supplied KernelType is present it has prio
 			if(isKernelType(type)) {
 				KernelType kernelType(type);
 				// first of all we transform the element type
 				inRecursion = true;
-				const auto& info = converter.getTypeManager().getTypeInfo(kernelType.getElementType());
+				const auto& info = converter.getTypeManager().getTypeInfo(context, kernelType.getElementType());
 				inRecursion = false;
 				// second step is to wrap the lvalue with an attributed type
 				std::string attribute;
@@ -113,7 +115,7 @@ namespace opencl {
 			} else if (!inRecursion && isPointerType(type)) {
 				// first of all we transform the element type
 				inRecursion = true;
-				const TypeInfo& info = converter.getTypeManager().getTypeInfo(type);
+				const TypeInfo& info = converter.getTypeManager().getTypeInfo(context, type);
 				inRecursion = false;
 
 				// if there would exist a dislike button, it would press it myself

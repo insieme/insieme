@@ -140,15 +140,15 @@ namespace backend {
 			 * @param type the type for which the requested information should be obtained
 			 */
 			template <typename T, typename result_type = const typename info_trait<typename boost::remove_const<typename T::element_type>::type>::type*>
-			result_type resolveType(const T& type) {
+			result_type resolveType(ConversionContext& context, const T& type) {
 				// lookup type information using internal mechanism
-				const TypeInfo* info = resolveInternal(type);
+				const TypeInfo* info = resolveInternal(context, type);
 				assert_true(info);
 				assert_true(dynamic_cast<result_type>(info));
 				return static_cast<result_type>(info);
 			}
 
-			const TypeInfo* resolveCVectorType(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size);
+			const TypeInfo* resolveCVectorType(ConversionContext& context, const core::TypePtr& elementType, const c_ast::ExpressionPtr& size);
 
 			const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type) const {
 				auto pos = std::find_if(allInfos.begin(), allInfos.end(), [&](const TypeInfo* cur) { return *cur->rValueType == *type; });
@@ -163,30 +163,30 @@ namespace backend {
 			const TypeInfo* getInfo(const core::TypePtr& type) const;
 			void remInfo(const core::TypePtr& type);
 
-			const TypeInfo* resolveInternal(const core::TypePtr& type);
-			const TypeInfo* resolveTypeInternal(const core::TypePtr& type);
+			const TypeInfo* resolveInternal(ConversionContext& context, const core::TypePtr& type);
+			const TypeInfo* resolveTypeInternal(ConversionContext& context, const core::TypePtr& type);
 
-			const TypeInfo* resolveTypeVariable(const core::TypeVariablePtr& ptr);
-			const TypeInfo* resolveNumericType(const core::NumericTypePtr& ptr);
-			const TypeInfo* resolveGenericType(const core::GenericTypePtr& ptr);
+			const TypeInfo* resolveTypeVariable(ConversionContext& context, const core::TypeVariablePtr& ptr);
+			const TypeInfo* resolveNumericType(ConversionContext& context, const core::NumericTypePtr& ptr);
+			const TypeInfo* resolveGenericType(ConversionContext& context, const core::GenericTypePtr& ptr);
 
-			const TagTypeInfo* resolveTagType(const core::TagTypePtr& ptr);
+			const TagTypeInfo* resolveTagType(ConversionContext& context, const core::TagTypePtr& ptr);
 
-			const TagTypeInfo* resolveTupleType(const core::TupleTypePtr& ptr);
+			const TagTypeInfo* resolveTupleType(ConversionContext& context, const core::TupleTypePtr& ptr);
 
-			const ArrayTypeInfo* resolveArrayType(const core::GenericTypePtr& ptr);
-			const ArrayTypeInfo* resolveFixedSizedArrayType(const core::GenericTypePtr& ptr);
-			const ArrayTypeInfo* resolveVariableSizedArrayType(const core::GenericTypePtr& ptr);
-			const ArrayTypeInfo* resolveUnknownSizedArrayType(const core::GenericTypePtr& ptr);
+			const ArrayTypeInfo* resolveArrayType(ConversionContext& context, const core::GenericTypePtr& ptr);
+			const ArrayTypeInfo* resolveFixedSizedArrayType(ConversionContext& context, const core::GenericTypePtr& ptr);
+			const ArrayTypeInfo* resolveVariableSizedArrayType(ConversionContext& context, const core::GenericTypePtr& ptr);
+			const ArrayTypeInfo* resolveUnknownSizedArrayType(ConversionContext& context, const core::GenericTypePtr& ptr);
 
-			const ChannelTypeInfo* resolveChannelType(const core::GenericTypePtr& ptr);
+			const ChannelTypeInfo* resolveChannelType(ConversionContext& context, const core::GenericTypePtr& ptr);
 
-			const FunctionTypeInfo* resolveFunctionType(const core::FunctionTypePtr& ptr);
-			const FunctionTypeInfo* resolvePlainFunctionType(const core::FunctionTypePtr& ptr);
-			const FunctionTypeInfo* resolveMemberFunctionType(const core::FunctionTypePtr& ptr);
-			const FunctionTypeInfo* resolveThickFunctionType(const core::FunctionTypePtr& ptr);
+			const FunctionTypeInfo* resolveFunctionType(ConversionContext& context, const core::FunctionTypePtr& ptr);
+			const FunctionTypeInfo* resolvePlainFunctionType(ConversionContext& context, const core::FunctionTypePtr& ptr);
+			const FunctionTypeInfo* resolveMemberFunctionType(ConversionContext& context, const core::FunctionTypePtr& ptr);
+			const FunctionTypeInfo* resolveThickFunctionType(ConversionContext& context, const core::FunctionTypePtr& ptr);
 
-			const RefTypeInfo* resolveRefType(const core::GenericTypePtr& ptr);
+			const RefTypeInfo* resolveRefType(ConversionContext& context, const core::GenericTypePtr& ptr);
 		};
 	}
 
@@ -201,41 +201,41 @@ namespace backend {
 	}
 
 
-	const TypeInfo& TypeManager::getTypeInfo(const core::TypePtr& type) {
+	const TypeInfo& TypeManager::getTypeInfo(ConversionContext& context, const core::TypePtr& type) {
 		// take value from store
-		return *(store->resolveType(type));
+		return *(store->resolveType(context, type));
 	}
 
-	const TagTypeInfo& TypeManager::getTypeInfo(const core::TagTypePtr& type) {
+	const TagTypeInfo& TypeManager::getTypeInfo(ConversionContext& context, const core::TagTypePtr& type) {
 		// take value from store
-		return *(store->resolveType(type));
+		return *(store->resolveType(context, type));
 	}
 
-	const TagTypeInfo& TypeManager::getTypeInfo(const core::TupleTypePtr& type) {
+	const TagTypeInfo& TypeManager::getTypeInfo(ConversionContext& context, const core::TupleTypePtr& type) {
 		// take value from store
-		return *(store->resolveType(type));
+		return *(store->resolveType(context, type));
 	}
 
-	const FunctionTypeInfo& TypeManager::getTypeInfo(const core::FunctionTypePtr& type) {
+	const FunctionTypeInfo& TypeManager::getTypeInfo(ConversionContext& context, const core::FunctionTypePtr& type) {
 		// just take value from store
-		return *(store->resolveType(type));
+		return *(store->resolveType(context, type));
 	}
 
-	const RefTypeInfo& TypeManager::getRefTypeInfo(const core::GenericTypePtr& type) {
-		return *(static_cast<const RefTypeInfo*>(store->resolveType(type)));
+	const RefTypeInfo& TypeManager::getRefTypeInfo(ConversionContext& context, const core::GenericTypePtr& type) {
+		return *(static_cast<const RefTypeInfo*>(store->resolveType(context, type)));
 	}
 
-	const ArrayTypeInfo& TypeManager::getArrayTypeInfo(const core::GenericTypePtr& type) {
-		return *(static_cast<const ArrayTypeInfo*>(store->resolveType(type)));
+	const ArrayTypeInfo& TypeManager::getArrayTypeInfo(ConversionContext& context, const core::GenericTypePtr& type) {
+		return *(static_cast<const ArrayTypeInfo*>(store->resolveType(context, type)));
 	}
 
-	const ChannelTypeInfo& TypeManager::getChannelTypeInfo(const core::GenericTypePtr& type) {
-		return *(static_cast<const ChannelTypeInfo*>(store->resolveType(type)));
+	const ChannelTypeInfo& TypeManager::getChannelTypeInfo(ConversionContext& context, const core::GenericTypePtr& type) {
+		return *(static_cast<const ChannelTypeInfo*>(store->resolveType(context, type)));
 	}
 
-	const TypeInfo& TypeManager::getCVectorTypeInfo(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size) {
+	const TypeInfo& TypeManager::getCVectorTypeInfo(ConversionContext& context, const core::TypePtr& elementType, const c_ast::ExpressionPtr& size) {
 		// take value from store
-		return *(store->resolveCVectorType(elementType, size));
+		return *(store->resolveCVectorType(context, elementType, size));
 	}
 
 
@@ -244,7 +244,7 @@ namespace backend {
 		return store->getDefinitionOf(type);
 	}
 
-	const c_ast::TypePtr TypeManager::getTemplateArgumentType(const core::TypePtr& type) {
+	const c_ast::TypePtr TypeManager::getTemplateArgumentType(ConversionContext& context, const core::TypePtr& type) {
 		// correctly handle intercepted template template arguments (do not resolve, only use name)
 		auto genType = type.isa<core::GenericTypePtr>();
 		if(genType && core::analysis::isGeneric(genType) && annotations::c::hasIncludeAttached(genType)) {
@@ -254,7 +254,7 @@ namespace backend {
 			}
 			return converter.getCNodeManager()->create<c_ast::NamedType>(converter.getCNodeManager()->create<c_ast::Identifier>(templateParamName));
 		} else {
-			return getTypeInfo(type).rValueType;
+			return getTypeInfo(context, type).rValueType;
 		}
 	}
 
@@ -269,7 +269,6 @@ namespace backend {
 	void TypeManager::addTypeHandler(const TypeHandlerList& list) {
 		store->addTypeHandler(list);
 	}
-
 
 	namespace type_info_utils {
 
@@ -332,7 +331,7 @@ namespace backend {
 
 		// --------------------- Implementations of resolution utilities --------------------
 
-		const TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& in) {
+		const TypeInfo* TypeInfoStore::resolveInternal(ConversionContext& context, const core::TypePtr& in) {
 
 			// normalize all types
 			auto type = core::analysis::normalize(core::analysis::getCanonicalType(in));
@@ -341,7 +340,7 @@ namespace backend {
 			if (auto info = getInfo(type)) return info;
 
 			// resolve information if there is no information yet
-			auto info = resolveTypeInternal(type);
+			auto info = resolveTypeInternal(context, type);
 
 			// register information
 			addInfo(type, info);
@@ -351,13 +350,13 @@ namespace backend {
 		}
 
 
-		const TypeInfo* TypeInfoStore::resolveTypeInternal(const core::TypePtr& type) {
+		const TypeInfo* TypeInfoStore::resolveTypeInternal(ConversionContext& context, const core::TypePtr& type) {
 
 			// - Installed Type Handlers -------------------------------------------------------------------
 
 			// try resolving it using type handlers
 			for(const auto& handler : typeHandlers) {
-				if (const TypeInfo* info = handler(converter, type)) {
+				if (const TypeInfo* info = handler(context, type)) {
 					return info;
 				}
 			}
@@ -394,19 +393,19 @@ namespace backend {
 				case core::NT_GenericType: {
 					// distinguish essential abstract types
 					auto genType = type.as<core::GenericTypePtr>();
-					if(core::lang::isReference(type)) 		info = resolveRefType(genType);
-					else if(core::lang::isArray(type))     	info = resolveArrayType(genType);
-					else if(core::lang::isChannel(type))   	info = resolveChannelType(genType);
-					else info = resolveGenericType(genType);
+					if(core::lang::isReference(type)) 		info = resolveRefType(context, genType);
+					else if(core::lang::isArray(type))     	info = resolveArrayType(context, genType);
+					else if(core::lang::isChannel(type))   	info = resolveChannelType(context, genType);
+					else info = resolveGenericType(context, genType);
 					break;
 				}
-				case core::NT_TagType:      info = resolveTagType(type.as<core::TagTypePtr>()); break;
-				case core::NT_TupleType:    info = resolveTupleType(type.as<core::TupleTypePtr>()); break;
-				case core::NT_FunctionType: info = resolveFunctionType(type.as<core::FunctionTypePtr>()); break;
-				case core::NT_NumericType:  info = resolveNumericType(type.as<core::NumericTypePtr>()); break;
+				case core::NT_TagType:      info = resolveTagType(context, type.as<core::TagTypePtr>()); break;
+				case core::NT_TupleType:    info = resolveTupleType(context, type.as<core::TupleTypePtr>()); break;
+				case core::NT_FunctionType: info = resolveFunctionType(context, type.as<core::FunctionTypePtr>()); break;
+				case core::NT_NumericType:  info = resolveNumericType(context, type.as<core::NumericTypePtr>()); break;
 
 				//			case core::NT_ChannelType:
-				case core::NT_TypeVariable: info = resolveTypeVariable(static_pointer_cast<const core::TypeVariable>(type)); break;
+				case core::NT_TypeVariable: info = resolveTypeVariable(context, type.as<core::TypeVariablePtr>()); break;
 				default:
 					// this should not happen ...
 					LOG(FATAL) << "Unsupported IR Type encountered: " << type;
@@ -419,12 +418,12 @@ namespace backend {
 			return info;
 		}
 
-		const TypeInfo* TypeInfoStore::resolveTypeVariable(const core::TypeVariablePtr& ptr) {
+		const TypeInfo* TypeInfoStore::resolveTypeVariable(ConversionContext& context, const core::TypeVariablePtr& ptr) {
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 			return type_info_utils::createUnsupportedInfo(manager, ptr);
 		}
 
-		const TypeInfo* TypeInfoStore::resolveNumericType(const core::NumericTypePtr& ptr) {
+		const TypeInfo* TypeInfoStore::resolveNumericType(ConversionContext& context, const core::NumericTypePtr& ptr) {
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 			assert_eq(ptr->getValue()->getNodeType(), core::NT_Literal) << "Non-literal numeric types should not reach the backend";
 			auto ident = manager.create<c_ast::Identifier>(ptr->getValue().as<core::LiteralPtr>()->getStringValue());
@@ -432,7 +431,7 @@ namespace backend {
 			return type_info_utils::createInfo(numType);
 		}
 
-		const TypeInfo* TypeInfoStore::resolveGenericType(const core::GenericTypePtr& ptr) {
+		const TypeInfo* TypeInfoStore::resolveGenericType(ConversionContext& context, const core::GenericTypePtr& ptr) {
 			auto& basic = converter.getNodeManager().getLangBasic();
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 
@@ -530,7 +529,7 @@ namespace backend {
 				}
 				// also handle optional template arguments
 				for(auto typeArg : ptr->getTypeParameterList()) {
-					auto tempParamType = converter.getTypeManager().getTemplateArgumentType(typeArg);
+					auto tempParamType = converter.getTypeManager().getTemplateArgumentType(context, typeArg);
 					namedType->parameters.push_back(tempParamType);
 
 					// we need to drop qualified-refs here in order to then correctly generate a dependency to the definition of the type
@@ -579,7 +578,7 @@ namespace backend {
 			}
 		}
 
-		const TagTypeInfo* TypeInfoStore::resolveTagType(const core::TagTypePtr& tagType) {
+		const TagTypeInfo* TypeInfoStore::resolveTagType(ConversionContext& context, const core::TagTypePtr& tagType) {
 
 			// NOTE: we simply assume every tag type to be a recursive type
 
@@ -680,7 +679,7 @@ namespace backend {
 
 						// construct vector type to be used
 						core::TypePtr elementType = core::lang::ArrayType(curType).getElementType();
-						const TypeInfo* info = resolveType(elementType);
+						const TypeInfo* info = resolveType(context, elementType);
 						auto memberType = manager->create<c_ast::VectorType>(info->rValueType);
 
 						// add member
@@ -695,7 +694,7 @@ namespace backend {
 					}
 
 					// build up the type entry
-					const TypeInfo* info = resolveType(curType);
+					const TypeInfo* info = resolveType(context, curType);
 					c_ast::TypePtr elementType = info->rValueType;
 					type->elements.push_back(var(elementType, name));
 
@@ -717,7 +716,7 @@ namespace backend {
 				for(const auto& ctor : record->getConstructors()) {
 					// skip ctors which are Literals
 					if(ctor.isa<core::LambdaExprPtr>()) {
-						funMgr.getInfo(tagType,ctor.as<core::LambdaExprPtr>());
+						funMgr.getInfo(context, tagType,ctor.as<core::LambdaExprPtr>());
 					}
 				}
 
@@ -731,7 +730,7 @@ namespace backend {
 					// skip dtor which is a Literal
 					if(record->getDestructor().isa<core::LambdaExprPtr>()) {
 						auto dtor = record->getDestructor().as<core::LambdaExprPtr>();
-						auto info = funMgr.getInfo(tagType,dtor);
+						auto info = funMgr.getInfo(context, tagType,dtor);
 						info.declaration.as<c_ast::DestructorPrototypePtr>()->isVirtual = record->hasVirtualDestructor();
 					}
 				}
@@ -743,12 +742,12 @@ namespace backend {
 				for(const auto& pureVirtual : record->getPureVirtualMemberFunctions()) {
 					auto type = pureVirtual->getType();
 					type = (core::analysis::getObjectType(type).isa<core::TagTypeReferencePtr>()) ? tagType->peel(type) : type;
-					funMgr.getInfo(builder.pureVirtualMemberFunction(pureVirtual->getName(), type));
+					funMgr.getInfo(context, builder.pureVirtualMemberFunction(pureVirtual->getName(), type));
 				}
 
 				// add member functions
 				for(const auto& member : record->getMemberFunctions()) {
-					funMgr.getInfo(tagType, member);
+					funMgr.getInfo(context, tagType, member);
 				}
 
 
@@ -771,7 +770,7 @@ namespace backend {
 					vector<c_ast::VariablePtr> params;
 					int i = 0;
 					for(const core::FieldPtr& cur : strct->getFields()) {
-						params.push_back(c_ast::var(resolveType(cur->getType())->rValueType, format("m%0d", i++)));
+						params.push_back(c_ast::var(resolveType(context, cur->getType())->rValueType, format("m%0d", i++)));
 					}
 
 					// create struct initialization
@@ -795,7 +794,7 @@ namespace backend {
 					c_ast::StructTypePtr type = static_pointer_cast<c_ast::StructType>(res->lValueType);
 					for(auto parent : strct->getParents()) {
 						// resolve parent type
-						const TypeInfo* parentInfo = resolveType(parent->getType());
+						const TypeInfo* parentInfo = resolveType(context, parent->getType());
 
 						// add dependency
 						res->definition->addDependency(parentInfo->definition);
@@ -817,7 +816,7 @@ namespace backend {
 
 
 						// create current parameter
-						c_ast::VariablePtr param = c_ast::var(resolveType(cur->getType())->rValueType, "value");
+						c_ast::VariablePtr param = c_ast::var(resolveType(context, cur->getType())->rValueType, "value");
 
 						// create union initialization
 						c_ast::VariablePtr resVar = c_ast::var(res->rValueType, "res");
@@ -852,10 +851,10 @@ namespace backend {
 			}
 
 			// return information for requested tag type
-			return resolveType(tagType);
+			return resolveType(context, tagType);
 		}
 
-		const TagTypeInfo* TypeInfoStore::resolveTupleType(const core::TupleTypePtr& ptr) {
+		const TagTypeInfo* TypeInfoStore::resolveTupleType(ConversionContext& context, const core::TupleTypePtr& ptr) {
 			// use struct conversion to resolve type => since tuple is represented using structs
 			core::IRBuilder builder(ptr->getNodeManager());
 			core::FieldList entries;
@@ -863,10 +862,10 @@ namespace backend {
 			transform(ptr->getElementTypes(), std::back_inserter(entries),
 			          [&](const core::TypePtr& cur) { return builder.field(builder.stringValue(format("c%d", counter++)), cur); });
 
-			return resolveTagType(builder.structType(entries));
+			return resolveTagType(context, builder.structType(entries));
 		}
 
-		const ArrayTypeInfo* TypeInfoStore::resolveArrayType(const core::GenericTypePtr& ptr) {
+		const ArrayTypeInfo* TypeInfoStore::resolveArrayType(ConversionContext& context, const core::GenericTypePtr& ptr) {
 			assert_pred1(core::lang::isArray, ptr) << "Can only convert array types.";
 			assert_false(core::lang::isGenericSizedArray(ptr)) << "Can not handle generic type: " << *ptr;
 
@@ -874,20 +873,20 @@ namespace backend {
 
 			// fixed size arrays (once known as vectors)
 			if (core::lang::isFixedSizedArray(ptr)) {
-				return resolveFixedSizedArrayType(ptr);
+				return resolveFixedSizedArrayType(context, ptr);
 			}
 
 			// unkown sized arrays, like 'int a[]';
 			if (core::lang::isUnknownSizedArray(ptr)) {
-				return resolveUnknownSizedArrayType(ptr);
+				return resolveUnknownSizedArrayType(context, ptr);
 			}
 
 			// final case - variable sized array
 			assert_pred1(core::lang::isVariableSizedArray, ptr);
-			return resolveVariableSizedArrayType(ptr);
+			return resolveVariableSizedArrayType(context, ptr);
 		}
 
-		const ArrayTypeInfo* TypeInfoStore::resolveFixedSizedArrayType(const core::GenericTypePtr& ptr) {
+		const ArrayTypeInfo* TypeInfoStore::resolveFixedSizedArrayType(ConversionContext& context, const core::GenericTypePtr& ptr) {
 			assert_pred1(core::lang::isFixedSizedArray, ptr);
 
 			// start with the parsing of the array type
@@ -899,7 +898,7 @@ namespace backend {
 
 			// ----- create the struct representing the array type ------
 
-			const TypeInfo* elementTypeInfo = resolveType(array.getElementType());
+			const TypeInfo* elementTypeInfo = resolveType(context, array.getElementType());
 			assert_true(elementTypeInfo);
 
 			// check whether the type has been resolved while resolving the sub-type
@@ -954,14 +953,14 @@ namespace backend {
 		}
 
 
-		const ArrayTypeInfo* TypeInfoStore::resolveUnknownSizedArrayType(const core::GenericTypePtr& ptr) {
+		const ArrayTypeInfo* TypeInfoStore::resolveUnknownSizedArrayType(ConversionContext& context, const core::GenericTypePtr& ptr) {
 			assert_pred1(core::lang::isUnknownSizedArray, ptr);
 
 			auto manager = converter.getCNodeManager();
 
 			// ----- create array type representation ------
 
-			const TypeInfo* elementTypeInfo = resolveType(core::lang::ArrayType(ptr).getElementType());
+			const TypeInfo* elementTypeInfo = resolveType(context, core::lang::ArrayType(ptr).getElementType());
 			assert_true(elementTypeInfo);
 
 			// check whether this array type has been resolved while resolving the sub-type (due to recursion)
@@ -994,58 +993,48 @@ namespace backend {
 		}
 
 
-		const ArrayTypeInfo* TypeInfoStore::resolveVariableSizedArrayType(const core::GenericTypePtr& ptr) {
+		const ArrayTypeInfo* TypeInfoStore::resolveVariableSizedArrayType(ConversionContext& context, const core::GenericTypePtr& ptr) {
 			assert_pred1(core::lang::isVariableSizedArray, ptr);
 
-			assert_not_implemented();
-			return nullptr;
+			// start with the parsing of the array type
+			core::lang::ArrayType array(ptr);
 
-//			// start with the parsing of the array type
-//			core::lang::ArrayType array(ptr);
-//
-//			// ----- create array type representation ------
-//
-//			const TypeInfo* elementTypeInfo = resolveType(core::lang::ArrayType(ptr).getElementType());
-//			assert_true(elementTypeInfo);
-//
-//			// check whether this array type has been resolved while resolving the sub-type (due to recursion)
-//			auto pos = typeInfos.find(ptr);
-//			if(pos != typeInfos.end()) {
-//				assert_true(dynamic_cast<const ArrayTypeInfo*>(pos->second));
-//				return static_cast<const ArrayTypeInfo*>(pos->second);
-//			}
-//
-//			// create array type information
-//			ArrayTypeInfo* res = new ArrayTypeInfo();
-//
-//			// create C type (pointer to target type)
-//			c_ast::ExpressionPtr size = converter.getStmtConverter().convert(context, array.getSize());
-//			c_ast::TypePtr arrayType = c_ast::vec(elementTypeInfo->rValueType, size);
-//
-//			// set L / R value types
-//			res->lValueType = arrayType;
-//			res->rValueType = arrayType;
-//			res->externalType = arrayType;
-//
-//			// set externalizer / internalizer
-//			res->externalize = &type_info_utils::NoOp;
-//			res->internalize = &type_info_utils::NoOp;
-//
-//			// set declaration / definition (based on element type)
-//			res->declaration = elementTypeInfo->declaration;
-//			res->definition = elementTypeInfo->definition;
-//
-//			// done
-//			return res;
+			// ----- create array type representation ------
+
+			const TypeInfo* elementTypeInfo = resolveType(context, core::lang::ArrayType(ptr).getElementType());
+			assert_true(elementTypeInfo);
+
+			// create array type information
+			ArrayTypeInfo* res = new ArrayTypeInfo();
+
+			// create C type (pointer to target type)
+			c_ast::ExpressionPtr size = converter.getStmtConverter().convert(context, array.getSize()).as<c_ast::ExpressionPtr>();
+			c_ast::TypePtr arrayType = c_ast::vec(elementTypeInfo->rValueType, size);
+
+			// set L / R value types
+			res->lValueType = arrayType;
+			res->rValueType = arrayType;
+			res->externalType = arrayType;
+
+			// set externalizer / internalizer
+			res->externalize = &type_info_utils::NoOp;
+			res->internalize = &type_info_utils::NoOp;
+
+			// set declaration / definition (based on element type)
+			res->declaration = elementTypeInfo->declaration;
+			res->definition = elementTypeInfo->definition;
+
+			// done
+			return res;
 		}
 
 
-		const ChannelTypeInfo* TypeInfoStore::resolveChannelType(const core::GenericTypePtr& ptr) {
+		const ChannelTypeInfo* TypeInfoStore::resolveChannelType(ConversionContext& context, const core::GenericTypePtr& ptr) {
 			assert_true(core::lang::isChannel(ptr)) << "Can only convert channel types.";
 			return type_info_utils::createUnsupportedInfo<ChannelTypeInfo>(*converter.getCNodeManager(), ptr);
 		}
 
-		const RefTypeInfo* TypeInfoStore::resolveRefType(const core::GenericTypePtr& ptr) {
+		const RefTypeInfo* TypeInfoStore::resolveRefType(ConversionContext& context, const core::GenericTypePtr& ptr) {
 			assert_pred1(core::lang::isReference, ptr) << "Can only convert reference types.";
 
 			// check that it is a plain, C++ or C++ R-Value reference
@@ -1060,7 +1049,7 @@ namespace backend {
 
 			// obtain information covering sub-type
 			auto elementType = ref.getElementType();
-			const TypeInfo* subType = resolveType(elementType);
+			const TypeInfo* subType = resolveType(context, elementType);
 
 			// check whether this ref type has been resolved while resolving the sub-type (due to recursion)
 			if (auto info = getInfo(ptr)) {
@@ -1134,7 +1123,7 @@ namespace backend {
 			if (core::lang::isUnknownSizedArray(elementType)) {
 				// make it a pointer to the arrays element type
 				auto arrayElementType = core::lang::ArrayType(elementType).getElementType();
-				const TypeInfo* arrayElementTypeInfo = resolveType(arrayElementType);
+				const TypeInfo* arrayElementTypeInfo = resolveType(context, arrayElementType);
 
 				// both, R and L value are just pointers
 				res->lValueType = c_ast::ptr(c_ast::qualify(arrayElementTypeInfo->lValueType, ref.isConst(), ref.isVolatile()));
@@ -1207,16 +1196,16 @@ namespace backend {
 			return res;
 		}
 
-		const FunctionTypeInfo* TypeInfoStore::resolveFunctionType(const core::FunctionTypePtr& ptr) {
+		const FunctionTypeInfo* TypeInfoStore::resolveFunctionType(ConversionContext& context, const core::FunctionTypePtr& ptr) {
 			// dispatch to pointer-specific type!
-			if(ptr->isPlain()) { return resolvePlainFunctionType(ptr); }
-			if(ptr->isMemberFunction()) { return resolveMemberFunctionType(ptr); }
+			if(ptr->isPlain()) { return resolvePlainFunctionType(context, ptr); }
+			if(ptr->isMemberFunction()) { return resolveMemberFunctionType(context, ptr); }
 			//TODO
 			if(ptr->isVirtualMemberFunction()) { assert_not_implemented(); }
-			return resolveThickFunctionType(ptr);
+			return resolveThickFunctionType(context, ptr);
 		}
 
-		const FunctionTypeInfo* TypeInfoStore::resolvePlainFunctionType(const core::FunctionTypePtr& ptr) {
+		const FunctionTypeInfo* TypeInfoStore::resolvePlainFunctionType(ConversionContext& context, const core::FunctionTypePtr& ptr) {
 			assert_true(ptr->isPlain()) << "Only supported for plain function types!";
 
 			auto manager = converter.getCNodeManager();
@@ -1228,7 +1217,7 @@ namespace backend {
 			res->plain = true;
 
 			// construct the C AST function type token
-			const TypeInfo* retTypeInfo = resolveType(ptr->getReturnType());
+			const TypeInfo* retTypeInfo = resolveType(context, ptr->getReturnType());
 			c_ast::FunctionTypePtr functionType = manager->create<c_ast::FunctionType>(retTypeInfo->rValueType);
 
 			// add result type dependencies
@@ -1237,7 +1226,7 @@ namespace backend {
 
 			// add remaining parameters
 			for_each(ptr->getParameterTypes()->getElements(), [&](const core::TypePtr& cur) {
-				const TypeInfo* info = resolveType(cur);
+				const TypeInfo* info = resolveType(context, cur);
 				functionType->parameterTypes.push_back(info->rValueType);
 				declDependencies.push_back(info->declaration);
 			});
@@ -1273,7 +1262,7 @@ namespace backend {
 			return res;
 		}
 
-		const FunctionTypeInfo* TypeInfoStore::resolveMemberFunctionType(const core::FunctionTypePtr& ptr) {
+		const FunctionTypeInfo* TypeInfoStore::resolveMemberFunctionType(ConversionContext& context, const core::FunctionTypePtr& ptr) {
 			assert_true(ptr->isMemberFunction()) << "Only supported for Member function types!";
 
 			auto manager = converter.getCNodeManager();
@@ -1285,8 +1274,8 @@ namespace backend {
 			res->plain = true;
 
 			// construct the C AST function type token, since is a member function, we need to provide the this class type
-			const TypeInfo* retTypeInfo = resolveType(ptr->getReturnType());
-			const TypeInfo* ownerType = resolveType(core::lang::ReferenceType(params[0]).getElementType());
+			const TypeInfo* retTypeInfo = resolveType(context, ptr->getReturnType());
+			const TypeInfo* ownerType = resolveType(context, core::lang::ReferenceType(params[0]).getElementType());
 			c_ast::FunctionTypePtr functionType = manager->create<c_ast::FunctionType>(retTypeInfo->rValueType, ownerType->rValueType);
 
 			// add result type dependencies
@@ -1298,7 +1287,7 @@ namespace backend {
 			auto param_it = params.begin() + 1;
 			auto param_end = params.end();
 			for(; param_it != param_end; ++param_it) {
-				const TypeInfo* info = resolveType(*param_it);
+				const TypeInfo* info = resolveType(context, *param_it);
 				functionType->parameterTypes.push_back(info->rValueType);
 				declDependencies.push_back(info->declaration);
 			}
@@ -1334,7 +1323,7 @@ namespace backend {
 			return res;
 		}
 
-		const FunctionTypeInfo* TypeInfoStore::resolveThickFunctionType(const core::FunctionTypePtr& ptr) {
+		const FunctionTypeInfo* TypeInfoStore::resolveThickFunctionType(ConversionContext& context, const core::FunctionTypePtr& ptr) {
 			assert_false(ptr->isPlain()) << "Only supported for non-plain function types!";
 
 			auto manager = converter.getCNodeManager();
@@ -1358,7 +1347,7 @@ namespace backend {
 
 
 			// construct the C AST function type token
-			const TypeInfo* retTypeInfo = resolveType(ptr->getReturnType());
+			const TypeInfo* retTypeInfo = resolveType(context, ptr->getReturnType());
 			c_ast::FunctionTypePtr functionType = manager->create<c_ast::FunctionType>(retTypeInfo->rValueType);
 
 			// add parameter capturing the closure
@@ -1371,7 +1360,7 @@ namespace backend {
 
 			// add remaining parameters
 			for_each(ptr->getParameterTypes()->getElements(), [&](const core::TypePtr& cur) {
-				const TypeInfo* info = resolveType(cur);
+				const TypeInfo* info = resolveType(context, cur);
 				functionType->parameterTypes.push_back(info->rValueType);
 				declDependencies.push_back(info->declaration);
 				defDependencies.push_back(info->definition);
@@ -1470,12 +1459,12 @@ namespace backend {
 			return res;
 		}
 
-		const TypeInfo* TypeInfoStore::resolveCVectorType(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size) {
+		const TypeInfo* TypeInfoStore::resolveCVectorType(ConversionContext& context, const core::TypePtr& elementType, const c_ast::ExpressionPtr& size) {
 			// obtain reference to CNodeManager
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 
 			// resolve type information
-			const TypeInfo* elementInfo = resolveType(elementType);
+			const TypeInfo* elementInfo = resolveType(context, elementType);
 
 			// create vector type to be used within C-AST
 			auto cType = manager.create<c_ast::VectorType>(elementInfo->lValueType, size);

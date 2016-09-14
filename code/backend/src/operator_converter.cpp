@@ -176,7 +176,7 @@ namespace backend {
 				core::LiteralPtr memberName = call->getArgument(1).as<core::LiteralPtr>();
 
 				// obtain reference to struct type
-				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(curType);
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(context, curType);
 
 				// add definition of type
 				context.addDependency(info.definition);
@@ -195,7 +195,7 @@ namespace backend {
 				curType = core::lang::ArrayType(curType).getElementType();
 
 				// get type-info of element type
-				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(curType);
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(context, curType);
 
 				// add dependency
 				context.addDependency(info.definition);
@@ -208,7 +208,7 @@ namespace backend {
 
 			} else if(dpExt.isDataPathComponent(fun)) {
 				// obtain reference to struct type
-				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(curType);
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(context, curType);
 
 				//  --- update current type for next steps ---
 
@@ -420,7 +420,7 @@ namespace backend {
 			// extract resulting type
 			const core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
 			assert_true(elementType) << "Unable to extract element type from: " << ARG(0)->getType();
-			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(elementType);
+			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(context, elementType);
 			context.getDependencies().insert(info.definition);
 
 			// special handling for string literals
@@ -511,7 +511,7 @@ namespace backend {
 
 			// get result type information
 			core::GenericTypePtr resType = call->getType().as<core::GenericTypePtr>();
-			const RefTypeInfo& info = context.getConverter().getTypeManager().getRefTypeInfo(resType);
+			const RefTypeInfo& info = context.getConverter().getTypeManager().getRefTypeInfo(context, resType);
 
 			// extract type
 			core::ExpressionPtr initValue = call->getArgument(0);
@@ -746,7 +746,7 @@ namespace backend {
 
 			// add a dependency to the accessed type definition before accessing the type
 			const core::TypePtr structType = ARG(0)->getType();
-			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(structType);
+			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(context, structType);
 			context.getDependencies().insert(info.definition);
 
 			// create member access
@@ -761,7 +761,7 @@ namespace backend {
 
 			// add a dependency to the accessed type definition before accessing the type
 			const core::TypePtr structType = core::analysis::getReferencedType(ARG(0)->getType());
-			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(structType);
+			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(context, structType);
 			context.getDependencies().insert(info.definition);
 
 			assert_eq(ARG(1)->getNodeType(), core::NT_Literal);
@@ -791,7 +791,7 @@ namespace backend {
 
 			// add a dependency to the accessed type definition before accessing the type
 			const core::TypePtr tupleType = ARG(0)->getType();
-			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(tupleType);
+			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(context, tupleType);
 			context.getDependencies().insert(info.definition);
 
 			// create member access
@@ -810,7 +810,7 @@ namespace backend {
 
 			// add a dependency to the accessed type definition before accessing the type
 			const core::TypePtr tupleType = core::analysis::getReferencedType(ARG(0)->getType());
-			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(tupleType);
+			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(context, tupleType);
 			context.getDependencies().insert(info.definition);
 
 			core::ExpressionPtr index = ARG(1);
@@ -1037,11 +1037,11 @@ namespace backend {
 //				if(!targetTy.isa<core::ArrayTypePtr>() && !core::analysis::isCppRef(targetTy)) { targetCType = c_ast::ptr(targetCType); }
 //
 //				// cast needs full definition of target type to be done
-//				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(targetTy);
+//				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(context, targetTy);
 //				context.addDependency(info.definition);
 //
 //				// and the definition of the source type (to retrieve sub-type relations)
-//				const TypeInfo& srcTypeInfo = context.getConverter().getTypeManager().getTypeInfo(ARG(0)->getType().as<core::RefTypePtr>()->getElementType());
+//				const TypeInfo& srcTypeInfo = context.getConverter().getTypeManager().getTypeInfo(context, ARG(0)->getType().as<core::RefTypePtr>()->getElementType());
 //				context.addDependency(srcTypeInfo.definition);
 //
 //				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
@@ -1085,11 +1085,11 @@ namespace backend {
 //				if(!targetTy.isa<core::ArrayTypePtr>() && !core::analysis::isCppRef(targetTy)) { targetCType = c_ast::ptr(targetCType); }
 //
 //				// cast needs full definition of target type to be done
-//				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(targetTy);
+//				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(context, targetTy);
 //				context.addDependency(info.definition);
 //
 //				// and the definition of the source type (to retrieve sub-type relations)
-//				const TypeInfo& srcTypeInfo = context.getConverter().getTypeManager().getTypeInfo(ARG(0)->getType().as<core::RefTypePtr>()->getElementType());
+//				const TypeInfo& srcTypeInfo = context.getConverter().getTypeManager().getTypeInfo(context, ARG(0)->getType().as<core::RefTypePtr>()->getElementType());
 //				context.addDependency(srcTypeInfo.definition);
 //
 //				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));

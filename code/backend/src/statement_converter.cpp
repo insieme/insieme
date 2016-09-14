@@ -36,6 +36,8 @@
 
 #include "insieme/backend/statement_converter.h"
 
+#include <boost/algorithm/string.hpp>
+
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/name_manager.h"
@@ -65,8 +67,6 @@
 
 #include "insieme/utils/logging.h"
 
-#include <boost/algorithm/string.hpp>
-
 namespace insieme {
 namespace backend {
 
@@ -85,7 +85,7 @@ namespace backend {
 			//     (<type>){<list of members>}
 
 			auto innerType = core::analysis::getReferencedType(ptr->getType());
-			auto typeInfo = converter.getTypeManager().getTypeInfo(innerType);
+			auto typeInfo = converter.getTypeManager().getTypeInfo(context, innerType);
 			context.addDependency(typeInfo.definition);
 
 			auto& rExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
@@ -215,7 +215,7 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitType(const core::TypePtr& type, ConversionContext& context) {
 		// obtain type information, add dependency and return type name
-		const TypeInfo& info = converter.getTypeManager().getTypeInfo(type);
+		const TypeInfo& info = converter.getTypeManager().getTypeInfo(context, type);
 		context.getDependencies().insert(info.definition);
 		return info.rValueType;
 	}
@@ -239,7 +239,7 @@ namespace backend {
 			if(entryPoint->getNodeType() == core::NT_LambdaExpr) {
 				// handle function-entry point specially
 				core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(entryPoint);
-				fragment = converter.getFunctionManager().getInfo(lambda).definition;
+				fragment = converter.getFunctionManager().getInfo(context, lambda).definition;
 			} else {
 				// use default conversion
 				fragment = toCodeFragment(entryContext, this->visit(entryPoint, entryContext));
@@ -264,7 +264,7 @@ namespace backend {
 			return {};
 		}
 		// everything else is handled by the function manager
-		auto cCall = converter.getFunctionManager().getCall(ptr, context);
+		auto cCall = converter.getFunctionManager().getCall(context, ptr);
 		// if materializing, transition to lvalue
 		if(core::analysis::isMaterializingCall(ptr)) {
 			return c_ast::ref(cCall.as<c_ast::ExpressionPtr>());
@@ -274,11 +274,11 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitBindExpr(const core::BindExprPtr& ptr, ConversionContext& context) {
 		// handled by the function manager
-		return converter.getFunctionManager().getValue(ptr, context);
+		return converter.getFunctionManager().getValue(context, ptr);
 	}
 
 	c_ast::NodePtr StmtConverter::visitCastExpr(const core::CastExprPtr& ptr, ConversionContext& context) {
-		const auto& info = converter.getTypeManager().getTypeInfo(ptr->getType());
+		const auto& info = converter.getTypeManager().getTypeInfo(context, ptr->getType());
 		context.addDependency(info.definition);
 		return c_ast::cast(info.rValueType, visit(ptr->getSubExpression(), context));
 	}
@@ -289,12 +289,12 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitLambdaExpr(const core::LambdaExprPtr& ptr, ConversionContext& context) {
 		// handled by the function manager
-		return converter.getFunctionManager().getValue(ptr, context);
+		return converter.getFunctionManager().getValue(context, ptr);
 	}
 
 	c_ast::NodePtr StmtConverter::visitLiteral(const core::LiteralPtr& ptr, ConversionContext& context) {
 		// Function literals are handled by function manager
-		if(ptr->getType()->getNodeType() == core::NT_FunctionType) { return converter.getFunctionManager().getValue(ptr, context); }
+		if(ptr->getType()->getNodeType() == core::NT_FunctionType) { return converter.getFunctionManager().getValue(context, ptr); }
 
 		// special handling for unit literal
 		if(converter.getNodeManager().getLangBasic().isUnitConstant(ptr)) {
@@ -340,14 +340,14 @@ namespace backend {
 			if(basic.isUInt16(type) && !boost::ends_with(value, "ull")) return toLiteral(value + "ull");
 
 			// fall-back solution: use an explicit cast
-			auto info = converter.getTypeManager().getTypeInfo(type);
+			auto info = converter.getTypeManager().getTypeInfo(context, type);
 			context.addDependency(info.definition);
 			return c_ast::cast(info.rValueType, res);
 		}
 
 		// special handling for type literals (fall-back solution)
 		if(core::analysis::isTypeLiteralType(type)) {
-			const TypeInfo& info = converter.getTypeManager().getTypeInfo(type);
+			const TypeInfo& info = converter.getTypeManager().getTypeInfo(context, type);
 			context.addDependency(info.declaration);
 			return c_ast::lit(info.rValueType, "type_token");
 		}
@@ -401,7 +401,7 @@ namespace backend {
 				fragmentManager->bindFragment(fragmentName, declaration);
 
 				// get type info
-				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(type);
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(context, type);
 
 				// add external declaration
 				auto& cManager = converter.getCNodeManager();
@@ -441,7 +441,7 @@ namespace backend {
 		// to be created: an initialization of the corresponding struct
 		//     (<type>){<list of members>}
 
-		auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
+		auto typeInfo = converter.getTypeManager().getTypeInfo(context, ptr->getType());
 		context.addDependency(typeInfo.definition);
 
 		// get type and create init expression
@@ -537,7 +537,7 @@ namespace backend {
 		}
 
 		// register variable information
-		const VariableInfo& info = context.getVariableManager().addInfo(converter, var, location);
+		const VariableInfo& info = context.getVariableManager().addInfo(context, var, location);
 
 		// add code dependency
 		context.getDependencies().insert(info.typeInfo->definition);
@@ -545,7 +545,7 @@ namespace backend {
 		// if a reference variable is put on the stack, the element type definition is also required
 		if(location == VariableInfo::DIRECT) {
 			auto elementType = core::analysis::getReferencedType(plainType);
-			context.getDependencies().insert(context.getConverter().getTypeManager().getTypeInfo(elementType).definition);
+			context.getDependencies().insert(context.getConverter().getTypeManager().getTypeInfo(context, elementType).definition);
 		}
 
 		c_ast::ExpressionPtr initValue = convertInitExpression(context, plainType, init);
@@ -581,7 +581,7 @@ namespace backend {
 					core::IRBuilder builder(converter.getNodeManager());
 					auto temp = core::lang::buildRefTemp(targetType);
 					auto call = builder.callExpr(constructor->getType().as<core::FunctionTypePtr>().getReturnType(), constructor, temp, init);
-					converter.getFunctionManager().getCall(call, context);
+					converter.getFunctionManager().getCall(context, call);
 				}
 			}
 		}
@@ -615,7 +615,7 @@ namespace backend {
 		auto var_iter = ptr->getIterator();
 
 		// get induction variable info
-		const VariableInfo& info_iter = varManager.addInfo(converter, var_iter, VariableInfo::NONE);
+		const VariableInfo& info_iter = varManager.addInfo(context, var_iter, VariableInfo::NONE);
 		// add dependency to iterator type definition
 		context.getDependencies().insert(info_iter.typeInfo->definition);
 
@@ -704,7 +704,7 @@ namespace backend {
 //			}
 
 			// register variable information
-			const VariableInfo& info = context.getVariableManager().addInfo(converter, clause->getVariable(), VariableInfo::MemoryLocation::NONE);
+			const VariableInfo& info = context.getVariableManager().addInfo(context, clause->getVariable(), VariableInfo::MemoryLocation::NONE);
 
 			// convert body of catch clause with registered variable
 			auto body = convertStmt(context, clause->getBody());

@@ -101,7 +101,7 @@ namespace runtime {
 			ImplementationTablePtr implTable = ImplementationTable::get(context.getConverter());
 
 			// convert argument into list of variants
-			implTable->registerWorkItemImpl(ARG(0));
+			implTable->registerWorkItemImpl(context, ARG(0));
 
 			context.addDependency(implTable);
 
@@ -113,7 +113,7 @@ namespace runtime {
 
 			// register work item
 			ImplementationTablePtr implTable = ImplementationTable::get(context.getConverter());
-			unsigned id = implTable->registerWorkItemImpl(call);
+			unsigned id = implTable->registerWorkItemImpl(context, call);
 
 			// produce work item id as a result
 			const RuntimeExtension& ext = NODE_MANAGER.getLangExtension<RuntimeExtension>();
@@ -132,7 +132,7 @@ namespace runtime {
 			TypeTablePtr typeTable = TypeTable::get(context.getConverter());
 
 			core::TupleTypePtr tupleType = DataItem::getUnfoldedLWDataItemType(static_pointer_cast<const core::TupleType>(ARG(0)->getType()));
-			unsigned id = typeTable->registerType(tupleType);
+			unsigned id = typeTable->registerType(context, tupleType);
 
 			// convert wrapped data item struct
 			core::TupleExprPtr pure = static_pointer_cast<const core::TupleExpr>(ARG(0));
