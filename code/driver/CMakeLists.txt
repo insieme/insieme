@@ -27,7 +27,8 @@ target_link_libraries(insieme_driver insieme_analysis)
 target_link_libraries(insieme_driver insieme_transform)
 target_link_libraries(insieme_driver insieme_annotations)
 
-# add Haskell dependencies
+# Add Haskell dependencies, these libraries are needed for all targets using
+# anything from analysis
 if(ANALYSIS_HASKELL)
 	# add GMP
 	insieme_find_package(NAME GMP)
