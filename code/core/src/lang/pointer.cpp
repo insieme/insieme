@@ -124,7 +124,7 @@ namespace lang {
 
 	void PointerType::setConst(bool newState) {
 		const auto& ext = elementType->getNodeManager().getLangExtension<BooleanMarkerExtension>();
-		mConst = (newState) ? ext.getTrue() : ext.getFalse();
+		mConst = (newState) ? ext.getTrueMarker() : ext.getFalseMarker();
 	}
 
 	bool PointerType::isVolatile() const {
@@ -133,7 +133,7 @@ namespace lang {
 
 	void PointerType::setVolatile(bool newState) {
 		const auto& ext = elementType->getNodeManager().getLangExtension<BooleanMarkerExtension>();
-		mVolatile = (newState) ? ext.getTrue() : ext.getFalse();
+		mVolatile = (newState) ? ext.getTrueMarker() : ext.getFalseMarker();
 	}
 
 	namespace {

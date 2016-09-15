@@ -215,12 +215,12 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINSIEME_VERSION=\"\\\"${insieme_version}\\\"\"")
 
 # --------------------------------------------------------- Analysis Backends
-option(ANALYSIS_DATALOG "Enable Datalog engine for analysis" ON)
+option(ANALYSIS_DATALOG "Enable Datalog engine for analysis" OFF)
 if(ANALYSIS_DATALOG)
 	add_definitions(-DINSIEME_ANALYSIS_DATALOG)
 endif()
 
-option(ANALYSIS_HASKELL "Enable Haskell engine for analysis" ON)
+option(ANALYSIS_HASKELL "Enable Haskell engine for analysis" OFF)
 if(ANALYSIS_HASKELL)
 	add_definitions(-DINSIEME_ANALYSIS_HASKELL)
 endif()

@@ -34,40 +34,33 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/addons/longlong_type.h"
-
-#include "insieme/core/lang/basic.h"
+#include "insieme/backend/addons/comma_operator.h"
 
 #include "insieme/backend/converter.h"
-#include "insieme/backend/type_manager.h"
+#include "insieme/backend/operator_converter.h"
+#include "insieme/backend/statement_converter.h"
+#include "insieme/backend/function_manager.h"
+#include "insieme/backend/c_ast/c_ast_utils.h"
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/transform/manipulation.h"
 
 namespace insieme {
 namespace backend {
 namespace addons {
 
-	namespace {
+	void CommaOperator::installOn(Converter& converter) const {
+		auto& mgr = converter.getNodeManager();
+		core::IRBuilder builder(mgr);
+		auto op = builder.normalize(builder.parseExpr("def comma_operator = (lhs : () => 'a, rhs : () => 'b) -> 'b { lhs(); return rhs(); }; comma_operator"));
 
-		const TypeInfo* LongLongTypeHandler(ConversionContext& context, const core::TypePtr& type) {
-			const TypeInfo* skip = nullptr;
-
-			// intercept 128-bit types and convert them to the long-long type
-			const auto& base = type->getNodeManager().getLangBasic();
-
-			// get the c-node manager
-			c_ast::CNodeManager& manager = *context.getConverter().getCNodeManager();
-
-			// check for the two special types
-			if(base.isInt16(type)) { return type_info_utils::createInfo(manager, c_ast::PrimitiveType::LongLong); }
-			if(base.isUInt16(type)) { return type_info_utils::createInfo(manager, c_ast::PrimitiveType::ULongLong); }
-
-			// otherwise use default handling
-			return skip;
-		}
-	}
-
-	void LongLongType::installOn(Converter& converter) const {
-		// registers type handler
-		converter.getTypeManager().addTypeHandler(LongLongTypeHandler);
+		// register operator
+		#include "insieme/backend/operator_converter_begin.inc"
+			converter.getFunctionManager().getOperatorConverterTable()[op] = OP_CONVERTER {
+				return c_ast::parentheses(
+				    c_ast::comma(CONVERT_EXPR(core::transform::evalLazy(NODE_MANAGER, ARG(0))), CONVERT_EXPR(core::transform::evalLazy(NODE_MANAGER, ARG(1)))));
+			};
+        #include "insieme/backend/operator_converter_end.inc"
 	}
 
 } // end namespace addons

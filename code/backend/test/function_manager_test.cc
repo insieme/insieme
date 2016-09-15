@@ -80,6 +80,7 @@ namespace backend {
 		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		FunctionManager& funManager = converter.getFunctionManager();
 
@@ -95,7 +96,7 @@ namespace backend {
 		core::LiteralPtr literal = builder.literal(funType, "myFun");
 
 		// obtain information
-		FunctionInfo info = funManager.getInfo(literal);
+		FunctionInfo info = funManager.getInfo(context, literal);
 
 		// to be tested:
 		//  - name of the function
@@ -113,8 +114,7 @@ namespace backend {
 		EXPECT_EQ("int32_t myFun_wrap(name* closure, float p1, bool p2) {\n    return myFun(p1, p2);\n}\n", toC(info.lambdaWrapper));
 
 		// check get value (value to be used when passing function as an argument)
-		ConversionContext context(converter, core::LambdaPtr());
-		EXPECT_EQ("&myFun", toC(funManager.getValue(literal, context)));
+		EXPECT_EQ("&myFun", toC(funManager.getValue(context, literal)));
 
 		// TODO: check the call creation
 	}
@@ -125,6 +125,7 @@ namespace backend {
 		core::IRBuilder builder(nodeManager);
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		FunctionManager& funManager = converter.getFunctionManager();
 
@@ -134,7 +135,7 @@ namespace backend {
 		).as<core::LambdaExprPtr>();
 
 		// obtain information
-		LambdaInfo info = funManager.getInfo(lambda);
+		LambdaInfo info = funManager.getInfo(context, lambda);
 
 		// to be tested:
 		//  - function
@@ -156,8 +157,7 @@ namespace backend {
 		EXPECT_EQ(info.prototype, info.definition);
 
 		// check get value (value to be used when passing function as an argument)
-		ConversionContext context(converter, core::LambdaPtr());
-		EXPECT_EQ("&name", toC(funManager.getValue(lambda, context)));
+		EXPECT_EQ("&name", toC(funManager.getValue(context, lambda)));
 
 		// TODO: check for call
 	}
@@ -168,6 +168,7 @@ namespace backend {
 		core::IRBuilder builder(nodeManager);
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		FunctionManager& funManager = converter.getFunctionManager();
 
@@ -181,7 +182,7 @@ namespace backend {
 		).as<core::LambdaExprPtr>();
 
 		// obtain information
-		LambdaInfo info = funManager.getInfo(lambda);
+		LambdaInfo info = funManager.getInfo(context, lambda);
 
 		// to be tested:
 		//  - function
@@ -207,6 +208,7 @@ namespace backend {
 		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		FunctionManager& funManager = converter.getFunctionManager();
 
@@ -229,7 +231,7 @@ namespace backend {
 
 		// ----------------- Convert using function manager -----------
 
-		BindInfo info = funManager.getInfo(bind);
+		BindInfo info = funManager.getInfo(context, bind);
 
 		// check presence of all members
 		EXPECT_TRUE((bool)info.closureName);
@@ -265,9 +267,7 @@ namespace backend {
 		toString(c_ast::CCode(converter.getFragmentManager(), bind, info.definitions));
 
 		// check get value (value to be used when passing function as an argument)
-		ConversionContext context(converter, core::LambdaPtr());
-
-		EXPECT_EQ("name_ctr((name_closure*)alloca(sizeof(name_closure)), &fun, &v3)", toC(funManager.getValue(bind, context)));
+		EXPECT_EQ("name_ctr((name_closure*)alloca(sizeof(name_closure)), &fun, &v3)", toC(funManager.getValue(context, bind)));
 		EXPECT_TRUE(context.getDependencies().find(info.definitions) != context.getDependencies().end());
 	}
 
@@ -278,6 +278,7 @@ namespace backend {
 		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		FunctionManager& funManager = converter.getFunctionManager();
 
@@ -309,7 +310,7 @@ namespace backend {
 
 		// ----------------- Convert using function manager -----------
 
-		BindInfo info = funManager.getInfo(bind);
+		BindInfo info = funManager.getInfo(context, bind);
 
 		// check presence of all members
 		EXPECT_TRUE((bool)info.closureName);
@@ -345,10 +346,8 @@ namespace backend {
 		toString(c_ast::CCode(converter.getFragmentManager(), bind, info.definitions));
 
 		// check get value (value to be used when passing function as an argument)
-		ConversionContext context(converter, core::LambdaPtr());
-
 		EXPECT_EQ("name_ctr((name_closure*)alloca(sizeof(name_closure)), name_ctr((name_closure*)alloca(sizeof(name_closure)), &fun, &v3), 0.8f)",
-		          toC(funManager.getValue(bind, context)));
+		          toC(funManager.getValue(context, bind)));
 		EXPECT_TRUE(context.getDependencies().find(info.definitions) != context.getDependencies().end());
 	}
 

@@ -200,7 +200,7 @@ namespace addons {
 					// Char vectors are wrapped into structs by Insieme
 					if(core::lang::isFixedSizedArray(initValue)
 					   && mgr.getLangBasic().isChar(core::lang::ArrayType(initValue).getElementType())) {
-						const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(initValue->getType());
+						const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(context, initValue->getType());
 						c_ast::InitializerPtr structInit =
 						    c_ast::init(C_NODE_MANAGER->create<c_ast::StructType>(static_pointer_cast<c_ast::NamedType>(info.lValueType)->name));
 						assert_true(core::analysis::isCallOf(initValue, mgr.getLangExtension<core::lang::ReferenceExtension>().getRefDeref()));

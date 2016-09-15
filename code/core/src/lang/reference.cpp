@@ -56,17 +56,17 @@ namespace lang {
 			if (!type) return false;
 			if (type.isa<TypeVariablePtr>()) return true;
 			const ReferenceExtension& refExt = type->getNodeManager().getLangExtension<ReferenceExtension>();
-			return refExt.isMarkerPlain(type) || refExt.isMarkerCppReference(type) || refExt.isMarkerCppRValueReference(type) || refExt.isMarkerQualified(type);
+			return refExt.isReferenceMarkerPlain(type) || refExt.isReferenceMarkerCppReference(type) || refExt.isReferenceMarkerCppRValueReference(type) || refExt.isReferenceMarkerQualified(type);
 		}
 
 		ReferenceType::Kind parseKind(const TypePtr& type) {
 			assert_pred1(isRefMarker, type);
 
 			const ReferenceExtension& refExt = type->getNodeManager().getLangExtension<ReferenceExtension>();
-			if(refExt.isMarkerPlain(type)) return ReferenceType::Kind::Plain;
-			if(refExt.isMarkerCppReference(type)) return ReferenceType::Kind::CppReference;
-			if(refExt.isMarkerCppRValueReference(type)) return ReferenceType::Kind::CppRValueReference;
-			if(refExt.isMarkerQualified(type)) return ReferenceType::Kind::Qualified;
+			if(refExt.isReferenceMarkerPlain(type)) return ReferenceType::Kind::Plain;
+			if(refExt.isReferenceMarkerCppReference(type)) return ReferenceType::Kind::CppReference;
+			if(refExt.isReferenceMarkerCppRValueReference(type)) return ReferenceType::Kind::CppRValueReference;
+			if(refExt.isReferenceMarkerQualified(type)) return ReferenceType::Kind::Qualified;
 			if(type.isa<TypeVariablePtr>()) return ReferenceType::Kind::Undefined;
 
 			// something went wrong
@@ -78,16 +78,16 @@ namespace lang {
 
 			const ReferenceExtension& refExt = mgr.getLangExtension<ReferenceExtension>();
 			switch(kind) {
-				case ReferenceType::Kind::Plain: 				return refExt.getMarkerPlain();
-				case ReferenceType::Kind::CppReference: 		return refExt.getMarkerCppReference();
-				case ReferenceType::Kind::CppRValueReference: 	return refExt.getMarkerCppRValueReference();
-				case ReferenceType::Kind::Qualified:			return refExt.getMarkerQualified();
+				case ReferenceType::Kind::Plain: 				return refExt.getReferenceMarkerPlain();
+				case ReferenceType::Kind::CppReference: 		return refExt.getReferenceMarkerCppReference();
+				case ReferenceType::Kind::CppRValueReference: 	return refExt.getReferenceMarkerCppRValueReference();
+				case ReferenceType::Kind::Qualified:			return refExt.getReferenceMarkerQualified();
 				case ReferenceType::Kind::Undefined:            return TypeVariable::get(mgr, "k");
 			}
 
 			// something went wrong
 			assert_fail() << "Unknown reference kind.";
-			return refExt.getMarkerPlain();
+			return refExt.getReferenceMarkerPlain();
 		}
 
 	}
@@ -138,7 +138,7 @@ namespace lang {
 
 	void ReferenceType::setConst(bool newState) {
 		const auto& ext = elementType->getNodeManager().getLangExtension<BooleanMarkerExtension>();
-		mConst = (newState) ? ext.getTrue() : ext.getFalse();
+		mConst = (newState) ? ext.getTrueMarker() : ext.getFalseMarker();
 	}
 
 	bool ReferenceType::isVolatile() const {
@@ -147,7 +147,7 @@ namespace lang {
 
 	void ReferenceType::setVolatile(bool newState) {
 		const auto& ext = elementType->getNodeManager().getLangExtension<BooleanMarkerExtension>();
-		mVolatile = (newState) ? ext.getTrue() : ext.getFalse();
+		mVolatile = (newState) ? ext.getTrueMarker() : ext.getFalseMarker();
 	}
 
 	ReferenceType::Kind ReferenceType::getKind() const {

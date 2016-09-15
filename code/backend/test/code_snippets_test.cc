@@ -56,7 +56,6 @@
 
 #include "code_snippets_test_utils.h"
 
-
 namespace insieme {
 namespace backend {
 
@@ -172,7 +171,7 @@ namespace backend {
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
-			EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t(*)[3])(&INS_INIT(__insieme_type_2){{(uint64_t)0, (uint64_t)0, (uint64_t)0}}))");
+			EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t(*)[3])(&INS_INIT(__insieme_type_2){{0ul, 0ul, 0ul}}))");
 		})
 	}
 
@@ -184,6 +183,57 @@ namespace backend {
 		})", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
 			EXPECT_PRED2(containsSubString, code, "true");
 			EXPECT_PRED2(containsSubString, code, "false");
+		})
+	}
+
+	TEST(Literals, NumericLiterals) {
+		DO_TEST(R"(int<4> main() {
+			lit("1" : int<1>) * lit("-1" : int<1>);
+			lit("2" : uint<1>);
+			lit("3" : int<2>) * lit("-3" : int<2>);
+			lit("4" : uint<2>);
+			5 * -5;
+			6u;
+			7l * -7l;
+			8ul;
+			9ll *  -9ll;
+			10ull;
+			11f * -11f;
+			12.0f * -12.0f;
+			13d * -13d;
+			14.0d * -14.0d;
+			15.0 * -15.0;
+			return 0;
+		})", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
+			// casts to smaller types
+			EXPECT_PRED2(containsSubString, code, "(int8_t)1 * (int8_t)-1;");
+			EXPECT_PRED2(containsSubString, code, "(uint8_t)2;");
+			EXPECT_PRED2(containsSubString, code, "(int16_t)3 * (int16_t)-3;");
+			EXPECT_PRED2(containsSubString, code, "(uint16_t)4;");
+
+			// no casts to larger and floating point types - the corresponding literals should be used
+			EXPECT_PRED2(containsSubString, code, "5 * -5;");
+			EXPECT_PRED2(containsSubString, code, "6u;");
+			EXPECT_PRED2(containsSubString, code, "7l * -7l;");
+			EXPECT_PRED2(containsSubString, code, "8ul;");
+			EXPECT_PRED2(containsSubString, code, "9ll * -9ll;");
+			EXPECT_PRED2(containsSubString, code, "10ull;");
+			EXPECT_PRED2(containsSubString, code, "11.0f * -11.0f;");
+			EXPECT_PRED2(containsSubString, code, "12.0f * -12.0f;");
+			EXPECT_PRED2(containsSubString, code, "13.0 * -13.0;");
+			EXPECT_PRED2(containsSubString, code, "14.0 * -14.0;");
+			EXPECT_PRED2(containsSubString, code, "15.0 * -15.0;");
+
+			EXPECT_PRED2(notContainsSubString, code, "(long)");
+			EXPECT_PRED2(notContainsSubString, code, "(int64_t)");
+			EXPECT_PRED2(notContainsSubString, code, "(unsigned long)");
+			EXPECT_PRED2(notContainsSubString, code, "(uint64_t)");
+			EXPECT_PRED2(notContainsSubString, code, "(long long)");
+			EXPECT_PRED2(notContainsSubString, code, "(int128_t)");
+			EXPECT_PRED2(notContainsSubString, code, "(unsigned long long)");
+			EXPECT_PRED2(notContainsSubString, code, "(uint128_t)");
+			EXPECT_PRED2(notContainsSubString, code, "(float)");
+			EXPECT_PRED2(notContainsSubString, code, "(double)");
 		})
 	}
 
@@ -251,20 +301,25 @@ namespace backend {
 		})
 	}
 
-	TEST(PrimitiveType, LongLong) {
+	TEST(Arrays, VLAs) {
 		DO_TEST(R"(
-			alias longlong = int<16>;
-
 			int<4> main() {
-				// just create a long-long variable
-				var int<16> a = 10l;
-				// just create a long-long variable
-				var uint<16> b = 10ul;
+				var ref<int<4>,f,f> v0 = 3;
+				var uint<inf> l = num_cast(*v0,type_lit(uint<inf>));
+				var ref<array<real<4>,#l>,f,f> arr;
+
+				var ref<int<4>,f,f> v1 = 3;
+				var ref<int<4>,f,f> v2 = 6;
+				var ref<int<4>,f,f> v3 = 10;
+				var uint<inf> l1 = num_cast(*v1+2, type_lit(uint<inf>));
+				var uint<inf> l2 = num_cast(*v2, type_lit(uint<inf>));
+				var uint<inf> l3 = num_cast(*v3+1, type_lit(uint<inf>));
+				var ref<array<array<array<int<4>,#l3>,#l2>,#l1>,f,f> arr2;
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
-			EXPECT_PRED2(containsSubString, code, "long long a = (int64_t)10;");
-			EXPECT_PRED2(containsSubString, code, "unsigned long long b = (uint64_t)10;");
+			EXPECT_PRED2(containsSubString, code, "float arr[l];");
+			EXPECT_PRED2(containsSubString, code, "int32_t arr2[l1][l2][l3];");
 		})
 	}
 
@@ -292,7 +347,7 @@ namespace backend {
 		})
 	}
 
-	TEST(FunctionCall, PassLabmdaToBind) {
+	TEST(FunctionCall, PassLambdaToBind) {
 		DO_TEST(R"(def f = ()->int<4> { return 4; };
 			def g = (a : ()=>'a)->'a { return a(); };
 			int<4> main() {
@@ -337,6 +392,23 @@ namespace backend {
 				EXPECT_PRED2(containsSubString, originalCode, "{main = function () -> int<4> {\n        return g(f());\n    };\n}");
 			})
 		}
+	}
+
+	TEST(Types, ConstVolatileGlobals) {
+		DO_TEST(R"(
+			int<4> main() {
+				lit("p" : ref<int<4>,f,f>);
+				lit("c" : ref<int<4>,t,f>);
+				lit("v" : ref<int<4>,f,t>);
+				lit("cv": ref<int<4>,t,t>);
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
+			EXPECT_PRED2(containsSubString, code, "int32_t p;");
+			EXPECT_PRED2(containsSubString, code, "const int32_t c;");
+			EXPECT_PRED2(containsSubString, code, "volatile int32_t v;");
+			EXPECT_PRED2(containsSubString, code, "const volatile int32_t cv;");
+		})
 	}
 
 	TEST(Types, RecursiveTypesSimple) {
@@ -658,6 +730,19 @@ namespace backend {
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
 			EXPECT_PRED2(containsSubString, code, "c_style_assignment");
 			EXPECT_PRED2(notContainsSubString, code, "+=");
+		})
+	}
+
+	TEST(Comma, Operator) {
+		DO_TEST(R"(
+			def comma_operator = (lhs : () => 'a, rhs : () => 'b) -> 'b { lhs(); return rhs(); };
+			int<4> function IMP_main() {
+				comma_operator(() -> int<4> { return comma_operator(() -> int<4> { return 2; }, () -> int<4> { return 3; }); }, () -> int<4> { return 4; });
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
+			EXPECT_PRED2(notContainsSubString, code, "comma_operator");
+			EXPECT_PRED2(containsSubString, code, "2,3,4");
 		})
 	}
 

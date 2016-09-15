@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -64,39 +64,21 @@
 #include "insieme/backend/runtime/runtime_stmt_handler.h"
 #include "insieme/backend/runtime/runtime_preprocessor.h"
 
-#include "insieme/backend/sequential/sequential_preprocessor.h"
-
 #include "insieme/backend/addons/pointer_type.h"
-#include "insieme/backend/addons/cpp_casts.h"
-#include "insieme/backend/addons/complex_type.h"
-#include "insieme/backend/addons/enum_type.h"
-#include "insieme/backend/addons/io.h"
-#include "insieme/backend/addons/longlong_type.h"
-#include "insieme/backend/addons/asm_stmt.h"
-#include "insieme/backend/addons/varargs.h"
-#include "insieme/backend/addons/static_variables.h"
 #include "insieme/backend/addons/compound_operators.h"
+
+#include "insieme/backend/sequential/sequential_preprocessor.h"
 
 namespace insieme {
 namespace backend {
 namespace opencl {
 
-	OpenCLBackend::OpenCLBackend(const BackendConfigPtr& config) :
-		RuntimeBackend(config)
+	OpenCLBackend::OpenCLBackend(const BackendConfigPtr& config) : RuntimeBackend(config)
 	{ }
 
 	OpenCLBackendPtr OpenCLBackend::getDefault(const BackendConfigPtr& config) {
 		auto res = std::make_shared<OpenCLBackend>(config);
-		res->addAddOn<addons::PointerType>();
-		res->addAddOn<addons::CppCastsAddon>();
-		res->addAddOn<addons::ComplexType>();
-		res->addAddOn<addons::CompoundOps>();
-		res->addAddOn<addons::EnumType>();
-		res->addAddOn<addons::InputOutput>();
-		res->addAddOn<addons::LongLongType>();
-		res->addAddOn<addons::AsmStmt>();
-		res->addAddOn<addons::VarArgs>();
-		res->addAddOn<addons::StaticVariables>();
+		res->addDefaultAddons();
 		return res;
 	}
 

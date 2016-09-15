@@ -34,42 +34,36 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/backend/backend.h"
+
+#include "insieme/backend/addons/pointer_type.h"
+#include "insieme/backend/addons/cpp_casts.h"
+#include "insieme/backend/addons/complex_type.h"
+#include "insieme/backend/addons/compound_operators.h"
+#include "insieme/backend/addons/enum_type.h"
+#include "insieme/backend/addons/io.h"
 #include "insieme/backend/addons/longlong_type.h"
-
-#include "insieme/core/lang/basic.h"
-
-#include "insieme/backend/converter.h"
-#include "insieme/backend/type_manager.h"
+#include "insieme/backend/addons/asm_stmt.h"
+#include "insieme/backend/addons/varargs.h"
+#include "insieme/backend/addons/static_variables.h"
+#include "insieme/backend/addons/comma_operator.h"
 
 namespace insieme {
 namespace backend {
-namespace addons {
 
-	namespace {
-
-		const TypeInfo* LongLongTypeHandler(ConversionContext& context, const core::TypePtr& type) {
-			const TypeInfo* skip = nullptr;
-
-			// intercept 128-bit types and convert them to the long-long type
-			const auto& base = type->getNodeManager().getLangBasic();
-
-			// get the c-node manager
-			c_ast::CNodeManager& manager = *context.getConverter().getCNodeManager();
-
-			// check for the two special types
-			if(base.isInt16(type)) { return type_info_utils::createInfo(manager, c_ast::PrimitiveType::LongLong); }
-			if(base.isUInt16(type)) { return type_info_utils::createInfo(manager, c_ast::PrimitiveType::ULongLong); }
-
-			// otherwise use default handling
-			return skip;
-		}
+	void Backend::addDefaultAddons() {
+		addAddOn<addons::PointerType>();
+		addAddOn<addons::CppCastsAddon>();
+		addAddOn<addons::ComplexType>();
+		addAddOn<addons::CompoundOps>();
+		addAddOn<addons::EnumType>();
+		addAddOn<addons::InputOutput>();
+		addAddOn<addons::LongLongType>();
+		addAddOn<addons::AsmStmt>();
+		addAddOn<addons::VarArgs>();
+		addAddOn<addons::StaticVariables>();
+		addAddOn<addons::CommaOperator>();
 	}
 
-	void LongLongType::installOn(Converter& converter) const {
-		// registers type handler
-		converter.getTypeManager().addTypeHandler(LongLongTypeHandler);
-	}
-
-} // end namespace addons
-} // end namespace backend
-} // end namespace insieme
+}
+}

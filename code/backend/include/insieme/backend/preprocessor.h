@@ -195,6 +195,7 @@ namespace backend {
 
 	/**
 	 * Adjust the semantics of cpp references by introducing ref casts as required.
+	 * This needs to be done in the backend, since the implicit materialization information is lost otherwise.
 	 */
 	class RefCastIntroducer : public PreProcessor {
 	  public:

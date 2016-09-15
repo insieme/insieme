@@ -60,23 +60,23 @@ namespace lang {
 		 */
 		EnumExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
-		LANG_EXT_DERIVED_WITH_NAME(EnumEquals, "enum_eq",
-			"(x : (type<'a>, 'b), y : (type<'a>, 'b)) -> bool {	 "
-			"    return x.1 == y.1;                              "
-			"}                                                   "
-		);
+		LANG_EXT_DERIVED_WITH_NAME(EnumEquals, "enum_eq", R"(
+			(x : (type<'a>, 'b), y : (type<'a>, 'b)) -> bool {
+				return x.1 == y.1;
+			}
+		)")
 
-		LANG_EXT_DERIVED_WITH_NAME(EnumFromInt, "enum_from_int",
-			"(t : type<(type<'a>, 'b)>, v : 'b) -> (type<'a>, 'b) {  "
-			"    return (type_lit('a), v);                           "
-			"}                                                       "
-		);
+		LANG_EXT_DERIVED(EnumFromInt, R"(
+			(t : type<(type<'a>, 'b)>, v : 'b) -> (type<'a>, 'b) {
+				return (type_lit('a), v);
+			}
+		)")
 
-		LANG_EXT_DERIVED_WITH_NAME(EnumToInt, "enum_to_int",
-			"( e : (type<'a>, 'b)) -> 'b {  "
-			"    return e.1;                "
-			"}                              "
-		);
+		LANG_EXT_DERIVED(EnumToInt, R"(
+			( e : (type<'a>, 'b)) -> 'b {
+				return e.1;
+			}
+		)")
 
 	};
 

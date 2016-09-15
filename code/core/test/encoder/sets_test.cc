@@ -34,42 +34,61 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/addons/longlong_type.h"
+#include <gtest/gtest.h>
 
-#include "insieme/core/lang/basic.h"
+#include <utility>
 
-#include "insieme/backend/converter.h"
-#include "insieme/backend/type_manager.h"
+#include "insieme/core/encoder/sets.h"
+#include "insieme/core/encoder/pairs.h"
+
+#include "insieme/core/ir.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/checks/full_check.h"
 
 namespace insieme {
-namespace backend {
-namespace addons {
+namespace core {
+namespace encoder {
 
-	namespace {
 
-		const TypeInfo* LongLongTypeHandler(ConversionContext& context, const core::TypePtr& type) {
-			const TypeInfo* skip = nullptr;
+	TEST(Sets, SetsConversion) {
+		NodeManager manager;
 
-			// intercept 128-bit types and convert them to the long-long type
-			const auto& base = type->getNodeManager().getLangBasic();
+		// create a set
 
-			// get the c-node manager
-			c_ast::CNodeManager& manager = *context.getConverter().getCNodeManager();
+		set<int> value;
 
-			// check for the two special types
-			if(base.isInt16(type)) { return type_info_utils::createInfo(manager, c_ast::PrimitiveType::LongLong); }
-			if(base.isUInt16(type)) { return type_info_utils::createInfo(manager, c_ast::PrimitiveType::ULongLong); }
+		core::ExpressionPtr ir = toIR(manager, value);
+		auto back = toValue<set<int>>(ir);
 
-			// otherwise use default handling
-			return skip;
-		}
+		EXPECT_EQ("{}", toString(value));
+		EXPECT_EQ("list_empty(type<int<4>>)", toString(*ir));
+
+
+		EXPECT_TRUE((isEncodingOf<set<int>>(ir)));
+		EXPECT_TRUE((isEncodingOf<vector<int>>(ir)));
+		EXPECT_FALSE((isEncodingOf<pair<int,int>>(ir)));
+		EXPECT_EQ(value, back);
+		EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
+
+
+		// fill the map with something
+
+		value.insert(12);
+		value.insert(14);
+
+		ir = toIR(manager, value);
+		back = toValue<set<int>>(ir);
+
+		EXPECT_EQ("{12,14}", toString(value));
+		EXPECT_EQ("list_cons(12, list_cons(14, list_empty(type<int<4>>)))", toString(*ir));
+
+		EXPECT_TRUE((isEncodingOf<set<int>>(ir)));
+		EXPECT_EQ(value, back);
+
+		EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
 	}
 
-	void LongLongType::installOn(Converter& converter) const {
-		// registers type handler
-		converter.getTypeManager().addTypeHandler(LongLongTypeHandler);
-	}
 
-} // end namespace addons
-} // end namespace backend
+} // end namespace lists
+} // end namespace core
 } // end namespace insieme

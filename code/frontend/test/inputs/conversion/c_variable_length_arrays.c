@@ -35,7 +35,7 @@
  */
 
 int main() {
-	
+
 	// VARIABLE LENGTH ARRAY TYPES //////////////////////////////////////////////////////////////
 	#pragma test expect_ir(R"({
 			var ref<int<4>,f,f> v0 = 3;
@@ -58,7 +58,7 @@ int main() {
 		int i = 3;
 		float x,y,arrxy[i];
 	}
-	
+
 	#pragma test expect_ir(R"({
 			var ref<int<4>,f,f> v0 = 3;
 			var uint<inf> v1 = num_cast(*v0+3, type_lit(uint<inf>));
@@ -68,7 +68,7 @@ int main() {
 		int i = 3;
 		float arrfm[i+3];
 	}
-	
+
 	#pragma test expect_ir(R"({
 			var ref<int<4>,f,f> v0 = 3;
 			var uint<inf> v1 = num_cast(*v0, type_lit(uint<inf>));
@@ -88,7 +88,7 @@ int main() {
 		int i = 3;
 		const float arrcf[i];
 		arrcf;
-	}	
+	}
 
 	#pragma test expect_ir(R"({
 			var ref<int<4>,f,f> v0 = 3;
@@ -99,7 +99,7 @@ int main() {
 		int i = 3;
 		volatile float arrvf[i];
 	}
-	
+
 	#pragma test expect_ir(R"({
 			var ref<int<4>,f,f> v0 = 3;
 			var ref<int<4>,f,f> v1 = 6;
@@ -168,7 +168,7 @@ int main() {
 		int j = 61;
 		const volatile float arrarrarrffm[10][j+2][10];
 	}
-	
+
 	#pragma test expect_ir(R"({
 			var ref<int<4>,f,f> v0 = 4;
 			var uint<inf> v1 = num_cast(*v0,type_lit(uint<inf>));
@@ -198,7 +198,7 @@ int main() {
 	}
 
 	// VARIABLE LENGTH ARRAY SIZEOF //////////////////////////////////////////////////////////////
-	
+
 	#pragma test expect_ir(R"({
 			var ref<int<4>,f,f> v0;
 			sizeof(type_lit(int<4>))*num_cast(*v0, type_lit(uint<8>));
@@ -207,7 +207,7 @@ int main() {
 		int i;
 		sizeof(int[i]);
 	}
-	
+
 	#pragma test expect_ir(R"({
 			var ref<int<4>,f,f> v0;
 			var ref<int<4>,f,f> v1;
@@ -229,8 +229,8 @@ int main() {
 		int k[i];
 		sizeof(k);
 	}
-	
-	#pragma test expect_ir(R"({ 
+
+	#pragma test expect_ir(R"({
 			var ref<int<4>> v0 = 10;
 			var ref<int<4>> v1 = 20;
 			var uint<inf> v2 = num_cast(*v0, type_lit(uint<inf>));
@@ -244,15 +244,15 @@ int main() {
 		sizeof(l);
 	}
 
-	#pragma test expect_ir(R"({ 
+	#pragma test expect_ir(R"({
 			var ref<int<4>> v0 = 10;
 			var ref<int<4>> v1 = 20;
 			var uint<inf> v2 = num_cast(*v0, type_lit(uint<inf>));
 			var uint<inf> v3 = num_cast(*v1, type_lit(uint<inf>));
-			var ref<array<array<int<4>,#v3>,#v2>> v4; 
+			var ref<array<array<int<4>,#v3>,#v2>> v4;
 			var uint<inf> v5 = num_cast(*v0, type_lit(uint<inf>));
 			var uint<inf> v6 = num_cast(*v1, type_lit(uint<inf>));
-			var ref<array<array<int<4>,#v6>,#v5>> v7; 
+			var ref<array<array<int<4>,#v6>,#v5>> v7;
 			sizeof(type_lit(array<array<int<4>,#v3>,#v2>));
 			sizeof(type_lit(array<array<int<4>,#v6>,#v5>));
 		})")

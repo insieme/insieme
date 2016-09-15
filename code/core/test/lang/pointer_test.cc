@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -56,9 +56,6 @@ namespace lang {
 		NodeManager nm;
 		const PointerExtension& ext = nm.getLangExtension<PointerExtension>();
 
-		// the generic pointer template should be a struct
-		EXPECT_EQ(NT_TupleType, ext.getGenPtr()->getNodeType());
-
 		// the arguments in the functions accepting a pointer should be expanded to a struct
 		EXPECT_EQ(NT_TupleType, ext.getPtrCast()->getType().as<FunctionTypePtr>()->getParameterTypes()[0]->getNodeType());
 	}
@@ -105,193 +102,194 @@ namespace lang {
 
 		NodeManager nm;
 		IRBuilder builder(nm);
-        auto& ext = nm.getLangExtension<PointerExtension>();
+		auto& ext = nm.getLangExtension<PointerExtension>();
 
-        auto A = builder.parseType("A");
+		auto A = builder.parseType("A");
 
-        auto refExpr = builder.literal( ReferenceType::create( A), "expr");
-        auto constRefExpr = builder.literal( ReferenceType::create( A, true), "expr");
-        auto volatileRefExpr = builder.literal( ReferenceType::create( A, false, true), "expr");
+		auto refExpr = builder.literal( ReferenceType::create( A), "expr");
+		auto constRefExpr = builder.literal( ReferenceType::create( A, true), "expr");
+		auto volatileRefExpr = builder.literal( ReferenceType::create( A, false, true), "expr");
 
-            // Ptr from ref
-        EXPECT_EQ(builder.callExpr(ext.getPtrFromRef(), refExpr)->getType(), builder.parseType("ptr<A>"));
-        EXPECT_EQ(builder.callExpr(ext.getPtrFromRef(), constRefExpr)->getType(), builder.parseType("ptr<A,t,f>"));
-        EXPECT_EQ(builder.callExpr(ext.getPtrFromRef(), volatileRefExpr)->getType(), builder.parseType("ptr<A,f,t>"));
+		// Ptr from ref
+		EXPECT_EQ(builder.callExpr(ext.getPtrFromRef(), refExpr)->getType(), builder.parseType("ptr<A>"));
+		EXPECT_EQ(builder.callExpr(ext.getPtrFromRef(), constRefExpr)->getType(), builder.parseType("ptr<A,t,f>"));
+		EXPECT_EQ(builder.callExpr(ext.getPtrFromRef(), volatileRefExpr)->getType(), builder.parseType("ptr<A,f,t>"));
 
-            // Ptr to ref
-        EXPECT_EQ(builder.callExpr(ext.getPtrToRef(), builder.literal(builder.parseType("ptr<A>"), "dummyPtr")    )->getType(), refExpr->getType());
-        EXPECT_EQ(builder.callExpr(ext.getPtrToRef(), builder.literal(builder.parseType("ptr<A,t,f>"), "dummyPtr"))->getType(), constRefExpr->getType());
-        EXPECT_EQ(builder.callExpr(ext.getPtrToRef(), builder.literal(builder.parseType("ptr<A,f,t>"), "dummyPtr"))->getType(), volatileRefExpr->getType());
+		// Ptr to ref
+		EXPECT_EQ(builder.callExpr(ext.getPtrToRef(), builder.literal(builder.parseType("ptr<A>"), "dummyPtr")    )->getType(), refExpr->getType());
+		EXPECT_EQ(builder.callExpr(ext.getPtrToRef(), builder.literal(builder.parseType("ptr<A,t,f>"), "dummyPtr"))->getType(), constRefExpr->getType());
+		EXPECT_EQ(builder.callExpr(ext.getPtrToRef(), builder.literal(builder.parseType("ptr<A,f,t>"), "dummyPtr"))->getType(), volatileRefExpr->getType());
 
-    }
+	}
 
 	TEST(Pointer, Ptr_array_convert) {
 
 		NodeManager nm;
 		IRBuilder builder(nm);
-        auto& ext = nm.getLangExtension<PointerExtension>();
+		auto& ext = nm.getLangExtension<PointerExtension>();
 
-        auto A = builder.parseType("A");
+		auto A = builder.parseType("A");
 
 		auto l = builder.literal(builder.parseType("uint<inf>"), "4");
 		auto v = builder.variable(builder.parseType("uint<inf>"), 0);
 
-        {
+		{
 
-            auto array1 = builder.literal(ReferenceType::create(ArrayType::create(A)), "dummyArray");
-            auto array2 = builder.literal(ReferenceType::create(ArrayType::create(A, 10)), "dummyArray");
-            auto array3 = builder.literal(ReferenceType::create(ArrayType::create(A, l)), "dummyArray");
-            auto array4 = builder.literal(ReferenceType::create(ArrayType::create(A, v)), "dummyArray");
+			auto array1 = builder.literal(ReferenceType::create(ArrayType::create(A)), "dummyArray");
+			auto array2 = builder.literal(ReferenceType::create(ArrayType::create(A, 10)), "dummyArray");
+			auto array3 = builder.literal(ReferenceType::create(ArrayType::create(A, l)), "dummyArray");
+			auto array4 = builder.literal(ReferenceType::create(ArrayType::create(A, v)), "dummyArray");
 
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array1)->getType(), builder.parseType("ptr<A>"));
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array2)->getType(), builder.parseType("ptr<A>"));
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array3)->getType(), builder.parseType("ptr<A>"));
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array4)->getType(), builder.parseType("ptr<A>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array1)->getType(), builder.parseType("ptr<A>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array2)->getType(), builder.parseType("ptr<A>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array3)->getType(), builder.parseType("ptr<A>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array4)->getType(), builder.parseType("ptr<A>"));
 
-        }
+		}
 
-        {
+		{
 
-            auto array1 = builder.literal(ReferenceType::create(ArrayType::create(A), true), "dummyArray");
-            auto array2 = builder.literal(ReferenceType::create(ArrayType::create(A, 10), true), "dummyArray");
-            auto array3 = builder.literal(ReferenceType::create(ArrayType::create(A, l), true), "dummyArray");
-            auto array4 = builder.literal(ReferenceType::create(ArrayType::create(A, v), true), "dummyArray");
+			auto array1 = builder.literal(ReferenceType::create(ArrayType::create(A), true), "dummyArray");
+			auto array2 = builder.literal(ReferenceType::create(ArrayType::create(A, 10), true), "dummyArray");
+			auto array3 = builder.literal(ReferenceType::create(ArrayType::create(A, l), true), "dummyArray");
+			auto array4 = builder.literal(ReferenceType::create(ArrayType::create(A, v), true), "dummyArray");
 
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array1)->getType(), builder.parseType("ptr<A,t,f>"));
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array2)->getType(), builder.parseType("ptr<A,t,f>"));
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array3)->getType(), builder.parseType("ptr<A,t,f>"));
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array4)->getType(), builder.parseType("ptr<A,t,f>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array1)->getType(), builder.parseType("ptr<A,t,f>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array2)->getType(), builder.parseType("ptr<A,t,f>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array3)->getType(), builder.parseType("ptr<A,t,f>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array4)->getType(), builder.parseType("ptr<A,t,f>"));
 
-        }
+		}
 
-        {
+		{
 
-            auto array1 = builder.literal(ReferenceType::create(ArrayType::create(A), false, true), "dummyArray");
-            auto array2 = builder.literal(ReferenceType::create(ArrayType::create(A, 10), false, true), "dummyArray");
-            auto array3 = builder.literal(ReferenceType::create(ArrayType::create(A, l), false, true), "dummyArray");
-            auto array4 = builder.literal(ReferenceType::create(ArrayType::create(A, v), false, true), "dummyArray");
+			auto array1 = builder.literal(ReferenceType::create(ArrayType::create(A), false, true), "dummyArray");
+			auto array2 = builder.literal(ReferenceType::create(ArrayType::create(A, 10), false, true), "dummyArray");
+			auto array3 = builder.literal(ReferenceType::create(ArrayType::create(A, l), false, true), "dummyArray");
+			auto array4 = builder.literal(ReferenceType::create(ArrayType::create(A, v), false, true), "dummyArray");
 
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array1)->getType(), builder.parseType("ptr<A,f,t>"));
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array2)->getType(), builder.parseType("ptr<A,f,t>"));
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array3)->getType(), builder.parseType("ptr<A,f,t>"));
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array4)->getType(), builder.parseType("ptr<A,f,t>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array1)->getType(), builder.parseType("ptr<A,f,t>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array2)->getType(), builder.parseType("ptr<A,f,t>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array3)->getType(), builder.parseType("ptr<A,f,t>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array4)->getType(), builder.parseType("ptr<A,f,t>"));
 
-        }
+		}
 
-        {
+		{
 
-            auto array1 = builder.literal(ReferenceType::create(ArrayType::create(A), true, true), "dummyArray");
-            auto array2 = builder.literal(ReferenceType::create(ArrayType::create(A, 10), true, true), "dummyArray");
-            auto array3 = builder.literal(ReferenceType::create(ArrayType::create(A, l), true, true), "dummyArray");
-            auto array4 = builder.literal(ReferenceType::create(ArrayType::create(A, v), true, true), "dummyArray");
+			auto array1 = builder.literal(ReferenceType::create(ArrayType::create(A), true, true), "dummyArray");
+			auto array2 = builder.literal(ReferenceType::create(ArrayType::create(A, 10), true, true), "dummyArray");
+			auto array3 = builder.literal(ReferenceType::create(ArrayType::create(A, l), true, true), "dummyArray");
+			auto array4 = builder.literal(ReferenceType::create(ArrayType::create(A, v), true, true), "dummyArray");
 
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array1)->getType(), builder.parseType("ptr<A,t,t>"));
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array2)->getType(), builder.parseType("ptr<A,t,t>"));
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array3)->getType(), builder.parseType("ptr<A,t,t>"));
-            EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array4)->getType(), builder.parseType("ptr<A,t,t>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array1)->getType(), builder.parseType("ptr<A,t,t>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array2)->getType(), builder.parseType("ptr<A,t,t>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array3)->getType(), builder.parseType("ptr<A,t,t>"));
+			EXPECT_EQ(builder.callExpr(ext.getPtrFromArray(), array4)->getType(), builder.parseType("ptr<A,t,t>"));
 
-        }
+		}
 
-    }
+	}
 
 	TEST(Pointer, Ptr_function_convert) {
 
 		NodeManager nm;
 		IRBuilder builder(nm);
-        auto& ext = nm.getLangExtension<PointerExtension>();
+		auto& ext = nm.getLangExtension<PointerExtension>();
 
-        auto f = builder.parseExpr("() -> unit { } ");
-        ASSERT_TRUE(f);
-        auto fType = f->getType();
+		auto f = builder.parseExpr("() -> unit { } ");
+		ASSERT_TRUE(f);
+		auto fType = f->getType();
 
-        EXPECT_TRUE(builder.callExpr(ext.getPtrOfFunction(), f));
-        EXPECT_EQ(builder.callExpr(ext.getPtrOfFunction(), f)->getType(), PointerType::create(fType, true));
+		EXPECT_TRUE(builder.callExpr(ext.getPtrOfFunction(), f));
+		EXPECT_EQ(builder.callExpr(ext.getPtrOfFunction(), f)->getType(), PointerType::create(fType, true));
 
 
-    }
-    
+	}
+
 	TEST(Pointer, Cast) {
 
 		NodeManager nm;
 		IRBuilder builder(nm);
-        auto& ext = nm.getLangExtension<PointerExtension>();
+		auto& ext = nm.getLangExtension<PointerExtension>();
 
 
-        auto A = builder.parseType("A");
-        auto B = builder.parseType("B");
+		auto A = builder.parseType("A");
+		auto B = builder.parseType("B");
 
-        auto ptrExpr = builder.literal(PointerType::create(A), "dummy");
-        auto constPtrExpr = builder.literal(PointerType::create(A, true), "dummy");
-        auto volatilePtrExpr = builder.literal(PointerType::create(A, false, true), "dummy");
+		auto ptrExpr = builder.literal(PointerType::create(A), "dummy");
+		auto constPtrExpr = builder.literal(PointerType::create(A, true), "dummy");
+		auto volatilePtrExpr = builder.literal(PointerType::create(A, false, true), "dummy");
 
-        EXPECT_EQ( builder.callExpr( ext.getPtrReinterpret(), ptrExpr, builder.getTypeLiteral(B))->getType(), PointerType::create(B) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrReinterpret(), constPtrExpr, builder.getTypeLiteral(B))->getType(), PointerType::create(B, true) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrReinterpret(), volatilePtrExpr, builder.getTypeLiteral(B))->getType(), PointerType::create(B, false, true) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrReinterpret(), ptrExpr, builder.getTypeLiteral(B))->getType(), PointerType::create(B) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrReinterpret(), constPtrExpr, builder.getTypeLiteral(B))->getType(), PointerType::create(B, true) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrReinterpret(), volatilePtrExpr, builder.getTypeLiteral(B))->getType(), PointerType::create(B, false, true) );
 
 		auto t = builder.getTypeLiteral(builder.parseType("t"));
 		auto f = builder.getTypeLiteral(builder.parseType("f"));
 
-            // Cast
-        EXPECT_EQ( builder.callExpr( ext.getPtrCast(), ptrExpr, t, t)->getType(), PointerType::create(A, true, true) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrCast(), ptrExpr, t, f)->getType(), PointerType::create(A, true, false) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrCast(), ptrExpr, f, t)->getType(), PointerType::create(A, false, true) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrCast(), ptrExpr, f, f)->getType(), PointerType::create(A, false, false) );
+		// Cast
+		EXPECT_EQ( builder.callExpr( ext.getPtrCast(), ptrExpr, t, t)->getType(), PointerType::create(A, true, true) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrCast(), ptrExpr, t, f)->getType(), PointerType::create(A, true, false) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrCast(), ptrExpr, f, t)->getType(), PointerType::create(A, false, true) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrCast(), ptrExpr, f, f)->getType(), PointerType::create(A, false, false) );
 
-        EXPECT_EQ( builder.callExpr( ext.getPtrCast(), constPtrExpr, t, t)->getType(), PointerType::create(A, true, true) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrCast(), constPtrExpr, t, f)->getType(), PointerType::create(A, true, false) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrCast(), constPtrExpr, f, t)->getType(), PointerType::create(A, false, true) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrCast(), constPtrExpr, f, f)->getType(), PointerType::create(A, false, false) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrCast(), constPtrExpr, t, t)->getType(), PointerType::create(A, true, true) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrCast(), constPtrExpr, t, f)->getType(), PointerType::create(A, true, false) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrCast(), constPtrExpr, f, t)->getType(), PointerType::create(A, false, true) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrCast(), constPtrExpr, f, f)->getType(), PointerType::create(A, false, false) );
 
-        EXPECT_EQ( builder.callExpr( ext.getPtrCast(), volatilePtrExpr, t, t)->getType(), PointerType::create(A, true, true) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrCast(), volatilePtrExpr, t, f)->getType(), PointerType::create(A, true, false) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrCast(), volatilePtrExpr, f, t)->getType(), PointerType::create(A, false, true) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrCast(), volatilePtrExpr, f, f)->getType(), PointerType::create(A, false, false) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrCast(), volatilePtrExpr, t, t)->getType(), PointerType::create(A, true, true) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrCast(), volatilePtrExpr, t, f)->getType(), PointerType::create(A, true, false) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrCast(), volatilePtrExpr, f, t)->getType(), PointerType::create(A, false, true) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrCast(), volatilePtrExpr, f, f)->getType(), PointerType::create(A, false, false) );
 
-            // Constant Cast
-        EXPECT_EQ( builder.callExpr( ext.getPtrConstCast(), ptrExpr, t)->getType(), PointerType::create(A, true, false) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrConstCast(), ptrExpr, f)->getType(), PointerType::create(A, false, false) );
+		// Constant Cast
+		EXPECT_EQ( builder.callExpr( ext.getPtrConstCast(), ptrExpr, t)->getType(), PointerType::create(A, true, false) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrConstCast(), ptrExpr, f)->getType(), PointerType::create(A, false, false) );
 
-        EXPECT_EQ( builder.callExpr( ext.getPtrConstCast(), constPtrExpr, t)->getType(), PointerType::create(A, true, false) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrConstCast(), constPtrExpr, f)->getType(), PointerType::create(A, false, false) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrConstCast(), constPtrExpr, t)->getType(), PointerType::create(A, true, false) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrConstCast(), constPtrExpr, f)->getType(), PointerType::create(A, false, false) );
 
-        EXPECT_EQ( builder.callExpr( ext.getPtrConstCast(), volatilePtrExpr, t)->getType(), PointerType::create(A, true, true) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrConstCast(), volatilePtrExpr, f)->getType(), PointerType::create(A, false, true) );
-            
-            // Volatile Cast
-        EXPECT_EQ( builder.callExpr( ext.getPtrVolatileCast(), ptrExpr, t)->getType(), PointerType::create(A, false, true) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrVolatileCast(), ptrExpr, f)->getType(), PointerType::create(A, false, false) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrConstCast(), volatilePtrExpr, t)->getType(), PointerType::create(A, true, true) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrConstCast(), volatilePtrExpr, f)->getType(), PointerType::create(A, false, true) );
 
-        EXPECT_EQ( builder.callExpr( ext.getPtrVolatileCast(), constPtrExpr, t)->getType(), PointerType::create(A, true, true) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrVolatileCast(), constPtrExpr, f)->getType(), PointerType::create(A, true, false) );
+		// Volatile Cast
+		EXPECT_EQ( builder.callExpr( ext.getPtrVolatileCast(), ptrExpr, t)->getType(), PointerType::create(A, false, true) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrVolatileCast(), ptrExpr, f)->getType(), PointerType::create(A, false, false) );
 
-        EXPECT_EQ( builder.callExpr( ext.getPtrVolatileCast(), volatilePtrExpr, t)->getType(), PointerType::create(A, false, true) );
-        EXPECT_EQ( builder.callExpr( ext.getPtrVolatileCast(), volatilePtrExpr, f)->getType(), PointerType::create(A, false, false) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrVolatileCast(), constPtrExpr, t)->getType(), PointerType::create(A, true, true) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrVolatileCast(), constPtrExpr, f)->getType(), PointerType::create(A, true, false) );
 
-            // integral (virtualy any type)
-        auto address = builder.literal(builder.getLangBasic().getUInt8(), "addr");
-        EXPECT_TRUE ( isPointer( builder.callExpr(ext.getPtrFromIntegral(), address, builder.getTypeLiteral(PointerType::create(A)))->getType()));
-        EXPECT_EQ ( builder.callExpr(ext.getPtrToIntegral(), ptrExpr, builder.getTypeLiteral(builder.getLangBasic().getUInt8()))->getType(), builder.getLangBasic().getUInt8());
-        EXPECT_EQ ( builder.callExpr(ext.getPtrToIntegral(), constPtrExpr, builder.getTypeLiteral(builder.getLangBasic().getUInt8()))->getType(), builder.getLangBasic().getUInt8());
-        EXPECT_EQ ( builder.callExpr(ext.getPtrToIntegral(), volatilePtrExpr, builder.getTypeLiteral(builder.getLangBasic().getUInt8()))->getType(), builder.getLangBasic().getUInt8());
-    
-    }
+		EXPECT_EQ( builder.callExpr( ext.getPtrVolatileCast(), volatilePtrExpr, t)->getType(), PointerType::create(A, false, true) );
+		EXPECT_EQ( builder.callExpr( ext.getPtrVolatileCast(), volatilePtrExpr, f)->getType(), PointerType::create(A, false, false) );
+
+		// integral (virtualy any type)
+		auto address = builder.literal(builder.getLangBasic().getUInt8(), "addr");
+		EXPECT_TRUE ( isPointer( builder.callExpr(ext.getPtrFromIntegral(), address, builder.getTypeLiteral(PointerType::create(A)))->getType()));
+		EXPECT_EQ ( builder.callExpr(ext.getPtrToIntegral(), ptrExpr, builder.getTypeLiteral(builder.getLangBasic().getUInt8()))->getType(), builder.getLangBasic().getUInt8());
+		EXPECT_EQ ( builder.callExpr(ext.getPtrToIntegral(), constPtrExpr, builder.getTypeLiteral(builder.getLangBasic().getUInt8()))->getType(), builder.getLangBasic().getUInt8());
+		EXPECT_EQ ( builder.callExpr(ext.getPtrToIntegral(), volatilePtrExpr, builder.getTypeLiteral(builder.getLangBasic().getUInt8()))->getType(), builder.getLangBasic().getUInt8());
+
+	}
 
 	TEST(Pointer, NullPtr) {
 		NodeManager nm;
 		IRBuilder builder(nm);
-        auto& ext = nm.getLangExtension<PointerExtension>();
+		auto& ext = nm.getLangExtension<PointerExtension>();
 
 		auto A = builder.getTypeLiteral(builder.parseType("A"));
 		auto t = builder.getTypeLiteral(builder.parseType("t"));
 		auto f = builder.getTypeLiteral(builder.parseType("f"));
 
-		    // Null 
-        EXPECT_TRUE(isPointer(builder.callExpr(ext.getPtrNull(), A, t, t)->getType()));
-        EXPECT_TRUE(isPointer(builder.callExpr(ext.getPtrNull(), A, t, f)->getType()));
-        EXPECT_TRUE(isPointer(builder.callExpr(ext.getPtrNull(), A, f, t)->getType()));
-        EXPECT_TRUE(isPointer(builder.callExpr(ext.getPtrNull(), A, f, f)->getType()));
+		// Null
+		EXPECT_TRUE(isPointer(builder.callExpr(ext.getPtrNull(), A, t, t)->getType()));
+		EXPECT_TRUE(isPointer(builder.callExpr(ext.getPtrNull(), A, t, f)->getType()));
+		EXPECT_TRUE(isPointer(builder.callExpr(ext.getPtrNull(), A, f, t)->getType()));
+		EXPECT_TRUE(isPointer(builder.callExpr(ext.getPtrNull(), A, f, f)->getType()));
 
-    }
+	}
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

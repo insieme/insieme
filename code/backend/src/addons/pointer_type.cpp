@@ -60,7 +60,9 @@ namespace addons {
 
 	namespace {
 
-		const TypeInfo* PointerTypeHandler(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* PointerTypeHandler(ConversionContext& context, const core::TypePtr& type) {
+			const auto& converter = context.getConverter();
+
 			// only interested in pointers
 			if(!core::lang::isPointer(type)) return nullptr;
 
@@ -71,7 +73,7 @@ namespace addons {
 			TypeManager& typeManager = converter.getTypeManager();
 
 			// load type information of base type
-			const TypeInfo& elementInfo = typeManager.getTypeInfo(ptr.getElementType());
+			const TypeInfo& elementInfo = typeManager.getTypeInfo(context, ptr.getElementType());
 
 			// create pointer type
 			auto cType = c_ast::ptr(c_ast::qualify(elementInfo.lValueType, ptr.isConst(), ptr.isVolatile()));

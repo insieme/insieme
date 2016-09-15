@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -65,7 +65,7 @@ namespace lang {
 		/**
 		 * The list type.
 		 */
-		LANG_EXT_TYPE_WITH_NAME(List, "list_template", "list<'a>");
+		LANG_EXT_TYPE(ListTemplate, "list<'a>");
 		
 		// -------------------- operators ---------------------------
 

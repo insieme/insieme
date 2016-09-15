@@ -34,41 +34,24 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/addons/longlong_type.h"
+#pragma once
 
-#include "insieme/core/lang/basic.h"
+#include "insieme/core/forward_decls.h"
 
-#include "insieme/backend/converter.h"
-#include "insieme/backend/type_manager.h"
+#include "insieme/backend/addon.h"
 
 namespace insieme {
 namespace backend {
 namespace addons {
 
-	namespace {
-
-		const TypeInfo* LongLongTypeHandler(ConversionContext& context, const core::TypePtr& type) {
-			const TypeInfo* skip = nullptr;
-
-			// intercept 128-bit types and convert them to the long-long type
-			const auto& base = type->getNodeManager().getLangBasic();
-
-			// get the c-node manager
-			c_ast::CNodeManager& manager = *context.getConverter().getCNodeManager();
-
-			// check for the two special types
-			if(base.isInt16(type)) { return type_info_utils::createInfo(manager, c_ast::PrimitiveType::LongLong); }
-			if(base.isUInt16(type)) { return type_info_utils::createInfo(manager, c_ast::PrimitiveType::ULongLong); }
-
-			// otherwise use default handling
-			return skip;
-		}
-	}
-
-	void LongLongType::installOn(Converter& converter) const {
-		// registers type handler
-		converter.getTypeManager().addTypeHandler(LongLongTypeHandler);
-	}
+	/**
+	 * Performance improvement addon handling the comma operator.
+	 * (Semantics are correct even without it)
+	 * TODO: implement a way to eliminate the repeated specification of the IR operator both here and in the FE
+	 */
+	struct CommaOperator : public AddOn {
+		virtual void installOn(Converter& converter) const;
+	};
 
 } // end namespace addons
 } // end namespace backend

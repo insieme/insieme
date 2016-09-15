@@ -76,8 +76,8 @@ namespace backend {
 		core::IRBuilder builder(nodeManager);
 		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
-
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		TypeManager& typeManager = converter.getTypeManager();
 
@@ -89,7 +89,7 @@ namespace backend {
 
 
 		core::TypePtr type = basic.getInt4();
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("int32_t", toC(info.lValueType));
 		EXPECT_EQ("int32_t", toC(info.rValueType));
 		EXPECT_EQ("int32_t", toC(info.externalType));
@@ -104,7 +104,7 @@ namespace backend {
 
 
 		type = basic.getInt8();
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("int64_t", toC(info.lValueType));
 		EXPECT_EQ("int64_t", toC(info.rValueType));
 		EXPECT_EQ("int64_t", toC(info.externalType));
@@ -119,7 +119,7 @@ namespace backend {
 
 
 		type = basic.getUInt16();
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("uint128_t", toC(info.lValueType));
 		EXPECT_EQ("uint128_t", toC(info.rValueType));
 		EXPECT_EQ("uint128_t", toC(info.externalType));
@@ -134,7 +134,7 @@ namespace backend {
 
 
 		type = basic.getFloat();
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("float", toC(info.lValueType));
 		EXPECT_EQ("float", toC(info.rValueType));
 		EXPECT_EQ("float", toC(info.externalType));
@@ -145,7 +145,7 @@ namespace backend {
 
 
 		type = basic.getDouble();
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("double", toC(info.lValueType));
 		EXPECT_EQ("double", toC(info.rValueType));
 		EXPECT_EQ("double", toC(info.externalType));
@@ -156,7 +156,7 @@ namespace backend {
 
 
 		type = basic.getLongDouble();
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("long double", toC(info.lValueType));
 		EXPECT_EQ("long double", toC(info.rValueType));
 		EXPECT_EQ("long double", toC(info.externalType));
@@ -166,7 +166,7 @@ namespace backend {
 		EXPECT_FALSE(info.declaration);
 
 		type = basic.getBool();
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("bool", toC(info.lValueType));
 		EXPECT_EQ("bool", toC(info.rValueType));
 		EXPECT_EQ("bool", toC(info.externalType));
@@ -187,6 +187,7 @@ namespace backend {
 
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		TypeManager& typeManager = converter.getTypeManager();
 
@@ -198,7 +199,7 @@ namespace backend {
 		auto lit = cManager->create<c_ast::Literal>("X");
 
 		core::TypePtr type = builder.structType(core::FieldList());
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name", toC(info.rValueType));
 		EXPECT_EQ("name", toC(info.externalType));
@@ -212,7 +213,7 @@ namespace backend {
 		elements.push_back(builder.field(builder.stringValue("a"), basic.getInt4()));
 		elements.push_back(builder.field(builder.stringValue("b"), basic.getBool()));
 		type = builder.structType(elements);
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name", toC(info.rValueType));
 		EXPECT_EQ("name", toC(info.externalType));
@@ -226,7 +227,7 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, toC(info.definition), "bool b;");
 
 		// the definition should depend on the definition of the boolean
-		TypeInfo infoBool = typeManager.getTypeInfo(basic.getBool());
+		TypeInfo infoBool = typeManager.getTypeInfo(context, basic.getBool());
 		EXPECT_TRUE((bool)infoBool.definition);
 		auto dependencies = info.definition->getDependencies();
 		EXPECT_TRUE(contains(dependencies, infoBool.definition));
@@ -239,6 +240,7 @@ namespace backend {
 		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		TypeManager& typeManager = converter.getTypeManager();
 
@@ -251,7 +253,7 @@ namespace backend {
 
 		// array of undefined size
 		core::GenericTypePtr type = builder.arrayType(basic.getInt4());
-		info = typeManager.getArrayTypeInfo(type);
+		info = typeManager.getArrayTypeInfo(context, type);
 		EXPECT_EQ("int32_t[]", toC(info.lValueType));
 		EXPECT_EQ("int32_t[]", toC(info.rValueType));
 		EXPECT_EQ("int32_t[]", toC(info.externalType));
@@ -264,7 +266,7 @@ namespace backend {
 
 		// array of fixed size
 		type = builder.arrayType(basic.getInt4(), 24);
-		info = typeManager.getArrayTypeInfo(type);
+		info = typeManager.getArrayTypeInfo(context, type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name", toC(info.rValueType));
 		EXPECT_EQ("int32_t[24]", toC(info.externalType));
@@ -283,7 +285,7 @@ namespace backend {
 //		auto size = builder.variable(builder.parseType("int<inf>"), 0);
 //		type = builder.arrayType(basic.getInt4(), size);
 //		EXPECT_EQ("array<int<4>,v0>", toString(*type));
-//		info = typeManager.getArrayTypeInfo(type);
+//		info = typeManager.getArrayTypeInfo(context, type);
 //		EXPECT_EQ("name", toC(info.lValueType));
 //		EXPECT_EQ("name", toC(info.rValueType));
 //		EXPECT_EQ("int32_t[24]", toC(info.externalType));
@@ -301,6 +303,7 @@ namespace backend {
 //		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 //
 //		Converter converter(nodeManager);
+//		ConversionContext context(converter);
 //		converter.setNameManager(std::make_shared<TestNameManager>());
 //		TypeManager& typeManager = converter.getTypeManager();
 //
@@ -311,7 +314,7 @@ namespace backend {
 //		auto lit = cManager->create("X");
 //
 //		core::GenericTypePtr type = builder.arrayType(basic.getInt4(), 4);
-//		info = typeManager.getArrayTypeInfo(type);
+//		info = typeManager.getArrayTypeInfo(context, type);
 //		EXPECT_EQ("name", toC(info.lValueType));
 //		EXPECT_EQ("name", toC(info.rValueType));
 //		EXPECT_TRUE((bool)info.declaration);
@@ -320,7 +323,7 @@ namespace backend {
 //		EXPECT_PRED2(containsSubString, toC(info.definition), "int32_t data[4];");
 //
 //		type = builder.arrayType(basic.getInt8(), 4);
-//		info = typeManager.getArrayTypeInfo(type);
+//		info = typeManager.getArrayTypeInfo(context, type);
 //		EXPECT_EQ("name", toC(info.lValueType));
 //		EXPECT_EQ("name", toC(info.rValueType));
 //		EXPECT_TRUE((bool)info.declaration);
@@ -330,7 +333,7 @@ namespace backend {
 //
 //		core::TypePtr innerType = builder.structType(core::NamedCompositeType::Entries());
 //		type = builder.arrayType(innerType, 4);
-//		info = typeManager.getArrayTypeInfo(type);
+//		info = typeManager.getArrayTypeInfo(context, type);
 //		EXPECT_EQ("name", toC(info.lValueType));
 //		EXPECT_EQ("name", toC(info.rValueType));
 //		EXPECT_TRUE((bool)info.declaration);
@@ -338,11 +341,11 @@ namespace backend {
 //		EXPECT_PRED2(containsSubString, toC(info.definition), "struct name");
 //		EXPECT_PRED2(containsSubString, toC(info.definition), "name data[4];");
 //
-//		EXPECT_TRUE(contains(info.definition->getDependencies(), typeManager.getTypeInfo(innerType).definition));
+//		EXPECT_TRUE(contains(info.definition->getDependencies(), typeManager.getTypeInfo(context, innerType).definition));
 //
 //
 //		type = builder.arrayType(type, 84);
-//		info = typeManager.getArrayTypeInfo(type);
+//		info = typeManager.getArrayTypeInfo(context, type);
 //		EXPECT_EQ("name", toC(info.lValueType));
 //		EXPECT_EQ("name", toC(info.rValueType));
 //		EXPECT_TRUE((bool)info.declaration);
@@ -358,6 +361,7 @@ namespace backend {
 		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		TypeManager& typeManager = converter.getTypeManager();
 
@@ -368,7 +372,7 @@ namespace backend {
 		auto lit = cManager->create<c_ast::Literal>("X");
 
 		core::GenericTypePtr type = builder.refType(basic.getInt4());
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t", toC(info.lValueType));
 		EXPECT_EQ("int32_t*", toC(info.rValueType));
 		EXPECT_EQ("int32_t*", toC(info.externalType));
@@ -381,7 +385,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(basic.getInt8());
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int64_t", toC(info.lValueType));
 		EXPECT_EQ("int64_t*", toC(info.rValueType));
 		EXPECT_EQ("int64_t*", toC(info.externalType));
@@ -394,7 +398,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(basic.getFloat());
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("float", toC(info.lValueType));
 		EXPECT_EQ("float*", toC(info.rValueType));
 		EXPECT_EQ("float*", toC(info.externalType));
@@ -409,7 +413,7 @@ namespace backend {
 		// TODO: check dependency on struct declaration
 
 		type = builder.refType(builder.structType());
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name*", toC(info.rValueType));
 		EXPECT_EQ("name*", toC(info.externalType));
@@ -423,7 +427,7 @@ namespace backend {
 
 		// check const
 		type = builder.refType(basic.getInt8(),true);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int64_t", toC(info.lValueType));
 		EXPECT_EQ("const int64_t*", toC(info.rValueType));
 		EXPECT_EQ("const int64_t*", toC(info.externalType));
@@ -437,7 +441,7 @@ namespace backend {
 
 		// check volatile
 		type = builder.refType(basic.getInt8(),false,true);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int64_t", toC(info.lValueType));
 		EXPECT_EQ("volatile int64_t*", toC(info.rValueType));
 		EXPECT_EQ("volatile int64_t*", toC(info.externalType));
@@ -451,7 +455,7 @@ namespace backend {
 
 		// check const volatile
 		type = builder.refType(basic.getInt8(),true,true);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const volatile int64_t", toC(info.lValueType));
 		EXPECT_EQ("const volatile int64_t*", toC(info.rValueType));
 		EXPECT_EQ("const volatile int64_t*", toC(info.externalType));
@@ -471,6 +475,7 @@ namespace backend {
 		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		TypeManager& typeManager = converter.getTypeManager();
 
@@ -481,7 +486,7 @@ namespace backend {
 		auto lit = cManager->create<c_ast::Literal>("X");
 
 		core::GenericTypePtr type = builder.refType(builder.refType(basic.getInt8(),false,false),false,false);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int64_t*", toC(info.lValueType));
 		EXPECT_EQ("int64_t**", toC(info.rValueType));
 		EXPECT_EQ("int64_t**", toC(info.externalType));
@@ -494,7 +499,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),false,false),false,true);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int64_t* volatile", toC(info.lValueType));
 		EXPECT_EQ("int64_t* volatile*", toC(info.rValueType));
 		EXPECT_EQ("int64_t* volatile*", toC(info.externalType));
@@ -507,7 +512,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),false,false),true,false);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int64_t* const", toC(info.lValueType));
 		EXPECT_EQ("int64_t* const*", toC(info.rValueType));
 		EXPECT_EQ("int64_t* const*", toC(info.externalType));
@@ -520,7 +525,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),false,false),true,true);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int64_t* const volatile", toC(info.lValueType));
 		EXPECT_EQ("int64_t* const volatile*", toC(info.rValueType));
 		EXPECT_EQ("int64_t* const volatile*", toC(info.externalType));
@@ -533,7 +538,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),false,true),false,false);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int64_t*", toC(info.lValueType));
 		EXPECT_EQ("volatile int64_t**", toC(info.rValueType));
 		EXPECT_EQ("volatile int64_t**", toC(info.externalType));
@@ -546,7 +551,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),false,true),false,true);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int64_t* volatile", toC(info.lValueType));
 		EXPECT_EQ("volatile int64_t* volatile*", toC(info.rValueType));
 		EXPECT_EQ("volatile int64_t* volatile*", toC(info.externalType));
@@ -559,7 +564,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),false,true),true,false);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int64_t* const", toC(info.lValueType));
 		EXPECT_EQ("volatile int64_t* const*", toC(info.rValueType));
 		EXPECT_EQ("volatile int64_t* const*", toC(info.externalType));
@@ -572,7 +577,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),false,true),true,true);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int64_t* const volatile", toC(info.lValueType));
 		EXPECT_EQ("volatile int64_t* const volatile*", toC(info.rValueType));
 		EXPECT_EQ("volatile int64_t* const volatile*", toC(info.externalType));
@@ -585,7 +590,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),true,false),false,false);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int64_t*", toC(info.lValueType));
 		EXPECT_EQ("const int64_t**", toC(info.rValueType));
 		EXPECT_EQ("const int64_t**", toC(info.externalType));
@@ -598,7 +603,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),true,false),false,true);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int64_t* volatile", toC(info.lValueType));
 		EXPECT_EQ("const int64_t* volatile*", toC(info.rValueType));
 		EXPECT_EQ("const int64_t* volatile*", toC(info.externalType));
@@ -611,7 +616,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),true,false),true,false);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int64_t* const", toC(info.lValueType));
 		EXPECT_EQ("const int64_t* const*", toC(info.rValueType));
 		EXPECT_EQ("const int64_t* const*", toC(info.externalType));
@@ -624,7 +629,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),true,false),true,true);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int64_t* const volatile", toC(info.lValueType));
 		EXPECT_EQ("const int64_t* const volatile*", toC(info.rValueType));
 		EXPECT_EQ("const int64_t* const volatile*", toC(info.externalType));
@@ -637,7 +642,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),true,true),false,false);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const volatile int64_t*", toC(info.lValueType));
 		EXPECT_EQ("const volatile int64_t**", toC(info.rValueType));
 		EXPECT_EQ("const volatile int64_t**", toC(info.externalType));
@@ -650,7 +655,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),true,true),false,true);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const volatile int64_t* volatile", toC(info.lValueType));
 		EXPECT_EQ("const volatile int64_t* volatile*", toC(info.rValueType));
 		EXPECT_EQ("const volatile int64_t* volatile*", toC(info.externalType));
@@ -663,7 +668,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),true,true),true,false);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const volatile int64_t* const", toC(info.lValueType));
 		EXPECT_EQ("const volatile int64_t* const*", toC(info.rValueType));
 		EXPECT_EQ("const volatile int64_t* const*", toC(info.externalType));
@@ -676,7 +681,7 @@ namespace backend {
 		EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
 		type = builder.refType(builder.refType(basic.getInt8(),true,true),true,true);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const volatile int64_t* const volatile", toC(info.lValueType));
 		EXPECT_EQ("const volatile int64_t* const volatile*", toC(info.rValueType));
 		EXPECT_EQ("const volatile int64_t* const volatile*", toC(info.externalType));
@@ -692,7 +697,7 @@ namespace backend {
 		// some examples for 3-level nesting
 
 		type = builder.refType(builder.refType(builder.refType(basic.getInt8(),false,true),true,false),false,true);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int64_t* const* volatile", toC(info.lValueType));
 		EXPECT_EQ("volatile int64_t* const* volatile*", toC(info.rValueType));
 		EXPECT_EQ("volatile int64_t* const* volatile*", toC(info.externalType));
@@ -706,7 +711,7 @@ namespace backend {
 
 
 		type = builder.refType(builder.refType(builder.refType(basic.getInt8(),true,false),false,true),true,false);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int64_t* volatile* const", toC(info.lValueType));
 		EXPECT_EQ("const int64_t* volatile* const*", toC(info.rValueType));
 		EXPECT_EQ("const int64_t* volatile* const*", toC(info.externalType));
@@ -726,6 +731,7 @@ namespace backend {
 		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		TypeManager& typeManager = converter.getTypeManager();
 
@@ -740,7 +746,7 @@ namespace backend {
 
 		type = builder.refType(builder.arrayType(basic.getInt4()));
 		EXPECT_EQ("ref<array<int<4>,inf>,f,f,plain>", toString(*type));
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t*", toC(info.lValueType));
 		EXPECT_EQ("int32_t*", toC(info.rValueType));
 		EXPECT_EQ("int32_t*", toC(info.externalType));
@@ -754,7 +760,7 @@ namespace backend {
 
 		type = builder.refType(builder.arrayType(basic.getInt4()), true, false);
 		EXPECT_EQ("ref<array<int<4>,inf>,t,f,plain>", toString(*type));
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int32_t*", toC(info.lValueType));
 		EXPECT_EQ("const int32_t*", toC(info.rValueType));
 		EXPECT_EQ("const int32_t*", toC(info.externalType));
@@ -768,7 +774,7 @@ namespace backend {
 
 		type = builder.refType(builder.arrayType(basic.getInt4()), false, true);
 		EXPECT_EQ("ref<array<int<4>,inf>,f,t,plain>", toString(*type));
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int32_t*", toC(info.lValueType));
 		EXPECT_EQ("volatile int32_t*", toC(info.rValueType));
 		EXPECT_EQ("volatile int32_t*", toC(info.externalType));
@@ -782,7 +788,7 @@ namespace backend {
 
 		type = builder.refType(builder.arrayType(basic.getInt4()), true, true);
 		EXPECT_EQ("ref<array<int<4>,inf>,t,t,plain>", toString(*type));
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const volatile int32_t*", toC(info.lValueType));
 		EXPECT_EQ("const volatile int32_t*", toC(info.rValueType));
 		EXPECT_EQ("const volatile int32_t*", toC(info.externalType));
@@ -798,7 +804,7 @@ namespace backend {
 
 //		// ref/vector combination
 //		type = builder.refType(builder.arrayType(basic.getInt4(), 4));
-//		info = typeManager.getRefTypeInfo(type);
+//		info = typeManager.getRefTypeInfo(context, type);
 //		EXPECT_EQ("ref<array<int<4>,4>,f,f,plain>", toString(*type));
 //		EXPECT_EQ("name", toC(info.lValueType));
 //		EXPECT_EQ("name*", toC(info.rValueType));
@@ -812,7 +818,7 @@ namespace backend {
 //
 //		// ref/vector - multidimensional
 //		type = builder.refType(builder.arrayType(builder.arrayType(basic.getInt4(), 4), 2));
-//		info = typeManager.getRefTypeInfo(type);
+//		info = typeManager.getRefTypeInfo(context, type);
 //		EXPECT_EQ("ref<array<array<int<4>,4>,2>,f,f,plain>", toString(*type));
 //		EXPECT_EQ("name", toC(info.lValueType));
 //		EXPECT_EQ("name*", toC(info.rValueType));
@@ -826,7 +832,7 @@ namespace backend {
 //
 //		// ref/ref combination
 //		type = builder.refType(builder.refType(basic.getInt4()));
-//		info = typeManager.getRefTypeInfo(type);
+//		info = typeManager.getRefTypeInfo(context, type);
 //		EXPECT_EQ("ref<ref<int<4>,f,f,plain>,f,f,plain>", toString(*type));
 //		EXPECT_EQ("int32_t*", toC(info.lValueType));
 //		EXPECT_EQ("int32_t**", toC(info.rValueType));
@@ -840,7 +846,7 @@ namespace backend {
 //
 //		// ref/ref combination
 //		type = builder.refType(builder.refType(basic.getInt4(), true, false), false, true);
-//		info = typeManager.getRefTypeInfo(type);
+//		info = typeManager.getRefTypeInfo(context, type);
 //		EXPECT_EQ("ref<ref<int<4>,t,f>,f,t>", toString(*type));
 //		EXPECT_EQ("int32_t*", toC(info.lValueType));
 //		EXPECT_EQ("int32_t**", toC(info.rValueType));
@@ -854,7 +860,7 @@ namespace backend {
 //
 //		// test ref/ref/array
 //		type = builder.refType(builder.refType(builder.arrayType(basic.getInt4())));
-//		info = typeManager.getRefTypeInfo(type);
+//		info = typeManager.getRefTypeInfo(context, type);
 //		EXPECT_EQ("ref<ref<array<int<4>,inf>,f,f,plain>,f,f,plain>", toString(*type));
 //		EXPECT_EQ("int32_t*", toC(info.lValueType));
 //		EXPECT_EQ("int32_t**", toC(info.rValueType));
@@ -874,6 +880,7 @@ namespace backend {
 			const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 			Converter converter(nodeManager);
+			ConversionContext context(converter);
 			converter.setNameManager(std::make_shared<TestNameManager>());
 			TypeManager& typeManager = converter.getTypeManager();
 
@@ -889,7 +896,7 @@ namespace backend {
 
 			type = builder.refType(builder.arrayType(basic.getInt4(),12));
 			EXPECT_EQ("ref<array<int<4>,12>,f,f,plain>", toString(*type));
-			info = typeManager.getRefTypeInfo(type);
+			info = typeManager.getRefTypeInfo(context, type);
 			EXPECT_EQ("name", toC(info.lValueType));
 			EXPECT_EQ("name*", toC(info.rValueType));
 			EXPECT_EQ("int32_t(*)[12]", toC(info.externalType));
@@ -903,7 +910,7 @@ namespace backend {
 
 			type = builder.refType(builder.arrayType(basic.getInt4(),12), true, false);
 			EXPECT_EQ("ref<array<int<4>,12>,t,f,plain>", toString(*type));
-			info = typeManager.getRefTypeInfo(type);
+			info = typeManager.getRefTypeInfo(context, type);
 			EXPECT_EQ("const name", toC(info.lValueType));
 			EXPECT_EQ("const name*", toC(info.rValueType));
 			EXPECT_EQ("const int32_t(*)[12]", toC(info.externalType));
@@ -917,7 +924,7 @@ namespace backend {
 
 			type = builder.refType(builder.arrayType(basic.getInt4(),12), false, true);
 			EXPECT_EQ("ref<array<int<4>,12>,f,t,plain>", toString(*type));
-			info = typeManager.getRefTypeInfo(type);
+			info = typeManager.getRefTypeInfo(context, type);
 			EXPECT_EQ("volatile name", toC(info.lValueType));
 			EXPECT_EQ("volatile name*", toC(info.rValueType));
 			EXPECT_EQ("volatile int32_t(*)[12]", toC(info.externalType));
@@ -931,7 +938,7 @@ namespace backend {
 
 			type = builder.refType(builder.arrayType(basic.getInt4(),12), true, true);
 			EXPECT_EQ("ref<array<int<4>,12>,t,t,plain>", toString(*type));
-			info = typeManager.getRefTypeInfo(type);
+			info = typeManager.getRefTypeInfo(context, type);
 			EXPECT_EQ("const volatile name", toC(info.lValueType));
 			EXPECT_EQ("const volatile name*", toC(info.rValueType));
 			EXPECT_EQ("const volatile int32_t(*)[12]", toC(info.externalType));
@@ -950,6 +957,7 @@ namespace backend {
 		core::IRBuilder builder(nodeManager);
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		TypeManager& typeManager = converter.getTypeManager();
 
@@ -965,7 +973,7 @@ namespace backend {
 
 		type = builder.parseType("ref<int<4>,f,f,cpp_ref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppReference, type);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t&", toC(info.lValueType));
 		EXPECT_EQ("int32_t&", toC(info.rValueType));
 		EXPECT_EQ("int32_t&", toC(info.externalType));
@@ -978,7 +986,7 @@ namespace backend {
 
 		type = builder.parseType("ref<int<4>,t,f,cpp_ref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppReference, type);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t const&", toC(info.lValueType));
 		EXPECT_EQ("int32_t const&", toC(info.rValueType));
 		EXPECT_EQ("int32_t const&", toC(info.externalType));
@@ -991,7 +999,7 @@ namespace backend {
 
 		type = builder.parseType("ref<int<4>,f,t,cpp_ref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppReference, type);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t volatile&", toC(info.lValueType));
 		EXPECT_EQ("int32_t volatile&", toC(info.rValueType));
 		EXPECT_EQ("int32_t volatile&", toC(info.externalType));
@@ -1004,7 +1012,7 @@ namespace backend {
 
 		type = builder.parseType("ref<int<4>,t,t,cpp_ref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppReference, type);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t const volatile&", toC(info.externalType));
 		EXPECT_EQ("int32_t const volatile&", toC(info.lValueType));
 		EXPECT_EQ("int32_t const volatile&", toC(info.rValueType));
@@ -1021,6 +1029,7 @@ namespace backend {
 		core::IRBuilder builder(nodeManager);
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		TypeManager& typeManager = converter.getTypeManager();
 
@@ -1036,7 +1045,7 @@ namespace backend {
 
 		type = builder.parseType("ref<int<4>,f,f,cpp_rref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppRValueReference, type);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t&&", toC(info.lValueType));
 		EXPECT_EQ("int32_t&&", toC(info.rValueType));
 		EXPECT_EQ("int32_t&&", toC(info.externalType));
@@ -1049,7 +1058,7 @@ namespace backend {
 
 		type = builder.parseType("ref<int<4>,t,f,cpp_rref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppRValueReference, type);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t const&&", toC(info.lValueType));
 		EXPECT_EQ("int32_t const&&", toC(info.rValueType));
 		EXPECT_EQ("int32_t const&&", toC(info.externalType));
@@ -1062,7 +1071,7 @@ namespace backend {
 
 		type = builder.parseType("ref<int<4>,f,t,cpp_rref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppRValueReference, type);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t volatile&&", toC(info.lValueType));
 		EXPECT_EQ("int32_t volatile&&", toC(info.rValueType));
 		EXPECT_EQ("int32_t volatile&&", toC(info.externalType));
@@ -1075,7 +1084,7 @@ namespace backend {
 
 		type = builder.parseType("ref<int<4>,t,t,cpp_rref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppRValueReference, type);
-		info = typeManager.getRefTypeInfo(type);
+		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t const volatile&&", toC(info.lValueType));
 		EXPECT_EQ("int32_t const volatile&&", toC(info.rValueType));
 		EXPECT_EQ("int32_t const volatile&&", toC(info.externalType));
@@ -1092,8 +1101,8 @@ namespace backend {
 		core::IRBuilder builder(nodeManager);
 		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
-
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		TypeManager& typeManager = converter.getTypeManager();
 
@@ -1112,7 +1121,7 @@ namespace backend {
 		// -- test a thick function pointer first => should generate closure, constructor and caller --
 
 		type = builder.functionType(toVector(typeA, typeB), typeC, core::FK_CLOSURE);
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("((int<4>,bool)=>real<4>)", toString(*type));
 		EXPECT_FALSE(info.plain);
 		EXPECT_EQ("name*", toC(info.lValueType));
@@ -1151,7 +1160,7 @@ namespace backend {
 		// -- test a plain function type --
 
 		type = builder.functionType(toVector(typeA, typeB), typeC);
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
 		EXPECT_TRUE(info.plain);
 		EXPECT_EQ("name", toC(info.lValueType)); // there is an implicit typedef, therefore the type is used with a symbol name
@@ -1176,7 +1185,7 @@ namespace backend {
 
 		// test the same with a function not accepting any arguments
 		type = builder.functionType(core::TypeList(), typeA);
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("(()->int<4>)", toString(*type));
 
 		decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(info.lValueType, cManager->create("var")));
@@ -1188,7 +1197,7 @@ namespace backend {
 		core::TypePtr classTy = builder.refType(builder.structType(toVector(builder.field("a", typeA), builder.field("b", typeA))));
 
 		type = builder.functionType(toVector(classTy, typeA), typeC, core::FK_MEMBER_FUNCTION);
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 
 
 		EXPECT_EQ("(struct {a:int<4>,b:int<4>,ctor(),ctor(ref<^,t,f,cpp_ref>),ctor(ref<^,f,f,cpp_rref>),dtor(),"
@@ -1222,6 +1231,7 @@ namespace backend {
 		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		TypeManager& typeManager = converter.getTypeManager();
 
@@ -1248,7 +1258,7 @@ namespace backend {
 
 		// do the checks
 
-		TypeInfo infoA = typeManager.getTypeInfo(recTypeA);
+		TypeInfo infoA = typeManager.getTypeInfo(context, recTypeA);
 
 		EXPECT_EQ("name", toC(infoA.lValueType));
 		EXPECT_EQ("name", toC(infoA.rValueType));
@@ -1266,6 +1276,7 @@ namespace backend {
 		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		TypeManager& typeManager = converter.getTypeManager();
 
@@ -1304,8 +1315,8 @@ namespace backend {
 
 		// do the checks
 
-		TypeInfo infoA = typeManager.getTypeInfo(recTypeA);
-		TypeInfo infoB = typeManager.getTypeInfo(recTypeB);
+		TypeInfo infoA = typeManager.getTypeInfo(context, recTypeA);
+		TypeInfo infoB = typeManager.getTypeInfo(context, recTypeB);
 
 		EXPECT_EQ("name", toC(infoA.lValueType));
 		EXPECT_EQ("name", toC(infoA.rValueType));
@@ -1332,8 +1343,8 @@ namespace backend {
 		core::IRBuilder builder(nodeManager);
 		const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
-
 		Converter converter(nodeManager);
+		ConversionContext context(converter);
 		converter.setNameManager(std::make_shared<TestNameManager>());
 		TypeManager& typeManager = converter.getTypeManager();
 
@@ -1344,7 +1355,7 @@ namespace backend {
 		auto lit = cManager->create<c_ast::Literal>("X");
 
 		core::TypePtr type = builder.tupleType(core::TypeList());
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name", toC(info.rValueType));
 		EXPECT_EQ("name", toC(info.externalType));
@@ -1355,7 +1366,7 @@ namespace backend {
 
 		// members should not have an effect on the types
 		type = builder.tupleType(toVector(basic.getInt4(), basic.getBool()));
-		info = typeManager.getTypeInfo(type);
+		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name", toC(info.rValueType));
 		EXPECT_EQ("name", toC(info.externalType));
@@ -1369,7 +1380,7 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, toC(info.definition), "bool c1;");
 
 		// the definition should depend on the definition of the boolean
-		TypeInfo infoBool = typeManager.getTypeInfo(basic.getBool());
+		TypeInfo infoBool = typeManager.getTypeInfo(context, basic.getBool());
 		EXPECT_TRUE((bool)infoBool.definition);
 		auto dependencies = info.definition->getDependencies();
 		EXPECT_TRUE(contains(dependencies, infoBool.definition));

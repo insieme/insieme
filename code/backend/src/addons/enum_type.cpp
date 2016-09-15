@@ -54,8 +54,11 @@ namespace addons {
 
 	namespace {
 
-		const TypeInfo* EnumTypeHandler(const Converter& converter, const core::TypePtr& type) {
-			if(!core::lang::isEnum(type)) { return NULL; }
+		const TypeInfo* EnumTypeHandler(ConversionContext& context, const core::TypePtr& type) {
+
+			if(!core::lang::isEnum(type)) { return nullptr; }
+
+			const Converter& converter = context.getConverter();
 
 			// check if the enum is defined in a system header
 			const TypeInfo* t = NULL;
@@ -75,7 +78,7 @@ namespace addons {
 			// get the enum int type and convert it if applicable
 			c_ast::TypePtr enumIntType = nullptr;
 			if(!type->getNodeManager().getLangBasic().isInt4(enumTy.getIntType())) {
-				auto intTypeInfo = converter.getTypeManager().getTypeInfo(enumTy.getIntType());
+				auto intTypeInfo = converter.getTypeManager().getTypeInfo(context, enumTy.getIntType());
 				enumIntType = intTypeInfo.lValueType;
 			}
 			// get the enum values and convert them

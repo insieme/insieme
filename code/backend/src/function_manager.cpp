@@ -134,9 +134,9 @@ namespace backend {
 				typename T,
 				typename result_type = typename info_trait<typename std::remove_const<typename T::element_type>::type>::type*
 			>
-			result_type resolve(const T& node) {
+			result_type resolve(ConversionContext& context, const T& node) {
 				// lookup information using internal mechanism and cast statically
-				ElementInfo* info = resolveInternal(node);
+				ElementInfo* info = resolveInternal(context, node);
 				assert(dynamic_cast<result_type>(info));
 				return static_cast<result_type>(info);
 			}
@@ -145,32 +145,34 @@ namespace backend {
 				typename T,
 				typename result_type = typename info_trait<typename std::remove_const<typename T::element_type>::type>::type*
 			>
-			result_type resolve(const core::TagTypePtr& tagType, const T& node) {
+			result_type resolve(ConversionContext& context, const core::TagTypePtr& tagType, const T& node) {
 				// lookup information using internal mechanism and cast statically
-				ElementInfo* info = resolveInternal(tagType,node);
+				ElementInfo* info = resolveInternal(context, tagType, node);
 				assert(dynamic_cast<result_type>(info));
 				return static_cast<result_type>(info);
 			}
 
 		  protected:
 
-			ElementInfo* resolveInternal(const core::NodePtr& expression);
-			ElementInfo* resolveInternal(const core::TagTypePtr& tagType, const core::LambdaExprPtr& member);
-			ElementInfo* resolveInternal(const core::TagTypePtr& tagType, const core::MemberFunctionPtr& member);
+			ElementInfo* resolveInternal(ConversionContext& context, const core::NodePtr& expression);
+			ElementInfo* resolveInternal(ConversionContext& context, const core::TagTypePtr& tagType, const core::LambdaExprPtr& member);
+			ElementInfo* resolveInternal(ConversionContext& context, const core::TagTypePtr& tagType, const core::MemberFunctionPtr& member);
 
-			FunctionInfo* resolveLiteral(const core::LiteralPtr& literal);
-			FunctionInfo* resolvePureVirtualMember(const core::PureVirtualMemberFunctionPtr&);
-			LambdaInfo* resolveLambda(const core::LambdaExprPtr& lambda);
-			LambdaInfo* resolveMemberFunction(const core::MemberFunctionPtr&);
-			BindInfo* resolveBind(const core::BindExprPtr& bind);
+			FunctionInfo* resolveLiteral(ConversionContext& context, const core::LiteralPtr& literal);
+			FunctionInfo* resolvePureVirtualMember(ConversionContext& context, const core::PureVirtualMemberFunctionPtr&);
+			LambdaInfo* resolveLambda(ConversionContext& context, const core::LambdaExprPtr& lambda);
+			LambdaInfo* resolveMemberFunction(ConversionContext& context, const core::MemberFunctionPtr&);
+			BindInfo* resolveBind(ConversionContext& context, const core::BindExprPtr& bind);
 
-			void resolveLambdaDefinition(const core::LambdaDefinitionPtr& lambdaDefinition);
+			void resolveLambdaDefinition(ConversionContext& context, const core::LambdaDefinitionPtr& lambdaDefinition);
 
 			// -------- utilities -----------
 
-			FunctionCodeInfo resolveFunction(const c_ast::IdentifierPtr name, const core::FunctionTypePtr& funType, const core::LambdaPtr& lambda, bool external);
+			FunctionCodeInfo resolveFunction(ConversionContext& context, const c_ast::IdentifierPtr name, const core::FunctionTypePtr& funType,
+			                                 const core::LambdaPtr& lambda, bool external);
 
-			std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr> resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType, bool external);
+			std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr> resolveLambdaWrapper(ConversionContext& context, const c_ast::FunctionPtr& function,
+			                                                                             const core::FunctionTypePtr& funType, bool external);
 		};
 	}
 
@@ -185,28 +187,28 @@ namespace backend {
 		delete store;
 	}
 
-	const FunctionInfo& FunctionManager::getInfo(const core::LiteralPtr& literal) {
-		return *(store->resolve(literal));
+	const FunctionInfo& FunctionManager::getInfo(ConversionContext& context, const core::LiteralPtr& literal) {
+		return *(store->resolve(context, literal));
 	}
 
-	const FunctionInfo& FunctionManager::getInfo(const core::PureVirtualMemberFunctionPtr& fun) {
-		return *(store->resolve(fun));
+	const FunctionInfo& FunctionManager::getInfo(ConversionContext& context, const core::PureVirtualMemberFunctionPtr& fun) {
+		return *(store->resolve(context, fun));
 	}
 
-	const LambdaInfo& FunctionManager::getInfo(const core::LambdaExprPtr& lambda) {
-		return *(store->resolve(lambda));
+	const LambdaInfo& FunctionManager::getInfo(ConversionContext& context, const core::LambdaExprPtr& lambda) {
+		return *(store->resolve(context, lambda));
 	}
 
-	const LambdaInfo& FunctionManager::getInfo(const core::TagTypePtr& tagType, const core::LambdaExprPtr& fun) {
-		return *(store->resolve(tagType,fun));
+	const LambdaInfo& FunctionManager::getInfo(ConversionContext& context, const core::TagTypePtr& tagType, const core::LambdaExprPtr& fun) {
+		return *(store->resolve(context, tagType,fun));
 	}
 
-	const LambdaInfo& FunctionManager::getInfo(const core::TagTypePtr& tagType, const core::MemberFunctionPtr& memberFun) {
-		return *(store->resolve(tagType,memberFun));
+	const LambdaInfo& FunctionManager::getInfo(ConversionContext& context, const core::TagTypePtr& tagType, const core::MemberFunctionPtr& memberFun) {
+		return *(store->resolve(context, tagType, memberFun));
 	}
 
-	const BindInfo& FunctionManager::getInfo(const core::BindExprPtr& bind) {
-		return *(store->resolve(bind));
+	const BindInfo& FunctionManager::getInfo(ConversionContext& context, const core::BindExprPtr& bind) {
+		return *(store->resolve(context, bind));
 	}
 
 	bool FunctionManager::isBuiltIn(const core::NodePtr& op) const {
@@ -271,7 +273,7 @@ namespace backend {
 				// convert the argument (externalize if necessary)
 				c_ast::ExpressionPtr res =
 				    targetType ? stmtConverter.convertInitExpression(context, targetType, cur) : stmtConverter.convertExpression(context, cur);
-				if(external) res = typeManager.getTypeInfo(cur->getType()).externalize(manager, res);
+				if(external) res = typeManager.getTypeInfo(context, cur->getType()).externalize(manager, res);
 
 				call->arguments.push_back(res);
 
@@ -284,7 +286,7 @@ namespace backend {
 			}
 		}
 
-		c_ast::NodePtr handleMemberCall(const core::CallExprPtr& call, c_ast::CallPtr c_call, ConversionContext& context) {
+		c_ast::NodePtr handleMemberCall(ConversionContext& context, const core::CallExprPtr& call, c_ast::CallPtr c_call) {
 			// by default, do nothing
 			c_ast::ExpressionPtr res = c_call;
 
@@ -305,7 +307,7 @@ namespace backend {
 				args.erase(args.begin());
 
 				// extract class type
-				auto classType = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)).lValueType;
+				auto classType = context.getConverter().getTypeManager().getTypeInfo(context, core::analysis::getObjectType(funType)).lValueType;
 
 				// distinguish memory location to be utilized
 				// case a) create object on stack => default
@@ -346,7 +348,7 @@ namespace backend {
 				if(!irCallArgs[0].isa<core::InitExprPtr>() && core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
 
 				// extract class type
-				auto classType = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getObjectType(funType)).lValueType;
+				auto classType = context.getConverter().getTypeManager().getTypeInfo(context, core::analysis::getObjectType(funType)).lValueType;
 
 				// create resulting call
 				res = c_ast::dtorCall(classType, obj, false); // it is not a virtual destructor if it is explicitly mentioned
@@ -458,9 +460,24 @@ namespace backend {
 			assert_not_implemented();
 			return {};
 		}
+
+		core::ExpressionPtr generateDummyLambda(const core::FunctionTypePtr funType, const core::VariableList params) {
+			core::IRBuilder builder(funType.getNodeManager());
+			const auto& basic = builder.getLangBasic();
+
+			//auto body = builder.compoundStmt(builder.stringLit("DUMMY"));
+			auto unit = basic.getUnit();
+			auto callee = builder.literal("assert", builder.functionType(toVector<core::TypePtr>(basic.getInt4()), unit));
+			annotations::c::attachInclude(callee, "assert.h");
+			auto arg = builder.callExpr(basic.getBoolLAnd(), basic.getFalse(),
+			                            builder.wrapLazy(builder.castExpr(basic.getBool(),builder.stringLit("This is an Insieme generated dummy function which should never be called"))));
+			auto call = builder.callExpr(unit, callee, arg);
+
+			return builder.lambdaExpr(funType, params, builder.compoundStmt(call));
+		}
 	}
 
-	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& in, ConversionContext& context) {
+	const c_ast::NodePtr FunctionManager::getCall(ConversionContext& context, const core::CallExprPtr& in) {
 		core::IRBuilder builder(context.getConverter().getNodeManager());
 
 		// conduct some cleanup (argument wrapping)
@@ -491,7 +508,7 @@ namespace backend {
 		// 2) test whether target is a literal => external function, direct call
 		if(fun->getNodeType() == core::NT_Literal) {
 			// obtain literal information
-			const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
+			const FunctionInfo& info = getInfo(context, static_pointer_cast<const core::Literal>(fun));
 
 			// produce call to external literal
 			c_ast::CallPtr res = c_ast::call(info.function->name);
@@ -501,7 +518,7 @@ namespace backend {
 			context.getDependencies().insert(info.prototype);
 
 			// return external function call
-			auto ret = handleMemberCall(call, res, context);
+			auto ret = handleMemberCall(context, call, res);
 			ret = instantiateCall(ret, info.instantiationTypes);
 			return ret;
 		}
@@ -509,7 +526,7 @@ namespace backend {
 		// 3) test whether target is a lambda => call lambda directly, without creating a closure
 		if(fun->getNodeType() == core::NT_LambdaExpr) {
 			// obtain lambda information
-			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
+			const LambdaInfo& info = getInfo(context, static_pointer_cast<const core::LambdaExpr>(fun));
 
 			// add dependencies and requirements
 			context.getDependencies().insert(info.prototype);
@@ -525,7 +542,7 @@ namespace backend {
 			appendAsArguments(context, c_call, materializeTypeList(extractCallTypeList(call)), call->getArgumentList(), false);
 
 			// handle potential member calls
-			auto ret = handleMemberCall(call, c_call, context);
+			auto ret = handleMemberCall(context, call, c_call);
 			return ret;
 		}
 
@@ -534,7 +551,7 @@ namespace backend {
 		// 4) test whether target is a plain function pointer => call function pointer, no closure
 		if(funType->isPlain()) {
 			// add call to function pointer (which is the value)
-			c_ast::CallPtr res = c_ast::call(c_ast::parentheses(getValue(call->getFunctionExpr(), context)));
+			c_ast::CallPtr res = c_ast::call(c_ast::parentheses(getValue(context, call->getFunctionExpr())));
 			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArgumentList(), false);
 			return res;
 		}
@@ -547,7 +564,7 @@ namespace backend {
 			c_ast::ExpressionPtr trgObj = converter.getStmtConverter().convertExpression(context, core::transform::extractInitExprFromDecl(call[0]));
 
 			// make a call to the member pointer executor binary operator
-			c_ast::ExpressionPtr funcExpr = c_ast::parentheses(c_ast::pointerToMember(trgObj, getValue(call->getFunctionExpr(), context)));
+			c_ast::ExpressionPtr funcExpr = c_ast::parentheses(c_ast::pointerToMember(trgObj, getValue(context, call->getFunctionExpr())));
 
 			// the call is a call to the member function with the n-1 tail arguments
 			c_ast::CallPtr res = c_ast::call(funcExpr);
@@ -567,9 +584,9 @@ namespace backend {
 		// Finally: the generic fall-back solution:
 		//		get function as a value and call it using the function-type's caller function
 
-		c_ast::ExpressionPtr value = getValue(call->getFunctionExpr(), context);
+		c_ast::ExpressionPtr value = getValue(context, call->getFunctionExpr());
 
-		const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(funType);
+		const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(context, funType);
 		c_ast::CallPtr res = c_ast::call(typeInfo.callerName, c_ast::cast(typeInfo.rValueType, value));
 		appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArgumentList(), false);
 
@@ -580,16 +597,16 @@ namespace backend {
 	}
 
 
-	const c_ast::ExpressionPtr FunctionManager::getValue(const core::ExpressionPtr& fun, ConversionContext& context) {
+	const c_ast::ExpressionPtr FunctionManager::getValue(ConversionContext& context, const core::ExpressionPtr& fun) {
 		auto manager = converter.getCNodeManager();
 
 		// handle according to node type
 		switch(fun->getNodeType()) {
 		case core::NT_BindExpr: {
-			return getValue(static_pointer_cast<const core::BindExpr>(fun), context);
+			return getValue(context, static_pointer_cast<const core::BindExpr>(fun));
 		}
 		case core::NT_Literal: {
-			const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
+			const FunctionInfo& info = getInfo(context, static_pointer_cast<const core::Literal>(fun));
 			if(static_pointer_cast<const core::FunctionType>(fun->getType())->isPlain()) {
 				// TODO: also check whether an externalization is required
 				context.getDependencies().insert(info.prototype);
@@ -599,7 +616,7 @@ namespace backend {
 			return c_ast::ref(info.lambdaWrapperName);
 		}
 		case core::NT_LambdaExpr: {
-			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
+			const LambdaInfo& info = getInfo(context, static_pointer_cast<const core::LambdaExpr>(fun));
 			context.getDependencies().insert(info.prototype);
 
 			// FIXME: hack to support member function pointers intialization
@@ -624,14 +641,14 @@ namespace backend {
 		}
 	}
 
-	const c_ast::ExpressionPtr FunctionManager::getValue(const core::BindExprPtr& bind, ConversionContext& context) {
+	const c_ast::ExpressionPtr FunctionManager::getValue(ConversionContext& context, const core::BindExprPtr& bind) {
 		auto manager = converter.getCNodeManager();
 
 		// create a value instance by initializing the bind closure using its constructor
 
 		// collect some information
-		const BindInfo& info = getInfo(bind);
-		const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(static_pointer_cast<const core::FunctionType>(bind->getType()));
+		const BindInfo& info = getInfo(context, bind);
+		const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(context, static_pointer_cast<const core::FunctionType>(bind->getType()));
 
 		// add dependencies
 		c_ast::FragmentSet& dependencies = context.getDependencies();
@@ -661,7 +678,7 @@ namespace backend {
 		}
 
 		// create nested closure
-		c_ast::ExpressionPtr nested = getValue(fun, context);
+		c_ast::ExpressionPtr nested = getValue(context, fun);
 
 		// create constructor call
 		c_ast::CallPtr res = c_ast::call(info.constructorName, alloc, nested);
@@ -698,7 +715,7 @@ namespace backend {
 
 	namespace detail {
 
-		core::FunctionTypePtr getFunctionType(const core::NodePtr& node) {
+		core::FunctionTypePtr getFunctionType(ConversionContext& context, const core::NodePtr& node) {
 
 			// for expressions get the the type and interpret as a function type
 			if (auto expr = node.isa<core::ExpressionPtr>()) {
@@ -721,7 +738,7 @@ namespace backend {
 		}
 
 
-		ElementInfo* FunctionInfoStore::resolveInternal(const core::NodePtr& fun) {
+		ElementInfo* FunctionInfoStore::resolveInternal(ConversionContext& context, const core::NodePtr& fun) {
 
 			// normalize all functions to avoid duplicates
 			core::NodePtr function = core::analysis::normalize(fun);
@@ -735,11 +752,11 @@ namespace backend {
 			nameManager.setName(function, nameManager.getName(fun));
 
 			// resolve all parameter types and the return type
-			auto funType = getFunctionType(function);
+			auto funType = getFunctionType(context, function);
 			for(const auto& param : funType->getParameterTypes()) {
-				converter.getTypeManager().getTypeInfo(param);
+				converter.getTypeManager().getTypeInfo(context, param);
 			}
-			converter.getTypeManager().getTypeInfo(funType->getReturnType());
+			converter.getTypeManager().getTypeInfo(context, funType->getReturnType());
 
 			// check whether the function has been resolved as a side-effect of resolving the types
 			pos = funInfos.find(function);
@@ -750,11 +767,11 @@ namespace backend {
 
 			// not known yet => requires some resolution
 			switch(function->getNodeType()) {
-			case core::NT_Literal: info = resolveLiteral(function.as<core::LiteralPtr>()); break;
-			case core::NT_LambdaExpr: info = resolveLambda(function.as<core::LambdaExprPtr>()); break;
-			case core::NT_BindExpr: info = resolveBind(function.as<core::BindExprPtr>()); break;
-			case core::NT_MemberFunction: info = resolveMemberFunction(function.as<core::MemberFunctionPtr>()); break;
-			case core::NT_PureVirtualMemberFunction: info = resolvePureVirtualMember(function.as<core::PureVirtualMemberFunctionPtr>()); break;
+			case core::NT_Literal: info = resolveLiteral(context, function.as<core::LiteralPtr>()); break;
+			case core::NT_LambdaExpr: info = resolveLambda(context, function.as<core::LambdaExprPtr>()); break;
+			case core::NT_BindExpr: info = resolveBind(context, function.as<core::BindExprPtr>()); break;
+			case core::NT_MemberFunction: info = resolveMemberFunction(context, function.as<core::MemberFunctionPtr>()); break;
+			case core::NT_PureVirtualMemberFunction: info = resolvePureVirtualMember(context, function.as<core::PureVirtualMemberFunctionPtr>()); break;
 			default:
 				// this should not happen ...
 				assert_fail() << "Unsupported node type encountered!";
@@ -768,10 +785,10 @@ namespace backend {
 			return info;
 		}
 
-		ElementInfo* FunctionInfoStore::resolveInternal(const core::TagTypePtr& tagType, const core::LambdaExprPtr& fun) {
+		ElementInfo* FunctionInfoStore::resolveInternal(ConversionContext& context, const core::TagTypePtr& tagType, const core::LambdaExprPtr& fun) {
 
 			// resolve element
-			ElementInfo* info = resolveInternal(fun);
+			ElementInfo* info = resolveInternal(context, fun);
 
 			// attach result also to peeled version for this function
 			auto peeled = tagType->peel(fun);
@@ -781,10 +798,10 @@ namespace backend {
 			return info;
 		}
 
-		ElementInfo* FunctionInfoStore::resolveInternal(const core::TagTypePtr& tagType, const core::MemberFunctionPtr& member) {
+		ElementInfo* FunctionInfoStore::resolveInternal(ConversionContext& context, const core::TagTypePtr& tagType, const core::MemberFunctionPtr& member) {
 
 			// resolve element
-			ElementInfo* info = resolveInternal(member);
+			ElementInfo* info = resolveInternal(context, member);
 
 			// attach result also to peeled version for this function
 			auto peeled = tagType->peel(member->getImplementation());
@@ -795,7 +812,7 @@ namespace backend {
 		}
 
 
-		FunctionInfo* FunctionInfoStore::resolveLiteral(const core::LiteralPtr& literal) {
+		FunctionInfo* FunctionInfoStore::resolveLiteral(ConversionContext& context, const core::LiteralPtr& literal) {
 			assert_eq(literal->getType()->getNodeType(), core::NT_FunctionType) << "Only supporting literals with a function type!";
 
 			// some preparation
@@ -809,7 +826,7 @@ namespace backend {
 
 			std::string name = insieme::utils::demangleToIdentifier(literal->getStringValue());
 			if(core::annotations::hasAttachedName(literal)) name = core::annotations::getAttachedName(literal);
-			FunctionCodeInfo fun = resolveFunction(manager->create(name), funType, core::LambdaPtr(), true);
+			FunctionCodeInfo fun = resolveFunction(context, manager->create(name), funType, core::LambdaPtr(), true);
 			res->function = fun.function;
 
 			// ------------------------ add prototype -------------------------
@@ -823,7 +840,7 @@ namespace backend {
 			} else if(funType->isMemberFunction()) {
 
 				// add pure-virtual member function to class declaration
-				const auto& typeInfo = typeManager.getTypeInfo(core::analysis::getObjectType(funType));
+				const auto& typeInfo = typeManager.getTypeInfo(context, core::analysis::getObjectType(funType));
 				res->prototype = typeInfo.definition;
 				res->prototype->addDependencies(fun.prototypeDependencies);
 
@@ -855,7 +872,7 @@ namespace backend {
 
 			// -------------------------- add lambda wrapper ---------------------------
 
-			auto wrapper = resolveLambdaWrapper(fun.function, funType, true);
+			auto wrapper = resolveLambdaWrapper(context, fun.function, funType, true);
 			res->lambdaWrapperName = wrapper.first;
 			res->lambdaWrapper = wrapper.second;
 			res->lambdaWrapper->addDependencies(fun.prototypeDependencies);
@@ -864,7 +881,7 @@ namespace backend {
 			// -------------------------- add instantiation types if they are there --------------------------
 
 			for(auto instantiationType : funType->getInstantiationTypes()) {
-				auto typeArg = typeManager.getTemplateArgumentType(instantiationType);
+				auto typeArg = typeManager.getTemplateArgumentType(context, instantiationType);
 				res->instantiationTypes.push_back(typeArg);
 				// if argument type is not intercepted, add a dependency on its definition
 				auto tempParamTypeDef = typeManager.getDefinitionOf(typeArg);
@@ -875,24 +892,24 @@ namespace backend {
 			return res;
 		}
 
-		FunctionInfo* FunctionInfoStore::resolvePureVirtualMember(const core::PureVirtualMemberFunctionPtr&  pureVirtualMemberFun) {
+		FunctionInfo* FunctionInfoStore::resolvePureVirtualMember(ConversionContext& context, const core::PureVirtualMemberFunctionPtr&  pureVirtualMemberFun) {
 
 			// create a literal of the proper type and resolve the literal
 			core::IRBuilder builder(pureVirtualMemberFun->getNodeManager());
-			return resolve(builder.literal(pureVirtualMemberFun->getName(), pureVirtualMemberFun->getType()));
+			return resolve(context, builder.literal(pureVirtualMemberFun->getName(), pureVirtualMemberFun->getType()));
 
 		}
 
-		LambdaInfo* FunctionInfoStore::resolveLambda(const core::LambdaExprPtr& lambda) {
+		LambdaInfo* FunctionInfoStore::resolveLambda(ConversionContext& context, const core::LambdaExprPtr& lambda) {
 
 			// resolve lambda definitions
-			resolveLambdaDefinition(lambda->getDefinition());
+			resolveLambdaDefinition(context, lambda->getDefinition());
 
 			// look up lambda again
-			return resolve(lambda);
+			return resolve(context, lambda);
 		}
 
-		LambdaInfo* FunctionInfoStore::resolveMemberFunction(const core::MemberFunctionPtr& memberFun) {
+		LambdaInfo* FunctionInfoStore::resolveMemberFunction(ConversionContext& context, const core::MemberFunctionPtr& memberFun) {
 
 			auto impl = memberFun->getImplementation();
 
@@ -903,8 +920,7 @@ namespace backend {
 				core::VariableList params = ::transform(funType->getParameterTypeList(), [&](const core::TypePtr t) {
 					return builder.variable(core::transform::materialize(t));
 				});
-				// TODO generate assertion in this dummy body indicating that it should never be reached (build tool for this)
-				impl = builder.lambdaExpr(funType, params, builder.compoundStmt(builder.stringLit("DUMMY")));
+				impl = generateDummyLambda(funType, params);
 			}
 
 			// fix name
@@ -913,14 +929,14 @@ namespace backend {
 			// for user-defined conversion operators, we need to generate their type representation from the actual return type,
 			// because function pointer types need to be typedef'd
 			if(boost::starts_with(name, "operator ")) {
-				auto retTypeInfo = converter.getTypeManager().getTypeInfo(impl->getType().as<core::FunctionTypePtr>()->getReturnType());
+				auto retTypeInfo = converter.getTypeManager().getTypeInfo(context, impl->getType().as<core::FunctionTypePtr>()->getReturnType());
 				name = format("operator %s", *retTypeInfo.rValueType);
 				nameDependency = retTypeInfo.declaration;
 			}
 			converter.getNameManager().setName(impl, name);
 
 			// convert implementation
-			auto res = resolve(impl.as<core::LambdaExprPtr>());
+			auto res = resolve(context, impl.as<core::LambdaExprPtr>());
 
 			// correct virtual flag
 			c_ast::MemberFunctionPrototypePtr decl = res->declaration.as<c_ast::MemberFunctionPrototypePtr>();
@@ -942,7 +958,7 @@ namespace backend {
 			return res;
 		}
 
-		BindInfo* FunctionInfoStore::resolveBind(const core::BindExprPtr& bind) {
+		BindInfo* FunctionInfoStore::resolveBind(ConversionContext& context, const core::BindExprPtr& bind) {
 			// prepare some manager
 			NameManager& nameManager = converter.getNameManager();
 			TypeManager& typeManager = converter.getTypeManager();
@@ -982,14 +998,14 @@ namespace backend {
 			int paramCounter = 0;
 			const vector<core::VariablePtr>& parameter = bind->getParameters()->getElements();
 			for_each(parameter, [&](const core::VariablePtr& cur) {
-				variableMap[cur] = var(typeManager.getTypeInfo(cur->getType()).rValueType, format("p%d", ++paramCounter));
+				variableMap[cur] = var(typeManager.getTypeInfo(context, cur->getType()).rValueType, format("p%d", ++paramCounter));
 			});
 
 			// add arguments of call
 			int argumentCounter = 0;
 			const vector<core::ExpressionPtr>& args = call->getArgumentList();
 			for_each(args, [&](const core::ExpressionPtr& cur) {
-				variableMap[cur] = var(typeManager.getTypeInfo(cur->getType()).rValueType, format("c%d", ++argumentCounter));
+				variableMap[cur] = var(typeManager.getTypeInfo(context, cur->getType()).rValueType, format("c%d", ++argumentCounter));
 			});
 
 			// extract captured variables
@@ -1006,18 +1022,18 @@ namespace backend {
 
 			// get function type of mapper
 			core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(bind->getType());
-			const FunctionTypeInfo& funInfo = typeManager.getTypeInfo(funType);
+			const FunctionTypeInfo& funInfo = typeManager.getTypeInfo(context, funType);
 
 			// construct variable / struct entry pointing to the function to be called when processing the closure
-			c_ast::FunctionTypePtr mapperType = manager->create<c_ast::FunctionType>(typeManager.getTypeInfo(funType->getReturnType()).rValueType);
+			c_ast::FunctionTypePtr mapperType = manager->create<c_ast::FunctionType>(typeManager.getTypeInfo(context, funType->getReturnType()).rValueType);
 			mapperType->parameterTypes.push_back(manager->create<c_ast::PointerType>(closureStruct));
 			for_each(parameter,
-			         [&](const core::VariablePtr& var) { mapperType->parameterTypes.push_back(typeManager.getTypeInfo(var->getType()).rValueType); });
+			         [&](const core::VariablePtr& var) { mapperType->parameterTypes.push_back(typeManager.getTypeInfo(context, var->getType()).rValueType); });
 			c_ast::VariablePtr varCall = c_ast::var(manager->create<c_ast::PointerType>(mapperType), "call");
 
 			// get generic type of nested closure
 			core::FunctionTypePtr nestedFunType = static_pointer_cast<const core::FunctionType>(call->getFunctionExpr()->getType());
-			const FunctionTypeInfo& nestedClosureInfo = typeManager.getTypeInfo(nestedFunType);
+			const FunctionTypeInfo& nestedClosureInfo = typeManager.getTypeInfo(context, nestedFunType);
 
 			// define variable / struct entry pointing to the nested closure variable
 			c_ast::TypePtr varNestedType = nestedClosureInfo.rValueType;
@@ -1104,13 +1120,13 @@ namespace backend {
 			res->definitions->addDependency(nestedClosureInfo.caller);
 
 			// finally - add a dependency to the return type definition since it is returned by value
-			res->definitions->addDependency(typeManager.getTypeInfo(call->getType()).definition);
+			res->definitions->addDependency(typeManager.getTypeInfo(context, call->getType()).definition);
 
 			// done
 			return res;
 		}
 
-		void FunctionInfoStore::resolveLambdaDefinition(const core::LambdaDefinitionPtr& lambdaDefinition) {
+		void FunctionInfoStore::resolveLambdaDefinition(ConversionContext& context, const core::LambdaDefinitionPtr& lambdaDefinition) {
 			// prepare some manager
 			NameManager& nameManager = converter.getNameManager();
 			core::NodeManager& manager = converter.getNodeManager();
@@ -1157,7 +1173,7 @@ namespace backend {
 				c_ast::NamedCompositeTypePtr classDecl;
 				if(isMember) {
 					classType = core::analysis::getObjectType(funType);
-					const auto& typeInfo = typeManager.getTypeInfo(classType);
+					const auto& typeInfo = typeManager.getTypeInfo(context, classType);
 					info->prototype = typeInfo.definition;
 					classDecl = typeInfo.lValueType.as<c_ast::NamedCompositeTypePtr>();
 					// add requirement of implementation
@@ -1173,10 +1189,10 @@ namespace backend {
 
 				// create dummy function ... no body
 				core::LambdaPtr body;
-				FunctionCodeInfo codeInfo = resolveFunction(name, funType, body, false);
+				FunctionCodeInfo codeInfo = resolveFunction(context, name, funType, body, false);
 				info->function = codeInfo.function;
 
-				auto wrapper = resolveLambdaWrapper(codeInfo.function, funType, false);
+				auto wrapper = resolveLambdaWrapper(context, codeInfo.function, funType, false);
 				info->lambdaWrapperName = wrapper.first;
 				info->lambdaWrapper = wrapper.second;
 				info->lambdaWrapper->addDependency(info->prototype);
@@ -1276,7 +1292,7 @@ namespace backend {
 				assert_false(unrolled->isRecursive()) << "Peeled function must not be recursive!";
 
 				// resolve function ... now with body
-				FunctionCodeInfo codeInfo = resolveFunction(name, funType, unrolled->getLambda(), false);
+				FunctionCodeInfo codeInfo = resolveFunction(context, name, funType, unrolled->getLambda(), false);
 
 				// add function
 				LambdaInfo* info = static_cast<LambdaInfo*>(funInfos[lambda]);
@@ -1585,7 +1601,7 @@ namespace backend {
 		} // end namespace
 
 
-		FunctionCodeInfo FunctionInfoStore::resolveFunction(const c_ast::IdentifierPtr name, const core::FunctionTypePtr& funType,
+		FunctionCodeInfo FunctionInfoStore::resolveFunction(ConversionContext& context, const c_ast::IdentifierPtr name, const core::FunctionTypePtr& funType,
 		                                                    const core::LambdaPtr& lambda, bool external) {
 			FunctionCodeInfo res;
 
@@ -1600,7 +1616,7 @@ namespace backend {
 			bool isMember = funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction() || funType->isVirtualMemberFunction();
 
 			// resolve return type
-			const TypeInfo& returnTypeInfo = typeManager.getTypeInfo(funType->getReturnType());
+			const TypeInfo& returnTypeInfo = typeManager.getTypeInfo(context, funType->getReturnType());
 			res.prototypeDependencies.insert(returnTypeInfo.definition);
 			res.definitionDependencies.insert(returnTypeInfo.definition);
 			c_ast::TypePtr returnType = (external) ? returnTypeInfo.externalType : returnTypeInfo.rValueType;
@@ -1620,7 +1636,7 @@ namespace backend {
 				}
 
 				// resolve parameter type
-				const TypeInfo& paramTypeInfo = typeManager.getTypeInfo(cur);
+				const TypeInfo& paramTypeInfo = typeManager.getTypeInfo(context, cur);
 				res.prototypeDependencies.insert(paramTypeInfo.definition);
 				res.definitionDependencies.insert(paramTypeInfo.definition);
 
@@ -1653,7 +1669,7 @@ namespace backend {
 				// set up variable manager
 				ConversionContext context(converter, lambda);
 				for_each(lambda->getParameterList(), [&](const core::VariablePtr& cur) {
-					context.getVariableManager().addInfo(converter, cur, VariableInfo::DIRECT);
+					context.getVariableManager().addInfo(context, cur, VariableInfo::DIRECT);
 				});
 
 				core::CompoundStmtPtr body = lambda->getBody();
@@ -1690,7 +1706,7 @@ namespace backend {
 			// a lazy-evaluated utility to obtain the name of a class a member function is associated to
 			auto getClassName = [&]() -> c_ast::IdentifierPtr {
 
-				const auto& type = typeManager.getTypeInfo(core::analysis::getObjectType(funType)).lValueType;
+				const auto& type = typeManager.getTypeInfo(context, core::analysis::getObjectType(funType)).lValueType;
 
 				if(const auto& tagType = type.isa<c_ast::NamedCompositeTypePtr>()) { return tagType->name; }
 
@@ -1723,7 +1739,8 @@ namespace backend {
 			return res;
 		}
 
-		std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr> FunctionInfoStore::resolveLambdaWrapper(const c_ast::FunctionPtr& function,
+		std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr> FunctionInfoStore::resolveLambdaWrapper(ConversionContext& context,
+		                                                                                                const c_ast::FunctionPtr& function,
 		                                                                                                const core::FunctionTypePtr& funType, bool external) {
 			// get C node manager
 			auto manager = converter.getCNodeManager();
@@ -1732,7 +1749,7 @@ namespace backend {
 			core::FunctionTypePtr closureType =
 			    core::FunctionType::get(funType->getNodeManager(), funType->getParameterTypes(), funType->getReturnType(), core::FK_CLOSURE);
 			TypeManager& typeManager = converter.getTypeManager();
-			const FunctionTypeInfo& funTypeInfo = typeManager.getTypeInfo(closureType);
+			const FunctionTypeInfo& funTypeInfo = typeManager.getTypeInfo(context, closureType);
 
 			// create a new function representing the wrapper
 
@@ -1745,7 +1762,7 @@ namespace backend {
 			// resolve parameters
 			int counter = 1;
 			::transform(funType->getParameterTypes()->getElements(), std::back_inserter(parameter), [&](const core::TypePtr& cur) {
-				const TypeInfo& paramTypeInfo = typeManager.getTypeInfo(cur);
+				const TypeInfo& paramTypeInfo = typeManager.getTypeInfo(context, cur);
 				return c_ast::var(paramTypeInfo.rValueType, manager->create(format("p%d", counter++)));
 			});
 
@@ -1764,14 +1781,14 @@ namespace backend {
 			// add parameters for wrapper
 			for(const auto& cur : make_paired_range(paramTypes, function->parameter)) {
 				if(external) {
-					assert_true(typeManager.getTypeInfo(cur.first).externalize) << "Missing externalizer for type " << *cur.first;
-					call->arguments.push_back(typeManager.getTypeInfo(cur.first).externalize(manager, cur.second));
+					assert_true(typeManager.getTypeInfo(context, cur.first).externalize) << "Missing externalizer for type " << *cur.first;
+					call->arguments.push_back(typeManager.getTypeInfo(context, cur.first).externalize(manager, cur.second));
 				} else {
 					call->arguments.push_back(cur.second);
 				}
 			}
 
-			c_ast::StatementPtr body = typeManager.getTypeInfo(closureType->getReturnType()).internalize(manager, call);
+			c_ast::StatementPtr body = typeManager.getTypeInfo(context, closureType->getReturnType()).internalize(manager, call);
 			if(!c_ast::isVoid(function->returnType)) { body = manager->create<c_ast::Return>(call); }
 
 			c_ast::FunctionPtr wrapper = manager->create<c_ast::Function>(function->returnType, name, parameter, body);

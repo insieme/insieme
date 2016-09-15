@@ -54,19 +54,22 @@ namespace backend {
 		auto pos = infos.find(var);
 		if(pos != infos.end()) { return pos->second; }
 
-		LOG(FATAL) << "Requesting info for unknown variable " << *var << " of type " << *var->getType() << "!!!";
+		LOG(FATAL) << "Requesting info for unknown variable " << *var << " of type " << *var->getType() << "!!!" << "\nVM: " << this;
 
 		assert(pos != infos.end() && "Requested variable infos for unknown variable!");
 		return pos->second;
 	}
 
-	const VariableInfo& VariableManager::addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location) {
+	const VariableInfo& VariableManager::addInfo(ConversionContext& context, const core::VariablePtr& var, VariableInfo::MemoryLocation location) {
+		const Converter& converter = context.getConverter();
 		// forward call more detailed implementation
-		return addInfo(converter, var, location, converter.getTypeManager().getTypeInfo(var->getType()));
+		return addInfo(context, var, location, converter.getTypeManager().getTypeInfo(context, var->getType()));
 	}
 
-	const VariableInfo& VariableManager::addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location,
+	const VariableInfo& VariableManager::addInfo(ConversionContext& context, const core::VariablePtr& var, VariableInfo::MemoryLocation location,
 	                                             const TypeInfo& typeInfo) {
+		const Converter& converter = context.getConverter();
+
 		// create new variable info instance (implicit)
 		VariableInfo& info = infos[var];
 

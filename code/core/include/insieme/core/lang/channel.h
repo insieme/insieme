@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -67,11 +67,11 @@ namespace lang {
 		 */
 		LANG_EXT_TYPE(GenChannel, "channel<'a,'s>")
 
-	    /**
-	     * An abstract operator for the creation of a channel utilizing a buffer of elements.
-	     * The type and size have to be fixed.
-	     */
-	    LANG_EXT_LITERAL(ChannelCreate, "channel_create", "(type<'a>, type<'s>) -> channel<'a,'s>")
+	  /**
+	   * An abstract operator for the creation of a channel utilizing a buffer of elements.
+	   * The type and size have to be fixed.
+	   */
+	  LANG_EXT_LITERAL(ChannelCreate, "channel_create", "(type<'a>, type<'s>) -> channel<'a,'s>")
 
 		/**
 		 * An abstract operator for releasing a channel. After releasing it, it can not be
