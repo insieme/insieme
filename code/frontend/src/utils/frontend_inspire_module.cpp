@@ -50,7 +50,6 @@ namespace utils {
 	FrontendInspireModule::FrontendInspireModule(core::NodeManager& manager) : core::lang::Extension(manager) {
 		annotations::markBackendInstantiate(getCStyleAssignment());
 		annotations::markBackendInstantiate(getCxxStyleAssignment());
-		annotations::markBackendInstantiate(getCommaOperator());
 		annotations::markBackendInstantiate(getBoolToInt());
 	}
 

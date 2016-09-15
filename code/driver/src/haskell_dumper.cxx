@@ -44,7 +44,7 @@
 #include "insieme/core/dump/json_dump.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/analysis/cba_postprocessing.h"
+#include "insieme/analysis/common/preprocessing.h"
 
 #include "insieme/utils/name_mangling.h"
 
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
 	// parse input code
 	core::NodeManager mgr;
 	auto program = job.execute(mgr);
-	program = analysis::postProcessing(program);
+	program = analysis::preProcessing(program);
 
 	if(options.dumpBinaryHaskell == "-") {
 		core::dump::binary::haskell::dumpIR(cout, program);

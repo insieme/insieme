@@ -34,9 +34,10 @@
  - regarding third party software licenses.
  -}
 
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PatternSynonyms   #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Insieme.Inspire where
 
@@ -73,10 +74,19 @@ $(let
 
     extend :: Q [Dec] -> Q [Dec]
     extend base = do
-        [DataD [] n [] cons ds]       <- base
+#if defined(MIN_VERSION_template_haskell)
+#if MIN_VERSION_template_haskell(2,11,0)
+        [DataD [] n [] Nothing cons ds] <- base
+        TyConI (DataD [] _ [] Nothing nt_cons _) <- reify ''C_NodeType
+        let cons' = genCons <$> filter (not . isLeaf) nt_cons
+        return $ [DataD [] n [] Nothing (cons ++ cons') ds]
+#endif
+#else
+        [DataD [] n [] cons ds] <- base
         TyConI (DataD [] _ [] nt_cons _) <- reify ''C_NodeType
         let cons' = genCons <$> filter (not . isLeaf) nt_cons
         return $ [DataD [] n [] (cons ++ cons') ds]
+#endif
 
     genCons :: Con -> Con
     genCons (NormalC n _) = NormalC (removePrefix "NT_" n) []
@@ -114,7 +124,13 @@ $(let
     extend :: Q [Dec] -> (Con -> Clause) -> Q [Dec]
     extend base gen = do
         [d, FunD n cls]               <- base
+#if defined(MIN_VERSION_template_haskell)
+#if MIN_VERSION_template_haskell(2,11,0)
+        TyConI (DataD [] _ [] Nothing cons _) <- reify ''C_NodeType
+#endif
+#else
         TyConI (DataD [] _ [] cons _) <- reify ''C_NodeType
+#endif
         let cls' = gen <$> filter (not . isLeaf) cons
         return $ [d,FunD n (cls ++ cls')]
 

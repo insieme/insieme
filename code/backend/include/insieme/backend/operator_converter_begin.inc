@@ -62,7 +62,7 @@
 #define LANG_EXT_PTR LANG_EXT(core::lang::PointerExtension)
 #define LANG_EXT_CPP LANG_EXT(core::lang::IRppExtensions)
 
-#define GET_TYPE_INFO(Type) context.getConverter().getTypeManager().getTypeInfo(Type)
+#define GET_TYPE_INFO(Type) context.getConverter().getTypeManager().getTypeInfo(context, Type)
 #define GET_VAR_INFO(Var) context.getVariableManager().getInfo(Var)
 #define GET_FUNCTION_INFO(expr) context.getConverter().getFunctionManager().getInfo(expr)
 

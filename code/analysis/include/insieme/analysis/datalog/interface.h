@@ -34,29 +34,49 @@
  * regarding third party software licenses.
  */
 
+#pragma once
 
-#include <gtest/gtest.h>
-
-#include "insieme/analysis/datalog/interface.h"
+#include "insieme/analysis/interface.h"
+#include "insieme/analysis/datalog/context.h"
+#include "insieme/analysis/datalog/alias_analysis.h"
+#include "insieme/analysis/datalog/boolean_analysis.h"
 #include "insieme/analysis/datalog/code_properties.h"
-
-#include "../common/definition_point_test.inc"
+#include "insieme/analysis/datalog/integer_analysis.h"
 
 namespace insieme {
 namespace analysis {
 
-	template<>
-	struct getDefinitionPointImpl<DatalogEngine> {
-		core::VariableAddress operator()(const core::VariableAddress& var) {
-			return datalog::getDefinitionPoint(var);
-		}
-	};
-
-	/**
-	 * Run the definition point tests using the datalog backend.
+	/*
+	 * Create a type for this backend
 	 */
-	INSTANTIATE_TYPED_TEST_CASE_P(Datalog, DefinitionPoint, DatalogEngine);
+	struct DatalogEngine : public analysis_engine<datalog::Context> {};
+
+
+	// --- Alias Analysis ---
+
+	register_analysis_implementation( DatalogEngine , areAlias, datalog::areAlias );
+	register_analysis_implementation( DatalogEngine , mayAlias, datalog::mayAlias );
+	register_analysis_implementation( DatalogEngine , notAlias, datalog::notAlias );
+
+
+	// --- Boolean Analysis ---
+
+	register_analysis_implementation( DatalogEngine , isTrue,     datalog::isTrue     );
+	register_analysis_implementation( DatalogEngine , isFalse,    datalog::isFalse    );
+	register_analysis_implementation( DatalogEngine , mayBeTrue,  datalog::mayBeTrue  );
+	register_analysis_implementation( DatalogEngine , mayBeFalse, datalog::mayBeFalse );
+
+
+	// --- Simple Integer Analysis ---
+
+	register_analysis_implementation( DatalogEngine , getIntegerValues,  datalog::getIntegerValues  );
+	register_analysis_implementation( DatalogEngine , isIntegerConstant, datalog::isIntegerConstant );
+
+	register_analysis_implementation( DatalogEngine , areEqualInteger,      datalog::integer::areEqual    );
+	register_analysis_implementation( DatalogEngine , areNotEqualInteger,   datalog::integer::areNotEqual );
+	register_analysis_implementation( DatalogEngine , mayBeEqualInteger,    datalog::integer::mayEqual    );
+	register_analysis_implementation( DatalogEngine , mayBeNotEqualInteger, datalog::integer::mayNotEqual );
+
 
 } // end namespace analysis
 } // end namespace insieme
-

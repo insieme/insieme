@@ -26,8 +26,8 @@ Insieme contains 4 main sub-directories:
 
 ### Dependencies
 
-A list of depdencies together with an installer and patches is provided inside
-`/scripts/dependencies`. This directory also houses a
+A list of dependencies together with an installer and patches is provided
+inside `/scripts/dependencies`. This directory also houses a
 [README](scripts/dependencies/README.md) which should be consulted when using
 Insieme for the first time.
 
@@ -82,6 +82,21 @@ module of the compiler.
 
     $ cd core
     $ make
+
+### Analysis Framework
+
+The analysis framework is divided into a common interface and multiple,
+different engines. The common interface has to be instantiated with one of the
+available engines in order to use it. These engines are disabled by default
+since they depend on additional third-party packages. They can be enabled by
+passing following flags to the `cmake` call.
+
+| Engine  | CMake Option            |
+|---------|-------------------------|
+| Soufflé | `-DANALYSIS_DATALOG=ON` |
+| Haskell | `-DANALYSIS_HASKELL=ON` |
+
+Also see `/scripts/dependencies/README.md`.
 
 ### Running Unit Tests
 

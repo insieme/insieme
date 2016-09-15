@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/haskell_interface.h"
+#include "insieme/analysis/haskell/interface.h"
 
 #include "../common/boolean_analysis_test.inc"
 

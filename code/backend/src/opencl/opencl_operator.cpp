@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -127,7 +127,7 @@ namespace opencl {
 			/*
 			input:
 			opencl_execute_kernel(1u, fun018, [fun019,fun020,fun021], varlist_pack(make_optional(sizeof(int<4>), callExpr)));
-			
+
 			output:
 			({
 				irt_opencl_requirement_func __irt_opencl_requirement_func_table[] = {
@@ -151,7 +151,7 @@ namespace opencl {
 			auto requirementsTable = c_ast::var(cb.vectorType("irt_opencl_data_requirement_func"),
 								  "__irt_opencl_data_requirement_func_table");
 			// put together the init list for @var
-			std::vector<c_ast::NodePtr> init;			
+			std::vector<c_ast::NodePtr> init;
 			for(const auto& req : requirements)
 				init.push_back(CONVERT_EXPR(req));
 
@@ -199,7 +199,7 @@ namespace opencl {
 					args.push_back(CONVERT_EXPR(value));
 				else
 					// it might be a variable, call or bind
-					args.push_back(CONVERTER.getFunctionManager().getValue(value, context));
+					args.push_back(CONVERTER.getFunctionManager().getValue(context, value));
 				// generate the optional modifier as well
 				switch (optional->getModifier()) {
 				case Optional::Modifier::HOST_PRIMITIVE: args.push_back(manager->create("IRT_OPENCL_OPTIONAL_MODE_HOST_PRIMITIVE")); break;
@@ -226,7 +226,7 @@ namespace opencl {
 			// e.g ref<array<real<4>,1000>,f,f,plain> must register real<4>
 			auto type = analysis::getUnderlyingType(requirement->getType());
 			// register it and put type_id into initializer
-			init.push_back(c_ast::lit(cb.uint32Type(), std::to_string(table->registerType(type))));
+			init.push_back(c_ast::lit(cb.uint32Type(), std::to_string(table->registerType(context, type))));
 
 			// map the AccessMode to IRT enums
 			switch (requirement->getAccessMode()) {
@@ -248,7 +248,7 @@ namespace opencl {
 			init.push_back(CONVERT_EXPR(range->getSize()));
 			init.push_back(CONVERT_EXPR(range->getStart()));
 			init.push_back(CONVERT_EXPR(range->getEnd()));
-			
+
 			return cb.initializer(cb.namedType("irt_opencl_data_range"), init);
 		};
 		table[oclExt.getMakeNDRange()] = OP_CONVERTER {
@@ -306,7 +306,7 @@ namespace opencl {
 		#include "insieme/backend/operator_converter_end.inc"
 		return table;
 	}
-	
+
 	void addOpenCLSpecificHeaders(FunctionIncludeTable& table) {
 
 	}

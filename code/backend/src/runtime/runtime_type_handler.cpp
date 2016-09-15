@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -53,7 +53,9 @@ namespace runtime {
 
 	namespace {
 
-		const TypeInfo* getLWDataItemStruct(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* getLWDataItemStruct(ConversionContext& context, const core::TypePtr& type) {
+			const Converter& converter = context.getConverter();
+
 			// make sure it is only invoked using LW data items
 			assert_true(DataItem::isLWDataItemType(type)) << "Only works on LW Data Items!";
 
@@ -65,11 +67,13 @@ namespace runtime {
 			core::TupleTypePtr fullTuple = DataItem::getUnfoldedLWDataItemType(tupleType);
 
 			// obtain type information from base struct => use the same type
-			return &converter.getTypeManager().getTypeInfo(fullTuple);
+			return &converter.getTypeManager().getTypeInfo(context, fullTuple);
 		}
 
 
-		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* handleType(ConversionContext& context, const core::TypePtr& type) {
+			const Converter& converter = context.getConverter();
+
 			auto& mgr = converter.getNodeManager();
 			auto& extension = mgr.getLangExtension<RuntimeExtension>();
 			auto& parExt = mgr.getLangExtension<core::lang::ParallelExtension>();
@@ -88,7 +92,7 @@ namespace runtime {
 				// use runtime definition of the id
 				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_type_id", "irt_all_impls.h");
 			}
-			
+
 			if(extension.isWorkItemRange(type)) {
 				// use runtime definition of the work item range type
 				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_work_item_range", "irt_all_impls.h");
@@ -96,7 +100,7 @@ namespace runtime {
 
 			if(DataItem::isLWDataItemType(type)) {
 				// create a substitution struct - the same struct + the type id
-				return getLWDataItemStruct(converter, type);
+				return getLWDataItemStruct(context, type);
 			}
 
 			// handle jobs

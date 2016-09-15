@@ -27,7 +27,6 @@ target_link_libraries(insieme_driver insieme_backend)
 target_link_libraries(insieme_driver insieme_analysis)
 target_link_libraries(insieme_driver insieme_transform)
 
-
 #custom target to build all drivers at once
 add_custom_target(drivers)
 

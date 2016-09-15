@@ -34,12 +34,61 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ir_node.h"
+#include <gtest/gtest.h>
+
+#include <utility>
+
+#include "insieme/core/encoder/sets.h"
+#include "insieme/core/encoder/pairs.h"
+
+#include "insieme/core/ir.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/checks/full_check.h"
 
 namespace insieme {
-namespace analysis {
+namespace core {
+namespace encoder {
 
-	core::ProgramPtr postProcessing(const core::ProgramPtr& prog);
 
-}
-}
+	TEST(Sets, SetsConversion) {
+		NodeManager manager;
+
+		// create a set
+
+		set<int> value;
+
+		core::ExpressionPtr ir = toIR(manager, value);
+		auto back = toValue<set<int>>(ir);
+
+		EXPECT_EQ("{}", toString(value));
+		EXPECT_EQ("list_empty(type<int<4>>)", toString(*ir));
+
+
+		EXPECT_TRUE((isEncodingOf<set<int>>(ir)));
+		EXPECT_TRUE((isEncodingOf<vector<int>>(ir)));
+		EXPECT_FALSE((isEncodingOf<pair<int,int>>(ir)));
+		EXPECT_EQ(value, back);
+		EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
+
+
+		// fill the map with something
+
+		value.insert(12);
+		value.insert(14);
+
+		ir = toIR(manager, value);
+		back = toValue<set<int>>(ir);
+
+		EXPECT_EQ("{12,14}", toString(value));
+		EXPECT_EQ("list_cons(12, list_cons(14, list_empty(type<int<4>>)))", toString(*ir));
+
+		EXPECT_TRUE((isEncodingOf<set<int>>(ir)));
+		EXPECT_EQ(value, back);
+
+		EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
+	}
+
+
+} // end namespace lists
+} // end namespace core
+} // end namespace insieme

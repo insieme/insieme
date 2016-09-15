@@ -59,6 +59,7 @@ namespace runtime {
 
 		// create a backend instance
 		Converter converter(mgr);
+		ConversionContext context(converter);
 
 		// install pointer addon
 		addons::PointerType().installOn(converter);
@@ -66,22 +67,22 @@ namespace runtime {
 		// get type manager
 		TypeManager& typeManager = converter.getTypeManager();
 
-		TypeInfo info = typeManager.getTypeInfo(builder.parseType("ptr<char>"));
+		TypeInfo info = typeManager.getTypeInfo(context, builder.parseType("ptr<char>"));
 		EXPECT_EQ("char*", c_ast::toC(info.lValueType));
 		EXPECT_EQ("char*", c_ast::toC(info.rValueType));
 		EXPECT_EQ("char*", c_ast::toC(info.externalType));
 
-		info = typeManager.getTypeInfo(builder.parseType("ptr<char,t,f>"));
+		info = typeManager.getTypeInfo(context, builder.parseType("ptr<char,t,f>"));
 		EXPECT_EQ("const char*", c_ast::toC(info.lValueType));
 		EXPECT_EQ("const char*", c_ast::toC(info.rValueType));
 		EXPECT_EQ("const char*", c_ast::toC(info.externalType));
 
-		info = typeManager.getTypeInfo(builder.parseType("ptr<char,f,t>"));
+		info = typeManager.getTypeInfo(context, builder.parseType("ptr<char,f,t>"));
 		EXPECT_EQ("volatile char*", c_ast::toC(info.lValueType));
 		EXPECT_EQ("volatile char*", c_ast::toC(info.rValueType));
 		EXPECT_EQ("volatile char*", c_ast::toC(info.externalType));
 
-		info = typeManager.getTypeInfo(builder.parseType("ptr<char,t,t>"));
+		info = typeManager.getTypeInfo(context, builder.parseType("ptr<char,t,t>"));
 		EXPECT_EQ("const volatile char*", c_ast::toC(info.lValueType));
 		EXPECT_EQ("const volatile char*", c_ast::toC(info.rValueType));
 		EXPECT_EQ("const volatile char*", c_ast::toC(info.externalType));
@@ -89,7 +90,7 @@ namespace runtime {
 
 		// -- nested pointers --
 
-		info = typeManager.getTypeInfo(builder.parseType("ptr<ptr<char,t,f>,f,t>"));
+		info = typeManager.getTypeInfo(context, builder.parseType("ptr<ptr<char,t,f>,f,t>"));
 		EXPECT_EQ("const char* volatile*", c_ast::toC(info.lValueType));
 		EXPECT_EQ("const char* volatile*", c_ast::toC(info.rValueType));
 		EXPECT_EQ("const char* volatile*", c_ast::toC(info.externalType));

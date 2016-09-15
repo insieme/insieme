@@ -34,56 +34,35 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/backend/addons/comma_operator.h"
 
-#include "insieme/analysis/haskell/interface.h"
+#include "insieme/backend/converter.h"
+#include "insieme/backend/operator_converter.h"
+#include "insieme/backend/statement_converter.h"
+#include "insieme/backend/function_manager.h"
+#include "insieme/backend/c_ast/c_ast_utils.h"
+
 #include "insieme/core/ir_builder.h"
-
-#include "insieme/core/dump/json_dump.h"
+#include "insieme/core/transform/manipulation.h"
 
 namespace insieme {
-namespace analysis {
+namespace backend {
+namespace addons {
 
-	using namespace core;
+	void CommaOperator::installOn(Converter& converter) const {
+		auto& mgr = converter.getNodeManager();
+		core::IRBuilder builder(mgr);
+		auto op = builder.normalize(builder.parseExpr("def comma_operator = (lhs : () => 'a, rhs : () => 'b) -> 'b { lhs(); return rhs(); }; comma_operator"));
 
-	bool isTrue(const StatementAddress& stmt) {
-		return isTrue<HaskellEngine>(stmt.as<ExpressionAddress>());
+		// register operator
+		#include "insieme/backend/operator_converter_begin.inc"
+			converter.getFunctionManager().getOperatorConverterTable()[op] = OP_CONVERTER {
+				return c_ast::parentheses(
+				    c_ast::comma(CONVERT_EXPR(core::transform::evalLazy(NODE_MANAGER, ARG(0))), CONVERT_EXPR(core::transform::evalLazy(NODE_MANAGER, ARG(1)))));
+			};
+        #include "insieme/backend/operator_converter_end.inc"
 	}
 
-	bool isFalse(const StatementAddress& stmt) {
-		return isFalse<HaskellEngine>(stmt.as<ExpressionAddress>());
-	}
-
-	TEST(AccessPathAnalysis, RefNew) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		auto stmt = builder.parseStmt(
-				"{"
-				"	var ref<bool> a = ref_new(type_lit(bool));"
-				"	a = false;"
-				"	var ref<bool> b = ref_new(type_lit(bool));"
-				"	( x : ref<bool>) -> unit {"
-				"		x = true;"
-				"	}(b);"
-				"	( x : ref<bool>, y : ref<bool>) -> unit {"
-				"		( x : ref<bool>, y : ref<bool> ) -> unit {"
-				"			x = true;"
-				"		}(y,x);"
-				"	}(a,b);"
-				"	*a;"
-//				"	*b;"
-				"}"
-		).as<CompoundStmtPtr>();
-
-		core::dump::json::dumpIR("code.json", stmt);
-
-		auto comp = CompoundStmtAddress(stmt);
-
-		EXPECT_TRUE(isFalse(comp[5]));
-
-	}
-
-} // end namespace analysis
+} // end namespace addons
+} // end namespace backend
 } // end namespace insieme
-

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -82,51 +82,37 @@ namespace lang {
 		/**
 		 * Get real part of complex.
 		 */
-		LANG_EXT_DERIVED(ComplexReal,
-			"(x : complex)->'a { return x.0; }"
-		);
+		LANG_EXT_DERIVED(ComplexReal, "(x : complex)->'a { return x.0; }")
 
 		/**
 		 * Get real part of complex ref.
 		 */
-		LANG_EXT_DERIVED(RefComplexReal,
-			"(x : ref<complex,'c,'v>)->ref<'a,'c,'v> { return x.0; }"
-		);
+		LANG_EXT_DERIVED(RefComplexReal, "(x : ref<complex,'c,'v>)->ref<'a,'c,'v> { return x.0; }")
 
 		/**
 		 * Get imaginary part of complex.
 		 */
-		LANG_EXT_DERIVED(ComplexImg,
-			"(x : complex)->'a { return x.1; }"
-		);
+		LANG_EXT_DERIVED(ComplexImg, "(x : complex)->'a { return x.1; }")
 
 		/**
 		 * Get imaginary part of complex ref.
 		 */
-		LANG_EXT_DERIVED(RefComplexImg,
-			"(x : ref<complex,'c,'v>)->ref<'a,'c,'v> { return x.1; }"
-		);
+		LANG_EXT_DERIVED(RefComplexImg, "(x : ref<complex,'c,'v>)->ref<'a,'c,'v> { return x.1; }")
 
 		/**
 		 * Create a Complex out of a constant value.
 		 */
-		LANG_EXT_DERIVED(ConstantToComplex,
-							"(c : 'a)-> complex {"
-								"return ( c, CAST('a) 0 );"
-							"}");
+		LANG_EXT_DERIVED(ConstantToComplex, "(c : 'a)-> complex { return ( c, CAST('a) 0 ); }")
 
 		/**
 		 * Check if the real and imaginary part of the complex number are zero.
 		 */
-		LANG_EXT_DERIVED(ComplexToBool,
-			"(x : complex)->bool { return (x.1 != num_cast(0.0, type_lit('a))) || (x.0 != num_cast(0.0, type_lit('a))); }"
-		);
+		LANG_EXT_DERIVED(ComplexToBool, "(x : complex)->bool { return (x.1 != num_cast(0.0, type_lit('a))) || (x.0 != num_cast(0.0, type_lit('a))); }")
 
 		/**
 		 * Cast a complex number of type a to a complex number of type b
 		 */
-		LANG_EXT_DERIVED(ComplexToComplex,
-							"(c : complex, t : type<'a>) -> complex { return ( num_cast(c.0, type_lit('a)), num_cast(c.1, type_lit('a)) ); }");
+		LANG_EXT_DERIVED(ComplexToComplex, "(c : complex, t : type<'a>) -> complex { return ( num_cast(c.0, type_lit('a)), num_cast(c.1, type_lit('a)) ); }")
 
 	};
 

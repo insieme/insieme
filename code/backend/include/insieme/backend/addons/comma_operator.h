@@ -36,40 +36,23 @@
 
 #pragma once
 
-#include "insieme/analysis/cba_interface.h"
-#include "insieme/analysis/haskell/context.h"
+#include "insieme/core/forward_decls.h"
 
-#include "insieme/analysis/haskell/alias_analysis.h"
-#include "insieme/analysis/haskell/arithmetic_analysis.h"
-#include "insieme/analysis/haskell/boolean_analysis.h"
+#include "insieme/backend/addon.h"
 
 namespace insieme {
-namespace analysis {
+namespace backend {
+namespace addons {
 
-	/*
-	 * Create a type for this backend.
+	/**
+	 * Performance improvement addon handling the comma operator.
+	 * (Semantics are correct even without it)
+	 * TODO: implement a way to eliminate the repeated specification of the IR operator both here and in the FE
 	 */
-	struct HaskellEngine : public analysis_engine<haskell::Context> {};
+	struct CommaOperator : public AddOn {
+		virtual void installOn(Converter& converter) const;
+	};
 
-	// --- Alias Analysis ---
-
-	register_analysis_implementation(HaskellEngine, areAlias, haskell::areAlias);
-	register_analysis_implementation(HaskellEngine, mayAlias, haskell::mayAlias);
-	register_analysis_implementation(HaskellEngine, notAlias, haskell::notAlias);
-
-
-	// --- Boolean Analysis ---
-
-	register_analysis_implementation(HaskellEngine , isTrue,     haskell::isTrue    );
-	register_analysis_implementation(HaskellEngine , isFalse,    haskell::isFalse   );
-	register_analysis_implementation(HaskellEngine , mayBeTrue,  haskell::mayBeTrue );
-	register_analysis_implementation(HaskellEngine , mayBeFalse, haskell::mayBeFalse);
-
-
-	// --- Symbolic Integer Analysis ---
-
-	register_analysis_implementation(HaskellEngine , getArithmeticValue, haskell::getArithmeticValue);
-
-
-} // end namespace analysis
+} // end namespace addons
+} // end namespace backend
 } // end namespace insieme

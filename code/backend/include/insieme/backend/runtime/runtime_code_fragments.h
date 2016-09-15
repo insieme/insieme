@@ -140,7 +140,7 @@ namespace runtime {
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 
-		unsigned registerType(const core::TypePtr& type);
+		unsigned registerType(ConversionContext& context, const core::TypePtr& type);
 
 		unsigned size() const;
 	};
@@ -170,7 +170,7 @@ namespace runtime {
 
 		const c_ast::ExpressionPtr getTable();
 
-		unsigned registerWorkItemImpl(const core::ExpressionPtr& implementation);
+		unsigned registerWorkItemImpl(ConversionContext& context, const core::ExpressionPtr& implementation);
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 

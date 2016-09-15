@@ -34,56 +34,36 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/backend/backend.h"
 
-#include "insieme/analysis/haskell/interface.h"
-#include "insieme/core/ir_builder.h"
-
-#include "insieme/core/dump/json_dump.h"
+#include "insieme/backend/addons/pointer_type.h"
+#include "insieme/backend/addons/cpp_casts.h"
+#include "insieme/backend/addons/complex_type.h"
+#include "insieme/backend/addons/compound_operators.h"
+#include "insieme/backend/addons/enum_type.h"
+#include "insieme/backend/addons/io.h"
+#include "insieme/backend/addons/longlong_type.h"
+#include "insieme/backend/addons/asm_stmt.h"
+#include "insieme/backend/addons/varargs.h"
+#include "insieme/backend/addons/static_variables.h"
+#include "insieme/backend/addons/comma_operator.h"
 
 namespace insieme {
-namespace analysis {
+namespace backend {
 
-	using namespace core;
-
-	bool isTrue(const StatementAddress& stmt) {
-		return isTrue<HaskellEngine>(stmt.as<ExpressionAddress>());
+	void Backend::addDefaultAddons() {
+		addAddOn<addons::PointerType>();
+		addAddOn<addons::CppCastsAddon>();
+		addAddOn<addons::ComplexType>();
+		addAddOn<addons::CompoundOps>();
+		addAddOn<addons::EnumType>();
+		addAddOn<addons::InputOutput>();
+		addAddOn<addons::LongLongType>();
+		addAddOn<addons::AsmStmt>();
+		addAddOn<addons::VarArgs>();
+		addAddOn<addons::StaticVariables>();
+		addAddOn<addons::CommaOperator>();
 	}
 
-	bool isFalse(const StatementAddress& stmt) {
-		return isFalse<HaskellEngine>(stmt.as<ExpressionAddress>());
-	}
-
-	TEST(AccessPathAnalysis, RefNew) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		auto stmt = builder.parseStmt(
-				"{"
-				"	var ref<bool> a = ref_new(type_lit(bool));"
-				"	a = false;"
-				"	var ref<bool> b = ref_new(type_lit(bool));"
-				"	( x : ref<bool>) -> unit {"
-				"		x = true;"
-				"	}(b);"
-				"	( x : ref<bool>, y : ref<bool>) -> unit {"
-				"		( x : ref<bool>, y : ref<bool> ) -> unit {"
-				"			x = true;"
-				"		}(y,x);"
-				"	}(a,b);"
-				"	*a;"
-//				"	*b;"
-				"}"
-		).as<CompoundStmtPtr>();
-
-		core::dump::json::dumpIR("code.json", stmt);
-
-		auto comp = CompoundStmtAddress(stmt);
-
-		EXPECT_TRUE(isFalse(comp[5]));
-
-	}
-
-} // end namespace analysis
-} // end namespace insieme
-
+}
+}

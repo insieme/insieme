@@ -41,6 +41,10 @@ struct SlightlyLessSimpleConstructor {
 	SlightlyLessSimpleConstructor(int a) { i = a; }
 };
 
+struct NonTrivial {
+	virtual ~NonTrivial() { 5; }
+};
+
 #define SimplestConstructor_IR R"( def struct IMP_SimplestConstructor { }; )"
 
 int main() {
@@ -175,7 +179,7 @@ int main() {
 	#pragma test expect_ir(R"(
 		def new_arr_fun = function (v0 : ref<uint<inf>,f,f,plain>, v1 : ref<int<4>,t,f,cpp_ref>, v2 : ref<int<4>,t,f,cpp_ref>, v3 : ref<int<4>,t,f,cpp_ref>) -> ptr<int<4>> {
 			var uint<inf> v4 = *v0;
-			return ptr_from_array(<ref<array<int<4>,#v4>,f,f,plain>>(ref_new(type_lit(array<int<4>,#v4>))) {*v1, *v2, *v3});
+			return ptr_from_array(<ref<array<int<4>,#v4>,f,f,plain>>(ref_new(type_lit(array<int<4>,#v4>))) {v1, v2, v3});
 		};
 		{
 			var ref<int<4>,f,f,plain> v0 = 50;
@@ -209,7 +213,7 @@ int main() {
 	#pragma test expect_ir(SimplestConstructor_IR, R"(
 		def new_arr_fun = function (v0 : ref<uint<inf>,f,f,plain>, v1 : ref<IMP_SimplestConstructor,t,f,cpp_ref>, v2 : ref<IMP_SimplestConstructor,t,f,cpp_ref>) -> ptr<IMP_SimplestConstructor> {
 			var uint<inf> v3 = *v0;
-			return ptr_from_array(<ref<array<IMP_SimplestConstructor,#v3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,#v3>))) {*v1, *v2});
+			return ptr_from_array(<ref<array<IMP_SimplestConstructor,#v3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,#v3>))) {v1, v2});
 		};
 		{
 			var ref<int<4>,f,f,plain> v0 = 50;
@@ -223,6 +227,30 @@ int main() {
 		int x = 50;
 		SimplestConstructor sc1, sc2;
 		SimplestConstructor* arri = new SimplestConstructor[x+5]{sc1,sc2};
+		delete [] arri;
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_NonTrivial {
+				dtor virtual function () {
+						5;
+				}
+		};
+		def new_arr_fun = function (v0 : ref<uint<inf>,f,f,plain>, v1 : ref<IMP_NonTrivial,t,f,cpp_ref>, v2 : ref<IMP_NonTrivial,t,f,cpp_ref>) -> ptr<IMP_NonTrivial> {
+				var uint<inf> v3 = *v0;
+				return ptr_from_array(<ref<array<IMP_NonTrivial,#v3>,f,f,plain>>(ref_new(type_lit(array<IMP_NonTrivial,#v3>))) {v1, v2});
+		};
+		{
+				var ref<int<4>,f,f,plain> v0 = 50;
+				var ref<IMP_NonTrivial,f,f,plain> v1 = IMP_NonTrivial::(ref_decl(type_lit(ref<IMP_NonTrivial,f,f,plain>)));
+				var ref<ptr<IMP_NonTrivial>,f,f,plain> v2 = new_arr_fun(num_cast(*v0+5, type_lit(uint<inf>)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref)));
+				ref_delete(ptr_to_array(*v2));
+		}
+	)")
+	{
+		int x = 50;
+		NonTrivial nt;
+		NonTrivial* arri = new NonTrivial[x+5]{nt, nt};
 		delete [] arri;
 	}
 

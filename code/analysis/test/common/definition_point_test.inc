@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/cba_interface.h"
+#include "insieme/analysis/interface.h"
 
 #include "insieme/core/ir_builder.h"
 

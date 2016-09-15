@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -318,7 +318,7 @@ namespace backend {
 		 * @param converter the converter which will be using the resulting context.
 		 */
 		ConversionContext(const Converter& converter, const core::LambdaPtr& entryPoint = core::LambdaPtr())
-		    : converter(converter), entryPoint(entryPoint), dependencies(), requirements(), variableManager(), includes() {}
+		    : converter(converter), entryPoint(entryPoint), dependencies(), requirements(), variableManager(), includes() { }
 
 		const Converter& getConverter() const {
 			return converter;

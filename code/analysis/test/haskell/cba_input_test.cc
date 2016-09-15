@@ -37,7 +37,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/haskell_interface.h"
+#include "insieme/analysis/haskell/interface.h"
 
 #include <iostream>
 #include <tuple>
@@ -47,8 +47,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
 
-#include "insieme/analysis/cba_interface.h"
-#include "insieme/analysis/cba_postprocessing.h"
+#include "insieme/analysis/interface.h"
+#include "insieme/analysis/common/preprocessing.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/checks/full_check.h"
@@ -164,7 +164,7 @@ namespace analysis {
 			insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
 
 			auto prog = options.job.execute(mgr);
-			prog = postProcessing(prog);
+			prog = preProcessing(prog);
 
 			std::cout << "done" << std::endl;
 

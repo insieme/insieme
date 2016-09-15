@@ -34,56 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
-
-#include "insieme/analysis/haskell/interface.h"
-#include "insieme/core/ir_builder.h"
-
-#include "insieme/core/dump/json_dump.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace analysis {
 
-	using namespace core;
+	core::ProgramPtr preProcessing(const core::ProgramPtr& prog);
 
-	bool isTrue(const StatementAddress& stmt) {
-		return isTrue<HaskellEngine>(stmt.as<ExpressionAddress>());
-	}
-
-	bool isFalse(const StatementAddress& stmt) {
-		return isFalse<HaskellEngine>(stmt.as<ExpressionAddress>());
-	}
-
-	TEST(AccessPathAnalysis, RefNew) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		auto stmt = builder.parseStmt(
-				"{"
-				"	var ref<bool> a = ref_new(type_lit(bool));"
-				"	a = false;"
-				"	var ref<bool> b = ref_new(type_lit(bool));"
-				"	( x : ref<bool>) -> unit {"
-				"		x = true;"
-				"	}(b);"
-				"	( x : ref<bool>, y : ref<bool>) -> unit {"
-				"		( x : ref<bool>, y : ref<bool> ) -> unit {"
-				"			x = true;"
-				"		}(y,x);"
-				"	}(a,b);"
-				"	*a;"
-//				"	*b;"
-				"}"
-		).as<CompoundStmtPtr>();
-
-		core::dump::json::dumpIR("code.json", stmt);
-
-		auto comp = CompoundStmtAddress(stmt);
-
-		EXPECT_TRUE(isFalse(comp[5]));
-
-	}
-
-} // end namespace analysis
-} // end namespace insieme
-
+}
+}

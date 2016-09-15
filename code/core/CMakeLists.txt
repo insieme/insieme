@@ -104,6 +104,9 @@ target_include_directories(insieme_core PRIVATE ${FLEX_OUTPUT_PATH})
 target_include_directories(insieme_core PRIVATE ${BISON_OUTPUT_PATH})
 target_include_directories(insieme_core PRIVATE ${FLEX_INCLUDE_DIRS})
 
+# We need to add a dummy target here in order to have the generated files available in certain IDEs (e.g. Eclipse)
+add_custom_target(insieme_core_builder_builder_dummy SOURCES ${builderbuilder_generated_files})
+
 # add dependencies
 target_link_libraries(insieme_core insieme_common)
 target_link_libraries(insieme_core insieme_utils)

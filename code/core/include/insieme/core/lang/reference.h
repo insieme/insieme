@@ -97,30 +97,25 @@ namespace lang {
 		/**
 		 * The marker for plain IR references.
 		 */
-		LANG_EXT_TYPE_WITH_NAME(MarkerPlain, "plain_marker", "plain");
+		LANG_EXT_TYPE(ReferenceMarkerPlain, "plain");
 
 		/**
 		 * The marker for marking IR references as being C++ references.
 		 */
-		LANG_EXT_TYPE_WITH_NAME(MarkerCppReference, "reference_marker", "cpp_ref");
+		LANG_EXT_TYPE(ReferenceMarkerCppReference, "cpp_ref");
 
 		/**
 		 * The marker for marking IR references as being C++ r-value references.
 		 */
-		LANG_EXT_TYPE_WITH_NAME(MarkerCppRValueReference, "rvalue_reference_marker", "cpp_rref");
+		LANG_EXT_TYPE(ReferenceMarkerCppRValueReference, "cpp_rref");
 
 		/**
 		 * The marker for qualified IR non-references.
 		 */
-		LANG_EXT_TYPE_WITH_NAME(MarkerQualified, "qualified_marker", "qualified");
+		LANG_EXT_TYPE(ReferenceMarkerQualified, "qualified");
 
 
 		// -------------------- references ---------------------------
-
-		/**
-		 * The generic ref type template e.g. utilized as a reference for is-ref checks.
-		 */
-		LANG_EXT_TYPE_WITH_NAME(GenRef, "generic_ref_template", "ref<'a,'const,'volatile,'kind>");
 
 		/**
 		 * Add a type alias that maps all 'old' references to non-const, non-volatile references.
@@ -163,27 +158,27 @@ namespace lang {
 		/**
 		 * A built-in derived operator allocating memory on the stack.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefTemp, "ref_temp", "(t : type<'a>) -> ref<'a,f,f> { return ref_alloc(t, mem_loc_stack); }")
+		LANG_EXT_DERIVED(RefTemp, "(t : type<'a>) -> ref<'a,f,f> { return ref_alloc(t, mem_loc_stack); }")
 
 		/**
 		 * A built-in derived operator allocating memory on the stack and initializing it.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefTempInit, "ref_temp_init", "(v : 'a) -> ref<'a,f,f> { auto r = ref_temp(type_lit('a)); r = v; return r; }")
+		LANG_EXT_DERIVED(RefTempInit, "(v : 'a) -> ref<'a,f,f> { auto r = ref_temp(type_lit('a)); r = v; return r; }")
 
 		/**
 		 * A built-in derived operator allocating memory on the heap.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "(t : type<'a>) -> ref<'a,f,f> { return ref_alloc(t, mem_loc_heap ); }")
+		LANG_EXT_DERIVED(RefNew, "(t : type<'a>) -> ref<'a,f,f> { return ref_alloc(t, mem_loc_heap ); }")
 
 		/**
 		 * A built-in derived operator allocating memory on the heap and initializing it.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefNewInit, "ref_new_init", "(v : 'a) -> ref<'a,f,f> { auto r = ref_new(type_lit('a)); r = v; return r; }")
+		LANG_EXT_DERIVED(RefNewInit, "(v : 'a) -> ref<'a,f,f> { auto r = ref_new(type_lit('a)); r = v; return r; }")
 
 		/**
 		 * A built-in abstract operator obtaining references to functions.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefOfFunction, "ref_of_function", "(f : 'a) -> ref<'a,t,f> { return ref_new_init(f); }")
+		LANG_EXT_DERIVED(RefOfFunction, "(f : 'a) -> ref<'a,t,f> { return ref_new_init(f); }")
 
 
 		// -- access --
@@ -217,24 +212,20 @@ namespace lang {
 		 */
 		LANG_EXT_DERIVED(RefParentCast, "(r: ref<'a,'c,'v,'k>, t: type<'b>) -> ref<'b,'c,'v,'k> { return ref_narrow(r, dp_parent(dp_root(type_lit('a)), t)); }")
 
-
 		/**
 		 * A specialization of the ref_cast operator for modeling const casts.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, "ref_const_cast",
-			                       "(r : ref<'a,'c,'v,'k>, c : type<'nc>) -> ref<'a,'nc,'v,'k> { return ref_cast(r, c, type_lit('v), type_lit('k)); }")
+		LANG_EXT_DERIVED(RefConstCast, "(r : ref<'a,'c,'v,'k>, c : type<'nc>) -> ref<'a,'nc,'v,'k> { return ref_cast(r, c, type_lit('v), type_lit('k)); }")
 
 		/**
 		 * A specialization of the ref_cast operator for modeling volatile casts.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefVolatileCast, "ref_volatile_cast",
-			                       "(r : ref<'a,'c,'v,'k>, v : type<'nv>) -> ref<'a,'c,'nv,'k> { return ref_cast(r, type_lit('c), v, type_lit('k)); }")
+		LANG_EXT_DERIVED(RefVolatileCast, "(r : ref<'a,'c,'v,'k>, v : type<'nv>) -> ref<'a,'c,'nv,'k> { return ref_cast(r, type_lit('c), v, type_lit('k)); }")
 
 		/**
 		 * A specialization of the ref_cast operator for modeling kind casts.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefKindCast, "ref_kind_cast",
-			                       "(r : ref<'a,'c,'v,'k>, k : type<'nk>) -> ref<'a,'c,'v,'nk> { return ref_cast(r, type_lit('c), type_lit('v), k); }")
+		LANG_EXT_DERIVED(RefKindCast, "(r : ref<'a,'c,'v,'k>, k : type<'nk>) -> ref<'a,'c,'v,'nk> { return ref_cast(r, type_lit('c), type_lit('v), k); }")
 
 
 		// -- sub-referencing --
@@ -252,31 +243,22 @@ namespace lang {
 		/**
 		 * A derived operator providing access to an element in an array.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(
-		    RefArrayElement, "ref_array_elem",
-		    "(r : ref<array<'a,'s>,'c,'v,plain>, i : int<8>) -> ref<'a,'c,'v, plain> { return ref_narrow(r, dp_element(dp_root(type_lit(array<'a,'s>)), i)); }")
+		LANG_EXT_DERIVED(RefArrayElement, "(r : ref<array<'a,'s>,'c,'v,plain>, i : int<8>) -> ref<'a,'c,'v, plain> { return ref_narrow(r, dp_element(dp_root(type_lit(array<'a,'s>)), i)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a member of a struct / union.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(
-			RefMemberAccess, "ref_member_access",
-			"(r : ref<'a,'c,'v,'k>, name : identifier, type : type<'b>) -> ref<'b,'c,'v, plain> {                    "
-			"    return ref_kind_cast(ref_narrow(r, dp_member(dp_root(type_lit('a)), name, type)), type_lit(plain)); "
-			"}")
+		LANG_EXT_DERIVED(RefMemberAccess, "(r : ref<'a,'c,'v,'k>, name : identifier, type : type<'b>) -> ref<'b,'c,'v, plain> { return ref_kind_cast(ref_narrow(r, dp_member(dp_root(type_lit('a)), name, type)), type_lit(plain)); }")
 
 		/**
 		 * A derived reference navigation operator providing access to a components of a tuple.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(
-		    RefComponentAccess, "ref_component_access",
-		    "(r : ref<'a,'c,'v,'k>, pos : uint<8>, type : type<'b>) -> ref<'b,'c,'v,'k> { return ref_narrow(r, dp_component(dp_root(type_lit('a)), pos, type)); }")
+		LANG_EXT_DERIVED(RefComponentAccess, "(r : ref<'a,'c,'v,'k>, pos : uint<8>, type : type<'b>) -> ref<'b,'c,'v,'k> { return ref_narrow(r, dp_component(dp_root(type_lit('a)), pos, type)); }")
 
 		/**
 		 * A derived reference-navigation operation providing an array view on a scalar.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefScalarToRefArray, "ref_scalar_to_ref_array",
-		    "(a : ref<'a,'c,'v,plain>) -> ref<array<'a>,'c,'v,plain> { return ref_expand(a, dp_element(dp_root(type_lit(array<'a>)), 0u)); }")
+		LANG_EXT_DERIVED(RefScalarToRefArray, "(a : ref<'a,'c,'v,plain>) -> ref<array<'a>,'c,'v,plain> { return ref_expand(a, dp_element(dp_root(type_lit(array<'a>)), 0u)); }")
 
 
 		// -- null --
@@ -298,27 +280,27 @@ namespace lang {
 		/**
 		 * An operator to compare two references for inequality.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefNotEqual, "ref_ne", "(a : ref<'a1,'c1,'v1,'k1>, b : ref<'a2,'c2,'v2,'k2>) -> bool { return !ref_eq(a, b); }")
+		LANG_EXT_DERIVED(RefNotEqual, "(a : ref<'a1,'c1,'v1,'k1>, b : ref<'a2,'c2,'v2,'k2>) -> bool { return !ref_eq(a, b); }")
 
 		/**
 		 * A generic pre-order increment operator.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(GenPreInc,  "gen_pre_inc",  "(v : ref<'a,f,'v,'k>)->'a { v=*v+lit(\"1\":'a); return *v; }")
+		LANG_EXT_DERIVED(GenPreInc, "(v : ref<'a,f,'v,'k>)->'a { v=*v+lit(\"1\":'a); return *v; }")
 
 		/**
 		 * A generic post-order increment operator.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(GenPostInc, "gen_post_inc", "(v : ref<'a,f,'v,'k>)->'a { auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
+		LANG_EXT_DERIVED(GenPostInc, "(v : ref<'a,f,'v,'k>)->'a { auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
 
 		/**
 		 * A generic pre-order decrement operator.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(GenPreDec,  "gen_pre_dec",  "(v : ref<'a,f,'v,'k>)->'a { v=*v-lit(\"1\":'a); return *v; }")
+		LANG_EXT_DERIVED(GenPreDec, "(v : ref<'a,f,'v,'k>)->'a { v=*v-lit(\"1\":'a); return *v; }")
 
 		/**
 		 * A generic post-order decrement operator.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(GenPostDec, "gen_post_dec", "(v : ref<'a,f,'v,'k>)->'a { auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
+		LANG_EXT_DERIVED(GenPostDec, "(v : ref<'a,f,'v,'k>)->'a { auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
 
 
 	};
