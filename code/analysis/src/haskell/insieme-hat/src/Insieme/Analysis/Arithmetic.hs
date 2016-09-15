@@ -102,11 +102,11 @@ arithmeticValue addr = case Addr.getNodePair addr of
     _ -> dataflowValue addr analysis ops
 
   where
-  
+
     analysis = (mkDataFlowAnalysis ArithmeticAnalysis "A" arithmeticValue) {
         initialValueHandler = \a -> compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNodePair a) a
     }
-    
+
     idGen = mkVarIdentifier analysis
 
     compose = ComposedValue.toComposed
@@ -131,7 +131,7 @@ arithmeticValue addr = case Addr.getNodePair addr of
         cov a = any (Addr.isBuiltin a) $ Addr.getBuiltin addr <$> [ "int_div", "uint_div", "gen_div" ]
         val a = compose $ tryDiv (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
 
-        tryDiv x y = if all (uncurry Ar.canDivide) (BSet.toList prod)
+        tryDiv x y = if not (BSet.isUniverse prod) && all (uncurry Ar.canDivide) (BSet.toList prod)
                         then BSet.map (uncurry Ar.divFormula) prod
                         else BSet.Universe
           where
@@ -148,7 +148,7 @@ arithmeticValue addr = case Addr.getNodePair addr of
         val a = ComposedValue.composeElements [(component 1,compose res)]
           where
             res = BSet.singleton $ Ar.mkConst 0
-            
+
 
 
     lhs = arithmeticValue $ Addr.goDown 2 addr
