@@ -37,7 +37,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/datalog_interface.h"
+#include "insieme/analysis/datalog/interface.h"
 
 #include "../common/boolean_analysis_test.inc"
 

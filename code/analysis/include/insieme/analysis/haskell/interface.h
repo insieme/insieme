@@ -36,46 +36,39 @@
 
 #pragma once
 
-#include "insieme/analysis/cba_interface.h"
-#include "insieme/analysis/datalog/context.h"
-#include "insieme/analysis/datalog/alias_analysis.h"
-#include "insieme/analysis/datalog/boolean_analysis.h"
-#include "insieme/analysis/datalog/code_properties.h"
-#include "insieme/analysis/datalog/integer_analysis.h"
+#include "insieme/analysis/interface.h"
+#include "insieme/analysis/haskell/context.h"
+
+#include "insieme/analysis/haskell/alias_analysis.h"
+#include "insieme/analysis/haskell/arithmetic_analysis.h"
+#include "insieme/analysis/haskell/boolean_analysis.h"
 
 namespace insieme {
 namespace analysis {
 
 	/*
-	 * Create a type for this backend
+	 * Create a type for this backend.
 	 */
-	struct DatalogEngine : public analysis_engine<datalog::Context> {};
-
+	struct HaskellEngine : public analysis_engine<haskell::Context> {};
 
 	// --- Alias Analysis ---
 
-	register_analysis_implementation( DatalogEngine , areAlias, datalog::areAlias );
-	register_analysis_implementation( DatalogEngine , mayAlias, datalog::mayAlias );
-	register_analysis_implementation( DatalogEngine , notAlias, datalog::notAlias );
+	register_analysis_implementation(HaskellEngine, areAlias, haskell::areAlias);
+	register_analysis_implementation(HaskellEngine, mayAlias, haskell::mayAlias);
+	register_analysis_implementation(HaskellEngine, notAlias, haskell::notAlias);
 
 
 	// --- Boolean Analysis ---
 
-	register_analysis_implementation( DatalogEngine , isTrue,     datalog::isTrue     );
-	register_analysis_implementation( DatalogEngine , isFalse,    datalog::isFalse    );
-	register_analysis_implementation( DatalogEngine , mayBeTrue,  datalog::mayBeTrue  );
-	register_analysis_implementation( DatalogEngine , mayBeFalse, datalog::mayBeFalse );
+	register_analysis_implementation(HaskellEngine , isTrue,     haskell::isTrue    );
+	register_analysis_implementation(HaskellEngine , isFalse,    haskell::isFalse   );
+	register_analysis_implementation(HaskellEngine , mayBeTrue,  haskell::mayBeTrue );
+	register_analysis_implementation(HaskellEngine , mayBeFalse, haskell::mayBeFalse);
 
 
-	// --- Simple Integer Analysis ---
+	// --- Symbolic Integer Analysis ---
 
-	register_analysis_implementation( DatalogEngine , getIntegerValues,  datalog::getIntegerValues  );
-	register_analysis_implementation( DatalogEngine , isIntegerConstant, datalog::isIntegerConstant );
-
-	register_analysis_implementation( DatalogEngine , areEqualInteger,      datalog::integer::areEqual    );
-	register_analysis_implementation( DatalogEngine , areNotEqualInteger,   datalog::integer::areNotEqual );
-	register_analysis_implementation( DatalogEngine , mayBeEqualInteger,    datalog::integer::mayEqual    );
-	register_analysis_implementation( DatalogEngine , mayBeNotEqualInteger, datalog::integer::mayNotEqual );
+	register_analysis_implementation(HaskellEngine , getArithmeticValue, haskell::getArithmeticValue);
 
 
 } // end namespace analysis

@@ -37,7 +37,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/haskell_interface.h"
+#include "insieme/analysis/haskell/interface.h"
 
 #include "../common/alias_analysis_test.inc"
 

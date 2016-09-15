@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/haskell_interface.h"
+#include "insieme/analysis/haskell/interface.h"
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/core/dump/json_dump.h"

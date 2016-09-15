@@ -35,9 +35,12 @@
  */
 
 #include <gtest/gtest.h>
-#include "insieme/analysis/haskell_interface.h"
+
+#include "insieme/analysis/haskell/interface.h"
+
 #include "insieme/core/dump/binary_haskell.h"
 #include "insieme/core/dump/json_dump.h"
+
 #include "../common/alias_analysis_test.inc"
 
 namespace insieme {

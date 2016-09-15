@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/cba_postprocessing.h"
+#include "insieme/analysis/common/preprocessing.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_node.h"
@@ -88,7 +88,7 @@ namespace analysis {
 
 	};
 
-	core::ProgramPtr postProcessing(const core::ProgramPtr& prog) {
+	core::ProgramPtr preProcessing(const core::ProgramPtr& prog) {
 		const auto& ext = prog.getNodeManager().getLangExtension<CBAInputTestExt>();
 		return core::transform::transformBottomUpGen(prog,
 				[&] (const core::LiteralPtr& lit)->core::ExpressionPtr {

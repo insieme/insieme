@@ -6,10 +6,9 @@ message(STATUS "========== configure analysis =============")
 cmake_minimum_required(VERSION 3.2)
 
 # Setup common source files
-file(GLOB insieme_analysis_srcs src/*.cpp)
-file(GLOB_RECURSE insieme_analysis_incs
-    include/insieme/analysis/cba_interface.h
-    include/insieme/analysis/cba_postprocessing.h
+file(GLOB insieme_analysis_srcs src/*.cpp src/common/*.cpp)
+file(GLOB insieme_analysis_incs
+    include/insieme/analysis/*.h
     include/insieme/analysis/common/*.h
 )
 
@@ -20,7 +19,7 @@ if(ANALYSIS_DATALOG)
     file(GLOB_RECURSE insieme_analysis_srcs_datalog src/datalog/*.cpp src/datalog/*.dl)
     set(insieme_analysis_srcs ${insieme_analysis_srcs} ${insieme_analysis_srcs_datalog})
     insieme_glob_headers(insieme_analysis_incs_datalog include/insieme/analysis/datalog)
-    set(insieme_analysis_incs ${insieme_analysis_incs} ${insieme_analysis_incs_datalog} include/insieme/analysis/datalog_interface.h)
+    set(insieme_analysis_incs ${insieme_analysis_incs} ${insieme_analysis_incs_datalog})
 
     # Generate soufflé files now so we can add them to the insieme_analysis library later
     set(souffle_input_dir  ${insieme_code_dir}/analysis/src/datalog)
@@ -51,7 +50,7 @@ if(ANALYSIS_HASKELL)
     file(GLOB_RECURSE insieme_analysis_srcs_haskell src/haskell/*.cpp src/haskell/*.dl)
     set(insieme_analysis_srcs ${insieme_analysis_srcs} ${insieme_analysis_srcs_haskell})
     insieme_glob_headers(insieme_analysis_incs_haskell include/insieme/analysis/haskell)
-    set(insieme_analysis_incs ${insieme_analysis_incs} ${insieme_analysis_incs_haskell} include/insieme/analysis/haskell_interface.h)
+    set(insieme_analysis_incs ${insieme_analysis_incs} ${insieme_analysis_incs_haskell})
 
     insieme_find_package(NAME GMP)
 

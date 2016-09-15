@@ -39,7 +39,7 @@
 namespace insieme {
 namespace analysis {
 
-	core::ProgramPtr postProcessing(const core::ProgramPtr& prog);
+	core::ProgramPtr preProcessing(const core::ProgramPtr& prog);
 
 }
 }

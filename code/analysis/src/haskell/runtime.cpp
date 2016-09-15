@@ -34,7 +34,6 @@
  * regarding third party software licenses.
  */
 
-
 extern "C" {
 
 	// Haskell Runtime
