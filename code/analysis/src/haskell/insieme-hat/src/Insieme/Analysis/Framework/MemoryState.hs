@@ -282,7 +282,7 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
 
         assignHandler = OperatorHandler cov dep val
             where
-                cov a = isBuiltin a "ref_assign"
+                cov a = isBuiltin a $ getBuiltin addr "ref_assign"
 
                 dep a = (Solver.toVar targetRefVar) : (
                         if isEmptyRef a || (isActive a && isSingleRef a) then [] else pdep a
@@ -347,9 +347,9 @@ isAssignmentFree addr = case getNodeType addr of
 isAssignmentFreeFunction :: NodeAddress -> Bool
 isAssignmentFreeFunction addr = case getNodeType addr of
     
-    IR.Literal -> not $ isBuiltin addr "ref_assign"
+    IR.Literal -> not $ isBuiltinByName addr "ref_assign"
     
-    IR.LambdaExpr -> any (isBuiltin addr) [
+    IR.LambdaExpr -> any (isBuiltinByName addr) [
                                 "ite",
                                 "ref_scalar_to_ref_array",
                                 "ref_array_elem",

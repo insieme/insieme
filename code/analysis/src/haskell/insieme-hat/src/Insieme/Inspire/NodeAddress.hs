@@ -57,7 +57,11 @@ module Insieme.Inspire.NodeAddress (
     goLeft,
     goRight,
     crop,
-    isBuiltin
+    
+    Builtin,
+    getBuiltin,
+    isBuiltin,
+    isBuiltinByName
 ) where
 
 import Data.Function (on)
@@ -161,10 +165,34 @@ goRight    (NodeAddress xs _ _ (Just parent) _ ) = goDown (head xs + 1) parent
 crop :: NodeAddress -> NodeAddress
 crop a = NodeAddress [] (getNodePair a) ( (getInspire a){IR.getTree=getNodePair a} ) Nothing ((getPathReversed a) ++ (getAbsoluteRootPath a))
 
-lookupBuiltin :: NodeAddress -> String -> Maybe IR.Tree
-lookupBuiltin addr needle = Map.lookup needle (IR.getBuiltins $ getInspire addr)
 
-isBuiltin :: NodeAddress -> String -> Bool
-isBuiltin addr needle = case getNodeType addr of
-    IR.Lambda | depth addr >= 3 -> isBuiltin (goUp $ goUp $ goUp $ addr) needle 
-    _         -> fromMaybe False $ (== getNodePair addr) <$> lookupBuiltin addr needle
+-- builtin handling ---------
+
+data Builtin = Builtin IR.Tree | NoSuchBuiltin
+
+getBuiltin :: NodeAddress -> String -> Builtin
+getBuiltin addr name = case tree of
+        Just t  -> Builtin t
+        Nothing -> NoSuchBuiltin 
+    where
+        tree = Map.lookup name (IR.getBuiltins $ getInspire addr)
+        
+
+isBuiltin :: NodeAddress -> Builtin -> Bool
+isBuiltin _ NoSuchBuiltin = False
+isBuiltin a b@(Builtin t) = case getNodeType a of
+     IR.Lambda | depth a >= 3 -> isBuiltin (goUp $ goUp $ goUp $ a) b 
+     _                        -> getNodePair a == t    
+
+isBuiltinByName :: NodeAddress -> String -> Bool
+isBuiltinByName a n = isBuiltin a $ getBuiltin a n
+
+-- lookupBuiltin :: NodeAddress -> String -> Maybe IR.Tree
+-- lookupBuiltin addr needle = Map.lookup needle (IR.getBuiltins $ getInspire addr)
+-- 
+-- 
+-- 
+-- isBuiltin :: NodeAddress -> String -> Bool
+-- isBuiltin addr needle = case getNodeType addr of
+--     IR.Lambda | depth addr >= 3 -> isBuiltin (goUp $ goUp $ goUp $ addr) needle 
+--     _         -> fromMaybe False $ (== getNodePair addr) <$> lookupBuiltin addr needle

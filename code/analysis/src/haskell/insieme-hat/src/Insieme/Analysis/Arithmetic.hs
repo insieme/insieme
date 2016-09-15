@@ -116,19 +116,19 @@ arithmeticValue addr = case Addr.getNodePair addr of
 
     add = OperatorHandler cov dep (val Ar.addFormula)
       where
-        cov a = any (Addr.isBuiltin a) ["int_add", "uint_add", "gen_add"]
-
-    mul = OperatorHandler cov dep (val Ar.mulFormula)
-      where
-        cov a = any (Addr.isBuiltin a) ["int_mul", "uint_mul", "gen_mul"]
+        cov a = any (Addr.isBuiltin a) $ Addr.getBuiltin addr <$> [ "int_add", "uint_add", "gen_add" ]
 
     sub = OperatorHandler cov dep (val Ar.subFormula)
       where
-        cov a = any (Addr.isBuiltin a) ["int_sub", "uint_sub", "gen_sub"]
+        cov a = any (Addr.isBuiltin a) $ Addr.getBuiltin addr <$> [ "int_sub", "uint_sub", "gen_sub" ]
+
+    mul = OperatorHandler cov dep (val Ar.mulFormula)
+      where
+        cov a = any (Addr.isBuiltin a) $ Addr.getBuiltin addr <$> [ "int_mul", "uint_mul", "gen_mul" ]
 
     div = OperatorHandler cov dep val
       where
-        cov a = any (Addr.isBuiltin a) ["int_div", "uint_div", "gen_div"]
+        cov a = any (Addr.isBuiltin a) $ Addr.getBuiltin addr <$> [ "int_div", "uint_div", "gen_div" ]
         val a = compose $ tryDiv (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
 
         tryDiv x y = if all (uncurry Ar.canDivide) (BSet.toList prod)
@@ -139,11 +139,11 @@ arithmeticValue addr = case Addr.getNodePair addr of
 
     mod = OperatorHandler cov dep (val Ar.modFormula)
       where
-        cov a = any (Addr.isBuiltin a) ["int_mod", "uint_mod", "gen_mod"]
+        cov a = any (Addr.isBuiltin a) $ Addr.getBuiltin addr <$> [ "int_mod", "uint_mod", "gen_mod" ]
 
     ptrFromRef = OperatorHandler cov dep val
       where
-        cov a = Addr.isBuiltin a "ptr_from_ref"
+        cov a = Addr.isBuiltin a $ Addr.getBuiltin addr "ptr_from_ref"
         dep _ = []
         val a = ComposedValue.composeElements [(component 1,compose res)]
           where
@@ -165,13 +165,4 @@ isIntType (IR.NT IR.GenericType (IR.NT (IR.StringValue "int" ) _:_)) = True
 isIntType (IR.NT IR.GenericType (IR.NT (IR.StringValue "uint") _:_)) = True
 isIntType _ = False
 
-
--- TODO: provide a improved implementation of this filter
-
-isSideEffectFree :: Addr.NodeAddress -> Bool
-isSideEffectFree a = case Addr.getNodeType a of
-    IR.Literal  -> True
-    IR.Variable -> isFreeVariable a
-    IR.CallExpr -> (Addr.isBuiltin (Addr.goDown 1 a) "ref_deref") && (isSideEffectFree $ Addr.goDown 1 $ Addr.goDown 2 a)
-    _           -> False
 

@@ -102,7 +102,7 @@ dataPathValue addr = dataflowValue addr analysis ops
     -- handle the data path root constructore --
     rootOp = OperatorHandler cov dep val
       where
-        cov a = isBuiltin a "dp_root"
+        cov a = isBuiltin a $ getBuiltin addr "dp_root"
 
         dep a = []
 
@@ -112,7 +112,7 @@ dataPathValue addr = dataflowValue addr analysis ops
     -- the handler for the member access path constructore --
     member = OperatorHandler cov dep val
       where
-        cov a = isBuiltin a "dp_member"
+        cov a = isBuiltin a $ getBuiltin addr "dp_member"
 
         dep a = (Solver.toVar nestedPathVar) : (Solver.toVar fieldNameVar) : []
 
@@ -127,7 +127,7 @@ dataPathValue addr = dataflowValue addr analysis ops
     -- the handler for the element and component access path constructore --
     element = OperatorHandler cov dep val
       where
-        cov a = any (isBuiltin a) ["dp_element","dp_component"]
+        cov a = any (isBuiltin a) $ getBuiltin addr <$> ["dp_element","dp_component"]
 
         dep a = (Solver.toVar nestedPathVar) : (Solver.toVar indexVar) : []
 

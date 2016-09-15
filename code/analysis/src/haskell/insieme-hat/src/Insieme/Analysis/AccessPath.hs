@@ -109,35 +109,35 @@ accessPathValue addr = case getNodeType addr of
 
     allocHandler = OperatorHandler cov noDep val
         where
-            cov a = isBuiltin a "ref_alloc"
+            cov a = isBuiltin a $ getBuiltin addr "ref_alloc"
             val a = compose $ BSet.singleton AP.local
 
     declHandler = OperatorHandler cov noDep val
         where
-            cov a = isBuiltin a "ref_decl"
+            cov a = isBuiltin a $ getBuiltin addr "ref_decl"
             val a = compose $ BSet.singleton AP.local
 
     refNarrow = OperatorHandler cov subRefDep val
         where
-            cov a = isBuiltin a "ref_narrow"
+            cov a = isBuiltin a $ getBuiltin addr "ref_narrow"
             val a = compose $ narrow (baseAccessPathVal a) (dataPathVal a)
             narrow = BSet.lift2 $ \a d -> AP.append a d
 
     refExpand = OperatorHandler cov subRefDep val
         where
-            cov a = isBuiltin a "ref_expand"
+            cov a = isBuiltin a $ getBuiltin addr "ref_expand"
             val a = compose $ expand (baseAccessPathVal a) (dataPathVal a)
             expand = BSet.lift2 $ \a d -> AP.append a (DP.invert d)
 
     refCast = OperatorHandler cov dep val
         where
-            cov a = isBuiltin a "ref_cast"
+            cov a = isBuiltin a $ getBuiltin addr "ref_cast"
             dep _ = [Solver.toVar baseAccessPathVar]
             val a = Solver.get a baseAccessPathVar
 
     refReinterpret = OperatorHandler cov dep val
         where
-            cov a = isBuiltin a "ref_reinterpret"
+            cov a = isBuiltin a $ getBuiltin addr "ref_reinterpret"
             dep _ = [Solver.toVar baseAccessPathVar]
             val a = Solver.get a baseAccessPathVar            -- TODO: check when this conversion is actually valid
 

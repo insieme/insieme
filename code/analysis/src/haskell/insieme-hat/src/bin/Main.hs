@@ -69,7 +69,7 @@ main = do
     go :: Addr.NodeAddress -> [Char] -> [Char]
     go addr xs = case Addr.getNodePair addr of
 
-        IR.NT IR.CallExpr _ | Addr.isBuiltin (Addr.goDown 1 addr) "ref_deref" -> case () of
+        IR.NT IR.CallExpr _ | Addr.isBuiltinByName (Addr.goDown 1 addr) "ref_deref" -> case () of
                 _ | USet.null res       -> 'e' : xs
                 _ | USet.isUniverse res -> 'u' : xs
                 _                       -> 'o' : xs
