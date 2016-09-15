@@ -56,10 +56,11 @@ namespace addons {
 
 		// register operator
 		#include "insieme/backend/operator_converter_begin.inc"
-		converter.getFunctionManager().getOperatorConverterTable()[op] = OP_CONVERTER {
-			return c_ast::comma(CONVERT_EXPR(core::transform::evalLazy(NODE_MANAGER, ARG(0))), CONVERT_EXPR(core::transform::evalLazy(NODE_MANAGER, ARG(1))));
-		};
-		#include "insieme/backend/operator_converter_end.inc"
+			converter.getFunctionManager().getOperatorConverterTable()[op] = OP_CONVERTER {
+				return c_ast::parentheses(
+				    c_ast::comma(CONVERT_EXPR(core::transform::evalLazy(NODE_MANAGER, ARG(0))), CONVERT_EXPR(core::transform::evalLazy(NODE_MANAGER, ARG(1)))));
+			};
+        #include "insieme/backend/operator_converter_end.inc"
 	}
 
 } // end namespace addons
