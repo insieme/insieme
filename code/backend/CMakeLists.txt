@@ -10,7 +10,7 @@ file(GLOB_RECURSE insieme_backend_srcs 	src/*.cpp src/*.def src/*.inc)
 insieme_glob_headers(insieme_backend_incs include)
 
 # Build the core library
-add_library(insieme_backend ${LINKING_TYPE} ${insieme_backend_srcs} ${insieme_backend_incs} )
+add_library(insieme_backend ${LINKING_TYPE} ${insieme_backend_srcs} )
 target_include_directories(insieme_backend PUBLIC ${insieme_backend_include_dir})
 target_include_directories(insieme_backend PUBLIC ${insieme_common_include_dir})
 

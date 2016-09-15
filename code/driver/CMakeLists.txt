@@ -10,7 +10,7 @@ file(GLOB_RECURSE insieme_driver_srcs	src/*.cpp )
 insieme_glob_headers(insieme_driver_incs include)
 
 # Build the driver library
-add_library(insieme_driver ${LINKING_TYPE} ${insieme_driver_srcs} ${insieme_driver_incs})
+add_library(insieme_driver ${LINKING_TYPE} ${insieme_driver_srcs})
 target_include_directories(insieme_driver PUBLIC ${insieme_driver_include_dir} )
 
 # lookup Boost library
@@ -19,24 +19,14 @@ target_include_directories(insieme_driver SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(insieme_driver ${Boost_PROGRAM_OPTIONS_LIBRARY})
 
 target_link_libraries(insieme_driver insieme_common)
-target_link_libraries(insieme_driver insieme_core)
 target_link_libraries(insieme_driver insieme_utils)
+target_link_libraries(insieme_driver insieme_core)
+target_link_libraries(insieme_driver insieme_annotations)
 target_link_libraries(insieme_driver insieme_frontend)
 target_link_libraries(insieme_driver insieme_backend)
 target_link_libraries(insieme_driver insieme_analysis)
 target_link_libraries(insieme_driver insieme_transform)
-target_link_libraries(insieme_driver insieme_annotations)
 
-# add Haskell dependencies
-if(ANALYSIS_HASKELL)
-	# add GMP
-	insieme_find_package(NAME GMP)
-	link_directories(${GMP_ROOT}/lib)
-
-	# add Haskell runtime
-	link_directories(${LIBHSRTS_DIR})
-	target_link_libraries(insieme_driver ${LIBHSRTS})
-endif()
 
 #custom target to build all drivers at once
 add_custom_target(drivers)
@@ -51,7 +41,7 @@ foreach(exec_file ${executables})
 	get_filename_component(exec_name ${exec_file} NAME_WE)
 
 	# Build driver executable
-	add_executable( ${exec_name} ${exec_file} ${insieme_driver_incs} ${insieme_driver_defs})
+	add_executable( ${exec_name} ${exec_file} ${insieme_driver_defs})
 	#target drivers depends on all driver
 	add_dependencies(drivers ${exec_name})
 

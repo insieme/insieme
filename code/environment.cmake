@@ -100,6 +100,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	# add flags for release mode
 	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
+	# add flag allowing arbitrary library linking order (required for systems using -as-needed by default)
+	set (CMAKE_CXX_FLAGS "-Wl,--no-as-needed ${CMAKE_CXX_FLAGS}")
+
 	# ENABLE PROFILING
 	# add_definitions( -pg )
 	# SET(CMAKE_EXE_LINKER_FLAGS -pg)

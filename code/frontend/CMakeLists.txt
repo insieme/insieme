@@ -33,7 +33,7 @@ if(NOT MSVC)
 endif()
 
 # build the frontend library
-add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} ${generate_builtins_generated_files} )
+add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${generate_builtins_generated_files} )
 target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_dir})
 target_include_directories(insieme_frontend PUBLIC ${generate_builtins_output_dir_base}/include)
 
@@ -53,9 +53,9 @@ target_link_libraries(insieme_frontend ${LLVM_LIBRARIES})
 target_include_directories(insieme_frontend PUBLIC ${LLVM_INCLUDE_DIRS})
 
 # add dependencies
-target_link_libraries(insieme_frontend insieme_core)
-target_link_libraries(insieme_frontend insieme_common)
 target_link_libraries(insieme_frontend insieme_utils)
+target_link_libraries(insieme_frontend insieme_common)
+target_link_libraries(insieme_frontend insieme_core)
 target_link_libraries(insieme_frontend insieme_transform)
 target_link_libraries(insieme_frontend insieme_annotations)
 

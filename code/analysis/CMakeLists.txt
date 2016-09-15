@@ -71,7 +71,7 @@ endif()
 # =============================================================================================
 
 # Build the analysis library
-add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_analysis_incs})
+add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs})
 set_target_properties(insieme_analysis PROPERTIES LINKER_LANGUAGE CXX)
 target_include_directories(insieme_analysis PUBLIC ${insieme_analysis_include_dir})
 
@@ -79,6 +79,11 @@ target_include_directories(insieme_analysis PUBLIC ${insieme_analysis_include_di
 if(ANALYSIS_HASKELL)
     add_dependencies(insieme_analysis insieme_analysis_haskell)
     target_include_directories(insieme_analysis SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/haskell/insieme-hat/include)
+
+    # Gold linker does not automatically resolve libHSrts depdency from
+    # insieme_analysis lib, need to specify them explicitly.
+    target_link_libraries(insieme_analysis ${LIBHSRTS})
+
     target_link_libraries(insieme_analysis ${insieme_analysis_haskell})
 endif()
 
@@ -116,14 +121,6 @@ foreach(case_file ${test_cases})
     add_executable(${case_name} ${case_file})
     target_link_libraries(${case_name} insieme_analysis)
     target_link_libraries(${case_name} insieme_driver)
-
-    if(ANALYSIS_HASKELL)
-        target_include_directories(${case_name} SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/haskell/insieme-hat/include)
-
-        # Gold linker does not automatically resolve libHSrts depdency from
-        # insieme_analysis lib, need to specify them explicitly.
-        target_link_libraries(${case_name} ${LIBHSRTS})
-    endif()
 
     add_unit_test(${case_name} ${ut_prefix})
 endforeach(case_file)
