@@ -60,18 +60,6 @@
 
 #include "insieme/backend/c_ast/c_code.h"
 
-#include "insieme/backend/addons/pointer_type.h"
-#include "insieme/backend/addons/cpp_casts.h"
-#include "insieme/backend/addons/complex_type.h"
-#include "insieme/backend/addons/compound_operators.h"
-#include "insieme/backend/addons/enum_type.h"
-#include "insieme/backend/addons/io.h"
-#include "insieme/backend/addons/longlong_type.h"
-#include "insieme/backend/addons/asm_stmt.h"
-#include "insieme/backend/addons/varargs.h"
-#include "insieme/backend/addons/static_variables.h"
-#include "insieme/backend/addons/comma_operator.h"
-
 #include "insieme/backend/backend_config.h"
 
 namespace insieme {
@@ -90,17 +78,7 @@ namespace runtime {
 		BackendConfigPtr config = std::make_shared<BackendConfig>();
 
 		auto res = std::make_shared<RuntimeBackend>(config);
-		res->addAddOn<addons::PointerType>();
-		res->addAddOn<addons::CppCastsAddon>();
-		res->addAddOn<addons::ComplexType>();
-		res->addAddOn<addons::CompoundOps>();
-		res->addAddOn<addons::EnumType>();
-		res->addAddOn<addons::InputOutput>();
-		res->addAddOn<addons::LongLongType>();
-		res->addAddOn<addons::AsmStmt>();
-		res->addAddOn<addons::VarArgs>();
-		res->addAddOn<addons::StaticVariables>();
-		res->addAddOn<addons::CommaOperator>();
+		res->addDefaultAddons();
 		return res;
 	}
 

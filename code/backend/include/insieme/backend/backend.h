@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -161,6 +161,11 @@ namespace backend {
 		void addAddOn(T... args) {
 			addons.push_back(makeAddOn<A>(args...));
 		}
+
+		/**
+		 * Installs default addons shared by most backends
+		 */
+		void addDefaultAddons();
 
 		/**
 		 * The method performing the actual conversion of the given program into

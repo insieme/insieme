@@ -34,56 +34,36 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/sequential/sequential_backend.h"
+#include "insieme/backend/backend.h"
 
-#include <sstream>
-
-#include <cstdlib>
-#include <iostream>
-
-#include "insieme/core/ir_node.h"
-
-#include "insieme/backend/preprocessor.h"
-#include "insieme/backend/postprocessor.h"
-#include "insieme/backend/converter.h"
-#include "insieme/backend/name_manager.h"
-#include "insieme/backend/variable_manager.h"
-#include "insieme/backend/type_manager.h"
-#include "insieme/backend/statement_converter.h"
-#include "insieme/backend/function_manager.h"
-#include "insieme/backend/parallel_manager.h"
-
-#include "insieme/backend/c_ast/c_code.h"
-
-#include "insieme/backend/sequential/sequential_preprocessor.h"
-#include "insieme/backend/sequential/sequential_type_handler.h"
+#include "insieme/backend/addons/pointer_type.h"
+#include "insieme/backend/addons/cpp_casts.h"
+#include "insieme/backend/addons/complex_type.h"
+#include "insieme/backend/addons/compound_operators.h"
+#include "insieme/backend/addons/enum_type.h"
+#include "insieme/backend/addons/io.h"
+#include "insieme/backend/addons/longlong_type.h"
+#include "insieme/backend/addons/asm_stmt.h"
+#include "insieme/backend/addons/varargs.h"
+#include "insieme/backend/addons/static_variables.h"
+#include "insieme/backend/addons/comma_operator.h"
 
 namespace insieme {
 namespace backend {
-namespace sequential {
 
-	SequentialBackendPtr SequentialBackend::getDefault() {
-		auto res = std::make_shared<SequentialBackend>();
-		res->addDefaultAddons();
-		return res;
+	void Backend::addDefaultAddons() {
+		addAddOn<addons::PointerType>();
+		addAddOn<addons::CppCastsAddon>();
+		addAddOn<addons::ComplexType>();
+		addAddOn<addons::CompoundOps>();
+		addAddOn<addons::EnumType>();
+		addAddOn<addons::InputOutput>();
+		addAddOn<addons::LongLongType>();
+		addAddOn<addons::AsmStmt>();
+		addAddOn<addons::VarArgs>();
+		addAddOn<addons::StaticVariables>();
+		addAddOn<addons::CommaOperator>();
 	}
 
-	Converter SequentialBackend::buildConverter(core::NodeManager& manager) const {
-		// create and set up the converter
-		Converter converter(manager, "SequentialBackend", getConfiguration());
-
-		// set up pre-processing
-		PreProcessorPtr preprocessor = makePreProcessor<PreProcessingSequence>(makePreProcessor<Sequentializer>(), getBasicPreProcessorSequence());
-		converter.setPreProcessor(preprocessor);
-
-		// update type manager
-		TypeManager& typeManager = converter.getTypeManager();
-		typeManager.addTypeHandler(SequentialTypeHandler);
-
-		// done
-		return converter;
-	}
-
-} // end namespace sequential
-} // end namespace backend
-} // end namespace insieme
+}
+}
