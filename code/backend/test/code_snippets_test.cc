@@ -56,7 +56,6 @@
 
 #include "code_snippets_test_utils.h"
 
-
 namespace insieme {
 namespace backend {
 
@@ -348,7 +347,7 @@ namespace backend {
 		})
 	}
 
-	TEST(FunctionCall, PassLabmdaToBind) {
+	TEST(FunctionCall, PassLambdaToBind) {
 		DO_TEST(R"(def f = ()->int<4> { return 4; };
 			def g = (a : ()=>'a)->'a { return a(); };
 			int<4> main() {
@@ -714,6 +713,19 @@ namespace backend {
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
 			EXPECT_PRED2(containsSubString, code, "c_style_assignment");
 			EXPECT_PRED2(notContainsSubString, code, "+=");
+		})
+	}
+
+	TEST(Comma, Operator) {
+		DO_TEST(R"(
+			def comma_operator = (lhs : () => 'a, rhs : () => 'b) -> 'b { lhs(); return rhs(); };
+			int<4> function IMP_main() {
+				comma_operator(() -> int<4> { return comma_operator(() -> int<4> { return 2; }, () -> int<4> { return 3; }); }, () -> int<4> { return 4; });
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
+			EXPECT_PRED2(notContainsSubString, code, "comma_operator");
+			EXPECT_PRED2(containsSubString, code, "2,3,4");
 		})
 	}
 

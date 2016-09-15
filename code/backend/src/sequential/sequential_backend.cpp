@@ -68,6 +68,7 @@
 #include "insieme/backend/addons/asm_stmt.h"
 #include "insieme/backend/addons/varargs.h"
 #include "insieme/backend/addons/static_variables.h"
+#include "insieme/backend/addons/comma_operator.h"
 
 namespace insieme {
 namespace backend {
@@ -85,6 +86,7 @@ namespace sequential {
 		res->addAddOn<addons::AsmStmt>();
 		res->addAddOn<addons::VarArgs>();
 		res->addAddOn<addons::StaticVariables>();
+		res->addAddOn<addons::CommaOperator>();
 		return res;
 	}
 

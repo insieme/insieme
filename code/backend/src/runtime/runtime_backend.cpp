@@ -70,6 +70,7 @@
 #include "insieme/backend/addons/asm_stmt.h"
 #include "insieme/backend/addons/varargs.h"
 #include "insieme/backend/addons/static_variables.h"
+#include "insieme/backend/addons/comma_operator.h"
 
 #include "insieme/backend/backend_config.h"
 
@@ -99,6 +100,7 @@ namespace runtime {
 		res->addAddOn<addons::AsmStmt>();
 		res->addAddOn<addons::VarArgs>();
 		res->addAddOn<addons::StaticVariables>();
+		res->addAddOn<addons::CommaOperator>();
 		return res;
 	}
 
