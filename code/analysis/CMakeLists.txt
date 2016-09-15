@@ -6,9 +6,12 @@ message(STATUS "========== configure analysis =============")
 cmake_minimum_required(VERSION 3.2)
 
 # Setup common source files
-set(insieme_analysis_srcs "")
-file(GLOB_RECURSE insieme_analysis_incs include/insieme/analysis/cba_interface.h include/insieme/analysis/common/*.h)
-
+file(GLOB insieme_analysis_srcs src/*.cpp)
+file(GLOB_RECURSE insieme_analysis_incs
+    include/insieme/analysis/cba_interface.h
+    include/insieme/analysis/cba_postprocessing.h
+    include/insieme/analysis/common/*.h
+)
 
 # =============================================  SOUFFLE  =====================================
 if(ANALYSIS_DATALOG)
@@ -58,6 +61,9 @@ if(ANALYSIS_HASKELL)
     # add directories containing libffi, libHSrts and gmp
     link_directories(${LIBHSRTS_DIR})
     link_directories(${GMP_ROOT}/lib)
+
+    set(LIBHSRTS_DIR ${LIBHSRTS_DIR} PARENT_SCOPE)
+    set(LIBHSRTS ${LIBHSRTS} PARENT_SCOPE)
 
 endif()
 

@@ -60,7 +60,7 @@ again.
 
 Profiling is not supported over the foreign function interface. Use the
 `cba_runner` binary for this purpose. Additionally the `haskell_dumper` driver
-is required, hence you must first build insieme (the Haskell engine maybe
+is required, hence you must first build insieme (the Haskell engine may be
 turned OFF for this). Assuming the `haskell_dumper` is located in your path use
 following commands to issue a profiling run:
 
