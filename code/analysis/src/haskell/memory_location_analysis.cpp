@@ -34,48 +34,67 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/analysis/interface.h"
-#include "insieme/analysis/haskell/context.h"
-
-#include "insieme/analysis/haskell/alias_analysis.h"
-#include "insieme/analysis/haskell/arithmetic_analysis.h"
-#include "insieme/analysis/haskell/boolean_analysis.h"
 #include "insieme/analysis/haskell/memory_location_analysis.h"
+
+#include "insieme/core/lang/reference.h"
+
+extern "C" {
+
+	namespace ia = insieme::analysis;
+	namespace hat = ia::haskell;
+
+	// Analysis
+	ia::MemoryLocationSet* hat_memory_locations(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
+
+}
 
 namespace insieme {
 namespace analysis {
+namespace haskell {
 
-	/*
-	 * Create a type for this backend.
-	 */
-	struct HaskellEngine : public analysis_engine<haskell::Context> {};
+	MemoryLocationSet getReferencedMemoryLocations(Context& ctxt, const core::ExpressionAddress& expr) {
+		auto expr_hs = ctxt.resolveNodeAddress(expr);
+		MemoryLocationSet* res_ptr = hat_memory_locations(ctxt.getHaskellContext(), expr_hs);
+		MemoryLocationSet res(std::move(*res_ptr));
+		delete res_ptr;
+		return res;
+	}
 
-	// --- Alias Analysis ---
-
-	register_analysis_implementation(HaskellEngine, areAlias, haskell::areAlias);
-	register_analysis_implementation(HaskellEngine, mayAlias, haskell::mayAlias);
-	register_analysis_implementation(HaskellEngine, notAlias, haskell::notAlias);
-
-
-	// --- Boolean Analysis ---
-
-	register_analysis_implementation(HaskellEngine , isTrue,     haskell::isTrue    );
-	register_analysis_implementation(HaskellEngine , isFalse,    haskell::isFalse   );
-	register_analysis_implementation(HaskellEngine , mayBeTrue,  haskell::mayBeTrue );
-	register_analysis_implementation(HaskellEngine , mayBeFalse, haskell::mayBeFalse);
-
-
-	// --- Reference Analysis ---
-
-	register_analysis_implementation(HaskellEngine, getReferencedMemoryLocations, haskell::getReferencedMemoryLocations);
-
-
-	// --- Symbolic Integer Analysis ---
-
-	register_analysis_implementation(HaskellEngine , getArithmeticValue, haskell::getArithmeticValue);
-
-
+} // end namespace haskell
 } // end namespace analysis
 } // end namespace insieme
+
+
+extern "C" {
+
+	using insieme::analysis::MemoryLocationSet;
+
+	using namespace insieme::core;
+	using namespace insieme::analysis::haskell;
+
+	ia::MemoryLocation* hat_mk_memory_location(Context* ctx_c, const size_t* addr_hs, size_t length_hs) {
+		assert_true(ctx_c) << "hat_mk_memory_location called without context";
+		// build NodeAddress
+		NodeAddress addr(ctx_c->getRoot());
+		for(size_t i = 0; i < length_hs; i++) {
+			addr = addr.getAddressOfChild(addr_hs[i]);
+		}
+
+		// build value
+		return new ia::MemoryLocation(std::move(addr.as<ExpressionAddress>()));
+	}
+
+	MemoryLocationSet* hat_mk_memory_location_set(const ia::MemoryLocation** locations_c, int length) {
+		if(length < 0) {
+			return new MemoryLocationSet(MemoryLocationSet::getUniversal());
+		}
+
+		auto ret = new MemoryLocationSet();
+		for(int i = 0; i < length; i++) {
+			ret->insert(*locations_c[i]);
+			delete locations_c[i];
+		}
+		return ret;
+	}
+
+}

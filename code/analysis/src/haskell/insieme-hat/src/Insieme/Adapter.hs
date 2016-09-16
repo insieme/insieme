@@ -47,6 +47,8 @@ import qualified Data.ByteString.Char8 as BS8
 import qualified Insieme.Analysis.Alias as Alias
 import qualified Insieme.Analysis.Arithmetic as Arith
 import qualified Insieme.Analysis.Boolean as AnBoolean
+import qualified Insieme.Analysis.Reference as Ref
+import qualified Insieme.Analysis.Entities.FieldIndex as FieldIndex
 import qualified Insieme.Analysis.Entities.SymbolicFormula as SymbolicFormula
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Solver as Solver
@@ -56,6 +58,7 @@ import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Inspire.Utils as IRUtils
 import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Utils.BoundSet as BSet
+import qualified Insieme.Utils.UnboundSet as USet
 
 --
 -- * HSobject
@@ -162,9 +165,57 @@ arithValue ctx_hs expr_hs = do
     updateContext ctx_c ctx_nhs
     passFormulaSet ctx_c $ BSet.map (fmap SymbolicFormula.getAddr) results
 
-foreign export ccall "hat_arithmetic_value"
-    arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress
-               -> IO (Ptr CArithmeticSet)
+
+
+--
+-- * Memory Locations
+--
+
+type CMemoryLocation = ()
+type CMemoryLocationSet = ()
+
+foreign import ccall "hat_mk_memory_location"
+    memoryLocation :: Ctx.CContext -> Ptr CSize -> CSize -> IO (Ptr CMemoryLocation)
+
+foreign import ccall "hat_mk_memory_location_set"
+    memoryLocationSet :: Ptr (Ptr CMemoryLocation) -> CInt -> IO (Ptr CMemoryLocationSet)
+
+foreign export ccall "hat_memory_locations"
+    memoryLocations :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress 
+                    -> IO (Ptr CMemoryLocationSet)
+
+
+memoryLocations :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (Ptr CMemoryLocationSet)
+memoryLocations ctx_hs expr_hs = do
+    ctx <- deRefStablePtr ctx_hs
+    expr <- deRefStablePtr expr_hs
+    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
+    let results = (ComposedValue.toValue res) :: Ref.ReferenceSet FieldIndex.SimpleFieldIndex
+    let ctx_c = Ctx.getCContext ctx
+    ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+    updateContext ctx_c ctx_nhs
+    passMemoryLocationSet ctx_c $ USet.map Ref.creationPoint results
+
+passMemoryLocation :: Ctx.CContext -> Ref.Location -> IO (Ptr CMemoryLocation)
+passMemoryLocation ctx_c location_hs = do
+    passLoc location_hs
+  where
+    passLoc :: Ref.Location -> IO (Ptr CMemoryLocation)
+    passLoc loc_hs = withArrayLen' (fromIntegral <$> Addr.getAbsolutePath loc_hs) (memoryLocation ctx_c)
+    withArrayLen' :: Storable a => [a] -> (Ptr a -> CSize -> IO b) -> IO b
+    withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
+
+
+passMemoryLocationSet :: Ctx.CContext -> USet.UnboundSet Ref.Location
+               -> IO (Ptr CMemoryLocationSet)
+passMemoryLocationSet _ USet.Universe = memoryLocationSet nullPtr (-1)
+passMemoryLocationSet ctx_c bs = do
+    locations <- mapM (passMemoryLocation ctx_c) (USet.toList bs)
+    withArrayLen' locations memoryLocationSet
+  where
+    withArrayLen' :: Storable a => [a] -> (Ptr a -> CInt -> IO b) -> IO b
+    withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
+
 
 --
 -- * Arithemtic
@@ -195,6 +246,9 @@ foreign import ccall "hat_mk_arithmetic_formula"
 foreign import ccall "hat_mk_arithmetic_set"
     arithmeticSet :: Ptr (Ptr CArithmeticFormula) -> CInt -> IO (Ptr CArithmeticSet)
 
+foreign export ccall "hat_arithmetic_value"
+    arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress
+               -> IO (Ptr CArithmeticSet)
 
 passFormula :: Integral c => Ctx.CContext -> Ar.Formula c Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
 passFormula ctx_c formula_hs = do

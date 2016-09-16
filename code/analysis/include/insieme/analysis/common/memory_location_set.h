@@ -36,46 +36,16 @@
 
 #pragma once
 
-#include "insieme/analysis/interface.h"
-#include "insieme/analysis/haskell/context.h"
-
-#include "insieme/analysis/haskell/alias_analysis.h"
-#include "insieme/analysis/haskell/arithmetic_analysis.h"
-#include "insieme/analysis/haskell/boolean_analysis.h"
-#include "insieme/analysis/haskell/memory_location_analysis.h"
+#include "insieme/analysis/common/set.h"
+#include "insieme/core/ir_address.h"
 
 namespace insieme {
 namespace analysis {
 
-	/*
-	 * Create a type for this backend.
-	 */
-	struct HaskellEngine : public analysis_engine<haskell::Context> {};
+	using MemoryLocation = core::ExpressionAddress;
 
-	// --- Alias Analysis ---
-
-	register_analysis_implementation(HaskellEngine, areAlias, haskell::areAlias);
-	register_analysis_implementation(HaskellEngine, mayAlias, haskell::mayAlias);
-	register_analysis_implementation(HaskellEngine, notAlias, haskell::notAlias);
-
-
-	// --- Boolean Analysis ---
-
-	register_analysis_implementation(HaskellEngine , isTrue,     haskell::isTrue    );
-	register_analysis_implementation(HaskellEngine , isFalse,    haskell::isFalse   );
-	register_analysis_implementation(HaskellEngine , mayBeTrue,  haskell::mayBeTrue );
-	register_analysis_implementation(HaskellEngine , mayBeFalse, haskell::mayBeFalse);
-
-
-	// --- Reference Analysis ---
-
-	register_analysis_implementation(HaskellEngine, getReferencedMemoryLocations, haskell::getReferencedMemoryLocations);
-
-
-	// --- Symbolic Integer Analysis ---
-
-	register_analysis_implementation(HaskellEngine , getArithmeticValue, haskell::getArithmeticValue);
-
+	using MemoryLocationSet = Set<MemoryLocation>;
 
 } // end namespace analysis
 } // end namespace insieme
+

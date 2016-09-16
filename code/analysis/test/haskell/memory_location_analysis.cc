@@ -34,48 +34,36 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/analysis/interface.h"
-#include "insieme/analysis/haskell/context.h"
-
-#include "insieme/analysis/haskell/alias_analysis.h"
-#include "insieme/analysis/haskell/arithmetic_analysis.h"
-#include "insieme/analysis/haskell/boolean_analysis.h"
-#include "insieme/analysis/haskell/memory_location_analysis.h"
+#include "insieme/analysis/haskell/interface.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace analysis {
 
-	/*
-	 * Create a type for this backend.
-	 */
-	struct HaskellEngine : public analysis_engine<haskell::Context> {};
+	using namespace core;
 
-	// --- Alias Analysis ---
+	TEST(AccessPathAnalysis, RefNew) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
 
-	register_analysis_implementation(HaskellEngine, areAlias, haskell::areAlias);
-	register_analysis_implementation(HaskellEngine, mayAlias, haskell::mayAlias);
-	register_analysis_implementation(HaskellEngine, notAlias, haskell::notAlias);
+		auto stmt = builder.parseStmt(
+				"{"
+				"	var ref<int<4>> a = 4;"
+				"	a;"
+				"}"
+		).as<CompoundStmtPtr>();
 
-
-	// --- Boolean Analysis ---
-
-	register_analysis_implementation(HaskellEngine , isTrue,     haskell::isTrue    );
-	register_analysis_implementation(HaskellEngine , isFalse,    haskell::isFalse   );
-	register_analysis_implementation(HaskellEngine , mayBeTrue,  haskell::mayBeTrue );
-	register_analysis_implementation(HaskellEngine , mayBeFalse, haskell::mayBeFalse);
+		auto comp = CompoundStmtAddress(stmt);
 
 
-	// --- Reference Analysis ---
-
-	register_analysis_implementation(HaskellEngine, getReferencedMemoryLocations, haskell::getReferencedMemoryLocations);
-
-
-	// --- Symbolic Integer Analysis ---
-
-	register_analysis_implementation(HaskellEngine , getArithmeticValue, haskell::getArithmeticValue);
+		auto locs = getReferencedMemoryLocations<HaskellEngine>(comp[1].as<ExpressionAddress>());
+		ASSERT_FALSE(locs.isUniversal());
+		EXPECT_EQ(1,locs.size());
+	}
 
 
 } // end namespace analysis
 } // end namespace insieme
+

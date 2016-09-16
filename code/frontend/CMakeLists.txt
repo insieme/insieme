@@ -47,10 +47,10 @@ target_link_libraries(insieme_frontend ${Boost_PROGRAM_OPTIONS_LIBRARY})
 
 # lookup LLVM/CLANG library+header
 insieme_find_package(NAME LLVM)
-target_link_libraries(insieme_frontend ${CLANG_LIBRARIES})
-target_include_directories(insieme_frontend PUBLIC ${CLANG_INCLUDE_DIRS})
 target_link_libraries(insieme_frontend ${LLVM_LIBRARIES})
 target_include_directories(insieme_frontend PUBLIC ${LLVM_INCLUDE_DIRS})
+target_link_libraries(insieme_frontend ${CLANG_LIBRARIES})
+target_include_directories(insieme_frontend PUBLIC ${CLANG_INCLUDE_DIRS})
 
 # add dependencies
 target_link_libraries(insieme_frontend insieme_utils)
