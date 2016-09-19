@@ -1106,6 +1106,96 @@ TEST(PrettyPrinter, FreeFunctions) {
 
 }
 
+TEST(PrettyPrinter, ListExtension) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	{
+		std::string input = ""
+			"{\n"
+			"    var ref<list<int>,f,f,plain> v0 = ref_decl(type_lit(ref<list<int>,f,f,plain>));\n"
+			"}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+									| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES);
+
+		EXPECT_EQ(input, toString(printer)) << printer;
+	}
+
+	{
+		std::string input = ""
+			"{\n"
+			"    var ref<list<int>,f,f,plain> v0 = [0,1,2,3,4,5];\n"
+			"}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+			| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES);
+
+		EXPECT_EQ(input, toString(printer)) << printer;
+	}
+}
+
+TEST(PrettyPrinter, Pick) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	{
+		std::string input = ""
+			"decl f : (int<4>) -> unit;\n"
+			"decl g : (int<4>) -> unit;\n"
+		    "decl h : (int<4>) -> unit;\n"
+		    "def f = function (v0 : ref<int<4>,f,f,plain>) -> unit {\n"
+		    "    v0 = 0;\n"
+		    "};\n"
+		    "def g = function (v0 : ref<int<4>,f,f,plain>) -> unit {\n"
+		    "    v0 = 1;\n"
+		    "};\n"
+		    "def h = function (v0 : ref<int<4>,f,f,plain>) -> unit {\n"
+		    "    v0 = 2;\n"
+		    "};\n"
+		    "{\n"
+		    "    var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
+		    "    pick([f,g,h])(v0);\n"
+		    "}";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+			| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES);
+
+		EXPECT_EQ(input, toString(printer)) << printer;
+	}
+
+	{
+		std::string input = ""
+			"{\n"
+			"    var ref<int<4>> a;\n"
+			"    pick([\n"
+			"        function (a : ref<int<4>>) -> unit {\n"
+			"            a = 3;\n"
+			"        },\n"
+			"        function (a : ref<int<4>>) -> unit {\n"
+			"            a = 1 + 2;\n"
+			"        },\n"
+			"        function (a : ref<int<4>>) -> unit {\n"
+			"            a = 1 * 3;\n"
+			"        }\n"
+			"    ])(a);\n"
+			"}\n";
+
+		auto ir = builder.normalize(builder.parseStmt(input));
+
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
+			| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_ATTRIBUTES);
+
+		// TODO: this this is not working, as all anonynimous funcitons are printed as "fun000"
+	}
+}
+
 TEST(PrettyPrinter, AutoEvaluatedFunctions) {
 	NodeManager nm;
 	IRBuilder builder(nm);

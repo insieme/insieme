@@ -1753,6 +1753,11 @@ namespace printer {
 				OUT(">>");
 				PRINT_ARG(1);
 			};
+			ADD_FORMATTER(basic.getPick()) {
+				OUT("pick(");
+				PRINT_ARG(0);
+				OUT(")");
+			};
 
 			// nicer inlined versions of the && and || operators
 			//		ADD_FORMATTER(basic.getBoolLAnd()) { PRINT_ARG(0); OUT(" && "); PRINT_ARG(1); };
@@ -1991,7 +1996,14 @@ namespace printer {
 					// check whether syntactic sugar is supported
 					if(is_encoding_of(call)) {
 						vector<ExpressionPtr> list = (encoder::toValue<vector<ExpressionPtr>, AttributConverter>(call));
-						printer.out << "[" << join(",", list, [&](std::ostream& out, const ExpressionPtr& cur) { printer.visit(NodeAddress(cur)); }) << "]";
+						printer.out << "[" << join(",", list, [&](std::ostream& out, const ExpressionPtr& cur) {
+							if (const auto& bind = cur.isa<LambdaExprPtr>()) {
+								// this thing is a function -> just print its Rreference
+								printer.visit(NodeAddress(bind->getReference()));
+							} else {
+								printer.visit(NodeAddress(cur));
+							}
+						}) << "]";
 					} else {
 						// use fall-back solution
 						printer.out << "[";
