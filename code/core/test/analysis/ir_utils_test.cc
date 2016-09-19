@@ -867,6 +867,28 @@ namespace analysis {
 		EXPECT_EQ(2, countInstances(prog, builder.intLit(1)));
 	}
 
+	TEST(CountInstancesOfNodeType, Simple) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto prog = builder.parseProgram(R"1N5P1RE(
+			alias int = int<4>;
+			def fun = () -> unit {
+				var int x = 1;
+				var int y = 2;
+			};
+			unit main() {
+				fun();
+				fun();
+			}
+		)1N5P1RE");
+
+		EXPECT_EQ(3, countInstancesOfNodeType(prog, NT_CompoundStmt));
+		EXPECT_EQ(3, countInstancesOfNodeType(prog, NT_LambdaExpr));
+		EXPECT_EQ(16, countInstancesOfNodeType(prog, NT_Literal));
+		EXPECT_EQ(1, countInstancesOfNodeType(prog, NT_LambdaExpr, true));
+	}
+
 	TEST(Types, FreeTagTypeReferences) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
