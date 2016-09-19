@@ -42,7 +42,7 @@
 namespace insieme {
 namespace analysis {
 
-	using MemoryLocation = core::ExpressionAddress;
+	using MemoryLocation = core::NodeAddress;
 
 	using MemoryLocationSet = Set<MemoryLocation>;
 

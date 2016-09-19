@@ -44,7 +44,7 @@ namespace analysis {
 
 	using namespace core;
 
-	TEST(AccessPathAnalysis, RefNew) {
+	TEST(MemoryLocation, Basic) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 

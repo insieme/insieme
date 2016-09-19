@@ -81,7 +81,7 @@ extern "C" {
 		}
 
 		// build value
-		return new ia::MemoryLocation(std::move(addr.as<ExpressionAddress>()));
+		return new ia::MemoryLocation(std::move(addr));
 	}
 
 	MemoryLocationSet* hat_mk_memory_location_set(const ia::MemoryLocation** locations_c, int length) {
