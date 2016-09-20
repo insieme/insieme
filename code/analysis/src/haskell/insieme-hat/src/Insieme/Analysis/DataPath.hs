@@ -40,7 +40,7 @@ module Insieme.Analysis.DataPath where
 
 import Data.Typeable
 
-import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.NodeAddress hiding (append)
 
 import Insieme.Analysis.Entities.DataPath
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow

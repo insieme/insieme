@@ -94,6 +94,8 @@ instance (FieldIndex i) => Solver.Lattice (Definitions i) where
     merge = USet.union
 
 
+instance (FieldIndex i) => Solver.ExtLattice (Definitions i) where
+    top = USet.Universe
 
 --
 -- * Memory State Analysis
@@ -127,16 +129,21 @@ memoryStateValue ms@(MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
 
         dep a = (Solver.toVar reachingDefVar) :
                    (
-                     if USet.member Creation $ reachingDefVal a then []
+                     if USet.isUniverse defs then [] else
+                     if USet.member Creation defs then []
                      else (map Solver.toVar $ definingValueVars a) ++ (partialAssingDep a)
                    )
+            where
+                defs = reachingDefVal a
 
-        val a = if USet.member Initial $ reachingDefVal a then Solver.merge init value else value
+        val a = if USet.isUniverse defs then Solver.top else if USet.member Initial defs then Solver.merge init value else value
             where
                 init = initialValueHandler analysis loc
             
-                value = if USet.member Creation $ reachingDefVal a then ComposedValue.top
+                value = if USet.member Creation $ defs then ComposedValue.top
                         else Solver.join $ (partialAssingVal a) : (map (Solver.get a) (definingValueVars a))
+                        
+                defs = reachingDefVal a
 
 
         reachingDefVar = reachingDefinitions ms

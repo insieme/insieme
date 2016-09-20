@@ -1,3 +1,5 @@
 .stack-work
 /.dist-buildwrapper/
 /bin
+*.prof
+*.irbd

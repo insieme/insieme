@@ -55,7 +55,7 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 -- properties of program points (e.g. the state of a heap object after
 -- the execution of a given expression)
 --
-programPointValue :: (Solver.Lattice a)
+programPointValue :: (Solver.ExtLattice a)
          => ProgramPoint                                    -- ^ the program point for which to compute a variable representing a state value
          -> (ProgramPoint -> Solver.Identifier)             -- ^ a variable ID generator function
          -> (ProgramPoint -> Solver.TypedVar a)             -- ^ a variable generator function for referenced variables
@@ -76,22 +76,22 @@ programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNodeType
 
                 -- if an handler is active, use the handlers value, else the default
                 idep a = (Solver.toVar targetVar) : (
-                        if isHandlerActive a then operatorDeps a else dep a
+                        if hasUniversalTarget a then [] else if isHandlerActive a then operatorDeps a else dep a
                     )
-                ival a = if isHandlerActive a then operatorVal a else val a
+                ival a = if hasUniversalTarget a then Solver.top else if isHandlerActive a then operatorVal a else val a
 
                 -- the variable storing the target of the call
                 targetVar = callableValue (goDown 1 addr)
 
+                -- tests whether the set of callees is universal
+                hasUniversalTarget a = USet.isUniverse $ extract $ Solver.get a targetVar
+
                 -- test whether any operator handlers are active
-                getActiveHandlers a = filter fit ops
+                getActiveHandlers a = if USet.isUniverse callables then [] else filter fit ops 
                     where
                         callables = extract $ Solver.get a targetVar
 
-                        targets = USet.toSet $
-                            if USet.isUniverse callables
-                            then collectAllCallables addr
-                            else callables
+                        targets = USet.toSet callables
 
                         fit o = any ( \t -> covers o $ toAddress t ) targets
 

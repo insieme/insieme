@@ -112,6 +112,11 @@ callSites addr = case getNodeType addr of
     
     isCall a = getNodeType a == IR.CallExpr
 
+
+    -- the number of parameters of this callable
+    numParams = numChildren $ goDown 1 addr                     -- TODO: this is wrong in case of variadic parameters!!
+        
+
     -- distinguish binding case --    
     var =
         if isRoot addr then noCallSitesVar
@@ -152,7 +157,7 @@ callSites addr = case getNodeType addr of
         
             allCalls = foldTree collector (getInspire addr)
             collector a calls = case getNodeType a of
-                IR.CallExpr -> case getNodeType $ goDown 1 a of
+                IR.CallExpr | numChildren a == numParams + 2 -> case getNodeType $ goDown 1 a of
                     IR.Lambda          -> calls
                     IR.BindExpr        -> calls
                     IR.Literal         -> calls

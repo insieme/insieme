@@ -45,6 +45,7 @@ module Insieme.Inspire.NodeAddress (
     getAbsolutePath,
     depth,
     numChildren,
+    getChildren,
     getIndex,
     getNodeType,
     isRoot,
@@ -56,6 +57,7 @@ module Insieme.Inspire.NodeAddress (
     goRel,
     goLeft,
     goRight,
+    append,
     crop,
     
     Builtin,
@@ -64,6 +66,7 @@ module Insieme.Inspire.NodeAddress (
     isBuiltinByName
 ) where
 
+import Debug.Trace
 import Data.Function (on)
 import Data.List (foldl',isSuffixOf)
 import Data.Maybe
@@ -119,6 +122,9 @@ depth = length . getPathReversed
 numChildren :: NodeAddress -> Int
 numChildren = length . IR.getChildren . getNodePair
 
+getChildren :: NodeAddress -> [NodeAddress]
+getChildren a = (flip goDown) a <$> [0..numChildren a - 1] 
+
 getIndex :: NodeAddress -> Int
 getIndex = head . getPathReversed
 
@@ -138,6 +144,7 @@ prettyShow :: NodeAddress -> String
 prettyShow na = '0' : concat ['-' : show x | x <- getPath na]
 
 goUp :: NodeAddress -> NodeAddress
+goUp na | isRoot na = trace "No parent for Root" undefined 
 goUp na = fromJust (getParent na)
 
 goDown :: Int -> NodeAddress -> NodeAddress
@@ -161,6 +168,17 @@ goLeft    (NodeAddress xs _ _ (Just parent) _ ) = goDown (head xs - 1) parent
 goRight :: NodeAddress -> NodeAddress
 goRight na@(NodeAddress _  _ _ Nothing       _ ) = na
 goRight    (NodeAddress xs _ _ (Just parent) _ ) = goDown (head xs + 1) parent
+
+append :: NodeAddress -> NodeAddress -> NodeAddress
+append a b | isRoot a = b
+append a b | isRoot b = a
+append a b = NodeAddress {
+            getPathReversed = (getPathReversed b) ++ (getPathReversed a),
+            getNodePair = getNodePair b,
+            getInspire = getInspire a,
+            getParent = getParent b,
+            getAbsoluteRootPath = getAbsoluteRootPath a 
+        }
 
 crop :: NodeAddress -> NodeAddress
 crop a = NodeAddress [] (getNodePair a) ( (getInspire a){IR.getTree=getNodePair a} ) Nothing ((getPathReversed a) ++ (getAbsoluteRootPath a))

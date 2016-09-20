@@ -26,6 +26,7 @@ library
                         Insieme.Analysis.CallSite,
                         Insieme.Analysis.DataPath,
                         Insieme.Analysis.ExitPoint,
+                        Insieme.Analysis.FreeLambdaReferences,
                         Insieme.Analysis.Identifier,
                         Insieme.Analysis.Predecessor,
                         Insieme.Analysis.Reference,

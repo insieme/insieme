@@ -48,14 +48,18 @@
 
 #include "insieme/utils/name_mangling.h"
 
+#include "insieme/driver/integration/test_framework.h"
+
 using namespace std;
 using namespace insieme;
 namespace fe = insieme::frontend;
 namespace opts = boost::program_options;
+namespace itc = insieme::driver::integration;
 
 struct CmdOptions {
 	bool valid;
 	string inputFile;
+	string testCase;
 	string dumpBinaryHaskell;
 	string dumpJson;
 };
@@ -82,6 +86,7 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 		("help,h", "produce help message")
 		("version,v", "output version information")
 		("input,i", opts::value<string>()->default_value(""), "the code file to be parsed")
+		("case,c", opts::value<string>()->default_value(""), "the test case to be loaded")
 		("dump-irbh,d", opts::value<string>()->default_value(""), "file to dump IR to (Haskell)")
 		("dump-json,j", opts::value<string>()->default_value(""), "file to dump IR to (JSON)");
 
@@ -106,8 +111,21 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	CmdOptions res = {0};
 	res.valid = true;
 	res.inputFile = map["input"].as<string>();
+	res.testCase = map["case"].as<string>();
 	res.dumpBinaryHaskell = map["dump-irbh"].as<string>();
 	res.dumpJson = map["dump-json"].as<string>();
+
+
+	if(res.inputFile=="" && res.testCase=="") {
+		cout << "No input file or test case name provided.\n";
+		return fail;
+	}
+
+	if(res.inputFile!="" && res.testCase!="") {
+		cout << "Can only process a given input file or a test case, but not both.\n";
+		return fail;
+	}
+
 
 	return res;
 }
@@ -116,13 +134,23 @@ int main(int argc, char** argv) {
 	CmdOptions options = parseCommandLine(argc, argv);
 	if(!options.valid) return 1;
 
-	// setup frontend
-	fe::ConversionJob job;
-	job.setFiles({options.inputFile});
-
-	// parse input code
+	// load the input file
 	core::NodeManager mgr;
-	auto program = job.execute(mgr);
+	core::ProgramPtr program;
+	if (!options.testCase.empty()) {
+		auto cases = itc::getCase(options.testCase);
+		if (!cases) {
+			std::cout << "Test case not found: " << options.inputFile << "\n";
+			return 1;
+		}
+		program = cases->load(mgr);
+	} else {
+		fe::ConversionJob job;
+		job.addFile(options.inputFile);
+		program = job.execute(mgr);
+	}
+
+	// run pre-processing
 	program = analysis::preProcessing(program);
 
 	if(options.dumpBinaryHaskell == "-") {

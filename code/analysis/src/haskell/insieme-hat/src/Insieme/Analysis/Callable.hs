@@ -104,7 +104,7 @@ callableValue addr = case getNodeType addr of
         Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Lambda (fromJust $ getLambda addr )))
 
     IR.LambdaReference -> 
-        Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Lambda (getLambda4Ref addr)))
+        Solver.mkVariable (idGen addr) [] (compose $ getCallables4Ref addr)
 
     IR.BindExpr ->
         Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Closure addr))
@@ -122,14 +122,15 @@ callableValue addr = case getNodeType addr of
 
     compose = ComposedValue.toComposed
 
-    getLambda4Ref r = search (getNodePair r) r
+    getCallables4Ref r = search (getNodePair r) r
         where
             search r cur = case getNodePair cur of
-                IR.NT IR.LambdaDefinition cs -> goDown 1 $ goDown pos cur
+                IR.NT IR.LambdaDefinition cs | isJust pos -> USet.singleton (Lambda $ goDown 1 $ goDown (fromJust pos) cur)
                     where
-                        pos = fromJust $ findIndex filter cs
-                        filter (IR.NT IR.LambdaBinding [a,b]) = a == r
-                _                         -> search r $ goUp cur  
+                        pos = findIndex filter cs
+                        filter (IR.NT IR.LambdaBinding [a,_]) = a == r
+                _ | isRoot cur      -> USet.Universe 
+                _                   -> search r $ goUp cur  
 
 
 -- | a utility to collect all callables of a program

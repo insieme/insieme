@@ -57,6 +57,7 @@ import Data.Typeable
 import Insieme.Inspire.NodeAddress
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.AccessPath
+import Insieme.Analysis.FreeLambdaReferences
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
@@ -180,26 +181,34 @@ writeSetSummary addr = case getNodeType addr of
 
                 dep a = Solver.toVar <$> writeSetVars
                 val a = Solver.join $ (Solver.get a <$> writeSetVars)
+                
 
-                -- get list of calls within current lambda --
-                calls = IRUtils.foldAddressPrune collect filter addr
-                    where
-
-                        filter cur = case getNodePair cur of
-                            IR.NT IR.Lambda _ -> cur /= addr
-                            IR.NT n         _ -> IRUtils.isType n
-
-                        collect cur l = case getNodePair cur of
-                            IR.NT IR.CallExpr _ -> cur : l
-                            _                  -> l
-
-
-                -- get list of write sets at calls
-                writeSetVars = writeSetSummary <$> calls
-
+        -- for non context-free lambdas, it has to be tested wether they are closed
+        IR.Lambda -> var
+            where
+                var = Solver.mkVariable (idGen addr) [con] Solver.bot
+                con = Solver.createEqualityConstraint dep val var
+                
+                dep a = Solver.toVar hasFreeLambdaRefsVar : if isClosed a then closedDep a else openDep a 
+                val a = if isClosed a then closedVal a else openVal a 
+                
+                hasFreeLambdaRefsVar = freeLambdaReferences $ goUp $ goUp $ goUp addr 
+                
+                isClosed a = depth addr >= 3 && (Set.null $ Solver.get a hasFreeLambdaRefsVar)
+                
+                -- the closed case --
+                
+                closedWriteSetVar = writeSetSummary contextFreeAddr
+                closedDep _ = [Solver.toVar closedWriteSetVar]
+                closedVal a = Solver.get a closedWriteSetVar 
+                
+                -- the non closed case --
+                
+                openDep _ = Solver.toVar <$> writeSetVars
+                openVal a = Solver.join $ (Solver.get a <$> writeSetVars)
 
         -- compute write sets for calls
-        IR.CallExpr | isContextFree addr -> var
+        IR.CallExpr -> var
             where
 
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
@@ -221,7 +230,7 @@ writeSetSummary addr = case getNodeType addr of
                 writeSetVars a = if hasUniversalTarget a then [] else list
                     where
                         trgs = filter (`isChildOf` addr) $ toAddress <$> (USet.toList $ ComposedValue.toValue $ Solver.get a callTargetVar)
-                        list = writeSetSummary . dropContext <$> trgs
+                        list = writeSetSummary <$> trgs
 
                 -- a test to see whether there are none unknown write sets
                 hasUnknownWriteSet a = hasUniversalTarget a || (any isUnknown $ (Solver.get a) <$> (writeSetVars a `asTypeOf` [var]))
@@ -237,7 +246,7 @@ writeSetSummary addr = case getNodeType addr of
                 argVars a = if hasUnknownWriteSet a then [] else list
                     where
                         list = go <$> getNeededArguments a
-                        go i = (i,accessPathValue $ goDown (i+2) addr)
+                        go i = (i,accessPathValue $ goDown (i+2) contextFreeAddr)
 
                 -- aggregate write set of all potential target functions
                 aggregateWriteSets a = if hasUnknownWriteSet a then Unknown else res
@@ -267,6 +276,23 @@ writeSetSummary addr = case getNodeType addr of
     everything = Solver.mkVariable (idGen addr) [] Unknown
 
     idGen a = Solver.mkIdentifier writeSetAnalysis a ""
+    
+    -- get list of calls within current node --
+    calls = IRUtils.foldAddressPrune collect filter addr
+        where
+
+            filter cur = case getNodePair cur of
+                IR.NT IR.Lambda _ -> cur /= addr
+                IR.NT n         _ -> IRUtils.isType n
+
+            collect cur l = case getNodePair cur of
+                IR.NT IR.CallExpr _ -> cur : l
+                _                  -> l
+
+
+    -- get list of write sets at calls
+    writeSetVars = writeSetSummary <$> calls
+
 
 
 
