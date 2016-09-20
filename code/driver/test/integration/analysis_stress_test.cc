@@ -40,9 +40,16 @@
 #include <boost/filesystem/fstream.hpp>
 
 #include "insieme/utils/logging.h"
-#include "insieme/analysis/haskell/interface.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/driver/integration/tests.h"
+
+#ifdef INSIEME_ANALYSIS_DATALOG
+#include "insieme/analysis/datalog/interface.h"
+#endif
+
+#ifdef INSIEME_ANALYSIS_HASKELL
+#include "insieme/analysis/haskell/interface.h"
+#endif
 
 
 namespace insieme {
@@ -55,59 +62,82 @@ namespace integration {
 
 	namespace an = insieme::analysis;
 
+
+	namespace {
+
+		template<typename Engine>
+		void run(const driver::integration::IntegrationTestCase& testCase) {
+			NodeManager manager;
+			IRBuilder builder(manager);
+
+			// obtain test case
+			SCOPED_TRACE("Testing Case: " + testCase.getName());
+			LOG(INFO) << "Testing Case: " + testCase.getName();
+
+			ProgramPtr code = testCase.load(manager);
+
+
+			const auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+			ExpressionPtr ref_deref  = refExt.getRefDeref();
+			ExpressionPtr ref_assign = refExt.getRefAssign();
+
+			TypePtr boolean = manager.getLangBasic().getBool();
+
+			int narrow = 0;
+			int failure = 0;
+			int univers = 0;
+
+			typename Engine::context_type ctxt;
+
+			// locate all ref_deref and ref_assign symbols
+			visitDepthFirst(NodeAddress(code), [&](const CallExprAddress& call) {
+				auto trg = call->getFunctionExpr().as<ExpressionPtr>();
+				if (*trg == *ref_deref || *trg == *ref_assign) {
+
+					auto list = an::getReferencedMemoryLocations<Engine>(ctxt,call->getArgument(0));
+					if (list.isUniversal()) {
+						univers++;
+					} else if (list.empty()) {
+						failure++;
+					} else {
+						narrow++;
+					}
+
+				}
+			});
+
+			std::cout << "Checks: " << (failure + univers + narrow) << "\n";
+
+//			EXPECT_EQ(0,failure) <<
+//				"Failures:  " << failure << "\n" <<
+//				"Universal: " << univers << "\n" <<
+//				"OK:        " << narrow;
+
+		}
+
+	}
+
+
+
 	// the type definition (specifying the parameter type)
 	class StressTests : public ::testing::TestWithParam<IntegrationTestCase> {};
 
-	// define the test case pattern
-	TEST_P(StressTests, References) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		// obtain test case
-		driver::integration::IntegrationTestCase testCase = GetParam();
-		SCOPED_TRACE("Testing Case: " + testCase.getName());
-		LOG(INFO) << "Testing Case: " + testCase.getName();
-
-		ProgramPtr code = testCase.load(manager);
-
-
-		const auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
-		ExpressionPtr ref_deref  = refExt.getRefDeref();
-		ExpressionPtr ref_assign = refExt.getRefAssign();
-
-		TypePtr boolean = manager.getLangBasic().getBool();
-
-		int narrow = 0;
-		int failure = 0;
-		int univers = 0;
-
-		an::HaskellEngine::context_type ctxt;
-
-		// locate all ref_deref and ref_assign symbols
-		visitDepthFirst(NodeAddress(code), [&](const CallExprAddress& call) {
-			auto trg = call->getFunctionExpr().as<ExpressionPtr>();
-			if (*trg == *ref_deref || *trg == *ref_assign) {
-
-				auto list = an::getReferencedMemoryLocations<an::HaskellEngine>(ctxt,call->getArgument(0));
-				if (list.isUniversal()) {
-					univers++;
-				} else if (list.empty()) {
-					failure++;
-				} else {
-					narrow++;
-				}
-
-			}
-		});
-
-		std::cout << "Checks: " << (failure + univers + narrow) << "\n";
-
-//		EXPECT_EQ(0,failure) <<
-//			"Failures:  " << failure << "\n" <<
-//			"Universal: " << univers << "\n" <<
-//			"OK:        " << narrow;
-
+	TEST_P(StressTests, Dummy) {
+		// one has to be here
 	}
+
+#ifdef INSIEME_ANALYSIS_DATALOG
+	TEST_P(StressTests, Datalog) {
+		// -- not implemented for datalog yet --
+		// run<an::DatalogEngine>(GetParam());
+	}
+#endif
+
+#ifdef INSIEME_ANALYSIS_DATALOG
+	TEST_P(StressTests, Haskell) {
+		run<an::HaskellEngine>(GetParam());
+	}
+#endif
 
 	INSTANTIATE_TEST_CASE_P(OverallTest, StressTests, ::testing::ValuesIn(getAllCases()));
 
