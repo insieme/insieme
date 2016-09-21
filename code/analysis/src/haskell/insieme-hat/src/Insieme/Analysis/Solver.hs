@@ -91,28 +91,26 @@ module Insieme.Analysis.Solver (
 
 ) where
 
-import Control.Exception
-
 import Prelude hiding (lookup)
-
 import Debug.Trace
-import Data.List hiding (insert,lookup) 
+
+import Control.Exception
+import Control.Monad (void)
 import Data.Dynamic
 import Data.Function
-import Data.Tuple
+import Data.List hiding (insert,lookup)
 import Data.Maybe
+import Data.Tuple
+import System.CPUTime
 import System.Directory (doesFileExist)
 import System.IO.Unsafe (unsafePerformIO)
-import System.CPUTime
 import System.Process
 import Text.Printf
---import qualified Data.Map.Lazy as Map
-import qualified Data.Map.Strict as Map
-import qualified Data.IntMap as IntMap
-import qualified Data.Set as Set
-import qualified Data.Hashable as Hash
-
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Hashable as Hash
+import qualified Data.IntMap as IntMap
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 import Insieme.Utils
 import Insieme.Inspire.NodeAddress
@@ -524,7 +522,7 @@ solveStep :: SolverState -> Dependencies -> [IndexedVar] -> SolverState
 
 -- empty work list
 -- solveStep s _ [] | trace (dumpToJsonFile s "ass_meta") $ False = undefined                                           -- debugging assignment as meta-info for JSON dump
--- solveStep s _ [] | trace (dumpSolverState True s "graph") False = undefined                                          -- debugging assignment as a graph plot
+-- solveStep s _ [] | trace (dumpSolverState False s "graph") False = undefined                                          -- debugging assignment as a graph plot
 -- solveStep s _ [] | trace (dumpSolverState True s "graph") $ trace (dumpToJsonFile s "ass_meta") $ False = undefined  -- debugging both
 -- solveStep s _ [] | trace (showSolverStatistic s) $ False = undefined                                                 -- debugging performance data
 solveStep s _ [] = s                                                                                                    -- work list is empty
@@ -680,28 +678,33 @@ toDotGraph (SolverState a@( Assignment m ) varIndex _ _) = "digraph G {\n\t"
 
 
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
-dumpSolverState :: Bool -> SolverState -> String -> String
+dumpSolverState :: Bool -> SolverState -> FilePath -> String
 dumpSolverState overwrite s f = unsafePerformIO $ do
-  dot <- if not overwrite then nonexistFile f "dot" else return (f ++ ".dot")
-  let pdf = replaceSuffix dot "pdf"
-  writeFile dot (toDotGraph s)
-  system ("dot -Tpdf " ++ dot ++ " -o " ++ pdf)
-  return ("Dumped assignment into " ++ pdf)
+  base <- solverToDot overwrite s f
+  pdfFromDot base
+  return ("Dumped assignment to " ++ base)
 
--- | Replace existing suffix in a file name with a new suffix.
-replaceSuffix :: FilePath -> String -> FilePath
-replaceSuffix fn suf = reverse (dropWhile (/= '.') $ reverse fn) ++ suf
+-- | Dump solver state to the given file name, using the dot format.
+solverToDot :: Bool -> SolverState -> FilePath -> IO FilePath
+solverToDot overwrite s base = target >>=
+  \f -> writeFile (f ++ ".dot") (toDotGraph s) >> return f
+  where
+    target = if not overwrite then nonexistFile base "dot" else return base
+
+-- | Generate a PDF from the dot file with the given basename.
+pdfFromDot :: FilePath -> IO ()
+pdfFromDot b = void (system $ "dot -Tpdf " ++ b ++ ".dot -o " ++ b ++ ".pdf")
 
 -- | Generate a file name which does not exist yet. The arguments to
--- this function is the file name base, and the file extension.
+-- this function is the file name base, and the file extension. The
+-- returned value is the base name only.
 nonexistFile :: String -> String -> IO String
 nonexistFile base ext = tryFile names
     where
-      tryFile (f:fs) =
-        doesFileExist f >>= \e -> if e then tryFile fs else return f
-      names  = simple : [ iter n | n <- [ 1.. ]]
-      simple = concat [base, ".", ext]
-      iter n = concat [base, "-", show n, ".", ext]
+      tryFile (f:fs) = doesFileExist (f ++ "." ++ ext)
+                       >>= \e -> if e then tryFile fs else return f
+      names  = base : [ iter n | n <- [ 1.. ]]
+      iter n = concat [base, "-", show n]
 
 toJsonMetaFile :: SolverState -> String
 toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _) = "{\n"
