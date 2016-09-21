@@ -34,26 +34,26 @@
  - regarding third party software licenses.
  -}
 
-module Insieme.Analysis.Entities.ProgramPoint where
+module Insieme.Analysis.Entities.Memory where
 
+import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Inspire.NodeAddress
 import qualified Data.Hashable as Hash
 
 
--- The execution phase of an expresssion
-data Phase = Pre | Internal | Post 
-    deriving (Eq, Ord, Show)
-
-instance Hash.Hashable Phase where
-    hashWithSalt s Pre      = Hash.hashWithSalt s (  5 :: Int )
-    hashWithSalt s Internal = Hash.hashWithSalt s (  7 :: Int )
-    hashWithSalt s Post     = Hash.hashWithSalt s ( 11 :: Int )
-
-
-
--- A point in the execution of a program
-data ProgramPoint = ProgramPoint NodeAddress Phase
-    deriving (Eq, Ord, Show)
-
-instance Hash.Hashable ProgramPoint where
-    hashWithSalt s (ProgramPoint n p) = Hash.hashWithSalt (Hash.hashWithSalt s n) p
+-- a memory location is simply addressed by its creation point
+newtype MemoryLocation = MemoryLocation NodeAddress
+    deriving (Eq,Ord,Show)
+    
+instance Hash.Hashable MemoryLocation where
+    hashWithSalt s (MemoryLocation n) = Hash.hashWithSalt s n
+    
+    
+-- a memory state point is referencing to the state of a memory location 
+-- at a given program point     
+data MemoryStatePoint = MemoryStatePoint ProgramPoint MemoryLocation
+    deriving (Eq,Ord,Show)
+    
+instance Hash.Hashable MemoryStatePoint where
+    hashWithSalt s (MemoryStatePoint p l) = Hash.hashWithSalt (Hash.hashWithSalt s p) l
+    

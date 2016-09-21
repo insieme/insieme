@@ -38,7 +38,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Insieme.Analysis.Framework.MemoryState where
+module Insieme.Analysis.Framework.MemoryState (
+    
+    MemoryLocation(..),       -- re-exported for convinience
+    MemoryStatePoint(..),
+    memoryStateValue
+    
+) where
 
 import Debug.Trace
 import Data.Typeable
@@ -66,14 +72,9 @@ import Insieme.Analysis.Entities.DataPath hiding (isRoot)
 import qualified Insieme.Analysis.Entities.AccessPath as AP
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import Insieme.Analysis.Entities.FieldIndex
+import Insieme.Analysis.Entities.Memory
 
 
-
-data MemoryLocation = MemoryLocation NodeAddress
-    deriving (Eq,Ord,Show)
-
-data MemoryState = MemoryState ProgramPoint MemoryLocation
-    deriving (Eq,Ord,Show)
 
 
 
@@ -113,16 +114,16 @@ memoryStateAnalysis a = Solver.mkAnalysisIdentifier (MemoryStateAnalysis a) ('M'
 --
 
 memoryStateValue :: (ComposedValue.ComposedValue v i a, Typeable d)
-         => MemoryState                                 -- ^ the program point and memory location interested in
+         => MemoryStatePoint                            -- ^ the program point and memory location interested in
          -> DataFlowAnalysis d v                        -- ^ the underlying data flow analysis this memory state analysis is cooperating with
          -> Solver.TypedVar v                           -- ^ the analysis variable representing the requested state
 
-memoryStateValue ms@(MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) analysis = var
+memoryStateValue ms@(MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) analysis = var
 
     where
 
         -- extend the underlysing analysis's identifier for the memory state identifier
-        varId = Solver.mkIdentifier (memoryStateAnalysis analysis) addr ((show p) ++ " " ++ show ml)
+        varId = Solver.mkIdentifierFromMemoryStatePoint (memoryStateAnalysis analysis) ms
 
         var = Solver.mkVariable varId [con] Solver.bot
         con = Solver.createConstraint dep val var
@@ -159,7 +160,7 @@ memoryStateValue ms@(MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
 
                 getDeclaredValueVar addr =
                     if isMaterializingDeclaration $ getNodePair addr
-                    then memoryStateValue (MemoryState (ProgramPoint addr Post) (MemoryLocation addr)) analysis
+                    then memoryStateValue (MemoryStatePoint (ProgramPoint addr Post) (MemoryLocation addr)) analysis
                     else variableGenerator analysis (goDown 1 addr)
 
         -- partial assignment support --
@@ -196,7 +197,7 @@ memoryStateValue ms@(MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
 
         elemValueVar assign = variableGenerator analysis $ goDown 3 assign
 
-        predStateVar assign = memoryStateValue (MemoryState (ProgramPoint assign Internal) ml) analysis
+        predStateVar assign = memoryStateValue (MemoryStatePoint (ProgramPoint assign Internal) ml) analysis
 
 
 
@@ -217,35 +218,35 @@ reachingDefinitionAnalysis = Solver.mkAnalysisIdentifier ReachingDefinitionAnaly
 -- * Reaching Definition Variable Generator
 --
 
-reachingDefinitions :: (FieldIndex i) => MemoryState -> Solver.TypedVar (Definitions i)
-reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case getNodeType addr of
+reachingDefinitions :: (FieldIndex i) => MemoryStatePoint -> Solver.TypedVar (Definitions i)
+reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case getNodeType addr of
 
         -- a declaration could be an assignment if it is materializing
         IR.Declaration | addr == loc && p == Post ->
-            Solver.mkVariable (idGen addr) [] (USet.singleton $ Declaration addr)
+            Solver.mkVariable varId [] (USet.singleton $ Declaration addr)
 
         -- a call could be an assignment if it is materializing
         IR.CallExpr | addr == loc && p == Post && isMaterializingCall (getNodePair addr) ->
-            Solver.mkVariable (idGen addr) [] (USet.singleton $ MaterializingCall addr)
+            Solver.mkVariable varId [] (USet.singleton $ MaterializingCall addr)
 
         -- the call could also be the creation point if it is not materializing
         IR.CallExpr | addr == loc && p == Post ->
-            Solver.mkVariable (idGen addr) [] (USet.singleton Creation)
+            Solver.mkVariable varId [] (USet.singleton Creation)
 
         -- the entry point is the creation of everything that reaches this point
         _ | p == Pre && IR.isEntryPoint addr -> 
-            Solver.mkVariable (idGen addr) [] (USet.singleton $ Initial)
+            Solver.mkVariable varId [] (USet.singleton $ Initial)
 
         -- skip everything that can statically be considered assignment free
         _ | p == Post && isAssignmentFree addr && (not isParentOfLocation) -> var
             where
-                var = Solver.mkVariable (idGen addr) [con] Solver.bot
-                con = Solver.forward (reachingDefinitions $ MemoryState (ProgramPoint addr Pre) ml) var
+                var = Solver.mkVariable varId [con] Solver.bot
+                con = Solver.forward (reachingDefinitions $ MemoryStatePoint (ProgramPoint addr Pre) ml) var
 
         -- to prune the set of variables, we check whether the invoced callable may update the traced reference
         IR.CallExpr | p == Internal && (not isParentOfLocation)-> var
             where
-                var = Solver.mkVariable (idGenExt pp "switch") [con] Solver.bot
+                var = Solver.mkVariable varId [con] Solver.bot
                 con = Solver.createEqualityConstraint dep val var
                 
                 dep a = (Solver.toVar writeSetVar) : 
@@ -260,7 +261,7 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
                 
                 -- utils for skip case --
                 
-                skipPredecessorVar = reachingDefinitions $ MemoryState (ProgramPoint (goDown 1 addr) Post) ml
+                skipPredecessorVar = reachingDefinitions $ MemoryStatePoint (ProgramPoint (goDown 1 addr) Post) ml
                 skipPredecessorVal a = Solver.get a skipPredecessorVar 
                 
                 -- utils for non-skip case --
@@ -276,10 +277,10 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
 
         isParentOfLocation = loc `isChildOf` addr
 
-        analysis pp = reachingDefinitions (MemoryState pp ml)
+        analysis pp = reachingDefinitions (MemoryStatePoint pp ml)
 
-        idGenExt pp s = Solver.mkIdentifierFromList reachingDefinitionAnalysis [addr,loc] $ ("/" ++ (show p) ++ s)
-        idGen pp = idGenExt pp ""
+        idGen pp = Solver.mkIdentifierFromMemoryStatePoint reachingDefinitionAnalysis (MemoryStatePoint pp ml) 
+        varId = idGen pp
 
         extract = ComposedValue.toValue
         
@@ -439,11 +440,11 @@ writeSet addr = case getNodeType addr of
         
         empty = Solver.mkVariable (idGen addr) [] (USet.empty) 
 
-        idGen a = Solver.mkIdentifier writeSetAnalysis a ""
+        idGen a = Solver.mkIdentifierFromExpression writeSetAnalysis a
 
 
 
 -- killed definitions
 
-killedDefinitions :: MemoryState -> Solver.TypedVar (Definitions i)
-killedDefinitions (MemoryState pp ml) = undefined
+killedDefinitions :: MemoryStatePoint -> Solver.TypedVar (Definitions i)
+killedDefinitions (MemoryStatePoint pp ml) = undefined

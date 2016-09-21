@@ -108,7 +108,7 @@ mkDataFlowAnalysis a s g = res
 
 -- a function creation an identifier for a variable of a data flow analysis
 mkVarIdentifier :: DataFlowAnalysis a v -> NodeAddress -> Solver.Identifier
-mkVarIdentifier a n = Solver.mkIdentifier (analysisIdentifier a) n ""
+mkVarIdentifier a n = Solver.mkIdentifierFromExpression (analysisIdentifier a) n
 
 
 -- a function creating a data flow analysis variable representing a constant value 
@@ -165,7 +165,7 @@ dataflowValue addr analysis ops = case getNodePair addr of
                 go e = map resolve e
 
                 resolve (ExitPoint.ExitPoint r) = case getNodePair r of
-                    IR.NT IR.Declaration  _ -> memoryStateValue (MemoryState (ProgramPoint r Post) (MemoryLocation r)) analysis
+                    IR.NT IR.Declaration  _ -> memoryStateValue (MemoryStatePoint (ProgramPoint r Post) (MemoryLocation r)) analysis
                     _                      -> varGen r
 
 
@@ -225,7 +225,7 @@ dataflowValue addr analysis ops = case getNodePair addr of
         con = Solver.forward
             (
                 if Reference.isMaterializingDeclaration decl
-                then memoryStateValue (MemoryState (ProgramPoint addr Post) (MemoryLocation addr)) analysis
+                then memoryStateValue (MemoryStatePoint (ProgramPoint addr Post) (MemoryLocation addr)) analysis
                 else varGen (goDown 1 addr)
             )
             var
@@ -304,7 +304,7 @@ dataflowValue addr analysis ops = case getNodePair addr of
                 where
                     targets = targetRefVal a
 
-            memStateVarOf r = memoryStateValue (MemoryState (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis
+            memStateVarOf r = memoryStateValue (MemoryStatePoint (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis
 
 
     -- support the tuple_member_access operation (read from tuple component)

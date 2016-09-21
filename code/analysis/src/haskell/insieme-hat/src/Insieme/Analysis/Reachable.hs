@@ -133,7 +133,7 @@ reachableIn a = case getNodeType parent of
 
 
 reachableInIdGen :: NodeAddress -> Solver.Identifier
-reachableInIdGen a = Solver.mkIdentifier reachableInAnalysis a ""
+reachableInIdGen a = Solver.mkIdentifierFromExpression reachableInAnalysis a
 
 
 
@@ -193,5 +193,5 @@ reachableOut a = case getNodeType a of
 
     where
 
-        idGen a = Solver.mkIdentifier reachableOutAnalysis a ""
+        idGen a = Solver.mkIdentifierFromExpression reachableOutAnalysis a
 

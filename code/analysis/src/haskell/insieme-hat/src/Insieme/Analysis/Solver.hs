@@ -52,8 +52,9 @@ module Insieme.Analysis.Solver (
 
     -- identifiers
     Identifier,
-    mkIdentifier,
-    mkIdentifierFromList,
+    mkIdentifierFromExpression,
+    mkIdentifierFromProgramPoint,
+    mkIdentifierFromMemoryStatePoint,
 
     -- variables
     Var,
@@ -113,7 +114,10 @@ import qualified Data.Hashable as Hash
 
 import qualified Data.ByteString.Char8 as BS
 
+import Insieme.Utils
 import Insieme.Inspire.NodeAddress
+import Insieme.Analysis.Entities.Memory
+import Insieme.Analysis.Entities.ProgramPoint
 
 
 -- Lattice --------------------------------------------------
@@ -146,65 +150,105 @@ class (Lattice v) => ExtLattice v where
 -- Analysis Identifier -----
 
 data AnalysisIdentifier = AnalysisIdentifier {
-    idToken :: TypeRep,
-    idName  :: String
+    aidToken :: TypeRep,
+    aidName  :: String,
+    aidHash  :: Int
 }
 
 instance Eq AnalysisIdentifier where
-    (==) = (==) `on` idToken
+    (==) = (==) `on` aidToken
 
 instance Ord AnalysisIdentifier where
-    compare = compare `on` idToken
+    compare = compare `on` aidToken
 
 instance Show AnalysisIdentifier where
-    show = idName
+    show = aidName
 
 
 mkAnalysisIdentifier :: (Typeable a) => a -> String -> AnalysisIdentifier
-mkAnalysisIdentifier a n = AnalysisIdentifier (typeOf a) n
+mkAnalysisIdentifier a n = AnalysisIdentifier {
+        aidToken = (typeOf a), aidName = n , aidHash = (Hash.hash n)
+    }
 
 
 -- Identifier -----
 
+
+data IdentifierValue = 
+          IDV_Expression NodeAddress
+        | IDV_ProgramPoint ProgramPoint
+        | IDV_MemoryStatePoint MemoryStatePoint
+        | IDV_Other BS.ByteString  
+    deriving (Eq,Ord,Show)
+
+
+referencedAddress :: IdentifierValue -> Maybe NodeAddress
+referencedAddress ( IDV_Expression   a )                                            = Just a
+referencedAddress ( IDV_ProgramPoint (ProgramPoint a _) )                           = Just a
+referencedAddress ( IDV_MemoryStatePoint (MemoryStatePoint (ProgramPoint a _) _ ) ) = Just a
+referencedAddress ( IDV_Other _ )                                                   = Nothing
+
+
+
 data Identifier = Identifier {
     analysis :: AnalysisIdentifier,
-    address  :: [NodeAddress],
-    extra    :: BS.ByteString,
-    hash     :: Int
+    idValue  :: IdentifierValue,
+    idHash   :: Int
 }
 
 
 instance Eq Identifier where
-    (==) (Identifier a1 n1 s1 h1) (Identifier a2 n2 s2 h2) =
-            h1 == h2 && n1 == n2 && a1 == a2 && s1 == s2
+    (==) (Identifier a1 v1 h1) (Identifier a2 v2 h2) =
+            h1 == h2 && v1 == v2 && a1 == a2
 
 instance Ord Identifier where
-    compare (Identifier a1 n1 s1 h1) (Identifier a2 n2 s2 h2) =
-            if r0 == EQ
-               then if r1 == EQ then if r2 == EQ then r3 else r2 else r1
-               else r0
+    compare (Identifier a1 v1 h1) (Identifier a2 v2 h2) =
+            r0 `thenCompare` r1 `thenCompare` r2
         where
             r0 = compare h1 h2
-            r1 = compare n1 n2
+            r1 = compare v1 v2
             r2 = compare a1 a2
-            r3 = compare s1 s2
 
 instance Show Identifier where
-        show (Identifier a [] s _) = (show a) ++ "/" ++ (BS.unpack s)
-        show (Identifier a ns s _) = (show a) ++ "@" ++ (intercalate "/" (prettyShow <$> ns)) ++ (BS.unpack s)
+        show (Identifier a v _) = (show a) ++ "/" ++ (show v)
 
 
+mkIdentifierFromExpression :: AnalysisIdentifier -> NodeAddress -> Identifier
+mkIdentifierFromExpression a n = Identifier {
+        analysis = a,
+        idValue = IDV_Expression n,
+        idHash = Hash.hashWithSalt (aidHash a) n
+    } 
+
+mkIdentifierFromProgramPoint :: AnalysisIdentifier -> ProgramPoint -> Identifier
+mkIdentifierFromProgramPoint a p = Identifier {
+    analysis = a,
+    idValue = IDV_ProgramPoint p,
+    idHash = Hash.hashWithSalt (aidHash a) p
+}
+
+mkIdentifierFromMemoryStatePoint :: AnalysisIdentifier -> MemoryStatePoint -> Identifier
+mkIdentifierFromMemoryStatePoint a m = Identifier {
+    analysis = a,
+    idValue = IDV_MemoryStatePoint m,
+    idHash = Hash.hashWithSalt (aidHash a) m
+}
+
+address :: Identifier -> Maybe NodeAddress
+address = referencedAddress . idValue
+
+{-
 mkIdentifierFromList :: AnalysisIdentifier -> [NodeAddress] -> String -> Identifier
 mkIdentifierFromList a n s = Identifier a n bs h
   where
     bs = BS.pack s
-    h1 = Hash.hash $ idName a
+    h1 = aidHash a
     h2 = Hash.hashWithSalt h1 $ getPathReversed <$> n
     h = Hash.hashWithSalt h2 s
 
 mkIdentifier :: AnalysisIdentifier -> NodeAddress -> String -> Identifier
 mkIdentifier a n s = mkIdentifierFromList a [n] s
-
+-}
 
 -- Analysis Variables ---------------------------------------
 
@@ -261,10 +305,10 @@ newtype VarMap a = VarMap (IntMap.IntMap (Map.Map Var a))
 emptyVarMap = VarMap IntMap.empty
 
 lookup :: Var -> VarMap a -> Maybe a
-lookup k (VarMap m) = (Map.lookup k) =<< (IntMap.lookup (hash $ index k) m)
+lookup k (VarMap m) = (Map.lookup k) =<< (IntMap.lookup (idHash $ index k) m)
 
 insert :: Var -> a -> VarMap a -> VarMap a
-insert k v (VarMap m) = VarMap (IntMap.insertWith go (hash $ index k) (Map.singleton k v) m)
+insert k v (VarMap m) = VarMap (IntMap.insertWith go (idHash $ index k) (Map.singleton k v) m)
     where
         go n o = Map.insert k v o
 
@@ -675,14 +719,11 @@ toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _) = "{\n"
 
         store = foldr go Map.empty vars
             where
-                go v m = if null $ addr v then m else Map.insert k (msg : Map.findWithDefault [] k m) m
+                go v m = if isJust $ addr v then m else Map.insert k (msg : Map.findWithDefault [] k m) m
                     where
-                        k = (head $ addr v)
+                        k = fromJust $ addr v
                         i = index v
-                        s = BS.unpack $ extra i
-                        ext = if null s then "" else '/' : s
-                        msg = (show . analysis $ i) ++ ext ++
-                            " = " ++ (valuePrint v a)
+                        msg = (show . analysis $ i) ++ " = " ++ (valuePrint v a)
 
         print (a,ms) = "      \"" ++ (show a) ++ "\" : \"" ++ ( intercalate "<br>" ms) ++ "\""
 

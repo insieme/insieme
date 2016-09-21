@@ -275,7 +275,7 @@ writeSetSummary addr = case getNodeType addr of
     nothing    = Solver.mkVariable (idGen addr) [] empty
     everything = Solver.mkVariable (idGen addr) [] Unknown
 
-    idGen a = Solver.mkIdentifier writeSetAnalysis a ""
+    idGen a = Solver.mkIdentifierFromExpression writeSetAnalysis a
     
     -- get list of calls within current node --
     calls = IRUtils.foldAddressPrune collect filter addr

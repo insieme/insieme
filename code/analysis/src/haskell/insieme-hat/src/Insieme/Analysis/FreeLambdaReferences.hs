@@ -143,7 +143,7 @@ freeLambdaReferences addr = case getNodeType addr of
 
         val a = join $ get a <$> deps 
 
-        varId = mkIdentifier analysis addr ""
+        varId = mkIdentifierFromExpression analysis addr
 
         analysis = mkAnalysisIdentifier FreeLambdaReferenceAnalysis "FreeLambdaRefs" 
         

@@ -124,7 +124,7 @@ exitPoints addr = case getNodeType addr of
 
   where
 
-    id = Solver.mkIdentifier exitPointAnalysis addr ""
+    id = Solver.mkIdentifierFromExpression exitPointAnalysis addr
 
 
 

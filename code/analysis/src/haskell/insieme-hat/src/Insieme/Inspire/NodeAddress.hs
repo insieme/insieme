@@ -70,6 +70,8 @@ import Debug.Trace
 import Data.Function (on)
 import Data.List (foldl',isSuffixOf)
 import Data.Maybe
+import Insieme.Utils
+import qualified Data.Hashable as Hash
 import qualified Data.Map as Map
 import qualified Insieme.Inspire as IR
 
@@ -90,7 +92,7 @@ instance Eq NodeAddress where
         rootID = IR.getID . getRoot
 
 instance Ord NodeAddress where
-    compare x y = if r1 == EQ then if r2 == EQ then r3 else r2 else r1
+    compare x y = r1 `thenCompare` r2 `thenCompare` r3
         where
             r1 = compare (nodeID x) (nodeID y)
             r2 = compare (getPathReversed x) (getPathReversed y)
@@ -101,6 +103,10 @@ instance Ord NodeAddress where
 
 instance Show NodeAddress where
     show = prettyShow
+    
+instance Hash.Hashable NodeAddress where
+    hashWithSalt s n = Hash.hashWithSalt s $ getPathReversed n
+    hash n = Hash.hash $ getPathReversed n
 
 -- | Create a 'NodeAddress' from a list of indizes and a root node.
 mkNodeAddress :: [Int] -> IR.Inspire -> NodeAddress

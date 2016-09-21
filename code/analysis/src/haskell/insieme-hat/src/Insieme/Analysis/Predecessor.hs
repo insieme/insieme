@@ -320,7 +320,7 @@ postContinueStmt a = map (`ProgramPoint` Post)
 
 -- | Variable ID generator
 idGen :: ProgramPoint -> Solver.Identifier
-idGen (ProgramPoint a p) = Solver.mkIdentifier predecessorAnalysis a (show p)
+idGen pp = Solver.mkIdentifierFromProgramPoint predecessorAnalysis pp
 
 -- | Unhandled cases should print an error message for easier debugging.
 unhandled :: String -> ProgramPoint -> IR.NodeType

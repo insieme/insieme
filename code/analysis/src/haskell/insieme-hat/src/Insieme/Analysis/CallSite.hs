@@ -100,7 +100,7 @@ callSites addr = case getNodeType addr of
 
   where
 
-    id = Solver.mkIdentifier callSiteAnalysis addr ""
+    id = Solver.mkIdentifierFromExpression callSiteAnalysis addr
 
     -- navigate to the enclosing expression    
     e = case getNodeType addr of 

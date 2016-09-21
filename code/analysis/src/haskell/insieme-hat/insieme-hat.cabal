@@ -16,6 +16,7 @@ library
                         Insieme.Analysis.Entities.AccessPath,
                         Insieme.Analysis.Entities.DataPath,
                         Insieme.Analysis.Entities.FieldIndex,
+                        Insieme.Analysis.Entities.Memory,
                         Insieme.Analysis.Entities.ProgramPoint,
                         Insieme.Analysis.Entities.SymbolicFormula,
                         Insieme.Analysis.AccessPath,
@@ -48,7 +49,8 @@ library
                         Insieme.Utils.Arithmetic,
                         Insieme.Utils.ParseInt,
                         Insieme.Utils.BoundSet,
-                        Insieme.Utils.UnboundSet
+                        Insieme.Utils.UnboundSet,
+                        Insieme.Utils
     build-depends:      attoparsec >= 0.13,
                         attoparsec-binary >= 0.2,
                         base >= 4.7,
