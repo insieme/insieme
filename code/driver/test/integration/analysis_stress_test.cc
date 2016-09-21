@@ -133,7 +133,7 @@ namespace integration {
 	}
 #endif
 
-#ifdef INSIEME_ANALYSIS_DATALOG
+#ifdef INSIEME_ANALYSIS_HASKELL
 	TEST_P(StressTests, Haskell) {
 		run<an::HaskellEngine>(GetParam());
 	}
