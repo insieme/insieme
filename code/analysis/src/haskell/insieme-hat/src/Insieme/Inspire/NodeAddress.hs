@@ -50,6 +50,7 @@ module Insieme.Inspire.NodeAddress (
     getNodeType,
     isRoot,
     getRoot,
+    getRootAddress,
     isChildOf,
     prettyShow,
     goUp,
@@ -59,7 +60,7 @@ module Insieme.Inspire.NodeAddress (
     goRight,
     append,
     crop,
-    
+
     Builtin,
     getBuiltin,
     isBuiltin,
@@ -103,7 +104,7 @@ instance Ord NodeAddress where
 
 instance Show NodeAddress where
     show = prettyShow
-    
+
 instance Hash.Hashable NodeAddress where
     hashWithSalt s n = Hash.hashWithSalt s $ getPathReversed n
     hash n = Hash.hash $ getPathReversed n
@@ -129,7 +130,7 @@ numChildren :: NodeAddress -> Int
 numChildren = length . IR.getChildren . getNodePair
 
 getChildren :: NodeAddress -> [NodeAddress]
-getChildren a = (flip goDown) a <$> [0..numChildren a - 1] 
+getChildren a = (flip goDown) a <$> [0..numChildren a - 1]
 
 getIndex :: NodeAddress -> Int
 getIndex = head . getPathReversed
@@ -143,6 +144,9 @@ isRoot = isNothing . getParent
 getRoot :: NodeAddress -> IR.Tree
 getRoot = IR.getTree . getInspire
 
+getRootAddress :: NodeAddress -> NodeAddress
+getRootAddress a = mkNodeAddress [] (getInspire a)
+
 isChildOf :: NodeAddress -> NodeAddress -> Bool
 a `isChildOf` b = getRoot a == getRoot b && (getPathReversed b `isSuffixOf` getPathReversed a)
 
@@ -150,7 +154,7 @@ prettyShow :: NodeAddress -> String
 prettyShow na = '0' : concat ['-' : show x | x <- getPath na]
 
 goUp :: NodeAddress -> NodeAddress
-goUp na | isRoot na = trace "No parent for Root" undefined 
+goUp na | isRoot na = trace "No parent for Root" undefined
 goUp na = fromJust (getParent na)
 
 goDown :: Int -> NodeAddress -> NodeAddress
@@ -183,7 +187,7 @@ append a b = NodeAddress {
             getNodePair = getNodePair b,
             getInspire = getInspire a,
             getParent = getParent b,
-            getAbsoluteRootPath = getAbsoluteRootPath a 
+            getAbsoluteRootPath = getAbsoluteRootPath a
         }
 
 crop :: NodeAddress -> NodeAddress
@@ -197,26 +201,26 @@ data Builtin = Builtin IR.Tree | NoSuchBuiltin
 getBuiltin :: NodeAddress -> String -> Builtin
 getBuiltin addr name = case tree of
         Just t  -> Builtin t
-        Nothing -> NoSuchBuiltin 
+        Nothing -> NoSuchBuiltin
     where
         tree = Map.lookup name (IR.getBuiltins $ getInspire addr)
-        
+
 
 isBuiltin :: NodeAddress -> Builtin -> Bool
 isBuiltin _ NoSuchBuiltin = False
 isBuiltin a b@(Builtin t) = case getNodeType a of
-     IR.Lambda | depth a >= 3 -> isBuiltin (goUp $ goUp $ goUp $ a) b 
-     _                        -> getNodePair a == t    
+     IR.Lambda | depth a >= 3 -> isBuiltin (goUp $ goUp $ goUp $ a) b
+     _                        -> getNodePair a == t
 
 isBuiltinByName :: NodeAddress -> String -> Bool
 isBuiltinByName a n = isBuiltin a $ getBuiltin a n
 
 -- lookupBuiltin :: NodeAddress -> String -> Maybe IR.Tree
 -- lookupBuiltin addr needle = Map.lookup needle (IR.getBuiltins $ getInspire addr)
--- 
--- 
--- 
+--
+--
+--
 -- isBuiltin :: NodeAddress -> String -> Bool
 -- isBuiltin addr needle = case getNodeType addr of
---     IR.Lambda | depth addr >= 3 -> isBuiltin (goUp $ goUp $ goUp $ addr) needle 
+--     IR.Lambda | depth addr >= 3 -> isBuiltin (goUp $ goUp $ goUp $ addr) needle
 --     _         -> fromMaybe False $ (== getNodePair addr) <$> lookupBuiltin addr needle

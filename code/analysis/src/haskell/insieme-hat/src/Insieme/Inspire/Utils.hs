@@ -38,6 +38,7 @@
 
 module Insieme.Inspire.Utils (
     collectAddr,
+    collectAll,
     foldTree,
     foldAddress,
     foldTreePrune,
@@ -53,12 +54,14 @@ module Insieme.Inspire.Utils (
 ) where
 
 import Control.Applicative
+import Control.Monad.State.Strict
 import Data.List
 import Data.Maybe
 import Insieme.Inspire.BinaryParser
 import Insieme.Inspire.NodeAddress
 import System.Process
 import qualified Data.ByteString.Char8 as BS8
+import qualified Data.IntMap.Strict as IntMap
 import qualified Insieme.Inspire as IR
 
 -- | Collect all nodes of the given 'IR.NodeType' but prune the tree
@@ -105,8 +108,30 @@ foldAddressPrune collect prune addr = visit addr mempty
     visit base acc = if prune base
                      then acc
                      else collect base $ visitsub base acc
+    -- visitsub base acc = foldr (\i a -> visit (goDown i base) a) acc [0..(numChildren base - 1)]
     visitsub base acc = foldr visit acc (subtrees base)
     subtrees addr = [goDown i addr | i <- [0..(numChildren addr) - 1]]
+
+collectAll :: (IR.Tree -> Bool) -> NodeAddress -> [NodeAddress]
+collectAll pred root = evalState (go root) IntMap.empty
+  where
+    go :: NodeAddress -> State (IntMap.IntMap [NodeAddress]) [NodeAddress]
+    go addr = do
+        cache <- get
+        let hit = IntMap.lookup key cache
+        if isJust hit
+            then return $ fromJust hit
+            else do
+                r <- res
+                modify $ IntMap.insert key r
+                res
+
+      where
+        key = IR.getID $ getNodePair addr
+        res = addAddr <$> map (append addr) <$> concat <$> mapM go (crop <$> getChildren addr)
+
+        addAddr xs = if pred $ getNodePair addr then (addr:xs) else xs
+
 
 --
 -- * Parse IR code

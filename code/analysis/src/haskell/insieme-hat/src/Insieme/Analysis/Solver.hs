@@ -55,6 +55,7 @@ module Insieme.Analysis.Solver (
     mkIdentifierFromExpression,
     mkIdentifierFromProgramPoint,
     mkIdentifierFromMemoryStatePoint,
+    mkIdentifierFromString,
 
     -- variables
     Var,
@@ -230,6 +231,13 @@ mkIdentifierFromMemoryStatePoint a m = Identifier {
     analysis = a,
     idValue = IDV_MemoryStatePoint m,
     idHash = Hash.hashWithSalt (aidHash a) m
+}
+
+mkIdentifierFromString :: AnalysisIdentifier -> String -> Identifier
+mkIdentifierFromString a s = Identifier {
+    analysis = a,
+    idValue = IDV_Other $ BS.pack s,
+    idHash = Hash.hashWithSalt (aidHash a) $ s
 }
 
 address :: Identifier -> Maybe NodeAddress

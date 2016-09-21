@@ -102,76 +102,78 @@ callSites addr = case getNodeType addr of
 
     id = Solver.mkIdentifierFromExpression callSiteAnalysis addr
 
-    -- navigate to the enclosing expression    
-    e = case getNodeType addr of 
-        IR.Lambda   -> fromJust $ getParent =<< getParent =<< getParent addr 
+    -- navigate to the enclosing expression
+    e = case getNodeType addr of
+        IR.Lambda   -> fromJust $ getParent =<< getParent =<< getParent addr
         IR.BindExpr -> addr
-    
+
     i = getIndex e
     p = fromJust $ getParent e
-    
+
     isCall a = getNodeType a == IR.CallExpr
 
 
     -- the number of parameters of this callable
     numParams = numChildren $ goDown 1 addr                     -- TODO: this is wrong in case of variadic parameters!!
-        
 
-    -- distinguish binding case --    
+
+    -- distinguish binding case --
     var =
         if isRoot addr then noCallSitesVar
         else if isStaticallyBound then staticCallSiteVar
         else allCallSitesVar
-    
+
     noCallSitesVar = Solver.mkVariable id [] Solver.bot
-    
+
     recReferences = case getNodeType addr of
         IR.BindExpr -> []          -- bind can not be recursive
         IR.Lambda   -> if isRoot p then [] else res
             where
                 ref = getNodePair $ goDown 0 $ fromJust $ getParent addr
-                def = fromJust $ getParent $ fromJust $ getParent addr 
+                def = fromJust $ getParent $ fromJust $ getParent addr
                 res = foldAddressPrune agg filter def
-                
+
                 agg n l = case getNodeType n of
                     IR.LambdaReference | isUse -> n : l --- TODO: filter out refs in bindings
-                        where 
+                        where
                             isUse = getNodePair n == ref && (getNodeType . fromJust . getParent) n /= IR.LambdaBinding
-                    _                                            -> l 
-                
-                filter n = isType (getNodeType n) || (IR.LambdaExpr == (getNodeType n))      -- TODO: support for lambda references exceeding local scope  
-    
-    
+                    _                                            -> l
+
+                filter n = isType (getNodeType n) || (IR.LambdaExpr == (getNodeType n))      -- TODO: support for lambda references exceeding local scope
+
+
     isStaticallyBound = i == 1 && isCall p && all check recReferences
         where
             check a = getIndex a == 1 && (isCall $ fromJust $ getParent a)
-    
+
     staticCallSiteVar = Solver.mkVariable id [] (res)
         where
             res = Set.fromList $ CallSite p : recCalls
-            recCalls = (CallSite . fromJust . getParent) <$> recReferences 
-    
+            recCalls = (CallSite . fromJust . getParent) <$> recReferences
+
     allCallSitesVar = Solver.mkVariable id [con] Solver.bot
         where
             con = Solver.createConstraint dep val var
-        
-            allCalls = foldTree collector (getInspire addr)
-            collector a calls = case getNodeType a of
-                IR.CallExpr | numChildren a == numParams + 2 -> case getNodeType $ goDown 1 a of
-                    IR.Lambda          -> calls
-                    IR.BindExpr        -> calls
-                    IR.Literal         -> calls
-                    IR.LambdaReference -> calls
-                    _                         -> a : calls
-                _                   -> calls
-        
+
+            allCalls = collectAll callable (getRootAddress addr)
+              where
+                callable node = case IR.getNodeType node of
+                    IR.CallExpr | IR.numChildren node == numParams + 2 ->
+                        case IR.getNodeType $ IR.getChildren node !! 1 of
+                            IR.Lambda          -> False
+                            IR.BindExpr        -> False
+                            IR.Literal         -> False
+                            IR.LambdaReference -> False
+                            _                  -> True
+                    _ -> False
+
             allTrgVars = map (\c -> (c , Callable.callableValue $ goDown 1 c ) ) allCalls
-        
+
             callable = case getNodeType addr of
                 IR.Lambda   -> Callable.Lambda addr
                 IR.BindExpr -> Callable.Closure addr
                 _           -> error "unexpected NodeType"
-        
+
             dep a = map Solver.toVar (map snd allTrgVars)
             val a = foldr go Set.empty allTrgVars
                 where

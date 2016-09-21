@@ -172,6 +172,9 @@ getID = fst . getNodePair
 getNodeType :: Tree -> NodeType
 getNodeType = snd . getNodePair
 
+numChildren :: Tree -> Int
+numChildren = length . getChildren
+
 --
 -- * Inspire
 --
