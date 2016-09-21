@@ -38,6 +38,7 @@
 
 module Main where
 
+import Control.Monad.State.Strict
 import Insieme.Analysis.Entities.FieldIndex (SimpleFieldIndex)
 import qualified Data.ByteString as BS
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -59,23 +60,26 @@ main = do
     -- run parser
     let Right ir = BinPar.parseBinaryDump dump
 
-    let res = Utils.foldTree go ir
+    let targets = Utils.foldTreePrune findTargets (Utils.isType . Addr.getNodeType) ir
+
+    let res = evalState (sequence $ analysis <$> targets) Solver.initState
 
     putStr $ "Errors:  " ++ (show $ length $ filter (=='e') res) ++ "\n"
     putStr $ "Unknown: " ++ (show $ length $ filter (=='u') res) ++ "\n"
     putStr $ "OK:      " ++ (show $ length $ filter (=='o') res) ++ "\n"
 
- where
-    go :: Addr.NodeAddress -> [Char] -> [Char]
-    go addr xs = case Addr.getNodePair addr of
+findTargets :: Addr.NodeAddress -> [Addr.NodeAddress] -> [Addr.NodeAddress]
+findTargets addr xs = case Addr.getNodePair addr of
+    IR.NT IR.CallExpr _ | Addr.isBuiltinByName (Addr.goDown 1 addr) "ref_deref" -> addr : xs
+    _ -> xs
 
-        IR.NT IR.CallExpr _ | Addr.isBuiltinByName (Addr.goDown 1 addr) "ref_deref" -> case () of
-                _ | USet.null res       -> 'e' : xs
-                _ | USet.isUniverse res -> 'u' : xs
-                _                       -> 'o' : xs
-
-        _ -> xs
-
-      where
-        res :: USet.UnboundSet (Ref.Reference SimpleFieldIndex)
-        res = ComposedValue.toValue $ fst $ Solver.resolve Solver.initState (Ref.referenceValue $ Addr.goDown 1 $ Addr.goDown 2 addr)
+analysis :: Addr.NodeAddress -> State Solver.SolverState Char
+analysis addr = do
+    state <- get
+    let (res, state') = Solver.resolve state (Ref.referenceValue $ Addr.goDown 1 $ Addr.goDown 2 addr)
+    put state'
+    let refs = ComposedValue.toValue res :: USet.UnboundSet (Ref.Reference SimpleFieldIndex)
+    return $ case () of _
+                         | USet.null refs       -> 'e'
+                         | USet.isUniverse refs -> 'u'
+                         | otherwise            -> 'o'
