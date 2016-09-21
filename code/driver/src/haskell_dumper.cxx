@@ -153,11 +153,23 @@ int main(int argc, char** argv) {
 	// run pre-processing
 	program = analysis::preProcessing(program);
 
+
+	vector<core::NodeAddress> targets;
+	core::NodePtr ref_deref = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefDeref();
+	core::NodePtr ref_assign = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefAssign();
+
+	core::visitDepthFirst(core::NodeAddress(program), [&](const core::CallExprAddress& call) {
+		auto fun = call->getFunctionExpr();
+		if(*fun == *ref_deref || *fun == *ref_assign) {
+			targets.push_back(call[0]);
+		}
+	});
+
 	if(options.dumpBinaryHaskell == "-") {
-		core::dump::binary::haskell::dumpIR(cout, program);
+		core::dump::binary::haskell::dumpAddresses(cout, targets);
 	} else if(!options.dumpBinaryHaskell.empty()) {
 		ofstream out(options.dumpBinaryHaskell);
-		core::dump::binary::haskell::dumpIR(out, program);
+		core::dump::binary::haskell::dumpAddresses(out, targets);
 	}
 
 	if(options.dumpJson == "-") {

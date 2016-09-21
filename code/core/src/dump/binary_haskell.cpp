@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -43,6 +43,8 @@
 #include "insieme/core/dump/binary_utils.h"
 #include "insieme/core/lang/lang.h"
 
+#include "insieme/utils/assert.h"
+
 using namespace insieme::core::dump::binary::utils;
 
 namespace insieme {
@@ -57,6 +59,21 @@ namespace haskell {
 	}
 
 	void dumpIR(std::ostream& out, const NodePtr& root) {
+		dumpAddress(out, NodeAddress(root));
+	}
+
+	void dumpAddress(std::ostream& out, const NodeAddress& addr) {
+		dumpAddresses(out, { addr });
+	}
+
+	void dumpAddresses(std::ostream& out, const std::vector<NodeAddress>& addr) {
+		assert_false(addr.empty());
+
+		const auto& root = addr[0].getRootNode();
+		for(const auto& a : addr) {
+			assert_eq(a.getRootNode(), root) << "Addresses do not share the same root";
+		}
+
 		binary::dumpIR(out, root);
 
 		// find builtins
@@ -75,6 +92,12 @@ namespace haskell {
 		for(auto& builtin : builtins) {
 			utils::dumpString(out, builtin.first);
 			utils::dumpString(out, toString(builtin.second));
+		}
+
+		// attach addresses
+		write<length_t>(out, addr.size());
+		for(const auto& a : addr) {
+			utils::dumpString(out, toString(a));
 		}
 	}
 

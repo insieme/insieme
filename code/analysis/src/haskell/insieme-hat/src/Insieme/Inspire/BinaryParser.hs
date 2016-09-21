@@ -53,29 +53,37 @@ import qualified Data.ByteString.Char8 as BS8
 import qualified Data.IntMap as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Insieme.Inspire as IR
+import qualified Insieme.Inspire.NodeAddress as Addr
 
 import Prelude hiding (take)
 
 -- | Parse binary dump.
 parseBinaryDump :: BS.ByteString -> Either String IR.Inspire
-parseBinaryDump = parseOnly $ do
+parseBinaryDump bs = (Addr.getInspire . head) <$> parseAddresses bs
+
+parseAddresses :: BS.ByteString -> Either String [Addr.NodeAddress]
+parseAddresses = parseOnly $ do
     -- parse components
     parseHeader
     n            <- anyInt32
     dumpNodes    <- IntMap.fromList <$> zip [0..] <$> count n parseDumpNode
     m            <- anyInt32
     dumpBuiltins <- Map.fromList <$> count m parseBuiltin
+    l            <- anyInt32
+    addresses    <- count l parseNodePath
 
     -- connect components
     let nodes    = connectDumpNodes dumpNodes
     let builtins = resolve nodes <$> dumpBuiltins
+    let ir       = IR.Inspire nodes builtins
 
-    return $ IR.Inspire nodes builtins
+    return $ (\p -> Addr.mkNodeAddress p ir) <$> addresses
 
   where
       resolve :: IR.Tree -> [Int] -> IR.Tree
       resolve node []     = node
       resolve node (x:xs) = resolve (IR.getChildren node !! x) xs
+
 
 --
 -- * Parsing the header
@@ -131,8 +139,14 @@ parseDumpNode = do
 parseBuiltin :: Parser (String, [Int])
 parseBuiltin = do
     key <- parseString
-    val <- tail . splitOn "-" <$> parseString
-    return (key, read <$> val)
+    val <- parseNodePath
+    return (key, val)
+
+-- | TODO rewrite
+parseNodePath :: Parser [Int]
+parseNodePath = do
+    s <- parseString
+    return $ read <$> (tail $ splitOn "-" s)
 
 connectDumpNodes :: IntMap.IntMap DumpNode -> IR.Tree
 connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
