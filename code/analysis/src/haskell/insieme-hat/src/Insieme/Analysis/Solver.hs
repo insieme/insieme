@@ -737,15 +737,15 @@ dumpToJsonFile s file = unsafePerformIO $ do
 
 showSolverStatistic :: SolverState -> String
 showSolverStatistic s = 
-        "==================================================== Solver Statistic ====================================================\n" ++
-        "       Analysis                #Vars              Updates          Updates/Var            ~Time[us]        ~Time/Var[us]" ++
-        "\n==========================================================================================================================\n" ++
+        "===================================================== Solver Statistic =====================================================\n" ++
+        "         Analysis                #Vars              Updates          Updates/Var            ~Time[us]        ~Time/Var[us]" ++
+        "\n============================================================================================================================\n" ++
         ( intercalate "\n" (map print $ Map.toList grouped)) ++
-        "\n--------------------------------------------------------------------------------------------------------------------------\n" ++
-        "         Total: " ++ (printf "%20d" numVars) ++ 
+        "\n----------------------------------------------------------------------------------------------------------------------------\n" ++
+        "           Total: " ++ (printf "%20d" numVars) ++ 
                         (printf " %20d" totalUpdates) ++ (printf " %20.3f" avgUpdates) ++ 
                         (printf " %20d" totalTime) ++ (printf " %20.3f" avgTime) ++
-        "\n==========================================================================================================================\n"
+        "\n============================================================================================================================\n"
     where
         vars = knownVariables $ variableIndex s
         
@@ -753,7 +753,7 @@ showSolverStatistic s =
             where
                 go v m = Map.insertWith (+) ( analysis . index $ v ) (1::Int) m
         
-        print (a,c) = printf "     %10s %20d %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime 
+        print (a,c) = printf " %16s %20d %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime 
             where
                 name = ((show a) ++ ":")
             

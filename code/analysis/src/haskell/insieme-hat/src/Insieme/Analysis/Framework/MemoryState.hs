@@ -279,7 +279,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
         analysis pp = reachingDefinitions (MemoryStatePoint pp ml)
 
-        idGen pp = Solver.mkIdentifierFromMemoryStatePoint reachingDefinitionAnalysis (MemoryStatePoint pp ml) 
+        idGen pp = Solver.mkIdentifierFromMemoryStatePoint reachingDefinitionAnalysis (MemoryStatePoint pp ml)
         varId = idGen pp
 
         extract = ComposedValue.toValue
@@ -358,14 +358,28 @@ isAssignmentFreeFunction addr = case getNodeType addr of
     IR.Literal -> not $ isBuiltinByName addr "ref_assign"
     
     IR.LambdaExpr -> any (isBuiltinByName addr) [
+                                "bool_and",
+                                "bool_or",
+                                "bool_not",
+                                "c_style_assignment",
+                                "enum_to_int",
                                 "ite",
+                                "num_cast",
+                                "ref_array_element",
+                                "ref_kind_cast",
+                                "ref_member_access",
                                 "ref_scalar_to_ref_array",
-                                "ref_array_elem",
-                                "ptr_from_ref",
-                                "ptr_to_ref",
+                                "ref_temp",
+                                "ptr_cast",
+                                "ptr_eq",
+                                "ptr_ne",
                                 "ptr_from_array",
-                                "ptr_to_array",
-                                "ptr_reinterpret"
+                                "ptr_from_ref",
+                                "ptr_null",
+                                "ptr_reinterpret",
+                                "ptr_subscript",
+                                "ptr_to_ref",
+                                "ptr_to_array"
                         ] 
 
     _ -> False

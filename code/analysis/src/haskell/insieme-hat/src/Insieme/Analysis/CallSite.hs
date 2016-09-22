@@ -129,10 +129,10 @@ callSites addr = case getNodeType addr of
     
     con = Solver.createConstraint dep val var
     dep a = (Solver.toVar <$> recReferencesDep) ++ (Solver.toVar <$> callSiteVars a)
-    val a = indirectCalls a 
+    val a = indirectCalls a
     
 
-    
+    -- a test whether the targeted function is a lambda or a bind --
     isLambda = getNodeType addr == IR.Lambda
     
     recReferencesVar = RecLambdaRefs.recursiveCalls addr
@@ -156,7 +156,7 @@ callSites addr = case getNodeType addr of
     allCalls = collectAll callable (getRootAddress addr)
       where
         callable node = case IR.getNodeType node of
-            IR.CallExpr | IR.numChildren node == numParams + 2 ->
+            IR.CallExpr | IR.numChildren node == 2 + numParams ->
                 case IR.getNodeType $ IR.getChildren node !! 1 of
                     IR.Lambda          -> False
                     IR.BindExpr        -> False
@@ -170,14 +170,19 @@ callSites addr = case getNodeType addr of
     
     indirectCalls a = 
         Set.fromList $ if isStaticallyBound a 
-        then CallSite . fromJust . getParent <$> Set.toList (recReferencesVal a)
-        else CallSite <$> reachingCalls
+            then CallSite . fromJust . getParent <$> Set.toList (recReferencesVal a)
+            else (CallSite <$> reachingCalls) ++ (CallSite <$> directRecursiveCalls) 
       where
+      
         reachingCalls = filter f $ allCalls
-        f c = USet.member callable $ ComposedValue.toValue $ Solver.get a $ Callable.callableValue $ goDown 1 c
+          where
+            f c = USet.member callable $ ComposedValue.toValue $ Solver.get a $ Callable.callableValue $ goDown 1 c
+    
+            callable = case getNodeType addr of
+                IR.Lambda   -> Callable.Lambda addr
+                IR.BindExpr -> Callable.Closure addr
+                _           -> error "unexpected NodeType"
 
-        callable = case getNodeType addr of
-            IR.Lambda   -> Callable.Lambda addr
-            IR.BindExpr -> Callable.Closure addr
-            _           -> error "unexpected NodeType"
-
+        directRecursiveCalls = (fromJust . getParent) <$> (filter f $ Set.toList $ recReferencesVal a)
+          where
+            f r = getIndex r == 1 && isCall (fromJust $ getParent r)
