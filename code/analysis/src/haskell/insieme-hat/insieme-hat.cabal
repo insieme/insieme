@@ -31,6 +31,7 @@ library
                         Insieme.Analysis.Identifier,
                         Insieme.Analysis.Predecessor,
                         Insieme.Analysis.Reference,
+                        Insieme.Analysis.RecursiveLambdaReferences,
                         Insieme.Analysis.Framework.Dataflow,
                         Insieme.Analysis.Framework.ProgramPoint,
                         Insieme.Analysis.Framework.MemoryState,
