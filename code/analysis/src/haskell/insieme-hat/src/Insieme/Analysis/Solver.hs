@@ -88,7 +88,8 @@ module Insieme.Analysis.Solver (
     constant,
 
     -- debugging
-    dumpSolverState
+    dumpSolverState,
+    showSolverStatistic
 
 ) where
 

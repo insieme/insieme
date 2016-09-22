@@ -35,6 +35,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <cstdlib>
 #include <iostream>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -107,6 +108,11 @@ namespace integration {
 			});
 
 			std::cout << "Checks: " << (failure + univers + narrow) << "\n";
+
+			// performance data:
+			if (std::getenv("DUMP_STATS")) {
+				ctxt.dumpStatistics();
+			}
 
 //			EXPECT_EQ(0,failure) <<
 //				"Failures:  " << failure << "\n" <<

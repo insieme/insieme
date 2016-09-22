@@ -43,8 +43,15 @@ namespace datalog {
 	/**
 	 * The context for datalog analysis.
 	 */
-	class Context {
-		// empty so far
+	struct Context {
+
+		// -- general context interface requirements --
+
+		void dumpStatistics() const {
+			// this feature is not yet implemented
+			std::cout << "No statistic data available.\n";
+		}
+
 	};
 
 } // end namespace datalog

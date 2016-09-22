@@ -81,6 +81,16 @@ foreign export ccall "hat_initialize_context"
     initializeContext :: Ctx.CContext -> CString -> CSize
                       -> IO (StablePtr Ctx.Context)
 
+
+dumpStatistics :: StablePtr Ctx.Context -> IO ()
+dumpStatistics ctx_hs = do
+    ctx <- deRefStablePtr ctx_hs
+    putStrLn $ Solver.showSolverStatistic $ Ctx.getSolverState ctx
+
+foreign export ccall "hat_print_statistic"
+    dumpStatistics :: StablePtr Ctx.Context -> IO ()
+
+
 mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize
               -> IO (StablePtr Addr.NodeAddress)
 mkNodeAddress ctx_hs path_c length_c = do
