@@ -37,8 +37,10 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Insieme.Inspire.Utils (
-    collectAddr,
+    Pruning(..),
     collectAll,
+    collectAllPrune,
+    collectAddr,
     foldTree,
     foldAddress,
     foldTreePrune,
@@ -64,13 +66,58 @@ import qualified Data.ByteString.Char8 as BS8
 import qualified Data.IntMap.Strict as IntMap
 import qualified Insieme.Inspire as IR
 
+
+data Pruning = NoPrune                      -- continue descending into child nodes 
+             | PruneChildren                -- skip children, but cover current node
+             | PruneHere                    -- skip this and all child nodes
+    deriving (Eq)
+
+
+collectAllPrune :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> NodeAddress -> [NodeAddress]
+collectAllPrune pred filter root = evalState (go root) IntMap.empty
+  where
+    go :: NodeAddress -> State (IntMap.IntMap [NodeAddress]) [NodeAddress]
+    go addr = do
+        cache <- get
+        let hit = IntMap.lookup key cache
+        if isJust hit
+            then return $ fromJust hit
+            else do
+                r <- res
+                modify $ IntMap.insert key r
+                res
+
+      where
+        node = getNodePair addr
+        key = IR.getID node
+        res = addAddr <$> concat <$> grow <$> 
+            if filter node == NoPrune then mapM go (crop <$> getChildren addr) else return []
+        
+        grow lists = (zipWith go) [ goDown i addr | i <- [0..] ] lists
+            where
+                go head tails = append head <$> tails
+
+        addAddr xs = if (filter node /= PruneHere) && (pred $ getNodePair addr) then (addr:xs) else xs
+ 
+
+
+
+collectAll :: (IR.Tree -> Bool) -> NodeAddress -> [NodeAddress]
+collectAll pred root = collectAllPrune pred (\_ -> NoPrune ) root
+
+
+
+
 -- | Collect all nodes of the given 'IR.NodeType' but prune the tree
 -- when encountering one of the other 'IR.NodeType's.
 collectAddr :: IR.NodeType -> [IR.NodeType -> Bool] -> NodeAddress -> [NodeAddress]
-collectAddr ty prune = foldAddressPrune cmpAddTy matchPruneTy
+collectAddr t fs = collectAllPrune pred filter
   where
-    cmpAddTy n = ([n | getNodeType n == ty] ++)
-    matchPruneTy = or . (\n -> map ($n) prune) . getNodeType
+    pred = (==t) . IR.getNodeType
+    filter t = if any (\f -> f $ IR.getNodeType t) fs then PruneHere else NoPrune 
+    
+
+
 
 -- | Fold the given 'Tree'. The accumulator function takes the subtree
 -- and the address of this subtree in the base tree.
@@ -111,30 +158,6 @@ foldAddressPrune collect prune addr = visit addr mempty
     -- visitsub base acc = foldr (\i a -> visit (goDown i base) a) acc [0..(numChildren base - 1)]
     visitsub base acc = foldr visit acc (subtrees base)
     subtrees addr = [goDown i addr | i <- [0..(numChildren addr) - 1]]
-
-collectAll :: (IR.Tree -> Bool) -> NodeAddress -> [NodeAddress]
-collectAll pred root = evalState (go root) IntMap.empty
-  where
-    go :: NodeAddress -> State (IntMap.IntMap [NodeAddress]) [NodeAddress]
-    go addr = do
-        cache <- get
-        let hit = IntMap.lookup key cache
-        if isJust hit
-            then return $ fromJust hit
-            else do
-                r <- res
-                modify $ IntMap.insert key r
-                res
-
-      where
-        key = IR.getID $ getNodePair addr
-        res = addAddr <$> concat <$> grow <$> mapM go (crop <$> getChildren addr)
-        
-        grow lists = (zipWith go) [ goDown i addr | i <- [0..] ] lists
-            where
-                go head tails = append head <$> tails
-
-        addAddr xs = if pred $ getNodePair addr then (addr:xs) else xs
 
 
 --
