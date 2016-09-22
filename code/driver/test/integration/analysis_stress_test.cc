@@ -110,7 +110,7 @@ namespace integration {
 			std::cout << "Checks: " << (failure + univers + narrow) << "\n";
 
 			// performance data:
-			if (std::getenv("DUMP_STATS")) {
+			if (std::getenv("PRINT_STATS")) {
 				ctxt.dumpStatistics();
 			}
 

@@ -69,10 +69,6 @@ namespace integration {
 
 		frontend::ConversionJob toJob(const IntegrationTestCase& testCase) {
 			driver::cmd::Options options = testCase.getOptions();
-			for(auto file : testCase.getFiles()) {
-				options.job.addFile(file.string());
-			}
-
 			std::string step = TEST_STEP_INSIEMECC_RUN_C_CONVERT;
 
 			// add pre-processor definitions
@@ -96,6 +92,9 @@ namespace integration {
 		for(auto includeDir : getIncludeDirs()) {
 			std::string include = "-I" + includeDir.string();
 			args.push_back(include);
+		}
+		for(auto file : getFiles()) {
+			args.push_back(file.string());
 		}
 		if(isEnableOpenMP()) { args.push_back("-fopenmp"); }
 		if(isEnableOpenCL()) { args.push_back("-fopencl=1"); args.push_back("-lOpenCL"); }
