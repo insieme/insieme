@@ -128,7 +128,11 @@ collectAll pred root = evalState (go root) IntMap.empty
 
       where
         key = IR.getID $ getNodePair addr
-        res = addAddr <$> map (append addr) <$> concat <$> mapM go (crop <$> getChildren addr)
+        res = addAddr <$> concat <$> grow <$> mapM go (crop <$> getChildren addr)
+        
+        grow lists = (zipWith go) [ goDown i addr | i <- [0..] ] lists
+            where
+                go head tails = append head <$> tails
 
         addAddr xs = if pred $ getNodePair addr then (addr:xs) else xs
 

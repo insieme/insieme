@@ -68,11 +68,13 @@ namespace haskell {
 
 	void dumpAddresses(std::ostream& out, const std::vector<NodeAddress>& addr) {
 		assert_false(addr.empty());
-
 		const auto& root = addr[0].getRootNode();
-		for(const auto& a : addr) {
-			assert_eq(a.getRootNode(), root) << "Addresses do not share the same root";
-		}
+
+		assert_decl(
+			for(const auto& a : addr) {
+				assert_eq(a.getRootNode(), root) << "Addresses do not share the same root";
+			}
+		);
 
 		binary::dumpIR(out, root);
 

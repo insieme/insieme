@@ -186,7 +186,7 @@ append a b = NodeAddress {
             getPathReversed = (getPathReversed b) ++ (getPathReversed a),
             getNodePair = getNodePair b,
             getInspire = getInspire a,
-            getParent = getParent b,
+            getParent = Just $ append a $ fromJust $ getParent b,
             getAbsoluteRootPath = getAbsoluteRootPath a
         }
 

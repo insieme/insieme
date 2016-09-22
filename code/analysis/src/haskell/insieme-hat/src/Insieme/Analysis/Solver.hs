@@ -109,7 +109,7 @@ import System.Process
 import Text.Printf
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Hashable as Hash
-import qualified Data.IntMap as IntMap
+import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
@@ -243,18 +243,6 @@ mkIdentifierFromString a s = Identifier {
 address :: Identifier -> Maybe NodeAddress
 address = referencedAddress . idValue
 
-{-
-mkIdentifierFromList :: AnalysisIdentifier -> [NodeAddress] -> String -> Identifier
-mkIdentifierFromList a n s = Identifier a n bs h
-  where
-    bs = BS.pack s
-    h1 = aidHash a
-    h2 = Hash.hashWithSalt h1 $ getPathReversed <$> n
-    h = Hash.hashWithSalt h2 s
-
-mkIdentifier :: AnalysisIdentifier -> NodeAddress -> String -> Identifier
-mkIdentifier a n s = mkIdentifierFromList a [n] s
--}
 
 -- Analysis Variables ---------------------------------------
 
