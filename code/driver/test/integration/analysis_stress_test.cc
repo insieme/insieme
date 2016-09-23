@@ -43,6 +43,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/driver/integration/tests.h"
+#include "insieme/core/annotations/source_location.h"
 
 #ifdef INSIEME_ANALYSIS_DATALOG
 #include "insieme/analysis/datalog/interface.h"
@@ -64,17 +65,70 @@ namespace integration {
 	namespace an = insieme::analysis;
 
 
+	// a few configuration flags
+	const char* PRINT_STATS_ENV     = "PRINT_STATS";
+	const char* RUN_BLACKLISTED_ENV = "RUN_BLACKLISTED";
+	const char* WALL_ENV            = "WALL";
+	const char* PEDANTIC_ENV        = "PEDANTIC";
+
+
 	namespace {
 
 		template<typename Engine>
+		bool isBlackListed(const driver::integration::IntegrationTestCase& test) {
+
+			// check kill switch
+			if (std::getenv(RUN_BLACKLISTED_ENV)) {
+				return false;
+			}
+
+			std::vector<string> blacklist;
+
+			// get blacklist
+			#ifdef INSIEME_ANALYSIS_HASKELL
+				if (typeid(Engine) == typeid(an::HaskellEngine)) {
+					blacklist = std::vector<string>{
+						"bots/sort",
+						"cilk/pyramid",
+						"cpp/bugs/dowhile_this",
+						"omp/pyramids",
+						"pyramids"
+					};
+				}
+			#endif
+
+			// check blacklist
+			for(const auto& name : blacklist) {
+				if (test.getName() == name) return true;
+			}
+			return false;
+
+		}
+
+
+
+		template<typename Engine>
 		void run(const driver::integration::IntegrationTestCase& testCase) {
-			NodeManager manager;
-			IRBuilder builder(manager);
+
+			bool wall = std::getenv(WALL_ENV);
+			bool pedantic = std::getenv(PEDANTIC_ENV);
+
+			bool fail_on_failure  = wall || pedantic;
+			bool fail_on_universe = pedantic;
+
 
 			// obtain test case
 			SCOPED_TRACE("Testing Case: " + testCase.getName());
 			LOG(INFO) << "Testing Case: " + testCase.getName();
 
+			// check blacklist
+			if (isBlackListed<Engine>(testCase)) {
+				std::cout << "Skipping black-listed test case: " << testCase << "\n";
+				return;
+			}
+
+			NodeManager manager;
+			IRBuilder builder(manager);
 			ProgramPtr code = testCase.load(manager);
 
 
@@ -95,29 +149,55 @@ namespace integration {
 				auto trg = call->getFunctionExpr().as<ExpressionPtr>();
 				if (*trg == *ref_deref || *trg == *ref_assign) {
 
-					auto list = an::getReferencedMemoryLocations<Engine>(ctxt,call->getArgument(0));
-					if (list.isUniversal()) {
-						univers++;
-					} else if (list.empty()) {
+					auto arg = call->getArgument(0);
+					auto list = an::getReferencedMemoryLocations<Engine>(ctxt,arg);
+					if (list.empty()) {
+
+						// this is bad
 						failure++;
+
+						std::cout << "Presumably invalid empty reference obtained for: " << arg << "\n";
+						std::cout << "   Source code location: " << *core::annotations::getLocation(arg) << "\n\n";
+
+						// register failure
+						if (fail_on_failure) {
+							ADD_FAILURE() << "Invalid empty reference set obtained for " << *core::annotations::getLocation(arg);
+						}
+
+					} else if (list.isUniversal()) {
+
+						// this is the ugly
+						univers++;
+
+						std::cout << "Inaccurate universal reference set obtained for: " << arg << "\n";
+						std::cout << "   Source code location: " << *core::annotations::getLocation(arg) << "\n\n";
+
+						// register failure
+						if (fail_on_universe) {
+							ADD_FAILURE() << "Invalid universal reference set obtained for " << *core::annotations::getLocation(arg);
+						}
+
 					} else {
+
+						// this is good
 						narrow++;
+
 					}
 
 				}
 			});
 
-			std::cout << "Checks: " << (failure + univers + narrow) << "\n";
 
 			// performance data:
-			if (std::getenv("PRINT_STATS")) {
+			if (std::getenv(PRINT_STATS_ENV)) {
 				ctxt.dumpStatistics();
-			}
 
-//			EXPECT_EQ(0,failure) <<
-//				"Failures:  " << failure << "\n" <<
-//				"Universal: " << univers << "\n" <<
-//				"OK:        " << narrow;
+				std::cout <<
+					"Checks: " << (failure + univers + narrow) << "\n" <<
+					"Failures:  " << failure << "\n" <<
+					"Universal: " << univers << "\n" <<
+					"OK:        " << narrow  << "\n";
+			}
 
 		}
 
@@ -146,6 +226,29 @@ namespace integration {
 #endif
 
 	INSTANTIATE_TEST_CASE_P(OverallTest, StressTests, ::testing::ValuesIn(getAllCases()));
+
+
+//	TEST(BuiltIn, Stats) {
+//		core::NodeManager mgr;
+//
+//
+//		std::map<string,int> stats;
+//		for(const auto& cur : getAllCases()) {
+//			std::cout << "Processing " << cur.getName() << " ...\n";
+//			auto code = cur.load(mgr);
+//			visitDepthFirstOnce(code, [&](const LambdaExprPtr& lambda) {
+//				if (core::lang::isBuiltIn(lambda)) {
+//					stats[core::lang::getConstructName(lambda)]++;
+//				}
+//			});
+//		}
+//
+//		for(const auto& cur : stats) {
+//			std::cout << cur.first << "\t" << cur.second << "\n";
+//		}
+//
+//	}
+
 
 } // end namespace integration
 } // end namespace driver
