@@ -157,11 +157,11 @@ namespace integration {
 						failure++;
 
 						std::cout << "Presumably invalid empty reference obtained for: " << arg << "\n";
-						std::cout << "   Source code location: " << *core::annotations::getLocation(arg) << "\n\n";
+						std::cout << "   Source code location: " << core::annotations::getLocationString(arg) << "\n\n";
 
 						// register failure
 						if (fail_on_failure) {
-							ADD_FAILURE() << "Invalid empty reference set obtained for " << *core::annotations::getLocation(arg);
+							ADD_FAILURE() << "Invalid empty reference set obtained for " << core::annotations::getLocationString(arg);
 						}
 
 					} else if (list.isUniversal()) {
@@ -170,11 +170,11 @@ namespace integration {
 						univers++;
 
 						std::cout << "Inaccurate universal reference set obtained for: " << arg << "\n";
-						std::cout << "   Source code location: " << *core::annotations::getLocation(arg) << "\n\n";
+						std::cout << "   Source code location: " << core::annotations::getLocationString(arg) << "\n\n";
 
 						// register failure
 						if (fail_on_universe) {
-							ADD_FAILURE() << "Invalid universal reference set obtained for " << *core::annotations::getLocation(arg);
+							ADD_FAILURE() << "Invalid universal reference set obtained for " << core::annotations::getLocationString(arg);
 						}
 
 					} else {
