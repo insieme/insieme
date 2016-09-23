@@ -413,6 +413,15 @@ namespace analysis {
 	unsigned countInstances(const NodePtr& code, const NodePtr& element, bool limitScope = false);
 
 	/**
+	 * Counts the number of occurrences of instances of the given node type in the given code fragment.
+	 *
+	 * @param code the IR structure to be inspected
+	 * @param nodeType the node type to be searched
+	 * @return number of instances of element
+	 */
+	unsigned countInstancesOfNodeType(const NodePtr& code, const NodeType& nodeType, bool limitScope = false);
+
+	/**
 	 * Tests if the variable is ever assigned or used by reference, if so, is not considered a read only
 	 * variable
 	 * is not descending into lambdas, only evaluates closest scope

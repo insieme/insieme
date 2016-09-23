@@ -834,6 +834,18 @@ namespace analysis {
 		}, true)(code) : 0;
 	}
 
+	unsigned countInstancesOfNodeType(const NodePtr& code, const NodeType& nodeType, bool limitScope) {
+		return code ? makeCachedLambdaVisitor([&](const NodePtr& cur, rec_call<unsigned>::type& rec) -> unsigned {
+			unsigned ret = 0;
+			if(cur.getNodeType() == nodeType) ret = 1;
+			if(limitScope && cur.isa<LambdaExprPtr>()) return ret;
+			auto children = cur->getChildList();
+			for(const auto& c : children) {
+				ret += rec(c);
+			}
+			return ret;
+		}, true)(code) : 0;
+	}
 
 	namespace {
 
