@@ -77,6 +77,7 @@ module Insieme.Analysis.Solver (
 
     -- solver
     resolve,
+    resolveS,
     resolveAll,
     solve,
 
@@ -108,6 +109,7 @@ import System.Directory (doesFileExist)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Process
 import Text.Printf
+import qualified Control.Monad.State.Strict as State
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Hashable as Hash
 import qualified Data.IntMap.Strict as IntMap
@@ -489,6 +491,13 @@ resolve i tv = (r,s)
         (l,s) = resolveAll i [tv]
         r = head l
 
+-- solve for a single value in state monad
+resolveS :: (Lattice a) => TypedVar a -> State.State SolverState a
+resolveS tv = do
+    state <- State.get
+    let (r, state') = resolve state tv
+    State.put state'
+    return r
 
 -- solve for a list of variables
 resolveAll :: (Lattice a) => SolverState -> [TypedVar a] -> ([a],SolverState)
