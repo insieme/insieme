@@ -42,6 +42,7 @@ module Insieme.Analysis.Entities.FieldIndex (
     project,
     field,
     index,
+    unknownIndex,
     component,
     
     -- an example implementation
@@ -58,12 +59,13 @@ import Insieme.Analysis.Entities.SymbolicFormula
 import qualified Data.Set as Set
 
 class (Eq v, Ord v, Show v, Typeable v) => FieldIndex v where
-        {-# MINIMAL join, project, field, index #-}
+        {-# MINIMAL join, project, field, index, unknownIndex #-}
         join :: [v] -> [v] -> Maybe [v]
         project :: [v] -> v -> [v]
         
-        field :: String -> v
-        index :: SymbolicFormula -> v
+        field        :: String -> v
+        index        :: SymbolicFormula -> v
+        unknownIndex :: v
 
         component :: Int32 -> v
         component = index . mkConst . CInt32
@@ -102,6 +104,8 @@ instance FieldIndex SimpleFieldIndex where
     index a = case toConstant a of 
         Just i  -> Index (fromIntegral i)
         Nothing -> UnknownIndex 
+        
+    unknownIndex = UnknownIndex
 
 
 isField :: SimpleFieldIndex -> Bool

@@ -133,7 +133,10 @@ dataPathValue addr = dataflowValue addr analysis ops
 
         val a = compose $ combine (paths a) indexes
             where
-                combine = USet.lift2 $ \p i -> append p ((step . index) i)
+                combine USet.Universe  _ = USet.Universe
+                combine ps USet.Universe = USet.map (\p -> append p (step unknownIndex)) ps 
+                combine ps is = (USet.lift2 $ \p i -> append p ((step . index) i)) ps is
+                          
                 indexes = BSet.toUnboundSet $ ComposedValue.toValue $ Solver.get a indexVar
 
         indexVar = arithmeticValue $ goDown 3 addr

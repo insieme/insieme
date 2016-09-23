@@ -190,7 +190,7 @@ dataflowValue addr analysis ops = case getNodePair addr of
 
         unknownTarget = Solver.createConstraint dep val var
             where
-                dep a = [Solver.toVar trg]
+                dep a = [] -- covered by known targets: [Solver.toVar trg]
                 val a = if hasUnknownTarget then top else Solver.bot
                     where
 

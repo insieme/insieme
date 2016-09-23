@@ -51,6 +51,12 @@ int main(int argc, char** argv) {
 	cba_expect_single_ptr(a);
 	cba_expect_single_ptr(s);
 
+	cba_expect_single_ptr(&a[0]);
+	cba_expect_single_ptr(&s[1]);
+
+	cba_expect_single_ptr(&a[s[0]]);
+
 //	cba_dump_solution();
+//	cba_dump_json();
 
 }
