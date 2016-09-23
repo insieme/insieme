@@ -34,65 +34,23 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/**
+ * A simple test case covering some arithmetic.
+ */
 
-#include <map>
-
-#include "insieme/core/ir_address.h"
-
-namespace insieme {
-namespace analysis {
-namespace haskell {
-
-	typedef void* StablePtr;
-	typedef void* HaskellNodeAddress;
-
-	class Context {
-
-		StablePtr context_hs;
-
-		core::NodePtr root;
-
-		std::map<core::NodeAddress, HaskellNodeAddress> addresses;
-
-	  public:
-
-		Context();
-		Context(const core::NodePtr& node);
-		~Context();
-
-		// move semantics
-		Context(const Context& other) = delete;
-		Context(Context&& other) = default;
-
-		Context& operator=(const Context& other) = delete;
-		Context& operator=(Context&& other) = default;
+#include "cba.h"
 
 
-		// -- general context interface requirements --
 
-		void dumpStatistics() const;
+int main(int argc, char** argv) {
 
-		void dumpSolution() const;
+	// test an array of scalars
+	int a[5];
+	int s[5];
 
+	cba_expect_single_ptr(a);
+	cba_expect_single_ptr(s);
 
-		// -- haskell engine specific requirements --
+	cba_dump_solution();
 
-		StablePtr getHaskellContext() const;
-		void setHaskellContext(StablePtr);
-
-		void setRoot(const core::NodePtr&);
-		core::NodePtr getRoot() const;
-
-		HaskellNodeAddress resolveNodeAddress(const core::NodeAddress& addr);
-		core::NodeAddress resolveNodeAddress(const HaskellNodeAddress& addr);
-
-	  private:
-
-		void clear();
-
-	};
-
-} // end namespace haskell
-} // end namespace analysis
-} // end namespace insieme
+}

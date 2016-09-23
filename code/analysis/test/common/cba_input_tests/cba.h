@@ -71,6 +71,8 @@ void cba_expect_not_single_ptr(void* a);		// = is not a single target
 void cba_print_code();
 void cba_print_int(int a);
 void cba_dump_json();
+void cba_dump_statistic();
+void cba_dump_solution();
 
 //void cba_dump_execution_net();
 //void cba_dump_state_graph();

@@ -52,6 +52,11 @@ namespace datalog {
 			std::cout << "No statistic data available.\n";
 		}
 
+		void dumpSolution() const {
+			// this feature is not yet implemented
+			std::cout << "Sorry, but the solution dump is not yet implemented for the Datalog engine.\n";
+		}
+
 	};
 
 } // end namespace datalog

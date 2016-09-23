@@ -91,6 +91,15 @@ foreign export ccall "hat_print_statistic"
     dumpStatistics :: StablePtr Ctx.Context -> IO ()
 
 
+dumpAssignment :: StablePtr Ctx.Context -> IO ()
+dumpAssignment ctx_hs = do
+    ctx <- deRefStablePtr ctx_hs
+    putStrLn $ Solver.dumpSolverState True (Ctx.getSolverState ctx) "graph"
+
+foreign export ccall "hat_dump_assignment"
+    dumpAssignment :: StablePtr Ctx.Context -> IO ()
+
+
 mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize
               -> IO (StablePtr Addr.NodeAddress)
 mkNodeAddress ctx_hs path_c length_c = do

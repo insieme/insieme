@@ -348,9 +348,17 @@ namespace analysis {
 					dumpPretty(prog);
 
 				} else if (name == "cba_dump_json") {
-                                        core::dump::json::dumpIR(filename+".json", prog);
-                                        core::dump::binary::haskell::dumpIR(filename+".binir", prog);
+					// dump the code as a json file
+					core::dump::json::dumpIR(filename+".json", prog);
+					core::dump::binary::haskell::dumpIR(filename+".binir", prog);
 
+				} else if (name == "cba_dump_statistic") {
+					// dump the current statistic
+					ctxt.dumpStatistics();
+
+				} else if (name == "cba_dump_solution") {
+					// dump the current solution
+					ctxt.dumpSolution();
 
 				} else if (name == "cba_print_int") {
 					// print the deduced value of the argument
