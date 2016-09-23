@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -73,17 +73,18 @@ namespace annotations {
 
 		ANNOTATION_CONVERTER(ExpectedIRAnnotation)
 
-		core::ExpressionPtr toIR(core::NodeManager& manager, const core::NodeAnnotationPtr& annotation) const {
-			assert(dynamic_pointer_cast<ExpectedIRAnnotation>(annotation) && "Only supports the conversion of ExpectedIRAnnotation Annotations!");
-			return core::encoder::toIR<string>(manager, static_pointer_cast<ExpectedIRAnnotation>(annotation)->getExpected());
-		};
+			core::ExpressionPtr toIR(core::NodeManager& manager, const core::NodeAnnotationPtr& annotation) const {
+				assert(dynamic_pointer_cast<ExpectedIRAnnotation>(annotation) && "Only supports the conversion of ExpectedIRAnnotation Annotations!");
+				return core::encoder::toIR<string>(manager, static_pointer_cast<ExpectedIRAnnotation>(annotation)->getExpected());
+			}
 
-		core::NodeAnnotationPtr toAnnotation(const core::ExpressionPtr& node) const {
-			assert(core::encoder::isEncodingOf<size_t>(node) && "Invalid Encoding!");
-			return std::make_shared<ExpectedIRAnnotation>(core::encoder::toValue<string>(node));
-		};
-	};
-}
+			core::NodeAnnotationPtr toAnnotation(const core::ExpressionPtr& node) const {
+				assert(core::encoder::isEncodingOf<size_t>(node) && "Invalid Encoding!");
+				return std::make_shared<ExpectedIRAnnotation>(core::encoder::toValue<string>(node));
+			}
+
+		ANNOTATION_CONVERTER_END
+	}
 
 } // namespace annotations
 } // namespace insieme

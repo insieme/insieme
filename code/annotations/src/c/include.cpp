@@ -92,18 +92,19 @@ namespace c {
 
 	VALUE_ANNOTATION_CONVERTER(IncludeTag)
 
-	typedef core::value_node_annotation<IncludeTag>::type annotation_type;
+		typedef core::value_node_annotation<IncludeTag>::type annotation_type;
 
-	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-		assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only include annotations supported!";
-		return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().include);
-	}
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only include annotations supported!";
+			return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().include);
+		}
 
-	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-		assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
-		return std::make_shared<annotation_type>(IncludeTag(encoder::toValue<string>(node)));
-	}
-};
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+			return std::make_shared<annotation_type>(IncludeTag(encoder::toValue<string>(node)));
+		}
+
+	VALUE_ANNOTATION_CONVERTER_END
 
 // ----------------------------------------------------
 

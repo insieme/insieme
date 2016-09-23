@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -264,19 +264,20 @@ namespace dump {
 	// create a converter which is automatically registered
 	VALUE_ANNOTATION_CONVERTER(DummyAnnotation2)
 
-	typedef core::value_node_annotation<DummyAnnotation2>::type annotation_type;
+		typedef core::value_node_annotation<DummyAnnotation2>::type annotation_type;
 
-	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-		assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only dummy annotations supported!");
-		int x = static_pointer_cast<annotation_type>(annotation)->getValue().x;
-		return encoder::toIR(manager, x);
-	}
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only dummy annotations supported!");
+			int x = static_pointer_cast<annotation_type>(annotation)->getValue().x;
+			return encoder::toIR(manager, x);
+		}
 
-	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-		assert(encoder::isEncodingOf<int>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
-		return std::make_shared<annotation_type>(DummyAnnotation2(encoder::toValue<int>(node)));
-	}
-};
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert(encoder::isEncodingOf<int>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
+			return std::make_shared<annotation_type>(DummyAnnotation2(encoder::toValue<int>(node)));
+		}
+
+	VALUE_ANNOTATION_CONVERTER_END
 
 
 TEST(BinaryDump, StoreLoadAnnotations2) {
@@ -324,19 +325,20 @@ struct DummyAnnotation3 {
 // create a converter which is automatically registered
 VALUE_ANNOTATION_CONVERTER(DummyAnnotation3)
 
-typedef core::value_node_annotation<DummyAnnotation3>::type annotation_type;
+	typedef core::value_node_annotation<DummyAnnotation3>::type annotation_type;
 
-virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-	assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only dummy annotations supported!");
-	int x = static_pointer_cast<annotation_type>(annotation)->getValue().x;
-	return encoder::toIR(manager, x);
+	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+		assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only dummy annotations supported!");
+		int x = static_pointer_cast<annotation_type>(annotation)->getValue().x;
+		return encoder::toIR(manager, x);
+	}
+
+	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+		assert(encoder::isEncodingOf<int>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
+		return std::make_shared<annotation_type>(DummyAnnotation3(encoder::toValue<int>(node)));
 }
 
-virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-	assert(encoder::isEncodingOf<int>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
-	return std::make_shared<annotation_type>(DummyAnnotation3(encoder::toValue<int>(node)));
-}
-};
+VALUE_ANNOTATION_CONVERTER
 
 
 TEST(BinaryDump, StoreLoadMultipleAnnotations) {

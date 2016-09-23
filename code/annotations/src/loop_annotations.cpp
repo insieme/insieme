@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -79,17 +79,19 @@ namespace annotations {
 
 		ANNOTATION_CONVERTER(LoopAnnotation)
 
-		core::ExpressionPtr toIR(core::NodeManager& manager, const core::NodeAnnotationPtr& annotation) const {
-			assert(dynamic_pointer_cast<LoopAnnotation>(annotation) && "Only supports the conversion of Loop Annotations!");
-			return core::encoder::toIR<size_t>(manager, static_pointer_cast<LoopAnnotation>(annotation)->getIterations());
-		};
+			core::ExpressionPtr toIR(core::NodeManager& manager, const core::NodeAnnotationPtr& annotation) const {
+				assert(dynamic_pointer_cast<LoopAnnotation>(annotation) && "Only supports the conversion of Loop Annotations!");
+				return core::encoder::toIR<size_t>(manager, static_pointer_cast<LoopAnnotation>(annotation)->getIterations());
+			};
 
-		core::NodeAnnotationPtr toAnnotation(const core::ExpressionPtr& node) const {
-			assert(core::encoder::isEncodingOf<size_t>(node) && "Invalid Encoding!");
-			return std::make_shared<LoopAnnotation>(core::encoder::toValue<size_t>(node));
-		};
-	};
-}
+			core::NodeAnnotationPtr toAnnotation(const core::ExpressionPtr& node) const {
+				assert(core::encoder::isEncodingOf<size_t>(node) && "Invalid Encoding!");
+				return std::make_shared<LoopAnnotation>(core::encoder::toValue<size_t>(node));
+			};
+
+		ANNOTATION_CONVERTER_END
+
+	}
 
 } // namespace annotations
 } // namespace insieme

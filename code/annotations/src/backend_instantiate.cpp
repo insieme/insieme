@@ -59,18 +59,19 @@ namespace annotations {
 
 	VALUE_ANNOTATION_CONVERTER(BackendInstantiateTag)
 
-	typedef core::value_node_annotation<BackendInstantiateTag>::type annotation_type;
+		typedef core::value_node_annotation<BackendInstantiateTag>::type annotation_type;
 
-	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-		assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only backend instantiate annotations supported!";
-		return encoder::toIR(manager, string("backend_instantiate"));
-	}
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only backend instantiate annotations supported!";
+			return encoder::toIR(manager, string("backend_instantiate"));
+		}
 
-	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-		assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
-		return std::make_shared<annotation_type>(BackendInstantiateTag());
-	}
-};
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+			return std::make_shared<annotation_type>(BackendInstantiateTag());
+		}
+
+	VALUE_ANNOTATION_CONVERTER_END
 
 // ----------------------------------------------------
 
