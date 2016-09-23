@@ -51,6 +51,6 @@ int main(int argc, char** argv) {
 	cba_expect_single_ptr(a);
 	cba_expect_single_ptr(s);
 
-	cba_dump_solution();
+//	cba_dump_solution();
 
 }
