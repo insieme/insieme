@@ -137,16 +137,10 @@ parseDumpNode = do
     return $ n
 
 parseBuiltin :: Parser (String, [Int])
-parseBuiltin = do
-    key <- parseString
-    val <- parseNodePath
-    return (key, val)
+parseBuiltin = (,) <$> parseString <*> parseNodePath
 
--- | TODO rewrite
 parseNodePath :: Parser [Int]
-parseNodePath = do
-    s <- parseString
-    return $ read <$> (tail $ splitOn "-" s)
+parseNodePath = map read . tail . splitOn "-" <$> parseString
 
 connectDumpNodes :: IntMap.IntMap DumpNode -> IR.Tree
 connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
