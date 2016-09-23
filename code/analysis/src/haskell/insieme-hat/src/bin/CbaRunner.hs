@@ -83,7 +83,7 @@ isPending = (==Pending) . getResult
 findAnalysis :: Addr.NodeAddress -> [AnalysisRun] -> [AnalysisRun]
 findAnalysis addr acc =
     case Addr.getNodePair addr of
-        IR.NT IR.CallExpr (_:IR.NT IR.Literal [_, IR.NT (IR.StringValue s) _]:_) | "IMP_cba_expect" `isPrefixOf` s
+        IR.NT IR.CallExpr (_:IR.NT IR.Literal [_, IR.NT (IR.StringValue s) _]:_) | "cba_expect" `isPrefixOf` s
             -> AnalysisRun addr s Pending : acc
         _   -> acc
 
@@ -122,52 +122,52 @@ analysis a =
     case getCbaExpect a of
 
         -- alias
-        "IMP_cba_expect_ref_are_alias" -> do
+        "cba_expect_ref_are_alias" -> do
             res <- aliasAnalysis a
             return a{getResult = boolToResult $ res == Alias.AreAlias}
 
-        "IMP_cba_expect_ref_may_alias" -> do
+        "cba_expect_ref_may_alias" -> do
             res <- aliasAnalysis a
             return a{getResult = boolToResult $ res == Alias.MayAlias}
 
-        "IMP_cba_expect_ref_not_alias" -> do
+        "cba_expect_ref_not_alias" -> do
             res <- aliasAnalysis a
             return a{getResult = boolToResult $ res == Alias.NotAlias}
 
         -- boolean
-        "IMP_cba_expect_true" -> do
+        "cba_expect_true" -> do
             res <- boolAnalysis a
             return a{getResult = boolToResult $ res == AnBoolean.AlwaysTrue}
 
-        "IMP_cba_expect_false" -> do
+        "cba_expect_false" -> do
             res <- boolAnalysis a
             return a{getResult = boolToResult $ res == AnBoolean.AlwaysFalse}
 
-        "IMP_cba_expect_may_be_true" -> do
+        "cba_expect_may_be_true" -> do
             res <- boolAnalysis a
             return a{getResult = boolToResult $ res `elem` [AnBoolean.AlwaysTrue, AnBoolean.Both]}
 
-        "IMP_cba_expect_may_be_false" -> do
+        "cba_expect_may_be_false" -> do
             res <- boolAnalysis a
             return a{getResult = boolToResult $ res `elem` [AnBoolean.AlwaysFalse, AnBoolean.Both]}
 
         -- arithmetic
-        "IMP_cba_expect_undefined_int" -> do
+        "cba_expect_undefined_int" -> do
             res <- arithAnalysis a
             return $ case () of _
                                  | BSet.isUniverse res -> a{getResult = Ok}
                                  | BSet.size res > 0   -> a{getResult = Inaccurate}
                                  | otherwise           -> a{getResult = Fail}
 
-        "IMP_cba_expect_defined_int" -> do
+        "cba_expect_defined_int" -> do
+            res <- arithAnalysis a
+            return $ a{getResult = boolToResult $ not (BSet.isUniverse res) && not (BSet.null res)}
+
+        "cba_expect_single_int" -> do
             res <- arithAnalysis a
             return $ a{getResult = boolToResult $ not (BSet.isUniverse res) && BSet.size res == 1}
 
-        "IMP_cba_expect_finite_int" -> do
-            res <- arithAnalysis a
-            return $ a{getResult = boolToResult $ not $ BSet.isUniverse res}
-
-        "IMP_cba_expect_eq_int" -> do
+        "cba_expect_eq_int" -> do
             (lhs, rhs) <- arithAnalysis2 a
             return $ case () of _
                                  | BSet.isUniverse lhs && BSet.isUniverse rhs -> a{getResult = Ok}
@@ -175,7 +175,7 @@ analysis a =
                                  | BSet.null lhs || BSet.null rhs             -> a{getResult = Fail}
                                  | otherwise -> a{getResult = boolToResult $ all (==NumEQ) $ BSet.toList $ BSet.lift2 numCompare lhs rhs}
 
-        "IMP_cba_expect_ne_int" -> do
+        "cba_expect_ne_int" -> do
             (lhs, rhs) <- arithAnalysis2 a
             return $ case () of _
                                  | BSet.isUniverse lhs && BSet.isUniverse rhs -> a{getResult = Fail}
