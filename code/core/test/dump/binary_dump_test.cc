@@ -338,7 +338,7 @@ VALUE_ANNOTATION_CONVERTER(DummyAnnotation3)
 		return std::make_shared<annotation_type>(DummyAnnotation3(encoder::toValue<int>(node)));
 }
 
-VALUE_ANNOTATION_CONVERTER
+VALUE_ANNOTATION_CONVERTER_END
 
 
 TEST(BinaryDump, StoreLoadMultipleAnnotations) {
