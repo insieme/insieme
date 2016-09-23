@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 	//cba_dump_json();
 
 	// at this point it should be unknown
-	cba_expect_defined_int(x);
+	cba_expect_single_int(x);
 
 	// if we set it, it should be known
 	x = 1;

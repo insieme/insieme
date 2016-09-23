@@ -86,6 +86,34 @@ namespace analysis {
 			"  }                                                            "
 		)
 
+		LANG_EXT_LITERAL(RefUndefined, "cba_expect_undefined_ref",  "(ref<'a>)->unit");
+		LANG_EXT_LITERAL(RefDefined,   "cba_expect_defined_ref",    "(ref<'a>)->unit");
+		LANG_EXT_LITERAL(RefSingle,    "cba_expect_single_ref",     "(ref<'a>)->unit");
+		LANG_EXT_LITERAL(RefNotSingle, "cba_expect_not_single_ref", "(ref<'a>)->unit");
+
+		LANG_EXT_DERIVED(PtrUndefined,
+			"  (a : ptr<'a>) -> unit {                         "
+			"		cba_expect_undefined_ref(ptr_to_ref(a));   "
+			"  }                                               "
+		)
+
+		LANG_EXT_DERIVED(PtrDefined,
+			"  (a : ptr<'a>) -> unit {                         "
+			"		cba_expect_defined_ref(ptr_to_ref(a));     "
+			"  }                                               "
+		)
+
+		LANG_EXT_DERIVED(PtrSingle,
+			"  (a : ptr<'a>) -> unit {                         "
+			"		cba_expect_single_ref(ptr_to_ref(a));      "
+			"  }                                               "
+		)
+
+		LANG_EXT_DERIVED(PtrNotSingle,
+			"  (a : ptr<'a>) -> unit {                         "
+			"		cba_expect_not_single_ref(ptr_to_ref(a));      "
+			"  }                                               "
+		)
 	};
 
 	core::ProgramPtr preProcessing(const core::ProgramPtr& prog) {
@@ -93,9 +121,13 @@ namespace analysis {
 		return core::transform::transformBottomUpGen(prog,
 				[&] (const core::LiteralPtr& lit)->core::ExpressionPtr {
 					const string& name = utils::demangle(lit->getStringValue());
-					if(name == "cba_expect_is_alias") return ext.getPtrAreAlias();
-					if(name == "cba_expect_may_alias") return ext.getPtrMayAlias();
-					if(name == "cba_expect_not_alias") return ext.getPtrNotAlias();
+					if(name == "cba_expect_is_alias")       return ext.getPtrAreAlias();
+					if(name == "cba_expect_may_alias")      return ext.getPtrMayAlias();
+					if(name == "cba_expect_not_alias")      return ext.getPtrNotAlias();
+					if(name == "cba_expect_undefined_ptr")  return ext.getPtrUndefined();
+					if(name == "cba_expect_defined_ptr")    return ext.getPtrDefined();
+					if(name == "cba_expect_single_ptr")     return ext.getPtrSingle();
+					if(name == "cba_expect_not_single_ptr") return ext.getPtrNotSingle();
 					return lit;
 				},
 				core::transform::globalReplacement

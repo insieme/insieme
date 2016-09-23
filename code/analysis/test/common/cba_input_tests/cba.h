@@ -54,16 +54,21 @@ void cba_expect_may_be_true(bool a);
 void cba_expect_may_be_false(bool a);
 
 // integer tests
-void cba_expect_undefined_int(int a);
-void cba_expect_defined_int(int a);
-void cba_expect_finite_int(int a);
+void cba_expect_undefined_int(int a);			// = is universe
+void cba_expect_defined_int(int a);				// = is not empty and not universe
+void cba_expect_single_int(int a);				// = is a single value
 void cba_expect_eq_int(int a, int b);
 void cba_expect_ne_int(int a, int b);
 void cba_expect_may_eq_int(int a, int b);
 
+// pointer tests
+void cba_expect_undefined_ptr(void* a);			// = is universe
+void cba_expect_defined_ptr(void* a);			// = is not empty and not universe
+void cba_expect_single_ptr(void* a);			// = is a single target
+void cba_expect_not_single_ptr(void* a);		// = is not a single target
+
 // debugging
 void cba_print_code();
-void cba_print_ref(void*);
 void cba_print_int(int a);
 void cba_dump_json();
 

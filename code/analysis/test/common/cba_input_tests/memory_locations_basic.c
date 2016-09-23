@@ -40,18 +40,27 @@
 
 #include "cba.h"
 
+int x;
+
 int main(int argc, char** argv) {
 
-	// at this point it should be unknown
-	cba_expect_single_int(argc);
+	int y;
 
-	// if we set it, it should be known
-	argc = 1;
-	cba_expect_eq_int(argc,1);
+	cba_expect_single_ptr(&x);
+	cba_expect_single_ptr(&y);
+	cba_expect_single_ptr(&argc);
 
-	// and it should be mutable
-	argc = 2;
-	cba_expect_eq_int(argc,2);
+	int* z = (x == y) ? &x : &y;
+	cba_expect_defined_ptr(z);
+	cba_expect_not_single_ptr(z);
+
+	x = 1;
+	y = 1;
+
+	int* w = (x == y) ? &x : &y;
+	cba_expect_single_ptr(w);
+	cba_expect_is_alias(w,&x);
 
 	return 0;
 }
+

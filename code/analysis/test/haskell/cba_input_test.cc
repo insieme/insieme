@@ -100,23 +100,7 @@ namespace analysis {
 			return insieme::analysis::notAlias<Backend>(ctxt, x, y);
 		}
 
-		// boolean
-		bool isTrue(const core::ExpressionAddress& x) {
-			return !getValue(x).contains(0);
-		}
-
-		bool isFalse(const core::ExpressionAddress& x) {
-			return eqConstant(0, x);
-		}
-
-		bool mayBeTrue(const core::ExpressionAddress& x) {
-			return neConstant(0, x);
-		}
-
-		bool mayBeFalse(const core::ExpressionAddress& x) {
-			return getValue(x).contains(0);
-		}
-
+		// arithmetic
 		boost::optional<int> getConstant(const core::ExpressionAddress& x) {
 			auto values = this->getValue(x);
 
@@ -142,6 +126,30 @@ namespace analysis {
 
 		ArithmeticSet getValue(const core::ExpressionAddress& x) {
 			return insieme::analysis::getArithmeticValue<Backend>(ctxt, x);
+		}
+
+
+		// boolean
+		bool isTrue(const core::ExpressionAddress& x) {
+			return !getValue(x).contains(0);
+		}
+
+		bool isFalse(const core::ExpressionAddress& x) {
+			return eqConstant(0, x);
+		}
+
+		bool mayBeTrue(const core::ExpressionAddress& x) {
+			return neConstant(0, x);
+		}
+
+		bool mayBeFalse(const core::ExpressionAddress& x) {
+			return getValue(x).contains(0);
+		}
+
+
+		// reference
+		MemoryLocationSet getMemoryLocations(const core::ExpressionAddress& x) {
+			return insieme::analysis::getReferencedMemoryLocations<Backend>(ctxt, x);
 		}
 
 	public:
@@ -258,14 +266,14 @@ namespace analysis {
 				} else if (name == "cba_expect_defined_int") {
 					std::cerr << "Performing " << name << std::endl;
 					ArithmeticSet res = this->getValue(call.getArgument(0));
-					EXPECT_TRUE(!res.isUniversal() && res.size() == 1)
+					EXPECT_TRUE(!res.isUniversal() && !res.empty())
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "ArithmeticSet evaluates to " << res << std::endl;
 
-				} else if (name == "cba_expect_finite_int") {
+				} else if (name == "cba_expect_single_int") {
 					std::cerr << "Performing " << name << std::endl;
 					ArithmeticSet res = this->getValue(call.getArgument(0));
-					EXPECT_TRUE(!res.isUniversal())
+					EXPECT_TRUE(!res.isUniversal() && res.size() == 1)
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "ArithmeticSet evaluates to " << res << std::endl;
 
@@ -302,6 +310,37 @@ namespace analysis {
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "LHS ArithmeticSet evaluates to " << lhs << std::endl
 						<< "RHS ArithmeticSet evaluates to " << rhs << std::endl;
+
+
+				// reference analysis
+				} else if (name == "cba_expect_undefined_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					MemoryLocationSet res = this->getMemoryLocations(call.getArgument(0));
+					EXPECT_TRUE(res.isUniversal())
+						<< *core::annotations::getLocation(call) << std::endl
+						<< "MemoryLocationSet evaluates to " << res << std::endl;
+
+				} else if (name == "cba_expect_defined_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					MemoryLocationSet res = this->getMemoryLocations(call.getArgument(0));
+					EXPECT_TRUE(!res.isUniversal() && !res.empty())
+						<< *core::annotations::getLocation(call) << std::endl
+						<< "MemoryLocationSet evaluates to " << res << std::endl;
+
+				} else if (name == "cba_expect_single_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					MemoryLocationSet res = this->getMemoryLocations(call.getArgument(0));
+					EXPECT_TRUE(!res.isUniversal() && res.size() == 1)
+						<< *core::annotations::getLocation(call) << std::endl
+						<< "MemoryLocationSet evaluates to " << res << std::endl;
+
+				} else if (name == "cba_expect_not_single_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					MemoryLocationSet res = this->getMemoryLocations(call.getArgument(0));
+					EXPECT_TRUE(res.isUniversal() || res.size() > 1)
+						<< *core::annotations::getLocation(call) << std::endl
+						<< "MemoryLocationSet evaluates to " << res << std::endl;
+
 
 				// debugging
 				} else if (name == "cba_print_code") {
