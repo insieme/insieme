@@ -45,6 +45,8 @@
 #include "insieme/driver/integration/tests.h"
 #include "insieme/core/annotations/source_location.h"
 
+#include "insieme/analysis/interface.h"
+
 #ifdef INSIEME_ANALYSIS_DATALOG
 #include "insieme/analysis/datalog/interface.h"
 #endif
