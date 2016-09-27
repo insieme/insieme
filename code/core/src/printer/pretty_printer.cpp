@@ -1355,7 +1355,7 @@ namespace printer {
 			}
 
 			PRINT(Program) {
-				out << "// Inspire Program ";
+				out << "// Inspire Program";
 				for(const auto& point : node->getEntryPoints()) {
 					const auto& cur = point.isa<LambdaExprAddress>();
 					newLine();

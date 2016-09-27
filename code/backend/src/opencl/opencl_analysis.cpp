@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -41,14 +41,16 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
-#include "insieme/core/transform/manipulation.h"
-#include "insieme/core/lang/reference.h"
-#include "insieme/core/lang/pointer.h"
+#include "insieme/core/annotations/naming.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/lang/array.h"
+#include "insieme/core/lang/memory.h"
+#include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/reference.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_builder.h"
+#include "insieme/core/transform/manipulation.h"
 
 #include "insieme/utils/name_mangling.h"
 #include "insieme/utils/logging.h"
@@ -210,7 +212,7 @@ namespace analysis {
 			core::ExpressionList end;
 			if (core::lang::isPlainReference(var->getType()) && core::lang::isPointer(getElementType(var->getType()))) {
 				// build the literal which represents malloc only once
-				auto declMalloc = builder.literal(insieme::utils::mangle("malloc"), builder.parseType("(uint<8>) -> ptr<unit>"));
+				auto declMalloc = manager.getLangExtension<core::lang::MemoryExtension>().getMallocWrapper();
 
 				bool success = false;
 				auto& ptrExt = manager.getLangExtension<core::lang::PointerExtension>();
@@ -218,7 +220,7 @@ namespace analysis {
 				// var ref<ptr<real<4>>,f,f,plain> v66 = ptr_reinterpret(IMP_malloc(
 				//     sizeof(type_lit(real<4>))*num_cast(*v55, type_lit(uint<8>))), type_lit(real<4>));
 				core::visitDepthFirstOnceInterruptible(code, [&](const core::DeclarationStmtPtr& declStmt) {
-					// if this is not the variable we are seraching for continue at another level
+					// if this is not the variable we are searching for continue at another level
 					if (*(declStmt->getVariable()) != *var) return false;
 
 					core::ExpressionPtr init = declStmt->getInitialization();

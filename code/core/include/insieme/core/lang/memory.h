@@ -34,48 +34,49 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/malloc_extension.h"
+#pragma once
 
-#include "insieme/frontend/clang.h"
-#include "insieme/frontend/converter.h"
-#include "insieme/frontend/extensions/interceptor_extension.h"
-#include "insieme/frontend/utils/frontend_inspire_module.h"
-
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/lang/memory.h"
-#include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/tu/ir_translation_unit_io.h"
-
-#include "insieme/utils/name_mangling.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/pointer.h"
 
 namespace insieme {
-namespace frontend {
-namespace extensions {
+namespace core {
+namespace lang {
 
-	using namespace core;
+	/**
+	 * Extension providing memory management operations.
+	 */
+	class MemoryExtension : public core::lang::Extension {
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
 
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		MemoryExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
-	boost::optional<std::string> MallocExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
-		if(!setup.hasExtension<InterceptorExtension>()) return std::string("MallocExtension requires the InterceptorExtension to be loaded");
-		return {};
-	}
+	  public:
+		// this extension is based upon the symbols defined by the pointer module
+		IMPORT_MODULE(PointerExtension);
 
-	core::tu::IRTranslationUnit MallocExtension::IRVisit(core::tu::IRTranslationUnit& tu) {
-		auto& nodeMan = tu.getNodeManager();
-		auto& memExt = nodeMan.getLangExtension<core::lang::MemoryExtension>();
-		auto irTu = core::tu::toIR(nodeMan, tu);
-		irTu = core::transform::transformBottomUpGen(irTu, [&memExt](const core::LiteralPtr& lit) -> core::ExpressionPtr {
-			if(insieme::utils::demangle(lit->getStringValue()) == "malloc") {
-				return memExt.getMallocWrapper();
-			}
-			if(insieme::utils::demangle(lit->getStringValue()) == "free") {
-				return memExt.getFreeWrapper();
-			}
-			return lit;
-		}, core::transform::globalReplacement);
-		return core::tu::fromIR(irTu);
-	}
+		/**
+		* Semantic translation of "malloc" (allocate an array of elements on the heap)
+		*/
+		LANG_EXT_DERIVED(MallocWrapper, R"((size : uint<8>) -> ptr<unit> {
+			var uint<inf> si = size;
+			return ptr_reinterpret(ptr_from_array(ref_new(type_lit(array<uint<1>,#si>))), type_lit(unit));
+		})");
 
-} // extensions
-} // frontend
-} // insieme
+		/**
+		* Semantic translation of "free" (frees pointer allocated on the heap)
+		*/
+		LANG_EXT_DERIVED(FreeWrapper, R"((trg : ptr<unit>) -> unit { ref_delete(ptr_to_ref(trg)); })");
+
+	};
+
+} // end namespace lang
+} // end namespace core
+} // end namespace insieme
