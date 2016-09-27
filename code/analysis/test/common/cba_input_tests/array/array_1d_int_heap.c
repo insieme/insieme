@@ -38,36 +38,34 @@
  * A simple test case covering some arithmetic.
  */
 
+#include <stdlib.h>
+
 #include "cba.h"
 
 int main(int argc, char** argv) {
 
-//	int x = 2;
-//
-//	int a[10][10];
-//
-//	a[3][4] = 12;
-//
-//	// cba_expect_eq_int(a[3][4],12);
-//	for(int i=0; i<10; i++) {
-//		a[i][i] = 14;
-//	}
-//
-//	cba_expect_eq_int(x,2);
 
-	cba_print_code();
+	// create an array
+	int* a = (int*)malloc(sizeof(int) * 10);
 
-	int y = 3;
-	int** b = 0; // (int**)malloc(sizeof(int*) * 10);
-	for(int i=0; i<10; i++) {
-//		b[i] = 0;
-//		cba_expect_not_alias(y,b[i]);
-//		b[i] = (int*)malloc(sizeof(int)*10);
-	}
+	// check that elements of a are not defined at this point
+	cba_expect_undefined_int(a[0]);
+	cba_expect_undefined_int(a[1]);
+	cba_expect_undefined_int(a[2]);
+	cba_expect_undefined_int(a[argc]);
 
-//	cba_expect_eq_int(y,3);
+	// fix some values
+	a[0] = 12;
+	a[1] = 14;
 
+	// check those values
+	cba_expect_eq_int(a[0],12);
+	cba_expect_eq_int(a[1],14);
+	cba_expect_undefined_int(a[2]);
 
+//	cba_print_code();
+//	cba_dump_solution();
+//	cba_dump_json();
 
 	return 0;
 }
