@@ -42,6 +42,7 @@
 #define true (1)
 #define false (0)
 
+
 // alias tests
 void cba_expect_is_alias(void* a, void* b);
 void cba_expect_not_alias(void* a, void* b);
@@ -61,11 +62,21 @@ void cba_expect_eq_int(int a, int b);
 void cba_expect_ne_int(int a, int b);
 void cba_expect_may_eq_int(int a, int b);
 
+typedef struct {} _iset;
+#define iset(...) (_iset*)(int[]){ __VA_ARGS__ }
+void cba_expect_one_of_int(int a, _iset* b);
+
+
 // pointer tests
 void cba_expect_undefined_ptr(void* a);			// = is universe
 void cba_expect_defined_ptr(void* a);			// = is not empty and not universe
 void cba_expect_single_ptr(void* a);			// = is a single target
 void cba_expect_not_single_ptr(void* a);		// = is not a single target
+
+typedef struct {} _pset;
+#define pset(...) (_pset*)(void*[]){ __VA_ARGS__ }
+void cba_expect_one_of_ptr(int a, _pset* b);
+
 
 // debugging
 void cba_print_code();

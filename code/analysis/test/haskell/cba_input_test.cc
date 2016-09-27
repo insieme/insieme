@@ -128,6 +128,16 @@ namespace analysis {
 			return insieme::analysis::getArithmeticValue<Backend>(ctxt, x);
 		}
 
+		ArithmeticSet getValues(const core::ExpressionAddress& x) {
+			ArithmeticSet res;
+			visitDepthFirstInterruptible(x, [&](const InitExprAddress& init)->bool {
+				for(const auto& a : init->getInitExprList()) {
+					res = merge(res, this->getValue(a));
+				}
+				return true;
+			});
+			return res;
+		}
 
 		// boolean
 		bool isTrue(const core::ExpressionAddress& x) {
@@ -307,6 +317,19 @@ namespace analysis {
 					EXPECT_FALSE(rhs.empty());
 					ArithmeticSet inter = intersect(lhs, rhs);
 					EXPECT_TRUE(lhs.isUniversal() || rhs.isUniversal() || inter.size() > 0)
+						<< *core::annotations::getLocation(call) << std::endl
+						<< "LHS ArithmeticSet evaluates to " << lhs << std::endl
+						<< "RHS ArithmeticSet evaluates to " << rhs << std::endl;
+
+				} else if (name == "cba_expect_one_of_int") {
+					std::cerr << "Performing " << name << std::endl;
+					ArithmeticSet lhs = this->getValue(call.getArgument(0));
+					ArithmeticSet rhs = this->getValues(call.getArgument(1));
+					EXPECT_FALSE(lhs.empty());
+					EXPECT_FALSE(rhs.empty());
+					std::cout << "lhs = " << lhs << "\n";
+					std::cout << "rhs = " << rhs << "\n";
+					EXPECT_TRUE(lhs == rhs)
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "LHS ArithmeticSet evaluates to " << lhs << std::endl
 						<< "RHS ArithmeticSet evaluates to " << rhs << std::endl;
