@@ -113,9 +113,9 @@ namespace analysis {
 			return elements.begin();
 		}
 
-		auto end() const -> decltype(elements.begin()) {
+		auto end() const -> decltype(elements.end()) {
 			assert_false(isUniversal());
-			return elements.begin();
+			return elements.end();
 		}
 
 		bool operator==(const Set& other) const {
@@ -168,6 +168,16 @@ namespace analysis {
 		std::vector<Elem> res;
 		std::set_intersection(sa.begin(), sa.end(), sb.begin(), sb.end(), std::back_inserter(res), Compare());
 		return std::set<Elem, Compare>(res.begin(), res.end());
+	}
+
+	template<typename Elem, typename Compare>
+	bool isSubsetOf(const Set<Elem,Compare>& a, const Set<Elem,Compare>& b) {
+		if (b.isUniversal()) return true;
+		if (a.isUniversal()) return false;
+		for(const auto& e : a) {
+			if (!b.contains(e)) return false;
+		}
+		return true;
 	}
 
 } // end namespace analysis
