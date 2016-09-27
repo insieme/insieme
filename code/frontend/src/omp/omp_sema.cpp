@@ -87,6 +87,38 @@ namespace omp {
 		bool contains(const vector<ExpressionPtr>& list, const ExpressionPtr& element) {
 			return ::contains(list, element, equal_target<ExpressionPtr>());
 		}
+
+		template<typename T>
+		T renameLambdaReference(const T& nodeIn, const string& newName) {
+			NodePtr node = nodeIn;
+			core::IRBuilder builder(node->getNodeManager());
+			ExpressionPtr ret = nullptr;
+			node = builder.normalize(node);
+
+			if(LambdaExprPtr lambdaExp = node.isa<core::LambdaExprPtr>()) {
+				ret = builder.lambdaExpr(lambdaExp->getLambda(), newName);
+			}
+			if(BindExprPtr bindExp = node.isa<core::BindExprPtr>()) {
+				auto call = bindExp->getCall();
+				auto lambda = call->getFunctionExpr().isa<LambdaExprPtr>();
+				assert_true(lambda) << "Trying to rename bind without lambda expr";
+				auto newLambda = renameLambdaReference(lambda, newName);
+				auto newCall = builder.callExpr(call->getType(), newLambda, call->getArgumentDeclarations());
+				core::transform::utils::migrateAnnotations(call, newCall);
+				ret = builder.bindExpr(bindExp->getParameters(), newCall);
+			}
+
+			assert_true(ret) << "Trying to rename unsupported node type";
+
+			core::transform::utils::migrateAnnotations(node, ret);
+			return ret.as<T>();
+		}
+
+		template<typename T>
+		T makeUniqueName(const T& node, const string& prefix) {
+			static int suffix = 0;
+			return renameLambdaReference(node, format("_ins_%s_%d", prefix, suffix++));
+		}
 	}
 
 	class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
@@ -656,6 +688,7 @@ namespace omp {
 			auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
 			// mark printf as unordered
 			parLambda = markUnordered(parLambda).as<BindExprPtr>();
+			parLambda = makeUniqueName(parLambda, "omp_parallel");
 			auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
 			if(par->hasNumThreads()) { range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads()); }
 			auto jobExp = build.jobExpr(range, parLambda.as<ExpressionPtr>());
@@ -676,6 +709,7 @@ namespace omp {
 			StatementList resultStmts;
 			auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts);
 			auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
+			parLambda = makeUniqueName(parLambda, "omp_task");
 			auto range = build.getThreadNumRange(1, 1); // range for tasks is always 1
 
 			JobExprPtr jobExp = build.jobExpr(range, parLambda.as<ExpressionPtr>());
@@ -780,6 +814,7 @@ namespace omp {
 			// implement single as pfor with 1 item
 			auto pforLambdaParams = toVector(build.variable(basic.getInt4()), build.variable(basic.getInt4()), build.variable(basic.getInt4()));
 			auto body = transform::extractLambda(nodeMan, stmtNode, pforLambdaParams);
+			body = makeUniqueName(body, "omp_single");
 			auto pfor = build.pfor(body, build.intLit(0), build.intLit(1), build.intLit(1));
 			replacements.push_back(pfor);
 			if(!singleP->hasNoWait()) { replacements.push_back(build.barrier()); }
