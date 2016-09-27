@@ -34,9 +34,6 @@
  * regarding third party software licenses.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
 
 #include <stdlib.h>
 
@@ -44,32 +41,20 @@
 
 int main(int argc, char** argv) {
 
-	// create an array
-	int** a = (int**)malloc(sizeof(int*) * 10);
-
-	// the indirection vector should be undefined
-	cba_expect_undefined_ptr(a[0]);
-	cba_expect_undefined_ptr(a[1]);
+	int y = 3;
+	int** b = (int**)malloc(sizeof(int*) * 10);
 
 	for(int i=0; i<10; i++) {
-		a[i] = (int*)malloc(sizeof(int) * 10);
+		b[i] = (int*)malloc(sizeof(int)*10);
+		for(int j=0; j<10; j++) {
+			// for this update, the target reference was unknown
+			// => leading to an update of y
+			b[i][j] = i * j;
+		}
 	}
 
-	// all values should be undefined
-	cba_expect_undefined_int(a[0][0]);
-	cba_expect_undefined_int(a[0][1]);
-	cba_expect_undefined_int(a[1][0]);
-	cba_expect_undefined_int(a[1][1]);
-
-	// set some values
-	a[0][1] = 12;
-	a[1][0] = 14;
-
-	// check those values
-	cba_expect_undefined_int(a[0][0]);
-	cba_expect_eq_int(a[0][1], 12);
-	cba_expect_eq_int(a[1][0], 12);
-	cba_expect_undefined_int(a[1][1]);
+	// the manipulation of b should not effect y
+	cba_expect_eq_int(y,3);
 
 //	cba_print_code();
 //	cba_dump_solution();

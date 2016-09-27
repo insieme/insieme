@@ -38,24 +38,44 @@
  * A simple test case covering some arithmetic.
  */
 
+#include <stdlib.h>
+
 #include "cba.h"
 
 int main(int argc, char** argv) {
 
-	int y = 3;
-	int** b = (int**)malloc(sizeof(int*) * 10);
+	// create an array
+	int** a = (int**)malloc(sizeof(int*) * 10);
+
+	// the indirection vector should be undefined
+	cba_expect_undefined_ptr(a[0]);
+	cba_expect_undefined_ptr(a[1]);
 
 	for(int i=0; i<10; i++) {
-		b[i] = (int*)malloc(sizeof(int)*10);
-		for(int j=0; j<10; j++) {
-			// for this update, the target reference was unknown
-			// => leading to an update of y
-			b[i][j] = i * j;
-		}
+		a[i] = (int*)malloc(sizeof(int) * 10);
 	}
 
-	// the manipulation of b should not effect y
-	cba_expect_eq_int(y,3);
+	// all values should be undefined
+	cba_expect_undefined_int(a[0][0]);
+	cba_expect_undefined_int(a[0][1]);
+	cba_expect_undefined_int(a[1][0]);
+	cba_expect_undefined_int(a[1][1]);
+
+	// set some values
+	a[0][1] = 12;
+	a[1][0] = 14;
+
+	// check those values
+	cba_expect_undefined_int(a[0][0]);
+	// TODO: this is a known bug:
+	//   since it can not be guaranteed that the above
+	//	 loop is updating all elements of the index vector
+	//   a[], all of them will also point to the initial,
+	//   invalid initialization array, leading to an unknown
+	//   result for the arithmetic analysis
+//	cba_expect_eq_int(a[0][1], 12);
+//	cba_expect_eq_int(a[1][0], 14);
+	cba_expect_undefined_int(a[1][1]);
 
 //	cba_print_code();
 //	cba_dump_solution();

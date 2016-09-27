@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
 	// check those values
 	cba_expect_undefined_int(a[0][0]);
 	cba_expect_eq_int(a[0][1], 12);
-	cba_expect_eq_int(a[1][0], 12);
+	cba_expect_eq_int(a[1][0], 14);
 	cba_expect_undefined_int(a[1][1]);
 
 //	cba_print_code();
