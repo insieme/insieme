@@ -180,6 +180,7 @@ namespace analysis {
 			NodeManager mgr;
 			std::vector<std::string> argv = {"compiler", file, "-fopenmp", "-fcilk"};
 			insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
+			options.job.addIncludeDirectory(ROOT_DIR);
 
 			auto prog = options.job.execute(mgr);
 			prog = preProcessing(prog);
@@ -406,6 +407,33 @@ namespace analysis {
 		test(GetParam());
 	}
 
+
+	namespace {
+
+		void collectFiles(const fs::path& dir, const std::string& prefix, std::vector<string>& res) {
+
+			fs::path root(dir);
+			assert_true(fs::is_directory(root));
+
+			for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
+				fs::path file = it->path();
+				// collect c files
+				if (file.extension().string() == ".c") {
+					res.push_back(prefix + file.filename().string());
+				}
+				// collect files recursively
+				if (fs::is_directory(file)) {
+					const auto& name = file.filename().string();
+					if (name != "_disabled") {
+						collectFiles(file, prefix + name + "/", res);
+					}
+				}
+			}
+
+		}
+
+	}
+
 	/*
 	 * Generate a list of configurations for the tests.
 	 * This is a cross-product of the cba_tests files and the Datalog/Haskell backends
@@ -413,17 +441,13 @@ namespace analysis {
 	vector<std::string> getFilenames() {
 		vector<string> filenames;
 
-		fs::path root(ROOT_DIR);
-		assert_true(fs::is_directory(root));
+		// collect input files
+		collectFiles(fs::path(ROOT_DIR), "", filenames);
 
-		for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
-			fs::path file = it->path();
-			if (file.extension().string() == ".c") {
-				filenames.push_back(file.filename().string());
-			}
-		}
+		// sort files
 		std::sort(filenames.begin(), filenames.end());
 
+		// done
 		return filenames;
 	}
 
