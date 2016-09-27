@@ -56,6 +56,10 @@ int main(int argc, char** argv) {
 	// the manipulation of b should not effect y
 	cba_expect_eq_int(y,3);
 
+	// also a manipulation here should not effect y
+	b[1][2] = 12;
+	cba_expect_eq_int(y,3);
+
 //	cba_print_code();
 //	cba_dump_solution();
 //	cba_dump_json();

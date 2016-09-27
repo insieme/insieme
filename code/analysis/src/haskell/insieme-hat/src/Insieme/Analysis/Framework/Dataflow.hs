@@ -292,7 +292,7 @@ dataflowValue addr analysis ops = case getNodePair addr of
 
             dep a = (Solver.toVar targetRefVar) : (map Solver.toVar $ readValueVars a)
 
-            val a = if USet.isUniverse targets then top else Solver.join $ map go $ USet.toList targets
+            val a = if includesUnknownSources targets then top else Solver.join $ map go $ USet.toList targets
                 where
                     targets = targetRefVal a
                     go r = ComposedValue.getElement (Reference.dataPath r) $ Solver.get a (memStateVarOf r)
@@ -300,7 +300,9 @@ dataflowValue addr analysis ops = case getNodePair addr of
             targetRefVar = Reference.referenceValue $ goDown 1 $ goDown 2 addr          -- here we have to skip the potentially materializing declaration!
             targetRefVal a = ComposedValue.toValue $ Solver.get a targetRefVar
 
-            readValueVars a = if USet.isUniverse targets then [] else map memStateVarOf $ USet.toList targets
+            includesUnknownSources t = USet.member Reference.NullReference t || USet.member Reference.UninitializedReference t 
+
+            readValueVars a = if includesUnknownSources targets then [] else map memStateVarOf $ USet.toList targets
                 where
                     targets = targetRefVal a
 

@@ -73,10 +73,13 @@ type Location = NodeAddress
 -- * References
 --
 
-data Reference i = Reference {
-        creationPoint :: Location,
-        dataPath      :: DP.DataPath i
-    }
+data Reference i = 
+      Reference {
+          creationPoint :: Location,
+          dataPath      :: DP.DataPath i
+      }
+    | NullReference
+    | UninitializedReference
   deriving (Eq,Ord,Show)
 
 
@@ -91,7 +94,7 @@ instance (Eq i,Ord i,Show i,Typeable i) => Lattice (ReferenceSet i) where
     merge = USet.union
 
 instance (Eq i,Ord i,Show i,Typeable i) => ExtLattice (ReferenceSet i) where
-    top   = USet.Universe
+    top   = USet.singleton UninitializedReference       -- What is not known, is not a valid reference
 
 
 --
@@ -149,13 +152,13 @@ referenceValue addr = case getNodeType addr of
             where
                 cov a = isBuiltin a $ getBuiltin addr "ref_narrow"
                 val a = compose $ narrow (baseRefVal a) (dataPathVal a)
-                narrow = USet.lift2 $ \(Reference l p) d -> Reference l (DP.append p d)
+                narrow = USet.lift2 $ onRefs $ \(Reference l p) d -> Reference l (DP.append p d)
 
         refExpand = OperatorHandler cov subRefDep val
             where
                 cov a = isBuiltin a $ getBuiltin addr "ref_expand"
                 val a = compose $ expand (baseRefVal a) (dataPathVal a)
-                expand = USet.lift2 $ \(Reference l p) d -> Reference l (DP.append p (DP.invert d))
+                expand = USet.lift2 $ onRefs $ \(Reference l p) d -> Reference l (DP.append p (DP.invert d))
 
         refCast = OperatorHandler cov dep val
             where
@@ -175,12 +178,12 @@ referenceValue addr = case getNodeType addr of
                 dep _ = [toVar baseRefVar, toVar offsetVar]
                 val a = compose $ access (baseRefVal a) (offsetVal a)
                 
-                baseRefVal a = ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 0) $ get a baseRefVar 
+                baseRefVal a = ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 0) $ get a baseRefVar
                 
                 offsetVar = arithmeticValue $ goDown 1 $ goDown 2 addr
                 offsetVal a = BSet.toUnboundSet $ ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 1) $ get a offsetVar
                 
-                access = USet.lift2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ index offset))  
+                access = USet.lift2 $ onRefs $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ index offset))  
 
         ptrFromRef = OperatorHandler cov dep val
             where
@@ -203,7 +206,11 @@ referenceValue addr = case getNodeType addr of
         dataPathVal a = ComposedValue.toValue $ get a dataPathVar
 
 
-
+        -- a utility filtering out actual references
+        onRefs _ NullReference          _ = NullReference
+        onRefs _ UninitializedReference _ = UninitializedReference
+        onRefs f r d = f r d
+ 
 
 -- Tests whether an IR node represents a reference type or not
 isReference :: IR.Tree -> Bool

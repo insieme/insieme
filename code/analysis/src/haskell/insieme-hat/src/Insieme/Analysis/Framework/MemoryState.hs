@@ -213,7 +213,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = var
 
         -- some checks
         
-        isActive a = (not $ USet.isUniverse trgs) && (any pred $ USet.toSet $ trgs)
+        isActive a = (USet.isUniverse trgs) || (any pred $ USet.toSet $ trgs)
             where
                 trgs = targetRefVal a
                 pred (Reference cp _) = cp == loc
@@ -244,20 +244,18 @@ definedValue addr ml@(MemoryLocation loc) analysis = var
             where
                 valueDecl = goDown 3 addr
         
---                getDeclaredValueVar addr =
---                    if isMaterializingDeclaration $ getNodePair addr
---                    then memoryStateValue (MemoryStatePoint (ProgramPoint addr Post) (MemoryLocation addr)) analysis
---                    else variableGenerator analysis (goDown 1 addr)
-        
         
         elemValueVal a = Solver.get a elemValueVar
 
-        updatedValue a = Solver.join values
+        updatedValue a = 
+                if USet.isUniverse trgs then Solver.top else Solver.join values
             where
                 oldVal = oldStateVal a
                 elemVal = elemValueVal a
                 
-                values = concat $ update <$> USet.toList (targetRefVal a)
+                trgs = targetRefVal a
+                
+                values = concat $ update <$> USet.toList trgs
                 
                 update (Reference cp dp) | cp == loc = [
                         ComposedValue.setElement dp elemVal oldVal 
@@ -484,9 +482,10 @@ writeSet addr = case getNodeType addr of
                         
                         res = foldr go USet.empty (WS.parameters wss)
                             where
-                                go x s = USet.union s $ USet.map toLoc $ ComposedValue.toValue $ Solver.get a $ refVar x
-                                toLoc :: Reference SimpleFieldIndex -> Location
-                                toLoc (Reference l _ ) = l
+                                go x s = USet.union s $ USet.fromList $ concat $ map toLoc $ USet.toList $ ComposedValue.toValue $ Solver.get a $ refVar x
+                                toLoc :: Reference SimpleFieldIndex -> [Location]
+                                toLoc (Reference l _ ) = [l]
+                                toLoc _ = []
 
                 refVar :: Int -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex (ReferenceSet SimpleFieldIndex))                        
                 refVar x = referenceValue $ goDown 1 $ goDown (x+2) addr
