@@ -328,8 +328,6 @@ namespace analysis {
 					ArithmeticSet rhs = this->getValues(call.getArgument(1));
 					EXPECT_FALSE(lhs.empty());
 					EXPECT_FALSE(rhs.empty());
-					std::cout << "lhs = " << lhs << "\n";
-					std::cout << "rhs = " << rhs << "\n";
 					EXPECT_TRUE(lhs == rhs)
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "LHS ArithmeticSet evaluates to " << lhs << std::endl
