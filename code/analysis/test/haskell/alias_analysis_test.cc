@@ -245,10 +245,10 @@ namespace analysis {
 
 		auto comp = CompoundStmtAddress(stmt);
 
-//		EXPECT_TRUE(areAlias(comp[3], comp[3]));
+		EXPECT_TRUE(areAlias(comp[3], comp[3]));
 		EXPECT_TRUE(areAlias(comp[5], comp[5]));
 
-//		EXPECT_TRUE(notAlias(comp[3], comp[5]));
+		EXPECT_TRUE(notAlias(comp[3], comp[5]));
 	}
 
 

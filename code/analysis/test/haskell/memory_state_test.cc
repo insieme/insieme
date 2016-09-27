@@ -60,6 +60,35 @@ namespace analysis {
 		return mayBeTrue<HaskellEngine>(e) && mayBeFalse<HaskellEngine>(e);
 	}
 
+	TEST(MemoryStateAnalysis, ScalarReadWrite) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto stmt = builder.parseStmt(
+				"{"
+				"	var ref<bool> a = ref_new(type_lit(bool));"
+				"	"
+				"	*a;"				// should be undefined
+				"	a = true;"
+				"	*a;"				// should be true now
+				"	a = false;"
+				"	*a;"				// should be false now
+				"	a = true;"
+				"	*a;"				// should be true now
+				"}"
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(stmt);
+
+		auto comp = CompoundStmtAddress(stmt);
+
+		EXPECT_TRUE(isUndefined(comp[1]));
+
+		EXPECT_TRUE(isTrue(comp[3]));
+		EXPECT_TRUE(isFalse(comp[5]));
+		EXPECT_TRUE(isTrue(comp[7]));
+	}
+
 
 	TEST(MemoryStateAnalysis, CompoundReadWrite) {
 		NodeManager mgr;
