@@ -34,13 +34,17 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.CallSite where
 
-import Debug.Trace
+import Control.DeepSeq
 import Data.Maybe
 import Data.Typeable
+import Debug.Trace
+import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
 import qualified Data.Set as Set
@@ -58,7 +62,7 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 --
 
 newtype CallSite = CallSite NodeAddress
- deriving (Eq, Ord)
+ deriving (Eq, Ord, Generic, NFData)
 
 instance Show CallSite where
     show (CallSite na) = "Call@" ++ (prettyShow na)

@@ -34,11 +34,15 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.ExitPoint where
 
+import Control.DeepSeq
 import Data.Typeable
+import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
 import qualified Data.Set as Set
@@ -52,7 +56,7 @@ import qualified Insieme.Inspire as IR
 --
 
 newtype ExitPoint = ExitPoint NodeAddress
- deriving (Eq, Ord)
+ deriving (Eq, Ord, Generic, NFData)
 
 instance Show ExitPoint where
     show (ExitPoint na) = "Exit@" ++ (prettyShow na)

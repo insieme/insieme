@@ -34,6 +34,9 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module Insieme.Utils.UnboundSet (
     UnboundSet(Universe),
     empty,
@@ -54,6 +57,8 @@ module Insieme.Utils.UnboundSet (
     fromUnboundSet
 ) where
 
+import Control.DeepSeq
+import GHC.Generics (Generic)
 import qualified Data.Set as Set
 
 import Prelude hiding (map,null)
@@ -64,7 +69,7 @@ import Prelude hiding (map,null)
 --
 
 data UnboundSet a = Universe | UnboundSet (Set.Set a)
-  deriving (Eq,Show,Ord)
+  deriving (Eq,Show,Ord,Generic,NFData)
 
 empty :: UnboundSet a
 empty = UnboundSet Set.empty

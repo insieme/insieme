@@ -34,8 +34,10 @@
  - regarding third party software licenses.
  -}
 
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Insieme.Analysis.Framework.MemoryState (
@@ -46,8 +48,10 @@ module Insieme.Analysis.Framework.MemoryState (
     
 ) where
 
-import Debug.Trace
+import Control.DeepSeq
 import Data.Typeable
+import Debug.Trace
+import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
 
 import Insieme.Analysis.Entities.ProgramPoint
@@ -85,7 +89,7 @@ data Definition = Initial                                    -- it is the defini
               | Declaration NodeAddress                      -- the definition is conducted by an assignment triggered through a materializing declaration
               | MaterializingCall NodeAddress                -- the definition is conducted by an assignment triggered through a materializing call
               | Assignment NodeAddress                       -- an assignment conducting an update to a memory location
-    deriving (Eq,Ord,Show)
+    deriving (Eq,Ord,Show,Generic,NFData)
 
 type Definitions = USet.UnboundSet Definition
 

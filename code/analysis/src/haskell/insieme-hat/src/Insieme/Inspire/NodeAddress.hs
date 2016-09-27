@@ -34,6 +34,9 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module Insieme.Inspire.NodeAddress (
     NodeAddress,
     mkNodeAddress,
@@ -67,10 +70,12 @@ module Insieme.Inspire.NodeAddress (
     isBuiltinByName
 ) where
 
-import Debug.Trace
+import Control.DeepSeq
 import Data.Function (on)
 import Data.List (foldl',isSuffixOf)
 import Data.Maybe
+import Debug.Trace
+import GHC.Generics (Generic)
 import Insieme.Utils
 import qualified Data.Hashable as Hash
 import qualified Data.Map as Map
@@ -83,6 +88,7 @@ data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
                                  getInspire          :: IR.Inspire,
                                  getParent           :: Maybe NodeAddress,
                                  getAbsoluteRootPath :: NodePath }
+  deriving (Generic, NFData)
 
 instance Eq NodeAddress where
     x == y = nodeID x == nodeID y

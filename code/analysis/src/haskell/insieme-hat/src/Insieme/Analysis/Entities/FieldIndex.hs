@@ -34,6 +34,9 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module Insieme.Analysis.Entities.FieldIndex (
     
     -- a type class for field indices
@@ -50,15 +53,18 @@ module Insieme.Analysis.Entities.FieldIndex (
     
 ) where
 
+import Control.DeepSeq
+import Control.DeepSeq
 import Data.Int
 import Data.Typeable
+import GHC.Generics (Generic)
+import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Utils.Arithmetic
 import Insieme.Utils.ParseInt
-import Insieme.Analysis.Entities.SymbolicFormula
  
 import qualified Data.Set as Set
 
-class (Eq v, Ord v, Show v, Typeable v) => FieldIndex v where
+class (Eq v, Ord v, Show v, Typeable v, NFData v) => FieldIndex v where
         {-# MINIMAL join, project, field, index, unknownIndex #-}
         join :: [v] -> [v] -> Maybe [v]
         project :: [v] -> v -> [v]
@@ -77,7 +83,7 @@ data SimpleFieldIndex =
               Field String
             | Index Int
             | UnknownIndex
-    deriving(Eq,Ord,Typeable)
+    deriving(Eq,Ord,Typeable,Generic,NFData)
     
 instance Show SimpleFieldIndex where
     show (Field s) = s
