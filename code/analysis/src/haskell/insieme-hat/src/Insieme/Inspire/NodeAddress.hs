@@ -133,7 +133,8 @@ getChildren :: NodeAddress -> [NodeAddress]
 getChildren a = (flip goDown) a <$> [0..numChildren a - 1]
 
 getIndex :: NodeAddress -> Int
-getIndex = head . getPathReversed
+getIndex a | isRoot a = error "Can't obtain index of a root address!" 
+getIndex a = head $ getPathReversed a
 
 getNodeType :: NodeAddress -> IR.NodeType
 getNodeType = IR.getNodeType . getNodePair
