@@ -101,6 +101,7 @@ accessPathValue addr = case getNodeType addr of
 
     compose = ComposedValue.toComposed
 
+    initValueHandler a | isRoot a = compose $ BSet.singleton $ AP.global $ getNodePair a
     initValueHandler a = compose $ BSet.singleton $ AP.parameter $ getIndex a 
 
     -- add operator support

@@ -92,16 +92,21 @@ callSiteAnalysis = Solver.mkAnalysisIdentifier CallSiteAnalysis "CS"
 callSites :: NodeAddress -> Solver.TypedVar CallSiteSet
 callSites addr = case getNodeType addr of
 
+    -- for root elements => no call sites
+    _ | isRoot e -> noCalls
+
     -- for lambdas and bind exressions: collect all call sites
     IR.Lambda   -> var
     IR.BindExpr -> var
 
     -- everything else has no call sites
-    _ -> Solver.mkVariable id [] Solver.bot
+    _ -> noCalls
 
   where
 
     id = Solver.mkIdentifierFromExpression callSiteAnalysis addr
+
+    noCalls = Solver.mkVariable id [] Solver.bot
 
     -- navigate to the enclosing expression
     e = case getNodeType addr of
