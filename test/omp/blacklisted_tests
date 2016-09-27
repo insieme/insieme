@@ -2,7 +2,7 @@
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
 flood_simulator
-gemsclaim # disabled here because the test takes quite long
+gemsclaim
 mergeSort
 molecularDynamics
 mqap
@@ -17,7 +17,6 @@ sgefa
 SNU-NPB
 ssca2
 transpose
-wavefront
 velvet
 vivid
 ziggurat

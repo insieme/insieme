@@ -4,7 +4,7 @@
 #include <math.h>
 #include <omp.h>
 
-#define N 4000
+#define N 400
 
 double mat_a[N+1][N+1];
 
@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
 	}		
 
 // 	int converged = 0;
-	double t = omp_get_wtime();
+	//double t = omp_get_wtime();
 	#pragma omp parallel 
 	for(int iter=0; iter<400; ++iter) {
 		#pragma omp for schedule(dynamic,32)
@@ -40,5 +40,5 @@ int main(int argc, char** argv) {
 		}
 // 		if(diff < 0.000001) converged = 1;
 	}
-	printf("Complete: %8.4lf\n", omp_get_wtime()-t);
+	//printf("Complete: %8.4lf\n", omp_get_wtime()-t);
 }

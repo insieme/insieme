@@ -3,7 +3,7 @@ VERSION="2016.05.15"
 PACKAGE="$NAME-$VERSION"
 
 FILE="$PACKAGE.zip"
-URL="http://www.dps.uibk.ac.at/~csaf7445/ext_libs/$FILE"
+URL="http://www.insieme-compiler.org/ext_libs/$FILE"
 SHA256SUM="35d4f7d8db604dfa1ba785fce3cefd439838f290d2618281a85ba79819ec19bc"
 
 DEPENDS="bison flex boost"
