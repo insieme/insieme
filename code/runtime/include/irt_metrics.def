@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -111,36 +111,46 @@ METRIC(socket_occupancy, 200, unit, double, "%f", IRT_HW_SCOPE_SOCKET, IRT_METRI
 #ifdef IRT_USE_PAPI
 
 GROUP(papi_group, int32* papi_eventset, long long int papi_values[IRT_INST_PAPI_MAX_COUNTERS] = {0},
-      {
-	      irt_papi_init();
-	      irt_papi_setup_context(context);
-	  },
-      { irt_papi_setup_worker(worker); }, { irt_papi_finalize_context(context); }, { irt_papi_finalize_worker(worker); }, { irt_papi_start(); },
-      { irt_papi_stop(papi_values); }, {}, {})
+	{
+		irt_papi_init();
+		irt_papi_setup_context(context);
+	},
+	{ irt_papi_setup_worker(worker); }, { irt_papi_finalize_context(context); }, { irt_papi_finalize_worker(worker); }, { irt_papi_start(); },
+	{ irt_papi_stop(papi_values); }, {}, {})
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L1_TCM)
 METRIC(PAPI_L1_TCM, 300, unit, uint64, "%" PRIu64, IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_SUM, papi_group, { wi->inst_region_data->last_PAPI_L1_TCM = 0; },
-       { wi->inst_region_data->aggregated_PAPI_L1_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L1_TCM"); }, {}, {}, 1)
+	{ wi->inst_region_data->aggregated_PAPI_L1_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L1_TCM"); }, {}, {}, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L1_DCM)
 METRIC(PAPI_L1_DCM, 301, unit, uint64, "%" PRIu64, IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_SUM, papi_group, { wi->inst_region_data->last_PAPI_L1_DCM = 0; },
-       { wi->inst_region_data->aggregated_PAPI_L1_DCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L1_DCM"); }, {}, {}, 1)
+	{ wi->inst_region_data->aggregated_PAPI_L1_DCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L1_DCM"); }, {}, {}, 1)
+#endif
+
+#if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L1_ICM)
+METRIC(PAPI_L1_ICM, 302, unit, uint64, "%" PRIu64, IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_SUM, papi_group, { wi->inst_region_data->last_PAPI_L1_ICM = 0; },
+	{ wi->inst_region_data->aggregated_PAPI_L1_ICM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L1_ICM"); }, {}, {}, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L2_TCM)
 METRIC(PAPI_L2_TCM, 310, unit, uint64, "%" PRIu64, IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_SUM, papi_group, { wi->inst_region_data->last_PAPI_L2_TCM = 0; },
-       { wi->inst_region_data->aggregated_PAPI_L2_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L2_TCM"); }, {}, {}, 1)
+	{ wi->inst_region_data->aggregated_PAPI_L2_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L2_TCM"); }, {}, {}, 1)
+#endif
+
+#if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L2_ICM)
+METRIC(PAPI_L2_ICM, 312, unit, uint64, "%" PRIu64, IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_SUM, papi_group, { wi->inst_region_data->last_PAPI_L2_ICM = 0; },
+	{ wi->inst_region_data->aggregated_PAPI_L2_ICM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L2_ICM"); }, {}, {}, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_L3_TCM)
 METRIC(PAPI_L3_TCM, 320, unit, uint64, "%" PRIu64, IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_SUM, papi_group, { wi->inst_region_data->last_PAPI_L3_TCM = 0; },
-       { wi->inst_region_data->aggregated_PAPI_L3_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L3_TCM"); }, {}, {}, 1)
+	{ wi->inst_region_data->aggregated_PAPI_L3_TCM = irt_papi_get_value_by_name(context, papi_values, "PAPI_L3_TCM"); }, {}, {}, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_FP_OPS)
 METRIC(PAPI_FP_OPS, 330, unit, uint64, "%" PRIu64, IRT_HW_SCOPE_SOCKET, IRT_METRIC_AGGREGATOR_SUM, papi_group, { wi->inst_region_data->last_PAPI_FP_OPS = 0; },
-       { wi->inst_region_data->aggregated_PAPI_FP_OPS = irt_papi_get_value_by_name(context, papi_values, "PAPI_FP_OPS"); }, {}, {}, 1)
+	{ wi->inst_region_data->aggregated_PAPI_FP_OPS = irt_papi_get_value_by_name(context, papi_values, "PAPI_FP_OPS"); }, {}, {}, 1)
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_PAPI_TOT_INS)

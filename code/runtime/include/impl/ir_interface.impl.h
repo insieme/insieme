@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -116,10 +116,10 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
 
 
 irt_joinable irt_parallel(const irt_parallel_job* job) {
-// Parallel
-// TODO: make optional, better scheduling,
-// speedup using custom implementation without adding each item individually to group
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
+	// Parallel
+	// TODO: make optional, better scheduling,
+	// speedup using custom implementation without adding each item individually to group
+	#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
 	// Note: We use the first implementation here since it may carry optimization data
 	// Note: this call and the call of irt_optimizer_set_wrapping_optimizations below maybe should be moved further down just before WI assignment
 	irt_optimizer_apply_dct(&job->impl->variants[0]);
@@ -147,7 +147,7 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 		irt_wg_insert(retwg, wis[i]);
 	}
 	for(uint32 i = 0; i < num_threads; ++i) {
-		irt_scheduling_generate_wi(irt_g_workers[(i + irt_g_degree_of_parallelism / 2 - 1) % irt_g_degree_of_parallelism], wis[i]);
+		irt_scheduling_generate_wi(irt_g_workers[i % irt_g_degree_of_parallelism], wis[i]);
 	}
 	#ifdef _GEMS_SIM
 	// alloca is implemented as malloc
