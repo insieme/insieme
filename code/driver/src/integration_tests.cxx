@@ -411,7 +411,7 @@ int main(int argc, char** argv) {
 
 						line << "# " << curRes.first
 						     << boost::format(colOffset)
-						            % (boost::format("[%.3f secs, %.3f MB]") % curRes.second.getRuntime() % (curRes.second.getMemory() / 1024))
+						            % (boost::format("[%.3f secs, %7.3f MB]") % curRes.second.getRuntime() % (curRes.second.getMemory() / 1024))
 						     << " #" << colorize.reset() << "\n";
 
 						if(curRes.second.wasSuccessful()) {
