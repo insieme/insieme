@@ -163,6 +163,7 @@ arithmeticValue addr = case Addr.getNodePair addr of
 isIntType :: IR.Tree -> Bool
 isIntType (IR.NT IR.GenericType (IR.NT (IR.StringValue "int" ) _:_)) = True
 isIntType (IR.NT IR.GenericType (IR.NT (IR.StringValue "uint") _:_)) = True
+isIntType (IR.NT IR.TypeVariable _ )                                 = True
 isIntType _ = False
 
 
