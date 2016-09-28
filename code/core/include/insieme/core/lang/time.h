@@ -34,38 +34,37 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+#pragma once
 
-#include "insieme/frontend/extensions/omp_frontend_extension.h"
-#include "insieme/frontend/extensions/test_pragma_extension.h"
+#include "insieme/core/lang/extension.h"
 
 namespace insieme {
-namespace frontend {
+namespace core {
+namespace lang {
 
-	namespace {
-		void runOmpTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](ConversionJob& job) {}) {
-			runIndependentTestOn(fn, [&jobModifier](ConversionJob& job) {
-				job.forceFrontendExtension<extensions::OmpFrontendExtension>();
-				jobModifier(job);
-			});
-		}
-	}
+	/**
+	 * An extension for time measurement
+	 */
+	class TimeExtension : public core::lang::Extension {
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
 
-	TEST(OpenMPConversion, Basic) {
-		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_basic.c");
-	}
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		TimeExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
-	TEST(OpenMPConversion, Capture) {
-		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_capture.c");
-	}
+	  public:
 
-	TEST(OpenMPConversion, Functions) {
-		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_functions.c");
-	}
+		/**
+		 * An operation retrieving the current wall time in seconds
+		 */
+		LANG_EXT_LITERAL(GetTime, "get_time", "() -> real<8>")
 
-	TEST(OpenMPConversion, Task) {
-		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_task.c");
-	}
+	};
 
-} // fe namespace
-} // insieme namespace
+} // end namespace lang
+} // end namespace core
+} // end namespace insieme

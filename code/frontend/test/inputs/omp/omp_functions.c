@@ -34,38 +34,21 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+#include <omp.h>
 
-#include "insieme/frontend/extensions/omp_frontend_extension.h"
-#include "insieme/frontend/extensions/test_pragma_extension.h"
+int main() {
+	int i;
 
-namespace insieme {
-namespace frontend {
+	//===------------------------------------------------------------------------------------------------------------------------------------------- TIME ---===
 
-	namespace {
-		void runOmpTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](ConversionJob& job) {}) {
-			runIndependentTestOn(fn, [&jobModifier](ConversionJob& job) {
-				job.forceFrontendExtension<extensions::OmpFrontendExtension>();
-				jobModifier(job);
-			});
+	#pragma test expect_ir(R"(
+		using "ext.time";
+		{
+			var ref<real<8>,f,f,plain> v0 = get_time();
 		}
+	)")
+	{
+		double t = omp_get_wtime();
 	}
 
-	TEST(OpenMPConversion, Basic) {
-		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_basic.c");
-	}
-
-	TEST(OpenMPConversion, Capture) {
-		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_capture.c");
-	}
-
-	TEST(OpenMPConversion, Functions) {
-		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_functions.c");
-	}
-
-	TEST(OpenMPConversion, Task) {
-		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_task.c");
-	}
-
-} // fe namespace
-} // insieme namespace
+}

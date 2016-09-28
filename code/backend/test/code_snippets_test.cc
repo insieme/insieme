@@ -746,5 +746,18 @@ namespace backend {
 		})
 	}
 
+	TEST(Time, Conversion) {
+		DO_TEST(R"(
+			using "ext.time";
+			int<4> function main() {
+				var ref<real<8>,f,f,plain> v0 = get_time();
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
+			EXPECT_PRED2(containsSubString, code, "double insieme_get_wtime()");
+		})
+	}
+
+
 } // namespace backend
 } // namespace insieme

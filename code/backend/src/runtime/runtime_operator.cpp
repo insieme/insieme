@@ -48,6 +48,7 @@
 
 #include "insieme/core/lang/instrumentation_extension.h"
 #include "insieme/core/lang/parallel.h"
+#include "insieme/core/lang/time.h"
 #include "insieme/core/transform/manipulation.h"
 
 namespace insieme {
@@ -67,6 +68,7 @@ namespace runtime {
 	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table, const BackendConfig& config) {
 		const RuntimeExtension& ext = manager.getLangExtension<RuntimeExtension>();
 		const core::lang::ParallelExtension& parExt = manager.getLangExtension<core::lang::ParallelExtension>();
+		const core::lang::TimeExtension& timeExt = manager.getLangExtension<core::lang::TimeExtension>();
 		const core::lang::InstrumentationExtension& instExt = manager.getLangExtension<core::lang::InstrumentationExtension>();
 		const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
@@ -204,6 +206,15 @@ namespace runtime {
 			return c_ast::call(C_NODE_MANAGER->create("irt_pfor"), item, group, range, body, data);
 		};
 
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// TIME
+
+		table[timeExt.getGetTime()] = OP_CONVERTER {
+			ADD_HEADER_FOR("irt_get_wtime");
+			return c_ast::call(C_NODE_MANAGER->create("irt_get_wtime"));
+		};
+
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// PARALLEL
+
 		table[parExt.getGetThreadGroup()] = OP_CONVERTER {
 			ADD_HEADER_FOR("irt_wi_get_current");
 			ADD_HEADER_FOR("irt_wi_get_wg");
@@ -298,7 +309,7 @@ namespace runtime {
 			                   CONVERT_TYPE(builder.deref(ARG(0))->getType()));
 		};
 
-		// special
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// SPECIAL
 
 		table[basic.getPick()] = OP_CONVERTER {
 			// uint16 irt_variant_pick(uint16 knop_id, uint16 num_variants);
@@ -316,6 +327,8 @@ namespace runtime {
 			ADD_HEADER_FOR("irt_exit");
 			return c_ast::call(C_NODE_MANAGER->create("irt_exit"), CONVERT_ARG(0));
 		};
+
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////INSTRUMENTATION
 
 		table[instExt.getInstrumentationInitRegions()] = OP_CONVERTER {
 			// just add info to context init

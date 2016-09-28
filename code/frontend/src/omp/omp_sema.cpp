@@ -46,6 +46,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/time.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
@@ -331,6 +332,7 @@ namespace omp {
 			if(CallExprPtr callExp = dynamic_pointer_cast<const CallExpr>(newNode)) {
 				auto fun = callExp->getFunctionExpr();
 				auto& refExt = nodeMan.getLangExtension<core::lang::ReferenceExtension>();
+				auto& timeExt = nodeMan.getLangExtension<core::lang::TimeExtension>();
 
 				if(refExt.isRefScalarToRefArray(fun)) {
 					ExpressionPtr arg = callExp->getArgument(0);
@@ -345,7 +347,7 @@ namespace omp {
 					} else if(funName == "omp_get_max_threads") {
 						return build.numericCast(build.getDefaultThreads(), basic.getInt4());
 					} else if(funName == "omp_get_wtime") {
-						return build.callExpr(build.literal("irt_get_wtime", build.functionType(TypeList(), basic.getDouble())));
+						return build.callExpr(basic.getReal8(), timeExt.getGetTime());
 					} else if(funName == "omp_set_num_threads") {
 						auto newCall = build.callExpr(build.literal("irt_set_default_parallel_wi_count", fun->getType()), callExp->getArgument(0));
 						return newCall;
