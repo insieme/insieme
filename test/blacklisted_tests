@@ -3,8 +3,9 @@
 
 indirection_test
 mpi
-vectors
+pointer_arith_vla
 vivid
+variadic_functions
 
 # Disabling tests because they fail with assertion:
 # Goto not implemented
@@ -14,14 +15,6 @@ label_goto
 # VectorType not implemented.
 longlong
 simd_vector
-
-# Disabling tests because the variadic fucntions plugin is incomplete
-variadic_functions
-
-# Disabling tests because VLAs are not implemented in the BE
-variable_arrays
-pointer_arith_vla
-
 
 ####################################################################################
 # The following tests are not really blacklisted but take rather long to execute.  #

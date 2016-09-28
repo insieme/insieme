@@ -96,5 +96,87 @@ namespace backend {
 		})
 	}
 
+	TEST(Task, InParallelSingleCapture) {
+		DO_TEST_WITH_BACKEND(R"(
+			def __any_string__task_fun = function (v0 : ref<ptr<int<4>>,f,f,plain>, v1 : ref<ref<real<4>,f,f,plain>,f,f,plain>, v2 : ref<ref<real<4>,f,f,plain>,f,f,plain>) -> unit {
+				{
+					ptr_to_ref(*v0) = num_cast(**v1***v2, type_lit(int<4>));
+				}
+			};
+			def __any_string__single_fun = function (v0 : ref<ptr<int<4>>,f,f,plain>, v1 : ref<ref<real<4>,f,f,plain>,f,f,plain>, v2 : ref<ref<real<4>,f,f,plain>,f,f,plain>) -> unit {
+				parallel(job[1ul..1ul] => __any_string__task_fun(*v0, *v1, *v2));
+			};
+			def __any_string__parallel_fun = function (v0 : ref<ptr<int<4>>,f,f,plain>, v1 : ref<ref<real<4>,f,f,plain>,f,f,plain>, v2 : ref<ref<real<4>,f,f,plain>,f,f,plain>) -> unit {
+				{
+					pfor(get_thread_group(0u), 0, 1, 1, (v3 : int<4>, v4 : int<4>, v5 : int<4>) => __any_string__single_fun(*v0, *v1, *v2));
+					barrier(get_thread_group(0u));
+				}
+				merge_all();
+			};
+			def IMP_testCapture = function (v0 : ref<ptr<int<4>>,f,f,plain>) -> int<4> {
+				var ref<real<4>,f,f,plain> v1 = 5.0E-1f;
+				var ref<real<4>,f,f,plain> v2 = 2.0E+0f;
+				{
+					merge(parallel(job[1ul...] => __any_string__parallel_fun(*v0, v1, v2)));
+				}
+				return *ptr_to_ref(*v0);
+			};
+			int<4> main() {
+				var ref<int<4>,f,f,plain> v0 = 0;
+				var ref<int<4>,f,f,plain> v1 = IMP_testCapture(ptr_from_ref(v0));
+				return 0;
+			}
+		)", runtime::RuntimeBackend::getDefault(), true, utils::compiler::Compiler::getRuntimeCompiler(), {
+			EXPECT_PRED2(notContainsSubString, code, "<?>");
+		})
+	}
+
+	// TODO: fix this bug in the backend
+	// current knowledge:
+	// - symptom: required variables are not captured
+	// - happens only if generated functions are not normalized
+	// - happens only if all three of parallel/single/task are nested
+	//
+	TEST(Task, FunctionNormalizationBug_DISABLED) {
+		auto program = builder.parseProgram(R"(
+			def __any_string__task_fun = function (v0 : ref<ptr<int<4>>,f,f,plain>) -> unit {
+				{
+					ptr_to_ref(*v0) = 1;
+				}
+			};
+			def __any_string__single_fun = function (v0 : ref<ptr<int<4>>,f,f,plain>) -> unit {
+				parallel(job[1ul..1ul] => __any_string__task_fun(*v0));
+			};
+			def __any_string__parallel_fun = function (v0 : ref<ptr<int<4>>,f,f,plain>) -> unit {
+				{
+					pfor(get_thread_group(0u), 0, 1, 1, (v1 : int<4>, v2 : int<4>, v3 : int<4>) => __any_string__single_fun(*v0));
+					barrier(get_thread_group(0u));
+				}
+				merge_all();
+			};
+			def IMP_testParam = function (v0 : ref<ptr<int<4>>,f,f,plain>) -> unit {
+				var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+				{
+					merge(parallel(job[1ul...] => __any_string__parallel_fun(*v0)));
+				}
+			};
+			int<4> main() {
+				var ref<int<4>,f,f,plain> v0 = 0;
+				IMP_testParam(ptr_from_ref(v0));
+				return 0;
+			}
+		)");
+
+		auto converted = runtime::RuntimeBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		auto originalCode = toString(*converted);
+		auto code = utils::removeCppStyleComments(originalCode);
+
+		/* try compiling the code fragment */
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
+		compiler.addFlag("-c"); /* do not run the linker */
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+	}
+
 } // namespace backend
 } // namespace insieme

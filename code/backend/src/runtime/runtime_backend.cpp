@@ -129,6 +129,7 @@ namespace runtime {
 			table["irt_region"] = "ir_interface.h";
 			table["irt_merge"] = "ir_interface.h";
 			table["irt_pfor"] = "ir_interface.h";
+			table["irt_get_wtime"] = "ir_interface.h";
 
 			table["irt_wi_end"] = "irt_all_impls.h";
 			table["irt_wi_get_current"] = "irt_all_impls.h";

@@ -59,6 +59,10 @@ namespace frontend {
 		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_capture.c");
 	}
 
+	TEST(OpenMPConversion, Functions) {
+		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_functions.c");
+	}
+
 	TEST(OpenMPConversion, Task) {
 		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_task.c");
 	}

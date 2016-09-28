@@ -201,6 +201,8 @@ namespace dump {
 		struct _ANNOTATION_NAME##Converter : public insieme::core::dump::AnnotationConverter {                                                                 \
 			_ANNOTATION_NAME##Converter() : insieme::core::dump::AnnotationConverter(#_ANNOTATION_NAME "Converter"){};
 
+	#define ANNOTATION_CONVERTER_END };
+
 	/**
 	 * A macro similar to the ANNOTATION_CONVERTER macro specialized for value annotations.
 	 *
