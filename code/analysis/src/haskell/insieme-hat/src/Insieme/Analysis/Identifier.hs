@@ -34,11 +34,15 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.Identifier where
 
+import Control.DeepSeq
 import Data.Typeable
+import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
@@ -54,7 +58,7 @@ import Insieme.Analysis.Entities.FieldIndex
 --
 
 data Identifier = Identifier String
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Generic, NFData)
 
 
 instance Show Identifier where

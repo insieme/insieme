@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -210,112 +210,102 @@ namespace opencl {
 		*/
 
 		auto prog = builder.parseProgram(R"(
-			decl IMP_malloc : (uint<8>) -> ptr<unit>;
-			decl IMP_gettimeofday : (ptr<IMP_timeval>, ptr<IMP_timezone>) -> int<4>;
-			decl IMP_fprintf : (ptr<IMP__IO_FILE>, ptr<char,t,f>, var_list) -> int<4>;
+			using "ext.memory";
 			decl IMP_rand : () -> int<4>;
 			decl IMP_free : (ptr<unit>) -> unit;
 			decl IMP_main : (int<4>, ptr<ptr<char>>) -> int<4>;
 			decl IMP_mat_init : (ptr<real<4>>, uint<4>, real<4>) -> bool;
 			decl IMP_mat_is_value : (ptr<real<4>>, uint<4>, real<4>) -> bool;
 			decl IMP_mat_is_equal : (ptr<real<4>>, ptr<real<4>>, uint<4>) -> bool;
-			def IMP_mat_init = function (v56 : ref<ptr<real<4>>,f,f,plain>, v57 : ref<uint<4>,f,f,plain>, v58 : ref<real<4>,f,f,plain>) -> bool {
+			def IMP_mat_init = function (v0 : ref<ptr<real<4>>,f,f,plain>, v1 : ref<uint<4>,f,f,plain>, v2 : ref<real<4>,f,f,plain>) -> bool {
 				{
-					var ref<uint<4>,f,f,plain> v81 = num_cast(0, type_lit(uint<4>));
-					for( uint<4> v143 = num_cast(0, type_lit(uint<4>)) .. *v57 : 1u) {
-						ptr_subscript(*v56, v143) = *v58;
-					};
-				};
-				return IMP_mat_is_value(*v56, *v57, *v58);
+					for( uint<4> v3 = num_cast(0, type_lit(uint<4>)) .. *v1 : 1u) {
+						ptr_subscript(*v0, v3) = *v2;
+					}
+				}
+				return IMP_mat_is_value(*v0, *v1, *v2);
 			};
-			def IMP_mat_is_value = function (v48 : ref<ptr<real<4>>,f,f,plain>, v49 : ref<uint<4>,f,f,plain>, v50 : ref<real<4>,f,f,plain>) -> bool {
+			def IMP_mat_is_value = function (v0 : ref<ptr<real<4>>,f,f,plain>, v1 : ref<uint<4>,f,f,plain>, v2 : ref<real<4>,f,f,plain>) -> bool {
 				{
-					var ref<uint<4>,f,f,plain> v51 = num_cast(0, type_lit(uint<4>));
-					while(*v51<*v49) {
-						if(*ptr_subscript(*v48, *v51)!=*v50) {
+					var ref<uint<4>,f,f,plain> v3 = num_cast(0, type_lit(uint<4>));
+					while(*v3<*v1) {
+						if(*ptr_subscript(*v0, *v3)!=*v2) {
 							return 0!=0;
-						};
-						gen_pre_inc(v51);
-					};
-				};
+						}
+						gen_pre_inc(v3);
+					}
+				}
 				return 1!=0;
 			};
-			def IMP_mat_is_equal = function (v17 : ref<ptr<real<4>>,f,f,plain>, v18 : ref<ptr<real<4>>,f,f,plain>, v19 : ref<uint<4>,f,f,plain>) -> bool {
+			def IMP_mat_is_equal = function (v0 : ref<ptr<real<4>>,f,f,plain>, v1 : ref<ptr<real<4>>,f,f,plain>, v2 : ref<uint<4>,f,f,plain>) -> bool {
 				{
-					var ref<uint<4>,f,f,plain> v20 = num_cast(0, type_lit(uint<4>));
-					while(*v20<*v19) {
-						if(num_cast(*ptr_subscript(*v17, *v20), type_lit(uint<4>))!=num_cast(*ptr_subscript(*v18, *v20), type_lit(uint<4>))) {
+					var ref<uint<4>,f,f,plain> v3 = num_cast(0, type_lit(uint<4>));
+					while(*v3<*v2) {
+						if(num_cast(*ptr_subscript(*v0, *v3), type_lit(uint<4>))!=num_cast(*ptr_subscript(*v1, *v3), type_lit(uint<4>))) {
 							return 0!=0;
-						};
-						gen_pre_inc(v20);
-					};
-				};
+						}
+						gen_pre_inc(v3);
+					}
+				}
 				return 1!=0;
 			};
 			// Inspire Program
-			int<4> function IMP_main (v91 : ref<int<4>,f,f,plain>, v92 : ref<ptr<ptr<char>>,f,f,plain>){
-				var ref<int<4>,t,f,plain> v93 = 1000;
-				var ref<int<4>,t,f,plain> v94 = 1000;
-				var ref<int<4>,t,f,plain> v95 = 1000;
-				var ref<ptr<real<4>>,f,f,plain> v96 = ptr_reinterpret(IMP_malloc(sizeof(type_lit(real<4>))*num_cast(*v94, type_lit(uint<8>))*num_cast(*v95, type_lit(uint<8>))), type_lit(real<4>));
-				var ref<ptr<real<4>>,f,f,plain> v100 = ptr_reinterpret(IMP_malloc(sizeof(type_lit(real<4>))*num_cast(*v93, type_lit(uint<8>))*num_cast(*v95, type_lit(uint<8>))), type_lit(real<4>));
-				var ref<uint<8>,t,f,plain> v101 = sizeof(type_lit(real<4>));
-				var ref<ptr<real<4>>,f,f,plain> v102 = ptr_reinterpret(IMP_malloc(*v101*num_cast(*v93, type_lit(uint<8>))*num_cast(*v94, type_lit(uint<8>))), type_lit(real<4>));
-				var ref<ptr<real<4>>,f,f,plain> v103 = ptr_reinterpret(IMP_malloc(*v101*num_cast(*v93, type_lit(uint<8>))*num_cast(*v94, type_lit(uint<8>))), type_lit(real<4>));
-				var ref<bool,f,f,plain> v104 = 1!=0;
-				v104 = v104 && IMP_mat_init(*v96, num_cast(*v94**v95, type_lit(uint<4>)), num_cast(2, type_lit(real<4>)));
-				v104 = v104 && IMP_mat_init(*v100, num_cast(*v93**v95, type_lit(uint<4>)), num_cast(3, type_lit(real<4>)));
-				v104 = v104 && IMP_mat_init(*v102, num_cast(*v93**v94, type_lit(uint<4>)), num_cast(0, type_lit(real<4>)));
-				v104 = v104 && IMP_mat_init(*v103, num_cast(*v93**v94, type_lit(uint<4>)), num_cast(0, type_lit(real<4>)));
-				if(*v104) {
+			int<4> function IMP_main (v0 : ref<int<4>,f,f,plain>, v1 : ref<ptr<ptr<char>>,f,f,plain>){
+				var ref<int<4>,t,f,plain> v2 = 1000;
+				var ref<int<4>,t,f,plain> v3 = 1000;
+				var ref<int<4>,t,f,plain> v4 = 1000;
+				var ref<ptr<real<4>>,f,f,plain> v5 = ptr_reinterpret(malloc_wrapper(sizeof(type_lit(real<4>))*num_cast(*v3, type_lit(uint<8>))*num_cast(*v4, type_lit(uint<8>))), type_lit(real<4>));
+				var ref<ptr<real<4>>,f,f,plain> v6 = ptr_reinterpret(malloc_wrapper(sizeof(type_lit(real<4>))*num_cast(*v2, type_lit(uint<8>))*num_cast(*v4, type_lit(uint<8>))), type_lit(real<4>));
+				var ref<uint<8>,t,f,plain> v7 = sizeof(type_lit(real<4>));
+				var ref<ptr<real<4>>,f,f,plain> v8 = ptr_reinterpret(malloc_wrapper(*v7*num_cast(*v2, type_lit(uint<8>))*num_cast(*v3, type_lit(uint<8>))), type_lit(real<4>));
+				var ref<ptr<real<4>>,f,f,plain> v9 = ptr_reinterpret(malloc_wrapper(*v7*num_cast(*v2, type_lit(uint<8>))*num_cast(*v3, type_lit(uint<8>))), type_lit(real<4>));
+				var ref<bool,f,f,plain> v10 = 1!=0;
+				v10 = v10 && IMP_mat_init(*v5, num_cast(*v3**v4, type_lit(uint<4>)), num_cast(2, type_lit(real<4>)));
+				v10 = v10 && IMP_mat_init(*v6, num_cast(*v2**v4, type_lit(uint<4>)), num_cast(3, type_lit(real<4>)));
+				v10 = v10 && IMP_mat_init(*v8, num_cast(*v2**v3, type_lit(uint<4>)), num_cast(0, type_lit(real<4>)));
+				v10 = v10 && IMP_mat_init(*v9, num_cast(*v2**v3, type_lit(uint<4>)), num_cast(0, type_lit(real<4>)));
+				if(*v10) {
 					{
-						var ref<uint<4>,f,f,plain> v108 = num_cast(0, type_lit(uint<4>));
-						for( uint<4> v150 = num_cast(0, type_lit(uint<4>)) .. num_cast(1024, type_lit(uint<4>)) : 1u) {
+						for( uint<4> v11 = num_cast(0, type_lit(uint<4>)) .. num_cast(1024, type_lit(uint<4>)) : 1u) {
 							{
-								ptr_subscript(*v96, IMP_rand()%(*v94**v95)) = num_cast(IMP_rand()%10+1, type_lit(real<4>));
-								ptr_subscript(*v100, IMP_rand()%(*v93**v95)) = num_cast(IMP_rand()%10+1, type_lit(real<4>));
-							};
-						};
-					};
+								ptr_subscript(*v5, IMP_rand()%(*v3**v4)) = num_cast(IMP_rand()%10+1, type_lit(real<4>));
+								ptr_subscript(*v6, IMP_rand()%(*v2**v4)) = num_cast(IMP_rand()%10+1, type_lit(real<4>));
+							}
+						}
+					}
 					{
-						var ref<uint<4>,f,f,plain> v113 = num_cast(0, type_lit(uint<4>));
-						for( uint<4> v149 = num_cast(0, type_lit(uint<4>)) .. num_cast(*v94, type_lit(uint<4>)) : 1u) {
+						for( uint<4> v12 = num_cast(0, type_lit(uint<4>)) .. num_cast(*v3, type_lit(uint<4>)) : 1u) {
 							{
-								var ref<uint<4>,f,f,plain> v114 = num_cast(0, type_lit(uint<4>));
-								for( uint<4> v148 = num_cast(0, type_lit(uint<4>)) .. num_cast(*v93, type_lit(uint<4>)) : 1u) {
+								for( uint<4> v13 = num_cast(0, type_lit(uint<4>)) .. num_cast(*v2, type_lit(uint<4>)) : 1u) {
 									{
-										var ref<uint<4>,f,f,plain> v115 = num_cast(0, type_lit(uint<4>));
-										for( uint<4> v147 = num_cast(0, type_lit(uint<4>)) .. num_cast(*v95, type_lit(uint<4>)) : 1u) {
-											ptr_subscript(*v102, v149*num_cast(*v94, type_lit(uint<4>))+v148) = ptr_subscript(*v102, v149*num_cast(*v94, type_lit(uint<4>))+v148) + *ptr_subscript(*v96, v149*num_cast(*v95, type_lit(uint<4>))+v147)**ptr_subscript(*v100, v147*num_cast(*v94, type_lit(uint<4>))+v148);
-										};
-									};
-								};
-							};
-						};
-					};
+										for( uint<4> v14 = num_cast(0, type_lit(uint<4>)) .. num_cast(*v4, type_lit(uint<4>)) : 1u) {
+											ptr_subscript(*v8, v12*num_cast(*v3, type_lit(uint<4>))+v13) = ptr_subscript(*v8, v12*num_cast(*v3, type_lit(uint<4>))+v13) + *ptr_subscript(*v5, v12*num_cast(*v4, type_lit(uint<4>))+v14)**ptr_subscript(*v6, v14*num_cast(*v3, type_lit(uint<4>))+v13);
+										}
+									}
+								}
+							}
+						}
+					}
 					{
-						var ref<uint<4>,f,f,plain> v120 = num_cast(0, type_lit(uint<4>));
-						for( uint<4> v146 = num_cast(0, type_lit(uint<4>)) .. num_cast(*v94, type_lit(uint<4>)) : 1u) {
+						for( uint<4> v15 = num_cast(0, type_lit(uint<4>)) .. num_cast(*v3, type_lit(uint<4>)) : 1u) {
 							{
-								var ref<uint<4>,f,f,plain> v121 = num_cast(0, type_lit(uint<4>));
-								for( uint<4> v145 = num_cast(0, type_lit(uint<4>)) .. num_cast(*v93, type_lit(uint<4>)) : 1u) {
+								for( uint<4> v16 = num_cast(0, type_lit(uint<4>)) .. num_cast(*v2, type_lit(uint<4>)) : 1u) {
 									{
-										var ref<uint<4>,f,f,plain> v122 = num_cast(0, type_lit(uint<4>));
-										for( uint<4> v144 = num_cast(0, type_lit(uint<4>)) .. num_cast(*v95, type_lit(uint<4>)) : 1u) {
-											ptr_subscript(*v103, v146*num_cast(*v94, type_lit(uint<4>))+v145) = ptr_subscript(*v103, v146*num_cast(*v94, type_lit(uint<4>))+v145) + *ptr_subscript(*v96, v146*num_cast(*v95, type_lit(uint<4>))+v144)**ptr_subscript(*v100, v144*num_cast(*v94, type_lit(uint<4>))+v145);
-										};
-									};
-								};
-							};
-						};
-					};
-					v104 = IMP_mat_is_equal(*v102, *v103, num_cast(*v93**v94, type_lit(uint<4>)));
-				};
-				IMP_free(ptr_reinterpret(*v96, type_lit(unit)));
-				IMP_free(ptr_reinterpret(*v100, type_lit(unit)));
-				IMP_free(ptr_reinterpret(*v102, type_lit(unit)));
-				IMP_free(ptr_reinterpret(*v103, type_lit(unit)));
-				return *v104?0:1;
+										for( uint<4> v17 = num_cast(0, type_lit(uint<4>)) .. num_cast(*v4, type_lit(uint<4>)) : 1u) {
+											ptr_subscript(*v9, v15*num_cast(*v3, type_lit(uint<4>))+v16) = ptr_subscript(*v9, v15*num_cast(*v3, type_lit(uint<4>))+v16) + *ptr_subscript(*v5, v15*num_cast(*v4, type_lit(uint<4>))+v17)**ptr_subscript(*v6, v17*num_cast(*v3, type_lit(uint<4>))+v16);
+										}
+									}
+								}
+							}
+						}
+					}
+					v10 = IMP_mat_is_equal(*v8, *v9, num_cast(*v2**v3, type_lit(uint<4>)));
+				}
+				free_wrapper(ptr_reinterpret(*v5, type_lit(unit)));
+				free_wrapper(ptr_reinterpret(*v6, type_lit(unit)));
+				free_wrapper(ptr_reinterpret(*v8, type_lit(unit)));
+				free_wrapper(ptr_reinterpret(*v9, type_lit(unit)));
+				return *v10?0:1;
 			}
 		)").as<core::ProgramPtr>();
 		ASSERT_TRUE(prog);

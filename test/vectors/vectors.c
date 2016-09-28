@@ -8,11 +8,6 @@ void funA(double* A) {
 	printf("%f\n", A[5*N+5]);
 }
 
-void funB(double** A) {
-	printf("%f\n", A[5][5]);
-}
-
-
 int main() {
 
 	// fixed size
@@ -32,12 +27,8 @@ int main() {
 		}
 	}
 	
-/*
 	funA(a);
-	funB(a);
 	funA(b);
-	funB(b);
-*/
 	funA((double*)b);
 
 	return 0;

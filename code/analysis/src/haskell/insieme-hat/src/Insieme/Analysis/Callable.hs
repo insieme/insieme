@@ -34,13 +34,17 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.Callable where
 
+import Control.DeepSeq
 import Data.List
 import Data.Maybe
 import Data.Typeable
+import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
 import qualified Insieme.Analysis.Solver as Solver
@@ -60,7 +64,7 @@ data Callable =
       Lambda NodeAddress
     | Literal NodeAddress
     | Closure NodeAddress
- deriving (Eq, Ord)
+ deriving (Eq, Ord, Generic, NFData)
 
 instance Show Callable where
     show (Lambda na) = "Lambda@" ++ (prettyShow na)

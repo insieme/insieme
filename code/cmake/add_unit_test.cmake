@@ -50,10 +50,8 @@ macro ( add_unit_test case_name ut_prefix )
 		set(GTEST_PREFIX ${CMAKE_BINARY_DIR}/ep-gtest-${GTEST_VERSION})
 		#set(GTEST_PREFIX ${THIRD_PARTY_LIBS_HOME}/ep-gtest-${GTEST_VERSION}/)
 		#ugly but necessary, in future versions one can use ${BINARY_DIR} in BUILD_BYPRODUCTS
-		set(gtest_lib
-			${GTEST_PREFIX}/src/googletest-build/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX})
-		set(gtest_main_lib
-			${GTEST_PREFIX}/src/googletest-build/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX})
+		set(gtest_lib ${GTEST_PREFIX}/src/googletest-build/googlemock/gtest/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX})
+		set(gtest_main_lib ${GTEST_PREFIX}/src/googletest-build/googlemock/gtest/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX})
 
 		# for now, always dynamically link in Windows
 		if(MSVC)
@@ -64,8 +62,8 @@ macro ( add_unit_test case_name ut_prefix )
 		# This is rather hacky as maybe we should already forward some more variables which we don't know of yet until they might actually be needed and things will break.
 		# For now this works and we haven't really found a nicer way to do this.
 		ExternalProject_Add(googletest
-			URL http://insieme-compiler.org/ext_libs/gtest-1.7.0.tar.gz
-			URL_HASH SHA256=f73a6546fdf9fce9ff93a5015e0333a8af3062a152a9ad6bcb772c96687016cc
+			URL http://insieme-compiler.org/ext_libs/gtest-1.8.0.tar.gz
+			URL_HASH SHA256=58a6f4277ca2bc8565222b3bbd58a177609e9c488e8a72649359ba51450db7d8
 			PREFIX ${GTEST_PREFIX} 
 			INSTALL_COMMAND "" #make gtest gtest_main
 			CMAKE_ARGS -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_C_COMPILER_ARG1=${CMAKE_C_COMPILER_ARG1} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_CXX_COMPILER_ARG1=${CMAKE_CXX_COMPILER_ARG1} -Dgtest_force_shared_crt=${MSVC_SHARED_RUNTIME} -DBUILD_SHARED_LIBS=${googletest_BUILD_SHARED_LIBS}
@@ -89,14 +87,14 @@ macro ( add_unit_test case_name ut_prefix )
 		add_dependencies(${GTEST_MAIN_LIBRARY} googletest) 
 	else()
 		ExternalProject_Get_Property(googletest source_dir binary_dir)
-		set(GTEST_LIBRARY_PATH ${binary_dir}/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX})
-		set(GTEST_MAIN_LIBRARY_PATH ${binary_dir}/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX})
+		set(GTEST_LIBRARY_PATH ${binary_dir}/googlemock/gtest/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX})
+		set(GTEST_MAIN_LIBRARY_PATH ${binary_dir}/googlemock/gtest/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX})
 		#set(GTEST_LIBRARY gtest)
 		#set(GTEST_MAIN_LIBRARY gtest_main)
 	endif()
 
 	add_dependencies(${case_name} googletest)
-	target_include_directories(${case_name} SYSTEM PRIVATE ${source_dir}/include)
+	target_include_directories(${case_name} SYSTEM PRIVATE ${source_dir}/googletest/include)
 	# add dependency to google test libraries
 	target_link_libraries(${case_name} ${GTEST_LIBRARY_PATH})
 	target_link_libraries(${case_name} ${GTEST_MAIN_LIBRARY_PATH})

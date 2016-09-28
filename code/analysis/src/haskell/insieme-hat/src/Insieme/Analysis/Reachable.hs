@@ -34,6 +34,9 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module Insieme.Analysis.Reachable (
     Reachable,
     toBool,
@@ -42,8 +45,10 @@ module Insieme.Analysis.Reachable (
 ) where
 
 
-import Data.Typeable
+import Control.DeepSeq
 import Data.Maybe
+import Data.Typeable
+import GHC.Generics (Generic)
 
 import qualified Insieme.Analysis.Solver as Solver
 
@@ -58,7 +63,7 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 --
 
 newtype Reachable = Reachable Bool
-    deriving (Eq,Show)
+    deriving (Eq,Show,Generic,NFData)
 
 instance Solver.Lattice Reachable where
     bot = Reachable False

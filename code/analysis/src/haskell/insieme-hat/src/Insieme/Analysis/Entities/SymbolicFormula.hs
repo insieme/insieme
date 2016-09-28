@@ -34,14 +34,18 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.Entities.SymbolicFormula where
 
+import Control.DeepSeq
+import GHC.Generics (Generic)
 import Insieme.Utils.ParseInt
-import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.NodeAddress as Addr
+import qualified Insieme.Utils.Arithmetic as Ar
 
 --
 -- * Arithemtic Symbol
@@ -51,6 +55,7 @@ data Symbol = Constant {getNode :: IR.Tree,
                         getAddr :: Addr.NodeAddress }
             | Variable {getNode :: IR.Tree,
                         getAddr :: Addr.NodeAddress }
+  deriving (Generic, NFData)
 
 instance Eq Symbol where
     x == y = (getNode x) == (getNode y)

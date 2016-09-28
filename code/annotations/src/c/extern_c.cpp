@@ -60,18 +60,19 @@ namespace c {
 
 	VALUE_ANNOTATION_CONVERTER(ExternCTag)
 
-	typedef core::value_node_annotation<ExternCTag>::type annotation_type;
+		typedef core::value_node_annotation<ExternCTag>::type annotation_type;
 
-	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-		assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only include annotations supported!";
-		return encoder::toIR(manager, string("externC"));
-	}
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only include annotations supported!";
+			return encoder::toIR(manager, string("externC"));
+		}
 
-	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-		assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
-		return std::make_shared<annotation_type>(ExternCTag());
-	}
-};
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+			return std::make_shared<annotation_type>(ExternCTag());
+		}
+
+	VALUE_ANNOTATION_CONVERTER_END
 
 // ----------------------------------------------------
 

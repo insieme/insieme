@@ -34,6 +34,8 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.Reference (
@@ -46,8 +48,10 @@ module Insieme.Analysis.Reference (
     isMaterializingCall
 ) where
 
-import Data.Typeable
+import Control.DeepSeq
 import Data.Maybe
+import Data.Typeable
+import GHC.Generics (Generic)
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
@@ -89,7 +93,7 @@ data Reference i =
       }
     | NullReference
     | UninitializedReference
-  deriving (Eq,Ord,Show)
+  deriving (Eq,Ord,Show,Generic,NFData)
 
 
 --
@@ -98,11 +102,11 @@ data Reference i =
 
 type ReferenceSet i = USet.UnboundSet (Reference i)
 
-instance (Eq i,Ord i,Show i,Typeable i) => Lattice (ReferenceSet i) where
+instance (Eq i,Ord i,Show i,Typeable i,NFData i) => Lattice (ReferenceSet i) where
     bot   = USet.empty
     merge = USet.union
 
-instance (Eq i,Ord i,Show i,Typeable i) => ExtLattice (ReferenceSet i) where
+instance (Eq i,Ord i,Show i,Typeable i,NFData i) => ExtLattice (ReferenceSet i) where
     top   = USet.singleton UninitializedReference       -- What is not known, is not a valid reference
 
 

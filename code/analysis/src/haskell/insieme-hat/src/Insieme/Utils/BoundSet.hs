@@ -34,6 +34,9 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module Insieme.Utils.BoundSet (
     IsBound,
     Bound10,
@@ -58,7 +61,9 @@ module Insieme.Utils.BoundSet (
     getBound,
 ) where
 
+import Control.DeepSeq
 import Data.Typeable
+import GHC.Generics (Generic)
 import qualified Data.Set as Set
 import qualified Insieme.Utils.UnboundSet as USet
 
@@ -84,7 +89,7 @@ instance IsBound Bound100 where
 --
 
 data BoundSet bb a = Universe | BoundSet (Set.Set a)
-  deriving (Eq, Show, Ord)
+  deriving (Eq, Show, Ord, Generic, NFData)
 
 empty :: BoundSet bb a
 empty = BoundSet Set.empty

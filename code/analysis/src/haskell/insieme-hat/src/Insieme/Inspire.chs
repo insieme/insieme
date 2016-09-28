@@ -35,14 +35,18 @@
  -}
 
 {-# LANGUAGE CPP               #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms   #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
 module Insieme.Inspire where
 
+import Control.DeepSeq
 import Data.Function (on)
-import Data.Map (Map)
+import Data.Map.Strict (Map)
+import GHC.Generics (Generic)
 import Insieme.Inspire.ThHelpers
 import Language.Haskell.TH
 
@@ -69,7 +73,7 @@ $(let
             | IntValue    Int
             | UIntValue   Int
             | StringValue String
-          deriving (Eq, Ord, Show, Read)
+          deriving (Eq, Ord, Show, Read, Generic, NFData)
       |]
 
     extend :: Q [Dec] -> Q [Dec]
@@ -153,7 +157,7 @@ $(let
 
 data Tree = Tree { getNodePair :: (Int, NodeType),
                    getChildren :: [Tree]           }
-  deriving (Show)
+  deriving (Show, Generic, NFData)
 
 instance Eq Tree where
     (==) = (==) `on` getID
@@ -181,8 +185,9 @@ numChildren = length . getChildren
 
 type Builtins = Map String Tree
 
-data Inspire = Inspire { getTree     :: Tree,
+data Inspire = Inspire { getTree     :: !Tree,
                          getBuiltins :: Builtins }
+  deriving (Generic, NFData)
 
 --
 -- * Node Kinds

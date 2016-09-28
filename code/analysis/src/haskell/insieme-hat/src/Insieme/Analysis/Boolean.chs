@@ -34,9 +34,14 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module Insieme.Analysis.Boolean where
 
+import Control.DeepSeq
 import Data.Typeable
+import GHC.Generics (Generic)
 import Insieme.Analysis.Arithmetic
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Inspire.NodeAddress
@@ -57,7 +62,7 @@ import Insieme.Analysis.Entities.FieldIndex
 
 {#enum BooleanAnalysisResult as Result {}
   with prefix = "BooleanAnalysisResult_"
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, NFData)
  #}
 
 --

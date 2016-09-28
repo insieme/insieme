@@ -72,7 +72,8 @@ namespace lang {
 			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
 			return std::make_shared<annotation_type>(DerivedTag(encoder::toValue<string>(node)));
 		}
-	};
+
+	VALUE_ANNOTATION_CONVERTER_END
 
 	// ----------------------------------------------------
 
@@ -147,8 +148,8 @@ namespace lang {
 			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding of BuiltInTag encountered!";
 			return std::make_shared<annotation_type>(BuiltInTag());
 		}
-	};
-
+	
+	VALUE_ANNOTATION_CONVERTER_END
 
 } // end namespace lang
 } // end namespace core

@@ -34,6 +34,8 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE BangPatterns #-}
+
 module Insieme.Analysis.Solver (
 
     -- lattices
@@ -74,6 +76,7 @@ module Insieme.Analysis.Solver (
     SolverState,
     initState,
     assignment,
+    numSteps,
 
     -- solver
     resolve,
@@ -97,6 +100,7 @@ module Insieme.Analysis.Solver (
 import Prelude hiding (lookup)
 import Debug.Trace
 
+import Control.DeepSeq
 import Control.Exception
 import Control.Monad (void)
 import Data.Dynamic
@@ -125,7 +129,7 @@ import Insieme.Analysis.Entities.ProgramPoint
 -- Lattice --------------------------------------------------
 
 -- this is actually a bound join-semilattice
-class (Eq v, Show v, Typeable v) => Lattice v where
+class (Eq v, Show v, Typeable v, NFData v) => Lattice v where
         {-# MINIMAL join | merge, bot #-}
         -- | combine elements
         join :: [v] -> v                    -- need to be provided by implementations
@@ -351,7 +355,7 @@ get (Assignment m) (TypedVar v) =
 
 
 -- updates the value for the given variable stored within the given assignment
-set :: (Typeable a) => Assignment -> TypedVar a -> a -> Assignment
+set :: (Typeable a, NFData a) => Assignment -> TypedVar a -> a -> Assignment
 set (Assignment a) (TypedVar v) d = Assignment (insert v (toDyn d) a)
 
 

@@ -57,6 +57,8 @@
  * DEALINGS IN THE SOFTWARE.
  *
  */
+
+#include <alloca.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -191,9 +193,9 @@ unsigned long long parallel_uts ( Node *root )
 
 unsigned long long parTreeSearch(int depth, Node *parent, int numChildren) 
 {
-  Node n[numChildren], *nodePtr;
+  Node *n = alloca(sizeof(Node)*numChildren), *nodePtr;
   int i, j;
-  unsigned long long subtreesize = 1, partialCount[numChildren];
+  unsigned long long subtreesize = 1, *partialCount = alloca(sizeof(unsigned long long)*numChildren);
 
   // Recurse on the children
   for (i = 0; i < numChildren; i++) {

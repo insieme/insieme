@@ -34,8 +34,10 @@
  - regarding third party software licenses.
  -}
 
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.WriteSetSummary (
 
@@ -52,12 +54,14 @@ module Insieme.Analysis.WriteSetSummary (
 
 import Prelude hiding (null)
 
-import Debug.Trace
+import Control.DeepSeq
 import Data.Typeable
-import Insieme.Inspire.NodeAddress
-import Insieme.Analysis.Entities.FieldIndex
+import Debug.Trace
+import GHC.Generics (Generic)
 import Insieme.Analysis.AccessPath
+import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.FreeLambdaReferences
+import Insieme.Inspire.NodeAddress
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
@@ -83,7 +87,7 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 data WriteSet i =
           Known (Map.Map AP.BaseVar (AccessPathSet i))
         | Unknown
-    deriving(Eq,Ord,Show)
+    deriving(Eq,Ord,Show,Generic,NFData)
 
 
 -- an empty write set value

@@ -67,6 +67,8 @@
 #include "insieme/driver/integration/test_step.h"
 #include "insieme/driver/integration/test_framework.h"
 
+#include "insieme/driver/perf_reg/logging.h"
+
 using std::pair;
 using std::string;
 using std::vector;
@@ -77,6 +79,8 @@ namespace itc = insieme::driver::integration;
 typedef itc::IntegrationTestCase TestCase;
 using itc::TestStep;
 using itc::TestResult;
+
+using insieme::driver::perf_reg::TestResultsLogger;
 
 namespace tf = itc::testFramework;
 namespace {
@@ -104,7 +108,10 @@ namespace {
 		    ("long-tests-only",     "only run test cases which take long to execute")
 		    ("long-tests-also",     "also run test cases which take long to execute")
 		    ("preprocessing",       "perform all pre-processing steps")
-		    ("postprocessing",      "perform all post-processing steps");
+		    ("postprocessing",      "perform all post-processing steps")
+		    ("log-to-csv-file",     bpo::value<string>()->implicit_value("./integration_tests_results.csv"), "Log memory and runtime results to a CSV file")
+		    ("csv-file-id",         bpo::value<string>(), "Use a special ID for the CSV log file, e.g. the build number or Git commit hash")
+		    ;
 		// clang-format on
 
 		// define positional options (all options not being named)
@@ -164,6 +171,17 @@ namespace {
 
 		res.preprocessingOnly = map.count("preprocessing");
 		res.postprocessingOnly = map.count("postprocessing");
+
+		res.logToCsvFile = map.count("log-to-csv-file");
+		res.csvFile = res.logToCsvFile ? map["log-to-csv-file"].as<string>() : "";
+
+		if(map.count("csv-file-id")) {
+			res.csvFileIDisset = true;
+			res.csvFileID = map["csv-file-id"].as<string>();
+			if(!res.logToCsvFile) {
+				LOG(WARNING) << "Ignoring CSV file ID, as logging has not been enabled";
+			}
+		}
 
 		return res;
 	}
@@ -310,6 +328,15 @@ int main(int argc, char** argv) {
 	bool panic = false;
 	int act = 0;
 
+	// Setup logging facility if enabled via command line args
+	if (options.logToCsvFile) {
+		auto &logger = TestResultsLogger::getInstance();
+		logger.addKey("RuntimeSec");
+		logger.addKey("MemoryMB");
+		if (options.csvFileIDisset)
+			logger.setID(options.csvFileID);
+	}
+
 	for(int i = 0; i < options.num_repetitions; i++) {
 		// get instance of the test runner
 		itc::TestRunner& runner = itc::TestRunner::getInstance();
@@ -384,7 +411,7 @@ int main(int argc, char** argv) {
 
 						line << "# " << curRes.first
 						     << boost::format(colOffset)
-						            % (boost::format("[%.3f secs, %.3f MB]") % curRes.second.getRuntime() % (curRes.second.getMemory() / 1024 / 1024))
+						            % (boost::format("[%.3f secs, %7.3f MB]") % curRes.second.getRuntime() % (curRes.second.getMemory() / 1024))
 						     << " #" << colorize.reset() << "\n";
 
 						if(curRes.second.wasSuccessful()) {
@@ -447,11 +474,37 @@ int main(int argc, char** argv) {
 
 				// reset color to default value
 				std::cout << colorize.reset();
+
+				// save results if they should be logged to a file afterwards
+				if(options.logToCsvFile) {
+					auto &logger = TestResultsLogger::getInstance();
+					for (const auto &result : results) {
+						if (!result.second.wasSuccessful())
+							continue;
+
+						const auto &test = cur.getName();
+						const auto &step = result.first;
+						const auto &runtime = result.second.getRuntime();
+						const auto &memory  = result.second.getMemory() / 1024;
+
+						logger.addResult(test, step, "RuntimeSec", runtime);
+						logger.addResult(test, step, "MemoryMB", memory);
+					}
+				}
 			}
 
 		} // end test case loop
 
 	} // end repetition loop
+
+	// write results to CSV file if enabled via command line args
+	if(options.logToCsvFile) {
+		cout << "#" << boost::format(centerAlign) % std::string("Logging results to file '" + options.csvFile + "'...") << "#\n";
+		auto &logger = TestResultsLogger::getInstance();
+		if (!logger.writeResultsToFile(options.csvFile)) {
+			LOG(ERROR) << "Could not write to CSV file!";
+		}
+	}
 
 	if(!panic) { printSummary(totalTests, ok, options.blacklistedOnly, omittedTestsCount, failedSteps, screenWidth, colorize); }
 
