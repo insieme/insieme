@@ -425,8 +425,34 @@ namespace analysis {
 		return filenames;
 	}
 
+	/**
+	 * A printer for test case names
+	 */
+	struct TestCaseNamePrinter {
+	  template <class ParamType>
+	  std::string operator()(const ::testing::TestParamInfo<ParamType>& info) const {
+		  std::stringstream out;
+
+		  // foramt the index
+		  out << format("%3d", info.index);
+
+		  // format the name
+		  std::string name = info.param;
+		  name = name.substr(0, name.find_last_of('.'));
+		  out << format("_%-40s", name);
+
+		  // sanitize the resulting string
+		  auto res = out.str();
+		  std::replace(res.begin(), res.end(), ' ','_');
+		  std::replace(res.begin(), res.end(), '/','_');
+		  std::replace(res.begin(), res.end(), '.','_');
+		  std::replace(res.begin(), res.end(), '-','_');
+		  return res;
+	  }
+	};
+
 	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(InputFileChecks, CBA_Inputs_Test, ::testing::ValuesIn(getFilenames()));
+	INSTANTIATE_TEST_CASE_P(InputFileChecks, CBA_Inputs_Test, ::testing::ValuesIn(getFilenames()), TestCaseNamePrinter());
 
 } // end namespace analysis
 } // end namespace insieme
