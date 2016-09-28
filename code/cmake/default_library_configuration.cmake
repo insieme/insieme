@@ -32,7 +32,7 @@ set(ZLIB_VERSION 1.2.8)
 set(LUAJIT_VERSION 2.0.3)
 
 #GTEST - used for unit tests
-set(GTEST_VERSION 1.7.0)
+set(GTEST_VERSION 1.8.0)
 
 #BOOST - used everywhere except for runtime...
 set(BOOST_VERSION 1.59.0)
