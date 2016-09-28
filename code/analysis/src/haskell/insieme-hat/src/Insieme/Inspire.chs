@@ -263,3 +263,29 @@ toNodeKind CatchClause                  = Support
 toNodeKind Parameters                   = Support
 toNodeKind Expressions                  = Support
                          
+
+
+--
+-- * Function Kind
+-- 
+
+data FunctionKind =
+        FK_Plain | FK_Closure | FK_Constructor | FK_Destructor | FK_MemberFunction | FK_VirtualMemberFunction
+    deriving (Eq,Ord,Show)
+                         
+                         
+toFunctionKind :: Tree -> Maybe FunctionKind
+toFunctionKind t@(NT FunctionType (_:_:k:_)) = case getNodeType k of
+    UIntValue 1 -> Just $ FK_Plain
+    UIntValue 2 -> Just $ FK_Closure
+    UIntValue 3 -> Just $ FK_Constructor
+    UIntValue 4 -> Just $ FK_Destructor
+    UIntValue 5 -> Just $ FK_MemberFunction
+    UIntValue 6 -> Just $ FK_VirtualMemberFunction
+    _ -> Nothing
+          
+toFunctionKind _ = Nothing 
+
+
+
+ 

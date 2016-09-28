@@ -52,7 +52,10 @@ module Insieme.Inspire.Utils (
     isType,
     isFreeVariable,
     isEntryPoint,
-    isEntryPointParameter
+    isEntryPointParameter,
+    isConstructor,
+    isDestructor,
+    isConstructorOrDestructor
 ) where
 
 import Control.Applicative
@@ -228,18 +231,11 @@ isLoopIterator :: NodeAddress -> Bool
 isLoopIterator a = (depth a >= 2) && ((==IR.ForStmt) $ getNodeType $ goUp $ goUp a)
 
 
-getType :: IR.Tree -> Maybe IR.NodeType
-getType (IR.NT IR.Literal         (t:_)) = Just $ IR.getNodeType t
-getType (IR.NT IR.Variable        (t:_)) = Just $ IR.getNodeType t
-getType (IR.NT IR.CallExpr        (t:_)) = Just $ IR.getNodeType t
-getType (IR.NT IR.LambdaExpr      (t:_)) = Just $ IR.getNodeType t
-getType (IR.NT IR.LambdaReference (t:_)) = Just $ IR.getNodeType t
-getType (IR.NT IR.BindExpr        (t:_)) = Just $ IR.getNodeType t
-getType (IR.NT IR.CastExpr        (t:_)) = Just $ IR.getNodeType t
-getType (IR.NT IR.TupleExpr       (t:_)) = Just $ IR.getNodeType t
-getType (IR.NT IR.InitExpr        (t:_)) = Just $ IR.getNodeType t
-getType (IR.NT IR.JobExpr         (t:_)) = Just $ IR.getNodeType t
-getType (IR.NT IR.MarkerExpr      (t:_)) = Just $ IR.getNodeType t
+-- | Returns the Type of an expression (or, if it is a type already, the given type)
+getType :: IR.Tree -> Maybe IR.Tree
+getType t@(IR.NT k _) | IR.toNodeKind k == IR.Type      = Just t 
+getType (IR.NT k cs) | IR.toNodeKind k == IR.Expression = Just $ head cs
+getType (IR.NT IR.Lambda (t:_))                         = Just t 
 getType _ = Nothing
 
 
@@ -253,6 +249,21 @@ isVariable = (==IR.Variable) . getNodeType
 isFreeVariable :: NodeAddress -> Bool
 isFreeVariable v | (not . isVariable) v = False
 isFreeVariable v = isNothing (findDecl v)
+
+
+checkFunctionKind :: (IR.FunctionKind -> Bool) -> IR.Tree -> Bool
+checkFunctionKind test t = fromMaybe False $ test <$> (IR.toFunctionKind =<< getType t)
+
+isConstructor :: IR.Tree -> Bool
+isConstructor = checkFunctionKind (==IR.FK_Constructor)
+
+isDestructor :: IR.Tree -> Bool
+isDestructor = checkFunctionKind (==IR.FK_Destructor)
+
+isConstructorOrDestructor :: IR.Tree -> Bool
+isConstructorOrDestructor t = isConstructor t || isDestructor t
+
+    
 
 hasEnclosingStatement :: NodeAddress -> Bool
 hasEnclosingStatement a = case getNodePair a of

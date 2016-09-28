@@ -36,12 +36,21 @@
 
 {-# LANGUAGE FlexibleInstances #-}
 
-module Insieme.Analysis.Reference where
+module Insieme.Analysis.Reference (
+    Location,
+    Reference(..),
+    ReferenceSet,
+    referenceValue,
+    
+    isMaterializingDeclaration,
+    isMaterializingCall
+) where
 
 import Data.Typeable
 import Data.Maybe
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.Utils
 import qualified Insieme.Inspire as IR
 
 import Insieme.Utils.Arithmetic
@@ -245,6 +254,32 @@ isMaterializingCall _ = False        -- the default, for now - TODO: implement r
 
 getEnclosingDecl :: NodeAddress -> NodeAddress
 getEnclosingDecl addr = case getNodeType addr of
-    IR.Declaration  -> addr
-    _ | isRoot addr -> error "getEnclosingDecl has no parent to go to"
-    _               -> getEnclosingDecl $ fromJust $ getParent addr
+        IR.Declaration | not isCtorThisParam && not isRefCastParam -> addr
+        _ | isRoot addr -> error "getEnclosingDecl has no parent to go to"
+        _               -> getEnclosingDecl $ fromJust $ getParent addr
+    where
+    
+        fun = (goDown 1) <$> getParent addr
+        
+        isCtorThisParam = isCtorCall && getIndex addr == 2
+        isCtorCall = fromMaybe False $ (isConstructor . getNodePair) <$> fun 
+        
+        isRefCastParam = isRefCastCall && getIndex addr == 2
+        isRefCastCall = case fun of
+            Just f  -> case getNodeType f of
+                IR.LambdaExpr -> isRefCast f
+                IR.Literal    -> isRefCast f
+                _             -> False
+            Nothing -> False
+            
+        isRefCast f = any (isBuiltin f) $ getBuiltin addr <$> [
+                        "ref_cast",
+                        "ref_const_cast",
+                        "ref_volatile_cast",
+                        "ref_kind_cast",
+                        "ref_reinterpret",
+                        "ref_parent_cast"
+                    ]         
+        
+        
+        

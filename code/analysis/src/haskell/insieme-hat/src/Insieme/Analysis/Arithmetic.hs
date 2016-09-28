@@ -41,7 +41,7 @@ module Insieme.Analysis.Arithmetic where
 import Data.Typeable
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-import Insieme.Inspire.Utils (isLoopIterator,isFreeVariable,getType)
+import Insieme.Inspire.Utils (isLoopIterator,isFreeVariable)
 import Insieme.Utils.ParseInt
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR

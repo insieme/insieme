@@ -282,7 +282,7 @@ reachingDefinitions :: MemoryStatePoint -> Solver.TypedVar Definitions
 reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case getNodeType addr of
 
         -- a declaration could be an assignment if it is materializing
-        IR.Declaration | addr == loc && p == Post ->
+        IR.Declaration | addr == loc && p == Pre ->
             Solver.mkVariable varId [] (USet.singleton $ Declaration addr)
 
         -- a call could be an assignment if it is materializing

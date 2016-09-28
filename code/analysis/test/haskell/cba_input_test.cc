@@ -179,6 +179,7 @@ namespace analysis {
 			// load file using the frontend
 			NodeManager mgr;
 			std::vector<std::string> argv = {"compiler", file, "-fopenmp", "-fcilk"};
+			if (*file.end() == 'p') argv.push_back("--std=c++14");
 			insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
 			options.job.addIncludeDirectory(ROOT_DIR);
 
@@ -190,32 +191,6 @@ namespace analysis {
 			// running semantic checks
 			auto res = core::checks::check(prog);
 			EXPECT_TRUE(res.empty()) << res << "\n------\n" << printer::dumpErrors(res);
-
-//			mgr.getLangExtension<core::lang::ReferenceExtension>().getSymbols();
-//			mgr.getLangExtension<core::lang::PointerExtension>().getSymbols();
-//
-//			core::visitDepthFirstOnce(prog, [](const LambdaExprPtr& lambda) {
-//				if (core::lang::isBuiltIn(lambda)) {
-//					std::cout << core::lang::getConstructName(lambda) << "\n";
-//				}
-//			});
-//
-//			std::map<NodePtr,int> counter;
-//			core::visitDepthFirst(prog, [&](const NodePtr& node) {
-//				if (core::lang::isBuiltIn(node)) {
-//					counter[node]++;
-//				}
-//			});
-//
-//			std::cout << "\nBuilt-In Statistics:\n";
-//			for(const auto& cur : counter) {
-//				std::cout << core::lang::getConstructName(cur.first) << "/" << cur.first->getNodeType() << ": " << cur.second << "\n";
-//			}
-//			std::cout << "\n";
-//
-//			std::cout << core::IRStatistic::evaluate(prog) << "\n";
-
-//			dumpText(prog);
 
 			// run CBA analysis
 			int testCount = 0;
@@ -371,7 +346,7 @@ namespace analysis {
 
 				} else if (name == "cba_dump_json") {
 					// dump the code as a json file
-					core::dump::json::dumpIR(filename+".json", prog);
+					core::dump::json::dumpIR("code.json", prog);
 					core::dump::binary::haskell::dumpIR(filename+".binir", prog);
 
 				} else if (name == "cba_dump_statistic") {
@@ -416,7 +391,8 @@ namespace analysis {
 			for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
 				fs::path file = it->path();
 				// collect c files
-				if (file.extension().string() == ".c") {
+				auto ext = file.extension().string();
+				if (ext == ".c" || ext == ".cpp") {
 					res.push_back(prefix + file.filename().string());
 				}
 				// collect files recursively

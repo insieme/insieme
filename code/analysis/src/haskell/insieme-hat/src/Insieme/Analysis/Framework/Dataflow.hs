@@ -55,6 +55,7 @@ module Insieme.Analysis.Framework.Dataflow (
 
 import Data.Int
 import Data.Foldable
+import Data.Maybe
 import Data.Typeable
 import Debug.Trace
 import qualified Data.Set as Set
@@ -140,41 +141,68 @@ dataflowValue addr analysis ops = case getNodePair addr of
         var = Solver.mkVariable (idGen addr) [knownTargets,unknownTarget] Solver.bot
         knownTargets = Solver.createConstraint dep val var
 
-        trg = Callable.callableValue (goDown 1 addr)
-        dep a = (Solver.toVar trg) : (
+        dep a = (Solver.toVar callTargetVar) : (
                     (map Solver.toVar (getExitPointVars a)) ++
                     (map Solver.toVar (getReturnValueVars a)) ++
+                    (map Solver.toVar (getCtorDtorVars a)) ++
                     (getOperatorDependencies a)
                 )
-        val a = Solver.join $ (map (Solver.get a) (getReturnValueVars a)) ++ (getOperatorValue a)
+        val a = Solver.join $ (getReturnValues a) ++ (getCtorDtorValues a) ++ (getOperatorValue a)
+
+
+        -- utilities --
+        
+        callTargetVar = Callable.callableValue (goDown 1 addr)
+        
+        callTargetVal a = ComposedValue.toValue $ Solver.get a callTargetVar
+        
+        filterInterceptedLambdas ts = Set.filter (not . covered) (USet.toSet ts)
+            where
+                covered (Callable.Lambda addr) = any (\o -> covers o addr) extOps
+                covered _ = False 
 
 
         -- support for calls to lambda and closures --
 
-        getExitPointVars a = if USet.isUniverse targets then [] else Set.fold go [] uninterceptedTargets
+        getExitPointVars a = if USet.isUniverse targets then [] else go <$> Set.toList uninterceptedTargets
             where
-                targets = ComposedValue.toValue $ Solver.get a trg
-                go c l = (ExitPoint.exitPoints $ Callable.toAddress c) : l
+                targets = callTargetVal a
+                uninterceptedTargets = filterInterceptedLambdas targets
+                go c = (ExitPoint.exitPoints $ Callable.toAddress c)
 
-                uninterceptedTargets = Set.filter (not . covered) (USet.toSet targets)
-                covered (Callable.Lambda addr) = any (\o -> covers o addr) extOps
-                covered _ = False
+                
 
         getReturnValueVars a = concat $ map go $ map (toList . Solver.get a) (getExitPointVars a)
             where
-                go e = map resolve e
+                go e = concat $ map resolve e
 
-                resolve (ExitPoint.ExitPoint r) = case getNodePair r of
-                    IR.NT IR.Declaration  _ -> memoryStateValue (MemoryStatePoint (ProgramPoint r Post) (MemoryLocation r)) analysis
-                    _                      -> varGen r
+                resolve (ExitPoint.ExitPoint r) = case getNodeType r of
+                    IR.Declaration  -> [memoryStateValue (MemoryStatePoint (ProgramPoint r Post) (MemoryLocation r)) analysis]
+                    IR.CompoundStmt | isConstructorOrDestructor $ getNodePair $ fromJust $ getParent r -> []
+                    _               -> [varGen r]
 
+        getReturnValues a = map (Solver.get a) (getReturnValueVars a)
+
+
+        -- support for calls to constructors and destructors --
+        
+        isCtorOrDtor c = isConstructorOrDestructor $ getNodePair $ Callable.toAddress c
+        
+        getCtorDtorVars a = if USet.isUniverse targets then [] else concat $ go <$> Set.toList uninterceptedTargets
+            where
+                targets = callTargetVal a
+                uninterceptedTargets = filterInterceptedLambdas targets
+                
+                go c = if isCtorOrDtor c then [varGen $ goDown 1 $ goDown 2 addr] else []
+                
+        getCtorDtorValues a = (Solver.get a) <$> getCtorDtorVars a 
 
 
         -- operator support --
 
         getActiveOperators a = if USet.isUniverse targets then [] else filter f extOps
             where
-                targets = ComposedValue.toValue $ Solver.get a trg
+                targets = callTargetVal a
                 f o = any (\l -> covers o (Callable.toAddress l)) $ USet.toSet $ targets
 
         getOperatorDependencies a = concat $ map go $ getActiveOperators a
@@ -194,11 +222,12 @@ dataflowValue addr analysis ops = case getNodePair addr of
                 val a = if hasUnknownTarget then top else Solver.bot
                     where
 
-                        targets = ComposedValue.toValue $ Solver.get a trg
+                        targets = callTargetVal a
 
                         uncoveredLiterals = filter f $ USet.toList $ targets
                             where
                                 f (Callable.Literal a) = not $ any (\h -> covers h a) extOps
+                                f c | isCtorOrDtor c     = False
                                 f _                    = False
 
                         hasUnknownTarget = (USet.isUniverse targets) || ((not . null) uncoveredLiterals)
