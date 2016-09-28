@@ -211,9 +211,10 @@ memoryLocations ctx_hs expr_hs = do
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
     let results = (ComposedValue.toValue res) :: Ref.ReferenceSet FieldIndex.SimpleFieldIndex
     let ctx_c = Ctx.getCContext ctx
+    let hasUnknownSources = USet.member Ref.NullReference results || USet.member Ref.UninitializedReference results  
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
-    passMemoryLocationSet ctx_c $ USet.map Ref.creationPoint results
+    passMemoryLocationSet ctx_c $ if hasUnknownSources then USet.Universe else USet.map Ref.creationPoint results
 
 passMemoryLocation :: Ctx.CContext -> Ref.Location -> IO (Ptr CMemoryLocation)
 passMemoryLocation ctx_c location_hs = do
