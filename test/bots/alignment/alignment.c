@@ -21,14 +21,18 @@
 /* Original code from the Application Kernel Matrix by Cray */
 /* that was based on the ClustalW application */
 
+#ifdef USE_FOR
+#define BOTS_APP_NAME "Protein alignment (For version)"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h> 
 #include <string.h>
 #include <math.h>
 #include <sys/time.h>
 #include <libgen.h>
-#include "param.h"
 #include "sequence.h"
+#include "param.h"
 #include "alignment.h"
 #include "bots.h"
 
@@ -206,7 +210,7 @@ void forward_pass(char *ia, char *ib, int n, int m, int *se1, int *se2, int *max
 
    for (i = 1; i <= n; i++) {
       hh = 0;
-	  p = 0;
+      p = 0;
       f  = -g;
 
       for (j = 1; j <= m; j++) {
@@ -243,14 +247,14 @@ void reverse_pass(char *ia, char *ib, int se1, int se2, int *sb1, int *sb2, int 
         int DD[MAX_ALN_LENGTH];
 
    cost = 0;
-   *sb1  = 1; 
+   *sb1  = 1;
    *sb2 = 1;
 
    for (i = se2; i > 0; i--){ HH[i] = -1; DD[i] = -1;}
 
    for (i = se1; i > 0; i--) {
-      hh = -1; 
-	  f = -1;
+      hh = -1;
+      f = -1;
       if (i == se1) p = 0; else p = -1;
 
       for (j = se2; j > 0; j--) {
@@ -315,7 +319,7 @@ int diff (int A, int B, int M, int N, int tb, int te, int *print_ptr, int *last_
       } else {
          if (midj > 1) add(midj-1, print_ptr, last_print, displ);
          displ[(*print_ptr)++] = 0;
-		 *last_print = 0;
+         *last_print = 0;
          if (midj < N) add(N-midj, print_ptr, last_print, displ);
       }
 
@@ -327,26 +331,26 @@ int diff (int A, int B, int M, int N, int tb, int te, int *print_ptr, int *last_
    t     = -tb;
 
    for (j = 1; j <= N; j++) {
-	  t = t - gh;
+      t = t - gh;
       HH[j] = t;
-	  DD[j] = t - g;
+      DD[j] = t - g;
    }
 
    t = -tb;
 
    for (i = 1; i <= midi; i++) {
       s     = HH[0];
-	  t = t - gh;
-	  hh = t;
+      t = t - gh;
+      hh = t;
       HH[0] = t;
       f     = t - g;
       for (j = 1; j <= N; j++) {
-		 hh = hh - g - gh;
-		 f = f - gh;
+         hh = hh - g - gh;
+         f = f - gh;
          if (hh > f)    f = hh;
 
-		 hh = HH[j] - g - gh;
-		 e = DD[j]- gh;
+         hh = HH[j] - g - gh;
+         e = DD[j]- gh;
          if (hh > e) e = hh;
          hh = s + calc_score(i,j,A,B,seq1,seq2);
          if (f > hh) hh = f;
@@ -363,26 +367,26 @@ int diff (int A, int B, int M, int N, int tb, int te, int *print_ptr, int *last_
    t     = -te;
 
    for (j = N-1; j >= 0; j--) {
-		t = t - gh;
-	   	RR[j] = t;
-		SS[j] = t - g;
+      t = t - gh;
+      RR[j] = t;
+      SS[j] = t - g;
    }
 
    t = -te;
 
    for (i = M - 1; i >= midi; i--) {
       s     = RR[N];
-	  t = t-gh;
-	  hh = t;
+      t = t-gh;
+      hh = t;
       RR[N] = hh;
       f     = t - g;
       for (j = N - 1; j >= 0; j--) {
-		 hh = hh - g - gh;
-		 f = f - gh;
+         hh = hh - g - gh;
+         f = f - gh;
          if (hh > f)     f = hh;
 
-		 hh = RR[j] - g - gh;
-		 e = SS[j] - gh;
+         hh = RR[j] - g - gh;
+         e = SS[j] - gh;
          if (hh > e) e = hh;
 
          hh = s + calc_score(i+1,j+1,A,B,seq1,seq2);
@@ -447,14 +451,14 @@ double tracepath(int tsb1, int tsb2, int *print_ptr, int *displ, int seq1, int s
          ++i1; ++i2; ++pos;
 
       } else {
-		  k = displ[i];
-		  if (k > 0) {
-         	 i2  += k;
-	         pos += k;
-    	  } else {
-        	 i1  -= k;
-         	 pos -= k;
-		  }
+         k = displ[i];
+         if (k > 0) {
+            i2  += k;
+            pos += k;
+         } else {
+            i1  -= k;
+            pos -= k;
+         }
       }
    }
 
@@ -464,6 +468,10 @@ double tracepath(int tsb1, int tsb2, int *print_ptr, int *displ, int seq1, int s
 
 int pairalign()
 {
+   #if !(defined(USE_SINGLE) || defined(USE_FOR))
+      #error Either define USE_SINGLE or USE_FOR to compile this benchmark
+   #endif
+   
    int i, n, m, si, sj;
    int len1, len2, maxres;
    double gg, mm_score;
@@ -478,7 +486,11 @@ int pairalign()
 
    #pragma omp parallel
    {
+   #if defined(USE_FOR)
+   #pragma omp for schedule(dynamic) private(i,n,si,sj,len1,m)
+   #elif defined(USE_SINGLE)
    #pragma omp single private(i,n,si,sj,len1,m)
+   #endif
       for (si = 0; si < nseqs; si++) {
          n = seqlen_array[si+1];
          for (i = 1, len1 = 0; i <= n; i++) {
@@ -531,7 +543,7 @@ int pairalign()
                } // end task
             } // end if (n == 0 || m == 0)
          } // for (j)
-      } // end single
+      } // end parallel for (i)/single
    } // end parallel
    bots_message(" completed!\n");
    return 0;
@@ -617,12 +629,12 @@ void init_matrix(void)
 
    c1 = amino_acid_order[0];
    for (i = 0; c1; i++) { 
-	  c2 = amino_acid_codes[0];
+      c2 = amino_acid_codes[0];
       for (j = 0; c2; j++) {
-        	if (c1 == c2) {def_aa_xref[i] = j; break;}
-	  		c2 = amino_acid_codes[j+1];
-	  }
-	  c1 = amino_acid_order[i+1]; 
+         if (c1 == c2) {def_aa_xref[i] = j; break;}
+         c2 = amino_acid_codes[j+1];
+      }
+      c1 = amino_acid_order[i+1]; 
    }
 }
 
@@ -635,7 +647,6 @@ void pairalign_init (char *filename)
    }
 
    init_matrix();
-
 
    nseqs = readseqs(filename);
 
@@ -726,9 +737,9 @@ int align_verify ()
       {
          if (bench_output[i*nseqs+j] != seq_output[i*nseqs+j])
          {
-                                bots_message("Error: Optimized prot. (%3d:%3d)=%5d Sequential prot. (%3d:%3d)=%5d\n",
-                                        i+1, j+1, (int) bench_output[i*nseqs+j],
-                                        i+1, j+1, (int) seq_output[i*nseqs+j]);
+            bots_message("Error: Optimized prot. (%3d:%3d)=%5d Sequential prot. (%3d:%3d)=%5d\n",
+               i+1, j+1, (int) bench_output[i*nseqs+j],
+               i+1, j+1, (int) seq_output[i*nseqs+j]);
             result = BOTS_RESULT_UNSUCCESSFUL;
          }
       }
