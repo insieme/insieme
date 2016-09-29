@@ -354,10 +354,8 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
             Solver.mkVariable varId [] (BSet.singleton $ Initial)
 
         -- skip everything that can statically be considered assignment free
-        _ | p == Post && isAssignmentFree addr && (not isParentOfLocation) -> var
-            where
-                var = Solver.mkVariable varId [con] Solver.bot
-                con = Solver.forward (reachingDefinitions $ MemoryStatePoint (ProgramPoint addr Pre) ml) var
+        _ | p == Post && isAssignmentFree addr && (not isParentOfLocation) -> 
+            reachingDefinitions $ MemoryStatePoint (ProgramPoint addr Pre) ml
 
         -- an assignment might be a definition point
         IR.CallExpr | p == Post && isAssignCandidate -> var

@@ -481,9 +481,10 @@ getDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
 getDep (Dependencies d) v = fromMaybe Set.empty $ IntMap.lookup (toIndex v) d
 
 getAllDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
-getAllDep d v = collect d [v] Set.empty
+getAllDep d i = collect d [i] Set.empty
     where
         collect d [] s = s
+        collect d (v:_:_) s | v == i = s        -- we can stop if we reach the seed variable again
         collect d (v:vs) s = collect d ((Set.toList $ Set.difference dep s) ++ vs) (Set.union dep s)
             where
                 dep = getDep d v 
@@ -542,21 +543,21 @@ solveStep s _ [] = s                                                            
 solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIndex nu nt nr) resDep ds
         where
                 -- profiling --
-                ((resAss,resIndex,resDep,ds,hadReset),dt) = measure go ()
+                ((resAss,resIndex,resDep,ds,numResets),dt) = measure go ()
                 nt = Map.insertWith (+) aid dt t
                 nu = Map.insertWith (+) aid  1 u
-                nr = if hadReset then Map.insertWith (+) aid 1 r else r
+                nr = if numResets > 0 then Map.insertWith (+) aid numResets r else r
                 aid = analysis $ index $ indexToVar v
                 
                 -- each constraint extends the result, the dependencies, and the vars to update
-                go _ = foldr processConstraint (a,i,d,vs,False) ( constraints $ indexToVar v )  -- update all constraints of current variable
-                processConstraint c (a,i,d,dv,hadReset) = case ( update c a ) of
+                go _ = foldr processConstraint (a,i,d,vs,0) ( constraints $ indexToVar v )  -- update all constraints of current variable
+                processConstraint c (a,i,d,dv,numResets) = case ( update c a ) of
                         
-                        (a',None)         -> (a',ni,nd,nv,hadReset)                                     -- nothing changed, we are fine
+                        (a',None)         -> (a',ni,nd,nv,numResets)                                     -- nothing changed, we are fine
                         
-                        (a',Increment)    -> (a',ni,nd, (Set.elems $ getDep nd trg) ++ nv, hadReset)    -- add depending variables to work list
+                        (a',Increment)    -> (a',ni,nd, (Set.elems $ getDep nd trg) ++ nv, numResets)    -- add depending variables to work list
                         
-                        (a',Reset)        -> (ra,ni,nd, (Set.elems $ getDep nd trg) ++ nv, True)        -- handling a local reset
+                        (a',Reset)        -> (ra,ni,nd, (Set.elems $ getDep nd trg) ++ nv, numResets+1)  -- handling a local reset
                             where 
                                 dep = getAllDep nd trg
                                 ra = if not $ Set.member trg dep                                  -- if variable is not indirectly depending on itself  
