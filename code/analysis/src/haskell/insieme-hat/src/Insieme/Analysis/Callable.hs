@@ -49,7 +49,7 @@ import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Utils.UnboundSet as USet
+import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -80,14 +80,14 @@ toAddress (Closure a) = a
 -- * Callable Lattice
 --
 
-type CallableSet = USet.UnboundSet Callable
+type CallableSet = BSet.UnboundSet Callable
 
 instance Solver.Lattice CallableSet where
-    bot   = USet.empty
-    merge = USet.union
+    bot   = BSet.empty
+    merge = BSet.union
 
 instance Solver.ExtLattice CallableSet where
-    top   = USet.Universe
+    top   = BSet.Universe
 
 
 --
@@ -105,16 +105,16 @@ data CallableAnalysis = CallableAnalysis
 callableValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex CallableSet)
 callableValue addr = case getNodeType addr of
     IR.LambdaExpr ->
-        Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Lambda (fromJust $ getLambda addr )))
+        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton (Lambda (fromJust $ getLambda addr )))
 
     IR.LambdaReference -> 
         Solver.mkVariable (idGen addr) [] (compose $ getCallables4Ref addr)
 
     IR.BindExpr ->
-        Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Closure addr))
+        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton (Closure addr))
 
     IR.Literal ->
-        Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Literal addr))
+        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton (Literal addr))
 
     _ -> dataflowValue addr analysis []
 
@@ -129,17 +129,17 @@ callableValue addr = case getNodeType addr of
     getCallables4Ref r = search (getNodePair r) r
         where
             search r cur = case getNodePair cur of
-                IR.NT IR.LambdaDefinition cs | isJust pos -> USet.singleton (Lambda $ goDown 1 $ goDown (fromJust pos) cur)
+                IR.NT IR.LambdaDefinition cs | isJust pos -> BSet.singleton (Lambda $ goDown 1 $ goDown (fromJust pos) cur)
                     where
                         pos = findIndex filter cs
                         filter (IR.NT IR.LambdaBinding [a,_]) = a == r
-                _ | isRoot cur      -> USet.Universe 
+                _ | isRoot cur      -> BSet.Universe 
                 _                   -> search r $ goUp cur  
 
 
 -- | a utility to collect all callables of a program
 collectAllCallables :: NodeAddress -> CallableSet
-collectAllCallables addr = USet.fromList $ foldTree collector (getInspire addr)
+collectAllCallables addr = BSet.fromList $ foldTree collector (getInspire addr)
     where
         collector cur callables = case getNodeType cur of
             IR.Lambda   -> ((Lambda  cur) : callables)

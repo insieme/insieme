@@ -58,7 +58,6 @@ import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Inspire.Utils as IRUtils
 import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Utils.BoundSet as BSet
-import qualified Insieme.Utils.UnboundSet as USet
 
 --
 -- * HSobject
@@ -211,10 +210,10 @@ memoryLocations ctx_hs expr_hs = do
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
     let results = (ComposedValue.toValue res) :: Ref.ReferenceSet FieldIndex.SimpleFieldIndex
     let ctx_c = Ctx.getCContext ctx
-    let hasUnknownSources = USet.member Ref.NullReference results || USet.member Ref.UninitializedReference results  
+    let hasUnknownSources = BSet.member Ref.NullReference results || BSet.member Ref.UninitializedReference results  
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
-    passMemoryLocationSet ctx_c $ if hasUnknownSources then USet.Universe else USet.map Ref.creationPoint results
+    passMemoryLocationSet ctx_c $ if hasUnknownSources then BSet.Universe else BSet.map Ref.creationPoint results
 
 passMemoryLocation :: Ctx.CContext -> Ref.Location -> IO (Ptr CMemoryLocation)
 passMemoryLocation ctx_c location_hs = do
@@ -226,11 +225,11 @@ passMemoryLocation ctx_c location_hs = do
     withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
 
 
-passMemoryLocationSet :: Ctx.CContext -> USet.UnboundSet Ref.Location
+passMemoryLocationSet :: Ctx.CContext -> BSet.UnboundSet Ref.Location
                -> IO (Ptr CMemoryLocationSet)
-passMemoryLocationSet _ USet.Universe = memoryLocationSet nullPtr (-1)
+passMemoryLocationSet _ BSet.Universe = memoryLocationSet nullPtr (-1)
 passMemoryLocationSet ctx_c bs = do
-    locations <- mapM (passMemoryLocation ctx_c) (USet.toList bs)
+    locations <- mapM (passMemoryLocation ctx_c) (BSet.toList bs)
     withArrayLen' locations memoryLocationSet
   where
     withArrayLen' :: Storable a => [a] -> (Ptr a -> CInt -> IO b) -> IO b

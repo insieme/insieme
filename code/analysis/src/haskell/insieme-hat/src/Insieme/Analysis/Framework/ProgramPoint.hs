@@ -45,7 +45,7 @@ import qualified Insieme.Analysis.Solver as Solver
 
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 
-import qualified Insieme.Utils.UnboundSet as USet
+import qualified Insieme.Utils.BoundSet as BSet
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
@@ -84,14 +84,14 @@ programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNodeType
                 targetVar = callableValue (goDown 1 addr)
 
                 -- tests whether the set of callees is universal
-                hasUniversalTarget a = USet.isUniverse $ extract $ Solver.get a targetVar
+                hasUniversalTarget a = BSet.isUniverse $ extract $ Solver.get a targetVar
 
                 -- test whether any operator handlers are active
-                getActiveHandlers a = if USet.isUniverse callables then [] else filter fit ops 
+                getActiveHandlers a = if BSet.isUniverse callables then [] else filter fit ops 
                     where
                         callables = extract $ Solver.get a targetVar
 
-                        targets = USet.toSet callables
+                        targets = BSet.toSet callables
 
                         fit o = any ( \t -> covers o $ toAddress t ) targets
 

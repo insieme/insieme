@@ -38,34 +38,49 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Insieme.Utils.BoundSet (
+    -- Bounds
     IsBound,
     Bound10,
     Bound100,
+    Unbound,
+    getBound,
+    changeBound,
+
+    -- Bound Set
     BoundSet(Universe),
+
     empty,
     singleton,
-    member,
+
     size,
     null,
     isUniverse,
+    member,
+
     fromSet,
     fromList,
+
+    toSet,
     toList,
-    toUnboundSet,
-    fromUnboundSet,
+
+    insert,
+    applyOrDefault,
+    map,
+    lift2,
+
     union,
     intersection,
     cartProduct,
-    map,
-    lift2,
-    getBound,
+
+    -- Unbound Set
+    UnboundSet,
+    toUnboundSet,
 ) where
 
 import Control.DeepSeq
 import Data.Typeable
 import GHC.Generics (Generic)
 import qualified Data.Set as Set
-import qualified Insieme.Utils.UnboundSet as USet
 
 import Prelude hiding (map,null)
 
@@ -76,6 +91,18 @@ import Prelude hiding (map,null)
 class Typeable b => IsBound b where
     bound :: p b a -> Int
 
+getBound :: IsBound bb => BoundSet bb a -> Int
+getBound bs = bound bs
+
+changeBound :: (IsBound bb, IsBound bb', Ord a)
+            => BoundSet bb a -> BoundSet bb' a
+changeBound  Universe    = Universe
+changeBound (BoundSet s) = fromSet s
+
+--
+-- * Bound Set
+--
+
 data Bound10 = Bound10
 instance IsBound Bound10 where
     bound _ = 10
@@ -84,12 +111,11 @@ data Bound100 = Bound100
 instance IsBound Bound100 where
     bound _ = 100
 
---
--- * Bound Set
---
-
 data BoundSet bb a = Universe | BoundSet (Set.Set a)
   deriving (Eq, Show, Ord, Generic, NFData)
+
+
+-- ** Basic Constructors
 
 empty :: BoundSet bb a
 empty = BoundSet Set.empty
@@ -97,9 +123,7 @@ empty = BoundSet Set.empty
 singleton :: a -> BoundSet bb a
 singleton = BoundSet . Set.singleton
 
-member :: Ord a => a -> BoundSet bb a -> Bool
-member _ Universe      = True
-member x (BoundSet xs) = Set.member x xs
+-- ** Queries
 
 size :: BoundSet bb a -> Int
 size Universe     = error "Size of Universe does not fit into Int"
@@ -113,33 +137,58 @@ isUniverse :: BoundSet bb a -> Bool
 isUniverse Universe = True
 isUniverse _        = False
 
-fromSet :: (IsBound bb, Ord a) => Set.Set a -> BoundSet bb a
-fromSet s = union set empty
-    where
-        set = BoundSet s 
+member :: Ord a => a -> BoundSet bb a -> Bool
+member _ Universe      = True
+member x (BoundSet xs) = Set.member x xs
 
+-- ** Importer
+
+fromSet :: (IsBound bb, Ord a) => Set.Set a -> BoundSet bb a
+fromSet s = (BoundSet s) `union` empty
 
 fromList :: (IsBound bb, Ord a) => [a] -> BoundSet bb a
-fromList as = union set empty
-  where
-    set = BoundSet $ Set.fromList as
+fromList as = (BoundSet $ Set.fromList as) `union` empty
+
+-- ** Exporter
+
+toSet :: (IsBound bb, Ord a) => BoundSet bb a -> Set.Set a
+toSet  Universe    = error "Cannot convert Universe :: UnboundSet to set"
+toSet (BoundSet s) = s
 
 toList :: BoundSet bb a -> [a]
 toList Universe     = error "Cannot convet Universe to list"
 toList (BoundSet x) = Set.toList x
 
-toUnboundSet :: BoundSet bb a -> USet.UnboundSet a
-toUnboundSet Universe     = USet.Universe
-toUnboundSet (BoundSet x) = USet.fromSet x
+-- ** Modifiers
 
-fromUnboundSet :: (IsBound bb, Ord a) => USet.UnboundSet a -> BoundSet bb a
-fromUnboundSet USet.Universe = Universe
-fromUnboundSet s             = fromSet . USet.toSet $ s
+insert :: (IsBound bb, Ord a) => a -> BoundSet bb a -> BoundSet bb a
+insert _  Universe      = Universe
+insert e (BoundSet s) = BoundSet $ Set.insert e s
+
+applyOrDefault :: IsBound bb => b -> (BoundSet bb a -> b) -> BoundSet bb a -> b
+applyOrDefault d _ Universe = d
+applyOrDefault _ f s        = f s
+
+map :: (IsBound bb, Ord b) => (a -> b) -> BoundSet bb a -> BoundSet bb b
+map _ Universe     = Universe
+map f (BoundSet x) = BoundSet (Set.map f x)
+
+lift2 :: (IsBound bb, Ord a, Ord b, Ord c)
+      => (a -> b -> c) -> (BoundSet bb a -> BoundSet bb b -> BoundSet bb c)
+lift2 _ Universe     _            = Universe
+lift2 _ _            Universe     = Universe
+lift2 f (BoundSet x) (BoundSet y) = fromList prod
+  where
+      prod = [f u v | u <- Set.toList x, v <- Set.toList y]
+
+-- ** Set Operations
 
 union :: (IsBound bb, Ord a) => BoundSet bb a -> BoundSet bb a -> BoundSet bb a
 union    Universe     _            = Universe
 union    _            Universe     = Universe
-union bs@(BoundSet x) (BoundSet y) = if Set.size u > bound bs then Universe else BoundSet u
+union bs@(BoundSet x) (BoundSet y) = if bound bs > 0 && Set.size u > bound bs
+                                         then Universe
+                                         else BoundSet u
   where
     u = Set.union x y
 
@@ -156,17 +205,15 @@ cartProduct (BoundSet x) (BoundSet y) = fromList prod
   where
      prod = [(u, v) | u <- Set.toList x, v <- Set.toList y]
 
-map :: (IsBound bb, Ord b) => (a -> b) -> BoundSet bb a -> BoundSet bb b
-map _ Universe     = Universe
-map f (BoundSet x) = BoundSet (Set.map f x)
+--
+-- * Unbound Set
+--
 
-lift2 :: (IsBound bb, Ord a, Ord b, Ord c)
-      => (a -> b -> c) -> (BoundSet bb a -> BoundSet bb b -> BoundSet bb c)
-lift2 _ Universe     _            = Universe
-lift2 _ _            Universe     = Universe
-lift2 f (BoundSet x) (BoundSet y) = fromList prod
-  where
-      prod = [f u v | u <- Set.toList x, v <- Set.toList y]
+data Unbound = Unbound
+instance IsBound Unbound where
+    bound _ = -1
 
-getBound :: IsBound b => BoundSet b a -> Int
-getBound bs = bound bs
+type UnboundSet a = BoundSet Unbound a
+
+toUnboundSet :: (IsBound bb, Ord a) => BoundSet bb a -> UnboundSet a
+toUnboundSet = changeBound

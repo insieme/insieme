@@ -67,7 +67,6 @@ import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.Utils as IR
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Utils.BoundSet as BSet
-import qualified Insieme.Utils.UnboundSet as USet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -91,15 +90,15 @@ data Definition = Initial                                    -- it is the defini
               | Assignment NodeAddress                       -- an assignment conducting an update to a memory location
     deriving (Eq,Ord,Show,Generic,NFData)
 
-type Definitions = USet.UnboundSet Definition
+type Definitions = BSet.UnboundSet Definition
 
 instance Solver.Lattice Definitions where
-    bot = USet.empty
-    merge = USet.union
+    bot = BSet.empty
+    merge = BSet.union
 
 
 instance Solver.ExtLattice Definitions where
-    top = USet.Universe
+    top = BSet.Universe
 
 --
 -- * Memory State Analysis
@@ -133,20 +132,20 @@ memoryStateValue ms@(MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
         dep a = (Solver.toVar reachingDefVar) :
                    (
-                     if USet.isUniverse defs || USet.member Creation defs then [] 
+                     if BSet.isUniverse defs || BSet.member Creation defs then [] 
                      else (map Solver.toVar $ definingValueVars a)
                    )
             where
                 defs = reachingDefVal a
 
         val a = case () of 
-                _ | USet.isUniverse defs      -> Solver.top
-                  | USet.member Initial defs  -> Solver.merge init value
+                _ | BSet.isUniverse defs      -> Solver.top
+                  | BSet.member Initial defs  -> Solver.merge init value
                   | otherwise                 -> value
             where
                 init = initialValueHandler analysis loc
             
-                value = if USet.member Creation $ defs then ComposedValue.top
+                value = if BSet.member Creation $ defs then ComposedValue.top
                         else Solver.join $ map (Solver.get a) (definingValueVars a)
                         
                 defs = reachingDefVal a
@@ -156,7 +155,7 @@ memoryStateValue ms@(MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
         reachingDefVal a = Solver.get a reachingDefVar
 
         definingValueVars a =
-                USet.fromUnboundSet [] ( concat . (map go) . USet.toList ) $ reachingDefVal a
+                BSet.applyOrDefault [] (concat . (map go) . BSet.toList) $ reachingDefVal a
             where
                 go (Declaration       addr)         = [variableGenerator analysis $ goDown 1 addr]
                 go (MaterializingCall addr)         = [variableGenerator analysis $ addr]
@@ -217,17 +216,17 @@ definedValue addr ml@(MemoryLocation loc) analysis = var
 
         -- some checks
         
-        isActive a = (USet.isUniverse trgs) || (any pred $ USet.toSet $ trgs)
+        isActive a = (BSet.isUniverse trgs) || (any pred $ BSet.toSet $ trgs)
             where
                 trgs = targetRefVal a
                 pred (Reference cp _) = cp == loc
                 pred _ = False
                 
-        isPerfectAssign a = (not $ USet.isUniverse trgs) && (USet.size trgs == 1)
+        isPerfectAssign a = (not $ BSet.isUniverse trgs) && (BSet.size trgs == 1)
             where
                 trgs = targetRefVal a
         
-        isFullAssign a = isPerfectAssign a && (all pred $ USet.toSet $ targetRefVal a)
+        isFullAssign a = isPerfectAssign a && (all pred $ BSet.toSet $ targetRefVal a)
             where
                 pred (Reference _ DP.Root) = True
                 pred _ = False 
@@ -252,14 +251,14 @@ definedValue addr ml@(MemoryLocation loc) analysis = var
         elemValueVal a = Solver.get a elemValueVar
 
         updatedValue a = 
-                if USet.isUniverse trgs then Solver.top else Solver.join values
+                if BSet.isUniverse trgs then Solver.top else Solver.join values
             where
                 oldVal = oldStateVal a
                 elemVal = elemValueVal a
                 
                 trgs = targetRefVal a
                 
-                values = concat $ update <$> USet.toList trgs
+                values = concat $ update <$> BSet.toList trgs
                 
                 update (Reference cp dp) | cp == loc = [
                         ComposedValue.setElement dp elemVal oldVal 
@@ -287,19 +286,19 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
         -- a declaration could be an assignment if it is materializing
         IR.Declaration | addr == loc && p == Pre ->
-            Solver.mkVariable varId [] (USet.singleton $ Declaration addr)
+            Solver.mkVariable varId [] (BSet.singleton $ Declaration addr)
 
         -- a call could be an assignment if it is materializing
         IR.CallExpr | addr == loc && p == Post && isMaterializingCall (getNodePair addr) ->
-            Solver.mkVariable varId [] (USet.singleton $ MaterializingCall addr)
+            Solver.mkVariable varId [] (BSet.singleton $ MaterializingCall addr)
 
         -- the call could also be the creation point if it is not materializing
         IR.CallExpr | addr == loc && p == Post ->
-            Solver.mkVariable varId [] (USet.singleton Creation)
+            Solver.mkVariable varId [] (BSet.singleton Creation)
 
         -- the entry point is the creation of everything that reaches this point
         _ | p == Pre && IR.isEntryPoint addr -> 
-            Solver.mkVariable varId [] (USet.singleton $ Initial)
+            Solver.mkVariable varId [] (BSet.singleton $ Initial)
 
         -- skip everything that can statically be considered assignment free
         _ | p == Post && isAssignmentFree addr && (not isParentOfLocation) -> var
@@ -316,16 +315,16 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
                 dep a = Solver.toVar targetVar :
                     if hasUnknownTargets a || isAssign a then [] else predecessorVars a
                     
-                val a = if hasUnknownTargets a then USet.Universe
-                        else if isAssign a then USet.singleton $ Assignment addr
+                val a = if hasUnknownTargets a then BSet.Universe
+                        else if isAssign a then BSet.singleton $ Assignment addr
                         else predecessorVal a
                         
                 targetVar = callableValue $ goDown 1 addr
                 targetVal a = ComposedValue.toValue $ Solver.get a targetVar
                 
-                hasUnknownTargets a = USet.isUniverse $ targetVal a
+                hasUnknownTargets a = BSet.isUniverse $ targetVal a
                         
-                isAssign a = any assign $ USet.toSet $ targetVal a 
+                isAssign a = any assign $ BSet.toSet $ targetVal a 
                     where
                         assign c = isBuiltin (toAddress c) ref_assign
                         ref_assign = getBuiltin addr "ref_assign" 
@@ -348,7 +347,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
                 writeSetVar = writeSet addr
                 writeSetVal a = Solver.get a writeSetVar
                 
-                canSkipCallable = not . USet.member loc . writeSetVal 
+                canSkipCallable = not . BSet.member loc . writeSetVal 
                 
                 -- utils for skip case --
                 
@@ -459,34 +458,34 @@ writeSetAnalysis = Solver.mkAnalysisIdentifier WriteSetAnalysis "WriteSet"
 
 
 
-instance Solver.Lattice (USet.UnboundSet Location) where
-    bot = USet.empty
-    merge = USet.union
+instance Solver.Lattice (BSet.UnboundSet Location) where
+    bot = BSet.empty
+    merge = BSet.union
 
 
 -- an analysis computing the set of memory locations written by a expression
-writeSet :: NodeAddress -> Solver.TypedVar (USet.UnboundSet Location)  
+writeSet :: NodeAddress -> Solver.TypedVar (BSet.UnboundSet Location)  
 writeSet addr = case getNodeType addr of
         
         IR.CallExpr -> var
             where
-                var = Solver.mkVariable (idGen addr) [con] USet.empty
+                var = Solver.mkVariable (idGen addr) [con] BSet.empty
                 con = Solver.createConstraint dep val var
                 
                 dep a = (Solver.toVar targetVar) : (Solver.toVar <$> writeSetSummaryVars a) ++ (Solver.toVar <$> refVars a)
-                val a = if unknown then USet.Universe else res
+                val a = if unknown then BSet.Universe else res
                     where
                         wss = writeSetSummaryVal a
                         aps = WS.toAccessPaths wss 
                         
                         unknown = (WS.isUnknown wss) || (any infinite $ refVars a) || (any tooLong aps)
                             where
-                                infinite r = USet.isUniverse $ ComposedValue.toValue $ Solver.get a r
+                                infinite r = BSet.isUniverse $ ComposedValue.toValue $ Solver.get a r
                                 tooLong (AP.AccessPath _ d) = length d > 1 
                         
-                        res = foldr go USet.empty (WS.parameters wss)
+                        res = foldr go BSet.empty (WS.parameters wss)
                             where
-                                go x s = USet.union s $ USet.fromList $ concat $ map toLoc $ USet.toList $ ComposedValue.toValue $ Solver.get a $ refVar x
+                                go x s = BSet.union s $ BSet.fromList $ concat $ map toLoc $ BSet.toList $ ComposedValue.toValue $ Solver.get a $ refVar x
                                 toLoc :: Reference SimpleFieldIndex -> [Location]
                                 toLoc (Reference l _ ) = [l]
                                 toLoc _ = []
@@ -498,10 +497,10 @@ writeSet addr = case getNodeType addr of
                 targetVal a = ComposedValue.toValue $ Solver.get a targetVar
                 
                 writeSetSummaryVars :: Solver.Assignment -> [Solver.TypedVar (WS.WriteSet SimpleFieldIndex)]
-                writeSetSummaryVars a = if USet.isUniverse trgs then [] else list
+                writeSetSummaryVars a = if BSet.isUniverse trgs then [] else list
                     where
                         trgs = targetVal a
-                        list = go <$> USet.toList trgs
+                        list = go <$> BSet.toList trgs
                         go = WS.writeSetSummary . toAddress
                 
                 writeSetSummaryVal a = Solver.join $ (Solver.get a) <$> writeSetSummaryVars a
@@ -515,7 +514,7 @@ writeSet addr = case getNodeType addr of
         
     where
         
-        empty = Solver.mkVariable (idGen addr) [] (USet.empty) 
+        empty = Solver.mkVariable (idGen addr) [] (BSet.empty) 
 
         idGen a = Solver.mkIdentifierFromExpression writeSetAnalysis a
 

@@ -72,7 +72,6 @@ import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
 import qualified Insieme.Utils.BoundSet as BSet
-import qualified Insieme.Utils.UnboundSet as USet
 
 import Insieme.Analysis.Callable
 
@@ -228,12 +227,12 @@ writeSetSummary addr = case getNodeType addr of
                 callTargetVar = callableValue $ goDown 1 addr
 
                 -- a test whether there are unknown call targets
-                hasUniversalTarget a = USet.isUniverse $ ComposedValue.toValue $ Solver.get a callTargetVar
+                hasUniversalTarget a = BSet.isUniverse $ ComposedValue.toValue $ Solver.get a callTargetVar
 
                 -- the variables for the write sets of callables
                 writeSetVars a = if hasUniversalTarget a then [] else list
                     where
-                        trgs = filter (`isChildOf` addr) $ toAddress <$> (USet.toList $ ComposedValue.toValue $ Solver.get a callTargetVar)
+                        trgs = filter (`isChildOf` addr) $ toAddress <$> (BSet.toList $ ComposedValue.toValue $ Solver.get a callTargetVar)
                         list = writeSetSummary <$> trgs
 
                 -- a test to see whether there are none unknown write sets

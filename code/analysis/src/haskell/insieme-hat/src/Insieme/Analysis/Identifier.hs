@@ -46,7 +46,7 @@ import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Utils.UnboundSet as USet
+import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -73,14 +73,14 @@ toString (Identifier s) = s
 -- * Identifier Lattice
 --
 
-type IdentifierSet = USet.UnboundSet Identifier
+type IdentifierSet = BSet.UnboundSet Identifier
 
 instance Solver.Lattice IdentifierSet where
-    bot   = USet.empty
-    merge = USet.union
+    bot   = BSet.empty
+    merge = BSet.union
 
 instance Solver.ExtLattice IdentifierSet where
-    top   = USet.Universe
+    top   = BSet.Universe
 
 
 --
@@ -99,7 +99,7 @@ identifierValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldInd
 identifierValue addr = case getNodePair addr of
 
     IR.NT IR.Literal [_, IR.NT (IR.StringValue x) _] ->
-        Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Identifier x))
+        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton (Identifier x))
 
     _ -> dataflowValue addr analysis []
 

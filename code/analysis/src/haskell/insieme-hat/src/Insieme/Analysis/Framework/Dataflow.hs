@@ -80,7 +80,6 @@ import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Framework.MemoryState
 
-import qualified Insieme.Utils.UnboundSet as USet
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
 --
@@ -156,7 +155,7 @@ dataflowValue addr analysis ops = case getNodePair addr of
         
         callTargetVal a = ComposedValue.toValue $ Solver.get a callTargetVar
         
-        filterInterceptedLambdas ts = Set.filter (not . covered) (USet.toSet ts)
+        filterInterceptedLambdas ts = Set.filter (not . covered) (BSet.toSet ts)
             where
                 covered (Callable.Lambda addr) = any (\o -> covers o addr) extOps
                 covered _ = False 
@@ -164,7 +163,7 @@ dataflowValue addr analysis ops = case getNodePair addr of
 
         -- support for calls to lambda and closures --
 
-        getExitPointVars a = if USet.isUniverse targets then [] else go <$> Set.toList uninterceptedTargets
+        getExitPointVars a = if BSet.isUniverse targets then [] else go <$> Set.toList uninterceptedTargets
             where
                 targets = callTargetVal a
                 uninterceptedTargets = filterInterceptedLambdas targets
@@ -188,7 +187,7 @@ dataflowValue addr analysis ops = case getNodePair addr of
         
         isCtorOrDtor c = isConstructorOrDestructor $ getNodePair $ Callable.toAddress c
         
-        getCtorDtorVars a = if USet.isUniverse targets then [] else concat $ go <$> Set.toList uninterceptedTargets
+        getCtorDtorVars a = if BSet.isUniverse targets then [] else concat $ go <$> Set.toList uninterceptedTargets
             where
                 targets = callTargetVal a
                 uninterceptedTargets = filterInterceptedLambdas targets
@@ -200,10 +199,10 @@ dataflowValue addr analysis ops = case getNodePair addr of
 
         -- operator support --
 
-        getActiveOperators a = if USet.isUniverse targets then [] else filter f extOps
+        getActiveOperators a = if BSet.isUniverse targets then [] else filter f extOps
             where
                 targets = callTargetVal a
-                f o = any (\l -> covers o (Callable.toAddress l)) $ USet.toSet $ targets
+                f o = any (\l -> covers o (Callable.toAddress l)) $ BSet.toSet $ targets
 
         getOperatorDependencies a = concat $ map go $ getActiveOperators a
             where
@@ -224,13 +223,13 @@ dataflowValue addr analysis ops = case getNodePair addr of
 
                         targets = callTargetVal a
 
-                        uncoveredLiterals = filter f $ USet.toList $ targets
+                        uncoveredLiterals = filter f $ BSet.toList $ targets
                             where
                                 f (Callable.Literal a) = not $ any (\h -> covers h a) extOps
                                 f c | isCtorOrDtor c     = False
                                 f _                    = False
 
-                        hasUnknownTarget = (USet.isUniverse targets) || ((not . null) uncoveredLiterals)
+                        hasUnknownTarget = (BSet.isUniverse targets) || ((not . null) uncoveredLiterals)
 
 
 
@@ -321,7 +320,7 @@ dataflowValue addr analysis ops = case getNodePair addr of
 
             dep a = (Solver.toVar targetRefVar) : (map Solver.toVar $ readValueVars a)
 
-            val a = if includesUnknownSources targets then top else Solver.join $ map go $ USet.toList targets
+            val a = if includesUnknownSources targets then top else Solver.join $ map go $ BSet.toList targets
                 where
                     targets = targetRefVal a
                     go r = ComposedValue.getElement (Reference.dataPath r) $ Solver.get a (memStateVarOf r)
@@ -329,9 +328,9 @@ dataflowValue addr analysis ops = case getNodePair addr of
             targetRefVar = Reference.referenceValue $ goDown 1 $ goDown 2 addr          -- here we have to skip the potentially materializing declaration!
             targetRefVal a = ComposedValue.toValue $ Solver.get a targetRefVar
 
-            includesUnknownSources t = USet.member Reference.NullReference t || USet.member Reference.UninitializedReference t 
+            includesUnknownSources t = BSet.member Reference.NullReference t || BSet.member Reference.UninitializedReference t 
 
-            readValueVars a = if includesUnknownSources targets then [] else map memStateVarOf $ USet.toList targets
+            readValueVars a = if includesUnknownSources targets then [] else map memStateVarOf $ BSet.toList targets
                 where
                     targets = targetRefVal a
 

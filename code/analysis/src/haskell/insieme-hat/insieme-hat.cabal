@@ -50,7 +50,6 @@ library
                         Insieme.Utils.Arithmetic,
                         Insieme.Utils.ParseInt,
                         Insieme.Utils.BoundSet,
-                        Insieme.Utils.UnboundSet,
                         Insieme.Utils
     build-depends:      attoparsec >= 0.13,
                         attoparsec-binary >= 0.2,
