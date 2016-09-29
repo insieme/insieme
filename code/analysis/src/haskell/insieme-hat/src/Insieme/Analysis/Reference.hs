@@ -59,7 +59,6 @@ import qualified Insieme.Inspire as IR
 
 import Insieme.Utils.Arithmetic
 import qualified Insieme.Utils.BoundSet as BSet
-import qualified Insieme.Utils.UnboundSet as USet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
@@ -100,14 +99,14 @@ data Reference i =
 -- * Reference Lattice
 --
 
-type ReferenceSet i = USet.UnboundSet (Reference i)
+type ReferenceSet i = BSet.UnboundSet (Reference i)
 
 instance (Eq i,Ord i,Show i,Typeable i,NFData i) => Lattice (ReferenceSet i) where
-    bot   = USet.empty
-    merge = USet.union
+    bot   = BSet.empty
+    merge = BSet.union
 
 instance (Eq i,Ord i,Show i,Typeable i,NFData i) => ExtLattice (ReferenceSet i) where
-    top   = USet.singleton UninitializedReference       -- What is not known, is not a valid reference
+    top   = BSet.singleton UninitializedReference       -- What is not known, is not a valid reference
 
 
 --
@@ -127,13 +126,13 @@ referenceValue :: (FieldIndex i) => NodeAddress -> TypedVar (ValueTree.Tree i (R
 referenceValue addr = case getNodeType addr of
 
         IR.Literal ->
-            mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference (crop addr) DP.root)
+            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference (crop addr) DP.root)
 
         IR.Declaration | isMaterializingDeclaration (getNodePair addr) ->
-            mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference addr DP.root)
+            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.root)
 
         IR.CallExpr | isMaterializingCall (getNodePair addr) ->
-            mkVariable (idGen addr) [] (compose $ USet.singleton $ Reference addr DP.root)
+            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.root)
 
         _ -> dataflowValue addr analysis opsHandler
 
@@ -143,7 +142,7 @@ referenceValue addr = case getNodeType addr of
             entryPointParameterHandler=epParamHandler
         }
         
-        epParamHandler a = mkConstant analysis a $ compose $ USet.singleton $ Reference a DP.root
+        epParamHandler a = mkConstant analysis a $ compose $ BSet.singleton $ Reference a DP.root
 
         idGen = mkVarIdentifier analysis
 
@@ -154,24 +153,24 @@ referenceValue addr = case getNodeType addr of
         allocHandler = OperatorHandler cov noDep val
             where
                 cov a = isBuiltin a $ getBuiltin addr "ref_alloc"
-                val a = compose $ USet.singleton $ Reference addr DP.root
+                val a = compose $ BSet.singleton $ Reference addr DP.root
 
         declHandler = OperatorHandler cov noDep val
             where
                 cov a = isBuiltin a $ getBuiltin addr "ref_decl"
-                val a = compose $ USet.singleton $ Reference (getEnclosingDecl addr) DP.root
+                val a = compose $ BSet.singleton $ Reference (getEnclosingDecl addr) DP.root
 
         refNarrow = OperatorHandler cov subRefDep val
             where
                 cov a = isBuiltin a $ getBuiltin addr "ref_narrow"
                 val a = compose $ narrow (baseRefVal a) (dataPathVal a)
-                narrow = USet.lift2 $ onRefs2 $ \(Reference l p) d -> Reference l (DP.append p d)
+                narrow = BSet.lift2 $ onRefs2 $ \(Reference l p) d -> Reference l (DP.append p d)
 
         refExpand = OperatorHandler cov subRefDep val
             where
                 cov a = isBuiltin a $ getBuiltin addr "ref_expand"
                 val a = compose $ expand (baseRefVal a) (dataPathVal a)
-                expand = USet.lift2 $ onRefs2 $ \(Reference l p) d -> Reference l (DP.append p (DP.invert d))
+                expand = BSet.lift2 $ onRefs2 $ \(Reference l p) d -> Reference l (DP.append p (DP.invert d))
 
         refCast = OperatorHandler cov dep val
             where
@@ -196,7 +195,7 @@ referenceValue addr = case getNodeType addr of
                 offsetVar = arithmeticValue $ goDown 1 $ goDown 2 addr
                 offsetVal a = BSet.toUnboundSet $ ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 1) $ get a offsetVar
                 
-                access = USet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ index offset))  
+                access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ index offset))  
 
         ptrFromRef = OperatorHandler cov dep val
             where
@@ -205,7 +204,7 @@ referenceValue addr = case getNodeType addr of
                 val a = ComposedValue.composeElements [(component 0,compose res)]
                     where
                         res = lower $ baseRefVal a
-                        lower = USet.lift $ onRefs $ \(Reference l p) -> Reference l (DP.append p (DP.invert $ DP.step $ component 0))
+                        lower = BSet.map $ onRefs $ \(Reference l p) -> Reference l (DP.append p (DP.invert $ DP.step $ component 0))
 
 
         noDep a = []

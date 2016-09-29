@@ -150,4 +150,4 @@ accessPathValue addr = case getNodeType addr of
     baseAccessPathVal a = ComposedValue.toValue $ Solver.get a baseAccessPathVar
 
     dataPathVar   = dataPathValue $ goDown 3 addr
-    dataPathVal a = BSet.fromUnboundSet $ ComposedValue.toValue $ Solver.get a dataPathVar
+    dataPathVal a = BSet.changeBound $ ComposedValue.toValue $ Solver.get a dataPathVar

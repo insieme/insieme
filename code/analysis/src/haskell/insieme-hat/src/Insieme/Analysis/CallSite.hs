@@ -52,8 +52,7 @@ import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.RecursiveLambdaReferences as RecLambdaRefs
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Utils.UnboundSet as USet
-
+import qualified Insieme.Utils.BoundSet as BSet
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
@@ -185,7 +184,7 @@ callSites addr = case getNodeType addr of
       
         reachingCalls = filter f $ allCalls
           where
-            f c = USet.member callable $ ComposedValue.toValue $ Solver.get a $ Callable.callableValue $ goDown 1 c
+            f c = BSet.member callable $ ComposedValue.toValue $ Solver.get a $ Callable.callableValue $ goDown 1 c
     
             callable = case getNodeType addr of
                 IR.Lambda   -> Callable.Lambda addr

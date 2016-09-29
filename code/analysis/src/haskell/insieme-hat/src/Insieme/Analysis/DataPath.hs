@@ -47,7 +47,6 @@ import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 
 import qualified Insieme.Utils.BoundSet as BSet
-import qualified Insieme.Utils.UnboundSet as USet
 
 import Insieme.Analysis.Identifier
 import Insieme.Analysis.Arithmetic
@@ -63,14 +62,14 @@ import Insieme.Analysis.Entities.FieldIndex
 -- * DataPath Lattice
 --
 
-type DataPathSet i = USet.UnboundSet (DataPath i)
+type DataPathSet i = BSet.UnboundSet (DataPath i)
 
 instance (FieldIndex i) => Solver.Lattice (DataPathSet i) where
-    bot   = USet.empty
-    merge = USet.union
+    bot   = BSet.empty
+    merge = BSet.union
 
 instance (FieldIndex i) => Solver.ExtLattice (DataPathSet i) where
-    top = USet.Universe
+    top = BSet.Universe
 
 
 --
@@ -106,7 +105,7 @@ dataPathValue addr = dataflowValue addr analysis ops
 
         dep a = []
 
-        val a = compose $ USet.singleton root
+        val a = compose $ BSet.singleton root
 
 
     -- the handler for the member access path constructore --
@@ -118,7 +117,7 @@ dataPathValue addr = dataflowValue addr analysis ops
 
         val a = compose $ combine (paths a) fieldNames
             where
-                combine = USet.lift2 $ \p i -> append p ((step . field) (toString i))
+                combine = BSet.lift2 $ \p i -> append p ((step . field) (toString i))
                 fieldNames = ComposedValue.toValue $ Solver.get a fieldNameVar
 
         fieldNameVar = identifierValue $ goDown 3 addr
@@ -133,9 +132,9 @@ dataPathValue addr = dataflowValue addr analysis ops
 
         val a = compose $ combine (paths a) indexes
             where
-                combine USet.Universe  _ = USet.Universe
-                combine ps USet.Universe = USet.map (\p -> append p (step unknownIndex)) ps 
-                combine ps is = (USet.lift2 $ \p i -> append p ((step . index) i)) ps is
+                combine BSet.Universe  _ = BSet.Universe
+                combine ps BSet.Universe = BSet.map (\p -> append p (step unknownIndex)) ps 
+                combine ps is = (BSet.lift2 $ \p i -> append p ((step . index) i)) ps is
                           
                 indexes = BSet.toUnboundSet $ ComposedValue.toValue $ Solver.get a indexVar
 

@@ -48,8 +48,7 @@ import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Inspire.Utils as Utils
-import qualified Insieme.Utils.UnboundSet as USet
-
+import qualified Insieme.Utils.BoundSet as BSet
 
 
 main :: IO ()
@@ -78,8 +77,8 @@ analysis addr = do
     state <- get
     let (res, state') = Solver.resolve state (Ref.referenceValue $ Addr.goDown 1 $ Addr.goDown 2 addr)
     put state'
-    let refs = ComposedValue.toValue res :: USet.UnboundSet (Ref.Reference SimpleFieldIndex)
+    let refs = ComposedValue.toValue res :: BSet.UnboundSet (Ref.Reference SimpleFieldIndex)
     return $ case () of _
-                         | USet.null refs       -> 'e'
-                         | USet.isUniverse refs -> 'u'
+                         | BSet.null refs       -> 'e'
+                         | BSet.isUniverse refs -> 'u'
                          | otherwise            -> 'o'
