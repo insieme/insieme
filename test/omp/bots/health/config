@@ -1,3 +1,4 @@
 includes="../../../../bots","../../../../bots/health"
 files="../../../../bots/bots_common.c","../../../../bots/bots_main.c","../../../../bots/health/health.c"
 executionFlags=-f ${PATH}/../../../../bots/health/small.input -c
+definitions="_GNU_SOURCE"
