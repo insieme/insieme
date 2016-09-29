@@ -458,11 +458,12 @@ data SolverState = SolverState {
         assignment :: Assignment,
         variableIndex :: VariableIndex,        
         -- for performance evaluation
-        numSteps :: Map.Map AnalysisIdentifier Int,                     
-        cpuTimes :: Map.Map AnalysisIdentifier Integer
+        numSteps  :: Map.Map AnalysisIdentifier Int,
+        cpuTimes  :: Map.Map AnalysisIdentifier Integer,
+        numResets :: Map.Map AnalysisIdentifier Int
     } 
 
-initState = SolverState empty emptyVarIndex Map.empty Map.empty
+initState = SolverState empty emptyVarIndex Map.empty Map.empty Map.empty
 
 
 
@@ -538,23 +539,24 @@ solveStep :: SolverState -> Dependencies -> [IndexedVar] -> SolverState
 solveStep s _ [] = s                                                                                                    -- work list is empty
 
 -- compute next element in work list
-solveStep (SolverState a i u t) d (v:vs) = solveStep (SolverState resAss resIndex nu nt) resDep ds
+solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIndex nu nt nr) resDep ds
         where
                 -- profiling --
-                ((resAss,resIndex,resDep,ds),dt) = measure go ()
+                ((resAss,resIndex,resDep,ds,hadReset),dt) = measure go ()
                 nt = Map.insertWith (+) aid dt t
                 nu = Map.insertWith (+) aid  1 u
+                nr = if hadReset then Map.insertWith (+) aid 1 r else r
                 aid = analysis $ index $ indexToVar v
                 
                 -- each constraint extends the result, the dependencies, and the vars to update
-                go _ = foldr processConstraint (a,i,d,vs) ( constraints $ indexToVar v )  -- update all constraints of current variable
-                processConstraint c (a,i,d,dv) = case ( update c a ) of
+                go _ = foldr processConstraint (a,i,d,vs,False) ( constraints $ indexToVar v )  -- update all constraints of current variable
+                processConstraint c (a,i,d,dv,hadReset) = case ( update c a ) of
                         
-                        (a',None)         -> (a',ni,nd,nv)                                        -- nothing changed, we are fine
+                        (a',None)         -> (a',ni,nd,nv,hadReset)                                     -- nothing changed, we are fine
                         
-                        (a',Increment)    -> (a',ni,nd, (Set.elems $ getDep nd trg) ++ nv)        -- add depending variables to work list
+                        (a',Increment)    -> (a',ni,nd, (Set.elems $ getDep nd trg) ++ nv, hadReset)    -- add depending variables to work list
                         
-                        (a',Reset)        -> (ra,ni,nd, (Set.elems $ getDep nd trg) ++ nv)        -- handling a local reset
+                        (a',Reset)        -> (ra,ni,nd, (Set.elems $ getDep nd trg) ++ nv, True)        -- handling a local reset
                             where 
                                 dep = getAllDep nd trg
                                 ra = if not $ Set.member trg dep                                  -- if variable is not indirectly depending on itself  
@@ -648,7 +650,7 @@ measure f p = unsafePerformIO $ do
 
 -- prints the current assignment as a graph
 toDotGraph :: SolverState -> String
-toDotGraph (SolverState a@( Assignment m ) varIndex _ _) = "digraph G {\n\t"
+toDotGraph (SolverState a@( Assignment m ) varIndex _ _ _) = "digraph G {\n\t"
         ++
         "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
         ++
@@ -717,7 +719,7 @@ nonexistFile base ext = tryFile names
       iter n = concat [base, "-", show n]
 
 toJsonMetaFile :: SolverState -> String
-toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _) = "{\n"
+toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _ _) = "{\n"
         ++
         "    \"bodies\": {\n"
         ++
@@ -750,15 +752,16 @@ dumpToJsonFile s file = unsafePerformIO $ do
 
 showSolverStatistic :: SolverState -> String
 showSolverStatistic s = 
-        "===================================================== Solver Statistic =====================================================\n" ++
-        "         Analysis                #Vars              Updates          Updates/Var            ~Time[us]        ~Time/Var[us]" ++
-        "\n============================================================================================================================\n" ++
+        "===================================================== Solver Statistic ==============================================================================================\n" ++
+        "         Analysis                #Vars              Updates          Updates/Var            ~Time[us]        ~Time/Var[us]               Resets           Resets/Var" ++
+        "\n=====================================================================================================================================================================\n" ++
         ( intercalate "\n" (map print $ Map.toList grouped)) ++
-        "\n----------------------------------------------------------------------------------------------------------------------------\n" ++
+        "\n---------------------------------------------------------------------------------------------------------------------------------------------------------------------\n" ++
         "           Total: " ++ (printf "%20d" numVars) ++ 
                         (printf " %20d" totalUpdates) ++ (printf " %20.3f" avgUpdates) ++ 
                         (printf " %20d" totalTime) ++ (printf " %20.3f" avgTime) ++
-        "\n============================================================================================================================\n"
+                        (printf " %20d" totalResets) ++ (printf " %20.3f" avgResets) ++
+        "\n=====================================================================================================================================================================\n"
     where
         vars = knownVariables $ variableIndex s
         
@@ -766,7 +769,7 @@ showSolverStatistic s =
             where
                 go v m = Map.insertWith (+) ( analysis . index $ v ) (1::Int) m
         
-        print (a,c) = printf " %16s %20d %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime 
+        print (a,c) = printf " %16s %20d %20d %20.3f %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime totalResets avgResets
             where
                 name = ((show a) ++ ":")
             
@@ -776,6 +779,9 @@ showSolverStatistic s =
                 totalTime = toMs $ Map.findWithDefault 0 a $ cpuTimes s
                 avgTime = ((fromIntegral totalTime) / (fromIntegral c)) :: Float
 
+                totalResets = Map.findWithDefault 0 a $ numResets s
+                avgResets = ((fromIntegral totalResets) / (fromIntegral c)) :: Float
+
 
         numVars = Set.size vars
         
@@ -784,5 +790,8 @@ showSolverStatistic s =
         
         totalTime = toMs $ foldr (+) 0 (cpuTimes s)
         avgTime = ((fromIntegral totalTime) / (fromIntegral numVars)) :: Float
+
+        totalResets = foldr (+) 0 (numResets s)
+        avgResets = ((fromIntegral totalResets) / (fromIntegral numVars)) :: Float
         
         toMs a = a `div` 1000000
