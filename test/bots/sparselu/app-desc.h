@@ -20,7 +20,9 @@
 
 #include "omp-tasks-app.h"
 
+#ifndef BOTS_APP_NAME
 #define BOTS_APP_NAME "SparseLU (Single version)"
+#endif
 #define BOTS_APP_PARAMETERS_DESC "S1=%dx%d, S2=%dx%d"
 #define BOTS_APP_PARAMETERS_LIST ,bots_arg_size,bots_arg_size,bots_arg_size_1,bots_arg_size_1
 
