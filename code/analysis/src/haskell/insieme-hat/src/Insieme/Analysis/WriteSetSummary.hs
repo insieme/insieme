@@ -269,7 +269,10 @@ writeSetSummary addr = case getNodeType addr of
                 con = Solver.createConstraint dep val var
 
                 dep _ = [Solver.toVar accessPathVar]
-                val a = fromAccessPaths $ BSet.toList $ accessPathVal a
+                val a = if BSet.isUniverse aps then Unknown else res
+                    where
+                        aps = accessPathVal a
+                        res = fromAccessPaths $ BSet.toList aps
                 
                 accessPathVar = accessPathValue $ goDown 1 addr
                 accessPathVal a = ComposedValue.toValue $ Solver.get a accessPathVar 
