@@ -70,7 +70,7 @@ endif()
 # =============================================================================================
 
 # Build the analysis library
-add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs})
+add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_analysis_incs})
 set_target_properties(insieme_analysis PROPERTIES LINKER_LANGUAGE CXX)
 target_include_directories(insieme_analysis PUBLIC ${insieme_analysis_include_dir})
 
@@ -111,13 +111,15 @@ if(ANALYSIS_HASKELL)
     set(test_cases ${test_cases} ${test_cases_haskell})
 endif()
 
+insieme_glob_headers(test_common test/common)
+
 foreach(case_file ${test_cases})
     get_filename_component(case_name ${case_file} NAME_WE)
 
     insieme_fix_case_name(case_subdir ${case_file})
 
     set(case_name ${ut_prefix}${case_subdir}_${case_name})
-    add_executable(${case_name} ${case_file})
+    add_executable(${case_name} ${case_file} ${test_common})
     target_link_libraries(${case_name} insieme_analysis)
     target_link_libraries(${case_name} insieme_driver)
 
