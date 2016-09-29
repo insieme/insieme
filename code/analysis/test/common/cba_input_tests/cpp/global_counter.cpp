@@ -41,7 +41,6 @@ struct A {
 	static int instances;
 
 	A()  { instances++; }
-	~A() { instances--; }
 
 };
 
@@ -49,7 +48,7 @@ int A::instances = 0;
 
 int main(int argc, char** argv) {
 
-	A::instances = 0;
+	// test the initial value
 	cba_expect_eq_int(A::instances, 0);
 
 	A a;

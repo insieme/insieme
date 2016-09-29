@@ -229,11 +229,6 @@ referenceValue addr = case getNodeType addr of
         onRefs2 f r d = f r d
  
 
--- Tests whether an IR node represents a reference type or not
-isReference :: IR.Tree -> Bool
-isReference (IR.NT IR.GenericType ((IR.NT (IR.StringValue "ref") _) : _)) = True
-isReference _                                                             = False
-
 getTypeParam :: Int -> IR.Tree -> IR.Tree
 getTypeParam i (IR.NT IR.GenericType ( _ : _ : (IR.NT IR.Types params) : [] )) = params !! i
 getTypeParam _ _ = error "unexpected NodeType"

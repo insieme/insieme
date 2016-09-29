@@ -34,28 +34,29 @@
  * regarding third party software licenses.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
-
 #include "cba.h"
 
-int x;
+int g = 10;
+int p = 3;
 
 int main(int argc, char** argv) {
 
-	//cba_dump_json();
+	// check the proper handling of the global initialization
+	cba_expect_eq_int(g,10);
+	cba_expect_eq_int(p,3);
 
-	// the global x should be default-initialized to 0
-	cba_expect_eq_int(x,0);
+	// but they can be changed
+	g++;
+	cba_expect_eq_int(g,11);
+	cba_expect_eq_int(p,3);
 
-	// if we set it, it should be known
-	x = 1;
-	cba_expect_eq_int(x,1);
+	p--;
+	cba_expect_eq_int(g,11);
+	cba_expect_eq_int(p,2);
 
-	// and it should be mutable
-	x = 2;
-	cba_expect_eq_int(x,2);
+//	cba_dump_solution();
+//	cba_print_code();
+//	cba_dump_json();
 
 	return 0;
 }

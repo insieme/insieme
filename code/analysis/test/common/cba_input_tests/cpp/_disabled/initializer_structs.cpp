@@ -34,28 +34,36 @@
  * regarding third party software licenses.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
-
 #include "cba.h"
 
-int x;
+struct A {
+	int x;
+	int y;
+};
+
+struct B {
+	A a;
+	int z;
+};
 
 int main(int argc, char** argv) {
 
-	//cba_dump_json();
+	// struct initialization
+	A a1 { 1, 2 };
+	cba_expect_eq_int(a1.x, 1);
+	cba_expect_eq_int(a1.y, 2);
 
-	// the global x should be default-initialized to 0
-	cba_expect_eq_int(x,0);
+	A a2 { 1 };
+	cba_expect_eq_int(a2.x, 1);
+	cba_expect_undefined_int(a2.y);
 
-	// if we set it, it should be known
-	x = 1;
-	cba_expect_eq_int(x,1);
 
-	// and it should be mutable
-	x = 2;
-	cba_expect_eq_int(x,2);
+	// nested struct initialization
+	B b1 { { 1, 2 } , 3 };
+
+//	cba_dump_solution();
+	cba_print_code();
+//	cba_dump_json();
 
 	return 0;
 }

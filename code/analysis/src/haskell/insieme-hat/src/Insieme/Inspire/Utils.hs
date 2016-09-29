@@ -53,6 +53,11 @@ module Insieme.Inspire.Utils (
     isFreeVariable,
     isEntryPoint,
     isEntryPointParameter,
+    isUnit,
+    isReference,
+    getReferencedType,
+    isArray,
+    isRecord,
     isConstructor,
     isDestructor,
     isConstructorOrDestructor
@@ -250,6 +255,58 @@ isFreeVariable :: NodeAddress -> Bool
 isFreeVariable v | (not . isVariable) v = False
 isFreeVariable v = isNothing (findDecl v)
 
+
+-- Unit type --
+
+isUnitType :: IR.Tree -> Bool
+isUnitType (IR.NT IR.GenericType ((IR.NT (IR.StringValue "unit") _) : _)) = True
+isUnitType _ = False
+
+isUnit :: IR.Tree -> Bool
+isUnit t = fromMaybe False $ (isUnitType <$> getType t)
+
+
+-- Reference type --
+
+isReferenceType :: IR.Tree -> Bool
+isReferenceType (IR.NT IR.GenericType ((IR.NT (IR.StringValue "ref") _) : _)) = True
+isReferenceType _ = False
+
+isReference :: IR.Tree -> Bool
+isReference t = fromMaybe False $ (isReferenceType <$> getType t)  
+
+
+getReferencedType :: IR.Tree -> Maybe IR.Tree
+getReferencedType e = if isRef then Just elem else Nothing
+    where
+        isRef = isReference e
+        elem = head $ IR.getChildren $ fromJust $ getType e
+
+
+
+-- Array Type --
+
+isArrayType :: IR.Tree -> Bool
+isArrayType (IR.NT IR.GenericType ((IR.NT (IR.StringValue "array") _) : _)) = True
+isArrayType _ = False
+
+isArray :: IR.Tree -> Bool
+isArray t = fromMaybe False $ (isReferenceType <$> getType t)  
+
+
+
+-- Record types --
+
+isRecordType :: IR.Tree -> Bool
+isRecordType (IR.NT IR.TagType _) = True
+isRecordType _ = False
+
+isRecord :: IR.Tree -> Bool
+isRecord t = fromMaybe False $ (isRecordType <$> getType t)  
+
+
+
+-- Function kinds --
 
 checkFunctionKind :: (IR.FunctionKind -> Bool) -> IR.Tree -> Bool
 checkFunctionKind test t = fromMaybe False $ test <$> (IR.toFunctionKind =<< getType t)

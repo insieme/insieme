@@ -263,6 +263,19 @@ writeSetSummary addr = case getNodeType addr of
                         res = Solver.join $ bindAccessPaths args <$> ws
 
 
+        -- compute write set for init expressions
+        IR.InitExpr -> var
+            where
+                var = Solver.mkVariable (idGen addr) [con] Solver.bot
+                con = Solver.createConstraint dep val var
+
+                dep _ = [Solver.toVar accessPathVar]
+                val a = fromAccessPaths $ BSet.toList $ accessPathVal a
+                
+                accessPathVar = accessPathValue $ goDown 1 addr
+                accessPathVal a = ComposedValue.toValue $ Solver.get a accessPathVar 
+                
+
         _ | isRoot addr -> everything
 
 
@@ -281,8 +294,8 @@ writeSetSummary addr = case getNodeType addr of
 
     idGen a = Solver.mkIdentifierFromExpression writeSetAnalysis a
     
-    -- get list of calls within current node --
-    calls = IRUtils.foldAddressPrune collect filter addr
+    -- get list of calls and init expressions within current node --
+    potentialWriteOps = IRUtils.foldAddressPrune collect filter addr
         where
 
             filter cur = case getNodePair cur of
@@ -291,11 +304,12 @@ writeSetSummary addr = case getNodeType addr of
 
             collect cur l = case getNodePair cur of
                 IR.NT IR.CallExpr _ -> cur : l
+                IR.NT IR.InitExpr _ -> cur : l
                 _                  -> l
 
 
     -- get list of write sets at calls
-    writeSetVars = writeSetSummary <$> calls
+    writeSetVars = writeSetSummary <$> potentialWriteOps
 
 
 

@@ -34,28 +34,47 @@
  * regarding third party software licenses.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
-
 #include "cba.h"
 
-int x;
+struct A {
+	int x;
+	A() : x(1) { }
+	A(int x) : x(x) { }
+};
 
 int main(int argc, char** argv) {
 
-	//cba_dump_json();
+	// default initialization
+	A a;
 
-	// the global x should be default-initialized to 0
-	cba_expect_eq_int(x,0);
+	// check that a is initialized
+	cba_expect_defined_ptr(&a);
 
-	// if we set it, it should be known
-	x = 1;
-	cba_expect_eq_int(x,1);
+	// check that the default constructor was processed
+	cba_expect_eq_int(a.x, 1);
 
-	// and it should be mutable
-	x = 2;
-	cba_expect_eq_int(x,2);
+
+	// check a call with parameter
+	A b(2);
+	cba_expect_eq_int(b.x,2);
+
+
+	// check a new call
+	A* c = new A();
+	cba_expect_eq_int(c->x,1);
+
+	// check a new call with parameters
+	A* d = new A(3);
+	cba_expect_eq_int(d->x,3);
+
+
+	int x = (argc > 2) ? c->x : d->x;
+//	cba_expect_one_of_int(x,iset(1,3));
+	cba_expect_defined_int(x);
+
+//	cba_dump_solution();
+//	cba_print_code();
+//	cba_dump_json();
 
 	return 0;
 }
