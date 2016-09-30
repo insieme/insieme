@@ -46,7 +46,7 @@ import Data.Maybe
 import Data.Typeable
 import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Utils
+import Insieme.Inspire.Visit
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Utils.BoundSet as BSet
@@ -107,7 +107,7 @@ callableValue addr = case getNodeType addr of
     IR.LambdaExpr ->
         Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton (Lambda (fromJust $ getLambda addr )))
 
-    IR.LambdaReference -> 
+    IR.LambdaReference ->
         Solver.mkVariable (idGen addr) [] (compose $ getCallables4Ref addr)
 
     IR.BindExpr ->
@@ -133,8 +133,8 @@ callableValue addr = case getNodeType addr of
                     where
                         pos = findIndex filter cs
                         filter (IR.NT IR.LambdaBinding [a,_]) = a == r
-                _ | isRoot cur      -> BSet.Universe 
-                _                   -> search r $ goUp cur  
+                _ | isRoot cur      -> BSet.Universe
+                _                   -> search r $ goUp cur
 
 
 -- | a utility to collect all callables of a program

@@ -46,7 +46,7 @@ import Data.Typeable
 import Debug.Trace
 import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Utils
+import Insieme.Inspire.Visit
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.RecursiveLambdaReferences as RecLambdaRefs
@@ -128,24 +128,24 @@ callSites addr = case getNodeType addr of
 
     -- create the variable (by binding at least the id) --
     var = Solver.mkVariable id cons init
-    
+
     cons = if isRoot addr then [] else [con]
     init = if isRoot addr then Solver.bot else directCall
 
 
     -- assemble the constraint computing all call sites --
-    
+
     con = Solver.createConstraint dep val var
     dep a = (Solver.toVar <$> recReferencesDep) ++ (Solver.toVar <$> callSiteVars a)
     val a = indirectCalls a
-    
+
 
     -- a test whether the targeted function is a lambda or a bind --
     isLambda = getNodeType addr == IR.Lambda
-    
+
     recReferencesVar = RecLambdaRefs.recursiveCalls addr
     recReferencesVal a = if isLambda then Solver.get a recReferencesVar else Set.empty
-    recReferencesDep   = if isLambda then [recReferencesVar] else []  
+    recReferencesDep   = if isLambda then [recReferencesVar] else []
 
 
     -- determines whether all calls are statically bound (if not, we have to search) --
@@ -153,14 +153,14 @@ callSites addr = case getNodeType addr of
       where
         check a = getIndex a == 1 && (isCall $ fromJust $ getParent a)
 
-    
+
     -- the list of call site variables to be checked for potential calls to this lambda
-    callSiteVars a = 
-        if isStaticallyBound a then [] 
-        else Callable.callableValue . (goDown 1) <$> allCalls  
+    callSiteVars a =
+        if isStaticallyBound a then []
+        else Callable.callableValue . (goDown 1) <$> allCalls
 
 
-    -- computes a list of addresses of all potentiall call sites 
+    -- computes a list of addresses of all potentiall call sites
     allCalls = collectAll callable (getRootAddress addr)
       where
         callable node = case IR.getNodeType node of
@@ -175,17 +175,17 @@ callSites addr = case getNodeType addr of
 
 
     directCall = if i == 1 && isCall p then Set.singleton $ CallSite p else Set.empty
-    
-    indirectCalls a = 
-        Set.fromList $ if isStaticallyBound a 
+
+    indirectCalls a =
+        Set.fromList $ if isStaticallyBound a
             then CallSite . fromJust . getParent <$> Set.toList (recReferencesVal a)
-            else (CallSite <$> reachingCalls) ++ (CallSite <$> directRecursiveCalls) 
+            else (CallSite <$> reachingCalls) ++ (CallSite <$> directRecursiveCalls)
       where
-      
+
         reachingCalls = filter f $ allCalls
           where
             f c = BSet.member callable $ ComposedValue.toValue $ Solver.get a $ Callable.callableValue $ goDown 1 c
-    
+
             callable = case getNodeType addr of
                 IR.Lambda   -> Callable.Lambda addr
                 IR.BindExpr -> Callable.Closure addr

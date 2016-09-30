@@ -47,11 +47,12 @@ library
                         Insieme.Inspire.NodeType,
                         Insieme.Inspire.Query,
                         Insieme.Inspire.ThHelpers,
-                        Insieme.Inspire.Utils,
+                        Insieme.Inspire.Visit,
+                        Insieme.Utils,
                         Insieme.Utils.Arithmetic,
-                        Insieme.Utils.ParseInt,
                         Insieme.Utils.BoundSet,
-                        Insieme.Utils
+                        Insieme.Utils.ParseIR,
+                        Insieme.Utils.ParseInt
     build-depends:      attoparsec >= 0.13,
                         attoparsec-binary >= 0.2,
                         base >= 4.7,

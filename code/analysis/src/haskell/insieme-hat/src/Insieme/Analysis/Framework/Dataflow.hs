@@ -65,7 +65,7 @@ import Insieme.Analysis.Framework.MemoryState
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Query
-import Insieme.Inspire.Utils
+import Insieme.Inspire.Visit
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Arithmetic as Arithmetic
 import qualified Insieme.Analysis.CallSite as CallSite

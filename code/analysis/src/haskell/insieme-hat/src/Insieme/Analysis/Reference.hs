@@ -60,7 +60,6 @@ import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress as Addr
 import Insieme.Inspire.Query
-import Insieme.Inspire.Utils
 import Insieme.Utils.Arithmetic
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue

@@ -38,12 +38,16 @@
 
 module Insieme.Analysis.Arithmetic where
 
+import Data.Maybe
 import Data.Typeable
+import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-import Insieme.Inspire.Query (isLoopIterator)
-import Insieme.Inspire.Utils (isFreeVariable)
+import Insieme.Inspire.Query (isLoopIterator,isVariable)
+import Insieme.Inspire.Visit (findDecl)
 import Insieme.Utils.ParseInt
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.NodeAddress as Addr
@@ -51,9 +55,6 @@ import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
-import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
-import Insieme.Analysis.Entities.FieldIndex
 
 
 --
@@ -167,4 +168,6 @@ isIntType (IR.NT IR.GenericType (IR.NT (IR.StringValue "uint") _:_)) = True
 isIntType (IR.NT IR.TypeVariable _ )                                 = True
 isIntType _ = False
 
-
+isFreeVariable :: Addr.NodeAddress -> Bool
+isFreeVariable v | (not . isVariable) v = False
+isFreeVariable v = isNothing (findDecl v)

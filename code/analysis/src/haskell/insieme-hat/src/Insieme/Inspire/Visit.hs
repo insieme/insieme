@@ -36,7 +36,7 @@
 
 {-# LANGUAGE LambdaCase #-}
 
-module Insieme.Inspire.Utils (
+module Insieme.Inspire.Visit (
     Pruning(..),
     collectAll,
     collectAllPrune,
@@ -45,29 +45,21 @@ module Insieme.Inspire.Utils (
     foldAddress,
     foldTreePrune,
     foldAddressPrune,
-    parseIR,
     findDecl,
-    isFreeVariable,
 ) where
 
 import Control.Applicative
 import Control.Monad.State.Strict
 import Data.List
 import Data.Maybe
-import Insieme.Inspire.Query
-import Insieme.Inspire.BinaryParser
 import Insieme.Inspire.NodeAddress
-import System.Process
-import qualified Data.ByteString.Char8 as BS8
 import qualified Data.IntMap.Strict as IntMap
 import qualified Insieme.Inspire as IR
 
-
-data Pruning = NoPrune                      -- continue descending into child nodes
-             | PruneChildren                -- skip children, but cover current node
-             | PruneHere                    -- skip this and all child nodes
-    deriving (Eq)
-
+data Pruning = NoPrune       -- continue descending into child nodes
+             | PruneChildren -- skip children, but cover current node
+             | PruneHere     -- skip this and all child nodes
+  deriving (Eq)
 
 collectAllPrune :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> NodeAddress -> [NodeAddress]
 collectAllPrune pred filter root = evalState (go root) IntMap.empty
@@ -95,30 +87,24 @@ collectAllPrune pred filter root = evalState (go root) IntMap.empty
 
         addAddr xs = if (filter node /= PruneHere) && (pred $ getNode addr) then (addr:xs) else xs
 
-
-
-
 collectAll :: (IR.Tree -> Bool) -> NodeAddress -> [NodeAddress]
 collectAll pred root = collectAllPrune pred (\_ -> NoPrune ) root
 
-
-
-
--- | Collect all nodes of the given 'IR.NodeType' but prune the tree
--- when encountering one of the other 'IR.NodeType's.
+-- | Collect all nodes of the given 'IR.NodeType' but prune the tree when
+-- encountering one of the other 'IR.NodeType's.
 collectAddr :: IR.NodeType -> [IR.NodeType -> Bool] -> NodeAddress -> [NodeAddress]
 collectAddr t fs = collectAllPrune pred filter
   where
     pred = (==t) . IR.getNodeType
     filter t = if any (\f -> f $ IR.getNodeType t) fs then PruneHere else NoPrune
 
--- | Fold the given 'Tree'. The accumulator function takes the subtree
--- and the address of this subtree in the base tree.
+-- | Fold the given 'Tree'. The accumulator function takes the subtree and the
+-- address of this subtree in the base tree.
 foldTree :: Monoid a => (NodeAddress -> a -> a) -> IR.Inspire -> a
 foldTree = flip foldTreePrune noPrune
 
--- | Fold the given 'Tree'. The accumulator function takes the subtree
--- and the address of this subtree in the base tree.
+-- | Fold the given 'Tree'. The accumulator function takes the subtree and the
+-- address of this subtree in the base tree.
 foldAddress :: Monoid a => (NodeAddress -> a -> a) -> NodeAddress -> a
 foldAddress = flip foldAddressPrune noPrune
 
@@ -126,8 +112,8 @@ foldAddress = flip foldAddressPrune noPrune
 noPrune :: NodeAddress -> Bool
 noPrune = const False
 
--- | Like 'foldTree' but is able to not follow entire subtrees when
--- the pruning function returns 'False'.
+-- | Like 'foldTree' but is able to not follow entire subtrees when the pruning
+-- function returns 'False'.
 foldTreePrune :: Monoid a
                 => (NodeAddress -> a -> a)      -- ^ aggregation function
                 -> (NodeAddress -> Bool)        -- ^ prune subtrees?
@@ -136,8 +122,8 @@ foldTreePrune :: Monoid a
 foldTreePrune collect prune ir = foldAddressPrune collect prune (mkNodeAddress [] ir)
 
 
--- | Like 'foldTree' but is able to not follow entire subtrees when
--- the pruning function returns 'False'.
+-- | Like 'foldTree' but is able to not follow entire subtrees when the pruning
+-- function returns 'False'.
 foldAddressPrune :: Monoid a
                 => (NodeAddress -> a -> a)      -- ^ aggregation function
                 -> (NodeAddress -> Bool)        -- ^ prune subtrees?
@@ -152,27 +138,7 @@ foldAddressPrune collect prune addr = visit addr mempty
     visitsub base acc = foldr visit acc (subtrees base)
     subtrees addr = [goDown i addr | i <- [0..(numChildren addr) - 1]]
 
--- some examples
---excoll a (Node n _) = Set.insert (a, n)
---extree = unfoldTree
---         (\i -> (i, if i>2 then [i `div` 2, i `div` 2 -1] else [])) 8
---exprune s t = Seq.length s <= 2
-
---
--- * Parse IR code
---
-
--- | Parse a given IR statement using the inspire binary.
-parseIR :: String -> IO IR.Inspire
-parseIR ircode = do
-    irb <- readProcess "inspire" ["-s", "-i", "-", "-k", "-"] ircode
-    let Right ir = parseBinaryDump (BS8.pack irb)
-    return ir
-
---
--- * Get Definition Point Analysis
---
-
+-- | Find declaration of given variable.
 findDecl :: NodeAddress -> Maybe NodeAddress
 findDecl start = findDecl start
   where
@@ -219,11 +185,3 @@ findDecl start = findDecl start
 
     nextlevel :: NodeAddress -> Maybe NodeAddress
     nextlevel addr = getParent addr >>= findDecl
-
-
-
-
--- TODO put somewhere else
-isFreeVariable :: NodeAddress -> Bool
-isFreeVariable v | (not . isVariable) v = False
-isFreeVariable v = isNothing (findDecl v)

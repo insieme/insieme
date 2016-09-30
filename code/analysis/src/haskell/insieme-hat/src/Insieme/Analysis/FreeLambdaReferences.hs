@@ -52,7 +52,7 @@ import Data.Typeable
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Query
-import Insieme.Inspire.Utils
+import Insieme.Inspire.Visit
 import qualified Data.Set as Set
 import qualified Insieme.Inspire as IR
 

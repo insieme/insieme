@@ -71,7 +71,6 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Analysis.WriteSetSummary as WS
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.Utils as IR
 import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow

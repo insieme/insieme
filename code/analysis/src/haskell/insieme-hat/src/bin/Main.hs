@@ -40,6 +40,7 @@ module Main where
 
 import Control.Monad.State.Strict
 import Insieme.Analysis.Entities.FieldIndex (SimpleFieldIndex)
+import Insieme.Inspire.Visit (foldTreePrune)
 import qualified Data.ByteString as BS
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Reference as Ref
@@ -48,9 +49,7 @@ import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Inspire.Query as Q
-import qualified Insieme.Inspire.Utils as Utils
 import qualified Insieme.Utils.BoundSet as BSet
-
 
 main :: IO ()
 main = do
@@ -60,7 +59,7 @@ main = do
     -- run parser
     let Right ir = BinPar.parseBinaryDump dump
 
-    let targets = Utils.foldTreePrune findTargets (Q.isType . Addr.getNodeType) ir
+    let targets = foldTreePrune findTargets (Q.isType . Addr.getNodeType) ir
 
     let res = evalState (sequence $ analysis <$> targets) Solver.initState
 
