@@ -34,13 +34,19 @@
  - regarding third party software licenses.
  -}
 
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE CPP               #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE PatternSynonyms   #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Insieme.Inspire where
 
-import Data.Map (Map)
-import Data.Tree (Tree(..))
+import Control.DeepSeq
+import Data.Function (on)
+import Data.Map.Strict (Map)
+import GHC.Generics (Generic)
 import Insieme.Inspire.ThHelpers
 import Language.Haskell.TH
 
@@ -67,15 +73,24 @@ $(let
             | IntValue    Int
             | UIntValue   Int
             | StringValue String
-          deriving (Eq, Ord, Show, Read)
+          deriving (Eq, Ord, Show, Read, Generic, NFData)
       |]
 
     extend :: Q [Dec] -> Q [Dec]
     extend base = do
-        [DataD [] n [] cons ds]       <- base
+#if defined(MIN_VERSION_template_haskell)
+#if MIN_VERSION_template_haskell(2,11,0)
+        [DataD [] n [] Nothing cons ds] <- base
+        TyConI (DataD [] _ [] Nothing nt_cons _) <- reify ''C_NodeType
+        let cons' = genCons <$> filter (not . isLeaf) nt_cons
+        return $ [DataD [] n [] Nothing (cons ++ cons') ds]
+#endif
+#else
+        [DataD [] n [] cons ds] <- base
         TyConI (DataD [] _ [] nt_cons _) <- reify ''C_NodeType
         let cons' = genCons <$> filter (not . isLeaf) nt_cons
         return $ [DataD [] n [] (cons ++ cons') ds]
+#endif
 
     genCons :: Con -> Con
     genCons (NormalC n _) = NormalC (removePrefix "NT_" n) []
@@ -113,7 +128,13 @@ $(let
     extend :: Q [Dec] -> (Con -> Clause) -> Q [Dec]
     extend base gen = do
         [d, FunD n cls]               <- base
+#if defined(MIN_VERSION_template_haskell)
+#if MIN_VERSION_template_haskell(2,11,0)
+        TyConI (DataD [] _ [] Nothing cons _) <- reify ''C_NodeType
+#endif
+#else
         TyConI (DataD [] _ [] cons _) <- reify ''C_NodeType
+#endif
         let cls' = gen <$> filter (not . isLeaf) cons
         return $ [d,FunD n (cls ++ cls')]
 
@@ -130,18 +151,47 @@ $(let
          <*> extend baseToNodeType   genClauseToNodeType
  )
 
-instance Ord (Tree (Int, NodeType)) where
-    compare (Node (x, _) _) (Node (y, _) _) = compare x y
+--
+-- * Tree
+--
 
+data Tree = Tree { getNodePair :: (Int, NodeType),
+                   getChildren :: [Tree]           }
+  deriving (Show, Generic, NFData)
 
-type Builtins = Map String (Tree (Int, NodeType))
+instance Eq Tree where
+    (==) = (==) `on` getID
 
-data Inspire = Inspire { getTree     :: Tree (Int, NodeType),
+instance Ord Tree where
+    compare = compare `on` getID
+
+pattern NT x y <- Tree (_, x) y
+
+mkNode :: (Int, NodeType) -> [Tree] -> Tree
+mkNode = Tree
+
+getID :: Tree -> Int
+getID = fst . getNodePair
+
+getNodeType :: Tree -> NodeType
+getNodeType = snd . getNodePair
+
+numChildren :: Tree -> Int
+numChildren = length . getChildren
+
+--
+-- * Inspire
+--
+
+type Builtins = Map String Tree
+
+data Inspire = Inspire { getTree     :: !Tree,
                          getBuiltins :: Builtins }
+  deriving (Generic, NFData)
 
-
-
------ Node Kind List ----
+--
+-- * Node Kinds
+-- 
 
 data NodeKind =
         Value | Type | Expression | Statement | TranslationUnit | Support
@@ -218,3 +268,29 @@ toNodeKind CatchClause                  = Support
 toNodeKind Parameters                   = Support
 toNodeKind Expressions                  = Support
                          
+
+
+--
+-- * Function Kind
+-- 
+
+data FunctionKind =
+        FK_Plain | FK_Closure | FK_Constructor | FK_Destructor | FK_MemberFunction | FK_VirtualMemberFunction
+    deriving (Eq,Ord,Show)
+                         
+                         
+toFunctionKind :: Tree -> Maybe FunctionKind
+toFunctionKind t@(NT FunctionType (_:_:k:_)) = case getNodeType k of
+    UIntValue 1 -> Just $ FK_Plain
+    UIntValue 2 -> Just $ FK_Closure
+    UIntValue 3 -> Just $ FK_Constructor
+    UIntValue 4 -> Just $ FK_Destructor
+    UIntValue 5 -> Just $ FK_MemberFunction
+    UIntValue 6 -> Just $ FK_VirtualMemberFunction
+    _ -> Nothing
+          
+toFunctionKind _ = Nothing 
+
+
+
+ 

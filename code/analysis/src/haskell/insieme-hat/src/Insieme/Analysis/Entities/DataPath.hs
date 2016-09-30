@@ -34,6 +34,9 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module Insieme.Analysis.Entities.DataPath (
 
     DataPath(Root,Invalid),
@@ -54,7 +57,9 @@ module Insieme.Analysis.Entities.DataPath (
 
 ) where
 
+import Control.DeepSeq
 import Data.List
+import GHC.Generics (Generic)
 
 --
 -- * DataPaths
@@ -66,7 +71,7 @@ data DataPath i =
         | Narrow [i]
         | Expand [i]
         | Invalid
-  deriving (Eq,Ord)
+  deriving (Eq,Ord,Generic,NFData)
 
 
 instance (Show i) => Show (DataPath i) where

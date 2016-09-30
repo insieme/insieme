@@ -36,10 +36,11 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/cba_interface.h"
+#include "insieme/analysis/interface.h"
 
 #include "insieme/analysis/common/failure.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace analysis {
@@ -542,6 +543,56 @@ namespace analysis {
 
 	}
 
+
+	TYPED_TEST_P(ArithmeticValue, RecursiveNonClosedLambda) {
+
+		// the problem modeled here has been uncovered by a stress test
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		// create a code example exhibiting a non-closed lambda
+		auto code = builder.parseStmt(R"(
+			decl f : (int<4>)->int<4>;
+			def f = ( x : int<4> ) -> int<4> {
+				return ( y : int<4> ) -> int<4> {
+					return f(y + 1);
+				}(x);
+		    };
+		
+			{
+				var ref<int<4>> a = 10;
+				f(2);
+				*a;
+			}
+		)").as<CompoundStmtPtr>();
+
+		// get references to the two lambdas
+		LambdaExprPtr f;
+		LambdaExprPtr g;
+		core::visitDepthFirst(code, [&](const core::LambdaExprPtr& lambda){
+			if (lambda->isRecursive()) {
+				EXPECT_FALSE(f);
+				f = lambda;
+			} else {
+				EXPECT_FALSE(g);
+				g = lambda;
+			}
+		});
+		EXPECT_TRUE(f);
+		EXPECT_TRUE(g);
+
+		// check that g has a free lambda reference to f
+		EXPECT_FALSE(g->getDefinition()->getDefinitionOf(f->getReference()));
+		EXPECT_TRUE(core::analysis::contains(g,f->getReference()));
+
+
+		// run analysis crossing f
+		EXPECT_EQ("{10}", toString(this->getValue(CompoundStmtAddress(code)[2].as<ExpressionAddress>())));
+
+	}
+
+
 	REGISTER_TYPED_TEST_CASE_P(ArithmeticValue,
 			Constants,
 			FreeVariables,
@@ -562,7 +613,8 @@ namespace analysis {
 			BoundValues,
 			MemoryState,
 			PassByReference,
-			Tuples
+			Tuples,
+			RecursiveNonClosedLambda
 	);
 
 } // end namespace analysis

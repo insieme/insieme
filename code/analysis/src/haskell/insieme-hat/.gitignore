@@ -1,2 +1,9 @@
 .stack-work
 /.dist-buildwrapper/
+/bin
+*.prof*
+*.irbd
+*.aux
+*.hp
+*.ps
+*.pdf

@@ -64,6 +64,8 @@ extern "C" {
 	// Haskell Context
 	StablePtr hat_initialize_context(const Context* ctx_c, const char* dump_c, size_t size_c);
 	void hat_update_context(Context* trg, StablePtr hs_context);
+	void hat_print_statistic(StablePtr hs_context);
+	void hat_dump_assignment(StablePtr hs_context);
 
 
 	// NodePath
@@ -87,6 +89,23 @@ namespace haskell {
 
 	Context::~Context() {
 		clear();
+	}
+
+	void Context::dumpStatistics() const {
+		if (!context_hs) {
+			std::cout << "No statistics available.\n";
+			return;
+		}
+		hat_print_statistic(context_hs);
+	}
+
+	void Context::dumpSolution() const {
+		if (!context_hs) {
+			std::cout << "No statistics available.\n";
+			return;
+		}
+		std::cout << "Dumping assignment ...\n";
+		hat_dump_assignment(context_hs);
 	}
 
 	StablePtr Context::getHaskellContext() const {

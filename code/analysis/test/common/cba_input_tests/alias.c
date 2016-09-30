@@ -43,7 +43,8 @@ int main() {
 	int* c = &a;
 	int** d = &c;
 
-	// cba_print_code();
+//	cba_print_code();
+//	cba_dump_json();
 
 	cba_expect_is_alias(&a,&a);
 	cba_expect_is_alias(&a,c);

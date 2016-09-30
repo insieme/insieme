@@ -36,10 +36,11 @@
 
 #pragma once
 
-#include "insieme/core/lang/extension.h"
-#include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/array.h"
+#include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/memory.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/reference.h"
 
 namespace insieme {
 namespace frontend {
@@ -70,6 +71,7 @@ namespace utils {
 		IMPORT_MODULE(core::lang::ReferenceExtension)
 		IMPORT_MODULE(core::lang::ArrayExtension)
 		IMPORT_MODULE(core::lang::PointerExtension)
+		IMPORT_MODULE(core::lang::MemoryExtension)
 
 		// -------------------- operators ---------------------------
 
@@ -98,18 +100,6 @@ namespace utils {
 		 */
 		LANG_EXT_LITERAL(FERefTemp, "fe_ref_temp", "(type<'a>) -> ref<'a,f,f>")
 
-		/**
-		 * Semantic translation of "malloc" (allocate an array of elements on the heap)
-		 */
-		LANG_EXT_DERIVED(MallocWrapper, R"((size : uint<8>) -> ptr<unit> {
-			var uint<inf> si = size;
-			return ptr_reinterpret(ptr_from_array(ref_new(type_lit(array<uint<1>,#si>))), type_lit(unit));
-		})");
-
-		/**
-		 * Semantic translation of "free" (frees pointer allocated on the heap)
-		 */
-		LANG_EXT_DERIVED(FreeWrapper, R"((trg : ptr<unit>) -> unit { ref_delete(ptr_to_ref(trg)); })");
 	};
 
 	// --------------------- Utilities ----------------------------

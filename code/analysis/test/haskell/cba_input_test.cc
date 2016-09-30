@@ -37,91 +37,34 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/haskell_interface.h"
+#include "insieme/analysis/haskell/interface.h"
 
 #include <iostream>
 #include <tuple>
 #include <fstream>
 
-#include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/optional.hpp>
 
-#include "insieme/analysis/cba_interface.h"
+#include "insieme/analysis/interface.h"
+#include "insieme/analysis/common/preprocessing.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/error_printer.h"
+#include "insieme/core/dump/binary_haskell.h"
 #include "insieme/core/dump/json_dump.h"
-
-#include "insieme/core/lang/extension.h"
-#include "insieme/core/lang/pointer.h"
-#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "insieme/utils/config.h"
 #include "insieme/utils/name_mangling.h"
 
+#include "insieme/core/ir_statistic.h"
+
 namespace insieme {
 namespace analysis {
-
-	class CBAInputTestExt : public core::lang::Extension {
-
-		/**
-		 * Allow the node manager to create instances of this class.
-		 */
-		friend class core::NodeManager;
-
-		/**
-		 * Creates a new instance based on the given node manager.
-		 */
-		CBAInputTestExt(core::NodeManager& manager) : core::lang::Extension(manager) {}
-
-	public:
-
-		// this extension is based upon the symbols defined by the pointer module
-		IMPORT_MODULE(core::lang::PointerExtension);
-
-		LANG_EXT_LITERAL(RefAreAlias,"cba_expect_ref_are_alias","(ref<'a>,ref<'a>)->unit");
-		LANG_EXT_LITERAL(RefMayAlias,"cba_expect_ref_may_alias","(ref<'a>,ref<'a>)->unit");
-		LANG_EXT_LITERAL(RefNotAlias,"cba_expect_ref_not_alias","(ref<'a>,ref<'a>)->unit");
-
-		LANG_EXT_DERIVED(PtrAreAlias,
-				"  (a : ptr<'a>, b : ptr<'a>) -> unit {                         "
-				"		cba_expect_ref_are_alias(ptr_to_ref(a),ptr_to_ref(b));  "
-				"  }                                                            "
-		)
-
-		LANG_EXT_DERIVED(PtrMayAlias,
-				"  (a : ptr<'a>, b : ptr<'a>) -> unit {                         "
-				"		cba_expect_ref_may_alias(ptr_to_ref(a),ptr_to_ref(b));  "
-				"  }                                                            "
-		)
-
-		LANG_EXT_DERIVED(PtrNotAlias,
-				"  (a : ptr<'a>, b : ptr<'a>) -> unit {                         "
-				"		cba_expect_ref_not_alias(ptr_to_ref(a),ptr_to_ref(b));  "
-				"  }                                                            "
-		)
-
-	};
-
-	core::ProgramPtr postProcessing(const core::ProgramPtr& prog) {
-		const auto& ext = prog.getNodeManager().getLangExtension<CBAInputTestExt>();
-		return core::transform::transformBottomUpGen(prog, [&](const core::LiteralPtr& lit)->core::ExpressionPtr {
-			const string& name = utils::demangle(lit->getStringValue());
-			if (name == "cba_expect_is_alias") {
-				return ext.getPtrAreAlias();
-			}
-			if (name == "cba_expect_may_alias") {
-				return ext.getPtrMayAlias();
-			}
-			if (name == "cba_expect_not_alias") {
-				return ext.getPtrNotAlias();
-			}
-			return lit;
-		}, core::transform::globalReplacement);
-	}
 
 	using namespace core;
 	using testing::Types;
@@ -157,38 +100,66 @@ namespace analysis {
 			return insieme::analysis::notAlias<Backend>(ctxt, x, y);
 		}
 
+		// arithmetic
+		boost::optional<int> getConstant(const core::ExpressionAddress& x) {
+			auto values = this->getValue(x);
+
+			if(values.isUniversal()) return {};
+
+			if(values.size() != 1) return {};
+
+			auto& value = *values.begin();
+			if(!value.isConstant()) return {};
+
+			return value.getIntegerValue();
+		}
+
+		bool eqConstant(int c, const core::ExpressionAddress& x) {
+			auto value = getConstant(x);
+			return value ? *value == c : false;
+		}
+
+		bool neConstant(int c, const core::ExpressionAddress& x) {
+			auto value = getConstant(x);
+			return value ? *value != c : true;
+		}
+
+		ArithmeticSet getValue(const core::ExpressionAddress& x) {
+			return insieme::analysis::getArithmeticValue<Backend>(ctxt, x);
+		}
+
+		ArithmeticSet getValues(const core::ExpressionAddress& x) {
+			ArithmeticSet res;
+			visitDepthFirstInterruptible(x, [&](const InitExprAddress& init)->bool {
+				for(const auto& a : init->getInitExprList()) {
+					res = merge(res, this->getValue(a));
+				}
+				return true;
+			});
+			return res;
+		}
+
 		// boolean
 		bool isTrue(const core::ExpressionAddress& x) {
-			return eqConstant(1,x);
+			return !getValue(x).contains(0);
 		}
 
 		bool isFalse(const core::ExpressionAddress& x) {
-			return eqConstant(0,x);
+			return eqConstant(0, x);
 		}
 
 		bool mayBeTrue(const core::ExpressionAddress& x) {
-			return getValue(x).contains(1);
+			return neConstant(0, x);
 		}
 
 		bool mayBeFalse(const core::ExpressionAddress& x) {
 			return getValue(x).contains(0);
 		}
 
-		bool eqConstant(int c, const core::ExpressionAddress& x) {
-			auto values = this->getValue(x);
 
-			if (values.isUniversal()) return false;
-
-			if (values.size() != 1) return false;
-
-			auto& value = *values.begin();
-			if (!value.isConstant()) return false;
-
-			return c == value.getIntegerValue();
-		}
-
-		ArithmeticSet getValue(const core::ExpressionAddress& x) {
-			return insieme::analysis::getArithmeticValue<Backend>(ctxt, x);
+		// reference
+		MemoryLocationSet getMemoryLocations(const core::ExpressionAddress& x) {
+			return insieme::analysis::getReferencedMemoryLocations<Backend>(ctxt, x);
 		}
 
 	public:
@@ -208,10 +179,12 @@ namespace analysis {
 			// load file using the frontend
 			NodeManager mgr;
 			std::vector<std::string> argv = {"compiler", file, "-fopenmp", "-fcilk"};
+			if (*file.end() == 'p') argv.push_back("--std=c++14");
 			insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
+			options.job.addIncludeDirectory(ROOT_DIR);
 
 			auto prog = options.job.execute(mgr);
-			prog = postProcessing(prog);
+			prog = preProcessing(prog);
 
 			std::cout << "done" << std::endl;
 
@@ -279,14 +252,14 @@ namespace analysis {
 				} else if (name == "cba_expect_defined_int") {
 					std::cerr << "Performing " << name << std::endl;
 					ArithmeticSet res = this->getValue(call.getArgument(0));
-					EXPECT_TRUE(!res.isUniversal() && res.size() == 1)
+					EXPECT_TRUE(!res.isUniversal() && !res.empty())
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "ArithmeticSet evaluates to " << res << std::endl;
 
-				} else if (name == "cba_expect_finite_int") {
+				} else if (name == "cba_expect_single_int") {
 					std::cerr << "Performing " << name << std::endl;
 					ArithmeticSet res = this->getValue(call.getArgument(0));
-					EXPECT_TRUE(!res.isUniversal())
+					EXPECT_TRUE(!res.isUniversal() && res.size() == 1)
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "ArithmeticSet evaluates to " << res << std::endl;
 
@@ -324,14 +297,65 @@ namespace analysis {
 						<< "LHS ArithmeticSet evaluates to " << lhs << std::endl
 						<< "RHS ArithmeticSet evaluates to " << rhs << std::endl;
 
+				} else if (name == "cba_expect_one_of_int") {
+					std::cerr << "Performing " << name << std::endl;
+					ArithmeticSet lhs = this->getValue(call.getArgument(0));
+					ArithmeticSet rhs = this->getValues(call.getArgument(1));
+					EXPECT_FALSE(lhs.empty());
+					EXPECT_FALSE(rhs.empty());
+					EXPECT_TRUE(lhs == rhs)
+						<< *core::annotations::getLocation(call) << std::endl
+						<< "LHS ArithmeticSet evaluates to " << lhs << std::endl
+						<< "RHS ArithmeticSet evaluates to " << rhs << std::endl;
+
+
+				// reference analysis
+				} else if (name == "cba_expect_undefined_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					MemoryLocationSet res = this->getMemoryLocations(call.getArgument(0));
+					EXPECT_TRUE(res.isUniversal())
+						<< *core::annotations::getLocation(call) << std::endl
+						<< "MemoryLocationSet evaluates to " << res << std::endl;
+
+				} else if (name == "cba_expect_defined_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					MemoryLocationSet res = this->getMemoryLocations(call.getArgument(0));
+					EXPECT_TRUE(!res.isUniversal() && !res.empty())
+						<< *core::annotations::getLocation(call) << std::endl
+						<< "MemoryLocationSet evaluates to " << res << std::endl;
+
+				} else if (name == "cba_expect_single_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					MemoryLocationSet res = this->getMemoryLocations(call.getArgument(0));
+					EXPECT_TRUE(!res.isUniversal() && res.size() == 1)
+						<< *core::annotations::getLocation(call) << std::endl
+						<< "MemoryLocationSet evaluates to " << res << std::endl;
+
+				} else if (name == "cba_expect_not_single_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					MemoryLocationSet res = this->getMemoryLocations(call.getArgument(0));
+					EXPECT_TRUE(res.isUniversal() || res.size() > 1)
+						<< *core::annotations::getLocation(call) << std::endl
+						<< "MemoryLocationSet evaluates to " << res << std::endl;
+
+
 				// debugging
 				} else if (name == "cba_print_code") {
 					// just dump the code
 					dumpPretty(prog);
 
 				} else if (name == "cba_dump_json") {
-					// just dump the code as a json file
+					// dump the code as a json file
 					core::dump::json::dumpIR("code.json", prog);
+					core::dump::binary::haskell::dumpIR(filename+".binir", prog);
+
+				} else if (name == "cba_dump_statistic") {
+					// dump the current statistic
+					ctxt.dumpStatistics();
+
+				} else if (name == "cba_dump_solution") {
+					// dump the current solution
+					ctxt.dumpSolution();
 
 				} else if (name == "cba_print_int") {
 					// print the deduced value of the argument
@@ -356,6 +380,34 @@ namespace analysis {
 		test(GetParam());
 	}
 
+
+	namespace {
+
+		void collectFiles(const fs::path& dir, const std::string& prefix, std::vector<string>& res) {
+
+			fs::path root(dir);
+			assert_true(fs::is_directory(root));
+
+			for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
+				fs::path file = it->path();
+				// collect c files
+				auto ext = file.extension().string();
+				if (ext == ".c" || ext == ".cpp") {
+					res.push_back(prefix + file.filename().string());
+				}
+				// collect files recursively
+				if (fs::is_directory(file)) {
+					const auto& name = file.filename().string();
+					if (name != "_disabled") {
+						collectFiles(file, prefix + name + "/", res);
+					}
+				}
+			}
+
+		}
+
+	}
+
 	/*
 	 * Generate a list of configurations for the tests.
 	 * This is a cross-product of the cba_tests files and the Datalog/Haskell backends
@@ -363,22 +415,44 @@ namespace analysis {
 	vector<std::string> getFilenames() {
 		vector<string> filenames;
 
-		fs::path root(ROOT_DIR);
-		assert_true(fs::is_directory(root));
+		// collect input files
+		collectFiles(fs::path(ROOT_DIR), "", filenames);
 
-		for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
-			fs::path file = it->path();
-			if (file.extension().string() == ".c") {
-				filenames.push_back(file.filename().string());
-			}
-		}
+		// sort files
 		std::sort(filenames.begin(), filenames.end());
 
+		// done
 		return filenames;
 	}
 
+	/**
+	 * A printer for test case names
+	 */
+	struct TestCaseNamePrinter {
+	  template <class ParamType>
+	  std::string operator()(const ::testing::TestParamInfo<ParamType>& info) const {
+		  std::stringstream out;
+
+		  // foramt the index
+		  out << format("%3d", info.index);
+
+		  // format the name
+		  std::string name = info.param;
+		  name = name.substr(0, name.find_last_of('.'));
+		  out << format("_%-40s", name);
+
+		  // sanitize the resulting string
+		  auto res = out.str();
+		  std::replace(res.begin(), res.end(), ' ','_');
+		  std::replace(res.begin(), res.end(), '/','_');
+		  std::replace(res.begin(), res.end(), '.','_');
+		  std::replace(res.begin(), res.end(), '-','_');
+		  return res;
+	  }
+	};
+
 	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(InputFileChecks, CBA_Inputs_Test, ::testing::ValuesIn(getFilenames()));
+	INSTANTIATE_TEST_CASE_P(InputFileChecks, CBA_Inputs_Test, ::testing::ValuesIn(getFilenames()), TestCaseNamePrinter());
 
 } // end namespace analysis
 } // end namespace insieme

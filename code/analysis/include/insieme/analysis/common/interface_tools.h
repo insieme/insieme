@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include "insieme/analysis/common/integer_set.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/utils/assert.h"

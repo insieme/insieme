@@ -37,6 +37,9 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Insieme.Inspire.Utils (
+    Pruning(..),
+    collectAll,
+    collectAllPrune,
     collectAddr,
     foldTree,
     foldAddress,
@@ -49,26 +52,80 @@ module Insieme.Inspire.Utils (
     isType,
     isFreeVariable,
     isEntryPoint,
-    isEntryPointParameter
+    isEntryPointParameter,
+    isUnit,
+    isReference,
+    getReferencedType,
+    isArray,
+    isRecord,
+    isConstructor,
+    isDestructor,
+    isConstructorOrDestructor
 ) where
 
 import Control.Applicative
+import Control.Monad.State.Strict
 import Data.List
 import Data.Maybe
-import Data.Tree
 import Insieme.Inspire.BinaryParser
 import Insieme.Inspire.NodeAddress
 import System.Process
 import qualified Data.ByteString.Char8 as BS8
+import qualified Data.IntMap.Strict as IntMap
 import qualified Insieme.Inspire as IR
+
+
+data Pruning = NoPrune                      -- continue descending into child nodes 
+             | PruneChildren                -- skip children, but cover current node
+             | PruneHere                    -- skip this and all child nodes
+    deriving (Eq)
+
+
+collectAllPrune :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> NodeAddress -> [NodeAddress]
+collectAllPrune pred filter root = evalState (go root) IntMap.empty
+  where
+    go :: NodeAddress -> State (IntMap.IntMap [NodeAddress]) [NodeAddress]
+    go addr = do
+        cache <- get
+        let hit = IntMap.lookup key cache
+        if isJust hit
+            then return $ fromJust hit
+            else do
+                r <- res
+                modify $ IntMap.insert key r
+                res
+
+      where
+        node = getNodePair addr
+        key = IR.getID node
+        res = addAddr <$> concat <$> grow <$> 
+            if filter node == NoPrune then mapM go (crop <$> getChildren addr) else return []
+        
+        grow lists = (zipWith go) [ goDown i addr | i <- [0..] ] lists
+            where
+                go head tails = append head <$> tails
+
+        addAddr xs = if (filter node /= PruneHere) && (pred $ getNodePair addr) then (addr:xs) else xs
+ 
+
+
+
+collectAll :: (IR.Tree -> Bool) -> NodeAddress -> [NodeAddress]
+collectAll pred root = collectAllPrune pred (\_ -> NoPrune ) root
+
+
+
 
 -- | Collect all nodes of the given 'IR.NodeType' but prune the tree
 -- when encountering one of the other 'IR.NodeType's.
 collectAddr :: IR.NodeType -> [IR.NodeType -> Bool] -> NodeAddress -> [NodeAddress]
-collectAddr ty prune = foldAddressPrune cmpAddTy matchPruneTy
+collectAddr t fs = collectAllPrune pred filter
   where
-    cmpAddTy n = ([n | getNodeType n == ty] ++)
-    matchPruneTy = or . (\n -> map ($n) prune) . getNodeType
+    pred = (==t) . IR.getNodeType
+    filter t = if any (\f -> f $ IR.getNodeType t) fs then PruneHere else NoPrune 
+    
+
+
 
 -- | Fold the given 'Tree'. The accumulator function takes the subtree
 -- and the address of this subtree in the base tree.
@@ -106,8 +163,10 @@ foldAddressPrune collect prune addr = visit addr mempty
     visit base acc = if prune base
                      then acc
                      else collect base $ visitsub base acc
+    -- visitsub base acc = foldr (\i a -> visit (goDown i base) a) acc [0..(numChildren base - 1)]
     visitsub base acc = foldr visit acc (subtrees base)
-    subtrees addr = [goDown i addr | i <- [0..(length . subForest . getNode $ addr) - 1]]
+    subtrees addr = [goDown i addr | i <- [0..(numChildren addr) - 1]]
+
 
 --
 -- * Parse IR code
@@ -127,45 +186,45 @@ parseIR ircode = do
 findDecl :: NodeAddress -> Maybe NodeAddress
 findDecl start = findDecl start
   where
-    org = getNode start
+    org = getNodePair start
 
     findDecl :: NodeAddress -> Maybe NodeAddress
-    findDecl addr = case getNode addr of
-        Node IR.Lambda _ -> lambda addr
+    findDecl addr = case getNodePair addr of
+        IR.NT IR.Lambda _ -> lambda addr
         _ -> parameter addr <|> declstmt addr <|> forstmt addr   <|>
              bindexpr addr  <|> compstmt addr <|> nextlevel addr
 
     parameter :: NodeAddress -> Maybe NodeAddress
-    parameter addr = case getNode addr of
-        Node IR.Parameters _ -> Just start
+    parameter addr = case getNodePair addr of
+        IR.NT IR.Parameters _ -> Just start
         _ -> Nothing
 
     declstmt :: NodeAddress -> Maybe NodeAddress
-    declstmt addr = case getNode addr of
-        Node IR.DeclarationStmt [_, v] | v == org -> Just $ goDown 1 addr
+    declstmt addr = case getNodePair addr of
+        IR.NT IR.DeclarationStmt [_, v] | v == org -> Just $ goDown 1 addr
         _ -> Nothing
 
     forstmt :: NodeAddress -> Maybe NodeAddress
-    forstmt addr = case getNode addr of
-        Node IR.ForStmt _ -> declstmt $ goDown 0 addr
+    forstmt addr = case getNodePair addr of
+        IR.NT IR.ForStmt _ -> declstmt $ goDown 0 addr
         _ -> Nothing
 
     lambda :: NodeAddress -> Maybe NodeAddress
-    lambda addr = case getNode addr of
-        Node IR.Lambda [_, Node IR.Parameters ps, _] ->
+    lambda addr = case getNodePair addr of
+        IR.NT IR.Lambda [_, IR.NT IR.Parameters ps, _] ->
             (\i -> goDown i . goDown 1 $ addr) <$> elemIndex org ps
         _ -> Nothing
 
     bindexpr :: NodeAddress -> Maybe NodeAddress
-    bindexpr addr = case getNode addr of
-        Node IR.BindExpr [_, Node IR.Parameters ps, _] ->
+    bindexpr addr = case getNodePair addr of
+        IR.NT IR.BindExpr [_, IR.NT IR.Parameters ps, _] ->
             (\i -> goDown i . goDown 1 $ addr) <$> elemIndex org ps
         _ -> Nothing
 
     compstmt :: NodeAddress -> Maybe NodeAddress
-    compstmt addr = getNode <$> getParent addr >>= \case
-        Node IR.CompoundStmt _ | getIndex addr == 0 -> Nothing
-        Node IR.CompoundStmt _ -> findDecl $ goLeft addr
+    compstmt addr = getNodePair <$> getParent addr >>= \case
+        IR.NT IR.CompoundStmt _ | getIndex addr == 0 -> Nothing
+        IR.NT IR.CompoundStmt _ -> findDecl $ goLeft addr
         _ -> Nothing
 
     nextlevel :: NodeAddress -> Maybe NodeAddress
@@ -174,55 +233,112 @@ findDecl start = findDecl start
 
 -- | Returns 'True' if given variable (in declaration) is a loop iterator.
 isLoopIterator :: NodeAddress -> Bool
-isLoopIterator = (==IR.ForStmt) . getNodeType . goUp . goUp
+isLoopIterator a = (depth a >= 2) && ((==IR.ForStmt) $ getNodeType $ goUp $ goUp a)
 
 
-getType :: Tree IR.NodeType -> Maybe (Tree IR.NodeType)
-getType (Node IR.Literal         (t:_)) = Just t
-getType (Node IR.Variable        (t:_)) = Just t
-getType (Node IR.CallExpr        (t:_)) = Just t
-getType (Node IR.LambdaExpr      (t:_)) = Just t
-getType (Node IR.LambdaReference (t:_)) = Just t
-getType (Node IR.BindExpr        (t:_)) = Just t
-getType (Node IR.CastExpr        (t:_)) = Just t
-getType (Node IR.TupleExpr       (t:_)) = Just t
-getType (Node IR.InitExpr        (t:_)) = Just t
-getType (Node IR.JobExpr         (t:_)) = Just t
-getType (Node IR.MarkerExpr      (t:_)) = Just t
+-- | Returns the Type of an expression (or, if it is a type already, the given type)
+getType :: IR.Tree -> Maybe IR.Tree
+getType t@(IR.NT k _) | IR.toNodeKind k == IR.Type      = Just t 
+getType (IR.NT k cs) | IR.toNodeKind k == IR.Expression = Just $ head cs
+getType (IR.NT IR.Lambda (t:_))                         = Just t 
 getType _ = Nothing
 
 
 -- | Return 'True' if the given node is a type.
 isType :: IR.NodeType -> Bool
-isType = (IR.Type ==) . IR.toNodeKind
+isType = (IR.Type==) . IR.toNodeKind
 
 isVariable :: NodeAddress -> Bool
-isVariable a = case getNode a of
-    Node IR.Variable _ -> True
-    _                  -> False
+isVariable = (==IR.Variable) . getNodeType
 
 isFreeVariable :: NodeAddress -> Bool
 isFreeVariable v | (not . isVariable) v = False
 isFreeVariable v = isNothing (findDecl v)
 
+
+-- Unit type --
+
+isUnitType :: IR.Tree -> Bool
+isUnitType (IR.NT IR.GenericType ((IR.NT (IR.StringValue "unit") _) : _)) = True
+isUnitType _ = False
+
+isUnit :: IR.Tree -> Bool
+isUnit t = fromMaybe False $ (isUnitType <$> getType t)
+
+
+-- Reference type --
+
+isReferenceType :: IR.Tree -> Bool
+isReferenceType (IR.NT IR.GenericType ((IR.NT (IR.StringValue "ref") _) : _)) = True
+isReferenceType _ = False
+
+isReference :: IR.Tree -> Bool
+isReference t = fromMaybe False $ (isReferenceType <$> getType t)  
+
+
+getReferencedType :: IR.Tree -> Maybe IR.Tree
+getReferencedType e = if isRef then Just elem else Nothing
+    where
+        isRef = isReference e
+        elem = head $ IR.getChildren $ fromJust $ getType e
+
+
+
+-- Array Type --
+
+isArrayType :: IR.Tree -> Bool
+isArrayType (IR.NT IR.GenericType ((IR.NT (IR.StringValue "array") _) : _)) = True
+isArrayType _ = False
+
+isArray :: IR.Tree -> Bool
+isArray t = fromMaybe False $ (isReferenceType <$> getType t)  
+
+
+
+-- Record types --
+
+isRecordType :: IR.Tree -> Bool
+isRecordType (IR.NT IR.TagType _) = True
+isRecordType _ = False
+
+isRecord :: IR.Tree -> Bool
+isRecord t = fromMaybe False $ (isRecordType <$> getType t)  
+
+
+
+-- Function kinds --
+
+checkFunctionKind :: (IR.FunctionKind -> Bool) -> IR.Tree -> Bool
+checkFunctionKind test t = fromMaybe False $ test <$> (IR.toFunctionKind =<< getType t)
+
+isConstructor :: IR.Tree -> Bool
+isConstructor = checkFunctionKind (==IR.FK_Constructor)
+
+isDestructor :: IR.Tree -> Bool
+isDestructor = checkFunctionKind (==IR.FK_Destructor)
+
+isConstructorOrDestructor :: IR.Tree -> Bool
+isConstructorOrDestructor t = isConstructor t || isDestructor t
+
+    
+
 hasEnclosingStatement :: NodeAddress -> Bool
-hasEnclosingStatement a = case getNode a of
-    Node n _ | IR.toNodeKind n == IR.Statement -> True
-    Node n _ | n /= IR.LambdaExpr && n /= IR.Variable && IR.toNodeKind n == IR.Expression -> True
+hasEnclosingStatement a = case getNodePair a of
+    IR.NT n _ | (IR.toNodeKind n) == IR.Statement -> True
+    IR.NT n _ | n /= IR.LambdaExpr && n /= IR.Variable && (IR.toNodeKind n) == IR.Expression -> True
     _ -> not (isRoot a) && hasEnclosingStatement (fromJust $ getParent a)
 
-
 isEntryPoint :: NodeAddress -> Bool
-isEntryPoint a = case getNode a of
-    Node IR.CompoundStmt _ -> isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
-    _                      -> isRoot a
+isEntryPoint a = case getNodePair a of
+    IR.NT IR.CompoundStmt _ -> isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
+    _                       -> isRoot a
 
 isEntryPointParameter :: NodeAddress -> Bool
 isEntryPointParameter v | (not . isVariable) v = False
 isEntryPointParameter v | isRoot v = False
-isEntryPointParameter v = case getNode $ fromJust $ getParent v of
-            Node IR.Parameters _ -> not $ hasEnclosingStatement v
-            _                    -> False
+isEntryPointParameter v = case getNodePair $ fromJust $ getParent v of
+            IR.NT IR.Parameters _ -> not $ hasEnclosingStatement v
+            _                     -> False
 
 -- some examples
 --excoll a (Node n _) = Set.insert (a, n)

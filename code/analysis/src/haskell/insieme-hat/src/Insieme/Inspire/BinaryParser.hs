@@ -47,36 +47,43 @@ import Data.Attoparsec.Binary
 import Data.Attoparsec.ByteString
 import Data.Char (chr)
 import Data.List.Split (splitOn)
-import Data.Tree
 import Data.Word
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.IntMap as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Insieme.Inspire as IR
+import qualified Insieme.Inspire.NodeAddress as Addr
 
 import Prelude hiding (take)
 
 -- | Parse binary dump.
 parseBinaryDump :: BS.ByteString -> Either String IR.Inspire
-parseBinaryDump = parseOnly $ do
+parseBinaryDump bs = (Addr.getInspire . head) <$> parseAddresses bs
+
+parseAddresses :: BS.ByteString -> Either String [Addr.NodeAddress]
+parseAddresses = parseOnly $ do
     -- parse components
     parseHeader
     n            <- anyInt32
     dumpNodes    <- IntMap.fromList <$> zip [0..] <$> count n parseDumpNode
     m            <- anyInt32
     dumpBuiltins <- Map.fromList <$> count m parseBuiltin
+    l            <- anyInt32
+    addresses    <- count l parseNodePath
 
     -- connect components
     let nodes    = connectDumpNodes dumpNodes
     let builtins = resolve nodes <$> dumpBuiltins
+    let ir       = IR.Inspire nodes builtins
 
-    return $ IR.Inspire nodes builtins
+    return $ (\p -> Addr.mkNodeAddress p ir) <$> addresses
 
   where
-      resolve :: Tree (Int, IR.NodeType) -> [Int] -> Tree (Int, IR.NodeType)
+      resolve :: IR.Tree -> [Int] -> IR.Tree
       resolve node []     = node
-      resolve node (x:xs) = resolve (subForest node !! x) xs
+      resolve node (x:xs) = resolve (IR.getChildren node !! x) xs
+
 
 --
 -- * Parsing the header
@@ -130,15 +137,15 @@ parseDumpNode = do
     return $ n
 
 parseBuiltin :: Parser (String, [Int])
-parseBuiltin = do
-    key <- parseString
-    val <- tail . splitOn "-" <$> parseString
-    return (key, read <$> val)
+parseBuiltin = (,) <$> parseString <*> parseNodePath
 
-connectDumpNodes :: IntMap.IntMap DumpNode -> Tree (Int, IR.NodeType)
+parseNodePath :: Parser [Int]
+parseNodePath = map read . tail . splitOn "-" <$> parseString
+
+connectDumpNodes :: IntMap.IntMap DumpNode -> IR.Tree
 connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
   where
-    go :: Int -> State (IntMap.IntMap (Tree (Int, IR.NodeType))) (Tree (Int, IR.NodeType))
+    go :: Int -> State (IntMap.IntMap IR.Tree) IR.Tree
     go index = do
         memo <- get
         case IntMap.lookup index memo of
@@ -146,7 +153,7 @@ connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
             Nothing -> do
                 let (DumpNode irnode is) = dumpNodes IntMap.! index
                 children <- mapM go is
-                let n = Node (index, irnode) children
+                let n = IR.mkNode (index, irnode) children
                 modify (IntMap.insert index n)
                 return n
 

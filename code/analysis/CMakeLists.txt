@@ -6,9 +6,11 @@ message(STATUS "========== configure analysis =============")
 cmake_minimum_required(VERSION 3.2)
 
 # Setup common source files
-set(insieme_analysis_srcs "")
-file(GLOB_RECURSE insieme_analysis_incs include/insieme/analysis/cba_interface.h include/insieme/analysis/common/*.h)
-
+file(GLOB insieme_analysis_srcs src/*.cpp src/common/*.cpp)
+file(GLOB insieme_analysis_incs
+    include/insieme/analysis/*.h
+    include/insieme/analysis/common/*.h
+)
 
 # =============================================  SOUFFLE  =====================================
 if(ANALYSIS_DATALOG)
@@ -17,7 +19,7 @@ if(ANALYSIS_DATALOG)
     file(GLOB_RECURSE insieme_analysis_srcs_datalog src/datalog/*.cpp src/datalog/*.dl)
     set(insieme_analysis_srcs ${insieme_analysis_srcs} ${insieme_analysis_srcs_datalog})
     insieme_glob_headers(insieme_analysis_incs_datalog include/insieme/analysis/datalog)
-    set(insieme_analysis_incs ${insieme_analysis_incs} ${insieme_analysis_incs_datalog} include/insieme/analysis/datalog_interface.h)
+    set(insieme_analysis_incs ${insieme_analysis_incs} ${insieme_analysis_incs_datalog})
 
     # Generate soufflé files now so we can add them to the insieme_analysis library later
     set(souffle_input_dir  ${insieme_code_dir}/analysis/src/datalog)
@@ -48,7 +50,7 @@ if(ANALYSIS_HASKELL)
     file(GLOB_RECURSE insieme_analysis_srcs_haskell src/haskell/*.cpp src/haskell/*.dl)
     set(insieme_analysis_srcs ${insieme_analysis_srcs} ${insieme_analysis_srcs_haskell})
     insieme_glob_headers(insieme_analysis_incs_haskell include/insieme/analysis/haskell)
-    set(insieme_analysis_incs ${insieme_analysis_incs} ${insieme_analysis_incs_haskell} include/insieme/analysis/haskell_interface.h)
+    set(insieme_analysis_incs ${insieme_analysis_incs} ${insieme_analysis_incs_haskell})
 
     insieme_find_package(NAME GMP)
 
@@ -59,13 +61,16 @@ if(ANALYSIS_HASKELL)
     link_directories(${LIBHSRTS_DIR})
     link_directories(${GMP_ROOT}/lib)
 
+    set(LIBHSRTS_DIR ${LIBHSRTS_DIR} PARENT_SCOPE)
+    set(LIBHSRTS ${LIBHSRTS} PARENT_SCOPE)
+
 endif()
 
 
 # =============================================================================================
 
 # Build the analysis library
-add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_analysis_incs})
+add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs})
 set_target_properties(insieme_analysis PROPERTIES LINKER_LANGUAGE CXX)
 target_include_directories(insieme_analysis PUBLIC ${insieme_analysis_include_dir})
 
@@ -73,6 +78,11 @@ target_include_directories(insieme_analysis PUBLIC ${insieme_analysis_include_di
 if(ANALYSIS_HASKELL)
     add_dependencies(insieme_analysis insieme_analysis_haskell)
     target_include_directories(insieme_analysis SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/haskell/insieme-hat/include)
+
+    # Gold linker does not automatically resolve libHSrts depdency from
+    # insieme_analysis lib, need to specify them explicitly.
+    target_link_libraries(insieme_analysis ${LIBHSRTS})
+
     target_link_libraries(insieme_analysis ${insieme_analysis_haskell})
 endif()
 
@@ -110,14 +120,6 @@ foreach(case_file ${test_cases})
     add_executable(${case_name} ${case_file})
     target_link_libraries(${case_name} insieme_analysis)
     target_link_libraries(${case_name} insieme_driver)
-
-    if(ANALYSIS_HASKELL)
-        target_include_directories(${case_name} SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/haskell/insieme-hat/include)
-
-        # Gold linker does not automatically resolve libHSrts depdency from
-        # insieme_analysis lib, need to specify them explicitly.
-        target_link_libraries(${case_name} ${LIBHSRTS})
-    endif()
 
     add_unit_test(${case_name} ${ut_prefix})
 endforeach(case_file)

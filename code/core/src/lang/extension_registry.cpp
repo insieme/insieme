@@ -44,6 +44,7 @@
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/instrumentation_extension.h"
 #include "insieme/core/lang/io.h"
+#include "insieme/core/lang/memory.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/reference.h"
@@ -76,6 +77,7 @@ namespace lang {
 		extensionFactories.insert(getExtensionFactory<EnumExtension>("ext.enum"));
 		extensionFactories.insert(getExtensionFactory<InputOutputExtension>("ext.io"));
 		extensionFactories.insert(getExtensionFactory<InstrumentationExtension>("ext.instrumentation"));
+		extensionFactories.insert(getExtensionFactory<MemoryExtension>("ext.memory"));
 		extensionFactories.insert(getExtensionFactory<ParallelExtension>("ext.parallel"));
 		extensionFactories.insert(getExtensionFactory<PointerExtension>("ext.pointer"));
 		extensionFactories.insert(getExtensionFactory<ReferenceExtension>("ext.reference"));

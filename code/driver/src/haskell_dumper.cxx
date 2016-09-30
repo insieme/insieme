@@ -42,20 +42,24 @@
 
 #include "insieme/core/dump/binary_haskell.h"
 #include "insieme/core/dump/json_dump.h"
-#include "insieme/core/lang/extension.h"
-#include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/analysis/common/preprocessing.h"
+
 #include "insieme/utils/name_mangling.h"
+
+#include "insieme/driver/integration/test_framework.h"
 
 using namespace std;
 using namespace insieme;
 namespace fe = insieme::frontend;
 namespace opts = boost::program_options;
+namespace itc = insieme::driver::integration;
 
 struct CmdOptions {
 	bool valid;
 	string inputFile;
+	string testCase;
 	string dumpBinaryHaskell;
 	string dumpJson;
 };
@@ -70,41 +74,7 @@ class CBAInputTestExt : public core::lang::Extension {
 	 * Creates a new instance based on the given node manager.
 	 */
 	CBAInputTestExt(core::NodeManager& manager) : core::lang::Extension(manager) {}
-
-  public:
-	// this extension is based upon the symbols defined by the pointer module
-	IMPORT_MODULE(core::lang::PointerExtension);
-
-	LANG_EXT_LITERAL(RefAreAlias, "IMP_cba_expect_ref_are_alias", "(ref<'a>,ref<'a>)->unit");
-	LANG_EXT_LITERAL(RefMayAlias, "IMP_cba_expect_ref_may_alias", "(ref<'a>,ref<'a>)->unit");
-	LANG_EXT_LITERAL(RefNotAlias, "IMP_cba_expect_ref_not_alias", "(ref<'a>,ref<'a>)->unit");
-
-	LANG_EXT_DERIVED(PtrAreAlias, "  (a : ptr<'a>, b : ptr<'a>) -> unit {                         "
-	                              "               IMP_cba_expect_ref_are_alias(ptr_to_ref(a),ptr_to_ref(b));  "
-	                              "  }                                                            ")
-
-	LANG_EXT_DERIVED(PtrMayAlias, "  (a : ptr<'a>, b : ptr<'a>) -> unit {                         "
-	                              "               IMP_cba_expect_ref_may_alias(ptr_to_ref(a),ptr_to_ref(b));  "
-	                              "  }                                                            ")
-
-	LANG_EXT_DERIVED(PtrNotAlias, "  (a : ptr<'a>, b : ptr<'a>) -> unit {                         "
-	                              "               IMP_cba_expect_ref_not_alias(ptr_to_ref(a),ptr_to_ref(b));  "
-	                              "  }                                                            ")
 };
-
-core::ProgramPtr postProcessing(const core::ProgramPtr& prog) {
-	const auto& ext = prog.getNodeManager().getLangExtension<CBAInputTestExt>();
-	return core::transform::transformBottomUpGen(prog,
-	                                             [&](const core::LiteralPtr& lit) -> core::ExpressionPtr {
-		                                             const string& name = utils::demangle(lit->getStringValue());
-		                                             if(name == "cba_expect_is_alias") { return ext.getPtrAreAlias(); }
-		                                             if(name == "cba_expect_may_alias") { return ext.getPtrMayAlias(); }
-		                                             if(name == "cba_expect_not_alias") { return ext.getPtrNotAlias(); }
-		                                             return lit;
-		                                         },
-	                                             core::transform::globalReplacement);
-}
-
 
 CmdOptions parseCommandLine(int argc, char** argv) {
 	CmdOptions fail = {0};
@@ -116,6 +86,7 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 		("help,h", "produce help message")
 		("version,v", "output version information")
 		("input,i", opts::value<string>()->default_value(""), "the code file to be parsed")
+		("case,c", opts::value<string>()->default_value(""), "the test case to be loaded")
 		("dump-irbh,d", opts::value<string>()->default_value(""), "file to dump IR to (Haskell)")
 		("dump-json,j", opts::value<string>()->default_value(""), "file to dump IR to (JSON)");
 
@@ -140,8 +111,21 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	CmdOptions res = {0};
 	res.valid = true;
 	res.inputFile = map["input"].as<string>();
+	res.testCase = map["case"].as<string>();
 	res.dumpBinaryHaskell = map["dump-irbh"].as<string>();
 	res.dumpJson = map["dump-json"].as<string>();
+
+
+	if(res.inputFile=="" && res.testCase=="") {
+		cout << "No input file or test case name provided.\n";
+		return fail;
+	}
+
+	if(res.inputFile!="" && res.testCase!="") {
+		cout << "Can only process a given input file or a test case, but not both.\n";
+		return fail;
+	}
+
 
 	return res;
 }
@@ -150,21 +134,47 @@ int main(int argc, char** argv) {
 	CmdOptions options = parseCommandLine(argc, argv);
 	if(!options.valid) return 1;
 
-	// setup frontend
-	fe::ConversionJob job;
-	job.setFiles({options.inputFile});
-
-	// parse input code
+	// load the input file
 	core::NodeManager mgr;
-	auto program = job.execute(mgr);
-	program = postProcessing(program);
-
-	if(!options.dumpBinaryHaskell.empty()) {
-		ofstream out(options.dumpBinaryHaskell);
-		core::dump::binary::haskell::dumpIR(out, program);
+	core::ProgramPtr program;
+	if (!options.testCase.empty()) {
+		auto cases = itc::getCase(options.testCase);
+		if (!cases) {
+			std::cout << "Test case not found: " << options.inputFile << "\n";
+			return 1;
+		}
+		program = cases->load(mgr);
+	} else {
+		fe::ConversionJob job;
+		job.addFile(options.inputFile);
+		program = job.execute(mgr);
 	}
 
-	if(!options.dumpJson.empty()) {
+	// run pre-processing
+	program = analysis::preProcessing(program);
+
+
+	vector<core::NodeAddress> targets;
+	core::NodePtr ref_deref = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefDeref();
+	core::NodePtr ref_assign = mgr.getLangExtension<core::lang::ReferenceExtension>().getRefAssign();
+
+	core::visitDepthFirst(core::NodeAddress(program), [&](const core::CallExprAddress& call) {
+		auto fun = call->getFunctionExpr();
+		if(*fun == *ref_deref || *fun == *ref_assign) {
+			targets.push_back(call[0]);
+		}
+	});
+
+	if(options.dumpBinaryHaskell == "-") {
+		core::dump::binary::haskell::dumpAddresses(cout, targets);
+	} else if(!options.dumpBinaryHaskell.empty()) {
+		ofstream out(options.dumpBinaryHaskell);
+		core::dump::binary::haskell::dumpAddresses(out, targets);
+	}
+
+	if(options.dumpJson == "-") {
+		core::dump::json::dumpIR(cout, program);
+	} else if(!options.dumpJson.empty()) {
 		ofstream out(options.dumpJson);
 		core::dump::json::dumpIR(out, program);
 	}

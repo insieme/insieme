@@ -39,7 +39,6 @@
 module Insieme.Analysis.AccessPath where
 
 import Data.Typeable
-import Data.Tree
 
 import Insieme.Inspire.NodeAddress
 import qualified Insieme.Inspire as IR
@@ -88,13 +87,9 @@ data AccessPathAnalysis = AccessPathAnalysis
 --
 
 accessPathValue :: (FieldIndex i) => NodeAddress -> Solver.TypedVar (ValueTree.Tree i (AccessPathSet i))
-accessPathValue addr = case getNode addr of 
+accessPathValue addr = case getNodeType addr of 
 
---    Node IR.Literal _  -> var
---        where
---            var = 
-
-    Node IR.Variable _ -> dataflowValue addr analysis ops
+    IR.Variable -> dataflowValue addr analysis ops
 
     _ -> dataflowValue addr analysis ops
 
@@ -106,6 +101,7 @@ accessPathValue addr = case getNode addr of
 
     compose = ComposedValue.toComposed
 
+    initValueHandler a | isRoot a = compose $ BSet.singleton $ AP.global $ getNodePair a
     initValueHandler a = compose $ BSet.singleton $ AP.parameter $ getIndex a 
 
     -- add operator support
@@ -114,35 +110,35 @@ accessPathValue addr = case getNode addr of
 
     allocHandler = OperatorHandler cov noDep val
         where
-            cov a = isBuiltin a "ref_alloc"
+            cov a = isBuiltin a $ getBuiltin addr "ref_alloc"
             val a = compose $ BSet.singleton AP.local
 
     declHandler = OperatorHandler cov noDep val
         where
-            cov a = isBuiltin a "ref_decl"
+            cov a = isBuiltin a $ getBuiltin addr "ref_decl"
             val a = compose $ BSet.singleton AP.local
 
     refNarrow = OperatorHandler cov subRefDep val
         where
-            cov a = isBuiltin a "ref_narrow"
+            cov a = isBuiltin a $ getBuiltin addr "ref_narrow"
             val a = compose $ narrow (baseAccessPathVal a) (dataPathVal a)
             narrow = BSet.lift2 $ \a d -> AP.append a d
 
     refExpand = OperatorHandler cov subRefDep val
         where
-            cov a = isBuiltin a "ref_expand"
+            cov a = isBuiltin a $ getBuiltin addr "ref_expand"
             val a = compose $ expand (baseAccessPathVal a) (dataPathVal a)
             expand = BSet.lift2 $ \a d -> AP.append a (DP.invert d)
 
     refCast = OperatorHandler cov dep val
         where
-            cov a = isBuiltin a "ref_cast"
+            cov a = isBuiltin a $ getBuiltin addr "ref_cast"
             dep _ = [Solver.toVar baseAccessPathVar]
             val a = Solver.get a baseAccessPathVar
 
     refReinterpret = OperatorHandler cov dep val
         where
-            cov a = isBuiltin a "ref_reinterpret"
+            cov a = isBuiltin a $ getBuiltin addr "ref_reinterpret"
             dep _ = [Solver.toVar baseAccessPathVar]
             val a = Solver.get a baseAccessPathVar            -- TODO: check when this conversion is actually valid
 
@@ -154,4 +150,4 @@ accessPathValue addr = case getNode addr of
     baseAccessPathVal a = ComposedValue.toValue $ Solver.get a baseAccessPathVar
 
     dataPathVar   = dataPathValue $ goDown 3 addr
-    dataPathVal a = BSet.fromUnboundSet $ ComposedValue.toValue $ Solver.get a dataPathVar
+    dataPathVal a = BSet.changeBound $ ComposedValue.toValue $ Solver.get a dataPathVar

@@ -37,7 +37,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/haskell_interface.h"
+#include "insieme/analysis/haskell/interface.h"
 
 #include "../common/alias_analysis_test.inc"
 
@@ -58,6 +58,35 @@ namespace analysis {
 	bool isUndefined(const StatementAddress& a) {
 		auto e = a.as<ExpressionAddress>();
 		return mayBeTrue<HaskellEngine>(e) && mayBeFalse<HaskellEngine>(e);
+	}
+
+	TEST(MemoryStateAnalysis, ScalarReadWrite) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto stmt = builder.parseStmt(
+				"{"
+				"	var ref<bool> a = ref_new(type_lit(bool));"
+				"	"
+				"	*a;"				// should be undefined
+				"	a = true;"
+				"	*a;"				// should be true now
+				"	a = false;"
+				"	*a;"				// should be false now
+				"	a = true;"
+				"	*a;"				// should be true now
+				"}"
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(stmt);
+
+		auto comp = CompoundStmtAddress(stmt);
+
+		EXPECT_TRUE(isUndefined(comp[1]));
+
+		EXPECT_TRUE(isTrue(comp[3]));
+		EXPECT_TRUE(isFalse(comp[5]));
+		EXPECT_TRUE(isTrue(comp[7]));
 	}
 
 

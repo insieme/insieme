@@ -68,6 +68,16 @@ namespace haskell {
 		Context& operator=(const Context& other) = delete;
 		Context& operator=(Context&& other) = default;
 
+
+		// -- general context interface requirements --
+
+		void dumpStatistics() const;
+
+		void dumpSolution() const;
+
+
+		// -- haskell engine specific requirements --
+
 		StablePtr getHaskellContext() const;
 		void setHaskellContext(StablePtr);
 

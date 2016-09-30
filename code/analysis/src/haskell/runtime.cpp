@@ -34,11 +34,10 @@
  * regarding third party software licenses.
  */
 
-
 extern "C" {
 
 	// Haskell Runtime
-	void hs_init(int, char*[]);
+	void hs_init(int*, const char**[]);
 	void hs_exit(void);
 
 }
@@ -47,13 +46,12 @@ namespace insieme {
 namespace analysis {
 namespace haskell {
 
-	// ------------------------------------------------------------ Runtime
 	// Apparently GHC does no longer support calling `hs_exit` from a destructor.
 	// Because of this the runtime is initialized and de-initialized by the static
 	// instance `rt` of this class.
 	class Runtime {
 	  public:
-		Runtime() { hs_init(0, nullptr); }
+		Runtime() { hs_init(nullptr, nullptr); }
 
 		~Runtime() { hs_exit(); }
 	} rt;

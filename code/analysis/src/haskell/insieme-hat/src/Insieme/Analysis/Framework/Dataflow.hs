@@ -55,7 +55,7 @@ module Insieme.Analysis.Framework.Dataflow (
 
 import Data.Int
 import Data.Foldable
-import Data.Tree
+import Data.Maybe
 import Data.Typeable
 import Debug.Trace
 import qualified Data.Set as Set
@@ -80,7 +80,6 @@ import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Framework.MemoryState
 
-import qualified Insieme.Utils.UnboundSet as USet
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
 --
@@ -109,7 +108,7 @@ mkDataFlowAnalysis a s g = res
 
 -- a function creation an identifier for a variable of a data flow analysis
 mkVarIdentifier :: DataFlowAnalysis a v -> NodeAddress -> Solver.Identifier
-mkVarIdentifier a n = Solver.mkIdentifier (analysisIdentifier a) n ""
+mkVarIdentifier a n = Solver.mkIdentifierFromExpression (analysisIdentifier a) n
 
 
 -- a function creating a data flow analysis variable representing a constant value 
@@ -129,50 +128,81 @@ dataflowValue :: (ComposedValue.ComposedValue a i v, Typeable d)
          -> DataFlowAnalysis d a                            -- ^ the summar of the analysis to be performed be realized by this function
          -> [OperatorHandler a]                             -- ^ allows selected operators to be intercepted and interpreted
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
-dataflowValue addr analysis ops = case getNode addr of
+dataflowValue addr analysis ops = case getNodePair addr of
 
-    Node IR.Variable _ -> case findDecl addr of
+    IR.NT IR.Variable _ -> case findDecl addr of
             Just declrAddr -> handleDeclr declrAddr              -- this variable is declared, use declared value
             _              -> freeVariableHandler analysis addr  -- it is a free variable, ask the analysis what to do with it
 
 
-    Node IR.CallExpr _ -> var
+    IR.NT IR.CallExpr _ -> var
       where
         var = Solver.mkVariable (idGen addr) [knownTargets,unknownTarget] Solver.bot
         knownTargets = Solver.createConstraint dep val var
 
-        trg = Callable.callableValue (goDown 1 addr)
-        dep a = (Solver.toVar trg) : (
+        dep a = (Solver.toVar callTargetVar) : (
                     (map Solver.toVar (getExitPointVars a)) ++
                     (map Solver.toVar (getReturnValueVars a)) ++
+                    (map Solver.toVar (getCtorDtorVars a)) ++
                     (getOperatorDependencies a)
                 )
-        val a = Solver.join $ (map (Solver.get a) (getReturnValueVars a)) ++ (getOperatorValue a)
+        val a = Solver.join $ (getReturnValues a) ++ (getCtorDtorValues a) ++ (getOperatorValue a)
+
+
+        -- utilities --
+        
+        callTargetVar = Callable.callableValue (goDown 1 addr)
+        
+        callTargetVal a = ComposedValue.toValue $ Solver.get a callTargetVar
+        
+        filterInterceptedLambdas ts = Set.filter (not . covered) (BSet.toSet ts)
+            where
+                covered (Callable.Lambda addr) = any (\o -> covers o addr) extOps
+                covered _ = False 
 
 
         -- support for calls to lambda and closures --
 
-        getExitPointVars a = if USet.isUniverse targets then [] else Set.fold go [] (USet.toSet $ targets)
+        getExitPointVars a = if BSet.isUniverse targets then [] else go <$> Set.toList uninterceptedTargets
             where
-                targets = ComposedValue.toValue $ Solver.get a trg
-                go c l = (ExitPoint.exitPoints $ Callable.toAddress c) : l
+                targets = callTargetVal a
+                uninterceptedTargets = filterInterceptedLambdas targets
+                go c = (ExitPoint.exitPoints $ Callable.toAddress c)
+
+                
 
         getReturnValueVars a = concat $ map go $ map (toList . Solver.get a) (getExitPointVars a)
             where
-                go e = map resolve e
+                go e = concat $ map resolve e
 
-                resolve (ExitPoint.ExitPoint r) = case getNode r of
-                    Node IR.Declaration  _ -> memoryStateValue (MemoryState (ProgramPoint r Post) (MemoryLocation r)) analysis
-                    _                      -> varGen r
+                resolve (ExitPoint.ExitPoint r) = case getNodeType r of
+                    IR.Declaration  -> [memoryStateValue (MemoryStatePoint (ProgramPoint r Post) (MemoryLocation r)) analysis]
+                    IR.CompoundStmt | isConstructorOrDestructor $ getNodePair $ fromJust $ getParent r -> []
+                    _               -> [varGen r]
 
+        getReturnValues a = map (Solver.get a) (getReturnValueVars a)
+
+
+        -- support for calls to constructors and destructors --
+        
+        isCtorOrDtor c = isConstructorOrDestructor $ getNodePair $ Callable.toAddress c
+        
+        getCtorDtorVars a = if BSet.isUniverse targets then [] else concat $ go <$> Set.toList uninterceptedTargets
+            where
+                targets = callTargetVal a
+                uninterceptedTargets = filterInterceptedLambdas targets
+                
+                go c = if isCtorOrDtor c then [varGen $ goDown 1 $ goDown 2 addr] else []
+                
+        getCtorDtorValues a = (Solver.get a) <$> getCtorDtorVars a 
 
 
         -- operator support --
 
-        getActiveOperators a = if USet.isUniverse targets then [] else filter f extOps
+        getActiveOperators a = if BSet.isUniverse targets then [] else filter f extOps
             where
-                targets = ComposedValue.toValue $ Solver.get a trg
-                f o = any (\l -> covers o (Callable.toAddress l)) $ USet.toSet $ targets
+                targets = callTargetVal a
+                f o = any (\l -> covers o (Callable.toAddress l)) $ BSet.toSet $ targets
 
         getOperatorDependencies a = concat $ map go $ getActiveOperators a
             where
@@ -187,22 +217,23 @@ dataflowValue addr analysis ops = case getNode addr of
 
         unknownTarget = Solver.createConstraint dep val var
             where
-                dep a = [Solver.toVar trg]
+                dep a = [] -- covered by known targets: [Solver.toVar trg]
                 val a = if hasUnknownTarget then top else Solver.bot
                     where
 
-                        targets = ComposedValue.toValue $ Solver.get a trg
+                        targets = callTargetVal a
 
-                        uncoveredLiterals = filter f $ USet.toList $ targets
+                        uncoveredLiterals = filter f $ BSet.toList $ targets
                             where
                                 f (Callable.Literal a) = not $ any (\h -> covers h a) extOps
+                                f c | isCtorOrDtor c     = False
                                 f _                    = False
 
-                        hasUnknownTarget = (USet.isUniverse targets) || ((not . null) uncoveredLiterals)
+                        hasUnknownTarget = (BSet.isUniverse targets) || ((not . null) uncoveredLiterals)
 
 
 
-    Node IR.TupleExpr [_,Node IR.Expressions args] -> var
+    IR.NT IR.TupleExpr [_,IR.NT IR.Expressions args] -> var
         where
             var = Solver.mkVariable (idGen addr) [con] Solver.bot
             con = Solver.createConstraint dep val var
@@ -215,14 +246,14 @@ dataflowValue addr analysis ops = case getNode addr of
                     go i = varGen (goDown i $ goDown 1 $ addr)
 
 
-    decl@(Node IR.Declaration _) -> var
+    decl@(IR.NT IR.Declaration _) -> var
       where
         var = Solver.mkVariable (idGen addr) [con] Solver.bot
 
         con = Solver.forward
             (
                 if Reference.isMaterializingDeclaration decl
-                then memoryStateValue (MemoryState (ProgramPoint addr Post) (MemoryLocation addr)) analysis
+                then memoryStateValue (MemoryStatePoint (ProgramPoint addr Post) (MemoryLocation addr)) analysis
                 else varGen (goDown 1 addr)
             )
             var
@@ -246,14 +277,14 @@ dataflowValue addr analysis ops = case getNode addr of
 
     -- variable declaration handler
 
-    handleDeclr declrAddr = case getNode (goUp declrAddr) of
+    handleDeclr declrAddr = case getNodeType (goUp declrAddr) of
 
-        Node IR.DeclarationStmt _ -> var
+        IR.DeclarationStmt -> var
           where
             var = Solver.mkVariable (idGen addr) [constraint] Solver.bot
             constraint = Solver.forward (varGen (goDown 0 . goUp $ declrAddr)) var
 
-        Node IR.Parameters _ -> 
+        IR.Parameters -> 
             
             if isEntryPointParameter declrAddr                           
                 then entryPointParameterHandler analysis declrAddr
@@ -285,11 +316,11 @@ dataflowValue addr analysis ops = case getNode addr of
 
     readHandler = OperatorHandler cov dep val
         where
-            cov a = isBuiltin a "ref_deref"
+            cov a = isBuiltin a $ getBuiltin addr "ref_deref"
 
             dep a = (Solver.toVar targetRefVar) : (map Solver.toVar $ readValueVars a)
 
-            val a = if USet.isUniverse targets then top else Solver.join $ map go $ USet.toList targets
+            val a = if includesUnknownSources targets then top else Solver.join $ map go $ BSet.toList targets
                 where
                     targets = targetRefVal a
                     go r = ComposedValue.getElement (Reference.dataPath r) $ Solver.get a (memStateVarOf r)
@@ -297,18 +328,20 @@ dataflowValue addr analysis ops = case getNode addr of
             targetRefVar = Reference.referenceValue $ goDown 1 $ goDown 2 addr          -- here we have to skip the potentially materializing declaration!
             targetRefVal a = ComposedValue.toValue $ Solver.get a targetRefVar
 
-            readValueVars a = if USet.isUniverse targets then [] else map memStateVarOf $ USet.toList targets
+            includesUnknownSources t = BSet.member Reference.NullReference t || BSet.member Reference.UninitializedReference t 
+
+            readValueVars a = if includesUnknownSources targets then [] else map memStateVarOf $ BSet.toList targets
                 where
                     targets = targetRefVal a
 
-            memStateVarOf r = memoryStateValue (MemoryState (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis
+            memStateVarOf r = memoryStateValue (MemoryStatePoint (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis
 
 
     -- support the tuple_member_access operation (read from tuple component)
 
     tupleMemberAccessHandler  = OperatorHandler cov dep val
         where
-            cov a = isBuiltin a "tuple_member_access"
+            cov a = isBuiltin a $ getBuiltin addr "tuple_member_access"
 
             dep a = Solver.toVar indexValueVar : Solver.toVar tupleValueVar : []
 

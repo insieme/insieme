@@ -36,7 +36,6 @@
 
 module Insieme.Analysis.Framework.ProgramPoint where
 
-import Data.Tree
 import Insieme.Inspire.NodeAddress
 
 import Insieme.Analysis.Entities.ProgramPoint
@@ -46,7 +45,7 @@ import qualified Insieme.Analysis.Solver as Solver
 
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 
-import qualified Insieme.Utils.UnboundSet as USet
+import qualified Insieme.Utils.BoundSet as BSet
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
@@ -56,17 +55,17 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 -- properties of program points (e.g. the state of a heap object after
 -- the execution of a given expression)
 --
-programPointValue :: (Solver.Lattice a)
+programPointValue :: (Solver.ExtLattice a)
          => ProgramPoint                                    -- ^ the program point for which to compute a variable representing a state value
          -> (ProgramPoint -> Solver.Identifier)             -- ^ a variable ID generator function
          -> (ProgramPoint -> Solver.TypedVar a)             -- ^ a variable generator function for referenced variables
          -> [OperatorHandler a]                             -- ^ a list of operator handlers to intercept the interpretation of certain operators
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
 
-programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNode addr of
+programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNodeType addr of
 
         -- allow operator handlers to intercept the interpretation of calls
-        Node IR.CallExpr _ | p == Post -> ivar
+        IR.CallExpr | p == Post -> ivar
             where
 
                 extract = ComposedValue.toValue
@@ -77,22 +76,22 @@ programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNode add
 
                 -- if an handler is active, use the handlers value, else the default
                 idep a = (Solver.toVar targetVar) : (
-                        if isHandlerActive a then operatorDeps a else dep a
+                        if hasUniversalTarget a then [] else if isHandlerActive a then operatorDeps a else dep a
                     )
-                ival a = if isHandlerActive a then operatorVal a else val a
+                ival a = if hasUniversalTarget a then Solver.top else if isHandlerActive a then operatorVal a else val a
 
                 -- the variable storing the target of the call
                 targetVar = callableValue (goDown 1 addr)
 
+                -- tests whether the set of callees is universal
+                hasUniversalTarget a = BSet.isUniverse $ extract $ Solver.get a targetVar
+
                 -- test whether any operator handlers are active
-                getActiveHandlers a = filter fit ops
+                getActiveHandlers a = if BSet.isUniverse callables then [] else filter fit ops 
                     where
                         callables = extract $ Solver.get a targetVar
 
-                        targets = USet.toSet $
-                            if USet.isUniverse callables
-                            then collectAllCallables addr
-                            else callables
+                        targets = BSet.toSet callables
 
                         fit o = any ( \t -> covers o $ toAddress t ) targets
 

@@ -701,16 +701,30 @@ namespace backend {
 		return boost::optional<string>();
 	}
 
+	namespace {
+
+		const boost::optional<string> internalGetHeaderFor(const core::ExpressionPtr& function) {
+
+			// check whether there is a annotated header
+			if(annotations::c::hasIncludeAttached(function)) { return annotations::c::getAttachedInclude(function); }
+
+			// otherwise there is no header ..
+			return {};
+		}
+
+	}
+
 	const boost::optional<string> FunctionManager::getHeaderFor(const core::LiteralPtr& function) const {
 		// include table has priority
 		auto res = getHeaderFor(function->getStringValue());
 		if(res) { return res; }
 
-		// check whether there is a annotated header
-		if(annotations::c::hasIncludeAttached(function)) { return annotations::c::getAttachedInclude(function); }
+		// use annotation
+		return internalGetHeaderFor(function);
+	}
 
-		// otherwise there is no header ..
-		return res;
+	const boost::optional<string> FunctionManager::getHeaderFor(const core::LambdaExprPtr& function) const {
+		return internalGetHeaderFor(function);
 	}
 
 	namespace detail {
@@ -901,6 +915,23 @@ namespace backend {
 		}
 
 		LambdaInfo* FunctionInfoStore::resolveLambda(ConversionContext& context, const core::LambdaExprPtr& lambda) {
+
+			// test whether the lambda is an intercepted lambda, modeled by a derived operator
+			auto header = converter.getFunctionManager().getHeaderFor(lambda);
+			if(header) {
+				LambdaInfo* res = new LambdaInfo();
+
+				auto manager = converter.getCNodeManager();
+				auto name = context.getConverter().getNameManager().getName(lambda);
+				auto funType = lambda->getType();
+				FunctionCodeInfo fun = resolveFunction(context, manager->create(name), funType, core::LambdaPtr(), true);
+				res->function = fun.function;
+
+				// => use prototype of include file
+				res->prototype = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), *header);
+				res->declaration = nullptr;
+				return res;
+			}
 
 			// resolve lambda definitions
 			resolveLambdaDefinition(context, lambda->getDefinition());

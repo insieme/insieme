@@ -38,111 +38,180 @@
 
 module Main where
 
-import Control.Monad
-import Data.List
+import Control.Monad.State.Strict (State, evalState, forM_, get, put)
+import Data.ByteString (getContents)
+import Data.List (isPrefixOf)
 import Data.Text.Format as Fmt
 import Data.Text.Lazy.Builder (fromString)
-import Data.Tree (Tree(Node))
-import Debug.Trace
-import qualified Data.ByteString as BS
+import Insieme.Inspire.BinaryParser (parseBinaryDump)
+import Insieme.Inspire.Utils (foldTree)
+import Insieme.Utils.Arithmetic (NumOrdering(NumEQ), numCompare)
+import qualified Insieme.Analysis.Entities.FieldIndex as FieldIndex
 import qualified Insieme.Analysis.Alias as Alias
 import qualified Insieme.Analysis.Arithmetic as Arith
 import qualified Insieme.Analysis.Boolean as AnBoolean
-import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as CV
+import qualified Insieme.Analysis.Reference as Ref
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
-import qualified Insieme.Inspire.Utils as Utils
-import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Utils.BoundSet as BSet
-
-
 
 main :: IO ()
 main = do
-    -- read in binary dump of IR
-    dump <- BS.getContents
-
-    -- run parser
-    let Right ir = BinPar.parseBinaryDump dump
-
-    forM (Utils.foldTree findAnalysis ir) line
-
+    dump <- Data.ByteString.getContents
+    let Right ir = parseBinaryDump dump
+    let findings = foldTree findAnalysis ir
+    let results = evalState (sequence $ analysis <$> findings) Solver.initState
+    forM_ results line
     return ()
-
   where
     cba  = Fmt.right 40 ' ' . getCbaExpect
     addr = Fmt.right 40 ' ' . Addr.prettyShow . getAddr
     res  = fromString . show . getResult
     line x = Fmt.print "{} {}: {}\n" [cba x, addr x, res x]
 
-
-
 data AnalysisRun = AnalysisRun { getAddr      :: Addr.NodeAddress,
                                  getCbaExpect :: String,
                                  getResult    :: AnalysisResult }
   deriving (Eq, Show)
 
-data AnalysisResult = Ok | Inaccurate | Fail
+data AnalysisResult = Ok | Inaccurate | Fail | Pending
   deriving (Eq, Show, Read)
 
-
+isPending :: AnalysisRun -> Bool
+isPending = (==Pending) . getResult
 
 findAnalysis :: Addr.NodeAddress -> [AnalysisRun] -> [AnalysisRun]
 findAnalysis addr acc =
-    case Addr.getNode addr of
-        Node IR.CallExpr (_:Node IR.Literal [_, Node (IR.StringValue s ) _]:_) | isPrefixOf "IMP_cba_expect" s -> AnalysisRun addr s (analysis s) : acc
-        _ -> acc
+    case Addr.getNodePair addr of
+        IR.NT IR.CallExpr (_:IR.NT IR.Literal [_, IR.NT (IR.StringValue s) _]:_) | "cba_expect" `isPrefixOf` s
+            -> AnalysisRun addr s Pending : acc
+        _   -> acc
+
+aliasAnalysis :: AnalysisRun -> State Solver.SolverState Alias.Results
+aliasAnalysis a = do
+    state <- get
+    let (res, state') = Alias.checkAlias state (Addr.goDown 1 $ Addr.goDown 2 $ getAddr a) (Addr.goDown 1 $ Addr.goDown 3 $ getAddr a)
+    put state'
+    return res
+
+boolAnalysis :: AnalysisRun -> State Solver.SolverState AnBoolean.Result
+boolAnalysis a = CV.toValue <$> Solver.resolveS (AnBoolean.booleanValue $ Addr.goDown 2 $ getAddr a)
+
+arithAnalysis :: AnalysisRun -> State Solver.SolverState (Arith.SymbolicFormulaSet BSet.Bound10)
+arithAnalysis a = CV.toValue <$> Solver.resolveS (Arith.arithmeticValue $ Addr.goDown 2 $ getAddr a)
+
+arithAnalysis2 :: AnalysisRun -> State Solver.SolverState (Arith.SymbolicFormulaSet BSet.Bound10, Arith.SymbolicFormulaSet BSet.Bound10)
+arithAnalysis2 a = toValue <$> ((,) <$> lhs <*> rhs)
   where
-    resolve a = ComposedValue.toValue . fst . (Solver.resolve Solver.initState) . a
+    lhs = Solver.resolveS (Arith.arithmeticValue $ Addr.goDown 2 $ getAddr a)
+    rhs = Solver.resolveS (Arith.arithmeticValue $ Addr.goDown 3 $ getAddr a)
+    toValue (x, y) = (CV.toValue x, CV.toValue y)
 
-    res_boolean = resolve AnBoolean.booleanValue $ Addr.goDown 2 addr
+refAnalysis :: AnalysisRun -> State Solver.SolverState (BSet.UnboundSet Ref.Location)
+refAnalysis a = BSet.map Ref.creationPoint <$> value
+  where
+    value :: State Solver.SolverState (Ref.ReferenceSet FieldIndex.SimpleFieldIndex)
+    value = CV.toValue <$> Solver.resolveS (Ref.referenceValue $ Addr.goDown 1 $ Addr.goDown 2 $ getAddr a)
 
-    res_arithme   = resolve Arith.arithmeticValue $ Addr.goDown 2 addr
-    res_arithme_2 = resolve Arith.arithmeticValue $ Addr.goDown 3 addr
-
-    res_alias = fst $ Alias.checkAlias Solver.initState (Addr.goDown 2 addr) ( Addr.goDown 3 addr)
-
-    analysis s = case s of
+analysis :: AnalysisRun -> State Solver.SolverState AnalysisRun
+analysis a | not (isPending a) = return a
+analysis a =
+    case getCbaExpect a of
 
         -- alias
-        "IMP_cba_expect_ref_are_alias" | res_alias == Alias.AreAlias -> Ok
-        "IMP_cba_expect_ref_are_alias" -> Fail
+        "cba_expect_ref_are_alias" -> do
+            res <- aliasAnalysis a
+            return a{getResult = boolToResult $ res == Alias.AreAlias}
 
-        "IMP_cba_expect_ref_may_alias" | res_alias == Alias.MayAlias -> Ok
-        "IMP_cba_expect_ref_may_alias" -> Fail
+        "cba_expect_ref_may_alias" -> do
+            res <- aliasAnalysis a
+            return a{getResult = boolToResult $ res == Alias.MayAlias}
 
-        "IMP_cba_expect_ref_not_alias" | res_alias == Alias.NotAlias -> Ok
-        "IMP_cba_expect_ref_not_alias" -> Fail
+        "cba_expect_ref_not_alias" -> do
+            res <- aliasAnalysis a
+            return a{getResult = boolToResult $ res == Alias.NotAlias}
 
         -- boolean
-        "IMP_cba_expect_true" | res_boolean == AnBoolean.AlwaysTrue -> Ok
-        "IMP_cba_expect_true" -> Fail
+        "cba_expect_true" -> do
+            res <- boolAnalysis a
+            return a{getResult = boolToResult $ res == AnBoolean.AlwaysTrue}
 
-        "IMP_cba_expect_false" | res_boolean == AnBoolean.AlwaysFalse -> Ok
-        "IMP_cba_expect_false" -> Fail
+        "cba_expect_false" -> do
+            res <- boolAnalysis a
+            return a{getResult = boolToResult $ res == AnBoolean.AlwaysFalse}
 
-        "IMP_cba_expect_may_be_true" | res_boolean `elem` [AnBoolean.AlwaysTrue, AnBoolean.Both] -> Ok
-        "IMP_cba_expect_may_be_true" -> Fail
+        "cba_expect_may_be_true" -> do
+            res <- boolAnalysis a
+            return a{getResult = boolToResult $ res `elem` [AnBoolean.AlwaysTrue, AnBoolean.Both]}
 
-        "IMP_cba_expect_may_be_false" | res_boolean `elem` [AnBoolean.AlwaysFalse, AnBoolean.Both] -> Ok
-        "IMP_cba_expect_may_be_false" -> Fail
+        "cba_expect_may_be_false" -> do
+            res <- boolAnalysis a
+            return a{getResult = boolToResult $ res `elem` [AnBoolean.AlwaysFalse, AnBoolean.Both]}
 
         -- arithmetic
-        "IMP_cba_expect_undefined_int" | BSet.isUniverse res_arithme -> Ok
-        "IMP_cba_expect_undefined_int" | BSet.size res_arithme > 0   -> Inaccurate
-        "IMP_cba_expect_undefined_int" -> Fail
+        "cba_expect_undefined_int" -> do
+            res <- arithAnalysis a
+            return $ case () of _
+                                 | BSet.isUniverse res -> a{getResult = Ok}
+                                 | BSet.size res > 0   -> a{getResult = Inaccurate}
+                                 | otherwise           -> a{getResult = Fail}
 
-        "IMP_cba_expect_eq_int" | all (==Ar.NumEQ) $ BSet.toList $ BSet.lift2 Ar.numCompare res_arithme res_arithme_2 -> Ok
-        "IMP_cba_expect_eq_int" -> Fail
+        "cba_expect_defined_int" -> do
+            res <- arithAnalysis a
+            return $ a{getResult = boolToResult $ not (BSet.isUniverse res) && not (BSet.null res)}
 
-        "IMP_cba_expect_ne_int" | all (/=Ar.NumEQ) $ BSet.toList $ BSet.lift2 Ar.numCompare res_arithme res_arithme_2 -> Ok
-        "IMP_cba_expect_ne_int" -> Fail
+        "cba_expect_single_int" -> do
+            res <- arithAnalysis a
+            return $ a{getResult = boolToResult $ not (BSet.isUniverse res) && BSet.size res == 1}
 
-        "IMP_cba_expect_may_eq_int" | oneIsUniverse || BSet.size (BSet.intersection res_arithme res_arithme_2) > 0 -> Ok
-        "IMP_cba_expect_may_eq_int" -> Fail
+        "cba_expect_eq_int" -> do
+            (lhs, rhs) <- arithAnalysis2 a
+            return $ case () of _
+                                 | BSet.isUniverse lhs && BSet.isUniverse rhs -> a{getResult = Ok}
+                                 | BSet.isUniverse lhs || BSet.isUniverse rhs -> a{getResult = Fail}
+                                 | BSet.null lhs || BSet.null rhs             -> a{getResult = Fail}
+                                 | otherwise -> a{getResult = boolToResult $ all (==NumEQ) $ BSet.toList $ BSet.lift2 numCompare lhs rhs}
 
-        _ -> error "Unsupported Analysis"
+        "cba_expect_ne_int" -> do
+            (lhs, rhs) <- arithAnalysis2 a
+            return $ case () of _
+                                 | BSet.isUniverse lhs && BSet.isUniverse rhs -> a{getResult = Fail}
+                                 | BSet.isUniverse lhs || BSet.isUniverse rhs -> a{getResult = Ok}
+                                 | BSet.null lhs || BSet.null rhs -> a{getResult = Fail}
+                                 | otherwise -> a{getResult = boolToResult $ notElem NumEQ $ BSet.toList $ BSet.lift2 numCompare lhs rhs}
 
-    oneIsUniverse = BSet.isUniverse res_arithme || BSet.isUniverse res_arithme_2
+        "cba_expect_may_eq_int" -> do
+            (lhs, rhs) <- arithAnalysis2 a
+            return $ case () of _
+                                 | BSet.isUniverse lhs || BSet.isUniverse rhs -> a{getResult = Ok}
+                                 | BSet.null lhs || BSet.null rhs             -> a{getResult = Fail}
+                                 | otherwise -> a{getResult = boolToResult $ BSet.size (BSet.intersection lhs rhs) > 0}
+
+        -- reference
+        "cba_expect_undefined_ref" -> do
+            res <- refAnalysis a
+            return $ case () of _
+                                 | BSet.isUniverse res -> a{getResult = Ok}
+                                 | BSet.size res > 0   -> a{getResult = Inaccurate}
+                                 | otherwise           -> a{getResult = Fail}
+
+        "cba_expect_defined_ref" -> do
+            res <- refAnalysis a
+            return $ a{getResult = boolToResult $ not (BSet.isUniverse res) && not (BSet.null res)}
+
+        "cba_expect_single_ref" -> do
+            res <- refAnalysis a
+            return $ a{getResult = boolToResult $ not (BSet.isUniverse res) && BSet.size res == 1}
+
+        "cba_expect_not_single_ref" -> do
+            res <- refAnalysis a
+            return $ a{getResult = boolToResult $ BSet.isUniverse res || BSet.size res > 1}
+
+        _ -> return a -- error "Unsupported Analysis"
+
+  where
+    boolToResult :: Bool -> AnalysisResult
+    boolToResult True  = Ok
+    boolToResult False = Fail

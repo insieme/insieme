@@ -36,40 +36,47 @@
 
 #pragma once
 
-#include "insieme/analysis/cba_interface.h"
-#include "insieme/analysis/haskell/context.h"
-
-#include "insieme/analysis/haskell/alias_analysis.h"
-#include "insieme/analysis/haskell/arithmetic_analysis.h"
-#include "insieme/analysis/haskell/boolean_analysis.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/pointer.h"
 
 namespace insieme {
-namespace analysis {
+namespace core {
+namespace lang {
 
-	/*
-	 * Create a type for this backend.
+	/**
+	 * Extension providing memory management operations.
 	 */
-	struct HaskellEngine : public analysis_engine<haskell::Context> {};
+	class MemoryExtension : public core::lang::Extension {
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
 
-	// --- Alias Analysis ---
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		MemoryExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
-	register_analysis_implementation(HaskellEngine, areAlias, haskell::areAlias);
-	register_analysis_implementation(HaskellEngine, mayAlias, haskell::mayAlias);
-	register_analysis_implementation(HaskellEngine, notAlias, haskell::notAlias);
+	  public:
+		// this extension is based upon the symbols defined by the pointer module
+		IMPORT_MODULE(PointerExtension);
 
+		/**
+		* Semantic translation of "malloc" (allocate an array of elements on the heap)
+		*/
+		LANG_EXT_DERIVED(MallocWrapper, R"((size : uint<8>) -> ptr<unit> {
+			var uint<inf> si = size;
+			return ptr_reinterpret(ptr_from_array(ref_new(type_lit(array<uint<1>,#si>))), type_lit(unit));
+		})");
 
-	// --- Boolean Analysis ---
+		/**
+		* Semantic translation of "free" (frees pointer allocated on the heap)
+		*/
+		LANG_EXT_DERIVED(FreeWrapper, R"((trg : ptr<unit>) -> unit { ref_delete(ptr_to_ref(trg)); })");
 
-	register_analysis_implementation(HaskellEngine , isTrue,     haskell::isTrue    );
-	register_analysis_implementation(HaskellEngine , isFalse,    haskell::isFalse   );
-	register_analysis_implementation(HaskellEngine , mayBeTrue,  haskell::mayBeTrue );
-	register_analysis_implementation(HaskellEngine , mayBeFalse, haskell::mayBeFalse);
+	};
 
-
-	// --- Symbolic Integer Analysis ---
-
-	register_analysis_implementation(HaskellEngine , getArithmeticValue, haskell::getArithmeticValue);
-
-
-} // end namespace analysis
+} // end namespace lang
+} // end namespace core
 } // end namespace insieme

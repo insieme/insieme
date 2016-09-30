@@ -78,8 +78,8 @@ int main(int argc, char** argv) {
 	cba_expect_undefined_int(fib(1));
 	cba_expect_undefined_int(fib(2));
 
-	cba_expect_finite_int(even(0));
-	cba_expect_finite_int(odd(1));
+	cba_expect_defined_int(even(0));
+	cba_expect_defined_int(odd(1));
 
 	return 0;
 }

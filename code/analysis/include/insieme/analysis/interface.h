@@ -43,6 +43,7 @@
 
 #include "insieme/analysis/common/arithmetic_set.h"
 #include "insieme/analysis/common/integer_set.h"
+#include "insieme/analysis/common/memory_location_set.h"
 
 namespace insieme {
 namespace analysis {
@@ -56,6 +57,12 @@ namespace analysis {
 	 * To be utilized, one of the backend interface headers has to be included, and the corresponding
 	 * backend has to be passed as a template parameter to the given function.
 	 */
+
+
+	// --- Reference Analysis ---
+
+	//                | Name                        | Res              | Argument               |
+	declare_analysis_1( getReferencedMemoryLocations, MemoryLocationSet, core::ExpressionAddress);
 
 
 	// --- Alias Analysis ---

@@ -34,6 +34,8 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -41,13 +43,15 @@ module Insieme.Analysis.Framework.PropertySpace.ValueTree (
     Tree
 ) where
 
-import Debug.Trace
+import Control.DeepSeq
 import Data.Maybe
+import Debug.Trace
+import GHC.Generics (Generic)
 import Insieme.Analysis.Entities.DataPath
 import Insieme.Analysis.Entities.FieldIndex
+import Insieme.Analysis.Framework.PropertySpace.ComposedValue
 import qualified Data.Map as Map
 import qualified Insieme.Analysis.Solver as Solver
-import Insieme.Analysis.Framework.PropertySpace.ComposedValue
 
 
 
@@ -55,7 +59,7 @@ data Tree i a = Leaf a
               | Node (Map.Map i (Tree i a))
               | Empty
               | Inconsistent
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Generic,NFData)
 
 
 instance (Show i, Show a) => Show (Tree i a) where
@@ -122,7 +126,7 @@ get i (Node m)     = r
         k = project (Map.keys m) i
         r = Solver.join $ map extract k
             where
-                extract k = fromMaybe Solver.bot $ Map.lookup k m
+                extract k = fromMaybe Inconsistent $ Map.lookup k m
 
 get _ Empty        = Empty
 get _ _            = Inconsistent

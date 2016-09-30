@@ -43,7 +43,7 @@
 int main(int argc, char** argv) {
 
 	// at this point it should be unknown
-	cba_expect_defined_int(argc);
+	cba_expect_single_int(argc);
 
 	// if we set it, it should be known
 	argc = 1;

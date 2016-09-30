@@ -37,21 +37,26 @@
 #pragma once
 
 #include <string>
+#include <vector>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #include <boost/program_options.hpp>
 #include "insieme/utils/config.h"
 
-namespace bpo = boost::program_options;
-namespace itc = insieme::driver::integration;
+#include "insieme/driver/integration/tests.h"
+#include "insieme/driver/integration/test_step.h"
 
-typedef itc::IntegrationTestCase TestCase;
-using itc::TestStep;
-using itc::TestResult;
+namespace bpo = boost::program_options;
 
 namespace insieme {
 namespace driver {
 namespace integration {
 namespace testFramework {
+
+	typedef IntegrationTestCase TestCase;
 
 	struct Options {
 		bool valid;
@@ -209,14 +214,14 @@ namespace testFramework {
 		else if(options.longTestsOnly) loadMode = LONG_TESTS;
 		else if(options.longTestsAlso) loadMode = ENABLED_AND_LONG_TESTS;
 		if(options.cases.empty()) {
-			return itc::getAllCases(loadMode);
+			return getAllCases(loadMode);
 		}
 
 		// load selected test cases
 		vector<TestCase> cases;
 		for(const auto& cur : options.cases) {
 			// load test case based on the location
-			auto curSuite = itc::getTestSuite(cur);
+			auto curSuite = getTestSuite(cur);
 			for(const auto& cur : curSuite) {
 				if(!contains(cases, cur)) { // make sure every test is only present once
 					cases.push_back(cur);
@@ -231,9 +236,9 @@ namespace testFramework {
 		std::map<std::string, TestStep> all;
 
 		if(options.statistics) {
-			all = itc::getFullStepList(options.statThreads, options.scheduling);
+			all = getFullStepList(options.statThreads, options.scheduling);
 		} else {
-			all = itc::getFullStepList();
+			all = getFullStepList();
 		}
 
 

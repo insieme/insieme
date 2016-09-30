@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -37,8 +37,10 @@
 #pragma once
 
 #include <ostream>
+#include <vector>
 
 #include "insieme/core/ir.h"
+#include "insieme/core/ir_address.h"
 
 namespace insieme {
 namespace core {
@@ -55,6 +57,15 @@ namespace haskell {
 	* @param ir the code fragment to be written
 	*/
 	void dumpIR(std::ostream& out, const NodePtr& ir);
+
+	/** Dump IR to the given file name. */
+	void dumpIR(const std::string &filename, const NodePtr &ir);
+
+	/** Dump IR to given output stream, also appending one address */
+	void dumpAddress(std::ostream& out, const NodeAddress& addr);
+
+	/** Dump IR to given output stream, also appending addresses. */
+	void dumpAddresses(std::ostream& out, const std::vector<NodeAddress>& addr);
 
 } // end namespace haskell
 } // end namespace binary

@@ -100,6 +100,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	# add flags for release mode
 	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
+	# add flag allowing arbitrary library linking order (required for systems using -as-needed by default)
+	set (CMAKE_CXX_FLAGS "-Wl,--no-as-needed ${CMAKE_CXX_FLAGS}")
+
 	# ENABLE PROFILING
 	# add_definitions( -pg )
 	# SET(CMAKE_EXE_LINKER_FLAGS -pg)
@@ -217,12 +220,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINSIEME_VERSION=\"\\\"${insieme_versio
 # --------------------------------------------------------- Analysis Backends
 option(ANALYSIS_DATALOG "Enable Datalog engine for analysis" OFF)
 if(ANALYSIS_DATALOG)
-    add_definitions(-DINSIEME_ANALYSIS_DATALOG)
+	add_definitions(-DINSIEME_ANALYSIS_DATALOG)
 endif()
 
 option(ANALYSIS_HASKELL "Enable Haskell engine for analysis" OFF)
 if(ANALYSIS_HASKELL)
-    add_definitions(-DINSIEME_ANALYSIS_HASKELL)
+	add_definitions(-DINSIEME_ANALYSIS_HASKELL)
 endif()
 
 # --------------------------------------------------------- Valgrind / GTest testing suite

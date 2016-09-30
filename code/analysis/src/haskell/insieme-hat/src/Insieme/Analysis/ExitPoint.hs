@@ -34,12 +34,15 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.ExitPoint where
 
-import Data.Tree
+import Control.DeepSeq
 import Data.Typeable
+import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
 import qualified Data.Set as Set
@@ -53,7 +56,7 @@ import qualified Insieme.Inspire as IR
 --
 
 newtype ExitPoint = ExitPoint NodeAddress
- deriving (Eq, Ord)
+ deriving (Eq, Ord, Generic, NFData)
 
 instance Show ExitPoint where
     show (ExitPoint na) = "Exit@" ++ (prettyShow na)
@@ -85,10 +88,10 @@ exitPointAnalysis = Solver.mkAnalysisIdentifier ExitPointAnalysis "EP"
 --
 
 exitPoints :: NodeAddress -> Solver.TypedVar ExitPointSet
-exitPoints addr = case getNode addr of
+exitPoints addr = case getNodeType addr of
 
     -- for lambdas: collect all reachable return statements and end of body
-    Node IR.Lambda   _ -> var
+    IR.Lambda -> var
         where
             var = Solver.mkVariable id [con] Solver.bot
             con = Solver.createConstraint dep val var
@@ -118,25 +121,21 @@ exitPoints addr = case getNode addr of
 
 
     -- for bind expressions: use nested call expression
-    Node IR.BindExpr _ -> Solver.mkVariable id [] $ Set.singleton $ ExitPoint $ goDown 2 addr
+    IR.BindExpr -> Solver.mkVariable id [] $ Set.singleton $ ExitPoint $ goDown 2 addr
 
     -- everything else has no call sites
     _ -> Solver.mkVariable id [] Solver.bot
 
   where
 
-    id = Solver.mkIdentifier exitPointAnalysis addr ""
+    id = Solver.mkIdentifierFromExpression exitPointAnalysis addr
 
 
 
 collectReturns :: NodeAddress -> [NodeAddress]
 collectReturns = foldAddressPrune collector filter
-    where
-        filter cur =
-            case getNode cur of
-                Node IR.LambdaExpr _ -> True
-                _ -> False
-        collector cur returns =
-            case getNode cur of
-                Node IR.ReturnStmt _ -> (goDown 0 cur : returns)
-                _ -> returns
+  where
+    filter cur = getNodeType cur == IR.LambdaExpr
+    collector cur returns = if getNodeType cur == IR.ReturnStmt
+                               then (goDown 0 cur : returns)
+                               else returns

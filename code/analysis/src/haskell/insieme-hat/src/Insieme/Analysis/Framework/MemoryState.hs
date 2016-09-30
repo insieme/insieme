@@ -34,15 +34,25 @@
  - regarding third party software licenses.
  -}
 
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Insieme.Analysis.Framework.MemoryState where
+module Insieme.Analysis.Framework.MemoryState (
+    
+    MemoryLocation(..),       -- re-exported for convinience
+    MemoryStatePoint(..),
+    memoryStateValue
+    
+) where
 
-import Debug.Trace
-import Data.Tree
+import Control.DeepSeq
 import Data.Typeable
+import Data.Maybe
+import Debug.Trace
+import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
 
 import Insieme.Analysis.Entities.ProgramPoint
@@ -58,7 +68,6 @@ import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.Utils as IR
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Utils.BoundSet as BSet
-import qualified Insieme.Utils.UnboundSet as USet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -67,34 +76,31 @@ import Insieme.Analysis.Entities.DataPath hiding (isRoot)
 import qualified Insieme.Analysis.Entities.AccessPath as AP
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import Insieme.Analysis.Entities.FieldIndex
+import Insieme.Analysis.Entities.Memory
 
 
-
-data MemoryLocation = MemoryLocation NodeAddress
-    deriving (Eq,Ord,Show)
-
-data MemoryState = MemoryState ProgramPoint MemoryLocation
-    deriving (Eq,Ord,Show)
 
 
 
 -- define the lattice of definitions
 
-data Definition i = Initial 
-                | Creation
-                | Declaration NodeAddress
-                | MaterializingCall NodeAddress
-                | Assignment NodeAddress (DataPath i)
-                | PerfectAssignment NodeAddress
-    deriving (Eq,Ord,Show)
+data Definition = Initial                                    -- it is the definiton obtained at program startup
+              | Creation                                     -- it is the creation point definition (e.g. ref_alloc)
+              | Declaration NodeAddress                      -- the definition is conducted by an assignment triggered through a materializing declaration
+              | MaterializingCall NodeAddress                -- the definition is conducted by an assignment triggered through a materializing call
+              | Assignment NodeAddress                       -- an assignment conducting an update to a memory location
+              | Initialization NodeAddress                   -- an initialization expression conducting an update to a memory location
+    deriving (Eq,Ord,Show,Generic,NFData)
 
-type Definitions i = USet.UnboundSet (Definition i)
+type Definitions = BSet.UnboundSet Definition
 
-instance (FieldIndex i) => Solver.Lattice (Definitions i) where
-    bot = USet.empty
-    merge = USet.union
+instance Solver.Lattice Definitions where
+    bot = BSet.empty
+    merge = BSet.union
 
 
+instance Solver.ExtLattice Definitions where
+    top = BSet.Universe
 
 --
 -- * Memory State Analysis
@@ -112,89 +118,206 @@ memoryStateAnalysis a = Solver.mkAnalysisIdentifier (MemoryStateAnalysis a) ('M'
 --
 
 memoryStateValue :: (ComposedValue.ComposedValue v i a, Typeable d)
-         => MemoryState                                 -- ^ the program point and memory location interested in
+         => MemoryStatePoint                            -- ^ the program point and memory location interested in
          -> DataFlowAnalysis d v                        -- ^ the underlying data flow analysis this memory state analysis is cooperating with
          -> Solver.TypedVar v                           -- ^ the analysis variable representing the requested state
 
-memoryStateValue ms@(MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) analysis = var
+memoryStateValue ms@(MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) analysis = var
 
     where
 
         -- extend the underlysing analysis's identifier for the memory state identifier
-        varId = Solver.mkIdentifier (memoryStateAnalysis analysis) addr ((show p) ++ " " ++ show ml)
+        varId = Solver.mkIdentifierFromMemoryStatePoint (memoryStateAnalysis analysis) ms
 
         var = Solver.mkVariable varId [con] Solver.bot
         con = Solver.createConstraint dep val var
 
         dep a = (Solver.toVar reachingDefVar) :
                    (
-                     if USet.member Creation $ reachingDefVal a then []
-                     else (map Solver.toVar $ definingValueVars a) ++ (partialAssingDep a)
+                     if BSet.isUniverse defs || BSet.member Creation defs then [] 
+                     else (map Solver.toVar $ definingValueVars a)
                    )
+            where
+                defs = reachingDefVal a
 
-        val a = if USet.member Initial $ reachingDefVal a then Solver.merge init value else value
+        val a = case () of 
+                _ | BSet.isUniverse defs      -> Solver.top
+                  | BSet.member Initial defs  -> Solver.merge init value
+                  | otherwise                 -> value
             where
                 init = initialValueHandler analysis loc
             
-                value = if USet.member Creation $ reachingDefVal a then ComposedValue.top
-                        else Solver.join $ (partialAssingVal a) : (map (Solver.get a) (definingValueVars a))
+                value = if BSet.member Creation $ defs then ComposedValue.top
+                        else Solver.join $ map (Solver.get a) (definingValueVars a)
+                        
+                defs = reachingDefVal a
 
 
         reachingDefVar = reachingDefinitions ms
         reachingDefVal a = Solver.get a reachingDefVar
 
         definingValueVars a =
-                USet.fromUnboundSet [] ( concat . (map go) . USet.toList ) $ reachingDefVal a
+                BSet.applyOrDefault [] (concat . (map go) . BSet.toList) $ reachingDefVal a
             where
-                go (Declaration       addr) = [variableGenerator analysis $ goDown 1 addr]
-                go (MaterializingCall addr) = [variableGenerator analysis $ addr]
-                go (PerfectAssignment addr) = [getDeclaredValueVar $ goDown 3 addr]
-                go _                        = []
+                go (Declaration       addr)         = [variableGenerator analysis $ goDown 1 addr]
+                go (MaterializingCall addr)         = [variableGenerator analysis $ addr]
+                go (Assignment addr)                = [definedValue addr ml analysis]
+                go (Initialization addr)            = [definedValue addr ml analysis]
+                go _                                = []
 
-                getDeclaredValueVar addr =
-                    if isMaterializingDeclaration $ getNode addr
-                    then memoryStateValue (MemoryState (ProgramPoint addr Post) (MemoryLocation addr)) analysis
-                    else variableGenerator analysis (goDown 1 addr)
 
-        -- partial assignment support --
 
-        partialAssignments a =
-                USet.fromUnboundSet [] ( (filter pred) . USet.toList ) $ reachingDefVal a
+
+--
+-- * Defined Value Analysis
+--
+
+data DefinedValueAnalysis a = DefinedValueAnalysis a
+    deriving (Typeable)
+    
+definedValueAnalysis :: (Typeable a, Typeable v) => DataFlowAnalysis a v -> Solver.AnalysisIdentifier
+definedValueAnalysis a = Solver.mkAnalysisIdentifier (DefinedValueAnalysis a) ( "DV-" ++ (show $ analysisIdentifier a) )
+
+
+--
+-- * Defined Value Variable Generator
+--
+
+definedValue :: (ComposedValue.ComposedValue v i a, Typeable d)
+         => NodeAddress                                 -- ^ the assignment interrested in
+         -> MemoryLocation                              -- ^ the memory location interrested in
+         -> DataFlowAnalysis d v                        -- ^ the underlying data flow analysis this defined value analysis is cooperating with
+         -> Solver.TypedVar v                           -- ^ the analysis variable representing the requested value
+
+definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
+
+        -- handle values defined by assignments
+        IR.CallExpr -> var
+
+        -- handle scalar values defined by init expressions
+        IR.InitExpr | isScalar -> var
+
+        -- handle struct values defined by init expressions
+        IR.InitExpr | isRecord -> var
             where
-                pred (Assignment _ _) = True
-                pred _                = False
+                var = Solver.mkVariable varId [con] Solver.bot
+                con = Solver.createEqualityConstraint dep val var
+                
+                dep a = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
+                val a = Solver.top  -- TODO: fill in the creation of a value here
+                
+                valueVars = valueVar <$> getChildren (goDown 2 addr)
 
-        hasPartialAssign = not . null . partialAssignments
+        -- handle struct values defined by init expressions
+        IR.InitExpr | isArray -> error "Initialization of arrays not yet implemented."
 
-        partialAssingDep a =
-                if ( not . hasPartialAssign ) a then []
-                else concat $ map go $ partialAssignments a
+    where
+    
+        -- the ID of the produced variable
+        varId = Solver.mkIdentifierFromMemoryStatePoint (definedValueAnalysis analysis) ms
             where
-                go (Assignment addr _ ) = [
-                        Solver.toVar $ elemValueVar addr,
-                        Solver.toVar $ predStateVar addr
-                    ]
-                go _ = error "unexpected action"
-
-
-        partialAssingVal a =
-                if ( not . hasPartialAssign ) a then Solver.bot
-                else Solver.join $ map go $ partialAssignments a
+                ms = MemoryStatePoint (ProgramPoint addr Post) ml
+    
+    
+        -- the variable for assignment and scalar init
+    
+        var = Solver.mkVariable varId [con] Solver.bot
+        con = Solver.createEqualityConstraint dep val var
+        
+        dep a = Solver.toVar targetRefVar : valueDeps a 
+                              
+        val a = case () of _ | not $ isActive a  -> old
+                             | isFullAssign a    -> elemValueVal a
+                             | isPerfectAssign a -> new
+                             | otherwise         -> Solver.merge old new
             where
-                go (Assignment addr dp) = ComposedValue.setElement dp elemValue predState
-                    where
-                        elemValue = Solver.get a $ elemValueVar addr
+                old = Solver.get a oldStateVar
+                new = updatedValue a
+             
+    
 
-                        predState = Solver.get a (predStateVar addr)
-                go _ = error "unexpected action"
-
-        elemValueVar assign = variableGenerator analysis $ goDown 3 assign
-
-        predStateVar assign = memoryStateValue (MemoryState (ProgramPoint assign Internal) ml) analysis
-
-
+        -- get access to the referenced locations
+        targetRefVar = referenceValue $ case getNodeType addr of
+            IR.CallExpr -> goDown 1 $ goDown 2 addr         -- here we have to skip the potentially materializing declaration!
+            IR.InitExpr -> goDown 1 addr                    -- the reference to be initialized
+        targetRefVal a = ComposedValue.toValue $ Solver.get a targetRefVar
 
 
+        -- some checks regarding the scope of the update
+        
+        isActive a = (BSet.isUniverse trgs) || (any pred $ BSet.toSet $ trgs)
+            where
+                trgs = targetRefVal a
+                pred (Reference cp _) = cp == loc
+                pred _ = False
+                
+        isPerfectAssign a = (not $ BSet.isUniverse trgs) && (BSet.size trgs == 1)
+            where
+                trgs = targetRefVal a
+        
+        isFullAssign a = isPerfectAssign a && (all pred $ BSet.toSet $ targetRefVal a)
+            where
+                pred (Reference _ DP.Root) = True
+                pred _ = False 
+
+
+        -- value analysis variable generator
+        
+        valueVar = variableGenerator analysis  
+
+
+        -- value composing utilities
+
+        valueDeps a = case () of _ | not $ isActive a -> [Solver.toVar oldStateVar]
+                                   | isFullAssign a   -> [Solver.toVar elemValueVar]
+                                   | otherwise        -> [Solver.toVar oldStateVar, Solver.toVar elemValueVar]
+
+        elemValueVar = case getNodeType addr of
+            
+                IR.InitExpr  -> valueVar $ goDown 0 $ goDown 2 addr 
+        
+                IR.CallExpr  -> if isMaterializingDeclaration $ getNodePair valueDecl
+                                then memoryStateValue (MemoryStatePoint (ProgramPoint valueDecl Post) (MemoryLocation valueDecl)) analysis
+                                else valueVar (goDown 1 valueDecl)
+                                  
+            where
+                valueDecl = goDown 3 addr
+        
+        
+        elemValueVal a = Solver.get a elemValueVar
+
+        updatedValue a = 
+                if BSet.isUniverse trgs then Solver.top else Solver.join values
+            where
+                oldVal = oldStateVal a
+                elemVal = elemValueVal a
+                
+                trgs = targetRefVal a
+                
+                values = concat $ update <$> BSet.toList trgs
+                
+                update (Reference cp dp) | cp == loc = [
+                        ComposedValue.setElement dp elemVal oldVal 
+                    ] 
+                update _ = []
+
+
+        -- access to the old state
+                          
+        oldStateVar = memoryStateValue (MemoryStatePoint (ProgramPoint (goDown 1 addr) Post) ml) analysis
+        oldStateVal a = Solver.get a oldStateVar         
+        
+        
+        -- type checks
+        
+        elemType = fromJust $ IR.getReferencedType =<< IR.getType (getNodePair addr)
+        
+        isArray  = IR.isArray elemType
+        isRecord = IR.isRecord elemType
+        isScalar = not isArray || not isRecord
+
+
+                
 
 --
 -- * Reaching Definition Analysis
@@ -211,30 +334,74 @@ reachingDefinitionAnalysis = Solver.mkAnalysisIdentifier ReachingDefinitionAnaly
 -- * Reaching Definition Variable Generator
 --
 
-reachingDefinitions :: (FieldIndex i) => MemoryState -> Solver.TypedVar (Definitions i)
-reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case getNode addr of
+reachingDefinitions :: MemoryStatePoint -> Solver.TypedVar Definitions
+reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) = case getNodeType addr of
 
         -- a declaration could be an assignment if it is materializing
-        d@(Node IR.Declaration _) | addr == loc && p == Post ->
-            Solver.mkVariable (idGen addr) [] (USet.singleton $ Declaration addr)
+        IR.Declaration | addr == loc && p == Pre ->
+            Solver.mkVariable varId [] (BSet.singleton $ Declaration addr)
 
         -- a call could be an assignment if it is materializing
-        c@(Node IR.CallExpr _) | addr == loc && p == Post && isMaterializingCall c ->
-            Solver.mkVariable (idGen addr) [] (USet.singleton $ MaterializingCall addr)
+        IR.CallExpr | addr == loc && p == Post && isMaterializingCall (getNodePair addr) ->
+            Solver.mkVariable varId [] (BSet.singleton $ MaterializingCall addr)
 
         -- the call could also be the creation point if it is not materializing
-        c@(Node IR.CallExpr _) | addr == loc && p == Post ->
-            Solver.mkVariable (idGen addr) [] (USet.singleton Creation)
+        IR.CallExpr | addr == loc && p == Post ->
+            Solver.mkVariable varId [] (BSet.singleton Creation)
 
         -- the entry point is the creation of everything that reaches this point
         _ | p == Pre && IR.isEntryPoint addr -> 
-            Solver.mkVariable (idGen addr) [] (USet.singleton $ Initial)
+            Solver.mkVariable varId [] (BSet.singleton $ Initial)
 
-{-
-        -- to prune the set of variables, we check whether the invoced callable may update the traced reference
-        c@(Node IR.CallExpr _) | p == Internal && (not $ loc `isChildOf` addr)-> var
+        -- skip everything that can statically be considered assignment free
+        _ | p == Post && isAssignmentFree addr && (not isParentOfLocation) -> 
+            reachingDefinitions $ MemoryStatePoint (ProgramPoint addr Pre) ml
+
+        -- an assignment might be a definition point
+        IR.CallExpr | p == Post && isAssignCandidate -> var
             where
-                var = Solver.mkVariable (idGenExt pp "switch") [con] Solver.bot
+                var = Solver.mkVariable varId [con] Solver.bot
+                con = Solver.createEqualityConstraint dep val var
+                
+                dep a = Solver.toVar funVar : case () of 
+                        _ | noFuns a    -> []                -- wait until there are some target functions (optimization)
+                          | mayAssign a -> refs : case () of 
+                                _ | noRefs a  -> []             -- wait until there are some references (optimization)
+                                  | hitsLoc a -> []             -- it is a hit, we don't need the predecessor
+                                  | otherwise -> predVars       -- it is no full hit, we might need the predecessor
+                          | otherwise   -> predVars
+                    where
+                        predVars = predecessorVars a
+                        refs = Solver.toVar refVar
+                          
+        
+                val a = case () of
+                    _ | mayAssign a -> case () of 
+                            _ | noRefs a  -> Solver.bot
+                              | hitsLoc a -> BSet.singleton $ Assignment addr
+                              | otherwise -> predVals
+                      | otherwise   -> predVals
+                    where
+                        predVals = predecessorVal a 
+                        
+                        
+                funVar = callableValue $ goDown 1 addr
+                funVal a = ComposedValue.toValue $ Solver.get a funVar
+                
+                noFuns a = BSet.null $ funVal a
+                
+                mayAssign a = BSet.isUniverse funs || (any assign $ BSet.toSet funs) 
+                    where
+                        funs = funVal a
+                        assign c = isBuiltin (toAddress c) ref_assign
+                        ref_assign = getBuiltin addr "ref_assign" 
+                
+                         
+
+        -- to prune the set of variables, we check whether the invoced callable may update the traced reference
+        IR.CallExpr | p == Internal && (not isParentOfLocation)-> var
+            where
+                var = Solver.mkVariable varId [con] Solver.bot
                 con = Solver.createEqualityConstraint dep val var
                 
                 dep a = (Solver.toVar writeSetVar) : 
@@ -245,77 +412,144 @@ reachingDefinitions (MemoryState pp@(ProgramPoint addr p) ml@(MemoryLocation loc
                 writeSetVar = writeSet addr
                 writeSetVal a = Solver.get a writeSetVar
                 
-                canSkipCallable = not . USet.member loc . writeSetVal 
+                canSkipCallable = not . BSet.member loc . writeSetVal 
                 
                 -- utils for skip case --
                 
-                skipPredecessorVar = reachingDefinitions $ MemoryState (ProgramPoint (goDown 1 addr) Post) ml
+                skipPredecessorVar = reachingDefinitions $ MemoryStatePoint (ProgramPoint (goDown 1 addr) Post) ml
                 skipPredecessorVal a = Solver.get a skipPredecessorVar 
                 
                 -- utils for non-skip case --
                 
                 nonSkipPredecessorVars a = Solver.getDependencies a defaultVar
                 nonSkipPredecessorVal a = Solver.getLimit a defaultVar 
--}
+
+        -- init expressions may alter memory states as well
+        IR.InitExpr | p == Post -> var
+            where
+                var = Solver.mkVariable varId [con] Solver.bot
+                con = Solver.createEqualityConstraint dep val var
+                
+                dep a = Solver.toVar refVar : case () of 
+                        _ | noRefs a  -> []
+                          | hitsLoc a -> []
+                          | otherwise -> predecessorVars a
+                
+                val a = case () of 
+                     _ | noRefs a  -> Solver.bot
+                       | hitsLoc a -> BSet.singleton $ Initialization addr
+                       | otherwise -> predecessorVal a  
 
         -- for all the others, the magic is covered by the generic program point value constraint generator
         _ -> defaultVar
 
     where
 
-        analysis pp = reachingDefinitions (MemoryState pp ml)
+        isParentOfLocation = loc `isChildOf` addr
 
-        idGenExt pp s = Solver.mkIdentifier reachingDefinitionAnalysis addr $ ("/" ++ (show pp) ++ " for " ++ (show ml) ++ s)
-        idGen pp = idGenExt pp ""
+        analysis pp = reachingDefinitions (MemoryStatePoint pp ml)
 
-        extract = ComposedValue.toValue
-        
-        defaultVar = programPointValue pp idGen analysis [assignHandler]
+        idGen pp = Solver.mkIdentifierFromMemoryStatePoint reachingDefinitionAnalysis (MemoryStatePoint pp ml)
+        varId = idGen pp
 
-        -- a handler for intercepting the interpretation of the ref_assign operator --
+        defaultVar = programPointValue pp idGen analysis []
 
-        assignHandler = OperatorHandler cov dep val
+        isAssignCandidate = res
             where
-                cov a = isBuiltin a "ref_assign"
+                res = numChildren addr == 4 && unitRes && refParam
+                unitRes  = IR.isUnit $ getNodePair addr
+                refParam = IR.isReference $ getNodePair $ goDown 1 $ goDown 2 addr
 
-                dep a = (Solver.toVar targetRefVar) : (
-                        if isEmptyRef a || (isActive a && isSingleRef a) then [] else pdep a
-                    )
+        -- target location utils --
 
-                val a = if isEmptyRef a then Solver.bot                             -- the target reference is not yet determined - wait
-                        else if isActive a then                                     -- it is referencing this memory location => do something
-                            (if isSingleRef a
-                                then collectLocalDefs a                             -- it only references this memory location
-                                else USet.union (collectLocalDefs a) $ pval a       -- it references this and other memory locations
-                            )
-                        else pval a                                                 -- it does not reference this memory location => no change to reachable definitions
+        refVar = referenceValue $ case getNodeType addr of
+            IR.CallExpr -> goDown 1 $ goDown 2 addr             -- first argument
+            IR.InitExpr -> goDown 1 addr                        -- target memory location
 
-                targetRefVar = referenceValue $ goDown 1 $ goDown 2 addr            -- here we have to skip the potentially materializing declaration!
-                targetRefVal a = extract $ Solver.get a targetRefVar
-
-                isActive a = (USet.isUniverse refs) || (any pred $ USet.toSet refs)
-                    where
-                        refs = targetRefVal a
-                        pred (Reference cp _) = cp == loc
-
-                isEmptyRef a = USet.null $ targetRefVal a
-
-                isSingleRef a = ((not . USet.isUniverse) refs) && (all pred $ USet.toSet refs)
-                    where
-                        refs = targetRefVal a
-                        pred (Reference l _) = l == loc
-
-                collectLocalDefs a = if USet.isUniverse targets then USet.Universe
-                        else USet.fromList $ concat $ map go $ USet.toList $ targets
-                    where
-                        targets = targetRefVal a
-                        go (Reference cp dp) | (cp == loc) && (DP.isRoot dp) = [PerfectAssignment addr]
-                        go (Reference cp dp) | cp == loc = [Assignment addr dp]
-                        go _                             = []
-
-                (pdep,pval) = mkPredecessorConstraintCredentials pp analysis
+        refVal a = ComposedValue.toValue $ Solver.get a refVar
+        
+        noRefs a = BSet.null $ refVal a
+        
+        hitsLoc a = BSet.isUniverse refs || (any hit $ BSet.toSet refs)
+            where
+                refs :: ReferenceSet SimpleFieldIndex
+                refs = refVal a
+                hit (Reference cp _) = cp == loc
+                hit _ = False 
+         
+        predecessorVars a = Solver.getDependencies a defaultVar
+        predecessorVal  a = Solver.getLimit a defaultVar 
 
 
+-- A filter for the reaching definition analysis --
+
+isAssignmentFree :: NodeAddress -> Bool
+isAssignmentFree addr = case getNodeType addr of
+
+        IR.Literal     -> True
+                       
+        IR.Variable    -> True
+                       
+        IR.CallExpr    -> isAssignmentFreeFunction (goDown 1 addr) && 
+                            all isAssignmentFree [ goDown x addr | x <- [1 .. (numChildren addr - 1)] ]
+                       
+        IR.LambdaExpr  -> True
+                       
+        IR.BindExpr    -> True
+
+        IR.Declaration -> isAssignmentFree $ goDown 1 addr
+        
+        _ -> False
+
+        
+
+isAssignmentFreeFunction :: NodeAddress -> Bool
+isAssignmentFreeFunction addr = case getNodeType addr of
+    
+    IR.Literal -> not $ isBuiltinByName addr "ref_assign"
+    
+    IR.LambdaExpr -> any (isBuiltinByName addr) [
+                                "bool_and",
+                                "bool_not",
+                                "bool_or",
+                                "bool_to_int",
+                                "enum_from_int",
+                                "enum_to_int",
+                                "id",
+                                "ite",
+                                "num_cast",
+                                "ptr_cast",
+                                "ptr_deref",
+                                "ptr_diff",
+                                "ptr_eq",
+                                "ptr_from_array",
+                                "ptr_from_ref",
+                                "ptr_ge",
+                                "ptr_gt",
+                                "ptr_le",
+                                "ptr_lt",
+                                "ptr_ne",
+                                "ptr_null",
+                                "ptr_of_function",
+                                "ptr_parent_cast",
+                                "ptr_reinterpret",
+                                "ptr_subscript",
+                                "ptr_to_array",
+                                "ptr_to_ref",
+                                "ref_array_element",
+                                "ref_kind_cast",
+                                "ref_member_access",
+                                "ref_new",
+                                "ref_new_init",
+                                "ref_of_function",
+                                "ref_parent_cast",
+                                "ref_scalar_to_ref_array",
+                                "ref_temp",
+                                "ref_temp_init",
+                                "unit_consume"
+                        ] 
+
+    _ -> False
 
 
 --
@@ -330,36 +564,37 @@ writeSetAnalysis = Solver.mkAnalysisIdentifier WriteSetAnalysis "WriteSet"
 
 
 
-instance Solver.Lattice (USet.UnboundSet Location) where
-    bot = USet.empty
-    merge = USet.union
+instance Solver.Lattice (BSet.UnboundSet Location) where
+    bot = BSet.empty
+    merge = BSet.union
 
 
 -- an analysis computing the set of memory locations written by a expression
-writeSet :: NodeAddress -> Solver.TypedVar (USet.UnboundSet Location)  
+writeSet :: NodeAddress -> Solver.TypedVar (BSet.UnboundSet Location)  
 writeSet addr = case getNodeType addr of
         
         IR.CallExpr -> var
             where
-                var = Solver.mkVariable (idGen addr) [con] USet.empty
+                var = Solver.mkVariable (idGen addr) [con] BSet.empty
                 con = Solver.createConstraint dep val var
                 
                 dep a = (Solver.toVar targetVar) : (Solver.toVar <$> writeSetSummaryVars a) ++ (Solver.toVar <$> refVars a)
-                val a = if unknown then USet.Universe else res
+                val a = if unknown then BSet.Universe else res
                     where
                         wss = writeSetSummaryVal a
                         aps = WS.toAccessPaths wss 
                         
                         unknown = (WS.isUnknown wss) || (any infinite $ refVars a) || (any tooLong aps)
                             where
-                                infinite r = USet.isUniverse $ ComposedValue.toValue $ Solver.get a r
+                                infinite r = BSet.isUniverse $ ComposedValue.toValue $ Solver.get a r
                                 tooLong (AP.AccessPath _ d) = length d > 1 
                         
-                        res = foldr go USet.empty (WS.parameters wss)
+                        res = foldr go BSet.empty (WS.parameters wss)
                             where
-                                go x s = USet.union s $ USet.map toLoc $ ComposedValue.toValue $ Solver.get a $ refVar x
-                                toLoc :: Reference SimpleFieldIndex -> Location
-                                toLoc (Reference l _ ) = l
+                                go x s = BSet.union s $ BSet.fromList $ concat $ map toLoc $ BSet.toList $ ComposedValue.toValue $ Solver.get a $ refVar x
+                                toLoc :: Reference SimpleFieldIndex -> [Location]
+                                toLoc (Reference l _ ) = [l]
+                                toLoc _ = []
 
                 refVar :: Int -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex (ReferenceSet SimpleFieldIndex))                        
                 refVar x = referenceValue $ goDown 1 $ goDown (x+2) addr
@@ -368,11 +603,11 @@ writeSet addr = case getNodeType addr of
                 targetVal a = ComposedValue.toValue $ Solver.get a targetVar
                 
                 writeSetSummaryVars :: Solver.Assignment -> [Solver.TypedVar (WS.WriteSet SimpleFieldIndex)]
-                writeSetSummaryVars a = if USet.isUniverse trgs then [] else list
+                writeSetSummaryVars a = if BSet.isUniverse trgs then [] else list
                     where
                         trgs = targetVal a
-                        list = go <$> USet.toList trgs
-                        go = WS.writeSetSummary . crop . toAddress
+                        list = go <$> BSet.toList trgs
+                        go = WS.writeSetSummary . toAddress
                 
                 writeSetSummaryVal a = Solver.join $ (Solver.get a) <$> writeSetSummaryVars a
                 
@@ -385,12 +620,13 @@ writeSet addr = case getNodeType addr of
         
     where
         
-        empty = Solver.mkVariable (idGen addr) [] (USet.empty) 
+        empty = Solver.mkVariable (idGen addr) [] (BSet.empty) 
 
-        idGen a = Solver.mkIdentifier writeSetAnalysis a ""
+        idGen a = Solver.mkIdentifierFromExpression writeSetAnalysis a
+
 
 
 -- killed definitions
 
-killedDefinitions :: MemoryState -> Solver.TypedVar (Definitions i)
-killedDefinitions (MemoryState pp ml) = undefined
+killedDefinitions :: MemoryStatePoint -> Solver.TypedVar Definitions
+killedDefinitions (MemoryStatePoint pp ml) = undefined

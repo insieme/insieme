@@ -40,14 +40,13 @@ module Insieme.Analysis.DataPath where
 
 import Data.Typeable
 
-import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.NodeAddress hiding (append)
 
 import Insieme.Analysis.Entities.DataPath
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 
 import qualified Insieme.Utils.BoundSet as BSet
-import qualified Insieme.Utils.UnboundSet as USet
 
 import Insieme.Analysis.Identifier
 import Insieme.Analysis.Arithmetic
@@ -63,14 +62,14 @@ import Insieme.Analysis.Entities.FieldIndex
 -- * DataPath Lattice
 --
 
-type DataPathSet i = USet.UnboundSet (DataPath i)
+type DataPathSet i = BSet.UnboundSet (DataPath i)
 
 instance (FieldIndex i) => Solver.Lattice (DataPathSet i) where
-    bot   = USet.empty
-    merge = USet.union
+    bot   = BSet.empty
+    merge = BSet.union
 
 instance (FieldIndex i) => Solver.ExtLattice (DataPathSet i) where
-    top = USet.Universe
+    top = BSet.Universe
 
 
 --
@@ -102,23 +101,23 @@ dataPathValue addr = dataflowValue addr analysis ops
     -- handle the data path root constructore --
     rootOp = OperatorHandler cov dep val
       where
-        cov a = isBuiltin a "dp_root"
+        cov a = isBuiltin a $ getBuiltin addr "dp_root"
 
         dep a = []
 
-        val a = compose $ USet.singleton root
+        val a = compose $ BSet.singleton root
 
 
     -- the handler for the member access path constructore --
     member = OperatorHandler cov dep val
       where
-        cov a = isBuiltin a "dp_member"
+        cov a = isBuiltin a $ getBuiltin addr "dp_member"
 
         dep a = (Solver.toVar nestedPathVar) : (Solver.toVar fieldNameVar) : []
 
         val a = compose $ combine (paths a) fieldNames
             where
-                combine = USet.lift2 $ \p i -> append p ((step . field) (toString i))
+                combine = BSet.lift2 $ \p i -> append p ((step . field) (toString i))
                 fieldNames = ComposedValue.toValue $ Solver.get a fieldNameVar
 
         fieldNameVar = identifierValue $ goDown 3 addr
@@ -127,13 +126,16 @@ dataPathValue addr = dataflowValue addr analysis ops
     -- the handler for the element and component access path constructore --
     element = OperatorHandler cov dep val
       where
-        cov a = any (isBuiltin a) ["dp_element","dp_component"]
+        cov a = any (isBuiltin a) $ getBuiltin addr <$> ["dp_element","dp_component"]
 
         dep a = (Solver.toVar nestedPathVar) : (Solver.toVar indexVar) : []
 
         val a = compose $ combine (paths a) indexes
             where
-                combine = USet.lift2 $ \p i -> append p ((step . index) i)
+                combine BSet.Universe  _ = BSet.Universe
+                combine ps BSet.Universe = BSet.map (\p -> append p (step unknownIndex)) ps 
+                combine ps is = (BSet.lift2 $ \p i -> append p ((step . index) i)) ps is
+                          
                 indexes = BSet.toUnboundSet $ ComposedValue.toValue $ Solver.get a indexVar
 
         indexVar = arithmeticValue $ goDown 3 addr

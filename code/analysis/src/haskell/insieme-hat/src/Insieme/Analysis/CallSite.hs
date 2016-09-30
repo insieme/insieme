@@ -34,22 +34,25 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.CallSite where
 
-import Debug.Trace
+import Control.DeepSeq
 import Data.Maybe
-import Data.Tree
 import Data.Typeable
+import Debug.Trace
+import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Utils
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Callable as Callable
+import qualified Insieme.Analysis.RecursiveLambdaReferences as RecLambdaRefs
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Utils.UnboundSet as USet
-
+import qualified Insieme.Utils.BoundSet as BSet
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
@@ -58,7 +61,7 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 --
 
 newtype CallSite = CallSite NodeAddress
- deriving (Eq, Ord)
+ deriving (Eq, Ord, Generic, NFData)
 
 instance Show CallSite where
     show (CallSite na) = "Call@" ++ (prettyShow na)
@@ -90,88 +93,104 @@ callSiteAnalysis = Solver.mkAnalysisIdentifier CallSiteAnalysis "CS"
 --
 
 callSites :: NodeAddress -> Solver.TypedVar CallSiteSet
-callSites addr = case getNode addr of
+callSites addr = case getNodeType addr of
+
+    -- for root elements => no call sites
+    _ | isRoot e -> noCalls
 
     -- for lambdas and bind exressions: collect all call sites
-    Node IR.Lambda   _ -> var
-    Node IR.BindExpr _ -> var
+    IR.Lambda   -> var
+    IR.BindExpr -> var
 
     -- everything else has no call sites
-    _ -> Solver.mkVariable id [] Solver.bot
+    _ -> noCalls
 
   where
 
-    id = Solver.mkIdentifier callSiteAnalysis addr ""
+    id = Solver.mkIdentifierFromExpression callSiteAnalysis addr
 
-    -- navigate to the enclosing expression    
-    e = case getNode addr of 
-        Node IR.Lambda   _ -> fromJust $ getParent =<< getParent =<< getParent addr 
-        Node IR.BindExpr _ -> addr
-    
+    noCalls = Solver.mkVariable id [] Solver.bot
+
+    -- navigate to the enclosing expression
+    e = case getNodeType addr of
+        IR.Lambda   -> fromJust $ getParent =<< getParent =<< getParent addr
+        IR.BindExpr -> addr
+
     i = getIndex e
     p = fromJust $ getParent e
-    
+
     isCall a = getNodeType a == IR.CallExpr
 
-    -- distinguish binding case --    
-    var =
-        if isRoot addr then noCallSitesVar
-        else if isStaticallyBound then staticCallSiteVar
-        else allCallSitesVar
+
+    -- the number of parameters of this callable
+    numParams = numChildren $ goDown 1 addr                     -- TODO: this is wrong in case of variadic parameters!!
+
+
+    -- create the variable (by binding at least the id) --
+    var = Solver.mkVariable id cons init
     
-    noCallSitesVar = Solver.mkVariable id [] Solver.bot
+    cons = if isRoot addr then [] else [con]
+    init = if isRoot addr then Solver.bot else directCall
+
+
+    -- assemble the constraint computing all call sites --
     
-    recReferences = case getNode addr of
-        Node IR.BindExpr _ -> []          -- bind can not be recursive
-        Node IR.Lambda _   -> if isRoot p then [] else res
-            where
-                ref = getNode $ goDown 0 $ fromJust $ getParent addr
-                def = fromJust $ getParent $ fromJust $ getParent addr 
-                res = foldAddressPrune agg filter def
-                
-                agg n l = case getNodeType n of
-                    IR.LambdaReference | isUse -> n : l --- TODO: filter out refs in bindings
-                        where 
-                            isUse = getNode n == ref && (getNodeType . fromJust . getParent) n /= IR.LambdaBinding
-                    _                                            -> l 
-                
-                filter n = isType (getNodeType n) || (IR.LambdaExpr == (getNodeType n))      -- TODO: support for lambda references exceeding local scope  
+    con = Solver.createConstraint dep val var
+    dep a = (Solver.toVar <$> recReferencesDep) ++ (Solver.toVar <$> callSiteVars a)
+    val a = indirectCalls a
     
+
+    -- a test whether the targeted function is a lambda or a bind --
+    isLambda = getNodeType addr == IR.Lambda
     
-    isStaticallyBound = i == 1 && isCall p && all check recReferences
-        where
-            check a = getIndex a == 1 && (isCall $ fromJust $ getParent a)
+    recReferencesVar = RecLambdaRefs.recursiveCalls addr
+    recReferencesVal a = if isLambda then Solver.get a recReferencesVar else Set.empty
+    recReferencesDep   = if isLambda then [recReferencesVar] else []  
+
+
+    -- determines whether all calls are statically bound (if not, we have to search) --
+    isStaticallyBound a = i == 1 && isCall p && all check (recReferencesVal a)
+      where
+        check a = getIndex a == 1 && (isCall $ fromJust $ getParent a)
+
     
-    staticCallSiteVar = Solver.mkVariable id [] (res)
-        where
-            res = Set.fromList $ CallSite p : recCalls
-            recCalls = (CallSite . fromJust . getParent) <$> recReferences 
+    -- the list of call site variables to be checked for potential calls to this lambda
+    callSiteVars a = 
+        if isStaticallyBound a then [] 
+        else Callable.callableValue . (goDown 1) <$> allCalls  
+
+
+    -- computes a list of addresses of all potentiall call sites 
+    allCalls = collectAll callable (getRootAddress addr)
+      where
+        callable node = case IR.getNodeType node of
+            IR.CallExpr | IR.numChildren node == 2 + numParams ->
+                case IR.getNodeType $ IR.getChildren node !! 1 of
+                    IR.Lambda          -> False
+                    IR.BindExpr        -> False
+                    IR.Literal         -> False
+                    IR.LambdaReference -> False
+                    _                  -> True
+            _ -> False
+
+
+    directCall = if i == 1 && isCall p then Set.singleton $ CallSite p else Set.empty
     
-    allCallSitesVar = Solver.mkVariable id [con] Solver.bot
-        where
-            con = Solver.createConstraint dep val var
-        
-            allCalls = foldTree collector (getInspire addr)
-            collector a calls = case getNodeType a of
-                IR.CallExpr -> case getNodeType $ goDown 1 a of
-                    IR.Lambda          -> calls
-                    IR.BindExpr        -> calls
-                    IR.Literal         -> calls
-                    IR.LambdaReference -> calls
-                    _                         -> a : calls
-                _                   -> calls
-        
-            allTrgVars = map (\c -> (c , Callable.callableValue $ goDown 1 c ) ) allCalls
-        
-            callable = case getNode addr of
-                Node IR.Lambda _   -> Callable.Lambda addr
-                Node IR.BindExpr _ -> Callable.Closure addr
-                _                  -> error "unexpected NodeType"
-        
-            dep a = map Solver.toVar (map snd allTrgVars)
-            val a = foldr go Set.empty allTrgVars
-                where
-                    go = \(call,var) set ->
-                        if (USet.member callable (ComposedValue.toValue $ Solver.get a var))
-                        then Set.insert (CallSite call) set
-                        else set
+    indirectCalls a = 
+        Set.fromList $ if isStaticallyBound a 
+            then CallSite . fromJust . getParent <$> Set.toList (recReferencesVal a)
+            else (CallSite <$> reachingCalls) ++ (CallSite <$> directRecursiveCalls) 
+      where
+      
+        reachingCalls = filter f $ allCalls
+          where
+            f c = BSet.member callable $ ComposedValue.toValue $ Solver.get a $ Callable.callableValue $ goDown 1 c
+    
+            callable = case getNodeType addr of
+                IR.Lambda   -> Callable.Lambda addr
+                IR.BindExpr -> Callable.Closure addr
+                _           -> error "unexpected NodeType"
+
+        directRecursiveCalls = (fromJust . getParent) <$> (filter f $ Set.toList $ recReferencesVal a)
+          where
+            f r = getIndex r == 1 && isCall (fromJust $ getParent r)

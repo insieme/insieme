@@ -56,13 +56,14 @@
 #include "insieme/frontend/extensions/insieme_pragma_extension.h"
 #include "insieme/frontend/extensions/instrumentation_region_extension.h"
 #include "insieme/frontend/extensions/interceptor_extension.h"
+#include "insieme/frontend/extensions/malloc_extension.h"
 #include "insieme/frontend/extensions/omp_frontend_extension.h"
+#include "insieme/frontend/extensions/opencl_frontend_extension.h"
 #include "insieme/frontend/extensions/significance_frontend_extension.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
 #include "insieme/frontend/extensions/variable_length_array_extension.h"
 #include "insieme/frontend/extensions/while_to_for_extension.h"
-#include "insieme/frontend/extensions/opencl_frontend_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -235,6 +236,7 @@ namespace frontend {
 		registerFrontendExtension<extensions::OmpFrontendExtension>(options);
 		registerFrontendExtension<extensions::SignificanceFrontendExtension>(options);
 		registerFrontendExtension<extensions::CilkFrontendExtension>(options);
+		registerFrontendExtension<extensions::MallocExtension>(options);
 
 		registerFrontendExtension<extensions::VariableArgumentListExtension>(options);
 		registerFrontendExtension<extensions::VariableLengthArrayExtension>(options);
