@@ -1,3 +1,3 @@
-files="../../bots_common.c","../../bots_main.c","sparselu.c"
-includes="../../","./"
+files="../../bots_common.c","../../bots_main.c","../sparselu.c"
+includes="../../","../"
 executionFlags=-c -n 20 -m 150
