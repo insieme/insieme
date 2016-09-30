@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
+#include <inttypes.h>
 #include "app-desc.h"
 #include "bots.h"
 #include "health.h"
