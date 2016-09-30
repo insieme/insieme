@@ -47,6 +47,7 @@ import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
+import qualified Insieme.Inspire.Query as Q
 import qualified Insieme.Inspire.Utils as Utils
 import qualified Insieme.Utils.BoundSet as BSet
 
@@ -59,7 +60,7 @@ main = do
     -- run parser
     let Right ir = BinPar.parseBinaryDump dump
 
-    let targets = Utils.foldTreePrune findTargets (Utils.isType . Addr.getNodeType) ir
+    let targets = Utils.foldTreePrune findTargets (Q.isType . Addr.getNodeType) ir
 
     let res = evalState (sequence $ analysis <$> targets) Solver.initState
 
@@ -68,7 +69,7 @@ main = do
     putStr $ "OK:      " ++ (show $ length $ filter (=='o') res) ++ "\n"
 
 findTargets :: Addr.NodeAddress -> [Addr.NodeAddress] -> [Addr.NodeAddress]
-findTargets addr xs = case Addr.getNodePair addr of
+findTargets addr xs = case Addr.getNode addr of
     IR.NT IR.CallExpr _ | Addr.isBuiltinByName (Addr.goDown 1 addr) "ref_deref" -> addr : xs
     _ -> xs
 

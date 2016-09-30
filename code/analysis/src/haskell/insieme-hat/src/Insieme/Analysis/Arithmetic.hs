@@ -41,7 +41,8 @@ module Insieme.Analysis.Arithmetic where
 import Data.Typeable
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-import Insieme.Inspire.Utils (isLoopIterator,isFreeVariable)
+import Insieme.Inspire.Query (isLoopIterator)
+import Insieme.Inspire.Utils (isFreeVariable)
 import Insieme.Utils.ParseInt
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
@@ -83,16 +84,16 @@ data ArithmeticAnalysis = ArithmeticAnalysis
 --
 
 arithmeticValue :: Addr.NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex (SymbolicFormulaSet BSet.Bound10))
-arithmeticValue addr = case Addr.getNodePair addr of
+arithmeticValue addr = case Addr.getNode addr of
 
     IR.NT IR.Literal [t, IR.NT (IR.StringValue v) _] | isIntType t -> case parseInt v of
         Just cint -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkConst cint)
-        Nothing   -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNodePair addr) addr)
+        Nothing   -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNode addr) addr)
 
     IR.NT IR.Variable _ | isLoopIterator addr -> Solver.mkVariable (idGen addr) [] (compose $ BSet.Universe)
 
     IR.NT IR.Variable (t:_) | isIntType t && isFreeVariable addr ->
-        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Variable (Addr.getNodePair addr) addr)
+        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Variable (Addr.getNode addr) addr)
 
     IR.NT IR.CastExpr (t:_) | isIntType t -> var
       where
@@ -104,7 +105,7 @@ arithmeticValue addr = case Addr.getNodePair addr of
   where
 
     analysis = (mkDataFlowAnalysis ArithmeticAnalysis "A" arithmeticValue) {
-        initialValueHandler = \a -> compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNodePair a) a
+        initialValueHandler = \a -> compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNode a) a
     }
 
     idGen = mkVarIdentifier analysis

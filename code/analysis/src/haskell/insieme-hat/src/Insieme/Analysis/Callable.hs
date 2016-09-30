@@ -126,9 +126,9 @@ callableValue addr = case getNodeType addr of
 
     compose = ComposedValue.toComposed
 
-    getCallables4Ref r = search (getNodePair r) r
+    getCallables4Ref r = search (getNode r) r
         where
-            search r cur = case getNodePair cur of
+            search r cur = case getNode cur of
                 IR.NT IR.LambdaDefinition cs | isJust pos -> BSet.singleton (Lambda $ goDown 1 $ goDown (fromJust pos) cur)
                     where
                         pos = findIndex filter cs
@@ -149,7 +149,7 @@ collectAllCallables addr = BSet.fromList $ foldTree collector (getInspire addr)
 
 
 getLambda :: NodeAddress -> Maybe NodeAddress
-getLambda addr = case getNodePair addr of
+getLambda addr = case getNode addr of
     IR.NT IR.LambdaExpr [_, ref, IR.NT IR.LambdaDefinition defs] ->
         findLambdaIndex ref defs >>= walk addr
     _ -> Nothing

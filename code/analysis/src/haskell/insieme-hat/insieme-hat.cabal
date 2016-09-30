@@ -8,9 +8,8 @@ build-type:         Simple
 cabal-version:      >= 1.10
 
 library
-    ghc-options: 
-        -O2
-        -optc-O3
+    ghc-options:        -O2
+                        -optc-O3
     hs-source-dirs:     src
     exposed-modules:    Insieme.Adapter,
                         Insieme.Analysis.Entities.AccessPath,
@@ -45,6 +44,8 @@ library
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
+                        Insieme.Inspire.NodeType,
+                        Insieme.Inspire.Query,
                         Insieme.Inspire.ThHelpers,
                         Insieme.Inspire.Utils,
                         Insieme.Utils.Arithmetic,

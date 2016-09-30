@@ -84,9 +84,9 @@ recursiveCalls addr = case getNodeType addr of
         dep _ = toVar <$> freeRefVars
         val a = Set.filter f $ join $ (get a) <$> freeRefVars
             where
-                f r = getNodePair r == tag 
+                f r = getNode r == tag 
     
-        tag = getNodePair $ goDown 0 $ goUp addr
+        tag = getNode $ goDown 0 $ goUp addr
         def = goUp $ goUp addr
         
         lambdas = goDown 1 <$> getChildren def

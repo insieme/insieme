@@ -62,12 +62,13 @@ import Insieme.Analysis.AccessPath
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.FreeLambdaReferences
 import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.Query
+import Insieme.Inspire.Utils
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Insieme.Analysis.Entities.AccessPath as AP
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.Utils as IRUtils
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
@@ -297,14 +298,14 @@ writeSetSummary addr = case getNodeType addr of
     idGen a = Solver.mkIdentifierFromExpression writeSetAnalysis a
     
     -- get list of calls and init expressions within current node --
-    potentialWriteOps = IRUtils.foldAddressPrune collect filter addr
+    potentialWriteOps = foldAddressPrune collect filter addr
         where
 
-            filter cur = case getNodePair cur of
+            filter cur = case getNode cur of
                 IR.NT IR.Lambda _ -> cur /= addr
-                IR.NT n         _ -> IRUtils.isType n
+                IR.NT n         _ -> isType n
 
-            collect cur l = case getNodePair cur of
+            collect cur l = case getNode cur of
                 IR.NT IR.CallExpr _ -> cur : l
                 IR.NT IR.InitExpr _ -> cur : l
                 _                  -> l

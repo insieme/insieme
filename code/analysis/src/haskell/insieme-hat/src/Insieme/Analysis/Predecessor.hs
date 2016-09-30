@@ -49,6 +49,7 @@ import Insieme.Analysis.Callable
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.ExitPoint
 import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.Query
 import Insieme.Inspire.Utils
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Solver as Solver
