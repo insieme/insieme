@@ -40,6 +40,9 @@
 module Insieme.Inspire.NodeAddress (
     NodeAddress,
     mkNodeAddress,
+    prettyShow,
+
+    -- queries
     getPathReversed,
     getNode,
     getInspire,
@@ -55,19 +58,17 @@ module Insieme.Inspire.NodeAddress (
     getRoot,
     getRootAddress,
     isChildOf,
-    prettyShow,
+
+    -- navigation
+    goRel,
     goUp,
     goDown,
-    goRel,
     goLeft,
     goRight,
+
+    -- subtrees
     append,
     crop,
-
-    Builtin,
-    getBuiltin,
-    isBuiltin,
-    isBuiltinByName
 ) where
 
 import Control.DeepSeq
@@ -78,7 +79,6 @@ import Debug.Trace
 import GHC.Generics (Generic)
 import Insieme.Utils
 import qualified Data.Hashable as Hash
-import qualified Data.Map as Map
 import qualified Insieme.Inspire as IR
 
 --
@@ -212,35 +212,3 @@ append a b = NodeAddress {
 
 crop :: NodeAddress -> NodeAddress
 crop a = NodeAddress [] (getNode a) ( (getInspire a){IR.getTree=getNode a} ) Nothing ((getPathReversed a) ++ (getAbsoluteRootPath a))
-
-
--- builtin handling ---------
-
-data Builtin = Builtin IR.Tree | NoSuchBuiltin
-
-getBuiltin :: NodeAddress -> String -> Builtin
-getBuiltin addr name = case tree of
-    Just t  -> Builtin t
-    Nothing -> NoSuchBuiltin
-  where
-    tree = Map.lookup name (IR.getBuiltins $ getInspire addr)
-
-
-isBuiltin :: NodeAddress -> Builtin -> Bool
-isBuiltin _ NoSuchBuiltin = False
-isBuiltin a b@(Builtin t) = case getNodeType a of
-     IR.Lambda | depth a >= 3 -> isBuiltin (goUp $ goUp $ goUp $ a) b
-     _                        -> getNode a == t
-
-isBuiltinByName :: NodeAddress -> String -> Bool
-isBuiltinByName a n = isBuiltin a $ getBuiltin a n
-
--- lookupBuiltin :: NodeAddress -> String -> Maybe IR.Tree
--- lookupBuiltin addr needle = Map.lookup needle (IR.getBuiltins $ getInspire addr)
---
---
---
--- isBuiltin :: NodeAddress -> String -> Bool
--- isBuiltin addr needle = case getNodeType addr of
---     IR.Lambda | depth addr >= 3 -> isBuiltin (goUp $ goUp $ goUp $ addr) needle
---     _         -> fromMaybe False $ (== getNode addr) <$> lookupBuiltin addr needle

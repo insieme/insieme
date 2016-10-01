@@ -54,12 +54,18 @@ import Insieme.Inspire.NodeType
 -- * Inspire
 --
 
-type Builtins = Map String Tree
-
 data Inspire = Inspire { getTree     :: Tree,
                          getBuiltins :: Builtins
                        }
   deriving (Generic, NFData)
+
+--
+-- * Builtins
+--
+
+type Builtin = Maybe Tree
+
+type Builtins = Map String Builtin
 
 --
 -- * Tree

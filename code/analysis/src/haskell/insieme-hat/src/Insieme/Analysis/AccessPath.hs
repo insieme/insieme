@@ -39,25 +39,20 @@
 module Insieme.Analysis.AccessPath where
 
 import Data.Typeable
-
+import Insieme.Analysis.DataPath
+import Insieme.Analysis.Entities.FieldIndex
+import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Inspire.NodeAddress
-import qualified Insieme.Inspire as IR
-
+import Insieme.Inspire.Query
 import qualified Insieme.Analysis.Entities.AccessPath as AP
 import qualified Insieme.Analysis.Entities.DataPath as DP
-
-import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
-import Insieme.Analysis.Framework.Utils.OperatorHandler
-
-import qualified Insieme.Utils.BoundSet as BSet
-
-import qualified Insieme.Analysis.Solver as Solver
-
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
-import Insieme.Analysis.Entities.FieldIndex
+import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Inspire as IR
+import qualified Insieme.Utils.BoundSet as BSet
 
-import Insieme.Analysis.DataPath
+import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 
 --
 -- * AccessPath Lattice
@@ -87,7 +82,7 @@ data AccessPathAnalysis = AccessPathAnalysis
 --
 
 accessPathValue :: (FieldIndex i) => NodeAddress -> Solver.TypedVar (ValueTree.Tree i (AccessPathSet i))
-accessPathValue addr = case getNodeType addr of 
+accessPathValue addr = case getNodeType addr of
 
     IR.Variable -> dataflowValue addr analysis ops
 
@@ -102,7 +97,7 @@ accessPathValue addr = case getNodeType addr of
     compose = ComposedValue.toComposed
 
     initValueHandler a | isRoot a = compose $ BSet.singleton $ AP.global $ getNode a
-    initValueHandler a = compose $ BSet.singleton $ AP.parameter $ getIndex a 
+    initValueHandler a = compose $ BSet.singleton $ AP.parameter $ getIndex a
 
     -- add operator support
 

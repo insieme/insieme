@@ -74,7 +74,7 @@ parseAddresses = parseOnly $ do
 
     -- connect components
     let nodes    = connectDumpNodes dumpNodes
-    let builtins = resolve nodes <$> dumpBuiltins
+    let builtins = Just <$> resolve nodes <$> dumpBuiltins
     let ir       = IR.Inspire nodes builtins
 
     return $ (\p -> Addr.mkNodeAddress p ir) <$> addresses

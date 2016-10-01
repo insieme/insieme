@@ -39,24 +39,19 @@
 module Insieme.Analysis.DataPath where
 
 import Data.Typeable
-
-import Insieme.Inspire.NodeAddress hiding (append)
-
-import Insieme.Analysis.Entities.DataPath
-import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
-import Insieme.Analysis.Framework.Utils.OperatorHandler
-
-import qualified Insieme.Utils.BoundSet as BSet
-
-import Insieme.Analysis.Identifier
 import Insieme.Analysis.Arithmetic
-
-import qualified Insieme.Analysis.Solver as Solver
-
+import Insieme.Analysis.Entities.DataPath
+import Insieme.Analysis.Entities.FieldIndex
+import Insieme.Analysis.Framework.Utils.OperatorHandler
+import Insieme.Analysis.Identifier
+import Insieme.Inspire.NodeAddress hiding (append)
+import Insieme.Inspire.Query
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
-import Insieme.Analysis.Entities.FieldIndex
+import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Utils.BoundSet as BSet
 
+import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 
 --
 -- * DataPath Lattice
@@ -133,9 +128,9 @@ dataPathValue addr = dataflowValue addr analysis ops
         val a = compose $ combine (paths a) indexes
             where
                 combine BSet.Universe  _ = BSet.Universe
-                combine ps BSet.Universe = BSet.map (\p -> append p (step unknownIndex)) ps 
+                combine ps BSet.Universe = BSet.map (\p -> append p (step unknownIndex)) ps
                 combine ps is = (BSet.lift2 $ \p i -> append p ((step . index) i)) ps is
-                          
+
                 indexes = BSet.toUnboundSet $ ComposedValue.toValue $ Solver.get a indexVar
 
         indexVar = arithmeticValue $ goDown 3 addr

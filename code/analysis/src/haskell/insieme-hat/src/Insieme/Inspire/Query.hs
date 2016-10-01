@@ -36,8 +36,10 @@
 
 module Insieme.Inspire.Query where
 
+import Control.Monad
 import Data.Maybe
 import Insieme.Inspire.NodeAddress
+import qualified Data.Map.Strict as Map
 import qualified Insieme.Inspire as IR
 
 --
@@ -160,3 +162,17 @@ isEntryPointParameter v | isRoot v = False
 isEntryPointParameter v = case getNode $ fromJust $ getParent v of
             IR.NT IR.Parameters _ -> not $ hasEnclosingStatement v
             _                     -> False
+
+-- ** Builtins
+
+getBuiltin :: NodeAddress -> String -> IR.Builtin
+getBuiltin addr name = join $ Map.lookup name (IR.getBuiltins $ getInspire addr)
+
+isBuiltin :: NodeAddress -> IR.Builtin -> Bool
+isBuiltin _ Nothing    = False
+isBuiltin a b@(Just t) = case getNodeType a of
+    IR.Lambda | depth a >= 3 -> isBuiltin (goUp $ goUp $ goUp $ a) b
+    _                        -> getNode a == t
+
+isBuiltinByName :: NodeAddress -> String -> Bool
+isBuiltinByName a n = isBuiltin a $ getBuiltin a n

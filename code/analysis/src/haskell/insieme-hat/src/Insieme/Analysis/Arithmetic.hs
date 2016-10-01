@@ -43,7 +43,7 @@ import Data.Typeable
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-import Insieme.Inspire.Query (isLoopIterator,isVariable)
+import Insieme.Inspire.Query
 import Insieme.Inspire.Visit (findDecl)
 import Insieme.Utils.ParseInt
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -118,19 +118,19 @@ arithmeticValue addr = case Addr.getNode addr of
 
     add = OperatorHandler cov dep (val Ar.addFormula)
       where
-        cov a = any (Addr.isBuiltin a) $ Addr.getBuiltin addr <$> [ "int_add", "uint_add", "gen_add" ]
+        cov a = any (isBuiltin a) $ getBuiltin addr <$> [ "int_add", "uint_add", "gen_add" ]
 
     sub = OperatorHandler cov dep (val Ar.subFormula)
       where
-        cov a = any (Addr.isBuiltin a) $ Addr.getBuiltin addr <$> [ "int_sub", "uint_sub", "gen_sub" ]
+        cov a = any (isBuiltin a) $ getBuiltin addr <$> [ "int_sub", "uint_sub", "gen_sub" ]
 
     mul = OperatorHandler cov dep (val Ar.mulFormula)
       where
-        cov a = any (Addr.isBuiltin a) $ Addr.getBuiltin addr <$> [ "int_mul", "uint_mul", "gen_mul" ]
+        cov a = any (isBuiltin a) $ getBuiltin addr <$> [ "int_mul", "uint_mul", "gen_mul" ]
 
     div = OperatorHandler cov dep val
       where
-        cov a = any (Addr.isBuiltin a) $ Addr.getBuiltin addr <$> [ "int_div", "uint_div", "gen_div" ]
+        cov a = any (isBuiltin a) $ getBuiltin addr <$> [ "int_div", "uint_div", "gen_div" ]
         val a = compose $ tryDiv (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
 
         tryDiv x y = if not (BSet.isUniverse prod) && all (uncurry Ar.canDivide) (BSet.toList prod)
@@ -141,11 +141,11 @@ arithmeticValue addr = case Addr.getNode addr of
 
     mod = OperatorHandler cov dep (val Ar.modFormula)
       where
-        cov a = any (Addr.isBuiltin a) $ Addr.getBuiltin addr <$> [ "int_mod", "uint_mod", "gen_mod" ]
+        cov a = any (isBuiltin a) $ getBuiltin addr <$> [ "int_mod", "uint_mod", "gen_mod" ]
 
     ptrFromRef = OperatorHandler cov dep val
       where
-        cov a = Addr.isBuiltin a $ Addr.getBuiltin addr "ptr_from_ref"
+        cov a = isBuiltin a $ getBuiltin addr "ptr_from_ref"
         dep _ = []
         val a = ComposedValue.composeElements [(component 1,compose res)]
           where
