@@ -387,8 +387,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
                 mayAssign a = BSet.isUniverse funs || (any assign $ BSet.toSet funs) 
                     where
                         funs = funVal a
-                        assign c = isBuiltin (toAddress c) ref_assign
-                        ref_assign = getBuiltin addr "ref_assign" 
+                        assign c = isBuiltin (toAddress c) "ref_assign"
                 
                          
 
@@ -500,9 +499,9 @@ isAssignmentFree addr = case getNodeType addr of
 isAssignmentFreeFunction :: NodeAddress -> Bool
 isAssignmentFreeFunction addr = case getNodeType addr of
     
-    IR.Literal -> not $ isBuiltinByName addr "ref_assign"
+    IR.Literal -> not $ isBuiltin addr "ref_assign"
     
-    IR.LambdaExpr -> any (isBuiltinByName addr) [
+    IR.LambdaExpr -> any (isBuiltin addr) [
                                 "bool_and",
                                 "bool_not",
                                 "bool_or",

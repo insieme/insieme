@@ -159,7 +159,7 @@ writeSetSummary :: (FieldIndex i) => NodeAddress -> Solver.TypedVar (WriteSet i)
 writeSetSummary addr = case getNodeType addr of
 
         -- ref_assign writes to location addressed by first argument
-        IR.Literal | isRoot addr && (isBuiltin addr $ getBuiltin addr "ref_assign") -> var
+        IR.Literal | isRoot addr && (isBuiltin addr "ref_assign") -> var
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var

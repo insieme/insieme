@@ -50,30 +50,16 @@ import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Insieme.Inspire.NodeType
 
---
--- * Inspire
---
-
-data Inspire = Inspire { getTree     :: Tree,
-                         getBuiltins :: Builtins
-                       }
-  deriving (Generic, NFData)
-
---
--- * Builtins
---
-
-type Builtin = Maybe Tree
-
-type Builtins = Map String Builtin
 
 --
 -- * Tree
 --
 
-data Tree = Tree { getNode :: (Int, NodeType),
-                   getChildren :: [Tree]
-                 }
+data Tree = Tree { getID :: Int,
+                   getNodeType :: NodeType,
+                   getChildren :: [Tree],
+                   builtinTags :: [String]
+                }
   deriving (Show, Generic, NFData)
 
 instance Eq Tree where
@@ -82,19 +68,19 @@ instance Eq Tree where
 instance Ord Tree where
     compare = compare `on` getID
 
-pattern NT x y <- Tree (_, x) y
+pattern NT x y <- Tree _ x y _
 
-mkNode :: (Int, NodeType) -> [Tree] -> Tree
+mkNode :: Int -> NodeType -> [Tree] -> [String] -> Tree
 mkNode = Tree
-
-getID :: Tree -> Int
-getID = fst . getNode
-
-getNodeType :: Tree -> NodeType
-getNodeType = snd . getNode
 
 numChildren :: Tree -> Int
 numChildren = length . getChildren
+
+goDown :: Int -> Tree -> Tree
+goDown i t = (!!i) $ getChildren t
+
+isBuiltin :: Tree -> String -> Bool
+isBuiltin t s = elem s $ builtinTags t
 
 --
 -- * Node Kind

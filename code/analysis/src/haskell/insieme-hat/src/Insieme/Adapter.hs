@@ -104,7 +104,7 @@ mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize
 mkNodeAddress ctx_hs path_c length_c = do
     ctx  <- deRefStablePtr ctx_hs
     path <- peekArray (fromIntegral length_c) path_c
-    newStablePtr $ Addr.mkNodeAddress (fromIntegral <$> path) (Ctx.getInspire ctx)
+    newStablePtr $ Addr.mkNodeAddress (fromIntegral <$> path) (Ctx.getTree ctx)
 
 foreign export ccall "hat_mk_node_address"
     mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize

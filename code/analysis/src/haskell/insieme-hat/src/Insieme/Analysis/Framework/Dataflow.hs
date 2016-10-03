@@ -311,7 +311,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
     readHandler = OperatorHandler cov dep val
         where
-            cov a = isBuiltin a $ getBuiltin addr "ref_deref"
+            cov a = isBuiltin a "ref_deref"
 
             dep a = (Solver.toVar targetRefVar) : (map Solver.toVar $ readValueVars a)
 
@@ -336,7 +336,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
     tupleMemberAccessHandler  = OperatorHandler cov dep val
         where
-            cov a = isBuiltin a $ getBuiltin addr "tuple_member_access"
+            cov a = isBuiltin a "tuple_member_access"
 
             dep a = Solver.toVar indexValueVar : Solver.toVar tupleValueVar : []
 

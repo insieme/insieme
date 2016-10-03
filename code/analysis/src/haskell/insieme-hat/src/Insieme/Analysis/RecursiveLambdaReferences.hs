@@ -51,6 +51,7 @@ import qualified Insieme.Inspire as IR
 
 import Insieme.Analysis.Solver
 import Insieme.Analysis.FreeLambdaReferences
+import Insieme.Inspire.Query
 
 
 --

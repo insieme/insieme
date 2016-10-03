@@ -45,7 +45,7 @@ module Insieme.Inspire.NodeAddress (
     -- queries
     getPathReversed,
     getNode,
-    getInspire,
+    getNodeType,
     getParent,
     getPath,
     getAbsolutePath,
@@ -53,7 +53,6 @@ module Insieme.Inspire.NodeAddress (
     numChildren,
     getChildren,
     getIndex,
-    getNodeType,
     isRoot,
     getRoot,
     getRootAddress,
@@ -66,9 +65,16 @@ module Insieme.Inspire.NodeAddress (
     goLeft,
     goRight,
 
-    -- subtrees
+    -- address clipping
     append,
     crop,
+    
+    -- semantic queries 
+    isLoopIterator,
+    hasEnclosingStatement,
+    isEntryPoint,
+    isEntryPointParameter
+    
 ) where
 
 import Control.DeepSeq
@@ -78,6 +84,7 @@ import Data.Maybe
 import Debug.Trace
 import GHC.Generics (Generic)
 import Insieme.Utils
+import Insieme.Inspire.Query
 import qualified Data.Hashable as Hash
 import qualified Insieme.Inspire as IR
 
@@ -89,8 +96,8 @@ type NodePath = [Int]
 
 data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
                                  getNode             :: IR.Tree,
-                                 getInspire          :: IR.Inspire,
                                  getParent           :: Maybe NodeAddress,
+                                 getRoot             :: IR.Tree,
                                  getAbsoluteRootPath :: NodePath
                                }
   deriving (Generic, NFData)
@@ -120,16 +127,20 @@ instance Hash.Hashable NodeAddress where
     hashWithSalt s n = Hash.hashWithSalt s $ getPathReversed n
     hash n = Hash.hash $ getPathReversed n
 
+
+instance NodeReference NodeAddress where
+    node = getNode
+
+
+
 prettyShow :: NodeAddress -> String
 prettyShow na = '0' : concat ['-' : show x | x <- getPath na]
 
 -- ** Constructors
 
 -- | Create a 'NodeAddress' from a list of indizes and a root node.
-mkNodeAddress :: [Int] -> IR.Inspire -> NodeAddress
-mkNodeAddress xs ir = foldl' (flip goDown) (NodeAddress [] root ir Nothing []) xs
-  where
-    root = IR.getTree ir
+mkNodeAddress :: [Int] -> IR.Tree -> NodeAddress
+mkNodeAddress xs root = foldl' (flip goDown) (NodeAddress [] root Nothing root []) xs
 
 -- ** Queries
 
@@ -154,17 +165,11 @@ getIndex :: NodeAddress -> Int
 getIndex a | isRoot a = error "Can't obtain index of a root address!"
 getIndex a = head $ getPathReversed a
 
-getNodeType :: NodeAddress -> IR.NodeType
-getNodeType = IR.getNodeType . getNode
-
 isRoot :: NodeAddress -> Bool
 isRoot = isNothing . getParent
 
-getRoot :: NodeAddress -> IR.Tree
-getRoot = IR.getTree . getInspire
-
 getRootAddress :: NodeAddress -> NodeAddress
-getRootAddress a = mkNodeAddress [] (getInspire a)
+getRootAddress a = mkNodeAddress [] (getRoot a)
 
 isChildOf :: NodeAddress -> NodeAddress -> Bool
 a `isChildOf` b = getRoot a == getRoot b && (getPathReversed b `isSuffixOf` getPathReversed a)
@@ -184,18 +189,18 @@ goUp na | isRoot na = trace "No parent for Root" undefined
 goUp na = fromJust (getParent na)
 
 goDown :: Int -> NodeAddress -> NodeAddress
-goDown x parent@(NodeAddress xs n ir _ r) = NodeAddress (x : xs) n' ir (Just parent) r
+goDown x parent@(NodeAddress xs n _ ir r) = NodeAddress (x : xs) n' (Just parent) ir r
   where
     n' = IR.getChildren n !! x
 
 goLeft :: NodeAddress -> NodeAddress
-goLeft na@(NodeAddress xs _ _ _             _) | head xs == 0 = na
-goLeft na@(NodeAddress _  _ _ Nothing       _) = na
-goLeft    (NodeAddress xs _ _ (Just parent) _) = goDown (head xs - 1) parent
+goLeft na@(NodeAddress xs _ _             _ _) | head xs == 0 = na
+goLeft na@(NodeAddress _  _ Nothing       _ _) = na
+goLeft    (NodeAddress xs _ (Just parent) _ _) = goDown (head xs - 1) parent
 
 goRight :: NodeAddress -> NodeAddress
-goRight na@(NodeAddress _  _ _ Nothing       _) = na
-goRight    (NodeAddress xs _ _ (Just parent) _) = goDown (head xs + 1) parent
+goRight na@(NodeAddress _  _ Nothing       _ _) = na
+goRight    (NodeAddress xs _ (Just parent) _ _) = goDown (head xs + 1) parent
 
 -- ** Subtree construction / destruction
 
@@ -205,10 +210,38 @@ append a b | isRoot b = a
 append a b = NodeAddress {
                 getPathReversed     = (getPathReversed b) ++ (getPathReversed a),
                 getNode             = getNode b,
-                getInspire          = getInspire a,
+                getRoot             = getRoot a,
                 getParent           = Just $ append a $ fromJust $ getParent b,
                 getAbsoluteRootPath = getAbsoluteRootPath a
              }
 
 crop :: NodeAddress -> NodeAddress
-crop a = NodeAddress [] (getNode a) ( (getInspire a){IR.getTree=getNode a} ) Nothing ((getPathReversed a) ++ (getAbsoluteRootPath a))
+crop a = NodeAddress [] (getNode a) Nothing (getNode a) ((getPathReversed a) ++ (getAbsoluteRootPath a))
+
+
+--
+-- * Queries for Node Address
+--
+
+-- | Returns 'True' if given variable (in declaration) is a loop iterator.
+isLoopIterator :: NodeAddress -> Bool
+isLoopIterator a = (depth a >= 2) && ((==IR.ForStmt) $ getNodeType $ goUp $ goUp a)
+
+hasEnclosingStatement :: NodeAddress -> Bool
+hasEnclosingStatement a = case getNode a of
+    IR.NT n _ | (IR.toNodeKind n) == IR.Statement -> True
+    IR.NT n _ | n /= IR.LambdaExpr && n /= IR.Variable && (IR.toNodeKind n) == IR.Expression -> True
+    _ -> not (isRoot a) && hasEnclosingStatement (fromJust $ getParent a)
+
+isEntryPoint :: NodeAddress -> Bool
+isEntryPoint a = case getNode a of
+    IR.NT IR.CompoundStmt _ -> isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
+    _                       -> isRoot a
+
+isEntryPointParameter :: NodeAddress -> Bool
+isEntryPointParameter v | (not . isVariable) v = False
+isEntryPointParameter v | isRoot v = False
+isEntryPointParameter v = case getNode $ fromJust $ getParent v of
+            IR.NT IR.Parameters _ -> not $ hasEnclosingStatement v
+            _                     -> False
+

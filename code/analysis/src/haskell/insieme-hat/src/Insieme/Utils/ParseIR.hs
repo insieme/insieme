@@ -42,7 +42,7 @@ import qualified Data.ByteString.Char8 as BS8
 import qualified Insieme.Inspire as IR
 
 -- | Parse a given IR statement using the inspire binary.
-parseIR :: String -> IO IR.Inspire
+parseIR :: String -> IO IR.Tree
 parseIR ircode = do
     irb <- readProcess "inspire" ["-s", "-i", "-", "-k", "-"] ircode
     let Right ir = parseBinaryDump (BS8.pack irb)

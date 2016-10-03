@@ -102,8 +102,8 @@ booleanAnalysis = Solver.mkAnalysisIdentifier BooleanAnalysis "B"
 booleanValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex Result)
 booleanValue addr =
     case () of _
-                | isBuiltinByName addr "true"  -> Solver.mkVariable (idGen addr) [] $ compose AlwaysTrue
-                | isBuiltinByName addr "false" -> Solver.mkVariable (idGen addr) [] $ compose AlwaysFalse
+                | isBuiltin addr "true"  -> Solver.mkVariable (idGen addr) [] $ compose AlwaysTrue
+                | isBuiltin addr "false" -> Solver.mkVariable (idGen addr) [] $ compose AlwaysFalse
                 | otherwise      -> dataflowValue addr analysis ops
   where
 
@@ -117,7 +117,7 @@ booleanValue addr =
 
     lt = OperatorHandler cov dep (val cmp)
       where
-        cov a = any (isBuiltin a) $ getBuiltin addr  <$> ["int_lt", "uint_lt"]
+        cov a = any (isBuiltin a) ["int_lt", "uint_lt"]
         cmp x y = case numCompare x y of
             NumLT     -> AlwaysTrue
             Sometimes -> Both
@@ -125,7 +125,7 @@ booleanValue addr =
 
     le = OperatorHandler cov dep (val cmp)
       where
-        cov a = any (isBuiltin a) $ getBuiltin addr  <$> ["int_le", "uint_le"]
+        cov a = any (isBuiltin a) ["int_le", "uint_le"]
         cmp x y = case numCompare x y of
             NumEQ     -> AlwaysTrue
             NumLT     -> AlwaysTrue
@@ -134,7 +134,7 @@ booleanValue addr =
 
     eq = OperatorHandler cov dep (val cmp)
       where
-        cov a = any (isBuiltin a) $ getBuiltin addr  <$> ["int_eq", "uint_eq"]
+        cov a = any (isBuiltin a) ["int_eq", "uint_eq"]
         cmp x y = case numCompare x y of
             NumEQ     -> AlwaysTrue
             Sometimes -> Both
@@ -142,7 +142,7 @@ booleanValue addr =
 
     ne = OperatorHandler cov dep (val cmp)
       where
-        cov a = any (isBuiltin a) $ getBuiltin addr  <$> ["int_ne", "uint_ne"]
+        cov a = any (isBuiltin a) ["int_ne", "uint_ne"]
         cmp x y = case numCompare x y of
             NumEQ     -> AlwaysFalse
             Sometimes -> Both
@@ -150,7 +150,7 @@ booleanValue addr =
 
     ge = OperatorHandler cov dep (val cmp)
       where
-        cov a = any (isBuiltin a) $ getBuiltin addr  <$> ["int_ge", "uint_ge"]
+        cov a = any (isBuiltin a) ["int_ge", "uint_ge"]
         cmp x y = case numCompare x y of
             NumGT     -> AlwaysTrue
             NumEQ     -> AlwaysTrue
@@ -159,7 +159,7 @@ booleanValue addr =
 
     gt = OperatorHandler cov dep (val cmp)
       where
-        cov a = any (isBuiltin a) $ getBuiltin addr  <$> ["int_gt", "uint_gt"]
+        cov a = any (isBuiltin a) ["int_gt", "uint_gt"]
         cmp x y = case numCompare x y of
             NumGT     -> AlwaysTrue
             Sometimes -> Both

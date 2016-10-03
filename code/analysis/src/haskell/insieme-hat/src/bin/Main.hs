@@ -69,7 +69,7 @@ main = do
 
 findTargets :: Addr.NodeAddress -> [Addr.NodeAddress] -> [Addr.NodeAddress]
 findTargets addr xs = case Addr.getNode addr of
-    IR.NT IR.CallExpr _ | Q.isBuiltinByName (Addr.goDown 1 addr) "ref_deref" -> addr : xs
+    IR.NT IR.CallExpr _ | Q.isBuiltin (Addr.goDown 1 addr) "ref_deref" -> addr : xs
     _ -> xs
 
 analysis :: Addr.NodeAddress -> State Solver.SolverState Char

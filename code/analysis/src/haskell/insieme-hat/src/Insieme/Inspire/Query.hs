@@ -38,7 +38,6 @@ module Insieme.Inspire.Query where
 
 import Control.Monad
 import Data.Maybe
-import Insieme.Inspire.NodeAddress
 import qualified Data.Map.Strict as Map
 import qualified Insieme.Inspire as IR
 
@@ -52,8 +51,10 @@ class NodeReference a where
 instance NodeReference IR.Tree where
     node = id
 
-instance NodeReference NodeAddress where
-    node = getNode
+
+
+getNodeType :: NodeReference a => a -> IR.NodeType
+getNodeType = IR.getNodeType . node
 
 --
 -- * Queries for Node Reference
@@ -70,10 +71,11 @@ isType = (==IR.Type) . IR.toNodeKind
 
 -- | Returns the Type of an expression (or, if it is a type already, the given type)
 getType :: NodeReference a => a -> Maybe IR.Tree
-getType n | kind == IR.Type                      = Just $ node n
-          | kind == IR.Expression                = Just $ head $ IR.getChildren $ node n
-          | IR.getNodeType (node n) == IR.Lambda = Just $ head $ IR.getChildren $ node n
-          | otherwise                            = Nothing
+getType n | kind == IR.Type                           = Just $ node n
+          | kind == IR.Expression                     = Just $ head $ IR.getChildren $ node n
+          | IR.getNodeType (node n) == IR.Lambda      = Just $ head $ IR.getChildren $ node n
+          | IR.getNodeType (node n) == IR.Declaration = Just $ head $ IR.getChildren $ node n
+          | otherwise                                 = Nothing
   where
     kind = IR.toNodeKind $ IR.getNodeType $ node n
 
@@ -99,7 +101,7 @@ isReference n = fromMaybe False $ isReferenceType <$> getType n
 
 getReferencedType :: NodeReference a => a -> Maybe IR.Tree
 getReferencedType n = if isReference n
-                         then Just $ head $ IR.getChildren $ fromJust $ getType n
+                         then Just $ head $ IR.getChildren $ (!!2) $ IR.getChildren $ fromJust $ getType n
                          else Nothing
 
 -- *** Array Type
@@ -137,42 +139,8 @@ isDestructor = checkFunctionKind (==IR.FK_Destructor)
 isConstructorOrDestructor :: NodeReference a => a -> Bool
 isConstructorOrDestructor n = isConstructor n || isDestructor n
 
---
--- * Queries for Node Address
---
-
--- | Returns 'True' if given variable (in declaration) is a loop iterator.
-isLoopIterator :: NodeAddress -> Bool
-isLoopIterator a = (depth a >= 2) && ((==IR.ForStmt) $ getNodeType $ goUp $ goUp a)
-
-hasEnclosingStatement :: NodeAddress -> Bool
-hasEnclosingStatement a = case getNode a of
-    IR.NT n _ | (IR.toNodeKind n) == IR.Statement -> True
-    IR.NT n _ | n /= IR.LambdaExpr && n /= IR.Variable && (IR.toNodeKind n) == IR.Expression -> True
-    _ -> not (isRoot a) && hasEnclosingStatement (fromJust $ getParent a)
-
-isEntryPoint :: NodeAddress -> Bool
-isEntryPoint a = case getNode a of
-    IR.NT IR.CompoundStmt _ -> isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
-    _                       -> isRoot a
-
-isEntryPointParameter :: NodeAddress -> Bool
-isEntryPointParameter v | (not . isVariable) v = False
-isEntryPointParameter v | isRoot v = False
-isEntryPointParameter v = case getNode $ fromJust $ getParent v of
-            IR.NT IR.Parameters _ -> not $ hasEnclosingStatement v
-            _                     -> False
 
 -- ** Builtins
 
-getBuiltin :: NodeAddress -> String -> IR.Builtin
-getBuiltin addr name = join $ Map.lookup name (IR.getBuiltins $ getInspire addr)
-
-isBuiltin :: NodeAddress -> IR.Builtin -> Bool
-isBuiltin _ Nothing    = False
-isBuiltin a b@(Just t) = case getNodeType a of
-    IR.Lambda | depth a >= 3 -> isBuiltin (goUp $ goUp $ goUp $ a) b
-    _                        -> getNode a == t
-
-isBuiltinByName :: NodeAddress -> String -> Bool
-isBuiltinByName a n = isBuiltin a $ getBuiltin a n
+isBuiltin :: (NodeReference a) => a -> String -> Bool
+isBuiltin r n = IR.isBuiltin (node r) n

@@ -100,7 +100,7 @@ collectAddr t fs = collectAllPrune pred filter
 
 -- | Fold the given 'Tree'. The accumulator function takes the subtree and the
 -- address of this subtree in the base tree.
-foldTree :: Monoid a => (NodeAddress -> a -> a) -> IR.Inspire -> a
+foldTree :: Monoid a => (NodeAddress -> a -> a) -> IR.Tree -> a
 foldTree = flip foldTreePrune noPrune
 
 -- | Fold the given 'Tree'. The accumulator function takes the subtree and the
@@ -117,7 +117,7 @@ noPrune = const False
 foldTreePrune :: Monoid a
                 => (NodeAddress -> a -> a)      -- ^ aggregation function
                 -> (NodeAddress -> Bool)        -- ^ prune subtrees?
-                -> IR.Inspire                   -- ^ current inspire representation
+                -> IR.Tree                      -- ^ current processed node
                 -> a                            -- ^ accumulated result
 foldTreePrune collect prune ir = foldAddressPrune collect prune (mkNodeAddress [] ir)
 
