@@ -205,6 +205,67 @@ namespace datalog {
 	}
 
 
+	TEST(IntegerAnalysis, Equality) {
+		IRBuilder& builder = getBuilder();
+		SymbolTable symbols;
+		Context ctxt;
+
+		symbols["x"] = builder.variable(builder.parseType("bool"));
+
+		auto genExprAddr = [&](const string &in) {
+			return ExpressionAddress(builder.parseExpr(in, symbols));
+		};
+
+		auto expr0 = genExprAddr("(y : bool)->int<4> { return 1234; }(x)");
+		auto expr1 = genExprAddr("(y : bool)->int<4> { if (y) { return 15; } return 20; }(x)");
+		auto expr2 = genExprAddr("(y : bool)->int<4> { if (y) { return 42; } return 69; }(x)");
+		auto expr3 = genExprAddr("(y : bool)->int<4> { if (y) { return 69; } return 42; }(x)");
+		auto expr4 = genExprAddr("(y : bool)->int<4> { if (y) { return 12; } return 42; }(x)");
+
+		EXPECT_TRUE (integer::areEqual(ctxt, expr0, expr0));
+		EXPECT_FALSE(integer::areEqual(ctxt, expr0, expr1));
+		EXPECT_FALSE(integer::areEqual(ctxt, expr0, expr2));
+		EXPECT_FALSE(integer::areEqual(ctxt, expr0, expr3));
+		EXPECT_FALSE(integer::areEqual(ctxt, expr1, expr0));
+		EXPECT_FALSE(integer::areEqual(ctxt, expr1, expr1));
+		EXPECT_FALSE(integer::areEqual(ctxt, expr1, expr2));
+		EXPECT_FALSE(integer::areEqual(ctxt, expr1, expr3));
+
+		EXPECT_TRUE (integer::mayEqual(ctxt, expr0, expr0));
+		EXPECT_TRUE (integer::mayEqual(ctxt, expr1, expr1));
+		EXPECT_TRUE (integer::mayEqual(ctxt, expr2, expr2));
+		EXPECT_TRUE (integer::mayEqual(ctxt, expr2, expr3));
+		EXPECT_TRUE (integer::mayEqual(ctxt, expr3, expr4));
+		EXPECT_FALSE(integer::mayEqual(ctxt, expr0, expr1));
+		EXPECT_FALSE(integer::mayEqual(ctxt, expr1, expr2));
+		EXPECT_FALSE(integer::mayEqual(ctxt, expr1, expr3));
+		EXPECT_FALSE(integer::mayEqual(ctxt, expr1, expr4));
+
+		EXPECT_TRUE (integer::areNotEqual(ctxt, expr0, expr1));
+		EXPECT_TRUE (integer::areNotEqual(ctxt, expr0, expr2));
+		EXPECT_TRUE (integer::areNotEqual(ctxt, expr0, expr3));
+		EXPECT_TRUE (integer::areNotEqual(ctxt, expr0, expr4));
+		EXPECT_TRUE (integer::areNotEqual(ctxt, expr1, expr0));
+		EXPECT_TRUE (integer::areNotEqual(ctxt, expr1, expr2));
+		EXPECT_TRUE (integer::areNotEqual(ctxt, expr1, expr3));
+		EXPECT_TRUE (integer::areNotEqual(ctxt, expr1, expr4));
+		EXPECT_FALSE(integer::areNotEqual(ctxt, expr0, expr0));
+		EXPECT_FALSE(integer::areNotEqual(ctxt, expr1, expr1));
+		EXPECT_FALSE(integer::areNotEqual(ctxt, expr2, expr3));
+		EXPECT_FALSE(integer::areNotEqual(ctxt, expr2, expr4));
+		EXPECT_FALSE(integer::areNotEqual(ctxt, expr3, expr4));
+
+		EXPECT_TRUE (integer::mayNotEqual(ctxt, expr1, expr1));
+		EXPECT_TRUE (integer::mayNotEqual(ctxt, expr1, expr2));
+		EXPECT_TRUE (integer::mayNotEqual(ctxt, expr1, expr3));
+		EXPECT_TRUE (integer::mayNotEqual(ctxt, expr1, expr4));
+		EXPECT_TRUE (integer::mayNotEqual(ctxt, expr2, expr2));
+		EXPECT_TRUE (integer::mayNotEqual(ctxt, expr2, expr3));
+		EXPECT_TRUE (integer::mayNotEqual(ctxt, expr2, expr4));
+		EXPECT_FALSE(integer::mayNotEqual(ctxt, expr0, expr0));
+	}
+
+
 } // end namespace datalog
 } // end namespace analysis
 } // end namespace insieme
