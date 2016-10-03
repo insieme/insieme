@@ -61,7 +61,13 @@ namespace analysis {
 
 	// --- Reference Analysis ---
 
-	//                | Name                        | Res              | Argument               |
+	//                | Name                         | Res              | Argument              |
+	declare_analysis_1( isNull,                       bool,              core::ExpressionAddress);
+	declare_analysis_1( mayBeNull,                    bool,              core::ExpressionAddress);
+	declare_analysis_1( notNull,                      bool,              core::ExpressionAddress);
+	declare_analysis_1( isExtern,                     bool,              core::ExpressionAddress);
+	declare_analysis_1( mayBeExtern,                  bool,              core::ExpressionAddress);
+	declare_analysis_1( notExtern,                    bool,              core::ExpressionAddress);
 	declare_analysis_1( getReferencedMemoryLocations, MemoryLocationSet, core::ExpressionAddress);
 
 
@@ -76,10 +82,10 @@ namespace analysis {
 	// --- Boolean Analysis ---
 
 	//                | Name       | Res | Argument              |
-	declare_analysis_1( isTrue,     bool, core::ExpressionAddress)
-	declare_analysis_1( isFalse,    bool, core::ExpressionAddress)
-	declare_analysis_1( mayBeTrue,  bool, core::ExpressionAddress)
-	declare_analysis_1( mayBeFalse, bool, core::ExpressionAddress)
+	declare_analysis_1( isTrue,     bool, core::ExpressionAddress);
+	declare_analysis_1( isFalse,    bool, core::ExpressionAddress);
+	declare_analysis_1( mayBeTrue,  bool, core::ExpressionAddress);
+	declare_analysis_1( mayBeFalse, bool, core::ExpressionAddress);
 
 
 	// --- Simple Integer Analysis ---

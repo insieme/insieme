@@ -73,6 +73,15 @@ void cba_expect_defined_ptr(void* a);			// = is not empty and not universe
 void cba_expect_single_ptr(void* a);			// = is a single target
 void cba_expect_not_single_ptr(void* a);		// = is not a single target
 
+void cba_expect_null_ptr(void* a);				// = is null
+void cba_expect_not_null_ptr(void* a);			// = not null
+void cba_expect_maybe_null_ptr(void* a);		// = maybe null
+
+void cba_expect_extern_ptr(void* a);			// = is undefined
+void cba_expect_not_extern_ptr(void* a);		// = not undefined
+void cba_expect_maybe_extern_ptr(void* a);		// = maybe undefined
+
+
 typedef struct {} _pset;
 #define pset(...) (_pset*)(void*[]){ __VA_ARGS__ }
 void cba_expect_one_of_ptr(int a, _pset* b);

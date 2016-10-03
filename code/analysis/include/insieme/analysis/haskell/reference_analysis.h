@@ -45,6 +45,18 @@ namespace insieme {
 namespace analysis {
 namespace haskell {
 
+	bool isNull(Context& ctxt, const core::ExpressionAddress& expr);
+
+	bool mayBeNull(Context& ctxt, const core::ExpressionAddress& expr);
+
+	bool notNull(Context& ctxt, const core::ExpressionAddress& expr);
+
+	bool isExtern(Context& ctxt, const core::ExpressionAddress& expr);
+
+	bool mayBeExtern(Context& ctxt, const core::ExpressionAddress& expr);
+
+	bool notExtern(Context& ctxt, const core::ExpressionAddress& expr);
+
 	MemoryLocationSet getReferencedMemoryLocations(Context&, const core::ExpressionAddress& expr);
 
 } // end namespace haskell

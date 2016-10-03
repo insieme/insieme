@@ -148,7 +148,7 @@ referenceValue addr = case getNodeType addr of
 
         compose = ComposedValue.toComposed
 
-        opsHandler = [ allocHandler , declHandler , refNarrow , refExpand , refCast , refReinterpret , ptrToRef , ptrFromRef ]
+        opsHandler = [ allocHandler , declHandler , refNull, refNarrow , refExpand , refCast , refReinterpret , ptrToRef , ptrFromRef ]
 
         allocHandler = OperatorHandler cov noDep val
             where
@@ -159,6 +159,11 @@ referenceValue addr = case getNodeType addr of
             where
                 cov a = isBuiltin a $ getBuiltin addr "ref_decl"
                 val a = compose $ BSet.singleton $ Reference (getEnclosingDecl addr) DP.root
+
+        refNull = OperatorHandler cov noDep val
+            where
+                cov a = isBuiltin a $ getBuiltin addr "ref_null"
+                val a = compose $ BSet.singleton NullReference
 
         refNarrow = OperatorHandler cov subRefDep val
             where

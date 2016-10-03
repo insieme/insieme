@@ -42,7 +42,7 @@
 #include "insieme/analysis/haskell/alias_analysis.h"
 #include "insieme/analysis/haskell/arithmetic_analysis.h"
 #include "insieme/analysis/haskell/boolean_analysis.h"
-#include "insieme/analysis/haskell/memory_location_analysis.h"
+#include "insieme/analysis/haskell/reference_analysis.h"
 
 namespace insieme {
 namespace analysis {
@@ -69,6 +69,12 @@ namespace analysis {
 
 	// --- Reference Analysis ---
 
+	register_analysis_implementation(HaskellEngine, isNull,                       haskell::isNull                      );
+	register_analysis_implementation(HaskellEngine, mayBeNull,                    haskell::mayBeNull                   );
+	register_analysis_implementation(HaskellEngine, notNull,                      haskell::notNull                     );
+	register_analysis_implementation(HaskellEngine, isExtern,                     haskell::isExtern                    );
+	register_analysis_implementation(HaskellEngine, mayBeExtern,                  haskell::mayBeExtern                 );
+	register_analysis_implementation(HaskellEngine, notExtern,                    haskell::notExtern                   );
 	register_analysis_implementation(HaskellEngine, getReferencedMemoryLocations, haskell::getReferencedMemoryLocations);
 
 

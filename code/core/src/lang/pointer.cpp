@@ -227,9 +227,19 @@ namespace lang {
 	ExpressionPtr buildPtrFromIntegral(const ExpressionPtr& intExpr, const TypePtr& ptrType) {
 		assert_pred1(intExpr->getNodeManager().getLangBasic().isInt, intExpr->getType()) << "Trying to build ptr from non-integral.";
 		assert_pred1(isPointer, ptrType) << "Trying to build non-ptr-type from integral.";
+
+		PointerType pointerType(ptrType);
 		IRBuilder builder(intExpr->getNodeManager());
 		auto& pExt = intExpr->getNodeManager().getLangExtension<PointerExtension>();
-		return builder.callExpr(pExt.getPtrFromIntegral(), intExpr, builder.getTypeLiteral(ptrType));
+		ExpressionPtr res = builder.callExpr(pExt.getPtrFromIntegral(), intExpr, builder.getTypeLiteral(pointerType.getElementType()));
+
+		// update pointer flags
+		if (pointerType.isConst() || pointerType.isVolatile()) {
+			res = buildPtrCast(res, pointerType.isConst(), pointerType.isVolatile());
+		}
+
+		// done
+		return res;
 	}
 
 	ExpressionPtr buildPtrToIntegral(const ExpressionPtr& ptrExpr, const TypePtr& intType) {

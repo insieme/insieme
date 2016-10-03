@@ -185,6 +185,44 @@ arithValue ctx_hs expr_hs = do
 
 
 
+
+--
+-- * References
+--
+
+
+checkForReference :: Ref.Reference FieldIndex.SimpleFieldIndex -> StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CInt)
+checkForReference ref ctx_hs expr_hs = handleAll (return maybe) $ do
+    ctx <- deRefStablePtr ctx_hs
+    expr <- deRefStablePtr expr_hs
+    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
+    let results = (ComposedValue.toValue res) :: Ref.ReferenceSet FieldIndex.SimpleFieldIndex
+    let ctx_c = Ctx.getCContext ctx
+    ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+    updateContext ctx_c ctx_nhs
+    evaluate $ case () of
+        _ |  BSet.member ref results -> case () of 
+                _ | not (BSet.isUniverse results) && BSet.size results == 1 -> yes
+                  | otherwise              -> maybe
+          |  otherwise -> no
+  where
+    yes   = 0
+    maybe = 1
+    no    = 2
+
+
+checkForNull = checkForReference Ref.NullReference
+
+foreign export ccall "hat_check_null"
+    checkForNull :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
+
+
+checkForExtern = checkForReference Ref.UninitializedReference
+
+foreign export ccall "hat_check_extern"
+    checkForExtern :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
+
+
 --
 -- * Memory Locations
 --
@@ -210,10 +248,12 @@ memoryLocations ctx_hs expr_hs = do
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
     let results = (ComposedValue.toValue res) :: Ref.ReferenceSet FieldIndex.SimpleFieldIndex
     let ctx_c = Ctx.getCContext ctx
-    let hasUnknownSources = BSet.member Ref.NullReference results || BSet.member Ref.UninitializedReference results  
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
-    passMemoryLocationSet ctx_c $ if hasUnknownSources then BSet.Universe else BSet.map Ref.creationPoint results
+    passMemoryLocationSet ctx_c $ BSet.map Ref.creationPoint $ BSet.filter f results
+        where
+            f (Ref.Reference _ _ ) = True
+            f _ = False
 
 passMemoryLocation :: Ctx.CContext -> Ref.Location -> IO (Ptr CMemoryLocation)
 passMemoryLocation ctx_c location_hs = do

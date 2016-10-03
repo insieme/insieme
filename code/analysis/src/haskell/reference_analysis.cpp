@@ -34,8 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/haskell/memory_location_analysis.h"
-
+#include "insieme/analysis/haskell/reference_analysis.h"
 #include "insieme/core/lang/reference.h"
 
 extern "C" {
@@ -44,6 +43,8 @@ extern "C" {
 	namespace hat = ia::haskell;
 
 	// Analysis
+	int hat_check_null(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
+	int hat_check_extern(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
 	ia::MemoryLocationSet* hat_memory_locations(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
 
 }
@@ -51,6 +52,54 @@ extern "C" {
 namespace insieme {
 namespace analysis {
 namespace haskell {
+
+
+	enum Result {
+		Yes=0, Maybe=1, No=2
+	};
+
+	namespace {
+
+		Result checkNull(Context& ctxt, const core::ExpressionAddress& expr) {
+			auto expr_hs = ctxt.resolveNodeAddress(expr);
+			return (Result)hat_check_null(ctxt.getHaskellContext(), expr_hs);
+		}
+
+	}
+
+	bool isNull(Context& ctxt, const core::ExpressionAddress& expr) {
+		return checkNull(ctxt, expr) == Yes;
+	}
+
+	bool mayBeNull(Context& ctxt, const core::ExpressionAddress& expr) {
+		return checkNull(ctxt, expr) == Maybe;
+	}
+
+	bool notNull(Context& ctxt, const core::ExpressionAddress& expr) {
+		return checkNull(ctxt, expr) == No;
+	}
+
+
+	namespace {
+
+		Result checkExtern(Context& ctxt, const core::ExpressionAddress& expr) {
+			auto expr_hs = ctxt.resolveNodeAddress(expr);
+			return (Result)hat_check_extern(ctxt.getHaskellContext(), expr_hs);
+		}
+
+	}
+
+	bool isExtern(Context& ctxt, const core::ExpressionAddress& expr) {
+		return checkExtern(ctxt, expr) == Yes;
+	}
+
+	bool mayBeExtern(Context& ctxt, const core::ExpressionAddress& expr) {
+		return checkExtern(ctxt, expr) == Maybe;
+	}
+
+	bool notExtern(Context& ctxt, const core::ExpressionAddress& expr) {
+		return checkExtern(ctxt, expr) == No;
+	}
 
 	MemoryLocationSet getReferencedMemoryLocations(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto expr_hs = ctxt.resolveNodeAddress(expr);

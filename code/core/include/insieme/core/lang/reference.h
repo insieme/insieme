@@ -303,6 +303,19 @@ namespace lang {
 		LANG_EXT_DERIVED(GenPostDec, "(v : ref<'a,f,'v,'k>)->'a { auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
 
 
+		// -- integer conversion --
+
+		/**
+		 * An operator converting a reference into an integral value.
+		 */
+		LANG_EXT_LITERAL(RefToIntegral, "ref_to_integral", "(ref<'a1,'c1,'v1,'k1>, type<'i>) -> 'i")
+
+		/**
+		 * An operator converting an integral value into a reference.
+		 */
+		LANG_EXT_LITERAL(RefFromIntegral, "ref_from_integral", "('i, type<'r>) -> ref<'r,f,f,plain>")
+
+
 	};
 
 

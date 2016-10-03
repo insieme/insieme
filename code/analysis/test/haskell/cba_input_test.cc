@@ -162,6 +162,32 @@ namespace analysis {
 			return insieme::analysis::getReferencedMemoryLocations<Backend>(ctxt, x);
 		}
 
+
+		bool isNull(const core::ExpressionAddress& x) {
+			return insieme::analysis::isNull<Backend>(ctxt, x);
+		}
+
+		bool notNull(const core::ExpressionAddress& x) {
+			return insieme::analysis::notNull<Backend>(ctxt, x);
+		}
+
+		bool maybeNull(const core::ExpressionAddress& x) {
+			return insieme::analysis::mayBeNull<Backend>(ctxt, x);
+		}
+
+		bool isExtern(const core::ExpressionAddress& x) {
+			return insieme::analysis::isExtern<Backend>(ctxt, x);
+		}
+
+		bool notExtern(const core::ExpressionAddress& x) {
+			return insieme::analysis::notExtern<Backend>(ctxt, x);
+		}
+
+		bool maybeExtern(const core::ExpressionAddress& x) {
+			return insieme::analysis::mayBeExtern<Backend>(ctxt, x);
+		}
+
+
 	public:
 		ActualTest() {}
 
@@ -337,6 +363,36 @@ namespace analysis {
 					EXPECT_TRUE(res.isUniversal() || res.size() > 1)
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "MemoryLocationSet evaluates to " << res << std::endl;
+
+				} else if (name == "cba_expect_null_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					EXPECT_TRUE(this->isNull(call.getArgument(0)))
+						<< *core::annotations::getLocation(call) << std::endl;
+
+				} else if (name == "cba_expect_not_null_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					EXPECT_TRUE(this->notNull(call.getArgument(0)))
+						<< *core::annotations::getLocation(call) << std::endl;
+
+				} else if (name == "cba_expect_maybe_null_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					EXPECT_TRUE(this->maybeNull(call.getArgument(0)))
+						<< *core::annotations::getLocation(call) << std::endl;
+
+				} else if (name == "cba_expect_extern_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					EXPECT_TRUE(this->isExtern(call.getArgument(0)))
+						<< *core::annotations::getLocation(call) << std::endl;
+
+				} else if (name == "cba_expect_not_extern_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					EXPECT_TRUE(this->notExtern(call.getArgument(0)))
+						<< *core::annotations::getLocation(call) << std::endl;
+
+				} else if (name == "cba_expect_maybe_extern_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					EXPECT_TRUE(this->maybeExtern(call.getArgument(0)))
+						<< *core::annotations::getLocation(call) << std::endl;
 
 
 				// debugging

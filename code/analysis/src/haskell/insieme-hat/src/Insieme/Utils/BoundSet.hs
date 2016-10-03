@@ -65,6 +65,7 @@ module Insieme.Utils.BoundSet (
 
     insert,
     applyOrDefault,
+    filter,
     map,
     lift2,
 
@@ -82,7 +83,7 @@ import Data.Typeable
 import GHC.Generics (Generic)
 import qualified Data.Set as Set
 
-import Prelude hiding (map,null)
+import Prelude hiding (filter,map,null)
 
 --
 -- * Bounds
@@ -172,6 +173,10 @@ applyOrDefault _ f s        = f s
 map :: (IsBound bb, Ord b) => (a -> b) -> BoundSet bb a -> BoundSet bb b
 map _ Universe     = Universe
 map f (BoundSet x) = BoundSet (Set.map f x)
+
+filter :: (IsBound bb, Ord a) => (a->Bool) -> BoundSet bb a -> BoundSet bb a
+filter _ Universe     = Universe
+filter f (BoundSet x) = BoundSet (Set.filter f x) 
 
 lift2 :: (IsBound bb, Ord a, Ord b, Ord c)
       => (a -> b -> c) -> (BoundSet bb a -> BoundSet bb b -> BoundSet bb c)
