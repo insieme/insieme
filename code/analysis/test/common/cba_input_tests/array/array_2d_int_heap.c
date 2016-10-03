@@ -48,8 +48,8 @@ int main(int argc, char** argv) {
 	int** a = (int**)malloc(sizeof(int*) * 10);
 
 	// the indirection vector should be undefined
-	cba_expect_extern_ptr(a[0]);
-	cba_expect_extern_ptr(a[1]);
+	cba_expect_undefined_ptr(a[0]);
+	cba_expect_undefined_ptr(a[1]);
 
 	for(int i=0; i<10; i++) {
 		a[i] = (int*)malloc(sizeof(int) * 10);

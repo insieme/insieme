@@ -86,7 +86,12 @@ namespace haskell {
 
 			covered.insert(expr.getAddressedNode());
 
-			if(core::lang::isBuiltIn(expr)) builtins[core::lang::getConstructName(expr)] = expr;
+			if(core::lang::isBuiltIn(expr)) {
+				builtins[core::lang::getConstructName(expr)] = expr;
+				if (auto fun = expr.isa<LambdaExprAddress>()) {
+					builtins[core::lang::getConstructName(expr)] = fun->getLambda();
+				}
+			}
 		});
 
 		// attach builtins
