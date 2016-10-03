@@ -100,24 +100,62 @@ namespace datalog {
 
 	namespace integer {
 
-		bool areEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-			assert_not_implemented();
+		bool areEqual(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+			auto resA = getIntegerValues(c, a);
+			assert_ne(0, resA.size());
+
+			/* Return early to save computation time */
+			if (resA.size() != 1)
+				return false;
+
+			auto resB = getIntegerValues(c, b);
+			assert_ne(0, resB.size());
+
+			/* Both sides are constants and have equal value */
+			return resA == resB;
+		}
+
+		bool mayEqual(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+			auto resA = getIntegerValues(c, a);
+			auto resB = getIntegerValues(c, b);
+
+			assert_ne(0, resA.size());
+			assert_ne(0, resB.size());
+
+			/* True if set intersection size > 0 */
+			for (const auto &valA : resA)
+				for (const auto &valB : resB)
+					if (valA == valB)
+						return true;
 			return false;
 		}
 
-		bool mayEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-			assert_not_implemented();
-			return false;
+		bool areNotEqual(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+			auto resA = getIntegerValues(c, a);
+			auto resB = getIntegerValues(c, b);
+
+			assert_ne(0, resA.size());
+			assert_ne(0, resB.size());
+
+			/* True if sets are disjoint */
+			for (const auto &valA : resA)
+				for (const auto &valB : resB)
+					if (valA == valB)
+						return false;
+			return true;
 		}
 
-		bool areNotEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-			assert_not_implemented();
-			return false;
-		}
+		bool mayNotEqual(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+			auto resA = getIntegerValues(c, a);
+			auto resB = getIntegerValues(c, b);
 
-		bool mayNotEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-			assert_not_implemented();
-			return false;
+			assert_ne(0, resA.size());
+			assert_ne(0, resB.size());
+
+			/* True if set size > 1 or elements not equal */
+			if (resA.size() > 1 || resB.size() > 1)
+				return true;
+			return resA != resB;
 		}
 
 	}
