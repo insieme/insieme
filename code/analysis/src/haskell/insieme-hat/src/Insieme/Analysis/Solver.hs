@@ -115,6 +115,7 @@ import System.Process
 import Text.Printf
 import qualified Control.Monad.State.Strict as State
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Graph as Graph
 import qualified Data.Hashable as Hash
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
@@ -124,6 +125,7 @@ import Insieme.Utils
 import Insieme.Inspire.NodeAddress
 import Insieme.Analysis.Entities.Memory
 import Insieme.Analysis.Entities.ProgramPoint
+
 
 
 -- Lattice --------------------------------------------------
@@ -534,7 +536,7 @@ solveStep :: SolverState -> Dependencies -> [IndexedVar] -> SolverState
 
 -- empty work list
 -- solveStep s _ [] | trace (dumpToJsonFile s "ass_meta") $ False = undefined                                           -- debugging assignment as meta-info for JSON dump
--- solveStep s _ [] | trace (dumpSolverState False s "graph") False = undefined                                          -- debugging assignment as a graph plot
+-- solveStep s _ [] | trace (dumpSolverState False s "graph") False = undefined                                         -- debugging assignment as a graph plot
 -- solveStep s _ [] | trace (dumpSolverState True s "graph") $ trace (dumpToJsonFile s "ass_meta") $ False = undefined  -- debugging both
 -- solveStep s _ [] | trace (showSolverStatistic s) $ False = undefined                                                 -- debugging performance data
 solveStep s _ [] = s                                                                                                    -- work list is empty
@@ -553,16 +555,16 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
                 go _ = foldr processConstraint (a,i,d,vs,0) ( constraints $ indexToVar v )  -- update all constraints of current variable
                 processConstraint c (a,i,d,dv,numResets) = case ( update c a ) of
                         
-                        (a',None)         -> (a',ni,nd,nv,numResets)                                     -- nothing changed, we are fine
+                        (a',None)         -> (a',ni,nd,nv,numResets)                -- nothing changed, we are fine
                         
-                        (a',Increment)    -> (a',ni,nd, (Set.elems $ getDep nd trg) ++ nv, numResets)    -- add depending variables to work list
+                        (a',Increment)    -> (a',ni,nd, uv ++ nv, numResets)        -- add depending variables to work list
                         
-                        (a',Reset)        -> (ra,ni,nd, (Set.elems $ getDep nd trg) ++ nv, numResets+1)  -- handling a local reset
+                        (a',Reset)        -> (ra,ni,nd, uv ++ nv, numResets+1)      -- handling a local reset
                             where 
                                 dep = getAllDep nd trg
-                                ra = if not $ Set.member trg dep                                  -- if variable is not indirectly depending on itself  
-                                    then reset a' dep                                             -- reset all depending variables to their bottom value 
-                                    else fst $ updateWithoutReset c a                             -- otherwise insist on merging reseted value with current state
+                                ra = if not $ Set.member trg dep                    -- if variable is not indirectly depending on itself  
+                                    then reset a' dep                               -- reset all depending variables to their bottom value 
+                                    else fst $ updateWithoutReset c a               -- otherwise insist on merging reseted value with current state
                                         
                     where
                             trg = v
@@ -575,6 +577,8 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
                                     
                             nd = addDep d trg idep
                             nv = newVarsList ++ dv
+                            
+                            uv = filter (\x -> not $ elem x nv) (Set.elems $ getDep nd trg)
 
 
 
@@ -762,7 +766,9 @@ showSolverStatistic s =
                         (printf " %20d" totalUpdates) ++ (printf " %20.3f" avgUpdates) ++ 
                         (printf " %20d" totalTime) ++ (printf " %20.3f" avgTime) ++
                         (printf " %20d" totalResets) ++ (printf " %20.3f" avgResets) ++
-        "\n=====================================================================================================================================================================\n"
+        "\n=====================================================================================================================================================================\n" ++
+        analyseVarDependencies s ++
+        "\n=====================================================================================================================================================================\n" 
     where
         vars = knownVariables $ variableIndex s
         
@@ -796,3 +802,32 @@ showSolverStatistic s =
         avgResets = ((fromIntegral totalResets) / (fromIntegral numVars)) :: Float
         
         toMs a = a `div` 1000000
+        
+        
+analyseVarDependencies :: SolverState -> String
+analyseVarDependencies s = 
+
+            "  Number of SCCs: " ++ show (length sccs)   ++ "\n" ++
+            "  largest SCCs:   " ++ show (take 10 $ reverse $ sort $ length . Graph.flattenSCC <$> sccs)
+
+    where
+    
+        ass = assignment s 
+    
+        index = variableIndex s
+        
+        vars = knownVariables index
+        
+        -- getDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
+        
+        -- varToIndex :: VariableIndex -> Var -> (IndexedVar,VariableIndex)
+        
+        nodes = go <$> Set.toList vars
+            where
+                go v = (v,v,dep v)
+                dep v = foldr (\c l -> (dependingOn c ass) ++ l) [] (constraints v)
+
+        
+        sccs = Graph.stronglyConnComp nodes
+        
+        
