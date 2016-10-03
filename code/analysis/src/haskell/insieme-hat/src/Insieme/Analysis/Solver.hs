@@ -578,7 +578,7 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
                             nd = addDep d trg idep
                             nv = newVarsList ++ dv
                             
-                            uv = filter (\x -> not $ elem x nv) (Set.elems $ getDep nd trg)
+                            uv = Set.elems $ getDep nd trg
 
 
 
