@@ -40,7 +40,7 @@ module Insieme.Analysis.FreeLambdaReferences (
 
     LambdaReferenceSet,
     freeLambdaReferences,
-    
+
 {-
     FreeRefsMark,
     hasFreeLambdaReferences
@@ -49,12 +49,12 @@ module Insieme.Analysis.FreeLambdaReferences (
 ) where
 
 import Data.Typeable
-import qualified Data.Set as Set
-
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.Query
+import Insieme.Inspire.Visit
+import qualified Data.Set as Set
 import qualified Insieme.Inspire as IR
-import Insieme.Inspire.Utils
 
 --
 -- * the lattice of this analysis
@@ -93,14 +93,14 @@ freeLambdaReferences addr = case getNodeType addr of
             where
                 var = mkVariable varId [con] bot
                 con = createConstraint (\_ -> toVar <$> deps) val var
-                
+
                 bindings = getChildren addr
-                definedRefs = (getNodePair . goDown 0) <$> bindings
+                definedRefs = (getNode . goDown 0) <$> bindings
                 deps = (freeLambdaReferences . goDown 1) <$> bindings
-                 
+
                 val a = Set.filter f $ join $ get a <$> deps
                     where
-                        f n = notElem (getNodePair n) definedRefs  
+                        f n = notElem (getNode n) definedRefs
 
 
         -- this is the one utilizing shared data
@@ -108,45 +108,45 @@ freeLambdaReferences addr = case getNodeType addr of
             where
                 var = mkVariable varId [con] bot
                 con = createConstraint dep val var
-                
+
                 dep _ = [toVar freeLambdaRefVar]
-                val a = Set.map (append addr) $ get a freeLambdaRefVar 
-                
+                val a = Set.map (append addr) $ get a freeLambdaRefVar
+
                 freeLambdaRefVar = freeLambdaReferences $ crop addr
-        
+
         _ -> var
-        
+
     where
-    
+
         var = mkVariable varId [con] base
         con = createConstraint (\_ -> toVar <$> deps) val var
-        
+
         base = Set.fromList $ foldAddressPrune collector prune addr
             where
-                collector c l = case getNodeType c of 
+                collector c l = case getNodeType c of
                     IR.LambdaReference -> c : l
                     _                  -> l
-                    
+
                 prune a = IR.LambdaExpr == nodeType || isType nodeType
                     where
-                        nodeType = getNodeType a 
+                        nodeType = getNodeType a
 
         deps = foldAddressPrune collector prune addr
             where
-                collector c l = case getNodeType c of 
+                collector c l = case getNodeType c of
                     IR.LambdaDefinition -> freeLambdaReferences c : l
                     _                  -> l
-                    
+
                 prune a = IR.LambdaBinding == nodeType || isType nodeType
                     where
                         nodeType = getNodeType a
 
-        val a = join $ get a <$> deps 
+        val a = join $ get a <$> deps
 
         varId = mkIdentifierFromExpression analysis addr
 
-        analysis = mkAnalysisIdentifier FreeLambdaReferenceAnalysis "FreeLambdaRefs" 
-        
+        analysis = mkAnalysisIdentifier FreeLambdaReferenceAnalysis "FreeLambdaRefs"
+
 
 
 {--
@@ -172,21 +172,21 @@ data HasFreeLambdaReferenceAnalysis = HasFreeLambdaReferenceAnalysis
 --
 -- * A lattice for a abstracted version of the free lambda reference analysis
 --
-        
+
 hasFreeLambdaReferences :: NodeAddress -> TypedVar FreeRefsMark
 hasFreeLambdaReferences addr = var
     where
         var = mkVariable varId [con] bot
         con = createConstraint dep val var
-        
+
         freeRefVar = freeLambdaReferences addr
         freeRefVal a = get a freeRefVar
-         
+
         dep _ = [toVar freeRefVar]
         val a = (not . Set.null) $ freeRefVal a
-        
+
         varId = mkIdentifier analysis addr ""
 
-        analysis = mkAnalysisIdentifier HasFreeLambdaReferenceAnalysis "HasFreeLambdaRefs" 
-        
+        analysis = mkAnalysisIdentifier HasFreeLambdaReferenceAnalysis "HasFreeLambdaRefs"
+
 -}

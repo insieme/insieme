@@ -59,24 +59,20 @@ import Data.Typeable
 import Debug.Trace
 import GHC.Generics (Generic)
 import Insieme.Analysis.AccessPath
+import Insieme.Analysis.Callable
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.FreeLambdaReferences
 import Insieme.Inspire.NodeAddress
-
+import Insieme.Inspire.Query
+import Insieme.Inspire.Visit
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import qualified Data.Map as Map
 import qualified Insieme.Analysis.Entities.AccessPath as AP
-import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.Utils as IRUtils
-import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-
-import qualified Insieme.Utils.BoundSet as BSet
-
-import Insieme.Analysis.Callable
-
-
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
+import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Inspire as IR
+import qualified Insieme.Utils.BoundSet as BSet
 
 
 --
@@ -184,29 +180,29 @@ writeSetSummary addr = case getNodeType addr of
 
                 dep a = Solver.toVar <$> writeSetVars
                 val a = Solver.join $ (Solver.get a <$> writeSetVars)
-                
+
 
         -- for non context-free lambdas, it has to be tested wether they are closed
         IR.Lambda -> var
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createEqualityConstraint dep val var
-                
-                dep a = Solver.toVar hasFreeLambdaRefsVar : if isClosed a then closedDep a else openDep a 
-                val a = if isClosed a then closedVal a else openVal a 
-                
-                hasFreeLambdaRefsVar = freeLambdaReferences $ goUp $ goUp $ goUp addr 
-                
+
+                dep a = Solver.toVar hasFreeLambdaRefsVar : if isClosed a then closedDep a else openDep a
+                val a = if isClosed a then closedVal a else openVal a
+
+                hasFreeLambdaRefsVar = freeLambdaReferences $ goUp $ goUp $ goUp addr
+
                 isClosed a = depth addr >= 3 && (Set.null $ Solver.get a hasFreeLambdaRefsVar)
-                
+
                 -- the closed case --
-                
+
                 closedWriteSetVar = writeSetSummary contextFreeAddr
                 closedDep _ = [Solver.toVar closedWriteSetVar]
-                closedVal a = Solver.get a closedWriteSetVar 
-                
+                closedVal a = Solver.get a closedWriteSetVar
+
                 -- the non closed case --
-                
+
                 openDep _ = Solver.toVar <$> writeSetVars
                 openVal a = Solver.join $ (Solver.get a <$> writeSetVars)
 
@@ -273,10 +269,10 @@ writeSetSummary addr = case getNodeType addr of
                     where
                         aps = accessPathVal a
                         res = fromAccessPaths $ BSet.toList aps
-                
+
                 accessPathVar = accessPathValue $ goDown 1 addr
-                accessPathVal a = ComposedValue.toValue $ Solver.get a accessPathVar 
-                
+                accessPathVal a = ComposedValue.toValue $ Solver.get a accessPathVar
+
 
         _ | isRoot addr -> everything
 
@@ -295,16 +291,16 @@ writeSetSummary addr = case getNodeType addr of
     everything = Solver.mkVariable (idGen addr) [] Unknown
 
     idGen a = Solver.mkIdentifierFromExpression writeSetAnalysis a
-    
+
     -- get list of calls and init expressions within current node --
-    potentialWriteOps = IRUtils.foldAddressPrune collect filter addr
+    potentialWriteOps = foldAddressPrune collect filter addr
         where
 
-            filter cur = case getNodePair cur of
+            filter cur = case getNode cur of
                 IR.NT IR.Lambda _ -> cur /= addr
-                IR.NT n         _ -> IRUtils.isType n
+                IR.NT n         _ -> isType n
 
-            collect cur l = case getNodePair cur of
+            collect cur l = case getNode cur of
                 IR.NT IR.CallExpr _ -> cur : l
                 IR.NT IR.InitExpr _ -> cur : l
                 _                  -> l

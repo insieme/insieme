@@ -49,35 +49,31 @@ module Insieme.Analysis.Framework.MemoryState (
 ) where
 
 import Control.DeepSeq
-import Data.Typeable
 import Data.Maybe
+import Data.Typeable
 import Debug.Trace
 import GHC.Generics (Generic)
-import Insieme.Inspire.NodeAddress
-
+import Insieme.Analysis.AccessPath
+import Insieme.Analysis.Callable
+import Insieme.Analysis.Entities.DataPath hiding (isRoot)
+import Insieme.Analysis.Entities.FieldIndex
+import Insieme.Analysis.Entities.Memory
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.ProgramPoint
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-
-import Insieme.Analysis.AccessPath
 import Insieme.Analysis.Reference
-import Insieme.Analysis.Callable
-import qualified Insieme.Analysis.WriteSetSummary as WS
-
-import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.Utils as IR
+import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.Query
+import qualified Insieme.Analysis.Entities.AccessPath as AP
+import qualified Insieme.Analysis.Entities.DataPath as DP
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Analysis.WriteSetSummary as WS
+import qualified Insieme.Inspire as IR
 import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
-import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
-import Insieme.Analysis.Entities.DataPath hiding (isRoot)
-import qualified Insieme.Analysis.Entities.AccessPath as AP
-import qualified Insieme.Analysis.Entities.DataPath as DP
-import Insieme.Analysis.Entities.FieldIndex
-import Insieme.Analysis.Entities.Memory
-
 
 
 
@@ -195,10 +191,10 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
         IR.CallExpr -> var
 
         -- handle scalar values defined by init expressions
-        IR.InitExpr | isScalar -> var
+        IR.InitExpr | isScalar elemType -> var
 
         -- handle struct values defined by init expressions
-        IR.InitExpr | isRecord -> var
+        IR.InitExpr | isRecord elemType -> var
             where
                 var = Solver.mkVariable varId [con] Solver.bot
                 con = Solver.createEqualityConstraint dep val var
@@ -209,7 +205,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
                 valueVars = valueVar <$> getChildren (goDown 2 addr)
 
         -- handle struct values defined by init expressions
-        IR.InitExpr | isArray -> error "Initialization of arrays not yet implemented."
+        IR.InitExpr | isArray elemType -> error "Initialization of arrays not yet implemented."
 
     where
     
@@ -276,7 +272,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
             
                 IR.InitExpr  -> valueVar $ goDown 0 $ goDown 2 addr 
         
-                IR.CallExpr  -> if isMaterializingDeclaration $ getNodePair valueDecl
+                IR.CallExpr  -> if isMaterializingDeclaration $ getNode valueDecl
                                 then memoryStateValue (MemoryStatePoint (ProgramPoint valueDecl Post) (MemoryLocation valueDecl)) analysis
                                 else valueVar (goDown 1 valueDecl)
                                   
@@ -310,11 +306,9 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
         
         -- type checks
         
-        elemType = fromJust $ IR.getReferencedType =<< IR.getType (getNodePair addr)
+        elemType = fromJust $ getReferencedType =<< getType (getNode addr)
         
-        isArray  = IR.isArray elemType
-        isRecord = IR.isRecord elemType
-        isScalar = not isArray || not isRecord
+        isScalar e = not (isArray e) || not (isRecord e)
 
 
                 
@@ -342,7 +336,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
             Solver.mkVariable varId [] (BSet.singleton $ Declaration addr)
 
         -- a call could be an assignment if it is materializing
-        IR.CallExpr | addr == loc && p == Post && isMaterializingCall (getNodePair addr) ->
+        IR.CallExpr | addr == loc && p == Post && isMaterializingCall (getNode addr) ->
             Solver.mkVariable varId [] (BSet.singleton $ MaterializingCall addr)
 
         -- the call could also be the creation point if it is not materializing
@@ -350,7 +344,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
             Solver.mkVariable varId [] (BSet.singleton Creation)
 
         -- the entry point is the creation of everything that reaches this point
-        _ | p == Pre && IR.isEntryPoint addr -> 
+        _ | p == Pre && isEntryPoint addr -> 
             Solver.mkVariable varId [] (BSet.singleton $ Initial)
 
         -- skip everything that can statically be considered assignment free
@@ -457,8 +451,8 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
         isAssignCandidate = res
             where
                 res = numChildren addr == 4 && unitRes && refParam
-                unitRes  = IR.isUnit $ getNodePair addr
-                refParam = IR.isReference $ getNodePair $ goDown 1 $ goDown 2 addr
+                unitRes  = isUnit $ getNode addr
+                refParam = isReference $ getNode $ goDown 1 $ goDown 2 addr
 
         -- target location utils --
 

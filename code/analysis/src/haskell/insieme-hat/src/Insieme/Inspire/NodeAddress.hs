@@ -40,8 +40,11 @@
 module Insieme.Inspire.NodeAddress (
     NodeAddress,
     mkNodeAddress,
+    prettyShow,
+
+    -- queries
     getPathReversed,
-    getNodePair,
+    getNode,
     getInspire,
     getParent,
     getPath,
@@ -55,19 +58,17 @@ module Insieme.Inspire.NodeAddress (
     getRoot,
     getRootAddress,
     isChildOf,
-    prettyShow,
+
+    -- navigation
+    goRel,
     goUp,
     goDown,
-    goRel,
     goLeft,
     goRight,
+
+    -- subtrees
     append,
     crop,
-
-    Builtin,
-    getBuiltin,
-    isBuiltin,
-    isBuiltinByName
 ) where
 
 import Control.DeepSeq
@@ -78,16 +79,20 @@ import Debug.Trace
 import GHC.Generics (Generic)
 import Insieme.Utils
 import qualified Data.Hashable as Hash
-import qualified Data.Map as Map
 import qualified Insieme.Inspire as IR
+
+--
+-- * Node Address
+--
 
 type NodePath = [Int]
 
 data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
-                                 getNodePair         :: IR.Tree,
+                                 getNode             :: IR.Tree,
                                  getInspire          :: IR.Inspire,
                                  getParent           :: Maybe NodeAddress,
-                                 getAbsoluteRootPath :: NodePath }
+                                 getAbsoluteRootPath :: NodePath
+                               }
   deriving (Generic, NFData)
 
 instance Eq NodeAddress where
@@ -95,7 +100,7 @@ instance Eq NodeAddress where
              && getPathReversed x == getPathReversed y
              && rootID x == rootID y
       where
-        nodeID = IR.getID . getNodePair
+        nodeID = IR.getID . getNode
         rootID = IR.getID . getRoot
 
 instance Ord NodeAddress where
@@ -105,7 +110,7 @@ instance Ord NodeAddress where
             r2 = compare (getPathReversed x) (getPathReversed y)
             r3 = compare (rootID x) (rootID y)
 
-            nodeID = IR.getID . getNodePair
+            nodeID = IR.getID . getNode
             rootID = IR.getID . getRoot
 
 instance Show NodeAddress where
@@ -115,11 +120,18 @@ instance Hash.Hashable NodeAddress where
     hashWithSalt s n = Hash.hashWithSalt s $ getPathReversed n
     hash n = Hash.hash $ getPathReversed n
 
+prettyShow :: NodeAddress -> String
+prettyShow na = '0' : concat ['-' : show x | x <- getPath na]
+
+-- ** Constructors
+
 -- | Create a 'NodeAddress' from a list of indizes and a root node.
 mkNodeAddress :: [Int] -> IR.Inspire -> NodeAddress
 mkNodeAddress xs ir = foldl' (flip goDown) (NodeAddress [] root ir Nothing []) xs
   where
     root = IR.getTree ir
+
+-- ** Queries
 
 -- | Slow, use 'getPathReversed' where possible
 getPath :: NodeAddress -> NodePath
@@ -133,17 +145,17 @@ depth = length . getPathReversed
 
 -- | Get the number of children of a given node.
 numChildren :: NodeAddress -> Int
-numChildren = length . IR.getChildren . getNodePair
+numChildren = length . IR.getChildren . getNode
 
 getChildren :: NodeAddress -> [NodeAddress]
 getChildren a = (flip goDown) a <$> [0..numChildren a - 1]
 
 getIndex :: NodeAddress -> Int
-getIndex a | isRoot a = error "Can't obtain index of a root address!" 
+getIndex a | isRoot a = error "Can't obtain index of a root address!"
 getIndex a = head $ getPathReversed a
 
 getNodeType :: NodeAddress -> IR.NodeType
-getNodeType = IR.getNodeType . getNodePair
+getNodeType = IR.getNodeType . getNode
 
 isRoot :: NodeAddress -> Bool
 isRoot = isNothing . getParent
@@ -157,8 +169,15 @@ getRootAddress a = mkNodeAddress [] (getInspire a)
 isChildOf :: NodeAddress -> NodeAddress -> Bool
 a `isChildOf` b = getRoot a == getRoot b && (getPathReversed b `isSuffixOf` getPathReversed a)
 
-prettyShow :: NodeAddress -> String
-prettyShow na = '0' : concat ['-' : show x | x <- getPath na]
+-- ** Navigation
+
+-- | Return a node address relative to the given one; a negative integer means
+-- going up so many levels; zero or a positive integer means going to the
+-- respective child.
+goRel :: [Int] -> NodeAddress -> NodeAddress
+goRel []     = id
+goRel (i:is) | i <  0 = goRel is . last . take (1-i) . iterate goUp
+             | i >= 0 = goRel is . goDown i
 
 goUp :: NodeAddress -> NodeAddress
 goUp na | isRoot na = trace "No parent for Root" undefined
@@ -169,65 +188,27 @@ goDown x parent@(NodeAddress xs n ir _ r) = NodeAddress (x : xs) n' ir (Just par
   where
     n' = IR.getChildren n !! x
 
--- | Return a node address relative to the given one; a negative
--- integer means going up so many levels; zero or a positive integer
--- means going to the respective child.
-goRel :: [Int] -> NodeAddress -> NodeAddress
-goRel []     = id
-goRel (i:is) | i < 0 = goRel is . last . take (1-i) . iterate goUp
-             | i >= 0 = goRel is . goDown i
-
 goLeft :: NodeAddress -> NodeAddress
-goLeft na@(NodeAddress xs _ _ _             _ ) | head xs == 0 = na
-goLeft na@(NodeAddress _  _ _ Nothing       _ ) = na
-goLeft    (NodeAddress xs _ _ (Just parent) _ ) = goDown (head xs - 1) parent
+goLeft na@(NodeAddress xs _ _ _             _) | head xs == 0 = na
+goLeft na@(NodeAddress _  _ _ Nothing       _) = na
+goLeft    (NodeAddress xs _ _ (Just parent) _) = goDown (head xs - 1) parent
 
 goRight :: NodeAddress -> NodeAddress
-goRight na@(NodeAddress _  _ _ Nothing       _ ) = na
-goRight    (NodeAddress xs _ _ (Just parent) _ ) = goDown (head xs + 1) parent
+goRight na@(NodeAddress _  _ _ Nothing       _) = na
+goRight    (NodeAddress xs _ _ (Just parent) _) = goDown (head xs + 1) parent
+
+-- ** Subtree construction / destruction
 
 append :: NodeAddress -> NodeAddress -> NodeAddress
 append a b | isRoot a = b
 append a b | isRoot b = a
 append a b = NodeAddress {
-            getPathReversed = (getPathReversed b) ++ (getPathReversed a),
-            getNodePair = getNodePair b,
-            getInspire = getInspire a,
-            getParent = Just $ append a $ fromJust $ getParent b,
-            getAbsoluteRootPath = getAbsoluteRootPath a
-        }
+                getPathReversed     = (getPathReversed b) ++ (getPathReversed a),
+                getNode             = getNode b,
+                getInspire          = getInspire a,
+                getParent           = Just $ append a $ fromJust $ getParent b,
+                getAbsoluteRootPath = getAbsoluteRootPath a
+             }
 
 crop :: NodeAddress -> NodeAddress
-crop a = NodeAddress [] (getNodePair a) ( (getInspire a){IR.getTree=getNodePair a} ) Nothing ((getPathReversed a) ++ (getAbsoluteRootPath a))
-
-
--- builtin handling ---------
-
-data Builtin = Builtin IR.Tree | NoSuchBuiltin
-
-getBuiltin :: NodeAddress -> String -> Builtin
-getBuiltin addr name = case tree of
-        Just t  -> Builtin t
-        Nothing -> NoSuchBuiltin
-    where
-        tree = Map.lookup name (IR.getBuiltins $ getInspire addr)
-
-
-isBuiltin :: NodeAddress -> Builtin -> Bool
-isBuiltin _ NoSuchBuiltin = False
-isBuiltin a b@(Builtin t) = case getNodeType a of
-     IR.Lambda | depth a >= 3 -> isBuiltin (goUp $ goUp $ goUp $ a) b
-     _                        -> getNodePair a == t
-
-isBuiltinByName :: NodeAddress -> String -> Bool
-isBuiltinByName a n = isBuiltin a $ getBuiltin a n
-
--- lookupBuiltin :: NodeAddress -> String -> Maybe IR.Tree
--- lookupBuiltin addr needle = Map.lookup needle (IR.getBuiltins $ getInspire addr)
---
---
---
--- isBuiltin :: NodeAddress -> String -> Bool
--- isBuiltin addr needle = case getNodeType addr of
---     IR.Lambda | depth addr >= 3 -> isBuiltin (goUp $ goUp $ goUp $ addr) needle
---     _         -> fromMaybe False $ (== getNodePair addr) <$> lookupBuiltin addr needle
+crop a = NodeAddress [] (getNode a) ( (getInspire a){IR.getTree=getNode a} ) Nothing ((getPathReversed a) ++ (getAbsoluteRootPath a))

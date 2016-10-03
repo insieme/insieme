@@ -43,7 +43,7 @@ module Insieme.Analysis.Reference (
     Reference(..),
     ReferenceSet,
     referenceValue,
-    
+
     isMaterializingDeclaration,
     isMaterializingCall
 ) where
@@ -52,26 +52,22 @@ import Control.DeepSeq
 import Data.Maybe
 import Data.Typeable
 import GHC.Generics (Generic)
+import Insieme.Analysis.Arithmetic
+import Insieme.Analysis.DataPath
+import Insieme.Analysis.Entities.FieldIndex
+import Insieme.Analysis.Entities.SymbolicFormula
+import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Solver
-import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Utils
-import qualified Insieme.Inspire as IR
-
+import Insieme.Inspire.NodeAddress as Addr
+import Insieme.Inspire.Query
 import Insieme.Utils.Arithmetic
+import qualified Insieme.Analysis.Entities.DataPath as DP
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
+import qualified Insieme.Inspire as IR
 import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
-import Insieme.Analysis.Framework.Utils.OperatorHandler
-import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
-import Insieme.Analysis.Entities.FieldIndex
-import Insieme.Analysis.Entities.SymbolicFormula
-
-
-import qualified Insieme.Analysis.Entities.DataPath as DP
-import Insieme.Analysis.Arithmetic
-import Insieme.Analysis.DataPath
-
 
 --
 -- * Location
@@ -85,7 +81,7 @@ type Location = NodeAddress
 -- * References
 --
 
-data Reference i = 
+data Reference i =
       Reference {
           creationPoint :: Location,
           dataPath      :: DP.DataPath i
@@ -128,10 +124,10 @@ referenceValue addr = case getNodeType addr of
         IR.Literal ->
             mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference (crop addr) DP.root)
 
-        IR.Declaration | isMaterializingDeclaration (getNodePair addr) ->
+        IR.Declaration | isMaterializingDeclaration (Addr.getNode addr) ->
             mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.root)
 
-        IR.CallExpr | isMaterializingCall (getNodePair addr) ->
+        IR.CallExpr | isMaterializingCall (Addr.getNode addr) ->
             mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.root)
 
         _ -> dataflowValue addr analysis opsHandler
@@ -141,7 +137,7 @@ referenceValue addr = case getNodeType addr of
         analysis = (mkDataFlowAnalysis ReferenceAnalysis "R" referenceValue){
             entryPointParameterHandler=epParamHandler
         }
-        
+
         epParamHandler a = mkConstant analysis a $ compose $ BSet.singleton $ Reference a DP.root
 
         idGen = mkVarIdentifier analysis
@@ -194,13 +190,13 @@ referenceValue addr = case getNodeType addr of
                 cov a = isBuiltin a $ getBuiltin addr "ptr_to_ref"
                 dep _ = [toVar baseRefVar, toVar offsetVar]
                 val a = compose $ access (baseRefVal a) (offsetVal a)
-                
+
                 baseRefVal a = ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 0) $ get a baseRefVar
-                
+
                 offsetVar = arithmeticValue $ goDown 1 $ goDown 2 addr
                 offsetVal a = BSet.toUnboundSet $ ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 1) $ get a offsetVar
-                
-                access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ index offset))  
+
+                access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ index offset))
 
         ptrFromRef = OperatorHandler cov dep val
             where
@@ -227,11 +223,11 @@ referenceValue addr = case getNodeType addr of
         onRefs _ NullReference          = NullReference
         onRefs _ UninitializedReference = UninitializedReference
         onRefs f r = f r
-        
+
         onRefs2 _ NullReference          _ = NullReference
         onRefs2 _ UninitializedReference _ = UninitializedReference
         onRefs2 f r d = f r d
- 
+
 
 getTypeParam :: Int -> IR.Tree -> IR.Tree
 getTypeParam i (IR.NT IR.GenericType ( _ : _ : (IR.NT IR.Types params) : [] )) = params !! i
@@ -261,12 +257,12 @@ getEnclosingDecl addr = case getNodeType addr of
         _ | isRoot addr -> error "getEnclosingDecl has no parent to go to"
         _               -> getEnclosingDecl $ fromJust $ getParent addr
     where
-    
+
         fun = (goDown 1) <$> getParent addr
-        
+
         isCtorThisParam = isCtorCall && getIndex addr == 2
-        isCtorCall = fromMaybe False $ (isConstructor . getNodePair) <$> fun 
-        
+        isCtorCall = fromMaybe False $ (isConstructor . Addr.getNode) <$> fun
+
         isRefCastParam = isRefCastCall && getIndex addr == 2
         isRefCastCall = case fun of
             Just f  -> case getNodeType f of
@@ -274,7 +270,7 @@ getEnclosingDecl addr = case getNodeType addr of
                 IR.Literal    -> isRefCast f
                 _             -> False
             Nothing -> False
-            
+
         isRefCast f = any (isBuiltin f) $ getBuiltin addr <$> [
                         "ref_cast",
                         "ref_const_cast",
@@ -282,7 +278,4 @@ getEnclosingDecl addr = case getNodeType addr of
                         "ref_kind_cast",
                         "ref_reinterpret",
                         "ref_parent_cast"
-                    ]         
-        
-        
-        
+                    ]

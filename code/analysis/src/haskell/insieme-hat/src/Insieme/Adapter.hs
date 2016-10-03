@@ -55,7 +55,7 @@ import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
-import qualified Insieme.Inspire.Utils as IRUtils
+import qualified Insieme.Inspire.Visit as Visit
 import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Utils.BoundSet as BSet
 
@@ -137,7 +137,7 @@ foreign import ccall "hat_update_context"
 findDecl :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
 findDecl var_hs = do
     var <- deRefStablePtr var_hs
-    case IRUtils.findDecl var of
+    case Visit.findDecl var of
         Nothing -> return $ castPtrToStablePtr nullPtr
         Just a  -> newStablePtr a
 

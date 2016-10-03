@@ -53,34 +53,29 @@ module Insieme.Analysis.Framework.Dataflow (
 ) where
 
 
-import Data.Int
 import Data.Foldable
+import Data.Int
 import Data.Maybe
 import Data.Typeable
 import Debug.Trace
-import qualified Data.Set as Set
-
-import qualified Insieme.Utils.BoundSet as BSet
-
-import qualified Insieme.Inspire as IR
-import Insieme.Inspire.Utils
-import Insieme.Inspire.NodeAddress
-
-import qualified Insieme.Analysis.Solver as Solver
-
-import qualified Insieme.Analysis.Callable as Callable
-import qualified Insieme.Analysis.CallSite as CallSite
-import qualified Insieme.Analysis.ExitPoint as ExitPoint
-import qualified Insieme.Analysis.Reference as Reference
-import qualified Insieme.Analysis.Arithmetic as Arithmetic
-
 import Insieme.Analysis.Entities.DataPath
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.ProgramPoint
-import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Framework.MemoryState
-
+import Insieme.Analysis.Framework.Utils.OperatorHandler
+import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.Query
+import Insieme.Inspire.Visit
+import qualified Data.Set as Set
+import qualified Insieme.Analysis.Arithmetic as Arithmetic
+import qualified Insieme.Analysis.CallSite as CallSite
+import qualified Insieme.Analysis.Callable as Callable
+import qualified Insieme.Analysis.ExitPoint as ExitPoint
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Reference as Reference
+import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Inspire as IR
+import qualified Insieme.Utils.BoundSet as BSet
 
 --
 -- * Data Flow Analysis summary
@@ -91,9 +86,9 @@ data DataFlowAnalysis a v = DataFlowAnalysis {
     analysisIdentifier         :: Solver.AnalysisIdentifier,            -- ^ the analysis identifier
     variableGenerator          :: NodeAddress -> Solver.TypedVar v,     -- ^ the variable generator of the represented analysis
     topValue                   :: v,                                    -- ^ the top value of this analysis
-    freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a free variable 
+    freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a free variable
     entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a entry point parameter
-    initialValueHandler        :: NodeAddress -> v                      -- ^ a function computing the initial value of a memory location 
+    initialValueHandler        :: NodeAddress -> v                      -- ^ a function computing the initial value of a memory location
 }
 
 -- a function creating a simple data flow analysis
@@ -102,7 +97,7 @@ mkDataFlowAnalysis a s g = res
     where
         res = DataFlowAnalysis a aid g top justTop justTop (\_ -> top)
         aid = (Solver.mkAnalysisIdentifier a s)
-        justTop a = mkConstant res a top 
+        justTop a = mkConstant res a top
         top = Solver.top
 
 
@@ -111,12 +106,12 @@ mkVarIdentifier :: DataFlowAnalysis a v -> NodeAddress -> Solver.Identifier
 mkVarIdentifier a n = Solver.mkIdentifierFromExpression (analysisIdentifier a) n
 
 
--- a function creating a data flow analysis variable representing a constant value 
-mkConstant :: (Typeable a, Solver.ExtLattice v) => DataFlowAnalysis a v -> NodeAddress -> v -> Solver.TypedVar v 
+-- a function creating a data flow analysis variable representing a constant value
+mkConstant :: (Typeable a, Solver.ExtLattice v) => DataFlowAnalysis a v -> NodeAddress -> v -> Solver.TypedVar v
 mkConstant a n v = var
     where
         var = Solver.mkVariable (idGen n) [] v
-        idGen = mkVarIdentifier a   
+        idGen = mkVarIdentifier a
 
 
 --
@@ -128,7 +123,7 @@ dataflowValue :: (ComposedValue.ComposedValue a i v, Typeable d)
          -> DataFlowAnalysis d a                            -- ^ the summar of the analysis to be performed be realized by this function
          -> [OperatorHandler a]                             -- ^ allows selected operators to be intercepted and interpreted
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
-dataflowValue addr analysis ops = case getNodePair addr of
+dataflowValue addr analysis ops = case getNode addr of
 
     IR.NT IR.Variable _ -> case findDecl addr of
             Just declrAddr -> handleDeclr declrAddr              -- this variable is declared, use declared value
@@ -150,15 +145,15 @@ dataflowValue addr analysis ops = case getNodePair addr of
 
 
         -- utilities --
-        
+
         callTargetVar = Callable.callableValue (goDown 1 addr)
-        
+
         callTargetVal a = ComposedValue.toValue $ Solver.get a callTargetVar
-        
+
         filterInterceptedLambdas ts = Set.filter (not . covered) (BSet.toSet ts)
             where
                 covered (Callable.Lambda addr) = any (\o -> covers o addr) extOps
-                covered _ = False 
+                covered _ = False
 
 
         -- support for calls to lambda and closures --
@@ -169,7 +164,7 @@ dataflowValue addr analysis ops = case getNodePair addr of
                 uninterceptedTargets = filterInterceptedLambdas targets
                 go c = (ExitPoint.exitPoints $ Callable.toAddress c)
 
-                
+
 
         getReturnValueVars a = concat $ map go $ map (toList . Solver.get a) (getExitPointVars a)
             where
@@ -177,24 +172,24 @@ dataflowValue addr analysis ops = case getNodePair addr of
 
                 resolve (ExitPoint.ExitPoint r) = case getNodeType r of
                     IR.Declaration  -> [memoryStateValue (MemoryStatePoint (ProgramPoint r Post) (MemoryLocation r)) analysis]
-                    IR.CompoundStmt | isConstructorOrDestructor $ getNodePair $ fromJust $ getParent r -> []
+                    IR.CompoundStmt | isConstructorOrDestructor $ getNode $ fromJust $ getParent r -> []
                     _               -> [varGen r]
 
         getReturnValues a = map (Solver.get a) (getReturnValueVars a)
 
 
         -- support for calls to constructors and destructors --
-        
-        isCtorOrDtor c = isConstructorOrDestructor $ getNodePair $ Callable.toAddress c
-        
+
+        isCtorOrDtor c = isConstructorOrDestructor $ getNode $ Callable.toAddress c
+
         getCtorDtorVars a = if BSet.isUniverse targets then [] else concat $ go <$> Set.toList uninterceptedTargets
             where
                 targets = callTargetVal a
                 uninterceptedTargets = filterInterceptedLambdas targets
-                
+
                 go c = if isCtorOrDtor c then [varGen $ goDown 1 $ goDown 2 addr] else []
-                
-        getCtorDtorValues a = (Solver.get a) <$> getCtorDtorVars a 
+
+        getCtorDtorValues a = (Solver.get a) <$> getCtorDtorVars a
 
 
         -- operator support --
@@ -284,12 +279,12 @@ dataflowValue addr analysis ops = case getNodePair addr of
             var = Solver.mkVariable (idGen addr) [constraint] Solver.bot
             constraint = Solver.forward (varGen (goDown 0 . goUp $ declrAddr)) var
 
-        IR.Parameters -> 
-            
-            if isEntryPointParameter declrAddr                           
+        IR.Parameters ->
+
+            if isEntryPointParameter declrAddr
                 then entryPointParameterHandler analysis declrAddr
-                else var   
-            
+                else var
+
           where
             var = Solver.mkVariable (idGen addr) [con] Solver.bot
             con = Solver.createConstraint dep val var
@@ -328,7 +323,7 @@ dataflowValue addr analysis ops = case getNodePair addr of
             targetRefVar = Reference.referenceValue $ goDown 1 $ goDown 2 addr          -- here we have to skip the potentially materializing declaration!
             targetRefVal a = ComposedValue.toValue $ Solver.get a targetRefVar
 
-            includesUnknownSources t = BSet.member Reference.NullReference t || BSet.member Reference.UninitializedReference t 
+            includesUnknownSources t = BSet.member Reference.NullReference t || BSet.member Reference.UninitializedReference t
 
             readValueVars a = if includesUnknownSources targets then [] else map memStateVarOf $ BSet.toList targets
                 where

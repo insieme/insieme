@@ -44,7 +44,7 @@ import Control.DeepSeq
 import Data.Typeable
 import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Utils
+import Insieme.Inspire.Visit
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Reachable as Reachable
 import qualified Insieme.Analysis.Solver as Solver

@@ -34,129 +34,46 @@
  - regarding third party software licenses.
  -}
 
-{-# LANGUAGE CPP               #-}
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms   #-}
-{-# LANGUAGE TemplateHaskell   #-}
 
-module Insieme.Inspire where
+module Insieme.Inspire (
+    module Insieme.Inspire,
+    module Insieme.Inspire.NodeType,
+) where
 
 import Control.DeepSeq
 import Data.Function (on)
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
-import Insieme.Inspire.ThHelpers
-import Language.Haskell.TH
+import Insieme.Inspire.NodeType
 
-#c
-#define CONCRETE(name) NT_##name,
-enum C_NodeType {
-#include "insieme/core/ir_nodes.def"
-};
-#undef CONCRETE
-#endc
+--
+-- * Inspire
+--
 
--- | NodeType taken from Insieme header files.
-{#enum C_NodeType {} deriving (Eq, Show)#}
+data Inspire = Inspire { getTree     :: Tree,
+                         getBuiltins :: Builtins
+                       }
+  deriving (Generic, NFData)
 
--- | Generates Inspire data structure.
-$(let
+--
+-- * Builtins
+--
 
-    base :: Q [Dec]
-    base =
-      [d|
-        data NodeType =
-              BoolValue   Bool
-            | CharValue   Char
-            | IntValue    Int
-            | UIntValue   Int
-            | StringValue String
-          deriving (Eq, Ord, Show, Read, Generic, NFData)
-      |]
+type Builtin = Maybe Tree
 
-    extend :: Q [Dec] -> Q [Dec]
-    extend base = do
-#if defined(MIN_VERSION_template_haskell)
-#if MIN_VERSION_template_haskell(2,11,0)
-        [DataD [] n [] Nothing cons ds] <- base
-        TyConI (DataD [] _ [] Nothing nt_cons _) <- reify ''C_NodeType
-        let cons' = genCons <$> filter (not . isLeaf) nt_cons
-        return $ [DataD [] n [] Nothing (cons ++ cons') ds]
-#endif
-#else
-        [DataD [] n [] cons ds] <- base
-        TyConI (DataD [] _ [] nt_cons _) <- reify ''C_NodeType
-        let cons' = genCons <$> filter (not . isLeaf) nt_cons
-        return $ [DataD [] n [] (cons ++ cons') ds]
-#endif
-
-    genCons :: Con -> Con
-    genCons (NormalC n _) = NormalC (removePrefix "NT_" n) []
-    genCons _             = error "unexpected Con"
-
-  in
-    extend base
- )
-
--- | Generates toNodeType and fromNodeType functions.
-$(let
-
-    baseFromNodeType :: Q [Dec]
-    baseFromNodeType =
-      [d|
-        fromNodeType :: C_NodeType -> NodeType
-        fromNodeType NT_BoolValue   = BoolValue False
-        fromNodeType NT_CharValue   = CharValue ' '
-        fromNodeType NT_IntValue    = IntValue 0
-        fromNodeType NT_UIntValue   = UIntValue 0
-        fromNodeType NT_StringValue = StringValue ""
-      |]
-
-    baseToNodeType :: Q [Dec]
-    baseToNodeType =
-      [d|
-        toNodeType :: NodeType -> C_NodeType
-        toNodeType (BoolValue   _) = NT_BoolValue
-        toNodeType (CharValue   _) = NT_CharValue
-        toNodeType (IntValue    _) = NT_IntValue
-        toNodeType (UIntValue   _) = NT_UIntValue
-        toNodeType (StringValue _) = NT_StringValue
-      |]
-
-    extend :: Q [Dec] -> (Con -> Clause) -> Q [Dec]
-    extend base gen = do
-        [d, FunD n cls]               <- base
-#if defined(MIN_VERSION_template_haskell)
-#if MIN_VERSION_template_haskell(2,11,0)
-        TyConI (DataD [] _ [] Nothing cons _) <- reify ''C_NodeType
-#endif
-#else
-        TyConI (DataD [] _ [] cons _) <- reify ''C_NodeType
-#endif
-        let cls' = gen <$> filter (not . isLeaf) cons
-        return $ [d,FunD n (cls ++ cls')]
-
-    genClauseFromNodeType :: Con -> Clause
-    genClauseFromNodeType (NormalC n _) = Clause [ConP n []] (NormalB (ConE (removePrefix "NT_" n))) []
-    genClauseFromNodeType _             = error "unexpected Con"
-
-    genClauseToNodeType :: Con -> Clause
-    genClauseToNodeType (NormalC n _) = Clause [ConP (removePrefix "NT_" n) []] (NormalB (ConE n)) []
-    genClauseToNodeType _             = error "unexpected Con"
-
-  in
-    (++) <$> extend baseFromNodeType genClauseFromNodeType
-         <*> extend baseToNodeType   genClauseToNodeType
- )
+type Builtins = Map String Builtin
 
 --
 -- * Tree
 --
 
-data Tree = Tree { getNodePair :: (Int, NodeType),
-                   getChildren :: [Tree]           }
+data Tree = Tree { getNode :: (Int, NodeType),
+                   getChildren :: [Tree]
+                 }
   deriving (Show, Generic, NFData)
 
 instance Eq Tree where
@@ -171,32 +88,26 @@ mkNode :: (Int, NodeType) -> [Tree] -> Tree
 mkNode = Tree
 
 getID :: Tree -> Int
-getID = fst . getNodePair
+getID = fst . getNode
 
 getNodeType :: Tree -> NodeType
-getNodeType = snd . getNodePair
+getNodeType = snd . getNode
 
 numChildren :: Tree -> Int
 numChildren = length . getChildren
 
 --
--- * Inspire
+-- * Node Kind
 --
 
-type Builtins = Map String Tree
+data NodeKind = Value
+              | Type
+              | Expression
+              | Statement
+              | TranslationUnit
+              | Support
+  deriving (Eq, Ord, Show)
 
-data Inspire = Inspire { getTree     :: !Tree,
-                         getBuiltins :: Builtins }
-  deriving (Generic, NFData)
-
---
--- * Node Kinds
--- 
-
-data NodeKind =
-        Value | Type | Expression | Statement | TranslationUnit | Support
-    deriving (Eq,Ord,Show)
-    
 toNodeKind :: NodeType -> NodeKind
 
 toNodeKind (BoolValue _)   = Value
@@ -267,18 +178,19 @@ toNodeKind SwitchCases                  = Support
 toNodeKind CatchClause                  = Support
 toNodeKind Parameters                   = Support
 toNodeKind Expressions                  = Support
-                         
-
 
 --
 -- * Function Kind
--- 
+--
 
-data FunctionKind =
-        FK_Plain | FK_Closure | FK_Constructor | FK_Destructor | FK_MemberFunction | FK_VirtualMemberFunction
-    deriving (Eq,Ord,Show)
-                         
-                         
+data FunctionKind = FK_Plain
+                  | FK_Closure
+                  | FK_Constructor
+                  | FK_Destructor
+                  | FK_MemberFunction
+                  | FK_VirtualMemberFunction
+  deriving (Eq, Ord, Show)
+
 toFunctionKind :: Tree -> Maybe FunctionKind
 toFunctionKind t@(NT FunctionType (_:_:k:_)) = case getNodeType k of
     UIntValue 1 -> Just $ FK_Plain
@@ -288,9 +200,5 @@ toFunctionKind t@(NT FunctionType (_:_:k:_)) = case getNodeType k of
     UIntValue 5 -> Just $ FK_MemberFunction
     UIntValue 6 -> Just $ FK_VirtualMemberFunction
     _ -> Nothing
-          
-toFunctionKind _ = Nothing 
 
-
-
- 
+toFunctionKind _ = Nothing

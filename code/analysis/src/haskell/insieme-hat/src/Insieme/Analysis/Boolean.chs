@@ -45,6 +45,7 @@ import GHC.Generics (Generic)
 import Insieme.Analysis.Arithmetic
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.Query
 import Insieme.Utils.Arithmetic (NumOrdering(..), numCompare)
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Utils.BoundSet as BSet
@@ -71,7 +72,7 @@ import Insieme.Analysis.Entities.FieldIndex
 
 instance Solver.Lattice Result where
     bot = Neither
-    
+
     merge Neither x = x
     merge x Neither = x
     merge x y | x == y = x
@@ -106,7 +107,7 @@ booleanValue addr =
                 | otherwise      -> dataflowValue addr analysis ops
   where
 
-    compose = ComposedValue.toComposed 
+    compose = ComposedValue.toComposed
     extract = ComposedValue.toValue
 
     analysis = mkDataFlowAnalysis BooleanAnalysis "B" booleanValue

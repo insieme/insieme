@@ -34,62 +34,16 @@
  - regarding third party software licenses.
  -}
 
-{-# LANGUAGE FlexibleInstances #-}
+module Insieme.Utils.ParseIR where
 
-module Insieme.Analysis.RecursiveLambdaReferences (
-
-    LambdaReferenceSet,
-    recursiveCalls
-
-) where
-
-import Data.Typeable
-import qualified Data.Set as Set
-
-import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.BinaryParser
+import System.Process
+import qualified Data.ByteString.Char8 as BS8
 import qualified Insieme.Inspire as IR
 
-import Insieme.Analysis.Solver
-import Insieme.Analysis.FreeLambdaReferences
-
-
---
--- * RecursiveLambdaReferences Analysis
---
-
-data RecursiveLambdaReferenceAnalysis = RecursiveLambdaReferenceAnalysis
-    deriving (Typeable)
-
-
---
--- * the constraint generator
---
-
-recursiveCalls :: NodeAddress -> TypedVar LambdaReferenceSet
-recursiveCalls addr = case getNodeType addr of
-    
-        IR.Lambda | depth addr >= 3 -> var
-        
-        _ -> error "Can only compute recursive calls for lambdas with sufficient context!"
-
-    where
-    
-        var = mkVariable varId [con] Set.empty
-        con = createConstraint dep val var
-    
-        varId = mkIdentifierFromExpression analysis addr
-        analysis = mkAnalysisIdentifier RecursiveLambdaReferenceAnalysis "RecLambdaRefs" 
-        
-        dep _ = toVar <$> freeRefVars
-        val a = Set.filter f $ join $ (get a) <$> freeRefVars
-            where
-                f r = getNode r == tag 
-    
-        tag = getNode $ goDown 0 $ goUp addr
-        def = goUp $ goUp addr
-        
-        lambdas = goDown 1 <$> getChildren def
-    
-        freeRefVars = freeLambdaReferences <$> lambdas    
-
-        
+-- | Parse a given IR statement using the inspire binary.
+parseIR :: String -> IO IR.Inspire
+parseIR ircode = do
+    irb <- readProcess "inspire" ["-s", "-i", "-", "-k", "-"] ircode
+    let Right ir = parseBinaryDump (BS8.pack irb)
+    return ir

@@ -44,12 +44,12 @@ import Data.List (isPrefixOf)
 import Data.Text.Format as Fmt
 import Data.Text.Lazy.Builder (fromString)
 import Insieme.Inspire.BinaryParser (parseBinaryDump)
-import Insieme.Inspire.Utils (foldTree)
+import Insieme.Inspire.Visit (foldTree)
 import Insieme.Utils.Arithmetic (NumOrdering(NumEQ), numCompare)
-import qualified Insieme.Analysis.Entities.FieldIndex as FieldIndex
 import qualified Insieme.Analysis.Alias as Alias
 import qualified Insieme.Analysis.Arithmetic as Arith
 import qualified Insieme.Analysis.Boolean as AnBoolean
+import qualified Insieme.Analysis.Entities.FieldIndex as FieldIndex
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as CV
 import qualified Insieme.Analysis.Reference as Ref
 import qualified Insieme.Analysis.Solver as Solver
@@ -84,7 +84,7 @@ isPending = (==Pending) . getResult
 
 findAnalysis :: Addr.NodeAddress -> [AnalysisRun] -> [AnalysisRun]
 findAnalysis addr acc =
-    case Addr.getNodePair addr of
+    case Addr.getNode addr of
         IR.NT IR.CallExpr (_:IR.NT IR.Literal [_, IR.NT (IR.StringValue s) _]:_) | "cba_expect" `isPrefixOf` s
             -> AnalysisRun addr s Pending : acc
         _   -> acc
