@@ -135,31 +135,31 @@ int main() {
 	}
 	
 	// implicit int to pointer
-	#pragma test expect_ir("var ref<ptr<unit,f,f>,f,f> v0 = ptr_from_integral(5, type_lit(ptr<unit,f,f>));")
+	#pragma test expect_ir("var ref<ptr<unit,f,f>,f,f> v0 = ptr_from_integral(5, type_lit(unit));")
 	void* a = 5;
 
 	// explicit int to pointer
-	#pragma test expect_ir("var ref<ptr<unit,f,f>,f,f> v0 = ptr_from_integral(5, type_lit(ptr<unit,f,f>));")
+	#pragma test expect_ir("var ref<ptr<unit,f,f>,f,f> v0 = ptr_from_integral(5, type_lit(unit));")
 	void* a2 = (void*)5;
 	
 	// implicit pointer to int
-	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ptr_to_integral(ptr_from_integral(5, type_lit(ptr<unit,f,f>)), type_lit(int<4>));")
+	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ptr_to_integral(ptr_from_integral(5, type_lit(unit)), type_lit(int<4>));")
 	int ifromp = (void*)5;
 
 	// explicit pointer to int
-	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ptr_to_integral(ptr_from_integral(5, type_lit(ptr<unit,f,f>)), type_lit(int<4>));")
+	#pragma test expect_ir("var ref<int<4>,f,f> v0 = ptr_to_integral(ptr_from_integral(5, type_lit(unit)), type_lit(int<4>));")
 	int ifromp2 = (int)(void*)5;
 	
 	// implicit int to volatile pointer
-	#pragma test expect_ir("var ref<ptr<unit,f,t>,f,f> v0 = ptr_from_integral(5, type_lit(ptr<unit,f,t>));")
+	#pragma test expect_ir("var ref<ptr<unit,f,t>,f,f> v0 = ptr_cast(ptr_from_integral(5, type_lit(unit)), type_lit(f), type_lit(t));")
 	volatile void* vpointerfromint = 5;
 	
 	// implicit uint to pointer
-	#pragma test expect_ir("var ref<ptr<unit,f,f>,f,f> v0 = ptr_from_integral(5u, type_lit(ptr<unit,f,f>));")
+	#pragma test expect_ir("var ref<ptr<unit,f,f>,f,f> v0 = ptr_from_integral(5u, type_lit(unit));")
 	void* pointerfromuint = 5u;
 	
 	// implicit pointer to uint
-	#pragma test expect_ir("var ref<uint<4>,f,f> v0 = ptr_to_integral(ptr_from_integral(5, type_lit(ptr<unit,f,f>)), type_lit(uint<4>));")
+	#pragma test expect_ir("var ref<uint<4>,f,f> v0 = ptr_to_integral(ptr_from_integral(5, type_lit(unit)), type_lit(uint<4>));")
 	unsigned uintfrompointer = (void*)5;
 
 	//===------------------------------------------------------------------------------------------------------------------------------------- MISC CASTS ---===

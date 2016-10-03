@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -51,33 +51,34 @@ namespace annotations {
 
 	VALUE_ANNOTATION_CONVERTER(Location)
 
-	typedef core::value_node_annotation<Location>::type annotation_type;
+		typedef core::value_node_annotation<Location>::type annotation_type;
 
-	typedef std::tuple<string, unsigned, unsigned, unsigned, unsigned, bool> encoded_type;
+		typedef std::tuple<string, unsigned, unsigned, unsigned, unsigned, bool> encoded_type;
 
-	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-		assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only location annotations supported!");
-		const Location& loc = static_pointer_cast<annotation_type>(annotation)->getValue();
-		if(loc.isShared()) {
-			encoded_type value;
-			std::get<5>(value) = true;
-			return encoder::toIR(manager, value);
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only location annotations supported!");
+			const Location& loc = static_pointer_cast<annotation_type>(annotation)->getValue();
+			if(loc.isShared()) {
+				encoded_type value;
+				std::get<5>(value) = true;
+				return encoder::toIR(manager, value);
+			}
+			return encoder::toIR(manager, encoded_type(loc.getFile(), loc.getStart().getLine(), loc.getStart().getColumn(), loc.getEnd().getLine(),
+													   loc.getEnd().getColumn(), loc.isShared()));
 		}
-		return encoder::toIR(manager, encoded_type(loc.getFile(), loc.getStart().getLine(), loc.getStart().getColumn(), loc.getEnd().getLine(),
-		                                           loc.getEnd().getColumn(), loc.isShared()));
-	}
 
-	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-		assert(encoder::isEncodingOf<encoded_type>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
-		encoded_type value = encoder::toValue<encoded_type>(node);
-		if(std::get<5>(value)) { return std::make_shared<annotation_type>(Location::getShared()); }
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert(encoder::isEncodingOf<encoded_type>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
+			encoded_type value = encoder::toValue<encoded_type>(node);
+			if(std::get<5>(value)) { return std::make_shared<annotation_type>(Location::getShared()); }
 
-		// re-build the location annotation
-		return std::make_shared<annotation_type>(Location(StringValue::get(node->getNodeManager(), std::get<0>(value)),
-		                                                  TextPosition(std::get<1>(value), std::get<2>(value)),
-		                                                  TextPosition(std::get<3>(value), std::get<4>(value))));
-	}
-};
+			// re-build the location annotation
+			return std::make_shared<annotation_type>(Location(StringValue::get(node->getNodeManager(), std::get<0>(value)),
+															  TextPosition(std::get<1>(value), std::get<2>(value)),
+															  TextPosition(std::get<3>(value), std::get<4>(value))));
+		}
+
+	VALUE_ANNOTATION_CONVERTER_END
 
 // ----------------------------------------------------
 

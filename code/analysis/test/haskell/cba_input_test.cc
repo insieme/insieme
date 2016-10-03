@@ -162,6 +162,32 @@ namespace analysis {
 			return insieme::analysis::getReferencedMemoryLocations<Backend>(ctxt, x);
 		}
 
+
+		bool isNull(const core::ExpressionAddress& x) {
+			return insieme::analysis::isNull<Backend>(ctxt, x);
+		}
+
+		bool notNull(const core::ExpressionAddress& x) {
+			return insieme::analysis::notNull<Backend>(ctxt, x);
+		}
+
+		bool maybeNull(const core::ExpressionAddress& x) {
+			return insieme::analysis::mayBeNull<Backend>(ctxt, x);
+		}
+
+		bool isExtern(const core::ExpressionAddress& x) {
+			return insieme::analysis::isExtern<Backend>(ctxt, x);
+		}
+
+		bool notExtern(const core::ExpressionAddress& x) {
+			return insieme::analysis::notExtern<Backend>(ctxt, x);
+		}
+
+		bool maybeExtern(const core::ExpressionAddress& x) {
+			return insieme::analysis::mayBeExtern<Backend>(ctxt, x);
+		}
+
+
 	public:
 		ActualTest() {}
 
@@ -179,6 +205,7 @@ namespace analysis {
 			// load file using the frontend
 			NodeManager mgr;
 			std::vector<std::string> argv = {"compiler", file, "-fopenmp", "-fcilk"};
+			if (*file.end() == 'p') argv.push_back("--std=c++14");
 			insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
 			options.job.addIncludeDirectory(ROOT_DIR);
 
@@ -190,32 +217,6 @@ namespace analysis {
 			// running semantic checks
 			auto res = core::checks::check(prog);
 			EXPECT_TRUE(res.empty()) << res << "\n------\n" << printer::dumpErrors(res);
-
-//			mgr.getLangExtension<core::lang::ReferenceExtension>().getSymbols();
-//			mgr.getLangExtension<core::lang::PointerExtension>().getSymbols();
-//
-//			core::visitDepthFirstOnce(prog, [](const LambdaExprPtr& lambda) {
-//				if (core::lang::isBuiltIn(lambda)) {
-//					std::cout << core::lang::getConstructName(lambda) << "\n";
-//				}
-//			});
-//
-//			std::map<NodePtr,int> counter;
-//			core::visitDepthFirst(prog, [&](const NodePtr& node) {
-//				if (core::lang::isBuiltIn(node)) {
-//					counter[node]++;
-//				}
-//			});
-//
-//			std::cout << "\nBuilt-In Statistics:\n";
-//			for(const auto& cur : counter) {
-//				std::cout << core::lang::getConstructName(cur.first) << "/" << cur.first->getNodeType() << ": " << cur.second << "\n";
-//			}
-//			std::cout << "\n";
-//
-//			std::cout << core::IRStatistic::evaluate(prog) << "\n";
-
-//			dumpText(prog);
 
 			// run CBA analysis
 			int testCount = 0;
@@ -363,6 +364,36 @@ namespace analysis {
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "MemoryLocationSet evaluates to " << res << std::endl;
 
+				} else if (name == "cba_expect_null_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					EXPECT_TRUE(this->isNull(call.getArgument(0)))
+						<< *core::annotations::getLocation(call) << std::endl;
+
+				} else if (name == "cba_expect_not_null_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					EXPECT_TRUE(this->notNull(call.getArgument(0)))
+						<< *core::annotations::getLocation(call) << std::endl;
+
+				} else if (name == "cba_expect_maybe_null_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					EXPECT_TRUE(this->maybeNull(call.getArgument(0)))
+						<< *core::annotations::getLocation(call) << std::endl;
+
+				} else if (name == "cba_expect_extern_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					EXPECT_TRUE(this->isExtern(call.getArgument(0)))
+						<< *core::annotations::getLocation(call) << std::endl;
+
+				} else if (name == "cba_expect_not_extern_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					EXPECT_TRUE(this->notExtern(call.getArgument(0)))
+						<< *core::annotations::getLocation(call) << std::endl;
+
+				} else if (name == "cba_expect_maybe_extern_ref") {
+					std::cerr << "Performing " << name << std::endl;
+					EXPECT_TRUE(this->maybeExtern(call.getArgument(0)))
+						<< *core::annotations::getLocation(call) << std::endl;
+
 
 				// debugging
 				} else if (name == "cba_print_code") {
@@ -371,7 +402,7 @@ namespace analysis {
 
 				} else if (name == "cba_dump_json") {
 					// dump the code as a json file
-					core::dump::json::dumpIR(filename+".json", prog);
+					core::dump::json::dumpIR("code.json", prog);
 					core::dump::binary::haskell::dumpIR(filename+".binir", prog);
 
 				} else if (name == "cba_dump_statistic") {
@@ -416,7 +447,8 @@ namespace analysis {
 			for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
 				fs::path file = it->path();
 				// collect c files
-				if (file.extension().string() == ".c") {
+				auto ext = file.extension().string();
+				if (ext == ".c" || ext == ".cpp") {
 					res.push_back(prefix + file.filename().string());
 				}
 				// collect files recursively
@@ -449,8 +481,34 @@ namespace analysis {
 		return filenames;
 	}
 
+	/**
+	 * A printer for test case names
+	 */
+	struct TestCaseNamePrinter {
+	  template <class ParamType>
+	  std::string operator()(const ::testing::TestParamInfo<ParamType>& info) const {
+		  std::stringstream out;
+
+		  // foramt the index
+		  out << format("%3d", info.index);
+
+		  // format the name
+		  std::string name = info.param;
+		  name = name.substr(0, name.find_last_of('.'));
+		  out << format("_%-40s", name);
+
+		  // sanitize the resulting string
+		  auto res = out.str();
+		  std::replace(res.begin(), res.end(), ' ','_');
+		  std::replace(res.begin(), res.end(), '/','_');
+		  std::replace(res.begin(), res.end(), '.','_');
+		  std::replace(res.begin(), res.end(), '-','_');
+		  return res;
+	  }
+	};
+
 	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(InputFileChecks, CBA_Inputs_Test, ::testing::ValuesIn(getFilenames()));
+	INSTANTIATE_TEST_CASE_P(InputFileChecks, CBA_Inputs_Test, ::testing::ValuesIn(getFilenames()), TestCaseNamePrinter());
 
 } // end namespace analysis
 } // end namespace insieme

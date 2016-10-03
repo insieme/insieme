@@ -60,18 +60,19 @@ namespace c {
 
 	VALUE_ANNOTATION_CONVERTER(DeclarationTag)
 
-	typedef core::value_node_annotation<DeclarationTag>::type annotation_type;
+		typedef core::value_node_annotation<DeclarationTag>::type annotation_type;
 
-	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-		assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only declaration annotations supported!";
-		return encoder::toIR(manager, string("declaration"));
-	}
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only declaration annotations supported!";
+			return encoder::toIR(manager, string("declaration"));
+		}
 
-	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-		assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
-		return std::make_shared<annotation_type>(DeclarationTag());
-	}
-};
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+			return std::make_shared<annotation_type>(DeclarationTag());
+		}
+
+	VALUE_ANNOTATION_CONVERTER_END
 
 // ----------------------------------------------------
 

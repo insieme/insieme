@@ -51,7 +51,7 @@ import qualified Insieme.Inspire as IR
 
 import Insieme.Analysis.Solver
 import Insieme.Analysis.FreeLambdaReferences
-import Insieme.Inspire.Utils
+import Insieme.Inspire.Query
 
 
 --
@@ -84,9 +84,9 @@ recursiveCalls addr = case getNodeType addr of
         dep _ = toVar <$> freeRefVars
         val a = Set.filter f $ join $ (get a) <$> freeRefVars
             where
-                f r = getNodePair r == tag 
+                f r = getNode r == tag 
     
-        tag = getNodePair $ goDown 0 $ goUp addr
+        tag = getNode $ goDown 0 $ goUp addr
         def = goUp $ goUp addr
         
         lambdas = goDown 1 <$> getChildren def

@@ -59,6 +59,7 @@
 #include "insieme/core/lang/io.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/time.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/simplify.h"
@@ -927,6 +928,35 @@ namespace backend {
 			return CONVERT_ARG(0);
 		};
 
+		// ------------------------------ Time extension ------------------------------
+
+		auto& timeExt = manager.getLangExtension<core::lang::TimeExtension>();
+		res[timeExt.getGetTime()] = OP_CONVERTER {
+
+			auto funDef = FRAGMENT_MANAGER->getFragment("insieme_get_wtime");
+
+			if(!funDef) {
+				std::stringstream code;
+				code << "/* get_wtime implementation helper */ \n"
+					"double insieme_get_wtime() {\n"
+					"    struct timeval t;\n"
+					"    gettimeofday(&t, 0);\n"
+					"    return t.tv_sec + t.tv_usec / 1000000.0;\n"
+					"}\n";
+
+				// attach the new operator
+				c_ast::OpaqueCodePtr cCode = C_NODE_MANAGER->create<c_ast::OpaqueCode>(code.str());
+				funDef = c_ast::CCodeFragment::createNew(FRAGMENT_MANAGER, cCode);
+
+				// add include for malloc
+				funDef->addInclude(string("sys/time.h"));
+				// bind fragment
+				FRAGMENT_MANAGER->bindFragment("insieme_get_wtime", funDef);
+			}
+
+			context.addDependency(funDef);
+			return c_ast::call(C_NODE_MANAGER->create("insieme_get_wtime"));
+		};
 
 		// ---------------------------- IR++ / C++ --------------------------
 

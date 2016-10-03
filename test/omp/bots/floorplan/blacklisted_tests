@@ -9,3 +9,6 @@
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
++floorplan
++floorplan_if
++floorplan_manual

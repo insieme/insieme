@@ -34,20 +34,25 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module Insieme.Utils.ParseInt where
 
+import Control.DeepSeq
 import Data.Char
 import Data.Int
 import Data.List
 import Data.Maybe
 import Data.Word
+import GHC.Generics (Generic)
 import Numeric (readOct, readDec, readHex)
 
 data CInt = CInt32  Int32
           | CInt64  Int64
           | CUInt32 Word32
           | CUInt64 Word64
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Generic, NFData)
 
 instance Show CInt where
     show (CInt32  x) = show x

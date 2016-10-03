@@ -34,6 +34,8 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE BangPatterns #-}
+
 module Insieme.Analysis.Solver (
 
     -- lattices
@@ -74,6 +76,7 @@ module Insieme.Analysis.Solver (
     SolverState,
     initState,
     assignment,
+    numSteps,
 
     -- solver
     resolve,
@@ -97,6 +100,7 @@ module Insieme.Analysis.Solver (
 import Prelude hiding (lookup)
 import Debug.Trace
 
+import Control.DeepSeq
 import Control.Exception
 import Control.Monad (void)
 import Data.Dynamic
@@ -111,6 +115,7 @@ import System.Process
 import Text.Printf
 import qualified Control.Monad.State.Strict as State
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Graph as Graph
 import qualified Data.Hashable as Hash
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
@@ -122,10 +127,11 @@ import Insieme.Analysis.Entities.Memory
 import Insieme.Analysis.Entities.ProgramPoint
 
 
+
 -- Lattice --------------------------------------------------
 
 -- this is actually a bound join-semilattice
-class (Eq v, Show v, Typeable v) => Lattice v where
+class (Eq v, Show v, Typeable v, NFData v) => Lattice v where
         {-# MINIMAL join | merge, bot #-}
         -- | combine elements
         join :: [v] -> v                    -- need to be provided by implementations
@@ -351,7 +357,7 @@ get (Assignment m) (TypedVar v) =
 
 
 -- updates the value for the given variable stored within the given assignment
-set :: (Typeable a) => Assignment -> TypedVar a -> a -> Assignment
+set :: (Typeable a, NFData a) => Assignment -> TypedVar a -> a -> Assignment
 set (Assignment a) (TypedVar v) d = Assignment (insert v (toDyn d) a)
 
 
@@ -454,11 +460,12 @@ data SolverState = SolverState {
         assignment :: Assignment,
         variableIndex :: VariableIndex,        
         -- for performance evaluation
-        numSteps :: Map.Map AnalysisIdentifier Int,                     
-        cpuTimes :: Map.Map AnalysisIdentifier Integer
+        numSteps  :: Map.Map AnalysisIdentifier Int,
+        cpuTimes  :: Map.Map AnalysisIdentifier Integer,
+        numResets :: Map.Map AnalysisIdentifier Int
     } 
 
-initState = SolverState empty emptyVarIndex Map.empty Map.empty
+initState = SolverState empty emptyVarIndex Map.empty Map.empty Map.empty
 
 
 
@@ -476,9 +483,10 @@ getDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
 getDep (Dependencies d) v = fromMaybe Set.empty $ IntMap.lookup (toIndex v) d
 
 getAllDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
-getAllDep d v = collect d [v] Set.empty
+getAllDep d i = collect d [i] Set.empty
     where
         collect d [] s = s
+        collect d (v:_:_) s | v == i = s        -- we can stop if we reach the seed variable again
         collect d (v:vs) s = collect d ((Set.toList $ Set.difference dep s) ++ vs) (Set.union dep s)
             where
                 dep = getDep d v 
@@ -528,34 +536,35 @@ solveStep :: SolverState -> Dependencies -> [IndexedVar] -> SolverState
 
 -- empty work list
 -- solveStep s _ [] | trace (dumpToJsonFile s "ass_meta") $ False = undefined                                           -- debugging assignment as meta-info for JSON dump
--- solveStep s _ [] | trace (dumpSolverState False s "graph") False = undefined                                          -- debugging assignment as a graph plot
+-- solveStep s _ [] | trace (dumpSolverState False s "graph") False = undefined                                         -- debugging assignment as a graph plot
 -- solveStep s _ [] | trace (dumpSolverState True s "graph") $ trace (dumpToJsonFile s "ass_meta") $ False = undefined  -- debugging both
 -- solveStep s _ [] | trace (showSolverStatistic s) $ False = undefined                                                 -- debugging performance data
 solveStep s _ [] = s                                                                                                    -- work list is empty
 
 -- compute next element in work list
-solveStep (SolverState a i u t) d (v:vs) = solveStep (SolverState resAss resIndex nu nt) resDep ds
+solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIndex nu nt nr) resDep ds
         where
                 -- profiling --
-                ((resAss,resIndex,resDep,ds),dt) = measure go ()
+                ((resAss,resIndex,resDep,ds,numResets),dt) = measure go ()
                 nt = Map.insertWith (+) aid dt t
                 nu = Map.insertWith (+) aid  1 u
+                nr = if numResets > 0 then Map.insertWith (+) aid numResets r else r
                 aid = analysis $ index $ indexToVar v
                 
                 -- each constraint extends the result, the dependencies, and the vars to update
-                go _ = foldr processConstraint (a,i,d,vs) ( constraints $ indexToVar v )  -- update all constraints of current variable
-                processConstraint c (a,i,d,dv) = case ( update c a ) of
+                go _ = foldr processConstraint (a,i,d,vs,0) ( constraints $ indexToVar v )  -- update all constraints of current variable
+                processConstraint c (a,i,d,dv,numResets) = case ( update c a ) of
                         
-                        (a',None)         -> (a',ni,nd,nv)                                        -- nothing changed, we are fine
+                        (a',None)         -> (a',ni,nd,nv,numResets)                -- nothing changed, we are fine
                         
-                        (a',Increment)    -> (a',ni,nd, (Set.elems $ getDep nd trg) ++ nv)        -- add depending variables to work list
+                        (a',Increment)    -> (a',ni,nd, uv ++ nv, numResets)        -- add depending variables to work list
                         
-                        (a',Reset)        -> (ra,ni,nd, (Set.elems $ getDep nd trg) ++ nv)        -- handling a local reset
+                        (a',Reset)        -> (ra,ni,nd, uv ++ nv, numResets+1)      -- handling a local reset
                             where 
                                 dep = getAllDep nd trg
-                                ra = if not $ Set.member trg dep                                  -- if variable is not indirectly depending on itself  
-                                    then reset a' dep                                             -- reset all depending variables to their bottom value 
-                                    else fst $ updateWithoutReset c a                             -- otherwise insist on merging reseted value with current state
+                                ra = if not $ Set.member trg dep                    -- if variable is not indirectly depending on itself  
+                                    then reset a' dep                               -- reset all depending variables to their bottom value 
+                                    else fst $ updateWithoutReset c a               -- otherwise insist on merging reseted value with current state
                                         
                     where
                             trg = v
@@ -568,6 +577,8 @@ solveStep (SolverState a i u t) d (v:vs) = solveStep (SolverState resAss resInde
                                     
                             nd = addDep d trg idep
                             nv = newVarsList ++ dv
+                            
+                            uv = Set.elems $ getDep nd trg
 
 
 
@@ -644,7 +655,7 @@ measure f p = unsafePerformIO $ do
 
 -- prints the current assignment as a graph
 toDotGraph :: SolverState -> String
-toDotGraph (SolverState a@( Assignment m ) varIndex _ _) = "digraph G {\n\t"
+toDotGraph (SolverState a@( Assignment m ) varIndex _ _ _) = "digraph G {\n\t"
         ++
         "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
         ++
@@ -713,7 +724,7 @@ nonexistFile base ext = tryFile names
       iter n = concat [base, "-", show n]
 
 toJsonMetaFile :: SolverState -> String
-toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _) = "{\n"
+toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _ _) = "{\n"
         ++
         "    \"bodies\": {\n"
         ++
@@ -746,15 +757,18 @@ dumpToJsonFile s file = unsafePerformIO $ do
 
 showSolverStatistic :: SolverState -> String
 showSolverStatistic s = 
-        "===================================================== Solver Statistic =====================================================\n" ++
-        "         Analysis                #Vars              Updates          Updates/Var            ~Time[us]        ~Time/Var[us]" ++
-        "\n============================================================================================================================\n" ++
+        "===================================================== Solver Statistic ==============================================================================================\n" ++
+        "         Analysis                #Vars              Updates          Updates/Var            ~Time[us]        ~Time/Var[us]               Resets           Resets/Var" ++
+        "\n=====================================================================================================================================================================\n" ++
         ( intercalate "\n" (map print $ Map.toList grouped)) ++
-        "\n----------------------------------------------------------------------------------------------------------------------------\n" ++
+        "\n---------------------------------------------------------------------------------------------------------------------------------------------------------------------\n" ++
         "           Total: " ++ (printf "%20d" numVars) ++ 
                         (printf " %20d" totalUpdates) ++ (printf " %20.3f" avgUpdates) ++ 
                         (printf " %20d" totalTime) ++ (printf " %20.3f" avgTime) ++
-        "\n============================================================================================================================\n"
+                        (printf " %20d" totalResets) ++ (printf " %20.3f" avgResets) ++
+        "\n=====================================================================================================================================================================\n" ++
+        analyseVarDependencies s ++
+        "\n=====================================================================================================================================================================\n" 
     where
         vars = knownVariables $ variableIndex s
         
@@ -762,7 +776,7 @@ showSolverStatistic s =
             where
                 go v m = Map.insertWith (+) ( analysis . index $ v ) (1::Int) m
         
-        print (a,c) = printf " %16s %20d %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime 
+        print (a,c) = printf " %16s %20d %20d %20.3f %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime totalResets avgResets
             where
                 name = ((show a) ++ ":")
             
@@ -772,6 +786,9 @@ showSolverStatistic s =
                 totalTime = toMs $ Map.findWithDefault 0 a $ cpuTimes s
                 avgTime = ((fromIntegral totalTime) / (fromIntegral c)) :: Float
 
+                totalResets = Map.findWithDefault 0 a $ numResets s
+                avgResets = ((fromIntegral totalResets) / (fromIntegral c)) :: Float
+
 
         numVars = Set.size vars
         
@@ -780,5 +797,37 @@ showSolverStatistic s =
         
         totalTime = toMs $ foldr (+) 0 (cpuTimes s)
         avgTime = ((fromIntegral totalTime) / (fromIntegral numVars)) :: Float
+
+        totalResets = foldr (+) 0 (numResets s)
+        avgResets = ((fromIntegral totalResets) / (fromIntegral numVars)) :: Float
         
         toMs a = a `div` 1000000
+        
+        
+analyseVarDependencies :: SolverState -> String
+analyseVarDependencies s = 
+
+            "  Number of SCCs: " ++ show (length sccs)   ++ "\n" ++
+            "  largest SCCs:   " ++ show (take 10 $ reverse $ sort $ length . Graph.flattenSCC <$> sccs)
+
+    where
+    
+        ass = assignment s 
+    
+        index = variableIndex s
+        
+        vars = knownVariables index
+        
+        -- getDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
+        
+        -- varToIndex :: VariableIndex -> Var -> (IndexedVar,VariableIndex)
+        
+        nodes = go <$> Set.toList vars
+            where
+                go v = (v,v,dep v)
+                dep v = foldr (\c l -> (dependingOn c ass) ++ l) [] (constraints v)
+
+        
+        sccs = Graph.stronglyConnComp nodes
+        
+        

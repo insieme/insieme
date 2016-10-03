@@ -45,6 +45,18 @@ void testParam(int* a) {
 	}
 }
 
+int testCapture(int* b) {
+	float c = 0.5f, d = 2.0f;
+
+	#pragma omp parallel
+	#pragma omp single
+	#pragma omp task untied
+	{
+		*b = (int)(c*d);
+	}
+
+	return *b;
+}
 
 int main() {
 	int magic;
@@ -110,5 +122,39 @@ int main() {
 	{
 		int p = 0;
 		testParam(&p);
+	}
+
+	#pragma test expect_ir(R"(
+		def __any_string__task_fun = function (v0 : ref<ptr<int<4>>,f,f,plain>, v1 : ref<ref<real<4>,f,f,plain>,f,f,plain>, v2 : ref<ref<real<4>,f,f,plain>,f,f,plain>) -> unit {
+			{
+				ptr_to_ref(*v0) = num_cast(**v1***v2, type_lit(int<4>));
+			}
+		};
+		def __any_string__single_fun = function (v0 : ref<ptr<int<4>>,f,f,plain>, v1 : ref<ref<real<4>,f,f,plain>,f,f,plain>, v2 : ref<ref<real<4>,f,f,plain>,f,f,plain>) -> unit {
+			parallel(job[1ul..1ul] => __any_string__task_fun(*v0, *v1, *v2));
+		};
+		def __any_string__parallel_fun = function (v0 : ref<ptr<int<4>>,f,f,plain>, v1 : ref<ref<real<4>,f,f,plain>,f,f,plain>, v2 : ref<ref<real<4>,f,f,plain>,f,f,plain>) -> unit {
+			{
+				pfor(get_thread_group(0u), 0, 1, 1, (v3 : int<4>, v4 : int<4>, v5 : int<4>) => __any_string__single_fun(*v0, *v1, *v2));
+				barrier(get_thread_group(0u));
+			}
+			merge_all();
+		};
+		def IMP_testCapture = function (v0 : ref<ptr<int<4>>,f,f,plain>) -> int<4> {
+			var ref<real<4>,f,f,plain> v1 = 5.0E-1f;
+			var ref<real<4>,f,f,plain> v2 = 2.0E+0f;
+			{
+				merge(parallel(job[1ul...] => __any_string__parallel_fun(*v0, v1, v2)));
+			}
+			return *ptr_to_ref(*v0);
+		};
+		{
+			var ref<int<4>,f,f,plain> v0 = 0;
+			var ref<int<4>,f,f,plain> v1 = IMP_testCapture(ptr_from_ref(v0));
+		}
+	)")
+	{
+		int p = 0;
+		int i = testCapture(&p);
 	}
 }

@@ -46,8 +46,8 @@ int main(int argc, char** argv) {
 
 	//cba_dump_json();
 
-	// at this point it should be unknown
-	cba_expect_single_int(x);
+	// the global x should be default-initialized to 0
+	cba_expect_eq_int(x,0);
 
 	// if we set it, it should be known
 	x = 1;

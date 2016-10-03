@@ -1,6 +1,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #define bool int
 #define true 1
@@ -137,7 +142,14 @@ int main(int argc, char** argv) {
 
 	// run solver
 	printf("Run solver ...\n");
+	#ifdef _OPENMP
+	double start = omp_get_wtime();
+	#endif
 	int best = solve(p);
+	#ifdef _OPENMP
+	double time = omp_get_wtime() - start;
+	if(argc > 2 && strcmp(argv[2],"+t") == 0) printf("Time Program        = %.6f seconds\n", time);
+	#endif
 	printf("Done!\n");
 	printf("Best Result: %d\n", best);
 

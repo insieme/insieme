@@ -34,6 +34,9 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module Insieme.Analysis.Entities.AccessPath (
 
     BaseVar(..),
@@ -50,7 +53,9 @@ module Insieme.Analysis.Entities.AccessPath (
 
 ) where
 
+import Control.DeepSeq
 import Data.List
+import GHC.Generics (Generic)
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import qualified Insieme.Inspire as IR
 
@@ -62,7 +67,7 @@ import qualified Insieme.Inspire as IR
 data BaseVar =
           Parameter Int
         | Global IR.Tree
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Generic,NFData)
 
 instance Show BaseVar where
     show (Parameter i) = "p" ++ (show i)
@@ -72,7 +77,7 @@ data AccessPath i =
           AccessPath BaseVar [DP.DataPath i]
         | Local
         | Unknown 
-    deriving (Eq,Ord)
+    deriving (Eq,Ord,Generic,NFData)
 
 instance (Show i) => Show (AccessPath i) where
     show (AccessPath b s) = (show b) ++ (concat $ (++ ".*") . tail . show <$> reverse s) ++ ")"

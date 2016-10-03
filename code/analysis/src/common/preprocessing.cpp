@@ -114,6 +114,53 @@ namespace analysis {
 			"		cba_expect_not_single_ref(ptr_to_ref(a));      "
 			"  }                                               "
 		)
+
+
+		LANG_EXT_LITERAL(RefIsNull,    "cba_expect_null_ref", "(ref<'a>)->unit");
+		LANG_EXT_LITERAL(RefNotNull,   "cba_expect_not_null_ref", "(ref<'a>)->unit");
+		LANG_EXT_LITERAL(RefMaybeNull, "cba_expect_maybe_null_ref", "(ref<'a>)->unit");
+
+		LANG_EXT_DERIVED(PtrIsNull,
+			"  (a : ptr<'a>) -> unit {                         "
+			"		cba_expect_null_ref(ptr_to_ref(a));      "
+			"  }                                               "
+		)
+
+		LANG_EXT_DERIVED(PtrNotNull,
+			"  (a : ptr<'a>) -> unit {                         "
+			"		cba_expect_not_null_ref(ptr_to_ref(a));      "
+			"  }                                               "
+		)
+
+		LANG_EXT_DERIVED(PtrMaybeNull,
+			"  (a : ptr<'a>) -> unit {                         "
+			"		cba_expect_maybe_null_ref(ptr_to_ref(a));      "
+			"  }                                               "
+		)
+
+
+		LANG_EXT_LITERAL(RefIsExtern,    "cba_expect_extern_ref", "(ref<'a>)->unit");
+		LANG_EXT_LITERAL(RefNotExtern,   "cba_expect_not_extern_ref", "(ref<'a>)->unit");
+		LANG_EXT_LITERAL(RefMaybeExtern, "cba_expect_maybe_extern_ref", "(ref<'a>)->unit");
+
+		LANG_EXT_DERIVED(PtrIsExtern,
+			"  (a : ptr<'a>) -> unit {                         "
+			"		cba_expect_extern_ref(ptr_to_ref(a));      "
+			"  }                                               "
+		)
+
+		LANG_EXT_DERIVED(PtrNotExtern,
+			"  (a : ptr<'a>) -> unit {                         "
+			"		cba_expect_not_extern_ref(ptr_to_ref(a));      "
+			"  }                                               "
+		)
+
+		LANG_EXT_DERIVED(PtrMaybeExtern,
+			"  (a : ptr<'a>) -> unit {                         "
+			"		cba_expect_maybe_extern_ref(ptr_to_ref(a));      "
+			"  }                                               "
+		)
+
 	};
 
 	core::ProgramPtr preProcessing(const core::ProgramPtr& prog) {
@@ -128,6 +175,12 @@ namespace analysis {
 					if(name == "cba_expect_defined_ptr")    return ext.getPtrDefined();
 					if(name == "cba_expect_single_ptr")     return ext.getPtrSingle();
 					if(name == "cba_expect_not_single_ptr") return ext.getPtrNotSingle();
+					if(name == "cba_expect_null_ptr")       return ext.getPtrIsNull();
+					if(name == "cba_expect_not_null_ptr")   return ext.getPtrNotNull();
+					if(name == "cba_expect_maybe_null_ptr") return ext.getPtrMaybeNull();
+					if(name == "cba_expect_extern_ptr")       return ext.getPtrIsExtern();
+					if(name == "cba_expect_not_extern_ptr")   return ext.getPtrNotExtern();
+					if(name == "cba_expect_maybe_extern_ptr") return ext.getPtrMaybeExtern();
 					return lit;
 				},
 				core::transform::globalReplacement

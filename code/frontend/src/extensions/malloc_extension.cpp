@@ -42,6 +42,7 @@
 #include "insieme/frontend/utils/frontend_inspire_module.h"
 
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/lang/memory.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/tu/ir_translation_unit_io.h"
 
@@ -61,14 +62,14 @@ namespace extensions {
 
 	core::tu::IRTranslationUnit MallocExtension::IRVisit(core::tu::IRTranslationUnit& tu) {
 		auto& nodeMan = tu.getNodeManager();
-		auto& feExt = nodeMan.getLangExtension<utils::FrontendInspireModule>();
+		auto& memExt = nodeMan.getLangExtension<core::lang::MemoryExtension>();
 		auto irTu = core::tu::toIR(nodeMan, tu);
-		irTu = core::transform::transformBottomUpGen(irTu, [&feExt](const core::LiteralPtr& lit) -> core::ExpressionPtr {
+		irTu = core::transform::transformBottomUpGen(irTu, [&memExt](const core::LiteralPtr& lit) -> core::ExpressionPtr {
 			if(insieme::utils::demangle(lit->getStringValue()) == "malloc") {
-				return feExt.getMallocWrapper();
+				return memExt.getMallocWrapper();
 			}
 			if(insieme::utils::demangle(lit->getStringValue()) == "free") {
-				return feExt.getFreeWrapper();
+				return memExt.getFreeWrapper();
 			}
 			return lit;
 		}, core::transform::globalReplacement);

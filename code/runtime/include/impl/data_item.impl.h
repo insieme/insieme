@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -128,7 +128,7 @@ static inline void* _irt_di_build_data_block(uint32 element_size, uint64* sizes,
 	// void pointer arithmetic is not defined => use ugly int casts
 
 	// pointer size is different on x86 and x64 -> switch to avoid warnings
-	#ifdef __x86_64__
+	#if defined(__x86_64__) || defined(__PPC64__)
 		index[i] = (void*)((uint64)index[i - 1] + step_size);
 		#else
 		index[i] = (void*)((uint32)index[i - 1] + (uint32)step_size);

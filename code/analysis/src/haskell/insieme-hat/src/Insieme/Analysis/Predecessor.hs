@@ -49,11 +49,12 @@ import Insieme.Analysis.Callable
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.ExitPoint
 import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Utils
+import Insieme.Inspire.Query
+import Insieme.Inspire.Visit
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Utils.UnboundSet as USet
+import qualified Insieme.Utils.BoundSet as BSet
 
 --
 -- * Predecessor Lattice
@@ -202,8 +203,8 @@ predecessor  p@(ProgramPoint addr Internal) = case getNodeType addr of
                 isLiteral _ = False
             litPredecessor = ProgramPoint (goDown 1 addr) Post
         callableVar = callableValue (goDown 1 addr)
-        callableVal a = USet.toSet $
-                if USet.isUniverse callables
+        callableVal a = BSet.toSet $
+                if BSet.isUniverse callables
                 then collectAllCallables addr
                 else callables
             where

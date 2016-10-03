@@ -55,10 +55,9 @@ import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
-import qualified Insieme.Inspire.Utils as IRUtils
+import qualified Insieme.Inspire.Visit as Visit
 import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Utils.BoundSet as BSet
-import qualified Insieme.Utils.UnboundSet as USet
 
 --
 -- * HSobject
@@ -105,7 +104,7 @@ mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize
 mkNodeAddress ctx_hs path_c length_c = do
     ctx  <- deRefStablePtr ctx_hs
     path <- peekArray (fromIntegral length_c) path_c
-    newStablePtr $ Addr.mkNodeAddress (fromIntegral <$> path) (Ctx.getInspire ctx)
+    newStablePtr $ Addr.mkNodeAddress (fromIntegral <$> path) (Ctx.getTree ctx)
 
 foreign export ccall "hat_mk_node_address"
     mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize
@@ -138,7 +137,7 @@ foreign import ccall "hat_update_context"
 findDecl :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
 findDecl var_hs = do
     var <- deRefStablePtr var_hs
-    case IRUtils.findDecl var of
+    case Visit.findDecl var of
         Nothing -> return $ castPtrToStablePtr nullPtr
         Just a  -> newStablePtr a
 
@@ -186,6 +185,44 @@ arithValue ctx_hs expr_hs = do
 
 
 
+
+--
+-- * References
+--
+
+
+checkForReference :: Ref.Reference FieldIndex.SimpleFieldIndex -> StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CInt)
+checkForReference ref ctx_hs expr_hs = handleAll (return maybe) $ do
+    ctx <- deRefStablePtr ctx_hs
+    expr <- deRefStablePtr expr_hs
+    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
+    let results = (ComposedValue.toValue res) :: Ref.ReferenceSet FieldIndex.SimpleFieldIndex
+    let ctx_c = Ctx.getCContext ctx
+    ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+    updateContext ctx_c ctx_nhs
+    evaluate $ case () of
+        _ |  BSet.member ref results -> case () of 
+                _ | not (BSet.isUniverse results) && BSet.size results == 1 -> yes
+                  | otherwise              -> maybe
+          |  otherwise -> no
+  where
+    yes   = 0
+    maybe = 1
+    no    = 2
+
+
+checkForNull = checkForReference Ref.NullReference
+
+foreign export ccall "hat_check_null"
+    checkForNull :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
+
+
+checkForExtern = checkForReference Ref.UninitializedReference
+
+foreign export ccall "hat_check_extern"
+    checkForExtern :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
+
+
 --
 -- * Memory Locations
 --
@@ -213,7 +250,10 @@ memoryLocations ctx_hs expr_hs = do
     let ctx_c = Ctx.getCContext ctx
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
-    passMemoryLocationSet ctx_c $ USet.map Ref.creationPoint results
+    passMemoryLocationSet ctx_c $ BSet.map Ref.creationPoint $ BSet.filter f results
+        where
+            f (Ref.Reference _ _ ) = True
+            f _ = False
 
 passMemoryLocation :: Ctx.CContext -> Ref.Location -> IO (Ptr CMemoryLocation)
 passMemoryLocation ctx_c location_hs = do
@@ -225,11 +265,11 @@ passMemoryLocation ctx_c location_hs = do
     withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
 
 
-passMemoryLocationSet :: Ctx.CContext -> USet.UnboundSet Ref.Location
+passMemoryLocationSet :: Ctx.CContext -> BSet.UnboundSet Ref.Location
                -> IO (Ptr CMemoryLocationSet)
-passMemoryLocationSet _ USet.Universe = memoryLocationSet nullPtr (-1)
+passMemoryLocationSet _ BSet.Universe = memoryLocationSet nullPtr (-1)
 passMemoryLocationSet ctx_c bs = do
-    locations <- mapM (passMemoryLocation ctx_c) (USet.toList bs)
+    locations <- mapM (passMemoryLocation ctx_c) (BSet.toList bs)
     withArrayLen' locations memoryLocationSet
   where
     withArrayLen' :: Storable a => [a] -> (Ptr a -> CInt -> IO b) -> IO b

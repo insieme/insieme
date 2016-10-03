@@ -40,6 +40,7 @@ module Main where
 
 import Control.Monad.State.Strict
 import Insieme.Analysis.Entities.FieldIndex (SimpleFieldIndex)
+import Insieme.Inspire.Visit (foldTreePrune)
 import qualified Data.ByteString as BS
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Reference as Ref
@@ -47,10 +48,8 @@ import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
-import qualified Insieme.Inspire.Utils as Utils
-import qualified Insieme.Utils.UnboundSet as USet
-
-
+import qualified Insieme.Inspire.Query as Q
+import qualified Insieme.Utils.BoundSet as BSet
 
 main :: IO ()
 main = do
@@ -60,7 +59,7 @@ main = do
     -- run parser
     let Right ir = BinPar.parseBinaryDump dump
 
-    let targets = Utils.foldTreePrune findTargets (Utils.isType . Addr.getNodeType) ir
+    let targets = foldTreePrune findTargets (Q.isType . Addr.getNodeType) ir
 
     let res = evalState (sequence $ analysis <$> targets) Solver.initState
 
@@ -69,8 +68,8 @@ main = do
     putStr $ "OK:      " ++ (show $ length $ filter (=='o') res) ++ "\n"
 
 findTargets :: Addr.NodeAddress -> [Addr.NodeAddress] -> [Addr.NodeAddress]
-findTargets addr xs = case Addr.getNodePair addr of
-    IR.NT IR.CallExpr _ | Addr.isBuiltinByName (Addr.goDown 1 addr) "ref_deref" -> addr : xs
+findTargets addr xs = case Addr.getNode addr of
+    IR.NT IR.CallExpr _ | Q.isBuiltin (Addr.goDown 1 addr) "ref_deref" -> addr : xs
     _ -> xs
 
 analysis :: Addr.NodeAddress -> State Solver.SolverState Char
@@ -78,8 +77,8 @@ analysis addr = do
     state <- get
     let (res, state') = Solver.resolve state (Ref.referenceValue $ Addr.goDown 1 $ Addr.goDown 2 addr)
     put state'
-    let refs = ComposedValue.toValue res :: USet.UnboundSet (Ref.Reference SimpleFieldIndex)
+    let refs = ComposedValue.toValue res :: BSet.UnboundSet (Ref.Reference SimpleFieldIndex)
     return $ case () of _
-                         | USet.null refs       -> 'e'
-                         | USet.isUniverse refs -> 'u'
+                         | BSet.null refs       -> 'e'
+                         | BSet.isUniverse refs -> 'u'
                          | otherwise            -> 'o'

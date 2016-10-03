@@ -34,12 +34,17 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module Insieme.Utils.Arithmetic where
 
 import Control.Applicative
+import Control.DeepSeq
 import Data.List hiding (product)
 import Data.Maybe
 import Data.Ord
+import GHC.Generics (Generic)
 
 import Prelude hiding (exponent, product)
 
@@ -50,7 +55,7 @@ import Prelude hiding (exponent, product)
 -- | Something like @-2 * x^2 * y^3 + 5 * z^1@ where 'c' denotes the type
 -- of coefficients and exponents, and 'v' the type of variables.
 data Formula c v = Formula { terms :: [Term c v] }
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Generic, NFData)
 
 instance Functor (Formula c) where
     fmap f = Formula . map (fmap f) . terms
@@ -109,7 +114,7 @@ mkVar v = Formula [Term 1 (Product [Factor v 1])]
 -- | Something like @x^2@
 data Factor c v = Factor { base     :: v,
                            exponent :: c }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic, NFData)
 
 instance Functor (Factor c) where
     fmap f (Factor b e) = Factor (f b) e
@@ -125,7 +130,7 @@ prettyShowFactor (Factor b e) = show b ++ "^" ++ show e
 
 -- | Something like @x^2 * y^3@
 data Product c v = Product { factors :: [Factor c v] }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic, NFData)
 
 instance Functor (Product c) where
     fmap f = Product . map (fmap f) . factors
@@ -149,7 +154,7 @@ prettyShowProduct = intercalate " " . map prettyShowFactor . factors
 -- | Something like @-2 * x^2 * y^3@
 data Term c v = Term { coeff   :: c,
                        product :: Product c v}
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic, NFData)
 
 instance Functor (Term c) where
     fmap f (Term c ps) = Term c (fmap f ps)

@@ -34,8 +34,10 @@
  - regarding third party software licenses.
  -}
 
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.WriteSetSummary (
 
@@ -52,28 +54,25 @@ module Insieme.Analysis.WriteSetSummary (
 
 import Prelude hiding (null)
 
-import Debug.Trace
+import Control.DeepSeq
 import Data.Typeable
-import Insieme.Inspire.NodeAddress
-import Insieme.Analysis.Entities.FieldIndex
+import Debug.Trace
+import GHC.Generics (Generic)
 import Insieme.Analysis.AccessPath
-import Insieme.Analysis.FreeLambdaReferences
-
-import qualified Data.Set as Set
-import qualified Data.Map as Map
-import qualified Insieme.Analysis.Entities.AccessPath as AP
-import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.Utils as IRUtils
-import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-
-import qualified Insieme.Utils.BoundSet as BSet
-import qualified Insieme.Utils.UnboundSet as USet
-
 import Insieme.Analysis.Callable
-
-
+import Insieme.Analysis.Entities.FieldIndex
+import Insieme.Analysis.FreeLambdaReferences
+import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.Query
+import Insieme.Inspire.Visit
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import qualified Insieme.Analysis.Entities.AccessPath as AP
+import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
+import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Inspire as IR
+import qualified Insieme.Utils.BoundSet as BSet
 
 
 --
@@ -83,7 +82,7 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 data WriteSet i =
           Known (Map.Map AP.BaseVar (AccessPathSet i))
         | Unknown
-    deriving(Eq,Ord,Show)
+    deriving(Eq,Ord,Show,Generic,NFData)
 
 
 -- an empty write set value
@@ -160,7 +159,7 @@ writeSetSummary :: (FieldIndex i) => NodeAddress -> Solver.TypedVar (WriteSet i)
 writeSetSummary addr = case getNodeType addr of
 
         -- ref_assign writes to location addressed by first argument
-        IR.Literal | isRoot addr && (isBuiltin addr $ getBuiltin addr "ref_assign") -> var
+        IR.Literal | isRoot addr && (isBuiltin addr "ref_assign") -> var
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
@@ -181,29 +180,29 @@ writeSetSummary addr = case getNodeType addr of
 
                 dep a = Solver.toVar <$> writeSetVars
                 val a = Solver.join $ (Solver.get a <$> writeSetVars)
-                
+
 
         -- for non context-free lambdas, it has to be tested wether they are closed
         IR.Lambda -> var
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createEqualityConstraint dep val var
-                
-                dep a = Solver.toVar hasFreeLambdaRefsVar : if isClosed a then closedDep a else openDep a 
-                val a = if isClosed a then closedVal a else openVal a 
-                
-                hasFreeLambdaRefsVar = freeLambdaReferences $ goUp $ goUp $ goUp addr 
-                
+
+                dep a = Solver.toVar hasFreeLambdaRefsVar : if isClosed a then closedDep a else openDep a
+                val a = if isClosed a then closedVal a else openVal a
+
+                hasFreeLambdaRefsVar = freeLambdaReferences $ goUp $ goUp $ goUp addr
+
                 isClosed a = depth addr >= 3 && (Set.null $ Solver.get a hasFreeLambdaRefsVar)
-                
+
                 -- the closed case --
-                
+
                 closedWriteSetVar = writeSetSummary contextFreeAddr
                 closedDep _ = [Solver.toVar closedWriteSetVar]
-                closedVal a = Solver.get a closedWriteSetVar 
-                
+                closedVal a = Solver.get a closedWriteSetVar
+
                 -- the non closed case --
-                
+
                 openDep _ = Solver.toVar <$> writeSetVars
                 openVal a = Solver.join $ (Solver.get a <$> writeSetVars)
 
@@ -224,12 +223,12 @@ writeSetSummary addr = case getNodeType addr of
                 callTargetVar = callableValue $ goDown 1 addr
 
                 -- a test whether there are unknown call targets
-                hasUniversalTarget a = USet.isUniverse $ ComposedValue.toValue $ Solver.get a callTargetVar
+                hasUniversalTarget a = BSet.isUniverse $ ComposedValue.toValue $ Solver.get a callTargetVar
 
                 -- the variables for the write sets of callables
                 writeSetVars a = if hasUniversalTarget a then [] else list
                     where
-                        trgs = filter (`isChildOf` addr) $ toAddress <$> (USet.toList $ ComposedValue.toValue $ Solver.get a callTargetVar)
+                        trgs = filter (`isChildOf` addr) $ toAddress <$> (BSet.toList $ ComposedValue.toValue $ Solver.get a callTargetVar)
                         list = writeSetSummary <$> trgs
 
                 -- a test to see whether there are none unknown write sets
@@ -259,6 +258,22 @@ writeSetSummary addr = case getNodeType addr of
                         res = Solver.join $ bindAccessPaths args <$> ws
 
 
+        -- compute write set for init expressions
+        IR.InitExpr -> var
+            where
+                var = Solver.mkVariable (idGen addr) [con] Solver.bot
+                con = Solver.createConstraint dep val var
+
+                dep _ = [Solver.toVar accessPathVar]
+                val a = if BSet.isUniverse aps then Unknown else res
+                    where
+                        aps = accessPathVal a
+                        res = fromAccessPaths $ BSet.toList aps
+
+                accessPathVar = accessPathValue $ goDown 1 addr
+                accessPathVal a = ComposedValue.toValue $ Solver.get a accessPathVar
+
+
         _ | isRoot addr -> everything
 
 
@@ -276,22 +291,23 @@ writeSetSummary addr = case getNodeType addr of
     everything = Solver.mkVariable (idGen addr) [] Unknown
 
     idGen a = Solver.mkIdentifierFromExpression writeSetAnalysis a
-    
-    -- get list of calls within current node --
-    calls = IRUtils.foldAddressPrune collect filter addr
+
+    -- get list of calls and init expressions within current node --
+    potentialWriteOps = foldAddressPrune collect filter addr
         where
 
-            filter cur = case getNodePair cur of
+            filter cur = case getNode cur of
                 IR.NT IR.Lambda _ -> cur /= addr
-                IR.NT n         _ -> IRUtils.isType n
+                IR.NT n         _ -> isType n
 
-            collect cur l = case getNodePair cur of
+            collect cur l = case getNode cur of
                 IR.NT IR.CallExpr _ -> cur : l
+                IR.NT IR.InitExpr _ -> cur : l
                 _                  -> l
 
 
     -- get list of write sets at calls
-    writeSetVars = writeSetSummary <$> calls
+    writeSetVars = writeSetSummary <$> potentialWriteOps
 
 
 

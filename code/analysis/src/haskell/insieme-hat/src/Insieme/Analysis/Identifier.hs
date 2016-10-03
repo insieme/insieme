@@ -34,15 +34,19 @@
  - regarding third party software licenses.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.Identifier where
 
+import Control.DeepSeq
 import Data.Typeable
+import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Utils.UnboundSet as USet
+import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -54,7 +58,7 @@ import Insieme.Analysis.Entities.FieldIndex
 --
 
 data Identifier = Identifier String
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Generic, NFData)
 
 
 instance Show Identifier where
@@ -69,14 +73,14 @@ toString (Identifier s) = s
 -- * Identifier Lattice
 --
 
-type IdentifierSet = USet.UnboundSet Identifier
+type IdentifierSet = BSet.UnboundSet Identifier
 
 instance Solver.Lattice IdentifierSet where
-    bot   = USet.empty
-    merge = USet.union
+    bot   = BSet.empty
+    merge = BSet.union
 
 instance Solver.ExtLattice IdentifierSet where
-    top   = USet.Universe
+    top   = BSet.Universe
 
 
 --
@@ -92,10 +96,10 @@ data IdentifierAnalysis = IdentifierAnalysis
 --
 
 identifierValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex IdentifierSet)
-identifierValue addr = case getNodePair addr of
+identifierValue addr = case getNode addr of
 
     IR.NT IR.Literal [_, IR.NT (IR.StringValue x) _] ->
-        Solver.mkVariable (idGen addr) [] (compose $ USet.singleton (Identifier x))
+        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton (Identifier x))
 
     _ -> dataflowValue addr analysis []
 

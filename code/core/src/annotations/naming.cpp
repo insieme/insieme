@@ -60,18 +60,19 @@ namespace annotations {
 
 	VALUE_ANNOTATION_CONVERTER(NameTag)
 
-	typedef core::value_node_annotation<NameTag>::type annotation_type;
+		typedef core::value_node_annotation<NameTag>::type annotation_type;
 
-	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-		assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only dummy annotations supported!");
-		return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().name);
-	}
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only dummy annotations supported!");
+			return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().name);
+		}
 
-	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-		assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
-		return std::make_shared<annotation_type>(NameTag(encoder::toValue<string>(node)));
-	}
-};
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+			return std::make_shared<annotation_type>(NameTag(encoder::toValue<string>(node)));
+		}
+
+	VALUE_ANNOTATION_CONVERTER_END
 
 // ----------------------------------------------------
 

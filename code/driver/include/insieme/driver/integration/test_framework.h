@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <string>
 #include <vector>
 
 #ifdef _OPENMP
@@ -84,6 +85,10 @@ namespace testFramework {
 		bool longTestsAlso;
 		bool preprocessingOnly;
 		bool postprocessingOnly;
+		bool logToCsvFile;
+		std::string csvFile;
+		bool csvFileIDisset;
+		std::string csvFileID;
 
 		// perf metrics
 		bool perf;
@@ -95,15 +100,17 @@ namespace testFramework {
 		Options(bool valid = true)
 		    : valid(valid), mockrun(false), num_threads(1), num_repetitions(1), use_median(false), statistics(false), scheduling(false),
 		      print_configs(false), panic_mode(false), list_only(false), no_clean(false), color(true), overwrite(false), blacklistedOnly(false),
-		      longTestsOnly(false), longTestsAlso(false), preprocessingOnly(false), postprocessingOnly(false), perf(false), load_miss(""),
-		      store_miss(""), flops("") {}
+		      longTestsOnly(false), longTestsAlso(false), preprocessingOnly(false), postprocessingOnly(false), logToCsvFile(false),
+		      csvFile(""), perf(false), load_miss(""), store_miss(""), flops("") {}
 
 		bool operator==(Options a) const {
 			return a.mockrun == mockrun && a.num_threads == num_threads && a.num_repetitions == num_repetitions && a.use_median == use_median
 			       && a.statistics == statistics && a.scheduling == scheduling && a.statThreads == statThreads && a.cases == cases
 			       && a.blacklistedOnly == blacklistedOnly && a.longTestsOnly == longTestsOnly && a.longTestsAlso == longTestsAlso
-			       && a.preprocessingOnly == preprocessingOnly && a.postprocessingOnly == postprocessingOnly && a.perf == perf
-			       && a.load_miss == load_miss && a.store_miss == store_miss && a.flops == flops && a.perf_metrics == perf_metrics && a.steps == steps;
+			       && a.preprocessingOnly == preprocessingOnly && a.postprocessingOnly == postprocessingOnly && a.logToCsvFile == logToCsvFile
+			       && a.perf == perf && a.load_miss == load_miss && a.store_miss == store_miss && a.flops == flops
+			       && a.csvFile == csvFile && a.csvFileIDisset == csvFileIDisset && a.csvFileID == csvFileID
+			       && a.perf_metrics == perf_metrics && a.steps == steps;
 		}
 
 	  private:
@@ -129,6 +136,10 @@ namespace testFramework {
 			ar& longTestsAlso;
 			ar& preprocessingOnly;
 			ar& postprocessingOnly;
+			ar& logToCsvFile;
+			ar& csvFile;
+			ar& csvFileIDisset;
+			ar& csvFileID;
 		}
 	};
 

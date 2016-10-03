@@ -39,10 +39,9 @@ module Insieme.Analysis.Alias where
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Reference
 import Insieme.Inspire.NodeAddress
-import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-
-import qualified Insieme.Utils.UnboundSet as USet
+import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Utils.BoundSet as BSet
 
 #include "alias_analysis.h"
 
@@ -55,27 +54,27 @@ checkAlias :: Solver.SolverState -> NodeAddress -> NodeAddress -> (Results,Solve
 checkAlias init x y = (checkAlias' rx ry, final)
   where
     -- here we determine the kind of filed index to be used for the reference analysis
-    rx :: USet.UnboundSet (Reference SimpleFieldIndex)
+    rx :: BSet.UnboundSet (Reference SimpleFieldIndex)
     (rx:ry:[]) = ComposedValue.toValue <$> res
     (res,final) = Solver.resolveAll init [ referenceValue x, referenceValue y ]
 
 
-checkAlias' :: Eq i => USet.UnboundSet (Reference i) -> USet.UnboundSet (Reference i) -> Results
+checkAlias' :: Eq i => BSet.UnboundSet (Reference i) -> BSet.UnboundSet (Reference i) -> Results
 
-checkAlias' USet.Universe s | USet.null s = NotAlias
-checkAlias' USet.Universe _               = MayAlias
+checkAlias' BSet.Universe s | BSet.null s = NotAlias
+checkAlias' BSet.Universe _               = MayAlias
 
-checkAlias' s USet.Universe  = checkAlias' USet.Universe s
+checkAlias' s BSet.Universe  = checkAlias' BSet.Universe s
 
 
 checkAlias' x y | areSingleton = areAlias (toReference x) (toReference y)
   where
-    areSingleton = USet.size x == 1 && USet.size y == 1
-    toReference = head . USet.toList
+    areSingleton = BSet.size x == 1 && BSet.size y == 1
+    toReference = head . BSet.toList
 
 checkAlias' x y = if any (==AreAlias) u then MayAlias else NotAlias
   where
-    u = [areAlias u v | u <- USet.toList x, v <- USet.toList y]
+    u = [areAlias u v | u <- BSet.toList x, v <- BSet.toList y]
 
 
 areAlias :: Eq i => Reference i -> Reference i -> Results

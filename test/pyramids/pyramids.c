@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -448,7 +449,7 @@ void jacobi_recursive(Grid* A, Grid* B, int num_iter) {
 }
 
 
-int main() {
+int main(int argc, char** argv) {
 
 	// allocate two copies of the processed array
 	Grid* A = malloc(sizeof(Grid));
@@ -468,7 +469,7 @@ int main() {
 
 	// run computation
 #ifdef _OPENMP
-//	double start = omp_get_wtime();
+	double start = omp_get_wtime();
 #endif
 #ifdef iterative
 	jacobi_iterative(A,B,M);
@@ -477,8 +478,8 @@ int main() {
 	jacobi_recursive(A,B,M);
 #endif
 #ifdef _OPENMP
-//	double time = omp_get_wtime() - start;
-//	printf("Execution time: %.1fms\n", time*1000);
+	double time = omp_get_wtime() - start;
+	if(argc > 1 && strcmp(argv[1],"+t") == 0) printf("Time Program        = %.6f seconds\n", time);
 #endif
 
 	// verification

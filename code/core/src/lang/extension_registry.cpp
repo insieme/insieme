@@ -44,10 +44,12 @@
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/instrumentation_extension.h"
 #include "insieme/core/lang/io.h"
+#include "insieme/core/lang/memory.h"
 #include "insieme/core/lang/parallel.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/static_vars.h"
+#include "insieme/core/lang/time.h"
 #include "insieme/core/lang/varargs_extension.h"
 
 #include "insieme/utils/assert.h"
@@ -75,10 +77,12 @@ namespace lang {
 		extensionFactories.insert(getExtensionFactory<EnumExtension>("ext.enum"));
 		extensionFactories.insert(getExtensionFactory<InputOutputExtension>("ext.io"));
 		extensionFactories.insert(getExtensionFactory<InstrumentationExtension>("ext.instrumentation"));
+		extensionFactories.insert(getExtensionFactory<MemoryExtension>("ext.memory"));
 		extensionFactories.insert(getExtensionFactory<ParallelExtension>("ext.parallel"));
 		extensionFactories.insert(getExtensionFactory<PointerExtension>("ext.pointer"));
 		extensionFactories.insert(getExtensionFactory<ReferenceExtension>("ext.reference"));
 		extensionFactories.insert(getExtensionFactory<StaticVariableExtension>("ext.static"));
+		extensionFactories.insert(getExtensionFactory<TimeExtension>("ext.time"));
 		extensionFactories.insert(getExtensionFactory<VarArgsExtension>("ext.varargs"));
 	}
 

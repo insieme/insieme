@@ -58,8 +58,8 @@ import qualified Insieme.Inspire.NodeAddress as Addr
 import Prelude hiding (take)
 
 -- | Parse binary dump.
-parseBinaryDump :: BS.ByteString -> Either String IR.Inspire
-parseBinaryDump bs = (Addr.getInspire . head) <$> parseAddresses bs
+parseBinaryDump :: BS.ByteString -> Either String IR.Tree
+parseBinaryDump bs = (Addr.getRoot . head) <$> parseAddresses bs
 
 parseAddresses :: BS.ByteString -> Either String [Addr.NodeAddress]
 parseAddresses = parseOnly $ do
@@ -73,9 +73,9 @@ parseAddresses = parseOnly $ do
     addresses    <- count l parseNodePath
 
     -- connect components
-    let nodes    = connectDumpNodes dumpNodes
-    let builtins = resolve nodes <$> dumpBuiltins
-    let ir       = IR.Inspire nodes builtins
+    let root     = connectDumpNodes dumpNodes
+    let builtins = resolve root <$> dumpBuiltins
+    let ir       = markBuiltins root builtins 
 
     return $ (\p -> Addr.mkNodeAddress p ir) <$> addresses
 
@@ -153,9 +153,34 @@ connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
             Nothing -> do
                 let (DumpNode irnode is) = dumpNodes IntMap.! index
                 children <- mapM go is
-                let n = IR.mkNode (index, irnode) children
+                let n = IR.mkNode index irnode children []
                 modify (IntMap.insert index n)
                 return n
+
+
+markBuiltins :: IR.Tree -> Map.Map String IR.Tree -> IR.Tree
+markBuiltins root builtins = evalState (go root) Map.empty
+  where
+    go :: IR.Tree -> State (Map.Map IR.Tree IR.Tree) IR.Tree
+    go node = do
+        memo <- get
+        case Map.lookup node memo of
+            Just n -> return n
+            Nothing -> do
+                let tags = builtinTags node
+                children <- mapM go $ IR.getChildren node
+                let n = IR.mkNode (IR.getID node) (IR.getNodeType node) children tags
+                modify (Map.insert node n)
+                return n
+                
+    builtinIndex = Map.fromList $ swap <$> Map.toList builtins
+      where
+        swap (n,t) = (t,n)
+        
+    builtinTags t = case Map.lookup t builtinIndex of
+        Just n  -> [n]
+        Nothing -> []  
+                 
 
 --
 -- * Some helper functions to aid the parsing of values

@@ -44,19 +44,18 @@ import Data.List (isPrefixOf)
 import Data.Text.Format as Fmt
 import Data.Text.Lazy.Builder (fromString)
 import Insieme.Inspire.BinaryParser (parseBinaryDump)
-import Insieme.Inspire.Utils (foldTree)
+import Insieme.Inspire.Visit (foldTree)
 import Insieme.Utils.Arithmetic (NumOrdering(NumEQ), numCompare)
-import qualified Insieme.Analysis.Entities.FieldIndex as FieldIndex
 import qualified Insieme.Analysis.Alias as Alias
 import qualified Insieme.Analysis.Arithmetic as Arith
 import qualified Insieme.Analysis.Boolean as AnBoolean
+import qualified Insieme.Analysis.Entities.FieldIndex as FieldIndex
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as CV
 import qualified Insieme.Analysis.Reference as Ref
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Utils.BoundSet as BSet
-import qualified Insieme.Utils.UnboundSet as USet
 
 main :: IO ()
 main = do
@@ -85,7 +84,7 @@ isPending = (==Pending) . getResult
 
 findAnalysis :: Addr.NodeAddress -> [AnalysisRun] -> [AnalysisRun]
 findAnalysis addr acc =
-    case Addr.getNodePair addr of
+    case Addr.getNode addr of
         IR.NT IR.CallExpr (_:IR.NT IR.Literal [_, IR.NT (IR.StringValue s) _]:_) | "cba_expect" `isPrefixOf` s
             -> AnalysisRun addr s Pending : acc
         _   -> acc
@@ -110,8 +109,8 @@ arithAnalysis2 a = toValue <$> ((,) <$> lhs <*> rhs)
     rhs = Solver.resolveS (Arith.arithmeticValue $ Addr.goDown 3 $ getAddr a)
     toValue (x, y) = (CV.toValue x, CV.toValue y)
 
-refAnalysis :: AnalysisRun -> State Solver.SolverState (USet.UnboundSet Ref.Location)
-refAnalysis a = USet.map Ref.creationPoint <$> value
+refAnalysis :: AnalysisRun -> State Solver.SolverState (BSet.UnboundSet Ref.Location)
+refAnalysis a = BSet.map Ref.creationPoint <$> value
   where
     value :: State Solver.SolverState (Ref.ReferenceSet FieldIndex.SimpleFieldIndex)
     value = CV.toValue <$> Solver.resolveS (Ref.referenceValue $ Addr.goDown 1 $ Addr.goDown 2 $ getAddr a)
@@ -194,21 +193,21 @@ analysis a =
         "cba_expect_undefined_ref" -> do
             res <- refAnalysis a
             return $ case () of _
-                                 | USet.isUniverse res -> a{getResult = Ok}
-                                 | USet.size res > 0   -> a{getResult = Inaccurate}
+                                 | BSet.isUniverse res -> a{getResult = Ok}
+                                 | BSet.size res > 0   -> a{getResult = Inaccurate}
                                  | otherwise           -> a{getResult = Fail}
 
         "cba_expect_defined_ref" -> do
             res <- refAnalysis a
-            return $ a{getResult = boolToResult $ not (USet.isUniverse res) && not (USet.null res)}
+            return $ a{getResult = boolToResult $ not (BSet.isUniverse res) && not (BSet.null res)}
 
         "cba_expect_single_ref" -> do
             res <- refAnalysis a
-            return $ a{getResult = boolToResult $ not (USet.isUniverse res) && USet.size res == 1}
+            return $ a{getResult = boolToResult $ not (BSet.isUniverse res) && BSet.size res == 1}
 
         "cba_expect_not_single_ref" -> do
             res <- refAnalysis a
-            return $ a{getResult = boolToResult $ USet.isUniverse res || USet.size res > 1}
+            return $ a{getResult = boolToResult $ BSet.isUniverse res || BSet.size res > 1}
 
         _ -> return a -- error "Unsupported Analysis"
 

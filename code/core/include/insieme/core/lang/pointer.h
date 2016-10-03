@@ -176,10 +176,23 @@ namespace lang {
 		)")
 
 		/**
-		 * Literals to support converting from/to pointers/integral data types.
+		 * Operator to convert pointers into integral values.
 		 */
-		LANG_EXT_LITERAL(PtrFromIntegral, "ptr_from_integral", "('a, type<'b>) -> 'b")
-		LANG_EXT_LITERAL(PtrToIntegral, "ptr_to_integral", "(ptr<'a, 'c, 'v>, type<'b>) -> 'b")
+		LANG_EXT_DERIVED(PtrToIntegral, R"(
+			(p : ptr<'a,'c,'v>, t : type<'b>) -> 'b {
+				return ref_to_integral(ptr_to_ref(p), t);
+			}
+		)")
+
+		/**
+		 * Operator to convert integral values into pointers.
+		 */
+		LANG_EXT_DERIVED(PtrFromIntegral, R"(
+			(n : 'a, t : type<'b>) -> ptr<'b,f,f> {
+				return ptr_from_ref(ref_from_integral(n, t));
+			}
+		)")
+
 
 		// -- sub-referencing --
 
