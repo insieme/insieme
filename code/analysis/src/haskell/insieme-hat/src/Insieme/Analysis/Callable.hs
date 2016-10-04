@@ -46,6 +46,7 @@ import Data.Maybe
 import Data.Typeable
 import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.Query
 import Insieme.Inspire.Visit
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
@@ -148,11 +149,3 @@ collectAllCallables addr = BSet.fromList $ foldTree collector (getRoot addr)
             _ -> callables
 
 
-getLambda :: NodeAddress -> Maybe NodeAddress
-getLambda addr = case getNode addr of
-    IR.NT IR.LambdaExpr [_, ref, IR.NT IR.LambdaDefinition defs] ->
-        findLambdaIndex ref defs >>= walk addr
-    _ -> Nothing
-  where
-    findLambdaIndex ref defs = findIndex ((ref==) . (!!0) . IR.getChildren) defs
-    walk addr i = Just . goDown 1 . goDown i . goDown 2 $ addr

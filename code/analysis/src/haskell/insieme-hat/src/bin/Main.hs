@@ -59,7 +59,7 @@ main = do
     -- run parser
     let Right ir = BinPar.parseBinaryDump dump
 
-    let targets = foldTreePrune findTargets (Q.isType . Addr.getNodeType) ir
+    let targets = foldTreePrune findTargets (Q.isType) ir
 
     let res = evalState (sequence $ analysis <$> targets) Solver.initState
 

@@ -194,7 +194,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
         IR.InitExpr | isScalar elemType -> var
 
         -- handle struct values defined by init expressions
-        IR.InitExpr | isRecord elemType -> var
+        IR.InitExpr | isTagType elemType -> var
             where
                 var = Solver.mkVariable varId [con] Solver.bot
                 con = Solver.createEqualityConstraint dep val var
@@ -308,7 +308,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
         
         elemType = fromJust $ getReferencedType =<< getType (getNode addr)
         
-        isScalar e = not (isArray e) || not (isRecord e)
+        isScalar e = not (isArray e) || not (isTagType e)
 
 
                 

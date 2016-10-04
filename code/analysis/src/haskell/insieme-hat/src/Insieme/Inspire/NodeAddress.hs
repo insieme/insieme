@@ -61,6 +61,7 @@ module Insieme.Inspire.NodeAddress (
     -- navigation
     goRel,
     goUp,
+    goUpX,
     goDown,
     goLeft,
     goRight,
@@ -129,7 +130,8 @@ instance Hash.Hashable NodeAddress where
 
 
 instance NodeReference NodeAddress where
-    node = getNode
+    node  = getNode
+    child = goDown
 
 
 
@@ -187,6 +189,10 @@ goRel (i:is) | i <  0 = goRel is . last . take (1-i) . iterate goUp
 goUp :: NodeAddress -> NodeAddress
 goUp na | isRoot na = trace "No parent for Root" undefined
 goUp na = fromJust (getParent na)
+
+goUpX :: Int -> NodeAddress -> NodeAddress
+goUpX 0 a = a
+goUpX n a = goUpX (n-1) $ goUp a
 
 goDown :: Int -> NodeAddress -> NodeAddress
 goDown x parent@(NodeAddress xs n _ ir r) = NodeAddress (x : xs) n' (Just parent) ir r

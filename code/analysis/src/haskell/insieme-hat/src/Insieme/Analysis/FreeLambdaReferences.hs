@@ -127,7 +127,7 @@ freeLambdaReferences addr = case getNodeType addr of
                     IR.LambdaReference -> c : l
                     _                  -> l
 
-                prune a = IR.LambdaExpr == nodeType || isType nodeType
+                prune a = IR.LambdaExpr == nodeType || isType a
                     where
                         nodeType = getNodeType a
 
@@ -137,7 +137,7 @@ freeLambdaReferences addr = case getNodeType addr of
                     IR.LambdaDefinition -> freeLambdaReferences c : l
                     _                  -> l
 
-                prune a = IR.LambdaBinding == nodeType || isType nodeType
+                prune a = IR.LambdaBinding == nodeType || isType a
                     where
                         nodeType = getNodeType a
 

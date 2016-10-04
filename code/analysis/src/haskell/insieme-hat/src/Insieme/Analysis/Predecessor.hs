@@ -41,6 +41,7 @@ module Insieme.Analysis.Predecessor (
     predecessor
 ) where
 
+import Data.List
 import Data.Maybe
 import Data.Typeable
 import Insieme.Analysis.Boolean
@@ -100,7 +101,32 @@ predecessor p@(ProgramPoint a Pre) = case getNodeType parent of
             -- eval arguments in reverse order
             else ProgramPoint (goDown (i+1) parent) Post
 
-    IR.Lambda -> call_sites
+    IR.Lambda -> case () of 
+          _ | isImplicitCtor -> error "Ctors not yet implemented"
+            | isImplicitDtor -> case () of 
+                _ | dtorIndex == 0 -> single $ ProgramPoint (goDown ((numChildren scope) -1) scope) Post
+                  | otherwise      -> single $ ProgramPoint (dtors !! (dtorIndex-1)) Post  
+            | otherwise      -> call_sites
+        where
+            isImplicitCtor = isCtorOrDtor && getIndex ( goUp lambdaExpr ) == 2 
+            isImplicitDtor = isCtorOrDtor && getIndex ( goUp lambdaExpr ) == 3 
+            
+            lambdaExpr = goUpX 3 parent
+            isLambda = fromMaybe False $ (==parent) <$> getLambda lambdaExpr
+            
+            record = goUpX 2 lambdaExpr
+            
+            isCtorOrDtor = (depth a > 6) && isLambda && (nodeType == IR.Struct || nodeType == IR.Union)
+              where
+                nodeType = getNodeType record  
+                
+            scope = getEnclosingScope parent
+                
+            dtors = getImplicitDestructorBodies scope
+            dtorIndex = fromJust $ elemIndex a dtors
+
+            
+            
 
     IR.BindExpr -> call_sites
 
@@ -171,14 +197,20 @@ predecessor p@(ProgramPoint a Pre) = case getNodeType parent of
 
   where
     parent = fromJust $ getParent a
+    
     i = getIndex a
+    
     single = single' p
     multiple = multiple' p
+    
     call_sites = Solver.mkVariable (idGen p) [con] []
     con = Solver.createConstraint dep val call_sites
+    
     dep a = [Solver.toVar callSitesVar]
     val a = foldr go [] $ Solver.get a callSitesVar
-    go (CallSite call) list = ProgramPoint (goDown 1 call) Post : list
+      where
+        go (CallSite call) list = ProgramPoint (goDown 1 call) Post : list
+        
     callSitesVar = callSites parent
 
 
@@ -246,7 +278,12 @@ predecessor p@(ProgramPoint a Post) = case getNodeType a of
 
     -- compound statements
     IR.CompoundStmt | numChildren a == 0 -> pre
-                    | otherwise          -> single $ ProgramPoint (goDown ((numChildren a) -1) a) Post
+                    | otherwise          -> case () of 
+                        _ | null dtors -> single $ ProgramPoint (goDown ((numChildren a) -1) a) Post
+                          | otherwise  -> single $ ProgramPoint (last dtors) Post   
+      where
+        dtors = getImplicitDestructorBodies a
+                    
 
     -- declaration statement
     IR.DeclarationStmt -> single $ ProgramPoint (goDown 0 a) Post
@@ -278,6 +315,7 @@ predecessor p@(ProgramPoint a Post) = case getNodeType a of
       collectAddr IR.BreakStmt prune a     -- all subordinate 'BreakStmt's
       where
         prune = [(== IR.SwitchStmt), (== IR.WhileStmt), isType]
+        isType = (==IR.Type) . IR.toNodeKind
 
     -- moving backwards after continue stmt we jump to its beginning
     IR.ContinueStmt -> pre
@@ -290,6 +328,7 @@ predecessor p@(ProgramPoint a Post) = case getNodeType a of
       [goRel [1, i, 1] a | i <- enumFromTo 0 (numChildren (goDown 1 a)-1)] -- case
       where
         prune = [(== IR.SwitchStmt), (== IR.WhileStmt), isType]
+        isType = (==IR.Type) . IR.toNodeKind
 
     -- moving backwards after break stmt we jump to its beginning
     IR.BreakStmt -> pre
@@ -317,7 +356,9 @@ single' p x = multiple' p [x]
 postContinueStmt :: NodeAddress -> [ProgramPoint]
 postContinueStmt a = map (`ProgramPoint` Post)
                      (collectAddr IR.ContinueStmt prune a)
-  where prune = [(== IR.WhileStmt), (== IR.ForStmt), (== IR.LambdaExpr), isType]
+  where 
+    prune = [(== IR.WhileStmt), (== IR.ForStmt), (== IR.LambdaExpr), isType]
+    isType = (==IR.Type) . IR.toNodeKind
 
 -- | Variable ID generator
 idGen :: ProgramPoint -> Solver.Identifier
@@ -328,3 +369,33 @@ unhandled :: String -> ProgramPoint -> IR.NodeType
           -> Solver.TypedVar PredecessorList
 unhandled pos p parent = error . unwords $
   ["Unhandled", pos, "Program Point:", show p, "for parent", show parent]
+  
+
+  
+--- Destructor Utilities ---
+
+getEnclosingScope :: NodeAddress -> NodeAddress
+getEnclosingScope s = case () of 
+    _ | getNodeType s == IR.CompoundStmt -> s
+      | isRoot s                         -> error "No enclosing compound statement found!"
+      | otherwise                        -> getEnclosingScope $ fromJust $ getParent s
+
+
+getImplicitDestructorBodies :: NodeAddress -> [NodeAddress]
+getImplicitDestructorBodies scope = case getNodeType scope of 
+    
+    IR.CompoundStmt -> bodies 
+    
+  where
+    
+    declarations = goDown 0 <$> (filter isDeclStmt $ getChildren scope) 
+      where
+        isDeclStmt t = getNodeType t == IR.DeclarationStmt
+
+    classes = catMaybes $ go <$> declarations
+      where
+        go d = getReferencedType d >>= getTagType
+
+    bodies = (goDown 2 . fromJust . getLambda) <$> dtors
+        where
+            dtors =  catMaybes $ getDestructor <$> classes
