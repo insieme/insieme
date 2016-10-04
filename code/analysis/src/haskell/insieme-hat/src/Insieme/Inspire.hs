@@ -50,12 +50,9 @@ import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Insieme.Inspire.NodeType
 
-
---
 -- * Tree
---
 
-data Tree = Tree { getID :: Int,
+data Tree = Tree { getID       :: Int,
                    getNodeType :: NodeType,
                    getChildren :: [Tree],
                    builtinTags :: [String]
@@ -82,9 +79,7 @@ goDown i t = (!!i) $ getChildren t
 isBuiltin :: Tree -> String -> Bool
 isBuiltin t s = elem s $ builtinTags t
 
---
 -- * Node Kind
---
 
 data NodeKind = Value
               | Type
@@ -165,9 +160,7 @@ toNodeKind CatchClause                  = Support
 toNodeKind Parameters                   = Support
 toNodeKind Expressions                  = Support
 
---
 -- * Function Kind
---
 
 data FunctionKind = FK_Plain
                   | FK_Closure

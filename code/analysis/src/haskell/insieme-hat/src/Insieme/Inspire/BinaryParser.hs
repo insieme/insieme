@@ -36,9 +36,7 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
-module Insieme.Inspire.BinaryParser (
-    parseBinaryDump
-) where
+module Insieme.Inspire.BinaryParser (parseBinaryDump) where
 
 import Control.Applicative
 import Control.Monad
@@ -47,6 +45,8 @@ import Data.Attoparsec.Binary
 import Data.Attoparsec.ByteString
 import Data.Char (chr)
 import Data.List.Split (splitOn)
+import Data.Maybe
+import Data.Tuple
 import Data.Word
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
@@ -57,7 +57,8 @@ import qualified Insieme.Inspire.NodeAddress as Addr
 
 import Prelude hiding (take)
 
--- | Parse binary dump.
+-- | Parse INSPIRE binary dump. Builtins are attached to the end of the dump
+-- and builtin nodes are marked as such.
 parseBinaryDump :: BS.ByteString -> Either String IR.Tree
 parseBinaryDump bs = (Addr.getRoot . head) <$> parseAddresses bs
 
@@ -75,7 +76,7 @@ parseAddresses = parseOnly $ do
     -- connect components
     let root     = connectDumpNodes dumpNodes
     let builtins = resolve root <$> dumpBuiltins
-    let ir       = markBuiltins root builtins 
+    let ir       = markBuiltins root builtins
 
     return $ (\p -> Addr.mkNodeAddress p ir) <$> addresses
 
@@ -84,10 +85,7 @@ parseAddresses = parseOnly $ do
       resolve node []     = node
       resolve node (x:xs) = resolve (IR.getChildren node !! x) xs
 
-
---
 -- * Parsing the header
---
 
 parseHeader :: Parser [String]
 parseHeader = parseMagicNr *> parseConverters
@@ -104,9 +102,7 @@ parseConverters = do
     n <- anyInt32
     count n parseConverter
 
---
 -- * Parsing the body
---
 
 data DumpNode = DumpNode IR.NodeType [Int]
 
@@ -157,7 +153,6 @@ connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
                 modify (IntMap.insert index n)
                 return n
 
-
 markBuiltins :: IR.Tree -> Map.Map String IR.Tree -> IR.Tree
 markBuiltins root builtins = evalState (go root) Map.empty
   where
@@ -172,19 +167,12 @@ markBuiltins root builtins = evalState (go root) Map.empty
                 let n = IR.mkNode (IR.getID node) (IR.getNodeType node) children tags
                 modify (Map.insert node n)
                 return n
-                
-    builtinIndex = Map.fromList $ swap <$> Map.toList builtins
-      where
-        swap (n,t) = (t,n)
-        
-    builtinTags t = case Map.lookup t builtinIndex of
-        Just n  -> [n]
-        Nothing -> []  
-                 
 
---
--- * Some helper functions to aid the parsing of values
---
+    builtinIndex = Map.fromList $ swap <$> Map.toList builtins
+
+    builtinTags t = maybeToList $ Map.lookup t builtinIndex
+
+-- * Helper Functions
 
 anyInt8 :: Parser Int
 anyInt8 = fromIntegral <$> anyWord8

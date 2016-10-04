@@ -34,6 +34,10 @@
  - regarding third party software licenses.
  -}
 
+
+-- | This module exports helper functions for the Template Haskell code in
+-- "Insieme.Inspire.NodeType"
+
 module Insieme.Inspire.ThHelpers where
 
 import Data.List
