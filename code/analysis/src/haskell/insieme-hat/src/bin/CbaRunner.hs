@@ -85,7 +85,7 @@ isPending = (==Pending) . getResult
 findAnalysis :: Addr.NodeAddress -> [AnalysisRun] -> [AnalysisRun]
 findAnalysis addr acc =
     case Addr.getNode addr of
-        IR.NT IR.CallExpr (_:IR.NT IR.Literal [_, IR.NT (IR.StringValue s) _]:_) | "cba_expect" `isPrefixOf` s
+        IR.Node IR.CallExpr (_:IR.Node IR.Literal [_, IR.Node (IR.StringValue s) _]:_) | "cba_expect" `isPrefixOf` s
             -> AnalysisRun addr s Pending : acc
         _   -> acc
 

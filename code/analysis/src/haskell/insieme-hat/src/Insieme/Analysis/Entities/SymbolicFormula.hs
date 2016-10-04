@@ -64,8 +64,8 @@ instance Ord Symbol where
     compare x y = compare (getNode x) (getNode y)
 
 instance Show Symbol where
-    show (Constant (IR.NT IR.Literal  [_, IR.NT (IR.StringValue v) _]) _) = v
-    show (Variable (IR.NT IR.Variable [_, IR.NT (IR.UIntValue   v) _]) _) = "v" ++ show v
+    show (Constant (IR.Node IR.Literal  [_, IR.Node (IR.StringValue v) _]) _) = v
+    show (Variable (IR.Node IR.Variable [_, IR.Node (IR.UIntValue   v) _]) _) = "v" ++ show v
     show _ = "???"
 
 type SymbolicFormula = Ar.Formula CInt Symbol

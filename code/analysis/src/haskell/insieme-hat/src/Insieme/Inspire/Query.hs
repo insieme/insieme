@@ -91,7 +91,7 @@ getType n | kind == IR.Type        = Just $ n
 
 isUnitType :: NodeReference a => a -> Bool
 isUnitType n = case node n of
-    IR.NT IR.GenericType (IR.NT (IR.StringValue "unit") _ : _) -> True
+    IR.Node IR.GenericType (IR.Node (IR.StringValue "unit") _ : _) -> True
     _ -> False
 
 isUnit :: NodeReference a => a -> Bool
@@ -101,7 +101,7 @@ isUnit n = fromMaybe False $ isUnitType <$> getType n
 
 isReferenceType :: NodeReference a => a -> Bool
 isReferenceType n = case node n of
-    IR.NT IR.GenericType (IR.NT (IR.StringValue "ref") _ : _) -> True
+    IR.Node IR.GenericType (IR.Node (IR.StringValue "ref") _ : _) -> True
     _ -> False
 
 isReference :: NodeReference a => a  -> Bool
@@ -118,7 +118,7 @@ getReferencedType n = (child 0) <$> (child 2) <$> getReferenceType n
 
 isArrayType :: NodeReference a => a -> Bool
 isArrayType n = case node n of
-    IR.NT IR.GenericType (IR.NT (IR.StringValue "array") _ : _) -> True
+    IR.Node IR.GenericType (IR.Node (IR.StringValue "array") _ : _) -> True
     _ -> False
 
 isArray :: NodeReference a => a -> Bool

@@ -68,7 +68,7 @@ instance Eq Tree where
 instance Ord Tree where
     compare = compare `on` getID
 
-pattern NT x y <- Tree _ x y _
+pattern Node x y <- Tree _ x y _
 
 mkNode :: Int -> NodeType -> [Tree] -> [String] -> Tree
 mkNode = Tree
@@ -178,7 +178,7 @@ data FunctionKind = FK_Plain
   deriving (Eq, Ord, Show)
 
 toFunctionKind :: Tree -> Maybe FunctionKind
-toFunctionKind t@(NT FunctionType (_:_:k:_)) = case getNodeType k of
+toFunctionKind t@(Node FunctionType (_:_:k:_)) = case getNodeType k of
     UIntValue 1 -> Just $ FK_Plain
     UIntValue 2 -> Just $ FK_Closure
     UIntValue 3 -> Just $ FK_Constructor

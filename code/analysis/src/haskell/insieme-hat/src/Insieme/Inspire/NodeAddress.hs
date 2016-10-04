@@ -235,19 +235,19 @@ isLoopIterator a = (depth a >= 2) && ((==IR.ForStmt) $ getNodeType $ goUp $ goUp
 
 hasEnclosingStatement :: NodeAddress -> Bool
 hasEnclosingStatement a = case getNode a of
-    IR.NT n _ | (IR.toNodeKind n) == IR.Statement -> True
-    IR.NT n _ | n /= IR.LambdaExpr && n /= IR.Variable && (IR.toNodeKind n) == IR.Expression -> True
+    IR.Node n _ | (IR.toNodeKind n) == IR.Statement -> True
+    IR.Node n _ | n /= IR.LambdaExpr && n /= IR.Variable && (IR.toNodeKind n) == IR.Expression -> True
     _ -> not (isRoot a) && hasEnclosingStatement (fromJust $ getParent a)
 
 isEntryPoint :: NodeAddress -> Bool
 isEntryPoint a = case getNode a of
-    IR.NT IR.CompoundStmt _ -> isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
+    IR.Node IR.CompoundStmt _ -> isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
     _                       -> isRoot a
 
 isEntryPointParameter :: NodeAddress -> Bool
 isEntryPointParameter v | (not . isVariable) v = False
 isEntryPointParameter v | isRoot v = False
 isEntryPointParameter v = case getNode $ fromJust $ getParent v of
-            IR.NT IR.Parameters _ -> not $ hasEnclosingStatement v
+            IR.Node IR.Parameters _ -> not $ hasEnclosingStatement v
             _                     -> False
 

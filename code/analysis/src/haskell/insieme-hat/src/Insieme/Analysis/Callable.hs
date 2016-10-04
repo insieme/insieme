@@ -130,10 +130,10 @@ callableValue addr = case getNodeType addr of
     getCallables4Ref r = search (getNode r) r
         where
             search r cur = case getNode cur of
-                IR.NT IR.LambdaDefinition cs | isJust pos -> BSet.singleton (Lambda $ goDown 1 $ goDown (fromJust pos) cur)
+                IR.Node IR.LambdaDefinition cs | isJust pos -> BSet.singleton (Lambda $ goDown 1 $ goDown (fromJust pos) cur)
                     where
                         pos = findIndex filter cs
-                        filter (IR.NT IR.LambdaBinding [a,_]) = a == r
+                        filter (IR.Node IR.LambdaBinding [a,_]) = a == r
                 _ | isRoot cur      -> BSet.Universe
                 _                   -> search r $ goUp cur
 
@@ -147,5 +147,3 @@ collectAllCallables addr = BSet.fromList $ foldTree collector (getRoot addr)
             IR.BindExpr -> ((Closure cur) : callables)
             IR.Literal  -> ((Literal cur) : callables)
             _ -> callables
-
-

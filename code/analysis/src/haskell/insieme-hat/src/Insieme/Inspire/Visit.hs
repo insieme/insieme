@@ -146,41 +146,41 @@ findDecl start = findDecl start
 
     findDecl :: NodeAddress -> Maybe NodeAddress
     findDecl addr = case getNode addr of
-        IR.NT IR.Lambda _ -> lambda addr
+        IR.Node IR.Lambda _ -> lambda addr
         _ -> parameter addr <|> declstmt addr <|> forstmt addr   <|>
              bindexpr addr  <|> compstmt addr <|> nextlevel addr
 
     parameter :: NodeAddress -> Maybe NodeAddress
     parameter addr = case getNode addr of
-        IR.NT IR.Parameters _ -> Just start
+        IR.Node IR.Parameters _ -> Just start
         _ -> Nothing
 
     declstmt :: NodeAddress -> Maybe NodeAddress
     declstmt addr = case getNode addr of
-        IR.NT IR.DeclarationStmt [_, v] | v == org -> Just $ goDown 1 addr
+        IR.Node IR.DeclarationStmt [_, v] | v == org -> Just $ goDown 1 addr
         _ -> Nothing
 
     forstmt :: NodeAddress -> Maybe NodeAddress
     forstmt addr = case getNode addr of
-        IR.NT IR.ForStmt _ -> declstmt $ goDown 0 addr
+        IR.Node IR.ForStmt _ -> declstmt $ goDown 0 addr
         _ -> Nothing
 
     lambda :: NodeAddress -> Maybe NodeAddress
     lambda addr = case getNode addr of
-        IR.NT IR.Lambda [_, IR.NT IR.Parameters ps, _] ->
+        IR.Node IR.Lambda [_, IR.Node IR.Parameters ps, _] ->
             (\i -> goDown i . goDown 1 $ addr) <$> elemIndex org ps
         _ -> Nothing
 
     bindexpr :: NodeAddress -> Maybe NodeAddress
     bindexpr addr = case getNode addr of
-        IR.NT IR.BindExpr [_, IR.NT IR.Parameters ps, _] ->
+        IR.Node IR.BindExpr [_, IR.Node IR.Parameters ps, _] ->
             (\i -> goDown i . goDown 1 $ addr) <$> elemIndex org ps
         _ -> Nothing
 
     compstmt :: NodeAddress -> Maybe NodeAddress
     compstmt addr = getNode <$> getParent addr >>= \case
-        IR.NT IR.CompoundStmt _ | getIndex addr == 0 -> Nothing
-        IR.NT IR.CompoundStmt _ -> findDecl $ goLeft addr
+        IR.Node IR.CompoundStmt _ | getIndex addr == 0 -> Nothing
+        IR.Node IR.CompoundStmt _ -> findDecl $ goLeft addr
         _ -> Nothing
 
     nextlevel :: NodeAddress -> Maybe NodeAddress
