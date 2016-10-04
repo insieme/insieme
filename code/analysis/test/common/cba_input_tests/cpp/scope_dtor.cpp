@@ -63,6 +63,43 @@ int main(int argc, char** argv) {
 	cba_expect_eq_int(2,A::step_count);
 
 
+	// create several nested
+	A a;
+	cba_expect_eq_int(1,A::instances);
+	cba_expect_eq_int(3,A::step_count);
+
+	{
+		cba_expect_eq_int(1,A::instances);
+		cba_expect_eq_int(3,A::step_count);
+
+		A a;
+
+		cba_expect_eq_int(2,A::instances);
+		cba_expect_eq_int(4,A::step_count);
+
+		{
+			cba_expect_eq_int(2,A::instances);
+			cba_expect_eq_int(4,A::step_count);
+
+			A a;
+
+			cba_expect_eq_int(3,A::instances);
+			cba_expect_eq_int(5,A::step_count);
+
+			A b;
+
+			cba_expect_eq_int(4,A::instances);
+			cba_expect_eq_int(6,A::step_count);
+		}
+
+		cba_expect_eq_int(2,A::instances);
+		cba_expect_eq_int(8,A::step_count);
+
+	}
+
+	cba_expect_eq_int(1,A::instances);
+	cba_expect_eq_int(9,A::step_count);
+
 //	cba_dump_solution();
 //	cba_print_code();
 //	cba_dump_json();
