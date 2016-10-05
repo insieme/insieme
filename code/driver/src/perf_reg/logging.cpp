@@ -39,6 +39,7 @@
 #include <ctime>
 #include <fstream>
 #include <sstream>
+#include <numeric>
 
 #include "insieme/utils/logging.h"
 
@@ -65,21 +66,14 @@ namespace perf_reg {
 		keys.insert(key);
 	}
 
-	bool TestResultsLogger::addResult(const Test& test, const Step& step, const Key& key, const double& value) {
+	bool TestResultsLogger::addResult(const Test& test, const Step& step, const Key& key, Value value)
+	{
 		if (!keys.count(key)) {
 			LOG(ERROR) << "Given key '" << key << "' is unknown!";
 			return false;
 		}
 
-		if (results.count(test) &&
-		    results.at(test).count(step) &&
-		    results.at(test).at(step).count(key))
-		{
-			LOG(WARNING) << "Overwriting previous value for "
-			             << test << " - " << step << " - " << key << "...";
-		}
-
-		results[test][step][key] = to_string(value);
+		results[test][step][key].push_back(value);
 
 		return true;
 	}
@@ -122,6 +116,12 @@ namespace perf_reg {
 						           << " in " << test << " - " << step << "!";
 						return false;
 					}
+
+					if (!results.at(test).at(step).at(key).size()) {
+						LOG(ERROR) << "Missing data: I have no results for "
+						           << key << " in " << test << " - " << step << "!";
+						return false;
+					}
 				}
 			}
 		}
@@ -156,20 +156,20 @@ namespace perf_reg {
 				const auto &step = stepPair.first;
 
 				out << bf("%s;%s") % test % step;
-				for (const auto &key : keys)
-					out << bf(";%s") % results.at(test).at(step).at(key);
+
+				for (const auto &key : keys) {
+					/* calc avg of accumulated results for this key */
+					const list<Value> &acc = results[test][step][key];
+					double sum = accumulate(acc.begin(), acc.end(), 0.);
+					double avg = sum / acc.size();
+
+					out << bf(";%f") % avg;
+				}
+
 				out << endl;
 			}
 		}
 	}
-
-
-
-
-
-
-
-
 
 
 } // namespace perf_reg
