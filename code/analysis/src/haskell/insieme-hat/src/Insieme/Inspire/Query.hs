@@ -34,6 +34,9 @@
  - regarding third party software licenses.
  -}
 
+-- | This moduel defines function to query the intermediate representation of
+-- the given program. The workings of these functions are specific to INSPIRE.
+
 module Insieme.Inspire.Query where
 
 import Control.Monad
@@ -42,30 +45,25 @@ import Data.Maybe
 import qualified Data.Map.Strict as Map
 import qualified Insieme.Inspire as IR
 
---
 -- * Node Reference
---
 
+-- | Implementing this class allows certain queries to be used directly.
 class NodeReference a where
     node  :: a -> IR.Tree
     child :: Int -> a -> a
-    
+
     children :: a -> [a]
     children a = [ child i a | i <- [0 .. IR.numChildren (node a) - 1]]
-    
+
 
 instance NodeReference IR.Tree where
     node  = id
     child = IR.goDown
 
-
+-- * Queries for 'NodeReference'
 
 getNodeType :: NodeReference a => a -> IR.NodeType
 getNodeType = IR.getNodeType . node
-
---
--- * Queries for Node Reference
---
 
 isVariable :: NodeReference a => a -> Bool
 isVariable = (==IR.Variable) . IR.getNodeType . node
@@ -76,7 +74,8 @@ isVariable = (==IR.Variable) . IR.getNodeType . node
 isType :: NodeReference a => a -> Bool
 isType = (==IR.Type) . IR.toNodeKind . IR.getNodeType . node
 
--- | Returns the Type of an expression (or, if it is a type already, the given type)
+-- | Returns the Type of an expression (or, if it is a type already, the given
+-- type). This does not return 'IR.NodeType', see 'getNodeType'.
 getType :: NodeReference a => a -> Maybe a
 getType n | kind == IR.Type        = Just $ n
           | kind == IR.Expression  = Just $ child 0 n
@@ -85,13 +84,13 @@ getType n | kind == IR.Type        = Just $ n
           | otherwise              = Nothing
   where
     ntyp = getNodeType n
-    kind = IR.toNodeKind ntyp 
+    kind = IR.toNodeKind ntyp
 
 -- *** Unit Type
 
 isUnitType :: NodeReference a => a -> Bool
 isUnitType n = case node n of
-    IR.NT IR.GenericType (IR.NT (IR.StringValue "unit") _ : _) -> True
+    IR.Node IR.GenericType (IR.Node (IR.StringValue "unit") _ : _) -> True
     _ -> False
 
 isUnit :: NodeReference a => a -> Bool
@@ -101,7 +100,7 @@ isUnit n = fromMaybe False $ isUnitType <$> getType n
 
 isReferenceType :: NodeReference a => a -> Bool
 isReferenceType n = case node n of
-    IR.NT IR.GenericType (IR.NT (IR.StringValue "ref") _ : _) -> True
+    IR.Node IR.GenericType (IR.Node (IR.StringValue "ref") _ : _) -> True
     _ -> False
 
 isReference :: NodeReference a => a  -> Bool
@@ -112,13 +111,13 @@ getReferenceType a = mfilter isReference $ getType a
 
 getReferencedType :: NodeReference a => a -> Maybe a
 getReferencedType n = (child 0) <$> (child 2) <$> getReferenceType n
-                      
+
 
 -- *** Array Type
 
 isArrayType :: NodeReference a => a -> Bool
 isArrayType n = case node n of
-    IR.NT IR.GenericType (IR.NT (IR.StringValue "array") _ : _) -> True
+    IR.Node IR.GenericType (IR.Node (IR.StringValue "array") _ : _) -> True
     _ -> False
 
 isArray :: NodeReference a => a -> Bool
@@ -138,32 +137,33 @@ getTagType :: NodeReference a => a -> Maybe a
 getTagType a = mfilter isTagType $ getType a
 
 
--- *** Record 
+-- *** Record
 
 
 getRecord :: NodeReference a => a -> Maybe a
-getRecord a = (child 1) <$> binding 
+getRecord a = (child 1) <$> binding
   where
     typ = getTagType a
     tag = fromJust $ (child 0) <$> typ
     bindings = children <$> (child 1) <$> typ
     binding = bindings >>= find go
       where
-        go a = (node tag) == ((child 0) $ node a)        
-     
+        go a = (node tag) == ((child 0) $ node a)
+
 
 
 getDestructor :: NodeReference a => a -> Maybe a
-getDestructor a = if noDtor then Nothing else (child 0) <$> optDtor 
+getDestructor a = if noDtor then Nothing else (child 0) <$> optDtor
   where
-    optDtor = (child 3) <$> getRecord a 
-    noDtor = if isJust optDtor then IR.numChildren (node $ fromJust optDtor) == 0 else False 
+    optDtor = (child 3) <$> getRecord a
+    noDtor = if isJust optDtor then IR.numChildren (node $ fromJust optDtor) == 0 else False
 
 
 
 -- ** Kind
 
 -- *** Function Kinds
+
 checkFunctionKind :: NodeReference a
                   => (IR.FunctionKind -> Bool) -> a -> Bool
 checkFunctionKind test n = fromMaybe False $ test <$> (IR.toFunctionKind =<< getType (node n))
@@ -177,8 +177,6 @@ isDestructor = checkFunctionKind (==IR.FK_Destructor)
 isConstructorOrDestructor :: NodeReference a => a -> Bool
 isConstructorOrDestructor n = isConstructor n || isDestructor n
 
-
-
 -- ** Expressions
 
 -- *** Lambda Expressions
@@ -189,7 +187,7 @@ getLambda a = case () of
     _ | isLambda     -> Just a
       | isLambdaExpr -> lambda
       | otherwise    -> Nothing
-      
+
   where
     isLambda     = getNodeType a == IR.Lambda
     isLambdaExpr = getNodeType a == IR.LambdaExpr
@@ -200,7 +198,6 @@ getLambda a = case () of
     lambda = (child 1) <$> find go defs
       where
         go b = ref == ((child 0) $ node b)
-    
 
 -- ** Builtins
 

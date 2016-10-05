@@ -48,10 +48,11 @@ import Data.Word
 import GHC.Generics (Generic)
 import Numeric (readOct, readDec, readHex)
 
-data CInt = CInt32  Int32
-          | CInt64  Int64
-          | CUInt32 Word32
-          | CUInt64 Word64
+-- | Represent a C integer.
+data CInt = CInt32  Int32   -- ^ Represents @int@
+          | CInt64  Int64   -- ^ Represents @long@
+          | CUInt32 Word32  -- ^ Represents @unsigned int@
+          | CUInt64 Word64  -- ^ Represents @unsigned long@
   deriving (Eq, Ord, Generic, NFData)
 
 instance Show CInt where
@@ -114,6 +115,7 @@ instance Integral CInt where
     toInteger (CUInt32 x) = toInteger x
     toInteger (CUInt64 x) = toInteger x
 
+-- | Parse a C integer literal into a 'CInt'.
 parseInt :: String -> Maybe CInt
 parseInt input = (toCInt . normalizeSuffix) <$> (listToMaybe $ readInt input)
   where

@@ -87,16 +87,16 @@ data ArithmeticAnalysis = ArithmeticAnalysis
 arithmeticValue :: Addr.NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex (SymbolicFormulaSet BSet.Bound10))
 arithmeticValue addr = case Addr.getNode addr of
 
-    IR.NT IR.Literal [t, IR.NT (IR.StringValue v) _] | isIntType t -> case parseInt v of
+    IR.Node IR.Literal [t, IR.Node (IR.StringValue v) _] | isIntType t -> case parseInt v of
         Just cint -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkConst cint)
         Nothing   -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNode addr) addr)
 
-    IR.NT IR.Variable _ | Addr.isLoopIterator addr -> Solver.mkVariable (idGen addr) [] (compose $ BSet.Universe)
+    IR.Node IR.Variable _ | Addr.isLoopIterator addr -> Solver.mkVariable (idGen addr) [] (compose $ BSet.Universe)
 
-    IR.NT IR.Variable (t:_) | isIntType t && isFreeVariable addr ->
+    IR.Node IR.Variable (t:_) | isIntType t && isFreeVariable addr ->
         Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Variable (Addr.getNode addr) addr)
 
-    IR.NT IR.CastExpr (t:_) | isIntType t -> var
+    IR.Node IR.CastExpr (t:_) | isIntType t -> var
       where
         var = Solver.mkVariable (idGen addr) [con] Solver.bot
         con = Solver.forward (arithmeticValue $ Addr.goDown 1 addr) var
@@ -163,9 +163,9 @@ arithmeticValue addr = case Addr.getNode addr of
 
 
 isIntType :: IR.Tree -> Bool
-isIntType (IR.NT IR.GenericType (IR.NT (IR.StringValue "int" ) _:_)) = True
-isIntType (IR.NT IR.GenericType (IR.NT (IR.StringValue "uint") _:_)) = True
-isIntType (IR.NT IR.TypeVariable _ )                                 = True
+isIntType (IR.Node IR.GenericType (IR.Node (IR.StringValue "int" ) _:_)) = True
+isIntType (IR.Node IR.GenericType (IR.Node (IR.StringValue "uint") _:_)) = True
+isIntType (IR.Node IR.TypeVariable _ )                                 = True
 isIntType _ = False
 
 isFreeVariable :: Addr.NodeAddress -> Bool

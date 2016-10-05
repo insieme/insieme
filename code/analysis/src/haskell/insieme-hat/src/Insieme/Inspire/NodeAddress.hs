@@ -38,11 +38,14 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Insieme.Inspire.NodeAddress (
+    -- * Node Address
     NodeAddress,
-    mkNodeAddress,
     prettyShow,
 
-    -- queries
+    -- ** Constructor
+    mkNodeAddress,
+
+    -- ** Queries
     getPathReversed,
     getNode,
     getNodeType,
@@ -50,6 +53,7 @@ module Insieme.Inspire.NodeAddress (
     getPath,
     getAbsolutePath,
     depth,
+    depthAbsolute,
     numChildren,
     getChildren,
     getIndex,
@@ -58,7 +62,13 @@ module Insieme.Inspire.NodeAddress (
     getRootAddress,
     isChildOf,
 
-    -- navigation
+    -- *** Semantic Queries
+    isLoopIterator,
+    hasEnclosingStatement,
+    isEntryPoint,
+    isEntryPointParameter,
+
+    -- ** Navigation
     goRel,
     goUp,
     goUpX,
@@ -66,16 +76,9 @@ module Insieme.Inspire.NodeAddress (
     goLeft,
     goRight,
 
-    -- address clipping
+    -- ** Address Clipping
     append,
     crop,
-    
-    -- semantic queries 
-    isLoopIterator,
-    hasEnclosingStatement,
-    isEntryPoint,
-    isEntryPointParameter
-    
 ) where
 
 import Control.DeepSeq
@@ -84,14 +87,10 @@ import Data.List (foldl',isSuffixOf)
 import Data.Maybe
 import Debug.Trace
 import GHC.Generics (Generic)
-import Insieme.Utils
 import Insieme.Inspire.Query
+import Insieme.Utils
 import qualified Data.Hashable as Hash
 import qualified Insieme.Inspire as IR
-
---
--- * Node Address
---
 
 type NodePath = [Int]
 
@@ -128,23 +127,16 @@ instance Hash.Hashable NodeAddress where
     hashWithSalt s n = Hash.hashWithSalt s $ getPathReversed n
     hash n = Hash.hash $ getPathReversed n
 
-
 instance NodeReference NodeAddress where
     node  = getNode
     child = goDown
 
-
-
 prettyShow :: NodeAddress -> String
 prettyShow na = '0' : concat ['-' : show x | x <- getPath na]
-
--- ** Constructors
 
 -- | Create a 'NodeAddress' from a list of indizes and a root node.
 mkNodeAddress :: [Int] -> IR.Tree -> NodeAddress
 mkNodeAddress xs root = foldl' (flip goDown) (NodeAddress [] root Nothing root []) xs
-
--- ** Queries
 
 -- | Slow, use 'getPathReversed' where possible
 getPath :: NodeAddress -> NodePath
@@ -156,6 +148,9 @@ getAbsolutePath a =  reverse $ getPathReversed a ++ getAbsoluteRootPath a
 depth :: NodeAddress -> Int
 depth = length . getPathReversed
 
+depthAbsolute :: NodeAddress -> Int
+depthAbsolute a = length $ getPathReversed a ++ getAbsoluteRootPath a
+
 -- | Get the number of children of a given node.
 numChildren :: NodeAddress -> Int
 numChildren = length . IR.getChildren . getNode
@@ -163,6 +158,7 @@ numChildren = length . IR.getChildren . getNode
 getChildren :: NodeAddress -> [NodeAddress]
 getChildren a = (flip goDown) a <$> [0..numChildren a - 1]
 
+-- | Returns the position, of the given node, in its parent's list of children.
 getIndex :: NodeAddress -> Int
 getIndex a | isRoot a = error "Can't obtain index of a root address!"
 getIndex a = head $ getPathReversed a
@@ -175,8 +171,6 @@ getRootAddress a = mkNodeAddress [] (getRoot a)
 
 isChildOf :: NodeAddress -> NodeAddress -> Bool
 a `isChildOf` b = getRoot a == getRoot b && (getPathReversed b `isSuffixOf` getPathReversed a)
-
--- ** Navigation
 
 -- | Return a node address relative to the given one; a negative integer means
 -- going up so many levels; zero or a positive integer means going to the
@@ -208,8 +202,6 @@ goRight :: NodeAddress -> NodeAddress
 goRight na@(NodeAddress _  _ Nothing       _ _) = na
 goRight    (NodeAddress xs _ (Just parent) _ _) = goDown (head xs + 1) parent
 
--- ** Subtree construction / destruction
-
 append :: NodeAddress -> NodeAddress -> NodeAddress
 append a b | isRoot a = b
 append a b | isRoot b = a
@@ -221,13 +213,9 @@ append a b = NodeAddress {
                 getAbsoluteRootPath = getAbsoluteRootPath a
              }
 
+-- | Creates a 'NodeAddress' relative from the give node.
 crop :: NodeAddress -> NodeAddress
 crop a = NodeAddress [] (getNode a) Nothing (getNode a) ((getPathReversed a) ++ (getAbsoluteRootPath a))
-
-
---
--- * Queries for Node Address
---
 
 -- | Returns 'True' if given variable (in declaration) is a loop iterator.
 isLoopIterator :: NodeAddress -> Bool
@@ -235,19 +223,18 @@ isLoopIterator a = (depth a >= 2) && ((==IR.ForStmt) $ getNodeType $ goUp $ goUp
 
 hasEnclosingStatement :: NodeAddress -> Bool
 hasEnclosingStatement a = case getNode a of
-    IR.NT n _ | (IR.toNodeKind n) == IR.Statement -> True
-    IR.NT n _ | n /= IR.LambdaExpr && n /= IR.Variable && (IR.toNodeKind n) == IR.Expression -> True
+    IR.Node n _ | (IR.toNodeKind n) == IR.Statement -> True
+    IR.Node n _ | n /= IR.LambdaExpr && n /= IR.Variable && (IR.toNodeKind n) == IR.Expression -> True
     _ -> not (isRoot a) && hasEnclosingStatement (fromJust $ getParent a)
 
 isEntryPoint :: NodeAddress -> Bool
 isEntryPoint a = case getNode a of
-    IR.NT IR.CompoundStmt _ -> isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
+    IR.Node IR.CompoundStmt _ -> isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
     _                       -> isRoot a
 
 isEntryPointParameter :: NodeAddress -> Bool
 isEntryPointParameter v | (not . isVariable) v = False
 isEntryPointParameter v | isRoot v = False
 isEntryPointParameter v = case getNode $ fromJust $ getParent v of
-            IR.NT IR.Parameters _ -> not $ hasEnclosingStatement v
+            IR.Node IR.Parameters _ -> not $ hasEnclosingStatement v
             _                     -> False
-

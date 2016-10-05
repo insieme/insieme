@@ -126,12 +126,12 @@ dataflowValue :: (ComposedValue.ComposedValue a i v, Typeable d)
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
 dataflowValue addr analysis ops = case getNode addr of
 
-    IR.NT IR.Variable _ -> case findDecl addr of
+    IR.Node IR.Variable _ -> case findDecl addr of
             Just declrAddr -> handleDeclr declrAddr              -- this variable is declared, use declared value
             _              -> freeVariableHandler analysis addr  -- it is a free variable, ask the analysis what to do with it
 
 
-    IR.NT IR.CallExpr _ -> var
+    IR.Node IR.CallExpr _ -> var
       where
         var = Solver.mkVariable (idGen addr) [knownTargets,unknownTarget] Solver.bot
         knownTargets = Solver.createConstraint dep val var
@@ -229,7 +229,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
 
 
-    IR.NT IR.TupleExpr [_,IR.NT IR.Expressions args] -> var
+    IR.Node IR.TupleExpr [_,IR.Node IR.Expressions args] -> var
         where
             var = Solver.mkVariable (idGen addr) [con] Solver.bot
             con = Solver.createConstraint dep val var
@@ -242,7 +242,7 @@ dataflowValue addr analysis ops = case getNode addr of
                     go i = varGen (goDown i $ goDown 1 $ addr)
 
 
-    decl@(IR.NT IR.Declaration _) -> var
+    decl@(IR.Node IR.Declaration _) -> var
       where
         var = Solver.mkVariable (idGen addr) [con] Solver.bot
 

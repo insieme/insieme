@@ -34,14 +34,27 @@
  - regarding third party software licenses.
  -}
 
+{- | The data structure defined in this module is used to capture one analysis
+   context.
+
+It brings together the 'IR.Tree' of the program, the 'Solver.SolverState' and
+an (optional) reference to an instance of the
+@insieme::analysis::haskell::Context@ data structure in INSIEME.
+
+ -}
+
 module Insieme.Context (
     CContext,
     Context,
+
+    -- * Constructors
     mkContext,
     mkDummyContext,
+
+    -- * Queries
     getCContext,
-    getSolverState,
     getTree,
+    getSolverState,
 ) where
 
 import Foreign.Ptr
@@ -50,12 +63,16 @@ import qualified Insieme.Analysis.Solver as Solver
 
 type CContext = Ptr ()
 
-data Context = Context { getCContext :: CContext,
-                         getTree     :: IR.Tree,
+data Context = Context { getCContext    :: CContext,
+                         getTree        :: IR.Tree,
                          getSolverState :: Solver.SolverState }
 
+-- | Create a new 'Context', it will be initialized with an /empty/
+-- 'Solver.SolverState'.
 mkContext :: CContext -> IR.Tree -> Context
 mkContext i c = Context i c Solver.initState
 
+-- | Create a new 'Context' without a reference to a
+-- @insieme::analysis::haskell::Context@ instance.
 mkDummyContext :: IR.Tree -> Context
 mkDummyContext = mkContext nullPtr

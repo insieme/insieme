@@ -50,12 +50,9 @@ import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Insieme.Inspire.NodeType
 
-
---
 -- * Tree
---
 
-data Tree = Tree { getID :: Int,
+data Tree = Tree { getID       :: Int,
                    getNodeType :: NodeType,
                    getChildren :: [Tree],
                    builtinTags :: [String]
@@ -68,7 +65,7 @@ instance Eq Tree where
 instance Ord Tree where
     compare = compare `on` getID
 
-pattern NT x y <- Tree _ x y _
+pattern Node x y <- Tree _ x y _
 
 mkNode :: Int -> NodeType -> [Tree] -> [String] -> Tree
 mkNode = Tree
@@ -82,9 +79,7 @@ goDown i t = (!!i) $ getChildren t
 isBuiltin :: Tree -> String -> Bool
 isBuiltin t s = elem s $ builtinTags t
 
---
 -- * Node Kind
---
 
 data NodeKind = Value
               | Type
@@ -165,9 +160,7 @@ toNodeKind CatchClause                  = Support
 toNodeKind Parameters                   = Support
 toNodeKind Expressions                  = Support
 
---
 -- * Function Kind
---
 
 data FunctionKind = FK_Plain
                   | FK_Closure
@@ -178,7 +171,7 @@ data FunctionKind = FK_Plain
   deriving (Eq, Ord, Show)
 
 toFunctionKind :: Tree -> Maybe FunctionKind
-toFunctionKind t@(NT FunctionType (_:_:k:_)) = case getNodeType k of
+toFunctionKind t@(Node FunctionType (_:_:k:_)) = case getNodeType k of
     UIntValue 1 -> Just $ FK_Plain
     UIntValue 2 -> Just $ FK_Closure
     UIntValue 3 -> Just $ FK_Constructor

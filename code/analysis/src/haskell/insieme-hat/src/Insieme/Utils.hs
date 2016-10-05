@@ -36,7 +36,6 @@
 
 module Insieme.Utils where
 
-
 -- | A utility to chain comparison operations
 thenCompare :: Ordering -> Ordering -> Ordering
 thenCompare EQ o = o

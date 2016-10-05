@@ -230,7 +230,7 @@ referenceValue addr = case getNodeType addr of
 
 
 getTypeParam :: Int -> IR.Tree -> IR.Tree
-getTypeParam i (IR.NT IR.GenericType ( _ : _ : (IR.NT IR.Types params) : [] )) = params !! i
+getTypeParam i (IR.Node IR.GenericType ( _ : _ : (IR.Node IR.Types params) : [] )) = params !! i
 getTypeParam _ _ = error "unexpected NodeType"
 
 hasMoreReferences :: IR.Tree -> IR.Tree -> Bool
@@ -241,14 +241,14 @@ hasMoreReferences _ _ = False
 
 -- tests whether the given node is a materializing declaration
 isMaterializingDeclaration :: IR.Tree -> Bool
-isMaterializingDeclaration (IR.NT IR.Declaration [declType,IR.NT _ (initType:_)]) = hasMoreReferences declType initType
+isMaterializingDeclaration (IR.Node IR.Declaration [declType,IR.Node _ (initType:_)]) = hasMoreReferences declType initType
 isMaterializingDeclaration _ = False
 
 
 -- tests whether the given node is a materializing call
 isMaterializingCall :: IR.Tree -> Bool
 isMaterializingCall _ = False        -- the default, for now - TODO: implement real check
--- isMaterializingCall (IR.NT IR.CallExpr ( resType : (IR.NT _ ((IR.NT IR.FunctionType (_:retType:_)):_)) : _)) = hasMoreReferences resType retType
+-- isMaterializingCall (IR.Node IR.CallExpr ( resType : (IR.Node _ ((IR.Node IR.FunctionType (_:retType:_)):_)) : _)) = hasMoreReferences resType retType
 -- isMaterializingCall _ = False
 
 getEnclosingDecl :: NodeAddress -> NodeAddress

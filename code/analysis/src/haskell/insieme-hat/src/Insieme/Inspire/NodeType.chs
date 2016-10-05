@@ -39,16 +39,25 @@
 {-# LANGUAGE DeriveGeneric   #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+{- | This module defines INSPIRE NodeTypes in Haskell.
+
+NodeTypes are imported from the original INSIEME header files resulting in
+'C_NodeType'. The actual data structure 'NodeType' is generated from it using
+Template Haskell. The difference between them is that values of value nodes
+have been attached, making access more convenient.
+
+Additional the functions 'toNodeType' and 'fromNodeType' are provided, but
+since values cannot be known only from a 'C_NodeType' they are set to a default
+value.
+
+ -}
+
 module Insieme.Inspire.NodeType where
 
 import Control.DeepSeq
 import GHC.Generics (Generic)
 import Insieme.Inspire.ThHelpers
 import Language.Haskell.TH
-
---
--- * Node Types
---
 
 #c
 #define CONCRETE(name) NT_##name,
@@ -58,10 +67,12 @@ enum C_NodeType {
 #undef CONCRETE
 #endc
 
--- | NodeType taken from Insieme header files.
+-- | NodeTypes taken from Insieme header files. These should be used only
+-- inside "Insieme.Inspire.BinaryParser", use 'NodeType' instead.
 {#enum C_NodeType {} deriving (Eq, Show)#}
 
--- | Generates Inspire data structure.
+-- | Represent INSPIRE NodeTypes, /ValueNodes/ have their values attached via
+-- these NodeTypes.
 $(let
 
     base :: Q [Dec]
@@ -98,7 +109,6 @@ $(let
   in extend base
  )
 
--- | Generates toNodeType and fromNodeType functions.
 $(let
 
     baseFromNodeType :: Q [Dec]

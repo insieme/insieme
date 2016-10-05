@@ -98,7 +98,7 @@ data IdentifierAnalysis = IdentifierAnalysis
 identifierValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex IdentifierSet)
 identifierValue addr = case getNode addr of
 
-    IR.NT IR.Literal [_, IR.NT (IR.StringValue x) _] ->
+    IR.Node IR.Literal [_, IR.Node (IR.StringValue x) _] ->
         Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton (Identifier x))
 
     _ -> dataflowValue addr analysis []

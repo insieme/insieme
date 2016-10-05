@@ -297,13 +297,13 @@ writeSetSummary addr = case getNodeType addr of
         where
 
             filter cur = case getNode cur of
-                IR.NT IR.Lambda _ -> cur /= addr
-                _                 -> isType cur
+                IR.Node IR.Lambda _ -> cur /= addr
+                _                   -> isType cur
 
             collect cur l = case getNode cur of
-                IR.NT IR.CallExpr _ -> cur : l
-                IR.NT IR.InitExpr _ -> cur : l
-                _                   -> l
+                IR.Node IR.CallExpr _ -> cur : l
+                IR.Node IR.InitExpr _ -> cur : l
+                _                     -> l
 
 
     -- get list of write sets at calls

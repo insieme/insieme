@@ -37,6 +37,9 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 
+-- | This module defines a data structure for arithmetic formulas similar to
+-- the ones used in INSIEME.
+
 module Insieme.Utils.Arithmetic where
 
 import Control.Applicative
@@ -48,12 +51,10 @@ import GHC.Generics (Generic)
 
 import Prelude hiding (exponent, product)
 
---
 -- * Formula
---
 
--- | Something like @-2 * x^2 * y^3 + 5 * z^1@ where 'c' denotes the type
--- of coefficients and exponents, and 'v' the type of variables.
+-- | Something like @-2 * x^2 * y^3 + 5 * z^1@ where @c@ denotes the type of
+-- coefficients and exponents, and @v@ the type of variables.
 data Formula c v = Formula { terms :: [Term c v] }
   deriving (Eq, Ord, Generic, NFData)
 
@@ -63,9 +64,13 @@ instance Functor (Formula c) where
 instance (Integral c, Show c, Show v) => Show (Formula c v) where
     show = prettyShow
 
-convert :: (Integral c, Integral c', Ord v) => Formula c v -> Formula c' v
-convert = Formula . map convertTerm . terms
+prettyShow :: (Integral c, Show c, Show v) => Formula c v -> String
+prettyShow (Formula ts) = unempty . intercalate " + " $ prettyShowTerm <$> ts
+  where
+    unempty "" = "0"
+    unempty xs = xs
 
+-- | Transform an arbitrary 'Formula' into normalform.
 normalize :: (Integral c, Ord v) => Formula c v -> Formula c v
 normalize = Formula . filter ((/=0) . coeff)
                     . map merge
@@ -76,22 +81,11 @@ normalize = Formula . filter ((/=0) . coeff)
   where
     merge ts = Term (sum $ coeff <$> ts) (product . head $ ts)
 
-prettyShow :: (Integral c, Show c, Show v) => Formula c v -> String
-prettyShow (Formula ts) = unempty . intercalate " + " $ prettyShowTerm <$> ts
-  where
-    unempty "" = "0"
-    unempty xs = xs
+-- | Convert the type of coefficients and exponents @c@ to @c'@.
+convert :: (Integral c, Integral c', Ord v) => Formula c v -> Formula c' v
+convert = Formula . map convertTerm . terms
 
-isZero :: Formula c v -> Bool
-isZero = null . terms
-
-isConst :: Formula c v -> Bool
-isConst = all termIsConst . terms
-
-toConstant :: (Integral c) => Formula c v -> Maybe c
-toConstant (Formula [])                    = Just 0
-toConstant (Formula [Term c (Product [])]) = Just c
-toConstant _                               = Nothing
+-- ** Basic Constructors
 
 zero :: (Integral c, Ord v) => Formula c v
 zero = Formula []
@@ -106,79 +100,29 @@ mkConst c = Formula [Term c (Product [])]
 mkVar :: (Integral c, Ord v) => v -> Formula c v
 mkVar v = Formula [Term 1 (Product [Factor v 1])]
 
+-- ** Queries
 
---
--- * Parts of a Formula
---
+isZero :: Formula c v -> Bool
+isZero = null . terms
 
--- | Something like @x^2@
-data Factor c v = Factor { base     :: v,
-                           exponent :: c }
-  deriving (Eq, Ord, Show, Generic, NFData)
+isConst :: Formula c v -> Bool
+isConst = all termIsConst . terms
 
-instance Functor (Factor c) where
-    fmap f (Factor b e) = Factor (f b) e
-
-compareFactor :: (Ord v) => Factor c v -> Factor c v-> Ordering
-compareFactor = comparing base
-
-convertFactor :: (Integral c, Integral c', Ord v) => Factor c v -> Factor c' v
-convertFactor (Factor b e) = Factor b (fromIntegral e)
-
-prettyShowFactor :: (Show c, Show v) => Factor c v -> String
-prettyShowFactor (Factor b e) = show b ++ "^" ++ show e
-
--- | Something like @x^2 * y^3@
-data Product c v = Product { factors :: [Factor c v] }
-  deriving (Eq, Ord, Show, Generic, NFData)
-
-instance Functor (Product c) where
-    fmap f = Product . map (fmap f) . factors
-
-convertProduct :: (Integral c, Integral c', Ord v)
-               => Product c v -> Product c' v
-convertProduct = Product . map convertFactor . factors
-
-normalizeProduct :: (Integral c, Ord v) => Product c v -> Product c v
-normalizeProduct = Product . filter ((/=0) . exponent)
-                           . map merge
-                           . groupBy (\x y -> base x == base y)
-                           . sortOn base
-                           . factors
+canDivide :: (Integral c) => Formula c v -> Formula c v -> Bool
+canDivide _ y | isZero y        = False
+canDivide _ y | not (isConst y) = False
+canDivide x y = all ((== 0) . (`mod` c) . coeff) $ terms x
   where
-    merge fs = Factor (base . head $ fs) (sum $ exponent <$> fs)
+    c = fromJust $ toConstant y
 
-prettyShowProduct :: (Show c, Show v) => Product c v -> String
-prettyShowProduct = intercalate " " . map prettyShowFactor . factors
+-- ** Exporters
 
--- | Something like @-2 * x^2 * y^3@
-data Term c v = Term { coeff   :: c,
-                       product :: Product c v}
-  deriving (Eq, Ord, Show, Generic, NFData)
+toConstant :: (Integral c) => Formula c v -> Maybe c
+toConstant (Formula [])                    = Just 0
+toConstant (Formula [Term c (Product [])]) = Just c
+toConstant _                               = Nothing
 
-instance Functor (Term c) where
-    fmap f (Term c ps) = Term c (fmap f ps)
-
-convertTerm :: (Integral c, Integral c', Ord v) => Term c v -> Term c' v
-convertTerm (Term c p) = Term (fromIntegral c) (convertProduct p)
-
-normalizeTerm :: (Integral c, Ord v) => Term c v -> Term c v
-normalizeTerm (Term c p) = Term c (normalizeProduct p)
-
-prettyShowTerm :: (Integral c, Show c, Show v) => Term c v -> String
-prettyShowTerm (Term c (Product [])) = show c
-prettyShowTerm (Term c p) | fromIntegral c == 1 = prettyShowProduct p
-prettyShowTerm (Term c p) = show c ++ " " ++ prettyShowProduct p
-
-termIsConst :: Term c v -> Bool
-termIsConst = null . factors . product
-
-scaleTerm :: (Integral c) => c -> Term c v -> Term c v
-scaleTerm s (Term c p) = Term (s * c) p
-
---
--- * Operations
---
+-- ** Operations
 
 addFormula :: (Integral c, Ord v) => Formula c v-> Formula c v -> Formula c v
 addFormula a b = normalize $ addFormula' a b
@@ -204,9 +148,7 @@ divFormula x y = normalize $ divFormula' x y
 modFormula :: (Integral c, Ord v) => Formula c v -> Formula c v -> Formula c v
 modFormula x y = normalize $ modFormula' x y
 
---
--- * Utility
---
+-- *** Non-normalizing Operations and Operations on Parts
 
 addFormula' :: (Integral c) => Formula c v-> Formula c v -> Formula c v
 addFormula' (Formula as) (Formula bs) = Formula (as ++ bs)
@@ -228,13 +170,6 @@ mulTerms t = map (mulTerm t)
 divTerm :: (Integral c) => c -> Term c v -> Term c v
 divTerm s (Term c p) = Term (c `div` s) p
 
-canDivide :: (Integral c) => Formula c v -> Formula c v -> Bool
-canDivide _ y | isZero y        = False
-canDivide _ y | not (isConst y) = False
-canDivide x y = all ((== 0) . (`mod` c) . coeff) $ terms x
-  where
-    c = fromJust $ toConstant y
-
 divFormula' :: (Integral c) => Formula c v -> Formula c v -> Formula c v
 divFormula' _ y | isZero y        = error "division by zero"
 divFormula' _ y | not (isConst y) = error "division by non-const not implemented"
@@ -252,9 +187,7 @@ modFormula' x y = Formula $ map (modTerm c) $ terms x
   where
     c = fromJust $ toConstant y
 
---
 -- * Numeric Order
---
 
 data NumOrdering = NumLT | NumEQ | NumGT | Sometimes
   deriving (Eq, Ord, Enum, Read, Show)
@@ -276,3 +209,76 @@ instance (Integral c, Ord v) => NumOrd (Formula c v) where
                 else fromOrdering $ compare (coeff . head . terms $ diff) 0
       where
         diff = addFormula a (scaleFormula' (-1) b)
+
+compareFactor :: (Ord v) => Factor c v -> Factor c v-> Ordering
+compareFactor = comparing base
+
+-- * Parts of a Formula
+
+-- ** Factor
+
+-- | Something like @x^2@.
+data Factor c v = Factor { base     :: v,
+                           exponent :: c }
+  deriving (Eq, Ord, Show, Generic, NFData)
+
+instance Functor (Factor c) where
+    fmap f (Factor b e) = Factor (f b) e
+
+prettyShowFactor :: (Show c, Show v) => Factor c v -> String
+prettyShowFactor (Factor b e) = show b ++ "^" ++ show e
+
+convertFactor :: (Integral c, Integral c', Ord v) => Factor c v -> Factor c' v
+convertFactor (Factor b e) = Factor b (fromIntegral e)
+
+-- ** Product
+
+-- | Something like @x^2 * y^3@.
+data Product c v = Product { factors :: [Factor c v] }
+  deriving (Eq, Ord, Show, Generic, NFData)
+
+instance Functor (Product c) where
+    fmap f = Product . map (fmap f) . factors
+
+prettyShowProduct :: (Show c, Show v) => Product c v -> String
+prettyShowProduct = intercalate " " . map prettyShowFactor . factors
+
+normalizeProduct :: (Integral c, Ord v) => Product c v -> Product c v
+normalizeProduct = Product . filter ((/=0) . exponent)
+                           . map merge
+                           . groupBy (\x y -> base x == base y)
+                           . sortOn base
+                           . factors
+  where
+    merge fs = Factor (base . head $ fs) (sum $ exponent <$> fs)
+
+convertProduct :: (Integral c, Integral c', Ord v)
+               => Product c v -> Product c' v
+convertProduct = Product . map convertFactor . factors
+
+-- ** Term
+
+-- | Something like @-2 * x^2 * y^3@.
+data Term c v = Term { coeff   :: c,
+                       product :: Product c v}
+  deriving (Eq, Ord, Show, Generic, NFData)
+
+instance Functor (Term c) where
+    fmap f (Term c ps) = Term c (fmap f ps)
+
+prettyShowTerm :: (Integral c, Show c, Show v) => Term c v -> String
+prettyShowTerm (Term c (Product [])) = show c
+prettyShowTerm (Term c p) | fromIntegral c == 1 = prettyShowProduct p
+prettyShowTerm (Term c p) = show c ++ " " ++ prettyShowProduct p
+
+normalizeTerm :: (Integral c, Ord v) => Term c v -> Term c v
+normalizeTerm (Term c p) = Term c (normalizeProduct p)
+
+termIsConst :: Term c v -> Bool
+termIsConst = null . factors . product
+
+scaleTerm :: (Integral c) => c -> Term c v -> Term c v
+scaleTerm s (Term c p) = Term (s * c) p
+
+convertTerm :: (Integral c, Integral c', Ord v) => Term c v -> Term c' v
+convertTerm (Term c p) = Term (fromIntegral c) (convertProduct p)

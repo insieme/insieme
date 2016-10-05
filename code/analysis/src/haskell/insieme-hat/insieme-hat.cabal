@@ -1,6 +1,6 @@
 name:               insieme-hat
 version:            0.2
-synopsis:           "Analysis framework based on ideas from the book: Principles of Program Analysis."
+synopsis:           Analysis framework based on ideas from the book: Principles of Program Analysis.
 license:            GPL-3
 author:             Thomas Prokosch <tprokos@dps.uibk.ac.at>, Alex Hirsch <alexander.hirsch@uibk.ac.at>
 maintainer:         Thomas Prokosch <tprokos@dps.uibk.ac.at>

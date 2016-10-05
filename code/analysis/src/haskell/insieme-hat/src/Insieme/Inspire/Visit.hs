@@ -56,11 +56,16 @@ import Insieme.Inspire.NodeAddress
 import qualified Data.IntMap.Strict as IntMap
 import qualified Insieme.Inspire as IR
 
-data Pruning = NoPrune       -- continue descending into child nodes
-             | PruneChildren -- skip children, but cover current node
-             | PruneHere     -- skip this and all child nodes
+data Pruning = NoPrune       -- ^ Continue descending into child nodes
+             | PruneChildren -- ^ Skip children, but cover current node
+             | PruneHere     -- ^ Skip this and all child nodes
   deriving (Eq)
 
+-- | Collect all nodes of the given tree, matching the given predicate.
+collectAll :: (IR.Tree -> Bool) -> NodeAddress -> [NodeAddress]
+collectAll pred root = collectAllPrune pred (\_ -> NoPrune ) root
+
+-- | Like 'collectAll' but allows you to prune the search space.
 collectAllPrune :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> NodeAddress -> [NodeAddress]
 collectAllPrune pred filter root = evalState (go root) IntMap.empty
   where
@@ -87,9 +92,6 @@ collectAllPrune pred filter root = evalState (go root) IntMap.empty
 
         addAddr xs = if (filter node /= PruneHere) && (pred $ getNode addr) then (addr:xs) else xs
 
-collectAll :: (IR.Tree -> Bool) -> NodeAddress -> [NodeAddress]
-collectAll pred root = collectAllPrune pred (\_ -> NoPrune ) root
-
 -- | Collect all nodes of the given 'IR.NodeType' but prune the tree when
 -- encountering one of the other 'IR.NodeType's.
 collectAddr :: IR.NodeType -> [IR.NodeType -> Bool] -> NodeAddress -> [NodeAddress]
@@ -98,13 +100,13 @@ collectAddr t fs = collectAllPrune pred filter
     pred = (==t) . IR.getNodeType
     filter t = if any (\f -> f $ IR.getNodeType t) fs then PruneHere else NoPrune
 
--- | Fold the given 'Tree'. The accumulator function takes the subtree and the
--- address of this subtree in the base tree.
+-- | Fold the given 'IR.Tree'. The accumulator function takes the subtree and
+-- the address of this subtree in the base tree.
 foldTree :: Monoid a => (NodeAddress -> a -> a) -> IR.Tree -> a
 foldTree = flip foldTreePrune noPrune
 
--- | Fold the given 'Tree'. The accumulator function takes the subtree and the
--- address of this subtree in the base tree.
+-- | Fold the given 'IR.Tree'. The accumulator function takes the subtree and
+-- the address of this subtree in the base tree.
 foldAddress :: Monoid a => (NodeAddress -> a -> a) -> NodeAddress -> a
 foldAddress = flip foldAddressPrune noPrune
 
@@ -146,41 +148,41 @@ findDecl start = findDecl start
 
     findDecl :: NodeAddress -> Maybe NodeAddress
     findDecl addr = case getNode addr of
-        IR.NT IR.Lambda _ -> lambda addr
+        IR.Node IR.Lambda _ -> lambda addr
         _ -> parameter addr <|> declstmt addr <|> forstmt addr   <|>
              bindexpr addr  <|> compstmt addr <|> nextlevel addr
 
     parameter :: NodeAddress -> Maybe NodeAddress
     parameter addr = case getNode addr of
-        IR.NT IR.Parameters _ -> Just start
+        IR.Node IR.Parameters _ -> Just start
         _ -> Nothing
 
     declstmt :: NodeAddress -> Maybe NodeAddress
     declstmt addr = case getNode addr of
-        IR.NT IR.DeclarationStmt [_, v] | v == org -> Just $ goDown 1 addr
+        IR.Node IR.DeclarationStmt [_, v] | v == org -> Just $ goDown 1 addr
         _ -> Nothing
 
     forstmt :: NodeAddress -> Maybe NodeAddress
     forstmt addr = case getNode addr of
-        IR.NT IR.ForStmt _ -> declstmt $ goDown 0 addr
+        IR.Node IR.ForStmt _ -> declstmt $ goDown 0 addr
         _ -> Nothing
 
     lambda :: NodeAddress -> Maybe NodeAddress
     lambda addr = case getNode addr of
-        IR.NT IR.Lambda [_, IR.NT IR.Parameters ps, _] ->
+        IR.Node IR.Lambda [_, IR.Node IR.Parameters ps, _] ->
             (\i -> goDown i . goDown 1 $ addr) <$> elemIndex org ps
         _ -> Nothing
 
     bindexpr :: NodeAddress -> Maybe NodeAddress
     bindexpr addr = case getNode addr of
-        IR.NT IR.BindExpr [_, IR.NT IR.Parameters ps, _] ->
+        IR.Node IR.BindExpr [_, IR.Node IR.Parameters ps, _] ->
             (\i -> goDown i . goDown 1 $ addr) <$> elemIndex org ps
         _ -> Nothing
 
     compstmt :: NodeAddress -> Maybe NodeAddress
     compstmt addr = getNode <$> getParent addr >>= \case
-        IR.NT IR.CompoundStmt _ | getIndex addr == 0 -> Nothing
-        IR.NT IR.CompoundStmt _ -> findDecl $ goLeft addr
+        IR.Node IR.CompoundStmt _ | getIndex addr == 0 -> Nothing
+        IR.Node IR.CompoundStmt _ -> findDecl $ goLeft addr
         _ -> Nothing
 
     nextlevel :: NodeAddress -> Maybe NodeAddress
