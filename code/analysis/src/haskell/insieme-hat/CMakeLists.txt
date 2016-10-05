@@ -46,6 +46,15 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+if(BUILD_DOXYGEN)
+    add_custom_command(
+        TARGET insieme_analysis_haskell
+        POST_BUILD
+        COMMAND ${stack} haddock
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+endif()
+
 # runtime library exports
 set(LIBHSRTS_DIR ${stack_root}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts PARENT_SCOPE)
 set(LIBHSRTS ${stack_root}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts/libHSrts-ghc7.10.3.so PARENT_SCOPE)
