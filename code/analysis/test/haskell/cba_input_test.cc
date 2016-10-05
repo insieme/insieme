@@ -131,7 +131,9 @@ namespace analysis {
 		ArithmeticSet getValues(const core::ExpressionAddress& x) {
 			ArithmeticSet res;
 			visitDepthFirstInterruptible(x, [&](const InitExprAddress& init)->bool {
+				bool first = true;
 				for(const auto& a : init->getInitExprList()) {
+					if (first) { first = false; continue; }
 					res = merge(res, this->getValue(a));
 				}
 				return true;

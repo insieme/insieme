@@ -59,31 +59,40 @@ void cba_expect_may_be_true(bool a)  {};
 void cba_expect_may_be_false(bool a) {};
 
 // integer tests
-void cba_expect_undefined_int(int a) {};			// = is universe
-void cba_expect_defined_int(int a) {};				// = is not empty and not universe
-void cba_expect_single_int(int a) {};				// = is a single value
-void cba_expect_eq_int(int a, int b) { assert(a==b); };
-void cba_expect_ne_int(int a, int b) { assert(a!=b); };
+void cba_expect_undefined_int(int a)     {};                  // = is universe
+void cba_expect_defined_int(int a)       {};                  // = is not empty and not universe
+void cba_expect_single_int(int a)        {};                  // = is a single value
+void cba_expect_eq_int(int a, int b)     { assert(a==b); };
+void cba_expect_ne_int(int a, int b)     { assert(a!=b); };
 void cba_expect_may_eq_int(int a, int b) {};
 
 typedef struct {} _iset;
-#define iset(...) (_iset*)(int[]){ __VA_ARGS__ }
-void cba_expect_one_of_int(int a, _iset* b) {};
+#define iset_size(...) (sizeof((int[]){__VA_ARGS__})/sizeof(int))
+#define iset(...) (_iset*)(int[]){ iset_size(__VA_ARGS__), __VA_ARGS__ }
+void cba_expect_one_of_int(int a, _iset* b) {
+	int* x = (int*)b;
+	int l = *x;
+	x++;
+	for(int i=0; i<l; i++) {
+		if(a == x[i]) return;
+	}
+	assert(false);
+};
 
 
 // pointer tests
-void cba_expect_undefined_ptr(void* a) {};			      // = is universe
-void cba_expect_defined_ptr(void* a) { assert(a); };	  // = is not empty and not universe
-void cba_expect_single_ptr(void* a) {};	                  // = is a single target
+void cba_expect_undefined_ptr(void* a) {};                // = is universe
+void cba_expect_defined_ptr(void* a) { assert(a); };      // = is not empty and not universe
+void cba_expect_single_ptr(void* a) {};                   // = is a single target
 void cba_expect_not_single_ptr(void* a) {};               // = is not a single target
 
-void cba_expect_null_ptr(void* a)     { assert(!a); };				// = is null
-void cba_expect_not_null_ptr(void* a) { assert(a); };			// = not null
-void cba_expect_maybe_null_ptr(void* a) {};		// = maybe null
+void cba_expect_null_ptr(void* a)     { assert(!a); };    // = is null
+void cba_expect_not_null_ptr(void* a) { assert(a); };     // = not null
+void cba_expect_maybe_null_ptr(void* a) {};               // = maybe null
 
-void cba_expect_extern_ptr(void* a) {};			// = is undefined
-void cba_expect_not_extern_ptr(void* a) {};		// = not undefined
-void cba_expect_maybe_extern_ptr(void* a) {};		// = maybe undefined
+void cba_expect_extern_ptr(void* a) {};                   // = is undefined
+void cba_expect_not_extern_ptr(void* a) {};               // = not undefined
+void cba_expect_maybe_extern_ptr(void* a) {};             // = maybe undefined
 
 
 typedef struct {} _pset;
@@ -98,18 +107,3 @@ void cba_dump_json() {};
 void cba_dump_statistic() {};
 void cba_dump_solution() {};
 
-//void cba_dump_execution_net();
-//void cba_dump_state_graph();
-//void cba_dump_thread_regions();
-//void cba_dump_sync_points();
-//void cba_dump_thread_list();
-
-//void cba_expect_num_threads(int);
-//void cba_expect_execution_net_num_places(int);
-//void cba_expect_execution_net_num_transitions(int);
-
-// boolean tests (mapped to integer tests, since in C everything is an int)
-//#define cba_expect_true(_c)             cba_expect_eq_int((_c!=0), 1)
-//#define cba_expect_false(_c)            cba_expect_eq_int((_c==0), 1)
-//#define cba_expect_may_be_true(_c)      cba_expect_may_eq_int((_c!=0), 1)
-//#define cba_expect_may_be_false(_c)     cba_expect_may_eq_int((_c==0), 1)
