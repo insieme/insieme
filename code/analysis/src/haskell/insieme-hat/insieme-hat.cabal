@@ -37,6 +37,7 @@ library
                         Insieme.Analysis.Framework.Utils.OperatorHandler,
                         Insieme.Analysis.Framework.PropertySpace.ComposedValue,
                         Insieme.Analysis.Framework.PropertySpace.ValueTree,
+                        Insieme.Analysis.Utils.CppSemantic,
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.Solver,
                         Insieme.Analysis.WriteSetSummary,

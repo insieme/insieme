@@ -194,15 +194,15 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
         IR.InitExpr | isScalar elemType -> var
 
         -- handle struct values defined by init expressions
-        IR.InitExpr | isTagType elemType -> var
-            where
-                var = Solver.mkVariable varId [con] Solver.bot
-                con = Solver.createEqualityConstraint dep val var
-                
-                dep a = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
-                val a = Solver.top  -- TODO: fill in the creation of a value here
-                
-                valueVars = valueVar <$> getChildren (goDown 2 addr)
+        IR.InitExpr | isTagType elemType -> error "Initialization of tag types not implemented!" -- var
+--            where
+--                var = Solver.mkVariable varId [con] Solver.bot
+--                con = Solver.createEqualityConstraint dep val var
+--                
+--                dep a = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
+--                val a = Solver.top  -- TODO: fill in the creation of a value here
+--                
+--                valueVars = valueVar <$> getChildren (goDown 2 addr)
 
         -- handle struct values defined by init expressions
         IR.InitExpr | isArray elemType -> error "Initialization of arrays not yet implemented."

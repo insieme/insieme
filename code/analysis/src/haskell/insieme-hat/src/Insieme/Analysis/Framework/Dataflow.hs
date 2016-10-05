@@ -63,6 +63,7 @@ import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.MemoryState
 import Insieme.Analysis.Framework.Utils.OperatorHandler
+import Insieme.Analysis.Utils.CppSemantic
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Query
 import Insieme.Inspire.Visit
@@ -279,13 +280,27 @@ dataflowValue addr analysis ops = case getNode addr of
             var = Solver.mkVariable (idGen addr) [constraint] Solver.bot
             constraint = Solver.forward (varGen (goDown 0 . goUp $ declrAddr)) var
 
-        IR.Parameters ->
+        IR.Parameters -> case () of 
 
-            if isEntryPointParameter declrAddr
-                then entryPointParameterHandler analysis declrAddr
-                else var
+            _ | isImplicitCtorOrDtorParameter declrAddr -> iVar
+              | isEntryPointParameter declrAddr         -> entryPointParameterHandler analysis declrAddr 
+              | otherwise                               -> var
 
           where
+          
+            -- implicit ctor/dtor call --
+            
+            iVar = Solver.mkVariable (idGen addr) [iCon] Solver.bot
+            iCon = Solver.forward arg iVar
+            
+            objDecl = getEnclosingDeclaration declrAddr 
+            
+            arg = case getIndex declrAddr of
+                0 -> varGen $ goDown 2 $ goDown 1 objDecl  -- the this parameter of the ctor (also for the dtor)
+                1 -> varGen $ goDown 1 objDecl             -- the argument of the implicit constructor call
+            
+          
+            -- standard parameter --
             var = Solver.mkVariable (idGen addr) [con] Solver.bot
             con = Solver.createConstraint dep val var
 

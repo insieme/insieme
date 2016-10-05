@@ -53,6 +53,7 @@ import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Query
 import Insieme.Inspire.Visit
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Utils.CppSemantic as Sema
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Utils.BoundSet as BSet
@@ -108,24 +109,13 @@ predecessor p@(ProgramPoint a Pre) = case getNodeType parent of
                   | otherwise      -> single $ ProgramPoint (dtors !! (dtorIndex-1)) Post  
             | otherwise      -> call_sites
         where
-            isImplicitCtor = isCtorOrDtor && getIndex ( goUp lambdaExpr ) == 2 
-            isImplicitDtor = isCtorOrDtor && getIndex ( goUp lambdaExpr ) == 3 
-            
-            lambdaExpr = goUpX 3 parent
-            isLambda = fromMaybe False $ (==parent) <$> getLambda lambdaExpr
-            
-            record = goUpX 2 lambdaExpr
-            
-            isCtorOrDtor = (depth a > 6) && isLambda && (nodeType == IR.Struct || nodeType == IR.Union)
-              where
-                nodeType = getNodeType record  
+            isImplicitCtor = Sema.isImplicitConstructor parent 
+            isImplicitDtor = Sema.isImplicitDestructor  parent
                 
-            scope = getEnclosingScope parent
+            scope = Sema.getEnclosingScope parent
                 
-            dtors = getImplicitDestructorBodies scope
+            dtors = Sema.getImplicitDestructorBodies scope
             dtorIndex = fromJust $ elemIndex a dtors
-
-            
             
 
     IR.BindExpr -> call_sites
@@ -282,7 +272,7 @@ predecessor p@(ProgramPoint a Post) = case getNodeType a of
                         _ | null dtors -> single $ ProgramPoint (goDown ((numChildren a) -1) a) Post
                           | otherwise  -> single $ ProgramPoint (last dtors) Post   
       where
-        dtors = getImplicitDestructorBodies a
+        dtors = Sema.getImplicitDestructorBodies a
                     
 
     -- declaration statement
@@ -370,32 +360,3 @@ unhandled :: String -> ProgramPoint -> IR.NodeType
 unhandled pos p parent = error . unwords $
   ["Unhandled", pos, "Program Point:", show p, "for parent", show parent]
   
-
-  
---- Destructor Utilities ---
-
-getEnclosingScope :: NodeAddress -> NodeAddress
-getEnclosingScope s = case () of 
-    _ | getNodeType s == IR.CompoundStmt -> s
-      | isRoot s                         -> error "No enclosing compound statement found!"
-      | otherwise                        -> getEnclosingScope $ fromJust $ getParent s
-
-
-getImplicitDestructorBodies :: NodeAddress -> [NodeAddress]
-getImplicitDestructorBodies scope = case getNodeType scope of 
-    
-    IR.CompoundStmt -> bodies 
-    
-  where
-    
-    declarations = goDown 0 <$> (filter isDeclStmt $ getChildren scope) 
-      where
-        isDeclStmt t = getNodeType t == IR.DeclarationStmt
-
-    classes = catMaybes $ go <$> declarations
-      where
-        go d = getReferencedType d >>= getTagType
-
-    bodies = (goDown 2 . fromJust . getLambda) <$> dtors
-        where
-            dtors =  catMaybes $ getDestructor <$> classes
