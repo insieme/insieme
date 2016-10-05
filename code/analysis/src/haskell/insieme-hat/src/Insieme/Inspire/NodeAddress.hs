@@ -53,6 +53,7 @@ module Insieme.Inspire.NodeAddress (
     getPath,
     getAbsolutePath,
     depth,
+    depthAbsolute,
     numChildren,
     getChildren,
     getIndex,
