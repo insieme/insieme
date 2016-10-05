@@ -109,7 +109,7 @@ getEnclosingScope s = case () of
 getImplicitDestructorBodies :: NodeAddress -> [NodeAddress]
 getImplicitDestructorBodies scope = case getNodeType scope of 
     
-    IR.CompoundStmt -> bodies 
+    IR.CompoundStmt -> reverse bodies 
     
   where
     
