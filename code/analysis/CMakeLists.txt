@@ -102,6 +102,10 @@ set(ut_prefix ut_analysis)
 
 # Find relevant source files
 set(test_cases ${CMAKE_CURRENT_SOURCE_DIR}/test/interface_test.cc)
+
+file(GLOB_RECURSE test_cases_common test/common/*.cc)
+set(test_cases ${test_cases} ${test_cases_common})
+
 if(ANALYSIS_DATALOG)
     file(GLOB_RECURSE test_cases_datalog test/datalog/*.cc)
     set(test_cases ${test_cases} ${test_cases_datalog})

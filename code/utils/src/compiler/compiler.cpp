@@ -204,6 +204,18 @@ namespace compiler {
 		return getDefaultIncludePaths(ss.str());
 	}
 
+	namespace {
+
+		fs::path getTemporaryFile() {
+			// create temporary target file name
+			fs::path targetFile = fs::unique_path(fs::temp_directory_path() / "insieme-trg-%%%%%%%%");
+			LOG(DEBUG) << "Using temporary file " << targetFile << " as a target file for compilation.";
+			return targetFile;
+		}
+
+
+	}
+
 	bool compile(const vector<string>& sourcefile, const string& targetfile, const Compiler& compiler) {
 		string&& cmd = compiler.getCommand(sourcefile, targetfile);
 		LOG(INFO) << "Compiling with: " << cmd << std::endl;
@@ -218,6 +230,15 @@ namespace compiler {
 		return compile(files, targetfile, compiler);
 	}
 
+	string compile(const string& sourcefile, const Compiler& compiler) {
+		auto targetFile = getTemporaryFile();
+		if (compile(sourcefile, targetFile.string(), compiler)) {
+			return targetFile.string();
+		}
+		assert_fail() << "Unable to compile given input file!";
+		return "";
+	}
+
 
 	bool compile(const VirtualPrintable& source, const Compiler& compiler) {
 		string target = compileToBinary(source, compiler);
@@ -230,10 +251,7 @@ namespace compiler {
 	}
 
 	string compileToBinary(const VirtualPrintable& source, const Compiler& compiler) {
-		// create temporary target file name
-		fs::path targetFile = fs::unique_path(fs::temp_directory_path() / "insieme-trg-%%%%%%%%");
-		LOG(DEBUG) << "Using temporary file " << targetFile << " as a target file for compilation.";
-
+		auto targetFile = getTemporaryFile();
 		if(compileToBinary(source, targetFile.string(), compiler)) { return targetFile.string(); }
 		return string();
 	}

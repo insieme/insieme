@@ -176,6 +176,16 @@ namespace compiler {
 	bool compile(const string& sourcefile, const string& targetfile, const Compiler& compiler = Compiler::getDefaultC99Compiler());
 
 	/**
+	 * Compiles the given source file using the defined compiler (by default, it is the default C compiler) and
+	 * writes the resulting binary into a temporary location, whose name is returned.
+	 *
+	 * @param sourcefile the file to be compiled
+	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
+	 * @return the name of the resulting binary file
+	 */
+	string compile(const string& sourcefile, const Compiler& compiler);
+
+	/**
 	 * Compiles the given source code using the given compiler and temporary source and target files.
 	 *
 	 * @param source the source code to be compiled

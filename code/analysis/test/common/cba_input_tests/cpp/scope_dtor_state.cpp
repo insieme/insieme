@@ -50,14 +50,6 @@ struct A {
 	}
 };
 
-struct B {
-	int x;
-	B(int x) : x(x) {}
-	~B() {
-		value = x;
-	}
-};
-
 
 int main(int argc, char** argv) {
 
@@ -73,17 +65,17 @@ int main(int argc, char** argv) {
 		cba_expect_eq_int(value, 1);
 	}
 
-	cba_expect_eq_int(value, 4);
+	cba_expect_eq_int(value, 3);
 
 	{
-		cba_expect_eq_int(value, 4);
+		cba_expect_eq_int(value, 3);
 		A a(1);
-		cba_expect_eq_int(value, 4);
+		cba_expect_eq_int(value, 3);
 		A b(0);
-		cba_expect_eq_int(value, 4);
+		cba_expect_eq_int(value, 3);
 	}
 
-	cba_expect_eq_int(value, 9);
+	cba_expect_eq_int(value, 8);
 
 //	cba_dump_solution();
 //	cba_print_code();

@@ -166,8 +166,15 @@ namespace analysis {
 	core::ProgramPtr preProcessing(const core::ProgramPtr& prog) {
 		const auto& ext = prog.getNodeManager().getLangExtension<CBAInputTestExt>();
 		return core::transform::transformBottomUpGen(prog,
-				[&] (const core::LiteralPtr& lit)->core::ExpressionPtr {
-					const string& name = utils::demangle(lit->getStringValue());
+				[&] (const core::ExpressionPtr& expr)->core::ExpressionPtr {
+
+					if (!expr.isa<core::LiteralPtr>() && !expr.isa<core::LambdaExprPtr>()) return expr;
+
+					const string& name = (expr.isa<core::LiteralPtr>()) ?
+							utils::demangle(expr.as<core::LiteralPtr>()->getStringValue()) :
+							utils::demangle(expr.as<core::LambdaExprPtr>()->getReference()->getNameAsString()) ;
+
+
 					if(name == "cba_expect_is_alias")       return ext.getPtrAreAlias();
 					if(name == "cba_expect_may_alias")      return ext.getPtrMayAlias();
 					if(name == "cba_expect_not_alias")      return ext.getPtrNotAlias();
@@ -181,7 +188,7 @@ namespace analysis {
 					if(name == "cba_expect_extern_ptr")       return ext.getPtrIsExtern();
 					if(name == "cba_expect_not_extern_ptr")   return ext.getPtrNotExtern();
 					if(name == "cba_expect_maybe_extern_ptr") return ext.getPtrMaybeExtern();
-					return lit;
+					return expr;
 				},
 				core::transform::globalReplacement
 		);

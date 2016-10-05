@@ -38,61 +38,65 @@
  * A header file forming the interface for the CBA test cases.
  */
 
+#pragma once
+
+#include <assert.h>
+
 #define bool int
 #define true (1)
 #define false (0)
 
 
 // alias tests
-void cba_expect_is_alias(void* a, void* b);
-void cba_expect_not_alias(void* a, void* b);
-void cba_expect_may_alias(void* a, void* b);
+void cba_expect_is_alias(void* a, void* b)  { assert(a==b); };
+void cba_expect_not_alias(void* a, void* b) { assert(a!=b); };
+void cba_expect_may_alias(void* a, void* b) {};
 
 // boolean analysis
-void cba_expect_true(bool a);
-void cba_expect_false(bool a);
-void cba_expect_may_be_true(bool a);
-void cba_expect_may_be_false(bool a);
+void cba_expect_true(bool a)         { assert(a); };
+void cba_expect_false(bool a)        { assert(!a); };
+void cba_expect_may_be_true(bool a)  {};
+void cba_expect_may_be_false(bool a) {};
 
 // integer tests
-void cba_expect_undefined_int(int a);			// = is universe
-void cba_expect_defined_int(int a);				// = is not empty and not universe
-void cba_expect_single_int(int a);				// = is a single value
-void cba_expect_eq_int(int a, int b);
-void cba_expect_ne_int(int a, int b);
-void cba_expect_may_eq_int(int a, int b);
+void cba_expect_undefined_int(int a) {};			// = is universe
+void cba_expect_defined_int(int a) {};				// = is not empty and not universe
+void cba_expect_single_int(int a) {};				// = is a single value
+void cba_expect_eq_int(int a, int b) { assert(a==b); };
+void cba_expect_ne_int(int a, int b) { assert(a!=b); };
+void cba_expect_may_eq_int(int a, int b) {};
 
 typedef struct {} _iset;
 #define iset(...) (_iset*)(int[]){ __VA_ARGS__ }
-void cba_expect_one_of_int(int a, _iset* b);
+void cba_expect_one_of_int(int a, _iset* b) {};
 
 
 // pointer tests
-void cba_expect_undefined_ptr(void* a);			// = is universe
-void cba_expect_defined_ptr(void* a);			// = is not empty and not universe
-void cba_expect_single_ptr(void* a);			// = is a single target
-void cba_expect_not_single_ptr(void* a);		// = is not a single target
+void cba_expect_undefined_ptr(void* a) {};			      // = is universe
+void cba_expect_defined_ptr(void* a) { assert(a); };	  // = is not empty and not universe
+void cba_expect_single_ptr(void* a) {};	                  // = is a single target
+void cba_expect_not_single_ptr(void* a) {};               // = is not a single target
 
-void cba_expect_null_ptr(void* a);				// = is null
-void cba_expect_not_null_ptr(void* a);			// = not null
-void cba_expect_maybe_null_ptr(void* a);		// = maybe null
+void cba_expect_null_ptr(void* a)     { assert(!a); };				// = is null
+void cba_expect_not_null_ptr(void* a) { assert(a); };			// = not null
+void cba_expect_maybe_null_ptr(void* a) {};		// = maybe null
 
-void cba_expect_extern_ptr(void* a);			// = is undefined
-void cba_expect_not_extern_ptr(void* a);		// = not undefined
-void cba_expect_maybe_extern_ptr(void* a);		// = maybe undefined
+void cba_expect_extern_ptr(void* a) {};			// = is undefined
+void cba_expect_not_extern_ptr(void* a) {};		// = not undefined
+void cba_expect_maybe_extern_ptr(void* a) {};		// = maybe undefined
 
 
 typedef struct {} _pset;
 #define pset(...) (_pset*)(void*[]){ __VA_ARGS__ }
-void cba_expect_one_of_ptr(int a, _pset* b);
+void cba_expect_one_of_ptr(int a, _pset* b) {};
 
 
 // debugging
-void cba_print_code();
-void cba_print_int(int a);
-void cba_dump_json();
-void cba_dump_statistic();
-void cba_dump_solution();
+void cba_print_code() {};
+void cba_print_int(int a) {};
+void cba_dump_json() {};
+void cba_dump_statistic() {};
+void cba_dump_solution() {};
 
 //void cba_dump_execution_net();
 //void cba_dump_state_graph();
