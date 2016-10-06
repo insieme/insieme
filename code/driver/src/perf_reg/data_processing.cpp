@@ -39,6 +39,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <algorithm>
 
 #include "insieme/driver/perf_reg/options.h"
 #include "insieme/driver/perf_reg/structures.h"
@@ -143,6 +144,12 @@ namespace perf_reg {
 					}
 				}
 			}
+		}
+
+		// Sort findings by severity
+		for (auto &vecPair : data.result) {
+			auto &vec = vecPair.second;
+			sort(vec.rbegin(), vec.rend());
 		}
 	}
 
