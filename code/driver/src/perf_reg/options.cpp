@@ -74,7 +74,10 @@ namespace perf_reg {
 		                ("avg-over-last-x", bpo::value<unsigned>(&avgOverLastX)->default_value(10),
 		                 "Consider X last records to calculate average of some key")
 
-		                ("graph-limit", bpo::value<int>(&graphLimit)->default_value(3),
+		                ("plot-last-x", bpo::value<unsigned>(&plotLastX)->default_value(20),
+		                 "Number of data points to be plotted in the graphs")
+
+		                ("graph-limit", bpo::value<int>(&graphLimit)->default_value(5),
 		                 "Show at most X graphs for each key as they tend to make the browser slow")
 
 		                ("id-as-x-axis", bpo::bool_switch(&idAsXAxis)->default_value(false),
