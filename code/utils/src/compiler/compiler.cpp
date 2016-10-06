@@ -273,8 +273,7 @@ namespace compiler {
 		// delete source file - only if compilation was a success
 		if(boost::filesystem::exists(sourceFile)) {
 			if(success) {
-				std::cerr << "Source: " << sourceFile << std::endl;
-				//boost::filesystem::remove(sourceFile);
+				boost::filesystem::remove(sourceFile);
 			} else {
 				std::cerr << "Offending source code can be found in " << sourceFile << std::endl;
 			}

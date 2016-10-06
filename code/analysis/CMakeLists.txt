@@ -101,7 +101,7 @@ target_link_libraries(insieme_analysis insieme_utils)
 set(ut_prefix ut_analysis)
 
 # Find relevant source files
-set(test_cases ${CMAKE_CURRENT_SOURCE_DIR}/test/interface_test.cc)
+file(GLOB test_cases test/*.cc)
 
 file(GLOB_RECURSE test_cases_common test/common/*.cc)
 set(test_cases ${test_cases} ${test_cases_common})
