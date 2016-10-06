@@ -34,12 +34,28 @@
  * regarding third party software licenses.
  */
 
-#include "../../input_tests/cba.h"
+#include "../input_tests/cba.h"
 
 int main(int argc, char** argv) {
     int a = 2;
+    int b = 3;
     cba_expect_eq_int(a, 2);
-    while (a<5) {
+
+    // while-continue
+    while (a!=b) {
+        b=a;
+        continue;
+        b++;
+    };
+    cba_expect_eq_int(a, 2);
+
+    // for-continue
+    b = 3;
+    cba_expect_eq_int(b, 3);
+    for (int i=0; i<5; i++) {
+        continue;
+        b = 4;
     }
-    cba_expect_eq_int(a, 2);
+    cba_expect_may_eq_int(b, 3);
+    return 0;
 }
