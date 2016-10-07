@@ -790,7 +790,7 @@ namespace conversion {
 		}
 		else if(clangType->isUnionType()) {
 			auto types = lookupRecordTypes(converter, initList);
-			auto initExp = converter.convertExpr(initList->getInit(0));
+			auto initExp = converter.convertInitExpr(initList->getInit(0));
 			retIr = builder.initExprTemp(genType, initExp);
 		}
 		else if(clangType->isArrayType()) {

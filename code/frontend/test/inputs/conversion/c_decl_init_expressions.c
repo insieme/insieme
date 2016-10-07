@@ -156,6 +156,16 @@ int main() {
 	#pragma test expect_ir("REGEX_S", R"(.*ref<array<struct \{ a : int<4>; b : uint<4>;  \},2>,f,f,plain> v0 = .*)")
 	{ struct { int a; unsigned b; } su[2] = { { 1, 2u }, { 3, 4u } }; }
 
+	#pragma test expect_ir(R"({
+		var ref<union { u1 : array<char,2>; },f,f,plain> v0 =
+			<ref<union { u1 : array<char,2>; },f,f,plain>>
+			(ref_decl(type_lit(ref<union { u1 : array<char,2>; },f,f,plain>)))
+			{
+				<ref<array<char,2>,f,f,plain>>(ref_temp(type_lit(array<char,2>))) {num_cast(1, type_lit(char)), num_cast(2, type_lit(char))}
+			};
+	})")
+	{ union { char u1[2]; } us = { { 1, 2 } }; }
+
 	// BOOL CONVERSION //////////////////////////////////////////////////////
 
 	#define BOOL_TO_INT "def bool_to_int = (b: bool) -> int<4> { if(b) {return 1;} else {return 0;} };"
