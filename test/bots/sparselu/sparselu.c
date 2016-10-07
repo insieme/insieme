@@ -18,6 +18,10 @@
 /*  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA            */
 /**********************************************************************************************/
 
+#ifdef USE_FOR
+#define BOTS_APP_NAME "SparseLU (For version)"
+#endif
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h> 
@@ -35,9 +39,9 @@ int checkmat (float *M, float *N)
    int i, j;
    float r_err;
 
-   for (i = 0; i < bots_arg_size_1; i++) 
+   for (i = 0; i < bots_arg_size_1; i++)
    {
-      for (j = 0; j < bots_arg_size_1; j++) 
+      for (j = 0; j < bots_arg_size_1; j++)
       {
          r_err = M[i*bots_arg_size_1+j] - N[i*bots_arg_size_1+j];
          if ( r_err == 0.0 ) continue;
@@ -122,7 +126,7 @@ void genmat (float *M[])
 void print_structure(char *name, float *M[])
 {
    int ii, jj;
-   //bots_message("Structure for matrix %s @ 0x%p\n",name, M);
+   bots_message("Structure for matrix %s @ 0x%p\n",name, M);
    for (ii = 0; ii < bots_arg_size; ii++) {
      for (jj = 0; jj < bots_arg_size; jj++) {
         if (M[ii*bots_arg_size+jj]!=NULL) {bots_message("x");}
@@ -215,11 +219,12 @@ void sparselu_init (float ***pBENCH, char *pass)
    print_structure(pass, *pBENCH);
 }
 
-
 void sparselu_seq_call(float **BENCH)
 {
    int ii, jj, kk;
 
+   bots_message("Computing SparseLU Factorization (%dx%d matrix with %dx%d blocks) ",
+           bots_arg_size,bots_arg_size,bots_arg_size_1,bots_arg_size_1);
    for (kk=0; kk<bots_arg_size; kk++)
    {
       lu0(BENCH[kk*bots_arg_size+kk]);
@@ -228,11 +233,12 @@ void sparselu_seq_call(float **BENCH)
          {
             fwd(BENCH[kk*bots_arg_size+kk], BENCH[kk*bots_arg_size+jj]);
          }
-      for (ii=kk+1; ii<bots_arg_size; ii++) 
+      for (ii=kk+1; ii<bots_arg_size; ii++)
          if (BENCH[ii*bots_arg_size+kk] != NULL)
          {
             bdiv (BENCH[kk*bots_arg_size+kk], BENCH[ii*bots_arg_size+kk]);
          }
+
       for (ii=kk+1; ii<bots_arg_size; ii++)
          if (BENCH[ii*bots_arg_size+kk] != NULL)
             for (jj=kk+1; jj<bots_arg_size; jj++)
@@ -243,47 +249,72 @@ void sparselu_seq_call(float **BENCH)
                }
 
    }
+   bots_message(" completed!\n");
 }
 
 void sparselu_par_call(float **BENCH)
 {
+   #if !(defined(USE_SINGLE) || defined(USE_FOR))
+      #error Either define USE_SINGLE or USE_FOR to compile this benchmark
+   #endif
    int ii, jj, kk;
-   
+
    bots_message("Computing SparseLU Factorization (%dx%d matrix with %dx%d blocks) ",
            bots_arg_size,bots_arg_size,bots_arg_size_1,bots_arg_size_1);
-#pragma omp parallel private(kk)
+   #if defined(USE_FOR)
+   #pragma omp parallel private(kk)
+   #elif defined(USE_SINGLE)
+   #pragma omp parallel
+   #pragma omp single nowait
+   #pragma omp task untied
+   #endif
    {
-   for (kk=0; kk<bots_arg_size; kk++) 
+   for (kk=0; kk<bots_arg_size; kk++)
    {
-#pragma omp single
+      #if defined(USE_FOR)
+      #pragma omp single
+      #endif
       lu0(BENCH[kk*bots_arg_size+kk]);
 
-#pragma omp for nowait
+      #if defined(USE_FOR)
+      #pragma omp for nowait
+      #endif
       for (jj=kk+1; jj<bots_arg_size; jj++)
          if (BENCH[kk*bots_arg_size+jj] != NULL)
-            #pragma omp task untied firstprivate(kk, jj) shared(BENCH)
          {
+            #pragma omp task untied firstprivate(kk, jj) shared(BENCH)
             fwd(BENCH[kk*bots_arg_size+kk], BENCH[kk*bots_arg_size+jj]);
          }
-#pragma omp for
-      for (ii=kk+1; ii<bots_arg_size; ii++) 
+      #if defined(USE_FOR)
+      #pragma omp for
+      #endif
+      for (ii=kk+1; ii<bots_arg_size; ii++)
          if (BENCH[ii*bots_arg_size+kk] != NULL)
-            #pragma omp task untied firstprivate(kk, ii) shared(BENCH)
          {
+            #pragma omp task untied firstprivate(kk, ii) shared(BENCH)
             bdiv (BENCH[kk*bots_arg_size+kk], BENCH[ii*bots_arg_size+kk]);
          }
 
-#pragma omp for private(jj)
+      #if defined(USE_FOR)
+      #pragma omp for private(jj)
+      #elif defined(USE_SINGLE)
+      #pragma omp taskwait
+      #endif
       for (ii=kk+1; ii<bots_arg_size; ii++)
          if (BENCH[ii*bots_arg_size+kk] != NULL)
             for (jj=kk+1; jj<bots_arg_size; jj++)
                if (BENCH[kk*bots_arg_size+jj] != NULL)
-               #pragma omp task untied firstprivate(kk, jj, ii) shared(BENCH)
                {
+                  #pragma omp task untied firstprivate(kk, jj, ii) shared(BENCH)
+                  {
                      if (BENCH[ii*bots_arg_size+jj]==NULL) BENCH[ii*bots_arg_size+jj] = allocate_clean_block();
                      bmod(BENCH[ii*bots_arg_size+kk], BENCH[kk*bots_arg_size+jj], BENCH[ii*bots_arg_size+jj]);
+                  }
                }
 
+      #if defined(USE_SINGLE)
+      #pragma omp taskwait
+      #endif
    }
    }
    bots_message(" completed!\n");

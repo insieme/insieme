@@ -39,6 +39,7 @@
 #include <ctime>
 #include <vector>
 #include <map>
+#include <utility>
 
 namespace insieme {
 namespace driver {
@@ -89,6 +90,20 @@ namespace perf_reg {
 
 		bool operator <(const AnalysisResult &rhs) const {
 			return percentOverAvg < rhs.percentOverAvg;
+		}
+
+		AnalysisResult(const AnalysisResult &other)
+			: test(other.test)
+			, step(other.test)
+			, key (other.key)
+			, vec (other.vec)
+			, avgValue(other.avgValue)
+			, currValue(other.currValue)
+			, valueOverAvg(other.valueOverAvg)
+			, percentOverAvg(other.percentOverAvg) { }
+
+		AnalysisResult &operator =(const AnalysisResult &other) {
+			return *new(this) AnalysisResult(other);
 		}
 	};
 

@@ -1,2 +1,0 @@
-files=${files},"alignment.c","sequence.c"
-executionFlags=-c -f ${PATH}/../prot.20.aa

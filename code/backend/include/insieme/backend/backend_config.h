@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -44,11 +44,10 @@ namespace backend {
 	 */
 	class BackendConfig {
 	  public:
-		BackendConfig() : mainFunctionName("main"), areShiftOpsSupported(true), instrumentMainFunction(false), addIRCodeAsComment(false){};
+		BackendConfig() : mainFunctionName("main"), instrumentMainFunction(false), addIRCodeAsComment(false){};
 
 		std::string mainFunctionName;
 		std::vector<std::string> additionalHeaderFiles;
-		bool areShiftOpsSupported;
 		bool instrumentMainFunction;
 
 		bool addIRCodeAsComment;

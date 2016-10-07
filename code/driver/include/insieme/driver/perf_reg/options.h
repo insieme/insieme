@@ -57,6 +57,7 @@ namespace perf_reg {
 		unsigned precision;
 		unsigned minDataPoints;
 		unsigned avgOverLastX;
+		unsigned plotLastX;
 		int graphLimit;
 		bool idAsXAxis;
 		string failFile;

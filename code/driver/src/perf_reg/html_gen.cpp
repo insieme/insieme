@@ -56,18 +56,19 @@ namespace perf_reg {
 
 
 	template <typename T>
-	string printDataPointVector(const vector<DataPoint> &vec, T member, bool asString = false, size_t maxPoints = 20)
+	string printDataPointVector(const vector<DataPoint> &vec, T member, bool asString = false)
 	{
-		maxPoints = (vec.size() < maxPoints) ? vec.size() : maxPoints;
+		auto &args = Options::getInstance();
+		auto it = (vec.size() < args.plotLastX) ? vec.rbegin() : vec.rend() - args.plotLastX;
 
 		stringstream ss;
 		bool first = true;
-		for (auto it = vec.rbegin(); maxPoints != 0; ++it) {
+		while (it != vec.rend()) {
 			if (!first) ss << ", ";
 			else first = false;
 			if (asString) ss << "'" << (*it).*member << "'";
 			else          ss << (*it).*member;
-			--maxPoints;
+			++it;
 		}
 		return ss.str();
 	}
@@ -169,22 +170,27 @@ namespace perf_reg {
 		};
 
 		auto plotCode = [&](const vector<DataPoint> &vec, double avg) {
+			auto &args = Options::getInstance();
+
 			string id = getDivID();
 
 			string xAxis, xAxisFormat, yAxis, additionalInfo, addInfoFormat;
 			string avgXAxis;
+
+			auto avgStartPoint = (vec.size() < args.plotLastX) ? vec.back() : vec.at(args.plotLastX - 1);
+
 			if (args.idAsXAxis) {
 				xAxis          = printDataPointVector(vec, &DataPoint::id);
 				yAxis          = printDataPointVector(vec, &DataPoint::val);
 				additionalInfo = printDataPointVector(vec, &DataPoint::ts);
 				addInfoFormat  = ".map(ts2string)";
-				avgXAxis       = (bf("%u, %u") % vec.front().id % vec.back().id).str();
+				avgXAxis       = (bf("%u, %u") % avgStartPoint.id % vec.front().id).str();
 			} else {
 				xAxis          = printDataPointVector(vec, &DataPoint::ts);
 				yAxis          = printDataPointVector(vec, &DataPoint::val);
 				additionalInfo = printDataPointVector(vec, &DataPoint::id, true);
 				xAxisFormat    = ".map(ts2string)";
-				avgXAxis       = (bf("%u, %u") % vec.front().ts % vec.back().ts).str();
+				avgXAxis       = (bf("%u, %u") % avgStartPoint.ts % vec.front().ts).str();
 			}
 
 			return bf("<div id=\"%s\"></div>                               \n"
@@ -262,6 +268,8 @@ namespace perf_reg {
 				for (const auto &ar : data.result.at(key)) {
 					analysisResult(ar, unit, (--graphLimit >= 0));
 				}
+			} else {
+				noWarnings();
 			}
 		}
 

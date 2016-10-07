@@ -348,25 +348,6 @@ namespace runtime {
 			                   CONVERT_ARG(4));
 		};
 
-		if(!config.areShiftOpsSupported) {
-		// TODO: parenthesize ARG(0)
-		#define SHIFT_OP_CONVERTER(__IRNAME, __OP)                                                                                                             \
-			table[basic.get##__IRNAME()] = OP_CONVERTER {                                                                                                      \
-		        ADD_HEADER("math.h");                                                                                                                          \
-		        c_ast::TypePtr uint16 = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt16);                                            \
-		        return c_ast::__OP(CONVERT_ARG(0), c_ast::call(C_NODE_MANAGER->create("pow"), c_ast::lit(uint16, "2"), CONVERT_ARG(1)));                       \
-			};
-
-			SHIFT_OP_CONVERTER(UnsignedIntLShift, mul);
-			SHIFT_OP_CONVERTER(SignedIntLShift, mul);
-			SHIFT_OP_CONVERTER(GenLShift, mul);
-			SHIFT_OP_CONVERTER(UnsignedIntRShift, div);
-			SHIFT_OP_CONVERTER(SignedIntRShift, div);
-			SHIFT_OP_CONVERTER(GenRShift, div);
-
-			#undef BIN_ATOMIC_CONVERTER
-		}
-
 		#include "insieme/backend/operator_converter_end.inc"
 
 		return table;

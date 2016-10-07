@@ -39,6 +39,7 @@
 #include <string>
 #include <set>
 #include <map>
+#include <list>
 
 
 namespace insieme {
@@ -51,16 +52,16 @@ namespace perf_reg {
 		using Test  = string;
 		using Step  = string;
 		using Key   = string;
-		using Value = string;
+		using Value = double;
 
 		string id;
 		set<Key> keys;
-		map<Test, map<Step, map<Key,Value>>> results;
+		map<Test, map<Step, map<Key, list<Value>>>> results;
 
 	public:
 		void setID(const string &id);
 		void addKey(const Key &key);
-		bool addResult(const Test &test, const Step &step, const Key &key, const double &value);
+		bool addResult(const Test &test, const Step &step, const Key &key, Value value);
 		bool writeResultsToFile(const string &filename);
 		bool writeResultsToStream(ostream &out);
 
