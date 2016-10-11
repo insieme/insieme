@@ -48,6 +48,7 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/gtest_utils.h"
 
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/dump/binary_dump.h"
@@ -218,30 +219,6 @@ namespace integration {
 		}
 
 	}
-
-	class TestCaseNamePrinter {
-	  public:
-		template <class ParamType>
-		std::string operator()(const ::testing::TestParamInfo<ParamType>& info) {
-			std::stringstream out;
-
-			// format the index
-			out << format("%03d", info.index);
-
-			// format the name
-			std::string name = info.param.getName();
-			name = name.substr(0, name.find_last_of('.'));
-			out << format("_%-100s", name);
-
-			// sanitize the resulting string
-			auto res = out.str();
-			std::replace(res.begin(), res.end(), ' ', '_');
-			std::replace(res.begin(), res.end(), '/', '_');
-			std::replace(res.begin(), res.end(), '.', '_');
-			std::replace(res.begin(), res.end(), '-', '_');
-			return res;
-		}
-	};
 
 	INSTANTIATE_TEST_CASE_P(OverallTest, IntegrationTests, ::testing::ValuesIn(getAllCases()), TestCaseNamePrinter());
 

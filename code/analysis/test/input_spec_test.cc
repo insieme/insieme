@@ -43,9 +43,11 @@
 #include <boost/filesystem.hpp>
 
 #include "insieme/utils/assert.h"
-#include "insieme/utils/config.h"
 #include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/config.h"
+#include "insieme/utils/gtest_utils.h"
 
+using namespace insieme::utils;
 
 namespace insieme {
 namespace analysis {
@@ -189,32 +191,6 @@ namespace analysis {
 		// done
 		return filenames;
 	}
-
-	/**
-	 * A printer for test case names
-	 */
-	struct TestCaseNamePrinter {
-	  template <class ParamType>
-	  std::string operator()(const ::testing::TestParamInfo<ParamType>& info) const {
-		  std::stringstream out;
-
-		  // foramt the index
-		  out << format("%3d", info.index);
-
-		  // format the name
-		  std::string name = info.param;
-		  name = name.substr(0, name.find_last_of('.'));
-		  out << format("_%-40s", name);
-
-		  // sanitize the resulting string
-		  auto res = out.str();
-		  std::replace(res.begin(), res.end(), ' ','_');
-		  std::replace(res.begin(), res.end(), '/','_');
-		  std::replace(res.begin(), res.end(), '.','_');
-		  std::replace(res.begin(), res.end(), '-','_');
-		  return res;
-	  }
-	};
 
 	// instantiate the test case
 	INSTANTIATE_TEST_CASE_P(InputFileChecks, InputTestVerifyer, ::testing::ValuesIn(getFilenames()), TestCaseNamePrinter());

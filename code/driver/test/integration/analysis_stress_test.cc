@@ -35,15 +35,20 @@
  */
 
 #include <gtest/gtest.h>
+
 #include <cstdlib>
 #include <iostream>
+
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
-#include "insieme/utils/logging.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/driver/integration/tests.h"
 #include "insieme/core/annotations/source_location.h"
+#include "insieme/core/ir_builder.h"
+
+#include "insieme/driver/integration/tests.h"
+
+#include "insieme/utils/gtest_utils.h"
+#include "insieme/utils/logging.h"
 
 #include "insieme/analysis/interface.h"
 
@@ -227,7 +232,7 @@ namespace integration {
 	}
 #endif
 
-	INSTANTIATE_TEST_CASE_P(OverallTest, StressTests, ::testing::ValuesIn(getAllCases()));
+	INSTANTIATE_TEST_CASE_P(OverallTest, StressTests, ::testing::ValuesIn(getAllCases()), TestCaseNamePrinter());
 
 
 //	TEST(BuiltIn, Stats) {
