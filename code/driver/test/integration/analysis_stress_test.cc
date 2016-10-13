@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 
 #include <boost/filesystem.hpp>
@@ -44,6 +45,7 @@
 
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/inspyer/inspyer.h"
 
 #include "insieme/driver/integration/tests.h"
 
@@ -70,6 +72,7 @@ namespace integration {
 	using namespace driver::integration;
 
 	namespace an = insieme::analysis;
+	namespace fs = boost::filesystem;
 
 
 	// a few configuration flags
@@ -77,6 +80,7 @@ namespace integration {
 	const char* RUN_BLACKLISTED_ENV = "RUN_BLACKLISTED";
 	const char* WALL_ENV            = "WALL";
 	const char* PEDANTIC_ENV        = "PEDANTIC";
+	const char* INSPYER_ENV         = "INSIEME_INSPYER";
 
 
 	namespace {
@@ -119,6 +123,7 @@ namespace integration {
 
 			bool wall = std::getenv(WALL_ENV);
 			bool pedantic = std::getenv(PEDANTIC_ENV);
+			bool dump_on_failure = std::getenv(INSPYER_ENV);
 
 			bool fail_on_failure  = wall || pedantic;
 			bool fail_on_universe = pedantic;
@@ -137,6 +142,7 @@ namespace integration {
 			NodeManager manager;
 			IRBuilder builder(manager);
 			ProgramPtr code = testCase.load(manager);
+			inspyer::MetaGenerator meta(code);
 
 
 			const auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
@@ -166,6 +172,9 @@ namespace integration {
 						std::cout << "Presumably invalid empty reference obtained for: " << arg << "\n";
 						std::cout << "   Source code location: " << core::annotations::getLocationString(arg) << "\n\n";
 
+						meta.addBookmark(arg);
+						meta.addLabel(arg, "Empty Set");
+
 						// register failure
 						if (fail_on_failure) {
 							ADD_FAILURE() << "Invalid empty reference set obtained for " << core::annotations::getLocationString(arg);
@@ -178,6 +187,9 @@ namespace integration {
 
 						std::cout << "Inaccurate universal reference set obtained for: " << arg << "\n";
 						std::cout << "   Source code location: " << core::annotations::getLocationString(arg) << "\n\n";
+
+						//meta.addBookmark(arg);
+						//meta.addLabel(arg, "Universe");
 
 						// register failure
 						if (fail_on_universe) {
@@ -206,6 +218,22 @@ namespace integration {
 					"OK:        " << narrow  << "\n";
 			}
 
+			if(dump_on_failure && failure > 0) {
+				fs::path dump_dir("dumps");
+				if(!fs::exists(dump_dir)) fs::create_directory(dump_dir);
+
+				std::string filename = testCase.getName();
+				std::replace(filename.begin(), filename.end(), '/', '_');
+
+				auto dump_file = (dump_dir / (filename + ".json")).string();
+				auto dump_file_meta = (dump_dir / (filename + "_meta.json")).string();
+
+				std::ofstream out_dump(dump_file);
+				inspyer::dumpTree(out_dump, code);
+
+				std::ofstream out_meta(dump_file_meta);
+				meta.dump(out_meta);
+			}
 		}
 
 	}
