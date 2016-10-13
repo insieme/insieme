@@ -254,6 +254,12 @@ dataflowValue addr analysis ops = case getNode addr of
             )
             var
 
+    IR.Node IR.InitExpr _ -> var
+      where
+        var = Solver.mkVariable (idGen addr) [con] Solver.bot
+
+        con = Solver.forward (varGen (goDown 1 addr)) var
+
 
     _ -> unknown
 

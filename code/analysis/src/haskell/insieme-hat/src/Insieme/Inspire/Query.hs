@@ -68,6 +68,33 @@ getNodeType = IR.getNodeType . node
 isVariable :: NodeReference a => a -> Bool
 isVariable = (==IR.Variable) . IR.getNodeType . node
 
+-- ** Value
+
+getBoolValue :: NodeReference a => a -> Bool
+getBoolValue a = case getNodeType a of
+    IR.BoolValue b -> b
+    _ -> error "not of type BoolValue"
+
+getCharValue :: NodeReference a => a -> Char
+getCharValue a = case getNodeType a of
+    IR.CharValue b -> b
+    _ -> error "not of type CharValue"
+
+getIntValue :: NodeReference a => a -> Int
+getIntValue a = case getNodeType a of
+    IR.IntValue b -> b
+    _ -> error "not of type IntValue"
+
+getUIntValue :: NodeReference a => a -> Int
+getUIntValue a = case getNodeType a of
+    IR.UIntValue b -> b
+    _ -> error "not of type UIntValue"
+
+getStringValue :: NodeReference a => a -> String
+getStringValue a = case getNodeType a of
+    IR.StringValue b -> b
+    _ -> error "not of type StringValue"
+
 -- ** Type
 
 -- | Return 'True' if the given node is a type.
@@ -150,7 +177,10 @@ getRecord a = (child 1) <$> binding
       where
         go a = (node tag) == ((child 0) $ node a)
 
-
+getFieldNames :: NodeReference a => a -> Maybe [String]
+getFieldNames a = map (getStringValue . node . child 0) <$> fields
+  where
+    fields = (children . child 1) <$> getRecord a
 
 getDestructor :: NodeReference a => a -> Maybe a
 getDestructor a = if noDtor then Nothing else (child 0) <$> optDtor
