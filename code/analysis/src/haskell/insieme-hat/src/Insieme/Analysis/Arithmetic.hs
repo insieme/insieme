@@ -106,7 +106,8 @@ arithmeticValue addr = case Addr.getNode addr of
   where
 
     analysis = (mkDataFlowAnalysis ArithmeticAnalysis "A" arithmeticValue) {
-        initialValueHandler = \a -> compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNode a) a
+        initialValueHandler = \a -> compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNode a) a,
+        initValueHandler = compose $ BSet.singleton $ Ar.zero
     }
 
     idGen = mkVarIdentifier analysis

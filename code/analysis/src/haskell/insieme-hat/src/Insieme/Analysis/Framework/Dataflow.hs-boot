@@ -6,7 +6,8 @@ module Insieme.Analysis.Framework.Dataflow (
         topValue,
         freeVariableHandler,
         entryPointParameterHandler,
-        initialValueHandler
+        initialValueHandler,
+        initValueHandler
     ),
     mkDataFlowAnalysis,
     mkVarIdentifier,
@@ -30,9 +31,10 @@ data DataFlowAnalysis a v = DataFlowAnalysis {
     analysisIdentifier         :: Solver.AnalysisIdentifier,            -- ^ the analysis identifier
     variableGenerator          :: NodeAddress -> Solver.TypedVar v,     -- ^ the variable generator of the represented analysis
     topValue                   :: v,                                    -- ^ the top value of this analysis
-    freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a free variable 
+    freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a free variable
     entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a entry point parameter
-    initialValueHandler        :: NodeAddress -> v                      -- ^ a function computing the initial value of a memory location
+    initialValueHandler        :: NodeAddress -> v,                     -- ^ a function computing the initial value of a memory location
+    initValueHandler           :: v                                     -- ^ default value of a memory location
 }
 
 -- a function creating a simple data flow analysis
@@ -41,7 +43,7 @@ mkDataFlowAnalysis :: (Typeable a, Solver.ExtLattice v) => a -> String -> (NodeA
 -- a function creation an identifier for a variable of a data flow analysis
 mkVarIdentifier :: DataFlowAnalysis a v -> NodeAddress -> Solver.Identifier
 
--- a function creating a data flow analysis variable representing a constant value 
+-- a function creating a data flow analysis variable representing a constant value
 mkConstant :: (Typeable a, Solver.ExtLattice v) => DataFlowAnalysis a v -> NodeAddress -> v -> Solver.TypedVar v
 
 --

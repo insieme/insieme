@@ -42,6 +42,8 @@
 
 #include "../../input_tests/cba.h"
 
+int* p4;
+
 int main(int argc, char** argv) {
 
 	int* p1 = 0;
@@ -55,6 +57,8 @@ int main(int argc, char** argv) {
 
 	int* p3 = (argc > 2) ? p1 : p2;
 	cba_expect_maybe_null_ptr(p3);
+
+	cba_expect_null_ptr(p4);
 
 //	cba_print_code();
 //	cba_dump_solution();

@@ -45,6 +45,7 @@ typedef struct {
 	int y;
 } point;
 
+int d[3];
 
 int main(int argc, char** argv) {
 
@@ -59,6 +60,25 @@ int main(int argc, char** argv) {
 	cba_expect_eq_int(a[0]+2, a[1]);
 	cba_expect_eq_int(a[0]+argc, 10+a[3]);
 
+	int b[5] = {1, 2, 3, 4, 5};
+
+	cba_expect_eq_int(b[0], 1);
+	cba_expect_eq_int(b[1], 2);
+	cba_expect_eq_int(b[2], 3);
+	cba_expect_eq_int(b[3], 4);
+	cba_expect_eq_int(b[4], 5);
+
+	b[3] = 42;
+	cba_expect_eq_int(b[3], 42);
+
+	int c[3] = {0};
+	cba_expect_eq_int(c[0], 0);
+	cba_expect_eq_int(c[1], 0);
+	cba_expect_eq_int(c[2], 0);
+
+	cba_expect_eq_int(d[0], 0);
+	cba_expect_eq_int(d[1], 0);
+	cba_expect_eq_int(d[2], 0);
 
 	// test an array of points
 	point p[3];

@@ -44,7 +44,8 @@ module Insieme.Analysis.Framework.Dataflow (
         topValue,
         freeVariableHandler,
         entryPointParameterHandler,
-        initialValueHandler
+        initialValueHandler,
+        initValueHandler
     ),
     mkDataFlowAnalysis,
     mkVarIdentifier,
@@ -89,14 +90,15 @@ data DataFlowAnalysis a v = DataFlowAnalysis {
     topValue                   :: v,                                    -- ^ the top value of this analysis
     freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a free variable
     entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a entry point parameter
-    initialValueHandler        :: NodeAddress -> v                      -- ^ a function computing the initial value of a memory location
+    initialValueHandler        :: NodeAddress -> v,                     -- ^ a function computing the initial value of a memory location
+    initValueHandler           :: v                                     -- ^ default value of a memory location
 }
 
 -- a function creating a simple data flow analysis
 mkDataFlowAnalysis :: (Typeable a, Solver.ExtLattice v) => a -> String -> (NodeAddress -> Solver.TypedVar v) -> DataFlowAnalysis a v
 mkDataFlowAnalysis a s g = res
     where
-        res = DataFlowAnalysis a aid g top justTop justTop (\_ -> top)
+        res = DataFlowAnalysis a aid g top justTop justTop (\_ -> top) top
         aid = (Solver.mkAnalysisIdentifier a s)
         justTop a = mkConstant res a top
         top = Solver.top

@@ -150,6 +150,12 @@ isArrayType n = case node n of
 isArray :: NodeReference a => a -> Bool
 isArray n = fromMaybe False $ isArrayType <$> getType n
 
+-- TODO check if Int really is a good choice here
+getArraySize :: NodeReference a => a -> Int
+getArraySize n | not (isArray n) = error "node reference is not an array"
+getArraySize n = read $ getStringValue $ gotoValue $ fromJust $ getType n
+  where
+    gotoValue = child 1 . child 0 . child 1 . child 2
 
 -- *** Tag Type
 
