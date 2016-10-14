@@ -69,9 +69,9 @@ int main(void) {
 
 	A c;
 
-	cba_expect_ne_int(c.x, 0);
-	cba_expect_ne_int(c.y, 0);
-	cba_expect_ne_int(c.z, 0);
+	cba_expect_undefined_int(c.x);
+	cba_expect_undefined_int(c.y);
+	cba_expect_undefined_int(c.z);
 
 	A d;
 
