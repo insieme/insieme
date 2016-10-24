@@ -220,10 +220,12 @@ memoryLocations ctx_hs expr_hs = do
     let ctx_c = Ctx.getCContext ctx
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
-    passMemoryLocationSet ctx_c $ BSet.map Ref.creationPoint $ BSet.filter f results
-        where
-            f (Ref.Reference _ _ ) = True
-            f _ = False
+    if BSet.member Ref.UninitializedReference results
+        then passMemoryLocationSet ctx_c BSet.Universe
+        else passMemoryLocationSet ctx_c $ BSet.map Ref.creationPoint $ BSet.filter f results
+      where
+        f (Ref.Reference _ _ ) = True
+        f _ = False
 
 passMemoryLocation :: Ctx.CContext -> Ref.Location -> IO (Ptr CMemoryLocation)
 passMemoryLocation ctx_c location_hs = do
