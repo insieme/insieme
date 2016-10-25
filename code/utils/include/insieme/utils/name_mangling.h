@@ -57,6 +57,10 @@ namespace utils {
 	///
 	std::string demangle(std::string name, bool keepLocation = false);
 
+	/// Checks whether the given name is a mangled name or not.
+	///
+	bool isMangled(std::string name);
+
 	/// Retrieve a valid C/CPP name from the mangled representation.
 	///
 	std::string demangleToIdentifier(std::string name, bool keepLocation = false);
