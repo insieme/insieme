@@ -107,6 +107,8 @@ file(GLOB test_cases test/*.cc)
 
 file(GLOB_RECURSE test_cases_common test/common/*.cc)
 set(test_cases ${test_cases} ${test_cases_common})
+file(GLOB_RECURSE test_cases_features test/features/*.cc)
+set(test_cases ${test_cases} ${test_cases_features})
 
 if(ANALYSIS_DATALOG)
     file(GLOB_RECURSE test_cases_datalog test/datalog/*.cc)
