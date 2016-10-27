@@ -44,7 +44,7 @@
 #include "insieme/core/dump/json_dump.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/analysis/common/preprocessing.h"
+#include "insieme/analysis/cba/common/preprocessing.h"
 
 #include "insieme/utils/name_mangling.h"
 
@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
 	}
 
 	// run pre-processing
-	program = analysis::preProcessing(program);
+	program = analysis::cba::preProcessing(program);
 
 
 	vector<core::NodeAddress> targets;

@@ -20,7 +20,7 @@ macro(configure_souffle)
 	include_directories(SYSTEM ${souffle_output_base})
 
 	# Find the Dough script, a preprocessor script
-	set(souffle_dough ${insieme_code_dir}/analysis/src/datalog/souffle_dough.rb)
+	set(souffle_dough ${insieme_code_dir}/analysis/src/cba/datalog/souffle_dough.rb)
 
 	# Find Soufflé installation directory
 	set(souffle_home $ENV{INSIEME_LIBS_HOME}/souffle-latest CACHE PATH "Souffle Home Directory")
@@ -41,7 +41,7 @@ endmacro(configure_souffle)
 # the datalog files to provide some sort of namespacing in the dl header files.
 #
 # Parameters:
-# input dir e.g. '${insieme_code_dir}/analysis/src/datalog'
+# input dir e.g. '${insieme_code_dir}/analysis/src/cba/datalog'
 # output dir e.g. '${CMAKE_CURRENT_BINARY_DIR}/souffle_tmp'
 #
 macro(souffle_run_dough input_dir output_dir)
@@ -78,7 +78,7 @@ endmacro(souffle_run_dough)
 # Soufflé executable that we built above
 #
 # Parameters:
-# input path e.g.  '${CMAKE_SOURCE_DIR}/code/src/datalog'
+# input path e.g.  '${CMAKE_SOURCE_DIR}/code/src/cba/datalog'
 # DL target e.g.  'constant_analysis' (without file extension!)
 # souffle_include_path (optional)
 #

@@ -52,14 +52,14 @@
 #include "insieme/utils/gtest_utils.h"
 #include "insieme/utils/logging.h"
 
-#include "insieme/analysis/interface.h"
+#include "insieme/analysis/cba/interface.h"
 
 #ifdef INSIEME_ANALYSIS_DATALOG
-#include "insieme/analysis/datalog/interface.h"
+#include "insieme/analysis/cba/datalog/interface.h"
 #endif
 
 #ifdef INSIEME_ANALYSIS_HASKELL
-#include "insieme/analysis/haskell/interface.h"
+#include "insieme/analysis/cba/haskell/interface.h"
 #endif
 
 
@@ -71,7 +71,7 @@ namespace integration {
 	using namespace core;
 	using namespace driver::integration;
 
-	namespace an = insieme::analysis;
+	namespace an = insieme::analysis::cba;
 	namespace fs = boost::filesystem;
 
 
