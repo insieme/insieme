@@ -34,43 +34,33 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <string>
+#include "insieme/analysis/features/stack_size_estimation.h"
+
+#include "insieme/core/ir_builder.h"
+
 
 namespace insieme {
-namespace utils {
+namespace analysis {
+namespace features {
 
-	/// Format string "name" to be usable as an identifier, and encode file, line and column information in it
-	///
-	std::string mangle(std::string name, std::string file, unsigned line, unsigned column);
+	TEST(StackSize, Basic) {
+		core::NodeManager mgr;
+		auto& basic = mgr.getLangBasic();
+		core::IRBuilder builder(mgr);
 
-	/// Retrieve a mangled "name" for an anonymous identifier
-	///
-	std::string mangle(std::string file, unsigned line, unsigned column);
+		EXPECT_EQ(4,  getTypeSize(basic.getInt4()));
+		EXPECT_EQ(8,  getTypeSize(basic.getUInt8()));
+		EXPECT_EQ(16, getTypeSize(basic.getInt16()));
+		EXPECT_EQ(4,  getTypeSize(basic.getReal4()));
+		EXPECT_EQ(8,  getTypeSize(basic.getReal8()));
+		EXPECT_EQ(12, getTypeSize(builder.parseType("def struct A { b : int<4>; c : real<8>; }; A")));
+		EXPECT_EQ(8,  getTypeSize(builder.parseType("def union A { b : int<4>; c : real<8>; }; A")));
+		EXPECT_EQ(40, getTypeSize(builder.parseType("array<int<4>, 10>")));
+	}
 
-	/// Format string "name" to be usable as an identifier
-	///
-	std::string mangle(std::string name);
 
-	/// Retrieve the original name from the mangled representation.
-	///
-	std::string demangle(std::string name, bool keepLocation = false);
-
-	/// Checks whether the given name is a mangled name or not.
-	///
-	bool isMangled(std::string name);
-
-	/// Retrieve a valid C/CPP name from the mangled representation.
-	///
-	std::string demangleToIdentifier(std::string name, bool keepLocation = false);
-
-	/// Returns the mangled name for the assignment operator.
-	///
-	const std::string& getMangledOperatorAssignName();
-
-	/// Returns a string which (if present) indicates that the name was generated for something anonymous.
-	///
-	const std::string& getMangledAnonymousIndicator();
-}
-}
+} // end namespace features
+} // end namespace analysis
+} // end namespace insieme

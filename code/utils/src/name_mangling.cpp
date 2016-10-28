@@ -169,7 +169,7 @@ namespace utils {
 	}
 
 	string demangle(string name, bool keepLocation) {
-		if(!boost::starts_with(name, manglePrefix)) return name;
+		if(!isMangled(name)) return name;
 		auto ret = name.substr(manglePrefix.size());
 		if(boost::starts_with(ret, mangleEmpty)) return "";
 		if(!keepLocation) {
@@ -180,6 +180,10 @@ namespace utils {
 		}
 		ret = reverseReplacements(ret);
 		return ret;
+	}
+
+	bool isMangled(std::string name) {
+		return boost::starts_with(name, manglePrefix);
 	}
 
 	string demangleToIdentifier(string name, bool keepLocation) {

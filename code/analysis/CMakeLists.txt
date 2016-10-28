@@ -7,6 +7,8 @@ cmake_minimum_required(VERSION 3.2)
 
 # Setup common source files
 file(GLOB insieme_analysis_srcs src/cba/*.cpp src/cba/common/*.cpp)
+file(GLOB_RECURSE insieme_analysis_features_srcs src/features/*.cpp)
+set(insieme_analysis_srcs ${insieme_analysis_srcs} ${insieme_analysis_features_srcs})
 file(GLOB insieme_analysis_incs
     include/insieme/analysis/cba/*.h
     include/insieme/analysis/cba/common/*.h
@@ -105,6 +107,8 @@ file(GLOB test_cases test/*.cc)
 
 file(GLOB_RECURSE test_cases_common test/cba/common/*.cc)
 set(test_cases ${test_cases} ${test_cases_common})
+file(GLOB_RECURSE test_cases_features test/features/*.cc)
+set(test_cases ${test_cases} ${test_cases_features})
 
 if(ANALYSIS_DATALOG)
     file(GLOB_RECURSE test_cases_datalog test/cba/datalog/*.cc)

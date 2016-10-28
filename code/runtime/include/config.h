@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -43,7 +43,9 @@
 // lookup table sizes
 #define IRT_CONTEXT_LT_BUCKETS 7
 #define IRT_DATA_ITEM_LT_BUCKETS 97
-#define IRT_EVENT_LT_BUCKETS /*65536*/ /*64567*/ 97 /*7207301*/
+#ifndef IRT_EVENT_LT_BUCKETS
+#define IRT_EVENT_LT_BUCKETS 97 /*1021*/ /*64567*/ /*256019*/ /*7207301*/
+#endif
 
 // scheduling policy
 #ifndef IRT_SCHED_POLICY
@@ -114,7 +116,9 @@
 //#endif
 
 // work item
+#ifndef IRT_WI_PARAM_BUFFER_SIZE
 #define IRT_WI_PARAM_BUFFER_SIZE 128
+#endif
 
 // work group
 #define IRT_WG_RING_BUFFER_SIZE 1024

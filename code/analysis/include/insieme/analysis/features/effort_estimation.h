@@ -36,41 +36,16 @@
 
 #pragma once
 
-#include <string>
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_expressions.h"
+
 
 namespace insieme {
-namespace utils {
+namespace analysis {
+namespace features {
 
-	/// Format string "name" to be usable as an identifier, and encode file, line and column information in it
-	///
-	std::string mangle(std::string name, std::string file, unsigned line, unsigned column);
+	unsigned long long estimateEffort(const core::LambdaExprPtr& function);
 
-	/// Retrieve a mangled "name" for an anonymous identifier
-	///
-	std::string mangle(std::string file, unsigned line, unsigned column);
-
-	/// Format string "name" to be usable as an identifier
-	///
-	std::string mangle(std::string name);
-
-	/// Retrieve the original name from the mangled representation.
-	///
-	std::string demangle(std::string name, bool keepLocation = false);
-
-	/// Checks whether the given name is a mangled name or not.
-	///
-	bool isMangled(std::string name);
-
-	/// Retrieve a valid C/CPP name from the mangled representation.
-	///
-	std::string demangleToIdentifier(std::string name, bool keepLocation = false);
-
-	/// Returns the mangled name for the assignment operator.
-	///
-	const std::string& getMangledOperatorAssignName();
-
-	/// Returns a string which (if present) indicates that the name was generated for something anonymous.
-	///
-	const std::string& getMangledAnonymousIndicator();
-}
-}
+} // end namespace features
+} // end namespace analysis
+} // end namespace insieme
