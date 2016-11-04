@@ -36,7 +36,9 @@
 
 #include "insieme/analysis/cba/datalog/integer_analysis.h"
 
-#include "insieme/analysis/cba/datalog/framework/analysis_base.h"
+#include "insieme/analysis/cba/datalog/framework/souffle_extractor.h"
+#include "insieme/analysis/cba/datalog/framework/toolbox.h"
+
 #include "insieme/core/ir_address.h"
 
 #include "souffle/gen/integer_analysis.h"

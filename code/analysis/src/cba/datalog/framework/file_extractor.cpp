@@ -34,58 +34,61 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include <exception>
+#include <iostream>
 #include <string>
-#include <vector>
-#include <sstream>
 
-#include "insieme/utils/string_utils.h"
+#include "insieme/analysis/cba/datalog/framework/analysis_base.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
+namespace datalog {
+namespace framework {
 
-	/**
-	 * The kind of exception thrown in case failures are detected.
-	 */
-	class AnalysisFailure : public std::exception {
-
-		// the list of failures detected during the evaluation
-		std::vector<std::string> failures;
-
-		// a summary of those errors
-		std::string summary;
+	class Inserter {
+		std::string folder;
 
 	public:
+		Inserter() {}
 
-		/**
-		 * Creates a new instance wrapping up the given failures.
-		 * The list of failures most not be empty.
-		 */
-		AnalysisFailure(const std::vector<std::string>& failures) : failures(failures) {
-			std::stringstream s;
-			s << "Encountered " << failures.size() << " failures during analysis:\n\t";
-			s << join("\n\t", failures);
-			summary = s.str();
+		void setTargetFolder(const std::string folder) {
+			this->folder = folder;
 		}
 
-		/**
-		 * Provides access to the internally recorded list of failure messages.
-		 */
-		const std::vector<std::string>& getFailureMessages() const {
-			return failures;
+		void printToStdout(bool) {
+			std::cout << ")" << std::endl;
 		}
 
-		/**
-		 * Provides a readable summary for the identified errors.
-		 */
-		virtual const char* what() const throw() {
-			return summary.c_str();
+		template <typename F, typename ...Rest>
+		void printToStdout(bool firstTime, const F& first, const Rest& ... rest) {
+			if (!firstTime)
+				std::cout << " , ";
+			std::cout << first;
+			printToStdout(false, rest...);
 		}
+
+		template<typename ... Args>
+		void insert(const std::string& relationName, const Args& ... args ) {
+			std::cout << relationName << " ( ";
+			printToStdout(true, args...);
+		}
+
 	};
 
-} //'end namespace cba
+	int extractFactsToFiles(const std::string &folder, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer) {
+		FactExtractor<core::Pointer,Inserter> extractor(nodeIndexer);
+		extractor.getInserter().setTargetFolder(folder);
+		return extractor.visit(root);
+	}
+
+	int extractAddressFactsToFiles(const std::string &folder, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer) {
+		FactExtractor<core::Address,Inserter> extractor(nodeIndexer);
+		extractor.getInserter().setTargetFolder(folder);
+		return extractor.visit(core::NodeAddress(root));
+	}
+
+} // end namespace framework
+} // end namespace datalog
+} // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

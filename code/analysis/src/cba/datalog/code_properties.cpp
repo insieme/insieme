@@ -36,7 +36,7 @@
 
 #include "insieme/analysis/cba/datalog/code_properties.h"
 
-#include "insieme/analysis/cba/datalog/framework/analysis_base.h"
+#include "insieme/analysis/cba/datalog/framework/souffle_extractor.h"
 
 #include "souffle/gen/polymorph_types_analysis.h"
 #include "souffle/gen/top_level_term.h"

@@ -36,56 +36,11 @@
 
 #pragma once
 
-#include <exception>
-#include <string>
-#include <vector>
-#include <sstream>
+#include "insieme/core/forward_decls.h"
 
-#include "insieme/utils/string_utils.h"
+namespace souffle {
+	
+	class Program;
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+} // end namespace souffle
 
-	/**
-	 * The kind of exception thrown in case failures are detected.
-	 */
-	class AnalysisFailure : public std::exception {
-
-		// the list of failures detected during the evaluation
-		std::vector<std::string> failures;
-
-		// a summary of those errors
-		std::string summary;
-
-	public:
-
-		/**
-		 * Creates a new instance wrapping up the given failures.
-		 * The list of failures most not be empty.
-		 */
-		AnalysisFailure(const std::vector<std::string>& failures) : failures(failures) {
-			std::stringstream s;
-			s << "Encountered " << failures.size() << " failures during analysis:\n\t";
-			s << join("\n\t", failures);
-			summary = s.str();
-		}
-
-		/**
-		 * Provides access to the internally recorded list of failure messages.
-		 */
-		const std::vector<std::string>& getFailureMessages() const {
-			return failures;
-		}
-
-		/**
-		 * Provides a readable summary for the identified errors.
-		 */
-		virtual const char* what() const throw() {
-			return summary.c_str();
-		}
-	};
-
-} //'end namespace cba
-} // end namespace analysis
-} // end namespace insieme

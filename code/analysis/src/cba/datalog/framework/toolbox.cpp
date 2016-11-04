@@ -34,58 +34,43 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/analysis/cba/datalog/framework/analysis_base.h"
 
-#include <exception>
 #include <string>
-#include <vector>
-#include <sstream>
 
-#include "insieme/utils/string_utils.h"
+#include <souffle/SouffleInterface.h>
+
+#include "insieme/analysis/cba/common/failure.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
+namespace datalog {
+namespace framework {
 
-	/**
-	 * The kind of exception thrown in case failures are detected.
-	 */
-	class AnalysisFailure : public std::exception {
+	void checkForFailures(souffle::Program& analysis) {
 
-		// the list of failures detected during the evaluation
-		std::vector<std::string> failures;
+		auto failures = analysis.getRelation("D474L06_utils_failure_dl_failure");
+		assert_true(failures) << "Failure relation in analysis not found!";
 
-		// a summary of those errors
-		std::string summary;
-
-	public:
-
-		/**
-		 * Creates a new instance wrapping up the given failures.
-		 * The list of failures most not be empty.
-		 */
-		AnalysisFailure(const std::vector<std::string>& failures) : failures(failures) {
-			std::stringstream s;
-			s << "Encountered " << failures.size() << " failures during analysis:\n\t";
-			s << join("\n\t", failures);
-			summary = s.str();
+		// extract failure messages
+		std::vector<std::string> msgs;
+		for(auto cur : *failures) {
+			std::string msg;
+			cur >> msg;
+			msgs.push_back(msg);
 		}
 
-		/**
-		 * Provides access to the internally recorded list of failure messages.
-		 */
-		const std::vector<std::string>& getFailureMessages() const {
-			return failures;
-		}
+		// check if there have been failures
+		if (msgs.empty()) return;
 
-		/**
-		 * Provides a readable summary for the identified errors.
-		 */
-		virtual const char* what() const throw() {
-			return summary.c_str();
-		}
-	};
+		// throw failure exception
+		throw AnalysisFailure(msgs);
 
-} //'end namespace cba
+	}
+
+} // end namespace framework
+} // end namespace datalog
+} // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

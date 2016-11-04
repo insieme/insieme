@@ -36,7 +36,8 @@
 
 #include "insieme/analysis/cba/datalog/alias_analysis.h"
 
-#include "insieme/analysis/cba/datalog/framework/analysis_base.h"
+#include "insieme/analysis/cba/datalog/framework/souffle_extractor.h"
+#include "insieme/analysis/cba/datalog/framework/toolbox.h"
 
 #include "souffle/gen/alias_analysis.h"
 

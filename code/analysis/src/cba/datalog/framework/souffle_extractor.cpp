@@ -34,81 +34,76 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/cba/datalog/boolean_analysis.h"
+//#include "insieme/analysis/cba/datalog/framework/analysis_base.h"
 
-#include "insieme/analysis/cba/datalog/framework/souffle_extractor.h"
-#include "insieme/analysis/cba/datalog/framework/toolbox.h"
+#include <iostream>
 
-#include "souffle/gen/boolean_analysis.h"
+#include <souffle/SouffleInterface.h>
+
+#include "insieme/analysis/cba/datalog/framework/analysis_base.h"
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 namespace datalog {
+namespace framework {
 
-	enum Result {
-		TRUE,
-		FALSE,
-		TRUE_OR_FALSE
+	class Inserter {
+		souffle::Program *analysis;
+
+	public:
+		Inserter() {}
+
+		void setAnalysis(souffle::Program &analysis) {
+			this->analysis = &analysis;
+		}
+
+		void fill(souffle::tuple&) {}
+
+		template<typename F, typename ... Rest>
+		void fill(souffle::tuple& tuple, const F& first, const Rest& ... rest) {
+			tuple << first;
+			fill(tuple,rest...);
+		}
+
+		void print() {
+			std::cout << std::endl;
+		}
+
+		template <typename F, typename ...Rest>
+		void print(const F& first, const Rest& ... rest) {
+			std::cout << " - " << first;
+			print(rest...);
+		}
+
+		template<typename ... Args>
+		void insert(const std::string& relationName, const Args& ... args ) {
+			// get relation
+			auto rel = analysis->getRelation(relationName);
+			// std::cout << "Inserting " << relationName; print(args...);
+			if (!rel) return;
+
+			// insert data
+			souffle::tuple tuple(rel);
+			fill(tuple, args...);
+			rel->insert(tuple);
+		}
+
 	};
 
-	Result getBoolValue(Context&, const core::ExpressionAddress& expr) {
-		const bool debug = false;
-
-		// instantiate the analysis
-		souffle::Sf_boolean_analysis analysis;
-
-		int targetID = 0;
-
-		// fill in facts
-		framework::extractAddressFacts(analysis, expr.getRootNode(), [&](const core::NodeAddress& addr, int id) {
-			if (addr == expr) targetID = id;
-		});
-
-		// add targeted node
-		analysis.rel_target_expr.insert(targetID);
-
-		// print debug information
-		if (debug) analysis.dumpInputs();
-
-		// run analysis
-		analysis.run();
-
-		// print debug information
-		if (debug) analysis.dumpOutputs();
-
-		// check for failures in analysis
-		framework::checkForFailures(analysis);
-
-		// read result
-		auto& result = analysis.rel_result;
-		assert_le(1, result.size()) << "Incomplete analysis!";
-
-		// if it is true or false => we don't know
-		if (result.size() != 1) return TRUE_OR_FALSE;
-
-		// read the single entry in the result set
-		auto value = (*result.begin())[0];
-		return (value) ? TRUE : FALSE;
+	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer) {
+		FactExtractor<core::Pointer,Inserter> extractor(nodeIndexer);
+		extractor.getInserter().setAnalysis(analysis);
+		return extractor.visit(root);
 	}
 
-
-	bool isTrue(Context& c, const core::ExpressionAddress& expr) {
-		return getBoolValue(c,expr) == TRUE;
+	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer) {
+		FactExtractor<core::Address,Inserter> extractor(nodeIndexer);
+		extractor.getInserter().setAnalysis(analysis);
+		return extractor.visit(core::NodeAddress(root));
 	}
 
-	bool isFalse(Context& c, const core::ExpressionAddress& expr) {
-		return getBoolValue(c,expr) == FALSE;
-	}
-
-	bool mayBeTrue(Context& c, const core::ExpressionAddress& expr) {
-		return getBoolValue(c,expr) != FALSE;
-	}
-
-	bool mayBeFalse(Context& c, const core::ExpressionAddress& expr) {
-		return getBoolValue(c,expr) != TRUE;
-	}
-
+} // end namespace framework
 } // end namespace datalog
 } // end namespace cba
 } // end namespace analysis

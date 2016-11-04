@@ -2,7 +2,8 @@
 
 #include <iostream>
 
-#include "insieme/analysis/cba/datalog/framework/analysis_base.h"
+#include "insieme/analysis/cba/datalog/framework/souffle_extractor.h"
+#include "insieme/analysis/cba/datalog/framework/file_extractor.h"
 
 #include "souffle/gen/pointers.h"
 
@@ -56,6 +57,30 @@ namespace datalog {
 
 		return results;
 	}
+
+	PointerResult fileExtractorWIP(const std::vector<core::ExpressionAddress>& targets) {
+		std::map<int,core::NodeAddress> targetIDs;
+
+		auto isTarget = [&](const core::NodeAddress &x) {
+			for (const auto &trg : targets)
+				if (trg == x) return true;
+			return false;
+		};
+
+		framework::extractAddressFactsToFiles("analysis", targets.at(0).getRootAddress(), [&](const core::NodeAddress &curr, int id) {
+			if (isTarget(curr)) {
+				targetIDs[id] = curr;
+				std::cout << "Target found: " << id << std::endl;
+			}
+		});
+
+
+		PointerResult results;
+
+		return results;
+	}
+
+	#undef convertValue
 
 } // end namespace datalog
 } // end namespace cba
