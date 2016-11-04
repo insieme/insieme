@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/analysis/datalog/interface.h"
+#include "insieme/analysis/cba/datalog/interface.h"
 
 namespace insieme {
 namespace analysis {

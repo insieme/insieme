@@ -1,13 +1,14 @@
-#include "insieme/analysis/datalog/structs_and_pointers_analysis.h"
+#include "insieme/analysis/cba/datalog/structs_and_pointers_analysis.h"
 
 #include <iostream>
 
-#include "insieme/analysis/datalog/framework/analysis_base.h"
+#include "insieme/analysis/cba/datalog/framework/analysis_base.h"
 
 #include "souffle/gen/pointers.h"
 
 namespace insieme {
 namespace analysis {
+namespace cba {
 namespace datalog {
 
 	#ifdef ResultValueIsInteger
@@ -57,5 +58,6 @@ namespace datalog {
 	}
 
 } // end namespace datalog
+} // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

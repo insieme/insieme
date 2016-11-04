@@ -1,12 +1,13 @@
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/datalog/structs_and_pointers_analysis.h"
+#include "insieme/analysis/cba/datalog/structs_and_pointers_analysis.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace analysis {
+namespace cba {
 
 	using namespace insieme::core;
 
@@ -74,5 +75,6 @@ namespace analysis {
 		EXPECT_EQ(controlValue, res[z].second);
 	}
 
+} // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
