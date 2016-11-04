@@ -62,6 +62,7 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/graph_utils.h"
+#include "insieme/utils/name_mangling.h"
 #include "insieme/utils/timer.h"
 
 namespace insieme {
@@ -1822,6 +1823,58 @@ namespace analysis {
 		return false;
 	}
 
+	NodeAddress getLowestCommonAncestor(const std::vector<NodeAddress>& addresses) {
+		std::vector<NodeAddress> parallelCallTrees(addresses);
+
+		//assert all of them have the same root
+		assert_true(addresses.size() >= 1) << "At least one address is required for this operation to make any sense";
+		const auto& front = parallelCallTrees.front();
+		if(any(addresses, [&](const auto& address) { return front.getRootNode() != address.getRootNode(); })) {
+			assert_false(true) << "Not all passed addresses have the same root";
+			return {};
+		}
+
+		//first find the shortest address and truncate all the others to that size
+		unsigned shortestDepth = front.getDepth();
+		for(const auto& cur : parallelCallTrees) {
+			if(cur.getDepth() < shortestDepth) {
+				shortestDepth = cur.getDepth();
+			}
+		}
+		for(auto& cur : parallelCallTrees) {
+			cur = cur.getParentAddress(cur.getDepth() - shortestDepth);
+		}
+
+		//now shorten them until they are all equal
+		while(true) {
+			if(all(parallelCallTrees, [&front](const NodeAddress& cur) { return front == cur; })) {
+				break;
+			}
+
+			for(auto& cur : parallelCallTrees) {
+				cur = cur.getParentAddress();
+			}
+		}
+
+		return front;
+	}
+
+	bool hasLoopInBetween(const NodeAddress& top, const NodeAddress& bottom) {
+		// ensure that bottom is a child of top, otherwise this operation doesn't make sense
+		assert_true(isChildOf(top, bottom)) << "bottom is not a child of top";
+
+		bool res = false;
+		visitPathBottomUpInterruptible(bottom, [&](const NodeAddress& cur) {
+			if(cur == top) return true;
+			if(cur.isa<WhileStmtAddress>() || cur.isa<ForStmtAddress>()) {
+				res = true;
+				return true;
+			}
+			return false;
+		});
+		return res;
+	}
+
 	bool hasFreeControlStatement(const StatementPtr& stmt, NodeType controlStmt, const vector<NodeType>& pruneStmts) {
 		bool hasFree = false;
 		visitDepthFirstOncePrunable(stmt, [&](const NodePtr& cur) {
@@ -1857,6 +1910,23 @@ namespace analysis {
 
 	bool hasFreeReturnStatement(const StatementPtr& stmt) {
 		return hasFreeControlStatement(stmt, NT_ReturnStmt, { NT_LambdaExpr });
+	}
+
+	LambdaExprAddress getLowestUserDefinedFunctionAbove(const NodeAddress& node) {
+		LambdaExprAddress fun = node.getFirstParentOfType(core::NT_LambdaExpr).as<core::LambdaExprAddress>();
+		//if that function doesn't originate from the original input program, we have to move further up
+		while(!utils::isMangled(fun->getReference()->getNameAsString())) {
+			fun = fun.getParentAddress().getFirstParentOfType(core::NT_LambdaExpr).as<core::LambdaExprAddress>();
+		}
+		return fun;
+	}
+
+	LambdaExprAddress getLambdaFromReference(const LambdaReferenceAddress& reference) {
+		LambdaExprAddress lambda = reference.getFirstParentOfType(NT_LambdaExpr).as<LambdaExprAddress>();
+		while(!lambda->getDefinition()->getDefinitionOf(reference)) {
+			lambda = lambda.getParentAddress().getFirstParentOfType(NT_LambdaExpr).as<LambdaExprAddress>();
+		}
+		return lambda;
 	}
 
 	namespace {
