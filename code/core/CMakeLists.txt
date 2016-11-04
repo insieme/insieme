@@ -97,7 +97,7 @@ endif()
 # =============================================  build insieme core .so  =====================================
 
 # Build the core library
-add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${builderbuilder_generated_files} ${FLEX_OUTPUT} ${BISON_OUTPUT})
+add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${builderbuilder_generated_files} ${FLEX_OUTPUT} ${BISON_OUTPUT})
 target_include_directories(insieme_core PUBLIC ${insieme_core_include_dir} )
 target_include_directories(insieme_core PUBLIC ${builderbuilder_output_dir}/include)
 target_include_directories(insieme_core PRIVATE ${FLEX_OUTPUT_PATH})

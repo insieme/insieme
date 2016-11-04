@@ -79,6 +79,10 @@ failure( "Error: Found a ref_assign whose parent is not a CallExpr!", id) :-
 	// declaration statements
 	value( v, p, b ) :- VariableDefinition(v), DeclarationStmt(_,d,v), value(d,p,b).
 
+	// Following pointers
+	value(v, p, b) :- VariableDefinition(v), DeclarationStmt(_,d,v), Declaration(d,_,ce), CallToNamedFunction(ce, "ptr_from_ref"), NodeList(ce,0,vptr), value(vptr,p,b).
+	value(v, p, b) :- VariableDefinition(v), DeclarationStmt(_,d,v), Declaration(d,_,ce), CallToNamedFunction(ce, "num_cast"), NodeList(ce,0,vptr), value(vptr,p,b).
+
 	// bind parameters
 	value( v, d, b ) :-
 			VariableDefinition(v), NodeList(p,i,v), BindExpr(f,p,_),  // this variable is the i-th parameter of a bind expression f
@@ -125,7 +129,10 @@ failure( "Error: Found a ref_assign whose parent is not a CallExpr!", id) :-
 
 
 	// read value from a memory location
-	value( c, vp, v ) :- deref(c), NodeList(c,0,t), reference_value(t,DP_ROOT, [m,rp]), memory_state.value(c,INT,[[m,p],v]), concat(rp,vp,p).
+	value( c, vp, v ) :- deref(c), NodeList(c,0,t),           // Follow the deref    /** verify this block! **/
+	                     reference_value(t,DP_ROOT, [m,rp]),  // Get the memory location of the referenced statement using [stmt, subref_data_path]
+	                     memory_state.value(c,INT,[[m,p],v]), // From that memory location, get the value using [[stmt, (stmt_data_path + subref_data_path)], value]
+	                     concat(rp,vp,p).                     // Extract the path to the stmt (stmt_data_path)
 
 	// write values to memory locations (perfect assignment)
 	memory_state.intercepted( c , INT ) :- simple_assignment(c).
@@ -134,7 +141,7 @@ failure( "Error: Found a ref_assign whose parent is not a CallExpr!", id) :-
 
 
 	// pass function argument to memory location of parameter
-	memory_state.value( b, PRE, [[v,dp],d] ) :-
+	memory_state.value( b, PRE, [[v,dp],d] ) :-   /* [[stmt, subref_data_path], value] */
 			VariableDefinition(v), NodeList(p,i,v), Lambda(l,_,p,b),      // this variable is the i-th parameter of a lambda l
 			callGraph(c,l),                                               // l is called by call site c
 			NodeList(c,i,a),value(a,dp,d).                                // v get's assigned the value of the i-th argument of c

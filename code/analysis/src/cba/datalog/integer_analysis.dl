@@ -5,7 +5,7 @@
 
 // output values
 .decl result_value( n : number ) output
-.decl result_is_not_defined ( b : bool ) output 
+.decl result_is_not_defined ( b : bool ) output
 
 .decl result_debug ( v : number , b : bool ) output
 result_debug( v , b ) :- target_expr(n), integer_value( n , DP_ROOT , [ b , v ] ).
@@ -16,6 +16,6 @@ result_debug( v , b ) :- target_expr(n), integer_value( n , DP_ROOT , [ b , v ] 
 // whether the result is a defined value
 result_is_not_defined( true ) :- target_expr(n), integer_value( n , DP_ROOT , [ false , _ ] ).
 
-// in case it is a defined value, list the values
+// in case it is a defined value, list the values                              /* Why only DP_ROOT? */
 result_value( v ) :- !result_is_not_defined(_), target_expr(n), integer_value( n , DP_ROOT , [ true , v ] ).
 

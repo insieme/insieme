@@ -10,7 +10,7 @@
 
 
 // - an auxiliary relation to link returns to enclosing lambda
-.decl ReturnOfLambda( l : lambda, r : return_stmt )
+.decl ReturnOfLambda( l : lambda, r : return_stmt_2 )
 
 
 // --- Definiton ---
@@ -43,7 +43,7 @@ ExitPoint( l, l ) :- Literal(l,_,_).
 // -------
 
 
-.decl ReturnParent( r : return_stmt, p : node )
+.decl ReturnParent( r : return_stmt_2, p : node )
 ReturnParent( r, r ) :- ReturnStmt(r,_).
 ReturnParent( r, p ) :- ReturnParent(r,s), ParentOf(p,s), !Lambda(s,_,_,_).
 

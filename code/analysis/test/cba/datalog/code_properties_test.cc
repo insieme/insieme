@@ -47,6 +47,8 @@
 
 #include "insieme/driver/integration/tests.h"
 
+#include "insieme/core/inspyer/inspyer.h"
+
 
 namespace insieme {
 namespace analysis {
@@ -54,6 +56,16 @@ namespace cba {
 namespace datalog {
 
 	using namespace core;
+
+	auto quickDump = [](const NodePtr &node, const string &file = "insieme_ir_text_dump.txt") {
+		std::ofstream outputFile(file);
+		if (outputFile.is_open()) {
+			core::inspyer::dumpTree(outputFile, node);
+			outputFile.close();
+		} else {
+			std::cerr << "Could not open file!" << std::endl;
+		}
+	};
 
 	TEST(CodeProperties, DISABLED_DumpTextToFile) {
 		using namespace driver::integration;
@@ -77,6 +89,8 @@ namespace datalog {
 			//dumpText(addresses[0].getRootAddress(), outputFile, true);
 			core::dump::json::dumpIR(outputFile, code);
 			outputFile.close();
+		} else {
+			std::cerr << "Could not open file!" << std::endl;
 		}
 	}
 
@@ -95,6 +109,8 @@ namespace datalog {
 
 		std::cout << "Parameter: " << param << "\n";
 		std::cout << "Variable:  " << var << "\n";
+
+		quickDump(var.getRootNode());
 
 		EXPECT_EQ(param, getDefinitionPoint(var, false));
 

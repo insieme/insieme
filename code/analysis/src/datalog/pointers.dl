@@ -1,0 +1,50 @@
+//.using _ from Entities/Integer // For type 'integer'
+.using DataFlowAnalysis from Templates/DataFlowAnalysis
+
+
+//.decl Targets(X:node) input
+//.decl Result(ID:node, DEF:bool, X:number) output
+
+
+//.init Integer = DataFlowAnalysis<integer>
+
+//Integer.unknown_value([false,-1]).
+
+//Integer.value(ID, DP_ROOT, [true,X]) :- IntegerLiteral(ID,X).
+
+//Integer.known_literal(ID) :- IntegerLiteral(ID,_).
+
+
+
+//                                          /* Why only DP_ROOT??? */
+//Result(ID, DEF, X) :- Targets(ID), Integer.value(ID,DP_ROOT,[DEF,X]).
+
+.type returnType = [defined:bool , value:string]
+
+.decl Targets(x:node) input
+.decl Result(id:node, def:bool, x:string) output
+
+
+.init DFA = DataFlowAnalysis<returnType>
+
+DFA.unknown_value([false,"_"]).
+
+DFA.value(ID, DP_ROOT, [true,X]) :- Literal(ID,_,X).
+
+DFA.known_literal(ID) :- Literal(ID,_,_).
+
+
+
+                                          /* Why only DP_ROOT??? */
+Result(ID, DEF, X) :- Targets(ID), DFA.value(ID,DP_ROOT,[DEF,X]).
+
+
+
+//.decl DFA_valueOut(id:node, p:data_path, def:bool, value:string) output
+//DFA_valueOut(a,b,c,d) :- DFA.value(a,b,[c,d]).
+
+//.using CallToNamedFunction from Utils/NamedFunctionCalls
+//.decl CallToNamedFunctionOut ( c : call_expr , n : string ) output
+//.decl NamedConstructOut( name : string , uid : unique_node_id ) output
+//CallToNamedFunctionOut(c,n) :- CallToNamedFunction(c,n).
+//NamedConstructOut(name,uid) :- NamedConstruct(name,uid).

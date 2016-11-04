@@ -36,6 +36,8 @@
 
 #include "insieme/analysis/cba/datalog/framework/analysis_base.h"
 
+#include <iostream>
+
 #include <souffle/SouffleInterface.h>
 
 #include "insieme/analysis/cba/common/failure.h"
@@ -87,10 +89,6 @@ namespace framework {
 
 			FactExtractor(souffle::Program& analysis,const NodeIndexer& indexer)
 				: core::IRVisitor<int,Ptr>(true), indexer(indexer), analysis(analysis) {}
-
-			int extractFacts(const Ptr<const core::Node>& rootNode) {
-				return this->visit(rootNode);
-			}
 
 			int getUniqueID(const Ptr<const core::Node>& node) {
 				core::NodePtr entry(&*node);
@@ -633,10 +631,21 @@ namespace framework {
 				fill(tuple,rest...);
 			}
 
+			void print() {
+				std::cout << std::endl;
+			}
+
+			template <typename F, typename ...Rest>
+			void print(const F& first, const Rest& ... rest) {
+				std::cout << " - " << first;
+				print(rest...);
+			}
+
 			template<typename ... Args>
 			void insert(const std::string& relationName, const Args& ... args ) {
 				// get relation
 				auto rel = analysis.getRelation(relationName);
+				// std::cout << "Inserting " << relationName; print(args...);
 				if (!rel) return;
 
 				// insert data

@@ -2,7 +2,7 @@
 
 
 // TODO: remove once the typing of the ir.dl is fixed
-.type return_stmt = node
+.type return_stmt_2 = node
 
 // --- links callables to their return statements ---
 
