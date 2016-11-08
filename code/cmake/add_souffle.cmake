@@ -23,7 +23,7 @@ macro(configure_souffle)
 	set(souffle_dough ${insieme_code_dir}/analysis/src/cba/datalog/souffle_dough.rb)
 
 	# Find Soufflé installation directory
-	set(souffle_home $ENV{INSIEME_LIBS_HOME}/souffle-latest CACHE PATH "Souffle Home Directory")
+	set(souffle_home ${THIRD_PARTY_LIBS_HOME}/souffle-latest CACHE PATH "Souffle Home Directory")
 
 	# Find Soufflé static header files
 	set(souffle_header_files ${souffle_home}/include)
