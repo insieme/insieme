@@ -75,7 +75,7 @@ namespace cba {
 		EXPECT_EQ(controlValue, res[z].second);
 	}
 
-	TEST(SAP, WriteToFile) {
+	TEST(SAP, WritePointerFactsToFile) {
 		NodeManager nm;
 		IRBuilder builder(nm);
 
@@ -97,6 +97,60 @@ namespace cba {
 		ExpressionAddress z = ptr[2].as<VariableAddress>();
 
 		bool res = datalog::extractPointerFactsToFiles({x,y,z});
+
+		EXPECT_TRUE(res);
+	}
+
+	TEST(SAP, DISABLED_StructsInteger) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		const string controlValueOne   = "111";
+		const string controlValueTwo   = "222";
+		const string controlValueThree = controlValueOne + controlValueTwo;
+
+		auto in("decl struct FunkyStructure;"
+		        ""
+		        "decl FunkyStructure::eins : char;"
+		        "decl FunkyStructure::zwei : char;"
+		        "decl FunkyStructure::drei : int<4>;"
+		        ""
+		        "def struct FunkyStructure {"
+		        "    eins : char;"
+		        "    zwei : char;"
+		        "    drei : int<4>;"
+		        "};"
+		        ""
+		        "{"
+		        "var ref<FunkyStructure> fooStruct = ref_decl(type_lit(ref<FunkyStructure>));"
+		        ""
+		        "fooStruct.eins = num_cast(" + controlValueOne + ", type_lit(char));"
+		        "fooStruct.zwei = num_cast(" + controlValueTwo + ", type_lit(char));"
+		        "fooStruct.drei = num_cast(*fooStruct.eins, type_lit(int<4>))+num_cast(*fooStruct.zwei, type_lit(int<4>));"
+		        ""
+		        "var ref<int<4>> deux = num_cast(*fooStruct.zwei, type_lit(int<4>));"
+		        ""
+		        "$fooStruct.eins$;"
+		        "$deux$;"
+		        "$fooStruct.drei$;"
+		        "}"
+		        );
+
+		auto ptr = builder.parseAddressesStatement(in);
+
+		ExpressionAddress eins = ptr[0].as<CallExprAddress>();
+		ExpressionAddress deux = ptr[1].as<VariableAddress>();
+		ExpressionAddress drei = ptr[2].as<CallExprAddress>();
+
+		datalog::PointerResult res = datalog::runPointerAnalysis({eins, deux, drei});
+
+		EXPECT_TRUE(res[eins].first);
+		EXPECT_TRUE(res[deux].first);
+		EXPECT_TRUE(res[drei].first);
+
+		EXPECT_EQ(controlValueOne,   res[eins].second);
+		EXPECT_EQ(controlValueTwo,   res[deux].second);
+		EXPECT_EQ(controlValueThree, res[drei].second);
 	}
 
 } // end namespace cba
