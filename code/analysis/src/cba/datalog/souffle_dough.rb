@@ -23,6 +23,10 @@ abort "Source dir (#{@srcdir}) does not exist!" unless File.directory?(@srcdir)
 abort "Destination dir (#{@destdir}) does not exist!" unless File.directory?(@destdir)
 abort "Invalid include dir (#{@incdir}): Does not exist in '#{@srcdir}'!" unless File.directory?(@srcdir + "/" + @incdir)
 
+# "Normalize" src and dest dir to absolute paths
+@srcdir = File.expand_path(@srcdir);
+@destdir = File.expand_path(@destdir);
+
 def extract_relation_name(name, input_arr)
   arr = input_arr.grep(/^\s*\.#{name}\s+/)
   arr.map! {|line| line.gsub(/^\s*\.#{name}\s+(\w+).*/, '\1') }

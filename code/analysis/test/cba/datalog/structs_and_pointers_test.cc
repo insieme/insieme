@@ -75,6 +75,30 @@ namespace cba {
 		EXPECT_EQ(controlValue, res[z].second);
 	}
 
+	TEST(SAP, WriteToFile) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		const string controlValue = "12345";
+
+		auto in("{"
+		        "var ref<int<4>> x = " + controlValue + ";"
+		        "var ref<ptr<int<4>>> y = ptr_from_ref(x);"
+		        "var ref<ptr<ptr<int<4>>>,f,f,plain> z = ptr_from_ref(y);"
+		        "$x$;"
+		        "$y$;"
+		        "$z$;"
+		        "}");
+
+		auto ptr = builder.parseAddressesStatement(in);
+
+		ExpressionAddress x = ptr[0].as<VariableAddress>();
+		ExpressionAddress y = ptr[1].as<VariableAddress>();
+		ExpressionAddress z = ptr[2].as<VariableAddress>();
+
+		bool res = datalog::extractPointerFactsToFiles({x,y,z});
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

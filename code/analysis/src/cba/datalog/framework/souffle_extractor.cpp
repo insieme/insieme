@@ -34,8 +34,6 @@
  * regarding third party software licenses.
  */
 
-//#include "insieme/analysis/cba/datalog/framework/analysis_base.h"
-
 #include <iostream>
 
 #include <souffle/SouffleInterface.h>
@@ -48,48 +46,52 @@ namespace cba {
 namespace datalog {
 namespace framework {
 
-	class Inserter {
-		souffle::Program *analysis;
+	namespace {
 
-	public:
-		Inserter() {}
+		class Inserter {
+			souffle::Program *analysis;
 
-		void setAnalysis(souffle::Program &analysis) {
-			this->analysis = &analysis;
-		}
+		public:
+			Inserter() {}
 
-		void fill(souffle::tuple&) {}
+			void setAnalysis(souffle::Program &analysis) {
+				this->analysis = &analysis;
+			}
 
-		template<typename F, typename ... Rest>
-		void fill(souffle::tuple& tuple, const F& first, const Rest& ... rest) {
-			tuple << first;
-			fill(tuple,rest...);
-		}
+			void fill(souffle::tuple&) {}
 
-		void print() {
-			std::cout << std::endl;
-		}
+			template<typename F, typename ... Rest>
+			void fill(souffle::tuple& tuple, const F& first, const Rest& ... rest) {
+				tuple << first;
+				fill(tuple,rest...);
+			}
 
-		template <typename F, typename ...Rest>
-		void print(const F& first, const Rest& ... rest) {
-			std::cout << " - " << first;
-			print(rest...);
-		}
+			void print() {
+				std::cout << std::endl;
+			}
 
-		template<typename ... Args>
-		void insert(const std::string& relationName, const Args& ... args ) {
-			// get relation
-			auto rel = analysis->getRelation(relationName);
-			// std::cout << "Inserting " << relationName; print(args...);
-			if (!rel) return;
+			template <typename F, typename ...Rest>
+			void print(const F& first, const Rest& ... rest) {
+				std::cout << " - " << first;
+				print(rest...);
+			}
 
-			// insert data
-			souffle::tuple tuple(rel);
-			fill(tuple, args...);
-			rel->insert(tuple);
-		}
+			template<typename ... Args>
+			void insert(const std::string& relationName, const Args& ... args ) {
+				// get relation
+				auto rel = analysis->getRelation(relationName);
+				// std::cout << "Inserting " << relationName; print(args...);
+				if (!rel) return;
 
-	};
+				// insert data
+				souffle::tuple tuple(rel);
+				fill(tuple, args...);
+				rel->insert(tuple);
+			}
+
+		};
+
+	} // end anonymous namespace
 
 	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer) {
 		FactExtractor<core::Pointer,Inserter> extractor(nodeIndexer);

@@ -19,7 +19,7 @@ namespace datalog {
 	#endif
 
 
-	PointerResult runPointerAnalysis(const std::vector<core::ExpressionAddress>& targets) {
+	PointerResult runPointerAnalysis(const std::set<core::ExpressionAddress>& targets) {
 		souffle::Sf_pointers analysis;
 
 		std::map<int,core::NodeAddress> targetIDs;
@@ -30,17 +30,14 @@ namespace datalog {
 			return false;
 		};
 
-		framework::extractAddressFacts(analysis, targets.at(0).getRootAddress(), [&](const core::NodeAddress &curr, int id) {
+		framework::extractAddressFacts(analysis, targets.begin()->getRootAddress(), [&](const core::NodeAddress &curr, int id) {
 			if (isTarget(curr)) {
 				targetIDs[id] = curr;
 				analysis.rel_Targets.insert(id);
-//				std::cout << "Target found: " << id << std::endl;
 			}
 		});
 
 		analysis.run();
-
-//		analysis.dumpOutputs();
 
 		auto analysisResult = analysis.rel_Result;
 
@@ -58,8 +55,9 @@ namespace datalog {
 		return results;
 	}
 
-	PointerResult fileExtractorWIP(const std::vector<core::ExpressionAddress>& targets) {
-		std::map<int,core::NodeAddress> targetIDs;
+	bool extractPointerFactsToFiles(const std::set<core::ExpressionAddress>& targets, const std::string &outputDir) {
+		std::set<std::string> targetFacts;
+		int ret;
 
 		auto isTarget = [&](const core::NodeAddress &x) {
 			for (const auto &trg : targets)
@@ -67,17 +65,20 @@ namespace datalog {
 			return false;
 		};
 
-		framework::extractAddressFactsToFiles("analysis", targets.at(0).getRootAddress(), [&](const core::NodeAddress &curr, int id) {
+		ret = framework::extractAddressFactsToFiles(outputDir, targets.begin()->getRootAddress(), [&](const core::NodeAddress &curr, int id) {
 			if (isTarget(curr)) {
-				targetIDs[id] = curr;
-				std::cout << "Target found: " << id << std::endl;
+				targetFacts.insert(std::to_string(id));
 			}
 		});
 
+		if (ret == -1)
+			return false;
 
-		PointerResult results;
+		ret = framework::addFactsManually(outputDir, "Targets", targetFacts);
 
-		return results;
+		if (ret == -1)
+			return false;
+		return true;
 	}
 
 	#undef convertValue

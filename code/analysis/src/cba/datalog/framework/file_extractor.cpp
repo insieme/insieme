@@ -36,6 +36,10 @@
 
 #include <iostream>
 #include <string>
+#include <fstream>
+#include <map>
+
+#include <boost/filesystem.hpp>
 
 #include "insieme/analysis/cba/datalog/framework/analysis_base.h"
 
@@ -45,46 +49,87 @@ namespace cba {
 namespace datalog {
 namespace framework {
 
-	class Inserter {
-		std::string folder;
+	namespace {
 
-	public:
-		Inserter() {}
+		using namespace std;
 
-		void setTargetFolder(const std::string folder) {
-			this->folder = folder;
-		}
+		class Inserter {
+			string folder;
+			map<string,fstream> factFiles;
 
-		void printToStdout(bool) {
-			std::cout << ")" << std::endl;
-		}
+		public:
+			Inserter() {}
 
-		template <typename F, typename ...Rest>
-		void printToStdout(bool firstTime, const F& first, const Rest& ... rest) {
-			if (!firstTime)
-				std::cout << " , ";
-			std::cout << first;
-			printToStdout(false, rest...);
-		}
+			~Inserter() {
+				for (auto &ff : factFiles)
+					ff.second.close();
+			}
 
-		template<typename ... Args>
-		void insert(const std::string& relationName, const Args& ... args ) {
-			std::cout << relationName << " ( ";
-			printToStdout(true, args...);
-		}
+			bool setTargetFolder(const std::string folder) {
+				this->folder = folder;
+				boost::filesystem::create_directories(folder);
+				return true;
+			}
 
-	};
+			void printToFactFile(fstream &fs, bool) {
+				fs << endl;
+			}
+
+			template <typename F, typename ... Rest>
+			void printToFactFile(fstream &fs, bool first, const F& car, const Rest& ... cdr) {
+				if (!first)
+					fs << "\t";
+				fs << car;
+				printToFactFile(fs, false, cdr...);
+			}
+
+			template<typename ... Args>
+			void insert(const std::string& relationName, const Args& ... args ) {
+				fstream &fs = getFs(relationName);
+				printToFactFile(fs, true, args...);
+			}
+
+		private:
+			fstream &getFs(const string &relationName) {
+				if (factFiles.find(relationName) != factFiles.end())
+					return factFiles[relationName];
+
+				string filepath(folder + "/" + relationName + ".facts");
+				factFiles[relationName].open(filepath, fstream::out | fstream::trunc);
+				if (!factFiles[relationName].is_open())
+					cerr << "Cannot open fact file at " <<filepath<<" for writing" << endl;
+				return factFiles[relationName];
+			}
+
+		};
+
+	} // end anonymous namespace
 
 	int extractFactsToFiles(const std::string &folder, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer) {
 		FactExtractor<core::Pointer,Inserter> extractor(nodeIndexer);
-		extractor.getInserter().setTargetFolder(folder);
+		if (!extractor.getInserter().setTargetFolder(folder)) {
+			cerr << "Unable to create target folder '" << folder << "'!" << endl;
+			return -1;
+		}
 		return extractor.visit(root);
 	}
 
 	int extractAddressFactsToFiles(const std::string &folder, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer) {
 		FactExtractor<core::Address,Inserter> extractor(nodeIndexer);
-		extractor.getInserter().setTargetFolder(folder);
+		if (!extractor.getInserter().setTargetFolder(folder)) {
+			cerr << "Unable to create target folder '" << folder << "'!" << endl;
+			return -1;
+		}
 		return extractor.visit(core::NodeAddress(root));
+	}
+
+	bool addFactsManually(const std::string &folder, const std::string &relationName, const std::set<string>& facts) {
+		Inserter ins;
+		ins.setTargetFolder(folder);
+		for (const auto &fact : facts) {
+			ins.insert(relationName, fact);
+		}
+		return true;
 	}
 
 } // end namespace framework
