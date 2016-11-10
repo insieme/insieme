@@ -102,17 +102,3 @@ ExternalProjects provide a mechanism to download/compile/install 3rd-party libra
 build of the actual project (careful this is not done during the CMake run!).
 
 Again we have checks for CMake version as below (<) CMake 3.2 things are a bit shaky. 
-
-
-Superbuild
-----------
-
-This should replace the nice scripts/Makefile + the install scripts (WORK IN PROGRESS!!!)
-
-${insieme_src_dir}/scripts/CMakeLists.txt contains the script for a "superbuild", to install
-third-party libraries in a given target directory (set by env var THIRD_PARTY_LIBS_HOME (preferred)
-or INSIEME_LIBS_HOME) if non is given, ~/libs/ is used.
-
-Careful here we try first to find the libraries with insieme_find_package (as described above) and
-if not found we create a target to install it. In the next step the user has to run the generated
-Makefile with the targets (make all would install all which were not found)
