@@ -36,6 +36,16 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
+#include <typeindex>
+
+#include "insieme/analysis/cba/datalog/framework/forward_decls.h"
+
+#include "insieme/core/ir.h"
+#include "insieme/core/ir_address.h"
+
+
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -45,6 +55,29 @@ namespace datalog {
 	 * The context for datalog analysis.
 	 */
 	struct Context {
+
+		struct entry {
+			core::NodePtr root;
+			souffle::Program* analysis;
+			std::map<core::ExpressionAddress,int> index;
+
+			entry() : analysis(nullptr) {}
+			~entry() { clear(); }
+
+			void clear();
+		};
+
+		std::map<std::type_index,entry> cache;
+
+		std::map<core::NodePtr,std::map<core::ExpressionAddress,int>> nodeIndexes;
+
+		Context() {}
+
+		Context(Context&&) = delete;
+		Context(const Context&) = delete;
+
+		Context& operator=(const Context&) = delete;
+		Context& operator=(Context&&) = delete;
 
 		// -- general context interface requirements --
 
@@ -57,6 +90,47 @@ namespace datalog {
 			// this feature is not yet implemented
 			std::cout << "Sorry, but the solution dump is not yet implemented for the Datalog engine.\n";
 		}
+
+		template<typename Analysis>
+		Analysis& getAnalysis(const core::NodePtr& root) {
+			auto& entry = cache[typeid(Analysis)];
+
+			// check whether this is a hit
+			if (entry.analysis && *entry.root == *root) {
+				std::cout << "Cache HITTT!!!\n";
+				return static_cast<Analysis&>(*entry.analysis);
+			}
+
+			std::cout << "Cache miss!!!\n";
+
+			// we have to produce a new analysis instance
+			entry.clear();
+			entry.analysis = new Analysis();
+			entry.root = root;
+
+			// execute the analyis
+			runAnalysis(*entry.analysis, root);
+
+			// done
+			return getAnalysis<Analysis>(root);
+		}
+
+		int getNodeID(const core::ExpressionAddress& expr) const {
+
+			auto pos = nodeIndexes.find(expr.getRootNode());
+			assert_true(pos != nodeIndexes.end())
+				<< "Trying to access ID of node not previously indexed!";
+
+			auto res_pos = (pos->second).find(expr);
+			assert_true(res_pos != pos->second.end())
+				<< "Trying to access ID of node not previously indexed!";
+
+			return res_pos->second;
+		}
+
+	private:
+
+		void runAnalysis(souffle::Program& prog, const core::NodePtr& root);
 
 	};
 

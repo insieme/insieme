@@ -1,11 +1,12 @@
 .using boolean_value from BooleanValue
 
-// input parameters
-.decl target_expr( n : node ) input
-
 // output values
-.decl result( v : bool ) output
+.decl result( id:node, v : bool ) output
 
 // link analysis with result
-result( v ) :- target_expr(n), boolean_value(n,DP_ROOT,v).
+result( n, v ) :- boolean_value(n,DP_ROOT,v).
+
+// .decl known_literalsout(id:node) output
+// .using known_literals from BooleanValue
+// known_literalsout(id) :- known_literals(id).
 

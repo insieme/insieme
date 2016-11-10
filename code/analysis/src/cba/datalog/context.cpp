@@ -34,72 +34,38 @@
  * regarding third party software licenses.
  */
 
-#include "souffle/gen/boolean_analysis.h"
+#include "insieme/analysis/cba/datalog/context.h"
 
-#include "insieme/analysis/cba/datalog/boolean_analysis.h"
+#include "souffle/SouffleInterface.h"
 
 #include "insieme/analysis/cba/datalog/framework/souffle_extractor.h"
 #include "insieme/analysis/cba/datalog/framework/toolbox.h"
-
 
 namespace insieme {
 namespace analysis {
 namespace cba {
 namespace datalog {
 
-	enum Result {
-		TRUE,
-		FALSE,
-		TRUE_OR_FALSE
-	};
-
-	Result getBoolValue(Context& context, const core::ExpressionAddress& expr) {
-//		const bool debug = true;
-
-		// instantiate the analysis
-		souffle::Sf_boolean_analysis& analysis = context.getAnalysis<souffle::Sf_boolean_analysis>(expr.getRootNode());
-
-		int targetID = context.getNodeID(expr);
-
-		// read result
-		auto& result = analysis.rel_result;
-
-		const auto range = result.template equalRange<0>({{targetID,0}});
-
-		std::cout << "-------- Result: --------\n";
-		for(const auto& cur : range) {
-			std::cout << cur << "\n";
-
-		}
-
-		// assert_le(1, result.size()) << "Incomplete analysis!";
-		if (range.empty()) std::cout << "INCOMPLETE ANALYSIS!!!!" << std::endl;
-
-		// if it is true or false => we don't know
-		auto b = range.begin();
-		++b; /* CLEAN UP THIS ITERATOR PART */
-		if (b != range.end()) return TRUE_OR_FALSE;
-
-		// read the single entry in the result set
-		auto value = (*range.begin())[1];
-		return (value) ? TRUE : FALSE;
+	void Context::entry::clear() {
+		delete analysis;
 	}
 
 
-	bool isTrue(Context& c, const core::ExpressionAddress& expr) {
-		return getBoolValue(c,expr) == TRUE;
-	}
+	void Context::runAnalysis(souffle::Program& prog, const core::NodePtr& root) {
 
-	bool isFalse(Context& c, const core::ExpressionAddress& expr) {
-		return getBoolValue(c,expr) == FALSE;
-	}
+		auto& nodeIndex = nodeIndexes[root];
+		nodeIndex.clear();
 
-	bool mayBeTrue(Context& c, const core::ExpressionAddress& expr) {
-		return getBoolValue(c,expr) != FALSE;
-	}
+		// export facts
+		framework::extractAddressFacts(prog, root, [&](const core::NodeAddress& addr, int id) {
+			if (auto expr = addr.isa<core::ExpressionAddress>()) nodeIndex[expr] = id;
+		});
 
-	bool mayBeFalse(Context& c, const core::ExpressionAddress& expr) {
-		return getBoolValue(c,expr) != TRUE;
+		// run the analysis
+		prog.run();
+
+		// check for failures in analysis
+		framework::checkForFailures(prog);
 	}
 
 } // end namespace datalog
