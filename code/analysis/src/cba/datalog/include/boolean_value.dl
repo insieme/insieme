@@ -1,9 +1,12 @@
 .using DataFlowAnalysis from Templates/DataFlowAnalysis
 .using CallToNamedFunction from Utils/NamedFunctionCalls
 .using integer_value from IntegerValue
-		
+
 // the analysis assigning IR nodes boolean values
 .decl boolean_value( n : node , p : data_path, v : bool )
+
+.decl known_literals(id:node)
+known_literals(id) :- boolean.known_literal(id).
 
 // ---------- Analysis Specification -----------
 
@@ -28,6 +31,7 @@ is_empty(e) :- Parents(e), !NodeList(e,_,_).
 // -- identify the boolean type --
 .decl is_boolean( t : node )
 is_boolean( n ) :- GenericType(n,"bool",a,b), is_empty(a), is_empty(b).
+is_boolean( n ) :- GenericType(n,"int" ,_,_).
 
 
 // -- boolean value analysis --
@@ -36,9 +40,12 @@ is_boolean( n ) :- GenericType(n,"bool",a,b), is_empty(a), is_empty(b).
 boolean.value( n , DP_ROOT, true ) :- Literal(n,t,"true"), is_boolean(t).
 boolean.value( n , DP_ROOT, false ) :- Literal(n,t,"false"), is_boolean(t).
 
+// -- also account for integers which represent boolean values
+boolean.value(n, DP_ROOT, true)  :- IntegerLiteral(n,v), v!=0.
+boolean.value(n, DP_ROOT, false) :- IntegerLiteral(n,v), v=0.
+
 // -- let the data flow analysis know which literals are handled --
-boolean.known_literal(l) :- Literal(l,t,"true"), is_boolean(t).
-boolean.known_literal(l) :- Literal(l,t,"false"), is_boolean(t).
+boolean.known_literal(l) :- Literal(l,t,_), is_boolean(t).
 
 // all other literals have an unknown boolean value
 //boolean.value( n, DP_ROOT, v ) :- Literal(n,t,_), !is_boolean(t), boolean.unknown_value(v).
@@ -46,31 +53,56 @@ boolean.known_literal(l) :- Literal(l,t,"false"), is_boolean(t).
 // --- support for comparison operators ---
 
 // should:
-//boolean.value( c , DP_ROOT , AND( AND( d_a , d_b ) , (v_a < v_b) )  ) :- 
+//boolean.value( c , DP_ROOT , AND( AND( d_a , d_b ) , (v_a < v_b) )  ) :-
 //	CallToNamedFunction( c , "int_lt"),
 //	NodeList(c,0,a), integer_value(a,DP_ROOT, [ d_a, v_a ]),
 //	NodeList(c,1,b), integer_value(b,DP_ROOT, [ d_b, v_b ]).
 
 // for now:
-boolean.value( c , DP_ROOT , true  ) :- 
-	CallToNamedFunction( c , "int_lt"),
-	NodeList(c,0,a), integer_value(a,DP_ROOT, [ true, v_a ]),
-	NodeList(c,1,b), integer_value(b,DP_ROOT, [ true, v_b ]), v_a < v_b.
+#define boolean_value_comparator(NAMEDFUNC, COND_FOR_TRUE)                                                \
+                                                                                                          \
+        boolean.value( c , DP_ROOT , true  ) :-                                                           \
+                CallToNamedFunction( c , NAMEDFUNC),                                                      \
+                NodeList(c,0,a), integer_value(a,DP_ROOT, [ true, x ]),                                   \
+                NodeList(c,1,b), integer_value(b,DP_ROOT, [ true, y ]), COND_FOR_TRUE.                    \
+                                                                                                          \
+        boolean.value( c , DP_ROOT , false  ) :-                                                          \
+                CallToNamedFunction( c , NAMEDFUNC),                                                      \
+                NodeList(c,0,a), integer_value(a,DP_ROOT, [ true, x ]),                                   \
+                NodeList(c,1,b), integer_value(b,DP_ROOT, [ true, y ]), !(COND_FOR_TRUE).                 \
+                                                                                                          \
+        boolean.value( c , DP_ROOT , v  ) :-                                                              \
+                CallToNamedFunction( c , NAMEDFUNC),                                                      \
+                NodeList(c,0,a), integer_value(a,DP_ROOT, [ false, _ ]), boolean.unknown_value(v).        \
+                                                                                                          \
+        boolean.value( c , DP_ROOT , v  ) :-                                                              \
+                CallToNamedFunction( c , NAMEDFUNC),                                                      \
+                NodeList(c,1,b), integer_value(b,DP_ROOT, [ false, _ ]), boolean.unknown_value(v).        \
+                                                                                                          \
+                                                                                                          \
+        boolean.known_named_function( NAMEDFUNC ).                                                        \
+                                                                                                          \
+        // end macro boolean_value_comparator
 
-boolean.value( c , DP_ROOT , false  ) :- 
-	CallToNamedFunction( c , "int_lt"),
-	NodeList(c,0,a), integer_value(a,DP_ROOT, [ true, v_a ]),
-	NodeList(c,1,b), integer_value(b,DP_ROOT, [ true, v_b ]), !(v_a < v_b).
 
-boolean.value( c , DP_ROOT , v  ) :- 
-	CallToNamedFunction( c , "int_lt"),
-	NodeList(c,0,a), integer_value(a,DP_ROOT, [ false, _ ]), boolean.unknown_value(v).
+boolean_value_comparator("int_eq", x =  y)
+boolean_value_comparator("int_ne", x != y)
+boolean_value_comparator("int_lt", x <  y)
+boolean_value_comparator("int_gt", x >  y)
+boolean_value_comparator("int_le", x <= y)
+boolean_value_comparator("int_ge", x >= y)
 
-boolean.value( c , DP_ROOT , v  ) :- 
-	CallToNamedFunction( c , "int_lt"),
-	NodeList(c,1,b), integer_value(b,DP_ROOT, [ false, _ ]), boolean.unknown_value(v).
-	
-	
-boolean.known_named_function( "int_lt" ).
+boolean_value_comparator("uint_eq", x =  y)
+boolean_value_comparator("uint_ne", x != y)
+boolean_value_comparator("uint_lt", x <  y)
+boolean_value_comparator("uint_gt", x >  y)
+boolean_value_comparator("uint_le", x <= y)
+boolean_value_comparator("uint_ge", x >= y)
 
-// TODO: all other relational operators <=, !=, ==, >= , > for signed and unsigned
+boolean_value_comparator("real_eq", x =  y)
+boolean_value_comparator("real_ne", x != y)
+boolean_value_comparator("real_lt", x <  y)
+boolean_value_comparator("real_gt", x >  y)
+boolean_value_comparator("real_le", x <= y)
+boolean_value_comparator("real_ge", x >= y)
+
