@@ -118,12 +118,16 @@ namespace datalog {
 			return getAnalysis<Analysis>(root);
 		}
 
-		int getNodeID(const core::ExpressionAddress& expr) const {
+		int getNodeID(const core::ExpressionAddress& expr, bool debug = false) const {
+
+			if (debug) {
+				std::cout << "Trying to get node ID for " << expr << "..." << std::endl;
+			}
 
 			// Search for root node of this expr first
 			auto pos = nodeIndexes.find(expr.getRootNode());
 			assert_true(pos != nodeIndexes.end())
-				<< "Trying to access ID of node not previously indexed!";
+				<< "Trying to access ROOT of node not previously indexed!";
 
 			// Now search for the expr itself
 			auto res_pos = (pos->second).find(expr);

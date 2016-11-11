@@ -53,63 +53,45 @@ namespace datalog {
 	/**
 	 * Determines whether the given type is a polymorph type.
 	 */
-	bool isPolymorph(const core::TypePtr& type, bool debug) {
+	bool isPolymorph(Context& context, const core::TypePtr& type, bool debug)
+	{
+		// Instantiate analysis
+		auto &analysis = context.getAnalysis<souffle::Sf_polymorph_types_analysis>(type, debug);
 
-		// instantiate the analysis
-		souffle::Sf_polymorph_types_analysis analysis;
+		// Get target node ID for which to check -> the root node
+		int targetID = 0;
 
-		// fill in facts
-		int rootNodeID = framework::extractFacts(analysis, type);
+		// Get result
+		auto &resultRel = analysis.rel_result;
+		auto resultRelContents = resultRel.template equalRange<0>({{targetID}});
 
-		// add start node
-		analysis.rel_rootNode.insert(rootNodeID);
-
-		// print debug information
-		if (debug) analysis.dumpInputs();
-
-		// run analysis
-		analysis.run();
-
-		// print debug information
-		if (debug) analysis.dumpOutputs();
-
-		// read result
-		auto& rel = analysis.rel_result;
-		return rel.size() > 0;
+		// If result is non-empty, return true
+		return resultRelContents.begin() != resultRelContents.end();
 	}
 
 	/**
 	 * Determine top level nodes
 	 */
-	bool getTopLevelNodes(const core::NodePtr& root, bool debug)
+	bool getTopLevelNodes(Context& context, const core::NodePtr& root, bool debug)
 	{
-		// instantiate the analysis
-		souffle::Sf_top_level_term analysis;
+		// Instantiate analysis
+		auto &analysis = context.getAnalysis<souffle::Sf_top_level_term>(root, debug);
 
-		// fill in facts
-		framework::extractFacts(analysis, root);
+		// Get target node ID for which to check -> the root node
+		int targetID = 0;
 
-		// print debug information
-		if (debug) analysis.dumpInputs();
+		// Get result
+		auto &resultRel = analysis.rel_TopLevel;
 
-		// run analysis
-		analysis.run();
-
-		// print debug information
-		if (debug) analysis.dumpOutputs();
-
-		// read result
-		auto& rel = analysis.rel_TopLevel;
-		bool result = rel.size() && rel.contains(0);
-		if (!result) analysis.dumpOutputs();
-		return result;
+		return resultRel.size() != 0 && resultRel.contains(targetID);
 	}
 
 	/**
 	 * Get exit points from a given lambda function
 	 */
-	std::vector<core::ReturnStmtAddress> performExitPointAnalysis(const core::LambdaPtr& rootLambda, bool debug)
+	std::set<core::ReturnStmtAddress> performExitPointAnalysis(Context& context, const core::LambdaPtr& rootLambda, bool debug)
 	{
+		{
 		// instantiate the analysis
 		souffle::Sf_exit_point_analysis analysis;
 
@@ -134,15 +116,19 @@ namespace datalog {
 		if (debug) analysis.dumpOutputs();
 
 		// produces result
-		std::vector<core::ReturnStmtAddress> res;
+		std::set<core::ReturnStmtAddress> res;
 		for(const auto& cur : analysis.rel_ExitPoints) {
-			res.push_back(index[cur[0]]);
+			res.insert(index[cur[0]]);
 		}
 		return res;
+
+		}
+
+
 	}
 
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var, bool debug)
+	core::VariableAddress getDefinitionPoint(Context& context, const core::VariableAddress& var, bool debug)
 	{
 		// instantiate the analysis
 		souffle::Sf_definition_point analysis;
@@ -185,7 +171,7 @@ namespace datalog {
 		return pos->second;
 	}
 
-	bool happensBefore(const core::StatementAddress& a, const core::StatementAddress& b) {
+	bool happensBefore(Context &context, const core::StatementAddress& a, const core::StatementAddress& b) {
 		static const bool debug = false;
 		assert_eq(a.getRootNode(), b.getRootNode());
 

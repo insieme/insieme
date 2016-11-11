@@ -51,7 +51,8 @@ namespace framework {
 	void checkForFailures(souffle::Program& analysis) {
 
 		auto failures = analysis.getRelation("D474L06_utils_failure_dl_failure");
-		assert_true(failures) << "Failure relation in analysis not found!";
+		if(!failures)
+			return;
 
 		// extract failure messages
 		std::vector<std::string> msgs;
