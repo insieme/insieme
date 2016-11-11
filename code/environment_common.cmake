@@ -135,10 +135,12 @@ if(MSVC)
 	#add_custom_target(insieme_all_files  SOURCES ${insieme_all_files})
 
 	# integration test file completion
-	file(GLOB_RECURSE insieme_integration_test_files
-		../test/*.h ../test/*.hpp ../test/*.inc ../test/*.def
-		../test/*.c ../test/*.cpp ../test/*.cc ../test/*.cxx
-		../test/*.ir
-	)
-	add_custom_target(insieme_integration_test_files SOURCES ${insieme_integration_test_files})
+	if(NOT TARGET insieme_integration_test_files)
+		file(GLOB_RECURSE insieme_integration_test_files
+			../test/*.h ../test/*.hpp ../test/*.inc ../test/*.def
+			../test/*.c ../test/*.cpp ../test/*.cc ../test/*.cxx
+			../test/*.ir
+		)
+		add_custom_target(insieme_integration_test_files SOURCES ${insieme_integration_test_files})
+	endif()
 endif()
