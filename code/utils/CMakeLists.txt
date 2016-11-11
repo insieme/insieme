@@ -13,7 +13,7 @@ insieme_glob_headers(insieme_utils_incs include)
 #include_directories(include)
 
 # build the utils library
-add_library(insieme_utils ${LINKING_TYPE} ${insieme_utils_srcs} )
+add_library(insieme_utils ${LINKING_TYPE} ${insieme_utils_srcs} ${insieme_utils_incs})
 target_include_directories(insieme_utils PUBLIC include)
 # required for generating import libraries (".lib") in Windows for DLL linking
 if(MSVC)

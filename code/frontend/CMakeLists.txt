@@ -33,7 +33,7 @@ if(NOT MSVC)
 endif()
 
 # build the frontend library
-add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${generate_builtins_generated_files} )
+add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} ${generate_builtins_generated_files})
 target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_dir})
 target_include_directories(insieme_frontend PUBLIC ${generate_builtins_output_dir_base}/include)
 

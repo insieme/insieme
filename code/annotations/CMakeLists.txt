@@ -6,11 +6,11 @@ message(STATUS "========== configure annotations =============")
 cmake_minimum_required(VERSION 3.2)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
-file(GLOB_RECURSE insieme_annotations_srcs 	src/*.cpp )
+file(GLOB_RECURSE insieme_annotations_srcs src/*.cpp)
 insieme_glob_headers(insieme_annotations_incs include)
 
 # Build the annotations library
-add_library(insieme_annotations ${LINKING_TYPE} ${insieme_annotations_srcs} )
+add_library(insieme_annotations ${LINKING_TYPE} ${insieme_annotations_srcs} ${insieme_annotations_incs})
 target_include_directories(insieme_annotations PUBLIC ${insieme_annotations_include_dir})
 target_link_libraries(insieme_annotations insieme_core)
 target_link_libraries(insieme_annotations insieme_utils)

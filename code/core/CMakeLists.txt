@@ -11,6 +11,8 @@ insieme_glob_headers(insieme_core_incs 	include)
 file(GLOB_RECURSE insieme_core_yy src/*.y src/*.yy )
 file(GLOB_RECURSE insieme_core_ll src/*.l src/*.ll )
 
+set(insieme_core_srcs ${insieme_core_srcs} ${insieme_core_yy} ${insieme_core_ll})
+
 # automatically run the script for generating IRBuilder interface
 set(builderbuilder_script_dir ${insieme_code_dir}/core)
 set(builderbuilder_output_dir ${CMAKE_CURRENT_BINARY_DIR}/generated)
@@ -97,7 +99,7 @@ endif()
 # =============================================  build insieme core .so  =====================================
 
 # Build the core library
-add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${builderbuilder_generated_files} ${FLEX_OUTPUT} ${BISON_OUTPUT})
+add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${builderbuilder_generated_files} ${FLEX_OUTPUT} ${BISON_OUTPUT})
 target_include_directories(insieme_core PUBLIC ${insieme_core_include_dir} )
 target_include_directories(insieme_core PUBLIC ${builderbuilder_output_dir}/include)
 target_include_directories(insieme_core PRIVATE ${FLEX_OUTPUT_PATH})

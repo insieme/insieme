@@ -130,4 +130,15 @@ if(MSVC)
 		set(Boost_USE_STATIC_RUNTIME ON)
 	endif()
 
+	# insieme file completion
+	#file(GLOB_RECURSE insieme_all_files *.h *.hpp *.inc *.def *.c *.cpp *.cc *.cxx *.ir *.y *.l *.dl *.hs)
+	#add_custom_target(insieme_all_files  SOURCES ${insieme_all_files})
+
+	# integration test file completion
+	file(GLOB_RECURSE insieme_integration_test_files
+		../test/*.h ../test/*.hpp ../test/*.inc ../test/*.def
+		../test/*.c ../test/*.cpp ../test/*.cc ../test/*.cxx
+		../test/*.ir
+	)
+	add_custom_target(insieme_integration_test_files SOURCES ${insieme_integration_test_files})
 endif()

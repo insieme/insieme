@@ -10,7 +10,7 @@ file(GLOB_RECURSE insieme_driver_srcs	src/*.cpp )
 insieme_glob_headers(insieme_driver_incs include)
 
 # Build the driver library
-add_library(insieme_driver ${LINKING_TYPE} ${insieme_driver_srcs})
+add_library(insieme_driver ${LINKING_TYPE} ${insieme_driver_srcs} ${insieme_driver_incs})
 target_include_directories(insieme_driver PUBLIC ${insieme_driver_include_dir} )
 
 # lookup Boost library
@@ -40,7 +40,7 @@ foreach(exec_file ${executables})
 	get_filename_component(exec_name ${exec_file} NAME_WE)
 
 	# Build driver executable
-	add_executable( ${exec_name} ${exec_file} ${insieme_driver_defs})
+	add_executable(${exec_name} ${exec_file} ${insieme_driver_defs})
 	#target drivers depends on all driver
 	add_dependencies(drivers ${exec_name})
 
