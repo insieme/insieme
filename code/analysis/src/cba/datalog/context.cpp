@@ -51,21 +51,31 @@ namespace datalog {
 	}
 
 
-	void Context::runAnalysis(souffle::Program& prog, const core::NodePtr& root) {
+	void Context::runAnalysis(souffle::Program& analysis, const core::NodePtr& root, bool debug) {
 
 		auto& nodeIndex = nodeIndexes[root];
 		nodeIndex.clear();
 
 		// export facts
-		framework::extractAddressFacts(prog, root, [&](const core::NodeAddress& addr, int id) {
+		framework::extractAddressFacts(analysis, root, [&](const core::NodeAddress& addr, int id) {
 			if (auto expr = addr.isa<core::ExpressionAddress>()) nodeIndex[expr] = id;
-		});
+		}, debug);
+
+		if (debug) {
+			std::cout << "-------- Input relations: --------" << std::endl;
+			analysis.dumpInputs();
+		}
 
 		// run the analysis
-		prog.run();
+		analysis.run();
+
+		if (debug) {
+			std::cout << std::endl << "-------- Output relations: --------" << std::endl;
+			analysis.dumpOutputs();
+		}
 
 		// check for failures in analysis
-		framework::checkForFailures(prog);
+		framework::checkForFailures(analysis);
 	}
 
 } // end namespace datalog

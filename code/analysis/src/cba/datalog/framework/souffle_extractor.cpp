@@ -50,12 +50,17 @@ namespace framework {
 
 		class Inserter {
 			souffle::Program *analysis;
+			bool debug = false;
 
 		public:
 			Inserter() {}
 
 			void setAnalysis(souffle::Program &analysis) {
 				this->analysis = &analysis;
+			}
+
+			void setDebug(bool debug) {
+				this->debug = debug;
 			}
 
 			void fill(souffle::tuple&) {}
@@ -78,9 +83,14 @@ namespace framework {
 
 			template<typename ... Args>
 			void insert(const std::string& relationName, const Args& ... args ) {
+
+				if (debug) {
+					std::cout << "Inserting " << relationName << "  ";
+					print(args...);
+				}
+
 				// get relation
 				auto rel = analysis->getRelation(relationName);
-				// std::cout << "Inserting " << relationName; print(args...);
 				if (!rel) return;
 
 				// insert data
@@ -93,15 +103,17 @@ namespace framework {
 
 	} // end anonymous namespace
 
-	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer) {
+	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer, bool debug) {
 		FactExtractor<core::Pointer,Inserter> extractor(nodeIndexer);
 		extractor.getInserter().setAnalysis(analysis);
+		extractor.getInserter().setDebug(debug);
 		return extractor.visit(root);
 	}
 
-	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer) {
+	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer, bool debug) {
 		FactExtractor<core::Address,Inserter> extractor(nodeIndexer);
 		extractor.getInserter().setAnalysis(analysis);
+		extractor.getInserter().setDebug(debug);
 		return extractor.visit(core::NodeAddress(root));
 	}
 

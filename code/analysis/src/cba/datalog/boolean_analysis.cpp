@@ -34,9 +34,9 @@
  * regarding third party software licenses.
  */
 
-#include "souffle/gen/boolean_analysis.h"
-
 #include "insieme/analysis/cba/datalog/boolean_analysis.h"
+
+#include "souffle/gen/boolean_analysis.h"
 
 #include "insieme/analysis/cba/datalog/framework/souffle_extractor.h"
 #include "insieme/analysis/cba/datalog/framework/toolbox.h"
@@ -54,35 +54,40 @@ namespace datalog {
 	};
 
 	Result getBoolValue(Context& context, const core::ExpressionAddress& expr) {
-//		const bool debug = true;
+		const bool debug = true;
 
-		// instantiate the analysis
-		souffle::Sf_boolean_analysis& analysis = context.getAnalysis<souffle::Sf_boolean_analysis>(expr.getRootNode());
+		// Instantiate the analysis
+		auto& analysis = context.getAnalysis<souffle::Sf_boolean_analysis>(expr.getRootNode(), debug);
 
+		// Get ID of target expression
 		int targetID = context.getNodeID(expr);
 
-		// read result
-		auto& result = analysis.rel_result;
+		// Read result
+		auto& resultRelation = analysis.rel_result;
+		auto resultRelationContents = resultRelation.template equalRange<0>({{targetID,0}});
 
-		const auto range = result.template equalRange<0>({{targetID,0}});
+		if (debug) {
 
-		std::cout << "-------- Result: --------\n";
-		for(const auto& cur : range) {
-			std::cout << cur << "\n";
+			std::cout << std::endl << "-------- Results: --------" << std::endl;
+			for(const auto& cur : resultRelationContents)
+				std::cout << cur << std::endl;
 
+			if (resultRelationContents.empty())
+				std::cout << "INCOMPLETE ANALYSIS!!!!" << std::endl;
+
+		} else {
+			assert_false(resultRelationContents.empty()) << "Incomplete analysis!";
 		}
 
-		// assert_le(1, result.size()) << "Incomplete analysis!";
-		if (range.empty()) std::cout << "INCOMPLETE ANALYSIS!!!!" << std::endl;
+		// Get possible result value
+		auto possibleResult = (*resultRelationContents.begin())[1];
 
-		// if it is true or false => we don't know
-		auto b = range.begin();
-		++b; /* CLEAN UP THIS ITERATOR PART */
-		if (b != range.end()) return TRUE_OR_FALSE;
+		// Check if there's more than one value ( = can't tell result)
+		if (++resultRelationContents.begin() != resultRelationContents.end())
+			return TRUE_OR_FALSE;
 
-		// read the single entry in the result set
-		auto value = (*range.begin())[1];
-		return (value) ? TRUE : FALSE;
+		// Only one value: Return result
+		return (possibleResult) ? TRUE : FALSE;
 	}
 
 

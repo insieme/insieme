@@ -37,7 +37,6 @@
 #pragma once
 
 #include <map>
-#include <memory>
 #include <typeindex>
 
 #include "insieme/analysis/cba/datalog/framework/forward_decls.h"
@@ -92,45 +91,52 @@ namespace datalog {
 		}
 
 		template<typename Analysis>
-		Analysis& getAnalysis(const core::NodePtr& root) {
+		Analysis& getAnalysis(const core::NodePtr& root, bool debug = false) {
 			auto& entry = cache[typeid(Analysis)];
 
-			// check whether this is a hit
+			// Check whether this is a hit
 			if (entry.analysis && *entry.root == *root) {
-				std::cout << "Cache HITTT!!!\n";
+
+				if (debug)
+					std::cout << "Cache hit, returning existing analysis!" << std::endl;
+
 				return static_cast<Analysis&>(*entry.analysis);
 			}
 
-			std::cout << "Cache miss!!!\n";
-
-			// we have to produce a new analysis instance
+			// We have to produce a new analysis instance
 			entry.clear();
 			entry.analysis = new Analysis();
 			entry.root = root;
 
-			// execute the analyis
-			runAnalysis(*entry.analysis, root);
+			if (debug)
+				std::cout << "Cache miss, running new analysis now";
 
-			// done
+			// Execute the analyis
+			runAnalysis(*entry.analysis, root, debug);
+
+			// Done
 			return getAnalysis<Analysis>(root);
 		}
 
 		int getNodeID(const core::ExpressionAddress& expr) const {
 
+			// Search for root node of this expr first
 			auto pos = nodeIndexes.find(expr.getRootNode());
 			assert_true(pos != nodeIndexes.end())
 				<< "Trying to access ID of node not previously indexed!";
 
+			// Now search for the expr itself
 			auto res_pos = (pos->second).find(expr);
 			assert_true(res_pos != pos->second.end())
 				<< "Trying to access ID of node not previously indexed!";
 
+			// Return the ID for expr given at traversal from it's root node
 			return res_pos->second;
 		}
 
 	private:
 
-		void runAnalysis(souffle::Program& prog, const core::NodePtr& root);
+		void runAnalysis(souffle::Program& analysis, const core::NodePtr& root, bool debug);
 
 	};
 
