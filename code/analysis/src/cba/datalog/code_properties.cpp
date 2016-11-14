@@ -113,7 +113,7 @@ namespace datalog {
 				continue;
 			}
 
-			auto rsa = context.getExprForID(lambda.getRootNode(), returnStmtID, debug).as<core::ReturnStmtAddress>();
+			auto rsa = context.getNodeForID(lambda.getRootNode(), returnStmtID, debug).as<core::ReturnStmtAddress>();
 
 			// Crop addresses to start at given lambda
 			rsa = core::cropRootNode(rsa, lambda);
@@ -122,51 +122,34 @@ namespace datalog {
 		}
 
 		return res;
-
 	}
 
 
 	core::VariableAddress getDefinitionPoint(Context& context, const core::VariableAddress& var, bool debug)
 	{
-		// instantiate the analysis
-		souffle::Sf_definition_point analysis;
+		// Instantiate analysis
+		auto &analysis = context.getAnalysis<souffle::Sf_definition_point>(var.getRootNode(), debug);
 
-		int targetID = 0;
-		std::map<int,core::VariableAddress> variables;
+		// Get ID for variable we are interested in
+		int targetVariableID = context.getNodeID(var);
 
-		// fill in facts
-		framework::extractAddressFacts(analysis, var.getRootNode(), [&](const core::NodeAddress& addr, int id) {
-			if (!addr.isa<core::VariableAddress>()) return;
-			auto cur = addr.as<core::VariableAddress>();
-			if (cur == var) targetID = id;
-			variables[id] = cur;
-		});
+		// Get result
+		auto &resultRel = analysis.rel_Result;
 
-		// add targeted node
-		analysis.rel_target.insert(targetID);
+		auto defPoint = resultRel.template equalRange<0>({{targetVariableID,0}});
 
-		// print debug information
-		if (debug) analysis.dumpInputs();
+		if (defPoint.empty()) {
+			if (debug)
+				std::cout << "Debug: Could not find definition point for variable " << var << "...";
+			return {};
+		}
 
-		// run analysis
-		analysis.run();
+		auto defPointID = (*defPoint.begin())[1];
 
-		// print debug information
-		if (debug) analysis.dumpOutputs();
+		assert_true(++defPoint.begin() == defPoint.end())
+		                << "Analysis failed: Multiple definition points found for var " << var << "!";
 
-		// read result
-		auto& result = analysis.rel_DefinitionPointResult;
-		if (result.empty()) return {};
-
-		assert_le(result.size(), 1) << "Invalid result - multiple definition points!";
-
-		auto definitionID = (*result.begin())[0];
-
-		auto pos = variables.find(definitionID);
-		assert_true(pos != variables.end()) << "Invalid result - referencing unknown address!";
-
-		// return definition point
-		return pos->second;
+		return context.getNodeForID(var.getRootNode(), defPointID, debug).as<core::VariableAddress>();
 	}
 
 	bool happensBefore(Context &context, const core::StatementAddress& a, const core::StatementAddress& b) {

@@ -139,7 +139,7 @@ namespace datalog {
 			return res_pos->second;
 		}
 
-		const core::NodeAddress &getExprForID(const core::NodePtr &root, int id, bool debug = false) const {
+		const core::NodeAddress &getNodeForID(const core::NodePtr &root, int id, bool debug = false) const {
 
 			if (debug) {
 				std::cout << "Trying to get expression for ID " << id
