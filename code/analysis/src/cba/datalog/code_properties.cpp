@@ -152,37 +152,37 @@ namespace datalog {
 		return context.getNodeForID(var.getRootNode(), defPointID, debug).as<core::VariableAddress>();
 	}
 
-	bool happensBefore(Context &context, const core::StatementAddress& a, const core::StatementAddress& b) {
-		static const bool debug = false;
+
+	bool happensBefore(Context &context, const core::StatementAddress& a, const core::StatementAddress& b, bool debug)
+	{
 		assert_eq(a.getRootNode(), b.getRootNode());
 
-		// instantiate the analysis
-		souffle::Sf_happens_before_analysis analysis;
+		// Instantiate analysis
+		auto &analysis = context.getAnalysis<souffle::Sf_happens_before_analysis>(a.getRootNode(), debug);
 
-		int startID = 0;
-		int endID = 0;
+		// Get ID of both statements
+		int targetStartID = context.getNodeID(a);
+		int targetEndID = context.getNodeID(b);
 
-		// fill in facts
-		framework::extractAddressFacts(analysis, a.getRootNode(), [&](const core::NodeAddress& addr, int id) {
-			if (addr == a) startID = id;
-			if (addr == b) endID = id;
-		});
+		// Get result
+		auto &resultRel = analysis.rel_Result;
 
-		// add start and end
-		analysis.rel_start.insert(startID);
-		analysis.rel_end.insert(endID);
+		// Filter for first value in result set
+		auto tmp = resultRel.template equalRange<0>({{targetStartID,0}});
 
-		// print debug information
-		if (debug) analysis.dumpInputs();
+		// Filter for second value in result set
+		for (auto it = tmp.begin(); it != tmp.end(); ++it) {
+			// Found target end
+			if ((*it)[1] == targetEndID) {
+				// Check result size
+				if (++it == tmp.end() || (*it)[1] != targetEndID)
+					return true; // Only value, good!
+				assert_fail() << "Happens-before analysis seems to be broken!";
+				return false;
+			}
+		}
 
-		// run analysis
-		analysis.run();
-
-		// print debug information
-		if (debug) analysis.dumpOutputs();
-
-		// read result
-		return !analysis.rel_result.empty();
+		return false;
 	}
 
 } // end namespace datalog

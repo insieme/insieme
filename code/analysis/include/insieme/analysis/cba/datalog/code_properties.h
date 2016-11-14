@@ -69,7 +69,7 @@ namespace datalog {
 	/**
 	 * Determines whether the statement a happens before statement b.
 	 */
-	bool happensBefore(Context &context, const core::StatementAddress& a, const core::StatementAddress& b);
+	bool happensBefore(Context &context, const core::StatementAddress& a, const core::StatementAddress& b, bool debug = false);
 
 } // end namespace datalog
 } //'end namespace cba
