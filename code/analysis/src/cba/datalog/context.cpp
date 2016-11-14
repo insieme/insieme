@@ -54,11 +54,14 @@ namespace datalog {
 	void Context::runAnalysis(souffle::Program& analysis, const core::NodePtr& root, bool debug) {
 
 		auto& nodeIndex = nodeIndexes[root];
+		auto& idIndex = idIndexes[root];
 		nodeIndex.clear();
+		idIndex.clear();
 
 		// export facts
 		framework::extractAddressFacts(analysis, root, [&](const core::NodeAddress& addr, int id) {
-			if (auto expr = addr.isa<core::ExpressionAddress>()) nodeIndex[expr] = id;
+			nodeIndex[addr] = id;
+			idIndex[id] = addr;
 		}, debug);
 
 		if (debug) {

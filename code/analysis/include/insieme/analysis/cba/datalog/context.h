@@ -68,7 +68,8 @@ namespace datalog {
 
 		std::map<std::type_index,entry> cache;
 
-		std::map<core::NodePtr,std::map<core::ExpressionAddress,int>> nodeIndexes;
+		std::map<core::NodePtr,std::map<core::NodeAddress,int>> nodeIndexes;
+		std::map<core::NodePtr,std::map<int,core::NodeAddress>> idIndexes;
 
 		Context() {}
 
@@ -118,7 +119,7 @@ namespace datalog {
 			return getAnalysis<Analysis>(root);
 		}
 
-		int getNodeID(const core::ExpressionAddress& expr, bool debug = false) const {
+		int getNodeID(const core::NodeAddress& expr, bool debug = false) const {
 
 			if (debug) {
 				std::cout << "Trying to get node ID for " << expr << "..." << std::endl;
@@ -127,15 +128,36 @@ namespace datalog {
 			// Search for root node of this expr first
 			auto pos = nodeIndexes.find(expr.getRootNode());
 			assert_true(pos != nodeIndexes.end())
-				<< "Trying to access ROOT of node not previously indexed!";
+			                << "Trying to access ROOT of node not previously indexed!";
 
 			// Now search for the expr itself
 			auto res_pos = (pos->second).find(expr);
 			assert_true(res_pos != pos->second.end())
-				<< "Trying to access ID of node not previously indexed!";
+			                << "Trying to access ID of node not previously indexed!";
 
 			// Return the ID for expr given at traversal from it's root node
 			return res_pos->second;
+		}
+
+		const core::NodeAddress &getExprForID(const core::NodePtr &root, int id, bool debug = false) const {
+
+			if (debug) {
+				std::cout << "Trying to get expression for ID " << id
+				          << " for root node " << root << "..." << std::endl;
+			}
+
+			// Search for given root node first
+			auto pos = idIndexes.find(root);
+			assert_true(pos != idIndexes.end())
+			                << "Trying to access a ROOT node that is not indexed!";
+
+			// Now search for the given ID
+			auto res_pos = (pos->second).find(id);
+			assert_true(res_pos != pos->second.end())
+			                << "Trying to find expr for ID " << id << ", which is not indexed!";
+
+			// Return the indexed expression
+			return  res_pos->second;
 		}
 
 	private:

@@ -274,11 +274,13 @@ namespace datalog {
 				"}"
 		);
 
-		visitDepthFirstOnce(t, [&](const core::LambdaPtr &lambda) {
+		visitDepthFirstOnce(core::NodeAddress(t), [&](const core::LambdaAddress &lambda) {
 			auto results = performExitPointAnalysis(ctxt, lambda);
 
 			std::set<core::ReturnStmtAddress> control;
-			visitDepthFirstOnce(core::NodeAddress(lambda), [&](const core::ReturnStmtAddress &rsa) {
+			visitDepthFirstOnce(lambda, [&](const core::ReturnStmtAddress &returnStmt) {
+				auto rsa = core::cropRootNode(returnStmt, lambda);
+
 				if (rsa.getDepth() > 3)
 					return; /* These are returns of sub-lambdas! */
 				control.insert(rsa);

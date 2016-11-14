@@ -59,7 +59,7 @@ namespace datalog {
 	/**
 	 * Get exit points from a given lambda function
 	 */
-	std::set<core::ReturnStmtAddress> performExitPointAnalysis(Context &context, const core::LambdaPtr& rootLambda, bool debug = false);
+	std::set<core::ReturnStmtAddress> performExitPointAnalysis(Context &context, const core::LambdaAddress& lambda, bool debug = false);
 
 	/**
 	 * Get definition point for a certain variable if there is one

@@ -38,6 +38,8 @@
 
 #include "insieme/analysis/cba/datalog/framework/souffle_extractor.h"
 
+#include "insieme/core/ir_address.h"
+
 #include "souffle/gen/polymorph_types_analysis.h"
 #include "souffle/gen/top_level_term.h"
 #include "souffle/gen/exit_point_analysis.h"
@@ -89,41 +91,37 @@ namespace datalog {
 	/**
 	 * Get exit points from a given lambda function
 	 */
-	std::set<core::ReturnStmtAddress> performExitPointAnalysis(Context& context, const core::LambdaPtr& rootLambda, bool debug)
+	std::set<core::ReturnStmtAddress> performExitPointAnalysis(Context& context, const core::LambdaAddress& lambda, bool debug)
 	{
-		{
-		// instantiate the analysis
-		souffle::Sf_exit_point_analysis analysis;
+		// Instantiate analysis
+		auto &analysis = context.getAnalysis<souffle::Sf_exit_point_analysis>(lambda.getRootNode(), debug);
 
-		// Create a map which maps node ID to IR node address (only return statements)
-		std::map<int,core::ReturnStmtAddress> index;
+		// Get ID for given Lambda
+		int targetLambdaID = context.getNodeID(lambda);
 
-		// fill in facts
-		int id = framework::extractAddressFacts(analysis, rootLambda, [&](const core::NodeAddress& node, int id) {
-			if (auto ret = node.isa<core::ReturnStmtAddress>()) index[id] = ret;
-		});
+		// Get result
+		auto &resultRel = analysis.rel_ExitPoints;
 
-		// Add the lambda which we are interested in as 'top level'
-		analysis.rel_TopLevelLambda.insert(id);
-
-		// print debug information
-		if (debug) analysis.dumpInputs();
-
-		// run analysis
-		analysis.run();
-
-		// print debug information
-		if (debug) analysis.dumpOutputs();
-
-		// produces result
+		// Now map the exit point IDs from root Lambda to actual ReturnStmts
 		std::set<core::ReturnStmtAddress> res;
-		for(const auto& cur : analysis.rel_ExitPoints) {
-			res.insert(index[cur[0]]);
+
+		for (const auto &cur : resultRel) {
+			int lambdaID = cur[0];
+			int returnStmtID = cur[1];
+
+			if (lambdaID != targetLambdaID) {
+				continue;
+			}
+
+			auto rsa = context.getExprForID(lambda.getRootNode(), returnStmtID, debug).as<core::ReturnStmtAddress>();
+
+			// Crop addresses to start at given lambda
+			rsa = core::cropRootNode(rsa, lambda);
+
+			res.insert(rsa);
 		}
+
 		return res;
-
-		}
-
 
 	}
 
