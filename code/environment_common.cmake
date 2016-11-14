@@ -21,6 +21,7 @@ list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
 #find them in CMAKE_MODULE_PATH
 include(default_library_configuration)
 include(insieme_find_package)
+include(msvc_file_completion)
 
 # -------------------------------------------------------------- define some code locations
 
@@ -128,19 +129,5 @@ if(MSVC)
 		set(Boost_USE_STATIC_RUNTIME OFF) # default: platform-dependent
 	else()
 		set(Boost_USE_STATIC_RUNTIME ON)
-	endif()
-
-	# insieme file completion
-	#file(GLOB_RECURSE insieme_all_files *.h *.hpp *.inc *.def *.c *.cpp *.cc *.cxx *.ir *.y *.l *.dl *.hs)
-	#add_custom_target(insieme_all_files  SOURCES ${insieme_all_files})
-
-	# integration test file completion
-	if(NOT TARGET insieme_integration_test_files)
-		file(GLOB_RECURSE insieme_integration_test_files
-			../test/*.h ../test/*.hpp ../test/*.inc ../test/*.def
-			../test/*.c ../test/*.cpp ../test/*.cc ../test/*.cxx
-			../test/*.ir
-		)
-		add_custom_target(insieme_integration_test_files SOURCES ${insieme_integration_test_files})
 	endif()
 endif()

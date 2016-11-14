@@ -13,6 +13,8 @@ insieme_glob_headers(insieme_driver_incs include)
 add_library(insieme_driver ${LINKING_TYPE} ${insieme_driver_srcs} ${insieme_driver_incs})
 target_include_directories(insieme_driver PUBLIC ${insieme_driver_include_dir} )
 
+msvc_file_completion(insieme_driver_tests test c)
+
 # lookup Boost library
 insieme_find_package(NAME Boost COMPONENTS program_options)
 target_include_directories(insieme_driver SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})

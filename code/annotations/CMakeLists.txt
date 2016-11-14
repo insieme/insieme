@@ -15,6 +15,8 @@ target_include_directories(insieme_annotations PUBLIC ${insieme_annotations_incl
 target_link_libraries(insieme_annotations insieme_core)
 target_link_libraries(insieme_annotations insieme_utils)
 
+msvc_file_completion(insieme_annotations_tests test h def)
+
 #insieme_common is a header-only target
 target_link_libraries(insieme_annotations insieme_common)
 

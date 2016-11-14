@@ -37,6 +37,8 @@ add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_
 target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_dir})
 target_include_directories(insieme_frontend PUBLIC ${generate_builtins_output_dir_base}/include)
 
+msvc_file_completion(insieme_frontend_tests test c cpp h)
+
 # lookup Boost library
 insieme_find_package(NAME Boost COMPONENTS serialization filesystem system program_options)
 target_include_directories(insieme_frontend SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
