@@ -49,78 +49,65 @@ namespace analysis {
 namespace cba {
 namespace datalog {
 
-	IntegerSet getIntegerValues(Context&, const core::ExpressionAddress& expr) {
+	IntegerSet getIntegerValues(Context& context, const core::ExpressionAddress& expr) {
 		const bool debug = false;
 
 		// instantiate the analysis
-		souffle::Sf_integer_analysis analysis;
+		auto &analysis = context.getAnalysis<souffle::Sf_integer_analysis>(expr.getRootNode(), debug);
 
-		int targetID = 0;
+		// Get ID for variable we are interested in (if it's there)
+		int targetExprID = context.getNodeID(expr, debug);
 
-		// fill in facts
-		framework::extractAddressFacts(analysis, expr.getRootNode(), [&](const core::NodeAddress& addr, int id) {
-			if (addr == expr) targetID = id;
-		});
+		assert_ne(targetExprID, -1) << "Integer analysis incomplete (target expr not found)!";
 
-		// add targeted node
-		analysis.rel_target_expr.insert(targetID);
+		// Get result
+		auto &resultRel = analysis.rel_Result;
 
-		// print debug information
-		if (debug) analysis.dumpInputs();
+		auto filtered = resultRel.template equalRange<0>({{targetExprID,0,0}});
 
-		// run analysis
-		analysis.run();
+		assert_false(filtered.empty()) << "Integer analysis incomplete (target expr not found)!";
 
-		// print debug information
-		if (debug) analysis.dumpOutputs();
-
-		// check for failures in analysis
-		framework::checkForFailures(analysis);
-
-		// read result
-		auto& not_defined = analysis.rel_result_is_not_defined;
-		auto& values = analysis.rel_result_value;
-
-		// check whether the result is valid
-		assert_lt(0, not_defined.size() + values.size()) << "Incomplete analysis!";
-
-		// check whether the result is any integer
-		if (!not_defined.empty()) return IntegerSet::getUniversal();
-
-		// extract values
+		// Read values. Return the universal integer set if an undefined value is encountered
 		IntegerSet res;
-		for(const auto& cur : values) {
-			res.insert(cur[0]);
+		for (auto it = filtered.begin(); it != filtered.end(); ++it) {
+			const auto &defined = (*it)[1];
+			const auto &value = (*it)[2];
+
+			if (!defined)
+				return IntegerSet::getUniversal();
+
+			res.insert(value);
 		}
+
 		return res;
 	}
 
-	bool isIntegerConstant(Context& c, const core::ExpressionAddress& expr) {
-		return getIntegerValues(c, expr).size() == 1;
+	bool isIntegerConstant(Context& context, const core::ExpressionAddress& expr) {
+		return getIntegerValues(context, expr).size() == 1;
 	}
 
 
 
 	namespace integer {
 
-		bool areEqual(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-			auto resA = getIntegerValues(c, a);
+		bool areEqual(Context& context, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+			auto resA = getIntegerValues(context, a);
 			assert_ne(0, resA.size());
 
 			/* Return early to save computation time */
 			if (resA.size() != 1)
 				return false;
 
-			auto resB = getIntegerValues(c, b);
+			auto resB = getIntegerValues(context, b);
 			assert_ne(0, resB.size());
 
 			/* Both sides are constants and have equal value */
 			return resA == resB;
 		}
 
-		bool mayEqual(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-			auto resA = getIntegerValues(c, a);
-			auto resB = getIntegerValues(c, b);
+		bool mayEqual(Context& context, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+			auto resA = getIntegerValues(context, a);
+			auto resB = getIntegerValues(context, b);
 
 			assert_ne(0, resA.size());
 			assert_ne(0, resB.size());
@@ -133,9 +120,9 @@ namespace datalog {
 			return false;
 		}
 
-		bool areNotEqual(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-			auto resA = getIntegerValues(c, a);
-			auto resB = getIntegerValues(c, b);
+		bool areNotEqual(Context& context, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+			auto resA = getIntegerValues(context, a);
+			auto resB = getIntegerValues(context, b);
 
 			assert_ne(0, resA.size());
 			assert_ne(0, resB.size());
@@ -148,9 +135,9 @@ namespace datalog {
 			return true;
 		}
 
-		bool mayNotEqual(Context& c, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-			auto resA = getIntegerValues(c, a);
-			auto resB = getIntegerValues(c, b);
+		bool mayNotEqual(Context& context, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+			auto resA = getIntegerValues(context, a);
+			auto resB = getIntegerValues(context, b);
 
 			assert_ne(0, resA.size());
 			assert_ne(0, resB.size());

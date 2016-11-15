@@ -46,19 +46,19 @@ namespace analysis {
 namespace cba {
 namespace datalog {
 
-	IntegerSet getIntegerValues(Context&, const core::ExpressionAddress&);
+	IntegerSet getIntegerValues(Context& context, const core::ExpressionAddress&);
 
-	bool isIntegerConstant(Context&, const core::ExpressionAddress&);
+	bool isIntegerConstant(Context& context, const core::ExpressionAddress&);
 
 	namespace integer {
 
-		bool areEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+		bool areEqual(Context& context, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
 
-		bool mayEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+		bool mayEqual(Context& context, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
 
-		bool areNotEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+		bool areNotEqual(Context& context, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
 
-		bool mayNotEqual(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+		bool mayNotEqual(Context& context, const core::ExpressionAddress& a, const core::ExpressionAddress& b);
 
 	}
 

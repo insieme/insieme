@@ -49,7 +49,8 @@ namespace cba {
 	template<>
 	struct getDefinitionPointImpl<DatalogEngine> {
 		core::VariableAddress operator()(const core::VariableAddress& var) {
-			return datalog::getDefinitionPoint(var);
+			static datalog::Context ctxt;
+			return datalog::getDefinitionPoint(ctxt, var);
 		}
 	};
 
