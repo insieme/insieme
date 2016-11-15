@@ -130,8 +130,8 @@ namespace datalog {
 		// Instantiate analysis
 		auto &analysis = context.getAnalysis<souffle::Sf_definition_point>(var.getRootNode(), debug);
 
-		// Get ID for variable we are interested in
-		int targetVariableID = context.getNodeID(var);
+		// Get ID for variable we are interested in (if it's there)
+		int targetVariableID = context.getNodeID(var, debug);
 
 		// Get result
 		auto &resultRel = analysis.rel_Result;

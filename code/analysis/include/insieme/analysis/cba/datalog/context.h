@@ -132,8 +132,15 @@ namespace datalog {
 
 			// Now search for the expr itself
 			auto res_pos = (pos->second).find(expr);
-			assert_true(res_pos != pos->second.end())
-			                << "Trying to access ID of node not previously indexed!";
+
+			// If it's not indexed...
+			if(res_pos == pos->second.end()) {
+				if (debug)
+					std::cout << "Warning: Node " << expr
+					          << " not indexed, returning -1...." << std::endl;
+				return -1;
+			}
+
 
 			// Return the ID for expr given at traversal from it's root node
 			return res_pos->second;
