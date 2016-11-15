@@ -44,6 +44,7 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/format.hpp>
+#include <boost/filesystem.hpp>
 
 #include "insieme/core/analysis/region/for_selector.h"
 #include "insieme/core/analysis/region/fun_call_selector.h"
@@ -64,11 +65,11 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/manipulation.h"
 
-#include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/driver/measure/measure.h"
 #include "insieme/driver/measure/dump.h"
 #include "insieme/driver/utils/driver_utils.h"
 #include "insieme/driver/utils/object_file_utils.h"
+#include "insieme/driver/cmd/commandline_options.h"
 
 #include "insieme/frontend/frontend.h"
 
@@ -365,13 +366,18 @@ void resultPrinterFull(const resultType<MetricType, QuantityType>& data, const R
 }
 
 int main(int argc, char** argv) {
+	bool compileOnly = false;
+	frontend::path outFile, dumpIR;
+
 	// Step 1: parse input parameters
-	std::vector<std::string> arguments(argv, argv + argc);
-	cmd::Options options = cmd::Options::parse(arguments);
+	auto parser = driver::cmd::Options::getParser();
+	parser.addFlag(     "compile,c", compileOnly,                          "compilation only");
+	parser.addParameter("outfile,o", outFile,     frontend::path("a.out"), "output file");
+	parser.addParameter("dump-ir",   dumpIR,      frontend::path(),        "dump intermediate representation");
+	auto options = parser.parse(argc, argv);
 
 	// if options are invalid, exit non-zero
 	if(!options.valid) { return 1; }
-
 	// if e.g. help was specified, exit with zero
 	if(options.gracefulExit) { return 0; }
 
@@ -404,7 +410,7 @@ int main(int argc, char** argv) {
 		}
 	}
 	// indicates that a shared object file should be created
-	bool createSharedObject = fs::extension(options.settings.outFile) == ".so";
+	bool createSharedObject = fs::extension(outFile) == ".so";
 
 	// update input files
 	options.job.setFiles(inputs);
@@ -419,11 +425,11 @@ int main(int argc, char** argv) {
 	}));
 
 	// if it is compile only or if it should become an object file => save it
-	if(options.settings.compileOnly || createSharedObject) {
+	if(compileOnly || createSharedObject) {
 		auto res = options.job.toIRTranslationUnit(mgr);
 		std::cout << "Saving object file ...\n";
-		du::saveLib(res, options.settings.outFile);
-		return du::isInsiemeLib(options.settings.outFile) ? 0 : 1;
+		du::saveLib(res, outFile);
+		return du::isInsiemeLib(outFile) ? 0 : 1;
 	}
 
 	std::cout << "Extracting executable ...\n";
@@ -472,9 +478,9 @@ int main(int argc, char** argv) {
 	timer.stop(); LOG(INFO) << timer;
 
 	// dump IR code
-	if(!options.settings.dumpIR.empty()) {
+	if(!dumpIR.empty()) {
 		std::cout << "Dumping intermediate representation ...\n";
-		std::ofstream out(options.settings.dumpIR.string());
+		std::ofstream out(dumpIR.string());
 		out << co::printer::PrettyPrinter(rootPtr, co::printer::PrettyPrinter::PRINT_DEREFS);
 	}
 

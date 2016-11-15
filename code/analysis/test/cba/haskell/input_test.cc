@@ -51,18 +51,18 @@
 #include "insieme/analysis/cba/common/preprocessing.h"
 
 #include "insieme/core/ir_node.h"
+#include "insieme/core/ir_statistic.h"
 #include "insieme/core/checks/full_check.h"
-#include "insieme/core/printer/error_printer.h"
 #include "insieme/core/dump/binary_haskell.h"
 #include "insieme/core/dump/json_dump.h"
-
-#include "insieme/driver/cmd/insiemecc_options.h"
+#include "insieme/core/printer/error_printer.h"
 
 #include "insieme/utils/config.h"
 #include "insieme/utils/gtest_utils.h"
 #include "insieme/utils/name_mangling.h"
 
-#include "insieme/core/ir_statistic.h"
+#include "insieme/driver/cmd/commandline_options.h"
+
 
 using namespace insieme::utils;
 

@@ -39,8 +39,13 @@
 #include <fstream>
 #include <boost/filesystem.hpp>
 
+#include "insieme/utils/logging.h"
+
 #include "insieme/core/tu/ir_translation_unit.h"
 #include "insieme/core/tu/ir_translation_unit_io.h"
+
+#include "insieme/frontend/frontend.h"
+#include "insieme/frontend/utils/file_extensions.h"
 
 namespace insieme {
 namespace driver {
@@ -91,6 +96,39 @@ namespace utils {
 		core::tu::dump(out, unit); // dump the rest
 
 		assert_true(boost::filesystem::exists(file));
+	}
+
+	bool filterInputFiles(core::NodeManager& mgr, insieme::frontend::ConversionJob& job) {
+		std::vector<frontend::path> inputs;
+		std::vector<frontend::path> libs;
+		std::vector<frontend::path> extLibs;
+
+		for(const frontend::path& cur : job.getFiles()) {
+			auto ext = boost::filesystem::extension(cur);
+			if(ext == ".o" || ext == ".so") {
+				if(isInsiemeLib(cur)) {
+					libs.push_back(cur);
+				} else {
+					extLibs.push_back(cur);
+				}
+			} else if (frontend::utils::cExtensions.count(ext) || frontend::utils::cxxExtensions.count(ext)) {
+				inputs.push_back(cur);
+			} else {
+				LOG(ERROR) << "Unrecognized file format: " << cur << "\n";
+				return false;
+			}
+		}
+
+		// update input files
+		job.setFiles(inputs);
+		job.setExtLibs(extLibs);
+
+		// load libraries
+		job.setLibs(::transform(libs, [&](const frontend::path& cur) {
+			std::cout << "Loading " << cur << " ...\n";
+			return loadLib(mgr, cur);
+		}));
+		return true;
 	}
 
 } // end namespace utils

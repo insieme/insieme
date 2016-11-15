@@ -58,7 +58,7 @@
 
 #include "insieme/frontend/frontend.h"
 
-#include "insieme/driver/cmd/insiemecc_options.h"
+#include "insieme/driver/cmd/commandline_options.h"
 #include "insieme/driver/integration/test_step.h"
 
 namespace insieme {
@@ -99,8 +99,7 @@ namespace integration {
 		if(isEnableOpenMP()) { args.push_back("-fopenmp"); }
 		if(isEnableOpenCL()) { args.push_back("-fopencl=1"); args.push_back("-lOpenCL"); }
 
-		driver::cmd::Options options = driver::cmd::Options::parse(args);
-		return options;
+		return driver::cmd::Options::parse(args);;
 	}
 
 

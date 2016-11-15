@@ -46,6 +46,9 @@ namespace tu {
 	class IRTranslationUnit;
 }
 }
+namespace frontend {
+	class ConversionJob;
+}
 namespace driver {
 namespace utils {
 
@@ -73,6 +76,14 @@ namespace utils {
 	 * @param file the target location
 	 */
 	void saveLib(const core::tu::IRTranslationUnit& unit, const boost::filesystem::path& file);
+
+	/**
+	 * Filters the input files in the given conversion job, correctly handling the loading of libraries.
+	 * The passed ConversionJob object will be modified accordingly.
+	 *
+	 * @return whether the files could be filtered correctly.
+	 */
+	bool filterInputFiles(core::NodeManager& mgr, insieme::frontend::ConversionJob& job);
 
 } // end namespace utils
 } // end namespace driver

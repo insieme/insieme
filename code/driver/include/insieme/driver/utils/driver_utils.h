@@ -36,12 +36,14 @@
 
 #pragma once
 
+#include <string>
+
+#include "insieme/utils/compiler/compiler.h"
+
 #include "insieme/core/ir_node.h"
 #include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/backend/backend.h"
-
-#include "insieme/driver/cmd/insiemecc_options.h"
 
 
 namespace insieme {
@@ -77,7 +79,12 @@ namespace utils {
 	//***************************************************************************************
 	//									Backend selection
 	//***************************************************************************************
-	insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const cmd::Options& options);
+	insieme::backend::BackendPtr getBackend(const std::string& backendString, const std::string& dumpOclKernel);
+
+	//***************************************************************************************
+	//									Compiler selection
+	//***************************************************************************************
+	insieme::utils::compiler::Compiler getCompiler(const std::string& backendString, const bool isCpp);
 
 } // end namespace utils
 } // end namespace driver

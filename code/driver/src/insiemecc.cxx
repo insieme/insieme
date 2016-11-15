@@ -34,8 +34,10 @@
  * regarding third party software licenses.
  */
 
+#include <insieme/driver/cmd/commandline_options.h>
 #include <string>
 #include <iomanip>
+#include <boost/filesystem.hpp>
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
@@ -46,7 +48,6 @@
 
 #include "insieme/backend/backend.h"
 
-#include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/driver/utils/driver_utils.h"
 #include "insieme/driver/utils/object_file_utils.h"
 
@@ -60,85 +61,72 @@
 using namespace std;
 using namespace insieme;
 
-namespace fs = boost::filesystem;
-
-namespace fe = insieme::frontend;
-namespace co = insieme::core;
-namespace dr = insieme::driver;
-namespace cp = insieme::utils::compiler;
-namespace cmd = insieme::driver::cmd;
-namespace du = insieme::driver::utils;
 
 int main(int argc, char** argv) {
 	std::cout << "Insieme compiler - Version: " << utils::getVersion() << "\n";
 
+	// additional fields we need to store parser options
+	bool benchmarkCore = false;
+	bool checkSemaOnly = false;
+	bool checkSema = false;
+	bool compileOnly = false;
+	bool showStatistics = false;
+	bool taskGranularityTuning = false;
+	std::string backendString;
+	frontend::path outFile, dumpCFG, dumpIR, dumpJSON, dumpTRG, dumpTRGOnly, dumpTU, dumpOclKernel;
+	std::vector<std::string> optimizationFlags;
+
 	// Step 1: parse input parameters
-	std::vector<std::string> arguments(argv, argv + argc);
-	cmd::Options options = cmd::Options::parse(arguments);
+	auto parser = driver::cmd::Options::getParser();
+	parser.addFlag(     "check-sema",              checkSema,                                     "run semantic checks on the generated IR");
+	parser.addFlag(     "check-sema-only",         checkSemaOnly,                                 "run semantic checks on the generated IR and stop afterwards");
+	parser.addFlag(     "compile,c",               compileOnly,                                   "compilation only");
+	parser.addFlag(     "show-stats",              showStatistics,                                "computes statistics regarding the composition of the IR");
+	parser.addFlag(     "benchmark-core",          benchmarkCore,                                 "benchmarking of some standard core operations on the intermediate representation");
+	parser.addFlag(     "task-granularity-tuning", taskGranularityTuning,                         "enables multiverisoning of parallel tasks");
+	parser.addParameter("backend",                 backendString,     std::string("runtime"),     "backend selection");
+	parser.addParameter("outfile,o",               outFile,           frontend::path("a.out"),    "output file");
+	parser.addParameter("dump-cfg",                dumpCFG,           frontend::path(),           "print dot graph of the CFG");
+	parser.addParameter("dump-ir",                 dumpIR,            frontend::path(),           "dump intermediate representation");
+	parser.addParameter("dump-json",               dumpJSON,          frontend::path(),           "dump intermediate representation (JSON)");
+	parser.addParameter("dump-trg",                dumpTRG,           frontend::path(),           "dump target code");
+	parser.addParameter("dump-trg-only",           dumpTRGOnly,       frontend::path(),           "dump target code and stop afterwards");
+	parser.addParameter("dump-tu",                 dumpTU,            frontend::path(),           "dump translation unit");
+	parser.addParameter("dump-kernel",             dumpOclKernel,     frontend::path(),           "dump OpenCL kernel");
+	parser.addParameter("fopt",                    optimizationFlags, std::vector<std::string>(), "optimization flags");
+	auto options = parser.parse(argc, argv);
 
 	// if options are invalid, exit non-zero
 	if(!options.valid) { return 1; }
-
 	// if e.g. help was specified, exit with zero
 	if(options.gracefulExit) { return 0; }
 
+
 	// Step 2: filter input files
-	vector<fe::path> inputs;
-	vector<fe::path> libs;
-	vector<fe::path> extLibs;
-
-	for(const fe::path& cur : options.job.getFiles()) {
-		auto ext = fs::extension(cur);
-		if(ext == ".o" || ext == ".so") {
-			if(du::isInsiemeLib(cur)) {
-				libs.push_back(cur);
-			} else {
-				extLibs.push_back(cur);
-			}
-		} else if (fe::utils::cExtensions.count(ext) || fe::utils::cxxExtensions.count(ext)) {
-			inputs.push_back(cur);
-		} else {
-			LOG(ERROR) << "Unrecognized file format: " << cur << "\n";
-			return 1;
-		}
+	core::NodeManager mgr;
+	if(!driver::utils::filterInputFiles(mgr, options.job)) {
+		return 1;
 	}
-	// indicates that a shared object file should be created
-	bool createSharedObject = fs::extension(options.settings.outFile) == ".so";
-
-	// std::cout << "Libs:    " << libs << "\n";
-	// std::cout << "Inputs:  " << inputs << "\n";
-	// std::cout << "ExtLibs: " << extLibs << "\n";
-	// std::cout << "OutFile: " << options.settings.outFile << "\n";
-	// std::cout << "Compile Only: " << options.settings.compileOnly << "\n";
-	// std::cout << "SharedObject: " << createSharedObject << "\n";
-	// std::cout << "WorkingDir: " << boost::filesystem::current_path() << "\n";
-
-	// update input files
-	options.job.setFiles(inputs);
 
 	// Step 3: load input code
-	co::NodeManager mgr;
 
-	// load libraries
-	options.job.setLibs(::transform(libs, [&](const fe::path& cur) {
-		std::cout << "Loading " << cur << " ...\n";
-		return du::loadLib(mgr, cur);
-	}));
+	// indicates that a shared object file should be created
+	bool createSharedObject = boost::filesystem::extension(outFile) == ".so";
 
 
 	// if it is compile only or if it should become an object file => save it
-	if(options.settings.compileOnly || createSharedObject) {
+	if(compileOnly || createSharedObject) {
 		auto res = options.job.toIRTranslationUnit(mgr);
 		std::cout << "Saving object file ...\n";
-		du::saveLib(res, options.settings.outFile);
-		return du::isInsiemeLib(options.settings.outFile) ? 0 : 1;
+		driver::utils::saveLib(res, outFile);
+		return driver::utils::isInsiemeLib(outFile) ? 0 : 1;
 	}
 
 	// dump the translation unit file (if needed for de-bugging)
-	if(!options.settings.dumpTU.empty()) {
+	if(!dumpTU.empty()) {
 		std::cout << "Dumping Translation Unit ...\n";
 		auto tu = options.job.toIRTranslationUnit(mgr);
-		std::ofstream out(options.settings.dumpTU.string());
+		std::ofstream out(dumpTU.string());
 		out << tu;
 	}
 
@@ -149,42 +137,44 @@ int main(int argc, char** argv) {
 	auto program = options.job.execute(mgr);
 
 	// dump IR code
-	if(!options.settings.dumpIR.empty()) {
+	if(!dumpIR.empty()) {
 		std::cout << "Dumping intermediate representation ...\n";
-		std::ofstream out(options.settings.dumpIR.string());
-		out << co::printer::PrettyPrinter(program, co::printer::PrettyPrinter::PRINT_DEREFS);
+		std::ofstream out(dumpIR.string());
+		out << core::printer::PrettyPrinter(program, core::printer::PrettyPrinter::PRINT_DEREFS);
 	}
 
-	if(!options.settings.dumpJSON.empty()) {
-		std::ofstream out(options.settings.dumpJSON.string());
-		co::dump::json::dumpIR(out, program);
+	if(!dumpJSON.empty()) {
+		std::cout << "Dumping JSON representation ...\n";
+		std::ofstream out(dumpJSON.string());
+		core::dump::json::dumpIR(out, program);
 	}
 
 	core::checks::MessageList errors;
-	if(options.settings.checkSema || options.settings.checkSemaOnly) {
-		int retval = du::checkSema(program, errors);
-		if(options.settings.checkSemaOnly) { return retval; }
+	if(checkSema || checkSemaOnly) {
+		int retval = driver::utils::checkSema(program, errors);
+		if(checkSemaOnly) { return retval; }
 	}
 
-	if(options.settings.showStatistics) { du::showStatistics(program); }
+	if(showStatistics) { driver::utils::showStatistics(program); }
 
-	if(options.settings.benchmarkCore) { du::benchmarkCore(program); }
+	if(benchmarkCore) { driver::utils::benchmarkCore(program); }
 
-	if(options.settings.taskGranularityTuning) { program = insieme::transform::tasks::applyTaskOptimization(program); }
+	if(taskGranularityTuning) { program = insieme::transform::tasks::applyTaskOptimization(program); }
 
 	// Step 3: produce output code
 	std::cout << "Creating target code ...\n";
-	backend::BackendPtr backend = du::getBackend(program, options);
+	backend::BackendPtr backend = driver::utils::getBackend(backendString, dumpOclKernel.string());
+	if(!backend) { return 1; }
 	auto targetCode = backend->convert(program);
 
 	// dump source file if requested, exit if requested
-	fe::path filePath = options.settings.dumpTRG;
-	if(!options.settings.dumpTRGOnly.empty()) { filePath = options.settings.dumpTRGOnly; }
+	frontend::path filePath = dumpTRG;
+	if(!dumpTRGOnly.empty()) { filePath = dumpTRGOnly; }
 	if(!filePath.empty()) {
 		std::cout << "Dumping target code ...\n";
 		std::ofstream out(filePath.string());
 		out << *targetCode;
-		if(!options.settings.dumpTRGOnly.empty()) { return 0; }
+		if(!dumpTRGOnly.empty()) { return 0; }
 	}
 
 	// Step 4: build output code
@@ -192,18 +182,10 @@ int main(int argc, char** argv) {
 	//		executable.
 	//		if any of the translation units is has cpp belongs to cpp code, we'll use the
 	//		cpp compiler, C otherwise
-	cp::Compiler compiler = (options.job.isCxx()) ? cp::Compiler::getDefaultCppCompiler() : cp::Compiler::getDefaultC99Compiler();
-
-	switch(options.backendHint.backend) {
-	case cmd::BackendEnum::Sequential: break;
-	case cmd::BackendEnum::OpenCL: compiler = cp::Compiler::getOpenCLCompiler(compiler); break;
-	case cmd::BackendEnum::Runtime:
-	case cmd::BackendEnum::Pthreads:
-	default: compiler = cp::Compiler::getRuntimeCompiler(compiler);
-	}
+	insieme::utils::compiler::Compiler compiler = driver::utils::getCompiler(backendString, options.job.isCxx());
 
 	// add needed external library flags
-	for(auto cur : extLibs) {
+	for(auto cur : options.job.getExtLibs()) {
 		string libname = cur.filename().string();
 		// add libraries by splitting their paths, truncating the filename of the library in the process (lib*.so*)
 		compiler.addExternalLibrary(cur.parent_path().string(), libname.substr(3, libname.find(".") - 3));
@@ -220,8 +202,9 @@ int main(int argc, char** argv) {
 	}
 
 	// add the given optimization flags (-f flags)
-	for(auto cur : options.job.getFFlags()) {
-		compiler.addFlag(cur);
+	for(auto optFlag : optimizationFlags) {
+		std::string&& s = "-f" + optFlag;
+		compiler.addFlag(s);
 	}
 
 	// add unknown options - might be used by backend compiler
@@ -241,5 +224,5 @@ int main(int argc, char** argv) {
 		compiler.addFlag("-std=c99");
 	}
 
-	return !cp::compileToBinary(*targetCode, options.settings.outFile.string(), compiler);
+	return !insieme::utils::compiler::compileToBinary(*targetCode, outFile.string(), compiler);
 }

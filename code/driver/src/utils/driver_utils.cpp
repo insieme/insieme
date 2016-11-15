@@ -54,6 +54,7 @@
 #include "insieme/core/printer/error_printer.h"
 
 #include "insieme/utils/timer.h"
+#include "insieme/utils/compiler/compiler.h"
 
 
 namespace insieme {
@@ -61,7 +62,6 @@ namespace driver {
 namespace utils {
 
 	namespace iu = insieme::utils;
-	namespace be = insieme::backend;
 
 	namespace {
 		// Minimum size of the context string reported by the error checker (context will be extended when smaller)
@@ -207,14 +207,35 @@ namespace utils {
 	//***************************************************************************************
 	//									Backend selection
 	//***************************************************************************************
-	insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const cmd::Options& options) {
-		if(options.backendHint == cmd::BackendEnum::Runtime) { return be::runtime::RuntimeBackend::getDefault(); }
-		if(options.backendHint == cmd::BackendEnum::OpenCL) {
-				auto config = std::make_shared<be::BackendConfig>();
-				config->dumpOclKernel = options.settings.dumpOclKernel.string();
-				return be::opencl::OpenCLBackend::getDefault(config);
+	insieme::backend::BackendPtr getBackend(const std::string& backendString, const std::string& dumpOclKernel) {
+		// prepare for setting up backend
+		if(backendString == "runtime" || backendString == "run") {
+			return backend::runtime::RuntimeBackend::getDefault();
+
+		} else if(backendString == "sequential" || backendString == "seq") {
+			return backend::sequential::SequentialBackend::getDefault();
+
+		} else if(backendString == "opencl" || backendString == "ocl") {
+			auto config = std::make_shared<backend::BackendConfig>();
+			config->dumpOclKernel = dumpOclKernel;
+			return backend::opencl::OpenCLBackend::getDefault(config);
 		}
-		return be::sequential::SequentialBackend::getDefault();
+
+		LOG(ERROR) << "Error: Unsupported backend: " << backendString << " - supported: sequential | runtime | ocl\n";
+		return {};
+	}
+
+	//***************************************************************************************
+	//									Compiler selection
+	//***************************************************************************************
+	insieme::utils::compiler::Compiler getCompiler(const std::string& backendString, const bool isCpp) {
+		insieme::utils::compiler::Compiler compiler = isCpp ?
+				insieme::utils::compiler::Compiler::getDefaultCppCompiler() : insieme::utils::compiler::Compiler::getDefaultC99Compiler();
+
+		if(backendString == "runtime" || backendString == "run") {
+			compiler = insieme::utils::compiler::Compiler::getRuntimeCompiler(compiler);
+		}
+		return compiler;
 	}
 
 } // end namespace utils

@@ -37,14 +37,15 @@
 #include <string>
 #include <iomanip>
 #include <fstream>
+#include <boost/filesystem.hpp>
 
 #include "insieme/utils/version.h"
 
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/utils/file_extensions.h"
 
-#include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/driver/utils/driver_utils.h"
+#include "insieme/driver/cmd/commandline_options.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/dump/binary_dump.h"
@@ -81,8 +82,11 @@ int main(int argc, char** argv) {
 	std::cout << "Insieme compiler - Version: " << utils::getVersion() << "\n";
 
 	// Step 1: parse input parameters
-	std::vector<std::string> arguments(argv, argv + argc);
-	cmd::Options options = cmd::Options::parse(arguments);
+	std::string outFile;
+
+	auto parser = driver::cmd::Options::getParser();
+	parser.addParameter("outfile,o", outFile, std::string("a.out"), "output file");
+	auto options = parser.parse(argc, argv);
 
 	// if options are invalid, exit non-zero
 	if(!options.valid) { return 1; }
@@ -110,9 +114,9 @@ int main(int argc, char** argv) {
 		auto time = TIME(program = options.job.execute(mgr));
 		std::cout << "done (took " << time << " seconds)\n";
 
-		std::cout << "Creating binary dump in file " << options.settings.outFile.string() << " ... ";
+		std::cout << "Creating binary dump in file " << outFile << " ... ";
 		std::cout.flush();
-		std::ofstream out(options.settings.outFile.string());
+		std::ofstream out(outFile);
 		time = TIME(core::dump::binary::dumpIR(out, program));
 		std::cout << "done (took " << time << " seconds)\n";
 

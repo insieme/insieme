@@ -176,11 +176,7 @@ namespace frontend {
 			}
 		}
 
-		if(config.hasOption(ConversionJob::WinCrossCompile)) {
-			pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "win32").getTriple();
-		} else {
-			pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "linux").getTriple();
-		}
+		pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "linux").getTriple();
 
 		pimpl->clang.setTarget(TargetInfo::CreateTargetInfo(pimpl->clang.getDiagnostics(), pimpl->TO));
 		LangOptions& LO = pimpl->clang.getLangOpts();
