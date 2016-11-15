@@ -3,7 +3,6 @@
 #include <iostream>
 
 #include "insieme/analysis/cba/datalog/framework/souffle_extractor.h"
-#include "insieme/analysis/cba/datalog/framework/file_extractor.h"
 
 #include "souffle/gen/pointers.h"
 
@@ -49,32 +48,6 @@ namespace datalog {
 		const auto &value = convertValue(res[2]);
 
 		return std::make_pair(defined, value);
-	}
-
-	bool extractPointerFactsToFiles(const std::set<core::ExpressionAddress>& targets, const std::string &outputDir) {
-		std::set<std::string> targetFacts;
-		int ret;
-
-		auto isTarget = [&](const core::NodeAddress &x) {
-			for (const auto &trg : targets)
-				if (trg == x) return true;
-			return false;
-		};
-
-		ret = framework::extractAddressFactsToFiles(outputDir, targets.begin()->getRootAddress(), [&](const core::NodeAddress &curr, int id) {
-			if (isTarget(curr)) {
-				targetFacts.insert(std::to_string(id));
-			}
-		});
-
-		if (ret == -1)
-			return false;
-
-		ret = framework::addFactsManually(outputDir, "Targets", targetFacts);
-
-		if (ret == -1)
-			return false;
-		return true;
 	}
 
 	#undef convertValue

@@ -110,7 +110,7 @@ namespace datalog {
 			entry.root = root;
 
 			if (debug)
-				std::cout << "Cache miss, running new analysis now";
+				std::cout << "Cache miss, running new analysis now" << std::endl;
 
 			// Execute the analyis
 			runAnalysis(*entry.analysis, root, debug);
