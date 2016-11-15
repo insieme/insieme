@@ -47,8 +47,8 @@
 #include "insieme/backend/backend.h"
 
 #include "insieme/driver/cmd/insiemecc_options.h"
-#include "insieme/driver/object_file_utils.h"
 #include "insieme/driver/utils/driver_utils.h"
+#include "insieme/driver/utils/object_file_utils.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_node.h"
@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
 	for(const fe::path& cur : options.job.getFiles()) {
 		auto ext = fs::extension(cur);
 		if(ext == ".o" || ext == ".so") {
-			if(dr::isInsiemeLib(cur)) {
+			if(du::isInsiemeLib(cur)) {
 				libs.push_back(cur);
 			} else {
 				extLibs.push_back(cur);
@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
 	// load libraries
 	options.job.setLibs(::transform(libs, [&](const fe::path& cur) {
 		std::cout << "Loading " << cur << " ...\n";
-		return dr::loadLib(mgr, cur);
+		return du::loadLib(mgr, cur);
 	}));
 
 
@@ -130,8 +130,8 @@ int main(int argc, char** argv) {
 	if(options.settings.compileOnly || createSharedObject) {
 		auto res = options.job.toIRTranslationUnit(mgr);
 		std::cout << "Saving object file ...\n";
-		dr::saveLib(res, options.settings.outFile);
-		return dr::isInsiemeLib(options.settings.outFile) ? 0 : 1;
+		du::saveLib(res, options.settings.outFile);
+		return du::isInsiemeLib(options.settings.outFile) ? 0 : 1;
 	}
 
 	// dump the translation unit file (if needed for de-bugging)

@@ -67,8 +67,8 @@
 #include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/driver/measure/measure.h"
 #include "insieme/driver/measure/dump.h"
-#include "insieme/driver/object_file_utils.h"
 #include "insieme/driver/utils/driver_utils.h"
+#include "insieme/driver/utils/object_file_utils.h"
 
 #include "insieme/frontend/frontend.h"
 
@@ -388,7 +388,7 @@ int main(int argc, char** argv) {
 	for(const fe::path& cur : options.job.getFiles()) {
 		auto ext = fs::extension(cur);
 		if(ext == ".o" || ext == ".so") {
-			if(dr::isInsiemeLib(cur)) {
+			if(du::isInsiemeLib(cur)) {
 				libs.push_back(cur);
 			}
 			else {
@@ -415,15 +415,15 @@ int main(int argc, char** argv) {
 	// load libraries
 	options.job.setLibs(::transform(libs, [&](const fe::path& cur) {
 		std::cout << "Loading " << cur << " ...\n";
-		return dr::loadLib(mgr, cur);
+		return du::loadLib(mgr, cur);
 	}));
 
 	// if it is compile only or if it should become an object file => save it
 	if(options.settings.compileOnly || createSharedObject) {
 		auto res = options.job.toIRTranslationUnit(mgr);
 		std::cout << "Saving object file ...\n";
-		dr::saveLib(res, options.settings.outFile);
-		return dr::isInsiemeLib(options.settings.outFile) ? 0 : 1;
+		du::saveLib(res, options.settings.outFile);
+		return du::isInsiemeLib(options.settings.outFile) ? 0 : 1;
 	}
 
 	std::cout << "Extracting executable ...\n";

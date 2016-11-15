@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/driver/object_file_utils.h"
+#include "insieme/driver/utils/object_file_utils.h"
 
 #include <boost/filesystem/operations.hpp>
 
@@ -48,11 +48,12 @@ namespace fs = boost::filesystem;
 
 namespace insieme {
 namespace driver {
+namespace utils {
 
 	TEST(ObjectFile, HelloWorldTest) {
 		core::NodeManager mgr;
 
-		fe::ConversionJob job(utils::getInsiemeSourceRootDir() + "driver/test/inputs/hello_world.c");
+		fe::ConversionJob job(insieme::utils::getInsiemeSourceRootDir() + "driver/test/inputs/hello_world.c");
 		auto unit = job.toIRTranslationUnit(mgr);
 
 		// save tu to temporary file
@@ -66,7 +67,7 @@ namespace driver {
 		EXPECT_TRUE(isInsiemeLib(file));
 
 		// this one should fail ..
-		EXPECT_FALSE(isInsiemeLib(utils::getInsiemeSourceRootDir() + "driver/test/inputs/hello_world.c"));
+		EXPECT_FALSE(isInsiemeLib(insieme::utils::getInsiemeSourceRootDir() + "driver/test/inputs/hello_world.c"));
 
 		// reload translation unit
 		core::NodeManager mgr2;
@@ -78,5 +79,6 @@ namespace driver {
 		if(fs::exists(file)) { fs::remove(file); }
 	}
 
+} // end namespace utils
 } // end namespace driver
 } // end namespace insieme

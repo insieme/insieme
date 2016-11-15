@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -47,6 +47,7 @@ namespace tu {
 }
 }
 namespace driver {
+namespace utils {
 
 	/**
 	 * Checks whether the given file is a Insieme library file.
@@ -73,5 +74,6 @@ namespace driver {
 	 */
 	void saveLib(const core::tu::IRTranslationUnit& unit, const boost::filesystem::path& file);
 
+} // end namespace utils
 } // end namespace driver
 } // end namespace insieme

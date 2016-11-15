@@ -43,7 +43,7 @@
 
 #include "insieme/driver/integration/tests.h"
 #include "insieme/driver/integration/test_step.h"
-#include "insieme/driver/object_file_utils.h"
+#include "insieme/driver/utils/object_file_utils.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -145,7 +145,7 @@ namespace integration {
 		}
 
 		// skip OpenCL tests as those are handeled via driver/integration_tests
-		if (testCase.isEnableOpenCL() && !utils::compiler::isOpenCLAvailable()) {
+		if (testCase.isEnableOpenCL() && !insieme::utils::compiler::isOpenCLAvailable()) {
 			LOG(INFO) << "Skipping OpenCL test: " + testCase.getName();
 			return;
 		}
@@ -162,12 +162,12 @@ namespace integration {
 			auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);
 
 			// see whether target code can be compiled
-			utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
+			insieme::utils::compiler::Compiler compiler = insieme::utils::compiler::Compiler::getRuntimeCompiler();
 
 			std::string step = TEST_STEP_INSIEMECC_RUN_C_COMPILE;
 			// switch to C++ compiler if necessary
 			if (any(testCase.getFiles(), [](const frontend::path& cur) { return *cur.string().rbegin() == 'p'; })) {
-				compiler = utils::compiler::Compiler::getRuntimeCompiler(utils::compiler::Compiler::getDefaultCppCompiler());
+				compiler = insieme::utils::compiler::Compiler::getRuntimeCompiler(insieme::utils::compiler::Compiler::getDefaultCppCompiler());
 				step = TEST_STEP_INSIEMECC_RUN_CPP_COMPILE;
 			}
 
@@ -191,7 +191,7 @@ namespace integration {
 				compiler.addFlag("-l" + cur);
 			}
 
-			EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "runtime backend test failed for test case: " << testCase.getName();
+			EXPECT_TRUE(insieme::utils::compiler::compile(*target, compiler)) << "runtime backend test failed for test case: " << testCase.getName();
 		}
 
 		//LIBRARIES TEST
@@ -203,14 +203,14 @@ namespace integration {
 			auto file = unique_path(temp_directory_path() / "tmp%%%%%%%%.o");
 
 			// save translation unit
-			insieme::driver::saveLib(codeTU, file);
+			insieme::driver::utils::saveLib(codeTU, file);
 
 			// check validity
 			EXPECT_TRUE(exists(file)) << "save library test failed for test case: " << testCase.getName();
-			EXPECT_TRUE(insieme::driver::isInsiemeLib(file)) << "save library test failed for test case: " << testCase.getName();
+			EXPECT_TRUE(insieme::driver::utils::isInsiemeLib(file)) << "save library test failed for test case: " << testCase.getName();
 
 			// reload translation unit
-			auto tu = insieme::driver::loadLib(tmpManager, file);
+			auto tu = insieme::driver::utils::loadLib(tmpManager, file);
 
 			EXPECT_EQ(codeTU, tu) << "load library test failed for test case: " << testCase.getName();;
 

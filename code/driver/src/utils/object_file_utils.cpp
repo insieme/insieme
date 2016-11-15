@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,17 +34,17 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/driver/utils/object_file_utils.h"
+
 #include <fstream>
-
 #include <boost/filesystem.hpp>
-
-#include "insieme/driver/object_file_utils.h"
 
 #include "insieme/core/tu/ir_translation_unit.h"
 #include "insieme/core/tu/ir_translation_unit_io.h"
 
 namespace insieme {
 namespace driver {
+namespace utils {
 
 	namespace {
 
@@ -93,5 +93,6 @@ namespace driver {
 		assert_true(boost::filesystem::exists(file));
 	}
 
+} // end namespace utils
 } // end namespace driver
 } // end namespace insieme

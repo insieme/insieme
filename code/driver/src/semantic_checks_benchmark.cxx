@@ -55,6 +55,8 @@
 #include "insieme/core/checks/semantic_checks.h"
 #include "insieme/core/checks/literal_checks.h"
 
+#include "insieme/utils/timer.h"
+
 using namespace std;
 using namespace insieme;
 
