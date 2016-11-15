@@ -19,9 +19,29 @@
 //                                          /* Why only DP_ROOT??? */
 //Result(ID, DEF, X) :- Targets(ID), Integer.value(ID,DP_ROOT,[DEF,X]).
 
+// =============================================================================
+//.type returnType = [defined:bool , value:string]
+
+//.decl Targets(x:node) input
+//.decl Result(id:node, def:bool, x:string) output
+
+
+//.init DFA = DataFlowAnalysis<returnType>
+
+//DFA.unknown_value([false,"_"]).
+
+//DFA.value(ID, DP_ROOT, [true,X]) :- Literal(ID,_,X).
+
+//DFA.known_literal(ID) :- Literal(ID,_,_).
+
+
+
+//                                          /* Why only DP_ROOT??? */
+//Result(ID, DEF, X) :- Targets(ID), DFA.value(ID,DP_ROOT,[DEF,X]).
+// ============================================================================
+
 .type returnType = [defined:bool , value:string]
 
-.decl Targets(x:node) input
 .decl Result(id:node, def:bool, x:string) output
 
 
@@ -34,9 +54,8 @@ DFA.value(ID, DP_ROOT, [true,X]) :- Literal(ID,_,X).
 DFA.known_literal(ID) :- Literal(ID,_,_).
 
 
-
-                                          /* Why only DP_ROOT??? */
-Result(ID, DEF, X) :- Targets(ID), DFA.value(ID,DP_ROOT,[DEF,X]).
+                           /* Why only DP_ROOT??? */
+Result(ID, DEF, X) :- DFA.value(ID,DP_ROOT,[DEF,X]).
 
 
 

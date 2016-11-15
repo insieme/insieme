@@ -19,40 +19,36 @@ namespace datalog {
 	#endif
 
 
-	PointerResult runPointerAnalysis(const std::set<core::ExpressionAddress>& targets) {
-		souffle::Sf_pointers analysis;
+	PointerResults runPointerAnalysis(Context& context, const std::set<core::ExpressionAddress>& targets) {
+		PointerResults results;
 
-		std::map<int,core::NodeAddress> targetIDs;
-
-		auto isTarget = [&](const core::NodeAddress &x) {
-			for (const auto &trg : targets)
-				if (trg == x) return true;
-			return false;
-		};
-
-		framework::extractAddressFacts(analysis, targets.begin()->getRootAddress(), [&](const core::NodeAddress &curr, int id) {
-			if (isTarget(curr)) {
-				targetIDs[id] = curr;
-				analysis.rel_Targets.insert(id);
-			}
-		});
-
-		analysis.run();
-
-		auto analysisResult = analysis.rel_Result;
-
-		PointerResult results;
-		for (const auto &res : analysisResult) {
-			auto id      = res[0];
-			auto defined = res[1];
-			string value = convertValue(res[2]);
-
-			core::NodeAddress addr = targetIDs[id];
-
-			results[addr] = std::make_pair(defined,value);
+		for (const auto &target : targets) {
+			auto res = runPointerAnalysis(context, target);
+			results[target] = res;
 		}
 
 		return results;
+
+	}
+
+	PointerResult runPointerAnalysis(Context &context, const core::ExpressionAddress &target) {
+		const bool debug = false;
+
+		// Instantiate analysis
+		auto &analysis = context.getAnalysis<souffle::Sf_pointers>(target.getRootNode(), debug);
+
+		// Get ID of target
+		int targetExprID = context.getNodeID(target, debug);
+
+		// Read result
+		auto &resultRel = analysis.rel_Result;
+		auto filtered = resultRel.template equalRange<0>({{targetExprID,0,0}});
+
+		const auto &res = *(filtered.begin());
+		const bool &defined = res[1];
+		const auto &value = convertValue(res[2]);
+
+		return std::make_pair(defined, value);
 	}
 
 	bool extractPointerFactsToFiles(const std::set<core::ExpressionAddress>& targets, const std::string &outputDir) {

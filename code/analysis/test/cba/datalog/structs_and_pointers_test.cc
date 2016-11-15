@@ -10,10 +10,12 @@ namespace analysis {
 namespace cba {
 
 	using namespace insieme::core;
+	using namespace datalog;
 
 	TEST(SAP, PointersInteger) {
 		NodeManager nm;
 		IRBuilder builder(nm);
+		Context ctxt;
 
 		const string controlValue = "2222";
 
@@ -32,7 +34,7 @@ namespace cba {
 		ExpressionAddress y = ptr[1].as<VariableAddress>();
 		ExpressionAddress z = ptr[2].as<VariableAddress>();
 
-		datalog::PointerResult res = datalog::runPointerAnalysis({x,y,z});
+		PointerResults res = runPointerAnalysis(ctxt, {x,y,z});
 
 		EXPECT_TRUE(res[x].first);
 		EXPECT_TRUE(res[y].first);
@@ -41,11 +43,19 @@ namespace cba {
 		EXPECT_EQ(controlValue, res[x].second);
 		EXPECT_EQ(controlValue, res[y].second);
 		EXPECT_EQ(controlValue, res[z].second);
+
+		// Also test non-bulk version
+		for (const auto &var : {x,y,z}) {
+			PointerResult res = runPointerAnalysis(ctxt, var);
+			EXPECT_TRUE(res.first);
+			EXPECT_EQ(controlValue, res.second);
+		}
 	}
 
 	TEST(SAP, PointersCharacter) {
 		NodeManager nm;
 		IRBuilder builder(nm);
+		Context ctxt;
 
 		const string controlValue = "'x'";
 
@@ -64,7 +74,7 @@ namespace cba {
 		ExpressionAddress y = ptr[1].as<VariableAddress>();
 		ExpressionAddress z = ptr[2].as<VariableAddress>();
 
-		datalog::PointerResult res = datalog::runPointerAnalysis({x,y,z});
+		PointerResults res = runPointerAnalysis(ctxt, {x,y,z});
 
 		EXPECT_TRUE(res[x].first);
 		EXPECT_TRUE(res[y].first);
@@ -96,7 +106,7 @@ namespace cba {
 		ExpressionAddress y = ptr[1].as<VariableAddress>();
 		ExpressionAddress z = ptr[2].as<VariableAddress>();
 
-		bool res = datalog::extractPointerFactsToFiles({x,y,z});
+		bool res = extractPointerFactsToFiles({x,y,z});
 
 		EXPECT_TRUE(res);
 	}
@@ -104,6 +114,7 @@ namespace cba {
 	TEST(SAP, DISABLED_StructsInteger) {
 		NodeManager nm;
 		IRBuilder builder(nm);
+		Context ctxt;
 
 		const string controlValueOne   = "111";
 		const string controlValueTwo   = "222";
@@ -142,7 +153,7 @@ namespace cba {
 		ExpressionAddress deux = ptr[1].as<VariableAddress>();
 		ExpressionAddress drei = ptr[2].as<CallExprAddress>();
 
-		datalog::PointerResult res = datalog::runPointerAnalysis({eins, deux, drei});
+		PointerResults res = runPointerAnalysis(ctxt, {eins, deux, drei});
 
 		EXPECT_TRUE(res[eins].first);
 		EXPECT_TRUE(res[deux].first);

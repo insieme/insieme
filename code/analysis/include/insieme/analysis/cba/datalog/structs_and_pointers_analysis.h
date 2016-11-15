@@ -16,15 +16,24 @@ namespace datalog {
 	/**
 	 * Result type from pointer analysis
 	 */
-	using PointerResult = std::map<core::NodeAddress,std::pair<bool,std::string>>;
+	using PointerResult = std::pair<bool,std::string>;
+	using PointerResults = std::map<core::NodeAddress,PointerResult>;
+
+
+	/**
+	 * Run a pointer analysis: To what value does a pointer point to?
+	 * @param target Return value for this expression
+	 * @return a 'PointerResult' pair in the form of <analysisSuccessful?, value>
+	 */
+	PointerResult runPointerAnalysis(Context &context, const core::ExpressionAddress &target);
 
 
 	/**
 	 * Run a pointer analysis: To what value does a pointer point to?
 	 * @param targets Return values for these expressions
-	 * @return a 'PointerResult' map, where the node addresses are mapped to <analysisSuccessful?, value>
+	 * @return a 'PointerResults' map, where the node addresses are mapped to <analysisSuccessful?, value>
 	 */
-	PointerResult runPointerAnalysis(const std::set<core::ExpressionAddress>& targets);
+	PointerResults runPointerAnalysis(Context &context, const std::set<core::ExpressionAddress>& targets);
 
 
 	/**
