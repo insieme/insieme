@@ -62,7 +62,7 @@ namespace tu {
 }
 namespace driver {
 namespace cmd {
-	class Options;
+	struct Options;
 }
 namespace integration {
 
