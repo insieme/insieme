@@ -38,6 +38,13 @@ class Trivial {};
 
 void takeIntPtr(int *c) {}
 
+class InitIt {
+public:
+	int x;
+	float y;
+	char z;
+};
+
 int main() {
 //===-------------------------------------------------------------------------------------------------------------------------------- UNARY OPERATORS ---===
 
@@ -342,6 +349,22 @@ int main() {
 
 	#pragma test expect_ir("(1!=0)?2:3")
 	1 ? 2 : 3;
+
+	//===-------------------------------------------------------------------------------------------------------------------------------------- INIT EXPR ---===
+
+	#pragma test expect_ir(R"(
+		def struct IMP_InitIt {
+			x : int<4>;
+			y : real<4>;
+			z : char;
+		};
+		{
+			var ref<IMP_InitIt,f,f,plain> v0 = <ref<IMP_InitIt,f,f,plain>>(ref_decl(type_lit(ref<IMP_InitIt,f,f,plain>))) {4, 2.0E+0f, 'a'};
+		}
+	)")
+	{
+		InitIt test { 4, 2.0f, 'a' };
+	}
 
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
 
