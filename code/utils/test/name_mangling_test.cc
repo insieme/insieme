@@ -103,3 +103,17 @@ TEST(NameMangling, OperatorManglingPrecedence) {
 	EXPECT_EQ("IMP__conversion_operator_",    mangle("operator "));
 	EXPECT_EQ("IMP__conversion_operator_int", mangle("operator int"));
 }
+
+TEST(NameMangling, Readable) {
+	EXPECT_EQ("Bla", getReadableName("Bla"));
+
+	EXPECT_EQ("Hat", getReadableName("IMP_Hat"));
+
+	EXPECT_EQ("ns_S::ctor", getReadableName("IMP_ns_colon__colon_S::ctor"));
+
+	auto t1 = "IMP___anon_tagtype__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_9_6_IMLOC__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_9_6";
+	EXPECT_EQ("anon_basic_cpp_9_6", getReadableName(t1));
+
+	auto t2 = "IMP__not_really_mangle_empty__IMLOC_foo_dot_cpp_42_7";
+	EXPECT_EQ("anon_foo_cpp_42_7", getReadableName(t2));
+}

@@ -72,5 +72,10 @@ namespace utils {
 	/// Returns a string which (if present) indicates that the name was generated for something anonymous.
 	///
 	const std::string& getMangledAnonymousIndicator();
+
+	/// Returns a "readable" representation of name if it is mangled.
+	///
+	const std::string getReadableName(const std::string& name);
+
 }
 }
