@@ -1,24 +1,28 @@
 NAME="cabal"
-VERSION="1.24.0.0"
+VERSION="453aa45a3467662a5815f5d4b5ee345d04907fbc"
 PACKAGE="$NAME-$VERSION"
 
-FILE="cabal-install-$VERSION.tar.gz"
-URL="https://www.haskell.org/cabal/release/cabal-install-$VERSION/$FILE"
-SHA256SUM="d840ecfd0a95a96e956b57fb2f3e9c81d9fc160e1fd0ea350b0d37d169d9e87e"
+URL="https://github.com/haskell/cabal.git"
 
-DEPENDS="ghc gmp zlib"
+DEPENDS="zlib gmp gcc ghc"
 
-export PATH="$PREFIX/ghc-latest/bin:$PATH"
+export PATH="$PREFIX/ghc-latest/bin:$PREFIX/gcc-latest/bin:$PATH"
 export LD_LIBRARY_PATH="$PREFIX/gmp-latest/lib:$PREFIX/zlib-latest/lib"
+export LIBRARY_PATH="$PREFIX/gmp-latest/lib:$PREFIX/zlib-latest/lib"
+export C_INCLUDE_PATH="$PREFIX/zlib-latest/include"
+
+
+pkg_download() {
+	git clone --single-branch "$URL" "$PACKAGE"
+	( cd "$PACKAGE"; git checkout "$VERSION" )
+}
 
 pkg_extract() {
-	tar xf "$FILE"
-	mv "cabal-install-$VERSION" "$PACKAGE"
+	true
 }
 
 pkg_configure() {
-	mkdir -p "$PREFIX/$PACKAGE"
-	ghc-pkg init "$PREFIX/$PACKAGE/packages.conf.d"
+	true
 }
 
 pkg_build() {
@@ -26,9 +30,32 @@ pkg_build() {
 }
 
 pkg_install() {
-	SCOPE_OF_INSTALLATION="--package-db=$PREFIX/$PACKAGE/packages.conf.d" \
-	PREFIX="$PREFIX/$PACKAGE" ./bootstrap.sh --no-doc
+	PKGS="$PKG_TEMP"/packages.conf.d; ghc-pkg init "$PKGS"
+
+	pushd Cabal/
+	ghc -j --make Setup.hs
+	./Setup configure \
+			--package-db="$PKG_TEMP"/packages.conf.d \
+			--prefix="$PREFIX/$PACKAGE" \
+			--enable-shared
+	./Setup build -j
+	./Setup install
+	popd
+
+	pushd cabal-install/
+	env \
+		EXTRA_CONFIGURE_OPTS="--enable-shared --disable-executable-dynamic" \
+		SCOPE_OF_INSTALLATION=--package-db="$PKGS" \
+		PREFIX="$PREFIX/$PACKAGE" \
+		sh -x ./bootstrap.sh --no-doc
+	popd
 
 	rm -f "$PREFIX/$NAME-latest"
 	ln -s "$PREFIX/$PACKAGE" "$PREFIX/$NAME-latest"
+	touch "$PREFIX/$PACKAGE/.installed"
+}
+
+pkg_cleanup() {
+	rm -rf "$PACKAGE" "$FILE"
+	rm -rf "$PKGS"
 }
