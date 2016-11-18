@@ -45,13 +45,13 @@ failure( "Error: Found a ref_assign whose parent is not a CallExpr!", id) :-
 	.member unknown_value( v : ValueType )
 
 	// the list of known literals (defined externally)
-	.member known_literal( l : node )
+	.member known_literal( l : node ) output
 
 	// the list of known operators (defined externally)
-	.member known_function( o : node )
+	.member known_function( o : node ) output
 
 	// the list of known named operators
-	.member known_named_function( n : string )
+	.member known_named_function( n : string ) output
 
 	// -- the value to be computed by this analysis --
 	.member value ( n : node , p : data_path , v : ValueType ) output

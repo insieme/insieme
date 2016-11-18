@@ -6,7 +6,7 @@
 
 // --- links callables to their return statements ---
 
-.decl ReturnValue( c : callable , e : node )
+.decl ReturnValue( c : callable , e : node ) output
 
 
 // --- Definiton ---
