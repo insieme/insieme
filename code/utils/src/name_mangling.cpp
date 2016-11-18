@@ -235,7 +235,7 @@ namespace utils {
 		ret = removeMangled(ret, "_");
 		boost::replace_all(ret, mangleLocation, "");
 		boost::replace_all(ret, "__", "_");
-		boost::trim_if(ret, [](auto s) { return s == ' ' | s == '_'; });
+		boost::trim_if(ret, [](auto s) { return (s == ' ') || (s == '_'); });
 
 		return ret;
 	}
