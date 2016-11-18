@@ -1640,6 +1640,13 @@ TEST(PrettyPrinter, ReadableNames) {
 		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::READABLE_NAMES);
 		EXPECT_EQ("decl " READABLENAME " : () -> unit;\ndef " READABLENAME " = function () -> unit {\n    42;\n};\n" READABLENAME "()", toString(printer));
 	}
+	// literals
+	{
+		std::string input = "lit(\"" TESTNAME "\": int<4>)";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::READABLE_NAMES);
+		EXPECT_EQ(READABLENAME, toString(printer));
+	}
 
 	#undef TESTNAME
 	#undef READABLENAME

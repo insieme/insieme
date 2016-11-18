@@ -1000,7 +1000,7 @@ namespace printer {
 					out << ")";
 					return;
 				}
- 				const string& str = node->getStringValue();
+ 				const string& str = makeReadableIfRequired(node->getStringValue());
 				// decide whether to really do the full print
 				bool doFullSyntax = printer.hasOption(PrettyPrinter::FULL_LITERAL_SYNTAX);
 				if(doFullSyntax) {

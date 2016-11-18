@@ -218,7 +218,7 @@ namespace utils {
 		string ret = name.substr(manglePrefix.size());
 
 		// if anon, search from back and find first /
-		if(boost::contains(name, mangleLocation)) {
+		if(boost::contains(name, mangleLocation) && boost::contains(name, "_anon_")) {
 			auto lastSlash = boost::find_last(name, applyReplacements("/"));
 			if(lastSlash.empty()) lastSlash = boost::find_last(name, mangleLocation);
 			if(!lastSlash.empty()) {
@@ -226,8 +226,16 @@ namespace utils {
 			}
 		}
 
+		// for templates, remove arguments
+		auto firstTemplateArg = boost::find_first(ret, applyReplacements("<"));
+		if(!firstTemplateArg.empty()) {
+			ret = string(ret.begin(), firstTemplateArg.begin()) + "_TI";
+		}
+
 		ret = removeMangled(ret, "_");
+		boost::replace_all(ret, mangleLocation, "");
 		boost::replace_all(ret, "__", "_");
+		boost::trim_if(ret, [](auto s) { return s == ' ' | s == '_'; });
 
 		return ret;
 	}
