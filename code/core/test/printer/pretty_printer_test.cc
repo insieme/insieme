@@ -1606,23 +1606,43 @@ TEST(PrettyPrinter, ReadableNames) {
 	NodeManager nm;
 	IRBuilder b(nm);
 
+	#define TESTNAME "IMP___anon_tagtype__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6_IMLOC__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6"
+	#define READABLENAME "anon_basic_cpp_8_6"
+
 	// generic type
 	{
-		std::string input = "<ref<IMP___anon_tagtype__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6_IMLOC__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6,f,f,plain>>(ref_temp(type_lit(IMP___anon_tagtype__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6_IMLOC__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6))) {}";
+		std::string input = "<ref<" TESTNAME ",f,f,plain>>(ref_temp(type_lit(" TESTNAME "))) {}";
 		auto ir = b.parseExpr(input);
 		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::READABLE_NAMES);
-		EXPECT_EQ("<ref<anon_basic_cpp_8_6,f,f,plain>>(ref_temp(type_lit(anon_basic_cpp_8_6))) {}", toString(printer));
+		EXPECT_EQ("<ref<" READABLENAME ",f,f,plain>>(ref_temp(type_lit(" READABLENAME "))) {}", toString(printer));
 	}
 	// struct
 	{
 		std::string input = R"(
-				def struct IMP___anon_tagtype__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6_IMLOC__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6 {};
-				<ref<IMP___anon_tagtype__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6_IMLOC__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6,f,f,plain>>(ref_temp(type_lit(IMP___anon_tagtype__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6_IMLOC__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6))) {}
+				def struct )" TESTNAME R"( {};
+				<ref<)" TESTNAME R"(,f,f,plain>>(ref_temp(type_lit()" TESTNAME R"())) {}
 			)";
 		auto ir = b.parseExpr(input);
 		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::READABLE_NAMES);
-		EXPECT_EQ("decl struct anon_basic_cpp_8_6;\ndef struct anon_basic_cpp_8_6 {\n};\n<ref<anon_basic_cpp_8_6,f,f,plain>>(ref_temp(type_lit(anon_basic_cpp_8_6))) {}", toString(printer));
+		EXPECT_EQ("decl struct " READABLENAME ";\ndef struct " READABLENAME" {\n};\n<ref<" READABLENAME ",f,f,plain>>(ref_temp(type_lit(" READABLENAME "))) {}", toString(printer));
 	}
+	// method
+	{
+		std::string input = "def struct A { lambda " TESTNAME " = () -> unit { } }; ref_temp(type_lit(A))";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::READABLE_NAMES);
+		EXPECT_EQ("decl struct A;\ndecl " READABLENAME ":A::() -> unit;\ndef struct A {\n    function " READABLENAME " = () -> unit { }\n};\nref_temp(type_lit(A))", toString(printer));
+	}
+	// functions
+	{
+		std::string input = "def " TESTNAME " = () -> unit { 42; }; " TESTNAME "()";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::READABLE_NAMES);
+		EXPECT_EQ("decl " READABLENAME " : () -> unit;\ndef " READABLENAME " = function () -> unit {\n    42;\n};\n" READABLENAME "()", toString(printer));
+	}
+
+	#undef TESTNAME
+	#undef READABLENAME
 }
 
 

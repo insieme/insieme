@@ -339,8 +339,8 @@ namespace printer {
 						for(auto& memberFun : binding->getRecord()->getMemberFunctions()) {
 							if (const auto& lambdaExpr = memberFun->getImplementation().isa<LambdaExprPtr>()) {
 								const auto& lambdaBinding = lambdaExpr->getDefinition()->getBindingOf(lambdaExpr->getReference());
-								lambdaNames[cur->peel(lambdaBinding)->getReference()] = memberFun->getName()->getValue();
-								lambdaNames[lambdaBinding->getReference()] = memberFun->getName()->getValue();
+								lambdaNames[cur->peel(lambdaBinding)->getReference()] = makeReadableIfRequired(memberFun->getName()->getValue());
+								lambdaNames[lambdaBinding->getReference()] = makeReadableIfRequired(memberFun->getName()->getValue());
 
 								// later used to find out which member functions are not visited -> free defined memFuns
 								visitedMemberFunctions.insert(lambdaBinding->getReference());
@@ -370,13 +370,13 @@ namespace printer {
 					if (lambdaNames.find(defaultRef) != lambdaNames.end()) {
 						return;
 					}
-					lambdaNames[defaultRef] = extractName(cur);
+					lambdaNames[defaultRef] = makeReadableIfRequired(extractName(cur));
 					for(const auto& binding : cur->getDefinition()->getDefinitions()) {
 						const auto& bindRef = binding->getReference();
 						if (bindRef == defaultRef || lambdaNames.find(bindRef) != lambdaNames.end()) {
 							continue;
 						}
-						lambdaNames[bindRef] = extractName(binding);
+						lambdaNames[bindRef] = makeReadableIfRequired(extractName(binding));
 					}
 				}, true);
 
@@ -462,7 +462,7 @@ namespace printer {
 									visitedFreeFunctions[binding->getReference()] = std::make_tuple(tagname,
 																									splitstring[2]);
 
-									lambdaNames[binding->getReference()] = splitstring[2];
+									lambdaNames[binding->getReference()] = makeReadableIfRequired(splitstring[2]);
 									newLine();
 									out << "decl " << splitstring[2] << ":";
 									visit(NodeAddress(funType));
@@ -1043,23 +1043,21 @@ namespace printer {
 			}
 
 			PRINT(MemberFunction) {
-				if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(node.getAddressedNode())) return;
-				if (auto impl = node->getImplementation().isa<LambdaExprAddress>()) {
-					if (node->isVirtual()) out << "virtual ";
+				if(!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(node.getAddressedNode())) return;
+				if(auto impl = node->getImplementation().isa<LambdaExprAddress>()) {
+					if(node->isVirtual()) out << "virtual ";
 
-					const auto &params = impl->getParameterList();
+					const auto& params = impl->getParameterList();
 					assert_true(params.size() >= 1);
 
 					TypePtr thisParam = params[0].getAddressedNode()->getType();
 					assert_true(analysis::isRefType(thisParam));
-					if (analysis::isRefType(analysis::getReferencedType(thisParam))) {
-						thisParam = analysis::getReferencedType(thisParam);
-					}
+					if(analysis::isRefType(analysis::getReferencedType(thisParam))) { thisParam = analysis::getReferencedType(thisParam); }
 					const auto thisParamRef = lang::ReferenceType(thisParam);
-					if (thisParamRef.isConst()) { out << "const "; }
-					if (thisParamRef.isVolatile()) { out << "volatile "; }
+					if(thisParamRef.isConst()) { out << "const "; }
+					if(thisParamRef.isVolatile()) { out << "volatile "; }
 
-					out << "function " << node->getName()->getValue();
+					out << "function " << makeReadableIfRequired(node->getName()->getValue());
 					auto parameters = impl->getParameterList();
 					thisStack.push(parameters.front().getAddressedNode());
 
@@ -1068,8 +1066,11 @@ namespace printer {
 					out << ") -> ";
 					visit(impl->getFunctionType()->getReturnType());
 					out << " ";
-					if (analysis::isaDefaultMember(node.getAddressedNode())) out << "= default;";
-					else visit(impl->getBody());
+					if(analysis::isaDefaultMember(node.getAddressedNode())) {
+						out << "= default;";
+					} else {
+						visit(impl->getBody());
+					}
 					thisStack.pop();
 				}
 			}
@@ -1099,7 +1100,7 @@ namespace printer {
 				if(lambdaNames.find(node.getAddressedNode()) != lambdaNames.end()) {
 					out << lambdaNames[node.getAddressedNode()];
 				} else {
-					out << node->getNameAsString();
+					out << makeReadableIfRequired(node->getNameAsString());
 				}
 			}
 
