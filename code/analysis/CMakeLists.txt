@@ -52,11 +52,6 @@ if(ANALYSIS_HASKELL)
 
 	add_subdirectory(src/cba/haskell/insieme-hat)
 	link_directories(${CMAKE_CURRENT_BINARY_DIR}/src/cba/haskell/insieme-hat)
-
-	# add directories containing libffi, libHSrts and gmp
-	link_directories(${LIBHSRTS_DIR})
-	link_directories(${GMP_ROOT}/lib)
-
 endif()
 
 if(MSVC)
@@ -103,10 +98,6 @@ endif()
 if(ANALYSIS_HASKELL)
 	add_dependencies(analysis insieme_hat)
 	target_include_directories(analysis SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/cba/haskell/insieme-hat/include)
-
-	# Gold linker does not automatically resolve libHSrts depdency from
-	# analysis lib, need to specify them explicitly.
-	target_link_libraries(analysis ${LIBHSRTS})
 
 	target_link_libraries(analysis ${insieme_hat})
 endif()

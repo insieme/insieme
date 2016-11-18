@@ -1,4 +1,5 @@
 .stack-work
+dist-newstyle
 /.dist-buildwrapper/
 /bin
 *.prof*
