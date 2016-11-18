@@ -36,7 +36,6 @@ pkg_configure() {
 	sh ./bootstrap
 	./configure \
 		--prefix="$PREFIX/$PACKAGE" \
-		--with-boost="$PREFIX/boost-latest" \
 		--disable-java \
 		CPPFLAGS="-I$PREFIX/sqlite-latest/include" \
 		LDFLAGS="-L$PREFIX/sqlite-latest/lib"
