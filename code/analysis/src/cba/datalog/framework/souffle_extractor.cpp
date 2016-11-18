@@ -49,13 +49,13 @@ namespace framework {
 	namespace {
 
 		class Inserter {
-			souffle::Program *analysis;
+			souffle::SouffleProgram *analysis;
 			bool debug = false;
 
 		public:
 			Inserter() {}
 
-			void setAnalysis(souffle::Program &analysis) {
+			void setAnalysis(souffle::SouffleProgram &analysis) {
 				this->analysis = &analysis;
 			}
 
@@ -103,14 +103,14 @@ namespace framework {
 
 	} // end anonymous namespace
 
-	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer, bool debug) {
+	int extractFacts(souffle::SouffleProgram& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer, bool debug) {
 		FactExtractor<core::Pointer,Inserter> extractor(nodeIndexer);
 		extractor.getInserter().setAnalysis(analysis);
 		extractor.getInserter().setDebug(debug);
 		return extractor.visit(root);
 	}
 
-	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer, bool debug) {
+	int extractAddressFacts(souffle::SouffleProgram& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer, bool debug) {
 		FactExtractor<core::Address,Inserter> extractor(nodeIndexer);
 		extractor.getInserter().setAnalysis(analysis);
 		extractor.getInserter().setDebug(debug);

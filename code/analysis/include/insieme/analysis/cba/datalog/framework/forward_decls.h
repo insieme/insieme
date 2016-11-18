@@ -39,8 +39,8 @@
 #include "insieme/core/forward_decls.h"
 
 namespace souffle {
-	
-	class Program;
+
+	class SouffleProgram;
 
 } // end namespace souffle
 

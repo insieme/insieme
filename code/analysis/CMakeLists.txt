@@ -74,7 +74,16 @@ endif()
 # Build the analysis library
 add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_analysis_incs})
 set_target_properties(insieme_analysis PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(insieme_analysis PROPERTIES COMPILE_FLAGS "-fopenmp")
 target_include_directories(insieme_analysis PUBLIC ${insieme_analysis_include_dir})
+
+# Souffle dependencies
+if(ANALYSIS_DATALOG)
+	# Find SQLite3 includes and lib. Newer versions of Soufflé need this
+	insieme_find_package(NAME SQLITE)
+	target_include_directories(insieme_analysis SYSTEM PRIVATE ${SQLITE_INCLUDE_DIRS})
+	target_link_libraries(insieme_analysis ${SQLITE_LIBRARIES})
+endif()
 
 # Haskell dependency
 if(ANALYSIS_HASKELL)
@@ -128,6 +137,7 @@ foreach(case_file ${test_cases})
 
     set(case_name ${ut_prefix}${case_subdir}_${case_name})
     add_executable(${case_name} ${case_file} ${test_common})
+    set_target_properties(${case_name} PROPERTIES COMPILE_FLAGS "-fopenmp")
     target_link_libraries(${case_name} insieme_analysis)
     target_link_libraries(${case_name} insieme_driver)
 

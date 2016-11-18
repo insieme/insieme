@@ -124,7 +124,7 @@ namespace datalog {
 			           name == "cba_expect_may_be_false")
 			{
 				TargetRelations targets;
-				targets["Target"].insert(call.getArgument(0));
+				targets["Targets"].insert(call.getArgument(0));
 				string edCmds("/^result\n"
 				              "s/\\.$/, Targets(n).\n"
 				              "i\n"

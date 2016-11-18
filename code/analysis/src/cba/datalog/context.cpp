@@ -51,7 +51,7 @@ namespace datalog {
 	}
 
 
-	void Context::runAnalysis(souffle::Program& analysis, const core::NodePtr& root, bool debug) {
+	void Context::runAnalysis(souffle::SouffleProgram& analysis, const core::NodePtr& root, bool debug) {
 
 		auto& nodeIndex = nodeIndexes[root];
 		auto& idIndex = idIndexes[root];

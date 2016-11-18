@@ -57,7 +57,7 @@ namespace datalog {
 
 		struct entry {
 			core::NodePtr root;
-			souffle::Program* analysis;
+			souffle::SouffleProgram* analysis;
 			std::map<core::ExpressionAddress,int> index;
 
 			entry() : analysis(nullptr) {}
@@ -169,7 +169,7 @@ namespace datalog {
 
 	private:
 
-		void runAnalysis(souffle::Program& analysis, const core::NodePtr& root, bool debug);
+		void runAnalysis(souffle::SouffleProgram& analysis, const core::NodePtr& root, bool debug);
 
 	};
 

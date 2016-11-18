@@ -11,7 +11,7 @@ namespace framework {
 	/**
 	 * Checks for failure states in the given analysis. If failures are encountered, an exception will be thrown.
 	 */
-	void checkForFailures(souffle::Program& analysis);
+	void checkForFailures(souffle::SouffleProgram& analysis);
 
 } // end namespace framework
 } // end namespace datalog

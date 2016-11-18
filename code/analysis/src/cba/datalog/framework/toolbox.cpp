@@ -48,7 +48,7 @@ namespace cba {
 namespace datalog {
 namespace framework {
 
-	void checkForFailures(souffle::Program& analysis) {
+	void checkForFailures(souffle::SouffleProgram& analysis) {
 
 		auto failures = analysis.getRelation("D474L06_utils_failure_dl_failure");
 		if(!failures)
