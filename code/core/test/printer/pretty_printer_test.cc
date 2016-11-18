@@ -1602,6 +1602,30 @@ TEST(PrettyPrinter, MaxDepth) {
 	EXPECT_EQ(res2, toString(printer2)) << printer2;
 }
 
+TEST(PrettyPrinter, ReadableNames) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	// generic type
+	{
+		std::string input = "<ref<IMP___anon_tagtype__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6_IMLOC__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6,f,f,plain>>(ref_temp(type_lit(IMP___anon_tagtype__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6_IMLOC__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6))) {}";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::READABLE_NAMES);
+		EXPECT_EQ("<ref<anon_basic_cpp_8_6,f,f,plain>>(ref_temp(type_lit(anon_basic_cpp_8_6))) {}", toString(printer));
+	}
+	// struct
+	{
+		std::string input = R"(
+				def struct IMP___anon_tagtype__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6_IMLOC__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6 {};
+				<ref<IMP___anon_tagtype__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6_IMLOC__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6,f,f,plain>>(ref_temp(type_lit(IMP___anon_tagtype__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6_IMLOC__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6))) {}
+			)";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::READABLE_NAMES);
+		EXPECT_EQ("decl struct anon_basic_cpp_8_6;\ndef struct anon_basic_cpp_8_6 {\n};\n<ref<anon_basic_cpp_8_6,f,f,plain>>(ref_temp(type_lit(anon_basic_cpp_8_6))) {}", toString(printer));
+	}
+}
+
+
 TEST(Lexer, Symbol) {
 	using namespace insieme::core::printer::detail;
 	char lex = 'b';
@@ -1693,5 +1717,4 @@ TEST(Lexer, Comments) {
 	EXPECT_EQ(1, token2.size());
 	EXPECT_EQ("(Comment:// This is just a comment)", toString(token2[0]));
 	//std::cout << token2[1];
-
 }

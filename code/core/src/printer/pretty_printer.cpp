@@ -51,6 +51,7 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/name_mangling.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
@@ -166,10 +167,11 @@ namespace printer {
 			return type;
 		}
 
-		const std::string getObjectName(const core::TypePtr& ty) {
+		const std::string getObjectName(const PrettyPrinter& printer, const core::TypePtr& ty) {
 			auto objTy = analysis::getObjectType(ty);
-			return analysis::getTypeName(objTy);
-			throw;
+			auto ret = analysis::getTypeName(objTy);
+			if(printer.hasOption(PrettyPrinter::READABLE_NAMES)) ret = utils::getReadableName(ret);
+			return ret;
 		}
 
 		/**
@@ -402,7 +404,7 @@ namespace printer {
 							newLine();
 							out << "decl ";
 							out << ((tag->isStruct()) ? "struct " : "union ");
-							out << tag->getName()->getValue();
+							out << makeReadableIfRequired(tag->getName()->getValue());
 							out << ";";
 						}
 					}
@@ -452,7 +454,7 @@ namespace printer {
 							} else if (visitedMemberFunctions.insert(binding->getReference()).second) {
 								// branch for free defined function
 								if (binding->getReference()->getType().isMemberFunction()) { // free member functions
-									auto tagname = getObjectName(cur->getType());
+									auto tagname = getObjectName(printer, cur->getType());
 									// get the function name out of the lambda name
 									vector<std::string> splitstring;
 									boost::split(splitstring, lambdaNames[binding->getReference()],
@@ -466,7 +468,7 @@ namespace printer {
 									visit(NodeAddress(funType));
 									out << ";";
 								} else if (binding->getReference()->getType().isConstructor()) { // free constructors
-									auto tagname = getObjectName(cur->getType());
+									auto tagname = getObjectName(printer, cur->getType());
 									visitedFreeFunctions[binding->getReference()] = std::make_tuple(tagname, lambdaNames[binding->getReference()]);
 								}
 							}
@@ -478,7 +480,7 @@ namespace printer {
 					//third: print all declarations for memberFields, constructors, destructors, memberFunctions...
 					for(auto& tag : visitedTagTypes) {
 						auto record = tag.getRecord();
-						auto& tagName = tag->getName()->getValue();
+						auto& tagName = makeReadableIfRequired(tag->getName()->getValue());
 
 						if (tagName.compare("")) {
 							// print all memberFields declarations
@@ -527,7 +529,7 @@ namespace printer {
 									continue;
 								if (auto member = memberFun->getImplementation().isa<LambdaExprPtr>()) {
 									newLine();
-									out << "decl " << memberFun->getName()->getValue() << ":";
+									out << "decl " << makeReadableIfRequired(memberFun->getName()->getValue()) << ":";
 									visit(NodeAddress(member->getType()));
 									out << ";";
 								}
@@ -667,6 +669,10 @@ namespace printer {
 				depth--;
 			}
 
+			const string makeReadableIfRequired(const string& name) {
+				if(printer.hasOption(PrettyPrinter::READABLE_NAMES)) return utils::getReadableName(name);
+				return name;
+			}
 
 		public:
 
@@ -687,7 +693,7 @@ namespace printer {
 				const auto& parent_types = node->getParents();
 				const auto& types = node->getTypeParameter();
 
-				out << *node->getName();
+				out << makeReadableIfRequired(node->getName()->getValue());
 				if(!parent_types->empty()) {
 					out << " : [ " << join(", ", parent_types, printer) << " ]";
 				}
@@ -698,35 +704,35 @@ namespace printer {
 
 			PRINT(FunctionType) {
 
-				auto printer = [&](std::ostream&, const TypeAddress& cur) { visit(cur); };
+				auto printerLambda = [&](std::ostream&, const TypeAddress& cur) { visit(cur); };
 
 				// print instantiation types
 				if(node->hasInstantiationTypes()) {
-					out << "<" << join(", ", node->getInstantiationTypeList(), printer) << ">";
+					out << "<" << join(", ", node->getInstantiationTypeList(), printerLambda) << ">";
 				}
 
 				// print the function type
 				if(node->isMember()) {
 					if (node->isDestructor()) {
 						// print class type
-						out << "~" << getObjectName(node) << "::()";
+						out << "~" << getObjectName(printer, node) << "::()";
 					} else {
 						auto params = node->getParameterTypes();
 						// print qualifier
 						assert_true(params.size() > 0);
 						printQualifiers(out, node->getParameterTypeList()[0].getAddressedNode());
 						// print class type
-						out << getObjectName(node) << "::";
+						out << getObjectName(printer, node) << "::";
 						// print function signature
 						if(node->isConstructor()) {
-							out << "(" << join(", ", params.begin() + 1, params.end(), printer) << ")";
+							out << "(" << join(", ", params.begin() + 1, params.end(), printerLambda) << ")";
 						} else if(node->isMemberFunction() || node->isVirtualMemberFunction()) {
-							out << "(" << join(", ", params.begin() + 1, params.end(), printer) << ")" << (node->isMemberFunction() ? " -> " : " ~> ");
+							out << "(" << join(", ", params.begin() + 1, params.end(), printerLambda) << ")" << (node->isMemberFunction() ? " -> " : " ~> ");
 							visit(node->getReturnType());
 						}
 					}
 				} else {
-					out << "(" << join(", ", node->getParameterTypes(), printer) << ")";
+					out << "(" << join(", ", node->getParameterTypes(), printerLambda) << ")";
 					out << ((node->isPlain()) ? " -> " : " => ");
 					visit(node->getReturnType());
 				}
@@ -761,7 +767,7 @@ namespace printer {
 				out << (strct ? "struct " : "union ");
 
 				// print name
-				auto recordName = node->getName()->getValue();
+				auto recordName = makeReadableIfRequired(node->getName()->getValue());
 				if(recordName.compare("")) { out << recordName << " "; }
 
 				// print parents including their qualifiers
@@ -1229,7 +1235,7 @@ namespace printer {
 								// indeed, we have a free constructor here
 								out << std::get<1>(visitedFreeFunctions[lambdaExpr->getReference()]);
 							} else {
-								out << getObjectName(lambdaExpr->getType()) << "::";
+								out << getObjectName(printer, lambdaExpr->getType()) << "::";
 							}
 						} else {
 							// standard function call name
@@ -1351,7 +1357,7 @@ namespace printer {
 			}
 
 			PRINT(TagTypeReference) {
-				out << node->getName()->getValue();
+				out << makeReadableIfRequired(node->getName()->getValue());
 			}
 
 			PRINT(Program) {
