@@ -41,12 +41,13 @@
  * @param NodeType the type the check should be applied on
  */
 #define SIMPLE_CHECK(Name, NodeType, visitTypes)                                                                                                               \
-	class Name##Check : public IRCheck {                                                                                                                       \
+	class Name##Check : public insieme::core::checks::IRCheck {                                                                                                \
 	  public:                                                                                                                                                  \
-		Name##Check() : IRCheck(visitTypes){};                                                                                                                 \
-		virtual OptionalMessageList visit(const NodeAddress& address) override {                                                                               \
-			if(NodeType##Address adr = dynamic_address_cast<const NodeType>(address)) return visit##NodeType(adr);                                             \
-			return OptionalMessageList();                                                                                                                      \
+		Name##Check() : insieme::core::checks::IRCheck(visitTypes){};                                                                                          \
+		virtual insieme::core::checks::OptionalMessageList visit(const insieme::core::NodeAddress& address) override {                                         \
+			if(insieme::core::NodeType##Address adr = insieme::core::dynamic_address_cast<const insieme::core::NodeType>(address))                             \
+				return visit##NodeType(adr);                                                                                                                   \
+			return insieme::core::checks::OptionalMessageList();                                                                                               \
 		}                                                                                                                                                      \
-		virtual OptionalMessageList visit##NodeType(const NodeType##Address& address) override;                                                                \
+		virtual insieme::core::checks::OptionalMessageList visit##NodeType(const insieme::core::NodeType##Address& address) override;                          \
 	}
