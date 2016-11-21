@@ -77,7 +77,7 @@ namespace framework {
 
 			int counter = 0;
 
-			souffle::Program& analysis;
+			souffle::SouffleProgram& analysis;
 
 			std::map<core::NodePtr,int> uniqueIndex;
 
@@ -85,7 +85,7 @@ namespace framework {
 
 		public:
 
-			FactExtractor(souffle::Program& analysis,const NodeIndexer& indexer)
+			FactExtractor(souffle::SouffleProgram& analysis,const NodeIndexer& indexer)
 				: core::IRVisitor<int,Ptr>(true), indexer(indexer), analysis(analysis) {}
 
 			int extractFacts(const Ptr<const core::Node>& rootNode) {
@@ -651,15 +651,15 @@ namespace framework {
 
 	} // end anonymous namespace
 
-	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer) {
+	int extractFacts(souffle::SouffleProgram& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer) {
 		return FactExtractor<core::Pointer>(analysis,nodeIndexer).visit(root);
 	}
 
-	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer) {
+	int extractAddressFacts(souffle::SouffleProgram& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer) {
 		return FactExtractor<core::Address>(analysis,nodeIndexer).visit(core::NodeAddress(root));
 	}
 
-	void checkForFailures(souffle::Program& analysis) {
+	void checkForFailures(souffle::SouffleProgram& analysis) {
 
 		auto failures = analysis.getRelation("D474L06_utils_failure_dl_failure");
 		assert_true(failures) << "Failure relation in analysis not found!";

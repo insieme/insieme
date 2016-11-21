@@ -40,7 +40,7 @@
 
 // -- forward declarations --
 namespace souffle {
-	class Program;
+	class SouffleProgram;
 } // end namespace souffle
 
 namespace insieme {
@@ -52,17 +52,17 @@ namespace framework {
 	/**
 	 * Extracts facts from the given root node and inserts them into the given program using node pointers.
 	 */
-	int extractFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer = [](const core::NodePtr&,int){});
+	int extractFacts(souffle::SouffleProgram& analysis, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer = [](const core::NodePtr&,int){});
 
 	/**
 	 * Extracts facts from the given root node and inserts them into the given program using node addresses.
 	 */
-	int extractAddressFacts(souffle::Program& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer = [](const core::NodeAddress&,int){});
+	int extractAddressFacts(souffle::SouffleProgram& analysis, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer = [](const core::NodeAddress&,int){});
 
 	/**
 	 * Checks for failure states in the given analysis. If failures are encountered, an exception will be thrown.
 	 */
-	void checkForFailures(souffle::Program& analysis);
+	void checkForFailures(souffle::SouffleProgram& analysis);
 
 } // end namespace framework
 } // end namespace datalog
