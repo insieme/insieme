@@ -1652,6 +1652,30 @@ TEST(PrettyPrinter, ReadableNames) {
 	#undef READABLENAME
 }
 
+TEST(PrettyPrinter, CallArgLineBreaks) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	{
+		std::string input = R"(
+				decl testfun : (int<4>, int<4>, int<4>) -> int<4>;
+				testfun(lit("aksajdjaklsdjkasjkdlasljkdasdsawjehqwjehkjqwheqjwneq":int<4>), 724781+12732817-2312312312/45, 1182*723)
+			)";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::CALL_ARG_LINE_BREAKS);
+		EXPECT_EQ("decl testfun : (int<4>, int<4>, int<4>) -> int<4>;\ntestfun(\n    aksajdjaklsdjkasjkdlasljkdasdsawjehqwjehkjqwheqjwneq,\n    724781+12732817-2312312312/45,\n    1182*723\n)", toString(printer));
+	}
+	{
+		std::string input = R"(
+				decl testfun : (int<4>, int<4>, int<4>) -> int<4>;
+				testfun(testfun(42, 31337, 3840*2160), 724781+12732817-2312312312/45, testfun(12732817-312312/45, lit("uijjcjnvjkdfzujermtnertwrwerjwerkjwerkwnsdf":int<4>), 1182*723))
+			)";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::CALL_ARG_LINE_BREAKS);
+		EXPECT_EQ("decl testfun : (int<4>, int<4>, int<4>) -> int<4>;\ntestfun(\n    testfun(42, 31337, 3840*2160),\n    724781+12732817-2312312312/45,\n    testfun(\n        12732817-312312/45,\n        uijjcjnvjkdfzujermtnertwrwerjwerkjwerkwnsdf,\n        1182*723\n    )\n)", toString(printer));
+		//std::cout << toString(PrettyPrinter(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::CALL_ARG_LINE_BREAKS | PrettyPrinter::USE_COLOR)) << std::endl;
+	}
+}
 
 TEST(Lexer, Symbol) {
 	using namespace insieme::core::printer::detail;
