@@ -76,6 +76,14 @@ add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_
 set_target_properties(insieme_analysis PROPERTIES LINKER_LANGUAGE CXX)
 target_include_directories(insieme_analysis PUBLIC ${insieme_analysis_include_dir})
 
+# Souffle dependencies
+if(ANALYSIS_DATALOG)
+	# Find SQLite3 includes and lib. Newer versions of Soufflé need this
+	insieme_find_package(NAME SQLITE)
+	target_include_directories(insieme_analysis SYSTEM PRIVATE ${SQLITE_INCLUDE_DIRS})
+	target_link_libraries(insieme_analysis ${SQLITE_LIBRARIES})
+endif()
+
 # Haskell dependency
 if(ANALYSIS_HASKELL)
     add_dependencies(insieme_analysis insieme_analysis_haskell)
