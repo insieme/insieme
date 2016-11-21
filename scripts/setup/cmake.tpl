@@ -10,6 +10,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # -- Project Settings
 include(build_settings)
 include(boost_settings)
+include(doxygen)
 
 # -- Dependencies
 #set(GMP_VERSION 6.0.0 CACHE STRING "GMP Version")

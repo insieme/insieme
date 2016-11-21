@@ -1,5 +1,6 @@
 option(BUILD_SHARED_LIBS "Link libraries dynamically" ON)
 option(BUILD_TESTS "Enable testing" ON)
+option(BUILD_DOCS "Enable documentation" OFF)
 
 if(BUILD_TESTS)
 	enable_testing()
