@@ -4,7 +4,7 @@ PACKAGE="$NAME-$VERSION"
 
 FILE="$PACKAGE.zip"
 URL="http://www.insieme-compiler.org/ext_libs/$FILE"
-SHA256SUM="3fef4a7d21dc1342fccb3596338587bdd32496578689cc30fc8b34e7a5eab84e"
+SHA256SUM="ffc5a36b66b1298a66631e0f89f47ff83a0af7afb8872a24346158e8d50b1cd4"
 
 DEPENDS="bison flex boost sqlite"
 
