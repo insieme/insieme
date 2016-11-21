@@ -214,7 +214,8 @@ namespace utils {
 		}
 	}
 
-	static inline void runIndependentTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](ConversionJob& job) {}) {
+	static inline void runIndependentTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](auto& job) {},
+	                                        std::function<void(core::NodeManager&, core::lang::symbol_map&)> symbolModifier = [](auto& mgr, auto& symbols) {}) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 
@@ -230,6 +231,7 @@ namespace utils {
 
 		// add FE module symbols for use in test cases
 		auto symbols = mgr.getLangExtension<frontend::utils::FrontendInspireModule>().getSymbols();
+		symbolModifier(mgr, symbols);
 
 		// iterate over res and check pragma expectations
 		size_t visited = 0;
