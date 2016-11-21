@@ -13,7 +13,7 @@ macro(add_unittest module test)
 
 		# setup full name
 		get_filename_component(test_name ${test} NAME_WE)
-		set(test_name "ut_${module}_${test_subdir}${test_name}")
+		set(test_name "ut_${module}${test_subdir}_${test_name}")
 
 		# build executable
 		add_executable(${test_name} ${test})
