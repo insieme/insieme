@@ -1,3 +1,36 @@
 #!/bin/bash
 
-echo "Nothing to see here, move along."
+set -e
+
+if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]];then
+	echo "Usage: $0 <project> [module]..."
+	exit 1
+fi
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TGT="$DIR/../.."
+
+# setup project name, modules remain in $@
+project="$1"
+shift
+
+if [[ $(head -n1 "$TGT/README.md") == "# CXX Template" ]]; then
+	# setup README
+	cp "$DIR/readme.tpl" "$TGT/README.md"
+	sed "s/%PROJECT%/$project/g" -i "$TGT/README.md"
+
+	# setup root CMakeLists
+	cp "$DIR/cmake.tpl" "$TGT/CMakeLists.txt"
+	sed "s/%PROJECT%/$project/g" -i "$TGT/CMakeLists.txt"
+fi
+
+# setup modules
+for module in $@; do
+	echo "add_subdirectory(code/$module)" >> "$TGT/CMakeLists.txt"
+
+	mkdir -p "$TGT/code"
+	cp -r "$DIR/module_tpl" "$TGT/code/$module"
+	mv "$TGT/code/$module/include/project" "$TGT/code/$module/include/$project"
+	mv "$TGT/code/$module/include/$project/module" "$TGT/code/$module/include/$project/$module"
+	find "$TGT/code/$module" -type f -exec sed -e "s/%PROJECT%/$project/g" -e "s/%MODULE%/$module/g" -i {} \;
+done
