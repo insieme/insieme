@@ -44,6 +44,7 @@ pkg_install() {
 
 	rm -f "$PREFIX/$NAME-latest"
 	ln -s "$PREFIX/$PACKAGE" "$PREFIX/$NAME-latest"
+	touch "$PREFIX/$PACKAGE/.installed"
 }
 
 pkg_cleanup() {
