@@ -40,15 +40,4 @@ if(MSVC)
 	# windows library naming policies
 	set(CMAKE_FIND_LIBRARY_PREFIXES "")
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib") # if you're thinking about adding ".dll" here, read up on "import libraries" in Windows
-
-	# TODO create own cmake file for boost stuff
-	# Boost linking options
-	set(Boost_USE_STATIC_LIBS OFF) # default: OFF
-	set(Boost_USE_DEBUG_RUNTIME ON) # default: ON
-	set(Boost_USE_MULTITHREADED ON) # default: ON
-	if(MSVC_SHARED_RUNTIME)
-		set(Boost_USE_STATIC_RUNTIME OFF) # default: platform-dependent
-	else()
-		set(Boost_USE_STATIC_RUNTIME ON)
-	endif()
 endif()
