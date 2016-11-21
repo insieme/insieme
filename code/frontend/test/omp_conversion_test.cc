@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+#include "insieme/frontend/utils/independent_test_utils.h"
 
 #include "insieme/frontend/extensions/omp_frontend_extension.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
@@ -44,7 +44,7 @@ namespace frontend {
 
 	namespace {
 		void runOmpTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](ConversionJob& job) {}) {
-			runIndependentTestOn(fn, [&jobModifier](ConversionJob& job) {
+			utils::runIndependentTestOn(fn, [&jobModifier](ConversionJob& job) {
 				job.forceFrontendExtension<extensions::OmpFrontendExtension>();
 				jobModifier(job);
 			});

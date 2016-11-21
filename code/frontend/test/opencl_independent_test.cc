@@ -34,7 +34,8 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+#include "insieme/frontend/utils/independent_test_utils.h"
+
 #include "insieme/frontend/extensions/opencl_frontend_extension.h"
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
 
@@ -42,7 +43,7 @@ namespace insieme {
 namespace frontend {
 	
 	TEST(IndependentTest, OpenCL) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_opencl.c", 
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_opencl.c",
 			[](ConversionJob& job) {
 				job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
 				job.registerFrontendExtension<extensions::OpenCLFrontendExtension>(true);

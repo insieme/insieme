@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+#include "insieme/frontend/utils/independent_test_utils.h"
 
 #include "insieme/frontend/extensions/variable_length_array_extension.h"
 
@@ -42,7 +42,7 @@ namespace insieme {
 namespace frontend {
 
 	TEST(IndependentTest, VariableLengthArrays) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_length_arrays.c",
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_length_arrays.c",
 			[](ConversionJob& job) { job.registerFrontendExtension<extensions::VariableLengthArrayExtension>(); }
 		);
 	}

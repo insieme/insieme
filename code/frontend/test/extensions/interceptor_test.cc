@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "../independent_test_utils.h"
+#include "insieme/frontend/utils/independent_test_utils.h"
 
 #include "insieme/frontend/extensions/interceptor_extension.h"
 
@@ -48,34 +48,34 @@ namespace insieme {
 namespace frontend {
 
 	TEST(InterceptorTest, CustomPath) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp", [](ConversionJob& job) {
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp", [](ConversionJob& job) {
 			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
 	}
 
 	TEST(InterceptorTest, Templates) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/template_interception.cpp", [](ConversionJob& job) {
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/template_interception.cpp", [](ConversionJob& job) {
 			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
 	}
 
 	TEST(InterceptorTest, QualifiedTemplates) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/qualified_template_interception.cpp", [](ConversionJob& job) {
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/qualified_template_interception.cpp", [](ConversionJob& job) {
 			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
 	}
 
 	TEST(InterceptorTest, SystemInterception) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp", [](ConversionJob& job) {
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp", [](ConversionJob& job) {
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
 	}
 
 	TEST(InterceptorTest, NoInterception) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/no_interceptor_test.cpp", [](ConversionJob& job) {
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/no_interceptor_test.cpp", [](ConversionJob& job) {
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
 	}
@@ -85,11 +85,11 @@ namespace frontend {
 		EXPECT_FALSE(any(funs, [&](decltype(funs)::value_type val) { return val.first->getStringValue() == name; })) << "Function " << name << " has not intercepted!";
 	}
 
-	void checkForTypeName(const NodePtr& code, const std::string& typeNodeIrSpec, const std::string& expectedAttachedName, const std::string& expectedHeaderName) {
+	void checkForTypeName(const core::NodePtr& code, const std::string& typeNodeIrSpec, const std::string& expectedAttachedName, const std::string& expectedHeaderName) {
 		bool checked = false;
-		IRBuilder builder(code->getNodeManager());
+		core::IRBuilder builder(code->getNodeManager());
 		auto targetType = builder.parseType(typeNodeIrSpec).as<core::GenericTypePtr>();
-		visitDepthFirstOnce(code, [&](const core::GenericTypePtr& genType) {
+		core::visitDepthFirstOnce(code, [&](const core::GenericTypePtr& genType) {
 			if(genType == targetType) {
 				ASSERT_TRUE(core::annotations::hasAttachedName(genType));
 				EXPECT_EQ(expectedAttachedName, core::annotations::getAttachedName(genType));
@@ -101,17 +101,17 @@ namespace frontend {
 		EXPECT_TRUE(checked) << "checkForTypeName: " << typeNodeIrSpec;
 	}
 
-	void checkLiteralNameInternal(const NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName,
+	void checkLiteralNameInternal(const core::NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName,
 	                              const std::string& expectedHeaderName, bool fun, const core::FunctionKind expectedKind) {
 		bool checked = false;
-		visitDepthFirstOnce(code, [&](const core::LiteralPtr& lit) {
+		core::visitDepthFirstOnce(code, [&](const core::LiteralPtr& lit) {
 			if(lit->getValue()->getValue() == functionLiteralName) {
 				ASSERT_TRUE(core::annotations::hasAttachedName(lit));
 				EXPECT_EQ(expectedAttachedName, core::annotations::getAttachedName(lit));
 				ASSERT_TRUE(insieme::annotations::c::hasIncludeAttached(lit));
 				EXPECT_EQ(expectedHeaderName, insieme::annotations::c::getAttachedInclude(lit));
 				if(fun) {
-					auto funType = lit->getType().isa<FunctionTypePtr>();
+					auto funType = lit->getType().isa<core::FunctionTypePtr>();
 					ASSERT_TRUE(funType);
 					EXPECT_EQ(funType->getKind(), expectedKind) << "Wrong kind for " << functionLiteralName;
 				}
@@ -122,12 +122,12 @@ namespace frontend {
 	}
 
 
-	void checkForFunctionName(const NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName,
+	void checkForFunctionName(const core::NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName,
 	                          const std::string& expectedHeaderName, const core::FunctionKind expectedKind = core::FK_PLAIN) {
 		checkLiteralNameInternal(code, functionLiteralName, expectedAttachedName, expectedHeaderName, true, expectedKind);
 	}
 
-	void checkForLiteralName(const NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName,
+	void checkForLiteralName(const core::NodePtr& code, const std::string& functionLiteralName, const std::string& expectedAttachedName,
 	                         const std::string& expectedHeaderName) {
 		checkLiteralNameInternal(code, functionLiteralName, expectedAttachedName, expectedHeaderName, false, core::FK_PLAIN);
 	}

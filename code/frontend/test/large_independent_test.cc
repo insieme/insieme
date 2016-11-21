@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+#include "insieme/frontend/utils/independent_test_utils.h"
 
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
 #include "insieme/frontend/extensions/variable_length_array_extension.h"
@@ -43,7 +43,7 @@ namespace insieme {
 namespace frontend {
 
 	static inline void runLargeIndependentTestOn(const string& fn, std::vector<std::string> includeDirs = toVector<std::string>()) {
-		runIndependentTestOn(fn, [&](ConversionJob& job) {
+		utils::runIndependentTestOn(fn, [&](ConversionJob& job) {
 			job.registerFrontendExtension<extensions::VariableLengthArrayExtension>();
 			job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
 			for(auto inc : includeDirs) {

@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+#include "insieme/frontend/utils/independent_test_utils.h"
 
 #include "insieme/frontend/extensions/while_to_for_extension.h"
 
@@ -42,7 +42,7 @@ namespace insieme {
 namespace frontend {
 
 	TEST(IndependentTest, WhileToFor) {
-		runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_for.c",
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_for.c",
 			[](ConversionJob& job) { job.registerFrontendExtension<extensions::WhileToForExtension>(); }
 		);
 	}

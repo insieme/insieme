@@ -34,69 +34,75 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+#include "insieme/frontend/utils/independent_test_utils.h"
 
 #include "insieme/frontend/extensions/interceptor_extension.h"
 
 namespace insieme {
 namespace frontend {
 
-	TEST(CppIndependentTest, AdvancedClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_advanced_classes.cpp"); }
+	TEST(CppIndependentTest, AdvancedClasses) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_advanced_classes.cpp"); }
 
-	TEST(CppIndependentTest, AdvancedTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_advanced_templates.cpp"); }
+	TEST(CppIndependentTest, AdvancedTemplates) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_advanced_templates.cpp"); }
 
-	TEST(CppIndependentTest, BasicClasses) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_classes.cpp"); }
+	TEST(CppIndependentTest, BasicClasses) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_classes.cpp"); }
 
-	TEST(CppIndependentTest, BasicTemplates) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_templates.cpp"); }
+	TEST(CppIndependentTest, BasicTemplates) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_templates.cpp"); }
 
-	TEST(CppIndependentTest, BasicTypes) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_types.cpp"); }
+	TEST(CppIndependentTest, BasicTypes) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_types.cpp"); }
 
-	TEST(CppIndependentTest, ClassOperators) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_class_operators.cpp"); }
+	TEST(CppIndependentTest, ClassOperators) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_class_operators.cpp"); }
 
-	TEST(CppIndependentTest, Constructors) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_constructors.cpp"); }
+	TEST(CppIndependentTest, Constructors) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_constructors.cpp"); }
 
-	TEST(CppIndependentTest, DefaultArgs) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args.cpp"); }
+	TEST(CppIndependentTest, DefaultArgs) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args.cpp"); }
 
-	TEST(CppIndependentTest, Enum) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_enum.cpp"); }
+	TEST(CppIndependentTest, DefaultConstructorDeclaration) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_constructor_declaration.cpp"); }
 
-	TEST(CppIndependentTest, Expressions) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions.cpp"); }
+	TEST(CppIndependentTest, Enum) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_enum.cpp"); }
 
-	TEST(CppIndependentTest, ExpressionsRef) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions_ref.cpp"); }
+	TEST(CppIndependentTest, Expressions) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions.cpp"); }
 
-	TEST(CppIndependentTest, Globals) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_globals.cpp"); }
+	TEST(CppIndependentTest, ExpressionsRef) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions_ref.cpp"); }
 
-	TEST(CppIndependentTest, InitializerList) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_initializer_list.cpp"); }
+	TEST(CppIndependentTest, Globals) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_globals.cpp"); }
 
-	TEST(CppIndependentTest, Lambda) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda.cpp"); }
+	TEST(CppIndependentTest, InitializerList) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_initializer_list.cpp"); }
 
-	TEST(CppIndependentTest, MemberCalls) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_member_calls.cpp"); }
+	TEST(CppIndependentTest, Lambda) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda.cpp"); }
 
-	TEST(CppIndependentTest, MemFunPtr) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_mem_fun_ptr.cpp"); }
+	TEST(CppIndependentTest, MemberCalls) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_member_calls.cpp"); }
 
-	TEST(CppIndependentTest, Naming) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_naming.cpp"); }
+	TEST(CppIndependentTest, MemFunPtr) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_mem_fun_ptr.cpp"); }
 
-	TEST(CppIndependentTest, NewDelete) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_new_delete.cpp"); }
+	TEST(CppIndependentTest, Naming) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_naming.cpp"); }
 
-	TEST(CppIndependentTest, ObjectPassing) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_object_passing.cpp"); }
+	TEST(CppIndependentTest, NewDelete) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_new_delete.cpp"); }
 
-	TEST(CppIndependentTest, RefPtr) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_ref_ptr.cpp"); }
+	TEST(CppIndependentTest, ObjectPassing) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_object_passing.cpp"); }
 
-	TEST(CppIndependentTest, Return) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_return.cpp"); }
+	TEST(CppIndependentTest, RefPtr) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_ref_ptr.cpp"); }
 
-	TEST(CppIndependentTest, ReturnStmt) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_return_stmt.cpp"); }
+	TEST(CppIndependentTest, Return) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_return.cpp"); }
 
-	TEST(CppIndependentTest, RValueXValue) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_rvalue_xvalue.cpp"); }
+	TEST(CppIndependentTest, ReturnStmt) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_return_stmt.cpp"); }
 
-	TEST(CppIndependentTest, StackInitialization) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_stack_initialization.cpp"); }
+	TEST(CppIndependentTest, RValueXValue) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_rvalue_xvalue.cpp"); }
 
-	TEST(CppIndependentTest, Statements) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_statements.cpp", [](ConversionJob& job) {
+	TEST(CppIndependentTest, StackInitialization) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_stack_initialization.cpp"); }
+
+	TEST(CppIndependentTest, Statements) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_statements.cpp", [](ConversionJob& job) {
 		// Requires interceptor extension (test extension needs to be last)
 		job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 	}); }
 
-	TEST(CppIndependentTest, Static) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_static.cpp"); }
+	TEST(CppIndependentTest, Static) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_static.cpp"); }
 
-	TEST(CppIndependentTest, This) { runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_this.cpp"); }
+	TEST(CppIndependentTest, StaticDataMember) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_static_data_member.cpp"); }
+
+	TEST(CppIndependentTest, This) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_this.cpp"); }
+
+	TEST(CppIndependentTest, Undeclared) { utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_undeclared.cpp"); }
 
 } // fe namespace
 } // insieme namespace

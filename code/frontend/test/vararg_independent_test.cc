@@ -34,14 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+#include "insieme/frontend/utils/independent_test_utils.h"
 
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
 
 namespace insieme {
 namespace frontend {
 	static inline void runVarargIndependentTestOn(const string& fn) {
-		runIndependentTestOn(fn, [&](ConversionJob& job) {
+		utils::runIndependentTestOn(fn, [&](ConversionJob& job) {
 			job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
 		});
 	}

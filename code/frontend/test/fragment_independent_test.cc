@@ -34,7 +34,8 @@
  * regarding third party software licenses.
  */
 
-#include "independent_test_utils.h"
+#include "insieme/frontend/utils/independent_test_utils.h"
+
 #include "insieme/frontend/extensions/opencl_frontend_extension.h"
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
 
@@ -42,63 +43,63 @@ namespace insieme {
 namespace frontend {
 
 	TEST(IndependentTest, Literals) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_literals.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_literals.c");
 	}
 	
 	TEST(IndependentTest, BasicTypes) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_basic_types.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_basic_types.c");
 	}
 
 	TEST(IndependentTest, Globals) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals.c");
 	}
 
 	TEST(IndependentTest, GlobalsInit) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals_init.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals_init.c");
 	}
 
 	TEST(IndependentTest, Statements) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_statements.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_statements.c");
 	}
 
 	TEST(IndependentTest, VariableScopes) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_variable_scopes.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_variable_scopes.c");
 	}
 	
 	TEST(IndependentTest, FunCalls) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_fun_calls.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_fun_calls.c");
 	}
 
 	TEST(IndependentTest, Expressions) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_expressions.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_expressions.c");
 	}
 
 	TEST(IndependentTest, Casts) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_casts.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_casts.c");
 	}
 
 	TEST(IndependentTest, DeclInitExpressions) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_decl_init_expressions.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_decl_init_expressions.c");
 	}
 
 	TEST(IndependentTest, Prototypes) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_prototypes.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_prototypes.c");
 	}
 
 	TEST(IndependentTest, FunctionPointers) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_function_pointers.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_function_pointers.c");
 	}
 	
 	TEST(IndependentTest, Static) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_static.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_static.c");
 	}
 
 	TEST(IndependentTest, Enum) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_enum.c");
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_enum.c");
 	}
 
 	TEST(IndependentTest, OpenCL) {
-		runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_opencl.c",
+		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_opencl.c",
 			[](ConversionJob& job) {
 				job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
 				job.registerFrontendExtension<extensions::OpenCLFrontendExtension>(true);
