@@ -39,5 +39,5 @@ pkg_configure() {
 		--with-boost="$BOOST_ROOT" \
 		--disable-java \
 		CPPFLAGS="-I$PREFIX/sqlite-latest/include" \
-		LDFLAGS="-L$PREFIX/sqlite-latest/lib"
+		LDFLAGS="-L$PREFIX/sqlite-latest/lib -Wl,-rpath,$BOOST_ROOT/lib"
 }
