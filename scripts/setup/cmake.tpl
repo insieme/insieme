@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.6)
 project(%PROJECT% VERSION 0.0.0 LANGUAGES C CXX)
 
-# -- Include Paths
+# -- Module Path
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+# -- Prefix Path
+file(GLOB prefix_paths ${CMAKE_CURRENT_SOURCE_DIR}/libs/*)
 
 # -- Extends
 #add_subdirectory(insieme)
