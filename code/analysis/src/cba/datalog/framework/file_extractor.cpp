@@ -74,6 +74,7 @@ namespace framework {
 
 			Inserter &setDebug(bool debug) {
 				this->debug = debug;
+				return *this;
 			}
 
 			void printDebug() {
