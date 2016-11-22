@@ -84,7 +84,7 @@ namespace encoder {
 	 * template is only defined by its partial specializations to cause a compile
 	 * error whenever a given type is not supported.
 	 */
-	template <typename T>
+	template <typename T, typename filter = bool>
 	struct type_factory;
 
 	/**
@@ -92,7 +92,7 @@ namespace encoder {
 	 * template is only defined by its partial specializations to cause a compile
 	 * error whenever a given type is not supported.
 	 */
-	template <typename T>
+	template <typename T, typename filter = bool>
 	struct value_to_ir_converter;
 
 	/**
@@ -100,14 +100,14 @@ namespace encoder {
 	 * template is only defined by its partial specializations to cause a compile
 	 * error whenever a given type is not supported.
 	 */
-	template <typename T>
+	template <typename T, typename filter = bool>
 	struct ir_to_value_converter;
 
 	/**
 	 * A generic functor testing whether a given expression is encoding a value of
 	 * the given generic parameter type.
 	 */
-	template <typename T>
+	template <typename T, typename filter = bool>
 	struct is_encoding_of;
 
 	/**
@@ -115,8 +115,13 @@ namespace encoder {
 	 * value type. This class can be used to determine the actual encoding within
 	 * the following wrapper functions.
 	 */
-	template <typename T, typename TypeFactory = type_factory<T>, typename Value2IR = value_to_ir_converter<T>, typename IR2Value = ir_to_value_converter<T>,
-	          typename Tester = is_encoding_of<T>>
+	template <
+		typename T,
+		typename TypeFactory = type_factory<T>,
+		typename Value2IR = value_to_ir_converter<T>,
+		typename IR2Value = ir_to_value_converter<T>,
+	    typename Tester = is_encoding_of<T>
+	>
 	struct Converter {
 		typedef T value_type;
 		typedef TypeFactory type_factory;
@@ -513,6 +518,64 @@ namespace encoder {
 	ADD_TYPE_CONVERTER(TypePtr);
 	ADD_TYPE_CONVERTER(GenericTypePtr);
 	ADD_TYPE_CONVERTER(TagTypePtr);
+
+
+	// ------------------------------------------------------------------------
+	//  Add a base class for encodable classes for simpler integration
+	// ------------------------------------------------------------------------
+
+
+	struct encodable {
+
+		/**
+		 * This is a marker interface. A derived type T is expected to exhibit
+		 * the following (static) member functions:
+		 *
+		 *
+		 * static TypePtr getEncodedType(NodeManager&);
+		 *
+		 * static bool isEncoding(const ExpressionPtr&);
+		 *
+		 * ExpressionPtr toIR(NodeManager&) const;
+		 *
+		 * static T toValue(const ExpressionPtr&);
+		 *
+		 */
+
+	};
+
+	template <typename T>
+	struct type_factory<T,std::enable_if_t<std::is_base_of<encodable,T>::value,bool>> {
+		core::TypePtr operator()(core::NodeManager& manager) const {
+			return T::getEncodedType(manager);
+		}
+		type_factory() {}
+	};
+
+	template <typename T>
+	struct is_encoding_of<T,std::enable_if_t<std::is_base_of<encodable,T>::value,bool>> {
+		bool operator()(const core::ExpressionPtr& expr) const {
+			return T::isEncoding(expr);
+		}
+		is_encoding_of() {}
+	};
+
+	template <typename T>
+	struct value_to_ir_converter<T,std::enable_if_t<std::is_base_of<encodable,T>::value,bool>> {
+		core::ExpressionPtr operator()(core::NodeManager& manager, const T& value) const {
+			return value.toIR(manager);
+		}
+		value_to_ir_converter() {}
+	};
+
+	template <typename T>
+	struct ir_to_value_converter<T,std::enable_if_t<std::is_base_of<encodable,T>::value,bool>> {
+		T operator()(const core::ExpressionPtr& expr) const {
+			return T::toValue(expr);
+		}
+		ir_to_value_converter() {}
+	};
+
 
 } // end namespace lists
 } // end namespace core

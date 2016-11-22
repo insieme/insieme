@@ -82,6 +82,55 @@ namespace encoder {
 	}
 
 
+	struct Info : public encodable {
+
+		int x;
+
+		Info(int x = 0) : x(x) {}
+
+		bool operator==(const Info& i) const {
+			return x == i.x;
+		}
+
+		static bool isEncoding(const ExpressionPtr& expr) {
+			return encoder::isEncodingOf<int>(expr);
+		}
+
+		static TypePtr getEncodedType(NodeManager& mgr) {
+			return encoder::getTypeFor<int>(mgr);
+		}
+
+		ExpressionPtr toIR(NodeManager& mgr) const {
+			return encoder::toIR(mgr,x);
+		}
+
+		static Info toValue(const ExpressionPtr& expr) {
+			Info res;
+			res.x = encoder::toValue<int>(expr);
+			return res;
+		}
+
+	};
+
+
+	TEST(Encodable, SimpleEncodableList) {
+
+		NodeManager mgr;
+
+		std::vector<Info> is;
+		is.push_back(Info(12));
+		is.push_back(Info(14));
+
+
+		EXPECT_EQ("list<int<4>>",toString(*getTypeFor<std::vector<Info>>(mgr)));
+		EXPECT_EQ("list_cons(12, list_cons(14, list_empty(type<int<4>>)))",toString(*toIR(mgr,is)));
+
+		EXPECT_EQ(is,toValue<std::vector<Info>>(toIR(mgr,is)));
+
+	}
+
+
+
 } // end namespace lists
 } // end namespace core
 } // end namespace insieme
