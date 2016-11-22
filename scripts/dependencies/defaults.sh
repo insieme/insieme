@@ -15,14 +15,8 @@ export LDLAGS="-mtune=native -O3"
 # parallel build
 export SLOTS="${SLOTS:-$(nproc)}"
 
-# location of this script
-export INSTALLER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-pkg_check_installed() {
-	if [[ -f "$PREFIX/$PACKAGE/.installed" ]]; then
-		echo "$NAME $VERSION already installed"
-		exit 0
-	fi
+pkg_is_installed() {
+	[[ -f "$PREFIX/$PACKAGE/.installed" ]]
 }
 
 pkg_download() {
