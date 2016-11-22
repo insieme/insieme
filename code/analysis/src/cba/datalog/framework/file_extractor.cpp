@@ -56,6 +56,7 @@ namespace framework {
 		class Inserter {
 			string folder;
 			map<string,fstream> factFiles;
+			bool debug = false;
 
 		public:
 			Inserter() {}
@@ -69,6 +70,20 @@ namespace framework {
 				this->folder = folder;
 				boost::filesystem::create_directories(folder);
 				return true;
+			}
+
+			Inserter &setDebug(bool debug) {
+				this->debug = debug;
+			}
+
+			void printDebug() {
+				std::cout << std::endl;
+			}
+
+			template <typename F, typename ... Rest>
+			void printDebug(const F& first, const Rest& ...rest) {
+				std::cout << " - " << first;
+				printDebug(rest...);
 			}
 
 			void printToFactFile(fstream &fs, bool) {
@@ -85,6 +100,12 @@ namespace framework {
 
 			template<typename ... Args>
 			void insert(const std::string& relationName, const Args& ... args ) {
+
+				if (debug) {
+					std::cout << "Inserting " << relationName << "  ";
+					printDebug(args...);
+				}
+
 				fstream &fs = getFs(relationName);
 				printToFactFile(fs, true, args...);
 			}
@@ -105,27 +126,29 @@ namespace framework {
 
 	} // end anonymous namespace
 
-	int extractFactsToFiles(const std::string &folder, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer) {
+	int extractFactsToFiles(const std::string &folder, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer, bool debug) {
 		FactExtractor<core::Pointer,Inserter> extractor(nodeIndexer);
-		if (!extractor.getInserter().setTargetFolder(folder)) {
+		if (!extractor.getInserter().setDebug(debug).setTargetFolder(folder)) {
 			cerr << "Unable to create target folder '" << folder << "'!" << endl;
 			return -1;
 		}
 		return extractor.visit(root);
 	}
 
-	int extractAddressFactsToFiles(const std::string &folder, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer) {
+	int extractAddressFactsToFiles(const std::string &folder, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer, bool debug) {
 		FactExtractor<core::Address,Inserter> extractor(nodeIndexer);
-		if (!extractor.getInserter().setTargetFolder(folder)) {
+		if (!extractor.getInserter().setDebug(debug).setTargetFolder(folder)) {
 			cerr << "Unable to create target folder '" << folder << "'!" << endl;
 			return -1;
 		}
 		return extractor.visit(core::NodeAddress(root));
 	}
 
-	bool addFactsManually(const std::string &folder, const std::string &relationName, const std::set<string>& facts) {
+	bool addFactsManually(const std::string &folder, const std::string &relationName, const std::set<string>& facts, bool debug) {
 		Inserter ins;
-		ins.setTargetFolder(folder);
+		if (!ins.setDebug(debug).setTargetFolder(folder))
+			return false;
+
 		for (const auto &fact : facts) {
 			ins.insert(relationName, fact);
 		}

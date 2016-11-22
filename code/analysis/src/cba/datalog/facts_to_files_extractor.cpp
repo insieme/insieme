@@ -10,6 +10,8 @@ namespace cba {
 namespace datalog {
 
 	bool extractPointerFactsToFiles(const TargetRelations &targets, const string &edCmds, const std::string &outputDir) {
+		const bool debug = true;
+
 		std::map<string,std::set<std::string>> targetFacts;
 		int ret;
 
@@ -28,7 +30,7 @@ namespace datalog {
 					targetFacts[relation].insert(std::to_string(id));
 				}
 			}
-		});
+		}, debug);
 
 		if (ret == -1)
 			return false;
@@ -36,7 +38,7 @@ namespace datalog {
 		for (const auto &trgPair : targetFacts) {
 			const string &relation = trgPair.first;
 			const auto &values = trgPair.second;
-			ret = framework::addFactsManually(outputDir, relation, values);
+			ret = framework::addFactsManually(outputDir, relation, values, debug);
 			if (ret == -1)
 				return false;
 		}
