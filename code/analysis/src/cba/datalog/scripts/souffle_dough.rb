@@ -8,6 +8,7 @@ require "fileutils"
 @incdir = "include"
 @basedir = Dir.pwd
 @verbose = true
+@debugMode = true
 
 @file_ext = "dl"
 @decltoken = "decl"
@@ -31,6 +32,10 @@ def extract_relation_name(name, input_arr)
   arr = input_arr.grep(/^\s*\.#{name}\s+/)
   arr.map! {|line| line.gsub(/^\s*\.#{name}\s+(\w+).*/, '\1') }
   return arr
+end
+
+def append_output_to_all_relations(name, input_arr)
+  input_arr.map! {|line| line.gsub(/^(\s*\.#{name}\s+\w+\s*\([^\)]+\)\s*((?!input|output).)*)$/, '\1 output') }
 end
 
 def create_mangle(filename, decl)
@@ -138,6 +143,9 @@ include_files.each do |filename|
   lines.map! {|line| line.gsub(/(\s*\.)#{@membertoken}([^\w]+)/, '\1decl\2') }
   lines.unshift "#pragma once"
 
+  # Convert all relations to output-relations
+  append_output_to_all_relations(@decltoken, lines) if @debugMode
+
   # Done. Write new content to file
   File.open(filename, "w") do |file|
     file.puts(lines)
@@ -158,6 +166,9 @@ source_files.each do |filename|
   # Replace relation names according to using-declarations
   expand_using_decls(lines, filename)
   convert_usings_to_includes(lines, filename)
+
+  # Convert all relations to output-relations
+  append_output_to_all_relations(@decltoken, lines) if @debugMode
 
   # Done. Write new content to file
   File.open(filename, "w") do |file|
