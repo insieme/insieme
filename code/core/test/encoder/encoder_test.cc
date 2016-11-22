@@ -177,6 +177,44 @@ namespace encoder {
 	}
 
 
+	struct Info : public encodable {
+
+		int x;
+
+		static bool isEncoding(const ExpressionPtr& expr) {
+			return encoder::isEncodingOf<int>(expr);
+		}
+
+		static TypePtr getEncodedType(NodeManager& mgr) {
+			return encoder::getTypeFor<int>(mgr);
+		}
+
+		ExpressionPtr toIR(NodeManager& mgr) const {
+			return encoder::toIR(mgr,x);
+		}
+
+		static Info toValue(const ExpressionPtr& expr) {
+			Info res;
+			res.x = encoder::toValue<int>(expr);
+			return res;
+		}
+
+	};
+
+
+	TEST(Encodable, SimpleEncodable) {
+
+		NodeManager mgr;
+
+		Info i;
+		i.x = 12;
+
+		EXPECT_EQ("int<4>",toString(*getTypeFor<Info>(mgr)));
+		EXPECT_EQ("12",toString(*toIR(mgr,i)));
+
+		EXPECT_EQ(12, toValue<Info>(toIR(mgr,i)).x);
+	}
+
 } // end namespace lists
 } // end namespace core
 } // end namespace insieme
