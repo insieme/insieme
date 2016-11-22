@@ -8,7 +8,7 @@ require "fileutils"
 @incdir = "include"
 @basedir = Dir.pwd
 @verbose = true
-@debugMode = true
+@debugMode = false
 
 @file_ext = "dl"
 @decltoken = "decl"

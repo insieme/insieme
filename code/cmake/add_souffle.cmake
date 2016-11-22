@@ -94,35 +94,17 @@ macro(souffle_generate_cpp souffle_input_path souffle_dl_target souffle_include_
 		file(GLOB include_dl_dependencies ${souffle_include_path}/*.dl)
 	endif()
 
-	# Save wrapper script in variable:
-	# Used to wrap LD_LIBRARY_PATH setting for souffle-wave
-	set(souffle_wrapper_script ${insieme_code_dir}/analysis/src/cba/datalog/scripts/souffle_wrapper.sh)
-	insieme_find_package(NAME Boost)
-
 	# Custom command to compile DL files into CPP files using Soufflé
 	add_custom_command(
 		SOURCE ${souffle_input_file}
-		COMMAND ${souffle_wrapper_script}
-		ARGS ${BOOST_ROOT}/lib ${souffle_binary} -g ${souffle_output_file}.h ${souffle_input_file} ${include_argument}
+		COMMAND ${souffle_binary}
+		ARGS -g ${souffle_output_file}.h ${souffle_input_file} ${include_argument}
 		COMMENT "Generating compiled soufflé datalog: ${souffle_dl_target}.h"
 		DEPENDS ${souffle_input_file} ${dough_output_files}
 		IMPLICIT_DEPENDS C ${souffle_input_file}
 		WORKING_DIRECTORY ${souffle_output_path}
 		OUTPUT ${souffle_output_file}.h
 	)
-
-#set(souffle
-#    ${CMAKE_COMMAND} -E env
-#    "LD_LIBRARY_PATH=${BOOST_ROOT}/lib"
-#    ${souffle_binary})
-
-#add_custom_target(insieme_analysis_execute_souffle
-#	COMMAND ${souffle} -g ${souffle_output_file}.h ${souffle_input_file} ${include_argument}
-#	DEPENDS ${souffle_input_file} ${dough_output_files}
-#	WORKING_DIRECTORY ${souffle_output_path}
-#	BYPRODUCTS ${souffle_output_file}.h
-#	DEPENDS C ${souffle_input_file}
-#)
 
 	# Add generated file to list of generated files ( = '${souffle_output}' )
 	#
