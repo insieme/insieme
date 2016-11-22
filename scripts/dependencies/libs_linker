@@ -2,7 +2,7 @@
 
 set -e
 
-export INSTALLER_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}")" && pwd )"
+export INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export LIBS_DIR="$INSTALLER_DIR/../../libs"
 
 mkdir -p "$LIBS_DIR"
