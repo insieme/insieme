@@ -45,6 +45,7 @@ namespace clang {
 	class Expr;
 	class Stmt;
 
+	class Type;
 	class QualType;
 
 	class Decl;
