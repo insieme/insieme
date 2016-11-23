@@ -46,6 +46,8 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
 
+#include "insieme/common/env_vars.h"
+
 using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::frontend;
@@ -134,7 +136,7 @@ namespace frontend {
 
 		assert_false(mClang.getDiagnostics().hasErrorOccurred()) << "Clang could not parse input file " << mFileName << ", please check the error report";
 
-		if(setup.hasOption(ConversionSetup::DumpClangAST)) {
+		if(setup.hasOption(ConversionSetup::DumpClangAST) || getenv(INSIEME_PRINT_CLANG_AST)) {
 			const std::string filter = setup.getClangASTDumpFilter();
 			auto tuDecl = getASTContext().getTranslationUnitDecl();
 			// if nothing defined print the whole context

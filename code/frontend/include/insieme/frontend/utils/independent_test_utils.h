@@ -43,7 +43,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
-#include "insieme/annotations/expected_ir_annotation.h"
 #include "insieme/core/analysis/compare.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/annotations/source_location.h"
@@ -51,12 +50,16 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/printer/error_printer.h"
 #include "insieme/core/transform/node_replacer.h"
+
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/state/variable_manager.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
+
+#include "insieme/annotations/expected_ir_annotation.h"
 #include "insieme/utils/config.h"
 #include "insieme/utils/set_utils.h"
+#include "insieme/common/env_vars.h"
 
 #define FRONTEND_TEST_DIR insieme::utils::getInsiemeSourceRootDir() + "frontend/test/"
 
@@ -207,7 +210,7 @@ namespace utils {
 			                    << "\tActual type  : " << (aIsExp ? toString(dumpColor(actual.as<ExpressionPtr>()->getType())) : toString("-")) << "\n"
 			                    << "\tExpected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-")) << "\n";
 
-			if(getenv("INSIEME_IRDIFF") != nullptr && expected != actual) {
+			if(getenv(INSIEME_IRDIFF) != nullptr && expected != actual) {
 				core::analysis::irDiff(actual, expected, "CodeIR", "PragmaIR");
 				exit(-1);
 			}
