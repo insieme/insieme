@@ -1,0 +1,6 @@
+/**
+ * Copyright (c) 2002-20XX Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ */
+
