@@ -128,7 +128,7 @@ if(ANALYSIS_HASKELL)
     set(test_cases ${test_cases} ${test_cases_haskell})
 endif()
 
-insieme_glob_headers(test_common test/common)
+insieme_glob_headers(test_common test/cba/common)
 
 foreach(case_file ${test_cases})
     get_filename_component(case_name ${case_file} NAME_WE)
