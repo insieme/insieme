@@ -16,11 +16,11 @@ shift
 
 if [[ $(head -n1 "$TGT/README.md") == "# CXX Template" ]]; then
 	# setup README
-	cp "$DIR/readme.tpl" "$TGT/README.md"
+	cp "$DIR/README.md.tpl" "$TGT/README.md"
 	sed "s/%PROJECT%/$project/g" -i "$TGT/README.md"
 
 	# setup root CMakeLists
-	cp "$DIR/cmake.tpl" "$TGT/CMakeLists.txt"
+	cp "$DIR/CMakeLists.txt.tpl" "$TGT/CMakeLists.txt"
 	sed "s/%PROJECT%/$project/g" -i "$TGT/CMakeLists.txt"
 fi
 
