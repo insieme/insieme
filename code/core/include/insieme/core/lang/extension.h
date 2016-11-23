@@ -36,8 +36,12 @@
 
 #pragma once
 
+#include <string>
+#include <map>
+
 #include <boost/noncopyable.hpp>
 
+#include "insieme/utils/assert.h"
 #include "insieme/utils/string_utils.h"
 
 #include "insieme/core/forward_decls.h"
@@ -47,8 +51,6 @@
 
 #include "insieme/core/lang/lang.h"
 
-#include <string>
-#include <map>
 
 namespace insieme {
 namespace core {
