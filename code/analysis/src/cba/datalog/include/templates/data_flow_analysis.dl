@@ -92,6 +92,9 @@ failure( "Error: Found a ref_assign whose parent is not a CallExpr!", id) :-
 	// uses of variables correspond to the value of the definition point
 	value( v, p, b ) :- Variable(v,_,_), DefinitionPoint(d,v), value(d,p,b).
 
+	// Follow the derefs
+	value(v, p, b) :- deref(v), NodeList(v,0,trg), value(trg,p,b).
+
 	// free variables are undefined
 	value( v, DP_ROOT, b ) :- FreeVariable(v), unknown_value(b).
 
