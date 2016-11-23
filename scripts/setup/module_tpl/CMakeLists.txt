@@ -6,6 +6,8 @@ target_include_directories(%MODULE% PUBLIC include)
 target_include_directories(%MODULE% SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 target_link_libraries(%MODULE% ${Boost_LIBRARIES})
 
+msvc_header_completion(%MODULE%_headers include)
+
 glob_executables(%MODULE%_exes src)
 foreach(exe ${%MODULE%_exes})
 	get_filename_component(exe_name ${exe} NAME_WE)

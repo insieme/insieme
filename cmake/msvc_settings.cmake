@@ -40,4 +40,10 @@ if(MSVC)
 	# windows library naming policies
 	set(CMAKE_FIND_LIBRARY_PREFIXES "")
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib") # if you're thinking about adding ".dll" here, read up on "import libraries" in Windows
+
+	# solution configuration
+	set(CMAKE_CONFIGURATION_TYPES Debug CACHE STRING "Visual Studio Solution Configuration" FORCE)
+
+	# no ZERO_CHECK target
+	set(CMAKE_SUPPRESS_REGENERATION true)
 endif()

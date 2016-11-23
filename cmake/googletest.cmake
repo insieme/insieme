@@ -19,12 +19,22 @@ if(NOT TARGET googletest)
 
 	# import libgtest
 	add_library(gtest STATIC IMPORTED)
-	set_target_properties(gtest PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/libgtest.a)
+	set(gtest ${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX})
+	if(NOT MSVC)
+		set_target_properties(gtest PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/${gtest})
+	else()
+		set_target_properties(gtest PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/Debug/${gtest})
+	endif()
 	add_dependencies(gtest googletest)
 
 	# import libgtest_main
 	add_library(gtest_main STATIC IMPORTED)
-	set_target_properties(gtest_main PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/libgtest_main.a)
+	set(gtest_main ${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX})
+	if(NOT MSVC)
+		set_target_properties(gtest_main PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/${gtest_main})
+	else()
+		set_target_properties(gtest_main PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/Debug/${gtest_main})
+	endif()
 	add_dependencies(gtest_main googletest)
 
 	# cannot attach include path to gtest target, must be added manually

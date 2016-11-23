@@ -22,6 +22,6 @@ include(doxygen)
 # -- CMake Modules
 include(file_globs)
 include(add_unittest)
-#include(msvc_file_completion)
+include(msvc_file_completion)
 
 # -- Project Modules
