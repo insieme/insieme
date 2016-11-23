@@ -8,7 +8,7 @@ require "fileutils"
 @incdir = "include"
 @basedir = Dir.pwd
 @verbose = true
-@debugMode = false
+@debugMode = (ARGV[2] == "debug")
 
 @file_ext = "dl"
 @decltoken = "decl"
@@ -19,7 +19,8 @@ require "fileutils"
 @mangle = "D474L06"
 @ir_dl = "entities/ir"
 
-abort "Dough takes exactly two arguments!" if ARGV.length != 2
+abort "3rd parameter is either 'debug' or empty!" if ARGV.length == 3 && ARGV[2] != "debug"
+abort "Dough needs exactly two arguments!" if ARGV.length < 2 || ARGV.length > 3
 abort "Source dir (#{@srcdir}) does not exist!" unless File.directory?(@srcdir)
 abort "Destination dir (#{@destdir}) does not exist!" unless File.directory?(@destdir)
 abort "Invalid include dir (#{@incdir}): Does not exist in '#{@srcdir}'!" unless File.directory?(@srcdir + "/" + @incdir)
