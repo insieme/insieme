@@ -11,30 +11,28 @@ if(NOT TARGET googletest)
 			-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
 			-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
 			-DCMAKE_C_COMPILER_ARG1=${CMAKE_C_COMPILER_ARG1}
+			-DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+			-DCMAKE_C_FLAGS_DEBUG=${CMAKE_C_FLAGS_DEBUG}
+			-DCMAKE_C_FLAGS_RELEASE=${CMAKE_C_FLAGS_RELEASE}
 			-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
 			-DCMAKE_CXX_COMPILER_ARG1=${CMAKE_CXX_COMPILER_ARG1}
+			-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
+			-DCMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG}
+			-DCMAKE_CXX_FLAGS_RELEASE=${CMAKE_CXX_FLAGS_RELEASE}
 		DOWNLOAD_NO_PROGRESS 1
 	)
 	ExternalProject_Get_Property(googletest source_dir binary_dir)
 
 	# import libgtest
 	add_library(gtest STATIC IMPORTED)
-	set(gtest ${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX})
-	if(NOT MSVC)
-		set_target_properties(gtest PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/${gtest})
-	else()
-		set_target_properties(gtest PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/Debug/${gtest})
-	endif()
+	set(gtest ${LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX})
+	set_target_properties(gtest PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/${gtest})
 	add_dependencies(gtest googletest)
 
 	# import libgtest_main
 	add_library(gtest_main STATIC IMPORTED)
-	set(gtest_main ${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX})
-	if(NOT MSVC)
-		set_target_properties(gtest_main PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/${gtest_main})
-	else()
-		set_target_properties(gtest_main PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/Debug/${gtest_main})
-	endif()
+	set(gtest_main ${LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX})
+	set_target_properties(gtest_main PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/${gtest_main})
 	add_dependencies(gtest_main googletest)
 
 	# cannot attach include path to gtest target, must be added manually

@@ -24,25 +24,26 @@ if(MSVC)
 
 	# properly configure how to link the MSVC runtime library, static <-> shared and debug <-> release
 	if(MSVC_SHARED_RUNTIME)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MD")
 		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
-		set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /MDd")
 		set(CMAKE_CXX_FLAGS_RELASE "${CMAKE_CXX_FLAGS_RELASE} /MD")
-		set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /MD")
 	else()
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
 		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-		set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /MTd")
 		set(CMAKE_CXX_FLAGS_RELASE "${CMAKE_CXX_FLAGS_RELASE} /MT")
-		set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /MT")
 	endif()
 
 	# windows library naming policies
 	set(CMAKE_FIND_LIBRARY_PREFIXES "")
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib") # if you're thinking about adding ".dll" here, read up on "import libraries" in Windows
 
+	# library output
+	if(${CMAKE_BUILD_TYPE} STREQUAL Release)
+		set(LIBRARY_OUTPUT_DIRECTORY Release)
+	else()
+		set(LIBRARY_OUTPUT_DIRECTORY Debug)
+	endif()
+
 	# solution configuration
-	set(CMAKE_CONFIGURATION_TYPES Debug CACHE STRING "Visual Studio Solution Configuration" FORCE)
+	set(CMAKE_CONFIGURATION_TYPES ${CMAKE_BUILD_TYPE} CACHE STRING "Visual Studio Solution Configuration" FORCE)
 
 	# no ZERO_CHECK target
 	set(CMAKE_SUPPRESS_REGENERATION true)
