@@ -1,0 +1,5 @@
+#!/bin/bash
+
+export DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+ln -s "../../scripts/license/pre-commit-hook" "$DIR/../../.git/hooks/pre-commit"
