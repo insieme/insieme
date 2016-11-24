@@ -264,6 +264,20 @@ namespace extensions {
 		virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
 		                                         insieme::frontend::conversion::Converter& converter);
 
+		/**
+		 *  User provided clang VarDecl visitor. Will be called after clang var decl
+		 *  was visited by the insieme visitor. IR variable(type) and initialization can be
+		 *  modified after standard conversion took place.
+		 *  @param varDecl clang VarDecl
+		 *  @param var converted variable
+		 *  @param varInit converted initialization for generated variable (which might be a nullptr)
+		 *  @param converter insieme conversion factory
+		 *  @return a pair of variable and init for the declaration or simply the input parameters if no modifications should be performed.
+		 */
+		virtual std::pair<core::VariablePtr, core::ExpressionPtr> PostVisit(const clang::VarDecl* varDecl,
+		                                                                    const core::VariablePtr& var, const core::ExpressionPtr& varInit,
+		                                                                    insieme::frontend::conversion::Converter& converter);
+
 
 		/*****************POST CLANG STAGE*****************/
 
