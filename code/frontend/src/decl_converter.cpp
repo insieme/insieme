@@ -69,11 +69,26 @@ namespace conversion {
 		auto var = builder.variable(irType);
 		// variable insertion is required prior to translation of the init expression, as it might use it
 		if(!varDecl->hasGlobalStorage()) converter.getVarMan()->insert(varDecl, var);
+
+		core::ExpressionPtr varInit = nullptr;
 		if(varDecl->getInit()) {
-			return {var, converter.convertCxxArgExpr(varDecl->getInit())};
-		} else {
-			return {var, {}};
+			varInit = converter.convertCxxArgExpr(varDecl->getInit());
 		}
+
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
+			auto extResult = extension->PostVisit(varDecl, var, varInit, converter);
+			//if the extension did any changes, we have to replace the variable in the variable manager
+			if(extResult.first != var || extResult.second != varInit) {
+				var = extResult.first;
+				varInit = extResult.second;
+				if(!varDecl->hasGlobalStorage()) {
+					converter.getVarMan()->undefine(varDecl);
+					converter.getVarMan()->insert(varDecl, var);
+				}
+			}
+		}
+
+		return {var, varInit};
 	}
 
 	namespace {

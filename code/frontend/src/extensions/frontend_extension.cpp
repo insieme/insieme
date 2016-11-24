@@ -128,6 +128,12 @@ namespace extensions {
 		return irStmt;
 	}
 
+	std::pair<core::VariablePtr, core::ExpressionPtr> FrontendExtension::PostVisit(const clang::VarDecl* varDecl,
+	                                                                               const core::VariablePtr& var, const core::ExpressionPtr& varInit,
+	                                                                               insieme::frontend::conversion::Converter& converter) {
+		return {var, varInit};
+	}
+
 	// ############ POST CLANG STAGE ############ //
 	insieme::core::ProgramPtr FrontendExtension::IRVisit(insieme::core::ProgramPtr& prog) {
 		return prog;

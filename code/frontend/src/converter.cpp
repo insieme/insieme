@@ -86,6 +86,7 @@
 
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/tag.h"
+#include "insieme/common/env_vars.h"
 
 using namespace clang;
 using namespace insieme;
@@ -115,7 +116,7 @@ namespace conversion {
 		: translationUnit(tu), convSetup(setup), pragmaMap(translationUnit.pragmas_begin(), translationUnit.pragmas_end()), mgr(mgr), builder(mgr),
 		  feIR(mgr, getCompiler().isCXX()), irTranslationUnit(mgr) {
 
-		if(getenv("INSIEME_DUMP_PRAGMALIST")) {
+		if(getenv(INSIEME_DUMP_PRAGMALIST)) {
 			for(auto p : translationUnit.getPragmaList()) {
 				if(p->isStatement()) {
 					std::cout << "Pragma on statement:\n";

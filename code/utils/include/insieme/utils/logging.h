@@ -41,6 +41,8 @@
 
 #include "insieme/utils/abstraction.h"
 
+#include "insieme/common/env_vars.h"
+
 namespace insieme {
 namespace utils {
 namespace log {
@@ -52,22 +54,6 @@ namespace log {
 	 */
 	enum Level { DEBUG, INFO, WARNING, ERROR, FATAL };
 
-	/**
-	 * The name of the environment variable to set up the log level.
-	 */
-	#define LOG_LEVEL_ENV "INSIEME_LOG_LEVEL"
-
-	/**
-	 * The name of the environment variable to set up the verbosity level.
-	 */
-	#define LOG_VERBOSITY_ENV "INSIEME_LOG_VERBOSITY"
-
-	/**
-	 * The name of the environment variable to set up a regular expression filtering
-	 * log messages by function names.
-	 */
-	#define LOG_FILTER_ENV "INSIEME_LOG_FILTER"
-
 } // end namespace log
 
 /**
@@ -75,7 +61,7 @@ namespace log {
  * into other namespaces.
  */
 namespace logger_details {
-	
+
 	/**
 	 * Temporary object used to wrap the log stream. This object is responsible to
 	 * collect logs and flush the stream once the object is deallocated.

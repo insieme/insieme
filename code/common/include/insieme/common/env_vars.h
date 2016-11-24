@@ -36,12 +36,44 @@
 
 #pragma once
 
+///////////// FRONTEND
+
+// print color dump of Clang AST before frontend conversion
+#define INSIEME_PRINT_CLANG_AST "INSIEME_PRINT_CLANG_AST"
+
+// print list of all pragmas parsed in input before frontend conversion
+#define INSIEME_DUMP_PRAGMALIST "INSIEME_DUMP_PRAGMALIST"
+
+// run irDiff for conversion tests
+#define INSIEME_IRDIFF "INSIEME_IRDIFF"
+
+
+///////////// CORE
+
 // disable full semantic checks
 #define INSIEME_NO_SEMA "INSIEME_NO_SEMA"
 
 // create JSON dumps for inspyer tool on semantic errors
 #define INSIEME_SEMA_INSPYER "INSIEME_SEMA_INSPYER"
 
+// create JSON dumps for inspyer tool on IRDIFF
+#define INSIEME_INSPYER "INSIEME_INSPYER"
+
+
+///////////// BACKEND
+
 // set backend compilers to use in insiemecc and unit/integration testing
 #define INSIEME_C_BACKEND_COMPILER "INSIEME_C_BACKEND_COMPILER"
 #define INSIEME_CXX_BACKEND_COMPILER "INSIEME_CXX_BACKEND_COMPILER"
+
+
+///////////// LOGGING
+
+// Set the log level (DEBUG, INFO, WARNING, ERROR, FATAL)
+#define LOG_LEVEL_ENV "INSIEME_LOG_LEVEL"
+
+// Set the log verbosity (1, 2, 3 are used)
+#define LOG_VERBOSITY_ENV "INSIEME_LOG_VERBOSITY"
+
+// Set up a regular expression filtering log messages by function names.
+#define LOG_FILTER_ENV "INSIEME_LOG_FILTER"

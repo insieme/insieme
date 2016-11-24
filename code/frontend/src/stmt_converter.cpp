@@ -124,7 +124,7 @@ namespace conversion {
 			// check if we have an init expression
 			core::ExpressionPtr initExp;
 			if(convertedDecl.second) {
-				initExp = *convertedDecl.second;
+				initExp = convertedDecl.second;
 				initExp = utils::fixTempMemoryInInitExpression(refDecl, initExp);
 			} else {
 				// generate undefined initializer
