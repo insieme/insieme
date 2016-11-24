@@ -173,7 +173,7 @@ namespace c_ast {
 	bool NamedType::equals(const Node& node) const {
 		assert(dynamic_cast<const NamedType*>(&node));
 		auto other = static_cast<const NamedType&>(node);
-		return CVQualifiedType::equals(other) && *name == *other.name && ::equals(parameters, other.parameters, equal_target<NodePtr>());
+		return CVQualifiedType::equals(other) && isFunctionType == other.isFunctionType && isGenericType == other.isGenericType && *name == *other.name && ::equals(parameters, other.parameters, equal_target<NodePtr>());
 	}
 
 	bool PointerType::equals(const Node& type) const {
@@ -206,7 +206,8 @@ namespace c_ast {
 		return *name == *other.name && ::equals(elements, other.elements, equal_target<VariablePtr>())
 		       && ::equals(ctors, other.ctors, equal_target<ConstructorPrototypePtr>())
 		       && ((!dtor && !other.dtor) || (dtor && other.dtor && *dtor == *other.dtor))
-		       && ::equals(members, other.members, equal_target<MemberFunctionPrototypePtr>());
+		       && ::equals(members, other.members, equal_target<MemberFunctionPrototypePtr>())
+			   && ::equals(others, other.others, equal_target<OpaqueCodePtr>());
 	}
 
 	bool Parent::equals(const Node& node) const {
@@ -478,6 +479,12 @@ namespace c_ast {
 		return isVirtual == other.isVirtual && pureVirtual == other.pureVirtual && flag == other.flag && ((!fun && !other.fun) || *fun == *other.fun);
 	}
 
+	bool TypeAlias::equals(const Node& node) const {
+		assert(dynamic_cast<const TypeAlias*>(&node));
+		auto other = static_cast<const TypeAlias&>(node);
+		return *type == *other.type && *definition == *other.definition;
+	}
+
 	bool TypeDefinition::equals(const Node& node) const {
 		assert(dynamic_cast<const TypeDefinition*>(&node));
 		auto other = static_cast<const TypeDefinition&>(node);
@@ -509,7 +516,7 @@ namespace c_ast {
 	bool MemberFunction::equals(const Node& node) const {
 		assert(dynamic_cast<const MemberFunction*>(&node));
 		auto other = static_cast<const MemberFunction&>(node);
-		return isConstant == other.isConstant && isVolatile == other.isVolatile && *className == *other.className && *function == *other.function;
+		return isConstant == other.isConstant && isVolatile == other.isVolatile && isStatic == other.isStatic && *className == *other.className && *function == *other.function;
 	}
 
 	bool Namespace::equals(const Node& node) const {

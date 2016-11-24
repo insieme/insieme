@@ -167,7 +167,7 @@ namespace c_ast {
 
 				// print name
 				out << print(node->name);
-				if(!node->parameters.empty()) {
+				if(node->isGenericType || !node->parameters.empty()) {
 					out << "<" << join(", ", node->parameters, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << " >";
 				}
 				return out;
@@ -643,12 +643,21 @@ namespace c_ast {
 			PRINT(MemberFunctionPrototype) {
 				// <virtual> <return type> <name> ( <parameter list > ) <const>;
 				auto fun = node->fun->function;
-				return out << (node->isVirtual ? "virtual " : "") << (boost::starts_with(fun->name->name, "operator ") ? "" : toC(fun->returnType) + " ")
-				           << print(fun->name) << "(" << printMemberParam(fun->parameter) << ")"
-						   << (node->fun->isConstant ? " const" : "")
-						   << (node->fun->isVolatile ? " volatile" : "")
-						   << node->flag
-				           << (node->pureVirtual ? " =0" : "");
+				if (node->fun->isStatic) out << "static ";
+				if (node->isVirtual) out << "virtual ";
+				out << (boost::starts_with(fun->name->name, "operator ") ? "" : toC(fun->returnType) + " ");
+				out << print(fun->name) << "(";
+				if (node->fun->isStatic) {
+					out << printParam(fun->parameter);
+				} else {
+					out << printMemberParam(fun->parameter);
+				}
+				out << ")";
+				if (node->fun->isConstant) out << " const";
+				if (node->fun->isVolatile) out << " volatile";
+				out << node->flag;
+				if (node->pureVirtual) out << " =0";
+				return out;
 			}
 
 			PRINT(GlobalVarDecl) {
@@ -725,6 +734,11 @@ namespace c_ast {
 					if(!composite->members.empty()) { out << ";"; }
 				}
 
+				// add remaining elements
+				for(const auto& cur : structType->others) {
+					out << "\n    " << print(cur);
+				}
+
 				// finish type definition
 				return out << "\n};\n";
 			}
@@ -741,6 +755,10 @@ namespace c_ast {
 				}
 
 				return printRecordDefinition(node->type, out);
+			}
+
+			PRINT(TypeAlias) {
+				return out << "using " << print(node->type) << " = " << print(node->definition) << ";\n";
 			}
 
 			c_ast::StatementPtr wrapBody(const c_ast::StatementPtr& body) {
@@ -797,7 +815,15 @@ namespace c_ast {
 
 				// print header
 				out << (boost::starts_with(fun->name->name, "operator ") ? "" : toC(fun->returnType) + " ") << print(node->className)
-				    << "::" << print(fun->name) << "(" << printMemberParam(fun->parameter) << ")" << (node->isConstant ? " const" : "") << (node->isVolatile ? " volatile" : "") << " ";
+				    << "::" << print(fun->name) << "(";
+
+				if (node->isStatic) {
+					out << printParam(fun->parameter);
+				} else {
+					out << printMemberParam(fun->parameter);
+				}
+
+				out << ")" << (node->isConstant ? " const" : "") << (node->isVolatile ? " volatile" : "") << " ";
 
 				// print body
 				return out << print(wrapBody(fun->body));

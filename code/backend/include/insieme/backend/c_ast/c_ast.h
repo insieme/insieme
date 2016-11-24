@@ -169,8 +169,9 @@ namespace c_ast {
 		IdentifierPtr name;
 		vector<NodePtr> parameters;
 		bool isFunctionType;
+		bool isGenericType;
 		NamedType(IdentifierPtr name, bool isConst = false, bool isVolatile = false)
-			: CVQualifiedType(NT_NamedType, isConst, isVolatile), name(name), isFunctionType(false) {}
+			: CVQualifiedType(NT_NamedType, isConst, isVolatile), name(name), isFunctionType(false), isGenericType(false) {}
 		virtual bool equals(const Node& other) const;
 	};
 
@@ -208,6 +209,7 @@ namespace c_ast {
 		vector<ConstructorPrototypePtr> ctors;
 		DestructorPrototypePtr dtor;
 		vector<MemberFunctionPrototypePtr> members;
+		vector<OpaqueCodePtr> others;
 		NamedCompositeType(NodeType type, const IdentifierPtr name) : Type(type), name(name) {}
 		virtual bool equals(const Node& node) const;
 	};
@@ -701,6 +703,13 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct TypeAlias : public Definition {
+		TypePtr type;
+		TypePtr definition;
+		TypeAlias(TypePtr type, TypePtr definition) : Definition(NT_TypeAlias), type(type), definition(definition) {}
+		virtual bool equals(const Node& node) const;
+	};
+
 	struct Function : public Definition {
 		enum Modifier { STATIC = 1 << 0, INLINE = 1 << 1, OCL_KERNEL = 1 << 2 };
 		unsigned flags;
@@ -742,8 +751,9 @@ namespace c_ast {
 		FunctionPtr function;
 		bool isConstant;
 		bool isVolatile;
+		bool isStatic;
 		MemberFunction(const IdentifierPtr& className, const FunctionPtr& function, bool isConstant = false, bool isVolatile = false)
-		    : Definition(NT_MemberFunction), className(className), function(function), isConstant(isConstant), isVolatile(isVolatile) {}
+		    : Definition(NT_MemberFunction), className(className), function(function), isConstant(isConstant), isVolatile(isVolatile), isStatic(false) {}
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -778,7 +788,9 @@ namespace c_ast {
 
 		IdentifierPtr create(const string& name = "");
 
-		PrimitiveTypePtr create(const PrimitiveType::CType type);
+		PrimitiveTypePtr create(const PrimitiveType::CType type) {
+			return create<c_ast::PrimitiveType>(type);
+		}
 
 		template <typename T, typename... Args>
 		Ptr<T> create(Args... args) {
