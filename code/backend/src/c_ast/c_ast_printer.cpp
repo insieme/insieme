@@ -735,7 +735,7 @@ namespace c_ast {
 				}
 
 				// add remaining elements
-				for(const auto& cur : structType->others) {
+				for(const auto& cur : composite->others) {
 					out << "\n    " << print(cur);
 				}
 
