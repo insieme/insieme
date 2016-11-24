@@ -17,8 +17,8 @@ reference_value(n,p,v) :- reference.value(n,p,v).
 
 // the value to be exhibited by any unknown value
 reference.unknown_value ( X ) :- reference.value(_,_,X).
-reference.unknown_value ( -1 ).			// two values not covered anywhere (=outside the application)
-reference.unknown_value ( -2 ).
+reference.unknown_value ( [-1, DP_ROOT] ).			// two values not covered anywhere (=outside the application)
+reference.unknown_value ( [-2, DP_ROOT] ).
 
 
 // references are created by calls to ref_alloc
