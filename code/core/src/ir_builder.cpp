@@ -975,7 +975,7 @@ namespace core {
 
 			// extract function type
 			FunctionTypePtr funType = static_pointer_cast<const FunctionType>(functionExpr->getType());
-			assert_eq(funType->getParameterTypes().size(), arguments.size()) << "Invalid number of arguments!";
+//			assert_eq(funType->getParameterTypes().size(), arguments.size()) << "Invalid number of arguments!";
 
 			// deduce return type
 			core::TypeList argumentTypes;

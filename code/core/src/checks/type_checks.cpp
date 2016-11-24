@@ -504,7 +504,9 @@ namespace checks {
 		// 1) check number of arguments
 		int numParameter = parameterTypes.size();
 		int numArguments = argumentTypes.size();
-		if(numArguments != numParameter) {
+		bool variadic = numParameter > 0 && (parameterTypes.back().isa<VariadicTypeVariablePtr>() || parameterTypes.back().isa<VariadicGenericTypeVariablePtr>());
+		if (variadic) numParameter -= 1;
+		if((!variadic && numArguments != numParameter) || (variadic && numArguments < numParameter)) {
 			add(res, Message(address, EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS,
 			                 format("Wrong number of arguments \nexpected: %d\n", numParameter) + format("actual: %d\n ", numArguments)
 			                     + format("function type: \n\t%s", *functionType),
