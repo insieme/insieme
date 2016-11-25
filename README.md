@@ -6,9 +6,9 @@ commit it afterwards.
 
 Fork this and run the setup utility:
 
-    $ scripts/setup/run <project> [module]...
+    $ scripts/setup/run <project-name>
 
-You can use the script to add new modules, just use the same project name.
-Example:
+You can use the script to add new, empty modules, just use the same project
+name. Example:
 
     $ scripts/setup/run my_awesome_project new_module_a new_module_b
