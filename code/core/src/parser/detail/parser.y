@@ -748,7 +748,7 @@ mem_lambda_reference : "identifier" "::" "identifier"                     { $$ =
 
 statement : plain_statement                                               { INSPIRE_GUARD(@1, $1); $$ = $1; }
           | "$" plain_statement "$"                                       { INSPIRE_GUARD(@2, $2); $$ = driver.markAddress(@2, $2); }
-          | let_statement                                                 { INSPIRE_GUARD(@1, $1); $$ = $1; }
+          | let_statement                                                 { INSPIRE_GUARD(@1, $1); }
           ;
 
 plain_statement : expression ";"                                          { $$ = $1; }
@@ -775,7 +775,7 @@ compound_statement_no_scope : "{" statement_list "}"                      { $$ =
                             ;
 
 statement_list :                                                          { $$ = StatementList(); }
-               | statement_list statement                                 { $1.push_back($2); $$ = $1; }
+               | statement_list statement                                 { if ($2) $1.push_back($2); $$ = $1; }
                | statement_list ";"                                       { $$ = $1; }
                ;
 
