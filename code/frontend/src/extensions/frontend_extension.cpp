@@ -97,6 +97,12 @@ namespace extensions {
 		return nullptr;
 	}
 
+	insieme::core::ExpressionPtr FrontendExtension::Visit(const clang::CastExpr* castExpr,
+	                                                      insieme::core::ExpressionPtr& irExpr, insieme::core::TypePtr& irTargetType,
+	                                                      insieme::frontend::conversion::Converter& converter) {
+		return nullptr;
+	}
+
 	insieme::core::TypePtr FrontendExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) {
 		return nullptr;
 	}
