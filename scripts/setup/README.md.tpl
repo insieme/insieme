@@ -2,14 +2,16 @@
 
 Description goes here...
 
-## Dependencies
+## Installation
+
+### Dependencies
 
 See `scripts/dependencies/README.md` for more details. Otherwise do
 
     $ scripts/dependencies/installer boost
     $ scripts/dependencies/libs_linker
 
-## Configuration
+### Configuration
 
 Following options can be supplied to CMake
 
@@ -21,9 +23,10 @@ Following options can be supplied to CMake
 | -DBUILD_DOCS        | ON / OFF        |
 | -DUSE_ASSERT        | ON / OFF        |
 
-## Building
+### Building / Testing
 
     $ mkdir build
     $ cd build
     $ cmake ..
     $ make
+    $ make test
