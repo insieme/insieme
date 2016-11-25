@@ -1,6 +1,7 @@
 option(BUILD_SHARED_LIBS "Link libraries dynamically" ON)
 option(BUILD_TESTS "Enable testing" ON)
 option(BUILD_DOCS "Enable documentation" OFF)
+option(USE_ASSERT "Enable assertions" ON)
 
 if(NOT DEFINED CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE Release)
@@ -30,6 +31,12 @@ if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR ("${CMAKE_CXX_COMPILER_ID}" 
 
 	# Yo Dawg, I heard you like templates!
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-depth-900")
+
+	# \[T]/ Praise the sun. There be dragons ahead.
+	if(NOT USE_ASSERT)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DNDEBUG")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG")
+	endif()
 elseif(MSVC)
 	include(msvc_settings)
 else()

@@ -19,6 +19,7 @@ Following options can be supplied to CMake
 | -DBUILD_SHARED_LIBS | ON / OFF        |
 | -DBUILD_TESTS       | ON / OFF        |
 | -DBUILD_DOCS        | ON / OFF        |
+| -DUSE_ASSERT        | ON / OFF        |
 
 ## Building
 
