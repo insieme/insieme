@@ -7,10 +7,11 @@ export CXXFLAGS="-mtune=native -O3"
 export LDLAGS="-mtune=native -O3"
 
 # override compiler
-#export CC="$PREFIX/gcc-latest/bin/gcc"
-#export CXX="$PREFIX/gcc-latest/bin/g++"
-#export PATH="$PREFIX/gcc-latest/bin:$PATH"
-#export LD_LIBRARY_PATH="$PREFIX/gcc-latest/lib64"
+#GCC_PKG=$(get_property gcc PACKAGE)
+#export CC="$PREFIX/$GCC_PKG/bin/gcc"
+#export CXX="$PREFIX/$GCC_PKG/bin/g++"
+#export PATH="$PREFIX/$GCC_PKG/bin:$PATH"
+#export LD_LIBRARY_PATH="$PREFIX/$GCC_PKG/lib64"
 
 # parallel build
 export SLOTS="${SLOTS:-$(nproc)}"
@@ -48,8 +49,9 @@ pkg_check() {
 
 pkg_install() {
 	make install
-	rm -f "$PREFIX/$NAME-latest"
-	ln -s "$PREFIX/$PACKAGE" "$PREFIX/$NAME-latest"
+}
+
+pkg_install_done() {
 	touch "$PREFIX/$PACKAGE/.installed"
 }
 
