@@ -189,6 +189,18 @@ namespace extensions {
 		virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter);
 
 		/**
+		 *  User provided clang cast expr visitor. Will be called before clang cast expression
+		 *  is visited by the insieme visitor. If non nullptr is returned the clang cast expression
+		 *  won't be visited by the insieme converter anymore.
+		 *  @param expr clang expression
+		 *  @param converter insieme conversion factory
+		 *  @return converted clang expression or nullptr if not converted
+		 */
+		virtual insieme::core::ExpressionPtr Visit(const clang::CastExpr* castExpr,
+		                                           insieme::core::ExpressionPtr& irExpr, insieme::core::TypePtr& irTargetType,
+		                                           insieme::frontend::conversion::Converter& converter);
+
+		/**
 		 *  User provided clang type visitor. Will be called before clang type
 		 *  is visited by the insieme visitor. If non nullptr is returned the clang type
 		 *  won't be visited by the insieme converter anymore.

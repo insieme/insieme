@@ -95,6 +95,14 @@ namespace utils {
 			VLOG(2) << "\n";
 		}
 
+		//call all the extensions and give them a chance to handle this cast expression
+		for(auto extension : converter.getConversionSetup().getExtensions()) {
+			if(auto ret = extension->Visit(castExpr, expr, targetTy, converter)) {
+				VLOG(2) << "castExpr was handled by frontend extension. Resulting expression: " << *ret;
+				return ret;
+			}
+		}
+
 		const core::IRBuilder& builder = converter.getIRBuilder();
 
 		// explicit C++ static casts
