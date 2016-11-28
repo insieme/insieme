@@ -1,7 +1,7 @@
 find_package(Boost ${Boost_VERSION} EXACT REQUIRED COMPONENTS filesystem system)
 
 glob_sources(%MODULE%_srcs src)
-add_library(%MODULE% ${LINKING_TYPE} ${%MODULE%_srcs})
+add_library(%MODULE% ${%MODULE%_srcs})
 target_include_directories(%MODULE% PUBLIC include)
 target_include_directories(%MODULE% SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 target_link_libraries(%MODULE% ${Boost_LIBRARIES})
