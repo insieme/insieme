@@ -30,3 +30,16 @@ Following options can be supplied to CMake
     $ cmake ..
     $ make
     $ make test
+
+## Development
+
+### Executable Bit
+
+When working on Windows via SMB share, consider setting following Git setting.
+
+    $ git config core.filemode false
+
+### Licensor
+
+A script, together with a Git hook, is provided to automatically add a license
+header to each source file upon commit. See `scripts/license`.
