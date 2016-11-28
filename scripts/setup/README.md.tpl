@@ -43,3 +43,9 @@ When working on Windows via SMB share, consider setting following Git setting.
 
 A script, together with a Git hook, is provided to automatically add a license
 header to each source file upon commit. See `scripts/license`.
+
+### Visual Studio Solution
+
+    $ cmake -G "Visual Studio 14 Win64" -DBUILD_SHARED_LIBS=OFF Z:\path\to\project
+
+Add path for third-party libraries when needed.
