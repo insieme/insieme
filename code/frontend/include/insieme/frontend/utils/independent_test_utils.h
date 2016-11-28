@@ -218,7 +218,8 @@ namespace utils {
 	}
 
 	static inline void runIndependentTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](auto& job) {},
-	                                        std::function<void(core::NodeManager&, core::lang::symbol_map&)> symbolModifier = [](auto& mgr, auto& symbols) {}) {
+	                                        std::function<void(core::NodeManager&, core::lang::symbol_map&)> symbolModifier = [](auto& mgr, auto& symbols) {},
+	                                        std::function<core::checks::MessageList(const core::NodePtr&)> semanticCheckFunction = [](const auto& node) { return core::checks::check(node); }) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 
@@ -331,7 +332,7 @@ namespace utils {
 		// dumpColor(res);
 		// std::cout << res;
 
-		auto checkResult = core::checks::check(res);
+		auto checkResult = semanticCheckFunction(res);
 		EXPECT_EQ(checkResult.size(), 0) << printer::dumpErrors(checkResult)
 		                                 //<< "\n" << dumpColor(checkResult.getErrors()[0].getOrigin().getAddressedNode())
 		                                 //<< "\n@(" << core::annotations::getLocationString(checkResult.getErrors()[0].getOrigin()) << ")"
