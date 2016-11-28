@@ -24,16 +24,28 @@ if(NOT TARGET googletest)
 	)
 	ExternalProject_Get_Property(googletest source_dir binary_dir)
 
+	if(BUILD_SHARED_LIBS)
+		set(_prefix ${CMAKE_SHARED_LIBRARY_PREFIX})
+		set(_suffix ${CMAKE_SHARED_LIBRARY_SUFFIX})
+		set(_linking SHARED)
+	else()
+		set(_prefix ${CMAKE_STATIC_LIBRARY_PREFIX})
+		set(_suffix ${CMAKE_STATIC_LIBRARY_SUFFIX})
+		set(_linking STATIC)
+	endif()
+
+	set(GTEST_LIBRARY_PATH ${binary_dir}/googlemock/gtest/${LIBRARY_OUTPUT_DIRECTORY})
+
 	# import libgtest
-	add_library(gtest STATIC IMPORTED)
-	set(gtest ${LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX})
-	set_target_properties(gtest PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/${gtest})
+	add_library(gtest ${_linking} IMPORTED)
+	set(gtest ${_prefix}gtest${_suffix})
+	set_target_properties(gtest PROPERTIES IMPORTED_LOCATION ${GTEST_LIBRARY_PATH}/${gtest})
 	add_dependencies(gtest googletest)
 
 	# import libgtest_main
-	add_library(gtest_main STATIC IMPORTED)
-	set(gtest_main ${LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main${CMAKE_STATIC_LIBRARY_SUFFIX})
-	set_target_properties(gtest_main PROPERTIES IMPORTED_LOCATION ${binary_dir}/googlemock/gtest/${gtest_main})
+	add_library(gtest_main ${_linking} IMPORTED)
+	set(gtest_main ${_prefix}gtest_main${_suffix})
+	set_target_properties(gtest_main PROPERTIES IMPORTED_LOCATION ${GTEST_LIBRARY_PATH}/${gtest_main})
 	add_dependencies(gtest_main googletest)
 
 	# cannot attach include path to gtest target, must be added manually
