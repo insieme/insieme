@@ -12,3 +12,9 @@ You can use the script to add new, empty modules, just use the same project
 name. Example:
 
     $ scripts/setup/run my_awesome_project new_module_a new_module_b
+
+## Template Development
+
+The development of this template continues in its own branch `template` and
+will be merged to `master` from time to time. Each merge will mark a new
+version of the template.
