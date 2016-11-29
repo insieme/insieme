@@ -207,6 +207,11 @@ namespace utils {
 		return result;
 	}
 
+	const string& getMangledOperatorCallName() {
+		static string result = mangle("operator()");
+		return result;
+	}
+
 	const std::string& getMangledAnonymousIndicator() {
 		static string result = applyReplacements("(anonymous");
 		return result;

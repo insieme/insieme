@@ -108,7 +108,7 @@ namespace conversion {
 				// if we have an automatically generated static "__invoke" function in a lambda, copy its body from operator()
 				if(classDecl->isLambda() && mem->getNameAsString() == "__invoke" && mem->hasBody()) {
 					auto opIt = std::find_if(members.cbegin(), members.cend(), [&](const core::MemberFunctionPtr& mf) {
-						return boost::starts_with(mf->getNameAsString(), insieme::utils::mangle("operator()"));
+						return boost::starts_with(mf->getNameAsString(), insieme::utils::getMangledOperatorCallName());
 					});
 					frontend_assert(opIt != members.cend());
 					auto translatedLiteral = converter.getFunMan()->lookup(mem);

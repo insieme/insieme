@@ -69,6 +69,10 @@ namespace utils {
 	///
 	const std::string& getMangledOperatorAssignName();
 
+	/// Returns the mangled name for the call operator.
+	///
+	const std::string& getMangledOperatorCallName();
+
 	/// Returns a string which (if present) indicates that the name was generated for something anonymous.
 	///
 	const std::string& getMangledAnonymousIndicator();
