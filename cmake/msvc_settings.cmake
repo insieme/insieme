@@ -22,6 +22,14 @@ if(MSVC)
 	# disable warning "symbol will be dynamically initialized(implementation limitation)" because MSVC 2015.1 is still buggy on that
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd\"4592\"")
 
+	# remove NDEBUG from release flags
+	string(REPLACE "/DNDEBUG" "" CMAKE_C_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
+	string(REPLACE "/DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
+	if(NOT USE_ASSERT)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /DNDEBUG")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DNDEBUG")
+	endif()
+
 	# properly configure how to link the MSVC runtime library, static <-> shared and debug <-> release
 	if(BUILD_SHARED_LIBS)
 		message(STATUS "MSVC: using dynamically-linked runtime")
