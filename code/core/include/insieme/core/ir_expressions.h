@@ -979,7 +979,12 @@ namespace core {
 	 * The accessor associated to a bind node. A bind node is introducing a new function
 	 * by accepting a list of parameters and carrying out a pre-determined call.
 	 */
-	IR_NODE_ACCESSOR(BindExpr, Expression, Type, Parameters, CallExpr)
+	IR_NODE_ACCESSOR(BindExpr, Expression, FunctionType, Parameters, CallExpr)
+
+		/**
+		* Obtains a reference to the type of this bind expression.
+		*/
+		IR_NODE_PROPERTY(FunctionType, Type, 0);
 
 		/**
 		 * Obtains a reference to the parameters accepted by this bind.
@@ -990,6 +995,13 @@ namespace core {
 		 * Obtains a reference to the call defining this bind expression.
 		 */
 		IR_NODE_PROPERTY(CallExpr, Call, 2);
+
+		/**
+		 * Obtains the function type of this bind expression.
+		 */
+		Ptr<const FunctionType> getFunctionType() const {
+			return this->getType();
+		}
 
 		/**
 		 * Obtains a list of all expressions which's resulting value is bound by this expression.
