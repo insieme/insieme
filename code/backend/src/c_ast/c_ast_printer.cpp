@@ -428,7 +428,7 @@ namespace c_ast {
 			}
 
 			PRINT(Initializer) {
-				if(node->type) { out << "INS_INIT(" << print(node->type) << ")"; }
+				if(node->type) { out << "INS_INIT((" << print(node->type) << "))"; }
 				return out << "{" << join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << "}";
 			}
 
