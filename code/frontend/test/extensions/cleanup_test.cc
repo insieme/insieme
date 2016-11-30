@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/utils/independent_test_utils.h"
+#include "insieme/frontend/utils/conversion_test_utils.h"
 
 #include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"

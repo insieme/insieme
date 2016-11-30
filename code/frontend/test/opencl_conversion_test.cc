@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,22 +34,22 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/utils/independent_test_utils.h"
+#include "insieme/frontend/utils/conversion_test_utils.h"
 
-#include "insieme/frontend/extensions/malloc_extension.h"
-#include "insieme/frontend/extensions/interceptor_extension.h"
+#include "insieme/frontend/extensions/opencl_frontend_extension.h"
+#include "insieme/frontend/extensions/variable_argument_list_extension.h"
 
 namespace insieme {
 namespace frontend {
-
-	TEST(IndependentTest, Malloc) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_malloc.c",
+	
+	TEST(OpenClConversionTest, OpenCL) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_opencl.c",
 			[](ConversionJob& job) {
-			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
-			job.registerFrontendExtension<extensions::MallocExtension>();
-		}
+				job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
+				job.registerFrontendExtension<extensions::OpenCLFrontendExtension>(true);
+			}
 		);
 	}
 
-} // fe namespace
+} // frontend namespace
 } // insieme namespace

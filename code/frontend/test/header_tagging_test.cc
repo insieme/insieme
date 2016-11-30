@@ -42,7 +42,7 @@
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/extensions/interceptor_extension.h"
 
-#include "insieme/frontend/utils/independent_test_utils.h"
+#include "insieme/frontend/utils/conversion_test_utils.h"
 
 namespace insieme {
 namespace frontend {

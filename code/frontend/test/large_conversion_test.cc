@@ -34,18 +34,48 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/utils/independent_test_utils.h"
+#include "insieme/frontend/utils/conversion_test_utils.h"
 
+#include "insieme/frontend/extensions/variable_argument_list_extension.h"
 #include "insieme/frontend/extensions/variable_length_array_extension.h"
 
 namespace insieme {
 namespace frontend {
 
-	TEST(IndependentTest, VariableLengthArrays) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_length_arrays.c",
-			[](ConversionJob& job) { job.registerFrontendExtension<extensions::VariableLengthArrayExtension>(); }
-		);
+	static inline void runLargeConversionTestOn(const string& fn, std::vector<std::string> includeDirs = toVector<std::string>()) {
+		utils::runConversionTestOn(fn, [&](ConversionJob& job) {
+			job.registerFrontendExtension<extensions::VariableLengthArrayExtension>();
+			job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
+			for(auto inc : includeDirs) {
+				job.addIncludeDirectory(inc);
+			}
+		});
 	}
+
+	TEST(LargeConversionTest, HelloWorld) {
+		runLargeConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_hello_world.c");
+	}
+
+	TEST(LargeConversionTest, MatrixMul) {
+		runLargeConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_matrix_mul.c");
+	}
+
+	TEST(LargeConversionTest, Pendulum) {
+		runLargeConversionTestOn(FRONTEND_TEST_DIR + "../../../test/pendulum/pendulum.c");
+	}
+
+	TEST(LargeConversionTest, Pyramids) {
+		runLargeConversionTestOn(FRONTEND_TEST_DIR + "../../../test/pyramids/pyramids.c");
+	}
+
+	TEST(LargeConversionTest, Stencil3D) {
+		runLargeConversionTestOn(FRONTEND_TEST_DIR + "../../../test/stencil3d/stencil3d.c");
+	}
+
+	// enable after checking recursive struct resolve
+	//TEST(LargeConversionTest, QAP) {
+	//	runLargeConversionTestOn(FRONTEND_TEST_DIR "../../../test/qap/qap.c");
+	//}
 
 } // fe namespace
 } // insieme namespace

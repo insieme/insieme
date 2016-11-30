@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/utils/independent_test_utils.h"
+#include "insieme/frontend/utils/conversion_test_utils.h"
 
 #include "insieme/frontend/extensions/opencl_frontend_extension.h"
 #include "insieme/frontend/extensions/variable_argument_list_extension.h"
@@ -42,64 +42,64 @@
 namespace insieme {
 namespace frontend {
 
-	TEST(IndependentTest, Literals) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_literals.c");
+	TEST(FragmentConversionTest, Literals) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_literals.c");
 	}
 	
-	TEST(IndependentTest, BasicTypes) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_basic_types.c");
+	TEST(FragmentConversionTest, BasicTypes) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_basic_types.c");
 	}
 
-	TEST(IndependentTest, Globals) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals.c");
+	TEST(FragmentConversionTest, Globals) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals.c");
 	}
 
-	TEST(IndependentTest, GlobalsInit) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals_init.c");
+	TEST(FragmentConversionTest, GlobalsInit) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals_init.c");
 	}
 
-	TEST(IndependentTest, Statements) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_statements.c");
+	TEST(FragmentConversionTest, Statements) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_statements.c");
 	}
 
-	TEST(IndependentTest, VariableScopes) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_variable_scopes.c");
+	TEST(FragmentConversionTest, VariableScopes) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_variable_scopes.c");
 	}
 	
-	TEST(IndependentTest, FunCalls) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_fun_calls.c");
+	TEST(FragmentConversionTest, FunCalls) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_fun_calls.c");
 	}
 
-	TEST(IndependentTest, Expressions) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_expressions.c");
+	TEST(FragmentConversionTest, Expressions) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_expressions.c");
 	}
 
-	TEST(IndependentTest, Casts) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_casts.c");
+	TEST(FragmentConversionTest, Casts) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_casts.c");
 	}
 
-	TEST(IndependentTest, DeclInitExpressions) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_decl_init_expressions.c");
+	TEST(FragmentConversionTest, DeclInitExpressions) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_decl_init_expressions.c");
 	}
 
-	TEST(IndependentTest, Prototypes) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_prototypes.c");
+	TEST(FragmentConversionTest, Prototypes) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_prototypes.c");
 	}
 
-	TEST(IndependentTest, FunctionPointers) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_function_pointers.c");
+	TEST(FragmentConversionTest, FunctionPointers) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_function_pointers.c");
 	}
 	
-	TEST(IndependentTest, Static) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_static.c");
+	TEST(FragmentConversionTest, Static) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_static.c");
 	}
 
-	TEST(IndependentTest, Enum) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_enum.c");
+	TEST(FragmentConversionTest, Enum) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_enum.c");
 	}
 
-	TEST(IndependentTest, OpenCL) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_opencl.c",
+	TEST(FragmentConversionTest, OpenCL) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_opencl.c",
 			[](ConversionJob& job) {
 				job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
 				job.registerFrontendExtension<extensions::OpenCLFrontendExtension>(true);

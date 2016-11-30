@@ -34,28 +34,21 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/utils/independent_test_utils.h"
+#include "insieme/frontend/utils/conversion_test_utils.h"
 
-#include "insieme/frontend/extensions/variable_argument_list_extension.h"
+#include "insieme/frontend/extensions/malloc_extension.h"
+#include "insieme/frontend/extensions/interceptor_extension.h"
 
 namespace insieme {
 namespace frontend {
-	static inline void runVarargIndependentTestOn(const string& fn) {
-		utils::runIndependentTestOn(fn, [&](ConversionJob& job) {
-			job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
-		});
-	}
-	
-	TEST(VarargIndependentTest, Basic) {
-		runVarargIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_variable_argument_lists.c");
-	}
 
-	TEST(VarargIndependentTest, HelloWorld) {
-		runVarargIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_hello_world.c");
-	}
-
-	TEST(VarargIndependentTest, Cpp) {
-		runVarargIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_variable_argument_lists.cpp");
+	TEST(MallocConversionTest, Malloc) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_malloc.c",
+			[](ConversionJob& job) {
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+			job.registerFrontendExtension<extensions::MallocExtension>();
+		}
+		);
 	}
 
 } // fe namespace

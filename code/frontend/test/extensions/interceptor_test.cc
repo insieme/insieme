@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/utils/independent_test_utils.h"
+#include "insieme/frontend/utils/conversion_test_utils.h"
 
 #include "insieme/frontend/extensions/interceptor_extension.h"
 
@@ -48,34 +48,34 @@ namespace insieme {
 namespace frontend {
 
 	TEST(InterceptorTest, CustomPath) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp", [](ConversionJob& job) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp", [](ConversionJob& job) {
 			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
 	}
 
 	TEST(InterceptorTest, Templates) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/template_interception.cpp", [](ConversionJob& job) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/template_interception.cpp", [](ConversionJob& job) {
 			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
 	}
 
 	TEST(InterceptorTest, QualifiedTemplates) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/qualified_template_interception.cpp", [](ConversionJob& job) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/qualified_template_interception.cpp", [](ConversionJob& job) {
 			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
 	}
 
 	TEST(InterceptorTest, SystemInterception) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp", [](ConversionJob& job) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp", [](ConversionJob& job) {
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
 	}
 
 	TEST(InterceptorTest, NoInterception) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/no_interceptor_test.cpp", [](ConversionJob& job) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/no_interceptor_test.cpp", [](ConversionJob& job) {
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
 	}
