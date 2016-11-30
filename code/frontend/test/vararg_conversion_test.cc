@@ -34,17 +34,29 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/utils/independent_test_utils.h"
+#include "insieme/frontend/utils/conversion_test_utils.h"
 
-#include "insieme/frontend/extensions/while_to_for_extension.h"
+#include "insieme/frontend/extensions/variable_argument_list_extension.h"
 
 namespace insieme {
 namespace frontend {
 
-	TEST(IndependentTest, WhileToFor) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_for.c",
-			[](ConversionJob& job) { job.registerFrontendExtension<extensions::WhileToForExtension>(); }
-		);
+	static inline void runVarargConversionTestOn(const string& fn) {
+		utils::runConversionTestOn(fn, [&](ConversionJob& job) {
+			job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
+		});
+	}
+	
+	TEST(VarargConversionTest, Basic) {
+		runVarargConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_variable_argument_lists.c");
+	}
+
+	TEST(VarargConversionTest, HelloWorld) {
+		runVarargConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_hello_world.c");
+	}
+
+	TEST(VarargConversionTest, Cpp) {
+		runVarargConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_variable_argument_lists.cpp");
 	}
 
 } // fe namespace

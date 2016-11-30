@@ -217,9 +217,9 @@ namespace utils {
 		}
 	}
 
-	static inline void runIndependentTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](auto& job) {},
-	                                        std::function<void(core::NodeManager&, core::lang::symbol_map&)> symbolModifier = [](auto& mgr, auto& symbols) {},
-	                                        std::function<core::checks::MessageList(const core::NodePtr&)> semanticCheckFunction = [](const auto& node) { return core::checks::check(node); }) {
+	static inline void runConversionTestOn(const string& fn, std::function<void(ConversionJob&)> jobModifier = [](auto& job) {},
+	                                       std::function<void(core::NodeManager&, core::lang::symbol_map&)> symbolModifier = [](auto& mgr, auto& symbols) {},
+	                                       std::function<core::checks::MessageList(const core::NodePtr&)> semanticCheckFunction = [](const auto& node) { return core::checks::check(node); }) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 

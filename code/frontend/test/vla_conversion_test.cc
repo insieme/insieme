@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,22 +34,18 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/utils/independent_test_utils.h"
+#include "insieme/frontend/utils/conversion_test_utils.h"
 
-#include "insieme/frontend/extensions/opencl_frontend_extension.h"
-#include "insieme/frontend/extensions/variable_argument_list_extension.h"
+#include "insieme/frontend/extensions/variable_length_array_extension.h"
 
 namespace insieme {
 namespace frontend {
-	
-	TEST(IndependentTest, OpenCL) {
-		utils::runIndependentTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_opencl.c",
-			[](ConversionJob& job) {
-				job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
-				job.registerFrontendExtension<extensions::OpenCLFrontendExtension>(true);
-			}
+
+	TEST(VlaConversionTest, VariableLengthArrays) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR "/inputs/conversion/c_variable_length_arrays.c",
+			[](ConversionJob& job) { job.registerFrontendExtension<extensions::VariableLengthArrayExtension>(); }
 		);
 	}
 
-} // frontend namespace
+} // fe namespace
 } // insieme namespace
