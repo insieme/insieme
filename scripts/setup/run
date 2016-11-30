@@ -46,6 +46,6 @@ if [[ $(head -n1 "$TGT/README.md") == "# CXX Template" ]]; then
 	render_template "$DIR/example/main.cxx.tpl" "$TGT/code/example/src/main.cxx"
 fi
 
-for module in $@; do
+for module in "$@"; do
 	add_module "$module"
 done

@@ -1,0 +1,66 @@
+#!/bin/bash
+
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TGT="$DIR/../.."
+
+render_template() {
+	header="$TGT/code/$module/include/$project/$module/$1.h"
+	local source="$TGT/code/$module/src/$1.cpp"
+	local test="$TGT/code/$module/test/$1_test.cc"
+
+	cp "$DIR/empty.h.tpl" "$header"
+	cp "$DIR/empty.cpp.tpl" "$source"
+
+	for d in $(echo $part_dir | tr " /" "_ "); do
+		local ns="namespace $d {\n%NAMESPACES%\n} // end namespace $d"
+		sed "s#%NAMESPACES%#$ns#" -i "$header"
+		sed "s#%NAMESPACES%#$ns#" -i "$source"
+	done
+	sed "s/%NAMESPACES%//" -i "$header"
+	sed "s/%NAMESPACES%//" -i "$source"
+
+	cp "$DIR/empty_test.cc.tpl" "$test"
+	local ns=$(echo $part_dir | sed -e "s/ /_/g" -e "s/\//::/g")
+	sed -e "s/%NAMESPACES%/$ns/" -e "s/::;/;/" -i "$test"
+
+	sed -e "s/%PROJECT%/$project/g" -e "s/%MODULE%/$module/g" -e "s#%PART%#$1#g" -i "$header"
+	sed -e "s/%PROJECT%/$project/g" -e "s/%MODULE%/$module/g" -e "s#%PART%#$1#g" -i "$source"
+	sed -e "s/%PROJECT%/$project/g" -e "s/%MODULE%/$module/g" -e "s#%PART%#$1#g" -e "s/%PART_NAME%/$(basename "$part")/g" -i "$test"
+}
+
+if [[ $# -lt 3 || "$1" == "-h" || "$1" == "--help" ]]; then
+	echo "Usage: $0 <project-name> <module-name> <part-name>..."
+	echo
+	echo -e "\tExamples:"
+	echo -e "\t\t$0 my_project my_module foo"
+	echo -e "\t\t$0 my_project my_module foo/bar/baz"
+	exit 1
+fi
+
+# parts remain in $@
+project="$1"
+module="$2"
+shift 2
+
+# check project and module name
+if [[ ! -d "$TGT/code/$module/include/$project/$module" ]]; then
+	echo "Double check project-name / module-name" 1>&2
+	exit 1
+fi
+
+for part in "$@"; do
+	part_dir=$(dirname "$part")
+	if [[ "$part_dir" == "." ]]; then
+		part_dir=""
+	else
+		part_dir="$part_dir/"
+	fi
+
+	mkdir -p "$TGT/code/$module/include/$project/$module/$part_dir"
+	mkdir -p "$TGT/code/$module/src/$part_dir"
+	mkdir -p "$TGT/code/$module/test/$part_dir"
+
+	render_template "$part"
+done
