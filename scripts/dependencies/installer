@@ -1,0 +1,89 @@
+#!/bin/bash
+
+set -e
+
+export INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+get_property() {
+	echo $(echo "source \"$INSTALLER_DIR/package_$1.sh\" && echo -n \$$2" | bash -)
+}
+export -f get_property
+
+resolve_dependencies() {
+	for pkg in $1; do
+		resolve_dependencies_for_pkg "$pkg"
+	done | awk '!unique[$_]++'
+}
+
+resolve_dependencies_for_pkg() {
+	for pkg in $(get_property $1 DEPENDS); do
+		resolve_dependencies_for_pkg "$pkg"
+	done
+	echo "$1"
+}
+
+install_pkg() {
+	bash - <<-EOF
+		set -e
+
+		source "$INSTALLER_DIR/defaults.sh"
+		source "$INSTALLER_DIR/package_$1.sh"
+
+		mkdir -p \$PREFIX
+
+		if pkg_is_installed; then
+			echo "\$NAME \$VERSION already installed"
+			exit 0
+		fi
+
+		PKG_TEMP=\$(mktemp -d)
+		pushd \$PKG_TEMP
+
+		echo "####   Downloading \$PACKAGE   ####"
+		pkg_download
+
+		echo "####   Extracting  \$PACKAGE   ####"
+		pkg_extract
+
+		pushd \$PACKAGE
+
+		echo "####   Preparing   \$PACKAGE   ####"
+		pkg_prepare
+
+		echo "####   Configuring \$PACKAGE   ####"
+		pkg_configure
+
+		echo "####   Building    \$PACKAGE   ####"
+		pkg_build
+
+		echo "####   Checking    \$PACKAGE   ####"
+		pkg_check
+
+		echo "####   Installing  \$PACKAGE   ####"
+		pkg_install
+
+		popd
+
+		pkg_install_done
+
+		echo "####   Cleaning    \$PACKAGE   ####"
+		pkg_cleanup
+
+		popd
+
+		rmdir \$PKG_TEMP
+	EOF
+}
+
+if [[ $# -eq 0 ]]; then
+	echo "Usage: $0 <package>..."
+	exit 1
+else
+	PACKAGES="$@"
+fi
+
+PACKAGES="$(resolve_dependencies "$PACKAGES")"
+
+for pkg in $PACKAGES; do
+	install_pkg "$pkg"
+done

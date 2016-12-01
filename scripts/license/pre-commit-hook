@@ -1,0 +1,25 @@
+#!/bin/bash
+
+for f in $(git diff --cached --name-only | grep -i "code/.*\.\(h\|hpp\|def\|inc\|c\|cpp\|cxx\|cc\)$"); do
+
+	# check whether disk version is the same as the version to be commited
+	git diff --quiet "$f"
+	up_to_date=$?
+
+	# adding license to file (if not present)
+	scripts/license/licensor scripts/license/header.txt "$f"
+	licened=$?
+
+	# check whether modification can / needs to be commited
+	if [[ $licened -eq 0 ]]; then 
+		if [[ $up_to_date -eq 0 ]]; then
+			# newly licented file can be commited
+			git add $f
+		else
+			# license had to be added, but there are uncommited changes
+			echo "ERROR: file '$f' required licening but contained uncommited changes!\n"
+			exit 1
+		fi
+	fi
+
+done

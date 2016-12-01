@@ -1,0 +1,51 @@
+#!/bin/bash
+
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TGT="$DIR/../.."
+
+render_template() {
+	sed -e "s/%PROJECT%/$project/g" -e "s/%MODULE%/$module/g" "$1" > "$2"
+}
+
+add_module() {
+	module="$1"
+
+	mkdir "$TGT/code/$module"
+	mkdir -p "$TGT/code/$module/"{"include/$project/$module",src,test}
+
+	render_template "$DIR/CMakeLists_module.txt.tpl" "$TGT/code/$module/CMakeLists.txt"
+
+	echo "add_subdirectory(code/$module)" >> "$TGT/CMakeLists.txt"
+}
+
+if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]]; then
+	echo "Usage: $0 <project-name> [module-name]..."
+	exit 1
+fi
+
+# setup project name, modules remain in $@
+project="$1"
+shift
+
+if [[ $(head -n1 "$TGT/README.md") == "# CXX Template" ]]; then
+	# setup README
+	render_template "$DIR/README.md.tpl" "$TGT/README.md"
+
+	# setup root CMakeLists
+	render_template "$DIR/CMakeLists.txt.tpl" "$TGT/CMakeLists.txt"
+
+	mkdir "$TGT/code"
+
+	# setup example module
+	add_module example
+	render_template "$DIR/example/answer.h.tpl" "$TGT/code/example/include/$project/example/answer.h"
+	render_template "$DIR/example/answer.cpp.tpl" "$TGT/code/example/src/answer.cpp"
+	render_template "$DIR/example/answer_test.cc.tpl" "$TGT/code/example/test/answer_test.cc"
+	render_template "$DIR/example/main.cxx.tpl" "$TGT/code/example/src/main.cxx"
+fi
+
+for module in "$@"; do
+	add_module "$module"
+done
