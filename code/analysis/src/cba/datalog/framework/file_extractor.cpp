@@ -57,6 +57,7 @@ namespace framework {
 			string folder;
 			map<string,fstream> factFiles;
 			bool debug = false;
+			std::ostream *debugOut;
 
 		public:
 			Inserter() {}
@@ -72,18 +73,19 @@ namespace framework {
 				return true;
 			}
 
-			Inserter &setDebug(bool debug) {
+			Inserter &setDebug(bool debug, std::ostream &debugOut) {
 				this->debug = debug;
+				this->debugOut = &debugOut;
 				return *this;
 			}
 
 			void printDebug() {
-				std::cout << std::endl;
+				*debugOut << std::endl;
 			}
 
 			template <typename F, typename ... Rest>
 			void printDebug(const F& first, const Rest& ...rest) {
-				std::cout << " - " << first;
+				*debugOut << " - " << first;
 				printDebug(rest...);
 			}
 
@@ -103,7 +105,7 @@ namespace framework {
 			void insert(const std::string& relationName, const Args& ... args ) {
 
 				if (debug) {
-					std::cout << "Inserting " << relationName << "  ";
+					*debugOut << "Inserting " << relationName << "  ";
 					printDebug(args...);
 				}
 
@@ -127,27 +129,27 @@ namespace framework {
 
 	} // end anonymous namespace
 
-	int extractFactsToFiles(const std::string &folder, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer, bool debug) {
+	int extractFactsToFiles(const std::string &folder, const core::NodePtr& root, const std::function<void(core::NodePtr,int)>& nodeIndexer, bool debug, ostream& debugOut) {
 		FactExtractor<core::Pointer,Inserter> extractor(nodeIndexer);
-		if (!extractor.getInserter().setDebug(debug).setTargetFolder(folder)) {
+		if (!extractor.getInserter().setDebug(debug, debugOut).setTargetFolder(folder)) {
 			cerr << "Unable to create target folder '" << folder << "'!" << endl;
 			return -1;
 		}
 		return extractor.visit(root);
 	}
 
-	int extractAddressFactsToFiles(const std::string &folder, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer, bool debug) {
+	int extractAddressFactsToFiles(const std::string &folder, const core::NodePtr& root, const std::function<void(core::NodeAddress,int)>& nodeIndexer, bool debug, ostream& debugOut) {
 		FactExtractor<core::Address,Inserter> extractor(nodeIndexer);
-		if (!extractor.getInserter().setDebug(debug).setTargetFolder(folder)) {
+		if (!extractor.getInserter().setDebug(debug, debugOut).setTargetFolder(folder)) {
 			cerr << "Unable to create target folder '" << folder << "'!" << endl;
 			return -1;
 		}
 		return extractor.visit(core::NodeAddress(root));
 	}
 
-	bool addFactsManually(const std::string &folder, const std::string &relationName, const std::set<string>& facts, bool debug) {
+	bool addFactsManually(const std::string &folder, const std::string &relationName, const std::set<string>& facts, bool debug, std::ostream &debugOut) {
 		Inserter ins;
-		if (!ins.setDebug(debug).setTargetFolder(folder))
+		if (!ins.setDebug(debug, debugOut).setTargetFolder(folder))
 			return false;
 
 		for (const auto &fact : facts) {

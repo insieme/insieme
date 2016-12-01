@@ -54,7 +54,7 @@ namespace datalog {
 	};
 
 	Result getBoolValue(Context& context, const core::ExpressionAddress& expr) {
-		const bool debug = true;
+		const bool debug = false;
 
 		// Instantiate the analysis
 		auto& analysis = context.getAnalysis<souffle::Sf_boolean_analysis>(expr.getRootNode(), debug);
@@ -77,6 +77,11 @@ namespace datalog {
 
 		} else {
 			assert_false(resultRelationContents.empty()) << "Incomplete analysis!";
+			if (resultRelationContents.empty())
+				std::cout << "INCOMPLETE ANALYSIS!!!!" << std::endl;
+			else
+				std::cout << "result not empty" << std::endl;
+
 		}
 
 		// Get possible result value

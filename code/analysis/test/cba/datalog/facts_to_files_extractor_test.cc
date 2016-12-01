@@ -47,7 +47,9 @@ namespace datalog {
 		ExpressionAddress z = ptr[2].as<VariableAddress>();
 
 		TargetRelations targets;
-		targets["Targets"].insert({x,y,z});
+		targets["Targets"].emplace(x);
+		targets["Targets"].emplace(y);
+		targets["Targets"].emplace(z);
 
 		string edCommands("/^Result\n"
 		                  "s/\\.$/, Targets(ID).\n"
@@ -65,7 +67,7 @@ namespace datalog {
 
 
 	TEST(FactsToFilesExtractor, LoadFromFile) {
-		const string filename = "aaaaa_micro_bool.c";
+		const string filename = "aaaaaaaaa.c";
 		const auto ROOT_DIR = utils::getInsiemeSourceRootDir() + "analysis/test/cba/common/input_tests/";
 		string file = ROOT_DIR + filename;
 
@@ -124,7 +126,7 @@ namespace datalog {
 			           name == "cba_expect_may_be_false")
 			{
 				TargetRelations targets;
-				targets["Targets"].insert(call.getArgument(0));
+				targets["Targets"].emplace(call.getArgument(0));
 				string edCmds("/^result\n"
 				              "s/\\.$/, Targets(n).\n"
 				              "i\n"
@@ -152,7 +154,13 @@ namespace datalog {
 			}
 		});
 
-		EXPECT_TRUE(testCount > 0) << "No tests encountered within file " << file;
+		// EXPECT_TRUE(testCount > 0) << "No tests encountered within file " << file;
+
+		if (testCount == 0) {
+			TargetRelations targets;
+			targets["Targets"].insert(NodeAddress(prog));
+			extractPointerFactsToFiles(targets);
+		}
 	}
 
 } // end namespace datalog
