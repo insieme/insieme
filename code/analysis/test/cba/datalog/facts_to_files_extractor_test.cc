@@ -111,8 +111,6 @@ namespace datalog {
 			// check the predicate
 			testCount++;
 
-			std::cout << "In here, with name = " << name << "...." << std::endl;
-
 			// alias analysis
 			if (name == "cba_expect_ref_are_alias") {
 			} else if (name == "cba_expect_ref_may_alias") {

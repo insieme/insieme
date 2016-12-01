@@ -79,9 +79,6 @@ namespace datalog {
 			assert_false(resultRelationContents.empty()) << "Incomplete analysis!";
 			if (resultRelationContents.empty())
 				std::cout << "INCOMPLETE ANALYSIS!!!!" << std::endl;
-			else
-				std::cout << "result not empty" << std::endl;
-
 		}
 
 		// Get possible result value
