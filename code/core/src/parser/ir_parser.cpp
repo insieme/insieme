@@ -127,31 +127,41 @@ namespace parser {
 			//first try to parse as an expression
 			x = parseExpr(manager, code, onFailThrow, definitions, aliases);
 			return x;
-		} catch (const IRParserException& ex) {
+		} catch (const IRParserException& expr_ex) {
 
 			//then try to parse as a type
 			try {
 				x = parseType(manager, code, onFailThrow, definitions, aliases);
 				return x;
-			} catch (const IRParserException& ex) {
+			} catch (const IRParserException& type_ex) {
 
 				//then try to parse as a statement
 				try {
 					x = parseStmt(manager, code, onFailThrow, definitions, aliases);
 					return x;
-				} catch (const IRParserException& ex) {
+				} catch (const IRParserException& stmt_ex) {
 
 					//finally try to parse as program
 					try {
 						x = parseProgram(manager, code, onFailThrow, definitions, aliases);
 						return x;
-					} catch (const IRParserException& ex) {
+					} catch (const IRParserException& prog_ex) {
+
+
+						// aggregate all errors into a string:
+						std::stringstream ss;
+						ss << "Unable to parse input. The following errors occurred:\n";
+						ss << " When attempting to interpret as a type:\n\t" << type_ex.what() << "\n";
+						ss << " When attempting to interpret as an expression:\n\t" << expr_ex.what() << "\n";
+						ss << " When attempting to interpret as a statement:\n\t" << stmt_ex.what() << "\n";
+						ss << " When attempting to interpret as a program:\n\t" << prog_ex.what() << "\n";
+						auto msg = ss.str();
 
 						//if this failed and we should throw exceptions, then we do so
 						if (onFailThrow) {
-							throw IRParserException("No way to parse the string, and because you use generic parse there is no way to provide errors, good luck there!");
+							throw IRParserException(msg);
 						} else {
-							std::cerr << "No way to parse the string, and because you use generic parse there is no way to provide errors, good luck there!" << std::endl;
+							std::cerr << msg << std::endl;
 						}
 					}
 				}
