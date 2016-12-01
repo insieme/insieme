@@ -9,7 +9,7 @@
 #define DP_ROOT nil
 
 // a table comuting concatenations of data paths
-.decl concat ( a : data_path , b : data_path , c : data_path )
+.decl concat ( left : data_path , right : data_path , total : data_path )
 
 
 
@@ -17,7 +17,7 @@
 
 concat( DP_ROOT , p , p ) :- all_data_paths(p).
 concat( [ah,at] , b , [ah,r]) :- all_data_paths([ah,at]), concat(at,b,r).
-					
+
 // TODO: compute all possible data paths from the type system
 .decl data_paths_in_type ( t : type , d : data_path )
 data_paths_in_type ( t, DP_ROOT ) :- GenericType(t,_,_,_).
