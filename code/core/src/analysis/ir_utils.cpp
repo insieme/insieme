@@ -593,12 +593,16 @@ namespace analysis {
 			}
 
 			void visitBindExpr(const Ptr<const BindExpr>& bindExpr, VariableSet& bound, ResultSet& free) {
-				// first search for free variables within bound expressions
-				auto expressions = bindExpr->getBoundExpressions();
-				for_each(expressions, [&](const Ptr<const Expression>& e) { this->visit(e, bound, free); });
 
-				// add free variables encountered within call target
-				this->visit(bindExpr->getCall()->getFunctionExpr(), bound, free);
+				// extend set of bound variables
+				VariableSet innerBound = bound;
+				for(const auto& cur : bindExpr->getParameters()) {
+					innerBound.insert(cur);
+				}
+
+				// collect free variables in bind body
+				this->visit(bindExpr->getCall(), innerBound, free);
+
 			}
 		};
 	}
