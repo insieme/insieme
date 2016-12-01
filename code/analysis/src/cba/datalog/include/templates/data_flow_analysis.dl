@@ -92,9 +92,6 @@ failure( "Error: Found a ref_assign whose parent is not a CallExpr!", id) :-
 	// uses of variables correspond to the value of the definition point
 	value( v, p, b ) :- Variable(v,_,_), DefinitionPoint(d,v), value(d,p,b).
 
-	// Follow the derefs
-	value(v, p, b) :- deref(v), NodeList(v,0,trg), value(trg,p,b).
-
 	// free variables are undefined
 	value( v, DP_ROOT, b ) :- FreeVariable(v), unknown_value(b).
 
@@ -139,8 +136,11 @@ failure( "Error: Found a ref_assign whose parent is not a CallExpr!", id) :-
 
 	// write values to memory locations (perfect assignment)
 	memory_state.intercepted( c , INT ) :- simple_assignment(c).
-	memory_state.value(c,POST,[[m,p],v]) :- assignment(c), NodeList(c,0,t), NodeList(c,1,e), reference_value(t,DP_ROOT,[m,p]), value(e,DP_ROOT,v).
-	memory_state.value(c,POST,s) :- assignment(c), NodeList(c,0,t), reference_value(t,DP_ROOT,[m1,p1]), reference_value(t,DP_ROOT,[m2,p2]), (m1!=m2 ; p1!=p2), memory_state.value(c,INT,s).
+	memory_state.value(c,POST,[memloc,v]) :- assignment(c), NodeList(c,0,t), NodeList(c,1,e), reference_value(t,DP_ROOT,memloc), value(e,DP_ROOT,v). // Assign a new value to a variable
+	memory_state.value(c,POST,s) :- assignment(c), NodeList(c,0,t), reference_value(t,DP_ROOT,[m1,p1]), reference_value(t,DP_ROOT,[m2,p2]), (m1!=m2 ; p1!=p2), memory_state.value(c,INT,s). // Non perfect assignment, keep old values if not sure about memloc
+
+	//.member MEMVAL(s:stmt, e:exec_state, creation_pt:stmt, p:data_path, v:ValueType)
+	//MEMVAL(s,e,c,p,v) :- memory_state.value(s,e,[[c,p],v]).
 
 
 	// pass function argument to memory location of parameter
