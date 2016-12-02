@@ -133,33 +133,26 @@ namespace checks {
 			 * The list of checks to be represented.
 			 */
 			CheckList checks;
-			/**
-			 * Whether this is a full check (which can tag nodes as error-free).
-			 */
-			bool isFullCheck;
-
-			struct FullyCorrectTag {};
 
 		  public:
+
 			/**
 			 * Default constructor for this combined check resulting in a check
 			 * combining the given checks.
 			 *
 			 * @param checks the checks to be conducted by the resulting check
 			 */
-			CombinedIRCheck(const CheckList& checks = CheckList(), bool isFullCheck = false)
-				: IRCheck(any(checks, [](const CheckPtr& cur) { return cur->isVisitingTypes(); })), checks(checks), isFullCheck(isFullCheck) { };
+			CombinedIRCheck(const CheckList& checks = CheckList())
+				: IRCheck(any(checks, [](const CheckPtr& cur) { return cur->isVisitingTypes(); })), checks(checks) { };
 
 		  protected:
 			OptionalMessageList visit(const NodeAddress& node) {
-				if(node->hasAttachedValue<FullyCorrectTag>()) { return OptionalMessageList(); }
 				// aggregate list of all error / warning messages
 				OptionalMessageList list;
 				for_each(checks.begin(), checks.end(), [&list, &node](const CheckPtr& cur) {
 					// merge overall list and messages of current visitor
 					addAll(list, cur->visit(node));
 				});
-				if(isFullCheck && (!list || list->empty())) { node->attachValue<FullyCorrectTag>(); }
 				return list;
 			}
 		};
@@ -434,7 +427,7 @@ namespace checks {
 
 	CheckPtr combine(const CheckPtr& a, const CheckPtr& b, const CheckPtr& c) { return combine(toVector<CheckPtr>(a, b, c)); }
 
-	CheckPtr combine(const CheckList& list, bool isFullCheck) { return make_check<CombinedIRCheck>(list, isFullCheck); }
+	CheckPtr combine(const CheckList& list) { return make_check<CombinedIRCheck>(list); }
 
 } // end namespace checks
 } // end namespace core
