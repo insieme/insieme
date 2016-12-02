@@ -44,7 +44,6 @@
 namespace insieme {
 namespace analysis {
 namespace cba {
-namespace datalog {
 
 	TEST(Set,ArithmeticSet) {
 		using namespace core;
@@ -58,8 +57,6 @@ namespace datalog {
 
 	}
 
-
-} // end namespace datalog
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
