@@ -1,0 +1,73 @@
+/**
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * regarding third party software licenses.
+ */
+
+#ifndef FLAG
+#define FLAG(NAME, ID, DESCRIPTION)
+#endif
+
+#ifndef PARAMETER
+#define PARAMETER(NAME, ID, ARG_TYPE, DEFAULT_VALUE, DESCRIPTION)
+#endif
+
+// Note: only general options needed by all (or at least most) drivers should be added here.
+// Driver-specific options should be added there - see insiemecc.cxx
+
+// general
+FLAG(     "help,h",                 help,                                                                                "produce help message")
+FLAG(     "version",                version,                                                                             "print full version string")
+FLAG(     "dumpversion",            dumpVersion,                                                                         "print minimal version string")
+
+// frontend options
+FLAG(     "no-warnings",            noWarnings,                                                                          "inhibit all warnings")
+FLAG(     "no-color",               noColor,                                                                             "force-disable highlighting of output")
+FLAG(     "no-default-extensions",  noDefaultExtensions,                                                                 "disables all frontend extensions that are enabled by default")
+FLAG(     "print-clang-ast",        printClangAST,                                                                       "print the clang AST")
+PARAMETER("print-clang-ast-filter", clangASTDumpFilter, std::string,                 std::string(),                      "set a regular expression to filter the clang AST dump.")
+
+// input settings
+PARAMETER("std",                    standard,           std::vector<std::string>,    std::vector<std::string>({"auto"}), "language standard")
+PARAMETER("x",                      language,           std::string,                 "undefined",                        "language setting")
+PARAMETER("input-file",             inFiles,            std::vector<frontend::path>, std::vector<frontend::path>(),      "input file(s)")
+PARAMETER("definitions,D",          definitions,        std::vector<std::string>,    std::vector<std::string>(),         "definition(s)")
+PARAMETER("include-path,I",         includePaths,       std::vector<frontend::path>, std::vector<frontend::path>(),      "additional user include search path(s)")
+PARAMETER("intercept-include",      interceptIncludes,  std::vector<frontend::path>, std::vector<frontend::path>(),      "intercepted include file(s)")
+PARAMETER("isystem",                systemIncludePaths, std::vector<frontend::path>, std::vector<frontend::path>(),      "additional system include search path(s)")
+PARAMETER("library-file,l",         libraryFiles,       std::vector<frontend::path>, std::vector<frontend::path>(),      "linker flag(s)/file(s)")
+PARAMETER("library-path,L",         libraryPaths,       std::vector<frontend::path>, std::vector<frontend::path>(),      "library search path(s)")
+
+
+#undef FLAG
+#undef PARAMETER

@@ -228,7 +228,7 @@ namespace utils {
 		}
 
 		// adjust name for things in anonymous namespaces
-		if(boost::contains(name, "(anonymous")) {
+		if(boost::contains(name, "(anonymous") || name.empty()) {
 			name = createNameForAnon(name, funcDecl, converter.getSourceManager());
 		}
 

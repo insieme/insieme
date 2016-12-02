@@ -42,8 +42,7 @@
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/extensions/interceptor_extension.h"
 
-#include "independent_test_utils.h"
-#include "test_utils.inc"
+#include "insieme/frontend/utils/conversion_test_utils.h"
 
 namespace insieme {
 namespace frontend {
@@ -53,10 +52,10 @@ namespace frontend {
 	TEST(HeaderTagging, C89Declarations) {
 		NodeManager man;
 
-		fs::path tmpFile;
+		boost::filesystem::path tmpFile;
 		{
 			// create a temporary source file
-			Source file(
+			utils::Source file(
 			    R"(
 				#include <stdio.h>
 
@@ -67,7 +66,7 @@ namespace frontend {
 
 			// check whether there is a temporary file
 			tmpFile = file.getPath();
-			EXPECT_TRUE(fs::exists(tmpFile));
+			EXPECT_TRUE(boost::filesystem::exists(tmpFile));
 
 			// parse temporary file
 			core::NodeManager manager;

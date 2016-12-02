@@ -10,7 +10,7 @@ file(GLOB_RECURSE insieme_transform_srcs 	src/*.cpp src/*.def src/*.inc )
 insieme_glob_headers(insieme_transform_incs include)
 
 # Build the transform library
-add_library(insieme_transform ${LINKING_TYPE} ${insieme_transform_srcs} )
+add_library(insieme_transform ${LINKING_TYPE} ${insieme_transform_srcs} ${insieme_transform_incs})
 target_include_directories(insieme_transform PUBLIC ${insieme_transform_include_dir})
 
 # lookup Boost library

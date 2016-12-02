@@ -65,7 +65,7 @@ namespace conversion {
 
 		/// Type expressing the conversion result of a clang Variable decl
 		///
-		using ConvertedVarDecl = std::pair<core::VariablePtr, boost::optional<core::ExpressionPtr>>;
+		using ConvertedVarDecl = std::pair<core::VariablePtr, core::ExpressionPtr>;
 
 		// Converters -----------------------------------------------------------------------------------------------------
 

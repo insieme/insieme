@@ -19,7 +19,7 @@ export SLOTS="${SLOTS:-$(nproc)}"
 export INSTALLER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 pkg_check_installed() {
-	if [[ -d "$PREFIX/$PACKAGE" ]]; then
+	if [[ -f "$PREFIX/$PACKAGE/.installed" ]]; then
 		echo "$NAME $VERSION already installed"
 		exit 0
 	fi
@@ -56,6 +56,7 @@ pkg_install() {
 	make install
 	rm -f "$PREFIX/$NAME-latest"
 	ln -s "$PREFIX/$PACKAGE" "$PREFIX/$NAME-latest"
+	touch "$PREFIX/$PACKAGE/.installed"
 }
 
 pkg_cleanup() {

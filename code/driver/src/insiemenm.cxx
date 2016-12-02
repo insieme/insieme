@@ -49,7 +49,7 @@
 #include <boost/filesystem.hpp>
 
 #include "insieme/utils/logging.h"
-#include "insieme/driver/object_file_utils.h"
+#include "insieme/driver/utils/object_file_utils.h"
 
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/tu/ir_translation_unit.h"
@@ -140,14 +140,14 @@ int main(int argc, char** argv) {
 	if(!options.valid) { return 0; }
 
 	// check input file
-	if(!isInsiemeLib(options.inputFile)) {
+	if(!driver::utils::isInsiemeLib(options.inputFile)) {
 		std::cout << "Not a proper insieme library: " << options.inputFile << "\n";
 		return 1;
 	}
 
 	// load input file
 	NodeManager mgr;
-	auto tu = loadLib(mgr, options.inputFile);
+	auto tu = driver::utils::loadLib(mgr, options.inputFile);
 
 	// perform semantic checks (do not print other output)
 	if(options.semanticChecks) {

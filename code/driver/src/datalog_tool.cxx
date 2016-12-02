@@ -45,7 +45,7 @@
 #include "insieme/core/dump/json_dump.h"
 #include "insieme/core/ir_node.h"
 
-#include "insieme/driver/cmd/insiemecc_options.h"
+#include "insieme/driver/cmd/commandline_options.h"
 #include "insieme/driver/datalog/options.h"
 
 #include "insieme/utils/name_mangling.h"

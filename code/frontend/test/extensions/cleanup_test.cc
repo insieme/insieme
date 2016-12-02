@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "../independent_test_utils.h"
+#include "insieme/frontend/utils/conversion_test_utils.h"
 
 #include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
@@ -46,8 +46,8 @@ namespace frontend {
 
 	TEST(CleanupExtension, Assignment) {
 
-		NodeManager mgr;
-		IRBuilder builder(mgr);
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 		auto& feExt = mgr.getLangExtension<utils::FrontendInspireModule>();
 		// add FE module symbols for use in test cases
 		auto symbols = mgr.getLangExtension<frontend::utils::FrontendInspireModule>().getSymbols();
@@ -70,7 +70,7 @@ namespace frontend {
 			main
 		)", symbols);
 
-		auto res = checks::check(prog);
+		auto res = core::checks::check(prog);
 		ASSERT_TRUE(res.empty()) << res;
 
 		auto lit = builder.literal(builder.stringValue("main"), prog->getType());
@@ -78,11 +78,11 @@ namespace frontend {
 		tu.addFunction(lit, prog.as<core::LambdaExprPtr>());
 		tu.addEntryPoints(lit);
 
-		FrontendCleanupExtension cleanup;
+		extensions::FrontendCleanupExtension cleanup;
 		tu = cleanup.IRVisit(tu);
 
 		prog = tu.resolve(lit).as<core::ExpressionPtr>();
-		res = checks::check(prog);
+		res = core::checks::check(prog);
 		ASSERT_TRUE(res.empty()) << "Semantic error after cleanup:\n" << res;
 
 		// check that only assignments for which the return value is used (that is, the parent is an expression or declaration) remain

@@ -164,26 +164,32 @@ namespace encoder {
 
 		namespace {
 
-			template <int pos, typename... T>
-			struct unpack {
-				void operator()(const vector<ExpressionPtr>& encoded, tuple<T...>& tuple) const {
-					std::get<pos - 1>(tuple) = toValue<typename std::tuple_element<pos - 1, std::tuple<T...>>::type>(encoded[pos - 1]);
-					unpack<pos - 1, T...>()(encoded, tuple);
+			template<typename ... T>
+			struct unpack;
+
+			template <typename F, typename ... R>
+			struct unpack<F, R...> {
+				tuple<F,R...> operator()(const vector<ExpressionPtr>& encoded) const {
+					return std::tuple_cat(
+							std::make_tuple(toValue<F>(encoded[encoded.size()-sizeof...(R)-1])),
+							unpack<R...>()(encoded)
+					);
+				}
+				unpack() {}
+			};
+
+			template <>
+			struct unpack<> {
+				tuple<> operator()(const vector<ExpressionPtr>& encoded) const {
+					return tuple<>();
 				}
 				unpack() {}
 			};
 
 			template <typename... T>
-			struct unpack<0, T...> {
-				void operator()(const vector<ExpressionPtr>& encoded, tuple<T...>& tuple) const {}
-				unpack() {}
-			};
-
-			template <typename... T>
 			tuple<T...> decodeTuple(const vector<ExpressionPtr>& encoded) {
-				tuple<T...> res;
-				unpack<sizeof...(T), T...>()(encoded, res);
-				return res;
+				assert_eq(sizeof...(T),encoded.size());
+				return unpack<T...>()(encoded);
 			}
 		}
 

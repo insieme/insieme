@@ -21,6 +21,7 @@ list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
 #find them in CMAKE_MODULE_PATH
 include(default_library_configuration)
 include(insieme_find_package)
+include(msvc_file_completion)
 
 # -------------------------------------------------------------- define some code locations
 
@@ -73,7 +74,7 @@ endif (NOT MSVC)
 option(MSVC_SHARED_RUNTIME "Use shared MSVC runtime linking" ON)
 
 add_definitions("-DINSIEME_LIBS_HOME=\"${THIRD_PARTY_LIBS_HOME}/\"")
-add_definitions("-DINSIEME_BUILD_ROOT=\"${CMAKE_BINARY_DIR}/\"")
+add_definitions("-DINSIEME_BUILD_ROOT=\"${CMAKE_CURRENT_BINARY_DIR}/..\"")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS")
 
 # Visual Studio customization
@@ -106,13 +107,13 @@ if(MSVC)
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MD")
 		set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
 		set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /MDd")
-		set (CMAKE_CXX_FLAGS_RELASE "${CMAKE_CXX_FLAGS_RELASE} /MD")
+		set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
 		set (CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /MD")
 	else()
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
 		set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 		set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /MTd")
-		set (CMAKE_CXX_FLAGS_RELASE "${CMAKE_CXX_FLAGS_RELASE} /MT")
+		set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
 		set (CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /MT")
 	endif()
 
@@ -129,5 +130,4 @@ if(MSVC)
 	else()
 		set(Boost_USE_STATIC_RUNTIME ON)
 	endif()
-
 endif()

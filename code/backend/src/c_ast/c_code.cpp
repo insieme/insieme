@@ -85,9 +85,9 @@ namespace c_ast {
 
 		// print macro definition for unified C/C++ in-place initialization
 		out << "#ifdef __cplusplus\n"
-			<< "#define INS_INIT(_v_) _v_\n"
+			<< "#define INS_INIT(...) __VA_ARGS__\n"
 			<< "#else\n"
-			<< "#define INS_INIT(_v_) (_v_)\n"
+			<< "#define INS_INIT(...) (__VA_ARGS__)\n"
 			<< "#endif\n";
 
 		// print C++14 workaround

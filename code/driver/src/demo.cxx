@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -42,38 +42,36 @@
  * applications utilizing the Insieme compiler and runtime infrastructure.
  */
 
+#include <insieme/driver/cmd/commandline_options.h>
 #include <string>
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/backend/runtime/runtime_backend.h"
-#include "insieme/driver/cmd/insiemecc_options.h"
-
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/filter/standard_filter.h"
 #include "insieme/transform/rulebased/transformations.h"
 
 using namespace std;
+using namespace insieme;
 
-namespace fe = insieme::frontend;
-namespace co = insieme::core;
-namespace be = insieme::backend;
-namespace ut = insieme::utils;
 namespace cp = insieme::utils::compiler;
 namespace tr = insieme::transform;
-namespace cmd = insieme::driver::cmd;
 
 
 int main(int argc, char** argv) {
 	// Step 1: parse input parameters
 	//		This part is application specific and need to be customized. Within this
 	//		example a few standard options are considered.
+	std::string outFile;
 	unsigned unrollingFactor = 1;
-	std::vector<std::string> arguments(argv, argv + argc);
-	cmd::Options options = cmd::Options::parse(arguments)
-	    // one extra parameter - unrolling factor, default should be 5
-	    ("unrolling,u", unrollingFactor, 5u, "The factor by which the innermost loops should be unrolled.");
+
+	auto parser = driver::cmd::Options::getParser();
+	parser.addParameter("unrolling,u", unrollingFactor, 5u,                   "The factor by which the innermost loops should be unrolled.");
+	parser.addParameter("outfile,o",   outFile,         std::string("a.out"), "output file");
+	auto options = parser.parse(argc, argv);
+
 	if(!options.valid) { return (options.settings.help) ? 0 : 1; }
 
 
@@ -81,7 +79,7 @@ int main(int argc, char** argv) {
 	//		The frontend is converting input code into the internal representation (IR).
 	//		The memory management of IR nodes is realized using node manager instances.
 	//		The life cycle of IR nodes is bound to the manager the have been created by.
-	co::NodeManager manager;
+	core::NodeManager manager;
 	auto program = options.job.execute(manager);
 
 
@@ -109,7 +107,7 @@ int main(int argc, char** argv) {
 	//		system. Backends targeting alternative platforms may be present in the
 	//		backend modul as well.
 	cout << "Creating target code ...\n";
-	auto targetCode = be::runtime::RuntimeBackend::getDefault()->convert(program);
+	auto targetCode = backend::runtime::RuntimeBackend::getDefault()->convert(program);
 
 
 	// Step 5: build output code
@@ -119,7 +117,7 @@ int main(int argc, char** argv) {
 	cp::Compiler compiler = cp::Compiler::getDefaultC99Compiler();
 	compiler = cp::Compiler::getOptimizedCompiler(compiler);
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
-	bool success = cp::compileToBinary(*targetCode, options.settings.outFile.string(), compiler);
+	bool success = cp::compileToBinary(*targetCode, outFile, compiler);
 
 	// done
 	return (success) ? 0 : 1;

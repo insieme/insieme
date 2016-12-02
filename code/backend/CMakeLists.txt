@@ -10,9 +10,11 @@ file(GLOB_RECURSE insieme_backend_srcs 	src/*.cpp src/*.def src/*.inc)
 insieme_glob_headers(insieme_backend_incs include)
 
 # Build the core library
-add_library(insieme_backend ${LINKING_TYPE} ${insieme_backend_srcs} )
+add_library(insieme_backend ${LINKING_TYPE} ${insieme_backend_srcs} ${insieme_backend_incs})
 target_include_directories(insieme_backend PUBLIC ${insieme_backend_include_dir})
 target_include_directories(insieme_backend PUBLIC ${insieme_common_include_dir})
+
+msvc_file_completion(insieme_backend_tests test h)
 
 # lookup Boost library
 insieme_find_package(NAME Boost)

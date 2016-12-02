@@ -1362,6 +1362,7 @@ struct IRDump : public insieme::utils::Printable {
 IRDump dump(const insieme::core::NodePtr&, std::ostream& out = std::cout);
 IRDump dumpText(const insieme::core::NodePtr&, std::ostream& out = std::cout, bool printAddresses = false);
 IRDump dumpColor(const insieme::core::NodePtr&, std::ostream& out = std::cout, bool noLet = false);
+IRDump dumpReadable(const insieme::core::NodePtr&, std::ostream& out = std::cout, bool noLet = false);
 IRDump dumpOneLine(const insieme::core::NodePtr&, std::ostream& out = std::cout);
 IRDump dumpPretty(const insieme::core::NodePtr&, std::ostream& out = std::cout);
 IRDump dumpDetail(const insieme::core::NodePtr&, std::ostream& out = std::cout);

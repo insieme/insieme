@@ -236,6 +236,9 @@ namespace c_ast {
 		return type->getManager()->create<c_ast::ComplexType>(type);
 	}
 
+	inline TypeAliasPtr alias(const TypePtr& type, const TypePtr& definition) {
+		return type->getManager()->create<c_ast::TypeAlias>(type,definition);
+	}
 
 	// --- create literals and variables ------------------------
 
@@ -308,6 +311,17 @@ namespace c_ast {
 	inline DestructorCallPtr dtorCall(TypePtr classType, ExpressionPtr obj, bool isVirtual = true) {
 		if(getPriority(obj) < getPriority(BinaryOperation::MemberAccess)) { obj = parentheses(obj); }
 		return classType->getManager()->create<c_ast::DestructorCall>(classType, obj, isVirtual);
+	}
+
+	// --- generic function instantiation ---
+
+	inline ExplicitInstantiationPtr instantiate(const c_ast::NodePtr& node, const std::vector<c_ast::TypePtr>& types) {
+		return node->getManager()->create<ExplicitInstantiation>(node,types);
+	}
+
+	template<typename ... Types>
+	inline ExplicitInstantiationPtr instantiate(const c_ast::NodePtr& node, const Types& ... types) {
+		return instantiate(node,std::vector<c_ast::TypePtr>{ types ... });
 	}
 
 	// -- Unary Operations --------------------------------------

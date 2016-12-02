@@ -11,6 +11,8 @@ insieme_glob_headers(insieme_core_incs 	include)
 file(GLOB_RECURSE insieme_core_yy src/*.y src/*.yy )
 file(GLOB_RECURSE insieme_core_ll src/*.l src/*.ll )
 
+set(insieme_core_srcs ${insieme_core_srcs} ${insieme_core_yy} ${insieme_core_ll})
+
 # automatically run the script for generating IRBuilder interface
 set(builderbuilder_script_dir ${insieme_code_dir}/core)
 set(builderbuilder_output_dir ${CMAKE_CURRENT_BINARY_DIR}/generated)
@@ -103,6 +105,8 @@ target_include_directories(insieme_core PUBLIC ${builderbuilder_output_dir}/incl
 target_include_directories(insieme_core PRIVATE ${FLEX_OUTPUT_PATH})
 target_include_directories(insieme_core PRIVATE ${BISON_OUTPUT_PATH})
 target_include_directories(insieme_core PRIVATE ${FLEX_INCLUDE_DIRS})
+
+msvc_file_completion(insieme_core_tests test inc ir)
 
 # We need to add a dummy target here in order to have the generated files available in certain IDEs (e.g. Eclipse)
 add_custom_target(insieme_core_builder_builder_dummy SOURCES ${builderbuilder_generated_files})

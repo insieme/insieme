@@ -234,7 +234,9 @@ if (NOT MEMORY_CHECK_SETUP)
 	option(CONDUCT_MEMORY_CHECKS "Checks all test cases for memory leaks using valgrind if enabled." OFF)
 
 	# add -all-valgrind target
-	add_custom_target(valgrind)
+	if (NOT TARGET valgrind)
+		add_custom_target(valgrind)
+	endif()
 
 	# mark as defined
 	set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)

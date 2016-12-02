@@ -249,6 +249,7 @@ AST_NODE(Definition, TopLevelElement)
 ABSTRACT(Definition)
 
 AST_TERMINAL(TypeDefinition, Definition)
+AST_TERMINAL(TypeAlias, Definition)
 AST_TERMINAL(Function, Definition)
 
 

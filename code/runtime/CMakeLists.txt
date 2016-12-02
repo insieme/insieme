@@ -150,6 +150,8 @@ add_executable(insieme_runtime ${insieme_runtime_srcs} ${insieme_runtime_incs} $
 
 target_link_libraries(insieme_runtime dl rt m)
 
+msvc_file_completion(insieme_runtime_tests test c cpp cl)
+
 link_hwloc(insieme_runtime)
 
 if(USE_PAPI)

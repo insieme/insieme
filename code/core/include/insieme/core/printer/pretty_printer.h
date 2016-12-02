@@ -113,8 +113,15 @@ namespace printer {
 			JUST_LOCAL_CONTEXT = 1 << 16,
 			FULL_LITERAL_SYNTAX = 1 << 17,
 			USE_VARIABLE_NAME_ANNOTATIONS = 1 << 18,
-			PRINT_CALL_EXPR_TYPES = 1 << 19
+			PRINT_CALL_EXPR_TYPES = 1 << 19,
+			READABLE_NAMES = 1 << 20,
+			CALL_ARG_LINE_BREAKS = 1 << 21,
 		};
+
+		/**
+		 * The number of characters an argument string must exceed before line breaks are inserted if CALL_ARG_LINE_BREAKS is set.
+		 */
+		static const unsigned CALL_ARG_LINE_BREAKS_THRESHOLD = 50;
 
 		/**
 		 * An default setup resulting in a readable print out.

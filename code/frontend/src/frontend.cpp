@@ -255,8 +255,6 @@ namespace frontend {
 		out << "input files: \n" << files << std::endl;
 		out << "flags: \n"
 		    << "PrintDiag " << hasOption(ConversionSetup::PrintDiag) << "\n"
-		    << "WinCrossCompile " << hasOption(ConversionSetup::WinCrossCompile) << "\n"
-		    << "TAG_MPI " << hasOption(ConversionSetup::TAG_MPI) << "\n"
 		    << "NoWarnings " << hasOption(ConversionSetup::NoWarnings) << "\n"
 		    << "NoDefaultExtensions " << hasOption(ConversionSetup::NoDefaultExtensions) << "\n" << std::endl;
 		out << "interceptions: \n" << getInterceptedHeaderDirs() << std::endl;

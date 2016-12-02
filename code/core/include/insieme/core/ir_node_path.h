@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -204,7 +204,7 @@ namespace core {
 			// check depth
 			if(depth != other.depth) { return false; }
 
-			// compare root nodes
+			// if both nodes are the root node
 			if(!parent && !other.parent) {
 				// compare associated pointer
 				return *ptr == *other.ptr;

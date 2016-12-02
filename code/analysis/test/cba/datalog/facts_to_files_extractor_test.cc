@@ -12,7 +12,7 @@
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/core/checks/full_check.h"
 
-#include "insieme/driver/cmd/insiemecc_options.h"
+#include "insieme/driver/cmd/commandline_options.h"
 
 #include "insieme/utils/config.h"
 #include "insieme/utils/name_mangling.h"

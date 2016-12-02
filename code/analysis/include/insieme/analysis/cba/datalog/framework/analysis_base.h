@@ -39,12 +39,14 @@
 #include "insieme/analysis/cba/datalog/framework/forward_decls.h"
 
 #include "insieme/analysis/cba/common/failure.h"
+
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/lang/lang.h"
 #include "insieme/core/lang/basic.h"
+
 #include "insieme/utils/logging.h"
 
 namespace insieme {

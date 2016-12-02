@@ -255,10 +255,11 @@ namespace backend {
 		visitDepthFirstOnce(retCode, [&](const core::TagTypeDefinitionPtr& td){
 			for(const auto& ttb : td->getDefinitions()) {
 				const auto& ttRef = ttb->getTag();
-				auto tt = builder.tagType(ttRef, td);
+				auto tt = builder.normalize(builder.tagType(ttRef, td));
 				if(ttAssignment.find(ttRef) != ttAssignment.end() && ttAssignment[ttRef] != tt) {
 					assert_not_implemented()
-							<< "Case of non-unique tag type references not handled here, could be done but complex, and this code should be obsolete in the future";
+							<< "Case of non-unique tag type references not handled here, could be done but complex, and this code should be obsolete in the future\n"
+							<< "Duplicated tag type reference: " << *ttRef;
 				}
 				ttAssignment[ttRef] = tt;
 			}

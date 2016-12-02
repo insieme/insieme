@@ -51,17 +51,16 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/checks/full_check.h"
-#include "insieme/core/printer/error_printer.h"
 #include "insieme/core/dump/json_dump.h"
-
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/printer/error_printer.h"
 #include "insieme/core/transform/node_replacer.h"
-
-#include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "insieme/utils/config.h"
 #include "insieme/utils/name_mangling.h"
+
+#include "insieme/driver/cmd/commandline_options.h"
 
 namespace insieme {
 namespace analysis {

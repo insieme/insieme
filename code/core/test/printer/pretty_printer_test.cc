@@ -1602,6 +1602,81 @@ TEST(PrettyPrinter, MaxDepth) {
 	EXPECT_EQ(res2, toString(printer2)) << printer2;
 }
 
+TEST(PrettyPrinter, ReadableNames) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	#define TESTNAME "IMP___anon_tagtype__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6_IMLOC__slash_home_slash_zangerl_slash_insieme_dev_slash_allscale_slash_test_slash_basic_slash_basic_dot_cpp_8_6"
+	#define READABLENAME "anon_basic_cpp_8_6"
+
+	// generic type
+	{
+		std::string input = "<ref<" TESTNAME ",f,f,plain>>(ref_temp(type_lit(" TESTNAME "))) {}";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::READABLE_NAMES);
+		EXPECT_EQ("<ref<" READABLENAME ",f,f,plain>>(ref_temp(type_lit(" READABLENAME "))) {}", toString(printer));
+	}
+	// struct
+	{
+		std::string input = R"(
+				def struct )" TESTNAME R"( {};
+				<ref<)" TESTNAME R"(,f,f,plain>>(ref_temp(type_lit()" TESTNAME R"())) {}
+			)";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::READABLE_NAMES);
+		EXPECT_EQ("decl struct " READABLENAME ";\ndef struct " READABLENAME" {\n};\n<ref<" READABLENAME ",f,f,plain>>(ref_temp(type_lit(" READABLENAME "))) {}", toString(printer));
+	}
+	// method
+	{
+		std::string input = "def struct A { lambda " TESTNAME " = () -> unit { } }; ref_temp(type_lit(A))";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::READABLE_NAMES);
+		EXPECT_EQ("decl struct A;\ndecl " READABLENAME ":A::() -> unit;\ndef struct A {\n    function " READABLENAME " = () -> unit { }\n};\nref_temp(type_lit(A))", toString(printer));
+	}
+	// functions
+	{
+		std::string input = "def " TESTNAME " = () -> unit { 42; }; " TESTNAME "()";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::READABLE_NAMES);
+		EXPECT_EQ("decl " READABLENAME " : () -> unit;\ndef " READABLENAME " = function () -> unit {\n    42;\n};\n" READABLENAME "()", toString(printer));
+	}
+	// literals
+	{
+		std::string input = "lit(\"" TESTNAME "\": int<4>)";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::READABLE_NAMES);
+		EXPECT_EQ(READABLENAME, toString(printer));
+	}
+
+	#undef TESTNAME
+	#undef READABLENAME
+}
+
+TEST(PrettyPrinter, CallArgLineBreaks) {
+	NodeManager nm;
+	IRBuilder b(nm);
+
+	{
+		std::string input = R"(
+				decl testfun : (int<4>, int<4>, int<4>) -> int<4>;
+				testfun(lit("aksajdjaklsdjkasjkdlasljkdasdsawjehqwjehkjqwheqjwneq":int<4>), 724781+12732817-2312312312/45, 1182*723)
+			)";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::CALL_ARG_LINE_BREAKS);
+		EXPECT_EQ("decl testfun : (int<4>, int<4>, int<4>) -> int<4>;\ntestfun(\n    aksajdjaklsdjkasjkdlasljkdasdsawjehqwjehkjqwheqjwneq,\n    724781+12732817-2312312312/45,\n    1182*723\n)", toString(printer));
+	}
+	{
+		std::string input = R"(
+				decl testfun : (int<4>, int<4>, int<4>) -> int<4>;
+				testfun(testfun(42, 31337, 3840*2160), 724781+12732817-2312312312/45, testfun(12732817-312312/45, lit("uijjcjnvjkdfzujermtnertwrwerjwerkjwerkwnsdf":int<4>), 1182*723))
+			)";
+		auto ir = b.parseExpr(input);
+		PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::CALL_ARG_LINE_BREAKS);
+		EXPECT_EQ("decl testfun : (int<4>, int<4>, int<4>) -> int<4>;\ntestfun(\n    testfun(42, 31337, 3840*2160),\n    724781+12732817-2312312312/45,\n    testfun(\n        12732817-312312/45,\n        uijjcjnvjkdfzujermtnertwrwerjwerkjwerkwnsdf,\n        1182*723\n    )\n)", toString(printer));
+		//std::cout << toString(PrettyPrinter(ir, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::CALL_ARG_LINE_BREAKS | PrettyPrinter::USE_COLOR)) << std::endl;
+	}
+}
+
 TEST(Lexer, Symbol) {
 	using namespace insieme::core::printer::detail;
 	char lex = 'b';
@@ -1693,5 +1768,4 @@ TEST(Lexer, Comments) {
 	EXPECT_EQ(1, token2.size());
 	EXPECT_EQ("(Comment:// This is just a comment)", toString(token2[0]));
 	//std::cout << token2[1];
-
 }

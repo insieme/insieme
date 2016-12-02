@@ -97,6 +97,12 @@ namespace extensions {
 		return nullptr;
 	}
 
+	insieme::core::ExpressionPtr FrontendExtension::Visit(const clang::CastExpr* castExpr,
+	                                                      insieme::core::ExpressionPtr& irExpr, insieme::core::TypePtr& irTargetType,
+	                                                      insieme::frontend::conversion::Converter& converter) {
+		return nullptr;
+	}
+
 	insieme::core::TypePtr FrontendExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& converter) {
 		return nullptr;
 	}
@@ -126,6 +132,12 @@ namespace extensions {
 	stmtutils::StmtWrapper FrontendExtension::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt,
 	                                                    insieme::frontend::conversion::Converter& converter) {
 		return irStmt;
+	}
+
+	std::pair<core::VariablePtr, core::ExpressionPtr> FrontendExtension::PostVisit(const clang::VarDecl* varDecl,
+	                                                                               const core::VariablePtr& var, const core::ExpressionPtr& varInit,
+	                                                                               insieme::frontend::conversion::Converter& converter) {
+		return {var, varInit};
 	}
 
 	// ############ POST CLANG STAGE ############ //

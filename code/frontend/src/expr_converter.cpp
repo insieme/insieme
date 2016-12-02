@@ -783,7 +783,7 @@ namespace conversion {
 		if(!core::lang::isReference(convertedExprType)) convertedExprType = builder.refType(convertedExprType);
 		auto genType = convertedExprType.as<core::GenericTypePtr>();
 
-		if(clangType->isStructureType()) {
+		if(clangType->isStructureType() || clangType->isClassType()) {
 			auto types = lookupRecordTypes(converter, initList);
 			auto values = buildExprListForStructInit(converter, initList);
 			retIr = builder.initExprTemp(genType, values);
@@ -812,7 +812,9 @@ namespace conversion {
 			retIr = convertInitExpr(initList->getInit(0));
 			return retIr;
 		} else {
-			frontend_assert(false) << "Clang InitListExpr of unexpected type";
+			std::cout << "Clang InitListExpr of unexpected type:\n";
+			clangType->dump();
+			frontend_assert(false);
 		}
 
 		// if used as r-value, deref

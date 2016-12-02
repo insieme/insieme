@@ -538,7 +538,7 @@ namespace encoder {
 		 *
 		 * ExpressionPtr toIR(NodeManager&) const;
 		 *
-		 * static T toValue(const ExpressionPtr&);
+		 * static T fromIR(const ExpressionPtr&);
 		 *
 		 */
 
@@ -571,7 +571,7 @@ namespace encoder {
 	template <typename T>
 	struct ir_to_value_converter<T,std::enable_if_t<std::is_base_of<encodable,T>::value,bool>> {
 		T operator()(const core::ExpressionPtr& expr) const {
-			return T::toValue(expr);
+			return T::fromIR(expr);
 		}
 		ir_to_value_converter() {}
 	};

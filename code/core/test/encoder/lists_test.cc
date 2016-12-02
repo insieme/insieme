@@ -104,7 +104,7 @@ namespace encoder {
 			return encoder::toIR(mgr,x);
 		}
 
-		static Info toValue(const ExpressionPtr& expr) {
+		static Info fromIR(const ExpressionPtr& expr) {
 			Info res;
 			res.x = encoder::toValue<int>(expr);
 			return res;

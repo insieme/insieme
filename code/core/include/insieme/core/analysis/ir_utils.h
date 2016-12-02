@@ -480,13 +480,20 @@ namespace analysis {
 	 */
 	bool equalTypes(const TypePtr& a, const TypePtr& b);
 
-
-	// ----------------------------------- Jobs ----------------------------
-
 	/**
 	 * Tests whether the given expression is zero or not.
 	 */
 	bool isZero(const core::ExpressionPtr& value);
+
+	/**
+	 * Returns the lowest common ancestor of all passed node addresses. All Addresses must have the same root node.
+	 */
+	NodeAddress getLowestCommonAncestor(const std::vector<NodeAddress>& addresses);
+
+	/**
+	 * Checks whether there is a loop on the path between top and bottom.
+	 */
+	bool hasLoopInBetween(const NodeAddress& top, const NodeAddress& bottom);
 
 	// ----------------------------------- Lambda extraction + helpers ----------------------------
 
@@ -515,6 +522,16 @@ namespace analysis {
 	 * Tests whether the given statement contains a free return statement.
 	 */
 	bool hasFreeReturnStatement(const StatementPtr& stmt);
+
+	/**
+	 * Returns the first parent of the passed address which has been a function originating from the input code.
+	 */
+	LambdaExprAddress getLowestUserDefinedFunctionAbove(const NodeAddress& node);
+
+	/**
+	 * Returns the lambda corresponding to a given LambdaReferenceAddress.
+	 */
+	LambdaExprAddress getLambdaFromReference(const LambdaReferenceAddress& reference);
 
 	// ------------------------------- utilities for recursive constructs -------------------------
 

@@ -221,6 +221,7 @@ IRDump dumpText(const insieme::core::NodePtr& node, std::ostream& out, bool prin
 	return IRDump([node,printAddresses](std::ostream& out) -> std::ostream& { return out << insieme::core::dump::text::TextDump(node,printAddresses) << std::endl; }, out);
 }
 
+
 IRDump dumpColor(const insieme::core::NodePtr& node, std::ostream& out, bool noLet) {
 	return IRDump([node, noLet](std::ostream& out) -> std::ostream& {
 		insieme::core::printer::PrettyPrinter print(node);
@@ -231,6 +232,20 @@ IRDump dumpColor(const insieme::core::NodePtr& node, std::ostream& out, bool noL
 		return out << print << std::endl;
 	}, out);
 }
+
+IRDump dumpReadable(const insieme::core::NodePtr& node, std::ostream& out, bool noLet) {
+	return IRDump([node, noLet](std::ostream& out) -> std::ostream& {
+		insieme::core::printer::PrettyPrinter print(node);
+		print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
+		print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);
+		print.setOption(insieme::core::printer::PrettyPrinter::USE_VARIABLE_NAME_ANNOTATIONS);
+		print.setOption(insieme::core::printer::PrettyPrinter::CALL_ARG_LINE_BREAKS);
+		print.setOption(insieme::core::printer::PrettyPrinter::READABLE_NAMES);
+		if(noLet) print.setOption(insieme::core::printer::PrettyPrinter::NO_LET_BINDINGS);
+		return out << print << std::endl;
+	}, out);
+}
+
 IRDump dumpOneLine(const insieme::core::NodePtr& node, std::ostream& out) {
 	return IRDump([node](std::ostream& out) -> std::ostream& {
 		insieme::core::printer::PrettyPrinter print(node);

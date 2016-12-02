@@ -80,12 +80,10 @@ namespace frontend {
 		 */
 		enum Option {
 			PrintDiag = 1 << 0,
-			WinCrossCompile = 1 << 1,
-			TAG_MPI = 1 << 2,
-			NoWarnings = 1 << 3,
-			NoDefaultExtensions = 1 << 4,
-			DumpClangAST = 1 << 5,
-			NoColor = 1 << 6,
+			NoWarnings = 1 << 1,
+			NoDefaultExtensions = 1 << 2,
+			DumpClangAST = 1 << 3,
+			NoColor = 1 << 4,
 		};
 
 		/**
@@ -372,6 +370,11 @@ namespace frontend {
 		vector<path> files;
 
 		/**
+		 * The external libraries.
+		 */
+		vector<path> extLibs;
+
+		/**
 		 * Extra libraries to be considered for the conversion.
 		 */
 		vector<core::tu::IRTranslationUnit> libs;
@@ -430,6 +433,20 @@ namespace frontend {
 		 */
 		void setFiles(const vector<path>& files) {
 			this->files = files;
+		}
+
+		/**
+		 * Obtains the list of external libraries.
+		 */
+		const vector<path>& getExtLibs() const {
+			return extLibs;
+		}
+
+		/**
+		 * Exchanges thelist of external libraries.
+		 */
+		void setExtLibs(const vector<path>& extLibs) {
+			this->extLibs = extLibs;
 		}
 
 		/**

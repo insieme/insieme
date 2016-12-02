@@ -50,6 +50,8 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/common/env_vars.h"
+
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -194,7 +196,7 @@ namespace analysis {
 	void irDiff(NodeAddress nodeA, NodeAddress nodeB, const string& nameA, const string& nameB, size_t contextSize) {
 		inspyer::MetaGenerator meta(nodeA.getRootNode());
 		irDiff_internal(nodeA, nodeB, nameA, nameB, contextSize, meta);
-		if(getenv("INSIEME_INSPYER") != nullptr) {
+		if(getenv(INSIEME_INSPYER) != nullptr) {
 			std::cout << "Dumping INSPYER... " << std::flush;
 			std::ofstream nodeA_out(nameA + ".json"), nodeB_out(nameB + ".json"), meta_out(nameA + "_meta.json");
 			meta.dump(meta_out);

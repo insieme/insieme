@@ -69,10 +69,11 @@ namespace extensions {
 	}
 
 	boost::optional<std::string> InterceptorExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
+		// TODO implement a method for global sort check of extensions which is extensible in outside projects
 		// interceptor needs to be the first extension in the extension list
-		if(setup.getExtensions().begin()->get() != this) {
-			return boost::optional<std::string>("InterceptorExtension should be the first Extension");
-		}
+		//if(setup.getExtensions().begin()->get() != this) {
+		//	return boost::optional<std::string>("InterceptorExtension should be the first Extension");
+		//}
 		// prerequisites are met - no prerequisite is missing
 		return boost::optional<std::string>();
 	}

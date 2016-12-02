@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -412,8 +412,11 @@ TEST(NodeAddressTest, CloneTo) {
 
 		NodeAddress addr(root);
 
-		NodeAddress addr1 = addr.getAddressOfChild(2);
-		NodeAddress addr2 = addr.getAddressOfChild(2).getAddressOfChild(0);
+		// isChildOf will also return true when passed the same addresses
+		EXPECT_TRUE(isChildOf(addr, addr));
+
+		NodeAddress addr1 = addr.getAddressOfChild(2); // the Types child
+		NodeAddress addr2 = addr.getAddressOfChild(2).getAddressOfChild(0); // typeA
 
 		EXPECT_EQ("0-2", toString(addr1));
 		EXPECT_EQ("0-2-0", toString(addr2));
@@ -427,6 +430,15 @@ TEST(NodeAddressTest, CloneTo) {
 
 		EXPECT_TRUE(isChildOf(addr, addr3));
 		EXPECT_FALSE(isChildOf(addr1, addr3));
+
+		// ensure that isChildOf also compares the root nodes
+		NodeAddress addrB(typeB); // typeB - as root
+		NodeAddress addrB3 = addrB.getAddressOfChild(2).getAddressOfChild(0); // 3 as child of typeB
+
+		EXPECT_EQ("0-2-0", toString(addrB3));
+
+		// addrB3 is NOT a child of addr1
+		EXPECT_FALSE(isChildOf(addr1, addrB3));
 	}
 
 	TEST(NodeAddressTest, UpdateRoot) {

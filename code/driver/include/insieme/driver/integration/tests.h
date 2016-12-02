@@ -52,7 +52,6 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/frontend/frontend.h"
 
-#include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/driver/integration/properties.h"
 
 namespace insieme {
@@ -62,6 +61,9 @@ namespace tu {
 }
 }
 namespace driver {
+namespace cmd {
+	struct Options;
+}
 namespace integration {
 
 	using std::map;

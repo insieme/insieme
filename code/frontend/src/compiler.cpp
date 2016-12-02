@@ -176,11 +176,7 @@ namespace frontend {
 			}
 		}
 
-		if(config.hasOption(ConversionJob::WinCrossCompile)) {
-			pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "win32").getTriple();
-		} else {
-			pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "linux").getTriple();
-		}
+		pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "linux").getTriple();
 
 		pimpl->clang.setTarget(TargetInfo::CreateTargetInfo(pimpl->clang.getDiagnostics(), pimpl->TO));
 		LangOptions& LO = pimpl->clang.getLangOpts();
@@ -229,7 +225,7 @@ namespace frontend {
 		//		functiondefinition
 		//	+	for some builtins with differing signature (currently storelps/storehps/movntq) we hack the
 		//		intrinsic to use depending on the used compiler the correct casts
-		this->pimpl->clang.getHeaderSearchOpts().AddPath(utils::getInsiemeBuildRootDir() + "code/frontend/assets/include/insieme/frontend/builtin_headers/", clang::frontend::Angled, false,
+		this->pimpl->clang.getHeaderSearchOpts().AddPath(utils::getInsiemeBuildRootDir() + "/code/frontend/assets/include/insieme/frontend/builtin_headers/", clang::frontend::Angled, false,
 		                                                 false);
 		/*** VECTOR EXTENSION STUFF END ***/
 
