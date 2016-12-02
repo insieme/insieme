@@ -41,6 +41,13 @@ foreach(exec_file ${executables})
 
 	get_filename_component(exec_name ${exec_file} NAME_WE)
 
+	# skip datalog binaries
+	if((NOT ANALYSIS_DATALOG) AND (exec_name MATCHES "datalog"))
+		continue()
+	endif()
+
+	message(STATUS ============================ ${exec_name})
+
 	# Build driver executable
 	add_executable(${exec_name} ${exec_file} ${insieme_driver_defs})
 	#target drivers depends on all driver
