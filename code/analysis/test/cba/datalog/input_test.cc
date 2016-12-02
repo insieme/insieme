@@ -171,9 +171,11 @@ namespace cba {
 
 				// only interested in literal calls
 				auto fun = call->getFunctionExpr();
-				if (!fun.isa<LiteralPtr>()) return;
+				if (!fun.isa<LiteralPtr>() && !fun.isa<LambdaExprPtr>()) return;
 
-				const string& name = utils::demangle(fun.as<LiteralPtr>()->getStringValue());
+				const string& name = (fun.isa<LiteralPtr>()) ?
+						utils::demangle(fun.as<LiteralPtr>()->getStringValue()) :
+						utils::demangle(fun.as<LambdaExprPtr>()->getReference()->getNameAsString());
 
 				// check prefix of literal
 				if (!boost::starts_with(name, "cba_")) return;

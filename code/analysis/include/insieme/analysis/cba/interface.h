@@ -74,7 +74,7 @@ namespace cba {
 
 	// --- Alias Analysis ---
 
-    //                | Name    | Res | Arguments                                        |
+	//                | Name    | Res | Arguments                                        |
 	declare_analysis_2( areAlias, bool, core::ExpressionAddress, core::ExpressionAddress );
 	declare_analysis_2( mayAlias, bool, core::ExpressionAddress, core::ExpressionAddress );
 	declare_analysis_2( notAlias, bool, core::ExpressionAddress, core::ExpressionAddress );

@@ -5,12 +5,12 @@
 
 // --- compute entry and exit points of all callables---
 
-.decl EntryPoint( c : callable, s : stmt )
+.decl EntryPoint( c : callable, s : stmt ) output
 .decl ExitPoint ( c : callable, s : stmt ) output
 
 
 // - an auxiliary relation to link returns to enclosing lambda
-.decl ReturnOfLambda( l : lambda, r : return_stmt )
+.decl ReturnOfLambda( l : lambda, r : return_stmt_2 ) output
 
 
 // --- Definiton ---
@@ -43,8 +43,9 @@ ExitPoint( l, l ) :- Literal(l,_,_).
 // -------
 
 
-.decl ReturnParent( r : return_stmt, p : node )
+.decl ReturnParent( r : return_stmt_2, p : node ) output
 ReturnParent( r, r ) :- ReturnStmt(r,_).
 ReturnParent( r, p ) :- ReturnParent(r,s), ParentOf(p,s), !Lambda(s,_,_,_).
 
-ReturnOfLambda(l,r) :- Lambda(l,_,_,_), ReturnParent(r,l), ReachableIn(r).
+//ReturnOfLambda(l,r) :- Lambda(l,_,_,_), ReturnParent(r,l), ReachableIn(r). // Old -- is it false?
+ReturnOfLambda(l,r) :- Lambda(l,_,_,_), ParentOf(l,s), ReturnParent(r,s), ReachableIn(r).

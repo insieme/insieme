@@ -36,7 +36,8 @@
 
 #include "insieme/analysis/cba/datalog/alias_analysis.h"
 
-#include "insieme/analysis/cba/datalog/framework/analysis_base.h"
+#include "insieme/analysis/cba/datalog/framework/souffle_extractor.h"
+#include "insieme/analysis/cba/datalog/framework/toolbox.h"
 
 #include "souffle/gen/alias_analysis.h"
 
@@ -48,58 +49,45 @@ namespace datalog {
 	using Locations = std::set<int>;
 	using LocationMap = std::map<core::ExpressionAddress,Locations>;
 
-	LocationMap getReferencedLocations(const std::vector<core::ExpressionAddress>& exprs) {
+	LocationMap getReferencedLocations(Context &context, const std::vector<core::ExpressionAddress>& exprs) {
 		const bool debug = false;
 
-		// check whether there is something to do
+		// Check whether there is something to do
 		if (exprs.empty()) {
 			return LocationMap();
 		}
 
-		// instantiate the analysis
-		souffle::Sf_alias_analysis analysis;
+		// Instantiate the analysis
+		auto &analysis = context.getAnalysis<souffle::Sf_alias_analysis>(exprs[0].getRootNode(), debug);
 
+		// Get IDs of target expressions
 		std::map<int,core::ExpressionAddress> index;
 
-		// fill in facts
-		framework::extractAddressFacts(analysis, exprs[0].getRootNode(), [&](const core::NodeAddress& addr, int id) {
-			for(const auto& expr : exprs) {
-				if (expr == addr) {
-					// remember id
-					index[id] = addr.as<core::ExpressionAddress>();
-
-					// add targeted node
-					analysis.rel_targets.insert(id);
-
-					// done
-					return;
-				}
-			}
-		});
-
-		// print debug information
-		if (debug) analysis.dumpInputs();
-
-		// run analysis
-		analysis.run();
-
-		// print debug information
-		if (debug) analysis.dumpOutputs();
-
-		// check for failures in analysis
-		framework::checkForFailures(analysis);
-
-		// read result
-		LocationMap res;
-		for(const auto& cur : analysis.rel_result) {
-			res[index[cur[0]]].insert(cur[1]);
+		for (const auto &expr : exprs) {
+			auto id = context.getNodeID(expr, debug);
+			index[id] = expr;
 		}
+
+		// Read result
+		LocationMap res;
+		auto& resultRelation = analysis.rel_result;
+
+		for(const auto& cur : resultRelation) {
+			auto &id = cur[0];
+			auto &values = cur[1];
+
+			if (index.find(id) == index.end())
+				continue;
+
+			res[index[id]].insert(values);
+		}
+
 		return res;
 	}
 
 
-	bool mayAlias(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-		auto data = getReferencedLocations({ a, b });
+	bool mayAlias(Context& context, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+		auto data = getReferencedLocations(context, { a, b });
 		/* Note: Removing the asserts because they may wrongly report failures if there's dead code */
 		// assert_false(data[a].empty()) << "Failure in analysis!";
 		// assert_false(data[b].empty()) << "Failure in analysis!";
@@ -109,8 +97,8 @@ namespace datalog {
 		return false;
 	}
 
-	bool areAlias(Context&, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
-		auto data = getReferencedLocations({ a, b });
+	bool areAlias(Context& context, const core::ExpressionAddress& a, const core::ExpressionAddress& b) {
+		auto data = getReferencedLocations(context, { a, b });
 		/* Note: Removing the asserts because they may wrongly report failures if there's dead code */
 		// assert_false(data[a].empty()) << "Failure in analysis!";
 		// assert_false(data[b].empty()) << "Failure in analysis!";

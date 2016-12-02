@@ -45,13 +45,13 @@ failure( "Error: Found a ref_assign whose parent is not a CallExpr!", id) :-
 	.member unknown_value( v : ValueType )
 
 	// the list of known literals (defined externally)
-	.member known_literal( l : node )
+	.member known_literal( l : node ) output
 
 	// the list of known operators (defined externally)
-	.member known_function( o : node )
+	.member known_function( o : node ) output
 
 	// the list of known named operators
-	.member known_named_function( n : string )
+	.member known_named_function( n : string ) output
 
 	// -- the value to be computed by this analysis --
 	.member value ( n : node , p : data_path , v : ValueType ) output
@@ -78,6 +78,10 @@ failure( "Error: Found a ref_assign whose parent is not a CallExpr!", id) :-
 
 	// declaration statements
 	value( v, p, b ) :- VariableDefinition(v), DeclarationStmt(_,d,v), value(d,p,b).
+
+	// Following pointers
+	value(v, p, b) :- VariableDefinition(v), DeclarationStmt(_,d,v), Declaration(d,_,ce), CallToNamedFunction(ce, "ptr_from_ref"), NodeList(ce,0,vptr), value(vptr,p,b).
+	value(v, p, b) :- VariableDefinition(v), DeclarationStmt(_,d,v), Declaration(d,_,ce), CallToNamedFunction(ce, "num_cast"), NodeList(ce,0,vptr), value(vptr,p,b).
 
 	// bind parameters
 	value( v, d, b ) :-
@@ -125,16 +129,22 @@ failure( "Error: Found a ref_assign whose parent is not a CallExpr!", id) :-
 
 
 	// read value from a memory location
-	value( c, vp, v ) :- deref(c), NodeList(c,0,t), reference_value(t,DP_ROOT, [m,rp]), memory_state.value(c,INT,[[m,p],v]), concat(rp,vp,p).
+	value( c, vp, v ) :- deref(c), NodeList(c,0,t),           // Follow the deref    /** verify this block! **/
+	                     reference_value(t,DP_ROOT, [m,rp]),  // Get the memory location of the referenced statement using [stmt, subref_data_path]
+	                     memory_state.value(c,INT,[[m,p],v]), // From that memory location, get the value using [[stmt, (stmt_data_path + subref_data_path)], value]
+	                     concat(rp,vp,p).                     // Extract the path to the stmt (stmt_data_path)
 
 	// write values to memory locations (perfect assignment)
 	memory_state.intercepted( c , INT ) :- simple_assignment(c).
-	memory_state.value(c,POST,[[m,p],v]) :- assignment(c), NodeList(c,0,t), NodeList(c,1,e), reference_value(t,DP_ROOT,[m,p]), value(e,DP_ROOT,v).
-	memory_state.value(c,POST,s) :- assignment(c), NodeList(c,0,t), reference_value(t,DP_ROOT,[m1,p1]), reference_value(t,DP_ROOT,[m2,p2]), (m1!=m2 ; p1!=p2), memory_state.value(c,INT,s).
+	memory_state.value(c,POST,[memloc,v]) :- assignment(c), NodeList(c,0,t), NodeList(c,1,e), reference_value(t,DP_ROOT,memloc), value(e,DP_ROOT,v). // Assign a new value to a variable
+	memory_state.value(c,POST,s) :- assignment(c), NodeList(c,0,t), reference_value(t,DP_ROOT,[m1,p1]), reference_value(t,DP_ROOT,[m2,p2]), (m1!=m2 ; p1!=p2), memory_state.value(c,INT,s). // Non perfect assignment, keep old values if not sure about memloc
+
+	//.member MEMVAL(s:stmt, e:exec_state, creation_pt:stmt, p:data_path, v:ValueType)
+	//MEMVAL(s,e,c,p,v) :- memory_state.value(s,e,[[c,p],v]).
 
 
 	// pass function argument to memory location of parameter
-	memory_state.value( b, PRE, [[v,dp],d] ) :-
+	memory_state.value( b, PRE, [[v,dp],d] ) :-   /* [[stmt, subref_data_path], value] */
 			VariableDefinition(v), NodeList(p,i,v), Lambda(l,_,p,b),      // this variable is the i-th parameter of a lambda l
 			callGraph(c,l),                                               // l is called by call site c
 			NodeList(c,i,a),value(a,dp,d).                                // v get's assigned the value of the i-th argument of c

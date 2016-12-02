@@ -1,6 +1,3 @@
-// the node to be tested
-.decl rootNode ( id : node ) input
-
 // compute the set of polymorth types
 .decl isPolymorph ( id : node )
 
@@ -13,6 +10,6 @@ isPolymorph(X) :- GenericType(X,_,_,P), NodeList(P,_,Y), isPolymorph(Y).
 
 // define the result
 .decl result ( x : number ) output
-result(1) :- rootNode(X), isPolymorph(X).
+result(X) :- isPolymorph(X).
 
 

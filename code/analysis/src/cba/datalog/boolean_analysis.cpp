@@ -36,9 +36,11 @@
 
 #include "insieme/analysis/cba/datalog/boolean_analysis.h"
 
-#include "insieme/analysis/cba/datalog/framework/analysis_base.h"
-
 #include "souffle/gen/boolean_analysis.h"
+
+#include "insieme/analysis/cba/datalog/framework/souffle_extractor.h"
+#include "insieme/analysis/cba/datalog/framework/toolbox.h"
+
 
 namespace insieme {
 namespace analysis {
@@ -51,44 +53,43 @@ namespace datalog {
 		TRUE_OR_FALSE
 	};
 
-	Result getBoolValue(Context&, const core::ExpressionAddress& expr) {
+	Result getBoolValue(Context& context, const core::ExpressionAddress& expr) {
 		const bool debug = false;
 
-		// instantiate the analysis
-		souffle::Sf_boolean_analysis analysis;
+		// Instantiate the analysis
+		auto& analysis = context.getAnalysis<souffle::Sf_boolean_analysis>(expr.getRootNode(), debug);
 
-		int targetID = 0;
+		// Get ID of target expression
+		int targetID = context.getNodeID(expr);
 
-		// fill in facts
-		framework::extractAddressFacts(analysis, expr.getRootNode(), [&](const core::NodeAddress& addr, int id) {
-			if (addr == expr) targetID = id;
-		});
+		// Read result
+		auto& resultRelation = analysis.rel_result;
+		auto resultRelationContents = resultRelation.template equalRange<0>({{targetID,0}});
 
-		// add targeted node
-		analysis.rel_target_expr.insert(targetID);
+		if (debug) {
 
-		// print debug information
-		if (debug) analysis.dumpInputs();
+			std::cout << std::endl << "-------- Results: --------" << std::endl;
+			for(const auto& cur : resultRelationContents)
+				std::cout << cur << std::endl;
 
-		// run analysis
-		analysis.run();
+			if (resultRelationContents.empty())
+				std::cout << "INCOMPLETE ANALYSIS!!!!" << std::endl;
 
-		// print debug information
-		if (debug) analysis.dumpOutputs();
+		} else {
+			assert_false(resultRelationContents.empty()) << "Incomplete analysis!";
+			if (resultRelationContents.empty())
+				std::cout << "INCOMPLETE ANALYSIS!!!!" << std::endl;
+		}
 
-		// check for failures in analysis
-		framework::checkForFailures(analysis);
+		// Get possible result value
+		auto possibleResult = (*resultRelationContents.begin())[1];
 
-		// read result
-		auto& result = analysis.rel_result;
-		assert_le(1, result.size()) << "Incomplete analysis!";
+		// Check if there's more than one value ( = can't tell result)
+		if (++resultRelationContents.begin() != resultRelationContents.end())
+			return TRUE_OR_FALSE;
 
-		// if it is true or false => we don't know
-		if (result.size() != 1) return TRUE_OR_FALSE;
-
-		// read the single entry in the result set
-		auto value = (*result.begin())[0];
-		return (value) ? TRUE : FALSE;
+		// Only one value: Return result
+		return (possibleResult) ? TRUE : FALSE;
 	}
 
 

@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/analysis/cba/datalog/interface.h"
 
 namespace insieme {
 namespace analysis {
@@ -146,7 +147,7 @@ namespace cba {
 
 		EXPECT_EQ(3,addresses.size());
 
-		auto x = addresses[0].as<VariableAddress>();;
+		auto x = addresses[0].as<VariableAddress>();
 		auto y = addresses[1].as<VariableAddress>();
 		auto z = addresses[2].as<VariableAddress>();
 

@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.2)
 insieme_find_package(NAME GMP)
 insieme_find_package(NAME ZLIB)
 
-set(stack_home $ENV{INSIEME_LIBS_HOME}/stack-latest CACHE PATH "Stack Home Directory")
+set(stack_home ${THIRD_PARTY_LIBS_HOME}/stack-latest CACHE PATH "Stack Home Directory")
 set(stack_root ${stack_home}/stack-root_$ENV{USER})
 
 # check for (patched) haskell stack

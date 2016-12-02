@@ -6,13 +6,13 @@
 
 
 // all defined variables
-.decl VariableDefinition ( var : variable )
+.decl VariableDefinition ( var : variable ) output
 
 // links from all defined variables to all their uses
-.decl DefinitionPoint ( definition : variable, var : variable )
+.decl DefinitionPoint ( definition : variable, var : variable ) output
 
 // a list of free variables
-.decl FreeVariable ( var : variable )
+.decl FreeVariable ( var : variable ) output
 
 // ---------------------------------
 

@@ -2,7 +2,7 @@
 .using DataFlowAnalysis from Templates/DataFlowAnalysis
 .using callGraph from Callable
 
-		
+
 // the analysis assigning each expression reference values
 .type memory_location = [ c : stmt , p : data_path ] 		// the creation point + sub-reference
 .decl reference_value( n : node , p : data_path , r : memory_location )
@@ -17,8 +17,8 @@ reference_value(n,p,v) :- reference.value(n,p,v).
 
 // the value to be exhibited by any unknown value
 reference.unknown_value ( X ) :- reference.value(_,_,X).
-reference.unknown_value ( -1 ).			// two values not covered anywhere (=outside the application)
-reference.unknown_value ( -2 ).
+reference.unknown_value ( [-1, DP_ROOT] ).			// two values not covered anywhere (=outside the application)
+reference.unknown_value ( [-2, DP_ROOT] ).
 
 
 // references are created by calls to ref_alloc
@@ -30,6 +30,7 @@ reference.value( a, DP_ROOT, [ a , DP_ROOT] ) :- Lambda(_,_,p,_), NodeList(p,_,a
 
 // and by return statements
 // TODO: cover this (after merge, this is different)
+// is it: reference.value(d, DP_ROOT, [d, DP_ROOT]) :- ReturnStmt(_,d).  //?
 
 // TODO: handle external references via literals properly
 //reference.known_literal(l) :- Literal(l,_,_).

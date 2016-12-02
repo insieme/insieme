@@ -3,10 +3,10 @@
 
 
 // marks all reachable statements that may be entered
-.decl ReachableIn( s : stmt )
+.decl ReachableIn( s : stmt ) output
 
 // marks all reachable statemetns that may be exited
-.decl ReachableOut( s : stmt )
+.decl ReachableOut( s : stmt ) output
 
 // for simplicity: assume the entry point of every lambda is reachable
 ReachableIn( s ) :- Lambda(_,_,_,b), NodeList(b,0,s).

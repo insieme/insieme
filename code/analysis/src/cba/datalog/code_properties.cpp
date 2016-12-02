@@ -36,7 +36,9 @@
 
 #include "insieme/analysis/cba/datalog/code_properties.h"
 
-#include "insieme/analysis/cba/datalog/framework/analysis_base.h"
+#include "insieme/analysis/cba/datalog/framework/souffle_extractor.h"
+
+#include "insieme/core/ir_address.h"
 
 #include "souffle/gen/polymorph_types_analysis.h"
 #include "souffle/gen/top_level_term.h"
@@ -53,169 +55,134 @@ namespace datalog {
 	/**
 	 * Determines whether the given type is a polymorph type.
 	 */
-	bool isPolymorph(const core::TypePtr& type, bool debug) {
+	bool isPolymorph(Context& context, const core::TypePtr& type, bool debug)
+	{
+		// Instantiate analysis
+		auto &analysis = context.getAnalysis<souffle::Sf_polymorph_types_analysis>(type, debug);
 
-		// instantiate the analysis
-		souffle::Sf_polymorph_types_analysis analysis;
+		// Get target node ID for which to check -> the root node
+		int targetID = 0;
 
-		// fill in facts
-		int rootNodeID = framework::extractFacts(analysis, type);
+		// Get result
+		auto &resultRel = analysis.rel_result;
+		auto resultRelContents = resultRel.template equalRange<0>({{targetID}});
 
-		// add start node
-		analysis.rel_rootNode.insert(rootNodeID);
-
-		// print debug information
-		if (debug) analysis.dumpInputs();
-
-		// run analysis
-		analysis.run();
-
-		// print debug information
-		if (debug) analysis.dumpOutputs();
-
-		// read result
-		auto& rel = analysis.rel_result;
-		return rel.size() > 0;
+		// If result is non-empty, return true
+		return resultRelContents.begin() != resultRelContents.end();
 	}
 
 	/**
 	 * Determine top level nodes
 	 */
-	bool getTopLevelNodes(const core::NodePtr& root, bool debug)
+	bool getTopLevelNodes(Context& context, const core::NodePtr& root, bool debug)
 	{
-		// instantiate the analysis
-		souffle::Sf_top_level_term analysis;
+		// Instantiate analysis
+		auto &analysis = context.getAnalysis<souffle::Sf_top_level_term>(root, debug);
 
-		// fill in facts
-		framework::extractFacts(analysis, root);
+		// Get target node ID for which to check -> the root node
+		int targetID = 0;
 
-		// print debug information
-		if (debug) analysis.dumpInputs();
+		// Get result
+		auto &resultRel = analysis.rel_TopLevel;
 
-		// run analysis
-		analysis.run();
-
-		// print debug information
-		if (debug) analysis.dumpOutputs();
-
-		// read result
-		auto& rel = analysis.rel_TopLevel;
-		bool result = rel.size() && rel.contains(0);
-		if (!result) analysis.dumpOutputs();
-		return result;
+		return resultRel.size() != 0 && resultRel.contains(targetID);
 	}
 
 	/**
 	 * Get exit points from a given lambda function
 	 */
-	std::vector<core::ReturnStmtAddress> performExitPointAnalysis(const core::LambdaPtr& rootLambda, bool debug)
+	std::set<core::ReturnStmtAddress> performExitPointAnalysis(Context& context, const core::LambdaAddress& lambda, bool debug)
 	{
-		// instantiate the analysis
-		souffle::Sf_exit_point_analysis analysis;
+		// Instantiate analysis
+		auto &analysis = context.getAnalysis<souffle::Sf_exit_point_analysis>(lambda.getRootNode(), debug);
 
-		// Create a map which maps node ID to IR node address (only return statements)
-		std::map<int,core::ReturnStmtAddress> index;
+		// Get ID for given Lambda
+		int targetLambdaID = context.getNodeID(lambda);
 
-		// fill in facts
-		int id = framework::extractAddressFacts(analysis, rootLambda, [&](const core::NodeAddress& node, int id) {
-			if (auto ret = node.isa<core::ReturnStmtAddress>()) index[id] = ret;
-		});
+		// Get result
+		auto &resultRel = analysis.rel_ExitPoints;
 
-		// Add the lambda which we are interested in as 'top level'
-		analysis.rel_TopLevelLambda.insert(id);
+		// Now map the exit point IDs from root Lambda to actual ReturnStmts
+		std::set<core::ReturnStmtAddress> res;
 
-		// print debug information
-		if (debug) analysis.dumpInputs();
+		for (const auto &cur : resultRel) {
+			int lambdaID = cur[0];
+			int returnStmtID = cur[1];
 
-		// run analysis
-		analysis.run();
+			if (lambdaID != targetLambdaID) {
+				continue;
+			}
 
-		// print debug information
-		if (debug) analysis.dumpOutputs();
+			auto rsa = context.getNodeForID(lambda.getRootNode(), returnStmtID, debug).as<core::ReturnStmtAddress>();
 
-		// produces result
-		std::vector<core::ReturnStmtAddress> res;
-		for(const auto& cur : analysis.rel_ExitPoints) {
-			res.push_back(index[cur[0]]);
+			// Crop addresses to start at given lambda
+			rsa = core::cropRootNode(rsa, lambda);
+
+			res.insert(rsa);
 		}
+
 		return res;
 	}
 
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& var, bool debug)
+	core::VariableAddress getDefinitionPoint(Context& context, const core::VariableAddress& var, bool debug)
 	{
-		// instantiate the analysis
-		souffle::Sf_definition_point analysis;
+		// Instantiate analysis
+		auto &analysis = context.getAnalysis<souffle::Sf_definition_point>(var.getRootNode(), debug);
 
-		int targetID = 0;
-		std::map<int,core::VariableAddress> variables;
+		// Get ID for variable we are interested in (if it's there)
+		int targetVariableID = context.getNodeID(var, debug);
 
-		// fill in facts
-		framework::extractAddressFacts(analysis, var.getRootNode(), [&](const core::NodeAddress& addr, int id) {
-			if (!addr.isa<core::VariableAddress>()) return;
-			auto cur = addr.as<core::VariableAddress>();
-			if (cur == var) targetID = id;
-			variables[id] = cur;
-		});
+		// Get result
+		auto &resultRel = analysis.rel_Result;
 
-		// add targeted node
-		analysis.rel_target.insert(targetID);
+		auto defPoint = resultRel.template equalRange<0>({{targetVariableID,0}});
 
-		// print debug information
-		if (debug) analysis.dumpInputs();
+		if (defPoint.empty()) {
+			if (debug)
+				std::cout << "Debug: Could not find definition point for variable " << var << "...";
+			return {};
+		}
 
-		// run analysis
-		analysis.run();
+		auto defPointID = (*defPoint.begin())[1];
 
-		// print debug information
-		if (debug) analysis.dumpOutputs();
+		assert_true(++defPoint.begin() == defPoint.end())
+		                << "Analysis failed: Multiple definition points found for var " << var << "!";
 
-		// read result
-		auto& result = analysis.rel_DefinitionPointResult;
-		if (result.empty()) return {};
-
-		assert_le(result.size(), 1) << "Invalid result - multiple definition points!";
-
-		auto definitionID = (*result.begin())[0];
-
-		auto pos = variables.find(definitionID);
-		assert_true(pos != variables.end()) << "Invalid result - referencing unknown address!";
-
-		// return definition point
-		return pos->second;
+		return context.getNodeForID(var.getRootNode(), defPointID, debug).as<core::VariableAddress>();
 	}
 
-	bool happensBefore(const core::StatementAddress& a, const core::StatementAddress& b) {
-		static const bool debug = false;
+
+	bool happensBefore(Context &context, const core::StatementAddress& a, const core::StatementAddress& b, bool debug)
+	{
 		assert_eq(a.getRootNode(), b.getRootNode());
 
-		// instantiate the analysis
-		souffle::Sf_happens_before_analysis analysis;
+		// Instantiate analysis
+		auto &analysis = context.getAnalysis<souffle::Sf_happens_before_analysis>(a.getRootNode(), debug);
 
-		int startID = 0;
-		int endID = 0;
+		// Get ID of both statements
+		int targetStartID = context.getNodeID(a);
+		int targetEndID = context.getNodeID(b);
 
-		// fill in facts
-		framework::extractAddressFacts(analysis, a.getRootNode(), [&](const core::NodeAddress& addr, int id) {
-			if (addr == a) startID = id;
-			if (addr == b) endID = id;
-		});
+		// Get result
+		auto &resultRel = analysis.rel_Result;
 
-		// add start and end
-		analysis.rel_start.insert(startID);
-		analysis.rel_end.insert(endID);
+		// Filter for first value in result set
+		auto tmp = resultRel.template equalRange<0>({{targetStartID,0}});
 
-		// print debug information
-		if (debug) analysis.dumpInputs();
+		// Filter for second value in result set
+		for (auto it = tmp.begin(); it != tmp.end(); ++it) {
+			// Found target end
+			if ((*it)[1] == targetEndID) {
+				// Check result size
+				if (++it == tmp.end() || (*it)[1] != targetEndID)
+					return true; // Only value, good!
+				assert_fail() << "Happens-before analysis seems to be broken!";
+				return false;
+			}
+		}
 
-		// run analysis
-		analysis.run();
-
-		// print debug information
-		if (debug) analysis.dumpOutputs();
-
-		// read result
-		return !analysis.rel_result.empty();
+		return false;
 	}
 
 } // end namespace datalog

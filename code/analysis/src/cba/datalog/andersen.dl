@@ -1,0 +1,4 @@
+.decl MemLoc(var:variable, t:type) output
+
+MemLoc(var, t) :- DeclarationStmt(_,dec,var), Declaration(dec,t,ini), Literal(ini,_,_).
+MemLoc(var, t) :- DeclarationStmt(_,dec,var), Declaration(dec,t,ini), CallExpr(ini,lit), Literal(lit,_,"ref_decl").

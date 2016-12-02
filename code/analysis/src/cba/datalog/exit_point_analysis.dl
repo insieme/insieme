@@ -1,18 +1,17 @@
 .using ParentOf from Utils/Parent
 
 
-.decl TopLevelLambda ( id:node )   input
-.decl ExitPoints     ( id:node )   output
-.decl ChildOfLambda  ( id:node )
+.decl ExitPoints     ( for:lambda, id:node )   output
+.decl ChildOfLambda  ( for:lambda, id:node )
 
 
 
 // An exit point is a return statement inside a lambda expression
-ExitPoints(X) :- ReturnStmt(X,_), ChildOfLambda(X).
+ExitPoints(L, EP) :- ReturnStmt(EP,_), ChildOfLambda(L, EP).
 
 
 // A node is a child of a lambda if it is referenced as the body of a
 // lambda node, or if it is referenced as the body of a lambda child
 // without being a lambda node itself.
-ChildOfLambda(X) :- TopLevelLambda(ID), Lambda(ID,_,_,X).
-ChildOfLambda(X) :- ChildOfLambda(ID), ParentOf(ID,X), !Lambda(X,_,_,_).
+ChildOfLambda(L, X) :- Lambda(L,_,_,X).
+ChildOfLambda(L, X) :- ChildOfLambda(L, Parent), ParentOf(Parent,X), !Lambda(X,_,_,_).

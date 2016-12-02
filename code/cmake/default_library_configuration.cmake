@@ -46,17 +46,21 @@ set(FLEX_VERSION 2.5.35)
 #VALGRIND - used for memchecks
 set(VALGRIND_VERSION 3.11.0)
 
+#SQLITE - used in analysis for Soufflé
+set(SQLITE_VERSION 3150100)
+
 #TODO: currently this happens everytime we include this cmake some where...
 #if the user provides a env{lib_version} for one of the libraries
 # we overwrite the default
 list(APPEND LIB_VERSIONS LLVM_VERSION PAPI_VERSION
 	CUDD_VERSION GMP_VERSION ZLIB_VERSION LUAJIT_VERSION
-	GTEST_VERSION BOOST_VERSION BISON_VERSION FLEX_VERSION HWLOC_VERSION VALGRIND_VERSION)
+	GTEST_VERSION BOOST_VERSION BISON_VERSION FLEX_VERSION
+	HWLOC_VERSION VALGRIND_VERSION SQLITE_VERSION)
 
 foreach(libversion ${LIB_VERSIONS})
 	#get ${lib_NAME}_VERSION from library_default_version_file
 	if( DEFINED ENV{${libversion}} )
-		# overwrite if user specifies otherwise 
+		# overwrite if user specifies otherwise
 		set(${libversion} $ENV{${libversion}})
 		message(STATUS "Overwriting default lib version: ${libversion} = ${${libversion}}")
 	endif()

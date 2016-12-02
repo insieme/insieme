@@ -1,23 +1,16 @@
 .using ControlFlow from Utils/ControlFlow
 
-
-// a relation to specify a start node
-.decl start ( s : stmt ) input
-
-// a relation to specify a end node
-.decl end ( s : stmt ) input
-
 // the happens-before relation
-.decl happens_before ( a : stmt, as : exec_state , b : stmt , bs : exec_state ) output
+.decl HappensBefore ( a:stmt, as:exec_state , b:stmt , bs:exec_state ) output
 
 // the result relation
-.decl result( x : int ) output // if yes, there is an entry, false otherwise
+.decl Result( A:stmt , B:stmt ) output // if yes, there is an entry, false otherwise
 
 
 
 // ------------------
 
-happens_before( as, ae , bs, be ) :- ControlFlow( ProgramPoint( as, ae ), ProgramPoint( bs, be ) ).
-happens_before( as, ae , cs, ce ) :- happens_before(as,ae,bs,be), happens_before(bs,be,cs,ce).
+HappensBefore( as, ae , bs, be ) :- ControlFlow( ProgramPoint( as, ae ), ProgramPoint( bs, be ) ).
+HappensBefore( as, ae , cs, ce ) :- HappensBefore(as,ae,bs,be), HappensBefore(bs,be,cs,ce).
 
-result(1) :- start(s), end(e), happens_before( s, PRE , e , PRE ).
+Result(A,B) :- HappensBefore( A , PRE , B , PRE ).

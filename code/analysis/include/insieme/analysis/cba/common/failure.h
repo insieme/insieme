@@ -39,6 +39,9 @@
 #include <exception>
 #include <string>
 #include <vector>
+#include <sstream>
+
+#include "insieme/utils/string_utils.h"
 
 namespace insieme {
 namespace analysis {

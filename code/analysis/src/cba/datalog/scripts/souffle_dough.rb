@@ -8,6 +8,7 @@ require "fileutils"
 @incdir = "include"
 @basedir = Dir.pwd
 @verbose = true
+@debugMode = (ARGV[2] == "debug")
 
 @file_ext = "dl"
 @decltoken = "decl"
@@ -18,15 +19,24 @@ require "fileutils"
 @mangle = "D474L06"
 @ir_dl = "entities/ir"
 
-abort "Dough takes exactly two arguments!" if ARGV.length != 2
+abort "3rd parameter is either 'debug' or empty!" if ARGV.length == 3 && ARGV[2] != "debug"
+abort "Dough needs exactly two arguments!" if ARGV.length < 2 || ARGV.length > 3
 abort "Source dir (#{@srcdir}) does not exist!" unless File.directory?(@srcdir)
 abort "Destination dir (#{@destdir}) does not exist!" unless File.directory?(@destdir)
 abort "Invalid include dir (#{@incdir}): Does not exist in '#{@srcdir}'!" unless File.directory?(@srcdir + "/" + @incdir)
+
+# "Normalize" src and dest dir to absolute paths
+@srcdir = File.expand_path(@srcdir);
+@destdir = File.expand_path(@destdir);
 
 def extract_relation_name(name, input_arr)
   arr = input_arr.grep(/^\s*\.#{name}\s+/)
   arr.map! {|line| line.gsub(/^\s*\.#{name}\s+(\w+).*/, '\1') }
   return arr
+end
+
+def append_output_to_all_relations(name, input_arr)
+  input_arr.map! {|line| line.gsub(/^(\s*\.#{name}\s+\w+\s*\([^\)]+\)\s*((?!input|output).)*)$/, '\1 output') }
 end
 
 def create_mangle(filename, decl)
@@ -134,6 +144,9 @@ include_files.each do |filename|
   lines.map! {|line| line.gsub(/(\s*\.)#{@membertoken}([^\w]+)/, '\1decl\2') }
   lines.unshift "#pragma once"
 
+  # Convert all relations to output-relations
+  append_output_to_all_relations(@decltoken, lines) if @debugMode
+
   # Done. Write new content to file
   File.open(filename, "w") do |file|
     file.puts(lines)
@@ -154,6 +167,9 @@ source_files.each do |filename|
   # Replace relation names according to using-declarations
   expand_using_decls(lines, filename)
   convert_usings_to_includes(lines, filename)
+
+  # Convert all relations to output-relations
+  append_output_to_all_relations(@decltoken, lines) if @debugMode
 
   # Done. Write new content to file
   File.open(filename, "w") do |file|
