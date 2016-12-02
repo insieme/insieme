@@ -58,7 +58,7 @@ namespace utils {
 	/**
 	* Create a string representation of a clang SourceLocation
 	*/
-	std::string getLocationAsString(const clang::SourceLocation sl, const clang::SourceManager& sm);
+	std::string getLocationAsString(const clang::SourceLocation sl, const clang::SourceManager& sm, bool mangled = true);
 
 	/**
 	 * Create a name for an anonymous object (encodes location)

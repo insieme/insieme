@@ -71,7 +71,7 @@ namespace utils {
 		return str;
 	}
 
-	std::string getLocationAsString(const clang::SourceLocation sl, const clang::SourceManager& sm) {
+	std::string getLocationAsString(const clang::SourceLocation sl, const clang::SourceManager& sm, bool mangled) {
 		std::stringstream ss;
 
 		std::string filename = sm.getFilename(sl).str();
@@ -83,7 +83,7 @@ namespace utils {
 		ss << "_" << sm.getExpansionLineNumber(sl);
 		ss << "_" << sm.getExpansionColumnNumber(sl);
 
-		return removeSymbols(ss.str());
+		return mangled ? removeSymbols(ss.str()) : ss.str();
 	}
 
 	std::string createNameForAnon(const std::string& prefix, const clang::Decl* decl, const clang::SourceManager& sm) {
