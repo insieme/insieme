@@ -46,8 +46,6 @@ foreach(exec_file ${executables})
 		continue()
 	endif()
 
-	message(STATUS ============================ ${exec_name})
-
 	# Build driver executable
 	add_executable(${exec_name} ${exec_file} ${insieme_driver_defs})
 	#target drivers depends on all driver
