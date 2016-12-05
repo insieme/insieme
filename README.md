@@ -18,7 +18,9 @@ module must already exist and you have to provide the same project-name.
 
     $ scripts/setup/add_part insieme frontend sema
 
-Previous command adds a `sema.h`, `sema.cpp` and `sema_test.cc` to the corresponding directories of the *frontend* module. You can also supply multiple *parts*.
+Previous command adds a `sema.h`, `sema.cpp` and `sema_test.cc` to the
+corresponding directories of the *frontend* module. You can also supply
+multiple *parts*.
 
     $ scripts/setup/add_part insieme frontend sema extensions/malloc_extension
 
