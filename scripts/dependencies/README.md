@@ -31,7 +31,7 @@ Examples:
     llvm-0001-insieme-clang.patch
     llvm-0002-fix-typos.patch
 
-## Libs Linker
+## Third Party Sym-Linker
 
 All packages installed by the installer are separated by their name and
 version, this allows one to have multiple versions of a package installed
@@ -41,10 +41,10 @@ projects.
 In order for a project to find its required dependencies another layer of
 indirection has to be added. 
 
-Each project should contain a `libs` folder inside the project's root
+Each project should contain a `third_party` folder inside the project's root
 directory. This folder should contain symlinks, one for each dependency,
-pointing to the installed package in `PREFIX`. The `libs` folder should not
-contain different versions of the same package. Example:
+pointing to the installed package in `PREFIX`. The `third_party` folder should
+not contain different versions of the same package. Example:
 
     $ PREFIX="$HOME/libs"
     $ ls -l $PREFIX
@@ -57,7 +57,7 @@ contain different versions of the same package. Example:
     drwxr-xr-x.  5 alex   dps 4.0K Nov 18 15:14 cmake-3.2.1/
     drwxr-xr-x.  5 alex   dps 4.0K Nov 18 15:14 cmake-3.6.1/
         ...
-    $ ls -l MyAwesomeProject/libs
+    $ ls -l MyAwesomeProject/third_party
     lrwxrwxrwx. 1 alex dps   47 Nov 22 13:17 autoconf -> /home/alex/libs/autoconf-2.68/
     lrwxrwxrwx. 1 alex dps   47 Nov 22 13:17 automake -> /home/alex/libs/automake-1.15/
     lrwxrwxrwx. 1 alex dps   47 Nov 22 13:17 binutils -> /home/alex/libs/binutils-2.27/
@@ -66,16 +66,16 @@ contain different versions of the same package. Example:
     lrwxrwxrwx. 1 alex dps   45 Nov 22 13:17 cmake -> /home/alex/libs/cmake-3.2.1/
         ...
 
-The `libs_linker` can create these symlinks for you, it uses the same version
-of a package as defined in the related `package_` file.
+The `third_party_linker` can create these symlinks for you, it uses the same
+version of a package as defined in the related `package_` file.
 
 ## Custom GCC
 
 If you chose to use GCC provided by the installer, `PATH` and `LD_LIBRARY_PATH`
-should be set accordingly:
+should be set accordingly.
 
-    export PATH="$INSIEME_LIBS_HOME/gcc-latest/bin:$PATH"
-    export LD_LIBRARY_PATH="$INSIEME_LIBS_HOME/gcc-latest/lib64"
+    export PATH="$PREFIX/gcc-$GCC_VERSION/bin:$PATH"
+    export LD_LIBRARY_PATH="$PREFIX/gcc-$GCC_VERSION/lib64"
 
 ## Use custom GCC for dependency Installation
 
