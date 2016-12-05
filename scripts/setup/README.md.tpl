@@ -9,7 +9,7 @@ Description goes here...
 See `scripts/dependencies/README.md` for more details. Otherwise do
 
     $ scripts/dependencies/installer boost
-    $ scripts/dependencies/libs_linker
+    $ scripts/dependencies/third_party_linker
 
 ### Configuration
 
