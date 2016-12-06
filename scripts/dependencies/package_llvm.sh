@@ -8,6 +8,8 @@ SHA256SUM="f60dc158bfda6822de167e87275848969f0558b3134892ff54fced87e4667b94"
 FILE_CFE="cfe-$VERSION.src.tar.xz"
 SHA256SUM_CFE="ae9180466a23acb426d12444d866b266ff2289b266064d362462e44f8d4699f3"
 
+DEPENDS="python"
+
 export CFLAGS="-O3 -std=c++0x"
 export CXXFLAGS="-O3 -std=c++0x"
 
@@ -32,7 +34,8 @@ pkg_configure() {
 		--enable-debug-symbols=no \
 		--enable-optimized=yes \
 		--enable-shared=yes \
-		--enable-bindings=none
+		--enable-bindings=none \
+		--with-python="$PREFIX/python-latest/bin/python"
 }
 
 pkg_build() {
