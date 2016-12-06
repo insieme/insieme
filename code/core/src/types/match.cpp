@@ -37,6 +37,8 @@
 #include "insieme/core/types/match.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/types/subtyping.h"
+#include "insieme/core/types/type_variable_deduction.h"
 
 namespace insieme {
 namespace core {
@@ -474,6 +476,38 @@ namespace types {
 
 	bool isMatchable(const TypePtr& type, const TypePtr& pattern) {
 		return match(type.getNodeManager(), type, pattern);
+	}
+
+	bool typeMatchesWithOptionalMaterialization(NodeManager& nm, const TypePtr& targetT, const TypePtr& valueT) {
+		// if the types are equivalent, everything is fine
+		if(isSubTypeOf(valueT, targetT)) {
+			return true;
+		}
+
+		// try to find a valid type variable instantiation
+		TypePtr paramType = targetT;
+		if(analysis::isRefType(paramType)) {
+			// plain refs get unwrapped, CPP refs and rrefs get used as is (see transform::materialize)
+			if(lang::isPlainReference(paramType)) {
+				paramType = analysis::getReferencedType(paramType);
+			}
+
+			// if we can find a valid instantiation, then this declaration is valid
+			if(getTypeVariableInstantiation(nm, paramType, valueT)) {
+				return true;
+				// if the substitution failed and we are assigning to a cpp ref or rref
+			} else if(lang::isCppReference(paramType) || lang::isCppRValueReference(paramType)) {
+				// we try to find a substitution for the case where the parameter would be a plain ref
+				auto paramRef = lang::ReferenceType(paramType);
+				auto plainRefType = lang::buildRefType(paramRef.getElementType(), paramRef.isConst(), paramRef.isVolatile(), lang::ReferenceType::Kind::Plain);
+				// try to find a substitution again with the changed reference kind
+				if(getTypeVariableInstantiation(nm, plainRefType, valueT)) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 } // end namespace types
