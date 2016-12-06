@@ -35,6 +35,7 @@
  */
 
 void take_ref(int& a) {}
+void take_const_ref(const int& a) {}
 void take_ptr(int* a) {}
 
 int* g;
@@ -97,6 +98,16 @@ int main() {
 	{
 		gen_ref();
 		gen_ptr();
+	}
+
+	#pragma test expect_ir(R"(
+		def IMP_take_const_ref = function (v0 : ref<int<4>,t,f,cpp_ref>) -> unit { };
+		{
+			IMP_take_const_ref(5);
+		}
+	)")
+	{
+		take_const_ref(5);
 	}
 
 	return 0;
