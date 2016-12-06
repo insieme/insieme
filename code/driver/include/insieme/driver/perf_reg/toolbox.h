@@ -51,26 +51,19 @@ namespace driver {
 namespace perf_reg {
 namespace tools {
 
-	using namespace std;
-
-	string vec2string(vector<string> &vec);
-	time_t str2time(const string &in);
-	double str2double(const string &in);
-	int str2int(const string &in);
-
-	bool isDouble(const string &in);
-	bool isInt(const string &in);
+	bool isDouble(const std::string &in);
+	bool isInt(const std::string &in);
 
 	double roundDouble(double in, double precision = 3);
 
-	bool fileExists(const string &filename);
-	bool allFilesExist(const vector<string> &filenames);
+	bool fileExists(const std::string &filename);
+	bool allFilesExist(const std::vector<std::string> &filenames);
 
-	bool extractSettingsValue(const string &in, const string &key, string &out);
-	bool extractTimestamp(const string &in, time_t &out);
+	bool extractSettingsValue(const std::string &in, const std::string &key, std::string &out);
+	bool extractTimestamp(const std::string &in, time_t &out);
 
-	bool quickWriteFile(const string filename, const string input);
-	bool quickRemoveFile(const string filename);
+	bool quickWriteFile(const std::string filename, const std::string input);
+	bool quickRemoveFile(const std::string filename);
 
 } // namespace tools
 } // namespace perf_reg
