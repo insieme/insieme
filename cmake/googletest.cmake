@@ -21,6 +21,7 @@ if(NOT TARGET googletest)
 			-DCMAKE_CXX_FLAGS_RELEASE=${CMAKE_CXX_FLAGS_RELEASE}
 			-DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}
 		DOWNLOAD_NO_PROGRESS 1
+		EXCLUDE_FROM_ALL 1
 	)
 	ExternalProject_Get_Property(googletest source_dir binary_dir)
 
