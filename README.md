@@ -138,10 +138,13 @@ Insieme now!**
 The main executable provided by the Insieme framework is called `insiemecc`,
 located in `code/driver`. It can be used to replace e.g. occurrences of another
 compiler such as `gcc` in makefiles. It supports both source-to-source-only
-compilation, as well as full compilation by calling a backend compiler
-(specified via `INSIEME_C_BACKEND_COMPILER` and `INSIEME_CXX_BACKEND_COMPILER`,
-defaulting to `gcc` and `g++` in your `PATH`. For further information on its
-features and options, please refer to:
+compilation, as well as full compilation by calling a backend compiler.
+Environment variables `INSIEME_C_BACKEND_COMPILER` and
+`INSIEME_CXX_BACKEND_COMPILER` can be used to change the backend compiler,
+while the CMake options `-DINSIEME_C_BACKEND_COMPILER` and
+`-DINSIEME_CXX_BACKEND_COMPILER` allow setting the compiler prior building.
+`gcc` and `g++` are used as fallback. For further information on its features
+and options, please refer to:
 
     $ ./code/driver/insiemecc --help
 

@@ -102,7 +102,7 @@ namespace compiler {
 
 	TEST(TargetCodeCompiler, GetIncludePaths) {
 		EXPECT_FALSE(getDefaultCIncludePaths().empty());
-		EXPECT_FALSE(getDefaultCIncludePaths().empty());
+		EXPECT_FALSE(getDefaultCppIncludePaths().empty());
 	}
 
 
