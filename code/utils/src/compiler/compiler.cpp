@@ -55,8 +55,9 @@ namespace compiler {
 		const char* envVar = std::getenv(INSIEME_C_BACKEND_COMPILER);
 		if(envVar != nullptr) return envVar;
 
-		if(!string(INSIEME_C_BACKEND_COMPILER_CMAKE).empty())
-			return INSIEME_C_BACKEND_COMPILER_CMAKE;
+#ifdef INSIEME_C_BACKEND_COMPILER_CMAKE
+		return INSIEME_C_BACKEND_COMPILER_CMAKE;
+#endif
 
 		return "gcc";
 	}
@@ -65,8 +66,9 @@ namespace compiler {
 		const char* envVar = std::getenv(INSIEME_CXX_BACKEND_COMPILER);
 		if(envVar != nullptr) return envVar;
 
-		if(!string(INSIEME_CXX_BACKEND_COMPILER_CMAKE).empty())
-			return INSIEME_CXX_BACKEND_COMPILER_CMAKE;
+#ifdef INSIEME_CXX_BACKEND_COMPILER_CMAKE
+		return INSIEME_CXX_BACKEND_COMPILER_CMAKE;
+#endif
 
 		return "g++";
 	}
