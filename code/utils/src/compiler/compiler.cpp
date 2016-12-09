@@ -55,22 +55,14 @@ namespace compiler {
 		const char* envVar = std::getenv(INSIEME_C_BACKEND_COMPILER);
 		if(envVar != nullptr) return envVar;
 
-#ifdef INSIEME_C_BACKEND_COMPILER_CMAKE
 		return INSIEME_C_BACKEND_COMPILER_CMAKE;
-#endif
-
-		return "gcc";
 	}
 
 	const char* getDefaultCxxCompilerExecutable() {
 		const char* envVar = std::getenv(INSIEME_CXX_BACKEND_COMPILER);
 		if(envVar != nullptr) return envVar;
 
-#ifdef INSIEME_CXX_BACKEND_COMPILER_CMAKE
 		return INSIEME_CXX_BACKEND_COMPILER_CMAKE;
-#endif
-
-		return "g++";
 	}
 
 	namespace fs = boost::filesystem;
