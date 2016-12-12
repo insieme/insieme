@@ -537,31 +537,17 @@ namespace frontend {
 		 *  if the extension is registered. If the extension does not override the
 		 *  registerFlag method it will be registered by default.
 		 */
-		template <class T>
-		void registerFrontendExtension(boost::program_options::options_description& options) {
-			auto extensionPtr = std::make_shared<T>();
-			extensions.push_back({extensionPtr, extensionPtr->registerFlag(options)});
-		};
-
-		/**
-		 *  Force given frontend extension to be loaded, ignoring any flags.
-		 */
-		template <class T>
-		void forceFrontendExtension() {
-			auto extensionPtr = std::make_shared<T>();
-			extensions.push_back({extensionPtr, [](const ConversionJob&){ return true; }});
-		};
-
-		/**
-		 * Insert a frontend extension without concerning about cmd-line options for drivers
-		 * We get from the extensions possible options and parse the arguments which were unknown to the driver
-		 * Most useful to write tests involving extensions
-		 */
 		template <class T, class Before = extensions::FrontendCleanupExtension, class... Args>
-		void registerFrontendExtension(Args&&... args) {
-			// we want to keep the newly registered frontend
+		void registerFrontendExtension(boost::program_options::options_description& extOptions, Args&&... args) {
 			auto extensionPtr = std::make_shared<T>(args...);
-			boost::program_options::options_description extOptions;
+
+			// don't do anything if the extension is already registered.
+			for(auto it = extensions.begin(); it < extensions.end(); ++it) {
+				auto&& pitfirst = *(it->first);
+				if(typeid(pitfirst) == typeid(T)) {
+					return;
+				}
+			}
 
 			// insert the extension before "Before", unless it's not found
 			bool inserted = false;
@@ -586,6 +572,26 @@ namespace frontend {
 			boost::program_options::variables_map vm;
 			boost::program_options::store(parsed, vm);
 			boost::program_options::notify(vm);
+		};
+
+		/**
+		 *  Force given frontend extension to be loaded, ignoring any flags.
+		 */
+		template <class T>
+		void forceFrontendExtension() {
+			auto extensionPtr = std::make_shared<T>();
+			extensions.push_back({extensionPtr, [](const ConversionJob&){ return true; }});
+		};
+
+		/**
+		 * Insert a frontend extension without concerning about cmd-line options for drivers
+		 * We get from the extensions possible options and parse the arguments which were unknown to the driver
+		 * Most useful to write tests involving extensions
+		 */
+		template <class T, class Before = extensions::FrontendCleanupExtension, class... Args>
+		void registerFrontendExtension(Args&&... args) {
+			boost::program_options::options_description extOptions;
+			registerFrontendExtension<T, Before>(extOptions, args...);
 		};
 
 		/**
