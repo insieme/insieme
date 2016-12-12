@@ -47,9 +47,10 @@ foreach ( case_file ${test_cases})
 
 	target_link_libraries(${case_name} insieme_backend)
 	
-	if(${case_name} STREQUAL ut_be_opencl_test OR
-		${case_name} STREQUAL ut_be_kernel_poly_test)
-		add_unit_test(${case_name} ${ut_prefix} off)
+	if(${case_name} STREQUAL ut_be_opencl_test OR ${case_name} STREQUAL ut_be_kernel_poly_test)
+		add_unit_test(${case_name} ${ut_prefix} DISABLE_VALGRIND)
+	elseif(${case_name} MATCHES ".*snippets.*")
+		add_unit_test(${case_name} ${ut_prefix} RUN_PARALLEL)
 	else()
 		add_unit_test(${case_name} ${ut_prefix})
 	endif()
