@@ -83,7 +83,7 @@ foreach ( case_file ${test_cases})
 
 	target_link_libraries(${case_name} insieme_frontend)
 
-	if(${case_name} MATCHES ".*fragment_independent.*")
+	if(${case_name} MATCHES ".*fragment_conversion.*")
 		add_unit_test(${case_name} ${ut_prefix} RUN_PARALLEL)
 	else()
 		add_unit_test(${case_name} ${ut_prefix})
