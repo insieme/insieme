@@ -559,6 +559,7 @@ namespace core {
 
 	LiteralPtr IRBuilderBaseModule::getLiteralForMember(const FunctionTypePtr& functionType, const std::string& memberName) const {
 		if (!functionType->isMember()) {
+			assert_fail() << "Builder: Requesting literal for member" << memberName << ", but it is not a member function type:\n" << dumpColor(functionType);
 			return LiteralPtr();
 		}
 		std::string recordName;
