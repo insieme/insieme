@@ -1,6 +1,6 @@
 
 # parallelize integration test if required - requires at least an executable parameter, but also parses any additional parameters as arguments to that executable
-function(add_test_conditionally_parallel case_name_internal insieme_root_dir current_binary_dir executable)
+function(add_test_conditionally_parallel case_name_internal parallel insieme_root_dir current_binary_dir executable)
 	# save all un-named arguments after the last named one
 	string(REPLACE ";" " " extra_args_string "${ARGN}")
 	set(extra_args_list ${ARGN})
@@ -13,7 +13,7 @@ function(add_test_conditionally_parallel case_name_internal insieme_root_dir cur
 	endif(NOT NB_PROCESSORS)
 	math(EXPR NB_PROCESSOR_PART "${NB_PROCESSORS} / 2")
 
-	if(${case_name_internal} MATCHES ".*driver_integration.*" OR ${case_name_internal} MATCHES ".*driver_measure.*" OR ${case_name_internal} MATCHES ".*snippets.*" OR ${case_name_internal} MATCHES ".*fragment_independent.*")
+	if(parallel)
 		add_test(NAME ${case_name_internal} 
 		COMMAND ${insieme_root_dir}/code/gtest-parallel.rb 
 			-w ${NB_PROCESSOR_PART}
@@ -28,7 +28,14 @@ function(add_test_conditionally_parallel case_name_internal insieme_root_dir cur
 endfunction()
 
 # define macro for adding tests
-macro ( add_unit_test case_name ut_prefix )
+macro(add_unit_test case_name ut_prefix)
+	# handle optional flags
+	set(options DISABLE_VALGRIND RUN_PARALLEL)
+	cmake_parse_arguments(OPT "${options}" "" "" ${ARGN})
+
+	if(OPT_DISABLE_VALGRIND)
+		message(STATUS "Valgrind disabled: ${case_name}")
+	endif()
 
 	#check if target for test suite already exists
 	if(NOT TARGET ${ut_prefix})
@@ -102,35 +109,22 @@ macro ( add_unit_test case_name ut_prefix )
 	# add dependency to pthread (TODO check gtest if depends on pthread?)
 	target_link_libraries(${case_name} ${CMAKE_THREAD_LIBS_INIT})
 
-	# set USE_VALGRIND=ON as fallback and disable only if asked to do so
-	set(USE_VALGRIND ON)
-
-	# check whether there was a optional 2nd argument 
-	# which disables use of valgrind for this particular test
-	if(${ARGC} GREATER 2)
-		# use (optional) 2nd argument as a valgrind flag
-		set(USE_VALGRIND ${ARGV2})
-		if(NOT ${USE_VALGRIND})
-			message(STATUS "Disabling Valgrind for ${case_name}")
-		endif()
-	endif()
-
 	set(valgrind_options --leak-check=full --show-reachable=no --track-fds=yes --error-exitcode=1 --track-origins=no)
 		#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
 
 	# add test case
-	if(CONDUCT_MEMORY_CHECKS AND USE_VALGRIND)
+	if(CONDUCT_MEMORY_CHECKS AND NOT OPT_DISABLE_VALGRIND)
 		# no valgrind support in MSVC 
 		if(NOT MSVC)
 			# lookup valgrind
 			insieme_find_package(NAME Valgrind)
 
 			# add valgrind as a test
-			add_test_conditionally_parallel(valgrind_${case_name} ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR} ${VALGRIND_EXECUTABLE} ${valgrind_options} "${CMAKE_CURRENT_BINARY_DIR}/${case_name}")
+			add_test_conditionally_parallel(valgrind_${case_name} ${OPT_RUN_PARALLEL} ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR} ${VALGRIND_EXECUTABLE} ${valgrind_options} "${CMAKE_CURRENT_BINARY_DIR}/${case_name}")
 		endif(NOT MSVC)
 	else()
 		# add normal test
-		add_test_conditionally_parallel(${case_name} ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/${case_name}")
+		add_test_conditionally_parallel(${case_name} ${OPT_RUN_PARALLEL} ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/${case_name}")
 		# + valgrind as a custom target (only if not explicitly prohibited)
 		if(NOT MSVC)
 			# lookup valgrind
@@ -154,4 +148,3 @@ macro ( add_unit_test case_name ut_prefix )
 		endif()
 	endif()
 endmacro(add_unit_test)
-

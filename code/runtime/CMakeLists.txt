@@ -256,8 +256,7 @@ foreach ( case_file ${test_cases})
 		set(VFLAG FALSE)
 	endif(case_name MATCHES ".*_par")
 
-	#disable valgrind for runtime unit tests
-	add_unit_test(${case_name} ${ut_prefix} FALSE)
+	add_unit_test(${case_name} ${ut_prefix} DISABLE_VALGRIND)
 
 endforeach(case_file)
 

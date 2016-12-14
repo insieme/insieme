@@ -566,7 +566,7 @@ namespace backend {
 	}
 
 	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::TypePtr& targetType, const core::ExpressionPtr& init) {
-		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+//		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
 		core::ExpressionPtr initValue = init;
 
@@ -585,9 +585,6 @@ namespace backend {
 				}
 			}
 		}
-
-		// drop ref_temp ...
-		if(core::analysis::isCallOf(initValue, refExt.getRefTempInit())) { initValue = core::analysis::getArgument(initValue, 0); }
 
 		auto coreInitExpr = initValue.isa<core::InitExprPtr>();
 		if(coreInitExpr) return visitInitExprInternal(converter, coreInitExpr, context);
