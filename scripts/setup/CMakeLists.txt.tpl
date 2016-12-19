@@ -5,7 +5,10 @@ project(%PROJECT% VERSION 0.0.0 LANGUAGES C CXX)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # -- Prefix Path
-file(GLOB prefix_paths ${PROJECT_SOURCE_DIR}/third_party/*)
+if(NOT DEFINED THIRD_PARTY_DIR)
+	set(THIRD_PARTY_DIR ${PROJECT_SOURCE_DIR}/third_party)
+endif()
+file(GLOB prefix_paths ${THIRD_PARTY_DIR}/*)
 list(APPEND CMAKE_PREFIX_PATH ${prefix_paths})
 
 # -- Extends
