@@ -16,11 +16,13 @@ list(APPEND CMAKE_PREFIX_PATH ${prefix_paths})
 
 # -- Project Settings
 include(build_settings)
-include(boost_settings)
 include(doxygen)
 
-# -- Dependencies
-#set(GMP_VERSION 6.0.0 CACHE STRING "GMP Version")
+# -- Dependency Versions
+set(Boost_VERSION 1.59.0 CACHE STRING "Boost Version")
+
+# -- Dependency Settings
+include(boost_settings)
 
 # -- CMake Modules
 include(file_globs)
