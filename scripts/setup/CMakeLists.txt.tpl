@@ -9,9 +9,6 @@ set(THIRD_PARTY_DIR ${PROJECT_SOURCE_DIR}/third_party CACHE STRING "Third Party 
 file(GLOB prefix_paths ${THIRD_PARTY_DIR}/*)
 list(APPEND CMAKE_PREFIX_PATH ${prefix_paths})
 
-# -- Extends
-#add_subdirectory(insieme)
-
 # -- Project Settings
 include(build_settings)
 include(doxygen)
