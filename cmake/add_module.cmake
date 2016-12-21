@@ -2,7 +2,39 @@ if(BUILD_TESTS)
 	include(googletest)
 endif()
 
-macro(add_unittest module test)
+if(MSVC)
+	include(msvc_source_group)
+endif()
+
+macro(add_module_library module)
+	glob_sources(${module}_srcs src)
+
+	if(MSVC)
+		glob_headers(${module}_incs include)
+		set(${module}_srcs ${${module}_srcs} ${${module}_incs})
+	endif()
+
+	add_library(${module} ${${module}_srcs})
+	target_include_directories(${module} PUBLIC include)
+
+	if(MSVC)
+		msvc_source_group("Source Files" "${${module}_srcs}" src)
+		msvc_source_group("Header Files" "${${module}_incs}" include)
+		set_target_properties(${module} PROPERTIES FOLDER ${module})
+	endif()
+endmacro()
+
+macro(add_module_executable module exe)
+	get_filename_component(exe_name ${exe} NAME_WE)
+	add_executable(${module}_${exe_name} ${exe})
+	target_link_libraries(${module}_${exe_name} ${module})
+
+	if(MSVC)
+		set_target_properties(${module}_${exe_name} PROPERTIES FOLDER ${module})
+	endif()
+endmacro()
+
+macro(add_module_unittest module test)
 	if(BUILD_TESTS)
 		# subdirectory list
 		get_filename_component(test_dir ${test} DIRECTORY)
@@ -30,5 +62,9 @@ macro(add_unittest module test)
 
 		# register executable as test
 		add_test(NAME ${test_name} COMMAND ${test_name})
+
+		if(MSVC)
+			set_target_properties(${test_name} PROPERTIES FOLDER "${module}/test")
+		endif()
 	endif()
 endmacro()

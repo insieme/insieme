@@ -5,23 +5,22 @@ project(%PROJECT% VERSION 0.0.0 LANGUAGES C CXX)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # -- Prefix Path
-file(GLOB prefix_paths ${PROJECT_SOURCE_DIR}/third_party/*)
+set(THIRD_PARTY_DIR ${PROJECT_SOURCE_DIR}/third_party CACHE STRING "Third Party Library Directory")
+file(GLOB prefix_paths ${THIRD_PARTY_DIR}/*)
 list(APPEND CMAKE_PREFIX_PATH ${prefix_paths})
-
-# -- Extends
-#add_subdirectory(insieme)
 
 # -- Project Settings
 include(build_settings)
-include(boost_settings)
 include(doxygen)
 
-# -- Dependencies
-#set(GMP_VERSION 6.0.0 CACHE STRING "GMP Version")
+# -- Dependency Versions
+set(Boost_VERSION 1.59.0 CACHE STRING "Boost Version")
+
+# -- Dependency Settings
+include(boost_settings)
 
 # -- CMake Modules
 include(file_globs)
-include(add_unittest)
-include(msvc_file_completion)
+include(add_module)
 
 # -- Project Modules
