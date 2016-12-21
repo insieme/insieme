@@ -21,7 +21,6 @@ include(boost_settings)
 
 # -- CMake Modules
 include(file_globs)
-include(add_unittest)
-include(msvc_file_completion)
+include(add_module)
 
 # -- Project Modules
