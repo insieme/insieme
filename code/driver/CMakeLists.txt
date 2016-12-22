@@ -83,3 +83,12 @@ foreach ( case_file ${test_cases})
 		add_unit_test(${case_name} ${ut_prefix} DISABLE_VALGRIND)
 	endif()
 endforeach(case_file)
+
+# =============================================  PREPROCESS  =====================================
+add_custom_command(
+	TARGET integration_tests
+	POST_BUILD
+	COMMAND ${CMAKE_CURRENT_BINARY_DIR}/integration_tests --preprocess
+	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+	COMMENT "Run preprocessing for integration tests"
+)

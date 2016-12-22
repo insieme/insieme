@@ -20,36 +20,23 @@ enable_testing()
 #		all the core stuff
 #		the runtime
 
-# -- option to build only the Runtime part
-option(BUILD_RUNTIME_ONLY "Build only the Runtime of Insieme" OFF)
+option(BUILD_RUNTIME "Build the Runtime of Insieme" ON)
 
-# -- option to build Insieme (C/C++) FE + core + transform/analysis + BE ... 
-option(BUILD_CLANG "Builds the Insieme Frontend + Insieme CORE + Insieme Backend" OFF)
+option(BUILD_COMPILER "Builds the Insieme Compiler" ON)
 
 # load environment settings common to both compiler and runtime
 include(environment_common.cmake)
 
-if(BUILD_RUNTIME_ONLY)
-	# Build only the RUNTIME part
-	# to avoid dependency on other libraries NOT used by runtime (boost for example)
-	add_subdirectory(common)
+add_subdirectory(common)
+
+if(BUILD_RUNTIME)
 	add_subdirectory(runtime)
+endif()
 
-	#Configure the integration test
-	set(CONFIG_INTEGRATION_TESTS FALSE)
-
-elseif(BUILD_CLANG)
-	# Build compiler c/c++ FE + core + backend + runtime 
-	
-	# CAREFULL we want to setup runtime before environment.cmake to avoid problems with Werror/Wall/
-	# pedantic when compiling runtime unittests as runtime has C features which are not supported by
-	# C++ -> therefore Werror/Wall/pedantic shows them as error
-	add_subdirectory(runtime)
-
+if(BUILD_COMPILER)
 	include(environment.cmake)
 
 	add_subdirectory(analysis)
-	add_subdirectory(common)
 	add_subdirectory(utils)
 	add_subdirectory(core)
 	add_subdirectory(transform)
@@ -57,35 +44,9 @@ elseif(BUILD_CLANG)
 	add_subdirectory(frontend)
 	add_subdirectory(backend)
 	add_subdirectory(driver)
-
-	#Configure the integration test
-	set(CONFIG_INTEGRATION_TESTS TRUE)
-
-else()
-	# Build compiler (c/c++ FE) + core + backend  + runtime -- everything
-	get_filename_component( curdir ${CMAKE_CURRENT_LIST_FILE} PATH )
-	file(GLOB children RELATIVE ${curdir} ${curdir}/*)
-
-	# CAREFULL we want to setup runtime before environment.cmake to avoid problems with Werror/Wall/
-	# pedantic when compiling runtime unittests as runtime has C features which are not supported by
-	# C++ -> therefore Werror/Wall/pedantic shows them as error
-	add_subdirectory(runtime)
-
-
-	include(environment.cmake)
-	
-	# include _all_ modules (but runtime is handled in before -> because of certain Wall problems)
-	foreach( child ${children} )
-		if ( EXISTS ${curdir}/${child}/CMakeLists.txt 
-			AND NOT (${child} STREQUAL runtime)
-			)
-			add_subdirectory( ${child} )
-		endif()
-	endforeach()
-
-	#Configure the integration test
-	set(CONFIG_INTEGRATION_TESTS TRUE)
 endif()
+
+set(CONFIG_INTEGRATION_TESTS TRUE)
 
 # configure the integration tests
 if(CONFIG_INTEGRATION_TESTS)

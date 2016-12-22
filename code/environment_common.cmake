@@ -19,6 +19,7 @@ get_filename_component( insieme_root_dir ${insieme_code_dir} PATH )
 list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
 
 #find them in CMAKE_MODULE_PATH
+include(insieme_glob_headers)
 include(default_library_configuration)
 include(insieme_find_package)
 include(msvc_file_completion)

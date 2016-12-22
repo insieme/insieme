@@ -71,6 +71,10 @@ options (as argument) to the `cmake` command:
     - `-DUSE_PAPI=ON|OFF`
 - Enable/disable valgrind memory checks for most unit tests
     - `-DCONDUCT_MEMORY_CHECKS=ON|OFF`
+- Enable/disable building of the Insieme Runtime
+    - `-DBUILD_RUNTIME=ON|OFF`
+- Enable/disable building of the Insieme Compiler
+    - `-DBUILD_COMPILER=ON|OFF`
 
 If successful, CMake produces the set of Makefiles required to build the
 Insieme project.
@@ -140,8 +144,8 @@ located in `code/driver`. It can be used to replace e.g. occurrences of another
 compiler such as `gcc` in makefiles. It supports both source-to-source-only
 compilation, as well as full compilation by calling a backend compiler.
 Environment variables `INSIEME_C_BACKEND_COMPILER` and
-`INSIEME_CXX_BACKEND_COMPILER` can be used to change the backend compiler,
-while the CMake options `-DINSIEME_C_BACKEND_COMPILER` and
+`INSIEME_CXX_BACKEND_COMPILER` can be used to change the backend compiler at
+runtime, while the CMake options `-DINSIEME_C_BACKEND_COMPILER` and
 `-DINSIEME_CXX_BACKEND_COMPILER` allow setting the compiler prior building.
 `gcc` and `g++` are used as fallback. For further information on its features
 and options, please refer to:
