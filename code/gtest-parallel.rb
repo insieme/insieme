@@ -34,20 +34,15 @@ optparse.parse!
 # get test case names
 testcases=`#{ARGV.first} --gtest_list_tests`
 
-# remove disabled tests if present, new output format (prefixed once and grouped)
-testcases.slice!(testcases.index("DISABLED")..-1) if testcases.index("DISABLED")
-
 list=testcases.split("\n").map{|x| x.split(" ")[0].strip }
-# remove disabled tests if present, old output format (prefixed for every test)
-list.reject! {|t| t =~ /DISABLED.*/ }
-
-# remove valgrind output if present
-list.reject! {|t| t =~ /^==[0-9]+==.*/}
 
 # remove gtest output header, merge test case names
 list.shift(1)
 
-# parse output format of gtest test case lister
+# remove valgrind output if present
+list.reject! {|t| t =~ /^==[0-9]+==.*/}
+
+# parse output format of gtest test case lister, assemble fully qualified test case names
 cases=[]
 prefix=""
 list.each do |x|
@@ -55,6 +50,9 @@ list.each do |x|
 	else cases << "#{prefix}#{x}" end
 end
 list=cases
+
+# remove disabled tests if present
+list.reject! {|t| t =~ /DISABLED/ }
 
 # shuffle test cases reproducibly to balance load
 list.shuffle!(random: Random.new(17))
