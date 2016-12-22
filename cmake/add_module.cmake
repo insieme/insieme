@@ -18,8 +18,11 @@ macro(add_module_library module)
 	target_include_directories(${module} PUBLIC include)
 
 	if(MSVC)
-		msvc_source_group("Source Files" "${${module}_srcs}" src)
-		msvc_source_group("Header Files" "${${module}_incs}" include)
+		string(TOLOWER ${PROJECT_NAME} project_name)
+		string(REPLACE " " "_" project_name ${project_name})
+
+		msvc_source_group("Source Files" "${${module}_srcs}" STRIP src)
+		msvc_source_group("Header Files" "${${module}_incs}" STRIP include/${project_name}/${module})
 		set_target_properties(${module} PROPERTIES FOLDER ${module})
 	endif()
 endmacro()
