@@ -163,6 +163,7 @@ namespace checks {
 		return check(node, getFullCheck());
 	}
 
-} // end namespace check
+} // end namespace checks
 } // end namespace core
 } // end namespace insieme
+

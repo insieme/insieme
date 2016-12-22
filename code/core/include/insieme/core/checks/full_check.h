@@ -36,7 +36,9 @@
 
 #pragma once
 
+#include "insieme/utils/assert.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/printer/error_printer.h"
 
 namespace insieme {
 namespace core {
@@ -56,3 +58,11 @@ namespace checks {
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme
+
+
+/**
+ * An assertion for verifying correct IR.
+ */
+#define assert_correct_ir(_code) \
+		assert_true(_code && insieme::core::checks::check(_code).empty()) \
+			 << core::printer::dumpErrors(insieme::core::checks::check(_code))
