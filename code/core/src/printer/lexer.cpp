@@ -218,7 +218,11 @@ namespace printer {
 
 					// define set of keywords to be considered
 					static const vector<string> KEYWORD = {
-					    "if", "else", "while", "for", "let", "in", "auto", "decl", "return", "break", "continue", "struct", "union",
+					    "if", "else", "while", "for",
+						"let", "in", "auto", "decl", "def", "var",
+						"function", "lambda",
+						"return", "break", "continue",
+						"struct", "union",
 					    //						"array", "vector", "ref", "channel",
 					    "spawn", "syncAll", "using",
 					};
