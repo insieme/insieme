@@ -28,12 +28,20 @@ macro(add_module_library module)
 endmacro()
 
 macro(add_module_executable module exe)
+	set(options NO_PREFIX)
+	cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
+
 	get_filename_component(exe_name ${exe} NAME_WE)
-	add_executable(${module}_${exe_name} ${exe})
-	target_link_libraries(${module}_${exe_name} ${module})
+
+	if(NOT ARG_NO_PREFIX)
+		set(exe_name ${module}_${exe_name})
+	endif()
+
+	add_executable(${exe_name} ${exe})
+	target_link_libraries(${exe_name} ${module})
 
 	if(MSVC)
-		set_target_properties(${module}_${exe_name} PROPERTIES FOLDER ${module})
+		set_target_properties(${exe_name} PROPERTIES FOLDER ${module})
 	endif()
 endmacro()
 
