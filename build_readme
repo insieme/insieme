@@ -27,19 +27,6 @@ TODO:
 Currently Insieme offers no CMake/Make install mechanism, whenever this comes up, one needs to take
 care of this as well.
 
-Configuring the Insieme build
------------------------------
-
-Several CMake options to build only parts of insieme:
-
-+ BUILD_RUNTIME_ONLY=ON|OFF - builds only runtime + dependencies
-
-+ BUILD_CLANG=ON|OFF - build Clang frontend + everything else
-
-If non of the above options are provided or if they are set to OFF, EVERYTHING is build.
-
-Careful the order in the CMakeLists.txt (of the add_subdirectory calls) matters!
-
 Various CMake options
 -----------------------
 

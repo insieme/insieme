@@ -71,6 +71,10 @@ options (as argument) to the `cmake` command:
     - `-DUSE_PAPI=ON|OFF`
 - Enable/disable valgrind memory checks for most unit tests
     - `-DCONDUCT_MEMORY_CHECKS=ON|OFF`
+- Enable/disable building of the Insieme Runtime
+    - `-DBUILD_RUNTIME=ON|OFF`
+- Enable/disable building of the Insieme Compiler
+    - `-DBUILD_COMPILER=ON|OFF`
 
 If successful, CMake produces the set of Makefiles required to build the
 Insieme project.

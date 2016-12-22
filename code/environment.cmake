@@ -19,7 +19,6 @@ list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
 # -------------------------------------------------------------- define some code locations
 
 #find them in CMAKE_MODULE_PATH
-include(insieme_glob_headers)
 include(add_unit_test)
 include(insieme_cotire)
 include(cotire)

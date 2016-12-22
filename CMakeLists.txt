@@ -14,18 +14,20 @@ add_subdirectory(code)
 #integration tests
 add_subdirectory(test)
 
-export(
-	TARGETS
-		insieme_analysis
-		insieme_annotations
-		insieme_backend
-		insieme_common
-		insieme_core
-		insieme_driver
-		insieme_frontend
-		insieme_transform
-		insieme_utils
-		insiemecc
-	FILE ${CMAKE_BINARY_DIR}/InsiemeConfig.cmake
-)
-export(PACKAGE Insieme)
+if(BUILD_COMPILER)
+	export(
+		TARGETS
+			insieme_analysis
+			insieme_annotations
+			insieme_backend
+			insieme_common
+			insieme_core
+			insieme_driver
+			insieme_frontend
+			insieme_transform
+			insieme_utils
+			insiemecc
+		FILE ${CMAKE_BINARY_DIR}/InsiemeConfig.cmake
+	)
+	export(PACKAGE Insieme)
+endif()
