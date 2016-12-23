@@ -7,15 +7,24 @@ if(MSVC)
 endif()
 
 macro(add_module_library module)
+	set(options HEADER_ONLY C_LINKAGE)
+	cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
+
 	glob_sources(${module}_srcs src)
 
-	if(MSVC)
+	if(MSVC OR ARG_HEADER_ONLY)
 		glob_headers(${module}_incs include)
 		set(${module}_srcs ${${module}_srcs} ${${module}_incs})
 	endif()
 
 	add_library(${module} ${${module}_srcs})
 	target_include_directories(${module} PUBLIC include)
+
+	if(ARG_C_LINKAGE)
+		set_target_properties(${module} PROPERTIES LINKER_LANGUAGE C)
+	else()
+		set_target_properties(${module} PROPERTIES LINKER_LANGUAGE CXX)
+	endif()
 
 	if(MSVC)
 		string(TOLOWER ${PROJECT_NAME} project_name)
