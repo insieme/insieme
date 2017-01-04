@@ -34,7 +34,6 @@
  * regarding third party software licenses.
  */
 
-#include <insieme/driver/cmd/commandline_options.h>
 #include <string>
 #include <iomanip>
 #include <boost/filesystem.hpp>
@@ -48,6 +47,7 @@
 
 #include "insieme/backend/backend.h"
 
+#include "insieme/driver/cmd/commandline_options.h"
 #include "insieme/driver/utils/driver_utils.h"
 #include "insieme/driver/utils/object_file_utils.h"
 
