@@ -4,7 +4,6 @@
 indirection_test
 mpi
 pointer_arith_vla
-vivid
 variadic_functions
 
 # Disabling tests because they fail with assertion:
