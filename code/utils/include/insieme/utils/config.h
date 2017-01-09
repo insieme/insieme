@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <string>
 #include <boost/filesystem/path.hpp>
 
 namespace insieme {
@@ -55,6 +56,14 @@ namespace utils {
 
 	inline string getInsiemeBuildRootDir() {
 		return string(INSIEME_BUILD_ROOT); // INSIEME_BUILD_ROOT is supplied by cmake
+	}
+
+	/**
+	 * Returns the top level build folder of the project.
+	 * Note: This is the same like getInsiemeBuildRootDir in Insieme, but can be different when Insieme is used within some other project.
+	 */
+	inline string getTopLevelBuildRootDir() {
+		return string(TOP_LEVEL_BUILD_ROOT); // TOP_LEVEL_BUILD_ROOT is supplied by cmake
 	}
 
 	inline string getPapiRootDir() {
