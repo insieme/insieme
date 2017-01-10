@@ -3,7 +3,7 @@
 #
 project(insieme_runtime C CXX)
 message(STATUS "========== configure runtime =============")
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(Version 3.5)
 
 # user configurable options
 if (WIN32)

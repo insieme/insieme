@@ -1,5 +1,5 @@
 project(insieme_analysis_haskell NONE)
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(Version 3.5)
 
 insieme_find_package(NAME GMP)
 insieme_find_package(NAME ZLIB)

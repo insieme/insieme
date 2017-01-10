@@ -4,7 +4,7 @@
 project(insieme_frontend CXX)
 
 message(STATUS "========== configure frontend =============")
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(Version 3.5)
 
 # collect source files
 file(GLOB_RECURSE insieme_frontend_srcs	src/*.cpp src/*.def src/*.inc )
