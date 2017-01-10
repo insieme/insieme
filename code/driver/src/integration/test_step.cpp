@@ -92,47 +92,25 @@ namespace integration {
 
 		TestStep createRefCompStep(const string& name, Language l) {
 			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
-				auto props = test.getPropertiesFor(name);
-
 				std::stringstream cmd;
 				TestSetup set = setup;
+				auto props = test.getPropertiesFor(name);
 
 				// start with executable
-				cmd << driver::integration::getBackendCompilerString(props["compiler"], l == Language::CPP);
+				cmd << test.getCompilerString(name, true, l == Language::CPP);
 
 				// add input files
 				for(const auto& cur : test.getFiles()) {
 					cmd << " " << cur.string();
 				}
 
-				// add include directories
-				for(const auto& cur : test.getIncludeDirs()) {
-					cmd << " -I" << cur.string();
-				}
-
-				// add external lib dirs
-				for(const auto& cur : test.getLibDirs()) {
-					cmd << " -L" << cur.string();
-				}
-
-				// add external libs
-				for(const auto& cur : test.getLibNames()) {
-					cmd << " -l" << cur;
-				}
+				// append all the arguments
+				cmd << " " << join(" ", test.getCompilerArguments(name, true, l == Language::CPP));
 
 				// disable multithreading
 				set.numThreads = 0;
 
-				std::vector<string> flags = test.getCompilerArguments(name, true, l == Language::CPP);
-				// get all flags defined by properties
-				for(string s : flags) {
-					cmd << " " << s;
-				}
-
-				// get definitions
-				for_each(test.getDefinitions(name), [&](const std::pair<string, string>& def) { cmd << " -D" << def.first << "=" << def.second; });
-				cmd << " ";
-
+				// get execution directory
 				string executionDirectory = test.getDirectory().string();
 				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
 
@@ -156,19 +134,18 @@ namespace integration {
 				string executionDirectory = test.getDirectory().string();
 				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
 
-
 				// start with executable
 				cmd << executionDirectory << "/" << test.getBaseName() << ".ref";
 
 				// add arguments
 				cmd << " " << props["executionFlags"];
 
+				// set number of threads
+				set.numThreads = numThreads;
+
 				// set output files
 				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
 				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
-
-				// set number of threads
-				set.numThreads = numThreads;
 
 				// run it
 				return runner.runCommand(name, set, props, cmd.str(), "", executionDirectory);
@@ -180,23 +157,22 @@ namespace integration {
 				std::stringstream cmd;
 				TestSetup set = setup;
 				auto props = test.getPropertiesFor(name);
-				string executionDirectory;
 
 				if(props[name].empty()) return TestResult::stepOmitted(name);
-
-				// get execution directory
-				executionDirectory = test.getDirectory().string();
-				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
 
 				// start with executable
 				cmd << props[name];
 
+				// set number of threads
+				set.numThreads = 0;
+
+				// get execution directory
+				string executionDirectory = test.getDirectory().string();
+				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
+
 				// set output files
 				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
 				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
-
-				// set number of threads
-				set.numThreads = 0;
 
 				// run it
 				return runner.runCommand(name, set, props, cmd.str(), "", executionDirectory);
@@ -205,112 +181,80 @@ namespace integration {
 
 		TestStep createInsiemeccSemaStep(const string& name, Language l, const Dependencies& deps = Dependencies()) {
 			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
-				auto props = test.getPropertiesFor(name);
-
 				std::stringstream cmd;
 				TestSetup set = setup;
-
-				// get execution dir
-				string executionDirectory = test.getDirectory().string();
-				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
+				auto props = test.getPropertiesFor(name);
 
 				// start with executable
-				cmd << props["compiler"];
-
-				// enable semantic tests
-				cmd << " --check-sema-only";
-
-				// also dump IR
-				std::string irFile = executionDirectory + "/" + test.getBaseName() + ".ir";
-				cmd << " --dump-ir " << irFile;
-
-				// add include directories
-				for(const auto& cur : test.getIncludeDirs()) {
-					cmd << " -I" << cur.string();
-				}
+				cmd << test.getCompilerString(name, false, l == Language::CPP);
 
 				// add input files
 				for(const auto& cur : test.getFiles()) {
 					cmd << " " << cur.string();
 				}
 
+				// append all the arguments
+				cmd << " " << join(" ", test.getCompilerArguments(name, false, l == Language::CPP));
+
+				// as well as the Insieme specific arguments
+				cmd << " " << join(" ", test.getInsiemeCompilerArguments(name, false, l == Language::CPP));
+
+				// enable semantic tests
+				cmd << " --check-sema-only";
+
+				// get execution dir
+				string executionDirectory = test.getDirectory().string();
+				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
+
+				// also dump IR
+				std::string irFile = executionDirectory + "/" + test.getBaseName() + ".ir";
+				cmd << " --dump-ir " << irFile;
+
 				// disable multithreading
 				set.numThreads = 0;
-
-				std::vector<string> flags = test.getCompilerArguments(name, false, l == Language::CPP);
-				// get all flags defined by properties
-				for(string s : flags) {
-					cmd << " " << s;
-				}
-
-				// get definitions
-				for_each(test.getDefinitions(name), [&](const std::pair<string, string>& def) { cmd << " -D" << def.first << "=" << def.second; });
-
-				// append intercepted header file dirs
-				for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
-					cmd << " --intercept-include " << cur.string();
-				}
-				cmd << " ";
 
 				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
 				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
 				return runner.runCommand(name, set, props, cmd.str(), irFile);
-				//					return runner.runCommand(name, set, props, cmd.str(),set.stdOutFile);
 			}, deps, COMPILE);
 		}
 
 		TestStep createInsiemeccConversionStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
 			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
-				auto props = test.getPropertiesFor(name);
-
 				std::stringstream cmd;
 				TestSetup set = setup;
+				auto props = test.getPropertiesFor(name);
 
 				// start with executable
-				cmd << props["compiler"];
-
-				string executionDirectory = test.getDirectory().string();
-				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
-
-				// determine backend
-				string be = getBackendKey(backend);
-
-				// source-to-source compilation only
-				set.outputFile = executionDirectory + "/" + test.getBaseName() + ".insieme." + be + "." + getExtension(l);
-				cmd << " --dump-trg-only " << set.outputFile;
-
-				cmd << " --backend " << be;
-
-				// add include directories
-				for(const auto& cur : test.getIncludeDirs()) {
-					cmd << " -I" << cur.string();
-				}
+				cmd << test.getCompilerString(name, false, l == Language::CPP);
 
 				// add input files
 				for(const auto& cur : test.getFiles()) {
 					cmd << " " << cur.string();
 				}
 
-				std::vector<string> flags = test.getCompilerArguments(name, false, l == Language::CPP);
-				// get all flags defined by properties
-				for(string s : flags) {
-					cmd << " " << s;
-				}
+				// append all the arguments
+				cmd << " " << join(" ", test.getCompilerArguments(name, false, l == Language::CPP));
+
+				// as well as the Insieme specific arguments
+				cmd << " " << join(" ", test.getInsiemeCompilerArguments(name, false, l == Language::CPP));
+
+				// get execution dir
+				string executionDirectory = test.getDirectory().string();
+				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
+
+				// determine backend
+				string be = getBackendKey(backend);
+				cmd << " --backend " << be;
+
+				// source-to-source compilation only
+				set.outputFile = executionDirectory + "/" + test.getBaseName() + ".insieme." + be + "." + getExtension(l);
+				cmd << " --dump-trg-only " << set.outputFile;
 
 				// disable multithreading
 				set.numThreads = 0;
-
-				// get definitions
-				for_each(test.getDefinitions(name), [&](const std::pair<string, string>& def) { cmd << " -D" << def.first << "=" << def.second; });
-
-				// append intercepted header file dirs
-				for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
-					cmd << " --intercept-include " << cur.string();
-				}
-				cmd << " ";
-
 
 				// set stdOut file and stdErr file
 				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
@@ -323,28 +267,28 @@ namespace integration {
 
 		TestStep createInsiemeccCompilationStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
 			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
-				auto props = test.getPropertiesFor(name);
-
 				std::stringstream cmd;
 				TestSetup set = setup;
+				auto props = test.getPropertiesFor(name);
+
+				// start with executable
+				cmd << test.getCompilerString(name, true, l == Language::CPP);
+
+				// determine backend
+				string be = getBackendKey(backend);
 
 				// get execution dir
 				string executionDirectory = test.getDirectory().string();
 				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
 
-				// start with executable
-				cmd << driver::integration::getBackendCompilerString(props["compiler"], l == Language::CPP);
-
-				// determine backend
-				string be = getBackendKey(backend);
-
 				// add input file
 				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
 
-				// add intercepted include directories
-				for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
-					cmd << " -I" << cur.string();
-				}
+				// append all the arguments
+				cmd << " " << join(" ", test.getCompilerArguments(name, true, l == Language::CPP));
+
+				// as well as the Insieme specific arguments
+				cmd << " " << join(" ", test.getInsiemeCompilerArguments(name, true, l == Language::CPP));
 
 				// add runtime include directories
 				if(backend != Sequential) { // TODO: make this non-hardcoded -- it is ugly, but I don't have the time ...
@@ -352,33 +296,8 @@ namespace integration {
 					cmd << " -I " << utils::getInsiemeSourceRootDir() << "common/include";
 				}
 
-				// add include directories
-				for(const auto& cur : test.getIncludeDirs()) {
-					cmd << " -I" << cur.string();
-				}
-
-				// add external lib dirs
-				for(const auto& cur : test.getLibDirs()) {
-					cmd << " -L" << cur.string();
-				}
-
-				// add external libs
-				for(const auto& cur : test.getLibNames()) {
-					cmd << " -l" << cur;
-				}
-
 				// disable multithreading
 				set.numThreads = 0;
-
-				std::vector<string> flags = test.getCompilerArguments(name, true, l == Language::CPP);
-				// get all flags defined by properties
-				for(string s : flags) {
-					cmd << " " << s;
-				};
-
-				// get definitions
-				for_each(test.getDefinitions(name), [&](const std::pair<string, string>& def) { cmd << " -D" << def.first << "=" << def.second; });
-				cmd << " ";
 
 				// set output file, stdOut file and stdErr file
 				set.outputFile = executionDirectory + "/" + test.getBaseName() + ".insieme." + be;
@@ -397,9 +316,6 @@ namespace integration {
 				TestSetup set = setup;
 				auto props = test.getPropertiesFor(name);
 
-				// determine backend
-				string be = getBackendKey(backend);
-
 				// get execution dir
 				string executionDirectory = test.getDirectory().string();
 				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
@@ -410,17 +326,20 @@ namespace integration {
 					logFile = executionDirectory + "/insieme_runtime.log";
 				}
 
+				// determine backend
+				string be = getBackendKey(backend);
+
 				// start with executable
 				cmd << executionDirectory << "/" << test.getBaseName() << ".insieme." << be;
+
+				// add arguments
+				cmd << " " << props["executionFlags"];
 
 				// set number of threads
 				set.numThreads = numThreads;
 
 				// set scheduling variant
 				set.sched = sched;
-
-				// add arguments
-				cmd << " " << props["executionFlags"];
 
 				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
 				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
@@ -433,6 +352,8 @@ namespace integration {
 		TestStep createInsiemeccCheckStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies(), int numThreads = 0,
 		                                  SchedulingPolicy sched = SCHED_UNDEFINED) {
 			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
+				std::stringstream cmd;
+				TestSetup set = setup;
 				auto props = test.getPropertiesFor(name);
 
 				std::string langstr("_c_");
@@ -446,15 +367,8 @@ namespace integration {
 				else if(sched == GUIDED)
 					schedString = "guid_";
 
-
-				std::stringstream cmd;
-				TestSetup set = setup;
-
 				// define comparison script
 				cmd << props["compareOutputScript"];
-
-				// determine backend
-				string be = getBackendKey(backend);
 
 				// disable multithreading
 				set.numThreads = 0;
@@ -465,6 +379,9 @@ namespace integration {
 
 				// start with executable
 				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref" + langstr + "execute.out";
+
+				// determine backend
+				string be = getBackendKey(backend);
 
 				// pipe result to output file
 				if(numThreads)

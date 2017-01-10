@@ -83,7 +83,7 @@ namespace insieme {
 		auto& parExt = manager.getLangExtension<core::lang::ParallelExtension>();
 
 		// obtain test case & check that it's available
-		driver::integration::IntegrationTestCaseOpt testCaseOpt = getCase("omp/meta_info_test");
+		auto testCaseOpt = getCase("omp/meta_info_test");
 		EXPECT_FALSE(!testCaseOpt);
 		driver::integration::IntegrationTestCase testCase = *testCaseOpt;
 
@@ -153,7 +153,7 @@ namespace insieme {
 		core::NodeManager manager;
 
 		// obtain test case & check that it's available
-		driver::integration::IntegrationTestCaseOpt testCaseOpt = getCase("omp/meta_info_test");
+		auto testCaseOpt = getCase("omp/meta_info_test");
 		EXPECT_FALSE(!testCaseOpt);
 		driver::integration::IntegrationTestCase testCase = *testCaseOpt;
 

@@ -58,9 +58,7 @@ namespace backend {
 		ASSERT_TRUE(testCase) << "Could not load hello world test case!";
 
 		// convert test case into IR using the frontend
-		auto job = frontend::ConversionJob(testCase->getFiles(), testCase->getIncludeDirs());
-		job.registerDefaultExtensions();
-		auto code = job.execute(manager);
+		auto code = testCase->load(manager);
 		ASSERT_TRUE(code) << "Unable to load input code!";
 
 		// create target code using real backend
