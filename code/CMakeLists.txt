@@ -10,7 +10,7 @@
 #
 project(insieme_code CXX)
 
-cmake_minimum_required(Version 3.5)
+cmake_minimum_required(VERSION 3.5)
 
 # enable ctest support for testing - generate a CTest file in the ${build_dir}/code
 enable_testing()

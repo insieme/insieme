@@ -3,7 +3,7 @@
 #
 project(insieme_annotations CXX)
 message(STATUS "========== configure annotations =============")
-cmake_minimum_required(Version 3.5)
+cmake_minimum_required(VERSION 3.5)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_annotations_srcs src/*.cpp)

@@ -3,7 +3,7 @@
 #
 project(insieme_backend CXX)
 message(STATUS "========== configure backend =============")
-cmake_minimum_required(Version 3.5)
+cmake_minimum_required(VERSION 3.5)
 
 # Create a variable called insieme_backend_srcs containing all .cpp files:
 file(GLOB_RECURSE insieme_backend_srcs 	src/*.cpp src/*.def src/*.inc)

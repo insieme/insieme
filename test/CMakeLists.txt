@@ -1,5 +1,5 @@
 project(insieme_integration_test CXX)
-cmake_minimum_required(Version 3.5)
+cmake_minimum_required(VERSION 3.5)
 
 # create test script
 #configure_file(${CMAKE_CURRENT_SOURCE_DIR}/perf_counters.dat ${CMAKE_BINARY_DIR}/perf_counters.dat COPYONLY)
