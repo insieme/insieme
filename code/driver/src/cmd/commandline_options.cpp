@@ -170,7 +170,7 @@ namespace cmd {
 		}
 
 		// check for libraries and add LD_LIBRARY_PATH entries to lib search path
-		std::vector<frontend::path> ldpath;
+		std::vector<boost::filesystem::path> ldpath;
 		ldpath.push_back(boost::filesystem::current_path().string());
 		if(!res.settings.libraryPaths.empty()) { ldpath = res.settings.libraryPaths; }
 
@@ -183,10 +183,10 @@ namespace cmd {
 			}
 		}
 		// we have to check for lib<name>.<so|a> in every library directory provided by library-path
-		for(const frontend::path& s : res.settings.libraryFiles) {
-			for(const frontend::path& d : ldpath) {
-				frontend::path f1 = d / ("/lib" + s.string() + ".so");
-				frontend::path f2 = d / ("/lib" + s.string() + ".a");
+		for(const boost::filesystem::path& s : res.settings.libraryFiles) {
+			for(const boost::filesystem::path& d : ldpath) {
+				boost::filesystem::path f1 = d / ("/lib" + s.string() + ".so");
+				boost::filesystem::path f2 = d / ("/lib" + s.string() + ".a");
 				if(boost::filesystem::is_regular_file(f1)) {
 					// shared object file
 					res.job.addFile(f1);
