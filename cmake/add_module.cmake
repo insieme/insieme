@@ -33,11 +33,8 @@ macro(add_module_library module)
 	endif()
 
 	if(MSVC)
-		string(TOLOWER ${PROJECT_NAME} project_name)
-		string(REPLACE " " "_" project_name ${project_name})
-
 		msvc_source_group("Source Files" "${${module}_srcs}" STRIP src)
-		msvc_source_group("Header Files" "${${module}_incs}" STRIP include/${project_name}/${module})
+		msvc_source_group("Header Files" "${${module}_incs}" STRIP include/${PROJECT_NAME}/${module})
 		set_target_properties(${module} PROPERTIES FOLDER ${module})
 	endif()
 endmacro()
