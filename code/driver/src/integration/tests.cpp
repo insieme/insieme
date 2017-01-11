@@ -65,125 +65,6 @@ namespace insieme {
 namespace driver {
 namespace integration {
 
-	IntegrationTestCase::IntegrationTestCase(const string& name,
-	                                         const boost::filesystem::path& dir,
-	                                         const vector<boost::filesystem::path>& files,
-	                                         const vector<boost::filesystem::path>& includeDirs,
-	                                         const vector<boost::filesystem::path>& libDirs,
-	                                         const vector<string>& libNames,
-	                                         const vector<boost::filesystem::path>& interceptedHeaderFileDirectories,
-	                                         bool enableOpenMP,
-	                                         bool enableOpenCL,
-	                                         const Properties& properties)
-				: name(name), dir(dir), files(files), includeDirs(includeDirs), libDirs(libDirs), libNames(libNames),
-					interceptedHeaderFileDirectories(interceptedHeaderFileDirectories), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL),
-					properties(properties) {
-		if(enableOpenCL) {
-			// add the OpenCL specific directories
-			this->includeDirs.push_back(utils::getInsiemeLibsRootDir() + "opencl/include");
-			this->libDirs.push_back(utils::getInsiemeLibsRootDir() + "opencl/lib64/");
-		}
-	}
-
-	frontend::ConversionJob IntegrationTestCase::toConversionJob() const {
-		// prepare arguments
-		std::vector<std::string> args = {"dummy_compiler_name_as_first_argument"};
-		auto compilerArgs = getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_CONVERT, false, false);
-		args.insert(args.end(), compilerArgs.begin(), compilerArgs.end());
-
-		// parse using our standard command line parser
-		driver::cmd::Options options = driver::cmd::Options::parse(args);
-
-		return options.job;
-	}
-
-	const map<string, string> IntegrationTestCase::getDefinitions(std::string step) const {
-		std::map<string, string> defs;
-		boost::char_separator<char> sep("\",");
-		std::string defStr = properties.get("definitions", step);
-
-		boost::tokenizer<boost::char_separator<char>> tokens = boost::tokenizer<boost::char_separator<char>>(defStr, sep);
-		for(const auto& t : tokens) {
-			std::string name = t;
-			if(!name.empty()) {
-				if(name.find("=") != std::string::npos) {
-					defs[name.substr(0, name.find("="))] = name.substr(name.find("=") + 1);
-				} else {
-					defs[name] = "1";
-				}
-			}
-		}
-		return defs;
-	}
-
-	core::ProgramPtr IntegrationTestCase::load(core::NodeManager& manager) const {
-		return toConversionJob().execute(manager);
-	}
-
-	core::tu::IRTranslationUnit IntegrationTestCase::loadTU(core::NodeManager& manager) const {
-		return toConversionJob().toIRTranslationUnit(manager);
-	}
-
-	std::string IntegrationTestCase::getCompilerString(std::string step, bool considerEnvVars, bool isCpp) const {
-		auto compilerProperty = properties.get("compiler", step);
-		if(considerEnvVars) {
-			if(!isCpp) {
-				if(getenv(INSIEME_C_BACKEND_COMPILER) != nullptr) {
-					return utils::compiler::getDefaultCCompilerExecutable();
-				}
-			} else {
-				if(getenv(INSIEME_CXX_BACKEND_COMPILER) != nullptr) {
-					return utils::compiler::getDefaultCxxCompilerExecutable();
-				}
-			}
-		}
-		return compilerProperty;
-	}
-
-	const vector<string> IntegrationTestCase::getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const {
-		vector<string> compArgs;
-
-		//TODO add compiler specific arguments
-
-		// add include directories
-		for(const auto& cur : includeDirs) {
-			compArgs.push_back(std::string("-I") + cur.string());
-		}
-
-		// add external lib dirs
-		for(const auto& cur : libDirs) {
-			compArgs.push_back(std::string("-L") + cur.string());
-		}
-
-		// add external libs
-		for(const auto& cur : libNames) {
-			compArgs.push_back(std::string("-l") + cur);
-		}
-
-		// add openMP and OpenCL flags
-		if(enableOpenMP) { compArgs.push_back("-fopenmp"); }
-		if(enableOpenCL) { compArgs.push_back("-fopencl=1"); compArgs.push_back("-lOpenCL"); }
-
-		// add pre-processor definitions
-		for_each(getDefinitions(step), [&](const std::pair<string, string>& def) {
-			std::string definition = "-D" + def.first + "=" + def.second;
-			compArgs.push_back(definition);
-		});
-
-		return compArgs;
-	}
-
-	const vector<string> IntegrationTestCase::getInsiemeCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const {
-		vector<string> compArgs;
-
-		// add intercepted include directories
-		for(const auto& cur : interceptedHeaderFileDirectories) {
-			compArgs.push_back(std::string(" --intercept-include ") + cur.string());
-		}
-
-		return compArgs;
-	}
-
 	namespace fs = boost::filesystem;
 
 	namespace {
@@ -483,6 +364,126 @@ namespace integration {
 			std::sort(testCases.begin(), testCases.end());
 			return testCases;
 		}
+
+	}
+
+	IntegrationTestCase::IntegrationTestCase(const string& name,
+	                                         const boost::filesystem::path& dir,
+	                                         const vector<boost::filesystem::path>& files,
+	                                         const vector<boost::filesystem::path>& includeDirs,
+	                                         const vector<boost::filesystem::path>& libDirs,
+	                                         const vector<string>& libNames,
+	                                         const vector<boost::filesystem::path>& interceptedHeaderFileDirectories,
+	                                         bool enableOpenMP,
+	                                         bool enableOpenCL,
+	                                         const Properties& properties)
+				: name(name), dir(dir), files(files), includeDirs(includeDirs), libDirs(libDirs), libNames(libNames),
+					interceptedHeaderFileDirectories(interceptedHeaderFileDirectories), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL),
+					properties(properties) {
+		if(enableOpenCL) {
+			// add the OpenCL specific directories
+			this->includeDirs.push_back(utils::getInsiemeLibsRootDir() + "opencl/include");
+			this->libDirs.push_back(utils::getInsiemeLibsRootDir() + "opencl/lib64/");
+		}
+	}
+
+	frontend::ConversionJob IntegrationTestCase::toConversionJob() const {
+		// prepare arguments
+		std::vector<std::string> args = {"dummy_compiler_name_as_first_argument"};
+		auto compilerArgs = getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_CONVERT, false, false);
+		args.insert(args.end(), compilerArgs.begin(), compilerArgs.end());
+
+		// parse using our standard command line parser
+		driver::cmd::Options options = driver::cmd::Options::parse(args);
+
+		return options.job;
+	}
+
+	const map<string, string> IntegrationTestCase::getDefinitions(std::string step) const {
+		std::map<string, string> defs;
+		boost::char_separator<char> sep("\",");
+		std::string defStr = properties.get("definitions", step);
+
+		boost::tokenizer<boost::char_separator<char>> tokens = boost::tokenizer<boost::char_separator<char>>(defStr, sep);
+		for(const auto& t : tokens) {
+			std::string name = t;
+			if(!name.empty()) {
+				if(name.find("=") != std::string::npos) {
+					defs[name.substr(0, name.find("="))] = name.substr(name.find("=") + 1);
+				} else {
+					defs[name] = "1";
+				}
+			}
+		}
+		return defs;
+	}
+
+	core::ProgramPtr IntegrationTestCase::load(core::NodeManager& manager) const {
+		return toConversionJob().execute(manager);
+	}
+
+	core::tu::IRTranslationUnit IntegrationTestCase::loadTU(core::NodeManager& manager) const {
+		return toConversionJob().toIRTranslationUnit(manager);
+	}
+
+	std::string IntegrationTestCase::getCompilerString(std::string step, bool considerEnvVars, bool isCpp) const {
+		auto compilerProperty = properties.get("compiler", step);
+		if(considerEnvVars) {
+			if(!isCpp) {
+				if(getenv(INSIEME_C_BACKEND_COMPILER) != nullptr) {
+					return utils::compiler::getDefaultCCompilerExecutable();
+				}
+			} else {
+				if(getenv(INSIEME_CXX_BACKEND_COMPILER) != nullptr) {
+					return utils::compiler::getDefaultCxxCompilerExecutable();
+				}
+			}
+		}
+		return compilerProperty;
+	}
+
+	const vector<string> IntegrationTestCase::getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const {
+		vector<string> compArgs;
+
+		//TODO add compiler specific arguments
+
+		// add include directories
+		for(const auto& cur : includeDirs) {
+			compArgs.push_back(std::string("-I") + cur.string());
+		}
+
+		// add external lib dirs
+		for(const auto& cur : libDirs) {
+			compArgs.push_back(std::string("-L") + cur.string());
+		}
+
+		// add external libs
+		for(const auto& cur : libNames) {
+			compArgs.push_back(std::string("-l") + cur);
+		}
+
+		// add openMP and OpenCL flags
+		if(enableOpenMP) { compArgs.push_back("-fopenmp"); }
+		if(enableOpenCL) { compArgs.push_back("-fopencl=1"); compArgs.push_back("-lOpenCL"); }
+
+		// add pre-processor definitions
+		for_each(getDefinitions(step), [&](const std::pair<string, string>& def) {
+			std::string definition = "-D" + def.first + "=" + def.second;
+			compArgs.push_back(definition);
+		});
+
+		return compArgs;
+	}
+
+	const vector<string> IntegrationTestCase::getInsiemeCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const {
+		vector<string> compArgs;
+
+		// add intercepted include directories
+		for(const auto& cur : interceptedHeaderFileDirectories) {
+			compArgs.push_back(std::string(" --intercept-include ") + cur.string());
+		}
+
+		return compArgs;
 	}
 
 	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode, const string& defaultTestDir) {
