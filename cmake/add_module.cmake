@@ -1,10 +1,5 @@
-if(BUILD_TESTS)
-	include(googletest)
-endif()
-
-if(MSVC)
-	include(msvc_source_group)
-endif()
+include(googletest)
+include(msvc_source_group)
 
 macro(add_module_library module)
 	set(options HEADER_ONLY C_LINKAGE)
