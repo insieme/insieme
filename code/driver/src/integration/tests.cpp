@@ -198,12 +198,28 @@ namespace integration {
 			return utils::getInsiemeSourceRootDir() + "../test/";
 		}
 
-		Properties getGlobalProperties() {
+		boost::optional<Properties> loadProperties(const fs::path& configFile) {
+			// the directory should be absolute
+			assert_eq(configFile, fs::absolute(configFile)) << "Expecting an absolute path - got " << configFile << "\n";
+
+			if(fs::exists(configFile)) {
+				// try loading file
+				fs::ifstream in(configFile);
+				if(in.is_open()) {
+					return Properties::load(in);
+				} else {
+					LOG(WARNING) << "Unable to open test-configuration file " << configFile << "\n";
+				}
+			}
+			return {};
+		}
+
+		Properties getGlobalConfiguration() {
 			//loadProperties(fs::current_path(), "integration_test_config");
 			return {};
 		}
 
-		Properties loadProperties(const fs::path& dir) {
+		Properties getConfiguration(const fs::path& dir) {
 			Properties res;
 
 			// if it is the root we are done
@@ -213,22 +229,17 @@ namespace integration {
 			assert_eq(dir, fs::absolute(dir)) << "Expecting an absolute directory - got " << dir << "\n";
 
 			// load configuration of parent directory
-			res = loadProperties(dir.parent_path());
+			res = getConfiguration(dir.parent_path());
 
 			// check whether there is a config file
 			auto file = dir / "config";
 
-			if(fs::exists(file)) {
-				// try loading file
-				fs::ifstream in(file);
-				if(in.is_open()) {
-					// load local configuration
-					auto p = Properties::load(in);
-					res.set("CUR_CONFIG_PATH", dir.string());
-					res <<= p;
-				} else {
-					LOG(WARNING) << "Unable to open test-configuration file " << file << "\n";
-				}
+			// load the config file
+			auto currentConfig = loadProperties(file);
+			if(currentConfig) {
+				// and merge the config with it's parent
+				res.set("CUR_CONFIG_PATH", dir.string());
+				res <<= (*currentConfig);
 			}
 
 			// done
@@ -253,10 +264,10 @@ namespace integration {
 			prop.set("PATH", testCaseDir.string());
 
 			// load global properties
-			Properties global = getGlobalProperties();
+			Properties global = getGlobalConfiguration();
 
 			// combine the various parts of the configuration (in the proper order)
-			prop = prop << global << loadProperties(testCaseDir);
+			prop = prop << global << getConfiguration(testCaseDir);
 
 			// get files
 			vector<fs::path> files;
