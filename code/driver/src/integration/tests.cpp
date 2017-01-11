@@ -210,7 +210,27 @@ namespace integration {
 		}
 
 		Properties getGlobalConfiguration() {
-			//loadProperties(fs::current_path(), "integration_test_config");
+			const string configFilename = "integration_test_config";
+
+			// first we look in the current working directory and all directories above
+			fs::path dir = fs::absolute(fs::current_path());
+			do {
+				fs::path file = dir / configFilename;
+				if(fs::exists(file)) {
+					return *loadProperties(file);
+				}
+				dir = dir.parent_path();
+			}	while (!dir.empty());
+
+			// after that we try to look in the build folder
+			dir = fs::absolute(utils::getInsiemeBuildRootDir());
+			fs::path file = dir / configFilename;
+			if(fs::exists(file)) {
+				return *loadProperties(file);
+			}
+
+			// otherwise we assert here. We need to have a global config file
+			assert_fail() << "Could not find the global configuration file \"integration_test_config\" anywhere in the current working directory, any of it's parents or the Insieme build folder.";
 			return {};
 		}
 
