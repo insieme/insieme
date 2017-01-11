@@ -22,5 +22,6 @@ include(boost_settings)
 # -- CMake Modules
 include(file_globs)
 include(add_module)
+include(nproc)
 
 # -- Project Modules
