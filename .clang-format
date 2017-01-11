@@ -28,6 +28,6 @@ SpacesInAngles: false
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard: LS_Cpp11
+Standard: Cpp11
 TabWidth: 4
 UseTab: ForIndentation

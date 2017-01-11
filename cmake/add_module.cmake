@@ -7,9 +7,12 @@ if(MSVC)
 endif()
 
 macro(add_module_library module)
+	set(options HEADER_ONLY C_LINKAGE)
+	cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
+
 	glob_sources(${module}_srcs src)
 
-	if(MSVC)
+	if(MSVC OR ARG_HEADER_ONLY)
 		glob_headers(${module}_incs include)
 		set(${module}_srcs ${${module}_srcs} ${${module}_incs})
 	endif()
@@ -17,17 +20,41 @@ macro(add_module_library module)
 	add_library(${module} ${${module}_srcs})
 	target_include_directories(${module} PUBLIC include)
 
+	# The project name will be prefixed to the output file since your
+	# library should be named libinsieme_frontend.so rather than
+	# libfrontend.so. This is especially helpful for installing this
+	# target.
+	set_target_properties(${module} PROPERTIES OUTPUT_NAME ${PROJECT_NAME}_${module})
+
+	if(ARG_C_LINKAGE)
+		set_target_properties(${module} PROPERTIES LINKER_LANGUAGE C)
+	else()
+		set_target_properties(${module} PROPERTIES LINKER_LANGUAGE CXX)
+	endif()
+
 	if(MSVC)
-		msvc_source_group("Source Files" "${${module}_srcs}" src)
-		msvc_source_group("Header Files" "${${module}_incs}" include)
+		string(TOLOWER ${PROJECT_NAME} project_name)
+		string(REPLACE " " "_" project_name ${project_name})
+
+		msvc_source_group("Source Files" "${${module}_srcs}" STRIP src)
+		msvc_source_group("Header Files" "${${module}_incs}" STRIP include/${project_name}/${module})
 		set_target_properties(${module} PROPERTIES FOLDER ${module})
 	endif()
 endmacro()
 
 macro(add_module_executable module exe)
 	get_filename_component(exe_name ${exe} NAME_WE)
+
+	# The target name will be prefixed with the module name so you can have
+	# two main executables in different modules.
 	add_executable(${module}_${exe_name} ${exe})
 	target_link_libraries(${module}_${exe_name} ${module})
+
+	# But the output name will not contain the module prefix, this is fine
+	# inside the build directory since everything is organized in
+	# subfolders. Just be aware when installing the executable, it may be
+	# overwritten by one with the same output name.
+	set_target_properties(${module}_${exe_name} PROPERTIES OUTPUT_NAME ${exe_name})
 
 	if(MSVC)
 		set_target_properties(${module}_${exe_name} PROPERTIES FOLDER ${module})
@@ -64,7 +91,7 @@ macro(add_module_unittest module test)
 		add_test(NAME ${test_name} COMMAND ${test_name})
 
 		if(MSVC)
-			set_target_properties(${test_name} PROPERTIES FOLDER "${module}/test")
+			set_target_properties(${test_name} PROPERTIES FOLDER "${module}/Tests")
 		endif()
 	endif()
 endmacro()
