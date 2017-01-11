@@ -204,7 +204,35 @@ namespace integration {
 		}
 
 		Properties loadProperties(const fs::path& dir) {
-			return {};
+			Properties res;
+
+			// if it is the root we are done
+			if(dir.empty()) { return res; }
+
+			// the directory should be absolute
+			assert_eq(dir, fs::absolute(dir)) << "Expecting an absolute directory - got " << dir << "\n";
+
+			// load configuration of parent directory
+			res = loadProperties(dir.parent_path());
+
+			// check whether there is a config file
+			auto file = dir / "config";
+
+			if(fs::exists(file)) {
+				// try loading file
+				fs::ifstream in(file);
+				if(in.is_open()) {
+					// load local configuration
+					auto p = Properties::load(in);
+					res.set("CUR_CONFIG_PATH", dir.string());
+					res <<= p;
+				} else {
+					LOG(WARNING) << "Unable to open test-configuration file " << file << "\n";
+				}
+			}
+
+			// done
+			return res;
 		}
 
 		boost::optional<IntegrationTestCase> loadSingleTestCase(const std::string& testName) {
@@ -242,6 +270,11 @@ namespace integration {
 				}
 			};
 
+			// use the files specified in the configuration file, if present
+			for(const auto& file : prop.get<vector<string>>("files")) {
+				addPath(files, file);
+			}
+
 			// no files specified, use default names
 			if(files.size() == 0) {
 				// extract the case name from the test directory
@@ -260,12 +293,6 @@ namespace integration {
 				} else {
 					LOG(WARNING) << "Directory " << testCaseDir << " doesn't contain a matching .c or .cpp file - Skipping";
 					return {};
-				}
-
-				// otherwise we use the files specified in the configuration file
-			} else {
-				for(const auto& file : prop.get<vector<string>>("files")) {
-					addPath(files, file);
 				}
 			}
 
