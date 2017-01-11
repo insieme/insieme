@@ -20,6 +20,12 @@ macro(add_module_library module)
 	add_library(${module} ${${module}_srcs})
 	target_include_directories(${module} PUBLIC include)
 
+	# The project name will be prefixed to the output file since your
+	# library should be named libinsieme_frontend.so rather than
+	# libfrontend.so. This is especially helpful for installing this
+	# target.
+	set_target_properties(${module} PROPERTIES OUTPUT_NAME ${PROJECT_NAME}_${module})
+
 	if(ARG_C_LINKAGE)
 		set_target_properties(${module} PROPERTIES LINKER_LANGUAGE C)
 	else()
@@ -37,20 +43,21 @@ macro(add_module_library module)
 endmacro()
 
 macro(add_module_executable module exe)
-	set(options NO_PREFIX)
-	cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
-
 	get_filename_component(exe_name ${exe} NAME_WE)
 
-	if(NOT ARG_NO_PREFIX)
-		set(exe_name ${module}_${exe_name})
-	endif()
+	# The target name will be prefixed with the module name so you can have
+	# two main executables in different modules.
+	add_executable(${module}_${exe_name} ${exe})
+	target_link_libraries(${module}_${exe_name} ${module})
 
-	add_executable(${exe_name} ${exe})
-	target_link_libraries(${exe_name} ${module})
+	# But the output name will not contain the module prefix, this is fine
+	# inside the build directory since everything is organized in
+	# subfolders. Just be aware when installing the executable, it may be
+	# overwritten by one with the same output name.
+	set_target_properties(${module}_${exe_name} PROPERTIES OUTPUT_NAME ${exe_name})
 
 	if(MSVC)
-		set_target_properties(${exe_name} PROPERTIES FOLDER ${module})
+		set_target_properties(${module}_${exe_name} PROPERTIES FOLDER ${module})
 	endif()
 endmacro()
 
