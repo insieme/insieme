@@ -229,14 +229,23 @@ namespace integration {
 			return {};
 		}
 
-		Properties getConfiguration(const fs::path& dir) {
-			Properties res;
+		// a simple cache for configurations to speed up the lookup
+		std::map<fs::path, Properties> CONFIG_CACHE;
 
+		Properties getConfiguration(const fs::path& dir) {
 			// if it is the root we are done
-			if(dir.empty()) { return res; }
+			if(dir.empty()) { return {}; }
 
 			// the directory should be absolute
 			assert_eq(dir, fs::absolute(dir)) << "Expecting an absolute directory - got " << dir << "\n";
+
+			// perform cache lookup
+			auto it = CONFIG_CACHE.find(dir);
+			if(it != CONFIG_CACHE.end()) {
+				return it->second;
+			}
+
+			Properties res;
 
 			// load configuration of parent directory
 			res = getConfiguration(dir.parent_path());
@@ -251,6 +260,9 @@ namespace integration {
 				res.set("CUR_CONFIG_PATH", dir.string());
 				res <<= (*currentConfig);
 			}
+
+			// cache result
+			CONFIG_CACHE.insert({ dir, res });
 
 			// done
 			return res;
