@@ -193,11 +193,6 @@ namespace integration {
 
 	namespace {
 
-		std::string getDefaultTestDir() {
-			//TODO adapt for external projects
-			return utils::getInsiemeSourceRootDir() + "../test/";
-		}
-
 		boost::optional<Properties> loadProperties(const fs::path& configFile) {
 			// the directory should be absolute
 			assert_eq(configFile, fs::absolute(configFile)) << "Expecting an absolute path - got " << configFile << "\n";
@@ -246,9 +241,9 @@ namespace integration {
 			return res;
 		}
 
-		boost::optional<IntegrationTestCase> loadSingleTestCase(const std::string& testName) {
+		boost::optional<IntegrationTestCase> loadSingleTestCase(const std::string& testName, const string& defaultTestDir) {
 			// get the test directory -- if the testName is an existing path skip appending rootDir
-			auto testDir = (fs::exists(fs::path(testName))) ? fs::path(testName) : fs::path(getDefaultTestDir()) / testName;
+			auto testDir = (fs::exists(fs::path(testName))) ? fs::path(testName) : fs::path(defaultTestDir) / testName;
 
 			// check test case directory
 			const fs::path testCaseDir = fs::canonical(fs::absolute(testDir));
@@ -332,7 +327,7 @@ namespace integration {
 			}
 
 			// find "canonical" test name regardless of setup
-			string canonicalRoot = fs::canonical(fs::path(getDefaultTestDir())).string();
+			string canonicalRoot = fs::canonical(fs::path(defaultTestDir)).string();
 			string prefix = commonPrefix(testCaseDir.string(), canonicalRoot);
 			string name = testCaseDir.string().substr(prefix.size());
 			// don't just replace "test/" here, as unintended replacements might occur deeper in the directory structure
@@ -345,7 +340,8 @@ namespace integration {
 			                           interceptedHeaderFileDirectories, enableOpenMP, enableOpenCL, prop);
 		}
 
-		vector<IntegrationTestCase> loadAllCasesInDirectory(const std::string& testDirStr, const LoadTestCaseMode loadMode = ENABLED_TESTS) {
+		vector<IntegrationTestCase> loadAllCasesInDirectory(const std::string& testDirStr, const string& defaultTestDir,
+		                                                    const LoadTestCaseMode loadMode = ENABLED_TESTS) {
 			// create a new result vector
 			vector<IntegrationTestCase> res;
 
@@ -434,7 +430,7 @@ namespace integration {
 
 						//if the test suite is blacklisted and we should run blacklisted tests, we descend and schedule all tests
 						auto childLoadMode = (testIsBlacklisted && loadMode == BLACKLISTED_TESTS) ? ALL_TESTS : loadMode;
-						vector<IntegrationTestCase>&& subCases = loadAllCasesInDirectory((testCaseDir).string(), childLoadMode);
+						vector<IntegrationTestCase>&& subCases = loadAllCasesInDirectory((testCaseDir).string(), defaultTestDir, childLoadMode);
 						std::copy(subCases.begin(), subCases.end(), std::back_inserter(res));
 						continue;
 					}
@@ -446,7 +442,7 @@ namespace integration {
 							|| (loadMode == LONG_TESTS && testIsLong)
 							|| (loadMode == ENABLED_TESTS && !testIsBlacklisted && !testIsLong)) {
 						// load individual test case
-						auto testCase = loadSingleTestCase(fs::canonical(fs::absolute(testDir / testCaseName)).string());
+						auto testCase = loadSingleTestCase(fs::canonical(fs::absolute(testDir / testCaseName)).string(), defaultTestDir);
 						if(testCase) { res.push_back(*testCase); }
 					}
 				}
@@ -455,21 +451,21 @@ namespace integration {
 			return res;
 		}
 
-		vector<IntegrationTestCase> getAllTestCasesInternal(const LoadTestCaseMode loadTestCaseMode) {
-			auto testCases = loadAllCasesInDirectory(getDefaultTestDir(), loadTestCaseMode);
+		vector<IntegrationTestCase> getAllTestCasesInternal(const LoadTestCaseMode loadTestCaseMode, const string& defaultTestDir) {
+			auto testCases = loadAllCasesInDirectory(defaultTestDir, defaultTestDir, loadTestCaseMode);
 			std::sort(testCases.begin(), testCases.end());
 			return testCases;
 		}
 	}
 
-	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode) {
-		static vector<IntegrationTestCase> TEST_CASES = getAllTestCasesInternal(loadTestCaseMode);
+	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode, const string& defaultTestDir) {
+		static vector<IntegrationTestCase> TEST_CASES = getAllTestCasesInternal(loadTestCaseMode, defaultTestDir);
 		return TEST_CASES;
 	}
 
-	const boost::optional<IntegrationTestCase> getCase(const string& name) {
+	const boost::optional<IntegrationTestCase> getCase(const string& name, const string& defaultTestDir) {
 		// get all cases which are loaded by default
-		auto allCases = getAllCases();
+		auto allCases = getAllCases(ENABLED_TESTS, defaultTestDir);
 
 		// search for case with given name
 		for(const auto& testCase : allCases) {
@@ -487,10 +483,10 @@ namespace integration {
 		}
 
 		// try loading test case directly (e.g if blacklisted)
-		return loadSingleTestCase(name);
+		return loadSingleTestCase(name, defaultTestDir);
 	}
 
-	vector<IntegrationTestCase> getTestSuite(const string& path) {
+	vector<IntegrationTestCase> getTestSuite(const string& path, const string& defaultTestDir) {
 		// create a dummy error code object to ignore if the path can't be resolved
 		boost::system::error_code errorCode;
 		// convert the path into an absolute path
@@ -498,13 +494,13 @@ namespace integration {
 
 		// if the given path doesn't exist, we try to interpret the argument as relative to the base test directory
 		if (!fs::exists(absolute_path)) {
-			absolute_path = fs::canonical(fs::absolute(getDefaultTestDir() + path));
+			absolute_path = fs::canonical(fs::absolute(defaultTestDir + path));
 		}
 
 		// first check if it's an individual test case. Individual test cases have no "blacklisted_tests" file in their folder
 		const fs::path blacklistFile = absolute_path / "blacklisted_tests";
 		if(!fs::exists(blacklistFile)) {
-			auto testCase = loadSingleTestCase(path);
+			auto testCase = loadSingleTestCase(path, defaultTestDir);
 			if(testCase) {
 				return toVector(*testCase);
 			} else {
@@ -513,7 +509,7 @@ namespace integration {
 		}
 
 		// otherwise it is a whole directory structure. Load all the test cases in there
-		return loadAllCasesInDirectory(absolute_path.string());
+		return loadAllCasesInDirectory(absolute_path.string(), defaultTestDir);
 	}
 
 } // end namespace integration

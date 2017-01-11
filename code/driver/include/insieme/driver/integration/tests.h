@@ -46,6 +46,7 @@
 
 #include "insieme/core/ir_program.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/config.h"
 #include "insieme/driver/integration/properties.h"
 
 namespace insieme {
@@ -297,7 +298,8 @@ namespace integration {
 	/**
 	 * Obtains a full list of all test cases available within the system.
 	 */
-	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode = ENABLED_TESTS);
+	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode = ENABLED_TESTS,
+	                                               const string& defaultTestDir = utils::getInsiemeTestRootDir());
 
 	/**
 	 * Obtains the test case matching the given name.
@@ -305,7 +307,8 @@ namespace integration {
 	 * @param name the name of the test case looking for
 	 * @return an optional representing the test case or being uninitialized if there is no such test case.
 	 */
-	const boost::optional<IntegrationTestCase> getCase(const string& name);
+	const boost::optional<IntegrationTestCase> getCase(const string& name,
+	                                                   const string& defaultTestDir = utils::getInsiemeTestRootDir());
 
 	/**
 	 * Obtains a list of test cases in the given path or below.
@@ -313,7 +316,8 @@ namespace integration {
 	 * @param path the directory representing the integration test
 	 * @return the list of test cases within this directory or below
 	 */
-	vector<IntegrationTestCase> getTestSuite(const string& path);
+	vector<IntegrationTestCase> getTestSuite(const string& path,
+	                                         const string& defaultTestDir = utils::getInsiemeTestRootDir());
 
 	/**
 	 * Allow Integration Tests to be properly printed within gtest.
