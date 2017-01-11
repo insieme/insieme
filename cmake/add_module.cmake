@@ -91,7 +91,7 @@ macro(add_module_unittest module test)
 		add_test(NAME ${test_name} COMMAND ${test_name})
 
 		if(MSVC)
-			set_target_properties(${test_name} PROPERTIES FOLDER "${module}/test")
+			set_target_properties(${test_name} PROPERTIES FOLDER "${module}/Tests")
 		endif()
 	endif()
 endmacro()
