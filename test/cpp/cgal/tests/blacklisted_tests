@@ -19,4 +19,4 @@ CGAL_CFG_USING_BASE_MEMBER_BUG_2
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
-+ CGAL_CFG_LONGNAME_BUG
++CGAL_CFG_LONGNAME_BUG

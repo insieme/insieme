@@ -2,11 +2,6 @@
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
 array_bug
-boost_array
-boost_err_msg
-boost_intercepted_naming
-boost_mutex
-boost_noncopyable
 const_type_modifier
 if_decl
 indirect_member_init
@@ -15,7 +10,6 @@ isstream
 mbstate
 member_function_ptr_init
 non_default_static
-non_working
 options
 static_data_member_struct
 static_in_template
