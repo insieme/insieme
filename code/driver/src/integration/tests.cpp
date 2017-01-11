@@ -145,11 +145,6 @@ namespace integration {
 
 		//TODO add compiler specific arguments
 
-		// add all the input files
-		for(auto file : files) {
-			compArgs.push_back(file.string());
-		}
-
 		// add include directories
 		for(const auto& cur : includeDirs) {
 			compArgs.push_back(std::string("-I") + cur.string());
