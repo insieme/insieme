@@ -55,6 +55,9 @@ endmacro()
 
 macro(add_module_unittest module test)
 	if(BUILD_TESTS)
+		set(options VALGRIND PARALLEL)
+		cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
+
 		# subdirectory list
 		get_filename_component(test_dir ${test} DIRECTORY)
 		string(CONCAT current_dir ${CMAKE_CURRENT_SOURCE_DIR} "/test")
@@ -62,9 +65,13 @@ macro(add_module_unittest module test)
 		string(SUBSTRING ${test_dir} ${current_dir_length} -1 test_stripped_dir)
 		string(REPLACE "/" "_" test_subdir "${test_stripped_dir}")
 
+		if(USE_VALGRIND AND ARG_VALGRIND)
+			set(test_prefix "valgrind_")
+		endif()
+
 		# setup full name
 		get_filename_component(test_name ${test} NAME_WE)
-		set(test_name "ut_${module}${test_subdir}_${test_name}")
+		set(test_name "ut_${test_prefix}${module}${test_subdir}_${test_name}")
 
 		# build executable
 		add_executable(${test_name} ${test})
@@ -79,8 +86,19 @@ macro(add_module_unittest module test)
 		find_package(Threads REQUIRED)
 		target_link_libraries(${test_name} ${CMAKE_THREAD_LIBS_INIT})
 
-		# register executable as test
-		add_test(NAME ${test_name} COMMAND ${test_name})
+		# set command for running the test
+		set(test_cmd ${CMAKE_CURRENT_BINARY_DIR}/${test_name})
+		if(USE_VALGRIND AND ARG_VALGRIND)
+			find_package(Valgrind REQUIRED)
+			set(test_cmd ${Valgrind_EXECUTABLE} ${Valgrind_FLAGS} ${test_cmd})
+		endif()
+		if(ARG_PARALLEL)
+			string(REPLACE ";" " " test_cmd "${test_cmd}")
+			set(test_cmd ${PROJECT_SOURCE_DIR}/scripts/gtest/run_parallel -w ${NPROC_HALF} ${test_cmd})
+		endif()
+
+		# register test
+		add_test(NAME ${test_name} COMMAND ${test_cmd} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 		if(MSVC)
 			set_target_properties(${test_name} PROPERTIES FOLDER "${module}/Tests")
