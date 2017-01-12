@@ -27,3 +27,10 @@ use_cpp[insiemecc_run_cpp_compile]=1
 use_cpp[insiemecc_seq_cpp_compile]=1
 use_libpthread=1
 outputAwk=
+
+# finally the compiler configuration settings
+compilerConfigurationFile[insiemecc]="${CUR_CONFIG_PATH}/compilerConfiguration.insiemecc"
+compilerConfigurationFile[gcc]="${CUR_CONFIG_PATH}/compilerConfiguration.gcc"
+compilerConfigurationFile[g++]="${CUR_CONFIG_PATH}/compilerConfiguration.g++_and_clang"
+compilerConfigurationFile[clang]="${CUR_CONFIG_PATH}/compilerConfiguration.g++_and_clang"
+compilerConfigurationFile[clang++]="${CUR_CONFIG_PATH}/compilerConfiguration.g++_and_clang"
