@@ -149,6 +149,38 @@ namespace integration {
 			return res;
 		}
 
+		// a simple cache for compiler configurations to speed up the lookup
+		std::map<std::string, Properties> COMPILER_CONFIG_CACHE;
+
+		Properties getCompilerArgumentsFromConfiguration(const string& compilerString, const Properties& properties) {
+			// get the filename from the compilerString
+			auto compilerName = fs::path(compilerString).filename().string();
+
+			// perform cache lookup
+			auto it = COMPILER_CONFIG_CACHE.find(compilerName);
+			if(it != COMPILER_CONFIG_CACHE.end()) {
+				return it->second;
+			}
+
+			// get the filename of the compiler configuration
+			auto configurationFilename = properties.get("compilerConfigurationFile", compilerName);
+			if(configurationFilename.empty()) {
+				assert_fail() << "Could not find property \"compilerConfigurationFile[" << compilerName << "]\" anywhere in configuration.";
+			}
+
+			auto loadedProperties = loadProperties(fs::path(configurationFilename));
+			if(!loadedProperties) {
+				assert_fail() << "Unable to load compiler configuration file " << configurationFilename;
+			}
+
+			Properties res = *loadedProperties;
+
+			// cache result
+			COMPILER_CONFIG_CACHE.insert({ compilerName, res });
+
+			return res;
+		}
+
 		boost::optional<IntegrationTestCase> loadSingleTestCase(const std::string& testName, const string& defaultTestDir) {
 			// get the test directory -- if the testName is an existing path skip appending rootDir
 			auto testDir = (fs::exists(fs::path(testName))) ? fs::path(testName) : fs::path(defaultTestDir) / testName;
@@ -452,8 +484,6 @@ namespace integration {
 	const vector<string> IntegrationTestCase::getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp, bool addLibs) const {
 		vector<string> compArgs;
 
-		//TODO add compiler specific arguments
-
 		// add include directories
 		for(const auto& cur : includeDirs) {
 			compArgs.push_back(std::string("-I") + cur.string());
@@ -471,15 +501,40 @@ namespace integration {
 			}
 		}
 
-		// add openMP and OpenCL flags
-		if(enableOpenMP) { compArgs.push_back("-fopenmp"); }
-		if(enableOpenCL) { compArgs.push_back("-fopencl=1"); compArgs.push_back("-lOpenCL"); }
-
 		// add pre-processor definitions
 		for_each(getDefinitions(step), [&](const std::pair<string, string>& def) {
 			std::string definition = "-D" + def.first + "=" + def.second;
 			compArgs.push_back(definition);
 		});
+
+		// add compiler flags according to the compiler configuration file
+		auto compilerString = getCompilerString(step, considerEnvVars, isCpp);
+		auto compilerArgsFromConfig = getCompilerArgumentsFromConfiguration(compilerString, properties);
+
+		for(const auto& key : properties.getKeys()) {
+			auto isBoolFlagSet = properties.get<bool>(key, step);
+			// check if property is switched on
+			if(isBoolFlagSet) {
+				// check if property is supported
+				if(compilerArgsFromConfig.getKeys().count(key) != 0) {
+					// there might be multiple values per key here
+					auto args = compilerArgsFromConfig.get<std::vector<std::string>>(key);
+					compArgs.insert(compArgs.end(), args.begin(), args.end());
+				} else {
+					std::cout << "WARNING: Property " << key << " not supported by the current compiler configuration!" << std::endl;
+				}
+			}
+		}
+
+		// add standard flags specified in configuration file
+		auto standardFlags = compilerArgsFromConfig.get<std::vector<std::string>>("standardFlags");
+		compArgs.insert(compArgs.end(), standardFlags.begin(), standardFlags.end());
+
+		// add remaining flags
+		compArgs.push_back(properties.get("compFlags", step));
+
+		// remove all empty arguments
+		compArgs.erase(std::remove_if(compArgs.begin(), compArgs.end(), [](const auto& arg) { return arg.empty(); }), compArgs.end());
 
 		return compArgs;
 	}
