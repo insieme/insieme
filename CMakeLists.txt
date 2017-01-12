@@ -18,6 +18,7 @@ include(insieme_specific)
 
 # -- Dependency Versions
 set(Boost_VERSION 1.59.0 CACHE STRING "Boost Version")
+set(CUDD_VERSION 2.4.2 CACHE STRING "CUDD Version")
 
 # -- Dependency Settings
 include(boost_settings)
@@ -30,3 +31,4 @@ include(nproc)
 # -- Project Modules
 add_subdirectory(code/common)
 add_subdirectory(code/utils)
+add_subdirectory(code/core)

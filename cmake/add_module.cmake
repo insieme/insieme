@@ -56,7 +56,8 @@ endmacro()
 macro(add_module_unittest module test)
 	if(BUILD_TESTS)
 		set(options VALGRIND PARALLEL)
-		cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
+		set(one_value_args TARGET_NAME)
+		cmake_parse_arguments(ARG "${options}" "${one_value_args}" "" ${ARGN})
 
 		# subdirectory list
 		get_filename_component(test_dir ${test} DIRECTORY)
@@ -72,6 +73,11 @@ macro(add_module_unittest module test)
 		# setup full name
 		get_filename_component(test_name ${test} NAME_WE)
 		set(test_name "ut_${test_prefix}${module}${test_subdir}_${test_name}")
+
+		# output generated target name
+		if(ARG_TARGET_NAME)
+			set(${ARG_TARGET_NAME} ${test_name})
+		endif()
 
 		# build executable
 		add_executable(${test_name} ${test})

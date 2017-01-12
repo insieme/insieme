@@ -32,23 +32,23 @@ Dir["**/ir_*.h"].each { |header|
 	code.gsub!(/\/\/.*?$/, "")
 	code.gsub!(/\/\*.*?\*\//, "")
 	# find signatures
-	code.gsub(simpleGetterExp) { |m| 
+	code.gsub(simpleGetterExp) { |m|
 		ptrTypeName = $1.strip
 		managerTypeName = $2.strip
 		params = nil
 		#puts("#{ptrTypeName} -- #{managerTypeName} -- #{params}")
-		if ptrTypeName !~ /##/		
+		if ptrTypeName !~ /##/
 			signatures << [ptrTypeName, managerTypeName, params]
 		end
 	}
-	code.gsub(getterExp) { |m| 
+	code.gsub(getterExp) { |m|
 		ptrTypeName = $1.strip
 		managerTypeName = $2.strip
 		params = $3.gsub("\n", "").strip
 		#puts("#{ptrTypeName} -- #{managerTypeName} -- #{params}")
-		if ptrTypeName !~ /##/		
+		if ptrTypeName !~ /##/
 			signatures << [ptrTypeName, managerTypeName, params]
-		end	
+		end
 	}
 }
 
@@ -62,7 +62,7 @@ newsigs = signatures.to_s.strip
 
 if sigcache == newsigs
 	# puts "Builderbuilder.rb : no change in signatures detected, skipping file generation."
-else 
+else
 	File.open(sigcache_file, "w+") { |sigfile| sigfile.puts(newsigs) }
 
 	File.open(irbuilder_header_file, "w+") { |inlFile|
@@ -85,7 +85,7 @@ else
 				inlFileImpl.puts("#{sig[0].ljust(18)} IRBuilderBaseModule::#{funDecl} const { return #{typeName}::get(manager); }")
 			end
 		}
-	} 
+	}
 	}
 end
 

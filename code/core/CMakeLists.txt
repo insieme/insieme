@@ -1,147 +1,79 @@
-#
-# Builds the insieme core library
-project(insieme_core CXX)
-message(STATUS "========== configure core =============")
-cmake_minimum_required(VERSION 3.5)
+add_module_library(core)
 
-# Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
-file(GLOB_RECURSE insieme_core_srcs src/*.cpp src/*.def src/*.inc )
-insieme_glob_headers(insieme_core_incs 	include)
+target_link_libraries(core common)
+target_link_libraries(core utils)
 
-file(GLOB_RECURSE insieme_core_yy src/*.y src/*.yy )
-file(GLOB_RECURSE insieme_core_ll src/*.l src/*.ll )
+# Boost
+find_package(Boost ${Boost_VERSION} EXACT REQUIRED COMPONENTS filesystem system)
+target_link_libraries(core ${Boost_LIBRARIES})
+target_include_directories(core SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 
-set(insieme_core_srcs ${insieme_core_srcs} ${insieme_core_yy} ${insieme_core_ll})
+# CUDD
+find_package(CUDD ${CUDD_VERSION} EXACT REQUIRED)
+target_link_libraries(core ${CUDD_LIBRARIES})
+target_include_directories(core SYSTEM PUBLIC ${CUDD_INCLUDE_DIRS})
 
-# automatically run the script for generating IRBuilder interface
-set(builderbuilder_script_dir ${insieme_code_dir}/core)
+# Generate IRBuilder interface
+# apparently CMake's find_package for Ruby is broken, see https://github.com/NREL/OpenStudio/issues/1271
 set(builderbuilder_output_dir ${CMAKE_CURRENT_BINARY_DIR}/generated)
-
 file(MAKE_DIRECTORY ${builderbuilder_output_dir})
-
 execute_process(
-	WORKING_DIRECTORY ${builderbuilder_script_dir}
-	COMMAND           ruby builderbuilder.rb ${builderbuilder_output_dir}
-	RESULT_VARIABLE   builderbuilder_success
-	OUTPUT_VARIABLE   builderbuilder_output
-	ERROR_VARIABLE    builderbuilder_output)
-
-if(NOT ${builderbuilder_success} EQUAL 0)
-	message(FATAL_ERROR "Ruby builder builder script failed to execute, reason:\n${builderbuilder_output}")
+	COMMAND ruby ${CMAKE_CURRENT_SOURCE_DIR}/scripts/builderbuilder.rb ${builderbuilder_output_dir}
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	RESULT_VARIABLE _builderbuilder_result
+	OUTPUT_VARIABLE _builderbuilder_stdout
+	ERROR_VARIABLE  _builderbuilder_stderr
+)
+if(NOT ${_builderbuilder_result} EQUAL 0)
+	message(FATAL_ERROR "Ruby builder builder script failed to execute:\n${_builderbuilder_stdout}\n\n${_builderbuilder_stderr}")
 endif()
+file(GLOB_RECURSE builderbuilder_output ${builderbuilder_output_dir}/*)
+target_include_directories(core PUBLIC ${builderbuilder_output_dir}/include)
+target_sources(core PRIVATE ${builderbuilder_output})
 
-file(GLOB_RECURSE builderbuilder_generated_files ${builderbuilder_output_dir}/*)
-
-
-# =============================================  bison builds the parser  =====================================
+# Generate Inspire Parser
 if(NOT MSVC)
-	insieme_find_package(NAME BISON)
-	IF(BISON_EXECUTABLE-NOTFOUND)
-	    message(FATAL_ERROR "bison not found")
+	find_package(FLEX REQUIRED)
+	find_package(BISON REQUIRED)
 
-	ELSE()
-	    message(STATUS "bison found @ ${BISON_EXECUTABLE}")
+	file(GLOB_RECURSE lexer_input src/*.l src/*.ll)
+	file(GLOB_RECURSE parser_input src/*.y src/*.yy)
 
-	    set(BISON_INPUT ${insieme_core_yy})
-	    set(BISON_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bison-flex/)
-	    file(MAKE_DIRECTORY ${BISON_OUTPUT_PATH})
-	    set(BISON_O_FILE inspire_parser.cpp)
-	    set(BISON_OUTPUT ${BISON_OUTPUT_PATH}/${BISON_O_FILE})
+	set(parser_output_dir ${CMAKE_CURRENT_BINARY_DIR}/inspire_parser)
 
-	    ADD_CUSTOM_COMMAND(
-	      SOURCE ${BISON_INPUT}
-	      COMMAND ${BISON_EXECUTABLE}
-	      ARGS -d -v
-		    --report=all
-		   -o ${BISON_O_FILE}
-		   --graph
-		  ${BISON_INPUT}
-	      COMMENT "Generating inspire parser"
-	      DEPENDS ${BISON_INPUT}
-	      WORKING_DIRECTORY ${BISON_OUTPUT_PATH}
-	      OUTPUT ${BISON_OUTPUT}
+	set(lexer_output ${parser_output_dir}/inspire_scanner.cpp)
+	set(parser_output ${parser_output_dir}/inspire_parser.cpp)
+
+	file(MAKE_DIRECTORY ${parser_output_dir})
+
+	add_custom_command(
+		COMMAND ${FLEX_EXECUTABLE} -o ${lexer_output} ${lexer_input}
+		DEPENDS ${lexer_input}
+		OUTPUT ${lexer_output}
 	)
-	ENDIF()
 
-# =============================================  flex builds the scanner  =====================================
-
-	insieme_find_package(NAME FLEX)
-
-	IF(FLEX_EXECUTABLE-NOTFOUND)
-	    message(FATAL_ERROR "flex not found")
-	ELSE()
-	    message(STATUS "flex found @ ${FLEX_EXECUTABLE}")
-
-	    set(FLEX_INPUT ${insieme_core_ll})
-	    set(FLEX_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bison-flex/)
-	    set(FLEX_OUTPUT ${FLEX_OUTPUT_PATH}/inspire_scanner.cpp)
-
-	    ADD_CUSTOM_COMMAND(
-	      SOURCE ${FLEX_INPUT}
-	      COMMAND ${FLEX_EXECUTABLE}
-	      ARGS -o ${FLEX_OUTPUT}
-		  ${FLEX_INPUT}
-	      COMMENT "Generating inspire scanner"
-	      DEPENDS ${FLEX_INPUT}
-	      WORKING_DIRECTORY ${FLEX_OUTPUT_PATH}
-	      OUTPUT ${FLEX_OUTPUT}
+	add_custom_command(
+		COMMAND ${BISON_EXECUTABLE} -d -v --report=all --graph -o ${parser_output} ${parser_input}
+		DEPENDS ${parser_input}
+		OUTPUT ${parser_output}
 	)
-	ENDIF()
 
-	# make the build aware of generated headers
-	#include_directories( ${FLEX_OUTPUT_PATH} )
-	#include_directories( ${BISON_OUTPUT_PATH} )
-
-	# flex needs a header in installation
-	#include_directories( ${FLEX_INCLUDE_DIRS} )
+	target_include_directories(core PRIVATE ${FLEX_INCLUDE_DIRS})
+	target_include_directories(core PRIVATE ${parser_output_dir})
+	target_sources(core PRIVATE ${lexer_output} ${parser_output})
 endif()
 
-# =============================================  build insieme core .so  =====================================
 
-# Build the core library
-add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${builderbuilder_generated_files} ${FLEX_OUTPUT} ${BISON_OUTPUT})
-target_include_directories(insieme_core PUBLIC ${insieme_core_include_dir} )
-target_include_directories(insieme_core PUBLIC ${builderbuilder_output_dir}/include)
-target_include_directories(insieme_core PRIVATE ${FLEX_OUTPUT_PATH})
-target_include_directories(insieme_core PRIVATE ${BISON_OUTPUT_PATH})
-target_include_directories(insieme_core PRIVATE ${FLEX_INCLUDE_DIRS})
+glob_tests(core_tests test)
+foreach(test ${core_tests})
+	add_module_unittest(core ${test} TARGET_NAME tgt_name)
 
-msvc_file_completion(insieme_core_tests test inc ir)
+	if(BUILD_TESTS)
+		target_include_directories(${tgt_name} PUBLIC test/include)
 
-# We need to add a dummy target here in order to have the generated files available in certain IDEs (e.g. Eclipse)
-add_custom_target(insieme_core_builder_builder_dummy SOURCES ${builderbuilder_generated_files})
-
-# add dependencies
-target_link_libraries(insieme_core insieme_common)
-target_link_libraries(insieme_core insieme_utils)
-
-# lookup CUDD library
-insieme_find_package(NAME CUDD)
-target_link_libraries(insieme_core ${CUDD_LIBRARIES})
-target_include_directories(insieme_core PUBLIC ${CUDD_INCLUDE_DIRS} )
-
-# lookup Boost library
-target_include_directories(insieme_core SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
-
-# =============================================  TESTING  =====================================
-set( ut_prefix  ut_core)
-file(GLOB_RECURSE test_cases test/*.cc)
-foreach ( case_file ${test_cases})
-	get_filename_component( case_name ${case_file} NAME_WE )
-
-	insieme_fix_case_name( case_subdir ${case_file} )
-
-	set ( case_name ${ut_prefix}${case_subdir}_${case_name} )
-	add_executable(${case_name} ${case_file})
-	target_link_libraries(${case_name} insieme_core)
-	target_include_directories(${case_name} PUBLIC test/include/)
-
-	#the parser unit-tests need the bison/flex include directories
-	if(case_file MATCHES ".*parser.*")
-		target_include_directories(${case_name} PRIVATE ${FLEX_OUTPUT_PATH})
-		target_include_directories(${case_name} PRIVATE ${BISON_OUTPUT_PATH})
-		target_include_directories(${case_name} PRIVATE ${FLEX_INCLUDE_DIRS})
+		if(tgt_name MATCHES ".*parser.*")
+			target_include_directories(${tgt_name} PRIVATE ${FLEX_INCLUDE_DIRS})
+			target_include_directories(${tgt_name} PRIVATE ${parser_output_dir})
+		endif()
 	endif()
-
-	add_unit_test(${case_name} ${ut_prefix})
-endforeach(case_file)
+endforeach(test)
