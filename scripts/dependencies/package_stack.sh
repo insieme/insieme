@@ -12,9 +12,12 @@ SHA256SUM_PB="fedf161622170801f29be5d5096ea30e253b2bba54f185607f568c44ee151e5a"
 
 DEPENDS="gmp zlib"
 
-export CPATH="$PREFIX/gmp-latest/include:$PREFIX/zlib-latest/include"
-export LIBRARY_PATH="$PREFIX/gmp-latest/lib:$PREFIX/zlib-latest/lib"
-export LD_LIBRARY_PATH="$PREFIX/gmp-latest/lib:$PREFIX/zlib-latest/lib"
+GMP_PKG=$(get_property gmp PACKAGE)
+ZLIB_PKG=$(get_property zlib PACKAGE)
+
+export CPATH="$PREFIX/$GMP_PKG/include:$PREFIX/$ZLIB_PKG/include"
+export LIBRARY_PATH="$PREFIX/$GMP_PKG/lib:$PREFIX/$ZLIB_PKG/lib"
+export LD_LIBRARY_PATH="$PREFIX/$GMP_PKG/lib:$PREFIX/$ZLIB_PKG/lib"
 
 pkg_download() {
 	wget -nc "$URL"
@@ -41,10 +44,6 @@ pkg_install() {
 	cp "$(find .stack-work/install -name stack)" "$PREFIX/$PACKAGE/bin/stack"
 
 	chmod g+w "$PREFIX/$PACKAGE"
-
-	rm -f "$PREFIX/$NAME-latest"
-	ln -s "$PREFIX/$PACKAGE" "$PREFIX/$NAME-latest"
-	touch "$PREFIX/$PACKAGE/.installed"
 }
 
 pkg_cleanup() {

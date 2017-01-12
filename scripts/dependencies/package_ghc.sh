@@ -8,10 +8,12 @@ SHA256SUM="a8957f7a2fd81720c5d3dc403571d77d31115ff5f42edb2917c36d8e714220d4"
 
 DEPENDS="gmp"
 
+GMP_PKG=$(get_property gmp PACKAGE)
+
 pkg_configure() {
 	./configure --prefix="$PREFIX/$PACKAGE" \
-		--with-gmp-includes="$PREFIX/gmp-latest/include" \
-		--with-gmp-libraries="$PREFIX/gmp-latest/lib"
+		--with-gmp-includes="$PREFIX/$GMP_PKG/include" \
+		--with-gmp-libraries="$PREFIX/$GMP_PKG/lib"
 }
 
 pkg_build() {

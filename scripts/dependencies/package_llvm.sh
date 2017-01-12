@@ -10,6 +10,8 @@ SHA256SUM_CFE="ae9180466a23acb426d12444d866b266ff2289b266064d362462e44f8d4699f3"
 
 DEPENDS="python"
 
+PYTHON_PKG=$(get_property python PACKAGE)
+
 export CFLAGS="-O3 -std=c++0x"
 export CXXFLAGS="-O3 -std=c++0x"
 
@@ -35,7 +37,7 @@ pkg_configure() {
 		--enable-optimized=yes \
 		--enable-shared=yes \
 		--enable-bindings=none \
-		--with-python="$PREFIX/python-latest/bin/python"
+		--with-python="$PREFIX/$PYTHON_PKG/bin/python"
 }
 
 pkg_build() {
@@ -44,9 +46,6 @@ pkg_build() {
 
 pkg_install() {
 	make -j "$SLOTS" clang-only install
-	rm -f "$PREFIX/$NAME-latest"
-	ln -s "$PREFIX/$PACKAGE" "$PREFIX/$NAME-latest"
-	touch "$PREFIX/$PACKAGE/.installed"
 }
 
 pkg_cleanup() {

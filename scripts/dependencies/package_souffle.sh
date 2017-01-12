@@ -6,13 +6,19 @@ FILE="$PACKAGE.zip"
 URL="http://www.insieme-compiler.org/ext_libs/$FILE"
 SHA256SUM="ffc5a36b66b1298a66631e0f89f47ff83a0af7afb8872a24346158e8d50b1cd4"
 
-DEPENDS="bison flex boost sqlite"
+DEPENDS="autoconf automake libtool bison flex boost sqlite"
 
-export PATH="$PREFIX/autoconf-latest/bin:$PREFIX/automake-latest/bin:$PATH"
-export PATH="$PREFIX/libtool-latest/bin:$PATH"
-export PATH="$PREFIX/bison-latest/bin:$PREFIX/flex-latest/bin:$PATH"
+AUTOCONF_PKG=$(get_property autoconf PACKAGE)
+AUTOMAKE_PKG=$(get_property automake PACKAGE)
+LIBTOOL_PKG=$(get_property libtool PACKAGE)
+BISON_PKG=$(get_property bison PACKAGE)
+FLEX_PKG=$(get_property flex PACKAGE)
+BOOST_PKG=$(get_property boost PACKAGE)
+SQLITE_PKG=$(get_property sqlite PACKAGE)
 
-export BOOST_ROOT="$PREFIX/boost-latest"
+export PATH="$PREFIX/$AUTOCONF_PKG/bin:$PREFIX/$AUTOMAKE_PKG/bin:$PATH"
+export PATH="$PREFIX/$LIBTOOL_PKG/bin:$PATH"
+export PATH="$PREFIX/$BISON_PKG/bin:$PREFIX/$FLEX_PKG/bin:$PATH"
 
 pkg_extract() {
 	unzip -o -d "$PACKAGE" "$FILE"
@@ -36,8 +42,8 @@ pkg_configure() {
 	sh ./bootstrap
 	./configure \
 		--prefix="$PREFIX/$PACKAGE" \
-		--with-boost="$BOOST_ROOT" \
+		--with-boost="$PREFIX/$BOOST_PKG" \
 		--disable-java \
-		CPPFLAGS="-I$PREFIX/sqlite-latest/include" \
-		LDFLAGS="-L$PREFIX/sqlite-latest/lib -Wl,-rpath,$BOOST_ROOT/lib"
+		CPPFLAGS="-I$PREFIX/$SQLITE_PKG/include" \
+		LDFLAGS="-L$PREFIX/$SQLITE_PKG/lib -Wl,-rpath,$PREFIX/$BISON_PKG/lib"
 }

@@ -13,7 +13,4 @@ pkg_configure() {
 
 pkg_install() {
 	make install PREFIX="$PREFIX/$PACKAGE"
-	rm -f "$PREFIX/$NAME-latest"
-	ln -s "$PREFIX/$PACKAGE" "$PREFIX/$NAME-latest"
-	touch "$PREFIX/$PACKAGE/.installed"
 }

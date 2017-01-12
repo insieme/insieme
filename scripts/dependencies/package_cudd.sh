@@ -29,9 +29,4 @@ pkg_install() {
 	# move result to prefix
 	cd ..
 	mv "$PACKAGE" "$PREFIX/$PACKAGE"
-
-	# create symlinks
-	rm -f "$PREFIX/$NAME-latest"
-	ln -s "$PREFIX/$PACKAGE" "$PREFIX/$NAME-latest"
-	touch "$PREFIX/$PACKAGE/.installed"
 }

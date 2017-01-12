@@ -4,10 +4,13 @@ PACKAGE="$NAME-$VERSION"
 
 DEPENDS="gcc cmake"
 
-export CC="$PREFIX/gcc-latest/bin/gcc"
-export CXX="$PREFIX/gcc-latest/bin/g++"
-export PATH="$PREFIX/gcc-latest/bin:$PATH"
-export LD_LIBRARY_PATH="$PREFIX/gcc-latest/lib64"
+GCC_PKG=$(get_property gcc PACKAGE)
+CMAKE_PKG=$(get_property cmake PACKAGE)
+
+export CC="$PREFIX/$GCC_PKG/bin/gcc"
+export CXX="$PREFIX/$GCC_PKG/bin/g++"
+export PATH="$PREFIX/$GCC_PKG/bin:$PATH"
+export LD_LIBRARY_PATH="$PREFIX/$GCC_PKG/lib64"
 
 pkg_download() {
 	git clone "http://llvm.org/git/llvm.git" "$PACKAGE"
@@ -25,7 +28,7 @@ pkg_extract() {
 pkg_configure() {
 	mkdir build
 	cd build
-	$PREFIX/cmake-latest/bin/cmake .. -DCMAKE_INSTALL_PREFIX="$PREFIX/$PACKAGE" -DCMAKE_BUILD_TYPE=Release
+	$PREFIX/$CMAKE_PKG/bin/cmake .. -DCMAKE_INSTALL_PREFIX="$PREFIX/$PACKAGE" -DCMAKE_BUILD_TYPE=Release
 }
 
 pkg_cleanup() {
