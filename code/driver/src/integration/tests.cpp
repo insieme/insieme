@@ -390,8 +390,15 @@ namespace integration {
 	frontend::ConversionJob IntegrationTestCase::toConversionJob() const {
 		// prepare arguments
 		std::vector<std::string> args = {"dummy_compiler_name_as_first_argument"};
-		auto compilerArgs = getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_CONVERT, false, false);
+		auto compilerArgs = getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_CONVERT, false, false, false);
+		auto insiemeArgs = getInsiemeCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_CONVERT, false, false);
 		args.insert(args.end(), compilerArgs.begin(), compilerArgs.end());
+		args.insert(args.end(), insiemeArgs.begin(), insiemeArgs.end());
+
+		// append files to compile
+		for(auto file : files) {
+			args.push_back(file.string());
+		}
 
 		// parse using our standard command line parser
 		driver::cmd::Options options = driver::cmd::Options::parse(args);
@@ -482,7 +489,7 @@ namespace integration {
 
 		// add intercepted include directories
 		for(const auto& cur : interceptedHeaderFileDirectories) {
-			compArgs.push_back(std::string(" --intercept-include ") + cur.string());
+			compArgs.push_back(std::string("--intercept-include=") + cur.string());
 		}
 
 		return compArgs;
