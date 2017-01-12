@@ -442,7 +442,7 @@ namespace integration {
 		return compilerProperty;
 	}
 
-	const vector<string> IntegrationTestCase::getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const {
+	const vector<string> IntegrationTestCase::getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp, bool addLibs) const {
 		vector<string> compArgs;
 
 		//TODO add compiler specific arguments
@@ -452,14 +452,16 @@ namespace integration {
 			compArgs.push_back(std::string("-I") + cur.string());
 		}
 
-		// add external lib dirs
-		for(const auto& cur : libDirs) {
-			compArgs.push_back(std::string("-L") + cur.string());
-		}
+		if(addLibs) {
+			// add external lib dirs
+			for(const auto& cur : libDirs) {
+				compArgs.push_back(std::string("-L") + cur.string());
+			}
 
-		// add external libs
-		for(const auto& cur : libNames) {
-			compArgs.push_back(std::string("-l") + cur);
+			// add external libs
+			for(const auto& cur : libNames) {
+				compArgs.push_back(std::string("-l") + cur);
+			}
 		}
 
 		// add openMP and OpenCL flags

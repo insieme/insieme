@@ -194,9 +194,9 @@ namespace integration {
 				}
 
 				// append all the arguments
-				cmd << " " << join(" ", test.getCompilerArguments(name, false, l == Language::CPP));
+				cmd << " " << join(" ", test.getCompilerArguments(name, false, l == Language::CPP, false));
 
-				// as well as the Insieme specific arguments
+				// append the Insieme specific arguments
 				cmd << " " << join(" ", test.getInsiemeCompilerArguments(name, false, l == Language::CPP));
 
 				// enable semantic tests
@@ -236,9 +236,9 @@ namespace integration {
 				}
 
 				// append all the arguments
-				cmd << " " << join(" ", test.getCompilerArguments(name, false, l == Language::CPP));
+				cmd << " " << join(" ", test.getCompilerArguments(name, false, l == Language::CPP, false));
 
-				// as well as the Insieme specific arguments
+				// append the Insieme specific arguments
 				cmd << " " << join(" ", test.getInsiemeCompilerArguments(name, false, l == Language::CPP));
 
 				// get execution dir
@@ -286,9 +286,6 @@ namespace integration {
 
 				// append all the arguments
 				cmd << " " << join(" ", test.getCompilerArguments(name, true, l == Language::CPP));
-
-				// as well as the Insieme specific arguments
-				cmd << " " << join(" ", test.getInsiemeCompilerArguments(name, true, l == Language::CPP));
 
 				// add runtime include directories
 				if(backend != Sequential) { // TODO: make this non-hardcoded -- it is ugly, but I don't have the time ...
@@ -394,7 +391,7 @@ namespace integration {
 				// add awk pattern
 				// TODO: generally remove outer quotation marks in properties if present - I don't have the time now but it needs to be done at some point
 				string outputAwk = props["outputAwk"]; //.substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
-				cmd << " " << outputAwk;
+				cmd << " \"" << outputAwk << "\"";
 
 				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
 				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
@@ -428,7 +425,7 @@ namespace integration {
 				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref_" << langstr << "_execute_" << std::to_string(numThreads) << ".out";
 
 				// add awk pattern
-				cmd << " " << props["outputAwk"];
+				cmd << " \"" << props["outputAwk"] << "\"";
 
 				// disable multithreading
 				set.numThreads = 0;
