@@ -1,4 +1,5 @@
 includes=
+intercepted_header_file_dirs=
 files=
 definitions=
 definitions[insiemecc_run_c_compile]="_GNU_SOURCE"
@@ -25,7 +26,10 @@ use_cpp[insiemecc_run_cpp_convert]=1
 use_cpp[insiemecc_seq_cpp_convert]=1
 use_cpp[insiemecc_run_cpp_compile]=1
 use_cpp[insiemecc_seq_cpp_compile]=1
-use_libpthread=1
+use_libmath=0
+use_libmath[insiemecc_run_c_compile]=1
+use_libpthread=0
+use_libpthread[insiemecc_run_c_compile]=1
 outputAwk=
 
 # finally the compiler configuration settings
