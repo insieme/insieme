@@ -2,7 +2,7 @@ include(googletest)
 include(msvc_source_group)
 
 macro(add_module_library module)
-	set(options HEADER_ONLY C_LINKAGE)
+	set(options HEADER_ONLY)
 	cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
 
 	glob_sources(${module}_srcs src)
@@ -12,19 +12,19 @@ macro(add_module_library module)
 		set(${module}_srcs ${${module}_srcs} ${${module}_incs})
 	endif()
 
-	add_library(${module} ${${module}_srcs})
-	target_include_directories(${module} PUBLIC include)
-
-	# The project name will be prefixed to the output file since your
-	# library should be named libinsieme_frontend.so rather than
-	# libfrontend.so. This is especially helpful for installing this
-	# target.
-	set_target_properties(${module} PROPERTIES OUTPUT_NAME ${PROJECT_NAME}_${module})
-
-	if(ARG_C_LINKAGE)
-		set_target_properties(${module} PROPERTIES LINKER_LANGUAGE C)
+	if(ARG_HEADER_ONLY)
+		add_library(${module} INTERFACE)
+		target_include_directories(${module} INTERFACE include)
+		target_sources(${module} INTERFACE ${${module}_srcs})
 	else()
-		set_target_properties(${module} PROPERTIES LINKER_LANGUAGE CXX)
+		add_library(${module} ${${module}_srcs})
+		target_include_directories(${module} PUBLIC include)
+
+		# The project name will be prefixed to the output file since your
+		# library should be named libinsieme_frontend.so rather than
+		# libfrontend.so. This is especially helpful for installing this
+		# target.
+		set_target_properties(${module} PROPERTIES OUTPUT_NAME ${PROJECT_NAME}_${module})
 	endif()
 
 	if(MSVC)

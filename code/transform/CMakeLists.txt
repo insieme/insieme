@@ -1,37 +1,14 @@
-#
-# Builds the insieme transform library
-#
-project(insieme_transform CXX)
-message(STATUS "========== configure transform =============")
-cmake_minimum_required(VERSION 3.5)
+add_module_library(transform)
 
-# Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
-file(GLOB_RECURSE insieme_transform_srcs 	src/*.cpp src/*.def src/*.inc )
-insieme_glob_headers(insieme_transform_incs include)
+target_link_libraries(transform core)
+target_link_libraries(transform utils)
 
-# Build the transform library
-add_library(insieme_transform ${LINKING_TYPE} ${insieme_transform_srcs} ${insieme_transform_incs})
-target_include_directories(insieme_transform PUBLIC ${insieme_transform_include_dir})
+# Boost
+find_package(Boost ${Boost_VERSION} EXACT REQUIRED)
+target_link_libraries(transform ${Boost_LIBRARIES})
+target_include_directories(transform SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 
-# lookup Boost library
-insieme_find_package(NAME Boost) 
-target_include_directories(insieme_transform SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
-
-target_link_libraries(insieme_transform insieme_core)
-target_link_libraries(insieme_transform insieme_utils)
-
-# =============================================  TESTING  =====================================
-set ( ut_prefix  ut_transform )
-file(GLOB_RECURSE test_cases test/*.cc)
-foreach ( case_file ${test_cases})
-	get_filename_component( case_name ${case_file} NAME_WE )
-	
-	insieme_fix_case_name( case_subdir ${case_file} )
-	
-	set ( case_name ${ut_prefix}${case_subdir}_${case_name} )	
-	add_executable(${case_name} ${case_file})
-	
-	target_link_libraries(${case_name} insieme_transform)
-	
-	add_unit_test(${case_name} ${ut_prefix})
-endforeach(case_file)
+glob_tests(transform_tests test)
+foreach(test ${transform_tests})
+	add_module_unittest(transform ${test})
+endforeach(test)

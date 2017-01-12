@@ -20,12 +20,12 @@ file(MAKE_DIRECTORY ${builderbuilder_output_dir})
 execute_process(
 	COMMAND ruby ${CMAKE_CURRENT_SOURCE_DIR}/scripts/builderbuilder.rb ${builderbuilder_output_dir}
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	RESULT_VARIABLE _builderbuilder_result
-	OUTPUT_VARIABLE _builderbuilder_stdout
-	ERROR_VARIABLE  _builderbuilder_stderr
+	RESULT_VARIABLE builderbuilder_result
+	OUTPUT_VARIABLE builderbuilder_stdout
+	ERROR_VARIABLE  builderbuilder_stdout
 )
-if(NOT ${_builderbuilder_result} EQUAL 0)
-	message(FATAL_ERROR "Ruby builder builder script failed to execute:\n${_builderbuilder_stdout}\n\n${_builderbuilder_stderr}")
+if(NOT ${builderbuilder_result} EQUAL 0)
+	message(FATAL_ERROR "Ruby builder builder script failed to execute:\n${builderbuilder_stdout}")
 endif()
 file(GLOB_RECURSE builderbuilder_output ${builderbuilder_output_dir}/*)
 target_include_directories(core PUBLIC ${builderbuilder_output_dir}/include)

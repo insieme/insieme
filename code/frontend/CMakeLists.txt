@@ -1,91 +1,52 @@
-#
-# Builds the insieme frontend library
-#
-project(insieme_frontend CXX)
+add_module_library(frontend)
 
-message(STATUS "========== configure frontend =============")
-cmake_minimum_required(VERSION 3.5)
+target_link_libraries(frontend annotations)
+target_link_libraries(frontend common)
+target_link_libraries(frontend core)
+target_link_libraries(frontend transform)
+target_link_libraries(frontend utils)
 
-# collect source files
-file(GLOB_RECURSE insieme_frontend_srcs	src/*.cpp src/*.def src/*.inc )
-insieme_glob_headers(insieme_frontend_incs include)
+# Boost
+find_package(Boost ${Boost_VERSION} EXACT REQUIRED COMPONENTS filesystem system program_options serialization)
+target_link_libraries(frontend ${Boost_LIBRARIES})
+target_include_directories(frontend SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 
-# automatically run the script for generating builtin header files
-if(NOT MSVC)
-	set(generate_builtins_output_dir_base ${CMAKE_CURRENT_BINARY_DIR}/assets)
-	set(generate_builtins_output_dir_rest include/insieme/frontend/builtin_headers)
-	set(generate_builtins_output_dir ${generate_builtins_output_dir_base}/${generate_builtins_output_dir_rest})
+# LLVM / CLANG
+find_package(LLVM ${LLVM_VERSION} REQUIRED)
+target_link_libraries(frontend ${LLVM_LIBRARIES})
+target_link_libraries(frontend ${CLANG_LIBRARIES})
+target_include_directories(frontend PUBLIC ${LLVM_INCLUDE_DIRS})
+target_include_directories(frontend PUBLIC ${CLANG_INCLUDE_DIRS})
 
-	file(MAKE_DIRECTORY ${generate_builtins_output_dir_base})
-
-	execute_process(
-		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-		COMMAND ruby generate_builtins.rb --quiet --detect-via-compiler ${INSIEME_CXX_BACKEND_COMPILER} --output ${generate_builtins_output_dir}
-		RESULT_VARIABLE generate_builtins_success
-		OUTPUT_VARIABLE generate_builtins_output
-		ERROR_VARIABLE generate_builtins_output)
-
-	if (NOT ${generate_builtins_success} EQUAL 0)
-		message(FATAL_ERROR "Ruby generate_builtins.rb script failed to execute, reason:\n${generate_builtins_output}")
-	endif()
-
-	file(GLOB_RECURSE generate_builtins_generated_files ${generate_builtins_output_dir_base}/*)
-endif()
-
-# build the frontend library
-add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} ${generate_builtins_generated_files})
-target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_dir})
-target_include_directories(insieme_frontend PUBLIC ${generate_builtins_output_dir_base}/include)
-
-msvc_file_completion(insieme_frontend_tests test c cpp h)
-
-# lookup Boost library
-insieme_find_package(NAME Boost COMPONENTS serialization filesystem system program_options)
-target_include_directories(insieme_frontend SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
-target_link_libraries(insieme_frontend ${Boost_SERIALIZATION_LIBRARY})
-target_link_libraries(insieme_frontend ${Boost_FILESYSTEM_LIBRARY})
-target_link_libraries(insieme_frontend ${Boost_SYSTEM_LIBRARY})
-target_link_libraries(insieme_frontend ${Boost_PROGRAM_OPTIONS_LIBRARY})
-
-# lookup LLVM/CLANG library+header
-insieme_find_package(NAME LLVM)
-target_link_libraries(insieme_frontend ${LLVM_LIBRARIES})
-target_include_directories(insieme_frontend PUBLIC ${LLVM_INCLUDE_DIRS})
-target_link_libraries(insieme_frontend ${CLANG_LIBRARIES})
-target_include_directories(insieme_frontend PUBLIC ${CLANG_INCLUDE_DIRS})
-
-# add dependencies
-target_link_libraries(insieme_frontend insieme_utils)
-target_link_libraries(insieme_frontend insieme_common)
-target_link_libraries(insieme_frontend insieme_core)
-target_link_libraries(insieme_frontend insieme_transform)
-target_link_libraries(insieme_frontend insieme_annotations)
-
-# required for llvm
+# Required for LLVM
 add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
 
-# =============================================  TESTING  =====================================
-# add custom target for ut_fe test suite
-set ( ut_prefix  ut_fe )
-add_custom_target(${ut_prefix})
+# Generate Builtins
+set(generate_builtins_output_dir ${CMAKE_CURRENT_BINARY_DIR}/builtins/include/insieme/frontend/builtin_headers)
+file(MAKE_DIRECTORY ${generate_builtins_output_dir})
+execute_process(
+	COMMAND ruby ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_builtins.rb
+		--quiet
+		--detect-via-compiler ${INSIEME_CXX_BACKEND_COMPILER}
+		--output ${generate_builtins_output_dir}
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	RESULT_VARIABLE generate_builtins_result
+	OUTPUT_VARIABLE generate_builtins_stdout
+	ERROR_VARIABLE  generate_builtins_stdout
+)
+if(NOT ${generate_builtins_result} EQUAL 0)
+	message(FATAL_ERROR "Ruby generate_builtins.rb script failed to execute, reason:\n${generate_builtins_stdout}")
+endif()
+file(GLOB_RECURSE generate_builtins_output ${generate_builtins_output_dir}/*)
+target_include_directories(frontend PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/builtins/include)
+target_sources(frontend PRIVATE ${generate_builtins_output})
 
-file(GLOB_RECURSE test_cases test/*.cc)
-foreach ( case_file ${test_cases})
-	get_filename_component( case_name ${case_file} NAME_WE )
-
-	insieme_fix_case_name( case_subdir ${case_file} )
-
-	set ( case_name ${ut_prefix}${case_subdir}_${case_name} )
-	add_executable(${case_name} ${case_file})
-
-	#dependency on test suit target
-	add_dependencies(${ut_prefix} ${case_name})
-
-	target_link_libraries(${case_name} insieme_frontend)
-
-	if(${case_name} MATCHES ".*fragment_conversion.*")
-		add_unit_test(${case_name} ${ut_prefix} RUN_PARALLEL)
+glob_tests(frontend_tests test)
+foreach(test ${frontend_tests})
+	string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/test/" "" test_relpath ${test})
+	if(${test_relpath} MATCHES ".*fragment_conversion.*")
+		add_module_unittest(frontend ${test} PARALLEL)
 	else()
-		add_unit_test(${case_name} ${ut_prefix})
+		add_module_unittest(frontend ${test})
 	endif()
-endforeach(case_file)
+endforeach(test)
