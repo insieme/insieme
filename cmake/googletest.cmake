@@ -1,4 +1,4 @@
-if(NOT TARGET googletest)
+if(BUILD_TESTS AND NOT TARGET googletest)
 	include(ExternalProject)
 
 	# gtest should be build with the same compiler as the project using it
