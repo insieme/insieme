@@ -33,7 +33,7 @@ Insieme for the first time.
 
 ### Building Insieme
 
-Insieme's build system is based on CMake. We assume that the environemnt is
+Insieme's build system is based on CMake. We assume that the environment is
 setup in the directory pointed to by `$INSIEME_LIBS_HOME` using the provided
 installer.
 
