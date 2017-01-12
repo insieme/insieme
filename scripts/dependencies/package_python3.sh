@@ -1,10 +1,10 @@
-NAME="python"
-VERSION="2.7.12"
+NAME="python3"
+VERSION="3.5.2"
 PACKAGE="$NAME-$VERSION"
 
 FILE="Python-$VERSION.tgz"
 URL="http://www.insieme-compiler.org/ext_libs/$FILE"
-SHA256SUM="3cb522d17463dfa69a155ab18cffa399b358c966c0363d6c8b5b3bf1384da4b6"
+SHA256SUM="1524b840e42cf3b909e8f8df67c1724012c7dc7f9d076d4feef2d3eff031e8a0"
 
 pkg_extract() {
 	tar xf "$FILE"

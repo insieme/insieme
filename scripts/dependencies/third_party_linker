@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -e
+
+export INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export THIRD_PARTY_DIR="$INSTALLER_DIR/../../third_party"
+
+get_property() {
+	echo $(echo "source \"$INSTALLER_DIR/package_$1.sh\" && echo -n \$$2" | bash -)
+}
+export -f get_property
+
+mkdir -p "$THIRD_PARTY_DIR"
+
+source "$INSTALLER_DIR/defaults.sh"
+
+for pkg in "$INSTALLER_DIR/package_"*.sh; do
+	source "$pkg"
+	if pkg_is_installed && [[ ! -e "$THIRD_PARTY_DIR/$NAME" ]]; then
+		ln -s "$PREFIX/$PACKAGE" "$THIRD_PARTY_DIR/$NAME"
+	fi
+done

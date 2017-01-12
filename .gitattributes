@@ -1,10 +1,16 @@
+*.c        text eol=lf filter=tabspace4
+*.cc       text eol=lf filter=tabspace4
+*.cpp      text eol=lf filter=tabspace4
+*.cxx      text eol=lf filter=tabspace4
 
+*.h        text eol=lf filter=tabspace4
+*.hpp      text eol=lf filter=tabspace4
+*.def      text eol=lf
+*.inc      text eol=lf
 
-*.c filter=tabspace4
-*.cpp filter=tabspace4
-*.cxx filter=tabspace4
-*.cc filter=tabspace4
+*.cmake    text eol=lf
+*.txt      text eol=lf
 
-*.h filter=tabspace4
-*.hpp filter=tabspace4
+*.sh       text eol=lf
 
+*.md       text eol=lf

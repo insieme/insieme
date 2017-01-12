@@ -1,0 +1,7 @@
+#!/bin/bash
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+find "$DIR/../../code" -regex ".*\.\(h\|hpp\|def\|inc\|c\|cpp\|cxx\|cc\)" -exec "$DIR/licensor" "$DIR/license_header.txt" {} \;
+
+find "$DIR/../../code" -regex ".*\.\(hs\|chs\)" -exec "$DIR/licensor" "$DIR/license_header_haskell.txt" {} \;

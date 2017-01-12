@@ -8,4 +8,4 @@ SHA256SUM="9908c75aabd49d13661d6dcb1bc382252d22cc77bf733a2d55e87f2aa2db8636"
 
 DEPENDS="autoconf"
 
-export PATH="$PREFIX/autoconf-latest/bin:$PATH"
+export PATH="$PREFIX/$(get_property autoconf PACKAGE)/bin:$PATH"

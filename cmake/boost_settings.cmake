@@ -1,0 +1,5 @@
+if(MSVC)
+	set(Boost_USE_STATIC_LIBS OFF)
+	set(Boost_USE_DEBUG_RUNTIME ON)
+	set(Boost_USE_MULTITHREADED ON)
+endif()
