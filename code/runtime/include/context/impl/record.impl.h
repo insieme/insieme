@@ -576,28 +576,18 @@ irt_cap_pointer_substitute irt_cap_get_substitute(void* pos) {
 
 
 void irt_cap_read_pointer(void** pos) {
-	void* value;
-
-	// 1) backup pointer value
-	value = *pos;
-
-	// 2) compute replacement value
+	// 1) compute replacement value
 	irt_cap_pointer_substitute replacement = irt_cap_get_substitute(*pos);
 
-	// 3) record read of replacement value
+	// 2) record read of replacement value
 	irt_cap_read_internal(pos, &replacement, sizeof(void*), true);
 }
 
 void irt_cap_written_pointer(void** pos) {
-	void* value;
-
-	// 1) backup pointer value
-	value = *pos;
-
-	// 2) compute replacement value
+	// 1) compute replacement value
 	irt_cap_pointer_substitute replacement = irt_cap_get_substitute(*pos);
 
-	// 3) record read of replacement value
+	// 2) record read of replacement value
 	irt_cap_written_internal(pos, &replacement, sizeof(void*), true);
 }
 

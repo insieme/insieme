@@ -60,7 +60,6 @@ class ContextCapturing : public ::testing::Test {
 	 */
 	void SetUp() {
 		char sourceFile[] = P_tmpdir "/contextXXXXXX";
-		int src = mkstemp(sourceFile);
 		setenv("IRT_CONTEXT_FILE", sourceFile, 1);
 		dumpFile = std::string(sourceFile);
 	}

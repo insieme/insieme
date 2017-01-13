@@ -181,7 +181,6 @@ dirt_byte_stream _dirt_blob_pack(dirt_blob_container* container) {
 
 void _dirt_blob_unpack(dirt_blob_container* container, dirt_byte_stream stream) {
 	// read size
-	size_t total_size = stream.size;
 	unsigned char* ptr = stream.payload;
 
 	_dirt_container_node* new_node = (_dirt_container_node*)malloc(sizeof(_dirt_container_node));

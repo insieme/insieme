@@ -373,7 +373,6 @@ TEST(Range, SetDiff2D) {
 	    irt_range_term_2d_create(irt_range_point_2d_create(3, 2), irt_range_point_2d_create(7, 8), irt_range_point_2d_create(1, 2)));
 
 	int N = 10;
-	int maxTerms = 0;
 	for(int i1 = 0; i1 < N; i1++) {
 		for(int i2 = 0; i2 < N; i2++) {
 			for(int j1 = i1; j1 < N; j1++) {
@@ -447,7 +446,6 @@ TEST(Range, SetDiff2D) {
 
 
 	N = 10;
-	maxTerms = 0;
 	for(int i1 = 0; i1 < N; i1++) {
 		for(int i2 = 0; i2 < N; i2++) {
 			for(int j1 = i1; j1 < N; j1++) {

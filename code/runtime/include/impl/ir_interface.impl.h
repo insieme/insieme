@@ -213,7 +213,6 @@ double irt_time_wis_get_total() {
 	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 		irt_worker* cur = irt_g_workers[i];
 		ret += cur->app_time_total;
-		double ls = cur->app_time_last_start;
 		if(cur->app_time_running) {
 			// add current running time
 			struct timespec ts;

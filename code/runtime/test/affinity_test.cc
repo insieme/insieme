@@ -128,7 +128,6 @@ TEST(affinity, manual) {
 	// get the initial affinity mask and create the mapping
 	irt_affinity_init_physical_mapping(&irt_g_affinity_physical_mapping);
 	_irt_print_native_affinity_mask(irt_g_affinity_base_mask);
-	uint32 num_cores = irt_affinity_cores_available();
 
 	// create a thread and set affinity
 	irt_thread t;
