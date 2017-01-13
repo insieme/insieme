@@ -52,8 +52,6 @@ if(MSVC)
 		set(LIBRARY_OUTPUT_DIRECTORY Debug)
 	endif()
 
-	set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
 	# solution configuration
 	set(CMAKE_CONFIGURATION_TYPES ${CMAKE_BUILD_TYPE} CACHE STRING "Visual Studio Solution Configuration" FORCE)
 
