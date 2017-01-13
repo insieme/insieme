@@ -196,6 +196,8 @@ namespace integration {
 
 			// define environment variables for the current test case
 			prop.set("PATH", testCaseDir.string());
+			prop.set("TEST_DIR_PATH", defaultPaths.testDir);
+			prop.set("BUILD_DIR_PATH", defaultPaths.buildDir);
 
 			// load global properties
 			Properties global = getGlobalConfiguration(defaultPaths);
