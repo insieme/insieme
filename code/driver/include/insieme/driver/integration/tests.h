@@ -291,6 +291,33 @@ namespace integration {
 	};
 
 
+	/**
+	 * A struct used to hold various paths needed to successfully lookup integration tests and their configuration
+	 */
+	struct IntegrationTestCaseDefaultsPaths {
+
+		/**
+		 * The default test source folder.
+		 * This is used to look up tests by name.
+		 */
+		std::string testDir;
+
+		/**
+		 * The default build folder.
+		 * This is used to look up the global configuration file and also the insiemecc binary.
+		 */
+		std::string buildDir;
+
+		/**
+		 * The name to the global configuration file.
+		 * This file will be searched in the current working directory, all it's parents and finally in the build folder.
+		 */
+		std::string globalConfigFileName;
+	};
+
+	IntegrationTestCaseDefaultsPaths getDefaultIntegrationTestCaseDefaultsPaths();
+
+
 	// an enum describing the different modes which test cases to load
 	enum LoadTestCaseMode { ENABLED_TESTS, ENABLED_AND_LONG_TESTS, LONG_TESTS, BLACKLISTED_TESTS, ALL_TESTS };
 
@@ -299,7 +326,7 @@ namespace integration {
 	 * Obtains a full list of all test cases available within the system.
 	 */
 	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode = ENABLED_TESTS,
-	                                               const string& defaultTestDir = utils::getInsiemeTestRootDir());
+	                                               const IntegrationTestCaseDefaultsPaths defaultPaths = getDefaultIntegrationTestCaseDefaultsPaths());
 
 	/**
 	 * Obtains the test case matching the given name.
@@ -308,7 +335,7 @@ namespace integration {
 	 * @return an optional representing the test case or being uninitialized if there is no such test case.
 	 */
 	const boost::optional<IntegrationTestCase> getCase(const string& name,
-	                                                   const string& defaultTestDir = utils::getInsiemeTestRootDir());
+	                                                   const IntegrationTestCaseDefaultsPaths defaultPaths = getDefaultIntegrationTestCaseDefaultsPaths());
 
 	/**
 	 * Obtains a list of test cases in the given path or below.
@@ -317,7 +344,7 @@ namespace integration {
 	 * @return the list of test cases within this directory or below
 	 */
 	vector<IntegrationTestCase> getTestSuite(const string& path,
-	                                         const string& defaultTestDir = utils::getInsiemeTestRootDir());
+	                                         const IntegrationTestCaseDefaultsPaths defaultPaths = getDefaultIntegrationTestCaseDefaultsPaths());
 
 	/**
 	 * Allow Integration Tests to be properly printed within gtest.
