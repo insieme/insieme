@@ -28,6 +28,7 @@ include(boost_settings)
 include(file_globs)
 include(add_module)
 include(nproc)
+include(run_ruby)
 
 # -- Project Modules
 add_subdirectory(code/annotations)

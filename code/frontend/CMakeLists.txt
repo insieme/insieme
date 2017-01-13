@@ -24,15 +24,11 @@ add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
 # Generate Builtins
 set(generate_builtins_output_dir ${CMAKE_CURRENT_BINARY_DIR}/builtins/include/insieme/frontend/builtin_headers)
 file(MAKE_DIRECTORY ${generate_builtins_output_dir})
-execute_process(
-	COMMAND ruby ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_builtins.rb
-		--quiet
-		--detect-via-compiler ${INSIEME_CXX_BACKEND_COMPILER}
-		--output ${generate_builtins_output_dir}
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	RESULT_VARIABLE generate_builtins_result
-	OUTPUT_VARIABLE generate_builtins_stdout
-	ERROR_VARIABLE  generate_builtins_stdout
+run_ruby(
+	${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_builtins.rb
+	--quiet
+	--detect-via-compiler ${INSIEME_CXX_BACKEND_COMPILER}
+	--output ${generate_builtins_output_dir}
 )
 if(NOT ${generate_builtins_result} EQUAL 0)
 	message(FATAL_ERROR "Ruby generate_builtins.rb script failed to execute, reason:\n${generate_builtins_stdout}")

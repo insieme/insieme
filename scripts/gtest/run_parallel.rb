@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-
 # TODO:
 # * merge gtest xml files?
 

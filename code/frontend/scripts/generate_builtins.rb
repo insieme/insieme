@@ -1,5 +1,3 @@
-#!/bin/env ruby
-
 # This is a helper script for dealing with the issue that clang cannot parse many GCC intrinsics.
 # It searches for standard header include files named *intrin.h, and copies forward declarations,
 # typedefs and enum declarations to the builtin_header directory of the Insieme source tree.

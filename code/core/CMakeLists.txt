@@ -17,16 +17,7 @@ target_include_directories(core SYSTEM PUBLIC ${CUDD_INCLUDE_DIRS})
 # apparently CMake's find_package for Ruby is broken, see https://github.com/NREL/OpenStudio/issues/1271
 set(builderbuilder_output_dir ${CMAKE_CURRENT_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${builderbuilder_output_dir})
-execute_process(
-	COMMAND ruby ${CMAKE_CURRENT_SOURCE_DIR}/scripts/builderbuilder.rb ${builderbuilder_output_dir}
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	RESULT_VARIABLE builderbuilder_result
-	OUTPUT_VARIABLE builderbuilder_stdout
-	ERROR_VARIABLE  builderbuilder_stdout
-)
-if(NOT ${builderbuilder_result} EQUAL 0)
-	message(FATAL_ERROR "Ruby builder builder script failed to execute:\n${builderbuilder_stdout}")
-endif()
+run_ruby(${CMAKE_CURRENT_SOURCE_DIR}/scripts/builderbuilder.rb ${builderbuilder_output_dir})
 file(GLOB_RECURSE builderbuilder_output ${builderbuilder_output_dir}/*)
 target_include_directories(core PUBLIC ${builderbuilder_output_dir}/include)
 target_sources(core PRIVATE ${builderbuilder_output})
