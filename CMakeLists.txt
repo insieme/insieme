@@ -40,3 +40,5 @@ add_subdirectory(code/driver)
 add_subdirectory(code/frontend)
 add_subdirectory(code/transform)
 add_subdirectory(code/utils)
+
+add_subdirectory(code/runtime)

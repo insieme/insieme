@@ -85,7 +85,12 @@ macro(add_module_unittest module test)
 
 		# build executable
 		add_executable(${test_name} ${test})
-		target_link_libraries(${test_name} ${module})
+
+		# link against module library if available
+		get_target_property(module_type ${module} TYPE)
+		if(NOT module_type STREQUAL "EXECUTABLE")
+			target_link_libraries(${test_name} ${module})
+		endif()
 
 		# add gtest
 		target_link_libraries(${test_name} gtest)
