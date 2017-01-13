@@ -4,6 +4,8 @@ option(BUILD_DOCS "Enable documentation" OFF)
 option(USE_ASSERT "Enable assertions" ON)
 option(USE_VALGRIND "Allow Valgrind for unit tests" ON)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 if(NOT DEFINED CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE Release)
 endif()
