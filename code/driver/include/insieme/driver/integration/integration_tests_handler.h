@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2017 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,12 +34,25 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/integration/integration_tests_handler.h"
-#include "insieme/driver/integration/tests.h"
-#include "insieme/utils/version.h"
+#pragma once
 
-int main(int argc, char** argv) {
-	// we simply forward the parameters to the integration test handler, using the default path configuration
-	return insieme::driver::integration::handleIntegrationTests(argc, argv, "Insieme Integration Test Driver", insieme::utils::getVersion(),
-	                                                            insieme::driver::integration::getDefaultIntegrationTestCaseDefaultsPaths());
-}
+#include <string>
+
+
+namespace insieme {
+namespace driver {
+namespace integration {
+
+	struct IntegrationTestCaseDefaultsPaths;
+
+	/**
+	 * Performs all the steps required for integration testing.
+	 * This function takes a set of command line arguments as well as a struct holding the default path configuration
+	 * @return The exit code
+	 */
+	int handleIntegrationTests(int argc, char** argv, const std::string& programName, const std::string& provramVersion,
+	                           const IntegrationTestCaseDefaultsPaths& defaultPaths);
+
+} // end namespace integration
+} // end namespace driver
+} // end namespace insieme
