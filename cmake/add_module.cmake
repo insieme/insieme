@@ -12,7 +12,7 @@ macro(add_module_library module)
 		set(${module}_srcs ${${module}_srcs} ${${module}_incs})
 	endif()
 
-	if(ARG_HEADER_ONLY)
+	if(ARG_HEADER_ONLY AND NOT MSVC)
 		add_library(${module} INTERFACE)
 		target_include_directories(${module} INTERFACE include)
 		target_sources(${module} INTERFACE ${${module}_srcs})
@@ -25,6 +25,10 @@ macro(add_module_library module)
 		# libfrontend.so. This is especially helpful for installing this
 		# target.
 		set_target_properties(${module} PROPERTIES OUTPUT_NAME ${PROJECT_NAME}_${module})
+
+		if(ARG_HEADER_ONLY)
+			set_target_properties(${module} PROPERTIES LINKER_LANGUAGE CXX)
+		endif()
 	endif()
 
 	if(MSVC)

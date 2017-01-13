@@ -31,10 +31,12 @@ include(nproc)
 include(run_ruby)
 
 # -- Project Modules
+add_subdirectory(code/analysis)
 add_subdirectory(code/annotations)
 add_subdirectory(code/backend)
 add_subdirectory(code/common)
 add_subdirectory(code/core)
+add_subdirectory(code/driver)
 add_subdirectory(code/frontend)
 add_subdirectory(code/transform)
 add_subdirectory(code/utils)

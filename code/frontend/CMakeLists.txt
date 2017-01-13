@@ -12,7 +12,7 @@ target_link_libraries(frontend ${Boost_LIBRARIES})
 target_include_directories(frontend SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 
 # LLVM / CLANG
-find_package(LLVM ${LLVM_VERSION} REQUIRED)
+find_package(LLVM ${LLVM_VERSION})
 target_link_libraries(frontend ${LLVM_LIBRARIES})
 target_link_libraries(frontend ${CLANG_LIBRARIES})
 target_include_directories(frontend PUBLIC ${LLVM_INCLUDE_DIRS})
@@ -30,9 +30,6 @@ run_ruby(
 	--detect-via-compiler ${INSIEME_CXX_BACKEND_COMPILER}
 	--output ${generate_builtins_output_dir}
 )
-if(NOT ${generate_builtins_result} EQUAL 0)
-	message(FATAL_ERROR "Ruby generate_builtins.rb script failed to execute, reason:\n${generate_builtins_stdout}")
-endif()
 file(GLOB_RECURSE generate_builtins_output ${generate_builtins_output_dir}/*)
 target_include_directories(frontend PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/builtins/include)
 target_sources(frontend PRIVATE ${generate_builtins_output})
