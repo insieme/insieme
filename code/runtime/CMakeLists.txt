@@ -69,13 +69,9 @@ set_target_properties(runtime PROPERTIES LINKER_LANGUAGE C)
 
 # Fix source files for Visual Studio
 if(MSVC)
-	foreach(src ${runtime_srcs})
-		#set_source_files_properties(${src} PROPERTIES LANGUAGE CXX)
-	endforeach(src)
-
 	msvc_source_group("Source Files" "${runtime_srcs}" STRIP src)
 	msvc_source_group("Header Files" "${runtime_incs}" STRIP include)
-	set_target_properties(runtime PROPERTIES FOLDER runtime)
+	set_target_properties(runtime PROPERTIES FOLDER "runtime")
 endif()
 
 # pthread
@@ -113,7 +109,7 @@ foreach(test ${runtime_manual_tests})
 		add_runtime_dependencies(${test_name})
 
 		if(MSVC)
-			set_source_files_properties(${test} PROPERTIES LANGUAGE CXX)
+			set_target_properties(${test_name} PROPERTIES FOLDER "runtime/Tests")
 		endif()
 	endif()
 endforeach(test)
@@ -133,7 +129,7 @@ foreach(test ${runtime_standalone_tests})
 		target_link_libraries(${test_name} ${CMAKE_THREAD_LIBS_INIT})
 
 		if(MSVC)
-			set_source_files_properties(${test} PROPERTIES LANGUAGE CXX)
+			set_target_properties(${test_name} PROPERTIES FOLDER "runtime/Tests")
 		endif()
 	endif()
 endforeach(test)
