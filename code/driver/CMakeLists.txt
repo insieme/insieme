@@ -37,10 +37,11 @@ endforeach(exe)
 # integrations_tests requiresinsiemecc
 add_dependencies(driver_integration_tests driver_insiemecc)
 
-#if(USE_PAPI)
-#	insieme_find_package(NAME PAPI)
-#	add_definitions(-DUSE_PAPI)
-#endif()
+# Papi
+if(USE_PAPI)
+	find_package(PAPI REQUIRED)
+	add_definitions(-DUSE_PAPI)
+endif()
 
 glob_tests(driver_tests test)
 foreach(test ${driver_tests})
