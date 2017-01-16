@@ -4,6 +4,9 @@ option(BUILD_DOCS "Enable documentation" OFF)
 option(USE_ASSERT "Enable assertions" ON)
 option(USE_VALGRIND "Allow Valgrind for unit tests" ON)
 
+option(BUILD_COMPILER "Build the Insieme Compiler" ON)
+option(BUILD_RUNTIME "Build the Insieme Runtime" ON)
+
 option(USE_PAPI "Enable PAPI Support" OFF)
 
 option(USE_ENERGY "Enable energy capabilities" OFF)
