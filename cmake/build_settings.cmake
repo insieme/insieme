@@ -15,6 +15,9 @@ if(USE_ENERGY)
 	set(USE_PAPI ON)
 endif()
 
+option(ANALYSIS_DATALOG "Enable Datalog engine for analysis" OFF)
+option(ANALYSIS_HASKELL "Enable Haskell engine for analysis" OFF)
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 if(NOT DEFINED CMAKE_BUILD_TYPE)
