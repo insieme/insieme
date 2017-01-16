@@ -4,6 +4,16 @@ option(BUILD_DOCS "Enable documentation" OFF)
 option(USE_ASSERT "Enable assertions" ON)
 option(USE_VALGRIND "Allow Valgrind for unit tests" ON)
 
+option(USE_PAPI "Enable PAPI Support" OFF)
+
+option(USE_ENERGY "Enable energy capabilities" OFF)
+if(USE_ENERGY)
+	# energy requires PAPI
+	set(USE_PAPI ON)
+else()
+	add_definitions(-DDISABLE_ENERGY)
+endif()
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 if(NOT DEFINED CMAKE_BUILD_TYPE)

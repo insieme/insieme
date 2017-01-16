@@ -13,6 +13,7 @@ macro(add_runtime_dependencies target)
 
 	if(USE_PAPI)
 		target_link_libraries(${target} ${PAPI_LIBRARIES})
+		target_include_directories(${target} PRIVATE ${PAPI_INCLUDE_DIRS})
 	endif()
 
 	if(USE_MPI_OPENCL)
@@ -20,8 +21,10 @@ macro(add_runtime_dependencies target)
 		target_include_directories(${target} PRIVATE ${MPI_INCLUDE_PATH})
 	endif()
 
+	# TODO revisit FindHwloc script
 	if(Hwloc_FOUND)
 		target_link_libraries(${target} ${HWLOC_LIBRARIES})
+		target_include_directories(${target} PRIVATE ${Hwloc_INCLUDE_DIRS})
 	endif()
 endmacro()
 
