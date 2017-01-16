@@ -93,7 +93,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
 
 glob_tests(runtime_tests test)
 foreach(test ${runtime_tests})
-	add_module_unittest(runtime ${test} TARGET_NAME tgt_name)
+	add_module_unittest(runtime ${test} NO_VALGRIND TARGET_NAME tgt_name)
 	if(BUILD_TESTS)
 		add_runtime_dependencies(${tgt_name})
 	endif()
