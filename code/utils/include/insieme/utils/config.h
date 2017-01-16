@@ -58,8 +58,8 @@ namespace utils {
 	}
 
 	inline string getPapiRootDir() {
-	#ifdef PAPI_ROOT_DIR
-		return string(PAPI_ROOT_DIR); // PAPI_ROOT_DIR is supplied by cmake
+	#ifdef USE_PAPI
+		return string(PAPI_ROOT); // PAPI_ROOT is supplied by cmake
 	#else
 		return string("");
 	#endif

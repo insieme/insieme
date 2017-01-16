@@ -46,17 +46,17 @@ endif()
 glob_tests(driver_tests test)
 foreach(test ${driver_tests})
 	string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/test/" "" test_relpath ${test})
-	if(${test_relpath} MATCHES ".*driver_integration.*" OR ${test_relpath} MATCHES ".*driver_measure.*")
-		add_module_unittest(driver ${test} PARALLEL)
+	if(test_relpath MATCHES "driver_integration" OR test_relpath MATCHES "driver_measure")
+		add_module_unittest(driver ${test} NO_VALGRIND PARALLEL)
 	else()
-		add_module_unittest(driver ${test})
+		add_module_unittest(driver ${test} NO_VALGRIND)
 	endif()
 endforeach(test)
 
 # Run preprocessing for integration tests
-#add_custom_command(
-#	TARGET driver_integration_tests
-#	POST_BUILD
-#	COMMAND ${CMAKE_CURRENT_BINARY_DIR}/integration_tests --preprocess
-#	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-#)
+add_custom_command(
+	TARGET driver_integration_tests
+	POST_BUILD
+	COMMAND ${CMAKE_CURRENT_BINARY_DIR}/integration_tests --preprocess
+	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)

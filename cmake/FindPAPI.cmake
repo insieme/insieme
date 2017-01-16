@@ -14,6 +14,7 @@
 # Variables defined by this module:
 #
 # PAPI_FOUND System has PAPI libraries and headers
+# PAPI_ROOT The PAPI root directory
 # PAPI_LIBRARIES The PAPI library
 # PAPI_INCLUDE_DIRS The location of PAPI headers
 
@@ -37,4 +38,8 @@ include(FindPackageHandleStandardArgs)
 
 find_package_handle_standard_args(PAPI DEFAULT_MSG PAPI_LIBRARIES PAPI_INCLUDE_DIRS)
 
-mark_as_advanced(PAPI_LIBRARIES PAPI_INCLUDE_DIRS)
+if(NOT PAPI_ROOT)
+	get_filename_component(PAPI_ROOT ${PAPI_INCLUDE_DIRS} DIRECTORY)
+endif()
+
+mark_as_advanced(PAPI_ROOT PAPI_LIBRARIES PAPI_INCLUDE_DIRS)

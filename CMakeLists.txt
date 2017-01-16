@@ -11,15 +11,17 @@ list(APPEND CMAKE_PREFIX_PATH ${prefix_paths})
 
 # -- Project Settings
 include(build_settings)
+include(energy_settings)
+include(papi_settings)
 include(valgrind_settings)
 include(doxygen)
 include(git_metadata)
 include(insieme_specific)
 
 # -- Dependency Versions
-set(Boost_VERSION 1.59.0 CACHE STRING "Boost Version")
-set(CUDD_VERSION 2.4.2 CACHE STRING "CUDD Version")
-set(LLVM_VERSION 3.6.2 CACHE STRING "LLVM Version")
+set(Boost_VERSION 1.59.0 CACHE STRING "Boost Version" FORCE)
+set(CUDD_VERSION 2.4.2 CACHE STRING "CUDD Version" FORCE)
+set(LLVM_VERSION 3.6.2 CACHE STRING "LLVM Version" FORCE)
 
 # -- Dependency Settings
 include(boost_settings)

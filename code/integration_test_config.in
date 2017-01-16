@@ -57,11 +57,8 @@ intercepted_header_file_dirs=
 boost_include=@Boost_INCLUDE_DIRS@
 boost_lib=@Boost_LIBRARY_DIRS@
 
-# third party libraries
-third_party_libs_home=@THIRD_PARTY_LIBS_HOME@
-
 # result comparison script
-compareOutputScript=@insieme_root_dir@/test/compareOutput
+compareOutputScript=@PROJECT_SOURCE_DIR@/test/compareOutput
 
 # time utility
 time_executable=@TIME_EXECUTABLE@
