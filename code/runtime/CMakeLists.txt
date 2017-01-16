@@ -16,11 +16,6 @@ macro(add_runtime_dependencies target)
 		target_include_directories(${target} PRIVATE ${PAPI_INCLUDE_DIRS})
 	endif()
 
-	if(USE_MPI_OPENCL)
-		target_link_libraries(${target} ${MPI_C_LIBRARIES})
-		target_include_directories(${target} PRIVATE ${MPI_INCLUDE_PATH})
-	endif()
-
 	# TODO revisit FindHwloc script
 	if(Hwloc_FOUND)
 		target_link_libraries(${target} ${HWLOC_LIBRARIES})
@@ -41,17 +36,6 @@ endif()
 if(USE_PAPI)
 	find_package(PAPI REQUIRED)
 	add_definitions(-DIRT_USE_PAPI)
-endif()
-
-# MPI OpenCL
-if(USE_MPI_OPENCL)
-	find_package(MPI REQUIRED)
-
-	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} ${MPI_COMPILE_FLAGS})
-	set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${MPI_COMPILE_FLAGS})
-
-	set(CMAKE_C_LINK_FLAGS ${CMAKE_C_LINK_FLAGS} ${MPI_LINK_FLAGS})
-	set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_LINK_FLAGS})
 endif()
 
 # HWloc
