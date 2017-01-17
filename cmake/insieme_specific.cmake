@@ -31,3 +31,10 @@ endif()
 find_package(Boost ${BOOST_VERSION} EXACT REQUIRED)
 
 configure_file(code/integration_test_config.in ${PROJECT_BINARY_DIR}/integration_test_config @ONLY IMMEDIATE)
+
+# Make integration test files visible in VS
+if(MSVC)
+	file(GLOB_RECURSE integration_test_files ${PROJECT_SOURCE_DIR}/test/*)
+	add_custom_target(integration_test_files SOURCES ${integration_test_files})
+	msvc_source_group("Files" "${integration_test_files}" STRIP test)
+endif()
