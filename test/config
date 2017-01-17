@@ -1,12 +1,8 @@
-includes=
-intercepted_header_file_dirs=
 files=
 definitions=
 definitions[insiemecc_run_c_compile]="_GNU_SOURCE"
 definitions[insiemecc_run_cpp_compile]="_GNU_SOURCE"
 compFlags=
-libPaths=
-libNames=
 excludeSteps="*_ocl_*","*_cpp_*","*_run_*"
 use_omp=0
 use_opencl=0
@@ -31,10 +27,3 @@ use_libmath[insiemecc_run_c_compile]=1
 use_libpthread=0
 use_libpthread[insiemecc_run_c_compile]=1
 outputAwk=
-
-# finally the compiler configuration settings
-compilerConfigurationFile[insiemecc]="${CUR_CONFIG_PATH}/compilerConfiguration.insiemecc"
-compilerConfigurationFile[gcc]="${CUR_CONFIG_PATH}/compilerConfiguration.gcc"
-compilerConfigurationFile[g++]="${CUR_CONFIG_PATH}/compilerConfiguration.g++_and_clang"
-compilerConfigurationFile[clang]="${CUR_CONFIG_PATH}/compilerConfiguration.g++_and_clang"
-compilerConfigurationFile[clang++]="${CUR_CONFIG_PATH}/compilerConfiguration.g++_and_clang"
