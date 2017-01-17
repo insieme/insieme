@@ -9,33 +9,33 @@ set(analysis_srcs ${analysis_cba_srcs} ${analysis_features_srcs})
 file(GLOB analysis_incs include/insieme/analysis/cba/*.h include/insieme/analysis/cba/common/*.h)
 
 # =============================================  SOUFFLE  =====================================
-#if(ANALYSIS_DATALOG)
-#
-#    # Add soufflé specific source files
-#    file(GLOB_RECURSE insieme_analysis_srcs_datalog src/cba/datalog/*.cpp src/cba/datalog/*.dl)
-#    set(insieme_analysis_srcs ${insieme_analysis_srcs} ${insieme_analysis_srcs_datalog})
-#    insieme_glob_headers(insieme_analysis_incs_datalog include/insieme/analysis/cba/datalog)
-#    set(insieme_analysis_incs ${insieme_analysis_incs} ${insieme_analysis_incs_datalog})
-#
-#    # Generate soufflé files now so we can add them to the insieme_analysis library later
-#    set(souffle_input_dir  ${insieme_code_dir}/analysis/src/cba/datalog)
-#
-#    # Create directories, soufflé-related variables etc
-#    configure_souffle()
-#
-#    # Run the Dough preprocessor script on the datalog files
-#    souffle_run_dough(${souffle_input_dir} ${souffle_tmp_dir})
-#
-#    # compile the preprocessed analysis files *.dl to CPP header files
-#    file(GLOB datalog_analysises ${souffle_input_dir}/*.dl)
-#    foreach(analysis_file ${datalog_analysises})
-#        get_filename_component(analysis_name ${analysis_file} NAME_WE)
-#        souffle_generate_cpp(${souffle_tmp_dir} ${analysis_name} "${souffle_tmp_dir}/include")
-#    endforeach()
-#
-#    set(insieme_analysis_srcs ${insieme_analysis_srcs} ${souffle_output})
-#
-#endif()
+if(ANALYSIS_DATALOG)
+
+    # Add soufflé specific source files
+    file(GLOB_RECURSE analysis_datalog_srcs src/cba/datalog/*.cpp src/cba/datalog/*.dl)
+    set(analysis_srcs ${analysis_srcs} ${analysis_datalog_srcs})
+    glob_headers(analysis_datalog_incs include/insieme/analysis/cba/datalog)
+    set(analysis_incs ${analysis_incs} ${analysis_datalog_incs})
+
+    # Generate soufflé files now so we can add them to the insieme_analysis library later
+    set(souffle_input_dir  ${CMAKE_CURRENT_SOURCE_DIR}/src/cba/datalog)
+
+    # Create directories, soufflé-related variables etc
+    configure_souffle()
+
+    # Run the Dough preprocessor script on the datalog files
+    souffle_run_dough(${souffle_input_dir} ${souffle_tmp_dir})
+
+    # compile the preprocessed analysis files *.dl to CPP header files
+    file(GLOB datalog_analyses ${souffle_input_dir}/*.dl)
+    foreach(analysis_file ${datalog_analyses})
+        get_filename_component(analysis_name ${analysis_file} NAME_WE)
+        souffle_generate_cpp(${souffle_tmp_dir} ${analysis_name} ${souffle_tmp_dir}/include)
+    endforeach(analysis_file)
+
+    set(analysis_srcs ${analysis_srcs} ${souffle_output})
+
+endif()
 
 # =============================================  HASKELL  =====================================
 #if(ANALYSIS_HASKELL)
@@ -89,12 +89,12 @@ target_link_libraries(analysis ${Boost_LIBRARIES})
 target_include_directories(analysis SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 
 # Souffle dependencies
-#if(ANALYSIS_DATALOG)
-#	# Find SQLite3 includes and lib. Newer versions of Soufflé need this
-#	insieme_find_package(NAME SQLITE)
-#	target_include_directories(insieme_analysis SYSTEM PRIVATE ${SQLITE_INCLUDE_DIRS})
-#	target_link_libraries(insieme_analysis ${SQLITE_LIBRARIES})
-#endif()
+if(ANALYSIS_DATALOG)
+	# Find SQLite3 includes and lib. Newer versions of Soufflé need this
+	find_package(SQLITE)
+	target_include_directories(analysis SYSTEM PRIVATE ${SQLITE_INCLUDE_DIRS})
+	target_link_libraries(analysis ${SQLITE_LIBRARIES})
+endif()
 
 # Haskell dependency
 #if(ANALYSIS_HASKELL)
@@ -117,10 +117,10 @@ set(test_cases ${test_cases} ${test_cases_common})
 file(GLOB_RECURSE test_cases_features test/features/*.cc)
 set(test_cases ${test_cases} ${test_cases_features})
 
-#if(ANALYSIS_DATALOG)
-#    file(GLOB_RECURSE test_cases_datalog test/cba/datalog/*.cc)
-#    set(test_cases ${test_cases} ${test_cases_datalog})
-#endif()
+if(ANALYSIS_DATALOG)
+    file(GLOB_RECURSE test_cases_datalog test/cba/datalog/*.cc)
+    set(test_cases ${test_cases} ${test_cases_datalog})
+endif()
 
 #if(ANALYSIS_HASKELL)
 #    file(GLOB_RECURSE test_cases_haskell test/cba/haskell/*.cc)

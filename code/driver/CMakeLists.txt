@@ -23,8 +23,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 glob_executables(driver_exes src)
 foreach(exe ${driver_exes})
 
-	# TODO
-	if(exe MATCHES "datalog")
+	if(exe MATCHES "datalog" AND NOT ANALYSIS_DATALOG)
 		continue()
 	endif()
 

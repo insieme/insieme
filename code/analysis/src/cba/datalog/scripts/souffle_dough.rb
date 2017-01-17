@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-
 require "fileutils"
 
 @srcdir = ARGV[0]

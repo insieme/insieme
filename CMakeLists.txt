@@ -32,6 +32,7 @@ include(msvc_source_group)
 include(add_module)
 include(nproc)
 include(run_ruby)
+include(add_souffle)
 
 # -- Insieme
 include(insieme_specific)
