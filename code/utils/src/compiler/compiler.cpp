@@ -95,8 +95,8 @@ namespace compiler {
 	Compiler Compiler::getOpenCLCompiler(const Compiler& base) {
 		Compiler res = getRuntimeCompiler(base);
 		res.addFlag("-lOpenCL -DIRT_ENABLE_OPENCL -DIRT_ENABLE_ASSERTS");
-		res.addFlag(string("-I ") + utils::getInsiemeLibsRootDir() + "opencl/include");
-		res.addFlag(string("-L ") + utils::getInsiemeLibsRootDir() + "opencl/lib64/");
+		res.addFlag(string("-I ") + utils::getOpenCLRootDir() + "include/");
+		res.addFlag(string("-L ") + utils::getOpenCLRootDir() + "lib64/");
 		return res;
 	}
 

@@ -225,8 +225,9 @@ namespace frontend {
 		//		functiondefinition
 		//	+	for some builtins with differing signature (currently storelps/storehps/movntq) we hack the
 		//		intrinsic to use depending on the used compiler the correct casts
-		this->pimpl->clang.getHeaderSearchOpts().AddPath(utils::getInsiemeBuildRootDir() + "/code/frontend/builtins/include/insieme/frontend/builtin_headers/", clang::frontend::Angled, false,
-		                                                 false);
+		//
+		// GENERATED_BUILTINS_DIR supplied by CMake
+		this->pimpl->clang.getHeaderSearchOpts().AddPath(string(GENERATED_BUILTINS_DIR), clang::frontend::Angled, false, false);
 		/*** VECTOR EXTENSION STUFF END ***/
 
 		pimpl->m_isCXX = false;

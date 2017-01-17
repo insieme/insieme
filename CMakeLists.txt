@@ -12,6 +12,7 @@ list(APPEND CMAKE_PREFIX_PATH ${prefix_paths})
 # -- Project Settings
 include(build_settings)
 include(energy_settings)
+include(opencl_settings)
 include(papi_settings)
 include(valgrind_settings)
 include(doxygen)

@@ -17,6 +17,7 @@ add_definitions(-DINSIEME_LIBS_HOME="$ENV{INSIEME_LIBS_HOME}/")
 
 # TODO this should be dropped too
 add_definitions(-DINSIEME_BUILD_ROOT="${PROJECT_BINARY_DIR}/")
+add_definitions(-DINSIEME_SOURCE_ROOT="${PROJECT_SOURCE_DIR}/code/")
 
 add_definitions(-DINSIEME_VERSION="${GIT_REF}")
 add_definitions(-DINSIEME_BRANCH="${GIT_BRANCH}")

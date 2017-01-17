@@ -146,8 +146,8 @@ namespace integration {
 		      properties(properties) {
 			if(enableOpenCL) {
 				// add the OpenCL specific directories
-				this->includeDirs.push_back(utils::getInsiemeLibsRootDir() + "opencl/include");
-				this->libDirs.push_back(utils::getInsiemeLibsRootDir() + "opencl/lib64/");
+				this->includeDirs.push_back(utils::getOpenCLRootDir() + "include/");
+				this->libDirs.push_back(utils::getOpenCLRootDir() + "lib64/");
 			}
 		}
 

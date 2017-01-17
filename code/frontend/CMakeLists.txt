@@ -33,6 +33,7 @@ run_ruby(
 file(GLOB_RECURSE generate_builtins_output ${generate_builtins_output_dir}/*)
 target_include_directories(frontend PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/builtins/include)
 target_sources(frontend PRIVATE ${generate_builtins_output})
+add_definitions(-DGENERATED_BUILTINS_DIR="${generate_builtins_output_dir}/")
 
 glob_tests(frontend_tests test)
 foreach(test ${frontend_tests})

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2017 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,18 +34,32 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/utils/config.h"
 
-#include <string>
+using std::string;
 
 namespace insieme {
 namespace utils {
 
-	std::string getInsiemeSourceRootDir();
+	string getInsiemeSourceRootDir() {
+		return string(INSIEME_SOURCE_ROOT); // supplied by CMake
+	}
 
-	std::string getOpenCLRootDir();
+	string getOpenCLRootDir() {
+		#ifdef OPENCL_ROOT
+			return string(OPENCL_ROOT); // supplied by CMake
+		#else
+			return string("");
+		#endif
+	}
 
-	std::string getPapiRootDir();
+	string getPapiRootDir() {
+		#ifdef USE_PAPI
+			return string(PAPI_ROOT); // supplied by CMake
+		#else
+			return string("");
+		#endif
+	}
 
 } // end namespace utils
 } // end namespace insieme
