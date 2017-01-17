@@ -52,6 +52,7 @@ namespace driver {
 			core::NodeManager manager;
 
 			frontend::ConversionJob job(utils::getInsiemeSourceRootDir() + filename);
+			job.addIncludeDirectory(utils::getInsiemeSourceRootDir() + "frontend/test/inputs/interceptor/");
 			job.addInterceptedHeaderDir(utils::getInsiemeSourceRootDir() + "frontend/test/inputs/interceptor/");
 			job.registerDefaultExtensions();
 			job.setStandard(frontend::ConversionSetup::Standard::Cxx11);
