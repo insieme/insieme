@@ -4,7 +4,7 @@ target_link_libraries(transform core)
 target_link_libraries(transform utils)
 
 # Boost
-find_package(Boost ${Boost_VERSION} EXACT REQUIRED)
+find_package(Boost ${BOOST_VERSION} EXACT REQUIRED)
 target_link_libraries(transform ${Boost_LIBRARIES})
 target_include_directories(transform SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 

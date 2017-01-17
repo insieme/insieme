@@ -10,7 +10,7 @@ target_link_libraries(driver transform)
 target_link_libraries(driver utils)
 
 # Boost
-find_package(Boost ${Boost_VERSION} EXACT REQUIRED COMPONENTS program_options)
+find_package(Boost ${BOOST_VERSION} EXACT REQUIRED COMPONENTS program_options)
 target_link_libraries(driver ${Boost_LIBRARIES})
 target_include_directories(driver SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 

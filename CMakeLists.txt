@@ -17,21 +17,24 @@ include(papi_settings)
 include(valgrind_settings)
 include(doxygen)
 include(git_metadata)
-include(insieme_specific)
 
 # -- Dependency Versions
-set(Boost_VERSION 1.59.0 CACHE STRING "Boost Version" FORCE)
-set(CUDD_VERSION 2.4.2 CACHE STRING "CUDD Version" FORCE)
-set(LLVM_VERSION 3.6.2 CACHE STRING "LLVM Version" FORCE)
+set(BOOST_VERSION 1.59.0 CACHE STRING "Boost Version")
+set(CUDD_VERSION 2.4.2 CACHE STRING "CUDD Version")
+set(LLVM_VERSION 3.6.2 CACHE STRING "LLVM Version")
 
 # -- Dependency Settings
 include(boost_settings)
 
 # -- CMake Modules
 include(file_globs)
+include(msvc_source_group)
 include(add_module)
 include(nproc)
 include(run_ruby)
+
+# -- Insieme
+include(insieme_specific)
 
 # -- Project Modules
 add_subdirectory(code/common)

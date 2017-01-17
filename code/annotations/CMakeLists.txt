@@ -5,7 +5,7 @@ target_link_libraries(annotations core)
 target_link_libraries(annotations utils)
 
 # Boost
-find_package(Boost ${Boost_VERSION} EXACT REQUIRED)
+find_package(Boost ${BOOST_VERSION} EXACT REQUIRED)
 target_link_libraries(annotations ${Boost_LIBRARIES})
 target_include_directories(annotations SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 

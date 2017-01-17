@@ -4,7 +4,7 @@ target_link_libraries(core common)
 target_link_libraries(core utils)
 
 # Boost
-find_package(Boost ${Boost_VERSION} EXACT REQUIRED COMPONENTS filesystem system)
+find_package(Boost ${BOOST_VERSION} EXACT REQUIRED COMPONENTS filesystem system)
 target_link_libraries(core ${Boost_LIBRARIES})
 target_include_directories(core SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 

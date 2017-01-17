@@ -7,7 +7,7 @@ target_link_libraries(frontend transform)
 target_link_libraries(frontend utils)
 
 # Boost
-find_package(Boost ${Boost_VERSION} EXACT REQUIRED COMPONENTS filesystem system program_options serialization)
+find_package(Boost ${BOOST_VERSION} EXACT REQUIRED COMPONENTS filesystem system program_options serialization)
 target_link_libraries(frontend ${Boost_LIBRARIES})
 target_include_directories(frontend SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 

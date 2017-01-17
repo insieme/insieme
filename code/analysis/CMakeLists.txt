@@ -84,7 +84,7 @@ target_link_libraries(analysis core)
 target_link_libraries(analysis utils)
 
 # Boost
-find_package(Boost ${Boost_VERSION} EXACT REQUIRED)
+find_package(Boost ${BOOST_VERSION} EXACT REQUIRED)
 target_link_libraries(analysis ${Boost_LIBRARIES})
 target_include_directories(analysis SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 
