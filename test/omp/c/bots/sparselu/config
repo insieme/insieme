@@ -1,0 +1,3 @@
+files="../../../../../seq/c/bots/bots_common.c","../../../../../seq/c/bots/bots_main.c","../../../../../seq/c/bots/sparselu/sparselu.c"
+includes="../../../../../seq/c/bots","../../../../../seq/c/bots/sparselu/"
+executionFlags=-c -n 20 -m 150

@@ -63,7 +63,7 @@ namespace insieme {
 		core::NodeManager manager;
 
 		// obtain test case & check that it's available
-		auto testCaseOpt = getCase("extern_global");
+		auto testCaseOpt = getCase("seq/c/extern_global");
 		ASSERT_FALSE(!testCaseOpt);
 		driver::integration::IntegrationTestCase testCase = *testCaseOpt;
 
@@ -90,7 +90,7 @@ namespace insieme {
 		core::NodeManager manager;
 
 		// obtain test case & check that it's available
-		auto testCaseOpt = getCase("ext_multi");
+		auto testCaseOpt = getCase("seq/c/ext_multi");
 		ASSERT_FALSE(!testCaseOpt);
 		driver::integration::IntegrationTestCase testCase = *testCaseOpt;
 

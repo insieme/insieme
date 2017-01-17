@@ -54,7 +54,7 @@ namespace backend {
 		core::NodeManager manager;
 
 		// load hello world test case
-		auto testCase = driver::integration::getCase("hello_world");
+		auto testCase = driver::integration::getCase("seq/c/hello_world");
 		ASSERT_TRUE(testCase) << "Could not load hello world test case!";
 
 		// convert test case into IR using the frontend

@@ -137,7 +137,7 @@ namespace insieme {
 		TreePattern pattern = irp::literal(var("value"), var("type"));
 
 		// run checks
-		runCheck(pattern, "hello_world");
+		runCheck(pattern, "seq/c/hello_world");
 	}
 
 
@@ -148,7 +148,7 @@ namespace insieme {
 		TreePattern pattern = irp::forStmt(var("iterator"), var("begin"), var("end"), var("step"), var("body"));
 
 		// run checks
-		runCheck(pattern, "matrix_mul_static");
+		runCheck(pattern, "seq/c/matrix_mul_static");
 	}
 
 	TEST(PatternTest, ContainsUsedVariable) {
@@ -167,7 +167,7 @@ namespace insieme {
 
 		// load input code
 		NodeManager mgr;
-		core::ProgramPtr code = load(mgr, "matrix_mul_static");
+		core::ProgramPtr code = load(mgr, "seq/c/matrix_mul_static");
 
 		// goal: make this run for pendulum - now it still takes forever
 		//		core::ProgramPtr code = load(mgr, "pendulum");
@@ -191,7 +191,7 @@ namespace insieme {
 		// load input code
 		NodeManager mgr;
 		//		core::ProgramPtr code = load(mgr, "matrix_mul_static");
-		core::ProgramPtr code = load(mgr, "pendulum");
+		core::ProgramPtr code = load(mgr, "seq/c/pendulum");
 
 		std::cout << "Running match ... \n";
 		auto res = pattern.matchPointer(code);
