@@ -78,9 +78,6 @@ endif()
 find_package(Threads REQUIRED)
 target_link_libraries(runtime ${CMAKE_THREAD_LIBS_INIT})
 
-# TODO check if this is needed
-target_include_directories(runtime PRIVATE ${OPENCL_INCLUDE_DIR})
-
 # Note that the unit tests are compiled with g++ so the runtime code is
 # compiled as well as C++ this gives problems with anonymous structs as they
 # are not supported by C++/C (before C11).
@@ -123,8 +120,9 @@ foreach(test ${runtime_standalone_tests})
 		add_executable(${test_name} ${test})
 		add_runtime_dependencies(${test_name})
 
-		# TODO fix OpenCL Path
-		target_include_directories(${test_name} PRIVATE $ENV{OPENCL_ROOT}/include)
+		if(OpenCL_FOUND)
+			target_include_directories(${test_name} PRIVATE ${OpenCL_INCLUDE_DIR})
+		endif()
 
 		target_link_libraries(${test_name} ${CMAKE_THREAD_LIBS_INIT})
 
