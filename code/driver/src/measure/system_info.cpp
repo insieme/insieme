@@ -50,7 +50,7 @@ namespace measure {
 
 	int SystemInfo::obtainSystemInformation() const {
 		core::NodeManager manager;
-		auto testCode = insieme::driver::integration::getCase("hello_world")->load(manager);
+		auto testCode = insieme::driver::integration::getCase("seq/c/hello_world")->load(manager);
 		assert_true(testCode) << "SystemInfo dummy code invalid!";
 		auto target = backend->convert(testCode);
 
