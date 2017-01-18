@@ -54,3 +54,14 @@ endif()
 if(BUILD_RUNTIME)
 	add_subdirectory(code/runtime)
 endif()
+
+if(BUILD_DOCS)
+	add_subdirectory(docs/insieme_dev_doc)
+endif()
+
+# -- Integration Test Files
+if(MSVC)
+	file(GLOB_RECURSE integration_test_files ${PROJECT_SOURCE_DIR}/test *.c *.cpp *.h)
+	add_custom_target(integration_test_files SOURCES ${integration_test_files})
+	msvc_source_group("Files" "${integration_test_files}" STRIP test)
+endif()
