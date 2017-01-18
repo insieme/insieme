@@ -49,6 +49,10 @@ namespace utils {
 		return (boost::filesystem::path(__FILE__).parent_path() / up / up / up / up).string();
 	}
 
+	inline string getInsiemeTestRootDir() {
+		return getInsiemeSourceRootDir() + "/../test/";
+	}
+
 	inline string getInsiemeLibsRootDir() {
 		return string(INSIEME_LIBS_HOME); // INSIEME_LIBS_HOME is supplied by cmake
 	}

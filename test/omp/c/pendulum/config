@@ -1,0 +1,2 @@
+files="../../../seq/c/pendulum/pendulum.c"
+use_libmath=1

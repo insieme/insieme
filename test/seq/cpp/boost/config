@@ -1,0 +1,4 @@
+includes=${includes},${boost_include}
+intercepted_header_file_dirs=${intercepted_header_file_dirs},${boost_include}
+libPaths="${libPaths}","${boost_lib}"
+libNames="${libNames}","boost_regex"

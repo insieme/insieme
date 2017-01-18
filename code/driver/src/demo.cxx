@@ -42,9 +42,9 @@
  * applications utilizing the Insieme compiler and runtime infrastructure.
  */
 
-#include <insieme/driver/cmd/commandline_options.h>
 #include <string>
 
+#include "insieme/driver/cmd/commandline_options.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/frontend/frontend.h"

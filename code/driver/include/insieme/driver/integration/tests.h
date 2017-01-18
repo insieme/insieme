@@ -41,29 +41,28 @@
 #include <vector>
 #include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/tokenizer.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
-#include "insieme/utils/string_utils.h"
+#include "insieme/core/ir_program.h"
 #include "insieme/utils/printable.h"
 #include "insieme/utils/config.h"
-
-#include "insieme/core/ir_program.h"
-#include "insieme/frontend/frontend.h"
-
 #include "insieme/driver/integration/properties.h"
 
 namespace insieme {
 namespace core {
-namespace tu {
-	class IRTranslationUnit;
+	namespace tu {
+		class IRTranslationUnit;
+	}
 }
+namespace frontend {
+	class ConversionJob;
 }
 namespace driver {
 namespace cmd {
 	struct Options;
 }
+
 namespace integration {
 
 	using std::map;
@@ -74,6 +73,7 @@ namespace integration {
 	 * Instances of this class represent integration test cases within
 	 */
 	class IntegrationTestCase : public utils::Printable {
+
 		/**
 		 * The name of this test case.
 		 */
@@ -82,22 +82,22 @@ namespace integration {
 		/**
 		 * The directory forming containing the test case.
 		 */
-		frontend::path dir;
+		boost::filesystem::path dir;
 
 		/**
 		 * The input files of this test case.
 		 */
-		vector<frontend::path> files;
+		vector<boost::filesystem::path> files;
 
 		/**
 		 * Extra include directories to be considered.
 		 */
-		vector<frontend::path> includeDirs;
+		vector<boost::filesystem::path> includeDirs;
 
 		/**
 		 * A list of external libraries, paths
 		 */
-		vector<frontend::path> libDirs;
+		vector<boost::filesystem::path> libDirs;
 
 		/**
 		 * A list of external libraries, names
@@ -107,7 +107,7 @@ namespace integration {
 		/**
 		 * A list of directories containing header filed to be intercepted.
 		 */
-		vector<frontend::path> interceptedHeaderFileDirectories;
+		vector<boost::filesystem::path> interceptedHeaderFileDirectories;
 
 		/**
 		 * A flag indicating whether OpenMP should be enabled within the frontend or not.
@@ -124,33 +124,39 @@ namespace integration {
 		 */
 		Properties properties;
 
-
-	  private:
 		friend class boost::serialization::access;
 		template <class Archive>
 		void serialize(Archive& ar, const unsigned int version) {
-			ar& name;
+			ar & name;
 		}
 
 	  public:
-		IntegrationTestCase(){};
 		/**
 		 * Creates a new test case based on the given arguments.
 		 */
-		IntegrationTestCase(const string& name, const frontend::path& dir, const vector<frontend::path>& files, const vector<frontend::path>& includeDirs,
-		                    const vector<frontend::path>& libDirs, const vector<string>& libNames,
-		                    const vector<frontend::path>& interceptedHeaderFileDirectories, bool enableOpenMP, bool enableOpenCL,
-		                    const Properties& properties)
-		    : name(name), dir(dir), files(files), includeDirs(includeDirs), libDirs(libDirs), libNames(libNames),
-		      interceptedHeaderFileDirectories(interceptedHeaderFileDirectories), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL),
-		      properties(properties) {
-			if(enableOpenCL) {
-				// add the OpenCL specific directories
-				this->includeDirs.push_back(utils::getInsiemeLibsRootDir() + "opencl/include");
-				this->libDirs.push_back(utils::getInsiemeLibsRootDir() + "opencl/lib64/");
-			}
-		}
+		IntegrationTestCase(const string& name,
+		                    const boost::filesystem::path& dir,
+		                    const vector<boost::filesystem::path>& files,
+		                    const vector<boost::filesystem::path>& includeDirs,
+		                    const vector<boost::filesystem::path>& libDirs,
+		                    const vector<string>& libNames,
+		                    const vector<boost::filesystem::path>& interceptedHeaderFileDirectories,
+		                    bool enableOpenMP,
+		                    bool enableOpenCL,
+		                    const Properties& properties);
 
+	  private:
+		/**
+		 * Obtains a properly configured frontend conversionJob object which can be used to convert the given test case to IR.
+		 */
+		frontend::ConversionJob toConversionJob() const;
+
+		/**
+		 * Obtains the list of macro definitions to be passed on the the frontend.
+		 */
+		const map<string, string> getDefinitions(std::string step) const;
+
+	  public:
 		/**
 		 * Obtains the name of this test case.
 		 */
@@ -168,28 +174,28 @@ namespace integration {
 		/**
 		 * Obtains the directory forming this test case.
 		 */
-		const frontend::path& getDirectory() const {
+		const boost::filesystem::path& getDirectory() const {
 			return dir;
 		}
 
 		/**
 		 * Obtains the files this test case is consisting of.
 		 */
-		const vector<frontend::path>& getFiles() const {
+		const vector<boost::filesystem::path>& getFiles() const {
 			return files;
 		}
 
 		/**
 		 * Obtains the list of include directories.
 		 */
-		const vector<frontend::path>& getIncludeDirs() const {
+		const vector<boost::filesystem::path>& getIncludeDirs() const {
 			return includeDirs;
 		}
 
 		/**
 		 * Obtains the list of external library directories.
 		 */
-		const vector<frontend::path>& getLibDirs() const {
+		const vector<boost::filesystem::path>& getLibDirs() const {
 			return libDirs;
 		}
 
@@ -203,7 +209,7 @@ namespace integration {
 		/**
 		 * Obtains the list of directories containing header filed to be intercepted.
 		 */
-		const vector<frontend::path>& getInterceptedHeaderFileDirectories() const {
+		const vector<boost::filesystem::path>& getInterceptedHeaderFileDirectories() const {
 			return interceptedHeaderFileDirectories;
 		}
 
@@ -258,13 +264,6 @@ namespace integration {
 		}
 
 		/**
-		 * A method that gives an options object that is configured and can be
-		 * passed to e.g., conversion job. The options object does not contain
-		 * any files that may be used as input sources for this test case.
-		 */
-		driver::cmd::Options getOptions() const;
-
-		/**
 		 * Loads this test case.
 		 */
 		core::ProgramPtr load(core::NodeManager& manager) const;
@@ -275,31 +274,59 @@ namespace integration {
 		core::tu::IRTranslationUnit loadTU(core::NodeManager& manager) const;
 
 		/**
-		 * Obtains the list of macro definitions to be passed on the the frontend.
-		*/
-		const map<string, string> getDefinitions(std::string step) const;
+		 * Returns the name/path to the compiler to use depending on the configuration for the passed step and language,
+		 * maybe also considering environment variables
+		 */
+		std::string getCompilerString(std::string step, bool considerEnvVars, bool isCpp) const;
 
 		/**
 		 * Obtains a list of additional arguments to be passed on to the compiler when building the test case.
 		 */
-		const vector<string> getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const;
+		const vector<string> getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp, bool addLibs = true) const;
+
+		/**
+		 * Obtains a list of additional arguments to be passed on to the Insieme compile step.
+		 */
+		const vector<string> getInsiemeCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const;
 	};
 
-	// an optional type wrapping a test case
-	typedef boost::optional<IntegrationTestCase> IntegrationTestCaseOpt;
+
+	/**
+	 * A struct used to hold various paths needed to successfully lookup integration tests and their configuration
+	 */
+	struct IntegrationTestCaseDefaultsPaths {
+
+		/**
+		 * The default test source folder.
+		 * This is used to look up tests by name.
+		 */
+		std::string testDir;
+
+		/**
+		 * The default build folder.
+		 * This is used to look up the global configuration file and also the insiemecc binary.
+		 */
+		std::string buildDir;
+
+		/**
+		 * The name to the global configuration file.
+		 * This file will be searched in the current working directory, all it's parents and finally in the build folder.
+		 */
+		std::string globalConfigFileName;
+	};
+
+	IntegrationTestCaseDefaultsPaths getDefaultIntegrationTestCaseDefaultsPaths();
+
 
 	// an enum describing the different modes which test cases to load
 	enum LoadTestCaseMode { ENABLED_TESTS, ENABLED_AND_LONG_TESTS, LONG_TESTS, BLACKLISTED_TESTS, ALL_TESTS };
 
-	/** returns the name/path to the backend compiler to use depending on the passed language and compiler name/path.
-	 * This function will give precedence to the INSIEME_C(XX)_BACKEND_COMPILER environment variables
-	 */
-	std::string getBackendCompilerString(const string& compilerProperty, bool isCpp);
 
 	/**
 	 * Obtains a full list of all test cases available within the system.
 	 */
-	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode = ENABLED_TESTS);
+	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode = ENABLED_TESTS,
+	                                               const IntegrationTestCaseDefaultsPaths defaultPaths = getDefaultIntegrationTestCaseDefaultsPaths());
 
 	/**
 	 * Obtains the test case matching the given name.
@@ -307,7 +334,8 @@ namespace integration {
 	 * @param name the name of the test case looking for
 	 * @return an optional representing the test case or being uninitialized if there is no such test case.
 	 */
-	const IntegrationTestCaseOpt getCase(const string& name);
+	const boost::optional<IntegrationTestCase> getCase(const string& name,
+	                                                   const IntegrationTestCaseDefaultsPaths defaultPaths = getDefaultIntegrationTestCaseDefaultsPaths());
 
 	/**
 	 * Obtains a list of test cases in the given path or below.
@@ -315,19 +343,8 @@ namespace integration {
 	 * @param path the directory representing the integration test
 	 * @return the list of test cases within this directory or below
 	 */
-	vector<IntegrationTestCase> getTestSuite(const string& path);
-
-	/**
-	 * This function is loading the integration test with the given name.
-	 *
-	 * @param manager the manager to be used to load the specified test program
-	 * @param name the integration test to be loaded
-	 * @param enableOpenMP a flag allowing to enable / disable the OpenMP conversion
-	 * @param definitions the list of definitions to be passed to the pre-processor
-	 * @return the loaded program
-	 */
-	core::ProgramPtr loadIntegrationTest(core::NodeManager& manager, const std::string& name, bool enableOpenMP = true,
-	                                     const std::map<string, string>& definitions = std::map<string, string>());
+	vector<IntegrationTestCase> getTestSuite(const string& path,
+	                                         const IntegrationTestCaseDefaultsPaths defaultPaths = getDefaultIntegrationTestCaseDefaultsPaths());
 
 	/**
 	 * Allow Integration Tests to be properly printed within gtest.

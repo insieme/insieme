@@ -61,20 +61,20 @@ namespace frontend {
 	}
 
 	TEST(LargeConversionTest, Pendulum) {
-		runLargeConversionTestOn(FRONTEND_TEST_DIR + "../../../test/pendulum/pendulum.c");
+		runLargeConversionTestOn(FRONTEND_TEST_DIR + "../../../test/seq/c/pendulum/pendulum.c");
 	}
 
 	TEST(LargeConversionTest, Pyramids) {
-		runLargeConversionTestOn(FRONTEND_TEST_DIR + "../../../test/pyramids/pyramids.c");
+		runLargeConversionTestOn(FRONTEND_TEST_DIR + "../../../test/seq/c/pyramids/pyramids.c");
 	}
 
 	TEST(LargeConversionTest, Stencil3D) {
-		runLargeConversionTestOn(FRONTEND_TEST_DIR + "../../../test/stencil3d/stencil3d.c");
+		runLargeConversionTestOn(FRONTEND_TEST_DIR + "../../../test/seq/c/stencil3d/stencil3d.c");
 	}
 
 	// enable after checking recursive struct resolve
 	//TEST(LargeConversionTest, QAP) {
-	//	runLargeConversionTestOn(FRONTEND_TEST_DIR "../../../test/qap/qap.c");
+	//	runLargeConversionTestOn(FRONTEND_TEST_DIR "../../../test/seq/c/qap/qap.c");
 	//}
 
 } // fe namespace

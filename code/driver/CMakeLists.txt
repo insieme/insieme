@@ -55,9 +55,6 @@ foreach(exec_file ${executables})
 
 endforeach(exec_file)
 
-# integrations_tests uses insiemecc - so there is a dependency
-add_dependencies(integration_tests insiemecc)
-
 # =============================================  TESTING  =====================================
 # add unit test cases
 set(ut_prefix  ut_driver )
@@ -92,3 +89,12 @@ add_custom_command(
 	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 	COMMENT "Run preprocessing for integration tests"
 )
+
+# ============================================  DEPENDENCIES  =====================================
+
+# integrations_tests uses insiemecc - so there is a dependency
+add_dependencies(integration_tests insiemecc)
+
+# The overall integration unit test depends on the preprocessing being done.
+# To ensure this we add a dependency to the integration_tests binary here, which will ensure the preprocessing has happened
+add_dependencies(ut_driver_integration_overall_integration_test integration_tests)

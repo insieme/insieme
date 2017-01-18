@@ -1,39 +1,3 @@
-/**
- * Copyright (c) 2002-2016 Distributed and Parallel Systems Group,
- *                Institute of Computer Science,
- *               University of Innsbruck, Austria
- *
- * This file is part of the INSIEME Compiler and Runtime System.
- *
- * We provide the software of this file (below described as "INSIEME")
- * under GPL Version 3.0 on an AS IS basis, and do not warrant its
- * validity or performance.  We reserve the right to update, modify,
- * or discontinue this software at any time.  We shall have no
- * obligation to supply such updates or modifications or any other
- * form of support to you.
- *
- * If you require different license terms for your intended use of the
- * software, e.g. for proprietary commercial or industrial use, please
- * contact us at:
- *                   insieme@dps.uibk.ac.at
- *
- * We kindly ask you to acknowledge the use of this software in any
- * publication or other disclosure of results by referring to the
- * following citation:
- *
- * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
- * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
- * for Parallel Codes, in Proc. of the Intl. Conference for High
- * Performance Computing, Networking, Storage and Analysis (SC 2012),
- * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
- *
- * All copyright notices must be kept intact.
- *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
- * regarding third party software licenses.
- */
-
 # some configuration options 
 compiler[ref_c_compile]=@INSIEME_C_BACKEND_COMPILER@
 compiler[ref_cpp_compile]=@INSIEME_CXX_BACKEND_COMPILER@
@@ -50,9 +14,6 @@ compiler[insiemecc_seq_cpp_compile]=@INSIEME_CXX_BACKEND_COMPILER@
 compiler[insiemecc_ocl_c_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
 compiler[insiemecc_ocl_c_compile]=@INSIEME_C_BACKEND_COMPILER@
 
-# frontend code interception configuration seed
-intercepted_header_file_dirs=
-
 # boost environment
 boost_include=@Boost_INCLUDE_DIRS@
 boost_lib=@Boost_LIBRARY_DIRS@
@@ -66,6 +27,15 @@ compareOutputScript=@insieme_root_dir@/test/compareOutput
 # time utility
 time_executable=@TIME_EXECUTABLE@
 
-# setup insieme runtime compiler flags
-use_libmath[insiemecc_run_c_compile]=1
-use_libpthread[insiemecc_run_c_compile]=1
+# config properties
+includes=
+intercepted_header_file_dirs=
+libPaths=
+libNames=
+
+# finally the compiler configuration settings
+compilerConfigurationFile[insiemecc]="@CMAKE_CURRENT_SOURCE_DIR@/../test/compilerConfiguration.insiemecc"
+compilerConfigurationFile[gcc]="@CMAKE_CURRENT_SOURCE_DIR@/../test/compilerConfiguration.gcc"
+compilerConfigurationFile[g++]="@CMAKE_CURRENT_SOURCE_DIR@/../test/compilerConfiguration.g++_and_clang"
+compilerConfigurationFile[clang]="@CMAKE_CURRENT_SOURCE_DIR@/../test/compilerConfiguration.g++_and_clang"
+compilerConfigurationFile[clang++]="@CMAKE_CURRENT_SOURCE_DIR@/../test/compilerConfiguration.g++_and_clang"

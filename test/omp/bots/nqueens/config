@@ -1,3 +1,0 @@
-includes="../../../../bots","../../../../bots/nqueens"
-files="../../../../bots/bots_common.c","../../../../bots/bots_main.c","../../../../bots/nqueens/nqueens.c"
-executionFlags=-n 13 -c -t

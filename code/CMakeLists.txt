@@ -55,7 +55,7 @@ if(CONFIG_INTEGRATION_TESTS)
 	#FIXME: cpp/boost integration tests rely on boost to be set?
 	insieme_find_package(NAME Boost)
 
-	configure_file(integration_test_config.in ${CMAKE_BINARY_DIR}/integration_test_config  @ONLY IMMEDIATE)
+	configure_file(integration_test_config.in ${CMAKE_CURRENT_BINARY_DIR}/../integration_test_config @ONLY IMMEDIATE)
 endif()
 
 #-- Add an Option to toggle the generation of the API documentation
