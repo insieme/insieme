@@ -1,7 +1,13 @@
-find_package(GMP ${GMP_VERSION} REQUIRED)
+find_package(GMP ${GMP_VERSION})
+if(NOT GMP_FOUND)
+	message(WARNING "GMP NOT found")
+endif()
 get_filename_component(GMP_LIBRARIES_DIR ${GMP_LIBRARIES} PATH)
 
-find_package(ZLIB ${ZLIB_VERSION} REQUIRED)
+find_package(ZLIB ${ZLIB_VERSION})
+if(NOT ZLIB_FOUND)
+	message(WARNING "ZLIB NOT found")
+endif()
 get_filename_component(ZLIB_LIBRARIES_DIR ${ZLIB_LIBRARIES} PATH)
 
 # TODO find_package(STACK REQUIRED)
@@ -9,7 +15,7 @@ if(NOT STACK_ROOT AND DEFINED $ENV{STACK_ROOT})
 	set(STACK_ROOT "$ENV{STACK_ROOT}" CACHE PATH "Haskell Stack base directory location")
 endif()
 if(NOT STACK_ROOT)
-	message(FATAL_ERROR "Haskell Stack NOT found")
+	message(WARNING "Haskell Stack NOT found")
 endif()
 
 set(stack_data ${STACK_ROOT}/stack-root_$ENV{USER})
@@ -45,6 +51,10 @@ add_custom_target(
 
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+if(MSVC)
+	set_target_properties(analysis_haskell PROPERTIES FOLDER analysis)
+endif()
 
 if(BUILD_DOCS)
     add_custom_command(

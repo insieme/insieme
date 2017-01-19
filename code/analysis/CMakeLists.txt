@@ -11,49 +11,52 @@ file(GLOB analysis_incs include/insieme/analysis/cba/*.h include/insieme/analysi
 # =============================================  SOUFFLE  =====================================
 if(ANALYSIS_DATALOG)
 
-    # Add soufflé specific source files
-    file(GLOB_RECURSE analysis_datalog_srcs src/cba/datalog/*.cpp src/cba/datalog/*.dl)
-    set(analysis_srcs ${analysis_srcs} ${analysis_datalog_srcs})
-    glob_headers(analysis_datalog_incs include/insieme/analysis/cba/datalog)
-    set(analysis_incs ${analysis_incs} ${analysis_datalog_incs})
+	# Add soufflé specific source files
+	file(GLOB_RECURSE analysis_datalog_srcs src/cba/datalog/*.cpp src/cba/datalog/*.dl)
+	set(analysis_srcs ${analysis_srcs} ${analysis_datalog_srcs})
+	glob_headers(analysis_datalog_incs include/insieme/analysis/cba/datalog)
+	set(analysis_incs ${analysis_incs} ${analysis_datalog_incs})
 
-    # Generate soufflé files now so we can add them to the insieme_analysis library later
-    set(souffle_input_dir  ${CMAKE_CURRENT_SOURCE_DIR}/src/cba/datalog)
+	# Generate soufflé files now so we can add them to the insieme_analysis library later
+	set(souffle_input_dir  ${CMAKE_CURRENT_SOURCE_DIR}/src/cba/datalog)
 
-    # Create directories, soufflé-related variables etc
-    configure_souffle()
+	# Create directories, soufflé-related variables etc
+	configure_souffle()
 
-    # Run the Dough preprocessor script on the datalog files
-    souffle_run_dough(${souffle_input_dir} ${souffle_tmp_dir})
+	# Run the Dough preprocessor script on the datalog files
+	souffle_run_dough(${souffle_input_dir} ${souffle_tmp_dir})
 
-    # compile the preprocessed analysis files *.dl to CPP header files
-    file(GLOB datalog_analyses ${souffle_input_dir}/*.dl)
-    foreach(analysis_file ${datalog_analyses})
-        get_filename_component(analysis_name ${analysis_file} NAME_WE)
-        souffle_generate_cpp(${souffle_tmp_dir} ${analysis_name} ${souffle_tmp_dir}/include)
-    endforeach(analysis_file)
+	# compile the preprocessed analysis files *.dl to CPP header files
+	file(GLOB datalog_analyses ${souffle_input_dir}/*.dl)
+	foreach(analysis_file ${datalog_analyses})
+	get_filename_component(analysis_name ${analysis_file} NAME_WE)
+	souffle_generate_cpp(${souffle_tmp_dir} ${analysis_name} ${souffle_tmp_dir}/include)
+	endforeach(analysis_file)
 
-    set(analysis_srcs ${analysis_srcs} ${souffle_output})
+	set(analysis_srcs ${analysis_srcs} ${souffle_output})
 
 endif()
 
 # =============================================  HASKELL  =====================================
 if(ANALYSIS_HASKELL)
 
-    # Add Haskell specific source files
-    file(GLOB_RECURSE analysis_haskell_srcs src/cba/haskell/*.cpp)
-    set(analysis_srcs ${analysis_srcs} ${analysis_haskell_srcs})
-    glob_headers(analysis_haskell_incs include/insieme/analysis/cba/haskell)
-    set(analysis_incs ${analysis_incs} ${analysis_haskell_incs})
+	# Add Haskell specific source files
+	file(GLOB_RECURSE analysis_haskell_srcs src/cba/haskell/*.cpp)
+	set(analysis_srcs ${analysis_srcs} ${analysis_haskell_srcs})
+	glob_headers(analysis_haskell_incs include/insieme/analysis/cba/haskell)
+	set(analysis_incs ${analysis_incs} ${analysis_haskell_incs})
 
-    find_package(GMP ${GMP_VERSION} REQUIRED)
+	find_package(GMP ${GMP_VERSION})
+	if(NOT GMP_FOUND)
+		message(WARNING "GMP NOT found")
+	endif()
 
-    add_subdirectory(src/cba/haskell/insieme-hat)
-    link_directories(${CMAKE_CURRENT_BINARY_DIR}/src/cba/haskell/insieme-hat)
+	add_subdirectory(src/cba/haskell/insieme-hat)
+	link_directories(${CMAKE_CURRENT_BINARY_DIR}/src/cba/haskell/insieme-hat)
 
-    # add directories containing libffi, libHSrts and gmp
-    link_directories(${LIBHSRTS_DIR})
-    link_directories(${GMP_ROOT}/lib)
+	# add directories containing libffi, libHSrts and gmp
+	link_directories(${LIBHSRTS_DIR})
+	link_directories(${GMP_ROOT}/lib)
 
 endif()
 
@@ -89,20 +92,25 @@ target_include_directories(analysis SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 if(ANALYSIS_DATALOG)
 	# Find SQLite3 includes and lib. Newer versions of Soufflé need this
 	find_package(SQLITE)
-	target_include_directories(analysis SYSTEM PRIVATE ${SQLITE_INCLUDE_DIRS})
+	if(NOT SQLITE_FOUND)
+		message(WARNING "SQLite NOT found")
+		set(SQLITE_LIBRARIES "")
+		set(SQLITE_INCLUDE_DIRS "")
+	endif()
 	target_link_libraries(analysis ${SQLITE_LIBRARIES})
+	target_include_directories(analysis SYSTEM PRIVATE ${SQLITE_INCLUDE_DIRS})
 endif()
 
 # Haskell dependency
 if(ANALYSIS_HASKELL)
-    add_dependencies(analysis analysis_haskell)
-    target_include_directories(analysis SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/cba/haskell/insieme-hat/include)
+	add_dependencies(analysis analysis_haskell)
+	target_include_directories(analysis SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/cba/haskell/insieme-hat/include)
 
-    # Gold linker does not automatically resolve libHSrts depdency from
-    # analysis lib, need to specify them explicitly.
-    target_link_libraries(analysis ${LIBHSRTS})
+	# Gold linker does not automatically resolve libHSrts depdency from
+	# analysis lib, need to specify them explicitly.
+	target_link_libraries(analysis ${LIBHSRTS})
 
-    target_link_libraries(analysis ${analysis_haskell})
+	target_link_libraries(analysis ${analysis_haskell})
 endif()
 
 # Find test cases base
@@ -115,13 +123,13 @@ file(GLOB_RECURSE test_cases_features test/features/*.cc)
 set(test_cases ${test_cases} ${test_cases_features})
 
 if(ANALYSIS_DATALOG)
-    file(GLOB_RECURSE test_cases_datalog test/cba/datalog/*.cc)
-    set(test_cases ${test_cases} ${test_cases_datalog})
+	file(GLOB_RECURSE test_cases_datalog test/cba/datalog/*.cc)
+	set(test_cases ${test_cases} ${test_cases_datalog})
 endif()
 
 if(ANALYSIS_HASKELL)
-    file(GLOB_RECURSE test_cases_haskell test/cba/haskell/*.cc)
-    set(test_cases ${test_cases} ${test_cases_haskell})
+	file(GLOB_RECURSE test_cases_haskell test/cba/haskell/*.cc)
+	set(test_cases ${test_cases} ${test_cases_haskell})
 endif()
 
 # Find common test case headers

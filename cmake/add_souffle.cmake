@@ -1,15 +1,15 @@
 #
 # Macro to configure souffle-related variables and paths, as well as
-# soufflé-code defines, directory creation, etc...
+# souffle-code defines, directory creation, etc...
 #
 macro(configure_souffle)
 	
 	# TODO find_package(SOUFFLE REQUIRED)
 	if(NOT SOUFFLE_ROOT AND DEFINED $ENV{SOUFFLE_ROOT})
-		set(SOUFFLE_ROOT "$ENV{SOUFFLE_ROOT}" CACHE PATH "Soufflé base directory location")
+		set(SOUFFLE_ROOT "$ENV{SOUFFLE_ROOT}" CACHE PATH "Souffle base directory location")
 	endif()
 	if(NOT SOUFFLE_ROOT)
-		message(FATAL_ERROR "Soufflé NOT found")
+		message(WARNING "Souffle NOT found")
 	endif()
 
 	# Settings
