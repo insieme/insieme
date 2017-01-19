@@ -38,27 +38,24 @@ if(ANALYSIS_DATALOG)
 endif()
 
 # =============================================  HASKELL  =====================================
-#if(ANALYSIS_HASKELL)
-#
-#    # Add Haskell specific source files
-#    file(GLOB_RECURSE insieme_analysis_srcs_haskell src/cba/haskell/*.cpp)
-#    set(insieme_analysis_srcs ${insieme_analysis_srcs} ${insieme_analysis_srcs_haskell})
-#    insieme_glob_headers(insieme_analysis_incs_haskell include/insieme/analysis/cba/haskell)
-#    set(insieme_analysis_incs ${insieme_analysis_incs} ${insieme_analysis_incs_haskell})
-#
-#    insieme_find_package(NAME GMP)
-#
-#    add_subdirectory(src/cba/haskell/insieme-hat)
-#    link_directories(${CMAKE_CURRENT_BINARY_DIR}/src/cba/haskell/insieme-hat)
-#
-#    # add directories containing libffi, libHSrts and gmp
-#    link_directories(${LIBHSRTS_DIR})
-#    link_directories(${GMP_ROOT}/lib)
-#
-#    set(LIBHSRTS_DIR ${LIBHSRTS_DIR} PARENT_SCOPE)
-#    set(LIBHSRTS ${LIBHSRTS} PARENT_SCOPE)
-#
-#endif()
+if(ANALYSIS_HASKELL)
+
+    # Add Haskell specific source files
+    file(GLOB_RECURSE analysis_haskell_srcs src/cba/haskell/*.cpp)
+    set(analysis_srcs ${analysis_srcs} ${analysis_haskell_srcs})
+    glob_headers(analysis_haskell_incs include/insieme/analysis/cba/haskell)
+    set(analysis_incs ${analysis_incs} ${analysis_haskell_incs})
+
+    find_package(GMP ${GMP_VERSION} REQUIRED)
+
+    add_subdirectory(src/cba/haskell/insieme-hat)
+    link_directories(${CMAKE_CURRENT_BINARY_DIR}/src/cba/haskell/insieme-hat)
+
+    # add directories containing libffi, libHSrts and gmp
+    link_directories(${LIBHSRTS_DIR})
+    link_directories(${GMP_ROOT}/lib)
+
+endif()
 
 if(MSVC)
 	set(analysis_srcs ${analysis_srcs} ${analysis_incs})
@@ -97,16 +94,16 @@ if(ANALYSIS_DATALOG)
 endif()
 
 # Haskell dependency
-#if(ANALYSIS_HASKELL)
-#    add_dependencies(insieme_analysis insieme_analysis_haskell)
-#    target_include_directories(insieme_analysis SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/cba/haskell/insieme-hat/include)
-#
-#    # Gold linker does not automatically resolve libHSrts depdency from
-#    # insieme_analysis lib, need to specify them explicitly.
-#    target_link_libraries(insieme_analysis ${LIBHSRTS})
-#
-#    target_link_libraries(insieme_analysis ${insieme_analysis_haskell})
-#endif()
+if(ANALYSIS_HASKELL)
+    add_dependencies(analysis analysis_haskell)
+    target_include_directories(analysis SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/cba/haskell/insieme-hat/include)
+
+    # Gold linker does not automatically resolve libHSrts depdency from
+    # analysis lib, need to specify them explicitly.
+    target_link_libraries(analysis ${LIBHSRTS})
+
+    target_link_libraries(analysis ${analysis_haskell})
+endif()
 
 # Find test cases base
 file(GLOB test_cases test/*.cc)
@@ -122,10 +119,10 @@ if(ANALYSIS_DATALOG)
     set(test_cases ${test_cases} ${test_cases_datalog})
 endif()
 
-#if(ANALYSIS_HASKELL)
-#    file(GLOB_RECURSE test_cases_haskell test/cba/haskell/*.cc)
-#    set(test_cases ${test_cases} ${test_cases_haskell})
-#endif()
+if(ANALYSIS_HASKELL)
+    file(GLOB_RECURSE test_cases_haskell test/cba/haskell/*.cc)
+    set(test_cases ${test_cases} ${test_cases_haskell})
+endif()
 
 # Find common test case headers
 glob_headers(test_common_incs test/cba/common)

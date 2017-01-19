@@ -1,33 +1,33 @@
-project(insieme_analysis_haskell NONE)
-cmake_minimum_required(VERSION 3.5)
+find_package(GMP ${GMP_VERSION} REQUIRED)
+get_filename_component(GMP_LIBRARIES_DIR ${GMP_LIBRARIES} PATH)
 
-insieme_find_package(NAME GMP)
-insieme_find_package(NAME ZLIB)
+find_package(ZLIB ${ZLIB_VERSION} REQUIRED)
+get_filename_component(ZLIB_LIBRARIES_DIR ${ZLIB_LIBRARIES} PATH)
 
-set(stack_home ${THIRD_PARTY_LIBS_HOME}/stack-latest CACHE PATH "Stack Home Directory")
-set(stack_root ${stack_home}/stack-root_$ENV{USER})
-
-# check for (patched) haskell stack
-if(NOT (${CMAKE_GENERATOR} MATCHES "Visual Studio"))
-    if(NOT EXISTS ${stack_home}/bin/stack)
-        MESSAGE(FATAL_ERROR "Coulnd't find patched Haskell stack")
-    endif()
+# TODO find_package(STACK REQUIRED)
+if(NOT STACK_ROOT AND DEFINED $ENV{STACK_ROOT})
+	set(STACK_ROOT "$ENV{STACK_ROOT}" CACHE PATH "Haskell Stack base directory location")
 endif()
+if(NOT STACK_ROOT)
+	message(FATAL_ERROR "Haskell Stack NOT found")
+endif()
+
+set(stack_data ${STACK_ROOT}/stack-root_$ENV{USER})
 
 # calling stack
 set(stack
     ${CMAKE_COMMAND} -E env
-    "STACK_ROOT=${stack_root}"
-    "LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-    "LD_LIBRARY_PATH=${GMP_ROOT}/lib:${ZLIB_ROOT}/lib"
-    ${stack_home}/bin/stack --ghc-variant standard
+    "STACK_ROOT=${stack_data}"
+    "LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}"
+    "LD_LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}"
+    ${STACK_ROOT}/bin/stack --ghc-variant standard
 )
 
 add_custom_target(
-    insieme_analysis_haskell
+    analysis_haskell
 
     # create STACK_ROOT folder to prevent hideous error
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${stack_root}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${stack_data}
 
     # install adequate ghc / cabal lib
     COMMAND ${stack} setup
@@ -46,9 +46,9 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-if(BUILD_DOXYGEN)
+if(BUILD_DOCS)
     add_custom_command(
-        TARGET insieme_analysis_haskell
+        TARGET analysis_haskell
         POST_BUILD
         COMMAND ${stack} haddock
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -56,7 +56,7 @@ if(BUILD_DOXYGEN)
 endif()
 
 # runtime library exports
-set(LIBHSRTS_DIR ${stack_root}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts PARENT_SCOPE)
-set(LIBHSRTS ${stack_root}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts/libHSrts-ghc7.10.3.so PARENT_SCOPE)
+set(LIBHSRTS_DIR ${stack_data}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts PARENT_SCOPE)
+set(LIBHSRTS ${stack_data}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts/libHSrts-ghc7.10.3.so PARENT_SCOPE)
 
-set(insieme_analysis_haskell ${CMAKE_CURRENT_BINARY_DIR}/libHSinsieme-hat.so PARENT_SCOPE)
+set(analysis_haskell ${CMAKE_CURRENT_BINARY_DIR}/libHSinsieme-hat.so PARENT_SCOPE)

@@ -21,7 +21,9 @@ include(git_metadata)
 # -- Dependency Versions
 set(BOOST_VERSION 1.59.0 CACHE STRING "Boost Version")
 set(CUDD_VERSION 2.4.2 CACHE STRING "CUDD Version")
+set(GMP_VERSION 6.0.0 CACHE STRING "GMP Version")
 set(LLVM_VERSION 3.6.2 CACHE STRING "LLVM Version")
+set(ZLIB_VERSION 1.2.8 CACHE STRING "ZLib Version")
 
 # -- Dependency Settings
 include(boost_settings)

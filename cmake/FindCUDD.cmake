@@ -19,14 +19,14 @@
 
 # Get hint from environment variable (if any)
 if(NOT CUDD_ROOT AND DEFINED ENV{CUDD_ROOT})
-  set(CUDD_ROOT "$ENV{CUDD_ROOT}" CACHE PATH "CUDD base directory location (optional, used for nonstandard installation paths)")
-  mark_as_advanced(CUDD_ROOT)
+	set(CUDD_ROOT "$ENV{CUDD_ROOT}" CACHE PATH "CUDD base directory location (optional, used for nonstandard installation paths)")
+	mark_as_advanced(CUDD_ROOT)
 endif()
 
 # Search path for nonstandard locations
 if(CUDD_ROOT)
-  set(CUDD_INCLUDE_PATH PATHS "${CUDD_ROOT}/include" NO_DEFAULT_PATH)
-  set(CUDD_LIBRARY_PATH PATHS "${CUDD_ROOT}/lib" NO_DEFAULT_PATH)
+	set(CUDD_INCLUDE_PATH PATHS "${CUDD_ROOT}/include" NO_DEFAULT_PATH)
+	set(CUDD_LIBRARY_PATH PATHS "${CUDD_ROOT}/lib" NO_DEFAULT_PATH)
 endif()
 
 find_path(CUDD_INCLUDE_DIRS NAMES cudd.h HINTS ${CUDD_INCLUDE_PATH})
