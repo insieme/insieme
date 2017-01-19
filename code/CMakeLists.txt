@@ -76,24 +76,3 @@ if(BUILD_DOXYGEN)
 	# IF you do NOT want the documentation to be generated EVERY time you build the project
 	# then leave out the 'ALL' keyword from the above command.
 endif()
-
-# Print a warning if the master branch is selected
-if (${insieme_branch} MATCHES "master")
-message("
-
-
-
-	================================ ${PrintColorBoldRed}WARNING${PrintColorReset} ================================
-	|                                                                       |
-	|  The master branch of Insieme is currently undergoing severe changes  |
-	|  and refactoring. Until these changes are complete, several features  |
-	|  will be missing and all interfaces are in flux. If you just want to  |
-	|  try Insieme as a user or want to do research building on top of its  |
-	|  infrastructure please use the ${PrintColorBold}inspire_1.3${PrintColorReset} branch.                    |
-	|                                                                       |
-	=========================================================================
-
-
-
-")
-endif ()
