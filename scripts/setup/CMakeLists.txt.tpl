@@ -11,7 +11,6 @@ list(APPEND CMAKE_PREFIX_PATH ${prefix_paths})
 
 # -- Project Settings
 include(build_settings)
-include(valgrind_settings)
 include(doxygen)
 
 # -- Dependency Versions
@@ -19,6 +18,7 @@ set(BOOST_VERSION 1.59.0 CACHE STRING "Boost Version")
 
 # -- Dependency Settings
 include(boost_settings)
+include(valgrind_settings)
 
 # -- CMake Modules
 include(add_module)
