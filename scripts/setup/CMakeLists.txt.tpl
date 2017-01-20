@@ -21,8 +21,9 @@ set(Boost_VERSION 1.59.0 CACHE STRING "Boost Version")
 include(boost_settings)
 
 # -- CMake Modules
-include(file_globs)
 include(add_module)
+include(file_globs)
+include(msvc_source_group)
 include(nproc)
 
 # -- Project Modules

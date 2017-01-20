@@ -1,5 +1,5 @@
-if(MSVC)
-	macro(msvc_source_group label files)
+macro(msvc_source_group label files)
+	if(MSVC)
 		set(one_value_args STRIP)
 		cmake_parse_arguments(ARG "" "${one_value_args}" "" ${ARGN})
 
@@ -14,5 +14,5 @@ if(MSVC)
 
 			source_group("${label}\\${file_dir}" FILES ${file})
 		endforeach(file)
-	endmacro()
-endif()
+	endif()
+endmacro()
