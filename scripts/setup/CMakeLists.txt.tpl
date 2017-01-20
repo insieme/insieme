@@ -15,7 +15,7 @@ include(valgrind_settings)
 include(doxygen)
 
 # -- Dependency Versions
-set(Boost_VERSION 1.59.0 CACHE STRING "Boost Version")
+set(BOOST_VERSION 1.59.0 CACHE STRING "Boost Version")
 
 # -- Dependency Settings
 include(boost_settings)

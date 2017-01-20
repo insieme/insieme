@@ -1,6 +1,6 @@
 add_module_library(%MODULE%)
 
-find_package(Boost ${Boost_VERSION} EXACT REQUIRED COMPONENTS filesystem system)
+find_package(Boost ${BOOST_VERSION} EXACT REQUIRED COMPONENTS filesystem system)
 target_link_libraries(%MODULE% ${Boost_LIBRARIES})
 target_include_directories(%MODULE% SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 
