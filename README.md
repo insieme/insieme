@@ -1,91 +1,106 @@
 # Insieme: Compiler and Runtime Infrastructure
 
 The Insieme compiler is a source-to-source compiler for C/C++ that supports
-portable parallel abstractions (OpenMP, MPI and OpenCL) for heterogeneous
-multi-core architectures. More details are available
-[here](http://insieme-compiler.org/mission.html).
+portable parallel abstractions (Cilk, OpenMP and [AllScale API]) for
+heterogeneous multi-core architectures. See our [mission statement] for more
+details.
 
-## *IMPORTANT NOTE*
-
-The master branch of Insieme is currently undergoing severe changes and
-refactoring. Until these changes are complete, several features will be missing
-and all interfaces are in flux. If you just want to try Insieme as a user or
-want to do research building on top of its infrastructure please use the
-**inspire_1.3** branch.
+[AllScale API]: <http://www.allscale.eu/>
+[mission statement]: <http://insieme-compiler.org/mission.html>
 
 ## Directory Structure
 
 Insieme contains 4 main sub-directories:
 
-- `/code`    --- Insieme compiler implementation
-- `/docs`    --- Insieme developer documentation
-- `/scripts` --- Insieme utility scripts
-- `/test`    --- Insieme integration tests
+| Directory  | Contains                            |
+| ---------- | ----------------------------------- |
+| `/code`    | Compiler and runtime implementation |
+| `/cmake`   | CMake modules                       |
+| `/docs`    | Developer documentation             |
+| `/scripts` | Utility scripts                     |
+| `/test`    | Integration tests                   |
 
 ## Installation
 
 ### Dependencies
 
-A list of dependencies together with an installer and patches is provided
-inside `/scripts/dependencies`. This directory also houses a
-[README](scripts/dependencies/README.md) which should be consulted when using
-Insieme for the first time.
+A list of dependencies together with an installer is provided inside
+`/scripts/dependencies`. See the [dependency README] for more information about
+this setup process.
+
+[dependency README]: <scripts/dependencies/README.md>
+
+For a quickstart, run these two scripts
+
+    $ scripts/dependencies/installer boost
+    $ scripts/dependencies/third_party_linker
+
+### Configuration
+
+Following options can be supplied to CMake:
+
+| Option                         | Values          |
+| ------------------------------ | --------------- |
+| -DCMAKE_BUILD_TYPE             | Release / Debug |
+| -DBUILD_SHARED_LIBS            | ON / OFF        |
+| -DBUILD_TESTS                  | ON / OFF        |
+| -DBUILD_DOCS                   | ON / OFF        |
+| -DUSE_ASSERT                   | ON / OFF        |
+| -DUSE_VALGRIND                 | ON / OFF        |
+| -DBUILD_COMPILER               | ON / OFF        |
+| -DBUILD_RUNTIME                | ON / OFF        |
+| -DUSE_PAPI                     | ON / OFF        |
+| -DUSE_ENERGY                   | ON / OFF        |
+| -DANALYSIS_DATALOG             | ON / OFF        |
+| -DANALYSIS_HASKELL             | ON / OFF        |
+| -DINSIEME_C_BACKEND_COMPILER   | \<path\>        |
+| -DINSIEME_CXX_BACKEND_COMPILER | \<path\>        |
+| -DTHIRD_PARTY_DIR              | \<path\>        |
+
+These settings are defined in the [build_settings] and [insieme_specific] CMake
+module, located in the `/cmake` subdirectory.
+
+[build_settings]: <cmake/build_settings.cmake>
+[insieme_specific]: <cmake/insieme_specific.cmake>
+
+### PAPI
+
+If PAPI is used, you have to add PAPI's lib directory to your `LD_LIBRARY_PATH`.
+
+    $ export LD_LIBRARY_PATH="$INSIEME_SRC/third_party/papi/lib:$LD_LIBRARY_PATH"
+
+### OpenCL
+
+Currently OpenCL is required but not provided by the dependency installer. You
+are required to install it by hand (for now) and point CMake to the installed
+location.
+
+### GCC
+
+The dependency installer provides a version of GCC suitable for Insieme, since
+some distros still ship a version of GCC that is too old for us to work with.
+`CC`, `CXX`, `PATH` and `LD_LIBRARY_PATH` should be set accordingly when
+building Insieme. We assume `INSIEME_SRC` contains the path to the Insieme
+source directory, although it is not necessary to set this environment
+variable.
+
+    $ export CC="$INSIEME_SRC/third_party/gcc/bin/gcc"
+    $ export CXX="$INSIEME_SRC/third_party/gcc/bin/g++"
+    $ export PATH="$INSIEME_SRC/third_party/gcc/bin:$PATH"
+    $ export LD_LIBRARY_PATH="$INSIEME_SRC/third_party/gcc/lib64"
 
 ### Building Insieme
-
-Insieme's build system is based on CMake. We assume that the environment is
-setup in the directory pointed to by `$INSIEME_LIBS_HOME` using the provided
-installer.
-
-    $ export INSIEME_LIBS_HOME="$HOME/libs"
-
-`CC`, `CXX`, `PATH` and `LD_LIBRARY_PATH` should be set when building Insieme
-with newly installed GCC.
-
-    $ export CC="$INSIEME_LIBS_HOME/gcc-latest/bin/gcc"
-    $ export CXX="$INSIEME_LIBS_HOME/gcc-latest/bin/g++"
-    $ export PATH="$INSIEME_LIBS_HOME/gcc-latest/bin:$PATH"
-    $ export LD_LIBRARY_PATH="$INSIEME_LIBS_HOME/gcc-latest/lib64"
-
-Additionally, `INSIEME_C_BACKEND_COMPILER` and
-`INSIEME_CXX_BACKEND_COMPILER` should point to the desired source-to-binary
-compiler. If not set, they default to `gcc` and `g++` in your `PATH`
-respectively.
 
 You can now setup a build directory using CMake:
 
     $ mkdir build
     $ cd build
-    $ $INSIEME_LIBS_HOME/cmake-latest/bin/cmake ..
-
-Some features of the compiler can be enabled / disabled by passing following
-options (as argument) to the `cmake` command:
-
-- Enable/disable generation of documentation
-    - `-DDOCS=ON|OFF`
-- Set the build to be in Debug, Release or Release with asserts mode
-    - `-DCMAKE_BUILD_TYPE=Debug|Release|RelWithAsserts`
-- Enable/disable energy measurement support
-    - `-DUSE_ENERGY=ON|OFF`
-- Enable/disable PAPI measurement and hardware information support
-    - `-DUSE_PAPI=ON|OFF`
-- Enable/disable valgrind memory checks for most unit tests
-    - `-DCONDUCT_MEMORY_CHECKS=ON|OFF`
-- Enable/disable building of the Insieme Runtime
-    - `-DBUILD_RUNTIME=ON|OFF`
-- Enable/disable building of the Insieme Compiler
-    - `-DBUILD_COMPILER=ON|OFF`
+    $ $INSIEME_SRC/third_party/cmake/bin/cmake -DOPENCL_ROOT=/path/to/opencl $INSIEME_SRC
 
 If successful, CMake produces the set of Makefiles required to build the
-Insieme project.
+Insieme project. Following command builds Insieme.
 
-    $ make -j2              # Builds using two parallel jobs
-
-Or you can alternatively change into a subfolder and only build that particular
-module of the compiler.
-
-    $ cd core
-    $ make
+    $ make -j8              # Builds using 8 parallel jobs
 
 ### Analysis Framework
 
@@ -93,37 +108,36 @@ The analysis framework is divided into a common interface and multiple,
 different engines. The common interface has to be instantiated with one of the
 available engines in order to use it. These engines are disabled by default
 since they depend on additional third-party packages. They can be enabled by
-passing following flags to the `cmake` call.
+passing their respective flags to the `cmake` call.
 
-| Engine  | CMake Option            |
-|---------|-------------------------|
-| Soufflé | `-DANALYSIS_DATALOG=ON` |
-| Haskell | `-DANALYSIS_HASKELL=ON` |
+Also see the [dependency README] inside `/scripts/dependencies`.
 
-Also see `/scripts/dependencies/README.md`.
+For some analysis engines additional paths must be provided to CMake
+
+| Analysis Engine | Required Path                       |
+| --------------- | ----------------------------------- |
+| Datalog         | -DSOUFFLE_ROOT=/path/to/souffle     |
+| Haskell         | -DSTACK_ROOT=/path/to/haskell_stack |
 
 ### Running Unit Tests
 
-For certain unit- and integration tests to run, the environment has to be
-prepared (e.g. precompiling libraries to link against). This can be achieved by
-executing the following command:
+After the actual build process has been completed, the `integration_tests`
+binary will be executed automatically to setup the environment for certain
+unit- and integration tests. This can also be achieved manually be running the
+binary with the `--preprocessing` flag.
 
-    $ ./code/driver/integration_tests --preprocessing
+    $ code/driver/integration_tests --preprocessing
 
-Unit tests can then be executed with:
+Unit tests can then be executed via ctest
 
-    $ make test ARGS=-j2    # Runs all unit tests using two parallel jobs
-
-or directly via CTest:
-
-    $ ctest -j2             # Runs all unit tests using two parallel jobs
+    $ $INSIEME_SRC/third_party/cmake/bin/ctest -j8       # Runs all unit tests using 8 parallel jobs
 
 ### Running Integration Tests
 
 Integration tests can be executed using the custom runner compiled in the build
 directory:
 
-    $ ./code/driver/integration_tests
+    $ code/driver/integration_tests
 
 Integration tests can be executed in parallel (`-w SLOTS`), and multiple times
 (`-r N`). For a full list of options use the `-h` argument or refer to the
@@ -132,7 +146,7 @@ the actual commands being invoked.
 
 To clean up files generated in the preprocessing step, simply run:
 
-    $ ./code/driver/integration_tests --postprocessing
+    $ code/driver/integration_tests --postprocessing
 
 If everything was successful... **congratulations! You can start enjoying
 Insieme now!**
@@ -140,17 +154,17 @@ Insieme now!**
 ### Compiling Application Codes
 
 The main executable provided by the Insieme framework is called `insiemecc`,
-located in `code/driver`. It can be used to replace e.g. occurrences of another
-compiler such as `gcc` in makefiles. It supports both source-to-source-only
-compilation, as well as full compilation by calling a backend compiler.
-Environment variables `INSIEME_C_BACKEND_COMPILER` and
+located in `/code/driver`. It can be used to replace e.g. occurrences of
+another compiler such as `gcc` in makefiles. It supports both
+source-to-source-only compilation, as well as full compilation by calling a
+backend compiler.  Environment variables `INSIEME_C_BACKEND_COMPILER` and
 `INSIEME_CXX_BACKEND_COMPILER` can be used to change the backend compiler at
 runtime, while the CMake options `-DINSIEME_C_BACKEND_COMPILER` and
 `-DINSIEME_CXX_BACKEND_COMPILER` allow setting the compiler prior building.
-`gcc` and `g++` are used as fallback. For further information on its features
+`gcc` and `g++` are used as default. For further information on its features
 and options, please refer to:
 
-    $ ./code/driver/insiemecc --help
+    $ code/driver/insiemecc --help
 
 ### Installation
 
@@ -158,3 +172,16 @@ Please, understand that the install command is not implemented since this is an
 on-going development framework. Instead of polluting your local setup, we
 prefer to use Insieme from the build directory. Install scripts may be provided
 in future releases.
+
+## Development
+
+### Executable Bit
+
+When working on Windows via SMB share, consider setting following Git setting.
+
+    $ git config core.filemode false
+
+### Licensor
+
+A script, together with a Git hook, is provided to automatically add a license
+header to each source file upon commit. See `/scripts/license`.

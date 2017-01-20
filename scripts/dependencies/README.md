@@ -20,7 +20,7 @@ dependencies will be installed too:
 The default `PREFIX` is set in `defaults.sh` and can be overwritten via an
 environment variable:
 
-    $ PREFIX=/opt/insieme-libs ./installer
+    $ PREFIX=/opt/custom-libs ./installer
 
 ## List of Required Libraries and Software
 
@@ -72,19 +72,48 @@ Insieme is written in C++11 and relies on several third-party libraries:
 
 The default `pkg_prepare` action will apply all patches inside the `patches`
 directory which are prefixed with the package name. The order is inferred from
-the filename.
+the filename which should have the following structure:
 
-## Paths
+    <package name>-<patch number>-<comment>.patch
 
-`INSIEME_LIBS_HOME` should be set to the prefix of the installer.
+## Third Party Sym-Linker
 
-    export INSIEME_LIBS_HOME="$HOME/libs"
+All packages installed by the installer are separated by their name and
+version, this allows one to have multiple versions of a package installed
+side-by-side. Hence the content of `PREFIX` can be shared across multiple
+projects.
 
-If you chose to use GCC provided by the installer, `PATH` and `LD_LIBRARY_PATH`
-should be set accordingly:
+In order for a project to find its required dependencies another layer of
+indirection has to be added.
 
-    export PATH="$INSIEME_LIBS_HOME/gcc-latest/bin:$PATH"
-    export LD_LIBRARY_PATH="$INSIEME_LIBS_HOME/gcc-latest/lib64"
+A folder `third_party` should be located inside the Insieme source directory,
+containing contain symlinks for each dependency. The symlink points to the
+installed package in `PREFIX`. The `third_party` folder should not contain
+different versions of the same package. Example:
+
+    $ PREFIX="$HOME/third_party_libs"
+    $ ls -l $PREFIX
+    drwxr-xr-x.  4 alex   dps 4.0K Nov 18 15:14 autoconf-2.68/
+    drwxr-xr-x.  4 alex   dps 4.0K Nov 18 15:14 automake-1.15/
+    drwxr-xr-x.  7 alex   dps 4.0K Nov 18 15:14 binutils-2.27/
+    drwxr-xr-x.  5 alex   dps 4.0K Nov 18 15:14 bison-3.0.4/
+    drwxr-xr-x.  4 alex   dps 4.0K Nov 18 15:14 boost-1.50.0/
+    drwxr-xr-x.  4 alex   dps 4.0K Nov 18 15:14 boost-1.59.0/
+    drwxr-xr-x.  5 alex   dps 4.0K Nov 18 15:14 cmake-3.2.1/
+    drwxr-xr-x.  5 alex   dps 4.0K Nov 18 15:14 cmake-3.6.1/
+        ...
+
+    $ ls -l $INSIEME_SRC/third_party
+    lrwxrwxrwx. 1 alex dps   47 Nov 22 13:17 autoconf -> /home/alex/third_party_libs/autoconf-2.68/
+    lrwxrwxrwx. 1 alex dps   47 Nov 22 13:17 automake -> /home/alex/third_party_libs/automake-1.15/
+    lrwxrwxrwx. 1 alex dps   47 Nov 22 13:17 binutils -> /home/alex/third_party_libs/binutils-2.27/
+    lrwxrwxrwx. 1 alex dps   45 Nov 22 13:17 bison -> /home/alex/third_party_libs/bison-3.0.4/
+    lrwxrwxrwx. 1 alex dps   46 Nov 22 13:17 boost -> /home/alex/third_party_libs/boost-1.59.0/
+    lrwxrwxrwx. 1 alex dps   45 Nov 22 13:17 cmake -> /home/alex/third_party_libs/cmake-3.2.1/
+        ...
+
+The `third_party_linker` can create these symlinks for you, it uses the same
+version of a package as defined in the related `package_` file.
 
 ## Ubuntu 16.04 LTS
 
@@ -123,5 +152,5 @@ which will work for Insieme.
 
 Adjust your environment variables as needed, for example:
 
-    export PATH="$INSIEME_LIBS_HOME/ruby-latest/bin:$PATH"
-    export PATH="$INSIEME_LIBS_HOME/valgrind-latest/bin:$PATH"
+    export PATH="$INSIEME_SRC/third_party/ruby/bin:$PATH"
+    export PATH="$INSIEME_SRC/third_party/valgrind/bin:$PATH"
