@@ -11,10 +11,6 @@ list(APPEND CMAKE_PREFIX_PATH ${prefix_paths})
 
 # -- Project Settings
 include(build_settings)
-include(energy_settings)
-include(opencl_settings)
-include(papi_settings)
-include(valgrind_settings)
 include(doxygen)
 include(git_metadata)
 
@@ -27,6 +23,10 @@ set(ZLIB_VERSION 1.2.8 CACHE STRING "ZLib Version")
 
 # -- Dependency Settings
 include(boost_settings)
+include(energy_settings)
+include(opencl_settings)
+include(papi_settings)
+include(valgrind_settings)
 
 # -- CMake Modules
 include(file_globs)
