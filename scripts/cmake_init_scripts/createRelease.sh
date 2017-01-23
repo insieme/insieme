@@ -3,7 +3,4 @@
 #export CC=gcc
 
 # run cmake to create the project
-../third_party/cmake/bin/cmake \
-	-DOPENCL_ROOT=/path/to/opencl \
-	-DCMAKE_BUILD_TYPE=Release \
-	..
+../third_party/cmake/bin/cmake ..

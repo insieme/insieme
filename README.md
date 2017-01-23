@@ -71,9 +71,12 @@ If PAPI is used, you have to add PAPI's lib directory to your `LD_LIBRARY_PATH`.
 
 ### OpenCL
 
-Currently OpenCL is required but not provided by the dependency installer. You
-are required to install it by hand (for now) and point CMake to the installed
-location.
+The backend is also capable of generating OpenCL code. In order to utilize this
+feature, one must supply the `OPENCL_ROOT` path to CMake. It should point to
+the directory containing the `include` and `lib64` directory of the OpenCL
+installation.
+
+    $ $INSIEME_SRC/third_party/cmake/bin/cmake -DOPENCL_ROOT=/path/to/opencl $INSIEME_SRC
 
 ### GCC
 
@@ -95,7 +98,7 @@ You can now setup a build directory using CMake:
 
     $ mkdir build
     $ cd build
-    $ $INSIEME_SRC/third_party/cmake/bin/cmake -DOPENCL_ROOT=/path/to/opencl $INSIEME_SRC
+    $ $INSIEME_SRC/third_party/cmake/bin/cmake $INSIEME_SRC
 
 If successful, CMake produces the set of Makefiles required to build the
 Insieme project. Following command builds Insieme.
@@ -114,10 +117,10 @@ Also see the [dependency README] inside `/scripts/dependencies`.
 
 For some analysis engines additional paths must be provided to CMake
 
-| Analysis Engine | Required Path                       |
-| --------------- | ----------------------------------- |
-| Datalog         | -DSOUFFLE_ROOT=/path/to/souffle     |
-| Haskell         | -DSTACK_ROOT=/path/to/haskell_stack |
+| Analysis Engine | Required Path                                              |
+| --------------- | ---------------------------------------------------------- |
+| Datalog         | -DSOUFFLE_ROOT=/path/to/souffle                            |
+| Haskell         | -DSTACK_ROOT=/path/to/haskell_stack (without `/bin/stack`) |
 
 ### Running Unit Tests
 
