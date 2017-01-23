@@ -164,11 +164,7 @@ else()
     pkg_check_modules(Hwloc ${_hwloc_OPTS} hwloc)
   endif()
 
-  message(STATUS "hwloc libs ${Hwloc_LIBRARIES}")
-  message(STATUS "hwloc incs ${Hwloc_INCLUDE_DIR}")
-
   find_library(HWLOC_LIBRARIES NAMES hwloc HINTS "${HWLOC_ROOT}/lib")
-
   mark_as_advanced(HWLOC_LIBRARIES)
 
   if(Hwloc_FOUND)
