@@ -1,0 +1,4 @@
+includes="./sprng2.0/include"
+definitions="LittleEndian","Add__"
+files="sprng2.0/lcg.c","sprng2.0/lfg.c","sprng2.0/lcg64.c","sprng2.0/mlfg.c","sprng2.0/cmrg.c","SSCA2.c","init.c","utils.c","genScalData.c","gen2DTorus.c","computeGraph.c","getStartLists.c","findSubGraphs.c","betweennessCentrality.c","sprng2.0/primes_32.c","sprng2.0/primes_64.c","sprng2.0/fwrap_mpi.c","sprng2.0/cputime.c","sprng2.0/makeseed.c","sprng2.0/simple_mpi.c","sprng2.0/memory.c","sprng2.0/communicate.c","sprng2.0/checkid.c","sprng2.0/store.c","sprng2.0/sprng.c"
+

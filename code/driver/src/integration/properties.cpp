@@ -37,6 +37,7 @@
 #include "insieme/driver/integration/properties.h"
 
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include "insieme/utils/string_utils.h"
 
@@ -142,6 +143,15 @@ namespace integration {
 		// process line by line
 		string line;
 		while(std::getline(in, line)) {
+			// first we strip all comments
+			auto commentPos = line.find('#');
+			if(commentPos != string::npos) {
+				line = line.substr(0, commentPos);
+			}
+
+			// then we trim all whitespaces
+			boost::trim(line);
+
 			// skip empty lines
 			if(line.empty()) { continue; }
 
@@ -165,6 +175,11 @@ namespace integration {
 
 				key = line.substr(0, csep);
 				cat = line.substr(csep + 1, sep - csep - 2);
+			}
+
+			// single values are cleaned of their quotes
+			if(std::count(value.begin(), value.end(), '\"') == 2 && value[0] == '\"' && value[value.size() - 1] == '\"') {
+				value = value.substr(1, value.size() - 2);
 			}
 
 			// register value

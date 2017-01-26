@@ -1,0 +1,3 @@
+includes="../../../../../seq/c/bots","../../../../../seq/c/bots/alignment"
+files="../../../../../seq/c/bots/bots_common.c","../../../../../seq/c/bots/bots_main.c","../../../../../seq/c/bots/alignment/alignment.c","../../../../../seq/c/bots/alignment/sequence.c"
+executionFlags=-c -f ${PATH}/../../../../../seq/c/bots/alignment/prot.20.aa

@@ -1,0 +1,5 @@
+files="uplink/uplink_serial.c","uplink/uplink_parameters.c","uplink/uplink_alarm.c","uplink/uplink_verify.c","lib/kernels/ant_comb_7.c","lib/kernels/chest_5.c","lib/kernels/complex_def.c","lib/kernels/fft_8.c","lib/kernels/interleave_11.c","lib/kernels/soft_demap_9.c","lib/kernels/mf_4.c","lib/kernels/weight_calc_6.c","lib/kernels/mmse_by_cholsolve_4xX_complex.c","lib/kernels/crc_13.c","lib/kernels/turbo_dec_12.c","lib/ulRsGen/src/alpha_n_prs.c","lib/ulRsGen/src/n_prs_all_ns.c","lib/ulRsGen/src/r_alpha.c","lib/ulRsGen/src/ulRsGen.c","lib/ulRsGen/common/src/feldspar.c","lib/ulRsGen/common/src/missingFunc.c","lib/ulRsGen/common/src/feldspar_functions.c"
+includes="./uplink/","./lib/kernels/","./lib/ulRsGen/inc","./lib/ulRsGen/common/inc/"
+definitions="_GNU_SOURCE"
+compFlags[insiemecc_seq_c_compile]=-fno-tree-vectorize
+compFlags[insiemecc_run_c_compile]=-fno-tree-vectorize

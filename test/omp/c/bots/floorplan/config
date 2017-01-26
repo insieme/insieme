@@ -1,0 +1,3 @@
+includes="../../../../../seq/c/bots","../../../../../seq/c/bots/floorplan"
+files="../../../../../seq/c/bots/bots_common.c","../../../../../seq/c/bots/bots_main.c","../../../../../seq/c/bots/floorplan/floorplan.c"
+executionFlags=-f ${PATH}/../../../../../seq/c/bots/floorplan/input.20 -c

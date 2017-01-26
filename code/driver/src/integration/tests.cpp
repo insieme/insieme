@@ -65,187 +65,130 @@ namespace insieme {
 namespace driver {
 namespace integration {
 
-	namespace {
-
-		frontend::ConversionJob toJob(const IntegrationTestCase& testCase) {
-			driver::cmd::Options options = testCase.getOptions();
-			std::string step = TEST_STEP_INSIEMECC_RUN_C_CONVERT;
-
-			// add pre-processor definitions
-			for_each(testCase.getDefinitions(step), [&](const std::pair<string, string>& def) { options.job.setDefinition(def.first, def.second); });
-
-			// add include directories
-			for_each(testCase.getIncludeDirs(), [&](const frontend::path& dir) { options.job.addIncludeDirectory(dir); });
-
-			// add interceptor configuration
-			options.job.setInterceptedHeaderDirs(testCase.getInterceptedHeaderFileDirectories());
-
-			// done
-			return options.job;
-		}
-	}
-
-
-	driver::cmd::Options IntegrationTestCase::getOptions() const {
-		// load code using frontend
-		std::vector<std::string> args = {"compiler"};
-		for(auto includeDir : getIncludeDirs()) {
-			std::string include = "-I" + includeDir.string();
-			args.push_back(include);
-		}
-		for(auto file : getFiles()) {
-			args.push_back(file.string());
-		}
-		if(isEnableOpenMP()) { args.push_back("-fopenmp"); }
-		if(isEnableOpenCL()) { args.push_back("-fopencl=1"); args.push_back("-lOpenCL"); }
-
-		return driver::cmd::Options::parse(args);;
-	}
-
-
-	core::ProgramPtr IntegrationTestCase::load(core::NodeManager& manager) const {
-		return toJob(*this).execute(manager);
-	}
-
-	core::tu::IRTranslationUnit IntegrationTestCase::loadTU(core::NodeManager& manager) const {
-		return toJob(*this).toIRTranslationUnit(manager);
-	}
-
-	const map<string, string> IntegrationTestCase::getDefinitions(std::string step) const {
-		std::map<string, string> defs;
-		boost::char_separator<char> sep("\",");
-		std::string defStr = properties.get("definitions", step);
-
-		boost::tokenizer<boost::char_separator<char>> tokens = boost::tokenizer<boost::char_separator<char>>(defStr, sep);
-		for(const auto& t : tokens) {
-			std::string name = t;
-			if(!name.empty()) {
-				if(name.find("=") != std::string::npos) {
-					defs[name.substr(0, name.find("="))] = name.substr(name.find("=") + 1);
-				} else {
-					defs[name] = "1";
-				}
-			}
-		}
-		return defs;
-	}
-
-	const vector<string> IntegrationTestCase::getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const {
-		// TODO move this to the right place
-		// TODO implement properties which exclude each other
-		std::map<string, string> gccFlags;
-		gccFlags["use_libmath"] = "-lm";
-		gccFlags["use_libpthread"] = "-lpthread";
-		gccFlags["use_opencl"] = "-lOpenCL";
-		gccFlags["use_omp"] = "-fopenmp";
-		gccFlags["standardFlags"] = "-fshow-column -Wall -lrt -pipe";
-		gccFlags["use_o3"] = "-O3";
-		gccFlags["use_c"] = "--std=c99";
-		gccFlags["use_cpp"] = "--std=c++14";
-		gccFlags["use_gnu99"] = "--std=gnu99";
-		gccFlags["use_gnu90"] = "--std=gnu90";
-
-		std::map<string, string> insiemeccFlags;
-		insiemeccFlags["use_libmath"] = "";
-		insiemeccFlags["use_libpthread"] = "";
-		insiemeccFlags["use_opencl"] = "-fopencl=1 -lOpenCL";
-		insiemeccFlags["use_omp"] = "-fopenmp";
-		insiemeccFlags["standardFlags"] = "--log-level=INFO";
-		insiemeccFlags["use_o3"] = "-O3";
-		insiemeccFlags["use_c"] = "";
-		insiemeccFlags["use_gnu99"] = "";
-		insiemeccFlags["use_gnu90"] = "";
-		insiemeccFlags["use_cpp"] = "--std=c++14";
-
-		std::map<string, map<string, string>> propFlags;
-		propFlags["gcc"] = gccFlags;
-
-		gccFlags["standardFlags"] += " -fpermissive";
-
-		propFlags["g++"] = gccFlags;
-		propFlags["insiemecc"] = insiemeccFlags;
-		propFlags["clang"] = gccFlags;
-		propFlags["clang++"] = gccFlags;
-
-		auto compilerPath = properties.get("compiler", step);
-		if(considerEnvVars) compilerPath = driver::integration::getBackendCompilerString(compilerPath, isCpp);
-		boost::filesystem::path comp(compilerPath);
-		map<std::string, std::string> flagMap = propFlags[comp.filename().string()];
-
-		vector<string> compArgs;
-		compArgs.push_back(flagMap["standardFlags"]);
-
-		for(const auto& key : properties.getKeys()) {
-			string propVal = properties.get(key, step);
-			// check if property is switched on
-			if(propVal.compare("1") == 0) {
-				// check if property is supported
-				if(flagMap.count(key) == 1) {
-					compArgs.push_back(flagMap[key]);
-				} else {
-					std::cout << "WARNING: Property " << key << " not supported!" << std::endl;
-				}
-			}
-			if(propVal.compare("0") == 0 && flagMap.count(key) != 1) { std::cout << "WARNING: Property " << key << " ignored!" << std::endl; }
-		}
-
-		// add remaining flags
-		compArgs.push_back(properties.get("compFlags", step));
-
-		return compArgs;
-	}
-
 	namespace fs = boost::filesystem;
 
 	namespace {
 
-		Properties loadProperties(const fs::path& dir, const string& configFileName = "config") {
-			Properties res;
+		boost::optional<Properties> loadProperties(const fs::path& configFile) {
+			// the directory should be absolute
+			assert_eq(configFile, fs::absolute(configFile)) << "Expecting an absolute path - got " << configFile << "\n";
 
+			if(fs::exists(configFile)) {
+				// try loading file
+				fs::ifstream in(configFile);
+				if(in.is_open()) {
+					return Properties::load(in);
+				} else {
+					LOG(WARNING) << "Unable to open test-configuration file " << configFile << "\n";
+				}
+			}
+			return {};
+		}
+
+		Properties getGlobalConfiguration(const IntegrationTestCaseDefaultsPaths defaultPaths) {
+			// first we look in the current working directory and all directories above
+			fs::path dir = fs::absolute(fs::current_path());
+			do {
+				fs::path file = dir / defaultPaths.globalConfigFileName;
+				if(fs::exists(file)) {
+					return *loadProperties(file);
+				}
+				dir = dir.parent_path();
+			}	while (!dir.empty());
+
+			// after that we try to look in the build folder
+			dir = fs::path(defaultPaths.buildDir);
+			fs::path file = dir / defaultPaths.globalConfigFileName;
+			if(fs::exists(file)) {
+				return *loadProperties(file);
+			}
+
+			// otherwise we assert here. We need to have a global config file
+			assert_fail() << "Could not find the global configuration file \"" << defaultPaths.globalConfigFileName
+					<< "\" anywhere in the current working directory, any of it's parents or the build folder " << defaultPaths.buildDir;
+			return {};
+		}
+
+		// a simple cache for configurations to speed up the lookup
+		std::map<fs::path, Properties> CONFIG_CACHE;
+
+		Properties getConfiguration(const fs::path& dir) {
 			// if it is the root we are done
-			if(dir.empty()) { return res; }
+			if(dir.empty()) { return {}; }
 
 			// the directory should be absolute
 			assert_eq(dir, fs::absolute(dir)) << "Expecting an absolute directory - got " << dir << "\n";
 
+			// perform cache lookup
+			auto it = CONFIG_CACHE.find(dir);
+			if(it != CONFIG_CACHE.end()) {
+				return it->second;
+			}
+
+			Properties res;
+
 			// load configuration of parent directory
-			res = loadProperties(dir.parent_path(), configFileName);
+			res = getConfiguration(dir.parent_path());
 
 			// check whether there is a config file
-			auto file = dir / configFileName;
+			auto file = dir / "config";
 
-			if(fs::exists(file)) {
-				// try loading file
-				fs::ifstream in(file);
-				if(in.is_open()) {
-					// load local configuration
-					auto p = Properties::load(in);
-					res.set("CUR_CONFIG_PATH", dir.string());
-					res <<= p;
-				} else {
-					LOG(WARNING) << "Unable to open test-configuration file " << file << "\n";
-				}
+			// load the config file
+			auto currentConfig = loadProperties(file);
+			if(currentConfig) {
+				// and merge the config with it's parent
+				res.set("CUR_CONFIG_PATH", dir.string());
+				res <<= (*currentConfig);
 			}
+
+			// cache result
+			CONFIG_CACHE.insert({ dir, res });
 
 			// done
 			return res;
 		}
 
+		// a simple cache for compiler configurations to speed up the lookup
+		std::map<std::string, Properties> COMPILER_CONFIG_CACHE;
 
-		boost::optional<IntegrationTestCase> loadTestCase(const std::string& testName) {
-			static const boost::optional<IntegrationTestCase> fail;
+		Properties getCompilerArgumentsFromConfiguration(const string& compilerString, const Properties& properties) {
+			// get the filename from the compilerString
+			auto compilerName = fs::path(compilerString).filename().string();
 
-			bool enableOpenMP = false;
-			bool enableOpenCL = false;
+			// perform cache lookup
+			auto it = COMPILER_CONFIG_CACHE.find(compilerName);
+			if(it != COMPILER_CONFIG_CACHE.end()) {
+				return it->second;
+			}
 
-			// get the test directory -- if the testName is a existingPath skip appending rootDir
-			auto testDir = (fs::exists(fs::path(testName))) ? fs::path(testName) : fs::path(utils::getInsiemeSourceRootDir() + "../test") / testName;
+			// get the filename of the compiler configuration
+			auto configurationFilename = properties.get("compilerConfigurationFile", compilerName);
+			if(configurationFilename.empty()) {
+				assert_fail() << "Could not find property \"compilerConfigurationFile[" << compilerName << "]\" anywhere in configuration.";
+			}
+
+			auto loadedProperties = loadProperties(fs::path(configurationFilename));
+			if(!loadedProperties) {
+				assert_fail() << "Unable to load compiler configuration file " << configurationFilename;
+			}
+
+			Properties res = *loadedProperties;
+
+			// cache result
+			COMPILER_CONFIG_CACHE.insert({ compilerName, res });
+
+			return res;
+		}
+
+		boost::optional<IntegrationTestCase> loadSingleTestCase(const std::string& testName, const IntegrationTestCaseDefaultsPaths defaultPaths) {
+			// get the test directory -- if the testName is an existing path skip appending rootDir
+			auto testDir = (fs::exists(fs::path(testName))) ? fs::path(testName) : fs::path(defaultPaths.testDir) / testName;
 
 			// check test case directory
 			const fs::path testCaseDir = fs::canonical(fs::absolute(testDir));
 			if(!fs::exists(testCaseDir)) {
 				LOG(WARNING) << "Directory for test case " + testDir.string() + " not found!";
-				return fail;
+				return {};
 			}
 
 			// assemble properties
@@ -253,22 +196,30 @@ namespace integration {
 
 			// define environment variables for the current test case
 			prop.set("PATH", testCaseDir.string());
+			prop.set("TEST_DIR_PATH", defaultPaths.testDir);
+			prop.set("BUILD_DIR_PATH", defaultPaths.buildDir);
 
 			// load global properties
-			Properties global = loadProperties(fs::current_path(), "integration_test_config");
+			Properties global = getGlobalConfiguration(defaultPaths);
 
 			// combine the various parts of the configuration (in the proper order)
-			prop = prop << global << loadProperties(testCaseDir);
+			prop = prop << global << getConfiguration(testCaseDir);
 
 			// get files
-			vector<frontend::path> files;
+			vector<fs::path> files;
 
-			for(const auto& file : prop.get<vector<string>>("files")) {
-				if(fs::path(file).is_absolute()) {
-					files.push_back(file);
+			auto addPath = [&testCaseDir](std::vector<fs::path>& paths, const std::string& pathString) {
+				auto path = fs::path(pathString);
+				if(path.is_absolute()) {
+					paths.push_back(path);
 				} else {
-					files.push_back((testCaseDir / file).string());
+					paths.push_back((testCaseDir / path));
 				}
+			};
+
+			// use the files specified in the configuration file, if present
+			for(const auto& file : prop.get<vector<string>>("files")) {
+				addPath(files, file);
 			}
 
 			// no files specified, use default names
@@ -288,56 +239,37 @@ namespace integration {
 					//otherwise we don't know how to handle this test case
 				} else {
 					LOG(WARNING) << "Directory " << testCaseDir << " doesn't contain a matching .c or .cpp file - Skipping";
-					return fail;
+					return {};
 				}
 			}
 
 			// get includes
-			vector<frontend::path> includeDirs;
-
+			vector<fs::path> includeDirs;
 			for(const auto& path : prop.get<vector<string>>("includes")) {
-				if(path.at(0) == '/') {
-					includeDirs.push_back(path);
-				} else {
-					includeDirs.push_back((testCaseDir / path).string());
-				}
+				addPath(includeDirs, path);
 			}
 
 			// get libs paths
-			vector<frontend::path> libPaths;
-
+			vector<fs::path> libPaths;
 			for(const auto& path : prop.get<vector<string>>("libPaths")) {
-				if(path.at(0) == '/') {
-					libPaths.push_back(path);
-				} else {
-					libPaths.push_back((testCaseDir / path).string());
-				}
+				addPath(libPaths, path);
 			}
 
 			// get lib names
-			vector<std::string> libNames;
+			vector<std::string> libNames(prop.get<vector<string>>("libNames"));
 
-			for(const auto& name : prop.get<vector<string>>("libNames")) {
-				libNames.push_back(name);
-			}
-
-			enableOpenMP = prop.get<bool>("use_omp");
-			enableOpenCL = prop.get<bool>("use_opencl");
+			bool enableOpenMP = prop.get<bool>("use_omp");
+			bool enableOpenCL = prop.get<bool>("use_opencl");
 
 			// extract interception configuration
-			vector<frontend::path> interceptedHeaderFileDirectories;
-
+			vector<fs::path> interceptedHeaderFileDirectories;
 			for(const auto& path : prop.get<vector<string>>("intercepted_header_file_dirs")) {
-				if(path.at(0) == '/') {
-					interceptedHeaderFileDirectories.push_back(path);
-				} else {
-					interceptedHeaderFileDirectories.push_back((testCaseDir / path).string());
-				}
+				addPath(interceptedHeaderFileDirectories, path);
 			}
 
 			// find "canonical" test name regardless of setup
-			string canonRoot = fs::canonical(fs::path(utils::getInsiemeSourceRootDir() + "../test")).string();
-			string prefix = commonPrefix(testCaseDir.string(), canonRoot);
+			string canonicalRoot = fs::canonical(fs::path(defaultPaths.testDir)).string();
+			string prefix = commonPrefix(testCaseDir.string(), canonicalRoot);
 			string name = testCaseDir.string().substr(prefix.size());
 			// don't just replace "test/" here, as unintended replacements might occur deeper in the directory structure
 			boost::algorithm::replace_first(name, "ext/test/", "ext/");
@@ -349,8 +281,8 @@ namespace integration {
 			                           interceptedHeaderFileDirectories, enableOpenMP, enableOpenCL, prop);
 		}
 
-
-		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr, const LoadTestCaseMode loadMode = ENABLED_TESTS) {
+		vector<IntegrationTestCase> loadAllCasesInDirectory(const std::string& testDirStr, const IntegrationTestCaseDefaultsPaths defaultPaths,
+		                                                    const LoadTestCaseMode loadMode = ENABLED_TESTS) {
 			// create a new result vector
 			vector<IntegrationTestCase> res;
 
@@ -439,7 +371,7 @@ namespace integration {
 
 						//if the test suite is blacklisted and we should run blacklisted tests, we descend and schedule all tests
 						auto childLoadMode = (testIsBlacklisted && loadMode == BLACKLISTED_TESTS) ? ALL_TESTS : loadMode;
-						vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string(), childLoadMode);
+						vector<IntegrationTestCase>&& subCases = loadAllCasesInDirectory((testCaseDir).string(), defaultPaths, childLoadMode);
 						std::copy(subCases.begin(), subCases.end(), std::back_inserter(res));
 						continue;
 					}
@@ -451,7 +383,7 @@ namespace integration {
 							|| (loadMode == LONG_TESTS && testIsLong)
 							|| (loadMode == ENABLED_TESTS && !testIsBlacklisted && !testIsLong)) {
 						// load individual test case
-						auto testCase = loadTestCase(fs::canonical(fs::absolute(testDir / testCaseName)).string());
+						auto testCase = loadSingleTestCase(fs::canonical(fs::absolute(testDir / testCaseName)).string(), defaultPaths);
 						if(testCase) { res.push_back(*testCase); }
 					}
 				}
@@ -459,106 +391,223 @@ namespace integration {
 
 			return res;
 		}
+
+		vector<IntegrationTestCase> getAllTestCasesInternal(const LoadTestCaseMode loadTestCaseMode, const IntegrationTestCaseDefaultsPaths defaultPaths) {
+			auto testCases = loadAllCasesInDirectory(defaultPaths.testDir, defaultPaths, loadTestCaseMode);
+			std::sort(testCases.begin(), testCases.end());
+			return testCases;
+		}
+
 	}
 
-	std::string getBackendCompilerString(const string& compilerProperty, bool isCpp) {
-		if(!isCpp) {
-			if(getenv(INSIEME_C_BACKEND_COMPILER) != nullptr) {
-				return utils::compiler::getDefaultCCompilerExecutable();
+	IntegrationTestCase::IntegrationTestCase(const string& name,
+	                                         const boost::filesystem::path& dir,
+	                                         const vector<boost::filesystem::path>& files,
+	                                         const vector<boost::filesystem::path>& includeDirs,
+	                                         const vector<boost::filesystem::path>& libDirs,
+	                                         const vector<string>& libNames,
+	                                         const vector<boost::filesystem::path>& interceptedHeaderFileDirectories,
+	                                         bool enableOpenMP,
+	                                         bool enableOpenCL,
+	                                         const Properties& properties)
+				: name(name), dir(dir), files(files), includeDirs(includeDirs), libDirs(libDirs), libNames(libNames),
+					interceptedHeaderFileDirectories(interceptedHeaderFileDirectories), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL),
+					properties(properties) {
+		if(enableOpenCL) {
+			// add the OpenCL specific directories
+			this->includeDirs.push_back(utils::getOpenCLRootDir() + "include/");
+			this->libDirs.push_back(utils::getOpenCLRootDir() + "lib64/");
+		}
+	}
+
+	frontend::ConversionJob IntegrationTestCase::toConversionJob() const {
+		// prepare arguments
+		std::vector<std::string> args = {"dummy_compiler_name_as_first_argument"};
+		auto compilerArgs = getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_CONVERT, false, false, false);
+		auto insiemeArgs = getInsiemeCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_CONVERT, false, false);
+		args.insert(args.end(), compilerArgs.begin(), compilerArgs.end());
+		args.insert(args.end(), insiemeArgs.begin(), insiemeArgs.end());
+
+		// append files to compile
+		for(auto file : files) {
+			args.push_back(file.string());
+		}
+
+		// parse using our standard command line parser
+		driver::cmd::Options options = driver::cmd::Options::parse(args);
+
+		return options.job;
+	}
+
+	const map<string, string> IntegrationTestCase::getDefinitions(std::string step) const {
+		std::map<string, string> defs;
+		boost::char_separator<char> sep("\",");
+		std::string defStr = properties.get("definitions", step);
+
+		boost::tokenizer<boost::char_separator<char>> tokens = boost::tokenizer<boost::char_separator<char>>(defStr, sep);
+		for(const auto& t : tokens) {
+			std::string name = t;
+			if(!name.empty()) {
+				if(name.find("=") != std::string::npos) {
+					defs[name.substr(0, name.find("="))] = name.substr(name.find("=") + 1);
+				} else {
+					defs[name] = "1";
+				}
 			}
-		} else {
-			if(getenv(INSIEME_CXX_BACKEND_COMPILER) != nullptr) {
-				return utils::compiler::getDefaultCxxCompilerExecutable();
+		}
+		return defs;
+	}
+
+	core::ProgramPtr IntegrationTestCase::load(core::NodeManager& manager) const {
+		return toConversionJob().execute(manager);
+	}
+
+	core::tu::IRTranslationUnit IntegrationTestCase::loadTU(core::NodeManager& manager) const {
+		return toConversionJob().toIRTranslationUnit(manager);
+	}
+
+	std::string IntegrationTestCase::getCompilerString(std::string step, bool considerEnvVars, bool isCpp) const {
+		auto compilerProperty = properties.get("compiler", step);
+		if(considerEnvVars) {
+			if(!isCpp) {
+				if(getenv(INSIEME_C_BACKEND_COMPILER) != nullptr) {
+					return utils::compiler::getDefaultCCompilerExecutable();
+				}
+			} else {
+				if(getenv(INSIEME_CXX_BACKEND_COMPILER) != nullptr) {
+					return utils::compiler::getDefaultCxxCompilerExecutable();
+				}
 			}
 		}
 		return compilerProperty;
 	}
 
-	// a global variable containing the list of test cases after they have been loaded the first time
-	boost::optional<vector<IntegrationTestCase>> TEST_CASES = boost::none;
+	const vector<string> IntegrationTestCase::getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp, bool addLibs) const {
+		vector<string> compArgs;
 
-	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode) {
-		// check whether cases have been loaded before
-		if(!TEST_CASES) {
-			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases(utils::getInsiemeSourceRootDir() + "../test", loadTestCaseMode));
-			std::sort(TEST_CASES->begin(), TEST_CASES->end());
+		// add include directories
+		for(const auto& cur : includeDirs) {
+			compArgs.push_back(std::string("-I") + cur.string());
 		}
-		return *TEST_CASES;
-	}
 
-	const IntegrationTestCaseOpt getCase(const string& name) {
+		if(addLibs) {
+			// add external lib dirs
+			for(const auto& cur : libDirs) {
+				compArgs.push_back(std::string("-L") + cur.string());
+			}
 
-		// in case all test case have already been loaded ...
-		if (TEST_CASES) {
-			// load list of test cases
-			const vector<IntegrationTestCase>& cases = getAllCases();
+			// add external libs
+			for(const auto& cur : libNames) {
+				compArgs.push_back(std::string("-l") + cur);
+			}
+		}
 
-			// search for case with given name
-			for(auto it = cases.begin(); it != cases.end(); ++it) {
-				// for base-only setups
-				if(it->getName() == name) {
-					return *it;
-					// for ext + base setups, check base and ext but prefer base
-				} else if(it->getName() == "base/" + name) {
-					return *it;
-				} else if(it->getName() == "ext/" + name) {
-					return *it;
+		// add pre-processor definitions
+		for_each(getDefinitions(step), [&](const std::pair<string, string>& def) {
+			std::string definition = "-D" + def.first + "=" + def.second;
+			compArgs.push_back(definition);
+		});
+
+		// add compiler flags according to the compiler configuration file
+		auto compilerString = getCompilerString(step, considerEnvVars, isCpp);
+		auto compilerArgsFromConfig = getCompilerArgumentsFromConfiguration(compilerString, properties);
+
+		for(const auto& key : properties.getKeys()) {
+			auto isBoolFlagSet = properties.get<bool>(key, step);
+			// check if property is switched on
+			if(isBoolFlagSet) {
+				// check if property is supported
+				if(compilerArgsFromConfig.getKeys().count(key) != 0) {
+					// there might be multiple values per key here
+					auto args = compilerArgsFromConfig.get<std::vector<std::string>>(key);
+					compArgs.insert(compArgs.end(), args.begin(), args.end());
+				} else {
+					std::cout << "WARNING: Property " << key << " not supported by the current compiler configuration!" << std::endl;
 				}
 			}
 		}
 
-		// try loading test case directly (e.g if blacklisted)
-		return loadTestCase(name);
+		// add standard flags specified in configuration file
+		auto standardFlags = compilerArgsFromConfig.get<std::vector<std::string>>("standardFlags");
+		compArgs.insert(compArgs.end(), standardFlags.begin(), standardFlags.end());
+
+		// add remaining flags
+		compArgs.push_back(properties.get("compFlags", step));
+
+		// remove all empty arguments
+		compArgs.erase(std::remove_if(compArgs.begin(), compArgs.end(), [](const auto& arg) { return arg.empty(); }), compArgs.end());
+
+		return compArgs;
 	}
 
-	vector<IntegrationTestCase> getTestSuite(const string& path) {
+	const vector<string> IntegrationTestCase::getInsiemeCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const {
+		vector<string> compArgs;
+
+		// add intercepted include directories
+		for(const auto& cur : interceptedHeaderFileDirectories) {
+			compArgs.push_back(std::string("--intercept-include=") + cur.string());
+		}
+
+		return compArgs;
+	}
+
+	IntegrationTestCaseDefaultsPaths getDefaultIntegrationTestCaseDefaultsPaths() {
+		return { utils::getInsiemeTestRootDir(), utils::getInsiemeBuildRootDir(), "integration_test_config" };
+	}
+
+	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode, const IntegrationTestCaseDefaultsPaths defaultPaths) {
+		static vector<IntegrationTestCase> TEST_CASES = getAllTestCasesInternal(loadTestCaseMode, defaultPaths);
+		return TEST_CASES;
+	}
+
+	const boost::optional<IntegrationTestCase> getCase(const string& name, const IntegrationTestCaseDefaultsPaths defaultPaths) {
+		// get all cases which are loaded by default
+		auto allCases = getAllCases(ENABLED_TESTS, defaultPaths);
+
+		// search for case with given name
+		for(const auto& testCase : allCases) {
+			const auto& caseName = testCase.getName();
+			// for base-only setups
+			if(caseName == name) {
+				return testCase;
+
+				// special handling for ext + base setups, check base and ext but prefer base
+			} else if(caseName == "base/" + name) {
+				return testCase;
+			} else if(caseName == "ext/" + name) {
+				return testCase;
+			}
+		}
+
+		// try loading test case directly (e.g if blacklisted)
+		return loadSingleTestCase(name, defaultPaths);
+	}
+
+	vector<IntegrationTestCase> getTestSuite(const string& path, const IntegrationTestCaseDefaultsPaths defaultPaths) {
 		// create a dummy error code object to ignore if the path can't be resolved
 		boost::system::error_code errorCode;
 		// convert the path into an absolute path
-		frontend::path absolute_path = fs::canonical(fs::absolute(path), errorCode);
+		fs::path absolute_path = fs::canonical(fs::absolute(path), errorCode);
 
 		// if the given path doesn't exist, we try to interpret the argument as relative to the base test directory
 		if (!fs::exists(absolute_path)) {
-			absolute_path = fs::canonical(fs::absolute(utils::getInsiemeSourceRootDir() + "../test/" + path));
+			absolute_path = fs::canonical(fs::absolute(defaultPaths.testDir + path));
 		}
 
-		// first check if it's an individual test case
+		// first check if it's an individual test case. Individual test cases have no "blacklisted_tests" file in their folder
 		const fs::path blacklistFile = absolute_path / "blacklisted_tests";
 		if(!fs::exists(blacklistFile)) {
-			// individual test cases have no "blacklisted_tests" file in their folder
-			auto testCase = loadTestCase(path);
-			if(testCase) { return toVector(*testCase); }
+			auto testCase = loadSingleTestCase(path, defaultPaths);
+			if(testCase) {
+				return toVector(*testCase);
+			} else {
+				return {};
+			}
 		}
 
-		return loadAllCases(absolute_path.string());
+		// otherwise it is a whole directory structure. Load all the test cases in there
+		return loadAllCasesInDirectory(absolute_path.string(), defaultPaths);
 	}
-
-
-	core::ProgramPtr loadIntegrationTest(core::NodeManager& manager, const std::string& name, bool enableOpenMP, const std::map<string, string>& definitions) {
-		// load case information
-		auto curCase = getCase(name);
-		if(!curCase) { return core::ProgramPtr(); }
-
-		// load code using frontend - using given options
-		std::vector<std::string> args = {"compiler"};
-		for(auto file : curCase->getFiles()) {
-			args.push_back(file.string());
-		}
-		for(auto incl : curCase->getIncludeDirs()) {
-			std::string inc = "-I" + incl.string();
-			args.push_back(inc);
-		}
-		if(enableOpenMP) { args.push_back("-fopenmp"); }
-		insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(args);
-
-		// add pre-processor definitions
-		for(const auto& cur : definitions) {
-			options.job.setDefinition(cur.first, cur.second);
-		}
-
-		return options.job.execute(manager);
-	}
-
 
 } // end namespace integration
 } // end namespace driver

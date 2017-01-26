@@ -46,27 +46,27 @@
 // Driver-specific options should be added there - see insiemecc.cxx
 
 // general
-FLAG(     "help,h",                 help,                                                                                "produce help message")
-FLAG(     "version",                version,                                                                             "print full version string")
-FLAG(     "dumpversion",            dumpVersion,                                                                         "print minimal version string")
+FLAG(     "help,h",                 help,                                                                                         "produce help message")
+FLAG(     "version",                version,                                                                                      "print full version string")
+FLAG(     "dumpversion",            dumpVersion,                                                                                  "print minimal version string")
 
 // frontend options
-FLAG(     "no-warnings",            noWarnings,                                                                          "inhibit all warnings")
-FLAG(     "no-color",               noColor,                                                                             "force-disable highlighting of output")
-FLAG(     "no-default-extensions",  noDefaultExtensions,                                                                 "disables all frontend extensions that are enabled by default")
-FLAG(     "print-clang-ast",        printClangAST,                                                                       "print the clang AST")
-PARAMETER("print-clang-ast-filter", clangASTDumpFilter, std::string,                 std::string(),                      "set a regular expression to filter the clang AST dump.")
+FLAG(     "no-warnings",            noWarnings,                                                                                   "inhibit all warnings")
+FLAG(     "no-color",               noColor,                                                                                      "force-disable highlighting of output")
+FLAG(     "no-default-extensions",  noDefaultExtensions,                                                                          "disables all frontend extensions that are enabled by default")
+FLAG(     "print-clang-ast",        printClangAST,                                                                                "print the clang AST")
+PARAMETER("print-clang-ast-filter", clangASTDumpFilter, std::string,                          std::string(),                      "set a regular expression to filter the clang AST dump.")
 
 // input settings
-PARAMETER("std",                    standard,           std::vector<std::string>,    std::vector<std::string>({"auto"}), "language standard")
-PARAMETER("x",                      language,           std::string,                 "undefined",                        "language setting")
-PARAMETER("input-file",             inFiles,            std::vector<frontend::path>, std::vector<frontend::path>(),      "input file(s)")
-PARAMETER("definitions,D",          definitions,        std::vector<std::string>,    std::vector<std::string>(),         "definition(s)")
-PARAMETER("include-path,I",         includePaths,       std::vector<frontend::path>, std::vector<frontend::path>(),      "additional user include search path(s)")
-PARAMETER("intercept-include",      interceptIncludes,  std::vector<frontend::path>, std::vector<frontend::path>(),      "intercepted include file(s)")
-PARAMETER("isystem",                systemIncludePaths, std::vector<frontend::path>, std::vector<frontend::path>(),      "additional system include search path(s)")
-PARAMETER("library-file,l",         libraryFiles,       std::vector<frontend::path>, std::vector<frontend::path>(),      "linker flag(s)/file(s)")
-PARAMETER("library-path,L",         libraryPaths,       std::vector<frontend::path>, std::vector<frontend::path>(),      "library search path(s)")
+PARAMETER("std",                    standard,           std::vector<std::string>,             std::vector<std::string>({"auto"}), "language standard")
+PARAMETER("x",                      language,           std::string,                          "undefined",                        "language setting")
+PARAMETER("input-file",             inFiles,            std::vector<boost::filesystem::path>, std::vector<frontend::path>(),      "input file(s)")
+PARAMETER("definitions,D",          definitions,        std::vector<std::string>,             std::vector<std::string>(),         "definition(s)")
+PARAMETER("include-path,I",         includePaths,       std::vector<boost::filesystem::path>, std::vector<frontend::path>(),      "additional user include search path(s)")
+PARAMETER("intercept-include",      interceptIncludes,  std::vector<boost::filesystem::path>, std::vector<frontend::path>(),      "intercepted include file(s)")
+PARAMETER("isystem",                systemIncludePaths, std::vector<boost::filesystem::path>, std::vector<frontend::path>(),      "additional system include search path(s)")
+PARAMETER("library-file,l",         libraryFiles,       std::vector<boost::filesystem::path>, std::vector<frontend::path>(),      "linker flag(s)/file(s)")
+PARAMETER("library-path,L",         libraryPaths,       std::vector<boost::filesystem::path>, std::vector<frontend::path>(),      "library search path(s)")
 
 
 #undef FLAG

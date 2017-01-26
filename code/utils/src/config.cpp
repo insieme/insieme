@@ -45,6 +45,14 @@ namespace utils {
 		return string(INSIEME_SOURCE_ROOT); // supplied by CMake
 	}
 
+	string getInsiemeTestRootDir() {
+		return string(INSIEME_TEST_ROOT); // supplied by CMake
+	}
+
+	string getInsiemeBuildRootDir() {
+		return string(INSIEME_BUILD_ROOT); // supplied by CMake
+	}
+
 	string getOpenCLRootDir() {
 		#ifdef OPENCL_ROOT
 			return string(OPENCL_ROOT); // supplied by CMake

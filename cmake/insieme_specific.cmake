@@ -12,9 +12,10 @@ if(NOT INSIEME_CXX_BACKEND_COMPILER)
 endif()
 add_definitions(-DINSIEME_CXX_BACKEND_COMPILER_CMAKE="${INSIEME_CXX_BACKEND_COMPILER}")
 
-# TODO this should be dropped too
-add_definitions(-DINSIEME_BUILD_ROOT="${PROJECT_BINARY_DIR}/")
+# TODO these should be dropped
 add_definitions(-DINSIEME_SOURCE_ROOT="${PROJECT_SOURCE_DIR}/code/")
+add_definitions(-DINSIEME_TEST_ROOT="${PROJECT_SOURCE_DIR}/test/")
+add_definitions(-DINSIEME_BUILD_ROOT="${PROJECT_BINARY_DIR}/")
 
 add_definitions(-DINSIEME_VERSION="${GIT_REF}")
 add_definitions(-DINSIEME_BRANCH="${GIT_BRANCH}")

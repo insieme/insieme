@@ -43,6 +43,10 @@ namespace utils {
 
 	std::string getInsiemeSourceRootDir();
 
+	std::string getInsiemeTestRootDir();
+
+	std::string getInsiemeBuildRootDir();
+
 	std::string getOpenCLRootDir();
 
 	std::string getPapiRootDir();

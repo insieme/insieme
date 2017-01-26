@@ -207,21 +207,21 @@ namespace testFramework {
 	}
 
 
-	vector<TestCase> loadCases(const Options& options) {
+	vector<TestCase> loadCases(const IntegrationTestCaseDefaultsPaths& defaultPaths, const Options& options) {
 		// if no test is specified explicitly load all of them
 		LoadTestCaseMode loadMode = ENABLED_TESTS;
 		if(options.blacklistedOnly) loadMode = BLACKLISTED_TESTS;
 		else if(options.longTestsOnly) loadMode = LONG_TESTS;
 		else if(options.longTestsAlso) loadMode = ENABLED_AND_LONG_TESTS;
 		if(options.cases.empty()) {
-			return getAllCases(loadMode);
+			return getAllCases(loadMode, defaultPaths);
 		}
 
 		// load selected test cases
 		vector<TestCase> cases;
 		for(const auto& cur : options.cases) {
 			// load test case based on the location
-			auto curSuite = getTestSuite(cur);
+			auto curSuite = getTestSuite(cur, defaultPaths);
 			for(const auto& cur : curSuite) {
 				if(!contains(cases, cur)) { // make sure every test is only present once
 					cases.push_back(cur);
