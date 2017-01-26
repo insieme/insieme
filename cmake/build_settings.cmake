@@ -7,7 +7,7 @@ option(USE_VALGRIND "Allow Valgrind for unit tests" OFF)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 if(NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "CMake Build Type" FORCE)
+	set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "CMake Build Type" FORCE)
 endif()
 
 if(BUILD_TESTS)
