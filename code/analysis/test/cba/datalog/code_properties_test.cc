@@ -78,7 +78,7 @@ namespace datalog {
 			"{ var int<4> x = 12; $x$; }"
 		);
 
-		auto code = getCase("seq/c/pyramids")->load(manager);
+		auto code = getCase("seq/c/pyramids")->load(mgr);
 
 		ASSERT_EQ(1, addresses.size());
 
@@ -298,7 +298,7 @@ namespace datalog {
 		Context ctxt;
 
 		for (auto name : {"seq/c/loop_transform", "seq/c/pyramids", "seq/c/pendulum", "seq/c/mqap", "seq/c/loops", "seq/c/transpose"}) {
-			auto code = getCase(name)->load(manager);
+			auto code = getCase(name)->load(mgr);
 			EXPECT_TRUE(code);
 			EXPECT_TRUE(getTopLevelNodes(ctxt, code));
 		}
