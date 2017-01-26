@@ -25,13 +25,15 @@ Following options can be supplied to CMake
 | -DUSE_VALGRIND      | ON / OFF        |
 | -DTHIRD_PARTY_DIR   | \<path\>        |
 
+The file `cmake/build_settings.cmake` states their default value.
+
 ### Building / Testing
 
     $ mkdir build
     $ cd build
     $ cmake ..
-    $ make
-    $ make test
+    $ make -j8
+    $ ctest -j8
 
 ## Development
 

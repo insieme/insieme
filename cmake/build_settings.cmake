@@ -2,12 +2,12 @@ option(BUILD_SHARED_LIBS "Link libraries dynamically" ON)
 option(BUILD_TESTS "Enable testing" ON)
 option(BUILD_DOCS "Enable documentation" OFF)
 option(USE_ASSERT "Enable assertions" ON)
-option(USE_VALGRIND "Allow Valgrind for unit tests" ON)
+option(USE_VALGRIND "Allow Valgrind for unit tests" OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 if(NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "CMake Build Type" FORCE)
+	set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "CMake Build Type" FORCE)
 endif()
 
 if(BUILD_TESTS)

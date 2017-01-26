@@ -58,7 +58,7 @@ endmacro()
 
 macro(add_module_unittest module test)
 	if(BUILD_TESTS)
-		set(options VALGRIND PARALLEL)
+		set(options NO_VALGRIND PARALLEL)
 		set(one_value_args OUTPUT_TARGET_NAME)
 		cmake_parse_arguments(ARG "${options}" "${one_value_args}" "" ${ARGN})
 
@@ -69,7 +69,7 @@ macro(add_module_unittest module test)
 		string(SUBSTRING ${test_dir} ${current_dir_length} -1 test_stripped_dir)
 		string(REPLACE "/" "_" test_subdir "${test_stripped_dir}")
 
-		if(USE_VALGRIND AND ARG_VALGRIND)
+		if(USE_VALGRIND AND NOT ARG_NO_VALGRIND)
 			set(test_prefix "valgrind_")
 		endif()
 
@@ -97,7 +97,7 @@ macro(add_module_unittest module test)
 
 		# set command for running the test
 		set(test_cmd ${CMAKE_CURRENT_BINARY_DIR}/${test_name})
-		if(USE_VALGRIND AND ARG_VALGRIND)
+		if(USE_VALGRIND AND NOT ARG_NO_VALGRIND)
 			find_package(Valgrind REQUIRED)
 			set(test_cmd ${Valgrind_EXECUTABLE} ${Valgrind_FLAGS} ${test_cmd})
 		endif()
