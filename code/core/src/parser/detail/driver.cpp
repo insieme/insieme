@@ -928,7 +928,8 @@ namespace parser {
 				}
 			}
 
-			if(args.size() != funcParamTypes.size()) {
+			auto lastParamNodeType = funcParamTypes.empty() ? NT_GenericType : funcParamTypes.back()->getNodeType();
+			if(args.size() != funcParamTypes.size() && !(lastParamNodeType == NT_VariadicTypeVariable || lastParamNodeType == NT_VariadicGenericTypeVariable)) {
 				error(l, format("invalid number of arguments in function call. got %d, expected %d", args.size(), funcParamTypes.size()));
 				return nullptr;
 			}
