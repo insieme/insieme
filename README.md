@@ -5,7 +5,7 @@ updating. The setup script will replace this README, you are free to change and
 commit it afterwards.
 
 Fork this and run the setup utility providing a project name, use lowercase
-letters and underscores only. An example module will be added:
+letters, digits and underscores only. An example module will be added:
 
     $ scripts/setup/run <project-name>
 
