@@ -622,6 +622,14 @@ namespace parser {
 		                                "	let two = (x : int<4>)-> int<4> { return x+5; };"
 		                                "    return one(two(exp));"
 		                                "}"));
+
+		// calls on variadic lambda
+		EXPECT_TRUE(test_expression(nm, "decl variadic : ('a...) -> unit;"
+		                                "variadic()"));
+		EXPECT_TRUE(test_expression(nm, "decl variadic : ('a...) -> unit;"
+		                                "variadic(1)"));
+		EXPECT_TRUE(test_expression(nm, "decl variadic : ('a...) -> unit;"
+		                                "variadic(1, 2)"));
 	}
 
 	TEST(IR_Parser, Precedence) {
