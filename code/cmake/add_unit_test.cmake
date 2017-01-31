@@ -122,29 +122,8 @@ macro(add_unit_test case_name ut_prefix)
 			# add valgrind as a test
 			add_test_conditionally_parallel(valgrind_${case_name} ${OPT_RUN_PARALLEL} ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR} ${VALGRIND_EXECUTABLE} ${valgrind_options} "${CMAKE_CURRENT_BINARY_DIR}/${case_name}")
 		endif(NOT MSVC)
-	else()
-		# add normal test
-		add_test_conditionally_parallel(${case_name} ${OPT_RUN_PARALLEL} ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/${case_name}")
-		# + valgrind as a custom target (only if not explicitly prohibited)
-		if(NOT MSVC)
-			# lookup valgrind
-			insieme_find_package(NAME Valgrind)
-
-			add_custom_target(valgrind_${case_name}
-				COMMAND ${VALGRIND_EXECUTABLE} ${valgrind_options} ${CMAKE_CURRENT_BINARY_DIR}/${case_name}
-			WORKING_DIRECTORY
-				${CMAKE_CURRENT_BINARY_DIR}
-			)
-
-			add_dependencies(valgrind valgrind_${case_name})
-			add_dependencies(valgrind_${case_name} ${case_name})
-
-			#check if target for test suite already exists
-			if(NOT TARGET valgrind_${ut_prefix})
-				add_custom_target(valgrind_${ut_prefix})
-			endif()
-
-			add_dependencies(valgrind_${ut_prefix} valgrind_${case_name})
-		endif()
 	endif()
+
+	# add normal test
+	add_test_conditionally_parallel(${case_name} ${OPT_RUN_PARALLEL} ${insieme_root_dir} ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_CURRENT_BINARY_DIR}/${case_name}")
 endmacro(add_unit_test)
