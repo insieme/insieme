@@ -31,7 +31,7 @@ The file `cmake/build_settings.cmake` states their default value.
 
     $ mkdir build
     $ cd build
-    $ cmake ..
+    $ cmake ../code
     $ make -j8
     $ ctest -j8
 
