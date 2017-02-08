@@ -103,7 +103,7 @@ macro(add_module_unittest module test)
 		endif()
 		if(ARG_PARALLEL)
 			string(REPLACE ";" " " test_cmd "${test_cmd}")
-			set(test_cmd ruby ${PROJECT_SOURCE_DIR}/scripts/gtest/run_parallel.rb -w ${NPROC_HALF} ${test_cmd})
+			set(test_cmd ruby ${PROJECT_SOURCE_DIR}/../scripts/gtest/run_parallel.rb -w ${NPROC_HALF} ${test_cmd})
 		endif()
 
 		# register test
