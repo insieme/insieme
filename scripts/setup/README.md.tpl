@@ -37,6 +37,26 @@ The file `cmake/build_settings.cmake` states their default value.
 
 ## Development
 
+### Adding new Modules
+
+The setup script can be run again to add new modules, just provide the same
+project name.
+
+    $ scripts/setup/run %PROJECT% frontend backend utils
+
+### Adding new Parts to Modules
+
+There is a utility script to add new *parts* to an existing module. The project
+name and module name must be provided followed by a list of *parts* to
+generate. Folders will be created along the way.
+
+    $ scripts/setup/add_part %PROJECT% frontend sema extensions/malloc_extension
+
+This will add the files `sema.h`, `sema.cpp` and `sema_test.cc` to the
+*frontend* module. Furthermore new subfolders `extensions` will be created
+containing `malloc_extension.h`, `malloc_extension.cpp` and
+`malloc_extension_test.cc` in their respective subdirectories.
+
 ### Executable Bit
 
 When working on Windows via SMB share, consider setting following Git setting.
