@@ -100,6 +100,7 @@ namespace integration {
 				if (typeid(Engine) == typeid(an::HaskellEngine)) {
 					blacklist = std::vector<string>{
 						"seq/c/bots/sort",
+						"cilk/nqueens",
 						"cilk/pyramid",
 						"seq/cpp/bugs/dowhile_this",
 						"omp/c/pyramids",
