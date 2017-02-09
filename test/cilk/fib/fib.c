@@ -1,29 +1,22 @@
 
 #include <stdio.h>
-
-#ifndef spawn
-	#define spawn
-#endif
-
-#ifndef sync
-	#define sync
-#endif
+#include <cilk/cilk.h>
 
 int fib(int n) {
 	if (n<2) return n;
 
-	int x = spawn fib(n-1);
+	int x = cilk_spawn fib(n-1);
 	int y;
-	y = spawn fib(n-2);
+	y = cilk_spawn fib(n-2);
 	
-	spawn fib(n-2);
+	cilk_spawn fib(n-2);
 
-	sync;
+	cilk_sync;
 	return (x+y);
 }
 
 int main() {
-	int N = 25;
+	int N = 15;
 	printf("fib(%d) = %d\n", N, fib(N));
 	return 0;
 }
