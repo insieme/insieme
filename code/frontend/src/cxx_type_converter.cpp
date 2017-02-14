@@ -454,11 +454,11 @@ namespace conversion {
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::CXXTypeConverter::VisitDecltypeType(const clang::DecltypeType* declTy) {
 		frontend_assert(!declTy->isUndeducedType()) << "Non-deduced decltype type unsupported.";
-		return convertInternal(declTy->getUnderlyingType());
+		return convert(declTy->getUnderlyingType());
 	}
 	core::TypePtr Converter::CXXTypeConverter::VisitAutoType(const clang::AutoType* autoTy) {
 		frontend_assert(autoTy->isDeduced()) << "Non-deduced auto type unsupported.";
-		return convertInternal(autoTy->getDeducedType());
+		return convert(autoTy->getDeducedType());
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
