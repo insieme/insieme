@@ -37,11 +37,11 @@
 #include "insieme/frontend/cilk/cilk_sema.h"
 
 #include "insieme/frontend/cilk/cilk_annotation.h"
-#include "insieme/core/tu/ir_translation_unit.h"
 
-#include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/tu/ir_translation_unit.h"
 
 namespace insieme {
@@ -89,7 +89,7 @@ namespace cilk {
 							core::IRBuilder builder(manager);
 
 							// initialize the variable using an undefined
-							newStmts.push_back(builder.declarationStmt(decl.getVariable(), decl.getVariable()));
+							newStmts.push_back(builder.declarationStmt(decl.getVariable(), core::lang::buildRefDecl(decl.getVariable()->getType())));
 
 							// assign the value
 							core::ExpressionPtr init = decl->getInitialization();

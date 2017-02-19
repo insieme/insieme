@@ -424,7 +424,10 @@ namespace extensions {
 			auto spec = injected->getInjectedSpecializationType()->getUnqualifiedDesugaredType();
 			if(auto tempSpecType = llvm::dyn_cast<clang::TemplateSpecializationType>(spec)) {
 				auto key = tempSpecType->getCanonicalTypeUnqualified().getTypePtr();
-				assert_true(::containsKey(templateSpecializationMapping, key)) << "Template injected specialization type encountered, but no mapping available";
+				if(!::containsKey(templateSpecializationMapping, key)) {
+					key->dump();
+					assert_fail() << "Template injected specialization type encountered, but no mapping available. Key ^^";
+				}
 				return templateSpecializationMapping[key];
 			}
 		}

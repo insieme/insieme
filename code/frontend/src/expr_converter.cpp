@@ -162,15 +162,18 @@ namespace conversion {
 		if(constructExpr) {
 			auto constructor = constructExpr->getConstructor();
 			if(constructor->isCopyOrMoveConstructor()) {
-				VLOG(2) << "CopyOrMove in param list at " << utils::location(clangArgExpr->getLocStart(), converter.getSourceManager()) << "\n";
-				auto prevArg = ret;
-				ret = converter.convertExpr(constructExpr->getArg(0));
-				// cast ref as required by copy constructor
-				if(core::lang::isReference(ret)) {
-					ret = core::lang::buildRefCast(
-						ret, prevArg.as<core::CallExprPtr>()->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(1));
+				// we only create the refCast here in case the original translated IR's functionExpr even has 2 parameters.
+				// this might not be the case if the translation has been intercepted somewhere, and thus we must not access the second parameter in this case
+				auto prefFunType = ret.as<core::CallExprPtr>()->getFunctionExpr()->getType().as<core::FunctionTypePtr>();
+				if(prefFunType->getParameterTypeList().size() == 2) {
+					VLOG(2) << "CopyOrMove in param list at " << utils::location(clangArgExpr->getLocStart(), converter.getSourceManager()) << "\n";
+					ret = converter.convertExpr(constructExpr->getArg(0));
+					// cast ref as required by copy constructor
+					if(core::lang::isReference(ret)) {
+						ret = core::lang::buildRefCast(ret, prefFunType->getParameterType(1));
+					}
+					VLOG(2) << "CXX call converted newArg: " << dumpPretty(ret);
 				}
-				VLOG(2) << "CXX call converted newArg: " << dumpPretty(ret);
 			}
 		}
 		// if a targetType was provided, and we are working on a ref, cast the ref as required

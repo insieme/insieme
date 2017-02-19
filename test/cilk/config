@@ -1,5 +1,6 @@
-compFlags[insiemecc_c_sema]=--cilk
-compFlags[insiemecc_cpp_sema]=--cilk
-compFlags[insiemecc_run_c_convert]=--cilk
-compFlags[insiemecc_seq_c_convert]=--cilk
+compFlags[insiemecc_c_sema]=--fcilk
+compFlags[insiemecc_cpp_sema]=--fcilk
+compFlags[insiemecc_run_c_convert]=--fcilk
+compFlags[insiemecc_seq_c_convert]=--fcilk
+compFlags[ref_c_compile]=-fcilkplus
 excludeSteps="*_ocl_*","*_cpp_*"

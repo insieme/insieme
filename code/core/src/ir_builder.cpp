@@ -972,11 +972,11 @@ namespace core {
 
 		TypePtr deduceReturnTypeForCall(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
 			// check function expression
-			assert_eq(functionExpr->getType()->getNodeType(), NT_FunctionType) << "Function expression is not a function!";
+			assert_eq(functionExpr->getType()->getNodeType(), NT_FunctionType) << "Function expression is not a function!" << "\n - fun expr: " << *functionExpr
+				<< "\n - of type: " << *functionExpr->getType() << "\n - with node type: " << functionExpr->getType()->getNodeType();
 
 			// extract function type
 			FunctionTypePtr funType = static_pointer_cast<const FunctionType>(functionExpr->getType());
-//			assert_eq(funType->getParameterTypes().size(), arguments.size()) << "Invalid number of arguments!";
 
 			// deduce return type
 			core::TypeList argumentTypes;
