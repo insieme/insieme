@@ -98,7 +98,7 @@ You can now setup a build directory using CMake:
 
     $ mkdir build
     $ cd build
-    $ $INSIEME_SRC/third_party/cmake/bin/cmake $INSIEME_SRC
+    $ $INSIEME_SRC/third_party/cmake/bin/cmake $INSIEME_SRC/code
 
 If successful, CMake produces the set of Makefiles required to build the
 Insieme project. Following command builds Insieme.

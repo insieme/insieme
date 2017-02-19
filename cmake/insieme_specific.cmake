@@ -13,8 +13,8 @@ endif()
 add_definitions(-DINSIEME_CXX_BACKEND_COMPILER_CMAKE="${INSIEME_CXX_BACKEND_COMPILER}")
 
 # TODO these should be dropped
-add_definitions(-DINSIEME_SOURCE_ROOT="${PROJECT_SOURCE_DIR}/code/")
-add_definitions(-DINSIEME_TEST_ROOT="${PROJECT_SOURCE_DIR}/test/")
+add_definitions(-DINSIEME_SOURCE_ROOT="${PROJECT_SOURCE_DIR}/")
+add_definitions(-DINSIEME_TEST_ROOT="${PROJECT_SOURCE_DIR}/../test/")
 add_definitions(-DINSIEME_BUILD_ROOT="${PROJECT_BINARY_DIR}/")
 
 add_definitions(-DINSIEME_VERSION="${GIT_REF}")
@@ -28,4 +28,4 @@ endif()
 # TODO cpp/boost integration test relies on boost to be set?
 find_package(Boost ${BOOST_VERSION} EXACT REQUIRED)
 
-configure_file(code/integration_test_config.in ${PROJECT_BINARY_DIR}/integration_test_config @ONLY IMMEDIATE)
+configure_file(integration_test_config.in ${PROJECT_BINARY_DIR}/integration_test_config @ONLY IMMEDIATE)

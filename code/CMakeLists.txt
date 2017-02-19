@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.5)
 project(insieme LANGUAGES C CXX)
 
 # -- Module Path
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake)
 
 # -- Prefix Path
-set(THIRD_PARTY_DIR ${PROJECT_SOURCE_DIR}/third_party CACHE STRING "Third Party Library Directory")
+set(THIRD_PARTY_DIR ${PROJECT_SOURCE_DIR}/../third_party CACHE STRING "Third Party Library Directory")
 file(GLOB prefix_paths ${THIRD_PARTY_DIR}/*)
 list(APPEND CMAKE_PREFIX_PATH ${prefix_paths})
 
@@ -40,30 +40,26 @@ include(add_souffle)
 include(insieme_specific)
 
 # -- Project Modules
-add_subdirectory(code/common)
+add_subdirectory(common)
 
 if(BUILD_COMPILER)
-	add_subdirectory(code/analysis)
-	add_subdirectory(code/annotations)
-	add_subdirectory(code/backend)
-	add_subdirectory(code/core)
-	add_subdirectory(code/driver)
-	add_subdirectory(code/frontend)
-	add_subdirectory(code/transform)
-	add_subdirectory(code/utils)
+	add_subdirectory(analysis)
+	add_subdirectory(annotations)
+	add_subdirectory(backend)
+	add_subdirectory(core)
+	add_subdirectory(driver)
+	add_subdirectory(frontend)
+	add_subdirectory(transform)
+	add_subdirectory(utils)
 endif()
 
 if(BUILD_RUNTIME)
-	add_subdirectory(code/runtime)
+	add_subdirectory(runtime)
 endif()
 
 if(BUILD_DOCS)
-	add_subdirectory(docs/insieme_dev_doc)
+	add_subdirectory(../docs/insieme_dev_doc ${PROJECT_BINARY_DIR}/insieme_dev_doc)
 endif()
 
 # -- Integration Test Files
-if(MSVC)
-	file(GLOB_RECURSE integration_test_files ${PROJECT_SOURCE_DIR}/test *.c *.cpp *.h)
-	add_custom_target(integration_test_files SOURCES ${integration_test_files})
-	msvc_source_group("Files" "${integration_test_files}" STRIP test)
-endif()
+add_subdirectory(../test ${PROJECT_BINARY_DIR}/test)

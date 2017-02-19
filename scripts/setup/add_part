@@ -65,4 +65,4 @@ for part in "$@"; do
 	render_template "$part"
 done
 
-touch "$TGT/CMakeLists.txt"
+touch "$TGT/code/CMakeLists.txt"

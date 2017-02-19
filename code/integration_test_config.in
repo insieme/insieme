@@ -31,8 +31,8 @@ libPaths=
 libNames=
 
 # finally the compiler configuration settings
-compilerConfigurationFile[insiemecc]="@PROJECT_SOURCE_DIR@/test/compilerConfiguration.insiemecc"
-compilerConfigurationFile[gcc]="@PROJECT_SOURCE_DIR@/test/compilerConfiguration.gcc"
-compilerConfigurationFile[g++]="@PROJECT_SOURCE_DIR@/test/compilerConfiguration.g++_and_clang"
-compilerConfigurationFile[clang]="@PROJECT_SOURCE_DIR@/test/compilerConfiguration.g++_and_clang"
-compilerConfigurationFile[clang++]="@PROJECT_SOURCE_DIR@/test/compilerConfiguration.g++_and_clang"
+compilerConfigurationFile[insiemecc]="@PROJECT_SOURCE_DIR@/../test/compilerConfiguration.insiemecc"
+compilerConfigurationFile[gcc]="@PROJECT_SOURCE_DIR@/../test/compilerConfiguration.gcc"
+compilerConfigurationFile[g++]="@PROJECT_SOURCE_DIR@/../test/compilerConfiguration.g++_and_clang"
+compilerConfigurationFile[clang]="@PROJECT_SOURCE_DIR@/../test/compilerConfiguration.g++_and_clang"
+compilerConfigurationFile[clang++]="@PROJECT_SOURCE_DIR@/../test/compilerConfiguration.g++_and_clang"

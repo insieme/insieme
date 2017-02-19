@@ -17,7 +17,7 @@ add_module() {
 
 	render_template "$DIR/CMakeLists_module.txt.tpl" "$TGT/code/$module/CMakeLists.txt"
 
-	echo "add_subdirectory(code/$module)" >> "$TGT/CMakeLists.txt"
+	echo "add_subdirectory($module)" >> "$TGT/code/CMakeLists.txt"
 }
 
 if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]]; then
@@ -29,14 +29,14 @@ fi
 project="$1"
 shift
 
-if [[ $(head -n1 "$TGT/README.md") == "# CXX Template" ]]; then
+if [[ -d "$TGT/code" ]]; then
 	# setup README
 	render_template "$DIR/README.md.tpl" "$TGT/README.md"
 
-	# setup root CMakeLists
-	render_template "$DIR/CMakeLists.txt.tpl" "$TGT/CMakeLists.txt"
-
 	mkdir "$TGT/code"
+
+	# setup root CMakeLists
+	render_template "$DIR/CMakeLists.txt.tpl" "$TGT/code/CMakeLists.txt"
 
 	# setup example module
 	add_module example
