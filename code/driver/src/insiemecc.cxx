@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 	bool showStatistics = false;
 	bool taskGranularityTuning = false;
 	std::string backendString;
-	frontend::path dumpCFG, dumpJSON, dumpTU, dumpOclKernel;
+	frontend::path dumpCFG, dumpJSON, dumpTree, dumpTU, dumpOclKernel;
 	std::vector<std::string> optimizationFlags;
 
 	// Step 1: parse input parameters
@@ -87,6 +87,7 @@ int main(int argc, char** argv) {
 	parser.addFlag(     "task-granularity-tuning", taskGranularityTuning,                         "enables multiverisoning of parallel tasks");
 	parser.addParameter("backend",                 backendString,     std::string("runtime"),     "backend selection");
 	parser.addParameter("dump-cfg",                dumpCFG,           frontend::path(),           "print dot graph of the CFG");
+	parser.addParameter("dump-tree",               dumpTree,          frontend::path(),           "dump intermediate representation (Tree)");
 	parser.addParameter("dump-json",               dumpJSON,          frontend::path(),           "dump intermediate representation (JSON)");
 	parser.addParameter("dump-tu",                 dumpTU,            frontend::path(),           "dump translation unit");
 	parser.addParameter("dump-kernel",             dumpOclKernel,     frontend::path(),           "dump OpenCL kernel");
@@ -145,6 +146,13 @@ int main(int argc, char** argv) {
 		std::cout << "Dumping JSON representation ...\n";
 		std::ofstream out(dumpJSON.string());
 		core::dump::json::dumpIR(out, program);
+	}
+
+	// dump Text IR representation
+	if(!dumpTree.empty()) {
+		std::cout << "Dumping Text representation ...\n";
+		std::ofstream out(dumpTree.string());
+		dumpText(program, out);
 	}
 
 	// perform semantic checks
