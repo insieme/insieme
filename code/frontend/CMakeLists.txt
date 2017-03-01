@@ -45,3 +45,13 @@ foreach(test ${frontend_tests})
 		add_module_unittest(frontend ${test})
 	endif()
 endforeach(test)
+
+# add test input sources
+if(MSVC)
+	glob_headers(frontend_test_input_incs test/inputs)
+	glob_sources(frontend_test_input_srcs test/inputs)
+	set(frontend_test_input_srcs ${frontend_test_input_srcs} ${frontend_test_input_incs})
+	add_custom_target(frontend_test_input SOURCES ${frontend_test_input_srcs})
+	msvc_source_group("Input Files" "${frontend_test_input_srcs}" STRIP test/inputs)
+	set_target_properties(frontend_test_input PROPERTIES FOLDER "frontend/Tests")
+endif()
