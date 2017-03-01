@@ -1,16 +1,23 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2017 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
  * This file is part of the INSIEME Compiler and Runtime System.
  *
- * We provide the software of this file (below described as "INSIEME")
- * under GPL Version 3.0 on an AS IS basis, and do not warrant its
- * validity or performance.  We reserve the right to update, modify,
- * or discontinue this software at any time.  We shall have no
- * obligation to supply such updates or modifications or any other
- * form of support to you.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  *
  * If you require different license terms for your intended use of the
  * software, e.g. for proprietary commercial or industrial use, please
@@ -27,13 +34,7 @@
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
- * All copyright notices must be kept intact.
- *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
- * regarding third party software licenses.
  */
-
 #pragma once
 #ifndef __GUARD_UTILS_CIRCULAR_WORK_BUFFERS_H
 #define __GUARD_UTILS_CIRCULAR_WORK_BUFFERS_H
