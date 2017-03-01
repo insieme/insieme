@@ -1,6 +1,0 @@
-libPaths="${boost_lib}"
-libNames="boost_regex"
-includes="${boost_include}","./"
-files="main.cpp","impl.cpp"
-
-intercepted_header_file_dirs=${intercepted_header_file_dirs},${boost_include}

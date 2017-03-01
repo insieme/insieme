@@ -82,7 +82,9 @@ namespace extensions {
 		// Define the macros which will replace the cilk keywords with inline pragmas
 		macros.insert(std::make_pair("cilk=", ""));
 		macros.insert(std::make_pair("spawn", "_Pragma(\"cilk spawn\")"));
+		macros.insert(std::make_pair("cilk_spawn", "_Pragma(\"cilk spawn\")"));
 		macros.insert(std::make_pair("sync", "_Pragma(\"cilk sync\")"));
+		macros.insert(std::make_pair("cilk_sync", "_Pragma(\"cilk sync\")"));
 
 		// Add pragma handlers which will attach cilk annotations at the correct location
 		pragmaHandlers.push_back(

@@ -1,0 +1,4 @@
+includes="../../../../../seq/c/bots","../../../../../seq/c/bots/health"
+files="../../../../../seq/c/bots/bots_common.c","../../../../../seq/c/bots/bots_main.c","../../../../../seq/c/bots/health/health.c"
+executionFlags=-f ${PATH}/../../../../../seq/c/bots/health/small.input -c
+definitions="_GNU_SOURCE"

@@ -99,11 +99,12 @@ namespace integration {
 			#ifdef INSIEME_ANALYSIS_HASKELL
 				if (typeid(Engine) == typeid(an::HaskellEngine)) {
 					blacklist = std::vector<string>{
-						"bots/sort",
+						"seq/c/bots/sort",
+						"cilk/nqueens",
 						"cilk/pyramid",
-						"cpp/bugs/dowhile_this",
-						"omp/pyramids",
-						"pyramids"
+						"seq/cpp/bugs/dowhile_this",
+						"omp/c/pyramids",
+						"seq/c/pyramids"
 					};
 				}
 			#endif

@@ -3,7 +3,7 @@
 #
 project(insieme_analysis CXX)
 message(STATUS "========== configure analysis =============")
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 
 # Setup common source files
 file(GLOB insieme_analysis_srcs src/cba/*.cpp src/cba/common/*.cpp)

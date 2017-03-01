@@ -19,7 +19,6 @@ list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
 # -------------------------------------------------------------- define some code locations
 
 #find them in CMAKE_MODULE_PATH
-include(insieme_glob_headers)
 include(add_unit_test)
 include(insieme_cotire)
 include(cotire)
@@ -251,18 +250,17 @@ if(MSVC)
 endif()
 
 # -------------------------------------------- Set backend compilers if specified, default to gcc/g++ otherwise
-if( DEFINED ENV{INSIEME_C_BACKEND_COMPILER} )
-	set(INSIEME_C_BACKEND_COMPILER $ENV{INSIEME_C_BACKEND_COMPILER})
-else()
-	message(WARNING "INSIEME_C_BACKEND_COMPILER environment variable not set, defaulting to gcc in PATH")
+if(NOT INSIEME_C_BACKEND_COMPILER)
+	message(WARNING "INSIEME_C_BACKEND_COMPILER not set, defaulting to gcc in PATH")
 	set(INSIEME_C_BACKEND_COMPILER "gcc")
 endif()
-if( DEFINED ENV{INSIEME_CXX_BACKEND_COMPILER} )
-	set(INSIEME_CXX_BACKEND_COMPILER $ENV{INSIEME_CXX_BACKEND_COMPILER})
-else()
-	message(WARNING "INSIEME_CXX_BACKEND_COMPILER environment variable not set, defaulting to g++ in PATH")
+add_definitions(-DINSIEME_C_BACKEND_COMPILER_CMAKE="${INSIEME_C_BACKEND_COMPILER}")
+
+if(NOT INSIEME_CXX_BACKEND_COMPILER)
+	message(WARNING "INSIEME_CXX_BACKEND_COMPILER not set, defaulting to g++ in PATH")
 	set(INSIEME_CXX_BACKEND_COMPILER "g++")
 endif()
+add_definitions(-DINSIEME_CXX_BACKEND_COMPILER_CMAKE="${INSIEME_CXX_BACKEND_COMPILER}")
 
 # Define some colors for printing
 if(NOT WIN32)

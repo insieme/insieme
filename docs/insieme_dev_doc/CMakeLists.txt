@@ -5,7 +5,7 @@
 #
 project(insieme_dev_doc NONE)
 
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 
 include(../UseLATEX.cmake)
 

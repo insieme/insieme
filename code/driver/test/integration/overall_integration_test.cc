@@ -51,10 +51,12 @@
 #include "insieme/utils/gtest_utils.h"
 
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/dump/binary_dump.h"
 #include "insieme/core/dump/text_dump.h"
 #include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/tu/ir_translation_unit.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
 
@@ -166,7 +168,7 @@ namespace integration {
 
 			std::string step = TEST_STEP_INSIEMECC_RUN_C_COMPILE;
 			// switch to C++ compiler if necessary
-			if (any(testCase.getFiles(), [](const frontend::path& cur) { return *cur.string().rbegin() == 'p'; })) {
+			if (any(testCase.getFiles(), [](const boost::filesystem::path& cur) { return *cur.string().rbegin() == 'p'; })) {
 				compiler = insieme::utils::compiler::Compiler::getRuntimeCompiler(insieme::utils::compiler::Compiler::getDefaultCppCompiler());
 				step = TEST_STEP_INSIEMECC_RUN_CPP_COMPILE;
 			}

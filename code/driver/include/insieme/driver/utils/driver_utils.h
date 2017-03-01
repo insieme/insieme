@@ -42,6 +42,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/backend/backend.h"
 
@@ -73,7 +74,7 @@ namespace utils {
 	//***************************************************************************************
 	// 					SEMA: Performs semantic checks on the IR
 	//***************************************************************************************
-	int checkSema(const core::NodePtr& program, core::checks::MessageList& list);
+	int checkSema(const core::NodePtr& program, core::checks::MessageList& list, core::checks::CheckPtr checks = core::checks::getFullCheck());
 
 
 	//***************************************************************************************

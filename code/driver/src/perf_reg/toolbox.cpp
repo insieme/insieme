@@ -39,47 +39,12 @@
 #include <cmath>
 #include <cstdio>
 
+using namespace std;
+
 namespace insieme {
 namespace driver {
 namespace perf_reg {
 namespace tools {
-
-	template <typename T>
-	string vecT2string(const vector<T> vec) {
-		bool first = true;
-		stringstream ss;
-
-		for (const auto &elem : vec) {
-			if (!first) ss << ", ";
-			else first = false;
-			ss << elem;
-		}
-
-		return ss.str();
-	}
-
-
-	string vec2string(vector<string>& vec) {
-		return vecT2string(vec);
-	}
-
-	time_t str2time(const std::__cxx11::string& in) {
-		try {
-			return boost::lexical_cast<time_t>(in);
-		} catch (boost::bad_lexical_cast &) {
-			LOG(WARNING) << "Given string '" << in
-			             << "' could not be casted to time_t!";
-		}
-		return 0L;
-	}
-
-	double str2double(const string& in) {
-		return boost::lexical_cast<double>(in);
-	}
-
-	int str2int(const string& in) {
-		return boost::lexical_cast<int>(in);
-	}
 
 	template <typename T>
 	bool isNumber(const string &in) {
@@ -125,8 +90,12 @@ namespace tools {
 		string str;
 
 		if (extractSettingsValue(in, "Timestamp", str)) {
-			out = str2time(str);
-			if (out) return true;
+			try {
+				out = boost::lexical_cast<time_t>(str);
+				return true;
+			} catch (boost::bad_lexical_cast &) {
+				LOG(WARNING) << "Given string '" << str << "' could not be casted to time_t!";
+			}
 		}
 
 		LOG(ERROR) << "Could not parse timestamp in line: " << in;

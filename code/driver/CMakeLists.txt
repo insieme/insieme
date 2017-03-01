@@ -3,7 +3,7 @@
 #
 project(insieme_driver CXX)
 message(STATUS "========== configure driver =============")
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_driver_srcs	src/*.cpp )
@@ -46,8 +46,6 @@ foreach(exec_file ${executables})
 		continue()
 	endif()
 
-	message(STATUS ============================ ${exec_name})
-
 	# Build driver executable
 	add_executable(${exec_name} ${exec_file} ${insieme_driver_defs})
 	#target drivers depends on all driver
@@ -56,9 +54,6 @@ foreach(exec_file ${executables})
 	target_link_libraries(${exec_name} insieme_driver)
 
 endforeach(exec_file)
-
-# integrations_tests uses insiemecc - so there is a dependency
-add_dependencies(integration_tests insiemecc)
 
 # =============================================  TESTING  =====================================
 # add unit test cases
@@ -79,5 +74,27 @@ foreach ( case_file ${test_cases})
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} insieme_driver)
 
-	add_unit_test(${case_name} ${ut_prefix} off)
+	if(${case_name} MATCHES ".*driver_integration.*" OR ${case_name} MATCHES ".*driver_measure.*")
+		add_unit_test(${case_name} ${ut_prefix} DISABLE_VALGRIND RUN_PARALLEL)
+	else()
+		add_unit_test(${case_name} ${ut_prefix} DISABLE_VALGRIND)
+	endif()
 endforeach(case_file)
+
+# =============================================  PREPROCESS  =====================================
+add_custom_command(
+	TARGET integration_tests
+	POST_BUILD
+	COMMAND ${CMAKE_CURRENT_BINARY_DIR}/integration_tests --preprocess
+	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+	COMMENT "Run preprocessing for integration tests"
+)
+
+# ============================================  DEPENDENCIES  =====================================
+
+# integrations_tests uses insiemecc - so there is a dependency
+add_dependencies(integration_tests insiemecc)
+
+# The overall integration unit test depends on the preprocessing being done.
+# To ensure this we add a dependency to the integration_tests binary here, which will ensure the preprocessing has happened
+add_dependencies(ut_driver_integration_overall_integration_test integration_tests)

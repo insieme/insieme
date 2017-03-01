@@ -51,6 +51,42 @@ namespace checks {
 
 	namespace {
 
+		class FullCheck : public IRCheck {
+
+			/**
+			 * The checks to be conducted.
+			 */
+			CheckPtr checks;
+
+		public:
+
+			FullCheck(const CheckPtr& checks)
+				: IRCheck(checks->isVisitingTypes()), checks(checks) {}
+
+		protected:
+
+			OptionalMessageList visit(const NodeAddress& node) {
+				struct FullyCorrectTag {};
+
+				// check whether it has been considered error-free earlier
+				if(node->hasAttachedValue<FullyCorrectTag>()) { return OptionalMessageList(); }
+
+				// run all the nested checks
+				OptionalMessageList res = checks->visit(node);
+
+				// check whether the check was error free
+				if (node.isRoot() && (!res || res->empty())) {
+					// attach the flag
+					node->attachValue<FullyCorrectTag>();
+				}
+
+				// done
+				return res;
+			}
+
+		};
+
+
 		CheckPtr buildFullCheck() {
 			std::vector<CheckPtr> context_free_checks;
 			context_free_checks.push_back(make_check<KeywordCheck>());
@@ -101,12 +137,16 @@ namespace checks {
 			context_free_checks.push_back(make_check<LiteralFormatCheck>());
 
 			// assemble the IR check list
-			return combine(toVector<CheckPtr>(
+			return make_check<FullCheck>(combine(toVector<CheckPtr>(
 				makeVisitOnce(combine(context_free_checks)),
 				make_check<FreeTagTypeReferencesCheck>()
-			), true);
+			)));
 		}
+
 	}
+
+
+
 
 	CheckPtr getFullCheck() {
 		// don't run the checks if the user requested this with the environment variable
@@ -123,6 +163,7 @@ namespace checks {
 		return check(node, getFullCheck());
 	}
 
-} // end namespace check
+} // end namespace checks
 } // end namespace core
 } // end namespace insieme
+

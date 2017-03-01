@@ -98,7 +98,7 @@ namespace insieme {
 		core::NodeManager manager;
 
 		// load test case
-		auto root = loadIntegrationTest(manager, "pendulum");
+		auto root = getCase("seq/c/pendulum")->load(manager);
 		ASSERT_TRUE(root);
 
 		std::cout << IRStatistic::evaluate(root) << "\n";
@@ -120,7 +120,7 @@ namespace insieme {
 		core::NodeManager manager;
 
 		// load test case
-		auto root = loadIntegrationTest(manager, "pendulum");
+		auto root = getCase("seq/c/pendulum")->load(manager);
 		ASSERT_TRUE(root);
 
 		core::NodePtr root2;
@@ -142,7 +142,7 @@ namespace insieme {
 		core::NodeManager manager;
 
 		// load test case
-		auto root = loadIntegrationTest(manager, "pendulum");
+		auto root = getCase("seq/c/pendulum")->load(manager);
 		ASSERT_TRUE(root);
 
 		// visit all pointer
@@ -164,7 +164,7 @@ namespace insieme {
 		core::NodeManager manager;
 
 		// load test case
-		auto root = loadIntegrationTest(manager, "pendulum");
+		auto root = getCase("seq/c/pendulum")->load(manager);
 		ASSERT_TRUE(root);
 
 		// visit all pointer
@@ -186,7 +186,7 @@ namespace insieme {
 		core::NodeManager manager;
 
 		// load test case
-		auto root = loadIntegrationTest(manager, "pendulum");
+		auto root = getCase("seq/c/pendulum")->load(manager);
 		ASSERT_TRUE(root);
 
 		// check for hash collisions

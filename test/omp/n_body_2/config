@@ -1,5 +1,0 @@
-includes="./"
-files="nbody.cpp"
-excludeSteps="*_ocl_*", "*_c_*"
-executionFlags=1000 300
-use_libmath=1

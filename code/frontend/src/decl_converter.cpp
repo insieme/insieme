@@ -278,7 +278,8 @@ namespace conversion {
 		else {
 			string name =  utils::buildNameForFunction(methDecl, converter);
 			auto funType = getFunMethodTypeInternal(converter, methDecl);
-			if(funType->getKind() == core::FK_CONSTRUCTOR) { ret.lit = builder.getLiteralForConstructor(funType); }
+			if(methDecl->isStatic()) { ret.lit = builder.literal(name, funType); } // static members are not methods in IR, need to treat here
+			else if(funType->getKind() == core::FK_CONSTRUCTOR) { ret.lit = builder.getLiteralForConstructor(funType); }
 			else if(funType->getKind() == core::FK_DESTRUCTOR) { ret.lit = builder.getLiteralForDestructor(funType); }
 			else { ret.lit = builder.getLiteralForMemberFunction(funType, name); }
 			if(!converter.getFunMan()->contains(methDecl)) converter.getFunMan()->insert(methDecl, ret.lit);

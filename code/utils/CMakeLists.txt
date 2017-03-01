@@ -3,7 +3,7 @@
 #
 project(insieme_utils CXX)
 message(STATUS "========== configure utils =============")
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 
 # collect source files 
 file(GLOB_RECURSE insieme_utils_srcs 	src/*.cpp )

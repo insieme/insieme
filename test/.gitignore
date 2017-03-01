@@ -26,3 +26,5 @@ worker_efficiency_log
 *.test.match
 *.ref.match
 
+# but don't ignore the compiler configuration files
+!compilerConfiguration.*

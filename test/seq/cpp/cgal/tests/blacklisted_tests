@@ -1,0 +1,20 @@
+# Do not remove this file even if it does not blacklist any test.
+# It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
+
+CGAL_CFG_ARRAY_MEMBER_INITIALIZATION_BUG
+CGAL_CFG_ISTREAM_INT_BUG
+CGAL_CFG_NESTED_CLASS_FRIEND_DECLARATION_BUG
+CGAL_CFG_NO_STL
+CGAL_CFG_NO_TMPL_IN_TMPL_PARAM
+CGAL_CFG_NO_TR1_ARRAY
+CGAL_CFG_OUTOFLINE_MEMBER_DEFINITION_BUG
+CGAL_CFG_USING_BASE_MEMBER_BUG_2
+
+
+####################################################################################
+# The following tests are not really blacklisted but take rather long to execute.  #
+# All test names preceded with a '+' will not be executed by default but only when #
+# the integration test driver is run with the option to run these long tests also. #
+####################################################################################
+
++CGAL_CFG_LONGNAME_BUG

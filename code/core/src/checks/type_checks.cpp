@@ -62,40 +62,6 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-	namespace {
-		bool typeMatchesWithOptionalMaterialization(NodeManager& nm, const TypePtr& targetT, const TypePtr& valueT) {
-			// if the types are equivalent, everything is fine
-			if(types::isSubTypeOf(valueT, targetT)) {
-				return true;
-			}
-
-			// try to find a valid type variable instantiation
-			TypePtr paramType = targetT;
-			if(analysis::isRefType(paramType)) {
-				// plain refs get unwrapped, CPP refs and rrefs get used as is (see transform::materialize)
-				if(lang::isPlainReference(paramType)) {
-					paramType = analysis::getReferencedType(paramType);
-				}
-
-				// if we can find a valid instantiation, then this declaration is valid
-				if(types::getTypeVariableInstantiation(nm, paramType, valueT)) {
-					return true;
-					// if the substitution failed and we are assigning to a cpp ref or rref
-				} else if(lang::isCppReference(paramType) || lang::isCppRValueReference(paramType)) {
-					// we try to find a substitution for the case where the parameter would be a plain ref
-					auto paramRef = lang::ReferenceType(paramType);
-					auto plainRefType = lang::buildRefType(paramRef.getElementType(), paramRef.isConst(), paramRef.isVolatile(), lang::ReferenceType::Kind::Plain);
-					// try to find a substitution again with the changed reference kind
-					if(types::getTypeVariableInstantiation(nm, plainRefType, valueT)) {
-						return true;
-					}
-				}
-			}
-
-			return false;
-		}
-	}
-
 	OptionalMessageList KeywordCheck::visitGenericType(const GenericTypeAddress& address) {
 		OptionalMessageList res;
 
@@ -516,7 +482,7 @@ namespace checks {
 
 		// 2) check that all parameter declarations are either materializing or cpp/rrefs
 		for(const auto& decl : address->getArgumentDeclarations()) {
-			if(!analysis::isMaterializingDecl(decl) && !lang::isCppReference(decl->getType()) && !lang::isCppRValueReference(decl->getType())) {
+			if(!lang::isCppReference(decl->getType()) && !lang::isCppRValueReference(decl->getType()) && !analysis::isMaterializingDecl(decl)) {
 				add(res, Message(address, EC_TYPE_INVALID_ARGUMENT_TYPE,
 					             format("Invalid non-materializing argument: \n\t%s\n\t - init expr of type %s", *decl, *decl->getInitialization()->getType()),
 					             Message::ERROR));
@@ -541,7 +507,7 @@ namespace checks {
 		TypePtr retType = substitution->applyTo(returnType);
 		TypePtr resType = address->getType();
 
-		if(typeMatchesWithOptionalMaterialization(manager, resType, retType)) return res;
+		if(types::typeMatchesWithOptionalMaterialization(manager, resType, retType)) return res;
 
 		// FIXME: this should only be allowed if the actual return within the lambda generates a ref
 		if(lang::isPlainReference(resType)) {
@@ -624,7 +590,7 @@ namespace checks {
 				actualType = analysis::getReferencedType(actualType);
 			}
 
-			if(!typeMatchesWithOptionalMaterialization(address->getNodeManager(), returnType, actualType)) {
+			if(!types::typeMatchesWithOptionalMaterialization(address->getNodeManager(), returnType, actualType)) {
 				add(res, Message(cur, EC_TYPE_INVALID_RETURN_VALUE_TYPE,
 				                 format("Invalid type of return value \nexpected: \n\t%s\n actual: \n\t%s", toString(*returnType), toString(*actualType)),
 				                 Message::ERROR));
@@ -831,7 +797,7 @@ namespace checks {
 		ExpressionPtr init = declaration->getInitialization();
 		TypePtr initType = init->getType();
 
-		if(typeMatchesWithOptionalMaterialization(address->getNodeManager(), variableType, initType)) { return res; }
+		if(types::typeMatchesWithOptionalMaterialization(address->getNodeManager(), variableType, initType)) { return res; }
 
 		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, format("Invalid initialization - types do not match\n"
 			                                                                  " - initialized type: %s\n - init expr type  : %s",
@@ -1002,7 +968,7 @@ namespace checks {
 
 		// check if we are initializing a scalar
 		if(initExprs.size() == 1) {
-			if(typeMatchesWithOptionalMaterialization(mgr, refType, initExprs.front()->getType())) {
+			if(types::typeMatchesWithOptionalMaterialization(mgr, refType, initExprs.front()->getType())) {
 				return res;
 			}
 		}
@@ -1028,7 +994,7 @@ namespace checks {
 				for(const auto& cur : initExprs) {
 					core::TypePtr requiredType = nominalize(fields[i++]->getType());
 					core::TypePtr isType = nominalize(cur->getType());
-					if(!typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
+					if(!types::typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
 						add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 										 format("Invalid type of struct-member initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
 										 Message::ERROR));
@@ -1049,7 +1015,7 @@ namespace checks {
 				core::TypePtr isType = nominalize(initExprs.front()->getType());
 				bool matchesAny = false;
 				for(const auto& field : unionType->getFields()) {
-					if(typeMatchesWithOptionalMaterialization(mgr, materialize(nominalize(field->getType())), isType)) matchesAny = true;
+					if(types::typeMatchesWithOptionalMaterialization(mgr, materialize(nominalize(field->getType())), isType)) matchesAny = true;
 				}
 				if(!matchesAny) {
 					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
@@ -1075,7 +1041,7 @@ namespace checks {
 			core::TypePtr requiredType = arrType.getElementType();
 			for(const auto& cur : initExprs) {
 				core::TypePtr isType = cur->getType();
-				if(!typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
+				if(!types::typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
 					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 										format("Invalid type of array-member initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
 										Message::ERROR));

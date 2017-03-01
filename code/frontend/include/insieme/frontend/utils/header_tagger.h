@@ -54,6 +54,11 @@ namespace utils {
 namespace fs = boost::filesystem;
 namespace ba = boost::algorithm;
 
+	namespace detail {
+		boost::optional<fs::path> getInterceptedLibHeader(const std::set<fs::path>& userIncludeDirs, const std::set<fs::path>& interceptedHeaderDirs,
+		                                                  const fs::path& path);
+	}
+
 /**
  * class which helps finding the more suitable header for a declaration, not allways top
  * level since we might have a system header included deep in a includes chain.

@@ -259,7 +259,7 @@ namespace perf_reg {
 
 					const string &test = values.at(0);
 					const string &step = values.at(1);
-					double val = tools::str2double(values[idx]);
+					double val = boost::lexical_cast<double>(values[idx]);
 
 					val = tools::roundDouble(val, args.precision);
 

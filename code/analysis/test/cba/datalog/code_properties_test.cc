@@ -78,8 +78,7 @@ namespace datalog {
 			"{ var int<4> x = 12; $x$; }"
 		);
 
-		IntegrationTestCaseOpt testCase = getCase("pyramids");
-		core::ProgramPtr code = testCase.get().load(mgr);
+		auto code = getCase("seq/c/pyramids")->load(mgr);
 
 		ASSERT_EQ(1, addresses.size());
 
@@ -298,9 +297,8 @@ namespace datalog {
 		IRBuilder builder(mgr);
 		Context ctxt;
 
-		for (auto name : {"loop_transform", "pyramids", "pendulum", "mqap", "loops", "transpose"}) {
-			IntegrationTestCaseOpt testCase = getCase(name);
-			core::ProgramPtr code = testCase.get().load(mgr);
+		for (auto name : {"seq/c/loop_transform", "seq/c/pyramids", "seq/c/pendulum", "seq/c/mqap", "seq/c/loops", "seq/c/transpose"}) {
+			auto code = getCase(name)->load(mgr);
 			EXPECT_TRUE(code);
 			EXPECT_TRUE(getTopLevelNodes(ctxt, code));
 		}

@@ -1,2 +1,0 @@
-excludeSteps="*_cpp_*", "*_ocl_*"
-use_o3=1

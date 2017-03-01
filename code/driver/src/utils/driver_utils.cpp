@@ -150,14 +150,14 @@ namespace utils {
 	//***************************************************************************************
 	// 					SEMA: Performs semantic checks on the IR
 	//***************************************************************************************
-	int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
+	int checkSema(const core::NodePtr& program, core::checks::MessageList& list, core::checks::CheckPtr checks) {
 		int retval = 0;
 
 		using namespace insieme::core::printer;
 
 		openBoxTitle("IR Semantic Checks");
 
-		iu::measureTimeFor<INFO>("Semantic Checks ", [&]() { list = core::checks::check(program); });
+		iu::measureTimeFor<INFO>("Semantic Checks ", [&]() { list = core::checks::check(program, checks); });
 
 		auto errors = list.getAll();
 

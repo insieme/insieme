@@ -4,7 +4,7 @@
 project(insieme_frontend CXX)
 
 message(STATUS "========== configure frontend =============")
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 
 # collect source files
 file(GLOB_RECURSE insieme_frontend_srcs	src/*.cpp src/*.def src/*.inc )
@@ -83,5 +83,9 @@ foreach ( case_file ${test_cases})
 
 	target_link_libraries(${case_name} insieme_frontend)
 
-	add_unit_test(${case_name} ${ut_prefix})
+	if(${case_name} MATCHES ".*fragment_conversion.*")
+		add_unit_test(${case_name} ${ut_prefix} RUN_PARALLEL)
+	else()
+		add_unit_test(${case_name} ${ut_prefix})
+	endif()
 endforeach(case_file)

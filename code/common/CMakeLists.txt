@@ -1,6 +1,6 @@
 project(insieme_common CXX)
 message(STATUS "========== configure common =============")
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 
 insieme_glob_headers(insieme_common_incs include)
 

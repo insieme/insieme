@@ -48,6 +48,57 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
+	namespace detail {
+		boost::optional<fs::path> getInterceptedLibHeader(const std::set<fs::path>& userIncludeDirs, const std::set<fs::path>& interceptedHeaderDirs,
+		                                                  const fs::path& path) {
+			// first we find the (longest) intercepted path mathing this path
+			const auto canonicalInterceptedPathString = fs::canonical(path).string();
+			fs::path longestInterceptedPrefix;
+			for(const auto& cur : interceptedHeaderDirs) {
+				// if the current dir is a parent of the given path
+				if(canonicalInterceptedPathString.find(cur.string()) == 0) {
+					// and the current dir is 'longer' than the previous one
+					if(cur.string().length() > longestInterceptedPrefix.string().length()) {
+						longestInterceptedPrefix = cur;
+					}
+				}
+			}
+
+			// return if given path is not below an intercepted directory
+			if(longestInterceptedPrefix.empty()) {
+				return {};
+			}
+
+			// now we find the matching user include - again the 'longest' one
+			const auto canonicalIncludePathString = fs::canonical(path).string();
+			fs::path longestIncludePrefix;
+			for(const auto& cur : userIncludeDirs) {
+				// if the current dir is a parent of the given path
+				if(canonicalIncludePathString.find(cur.string()) == 0) {
+					// and the current dir is 'longer' than the previous one
+					if(cur.string().length() > longestIncludePrefix.string().length()) {
+						longestIncludePrefix = cur;
+					}
+				}
+			}
+
+			// return if we couldn't find a user include path as the parent of the intercepted path
+			if(longestIncludePrefix.empty()) {
+				return {};
+			}
+
+			// finally we compute the difference between the include path and the given path
+			auto parent = path.parent_path();
+			auto res = path.filename();
+			while(!parent.empty() && (longestIncludePrefix / res) != path) {
+				res = parent.filename() / res;
+				parent = parent.parent_path();
+			}
+
+			return res;
+		}
+	}
+
 	namespace {
 		std::set<fs::path> buildPathSet(const vector<fs::path>& input) {
 			std::set<fs::path> ret;
@@ -126,17 +177,7 @@ namespace utils {
 	}
 
 	boost::optional<fs::path> HeaderTagger::toInterceptedLibHeader(const fs::path& path) const {
-		static const boost::optional<fs::path> fail;
-
-		if(interceptedHeaderDirs.empty()) { return fail; }
-
-		if(contains(interceptedHeaderDirs, fs::canonical(path))) { return fs::path(); }
-
-		if(!path.has_parent_path()) { return fail; }
-
-		// if it is within the user-added-include directory, build relative path
-		auto res = toInterceptedLibHeader(path.parent_path());
-		return (res) ? (*res / path.filename()) : fail;
+		return detail::getInterceptedLibHeader(userIncludeDirs, interceptedHeaderDirs, path);
 	}
 
 	bool HeaderTagger::isUserLibHeader(const clang::SourceLocation& loc) const {

@@ -1,0 +1,3 @@
+includes="../../../../seq/c/bots","../../../../seq/c/bots/uts"
+files="../../../../seq/c/bots/bots_common.c","../../../../seq/c/bots/bots_main.c","../../../../seq/c/bots/uts/uts.c","../../../../seq/c/bots/uts/brg_sha1.c"
+executionFlags=-c -f ${PATH}/../../../../seq/c/bots/uts/tiny.input

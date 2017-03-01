@@ -1,3 +1,0 @@
-includes="../../../bots","../../../bots/sort"
-files="../../../bots/bots_common.c","../../../bots/bots_main.c","../../../bots/sort/sort.c"
-executionFlags=-c 

@@ -65,6 +65,7 @@ namespace types {
 	 */
 	bool isMatchable(const TypePtr& type, const TypePtr& pattern);
 
+	bool typeMatchesWithOptionalMaterialization(NodeManager& nm, const TypePtr& targetT, const TypePtr& valueT);
 
 } // end namespace types
 } // end namespace core

@@ -49,6 +49,7 @@ namespace frontend {
 
 	TEST(InterceptorTest, CustomPath) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp", [](ConversionJob& job) {
+			job.addIncludeDirectory(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
@@ -56,6 +57,7 @@ namespace frontend {
 
 	TEST(InterceptorTest, Templates) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/template_interception.cpp", [](ConversionJob& job) {
+			job.addIncludeDirectory(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
@@ -63,6 +65,7 @@ namespace frontend {
 
 	TEST(InterceptorTest, QualifiedTemplates) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/qualified_template_interception.cpp", [](ConversionJob& job) {
+			job.addIncludeDirectory(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
@@ -76,6 +79,7 @@ namespace frontend {
 
 	TEST(InterceptorTest, NoInterception) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/no_interceptor_test.cpp", [](ConversionJob& job) {
+			job.addIncludeDirectory(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
 		});
 	}
@@ -136,6 +140,7 @@ namespace frontend {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_test.cpp");
+		job.addIncludeDirectory(FRONTEND_TEST_DIR + "/inputs/interceptor");
 		job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 		job.registerFrontendExtension<extensions::InterceptorExtension>();
 		job.registerFrontendExtension<extensions::TestPragmaExtension>(); // necessary to parse pragmas
@@ -163,6 +168,7 @@ namespace frontend {
 	TEST(InterceptorTest, TrueTemplateInterception) {
 		core::NodeManager manager;
 		ConversionJob job(FRONTEND_TEST_DIR + "/inputs/interceptor/template_interception.cpp");
+		job.addIncludeDirectory(FRONTEND_TEST_DIR + "/inputs/interceptor");
 		job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
 		job.registerFrontendExtension<extensions::InterceptorExtension>();
 		job.registerFrontendExtension<extensions::TestPragmaExtension>(); // necessary to parse pragmas

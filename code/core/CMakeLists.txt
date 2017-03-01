@@ -2,7 +2,7 @@
 # Builds the insieme core library
 project(insieme_core CXX)
 message(STATUS "========== configure core =============")
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_core_srcs src/*.cpp src/*.def src/*.inc )

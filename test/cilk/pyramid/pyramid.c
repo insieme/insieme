@@ -1,19 +1,9 @@
+#include <cilk/cilk.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-//#include <omp.h>
 
-// -------- to support cilk in gcc ------------
-
-#ifndef cilk
-	#define cilk
-#endif
-#ifndef spawn
-	#define spawn
-#endif
-#ifndef sync
-	#define sync
-#endif
 
 // ---------------------------------------------
 
@@ -76,7 +66,7 @@ void printGrid(Grid* A) {
 
 int steps;
 
-inline void update(Grid* A, Grid* B, int i, int j) {
+void update(Grid* A, Grid* B, int i, int j) {
 
 	// correct coordinates
 	i = (i+(N-1)) % (N-1);
@@ -136,18 +126,18 @@ inline void update(Grid* A, Grid* B, int i, int j) {
 
 
 // computes a pyramid types
-cilk void compute_pyramid(Grid* A, Grid* B, int x, int y, int h);
-cilk void compute_reverse(Grid* A, Grid* B, int x, int y, int h);
+void compute_pyramid(Grid* A, Grid* B, int x, int y, int h);
+void compute_reverse(Grid* A, Grid* B, int x, int y, int h);
 
 // computes a wedge (piece between pyramids - x base line points in x direction)
-cilk void compute_wedge_x(Grid* A, Grid* B, int x, int y, int h);
-cilk void compute_wedge_y(Grid* A, Grid* B, int x, int y, int h);
+void compute_wedge_x(Grid* A, Grid* B, int x, int y, int h);
+void compute_wedge_y(Grid* A, Grid* B, int x, int y, int h);
 
 
 /**
  * Computes the pyramid with center point (x,y) of size s (edge size, must be odd)
  */
-cilk void compute_pyramid(Grid* A, Grid* B, int x, int y, int s) {
+void compute_pyramid(Grid* A, Grid* B, int x, int y, int s) {
 	int l, i, j, d, h, ux, lx, uy, ly;
 	assert(s % 2 == 1 && "Only odd sizes are supported!");
 	//assert(x >= s && y >= s && "Coordinates not matching!");
@@ -194,31 +184,31 @@ cilk void compute_pyramid(Grid* A, Grid* B, int x, int y, int s) {
 	ly = y + h;
 
 	// compute 4 base-pyramids (parallel)
-	spawn compute_pyramid(A, B, ux, uy,  d);
-	spawn compute_pyramid(A, B, ux, ly,  d);
-	spawn compute_pyramid(A, B, lx, uy,  d);
-	spawn compute_pyramid(A, B, lx, ly,  d);
+	cilk_spawn compute_pyramid(A, B, ux, uy,  d);
+	cilk_spawn compute_pyramid(A, B, ux, ly,  d);
+	cilk_spawn compute_pyramid(A, B, lx, uy,  d);
+	cilk_spawn compute_pyramid(A, B, lx, ly,  d);
 
-	sync;
+	cilk_sync;
 
 	// compute 4 wedges (parallel)
-	spawn compute_wedge_x(A, B, ux, y, d);
-	spawn compute_wedge_x(A, B, lx, y, d);
-	spawn compute_wedge_y(A, B, x, uy, d);
-	spawn compute_wedge_y(A, B, x, ly, d);
+	cilk_spawn compute_wedge_x(A, B, ux, y, d);
+	cilk_spawn compute_wedge_x(A, B, lx, y, d);
+	cilk_spawn compute_wedge_y(A, B, x, uy, d);
+	cilk_spawn compute_wedge_y(A, B, x, ly, d);
 
-	sync;
+	cilk_sync;
 
 	// compute reverse pyramid in the center
-	spawn compute_reverse(A, B, x, y, d); sync;
+	cilk_spawn compute_reverse(A, B, x, y, d); cilk_sync;
 
 	// compute tip
-	spawn compute_pyramid(A, B, x, y, d); sync;
+	cilk_spawn compute_pyramid(A, B, x, y, d); cilk_sync;
 
 }
 
 
-cilk void compute_reverse(Grid* A, Grid* B, int x, int y, int s) {
+void compute_reverse(Grid* A, Grid* B, int x, int y, int s) {
 	int l, i, j, d, h, ux, lx, uy, ly;
 	assert(s % 2 == 1 && "Only odd sizes are supported!");
 
@@ -264,31 +254,31 @@ cilk void compute_reverse(Grid* A, Grid* B, int x, int y, int s) {
 	ly = y + h;
 
 	// compute tip
-	spawn compute_reverse(A, B, x, y, d); sync;
+	cilk_spawn compute_reverse(A, B, x, y, d); cilk_sync;
 
 	// compute reverse pyramid in the center
-	spawn compute_pyramid(A, B, x, y, d); sync;
+	cilk_spawn compute_pyramid(A, B, x, y, d); cilk_sync;
 
 	// compute 4 wedges (parallel)
-	spawn compute_wedge_y(A, B, ux, y, d);
-	spawn compute_wedge_y(A, B, lx, y, d);
-	spawn compute_wedge_x(A, B, x, uy,  d);
-	spawn compute_wedge_x(A, B, x, ly, d);
+	cilk_spawn compute_wedge_y(A, B, ux, y, d);
+	cilk_spawn compute_wedge_y(A, B, lx, y, d);
+	cilk_spawn compute_wedge_x(A, B, x, uy,  d);
+	cilk_spawn compute_wedge_x(A, B, x, ly, d);
 
-	sync;
+	cilk_sync;
 
 	// compute 4 base-pyramids (parallel)
-	spawn compute_reverse(A, B, lx, ly,  d);
-	spawn compute_reverse(A, B, lx, uy,  d);
-	spawn compute_reverse(A, B, ux, ly,  d);
-	spawn compute_reverse(A, B, ux, uy,  d);
+	cilk_spawn compute_reverse(A, B, lx, ly,  d);
+	cilk_spawn compute_reverse(A, B, lx, uy,  d);
+	cilk_spawn compute_reverse(A, B, ux, ly,  d);
+	cilk_spawn compute_reverse(A, B, ux, uy,  d);
 
-	sync;
+	cilk_sync;
 
 }
 
 
-cilk void compute_wedge_x(Grid* A, Grid* B, int x, int y, int s) {
+void compute_wedge_x(Grid* A, Grid* B, int x, int y, int s) {
 	int l, i, j, d, h;
 	assert(s > 0);
 
@@ -328,24 +318,24 @@ cilk void compute_wedge_x(Grid* A, Grid* B, int x, int y, int s) {
 	h = (d+1)/2;
 
 	// compute bottom wedges (parallel)
-	spawn compute_wedge_x(A, B, x-h, y, d);
-	spawn compute_wedge_x(A, B, x+h, y, d);
-	sync;
+	cilk_spawn compute_wedge_x(A, B, x-h, y, d);
+	cilk_spawn compute_wedge_x(A, B, x+h, y, d);
+	cilk_sync;
 
 	// reverse pyramid
-	spawn compute_reverse(A, B, x, y, d); sync;
+	cilk_spawn compute_reverse(A, B, x, y, d); cilk_sync;
 
 	// compute pyramid on top
-	spawn compute_pyramid(A, B, x, y, d); sync;
+	cilk_spawn compute_pyramid(A, B, x, y, d); cilk_sync;
 
 	// compute remaining two wedges (parallel)
-	spawn compute_wedge_x(A, B, x, y-h, d);
-	spawn compute_wedge_x(A, B, x, y+h, d);
-	sync;
+	cilk_spawn compute_wedge_x(A, B, x, y-h, d);
+	cilk_spawn compute_wedge_x(A, B, x, y+h, d);
+	cilk_sync;
 
 }
 
-cilk void compute_wedge_y(Grid* A, Grid* B, int x, int y, int s) {
+void compute_wedge_y(Grid* A, Grid* B, int x, int y, int s) {
 	int l, i, j, d, h;
 	assert(s > 0);
 
@@ -387,40 +377,40 @@ cilk void compute_wedge_y(Grid* A, Grid* B, int x, int y, int s) {
 	h = (d+1)/2;
 
 	// compute bottom wedges (parallel)
-	spawn compute_wedge_y(A, B, x, y-h, d);
-	spawn compute_wedge_y(A, B, x, y+h, d);
-	sync;
+	cilk_spawn compute_wedge_y(A, B, x, y-h, d);
+	cilk_spawn compute_wedge_y(A, B, x, y+h, d);
+	cilk_sync;
 
 	// reverse pyramid
-	spawn compute_reverse(A, B, x, y, d); sync;
+	cilk_spawn compute_reverse(A, B, x, y, d); cilk_sync;
 
 	// compute pyramid on top
-	spawn compute_pyramid(A, B, x, y, d); sync;
+	cilk_spawn compute_pyramid(A, B, x, y, d); cilk_sync;
 
 	// compute remaining two wedges (parallel)
-	spawn compute_wedge_y(A, B, x-h, y, d);
-	spawn compute_wedge_y(A, B, x+h, y, d);
-	sync;
+	cilk_spawn compute_wedge_y(A, B, x-h, y, d);
+	cilk_spawn compute_wedge_y(A, B, x+h, y, d);
+	cilk_sync;
 }
 
 
 
-cilk void jacobi_recursive(Grid* A, Grid* B, int num_iter) {
+void jacobi_recursive(Grid* A, Grid* B, int num_iter) {
 
 	// compute full pyramid
 	if (DEBUG) printf("\nProcessing main pyramid ...\n");
-	spawn compute_pyramid(A, B, N/2, N/2, N-2); sync;
+	cilk_spawn compute_pyramid(A, B, N/2, N/2, N-2); cilk_sync;
 	if (DEBUG) printf("\nProcessing x wedge ...\n");
-	spawn compute_wedge_x(A, B, N/2,0, N-2); sync;
+	cilk_spawn compute_wedge_x(A, B, N/2,0, N-2); cilk_sync;
 	if (DEBUG) printf("\nProcessing y wedge ...\n");
-	spawn compute_wedge_y(A, B, 0, N/2, N-2); sync;
+	cilk_spawn compute_wedge_y(A, B, 0, N/2, N-2); cilk_sync;
 	if (DEBUG) printf("\nProcessing reverse pyramid ...\n");
-	spawn compute_reverse(A, B, 0, 0, N-2); sync;
+	cilk_spawn compute_reverse(A, B, 0, 0, N-2); cilk_sync;
 
 }
 
 
-cilk int main() {
+int main() {
 	double sum = 0.0;
 	int ok = 1;
 
@@ -446,7 +436,7 @@ cilk int main() {
 	// run computation
 //	start = omp_get_wtime();
 	printf("Using CUT = %d => CUT_OFF = %d\n", CUT, CUT_OFF);
-	spawn jacobi_recursive(A,B,M); sync;
+	cilk_spawn jacobi_recursive(A,B,M); cilk_sync;
 //	time = omp_get_wtime() - start;
 //	printf("Execution time: %.1fms\n", time*1000);
 

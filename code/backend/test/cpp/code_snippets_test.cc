@@ -95,6 +95,18 @@ namespace backend {
 		})
 	}
 
+	TEST(CppSnippet, DISABLED_RefTempInRefKindCast) {
+		DO_TEST(R"(
+			int<4> main() {
+				var int<4> v2 = 5;
+				ref_kind_cast(ref_temp_init(v2), type_lit(cpp_rref));
+				return 0;
+			}
+		)", true, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			;
+		})
+	}
+
 	TEST(CppSnippet, ReferenceParameter) {
 		DO_TEST(R"(
 			def IMP_test = function (v1 : ref<int<4>,f,f,cpp_ref>) -> unit { };
