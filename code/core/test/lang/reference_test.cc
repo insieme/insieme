@@ -84,6 +84,13 @@ namespace lang {
 		EXPECT_FALSE(isCppRValueReference(builder.parseType("ref<A,f,t,cpp_ref>")));
 		EXPECT_TRUE(isCppRValueReference(builder.parseType("ref<A,f,t,cpp_rref>")));
 
+
+		EXPECT_FALSE(isConstCppReference(builder.parseType("A")));
+		EXPECT_FALSE(isConstCppReference(builder.parseType("ref<A,t,f,plain>")));
+		EXPECT_FALSE(isConstCppReference(builder.parseType("ref<A,f,f,cpp_ref>")));
+		EXPECT_FALSE(isConstCppReference(builder.parseType("ref<A,f,t,cpp_ref>")));
+		EXPECT_TRUE(isConstCppReference(builder.parseType("ref<A,t,f,cpp_ref>")));
+		EXPECT_TRUE(isConstCppReference(builder.parseType("ref<A,t,t,cpp_ref>")));
 	}
 
 	TEST(Reference, MemoryManagement) {
