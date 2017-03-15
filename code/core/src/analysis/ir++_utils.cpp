@@ -112,7 +112,9 @@ namespace analysis {
 
 	bool isConstructorCall(const core::ExpressionPtr& expr) {
 		core::CallExprPtr call = expr.isa<core::CallExprPtr>();
-		return call && call->getFunctionExpr()->getType().as<FunctionTypePtr>()->isConstructor();
+		if (!call) return false;
+		auto funType = call->getFunctionExpr()->getType().isa<FunctionTypePtr>();
+		return funType && funType->isConstructor();
 	}
 
 	// ---------------------------- Defaulted Members --------------------------------------
