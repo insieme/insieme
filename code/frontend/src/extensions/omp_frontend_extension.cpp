@@ -752,7 +752,7 @@ namespace extensions {
 		return tu;
 	}
 
-	FrontendExtension::flagHandler OmpFrontendExtension::registerFlag(boost::program_options::options_description& options) {
+	FrontendExtension::FlagHandler OmpFrontendExtension::registerFlag(boost::program_options::options_description& options) {
 		// register omp flag
 		options.add_options()("fopenmp", boost::program_options::value<bool>(&flagActivated)->implicit_value(true), "OpenMP support");
 		// create lambda

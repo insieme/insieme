@@ -116,20 +116,21 @@ namespace extensions {
 	 */
 	class FrontendExtension {
 	  protected:
-		typedef std::map<std::string, std::string> macroMap;
-		typedef std::vector<std::string> headerVec;                 // header files
-		typedef std::vector<boost::filesystem::path> includeDirVec; // include dirs
-		typedef std::vector<std::shared_ptr<PragmaHandler>> pragmaHandlerVec;
-		pragmaHandlerVec pragmaHandlers;
-		macroMap macros;
-		headerVec injectedHeaders;      // header files
-		includeDirVec kidnappedHeaders; // include dirs with headers to kidnap some default implementation
-		includeDirVec includeDirs;      // include dirs
+		using MacroMap = std::map<std::string, std::string>;
+		using StringList = std::vector<std::string>;
+		using DirectoryList = std::vector<boost::filesystem::path>;
+		using PragmaHandlerList = std::vector<std::shared_ptr<PragmaHandler>>;
+
+		MacroMap macros;                  // macro definitions to use
+		StringList injectedHeaders;       // header files to be injected
+		DirectoryList kidnappedHeaders;   // include dirs with headers to kidnap some default implementation
+		DirectoryList includeDirs;        // include dirs
+		PragmaHandlerList pragmaHandlers; // pragma handlers
 
 
 	  public:
-		typedef std::shared_ptr<extensions::FrontendExtension> FrontendExtensionPtr;
-		typedef std::function<bool(const ConversionJob&)> flagHandler;
+		using FrontendExtensionPtr = std::shared_ptr<extensions::FrontendExtension>;
+		using FlagHandler = std::function<bool(const ConversionJob&)>;
 
 		virtual ~FrontendExtension() {}
 
@@ -140,7 +141,7 @@ namespace extensions {
 		 *  @param optParser Reference to the OptionParser
 		 *  @return lambda that is called after the insiemecc call was parsed
 		 */
-		virtual flagHandler registerFlag(boost::program_options::options_description& options);
+		virtual FlagHandler registerFlag(boost::program_options::options_description& options);
 
 		/**
 		 * Check if the setup the current ConversionJob is correct regarding userprovided flags and
@@ -157,25 +158,25 @@ namespace extensions {
 		 *  Returns the list with user defined macros.
 		 *  @return macro list
 		 */
-		const macroMap& getMacroList() const;
+		const MacroMap& getMacroList() const;
 
 		/**
-		 *  Returns the list with headers that should be injected.
+		 *  Returns the list with header files that should be injected
 		 *  @return injected header list
 		 */
-		const headerVec& getInjectedHeaderList() const;
+		const StringList& getInjectedHeaderList() const;
 
 		/**
-		 *  Returns the list with headers that should be kidnapped
+		 *  Returns the list with header paths that should be kidnapped.
 		 *  @return kidnapped header list
 		 */
-		const includeDirVec& getKidnappedHeaderList() const;
+		const DirectoryList& getKidnappedHeaderList() const;
 
 		/**
 		 *  Returns the list with additional include directories needed by the extension
 		 *  @return additional include directories
 		 */
-		const includeDirVec& getIncludeDirList() const;
+		const DirectoryList& getIncludeDirList() const;
 
 
 		/*****************CLANG STAGE*****************/
@@ -317,7 +318,7 @@ namespace extensions {
 		 *  Used to retrieve the list of user defined pragma handlers.
 		 *  @return User defined pragma handler vector
 		 */
-		const pragmaHandlerVec& getPragmaHandlers() const;
+		const PragmaHandlerList& getPragmaHandlers() const;
 	};
 }
 }

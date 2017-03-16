@@ -125,7 +125,7 @@ namespace extensions {
 		return tu;
 	}
 
-	FrontendExtension::flagHandler SignificanceFrontendExtension::registerFlag(bpo::options_description& options) {
+	FrontendExtension::FlagHandler SignificanceFrontendExtension::registerFlag(bpo::options_description& options) {
 		// register significance flag
 		options.add_options()("ftask-significance", bpo::bool_switch(&flagActivated), "Task significance support");
 		auto fHandler = [&](const ConversionJob& job) { return flagActivated; };

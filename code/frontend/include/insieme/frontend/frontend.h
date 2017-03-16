@@ -387,7 +387,7 @@ namespace frontend {
 		 * lambda.
 		 */
 
-		std::vector<std::pair<extensions::FrontendExtension::FrontendExtensionPtr, extensions::FrontendExtension::flagHandler>> extensions;
+		std::vector<std::pair<extensions::FrontendExtension::FrontendExtensionPtr, extensions::FrontendExtension::FlagHandler>> extensions;
 		std::vector<string> unparsedOptions;
 
 	  public:

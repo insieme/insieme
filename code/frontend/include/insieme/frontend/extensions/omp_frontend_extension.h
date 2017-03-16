@@ -58,7 +58,7 @@ namespace extensions {
 
 	  public:
 		OmpFrontendExtension();
-		virtual flagHandler registerFlag(boost::program_options::options_description& options);
+		virtual FlagHandler registerFlag(boost::program_options::options_description& options);
 		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu);
 		virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 	};

@@ -55,7 +55,7 @@ namespace extensions {
 		CilkFrontendExtension();
 
 		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu);
-		virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
+		virtual FrontendExtension::FlagHandler registerFlag(boost::program_options::options_description& options);
 	};
 
 } // end namespace extensions
