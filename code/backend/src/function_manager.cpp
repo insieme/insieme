@@ -1086,6 +1086,7 @@ namespace backend {
 			c_ast::VariablePtr varClosure = var(manager->create<c_ast::PointerType>(res->closureType), "closure");
 
 			c_ast::FunctionPtr mapper;
+			c_ast::FunctionPrototypePtr mapperDecl;
 			{
 				bool plain = nestedFunType->isPlain();
 				c_ast::TypePtr returnType = mapperType->returnType;
@@ -1111,6 +1112,7 @@ namespace backend {
 				if(!isVoid(returnType)) { body = manager->create<c_ast::Return>(call); }
 
 				mapper = manager->create<c_ast::Function>(returnType, res->mapperName, params, body);
+				mapperDecl = manager->create<c_ast::FunctionPrototype>(mapper);
 			}
 
 			// --------------------------------- define constructor -------------------------------------
@@ -1140,16 +1142,27 @@ namespace backend {
 				    manager->create<c_ast::Function>(c_ast::Function::STATIC | c_ast::Function::INLINE, returnType, res->constructorName, params, body);
 			}
 
-			// attach definitions of closure, mapper and constructor
+			// attach definitions of closure, mapper declaration and constructor
 			res->definitions = c_ast::CCodeFragment::createNew(
 			    converter.getFragmentManager(),
 			    manager->create<c_ast::Comment>("-- Begin - Bind Constructs ------------------------------------------------------------"), closureDecl,
-			    closureDef, mapper, constructor,
-			    manager->create<c_ast::Comment>("--  End  - Bind Constructs ------------------------------------------------------------"));
+			    closureDef, mapperDecl, constructor,
+			    manager->create<c_ast::Comment>("--  End  - Bind Constructs ------------------------------------------------------------")
+			);
 
 			res->definitions->addDependency(funInfo.declaration);
 			res->definitions->addDependency(nestedClosureInfo.definition);
 			res->definitions->addDependency(nestedClosureInfo.caller);
+
+			// create code fragment for mapper implementation
+			auto mapperDef = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), mapper);
+			mapperDef->addDependency(res->definitions);
+			res->definitions->addRequirement(mapperDef);
+
+			// make the mapper definition dependent on the parameter type definitions
+			for(const auto& param : parameter) {
+				mapperDef->addDependency(typeManager.getTypeInfo(context, param->getType()).definition);
+			}
 
 			// finally - add a dependency to the return type definition since it is returned by value
 			res->definitions->addDependency(typeManager.getTypeInfo(context, call->getType()).definition);
