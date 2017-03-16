@@ -14,13 +14,13 @@ require 'fileutils'
 
 # generated file to which all typedefs are written
 types_header_filename = "hacked_types.h"
-# pattern of input files to be parsed
-infile_pattern = "*intrin.h"
+# patterns of input files to be parsed - most of them end with the string 'intrin.h', but there are some exceptions
+infile_pattern = /.*intrin.h|mm3dnow.h/
 
 # these match all relevant constructs seen so far in standard intrinsics headers
 function_pattern = /extern\s+__inline\s+([\w ]+)\s+(?:__attribute__\s*[_a-zA-Z0-9(,)\s+]*?)?\n(_[^\s]+)\s+\(([^\)]*?)\)/
 enum_pattern = /(\w*)\s*enum\s+(\w*)([^}]+?})\s*(\w*);/
-preprocessor_pattern = /^(#(?:if|else|endif).*)$/
+preprocessor_pattern = /^(#(?:if|else|endif|include).*)$/
 
 # tokens to be removed/ignored
 standard_tokens = %w(void char short int unsigned long float double const enum \*)
@@ -97,7 +97,12 @@ types = Set.new
 enums = Hash.new
 
 $options[:std_include_dirs].each do |directory|
-	Dir.glob("#{directory}/**/#{infile_pattern}").each do |infile|
+	# we glob over all header files here
+	Dir.glob("#{directory}/**/*.h").each do |infile|
+		# and filter out the ones not matching our input filename pattern
+		if(!infile_pattern.match(File.basename(infile)))
+			next
+		end
 
 		if(!$options[:force] && File.file?("#{$options[:insieme_builtins_dir]}/#{File.basename(infile)}"))
 			puts "* Skipping already present #{$options[:insieme_builtins_dir]}/#{File.basename(infile)}\n" if !$options[:quiet]
