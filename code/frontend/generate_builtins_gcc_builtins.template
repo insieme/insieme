@@ -36,26 +36,6 @@
  *
  */
 
-#include "insieme/frontend/extensions/intrinsic_support_extension.h"
+#pragma once
 
-#include <string>
-
-#include "insieme/frontend/extensions/interceptor_extension.h"
-
-#include "insieme/utils/config.h"
-
-namespace insieme {
-namespace frontend {
-namespace extensions {
-
-	IntrinsicSupportExtension::IntrinsicSupportExtension() {
-		// we add the directory with the dummy intrinsic replacement header path to the kidnapped include dirs
-		const std::string path = insieme::utils::getInsiemeBuildRootDir() + "/code/frontend/assets/include/insieme/frontend/builtin_headers/";
-		kidnappedHeaders.push_back(path);
-		// and also inject the header containing the gcc builtin dummy declarations
-		injectedHeaders.push_back(path + "generate_builtins_gcc_builtins.h");
-	}
-
-} // extensions
-} // frontend
-} // insieme
+extern void __builtin_ia32_pause(void);

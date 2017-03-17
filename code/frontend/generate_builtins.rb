@@ -14,6 +14,9 @@ require 'fileutils'
 
 # generated file to which all typedefs are written
 types_header_filename = "hacked_types.h"
+# generated file containing dummy declarations for the GCC builtins we need
+gcc_builtins_filename_src = "generate_builtins_gcc_builtins.template"
+gcc_builtins_filename_dst = "generate_builtins_gcc_builtins.h"
 # patterns of input files to be parsed - most of them end with the string 'intrin.h', but there are some exceptions
 infile_pattern = /.*intrin.h|mm3dnow.h/
 
@@ -169,3 +172,6 @@ if !enums.empty? || !types.empty?
 	wrap_and_print(enums_out + "\n\n" + types_out, "#{$options[:insieme_builtins_dir]}/#{types_header_filename}")
 
 end
+
+# copy over the template file for the GCC intrinsics
+FileUtils.cp("./#{gcc_builtins_filename_src}", "#{$options[:insieme_builtins_dir]}/#{gcc_builtins_filename_dst}")
