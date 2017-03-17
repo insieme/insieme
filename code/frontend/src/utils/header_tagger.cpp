@@ -123,6 +123,7 @@ namespace utils {
 		  sm(srcMgr) {
 
 		// we need to ensure that each directory which is intercepted (or any parent of that) is also an include directory
+		assert_decl({
 		for(const auto& interceptedPath : this->interceptedHeaderDirs) {
 			auto path = interceptedPath;
 			// move up the path to the root
@@ -139,6 +140,7 @@ namespace utils {
 			// if we didn't find the intercepted path all the way up to root without finding a matching user include, we fail
 			assert_true(found) << "Intercepted path \"" << interceptedPath << "\" (or any of it's parents) has not been added as user include.";
 		}
+		});
 
 		VLOG(2) << "stdLibDirs: \n\t" << this->stdLibDirs;
 		VLOG(2) << "interceptedHeaderDirs: \n\t" << this->interceptedHeaderDirs;
