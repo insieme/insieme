@@ -100,7 +100,7 @@ namespace extensions {
 		return cilk::applySema(tu, tu.getNodeManager());
 	}
 
-	FrontendExtension::flagHandler CilkFrontendExtension::registerFlag(boost::program_options::options_description& options) {
+	FrontendExtension::FlagHandler CilkFrontendExtension::registerFlag(boost::program_options::options_description& options) {
 		// register omp flag
 		options.add_options()("fcilk", boost::program_options::value<bool>(&flagActivated)->implicit_value(true), "Cilk support");
 		// create lambda

@@ -254,6 +254,12 @@ namespace lang {
 		return isReference(node) && ReferenceType(node).isQualified();
 	}
 
+	bool isConstCppReference(const NodePtr& node) {
+		if(!isReference(node)) return false;
+		ReferenceType refType(node);
+		return refType.isCppReference() && refType.isConst();
+	}
+
 	bool isAssignment(const NodePtr& node) {
 		if(node->getNodeType() != NT_CallExpr) return false;
 		auto& rExt = node->getNodeManager().getLangExtension<ReferenceExtension>();

@@ -22,7 +22,7 @@ target_include_directories(frontend PUBLIC ${CLANG_INCLUDE_DIRS})
 add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
 
 # Generate Builtins
-set(generate_builtins_output_dir ${CMAKE_CURRENT_BINARY_DIR}/builtins/include/insieme/frontend/builtin_headers)
+set(generate_builtins_output_dir ${CMAKE_CURRENT_BINARY_DIR}/assets/include/insieme/frontend/builtin_headers)
 file(MAKE_DIRECTORY ${generate_builtins_output_dir})
 run_ruby(
 	${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_builtins.rb

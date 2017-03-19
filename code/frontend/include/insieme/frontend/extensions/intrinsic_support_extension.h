@@ -35,34 +35,27 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
+
 #pragma once
 
 #include "insieme/frontend/extensions/frontend_extension.h"
 
-
-using namespace insieme::frontend;
-
 namespace insieme {
-namespace core {
-namespace tu {
-	class IRTranslationUnit;
-}
-}
-
 namespace frontend {
 namespace extensions {
 
-	class OmpFrontendExtension : public FrontendExtension {
-		std::list<core::ExpressionPtr> thread_privates;
-		bool flagActivated;
-
+	/**
+	 *
+	 * This extension handles "insieme" pragmas
+	 */
+	class IntrinsicSupportExtension : public FrontendExtension {
 	  public:
-		OmpFrontendExtension();
-		virtual FlagHandler registerFlag(boost::program_options::options_description& options);
-		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu);
-		virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
+		/**
+		 * Registers all necessary paths
+		 */
+		IntrinsicSupportExtension();
 	};
 
-} // end namespace extensions
-} // end namespace frontend
-} // end namespace insieme
+} // extensions
+} // frontend
+} // insieme

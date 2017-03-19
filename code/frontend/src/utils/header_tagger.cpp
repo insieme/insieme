@@ -52,7 +52,7 @@ namespace utils {
 	namespace detail {
 		boost::optional<fs::path> getInterceptedLibHeader(const std::set<fs::path>& userIncludeDirs, const std::set<fs::path>& interceptedHeaderDirs,
 		                                                  const fs::path& path) {
-			// first we find the (longest) intercepted path mathing this path
+			// first we find the (longest) intercepted path matching this path
 			const auto canonicalInterceptedPathString = fs::canonical(path).string();
 			fs::path longestInterceptedPrefix;
 			for(const auto& cur : interceptedHeaderDirs) {
@@ -121,6 +121,27 @@ namespace utils {
 		                       const clang::SourceManager& srcMgr)
 		: stdLibDirs(buildPathSet(stdLibDirs)), interceptedHeaderDirs(buildPathSet(interceptedHeaderDirs)), userIncludeDirs(buildPathSet(userIncludeDirs)),
 		  sm(srcMgr) {
+
+		// we need to ensure that each directory which is intercepted (or any parent of that) is also an include directory
+		assert_decl({
+		for(const auto& interceptedPath : this->interceptedHeaderDirs) {
+			auto path = interceptedPath;
+			// move up the path to the root
+			bool found = false;
+			while (!path.empty()) {
+				// if we found the current path component in the user includes, we are fine
+				if(this->userIncludeDirs.find(path) != this->userIncludeDirs.end()) {
+					found = true;
+					break;
+				}
+				// otherwise we move to the parent folder
+				path = path.parent_path();
+			}
+			// if we didn't find the intercepted path all the way up to root without finding a matching user include, we fail
+			assert_true(found) << "Intercepted path \"" << interceptedPath << "\" (or any of it's parents) has not been added as user include.";
+		}
+		});
+
 		VLOG(2) << "stdLibDirs: \n\t" << this->stdLibDirs;
 		VLOG(2) << "interceptedHeaderDirs: \n\t" << this->interceptedHeaderDirs;
 		VLOG(2) << "userIncludeDirs: \n\t" << this->userIncludeDirs;
@@ -251,7 +272,7 @@ namespace utils {
 		//
 		// travel down until we are at the sourcefile then work up again
 		// if userProvided header, we need to go further
-		// if userSearchPath/systemSearch path we need to include de header
+		// if userSearchPath/systemSearch path we need to include the header
 		//
 		//*******************
 
@@ -368,7 +389,7 @@ namespace utils {
 
 	bool HeaderTagger::isIntercepted(const clang::Decl* decl) const	{
 		auto location = decl->getLocation();
-		// we do not want to intercept initializer lsits
+		// we do not want to intercept initializer lists
 		if(auto namedDecl = llvm::dyn_cast<clang::NamedDecl>(decl)) {
 			if(boost::starts_with(namedDecl->getQualifiedNameAsString(), "std::initializer_list")) return false;
 		}

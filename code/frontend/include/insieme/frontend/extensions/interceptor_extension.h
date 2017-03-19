@@ -55,7 +55,7 @@ namespace extensions {
 	  public:
 		InterceptorExtension();
 
-		virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options) override;
+		virtual FrontendExtension::FlagHandler registerFlag(boost::program_options::options_description& options) override;
 		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const override;
 
 		// Extension Hooks

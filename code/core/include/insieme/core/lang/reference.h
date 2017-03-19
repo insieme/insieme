@@ -463,6 +463,11 @@ namespace lang {
 	bool isQualifiedReference(const NodePtr& node);
 
 	/**
+	 * Determines whether a given node is a reference type or an expression of a const C++ reference type.
+	 */
+	bool isConstCppReference(const NodePtr& node);
+
+	/**
 	 * Determines whether a given node is an assignment operation.
 	 */
 	bool isAssignment(const NodePtr& node);

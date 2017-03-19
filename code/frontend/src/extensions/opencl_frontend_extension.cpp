@@ -237,7 +237,7 @@ namespace extensions {
 		return tu;
 	}
 
-	FrontendExtension::flagHandler OpenCLFrontendExtension::registerFlag(boost::program_options::options_description& options) {
+	FrontendExtension::FlagHandler OpenCLFrontendExtension::registerFlag(boost::program_options::options_description& options) {
 		// register opencl flag
 		options.add_options()("fopencl", boost::program_options::value<bool>(&flagActivated)->implicit_value(true), "OpenCL support");
 		// create lambda

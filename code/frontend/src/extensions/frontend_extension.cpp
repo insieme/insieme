@@ -63,7 +63,7 @@ namespace extensions {
 	};
 
 	// ############ DRIVER STAGE ############ //
-	FrontendExtension::flagHandler FrontendExtension::registerFlag(boost::program_options::options_description& options) {
+	FrontendExtension::FlagHandler FrontendExtension::registerFlag(boost::program_options::options_description& options) {
 		return [&](const ConversionJob& job) {
 			// check if the default activated plugins have been deactivated manually
 			if(job.hasOption(frontend::ConversionJob::NoDefaultExtensions)) { return false; }
@@ -77,21 +77,22 @@ namespace extensions {
 	}
 
 	// ############ PRE CLANG STAGE ############ //
-	const FrontendExtension::macroMap& FrontendExtension::getMacroList() const {
+	const FrontendExtension::MacroMap& FrontendExtension::getMacroList() const {
 		return macros;
 	}
 
-	const FrontendExtension::headerVec& FrontendExtension::getInjectedHeaderList() const {
+	const FrontendExtension::StringList& FrontendExtension::getInjectedHeaderList() const {
 		return injectedHeaders;
 	}
 
-	const FrontendExtension::includeDirVec& FrontendExtension::getKidnappedHeaderList() const {
+	const FrontendExtension::DirectoryList& FrontendExtension::getKidnappedHeaderList() const {
 		return kidnappedHeaders;
 	}
 
-	const FrontendExtension::includeDirVec& FrontendExtension::getIncludeDirList() const {
+	const FrontendExtension::DirectoryList& FrontendExtension::getIncludeDirList() const {
 		return includeDirs;
 	}
+
 
 	// ############ CLANG STAGE ############ //
 	insieme::core::ExpressionPtr FrontendExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) {
@@ -151,7 +152,7 @@ namespace extensions {
 	}
 
 	// ############ PRAGMA HANDLING ############ //
-	const FrontendExtension::pragmaHandlerVec& FrontendExtension::getPragmaHandlers() const {
+	const FrontendExtension::PragmaHandlerList& FrontendExtension::getPragmaHandlers() const {
 		return pragmaHandlers;
 	}
 

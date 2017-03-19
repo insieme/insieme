@@ -59,7 +59,7 @@ namespace extensions {
 	InterceptorExtension::InterceptorExtension() {
 	}
 
-	FrontendExtension::flagHandler InterceptorExtension::registerFlag(boost::program_options::options_description& options) {
+	FrontendExtension::FlagHandler InterceptorExtension::registerFlag(boost::program_options::options_description& options) {
 		// create lambda
 		auto lambda = [&](const ConversionJob& job) {
 			// check if the default activated plugins have been deactivated manually

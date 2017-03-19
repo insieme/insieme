@@ -56,6 +56,7 @@
 #include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 #include "insieme/frontend/extensions/insieme_pragma_extension.h"
 #include "insieme/frontend/extensions/instrumentation_region_extension.h"
+#include "insieme/frontend/extensions/intrinsic_support_extension.h"
 #include "insieme/frontend/extensions/interceptor_extension.h"
 #include "insieme/frontend/extensions/malloc_extension.h"
 #include "insieme/frontend/extensions/omp_frontend_extension.h"
@@ -96,6 +97,7 @@ namespace frontend {
 	// if the extension is kept in the list or drops out.
 	// In a second pass the prerequisites are checked
 	// and an error message may be printed.
+	// also this method will collect include paths of all kinds gathered from the extensions in this ConversionJob
 	void ConversionJob::frontendExtensionInit() {
 		// reset extensions list in case extensions changed, we do not want duplicates
 		extensionList.clear();
@@ -228,6 +230,9 @@ namespace frontend {
 
 		// interceptor wants to be first
 		registerFrontendExtension<extensions::InterceptorExtension>(options);
+
+		// intrinsics support wants to come up front too, to get high priority for kidnapped headers
+		registerFrontendExtension<extensions::IntrinsicSupportExtension>(options);
 
 		registerFrontendExtension<extensions::BuiltinFunctionExtension>(options);
 		registerFrontendExtension<extensions::InstrumentationRegionExtension>(options);

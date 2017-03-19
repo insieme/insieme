@@ -50,7 +50,7 @@ namespace extensions {
 
 	  public:
 		SignificanceFrontendExtension();
-		virtual flagHandler registerFlag(boost::program_options::options_description& options);
+		virtual FlagHandler registerFlag(boost::program_options::options_description& options);
 		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu);
 		virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
 	};

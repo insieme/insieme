@@ -35,34 +35,24 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-#pragma once
 
-#include "insieme/frontend/extensions/frontend_extension.h"
+#include "insieme/frontend/extensions/intrinsic_support_extension.h"
 
+#include <string>
 
-using namespace insieme::frontend;
+#include "insieme/frontend/extensions/interceptor_extension.h"
+
+#include "insieme/utils/config.h"
 
 namespace insieme {
-namespace core {
-namespace tu {
-	class IRTranslationUnit;
-}
-}
-
 namespace frontend {
 namespace extensions {
 
-	class OmpFrontendExtension : public FrontendExtension {
-		std::list<core::ExpressionPtr> thread_privates;
-		bool flagActivated;
+	IntrinsicSupportExtension::IntrinsicSupportExtension() {
+		// we add the directory with the dummy intrinsic replacement header path to the kidnapped include dirs
+		kidnappedHeaders.push_back(insieme::utils::getInsiemeBuildRootDir() + "/frontend/assets/include/insieme/frontend/builtin_headers/");
+	}
 
-	  public:
-		OmpFrontendExtension();
-		virtual FlagHandler registerFlag(boost::program_options::options_description& options);
-		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu);
-		virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
-	};
-
-} // end namespace extensions
-} // end namespace frontend
-} // end namespace insieme
+} // extensions
+} // frontend
+} // insieme

@@ -215,21 +215,6 @@ namespace frontend {
 			}
 		}
 
-		/*** VECTOR EXTENSION STUFF ***/
-		// Enable OpenCL
-		// LO.OpenCL = 1;
-		LO.AltiVec = 1;
-		LO.LaxVectorConversions = 1;
-
-		// to enable clang to parse gcc-builtins we need the hacked builtinheaders
-		//	+	for some not builtins which are NOT supported by CLANG we give the signature (taken from GCC) as extern
-		//		functiondefinition
-		//	+	for some builtins with differing signature (currently storelps/storehps/movntq) we hack the
-		//		intrinsic to use depending on the used compiler the correct casts
-		//
-		// GENERATED_BUILTINS_DIR supplied by CMake
-		this->pimpl->clang.getHeaderSearchOpts().AddPath(string(GENERATED_BUILTINS_DIR), clang::frontend::Angled, false, false);
-		/*** VECTOR EXTENSION STUFF END ***/
 
 		pimpl->m_isCXX = false;
 		if(config.getStandard() == ConversionSetup::C99) {

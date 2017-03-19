@@ -458,7 +458,12 @@ namespace checks {
 
 		// obtain function type ...
 		TypePtr funType = address->getFunctionExpr()->getType();
-		assert_eq(address->getFunctionExpr()->getType()->getNodeType(), NT_FunctionType) << "Illegal function expression!";
+		if (address->getFunctionExpr()->getType()->getNodeType() != NT_FunctionType) {
+			add(res, Message(address, EC_TYPE_INVALID_FUNCTION_TYPE,
+							 format("Target function expression is not of a function type %s\n ", *address->getFunctionExpr()->getType()),
+							 Message::ERROR));
+			return res;
+		}
 
 		const FunctionTypePtr& functionType = funType.as<FunctionTypePtr>();
 		const TypeList& parameterTypes = functionType->getParameterTypes()->getTypes();
