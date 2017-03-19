@@ -11,10 +11,18 @@ macro(add_module_library module)
 		set(${module}_srcs ${${module}_srcs} ${${module}_incs})
 	endif()
 
-	if(ARG_HEADER_ONLY AND NOT MSVC)
+	if(ARG_HEADER_ONLY)
 		add_library(${module} INTERFACE)
 		target_include_directories(${module} INTERFACE include)
 		target_sources(${module} INTERFACE ${${module}_srcs})
+
+		if(MSVC)
+			add_custom_target(${module}_vs SOURCES ${${module}_srcs})
+			set_target_properties(${module}_vs PROPERTIES
+				FOLDER ${module}
+				PROJECT_LABEL ${module}
+			)
+		endif()
 	else()
 		add_library(${module} ${${module}_srcs})
 		target_include_directories(${module} PUBLIC include)
@@ -28,12 +36,15 @@ macro(add_module_library module)
 		if(ARG_HEADER_ONLY)
 			set_target_properties(${module} PROPERTIES LINKER_LANGUAGE CXX)
 		endif()
+
+		if(MSVC)
+			set_target_properties(${module} PROPERTIES FOLDER ${module})
+		endif()
 	endif()
 
 	if(MSVC)
 		msvc_source_group("Source Files" "${${module}_srcs}" STRIP src)
 		msvc_source_group("Header Files" "${${module}_incs}" STRIP include/${PROJECT_NAME}/${module})
-		set_target_properties(${module} PROPERTIES FOLDER ${module})
 	endif()
 endmacro()
 
