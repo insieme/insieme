@@ -25,7 +25,8 @@ Following options can be supplied to CMake
 | -DUSE_VALGRIND      | ON / OFF        |
 | -DTHIRD_PARTY_DIR   | \<path\>        |
 
-The file `cmake/build_settings.cmake` states their default value.
+The files `cmake/build_settings.cmake` and `code/CMakeLists.txt` state their
+default value.
 
 ### Building / Testing
 

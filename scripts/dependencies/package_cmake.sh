@@ -1,10 +1,10 @@
 NAME="cmake"
-VERSION="3.5.1"
+VERSION="3.7.2"
 PACKAGE="$NAME-$VERSION"
 
 FILE="$PACKAGE.tar.gz"
 URL="http://www.insieme-compiler.org/ext_libs/$FILE"
-SHA256SUM="93d651a754bcf6f0124669646391dd5774c0fc4d407c384e3ae76ef9a60477e8"
+SHA256SUM="dc1246c4e6d168ea4d6e042cfba577c1acd65feea27e56f5ff37df920c30cae0"
 
 pkg_configure() {
 	LDFLAGS="-O3" ./configure --prefix="$PREFIX/$PACKAGE"
