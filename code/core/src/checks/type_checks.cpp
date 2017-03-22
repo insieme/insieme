@@ -892,10 +892,10 @@ namespace checks {
 
 		OptionalMessageList res;
 		TypePtr switchType = address->getSwitchExpr()->getType();
-		if(!manager.getLangBasic().isInt(switchType)) {
+		if(!manager.getLangBasic().isInt(switchType) && !core::lang::isEnum(switchType)) {
 			add(res,
 			    Message(address, EC_TYPE_INVALID_SWITCH_EXPR,
-			            format("Invalid type of switch expression - expected: integral type, actual: \n%s", *switchType), Message::ERROR));
+			            format("Invalid type of switch expression - expected: integral or enum type, actual: \n%s", *switchType), Message::ERROR));
 		}
 		return res;
 	}
