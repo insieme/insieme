@@ -411,14 +411,11 @@ namespace utils {
 			// only consider FunctionDecls for the whitelist
 			if(funDecl) {
 				auto name = funDecl->getQualifiedNameAsString();
-				std::cout << name << std::endl;
 				// check all patterns - if one of them matches, we will _not_ intercept this decl
-				bool ret = !any(interceptionWhitelist, [&name](const auto& patternString) {
+				return !any(interceptionWhitelist, [&name](const auto& patternString) {
 					std::regex pattern(patternString);
 					return std::regex_match(name, pattern);
 				});
-				if(!ret) std::cout << "  NOT intercepting " << name << std::endl;
-				return ret;
 			}
 			// otherwise we will
 			return true;
