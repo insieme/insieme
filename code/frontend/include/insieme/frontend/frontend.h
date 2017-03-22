@@ -135,6 +135,12 @@ namespace frontend {
 		vector<path> interceptedHeaderDirs;
 
 		/**
+		 * A list of regex strings which will be applied to the fully qualified name before the interceptor decides whether to intercept or not.
+		 * Everything mathing an entry in this list will _not_ be intercepted.
+		 */
+		vector<string> interceptionWhitelist;
+
+		/**
 		 * A list of include directories containing system headers for a cross compilation.
 		 */
 		string crossCompilationSystemHeadersDir;
@@ -304,6 +310,20 @@ namespace frontend {
 		 */
 		void addInterceptedHeaderDir(const path& directory) {
 			this->interceptedHeaderDirs.push_back(directory);
+		}
+
+		/**
+		 * Obtains a reference to the interception whitelist.
+		 */
+		const vector<string>& getInterceptionWhitelist() const {
+			return interceptionWhitelist;
+		}
+
+		/**
+		 * Adds a new regex pattern to the interception whitelist.
+		 */
+		void addInterceptionWhitelistEntry(const string& pattern) {
+			this->interceptionWhitelist.push_back(pattern);
 		}
 
 		/**
