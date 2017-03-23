@@ -344,7 +344,8 @@ namespace extensions {
 					return lit;
 				}
 				// as well as global variables
-				if(auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
+				auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl);
+				if(varDecl) {
 					assert_true(varDecl->hasGlobalStorage()) << "We may only intercept global variables";
 					auto lit = builder.literal(insieme::utils::mangle(decl->getQualifiedNameAsString()), converter.convertVarType(expr->getType()));
 					converter.applyHeaderTagging(lit, decl);
