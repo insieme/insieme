@@ -98,10 +98,6 @@ macro(add_module_unittest module test)
 		# add gtest
 		target_link_libraries(${test_name} gtest)
 		target_link_libraries(${test_name} gtest_main)
-		target_include_directories(${test_name} SYSTEM PRIVATE ${GTEST_INCLUDE_PATH})
-
-		# gtest requires pthread
-		target_link_libraries(${test_name} ${CMAKE_THREAD_LIBS_INIT})
 
 		# set command for running the test
 		set(test_cmd ${CMAKE_CURRENT_BINARY_DIR}/${test_name})

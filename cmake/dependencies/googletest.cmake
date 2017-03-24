@@ -13,6 +13,9 @@ if(BUILD_TESTS AND NOT TARGET googletest)
 	)
 	ExternalProject_Get_Property(googletest source_dir binary_dir)
 
+	# workaround https://itk.org/Bug/view.php?id=15052
+	file(MAKE_DIRECTORY ${source_dir}/googletest/include)
+
 	if(BUILD_SHARED_LIBS)
 		set(_prefix ${CMAKE_SHARED_LIBRARY_PREFIX})
 		set(_suffix ${CMAKE_SHARED_LIBRARY_SUFFIX})
@@ -28,7 +31,15 @@ if(BUILD_TESTS AND NOT TARGET googletest)
 	# import libgtest
 	add_library(gtest ${_linking} IMPORTED)
 	set(gtest ${_prefix}gtest${_suffix})
-	set_target_properties(gtest PROPERTIES IMPORTED_LOCATION ${GTEST_LIBRARY_PATH}/${gtest})
+	set_target_properties(gtest PROPERTIES
+		IMPORTED_LOCATION ${GTEST_LIBRARY_PATH}/${gtest}
+
+		# attach include path
+		INTERFACE_INCLUDE_DIRECTORIES ${source_dir}/googletest/include
+
+		# attach pthread dependency
+		INTERFACE_LINK_LIBRARIES ${CMAKE_THREAD_LIBS_INIT}
+	)
 	add_dependencies(gtest googletest)
 
 	# import libgtest_main
@@ -36,7 +47,4 @@ if(BUILD_TESTS AND NOT TARGET googletest)
 	set(gtest_main ${_prefix}gtest_main${_suffix})
 	set_target_properties(gtest_main PROPERTIES IMPORTED_LOCATION ${GTEST_LIBRARY_PATH}/${gtest_main})
 	add_dependencies(gtest_main googletest)
-
-	# cannot attach include path to gtest target, must be added manually
-	set(GTEST_INCLUDE_PATH ${source_dir}/googletest/include)
 endif()
