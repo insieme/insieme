@@ -264,7 +264,7 @@ namespace frontend {
 		pimpl->clang.createASTContext();
 
 		// since we perform a custom initialization of the compiler entity,
-		// we should not forget to initialize the set of invariant and target dependent builtints.
+		// we should not forget to initialize the set of invariant and target dependent builtins.
 		// (which we need to compile code with standard c++ headers)
 		getPreprocessor().getBuiltinInfo().InitializeBuiltins(getPreprocessor().getIdentifierTable(), getPreprocessor().getLangOpts());
 

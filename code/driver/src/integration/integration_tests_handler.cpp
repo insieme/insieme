@@ -207,7 +207,7 @@ namespace integration {
 		}
 	}
 
-	int handleIntegrationTests(int argc, char** argv, const std::string& programName, const std::string& provramVersion,
+	int handleIntegrationTests(int argc, char** argv, const std::string& programName, const std::string& programVersion,
 	                           const IntegrationTestCaseDefaultsPaths& defaultPaths) {
 		// TODO custom root config file
 		// set OMP/IRT environment variables if not already set
@@ -237,7 +237,7 @@ namespace integration {
 		// get list of test cases
 		auto cases = tf::loadCases(defaultPaths, options);
 
-		string header = programName + " version: " + provramVersion;
+		string header = programName + " version: " + programVersion;
 
 		std::cout << "#" << string(screenWidth - 2, '-') << "#\n";
 		std::cout << "#" << boost::format(centerAlign) % header << "#\n";
