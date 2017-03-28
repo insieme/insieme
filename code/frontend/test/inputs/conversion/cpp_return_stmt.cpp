@@ -74,6 +74,11 @@ constIntPtr const_pointer_int() {
 	return 0;
 }
 
+constIntPtr nonconst_to_const_pointer_int() {
+	intPtr i = 0;
+	return i;
+}
+
 intPtr& reference_pointer_int() {
 	#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0; return v0 in ref<ptr<int<4>,f,f>,f,f,cpp_ref>; } ")
 	{
@@ -129,6 +134,9 @@ int main() {
 
 		#pragma test expect_ir("EXPR_TYPE", "ptr<int<4>, t,f>")
 		const_pointer_int();
+
+		#pragma test expect_ir("EXPR_TYPE", "ptr<int<4>, t,f>")
+		nonconst_to_const_pointer_int();
 	}
 
 	{

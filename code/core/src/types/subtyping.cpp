@@ -39,6 +39,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/pointer.h"
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -191,6 +192,29 @@ namespace types {
 			// also support references of derived classes being passed to base-type pointer
 			if(core::analysis::isObjectType(srcElement) && core::analysis::isObjectType(trgElement)) {
 				if(isSubTypeOf(srcElement, trgElement)) { return true; }
+			}
+		}
+
+		// check pointer types
+		if(lang::isPointer(subType) && lang::isPointer(superType)) {
+
+			auto subPtrType = lang::PointerType(subType);
+			auto superPtrType = lang::PointerType(superType);
+			bool adapted = false;
+
+			// support implicit qualifier promotion
+			if(!subPtrType.isConst() && superPtrType.isConst()) {
+				adapted = true;
+				subPtrType.setConst(true);
+			}
+			if(!subPtrType.isVolatile() && superPtrType.isVolatile()) {
+				adapted = true;
+				subPtrType.setVolatile(true);
+			}
+
+			// retry with adapted qualifiers
+			if(adapted) {
+				return isSubTypeOf(subPtrType, superPtrType);
 			}
 		}
 
