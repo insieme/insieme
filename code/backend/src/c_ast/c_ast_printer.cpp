@@ -718,20 +718,51 @@ namespace c_ast {
 
 				// add member functions
 				if(composite) {
-					// add constructors
-					if(!composite->ctors.empty()) { out << "\n    "; }
-					out << join(";\n    ", composite->ctors, [&](std::ostream& out, const ConstructorPrototypePtr& cur) { out << print(cur); });
-					if(!composite->ctors.empty()) { out << ";"; }
 
-					// add destructor
-					if(composite->dtor) { out << "\n    "; }
-					out << print(composite->dtor);
-					if(composite->dtor) { out << ";"; }
+					// check whether there are non-defaulted constructors, destructors, or assignment operators
+					bool allDefaulted = true;
 
+					// check the destructor
+					allDefaulted = allDefaulted && ((!composite->dtor) || composite->dtor->flag == c_ast::BodyFlag::Default);
+
+					// check the constructors
+					if (allDefaulted) {
+						for(const auto& ctor : composite->ctors) {
+							if (ctor->flag != c_ast::BodyFlag::Default) allDefaulted = false;
+						}
+					}
+
+					// check for assignment operators
+					if (allDefaulted) {
+						for(const auto& member : composite->members) {
+							// check the name
+							if (member->fun->function->name->name == "operator=") {
+								if (member->flag != c_ast::BodyFlag::Default) allDefaulted = false;
+							}
+						}
+					}
+
+					// if there are non-defaulted ctors / dtors => add constructors and destructors
+					if (!allDefaulted) {
+
+						// add constructors
+						if(!composite->ctors.empty()) { out << "\n    "; }
+						out << join(";\n    ", composite->ctors, [&](std::ostream& out, const ConstructorPrototypePtr& cur) { out << print(cur); });
+						if(!composite->ctors.empty()) { out << ";"; }
+
+						// add destructor
+						if(composite->dtor) { out << "\n    "; }
+						out << print(composite->dtor);
+						if(composite->dtor) { out << ";"; }
+
+					}
 
 					// add member functions
 					if(!composite->members.empty()) { out << "\n    "; }
-					out << join(";\n    ", composite->members, [&](std::ostream& out, const MemberFunctionPrototypePtr& cur) { out << print(cur); });
+					out << join(";\n    ", composite->members, [&](std::ostream& out, const MemberFunctionPrototypePtr& cur) {
+						if (allDefaulted && cur->fun->function->name->name == "operator=") return;
+						out << print(cur);
+					});
 					if(!composite->members.empty()) { out << ";"; }
 				}
 
