@@ -79,6 +79,12 @@ namespace analysis {
 		EXPECT_TRUE(isTrivial(builder.parseType("int<4>")));
 	}
 
+	TEST(TrivialType, Reference) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		EXPECT_TRUE(isTrivial(builder.parseType("ref<int<4>>")));
+	}
+
 	TEST(ArrayOfTrivialType, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);

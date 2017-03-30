@@ -1662,7 +1662,7 @@ namespace backend {
 
 			// resolve return type
 			const TypeInfo& returnTypeInfo = typeManager.getTypeInfo(context, funType->getReturnType());
-			res.prototypeDependencies.insert(returnTypeInfo.definition);
+			res.prototypeDependencies.insert(returnTypeInfo.declaration);
 			res.definitionDependencies.insert(returnTypeInfo.definition);
 			c_ast::TypePtr returnType = (external) ? returnTypeInfo.externalType : returnTypeInfo.rValueType;
 
@@ -1682,7 +1682,7 @@ namespace backend {
 
 				// resolve parameter type
 				const TypeInfo& paramTypeInfo = typeManager.getTypeInfo(context, cur);
-				res.prototypeDependencies.insert(paramTypeInfo.definition);
+				res.prototypeDependencies.insert(paramTypeInfo.declaration);
 				res.definitionDependencies.insert(paramTypeInfo.definition);
 
 				c_ast::TypePtr paramType = (external) ? paramTypeInfo.externalType : paramTypeInfo.rValueType;

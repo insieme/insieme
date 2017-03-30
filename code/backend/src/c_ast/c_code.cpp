@@ -144,7 +144,10 @@ namespace c_ast {
 		if(this == &*fragment) { return; }
 
 		// check for cyclic dependencies
-		assert_false(fragment->isDependingOn(this)) << "Adding dependency is closing dependency cycle!";
+		assert_false(fragment->isDependingOn(this))
+			<< "Adding dependency is closing dependency cycle!\n"
+			<< "Fragment:\n" << toString(*this) << "\n"
+			<< "depends on:\n" << toString(*fragment);
 
 		// add dependency
 		dependencies.insert(fragment);
