@@ -1134,8 +1134,8 @@ namespace backend {
 				// create the body
 				c_ast::InitializerPtr init = c_ast::init(res->closureType, c_ast::ref(res->mapperName), varNested);
 				addAll(init->values, varsCaptured);
-				c_ast::ExpressionPtr assign = c_ast::assign(c_ast::deref(varClosure), init);
-				c_ast::StatementPtr body = compound(assign, c_ast::ret(c_ast::cast(returnType, varClosure)));
+				init->target = varClosure;
+				c_ast::StatementPtr body = compound(init, c_ast::ret(c_ast::cast(returnType, varClosure)));
 
 				// assemble constructor
 				constructor =

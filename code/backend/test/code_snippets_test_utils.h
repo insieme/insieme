@@ -57,7 +57,7 @@
 	auto converted = BACKEND->convert(program); \
 	ASSERT_TRUE((bool)converted); \
 	auto originalCode = toString(*converted); \
-	auto code = utils::removeCppStyleComments(originalCode); \
+	auto code = utils::removePragmas(utils::removeCppStyleComments(originalCode)); \
 	if(PRINT_BACKEND_CODE) std::cout << "Converted code produced by sequential backend: =======\n" << code << "\n============================\n"; \
 	/* perform comparisons */ \
 	COMPARISON_ACTIONS \
