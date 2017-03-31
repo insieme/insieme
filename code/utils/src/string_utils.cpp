@@ -90,5 +90,10 @@ namespace utils {
 		const static std::regex comments(R"((//.*)|(/\*(?:.|\r|\n)*?\*/))");
 		return std::regex_replace(in, comments, "");
 	}
+
+	string removePragmas(const string& in) {
+		const static std::regex comments(R"((#.*))");
+		return std::regex_replace(in, comments, "");
+	}
 }
 }
