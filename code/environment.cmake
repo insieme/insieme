@@ -178,7 +178,9 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 # set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg")
 
 # -------------------------------------------------------------- determines insieme version
-find_package(Git)
+if(NOT MSVC)
+	find_package(Git)
+endif()
 if(GIT_FOUND)
 	# deduce the code version using git describe
 	#set ( insieme_version "`(cd ${insieme_code_dir}; ${GIT_EXECUTABLE} describe --dirty)`")
