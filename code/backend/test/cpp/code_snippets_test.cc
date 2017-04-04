@@ -1488,6 +1488,36 @@ namespace backend {
 		})
 	}
 
+	TEST(CppSnippet, ReturnGeneralizedInit) {
+		DO_TEST(R"(
+			def struct IMP_Trivial {
+				x : int<4>;
+				ctor function () { }
+				ctor function (v1 : ref<int<4>,f,f,plain>) {
+					<ref<int<4>,f,f,plain>>((this).x) {*v1};
+				}
+			};
+			def IMP_returnTrivial = function () -> IMP_Trivial {
+				return ref_cast(IMP_Trivial::(ref_temp(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref));
+			};
+			def IMP_returnTrivialInit = function () -> IMP_Trivial {
+				return IMP_Trivial::(ref_decl(type_lit(ref<IMP_Trivial,f,f,plain>)));
+			};
+			def IMP_returnTrivialInitWithParam = function () -> IMP_Trivial {
+				return IMP_Trivial::(ref_decl(type_lit(ref<IMP_Trivial,f,f,plain>)), 5);
+			};
+			int<4> main() {
+				IMP_returnTrivial();
+				IMP_returnTrivialInit();
+				IMP_returnTrivialInitWithParam();
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "return {5};");
+			EXPECT_PRED2(containsSubString, code, "return {};");
+		})
+	}
+
 	TEST(CppSnippet, InterceptedTemplateFunctionPointer) {
 		auto prog = builder.parseProgram(R"(
 			int<4> main() {
