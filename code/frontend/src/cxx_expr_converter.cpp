@@ -716,14 +716,23 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(lExpr, retIr);
 
-		// gather init expressions
-		core::ExpressionList initExprs;
-		for(auto capture: lExpr->capture_inits()) {
-			initExprs.push_back(converter.convertExpr(capture));
-		}
-
 		// translate implicitly created class
 		auto genTy = converter.convertType(clang::QualType(lExpr->getLambdaClass()->getTypeForDecl(), 0)).as<core::GenericTypePtr>();
+
+		// look up struct type in order to use member types for argument translation
+		auto tagTyIt = converter.getIRTranslationUnit().getTypes().find(genTy);
+		frontend_assert(tagTyIt != converter.getIRTranslationUnit().getTypes().end());
+		auto fields = tagTyIt->second.getFields();
+
+		// gather init expressions and translate as if they were arguments
+		core::ExpressionList initExprs;
+		size_t fieldIndex = 0;
+		for(auto capture: lExpr->capture_inits()) {
+			frontend_assert(fields.size() > fieldIndex)
+				<< "Mismatch between number of captures in generated struct and number of initializers while translating LambdaExpr";
+			initExprs.push_back(converter.convertCxxArgExpr(capture, fields[fieldIndex++]->getType()));
+		}
+
 
 		// generate init expr of the lambda type
 		return builder.initExprTemp(genTy, initExprs);
