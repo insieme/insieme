@@ -116,6 +116,44 @@ void recursiveVoid(int a) {
 	return recursiveVoid(a-1);
 }
 
+class Trivial {
+	int x;
+public:
+	Trivial() {}
+	Trivial(int x) : x(x) {}
+};
+int g_a;
+class NonTrivial {
+public:
+	NonTrivial() {}
+	NonTrivial(int x) {
+		g_a = x;
+	}
+	~NonTrivial() {
+		g_a++;
+	}
+};
+
+Trivial returnTrivial() {
+	return Trivial();
+}
+Trivial returnTrivialInit() {
+	return {};
+}
+Trivial returnTrivialInitWithParam() {
+	return { 5 };
+}
+
+NonTrivial returnNonTrivial() {
+	return NonTrivial();
+}
+NonTrivial returnNonTrivialInit() {
+	return {};
+}
+NonTrivial returnNonTrivialInitWithParam() {
+	return { 7 };
+}
+
 int main() {
 	{} // help pragmas to find their way
 
@@ -165,4 +203,63 @@ int main() {
 		IMP_recursiveVoid(7)
 	)")
 	recursiveVoid(7);
+
+	#pragma test expect_ir(R"(
+		def struct IMP_Trivial {
+			x : int<4>;
+			ctor function () { }
+			ctor function (v1 : ref<int<4>,f,f,plain>) {
+				<ref<int<4>,f,f,plain>>((this).x) {*v1};
+			}
+		};
+		def IMP_returnTrivial = function () -> IMP_Trivial {
+			return ref_cast(IMP_Trivial::(ref_temp(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref));
+		};
+		def IMP_returnTrivialInit = function () -> IMP_Trivial {
+			return IMP_Trivial::(ref_decl(type_lit(ref<IMP_Trivial,f,f,plain>)));
+		};
+		def IMP_returnTrivialInitWithParam = function () -> IMP_Trivial {
+			return IMP_Trivial::(ref_decl(type_lit(ref<IMP_Trivial,f,f,plain>)), 5);
+		};
+		{
+			IMP_returnTrivial();
+			IMP_returnTrivialInit();
+			IMP_returnTrivialInitWithParam();
+		}
+	)")
+	{
+		returnTrivial();
+		returnTrivialInit();
+		returnTrivialInitWithParam();
+	}
+	#pragma test expect_ir(R"(
+		def struct IMP_NonTrivial {
+			ctor function () { }
+			ctor function (v1 : ref<int<4>,f,f,plain>) {
+				lit("g_a" : ref<int<4>,f,f,plain>) = *v1;
+			}
+			dtor function () {
+				gen_post_inc(lit("g_a" : ref<int<4>,f,f,plain>));
+			}
+		};
+		def IMP_returnNonTrivial = function () -> IMP_NonTrivial {
+			return ref_cast(IMP_NonTrivial::(ref_temp(type_lit(IMP_NonTrivial))), type_lit(t), type_lit(f), type_lit(cpp_ref));
+		};
+		def IMP_returnNonTrivialInit = function () -> IMP_NonTrivial {
+			return IMP_NonTrivial::(ref_decl(type_lit(ref<IMP_NonTrivial,f,f,plain>)));
+		};
+		def IMP_returnNonTrivialInitWithParam = function () -> IMP_NonTrivial {
+			return IMP_NonTrivial::(ref_decl(type_lit(ref<IMP_NonTrivial,f,f,plain>)), 7);
+		};
+		{
+			IMP_returnNonTrivial() materialize ;
+			IMP_returnNonTrivialInit() materialize ;
+			IMP_returnNonTrivialInitWithParam() materialize ;
+		}
+	)")
+	{
+		returnNonTrivial();
+		returnNonTrivialInit();
+		returnNonTrivialInitWithParam();
+	}
 }
