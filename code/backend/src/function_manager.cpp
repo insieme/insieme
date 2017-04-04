@@ -219,23 +219,6 @@ namespace backend {
 
 	namespace {
 
-		// deal with a very specific case: construction of an object in-place as the argument to a function (without any copies being created)
-		// in IR, this manifests as a call which takes a non-materializing constructor with a ref_decl as its this parameter as an argument
-		// in C++, it's implemented by performing an in-place construction using the {} syntax
-		c_ast::ExpressionPtr checkDirectConstruction(ConversionContext& context, const core::TypePtr& targetT, const core::ExpressionPtr& arg) {
-			if(!targetT) return {};
-			if(!(core::lang::isPlainReference(targetT) && core::lang::isPlainReference(arg))) return {};
-			if(!core::analysis::isConstructorCall(arg)) return {};
-			auto thisArg = core::analysis::getArgument(arg, 0);
-			if(!targetT->getNodeManager().getLangExtension<core::lang::ReferenceExtension>().isCallOfRefDecl(thisArg)) return {};
-			// build init expression -- shortcut by building constructor call and taking its arguments
-			StmtConverter& stmtConverter = context.getConverter().getStmtConverter();
-			auto conCall = stmtConverter.convert(context, arg);
-			if(!conCall.isa<c_ast::ConstructorCallPtr>()) conCall = conCall.as<c_ast::UnaryOperationPtr>()->operand;
-			auto constructorCall = conCall.as<c_ast::ConstructorCallPtr>();
-			return c_ast::init(constructorCall->arguments);
-		}
-
 		void appendAsArguments(ConversionContext& context, c_ast::CallPtr& call, const core::TypeList& targetTypes, const core::ExpressionList& arguments,
 		                       bool external) {
 			// collect some manager references
