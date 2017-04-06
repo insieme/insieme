@@ -120,11 +120,11 @@ namespace utils {
 	namespace ba = boost::algorithm;
 
 	HeaderTagger::HeaderTagger(const vector<fs::path>& stdLibDirs,
-	                           const vector<fs::path>& interceptedHeaderDirs, const std::vector<std::string> interceptionWhitelist,
+	                           const vector<fs::path>& interceptedHeaderDirs,
 	                           const vector<fs::path>& userIncludeDirs,
 	                           const clang::SourceManager& srcMgr)
 		: stdLibDirs(buildPathSet(stdLibDirs)),
-		  interceptedHeaderDirs(buildPathSet(interceptedHeaderDirs)), interceptionWhitelist(interceptionWhitelist),
+		  interceptedHeaderDirs(buildPathSet(interceptedHeaderDirs)),
 		  userIncludeDirs(buildPathSet(userIncludeDirs)),
 		  sm(srcMgr) {
 
@@ -400,27 +400,7 @@ namespace utils {
 			if(boost::starts_with(namedDecl->getQualifiedNameAsString(), "std::initializer_list")) return false;
 		}
 		// check whether we should intercept this decl
-		bool intercepted = isStdLibHeader(location) || isInterceptedLibHeader(location);
-
-		// if it would be intercepted according to the path list, we check it against the whitelist to ensure this decl should not be excluded
-		if(intercepted) {
-			auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl);
-			if(auto varDecl = llvm::dyn_cast<clang::ParmVarDecl>(decl)) {
-				funDecl = llvm::dyn_cast<clang::FunctionDecl>(varDecl->getDeclContext());
-			}
-			// only consider FunctionDecls for the whitelist
-			if(funDecl) {
-				auto name = funDecl->getQualifiedNameAsString();
-				// check all patterns - if one of them matches, we will _not_ intercept this decl
-				return !any(interceptionWhitelist, [&name](const auto& patternString) {
-					std::regex pattern(patternString);
-					return std::regex_match(name, pattern);
-				});
-			}
-			// otherwise we will
-			return true;
-		}
-		return false;
+		return isStdLibHeader(location) || isInterceptedLibHeader(location);
 	}
 
 } // end namespace utils

@@ -61,14 +61,13 @@ namespace ba = boost::algorithm;
 	}
 
 /**
- * class which helps finding the more suitable header for a declaration, not allways top
+ * class which helps finding the more suitable header for a declaration, not always top
  * level since we might have a system header included deep in a includes chain.
  * the most appropriate header has to be computed
  */
 class HeaderTagger {
 	std::set<fs::path> stdLibDirs;
 	std::set<fs::path> interceptedHeaderDirs;
-	std::vector<std::string> interceptionWhitelist;
 	std::set<fs::path> userIncludeDirs;
 	const clang::SourceManager& sm;
 
@@ -110,7 +109,7 @@ class HeaderTagger {
 
   public:
 	HeaderTagger(const vector<fs::path>& stdLibDirs,
-	             const vector<fs::path>& interceptedHeaderDirs, const std::vector<std::string> interceptionWhitelist,
+	             const vector<fs::path>& interceptedHeaderDirs,
 	             const vector<fs::path>& userIncludeDirs,
 	             const clang::SourceManager& srcMgr);
 

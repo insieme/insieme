@@ -264,8 +264,6 @@ namespace frontend {
 		    << "NoWarnings " << hasOption(ConversionSetup::NoWarnings) << "\n"
 		    << "NoDefaultExtensions " << hasOption(ConversionSetup::NoDefaultExtensions) << "\n" << std::endl;
 		out << "interceptions: \n" << getInterceptedHeaderDirs() << std::endl;
-		out << "interceptionWhitelist: \n" << getInterceptionWhitelist() << std::endl;
-		out << "crosscompilation dir: \n" << getCrossCompilationSystemHeadersDir() << std::endl;
 		out << "include dirs: \n" << getIncludeDirectories() << std::endl;
 		out << "definitions: \n" << getDefinitions() << std::endl;
 		out << "libraries: \n" << libs << std::endl;
