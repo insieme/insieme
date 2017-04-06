@@ -138,16 +138,16 @@ namespace frontend {
 
 		// matching a path which isn't intercepted
 		{
-			std::set<boost::filesystem::path> libDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor") };
-			std::set<boost::filesystem::path> interceptedDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor") };
+			std::vector<boost::filesystem::path> libDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor") };
+			std::vector<boost::filesystem::path> interceptedDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor") };
 			auto res = utils::detail::getInterceptedLibHeader(libDirs, interceptedDirs, canonicalize(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_classes.h"));
 			EXPECT_FALSE(res);
 		}
 
 		// intercepting the same path as included
 		{
-			std::set<boost::filesystem::path> libDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor") };
-			std::set<boost::filesystem::path> interceptedDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor") };
+			std::vector<boost::filesystem::path> libDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor") };
+			std::vector<boost::filesystem::path> interceptedDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor") };
 			auto res = utils::detail::getInterceptedLibHeader(libDirs, interceptedDirs, canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_header.h"));
 			ASSERT_TRUE(res);
 			EXPECT_EQ("interceptor_header.h", res->string());
@@ -155,9 +155,9 @@ namespace frontend {
 
 		// intercepting the same path as included, multiple includes
 		{
-			std::set<boost::filesystem::path> libDirs { canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor"),
-			                                            canonicalize(FRONTEND_TEST_DIR + "/inputs/conversion") };
-			std::set<boost::filesystem::path> interceptedDirs{canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor") };
+			std::vector<boost::filesystem::path> libDirs { canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor"),
+			                                               canonicalize(FRONTEND_TEST_DIR + "/inputs/conversion") };
+			std::vector<boost::filesystem::path> interceptedDirs{canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor") };
 			auto res = utils::detail::getInterceptedLibHeader(libDirs, interceptedDirs, canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_header.h"));
 			ASSERT_TRUE(res);
 			EXPECT_EQ("interceptor_header.h", res->string());
@@ -165,10 +165,10 @@ namespace frontend {
 
 		// intercepting the same path as included, multiple intercepted paths
 		{
-			std::set<boost::filesystem::path> libDirs { canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor"),
-			                                            canonicalize(FRONTEND_TEST_DIR + "/inputs/conversion") };
-			std::set<boost::filesystem::path> interceptedDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor"),
-			                                                   canonicalize(FRONTEND_TEST_DIR + "/inputs/conversion") };
+			std::vector<boost::filesystem::path> libDirs { canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor"),
+			                                               canonicalize(FRONTEND_TEST_DIR + "/inputs/conversion") };
+			std::vector<boost::filesystem::path> interceptedDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor"),
+			                                                      canonicalize(FRONTEND_TEST_DIR + "/inputs/conversion") };
 			auto res = utils::detail::getInterceptedLibHeader(libDirs, interceptedDirs, canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_header.h"));
 			ASSERT_TRUE(res);
 			EXPECT_EQ("interceptor_header.h", res->string());
@@ -176,8 +176,8 @@ namespace frontend {
 
 		// intercepting a sub-path of the include path - we always want the path relative to the include dir returned
 		{
-			std::set<boost::filesystem::path> libDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs") };
-			std::set<boost::filesystem::path> interceptedDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor") };
+			std::vector<boost::filesystem::path> libDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs") };
+			std::vector<boost::filesystem::path> interceptedDirs{ canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor") };
 			auto res = utils::detail::getInterceptedLibHeader(libDirs, interceptedDirs, canonicalize(FRONTEND_TEST_DIR + "/inputs/interceptor/interceptor_header.h"));
 			ASSERT_TRUE(res);
 			EXPECT_EQ("interceptor/interceptor_header.h", res->string());

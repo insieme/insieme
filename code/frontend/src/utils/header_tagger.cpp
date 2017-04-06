@@ -37,6 +37,7 @@
  */
 #include "insieme/frontend/utils/header_tagger.h"
 
+#include <algorithm>
 #include <regex>
 
 #include <boost/optional.hpp>
@@ -52,7 +53,7 @@ namespace frontend {
 namespace utils {
 
 	namespace detail {
-		boost::optional<fs::path> getInterceptedLibHeader(const std::set<fs::path>& userIncludeDirs, const std::set<fs::path>& interceptedHeaderDirs,
+		boost::optional<fs::path> getInterceptedLibHeader(const std::vector<fs::path>& userIncludeDirs, const std::vector<fs::path>& interceptedHeaderDirs,
 		                                                  const fs::path& path) {
 			// first we find the (longest) intercepted path matching this path
 			const auto canonicalInterceptedPathString = fs::canonical(path).string();
@@ -103,11 +104,15 @@ namespace utils {
 	}
 
 	namespace {
-		std::set<fs::path> buildPathSet(const vector<fs::path>& input) {
-			std::set<fs::path> ret;
+		// removes duplicate entries from the given vector
+		std::vector<fs::path> removeDuplicatesAndCanonicalize(const vector<fs::path>& input) {
+			std::vector<fs::path> ret;
 			for(const auto& p : input) {
 				try {
-					ret.insert(fs::canonical(p));
+					auto canonicalPath = fs::canonical(p);
+					if(std::find(ret.begin(), ret.end(), canonicalPath) == ret.end()) {
+						ret.push_back(canonicalPath);
+					}
 				} catch(const fs::filesystem_error& error) {
 					LOG(ERROR) << "Header Tagger: could not canonicalize path " << p << "\n" << error.what();
 				}
@@ -123,9 +128,9 @@ namespace utils {
 	                           const vector<fs::path>& interceptedHeaderDirs,
 	                           const vector<fs::path>& userIncludeDirs,
 	                           const clang::SourceManager& srcMgr)
-		: stdLibDirs(buildPathSet(stdLibDirs)),
-		  interceptedHeaderDirs(buildPathSet(interceptedHeaderDirs)),
-		  userIncludeDirs(buildPathSet(userIncludeDirs)),
+		: stdLibDirs(removeDuplicatesAndCanonicalize(stdLibDirs)),
+		  interceptedHeaderDirs(removeDuplicatesAndCanonicalize(interceptedHeaderDirs)),
+		  userIncludeDirs(removeDuplicatesAndCanonicalize(userIncludeDirs)),
 		  sm(srcMgr) {
 
 		// we need to ensure that each directory which is intercepted (or any parent of that) is also an include directory
@@ -136,7 +141,7 @@ namespace utils {
 			bool found = false;
 			while (!path.empty()) {
 				// if we found the current path component in the user includes, we are fine
-				if(this->userIncludeDirs.find(path) != this->userIncludeDirs.end()) {
+				if(std::find(this->userIncludeDirs.begin(), this->userIncludeDirs.end(), path) != this->userIncludeDirs.end()) {
 					found = true;
 					break;
 				}
