@@ -132,13 +132,13 @@ namespace extensions {
 
 	core::TypePtr MappingFrontendExtension::mapType(const clang::Type* type, conversion::Converter& converter) {
 		// initialization once
-		if(typeIrMap.empty()) {
+		if(typeIrMappings.empty()) {
 			auto& builder = converter.getIRBuilder();
 
 			// generate type to ir map from string-based type map
 			for(auto stringMapping : getTypeMappings()) {
 				auto ir = parseTypeForTypeMapping(builder, stringMapping.second);
-				typeIrMap[stringMapping.first] = ir;
+				typeIrMappings.push_back({ std::regex(stringMapping.first), ir });
 			}
 
 			// generate the template placeholder replacers to be applied on mapped IR
@@ -181,10 +181,9 @@ namespace extensions {
 			auto name = recordDecl->getQualifiedNameAsString();
 
 			// replace if we have a map entry matching this name
-			for(const auto& mapping : typeIrMap) {
-				std::regex pattern(mapping.first);
-				if(std::regex_match(name, pattern)) {
-					ret = mapping.second;
+			for(const auto& mapping : typeIrMappings) {
+				if(std::regex_match(name, mapping.pattern)) {
+					ret = mapping.irType;
 					core::IRBuilder builder(ret->getNodeManager());
 					// replace all placeholders in generated IR type
 					ret = core::transform::transformBottomUpGen(ret, [&](const core::TypePtr& typeIn) -> core::TypePtr {

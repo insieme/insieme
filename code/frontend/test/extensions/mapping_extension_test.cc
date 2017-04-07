@@ -39,8 +39,6 @@
 
 #include "insieme/frontend/extensions/mapping_frontend_extension.h"
 
-#include "insieme/frontend/extensions/interceptor_extension.h"
-
 
 namespace insieme {
 namespace frontend {

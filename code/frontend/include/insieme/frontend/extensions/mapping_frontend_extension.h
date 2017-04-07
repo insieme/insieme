@@ -40,6 +40,7 @@
 #include "insieme/frontend/extensions/frontend_extension.h"
 
 #include <string>
+#include <regex>
 #include <map>
 
 #include "insieme/frontend/clang.h"
@@ -93,7 +94,11 @@ namespace extensions {
 
 	  private:
 		/// Members used for type mapping
-		std::map<std::string, insieme::core::TypePtr> typeIrMap;
+		struct TypeMappingEntry {
+			const std::regex pattern;
+			const insieme::core::TypePtr irType;
+		};
+		std::vector<TypeMappingEntry> typeIrMappings;
 
 		using CodeExtractor = std::function<insieme::core::TypePtr(const clang::RecordDecl* recordDecl, const insieme::core::TypePtr& irType)>;
 		std::map<insieme::core::TypePtr, CodeExtractor> placeholderReplacer;
