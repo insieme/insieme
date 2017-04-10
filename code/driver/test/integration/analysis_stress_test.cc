@@ -45,6 +45,7 @@
 #include <boost/filesystem/fstream.hpp>
 
 #include "insieme/core/annotations/source_location.h"
+#include "insieme/core/dump/json_dump.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/inspyer/inspyer.h"
 
@@ -144,7 +145,7 @@ namespace integration {
 			NodeManager manager;
 			IRBuilder builder(manager);
 			ProgramPtr code = testCase.load(manager);
-			inspyer::MetaGenerator meta(code);
+			auto& meta = manager.getMetaGenerator();
 
 
 			const auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
@@ -231,7 +232,7 @@ namespace integration {
 				auto dump_file_meta = (dump_dir / (filename + "_meta.json")).string();
 
 				std::ofstream out_dump(dump_file);
-				inspyer::dumpTree(out_dump, code);
+				dump::json::dumpIR(out_dump, code);
 
 				std::ofstream out_meta(dump_file_meta);
 				meta.dump(out_meta);

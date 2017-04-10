@@ -54,7 +54,6 @@ namespace insieme {
 namespace core {
 namespace inspyer {
 
-
 	TEST(InspyerMeta, Base) {
 		NodeManager managerA;
 		IRBuilder builder(managerA);

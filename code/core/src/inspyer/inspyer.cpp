@@ -40,8 +40,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
-#include "insieme/core/dump/json_dump.h"
-
 #include "insieme/utils/assert.h"
 #include "insieme/utils/string_utils.h"
 
@@ -52,7 +50,7 @@ namespace insieme {
 namespace core {
 namespace inspyer {
 
-	MetaGenerator default_meta {nullptr};
+	MetaGenerator::MetaGenerator() = default;
 
 	MetaGenerator::MetaGenerator(const NodePtr root) : root(root) {};
 
@@ -116,34 +114,6 @@ namespace inspyer {
 		meta.put_child("labels", detail::map2ptree(labels));
 		meta.put_child("bodies", detail::map2ptree(bodies));
 		write_json(out, meta);
-	}
-
-	void addBookmark(const NodeAddress addr) {
-		default_meta.addBookmark(addr);
-	}
-
-	void addExpand(const NodeAddress addr) {
-		default_meta.addExpand(addr);
-	}
-
-	void addHighlight(const NodeAddress addr) {
-		default_meta.addHighlight(addr);
-	}
-
-	void addLabel(const NodeAddress addr, const string label) {
-		default_meta.addLabel(addr, label);
-	}
-
-	void addBody(const NodeAddress addr, const string body) {
-		default_meta.addBody(addr, body);
-	}
-
-	void dumpTree(ostream& out, const NodePtr root) {
-		dump::json::dumpIR(out, root);
-	}
-
-	void dumpMeta(ostream& out) {
-		default_meta.dump(out);
 	}
 
 } // end namespace inspyer

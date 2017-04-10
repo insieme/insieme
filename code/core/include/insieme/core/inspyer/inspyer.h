@@ -60,6 +60,7 @@ namespace inspyer {
 		void checkRoot(const NodePtr root);
 
 	  public:
+		MetaGenerator();
 		explicit MetaGenerator(const NodePtr root);
 		void addBookmark(const NodeAddress addr);
 		void addExpand(const NodeAddress addr);
@@ -68,20 +69,6 @@ namespace inspyer {
 		void addBody(const NodeAddress addr, const std::string body);
 		void dump(std::ostream& out);
 	};
-
-	void addBookmark(const NodeAddress addr);
-
-	void addExpand(const NodeAddress addr);
-
-	void addHighlight(const NodeAddress addr);
-
-	void addLabel(const NodeAddress addr, const std::string label);
-
-	void addBody(const NodeAddress addr, const std::string body);
-
-	void dumpTree(std::ostream& out, const NodePtr root);
-
-	void dumpMeta(std::ostream& out);
 
 } // end namespace inspyer
 } // end namespace core
