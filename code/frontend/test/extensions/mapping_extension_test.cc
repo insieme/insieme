@@ -44,22 +44,65 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
+	core::ExpressionPtr singleBarMapper(const detail::ClangExpressionInfo& exprInfo) {
+		auto& builder = exprInfo.converter.getIRBuilder();
+		auto funType = builder.functionType(builder.getLangBasic().getInt4(), builder.getLangBasic().getUnit());
+		return builder.callExpr(builder.literal("singleBar", funType), exprInfo.converter.convertExpr(exprInfo.args[0]));
+	}
+
+	struct MultipleBarMapper {
+		core::ExpressionPtr operator()(const detail::ClangExpressionInfo& exprInfo) {
+			auto& builder = exprInfo.converter.getIRBuilder();
+			core::ExpressionList args;
+			core::TypeList paramTypes;
+			for(const auto& arg : exprInfo.args) {
+				args.push_back(exprInfo.converter.convertExpr(arg));
+				paramTypes.push_back(builder.getLangBasic().getInt4());
+			}
+			auto funType = builder.functionType(paramTypes, builder.getLangBasic().getUnit());
+			return builder.callExpr(builder.literal("multipleBar", funType), args);
+		}
+	};
+
 	class DummyMappingExtension : public MappingFrontendExtension {
 
 		std::map<std::string, std::string> getTypeMappings() override {
-			static std::map<std::string, std::string> mappings = {
+			return {
 				{ "Simple.*", "simple" }, // simple mapping. Note that the pattern can match against the fully qualified name using a regex
 				{ ".*Templates", "templates<TEMPLATE_T_1,TEMPLATE_T_0,TEMPLATE_T_3>" }, // extract template arguments
 				{ "ns::ToTuple", "('TEMPLATE_T_0...)" }, // create tuple types - here from a template argument type
 				{ "ns::ToTupleType", "extracted_tuple<TUPLE_TYPE_0<TUPLE_TYPE_0<('TEMPLATE_T_0...)>>>" }, // extract the element type of an IR tuple type
 				{ "EnclosingType<.*>::NestedType", "nested<TUPLE_TYPE_0<('ENCLOSING_TEMPLATE_T_0...)>>" }, // extract template args types from enclosing type
+
+				// type mappings for expr tests below
+				{ "Foo", "foo" },
 			};
-			return mappings;
+		}
+
+		std::vector<detail::FilterMapper> getExprMappings() override {
+			auto makeFoo = [](const detail::ClangExpressionInfo& exprInfo) {
+				auto& builder = exprInfo.converter.getIRBuilder();
+				auto funType = builder.functionType(core::TypeList(), builder.genericType("foo"));
+				return builder.callExpr(builder.literal("makeFoo", funType), core::ExpressionList());
+			};
+
+			return {
+				{ "Foo::Foo", 0, makeFoo },       // default ctor
+				{ "foo.*",  makeFoo },            // matches calls to foo.* - implementation in a lambda
+				{ "bar.*", 1, singleBarMapper },  // matches calls to bar.* with one param - implementation in a function
+				{ "bar.*", MultipleBarMapper() }, // matches calls to bar.* with pultiple params. The above entry will have priority over this one - implementation is a class
+			};
 		}
 	};
 
-	TEST(MappingTest, TypeMapping) {
+	TEST(MappingTest, Types) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/mapping_types.cpp", [](ConversionJob& job) {
+			job.registerFrontendExtension<extensions::DummyMappingExtension, extensions::TestPragmaExtension>();
+		});
+	}
+
+	TEST(MappingTest, Exprs) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/mapping_exprs.cpp", [](ConversionJob& job) {
 			job.registerFrontendExtension<extensions::DummyMappingExtension, extensions::TestPragmaExtension>();
 		});
 	}

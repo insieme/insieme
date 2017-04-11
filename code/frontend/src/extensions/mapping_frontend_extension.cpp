@@ -51,7 +51,7 @@ namespace extensions {
 
 	/// Pre-visit expressions
 	core::ExpressionPtr MappingFrontendExtension::Visit(const clang::Expr* expr, conversion::Converter& converter) {
-		return nullptr;
+		return mapExpr(expr, converter);
 	}
 
 	/// Pre-visit types
@@ -76,7 +76,15 @@ namespace extensions {
 		return builder.parseType(code);
 	}
 
+	/// The default expr mappings are empty
+	std::vector<detail::FilterMapper> MappingFrontendExtension::getExprMappings() {
+		return {};
+	}
+
 	//----------- Implementation -----------------------------------------------------------------------------------------------------------------------#
+
+	/// Set this flag to true to get some debug output during type and expr mapping
+	static bool debug = false;
 
 	/// Maximum number of template arguments we can map
 	const unsigned MAX_MAPPED_TEMPLATE_ARGS = 8;
@@ -179,6 +187,7 @@ namespace extensions {
 		if(auto recordType = llvm::dyn_cast<clang::RecordType>(type)) {
 			auto recordDecl = recordType->getDecl();
 			auto name = recordDecl->getQualifiedNameAsString();
+			if(debug) std::cout << "Trying to match type: " << name << std::endl;
 
 			// replace if we have a map entry matching this name
 			for(const auto& mapping : typeIrMappings) {
@@ -196,11 +205,97 @@ namespace extensions {
 						}
 						return typeIn;
 					});
+					if(debug) std::cout << "  Found match: " << *ret << std::endl;
 					break;
 				}
 			}
 		}
 		return ret;
+	}
+
+	core::ExpressionPtr MappingFrontendExtension::mapExpr(const clang::Expr* expr, conversion::Converter& converter) {
+		// initialization once
+		if(exprMappings.empty()) {
+			exprMappings = getExprMappings();
+		}
+
+		// perform the actual mapping
+		// we handle certain calls specially, which we differentiate by their callee's name
+		const clang::Decl* decl = nullptr;
+
+		// the entries in our expression mappings apply to calls and constructor calls
+		if(auto call = llvm::dyn_cast<clang::CallExpr>(expr)) {
+			decl = call->getCalleeDecl();
+		}
+		if(auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(expr)) {
+			decl = constructExpr->getConstructor();
+		}
+
+		// if we found a decl, we get it's fully qualified name and do a lookup in our map
+		if(auto funDecl = llvm::dyn_cast_or_null<clang::FunctionDecl>(decl)) {
+			auto name = funDecl->getQualifiedNameAsString();
+			if(debug) {
+				std::cout << "Trying to match expr: " << name << "  from line: "
+						<< insieme::frontend::utils::location(funDecl->getLocStart(), funDecl->getASTContext().getSourceManager()) << std::endl;
+			}
+
+			for(const auto& mapping : exprMappings) {
+				if(mapping.matches(funDecl)) {
+					if(debug) std::cout << "  Found match: " << mapping.getFilterRepresentation() << std::endl;
+					// perform the actual mapping
+					return mapping.getCallMapper()(detail::ClangExpressionInfo::getClangExpressionInfo(expr, converter));
+				}
+			}
+		}
+
+		return nullptr;
+	}
+
+
+	namespace detail {
+		ClangExpressionInfo ClangExpressionInfo::getClangExpressionInfo(const clang::Expr* expr, conversion::Converter& converter) {
+			// check preconditions
+			auto callExpr = llvm::dyn_cast<clang::CallExpr>(expr);
+			auto memberCallExpr = llvm::dyn_cast<clang::CXXMemberCallExpr>(expr);
+			auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(expr);
+			assert_true(callExpr || constructExpr) << "Passed expr must either be a CallExpr or CXXConstructExpr";
+
+			// fill fields
+			auto numArgs = callExpr ? callExpr->getNumArgs() : constructExpr->getNumArgs();
+			std::vector<const clang::Expr*> args;
+			for(auto arg : (callExpr ? callExpr->arguments() : constructExpr->arguments())) {
+				args.push_back(arg);
+			}
+			auto clangType = expr->getType();
+			auto implicitObjectArgument = memberCallExpr ? memberCallExpr->getImplicitObjectArgument() : nullptr;
+			auto isMemberCall = llvm::isa<clang::CXXMemberCallExpr>(expr);
+			auto isOperatorCall = llvm::isa<clang::CXXOperatorCallExpr>(expr);
+			auto isConstructorCall = llvm::isa<clang::CXXConstructExpr>(expr);
+			auto locStart = expr->getLocStart();
+
+			return {expr, numArgs, args, clangType, implicitObjectArgument, isMemberCall, isOperatorCall, isConstructorCall, locStart, converter};
+		}
+
+		bool RegexCallFilter::matches(const clang::FunctionDecl* funDecl) const {
+			return std::regex_match(funDecl->getQualifiedNameAsString(), pattern);
+		}
+
+		const std::string RegexCallFilter::getFilterRepresentation() const {
+			return patternString;
+		}
+
+		bool NumParamRegexCallFilter::matches(const clang::FunctionDecl* funDecl) const {
+			unsigned clangNumParams = funDecl->getNumParams();
+			auto primaryTemplate = funDecl->getPrimaryTemplate();
+			if(primaryTemplate) {
+				clangNumParams = primaryTemplate->getTemplatedDecl()->getNumParams();
+			}
+			return clangNumParams == numParams && std::regex_match(funDecl->getQualifiedNameAsString(), pattern);
+		}
+
+		const std::string NumParamRegexCallFilter::getFilterRepresentation() const {
+			return patternString + " [" + toString(numParams) + " params version]";
+		}
 	}
 
 } // extensions

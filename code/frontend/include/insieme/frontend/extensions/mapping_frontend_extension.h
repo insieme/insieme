@@ -42,6 +42,7 @@
 #include <string>
 #include <regex>
 #include <map>
+#include <vector>
 
 #include "insieme/frontend/clang.h"
 #include "insieme/core/ir_node.h"
@@ -50,6 +51,14 @@
 namespace insieme {
 namespace frontend {
 namespace extensions {
+
+	namespace detail {
+		/// Entry in the internal type map
+		struct TypeMappingEntry;
+
+		/// Entry in the expression map
+		class FilterMapper;
+	}
 
 	/**
 	 * An Extension which allows to more easily build custom extensions which perform simple type and expression mappings based on regex patterns.
@@ -72,7 +81,7 @@ namespace extensions {
 	  protected:
 		/**
 		 * This is the actual interface for type mappings.
-		 * A subclass can return a map containing the rules on how to map types. the keys in the map are interpreted as regex strings and matched
+		 * A subclass can return a map containing the rules on how to map types. The keys in the map are interpreted as regex strings and matched
 		 * against the fully qualified name of the declaration of the corresponding type. If the regex matches, then the corresponding value is used
 		 * to build a new type. This type construction supports certain special syntax patterns to extract different elements of the translated type.
 		 *
@@ -80,6 +89,8 @@ namespace extensions {
 		 * a look at the unit test which tests all this functionality at:
 		 * @see insieme/code/frontend/test/extensions/mapping_extension_test.cc
 		 * @see insieme/code/frontend/test/inputs/conversion/mapping_types.cpp
+		 *
+		 * Note that this function will only be called once (unless you return an empty map, which is the default implementation).
 		 */
 		virtual std::map<std::string, std::string> getTypeMappings();
 
@@ -91,21 +102,151 @@ namespace extensions {
 		 */
 		virtual core::TypePtr parseTypeForTypeMapping(const core::IRBuilder& builder, const std::string& code);
 
+		/**
+		 * This is the actual interface for expr mappings.
+		 * A subclass can return a vector containing the rules on how to map expressions.
+		 * The returned vector contains detail::FilterMapper objects, which allow filtering clang objects based upon regex (and even more) and also
+		 * returns an object which can be called to do the actual mapping. detail::FilterMapper provides two conversion constructors supporting
+		 * simple name-based regex matching as well as the additional matching on the number of parameters in the declaration to match.
+		 *
+		 * For concrete examples on the supported patterns, and how to use this mapping facility have a look at the unit test which tests all this
+		 * functionality at:
+		 * @see insieme/code/frontend/test/extensions/mapping_extension_test.cc
+		 * @see insieme/code/frontend/test/inputs/conversion/mapping_types.cpp
+		 *
+		 * Note that this function will only be called once (unless you return an empty vecor, which is the default implementation).
+		 * Also note, that the returned list will always be iterated from beginning to end and thus this allows to specify priorities when matching.
+		 */
+		virtual std::vector<detail::FilterMapper> getExprMappings();
+
 
 	  private:
 		/// Members used for type mapping
-		struct TypeMappingEntry {
-			const std::regex pattern;
-			const insieme::core::TypePtr irType;
-		};
-		std::vector<TypeMappingEntry> typeIrMappings;
+		std::vector<detail::TypeMappingEntry> typeIrMappings;
 
 		using CodeExtractor = std::function<insieme::core::TypePtr(const clang::RecordDecl* recordDecl, const insieme::core::TypePtr& irType)>;
 		std::map<insieme::core::TypePtr, CodeExtractor> placeholderReplacer;
 
+
+		/// Members used for expr mapping
+		std::vector<detail::FilterMapper> exprMappings;
+
+
 		/// performs the actual type mapping
 		core::TypePtr mapType(const clang::Type* type, conversion::Converter& converter);
+
+		/// performs the actual expr mapping
+		core::ExpressionPtr mapExpr(const clang::Expr* expr, conversion::Converter& converter);
 	};
+
+
+	namespace detail {
+		/// Entry in the internal type map
+		struct TypeMappingEntry {
+			const std::regex pattern;
+			const insieme::core::TypePtr irType;
+		};
+
+
+		/// An object passed to the call CallMapper for a matching FilterMapper (see below). Used to represent the clang node and it's arguments.
+		struct ClangExpressionInfo {
+
+			const clang::Expr* sourceExpression;
+
+			const unsigned numArgs;
+
+			const std::vector<const clang::Expr*> args;
+
+			const clang::QualType clangType;
+
+			const clang::Expr* implicitObjectArgument;
+
+			const bool isMemberCall;
+
+			const bool isOperatorCall;
+
+			const bool isConstructorCall;
+
+			const clang::SourceLocation locStart;
+
+			insieme::frontend::conversion::Converter& converter;
+
+			static ClangExpressionInfo getClangExpressionInfo(const clang::Expr* expr, conversion::Converter& converter);
+
+		private:
+			ClangExpressionInfo(const clang::Expr* sourceExpression, const unsigned numArgs, const std::vector<const clang::Expr*> args,
+			                    const clang::QualType clangType, const clang::Expr* implicitObjectArgument,
+			                    const bool isMemberCall, const bool isOperatorCall, const bool isConstructorCall, const clang::SourceLocation locStart,
+			                    conversion::Converter& converter) :
+			                    	sourceExpression(sourceExpression), numArgs(numArgs), args(args), clangType(clangType), implicitObjectArgument(implicitObjectArgument),
+			                    	isMemberCall(isMemberCall), isOperatorCall(isOperatorCall),
+			                    	isConstructorCall(isConstructorCall), converter(converter) { }
+		};
+
+		/// The type used to perform expr mapping. Can be expressed by a class with an overloaded call operator
+		using CallMapper = std::function<insieme::core::ExpressionPtr(const ClangExpressionInfo&)>;
+
+		/// A filter matching the qualified name of the passed FunctionDecl against a regex
+		class RegexCallFilter {
+
+		  protected:
+			const std::string patternString;
+
+			const std::regex pattern;
+
+		  public:
+			RegexCallFilter(const std::string& patternString) : patternString(patternString), pattern(std::regex(patternString)) { }
+
+			virtual bool matches(const clang::FunctionDecl* funDecl) const;
+
+			virtual const std::string getFilterRepresentation() const;
+		};
+
+		/// A filter matching the qualified name of the passed FunctionDecl against a regex and also comparing the number of parameters
+		class NumParamRegexCallFilter : public RegexCallFilter {
+
+			const unsigned numParams;
+
+		  public:
+			NumParamRegexCallFilter(const std::string& patternString, const unsigned numParams) : RegexCallFilter(patternString), numParams(numParams) { }
+
+			virtual bool matches(const clang::FunctionDecl* funDecl) const override;
+
+			virtual const std::string getFilterRepresentation() const override;
+		};
+
+		/// The mapper which combines a filter and the corresponding CallMapper
+		class FilterMapper {
+
+			const std::shared_ptr<RegexCallFilter> filter;
+
+			const CallMapper mapper;
+
+		  public:
+			/// Constructs a FilterMapper with the given regexp
+			FilterMapper(const char* filterString, const CallMapper& mapper)
+					: filter(std::make_shared<RegexCallFilter>(filterString)), mapper(mapper) { }
+
+			/// Constructs a FilterMapper with the given regexp and the number of parameters
+			FilterMapper(const char* filterString, const unsigned numParams, const CallMapper& mapper)
+					: filter(std::make_shared<NumParamRegexCallFilter>(filterString, numParams)), mapper(mapper) { }
+
+			/// Checks whether this filter matches the given FunctionDecl
+			bool matches(const clang::FunctionDecl* funDecl) const {
+				return filter->matches(funDecl);
+			};
+
+			/// Returns the representation of the used pattern
+			const std::string getFilterRepresentation() const {
+				return filter->getFilterRepresentation();
+			}
+
+			/// Returns the CallMapper used for this Filter
+			const CallMapper& getCallMapper() const {
+				return mapper;
+			}
+		};
+	}
 
 }
 }
