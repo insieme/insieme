@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
 
 	// Step 1: parse input parameters
 	auto parser = driver::cmd::Options::getParser();
-	// register common options and flags needed by more then one driver
+	// register common options and flags needed by more than one driver
 	commonOptions.addFlagsAndParameters(parser);
 
 	// register insiemecc specific flags and parameters

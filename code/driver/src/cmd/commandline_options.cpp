@@ -89,6 +89,7 @@ namespace cmd {
 				boost::program_options::basic_command_line_parser<char>(args)
 						.options(desc)
 						.style((boost::program_options::command_line_style::default_style |
+								boost::program_options::command_line_style::short_allow_adjacent |
 								boost::program_options::command_line_style::allow_long_disguise) ^ boost::program_options::command_line_style::allow_guessing)
 						.allow_unregistered()
 				.positional(pos)

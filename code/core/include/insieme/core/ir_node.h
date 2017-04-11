@@ -518,10 +518,13 @@ namespace core {
 	// 									Node Manager
 	// **********************************************************************************
 
-	// two forward declarations required by the node manager
+	// forward declarations required by the node manager
 	namespace lang {
 		class BasicGenerator;
 		class Extension;
+	}
+	namespace inspyer {
+		class MetaGenerator;
 	}
 
 	/**
@@ -584,6 +587,11 @@ namespace core {
 			 * A static generator for generating IDs
 			 */
 			utils::SimpleIDGenerator<unsigned> idGenerator;
+
+			/**
+			 * An instance of the INSPYER MetaGenerator
+			 */
+			std::unique_ptr<inspyer::MetaGenerator> metaGenerator;
 
 			/**
 			 * A constructor for this data structure.
@@ -671,6 +679,13 @@ namespace core {
 		 */
 		void setNextFreshID(unsigned value) {
 			data->idGenerator.setNext(value);
+		}
+
+		/**
+		 * Obtains a reference to the INSPYER MetaGenerator of this node manager.
+		 */
+		inspyer::MetaGenerator& getMetaGenerator() const {
+			return *data->metaGenerator;
 		}
 
 		/**

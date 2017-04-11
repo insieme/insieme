@@ -357,7 +357,7 @@ namespace c_ast {
 	bool Initializer::equals(const Node& node) const {
 		assert(dynamic_cast<const Initializer*>(&node));
 		auto other = static_cast<const Initializer&>(node);
-		return equalTarget(type, other.type) && ::equals(values, other.values, equal_target<NodePtr>());
+		return equalTarget(type, other.type) && equalTarget(target, other.target) && ::equals(values, other.values, equal_target<NodePtr>());
 	}
 
 	bool DesignatedInitializer::equals(const Node& node) const {

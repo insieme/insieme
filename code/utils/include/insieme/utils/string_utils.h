@@ -207,6 +207,11 @@ namespace utils {
 	 */
 	string removeCppStyleComments(const string& in);
 
+	/**
+	 * Removes lines starting with # from the input string
+	 */
+	string removePragmas(const string& in);
+
 }
 }
 

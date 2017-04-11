@@ -138,10 +138,13 @@ namespace utils {
 		for(auto extension : converter.getConversionSetup().getExtensions()) {
 			auto retIr = extension->Visit(constructExpr, converter);
 			if(retIr) {
-				auto call = retIr.as<core::CallExprPtr>();
-				auto args = call.getArgumentList();
-				args[0] = memLoc;
-				return converter.getIRBuilder().callExpr(call.getType(), call.getFunctionExpr(), args);
+				if(retIr.isa<core::CallExprPtr>()) {
+					auto call = retIr.as<core::CallExprPtr>();
+					auto args = call.getArgumentList();
+					args[0] = memLoc;
+					return converter.getIRBuilder().callExpr(call.getType(), call.getFunctionExpr(), args);
+				}
+				return retIr;
 			}
 		}
 

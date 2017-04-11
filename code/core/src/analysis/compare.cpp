@@ -46,6 +46,7 @@
 #include "insieme/utils/string_utils.h"
 
 #include "insieme/core/annotations/source_location.h"
+#include "insieme/core/dump/json_dump.h"
 #include "insieme/core/inspyer/inspyer.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
@@ -137,7 +138,7 @@ namespace analysis {
 
 	namespace {
 
-		void irDiff_internal(NodeAddress nodeA, NodeAddress nodeB, const string& nameA, const string& nameB, size_t contextSize, inspyer::MetaGenerator& meta) {
+		void irDiff_internal(NodeAddress nodeA, NodeAddress nodeB, const string& nameA, const string& nameB, size_t contextSize) {
 			const auto& locString = core::annotations::getLocationString(nodeA);
 
 			auto maxLen = std::max(nameA.length(), nameB.length());
@@ -150,7 +151,7 @@ namespace analysis {
 					      << "\t" << std::setw(maxLen) << nameA << ": " << dumpColor(safeGetParent(nodeA, contextSize)) << "\t" << std::setw(maxLen) << nameB
 					      << ": " << dumpColor(safeGetParent(nodeB, contextSize)) << "\tLOC(" << locString << ")\n";
 
-				meta.addBookmark(nodeA);
+				nodeA.getNodeManager().getMetaGenerator().addBookmark(nodeA);
 			};
 
 			if(nodeA->getNodeType() != nodeB->getNodeType()) { reportError("Node types differ", "NT", nodeA->getNodeType(), nodeB->getNodeType()); }
@@ -189,20 +190,20 @@ namespace analysis {
 			}
 
 			for(size_t i = 0; i < aChildren.size(); ++i) {
-				irDiff_internal(aChildren[i], bChildren[i], nameA, nameB, contextSize, meta);
+				irDiff_internal(aChildren[i], bChildren[i], nameA, nameB, contextSize);
 			}
 		}
 	}
 
 	void irDiff(NodeAddress nodeA, NodeAddress nodeB, const string& nameA, const string& nameB, size_t contextSize) {
-		inspyer::MetaGenerator meta(nodeA.getRootNode());
-		irDiff_internal(nodeA, nodeB, nameA, nameB, contextSize, meta);
+		auto& meta = nodeA.getNodeManager().getMetaGenerator();
+		irDiff_internal(nodeA, nodeB, nameA, nameB, contextSize);
 		if(getenv(INSIEME_INSPYER) != nullptr) {
 			std::cout << "Dumping INSPYER... " << std::flush;
 			std::ofstream nodeA_out(nameA + ".json"), nodeB_out(nameB + ".json"), meta_out(nameA + "_meta.json");
 			meta.dump(meta_out);
-			inspyer::dumpTree(nodeA_out, nodeA.getRootNode());
-			inspyer::dumpTree(nodeB_out, nodeB.getRootNode());
+			dump::json::dumpIR(nodeA_out, nodeA.getRootNode());
+			dump::json::dumpIR(nodeB_out, nodeB.getRootNode());
 			std::cout << "done" << std::endl;
 		}
 	}

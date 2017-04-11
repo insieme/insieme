@@ -37,6 +37,8 @@
  */
 #pragma once
 
+#include <vector>
+
 #include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -56,19 +58,19 @@ namespace fs = boost::filesystem;
 namespace ba = boost::algorithm;
 
 	namespace detail {
-		boost::optional<fs::path> getInterceptedLibHeader(const std::set<fs::path>& userIncludeDirs, const std::set<fs::path>& interceptedHeaderDirs,
+		boost::optional<fs::path> getInterceptedLibHeader(const std::vector<fs::path>& userIncludeDirs, const std::vector<fs::path>& interceptedHeaderDirs,
 		                                                  const fs::path& path);
 	}
 
 /**
- * class which helps finding the more suitable header for a declaration, not allways top
+ * class which helps finding the more suitable header for a declaration, not always top
  * level since we might have a system header included deep in a includes chain.
  * the most appropriate header has to be computed
  */
 class HeaderTagger {
-	std::set<fs::path> stdLibDirs;
-	std::set<fs::path> interceptedHeaderDirs;
-	std::set<fs::path> userIncludeDirs;
+	std::vector<fs::path> stdLibDirs;
+	std::vector<fs::path> interceptedHeaderDirs;
+	std::vector<fs::path> userIncludeDirs;
 	const clang::SourceManager& sm;
 
 	mutable std::map<clang::FileID, std::pair<std::string, bool>> isStdCache;
@@ -108,7 +110,9 @@ class HeaderTagger {
 
 
   public:
-	HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& interceptedHeaderDirs, const vector<fs::path>& userIncludeDirs,
+	HeaderTagger(const vector<fs::path>& stdLibDirs,
+	             const vector<fs::path>& interceptedHeaderDirs,
+	             const vector<fs::path>& userIncludeDirs,
 	             const clang::SourceManager& srcMgr);
 
 	/**

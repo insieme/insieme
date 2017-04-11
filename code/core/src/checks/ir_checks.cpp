@@ -44,6 +44,7 @@
 
 #include "insieme/common/env_vars.h"
 #include "insieme/core/annotations/source_location.h"
+#include "insieme/core/dump/json_dump.h"
 #include "insieme/core/inspyer/inspyer.h"
 #include "insieme/utils/container_utils.h"
 
@@ -389,25 +390,27 @@ namespace checks {
 		if(res) {
 
 			if(getenv(INSIEME_SEMA_INSPYER) != nullptr) {
+				auto& meta = node.getNodeManager().getMetaGenerator();
+
 				auto errors = res->getAll();
 				std::string jsonFile = "insieme_sema_inspyer.json";
 				std::string metaFile = "insieme_sema_inspyer_meta.json";
 				std::cout << "Semantic errors encountered. Dumping JSON representation of program to file " << jsonFile << " ... ";
 				std::cout.flush();
 				std::ofstream jsonOut(jsonFile);
-				core::inspyer::dumpTree(jsonOut, node);
+				core::dump::json::dumpIR(jsonOut, node);
 				std::cout << "done." << std::endl;
 
 				std::cout << "Dumping JSON meta file with error bookmarks to file " << metaFile << " ... ";
 				std::cout.flush();
 				for(auto error : errors) {
-					core::inspyer::addBookmark(error.getOrigin());
+					meta.addBookmark(error.getOrigin());
 					std::string msg = error.getMessage();
 					boost::algorithm::replace_all(msg, "<", "&lt;");
-					core::inspyer::addBody(error.getOrigin(), std::string("<pre>") + msg + "</pre>");
+					meta.addBody(error.getOrigin(), std::string("<pre>") + msg + "</pre>");
 				}
 				std::ofstream metaOut(metaFile);
-				core::inspyer::dumpMeta(metaOut);
+				meta.dump(metaOut);
 				std::cout << "done." << std::endl;
 			}
 

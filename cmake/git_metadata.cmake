@@ -1,4 +1,6 @@
-find_package(Git)
+if(NOT MSVC)
+	find_package(Git)
+endif()
 
 if(GIT_FOUND)
 	# query reference of current commit

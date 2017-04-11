@@ -35,65 +35,35 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-#include "insieme/utils/string_utils.h"
+#include "insieme/frontend/utils/conversion_test_utils.h"
 
-#include <regex>
+#include "insieme/frontend/extensions/mapping_frontend_extension.h"
 
-std::vector<string> split(const string& str) {
-	using namespace std;
-	vector<string> tokens;
-	istringstream iss(str);
-	copy(istream_iterator<string>(iss), istream_iterator<string>(), back_inserter<vector<string>>(tokens));
-	return tokens;
-}
-
-string commonPrefix(string a, string b) {
-	if(a.size() > b.size()) { std::swap(a, b); }
-	return string(a.begin(), std::mismatch(a.begin(), a.end(), b.begin()).first);
-}
-
-bool containsSubString(const string& str, const string& substr) {
-	return str.find(substr) != string::npos;
-}
-
-bool notContainsSubString(const string& str, const string& substr) {
-	return !containsSubString(str, substr);
-}
-
-bool containsNTimesSubString(const string& str, const string& substr, const int n) {
-	int count = 0;
-	for(size_t offset = str.find(substr); offset != string::npos; offset = str.find(substr, offset + substr.length())) {
-		count++;
-	}
-	return (count == n);
-}
-
-string camelcaseToUnderscore(const string input) {
-	string output;
-
-	for(char s : input) {
-		if(std::isupper(s)) {
-			if(!output.empty()) { output.push_back('_'); }
-			output.push_back((char)tolower(s));
-		} else {
-			output.push_back(s);
-		}
-	}
-
-	return output;
-}
 
 namespace insieme {
-namespace utils {
+namespace frontend {
+namespace extensions {
 
-	string removeCppStyleComments(const string& in) {
-		const static std::regex comments(R"((//.*)|(/\*(?:.|\r|\n)*?\*/))");
-		return std::regex_replace(in, comments, "");
+	class DummyMappingExtension : public MappingFrontendExtension {
+
+		std::map<std::string, std::string> getTypeMappings() override {
+			static std::map<std::string, std::string> mappings = {
+				{ "Simple.*", "simple" }, // simple mapping. Note that the pattern can match against the fully qualified name using a regex
+				{ ".*Templates", "templates<TEMPLATE_T_1,TEMPLATE_T_0,TEMPLATE_T_3>" }, // extract template arguments
+				{ "ns::ToTuple", "('TEMPLATE_T_0...)" }, // create tuple types - here from a template argument type
+				{ "ns::ToTupleType", "extracted_tuple<TUPLE_TYPE_0<TUPLE_TYPE_0<('TEMPLATE_T_0...)>>>" }, // extract the element type of an IR tuple type
+				{ "EnclosingType<.*>::NestedType", "nested<TUPLE_TYPE_0<('ENCLOSING_TEMPLATE_T_0...)>>" }, // extract template args types from enclosing type
+			};
+			return mappings;
+		}
+	};
+
+	TEST(MappingTest, TypeMapping) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/mapping_types.cpp", [](ConversionJob& job) {
+			job.registerFrontendExtension<extensions::DummyMappingExtension, extensions::TestPragmaExtension>();
+		});
 	}
 
-	string removePragmas(const string& in) {
-		const static std::regex comments(R"((#.*))");
-		return std::regex_replace(in, comments, "");
-	}
-}
-}
+} // extensions namespace
+} // fe namespace
+} // insieme namespace

@@ -48,9 +48,6 @@
 
 #include "insieme/driver/integration/tests.h"
 
-#include "insieme/core/inspyer/inspyer.h"
-
-
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -61,7 +58,7 @@ namespace datalog {
 	auto quickDump = [](const NodePtr &node, const string &file = "insieme_ir_text_dump.txt") {
 		std::ofstream outputFile(file);
 		if (outputFile.is_open()) {
-			core::inspyer::dumpTree(outputFile, node);
+			core::dump::json::dumpIR(outputFile, node);
 			outputFile.close();
 		} else {
 			std::cerr << "Could not open file!" << std::endl;

@@ -63,6 +63,15 @@ namespace core {
 		return getId() < var.getId() || (getId() == var.getId() && *getType() < *var.getType());
 	}
 
+	VariablePtr Variable::get(NodeManager & manager, const TypePtr& type) {
+		unsigned id = manager.getFreshID();
+		// Variable var(type,UIntValue::get(manager, id));
+		while(manager.contains(Variable(type, UIntValue::get(manager, id)))) {
+			id = manager.getFreshID();
+		}
+		return manager.get(Variable(type, UIntValue::get(manager, id)));
+	}
+
 	bool Literal::operator<(const Literal& var) const {
 		LiteralPtr other(&var);
 		if(getStringValue() < other->getStringValue()) { return true; }

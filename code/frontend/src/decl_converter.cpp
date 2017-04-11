@@ -171,12 +171,14 @@ namespace conversion {
 				}
 				// handle ConstructExprs
 				if(auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(clangInitExpr)) {
-					auto converted = utils::convertConstructExpr(converter, constructExpr, irMember).as<core::CallExprPtr>();
-					// cast "this" as required for base constructor calls
-					auto targetObjType = core::analysis::getObjectType(converted->getFunctionExpr()->getType());
-					auto adjustedArgs = converted->getArgumentList();
-					adjustedArgs[0] = core::lang::buildRefParentCast(adjustedArgs[0], targetObjType);
-					converted = builder.callExpr(converted->getType(), converted->getFunctionExpr(), adjustedArgs);
+					auto converted = utils::convertConstructExpr(converter, constructExpr, irMember);
+					if(auto convertedCall = converted.isa<core::CallExprPtr>()) {
+						// cast "this" as required for base constructor calls
+						auto targetObjType = core::analysis::getObjectType(convertedCall->getFunctionExpr()->getType());
+						auto adjustedArgs = convertedCall->getArgumentList();
+						adjustedArgs[0] = core::lang::buildRefParentCast(adjustedArgs[0], targetObjType);
+						converted = builder.callExpr(convertedCall->getType(), convertedCall->getFunctionExpr(), adjustedArgs);
+					}
 					retStmts.push_back(converted);
 					continue;
 				}

@@ -103,7 +103,7 @@ namespace backend {
 				ref_kind_cast(ref_temp_init(v2), type_lit(cpp_rref));
 				return 0;
 			}
-		)", true, utils::compiler::Compiler::getDefaultCppCompiler(), {
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			;
 		})
 	}
@@ -202,7 +202,7 @@ namespace backend {
 				IMP_takeT_int__lbracket_3_rbracket__returns_void(ref_kind_cast(v0, type_lit(cpp_ref)));
 				return 0;
 			}
-		)", true, utils::compiler::Compiler::getDefaultCppCompiler(), {
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			;
 		})
 	}
@@ -411,7 +411,6 @@ namespace backend {
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			EXPECT_PRED2(containsSubString, code, "include <assert.h>");
 			EXPECT_PRED2(containsSubString, code, "assert(");
 			EXPECT_PRED2(containsSubString, code, "\"This is an Insieme generated dummy function which should never be called\"");
 		})
@@ -566,7 +565,7 @@ namespace backend {
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			EXPECT_PRED2(containsSubString, code, "IMP_S& IMP_j(IMP_S& v57)");
 			EXPECT_PRED2(containsSubString, code, "return v57.operator=(INS_INIT(IMP_S){5});");
-			EXPECT_PRED2(containsSubString, code, "IMP_S& operator=(IMP_S const& p2) = default;");
+			EXPECT_PRED2(notContainsSubString, code, "IMP_S& operator=(IMP_S const& p2) = default;");
 		})
 	}
 
@@ -1146,9 +1145,9 @@ namespace backend {
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			EXPECT_PRED2(notContainsSubString, code, "*");
-			EXPECT_PRED2(containsSubString, code, "IMP_A(IMP_A const& p2) = default");
-			EXPECT_PRED2(containsSubString, code, "IMP_A() = default");
-			EXPECT_PRED2(containsSubString, code, "IMP_A(IMP_A&& p2) = default");
+			EXPECT_PRED2(notContainsSubString, code, "IMP_A(IMP_A const& p2) = default");
+			EXPECT_PRED2(notContainsSubString, code, "IMP_A() = default");
+			EXPECT_PRED2(notContainsSubString, code, "IMP_A(IMP_A&& p2) = default");
 		})
 	}
 
@@ -1166,9 +1165,9 @@ namespace backend {
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			EXPECT_PRED2(notContainsSubString, code, "*");
-			EXPECT_PRED2(containsSubString, code, "IMP_A(IMP_A const& p2) = default");
-			EXPECT_PRED2(containsSubString, code, "IMP_A() = default");
-			EXPECT_PRED2(containsSubString, code, "IMP_A(IMP_A&& p2) = default");
+			EXPECT_PRED2(notContainsSubString, code, "IMP_A(IMP_A const& p2) = default");
+			EXPECT_PRED2(notContainsSubString, code, "IMP_A() = default");
+			EXPECT_PRED2(notContainsSubString, code, "IMP_A(IMP_A&& p2) = default");
 		})
 	}
 
@@ -1484,8 +1483,38 @@ namespace backend {
 				IMP_dfun(<ref<IMP_D,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_D)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {1});
 				return 0;
 			}
-		)", true, utils::compiler::Compiler::getDefaultCppCompiler(), {
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			;
+		})
+	}
+
+	TEST(CppSnippet, ReturnGeneralizedInit) {
+		DO_TEST(R"(
+			def struct IMP_Trivial {
+				x : int<4>;
+				ctor function () { }
+				ctor function (v1 : ref<int<4>,f,f,plain>) {
+					<ref<int<4>,f,f,plain>>((this).x) {*v1};
+				}
+			};
+			def IMP_returnTrivial = function () -> IMP_Trivial {
+				return ref_cast(IMP_Trivial::(ref_temp(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref));
+			};
+			def IMP_returnTrivialInit = function () -> IMP_Trivial {
+				return IMP_Trivial::(ref_decl(type_lit(ref<IMP_Trivial,f,f,plain>)));
+			};
+			def IMP_returnTrivialInitWithParam = function () -> IMP_Trivial {
+				return IMP_Trivial::(ref_decl(type_lit(ref<IMP_Trivial,f,f,plain>)), 5);
+			};
+			int<4> main() {
+				IMP_returnTrivial();
+				IMP_returnTrivialInit();
+				IMP_returnTrivialInitWithParam();
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "return {5};");
+			EXPECT_PRED2(containsSubString, code, "return {};");
 		})
 	}
 

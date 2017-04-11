@@ -721,6 +721,11 @@ namespace backend {
 			return converter.getCNodeManager()->create<c_ast::Return>();
 		}
 
+		// special handling for in-place construction
+		if(auto directInit = checkDirectConstruction(context, ptr->getReturnDeclaration()->getType(), ptr->getReturnExpr())) {
+			return converter.getCNodeManager()->create<c_ast::Return>(directInit);
+		}
+
 		// return value of return expression
 		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, ptr->getReturnExpr()));
 	}
@@ -770,6 +775,19 @@ namespace backend {
 		return visit(ptr->getSubStatement(), context);
 	}
 
+	insieme::backend::c_ast::ExpressionPtr checkDirectConstruction(ConversionContext& context, const core::TypePtr& targetT, const core::ExpressionPtr& arg) {
+		if(!targetT) return {};
+		if(!(core::lang::isPlainReference(targetT) && core::lang::isPlainReference(arg))) return {};
+		if(!core::analysis::isConstructorCall(arg)) return {};
+		auto thisArg = core::analysis::getArgument(arg, 0);
+		if(!targetT->getNodeManager().getLangExtension<core::lang::ReferenceExtension>().isCallOfRefDecl(thisArg)) return {};
+		// build init expression -- shortcut by building constructor call and taking its arguments
+		StmtConverter& stmtConverter = context.getConverter().getStmtConverter();
+		auto conCall = stmtConverter.convert(context, arg);
+		if(!conCall.isa<c_ast::ConstructorCallPtr>()) conCall = conCall.as<c_ast::UnaryOperationPtr>()->operand;
+		auto constructorCall = conCall.as<c_ast::ConstructorCallPtr>();
+		return c_ast::init(context.getConverter().getCNodeManager().get(), constructorCall->arguments);
+	}
 
 } // end namespace backend
 } // end namespace insieme

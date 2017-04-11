@@ -161,6 +161,12 @@ namespace backend {
 
 	};
 
+	// deal with a very specific case: construction of an object in-place as the argument
+	//                   or return value of a function (without any copies being created)
+	// - in IR, as a non-materializing constructor with a ref_decl as its this parameter
+	// - in C++, it's implemented by performing an in-place construction using the {} syntax
+	// in case direct construction is required, returns the required C AST, otherwise returns a null pointer
+	c_ast::ExpressionPtr checkDirectConstruction(ConversionContext& context, const core::TypePtr& targetT, const core::ExpressionPtr& arg);
 
 } // end namespace backend
 } // end namespace insieme

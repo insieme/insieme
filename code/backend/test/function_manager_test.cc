@@ -258,7 +258,7 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, def, "bool name_mapper(name_closure* closure, float c1, int32_t c3);");
 
 		EXPECT_PRED2(containsSubString, def, "static inline name* name_ctr(name_closure* closure, name* nested, int32_t* c2) {\n"
-		                                     "    *closure = INS_INIT(name_closure){&name_mapper, nested, c2};\n"
+		                                     "    INS_INPLACE_INIT(closure,name_closure){&name_mapper, nested, c2};\n"
 		                                     "    return (name*)closure;\n"
 		                                     "}");
 
@@ -346,7 +346,7 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, def, "bool name_mapper(name_closure* closure, int32_t c2);");
 
 		EXPECT_PRED2(containsSubString, def, "static inline name* name_ctr(name_closure* closure, name* nested, float c1) {\n"
-		                                     "    *closure = INS_INIT(name_closure){&name_mapper, nested, c1};\n"
+		                                     "    INS_INPLACE_INIT(closure,name_closure){&name_mapper, nested, c1};\n"
 		                                     "    return (name*)closure;\n"
 		                                     "}");
 

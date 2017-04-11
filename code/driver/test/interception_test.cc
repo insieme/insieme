@@ -81,18 +81,18 @@ namespace driver {
 
 	TEST(DriverInterceptionTest, Basic) {
 		auto codeString = testCompilation("frontend/test/inputs/interceptor/interceptor_test.cpp");
-		EXPECT_PRED2(notContainsSubString, codeString, "*");
+		EXPECT_PRED2(notContainsSubString, utils::removePragmas(codeString), "*");
 	}
 
 	TEST(DriverInterceptionTest, Templates) {
 		auto codeString = testCompilation("frontend/test/inputs/interceptor/template_interception.cpp");
-		EXPECT_PRED2(notContainsSubString, codeString, "*");
+		EXPECT_PRED2(notContainsSubString, utils::removePragmas(codeString), "*");
 		EXPECT_PRED2(containsSubString, codeString, "templateTemplateFun<TemplateClass,");
 	}
 
 	TEST(DriverInterceptionTest, QualifiedTemplates) {
 		auto codeString = testCompilation("frontend/test/inputs/interceptor/qualified_template_interception.cpp");
-		EXPECT_PRED2(notContainsSubString, codeString, "*");
+		EXPECT_PRED2(notContainsSubString, utils::removePragmas(codeString), "*");
 		EXPECT_PRED2(containsSubString, codeString, "trivialTemplateFun<int32_t&");
 		EXPECT_PRED2(containsSubString, codeString, "trivialTemplateFun<const int32_t");
 		EXPECT_PRED2(containsSubString, codeString, "trivialTemplateFun<int32_t volatile&&");

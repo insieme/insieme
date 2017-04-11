@@ -35,65 +35,69 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-#include "insieme/utils/string_utils.h"
 
-#include <regex>
+struct SimpleClass { };
 
-std::vector<string> split(const string& str) {
-	using namespace std;
-	vector<string> tokens;
-	istringstream iss(str);
-	copy(istream_iterator<string>(iss), istream_iterator<string>(), back_inserter<vector<string>>(tokens));
-	return tokens;
+template<typename T0, typename T1, typename T2, typename T3>
+struct ClassWithTemplates { };
+
+namespace ns {
+	template<typename ... T>
+	struct ToTuple { };
+
+	template<typename ... T>
+	struct ToTupleType { };
 }
 
-string commonPrefix(string a, string b) {
-	if(a.size() > b.size()) { std::swap(a, b); }
-	return string(a.begin(), std::mismatch(a.begin(), a.end(), b.begin()).first);
-}
+template<typename ... T>
+struct EnclosingType {
+	struct NestedType { };
+};
 
-bool containsSubString(const string& str, const string& substr) {
-	return str.find(substr) != string::npos;
-}
+int main() {
+	; // this is required because of the clang compound source location bug
 
-bool notContainsSubString(const string& str, const string& substr) {
-	return !containsSubString(str, substr);
-}
+	// Note that we are dealing with pointers here to test only the type mapping
 
-bool containsNTimesSubString(const string& str, const string& substr, const int n) {
-	int count = 0;
-	for(size_t offset = str.find(substr); offset != string::npos; offset = str.find(substr, offset + substr.length())) {
-		count++;
-	}
-	return (count == n);
-}
-
-string camelcaseToUnderscore(const string input) {
-	string output;
-
-	for(char s : input) {
-		if(std::isupper(s)) {
-			if(!output.empty()) { output.push_back('_'); }
-			output.push_back((char)tolower(s));
-		} else {
-			output.push_back(s);
-		}
+	// simple mapping
+	#pragma test expect_ir(R"({
+		var ref<ptr<simple>,f,f,plain> v0 = ref_decl(type_lit(ref<ptr<simple>,f,f,plain>));
+	})")
+	{
+		SimpleClass* m;
 	}
 
-	return output;
-}
-
-namespace insieme {
-namespace utils {
-
-	string removeCppStyleComments(const string& in) {
-		const static std::regex comments(R"((//.*)|(/\*(?:.|\r|\n)*?\*/))");
-		return std::regex_replace(in, comments, "");
+	// template parameter extraction
+	#pragma test expect_ir(R"({
+		var ref<ptr<templates<int<4>,simple,bool>>,f,f,plain> v1 = ref_decl(type_lit(ref<ptr<templates<int<4>,simple,bool>>,f,f,plain>));
+	})")
+	{
+		ClassWithTemplates<SimpleClass, int, double, bool>* m;
 	}
 
-	string removePragmas(const string& in) {
-		const static std::regex comments(R"((#.*))");
-		return std::regex_replace(in, comments, "");
+	// tuple creation from variadic template arguments
+	#pragma test expect_ir(R"({
+		var ref<ptr<(simple)>,f,f,plain> v2 = ref_decl(type_lit(ref<ptr<(simple)>,f,f,plain>));
+	})")
+	{
+		ns::ToTuple<SimpleClass>* m;
 	}
-}
+
+	// extraction of tuple element type
+	#pragma test expect_ir(R"({
+		var ref<ptr<extracted_tuple<simple>>,f,f,plain> v0 = ref_decl(type_lit(ref<ptr<extracted_tuple<simple>>,f,f,plain>));
+	})")
+	{
+		ns::ToTupleType<ns::ToTuple<SimpleClass>>* m;
+	}
+
+	// extraction of tuple element type from enclosing scope
+	#pragma test expect_ir(R"({
+		var ref<ptr<nested<simple>>,f,f,plain> v0 = ref_decl(type_lit(ref<ptr<nested<simple>>,f,f,plain>));
+	})")
+	{
+		EnclosingType<SimpleClass>::NestedType* m;
+	}
+
+	return 0;
 }

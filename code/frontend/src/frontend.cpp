@@ -102,6 +102,9 @@ namespace frontend {
 		// reset extensions list in case extensions changed, we do not want duplicates
 		extensionList.clear();
 
+		std::vector<path> extensionKidnappedHeaders;
+		std::vector<path> extensionIncludeDirs;
+
 		// register all extensions that should be registered
 		for(auto it = extensions.begin(); it != extensions.end(); ++it) {
 			if(it->second(*this)) {
@@ -109,15 +112,21 @@ namespace frontend {
 
 				// collect the kidnapped headers and add them to the list
 				for(auto kidnappedHeader : it->first->getKidnappedHeaderList()) {
-					addSystemHeadersDirectory(kidnappedHeader);
+					extensionKidnappedHeaders.push_back(kidnappedHeader);
 				}
 
 				// add additional include directories
 				for(auto includeDir : it->first->getIncludeDirList()) {
-					addIncludeDirectory(includeDir);
+					extensionIncludeDirs.push_back(includeDir);
 				}
 			}
 		}
+
+		// we pre-pend the extensions' include directories to ensure they'll end up before any other entries which are already set
+		extensionKidnappedHeaders.insert(extensionKidnappedHeaders.end(), getSystemHeadersDirectories().cbegin(), getSystemHeadersDirectories().cend());
+		setSystemHeadersDirectories(extensionKidnappedHeaders);
+		extensionIncludeDirs.insert(extensionIncludeDirs.end(), getIncludeDirectories().cbegin(), getIncludeDirectories().cend());
+		setIncludeDirectories(extensionIncludeDirs);
 
 		// check pre-requisites
 		for(auto ext : getExtensions()) {
@@ -264,7 +273,6 @@ namespace frontend {
 		    << "NoWarnings " << hasOption(ConversionSetup::NoWarnings) << "\n"
 		    << "NoDefaultExtensions " << hasOption(ConversionSetup::NoDefaultExtensions) << "\n" << std::endl;
 		out << "interceptions: \n" << getInterceptedHeaderDirs() << std::endl;
-		out << "crosscompilation dir: \n" << getCrossCompilationSystemHeadersDir() << std::endl;
 		out << "include dirs: \n" << getIncludeDirectories() << std::endl;
 		out << "definitions: \n" << getDefinitions() << std::endl;
 		out << "libraries: \n" << libs << std::endl;

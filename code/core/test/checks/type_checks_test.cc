@@ -47,6 +47,7 @@
 
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/array.h"
+#include "insieme/core/lang/enum.h"
 
 namespace insieme {
 namespace core {
@@ -1252,14 +1253,20 @@ namespace checks {
 		IRBuilder builder(manager);
 
 		TypePtr intType = builder.getLangBasic().getInt1();
+		TypePtr enumType = core::lang::buildEnumType(core::lang::EnumDefinition::create(builder.genericType("MyEnum"),intType,{}));
 		TypePtr boolType = builder.genericType("bool");
 		ExpressionPtr intLit = builder.literal(intType, "4");
+		ExpressionPtr enumLit = builder.literal(enumType, "X");
 		ExpressionPtr boolLit = builder.literal(boolType, "true");
-		SwitchStmtPtr ok = builder.switchStmt(intLit, vector<SwitchCasePtr>());
+		SwitchStmtPtr ok1 = builder.switchStmt(intLit, vector<SwitchCasePtr>());
+		SwitchStmtPtr ok2 = builder.switchStmt(enumLit, vector<SwitchCasePtr>());
 		SwitchStmtPtr err = builder.switchStmt(boolLit, vector<SwitchCasePtr>());
 
+		EXPECT_TRUE(core::lang::isEnum(enumType));
+
 		CheckPtr typeCheck = make_check<SwitchExpressionTypeCheck>();
-		EXPECT_TRUE(check(ok, typeCheck).empty());
+		EXPECT_TRUE(check(ok1, typeCheck).empty()) << check(ok1, typeCheck);
+		EXPECT_TRUE(check(ok2, typeCheck).empty()) << check(ok2, typeCheck);
 		ASSERT_FALSE(check(err, typeCheck).empty());
 
 		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_SWITCH_EXPR, "", Message::ERROR));

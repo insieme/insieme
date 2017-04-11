@@ -43,6 +43,9 @@
 #include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/core/inspyer/inspyer.h"
+
 #include "insieme/core/dump/text_dump.h"
 
 #include "insieme/core/lang/basic.h"
@@ -202,7 +205,9 @@ namespace core {
 		setNextFreshID(initialFreshID);
 	}
 
-	NodeManager::NodeManagerData::NodeManagerData(NodeManager& manager) : root(manager), basic(new lang::BasicGenerator(manager)){};
+	NodeManager::NodeManagerData::NodeManagerData(NodeManager& manager) : root(manager),
+	                                                                      basic(new lang::BasicGenerator(manager)),
+	                                                                      metaGenerator(new inspyer::MetaGenerator()) {};
 
 
 	NodeManager::NodeManagerData::~NodeManagerData() {

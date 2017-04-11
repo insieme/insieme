@@ -412,11 +412,14 @@ namespace c_ast {
 
 	struct Initializer : public Expression {
 		TypePtr type;
+		ExpressionPtr target;
 		vector<NodePtr> values;
 		Initializer(TypePtr type = TypePtr()) : Expression(NT_Initializer), type(type) {};
 		Initializer(const vector<NodePtr>& values) : Expression(NT_Initializer), values(values) {};
 		Initializer(TypePtr type, const vector<NodePtr>& values)
 		    : Expression(NT_Initializer), type(type), values(values) {};
+		Initializer(TypePtr type, const ExpressionPtr& target, const vector<NodePtr>& values)
+			: Expression(NT_Initializer), type(type), target(target), values(values) {};
 		virtual bool equals(const Node& node) const;
 	};
 

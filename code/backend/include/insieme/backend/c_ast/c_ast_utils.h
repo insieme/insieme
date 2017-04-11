@@ -594,6 +594,11 @@ namespace c_ast {
 		return elements[0]->getManager()->create<c_ast::Initializer>(elements);
 	}
 
+	/// This variant of the init construction can deal with an empty elements list (generating simply "{}")
+	inline InitializerPtr init(CNodeManager* cnodeMan, const vector<c_ast::NodePtr>& elements) {
+		return cnodeMan->create<c_ast::Initializer>(elements);
+	}
+
 	inline DesignatedInitializerPtr init(TypePtr type, IdentifierPtr member, ExpressionPtr value) {
 		return type->getManager()->create<c_ast::DesignatedInitializer>(type, member, value);
 	}

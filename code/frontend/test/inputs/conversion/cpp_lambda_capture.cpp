@@ -35,65 +35,46 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-#include "insieme/utils/string_utils.h"
 
-#include <regex>
-
-std::vector<string> split(const string& str) {
-	using namespace std;
-	vector<string> tokens;
-	istringstream iss(str);
-	copy(istream_iterator<string>(iss), istream_iterator<string>(), back_inserter<vector<string>>(tokens));
-	return tokens;
-}
-
-string commonPrefix(string a, string b) {
-	if(a.size() > b.size()) { std::swap(a, b); }
-	return string(a.begin(), std::mismatch(a.begin(), a.end(), b.begin()).first);
-}
-
-bool containsSubString(const string& str, const string& substr) {
-	return str.find(substr) != string::npos;
-}
-
-bool notContainsSubString(const string& str, const string& substr) {
-	return !containsSubString(str, substr);
-}
-
-bool containsNTimesSubString(const string& str, const string& substr, const int n) {
-	int count = 0;
-	for(size_t offset = str.find(substr); offset != string::npos; offset = str.find(substr, offset + substr.length())) {
-		count++;
+struct C {
+	int x;
+  public:
+	int get() const {
+		return x;
 	}
-	return (count == n);
-}
+};
 
-string camelcaseToUnderscore(const string input) {
-	string output;
+int main() {
+	;
 
-	for(char s : input) {
-		if(std::isupper(s)) {
-			if(!output.empty()) { output.push_back('_'); }
-			output.push_back((char)tolower(s));
-		} else {
-			output.push_back(s);
+	// Test capturing of structs (implicit copy construction)
+
+	#pragma test expect_ir(R"(
+		def struct IMP_C {
+			x : int<4>;
+			const function IMP_get = () -> int<4> {
+				return *(this).x;
+			}
+		};
+		def struct __any_string__lambda_class {
+			capture_0 : IMP_C;
+			const function IMP__operator_call_ = () -> unit {
+				(this).capture_0.IMP_get();
+			}
+		};
+		{
+			var ref<IMP_C,f,f,plain> v0 = IMP_C::(ref_decl(type_lit(ref<IMP_C,f,f,plain>)));
+			var ref<__any_string__lambda_class,f,f,plain> v1 = <ref<__any_string__lambda_class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__lambda_class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {
+				ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))
+			};
 		}
+	)")
+	{
+		C c;
+		auto a = [=] {
+			c.get();
+		};
 	}
 
-	return output;
-}
-
-namespace insieme {
-namespace utils {
-
-	string removeCppStyleComments(const string& in) {
-		const static std::regex comments(R"((//.*)|(/\*(?:.|\r|\n)*?\*/))");
-		return std::regex_replace(in, comments, "");
-	}
-
-	string removePragmas(const string& in) {
-		const static std::regex comments(R"((#.*))");
-		return std::regex_replace(in, comments, "");
-	}
-}
+	return 0;
 }
