@@ -1322,12 +1322,16 @@ namespace backend {
 				var ref<IMP_SimplestConstructor,f,f,plain> objectPlace = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
 				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> object = ptr_from_ref(IMP_SimplestConstructor::(ptr_to_ref(ptr_reinterpret(ptr_reinterpret(ptr_from_ref(objectPlace), type_lit(unit)), type_lit(IMP_SimplestConstructor)))));
 
+				var ref<IMP_SimplestConstructor,f,f,plain> expressionPlace = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
+				ptr_from_ref(IMP_SimplestConstructor::(ptr_to_ref(ptr_reinterpret(ptr_reinterpret(ptr_from_ref(expressionPlace), type_lit(unit)), type_lit(IMP_SimplestConstructor)))));
+
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			EXPECT_PRED2(containsSubString, code, "int32_t* inta = (int32_t*)((void*)(&intplace));");
 			EXPECT_PRED2(containsSubString, code, "int32_t* intb = cxx_placement_new((void*)(&intplace), 42);");
 			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* object = new ((IMP_SimplestConstructor*)((void*)(&objectPlace))) IMP_SimplestConstructor()");
+			EXPECT_PRED2(containsSubString, code, "new ((IMP_SimplestConstructor*)((void*)(&expressionPlace))) IMP_SimplestConstructor()");
 		})
 	}
 

@@ -84,7 +84,7 @@ int main() {
 		int* i = new (&place) int{42};
 	}
 
-	//// Class types ---------------------------------------------------------------------------------------------------------------------------------------------
+	// Class types ---------------------------------------------------------------------------------------------------------------------------------------------
 
 	#pragma test expect_ir(R"(
 		def struct IMP_SimplestConstructor {
@@ -131,6 +131,22 @@ int main() {
 		NonTrivial place;
 		NonTrivial *less = new (&place) NonTrivial();
 	}
+
+	// As expression ---------------------------------------------------------------------------------------------------------------------------------------------
+
+	#pragma test expect_ir(R"(
+		def struct IMP_SimplestConstructor {
+		};
+		{
+			var ref<IMP_SimplestConstructor,f,f,plain> v0 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
+			ptr_from_ref(IMP_SimplestConstructor::(ptr_to_ref(ptr_reinterpret(ptr_reinterpret(ptr_from_ref(v0), type_lit(unit)), type_lit(IMP_SimplestConstructor)))));
+		}
+	)")
+	{
+		SimplestConstructor place;
+		new (&place) SimplestConstructor();
+	}
+
 
 	return 0;
 }
