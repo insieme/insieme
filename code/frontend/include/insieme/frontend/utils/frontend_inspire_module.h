@@ -104,7 +104,7 @@ namespace utils {
 		/**
 		* Placement new for base types
 		*/
-		LANG_EXT_DERIVED(CxxPlacementNew, "(loc : ptr<unit,f,f>, val : 'a) -> ptr<'a,f,f> { ptr_to_ref(ptr_reinterpret(loc,type_lit('a))) = val; return loc; }")
+		LANG_EXT_DERIVED(CxxPlacementNew, "(loc : ptr<unit,f,f>, val : 'a) -> ptr<'a,f,f> { ptr_to_ref(ptr_reinterpret(loc, type_lit('a))) = val; return ptr_reinterpret(loc, type_lit('a)); }")
 	};
 
 	// --------------------- Utilities ----------------------------

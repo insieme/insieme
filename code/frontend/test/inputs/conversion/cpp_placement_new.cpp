@@ -37,6 +37,7 @@
  */
 
 #include <new>
+#include <cstdlib>
 
 struct SimplestConstructor { };
 
@@ -61,203 +62,75 @@ int main() {
 	{
 		int place;
 		int* val = new (&place) int;
-		// no dtor to call
 	}
 
 	// different from above!
 	#pragma test expect_ir(R"({
-		var ref<ptr<int<4>>,f,f,plain> v0 = ptr_from_ref(ref_new_init(0));
-		ref_delete(ptr_to_ref(*v0));
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+		var ref<ptr<int<4>>,f,f,plain> v1 = cxx_placement_new(ptr_reinterpret(ptr_from_ref(v0), type_lit(unit)), 0);
 	})")
 	{
 		int place;
 		int* i = new (&place) int();
-		// no dtor to call
 	}
 
-	//#pragma test expect_ir(R"({
-	//	var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_ref(ref_new_init(42));
-	//	ref_delete(ptr_to_ref(*i));
-	//})")
-	//{
-	//	int* i = new int{42};
-	//	delete i;
-	//}
-
-	//// Base type arrays ----------------------------------------------------------------------------------------------------------------------------------------
-
-	//#pragma test expect_ir(R"({
-	//	var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(<ref<array<int<4>,50>,f,f,plain>>(ref_new(type_lit(array<int<4>,50>))) {});
-	//	ref_delete(ptr_to_array(*i));
-	//})")
-	//{
-	//	int* arri = new int[50];
-	//	delete [] arri;
-	//}
-
-	//#pragma test expect_ir(R"({
-	//	var ref<ptr<int<4>>,f,f,plain> v0 = ptr_from_array(<ref<array<int<4>,50>,f,f,plain>>(ref_new(type_lit(array<int<4>,50>))) {1, 2, 3});
-	//	ref_delete(ptr_to_array(*v0));
-	//})")
-	//{
-	//	int* arri = new int[50]{1, 2, 3};
-	//	delete [] arri;
-	//}
-
-	//#pragma test expect_ir(R"({
-	//	var ref<ptr<array<int<4>,3>>,f,f,plain> v0 = ptr_from_array(<ref<array<array<int<4>,3>,50>,f,f,plain>>(ref_new(type_lit(array<array<int<4>,3>,50>))) {});
-	//	ref_delete(ptr_to_array(*v0));
-	//})")
-	//{
-	//	int (*arri)[3] = new int[50][3];
-	//	delete [] arri;
-	//}
+	// different from above!
+	#pragma test expect_ir(R"({
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+		var ref<ptr<int<4>>,f,f,plain> v1 = cxx_placement_new(ptr_reinterpret(ptr_from_ref(v0), type_lit(unit)), 42);
+	})")
+	{
+		int place;
+		int* i = new (&place) int{42};
+	}
 
 	//// Class types ---------------------------------------------------------------------------------------------------------------------------------------------
 
-	//#pragma test expect_ir(SimplestConstructor_IR, R"({
-	//	var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ptr_from_ref(IMP_SimplestConstructor::(ref_new(type_lit(IMP_SimplestConstructor))));
-	//	ref_delete(IMP_SimplestConstructor::~(ptr_to_ref(*v0)));
-	//})")
-	//{
-	//	SimplestConstructor place;
-	//	SimplestConstructor *simple = new (&place) SimplestConstructor();
-	//	delete simple;
-	//}
+	#pragma test expect_ir(R"(
+		def struct IMP_SimplestConstructor {
+		};
+		{
+			var ref<IMP_SimplestConstructor,f,f,plain> v0 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
+			var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v1 = ptr_from_ref(IMP_SimplestConstructor::(ptr_to_ref(ptr_reinterpret(ptr_reinterpret(ptr_from_ref(v0), type_lit(unit)), type_lit(IMP_SimplestConstructor)))));
+		}
+	)")
+	{
+		SimplestConstructor place;
+		SimplestConstructor *simple = new (&place) SimplestConstructor();
+	}
 
-	//#pragma test expect_ir(SimplestConstructor_IR, R"({
-	//	var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {});
-	//	ref_delete(ptr_to_array(*v0));
-	//})")
-	//{
-	//	SimplestConstructor* arrsimple = new SimplestConstructor[3];
-	//	delete [] arrsimple;
-	//}
+	#pragma test expect_ir(R"(
+		def struct IMP_SlightlyLessSimpleConstructor {
+			i : int<4>;
+			ctor function (v1 : ref<int<4>,f,f,plain>) {
+				(this).i = *v1;
+			}
+		};
+		{
+			var ref<IMP_SlightlyLessSimpleConstructor,f,f,plain> v0 = IMP_SlightlyLessSimpleConstructor::(ref_decl(type_lit(ref<IMP_SlightlyLessSimpleConstructor,f,f,plain>)), 41);
+			var ref<ptr<IMP_SlightlyLessSimpleConstructor>,f,f,plain> v1 = ptr_from_ref(IMP_SlightlyLessSimpleConstructor::(ptr_to_ref(ptr_reinterpret(ptr_reinterpret(ptr_from_ref(v0), type_lit(unit)), type_lit(IMP_SlightlyLessSimpleConstructor))), 42));
+		}
+	)")
+	{
+		SlightlyLessSimpleConstructor place(41);
+		SlightlyLessSimpleConstructor *less = new (&place) SlightlyLessSimpleConstructor(42);
+	}
 
-	//#pragma test expect_ir(SimplestConstructor_IR, R"({
-	//	var ref<IMP_SimplestConstructor,f,f,plain> v0 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
-	//	var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v1 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))});
-	//	ref_delete(ptr_to_array(*v1));
-	//})")
-	//{
-	//	SimplestConstructor sc;
-	//	SimplestConstructor* arrsimple = new SimplestConstructor[3]{sc,sc};
-	//	delete [] arrsimple;
-	//}
-
-	//#pragma test expect_ir(R"(
-	//	def struct IMP_SlightlyLessSimpleConstructor {
-	//		i : int<4>;
-	//		ctor function (v1 : ref<int<4>,f,f,plain>) {
-	//			(this).i = *v1;
-	//		}
-	//	};
-	//	{
-	//		var ref<ptr<IMP_SlightlyLessSimpleConstructor>,f,f,plain> v0 = ptr_from_ref(IMP_SlightlyLessSimpleConstructor::(ref_new(type_lit(IMP_SlightlyLessSimpleConstructor)), 42));
-	//		ref_delete(IMP_SlightlyLessSimpleConstructor::~(ptr_to_ref(*v0)));
-	//	}
-	//)")
-	//{
-	//	SlightlyLessSimpleConstructor *less = new SlightlyLessSimpleConstructor(42);
-	//	delete less;
-	//}
-
-	//// Variable size arrays ------------------------------------------------------------------------------------------------------------------------------------
-
-	//#pragma test expect_ir(R"(
-	//	def new_arr_fun = function (v0 : ref<uint<inf>,f,f,plain>) -> ptr<int<4>> {
-	//		var uint<inf> v1 = *v0;
-	//		return ptr_from_array(<ref<array<int<4>,#v1>,f,f,plain>>(ref_new(type_lit(array<int<4>,#v1>))) {});
-	//	};
-	//	{
-	//		var ref<int<4>,f,f,plain> v0 = 50;
-	//		var ref<ptr<int<4>>,f,f,plain> v1 = new_arr_fun(num_cast(*v0+5, type_lit(uint<inf>)));
-	//		ref_delete(ptr_to_array(*v1));
-	//	}
-	//)")
-	//{
-	//	int x = 50;
-	//	int* arri = new int[x+5];
-	//	delete [] arri;
-	//}
-
-	//#pragma test expect_ir(R"(
-	//	def new_arr_fun = function (v0 : ref<uint<inf>,f,f,plain>, v1 : ref<int<4>,t,f,cpp_ref>, v2 : ref<int<4>,t,f,cpp_ref>, v3 : ref<int<4>,t,f,cpp_ref>) -> ptr<int<4>> {
-	//		var uint<inf> v4 = *v0;
-	//		return ptr_from_array(<ref<array<int<4>,#v4>,f,f,plain>>(ref_new(type_lit(array<int<4>,#v4>))) {v1, v2, v3});
-	//	};
-	//	{
-	//		var ref<int<4>,f,f,plain> v0 = 50;
-	//		var ref<ptr<int<4>>,f,f,plain> v1 = new_arr_fun(num_cast(*v0+5, type_lit(uint<inf>)), 1, 2, 3);
-	//		ref_delete(ptr_to_array(*v1));
-	//	}
-	//)")
-	//{
-	//	int x = 50;
-	//	int* arri = new int[x+5]{1,2,3};
-	//	delete [] arri;
-	//}
-
-	//#pragma test expect_ir(SimplestConstructor_IR, R"(
-	//	def new_arr_fun = function (v0 : ref<uint<inf>,f,f,plain>) -> ptr<IMP_SimplestConstructor> {
-	//		var uint<inf> v1 = *v0;
-	//		return ptr_from_array(<ref<array<IMP_SimplestConstructor,#v1>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,#v1>))) {});
-	//	};
-	//	{
-	//		var ref<int<4>,f,f,plain> v0 = 30;
-	//		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v1 = new_arr_fun(num_cast(*v0+5, type_lit(uint<inf>)));
-	//		ref_delete(ptr_to_array(*v1));
-	//	}
-	//)")
-	//{
-	//	int x = 30;
-	//	SimplestConstructor* arri = new SimplestConstructor[x+5];
-	//	delete [] arri;
-	//}
-
-	//#pragma test expect_ir(SimplestConstructor_IR, R"(
-	//	def new_arr_fun = function (v0 : ref<uint<inf>,f,f,plain>, v1 : ref<IMP_SimplestConstructor,t,f,cpp_ref>, v2 : ref<IMP_SimplestConstructor,t,f,cpp_ref>) -> ptr<IMP_SimplestConstructor> {
-	//		var uint<inf> v3 = *v0;
-	//		return ptr_from_array(<ref<array<IMP_SimplestConstructor,#v3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,#v3>))) {v1, v2});
-	//	};
-	//	{
-	//		var ref<int<4>,f,f,plain> v0 = 50;
-	//		var ref<IMP_SimplestConstructor,f,f,plain> v1 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
-	//		var ref<IMP_SimplestConstructor,f,f,plain> v2 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
-	//		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v3 = new_arr_fun(num_cast(*v0+5, type_lit(uint<inf>)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v2, type_lit(t), type_lit(f), type_lit(cpp_ref)));
-	//		ref_delete(ptr_to_array(*v3));
-	//	}
-	//)")
-	//{
-	//	int x = 50;
-	//	SimplestConstructor sc1, sc2;
-	//	SimplestConstructor* arri = new SimplestConstructor[x+5]{sc1,sc2};
-	//	delete [] arri;
-	//}
-
-	//#pragma test expect_ir(R"(
-	//	def struct IMP_NonTrivial {
-	//			dtor virtual function () {
-	//					5;
-	//			}
-	//	};
-	//	def new_arr_fun = function (v0 : ref<uint<inf>,f,f,plain>, v1 : ref<IMP_NonTrivial,t,f,cpp_ref>, v2 : ref<IMP_NonTrivial,t,f,cpp_ref>) -> ptr<IMP_NonTrivial> {
-	//			var uint<inf> v3 = *v0;
-	//			return ptr_from_array(<ref<array<IMP_NonTrivial,#v3>,f,f,plain>>(ref_new(type_lit(array<IMP_NonTrivial,#v3>))) {v1, v2});
-	//	};
-	//	{
-	//			var ref<int<4>,f,f,plain> v0 = 50;
-	//			var ref<IMP_NonTrivial,f,f,plain> v1 = IMP_NonTrivial::(ref_decl(type_lit(ref<IMP_NonTrivial,f,f,plain>)));
-	//			var ref<ptr<IMP_NonTrivial>,f,f,plain> v2 = new_arr_fun(num_cast(*v0+5, type_lit(uint<inf>)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref)));
-	//			ref_delete(ptr_to_array(*v2));
-	//	}
-	//)")
-	//{
-	//	int x = 50;
-	//	NonTrivial nt;
-	//	NonTrivial* arri = new NonTrivial[x+5]{nt, nt};
-	//	delete [] arri;
-	//}
+	#pragma test expect_ir(R"(
+		def struct IMP_NonTrivial {
+			dtor virtual function () {
+				5;
+			}
+		};
+		{
+			var ref<IMP_NonTrivial,f,f,plain> v0 = IMP_NonTrivial::(ref_decl(type_lit(ref<IMP_NonTrivial,f,f,plain>)));
+			var ref<ptr<IMP_NonTrivial>,f,f,plain> v1 = ptr_from_ref(IMP_NonTrivial::(ptr_to_ref(ptr_reinterpret(ptr_reinterpret(ptr_from_ref(v0), type_lit(unit)), type_lit(IMP_NonTrivial)))));
+		}
+	)")
+	{
+		NonTrivial place;
+		NonTrivial *less = new (&place) NonTrivial();
+	}
 
 	return 0;
 }

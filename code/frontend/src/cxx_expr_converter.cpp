@@ -415,12 +415,26 @@ namespace conversion {
 					retExpr = core::lang::buildPtrFromRef(newExp);
 				}
 				else {
-					retExpr = core::lang::buildPtrReinterpret(converter.convertExpr(newExpr->getPlacementArg(0)), type);
+					auto location = Visit(newExpr->getPlacementArg(0));
+					if(newExpr->hasInitializer()) {
+						retExpr = utils::buildCxxPlacementNew(location, Visit(newExpr->getInitializer()));
+					}
+					else {
+						retExpr = core::lang::buildPtrReinterpret(location, type);
+					}
 				}
 			}
 			// we have a constructor, so we are building a class
 			else {
-				retExpr = core::lang::buildPtrFromRef(convertConstructExprInternal(converter, newExpr->getConstructExpr(), false));
+				if(newExpr->getNumPlacementArgs() == 0) {
+					retExpr = convertConstructExprInternal(converter, newExpr->getConstructExpr(), false);
+				}
+				else {
+					auto location = Visit(newExpr->getPlacementArg(0));
+					retExpr = utils::convertConstructExpr(converter, newExpr->getConstructExpr(),
+					                                      core::lang::buildPtrToRef(core::lang::buildPtrReinterpret(location, type)));
+				}
+				retExpr = core::lang::buildPtrFromRef(retExpr);
 			}
 		}
 
