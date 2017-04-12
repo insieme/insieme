@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(%PROJECT% VERSION 0.0.0 LANGUAGES C CXX)
+project(%PROJECT% LANGUAGES C CXX)
 
 # -- Module Path
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake)
