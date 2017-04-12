@@ -35,46 +35,46 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-#pragma once
 
-#include <map>
+// Introduce mutual dependency to method of A while translating type B, coming from A
+struct B;
 
-#include "insieme/frontend/converter.h"
+struct A {
+	void methA(B* b) { }
+	void foo() { }
+};
 
-#include "insieme/core/forward_decls.h"
+struct B {
+	void methB(A a) {
+		a.foo();
+	}
+};
 
-namespace insieme {
-namespace frontend {
-namespace state {
-	using namespace conversion;
+int main() {
+	; // this is required because of the clang compound source location bug
 
-	/// Manages record (struct/union/class) identities from clang to its INSPIRE translation
-	class RecordManager {
-	private:
-		Converter& converter;
-		
-		std::map<const clang::RecordDecl*, core::GenericTypePtr> records;
+	#pragma test expect_ir(R"(
+		decl struct IMP_B;
+		decl struct IMP_A;
+		decl IMP_methB:IMP_B::(IMP_A) -> unit;
+		decl IMP_foo:IMP_A::() -> unit;
+		decl IMP_methA:IMP_A::(ptr<IMP_B>) -> unit;
+		def struct IMP_B {
+			function IMP_methB = (v1 : ref<IMP_A,f,f,plain>) -> unit {
+				v1.IMP_foo();
+			}
+		};
+		def struct IMP_A {
+			function IMP_foo = () -> unit { }
+			function IMP_methA = (v1 : ref<ptr<IMP_B>,f,f,plain>) -> unit { }
+		};
+		{
+			var ref<IMP_A,f,f,plain> v0 = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
+		}
+	)")
+	{
+		A a;
+	}
 
-		std::set<const clang::RecordDecl*> completedRecords;
-
-		unsigned recordConversionStackDepth = 0;
-
-	public:
-		RecordManager(Converter& converter) : converter(converter) {}
-
-		core::GenericTypePtr lookup(const clang::RecordDecl* recordDecl) const;
-		bool contains(const clang::RecordDecl* recordDecl) const;
-		void insert(const clang::RecordDecl* recordDecl, const core::GenericTypePtr& genType);
-		void replace(const clang::RecordDecl* recordDecl, const core::GenericTypePtr& genType);
-
-		void markComplete(const clang::RecordDecl* recordDecl);
-		bool isComplete(const clang::RecordDecl* recordDecl);
-
-		void incrementConversionStackDepth();
-		void decrementConversionStackDepth();
-		bool isDeclOnlyConversion();
-	};
-
-} // end namespace state
-} // end namespace frontend
-} // end namespace insieme
+	return 0;
+}

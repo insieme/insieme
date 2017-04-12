@@ -64,6 +64,27 @@ namespace state {
 		records[recordDecl] = genType;
 	}
 
+	void RecordManager::markComplete(const clang::RecordDecl* recordDecl) {
+		completedRecords.insert(recordDecl);
+	}
+
+	bool RecordManager::isComplete(const clang::RecordDecl* recordDecl) {
+		return completedRecords.find(recordDecl) != completedRecords.end();
+	}
+
+	void RecordManager::incrementConversionStackDepth() {
+		recordConversionStackDepth++;
+	}
+
+	void RecordManager::decrementConversionStackDepth() {
+		assert_ne(recordConversionStackDepth, 0) << "Can't decrement ConversionStackDepth";
+		recordConversionStackDepth--;
+	}
+
+	bool RecordManager::isDeclOnlyConversion() {
+		return recordConversionStackDepth != 0;
+	}
+
 } // end namespace state
 } // end namespace frontend
 } // end namespace insieme

@@ -142,9 +142,14 @@ namespace conversion {
 		VLOG(2) << "CXXTypeConverter::VisitTagType " << tagType << std::endl;
 
 		// first, try lookup
-		if(auto clangRecTy = llvm::dyn_cast<RecordType>(tagType)) {
-			if(converter.getRecordMan()->contains(clangRecTy->getDecl())) {
-				return converter.getRecordMan()->lookup(clangRecTy->getDecl());
+		auto clangRecTy = llvm::dyn_cast<RecordType>(tagType);
+		if(clangRecTy) {
+			auto recordDecl = clangRecTy->getDecl();
+			// if type is complete, simply return it.
+			// also return if we are lower on the type conversion stack and already generated an entry for this type
+			if(converter.getRecordMan()->isComplete(recordDecl)
+					|| (converter.getRecordMan()->contains(recordDecl) && converter.getRecordMan()->isDeclOnlyConversion())) {
+				return converter.getRecordMan()->lookup(recordDecl);
 			}
 		}
 
@@ -164,18 +169,12 @@ namespace conversion {
 		const clang::CXXRecordDecl* classDecl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(tagType->getDecl());
 		if(!classDecl || !classDecl->getDefinition()) { return genTy; }
 
-		// add static vars as globals
-		for(auto decl : classDecl->decls()) {
-			if(auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
-				if(varDecl->isStaticDataMember()) {
-					converter.getDeclConverter()->VisitVarDecl(varDecl);
-				}
-			}
-		}
-
 		// get struct type for easier manipulation
 		auto tagTy = retTy.as<core::TagTypePtr>();
 		auto recordTy = tagTy->getRecord();
+
+		// decl only conversion start
+		converter.getRecordMan()->incrementConversionStackDepth();
 
 		// get parents if any
 		std::vector<core::ParentPtr> parents;
@@ -198,6 +197,15 @@ namespace conversion {
 			}
 		}
 
+		// add static vars as globals
+		for(auto decl : classDecl->decls()) {
+			if(auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
+				if(varDecl->isStaticDataMember()) {
+					converter.getDeclConverter()->VisitVarDecl(varDecl);
+				}
+			}
+		}
+
 		// add symbols for all methods to function manager before conversion
 		for(auto mem : methodDecls) {
 			if(mem->isStatic()) continue;
@@ -210,6 +218,18 @@ namespace conversion {
 				converter.getDeclConverter()->VisitFunctionDecl(mem->getCanonicalDecl());
 			}
 		}
+
+		// decl only conversion end
+		converter.getRecordMan()->decrementConversionStackDepth();
+
+		// if we are converting only the decl, we are done at this point
+		if(converter.getRecordMan()->isDeclOnlyConversion()) {
+			return genTy;
+		}
+
+		// if we reached this point, the type will be completed for sure
+		// mark complete immediately to prevent infinite conversion recursion
+		converter.getRecordMan()->markComplete(clangRecTy->getDecl());
 
 		// before method translation: push lambda mapping in case of lambda
 		converter.getVarMan()->pushLambda(generateLambdaMapping(converter, classDecl));
