@@ -35,6 +35,7 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
+
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
@@ -1303,6 +1304,30 @@ namespace backend {
 			EXPECT_PRED2(containsSubString, code, "IMP_SlightlyLessSimpleConstructor* o2 = new IMP_SlightlyLessSimpleConstructor(42);");
 			EXPECT_PRED2(containsSubString, code, "delete o2;");
 			EXPECT_PRED2(notContainsSubString, code, "= malloc("); // make sure there are no malloc calls with result not cast to the right type
+		})
+	}
+
+	TEST(CppSnippet, PlacementNew) {
+		DO_TEST(R"(
+			def struct IMP_SimplestConstructor {
+			};
+			def cxx_placement_new = (loc : ptr<unit,f,f>, val : 'a) -> ptr<'a,f,f> {
+				ptr_to_ref(ptr_reinterpret(loc, type_lit('a))) = val; return ptr_reinterpret(loc, type_lit('a));
+			};
+			int<4> main() {
+				var ref<int<4>,f,f,plain> intplace = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+				var ref<ptr<int<4>>,f,f,plain> inta = ptr_reinterpret(ptr_reinterpret(ptr_from_ref(intplace), type_lit(unit)), type_lit(int<4>));
+				var ref<ptr<int<4>>,f,f,plain> intb = cxx_placement_new(ptr_reinterpret(ptr_from_ref(intplace), type_lit(unit)), 42);
+
+				var ref<IMP_SimplestConstructor,f,f,plain> objectPlace = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
+				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> object = ptr_from_ref(IMP_SimplestConstructor::(ptr_to_ref(ptr_reinterpret(ptr_reinterpret(ptr_from_ref(objectPlace), type_lit(unit)), type_lit(IMP_SimplestConstructor)))));
+
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "int32_t* inta = (int32_t*)((void*)(&intplace));");
+			EXPECT_PRED2(containsSubString, code, "int32_t* intb = cxx_placement_new((void*)(&intplace), 42);");
+			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* object = new ((IMP_SimplestConstructor*)((void*)(&objectPlace))) IMP_SimplestConstructor()");
 		})
 	}
 

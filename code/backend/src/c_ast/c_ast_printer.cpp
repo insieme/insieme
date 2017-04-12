@@ -269,7 +269,7 @@ namespace c_ast {
 					// add constructor call if necessary
 					ConstructorCallPtr call = node->varInit[0].second.isa<ConstructorCallPtr>();
 					auto vt = node->varInit[0].first->type;
-					if(call && !vt.isa<c_ast::ReferenceTypePtr>() && !vt.isa<c_ast::RValueReferenceTypePtr>()) {
+					if(call && !vt.isa<c_ast::ReferenceTypePtr>() && !vt.isa<c_ast::RValueReferenceTypePtr>() && !call->location) {
 						// do nothing if it is default constructed
 						if(call->arguments.empty()) { return out; }
 
@@ -584,11 +584,8 @@ namespace c_ast {
 			}
 
 			PRINT(ConstructorCall) {
-				// <new> <className> ( <arguments> )
-				out << ((node->location) ? "new " : "");
-
-				// the location for a placement new
-				if(node->location) { out << "(" << print(node->location) << ") "; }
+				// if a location is provided, create placement new
+				if(node->location) { out << "new (" << print(node->location) << ") "; }
 
 				// the rest
 				return out << print(node->classType) << "(" << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); })
