@@ -235,6 +235,12 @@ namespace conversion {
 
 			// build call and we are done
 			auto retType = convertExprType(callExpr);
+
+			// special handling for return type for dtor calls
+			if(llvm::dyn_cast<clang::CXXDestructorDecl>(methodDecl)) {
+				retType = thisObj->getType();
+			}
+
 			ret = utils::buildCxxMethodCall(converter, retType, methodLambda, thisObj, callExpr->arguments());
 		}
 
