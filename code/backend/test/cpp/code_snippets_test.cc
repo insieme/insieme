@@ -722,9 +722,9 @@ namespace backend {
 			};
 
 			int main() {
-				var ref<A> a = A::(a);
-				var ref<D> d = D::(d);
-				var ref<E> e = E::(e);
+				var ref<A> a = A::(ref_decl(type_lit(ref<A>)));
+				var ref<D> d = D::(ref_decl(type_lit(ref<D>)));
+				var ref<E> e = E::(ref_decl(type_lit(ref<E>)));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
@@ -751,7 +751,7 @@ namespace backend {
 			};
 
 			int<4> main() {
-				var ref<ChainedConstructor,f,f,plain> v0 = ChainedConstructor::(v0);
+				var ref<ChainedConstructor,f,f,plain> v0 = ChainedConstructor::(ref_decl(type_lit(ref<ChainedConstructor>)));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
@@ -776,7 +776,7 @@ namespace backend {
 			};
 
 			int<4> main() {
-				var ref<Derived,f,f,plain> v0 = Derived::(v0);
+				var ref<Derived,f,f,plain> v0 = Derived::(ref_decl(type_lit(ref<Derived>)));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
@@ -919,6 +919,21 @@ namespace backend {
 			EXPECT_PRED2(containsSubString, code, "struct C");      // struct definition
 			EXPECT_PRED2(containsSubString, code, "C c;");          // variable definition
 			EXPECT_PRED2(containsSubString, code, "virtual ~C();"); // destructor for B
+		})
+	}
+
+	TEST(CppSnippet, DestructorCall) {
+		DO_TEST(R"(
+			def struct A {
+			};
+			int<4> main() {
+				var ref<A,f,f,plain> v0 = A::(ref_decl(type_lit(ref<A,f,f,plain>)));
+				var ref<ptr<A>,f,f,plain> v1 = ptr_from_ref(v0);
+				A::~(ptr_to_ref(*v1));
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "(*v1).A::~A();");
 		})
 	}
 
@@ -1139,7 +1154,7 @@ namespace backend {
 				lambda IMP_f = () -> real<4> { return lit("1.0E+0":real<4>); }
 			};
 			int<4> main() {
-				var ref<IMP_A,f,f,plain> v0 = IMP_A::(v0);
+				var ref<IMP_A,f,f,plain> v0 = IMP_A::(ref_decl(type_lit(ref<IMP_A>)));
 				var ref<IMP_A,f,f,plain> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref));
 				var ref<IMP_A,f,f,plain> v2 = ref_cast(IMP_A::(ref_temp(type_lit(IMP_A)), ref_kind_cast(v0, type_lit(cpp_ref))), type_lit(f), type_lit(f), type_lit(cpp_rref));
 				return 0;
@@ -1242,8 +1257,8 @@ namespace backend {
 
 			int main() {
 				// on stack
-				var ref<A> a1 = A::(a1);
-				var ref<A> a2 = A::(a2, 1);
+				var ref<A> a1 = A::(ref_decl(type_lit(ref<A>)));
+				var ref<A> a2 = A::(ref_decl(type_lit(ref<A>)), 1);
 
 				// on heap
 				var ref<A> a1r = A::(ref_new(type_lit(A)));
