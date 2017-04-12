@@ -1,5 +1,3 @@
-include(googletest)
-
 macro(add_module_library module)
 	set(options HEADER_ONLY)
 	cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
@@ -100,16 +98,10 @@ macro(add_module_unittest module test)
 		# add gtest
 		target_link_libraries(${test_name} gtest)
 		target_link_libraries(${test_name} gtest_main)
-		target_include_directories(${test_name} SYSTEM PRIVATE ${GTEST_INCLUDE_PATH})
-
-		# gtest requires pthread
-		find_package(Threads REQUIRED)
-		target_link_libraries(${test_name} ${CMAKE_THREAD_LIBS_INIT})
 
 		# set command for running the test
 		set(test_cmd ${CMAKE_CURRENT_BINARY_DIR}/${test_name})
 		if(USE_VALGRIND AND NOT ARG_NO_VALGRIND)
-			find_package(Valgrind REQUIRED)
 			set(test_cmd ${Valgrind_EXECUTABLE} ${Valgrind_FLAGS} ${test_cmd})
 		endif()
 		if(ARG_PARALLEL)
