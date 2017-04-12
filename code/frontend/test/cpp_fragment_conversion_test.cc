@@ -52,6 +52,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, BasicTypes) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_types.cpp"); }
 
+	TEST(CppConversionTest, Casts) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_casts.cpp"); }
+
 	TEST(CppConversionTest, ClassOperators) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_class_operators.cpp"); }
 
 	TEST(CppConversionTest, Constructors) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_constructors.cpp"); }
