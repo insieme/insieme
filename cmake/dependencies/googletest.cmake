@@ -38,7 +38,7 @@ if(BUILD_TESTS AND NOT TARGET googletest)
 		INTERFACE_INCLUDE_DIRECTORIES ${source_dir}/googletest/include
 
 		# attach pthread dependency
-		INTERFACE_LINK_LIBRARIES ${CMAKE_THREAD_LIBS_INIT}
+		INTERFACE_LINK_LIBRARIES Threads::Threads
 	)
 	add_dependencies(gtest googletest)
 
