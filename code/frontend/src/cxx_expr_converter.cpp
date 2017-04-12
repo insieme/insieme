@@ -387,23 +387,30 @@ namespace conversion {
 		core::ExpressionPtr retExpr;
 		LOG_EXPR_CONVERSION(newExpr, retExpr);
 
-		frontend_assert(newExpr->getNumPlacementArgs() == 0) << "Placement new not yet supported";
+		frontend_assert(newExpr->getNumPlacementArgs() < 2) << "Custom placement new not yet supported";
 
 		core::TypePtr type = converter.convertType(newExpr->getAllocatedType());
 
 		if(newExpr->isArray()) {
+			frontend_assert(newExpr->getNumPlacementArgs() == 0) << "Placement new for arrays not yet supported";
 			retExpr = buildArrayNew(converter, newExpr, type);
 		} else {
 			// if no constructor is found, it is a new over a non-class type
 			if(!newExpr->getConstructExpr()) {
-				// build new expression depending on whether or not we have an initializer expression
-				core::ExpressionPtr newExp;
-				if(newExpr->hasInitializer()) {
-					newExp = builder.refNew(Visit(newExpr->getInitializer()));
-				} else {
-					newExp = builder.undefinedNew(type);
+				if(newExpr->getNumPlacementArgs() == 0) {
+					// build new expression depending on whether or not we have an initializer expression
+					core::ExpressionPtr newExp;
+					if(newExpr->hasInitializer()) {
+						newExp = builder.refNew(Visit(newExpr->getInitializer()));
+					}
+					else {
+						newExp = builder.undefinedNew(type);
+					}
+					retExpr = core::lang::buildPtrFromRef(newExp);
 				}
-				retExpr = core::lang::buildPtrFromRef(newExp);
+				else {
+					retExpr = core::lang::buildPtrReinterpret(converter.convertExpr(newExpr->getPlacementArg(0)), type);
+				}
 			}
 			// we have a constructor, so we are building a class
 			else {

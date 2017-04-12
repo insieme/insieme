@@ -89,6 +89,14 @@ namespace utils {
 		return builder.callExpr(inspMod.getFERefTemp(), builder.getTypeLiteral(t));
 	}
 
+	core::ExpressionPtr buildCxxPlacementNew(const core::ExpressionPtr& loc, const core::ExpressionPtr& init) {
+		NodeManager& mgr = loc->getNodeManager();
+		IRBuilder builder(mgr);
+		assert_true(core::lang::isPointer(loc)) << "Loc has to be a pointer";
+		auto& inspMod = mgr.getLangExtension<FrontendInspireModule>();
+		return builder.callExpr(inspMod.getCxxPlacementNew(), loc, init);
+	}
+
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme
