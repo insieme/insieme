@@ -45,6 +45,7 @@ struct A {
 };
 
 struct B {
+	static unsigned test; // ensure global variable is only inserted once
 	void methB(A a) {
 		a.foo();
 	}

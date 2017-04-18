@@ -147,8 +147,8 @@ namespace conversion {
 			auto recordDecl = clangRecTy->getDecl();
 			// if type is complete, simply return it.
 			// also return if we are lower on the type conversion stack and already generated an entry for this type
-			if(converter.getRecordMan()->isComplete(recordDecl)
-					|| (converter.getRecordMan()->contains(recordDecl) && converter.getRecordMan()->isDeclOnlyConversion())) {
+			if(converter.getRecordMan()->contains(recordDecl)
+					&& (converter.getRecordMan()->isFinishing(recordDecl) || converter.getRecordMan()->isDeclOnlyConversion())) {
 				return converter.getRecordMan()->lookup(recordDecl);
 			}
 		}
@@ -197,13 +197,16 @@ namespace conversion {
 			}
 		}
 
-		// add static vars as globals
-		for(auto decl : classDecl->decls()) {
-			if(auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
-				if(varDecl->isStaticDataMember()) {
-					converter.getDeclConverter()->VisitVarDecl(varDecl);
+		// add static vars as globals - if not already done
+		if(!converter.getRecordMan()->hasConvertedGlobals(clangRecTy->getDecl())) {
+			for(auto decl : classDecl->decls()) {
+				if(auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
+					if(varDecl->isStaticDataMember()) {
+						converter.getDeclConverter()->VisitVarDecl(varDecl);
+					}
 				}
 			}
+			converter.getRecordMan()->markConvertedGlobals(clangRecTy->getDecl());
 		}
 
 		// add symbols for all methods to function manager before conversion
@@ -227,9 +230,9 @@ namespace conversion {
 			return genTy;
 		}
 
-		// if we reached this point, the type will be completed for sure
-		// mark complete immediately to prevent infinite conversion recursion
-		converter.getRecordMan()->markComplete(clangRecTy->getDecl());
+		// if we reached this point, the type will be finished for sure
+		// mark finishing immediately to prevent infinite conversion recursion
+		converter.getRecordMan()->markFinishing(clangRecTy->getDecl());
 
 		// before method translation: push lambda mapping in case of lambda
 		converter.getVarMan()->pushLambda(generateLambdaMapping(converter, classDecl));
@@ -276,6 +279,9 @@ namespace conversion {
 
 		// update associated type in irTu
 		converter.getIRTranslationUnit().insertRecordTypeWithDefaults(genTy, retTy.as<core::TagTypePtr>());
+
+		// finally, we can mark the record conversion as done
+		converter.getRecordMan()->markDone(clangRecTy->getDecl());
 
 		return genTy;
 	}
