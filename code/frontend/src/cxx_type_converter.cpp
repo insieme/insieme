@@ -378,7 +378,7 @@ namespace conversion {
 			retTy = converter.convertType(templTy->desugar());
 		} else {
 			// intercepted template
-			retTy = builder.genericType(insieme::utils::mangle(templTy->getTemplateName().getAsTemplateDecl()->getNameAsString()), templateTypes);
+			retTy = builder.genericType(insieme::utils::mangle(templTy->getTemplateName().getAsTemplateDecl()->getQualifiedNameAsString()), templateTypes);
 		}
 		return retTy;
 	}
