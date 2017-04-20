@@ -5,7 +5,6 @@ alignof
 big
 cast
 cast_dynamic
-cast_reinterpret
 cast_static
 curiously_recurring_template_pattern
 curiously_recurring_template_pattern_2
@@ -13,7 +12,6 @@ curiously_recurring_template_pattern_member_function
 expr_with_cleanups
 inherit_chained
 member_data_pointer
-member_function_vector
 memb_func_ptr
 performance
 rec_memberfunc_pointer
