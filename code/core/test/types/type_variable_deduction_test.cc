@@ -861,6 +861,49 @@ namespace types {
 		EXPECT_TRUE(checks::check(ir).empty());
 	}
 
+	TEST(TypeVariableDeduction, TempProblemReproduction) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto tA = builder.parseType(R"(
+			(ref<
+			IMP_std_colon__colon___cxx11_colon__colon_basic_stringstream<
+					ref<'T_0_0, 'T_0_0_a, 'T_0_0_b, 'T_0_0_c>,
+					ref<'T_0_1, 'T_0_1_a, 'T_0_1_b, 'T_0_1_c>,
+					ref<'T_0_2, 'T_0_2_a, 'T_0_2_b, 'T_0_2_c>>,
+				f, f, plain>,
+			ref<
+			IMP_std_colon__colon___cxx11_colon__colon_basic_string<
+					'T_0_0,
+					'T_0_1,
+					'T_0_2>,
+				t, f, cpp_ref>
+			)
+		)").as<TupleTypePtr>();
+
+		auto tB = builder.parseType(R"(
+			(ref<
+				IMP_std_colon__colon___cxx11_colon__colon_basic_stringstream<
+					ref<char, f, f, qualified>,
+					ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>, f, f, qualified>,
+					ref<IMP_std_colon__colon_allocator<ref<char,f,f,qualified>>, f, f, qualified>>,
+				f, f, plain>,
+			ref<
+			IMP_std_colon__colon___cxx11_colon__colon_basic_string<
+					ref<char,f,f,qualified>,
+					ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>,
+					ref<IMP_std_colon__colon_allocator<ref<char,f,f,qualified>>,f,f,qualified>>,
+				f, f, cpp_ref>
+			)
+		)").as<TupleTypePtr>();
+
+		auto res = getTypeVariableInstantiation(manager, (TypeList)tA.getElementTypes(), (TypeList)tB.getElementTypes());
+
+		EXPECT_TRUE(res);
+
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme
