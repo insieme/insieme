@@ -422,7 +422,7 @@ namespace extensions {
 		clang::QualType type = typeIn;
 		const core::IRBuilder& builder = converter.getIRBuilder();
 
-		// handle template parameters of intercepted tagtypes
+		// lookup template parameters of intercepted tagtypes
 		if(auto injected = llvm::dyn_cast<clang::InjectedClassNameType>(type.getUnqualifiedType())) {
 			auto spec = injected->getInjectedSpecializationType()->getUnqualifiedDesugaredType();
 			if(auto tempSpecType = llvm::dyn_cast<clang::TemplateSpecializationType>(spec)) {
@@ -433,6 +433,11 @@ namespace extensions {
 				}
 				return templateSpecializationMapping[key];
 			}
+		}
+
+		// lookup TemplateSpecializationTypes
+		if(auto tempSpecType = llvm::dyn_cast<clang::TemplateSpecializationType>(type->getCanonicalTypeUnqualified())) {
+			if(::containsKey(templateSpecializationMapping, tempSpecType)) return templateSpecializationMapping[tempSpecType];
 		}
 
 		// handle template parameters of intercepted template functions
@@ -454,6 +459,7 @@ namespace extensions {
 
 		// handle class, struct and union interception
 		if(auto tt = llvm::dyn_cast<clang::TagType>(type->getCanonicalTypeUnqualified())) {
+
 			// do not intercept enums, they are simple
 			if(tt->isEnumeralType()) return nullptr;
 

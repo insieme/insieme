@@ -44,7 +44,7 @@ int main() {
 
 	#pragma test expect_ir(R"({
 		type_instantiation(type_lit((int<4>, IMP_testNs_colon__colon_X<ref<int<4>,f,f,qualified>>) -> unit),
-				lit("IMP_testNs_colon__colon_fun" : ('T_0_0, IMP_testNs_colon__colon_X<'T_0_0>) -> unit))(1,
+				lit("IMP_testNs_colon__colon_fun" : ('T_0_0, IMP_testNs_colon__colon_X<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>) -> unit))(1,
 				ref_cast(lit("IMP_testNs_colon__colon_X::ctor" : IMP_testNs_colon__colon_X<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::())
 			(ref_temp(type_lit(IMP_testNs_colon__colon_X<ref<int<4>,f,f,qualified>>))), type_lit(f), type_lit(f), type_lit(cpp_rref)));
 	})")
