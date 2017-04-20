@@ -78,7 +78,7 @@ int main() {
 
 	// cpp global and function
 	#pragma test expect_ir(R"({
-		type_instantiation(type_lit((ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,cpp_ref>, ptr<char,t,f>) -> ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,cpp_ref>), lit("IMP_std_colon__colon__operator_lshift_" : (ref<IMP_basic_ostream<char,'T_0_0>,f,f,cpp_ref>, ptr<char,t,f>) -> ref<IMP_basic_ostream<char,'T_0_0>,f,f,cpp_ref>))(ref_kind_cast(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,plain>), type_lit(cpp_ref)), ptr_from_array(lit(""Test"" : ref<array<char,5>,t,f,plain>))) materialize ;
+		type_instantiation(type_lit((ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,cpp_ref>, ptr<char,t,f>) -> ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,cpp_ref>), lit("IMP_std_colon__colon__operator_lshift_" : (ref<IMP_std_colon__colon_basic_ostream<char,'T_0_0>,f,f,cpp_ref>, ptr<char,t,f>) -> ref<IMP_std_colon__colon_basic_ostream<char,'T_0_0>,f,f,cpp_ref>))(ref_kind_cast(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,plain>), type_lit(cpp_ref)), ptr_from_array(lit(""Test"" : ref<array<char,5>,t,f,plain>))) materialize ;
 	})")
 	{
 		std::cout << "Test";
@@ -132,7 +132,7 @@ int main() {
 		decl struct IMP_OtherTrivial;
 		def struct IMP_OtherTrivial { };
 		{
-			type_instantiation(type_lit(<ref<IMP_OtherTrivial,f,f,qualified>>() -> IMP_std_colon__colon_shared_ptr<ref<IMP_OtherTrivial,f,f,qualified>>), lit("IMP_std_colon__colon_make_shared" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, 'V_T_0_1...>('V_T_0_1...) -> IMP_shared_ptr<'T_0_0>))() materialize;
+			type_instantiation(type_lit(<ref<IMP_OtherTrivial,f,f,qualified>>() -> IMP_std_colon__colon_shared_ptr<ref<IMP_OtherTrivial,f,f,qualified>>), lit("IMP_std_colon__colon_make_shared" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, 'V_T_0_1...>('V_T_0_1...) -> IMP_std_colon__colon_shared_ptr<'T_0_0>))() materialize;
 		}
 	)")
 	{
@@ -141,7 +141,7 @@ int main() {
 
 	#pragma test expect_ir(R"({
 		var ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::())(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
-		var ref<IMP___gnu_cxx_colon__colon___normal_iterator<ref<ptr<int<4>>,f,f,qualified>,ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v1 = ref_cast(type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>::() -> IMP___gnu_cxx_colon__colon___normal_iterator<ref<ptr<int<4>>,f,f,qualified>,ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>), lit("IMP_std_colon__colon_vector::IMP_begin" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::() -> IMP___normal_iterator<'IMP_typename_space__Base_colon__colon_pointer,IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>>))(v0) materialize , type_lit(f), type_lit(f), type_lit(cpp_rref));
+		var ref<IMP___gnu_cxx_colon__colon___normal_iterator<ref<ptr<int<4>>,f,f,qualified>,ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v1 = ref_cast(type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>::() -> IMP___gnu_cxx_colon__colon___normal_iterator<ref<ptr<int<4>>,f,f,qualified>,ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>), lit("IMP_std_colon__colon_vector::IMP_begin" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::() -> IMP___gnu_cxx_colon__colon___normal_iterator<'IMP_typename_space__Base_colon__colon_pointer,IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>>))(v0) materialize , type_lit(f), type_lit(f), type_lit(cpp_rref));
 	})")
 	{
 		std::vector<int> a;
@@ -166,7 +166,7 @@ int main() {
 	#pragma test expect_ir(R"(
 		 var ref<IMP_std_colon__colon_pair<ref<int<4>,f,f,qualified>,ref<bool,f,f,qualified>>,f,f,plain> v0 =
 			ref_cast(type_instantiation(type_lit((ref<int<4>,f,f,cpp_rref>, ref<bool,f,f,cpp_rref>) -> IMP_std_colon__colon_pair<ref<int<4>,f,f,qualified>,ref<bool,f,f,qualified>>),
-				lit("IMP_std_colon__colon_make_pair" : (ref<'T_0_0,f,f,cpp_rref>, ref<'T_0_1,f,f,cpp_rref>) -> IMP_pair<'IMP_typename_space___decay_and_strip_lt__T1_gt__colon__colon___type,'IMP_typename_space___decay_and_strip_lt__T2_gt__colon__colon___type>))(12, true) materialize , type_lit(f), type_lit(f), type_lit(cpp_rref));
+				lit("IMP_std_colon__colon_make_pair" : (ref<'T_0_0,f,f,cpp_rref>, ref<'T_0_1,f,f,cpp_rref>) -> IMP_std_colon__colon_pair<'IMP_typename_space___decay_and_strip_lt__T1_gt__colon__colon___type,'IMP_typename_space___decay_and_strip_lt__T2_gt__colon__colon___type>))(12, true) materialize , type_lit(f), type_lit(f), type_lit(cpp_rref));
 	)")
 	std::pair<int,bool> x = std::make_pair(12, true);
 
