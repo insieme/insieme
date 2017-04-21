@@ -77,7 +77,9 @@ struct no_post_add_action {
  * @tparam T the type of elements managed by the concrete manager instance. The type has to
  * 			 be a constant type.
  */
-template <typename T, template <class C> class R = Ptr, typename PostAddAction = no_post_add_action<T>,
+template <typename T, template <class C> class R = Ptr,
+          typename LookupAction = no_post_add_action<T>,
+          typename PostAddAction = no_post_add_action<T>,
           typename boost::enable_if<boost::is_base_of<Ptr<T>, R<T>>, int>::type = 0>
 class InstanceManager : private boost::noncopyable {
 	/**
@@ -159,6 +161,7 @@ class InstanceManager : private boost::noncopyable {
 	 */
 	template <class S>
 	typename boost::enable_if<boost::is_base_of<T, S>, std::pair<R<const S>, bool>>::type add(const S* instance) {
+		static const LookupAction lookupAction = LookupAction();
 		static const PostAddAction postAddAction = PostAddAction();
 
 		assert_true(instance) << "Instance must not be NULL!";
@@ -166,6 +169,7 @@ class InstanceManager : private boost::noncopyable {
 		// test whether there is already an identical element
 		auto res = lookupPlain(instance);
 		if(res) {
+			lookupAction(instance, res);
 			// use included element
 			return std::make_pair(R<const S>(dynamic_cast<const S*>(res)), false);
 		}

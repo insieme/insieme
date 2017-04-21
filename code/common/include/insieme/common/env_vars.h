@@ -60,6 +60,9 @@
 // create JSON dumps for inspyer tool on IRDIFF
 #define INSIEME_INSPYER "INSIEME_INSPYER"
 
+// abort on node creation matching the given IR string
+#define INSIEME_ABORT_NODE "INSIEME_ABORT_NODE"
+
 
 ///////////// BACKEND
 

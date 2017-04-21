@@ -57,7 +57,8 @@
 namespace insieme {
 namespace core {
 
-	struct move_annotation_on_clone;
+	struct MoveAnnotationOnClone;
+	struct AbortOnNodeCreation;
 
 	// **********************************************************************************
 	// 							    Abstract Node Base
@@ -82,7 +83,12 @@ namespace core {
 		/**
 		 * Allow the instance manager to access private methods to create / destroy nodes.
 		 */
-		friend class InstanceManager<Node, Pointer, move_annotation_on_clone>;
+		friend class InstanceManager<Node, Pointer, AbortOnNodeCreation, MoveAnnotationOnClone>;
+
+		/**
+		 * Allow the AbortOnNodeCreation to access the node's getNodeManagerPtr method.
+		 */
+		friend class AbortOnNodeCreation;
 
 		/**
 		 * The Node Accessor may access any internal data element.
@@ -531,7 +537,11 @@ namespace core {
 	 * A functor realizing the migration of annotations after nodes have been moved
 	 * between node-manager instances.
 	 */
-	struct move_annotation_on_clone {
+	struct MoveAnnotationOnClone {
+		void operator()(const Node* src, const Node* trg) const;
+	};
+
+	struct AbortOnNodeCreation {
 		void operator()(const Node* src, const Node* trg) const;
 	};
 
@@ -541,7 +551,7 @@ namespace core {
 	 * all children of the node have to be bound to the same manager. This constraint
 	 * is automatically enforced by the node implementations.
 	 */
-	class NodeManager : public InstanceManager<Node, Pointer, move_annotation_on_clone>,
+	class NodeManager : public InstanceManager<Node, Pointer, AbortOnNodeCreation, MoveAnnotationOnClone>,
 						public NodeAnnotationAccessHelper<NodeManager> {
 		/**
 		 * The data type used to maintain language extensions. Language extensions
@@ -594,6 +604,12 @@ namespace core {
 			std::unique_ptr<inspyer::MetaGenerator> metaGenerator;
 
 			/**
+			 * A node pointer which will be compared against all newly created nodes.
+			 * If the newly created node equals this one, we'll abort (for debugging purposes).
+			 */
+			const Node* abortNode = nullptr;
+
+			/**
 			 * A constructor for this data structure.
 			 */
 			NodeManagerData(NodeManager& manager);
@@ -635,7 +651,7 @@ namespace core {
 		 * Null if this manager is the root of the manager hierarchy.
 		 */
 		NodeManager* getBaseManager() const {
-			return static_cast<NodeManager*>(InstanceManager<Node, Pointer, move_annotation_on_clone>::getBaseManager());
+			return static_cast<NodeManager*>(InstanceManager<Node, Pointer, AbortOnNodeCreation, MoveAnnotationOnClone>::getBaseManager());
 		}
 
 		/**
@@ -686,6 +702,10 @@ namespace core {
 		 */
 		inspyer::MetaGenerator& getMetaGenerator() const {
 			return *data->metaGenerator;
+		}
+
+		const Node* getAbortNode() const {
+			return data->abortNode;
 		}
 
 		/**
