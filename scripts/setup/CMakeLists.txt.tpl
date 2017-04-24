@@ -11,6 +11,7 @@ list(APPEND CMAKE_PREFIX_PATH ${prefix_paths})
 
 # -- Project Settings
 include(build_settings)
+include(coverage)
 include(doxygen)
 
 # -- Dependency Settings

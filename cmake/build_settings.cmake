@@ -1,6 +1,7 @@
 option(BUILD_SHARED_LIBS "Link libraries dynamically" ON)
 option(BUILD_TESTS "Enable testing" ON)
 option(BUILD_DOCS "Enable documentation" OFF)
+option(BUILD_COVERAGE "Enables code coverage report" OFF)
 option(USE_ASSERT "Enable assertions" ON)
 option(USE_VALGRIND "Allow Valgrind for unit tests" OFF)
 
@@ -12,6 +13,14 @@ endif()
 
 if(BUILD_TESTS)
 	enable_testing()
+endif()
+
+# check correct flags for code coverage
+if(BUILD_COVERAGE AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	message(FATAL_ERROR "Code coverage report only supported when using GCC")
+endif()
+if(BUILD_COVERAGE AND NOT BUILD_TESTS)
+	message(FATAL_ERROR "Code coverage report requires -DBUILD_TESTS=ON")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang")
@@ -39,6 +48,14 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed")
 		set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} -Wl,--no-as-needed")
 		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-as-needed")
+	endif()
+
+	if(BUILD_COVERAGE)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+		set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} --coverage")
+		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} --coverage")
 	endif()
 elseif(MSVC)
 	include(msvc_settings)

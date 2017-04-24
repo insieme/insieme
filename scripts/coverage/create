@@ -1,0 +1,59 @@
+#!/bin/bash
+
+set -e
+
+if [[ $# -ne 1 ]]; then
+	echo "Usage: $0 <build-dir>"
+	exit 1
+fi
+
+DIR="$(dirname $(readlink -f "$0"))"
+PRJ="$(readlink -f "$DIR/../..")"
+LCOV="$DIR/lcov/lcov"
+
+MODULE_DIRECTORIES="$(
+	find $PRJ/code -mindepth 1 -maxdepth 1 -type d |
+	xargs -L 1 basename |
+	awk "{print \"--directory $1/\" \$0}" |
+	tr '\n' ' '
+)"
+
+run_unit_tests() {
+	pushd "$1"
+	NUM_WORKERS=4 make test ARGS=-j4
+	popd
+}
+
+# reset
+rm -rf "$1/coverage" "$1/coverage"{,_initial,_unittests,_total}.info
+"$LCOV" --zerocounters --directory "$1"
+
+# initial reading
+"$LCOV" --quiet --capture --initial \
+	--base-directory "$PRJ" \
+	$MODULE_DIRECTORIES \
+	--output-file "$1/coverage_initial.info" \
+	--ignore-errors source \
+	--no-external
+
+run_unit_tests "$1"
+
+# capture unit tests results
+"$LCOV" --quiet --capture \
+	--base-directory "$PRJ" \
+	$MODULE_DIRECTORIES \
+	--output-file "$1/coverage_unittests.info" \
+	--ignore-errors source \
+	--no-external
+
+# combine baseline and unit test results
+"$LCOV" --add-tracefile "$1/coverage_initial.info" \
+	--add-tracefile "$1/coverage_unittests.info" \
+	--output-file "$1/coverage_total.info"
+
+# remove unwanted information
+"$LCOV" --remove coverage_total.info '*-prefix*' \
+	--output-file "$1/coverage.info"
+
+# generate report
+"$DIR/lcov/genhtml" "$1/coverage.info" --output-directory "$1/coverage"

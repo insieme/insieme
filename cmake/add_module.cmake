@@ -115,5 +115,10 @@ macro(add_module_unittest module test)
 		if(MSVC)
 			set_target_properties(${test_name} PROPERTIES FOLDER "${module}/Tests")
 		endif()
+
+		# unit test required for code coverage
+		if(BUILD_COVERAGE)
+			add_dependencies(coverage ${test_name})
+		endif()
 	endif()
 endmacro()
