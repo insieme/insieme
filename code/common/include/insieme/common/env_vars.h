@@ -70,6 +70,9 @@
 #define INSIEME_C_BACKEND_COMPILER "INSIEME_C_BACKEND_COMPILER"
 #define INSIEME_CXX_BACKEND_COMPILER "INSIEME_CXX_BACKEND_COMPILER"
 
+// do not translate the IR versions of std::initializer_list back to C++ std::initializer_list
+#define INSIEME_BE_INIT_LIST_TESTING "INSIEME_BE_INIT_LIST_TESTING"
+
 
 ///////////// LOGGING
 

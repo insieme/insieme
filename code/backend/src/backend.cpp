@@ -37,22 +37,24 @@
  */
 #include "insieme/backend/backend.h"
 
-#include "insieme/backend/addons/pointer_type.h"
-#include "insieme/backend/addons/cpp_casts.h"
+#include "insieme/backend/addons/asm_stmt.h"
+#include "insieme/backend/addons/comma_operator.h"
 #include "insieme/backend/addons/complex_type.h"
 #include "insieme/backend/addons/compound_operators.h"
+#include "insieme/backend/addons/cpp_casts.h"
 #include "insieme/backend/addons/enum_type.h"
 #include "insieme/backend/addons/io.h"
 #include "insieme/backend/addons/longlong_type.h"
-#include "insieme/backend/addons/asm_stmt.h"
-#include "insieme/backend/addons/varargs.h"
+#include "insieme/backend/addons/pointer_type.h"
 #include "insieme/backend/addons/static_variables.h"
-#include "insieme/backend/addons/comma_operator.h"
+#include "insieme/backend/addons/std_init_lists.h"
+#include "insieme/backend/addons/varargs.h"
 
 namespace insieme {
 namespace backend {
 
 	void Backend::addDefaultAddons() {
+		addAddOn<addons::StdInitListAddon>(); // this will reduce the resulting IR, so it might be good to do it early
 		addAddOn<addons::PointerType>();
 		addAddOn<addons::CppCastsAddon>();
 		addAddOn<addons::ComplexType>();

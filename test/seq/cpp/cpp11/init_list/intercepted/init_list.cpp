@@ -53,6 +53,13 @@ int main (){
 	T{42,43};
 	f({ 5 });
 
+	std::initializer_list<int> i{42, 43, 44};
+	std::cout << i.size() << std::endl;
+	std::cout << *i.begin() << std::endl;
+	std::cout << *i.end() << std::endl;
+	std::initializer_list<int> ib;
+	ib = i;
+
 	//more complicated semantics
 	TestObj obj;
 	std::cout << 1 << std::endl;

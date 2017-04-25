@@ -35,57 +35,24 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-
 #pragma once
 
-
-#include "insieme/utils/annotation.h"
-#include "insieme/core/ir_expressions.h"
+#include "insieme/backend/addon.h"
 
 namespace insieme {
-namespace annotations {
+namespace backend {
+namespace addons {
 
-	using namespace insieme::core;
-
-
-	class LoopAnnotation : public NodeAnnotation {
-		size_t iterations;
-
-	  public:
-		static const string NAME;
-		static const utils::StringKey<LoopAnnotation> KEY;
-
-		const utils::AnnotationKeyPtr getKey() const {
-			return &KEY;
-		}
-		const std::string& getAnnotationName() const {
-			return NAME;
-		}
-
-		//    LoopAnnotation() {} iterations has to be initialized
-		LoopAnnotation(size_t iterations) : iterations(iterations) {}
-
-		size_t getIterations() const;
-
-		virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
-			// always copy the annotation
-			assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
-			after->addAnnotation(ptr);
-			return true;
-		}
-
-		static void attach(const NodePtr& node, size_t iterations);
-		static bool hasAttachedValue(const NodePtr& node);
-		static size_t getValue(const NodePtr& node);
+	/**
+	 * Make the backend support back-translation of the IR variant of std::initializer_list
+	 */
+	struct StdInitListAddon : public AddOn {
+		/**
+		 * Installs this Add-On within the given converter
+		 */
+		virtual void installOn(Converter& converter) const;
 	};
 
-	typedef std::shared_ptr<LoopAnnotation> LoopAnnotationPtr;
-
+} // end namespace addons
+} // end namespace backend
 } // end namespace insieme
-} // end namespace annotations
-
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::LoopAnnotation& lAnnot);
-
-} // end namespace std
