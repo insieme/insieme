@@ -377,8 +377,13 @@ namespace conversion {
 		if(templTy->isSugared()) {
 			retTy = converter.convertType(templTy->desugar());
 		} else {
+			auto name = templTy->getTemplateName().getAsTemplateDecl()->getQualifiedNameAsString();
+			if(boost::starts_with(name, "std::initializer_list")) {
+				retTy = builder.typeVariable("_INSIEME_init_list_type_var");
+				return retTy;
+			}
 			// intercepted template
-			retTy = builder.genericType(insieme::utils::mangle(templTy->getTemplateName().getAsTemplateDecl()->getQualifiedNameAsString()), templateTypes);
+			retTy = builder.genericType(insieme::utils::mangle(name), templateTypes);
 		}
 		return retTy;
 	}
