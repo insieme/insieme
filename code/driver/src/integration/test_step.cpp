@@ -1003,6 +1003,11 @@ namespace integration {
 				env << "IRT_LOOP_SCHED_POLICY=IRT_GUIDED ";
 				env << "OMP_SCHEDULE=GUIDED ";
 			}
+
+			// append user defined custom environment variables
+			if(!testConfig.get("env").empty()) {
+				env << testConfig.get("env") << " ";
+			}
 		}
 
 		// if it is a mock-run do nothing

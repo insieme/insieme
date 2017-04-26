@@ -1,35 +1,7 @@
 # Do not remove this file even if it does not blacklist any test.
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
-alignof
-big
-cast
-cast_dynamic
-cast_static
-curiously_recurring_template_pattern
-curiously_recurring_template_pattern_2
-curiously_recurring_template_pattern_member_function
-expr_with_cleanups
-inherit_chained
-member_data_pointer
-memb_func_ptr
-rec_memberfunc_pointer
-shadow_decl
-static_assert
-static_data_member
-static_initialization
-static_var_init
-static_var_updates
-stl_list_iterator
-stl_read_file
-template_statics
-try_catch
-try_catch_cond_op
-typeinfo_struct
-vfunc_covariant_returnty
-vfunc_multiple_inherit
-vfunc_multiple_inherit_operators
-vfunc_single_inherit
+
 
 
 ####################################################################################
@@ -37,4 +9,3 @@ vfunc_single_inherit
 # All test names preceded with a '+' will not be executed by default but only when #
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
-

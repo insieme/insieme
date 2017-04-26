@@ -35,57 +35,31 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-
 #pragma once
 
+#include "insieme/core/forward_decls.h"
 
-#include "insieme/utils/annotation.h"
-#include "insieme/core/ir_expressions.h"
+/**
+ * A header file for marking std::initializer_list types with the list element type
+ */
 
 namespace insieme {
 namespace annotations {
 
-	using namespace insieme::core;
+	/**
+	 * marks the given node as being of std::initializer_list type and attached the element type
+	 */
+	void markStdInitList(const core::NodePtr& node, const core::TypePtr& elementType);
 
+	/**
+	 * checks whether the given node is marked as std::initializer_list
+	 */
+	bool isStdInitList(const core::NodePtr& node);
 
-	class LoopAnnotation : public NodeAnnotation {
-		size_t iterations;
+	/**
+	 * returns the element type for nodes which are marked as std::initializer_list
+	 */
+	core::TypePtr getStdInitListElementType(const core::NodePtr& node);
 
-	  public:
-		static const string NAME;
-		static const utils::StringKey<LoopAnnotation> KEY;
-
-		const utils::AnnotationKeyPtr getKey() const {
-			return &KEY;
-		}
-		const std::string& getAnnotationName() const {
-			return NAME;
-		}
-
-		//    LoopAnnotation() {} iterations has to be initialized
-		LoopAnnotation(size_t iterations) : iterations(iterations) {}
-
-		size_t getIterations() const;
-
-		virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
-			// always copy the annotation
-			assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
-			after->addAnnotation(ptr);
-			return true;
-		}
-
-		static void attach(const NodePtr& node, size_t iterations);
-		static bool hasAttachedValue(const NodePtr& node);
-		static size_t getValue(const NodePtr& node);
-	};
-
-	typedef std::shared_ptr<LoopAnnotation> LoopAnnotationPtr;
-
-} // end namespace insieme
 } // end namespace annotations
-
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::LoopAnnotation& lAnnot);
-
-} // end namespace std
+} // end namespace insieme
