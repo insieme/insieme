@@ -156,11 +156,14 @@ namespace extensions {
 
 		class TypeCanonicalizer : public core::transform::CachedNodeMapping {
 			virtual const NodePtr resolveElement(const NodePtr& ptr) override {
-				auto tt = ptr.isa<core::TagTypePtr>();
-				if(tt) {
+
+				// canonicalize types bottom-up
+				auto res = ptr->substitute(ptr->getNodeManager(), *this);
+				if (auto tt = res.isa<core::TagTypePtr>()) {
 					return core::analysis::getCanonicalType(tt);
 				}
-				return ptr->substitute(ptr->getNodeManager(), *this);
+
+				return res;
 			}
 		};
 
