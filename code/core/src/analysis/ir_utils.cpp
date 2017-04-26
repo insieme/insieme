@@ -1792,6 +1792,18 @@ namespace analysis {
 		// attach result
 		a.attachValue(CanonicalAnnotation{ res });
 
+		// re-use result for other types in recursive group
+		if (auto tagType = a.isa<TagTypePtr>()) {
+			auto& mgr = a->getNodeManager();
+			auto originalDef = tagType->getDefinition();
+			auto canonicalDef = res.as<TagTypePtr>()->getDefinition();
+			for(const auto& cur : originalDef) {
+				auto originalType = core::TagType::get(mgr,cur->getTag(),originalDef);
+				auto canonicalType = core::TagType::get(mgr,cur->getTag(),canonicalDef);
+				originalType.attachValue(CanonicalAnnotation{ canonicalType });
+			}
+		}
+
 		// done
 		return res;
 	}

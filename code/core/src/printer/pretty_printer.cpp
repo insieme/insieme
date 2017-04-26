@@ -460,12 +460,18 @@ namespace printer {
 									vector<std::string> splitstring;
 									boost::split(splitstring, lambdaNames[binding->getReference()],
 												 boost::is_any_of("::"));
-									visitedFreeFunctions[binding->getReference()] = std::make_tuple(tagname,
-																									splitstring[2]);
+									std::string lambdaName;
+									if(splitstring.size() == 3) {
+										lambdaName = makeReadableIfRequired(splitstring[2]);
+									} else {
+										lambdaName = lambdaNames[binding->getReference()];
+									}
 
-									lambdaNames[binding->getReference()] = makeReadableIfRequired(splitstring[2]);
+									visitedFreeFunctions[binding->getReference()] = std::make_tuple(tagname, lambdaName);
+
+									lambdaNames[binding->getReference()] = lambdaName;
 									newLine();
-									(*out) << "decl " << splitstring[2] << ":";
+									(*out) << "decl " << lambdaName << ":";
 									visit(NodeAddress(funType));
 									(*out) << ";";
 								} else if (binding->getReference()->getType().isConstructor()) { // free constructors
