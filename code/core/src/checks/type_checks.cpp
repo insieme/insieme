@@ -1121,10 +1121,8 @@ namespace checks {
 				return res;
 			}
 
-			// peel recursive type (this fixes the field types to be accessed)
-			if(tagType->isRecursive()) {
-				tagType = tagType->peel();
-			}
+			// peel tag type (this fixes the field types to be accessed)
+			tagType = tagType->peel();
 
 			// check member access
 			return checkMemberAccess(address, tagType->getRecord(), identifier, elementType, isRefVersion);
