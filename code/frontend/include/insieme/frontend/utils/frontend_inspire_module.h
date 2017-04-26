@@ -102,9 +102,14 @@ namespace utils {
 		LANG_EXT_LITERAL(FERefTemp, "fe_ref_temp", "(type<'a>) -> ref<'a,f,f>")
 
 		/**
-		* Placement new for base types
-		*/
+		 * Placement new for base types
+		 */
 		LANG_EXT_DERIVED(CxxPlacementNew, "(loc : ptr<unit,f,f>, val : 'a) -> ptr<'a,f,f> { ptr_to_ref(ptr_reinterpret(loc, type_lit('a))) = val; return ptr_reinterpret(loc, type_lit('a)); }")
+
+		/**
+		 * Pseudo destructor call
+		 */
+		LANG_EXT_LITERAL(CxxPseudoDestructorCall, "pseudo_destructor_call", "() -> unit")
 	};
 
 	// --------------------- Utilities ----------------------------

@@ -92,6 +92,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, PlacementNew) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_placement_new.cpp"); }
 
+	TEST(CppConversionTest, PseudoDestructor) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_pseudo_destructor.cpp"); }
+
 	TEST(CppConversionTest, RefPtr) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_ref_ptr.cpp"); }
 
 	TEST(CppConversionTest, Return) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_return.cpp"); }

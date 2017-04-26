@@ -199,6 +199,23 @@ namespace conversion {
 		return retIr;
 	}
 
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							CXX PSEUDO DESTRUCTOR
+	//
+	// Destructor call generated in a template instantiation for a base type
+	// Nothing happens here, Clang probably has it only to regenerate the original code
+	// We replace it by a no-op function defined in the FE extension and get rid of the entire call in cleanup later
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXPseudoDestructorExpr(const clang::CXXPseudoDestructorExpr* pseudo) {
+		core::ExpressionPtr retIr;
+		LOG_EXPR_CONVERSION(pseudo, retIr);
+		auto& feExt = converter.getNodeManager().getLangExtension<frontend::utils::FrontendInspireModule>();
+		// rest off FE expects a pointer here
+		retIr = core::lang::buildPtrOfFunction(feExt.getCxxPseudoDestructorCall());
+		return retIr;
+	}
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CXX BOOLEAN LITERAL
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
