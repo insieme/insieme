@@ -88,7 +88,7 @@ namespace core {
 		/**
 		 * Allow the AbortOnNodeCreation to access the node's getNodeManagerPtr method.
 		 */
-		friend class AbortOnNodeCreation;
+		friend struct AbortOnNodeCreation;
 
 		/**
 		 * The Node Accessor may access any internal data element.
