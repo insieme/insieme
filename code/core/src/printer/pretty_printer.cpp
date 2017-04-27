@@ -249,6 +249,15 @@ namespace printer {
 				if(thisParamRef.isVolatile()) { out << "volatile "; }
 			}
 
+			void printObjectName(const core::TypeAddress& ty) {
+				auto objTy = analysis::getObjectType(ty);
+				if(objTy.isa<GenericTypePtr>()) {
+					visit(objTy);
+					return;
+				}
+				*out << getObjectName(printer, ty.getAddressedNode());
+			}
+
 			bool hasEndingCompoundStmt(const StatementAddress& stmt) {
 				auto nodeType = stmt->getNodeType();
 				if(nodeType == NodeType::NT_ForStmt || nodeType == NodeType::NT_IfStmt || nodeType == NodeType::NT_CompoundStmt
@@ -722,14 +731,17 @@ namespace printer {
 				if(node->isMember()) {
 					if (node->isDestructor()) {
 						// print class type
-						(*out) << "~" << getObjectName(printer, node) << "::()";
+						(*out) << "~";
+						printObjectName(node);
+						(*out) << "::()";
 					} else {
 						auto params = node->getParameterTypes();
 						// print qualifier
 						assert_true(params.size() > 0);
 						printQualifiers(*out, node->getParameterTypeList()[0].getAddressedNode());
 						// print class type
-						(*out) << getObjectName(printer, node) << "::";
+						printObjectName(node);
+						(*out) << "::";
 						// print function signature
 						if(node->isConstructor()) {
 							(*out) << "(" << join(", ", params.begin() + 1, params.end(), printerLambda) << ")";
