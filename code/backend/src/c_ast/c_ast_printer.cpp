@@ -274,8 +274,13 @@ namespace c_ast {
 						if(call->arguments.empty()) { return out; }
 
 						// just add list of parameters
-						return out << "(" << join(", ", call->arguments, [&](std::ostream& out, const NodePtr& cur) { out << "(" << print(cur) << ")"; })
-						           << ")";
+						return out << "(" << join(", ", call->arguments, [&](std::ostream& out, const NodePtr& cur) {
+							// we don't print additional parentheses around initializers, as this isn't allowed
+							if(!cur.isa<c_ast::InitializerPtr>()) out << "(";
+							out << print(cur);
+							if(!cur.isa<c_ast::InitializerPtr>()) out << ")";
+						})
+								<< ")";
 					}
 
 					// add init value
@@ -587,8 +592,15 @@ namespace c_ast {
 				// if a location is provided, create placement new
 				if(node->location) { out << "new (" << print(node->location) << ") "; }
 
-				// the rest
-				return out << print(node->classType) << "(" << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); })
+				// ctor calls must not include the CTag "struct"
+				std::stringstream ss;
+				ss << print(node->classType);
+				auto nameString = ss.str();
+				if(boost::starts_with(nameString, "struct ")) {
+					nameString = nameString.substr(nameString.find(" ") + 1);
+				}
+
+				return out << nameString << "(" << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); })
 				           << ")";
 			}
 

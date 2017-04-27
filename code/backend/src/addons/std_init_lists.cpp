@@ -134,7 +134,7 @@ namespace addons {
 				// we undo the changes made during the frontend cleanup to reflect copy semantics in the IR
 				res = core::transform::transformBottomUpGen(res, [&](const core::CallExprPtr& call) -> core::NodePtr {
 					// we undo the changes performed by the frontend cleanup to encode copy operations on initializer_lists
-					if(refExt.isCallOfRefCast(call)) {
+					if(refExt.isCallOfRefCast(call) || refExt.isCallOfRefKindCast(call)) {
 						auto callArg = call->getArgument(0).isa<core::CallExprPtr>();
 						if(callArg && core::analysis::isConstructorCall(callArg)) {
 							auto ctorArg = callArg.as<core::CallExprPtr>()->getArgument(0);
