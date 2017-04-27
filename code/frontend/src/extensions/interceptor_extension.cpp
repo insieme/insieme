@@ -280,7 +280,7 @@ namespace extensions {
 			auto concreteFunctionType = lit->getType().as<core::FunctionTypePtr>();
 
 			// if we don't need to do any type instantiation
-			if(templateConcreteParams.empty() && core::analysis::isReturnTypePotentiallyDeducible(genericFunType)) {
+			if(!concreteFunctionType->isMember() && templateConcreteParams.empty() && core::analysis::isReturnTypePotentiallyDeducible(genericFunType)) {
 				return {innerLit, concreteFunctionType.getReturnType()};
 			}
 
