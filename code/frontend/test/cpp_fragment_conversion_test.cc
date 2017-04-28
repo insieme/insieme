@@ -78,6 +78,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, LambdaCapture) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda_capture.cpp"); }
 
+	TEST(CppConversionTest, LambdaConstCapture) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda_const_capture.cpp"); }
+
 	TEST(CppConversionTest, MemberCalls) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_member_calls.cpp"); }
 
 	TEST(CppConversionTest, MemFunPtr) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_mem_fun_ptr.cpp"); }

@@ -77,6 +77,13 @@ namespace state {
 			if(!it->nested) break;
 		}
 
+		// true constants are not captured in lambdas, and we need to copy the value
+		if(lambdaScopes.size()>=1 && lambdaScopes.back().isaLambda()) {
+			auto varInit = varDecl->getInit();
+			frontend_assert(varInit && varDecl->getType().isConstQualified()) << "Nondeclared local var in lambda without const init";
+			return converter.getIRBuilder().refTemp(converter.convertExpr(varInit));
+		}
+
 		frontend_assert(false) << "Trying to look up local variable not previously declared: " << dumpClang(varDecl);
 		return core::ExpressionPtr();
 	}

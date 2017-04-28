@@ -81,6 +81,7 @@ namespace conversion {
 		state::VariableManager::LambdaScope generateLambdaMapping(const Converter& converter, const clang::CXXRecordDecl* classDecl) {
 			state::VariableManager::LambdaScope lScope;
 			if(!classDecl->isLambda()) return lScope;
+			lScope.setIsaLambda();
 			llvm::DenseMap<const clang::VarDecl*, clang::FieldDecl*> clangCaptures;
 			clang::FieldDecl *thisField;
 			classDecl->getCaptureFields(clangCaptures, thisField);
