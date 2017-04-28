@@ -92,6 +92,12 @@ namespace analysis {
 	bool isCallOf(const NodePtr& candidate, const NodePtr& function);
 
 	/**
+	 * Obtains the (optional) ref_decl call referenced by the init expression of the given declaration,
+	 * if such a call is present. If not, the resulting call will be null.
+	 */
+	CallExprPtr getRefDeclCall(const DeclarationPtr& decl);
+
+	/**
 	 * Tests whether the given call is materializing its result
 	 * (this is the case if the function returns a value type but the return value of the call is a reference to that type)
 	 */
