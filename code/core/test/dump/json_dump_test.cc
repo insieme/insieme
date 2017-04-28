@@ -57,11 +57,6 @@ namespace json {
 
 		// print the plain json dump
 		json::dumpIR(std::cout, builder.parseType("int<4>"));
-
-		// print the json dump + extra information
-		json::dumpIR(std::cout, builder.parseType("int<4>"), [](const NodeAddress& cur)->std::string {
-			return (cur.isa<TypePtr>()) ? "TYPE!" : "";
-		});
 	}
 
 } // end namespace json

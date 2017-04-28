@@ -56,12 +56,12 @@ namespace dump {
 namespace json {
 
 
-	void dumpIR(const std::string& filename, const NodePtr& ir, const std::function<std::string(NodeAddress)>& infoAnnotator) {
+	void dumpIR(const std::string& filename, const NodePtr& ir) {
 		std::ofstream out(filename);
-		dumpIR(out, ir, infoAnnotator);
+		dumpIR(out, ir);
 	}
 
-	void dumpIR(std::ostream& out, const NodePtr& ir, const std::function<std::string(NodeAddress)>& infoAnnotator) {
+	void dumpIR(std::ostream& out, const NodePtr& ir) {
 		// create list of all nodes
 		std::vector<NodePtr> nodes;
 		visitDepthFirstOnce(ir,[&](const NodePtr& cur) {
@@ -91,20 +91,6 @@ namespace json {
 
 			dump.push_back(make_pair(toString(node.ptr), e));
 		}
-
-		// put annotations (if any)
-		ptree annotations;
-		visitDepthFirst(NodeAddress(ir), [&] (const NodeAddress& node) {
-			// read info
-			auto annotation = infoAnnotator(node);
-			if(annotation.empty()) return;
-
-			// add info
-			ptree info;
-			info.put<string>("", annotation);
-			annotations.push_back(make_pair(toString(node), info));
-		}, true, true);
-		if(!annotations.empty()) dump.push_back(make_pair("annotations", annotations));
 
 		write_json(out, dump);
 	}
