@@ -35,54 +35,27 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-#pragma once
 
-///////////// FRONTEND
+template<typename T>
+void destroy() {
+	T *t;
+	t->T::~T();
+}
 
-// print color dump of Clang AST before frontend conversion
-#define INSIEME_PRINT_CLANG_AST "INSIEME_PRINT_CLANG_AST"
+int main() {
+	;
 
-// print list of all pragmas parsed in input before frontend conversion
-#define INSIEME_DUMP_PRAGMALIST "INSIEME_DUMP_PRAGMALIST"
+	#pragma test expect_ir(R"(
+		def IMP_destroy_int_returns_void = function () -> unit {
+			var ref<ptr<int<4>>,f,f,plain> v0 = ref_decl(type_lit(ref<ptr<int<4>>,f,f,plain>));
+		};
+		{
+			IMP_destroy_int_returns_void();
+		}
+	)")
+	{
+		destroy<int>();
+	}
 
-// run irDiff for conversion tests
-#define INSIEME_IRDIFF "INSIEME_IRDIFF"
-// the context size to use (default 0)
-#define INSIEME_IRDIFF_CONTEXT_SIZE "INSIEME_IRDIFF_CONTEXT_SIZE"
-
-
-///////////// CORE
-
-// disable full semantic checks
-#define INSIEME_NO_SEMA "INSIEME_NO_SEMA"
-
-// create JSON dumps for inspyer tool on semantic errors
-#define INSIEME_SEMA_INSPYER "INSIEME_SEMA_INSPYER"
-
-// create JSON dumps for inspyer tool on IRDIFF
-#define INSIEME_INSPYER "INSIEME_INSPYER"
-
-// abort on node creation matching the given IR string
-#define INSIEME_ABORT_NODE "INSIEME_ABORT_NODE"
-
-
-///////////// BACKEND
-
-// set backend compilers to use in insiemecc and unit/integration testing
-#define INSIEME_C_BACKEND_COMPILER "INSIEME_C_BACKEND_COMPILER"
-#define INSIEME_CXX_BACKEND_COMPILER "INSIEME_CXX_BACKEND_COMPILER"
-
-// do not translate the IR versions of std::initializer_list back to C++ std::initializer_list
-#define INSIEME_BE_INIT_LIST_TESTING "INSIEME_BE_INIT_LIST_TESTING"
-
-
-///////////// LOGGING
-
-// Set the log level (DEBUG, INFO, WARNING, ERROR, FATAL)
-#define LOG_LEVEL_ENV "INSIEME_LOG_LEVEL"
-
-// Set the log verbosity (1, 2, 3 are used)
-#define LOG_VERBOSITY_ENV "INSIEME_LOG_VERBOSITY"
-
-// Set up a regular expression filtering log messages by function names.
-#define LOG_FILTER_ENV "INSIEME_LOG_FILTER"
+	return 0;
+}

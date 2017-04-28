@@ -212,7 +212,9 @@ namespace utils {
 			                    << "\tExpected type: " << (eIsExp ? toString(dumpColor(expected.as<ExpressionPtr>()->getType())) : toString("-")) << "\n";
 
 			if(getenv(INSIEME_IRDIFF) != nullptr && expected != actual) {
-				core::analysis::irDiff(actual, expected, "CodeIR", "PragmaIR");
+				size_t contextSize = 0;
+				if(auto contextSizeString = getenv(INSIEME_IRDIFF_CONTEXT_SIZE)) contextSize = atoi(contextSizeString);
+				core::analysis::irDiff(actual, expected, "CodeIR", "PragmaIR", contextSize);
 				exit(-1);
 			}
 		}

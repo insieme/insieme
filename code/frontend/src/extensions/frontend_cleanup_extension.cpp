@@ -99,6 +99,9 @@ namespace extensions {
 						replacement = core::analysis::getArgument(stmt, 0);
 					} else if(feExt.isCallOfBoolToInt(stmt)) {
 						replacement = core::analysis::getArgument(stmt, 0);
+					} else if(feExt.isCallOfCxxPseudoDestructorCall(stmt)) {
+						// pseudo destructor calls are no-ops semantically
+						continue;
 					}
 					core::transform::utils::migrateAnnotations(stmt, replacement);
 					newStmts.push_back(replacement);

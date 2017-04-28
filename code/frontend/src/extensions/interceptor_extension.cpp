@@ -280,7 +280,7 @@ namespace extensions {
 			auto concreteFunctionType = lit->getType().as<core::FunctionTypePtr>();
 
 			// if we don't need to do any type instantiation
-			if(templateConcreteParams.empty() && core::analysis::isReturnTypePotentiallyDeducible(genericFunType)) {
+			if(!concreteFunctionType->isMember() && templateConcreteParams.empty() && core::analysis::isReturnTypePotentiallyDeducible(genericFunType)) {
 				return {innerLit, concreteFunctionType.getReturnType()};
 			}
 
@@ -346,7 +346,8 @@ namespace extensions {
 				// as well as global variables
 				auto varDecl = llvm::dyn_cast<clang::VarDecl>(decl);
 				if(varDecl) {
-					assert_true(varDecl->hasGlobalStorage()) << "We may only intercept global variables";
+					// only intercept variables with global storage
+					if(!varDecl->hasGlobalStorage()) return nullptr;
 					auto lit = builder.literal(insieme::utils::mangle(decl->getQualifiedNameAsString()), converter.convertVarType(expr->getType()));
 					converter.applyHeaderTagging(lit, decl);
 					VLOG(2) << "Interceptor: intercepted clang lit\n" << dumpClang(decl) << " -> converted to literal: " << *lit << " of type "

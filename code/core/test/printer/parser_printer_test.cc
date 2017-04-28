@@ -66,7 +66,6 @@ namespace parser {
 		auto type1 = builder.parseType(x);
 
 		if (type1) {
-			dumpColor(type1);
 			PrettyPrinter printerA(type1, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 			                              | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
 			                              | PrettyPrinter::NO_LIST_SUGAR | PrettyPrinter::PRINT_DERIVED_IMPL
@@ -126,6 +125,9 @@ namespace parser {
 		EXPECT_TRUE(test_type(nm, "(array<'elem,'n>, vector<uint<8>,'n>) -> 'elem"));
 		EXPECT_TRUE(test_type(nm, "<'a,'b>('a , int<4>) -> 'b"));
 		EXPECT_TRUE(test_type(nm, "<'a,uint<4>>('a , int<4>) -> uint<4>"));
+
+		// function as parameter to generic type which has a member function
+		EXPECT_TRUE(test_type(nm, "Foo<()->int<4>>::() -> unit"));
 
 		EXPECT_TRUE(test_type(nm, "struct C { field : int<4>; }"));
 		EXPECT_TRUE(test_type(nm, "alias papa = t<11>; alias mama = t<4>; struct name : [ papa, mama ] { a: int<4>; b : int<5>;}"));
