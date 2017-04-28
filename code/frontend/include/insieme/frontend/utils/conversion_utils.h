@@ -92,6 +92,10 @@ namespace utils {
 		return core::lang::buildRefType(irThisType, funProto->isConst(), funProto->isVolatile(), refKind);
 	}
 
+	inline const std::string getDummyAutoDeducedTypeName() {
+		return "INSIEME_AUTO_TYPE";
+	}
+
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme
