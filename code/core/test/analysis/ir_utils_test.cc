@@ -514,7 +514,12 @@ namespace analysis {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto buildDecl = [&](const string& type, const string& init) { return builder.declaration(builder.parseType(type), builder.parseExpr(init)); };
+		auto buildDecl = [&](const string& type, const string& init) {
+			return builder.declaration(
+					builder.normalize(builder.parseType(type)),
+					builder.normalize(builder.parseExpr(init))
+			);
+		};
 
 		// basic & subtyping
 		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>>", "2")));
@@ -534,16 +539,37 @@ namespace analysis {
 		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<ptr<'a,t,f>>", R"(lit("p":ptr<int<4>,f,f>))")));
 
 		// classes and structs materializing by (1) construction, (2) init expressions, or (3) implicit constructor calls
-		string structA = "def struct A { ctor () { } ctor (p : real<8>) { } }; ";
+		string structA = "def struct A { ctor () { } ctor (p : real<8>) { }  ctor (x : ref<int<4>>) { } }; ";
 		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "A::(ref_decl(type_lit(ref<A>)))")));
 		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "<ref<A>>(ref_decl(type_lit(ref<A>))){}")));
 		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "4.0")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "lit(\"X\":ref<int<4>>)")));
 
 		// cases which are NOT materializing
 		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>>", R"(lit("a":ref<int<4>>))")));
 		EXPECT_FALSE(isMaterializingDecl(buildDecl("int<4>", R"(42)")));
 		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,f,cpp_ref>", R"(42)")));
 
+		// test const / volatile combinations -- TODO: rethink whether all implicit kind casts should be allowed here
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,f,plain>", R"(lit("a":ref<int<4>,f,f,plain>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,f,plain>", R"(lit("a":ref<int<4>,f,t,plain>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,f,plain>", R"(lit("a":ref<int<4>,t,f,plain>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,f,plain>", R"(lit("a":ref<int<4>,t,t,plain>))")));
+
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,t,plain>", R"(lit("a":ref<int<4>,f,f,plain>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,t,plain>", R"(lit("a":ref<int<4>,f,t,plain>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,t,plain>", R"(lit("a":ref<int<4>,t,f,plain>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,t,plain>", R"(lit("a":ref<int<4>,t,t,plain>))")));
+
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,t,f,plain>", R"(lit("a":ref<int<4>,f,f,plain>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,t,f,plain>", R"(lit("a":ref<int<4>,f,t,plain>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,t,f,plain>", R"(lit("a":ref<int<4>,t,f,plain>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,t,f,plain>", R"(lit("a":ref<int<4>,t,t,plain>))")));
+
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,t,t,plain>", R"(lit("a":ref<int<4>,f,f,plain>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,t,t,plain>", R"(lit("a":ref<int<4>,f,t,plain>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,t,t,plain>", R"(lit("a":ref<int<4>,t,f,plain>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,t,t,plain>", R"(lit("a":ref<int<4>,t,t,plain>))")));
 	}
 
 	namespace {
