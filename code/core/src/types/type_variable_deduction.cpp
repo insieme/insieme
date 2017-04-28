@@ -52,6 +52,8 @@
 #include "insieme/utils/difference_constraints.h"
 #include "insieme/utils/logging.h"
 
+#include "insieme/core/ir_builder.h"
+
 namespace insieme {
 namespace core {
 namespace types {
@@ -718,11 +720,115 @@ namespace types {
 
 	namespace {
 
+		using MappingSolution = insieme::utils::map::PointerMap<TypeVariablePtr,TypePtr>;
+
+		bool match(const NodePtr& a, const NodePtr& b, MappingSolution& solution) {
+
+			// get node types
+			auto nodeTypeA = a->getNodeType();
+			auto nodeTypeB = b->getNodeType();
+
+			// if b is a type variable, the pure matching approach is not valid any more
+			if (nodeTypeB == NT_TypeVariable) return false;
+
+			// if both are the same => nothing to do
+			if (*a == *b) return true;
+
+			// and the category of B
+			auto category = b->getNodeCategory();
+
+			// check whether a is a variable
+			if (nodeTypeA == NT_TypeVariable) {
+				auto var = a.as<TypeVariablePtr>();
+
+				// b must be a type in this case
+				if(category != NC_Type) return false;
+
+				// check whether there is already a mapping for this variable
+				auto pos = solution.find(var);
+				if (pos != solution.end()) {
+					// check whether it is the same
+					return *pos->second == *b;
+				} else {
+					// add a new mapping
+					solution[var] = b.as<TypePtr>();
+					return true;
+				}
+			}
+
+			// for everything else, compare recursively
+
+			// the current type needs to be the same
+			if (nodeTypeA != nodeTypeB) return false;
+
+			// value nodes must match
+			if (category == NC_Value) {
+				return *a == *b;
+			}
+
+			// and there must be the same number of children
+			const auto& childrenA = a->getChildList();
+			const auto& childrenB = b->getChildList();
+			if (childrenA.size() != childrenB.size()) return false;
+
+			// and those must be matchable
+			for(std::size_t i = 0; i<childrenA.size(); i++) {
+				if (!match(childrenA[i],childrenB[i],solution)) return false;
+			}
+
+			// everything seems fine
+			return true;
+		}
+
+
+		SubstitutionOpt getMatchBasedInstantiation(NodeManager& manager, const TypeList& parameters, const TypeList& arguments) {
+
+			// the result to be returned upon failure
+			const static SubstitutionOpt fail;
+
+			// this quick solver only works for same-size lists
+			if (parameters.size() != arguments.size()) return fail;
+
+			// build up solution
+			MappingSolution mapping;
+
+			for(std::size_t i = 0; i<parameters.size(); i++) {
+
+				// get the parameter and the argument
+				auto param = parameters[i];
+				auto arg = arguments[i];
+
+				// handle necessary materialization
+				if (arg.isa<TagTypePtr>()) return fail;
+
+				// check whether it can be matched
+				if (!match(param,arg,mapping)) return fail;
+			}
+
+			// use result
+			Substitution res;
+			for(const auto& cur : mapping) {
+				res.addMapping(cur.first,cur.second);
+			}
+			return res;
+		}
+
+
 		SubstitutionOpt getTypeVariableInstantiationInternal(NodeManager& manager, TypeList parameter, TypeList arguments, bool allowMaterialization) {
 			const bool debug = false;
 
 			// the result to be returned upon failure
 			const static SubstitutionOpt fail;
+
+			// see whether a simple match would be sufficient
+			{
+				IRBuilder builder(manager);
+
+				auto match = getMatchBasedInstantiation(manager, parameter, arguments);
+				if (match) return match;
+
+			}
+
 
 			// -------------------------------- Invalid Call By Value ---------------------------------------
 			//
@@ -1109,18 +1215,8 @@ namespace types {
 
 
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const FunctionTypePtr& function, const TypeList& arguments, bool allowMaterialization) {
-		if(!allowMaterialization) return getTypeVariableInstantiation(manager, function->getParameterTypes()->getTypes(), arguments, allowMaterialization);
-
-		// check annotations
-		TypeList localArgs = function->getNodeManager().getAll(arguments);
-		if(auto res = VariableInstantionInfo::getFromAnnotation(function, localArgs)) { return copyTo(manager, *res); }
-
 		// use deduction mechanism
-		SubstitutionOpt res = getTypeVariableInstantiation(manager, function->getParameterTypes()->getTypes(), arguments, allowMaterialization);
-
-		// attach substitution
-		VariableInstantionInfo::addToAnnotation(function, localArgs, copyTo(function->getNodeManager(), res));
-		return res;
+		return getTypeVariableInstantiation(manager, function->getParameterTypes()->getTypes(), arguments, allowMaterialization);
 	}
 
 
