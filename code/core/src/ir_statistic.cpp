@@ -50,18 +50,86 @@ namespace core {
 	namespace {
 
 		/**
+		 * A utility for the efficient computation of a IR programs height.
+		 */
+		unsigned getHeight(const NodePtr& node, std::map<NodePtr,unsigned>& cache) {
+
+			// check cache
+			auto pos = cache.find(node);
+			if (pos != cache.end()) return pos->second;
+
+			// evaluate depth
+			unsigned res = 0;
+			for(const auto& cur : node->getChildList()) {
+				res = std::max(res,getHeight(cur,cache));
+			}
+
+			// cache result and return value
+			return cache[node] = res + 1;
+		}
+
+		/**
 		 * Obtains the height of the subtree rooted by the given node.
 		 *
 		 * @param node the node representing the root node of the tree to be evaluated
 		 */
 		unsigned evalHeight(const NodePtr& node) {
-			unsigned res = 1;
-			for_each(node->getChildList(), [&res](const NodePtr& cur) {
-				unsigned height = evalHeight(cur) + 1;
-				res = (res < height) ? height : res;
-			});
-			return res;
+			std::map<NodePtr,unsigned> cache;
+			return getHeight(node,cache);
 		}
+
+		/**
+		 * A helper class for counting the number of addressable nodes.
+		 */
+		struct AddressableNodesStatistic {
+			std::uint64_t numAddressableNodes;
+			std::uint64_t nodeTypeInfo[NUM_CONCRETE_NODE_TYPES];
+
+			AddressableNodesStatistic() : numAddressableNodes(0) {
+				for(int i=0; i<NUM_CONCRETE_NODE_TYPES; i++) {
+					nodeTypeInfo[i] = 0;
+				}
+			}
+
+			AddressableNodesStatistic& operator+=(const AddressableNodesStatistic& other) {
+				numAddressableNodes += other.numAddressableNodes;
+				for(int i=0; i<NUM_CONCRETE_NODE_TYPES; i++) {
+					nodeTypeInfo[i] += other.nodeTypeInfo[i];
+				}
+				return *this;
+			}
+		};
+
+		/**
+		 * A utility function for counting the number of addressable nodes.
+		 */
+		const AddressableNodesStatistic& countAddressableNodesInternal(const NodePtr& node, std::map<NodePtr,AddressableNodesStatistic>& cache) {
+
+			// check the cache
+			auto pos = cache.find(node);
+			if (pos != cache.end()) return pos->second;
+
+			AddressableNodesStatistic res;
+			for(const auto& cur : node->getChildList()) {
+				res += countAddressableNodesInternal(cur,cache);
+			}
+
+			// count this node
+			res.numAddressableNodes++;
+			res.nodeTypeInfo[node->getNodeType()]++;
+
+			// cache and return result
+			return cache[node] = res;
+		}
+
+		/**
+		 * A utility function for counting the number of addressable nodes.
+		 */
+		AddressableNodesStatistic countAddressableNodes(const NodePtr& root) {
+			std::map<NodePtr,AddressableNodesStatistic> cache;
+			return countAddressableNodesInternal(root,cache);
+		}
+
 	}
 
 	IRStatistic::IRStatistic() : numSharedNodes(0), numAddressableNodes(0), height(0) {
@@ -73,15 +141,16 @@ namespace core {
 
 		// count number of shared nodes ...
 		visitDepthFirstOnce(node, makeLambdaVisitor([&res](const NodePtr& ptr) {
-			                    res.numSharedNodes++;
-			                    res.nodeTypeInfo[ptr->getNodeType()].numShared++;
-			                }, true));
+			res.numSharedNodes++;
+			res.nodeTypeInfo[ptr->getNodeType()].numShared++;
+		}, true));
 
 		// ... and addressable nodes
-		visitDepthFirst(node, makeLambdaVisitor([&res](const NodePtr& ptr) {
-			                res.numAddressableNodes++;
-			                res.nodeTypeInfo[ptr->getNodeType()].numAddressable++;
-			            }, true));
+		auto stat = countAddressableNodes(node);
+		res.numAddressableNodes = stat.numAddressableNodes;
+		for(int i=0; i<NUM_CONCRETE_NODE_TYPES; i++) {
+			res.nodeTypeInfo[i].numAddressable = stat.nodeTypeInfo[i];
+		}
 
 		// ... and height (lightweight)
 		res.height = evalHeight(node);
