@@ -488,7 +488,7 @@ namespace checks {
 
 		// 2) check that all parameter declarations are either materializing or cpp/rrefs
 		for(const auto& decl : address->getArgumentDeclarations()) {
-			if(!lang::isCppReference(decl->getType()) && !lang::isCppRValueReference(decl->getType()) && !analysis::isMaterializingDecl(decl)) {
+			if(!lang::isCppReference(decl->getType()) && !lang::isCppRValueReference(decl->getType()) && !lang::isReference(decl->getInitialization()) && !analysis::isMaterializingDecl(decl)) {
 				add(res, Message(address, EC_TYPE_INVALID_ARGUMENT_TYPE,
 					             format("Invalid non-materializing argument: \n\t%s\n\t - init expr of type %s", *decl, *decl->getInitialization()->getType()),
 					             Message::ERROR));
