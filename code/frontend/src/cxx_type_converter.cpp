@@ -490,7 +490,9 @@ namespace conversion {
 		return convert(declTy->getUnderlyingType());
 	}
 	core::TypePtr Converter::CXXTypeConverter::VisitAutoType(const clang::AutoType* autoTy) {
-		frontend_assert(autoTy->isDeduced()) << "Non-deduced auto type unsupported.";
+		if(!autoTy->isDeduced()) {
+			return converter.getIRBuilder().genericType(utils::getDummyAutoDeducedTypeName());
+		}
 		return convert(autoTy->getDeducedType());
 	}
 

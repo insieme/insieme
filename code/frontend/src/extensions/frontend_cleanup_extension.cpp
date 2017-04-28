@@ -59,6 +59,7 @@
 #include "insieme/frontend/converter.h"
 #include "insieme/core/tu/ir_translation_unit.h"
 #include "insieme/core/tu/ir_translation_unit_io.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
@@ -244,6 +245,9 @@ namespace extensions {
 		ir = simplifyExpressionsInCompoundStatements(ir);
 		ir = replaceFERefTemp(ir);
 		ir = replaceStdInitListCopies(ir);
+
+		assert_false(core::analysis::contains(ir, core::IRBuilder(ir->getNodeManager()).genericType(utils::getDummyAutoDeducedTypeName())))
+				<< "Found un-deduced auto type!";
 
 		return core::tu::fromIR(ir);
 	}
