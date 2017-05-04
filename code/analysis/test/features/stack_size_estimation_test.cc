@@ -58,7 +58,7 @@ namespace features {
 		EXPECT_EQ(8,  getTypeSize(basic.getReal8()));
 		EXPECT_EQ(12, getTypeSize(builder.parseType("def struct A { b : int<4>; c : real<8>; }; A")));
 		EXPECT_EQ(8,  getTypeSize(builder.parseType("def union A { b : int<4>; c : real<8>; }; A")));
-		EXPECT_EQ(40, getTypeSize(builder.parseType("array<int<4>, 10>")));
+		EXPECT_EQ(40, getTypeSize(builder.parseType("array<int<4>, 10u>")));
 	}
 
 

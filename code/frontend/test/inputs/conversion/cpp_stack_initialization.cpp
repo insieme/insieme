@@ -48,7 +48,7 @@ int main() {
 	#pragma test expect_ir(R"(
 		def struct IMP_A {};
 		{
-			var ref<array<IMP_A,3>,f,f,plain> v0 = <ref<array<IMP_A,3>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3>,f,f,plain>))) {};
+			var ref<array<IMP_A,3u>,f,f,plain> v0 = <ref<array<IMP_A,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3u>,f,f,plain>))) {};
 		}
 	)")
 	{
@@ -60,7 +60,7 @@ int main() {
 		{
 			var ref<IMP_A,f,f,plain> v0 = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
 			var ref<IMP_A,f,f,plain> v1 = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
-			var ref<array<IMP_A,3>,f,f,plain> v2 = <ref<array<IMP_A,3>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3>,f,f,plain>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref))};
+			var ref<array<IMP_A,3u>,f,f,plain> v2 = <ref<array<IMP_A,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3u>,f,f,plain>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref))};
 		}
 	)")
 	{
@@ -73,7 +73,7 @@ int main() {
 			dtor virtual function () { 5; }
 		};
 		{
-			var ref<array<IMP_NonPod,77>,f,f,plain> v0 = <ref<array<IMP_NonPod,77>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_NonPod,77>,f,f,plain>))) {};
+			var ref<array<IMP_NonPod,77u>,f,f,plain> v0 = <ref<array<IMP_NonPod,77u>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_NonPod,77u>,f,f,plain>))) {};
 		}
 	)")
 	{

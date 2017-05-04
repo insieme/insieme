@@ -346,7 +346,7 @@ namespace checks {
 		auto err1 = builder.parent(builder.parseType("union { x : int<4>; }"));
 		auto err2 = builder.parent(builder.parseType("(A,B)->R"));
 		auto err3 = builder.parent(builder.parseType("ref<A>"));
-		auto err4 = builder.parent(builder.parseType("array<A,1>"));
+		auto err4 = builder.parent(builder.parseType("array<A,1u>"));
 		auto err5 = builder.parent(builder.parseType("channel<A,2>"));
 
 		// check the correct types
@@ -1393,8 +1393,8 @@ namespace checks {
 
 		// test array
 		{
-			TypePtr ok = builder.parseType("array<int<4>,12>");
-			TypePtr err = builder.parseType("array<int<4>,12,14>");
+			TypePtr ok = builder.parseType("array<int<4>,12u>");
+			TypePtr err = builder.parseType("array<int<4>,12u,14>");
 
 			EXPECT_FALSE(*ok == *err);
 
@@ -1406,7 +1406,7 @@ namespace checks {
 
 		// test array
 		{
-			TypePtr ok = builder.parseType("array<int<4>,12>");
+			TypePtr ok = builder.parseType("array<int<4>,12u>");
 			TypePtr err = builder.parseType("array<12,int<4>>");
 
 			EXPECT_FALSE(*ok == *err);
@@ -1688,7 +1688,7 @@ namespace checks {
 		errors = check(cur, typeCheck);
 		EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
-		ExpressionPtr arrayPtr = builder.parseExpr("*<ref<array<int<4>,12>,f,f,plain>> {0}");
+		ExpressionPtr arrayPtr = builder.parseExpr("*<ref<array<int<4>,12u>,f,f,plain>> {0}");
 
 		// also, allow array values to be used within ref.new, ref.temp, struct, tuple and union expressions
 

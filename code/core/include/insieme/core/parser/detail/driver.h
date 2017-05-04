@@ -244,6 +244,22 @@ namespace parser {
 			NumericTypePtr genNumericType(const location& l, const string& value) const;
 
 			/**
+			 * generates a negative numeric type from the given positive value
+			 * @param l: the location where this generic type was found
+			 * @param value: the positive part of the value to be represented
+			 * @return the corresponding type node
+			 */
+			NumericTypePtr genNegativeNumericType(const location& l, const string& value) const;
+
+			/**
+			 * generates an unsigned numeric type representing the given value
+			 * @param l: the location where this generic type was found
+			 * @param value: the value to be represented
+			 * @return the corresponding type node
+			 */
+			NumericTypePtr genUnsignedNumericType(const location& l, const string& value) const;
+
+			/**
 			 * generates a numeric type representing the given value
 			 * @param l: the location where this generic type was found
 			 * @param variable: the variable to be represented

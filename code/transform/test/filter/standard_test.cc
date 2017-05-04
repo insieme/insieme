@@ -53,7 +53,7 @@ namespace filter {
 		core::IRBuilder builder(manager);
 
 		std::map<std::string, core::NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,10>,f,f,plain>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,10u>,f,f,plain>"));
 
 		auto node = builder.parseStmt("for(uint<4> i = 10u .. 50u) {"
 		                              "	for(uint<4> j = 3u .. 25u) {"
@@ -109,7 +109,7 @@ namespace filter {
 		core::IRBuilder builder(manager);
 
 		std::map<std::string, core::NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,10>,f,f,plain>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,10u>,f,f,plain>"));
 
 		auto node = builder.parseStmt("{"
 		                              "10;"
@@ -170,7 +170,7 @@ namespace filter {
 		core::IRBuilder builder(manager);
 
 		std::map<std::string, core::NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,10>,f,f,plain>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,10u>,f,f,plain>"));
 
 		auto node = builder.parseStmt("{"
 		                              "10;"
@@ -225,7 +225,7 @@ namespace filter {
 		core::IRBuilder builder(manager);
 
 		std::map<std::string, core::NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,10>,f,f,plain>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,10u>,f,f,plain>"));
 
 		auto node = builder.parseStmt("{"
 		                              "10;"

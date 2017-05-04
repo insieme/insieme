@@ -35,11 +35,14 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
+
+#include <limits.h>
+
 enum e { A, B, C };
 
 typedef enum f { D, E, F } f;
 
-typedef enum g { G, H=4, I } g;
+typedef enum g { G, H=4, I, MAX=~INT_MAX } g;
 
 void eConsumer(enum e e) { }
 
@@ -99,8 +102,12 @@ int main() {
 	f f1;
 
 	// enum with custom values
-	#pragma test expect_ir("var ref<(type<enum_def<IMP_g,int<4>,enum_entry<IMP_g_colon__colon_G,0>,enum_entry<IMP_g_colon__colon_H,4>,enum_entry<IMP_g_colon__colon_I,5>>>, int<4>),f,f,plain> v0 = ref_decl(type_lit(ref<(type<enum_def<IMP_g,int<4>,enum_entry<IMP_g_colon__colon_G,0>,enum_entry<IMP_g_colon__colon_H,4>,enum_entry<IMP_g_colon__colon_I,5>>>, int<4>),f,f,plain>));")
+	#pragma test expect_ir("var ref<(type<enum_def<IMP_g,int<4>,enum_entry<IMP_g_colon__colon_G,0>,enum_entry<IMP_g_colon__colon_H,4>,enum_entry<IMP_g_colon__colon_I,5>,enum_entry<IMP_g_colon__colon_MAX,-2147483648>>>, int<4>),f,f,plain> v0 = ref_decl(type_lit(ref<(type<enum_def<IMP_g,int<4>,enum_entry<IMP_g_colon__colon_G,0>,enum_entry<IMP_g_colon__colon_H,4>,enum_entry<IMP_g_colon__colon_I,5>,enum_entry<IMP_g_colon__colon_MAX,-2147483648>>>, int<4>),f,f,plain>));")
 	g g1;
+
+	// enum with custom values - using a negative value
+	#pragma test expect_ir("var ref<(type<enum_def<IMP_g,int<4>,enum_entry<IMP_g_colon__colon_G,0>,enum_entry<IMP_g_colon__colon_H,4>,enum_entry<IMP_g_colon__colon_I,5>,enum_entry<IMP_g_colon__colon_MAX,-2147483648>>>, int<4>),f,f,plain> v0 = (type_lit(enum_def<IMP_g,int<4>,enum_entry<IMP_g_colon__colon_G,0>,enum_entry<IMP_g_colon__colon_H,4>,enum_entry<IMP_g_colon__colon_I,5>,enum_entry<IMP_g_colon__colon_MAX,-2147483648>>), -2147483648);")
+	g g2 = MAX;
 
 	// comparison operators
 	#pragma test expect_ir(R"(using "ext.enum"; {

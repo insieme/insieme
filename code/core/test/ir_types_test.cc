@@ -781,8 +781,8 @@ namespace core {
 		GenericTypePtr genArrayTypeB = builder.arrayType(elementTypeB, param3);
 
 		// check names
-		EXPECT_EQ("array<A,1>", toString(*genArrayTypeA));
-		EXPECT_EQ("array<'a,3>", toString(*genArrayTypeB));
+		EXPECT_EQ("array<A,1u>", toString(*genArrayTypeA));
+		EXPECT_EQ("array<'a,3u>", toString(*genArrayTypeB));
 
 		auto arrayTypeA = core::lang::ArrayType(genArrayTypeA);
 		auto arrayTypeB = core::lang::ArrayType(genArrayTypeB);
@@ -824,8 +824,8 @@ namespace core {
 		GenericTypePtr genChannelTypeB = builder.channelType(elementTypeB, param3);
 
 		// check names
-		EXPECT_EQ("channel<A,1>", toString(*genChannelTypeA));
-		EXPECT_EQ("channel<'a,3>", toString(*genChannelTypeB));
+		EXPECT_EQ("channel<A,1u>", toString(*genChannelTypeA));
+		EXPECT_EQ("channel<'a,3u>", toString(*genChannelTypeB));
 
 		auto channelTypeA = core::lang::ChannelType(genChannelTypeA);
 		auto channelTypeB = core::lang::ChannelType(genChannelTypeB);

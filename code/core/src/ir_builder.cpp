@@ -1287,7 +1287,7 @@ namespace core {
 	}
 
 	TypePtr IRBuilderBaseModule::numericType(int64_t value) const {
-		return numericType(literal(format("%d", value), getLangBasic().getUIntInf()));
+		return numericType(literal(format("%d", value), getLangBasic().getIntInf()));
 	}
 
 	LiteralPtr IRBuilderBaseModule::getTypeLiteral(const TypePtr& type) const {

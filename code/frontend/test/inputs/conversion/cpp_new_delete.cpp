@@ -84,7 +84,7 @@ int main() {
 	// Base type arrays ----------------------------------------------------------------------------------------------------------------------------------------
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(<ref<array<int<4>,50>,f,f,plain>>(ref_new(type_lit(array<int<4>,50>))) {});
+		var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(<ref<array<int<4>,50u>,f,f,plain>>(ref_new(type_lit(array<int<4>,50u>))) {});
 		ref_delete(ptr_to_array(*i));
 	})")
 	{
@@ -93,7 +93,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<int<4>>,f,f,plain> v0 = ptr_from_array(<ref<array<int<4>,50>,f,f,plain>>(ref_new(type_lit(array<int<4>,50>))) {1, 2, 3});
+		var ref<ptr<int<4>>,f,f,plain> v0 = ptr_from_array(<ref<array<int<4>,50u>,f,f,plain>>(ref_new(type_lit(array<int<4>,50u>))) {1, 2, 3});
 		ref_delete(ptr_to_array(*v0));
 	})")
 	{
@@ -102,7 +102,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<ptr<array<int<4>,3>>,f,f,plain> v0 = ptr_from_array(<ref<array<array<int<4>,3>,50>,f,f,plain>>(ref_new(type_lit(array<array<int<4>,3>,50>))) {});
+		var ref<ptr<array<int<4>,3u>>,f,f,plain> v0 = ptr_from_array(<ref<array<array<int<4>,3u>,50u>,f,f,plain>>(ref_new(type_lit(array<array<int<4>,3u>,50u>))) {});
 		ref_delete(ptr_to_array(*v0));
 	})")
 	{
@@ -122,7 +122,7 @@ int main() {
 	}
 
 	#pragma test expect_ir(SimplestConstructor_IR, R"({
-		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {});
+		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v0 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3u>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3u>))) {});
 		ref_delete(ptr_to_array(*v0));
 	})")
 	{
@@ -132,7 +132,7 @@ int main() {
 
 	#pragma test expect_ir(SimplestConstructor_IR, R"({
 		var ref<IMP_SimplestConstructor,f,f,plain> v0 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
-		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v1 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))});
+		var ref<ptr<IMP_SimplestConstructor>,f,f,plain> v1 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3u>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3u>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))});
 		ref_delete(ptr_to_array(*v1));
 	})")
 	{

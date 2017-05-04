@@ -231,6 +231,11 @@ namespace printer {
 		return core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::PRINT_SINGLE_LINE | core::printer::PrettyPrinter::NO_LET_BINDINGS);
 	}
 
+	/**
+	 * Returns a suffix for the type of the given literal like "u" or "ll".
+	 */
+	std::string getLiteralTypeSuffix(const core::LiteralPtr& lit);
+
 } // end of namespace printer
 } // end of namespace core
 } // end of namespace insieme

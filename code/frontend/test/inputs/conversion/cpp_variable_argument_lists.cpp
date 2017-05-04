@@ -40,7 +40,7 @@
 int main() {
 
 	#pragma test expect_ir(R"(using "ext.varargs";
-		lit("IMP_printf" : (ptr<char,t,f>, var_list) -> int<4>)(ptr_from_array(lit(""%d, %d, %d\n"" : ref<array<char,12>,t,f,plain>)), varlist_pack((1, 2, 3)))
+		lit("IMP_printf" : (ptr<char,t,f>, var_list) -> int<4>)(ptr_from_array(lit(""%d, %d, %d\n"" : ref<array<char,12u>,t,f,plain>)), varlist_pack((1, 2, 3)))
 	)")
 	printf("%d, %d, %d\n", 1, 2, 3);
 

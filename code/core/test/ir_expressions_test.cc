@@ -92,7 +92,7 @@ namespace core {
 		// EXPECT_EQ( *f5, *f5_s ); //-- this is not necessarily true
 		std::stringstream ss;
 		ss << *f5_s;
-		EXPECT_EQ(ss.str(), "5.0");
+		EXPECT_EQ(ss.str(), "5.0f");
 		//	EXPECT_EQ( f5->getValue(), f5_s->getValue() );
 	}
 
@@ -143,7 +143,7 @@ namespace core {
 		EXPECT_EQ(*second, *more->getType());
 
 		EXPECT_EQ("tuple()", toString(*empty));
-		EXPECT_EQ("tuple(true,1)", toString(*more));
+		EXPECT_EQ("tuple(true,1u)", toString(*more));
 
 
 		// check hash codes, children and cloning
@@ -253,10 +253,10 @@ namespace core {
 		LambdaExprPtr simple = builder.lambdaExpr(functionType, toVector(x), builder.returnStmt(builder.boolLit("true")));
 		EXPECT_FALSE(simple->isRecursive());
 
-		EXPECT_EQ("rec even.{even=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) {return true;} else {return rec bool_not.{bool_not=fun(ref<bool,f,f,plain> v0) {if(ref_deref(v0)) {return false;} else {return true;};}}(odd(v3));};}, odd=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) "
+		EXPECT_EQ("rec even.{even=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0u)) {return true;} else {return rec bool_not.{bool_not=fun(ref<bool,f,f,plain> v0) {if(ref_deref(v0)) {return false;} else {return true;};}}(odd(v3));};}, odd=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0u)) "
 		          "{return false;} else {return rec bool_not.{bool_not=fun(ref<bool,f,f,plain> v0) {if(ref_deref(v0)) {return false;} else {return true;};}}(even(v3));};}}",
 		          toString(*even));
-		EXPECT_EQ("rec odd.{even=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) {return true;} else {return rec bool_not.{bool_not=fun(ref<bool,f,f,plain> v0) {if(ref_deref(v0)) {return false;} else {return true;};}}(odd(v3));};}, odd=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0)) "
+		EXPECT_EQ("rec odd.{even=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0u)) {return true;} else {return rec bool_not.{bool_not=fun(ref<bool,f,f,plain> v0) {if(ref_deref(v0)) {return false;} else {return true;};}}(odd(v3));};}, odd=fun(ref<uint<4>,f,f,plain> v3) {if(uint_eq(v3, 0u)) "
 		          "{return false;} else {return rec bool_not.{bool_not=fun(ref<bool,f,f,plain> v0) {if(ref_deref(v0)) {return false;} else {return true;};}}(even(v3));};}}",
 		          toString(*odd));
 	}
@@ -452,8 +452,8 @@ namespace core {
 		EXPECT_NE(access2, access3);
 		EXPECT_EQ(builder.normalize(access), builder.normalize(access3));
 
-		EXPECT_EQ("tuple_member_access(tuple(1,2), 0, type<typeA>)", toString(*access));
-		EXPECT_EQ("tuple_member_access(tuple(1,2), 1, type<typeB>)", toString(*access2));
+		EXPECT_EQ("tuple_member_access(tuple(1,2), 0ul, type<typeA>)", toString(*access));
+		EXPECT_EQ("tuple_member_access(tuple(1,2), 1ul, type<typeB>)", toString(*access2));
 	}
 
 

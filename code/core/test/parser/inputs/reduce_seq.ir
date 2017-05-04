@@ -1,4 +1,4 @@
-def reduce = (data : ref<array<'a,1>>, size : uint<8>, op : ('b,'a)->'b, init : 'b)->'b {
+def reduce = (data : ref<array<'a,1u>>, size : uint<8>, op : ('b,'a)->'b, init : 'b)->'b {
 	var ref<'b> res = init;
 	for(uint<8> i = 0ul .. size) {
 		res = op(*res, *(data[i]));
