@@ -21,6 +21,7 @@ Following options can be supplied to CMake
 | -DBUILD_SHARED_LIBS | ON / OFF        |
 | -DBUILD_TESTS       | ON / OFF        |
 | -DBUILD_DOCS        | ON / OFF        |
+| -DBUILD_COVERAGE    | ON / OFF        |
 | -DUSE_ASSERT        | ON / OFF        |
 | -DUSE_VALGRIND      | ON / OFF        |
 | -DTHIRD_PARTY_DIR   | \<path\>        |

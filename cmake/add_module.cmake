@@ -1,5 +1,5 @@
 macro(add_module_library module)
-	set(options HEADER_ONLY)
+	set(options HEADER_ONLY EXCLUDE_FROM_ALL)
 	cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
 
 	glob_sources(${module}_srcs src)
@@ -22,7 +22,12 @@ macro(add_module_library module)
 			)
 		endif()
 	else()
-		add_library(${module} ${${module}_srcs})
+		set(library_options "")
+		if(ARG_EXCLUDE_FROM_ALL)
+			set(library_options "EXCLUDE_FROM_ALL")
+		endif()
+
+		add_library(${module} ${library_options} ${${module}_srcs})
 		target_include_directories(${module} PUBLIC include)
 
 		# The project name will be prefixed to the output file since your
@@ -47,12 +52,24 @@ macro(add_module_library module)
 endmacro()
 
 macro(add_module_executable module exe)
+	set(options NO_LIB EXCLUDE_FROM_ALL)
+	cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
+
 	get_filename_component(exe_name ${exe} NAME_WE)
+
+	set(executable_options "")
+	if(ARG_EXCLUDE_FROM_ALL)
+		set(executable_options "EXCLUDE_FROM_ALL")
+	endif()
 
 	# The target name will be prefixed with the module name so you can have
 	# two main executables in different modules.
-	add_executable(${module}_${exe_name} ${exe})
-	target_link_libraries(${module}_${exe_name} ${module})
+	add_executable(${module}_${exe_name} ${executable_options} ${exe})
+
+	# link with module library
+	if(NOT ARG_NO_LIB)
+		target_link_libraries(${module}_${exe_name} ${module})
+	endif()
 
 	# But the output name will not contain the module prefix, this is fine
 	# inside the build directory since everything is organized in
@@ -67,7 +84,7 @@ endmacro()
 
 macro(add_module_unittest module test)
 	if(BUILD_TESTS)
-		set(options NO_VALGRIND PARALLEL)
+		set(options NO_VALGRIND PARALLEL NO_LIB)
 		set(one_value_args OUTPUT_TARGET_NAME)
 		cmake_parse_arguments(ARG "${options}" "${one_value_args}" "" ${ARGN})
 
@@ -93,7 +110,11 @@ macro(add_module_unittest module test)
 
 		# build executable
 		add_executable(${test_name} ${test})
-		target_link_libraries(${test_name} ${module})
+
+		# link with module library
+		if(NOT ARG_NO_LIB)
+			target_link_libraries(${test_name} ${module})
+		endif()
 
 		# add gtest
 		target_link_libraries(${test_name} gtest)
@@ -114,6 +135,11 @@ macro(add_module_unittest module test)
 
 		if(MSVC)
 			set_target_properties(${test_name} PROPERTIES FOLDER "${module}/Tests")
+		endif()
+
+		# unit test required for code coverage
+		if(BUILD_COVERAGE)
+			add_dependencies(coverage ${test_name})
 		endif()
 	endif()
 endmacro()
