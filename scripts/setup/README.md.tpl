@@ -75,3 +75,13 @@ header to each source file upon commit. See `scripts/license`.
     $ cmake -G "Visual Studio 14 Win64" -DBUILD_SHARED_LIBS=OFF Z:\path\to\project
 
 Add path for third-party libraries when needed.
+
+### Coverage
+
+Building the coverage us currently only supported on Linux, as Perl and Bash
+are required. To build and view the coverage set the corresponding CMake flag
+to `ON` and run:
+
+    $ make
+    $ make coverage
+    $ xdg-open coverage/index.html
