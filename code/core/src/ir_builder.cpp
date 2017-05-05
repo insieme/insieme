@@ -1021,7 +1021,7 @@ namespace core {
 	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body, const std::string& name) const {
 		auto paramVarTypes = extractTypes(params);
 		assert_true(::all(paramVarTypes, lang::isReference)) << "All parameters need to be reference types, given: " << paramVarTypes;
-		auto paramTypes = ::transform(paramVarTypes, analysis::getReferencedType);
+		auto paramTypes = ::transform(paramVarTypes, transform::dematerialize);
 		return lambdaExpr(functionType(paramTypes, returnType, FK_PLAIN), params, wrapBody(body), name);
 	}
 

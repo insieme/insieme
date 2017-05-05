@@ -487,6 +487,8 @@ namespace lang {
 
 	bool doReferencesDifferOnlyInQualifiers(const TypePtr& typeA, const TypePtr& typeB);
 
+	bool doReferencesDifferOnlyInConstOrVolatileQualifiers(const TypePtr& typeA, const TypePtr& typeB);
+
 	ExpressionPtr buildRefDeref(const ExpressionPtr& refExpr);
 
 	ExpressionPtr buildRefCast(const ExpressionPtr& refExpr, const TypePtr& targetTy);

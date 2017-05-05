@@ -665,22 +665,26 @@ namespace checks {
 		FunctionTypePtr funTypeIs = lambda->getLambda()->getType();
 
 		TypesPtr types = funTypeIs->getParameterTypes();
-		vector<TypePtr> paramTypes;
 		for(std::size_t i = 0; i < types.size(); ++i) {
 
 			auto parameter = address->getParameterList()[i];
-			auto should = transform::materialize(types[i]);
 			auto is = parameter->getType();
+			auto should = transform::materialize(types[i]);
 
-			// materialized parameters of non-ref type are alowed to have arbitrary qualifiers
-			if(*should != *is && (!analysis::isRefType(types[i]) && !lang::doReferencesDifferOnlyInQualifiers(is, should))) {
-				add(res, Message(
-						parameter, EC_TYPE_INVALID_LAMBDA_TYPE,
-						format("Invalid parameters type of %s - is: %s, should %s", *parameter, *is, *should),
-						Message::ERROR
-					)
-				);
+			// if is and should are the same, this parameter materialization is ok.
+			if(*is == *should) {
+				continue;
 			}
+			// also, materialized parameters of non-ref type are allowed to have arbitrary (const and volatile) qualifiers
+			if(!analysis::isRefType(types[i]) && lang::doReferencesDifferOnlyInConstOrVolatileQualifiers(is, should)) {
+				continue;
+			}
+
+			// otherwise we have an error
+			add(res, Message(
+					parameter, EC_TYPE_INVALID_LAMBDA_TYPE,
+					format("Invalid parameters type of %s - is: %s, should %s", *parameter, *is, *should),
+					Message::ERROR));
 		}
 
 		/*

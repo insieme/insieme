@@ -1523,8 +1523,27 @@ namespace checks {
 		err = transform::replaceAll(manager, lambda, param, invalidParam, transform::globalReplacement).as<LambdaExprPtr>();
 		errors = check(err, typeCheck);
 		EXPECT_EQ(1u, errors.size()) << errors;
-		auto paramAddress = LambdaExprAddress(err)->getParameterList()[0];
-		EXPECT_PRED2(containsMSG, errors, Message(paramAddress, EC_TYPE_INVALID_LAMBDA_PARAMETER_TYPE, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, errors, Message(LambdaExprAddress(err)->getParameterList()[0], EC_TYPE_INVALID_LAMBDA_PARAMETER_TYPE, "", Message::ERROR));
+
+
+		// case 6 - parametes have to be the materialized version of the function type parts
+		// here we have a cpp_ref as parameter and the function type has a plain reference
+		auto int4 = builder.getLangBasic().getInt4();
+		param = builder.variable(builder.refType(int4, true, false, lang::ReferenceType::Kind::CppReference));
+		auto funType = builder.functionType(builder.refType(int4), basic.getUnit());
+		err = builder.lambdaExpr(funType, { param }, builder.getNoOp());
+		errors = check(err, typeCheck);
+		EXPECT_EQ(1u, errors.size()) << errors;
+		EXPECT_PRED2(containsMSG, errors, Message(LambdaExprAddress(err)->getParameterList()[0], EC_TYPE_INVALID_LAMBDA_TYPE, "", Message::ERROR));
+
+
+		// case 7 - non-ref parameter type is ok if the materialized version of the parameter only has different const and volatile qualifiers
+		// here we have a const int plain ref as parameter and the function type has a plain value
+		param = builder.variable(builder.refType(int4, true));
+		funType = builder.functionType(int4, basic.getUnit());
+		lambda = builder.lambdaExpr(funType, { param }, builder.getNoOp());
+		errors = check(lambda, typeCheck);
+		EXPECT_EQ(0, errors.size()) << errors;
 	}
 
 	TEST(ArrayTypeChecks, Basic) {

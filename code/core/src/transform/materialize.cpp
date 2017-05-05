@@ -38,6 +38,7 @@
 #include "insieme/core/transform/materialize.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation_utils.h"
 
@@ -47,7 +48,6 @@ namespace transform {
 
 
 	TypePtr materialize(const TypePtr& type) {
-
 		// check for null pointer
 		if(!type) return type;
 
@@ -59,9 +59,28 @@ namespace transform {
 			return type;
 		}
 
-		// wrap type into parameter
+		// wrap type into plain ref
 		IRBuilder builder(type->getNodeManager());
 		return builder.refType(type);
+	}
+
+	TypePtr dematerialize(const TypePtr& type) {
+		// check for null pointer
+		if(!type) return type;
+
+		// check for unit
+		if(type->getNodeManager().getLangBasic().isUnit(type)) return type;
+
+		// make sure we are dealing with a reference here
+		assert_true(analysis::isRefType(type)) << "Trying to de-materialize a non-ref type";
+
+		// do not materialize references
+		if(lang::isCppReference(type)||lang::isCppRValueReference(type)) {
+			return type;
+		}
+
+		// strip surrounding ref
+		return analysis::getReferencedType(type);
 	}
 
 
