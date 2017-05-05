@@ -110,10 +110,13 @@ namespace lang {
 			// check properties
 			if(arr->getTypeParameter().size()!=2) return false;
 			auto size = arr->getTypeParameter(1);
+			auto sizeNumericType = size.isa<NumericTypePtr>();
 
 			return arr->getParents().empty()
 				&& arr->getName()->getValue() == "array"
-				&& (size.isa<TypeVariablePtr>() || size.isa<NumericTypePtr>() || isInf(size));
+				&& (size.isa<TypeVariablePtr>()
+						|| (sizeNumericType && arr.getNodeManager().getLangBasic().isUnsignedInt(sizeNumericType->getValue()->getType())) // if the size is a NumericType, make sure it is unsigned
+						|| isInf(size));
 		}
 
 	}

@@ -320,6 +320,14 @@ namespace lang {
 				|| types::getTypeVariableInstantiation(typeA->getNodeManager(), gB->getTypeParameter(0), gA->getTypeParameter(0));
 	}
 
+	bool doReferencesDifferOnlyInConstOrVolatileQualifiers(const TypePtr& typeA, const TypePtr& typeB) {
+		// doReferencesDifferOnlyInQualifiers will check for ref types
+		if(!doReferencesDifferOnlyInQualifiers(typeA, typeB)) return false;
+
+		// ensure the ref kind is the same
+		return ReferenceType(typeA).getKind() == ReferenceType(typeB).getKind();
+	}
+
 	ExpressionPtr buildRefDeref(const ExpressionPtr& refExpr) {
 		assert_pred1(isReference, refExpr->getType());
 		auto& rExt = refExpr->getNodeManager().getLangExtension<lang::ReferenceExtension>();

@@ -59,17 +59,17 @@
 			(this)._M_original = false;
 		}
 		ctor function (v1 : ref<int<4>,t,f,cpp_ref>) {
-			(this)._M_array = ptr_cast(ptr_from_array(<ref<array<int<4>,1>,f,f,plain>>(ref_new(type_lit(array<int<4>,1>))) {v1}), type_lit(t), type_lit(f));
+			(this)._M_array = ptr_cast(ptr_from_array(<ref<array<int<4>,1u>,f,f,plain>>(ref_new(type_lit(array<int<4>,1u>))) {v1}), type_lit(t), type_lit(f));
 			(this)._M_len = 1ul;
 			(this)._M_original = true;
 		}
 		ctor function (v1 : ref<int<4>,t,f,cpp_ref>, v2 : ref<int<4>,t,f,cpp_ref>) {
-			(this)._M_array = ptr_cast(ptr_from_array(<ref<array<int<4>,2>,f,f,plain>>(ref_new(type_lit(array<int<4>,2>))) {v1, v2}), type_lit(t), type_lit(f));
+			(this)._M_array = ptr_cast(ptr_from_array(<ref<array<int<4>,2u>,f,f,plain>>(ref_new(type_lit(array<int<4>,2u>))) {v1, v2}), type_lit(t), type_lit(f));
 			(this)._M_len = 2ul;
 			(this)._M_original = true;
 		}
 		ctor function (v1 : ref<int<4>,t,f,cpp_ref>, v2 : ref<int<4>,t,f,cpp_ref>, v3 : ref<int<4>,t,f,cpp_ref>) {
-			(this)._M_array = ptr_cast(ptr_from_array(<ref<array<int<4>,3>,f,f,plain>>(ref_new(type_lit(array<int<4>,3>))) {v1, v2, v3}), type_lit(t), type_lit(f));
+			(this)._M_array = ptr_cast(ptr_from_array(<ref<array<int<4>,3u>,f,f,plain>>(ref_new(type_lit(array<int<4>,3u>))) {v1, v2, v3}), type_lit(t), type_lit(f));
 			(this)._M_len = 3ul;
 			(this)._M_original = true;
 		}
@@ -196,7 +196,7 @@ int main() {
 				(this)._M_original = false;
 			}
 			ctor function (v1 : ref<IMP_TestObj,t,f,cpp_ref>, v2 : ref<IMP_TestObj,t,f,cpp_ref>) {
-				(this)._M_array = ptr_cast(ptr_from_array(<ref<array<IMP_TestObj,2>,f,f,plain>>(ref_new(type_lit(array<IMP_TestObj,2>))) {v1, v2}), type_lit(t), type_lit(f));
+				(this)._M_array = ptr_cast(ptr_from_array(<ref<array<IMP_TestObj,2u>,f,f,plain>>(ref_new(type_lit(array<IMP_TestObj,2u>))) {v1, v2}), type_lit(t), type_lit(f));
 				(this)._M_len = 2ul;
 				(this)._M_original = true;
 			}

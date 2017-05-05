@@ -44,6 +44,7 @@ namespace core {
 namespace transform {
 
 	TypePtr materialize(const TypePtr&);
+	TypePtr dematerialize(const TypePtr&);
 
 	struct LambdaIngredients {
 		VariableList params;

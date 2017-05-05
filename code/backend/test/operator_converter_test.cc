@@ -69,7 +69,7 @@ namespace backend {
 
 			alias obj = struct B {
 				a : int;
-				b : array<int,4>;
+				b : array<int,4u>;
 				c : pair;
 			};
 
@@ -92,14 +92,14 @@ namespace backend {
 				o.b[2u] = 0;
 				print("o.b[2] = %d\n", *o.b[2u]);
 
-				var ref<ref<int>> y = ref_narrow(o, dp_element(dp_member(dp_root(type_lit(obj)), lit("b"), type_lit(array<int,4>)), 2u));
+				var ref<ref<int>> y = ref_narrow(o, dp_element(dp_member(dp_root(type_lit(obj)), lit("b"), type_lit(array<int,4u>)), 2u));
 				*y = 12;
 				print("Equal: %d\n", ref_eq(o.b[2u], *y));
 				print("y = %d \t o.b[2] = %d\n", **y, *o.b[2u]);
 
 
 				// expand a definition
-				var ref<ref<array<int,4>>> v = ref_expand(*y, dp_element(dp_root(type_lit(array<int,4>)), 2u));
+				var ref<ref<array<int,4u>>> v = ref_expand(*y, dp_element(dp_root(type_lit(array<int,4u>)), 2u));
 				(*v)[1u] = 10;
 				(*v)[2u] = 14;
 

@@ -527,6 +527,8 @@ qual_object_type : object_type                                            { $$ =
 // -- numeric type --
 
 numeric_type : "int"                                                      { $$ = driver.genNumericType(@$, $1); }
+             | "-" "int"                                                  { $$ = driver.genNegativeNumericType(@$, $2); }
+             | "uint"                                                     { $$ = driver.genUnsignedNumericType(@$, $1); }
              | "#" variable                                               { $$ = driver.genNumericType(@$, $2); }
              ;
 

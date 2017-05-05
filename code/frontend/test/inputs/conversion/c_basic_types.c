@@ -119,23 +119,23 @@ int main() {
 
 	// FIXED SIZE ARRAY TYPES //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("var ref<array<real<4>,2>,f,f> v0;")
+	#pragma test expect_ir("var ref<array<real<4>,2u>,f,f> v0;")
 	float arrf[2];
-	#pragma test expect_ir("var ref<array<real<4>,2>,t,f> v0;")
+	#pragma test expect_ir("var ref<array<real<4>,2u>,t,f> v0;")
 	const float arrcf[2];
-	#pragma test expect_ir("var ref<array<real<4>,2>,f,t> v0;")
+	#pragma test expect_ir("var ref<array<real<4>,2u>,f,t> v0;")
 	volatile float arrvf[2];
 
-	#pragma test expect_ir("var ref<array<array<real<4>,5>,2>,f,f> v0;")
+	#pragma test expect_ir("var ref<array<array<real<4>,5u>,2u>,f,f> v0;")
 	float arrarrf[2][5];
-	#pragma test expect_ir("var ref<array<array<array<real<4>,3>,5>,2>,f,f> v0;")
+	#pragma test expect_ir("var ref<array<array<array<real<4>,3u>,5u>,2u>,f,f> v0;")
 	float arrarrarrf[2][5][3];
 
-	#pragma test expect_ir("var ref<array<ptr<real<4>,f,f>,2>,f,f> v0;")
+	#pragma test expect_ir("var ref<array<ptr<real<4>,f,f>,2u>,f,f> v0;")
 	float* arrpf[2];
-	#pragma test expect_ir("var ref<array<ptr<real<4>,t,f>,2>,f,f> v0;")
+	#pragma test expect_ir("var ref<array<ptr<real<4>,t,f>,2u>,f,f> v0;")
 	const float* arrpcf[2];
-	#pragma test expect_ir("var ref<array<ptr<real<4>,t,f>,2>,f,t> v0;")
+	#pragma test expect_ir("var ref<array<ptr<real<4>,t,f>,2u>,f,t> v0;")
 	const float *volatile arrvpcf[2];
 
 	// ENUM TYPES //////////////////////////////////////////////////////////////
@@ -188,13 +188,13 @@ int main() {
 				a : int<4>;
 				b : int<4>;
 			};
-			v : array<int<4>,2>;
+			v : array<int<4>,2u>;
 		},f,f,plain> v0 = ref_decl(type_lit(ref<union {
 			__any_string__s : struct {
 				a : int<4>;
 				b : int<4>;
 			};
-			v : array<int<4>,2>;
+			v : array<int<4>,2u>;
 		},f,f,plain>));
 	)")
 	union { struct { int a; int b; }; int v[2]; } anonymous_inner;

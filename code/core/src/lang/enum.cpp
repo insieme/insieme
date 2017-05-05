@@ -162,7 +162,7 @@ namespace lang {
 	EnumEntry::operator GenericTypePtr() const {
 		NodeManager& nm = entryName.getNodeManager();
 		IRBuilder builder(nm);
-		auto val = builder.numericType(builder.literal(builder.getLangBasic().getUIntInf(), toString(value)));
+		auto val = builder.numericType(builder.literal(builder.getLangBasic().getIntInf(), toString(value)));
 		return GenericType::get(nm, "enum_entry", toVector(entryName.as<TypePtr>(), val));
 	}
 

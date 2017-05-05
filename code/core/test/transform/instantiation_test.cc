@@ -525,7 +525,7 @@ namespace transform {
 		auto ret = core::transform::instantiateTypes(code, core::lang::isBuiltIn);
 		EXPECT_TRUE(checks::check(ret).empty()) << printer::dumpErrors(checks::check(ret));
 
-		code = builder.parseExpr("array_pointwise(int_add)(lit(\"x\":array<int<4>,12>),lit(\"y\":array<int<4>,12>))");
+		code = builder.parseExpr("array_pointwise(int_add)(lit(\"x\":array<int<4>,12u>),lit(\"y\":array<int<4>,12u>))");
 		ASSERT_TRUE(code);
 		EXPECT_TRUE(checks::check(code).empty()) << checks::check(code);
 		ret = core::transform::instantiateTypes(code, core::lang::isBuiltIn);

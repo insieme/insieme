@@ -617,7 +617,7 @@ namespace datalog {
 		                               "}")));
 
 		EXPECT_TRUE(getTopLevelNodes(ctxt, builder.parseStmt("alias class = struct name { a : int<2>; };"
-		                               "alias collection = array<class, 10>;"
+		                               "alias collection = array<class, 10u>;"
 		                               "{"
 		                               "    var ref<collection,f,f,plain> x;"
 		                               "    var int<2> y = CAST(int<2>) 5;"

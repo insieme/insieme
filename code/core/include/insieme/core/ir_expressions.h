@@ -93,10 +93,7 @@ namespace core {
 		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream & out) const {
-			if(getValue()->getValue() == "type_literal") { return out << *getType(); }
-			return out << *getValue();
-		}
+		virtual std::ostream& printTo(std::ostream & out) const;
 
 	  public:
 		/**

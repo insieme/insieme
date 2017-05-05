@@ -343,7 +343,7 @@ namespace conversion {
 
 			// attach necessary information for types defined in library headers
 			converter.applyHeaderTagging(enumResTy, enumDecl);
-            if(!enumDecl->getNameAsString().empty()) core::annotations::attachName(enumResTy, enumDecl->getNameAsString());
+			if(!enumDecl->getNameAsString().empty()) core::annotations::attachName(enumResTy, enumDecl->getNameAsString());
 			return enumResTy;
 		}
 

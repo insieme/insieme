@@ -4,7 +4,7 @@ alias uint = uint<4>;
 
 alias double = real<8>;
 
-alias matrix = array<array<double,100>,100>;
+alias matrix = array<array<double,100u>,100u>;
 
 def initUniform = (elem : 'elem, size : type<'a>) -> array<'elem,'a>{
 					var ref<array<'elem,'a>> res;
@@ -19,9 +19,9 @@ def initUniform = (elem : 'elem, size : type<'a>) -> array<'elem,'a>{
 int main() {
 
 	// create matrices
-	var ref<matrix> a = initUniform(initUniform(0.0,type_lit(100)),type_lit(100));
-	var ref<matrix> b = initUniform(initUniform(0.0,type_lit(100)),type_lit(100));
-	var ref<matrix> c = initUniform(initUniform(0.0,type_lit(100)),type_lit(100));
+	var ref<matrix> a = initUniform(initUniform(0.0,type_lit(100u)),type_lit(100u));
+	var ref<matrix> b = initUniform(initUniform(0.0,type_lit(100u)),type_lit(100u));
+	var ref<matrix> c = initUniform(initUniform(0.0,type_lit(100u)),type_lit(100u));
 	
 	// initialize a and b
 	for(uint i= 0u .. 100u) {

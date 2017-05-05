@@ -163,7 +163,7 @@ int main() {
 			var ref<int<4>,f,f> v0 = 61;
 			var uint<inf> v1 = num_cast(10, type_lit(uint<inf>));
 			var uint<inf> v2 = num_cast(*v0+2, type_lit(uint<inf>));
-			var ref<array<array<array<real<4>,10>,#v2>,#v1>,t,t> v3;
+			var ref<array<array<array<real<4>,10u>,#v2>,#v1>,t,t> v3;
 		})")
 	{
 		int j = 61;
@@ -212,7 +212,7 @@ int main() {
 	#pragma test expect_ir(R"({
 			var ref<int<4>,f,f> v0;
 			var ref<int<4>,f,f> v1;
-			sizeof(type_lit(array<int<4>,2>))*num_cast(*v0, type_lit(uint<8>))*num_cast(5, type_lit(uint<8>))*num_cast(*v1, type_lit(uint<8>));
+			sizeof(type_lit(array<int<4>,2u>))*num_cast(*v0, type_lit(uint<8>))*num_cast(5, type_lit(uint<8>))*num_cast(*v1, type_lit(uint<8>));
 		})")
 	{
 		int i, j;

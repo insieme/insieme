@@ -44,6 +44,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/materialize.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -70,6 +71,12 @@ namespace core {
 			id = manager.getFreshID();
 		}
 		return manager.get(Variable(type, UIntValue::get(manager, id)));
+	}
+
+	std::ostream& Literal::printTo(std::ostream & out) const {
+		if(getValue()->getValue() == "type_literal") { return out << *getType(); }
+		if(getValue().isa<StringValuePtr>()) { return out << *getValue() << printer::getLiteralTypeSuffix(getNodeManager().get(getNode())); }
+		return out << *getValue();
 	}
 
 	bool Literal::operator<(const Literal& var) const {

@@ -312,7 +312,7 @@ namespace backend {
 		// ----------------- Create another bind -----------
 
 		core::VariablePtr p4 = builder.variable(int4, 4);
-		core::LiteralPtr p5 = builder.literal(real4, "0.8f");
+		core::LiteralPtr p5 = builder.literal(real4, "0.8");
 		core::CallExprPtr call2 = builder.callExpr(boolean, innerBind, p5, p4);
 		core::BindExprPtr bind = builder.bindExpr(toVector(p4), call2);
 

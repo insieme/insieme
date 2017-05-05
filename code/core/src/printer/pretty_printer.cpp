@@ -1031,24 +1031,7 @@ namespace printer {
 				if(printer.hasOption(PrettyPrinter::NAME_CONTRACTION) && str.size() > 9) {
 					(*out) << str.substr(0, 3) << "..." << str.substr(str.size() - 3, str.size());
 				} else {
-					(*out) << str;
-					if (node.isRoot() || !node.getParentAddress().isa<NumericTypeAddress>()) { // print extension only when no type printing like int<4>
-						auto& basic = node->getNodeManager().getLangBasic();
-						auto type = node->getType();
-
-						if (basic.isFloat(type))  (*out) << "f";
-
-						if (basic.isUInt1(type))    (*out) << "u";
-						if (basic.isUInt2(type))    (*out) << "u";
-						if (basic.isUInt4(type))    (*out) << "u";
-						if (basic.isUInt8(type))    (*out) << "ul";
-						if (basic.isUInt16(type))   (*out) << "ull";
-						if (basic.isUIntGen(type))  (*out) << "u";
-						if (basic.isUIntInf(type))  (*out) << "u";
-
-						if (basic.isInt8(type))     (*out) << "l";
-						if (basic.isInt16(type))    (*out) << "ll";
-					}
+					(*out) << str << getLiteralTypeSuffix(node);
 				}
 
 				if(doFullSyntax) {
@@ -2091,6 +2074,22 @@ namespace printer {
 		wrappedOutStream.flush();
 
 		return srcMap;
+	}
+
+	std::string getLiteralTypeSuffix(const core::LiteralPtr& lit) {
+		auto& basic = lit->getNodeManager().getLangBasic();
+		auto type = lit->getType();
+
+		if (basic.isFloat(type))  return "f";
+
+		if (basic.isUInt1(type) || basic.isUInt2(type) || basic.isUInt4(type) || basic.isUIntGen(type) || basic.isUIntInf(type)) return "u";
+		if (basic.isUInt8(type))  return "ul";
+		if (basic.isUInt16(type)) return "ull";
+
+		if (basic.isInt8(type))   return "l";
+		if (basic.isInt16(type))  return "ll";
+
+		return "";
 	}
 
 } // end of namespace printer

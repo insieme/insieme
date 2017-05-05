@@ -78,7 +78,7 @@ namespace pattern {
 		IRBuilder builder(manager);
 
 		std::map<std::string, core::NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1u>>"));
 
 		core::NodePtr node = builder.parseStmt(R"(
 		for(uint<4> l = 8u .. 70u : 3u) {
