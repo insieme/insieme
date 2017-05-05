@@ -5,6 +5,11 @@ macro(file_name_parts filepath strip_dir output_prefix)
 	string(LENGTH ${CMAKE_CURRENT_SOURCE_DIR}/${strip_dir} strip_length)
 	string(SUBSTRING ${${output_prefix}_dir} ${strip_length} -1 ${output_prefix}_subdir)
 
+	# move leading slash to back
+	if(NOT ${output_prefix}_subdir STREQUAL "")
+		string(SUBSTRING ${${output_prefix}_subdir}/ 1 -1 ${output_prefix}_subdir)
+	endif()
+
 	string(REPLACE "/" "_" ${output_prefix}_subdir_ "${${output_prefix}_subdir}")
 
 	#message(
@@ -76,7 +81,7 @@ macro(add_module_executable module exe)
 	file_name_parts(${exe} src exe)
 
 	# setup target name
-	set(exe_tgt ${module}${exe_subdir_}_${exe_name})
+	set(exe_tgt ${module}_${exe_subdir_}${exe_name})
 
 	# output generated target name
 	if(ARG_OUTPUT_TARGET_NAME)
@@ -100,10 +105,10 @@ macro(add_module_executable module exe)
 	# inside the build directory since everything is organized in
 	# subfolders. Just be aware when installing the executable, it may be
 	# overwritten by one with the same output name.
-	set_target_properties(${exe_tgt} PROPERTIES OUTPUT_NAME ${CMAKE_CURRENT_BINARY_DIR}${exe_subdir}/${exe_name})
+	set_target_properties(${exe_tgt} PROPERTIES OUTPUT_NAME ${exe_subdir}${exe_name})
 
 	# ensure subdir exists
-	file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}${exe_subdir})
+	file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${exe_subdir})
 
 	if(MSVC)
 		set_target_properties(${exe_tgt} PROPERTIES FOLDER ${module})
@@ -123,7 +128,7 @@ macro(add_module_unittest module test)
 		endif()
 
 		# setup target name
-		set(test_tgt ut_${test_prefix}${module}${test_subdir_}_${test_name})
+		set(test_tgt ut_${test_prefix}${module}_${test_subdir_}${test_name})
 
 		# output generated target name
 		if(ARG_OUTPUT_TARGET_NAME)
