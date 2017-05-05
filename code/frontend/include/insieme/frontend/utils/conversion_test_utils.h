@@ -72,28 +72,89 @@ namespace utils {
 	using namespace core;
 	using insieme::annotations::ExpectedIRAnnotation;
 
-	namespace {
-		static inline std::string typeParsingError(core::IRBuilder& builder, const std::string& str, const core::lang::symbol_map& symbols) {
-			try {
-				builder.parseType(str, symbols);
-			} catch(const core::parser::IRParserException& ex) { return ex.getMessage(); }
-			return "";
-		}
-		static inline std::string exprParsingError(core::IRBuilder& builder, const std::string& str, const core::lang::symbol_map& symbols) {
-			try {
-				builder.parseExpr(str, symbols);
-			} catch(const core::parser::IRParserException& ex) { return ex.getMessage(); }
-			return "";
-		}
-		static inline std::string stmtParsingError(core::IRBuilder& builder, const std::string& str, const core::lang::symbol_map& symbols) {
-			try {
-				builder.parseStmt(str, symbols);
-			} catch(const core::parser::IRParserException& ex) { return ex.getMessage(); }
-			return "";
+	namespace detail {
+		/*
+		 * Returns a new tree derived from the given actual tree with special expression and type replacements applied.
+		 * Both given trees have to have an identical structure to some degree.
+		 * The address of GenericTypes in expected with the name "__any_type__" will be replaced in the actual tree with the same node.
+		 * The address of Literals in expected with the StringValue "__any_expr__" will be replaced in the actual tree with the same node.
+		 *
+		 * As an example, calling the function with the following trees:
+		 * expected:                                          actual:
+		 * - someRoot                                         - someActualRoot
+		 *   `- Literal                                         `- Literal
+		 *      `- "__any_expr__"                                  `- "true"
+		 *      `- bool                                            `- bool
+		 *   `- 4                                               `- 20
+		 *   `- someNode                                        `- someActualNode
+		 *      `- Literal                                         `- LambdaExpr
+		 *      |  `- "__any_expr__"                               |  `- [...]
+		 *      |  `- GenericType<"__any_type__">                  |  `- (int<4>) -> bool
+		 *      `- someChild                                       `- someActualChild
+		 *      `- GenericType<"__any_type__">                     `- TagType
+		 *      |                                                  |  `- TagTypeReference
+		 *      |                                                  |  `- [...]
+		 *      `- someLeaf                                        `- someActualLeaf
+		 *
+		 * Will return the following tree:
+		 * - someActualRoot
+		 *   `- Literal
+		 *      `- "__any_expr__"
+		 *      `- bool
+		 *   `- 20
+		 *   `- someActualNode
+		 *      `- Literal
+		 *      |  `- "__any_expr__"
+		 *      |  `- GenericType<"__any_type__">
+		 *      `- someActualChild
+		 *      `- GenericType<"__any_type__">
+		 *      `- someActualLeaf
+		 */
+		static inline NodePtr replaceAnyTypeAndAnyExprNodes(const NodePtr& expected, const NodePtr& actual) {
+			NodeManager& mgr = expected.getNodeManager();
+			IRBuilder builder(mgr);
+
+			static const std::string anyExprString = "__any_expr__";
+			static const auto anyType = builder.genericType("__any_type__");
+
+			std::map<NodeAddress, NodePtr> replacements;
+
+			visitDepthFirst(NodeAddress(expected), [&](const NodeAddress& addr) {
+				// this lambda will switch the current address into the actual tree. If that address exists it will add the replacement if the types are correct
+				auto addReplacement = [&](const NodePtr& replacement) {
+					auto targetAddr = addr.switchRoot(actual);
+					// if the address exists in the target tree
+					if(targetAddr) {
+						// and the target of a Literal replacement is an expression or the target of a GenericType replacement is a type
+						if((replacement.isa<LiteralPtr>() && targetAddr.isa<ExpressionAddress>())
+								|| (replacement.isa<GenericTypePtr>() && targetAddr.isa<TypeAddress>())) {
+							replacements[targetAddr] = replacement;
+						}
+					}
+				};
+
+				// Literals which's StringValue is the special expr marker get replaced
+				if(auto lit = addr.isa<LiteralAddress>()) {
+					if(lit->getValue()->getValue() == anyExprString) {
+						addReplacement(lit.getAddressedNode());
+					}
+				}
+				// as well as types which match the special type marker
+				if(auto type = addr.isa<GenericTypeAddress>()) {
+					if(type.getAddressedNode() == anyType) {
+						addReplacement(anyType);
+					}
+				}
+			}, true, true);
+
+			if(replacements.empty()) {
+				return actual;
+			}
+			return core::transform::replaceAll(mgr, replacements);
 		}
 
 		/*
-		 * Returns a new tree derived from the given actual tree.
+		 * Returns a new tree derived from the given actual tree with special StringValue replacements applied.
 		 * Both given trees have to have an identical structure.
 		 * The StringValue(prefixes) "__any_string__" in expected can be anything in actual, and will be replaced with the matching StringValue(prefixes)
 		 * from the expected tree. the Suffixes (delimited by "::") will keep the same.
@@ -160,6 +221,27 @@ namespace utils {
 			}
 			return core::transform::replaceAll(mgr, replacements);
 		}
+	}
+
+	namespace {
+		static inline std::string typeParsingError(core::IRBuilder& builder, const std::string& str, const core::lang::symbol_map& symbols) {
+			try {
+				builder.parseType(str, symbols);
+			} catch(const core::parser::IRParserException& ex) { return ex.getMessage(); }
+			return "";
+		}
+		static inline std::string exprParsingError(core::IRBuilder& builder, const std::string& str, const core::lang::symbol_map& symbols) {
+			try {
+				builder.parseExpr(str, symbols);
+			} catch(const core::parser::IRParserException& ex) { return ex.getMessage(); }
+			return "";
+		}
+		static inline std::string stmtParsingError(core::IRBuilder& builder, const std::string& str, const core::lang::symbol_map& symbols) {
+			try {
+				builder.parseStmt(str, symbols);
+			} catch(const core::parser::IRParserException& ex) { return ex.getMessage(); }
+			return "";
+		}
 
 		static inline void checkExpected(NodePtr expected, NodePtr actual, const NodeAddress& addr) {
 			ASSERT_TRUE(actual) << "Actual IR pointer null!";
@@ -187,7 +269,14 @@ namespace utils {
 			// first we check whether the given trees are identical
 			bool result = (expected == actual);
 
-			// if this isn't the case we compare them with a special handling for StringValues, which might be different and are tagged with a special marker
+			// if this isn't the case we compare them with a special handling for our __any_type__ and __any_expr__ nodes
+			if(!result) {
+				// we modify actual and replace the addresses of the __any_type__ and __any_expr__ nodes in expected with the same nodes
+				actual = detail::replaceAnyTypeAndAnyExprNodes(expected, actual);
+				result = (expected == actual);
+			}
+
+			// if the trees are still not identical we compare them with a special handling for StringValues, which might be different and are tagged with a special marker
 			if(!result) {
 				// first we create copies of both trees which have all their StringValues set to "", so we actually only compare their structure
 				auto expectedCopy = removeStringValues(expected);
@@ -198,7 +287,7 @@ namespace utils {
 
 				// if they are identical, we compare them with a special treatment for our string markers
 				if(result) {
-					actual = replaceAnyStringsInActual(expected, actual);
+					actual = detail::replaceAnyStringsInActual(expected, actual);
 					result = (expected == actual);
 				}
 			}
