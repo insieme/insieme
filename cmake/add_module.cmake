@@ -80,7 +80,7 @@ macro(add_module_executable module exe)
 
 	# output generated target name
 	if(ARG_OUTPUT_TARGET_NAME)
-		set(${ARG_OUTPUT_TARGET_NAME} ${test_tgt})
+		set(${ARG_OUTPUT_TARGET_NAME} ${exe_tgt})
 	endif()
 
 	if(ARG_EXCLUDE_FROM_ALL)
