@@ -221,9 +221,9 @@ namespace checks {
 		auto innerType = analysis::getReferencedType(decl->getType());
 		if (analysis::hasConstructorAccepting(innerType,init->getType())) return res;
 
-		// also, assume that all generic types and tag type references have implicit copy and move constructors
+		// also, assume that all generic types, tuple types, and tag type references have implicit copy and move constructors
 		auto initType = init->getType();
-		if ((innerType.isa<GenericTypePtr>() || innerType.isa<TagTypeReferencePtr>())  && lang::isReference(initType)) {
+		if ((innerType.isa<GenericTypePtr>() || innerType.isa<TupleTypePtr>() || innerType.isa<TagTypeReferencePtr>())  && lang::isReference(initType)) {
 			lang::ReferenceType initRefType(initType);
 
 			// the element type is the same

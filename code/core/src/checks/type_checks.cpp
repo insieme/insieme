@@ -1056,6 +1056,30 @@ namespace checks {
 			return res;
 		}
 
+		if(auto tupleType = type.isa<TupleTypePtr>()) {
+
+			core::TypeList elementTypes = tupleType->getElementTypes();
+			// check number of initializers
+			if(initExprs.size() != elementTypes.size()) {
+				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+								 format("Wrong number of initialization expressions (%d expressions for %d elements)", initExprs.size(), elementTypes.size()),
+								 Message::ERROR));
+				return res;
+			}
+			// check type of values within init expression
+			unsigned i = 0;
+			for(const auto& cur : initExprs) {
+				core::TypePtr requiredType = nominalize(elementTypes[i++]);
+				core::TypePtr isType = nominalize(cur->getType());
+				if(!types::typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
+					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+									 format("Invalid type of tuple-element initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
+									 Message::ERROR));
+				}
+			}
+			return res;
+		}
+
 		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 			             format("Invalid type of initialization - expected type: \n%s, actual: \n%s", *refType, toString(initExprs)), Message::ERROR));
 

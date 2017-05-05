@@ -741,6 +741,11 @@ namespace core {
 		return deref(subExpr);
 	}
 
+	CallExprPtr IRBuilderBaseModule::refTemp(const TypePtr& type) const {
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		return callExpr(refType(type), refExt.getRefTemp(), getTypeLiteral(type));
+	}
+
 	CallExprPtr IRBuilderBaseModule::refTemp(const ExpressionPtr& subExpr) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 		return callExpr(refType(subExpr->getType()), refExt.getRefTempInit(), subExpr);

@@ -666,6 +666,60 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 	}
 
+	TEST(InitExprTypeCheck, Tuple) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// some preparations
+		core::TypePtr typeA = builder.genericType("A");
+		core::TypePtr typeB = builder.genericType("B");
+		core::TypePtr typeC = builder.genericType("C");
+
+		core::ExpressionPtr valueA = builder.literal(typeA, "a");
+		core::ExpressionPtr valueB = builder.literal(typeB, "b");
+		core::ExpressionPtr valueC = builder.literal(typeC, "c");
+
+		core::ExpressionPtr cppRefValueA = builder.literal(builder.parseType("cpp_ref<A,t,f>"), "a");
+		core::ExpressionPtr cppRefValueB = builder.literal(builder.parseType("cpp_ref<B,t,f>"), "b");
+		core::ExpressionPtr cppRefValueC = builder.literal(builder.parseType("cpp_ref<C,t,f>"), "c");
+
+		// create the resulting tuple type
+		auto tupleType = builder.tupleType({ typeA, typeB });
+
+		// create some init expressions
+		core::ExpressionList ok = {
+			builder.initExprTemp(builder.refType(tupleType), { valueA, valueB }),
+			builder.initExprTemp(builder.refType(tupleType), { valueA, cppRefValueB }),
+			builder.initExprTemp(builder.refType(tupleType), { cppRefValueA, valueB }),
+			builder.initExprTemp(builder.refType(tupleType), { cppRefValueA, cppRefValueB })
+		};
+
+		core::ExpressionList err = {
+			builder.initExprTemp(builder.refType(tupleType), { valueA }),
+			builder.initExprTemp(builder.refType(tupleType), { valueA, valueA }),
+			builder.initExprTemp(builder.refType(tupleType), { valueB, valueA }),
+			builder.initExprTemp(builder.refType(tupleType), { valueB, valueB }),
+			builder.initExprTemp(builder.refType(tupleType), { valueA, valueB, valueC }),
+			builder.initExprTemp(builder.refType(tupleType), { cppRefValueA, cppRefValueA }),
+			builder.initExprTemp(builder.refType(tupleType), { cppRefValueB, cppRefValueA })
+		};
+
+		// conduct checks
+		CheckPtr typeCheck = make_check<InitExprTypeCheck>();
+
+		for(const auto& cur : ok) {
+			EXPECT_TRUE(check(cur, typeCheck).empty()) << "Failed on " << dumpReadable(cur);
+		}
+
+		for(const auto& cur : err) {
+			auto errors = check(cur, typeCheck);
+			EXPECT_FALSE(errors.empty()) << "Should have failed on " << dumpReadable(cur);
+			if (!errors.empty()) {
+				EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(cur), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+			}
+		}
+	}
+
 	TEST(UnhandledMemberStructExprTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
