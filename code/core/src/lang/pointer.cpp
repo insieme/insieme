@@ -189,6 +189,10 @@ namespace lang {
 		return PointerType::create(elementType, _const, _volatile);
 	}
 
+	TypePtr buildPtrType(const ReferenceType& referenceType) {
+		return buildPtrType(referenceType.getElementType(), referenceType.isConst(), referenceType.isVolatile());
+	}
+
 	insieme::core::ExpressionPtr buildPtrNull(const TypePtr& type) {
 		assert_pred1(isPointer, type) << "Trying to build a null ptr which isn't a pointer.";
 		IRBuilder builder(type->getNodeManager());
