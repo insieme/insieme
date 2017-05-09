@@ -605,19 +605,19 @@ namespace types {
 		EXPECT_EQ("unit", toString(*deduce(type("('a<>,'a<>)->'a<>"), { type("A"), type("B") })));
 
 
-//		EXPECT_EQ("A", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("A") })));
-//		EXPECT_EQ("B", toString(*deduce(type("('a,'a)->'a"), { type("B"), type("B") })));
-//		EXPECT_EQ("unit", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("B") })));
-//
-//		// now, let's try variadic arguments
-//		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), {})));
-//		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A") })));
-//		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A"), type("B") })));
-//
-//		EXPECT_EQ("()", toString(*deduce(type("('a...)->('a...)"), {})));
-//		EXPECT_EQ("(A)", toString(*deduce(type("('a...)->('a...)"), { type("A") })));
-//		EXPECT_EQ("(A,B)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B") })));
-//		EXPECT_EQ("(A,B,C)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B"), type("C") })));
+		EXPECT_EQ("A", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("A") })));
+		EXPECT_EQ("B", toString(*deduce(type("('a,'a)->'a"), { type("B"), type("B") })));
+		EXPECT_EQ("unit", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("B") })));
+
+		// now, let's try variadic arguments
+		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), {})));
+		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A") })));
+		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A"), type("B") })));
+
+		EXPECT_EQ("()", toString(*deduce(type("('a...)->('a...)"), {})));
+		EXPECT_EQ("(A)", toString(*deduce(type("('a...)->('a...)"), { type("A") })));
+		EXPECT_EQ("(A,B)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B") })));
+		EXPECT_EQ("(A,B,C)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B"), type("C") })));
 
 	}
 
