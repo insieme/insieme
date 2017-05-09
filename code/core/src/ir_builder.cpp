@@ -1023,11 +1023,11 @@ namespace core {
 		return lambda(type, params, wrapBody(body));
 	}
 
-	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body, const std::string& name) const {
+	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body, const std::string& name, FunctionKind kind) const {
 		auto paramVarTypes = extractTypes(params);
 		assert_true(::all(paramVarTypes, lang::isReference)) << "All parameters need to be reference types, given: " << paramVarTypes;
 		auto paramTypes = ::transform(paramVarTypes, transform::dematerialize);
-		return lambdaExpr(functionType(paramTypes, returnType, FK_PLAIN), params, wrapBody(body), name);
+		return lambdaExpr(functionType(paramTypes, returnType, kind), params, wrapBody(body), name);
 	}
 
 	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body, const std::string& name) const {

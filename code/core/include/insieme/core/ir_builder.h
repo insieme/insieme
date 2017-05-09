@@ -512,7 +512,7 @@ namespace core {
 		LambdaPtr lambda(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
 
 		// Lambda Expressions
-		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body, const std::string& name="_") const;
+		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body, const std::string& name="_", FunctionKind kind = FK_PLAIN) const;
 		LambdaExprPtr lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body, const std::string& name = "_") const;
 
 		BindExprPtr bindExpr(const VariableList& params, const CallExprPtr& call) const;
