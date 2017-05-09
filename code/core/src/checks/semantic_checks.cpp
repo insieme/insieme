@@ -226,9 +226,11 @@ namespace checks {
 		if ((innerType.isa<GenericTypePtr>() || innerType.isa<TupleTypePtr>() || innerType.isa<TagTypeReferencePtr>())  && lang::isReference(initType)) {
 			lang::ReferenceType initRefType(initType);
 
-			// the element type is the same
-			//if (analysis::equalTypes(innerType,initRefType.getElementType())) {
-			if (*innerType == *initRefType.getElementType()) {
+			// apply a matching to instantiate type variables (if present)
+			auto match = types::match(innerType.getNodeManager(),initRefType.getElementType(),innerType);
+
+			// if a match can be obtained, everything is fine
+			if (match) {
 
 				// the init value is a const reference ..
 				if (initRefType.isCppReference() && initRefType.isConst()) return res;

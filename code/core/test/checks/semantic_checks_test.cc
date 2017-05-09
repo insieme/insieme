@@ -475,6 +475,33 @@ namespace checks {
 		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
 
 
+		// - tuples are implicitly copy-constructable
+		decl = mkDecl("ref<(),f,f,plain>", "lit(\"X\" : ref<(),t,f,cpp_ref>)");
+		EXPECT_TRUE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("ref<(int<4>),f,f,plain>", "lit(\"X\" : ref<(int<4>),t,f,cpp_ref>)");
+		EXPECT_TRUE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		// - tuples are implicitly move constructable
+		decl = mkDecl("ref<(),f,f,plain>", "lit(\"X\" : ref<(),f,f,cpp_rref>)");
+		EXPECT_TRUE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("ref<(int<4>),f,f,plain>", "lit(\"X\" : ref<(int<4>),f,f,cpp_rref>)");
+		EXPECT_TRUE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		// - the implicit declaration should also work with type variables
+		decl = mkDecl("ref<('a,'b),f,f,plain>", "lit(\"X\" : ref<(int<4>,bool),f,f,cpp_rref>)");
+		EXPECT_TRUE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("ref<('ts...),f,f,plain>", "lit(\"X\" : ref<(int<4>,bool),f,f,cpp_rref>)");
+		EXPECT_TRUE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
 
 		// -- invalid --
 
@@ -496,6 +523,11 @@ namespace checks {
 
 		structDef = "def struct A { ctor ( o : ref<A,f,f,cpp_rref>) = delete; }; ";
 		decl = mkDecl(structDef + "ref<A,f,f,plain>", structDef + "lit(\"X\" : ref<A,f,f,cpp_rref>)");
+		EXPECT_TRUE(analysis::isMaterializingDecl(decl));
+		EXPECT_EQ(1,check(decl,declCheck).size()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		// - type variables must be consistently instantiated
+		decl = mkDecl("ref<('a,'a),f,f,plain>", "lit(\"X\" : ref<(int<4>,bool),f,f,cpp_rref>)");
 		EXPECT_TRUE(analysis::isMaterializingDecl(decl));
 		EXPECT_EQ(1,check(decl,declCheck).size()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
 

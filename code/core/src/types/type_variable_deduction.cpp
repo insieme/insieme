@@ -120,6 +120,12 @@ namespace types {
 					if (other.isa<TypeVariablePtr>()) return;
 					if (other.isa<VariadicTypeVariablePtr>()) return;
 
+					// if one is a reference, the other is not => remove reference (materialization)
+					bool isRefA = core::lang::isReference(node);
+					bool isRefB = core::lang::isReference(other);
+					if (isRefA && !isRefB) return visit(core::analysis::getReferencedType(node),other);
+					if (!isRefA && isRefB) return visit(node,core::analysis::getReferencedType(other));
+
 					// dispatch to individual nodes
 					super::visit(node,other);
 				}

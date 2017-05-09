@@ -621,6 +621,32 @@ namespace types {
 
 	}
 
+
+	TEST(ReturnTypeDeduction, VariadicTypesAndMaterialization) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto deduce = [&](const TypePtr& fun, const TypeList& args) {
+			return deduceReturnType(fun.as<FunctionTypePtr>(), args);
+		};
+
+		auto type = [&](const std::string& type) {
+			return builder.parseType(type);
+		};
+
+
+		// parse the function type
+		auto funType = type("(('Closure...),(ref<('Arg,'Closure...),t,f,cpp_ref>)->'Res) -> fun<'Arg,'Res>");
+		ASSERT_TRUE(funType);
+
+		EXPECT_EQ("fun<int<4>,bool>", toString(*deduce(funType, { type("(A)"),     type("(ref<(int<4>,A),t,f,cpp_ref>)->bool") })));
+		EXPECT_EQ("fun<int<4>,bool>", toString(*deduce(funType, { type("(A,B)"),   type("(ref<(int<4>,A,B),t,f,cpp_ref>)->bool") })));
+		EXPECT_EQ("fun<int<4>,bool>", toString(*deduce(funType, { type("(A,B,C)"), type("(ref<(int<4>,A,B,C),t,f,cpp_ref>)->bool") })));
+
+		EXPECT_EQ("fun<int<4>,bool>", toString(*deduce(funType, { type("ref<(A,B),t,f,cpp_ref>"), type("(ref<(int<4>,A,B),t,f,cpp_ref>)->bool") })));
+
+	}
+
 } // end namespace types
 } // end namespace core
 } // end namespace insieme
