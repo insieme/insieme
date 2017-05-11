@@ -124,7 +124,7 @@ namespace runtime {
 		symbols["x"] = [&]()->NodePtr { return builder.parseExpr("lit(\"x\":ptr<char,f,f>)"); };
 		symbols["y"] = [&]()->NodePtr { return builder.parseExpr("lit(\"y\":ptr<char,f,f>)"); };
 		symbols["r"] = [&]()->NodePtr { return builder.parseExpr("lit(\"r\":ref<ptr<char,f,f>>)"); };
-		symbols["m"] = [&]()->NodePtr { return builder.parseExpr("lit(\"m\":ref<array<char,12>>)"); };
+		symbols["m"] = [&]()->NodePtr { return builder.parseExpr("lit(\"m\":ref<array<char,12u>>)"); };
 		symbols["n"] = [&]()->NodePtr { return builder.parseExpr("lit(\"n\":ref<array<char,inf>>)"); };
 
 

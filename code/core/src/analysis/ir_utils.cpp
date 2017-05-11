@@ -147,6 +147,48 @@ namespace analysis {
 		return isCallOf(candidate.isa<CallExprPtr>(), function);
 	}
 
+
+	namespace {
+
+		CallExprPtr getRefDeclCallInternal(const ExpressionPtr& expr) {
+
+			// make sure there are no null-pointers
+			assert_true(expr);
+
+			// check whether it is a ref-decl call
+			auto& rExt = expr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+			if(rExt.isCallOfRefDecl(expr)) return expr.as<CallExprPtr>();
+
+			// if it is some sort of cast, check the input
+			if(lang::isAnyRefCast(expr)) return getRefDeclCallInternal(analysis::getArgument(expr,0));
+
+			// if it is a constructor call => check the target memory location
+			if (analysis::isConstructorCall(expr)) return getRefDeclCallInternal(analysis::getArgument(expr,0));
+
+			// if it is a init expression => check the target memory location
+			if (auto init = expr.isa<InitExprPtr>()) return getRefDeclCallInternal(init->getMemoryExpr());
+
+			// in all other cases, there is no associated ref_decl call
+			return CallExprPtr();
+		}
+	}
+
+	CallExprPtr getRefDeclCall(const DeclarationPtr& decl) {
+
+		// no declaration, no ref_decl call
+		if (!decl) return CallExprPtr();
+
+		// start with initialization
+		auto init = decl->getInitialization();
+
+		// search for ref_decl call
+		auto res = getRefDeclCallInternal(init);
+
+		// check proper type
+		return (res && *res->getType() == *decl->getType()) ? res : CallExprPtr();
+
+	}
+
 	bool isMaterializingCall(const NodePtr& candidate) {
 		auto call = candidate.isa<CallExprPtr>();
 		if(!call) return false;
@@ -157,15 +199,6 @@ namespace analysis {
 		return !analysis::equalTypes(callType, funType) && types::getTypeVariableInstantiation(call->getNodeManager(), callType, transform::materialize(funType));
 	}
 
-	namespace {
-		bool isOptionallyCastRefDecl(const ExpressionPtr& expr) {
-			auto& rExt = expr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
-			if(rExt.isCallOfRefDecl(expr)) return true;
-			if(lang::isAnyRefCast(expr)) return isOptionallyCastRefDecl(getArgument(expr,0));
-			return false;
-		}
-	}
-
 	bool isMaterializingDecl(const NodePtr& candidate) {
 		auto decl = candidate.isa<DeclarationPtr>();
 		if(!decl) return false;
@@ -173,36 +206,36 @@ namespace analysis {
 
 		// only plain reference declarations can be materializing
 		if(!lang::isPlainReference(dT)) return false;
+
+		// a materialization happens if the init expression contains a associated ref_decl call
 		auto init = decl->getInitialization();
+		if (getRefDeclCall(decl)) return true;
 
-		// case 1: a constructor call with ref_decl is materializing
-		if(analysis::isConstructorCall(init) && isOptionallyCastRefDecl(getArgument(init, 0))) return true;
+		// in all other cases the relation between the declared and initialized type determines whether a materialization happens
+		auto iT = init->getType();
 
-		// case 2: an init expression with a ref_decl memory location is materializing
-		auto initExp = init.isa<InitExprPtr>();
-		if(initExp && isOptionallyCastRefDecl(initExp->getMemoryExpr())) return true;
+		// if the two types are identical => no materialization
+		if (*dT == *iT) return false;
 
-		// case 3: if the inner type of the declaration ref type matches the type of the init expression, we have a materialization
-		//  - e.g. ref<int<4>> initialized by "0":int<4> (but also ref<int<'a>> initialized by the same value)
-		auto innerType = getReferencedType(dT);
-		auto initType = init->getType();
-		// if the init type is a reference and the inner target type is a plain ref, adjust init type
-		if((lang::isCppReference(initType) || lang::isCppRValueReference(initType)) && lang::isPlainReference(innerType)) {
-			initType = lang::ReferenceType::create(core::analysis::getReferencedType(initType));
+		// if both are plain references, allow implicit kind casts
+		if (lang::isPlainReference(iT)) {
+			auto dRT = lang::ReferenceType(dT);
+			auto iRT = lang::ReferenceType(iT);
+
+			// allow implicit kind casts of any form
+			// TODO: think about restricting to only non-const to const and volatile to non-volatile casts
+			dRT.setConst(false);
+			dRT.setVolatile(false);
+			dT = dRT.toType();
+
+			iRT.setConst(false);
+			iRT.setVolatile(false);
+			iT = iRT.toType();
+
 		}
-		// if both types are reference types, unify their qualifiers
-		if(lang::isReference(initType) && lang::isReference(innerType)) {
-			auto innerRef = core::lang::ReferenceType(innerType);
-			auto initRef = core::lang::ReferenceType(initType);
-			initType = lang::ReferenceType::create(initRef.getElementType(), innerRef.isConst(), innerRef.isVolatile(), initRef.getKind());
-		}
-		if(types::getTypeVariableInstantiation(decl->getNodeManager(), innerType, initType, false)) return true;
 
-		// case 4: we could have materialization by implicit constructor call
-		if(analysis::hasConstructorAccepting(innerType, init->getType())) return true;
-
-		// not a materializing case
-		return false;
+		// a materialization happens if the types have changed by any reason (whether the reason is valid is checked by semantic checks)
+		return *dT != *iT;
 	}
 
 	bool isNoOp(const StatementPtr& candidate) {
@@ -1791,6 +1824,18 @@ namespace analysis {
 
 		// attach result
 		a.attachValue(CanonicalAnnotation{ res });
+
+		// re-use result for other types in recursive group
+		if (auto tagType = a.isa<TagTypePtr>()) {
+			auto& mgr = a->getNodeManager();
+			auto originalDef = tagType->getDefinition();
+			auto canonicalDef = res.as<TagTypePtr>()->getDefinition();
+			for(const auto& cur : originalDef) {
+				auto originalType = core::TagType::get(mgr,cur->getTag(),originalDef);
+				auto canonicalType = core::TagType::get(mgr,cur->getTag(),canonicalDef);
+				originalType.attachValue(CanonicalAnnotation{ canonicalType });
+			}
+		}
 
 		// done
 		return res;

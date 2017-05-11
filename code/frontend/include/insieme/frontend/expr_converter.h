@@ -306,6 +306,7 @@ namespace conversion {
 		core::ExpressionPtr VisitMemberExpr(const clang::MemberExpr* memExpr);
 		core::ExpressionPtr VisitDeclRefExpr(const clang::DeclRefExpr* declRef);
 		core::ExpressionPtr VisitCXXNullPtrLiteralExpr(const clang::CXXNullPtrLiteralExpr* nptrExpr);
+		core::ExpressionPtr VisitCXXPseudoDestructorExpr(const clang::CXXPseudoDestructorExpr* pseudo);
 		core::ExpressionPtr VisitLambdaExpr(const clang::LambdaExpr* lExpr);
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

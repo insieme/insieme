@@ -101,31 +101,29 @@ namespace utils {
 		 */
 		LANG_EXT_LITERAL(FERefTemp, "fe_ref_temp", "(type<'a>) -> ref<'a,f,f>")
 
+		/**
+		 * Placement new for base types
+		 */
+		LANG_EXT_DERIVED(CxxPlacementNew, "(loc : ptr<unit,f,f>, val : 'a) -> ptr<'a,f,f> { ptr_to_ref(ptr_reinterpret(loc, type_lit('a))) = val; return ptr_reinterpret(loc, type_lit('a)); }")
+
+		/**
+		 * Pseudo destructor call
+		 */
+		LANG_EXT_LITERAL(CxxPseudoDestructorCall, "pseudo_destructor_call", "() -> unit")
 	};
 
 	// --------------------- Utilities ----------------------------
 
-	/**
-	 * Creates a C-style assignment operation
-	 */
 	core::ExpressionPtr buildCStyleAssignment(const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs);
-
-	/**
-	 * Creates a C++-style assignment operation
-	 */
 	core::ExpressionPtr buildCxxStyleAssignment(const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs);
 
-	/**
-	 * Creates a C-style comma operation
-	 */
 	core::ExpressionPtr buildCommaOperator(const core::ExpressionPtr& lhs, const core::ExpressionPtr& rhs);
 
-	/**
-	 * Creates a an expression implementing C bool semantics
-	 */
 	core::ExpressionPtr buildBoolToInt(const core::ExpressionPtr& b);
 
 	core::ExpressionPtr buildFERefTemp(const core::TypePtr& t);
+
+	core::ExpressionPtr buildCxxPlacementNew(const core::ExpressionPtr& loc, const core::ExpressionPtr& init);
 
 } // end namespace utils
 } // end namespace frontend

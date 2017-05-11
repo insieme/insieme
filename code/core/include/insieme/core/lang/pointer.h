@@ -400,6 +400,7 @@ namespace lang {
 	 * Creates a new pointer type based on the given specification.
 	 */
 	TypePtr buildPtrType(const TypePtr& elementType, bool _const = false, bool _volatile = false);
+	TypePtr buildPtrType(const ReferenceType& referenceType);
 
 	// constructors and conversions
 	ExpressionPtr buildPtrNull(const TypePtr& type);

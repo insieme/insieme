@@ -317,23 +317,23 @@ namespace types {
 
 		TypePtr int4 = basic.getInt4();
 		TypePtr uint4 = basic.getUInt4();
-		TypePtr vectorInt12 = builder.parseType("vector<int<4>,12>");
-		TypePtr vectorInt14 = builder.parseType("vector<int<4>,14>");
-		TypePtr vectorUInt12 = builder.parseType("vector<uint<4>,12>");
-		TypePtr vectorUInt14 = builder.parseType("vector<uint<4>,14>");
-		TypePtr vectorGen12 = builder.parseType("vector<'a,12>");
+		TypePtr vectorInt12 = builder.parseType("vector<int<4>,12u>");
+		TypePtr vectorInt14 = builder.parseType("vector<int<4>,14u>");
+		TypePtr vectorUInt12 = builder.parseType("vector<uint<4>,12u>");
+		TypePtr vectorUInt14 = builder.parseType("vector<uint<4>,14u>");
+		TypePtr vectorGen12 = builder.parseType("vector<'a,12u>");
 		;
 		TypePtr vectorIntA = builder.parseType("vector<int<4>,'l>");
 		TypePtr vectorGenA = builder.parseType("vector<'a,'l>");
 
 		TypePtr array1Int = builder.arrayType(int4);
-		TypePtr array2Int = builder.arrayType(int4, builder.intLit(2));
+		TypePtr array2Int = builder.arrayType(int4, builder.uintLit(2));
 		TypePtr arrayAInt = builder.parseType("array<int<4>,'a>");
 
 		// OK - now, lets test something difficult - pass a vector to an alpha
 		auto res = getTypeVariableInstantiation(manager, toVector(varA), toVector(vectorInt12));
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ("{'a->vector<int<4>,12>}", toString(*res)); }
+		if(res) { EXPECT_EQ("{'a->vector<int<4>,12u>}", toString(*res)); }
 
 		// not the other way around ...
 		res = getTypeVariableInstantiation(manager, toVector(vectorInt12), toVector(varA));
@@ -342,7 +342,7 @@ namespace types {
 		// ... now with a vector with a generic variable (even the same)
 		res = getTypeVariableInstantiation(manager, toVector(varA), toVector(vectorGen12));
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ("{'a->vector<'a,12>}", toString(*res)); }
+		if(res) { EXPECT_EQ("{'a->vector<'a,12u>}", toString(*res)); }
 
 		// ... now with a vector with a generic variable and generic size (even the same)
 		res = getTypeVariableInstantiation(manager, toVector(varA), toVector(vectorGenA));
@@ -366,7 +366,7 @@ namespace types {
 		// test it with int-type parameter
 		res = getTypeVariableInstantiation(manager, toVector(vectorIntA), toVector(vectorInt12));
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ("{'l->12}", toString(*res)); }
+		if(res) { EXPECT_EQ("{'l->12u}", toString(*res)); }
 
 		// test vectors with different, yet related sub-types (should fail)
 		res = getTypeVariableInstantiation(manager, toVector(varA, varA), toVector(vectorInt12, vectorUInt12));
@@ -391,7 +391,7 @@ namespace types {
 		// check for variable array dimensions
 		res = getTypeVariableInstantiation(manager, toVector(arrayAInt), toVector(array2Int));
 		EXPECT_TRUE(res);
-		if(res) { EXPECT_EQ("{'a->2}", toString(*res)); }
+		if(res) { EXPECT_EQ("{'a->2u}", toString(*res)); }
 
 		// check for vector being passed ot an generic array
 		res = getTypeVariableInstantiation(manager, toVector(arrayAInt), toVector(vectorInt12));

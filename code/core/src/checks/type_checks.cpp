@@ -488,7 +488,7 @@ namespace checks {
 
 		// 2) check that all parameter declarations are either materializing or cpp/rrefs
 		for(const auto& decl : address->getArgumentDeclarations()) {
-			if(!lang::isCppReference(decl->getType()) && !lang::isCppRValueReference(decl->getType()) && !analysis::isMaterializingDecl(decl)) {
+			if(!lang::isCppReference(decl->getType()) && !lang::isCppRValueReference(decl->getType()) && !lang::isReference(decl->getInitialization()) && !analysis::isMaterializingDecl(decl)) {
 				add(res, Message(address, EC_TYPE_INVALID_ARGUMENT_TYPE,
 					             format("Invalid non-materializing argument: \n\t%s\n\t - init expr of type %s", *decl, *decl->getInitialization()->getType()),
 					             Message::ERROR));
@@ -665,22 +665,26 @@ namespace checks {
 		FunctionTypePtr funTypeIs = lambda->getLambda()->getType();
 
 		TypesPtr types = funTypeIs->getParameterTypes();
-		vector<TypePtr> paramTypes;
 		for(std::size_t i = 0; i < types.size(); ++i) {
 
 			auto parameter = address->getParameterList()[i];
-			auto should = transform::materialize(types[i]);
 			auto is = parameter->getType();
+			auto should = transform::materialize(types[i]);
 
-			// materialized parameters of non-ref type are alowed to have arbitrary qualifiers
-			if(*should != *is && (!analysis::isRefType(types[i]) && !lang::doReferencesDifferOnlyInQualifiers(is, should))) {
-				add(res, Message(
-						parameter, EC_TYPE_INVALID_LAMBDA_TYPE,
-						format("Invalid parameters type of %s - is: %s, should %s", *parameter, *is, *should),
-						Message::ERROR
-					)
-				);
+			// if is and should are the same, this parameter materialization is ok.
+			if(*is == *should) {
+				continue;
 			}
+			// also, materialized parameters of non-ref type are allowed to have arbitrary (const and volatile) qualifiers
+			if(!analysis::isRefType(types[i]) && lang::doReferencesDifferOnlyInConstOrVolatileQualifiers(is, should)) {
+				continue;
+			}
+
+			// otherwise we have an error
+			add(res, Message(
+					parameter, EC_TYPE_INVALID_LAMBDA_TYPE,
+					format("Invalid parameters type of %s - is: %s, should %s", *parameter, *is, *should),
+					Message::ERROR));
 		}
 
 		/*
@@ -1056,6 +1060,30 @@ namespace checks {
 			return res;
 		}
 
+		if(auto tupleType = type.isa<TupleTypePtr>()) {
+
+			core::TypeList elementTypes = tupleType->getElementTypes();
+			// check number of initializers
+			if(initExprs.size() != elementTypes.size()) {
+				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+								 format("Wrong number of initialization expressions (%d expressions for %d elements)", initExprs.size(), elementTypes.size()),
+								 Message::ERROR));
+				return res;
+			}
+			// check type of values within init expression
+			unsigned i = 0;
+			for(const auto& cur : initExprs) {
+				core::TypePtr requiredType = nominalize(elementTypes[i++]);
+				core::TypePtr isType = nominalize(cur->getType());
+				if(!types::typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
+					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+									 format("Invalid type of tuple-element initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
+									 Message::ERROR));
+				}
+			}
+			return res;
+		}
+
 		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 			             format("Invalid type of initialization - expected type: \n%s, actual: \n%s", *refType, toString(initExprs)), Message::ERROR));
 
@@ -1121,10 +1149,8 @@ namespace checks {
 				return res;
 			}
 
-			// peel recursive type (this fixes the field types to be accessed)
-			if(tagType->isRecursive()) {
-				tagType = tagType->peel();
-			}
+			// peel tag type (this fixes the field types to be accessed)
+			tagType = tagType->peel();
 
 			// check member access
 			return checkMemberAccess(address, tagType->getRecord(), identifier, elementType, isRefVersion);

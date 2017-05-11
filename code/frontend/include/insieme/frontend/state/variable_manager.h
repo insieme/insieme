@@ -57,6 +57,7 @@ namespace state {
 		class LambdaScope : public std::map<const clang::VarDecl*, AccessGenerator> {
 			AccessGenerator thisGenerator;
 			bool hasThis_ = false;
+			bool isaLambda_ = false;
 		public:
 			void setThisGenerator(AccessGenerator gen) {
 				thisGenerator = gen;
@@ -66,6 +67,8 @@ namespace state {
 				return thisGenerator;
 			}
 			bool hasThis() const { return hasThis_; }
+			void setIsaLambda() { isaLambda_ = true; }
+			bool isaLambda() { return isaLambda_; }
 		};
 
 	private:

@@ -38,15 +38,8 @@
 #pragma once
 
 #include <ostream>
-#include <istream>
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/core/ir_address.h"
-#include "insieme/core/dump/dump.h"
-#include "insieme/core/dump/annotations.h"
-
-#include "insieme/utils/printable.h"
-
 
 namespace insieme {
 namespace core {
@@ -59,19 +52,16 @@ namespace json {
 	 *
 	 * @param out the stream to be writing to
 	 * @param ir the code fragment to be written
-	 * @param infoAnnotator provides extra information for individual addresses -- no information by default
 	 */
-	void dumpIR(std::ostream& out, const NodePtr& ir, const std::function<std::string(NodeAddress)>& infoAnnotator = [](const NodeAddress&)->std::string { return ""; });
+	void dumpIR(std::ostream& out, const NodePtr& ir);
 
 	/**
 	 * Writes a JSON encoding of the given IR node into a file of the given name.
 	 *
 	 * @param filename the file to dump the given IR to
 	 * @param ir the code fragment to be written
-	 * @param infoAnnotator provides extra information for individual addresses -- no information by default
 	 */
-	void dumpIR(const std::string& filename, const NodePtr& ir, const std::function<std::string(NodeAddress)>& infoAnnotator = [](const NodeAddress&)->std::string { return ""; });
-
+	void dumpIR(const std::string& filename, const NodePtr& ir);
 
 } // end namespace json
 

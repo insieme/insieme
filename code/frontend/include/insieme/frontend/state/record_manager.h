@@ -48,12 +48,22 @@ namespace frontend {
 namespace state {
 	using namespace conversion;
 
+	enum RecordConversionStage { STARTED, CONVERTED_GLOBALS, FINISHING, DONE };
+
+	struct RecordConversionState {
+		RecordConversionStage conversionStage = STARTED;
+
+		core::GenericTypePtr result;
+	};
+
 	/// Manages record (struct/union/class) identities from clang to its INSPIRE translation
 	class RecordManager {
 	private:
 		Converter& converter;
 		
-		std::map<const clang::RecordDecl*, core::GenericTypePtr> records;
+		std::map<const clang::RecordDecl*, RecordConversionState> records;
+
+		unsigned recordConversionStackDepth = 0;
 
 	public:
 		RecordManager(Converter& converter) : converter(converter) {}
@@ -62,6 +72,17 @@ namespace state {
 		bool contains(const clang::RecordDecl* recordDecl) const;
 		void insert(const clang::RecordDecl* recordDecl, const core::GenericTypePtr& genType);
 		void replace(const clang::RecordDecl* recordDecl, const core::GenericTypePtr& genType);
+
+		void markConvertedGlobals(const clang::RecordDecl* recordDecl);
+		bool hasConvertedGlobals(const clang::RecordDecl* recordDecl);
+		void markFinishing(const clang::RecordDecl* recordDecl);
+		bool isFinishing(const clang::RecordDecl* recordDecl);
+		void markDone(const clang::RecordDecl* recordDecl);
+		bool isDone(const clang::RecordDecl* recordDecl);
+
+		void incrementConversionStackDepth();
+		void decrementConversionStackDepth();
+		bool isDeclOnlyConversion();
 	};
 
 } // end namespace state

@@ -147,15 +147,20 @@ namespace {
 	struct numeric_cast_impl<RetTy, InTy, 2>;
 
 	/**
-	 * We are overloading the conversion of float literals to append the trailing 'f' suffix when
-	 * converting floats to strings.
+	 * We are overloading the conversion of float and double literals to append the trailing '.0' if it is not there.
 	 */
+	template <>
+	struct numeric_cast_impl<std::string, double, 0> {
+		static std::string convert(double d) {
+			auto res = boost::lexical_cast<std::string>(d);
+			if(find(res.begin(), res.end(), '.') == res.end()) { return res + ".0"; }
+			return res;
+		}
+	};
 	template <>
 	struct numeric_cast_impl<std::string, float, 0> {
 		static std::string convert(float f) {
-			auto res = boost::lexical_cast<std::string>(f);
-			if(find(res.begin(), res.end(), '.') == res.end()) { return res + ".0f"; }
-			return res + "f";
+			return numeric_cast_impl<std::string, double, 0>::convert(f);
 		}
 	};
 

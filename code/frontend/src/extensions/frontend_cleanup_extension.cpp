@@ -59,6 +59,7 @@
 #include "insieme/frontend/converter.h"
 #include "insieme/core/tu/ir_translation_unit.h"
 #include "insieme/core/tu/ir_translation_unit_io.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
@@ -99,6 +100,9 @@ namespace extensions {
 						replacement = core::analysis::getArgument(stmt, 0);
 					} else if(feExt.isCallOfBoolToInt(stmt)) {
 						replacement = core::analysis::getArgument(stmt, 0);
+					} else if(feExt.isCallOfCxxPseudoDestructorCall(stmt)) {
+						// pseudo destructor calls are no-ops semantically
+						continue;
 					}
 					core::transform::utils::migrateAnnotations(stmt, replacement);
 					newStmts.push_back(replacement);
@@ -156,11 +160,14 @@ namespace extensions {
 
 		class TypeCanonicalizer : public core::transform::CachedNodeMapping {
 			virtual const NodePtr resolveElement(const NodePtr& ptr) override {
-				auto tt = ptr.isa<core::TagTypePtr>();
-				if(tt) {
+
+				// canonicalize types bottom-up
+				auto res = ptr->substitute(ptr->getNodeManager(), *this);
+				if (auto tt = res.isa<core::TagTypePtr>()) {
 					return core::analysis::getCanonicalType(tt);
 				}
-				return ptr->substitute(ptr->getNodeManager(), *this);
+
+				return res;
 			}
 		};
 
@@ -238,6 +245,9 @@ namespace extensions {
 		ir = simplifyExpressionsInCompoundStatements(ir);
 		ir = replaceFERefTemp(ir);
 		ir = replaceStdInitListCopies(ir);
+
+		assert_false(core::analysis::contains(ir, core::IRBuilder(ir->getNodeManager()).genericType(utils::getDummyAutoDeducedTypeName())))
+				<< "Found un-deduced auto type!";
 
 		return core::tu::fromIR(ir);
 	}

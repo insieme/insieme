@@ -39,6 +39,9 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/type_utils.h"
+#include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/encoder/lists.h"
 
@@ -173,6 +176,94 @@ namespace checks {
 				        Message::ERROR));
 		}
 
+		return res;
+	}
+
+	OptionalMessageList ValidMaterializingDeclarationCheck::visitDeclaration(const DeclarationAddress& decl) {
+		OptionalMessageList res;
+
+		// only interested in materializing declarations
+		if (!analysis::isMaterializingDecl(decl)) return res;
+
+		// now, that it is materializing, there has to be a reason for that
+		auto init = decl.getAddressedNode()->getInitialization();
+
+		// two possibilities: explicit or implicit
+
+		// case 1: explicit - the materialized memory location is explicitly initialized
+		if (analysis::getRefDeclCall(decl)) {	// so there is a ref_decl call
+
+			// check for matching types of the init type and declared type
+			auto declType = decl->getType();
+			auto initType = init->getType();
+
+			// mask out qualifiers (TODO: rethink this)
+			lang::ReferenceType declRefType(declType);
+			lang::ReferenceType initRefType(initType);
+
+
+			if (!(declRefType.isPlain() && initRefType.isPlain() && analysis::equalTypes(declRefType.getElementType(),initRefType.getElementType()))) {
+				add(res,Message(decl,
+						EC_SEMANTIC_INVALID_MATERIALIZING_DECLARATION,
+						format("Invalid conversion of types.\n\tinit-type: %s\n\tdecl-type: %s\n\tref-declt: %s", *init->getType(), *decl->getType(), *analysis::getRefDeclCall(decl)->getType()),
+						Message::ERROR
+				));
+			}
+
+			// done with the explicit cases
+			return res;
+		}
+
+		// case 2: implicit - the materialized memory location is initialized through an implicit assignment or constructor call
+
+		// -- some implicit constructor based initialization --
+
+		auto innerType = analysis::getReferencedType(decl->getType());
+		if (analysis::hasConstructorAccepting(innerType,init->getType())) return res;
+
+		// also, assume that all generic types, tuple types, and tag type references have implicit copy and move constructors
+		auto initType = init->getType();
+		if ((innerType.isa<GenericTypePtr>() || innerType.isa<TupleTypePtr>() || innerType.isa<TagTypeReferencePtr>())  && lang::isReference(initType)) {
+			lang::ReferenceType initRefType(initType);
+
+			// apply a matching to instantiate type variables (if present)
+			auto match = types::match(innerType.getNodeManager(),initRefType.getElementType(),innerType);
+
+			// if a match can be obtained, everything is fine
+			if (match) {
+
+				// the init value is a const reference ..
+				if (initRefType.isCppReference() && initRefType.isConst()) return res;
+
+				// ... or a r-value reference
+				if (initRefType.isCppRValueReference() && !initRefType.isConst()) return res;
+			}
+
+		}
+
+
+		// -- some assignment based constructor --
+
+		// if the init type is a reference and the inner target type is a plain ref, adjust init type
+		if((lang::isCppReference(initType) || lang::isCppRValueReference(initType)) && lang::isPlainReference(innerType)) {
+			initType = lang::ReferenceType::create(core::analysis::getReferencedType(initType));
+		}
+		// if both types are reference types, unify their qualifiers
+		if(lang::isReference(initType) && lang::isReference(innerType)) {
+			auto innerRef = core::lang::ReferenceType(innerType);
+			auto initRef = core::lang::ReferenceType(initType);
+			initType = lang::ReferenceType::create(initRef.getElementType(), innerRef.isConst(), innerRef.isVolatile(), initRef.getKind());
+		}
+
+		// see whether init type can be assigned to the inner type
+		if(*innerType == *initType || types::getTypeVariableInstantiation(decl->getNodeManager(), innerType, initType, false)) return res;
+
+		// no reason found => this is not ok
+		add(res,Message(decl,
+				EC_SEMANTIC_INVALID_MATERIALIZING_DECLARATION,
+				format("Materializing declaration unsupported by implicit or explicit constructor or conversion operations.\n\tinit-type: %s\n\tdecl-type: %s", *init->getType(), *decl->getType()),
+				Message::ERROR
+		));
 		return res;
 	}
 

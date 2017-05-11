@@ -605,19 +605,45 @@ namespace types {
 		EXPECT_EQ("unit", toString(*deduce(type("('a<>,'a<>)->'a<>"), { type("A"), type("B") })));
 
 
-//		EXPECT_EQ("A", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("A") })));
-//		EXPECT_EQ("B", toString(*deduce(type("('a,'a)->'a"), { type("B"), type("B") })));
-//		EXPECT_EQ("unit", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("B") })));
-//
-//		// now, let's try variadic arguments
-//		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), {})));
-//		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A") })));
-//		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A"), type("B") })));
-//
-//		EXPECT_EQ("()", toString(*deduce(type("('a...)->('a...)"), {})));
-//		EXPECT_EQ("(A)", toString(*deduce(type("('a...)->('a...)"), { type("A") })));
-//		EXPECT_EQ("(A,B)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B") })));
-//		EXPECT_EQ("(A,B,C)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B"), type("C") })));
+		EXPECT_EQ("A", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("A") })));
+		EXPECT_EQ("B", toString(*deduce(type("('a,'a)->'a"), { type("B"), type("B") })));
+		EXPECT_EQ("unit", toString(*deduce(type("('a,'a)->'a"), { type("A"), type("B") })));
+
+		// now, let's try variadic arguments
+		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), {})));
+		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A") })));
+		EXPECT_EQ("A", toString(*deduce(type("('a...)->A"), { type("A"), type("B") })));
+
+		EXPECT_EQ("()", toString(*deduce(type("('a...)->('a...)"), {})));
+		EXPECT_EQ("(A)", toString(*deduce(type("('a...)->('a...)"), { type("A") })));
+		EXPECT_EQ("(A,B)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B") })));
+		EXPECT_EQ("(A,B,C)", toString(*deduce(type("('a...)->('a...)"), { type("A"), type("B"), type("C") })));
+
+	}
+
+
+	TEST(ReturnTypeDeduction, VariadicTypesAndMaterialization) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto deduce = [&](const TypePtr& fun, const TypeList& args) {
+			return deduceReturnType(fun.as<FunctionTypePtr>(), args);
+		};
+
+		auto type = [&](const std::string& type) {
+			return builder.parseType(type);
+		};
+
+
+		// parse the function type
+		auto funType = type("(('Closure...),(ref<('Arg,'Closure...),t,f,cpp_ref>)->'Res) -> fun<'Arg,'Res>");
+		ASSERT_TRUE(funType);
+
+		EXPECT_EQ("fun<int<4>,bool>", toString(*deduce(funType, { type("(A)"),     type("(ref<(int<4>,A),t,f,cpp_ref>)->bool") })));
+		EXPECT_EQ("fun<int<4>,bool>", toString(*deduce(funType, { type("(A,B)"),   type("(ref<(int<4>,A,B),t,f,cpp_ref>)->bool") })));
+		EXPECT_EQ("fun<int<4>,bool>", toString(*deduce(funType, { type("(A,B,C)"), type("(ref<(int<4>,A,B,C),t,f,cpp_ref>)->bool") })));
+
+		EXPECT_EQ("fun<int<4>,bool>", toString(*deduce(funType, { type("ref<(A,B),t,f,cpp_ref>"), type("(ref<(int<4>,A,B),t,f,cpp_ref>)->bool") })));
 
 	}
 

@@ -47,7 +47,7 @@ namespace state {
 
 	core::GenericTypePtr RecordManager::lookup(const clang::RecordDecl* recordDecl) const {
 		frontend_assert(::containsKey(records, recordDecl)) << "Trying to look up record not previously declared: " << dumpClang(recordDecl);
-		return records.find(recordDecl)->second;
+		return records.find(recordDecl)->second.result;
 	}
 
 	bool RecordManager::contains(const clang::RecordDecl* recordDecl) const {
@@ -56,12 +56,55 @@ namespace state {
 
 	void RecordManager::insert(const clang::RecordDecl* recordDecl, const core::GenericTypePtr& genType) {
 		frontend_assert(!::containsKey(records, recordDecl)) << "Trying to insert previously declared record: " << dumpClang(recordDecl);
-		records[recordDecl] = genType;
+		records[recordDecl] = { RecordConversionStage::STARTED, genType };
 	}
 
 	void RecordManager::replace(const clang::RecordDecl* recordDecl, const core::GenericTypePtr& genType) {
 		frontend_assert(::containsKey(records, recordDecl)) << "Trying to replace undeclared record: " << dumpClang(recordDecl);
-		records[recordDecl] = genType;
+		records[recordDecl] = { records[recordDecl].conversionStage, genType };
+	}
+
+	void RecordManager::markConvertedGlobals(const clang::RecordDecl* recordDecl) {
+		frontend_assert(::containsKey(records, recordDecl)) << "Trying to change state of undeclared record: " << dumpClang(recordDecl);
+		records[recordDecl].conversionStage = CONVERTED_GLOBALS;
+	}
+
+	bool RecordManager::hasConvertedGlobals(const clang::RecordDecl* recordDecl) {
+		frontend_assert(::containsKey(records, recordDecl)) << "Trying to lookup state of undeclared record: " << dumpClang(recordDecl);
+		return records[recordDecl].conversionStage >= CONVERTED_GLOBALS;
+	}
+
+	void RecordManager::markFinishing(const clang::RecordDecl* recordDecl) {
+		frontend_assert(::containsKey(records, recordDecl)) << "Trying to change state of undeclared record: " << dumpClang(recordDecl);
+		records[recordDecl].conversionStage = FINISHING;
+	}
+
+	bool RecordManager::isFinishing(const clang::RecordDecl* recordDecl) {
+		frontend_assert(::containsKey(records, recordDecl)) << "Trying to lookup state of undeclared record: " << dumpClang(recordDecl);
+		return records[recordDecl].conversionStage >= FINISHING;
+	}
+
+	void RecordManager::markDone(const clang::RecordDecl* recordDecl) {
+		frontend_assert(::containsKey(records, recordDecl)) << "Trying to change state of undeclared record: " << dumpClang(recordDecl);
+		records[recordDecl].conversionStage = DONE;
+	}
+
+	bool RecordManager::isDone(const clang::RecordDecl* recordDecl) {
+		frontend_assert(::containsKey(records, recordDecl)) << "Trying to lookup state of undeclared record: " << dumpClang(recordDecl);
+		return records[recordDecl].conversionStage >= DONE;
+	}
+
+	void RecordManager::incrementConversionStackDepth() {
+		recordConversionStackDepth++;
+	}
+
+	void RecordManager::decrementConversionStackDepth() {
+		assert_ne(recordConversionStackDepth, 0) << "Can't decrement ConversionStackDepth";
+		recordConversionStackDepth--;
+	}
+
+	bool RecordManager::isDeclOnlyConversion() {
+		return recordConversionStackDepth != 0;
 	}
 
 } // end namespace state

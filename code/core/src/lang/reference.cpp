@@ -191,6 +191,16 @@ namespace lang {
 				isRefMarker(ref->getTypeParameter(3));
 		}
 
+		TypePtr toType(const NodePtr& node) {
+			if (node->getNodeCategory() == NC_Type) {
+				return node.as<TypePtr>();
+			}
+			if (node->getNodeCategory() == NC_Expression) {
+				return node.as<ExpressionPtr>()->getType();
+			}
+			return TypePtr();
+		}
+
 	}
 
 
@@ -239,15 +249,18 @@ namespace lang {
 	}
 
 	bool isPlainReference(const NodePtr& node) {
-		return isReference(node) && ReferenceType(node).isPlain();
+		TypePtr type = toType(node);
+		return type && isReference(type) && parseKind(type.as<GenericTypePtr>()->getTypeParameter(3)) == ReferenceType::Kind::Plain;
 	}
 
 	bool isCppReference(const NodePtr& node) {
-		return isReference(node) && ReferenceType(node).isCppReference();
+		TypePtr type = toType(node);
+		return type && isReference(type) && parseKind(type.as<GenericTypePtr>()->getTypeParameter(3)) == ReferenceType::Kind::CppReference;
 	}
 
 	bool isCppRValueReference(const NodePtr& node) {
-		return isReference(node) && ReferenceType(node).isCppRValueReference();
+		TypePtr type = toType(node);
+		return type && isReference(type) && parseKind(type.as<GenericTypePtr>()->getTypeParameter(3)) == ReferenceType::Kind::CppRValueReference;
 	}
 
 	bool isQualifiedReference(const NodePtr& node) {
@@ -305,6 +318,14 @@ namespace lang {
 		return gA->getTypeParameter(0) == gB->getTypeParameter(0)
 				|| types::getTypeVariableInstantiation(typeA->getNodeManager(), gA->getTypeParameter(0), gB->getTypeParameter(0))
 				|| types::getTypeVariableInstantiation(typeA->getNodeManager(), gB->getTypeParameter(0), gA->getTypeParameter(0));
+	}
+
+	bool doReferencesDifferOnlyInConstOrVolatileQualifiers(const TypePtr& typeA, const TypePtr& typeB) {
+		// doReferencesDifferOnlyInQualifiers will check for ref types
+		if(!doReferencesDifferOnlyInQualifiers(typeA, typeB)) return false;
+
+		// ensure the ref kind is the same
+		return ReferenceType(typeA).getKind() == ReferenceType(typeB).getKind();
 	}
 
 	ExpressionPtr buildRefDeref(const ExpressionPtr& refExpr) {

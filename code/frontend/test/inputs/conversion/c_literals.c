@@ -85,12 +85,12 @@ int main() {
 	// Note: we actually have to create a string literal which isn't const here, as Clang says that the single string literal below the pragma also isn't const.
 	// In order to do this, we need to create the literal ourselves specifying the complete type. Also to create these string literals we need to
 	// enclose them within double quotes, in order for the inner ones to end up in the string literal, as the outer quotes are consumed by the parser.
-	#pragma test expect_ir("ptr_from_array(lit(\"\"abc\"\":ref<array<char,4>,f,f>))")
+	#pragma test expect_ir("ptr_from_array(lit(\"\"abc\"\":ref<array<char,4u>,f,f>))")
 	"abc";
 
 	// Note: we also need to encode escaped characters once again (\n -> \\n) and manually specify to correct length of the
 	// _unescaped_ string _including_ the terminating \0 character (here 5)
-	#pragma test expect_ir("ptr_from_array(lit(\"\"ab\\nc\"\":ref<array<char,5>,f,f>))")
+	#pragma test expect_ir("ptr_from_array(lit(\"\"ab\\nc\"\":ref<array<char,5u>,f,f>))")
 	"ab\nc";
 
 }

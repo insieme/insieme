@@ -365,7 +365,7 @@ namespace pattern {
 		// not perfectly nested loop
 
 		std::map<std::string, core::NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1u>>"));
 
 		auto match = pattern.matchPointer(builder.parseStmt("for( uint<4> i = 10u .. 50u) { "
 		                                                    "	v[i]; "
@@ -403,7 +403,7 @@ namespace pattern {
 		IRBuilder builder(manager);
 
 		std::map<std::string, core::NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1u>>"));
 
 		core::NodePtr node = builder.parseStmt("for(uint<4> l = 8u .. 70u : 3u) { "
 		                                       "	l; "
@@ -473,7 +473,7 @@ namespace pattern {
 		IRBuilder builder(manager);
 
 		std::map<std::string, core::NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1u>>"));
 
 		core::NodePtr node = builder.parseStmt("for(uint<4> l = 8u .. 70u : 3u) {"
 		                                       "	l; "
@@ -548,7 +548,7 @@ namespace pattern {
 		IRBuilder builder(manager);
 
 		std::map<std::string, core::NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1u>>"));
 
 		core::NodePtr node = builder.parseStmt("for(uint<4> l = 8u .. 70u : 3u) {"
 		                                       "	l; "

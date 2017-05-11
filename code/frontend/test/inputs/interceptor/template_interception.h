@@ -122,6 +122,14 @@ template<int I>
 class IntTemplateClass {
 };
 
+template<int I>
+void intTemplateClassFunction(IntTemplateClass<I> i) {}
+
+template<int I>
+struct IntTemplateClassContainer {
+	IntTemplateClassContainer(IntTemplateClass<I> i) {}
+};
+
 template<template <class> class TT, class X>
 class TemplateTemplateClass {
 	TT<X> x;

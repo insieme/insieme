@@ -116,8 +116,8 @@ namespace backend {
 	TEST(FunctionCall, Pointwise) {
 		DO_TEST(R"(
 			unit main() {
-				auto v1 = *<ref<array<int<4>,4>>>{1,2,3,4};
-				auto v2 = *<ref<array<int<4>,4>>>{5,6,7,8};
+				auto v1 = *<ref<array<int<4>,4u>>>{1,2,3,4};
+				auto v2 = *<ref<array<int<4>,4u>>>{5,6,7,8};
 				array_pointwise(int_add)(v1,v2);
 			}
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
@@ -143,7 +143,7 @@ namespace backend {
 			int<4> main() {
 				(data : ref<array<'a,'l>>)->uint<8> {
 					return sizeof(type_lit('a));
-				} (ref_null(type_lit(array<real<4>,12>),type_lit(f),type_lit(f)));
+				} (ref_null(type_lit(array<real<4>,12u>),type_lit(f),type_lit(f)));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
@@ -166,9 +166,9 @@ namespace backend {
 
 	TEST(FunctionCall, FixedSizedArrayInit) {
 		DO_TEST(R"(
-			decl call_vector : (ref<array<uint<8>,3>>)->unit ;
+			decl call_vector : (ref<array<uint<8>,3u>>)->unit ;
 			int<4> main() {
-				call_vector(<ref<array<uint<8>,3>>>{0ul,0ul,0ul});
+				call_vector(<ref<array<uint<8>,3u>>>{0ul,0ul,0ul});
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
@@ -282,9 +282,9 @@ namespace backend {
 				var uint<inf> size = num_cast(12,type_lit(uint<inf>));
 
 				// create two fixed-sized arrays on the stack and the heap
-				var ref<array<int,10>> a;
-				var ref<array<int,10>> b = ref_new(type_lit(array<int,10>));
-				var ref<array<int,10>> c = ref_new_init(*a);
+				var ref<array<int,10u>> a;
+				var ref<array<int,10u>> b = ref_new(type_lit(array<int,10u>));
+				var ref<array<int,10u>> c = ref_new_init(*a);
 
 				var ref<array<int,inf>> e = ref_null(type_lit(array<int,inf>),type_lit(f),type_lit(f));
 
@@ -525,22 +525,22 @@ namespace backend {
 	TEST(Initialization, Array) {
 		DO_TEST(R"(
 			int<4> main() {
-				var ref<array<int<4>,5>,f,f> v0 = <ref<array<int<4>,5>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5>,f,f,plain>))) {1,2,3,4,5};
+				var ref<array<int<4>,5u>,f,f> v0 = <ref<array<int<4>,5u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5u>,f,f,plain>))) {1,2,3,4,5};
 				//int arr_all[5] = {1,2,3,4,5};
 
-				var ref<array<int<4>,5>,f,f> v1 = <ref<array<int<4>,5>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5>,f,f,plain>))) {1,2};
+				var ref<array<int<4>,5u>,f,f> v1 = <ref<array<int<4>,5u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5u>,f,f,plain>))) {1,2};
 				//int arr_partial[5] = {1,2};
 
-				var ref<array<int<4>,5>,f,f> v2 = <ref<array<int<4>,5>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5>,f,f,plain>))) {0};
+				var ref<array<int<4>,5u>,f,f> v2 = <ref<array<int<4>,5u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5u>,f,f,plain>))) {0};
 				//int arr_zero[5] = {0};
 
-				var ref<array<int<4>,3>,f,f> v3 = <ref<array<int<4>,3>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3>,f,f,plain>))) {0,1,2};
+				var ref<array<int<4>,3u>,f,f> v3 = <ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>,f,f,plain>))) {0,1,2};
 				//int arr_implied[] = {0,1,2};
 
-				var ref<array<array<int<4>,3>,2>,f,f> v4 = <ref<array<array<int<4>,3>,2>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3>,2>,f,f>))) {<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1,2,3},<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5,6}};
+				var ref<array<array<int<4>,3u>,2u>,f,f> v4 = <ref<array<array<int<4>,3u>,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3u>,2u>,f,f>))) {<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {1,2,3},<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {4,5,6}};
 				//int arr_multi[2][3] = {{1,2,3}, {4,5,6}};
 
-				var ref<array<array<int<4>,3>,2>,f,f,plain> v5 = <ref<array<array<int<4>,3>,2>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3>,2>,f,f,plain>))) {<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1},<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5}};
+				var ref<array<array<int<4>,3u>,2u>,f,f,plain> v5 = <ref<array<array<int<4>,3u>,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3u>,2u>,f,f,plain>))) {<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {1},<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {4,5}};
 				//int arr_multi_partial[2][3] = {{1}, {4,5}};
 
 				return 0;
@@ -602,15 +602,15 @@ namespace backend {
 			int<4> main() {
 				<ref<int<4>,f,f,plain>>(lit("initedGlobal" : ref<int<4>,f,f,plain>)) {5};
 				<ref<S,f,f,plain>>(lit("y" : ref<S,f,f,plain>)) {1, 5u};
-				<ref<array<S,3>,f,f,plain>>(lit("klaus_test" : ref<array<S,3>,t,f,plain>)) {<ref<S,f,f,plain>>(ref_temp(type_lit(S))) {1, 2u}, <ref<S,f,f,plain>>(ref_temp(type_lit(S))) {3, 4u}, <ref<S,f,f,plain>>(ref_temp(type_lit(S))) {5, 6u}};
-				<ref<array<char,255>,f,f,plain>>(lit("char_arr" : ref<array<char,255>,f,f,plain>)) {'\0'};
-				<ref<array<int<4>,2>,f,f,plain>>(lit("arr" : ref<array<int<4>,2>,f,f,plain>)) {42, 43};
+				<ref<array<S,3u>,f,f,plain>>(lit("klaus_test" : ref<array<S,3u>,t,f,plain>)) {<ref<S,f,f,plain>>(ref_temp(type_lit(S))) {1, 2u}, <ref<S,f,f,plain>>(ref_temp(type_lit(S))) {3, 4u}, <ref<S,f,f,plain>>(ref_temp(type_lit(S))) {5, 6u}};
+				<ref<array<char,255u>,f,f,plain>>(lit("char_arr" : ref<array<char,255u>,f,f,plain>)) {'\0'};
+				<ref<array<int<4>,2u>,f,f,plain>>(lit("arr" : ref<array<int<4>,2u>,f,f,plain>)) {42, 43};
 
 				*lit("initedGlobal":ref<int<4>>);
 				*lit("y":ref<S>);
-				ptr_from_array(lit("klaus_test":ref<array<S,3>,t,f>));
-				ptr_from_array(lit("char_arr":ref<array<char,255>,f,f>));
-				ptr_from_array(lit("arr":ref<array<int<4>,2>,f,f>));
+				ptr_from_array(lit("klaus_test":ref<array<S,3u>,t,f>));
+				ptr_from_array(lit("char_arr":ref<array<char,255u>,f,f>));
+				ptr_from_array(lit("arr":ref<array<int<4>,2u>,f,f>));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {

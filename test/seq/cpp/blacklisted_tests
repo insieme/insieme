@@ -5,7 +5,6 @@ alignof
 big
 cast
 cast_dynamic
-cast_reinterpret
 cast_static
 curiously_recurring_template_pattern
 curiously_recurring_template_pattern_2
@@ -13,9 +12,7 @@ curiously_recurring_template_pattern_member_function
 expr_with_cleanups
 inherit_chained
 member_data_pointer
-member_function_vector
 memb_func_ptr
-performance
 rec_memberfunc_pointer
 shadow_decl
 static_assert
@@ -23,7 +20,6 @@ static_data_member
 static_initialization
 static_var_init
 static_var_updates
-stl_intercept
 stl_list_iterator
 stl_read_file
 template_statics

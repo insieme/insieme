@@ -567,7 +567,6 @@ namespace backend {
 	}
 
 	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::TypePtr& targetType, const core::ExpressionPtr& init) {
-//		auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
 		core::ExpressionPtr initValue = init;
 

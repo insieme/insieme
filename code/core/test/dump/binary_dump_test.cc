@@ -58,7 +58,7 @@ namespace dump {
 		IRBuilder builder(managerA);
 
 		std::map<std::string, NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1u>>"));
 
 		NodePtr code = builder.parseStmt("{ "
 		                                 "	for(uint<4> i = 10u .. 50u) { "
@@ -97,7 +97,7 @@ namespace dump {
 		IRBuilder builder(managerA);
 
 		std::map<std::string, NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1u>>"));
 		NodePtr code = builder.parseStmt("{ "
 		                                 "	for(uint<4> i = 10u .. 50u) { "
 		                                 "		v[i]; "
@@ -141,7 +141,7 @@ namespace dump {
 		IRBuilder builder(managerA);
 
 		std::map<std::string, NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1u>>"));
 		NodePtr code = builder.parseStmt("{ "
 		                                 "	for(uint<4> i = 10u .. 50u) { "
 		                                 "		v[i]; "

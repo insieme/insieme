@@ -169,6 +169,9 @@ namespace conversion {
 				if(auto defaultInitExpr = llvm::dyn_cast<clang::CXXDefaultInitExpr>(clangInitExpr)) {
 					clangInitExpr = defaultInitExpr->getExpr();
 				}
+				if(auto cleanupExpr = llvm::dyn_cast<clang::ExprWithCleanups>(clangInitExpr)) {
+					clangInitExpr = cleanupExpr->getSubExpr();
+				}
 				// handle ConstructExprs
 				if(auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(clangInitExpr)) {
 					auto converted = utils::convertConstructExpr(converter, constructExpr, irMember);

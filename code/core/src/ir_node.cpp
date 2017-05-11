@@ -37,6 +37,7 @@
  */
 #include "insieme/core/ir_node.h"
 
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_mapper.h"
 #include "insieme/core/ir_node_annotation.h"
 
@@ -52,6 +53,8 @@
 #include "insieme/core/lang/extension.h"
 
 #include "insieme/utils/container_utils.h"
+
+#include "insieme/common/env_vars.h"
 
 namespace insieme {
 namespace core {
@@ -191,15 +194,29 @@ namespace core {
 			       });
 	}
 
-	void move_annotation_on_clone::operator()(const Node* src, const Node* trg) const {
+	void MoveAnnotationOnClone::operator()(const Node* src, const Node* trg) const {
 		// copy annotations
 		for_each(src->getAnnotationContainer().getAnnotations(),
 		         [&](const typename Node::annotation_container::annotation_map_type::value_type& cur) { cur.second->clone(cur.second, trg); });
 	}
 
-	NodeManager::NodeManager() : data(new NodeManagerData(*this)) {}
+	void AbortOnNodeCreation::operator()(const Node* src, const Node* trg) const {
+		if(auto mgr = trg->getNodeManagerPtr()) {
+			auto abortNode = mgr->getAbortNode();
+			if(abortNode && *trg == *abortNode) {
+				abort();
+			}
+		}
+	}
 
-	NodeManager::NodeManager(NodeManager& manager) : InstanceManager<Node, Pointer, move_annotation_on_clone>(manager), data(manager.data) {}
+	NodeManager::NodeManager() : data(new NodeManagerData(*this)) {
+		// set the abort node if the env var is set
+		if(auto nodeIrString = getenv(INSIEME_ABORT_NODE)) {
+			data->abortNode = &(*IRBuilder(*this).parse(nodeIrString));
+		}
+	}
+
+	NodeManager::NodeManager(NodeManager& manager) : InstanceManager<Node, Pointer, AbortOnNodeCreation, MoveAnnotationOnClone>(manager), data(manager.data) { }
 
 	NodeManager::NodeManager(unsigned initialFreshID) : data(new NodeManagerData(*this)) {
 		setNextFreshID(initialFreshID);
@@ -207,7 +224,7 @@ namespace core {
 
 	NodeManager::NodeManagerData::NodeManagerData(NodeManager& manager) : root(manager),
 	                                                                      basic(new lang::BasicGenerator(manager)),
-	                                                                      metaGenerator(new inspyer::MetaGenerator()) {};
+	                                                                      metaGenerator(new inspyer::MetaGenerator()) { };
 
 
 	NodeManager::NodeManagerData::~NodeManagerData() {

@@ -53,22 +53,22 @@ int main() {
 	int i = 2;
 
 	#pragma test expect_ir(R"(var ref<(ref<array<char,inf>,f,f,plain>,int<8>),f,f,plain> v0 =
-							  ptr_from_array(lit(""Hallo"":ref<array<char,6>,f,f>));)")
+							  ptr_from_array(lit(""Hallo"":ref<array<char,6u>,f,f>));)")
 	char* hallo = "Hallo";
 
-	#pragma test expect_ir(R"(var ref<array<char,6>,f,f,plain> v0 = lit(""Hallo"":ref<array<char,6>,f,f>);)")
+	#pragma test expect_ir(R"(var ref<array<char,6u>,f,f,plain> v0 = lit(""Hallo"":ref<array<char,6u>,f,f>);)")
 	char hallo2[6] = "Hallo";
 
-	#pragma test expect_ir(R"(var ref<array<char,5>,f,f,plain> v0 =
-							  <ref<array<char,5>,f,f,plain>>(ref_decl(type_lit(ref<array<char,5>,f,f,plain>))) {'a', 'b', 'c', '\n', '\0'};)")
+	#pragma test expect_ir(R"(var ref<array<char,5u>,f,f,plain> v0 =
+							  <ref<array<char,5u>,f,f,plain>>(ref_decl(type_lit(ref<array<char,5u>,f,f,plain>))) {'a', 'b', 'c', '\n', '\0'};)")
 	char abc[5] = { "abc\n" };
 
-	#pragma test expect_ir(R"(var ref<array<char,5>,f,f,plain> v0 =
-							  <ref<array<char,5>,f,f,plain>>(ref_decl(type_lit(ref<array<char,5>,f,f,plain>))) {'m', 'u', 'h', 'a', '\0'};)")
+	#pragma test expect_ir(R"(var ref<array<char,5u>,f,f,plain> v0 =
+							  <ref<array<char,5u>,f,f,plain>>(ref_decl(type_lit(ref<array<char,5u>,f,f,plain>))) {'m', 'u', 'h', 'a', '\0'};)")
 	char muha[5] = { "muha" };
 
-	#pragma test expect_ir(R"(var ref<array<char,4>,f,f,plain> v0 =
-							  <ref<array<char,4>,f,f,plain>>(ref_decl(type_lit(ref<array<char,4>,f,f,plain>)))
+	#pragma test expect_ir(R"(var ref<array<char,4u>,f,f,plain> v0 =
+							  <ref<array<char,4u>,f,f,plain>>(ref_decl(type_lit(ref<array<char,4u>,f,f,plain>)))
 							  {num_cast(lit("'b'":int<4>), type_lit(char)),
 							   num_cast(lit("'c'":int<4>), type_lit(char)),
 							   num_cast(lit("'d'":int<4>), type_lit(char))};)")
@@ -105,22 +105,22 @@ int main() {
 
 	// ARRAY TYPES /////////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("var ref<array<int<4>,5>,f,f> v0 = <ref<array<int<4>,5>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5>,f,f,plain>))) {1,2,3,4,5};")
+	#pragma test expect_ir("var ref<array<int<4>,5u>,f,f> v0 = <ref<array<int<4>,5u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5u>,f,f,plain>))) {1,2,3,4,5};")
 	int arr_all[5] = {1,2,3,4,5};
 
-	#pragma test expect_ir("var ref<array<int<4>,5>,f,f> v0 = <ref<array<int<4>,5>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5>,f,f,plain>))) {1,2};")
+	#pragma test expect_ir("var ref<array<int<4>,5u>,f,f> v0 = <ref<array<int<4>,5u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5u>,f,f,plain>))) {1,2};")
 	int arr_partial[5] = {1,2};
 
-	#pragma test expect_ir("var ref<array<int<4>,5>,f,f> v0 = <ref<array<int<4>,5>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5>,f,f,plain>))) {0};")
+	#pragma test expect_ir("var ref<array<int<4>,5u>,f,f> v0 = <ref<array<int<4>,5u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,5u>,f,f,plain>))) {0};")
 	int arr_zero[5] = {0};
 
-	#pragma test expect_ir("var ref<array<int<4>,3>,f,f> v0 = <ref<array<int<4>,3>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3>,f,f,plain>))) {0,1,2};")
+	#pragma test expect_ir("var ref<array<int<4>,3u>,f,f> v0 = <ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>,f,f,plain>))) {0,1,2};")
 	int arr_implied[] = {0,1,2};
 
-	#pragma test expect_ir("var ref<array<array<int<4>,3>,2>,f,f> v0 = <ref<array<array<int<4>,3>,2>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3>,2>,f,f>))) {<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1,2,3},<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5,6}};")
+	#pragma test expect_ir("var ref<array<array<int<4>,3u>,2u>,f,f> v0 = <ref<array<array<int<4>,3u>,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3u>,2u>,f,f>))) {<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {1,2,3},<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {4,5,6}};")
 	int arr_multi[2][3] = {{1,2,3}, {4,5,6}};
 
-	#pragma test expect_ir("var ref<array<array<int<4>,3>,2>,f,f,plain> v0 = <ref<array<array<int<4>,3>,2>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3>,2>,f,f,plain>))) {<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {1},<ref<array<int<4>,3>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3>))) {4,5}};")
+	#pragma test expect_ir("var ref<array<array<int<4>,3u>,2u>,f,f,plain> v0 = <ref<array<array<int<4>,3u>,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3u>,2u>,f,f,plain>))) {<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {1},<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {4,5}};")
 	int arr_multi_partial[2][3] = {{1}, {4,5}};
 
 	// STRUCT TYPES //////////////////////////////////////////////////////////////
@@ -154,15 +154,15 @@ int main() {
 	#pragma test expect_ir("REGEX_S", R"(.*ref<struct \{ is : struct \{ inner1 : int<4>; inner2 : real<4>; \}; iu : union \{ u1 : int<4>; u2 : real<4>; \}; \},f,f,plain> v0 = .*)")
 	{ struct { struct { int inner1; float inner2; } is; union { int u1; float u2; } iu; } su = { { 1, 2.0f }, { 3 } }; }
 
-	#pragma test expect_ir("REGEX_S", R"(.*ref<array<struct \{ a : int<4>; b : uint<4>;  \},2>,f,f,plain> v0 = .*)")
+	#pragma test expect_ir("REGEX_S", R"(.*ref<array<struct \{ a : int<4>; b : uint<4>;  \},2u>,f,f,plain> v0 = .*)")
 	{ struct { int a; unsigned b; } su[2] = { { 1, 2u }, { 3, 4u } }; }
 
 	#pragma test expect_ir(R"({
-		var ref<union { u1 : array<char,2>; },f,f,plain> v0 =
-			<ref<union { u1 : array<char,2>; },f,f,plain>>
-			(ref_decl(type_lit(ref<union { u1 : array<char,2>; },f,f,plain>)))
+		var ref<union { u1 : array<char,2u>; },f,f,plain> v0 =
+			<ref<union { u1 : array<char,2u>; },f,f,plain>>
+			(ref_decl(type_lit(ref<union { u1 : array<char,2u>; },f,f,plain>)))
 			{
-				<ref<array<char,2>,f,f,plain>>(ref_temp(type_lit(array<char,2>))) {num_cast(1, type_lit(char)), num_cast(2, type_lit(char))}
+				<ref<array<char,2u>,f,f,plain>>(ref_temp(type_lit(array<char,2u>))) {num_cast(1, type_lit(char)), num_cast(2, type_lit(char))}
 			};
 	})")
 	{ union { char u1[2]; } us = { { 1, 2 } }; }

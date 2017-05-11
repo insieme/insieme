@@ -35,6 +35,7 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
+
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
@@ -179,8 +180,8 @@ namespace backend {
 
 	TEST(CppSnippet, RefArrayReturn) {
 		DO_TEST(R"(
-			def IMP_test = function () -> ref<array<int<4>,1>,f,f,cpp_ref> {
-				auto x = <ref<array<int<4>,1>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,1>,f,f,plain>))){};
+			def IMP_test = function () -> ref<array<int<4>,1u>,f,f,cpp_ref> {
+				auto x = <ref<array<int<4>,1u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,1u>,f,f,plain>))){};
 				return x;
 			};
 			int<4> main() {
@@ -194,11 +195,11 @@ namespace backend {
 
 	TEST(CppSnippet, RefArrayParameter) {
 		DO_TEST(R"(
-			def IMP_takeT_char__lbracket_5_rbracket__returns_void = function (v0 : ref<array<char,5>,t,f,cpp_ref>) -> unit { };
-			def IMP_takeT_int__lbracket_3_rbracket__returns_void = function (v0 : ref<array<int<4>,3>,t,f,cpp_ref>) -> unit { };
+			def IMP_takeT_char__lbracket_5_rbracket__returns_void = function (v0 : ref<array<char,5u>,t,f,cpp_ref>) -> unit { };
+			def IMP_takeT_int__lbracket_3_rbracket__returns_void = function (v0 : ref<array<int<4>,3u>,t,f,cpp_ref>) -> unit { };
 			int<4> main() {
-				IMP_takeT_char__lbracket_5_rbracket__returns_void(ref_kind_cast(lit(""test"" : ref<array<char,5>,t,f,plain>), type_lit(cpp_ref)));
-				var ref<array<int<4>,3>,f,f,plain> v0 = <ref<array<int<4>,3>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3>,f,f,plain>))) {1, 2, 3};
+				IMP_takeT_char__lbracket_5_rbracket__returns_void(ref_kind_cast(lit(""test"" : ref<array<char,5u>,t,f,plain>), type_lit(cpp_ref)));
+				var ref<array<int<4>,3u>,f,f,plain> v0 = <ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>,f,f,plain>))) {1, 2, 3};
 				IMP_takeT_int__lbracket_3_rbracket__returns_void(ref_kind_cast(v0, type_lit(cpp_ref)));
 				return 0;
 			}
@@ -721,9 +722,9 @@ namespace backend {
 			};
 
 			int main() {
-				var ref<A> a = A::(a);
-				var ref<D> d = D::(d);
-				var ref<E> e = E::(e);
+				var ref<A> a = A::(ref_decl(type_lit(ref<A>)));
+				var ref<D> d = D::(ref_decl(type_lit(ref<D>)));
+				var ref<E> e = E::(ref_decl(type_lit(ref<E>)));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
@@ -750,7 +751,7 @@ namespace backend {
 			};
 
 			int<4> main() {
-				var ref<ChainedConstructor,f,f,plain> v0 = ChainedConstructor::(v0);
+				var ref<ChainedConstructor,f,f,plain> v0 = ChainedConstructor::(ref_decl(type_lit(ref<ChainedConstructor>)));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
@@ -775,7 +776,7 @@ namespace backend {
 			};
 
 			int<4> main() {
-				var ref<Derived,f,f,plain> v0 = Derived::(v0);
+				var ref<Derived,f,f,plain> v0 = Derived::(ref_decl(type_lit(ref<Derived>)));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
@@ -918,6 +919,21 @@ namespace backend {
 			EXPECT_PRED2(containsSubString, code, "struct C");      // struct definition
 			EXPECT_PRED2(containsSubString, code, "C c;");          // variable definition
 			EXPECT_PRED2(containsSubString, code, "virtual ~C();"); // destructor for B
+		})
+	}
+
+	TEST(CppSnippet, DestructorCall) {
+		DO_TEST(R"(
+			def struct A {
+			};
+			int<4> main() {
+				var ref<A,f,f,plain> v0 = A::(ref_decl(type_lit(ref<A,f,f,plain>)));
+				var ref<ptr<A>,f,f,plain> v1 = ptr_from_ref(v0);
+				A::~(ptr_to_ref(*v1));
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "(*v1).A::~A();");
 		})
 	}
 
@@ -1138,7 +1154,7 @@ namespace backend {
 				lambda IMP_f = () -> real<4> { return lit("1.0E+0":real<4>); }
 			};
 			int<4> main() {
-				var ref<IMP_A,f,f,plain> v0 = IMP_A::(v0);
+				var ref<IMP_A,f,f,plain> v0 = IMP_A::(ref_decl(type_lit(ref<IMP_A>)));
 				var ref<IMP_A,f,f,plain> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref));
 				var ref<IMP_A,f,f,plain> v2 = ref_cast(IMP_A::(ref_temp(type_lit(IMP_A)), ref_kind_cast(v0, type_lit(cpp_ref))), type_lit(f), type_lit(f), type_lit(cpp_rref));
 				return 0;
@@ -1241,8 +1257,8 @@ namespace backend {
 
 			int main() {
 				// on stack
-				var ref<A> a1 = A::(a1);
-				var ref<A> a2 = A::(a2, 1);
+				var ref<A> a1 = A::(ref_decl(type_lit(ref<A>)));
+				var ref<A> a2 = A::(ref_decl(type_lit(ref<A>)), 1);
 
 				// on heap
 				var ref<A> a1r = A::(ref_new(type_lit(A)));
@@ -1306,27 +1322,55 @@ namespace backend {
 		})
 	}
 
+	TEST(CppSnippet, PlacementNew) {
+		DO_TEST(R"(
+			def struct IMP_SimplestConstructor {
+			};
+			def cxx_placement_new = (loc : ptr<unit,f,f>, val : 'a) -> ptr<'a,f,f> {
+				ptr_to_ref(ptr_reinterpret(loc, type_lit('a))) = val; return ptr_reinterpret(loc, type_lit('a));
+			};
+			int<4> main() {
+				var ref<int<4>,f,f,plain> intplace = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+				var ref<ptr<int<4>>,f,f,plain> inta = ptr_reinterpret(ptr_reinterpret(ptr_from_ref(intplace), type_lit(unit)), type_lit(int<4>));
+				var ref<ptr<int<4>>,f,f,plain> intb = cxx_placement_new(ptr_reinterpret(ptr_from_ref(intplace), type_lit(unit)), 42);
+
+				var ref<IMP_SimplestConstructor,f,f,plain> objectPlace = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
+				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> object = ptr_from_ref(IMP_SimplestConstructor::(ptr_to_ref(ptr_reinterpret(ptr_reinterpret(ptr_from_ref(objectPlace), type_lit(unit)), type_lit(IMP_SimplestConstructor)))));
+
+				var ref<IMP_SimplestConstructor,f,f,plain> expressionPlace = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
+				ptr_from_ref(IMP_SimplestConstructor::(ptr_to_ref(ptr_reinterpret(ptr_reinterpret(ptr_from_ref(expressionPlace), type_lit(unit)), type_lit(IMP_SimplestConstructor)))));
+
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "int32_t* inta = (int32_t*)((void*)(&intplace));");
+			EXPECT_PRED2(containsSubString, code, "int32_t* intb = cxx_placement_new((void*)(&intplace), 42);");
+			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* object = new ((IMP_SimplestConstructor*)((void*)(&objectPlace))) IMP_SimplestConstructor()");
+			EXPECT_PRED2(containsSubString, code, "new ((IMP_SimplestConstructor*)((void*)(&expressionPlace))) IMP_SimplestConstructor()");
+		})
+	}
+
 	TEST(CppSnippet, NewDeleteArrayFixed) {
 		DO_TEST(R"(
 			def struct IMP_SimplestConstructor { };
 			int<4> main() {
-				var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(<ref<array<int<4>,50>,f,f,plain>>(ref_new(type_lit(array<int<4>,50>))) {});
+				var ref<ptr<int<4>,f,f>,f,f,plain> i = ptr_from_array(<ref<array<int<4>,50u>,f,f,plain>>(ref_new(type_lit(array<int<4>,50u>))) {});
 				ref_delete(ptr_to_array(*i));
-				var ref<ptr<int<4>>,f,f,plain> j = ptr_from_array(<ref<array<int<4>,50>,f,f,plain>>(ref_new(type_lit(array<int<4>,50>))) {1, 2, 3});
+				var ref<ptr<int<4>>,f,f,plain> j = ptr_from_array(<ref<array<int<4>,50u>,f,f,plain>>(ref_new(type_lit(array<int<4>,50u>))) {1, 2, 3});
 				ref_delete(ptr_to_array(*j));
-				var ref<ptr<array<int<4>,3>>,f,f,plain> k = ptr_from_array(<ref<array<array<int<4>,3>,50>,f,f,plain>>(ref_new(type_lit(array<array<int<4>,3>,50>))) {});
+				var ref<ptr<array<int<4>,3u>>,f,f,plain> k = ptr_from_array(<ref<array<array<int<4>,3u>,50u>,f,f,plain>>(ref_new(type_lit(array<array<int<4>,3u>,50u>))) {});
 				ref_delete(ptr_to_array(*k));
 
-				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o1 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {});
+				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o1 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3u>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3u>))) {});
 				ref_delete(ptr_to_array(*o1));
 				var ref<IMP_SimplestConstructor,f,f,plain> v0 = IMP_SimplestConstructor::(ref_decl(type_lit(ref<IMP_SimplestConstructor,f,f,plain>)));
-				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o2 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))});
+				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o2 = ptr_from_array(<ref<array<IMP_SimplestConstructor,3u>,f,f,plain>>(ref_new(type_lit(array<IMP_SimplestConstructor,3u>))) {ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))});
 				ref_delete(ptr_to_array(*o2));
 
 				// arrays created with ref_new not nested inside an init expr should be allocated with malloc and free'd with free
-				var ref<ptr<int<4>,f,f>,f,f,plain> i_malloc = ptr_from_array(ref_new(type_lit(array<int<4>,50>)));
+				var ref<ptr<int<4>,f,f>,f,f,plain> i_malloc = ptr_from_array(ref_new(type_lit(array<int<4>,50u>)));
 				ref_delete(ptr_to_ref(*i_malloc));
-				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o_malloc = ptr_from_array(ref_new(type_lit(array<IMP_SimplestConstructor,3>)));
+				var ref<ptr<IMP_SimplestConstructor>,f,f,plain> o_malloc = ptr_from_array(ref_new(type_lit(array<IMP_SimplestConstructor,3u>)));
 				ref_delete(ptr_to_ref(*o_malloc));
 				return 0;
 			}
@@ -1412,12 +1456,12 @@ namespace backend {
 			def struct IMP_A {};
 			int<4> main() {
 				{
-					var ref<array<IMP_A,3>,f,f,plain> i = <ref<array<IMP_A,3>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3>,f,f,plain>))) {};
+					var ref<array<IMP_A,3u>,f,f,plain> i = <ref<array<IMP_A,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3u>,f,f,plain>))) {};
 				}
 				{
 					var ref<IMP_A,f,f,plain> a = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
 					var ref<IMP_A,f,f,plain> b = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
-					var ref<array<IMP_A,3>,f,f,plain> v2 = <ref<array<IMP_A,3>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3>,f,f,plain>))) {ref_cast(a, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(b, type_lit(t), type_lit(f), type_lit(cpp_ref))};
+					var ref<array<IMP_A,3u>,f,f,plain> v2 = <ref<array<IMP_A,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_A,3u>,f,f,plain>))) {ref_cast(a, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(b, type_lit(t), type_lit(f), type_lit(cpp_ref))};
 				}
 				return 0;
 			}

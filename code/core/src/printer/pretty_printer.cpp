@@ -249,6 +249,15 @@ namespace printer {
 				if(thisParamRef.isVolatile()) { out << "volatile "; }
 			}
 
+			void printObjectName(const core::TypeAddress& ty) {
+				auto objTy = analysis::getObjectType(ty);
+				if(objTy.isa<GenericTypePtr>()) {
+					visit(objTy);
+					return;
+				}
+				*out << getObjectName(printer, ty.getAddressedNode());
+			}
+
 			bool hasEndingCompoundStmt(const StatementAddress& stmt) {
 				auto nodeType = stmt->getNodeType();
 				if(nodeType == NodeType::NT_ForStmt || nodeType == NodeType::NT_IfStmt || nodeType == NodeType::NT_CompoundStmt
@@ -460,12 +469,18 @@ namespace printer {
 									vector<std::string> splitstring;
 									boost::split(splitstring, lambdaNames[binding->getReference()],
 												 boost::is_any_of("::"));
-									visitedFreeFunctions[binding->getReference()] = std::make_tuple(tagname,
-																									splitstring[2]);
+									std::string lambdaName;
+									if(splitstring.size() == 3) {
+										lambdaName = makeReadableIfRequired(splitstring[2]);
+									} else {
+										lambdaName = lambdaNames[binding->getReference()];
+									}
 
-									lambdaNames[binding->getReference()] = makeReadableIfRequired(splitstring[2]);
+									visitedFreeFunctions[binding->getReference()] = std::make_tuple(tagname, lambdaName);
+
+									lambdaNames[binding->getReference()] = lambdaName;
 									newLine();
-									(*out) << "decl " << splitstring[2] << ":";
+									(*out) << "decl " << lambdaName << ":";
 									visit(NodeAddress(funType));
 									(*out) << ";";
 								} else if (binding->getReference()->getType().isConstructor()) { // free constructors
@@ -716,14 +731,17 @@ namespace printer {
 				if(node->isMember()) {
 					if (node->isDestructor()) {
 						// print class type
-						(*out) << "~" << getObjectName(printer, node) << "::()";
+						(*out) << "~";
+						printObjectName(node);
+						(*out) << "::()";
 					} else {
 						auto params = node->getParameterTypes();
 						// print qualifier
 						assert_true(params.size() > 0);
 						printQualifiers(*out, node->getParameterTypeList()[0].getAddressedNode());
 						// print class type
-						(*out) << getObjectName(printer, node) << "::";
+						printObjectName(node);
+						(*out) << "::";
 						// print function signature
 						if(node->isConstructor()) {
 							(*out) << "(" << join(", ", params.begin() + 1, params.end(), printerLambda) << ")";
@@ -1013,24 +1031,7 @@ namespace printer {
 				if(printer.hasOption(PrettyPrinter::NAME_CONTRACTION) && str.size() > 9) {
 					(*out) << str.substr(0, 3) << "..." << str.substr(str.size() - 3, str.size());
 				} else {
-					(*out) << str;
-					if (node.isRoot() || !node.getParentAddress().isa<NumericTypeAddress>()) { // print extension only when no type printing like int<4>
-						auto& basic = node->getNodeManager().getLangBasic();
-						auto type = node->getType();
-
-						if (basic.isFloat(type))  (*out) << "f";
-
-						if (basic.isUInt1(type))    (*out) << "u";
-						if (basic.isUInt2(type))    (*out) << "u";
-						if (basic.isUInt4(type))    (*out) << "u";
-						if (basic.isUInt8(type))    (*out) << "ul";
-						if (basic.isUInt16(type))   (*out) << "ull";
-						if (basic.isUIntGen(type))  (*out) << "u";
-						if (basic.isUIntInf(type))  (*out) << "u";
-
-						if (basic.isInt8(type))     (*out) << "l";
-						if (basic.isInt16(type))    (*out) << "ll";
-					}
+					(*out) << str << getLiteralTypeSuffix(node);
 				}
 
 				if(doFullSyntax) {
@@ -2073,6 +2074,22 @@ namespace printer {
 		wrappedOutStream.flush();
 
 		return srcMap;
+	}
+
+	std::string getLiteralTypeSuffix(const core::LiteralPtr& lit) {
+		auto& basic = lit->getNodeManager().getLangBasic();
+		auto type = lit->getType();
+
+		if (basic.isFloat(type))  return "f";
+
+		if (basic.isUInt1(type) || basic.isUInt2(type) || basic.isUInt4(type) || basic.isUIntGen(type) || basic.isUIntInf(type)) return "u";
+		if (basic.isUInt8(type))  return "ul";
+		if (basic.isUInt16(type)) return "ull";
+
+		if (basic.isInt8(type))   return "l";
+		if (basic.isInt16(type))  return "ll";
+
+		return "";
 	}
 
 } // end of namespace printer

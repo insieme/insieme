@@ -35,12 +35,14 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
+
 #include <sys/time.h>
 
 #include <iostream>
 #include <vector>
 #include <map>
 #include <future>
+#include <sstream>
 
 struct Trivial {};
 struct OtherTrivial {}; // should ONLY be used once in the remaining test code
@@ -64,10 +66,10 @@ int main() {
 
 	// cpp type and member function
 	#pragma test expect_ir(R"({
-		var ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::())(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
-		lit("IMP_std_colon__colon_vector::IMP_push_back" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::(ref<'T_0_0,f,f,cpp_rref>) -> unit)(v0, 0);
-		var ref<IMP_std_colon__colon_vector<ref<real<8>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<real<8>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v1 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::())(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<real<8>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<real<8>,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
-		lit("IMP_std_colon__colon_vector::IMP_push_back" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::(ref<'T_0_0,f,f,cpp_rref>) -> unit)(v1, 1.0E+0);
+		var ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>::()), lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::()))(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
+		type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>::(ref<int<4>,f,f,cpp_rref>) -> unit), lit("IMP_std_colon__colon_vector::IMP_push_back" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::(ref<'T_0_0,f,f,cpp_rref>) -> unit))(v0, 0);
+		var ref<IMP_std_colon__colon_vector<ref<real<8>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<real<8>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v1 = type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<real<8>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<real<8>,f,f,qualified>>,f,f,qualified>>::()), lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::()))(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<real<8>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<real<8>,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
+		type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<real<8>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<real<8>,f,f,qualified>>,f,f,qualified>>::(ref<real<8>,f,f,cpp_rref>) -> unit), lit("IMP_std_colon__colon_vector::IMP_push_back" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::(ref<'T_0_0,f,f,cpp_rref>) -> unit))(v1, 1.0E+0);
 	})")
 	{
 		std::vector<int> v1;
@@ -78,14 +80,14 @@ int main() {
 
 	// cpp global and function
 	#pragma test expect_ir(R"({
-		type_instantiation(type_lit((ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,cpp_ref>, ptr<char,t,f>) -> ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,cpp_ref>), lit("IMP_std_colon__colon__operator_lshift_" : (ref<IMP_basic_ostream<char,'T_0_0>,f,f,cpp_ref>, ptr<char,t,f>) -> ref<IMP_basic_ostream<char,'T_0_0>,f,f,cpp_ref>))(ref_kind_cast(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,plain>), type_lit(cpp_ref)), ptr_from_array(lit(""Test"" : ref<array<char,5>,t,f,plain>))) materialize ;
+		type_instantiation(type_lit((ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,cpp_ref>, ptr<char,t,f>) -> ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,cpp_ref>), lit("IMP_std_colon__colon__operator_lshift_" : (ref<IMP_std_colon__colon_basic_ostream<char,'T_0_0>,f,f,cpp_ref>, ptr<char,t,f>) -> ref<IMP_std_colon__colon_basic_ostream<char,'T_0_0>,f,f,cpp_ref>))(ref_kind_cast(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,plain>), type_lit(cpp_ref)), ptr_from_array(lit(""Test"" : ref<array<char,5u>,t,f,plain>))) materialize ;
 	})")
 	{
 		std::cout << "Test";
 	}
 
 	#pragma test expect_ir(R"({
-		lit("IMP_std_colon__colon_basic_ostream::IMP__operator_lshift_" : IMP_std_colon__colon_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::(int<4>) -> ref<IMP_std_colon__colon_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>,f,f,cpp_ref>)(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,plain>), 1) materialize;
+		type_instantiation(type_lit(IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>::(int<4>) -> ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,cpp_ref>), lit("IMP_std_colon__colon_basic_ostream::IMP__operator_lshift_" : IMP_std_colon__colon_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::(int<4>) -> ref<IMP_std_colon__colon_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>,f,f,cpp_ref>))(lit("IMP_std_colon__colon_cout" : ref<IMP_std_colon__colon_basic_ostream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,plain>), 1) materialize ;
 	})")
 	{
 		std::cout << 1;
@@ -102,7 +104,7 @@ int main() {
 		decl struct IMP_Trivial;
 		def struct IMP_Trivial { };
 		{
-			var ref<IMP_std_colon__colon_vector<ref<IMP_Trivial,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_Trivial,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::())(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<IMP_Trivial,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_Trivial,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
+			var ref<IMP_std_colon__colon_vector<ref<IMP_Trivial,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_Trivial,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<IMP_Trivial,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_Trivial,f,f,qualified>>,f,f,qualified>>::()), lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::()))(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<IMP_Trivial,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_Trivial,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
 		}
 	)")
 	{
@@ -111,8 +113,8 @@ int main() {
 
 	// check naming of const method
 	#pragma test expect_ir(R"({
-		var ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::())(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
-		lit("IMP_std_colon__colon_vector::IMP_size" : const IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::() -> uint<8>)(v0);
+		var ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>::()), lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::()))(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
+		type_instantiation(type_lit(const IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>::() -> uint<8>), lit("IMP_std_colon__colon_vector::IMP_size" : const IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::() -> uint<8>))(v0);
 	})")
 	{
 		std::vector<int> a;
@@ -121,7 +123,7 @@ int main() {
 
 	// check partial template specialization
 	#pragma test expect_ir(R"({
-		var ref<IMP_std_colon__colon_vector<ref<bool,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<bool,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::())(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<bool,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<bool,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
+		var ref<IMP_std_colon__colon_vector<ref<bool,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<bool,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<bool,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<bool,f,f,qualified>>,f,f,qualified>>::()), lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::()))(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<bool,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<bool,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
 	})")
 	{
 		std::vector<bool> b;
@@ -132,7 +134,7 @@ int main() {
 		decl struct IMP_OtherTrivial;
 		def struct IMP_OtherTrivial { };
 		{
-			type_instantiation(type_lit(<ref<IMP_OtherTrivial,f,f,qualified>>() -> IMP_std_colon__colon_shared_ptr<ref<IMP_OtherTrivial,f,f,qualified>>), lit("IMP_std_colon__colon_make_shared" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, 'V_T_0_1...>('V_T_0_1...) -> IMP_shared_ptr<'T_0_0>))() materialize;
+			type_instantiation(type_lit(<ref<IMP_OtherTrivial,f,f,qualified>>() -> IMP_std_colon__colon_shared_ptr<ref<IMP_OtherTrivial,f,f,qualified>>), lit("IMP_std_colon__colon_make_shared" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, 'V_T_0_1...>('V_T_0_1...) -> IMP_std_colon__colon_shared_ptr<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>))() materialize;
 		}
 	)")
 	{
@@ -140,8 +142,8 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"({
-		var ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::())(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
-		var ref<IMP___gnu_cxx_colon__colon___normal_iterator<ref<ptr<int<4>>,f,f,qualified>,ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v1 = ref_cast(type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>::() -> IMP___gnu_cxx_colon__colon___normal_iterator<ref<ptr<int<4>>,f,f,qualified>,ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>), lit("IMP_std_colon__colon_vector::IMP_begin" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::() -> IMP___normal_iterator<'IMP_typename_space__Base_colon__colon_pointer,IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>>))(v0) materialize , type_lit(f), type_lit(f), type_lit(cpp_rref));
+		var ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>::()), lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::()))(ref_decl(type_lit(ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
+		var ref<IMP___gnu_cxx_colon__colon___normal_iterator<ref<ptr<int<4>>,f,f,qualified>,ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v1 = ref_cast(type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>::() -> IMP___gnu_cxx_colon__colon___normal_iterator<ref<ptr<int<4>>,f,f,qualified>,ref<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>), lit("IMP_std_colon__colon_vector::IMP_begin" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::() -> IMP___gnu_cxx_colon__colon___normal_iterator<'IMP_typename_space__Base_colon__colon_pointer,IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>>))(v0) materialize , type_lit(f), type_lit(f), type_lit(cpp_rref));
 	})")
 	{
 		std::vector<int> a;
@@ -149,10 +151,13 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"(
+		decl struct IMP_InitListTest;
+		decl IMP_InitListTest::v : IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>;
+		decl ctor:IMP_InitListTest::();
 		def struct IMP_InitListTest {
 			v : IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>;
 			ctor function () {
-				lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::())((this).v);
+				type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>::()), lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::()))((this).v);
 			}
 		};
 		{
@@ -166,14 +171,17 @@ int main() {
 	#pragma test expect_ir(R"(
 		 var ref<IMP_std_colon__colon_pair<ref<int<4>,f,f,qualified>,ref<bool,f,f,qualified>>,f,f,plain> v0 =
 			ref_cast(type_instantiation(type_lit((ref<int<4>,f,f,cpp_rref>, ref<bool,f,f,cpp_rref>) -> IMP_std_colon__colon_pair<ref<int<4>,f,f,qualified>,ref<bool,f,f,qualified>>),
-				lit("IMP_std_colon__colon_make_pair" : (ref<'T_0_0,f,f,cpp_rref>, ref<'T_0_1,f,f,cpp_rref>) -> IMP_pair<'IMP_typename_space___decay_and_strip_lt__T1_gt__colon__colon___type,'IMP_typename_space___decay_and_strip_lt__T2_gt__colon__colon___type>))(12, true) materialize , type_lit(f), type_lit(f), type_lit(cpp_rref));
+				lit("IMP_std_colon__colon_make_pair" : (ref<'T_0_0,f,f,cpp_rref>, ref<'T_0_1,f,f,cpp_rref>) -> IMP_std_colon__colon_pair<'IMP_typename_space___decay_and_strip_lt__T1_gt__colon__colon___type,'IMP_typename_space___decay_and_strip_lt__T2_gt__colon__colon___type>))(12, true) materialize , type_lit(f), type_lit(f), type_lit(cpp_rref));
 	)")
 	std::pair<int,bool> x = std::make_pair(12, true);
 
 	// std::function
 	#pragma test expect_ir(R"({
-		var ref<IMP_std_colon__colon_function<ref<(int<4>) -> int<4>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_std_colon__colon_function::ctor" : IMP_std_colon__colon_function<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::())(ref_decl(type_lit(ref<IMP_std_colon__colon_function<ref<(int<4>) -> int<4>,f,f,qualified>>,f,f,plain>)));
-		type_instantiation(type_lit(const IMP_std_colon__colon_function<ref<(int<4>)->int<4>,f,f,qualified>>::(int<4>) -> int<4>), lit("IMP_std_colon__colon_function::IMP__operator_call_" : const IMP_std_colon__colon_function<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::('V_T_0_1...) -> '__std_fun_ret_type))(v0, 1);
+		var ref<IMP_std_colon__colon_function<ref<(int<4>) -> int<4>,f,f,qualified>>,f,f,plain> v0 =
+				type_instantiation(type_lit(IMP_std_colon__colon_function<ref<(int<4>)->int<4>,f,f,qualified>>::()),
+				                   lit("IMP_std_colon__colon_function::ctor" : IMP_std_colon__colon_function<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::()))(ref_decl(type_lit(ref<IMP_std_colon__colon_function<ref<(int<4>) -> int<4>,f,f,qualified>>,f,f,plain>)));
+		type_instantiation(type_lit(const IMP_std_colon__colon_function<ref<(int<4>)->int<4>,f,f,qualified>>::(int<4>) -> int<4>),
+		                   lit("IMP_std_colon__colon_function::IMP__operator_call_" : const IMP_std_colon__colon_function<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::('V_T_0_1...) -> '__std_fun_ret_type))(v0, 1);
 	})")
 	{
 		std::function<int (int)> x;
@@ -182,8 +190,8 @@ int main() {
 
 	// method call on rvalue
 	#pragma test expect_ir(R"({
-		var ref<IMP_std_colon__colon_map<ref<int<4>,f,f,qualified>,ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_less<ref<int<4>,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_std_colon__colon_map::ctor" : IMP_std_colon__colon_map<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>,ref<'T_0_2,'T_0_2_a,'T_0_2_b,'T_0_2_c>,ref<'T_0_3,'T_0_3_a,'T_0_3_b,'T_0_3_c>>::())(ref_decl(type_lit(ref<IMP_std_colon__colon_map<ref<int<4>,f,f,qualified>,ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_less<ref<int<4>,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
-		lit("IMP_std_colon__colon__Rb_tree_iterator::IMP__operator_neq_" : const IMP_std_colon__colon__Rb_tree_iterator<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::(ref<IMP_std_colon__colon__Rb_tree_iterator<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,t,f,cpp_ref>) -> bool)(type_instantiation(type_lit(IMP_std_colon__colon_map<ref<int<4>,f,f,qualified>,ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_less<ref<int<4>,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>::(ref<int<4>,t,f,cpp_ref>) -> IMP_std_colon__colon__Rb_tree_iterator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>), lit("IMP_std_colon__colon_map::IMP_find" : IMP_std_colon__colon_map<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>,ref<'T_0_2,'T_0_2_a,'T_0_2_b,'T_0_2_c>,ref<'T_0_3,'T_0_3_a,'T_0_3_b,'T_0_3_c>>::(ref<'T_0_0,t,f,cpp_ref>) -> 'IMP_typename_space__Rep_type_colon__colon_iterator))(v0, 1) materialize , ref_kind_cast(type_instantiation(type_lit(IMP_std_colon__colon_map<ref<int<4>,f,f,qualified>,ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_less<ref<int<4>,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>::(ref<int<4>,t,f,cpp_ref>) -> IMP_std_colon__colon__Rb_tree_iterator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>), lit("IMP_std_colon__colon_map::IMP_find" : IMP_std_colon__colon_map<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>,ref<'T_0_2,'T_0_2_a,'T_0_2_b,'T_0_2_c>,ref<'T_0_3,'T_0_3_a,'T_0_3_b,'T_0_3_c>>::(ref<'T_0_0,t,f,cpp_ref>) -> 'IMP_typename_space__Rep_type_colon__colon_iterator))(v0, 2) materialize , type_lit(cpp_ref)));
+		var ref<IMP_std_colon__colon_map<ref<int<4>,f,f,qualified>,ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_less<ref<int<4>,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = type_instantiation(type_lit(IMP_std_colon__colon_map<ref<int<4>,f,f,qualified>,ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_less<ref<int<4>,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>::()), lit("IMP_std_colon__colon_map::ctor" : IMP_std_colon__colon_map<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>,ref<'T_0_2,'T_0_2_a,'T_0_2_b,'T_0_2_c>,ref<'T_0_3,'T_0_3_a,'T_0_3_b,'T_0_3_c>>::()))(ref_decl(type_lit(ref<IMP_std_colon__colon_map<ref<int<4>,f,f,qualified>,ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_less<ref<int<4>,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
+		type_instantiation(type_lit(const IMP_std_colon__colon__Rb_tree_iterator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>::(ref<IMP_std_colon__colon__Rb_tree_iterator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>,t,f,cpp_ref>) -> bool), lit("IMP_std_colon__colon__Rb_tree_iterator::IMP__operator_neq_" : const IMP_std_colon__colon__Rb_tree_iterator<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::(ref<IMP_std_colon__colon__Rb_tree_iterator<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,t,f,cpp_ref>) -> bool))(type_instantiation(type_lit(IMP_std_colon__colon_map<ref<int<4>,f,f,qualified>,ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_less<ref<int<4>,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>::(ref<int<4>,t,f,cpp_ref>) -> IMP_std_colon__colon__Rb_tree_iterator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>), lit("IMP_std_colon__colon_map::IMP_find" : IMP_std_colon__colon_map<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>,ref<'T_0_2,'T_0_2_a,'T_0_2_b,'T_0_2_c>,ref<'T_0_3,'T_0_3_a,'T_0_3_b,'T_0_3_c>>::(ref<'T_0_0,t,f,cpp_ref>) -> 'IMP_typename_space__Rep_type_colon__colon_iterator))(v0, 1) materialize , ref_kind_cast(type_instantiation(type_lit(IMP_std_colon__colon_map<ref<int<4>,f,f,qualified>,ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_less<ref<int<4>,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,qualified>>::(ref<int<4>,t,f,cpp_ref>) -> IMP_std_colon__colon__Rb_tree_iterator<ref<IMP_std_colon__colon_pair<ref<int<4>,t,f,qualified>,ref<int<4>,f,f,qualified>>,f,f,qualified>>), lit("IMP_std_colon__colon_map::IMP_find" : IMP_std_colon__colon_map<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>,ref<'T_0_2,'T_0_2_a,'T_0_2_b,'T_0_2_c>,ref<'T_0_3,'T_0_3_a,'T_0_3_b,'T_0_3_c>>::(ref<'T_0_0,t,f,cpp_ref>) -> 'IMP_typename_space__Rep_type_colon__colon_iterator))(v0, 2) materialize , type_lit(cpp_ref)));
 	})")
 	{
 		std::map<int,int> m;
@@ -192,7 +200,7 @@ int main() {
 
 	// new/delete of intercepted type
 	#pragma test expect_ir(R"({
-		var ref<ptr<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>>,f,f,plain> v0 = ptr_from_ref(lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::())(ref_new(type_lit(IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>))));
+		var ref<ptr<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>>,f,f,plain> v0 = ptr_from_ref(type_instantiation(type_lit(IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>::()), lit("IMP_std_colon__colon_vector::ctor" : IMP_std_colon__colon_vector<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::()))(ref_new(type_lit(IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>))));
 		ref_delete(lit("IMP_std_colon__colon_vector::dtor" : ~IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>::())(ptr_to_ref(*v0)));
 	})")
 	{
@@ -202,11 +210,23 @@ int main() {
 
 	// array new/delete of intercepted type
 	#pragma test expect_ir(R"({
-		var ref<ptr<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>>,f,f,plain> v0 = ptr_from_array(<ref<array<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,5>,f,f,plain>>(ref_new(type_lit(array<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,5>))) {});
+		var ref<ptr<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>>,f,f,plain> v0 = ptr_from_array(<ref<array<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,5u>,f,f,plain>>(ref_new(type_lit(array<IMP_std_colon__colon_vector<ref<int<4>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<int<4>,f,f,qualified>>,f,f,qualified>>,5u>))) {});
 		ref_delete(ptr_to_array(*v0));
 	})")
 	{
 		std::vector<int> *arr = new std::vector<int>[5];
 		delete [] arr;
+	}
+
+	// stringstream construction
+	#pragma test expect_ir(R"({
+		var ref<IMP_std_colon__colon___cxx11_colon__colon_basic_string<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 =
+				type_instantiation(type_lit(IMP_std_colon__colon___cxx11_colon__colon_basic_string<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<char,f,f,qualified>>,f,f,qualified>>::()), lit("IMP_std_colon__colon___cxx11_colon__colon_basic_string::ctor" : IMP_std_colon__colon___cxx11_colon__colon_basic_string<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>,ref<'T_0_2,'T_0_2_a,'T_0_2_b,'T_0_2_c>>::()))(ref_decl(type_lit(ref<IMP_std_colon__colon___cxx11_colon__colon_basic_string<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
+		var ref<IMP_std_colon__colon___cxx11_colon__colon_basic_stringstream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,plain> v1 =
+				type_instantiation(type_lit(IMP_std_colon__colon___cxx11_colon__colon_basic_stringstream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<char,f,f,qualified>>,f,f,qualified>>::(ref<IMP_std_colon__colon___cxx11_colon__colon_basic_string<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<char,f,f,qualified>>,f,f,qualified>>,t,f,cpp_ref>, (type<__any_type__>, int<4>))), lit("IMP_std_colon__colon___cxx11_colon__colon_basic_stringstream::ctor" : IMP_std_colon__colon___cxx11_colon__colon_basic_stringstream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>,ref<'T_0_2,'T_0_2_a,'T_0_2_b,'T_0_2_c>>::(ref<IMP_std_colon__colon___cxx11_colon__colon_basic_string<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>,ref<'T_0_2,'T_0_2_a,'T_0_2_b,'T_0_2_c>>,t,f,cpp_ref>, (type<__any_type__>, int<4>))))(ref_decl(type_lit(ref<IMP_std_colon__colon___cxx11_colon__colon_basic_stringstream<ref<char,f,f,qualified>,ref<IMP_std_colon__colon_char_traits<ref<char,f,f,qualified>>,f,f,qualified>,ref<IMP_std_colon__colon_allocator<ref<char,f,f,qualified>>,f,f,qualified>>,f,f,plain>)), ref_kind_cast(v0, type_lit(cpp_ref)), lit("IMP_std_colon__colon__operator_or_" : ((type<__any_type__>, int<4>), (type<__any_type__>, int<4>)) -> (type<__any_type__>, int<4>))(*lit("IMP_std_colon__colon_ios_base_colon__colon_out" : ref<(type<__any_type__>, int<4>),t,f,plain>), *lit("IMP_std_colon__colon_ios_base_colon__colon_in" : ref<(type<__any_type__>, int<4>),t,f,plain>)));
+	})")
+	{
+		std::string s;
+		std::stringstream ss(s);
 	}
 }

@@ -94,7 +94,7 @@ namespace analysis {
 	TEST(ArrayOfNonTrivialType, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
-		EXPECT_FALSE(isTrivial(builder.parseType("array<struct s { ctor() { return; } },1>")));
+		EXPECT_FALSE(isTrivial(builder.parseType("array<struct s { ctor() { return; } },1u>")));
 	}
 
 	TEST(TrivialStruct, Basic) {

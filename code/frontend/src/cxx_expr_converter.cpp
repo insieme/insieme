@@ -199,6 +199,23 @@ namespace conversion {
 		return retIr;
 	}
 
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							CXX PSEUDO DESTRUCTOR
+	//
+	// Destructor call generated in a template instantiation for a base type
+	// Nothing happens here, Clang probably has it only to regenerate the original code
+	// We replace it by a no-op function defined in the FE extension and get rid of the entire call in cleanup later
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr Converter::CXXExprConverter::VisitCXXPseudoDestructorExpr(const clang::CXXPseudoDestructorExpr* pseudo) {
+		core::ExpressionPtr retIr;
+		LOG_EXPR_CONVERSION(pseudo, retIr);
+		auto& feExt = converter.getNodeManager().getLangExtension<frontend::utils::FrontendInspireModule>();
+		// rest off FE expects a pointer here
+		retIr = core::lang::buildPtrOfFunction(feExt.getCxxPseudoDestructorCall());
+		return retIr;
+	}
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CXX BOOLEAN LITERAL
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -235,6 +252,12 @@ namespace conversion {
 
 			// build call and we are done
 			auto retType = convertExprType(callExpr);
+
+			// special handling for return type for dtor calls
+			if(llvm::dyn_cast<clang::CXXDestructorDecl>(methodDecl)) {
+				retType = thisObj->getType();
+			}
+
 			ret = utils::buildCxxMethodCall(converter, retType, methodLambda, thisObj, callExpr->arguments());
 		}
 
@@ -387,27 +410,48 @@ namespace conversion {
 		core::ExpressionPtr retExpr;
 		LOG_EXPR_CONVERSION(newExpr, retExpr);
 
-		frontend_assert(newExpr->getNumPlacementArgs() == 0) << "Placement new not yet supported";
+		frontend_assert(newExpr->getNumPlacementArgs() < 2) << "Custom placement new not yet supported";
 
 		core::TypePtr type = converter.convertType(newExpr->getAllocatedType());
 
 		if(newExpr->isArray()) {
+			frontend_assert(newExpr->getNumPlacementArgs() == 0) << "Placement new for arrays not yet supported";
 			retExpr = buildArrayNew(converter, newExpr, type);
 		} else {
 			// if no constructor is found, it is a new over a non-class type
 			if(!newExpr->getConstructExpr()) {
-				// build new expression depending on whether or not we have an initializer expression
-				core::ExpressionPtr newExp;
-				if(newExpr->hasInitializer()) {
-					newExp = builder.refNew(Visit(newExpr->getInitializer()));
-				} else {
-					newExp = builder.undefinedNew(type);
+				if(newExpr->getNumPlacementArgs() == 0) {
+					// build new expression depending on whether or not we have an initializer expression
+					core::ExpressionPtr newExp;
+					if(newExpr->hasInitializer()) {
+						newExp = builder.refNew(Visit(newExpr->getInitializer()));
+					}
+					else {
+						newExp = builder.undefinedNew(type);
+					}
+					retExpr = core::lang::buildPtrFromRef(newExp);
 				}
-				retExpr = core::lang::buildPtrFromRef(newExp);
+				else {
+					auto location = Visit(newExpr->getPlacementArg(0));
+					if(newExpr->hasInitializer()) {
+						retExpr = utils::buildCxxPlacementNew(location, Visit(newExpr->getInitializer()));
+					}
+					else {
+						retExpr = core::lang::buildPtrReinterpret(location, type);
+					}
+				}
 			}
 			// we have a constructor, so we are building a class
 			else {
-				retExpr = core::lang::buildPtrFromRef(convertConstructExprInternal(converter, newExpr->getConstructExpr(), false));
+				if(newExpr->getNumPlacementArgs() == 0) {
+					retExpr = convertConstructExprInternal(converter, newExpr->getConstructExpr(), false);
+				}
+				else {
+					auto location = Visit(newExpr->getPlacementArg(0));
+					retExpr = utils::convertConstructExpr(converter, newExpr->getConstructExpr(),
+					                                      core::lang::buildPtrToRef(core::lang::buildPtrReinterpret(location, type)));
+				}
+				retExpr = core::lang::buildPtrFromRef(retExpr);
 			}
 		}
 

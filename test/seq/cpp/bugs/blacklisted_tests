@@ -6,7 +6,6 @@ const_type_modifier
 if_decl
 indirect_member_init
 intercepted_baseclass
-isstream
 mbstate
 member_function_ptr_init
 non_default_static
@@ -14,7 +13,6 @@ options
 static_data_member_struct
 static_in_template
 static_non_copy
-stringstream
 tellg
 throw
 tr1_array

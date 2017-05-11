@@ -91,7 +91,7 @@ namespace encoder {
 
 		expr = toIR(manager, (unsigned)14);
 		EXPECT_EQ("uint<4>", toString(*expr->getType()));
-		EXPECT_EQ("14", toString(*expr));
+		EXPECT_EQ("14u", toString(*expr));
 		EXPECT_TRUE(checks::check(expr).empty()) << checks::check(expr);
 
 		float y = 1.5f;

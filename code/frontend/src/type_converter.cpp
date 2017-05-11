@@ -57,8 +57,9 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/declaration.h"
+#include "insieme/annotations/c/include.h"
+#include "insieme/annotations/std_init_list.h"
 
 using namespace clang;
 using namespace insieme;
@@ -342,7 +343,7 @@ namespace conversion {
 
 			// attach necessary information for types defined in library headers
 			converter.applyHeaderTagging(enumResTy, enumDecl);
-            if(!enumDecl->getNameAsString().empty()) core::annotations::attachName(enumResTy, enumDecl->getNameAsString());
+			if(!enumDecl->getNameAsString().empty()) core::annotations::attachName(enumResTy, enumDecl->getNameAsString());
 			return enumResTy;
 		}
 
@@ -379,10 +380,22 @@ namespace conversion {
 				                                                       : builder.structType(compoundName, recordMembers);
 			// attach necessary information for types defined in library headers
 			converter.applyHeaderTagging(recordType, clangDecl);
-            // we'll attach name only if available, this could be a problem if anonymous names are used
-            if (!clangDecl->getNameAsString().empty()) core::annotations::attachName(recordType, clangDecl->getNameAsString());
+			// we'll attach name only if available, this could be a problem if anonymous names are used
+			if(!clangDecl->getNameAsString().empty()) core::annotations::attachName(recordType, clangDecl->getNameAsString());
+
+			// attach the element type if the type is a std::initializer_list type
+			if(clangDecl->getQualifiedNameAsString() == "std::initializer_list") {
+				auto tempSpecDecl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(clangDecl);
+				assert_true(tempSpecDecl) << "RecordDecl of an object of type std::initializer_list has to be of type ClassTemplateSpecializationDecl";
+				assert_eq(1, tempSpecDecl->getTemplateArgs().size());
+				auto templateArg = tempSpecDecl->getTemplateArgs().get(0);
+				assert_eq(clang::TemplateArgument::Type, templateArg.getKind());
+				annotations::markStdInitList(genTy, converter.convertType(templateArg.getAsType()));
+			}
+
 			// replace dummy type with actual type
 			converter.getIRTranslationUnit().replaceType(genTy, recordType);
+
 			return genTy;
 		}
 	} // anonymous namespace

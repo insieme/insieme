@@ -1,0 +1,2 @@
+files=../intercepted/init_list.cpp
+env="INSIEME_BE_INIT_LIST_TESTING=t"

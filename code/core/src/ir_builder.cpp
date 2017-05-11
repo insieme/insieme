@@ -741,6 +741,11 @@ namespace core {
 		return deref(subExpr);
 	}
 
+	CallExprPtr IRBuilderBaseModule::refTemp(const TypePtr& type) const {
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		return callExpr(refType(type), refExt.getRefTemp(), getTypeLiteral(type));
+	}
+
 	CallExprPtr IRBuilderBaseModule::refTemp(const ExpressionPtr& subExpr) const {
 		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 		return callExpr(refType(subExpr->getType()), refExt.getRefTempInit(), subExpr);
@@ -1018,11 +1023,11 @@ namespace core {
 		return lambda(type, params, wrapBody(body));
 	}
 
-	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body, const std::string& name) const {
+	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body, const std::string& name, FunctionKind kind) const {
 		auto paramVarTypes = extractTypes(params);
 		assert_true(::all(paramVarTypes, lang::isReference)) << "All parameters need to be reference types, given: " << paramVarTypes;
-		auto paramTypes = ::transform(paramVarTypes, analysis::getReferencedType);
-		return lambdaExpr(functionType(paramTypes, returnType, FK_PLAIN), params, wrapBody(body), name);
+		auto paramTypes = ::transform(paramVarTypes, transform::dematerialize);
+		return lambdaExpr(functionType(paramTypes, returnType, kind), params, wrapBody(body), name);
 	}
 
 	LambdaExprPtr IRBuilderBaseModule::lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body, const std::string& name) const {
@@ -1287,7 +1292,7 @@ namespace core {
 	}
 
 	TypePtr IRBuilderBaseModule::numericType(int64_t value) const {
-		return numericType(literal(format("%d", value), getLangBasic().getUIntInf()));
+		return numericType(literal(format("%d", value), getLangBasic().getIntInf()));
 	}
 
 	LiteralPtr IRBuilderBaseModule::getTypeLiteral(const TypePtr& type) const {

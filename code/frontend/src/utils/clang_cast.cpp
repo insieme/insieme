@@ -65,7 +65,7 @@ namespace utils {
 
 	namespace {
 		core::ExpressionPtr implementBitcast(insieme::frontend::conversion::Converter& converter, const core::TypePtr& targetTy,
-			                                 const core::ExpressionPtr& expr) {
+		                                     const core::ExpressionPtr& expr) {
 			frontend_assert(core::lang::isPointer(expr)) << "Bitcasts only implemented for pointer types, trying to cast from \n" << dumpColor(expr->getType());
 			frontend_assert(core::lang::isPointer(targetTy)) << "Bitcasts only implemented for pointer types, trying to cast to \n" << dumpColor(targetTy);
 
@@ -77,6 +77,23 @@ namespace utils {
 			retExpr = core::lang::buildPtrReinterpret(retExpr, trgPtrType.getElementType());
 			// if qualifiers differ, cast
 			retExpr = core::lang::buildPtrCast(retExpr, trgPtrType.isConst(), trgPtrType.isVolatile());
+
+			return retExpr;
+		}
+
+		core::ExpressionPtr implementLValueBitcast(insieme::frontend::conversion::Converter& converter, const core::TypePtr& targetTy,
+		                                           const core::ExpressionPtr& expr) {
+			frontend_assert(core::lang::isPlainReference(expr)) << "LValueBitCasts only implemented for plain reference types, trying to cast from \n" << dumpColor(expr->getType());
+			frontend_assert(core::lang::isPlainReference(targetTy)) << "LValueBitCasts only implemented for plain reference types, trying to cast to \n" << dumpColor(targetTy);
+
+			core::lang::ReferenceType srcRefType(expr->getType());
+			core::lang::ReferenceType trgRefType(targetTy);
+
+			core::ExpressionPtr retExpr = expr;
+			// if types pointed to differ, reinterpret
+			retExpr = core::lang::buildRefReinterpret(retExpr, trgRefType.getElementType());
+			// if qualifiers differ, cast
+			retExpr = core::lang::buildRefCast(retExpr, trgRefType.toType());
 
 			return retExpr;
 		}
@@ -152,6 +169,12 @@ namespace utils {
 		// Vector coercions are bitcasts.
 		case clang::CK_BitCast:
 			return implementBitcast(converter, targetTy, expr);
+
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// A conversion which reinterprets the address of an l-value as an l-value of a different
+		// kind. Used for reinterpret_casts of l-value expressions to reference types. bool b; reinterpret_cast<char&>(b) = 'a';
+		case clang::CK_LValueBitCast:
+			return implementLValueBitcast(converter, targetTy, expr);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// Integral to pointer. A special kind of reinterpreting conversion.

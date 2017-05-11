@@ -397,7 +397,15 @@ namespace parser {
 		}
 
 		NumericTypePtr InspireDriver::genNumericType(const location& l, const string& value) const {
-			return builder.numericType(builder.literal(value, builder.getLangBasic().getUIntInf()));
+			return builder.numericType(builder.literal(value, builder.getLangBasic().getIntInf()));
+		}
+
+		NumericTypePtr InspireDriver::genNegativeNumericType(const location& l, const string& value) const {
+			return builder.numericType(builder.literal(std::string("-") + value, builder.getLangBasic().getIntInf()));
+		}
+
+		NumericTypePtr InspireDriver::genUnsignedNumericType(const location& l, const string& value) const {
+			return builder.numericType(builder.literal(value.substr(0, value.find_first_not_of("0123456789")), builder.getLangBasic().getUIntInf()));
 		}
 
 		TypePtr InspireDriver::genFuncType(const location& l, const TypeList& params, const TypePtr& retType, const FunctionKind& fk) {

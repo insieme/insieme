@@ -52,6 +52,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, BasicTypes) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_types.cpp"); }
 
+	TEST(CppConversionTest, Casts) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_casts.cpp"); }
+
 	TEST(CppConversionTest, ClassOperators) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_class_operators.cpp"); }
 
 	TEST(CppConversionTest, Constructors) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_constructors.cpp"); }
@@ -59,6 +61,8 @@ namespace frontend {
 	TEST(CppConversionTest, DefaultArgs) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args.cpp"); }
 
 	TEST(CppConversionTest, DefaultConstructorDeclaration) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_constructor_declaration.cpp"); }
+
+	TEST(CppConversionTest, Destructors) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_destructors.cpp"); }
 
 	TEST(CppConversionTest, Enum) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_enum.cpp"); }
 
@@ -74,15 +78,23 @@ namespace frontend {
 
 	TEST(CppConversionTest, LambdaCapture) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda_capture.cpp"); }
 
+	TEST(CppConversionTest, LambdaConstCapture) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda_const_capture.cpp"); }
+
 	TEST(CppConversionTest, MemberCalls) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_member_calls.cpp"); }
 
 	TEST(CppConversionTest, MemFunPtr) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_mem_fun_ptr.cpp"); }
+
+	TEST(CppConversionTest, MutuallyDependentMethods) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_mutually_dependent_methods.cpp"); }
 
 	TEST(CppConversionTest, Naming) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_naming.cpp"); }
 
 	TEST(CppConversionTest, NewDelete) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_new_delete.cpp"); }
 
 	TEST(CppConversionTest, ObjectPassing) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_object_passing.cpp"); }
+
+	TEST(CppConversionTest, PlacementNew) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_placement_new.cpp"); }
+
+	TEST(CppConversionTest, PseudoDestructor) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_pseudo_destructor.cpp"); }
 
 	TEST(CppConversionTest, RefPtr) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_ref_ptr.cpp"); }
 

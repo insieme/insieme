@@ -3,7 +3,7 @@ alias int = int<4>;
 
 unit main() {
 	
-	var ref<array<int,50>> x = ref_new_init(*<ref<array<int,50>>>(x) { 1 });
+	var ref<array<int,50u>> x = ref_new_init(*<ref<array<int,50u>>>(x) { 1 });
 
 	for(int i=0..10) {
 		x[i] = i;

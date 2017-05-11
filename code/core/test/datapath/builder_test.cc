@@ -64,7 +64,7 @@ namespace datapath {
 				  "" + utils::getMangledOperatorAssignName() + "(ref<^,t,f,cpp_ref>)->ref<^,f,f,cpp_ref>," + utils::getMangledOperatorAssignName() + "(ref<^,f,f,cpp_rref>)->ref<^,f,f,cpp_ref>}>), hello, type<bool>)",
 		          toString(*build("struct { hello: bool; }").member("hello").getPath()));
 		EXPECT_EQ("dp_element(dp_root(type<array<int<4>,20>>), 12)", toString(*build("array<int<4>,20>").element(12).getPath()));
-		EXPECT_EQ("dp_component(dp_root(type<(bool,int<4>,real<4>,R)>), 3, type<R>)", toString(*build("(bool,int<4>,real<4>,R)").component(3).getPath()));
+		EXPECT_EQ("dp_component(dp_root(type<(bool,int<4>,real<4>,R)>), 3u, type<R>)", toString(*build("(bool,int<4>,real<4>,R)").component(3).getPath()));
 		EXPECT_EQ("dp_parent(dp_root(type<struct B : [struct A {ctor(),ctor(ref<^A,t,f,cpp_ref>),ctor(ref<^A,f,f,cpp_rref>),"
 		          "dtor()," + utils::getMangledOperatorAssignName() + "(ref<^A,t,f,cpp_ref>)->ref<^A,f,f,cpp_ref>," + utils::getMangledOperatorAssignName() + "(ref<^A,f,f,cpp_rref>)->ref<^A,f,f,cpp_ref>}] {"
 		          "ctor(),ctor(ref<^B,t,f,cpp_ref>),ctor(ref<^B,f,f,cpp_rref>),dtor()," + utils::getMangledOperatorAssignName() + "(ref<^B,t,f,cpp_ref>)->ref<^B,f,f,cpp_ref>,"

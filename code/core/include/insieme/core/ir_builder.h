@@ -373,11 +373,11 @@ namespace core {
 			return initExpr(memExpr, toVector<ExpressionPtr>(initExprs...));
 		}
 
-		InitExprPtr initExprTemp(const GenericTypePtr& type, const ExpressionList& initExprs = ExpressionList()) const {
+		InitExprPtr initExprTemp(const TypePtr& type, const ExpressionList& initExprs = ExpressionList()) const {
 			return initExpr(lang::buildRefTemp(type), initExprs);
 		}
 		template <typename... T>
-		InitExprPtr initExprTemp(const GenericTypePtr& type, const T&... initExprs) const {
+		InitExprPtr initExprTemp(const TypePtr& type, const T&... initExprs) const {
 			return initExprTemp(type, toVector<ExpressionPtr>(initExprs...));
 		}
 
@@ -446,6 +446,7 @@ namespace core {
 
 		// Referencing
 		ExpressionPtr deref(const ExpressionPtr& subExpr) const;
+		CallExprPtr refTemp(const TypePtr& type) const;
 		CallExprPtr refTemp(const ExpressionPtr& subExpr) const;
 		CallExprPtr refNew(const ExpressionPtr& subExpr) const;
 		CallExprPtr refDelete(const ExpressionPtr& subExpr) const;
@@ -511,7 +512,7 @@ namespace core {
 		LambdaPtr lambda(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
 
 		// Lambda Expressions
-		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body, const std::string& name="_") const;
+		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const VariableList& params, const StatementPtr& body, const std::string& name="_", FunctionKind kind = FK_PLAIN) const;
 		LambdaExprPtr lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body, const std::string& name = "_") const;
 
 		BindExprPtr bindExpr(const VariableList& params, const CallExprPtr& call) const;

@@ -47,6 +47,8 @@
 
 // run irDiff for conversion tests
 #define INSIEME_IRDIFF "INSIEME_IRDIFF"
+// the context size to use (default 0)
+#define INSIEME_IRDIFF_CONTEXT_SIZE "INSIEME_IRDIFF_CONTEXT_SIZE"
 
 
 ///////////// CORE
@@ -60,12 +62,18 @@
 // create JSON dumps for inspyer tool on IRDIFF
 #define INSIEME_INSPYER "INSIEME_INSPYER"
 
+// abort on node creation matching the given IR string
+#define INSIEME_ABORT_NODE "INSIEME_ABORT_NODE"
+
 
 ///////////// BACKEND
 
 // set backend compilers to use in insiemecc and unit/integration testing
 #define INSIEME_C_BACKEND_COMPILER "INSIEME_C_BACKEND_COMPILER"
 #define INSIEME_CXX_BACKEND_COMPILER "INSIEME_CXX_BACKEND_COMPILER"
+
+// do not translate the IR versions of std::initializer_list back to C++ std::initializer_list
+#define INSIEME_BE_INIT_LIST_TESTING "INSIEME_BE_INIT_LIST_TESTING"
 
 
 ///////////// LOGGING

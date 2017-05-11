@@ -210,25 +210,25 @@ int main() {
 
 	// one dimension
 
-	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ptr_subscript(ptr_from_array(v0), 1); }")
+	#pragma test expect_ir("{ var ref<array<int<4>,5u>,f,f> v0; ptr_subscript(ptr_from_array(v0), 1); }")
 	{
 		int a[5];
 		a[1];
 	}
 
-	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ptr_subscript(ptr_from_array(v0), -1); }")
+	#pragma test expect_ir("{ var ref<array<int<4>,5u>,f,f> v0; ptr_subscript(ptr_from_array(v0), -1); }")
 	{
 		int a[5];
 		a[-1];
 	}
 
-	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ptr_subscript(ptr_from_array(v0), 1); }")
+	#pragma test expect_ir("{ var ref<array<int<4>,5u>,f,f> v0; ptr_subscript(ptr_from_array(v0), 1); }")
 	{
 		int a[5];
 		1 [a];
 	}
 
-	#pragma test expect_ir("{ var ref<array<int<4>,1>,f,f> v0; ptr_to_ref(ptr_from_array(v0)); }")
+	#pragma test expect_ir("{ var ref<array<int<4>,1u>,f,f> v0; ptr_to_ref(ptr_from_array(v0)); }")
 	{
 		int a[1];
 		*a;
@@ -240,7 +240,7 @@ int main() {
 		&a;
 	}
 
-	#pragma test expect_ir("{ var ref<array<int<4>,5>,f,f> v0; ptr_from_ref(v0); }")
+	#pragma test expect_ir("{ var ref<array<int<4>,5u>,f,f> v0; ptr_from_ref(v0); }")
 	{
 		int a[5];
 		&a;
@@ -257,14 +257,14 @@ int main() {
 
 	// multidimensional
 
-	#pragma test expect_ir("{ var ref<array<array<int<4>,3>,2>,f,f> v0; ptr_subscript(ptr_from_array(ptr_subscript(ptr_from_array(v0), 1)), 2); }")
+	#pragma test expect_ir("{ var ref<array<array<int<4>,3u>,2u>,f,f> v0; ptr_subscript(ptr_from_array(ptr_subscript(ptr_from_array(v0), 1)), 2); }")
 	{
 		int a[2][3];
 		a[1][2];
 	}
 
 	// note: there are no rvalue arrays in C!
-	#pragma test expect_ir("{ var ref<array<array<int<4>,3>,2>,f,f> v0; ptr_subscript(ptr_from_array(v0), 1); }")
+	#pragma test expect_ir("{ var ref<array<array<int<4>,3u>,2u>,f,f> v0; ptr_subscript(ptr_from_array(v0), 1); }")
 	{
 		int a[2][3];
 		a[1];
@@ -383,7 +383,7 @@ int main() {
 	//     i = alignof(i);
 	// }
 
-	#pragma test expect_ir("{ var ref<array<char,8>,f,f> v0; var ref<uint<8>,f,f,plain> v1 = sizeof(type_lit(array<char,8>)); }")
+	#pragma test expect_ir("{ var ref<array<char,8u>,f,f> v0; var ref<uint<8>,f,f,plain> v1 = sizeof(type_lit(array<char,8u>)); }")
 	{
 		char char_arr[8];
 		unsigned long i = sizeof(char_arr);
@@ -392,7 +392,7 @@ int main() {
 	// check vector init with constructor calls
 	#pragma test expect_ir(R"(
 		def struct IMP_Trivial {};
-		var ref<array<IMP_Trivial,2>,f,f,plain> v0 = <ref<array<IMP_Trivial,2>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_Trivial,2>,f,f,plain>))) {
+		var ref<array<IMP_Trivial,2u>,f,f,plain> v0 = <ref<array<IMP_Trivial,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<IMP_Trivial,2u>,f,f,plain>))) {
 			ref_cast(IMP_Trivial::(ref_temp(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref)),
 			ref_cast(IMP_Trivial::(ref_temp(type_lit(IMP_Trivial))), type_lit(f), type_lit(f), type_lit(cpp_rref))
 		};)")
