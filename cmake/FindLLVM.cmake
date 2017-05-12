@@ -24,133 +24,66 @@
 # CLANG_LIBRARIES The CLANG libraries
 # CLANG_INCLUDE_DIRS The location of CLANG headers
 
+# -- LLVM
+
 # Get hint from environment variable (if any)
 if(NOT LLVM_ROOT AND DEFINED ENV{LLVM_ROOT})
 	set(LLVM_ROOT "$ENV{LLVM_ROOT}" CACHE PATH "LLVM base directory location (optional, used for nonstandard installation paths)")
-	mark_as_advanced(LLVM_ROOT)
 endif()
 
-# Search path for nonstandard locations
 if(LLVM_ROOT)
-	set(LLVM_INCLUDE_PATH PATHS "${LLVM_ROOT}/include" NO_DEFAULT_PATH)
-	set(LLVM_LIBRARY_PATH PATHS "${LLVM_ROOT}/lib" NO_DEFAULT_PATH)
+	set(LLVM_LIBRARY_PATH PATHS ${LLVM_ROOT}/lib NO_DEFAULT_PATH)
 endif()
 
-# Find all llvm libraries
-foreach (name ${llvm_LList})
-	if(MSVC)
-		set (llvm_${name}_LIB dummy)
-	else()
-		find_library(llvm_${name}_LIB NAMES ${name} HINTS ${LLVM_ROOT}/lib)
-		set(llvm_LIBS ${llvm_${name}_LIB} ${llvm_LIBS})
-	endif()
-endforeach(name)
+find_library(LLVM_LIBRARIES LLVM-${LLVM_VERSION} ${LLVM_LIBRARY_PATH})
 
-if(MSVC)
-	# Manual list - TODO needs some cmake feature to gather "lib/libLLVM*.lib"
-	set(llvm_LList
-		LLVMSystem LLVMCore LLVMCodeGen LLVMSelectionDAG LLVMAsmPrinter LLVMBitReader
-		LLVMBitWriter LLVMTransformUtils LLVMX86AsmParser LLVMX86AsmPrinter LLVMX86CodeGen
-		LLVMX86Info LLVMX86Disassembler LLVMInstrumentation LLVMInstCombine LLVMScalarOpts
-		LLVMipo LLVMLinker LLVMAnalysis LLVMipa LLVMExecutionEngine LLVMInterpreter
-		LLVMJIT LLVMTarget LLVMAsmParser LLVMArchive LLVMSupport LLVMSelectionDAG LLVMMC
-		LLVMMCDisassembler LLVMMCParser
-	)
-else()
-	# find include path with the used headers
-	find_path(LLVM_INCLUDE_DIRS
-		NAMES
-		llvm/ADT/IntrusiveRefCntPtr.h    # used in: fe/compiler.cpp
-		llvm/Support/Host.h              # used in: fe/compiler.cpp
-		llvm/Config/config.h             # used in: fe/compiler.cpp
-		llvm/Support/raw_os_ostream.h    # used in: fe/compiler.cpp, pragma/matcher.cpp, pragma/handler.cpp
-		llvm/Support/FileSystem.h        # used in: fe/translation_unit.cpp
-		llvm/Support/Casting.h           # used in: fe/compiler.cpp, fe/name_manager.cpp, pragma/matcher.cpp
-		llvm/ADT/PointerUnion.h          # used in: pragma/matcher.cpp
-		HINTS ${LLVM_INCLUDE_PATH}
-	)
-
-	# On Linux we have a .so file for all LLVM (LLVM-${LLVM_VERSION}.so)
-	find_library(LLVM_LIBRARIES NAMES LLVM-${LLVM_VERSION} HINTS ${LLVM_LIBRARY_PATH})
+if(NOT LLVM_ROOT)
+	get_filename_component(LLVM_ROOT ${LLVM_LIBRARIES} DIRECTORY)
+	get_filename_component(LLVM_ROOT ${LLVM_ROOT} DIRECTORY)
 endif()
+
+set(LLVM_INCLUDE_DIRS ${LLVM_ROOT}/include)
 
 include(FindPackageHandleStandardArgs)
-
 find_package_handle_standard_args(LLVM DEFAULT_MSG LLVM_LIBRARIES LLVM_INCLUDE_DIRS)
 
-mark_as_advanced(LLVM_ROOTS LLVM_LIBRARIES LLVM_INCLUDE_DIRS)
+# -- CLANG
 
-if(NOT CLANG_ROOT AND DEFINED ENV{CLANG_ROOT})
-	set(CLANG_ROOT "$ENV{CLANG_ROOT}" CACHE PATH "CLANG base directory location (optional, used for nonstandard installation paths)")
-	mark_as_advanced(CLANG_ROOT)
-endif()
-
-# clang-root is typically the same as llvm-root
-# unless the user sets something completley different we use llvm-root for clang-root
-if(NOT CLANG_ROOT AND NOT DEFINED ENV{CLANG_ROOT})
-	set(CLANG_ROOT ${LLVM_ROOT} CACHE PATH "CLANG base directory location (optional, used for nonstandard installation paths)")
-	mark_as_advanced(CLANG_ROOT)
-endif()
-
-# Search path for nonstandard locations
-if(CLANG_ROOT)
-	set(CLANG_INCLUDE_PATH PATHS "${CLANG_ROOT}/include" NO_DEFAULT_PATH)
-	set(CLANG_LIBRARY_PATH PATHS "${CLANG_ROOT}/lib" NO_DEFAULT_PATH)
-endif()
-
-set(CLANG_LIB_LIST
-	#libclang.a
-	#libclang.so
-	libclangAnalysis.a
-	libclangARCMigrate.a
-	libclangAST.a
-	libclangASTMatchers.a
-	libclangBasic.a
-	libclangCodeGen.a
-	libclangDriver.a
-	libclangEdit.a
-	libclangFrontend.a
-	libclangFrontendTool.a
-	libclangLex.a
-	libclangParse.a
-	libclangRewrite.a
-	libclangRewriteFrontend.a
-	libclangSema.a
-	libclangSerialization.a
-	libclangStaticAnalyzerCheckers.a
-	libclangStaticAnalyzerCore.a
-	libclangStaticAnalyzerFrontend.a
-	libclangTooling.a
-)
-
-if(NOT MSVC)
-	# find include path for clang headers - look for some headers used by insieme
-	# listing all would be a bit verbose...
-	find_path(CLANG_INCLUDE_DIRS
-		NAMES
-			clang/AST/Decl.h
-			clang/AST/Expr.h
-			clang/Sema/Sema.h
-		HINTS ${CLANG_INCLUDE_PATH}
-	)
-
-	# clang provides a shared library libclang.so
-	find_library(CLANG_LIBRARIES NAMES clang HINTS ${CLANG_LIBRARY_PATH})
-endif()
-
-# Find (all?) clang libraries
-foreach(name ${CLANG_LIB_LIST})
-	if(MSVC)
-		set (clang_${name}_LIB dummy)
+if(NOT CLANG_ROOT)
+	if(DEFINED ENV{CLANG_ROOT})
+		set(CLANG_ROOT "$ENV{CLANG_ROOT}" CACHE PATH "CLANG base directory location (optional, used for nonstandard installation paths)")
 	else()
-		find_library(CLANG_${name}_LIB NAMES ${name} HINTS ${LLVM_ROOT}/lib)
-		set(CLANG_LIBRARIES ${CLANG_${name}_LIB} ${CLANG_LIBRARIES})
+		# assume clang and llvm share the same folder
+		set(CLANG_ROOT ${LLVM_ROOT} CACHE PATH "CLANG base directory location (optional, used for nonstandard installation paths)")
 	endif()
-endforeach(name)
+endif()
+
+find_library(CLANG_LIBRARIES clang PATHS ${CLANG_ROOT}/lib NO_DEFAULT_PATH)
+
+if(NOT CLANG_LIBRARIES STREQUAL CLANG_LIBRARIES-NOTFOUND)
+	set(CLANG_LIB_LIST
+		libclangAnalysis.a libclangARCMigrate.a libclangAST.a
+		libclangASTMatchers.a libclangBasic.a libclangCodeGen.a
+		libclangDriver.a libclangEdit.a libclangFrontend.a
+		libclangFrontendTool.a libclangLex.a libclangParse.a libclangRewrite.a
+		libclangRewriteFrontend.a libclangSema.a libclangSerialization.a
+		libclangStaticAnalyzerCheckers.a libclangStaticAnalyzerCore.a
+		libclangStaticAnalyzerFrontend.a libclangTooling.a
+	)
+	foreach(lib ${CLANG_LIB_LIST})
+		find_library(CLANG_${lib} ${lib} PATHS ${CLANG_ROOT}/lib NO_DEFAULT_PATH)
+		set(CLANG_LIBRARIES ${CLANG_${lib}} ${CLANG_LIBRARIES})
+	endforeach(lib)
+	message("=== ${CLANG_LIBRARIES}")
+endif()
+
+set(CLANG_INCLUDE_DIRS ${CLANG_ROOT}/include)
 
 include(FindPackageHandleStandardArgs)
-
 find_package_handle_standard_args(CLANG DEFAULT_MSG CLANG_LIBRARIES CLANG_INCLUDE_DIRS)
 
-mark_as_advanced(CLANG_ROOTS CLANG_LIBRARIES CLANG_INCLUDE_DIRS)
-
+# TODO: Insieme does not compile on windows
+if(MSVC)
+	set(LLVM_LIBRARIES "dummy")
+	set(CLANG_LIBRARIES "dummy")
+endif()

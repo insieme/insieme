@@ -12,7 +12,8 @@ target_link_libraries(frontend ${Boost_LIBRARIES})
 target_include_directories(frontend SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 
 # LLVM / CLANG
-find_package(LLVM ${LLVM_VERSION})
+find_package(LLVM ${LLVM_VERSION} EXACT)
+
 target_link_libraries(frontend ${LLVM_LIBRARIES})
 target_link_libraries(frontend ${CLANG_LIBRARIES})
 target_include_directories(frontend PUBLIC ${LLVM_INCLUDE_DIRS})
