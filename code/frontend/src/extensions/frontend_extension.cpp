@@ -113,6 +113,12 @@ namespace extensions {
 		return stmtutils::StmtWrapper();
 	}
 
+	insieme::core::ExpressionPtr FrontendExtension::Visit(const clang::CXXCtorInitializer* ctorInit, const clang::Expr* initExpr,
+	                                                      insieme::core::ExpressionPtr& irInitializedMemLoc,
+	                                                      insieme::frontend::conversion::Converter& converter) {
+		return nullptr;
+	}
+
 	bool FrontendExtension::FuncDeclVisit(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& converter) {
 		return true;
 	}

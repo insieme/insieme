@@ -172,6 +172,20 @@ namespace conversion {
 				if(auto cleanupExpr = llvm::dyn_cast<clang::ExprWithCleanups>(clangInitExpr)) {
 					clangInitExpr = cleanupExpr->getSubExpr();
 				}
+
+				// extensions get a chance to handle this constructor init expression. if they do, we won't perform the default handling
+				bool handledByExtension = false;
+				for(auto extension : converter.getConversionSetup().getExtensions()) {
+					if(auto extensionResult = extension->Visit(init, clangInitExpr, irMember, converter)) {
+						retStmts.push_back(extensionResult);
+						handledByExtension = true;
+						break;
+					}
+				}
+				if(handledByExtension) {
+					continue;
+				}
+
 				// handle ConstructExprs
 				if(auto constructExpr = llvm::dyn_cast<clang::CXXConstructExpr>(clangInitExpr)) {
 					auto converted = utils::convertConstructExpr(converter, constructExpr, irMember);
