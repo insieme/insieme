@@ -38,17 +38,17 @@
 # some configuration options 
 compiler[ref_c_compile]=@INSIEME_C_BACKEND_COMPILER@
 compiler[ref_cpp_compile]=@INSIEME_CXX_BACKEND_COMPILER@
-compiler[insiemecc_c_sema]=@PROJECT_BINARY_DIR@/code/driver/insiemecc
-compiler[insiemecc_cpp_sema]=@PROJECT_BINARY_DIR@/code/driver/insiemecc
-compiler[insiemecc_run_c_convert]=@PROJECT_BINARY_DIR@/code/driver/insiemecc
-compiler[insiemecc_run_cpp_convert]=@PROJECT_BINARY_DIR@/code/driver/insiemecc
+compiler[insiemecc_c_sema]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_cpp_sema]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_run_c_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_run_cpp_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
 compiler[insiemecc_run_c_compile]=@INSIEME_C_BACKEND_COMPILER@
 compiler[insiemecc_run_cpp_compile]=@INSIEME_CXX_BACKEND_COMPILER@
-compiler[insiemecc_seq_c_convert]=@PROJECT_BINARY_DIR@/code/driver/insiemecc
-compiler[insiemecc_seq_cpp_convert]=@PROJECT_BINARY_DIR@/code/driver/insiemecc
+compiler[insiemecc_seq_c_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_seq_cpp_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
 compiler[insiemecc_seq_c_compile]=@INSIEME_C_BACKEND_COMPILER@
 compiler[insiemecc_seq_cpp_compile]=@INSIEME_CXX_BACKEND_COMPILER@
-compiler[insiemecc_ocl_c_convert]=@PROJECT_BINARY_DIR@/code/driver/insiemecc
+compiler[insiemecc_ocl_c_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
 compiler[insiemecc_ocl_c_compile]=@INSIEME_C_BACKEND_COMPILER@
 
 # boost environment
@@ -56,7 +56,7 @@ boost_include=@Boost_INCLUDE_DIRS@
 boost_lib=@Boost_LIBRARY_DIRS@
 
 # result comparison script
-compareOutputScript=@PROJECT_SOURCE_DIR@/test/compareOutput
+compareOutputScript=@PROJECT_SOURCE_DIR@/../test/compareOutput
 
 # time utility
 time_executable=@TIME_EXECUTABLE@
