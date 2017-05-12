@@ -315,7 +315,7 @@ namespace conversion {
 
 	void DeclConverter::VisitDeclContext(const clang::DeclContext* context) {
 		VLOG(2) << "~~~~~~~~~~~~~~~~ VisitDeclContext: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n ";
-		if(VLOG_IS_ON(2)) context->dumpDeclContext();
+		//if(VLOG_IS_ON(2)) context->dumpDeclContext();
 		for(auto decl : context->decls()) {
 			VLOG(2) << "~~~~~~~~~~~~~~~~ VisitDeclContext, decl : " << dumpClang(decl);
 			Visit(decl);
