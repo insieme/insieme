@@ -74,7 +74,6 @@ if(NOT CLANG_LIBRARIES STREQUAL CLANG_LIBRARIES-NOTFOUND)
 		find_library(CLANG_${lib} ${lib} PATHS ${CLANG_ROOT}/lib NO_DEFAULT_PATH)
 		set(CLANG_LIBRARIES ${CLANG_${lib}} ${CLANG_LIBRARIES})
 	endforeach(lib)
-	message("=== ${CLANG_LIBRARIES}")
 endif()
 
 set(CLANG_INCLUDE_DIRS ${CLANG_ROOT}/include)
