@@ -21,19 +21,43 @@ Following options can be supplied to CMake
 | -DBUILD_SHARED_LIBS | ON / OFF        |
 | -DBUILD_TESTS       | ON / OFF        |
 | -DBUILD_DOCS        | ON / OFF        |
+| -DBUILD_COVERAGE    | ON / OFF        |
 | -DUSE_ASSERT        | ON / OFF        |
 | -DUSE_VALGRIND      | ON / OFF        |
 | -DTHIRD_PARTY_DIR   | \<path\>        |
+
+The files `cmake/build_settings.cmake` and `code/CMakeLists.txt` state their
+default value.
 
 ### Building / Testing
 
     $ mkdir build
     $ cd build
-    $ cmake ..
-    $ make
-    $ make test
+    $ cmake ../code
+    $ make -j8
+    $ ctest -j8
 
 ## Development
+
+### Adding new Modules
+
+The setup script can be run again to add new modules, just provide the same
+project name.
+
+    $ scripts/setup/run %PROJECT% frontend backend utils
+
+### Adding new Parts to Modules
+
+There is a utility script to add new *parts* to an existing module. The project
+name and module name must be provided followed by a list of *parts* to
+generate. Folders will be created along the way.
+
+    $ scripts/setup/add_part %PROJECT% frontend sema extensions/malloc_extension
+
+This will add the files `sema.h`, `sema.cpp` and `sema_test.cc` to the
+*frontend* module. Furthermore new subfolders `extensions` will be created
+containing `malloc_extension.h`, `malloc_extension.cpp` and
+`malloc_extension_test.cc` in their respective subdirectories.
 
 ### Executable Bit
 
@@ -51,3 +75,13 @@ header to each source file upon commit. See `scripts/license`.
     $ cmake -G "Visual Studio 14 Win64" -DBUILD_SHARED_LIBS=OFF Z:\path\to\project
 
 Add path for third-party libraries when needed.
+
+### Coverage
+
+Building the coverage us currently only supported on Linux, as Perl and Bash
+are required. To build and view the coverage set the corresponding CMake flag
+to `ON` and run:
+
+    $ make
+    $ make coverage
+    $ xdg-open coverage/index.html

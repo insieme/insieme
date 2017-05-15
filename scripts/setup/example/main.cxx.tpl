@@ -3,10 +3,9 @@
 
 #include "%PROJECT%/%MODULE%/answer.h"
 
-using namespace std;
 using namespace %PROJECT%::%MODULE%;
 
 int main() {
-	cout << "The answer is: " << answer() << endl;
+	std::cout << "The answer is " << answer() << std::endl;
 	return EXIT_SUCCESS;
 }

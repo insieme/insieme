@@ -1,0 +1,2 @@
+set(LLVM_VERSION 3.6.2 CACHE STRING "LLVM Version")
+find_package(LLVM ${LLVM_VERSION} EXACT)

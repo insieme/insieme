@@ -1,4 +1,6 @@
 if(USE_VALGRIND)
+	find_package(Valgrind REQUIRED)
+
 	set(Valgrind_FLAGS
 		--leak-check=full
 		--show-reachable=no

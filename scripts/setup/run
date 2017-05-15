@@ -29,9 +29,12 @@ fi
 project="$1"
 shift
 
-if [[ -d "$TGT/code" ]]; then
+if [[ ! -d "$TGT/code" ]]; then
 	# setup README
 	render_template "$DIR/README.md.tpl" "$TGT/README.md"
+
+	# CMakeLists.txt chain loader
+	cp "$DIR/CMakeLists_root.txt" "$TGT/CMakeLists.txt"
 
 	mkdir "$TGT/code"
 

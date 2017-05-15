@@ -25,7 +25,4 @@ if(TIME_EXECUTABLE STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC)
 	message(FATAL_ERROR "Unable to locate time utility!")
 endif()
 
-# TODO cpp/boost integration test relies on boost to be set?
-find_package(Boost ${BOOST_VERSION} EXACT REQUIRED)
-
 configure_file(integration_test_config.in ${PROJECT_BINARY_DIR}/integration_test_config @ONLY IMMEDIATE)

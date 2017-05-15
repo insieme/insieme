@@ -4,12 +4,10 @@ target_link_libraries(core common)
 target_link_libraries(core utils)
 
 # Boost
-find_package(Boost ${BOOST_VERSION} EXACT REQUIRED COMPONENTS filesystem system)
 target_link_libraries(core ${Boost_LIBRARIES})
 target_include_directories(core SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 
 # CUDD
-find_package(CUDD ${CUDD_VERSION} EXACT REQUIRED)
 target_link_libraries(core ${CUDD_LIBRARIES})
 target_include_directories(core SYSTEM PUBLIC ${CUDD_INCLUDE_DIRS})
 
@@ -57,14 +55,14 @@ endif()
 
 glob_tests(core_tests test)
 foreach(test ${core_tests})
-	add_module_unittest(core ${test} TARGET_NAME tgt_name)
+	add_module_unittest(core ${test} OUTPUT_TARGET_NAME test_tgt)
 
 	if(BUILD_TESTS)
-		target_include_directories(${tgt_name} PUBLIC test/include)
+		target_include_directories(${test_tgt} PUBLIC test/include)
 
-		if(tgt_name MATCHES ".*parser.*")
-			target_include_directories(${tgt_name} PRIVATE ${FLEX_INCLUDE_DIRS})
-			target_include_directories(${tgt_name} PRIVATE ${parser_output_dir})
+		if(test_tgt MATCHES "parser")
+			target_include_directories(${test_tgt} PRIVATE ${FLEX_INCLUDE_DIRS})
+			target_include_directories(${test_tgt} PRIVATE ${parser_output_dir})
 		endif()
 	endif()
 endforeach(test)

@@ -7,7 +7,6 @@ target_link_libraries(backend transform)
 target_link_libraries(backend utils)
 
 # Boost
-find_package(Boost ${BOOST_VERSION} EXACT REQUIRED)
 target_link_libraries(backend ${Boost_LIBRARIES})
 target_include_directories(backend SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 

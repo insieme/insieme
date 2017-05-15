@@ -5,36 +5,33 @@ project(insieme LANGUAGES C CXX)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake)
 
 # -- Prefix Path
-set(THIRD_PARTY_DIR ${PROJECT_SOURCE_DIR}/../third_party CACHE STRING "Third Party Library Directory")
+set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/../third_party CACHE STRING "Third Party Library Directory")
 file(GLOB prefix_paths ${THIRD_PARTY_DIR}/*)
 list(APPEND CMAKE_PREFIX_PATH ${prefix_paths})
 
 # -- Project Settings
 include(build_settings)
+include(coverage)
 include(doxygen)
 include(git_metadata)
 
-# -- Dependency Versions
-set(BOOST_VERSION 1.59.0 CACHE STRING "Boost Version")
-set(CUDD_VERSION 2.4.2 CACHE STRING "CUDD Version")
-set(GMP_VERSION 6.0.0 CACHE STRING "GMP Version")
-set(LLVM_VERSION 3.6.2 CACHE STRING "LLVM Version")
-set(ZLIB_VERSION 1.2.8 CACHE STRING "ZLib Version")
-
 # -- Dependency Settings
-include(boost_settings)
-include(energy_settings)
-include(opencl_settings)
-include(papi_settings)
-include(valgrind_settings)
+include(dependencies/boost)
+include(dependencies/cudd)
+include(dependencies/llvm)
+include(dependencies/googletest)
+include(dependencies/opencl)
+include(dependencies/papi)
+include(dependencies/pthread)
+include(dependencies/valgrind)
 
 # -- CMake Modules
+include(add_module)
+include(add_souffle)
 include(file_globs)
 include(msvc_source_group)
-include(add_module)
 include(nproc)
 include(run_ruby)
-include(add_souffle)
 
 # -- Insieme
 include(insieme_specific)

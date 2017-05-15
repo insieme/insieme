@@ -46,7 +46,6 @@ if(ANALYSIS_HASKELL)
 	glob_headers(analysis_haskell_incs include/insieme/analysis/cba/haskell)
 	set(analysis_incs ${analysis_incs} ${analysis_haskell_incs})
 
-	find_package(GMP ${GMP_VERSION})
 	if(NOT GMP_FOUND)
 		message(WARNING "GMP NOT found")
 	endif()
@@ -84,7 +83,6 @@ target_link_libraries(analysis core)
 target_link_libraries(analysis utils)
 
 # Boost
-find_package(Boost ${BOOST_VERSION} EXACT REQUIRED)
 target_link_libraries(analysis ${Boost_LIBRARIES})
 target_include_directories(analysis SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 
@@ -136,10 +134,10 @@ endif()
 glob_headers(test_common_incs test/cba/common)
 
 foreach(test ${test_cases})
-	add_module_unittest(analysis ${test} TARGET_NAME tgt_name)
+	add_module_unittest(analysis ${test} OUTPUT_TARGET_NAME test_tgt)
 
 	if(BUILD_TESTS)
-		target_sources(${tgt_name} PRIVATE ${test_common_incs})
-		target_link_libraries(${tgt_name} driver)
+		target_sources(${test_tgt} PRIVATE ${test_common_incs})
+		target_link_libraries(${test_tgt} driver)
 	endif()
 endforeach(test)

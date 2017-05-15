@@ -7,13 +7,10 @@ target_link_libraries(frontend transform)
 target_link_libraries(frontend utils)
 
 # Boost
-find_package(Boost ${BOOST_VERSION} EXACT REQUIRED COMPONENTS filesystem system program_options serialization)
 target_link_libraries(frontend ${Boost_LIBRARIES})
 target_include_directories(frontend SYSTEM PUBLIC ${Boost_INCLUDE_DIR})
 
 # LLVM / CLANG
-find_package(LLVM ${LLVM_VERSION} EXACT)
-
 target_link_libraries(frontend ${LLVM_LIBRARIES})
 target_link_libraries(frontend ${CLANG_LIBRARIES})
 target_include_directories(frontend PUBLIC ${LLVM_INCLUDE_DIRS})
@@ -34,7 +31,7 @@ run_ruby(
 file(GLOB_RECURSE generate_builtins_output ${generate_builtins_output_dir}/*)
 target_include_directories(frontend PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/builtins/include)
 target_sources(frontend PRIVATE ${generate_builtins_output})
-msvc_source_group("Generated Builtins" "${generate_builtins}" STRIP ${CMAKE_CURRENT_BINARY_DIR}/builtins/include)
+msvc_source_group("Generated Builtins" "${generate_builtins_output}" STRIP ${CMAKE_CURRENT_BINARY_DIR}/builtins/include)
 add_definitions(-DGENERATED_BUILTINS_DIR="${generate_builtins_output_dir}/")
 
 glob_tests(frontend_tests test)

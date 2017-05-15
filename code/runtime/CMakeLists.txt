@@ -34,7 +34,6 @@ endif()
 
 # Papi
 if(USE_PAPI)
-	find_package(PAPI REQUIRED)
 	add_definitions(-DIRT_USE_PAPI)
 endif()
 
@@ -65,8 +64,7 @@ if(MSVC)
 endif()
 
 # pthread
-find_package(Threads REQUIRED)
-target_link_libraries(runtime ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(runtime Threads::Threads)
 
 # Note that the unit tests are compiled with g++ so the runtime code is
 # compiled as well as C++ this gives problems with anonymous structs as they
@@ -80,9 +78,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
 
 glob_tests(runtime_tests test)
 foreach(test ${runtime_tests})
-	add_module_unittest(runtime ${test} NO_VALGRIND TARGET_NAME tgt_name)
+	add_module_unittest(runtime ${test} NO_VALGRIND NO_LIB OUTPUT_TARGET_NAME test_tgt)
 	if(BUILD_TESTS)
-		add_runtime_dependencies(${tgt_name})
+		add_runtime_dependencies(${test_tgt})
 	endif()
 endforeach(test)
 
@@ -114,7 +112,7 @@ foreach(test ${runtime_standalone_tests})
 			target_include_directories(${test_name} PRIVATE ${OpenCL_INCLUDE_DIR})
 		endif()
 
-		target_link_libraries(${test_name} ${CMAKE_THREAD_LIBS_INIT})
+		target_link_libraries(${test_name} Threads::Threads)
 
 		if(MSVC)
 			set_target_properties(${test_name} PROPERTIES FOLDER "runtime/Tests")
