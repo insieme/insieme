@@ -70,6 +70,13 @@ macro(add_module_library module)
 	if(MSVC)
 		msvc_source_group("Source Files" "${${module}_srcs}" STRIP src)
 		msvc_source_group("Header Files" "${${module}_incs}" STRIP include/${PROJECT_NAME}/${module})
+
+		# mark .def as regular header files
+		foreach(src ${${module}_srcs})
+			if(src MATCHES "\.def$")
+				set_source_files_properties(${src} PROPERTIES HEADER_FILE_ONLY TRUE)
+			endif()
+		endforeach(src)
 	endif()
 endmacro()
 

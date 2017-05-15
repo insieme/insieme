@@ -21,12 +21,11 @@ target_include_directories(core PUBLIC ${builderbuilder_output_dir}/include)
 target_sources(core PRIVATE ${builderbuilder_output})
 
 # Generate Inspire Parser
+file(GLOB_RECURSE lexer_input src/*.l src/*.ll)
+file(GLOB_RECURSE parser_input src/*.y src/*.yy)
 if(NOT MSVC)
 	find_package(FLEX REQUIRED)
 	find_package(BISON REQUIRED)
-
-	file(GLOB_RECURSE lexer_input src/*.l src/*.ll)
-	file(GLOB_RECURSE parser_input src/*.y src/*.yy)
 
 	set(parser_output_dir ${CMAKE_CURRENT_BINARY_DIR}/inspire_parser)
 
@@ -50,6 +49,11 @@ if(NOT MSVC)
 	target_include_directories(core PRIVATE ${FLEX_INCLUDE_DIRS})
 	target_include_directories(core PRIVATE ${parser_output_dir})
 	target_sources(core PRIVATE ${lexer_output} ${parser_output})
+else()
+	target_sources(core PRIVATE ${lexer_input} ${parser_input})
+	set_target_properties(core PROPERTIES RESOURCE "${lexer_input} ${parser_input}")
+	msvc_source_group("Parser Input" "${lexer_input}" STRIP src)
+	msvc_source_group("Parser Input" "${parser_input}" STRIP src)
 endif()
 
 
