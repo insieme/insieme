@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(insieme LANGUAGES C CXX)
 
 # -- Module Path
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 
 # -- Prefix Path
 set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/../third_party CACHE STRING "Third Party Library Directory")
