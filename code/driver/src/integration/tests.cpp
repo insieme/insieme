@@ -424,8 +424,8 @@ namespace integration {
 	frontend::ConversionJob IntegrationTestCase::toConversionJob() const {
 		// prepare arguments
 		std::vector<std::string> args = {"dummy_compiler_name_as_first_argument"};
-		auto compilerArgs = getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_CONVERT, false, false, false);
-		auto insiemeArgs = getInsiemeCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_CONVERT, false, false);
+		auto compilerArgs = getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_CONVERT, false, false);
+		auto insiemeArgs = getInsiemeCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_CONVERT, false);
 		args.insert(args.end(), compilerArgs.begin(), compilerArgs.end());
 		args.insert(args.end(), insiemeArgs.begin(), insiemeArgs.end());
 
@@ -467,23 +467,28 @@ namespace integration {
 		return toConversionJob().toIRTranslationUnit(manager);
 	}
 
-	std::string IntegrationTestCase::getCompilerString(std::string step, bool considerEnvVars, bool isCpp) const {
-		auto compilerProperty = properties.get("compiler", step);
-		if(considerEnvVars) {
-			if(!isCpp) {
-				if(getenv(INSIEME_C_BACKEND_COMPILER) != nullptr) {
-					return utils::compiler::getDefaultCCompilerExecutable();
-				}
-			} else {
-				if(getenv(INSIEME_CXX_BACKEND_COMPILER) != nullptr) {
-					return utils::compiler::getDefaultCxxCompilerExecutable();
-				}
-			}
+	std::string IntegrationTestCase::getCompilerString(std::string step, bool isCpp) const {
+		// environment variable
+		if(isCpp) {
+			const char* envVar = std::getenv(INSIEME_CXX_BACKEND_COMPILER);
+			if(envVar != nullptr) return envVar;
+		} else {
+			const char* envVar = std::getenv(INSIEME_C_BACKEND_COMPILER);
+			if(envVar != nullptr) return envVar;
 		}
-		return compilerProperty;
+
+		// integration test config
+		auto compilerProperty = properties.get("compiler", step);
+		if(!compilerProperty.empty()) return compilerProperty;
+
+		// fallback
+		if(isCpp)
+			return utils::compiler::getDefaultCxxCompilerExecutable();
+		else
+			return utils::compiler::getDefaultCCompilerExecutable();
 	}
 
-	const vector<string> IntegrationTestCase::getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp, bool addLibs) const {
+	const vector<string> IntegrationTestCase::getCompilerArguments(std::string step, bool isCpp, bool addLibs) const {
 		vector<string> compArgs;
 
 		// add include directories
@@ -510,7 +515,7 @@ namespace integration {
 		});
 
 		// add compiler flags according to the compiler configuration file
-		auto compilerString = getCompilerString(step, considerEnvVars, isCpp);
+		auto compilerString = getCompilerString(step, isCpp);
 		auto compilerArgsFromConfig = getCompilerArgumentsFromConfiguration(compilerString, properties);
 
 		for(const auto& key : properties.getKeys()) {
@@ -541,7 +546,7 @@ namespace integration {
 		return compArgs;
 	}
 
-	const vector<string> IntegrationTestCase::getInsiemeCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const {
+	const vector<string> IntegrationTestCase::getInsiemeCompilerArguments(std::string step, bool isCpp) const {
 		vector<string> compArgs;
 
 		// add intercepted include directories

@@ -116,7 +116,7 @@ namespace insieme {
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 
 		// add extra compiler flags from test case
-		for(const auto& flag : testCase.getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_COMPILE, true, false)) {
+		for(const auto& flag : testCase.getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_COMPILE, false)) {
 			compiler.addFlag(flag);
 		}
 
@@ -186,7 +186,7 @@ namespace insieme {
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 
 		// add extra compiler flags from test case
-		for(const auto& flag : testCase.getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_COMPILE, true, false)) {
+		for(const auto& flag : testCase.getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_COMPILE, false)) {
 			compiler.addFlag(flag);
 		}
 

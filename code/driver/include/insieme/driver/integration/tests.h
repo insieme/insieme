@@ -275,20 +275,19 @@ namespace integration {
 		core::tu::IRTranslationUnit loadTU(core::NodeManager& manager) const;
 
 		/**
-		 * Returns the name/path to the compiler to use depending on the configuration for the passed step and language,
-		 * maybe also considering environment variables
+		 * Returns the name/path to the compiler to use depending on the configuration for the passed step and language.
 		 */
-		std::string getCompilerString(std::string step, bool considerEnvVars, bool isCpp) const;
+		std::string getCompilerString(std::string step, bool isCpp) const;
 
 		/**
 		 * Obtains a list of additional arguments to be passed on to the compiler when building the test case.
 		 */
-		const vector<string> getCompilerArguments(std::string step, bool considerEnvVars, bool isCpp, bool addLibs = true) const;
+		const vector<string> getCompilerArguments(std::string step, bool isCpp, bool addLibs = true) const;
 
 		/**
 		 * Obtains a list of additional arguments to be passed on to the Insieme compile step.
 		 */
-		const vector<string> getInsiemeCompilerArguments(std::string step, bool considerEnvVars, bool isCpp) const;
+		const vector<string> getInsiemeCompilerArguments(std::string step, bool isCpp) const;
 	};
 
 

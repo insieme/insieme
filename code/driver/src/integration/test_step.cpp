@@ -98,7 +98,7 @@ namespace integration {
 				auto props = test.getPropertiesFor(name);
 
 				// start with executable
-				cmd << test.getCompilerString(name, true, l == Language::CPP);
+				cmd << test.getCompilerString(name, l == Language::CPP);
 
 				// add input files
 				for(const auto& cur : test.getFiles()) {
@@ -106,7 +106,7 @@ namespace integration {
 				}
 
 				// append all the arguments
-				cmd << " " << join(" ", test.getCompilerArguments(name, true, l == Language::CPP));
+				cmd << " " << join(" ", test.getCompilerArguments(name, l == Language::CPP));
 
 				// disable multithreading
 				set.numThreads = 0;
@@ -187,7 +187,7 @@ namespace integration {
 				auto props = test.getPropertiesFor(name);
 
 				// start with executable
-				cmd << test.getCompilerString(name, false, l == Language::CPP);
+				cmd << test.getCompilerString(name, l == Language::CPP);
 
 				// add input files
 				for(const auto& cur : test.getFiles()) {
@@ -195,10 +195,10 @@ namespace integration {
 				}
 
 				// append all the arguments
-				cmd << " " << join(" ", test.getCompilerArguments(name, false, l == Language::CPP, false));
+				cmd << " " << join(" ", test.getCompilerArguments(name, l == Language::CPP, false));
 
 				// append the Insieme specific arguments
-				cmd << " " << join(" ", test.getInsiemeCompilerArguments(name, false, l == Language::CPP));
+				cmd << " " << join(" ", test.getInsiemeCompilerArguments(name, l == Language::CPP));
 
 				// enable semantic tests
 				cmd << " --check-sema-only";
@@ -229,7 +229,7 @@ namespace integration {
 				auto props = test.getPropertiesFor(name);
 
 				// start with executable
-				cmd << test.getCompilerString(name, false, l == Language::CPP);
+				cmd << test.getCompilerString(name, l == Language::CPP);
 
 				// add input files
 				for(const auto& cur : test.getFiles()) {
@@ -237,10 +237,10 @@ namespace integration {
 				}
 
 				// append all the arguments
-				cmd << " " << join(" ", test.getCompilerArguments(name, false, l == Language::CPP, false));
+				cmd << " " << join(" ", test.getCompilerArguments(name, l == Language::CPP, false));
 
 				// append the Insieme specific arguments
-				cmd << " " << join(" ", test.getInsiemeCompilerArguments(name, false, l == Language::CPP));
+				cmd << " " << join(" ", test.getInsiemeCompilerArguments(name, l == Language::CPP));
 
 				// get execution dir
 				string executionDirectory = test.getDirectory().string();
@@ -273,7 +273,7 @@ namespace integration {
 				auto props = test.getPropertiesFor(name);
 
 				// start with executable
-				cmd << test.getCompilerString(name, true, l == Language::CPP);
+				cmd << test.getCompilerString(name, l == Language::CPP);
 
 				// determine backend
 				string be = getBackendKey(backend);
@@ -286,7 +286,7 @@ namespace integration {
 				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
 
 				// append all the arguments
-				cmd << " " << join(" ", test.getCompilerArguments(name, true, l == Language::CPP));
+				cmd << " " << join(" ", test.getCompilerArguments(name, l == Language::CPP));
 
 				// add runtime include directories
 				if(backend != Sequential) { // TODO: make this non-hardcoded -- it is ugly, but I don't have the time ...

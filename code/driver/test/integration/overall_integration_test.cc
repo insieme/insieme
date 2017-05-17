@@ -175,7 +175,7 @@ namespace integration {
 			}
 
 			// add extra compiler flags from test case
-			for (const auto& flag : testCase.getCompilerArguments(step, true, step == TEST_STEP_INSIEMECC_RUN_CPP_COMPILE)) {
+			for (const auto& flag : testCase.getCompilerArguments(step, step == TEST_STEP_INSIEMECC_RUN_CPP_COMPILE)) {
 				compiler.addFlag(flag);
 			}
 
