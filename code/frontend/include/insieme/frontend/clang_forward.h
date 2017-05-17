@@ -57,6 +57,8 @@ namespace clang {
 
 	class CastExpr;
 
+	class CXXCtorInitializer;
+
 	class SourceLocation;
 	class SourceRange;
 	class SourceManager;

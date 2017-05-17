@@ -223,6 +223,20 @@ namespace extensions {
 		virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& converter);
 
 		/**
+		 *  User provided clang constructor initializer expression visitor. Will be called before the frontend does the constructor initializer expression
+		 *  conversion. If the extension returns an expression, that expression will be inserted in the resulting constructor body and the frontend will
+		 *  not perform the default conversion.
+		 *  @param ctorInit the clang CXXCtorInitializer
+		 *  @param initExpr the already unwrapped initialization part of ctorInit
+		 *  @param irInitializedMemLoc the memory location initialized by this ctorInit, already correctly built by the frontend
+		 *  @param converter insieme conversion factory
+		 *  @return an expression to be inserted into the constructor body or nullptr if this extension doesn't want to do anything (default)
+		 */
+		virtual insieme::core::ExpressionPtr Visit(const clang::CXXCtorInitializer* ctorInit, const clang::Expr* initExpr,
+		                                           insieme::core::ExpressionPtr& irInitializedMemLoc,
+		                                           insieme::frontend::conversion::Converter& converter);
+
+		/**
 		 *  User provided clang function decl visitor. Will be called before clang function decl
 		 *  is visited by the insieme function decl visitor. If the extension returns false,
 		 *  the standard visitor is not called.
