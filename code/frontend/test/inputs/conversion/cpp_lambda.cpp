@@ -35,6 +35,7 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
+
 struct C {
 	int x;
 
@@ -57,15 +58,6 @@ void takeLambda(T lam) {
 
 void takeLambdaAsFunction(void (*lam)()) {
 	lam();
-}
-
-
-template<typename M>
-void templateFunWithLambda() {
-	M a;
-	[&](){
-		a;
-	}();
 }
 
 int main() {
@@ -385,39 +377,6 @@ int main() {
 		[n]() {
 			n;
 		}();
-	}
-
-	/// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Lambda specified in template
-
-	#pragma test expect_ir(R"(
-		def struct __any_string__class_int {
-			capture_0 : ref<int<4>,f,f,cpp_ref>;
-			const function IMP__operator_call_ = () -> unit {
-				(this).capture_0;
-			}
-		};
-		def struct __any_string__class_real {
-			capture_0 : ref<real<4>,f,f,cpp_ref>;
-			const function IMP__operator_call_ = () -> unit {
-				(this).capture_0;
-			}
-		};
-		def IMP_templateFunWithLambda_int_returns_void = function () -> unit {
-			var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
-			<ref<__any_string__class_int,f,f,plain>>(ref_temp(type_lit(__any_string__class_int))) {ref_kind_cast(v0, type_lit(cpp_ref))}.IMP__operator_call_();
-		};
-		def IMP_templateFunWithLambda_float_returns_void = function () -> unit {
-			var ref<real<4>,f,f,plain> v0 = ref_decl(type_lit(ref<real<4>,f,f,plain>));
-			<ref<__any_string__class_real,f,f,plain>>(ref_temp(type_lit(__any_string__class_real))) {ref_kind_cast(v0, type_lit(cpp_ref))}.IMP__operator_call_();
-		};
-		{
-			IMP_templateFunWithLambda_int_returns_void();
-			IMP_templateFunWithLambda_float_returns_void();
-		}
-	)")
-	{
-		templateFunWithLambda<int>();
-		templateFunWithLambda<float>();
 	}
 
 	return 0;

@@ -299,11 +299,19 @@ namespace utils {
 		if(canon->getDeclName() && !canon->getDeclName().isEmpty()) name = canon->getQualifiedNameAsString();
 		else if(canon->hasNameForLinkage()) name = canon->getTypedefNameForAnonDecl()->getQualifiedNameAsString();
 		else {
-			// for anonymous structs created to implement lambdas, encode capture type names in name (
-			auto rec = llvm::dyn_cast<clang::RecordDecl>(tagDecl);
+			// for anonymous structs created to implement lambdas, encode capture type as well as call operator type in name
+			auto rec = llvm::dyn_cast<clang::CXXRecordDecl>(tagDecl);
 			if(rec && rec->isLambda()) {
 				for(auto capture : rec->fields()) {
-					name = name + "_" + getTypeString(capture->getType(), false);
+					name = name + "_" + getTypeString(capture->getType().getCanonicalType(), false);
+				}
+				if(auto lambdaOperator = rec->getLambdaCallOperator()) {
+					if(auto lambdaOperatorType = llvm::dyn_cast<clang::FunctionProtoType>(lambdaOperator->getType())) {
+						name = name + "_" + getTypeString(lambdaOperatorType->getReturnType().getCanonicalType(), false);
+						for(auto param : lambdaOperatorType->getParamTypes()) {
+							name = name + "_" + getTypeString(param.getCanonicalType(), false);
+						}
+					}
 				}
 			}
 		}
