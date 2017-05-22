@@ -467,14 +467,15 @@ namespace integration {
 		return toConversionJob().toIRTranslationUnit(manager);
 	}
 
-	std::string IntegrationTestCase::getCompilerString(std::string step, bool isCpp) const {
-		// environment variable
-		if(isCpp) {
-			const char* envVar = std::getenv(INSIEME_CXX_BACKEND_COMPILER);
-			if(envVar != nullptr) return envVar;
-		} else {
-			const char* envVar = std::getenv(INSIEME_C_BACKEND_COMPILER);
-			if(envVar != nullptr) return envVar;
+	std::string IntegrationTestCase::getCompilerString(std::string step, bool isCpp, bool isBackendCompileStep) const {
+		if(isBackendCompileStep) {
+			if(isCpp) {
+				const char* envVar = std::getenv(INSIEME_CXX_BACKEND_COMPILER);
+				if(envVar != nullptr) return envVar;
+			} else {
+				const char* envVar = std::getenv(INSIEME_C_BACKEND_COMPILER);
+				if(envVar != nullptr) return envVar;
+			}
 		}
 
 		// integration test config
@@ -488,7 +489,7 @@ namespace integration {
 			return utils::compiler::getDefaultCCompilerExecutable();
 	}
 
-	const vector<string> IntegrationTestCase::getCompilerArguments(std::string step, bool isCpp, bool addLibs) const {
+	const vector<string> IntegrationTestCase::getCompilerArguments(std::string step, bool isCpp, bool addLibs, bool isBackendCompileStep) const {
 		vector<string> compArgs;
 
 		// add include directories
@@ -515,7 +516,7 @@ namespace integration {
 		});
 
 		// add compiler flags according to the compiler configuration file
-		auto compilerString = getCompilerString(step, isCpp);
+		auto compilerString = getCompilerString(step, isCpp, isBackendCompileStep);
 		auto compilerArgsFromConfig = getCompilerArgumentsFromConfiguration(compilerString, properties);
 
 		for(const auto& key : properties.getKeys()) {

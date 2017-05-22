@@ -98,7 +98,7 @@ namespace integration {
 				auto props = test.getPropertiesFor(name);
 
 				// start with executable
-				cmd << test.getCompilerString(name, l == Language::CPP);
+				cmd << test.getCompilerString(name, l == Language::CPP, true);
 
 				// add input files
 				for(const auto& cur : test.getFiles()) {
@@ -106,7 +106,7 @@ namespace integration {
 				}
 
 				// append all the arguments
-				cmd << " " << join(" ", test.getCompilerArguments(name, l == Language::CPP));
+				cmd << " " << join(" ", test.getCompilerArguments(name, l == Language::CPP, true, true));
 
 				// disable multithreading
 				set.numThreads = 0;
@@ -273,7 +273,7 @@ namespace integration {
 				auto props = test.getPropertiesFor(name);
 
 				// start with executable
-				cmd << test.getCompilerString(name, l == Language::CPP);
+				cmd << test.getCompilerString(name, l == Language::CPP, true);
 
 				// determine backend
 				string be = getBackendKey(backend);
@@ -286,7 +286,7 @@ namespace integration {
 				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
 
 				// append all the arguments
-				cmd << " " << join(" ", test.getCompilerArguments(name, l == Language::CPP));
+				cmd << " " << join(" ", test.getCompilerArguments(name, l == Language::CPP, true, true));
 
 				// add runtime include directories
 				if(backend != Sequential) { // TODO: make this non-hardcoded -- it is ugly, but I don't have the time ...

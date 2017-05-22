@@ -277,12 +277,12 @@ namespace integration {
 		/**
 		 * Returns the name/path to the compiler to use depending on the configuration for the passed step and language.
 		 */
-		std::string getCompilerString(std::string step, bool isCpp) const;
+		std::string getCompilerString(std::string step, bool isCpp, bool isBackendCompileStep = false) const;
 
 		/**
 		 * Obtains a list of additional arguments to be passed on to the compiler when building the test case.
 		 */
-		const vector<string> getCompilerArguments(std::string step, bool isCpp, bool addLibs = true) const;
+		const vector<string> getCompilerArguments(std::string step, bool isCpp, bool addLibs = true, bool isBackendCompileStep = false) const;
 
 		/**
 		 * Obtains a list of additional arguments to be passed on to the Insieme compile step.
