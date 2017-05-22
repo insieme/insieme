@@ -1,13 +1,20 @@
 if(BUILD_TESTS AND NOT TARGET googletest)
 	include(ExternalProject)
 
+	if(MSVC)
+		# disable checked iterators
+		set(_additional_c_flags /D_ITERATOR_DEBUG_LEVEL=0)
+		set(_additional_cxx_flags /D_ITERATOR_DEBUG_LEVEL=0)
+		set(_additional_flags -DCMAKE_C_FLAGS=${_additional_c_flags} -DCMAKE_CXX_FLAGS=${_additional_cxx_flags})
+	endif()
+
 	# gtest should be build with the same compiler as the project using it
 	ExternalProject_Add(
 		googletest
 		URL http://insieme-compiler.org/ext_libs/gtest-1.8.0.tar.gz
 		URL_HASH SHA256=58a6f4277ca2bc8565222b3bbd58a177609e9c488e8a72649359ba51450db7d8
 		INSTALL_COMMAND ""
-		CMAKE_ARGS ${CMAKE_EXTERNALPROJECT_FORWARDS}
+		CMAKE_ARGS ${CMAKE_EXTERNALPROJECT_FORWARDS} ${_additional_flags}
 		DOWNLOAD_NO_PROGRESS 1
 		EXCLUDE_FROM_ALL 1
 	)
@@ -26,7 +33,11 @@ if(BUILD_TESTS AND NOT TARGET googletest)
 		set(_linking STATIC)
 	endif()
 
-	set(GTEST_LIBRARY_PATH ${binary_dir}/googlemock/gtest/${LIBRARY_OUTPUT_DIRECTORY})
+	if(MSVC)
+		set(GTEST_LIBRARY_PATH ${binary_dir}/googlemock/gtest/$(Configuration))
+	else()
+		set(GTEST_LIBRARY_PATH ${binary_dir}/googlemock/gtest/${LIBRARY_OUTPUT_DIRECTORY})
+	endif()
 
 	# import libgtest
 	add_library(gtest ${_linking} IMPORTED)
