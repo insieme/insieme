@@ -170,6 +170,34 @@ arithValue ctx_hs expr_hs = do
     updateContext ctx_c ctx_nhs
     passFormulaSet ctx_c $ BSet.map (fmap SymbolicFormula.getAddr) results
 
+-- ** NodeAddresses
+
+type CNodeAddress = ()
+type CNodeAddressSet = ()
+
+foreign import ccall "hat_mk_c_node_address"
+  mkCNodeAddress :: Ctx.CContext -> Ptr CSize -> CSize -> IO (Ptr CNodeAddress)
+
+foreign import ccall "hat_mk_c_node_address_set"
+  mkCNodeAddressSet :: Ptr (Ptr CNodeAddress) -> CLLong -> IO (Ptr CNodeAddressSet)
+
+passNodeAddress :: StablePtr Ctx.Context -> Addr.NodeAddress -> IO (Ptr CNodeAddress)
+passNodeAddress ctx_hs addr = do
+    ctx <- deRefStablePtr ctx_hs
+    withArrayLen' (fromIntegral <$> Addr.getAbsolutePath addr) (mkCNodeAddress $ Ctx.getCContext ctx)
+  where
+    withArrayLen' :: Storable a => [a] -> (Ptr a -> CSize -> IO b) -> IO b
+    withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
+
+passNodeAddressSet :: BSet.IsBound bb => StablePtr Ctx.Context -> BSet.BoundSet bb Addr.NodeAddress -> IO (Ptr CNodeAddressSet)
+passNodeAddressSet _ BSet.Universe = mkCNodeAddressSet nullPtr (-1)
+passNodeAddressSet ctx_hs addrs = do
+    addrs_c <- mapM (passNodeAddress ctx_hs) (BSet.toList addrs)
+    withArrayLen' addrs_c mkCNodeAddressSet
+  where
+    withArrayLen' :: Storable a => [a] -> (Ptr a -> CLLong -> IO b) -> IO b
+    withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
+
 -- ** References
 
 foreign export ccall "hat_check_null"
@@ -204,12 +232,6 @@ checkForReference ref ctx_hs expr_hs = handleAll (return maybe) $ do
 type CMemoryLocation = ()
 type CMemoryLocationSet = ()
 
-foreign import ccall "hat_mk_memory_location"
-  memoryLocation :: Ctx.CContext -> Ptr CSize -> CSize -> IO (Ptr CMemoryLocation)
-
-foreign import ccall "hat_mk_memory_location_set"
-  memoryLocationSet :: Ptr (Ptr CMemoryLocation) -> CInt -> IO (Ptr CMemoryLocationSet)
-
 foreign export ccall "hat_memory_locations"
   memoryLocations :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (Ptr CMemoryLocationSet)
 memoryLocations ctx_hs expr_hs = do
@@ -221,29 +243,11 @@ memoryLocations ctx_hs expr_hs = do
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
     if BSet.member Ref.UninitializedReference results
-        then passMemoryLocationSet ctx_c BSet.Universe
-        else passMemoryLocationSet ctx_c $ BSet.map Ref.creationPoint $ BSet.filter f results
+        then passNodeAddressSet ctx_nhs (BSet.Universe :: BSet.UnboundSet Ref.Location)
+        else passNodeAddressSet ctx_nhs $ BSet.map Ref.creationPoint $ BSet.filter f results
       where
         f (Ref.Reference _ _ ) = True
         f _ = False
-
-passMemoryLocation :: Ctx.CContext -> Ref.Location -> IO (Ptr CMemoryLocation)
-passMemoryLocation ctx_c location_hs = do
-    passLoc location_hs
-  where
-    passLoc :: Ref.Location -> IO (Ptr CMemoryLocation)
-    passLoc loc_hs = withArrayLen' (fromIntegral <$> Addr.getAbsolutePath loc_hs) (memoryLocation ctx_c)
-    withArrayLen' :: Storable a => [a] -> (Ptr a -> CSize -> IO b) -> IO b
-    withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
-
-passMemoryLocationSet :: Ctx.CContext -> BSet.UnboundSet Ref.Location -> IO (Ptr CMemoryLocationSet)
-passMemoryLocationSet _ BSet.Universe = memoryLocationSet nullPtr (-1)
-passMemoryLocationSet ctx_c bs = do
-    locations <- mapM (passMemoryLocation ctx_c) (BSet.toList bs)
-    withArrayLen' locations memoryLocationSet
-  where
-    withArrayLen' :: Storable a => [a] -> (Ptr a -> CInt -> IO b) -> IO b
-    withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
 
 -- ** Arithmetic
 
