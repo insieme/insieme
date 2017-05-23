@@ -124,7 +124,7 @@ extern "C" {
 		return ret;
 	}
 
-	ArithmeticSet* hat_mk_arithmetic_set(const arithmetic::Formula** formulas_c, int length) {
+	ArithmeticSet* hat_mk_arithmetic_set(const arithmetic::Formula** formulas_c, long long length) {
 		if(length < 0) {
 			return new ArithmeticSet(ArithmeticSet::getUniversal());
 		}

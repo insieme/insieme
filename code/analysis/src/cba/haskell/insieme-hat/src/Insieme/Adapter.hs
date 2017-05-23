@@ -184,19 +184,13 @@ foreign import ccall "hat_mk_c_node_address_set"
 passNodeAddress :: StablePtr Ctx.Context -> Addr.NodeAddress -> IO (Ptr CNodeAddress)
 passNodeAddress ctx_hs addr = do
     ctx <- deRefStablePtr ctx_hs
-    withArrayLen' (fromIntegral <$> Addr.getAbsolutePath addr) (mkCNodeAddress $ Ctx.getCContext ctx)
-  where
-    withArrayLen' :: Storable a => [a] -> (Ptr a -> CSize -> IO b) -> IO b
-    withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
+    withArrayUnsignedLen (fromIntegral <$> Addr.getAbsolutePath addr) (mkCNodeAddress $ Ctx.getCContext ctx)
 
 passNodeAddressSet :: BSet.IsBound bb => StablePtr Ctx.Context -> BSet.BoundSet bb Addr.NodeAddress -> IO (Ptr CNodeAddressSet)
 passNodeAddressSet _ BSet.Universe = mkCNodeAddressSet nullPtr (-1)
 passNodeAddressSet ctx_hs addrs = do
     addrs_c <- mapM (passNodeAddress ctx_hs) (BSet.toList addrs)
-    withArrayLen' addrs_c mkCNodeAddressSet
-  where
-    withArrayLen' :: Storable a => [a] -> (Ptr a -> CLLong -> IO b) -> IO b
-    withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
+    withArraySignedLen addrs_c mkCNodeAddressSet
 
 -- ** References
 
@@ -259,7 +253,7 @@ type CArithmeticFactor = ()
 type CArithmeticValue = ()
 
 foreign import ccall "hat_mk_arithmetic_set"
-  arithmeticSet :: Ptr (Ptr CArithmeticFormula) -> CInt -> IO (Ptr CArithmeticSet)
+  arithmeticSet :: Ptr (Ptr CArithmeticFormula) -> CLLong -> IO (Ptr CArithmeticSet)
 
 foreign import ccall "hat_mk_arithmetic_formula"
   arithmeticFormula :: Ptr (Ptr CArithmeticTerm) -> CSize -> IO (Ptr CArithmeticFormula)
@@ -268,7 +262,7 @@ foreign import ccall "hat_mk_arithmetic_product"
   arithmeticProduct :: Ptr (Ptr CArithmeticFactor) -> CSize -> IO (Ptr CArithmeticProduct)
 
 foreign import ccall "hat_mk_arithmetic_term"
-  arithmeticTerm :: Ptr CArithmeticProduct -> CULong -> IO (Ptr CArithmeticTerm)
+  arithmeticTerm :: Ptr CArithmeticProduct -> CLong -> IO (Ptr CArithmeticTerm)
 
 foreign import ccall "hat_mk_arithemtic_factor"
   arithemticFactor :: Ptr CArithmeticValue -> CInt -> IO (Ptr CArithmeticFactor)
@@ -279,7 +273,7 @@ foreign import ccall "hat_mk_arithmetic_value"
 passFormula :: Integral c => Ctx.CContext -> Ar.Formula c Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
 passFormula ctx_c formula_hs = do
     terms_c <- forM (Ar.terms formula_hs) passTerm
-    withArrayLen' terms_c arithmeticFormula
+    withArrayUnsignedLen terms_c arithmeticFormula
   where
     passTerm :: Integral c => Ar.Term c Addr.NodeAddress -> IO (Ptr CArithmeticTerm)
     passTerm term_hs = do
@@ -289,7 +283,7 @@ passFormula ctx_c formula_hs = do
     passProduct :: Integral c => Ar.Product c Addr.NodeAddress -> IO (Ptr CArithmeticProduct)
     passProduct product_hs = do
         factors_c <- forM (Ar.factors product_hs) passFactor
-        withArrayLen' factors_c arithmeticProduct
+        withArrayUnsignedLen factors_c arithmeticProduct
 
     passFactor :: Integral c => Ar.Factor c Addr.NodeAddress -> IO (Ptr CArithmeticFactor)
     passFactor factor_hs = do
@@ -297,19 +291,13 @@ passFormula ctx_c formula_hs = do
         arithemticFactor value_c (fromIntegral $ Ar.exponent factor_hs)
 
     passValue :: Addr.NodeAddress -> IO (Ptr CArithmeticValue)
-    passValue addr_hs = withArrayLen' (fromIntegral <$> Addr.getAbsolutePath addr_hs) (arithmeticValue ctx_c)
-
-    withArrayLen' :: Storable a => [a] -> (Ptr a -> CSize -> IO b) -> IO b
-    withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
+    passValue addr_hs = withArrayUnsignedLen (fromIntegral <$> Addr.getAbsolutePath addr_hs) (arithmeticValue ctx_c)
 
 passFormulaSet :: Integral c => Ctx.CContext -> BSet.BoundSet bb (Ar.Formula c Addr.NodeAddress) -> IO (Ptr CArithmeticSet)
 passFormulaSet _ BSet.Universe = arithmeticSet nullPtr (-1)
 passFormulaSet ctx_c bs = do
     formulas <- mapM (passFormula ctx_c) (BSet.toList bs)
-    withArrayLen' formulas arithmeticSet
-  where
-    withArrayLen' :: Storable a => [a] -> (Ptr a -> CInt -> IO b) -> IO b
-    withArrayLen' xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
+    withArraySignedLen formulas arithmeticSet
 
 -- * Utilities
 
@@ -317,6 +305,12 @@ handleAll :: IO a -> IO a -> IO a
 handleAll dummy action = catch action $ \e -> do
     putStrLn $ "Exception: " ++ show (e :: SomeException)
     dummy
+
+withArraySignedLen :: Storable a => [a] -> (Ptr a -> CLLong -> IO b) -> IO b
+withArraySignedLen xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
+
+withArrayUnsignedLen :: Storable a => [a] -> (Ptr a -> CSize -> IO b) -> IO b
+withArrayUnsignedLen xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
 
 -- ** Arithmetic Tests
 
