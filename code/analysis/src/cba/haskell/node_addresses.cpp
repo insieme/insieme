@@ -35,19 +35,35 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-#pragma once
 
-#include "insieme/analysis/cba/common/set.h"
-#include "insieme/core/ir_address.h"
+#include "insieme/analysis/cba/haskell/node_addresses.h"
 
-namespace insieme {
-namespace analysis {
-namespace cba {
+extern "C" {
 
-	using MemoryLocation = core::NodeAddress;
+	NodeAddress* hat_mk_c_node_address(Context* ctx_c, const size_t indices[], size_t length_hs) {
+		assert_true(ctx_c) << "hat_mk_c_node_address called without context";
 
-	using MemoryLocationSet = Set<MemoryLocation>;
+		// build NodeAddress
+		NodeAddress addr(ctx_c->getRoot());
+		for(size_t i = 0; i < length_hs; i++) {
+			addr = addr.getAddressOfChild(indices[i]);
+		}
 
-} //'end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+		return new NodeAddress(std::move(addr));
+	}
+
+	NodeAddressSet* hat_mk_c_node_address_set(const NodeAddress* addrs[], long long length) {
+		if(length < 0) {
+			return new NodeAddressSet(NodeAddressSet::getUniversal());
+		}
+
+		auto ret = new NodeAddressSet();
+		for(long long i = 0; i < length; i++) {
+			ret->insert(*addrs[i]);
+			delete addrs[i];
+		}
+
+		return ret;
+	}
+
+}
