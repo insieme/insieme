@@ -1084,6 +1084,11 @@ namespace checks {
 			return res;
 		}
 
+		// generic types which are not builtins could be the result of interception and therefore need to be initializable with everything
+		if(auto genTy = type.isa<GenericTypePtr>()) {
+			if(!lang::isBuiltIn(genTy))	return res;
+		}
+
 		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 			             format("Invalid type of initialization - expected type: \n%s, actual: \n%s", *refType, toString(initExprs)), Message::ERROR));
 

@@ -35,6 +35,7 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
+
 // intercepted
 namespace ns {
 	static int simpleFunc(int x) {
@@ -72,3 +73,8 @@ struct StaticMember {
 
 // literal checked for in true interception test
 int StaticMember::staticMem = 31337;
+
+struct InterceptedPOD {
+	int x;
+	float y;
+};

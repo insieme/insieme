@@ -332,6 +332,20 @@ namespace extensions {
 	core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& converter) {
 		const core::IRBuilder& builder = converter.getIRBuilder();
 		VLOG(3) << "Intercepting Expression\n";
+
+		// directly build init exprs of intercepted structural types (main FE cannot look up their member types)
+		if(auto initList = llvm::dyn_cast<clang::InitListExpr>(expr)) {
+			if(auto clangTt = llvm::dyn_cast<clang::TagType>(initList->getType()->getCanonicalTypeUnqualified())) {
+				if(!clangTt->isEnumeralType() && converter.getHeaderTagger()->isIntercepted(clangTt->getDecl())) {
+					core::ExpressionList initExps;
+					for(unsigned i = 0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
+						initExps.push_back(converter.convertInitExpr(initList->getInit(i)));
+					}
+					return builder.initExprTemp(converter.convertType(initList->getType()), initExps);
+				}
+			}
+		}
+
 		// decl refs to intercepted functions
 		if(auto dr = llvm::dyn_cast<clang::DeclRefExpr>(expr)) {
 			auto decl = dr->getDecl();
