@@ -4,7 +4,6 @@ macro(msvc_source_group label files)
 		cmake_parse_arguments(ARG "" "${one_value_args}" "" ${ARGN})
 
 		foreach(file ${files})
-			message("== ${file} | ${ARG_STRIP}")
 			get_filename_component(file_dir ${file} DIRECTORY)
 
 			# strip
