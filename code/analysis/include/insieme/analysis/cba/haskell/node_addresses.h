@@ -36,45 +36,31 @@
  *
  */
 
-// intercepted
-namespace ns {
-	static int simpleFunc(int x) {
-		return x;
-	}
+#pragma once
 
-	struct S {
-		int a, b, c;
-		int memberFunc(int x) {
-			return x;
-		}
-	};
+#include "insieme/core/ir_address.h"
+
+#include "insieme/analysis/cba/common/set.h"
+#include "insieme/analysis/cba/haskell/context.h"
+
+namespace insieme {
+namespace analysis {
+namespace cba {
+namespace haskell {
+
+	using NodeAddressSet = Set<core::NodeAddress>;
+
+} // end namespace haskell
+} // end namespace cba
+} // end namespace analysis
+} // end namespace insieme
+
+extern "C" {
+
+	using namespace insieme::core;
+	using namespace insieme::analysis::cba::haskell;
+
+	NodeAddress* hat_mk_c_node_address(Context* ctx_c, const size_t indices[], size_t length);
+
+	NodeAddressSet* hat_mk_c_node_address_set(const NodeAddress* addrs[], long long length);
 }
-
-static int x;
-int& refFunTest() {
-	return x;
-}
-
-struct RefOpTest {
-	RefOpTest& operator+(const RefOpTest& rhs) {
-		return *this;
-	}
-};
-
-struct RefMethTest {
-	RefMethTest& meth() {
-		return *this;
-	}
-};
-
-struct StaticMember {
-	static int staticMem;
-};
-
-// literal checked for in true interception test
-int StaticMember::staticMem = 31337;
-
-struct InterceptedPOD {
-	int x;
-	float y;
-};

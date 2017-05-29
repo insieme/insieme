@@ -659,6 +659,9 @@ namespace backend {
 			// B) add members and member functions for all records in this type
 			for(const core::TagTypeBindingPtr& def : definitions) {
 
+				// create recursive type represented by current definition
+				core::TagTypePtr tagType = core::TagType::get(nodeManager, def->getTag(), definitions);
+
 				// extract the record
 				core::RecordPtr record = def->getRecord();
 

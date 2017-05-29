@@ -36,45 +36,34 @@
  *
  */
 
-// intercepted
-namespace ns {
-	static int simpleFunc(int x) {
-		return x;
-	}
+#include "insieme/analysis/cba/haskell/node_addresses.h"
 
-	struct S {
-		int a, b, c;
-		int memberFunc(int x) {
-			return x;
+extern "C" {
+
+	NodeAddress* hat_mk_c_node_address(Context* ctx_c, const size_t indices[], size_t length_hs) {
+		assert_true(ctx_c) << "hat_mk_c_node_address called without context";
+
+		// build NodeAddress
+		NodeAddress addr(ctx_c->getRoot());
+		for(size_t i = 0; i < length_hs; i++) {
+			addr = addr.getAddressOfChild(indices[i]);
 		}
-	};
-}
 
-static int x;
-int& refFunTest() {
-	return x;
-}
-
-struct RefOpTest {
-	RefOpTest& operator+(const RefOpTest& rhs) {
-		return *this;
+		return new NodeAddress(std::move(addr));
 	}
-};
 
-struct RefMethTest {
-	RefMethTest& meth() {
-		return *this;
+	NodeAddressSet* hat_mk_c_node_address_set(const NodeAddress* addrs[], long long length) {
+		if(length < 0) {
+			return new NodeAddressSet(NodeAddressSet::getUniversal());
+		}
+
+		auto ret = new NodeAddressSet();
+		for(long long i = 0; i < length; i++) {
+			ret->insert(*addrs[i]);
+			delete addrs[i];
+		}
+
+		return ret;
 	}
-};
 
-struct StaticMember {
-	static int staticMem;
-};
-
-// literal checked for in true interception test
-int StaticMember::staticMem = 31337;
-
-struct InterceptedPOD {
-	int x;
-	float y;
-};
+}

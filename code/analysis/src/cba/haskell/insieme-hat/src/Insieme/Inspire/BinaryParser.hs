@@ -66,12 +66,9 @@ parseAddresses :: BS.ByteString -> Either String [Addr.NodeAddress]
 parseAddresses = parseOnly $ do
     -- parse components
     parseHeader
-    n            <- anyInt32
-    dumpNodes    <- IntMap.fromList <$> zip [0..] <$> count n parseDumpNode
-    m            <- anyInt32
-    dumpBuiltins <- Map.fromList <$> count m parseBuiltin
-    l            <- anyInt32
-    addresses    <- count l parseNodePath
+    dumpNodes    <- IntMap.fromList <$> zip [0..] <$> parseList parseDumpNode
+    dumpBuiltins <- Map.fromList <$> parseList parseBuiltin
+    addresses    <- parseList parseNodePath
 
     -- connect components
     let root     = connectDumpNodes dumpNodes
@@ -88,7 +85,7 @@ parseAddresses = parseOnly $ do
 -- * Parsing the header
 
 parseHeader :: Parser [String]
-parseHeader = parseMagicNr *> parseConverters
+parseHeader = parseMagicNr *> parseList parseConverter
 
 parseMagicNr :: Parser Word64
 parseMagicNr =  word64le 0x494e5350495245
@@ -96,11 +93,6 @@ parseMagicNr =  word64le 0x494e5350495245
 
 parseConverter :: Parser String
 parseConverter = parseString
-
-parseConverters :: Parser [String]
-parseConverters = do
-    n <- anyInt32
-    count n parseConverter
 
 -- * Parsing the body
 
@@ -122,13 +114,11 @@ parseDumpNode = do
 
         -- intermediate nodes
         _              -> do
-            c  <- anyInt32
-            is <- count c anyInt32
+            is  <- parseList anyInt32
             return $ DumpNode (IR.fromNodeType t) (fromIntegral <$> is)
 
     -- skip annotations
-    a <- anyInt32
-    count a anyWord64le
+    parseList anyWord64le
 
     return $ n
 
@@ -183,5 +173,8 @@ anyInt16 = fromIntegral <$> anyWord16le
 anyInt32 :: Parser Int
 anyInt32 = fromIntegral <$> anyWord32le
 
+parseList :: Parser a -> Parser [a]
+parseList p = anyInt32 >>= flip count p
+
 parseString :: Parser String
-parseString = liftM BS8.unpack $ take =<< anyInt32
+parseString = liftM BS8.unpack $ anyInt32 >>= take

@@ -115,38 +115,3 @@ namespace haskell {
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
-
-
-extern "C" {
-
-	using insieme::analysis::cba::MemoryLocationSet;
-
-	using namespace insieme::core;
-	using namespace insieme::analysis::cba::haskell;
-
-	ia::MemoryLocation* hat_mk_memory_location(Context* ctx_c, const size_t* addr_hs, size_t length_hs) {
-		assert_true(ctx_c) << "hat_mk_memory_location called without context";
-		// build NodeAddress
-		NodeAddress addr(ctx_c->getRoot());
-		for(size_t i = 0; i < length_hs; i++) {
-			addr = addr.getAddressOfChild(addr_hs[i]);
-		}
-
-		// build value
-		return new ia::MemoryLocation(std::move(addr));
-	}
-
-	MemoryLocationSet* hat_mk_memory_location_set(const ia::MemoryLocation** locations_c, int length) {
-		if(length < 0) {
-			return new MemoryLocationSet(MemoryLocationSet::getUniversal());
-		}
-
-		auto ret = new MemoryLocationSet();
-		for(int i = 0; i < length; i++) {
-			ret->insert(*locations_c[i]);
-			delete locations_c[i];
-		}
-		return ret;
-	}
-
-}

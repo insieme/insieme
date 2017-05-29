@@ -134,6 +134,12 @@ void intercept_materialize() {
 	}
 }
 
+
+
+void intercept_init_expr(InterceptedPOD pod) {
+
+}
+
 int main() {
 	intercept_simpleFunc();
 	intercept_memFunc();
@@ -141,4 +147,15 @@ int main() {
 	intercept_fieldAccess();
 	intercept_new();
 	intercept_materialize();
+
+	int m;
+
+	#pragma test expect_ir(R"(
+	def IMP_intercept_init_expr = function (v0 : ref<IMP_InterceptedPOD,f,f,plain>) -> unit { };
+	{
+		IMP_intercept_init_expr(<ref<IMP_InterceptedPOD,f,f,plain>>(ref_decl(type_lit(ref<IMP_InterceptedPOD,f,f,plain>))) {4, 5.0E-1f});
+	})")
+	{
+		intercept_init_expr({ 4, 0.5f });
+	}
 };
