@@ -25,7 +25,7 @@ endmacro()
 
 # Custom compile flags
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror -pedantic -std=c11 -fPIC")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
 	add_definitions(-D_XOPEN_SOURCE=700 -D_GNU_SOURCE)
 
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")

@@ -121,7 +121,7 @@ int32 irt_cpu_freq_set_frequency_worker_env(const irt_worker* worker) {
 				return retval;
 			} else {
 				uint32 freq = atoi(tok);
-				bool available;
+				bool available = false;
 				for(uint32 i = 0; i < length; ++i) {
 					if(freq == freqs[i]) {
 						available = true;
