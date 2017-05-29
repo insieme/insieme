@@ -45,6 +45,7 @@ Following options can be supplied to CMake:
 | -DBUILD_SHARED_LIBS            | ON / OFF        |
 | -DBUILD_TESTS                  | ON / OFF        |
 | -DBUILD_DOCS                   | ON / OFF        |
+| -DBUILD_COVERAGE               | ON / OFF        |
 | -DUSE_ASSERT                   | ON / OFF        |
 | -DUSE_VALGRIND                 | ON / OFF        |
 | -DBUILD_COMPILER               | ON / OFF        |
@@ -188,3 +189,19 @@ When working on Windows via SMB share, consider setting following Git setting.
 
 A script, together with a Git hook, is provided to automatically add a license
 header to each source file upon commit. See `/scripts/license`.
+
+### Visual Studio Solution
+
+    $ cmake -G "Visual Studio 14 Win64" -DBUILD_SHARED_LIBS=OFF Z:\path\to\project
+
+Add path for third-party libraries when needed.
+
+### Coverage
+
+Building the coverage us currently only supported on Linux, as Perl and Bash
+are required. To build and view the coverage set the corresponding CMake flag
+to `ON` and run:
+
+    $ make
+    $ make coverage
+    $ xdg-open coverage/index.html
