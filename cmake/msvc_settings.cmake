@@ -53,7 +53,7 @@ if(MSVC)
 	endif()
 
 	# solution configuration
-	set(CMAKE_CONFIGURATION_TYPES ${CMAKE_BUILD_TYPE} CACHE STRING "Visual Studio Solution Configuration" FORCE)
+	set(CMAKE_CONFIGURATION_TYPES Debug Release CACHE STRING "Visual Studio Solution Configuration" FORCE)
 
 	# no ZERO_CHECK target
 	set(CMAKE_SUPPRESS_REGENERATION true)
