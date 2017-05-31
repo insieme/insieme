@@ -49,7 +49,7 @@ module Insieme.Analysis.Entities.FieldIndex (
     component,
     
     -- an example implementation
-    SimpleFieldIndex
+    SimpleFieldIndex(..)
     
 ) where
 
