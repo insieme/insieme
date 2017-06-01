@@ -34,6 +34,7 @@
  - Performance Computing, Networking, Storage and Analysis (SC 2012),
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
+
 import Control.Monad
 import Data.Time.Clock
 import System.Directory
@@ -41,15 +42,6 @@ import System.Exit
 import System.Environment
 import System.FilePath
 import System.FilePath.Glob
-
-outOfDate :: UTCTime -> FilePath -> IO Bool
-outOfDate ts dst = do
-    exists <- doesFileExist dst
-    if not exists
-       then return True
-       else do
-           mtime <- getModificationTime dst
-           return $ mtime < ts
 
 main :: IO ()
 main = do
@@ -64,17 +56,9 @@ main = do
     ts    <- mapM getModificationTime libs
 
     -- find latest lib
-    let (latestts, latestlib) = maximum $ zip ts libs
+    let latestlib = snd $ maximum $ zip ts libs
 
-    -- check for out-of-date
-    isOod <- outOfDate latestts (args !! 0 </> "libHSinsieme-hat.so")
-
-    -- copy original + simple name
-    if isOod
-        then do
-            putStrLn $ "Copying over lib " ++ show latestlib
-            copyFile latestlib  (args !! 0 </> "libHSinsieme-hat.so")
-            -- setModificationTime (args !! 0 </> "libHSinsieme-hat.so") latestts
-            copyFile latestlib  (args !! 0 </> takeFileName latestlib)
-            -- setModificationTime (args !! 0 </> takeFileName latestlib) latestts
-        else return ()
+    -- copy original + predictable name
+    putStrLn $ "Copying over lib " ++ show latestlib
+    copyFile latestlib  (args !! 0 </> "libHSinsieme-hat.so")
+    copyFile latestlib  (args !! 0 </> takeFileName latestlib)

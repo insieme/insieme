@@ -101,14 +101,14 @@ endif()
 
 # Haskell dependency
 if(ANALYSIS_HASKELL)
-	add_dependencies(analysis analysis_haskell)
+	add_dependencies(analysis insieme_hat)
 	target_include_directories(analysis SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/cba/haskell/insieme-hat/include)
 
 	# Gold linker does not automatically resolve libHSrts depdency from
 	# analysis lib, need to specify them explicitly.
 	target_link_libraries(analysis ${LIBHSRTS})
 
-	target_link_libraries(analysis ${analysis_haskell})
+	target_link_libraries(analysis ${insieme_hat})
 endif()
 
 # Find test cases base
