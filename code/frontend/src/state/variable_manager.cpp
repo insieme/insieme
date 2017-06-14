@@ -37,6 +37,7 @@
  */
 #include "insieme/frontend/state/variable_manager.h"
 
+#include "insieme/frontend/decl_converter.h"
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/utils/container_utils.h"
@@ -49,7 +50,7 @@ namespace state {
 
 	VariableManager::VariableManager(Converter& converter) : converter(converter) { pushScope(false); }
 
-	core::ExpressionPtr VariableManager::lookup(const clang::VarDecl* varDecl) const {
+	core::ExpressionPtr VariableManager::lookup(const clang::VarDecl* varDecl) {
 		// lookup in innermost lambda scope if available
 		if(lambdaScopes.size()>=1) {
 			auto f = lambdaScopes.back().find(varDecl);
@@ -65,6 +66,32 @@ namespace state {
 
 		// lookup globals in outermost scope
 		if(varDecl->hasGlobalStorage() && !varDecl->isStaticLocal()) {
+			// first we do a lookup and return the variable if we find it in the outermost scope
+			if(::containsKey(storage.front().variables, varDecl)) {
+				return storage.front().variables.find(varDecl)->second;
+			}
+
+			// Now it gets a little more tricky.
+			// There are cases where we visit the VarDeclRef before we visited the VarDecl for this variable.
+			// As we can not really avoid this so easily, we decided to just register the variable upon lookup here, and ignore the correspoding insert later on
+			// However, before we do so, we need to pop everything off the scope stack back to the global scope and then re-add the scopes afterwards.
+			std::vector<Scope> tempScopes;
+			while(storage.size() != 1) {
+				tempScopes.push_back(storage.back());
+				storage.pop_back();
+			}
+
+			// no we'll visit the VarDecl itself, as it should have been done already. Upon return of this call, the scope stack should have the sme depth again anyways
+			converter.getDeclConverter()->VisitVarDecl(varDecl);
+			assert_eq(1, storage.size());
+
+			// now we restore the original scopes again
+			while(!tempScopes.empty()) {
+				storage.push_back(tempScopes.back());
+				tempScopes.pop_back();
+			}
+
+			// and we try the lookup again
 			frontend_assert(::containsKey(storage.front().variables, varDecl)) << "Trying to look up global variable not previously declared: "
 				                                                               << dumpClang(varDecl);
 			return storage.front().variables.find(varDecl)->second;
@@ -95,8 +122,14 @@ namespace state {
 	}
 
 	void VariableManager::insert(const clang::VarDecl* varDecl, const core::ExpressionPtr& var) {
-		if(varDecl->hasGlobalStorage() && !varDecl->isStaticLocal()) frontend_assert(storage.size() == 1) << "Global variable not inserted at global scope";
-		frontend_assert(!::containsKey(storage.back().variables, varDecl)) << "Trying to insert variable already declared previously: "<< dumpClang(varDecl);
+		if(varDecl->hasGlobalStorage() && !varDecl->isStaticLocal()) {
+			frontend_assert(storage.size() == 1) << "Global variable not inserted at global scope";
+			// don't insert a global which is already there
+			if(::containsKey(storage.back().variables, varDecl)) {
+				return;
+			}
+		}
+
 		converter.applyHeaderTagging(var, varDecl);
 		storage.back().variables[varDecl] = var;
 	}
