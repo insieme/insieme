@@ -52,6 +52,7 @@
 #include "utils/timing.h"
 #include "abstraction/measurements.h"
 #include "abstraction/impl/measurements.impl.h"
+#include "abstraction/unused.h"
 #include "utils/memory.h"
 #include "impl/error_handling.impl.h"
 #include "instrumentation_regions_includes.h"
@@ -95,7 +96,7 @@ void _irt_inst_region_start_early_entry_measurements(irt_work_item* wi) {
 	volatile irt_inst_region_wi_data* rg =
 	    &wi->wg_memberships[0].wg_id.cached->region_data[irt_inst_region_get_current(wi)->id][index % IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE];
 	//	irt_inst_region_context_data* rg = irt_inst_region_get_current(wi);
-	irt_context* context = irt_context_table_lookup(wi->context_id);
+	__irt_unused irt_context* context = irt_context_table_lookup(wi->context_id);
 	#pragma GCC diagnostic push
 	// ignore uninitialized variables in _local_var_decls__ that might only be used for starting measurements but not for ending
 	#pragma GCC diagnostic ignored "-Wunused-variable"
@@ -122,7 +123,7 @@ void _irt_inst_region_end_late_exit_measurements(irt_work_item* wi) {
 	volatile irt_inst_region_wi_data* rg =
 	    &wi->wg_memberships[0].wg_id.cached->region_data[irt_inst_region_get_current(wi)->id][index % IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE];
 	//	printf("region %u %u end start: last %llu\n", irt_inst_region_get_current(wi)->id, index, rg->last_wall_time);
-	irt_context* context = irt_context_table_lookup(wi->context_id);
+	__irt_unused irt_context* context = irt_context_table_lookup(wi->context_id);
 	#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__,               \
 	               _region_early_start_code__, _region_late_end_code__, _output_conversion_code__)                                                             \
 		_data_type__ old_aggregated_##_name__ = rg->aggregated_##_name__;
@@ -347,7 +348,7 @@ void irt_inst_region_propagate_data_from_wi_to_regions(irt_work_item* wi) {
 void irt_inst_region_start_measurements(irt_work_item* wi) {
 	if(wi->inst_region_list->length <= 0) { return; }
 
-	irt_context* context = irt_context_table_lookup(wi->context_id);
+	__irt_unused irt_context* context = irt_context_table_lookup(wi->context_id);
 	#pragma GCC diagnostic push
 	// ignore uninitialized variables in _local_var_decls__ that might only be used for starting measurements but not for ending
 	#pragma GCC diagnostic ignored "-Wunused-variable"
@@ -375,7 +376,7 @@ void irt_inst_region_start_measurements(irt_work_item* wi) {
 void irt_inst_region_end_measurements(irt_work_item* wi) {
 	if(wi->inst_region_list->length <= 0) { return; }
 
-	irt_context* context = irt_context_table_lookup(wi->context_id);
+	__irt_unused irt_context* context = irt_context_table_lookup(wi->context_id);
 
 	#pragma GCC diagnostic push
 	// ignore uninitialized variables in _local_var_decls__ that might only be used for starting measurements but not for ending
