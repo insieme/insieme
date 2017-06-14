@@ -62,7 +62,6 @@ struct DerivedSpecifyingFoo : Derived {
 //};
 
 int main() {
-	; // this is required because of the clang compound source location bug
 
 
 	// -------- value types ------------------------------------------------------------------------------------------------------------------------------------

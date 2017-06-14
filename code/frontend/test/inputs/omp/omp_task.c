@@ -60,8 +60,6 @@ int testCapture(int* b) {
 }
 
 int main() {
-	int magic;
-
 	#pragma test expect_ir(R"(
 		def __any_string__task_fun = function () -> unit {
 			{

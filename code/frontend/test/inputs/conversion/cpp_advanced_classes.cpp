@@ -60,7 +60,6 @@ struct ConversionOperator {
 };
 
 int main() {
-	; // this is required because of the clang compound source location bug
 
 	// check accesses with various ref kind combinations
 	#pragma test expect_ir(R"(

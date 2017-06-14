@@ -38,6 +38,7 @@
 #pragma once
 
 #include "insieme/frontend/clang.h"
+#include "insieme/frontend/utils/source_locations.h"
 
 using clang::SourceLocation;
 
@@ -68,6 +69,10 @@ class InsiemeSema : public clang::Sema {
 	void matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, const clang::SourceManager& sm, pragma::PragmaList& matched);
 
 	InsiemeSema(const InsiemeSema& other);
+
+	unsigned getLineNum(const clang::SourceLocation& loc) {
+		return frontend::utils::Line(loc, SourceMgr);
+	}
 
   public:
 	InsiemeSema(pragma::PragmaList& pragma_list, clang::Preprocessor& pp, clang::ASTContext& ctx, clang::ASTConsumer& ast_consumer,

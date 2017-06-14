@@ -43,7 +43,6 @@ struct NonPod {
 };
 
 int main() {
-	; // this is required because of the clang compound source location bug
 
 	#pragma test expect_ir(R"(
 		def struct IMP_A {};

@@ -94,7 +94,12 @@ namespace frontend {
 
 	TEST(CppConversionTest, ObjectPassing) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_object_passing.cpp"); }
 
-	TEST(CppConversionTest, PlacementNew) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_placement_new.cpp"); }
+	TEST(CppConversionTest, PlacementNew) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_placement_new.cpp", [](ConversionJob& job) {
+			// Requires interceptor extension (test extension needs to be last)
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+		});
+	}
 
 	TEST(CppConversionTest, PseudoDestructor) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_pseudo_destructor.cpp"); }
 
@@ -108,10 +113,12 @@ namespace frontend {
 
 	TEST(CppConversionTest, StackInitialization) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_stack_initialization.cpp"); }
 
-	TEST(CppConversionTest, Statements) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_statements.cpp", [](ConversionJob& job) {
-		// Requires interceptor extension (test extension needs to be last)
-		job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
-	}); }
+	TEST(CppConversionTest, Statements) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_statements.cpp", [](ConversionJob& job) {
+			// Requires interceptor extension (test extension needs to be last)
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+		});
+	}
 
 	TEST(CppConversionTest, Static) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_static.cpp"); }
 

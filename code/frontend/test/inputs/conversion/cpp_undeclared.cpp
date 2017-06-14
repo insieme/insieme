@@ -49,8 +49,6 @@ namespace stefan {
 
 int main() {
 
-	int magic;
-
 	#pragma test expect_ir(R"(
 		decl struct IMP_stefan_colon__colon_Joerg;
 		decl IMP_stefan_colon__colon_Joerg_colon__colon_getInstanceOfBla : () -> ptr<IMP_stefan_colon__colon_Joerg>;

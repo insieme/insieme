@@ -63,7 +63,6 @@ R to(A x) {
 #define CONSUME_TRIVIAL_CONST_RREF "def IMP_consume_const_struct_Trivial__ampersand__ampersand__returns_void = function (v0 : ref<IMP_Trivial,t,f,cpp_rref>) -> unit { }; "
 
 void validateTrivial() {
-	; // this is required because of the clang compound source location bug
 
 	using T = Trivial;
 
@@ -229,7 +228,6 @@ struct NonTrivial {
 #define CONSUME_NON_TRIVIAL_CONST_RREF "def IMP_consume_const_struct_NonTrivial__ampersand__ampersand__returns_void = function (v0 : ref<IMP_NonTrivial,t,f,cpp_rref>) -> unit { }; "
 
 void validateNonTrivial() {
-	; // this is required because of the clang compound source location bug
 
 	using T = NonTrivial;
 

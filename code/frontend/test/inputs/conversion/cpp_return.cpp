@@ -316,8 +316,6 @@ void nonTrivialTest() {
 
 void returnVariableTest() {
 
-	int magic; // DO NOT REMOVE ME
-
 	#pragma test expect_ir(R"(
 		def struct IMP_VarReturn {
 				i : int<4>;

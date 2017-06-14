@@ -55,7 +55,6 @@ void barThree(int a, int b, int c) {
 }
 
 int main() {
-	; // this is required because of the clang compound source location bug
 
 	#pragma test expect_ir(R"({
 		var ref<foo,f,f,plain> v0 = lit("makeFoo" : () -> foo)();

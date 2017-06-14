@@ -76,7 +76,6 @@ struct M2 {
 
 #pragma test expect_ir("REGEX_S", R"(.* <ref<int<4>,f,f,plain>>\(IMP_M_colon__colon_a\) \{42\}; .*)")
 int main() {
-	; // this is required because of the clang compound source location bug
 
 	// static methods ==========================================================================================================================================
 

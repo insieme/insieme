@@ -36,8 +36,6 @@
  *
  */
 int main() {
-	int magic;
-
 	#pragma test expect_ir(R"(
 		def __any_string__parfun = function (v0 : ref<ref<int<4>,f,f,plain>,f,f,plain>) -> unit {
 			{

@@ -56,7 +56,7 @@ using namespace insieme::frontend::pragma;
 using namespace insieme::frontend::utils;
 using namespace insieme::utils::log;
 
-typedef std::list<PragmaPtr> PendingPragmaList;
+typedef std::vector<PragmaPtr> PendingPragmaList;
 
 namespace {
 
@@ -72,7 +72,7 @@ namespace {
 
 	void EraseMatchedPragmas(PendingPragmaList& pending, PragmaList& matched) {
 		for(PragmaList::iterator I = matched.begin(), E = matched.end(); I != E; ++I) {
-			std::list<PragmaPtr>::iterator it = std::find(pending.begin(), pending.end(), *I);
+			auto it = std::find(pending.begin(), pending.end(), *I);
 			assert(it != pending.end() && "Current matched pragma is not in the list of pending pragmas");
 			pending.erase(it);
 		}
@@ -147,10 +147,14 @@ namespace frontend {
 		return pos;
 	}
 
-	clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R, llvm::ArrayRef<clang::Stmt*> Elts, bool isStmtExpr) {
+	clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation leftBraceLoc, clang::SourceLocation rightBraceLoc, llvm::ArrayRef<clang::Stmt*> Elts, bool isStmtExpr) {
 		// we parse the original code segment, within the original locations
-		StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, std::move(Elts), isStmtExpr);
+		StmtResult ret = Sema::ActOnCompoundStmt(leftBraceLoc, rightBraceLoc, std::move(Elts), isStmtExpr);
 		clang::CompoundStmt* CS = cast<clang::CompoundStmt>(ret.get());
+
+		if(pimpl->pending_pragma.empty()) {
+			return ret;
+		}
 
 		// This is still buggy with Clang 3.6.2:
 		// when pragmas are just after the beginning of a compound stmt, example:
@@ -171,20 +175,34 @@ namespace frontend {
         // and solve this issue in the pragma lexer. (I have seen it working, but without the Raw string in C mode).
 
 		enum { MacroIDBit = 1U << 31 }; // from clang/Basic/SourceLocation.h for use with cpp classes
-		{
-			SourceLocation&& leftBracketLoc = SourceMgr.getImmediateSpellingLoc(L);
-			std::pair<FileID, unsigned>&& locInfo = SourceMgr.getDecomposedLoc(leftBracketLoc);
-			llvm::StringRef&& buffer = SourceMgr.getBufferData(locInfo.first);
+
+		// this loop ensures that when correcting the left bracket location, we ignore any left brackets contained in pragmas
+		do {
+			SourceLocation leftBraceImmediateLoc = SourceMgr.getImmediateSpellingLoc(leftBraceLoc);
+			
+			std::pair<FileID, unsigned> locInfo = SourceMgr.getDecomposedLoc(leftBraceImmediateLoc);
+			llvm::StringRef buffer = SourceMgr.getBufferData(locInfo.first);
 			const char* strData = buffer.begin() + locInfo.second;
 			char const* lBracePos = strbchr(strData, buffer.begin(), '{');
 
+			if(lBracePos == buffer.begin()) {
+				break;
+			}
+
 			// We know the location of the left bracket, we overwrite the value of L with the correct location
 			// but only if the location is valid as in getFileLocWithOffset() in SourceLocation
-			if((((leftBracketLoc.getRawEncoding() & ~MacroIDBit) + (lBracePos - strData)) & MacroIDBit) == 0) {
-				L = leftBracketLoc.getLocWithOffset(lBracePos - strData);
+			auto newOffset = lBracePos - strData - 1;
+			if((((leftBraceImmediateLoc.getRawEncoding() & ~MacroIDBit) + newOffset) & MacroIDBit) == 0) {
+				leftBraceLoc = leftBraceImmediateLoc.getLocWithOffset(newOffset);
+			} else {
+				break;
 			}
-		}
-
+				
+		} while(::any(pimpl->pending_pragma, [this, leftBraceLoc](const PragmaPtr& pragma) {
+			unsigned l = getLineNum(leftBraceLoc);
+			return getLineNum(pragma->getStartLocation()) <= l && getLineNum(pragma->getEndLocation()) >= l;
+		}));
+			
 		// For the right bracket, we start at the final statement in the compound
 		//   (or its start if it is empty) and search forward until we find the first "}"
 		// Otherwise, cases such as this:
@@ -197,20 +215,20 @@ namespace frontend {
 		// will be broken
 
 		{
-			SourceLocation rightBracketLoc;
+			SourceLocation rightBraceImmediateLoc;
 			if(CS->size() == 0) {
-				rightBracketLoc = SourceMgr.getImmediateSpellingLoc(L);
+				rightBraceImmediateLoc = SourceMgr.getImmediateSpellingLoc(leftBraceLoc);
 			} else {
-				rightBracketLoc = SourceMgr.getImmediateSpellingLoc(CS->body_back()->getLocEnd());
+				rightBraceImmediateLoc = SourceMgr.getImmediateSpellingLoc(CS->body_back()->getLocEnd());
 			}
-			std::pair<FileID, unsigned>&& locInfo = SourceMgr.getDecomposedLoc(rightBracketLoc);
+			std::pair<FileID, unsigned>&& locInfo = SourceMgr.getDecomposedLoc(rightBraceImmediateLoc);
 			llvm::StringRef buffer = SourceMgr.getBufferData(locInfo.first);
 			const char* strData = buffer.begin() + locInfo.second;
 			char const* rBracePos = strchr(strData, '}');
 
 			// We know the location of the right bracket, we overwrite the value of R with the correct location
-			if((((rightBracketLoc.getRawEncoding() & ~MacroIDBit) + (rBracePos - strData)) & MacroIDBit) == 0) {
-				R = rightBracketLoc.getLocWithOffset(rBracePos - strData);
+			if((((rightBraceImmediateLoc.getRawEncoding() & ~MacroIDBit) + (rBracePos - strData)) & MacroIDBit) == 0) {
+				rightBraceLoc = rightBraceImmediateLoc.getLocWithOffset(rBracePos - strData);
 			}
 		}
 
@@ -225,69 +243,71 @@ namespace frontend {
 		//		F(r)    // <-this statement will jum to the macro location
 		//
 		PragmaList matched;
-		SourceRange SR(L, R);
+		SourceRange SR(leftBraceLoc, rightBraceLoc);
 
-		// for each of the pragmas in the range between brackets
-		for(PragmaFilter&& filter = PragmaFilter(SR, SourceMgr, pimpl->pending_pragma); *filter; ++filter) {
-			PragmaPtr P = *filter;
+		// ensure the list of pragmas is sorted
+		std::sort(pimpl->pending_pragma.begin(), pimpl->pending_pragma.end(), [this](const PragmaPtr& a, const PragmaPtr& b) {
+			return getLineNum(a->getStartLocation()) > getLineNum(b->getStartLocation());
+		});
 
-			unsigned int pragmaStart = utils::Line(P->getStartLocation(), SourceMgr);
-			unsigned int pragmaEnd = utils::Line(P->getEndLocation(), SourceMgr);
+		// only consider pragmas inside the current compound statement
+		std::vector<PragmaPtr> currentPragmas;
+		std::copy_if(pimpl->pending_pragma.begin(), pimpl->pending_pragma.end(), std::back_inserter(currentPragmas),
+		             [this, leftBraceLoc, rightBraceLoc](const PragmaPtr& pragma) {
+			             if(!SourceMgr.isWrittenInSameFile(pragma->getStartLocation(), leftBraceLoc)) { return false; }
+			             return getLineNum(pragma->getStartLocation()) > getLineNum(leftBraceLoc)
+			                    && getLineNum(pragma->getEndLocation()) < getLineNum(rightBraceLoc);
+		             });
 
-			bool found = false;
-			// problem with first pragma, compound start is delayed until fist usable line (first stmt)
-			if(CS->size() > 0) {
-				for(clang::CompoundStmt::body_iterator it = CS->body_begin(); it != CS->body_end(); ++it) {
-					unsigned int stmtStart = (Line((*it)->getLocStart(), SourceMgr));
+		// if there are no pragmas in the current compound, there is no work to do here
+		if(currentPragmas.empty()) {
+			return ret;
+		}
 
-					if((pragmaEnd <= stmtStart)) {
-						// ACHTUNG: if the node is a nullStmt, and is not at the end of the compound (in
-						// which case is most probably ours) we can not trust it. semantics wont change,
-						// we move one more. (BUG: nullStmt followed by pragmas, the source begin is
-						// postponed until next stmt) this makes pragmas to be attached to a previous
-						// stmt
-						if(!llvm::isa<clang::NullStmt>(*it)) {
-							// this pragma is attached to the current stmt
-							P->setStatement(*it);
-							matched.push_back(P);
-							found = true;
-							break;
-						}
-					}
-				}
-			}
-			if(!found && pragmaStart <= utils::Line(R, SourceMgr)) {
-				// this is a de-attached pragma (barrier i.e.) at the end of the compound
-				// we need to create a fake NullStmt ( ; ) to attach this
-				Stmt** stmts = new Stmt*[CS->size() + 1];
-
-				ArrayRef<clang::Stmt*> stmtList(stmts, CS->size() + 1);
-
-				clang::CompoundStmt* newCS =
-				    new(Context) clang::CompoundStmt(Context, stmtList, CS->getSourceRange().getBegin(), CS->getSourceRange().getEnd());
-
-				std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
-				std::for_each(CS->body_begin(), CS->body_end(), [&](Stmt*& curr) { this->Context.Deallocate(curr); });
-				newCS->setLastStmt(new(Context) NullStmt(SourceLocation()));
-
-				P->setStatement(*newCS->body_rbegin());
-				matched.push_back(P);
-
-				// transfer the ownership of the statement
-				clang::CompoundStmt* oldStmt = ret.getAs<clang::CompoundStmt>();
-				oldStmt->setStmts(Context, NULL, 0);
-				ret = newCS;
-				CS = newCS;
-
-				// destroy the old compound stmt
-				Context.Deallocate(oldStmt);
-				delete[] stmts;
+		// for each statement, add all pragmas to it that have a start source location smaller than its own start source location (and remove matched pragmas from both lists)
+		for(const auto& currentStmt : CS->body()) {
+			// do not deal with null statements (exact reason why they need exist or need to be ignored is unknown)
+			if(llvm::isa<clang::NullStmt>(currentStmt)) { continue; }
+			while(!currentPragmas.empty() && getLineNum(currentPragmas.back()->getStartLocation()) <= getLineNum(currentStmt->getLocStart())) {
+				currentPragmas.back()->setStatement(currentStmt);
+				pimpl->pending_pragma.erase(std::find(pimpl->pending_pragma.begin(), pimpl->pending_pragma.end(), currentPragmas.back()));
+				currentPragmas.erase(currentPragmas.cend()-1);
 			}
 		}
-		// remove matched pragmas
-		EraseMatchedPragmas(pimpl->pending_pragma, matched);
 
-		return std::move(ret);
+		// if there are any pragmas left, attach to a nullstmt
+		if(!currentPragmas.empty()) {
+			// this is a de-attached pragma (barrier i.e.) at the end of the compound
+			// we need to create a fake NullStmt ( ; ) to attach this
+			Stmt** stmts = new Stmt*[CS->size() + 1];
+			
+			ArrayRef<clang::Stmt*> stmtList(stmts, CS->size() + 1);
+			
+			clang::CompoundStmt* newCS =
+				new(Context) clang::CompoundStmt(Context, stmtList, CS->getSourceRange().getBegin(), CS->getSourceRange().getEnd());
+			
+			std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
+			std::for_each(CS->body_begin(), CS->body_end(), [&](Stmt*& curr) { this->Context.Deallocate(curr); });
+			newCS->setLastStmt(new(Context) NullStmt(SourceLocation()));
+			
+			while(!currentPragmas.empty()) {
+				currentPragmas.back()->setStatement(*newCS->body_rbegin());
+				pimpl->pending_pragma.erase(std::find(pimpl->pending_pragma.begin(), pimpl->pending_pragma.end(), currentPragmas.back()));
+				currentPragmas.erase(currentPragmas.cend() - 1);
+			}
+			
+			// transfer the ownership of the statement
+			clang::CompoundStmt* oldStmt = ret.getAs<clang::CompoundStmt>();
+			oldStmt->setStmts(Context, NULL, 0);
+			ret = newCS;
+			CS = newCS;
+			
+			// destroy the old compound stmt
+			Context.Deallocate(oldStmt);
+			delete[] stmts;
+		}
+
+		return ret;
 	}
 
 	void InsiemeSema::matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, const clang::SourceManager& sm, PragmaList& matched) {
@@ -360,15 +380,15 @@ namespace frontend {
 		if(!FD) { return ret; }
 
 		PragmaList matched;
-		std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
+		auto I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
 
 		while(I != E && isAfterRange(FD->getSourceRange(), (*I)->getStartLocation(), SourceMgr)) {
 			++I;
 		}
 
 		while(I != E) {
-			unsigned int pragmaEnd = utils::Line((*I)->getEndLocation(), SourceMgr);
-			unsigned int declBegin = utils::Line(ret->getSourceRange().getBegin(), SourceMgr);
+			unsigned int pragmaEnd = getLineNum((*I)->getEndLocation());
+			unsigned int declBegin = getLineNum(ret->getSourceRange().getBegin());
 
 			if(pragmaEnd <= declBegin) {
 				(*I)->setDecl(FD);
@@ -389,7 +409,7 @@ namespace frontend {
 		if(isInsideFunctionDef) { return ret; }
 
 		PragmaList matched;
-		std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
+		auto I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
 
 		while(I != E && isAfterRange(ret->getSourceRange(), (*I)->getStartLocation(), SourceMgr)) {
 			++I;
@@ -412,7 +432,7 @@ namespace frontend {
 		if(isInsideFunctionDef) { return; }
 
 		PragmaList matched;
-		std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
+		auto I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
 
 		while(I != E && isAfterRange(TagDecl->getSourceRange(), (*I)->getStartLocation(), SourceMgr)) {
 			++I;

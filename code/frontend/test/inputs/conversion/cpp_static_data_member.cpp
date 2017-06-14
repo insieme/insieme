@@ -46,8 +46,6 @@ struct Joerg {
 
 int main() {
 
-	int magic;
-
 	#pragma test expect_ir(R"(
 		def struct IMP_Joerg {
 		};

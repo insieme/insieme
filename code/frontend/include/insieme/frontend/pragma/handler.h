@@ -249,7 +249,7 @@ namespace pragma {
 
 		void HandlePragma(clang::Preprocessor& PP, clang::PragmaIntroducerKind kind, clang::Token& FirstToken) {
 			// '#' symbol is 1 position before
-			clang::SourceLocation&& startLoc = ParserProxy::get().CurrentToken().getLocation().getLocWithOffset(-1);
+			clang::SourceLocation startLoc = ParserProxy::get().CurrentToken().getLocation().getLocWithOffset(-1);
 
 			MatchMap mmap;
 			ParserStack errStack;
@@ -265,6 +265,18 @@ namespace pragma {
 				if(!getName().empty()) { pragma_name << getName().str(); }
 
 				clang::SourceLocation endLoc = ParserProxy::get().CurrentToken().getLocation();
+				
+				// retrieves source location of call site in case of macros
+				auto checkAndFixLocation = [&PP](clang::SourceLocation location){
+					if(PP.getSourceManager().isMacroArgExpansion(location) || PP.getSourceManager().isMacroBodyExpansion(location)) {
+						location = PP.getSourceManager().getExpansionLoc(location);
+					}
+					return location;
+				};
+
+				startLoc = checkAndFixLocation(startLoc);
+				endLoc = checkAndFixLocation(endLoc);
+
 				// the pragma has been successfully parsed, now we have to instantiate the correct type
 				// which is associated to this pragma (T) and pass the matcher map in order for the
 				// pragma to initialize his internal representation. The framework will then take care

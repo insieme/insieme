@@ -55,7 +55,6 @@ struct EnclosingType {
 };
 
 int main() {
-	; // this is required because of the clang compound source location bug
 
 	// Note that we are dealing with pointers here to test only the type mapping
 

@@ -231,6 +231,7 @@ namespace pragma {
 		}
 		const std::string getString(const std::string& k) const {
 			if(stringList.find(k) == stringList.end()) { return std::string(); }
+			assert_eq(getStrings(k).size(), 1) << "Expected StringList to have only one entry, but contents are: " << getStrings(k);
 			return getStrings(k).front();
 		}
 

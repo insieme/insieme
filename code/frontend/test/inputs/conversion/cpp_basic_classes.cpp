@@ -124,7 +124,6 @@ struct ClassWithConstAndNonConstMethodInline {
 };
 
 int main() {
-	; // this is required because of the clang compound source location bug
 
 	#pragma test expect_ir(A_IR, R"( { var ref<IMP_A> a = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>))); } )")
 	{ A a; }

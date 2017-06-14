@@ -40,7 +40,6 @@ struct A {};
 struct B {};
 
 int main() {
-	; // this is required because of the clang compound source location bug
 
 	// reinterpret_cast with different type
 	#pragma test expect_ir(R"({

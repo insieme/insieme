@@ -63,6 +63,7 @@ int main() {
 	enum e e3 = 7;
 
 	int magic;
+
 	// initialized with another enum variable
 	#pragma test expect_ir(R"(using "ext.enum"; {
 	    var ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain> v0 = ref_decl(type_lit(ref<(type<enum_def<IMP_e,int<4>,enum_entry<IMP_e_colon__colon_A,0>,enum_entry<IMP_e_colon__colon_B,1>,enum_entry<IMP_e_colon__colon_C,2>>>, int<4>),f,f,plain>));

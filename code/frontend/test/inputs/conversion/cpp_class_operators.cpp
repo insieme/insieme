@@ -95,7 +95,6 @@ void j(S& s) {
 }
 
 int main() {
-	; // this is required because of the clang compound source location bug
 
 	// call copy assignment
 	#pragma test expect_ir(SIMPLEST_IR,R"( {

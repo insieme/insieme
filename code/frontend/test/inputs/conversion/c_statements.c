@@ -173,8 +173,6 @@ int main() {
 		}
 	}
 
-	int magic;
-
 	#pragma test expect_ir("{var ref<int<4>,f,f> v0; { v0 = 0; while(*v0 < 10) { v0; gen_post_inc(v0); } } }")
 	{
 		int i;
