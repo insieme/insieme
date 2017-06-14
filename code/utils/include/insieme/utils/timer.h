@@ -37,6 +37,7 @@
  */
 #pragma once
 
+#include <functional>
 #include <string>
 #include <boost/timer.hpp>
 
