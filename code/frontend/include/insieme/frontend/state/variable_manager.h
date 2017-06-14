@@ -101,7 +101,7 @@ namespace state {
 		/// Pop a scope after closing it
 		void popScope() { storage.pop_back(); }
 
-		core::ExpressionPtr lookup(const clang::VarDecl* varDecl) const;
+		core::ExpressionPtr lookup(const clang::VarDecl* varDecl);
 		void undefine(const clang::VarDecl* varDecl);
 		void insert(const clang::VarDecl* varDecl, const core::ExpressionPtr& var);
 
