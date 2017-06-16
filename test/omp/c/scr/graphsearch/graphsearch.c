@@ -192,7 +192,7 @@ OSCR_timer_start(0);
 
 /* 4. SPAWN WORKERS */
 #pragma omp parallel default(none) shared(nthreads,num_waiting,graph,searched,pool,target,found)
-{
+	{
 Bool		waiting = FALSE;
 tg_task		next=TG_NULLID;
 task_list	succs;
