@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -e
+
+cd "$BUILD_DIR"
+rm -f sloccount.sc
+sloccount --duplicates --wide --details -- code/ extra/ > sloccount.sc

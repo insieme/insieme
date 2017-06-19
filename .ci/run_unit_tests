@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -e
+
+cd "$BUILD_DIR"
+
+# Setup restrictions and permissions.
+if [[ "$(hostname)" == "hudson.dps.uibk.ac.at" ]]; then
+	ulimit -t 14400
+
+	# Set permissions for RAPL tests.
+	sudo /sbin/setcap cap_sys_rawio=ep runtime/ut_runtime_energy_test
+	sudo /sbin/setcap cap_sys_rawio=ep runtime/ut_runtime_instrumentation_regions_test
+	/sbin/getcap runtime/ut_runtime_energy_test
+	/sbin/getcap runtime/ut_runtime_instrumentation_regions_test
+fi
+
+nice -n5 make test ARGS="$NPROC"

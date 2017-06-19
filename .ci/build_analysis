@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -e
+
+cd "$BUILD_DIR"
+
+cmake "$WORKSPACE/code" \
+	-DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+	-DCMAKE_CXX_FLAGS="-Werror" \
+	-DANALYSIS_DATALOG=ON -DSOUFFLE_ROOT="$WORKSPACE/third_party/souffle" \
+	-DANALYSIS_HASKELL=ON -DSTACK_ROOT="$WORKSPACE/third_party/stack"
+
+make -j "$NPROC"
+
+if [[ -n "${STACK_ROOT+x}" && "$(hostname)" == "hudson.dps.uibk.ac.at" ]]; then
+	# Grant everybody write permissions to stack-root
+	chmod -R a+w "$STACK_ROOT"
+fi

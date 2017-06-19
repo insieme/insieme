@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -e
+
+# Assuming all required dependencies are installed, this will setup the
+# symlinks corresponding to the installed version selected in the dependency
+# installer. Just in case some versions have changed, we remove the existing
+# setup first.
+rm -rf "$WORKSPACE/third_party"
+PREFIX="$THIRD_PARTY_LIBS" "$WORKSPACE/scripts/dependencies/third_party_linker"
+
+# Create build directory if it does not exist.
+mkdir -p "$BUILD_DIR"

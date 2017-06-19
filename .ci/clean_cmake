@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -e
+
+# Cleanup all CMake files to start a clean configuration. Object files are
+# *not* removed to improve compile time.
+rm -rf "$BUILD_DIR/CMake"* "$BUILD_DIR/"*".cmake"

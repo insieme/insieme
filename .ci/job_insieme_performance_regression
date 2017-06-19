@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -e
+
+cd "$(dirname $(readlink -f "$0"))"
+
+LOG_DIR="$HOME/logs"
+
+source defaults.sh
+
+./configure
+./clean_cmake
+./build
+
+cd "$BUILD_DIR/driver"
+
+mkdir -p "$BUILD_DIR/html" "$LOG_DIR"
+
+cp "$WORKSPACE/code/driver/src/perf_reg/assets/plotly-latest.min.js" \
+	"$BUILD_DIR/html/plotly-latest.min.js"
+
+# Run integration tests.
+export IRT_AFFINITY_POLICY="IRT_AFFINITY_FILL"
+
+./integration_tests -w1 -r5 \
+	--long-tests-also \
+	--log-to-csv-file="$LOG_DIR/log$BUILD_NUMBER.csv" \
+	--csv-file-id="$BUILD_NUMBER"
+
+./integration_tests --postprocessing
+
+# Do regression check.
+./performance_regression_check \
+	--id-as-x-axis \
+	--create-fail-file=$WORKSPACE/performance_regressions_found.txt \
+	--output-file=$BUILD_DIR/html/index.html \
+	--input-files $LOG_DIR/*.csv

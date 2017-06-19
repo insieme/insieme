@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -e
+
+cd "$BUILD_DIR"
+
+cmake "$WORKSPACE/code" \
+	-DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+	-DCMAKE_CXX_FLAGS="-Werror" \
+	-DUSE_OPENCL=ON -DOPENCL_ROOT="$OPENCL_ROOT" \
+	-DUSE_ENERGY=ON \
+	-DUSE_VALGRIND=ON
+
+make -j "$NPROC"

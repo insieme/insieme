@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -e
+
+cd "$BUILD_DIR/driver"
+
+# Arguments used to run this script are forwarded to the runner.
+nice -n5 ./integration_tests -w "$NPROC" "$@"
+
+# Cleanup.
+nice -n5 ./integration_tests --postprocessing

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -e
+
+cd "$(dirname $(readlink -f "$0"))"
+
+source defaults.sh
+
+./configure
+./clean_cmake
+./build_energy_opencl_valgrind
+./run_unit_tests
+./run_integration_tests
