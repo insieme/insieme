@@ -4,4 +4,4 @@ set -e
 
 cd "$BUILD_DIR"
 
-nice -n5 make test ARGS="$NPROC"
+nice -n5 make test ARGS="-j $NPROC"
