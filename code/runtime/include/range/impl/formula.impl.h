@@ -386,7 +386,7 @@ irt_range_formula_1d* irt_range_formula_1d_set_diff(irt_range_formula_1d* a, irt
 			// convert to term list
 			irt_range_formula_1d* cur = _irt_range_formula_1d_alloc(diffList->num_entries);
 			for(int k = 0; k < diffList->num_entries; k++) {
-				cur->terms[k] = (irt_range_term_1d){diffList->entries[k].a, diffList->entries[k].b, diffList->entries[k].c};
+				cur->terms[k] = (irt_range_term_1d){{{diffList->entries[k].a}}, {{diffList->entries[k].b}}, {{diffList->entries[k].c}}};
 			}
 
 			// update inner intersection

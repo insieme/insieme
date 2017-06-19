@@ -73,17 +73,17 @@ typedef union {
 // ---- Creation -------
 
 #define irt_range_point_1d_create(A)                                                                                                                           \
-	(irt_range_point_1d) {                                                                                                                                     \
+	(irt_range_point_1d) {{                                                                                                                                     \
 		(A)                                                                                                                                                    \
-	}
+	}}
 #define irt_range_point_2d_create(A, B)                                                                                                                        \
-	(irt_range_point_2d) {                                                                                                                                     \
+	(irt_range_point_2d) {{                                                                                                                                     \
 		(A), (B)                                                                                                                                               \
-	}
+	}}
 #define irt_range_point_3d_create(A, B, C)                                                                                                                     \
-	(irt_range_point_3d) {                                                                                                                                     \
+	(irt_range_point_3d) {{                                                                                                                                     \
 		(A), (B), (C)                                                                                                                                          \
-	}
+	}}
 
 
 // ---- Printing -------
@@ -124,13 +124,13 @@ inline bool irt_range_point_3d_eq(irt_range_point_3d a, irt_range_point_3d b) {
 // ---- Addition -------
 
 inline irt_range_point_1d irt_range_point_1d_add(irt_range_point_1d a, irt_range_point_1d b) {
-	return (irt_range_point_1d){a.x + b.x};
+	return (irt_range_point_1d){{a.x + b.x}};
 }
 inline irt_range_point_2d irt_range_point_2d_add(irt_range_point_2d a, irt_range_point_2d b) {
-	return (irt_range_point_2d){a.x + b.x, a.y + b.y};
+	return (irt_range_point_2d){{a.x + b.x, a.y + b.y}};
 }
 inline irt_range_point_3d irt_range_point_3d_add(irt_range_point_3d a, irt_range_point_3d b) {
-	return (irt_range_point_3d){a.x + b.x, a.y + b.y, a.z + b.z};
+	return (irt_range_point_3d){{a.x + b.x, a.y + b.y, a.z + b.z}};
 }
 
 

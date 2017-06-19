@@ -426,7 +426,7 @@ namespace conversion {
 		// 					stmt1
 		// 					stmt2
 		// 			break
-		auto lookForCases = [this, &caseMap, &openCases, &decls, convertCase, addStmtToOpenCases, handleDeclStmt](const clang::SwitchCase* caseStmt) {
+		auto lookForCases = [this, &caseMap, &openCases, convertCase, addStmtToOpenCases, handleDeclStmt](const clang::SwitchCase* caseStmt) {
 			const clang::Stmt* stmt = caseStmt;
 
 			// we might find some chained stmts

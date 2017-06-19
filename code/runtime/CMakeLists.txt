@@ -74,7 +74,7 @@ target_link_libraries(runtime Threads::Threads)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
 # Also we ignore warnings about signed comparison and unused variables
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare -Wno-unused-function")
 
 glob_tests(runtime_tests test)
 foreach(test ${runtime_tests})

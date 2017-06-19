@@ -82,7 +82,7 @@ TEST(Range, Range2D) {
 
 
 	// create a formula containing a term
-	irt_range_term_2d term = irt_range_term_2d_create((irt_range_point_2d){1, 2}, (irt_range_point_2d){3, 4}, (irt_range_point_2d){5, 6});
+	irt_range_term_2d term = irt_range_term_2d_create((irt_range_point_2d){{1, 2}}, (irt_range_point_2d){{3, 4}}, (irt_range_point_2d){{5, 6}});
 
 	r = irt_range_formula_2d_create(&term);
 	EXPECT_STREQ("[1,2] .. [3,4] : [5,6]", toStrR2(r));
@@ -97,7 +97,7 @@ TEST(Range, Contains2D) {
 	irt_range_formula_2d_clear(r);
 
 	// create a formula containing a term
-	irt_range_term_2d term = irt_range_term_2d_create((irt_range_point_2d){1, 2}, (irt_range_point_2d){3, 4}, (irt_range_point_2d){5, 6});
+	irt_range_term_2d term = irt_range_term_2d_create((irt_range_point_2d){{1, 2}}, (irt_range_point_2d){{3, 4}}, (irt_range_point_2d){{5, 6}});
 
 	r = irt_range_formula_2d_create(&term);
 	EXPECT_STREQ("[1,2] .. [3,4] : [5,6]", toStrR2(r));
@@ -108,10 +108,10 @@ TEST(Range, Contains2D) {
 TEST(Range, Union2D) {
 	// form a complex 2D set
 	irt_range_formula_2d* a =
-	    irt_range_formula_2d_create_from(irt_range_term_2d_create((irt_range_point_2d){0, 1}, (irt_range_point_2d){10, 12}, (irt_range_point_2d){2, 3}));
+	    irt_range_formula_2d_create_from(irt_range_term_2d_create((irt_range_point_2d){{0, 1}}, (irt_range_point_2d){{10, 12}}, (irt_range_point_2d){{2, 3}}));
 
 	irt_range_formula_2d* b =
-	    irt_range_formula_2d_create_from(irt_range_term_2d_create((irt_range_point_2d){15, 19}, (irt_range_point_2d){20, 24}, (irt_range_point_2d){1, 2}));
+	    irt_range_formula_2d_create_from(irt_range_term_2d_create((irt_range_point_2d){{15, 19}}, (irt_range_point_2d){{20, 24}}, (irt_range_point_2d){{1, 2}}));
 
 	irt_range_formula_2d* c = irt_range_formula_2d_union(a, b);
 	EXPECT_STREQ("[0,1] .. [10,12] : [2,3] v [15,19] .. [20,24] : [1,2]", toStrR2(c));
@@ -134,10 +134,10 @@ TEST(Range, Union2D) {
 TEST(Range, Intersect2D) {
 	// form a complex 2D set
 	irt_range_formula_2d* a =
-	    irt_range_formula_2d_create_from(irt_range_term_2d_create((irt_range_point_2d){0, 1}, (irt_range_point_2d){10, 12}, (irt_range_point_2d){2, 3}));
+	    irt_range_formula_2d_create_from(irt_range_term_2d_create((irt_range_point_2d){{0, 1}}, (irt_range_point_2d){{10, 12}}, (irt_range_point_2d){{2, 3}}));
 
 	irt_range_formula_2d* b =
-	    irt_range_formula_2d_create_from(irt_range_term_2d_create((irt_range_point_2d){5, 7}, (irt_range_point_2d){20, 24}, (irt_range_point_2d){1, 2}));
+	    irt_range_formula_2d_create_from(irt_range_term_2d_create((irt_range_point_2d){{5, 7}}, (irt_range_point_2d){{20, 24}}, (irt_range_point_2d){{1, 2}}));
 
 	irt_range_formula_2d* c = irt_range_formula_2d_intersect(a, b);
 	EXPECT_STREQ("[6,7] .. [10,12] : [2,6]", toStrR2(c));
@@ -190,12 +190,12 @@ TEST(Range, Intersect2D) {
 TEST(Range, Cardinality2D) {
 	// form a complex 2D set
 	irt_range_formula_2d* a =
-	    irt_range_formula_2d_create_from(irt_range_term_2d_create((irt_range_point_2d){0, 1}, (irt_range_point_2d){10, 12}, (irt_range_point_2d){2, 3}));
+	    irt_range_formula_2d_create_from(irt_range_term_2d_create((irt_range_point_2d){{0, 1}}, (irt_range_point_2d){{10, 12}}, (irt_range_point_2d){{2, 3}}));
 	EXPECT_EQ(5 * 4, irt_range_formula_2d_cardinality(a));
 	EXPECT_EQ(countMembers(a), irt_range_formula_2d_cardinality(a));
 
 	irt_range_formula_2d* b =
-	    irt_range_formula_2d_create_from(irt_range_term_2d_create((irt_range_point_2d){5, 7}, (irt_range_point_2d){20, 24}, (irt_range_point_2d){1, 2}));
+	    irt_range_formula_2d_create_from(irt_range_term_2d_create((irt_range_point_2d){{5, 7}}, (irt_range_point_2d){{20, 24}}, (irt_range_point_2d){{1, 2}}));
 
 	EXPECT_EQ(15 * 9, irt_range_formula_2d_cardinality(b));
 	EXPECT_EQ(countMembers(b), irt_range_formula_2d_cardinality(b));
@@ -279,7 +279,7 @@ TEST(Range, SetDiff1D) {
 				// check memberships
 				int count = 0;
 				for(int h = 0; h < 30; h++) {
-					irt_range_point_1d p = {h};
+					irt_range_point_1d p = {{h}};
 					ASSERT_EQ(irt_range_formula_1d_contains(a, p) && !irt_range_formula_1d_contains(b, p), irt_range_formula_1d_contains(c, p));
 					if(irt_range_formula_1d_contains(c, p)) { count++; }
 				}
@@ -323,7 +323,7 @@ TEST(Range, SetDiff1D) {
 				// check memberships
 				int count = 0;
 				for(int h = 0; h < 30; h++) {
-					irt_range_point_1d p = {h};
+					irt_range_point_1d p = {{h}};
 
 					ASSERT_EQ(irt_range_formula_1d_contains(a, p) && !irt_range_formula_1d_contains(b, p), irt_range_formula_1d_contains(c, p));
 					if(irt_range_formula_1d_contains(c, p)) { count++; }
@@ -399,7 +399,7 @@ TEST(Range, SetDiff2D) {
 							int count = 0;
 							for(int h1 = 0; h1 < N; h1++) {
 								for(int h2 = 0; h2 < N; h2++) {
-									irt_range_point_2d p = {h1, h2};
+									irt_range_point_2d p = {{h1, h2}};
 
 									//					if (irt_range_formula_2d_contains(a,p) && !irt_range_formula_2d_contains(b,p) !=
 									//irt_range_formula_2d_contains(c,p)) {
@@ -472,7 +472,7 @@ TEST(Range, SetDiff2D) {
 							int count = 0;
 							for(int h1 = 0; h1 < N; h1++) {
 								for(int h2 = 0; h2 < N; h2++) {
-									irt_range_point_2d p = {h1, h2};
+									irt_range_point_2d p = {{h1, h2}};
 
 									//					if (irt_range_formula_2d_contains(a,p) && !irt_range_formula_2d_contains(b,p) !=
 									//irt_range_formula_2d_contains(c,p)) {

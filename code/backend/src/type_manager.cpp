@@ -1411,7 +1411,7 @@ namespace backend {
 			int i = 0;
 			if(!params.empty()) {
 				code << ", " << join(", ", functionType->parameterTypes.begin() + 1, functionType->parameterTypes.end(),
-				                     [&, this](std::ostream& out, const c_ast::TypePtr& cur) {
+				                     [&](std::ostream& out, const c_ast::TypePtr& cur) {
 					                     out << c_ast::ParameterPrinter(cur, manager->create(format("p%d", ++i)));
 					                 });
 			}
@@ -1421,7 +1421,7 @@ namespace backend {
 			i = 0;
 			if(!params.empty()) {
 				code << ", " << join(", ", functionType->parameterTypes.begin() + 1, functionType->parameterTypes.end(),
-				                     [&, this](std::ostream& out, const c_ast::TypePtr&) { out << format("p%d", ++i); });
+				                     [&](std::ostream& out, const c_ast::TypePtr&) { out << format("p%d", ++i); });
 			}
 			code << ");\n}\n";
 

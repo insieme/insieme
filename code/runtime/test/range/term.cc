@@ -51,9 +51,9 @@ char _buffer_str[500];
 
 
 TEST(Term, Basic) {
-	irt_range_point_3d a = {1, 2, 3};
-	irt_range_point_3d b = {4, 5, 6};
-	irt_range_point_3d c = {7, 8, 9};
+	irt_range_point_3d a = {{1, 2, 3}};
+	irt_range_point_3d b = {{4, 5, 6}};
+	irt_range_point_3d c = {{7, 8, 9}};
 
 	irt_range_term_3d term = irt_range_term_3d_create(a, b, c);
 

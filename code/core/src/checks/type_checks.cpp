@@ -915,7 +915,7 @@ namespace checks {
 		TypePtr refDeclType = address->getType();
 		TypePtr declType = nullptr;
 
-		visitPathBottomUpInterruptible(address, [&declType,&rExt](const core::DeclarationAddress& decl) {
+		visitPathBottomUpInterruptible(address, [&declType](const core::DeclarationAddress& decl) {
 			// ignore ref casts
 			if(lang::isAnyRefCast(decl.getParentNode())) return false;
 			// ignore constructors if we are the this parameter

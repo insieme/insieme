@@ -168,7 +168,7 @@ namespace extensions {
 				// type extraction from tuple types
 				name = ::format("TUPLE_TYPE_%u", i);
 				auto tupleTypeExtractorType = parseTypeForTypeMapping(builder, name);
-				placeholderReplacer[tupleTypeExtractorType] = [&converter, i](const clang::RecordDecl* recordDecl, const core::TypePtr& irType) {
+				placeholderReplacer[tupleTypeExtractorType] = [i](const clang::RecordDecl* recordDecl, const core::TypePtr& irType) {
 					return irType.as<core::GenericTypePtr>()->getTypeParameter(0).as<core::TupleTypePtr>()->getElement(i);
 				};
 
