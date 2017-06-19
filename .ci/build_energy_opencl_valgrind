@@ -4,11 +4,30 @@ set -e
 
 cd "$BUILD_DIR"
 
+# Use LD_LIBRARY_PATH folders for rpath. This is required as permission setting
+# (see below) clears the LD_LIBRARY_PATH for security reasons.
+rpath_flags=""
+for r in ${LD_LIBRARY_PATH//:/ }; do
+	rpath_flags="$rpath_flags -Wl,-rpath,$r"
+done
+
 cmake "$WORKSPACE/code" \
 	-DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
 	-DCMAKE_CXX_FLAGS="-Werror" \
+	-DCMAKE_CXX_LINK_FLAGS="$rpath_flags" \
 	-DUSE_OPENCL=ON -DOPENCL_ROOT="$OPENCL_ROOT" \
 	-DUSE_ENERGY=ON \
 	-DUSE_VALGRIND=ON
 
 make -j "$NPROC"
+
+# Setup restrictions and permissions.
+if [[ "$(hostname)" == "hudson.dps.uibk.ac.at" ]]; then
+	ulimit -t 14400
+
+	# Set permissions for RAPL tests.
+	sudo /sbin/setcap cap_sys_rawio=ep runtime/ut_runtime_energy_test
+	sudo /sbin/setcap cap_sys_rawio=ep runtime/ut_runtime_instrumentation_regions_test
+	/sbin/getcap runtime/ut_runtime_energy_test
+	/sbin/getcap runtime/ut_runtime_instrumentation_regions_test
+fi
