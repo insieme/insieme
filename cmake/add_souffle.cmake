@@ -102,12 +102,8 @@ macro(souffle_generate_cpp souffle_input_path souffle_dl_target souffle_include_
 	endif()
 
 	# Custom command to compile DL files into CPP files using Soufflé
-	# TODO link souffle binaries with rpath
 	add_custom_command(
-		COMMAND
-			${CMAKE_COMMAND} -E env
-			"LD_LIBRARY_PATH=${Boost_LIBRARY_DIRS}:$ENV{LD_LIBRARY_PATH}"
-			${souffle_binary} -g ${souffle_output_file}.h ${souffle_input_file} ${include_argument}
+		COMMAND ${souffle_binary} -g ${souffle_output_file}.h ${souffle_input_file} ${include_argument}
 		WORKING_DIRECTORY ${souffle_output_path}
 		SOURCE ${souffle_input_file}
 		DEPENDS ${souffle_input_file} ${dough_output_files}

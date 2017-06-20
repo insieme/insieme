@@ -38,8 +38,6 @@ pkg_prepare() {
 }
 
 pkg_configure() {
-	# TODO link souffle binaries with rpath against boost
-
 	pwd
 	sh ./bootstrap
 	./configure \
@@ -47,5 +45,10 @@ pkg_configure() {
 		--with-boost="$PREFIX/$BOOST_PKG" \
 		--disable-java \
 		CPPFLAGS="-I$PREFIX/$SQLITE_PKG/include" \
-		LDFLAGS="-L$PREFIX/$SQLITE_PKG/lib -Wl,-rpath,$PREFIX/$BISON_PKG/lib"
+		LDFLAGS="-L$PREFIX/$SQLITE_PKG/lib -Wl,-rpath,$PREFIX/$BISON_PKG/lib -Wl,-rpath,$PREFIX/$BOOST_PKG/lib"
+}
+
+pkg_build() {
+	make -j "$SLOTS" || true
+	make -j "$SLOTS"
 }
