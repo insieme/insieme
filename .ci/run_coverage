@@ -4,4 +4,7 @@ set -ex
 
 cd "$BUILD_DIR"
 
+# Adjust resource restriction.
+ulimit -t 14400
+
 nice -n5 make coverage ARGS="-j $NPROC"

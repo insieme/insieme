@@ -14,7 +14,9 @@ export WORKSPACE="${WORKSPACE:-"$(realpath "$CI_DIR/..")"}"
 # Assume Build Directory if not set.
 export BUILD_DIR="${BUILD_DIR:-$WORKSPACE/build}"
 
-# Adjust resource restriction for CI server.
+# Are we running on our CI server?
 if [[ "$(hostname)" == "hudson.dps.uibk.ac.at" ]]; then
-	ulimit -t 14400
+	export RUNNING_ON_CI_SERVER="1"
+else
+	export RUNNING_ON_CI_SERVER=""
 fi
