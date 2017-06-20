@@ -37,6 +37,7 @@
  */
 #include "insieme/core/checks/semantic_checks.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/annotations/default_delete.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -52,14 +53,24 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-	OptionalMessageList DefaultedDeletedMarkerCheck::visitCompoundStmt(const CompoundStmtAddress& compound) {
+	OptionalMessageList DefaultedDeletedMarkerCheck::visitNode(const NodeAddress& node) {
 		OptionalMessageList res;
-		IRBuilder builder(compound->getNodeManager());
+		IRBuilder builder(node->getNodeManager());
 
-		if(compound.getAddressedNode() == builder.getDefaultedBodyMarker()) {
-			add(res, Message(compound, EC_SEMANTIC_DEFAULTED_BODY_MARKER, "Found defaulted body marker.", Message::ERROR));
-		} else if(compound.getAddressedNode() == builder.getDeletedBodyMarker()) {
-			add(res, Message(compound, EC_SEMANTIC_DELETED_BODY_MARKER, "Found deleted body marker.", Message::ERROR));
+		if(annotations::isMarkedDefaulted(node)) {
+			add(res, Message(node, EC_SEMANTIC_DEFAULTED_BODY_MARKER, "Found defaulted node annotation.", Message::ERROR));
+		}
+		if(annotations::isMarkedDeleted(node)) {
+			add(res, Message(node, EC_SEMANTIC_DELETED_BODY_MARKER, "Found deleted node annotation.", Message::ERROR));
+		}
+
+		if(auto compound = node.getAddressedNode().isa<CompoundStmtPtr>()) {
+			if(compound == builder.getDefaultedBodyMarker()) {
+				add(res, Message(node, EC_SEMANTIC_DEFAULTED_BODY_MARKER, "Found defaulted body marker.", Message::ERROR));
+			}
+			if(compound == builder.getDeletedBodyMarker()) {
+				add(res, Message(node, EC_SEMANTIC_DELETED_BODY_MARKER, "Found deleted body marker.", Message::ERROR));
+			}
 		}
 
 		return res;

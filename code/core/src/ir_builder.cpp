@@ -347,13 +347,13 @@ namespace core {
 
 
 	CompoundStmtPtr IRBuilderBaseModule::getDefaultedBodyMarker() const {
-		static auto defaultedBodyCompound = compoundStmt(literal(genericType("Insieme_defaulted_body_compound_marker"), "Insieme_defaulted_body_compound_marker"));
-		return defaultedBodyCompound;
+		static auto defaultedBodyMarker = compoundStmt(literal(genericType("Insieme_defaulted_body_compound_marker"), "Insieme_defaulted_body_compound_marker"));
+		return defaultedBodyMarker;
 	}
 
 	CompoundStmtPtr IRBuilderBaseModule::getDeletedBodyMarker() const {
-		static auto deletedBodyCompound = compoundStmt(literal(genericType("Insieme_deleted_body_compound_marker"), "Insieme_deleted_body_compound_marker"));
-		return deletedBodyCompound;
+		static auto deletedBodyMarker = compoundStmt(literal(genericType("Insieme_deleted_body_compound_marker"), "Insieme_deleted_body_compound_marker"));
+		return deletedBodyMarker;
 	}
 
 	namespace {

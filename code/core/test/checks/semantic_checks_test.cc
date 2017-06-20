@@ -38,6 +38,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/annotations/default_delete.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/checks/semantic_checks.h"
 #include "insieme/utils/logging.h"
@@ -57,8 +58,24 @@ namespace checks {
 
 		CheckPtr defaultedDeletedMarkerCheck = makeRecursive(make_check<DefaultedDeletedMarkerCheck>());
 
+		auto lit = builder.intLit(5);
+		auto checkResult = check(lit, defaultedDeletedMarkerCheck);
+		EXPECT_TRUE(checkResult.empty());
+
+		lit = builder.intLit(6);
+		annotations::markDefaulted(lit);
+		checkResult = check(lit, defaultedDeletedMarkerCheck);
+		EXPECT_EQ(checkResult.size(), 1);
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(lit), EC_SEMANTIC_DEFAULTED_BODY_MARKER, "", Message::ERROR));
+
+		lit = builder.intLit(7);
+		annotations::markDeleted(lit);
+		checkResult = check(lit, defaultedDeletedMarkerCheck);
+		EXPECT_EQ(checkResult.size(), 1);
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(lit), EC_SEMANTIC_DELETED_BODY_MARKER, "", Message::ERROR));
+
 		auto stmt = builder.getNoOp();
-		auto checkResult = check(stmt, defaultedDeletedMarkerCheck);
+		checkResult = check(stmt, defaultedDeletedMarkerCheck);
 		EXPECT_TRUE(checkResult.empty());
 
 		stmt = builder.getDefaultedBodyMarker();
