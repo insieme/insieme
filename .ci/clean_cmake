@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 # Cleanup all CMake files to start a clean configuration. Object files are
 # *not* removed to improve compile time.

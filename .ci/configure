@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 # Assuming all required dependencies are installed, this will setup the
 # symlinks corresponding to the installed version selected in the dependency

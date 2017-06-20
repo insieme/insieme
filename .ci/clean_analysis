@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 # Remove Haskell Stack's Working Directory to simulate a clean installation.
 rm -rf "$WORKSPACE/code/analysis/src/haskell/insieme-hat/.stack-work"
