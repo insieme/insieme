@@ -38,6 +38,8 @@ pkg_prepare() {
 }
 
 pkg_configure() {
+	# TODO link souffle binaries with rpath against boost
+
 	pwd
 	sh ./bootstrap
 	./configure \
