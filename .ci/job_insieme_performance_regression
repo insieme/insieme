@@ -22,6 +22,8 @@ cp "$WORKSPACE/code/driver/src/perf_reg/assets/plotly-latest.min.js" \
 # Run integration tests.
 export IRT_AFFINITY_POLICY="IRT_AFFINITY_FILL"
 
+./integration_tests --preprocess
+
 ./integration_tests -w1 -r5 \
 	--long-tests-also \
 	--log-to-csv-file="$LOG_DIR/log$BUILD_NUMBER.csv" \

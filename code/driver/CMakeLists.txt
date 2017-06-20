@@ -50,18 +50,5 @@ foreach(test ${driver_tests})
 	endif()
 endforeach(test)
 
-# Run preprocessing for integration tests
-add_custom_command(
-	TARGET driver_integration_tests
-	POST_BUILD
-	COMMAND ${CMAKE_CURRENT_BINARY_DIR}/integration_tests --preprocess
-	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-)
-
 # integrations_tests uses insiemecc - so there is a dependency
 add_dependencies(driver_integration_tests driver_insiemecc)
-
-# The overall integration unit test depends on the preprocessing being done.
-# To ensure this we add a dependency to the integration_tests binary here,
-# which will ensure the preprocessing has happened.
-add_dependencies(ut_driver_integration_overall_integration_test driver_integration_tests)
