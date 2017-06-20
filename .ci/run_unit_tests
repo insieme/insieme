@@ -7,4 +7,4 @@ cd "$BUILD_DIR"
 # Adjust resource restriction.
 ulimit -t 14400
 
-nice -n5 make test ARGS="-j $NPROC"
+make test ARGS="-j $NPROC"

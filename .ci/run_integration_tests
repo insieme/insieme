@@ -5,10 +5,10 @@ set -ex
 cd "$BUILD_DIR/driver"
 
 # Setup.
-nice -n5 ./integration_tests --preprocess
+./integration_tests --preprocess
 
 # Arguments used to run this script are forwarded to the runner.
-nice -n5 ./integration_tests -w "$NPROC" "$@"
+./integration_tests -w "$NPROC" "$@"
 
 # Cleanup.
-nice -n5 ./integration_tests --postprocessing
+./integration_tests --postprocessing

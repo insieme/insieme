@@ -6,9 +6,9 @@ cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 source defaults.sh
 
-./configure
-./clean_cmake
-./clean_analysis
-./build_analysis
-./run_unit_tests
-./run_integration_tests
+nice -n $NICE_LEVEL ./configure
+nice -n $NICE_LEVEL ./clean_cmake
+nice -n $NICE_LEVEL ./clean_analysis
+nice -n $NICE_LEVEL ./build_analysis
+nice -n $NICE_LEVEL ./run_unit_tests
+nice -n $NICE_LEVEL ./run_integration_tests

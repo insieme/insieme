@@ -6,8 +6,8 @@ cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 source defaults.sh
 
-./configure
-./clean_cmake
-./build_coverage_docs
-./run_sloccount
-./run_coverage
+nice -n $NICE_LEVEL ./configure
+nice -n $NICE_LEVEL ./clean_cmake
+nice -n $NICE_LEVEL ./build_coverage_docs
+nice -n $NICE_LEVEL ./run_sloccount
+nice -n $NICE_LEVEL ./run_coverage

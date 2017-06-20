@@ -4,6 +4,9 @@ export BUILD_TYPE="${BUILD_TYPE:-Release}"
 # Number of cores used for compilation and testing.
 export NPROC="${NPROC:-$(nproc)}"
 
+# Set default nice level.
+export NICE_LEVEL="${NICE_LEVEL:-10}"
+
 # Location of Third Party Libraries.
 export THIRD_PARTY_LIBS="${THIRD_PARTY_LIBS:-$HOME/third_party_libs}"
 
