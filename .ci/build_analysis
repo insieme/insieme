@@ -12,7 +12,7 @@ cmake "$WORKSPACE/code" \
 
 make -j "$NPROC"
 
-./integration_tests --preprocess
+driver/integration_tests --preprocess
 
 if [[ -n "${STACK_ROOT+x}" && "$(hostname)" == "hudson.dps.uibk.ac.at" ]]; then
 	# Grant everybody write permissions to stack-root

@@ -21,7 +21,7 @@ cmake "$WORKSPACE/code" \
 
 make -j "$NPROC"
 
-./integration_tests --preprocess
+driver/integration_tests --preprocess
 
 # Setup restrictions and permissions for CI server.
 if [[ -n "$RUNNING_ON_CI_SERVER" ]]; then

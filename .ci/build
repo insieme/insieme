@@ -10,4 +10,4 @@ cmake "$WORKSPACE/code" \
 
 make -j "$NPROC"
 
-./integration_tests --preprocess
+driver/integration_tests --preprocess
