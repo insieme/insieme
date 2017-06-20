@@ -299,6 +299,9 @@ namespace core {
 
 		FieldPtr field(const string& name, const TypePtr& type) const;
 
+		CompoundStmtPtr getDefaultedBodyMarker() const;
+		CompoundStmtPtr getDeletedBodyMarker() const;
+
 		TagTypePtr structType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
 		TagTypePtr structType(const vector<ParentPtr>& parents, const vector<FieldPtr>& fields) const;
 		TagTypePtr structType(const vector<TypePtr>& parents, const vector<FieldPtr>& fields) const;

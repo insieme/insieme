@@ -51,6 +51,27 @@ namespace checks {
 		return contains(list.getAll(), msg);
 	}
 
+	TEST(DefaultedDeletedMarkerCheck, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		CheckPtr defaultedDeletedMarkerCheck = makeRecursive(make_check<DefaultedDeletedMarkerCheck>());
+
+		auto stmt = builder.getNoOp();
+		auto checkResult = check(stmt, defaultedDeletedMarkerCheck);
+		EXPECT_TRUE(checkResult.empty());
+
+		stmt = builder.getDefaultedBodyMarker();
+		checkResult = check(stmt, defaultedDeletedMarkerCheck);
+		EXPECT_EQ(checkResult.size(), 1);
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt), EC_SEMANTIC_DEFAULTED_BODY_MARKER, "", Message::ERROR));
+
+		stmt = builder.getDeletedBodyMarker();
+		checkResult = check(stmt, defaultedDeletedMarkerCheck);
+		EXPECT_EQ(checkResult.size(), 1);
+		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt), EC_SEMANTIC_DELETED_BODY_MARKER, "", Message::ERROR));
+	}
+
 	TEST(MissingReturnStmtCheck, UnitLambda) {
 		NodeManager manager;
 		IRBuilder builder(manager);

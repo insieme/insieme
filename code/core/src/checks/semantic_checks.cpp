@@ -52,6 +52,19 @@ namespace insieme {
 namespace core {
 namespace checks {
 
+	OptionalMessageList DefaultedDeletedMarkerCheck::visitCompoundStmt(const CompoundStmtAddress& compound) {
+		OptionalMessageList res;
+		IRBuilder builder(compound->getNodeManager());
+
+		if(compound.getAddressedNode() == builder.getDefaultedBodyMarker()) {
+			add(res, Message(compound, EC_SEMANTIC_DEFAULTED_BODY_MARKER, "Found defaulted body marker.", Message::ERROR));
+		} else if(compound.getAddressedNode() == builder.getDeletedBodyMarker()) {
+			add(res, Message(compound, EC_SEMANTIC_DELETED_BODY_MARKER, "Found deleted body marker.", Message::ERROR));
+		}
+
+		return res;
+	}
+
 	OptionalMessageList FreeBreakInsideForLoopCheck::visitForStmt(const ForStmtAddress& curfor) {
 		OptionalMessageList res;
 		auto& mgr = curfor->getNodeManager();

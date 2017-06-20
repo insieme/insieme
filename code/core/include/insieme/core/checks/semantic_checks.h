@@ -52,6 +52,11 @@ namespace checks {
 	SIMPLE_CHECK(Undefined, CallExpr, false);
 
 	/**
+	 * This check verifies that no defaulted and deleted marker bodies remain in the final IR.
+	 */
+	SIMPLE_CHECK(DefaultedDeletedMarker, CompoundStmt, false);
+
+	/**
 	 * This check verifies that there are no free break statements inside for loops.
 	 */
 	SIMPLE_CHECK(FreeBreakInsideForLoop, ForStmt, false);
