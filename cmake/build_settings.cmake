@@ -87,6 +87,11 @@ else()
 	message(FATAL_ERROR "Unhandled Compiler: ${CMAKE_CXX_COMPILER_ID}")
 endif()
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+	message(WARNING "Insieme Runtime is not supported when using Clang")
+	set(BUILD_RUNTIME OFF)
+endif()
+
 # Forward settings for external projects.
 set(CMAKE_EXTERNALPROJECT_FORWARDS
 	-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
