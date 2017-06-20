@@ -4,9 +4,6 @@ set -ex
 
 cd "$BUILD_DIR/driver"
 
-# Setup.
-./integration_tests --preprocess
-
 # Arguments used to run this script are forwarded to the runner.
 ./integration_tests -w "$NPROC" "$@"
 

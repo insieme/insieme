@@ -11,3 +11,5 @@ cmake "$WORKSPACE/code" \
 	-DBUILD_COVERAGE=ON
 
 make -j "$NPROC"
+
+./integration_tests --preprocess
