@@ -1947,7 +1947,7 @@ namespace core {
 		static StructPtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
 		                     const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			return get(manager, name, parents, fields, ctors, Expressions::get(manager, toVector(dtor)), dtorIsVirtual, mfuns, pvfuns);
+			return get(manager, name, parents, fields, ctors, Expressions::get(manager, dtor ? toVector(dtor) : ExpressionList()), dtorIsVirtual, mfuns, pvfuns);
 		}
 
 		/**
@@ -2104,7 +2104,7 @@ namespace core {
 		static UnionPtr get(NodeManager& manager, const StringValuePtr& name, const FieldsPtr& fields,
 		                    const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 		                    const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			return get(manager, name, fields, ctors, Expressions::get(manager, toVector(dtor)), dtorIsVirtual, mfuns, pvfuns);
+			return get(manager, name, fields, ctors, Expressions::get(manager, dtor ? toVector(dtor) : ExpressionList()), dtorIsVirtual, mfuns, pvfuns);
 		}
 
 		/**
