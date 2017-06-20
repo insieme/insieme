@@ -14,6 +14,9 @@ export WORKSPACE="${WORKSPACE:-"$(realpath "$CI_DIR/..")"}"
 # Assume Build Directory if not set.
 export BUILD_DIR="${BUILD_DIR:-$WORKSPACE/build}"
 
+# Number of Insieme Runtime Workers.
+export IRT_NUM_WORKERS="3"
+
 # Are we running on our CI server?
 if [[ "$(hostname)" == "hudson.dps.uibk.ac.at" ]]; then
 	export RUNNING_ON_CI_SERVER="1"
