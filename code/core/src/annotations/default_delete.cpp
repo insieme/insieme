@@ -53,7 +53,7 @@ namespace annotations {
 		}
 
 		void cloneTo(const NodePtr& target) const {
-			if(value) markDefaulted(target);
+			if(value) markDefaultedPreTU(target);
 		}
 	};
 
@@ -65,25 +65,25 @@ namespace annotations {
 		}
 
 		void cloneTo(const NodePtr& target) const {
-			if(value) markDeleted(target);
+			if(value) markDeletedPreTU(target);
 		}
 	};
 
 	// ----------------------------------------------------
 
-	void markDefaulted(const NodePtr& node) {
+	void markDefaultedPreTU(const NodePtr& node) {
 		node->attachValue(DefaultedTag(true));
 	}
 
-	bool isMarkedDefaulted(const NodePtr& node) {
+	bool isMarkedDefaultedPreTU(const NodePtr& node) {
 		return node->hasAttachedValue<DefaultedTag>() && node->getAttachedValue<DefaultedTag>().value;
 	}
 
-	void markDeleted(const NodePtr& node) {
+	void markDeletedPreTU(const NodePtr& node) {
 		node->attachValue(DeletedTag(true));
 	}
 
-	bool isMarkedDeleted(const NodePtr& node) {
+	bool isMarkedDeletedPreTU(const NodePtr& node) {
 		return node->hasAttachedValue<DeletedTag>() && node->getAttachedValue<DeletedTag>().value;
 	}
 

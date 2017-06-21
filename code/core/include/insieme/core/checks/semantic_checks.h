@@ -54,7 +54,7 @@ namespace checks {
 	/**
 	 * This check verifies that no defaulted and deleted marker bodies remain in the final IR.
 	 */
-	SIMPLE_CHECK(DefaultedDeletedMarker, Node, false);
+	SIMPLE_CHECK(DefaultedDeletedPreTUMarker, Node, false);
 
 	/**
 	 * This check verifies that there are no free break statements inside for loops.

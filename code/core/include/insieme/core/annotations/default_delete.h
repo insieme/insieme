@@ -40,7 +40,7 @@
 #include "insieme/core/forward_decls.h"
 
 /**
- * A header file for annotating defaulted and deleted members of record types.
+ * A header file for annotating defaulted and deleted members of record types in a pre-TranslationUnit stage.
  */
 
 namespace insieme {
@@ -50,22 +50,22 @@ namespace annotations {
 	/**
 	 * Marks the given node as defaulted.
 	 */
-	void markDefaulted(const NodePtr& node);
+	void markDefaultedPreTU(const NodePtr& node);
 
 	/**
 	 * Checks whether a node has been marked as defaulted.
 	 */
-	bool isMarkedDefaulted(const NodePtr& node);
+	bool isMarkedDefaultedPreTU(const NodePtr& node);
 
 	/**
 	 * Marks the given node as deleted.
 	 */
-	void markDeleted(const NodePtr& node);
+	void markDeletedPreTU(const NodePtr& node);
 
 	/**
 	 * Checks whether a node has been marked as deleted.
 	 */
-	bool isMarkedDeleted(const NodePtr& node);
+	bool isMarkedDeletedPreTU(const NodePtr& node);
 
 } // end namespace annotations
 } // end namespace core

@@ -52,24 +52,24 @@ namespace checks {
 		return contains(list.getAll(), msg);
 	}
 
-	TEST(DefaultedDeletedMarkerCheck, Basic) {
+	TEST(DefaultedDeletedPreTUMarkerCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		CheckPtr defaultedDeletedMarkerCheck = makeRecursive(make_check<DefaultedDeletedMarkerCheck>());
+		CheckPtr defaultedDeletedMarkerCheck = makeRecursive(make_check<DefaultedDeletedPreTUMarkerCheck>());
 
 		auto lit = builder.intLit(5);
 		auto checkResult = check(lit, defaultedDeletedMarkerCheck);
 		EXPECT_TRUE(checkResult.empty());
 
 		lit = builder.intLit(6);
-		annotations::markDefaulted(lit);
+		annotations::markDefaultedPreTU(lit);
 		checkResult = check(lit, defaultedDeletedMarkerCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(lit), EC_SEMANTIC_DEFAULTED_BODY_MARKER, "", Message::ERROR));
 
 		lit = builder.intLit(7);
-		annotations::markDeleted(lit);
+		annotations::markDeletedPreTU(lit);
 		checkResult = check(lit, defaultedDeletedMarkerCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(lit), EC_SEMANTIC_DELETED_BODY_MARKER, "", Message::ERROR));
@@ -78,12 +78,12 @@ namespace checks {
 		checkResult = check(stmt, defaultedDeletedMarkerCheck);
 		EXPECT_TRUE(checkResult.empty());
 
-		stmt = builder.getDefaultedBodyMarker();
+		stmt = builder.getDefaultedBodyPreTUMarker();
 		checkResult = check(stmt, defaultedDeletedMarkerCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt), EC_SEMANTIC_DEFAULTED_BODY_MARKER, "", Message::ERROR));
 
-		stmt = builder.getDeletedBodyMarker();
+		stmt = builder.getDeletedBodyPreTUMarker();
 		checkResult = check(stmt, defaultedDeletedMarkerCheck);
 		EXPECT_EQ(checkResult.size(), 1);
 		EXPECT_PRED2(containsMSG, checkResult, Message(NodeAddress(stmt), EC_SEMANTIC_DELETED_BODY_MARKER, "", Message::ERROR));

@@ -63,6 +63,8 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 
+#include "insieme/core/annotations/default_delete.h"
+
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/channel.h"
 #include "insieme/core/lang/compound_operators.h"
@@ -346,12 +348,12 @@ namespace core {
 	}
 
 
-	CompoundStmtPtr IRBuilderBaseModule::getDefaultedBodyMarker() const {
+	CompoundStmtPtr IRBuilderBaseModule::getDefaultedBodyPreTUMarker() const {
 		static auto defaultedBodyMarker = compoundStmt(literal(genericType("Insieme_defaulted_body_compound_marker"), "Insieme_defaulted_body_compound_marker"));
 		return defaultedBodyMarker;
 	}
 
-	CompoundStmtPtr IRBuilderBaseModule::getDeletedBodyMarker() const {
+	CompoundStmtPtr IRBuilderBaseModule::getDeletedBodyPreTUMarker() const {
 		static auto deletedBodyMarker = compoundStmt(literal(genericType("Insieme_deleted_body_compound_marker"), "Insieme_deleted_body_compound_marker"));
 		return deletedBodyMarker;
 	}

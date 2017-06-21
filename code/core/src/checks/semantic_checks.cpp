@@ -53,22 +53,22 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-	OptionalMessageList DefaultedDeletedMarkerCheck::visitNode(const NodeAddress& node) {
+	OptionalMessageList DefaultedDeletedPreTUMarkerCheck::visitNode(const NodeAddress& node) {
 		OptionalMessageList res;
 		IRBuilder builder(node->getNodeManager());
 
-		if(annotations::isMarkedDefaulted(node)) {
+		if(annotations::isMarkedDefaultedPreTU(node)) {
 			add(res, Message(node, EC_SEMANTIC_DEFAULTED_BODY_MARKER, "Found defaulted node annotation.", Message::ERROR));
 		}
-		if(annotations::isMarkedDeleted(node)) {
+		if(annotations::isMarkedDeletedPreTU(node)) {
 			add(res, Message(node, EC_SEMANTIC_DELETED_BODY_MARKER, "Found deleted node annotation.", Message::ERROR));
 		}
 
 		if(auto compound = node.getAddressedNode().isa<CompoundStmtPtr>()) {
-			if(compound == builder.getDefaultedBodyMarker()) {
+			if(compound == builder.getDefaultedBodyPreTUMarker()) {
 				add(res, Message(node, EC_SEMANTIC_DEFAULTED_BODY_MARKER, "Found defaulted body marker.", Message::ERROR));
 			}
-			if(compound == builder.getDeletedBodyMarker()) {
+			if(compound == builder.getDeletedBodyPreTUMarker()) {
 				add(res, Message(node, EC_SEMANTIC_DELETED_BODY_MARKER, "Found deleted body marker.", Message::ERROR));
 			}
 		}
