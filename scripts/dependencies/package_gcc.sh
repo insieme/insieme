@@ -1,10 +1,10 @@
 NAME="gcc"
-VERSION="5.4.0"
+VERSION="6.3.0"
 PACKAGE="$NAME-$VERSION"
 
 FILE="$PACKAGE.tar.gz"
 URL="http://www.insieme-compiler.org/ext_libs/$FILE"
-SHA256SUM="37089e80c3f2e9a0663d7ccc51c2a6c7dbbf3275bc1e4ed1ed3b1460cd5b3030"
+SHA256SUM="02f9302a559fa2251595ca0bc1e937219eff2995a3802d7b31676fec2402beb4"
 
 DEPENDS="gmp mpc mpfr"
 
