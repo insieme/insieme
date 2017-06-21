@@ -2,6 +2,11 @@
 
 set -ex
 
+if [[ -z "${WORKSPACE+x}" ]]; then
+	cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+	source defaults.sh
+fi
+
 # Assuming all required dependencies are installed, this will setup the
 # symlinks corresponding to the installed version selected in the dependency
 # installer. Just in case some versions have changed, we remove the existing

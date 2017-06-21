@@ -2,6 +2,11 @@
 
 set -ex
 
+if [[ -z "${WORKSPACE+x}" ]]; then
+	cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+	source defaults.sh
+fi
+
 # Cleanup all CMake files to start a clean configuration. Object files are
 # *not* removed to improve compile time.
 rm -rf "$BUILD_DIR/CMake"* "$BUILD_DIR/"*".cmake"

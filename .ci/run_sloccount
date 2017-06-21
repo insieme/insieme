@@ -2,6 +2,11 @@
 
 set -ex
 
+if [[ -z "${WORKSPACE+x}" ]]; then
+	cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+	source defaults.sh
+fi
+
 cd "$BUILD_DIR"
 
 rm -f sloccount.sc

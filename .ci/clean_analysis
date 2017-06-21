@@ -2,5 +2,10 @@
 
 set -ex
 
+if [[ -z "${WORKSPACE+x}" ]]; then
+	cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+	source defaults.sh
+fi
+
 # Remove Haskell Stack's Working Directory to simulate a clean installation.
 rm -rf "$WORKSPACE/code/analysis/src/haskell/insieme-hat/.stack-work"
