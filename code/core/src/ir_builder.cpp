@@ -515,58 +515,85 @@ namespace core {
 		                                    dtor, boolValue(dtorIsVirtual), mfuns, pureVirtualMemberFunctions(pvmfuns));
 	}
 
-	LambdaExprPtr IRBuilderBaseModule::getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+	FunctionTypePtr IRBuilderBaseModule::getDefaultConstructorType(const TypePtr& thisType) const {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
-		auto ctorType = functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
+		return functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
+	}
+	LambdaExprPtr IRBuilderBaseModule::getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		auto ctorType = getDefaultConstructorType(thisType);
 		auto name = getLiteralForConstructor(ctorType);
-		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType))), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
+		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType))),
+		                                                                getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
 	}
 
-	LambdaExprPtr IRBuilderBaseModule::getDefaultCopyConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+	FunctionTypePtr IRBuilderBaseModule::getDefaultCopyConstructorType(const TypePtr& thisType) const {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		TypePtr otherType = refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
-		auto ctorType = functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
+		return functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
+	}
+	LambdaExprPtr IRBuilderBaseModule::getDefaultCopyConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		auto ctorType = getDefaultCopyConstructorType(thisType);
 		auto name = getLiteralForConstructor(ctorType);
-		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
+		const auto& otherType = ctorType->getParameterType(1);
+		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)),
+		                                                                getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
 	}
 
-	LambdaExprPtr IRBuilderBaseModule::getDefaultMoveConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+	FunctionTypePtr IRBuilderBaseModule::getDefaultMoveConstructorType(const TypePtr& thisType) const {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		TypePtr otherType = refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
-		auto ctorType = functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
+		return functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
+	}
+	LambdaExprPtr IRBuilderBaseModule::getDefaultMoveConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		auto ctorType = getDefaultMoveConstructorType(thisType);
 		auto name = getLiteralForConstructor(ctorType);
-		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
+		const auto& otherType = ctorType->getParameterType(1);
+		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)),
+		                                                                getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
 	}
 
-	LambdaExprPtr IRBuilderBaseModule::getDefaultDestructor(const TypePtr& thisType) const {
+	FunctionTypePtr IRBuilderBaseModule::getDefaultDestructorType(const TypePtr& thisType) const {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
-		// create default destructor
-		auto dtorType = functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
+		return functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
+	}
+	LambdaExprPtr IRBuilderBaseModule::getDefaultDestructor(const TypePtr& thisType) const {
+		auto dtorType = getDefaultDestructorType(thisType);
 		auto name = getLiteralForDestructor(dtorType);
-		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))), getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
+		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(dtorType, toVector(variable(refType(thisType))),
+		                                                                getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
 	}
 
-	MemberFunctionPtr IRBuilderBaseModule::getDefaultCopyAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+	FunctionTypePtr IRBuilderBaseModule::getDefaultCopyAssignOperatorType(const TypePtr& thisType) const {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		TypePtr otherType = refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
 		TypePtr resType = refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
-		auto funType = functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
+		return functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
+	}
+	MemberFunctionPtr IRBuilderBaseModule::getDefaultCopyAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		auto funType = getDefaultCopyAssignOperatorType(thisType);
 		auto thisParam = variable(refType(thisType));
-		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
+		auto res = returnStmt(lang::buildRefCast(deref(thisParam), funType->getReturnType()));
 		auto name = getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
-		auto fun = core::analysis::markAsDefaultMember(normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)), res, name->getValue()->getValue())).as<LambdaExprPtr>());
+		const auto& otherType = funType->getParameterType(1);
+		auto fun = core::analysis::markAsDefaultMember(normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)),
+		                                                                    res, name->getValue()->getValue())).as<LambdaExprPtr>());
 		return memberFunction(false, utils::getMangledOperatorAssignName(), fun);
 	}
 
-	MemberFunctionPtr IRBuilderBaseModule::getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+	FunctionTypePtr IRBuilderBaseModule::getDefaultMoveAssignOperatorType(const TypePtr& thisType) const {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		TypePtr otherType = refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
 		TypePtr resType = refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
-		auto funType = functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
+		return functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
+	}
+	MemberFunctionPtr IRBuilderBaseModule::getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const {
+		auto funType = getDefaultMoveAssignOperatorType(thisType);
 		auto thisParam = variable(refType(thisType));
-		auto res = returnStmt(lang::buildRefCast(deref(thisParam),resType));
+		auto res = returnStmt(lang::buildRefCast(deref(thisParam), funType->getReturnType()));
 		auto name = getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
-		auto fun = core::analysis::markAsDefaultMember(normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)), res, name->getValue()->getValue())).as<LambdaExprPtr>());
+		const auto& otherType = funType->getParameterType(1);
+		auto fun = core::analysis::markAsDefaultMember(normalize(lambdaExpr(funType, toVector(thisParam, variable(otherType)),
+		                                                                    res, name->getValue()->getValue())).as<LambdaExprPtr>());
 		return memberFunction(false, utils::getMangledOperatorAssignName(), fun);
 	}
 

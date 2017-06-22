@@ -336,16 +336,22 @@ namespace core {
 
 		// -- special functions for classes --
 
-		LambdaExprPtr getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
+		FunctionTypePtr getDefaultConstructorType(const TypePtr& thisType) const;
+		LambdaExprPtr   getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
 
-		LambdaExprPtr getDefaultCopyConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
+		FunctionTypePtr getDefaultCopyConstructorType(const TypePtr& thisType) const;
+		LambdaExprPtr   getDefaultCopyConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
 
-		LambdaExprPtr getDefaultMoveConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
+		FunctionTypePtr getDefaultMoveConstructorType(const TypePtr& thisType) const;
+		LambdaExprPtr   getDefaultMoveConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
 
-		LambdaExprPtr getDefaultDestructor(const TypePtr& thisType) const;
+		FunctionTypePtr getDefaultDestructorType(const TypePtr& thisType) const;
+		LambdaExprPtr   getDefaultDestructor(const TypePtr& thisType) const;
 
+		FunctionTypePtr   getDefaultCopyAssignOperatorType(const TypePtr& thisType) const;
 		MemberFunctionPtr getDefaultCopyAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
 
+		FunctionTypePtr   getDefaultMoveAssignOperatorType(const TypePtr& thisType) const;
 		MemberFunctionPtr getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
 
 	  private:
