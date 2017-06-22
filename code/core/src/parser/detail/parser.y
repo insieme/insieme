@@ -337,7 +337,7 @@ fields : fields field                                                       { $1
 field : "identifier" ":" type ";"                                           { $$ = driver.builder.field($1, $3); }
       ;
 
-constructors : constructors constructor                                     { INSPIRE_GUARD(@2, $2) if(!driver.isMarkedAsDefaultedMember($2)) { $1.push_back($2); } $$ = $1; }
+constructors : constructors constructor                                     { INSPIRE_GUARD(@2, $2) $1.push_back($2); $$ = $1; }
              |                                                              { $$ = ExpressionList(); }
              ;
 
@@ -345,8 +345,8 @@ constructor : "ctor" constructor_lambda                                     { $$
             ;
 
 compound_no_scope_default_delete : compound_statement_no_scope              { $$ = $1; }
-                                 | "=" "default" ";"                        { $$ = driver.getParserDefaultCompound(); }
-                                 | "=" "delete"  ";"                        { $$ = driver.getParserDeleteCompound(); }
+                                 | "=" "default" ";"                        { $$ = driver.builder.getDefaultedBodyPreTUMarker(); }
+                                 | "=" "delete"  ";"                        { $$ = driver.builder.getDeletedBodyPreTUMarker(); }
                                  ;
 
 constructor_lambda : "(" parameters                                         { driver.openScope(); driver.registerParameters(@2, $2); }
@@ -362,7 +362,7 @@ destructor : "dtor" virtual_flag                                            { dr
            |                                                                { $$ = std::make_pair(LambdaExprPtr(), false); }
            ;
 
-member_functions : member_functions member_function                         { INSPIRE_GUARD(@2, $2) if(!driver.isMarkedAsDefaultedMember($2)) { $1.push_back($2); } $$ = $1; }
+member_functions : member_functions member_function                         { INSPIRE_GUARD(@2, $2) $1.push_back($2); $$ = $1; }
                  |                                                          { $$ = MemberFunctionList(); }
                  ;
 
@@ -371,7 +371,7 @@ member_function : virtual_flag cv_flags lambda_or_function "identifier" "=" "(" 
                 | virtual_flag cv_flags lambda_or_function "identifier" "=" "(" non_empty_parameters
                                                                                         { driver.inLambda = $3; driver.openScope(); driver.registerParameters(@7, $7, $2.first, $2.second); }
                       ")" "->" type compound_no_scope_default_delete        { $$ = driver.genMemberFunction(@$, $1, $2.first, $2.second, $4, $7, $11, $12); driver.unregisterParameters(); driver.closeScope(); driver.inLambda = true; }
-				;
+                ;
 
 virtual_flag : "virtual"                                                    { $$ = true; }
              |                                                              { $$ = false; }

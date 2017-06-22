@@ -1231,6 +1231,10 @@ namespace parser {
 			def struct A {
 				i : int<4>;
 				ctor() { i = 0; }
+				ctor(other: ref<A,t,f,cpp_ref>) = delete;
+				ctor(other: ref<A,f,f,cpp_rref>) = delete;
+				lambda )" + utils::getMangledOperatorAssignName() + R"( = (other: ref<A,t,f,cpp_ref>) -> ref<A,f,f,cpp_ref> = delete;
+				lambda )" + utils::getMangledOperatorAssignName() + R"( = (other: ref<A,t,f,cpp_rref>) -> ref<A,f,f,cpp_ref> = delete;
 			};
 			A
 		)");
@@ -1249,7 +1253,7 @@ namespace parser {
 		auto ctorBody = builder.compoundStmt(builder.assign(fieldAccess, builder.intLit(0)));
 		auto ctor = builder.lambdaExpr(ctorType, builder.parameters(thisVariable), ctorBody, "A::ctor");
 
-		auto constructed = builder.structTypeWithDefaults(thisType, ParentList(), toVector(field), toVector<ExpressionPtr>(ctor),
+		auto constructed = builder.structType("A", ParentList(), toVector(field), toVector<ExpressionPtr>(ctor),
 			builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList());
 
 		constructed = builder.normalize(constructed);
@@ -1311,25 +1315,25 @@ namespace parser {
 
 		{
 			auto typ = builder.parseType(R"(
-				def struct S {
+				def struct S0 {
 					ctor() = delete;
-					ctor(other: ref<S,f,f,cpp_rref>) = delete;
+					ctor(other: ref<S0,f,f,cpp_rref>) = delete;
 				};
-				S
+				S0
 			)");
 
 			EXPECT_TRUE(typ);
 			//std::cout << printer::PrettyPrinter(typ, printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS) << std::endl;
 			EXPECT_TRUE(checks::check(typ).empty()) << checks::check(typ);
-			EXPECT_EQ(1, typ.as<TagTypePtr>()->getRecord()->getConstructors().size());
+			EXPECT_EQ(0, typ.as<TagTypePtr>()->getRecord()->getConstructors().size());
 		}
 		{
 			auto typ = builder.parseType(R"(
-				def struct S {
+				def struct S1 {
 					ctor() = default;
 					ctor(a : type) {}
 				};
-				S
+				S1
 			)");
 
 			EXPECT_TRUE(typ);
@@ -1340,10 +1344,23 @@ namespace parser {
 
 		{
 			auto typ = builder.parseType(R"(
-				def struct S {
-					lambda )" + utils::getMangledOperatorAssignName() + R"( = (other: ref<S,t,f,cpp_ref>) -> ref<S,f,f,cpp_ref> = delete;
+				def struct S2 {
+					lambda )" + utils::getMangledOperatorAssignName() + R"( = (other: ref<S2,t,f,cpp_ref>) -> ref<S2,f,f,cpp_ref> = delete;
 				};
-				S
+				S2
+			)");
+
+			EXPECT_TRUE(typ);
+			//std::cout << printer::PrettyPrinter(typ, printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS) << std::endl;
+			EXPECT_TRUE(checks::check(typ).empty()) << checks::check(typ);
+			EXPECT_EQ(0, typ.as<TagTypePtr>()->getRecord()->getMemberFunctions().size());
+		}
+		{
+			auto typ = builder.parseType(R"(
+				def struct S3 {
+					lambda )" + utils::getMangledOperatorAssignName() + R"( = (other: ref<S3,t,f,cpp_ref>) -> ref<S3,f,f,cpp_ref> = default;
+				};
+				S3
 			)");
 
 			EXPECT_TRUE(typ);
@@ -1351,26 +1368,13 @@ namespace parser {
 			EXPECT_TRUE(checks::check(typ).empty()) << checks::check(typ);
 			EXPECT_EQ(1, typ.as<TagTypePtr>()->getRecord()->getMemberFunctions().size());
 		}
-		{
-			auto typ = builder.parseType(R"(
-				def struct S {
-					lambda )" + utils::getMangledOperatorAssignName() + R"( = (other: ref<S,t,f,cpp_ref>) -> ref<S,f,f,cpp_ref> = default;
-				};
-				S
-			)");
-
-			EXPECT_TRUE(typ);
-			//std::cout << printer::PrettyPrinter(typ, printer::PrettyPrinter::PRINT_DEFAULT_MEMBERS) << std::endl;
-			EXPECT_TRUE(checks::check(typ).empty()) << checks::check(typ);
-			EXPECT_EQ(2, typ.as<TagTypePtr>()->getRecord()->getMemberFunctions().size());
-		}
 
 		{
 			auto typ = builder.parseType(R"(
-				def struct S {
+				def struct S4 {
 					dtor() = delete;
 				};
-				S
+				S4
 			)");
 
 			EXPECT_TRUE(typ);
@@ -1380,10 +1384,10 @@ namespace parser {
 		}
 		{
 			auto typ = builder.parseType(R"(
-				def struct S {
+				def struct S5 {
 					dtor() = default;
 				};
-				S
+				S5
 			)");
 
 			EXPECT_TRUE(typ);
