@@ -509,144 +509,154 @@ TEST(PrettyPrinter, Structs) {
 	}
 
 	{ // default constructor
-		auto type = builder.parseType("struct s { ctor () { return; }}");
-		auto type1 = builder.parseType("struct s { ctor () = default;}");
+		auto type = builder.parseType("struct s1 { ctor () { return; }}");
+		auto type1 = builder.parseType("struct s2 { ctor () = default;}");
 
-		EXPECT_EQ("decl struct s;\n"
-                  "decl ctor:s::();\n"
-                  "def struct s {\n"
+		EXPECT_EQ("decl struct s1;\n"
+                  "decl ctor:s1::();\n"
+                  "def struct s1 {\n"
                   "    ctor function () {\n"
                   "        return unit;\n"
                   "    }\n"
                   "};\n"
-                  "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
+                  "s1", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
 
-		EXPECT_EQ("decl struct s;\n"
-		          "def struct s {\n"
+		EXPECT_EQ("decl struct s2;\n"
+		          "def struct s2 {\n"
 		          "};\n"
-		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+		          "s2", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
 
 	}
 
 	{ // copy and move constructor
-		auto type = builder.normalize(builder.parseType("struct s { "
-									  "    ctor function (v1 : ref<s,t,f,cpp_ref>) { return; }"
-									  "    ctor function (v1 : ref<s,f,f,cpp_rref>) { return;}"
+		auto type = builder.normalize(builder.parseType("struct s3 { "
+									  "    ctor function (v1 : ref<s3,t,f,cpp_ref>) { return; }"
+									  "    ctor function (v1 : ref<s3,f,f,cpp_rref>) { return;}"
 									  "}"));
-		auto type1 = builder.normalize(builder.parseType("struct s { "
-									   "    ctor (other : ref<s,t,f,cpp_ref>) = default;"
-									   "    ctor (other : ref<s,f,f,cpp_rref>) = default;"
+		auto type1 = builder.normalize(builder.parseType("struct s4 { "
+									   "    ctor (other : ref<s4,t,f,cpp_ref>) = default;"
+									   "    ctor (other : ref<s4,f,f,cpp_rref>) = default;"
 									   "}"));
 
-		EXPECT_EQ("decl struct s;\n"
-		          "decl ctor:s::(ref<s,t,f,cpp_ref>);\n"
-		          "decl ctor:s::(ref<s,f,f,cpp_rref>);\n"
-		          "def struct s {\n"
-		          "    ctor function (v1 : ref<s,t,f,cpp_ref>) {\n"
+		EXPECT_EQ("decl struct s3;\n"
+		          "decl ctor:s3::(ref<s3,t,f,cpp_ref>);\n"
+		          "decl ctor:s3::(ref<s3,f,f,cpp_rref>);\n"
+		          "def struct s3 {\n"
+		          "    ctor function () = delete;\n"
+		          "    ctor function (v1 : ref<s3,t,f,cpp_ref>) {\n"
 		          "        return unit;\n"
 		          "    }\n"
-		          "    ctor function (v1 : ref<s,f,f,cpp_rref>) {\n"
+		          "    ctor function (v1 : ref<s3,f,f,cpp_rref>) {\n"
 		          "        return unit;\n"
 		          "    }\n"
+		          "    function IMP__operator_assign_ = (rhs : ref<s3,t,f,cpp_ref>) -> ref<s3,f,f,cpp_ref> = delete;\n"
+		          "    function IMP__operator_assign_ = (rhs : ref<s3,f,f,cpp_rref>) -> ref<s3,f,f,cpp_ref> = delete;\n"
 		          "};\n"
-		          "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
+		          "s3", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
 
-		EXPECT_EQ("decl struct s;\n"
-		          "def struct s {\n"
+		EXPECT_EQ("decl struct s4;\n"
+		          "def struct s4 {\n"
+		          "    ctor function () = delete;\n"
+		          "    function IMP__operator_assign_ = (rhs : ref<s4,t,f,cpp_ref>) -> ref<s4,f,f,cpp_ref> = delete;\n"
+		          "    function IMP__operator_assign_ = (rhs : ref<s4,f,f,cpp_rref>) -> ref<s4,f,f,cpp_ref> = delete;\n"
 		          "};\n"
-		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+		          "s4", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
 
 	}
 
 	{ // assignment operator
 		auto type = builder.normalize(builder.parseType(
-				"struct s {"
-				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,t,f,cpp_ref>) -> ref<s,f,f,cpp_ref> {\n"
+				"struct s5 {"
+				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s5,t,f,cpp_ref>) -> ref<s5,f,f,cpp_ref> {\n"
 				"    }\n"
-				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,f,f,cpp_rref>) -> ref<s,f,f,cpp_ref> {\n"
+				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s5,f,f,cpp_rref>) -> ref<s5,f,f,cpp_ref> {\n"
 				"    }\n"
 				"}"));
 
 		auto type1 = builder.normalize(builder.parseType(
-				"struct s {"
-				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,t,f,cpp_ref>) -> ref<s,f,f,cpp_ref> = default;\n"
-				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,f,f,cpp_rref>) -> ref<s,f,f,cpp_ref> = default;\n"
+				"struct s6 {"
+				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s6,t,f,cpp_ref>) -> ref<s6,f,f,cpp_ref> = default;\n"
+				"    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s6,f,f,cpp_rref>) -> ref<s6,f,f,cpp_ref> = default;\n"
 				"}"));
 
-		std::string res = "decl struct s;\n"
-						  "decl " + utils::getMangledOperatorAssignName() + ":s::(ref<s,t,f,cpp_ref>) -> ref<s,f,f,cpp_ref>;\n"
-						  "decl " + utils::getMangledOperatorAssignName() + ":s::(ref<s,f,f,cpp_rref>) -> ref<s,f,f,cpp_ref>;\n"
-						  "def struct s {\n"
-						  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,t,f,cpp_ref>) -> ref<s,f,f,cpp_ref> { }\n"
-						  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s,f,f,cpp_rref>) -> ref<s,f,f,cpp_ref> { }\n"
+		std::string res = "decl struct s5;\n"
+						  "decl " + utils::getMangledOperatorAssignName() + ":s5::(ref<s5,t,f,cpp_ref>) -> ref<s5,f,f,cpp_ref>;\n"
+						  "decl " + utils::getMangledOperatorAssignName() + ":s5::(ref<s5,f,f,cpp_rref>) -> ref<s5,f,f,cpp_ref>;\n"
+						  "def struct s5 {\n"
+						  "    ctor function (other : ref<s5,t,f,cpp_ref>) = delete;\n"
+						  "    ctor function (other : ref<s5,f,f,cpp_rref>) = delete;\n"
+						  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s5,t,f,cpp_ref>) -> ref<s5,f,f,cpp_ref> { }\n"
+						  "    function " + utils::getMangledOperatorAssignName() + " = (v1 : ref<s5,f,f,cpp_rref>) -> ref<s5,f,f,cpp_ref> { }\n"
 						  "};\n"
-						  "s";
+						  "s5";
 
 		EXPECT_EQ(res, toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
 
-		EXPECT_EQ("decl struct s;\n"
-		          "def struct s {\n"
+		EXPECT_EQ("decl struct s6;\n"
+		          "def struct s6 {\n"
+						  "    ctor function (other : ref<s6,t,f,cpp_ref>) = delete;\n"
+						  "    ctor function (other : ref<s6,f,f,cpp_rref>) = delete;\n"
 		          "};\n"
-		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+		          "s6", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
 
 	}
 
 	{ // destructor
-		auto type = builder.parseType("struct s {"
+		auto type = builder.parseType("struct s7 {"
 									  "    dtor () = default;"
 									  "}");
 
-		auto type1 = builder.parseType("struct s {"
+		auto type1 = builder.parseType("struct s8 {"
 									  "    dtor () {return;}"
 									  "}");
 
-		auto type2 = builder.parseType("struct s { dtor () = delete; }");
+		auto type2 = builder.parseType("struct s9 { dtor () = delete; }");
 
-		EXPECT_EQ("decl struct s;\n"
-		          "def struct s {\n"
+		EXPECT_EQ("decl struct s7;\n"
+		          "def struct s7 {\n"
 		          "};\n"
-		          "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
+		          "s7", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
 
-		EXPECT_EQ("decl struct s;\n"
-		          "decl dtor:~s::();\n"
-		          "def struct s {\n"
+		EXPECT_EQ("decl struct s8;\n"
+		          "decl dtor:~s8::();\n"
+		          "def struct s8 {\n"
 		          "    dtor function () {\n"
 		          "        return unit;\n"
 		          "    }\n"
 		          "};\n"
-		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+		          "s8", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
 
-		EXPECT_EQ("decl struct s;\n"
-		          "def struct s {\n"
+		EXPECT_EQ("decl struct s9;\n"
+		          "def struct s9 {\n"
 		          "    dtor function () = delete;\n"
 		          "};\n"
-		          "s", toString(PrettyPrinter(type2))) << toString(PrettyPrinter(type2));
+		          "s9", toString(PrettyPrinter(type2))) << toString(PrettyPrinter(type2));
 	}
 
 	{ // destructor virtual
-		auto type = builder.parseType("struct s {"
+		auto type = builder.parseType("struct s10 {"
 											  "    dtor virtual () {}"
 											  "}");
 
-		auto type1 = builder.parseType("struct s {"
+		auto type1 = builder.parseType("struct s11 {"
 											   "    dtor virtual () {return;}"
 											   "}");
 
-		EXPECT_EQ("decl struct s;\n"
-		          "decl dtor:~s::();\n"
-		          "def struct s {\n"
+		EXPECT_EQ("decl struct s10;\n"
+		          "decl dtor:~s10::();\n"
+		          "def struct s10 {\n"
 		          "    dtor virtual function () { }\n"
 		          "};\n"
-		          "s", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
+		          "s10", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
 
-		EXPECT_EQ("decl struct s;\n"
-		          "decl dtor:~s::();\n"
-		          "def struct s {\n"
+		EXPECT_EQ("decl struct s11;\n"
+		          "decl dtor:~s11::();\n"
+		          "def struct s11 {\n"
 		          "    dtor virtual function () {\n"
 		          "        return unit;\n"
 		          "    }\n"
 		          "};\n"
-		          "s", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
+		          "s11", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
 		}
 
 
