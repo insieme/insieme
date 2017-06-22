@@ -203,32 +203,40 @@ namespace analysis {
 		}
 
 		// now we finally add members to the record, according to what C++ semantics require based on what the user specified
+		// we add them one by one according to the conditions which tell us to do so. A summary image of these conditions can be seen at
+		// https://stackoverflow.com/questions/4943958/conditions-for-automatic-generation-of-default-copy-move-ctor-and-copy-move-assi
+
+		bool hasNoMoveOperation = !hasMoveConstructor && !hasMoveAssignment;
+		bool hasNoCopyOrMoveOperation = !hasCopyConstructor && !hasCopyAssignment && !hasMoveConstructor && !hasMoveAssignment;
 
 		// only if the user didn't provide any constructor (not even defaulted or deleted ones), we create a default constructor
 		if(inputMembers.constructors.size() == 0) {
 			res.constructors.push_back(defaultDefaultConstructor);
 		}
 
-		// if the user didn't specify any of the copy or move constructs, we add them all
-		if(!hasCopyConstructor && !hasMoveConstructor && !hasCopyAssignment && !hasMoveAssignment) {
-			res.constructors.push_back(defaultCopyConstructor);
-			res.constructors.push_back(defaultMoveConstructor);
-			res.memberFunctions.push_back(defaultCopyAssignment);
-			res.memberFunctions.push_back(defaultMoveAssignment);
-
-			// we only add copy constructs if the user didn't specify move constructs
-		} else if(!hasMoveConstructor && !hasMoveAssignment) {
-			if(!hasCopyConstructor) {
-				res.constructors.push_back(defaultCopyConstructor);
-			}
-			if(!hasCopyAssignment) {
-				res.memberFunctions.push_back(defaultCopyAssignment);
-			}
-		}
-
-		// finally handle the default destructor. If we didn't have one, we add the default ctor
+		// a destructor is added if the user didn't specify one
 		if(!hasDestructor) {
 			res.destructor = defaultDestructor;
+		}
+
+		// the copy constructor is added if we didn't have one, and the user didn't specify any move operations
+		if(!hasCopyConstructor && hasNoMoveOperation) {
+			res.constructors.push_back(defaultCopyConstructor);
+		}
+
+		// the copy assignment is added if we didn't have one, and the user didn't specify any move operations
+		if(!hasCopyAssignment && hasNoMoveOperation) {
+			res.memberFunctions.push_back(defaultCopyAssignment);
+		}
+
+		// the move constructor is added if we didn't have one, and the user didn't specify a destructor or any copy and move operations
+		if(!hasMoveConstructor && !hasDestructor && hasNoCopyOrMoveOperation) {
+			res.constructors.push_back(defaultMoveConstructor);
+		}
+
+		// the move assignment is added if we didn't have one, and the user didn't specify a destructor or any copy and move operations
+		if(!hasMoveAssignment && !hasDestructor && hasNoCopyOrMoveOperation) {
+			res.memberFunctions.push_back(defaultMoveAssignment);
 		}
 
 		return res;
