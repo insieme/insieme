@@ -317,9 +317,6 @@ namespace core {
 		TagTypePtr structType(const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
 		                      const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 		                      const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
-		TagTypePtr structTypeWithDefaults(const TypePtr& thisType, const ParentList& parents, const FieldList& fields,
-		                                  const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
-		                                  const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const;
 
 		TagTypePtr unionType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const;
 		TagTypePtr unionType(const StringValuePtr& name, const vector<FieldPtr>& fields) const;
@@ -330,9 +327,6 @@ namespace core {
 		TagTypePtr unionType(const StringValuePtr& name, const FieldsPtr& fields,
 		                     const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
 		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const;
-		TagTypePtr unionTypeWithDefaults(const TypePtr& thisType, const FieldList& fields,
-		                                 const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
-		                                 const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const;
 
 		// -- special functions for classes --
 

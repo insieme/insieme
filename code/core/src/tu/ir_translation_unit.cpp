@@ -709,61 +709,6 @@ namespace tu {
 		return core::IRBuilder(mgr).program(entryPoints);
 	}
 
-
-	core::TagTypePtr IRTranslationUnit::insertRecordTypeWithDefaults(const core::GenericTypePtr& key, const core::TagTypePtr& tagType) {
-		core::IRBuilder builder(key->getNodeManager());
-		core::ExpressionList ctors;
-		core::ExpressionPtr dtor;
-		core::MemberFunctionList memFuns;
-		// check ctors
-		for (auto ctor : tagType->getRecord()->getConstructors()) {
-			if (ctor.isa<core::LiteralPtr>()) {
-				ctors.push_back(ctor);
-			} else {
-				auto lit = builder.getLiteralForConstructor(ctor.as<core::LambdaExprPtr>()->getFunctionType());
-				addFunction(lit, ctor.as<core::LambdaExprPtr>());
-				ctors.push_back(lit);
-			}
-		}
-		// check dtor
-		if(tagType->getRecord()->hasDestructor()) {
-			dtor = tagType->getRecord()->getDestructor();
-			if (!dtor.isa<core::LiteralPtr>()) {
-				auto lit = builder.getLiteralForDestructor(dtor.as<core::LambdaExprPtr>()->getFunctionType());
-				addFunction(lit, dtor.as<core::LambdaExprPtr>());
-				dtor = lit;
-			}
-		}
-		// check mem funs
-		for (auto memfun : tagType->getRecord()->getMemberFunctions()) {
-			if (!memfun->getImplementation().isa<core::LiteralPtr>()) {
-				auto lit = builder.getLiteralForMemberFunction(memfun->getImplementation().as<core::LambdaExprPtr>()->getFunctionType(), memfun->getNameAsString());
-				addFunction(lit, memfun->getImplementation().as<core::LambdaExprPtr>());
-				memFuns.push_back(builder.memberFunction(memfun->isVirtual(), memfun->getNameAsString(), lit));
-			} else {
-				memFuns.push_back(memfun);
-			}
-		}
-		// insert new tag type in tu
-		core::TagTypePtr newTagType;
-		if (tagType->isStruct()) {
-			auto str = tagType->getStruct();
-			newTagType = builder.structType(str->getName(), str->getParents(),
-				str->getFields(), builder.expressions(convertList<Expression>(ctors)),
-				dtor, str->getDestructorVirtual(), builder.memberFunctions(memFuns),
-				str->getPureVirtualMemberFunctions());
-		} else {
-			auto uni = tagType->getUnion();
-			newTagType = builder.unionType(uni->getName(), uni->getFields(),
-				builder.expressions(convertList<Expression>(ctors)), dtor,
-				uni->getDestructorVirtual(), builder.memberFunctions(memFuns),
-				uni->getPureVirtualMemberFunctions());
-		}
-		types[key] = newTagType;
-		// return tag type
-		return newTagType;
-	}
-
 } // end namespace tu
 } // end namespace core
 } // end namespace insieme

@@ -356,65 +356,6 @@ namespace core {
 		return compoundStmt(literal(genericType("Insieme_deleted_body_compound_marker"), "Insieme_deleted_body_compound_marker"));
 	}
 
-	namespace {
-
-		TagTypePtr getStructOrUnionWithDefaults(const IRBuilderBaseModule& builder, const bool generateStruct,
-		                                        const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields,
-		                                        const ExpressionList& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
-		                                        const MemberFunctionList& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) {
-
-			// make sure the passed this type is of the correct type and extract the name
-			assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
-			auto elementType = analysis::getReferencedType(thisType);
-			assert_true(elementType.isa<TagTypeReferencePtr>() || elementType.isa<GenericTypePtr>()) << "thisType must be either a TagTypeReference or a GenericType";
-			auto name = elementType.isa<TagTypeReferencePtr>() ? elementType.as<TagTypeReferencePtr>()->getName() : elementType.as<GenericTypePtr>()->getName();
-
-			// lambda to check for the presence of a specific constructor type
-			auto containsCtorType = [&](const ExpressionPtr& ctor)->bool {
-				return any(ctors, [&](const ExpressionPtr& cur) {
-					return *(cur->getType()) == *(ctor->getType());
-				});
-			};
-
-			// lambda to check for the presence of a specific member function (with the same name and type as the passed one)
-			auto containsMemberFunction = [&](const MemberFunctionPtr& member)->bool {
-				return any(mfuns, [&](const MemberFunctionPtr& cur) {
-					return cur->getName() == member->getName() && *(cur->getImplementation()->getType()) == *(member->getImplementation()->getType());
-				});
-			};
-
-			// all the default constructs
-			auto defaultConstructor = builder.getDefaultConstructor(thisType, parents, fields);
-			auto defaultCopyConstructor = builder.getDefaultCopyConstructor(thisType, parents, fields);
-			auto defaultMoveConstructor = builder.getDefaultMoveConstructor(thisType, parents, fields);
-			auto defaultDestructor = builder.getDefaultDestructor(thisType);
-			auto defaultCopyAssignment = builder.getDefaultCopyAssignOperator(thisType, parents, fields);
-			auto defaultMoveAssignment = builder.getDefaultMoveAssignOperator(thisType, parents, fields);
-
-			ExpressionList ctorsOut = ctors;
-			ExpressionPtr dtorOut = dtor;
-			MemberFunctionList mfunsOut = mfuns;
-
-			// if the user didn't provide a given constructor type we create it
-			if(!containsCtorType(defaultConstructor)) { ctorsOut.push_back(defaultConstructor); }
-			if(!containsCtorType(defaultCopyConstructor)) { ctorsOut.push_back(defaultCopyConstructor); }
-			if(!containsCtorType(defaultMoveConstructor)) { ctorsOut.push_back(defaultMoveConstructor); }
-
-			// as are the default assignment operators
-			if(!containsMemberFunction(defaultCopyAssignment)) { mfunsOut.push_back(defaultCopyAssignment); }
-			if(!containsMemberFunction(defaultMoveAssignment)) { mfunsOut.push_back(defaultMoveAssignment); }
-
-			// finally handle the default destructor. If the user provided one we don't create the default one
-			if(!dtor) { dtorOut = defaultDestructor; }
-
-			// create a new struct or union with the (maybe) modified parameters
-			if(generateStruct) {
-				return builder.structType(name, parents, fields, builder.expressions(ctorsOut), dtorOut, dtorIsVirtual, builder.memberFunctions(mfunsOut), pvmfuns);
-			}
-			return builder.unionType(name, fields, builder.expressions(ctorsOut), dtorOut, dtorIsVirtual, builder.memberFunctions(mfunsOut), pvmfuns);
-		}
-
-	}
 
 	TagTypePtr IRBuilderBaseModule::structType(const vector<std::pair<StringValuePtr, TypePtr>>& fields) const {
 		return structType(::transform(fields, [&](const pair<StringValuePtr, TypePtr>& cur) { return field(cur.first, cur.second); }));
@@ -448,13 +389,6 @@ namespace core {
 	                                          const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const {
 		auto tag = tagTypeReference(name);
 				return tagType(tag, tagTypeDefinition({ { tag, unionRecord(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns) } }));
-	}
-
-	TagTypePtr IRBuilderBaseModule::unionTypeWithDefaults(const TypePtr& thisType, const FieldList& fields,
-	                                                      const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
-	                                                      const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
-		return getStructOrUnionWithDefaults(*this, false, thisType, parents(), this->fields(fields), ctors,
-		                                    dtor, boolValue(dtorIsVirtual), mfuns, pureVirtualMemberFunctions(pvmfuns));
 	}
 
 
@@ -504,13 +438,6 @@ namespace core {
 	                                           const PureVirtualMemberFunctionsPtr& pvmfuns) const {
 		auto tag = tagTypeReference(name);
 		return tagType(tag, tagTypeDefinition({ { tag, structRecord(name, parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns) } }));
-	}
-
-	TagTypePtr IRBuilderBaseModule::structTypeWithDefaults(const TypePtr& thisType, const ParentList& parents, const FieldList& fields,
-	                                                       const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
-	                                                       const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
-		return getStructOrUnionWithDefaults(*this, true, thisType, this->parents(parents), this->fields(fields), ctors,
-		                                    dtor, boolValue(dtorIsVirtual), mfuns, pureVirtualMemberFunctions(pvmfuns));
 	}
 
 	FunctionTypePtr IRBuilderBaseModule::getDefaultConstructorType(const TypePtr& thisType) const {
