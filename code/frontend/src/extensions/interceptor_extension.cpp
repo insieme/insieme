@@ -41,6 +41,7 @@
 #include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/name_manager.h"
 
+#include "insieme/core/analysis/default_delete_member_semantics.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/lang/pointer.h"
@@ -197,7 +198,7 @@ namespace extensions {
 				core::LiteralPtr lit;
 
 				if(auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl)) {
-					lit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).lit;
+					lit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).literal;
 				} else {
 					lit = builder.literal(utils::buildNameForFunction(funDecl, converter), converter.convertType(funDecl->getType()));
 				}
