@@ -250,13 +250,17 @@ namespace conversion {
 			auto methodConversionResult = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields());
 			if(mem->isVirtual() && mem->isPure()) {
 				pvMembers.push_back(builder.pureVirtualMemberFunction(methodConversionResult.memberFunction->getName(), methodConversionResult.literal->getType().as<core::FunctionTypePtr>()));
-			} else if(llvm::dyn_cast<clang::CXXConstructorDecl>(mem)) {
-				recordMembers.constructors.push_back(methodConversionResult);
-			} else if(llvm::dyn_cast<clang::CXXDestructorDecl>(mem)) {
-				recordMembers.destructor = methodConversionResult;
-				destructorVirtual = mem->isVirtual();
-			} else {
-				recordMembers.memberFunctions.push_back(methodConversionResult);
+			}
+			//we only add non-implicit members to the type. The implicit ones will be added by the C++ defaulted/deleted semantics
+			if(!mem->isImplicit()) {
+				if(llvm::dyn_cast<clang::CXXConstructorDecl>(mem)) {
+					recordMembers.constructors.push_back(methodConversionResult);
+				} else if(llvm::dyn_cast<clang::CXXDestructorDecl>(mem)) {
+					recordMembers.destructor = methodConversionResult;
+					destructorVirtual = mem->isVirtual();
+				} else {
+					recordMembers.memberFunctions.push_back(methodConversionResult);
+				}
 			}
 		}
 
