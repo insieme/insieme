@@ -246,21 +246,27 @@ namespace conversion {
 		for(auto mem : methodDecls) {
 			mem = mem->getCanonicalDecl();
 			if(mem->isStatic()) continue;
+			auto ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(mem);
+			auto dtorDecl = llvm::dyn_cast<clang::CXXDestructorDecl>(mem);
+			auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(mem);
+			// if the method is implicit and one of the default constructs we skip it, because the C++ semantics too will add these again correctly
+			if(mem->isImplicit()
+					&& ((ctorDecl && (ctorDecl->isDefaultConstructor() || ctorDecl->isCopyOrMoveConstructor()))
+							|| dtorDecl
+							|| (methDecl && (methDecl->isCopyAssignmentOperator() || methDecl->isMoveAssignmentOperator())))) {
+				continue;
+			}
 			// actual methods
 			auto methodConversionResult = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields());
 			if(mem->isVirtual() && mem->isPure()) {
 				pvMembers.push_back(builder.pureVirtualMemberFunction(methodConversionResult.memberFunction->getName(), methodConversionResult.literal->getType().as<core::FunctionTypePtr>()));
-			}
-			//we only add non-implicit members to the type. The implicit ones will be added by the C++ defaulted/deleted semantics
-			if(!mem->isImplicit()) {
-				if(llvm::dyn_cast<clang::CXXConstructorDecl>(mem)) {
-					recordMembers.constructors.push_back(methodConversionResult);
-				} else if(llvm::dyn_cast<clang::CXXDestructorDecl>(mem)) {
-					recordMembers.destructor = methodConversionResult;
-					destructorVirtual = mem->isVirtual();
-				} else {
-					recordMembers.memberFunctions.push_back(methodConversionResult);
-				}
+			} else if(ctorDecl) {
+				recordMembers.constructors.push_back(methodConversionResult);
+			} else if(dtorDecl) {
+				recordMembers.destructor = methodConversionResult;
+				destructorVirtual = mem->isVirtual();
+			} else {
+				recordMembers.memberFunctions.push_back(methodConversionResult);
 			}
 		}
 
