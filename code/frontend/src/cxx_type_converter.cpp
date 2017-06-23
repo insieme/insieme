@@ -279,8 +279,10 @@ namespace conversion {
 
 		// register all lambdas in the TU
 		auto registerInTu = [this](const core::analysis::MemberProperties& member) {
-			VLOG(2) << "adding method lambda literal " << *member.literal << " of type " << dumpColor(member.literal->getType()) << " to IRTU";
-			converter.getIRTranslationUnit().addFunction(member.literal, member.lambda);
+			if(member.literal && member.lambda) {
+				VLOG(2) << "adding method lambda literal " << *member.literal << " of type " << dumpColor(member.literal->getType()) << " to IRTU";
+				converter.getIRTranslationUnit().addFunction(member.literal, member.lambda);
+			}
 		};
 		::for_each(recordMembers.constructors, [&](const auto& ctor) { registerInTu(ctor); });
 		if(recordMembers.destructor) registerInTu(*recordMembers.destructor);
