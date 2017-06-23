@@ -614,21 +614,27 @@ TEST(PrettyPrinter, Structs) {
 
 		EXPECT_EQ("decl struct s7;\n"
 		          "def struct s7 {\n"
+		          "    ctor function (other : ref<s7,f,f,cpp_rref>) = delete;\n"
+		          "    function IMP__operator_assign_ = (rhs : ref<s7,f,f,cpp_rref>) -> ref<s7,f,f,cpp_ref> = delete;\n"
 		          "};\n"
 		          "s7", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
 
 		EXPECT_EQ("decl struct s8;\n"
 		          "decl dtor:~s8::();\n"
 		          "def struct s8 {\n"
+		          "    ctor function (other : ref<s8,f,f,cpp_rref>) = delete;\n"
 		          "    dtor function () {\n"
 		          "        return unit;\n"
 		          "    }\n"
+		          "    function IMP__operator_assign_ = (rhs : ref<s8,f,f,cpp_rref>) -> ref<s8,f,f,cpp_ref> = delete;\n"
 		          "};\n"
 		          "s8", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
 
 		EXPECT_EQ("decl struct s9;\n"
 		          "def struct s9 {\n"
+		          "    ctor function (other : ref<s9,f,f,cpp_rref>) = delete;\n"
 		          "    dtor function () = delete;\n"
+		          "    function IMP__operator_assign_ = (rhs : ref<s9,f,f,cpp_rref>) -> ref<s9,f,f,cpp_ref> = delete;\n"
 		          "};\n"
 		          "s9", toString(PrettyPrinter(type2))) << toString(PrettyPrinter(type2));
 	}
@@ -645,16 +651,20 @@ TEST(PrettyPrinter, Structs) {
 		EXPECT_EQ("decl struct s10;\n"
 		          "decl dtor:~s10::();\n"
 		          "def struct s10 {\n"
+		          "    ctor function (other : ref<s10,f,f,cpp_rref>) = delete;\n"
 		          "    dtor virtual function () { }\n"
+		          "    function IMP__operator_assign_ = (rhs : ref<s10,f,f,cpp_rref>) -> ref<s10,f,f,cpp_ref> = delete;\n"
 		          "};\n"
 		          "s10", toString(PrettyPrinter(type))) << toString(PrettyPrinter(type));
 
 		EXPECT_EQ("decl struct s11;\n"
 		          "decl dtor:~s11::();\n"
 		          "def struct s11 {\n"
+		          "    ctor function (other : ref<s11,f,f,cpp_rref>) = delete;\n"
 		          "    dtor virtual function () {\n"
 		          "        return unit;\n"
 		          "    }\n"
+		          "    function IMP__operator_assign_ = (rhs : ref<s11,f,f,cpp_rref>) -> ref<s11,f,f,cpp_ref> = delete;\n"
 		          "};\n"
 		          "s11", toString(PrettyPrinter(type1))) << toString(PrettyPrinter(type1));
 		}
