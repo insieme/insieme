@@ -266,7 +266,9 @@ namespace conversion {
 		auto& builder = converter.getIRBuilder();
 
 		// handle defaulted and deleted constructor / destructor / operators in accordance with core
-		if(methDecl->isDefaulted() || methDecl->isDeleted()) {
+		// deleted constructors which are not one of the default members are handled in the else block
+		if(methDecl->isDefaulted()
+				|| (methDecl->isDeleted() && utils::isDefaultClassMember(methDecl))) {
 			bool defaulted = methDecl->isDefaulted();
 			auto thisType = getThisType(converter, methDecl);
 			if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) {
@@ -283,7 +285,7 @@ namespace conversion {
 				else if(constDecl->isMoveConstructor()) {
 					type = builder.getDefaultMoveConstructorType(thisType);
 				} else {
-					assert_not_implemented() << "Can't translate defaulted constructor: " << dumpClang(methDecl);
+					assert_fail() << "Can't translate defaulted constructor: " << dumpClang(methDecl);
 				}
 				ret.literal = builder.getLiteralForConstructor(type);
 			} else {
@@ -293,7 +295,7 @@ namespace conversion {
 				} else if(methDecl->isMoveAssignmentOperator()) {
 					type = builder.getDefaultMoveAssignOperatorType(thisType);
 				} else {
-					assert_not_implemented() << "Can't translate defaulted method: " << dumpClang(methDecl);
+					assert_fail() << "Can't translate defaulted method: " << dumpClang(methDecl);
 				}
 				ret.literal = builder.getLiteralForMemberFunction(type, insieme::utils::getMangledOperatorAssignName());
 				ret.memberFunction = builder.memberFunction(false, insieme::utils::getMangledOperatorAssignName(), ret.literal);
