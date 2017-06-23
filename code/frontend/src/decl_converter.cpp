@@ -299,7 +299,7 @@ namespace conversion {
 				ret.memberFunction = builder.memberFunction(false, insieme::utils::getMangledOperatorAssignName(), ret.literal);
 			}
 			// mark the literal as defaulted or deleted
-			if(addDefaultedAndDeletedAnnotations) {
+			if(!declOnly && addDefaultedAndDeletedAnnotations) {
 				if(defaulted) core::annotations::markDefaultedPreTU(ret.literal);
 				else core::annotations::markDeletedPreTU(ret.literal);
 			}
