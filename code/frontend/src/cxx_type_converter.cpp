@@ -270,10 +270,6 @@ namespace conversion {
 			}
 		}
 
-		// after method translation: generate invoke and pop lambda scope in case it was a lambda class
-		generateLambdaInvokeOperator(methodDecls, classDecl, recordMembers.getMemberFunctionList(), converter);
-		converter.getVarMan()->popLambda();
-
 		// handle defaulted and deleted members accordingly
 		recordMembers = core::analysis::applyCppDefaultDeleteSemantics(builder.refType(genTy), irParents, recordTy->getFields(), recordMembers);
 
@@ -287,6 +283,10 @@ namespace conversion {
 		::for_each(recordMembers.constructors, [&](const auto& ctor) { registerInTu(ctor); });
 		if(recordMembers.destructor) registerInTu(*recordMembers.destructor);
 		::for_each(recordMembers.memberFunctions, [&](const auto& mfun) { registerInTu(mfun); });
+
+		// after method translation: generate invoke and pop lambda scope in case it was a lambda class
+		generateLambdaInvokeOperator(methodDecls, classDecl, recordMembers.getMemberFunctionList(), converter);
+		converter.getVarMan()->popLambda();
 
 		// create new structTy/unionTy
 		if(tagTy->isStruct()) {
