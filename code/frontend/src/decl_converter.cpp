@@ -261,7 +261,7 @@ namespace conversion {
 	}
 
 	core::analysis::MemberProperties DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents,
-		                                                                const core::FieldsPtr& fields, bool declOnly) const {
+		                                                                const core::FieldsPtr& fields, bool declOnly, bool addDefaultedAndDeletedAnnotations) const {
 		core::analysis::MemberProperties ret;
 		auto& builder = converter.getIRBuilder();
 
@@ -299,8 +299,10 @@ namespace conversion {
 				ret.memberFunction = builder.memberFunction(false, insieme::utils::getMangledOperatorAssignName(), ret.literal);
 			}
 			// mark the literal as defaulted or deleted
-			if(defaulted) core::annotations::markDefaultedPreTU(ret.literal);
-			else core::annotations::markDeletedPreTU(ret.literal);
+			if(addDefaultedAndDeletedAnnotations) {
+				if(defaulted) core::annotations::markDefaultedPreTU(ret.literal);
+				else core::annotations::markDeletedPreTU(ret.literal);
+			}
 
 			if(!converter.getFunMan()->contains(methDecl)) converter.getFunMan()->insert(methDecl, ret.literal);
 		}

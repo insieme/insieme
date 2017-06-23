@@ -198,7 +198,7 @@ namespace extensions {
 				core::LiteralPtr lit;
 
 				if(auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl)) {
-					lit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true).literal;
+					lit = converter.getDeclConverter()->convertMethodDecl(methDecl, builder.parents(), builder.fields(), true, false).literal;
 				} else {
 					lit = builder.literal(utils::buildNameForFunction(funDecl, converter), converter.convertType(funDecl->getType()));
 				}

@@ -96,7 +96,7 @@ namespace conversion {
 		/// @param declOnly only add method to function table, don't convert body
 		/// @return Converted member function
 		core::analysis::MemberProperties convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents, const core::FieldsPtr& fields,
-		                                                   bool declOnly = false) const;
+		                                                   bool declOnly = false, bool addDefaultedAndDeletedAnnotations = true) const;
 
 		// Visitors -------------------------------------------------------------------------------------------------------
 
