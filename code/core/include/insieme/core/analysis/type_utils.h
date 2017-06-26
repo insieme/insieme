@@ -100,11 +100,18 @@ namespace analysis {
 	TypePtr autoReturnType(NodeManager& nodeMan, const CompoundStmtPtr& body);
 
 	/**
-	 * Determines whether the given type is trivial. A trivial type is one which can be statically
-	 * initialized and copied by simply copying its memory contents (without constructor/destructor/copy constructor calls).
-	 *
-	 * @param type the type to check
-	 * @return true if the type is trivial, false otherwise
+	 * Determines whether the given type is trivially copyable.
+	 * The only trivially copyable types are scalar types, trivially copyable classes, and arrays of such types/classes.
+	 * Objects of trivially-copyable types are the only C++ objects that may be safely copied with std::memcpy or serialized to/from binary files
+	 * with std::ofstream::write()/std::ifstream::read(). In general, a trivially copyable type is any type for which the underlying bytes can be
+	 * copied to an array of char or unsigned char and into a new object of the same type, and the resulting object would have the same value as
+	 * the original.
+	 */
+	bool isTriviallyCopyable(const TypePtr& type);
+
+	/**
+	 * Determines whether the given type is trivial. A trivial type is one which is trivially copyable
+	 * and also has a trivial non-deleted default constructor.
 	 */
 	bool isTrivial(const TypePtr& type);
 
