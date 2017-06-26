@@ -569,7 +569,7 @@ namespace checks {
 
 		// obtain return type of lambda
 		const TypePtr& returnType = address->getType()->getReturnType();
-		bool isTrivialReturn = analysis::isTrivial(returnType);
+		bool isTrivialReturn = analysis::isTriviallyCopyable(returnType);
 
 		// search for all return statements and check type
 		visitDepthFirstPrunable(address, [&](const NodeAddress& cur) -> bool {
