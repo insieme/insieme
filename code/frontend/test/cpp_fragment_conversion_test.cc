@@ -88,6 +88,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, MemberCalls) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_member_calls.cpp"); }
 
+	TEST(CppConversionTest, Members) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_members.cpp"); }
+
 	TEST(CppConversionTest, MemFunPtr) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_mem_fun_ptr.cpp"); }
 
 	TEST(CppConversionTest, MutuallyDependentMethods) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_mutually_dependent_methods.cpp"); }

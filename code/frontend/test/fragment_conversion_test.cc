@@ -83,6 +83,8 @@ namespace frontend {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_literals.c");
 	}
 
+	TEST(FragmentConversionTest, Members) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_members.c");
 	}
 
 	TEST(FragmentConversionTest, OpenCL) {
