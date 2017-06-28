@@ -42,37 +42,9 @@
 
 namespace insieme {
 namespace frontend {
-
-	TEST(FragmentConversionTest, Literals) {
-		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_literals.c");
-	}
 	
 	TEST(FragmentConversionTest, BasicTypes) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_basic_types.c");
-	}
-
-	TEST(FragmentConversionTest, Globals) {
-		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals.c");
-	}
-
-	TEST(FragmentConversionTest, GlobalsInit) {
-		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals_init.c");
-	}
-
-	TEST(FragmentConversionTest, Statements) {
-		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_statements.c");
-	}
-
-	TEST(FragmentConversionTest, VariableScopes) {
-		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_variable_scopes.c");
-	}
-	
-	TEST(FragmentConversionTest, FunCalls) {
-		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_fun_calls.c");
-	}
-
-	TEST(FragmentConversionTest, Expressions) {
-		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_expressions.c");
 	}
 
 	TEST(FragmentConversionTest, Casts) {
@@ -83,20 +55,34 @@ namespace frontend {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_decl_init_expressions.c");
 	}
 
-	TEST(FragmentConversionTest, Prototypes) {
-		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_prototypes.c");
+	TEST(FragmentConversionTest, Enum) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_enum.c");
+	}
+
+	TEST(FragmentConversionTest, Expressions) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_expressions.c");
+	}
+	
+	TEST(FragmentConversionTest, FunCalls) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_fun_calls.c");
 	}
 
 	TEST(FragmentConversionTest, FunctionPointers) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_function_pointers.c");
 	}
-	
-	TEST(FragmentConversionTest, Static) {
-		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_static.c");
+
+	TEST(FragmentConversionTest, Globals) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals.c");
 	}
 
-	TEST(FragmentConversionTest, Enum) {
-		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_enum.c");
+	TEST(FragmentConversionTest, GlobalsInit) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_globals_init.c");
+	}
+
+	TEST(FragmentConversionTest, Literals) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_literals.c");
+	}
+
 	}
 
 	TEST(FragmentConversionTest, OpenCL) {
@@ -105,6 +91,22 @@ namespace frontend {
 				job.registerFrontendExtension<extensions::VariableArgumentListExtension>();
 				job.registerFrontendExtension<extensions::OpenCLFrontendExtension>(true);
 			});
+	}
+
+	TEST(FragmentConversionTest, Prototypes) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_prototypes.c");
+	}
+
+	TEST(FragmentConversionTest, Statements) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_statements.c");
+	}
+
+	TEST(FragmentConversionTest, Static) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_static.c");
+	}
+
+	TEST(FragmentConversionTest, VariableScopes) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_variable_scopes.c");
 	}
 
 } // frontend namespace
