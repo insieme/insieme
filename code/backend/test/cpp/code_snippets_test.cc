@@ -367,6 +367,51 @@ namespace backend {
 		})
 	}
 
+	TEST(CppSnippet, MemberAccess) {
+		DO_TEST(R"(
+			def struct IMP_NonTrivial {
+				ctor function () = delete;
+				ctor function (v1 : ref<int<4>,f,f,plain>) { }
+				function IMP_foo = () -> unit { }
+			};
+			def struct IMP_S {
+				i : int<4>;
+				n : IMP_NonTrivial;
+				ctor function () {
+					<ref<int<4>,f,f,plain>>((this).i) {0};
+					IMP_NonTrivial::((this).n, 1);
+				}
+			};
+
+			def IMP_generateS = function () -> IMP_S {
+				return IMP_S::(ref_decl(type_lit(ref<IMP_S,f,f,plain>)));
+			};
+			def IMP_consumeValue = function (v0 : ref<IMP_NonTrivial,f,f,plain>) -> unit { };
+			def IMP_consumeConstReference = function (v0 : ref<IMP_NonTrivial,t,f,cpp_ref>) -> unit { };
+
+			int<4> main() {
+				*IMP_generateS() materialize .i+5;
+				IMP_generateS() materialize .n.IMP_foo();
+
+				var ref<IMP_S,f,f,plain> v0 = IMP_S::(ref_decl(type_lit(ref<IMP_S,f,f,plain>)));
+				IMP_consumeValue(ref_cast(v0.n, type_lit(t), type_lit(f), type_lit(cpp_ref)));
+				IMP_consumeConstReference(ref_kind_cast(v0.n, type_lit(cpp_ref)));
+				IMP_consumeValue(ref_cast(IMP_generateS() materialize .n, type_lit(f), type_lit(f), type_lit(cpp_rref)));
+				IMP_consumeConstReference(ref_kind_cast(IMP_generateS() materialize .n, type_lit(cpp_ref)));
+
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "IMP_generateS().i + 5;");
+			EXPECT_PRED2(containsSubString, code, "IMP_generateS().n.foo();");
+			EXPECT_PRED2(containsSubString, code, "IMP_S v0;");
+			EXPECT_PRED2(containsSubString, code, "IMP_consumeValue((IMP_NonTrivial const&)v0.n);");
+			EXPECT_PRED2(containsSubString, code, "IMP_consumeConstReference(v0.n);");
+			EXPECT_PRED2(containsSubString, code, "IMP_consumeValue((IMP_NonTrivial&&)IMP_generateS().n);");
+			EXPECT_PRED2(containsSubString, code, "IMP_consumeConstReference(IMP_generateS().n);");
+		})
+	}
+
 	TEST(CppSnippet, MemberFunctions) {
 		DO_TEST(R"(
 			alias int = int<4>;

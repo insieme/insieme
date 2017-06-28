@@ -208,35 +208,13 @@ namespace analysis {
 		return newReturnType;
 	}
 
-	/**
-	 * This function tests whether the given type is a 'trivial' class/struct type in the C++ interpretation.
-	 *
-	 * In C++, a trivial class or struct is defined as one that:
-	 *
-	 * - Has a trivial default constructor. This may use the default constructor syntax (SomeConstructor() = default;).
-	 * - Has trivial copy and move constructors, which may use the default syntax.
-	 * - Has trivial copy and move assignment operators, which may use the default syntax.
-	 * - Has a trivial destructor, which must not be virtual.
-	 *
-	 * Constructors are trivial only if there are no virtual member functions of the class and no virtual base classes.
-	 * Copy/move operations also require that all the non-static data members be trivial.
-	 *
-	 * The copy assignment operator for class T is trivial if all of the following is true:
-	 *
-	 * - It is not user-provided (meaning, it is implicitly-defined or defaulted), and if it is defaulted, its signature is the same as implicitly-defined
-	 * - T has no virtual member functions
-	 * - T has no virtual base classes
-	 * - The copy assignment operator selected for every direct base of T is trivial
-	 * - The copy assignment operator selected for every non-static class type (or array of class type) member of T is trivial
-	 * - T has no non-static data members of volatile-qualified type (since C++14)
-	 */
-	/// TODO: add trivial marker for tagtypes
-	bool isTrivial(const TypePtr& type) {
-		auto ttype = type.isa<TagTypePtr>();
+	namespace {
+		bool isTrivialOrTriviallyCopyable(const TypePtr& type, const bool checkTrivial) {
+			auto ttype = type.isa<TagTypePtr>();
 		if(!ttype) {
-			if (core::lang::isArray(type)) {
-				// in case of an array, check the enclosed type for triviality
-				return isTrivial(core::lang::ArrayType(type).getElementType());
+			if(core::lang::isArray(type)) {
+				// in case of an array, check the enclosed type for the same properties
+				return isTrivialOrTriviallyCopyable(core::lang::ArrayType(type).getElementType(), checkTrivial);
 			}
 			// non-tag-type & non-array types are always trivial
 			return true;
@@ -246,46 +224,53 @@ namespace analysis {
 
 		IRBuilder builder(type->getNodeManager());
 
-		auto containsCtor = [&](const LambdaExprPtr& ctor)->bool {
-			return any(record->getConstructors(), [&](const ExpressionPtr& cur) {
-				return analysis::equalNameless(builder.normalize(ctor), builder.normalize(cur));
-			});
+		auto getCtorByType = [&](const FunctionTypePtr& ctorType) -> ExpressionPtr {
+			for(const auto& ctor : record->getConstructors()) {
+				if(ctor->getType() == ctorType) {
+					return ctor;
+				}
+			}
+			return {};
 		};
 
-		auto containsMemberFunction = [&](const MemberFunctionPtr& member)->bool {
-			return any(record->getMemberFunctions(), [&](const MemberFunctionPtr& cur) {
-				return analysis::equalNameless(builder.normalize(member), builder.normalize(cur));
-			});
+		auto getAssignmentOperatorByType = [&](const FunctionTypePtr& mfunType) -> MemberFunctionPtr {
+			for(const auto& mfun : record->getMemberFunctions()) {
+				if(mfun->getNameAsString() == utils::getMangledOperatorAssignName() && mfun->getImplementation()->getType() == mfunType) {
+					return mfun;
+				}
+			}
+			return {};
 		};
 
 		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
-		ParentsPtr parents =
-				(record.isa<StructPtr>()) ?
-				record.as<StructPtr>()->getParents() :
-				builder.parents();
 
-		// and there is a non-virtual destructor
-		if (record->hasVirtualDestructor()) return false;
+		// a virtual destructor means this type is not trivially copyable
+		if(record->hasVirtualDestructor()) return false;
 
-		// check for trivial constructors
-		bool trivialDefaultConstructor = containsCtor(builder.getDefaultConstructor(thisType, parents, record->getFields()));
-		if (!trivialDefaultConstructor) return false;
+		// if we should check for a trivial type, we also check for a trivial default constructor here
+		if(checkTrivial) {
+			// the defult constructor must not be deleted and be either implicit or defaulted)
+			auto defaultConstructor = getCtorByType(builder.getDefaultConstructorType(thisType));
+			if(!defaultConstructor || !isaDefaultMember(defaultConstructor)) return false;
+		}
 
-		bool trivialCopyConstructor = containsCtor(builder.getDefaultCopyConstructor(thisType, parents, record->getFields()));
-		if (!trivialCopyConstructor) return false;
+		// check for trivial constructors. They have to be either deleted or (implicitly) defaulted
+		auto copyConstructor = getCtorByType(builder.getDefaultCopyConstructorType(thisType));
+		if(copyConstructor && !isaDefaultMember(copyConstructor)) return false;
 
-		bool trivialMoveConstructor = containsCtor(builder.getDefaultMoveConstructor(thisType, parents, record->getFields()));
-		if (!trivialMoveConstructor) return false;
+		auto moveConstructor = getCtorByType(builder.getDefaultMoveConstructorType(thisType));
+		if(moveConstructor && !isaDefaultMember(moveConstructor)) return false;
 
-		// check for trivial, non-virtual destructor
-		if (!hasDefaultDestructor(ttype)) return false;
+		// check trivial destructor
+		auto destructor = record->getDestructor();
+		if(destructor && !isaDefaultMember(destructor)) return false;
 
 		// check for trivial copy and move assignments
-		bool trivialCopyAssignment = containsMemberFunction(builder.getDefaultCopyAssignOperator(thisType, parents, record->getFields()));
-		if (!trivialCopyAssignment) return false;
+		auto copyAssignment = getAssignmentOperatorByType(builder.getDefaultCopyAssignOperatorType(thisType));
+		if(copyAssignment && !isaDefaultMember(copyAssignment)) return false;
 
-		bool trivialMoveAssignment = containsMemberFunction(builder.getDefaultMoveAssignOperator(thisType, parents, record->getFields()));
-		if (!trivialMoveAssignment) return false;
+		auto moveAssignment = getAssignmentOperatorByType(builder.getDefaultMoveAssignOperatorType(thisType));
+		if(moveAssignment && !isaDefaultMember(moveAssignment)) return false;
 
 		// check for virtual member functions
 		for(auto memFun : record->getMemberFunctions()) {
@@ -316,6 +301,43 @@ namespace analysis {
 		}
 
 		return true;
+		}
+	}
+
+	/**
+	 * The only trivially copyable types are scalar types, trivially copyable classes, and arrays of such types/classes.
+	 *
+	 * Requirements for trivially copyable classes are:
+	 * - Every copy constructor is trivial or deleted
+	 * - Every move constructor is trivial or deleted
+	 * - Every copy assignment operator is trivial or deleted
+	 * - Every move assignment operator is trivial or deleted
+	 * - Trivial non-deleted destructor
+	 *
+	 * This implies that the class has no virtual functions or virtual base classes.
+	 *
+	 * As an example what trivial means for these default constructs:
+	 *
+	 * The copy constructor for class T is trivial if all of the following are true:
+	 *
+	 * it is not user-provided (that is, it is implicitly-defined or defaulted), and if it is defaulted, its signature is the same as implicitly-defined (until C++14);
+	 * T has no virtual member functions;
+	 * T has no virtual base classes;
+	 * the copy constructor selected for every direct base of T is trivial;
+	 * the copy constructor selected for every non-static class type (or array of class type) member of T is trivial;
+	 *
+	 * A trivial copy constructor creates a bytewise copy of the object representation of the argument, and performs no other action.
+	 * TriviallyCopyable objects can be copied by copying their object representations manually, e.g. with std::memmove. All data types compatible
+	 * with the C language (POD types) are trivially copyable.
+	 */
+	/// TODO: add trivially copyable marker for tagtypes
+	bool isTriviallyCopyable(const TypePtr& type) {
+		return isTrivialOrTriviallyCopyable(type, false);
+	}
+
+	/// TODO: add trivial marker for tagtypes
+	bool isTrivial(const TypePtr& type) {
+		return isTrivialOrTriviallyCopyable(type, true);
 	}
 
 	boost::optional<ExpressionPtr> hasConstructorOfType(const TagTypePtr& type, const FunctionTypePtr& funType) {

@@ -219,6 +219,14 @@ namespace utils {
 		return stmtutils::aggregateStmts(builder, newBody);
 	}
 
+	bool isDefaultClassMember(const clang::CXXMethodDecl* methDecl) {
+		auto constDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl);
+		auto dtorDecl = llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl);
+		return (constDecl && (constDecl->isDefaultConstructor() || constDecl->isCopyOrMoveConstructor()))
+				|| dtorDecl
+				|| (methDecl && (methDecl->isCopyAssignmentOperator() || methDecl->isMoveAssignmentOperator()));
+	}
+
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme

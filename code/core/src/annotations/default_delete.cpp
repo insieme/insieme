@@ -35,49 +35,58 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-#pragma once
 
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/annotations/default_delete.h"
+
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_node_annotation.h"
 
 namespace insieme {
 namespace core {
-namespace checks {
+namespace annotations {
 
-// defines macros for generating CHECK declarations
-#include "insieme/core/checks/check_macros.inc"
+	struct DefaultedTag : public value_annotation::cloneable {
+		bool value;
+		DefaultedTag(bool value) : value(value) {}
+		bool operator==(const DefaultedTag& other) const {
+			return value == other.value;
+		}
 
-	/**
-	 * This check verifies that undefined(...) is only called within ref.new or ref.var.
-	 */
-	SIMPLE_CHECK(Undefined, CallExpr, false);
+		void cloneTo(const NodePtr& target) const {
+			if(value) markDefaultedPreTU(target);
+		}
+	};
 
-	/**
-	 * This check verifies that no defaulted and deleted marker bodies remain in the final IR.
-	 */
-	SIMPLE_CHECK(DefaultedDeletedPreTUMarker, Node, false);
+	struct DeletedTag : public value_annotation::cloneable {
+		bool value;
+		DeletedTag(bool value) : value(value) {}
+		bool operator==(const DeletedTag& other) const {
+			return value == other.value;
+		}
 
-	/**
-	 * This check verifies that there are no free break statements inside for loops.
-	 */
-	SIMPLE_CHECK(FreeBreakInsideForLoop, ForStmt, false);
+		void cloneTo(const NodePtr& target) const {
+			if(value) markDeletedPreTU(target);
+		}
+	};
 
-	/**
-	 * This check verifies that functions with non-unit return type return something on every code path.
-	 */
-	SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
+	// ----------------------------------------------------
 
-	/**
-	 * This check verifies that init expressions are executed on synthesizable locations.
-	 */
-	SIMPLE_CHECK(ValidInitExprMemLocation, InitExpr, false);
+	void markDefaultedPreTU(const NodePtr& node) {
+		node->attachValue(DefaultedTag(true));
+	}
 
-	/**
-	 * This check verifies that materializing declarations are backed up through a constructor or an implicit conversion.
-	 */
-	SIMPLE_CHECK(ValidMaterializingDeclaration, Declaration, false);
+	bool isMarkedDefaultedPreTU(const NodePtr& node) {
+		return node->hasAttachedValue<DefaultedTag>() && node->getAttachedValue<DefaultedTag>().value;
+	}
 
-	#undef SIMPLE_CHECK
+	void markDeletedPreTU(const NodePtr& node) {
+		node->attachValue(DeletedTag(true));
+	}
 
-} // end namespace check
+	bool isMarkedDeletedPreTU(const NodePtr& node) {
+		return node->hasAttachedValue<DeletedTag>() && node->getAttachedValue<DeletedTag>().value;
+	}
+
+} // end namespace annotations
 } // end namespace core
 } // end namespace insieme

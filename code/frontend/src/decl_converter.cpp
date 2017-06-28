@@ -43,7 +43,9 @@
 #include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/name_manager.h"
 
+#include "insieme/core/analysis/default_delete_member_semantics.h"
 #include "insieme/core/analysis/type_utils.h"
+#include "insieme/core/annotations/default_delete.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
@@ -258,54 +260,66 @@ namespace conversion {
 		return convertFunMethodInternal(converter, funType, funcDecl, name);
 	}
 
-	DeclConverter::ConvertedMethodDecl DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents,
-		                                                                const core::FieldsPtr& fields, bool declOnly) const {
-		ConvertedMethodDecl ret;
+	core::analysis::MemberProperties DeclConverter::convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents,
+		                                                                const core::FieldsPtr& fields, bool declOnly, bool addDefaultedAndDeletedAnnotations) const {
+		core::analysis::MemberProperties ret;
+		auto& builder = converter.getIRBuilder();
 
-		// handle default constructor / destructor / operators in accordance with core
-		if(methDecl->isDefaulted()) {
+		// handle defaulted and deleted constructor / destructor / operators in accordance with core
+		// deleted constructors which are not one of the default members are handled in the else block
+		if(methDecl->isDefaulted()
+				|| (methDecl->isDeleted() && utils::isDefaultClassMember(methDecl))) {
+			bool defaulted = methDecl->isDefaulted();
 			auto thisType = getThisType(converter, methDecl);
 			if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) {
-				ret.lambda = converter.getIRBuilder().getDefaultDestructor(thisType);
-				ret.lit = converter.getIRBuilder().getLiteralForDestructor(ret.lambda->getType());
+				auto type = builder.getDefaultDestructorType(thisType);
+				ret.literal = builder.getLiteralForDestructor(type);
 			} else if(auto constDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl)) {
+				core::FunctionTypePtr type;
 				if(constDecl->isDefaultConstructor()) {
-					ret.lambda = converter.getIRBuilder().getDefaultConstructor(thisType, parents, fields);
+					type = builder.getDefaultConstructorType(thisType);
 				}
 				else if(constDecl->isCopyConstructor()) {
-					ret.lambda = converter.getIRBuilder().getDefaultCopyConstructor(thisType, parents, fields);
+					type = builder.getDefaultCopyConstructorType(thisType);
 				}
 				else if(constDecl->isMoveConstructor()) {
-					ret.lambda = converter.getIRBuilder().getDefaultMoveConstructor(thisType, parents, fields);
+					type = builder.getDefaultMoveConstructorType(thisType);
 				} else {
-					assert_not_implemented() << "Can't translate defaulted constructor: " << dumpClang(methDecl);
+					assert_fail() << "Can't translate defaulted constructor: " << dumpClang(methDecl);
 				}
-				ret.lit = converter.getIRBuilder().getLiteralForConstructor(ret.lambda->getType());
+				ret.literal = builder.getLiteralForConstructor(type);
 			} else {
+				core::FunctionTypePtr type;
 				if(methDecl->isCopyAssignmentOperator()) {
-					ret.memFun = converter.getIRBuilder().getDefaultCopyAssignOperator(thisType, parents, fields);
+					type = builder.getDefaultCopyAssignOperatorType(thisType);
 				} else if(methDecl->isMoveAssignmentOperator()) {
-					ret.memFun = converter.getIRBuilder().getDefaultMoveAssignOperator(thisType, parents, fields);
+					type = builder.getDefaultMoveAssignOperatorType(thisType);
 				} else {
-					assert_not_implemented() << "Can't translate defaulted method: " << dumpClang(methDecl);
+					assert_fail() << "Can't translate defaulted method: " << dumpClang(methDecl);
 				}
-				ret.lambda = ret.memFun->getImplementation().as<core::LambdaExprPtr>();
-				ret.lit = converter.getIRBuilder().literal(ret.lambda->getReference()->getNameAsString(), ret.lambda->getType());
+				ret.literal = builder.getLiteralForMemberFunction(type, insieme::utils::getMangledOperatorAssignName());
+				ret.memberFunction = builder.memberFunction(false, insieme::utils::getMangledOperatorAssignName(), ret.literal);
 			}
-			if(!converter.getFunMan()->contains(methDecl)) converter.getFunMan()->insert(methDecl, ret.lit);
+			// mark the literal as defaulted or deleted
+			if(!declOnly && addDefaultedAndDeletedAnnotations) {
+				if(defaulted) core::annotations::markDefaultedPreTU(ret.literal);
+				else core::annotations::markDeletedPreTU(ret.literal);
+			}
+
+			if(!converter.getFunMan()->contains(methDecl)) converter.getFunMan()->insert(methDecl, ret.literal);
 		}
-		// non-default cases
+		// non-defaulted/deleted cases
 		else {
 			string name =  utils::buildNameForFunction(methDecl, converter);
 			auto funType = getFunMethodTypeInternal(converter, methDecl);
-			if(methDecl->isStatic()) { ret.lit = builder.literal(name, funType); } // static members are not methods in IR, need to treat here
-			else if(funType->getKind() == core::FK_CONSTRUCTOR) { ret.lit = builder.getLiteralForConstructor(funType); }
-			else if(funType->getKind() == core::FK_DESTRUCTOR) { ret.lit = builder.getLiteralForDestructor(funType); }
-			else { ret.lit = builder.getLiteralForMemberFunction(funType, name); }
-			if(!converter.getFunMan()->contains(methDecl)) converter.getFunMan()->insert(methDecl, ret.lit);
+			if(methDecl->isStatic()) { ret.literal = builder.literal(name, funType); } // static members are not methods in IR, need to treat here
+			else if(funType->getKind() == core::FK_CONSTRUCTOR) { ret.literal = builder.getLiteralForConstructor(funType); }
+			else if(funType->getKind() == core::FK_DESTRUCTOR) { ret.literal = builder.getLiteralForDestructor(funType); }
+			else { ret.literal = builder.getLiteralForMemberFunction(funType, name); }
+			if(!converter.getFunMan()->contains(methDecl)) converter.getFunMan()->insert(methDecl, ret.literal);
 			if(!declOnly) {
-				ret.lambda = convertFunMethodInternal(converter, funType, methDecl, ret.lit->getStringValue());
-				ret.memFun = builder.memberFunction(methDecl->isVirtual(), name, ret.lit);
+				ret.lambda = convertFunMethodInternal(converter, funType, methDecl, ret.literal->getStringValue());
+				ret.memberFunction = builder.memberFunction(methDecl->isVirtual(), name, ret.literal);
 			}
 		}
 		return ret;

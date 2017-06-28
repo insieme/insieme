@@ -47,7 +47,9 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/materialize.h"
+#include "insieme/core/analysis/default_delete_member_semantics.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/annotations/default_delete.h"
 #include "insieme/core/annotations/naming.h"
 
 #include "insieme/core/types/match.h"
@@ -412,6 +414,46 @@ namespace parser {
 			return builder.functionType(params, retType, fk);
 		}
 
+		namespace {
+			void handleDefaultedDeletedAndRegisterType(NodeManager& mgr, tu::IRTranslationUnit& tu, const NodeType& type, const string& name,
+			                                           const ParentList& parents, const FieldList& fields,
+			                                           const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
+			                                           const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
+				IRBuilder builder(mgr);
+				auto key = builder.genericType(name);
+
+				// handle defaulted and deleted members
+				analysis::CppDefaultDeleteMembers inputMembers(mgr, ctors, dtor, mfuns);
+				auto recordMembers = analysis::applyCppDefaultDeleteSemantics(builder.refType(key), builder.parents(parents),
+				                                                              builder.fields(fields), inputMembers);
+
+				// register/update all lambdas in the TU
+				auto registerInTu = [&tu](const core::analysis::MemberProperties& member) {
+					if(member.lambda) {
+						if(tu.getFunctions().find(member.literal) == tu.getFunctions().end()) {
+							tu.addFunction(member.literal, member.lambda);
+						} else {
+							tu.replaceFunction(member.literal, member.lambda);
+						}
+					}
+				};
+				::for_each(recordMembers.constructors, [&](const auto& ctor) { registerInTu(ctor); });
+				if(recordMembers.destructor) registerInTu(*recordMembers.destructor);
+				::for_each(recordMembers.memberFunctions, [&](const auto& mfun) { registerInTu(mfun); });
+
+				// generate the record and insert it into the TU
+				if(type == NT_Struct) {
+					tu.addType(key, builder.structType(name, parents, fields, recordMembers.getConstructorLiteralList(),
+																						 recordMembers.getDestructorLiteral(), dtorIsVirtual,
+																						 recordMembers.getMemberFunctionList(), pvmfuns));
+				} else {
+					tu.addType(key, builder.unionType(name, fields, recordMembers.getConstructorLiteralList(),
+																						recordMembers.getDestructorLiteral(), dtorIsVirtual,
+																						recordMembers.getMemberFunctionList(), pvmfuns));
+				}
+			}
+		}
+
 		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields,
 			                                 const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
 			                                 const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
@@ -422,7 +464,10 @@ namespace parser {
 				return nullptr;
 			}
 
-			TagTypePtr res;
+			if(type == NT_Union && !parents.empty()) {
+				error(l, "Inheritance not supported for unions!");
+				return nullptr;
+			}
 
 			// now we insert new member functions with just literals as implementation for all functions which have only been declared by the user
 			MemberFunctionList mfunsNew = mfuns;
@@ -451,18 +496,8 @@ namespace parser {
 				tu.getFunctions().erase(lit);
 			}
 
-			if(type == NT_Struct) {
-				res = builder.structTypeWithDefaults(builder.refType(getThisType()), parents, fields, ctors, dtor, dtorIsVirtual, mfunsNew, pvmfuns);
-			} else {
-				if(!parents.empty()) {
-					error(l, "Inheritance not supported for unions!");
-					return nullptr;
-				}
-				res = builder.unionTypeWithDefaults(builder.refType(getThisType()), fields, ctors, dtor, dtorIsVirtual, mfunsNew, pvmfuns);
-			}
-
-			// register type in translation unit
-			tu.insertRecordTypeWithDefaults(key, res);
+			// now we handle the defaulted and deleted members, create the type and register it in the TU
+			handleDefaultedDeletedAndRegisterType(mgr, tu, type, name, parents, fields, ctors, dtor, dtorIsVirtual, mfunsNew, pvmfuns);
 
 			// done
 			return key;
@@ -481,15 +516,10 @@ namespace parser {
 			registerFields(l, fields);
 
 			const GenericTypePtr key = builder.genericType(name->getValue());
-			TagTypePtr res;
-			if(type == NT_Struct) {
-				res = builder.structTypeWithDefaults(builder.refType(key), ParentList(), fields, ExpressionList(), ExpressionPtr(), false, MemberFunctionList(),
-					                                 PureVirtualMemberFunctionList());
-			} else {
-				res = builder.unionTypeWithDefaults(builder.refType(key), fields, ExpressionList(), ExpressionPtr(), false, MemberFunctionList(),
-					                                PureVirtualMemberFunctionList());
-			}
-			tu.insertRecordTypeWithDefaults(key, res);
+
+			// now we handle the defaulted and deleted members, create the type and register it in the TU
+			handleDefaultedDeletedAndRegisterType(mgr, tu, type, name->getValue(), ParentList(), fields, ExpressionList(), {}, false,
+			                                      MemberFunctionList(), PureVirtualMemberFunctionList());
 
 			// end the record here
 			endRecord();
@@ -607,9 +637,6 @@ namespace parser {
 		ExpressionPtr InspireDriver::genConstructor(const location& l, const LambdaExprPtr& ctor) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
-			// return a special literal if the body indicates to default this function
-			if(ctor->getBody() == getParserDefaultCompound()) return parserIRExtension.getDefaultedBodyMarker();
-
 			auto key = builder.getLiteralForConstructor(ctor->getType());
 
 			//register the lambda itself in the TU - but only overwrite dummy declarations
@@ -623,6 +650,10 @@ namespace parser {
 				}
 			}
 			tu.addFunction(key, ctor);
+
+			// mark the literal as defaulted/deleted accordingly
+			if(ctor->getBody() == builder.getDefaultedBodyPreTUMarker()) annotations::markDefaultedPreTU(key);
+			if(ctor->getBody() == builder.getDeletedBodyPreTUMarker()) annotations::markDeletedPreTU(key);
 
 			return key;
 		}
@@ -661,8 +692,6 @@ namespace parser {
 		ExpressionPtr InspireDriver::genDestructor(const location& l, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
-			if(body == getParserDefaultCompound()) return nullptr;
-
 			// create full parameter list
 			VariableList params = {thisStack.back()};
 			auto paramTypes = getParamTypesForLambdaAndFunction(l, params);
@@ -682,6 +711,10 @@ namespace parser {
 			auto key = builder.getLiteralForDestructor(dtorType);
 			tu.addFunction(key, fun);
 
+			// mark the literal as defaulted/deleted accordingly
+			if(body == builder.getDefaultedBodyPreTUMarker()) annotations::markDefaultedPreTU(key);
+			if(body == builder.getDeletedBodyPreTUMarker()) annotations::markDeletedPreTU(key);
+
 			return key;
 		}
 
@@ -691,9 +724,6 @@ namespace parser {
 		MemberFunctionPtr InspireDriver::genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name,
 			                                               const VariableList& params, const TypePtr& retType, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
-
-			// return a member function containing a special literal if the body indicates to default this function
-			if(body == getParserDefaultCompound()) return builder.memberFunction(false, name, parserIRExtension.getDefaultedBodyMarker());
 
 			// create full parameter list
 			VariableList fullParams { thisStack.back() };
@@ -731,6 +761,10 @@ namespace parser {
 			}
 			tu.addFunction(key, fun);
 
+			// mark the literal as defaulted/deleted accordingly
+			if(body == builder.getDefaultedBodyPreTUMarker()) annotations::markDefaultedPreTU(key);
+			if(body == builder.getDeletedBodyPreTUMarker()) annotations::markDeletedPreTU(key);
+
 			return builder.memberFunction(virtl, name, key);
 		}
 
@@ -754,29 +788,6 @@ namespace parser {
 
 			// create the member function entry
 			return builder.pureVirtualMemberFunction(name, memberFunType);
-		}
-
-		CompoundStmtPtr InspireDriver::getParserDefaultCompound() const {
-			return parserIRExtension.getDefaultedBodyCompound();
-		}
-
-		CompoundStmtPtr InspireDriver::getParserDeleteCompound() const {
-			return parserIRExtension.getDeletedBodyCompound();
-		}
-
-		bool InspireDriver::isMarkedAsDefaultedMember(const NodePtr& node) const {
-			if(!node) return false;
-
-			// member functions are checked for their implementation
-			if(const auto& mFun = node.isa<MemberFunctionPtr>()) {
-				return isMarkedAsDefaultedMember(mFun->getImplementation());
-			}
-			// literals can be compared directly
-			if(const auto& lit = node.isa<LiteralPtr>()) {
-				return lit == parserIRExtension.getDefaultedBodyMarker();
-			}
-			// everything else isn't a defaulted member
-			return false;
 		}
 
 		ExpressionPtr InspireDriver::genFreeConstructor(const location& l, const std::string& name, const LambdaExprPtr& ctor) {
@@ -1161,53 +1172,30 @@ namespace parser {
 			//now register all the default members
 			TypePtr thisType = builder.refType(key);
 
-			{
-				//default constructor
-				auto ctorType = builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
-				auto lit = builder.getLiteralForConstructor(ctorType);
-				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
-			}
+			LiteralPtr lit;
+			//default constructor
+			lit = builder.getLiteralForConstructor(builder.getDefaultConstructorType(thisType));
+			tu.addFunction(lit, builder.lambdaExpr(lit->getType().as<FunctionTypePtr>(), builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 
-			{
-				//default copy constructor
-				TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
-				auto ctorType = builder.functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
-				auto lit = builder.getLiteralForConstructor(ctorType);
-				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
-			}
+			//default copy constructor
+			lit = builder.getLiteralForConstructor(builder.getDefaultCopyConstructorType(thisType));
+			tu.addFunction(lit, builder.lambdaExpr(lit->getType().as<FunctionTypePtr>(), builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 
-			{
-				//default move constructor
-				TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
-				auto ctorType = builder.functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
-				auto lit = builder.getLiteralForConstructor(ctorType);
-				tu.addFunction(lit, builder.lambdaExpr(ctorType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
-			}
+			//default move constructor
+			lit = builder.getLiteralForConstructor(builder.getDefaultMoveConstructorType(thisType));
+			tu.addFunction(lit, builder.lambdaExpr(lit->getType().as<FunctionTypePtr>(), builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 
-			{
-				//default destructor
-				auto dtorType = builder.functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
-				auto lit = builder.getLiteralForDestructor(dtorType);
-				tu.addFunction(lit, builder.lambdaExpr(dtorType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
-			}
+			//default destructor
+			lit = builder.getLiteralForDestructor(builder.getDefaultDestructorType(thisType));
+			tu.addFunction(lit, builder.lambdaExpr(lit->getType().as<FunctionTypePtr>(), builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 
-			{
-				//default copy assignment operator
-				TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
-				TypePtr resType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
-				auto funType = builder.functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
-				auto lit = builder.getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
-				tu.addFunction(lit, builder.lambdaExpr(funType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
-			}
+			//default copy assignment operator
+			lit = builder.getLiteralForMemberFunction(builder.getDefaultCopyAssignOperatorType(thisType), utils::getMangledOperatorAssignName());
+			tu.addFunction(lit, builder.lambdaExpr(lit->getType().as<FunctionTypePtr>(), builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 
-			{
-				//default move assignment operator
-				TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
-				TypePtr resType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
-				auto funType = builder.functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
-				auto lit = builder.getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
-				tu.addFunction(lit, builder.lambdaExpr(funType, builder.parameters(), parserIRExtension.getMemberDummyLambda()));
-			}
+			//default move assignment operator
+			lit = builder.getLiteralForMemberFunction(builder.getDefaultMoveAssignOperatorType(thisType), utils::getMangledOperatorAssignName());
+			tu.addFunction(lit, builder.lambdaExpr(lit->getType().as<FunctionTypePtr>(), builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 		}
 
 		void InspireDriver::genDeclaration(const location& l, const std::string name, const TypePtr& type) {
@@ -1264,52 +1252,6 @@ namespace parser {
 			return nullptr;
 		}
 
-		namespace {
-			bool isDeletedBody(const InspireDriver& driver, const ExpressionPtr& lambda) {
-				auto lambdaExpr = lambda.isa<LambdaExprPtr>();
-				if(!lambdaExpr) return false;
-				if(lambdaExpr->getBody() == driver.getParserDeleteCompound()) return true;
-				return false;
-			};
-
-			RecordPtr handleDefaultedAndDeletedMembers(const InspireDriver& driver, const RecordPtr& record) {
-				auto& builder = driver.builder;
-				bool isStruct = record.isa<StructPtr>();
-				auto parents = isStruct ? record.as<StructPtr>()->getParents() : builder.parents();
-
-				// handle constructors
-				auto ctors = record->getConstructors();
-				ExpressionList newCtors;
-				for(auto& ctor : ctors) {
-					if(isDeletedBody(driver, ctor)) continue;
-					newCtors.push_back(ctor);
-				}
-
-				// handle destructor
-				ExpressionList newDtor { record->getDestructor() };
-				if(isDeletedBody(driver, newDtor[0])) {
-					newDtor.clear();
-				}
-
-				// handle operators
-				auto mfuns = record->getMemberFunctions();
-				MemberFunctionList newMfuns;
-				for(auto& mfun : mfuns) {
-					if(isDeletedBody(driver, mfun->getImplementation())) continue;
-					newMfuns.push_back(mfun);
-				}
-
-				// generate replacements
-				if(isStruct) {
-					return builder.structRecord(record->getName(), parents, record->getFields(), builder.expressions(newCtors), builder.expressions(newDtor),
-						                        record->getDestructorVirtual(), builder.memberFunctions(newMfuns), record->getPureVirtualMemberFunctions());
-				} else {
-					return builder.unionRecord(record->getName(), record->getFields(), builder.expressions(newCtors), builder.expressions(newDtor),
-						                       record->getDestructorVirtual(), builder.memberFunctions(newMfuns), record->getPureVirtualMemberFunctions());
-				}
-			}
-		}
-
 		void InspireDriver::computeResult(const NodePtr& fragment) {
 			result = tu.resolve(fragment);
 
@@ -1323,28 +1265,18 @@ namespace parser {
 				replacements[builder.stringValue(temporaryName->getValue() + "::" + utils::getMangledOperatorAssignName())] = builder.stringValue("::" + utils::getMangledOperatorAssignName());
 			}
 			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
-			replacements.clear();
-
-			// replace defaulted member functions and remove deleted ones
-			visitDepthFirstOnce(result, [&](const RecordPtr& record) {
-				replacements[record] = handleDefaultedAndDeletedMembers(*this, record);
-			}, true);
-
-			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
 
 			// check if artifacts remain
 			bool foundArtifacts = false;
 			visitDepthFirstOnceInterruptible(result, [&](const NodePtr& node) {
-				if(node == parserIRExtension.getMemberDummyLambda() || node == parserIRExtension.getExplicitMemberDummyLambda()
-				   || node == parserIRExtension.getDefaultedBodyCompound() || node == parserIRExtension.getDeletedBodyCompound()
-				   || node == parserIRExtension.getDefaultedBodyMarker()) {
+				if(node == parserIRExtension.getMemberDummyLambda() || node == parserIRExtension.getExplicitMemberDummyLambda()) {
 					foundArtifacts = true;
 					return true;
 				}
 				return false;
 			}, true, true);
 
-			if(foundArtifacts) { assert_fail() << "Found parser artifacts in final parser result."; }
+			assert_false(foundArtifacts) << "Found parser artifacts in final parser result.\n\n";
 		}
 
 

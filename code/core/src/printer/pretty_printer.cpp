@@ -789,6 +789,10 @@ namespace printer {
 				auto recordName = makeReadableIfRequired(node->getName()->getValue());
 				if(recordName.compare("")) { (*out) << recordName << " "; }
 
+				IRBuilder builder(node->getNodeManager());
+				auto tag = builder.tagTypeReference(node->getName());
+				auto thisType = builder.refType(tag);
+
 				// print parents including their qualifiers
 				if(strct) {
 					auto parents = node.as<StructAddress>()->getParents();
@@ -811,7 +815,24 @@ namespace printer {
 				// print all fields
 				visit(node->getFields());
 
-				// print all constructors
+				// print all constructors - first the deleted ones
+				auto containsCtorType = [&](const TypePtr& type) {
+					return ::any(node->getConstructors(), [&type](const auto& ctor) { return ctor->getType().getAddressedNode() == type; });
+				};
+				if(!containsCtorType(builder.getDefaultConstructorType(thisType))) {
+					newLine();
+					(*out) << "ctor function () = delete;";
+				}
+				if(!containsCtorType(builder.getDefaultCopyConstructorType(thisType))) {
+					newLine();
+					(*out) << "ctor function (other : ref<" << recordName << ",t,f,cpp_ref>) = delete;";
+				}
+				if(!containsCtorType(builder.getDefaultMoveConstructorType(thisType))) {
+					newLine();
+					(*out) << "ctor function (other : ref<" << recordName << ",f,f,cpp_rref>) = delete;";
+				}
+
+				// and then all the ones which are present
 				for(auto constr : node->getConstructors()) {
 					if(!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultConstructor(constr.getAddressedNode())) continue;
 					newLine();
@@ -833,7 +854,22 @@ namespace printer {
 					(*out) << "dtor function () = delete;";
 				}
 
-				// print all member functions
+				// print all member functions - first the deleted ones
+				auto containsAssignOperatorType = [&](const TypePtr& type) {
+					return ::any(node->getMemberFunctions(), [&type](const auto& memfun) {
+							return memfun->getNameAsString() == utils::getMangledOperatorAssignName() && memfun->getImplementation()->getType().getAddressedNode() == type;
+					});
+				};
+				if(!containsAssignOperatorType(builder.getDefaultCopyAssignOperatorType(thisType))) {
+					newLine();
+					(*out) << "function " << utils::getMangledOperatorAssignName() << " = (rhs : ref<" << recordName << ",t,f,cpp_ref>) -> ref<" << recordName << ",f,f,cpp_ref> = delete;";
+				}
+				if(!containsAssignOperatorType(builder.getDefaultMoveAssignOperatorType(thisType))) {
+					newLine();
+					(*out) << "function " << utils::getMangledOperatorAssignName() << " = (rhs : ref<" << recordName << ",f,f,cpp_rref>) -> ref<" << recordName << ",f,f,cpp_ref> = delete;";
+				}
+
+				// and then all the ones which are present
 				auto memberfuns = node->getMemberFunctions();
 				for(auto memberFun : memberfuns) {
 					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(memberFun.getAddressedNode())) continue;

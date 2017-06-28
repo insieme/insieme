@@ -871,7 +871,7 @@ namespace types {
 
 			// check all arguments
 			for (const auto& cur : arguments) {
-				if (!analysis::isTrivial(cur)) return fail;
+				if (!analysis::isTriviallyCopyable(cur)) return fail;
 			}
 
 
@@ -908,8 +908,8 @@ namespace types {
 						}
 						}
 
-						// check whether the argument is trivial or not convertible to parameter type
-						if (!analysis::isTrivial(arguments[i]) && !analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
+						// check whether the argument is not trivially copyable and not convertible to parameter type
+						if (!analysis::isTriviallyCopyable(arguments[i]) && !analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
 							return fail;
 						}
 

@@ -1029,16 +1029,16 @@ namespace checks {
 
 		// return type rules for value types:
 		//  - trivial types can be returned by value or reference
-		//  - non-trivial types must be returned by reference
+		//  - non-trivially copyable types must be returned by reference
 
 		TypePtr trivialClass = builder.parseType("struct A { x : int<4>; }");
-		TypePtr nonTrivialClass = builder.parseType("struct B { x : int<4>; ctor () { x = 5; } }");
+		TypePtr nonTriviallyCopyableClass = builder.parseType("struct B { x : int<4>; ctor (other : ref<B,t,f,cpp_ref>) { } }");
 
 		EXPECT_TRUE(trivialClass);
-		EXPECT_TRUE(nonTrivialClass);
+		EXPECT_TRUE(nonTriviallyCopyableClass);
 
 		EXPECT_TRUE(analysis::isTrivial(trivialClass));
-		EXPECT_FALSE(analysis::isTrivial(nonTrivialClass));
+		EXPECT_FALSE(analysis::isTrivial(nonTriviallyCopyableClass));
 
 
 		{
@@ -1073,27 +1073,27 @@ namespace checks {
 		}
 
 		{
-			// -- non-trivial case --
-			FunctionTypePtr nonTrivialFunType = builder.functionType(TypeList(), nonTrivialClass);
+			// -- non-trivially copyable case --
+			FunctionTypePtr nonTrivialFunType = builder.functionType(TypeList(), nonTriviallyCopyableClass);
 
 			// -- return by value --
 			LambdaPtr a = builder.lambda(nonTrivialFunType, VariableList(), builder.returnStmt(
-				builder.literal(nonTrivialClass, "X")
+				builder.literal(nonTriviallyCopyableClass, "X")
 			));
 
 			// -- return a reference
 			LambdaPtr b = builder.lambda(nonTrivialFunType, VariableList(), builder.returnStmt(
-				builder.literal(builder.refType(nonTrivialClass), "X")
+				builder.literal(builder.refType(nonTriviallyCopyableClass), "X")
 			));
 
 			// -- return as C++ reference
 			LambdaPtr c = builder.lambda(nonTrivialFunType, VariableList(), builder.returnStmt(
-				builder.literal(builder.refType(nonTrivialClass, true, false, lang::ReferenceType::Kind::CppReference), "X")
+				builder.literal(builder.refType(nonTriviallyCopyableClass, true, false, lang::ReferenceType::Kind::CppReference), "X")
 			));
 
 			// -- not something different, e.g. a pointer
 			LambdaPtr d = builder.lambda(nonTrivialFunType, VariableList(), builder.returnStmt(
-				builder.literal(builder.ptrType(nonTrivialClass), "X")
+				builder.literal(builder.ptrType(nonTriviallyCopyableClass), "X")
 			));
 
 			CheckPtr returnTypeCheck = make_check<ReturnTypeCheck>();

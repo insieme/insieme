@@ -43,6 +43,12 @@
 #include "insieme/core/forward_decls.h"
 
 namespace insieme {
+namespace core {
+namespace analysis {
+	struct MemberProperties;
+}
+}
+
 namespace frontend {
 namespace conversion {
 
@@ -83,22 +89,14 @@ namespace conversion {
 		core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl, string name = "", bool genLiteral = false) const;
 
 
-		// return value type for convertMethodDecl
-		// impl can be null
-		struct ConvertedMethodDecl {
-			core::MemberFunctionPtr memFun = nullptr;
-			core::LambdaExprPtr lambda = nullptr;
-			core::LiteralPtr lit = nullptr;
-		};
-
 		/// Converts a method declaration into an IR MemberFunction.
 		/// @param methDecl is a clang CXXMethodDecl which represent a definition for the method
 		/// @param parents parents of the class this is a method of
 		/// @param fields fields of the class this is a method of
 		/// @param declOnly only add method to function table, don't convert body
 		/// @return Converted member function
-		ConvertedMethodDecl convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents, const core::FieldsPtr& fields,
-			                                  bool declOnly = false) const;
+		core::analysis::MemberProperties convertMethodDecl(const clang::CXXMethodDecl* methDecl, const core::ParentsPtr& parents, const core::FieldsPtr& fields,
+		                                                   bool declOnly = false, bool addDefaultedAndDeletedAnnotations = true) const;
 
 		// Visitors -------------------------------------------------------------------------------------------------------
 

@@ -53,6 +53,7 @@
 
 #include "insieme/core/ir_types.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/analysis/default_delete_member_semantics.h"
 #include "insieme/core/annotations/naming.h"
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -178,7 +179,7 @@ namespace conversion {
 		converter.getRecordMan()->incrementConversionStackDepth();
 
 		// get parents if any
-		std::vector<core::ParentPtr> parents;
+		core::ParentList parents;
 		for(auto base : classDecl->bases()) {
 			// visit the parent to build its type
 			auto parentIrType = convert(base.getType());
@@ -239,47 +240,61 @@ namespace conversion {
 		converter.getVarMan()->pushLambda(generateLambdaMapping(converter, classDecl));
 
 		// get methods, constructors and destructor
-		std::vector<core::MemberFunctionPtr> members;
-		std::vector<core::PureVirtualMemberFunctionPtr> pvMembers;
-		std::vector<core::ExpressionPtr> constructors;
-		core::LiteralPtr destructor = nullptr;
+		core::analysis::CppDefaultDeleteMembers recordMembers;
+		core::PureVirtualMemberFunctionList pvMembers;
 		bool destructorVirtual = false;
 		for(auto mem : methodDecls) {
 			mem = mem->getCanonicalDecl();
 			if(mem->isStatic()) continue;
-			// actual methods
-			auto convDecl = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields());
-			if(convDecl.lambda) {
-				VLOG(2) << "adding method lambda literal " << *convDecl.lit << " of type " << dumpColor(convDecl.lit->getType()) << "to IRTU";
-				converter.getIRTranslationUnit().addFunction(convDecl.lit, convDecl.lambda);
+			// if the method is implicit and one of the default constructs we skip it, because the C++ semantics too will add these again correctly
+			if(mem->isImplicit() && utils::isDefaultClassMember(mem)) {
+				continue;
 			}
+			// actual methods
+			auto methodConversionResult = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields());
 			if(mem->isVirtual() && mem->isPure()) {
-				pvMembers.push_back(builder.pureVirtualMemberFunction(convDecl.memFun->getName(), convDecl.lit->getType().as<core::FunctionTypePtr>()));
+				pvMembers.push_back(builder.pureVirtualMemberFunction(methodConversionResult.memberFunction->getName(), methodConversionResult.literal->getType().as<core::FunctionTypePtr>()));
 			} else if(llvm::dyn_cast<clang::CXXConstructorDecl>(mem)) {
-				constructors.push_back(convDecl.lit.as<core::ExpressionPtr>());
+				recordMembers.constructors.push_back(methodConversionResult);
 			} else if(llvm::dyn_cast<clang::CXXDestructorDecl>(mem)) {
-				destructor = convDecl.lit;
+				recordMembers.destructor = methodConversionResult;
 				destructorVirtual = mem->isVirtual();
 			} else {
-				members.push_back(convDecl.memFun);
+				recordMembers.memberFunctions.push_back(methodConversionResult);
 			}
 		}
 
+		// handle defaulted and deleted members accordingly
+		recordMembers = core::analysis::applyCppDefaultDeleteSemantics(builder.refType(genTy), irParents, recordTy->getFields(), recordMembers);
+
+		// register all lambdas in the TU
+		auto registerInTu = [this](const core::analysis::MemberProperties& member) {
+			if(member.literal && member.lambda) {
+				VLOG(2) << "adding method lambda literal " << *member.literal << " of type " << dumpColor(member.literal->getType()) << " to IRTU";
+				converter.getIRTranslationUnit().addFunction(member.literal, member.lambda);
+			}
+		};
+		::for_each(recordMembers.constructors, [&](const auto& ctor) { registerInTu(ctor); });
+		if(recordMembers.destructor) registerInTu(*recordMembers.destructor);
+		::for_each(recordMembers.memberFunctions, [&](const auto& mfun) { registerInTu(mfun); });
+
 		// after method translation: generate invoke and pop lambda scope in case it was a lambda class
-		generateLambdaInvokeOperator(methodDecls, classDecl, members, converter);
+		generateLambdaInvokeOperator(methodDecls, classDecl, recordMembers.getMemberFunctionList(), converter);
 		converter.getVarMan()->popLambda();
 
 		// create new structTy/unionTy
 		if(tagTy->isStruct()) {
-			retTy = builder.structTypeWithDefaults(builder.refType(genTy), irParents, recordTy->getFields(), builder.expressions(constructors), destructor,
-				                                   destructorVirtual, builder.memberFunctions(members), builder.pureVirtualMemberFunctions(pvMembers));
+			retTy = builder.structType(genTy->getName()->getValue(), parents, recordTy->getFields()->getFields(), recordMembers.getConstructorLiteralList(),
+			                           recordMembers.getDestructorLiteral(), destructorVirtual,
+			                           recordMembers.getMemberFunctionList(), pvMembers);
 		} else {
-			retTy = builder.unionTypeWithDefaults(builder.refType(genTy), recordTy->getFields(), builder.expressions(constructors), destructor,
-				                                  destructorVirtual, builder.memberFunctions(members), builder.pureVirtualMemberFunctions(pvMembers));
+			retTy = builder.unionType(genTy->getName()->getValue(), recordTy->getFields()->getFields(), recordMembers.getConstructorLiteralList(),
+			                          recordMembers.getDestructorLiteral(), destructorVirtual,
+			                          recordMembers.getMemberFunctionList(), pvMembers);
 		}
 
-		// update associated type in irTu
-		converter.getIRTranslationUnit().insertRecordTypeWithDefaults(genTy, retTy.as<core::TagTypePtr>());
+		// add the type to the irTU
+		converter.getIRTranslationUnit().replaceType(genTy, retTy.as<core::TagTypePtr>());
 
 		// finally, we can mark the record conversion as done
 		converter.getRecordMan()->markDone(clangRecTy->getDecl());

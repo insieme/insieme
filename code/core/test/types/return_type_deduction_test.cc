@@ -338,8 +338,8 @@ namespace types {
 		funType = builder.parseType("(ref<int<4>,f,f,cpp_ref>)->bool").as<FunctionTypePtr>();
 		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
 
-		// -- check a non-trivial --
-		symbols["A"] = builder.parseType("struct A { a : int<4>; ctor () { a = 5; } }");
+		// -- check a non-trivially copyable --
+		symbols["A"] = builder.parseType("struct A { a : int<4>; ctor (other : ref<A,t,f,cpp_ref>) { } }");
 		EXPECT_FALSE(analysis::isTrivial(symbols["A"].as<TypePtr>()));
 
 		// pass by value should not be possible

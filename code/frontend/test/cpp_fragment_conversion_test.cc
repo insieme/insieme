@@ -60,6 +60,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, DefaultArgs) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args.cpp"); }
 
+	TEST(CppConversionTest, DefaultDelete) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_delete.cpp"); }
+
 	TEST(CppConversionTest, DefaultConstructorDeclaration) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_constructor_declaration.cpp"); }
 
 	TEST(CppConversionTest, Destructors) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_destructors.cpp"); }
@@ -85,6 +87,8 @@ namespace frontend {
 	TEST(CppConversionTest, LambdaNaming) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda_naming.cpp"); }
 
 	TEST(CppConversionTest, MemberCalls) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_member_calls.cpp"); }
+
+	TEST(CppConversionTest, Members) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_members.cpp"); }
 
 	TEST(CppConversionTest, MemFunPtr) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_mem_fun_ptr.cpp"); }
 

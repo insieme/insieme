@@ -37,47 +37,36 @@
  */
 #pragma once
 
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/forward_decls.h"
+
+/**
+ * A header file for annotating defaulted and deleted members of record types in a pre-TranslationUnit stage.
+ */
 
 namespace insieme {
 namespace core {
-namespace checks {
-
-// defines macros for generating CHECK declarations
-#include "insieme/core/checks/check_macros.inc"
+namespace annotations {
 
 	/**
-	 * This check verifies that undefined(...) is only called within ref.new or ref.var.
+	 * Marks the given node as defaulted.
 	 */
-	SIMPLE_CHECK(Undefined, CallExpr, false);
+	void markDefaultedPreTU(const NodePtr& node);
 
 	/**
-	 * This check verifies that no defaulted and deleted marker bodies remain in the final IR.
+	 * Checks whether a node has been marked as defaulted.
 	 */
-	SIMPLE_CHECK(DefaultedDeletedPreTUMarker, Node, false);
+	bool isMarkedDefaultedPreTU(const NodePtr& node);
 
 	/**
-	 * This check verifies that there are no free break statements inside for loops.
+	 * Marks the given node as deleted.
 	 */
-	SIMPLE_CHECK(FreeBreakInsideForLoop, ForStmt, false);
+	void markDeletedPreTU(const NodePtr& node);
 
 	/**
-	 * This check verifies that functions with non-unit return type return something on every code path.
+	 * Checks whether a node has been marked as deleted.
 	 */
-	SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
+	bool isMarkedDeletedPreTU(const NodePtr& node);
 
-	/**
-	 * This check verifies that init expressions are executed on synthesizable locations.
-	 */
-	SIMPLE_CHECK(ValidInitExprMemLocation, InitExpr, false);
-
-	/**
-	 * This check verifies that materializing declarations are backed up through a constructor or an implicit conversion.
-	 */
-	SIMPLE_CHECK(ValidMaterializingDeclaration, Declaration, false);
-
-	#undef SIMPLE_CHECK
-
-} // end namespace check
+} // end namespace annotations
 } // end namespace core
 } // end namespace insieme

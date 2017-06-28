@@ -96,6 +96,10 @@ namespace utils {
 		return "INSIEME_AUTO_TYPE";
 	}
 
+	/// Returns whether the passed CXXMethodDecl is one of the six default constructs of a class
+	///
+	bool isDefaultClassMember(const clang::CXXMethodDecl* methDecl);
+
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme

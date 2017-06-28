@@ -35,16 +35,13 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
+
 void nameCheck() {
 	#pragma test expect_ir(R"({ ptr_from_array("nameCheck"); 1; })")
 	{ __func__; 1; }
 	#pragma test expect_ir("EXPR_TYPE",R"(ptr<char,t,f>)")
 	__func__;
 }
-
-typedef struct { int i; } simple_struct;
-
-simple_struct generate_struct() { return (simple_struct){0}; };
 
 int main() {
 	nameCheck();
@@ -440,14 +437,6 @@ int main() {
 		} *ts;
 		ts->i;
 	}
-
-	// check direct R-value access
-	#pragma test expect_ir(R"(
-		def struct IMP_simple_struct { i: int<4>; };
-		def IMP_generate_struct = () -> IMP_simple_struct { return *<ref<IMP_simple_struct>>(ref_temp(type_lit(IMP_simple_struct))) {0} in IMP_simple_struct; };
-		IMP_generate_struct().i+5
-	)")
-	generate_struct().i + 5;
 
 	//===---------------------------------------------------------------------------------------------------------------------------------- MISCELLANEOUS ---===
 

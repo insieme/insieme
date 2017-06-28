@@ -88,6 +88,14 @@ namespace frontend {
 		});
 	}
 
+	TEST(InterceptorTest, NonTrivialTriviallyCopyableTypePassing) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/non_trivial_trivially_copyable_type_passing.cpp", [](ConversionJob& job) {
+			job.addIncludeDirectory(FRONTEND_TEST_DIR + "/inputs/interceptor");
+			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+		});
+	}
+
 	TEST(InterceptorTest, SystemInterception) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/system_interception.cpp", [](ConversionJob& job) {
 			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
