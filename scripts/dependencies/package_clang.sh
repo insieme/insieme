@@ -1,6 +1,4 @@
-# Apparently LLVM 4 libcxx does not compile with GCC 5.
-
-NAME="llvm4"
+NAME="clang"
 VERSION="4.0.0"
 PACKAGE="$NAME-$VERSION"
 
@@ -54,6 +52,7 @@ pkg_configure() {
 	$PREFIX/$CMAKE_PKG/bin/cmake \
 		-DCMAKE_INSTALL_PREFIX="$PREFIX/$PACKAGE" \
 		-DCMAKE_BUILD_TYPE=Release \
+		-DGCC_INSTALL_PREFIX="$PREFIX/$GCC_PKG" \
 		-DPYTHON_EXECUTABLE="$PREFIX/$PYTHON_PKG/bin/python" \
 		..
 }
