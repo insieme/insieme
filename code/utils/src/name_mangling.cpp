@@ -189,8 +189,7 @@ namespace utils {
 
 	string demangleToIdentifier(string name, bool keepLocation) {
 		// special case for conversion operators
-		static string convOpMangled = mangle("operator ");
-		if(boost::starts_with(name, convOpMangled)) {
+		if(boost::starts_with(name, getMangledOperatorConversionPrefix())) {
 			return demangle(name);
 		}
 
@@ -210,6 +209,11 @@ namespace utils {
 
 	const string& getMangledOperatorCallName() {
 		static string result = mangle("operator()");
+		return result;
+	}
+
+	const std::string& getMangledOperatorConversionPrefix() {
+		static string result = mangle("operator ");
 		return result;
 	}
 

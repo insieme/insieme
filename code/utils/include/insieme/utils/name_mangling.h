@@ -74,6 +74,10 @@ namespace utils {
 	///
 	const std::string& getMangledOperatorCallName();
 
+	/// Returns the prefix for mangled conversion operator names.
+	///
+	const std::string& getMangledOperatorConversionPrefix();
+
 	/// Returns a string which (if present) indicates that the name was generated for something anonymous.
 	///
 	const std::string& getMangledAnonymousIndicator();
