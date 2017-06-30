@@ -1,3 +1,3 @@
 includes="../../../../../seq/c/bots","../../../../../seq/c/bots/fib"
 files="../../../../../seq/c/bots/bots_common.c","../../../../../seq/c/bots/bots_main.c","../../../../../seq/c/bots/fib/fib.c"
-executionFlags=-n 40 -c -t
+executionFlags=-n 32 -c -t
