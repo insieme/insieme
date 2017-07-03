@@ -405,6 +405,7 @@ namespace checks {
 				std::cout.flush();
 				for(auto error : errors) {
 					meta.addBookmark(error.getOrigin());
+					meta.addExpand(error.getOrigin());
 					std::string msg = error.getMessage();
 					boost::algorithm::replace_all(msg, "<", "&lt;");
 					meta.addBody(error.getOrigin(), std::string("<pre>") + msg + "</pre>");
