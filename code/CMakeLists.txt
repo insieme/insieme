@@ -13,7 +13,6 @@ list(APPEND CMAKE_PREFIX_PATH ${prefix_paths})
 include(build_settings)
 include(coverage)
 include(doxygen)
-include(git_metadata)
 
 # -- Dependency Settings
 include(dependencies/boost)

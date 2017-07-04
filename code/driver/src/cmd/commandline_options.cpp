@@ -41,6 +41,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/tokenizer.hpp>
 
+#include "insieme/utils/version.h"
+
 namespace insieme {
 namespace driver {
 namespace cmd {
@@ -118,7 +120,7 @@ namespace cmd {
 
 		// check whether version was requested
 		if(res.settings.version) {
-			std::cout << "This is the Insieme (tm) compiler version: " << INSIEME_VERSION << "\n"
+			std::cout << "This is the Insieme (tm) compiler version: " << utils::getVersion() << "\n"
 								<< "Realized by the Distributed and Parallel Systems (DPS) group, copyright 2008-2016, "
 								<< "University of Innsbruck\n"
 								<< "http://www.insieme-compiler.org\n";
@@ -127,7 +129,7 @@ namespace cmd {
 			return res;
 		}
 		if(res.settings.dumpVersion) {
-			std::cout << INSIEME_VERSION << "\n";
+			std::cout << utils::getVersion() << "\n";
 			// zero exit code when requesting version!
 			res.gracefulExit = true;
 			return res;

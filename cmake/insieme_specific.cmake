@@ -17,9 +17,6 @@ add_definitions(-DINSIEME_SOURCE_ROOT="${PROJECT_SOURCE_DIR}/")
 add_definitions(-DINSIEME_TEST_ROOT="${PROJECT_SOURCE_DIR}/../test/")
 add_definitions(-DINSIEME_BUILD_ROOT="${PROJECT_BINARY_DIR}/")
 
-add_definitions(-DINSIEME_VERSION="${GIT_REF}")
-add_definitions(-DINSIEME_BRANCH="${GIT_BRANCH}")
-
 find_program(TIME_EXECUTABLE time)
 if(TIME_EXECUTABLE STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC)
 	message(FATAL_ERROR "Unable to locate time utility!")

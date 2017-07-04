@@ -44,12 +44,6 @@
 
 #include <string>
 
-// The macro defining the insieme version information
-#ifndef INSIEME_VERSION
-// fall-back if not defined by make file
-#define INSIEME_VERSION "unknown"
-#endif
-
 namespace insieme {
 namespace utils {
 
@@ -57,8 +51,8 @@ namespace utils {
 	 * Obtains a reference to a string holding the Insieme Version string to be
 	 * used when referring to a particular version of Insieme.
 	 */
-	inline const std::string getVersion() {
-		return std::string(INSIEME_VERSION);
+	static inline const std::string getVersion() {
+		return std::string("2epsilon");
 	}
 
 } // end namespace utils

@@ -39,18 +39,6 @@
 #ifndef __GUARD_IRT_VERSION_H
 #define __GUARD_IRT_VERSION_H
 
-/**
- * A simple header file defining a default insieme version information. It is overloaded
- * by the
- */
-
-// The macro defining the insieme version information (determined by the gcc-call)
-#ifndef INSIEME_VERSION
-// fall-back if not defined by make file
-#define INSIEME_VERSION "unknown"
-#endif
-
-#define IRT_CODE_VERSION INSIEME_VERSION
-
+#define IRT_CODE_VERSION "2epsilon"
 
 #endif // ifndef __GUARD_IRT_VERSION_H
