@@ -69,7 +69,7 @@ enum C_NodeType {
 
 -- | NodeTypes taken from Insieme header files. These should be used only
 -- inside "Insieme.Inspire.BinaryParser", use 'NodeType' instead.
-{#enum C_NodeType {} deriving (Eq, Show)#}
+{#enum C_NodeType {} deriving (Eq, Ord, Show)#}
 
 -- | Represent INSPIRE NodeTypes, /ValueNodes/ have their values attached via
 -- these NodeTypes.

@@ -43,6 +43,7 @@ library
                         Insieme.Analysis.WriteSetSummary,
                         Insieme.Context,
                         Insieme.Inspire,
+                        Insieme.Inspire.BinaryDumper,
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.NodeType,
