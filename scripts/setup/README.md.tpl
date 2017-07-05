@@ -9,7 +9,6 @@ Description goes here...
 See `scripts/dependencies/README.md` for more details. Otherwise do
 
     $ scripts/dependencies/installer boost
-    $ scripts/dependencies/third_party_linker
 
 ### Configuration
 
@@ -33,6 +32,7 @@ default value.
 
     $ mkdir build
     $ cd build
+    $ ../scripts/dependencies/third_party_linker
     $ cmake ../code
     $ make -j8
     $ ctest -j8
@@ -72,7 +72,7 @@ header to each source file upon commit. See `scripts/license`.
 
 ### Visual Studio Solution
 
-    $ cmake -G "Visual Studio 14 Win64" -DBUILD_SHARED_LIBS=OFF Z:\path\to\project
+    $ cmake -G "Visual Studio 15 2017 Win64" -DBUILD_SHARED_LIBS=OFF Z:\path\to\project
 
 Add path for third-party libraries when needed.
 

@@ -1,5 +1,4 @@
 build/
-third_party/
 
 # Editor Specific
 *.swp

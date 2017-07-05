@@ -1,7 +1,7 @@
 # Dependencies Installer
 
 These scripts ease the environment setup procedure required to build this
-project.  Each file with the prefix `package_` contains meta data and build
+project. Each file with the prefix `package_` contains meta data and build
 instructions for a specific package as well as its dependencies. A default set
 of instructions is inherited from `defaults.sh`, but can be overwritten by each
 package.
@@ -41,7 +41,7 @@ projects.
 In order for a project to find its required dependencies another layer of
 indirection has to be added. 
 
-Each project should contain a `third_party` folder inside the project's root
+Each project should contain a `third_party` folder inside the project's build
 directory. This folder should contain symlinks, one for each dependency,
 pointing to the installed package in `PREFIX`. The `third_party` folder should
 not contain different versions of the same package. Example:
@@ -57,7 +57,7 @@ not contain different versions of the same package. Example:
     drwxr-xr-x.  5 alex   dps 4.0K Nov 18 15:14 cmake-3.2.1/
     drwxr-xr-x.  5 alex   dps 4.0K Nov 18 15:14 cmake-3.6.1/
         ...
-    $ ls -l MyAwesomeProject/third_party
+    $ ls -l MyAwesomeProject/build/third_party
     lrwxrwxrwx. 1 alex dps   47 Nov 22 13:17 autoconf -> /home/alex/third_party_libs/autoconf-2.68/
     lrwxrwxrwx. 1 alex dps   47 Nov 22 13:17 automake -> /home/alex/third_party_libs/automake-1.15/
     lrwxrwxrwx. 1 alex dps   47 Nov 22 13:17 binutils -> /home/alex/third_party_libs/binutils-2.27/
@@ -67,7 +67,9 @@ not contain different versions of the same package. Example:
         ...
 
 The `third_party_linker` can create these symlinks for you, it uses the same
-version of a package as defined in the related `package_` file.
+version of a package as defined in the related `package_` file. The folder
+`third_party` is created in the current working directory when invoking
+`third_party_linker`.
 
 ## Custom GCC
 
