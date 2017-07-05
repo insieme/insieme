@@ -63,6 +63,7 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire.BinaryParser as BinPar
+import qualified Insieme.Inspire.BinaryDumper as BinDum
 import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Inspire.Visit as Visit
 import qualified Insieme.Utils.Arithmetic as Ar
@@ -333,3 +334,18 @@ foreign export ccall "hat_test_formulaExample2"
 testFormulaExample2 addr_c = do
     addr <- deRefStablePtr addr_c
     passFormula nullPtr $ Ar.Formula [ Ar.Term 1 (Ar.Product []), Ar.Term 2 (Ar.Product [Ar.Factor addr 2, Ar.Factor addr 4]) ]
+
+-- ** BinaryDumper Tests
+
+foreign export ccall "hat_hs_test_binary_dumper_mirror"
+  testBinaryDumperMirror :: CString -> CSize -> Ptr CString -> Ptr CSize -> IO ()
+
+testBinaryDumperMirror dump_c size_c dump_hs_ptr size_hs_ptr = do
+    dump <- BS8.packCStringLen (dump_c, fromIntegral size_c)
+    let Right ir = BinPar.parseBinaryDump dump
+    let dump' = BinDum.dumpBinaryDump ir
+    let size  = BS8.length dump'
+    dump_hs <- mallocBytes size :: IO CString
+    pokeArray dump_hs (castCharToCChar <$> BS8.unpack dump')
+    poke dump_hs_ptr dump_hs
+    poke size_hs_ptr $ fromIntegral size

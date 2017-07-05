@@ -48,15 +48,20 @@ import Data.Maybe
 import Data.Map.Strict (Map)
 import Insieme.Inspire.NodeType
 
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as L
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Insieme.Inspire as IR
 
-dumpBinaryDump :: IR.Tree -> L.ByteString
-dumpBinaryDump ir = toLazyByteString $ mconcat [ magicNr,
-                                                 dumpConverters,
-                                                 dumpNodes $ toDumpNodes ir]
+dumpBinaryDump :: IR.Tree -> BS.ByteString
+dumpBinaryDump ir = L.toStrict
+                  $ toLazyByteString
+                  $ mconcat [ magicNr,
+                              dumpConverters,
+                              dumpNodes $ toDumpNodes ir,
+                              dumpBuiltins,
+                              dumpAddresses ]
 
 -- * Dumping the header
 
@@ -68,6 +73,14 @@ magicNr = word64LE 0x494e5350495245
 
 dumpConverters :: Builder
 dumpConverters = dumpList []
+
+-- * Dumping additional stuff
+
+dumpBuiltins :: Builder
+dumpBuiltins = dumpList []
+
+dumpAddresses :: Builder
+dumpAddresses = dumpList [dumpString "0"]
 
 -- * Dumping the body
 
@@ -105,7 +118,7 @@ data DumpNode = DumpNode IR.NodeType [Int]
 toDumpNodes :: IR.Tree -> IntMap DumpNode
 toDumpNodes n = IntMap.union baseMap $ IntMap.fromList $ Map.elems map
   where
-    map = execState (toDumpNode n) Map.empty
+    (rootIndex, map) = runState (toDumpNode n) Map.empty
     baseMap = IntMap.singleton 0 $ snd $ fromJust $ Map.lookup n map
 
 toDumpNode :: IR.Tree -> State (Map IR.Tree (Int, DumpNode)) Int
@@ -118,7 +131,7 @@ toDumpNode n = do
 
             -- index 0 is reserved for the root node, therefore we start at 1
             -- and set the root afterwards
-            let index = Map.size map + 1
+            index <- (+1) <$> Map.size <$> get
 
             modify $ Map.insert n $ (index, DumpNode (IR.getNodeType n) children)
             return $ index
