@@ -67,15 +67,14 @@ collectAll pred root = collectAllPrune pred (\_ -> NoPrune ) root
 
 -- | Like 'collectAll' but allows you to prune the search space.
 collectAllPrune :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> NodeAddress -> [NodeAddress]
-collectAllPrune pred filter root = evalState (go root) IntMap.empty
+collectAllPrune pred pruning root = evalState (go root) IntMap.empty
   where
     go :: NodeAddress -> State (IntMap.IntMap [NodeAddress]) [NodeAddress]
     go addr = do
         cache <- get
-        let hit = IntMap.lookup key cache
-        if isJust hit
-            then return $ fromJust hit
-            else do
+        case IntMap.lookup key cache of
+            Just hit -> return hit
+            Nothing  -> do
                 r <- res
                 modify $ IntMap.insert key r
                 res
@@ -84,21 +83,21 @@ collectAllPrune pred filter root = evalState (go root) IntMap.empty
         node = getNode addr
         key = IR.getID node
         res = addAddr <$> concat <$> grow <$>
-            if filter node == NoPrune then mapM go (crop <$> getChildren addr) else return []
+            if pruning node == NoPrune then mapM go (crop <$> getChildren addr) else return []
 
         grow lists = (zipWith go) [ goDown i addr | i <- [0..] ] lists
             where
                 go head tails = append head <$> tails
 
-        addAddr xs = if (filter node /= PruneHere) && (pred $ getNode addr) then (addr:xs) else xs
+        addAddr xs = if (pruning node /= PruneHere) && (pred $ getNode addr) then (addr:xs) else xs
 
 -- | Collect all nodes of the given 'IR.NodeType' but prune the tree when
 -- encountering one of the other 'IR.NodeType's.
 collectAddr :: IR.NodeType -> [IR.NodeType -> Bool] -> NodeAddress -> [NodeAddress]
-collectAddr t fs = collectAllPrune pred filter
+collectAddr t fs = collectAllPrune p pruning
   where
-    pred = (==t) . IR.getNodeType
-    filter t = if any (\f -> f $ IR.getNodeType t) fs then PruneHere else NoPrune
+    p = (==t) . IR.getNodeType
+    pruning t = if any (\f -> f $ IR.getNodeType t) fs then PruneHere else NoPrune
 
 -- | Fold the given 'IR.Tree'. The accumulator function takes the subtree and
 -- the address of this subtree in the base tree.
