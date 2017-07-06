@@ -105,6 +105,15 @@ namespace parser {
 	}
 
 	StatementPtr parseStmt(NodeManager& manager, const string& code, bool onFailThrow, const DefinitionMap& definitions, const TypeAliasMap& aliases) {
+		// check whether it is actually an expression (every expression is a statement)
+		{
+			InspireDriver driver(code, manager);
+			saveSymbolTable(driver, definitions);
+			appendTypeAliases(driver, aliases);
+			if (auto x = driver.parseExpression()) return x;
+		}
+
+		// if it is not an expression, try the statement
 		InspireDriver driver(code, manager);
 		saveSymbolTable(driver, definitions);
 		appendTypeAliases(driver, aliases);
