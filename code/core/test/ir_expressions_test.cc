@@ -155,10 +155,10 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto root = builder.parseStmt(""
+		auto root = builder.parseExpr(""
 									  "alias int = int<4>;"
 									  "def f = (a : int, b : int) -> int { return 1; };"
-									  "f(1,2);");
+									  "f(1,2)");
 
 		EXPECT_EQ("AP([v1,v2])", toString(root.as<CallExprPtr>()->getFunctionExpr().as<LambdaExprPtr>()->getParameterList()));
 	}
