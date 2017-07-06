@@ -127,7 +127,7 @@ For some analysis engines additional paths must be provided to CMake
 
 After the actual build process has been completed, the `integration_tests`
 binary will be executed automatically to setup the environment for certain
-unit- and integration tests. This can also be achieved manually be running the
+unit- and integration tests. This can also be achieved manually by running the
 binary with the `--preprocessing` flag.
 
     $ code/driver/integration_tests --preprocessing
@@ -198,7 +198,7 @@ Add path for third-party libraries when needed.
 
 ### Coverage
 
-Building the coverage us currently only supported on Linux, as Perl and Bash
+Building the coverage is currently only supported on Linux, as Perl and Bash
 are required. To build and view the coverage set the corresponding CMake flag
 to `ON` and run:
 
