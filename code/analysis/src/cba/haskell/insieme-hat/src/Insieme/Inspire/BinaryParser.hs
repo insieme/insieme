@@ -154,7 +154,7 @@ markBuiltins root builtins = evalState (go root) Map.empty
             Nothing -> do
                 let tags = builtinTags node
                 children <- mapM go $ IR.getChildren node
-                let n = IR.mkNode (IR.getID node) (IR.getNodeType node) children tags
+                let n = IR.mkNode (fromJust $ IR.getID node) (IR.getNodeType node) children tags
                 modify (Map.insert node n)
                 return n
 

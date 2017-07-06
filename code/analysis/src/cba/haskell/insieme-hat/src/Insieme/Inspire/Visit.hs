@@ -81,7 +81,7 @@ collectAllPrune pred pruning root = evalState (go root) IntMap.empty
 
       where
         node = getNode addr
-        key = IR.getID node
+        key = fromJust $ IR.getID node
         res = addAddr <$> concat <$> grow <$>
             if pruning node == NoPrune then mapM go (crop <$> getChildren addr) else return []
 

@@ -52,7 +52,7 @@ import Insieme.Inspire.NodeType
 
 -- * Tree
 
-data Tree = Tree { getID       :: Int,
+data Tree = Tree { getID       :: Maybe Int,
                    getNodeType :: NodeType,
                    getChildren :: [Tree],
                    builtinTags :: [String]
@@ -67,8 +67,14 @@ instance Ord Tree where
 
 pattern Node x y <- Tree _ x y _
 
+unsafeMkNode :: Int -> NodeType -> [Tree] -> [String] -> Tree
+unsafeMkNode i = Tree (Just i)
+
 mkNode :: Int -> NodeType -> [Tree] -> [String] -> Tree
-mkNode = Tree
+mkNode = unsafeMkNode
+
+mkNode' :: NodeType -> [Tree] -> [String] -> Tree
+mkNode' = Tree Nothing
 
 numChildren :: Tree -> Int
 numChildren = length . getChildren
