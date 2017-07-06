@@ -86,8 +86,8 @@ projects.
 In order for a project to find its required dependencies another layer of
 indirection has to be added.
 
-A folder `third_party` should be located inside the Insieme source directory,
-containing contain symlinks for each dependency. The symlink points to the
+A folder `third_party` should be located inside the Insieme build directory,
+containing contain symlinks for each dependency. The symlinks point to
 installed package in `PREFIX`. The `third_party` folder should not contain
 different versions of the same package. Example:
 
@@ -103,7 +103,7 @@ different versions of the same package. Example:
     drwxr-xr-x.  5 alex   dps 4.0K Nov 18 15:14 cmake-3.6.1/
         ...
 
-    $ ls -l $INSIEME_SRC/third_party
+    $ ls -l $INSIEME_SRC/build/third_party
     lrwxrwxrwx. 1 alex dps   47 Nov 22 13:17 autoconf -> /home/alex/third_party_libs/autoconf-2.68/
     lrwxrwxrwx. 1 alex dps   47 Nov 22 13:17 automake -> /home/alex/third_party_libs/automake-1.15/
     lrwxrwxrwx. 1 alex dps   47 Nov 22 13:17 binutils -> /home/alex/third_party_libs/binutils-2.27/
@@ -113,7 +113,9 @@ different versions of the same package. Example:
         ...
 
 The `third_party_linker` can create these symlinks for you, it uses the same
-version of a package as defined in the related `package_` file.
+version of a package as defined in the related `package_` file. The folder
+`third_party` is created in the current working directory when invoking
+`third_party_linker`.
 
 ## Ubuntu 16.04 LTS
 

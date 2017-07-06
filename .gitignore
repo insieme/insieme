@@ -20,7 +20,6 @@ Thumbs.db
 tags
 CMakeLists.txt.user
 code/.idea*
-third_party/
 
 # ignore vim ycm files
 .ycm_extra_conf.py

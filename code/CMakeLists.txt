@@ -5,7 +5,7 @@ project(insieme LANGUAGES C CXX)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 
 # -- Prefix Path
-set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/../third_party CACHE STRING "Third Party Library Directory")
+set(THIRD_PARTY_DIR ${CMAKE_BINARY_DIR}/third_party CACHE STRING "Third Party Library Directory")
 if(NOT EXISTS ${THIRD_PARTY_DIR})
 	message(FATAL_ERROR "`third_party` directory does not exist, did you run `scripts/dependencies/third_party_linker` ?")
 endif()

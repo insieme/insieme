@@ -30,10 +30,9 @@ this setup process.
 
 [dependency README]: <scripts/dependencies/README.md>
 
-For a quickstart, run these two scripts
+For a quickstart, run the dependency installer
 
-    $ scripts/dependencies/installer boost
-    $ scripts/dependencies/third_party_linker
+    $ scripts/dependencies/installer
 
 ### Configuration
 
@@ -99,7 +98,8 @@ You can now setup a build directory using CMake:
 
     $ mkdir build
     $ cd build
-    $ $INSIEME_SRC/third_party/cmake/bin/cmake $INSIEME_SRC/code
+    $ $INSIEME_SRC/scripts/dependencies/installer
+    $ third_party/cmake/bin/cmake $INSIEME_SRC/code
 
 If successful, CMake produces the set of Makefiles required to build the
 Insieme project. Following command builds Insieme.
