@@ -48,73 +48,66 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
-	TEST(ConversionUtils, AnyTypeAndAnyExpr) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		// __any_expr__
-		{
-			auto expected = builder.parseStmt(R"(
-				{
-					var ref<int<4>> v1 = 1;
-					var ref<int<4>> v2 = 2;
-					var ref<int<4>> v3 = lit("__any_expr__" : (int<4>) -> int<4>)(1);
-				}
-			)");
-			auto actual = builder.parseStmt(R"(
-				def foo = (a: int<4>) -> int<4> { return a; };
-				{
-					var ref<int<4>> v1 = 1;
-					var ref<int<4>> v2 = 2;
-					var ref<int<4>> v3 = foo(1);
-				}
-			)");
-			auto res = detail::replaceAnyTypeAndAnyExprNodes(expected, actual);
-
-			ASSERT_TRUE(checks::check(expected).empty()) << checks::check(expected);
-			ASSERT_TRUE(checks::check(actual).empty()) << checks::check(actual);
-			ASSERT_TRUE(checks::check(res).empty()) << checks::check(res);
-
-			EXPECT_EQ(builder.normalize(expected), builder.normalize(res));
-		}
-
-		// __any_type__
-		{
-			auto expected = builder.parseStmt(R"(
-				{
-					var ref<__any_type__> v1 = ref_decl(type_lit(ref<__any_type__>));
-				}
-			)");
-			auto actual = builder.parseStmt(R"(
-				def struct A {};
-				{
-					var ref<A> v1 = ref_decl(type_lit(ref<A>));
-				}
-			)");
-			auto res = detail::replaceAnyTypeAndAnyExprNodes(expected, actual);
-
-			ASSERT_TRUE(checks::check(expected).empty()) << checks::check(expected);
-			ASSERT_TRUE(checks::check(actual).empty()) << checks::check(actual);
-			ASSERT_TRUE(checks::check(res).empty()) << checks::check(res);
-
-			EXPECT_EQ(builder.normalize(expected), builder.normalize(res));
-		}
-	}
-
-	TEST(ConversionUtils, AnyString) {
+	TEST(ConversionUtils, AnyExpr) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
 		auto expected = builder.parseStmt(R"(
-			def struct __any_string__1 {};
-			def struct __any_string__2 {
+			{
+				var ref<int<4>> v1 = 1;
+				var ref<int<4>> v2 = 2;
+				var ref<int<4>> v3 = lit("__any_expr__" : (int<4>) -> int<4>)(1);
+			}
+		)");
+		auto actual = builder.parseStmt(R"(
+			def foo = (a: int<4>) -> int<4> { return a; };
+			{
+				var ref<int<4>> v1 = 1;
+				var ref<int<4>> v2 = 2;
+				var ref<int<4>> v3 = foo(1);
+			}
+		)");
+
+		ASSERT_TRUE(checks::check(expected).empty()) << checks::check(expected);
+		ASSERT_TRUE(checks::check(actual).empty()) << checks::check(actual);
+		EXPECT_TRUE(detail::compareWithMarkerNodeHandling(expected, actual));
+	}
+
+	TEST(ConversionUtils, AnyType) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto expected = builder.parseStmt(R"(
+			{
+				var ref<__any_type__> v1 = ref_decl(type_lit(ref<__any_type__>));
+			}
+		)");
+		auto actual = builder.parseStmt(R"(
+			def struct A {};
+			{
+				var ref<A> v1 = ref_decl(type_lit(ref<A>));
+			}
+		)");
+
+		ASSERT_TRUE(checks::check(expected).empty()) << checks::check(expected);
+		ASSERT_TRUE(checks::check(actual).empty()) << checks::check(actual);
+		EXPECT_TRUE(detail::compareWithMarkerNodeHandling(expected, actual));
+	}
+
+	TEST(ConversionUtils, AnyStringSame) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto expected = builder.parseStmt(R"(
+			def struct __any_string__A {};
+			def struct __any_string__B {
 				ctor function () {}
-				function IMP_foo = () -> unit {}
+				function __any_string__function = () -> unit {}
 			};
 			{
-				var ref<__any_string__1> v1;
-				var ref<__any_string__2> v2 = __any_string_2::(ref_decl(type_lit(ref<__any_string__2>)));
-				v2.IMP_foo();
+				var ref<__any_string__A> v1;
+				var ref<__any_string__B> v2 = __any_string_2::(ref_decl(type_lit(ref<__any_string__B>)));
+				v2.__any_string__function();
 			}
 		)");
 		auto actual = builder.parseStmt(R"(
@@ -129,13 +122,38 @@ namespace utils {
 				v2.IMP_foo();
 			}
 		)");
-		auto res = detail::replaceAnyStringsInActual(expected, actual);
 
 		ASSERT_TRUE(checks::check(expected).empty()) << checks::check(expected);
 		ASSERT_TRUE(checks::check(actual).empty()) << checks::check(actual);
-		ASSERT_TRUE(checks::check(res).empty()) << checks::check(res);
+		EXPECT_TRUE(detail::compareWithMarkerNodeHandling(expected, actual));
+	}
 
-		EXPECT_EQ(builder.normalize(expected), builder.normalize(res));
+	TEST(ConversionUtils, AnyStringDifferent) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto expected = builder.parseStmt(R"(
+			def __any_string__function1 = () -> unit {};
+			def __any_string__function2 = () -> unit {};
+			{
+				__any_string__function1();
+				__any_string__function2();
+				__any_string__function1();
+			}
+		)");
+		auto actual = builder.parseStmt(R"(
+			def foo = () -> unit {};
+			def bar = () -> unit {};
+			{
+				foo();
+				bar();
+				bar();
+			}
+		)");
+
+		ASSERT_TRUE(checks::check(expected).empty()) << checks::check(expected);
+		ASSERT_TRUE(checks::check(actual).empty()) << checks::check(actual);
+		EXPECT_FALSE(detail::compareWithMarkerNodeHandling(expected, actual));
 	}
 
 } // utils namespace

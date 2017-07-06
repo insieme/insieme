@@ -74,152 +74,84 @@ namespace utils {
 
 	namespace detail {
 		/*
-		 * Returns a new tree derived from the given actual tree with special expression and type replacements applied.
-		 * Both given trees have to have an identical structure to some degree.
-		 * The address of GenericTypes in expected with the name "__any_type__" will be replaced in the actual tree with the same node.
-		 * The address of Literals in expected with the StringValue "__any_expr__" will be replaced in the actual tree with the same node.
+		 * This function compares both trees recursively and returns whether they match considering some special markers.
 		 *
-		 * As an example, calling the function with the following trees:
-		 * expected:                                          actual:
-		 * - someRoot                                         - someActualRoot
-		 *   `- Literal                                         `- Literal
-		 *      `- "__any_expr__"                                  `- "true"
-		 *      `- bool                                            `- bool
-		 *   `- 4                                               `- 20
-		 *   `- someNode                                        `- someActualNode
-		 *      `- Literal                                         `- LambdaExpr
-		 *      |  `- "__any_expr__"                               |  `- [...]
-		 *      |  `- GenericType<"__any_type__">                  |  `- (int<4>) -> bool
-		 *      `- someChild                                       `- someActualChild
-		 *      `- GenericType<"__any_type__">                     `- TagType
-		 *      |                                                  |  `- TagTypeReference
-		 *      |                                                  |  `- [...]
-		 *      `- someLeaf                                        `- someActualLeaf
-		 *
-		 * Will return the following tree:
-		 * - someActualRoot
-		 *   `- Literal
-		 *      `- "__any_expr__"
-		 *      `- bool
-		 *   `- 20
-		 *   `- someActualNode
-		 *      `- Literal
-		 *      |  `- "__any_expr__"
-		 *      |  `- GenericType<"__any_type__">
-		 *      `- someActualChild
-		 *      `- GenericType<"__any_type__">
-		 *      `- someActualLeaf
+		 * - If the expected node is a GenericType with the family name "__any_type__", any type is accepted as actual node.
+		 * - If the expected node is a Literal with the string value "__any_expr__", any expression is accepted as actual node.
+		 * - If the expected node is a StringLiteral which starts with the prefix "__any_string__", then the string value of the actual node
+		 *   will be mapped to the string value of the expected node. If a mapping for the expected node already exists, the actual value has to match.
+		 *   For StringLiteral objects which contain the string "::" (i.e. class members), this procedure will be executed individually for the class name
+		 *   and member name part.
 		 */
-		static inline NodePtr replaceAnyTypeAndAnyExprNodes(const NodePtr& expected, const NodePtr& actual) {
-			NodeManager& mgr = expected.getNodeManager();
-			IRBuilder builder(mgr);
-
-			static const std::string anyExprString = "__any_expr__";
-			static const auto anyType = builder.genericType("__any_type__");
-
-			std::map<NodeAddress, NodePtr> replacements;
-
-			visitDepthFirst(NodeAddress(expected), [&](const NodeAddress& addr) {
-				// this lambda will switch the current address into the actual tree. If that address exists it will add the replacement if the types are correct
-				auto addReplacement = [&](const NodePtr& replacement) {
-					auto targetAddr = addr.switchRoot(actual);
-					// if the address exists in the target tree
-					if(targetAddr) {
-						// and the target of a Literal replacement is an expression or the target of a GenericType replacement is a type
-						if((replacement.isa<LiteralPtr>() && targetAddr.isa<ExpressionAddress>())
-								|| (replacement.isa<GenericTypePtr>() && targetAddr.isa<TypeAddress>())) {
-							replacements[targetAddr] = replacement;
-						}
-					}
-				};
-
-				// Literals which's StringValue is the special expr marker get replaced
-				if(auto lit = addr.isa<LiteralAddress>()) {
-					if(lit->getValue()->getValue() == anyExprString) {
-						addReplacement(lit.getAddressedNode());
-					}
-				}
-				// as well as types which match the special type marker
-				if(auto type = addr.isa<GenericTypeAddress>()) {
-					if(type.getAddressedNode() == anyType) {
-						addReplacement(anyType);
-					}
-				}
-			}, true, true);
-
-			if(replacements.empty()) {
-				return actual;
-			}
-			return core::transform::replaceAll(mgr, replacements);
-		}
-
-		/*
-		 * Returns a new tree derived from the given actual tree with special StringValue replacements applied.
-		 * Both given trees have to have an identical structure.
-		 * The StringValue(prefixes) "__any_string__" in expected can be anything in actual, and will be replaced with the matching StringValue(prefixes)
-		 * from the expected tree. the Suffixes (delimited by "::") will keep the same.
-		 *
-		 * As an example, calling the function with the following trees:
-		 * expected:                                          actual:
-		 * - someRoot                                         - someRoot
-		 *   `- "__any_string__1"                               `- "SomeStringInActual"
-		 *   `- 4                                               `- 20
-		 *   `- someNode                                        `- someNode
-		 *      `- someChild                                       `- someChild
-		 *      |  `- 8                                            |  `- 1000
-		 *      |  `- "__any_string__2::ExpectedSuffix"            |  `- "AnotherString::ActualSuffix"
-		 *      `- "__any_string__1::FooSuffix"                    `- "SomeStringInActual::BarSuffix"
-		 *      `- "__any_string__2"                               `- "AnotherString"
-		 *      `- someLeaf                                        `- someLeaf
-		 *
-		 * Will return the following tree:
-		 * - someRoot
-		 *   `- "__any_string__1"
-		 *   `- 20
-		 *   `- someNode
-		 *      `- someChild
-		 *      |  `- 1000
-		 *      |  `- "__any_string__2::ActualSuffix"
-		 *      `- "__any_string__1::BarSuffix"
-		 *      `- "__any_string__2"
-		 *      `- someLeaf
-		 */
-		static inline NodePtr replaceAnyStringsInActual(const NodePtr& expected, const NodePtr& actual) {
-			NodeManager& mgr = expected.getNodeManager();
-			IRBuilder builder(mgr);
-
+		static inline bool compareWithMarkerNodeHandlingInternal(const NodePtr& expected, const NodePtr& actual,
+		                                                         std::map<std::string, std::string>& nameMappings) {
 			static const std::string markerPrefix = "__any_string__";
+			static const std::string anyExprString = "__any_expr__";
+			static const std::string anyTypeString = "__any_type__";
 
-			std::map<NodeAddress, NodePtr> replacements;
-			std::map<std::string, std::string> nameMappings;
+			// if the expected node is the special __any_type__ generic type
+			if(expected->getNodeType() == core::NT_GenericType && expected.as<core::GenericTypePtr>()->getFamilyName() == anyTypeString) {
+				// we accept any type for the actual node
+				return actual->getNodeCategory() == core::NC_Type;
 
-			visitDepthFirst(NodeAddress(expected), [&](const StringValueAddress& addr) {
-				auto& expectedName = addr->getValue();
-				if(boost::starts_with(expectedName, markerPrefix)) {
-					auto targetAddr = addr.switchRoot(actual);
-					if (!targetAddr || !targetAddr.isa<StringValueAddress>()) {
-						assert_fail() << "Invalid tree structure";
-					}
-					//if we found an instance without any appended member name
-					if(!boost::contains(expectedName, "::")) {
-						//add it to our mapping
-						nameMappings[targetAddr->getValue()] = expectedName;
-						replacements[targetAddr] = addr.getAddressedNode();
-
-						//otherwise we have to replace only a part of the string
-					} else {
-						auto& targetName = targetAddr->getValue();
-						auto seperatorIndex = targetName.find("::");
-						auto prefix = targetName.substr(0, seperatorIndex);
-						replacements[targetAddr] = builder.stringValue(nameMappings[prefix] + targetName.substr(seperatorIndex));
-					}
-				}
-			}, true, true);
-
-			if(replacements.empty()) {
-				return actual;
+				// if the expected node is a literal with the special __any_expr__ StringValue
+			} else if(expected->getNodeType() == core::NT_Literal && expected.as<core::LiteralPtr>()->getStringValue() == anyExprString) {
+				// we accept any expression for the actual node
+				return actual->getNodeCategory() == core::NC_Expression;
 			}
-			return core::transform::replaceAll(mgr, replacements);
+
+			// now we ensure that both nodes have the same node type and the same number of children
+			if(expected->getNodeType() != actual->getNodeType()) return false;
+			if(expected->getChildList().size() != actual->getChildList().size()) return false;
+
+			// this lambda will lookup the name mapping and check for equality. If the name mapping isn't already existing, it will be added
+			auto lookupAndInsertNameMapping = [&nameMappings](const std::string& expectedName, const std::string& actualName) {
+				// only do the mapping if the string starts with the markerPrefix
+				if(boost::starts_with(expectedName, markerPrefix)) {
+					// we check whether we already have a mapping for this prefix
+					auto mappingResult = nameMappings.find(expectedName);
+					if(mappingResult != nameMappings.end()) {
+						// then the mapping needs to be the same
+						return mappingResult->second == actualName;
+					}
+					// if we don't have a mapping already, we add it and the comparison is correct
+					nameMappings[expectedName] = actualName;
+					return true;
+				}
+				// otherwise, we compare both strings
+				return expectedName == actualName;
+			};
+
+			// StringValues need special consideration
+			if(expected->getNodeType() == core::NT_StringValue) {
+				auto& expectedName = expected.as<core::StringValuePtr>()->getValue();
+				auto& actualName = actual.as<core::StringValuePtr>()->getValue();
+
+				// if this StringValue does not represent a record-member
+				if(!boost::contains(expectedName, "::")) {
+					return lookupAndInsertNameMapping(expectedName, actualName);
+				}
+
+				// otherwise we have to split both names into className::memberName parts and compare them both
+				if(!boost::contains(actualName, "::")) return false;
+				auto expectedNameClass = expectedName.substr(0, expectedName.find("::"));
+				auto actualNameClass = actualName.substr(0, actualName.find("::"));
+				auto expectedNameMember = expectedName.substr(expectedName.find("::") + 2);
+				auto actualNameMember = actualName.substr(actualName.find("::") + 2);
+				return lookupAndInsertNameMapping(expectedNameClass, actualNameClass) && lookupAndInsertNameMapping(expectedNameMember, actualNameMember);
+
+				// all other nodes are compared by comparing all their children
+			} else {
+				for(size_t index = 0; index < expected->getChildList().size(); ++index) {
+					if(!compareWithMarkerNodeHandlingInternal(expected->getChild(index), actual->getChild(index), nameMappings)) return false;
+				}
+			}
+
+			return true;
+		}
+		static inline bool compareWithMarkerNodeHandling(const NodePtr& expected, const NodePtr& actual) {
+			std::map<std::string, std::string> nameMappings;
+			return compareWithMarkerNodeHandlingInternal(expected, actual, nameMappings);
 		}
 	}
 
@@ -259,37 +191,13 @@ namespace utils {
 				return core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_DEFAULT | core::printer::PrettyPrinter::USE_COLOR
 				                                              | core::printer::PrettyPrinter::PRINT_DEREFS | core::printer::PrettyPrinter::FULL_LITERAL_SYNTAX);
 			};
-			const auto emptyStringValue = builder.stringValue("");
-			auto removeStringValues = [&emptyStringValue](const NodePtr& root) {
-				return core::transform::transformBottomUpGen(root, [&emptyStringValue](const StringValuePtr& stringValue){
-					return emptyStringValue;
-				}, core::transform::globalReplacement);
-			};
 
 			// first we check whether the given trees are identical
 			bool result = (expected == actual);
 
-			// if this isn't the case we compare them with a special handling for our __any_type__ and __any_expr__ nodes
+			// if this isn't the case we compare them with a special handling for our __any_type__, __any_expr__ and __any_string__ nodes
 			if(!result) {
-				// we modify actual and replace the addresses of the __any_type__ and __any_expr__ nodes in expected with the same nodes
-				actual = detail::replaceAnyTypeAndAnyExprNodes(expected, actual);
-				result = (expected == actual);
-			}
-
-			// if the trees are still not identical we compare them with a special handling for StringValues, which might be different and are tagged with a special marker
-			if(!result) {
-				// first we create copies of both trees which have all their StringValues set to "", so we actually only compare their structure
-				auto expectedCopy = removeStringValues(expected);
-				auto actualCopy = removeStringValues(actual);
-
-				// if the copies are not identical now, the trees differ structurally
-				result = (expectedCopy == actualCopy);
-
-				// if they are identical, we compare them with a special treatment for our string markers
-				if(result) {
-					actual = detail::replaceAnyStringsInActual(expected, actual);
-					result = (expected == actual);
-				}
+				result = detail::compareWithMarkerNodeHandling(expected, actual);
 			}
 
 			EXPECT_TRUE(result) << "\tLocation     : " << core::annotations::getLocationString(addr) << "\n"
