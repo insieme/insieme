@@ -52,6 +52,18 @@ void templateFunWithLambdaParam() {
 	}(a);
 }
 
+struct ClassWithTemplatedFun {
+	template<typename Op>
+	void fun(Op op) {
+		op();
+	}
+};
+template<typename T>
+void templatedFunUsingTemplatedClass() {
+	ClassWithTemplatedFun s;
+	s.fun([]() {T i;});
+}
+
 int main() {
 	;
 
@@ -119,6 +131,64 @@ int main() {
 	{
 		templateFunWithLambdaParam<int>();
 		templateFunWithLambdaParam<float>();
+	}
+
+	#pragma test expect_ir(R"(
+		decl struct __any_string__0;
+		decl struct __any_string__1;
+		decl struct __any_string__2;
+		decl struct IMP_ClassWithTemplatedFun;
+		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen__rparen_:const __any_string__0::() -> ptr<() -> unit,t,f>;
+		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen__rparen_:const __any_string__1::() -> ptr<() -> unit,t,f>;
+		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen__rparen_:const __any_string__2::() -> ptr<() -> unit,t,f>;
+		def struct __any_string__0 {
+			const function IMP__operator_call_ = () -> unit {
+				var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+			}
+		};
+		def struct __any_string__1 {
+			const function IMP__operator_call_ = () -> unit {
+				var ref<real<8>,f,f,plain> v1 = ref_decl(type_lit(ref<real<8>,f,f,plain>));
+			}
+		};
+		def struct __any_string__2 {
+			const function IMP__operator_call_ = () -> unit {
+				var ref<IMP_ClassWithTemplatedFun,f,f,plain> v1 = IMP_ClassWithTemplatedFun::(ref_decl(type_lit(ref<IMP_ClassWithTemplatedFun,f,f,plain>)));
+			}
+		};
+		def struct IMP_ClassWithTemplatedFun {
+			function __any_string__fun = (v1 : ref<__any_string__0,f,f,plain>) -> unit {
+				v1.IMP__operator_call_();
+			}
+			function __any_string__fun = (v1 : ref<__any_string__1,f,f,plain>) -> unit {
+				v1.IMP__operator_call_();
+			}
+			function __any_string__fun = (v1 : ref<__any_string__2,f,f,plain>) -> unit {
+				v1.IMP__operator_call_();
+			}
+		};
+		def IMP_templatedFunUsingTemplatedClass_int_returns_void = function () -> unit {
+			var ref<IMP_ClassWithTemplatedFun,f,f,plain> v0 = IMP_ClassWithTemplatedFun::(ref_decl(type_lit(ref<IMP_ClassWithTemplatedFun,f,f,plain>)));
+			v0.__any_string__fun(<ref<__any_string__0,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__0)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {});
+		};
+		def IMP_templatedFunUsingTemplatedClass_double_returns_void = function () -> unit {
+			var ref<IMP_ClassWithTemplatedFun,f,f,plain> v0 = IMP_ClassWithTemplatedFun::(ref_decl(type_lit(ref<IMP_ClassWithTemplatedFun,f,f,plain>)));
+			v0.__any_string__fun(<ref<__any_string__1,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__1)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {});
+		};
+		def IMP_templatedFunUsingTemplatedClass_struct_ClassWithTemplatedFun_returns_void = function () -> unit {
+			var ref<IMP_ClassWithTemplatedFun,f,f,plain> v0 = IMP_ClassWithTemplatedFun::(ref_decl(type_lit(ref<IMP_ClassWithTemplatedFun,f,f,plain>)));
+			v0.__any_string__fun(<ref<__any_string__2,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__2)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {});
+		};
+		{
+			IMP_templatedFunUsingTemplatedClass_int_returns_void();
+			IMP_templatedFunUsingTemplatedClass_double_returns_void();
+			IMP_templatedFunUsingTemplatedClass_struct_ClassWithTemplatedFun_returns_void();
+		}
+	)")
+	{
+		templatedFunUsingTemplatedClass<int>();
+		templatedFunUsingTemplatedClass<double>();
+		templatedFunUsingTemplatedClass<ClassWithTemplatedFun>();
 	}
 
 	return 0;

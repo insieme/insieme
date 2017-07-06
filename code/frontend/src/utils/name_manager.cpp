@@ -292,6 +292,8 @@ namespace utils {
 	}
 
 	std::pair<std::string,bool> getNameForTagDecl(const conversion::Converter& converter, const clang::TagDecl* tagDecl, bool cStyleName) {
+		static std::map<std::string, std::vector<const clang::TagDecl*>> instantiationNameMapping;
+
 		auto canon = tagDecl->getCanonicalDecl();
 		// try to use name, if not available try to use typedef name, otherwise no name
 		string name = utils::createNameForAnon("__anon_tagtype_", tagDecl, converter.getSourceManager());
@@ -310,6 +312,32 @@ namespace utils {
 						name = name + "_" + getTypeString(lambdaOperatorType->getReturnType().getCanonicalType(), false);
 						for(auto param : lambdaOperatorType->getParamTypes()) {
 							name = name + "_" + getTypeString(param.getCanonicalType(), false);
+						}
+					}
+				}
+
+				// now we check that the generated name is unique, as we need to generate unique names for different instantiations.
+				// we look up the name in instantiationNameMapping.
+				auto instantiationNameMappingSearch = instantiationNameMapping.find(name);
+				// If we don't find anything there, we add the mapping and use the name we have.
+				if(instantiationNameMappingSearch == instantiationNameMapping.end()) {
+					instantiationNameMapping[name] = { tagDecl };
+
+					// If we find an entry there
+				} else {
+					// we look whether we already generated a name for that entry (i.e. the decl is in the vector)
+					auto& mappedDecls = instantiationNameMappingSearch->second;
+					auto mappedDeclsSearch = std::find(mappedDecls.cbegin(), mappedDecls.cend(), tagDecl);
+					// if not, we add it and modify the returned name
+					if(mappedDeclsSearch == mappedDecls.cend()) {
+						mappedDecls.push_back(tagDecl);
+						name = format("%s_instance%d", name, mappedDecls.size() - 1);
+
+						//if we do find it in the list of already mapped names
+					} else {
+						// The entry at location 0 gets the unchanged name, all other entries get their index in the vector appended
+						if(mappedDeclsSearch != mappedDecls.cbegin()) {
+							name = format("%s_instance%d", name, mappedDeclsSearch - mappedDecls.cbegin());
 						}
 					}
 				}
