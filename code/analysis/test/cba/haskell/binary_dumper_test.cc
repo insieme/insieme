@@ -117,14 +117,15 @@ namespace haskell {
 		// put data into buffer for reading
 		buffer.str({data_hs, size_hs});
 
-		auto prog2 = dump::binary::loadIR(buffer, mgr);
+		NodeManager mgr2;
+		auto prog2 = dump::binary::loadIR(buffer, mgr2);
 		ASSERT_TRUE(prog2) << "could not load received data";
 
 		// data_hs has been allocated in Haskell using malloc, we don't need it anymore after loadIR
 		free(data_hs);
 
 		// The original tree should be equal to the received one.
-		ASSERT_EQ(prog, prog2);
+		ASSERT_EQ(*prog, *prog2);
 	}
 
 	namespace {
