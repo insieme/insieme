@@ -66,4 +66,4 @@ namespace checks {
  */
 #define assert_correct_ir(_code) \
 		assert_true(_code && insieme::core::checks::check(_code).empty()) \
-			 << core::printer::dumpErrors(insieme::core::checks::check(_code))
+			 << insieme::core::printer::dumpErrors(insieme::core::checks::check(_code))
