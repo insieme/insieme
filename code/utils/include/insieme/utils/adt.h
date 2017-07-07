@@ -97,13 +97,51 @@ namespace utils {
 			Integer,
 			Float,
 			Double,
-			String,
 
-			// aggregates
-			ADT,
-			Vector,
-			Set,
+			// everything more complex than atomic values
+			Composed
 		};
+
+
+		struct value_wrapper_base {
+
+			virtual ~value_wrapper_base() {};
+
+			virtual bool operator==(const value_wrapper_base& other) const =0;
+
+			bool operator!=(const value_wrapper_base& other) const {
+				return !(*this == other);
+			}
+
+			virtual bool operator<(const value_wrapper_base& other) const =0;
+
+			virtual std::ostream& printTo(std::ostream& out) const =0;
+
+		};
+
+		template<typename T>
+		struct value_wrapper : public value_wrapper_base {
+
+			T value;
+
+			value_wrapper(const T& value) : value(value) {}
+
+			value_wrapper(T&& value) : value(std::move(value)) {}
+
+			~value_wrapper() override {}
+
+			bool operator==(const value_wrapper_base& other) const override {
+				return value == static_cast<const value_wrapper<T>&>(other).value;
+			}
+			bool operator<(const value_wrapper_base& other) const override {
+				return value < static_cast<const value_wrapper<T>&>(other).value;
+			}
+
+			std::ostream& printTo(std::ostream& out) const override {
+				return out << value;
+			}
+		};
+
 
 		struct adt_value {
 			ValueType type;
@@ -113,7 +151,7 @@ namespace utils {
 				int i;
 				float f;
 				double d;
-				void* r;		// < a pointer to strings and aggregates
+				value_wrapper_base* v; 	// < a wrapper for non-primitive types
 			};
 
 			friend std::ostream& operator<<(std::ostream& out, const adt_value& value);
@@ -143,23 +181,9 @@ namespace utils {
 					case ValueType::Float:
 					case ValueType::Double:
 						break;
-					case ValueType::ADT: {
-						reinterpret_cast<adt_data*>(value.r)->decRefCounter();
+					case ValueType::Composed:
+						delete value.v;
 						break;
-					}
-					case ValueType::String: {
-						delete reinterpret_cast<const std::string*>(value.r);
-						break;
-					}
-					case ValueType::Vector:
-					case ValueType::Set:{
-						const std::vector<adt_value>* list = reinterpret_cast<const std::vector<adt_value>*>(value.r);
-						for(const adt_value& cur : *list) {
-							reduceRefCounter(cur);
-						}
-						delete list;
-						break;
-					}
 				}
 			}
 
@@ -201,25 +225,10 @@ namespace utils {
 						if (data[i].d != other.data[i].d) return false;
 						break;
 					}
-					case ValueType::String: {
-						auto a = reinterpret_cast<std::string*>(data[i].r);
-						auto b = reinterpret_cast<std::string*>(other.data[i].r);
-						return *a == *b;
-					}
-					case ValueType::ADT: {
-						auto a = reinterpret_cast<adt_data*>(data[i].r);
-						auto b = reinterpret_cast<adt_data*>(other.data[i].r);
-						auto eq = ( a == b || *a == *b );
-						if (!eq) return false;
-						break;
-					}
-					case ValueType::Vector:
-					case ValueType::Set: {
-						auto a = reinterpret_cast<const std::vector<adt_data>*>(data[i].r);
-						auto b = reinterpret_cast<const std::vector<adt_data>*>(other.data[i].r);
-						auto eq = ( a == b || *a == *b );
-						if (!eq) return false;
-						break;
+					case ValueType::Composed: {
+						auto a = data[i].v;
+						auto b = other.data[i].v;
+						return (a == b || *a == *b);
 					}
 					}
 				}
@@ -264,26 +273,9 @@ namespace utils {
 						if (data[i].d != other.data[i].d) return false;
 						break;
 					}
-					case ValueType::String: {
-						auto a = reinterpret_cast<const std::string*>(data[i].r);
-						auto b = reinterpret_cast<const std::string*>(other.data[i].r);
-						if (*a < *b) return true;
-						if (!(*a == *b)) return false;
-						break;
-					}
-					case ValueType::ADT: {
-						auto a = reinterpret_cast<adt_data*>(data[i].r);
-						auto b = reinterpret_cast<adt_data*>(other.data[i].r);
-						if (*a < *b) return true;
-						if (!(*a == *b)) return false;
-						break;
-					}
-					case ValueType::Vector:
-					case ValueType::Set: {
-						auto a = reinterpret_cast<const std::vector<adt_data>*>(data[i].r);
-						auto b = reinterpret_cast<const std::vector<adt_data>*>(other.data[i].r);
-						if (*a < *b) return true;
-						if (!(*a == *b)) return false;
+					case ValueType::Composed: {
+						if (*data[i].v < *other.data[i].v) return true;
+						if (*data[i].v != *other.data[i].v) return false;
 						break;
 					}
 					}
@@ -323,51 +315,25 @@ namespace utils {
 			case ValueType::Double: {
 				return out << value.d;
 			}
-			case ValueType::String: {
-				return out << "\"" << *reinterpret_cast<const std::string*>(value.r) << "\"";
-			}
-			case ValueType::ADT: {
-				return out << *reinterpret_cast<const adt_data<1>*>(value.r);
-			}
-			case ValueType::Vector: {
-				const std::vector<adt_value>& list = *reinterpret_cast<const std::vector<adt_value>*>(value.r);
-
-				out << "[";
-				for(std::size_t i=0; i<list.size(); i++) {
-					out << list[i];
-					if (i < list.size() - 1) out << ",";
-				}
-				return out << "]";
-			}
-			case ValueType::Set: {
-				const std::vector<adt_value>& list = *reinterpret_cast<const std::vector<adt_value>*>(value.r);
-
-				out << "{";
-				for(std::size_t i=0; i<list.size(); i++) {
-					out << list[i];
-					if (i < list.size() - 1) out << ",";
-				}
-				return out << "}";
+			case ValueType::Composed: {
+				return value.v->printTo(out);
 			}
 			}
 			return out << "-unknown-";
 		}
 
-		template<typename T>
+		template<typename UserType>
 		struct adt_value_encoder {
-			template<typename ... Variants>
-			adt_value pack(const ADT<Variants...>& cur) const {
+			adt_value pack(const UserType& cur) const {
 				adt_value res;
-				res.type = ValueType::ADT;
-				res.r = cur.data;
-				cur.data->incRefCounter();			// < increase reference counter
+				res.type = ValueType::Composed;
+				res.v = new value_wrapper<UserType>(cur);
 				return res;
 			}
 
-			T unpack(const adt_value& cur) const {
-				assert(cur.type == ValueType::ADT);
-				const T& res = reinterpret_cast<const T&>(cur.r);
-				return res;
+			UserType unpack(const adt_value& cur) const {
+				assert(cur.type == ValueType::Composed);
+				return static_cast<const value_wrapper<UserType>&>(*cur.v).value;
 			}
 
 		};
@@ -444,80 +410,6 @@ namespace utils {
 			double unpack(const adt_value& cur) const {
 				assert(cur.type == ValueType::Double);
 				return cur.d;
-			}
-		};
-
-		template<>
-		struct adt_value_encoder<std::string> {
-			adt_value pack(const std::string& cur) const {
-				adt_value res;
-				res.type = ValueType::String;
-				res.r = new std::string(cur);
-				return res;
-			}
-
-			const std::string& unpack(const adt_value& cur) const {
-				assert(cur.type == ValueType::String);
-				return *reinterpret_cast<const std::string*>(cur.r);
-			}
-		};
-
-		template<typename T>
-		struct adt_value_encoder<std::vector<T>> {
-			adt_value_encoder<T> nested;
-
-			adt_value pack(const std::vector<T>& cur) const {
-
-				auto data = new std::vector<adt_value>();
-				for(std::size_t i = 0; i<cur.size(); i++) {
-					(*data).emplace_back(nested.pack(cur[i]));
-				}
-
-				adt_value res;
-				res.type = ValueType::Vector;
-				res.r = data;
-				return res;
-			}
-
-			std::vector<T> unpack(const adt_value& cur) const {
-				assert(cur.type == ValueType::Vector);
-				const std::vector<adt_value>& data = *reinterpret_cast<const std::vector<adt_value>*>(cur.r);
-
-				std::vector<T> res;
-				for(std::size_t i = 0; i<data.size(); i++) {
-					res.emplace_back(nested.unpack(data[i]));
-				}
-				return res;
-			}
-		};
-
-		template<typename T>
-		struct adt_value_encoder<std::set<T>> {
-			adt_value_encoder<T> nested;
-
-			adt_value pack(const std::set<T>& cur) const {
-
-				auto data = new std::vector<adt_value>(cur.size());
-				int i = 0;
-				for(const auto& e : cur) {
-					(*data)[i++] = nested.pack(e);
-				}
-
-				adt_value res;
-				res.type = ValueType::Set;
-				res.r = data;
-				return res;
-			}
-
-			std::set<T> unpack(const adt_value& cur) const {
-				assert(cur.type == ValueType::Set);
-				const std::vector<adt_value>& data = *reinterpret_cast<const std::vector<adt_value>*>(cur.r);
-
-				std::set<T> res;
-				for(const auto& cur : data) {
-					res.insert(nested.unpack(cur));
-				}
-				return res;
 			}
 		};
 

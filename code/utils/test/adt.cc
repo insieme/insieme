@@ -42,6 +42,9 @@
 #include "insieme/utils/adt.h"
 #include "insieme/utils/string_utils.h"
 
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/set_utils.h"
+
 namespace insieme {
 namespace utils {
 
@@ -145,8 +148,8 @@ namespace utils {
 		Mix n = create<Mix>('M',true,'c',1,2.0f,3.0,"bla",il,ll,nested,s1,s2);
 
 		EXPECT_EQ(m,n);
-		EXPECT_EQ("(M true c 1 2 3 \"bla\" [12] [] [[5,2],[7,8]] {10,12} {[5,2],[7,8]})", toString(m));
-		EXPECT_EQ("(M true c 1 2 3 \"bla\" [12] [] [[5,2],[7,8]] {10,12} {[5,2],[7,8]})", toString(n));
+		EXPECT_EQ("(M true c 1 2 3 bla [12] [] [[5,2],[7,8]] {10,12} {[5,2],[7,8]})", toString(m));
+		EXPECT_EQ("(M true c 1 2 3 bla [12] [] [[5,2],[7,8]] {10,12} {[5,2],[7,8]})", toString(n));
 	}
 
 
@@ -255,6 +258,45 @@ namespace utils {
 		));
 
 	}
+
+
+	struct Value {
+		// some value type to be stored in an ADT
+		int x;
+
+		bool operator==(const Value& other) const {
+			return x == other.x;
+		}
+
+		bool operator<(const Value& other) const {
+			return x < other.x;
+		}
+
+		// make it printable
+		friend std::ostream& operator<<(std::ostream& out, const Value& value) {
+			return out << value.x;
+		}
+	};
+
+	struct ValueList : public ADT<
+			Variant<'E'>,
+			Variant<'C',Value,ValueList>
+	> {};
+
+	TEST(ADT, ValueList) {
+
+		EXPECT_EQ(2,ValueList::arity);
+
+		ValueList e = create<ValueList>('E');
+		ValueList a = create<ValueList>('C',Value{ 1 }, e);
+		ValueList b = create<ValueList>('C',Value{ 2 }, a);
+
+		EXPECT_EQ("E",toString(e));
+		EXPECT_EQ("(C 1 E)",toString(a));
+		EXPECT_EQ("(C 2 (C 1 E))",toString(b));
+
+	}
+
 
 
 //	data Expression = Number Int
