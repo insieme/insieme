@@ -84,12 +84,8 @@ pattern Tree { getID, getNodeType, getChildren, builtinTags }
 unsafeMkNode :: Int -> NodeType -> [Tree] -> [String] -> Tree
 unsafeMkNode i nt ch bt = MkTree (Just i) (InnerTree nt ch bt)
 
-{-# DEPRECATED mkNode "Will be replaced by mkNode'" #-}
-mkNode :: Int -> NodeType -> [Tree] -> [String] -> Tree
-mkNode = unsafeMkNode
-
-mkNode' :: NodeType -> [Tree] -> [String] -> Tree
-mkNode' nt ch bt = MkTree Nothing (InnerTree nt ch bt)
+mkNode :: NodeType -> [Tree] -> [String] -> Tree
+mkNode nt ch bt = MkTree Nothing (InnerTree nt ch bt)
 
 numChildren :: Tree -> Int
 numChildren = length . getChildren
