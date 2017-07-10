@@ -85,7 +85,7 @@ namespace parser {
 
 		// load file
 		std::stringstream ss;
-		ss << std::fstream(file).rdbuf();
+		ss << std::fstream(file, std::ios_base::in).rdbuf();
 
 		// parse file
 		NodeManager manager;
