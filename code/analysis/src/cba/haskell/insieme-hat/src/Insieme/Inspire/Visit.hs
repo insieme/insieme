@@ -67,7 +67,7 @@ collectAll pred root = collectAllPrune pred (\_ -> NoPrune ) root
 
 -- | Like 'collectAll' but allows you to prune the search space.
 collectAllPrune :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> NodeAddress -> [NodeAddress]
-collectAllPrune pred pruning root = evalState (go root) IntMap.empty
+collectAllPrune p pruning root = evalState (go root) IntMap.empty
   where
     go :: NodeAddress -> State (IntMap.IntMap [NodeAddress]) [NodeAddress]
     go addr = do
@@ -83,13 +83,20 @@ collectAllPrune pred pruning root = evalState (go root) IntMap.empty
         node = getNode addr
         key = fromJust $ IR.getID node
         res = addAddr <$> concat <$> grow <$>
-            if pruning node == NoPrune then mapM go (crop <$> getChildren addr) else return []
+            case pruning node of
+              NoPrune -> mapM go (crop <$> getChildren addr)
+              _       -> return []
 
         grow lists = (zipWith go) [ goDown i addr | i <- [0..] ] lists
             where
                 go head tails = append head <$> tails
 
-        addAddr xs = if (pruning node /= PruneHere) && (pred $ getNode addr) then (addr:xs) else xs
+        addAddr xs = maybeToList naddr ++ xs
+            where
+              naddr
+                  | pruning node /= PruneHere, p (getNode addr) = Just addr
+                  | otherwise = Nothing
+
 
 -- | Collect all nodes of the given 'IR.NodeType' but prune the tree when
 -- encountering one of the other 'IR.NodeType's.
