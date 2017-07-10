@@ -52,6 +52,3 @@ endforeach(test)
 
 # integrations_tests uses insiemecc - so there is a dependency
 add_dependencies(driver_integration_tests driver_insiemecc)
-
-# overall_interation_test requires the integration_tests executable for preprocessing
-add_dependencies(ut_driver_integration_overall_integration_test driver_integration_tests)

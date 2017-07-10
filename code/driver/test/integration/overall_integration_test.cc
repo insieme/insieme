@@ -36,12 +36,9 @@
  *
  */
 #include <gtest/gtest.h>
-
-#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <string>
-
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
@@ -49,7 +46,6 @@
 #include "insieme/driver/integration/test_step.h"
 #include "insieme/driver/utils/object_file_utils.h"
 
-#include "insieme/utils/config.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
@@ -65,6 +61,7 @@
 
 #include "insieme/backend/runtime/runtime_backend.h"
 
+
 using namespace insieme::utils;
 
 namespace insieme {
@@ -73,16 +70,6 @@ namespace integration {
 
 	using namespace driver::integration;
 	using namespace boost::filesystem;
-
-	// global environment setup
-	class Environment : public ::testing::Environment {
-	  public:
-		virtual void SetUp() {
-			auto cmd = getInsiemeBuildRootDir() + "/driver/integration_tests --preprocessing";
-			assert_eq(system(cmd.c_str()), EXIT_SUCCESS) << "failed to run integration test preprocessing";
-		}
-	};
-	const auto env = ::testing::AddGlobalTestEnvironment(new Environment);
 
 	// the type definition (specifying the parameter type)
 	class IntegrationTests : public ::testing::TestWithParam<IntegrationTestCase> {};
