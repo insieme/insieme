@@ -131,6 +131,12 @@ namespace cba {
 			return !(*this == other);
 		}
 
+		bool operator<(const Set& other) const {
+			if (all) return !other.all;
+			if (other.all) return true;
+			return elements < other.elements;
+		}
+
 		friend std::ostream& operator<<(std::ostream& out, const Set& set) {
 			if (set.all) {
 				return out << "{-all-}";

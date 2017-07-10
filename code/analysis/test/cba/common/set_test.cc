@@ -58,6 +58,28 @@ namespace cba {
 
 	}
 
+	TEST(Set, LessThan) {
+
+		using set = Set<int>;
+
+		set a;
+		set b({ 1, 2, 3 });
+		set c = set::getUniversal();
+
+		EXPECT_EQ(a,a);
+		EXPECT_EQ(b,b);
+		EXPECT_EQ(c,c);
+
+		EXPECT_NE(a,b);
+		EXPECT_NE(b,c);
+		EXPECT_NE(a,c);
+
+		EXPECT_LT(a,b);
+		EXPECT_LT(b,c);
+		EXPECT_LT(a,c);
+
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
