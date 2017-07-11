@@ -144,6 +144,22 @@ namespace cba {
 			return out << set.elements;
 		}
 
+		/* Takes an array of dynamically allocated Elems and moves them into a newly allocated set.
+		 * size < 0 indicates Universal. */
+		static Set* fromArray(Elem* arr[], long long size) {
+			if(size < 0) {
+				return new Set(true);
+			}
+
+			auto ret = new Set;
+			for(long long i = 0; i < size; i++) {
+				ret->insert(std::move(*arr[i]));
+				delete arr[i];
+			}
+
+			return ret;
+		}
+
 	};
 
 
@@ -188,7 +204,6 @@ namespace cba {
 		return true;
 	}
 
-} //'end namespace cba
+} // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
-

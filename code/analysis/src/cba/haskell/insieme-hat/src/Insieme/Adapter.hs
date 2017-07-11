@@ -169,7 +169,7 @@ arithValue ctx_hs expr_hs = do
     let ctx_c = Ctx.getCContext ctx
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
-    passFormulaSet ctx_c $ BSet.map (fmap SymbolicFormula.getAddr) results
+    passBoundSet (passFormula ctx_c) arithmeticSet $ BSet.map (fmap SymbolicFormula.getAddr) results
 
 -- ** NodeAddresses
 
@@ -182,16 +182,9 @@ foreign import ccall "hat_mk_c_node_address"
 foreign import ccall "hat_mk_c_node_address_set"
   mkCNodeAddressSet :: Ptr (Ptr CNodeAddress) -> CLLong -> IO (Ptr CNodeAddressSet)
 
-passNodeAddress :: StablePtr Ctx.Context -> Addr.NodeAddress -> IO (Ptr CNodeAddress)
-passNodeAddress ctx_hs addr = do
-    ctx <- deRefStablePtr ctx_hs
-    withArrayUnsignedLen (fromIntegral <$> Addr.getAbsolutePath addr) (mkCNodeAddress $ Ctx.getCContext ctx)
-
-passNodeAddressSet :: BSet.IsBound bb => StablePtr Ctx.Context -> BSet.BoundSet bb Addr.NodeAddress -> IO (Ptr CNodeAddressSet)
-passNodeAddressSet _ BSet.Universe = mkCNodeAddressSet nullPtr (-1)
-passNodeAddressSet ctx_hs addrs = do
-    addrs_c <- mapM (passNodeAddress ctx_hs) (BSet.toList addrs)
-    withArraySignedLen addrs_c mkCNodeAddressSet
+passNodeAddress :: Ctx.CContext -> Addr.NodeAddress -> IO (Ptr CNodeAddress)
+passNodeAddress ctx_c addr = do
+    withArrayUnsignedLen (fromIntegral <$> Addr.getAbsolutePath addr) (mkCNodeAddress ctx_c)
 
 -- ** References
 
@@ -237,9 +230,10 @@ memoryLocations ctx_hs expr_hs = do
     let ctx_c = Ctx.getCContext ctx
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
-    if BSet.member Ref.UninitializedReference results
-        then passNodeAddressSet ctx_nhs (BSet.Universe :: BSet.UnboundSet Ref.Location)
-        else passNodeAddressSet ctx_nhs $ BSet.map Ref.creationPoint $ BSet.filter f results
+    passBoundSet (passNodeAddress ctx_c) mkCNodeAddressSet $
+        if BSet.member Ref.UninitializedReference results
+            then (BSet.Universe :: BSet.UnboundSet Ref.Location)
+            else  BSet.map Ref.creationPoint $ BSet.filter f results
       where
         f (Ref.Reference _ _ ) = True
         f _ = False
@@ -294,18 +288,21 @@ passFormula ctx_c formula_hs = do
     passValue :: Addr.NodeAddress -> IO (Ptr CArithmeticValue)
     passValue addr_hs = withArrayUnsignedLen (fromIntegral <$> Addr.getAbsolutePath addr_hs) (arithmeticValue ctx_c)
 
-passFormulaSet :: Integral c => Ctx.CContext -> BSet.BoundSet bb (Ar.Formula c Addr.NodeAddress) -> IO (Ptr CArithmeticSet)
-passFormulaSet _ BSet.Universe = arithmeticSet nullPtr (-1)
-passFormulaSet ctx_c bs = do
-    formulas <- mapM (passFormula ctx_c) (BSet.toList bs)
-    withArraySignedLen formulas arithmeticSet
-
 -- * Utilities
 
 handleAll :: IO a -> IO a -> IO a
 handleAll dummy action = catch action $ \e -> do
     putStrLn $ "Exception: " ++ show (e :: SomeException)
     dummy
+
+passBoundSet :: (a -> IO (Ptr b))                     -- Element constructor
+             -> (Ptr (Ptr b) -> CLLong -> IO (Ptr c)) -- Set constructor
+             -> BSet.BoundSet bb a                    -- input set
+             -> IO (Ptr c)
+passBoundSet _ mkSet BSet.Universe = mkSet nullPtr (-1)
+passBoundSet mkElem mkSet s = do
+    elems <- forM (BSet.toList s) mkElem
+    withArraySignedLen elems mkSet
 
 withArraySignedLen :: Storable a => [a] -> (Ptr a -> CLLong -> IO b) -> IO b
 withArraySignedLen xs f = withArrayLen xs (\s a -> f a (fromIntegral s))

@@ -40,6 +40,8 @@
 
 #include <sstream>
 
+#include "insieme/analysis/cba/common/set.h"
+
 #include "insieme/core/dump/binary_dump.h"
 
 extern "C" {
@@ -56,18 +58,8 @@ extern "C" {
 		return new NodeAddress(std::move(addr));
 	}
 
-	NodeAddressSet* hat_mk_c_node_address_set(const NodeAddress* addrs[], long long length) {
-		if(length < 0) {
-			return new NodeAddressSet(NodeAddressSet::getUniversal());
-		}
-
-		auto ret = new NodeAddressSet();
-		for(long long i = 0; i < length; i++) {
-			ret->insert(*addrs[i]);
-			delete addrs[i];
-		}
-
-		return ret;
+	NodeAddressSet* hat_mk_c_node_address_set(NodeAddress* addrs[], long long length) {
+		return NodeAddressSet::fromArray(addrs, length);
 	}
 
 	NodePtr* hat_c_mk_ir_tree(Context* ctx_c, const char* data, size_t size) {

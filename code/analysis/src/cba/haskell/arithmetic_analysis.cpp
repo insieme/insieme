@@ -37,6 +37,8 @@
  */
 #include "insieme/analysis/cba/haskell/arithmetic_analysis.h"
 
+#include "insieme/analysis/cba/common/set.h"
+
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/lang/reference.h"
 
@@ -100,7 +102,7 @@ extern "C" {
 		return ret;
 	}
 
-	arithmetic::Product* hat_mk_arithmetic_product(const arithmetic::Product::Factor** factors_c, size_t length) {
+	arithmetic::Product* hat_mk_arithmetic_product(arithmetic::Product::Factor* factors_c[], size_t length) {
 		auto ret = new arithmetic::Product();
 		for(size_t i = 0; i < length; i++) {
 			*ret *= arithmetic::Product(factors_c[i]->first, factors_c[i]->second);
@@ -115,7 +117,7 @@ extern "C" {
 		return ret;
 	}
 
-	arithmetic::Formula* hat_mk_arithmetic_formula(const arithmetic::Formula::Term** terms_c, size_t length) {
+	arithmetic::Formula* hat_mk_arithmetic_formula(arithmetic::Formula::Term* terms_c[], size_t length) {
 		auto ret = new arithmetic::Formula();
 		for(size_t i = 0; i < length; i++) {
 			*ret += arithmetic::Formula(terms_c[i]->first, terms_c[i]->second);
@@ -124,17 +126,8 @@ extern "C" {
 		return ret;
 	}
 
-	ArithmeticSet* hat_mk_arithmetic_set(const arithmetic::Formula** formulas_c, long long length) {
-		if(length < 0) {
-			return new ArithmeticSet(ArithmeticSet::getUniversal());
-		}
-
-		auto ret = new ArithmeticSet();
-		for(int i = 0; i < length; i++) {
-			ret->insert(*formulas_c[i]);
-			delete formulas_c[i];
-		}
-		return ret;
+	ArithmeticSet* hat_mk_arithmetic_set(arithmetic::Formula* formulas_c[], long long length) {
+		return ArithmeticSet::fromArray(formulas_c, length);
 	}
 
 }

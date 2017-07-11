@@ -62,5 +62,5 @@ extern "C" {
 
 	NodeAddress* hat_mk_c_node_address(Context* ctx_c, const size_t indices[], size_t length);
 
-	NodeAddressSet* hat_mk_c_node_address_set(const NodeAddress* addrs[], long long length);
+	NodeAddressSet* hat_mk_c_node_address_set(NodeAddress* addrs[], long long length);
 }
