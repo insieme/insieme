@@ -38,6 +38,10 @@
 
 #include "insieme/analysis/cba/haskell/node_addresses.h"
 
+#include <sstream>
+
+#include "insieme/core/dump/binary_dump.h"
+
 extern "C" {
 
 	NodeAddress* hat_mk_c_node_address(Context* ctx_c, const size_t indices[], size_t length_hs) {
@@ -64,6 +68,20 @@ extern "C" {
 		}
 
 		return ret;
+	}
+
+	NodePtr* hat_c_mk_ir_tree(Context* ctx_c, const char* data, size_t size) {
+		assert_true(ctx_c);
+		assert_true(size > 0);
+
+		std::stringstream buffer(std::ios_base::out | std::ios_base::in | std::ios_base::binary);
+		buffer.str({data, size});
+
+		auto loaded_tree = dump::binary::loadIR(buffer, ctx_c->getRoot().getNodeManager());
+		assert_true(loaded_tree) << "could not load received data";
+
+		// Since this function is called by Haskell, `data` is freed in Haskell afterwards.
+		return new NodePtr(loaded_tree);
 	}
 
 }
