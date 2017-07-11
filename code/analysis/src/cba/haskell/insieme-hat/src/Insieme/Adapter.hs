@@ -69,6 +69,19 @@ import qualified Insieme.Inspire.Visit as Visit
 import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Utils.BoundSet as BSet
 
+-- * General FFI
+
+-- | C representation of 'a'
+data CRep a
+
+-- | C representation of 'BSet.BoundSet bb a'
+data CSet a
+
+-- Convenience alises
+type CRepPtr a = Ptr (CRep a)
+type CSetPtr a = Ptr (CSet a)
+type CRepArr a = Ptr (Ptr (CRep a))
+
 -- 'freeStablePtr' is exported so it can be used directly within a C++ destructor.
 foreign export ccall "hat_freeStablePtr"
   freeStablePtr :: StablePtr a -> IO ()
@@ -160,7 +173,7 @@ checkAlias ctx_hs x_hs y_hs = handleAll (return . fromIntegral . fromEnum $ Alia
     evaluate $ fromIntegral $ fromEnum res
 
 foreign export ccall "hat_arithmetic_value"
-  arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticSet)
+  arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr ArithmeticFormula)
 arithValue ctx_hs expr_hs = do
     ctx <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
@@ -169,20 +182,19 @@ arithValue ctx_hs expr_hs = do
     let ctx_c = Ctx.getCContext ctx
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
-    passBoundSet (passFormula ctx_c) arithmeticSet $ BSet.map (fmap SymbolicFormula.getAddr) results
+    passBoundSet (passFormula ctx_c) arithmeticSet
+        $ BSet.map Ar.convert
+        $ BSet.map (fmap SymbolicFormula.getAddr) results
 
 -- ** NodeAddresses
 
-type CNodeAddress = ()
-type CNodeAddressSet = ()
-
 foreign import ccall "hat_mk_c_node_address"
-  mkCNodeAddress :: Ctx.CContext -> Ptr CSize -> CSize -> IO (Ptr CNodeAddress)
+  mkCNodeAddress :: Ctx.CContext -> Ptr CSize -> CSize -> IO (CRepPtr Addr.NodeAddress)
 
 foreign import ccall "hat_mk_c_node_address_set"
-  mkCNodeAddressSet :: Ptr (Ptr CNodeAddress) -> CLLong -> IO (Ptr CNodeAddressSet)
+  mkCNodeAddressSet :: CRepArr Addr.NodeAddress -> CLLong -> IO (CSetPtr Addr.NodeAddress)
 
-passNodeAddress :: Ctx.CContext -> Addr.NodeAddress -> IO (Ptr CNodeAddress)
+passNodeAddress :: Ctx.CContext -> Addr.NodeAddress -> IO (CRepPtr Addr.NodeAddress)
 passNodeAddress ctx_c addr = do
     withArrayUnsignedLen (fromIntegral <$> Addr.getAbsolutePath addr) (mkCNodeAddress ctx_c)
 
@@ -217,11 +229,10 @@ checkForReference ref ctx_hs expr_hs = handleAll (return maybe) $ do
 
 -- ** Memory Locations
 
-type CMemoryLocation = ()
-type CMemoryLocationSet = ()
+type MemoryLocation = Addr.NodeAddress
 
 foreign export ccall "hat_memory_locations"
-  memoryLocations :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (Ptr CMemoryLocationSet)
+  memoryLocations :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr MemoryLocation)
 memoryLocations ctx_hs expr_hs = do
     ctx <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
@@ -240,52 +251,53 @@ memoryLocations ctx_hs expr_hs = do
 
 -- ** Arithmetic
 
-type CArithmeticSet = ()
-type CArithmeticFormula = ()
-type CArithmeticTerm = ()
-type CArithmeticProduct = ()
-type CArithmeticFactor = ()
-type CArithmeticValue = ()
+type ArithmeticFormula = Ar.Formula CLong ArithmeticValue
+type ArithmeticTerm = Ar.Term CLong ArithmeticValue
+type ArithmeticProduct = Ar.Product CInt ArithmeticValue
+type ArithmeticFactor = Ar.Factor CInt ArithmeticValue
+
+-- Arithmetic values are actually wrapped in C, yet we do not care about this here.
+type ArithmeticValue = Addr.NodeAddress
 
 foreign import ccall "hat_mk_arithmetic_set"
-  arithmeticSet :: Ptr (Ptr CArithmeticFormula) -> CLLong -> IO (Ptr CArithmeticSet)
+  arithmeticSet :: CRepArr ArithmeticFormula -> CLLong -> IO (CSetPtr ArithmeticFormula)
 
 foreign import ccall "hat_mk_arithmetic_formula"
-  arithmeticFormula :: Ptr (Ptr CArithmeticTerm) -> CSize -> IO (Ptr CArithmeticFormula)
-
-foreign import ccall "hat_mk_arithmetic_product"
-  arithmeticProduct :: Ptr (Ptr CArithmeticFactor) -> CSize -> IO (Ptr CArithmeticProduct)
+  arithmeticFormula :: CRepArr ArithmeticTerm -> CSize -> IO (CRepPtr ArithmeticFormula)
 
 foreign import ccall "hat_mk_arithmetic_term"
-  arithmeticTerm :: Ptr CArithmeticProduct -> CLong -> IO (Ptr CArithmeticTerm)
+  arithmeticTerm ::CRepPtr ArithmeticProduct -> CLong -> IO (CRepPtr ArithmeticTerm)
+
+foreign import ccall "hat_mk_arithmetic_product"
+  arithmeticProduct :: CRepArr ArithmeticFactor -> CSize -> IO (CRepPtr ArithmeticProduct)
 
 foreign import ccall "hat_mk_arithemtic_factor"
-  arithemticFactor :: Ptr CArithmeticValue -> CInt -> IO (Ptr CArithmeticFactor)
+  arithemticFactor :: CRepPtr ArithmeticValue -> CInt -> IO (CRepPtr ArithmeticFactor)
 
 foreign import ccall "hat_mk_arithmetic_value"
-  arithmeticValue :: Ctx.CContext -> Ptr CSize -> CSize -> IO (Ptr CArithmeticValue)
+  arithmeticValue :: Ctx.CContext -> Ptr CSize -> CSize -> IO (CRepPtr ArithmeticValue)
 
-passFormula :: Integral c => Ctx.CContext -> Ar.Formula c Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
+passFormula :: Integral c => Ctx.CContext -> Ar.Formula c Addr.NodeAddress -> IO (CRepPtr ArithmeticFormula)
 passFormula ctx_c formula_hs = do
     terms_c <- forM (Ar.terms formula_hs) passTerm
     withArrayUnsignedLen terms_c arithmeticFormula
   where
-    passTerm :: Integral c => Ar.Term c Addr.NodeAddress -> IO (Ptr CArithmeticTerm)
+    passTerm :: Integral c => Ar.Term c Addr.NodeAddress -> IO (CRepPtr ArithmeticTerm)
     passTerm term_hs = do
         product_c <- passProduct (Ar.product term_hs)
         arithmeticTerm product_c (fromIntegral $ Ar.coeff term_hs)
 
-    passProduct :: Integral c => Ar.Product c Addr.NodeAddress -> IO (Ptr CArithmeticProduct)
+    passProduct :: Integral c => Ar.Product c Addr.NodeAddress -> IO (CRepPtr ArithmeticProduct)
     passProduct product_hs = do
         factors_c <- forM (Ar.factors product_hs) passFactor
         withArrayUnsignedLen factors_c arithmeticProduct
 
-    passFactor :: Integral c => Ar.Factor c Addr.NodeAddress -> IO (Ptr CArithmeticFactor)
+    passFactor :: Integral c => Ar.Factor c Addr.NodeAddress -> IO (CRepPtr ArithmeticFactor)
     passFactor factor_hs = do
         value_c <- passValue (Ar.base factor_hs)
         arithemticFactor value_c (fromIntegral $ Ar.exponent factor_hs)
 
-    passValue :: Addr.NodeAddress -> IO (Ptr CArithmeticValue)
+    passValue :: Addr.NodeAddress -> IO (CRepPtr ArithmeticValue)
     passValue addr_hs = withArrayUnsignedLen (fromIntegral <$> Addr.getAbsolutePath addr_hs) (arithmeticValue ctx_c)
 
 -- * Utilities
@@ -295,10 +307,10 @@ handleAll dummy action = catch action $ \e -> do
     putStrLn $ "Exception: " ++ show (e :: SomeException)
     dummy
 
-passBoundSet :: (a -> IO (Ptr b))                     -- Element constructor
-             -> (Ptr (Ptr b) -> CLLong -> IO (Ptr c)) -- Set constructor
-             -> BSet.BoundSet bb a                    -- input set
-             -> IO (Ptr c)
+passBoundSet :: (a -> IO (CRepPtr a))                   -- ^ Element constructor
+             -> (CRepArr a -> CLLong -> IO (CSetPtr a)) -- ^ Set constructor
+             -> BSet.BoundSet bb a                      -- ^ input set
+             -> IO (CSetPtr a)
 passBoundSet _ mkSet BSet.Universe = mkSet nullPtr (-1)
 passBoundSet mkElem mkSet s = do
     elems <- forM (BSet.toList s) mkElem
@@ -313,21 +325,21 @@ withArrayUnsignedLen xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
 -- ** Arithmetic Tests
 
 foreign export ccall "hat_test_formulaZero"
-  testFormulaZero :: IO (Ptr CArithmeticFormula)
+  testFormulaZero :: IO (CRepPtr ArithmeticFormula)
 testFormulaZero = passFormula nullPtr Ar.zero
 
 foreign export ccall "hat_test_formulaOne"
-  testFormulaOne :: IO (Ptr CArithmeticFormula)
+  testFormulaOne :: IO (CRepPtr ArithmeticFormula)
 testFormulaOne = passFormula nullPtr Ar.one
 
 foreign export ccall "hat_test_formulaExample1"
-  testFormulaExample1 :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
+  testFormulaExample1 :: StablePtr Addr.NodeAddress -> IO (CRepPtr ArithmeticFormula)
 testFormulaExample1 addr_c = do
     addr <- deRefStablePtr addr_c
     passFormula nullPtr $ Ar.Formula [Ar.Term 2 (Ar.Product [Ar.Factor addr 2])]
 
 foreign export ccall "hat_test_formulaExample2"
-  testFormulaExample2 :: StablePtr Addr.NodeAddress -> IO (Ptr CArithmeticFormula)
+  testFormulaExample2 :: StablePtr Addr.NodeAddress -> IO (CRepPtr ArithmeticFormula)
 testFormulaExample2 addr_c = do
     addr <- deRefStablePtr addr_c
     passFormula nullPtr $ Ar.Formula [ Ar.Term 1 (Ar.Product []), Ar.Term 2 (Ar.Product [Ar.Factor addr 2, Ar.Factor addr 4]) ]
