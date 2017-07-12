@@ -69,6 +69,8 @@ instance Ord Tree where
     compare a b =
         compare (mtInnerTree a) (mtInnerTree b)
 
+treeExactEq a b = mtId a == mtId b && mtInnerTree a == mtInnerTree b
+
 data InnerTree = InnerTree {
       itNodeType    :: NodeType,
       itChildren    :: [Tree],
