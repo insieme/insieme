@@ -72,16 +72,20 @@ collectAllPrune p pruning root = evalState (go root) IntMap.empty
     go :: NodeAddress -> State (IntMap.IntMap [NodeAddress]) [NodeAddress]
     go addr = do
         cache <- get
-        case IntMap.lookup key cache of
-            Just hit -> return hit
-            Nothing  -> do
-                r <- res
-                modify $ IntMap.insert key r
-                res
+        case mkey of
+          Just key ->
+              case IntMap.lookup key cache of
+                  Just hit -> return hit
+                  Nothing  -> do
+                      r <- res
+                      modify $ IntMap.insert key r
+                      res
+          Nothing -> 
+              res
 
       where
         node = getNode addr
-        key = fromJust $ IR.getID node
+        mkey = IR.getID node
         res = addAddr <$> concat <$> grow <$>
             case pruning node of
               NoPrune -> mapM go (crop <$> getChildren addr)
