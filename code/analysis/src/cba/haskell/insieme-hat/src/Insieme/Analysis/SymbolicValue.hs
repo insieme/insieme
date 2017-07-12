@@ -43,7 +43,7 @@ import Data.Typeable
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
-import Insieme.Adapter (CRepPtr,CRepArr,CSetPtr,passBoundSet,updateContext)
+import Insieme.Adapter (CRepPtr,CRepArr,CSetPtr,dumpIrTree,passBoundSet,updateContext)
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
@@ -136,8 +136,6 @@ symbolicValue addr = case getNodeType addr of
 foreign export ccall "hat_hs_symbolic_values"
   hsSymbolicValues :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr SymbolicValue)
   
-foreign import ccall "hat_c_mk_ir_tree"
-  mkCIrTree :: Ctx.CContext -> CString -> CSize -> IO (CRepPtr IR.Tree)
 
 foreign import ccall "hat_c_mk_symbolic_value_set"
   mkCSymbolicValueSet :: CRepArr SymbolicValue -> CLLong -> IO (CSetPtr SymbolicValue)
@@ -158,8 +156,6 @@ passSymbolicValueSet ctx s = do
 
     passSymbolicValue :: SymbolicValue -> IO (CRepPtr SymbolicValue)
     passSymbolicValue s = do
-        BS.useAsCStringLen (dumpBinaryDump s) (mkCIrTree' ctx)
+        dumpIrTree ctx s
 
-    mkCIrTree' :: Ctx.CContext -> CStringLen -> IO (CRepPtr IR.Tree)
-    mkCIrTree' ctx (sz,s) = mkCIrTree ctx sz (fromIntegral s)
     
