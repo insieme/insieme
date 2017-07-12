@@ -52,6 +52,8 @@ import Control.Monad
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
+import System.IO.Unsafe (unsafePerformIO)
+
 import qualified Data.ByteString.Char8 as BS8
 import qualified Insieme.Analysis.Alias as Alias
 import qualified Insieme.Analysis.Arithmetic as Arith
@@ -62,6 +64,7 @@ import qualified Insieme.Analysis.Entities.SymbolicFormula as SymbolicFormula
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Context as Ctx
+import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.BinaryDumper as BinDum
 import qualified Insieme.Inspire.NodeAddress as Addr
@@ -306,6 +309,17 @@ handleAll :: IO a -> IO a -> IO a
 handleAll dummy action = catch action $ \e -> do
     putStrLn $ "Exception: " ++ show (e :: SomeException)
     dummy
+
+foreign import ccall "hat_c_pretty_print_tree"
+  prettyPrintTree :: CString -> CSize -> IO CString
+
+pprintTree :: IR.Tree -> String
+pprintTree ir = unsafePerformIO $ do
+    let dump = BinDum.dumpBinaryDump ir
+    pretty_c <- BS8.useAsCStringLen dump $ \(sz,l) -> prettyPrintTree sz (fromIntegral l)
+    pretty   <- peekCString pretty_c
+    free pretty_c
+    return pretty
 
 passBoundSet :: (a -> IO (CRepPtr a))                   -- ^ Element constructor
              -> (CRepArr a -> CLLong -> IO (CSetPtr a)) -- ^ Set constructor

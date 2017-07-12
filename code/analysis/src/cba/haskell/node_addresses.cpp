@@ -38,6 +38,8 @@
 
 #include "insieme/analysis/cba/haskell/node_addresses.h"
 
+#include <cstdlib>
+#include <cstring>
 #include <sstream>
 
 #include "insieme/analysis/cba/common/set.h"
@@ -74,6 +76,23 @@ extern "C" {
 
 		// Since this function is called by Haskell, `data` is freed in Haskell afterwards.
 		return new NodePtr(loaded_tree);
+	}
+
+	char* hat_c_pretty_print_tree(const char* data, size_t size) {
+		assert_true(size > 0);
+
+		std::stringstream buffer(std::ios_base::out | std::ios_base::in | std::ios_base::binary);
+		buffer.str({data, size});
+
+		NodeManager mgr;
+		auto loaded_tree = dump::binary::loadIR(buffer, mgr);
+		assert_true(loaded_tree) << "could not load received data";
+
+		auto dump = toString(dumpOneLine(loaded_tree));
+		char* dump_c = (char*) malloc(dump.size());
+		assert_true(dump_c);
+		memcpy(dump_c, dump.c_str(), dump.size());
+		return dump_c;
 	}
 
 }
