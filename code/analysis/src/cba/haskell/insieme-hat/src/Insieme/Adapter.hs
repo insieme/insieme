@@ -310,6 +310,13 @@ handleAll dummy action = catch action $ \e -> do
     putStrLn $ "Exception: " ++ show (e :: SomeException)
     dummy
 
+foreign import ccall "hat_c_mk_ir_tree"
+  mkCIrTree :: Ctx.CContext -> CString -> CSize -> IO (CRepPtr IR.Tree)
+
+dumpIrTree :: Ctx.CContext -> IR.Tree -> IO (CRepPtr IR.Tree)
+dumpIrTree ctx irtree = BS8.useAsCStringLen (BinDum.dumpBinaryDump irtree)
+                      $ \(sz,l) -> mkCIrTree ctx sz (fromIntegral l)
+
 foreign import ccall "hat_c_pretty_print_tree"
   prettyPrintTree :: CString -> CSize -> IO CString
 
