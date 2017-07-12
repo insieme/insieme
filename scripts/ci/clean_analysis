@@ -8,4 +8,4 @@ if [[ -z "${WORKSPACE+x}" ]]; then
 fi
 
 # Remove Haskell Stack's Working Directory to simulate a clean installation.
-rm -rf "$WORKSPACE/code/analysis/src/haskell/insieme-hat/.stack-work"
+rm -rf "$WORKSPACE/code/analysis/src/cba/haskell/insieme-hat/.stack-work"
