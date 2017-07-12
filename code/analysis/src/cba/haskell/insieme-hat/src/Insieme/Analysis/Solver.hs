@@ -183,7 +183,7 @@ mkAnalysisIdentifier a n = AnalysisIdentifier {
 
 
 data IdentifierValue = 
-          IDV_Expression NodeAddress
+          IDV_NodeAddress NodeAddress
         | IDV_ProgramPoint ProgramPoint
         | IDV_MemoryStatePoint MemoryStatePoint
         | IDV_Other BS.ByteString  
@@ -191,7 +191,7 @@ data IdentifierValue =
 
 
 referencedAddress :: IdentifierValue -> Maybe NodeAddress
-referencedAddress ( IDV_Expression   a )                                            = Just a
+referencedAddress ( IDV_NodeAddress   a )                                           = Just a
 referencedAddress ( IDV_ProgramPoint (ProgramPoint a _) )                           = Just a
 referencedAddress ( IDV_MemoryStatePoint (MemoryStatePoint (ProgramPoint a _) _ ) ) = Just a
 referencedAddress ( IDV_Other _ )                                                   = Nothing
@@ -224,7 +224,7 @@ instance Show Identifier where
 mkIdentifierFromExpression :: AnalysisIdentifier -> NodeAddress -> Identifier
 mkIdentifierFromExpression a n = Identifier {
         analysis = a,
-        idValue = IDV_Expression n,
+        idValue = IDV_NodeAddress n,
         idHash = Hash.hashWithSalt (aidHash a) n
     } 
 
@@ -285,7 +285,6 @@ mkVariable i cs b = var
 
 toVar :: TypedVar a -> Var
 toVar (TypedVar x) = x
-
 
 getDependencies :: Assignment -> TypedVar a -> [Var]
 getDependencies a v = concat $ (go <$> (constraints . toVar) v)
@@ -699,6 +698,7 @@ dumpSolverState :: Bool -> SolverState -> FilePath -> String
 dumpSolverState overwrite s f = unsafePerformIO $ do
   base <- solverToDot overwrite s f
   pdfFromDot base
+  evaluate $ dumpToJsonFile s "solution_meta" 
   return ("Dumped assignment to " ++ base)
 
 -- | Dump solver state to the given file name, using the dot format.
@@ -739,7 +739,7 @@ toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _ _) = "{\n"
 
         store = foldr go Map.empty vars
             where
-                go v m = if isJust $ addr v then m else Map.insert k (msg : Map.findWithDefault [] k m) m
+                go v m = if isJust $ addr v then Map.insert k (msg : Map.findWithDefault [] k m) m else m
                     where
                         k = fromJust $ addr v
                         i = index v

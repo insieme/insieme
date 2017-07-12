@@ -43,4 +43,6 @@ data OperatorHandler a = OperatorHandler {
     covers     :: NodeAddress -> Bool, 
     dependsOn  :: Solver.Assignment -> [Solver.Var],
     getValue   :: Solver.Assignment -> a
+--    dependsOn  :: NodeAddress -> Solver.Assignment -> [Solver.Var],
+--    getValue   :: NodeAddress -> Solver.Assignment -> a
 }

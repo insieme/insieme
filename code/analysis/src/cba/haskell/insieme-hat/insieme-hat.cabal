@@ -40,6 +40,7 @@ library
                         Insieme.Analysis.Utils.CppSemantic,
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.Solver,
+                        Insieme.Analysis.SymbolicValue,
                         Insieme.Analysis.WriteSetSummary,
                         Insieme.Context,
                         Insieme.Inspire,
