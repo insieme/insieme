@@ -28,14 +28,7 @@ set(stack
     "STACK_ROOT=${stack_data}"
     "LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}"
     "LD_LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}"
-    ${STACK_ROOT}/bin/stack
-)
-
-execute_process(
-	COMMAND ${stack} path --compiler-bin
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	OUTPUT_VARIABLE stack_compiler_bin
-        OUTPUT_STRIP_TRAILING_WHITESPACE
+    ${STACK_ROOT}/bin/stack --ghc-variant standard
 )
 
 add_custom_command(
@@ -72,17 +65,15 @@ endif()
 
 if(BUILD_DOCS)
     add_custom_command(
-	TARGET insieme_hat
-	POST_BUILD
-	COMMAND ${stack} haddock
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        TARGET insieme_hat
+        POST_BUILD
+        COMMAND ${stack} haddock
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 endif()
 
-message("================================================================stack compiler bin ${stack_compiler_bin}")
-
 # runtime library exports
-set(LIBHSRTS_DIR "${stack_compiler_bin}/../lib/ghc-8.0.2/rts" PARENT_SCOPE)
-set(LIBHSRTS "${stack_compiler_bin}/../lib/ghc-8.0.2/rts/libHSrts-ghc8.0.2.so" PARENT_SCOPE)
+set(LIBHSRTS_DIR ${stack_data}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts PARENT_SCOPE)
+set(LIBHSRTS ${stack_data}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts/libHSrts-ghc7.10.3.so PARENT_SCOPE)
 
 set(insieme_hat ${CMAKE_CURRENT_BINARY_DIR}/libHSinsieme-hat.so PARENT_SCOPE)

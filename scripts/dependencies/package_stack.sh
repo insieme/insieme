@@ -1,14 +1,14 @@
 NAME="stack"
-VERSION="1.4.0"
+VERSION="1.0.4"
 PACKAGE="$NAME-$VERSION"
 
 FILE="v$VERSION.tar.gz"
 URL="https://github.com/commercialhaskell/stack/archive/$FILE"
-SHA256SUM="595d311ad117e41ad908b7065743917542b40f343d1334673e98171ee74d36e6"
+SHA256SUM="60df5eaeccd9db7fdb535f056815c9ec196731231d4754d2e294f74bef3f4547"
 
 FILE_PB="$PACKAGE-linux-x86_64.tar.gz"
 URL_PB="https://github.com/commercialhaskell/stack/releases/download/v$VERSION/$FILE_PB"
-SHA256SUM_PB="618a309d763432a2cca654bc29249a77c7de096c693a28b84dd3656470269f5a"
+SHA256SUM_PB="fedf161622170801f29be5d5096ea30e253b2bba54f185607f568c44ee151e5a"
 
 DEPENDS="gmp zlib"
 

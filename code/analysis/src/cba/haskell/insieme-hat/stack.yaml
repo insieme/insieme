@@ -1,4 +1,8 @@
-resolver: lts-8.21
+resolver: lts-6.17
 
 packages:
 - '.'
+
+extra-deps:
+- attoparsec-binary-0.2
+- directory-1.2.6.3
