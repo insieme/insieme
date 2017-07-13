@@ -242,7 +242,7 @@ namespace extensions {
 				if(clangExpr && core::analysis::isGeneric(retType)) {
 					retType = converter.convertExprType(clangExpr);
 					auto concreteFunType = builder.functionType(funType->getParameterTypes(), retType, funType->getKind());
-					lit = builder.callExpr(builder.getLangBasic().getTypeInstantiation(), builder.getTypeLiteral(concreteFunType), lit);
+					lit = builder.callExpr(builder.getLangBasic().getInstantiate(), builder.literal("target_type", concreteFunType), lit);
 				}
 				// return the concrete return type but potentially generic literal
 				converter.applyHeaderTagging(lit, decl);
@@ -288,7 +288,7 @@ namespace extensions {
 			concreteFunctionType = builder.functionType(concreteFunctionType->getParameterTypes(), concreteFunctionType->getReturnType(),
 				                                        concreteFunctionType->getKind(), explicitInstantiationTypes);
 
-			return {builder.callExpr(builder.getLangBasic().getTypeInstantiation(), builder.getTypeLiteral(concreteFunctionType), innerLit),
+			return {builder.callExpr(builder.getLangBasic().getInstantiate(), builder.literal("target_type", concreteFunctionType), innerLit),
 				    concreteFunctionType->getReturnType()};
 		}
 

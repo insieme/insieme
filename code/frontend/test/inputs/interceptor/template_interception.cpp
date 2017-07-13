@@ -44,8 +44,8 @@ void intTypeParams() {
 	#pragma test expect_ir(R"({
 		var ref<IMP_IntTemplateClass<5>,f,f,plain> v0 = lit("IMP_IntTemplateClass::ctor" : IMP_IntTemplateClass<'T_0_0>::())(ref_decl(type_lit(ref<IMP_IntTemplateClass<5>,f,f,plain>)));
 		var ref<IMP_IntTemplateClass<42>,f,f,plain> v1 = lit("IMP_IntTemplateClass::ctor" : IMP_IntTemplateClass<'T_0_0>::())(ref_decl(type_lit(ref<IMP_IntTemplateClass<42>,f,f,plain>)));
-		type_instantiation(type_lit((IMP_IntTemplateClass<5>) -> unit), lit("IMP_intTemplateClassFunction" : (IMP_IntTemplateClass<'T_0_0>) -> unit))(ref_cast(lit("IMP_IntTemplateClass::ctor" : IMP_IntTemplateClass<'T_0_0>::())(ref_temp(type_lit(IMP_IntTemplateClass<5>))), type_lit(f), type_lit(f), type_lit(cpp_rref)));
-		var ref<IMP_IntTemplateClassContainer<5>,f,f,plain> v2 = type_instantiation(type_lit(IMP_IntTemplateClassContainer<5>::(IMP_IntTemplateClass<5>)), lit("IMP_IntTemplateClassContainer::ctor" : IMP_IntTemplateClassContainer<'T_0_0>::(IMP_IntTemplateClass<'T_0_0>)))(ref_decl(type_lit(ref<IMP_IntTemplateClassContainer<5>,f,f,plain>)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)));
+		instantiate(lit("target_type" : (IMP_IntTemplateClass<5>) -> unit), lit("IMP_intTemplateClassFunction" : (IMP_IntTemplateClass<'T_0_0>) -> unit))(ref_cast(lit("IMP_IntTemplateClass::ctor" : IMP_IntTemplateClass<'T_0_0>::())(ref_temp(type_lit(IMP_IntTemplateClass<5>))), type_lit(f), type_lit(f), type_lit(cpp_rref)));
+		var ref<IMP_IntTemplateClassContainer<5>,f,f,plain> v2 = instantiate(lit("target_type" : IMP_IntTemplateClassContainer<5>::(IMP_IntTemplateClass<5>)), lit("IMP_IntTemplateClassContainer::ctor" : IMP_IntTemplateClassContainer<'T_0_0>::(IMP_IntTemplateClass<'T_0_0>)))(ref_decl(type_lit(ref<IMP_IntTemplateClassContainer<5>,f,f,plain>)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)));
 	})")
 	{
 		IntTemplateClass<5> fiveInstance;
@@ -62,36 +62,36 @@ int main() {
 
 	// Functions with templates ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir(R"(type_instantiation(type_lit(<ref<int<4>,f,f,qualified>>() -> int<4>), lit("IMP_templateFunRet" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>() -> 'T_0_0))())")
+	#pragma test expect_ir(R"(instantiate(lit("target_type" : <ref<int<4>,f,f,qualified>>() -> int<4>), lit("IMP_templateFunRet" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>() -> 'T_0_0))())")
 	templateFunRet<int>();
-	#pragma test expect_ir(R"(type_instantiation(type_lit(<ref<real<4>,f,f,qualified>>() -> real<4>), lit("IMP_templateFunRet" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>() -> 'T_0_0))())")
+	#pragma test expect_ir(R"(instantiate(lit("target_type" : <ref<real<4>,f,f,qualified>>() -> real<4>), lit("IMP_templateFunRet" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>() -> 'T_0_0))())")
 	templateFunRet<float>();
-	#pragma test expect_ir(R"(type_instantiation(type_lit(<ref<int<4>,f,f,qualified>, ref<uint<4>,f,f,qualified>>(uint<4>) -> int<4>), lit("IMP_templateFunRetParam" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>('T_0_1) -> 'T_0_0))(7u))")
+	#pragma test expect_ir(R"(instantiate(lit("target_type" : <ref<int<4>,f,f,qualified>, ref<uint<4>,f,f,qualified>>(uint<4>) -> int<4>), lit("IMP_templateFunRetParam" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>('T_0_1) -> 'T_0_0))(7u))")
 	templateFunRetParam<int>(7u);
-	#pragma test expect_ir(R"(type_instantiation(type_lit(<ref<int<4>,f,f,qualified>, ref<uint<4>,f,f,qualified>>(uint<4>) -> int<4>), lit("IMP_templateFunRetParam" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>('T_0_1) -> 'T_0_0))(6u))")
+	#pragma test expect_ir(R"(instantiate(lit("target_type" : <ref<int<4>,f,f,qualified>, ref<uint<4>,f,f,qualified>>(uint<4>) -> int<4>), lit("IMP_templateFunRetParam" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>('T_0_1) -> 'T_0_0))(6u))")
 	templateFunRetParam<int,unsigned>(6u);
 
 
-	#pragma test expect_ir(R"( type_instantiation(type_lit((int<4>) -> int<4>), lit("IMP_templateFun" : ('T_0_0) -> 'T_0_0))(1) )")
+	#pragma test expect_ir(R"( instantiate(lit("target_type" : (int<4>) -> int<4>), lit("IMP_templateFun" : ('T_0_0) -> 'T_0_0))(1) )")
 	templateFun(1);
-	#pragma test expect_ir(R"( type_instantiation(type_lit((real<8>) -> real<8>), lit("IMP_templateFun" : ('T_0_0) -> 'T_0_0))(2.0E+0) )")
+	#pragma test expect_ir(R"( instantiate(lit("target_type" : (real<8>) -> real<8>), lit("IMP_templateFun" : ('T_0_0) -> 'T_0_0))(2.0E+0) )")
 	templateFun(2.0);
-	#pragma test expect_ir(R"( type_instantiation(type_lit((uint<16>) -> uint<16>), lit("IMP_templateFun" : ('T_0_0) -> 'T_0_0))(3ull) )")
+	#pragma test expect_ir(R"( instantiate(lit("target_type" : (uint<16>) -> uint<16>), lit("IMP_templateFun" : ('T_0_0) -> 'T_0_0))(3ull) )")
 	templateFun(3ull);
-	#pragma test expect_ir(R"( type_instantiation(type_lit(<ref<uint<8>,f,f,qualified>>(uint<8>) -> uint<8>), lit("IMP_templateFun" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>('T_0_0) -> 'T_0_0))(num_cast(4, type_lit(uint<8>))) )")
+	#pragma test expect_ir(R"( instantiate(lit("target_type" : <ref<uint<8>,f,f,qualified>>(uint<8>) -> uint<8>), lit("IMP_templateFun" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>('T_0_0) -> 'T_0_0))(num_cast(4, type_lit(uint<8>))) )")
 	templateFun<unsigned long>(4);
 
 	// Dependent name
-	#pragma test expect_ir(R"(type_instantiation(type_lit(<ref<IMP_Typer,f,f,qualified>>(int<4>) -> unit), lit("IMP_dependentNameFun" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>('IMP_typename_space_T_colon__colon_Bla) -> unit))(5))")
+	#pragma test expect_ir(R"(instantiate(lit("target_type" : <ref<IMP_Typer,f,f,qualified>>(int<4>) -> unit), lit("IMP_dependentNameFun" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>('IMP_typename_space_T_colon__colon_Bla) -> unit))(5))")
 	dependentNameFun<Typer>(5);
 
 	// Class with method dependent on class instantiation type
 
 	#pragma test expect_ir(R"({
 		var ref<IMP_TemplateWithMethod<ref<int<4>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_TemplateWithMethod::ctor" : IMP_TemplateWithMethod<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::())(ref_decl(type_lit(ref<IMP_TemplateWithMethod<ref<int<4>,f,f,qualified>>,f,f,plain>)));
-		type_instantiation(type_lit(IMP_TemplateWithMethod<ref<int<4>,f,f,qualified>>::() -> int<4>), lit("IMP_TemplateWithMethod::IMP_get" : IMP_TemplateWithMethod<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::() -> 'T_0_0))(v0);
+		instantiate(lit("target_type" : IMP_TemplateWithMethod<ref<int<4>,f,f,qualified>>::() -> int<4>), lit("IMP_TemplateWithMethod::IMP_get" : IMP_TemplateWithMethod<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::() -> 'T_0_0))(v0);
 		var ref<IMP_TemplateWithMethod<ref<real<4>,f,f,qualified>>,f,f,plain> v1 = lit("IMP_TemplateWithMethod::ctor" : IMP_TemplateWithMethod<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::())(ref_decl(type_lit(ref<IMP_TemplateWithMethod<ref<real<4>,f,f,qualified>>,f,f,plain>)));
-		type_instantiation(type_lit(IMP_TemplateWithMethod<ref<real<4>,f,f,qualified>>::() -> real<4>), lit("IMP_TemplateWithMethod::IMP_get" : IMP_TemplateWithMethod<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::() -> 'T_0_0))(v1);
+		instantiate(lit("target_type" : IMP_TemplateWithMethod<ref<real<4>,f,f,qualified>>::() -> real<4>), lit("IMP_TemplateWithMethod::IMP_get" : IMP_TemplateWithMethod<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::() -> 'T_0_0))(v1);
 	})")
 	{
 		TemplateWithMethod<int> a;
@@ -104,8 +104,8 @@ int main() {
 
 	#pragma test expect_ir(R"({
 		var ref<IMP_ClassWithTemplateMethod,f,f,plain> v0 = lit("IMP_ClassWithTemplateMethod::ctor" : IMP_ClassWithTemplateMethod::())(ref_decl(type_lit(ref<IMP_ClassWithTemplateMethod,f,f,plain>)));
-		type_instantiation(type_lit(<ref<int<4>,f,f,qualified>>IMP_ClassWithTemplateMethod::() -> int<4>), lit("IMP_ClassWithTemplateMethod::IMP_get" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>IMP_ClassWithTemplateMethod::() -> 'T_0_0))(v0);
-		type_instantiation(type_lit(<ref<real<4>,f,f,qualified>>IMP_ClassWithTemplateMethod::() -> real<4>), lit("IMP_ClassWithTemplateMethod::IMP_get" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>IMP_ClassWithTemplateMethod::() -> 'T_0_0))(v0);
+		instantiate(lit("target_type" : <ref<int<4>,f,f,qualified>>IMP_ClassWithTemplateMethod::() -> int<4>), lit("IMP_ClassWithTemplateMethod::IMP_get" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>IMP_ClassWithTemplateMethod::() -> 'T_0_0))(v0);
+		instantiate(lit("target_type" : <ref<real<4>,f,f,qualified>>IMP_ClassWithTemplateMethod::() -> real<4>), lit("IMP_ClassWithTemplateMethod::IMP_get" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>IMP_ClassWithTemplateMethod::() -> 'T_0_0))(v0);
 	})")
 	{
 		ClassWithTemplateMethod a;
@@ -133,7 +133,7 @@ int main() {
 
 	#pragma test expect_ir(R"({
 		var ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::())(ref_decl(type_lit(ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,plain>)));
-		type_instantiation(type_lit((ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,cpp_ref>, int<4>) -> unit), lit("IMP_templateTemplateFun" : (ref<IMP_Container<'T_0_1>,f,f,cpp_ref>, 'T_0_1) -> unit))(ref_kind_cast(v0, type_lit(cpp_ref)), 0);
+		instantiate(lit("target_type" : (ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,cpp_ref>, int<4>) -> unit), lit("IMP_templateTemplateFun" : (ref<IMP_Container<'T_0_1>,f,f,cpp_ref>, 'T_0_1) -> unit))(ref_kind_cast(v0, type_lit(cpp_ref)), 0);
 	})")
 	{
 		TemplateClass<int> c;
@@ -145,7 +145,7 @@ int main() {
 	#pragma test expect_ir(R"({
 		1;
 		var ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::())(ref_decl(type_lit(ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,plain>)));
-		type_instantiation(type_lit(<IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>, ref<int<4>,f,f,qualified>>(ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,cpp_ref>, int<4>) -> unit), lit("IMP_templateTemplateFun" : <'T_T_0_0<ref<'T_1_0,'T_1_0_a,'T_1_0_b,'T_1_0_c>>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>(ref<IMP_Container<'T_0_1>,f,f,cpp_ref>, 'T_0_1) -> unit))(ref_kind_cast(v0, type_lit(cpp_ref)), 0);
+		instantiate(lit("target_type" : <IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>, ref<int<4>,f,f,qualified>>(ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,cpp_ref>, int<4>) -> unit), lit("IMP_templateTemplateFun" : <'T_T_0_0<ref<'T_1_0,'T_1_0_a,'T_1_0_b,'T_1_0_c>>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>(ref<IMP_Container<'T_0_1>,f,f,cpp_ref>, 'T_0_1) -> unit))(ref_kind_cast(v0, type_lit(cpp_ref)), 0);
 	})")
 	{
 		1; TemplateClass<int> c;
@@ -156,7 +156,7 @@ int main() {
 	#pragma test expect_ir(R"({
 		var ref<IMP_TemplateClass<ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::())(ref_decl(type_lit(ref<IMP_TemplateClass<ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
 		var ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,plain> v1 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::())(ref_decl(type_lit(ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,plain>)));
-		type_instantiation(type_lit((ref<IMP_TemplateClass<ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,cpp_ref>, IMP_TemplateClass<ref<int<4>,f,f,qualified>>) -> unit), lit("IMP_templateTemplateFun" : (ref<IMP_Container<'T_0_1>,f,f,cpp_ref>, 'T_0_1) -> unit))(ref_kind_cast(v0, type_lit(cpp_ref)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref)));
+		instantiate(lit("target_type" : (ref<IMP_TemplateClass<ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,cpp_ref>, IMP_TemplateClass<ref<int<4>,f,f,qualified>>) -> unit), lit("IMP_templateTemplateFun" : (ref<IMP_Container<'T_0_1>,f,f,cpp_ref>, 'T_0_1) -> unit))(ref_kind_cast(v0, type_lit(cpp_ref)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref)));
 	})")
 	{
 		TemplateClass<TemplateClass<int> > c;
@@ -169,7 +169,7 @@ int main() {
 		1;
 		var ref<IMP_TemplateClass<ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::())(ref_decl(type_lit(ref<IMP_TemplateClass<ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,plain>)));
 		var ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,plain> v1 = lit("IMP_TemplateClass::ctor" : IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::())(ref_decl(type_lit(ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,plain>)));
-		type_instantiation(type_lit(<IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>, ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,qualified>>(ref<IMP_TemplateClass<ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,cpp_ref>, IMP_TemplateClass<ref<int<4>,f,f,qualified>>) -> unit), lit("IMP_templateTemplateFun" : <'T_T_0_0<ref<'T_1_0,'T_1_0_a,'T_1_0_b,'T_1_0_c>>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>(ref<IMP_Container<'T_0_1>,f,f,cpp_ref>, 'T_0_1) -> unit))(ref_kind_cast(v0, type_lit(cpp_ref)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref)));
+		instantiate(lit("target_type" : <IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>, ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,qualified>>(ref<IMP_TemplateClass<ref<IMP_TemplateClass<ref<int<4>,f,f,qualified>>,f,f,qualified>>,f,f,cpp_ref>, IMP_TemplateClass<ref<int<4>,f,f,qualified>>) -> unit), lit("IMP_templateTemplateFun" : <'T_T_0_0<ref<'T_1_0,'T_1_0_a,'T_1_0_b,'T_1_0_c>>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>(ref<IMP_Container<'T_0_1>,f,f,cpp_ref>, 'T_0_1) -> unit))(ref_kind_cast(v0, type_lit(cpp_ref)), ref_cast(v1, type_lit(t), type_lit(f), type_lit(cpp_ref)));
 	})")
 	{
 		1; TemplateClass<TemplateClass<int> > c;
@@ -186,20 +186,20 @@ int main() {
 
 	// Function pointer ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir(R"(type_instantiation(type_lit((ptr<(real<4>) -> int<4>,t,f>) -> unit), lit("IMP_templateFunPointerParam" : (ptr<('T_0_1) -> 'T_0_0,t,f>) -> unit))(ptr_of_function(type_instantiation(type_lit(<ref<int<4>,f,f,qualified>, ref<real<4>,f,f,qualified>>(real<4>) -> int<4>), lit("IMP_templateFunRetParam" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>('T_0_1) -> 'T_0_0)))))")
+	#pragma test expect_ir(R"(instantiate(lit("target_type" : (ptr<(real<4>) -> int<4>,t,f>) -> unit), lit("IMP_templateFunPointerParam" : (ptr<('T_0_1) -> 'T_0_0,t,f>) -> unit))(ptr_of_function(instantiate(lit("target_type" : <ref<int<4>,f,f,qualified>, ref<real<4>,f,f,qualified>>(real<4>) -> int<4>), lit("IMP_templateFunRetParam" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>('T_0_1) -> 'T_0_0)))))")
 	templateFunPointerParam(templateFunRetParam<int,float>);
 
-	#pragma test expect_ir(R"(lit("IMP_specificFunPointerParam" : (ptr<(real<4>) -> int<4>,t,f>) -> unit)(ptr_of_function(type_instantiation(type_lit((real<4>) -> int<4>), lit("IMP_templateFunRetParam" : ('T_0_1) -> 'T_0_0)))))")
+	#pragma test expect_ir(R"(lit("IMP_specificFunPointerParam" : (ptr<(real<4>) -> int<4>,t,f>) -> unit)(ptr_of_function(instantiate(lit("target_type" : (real<4>) -> int<4>), lit("IMP_templateFunRetParam" : ('T_0_1) -> 'T_0_0)))))")
 	specificFunPointerParam(templateFunRetParam);
 
-	#pragma test expect_ir(R"(type_instantiation(type_lit(<ref<int<4>,f,f,qualified>>(ptr<(IMP_TemplateClass<ref<int<4>,f,f,qualified>>) -> unit,t,f>) -> unit), lit("IMP_dependentFunPointerParam" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>(ptr<(IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>) -> unit,t,f>) -> unit))(ptr_of_function(type_instantiation(type_lit((IMP_TemplateClass<ref<int<4>,f,f,qualified>>) -> unit), lit("IMP_modifier" : (IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>) -> unit)))))")
+	#pragma test expect_ir(R"(instantiate(lit("target_type" : <ref<int<4>,f,f,qualified>>(ptr<(IMP_TemplateClass<ref<int<4>,f,f,qualified>>) -> unit,t,f>) -> unit), lit("IMP_dependentFunPointerParam" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>(ptr<(IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>) -> unit,t,f>) -> unit))(ptr_of_function(instantiate(lit("target_type" : (IMP_TemplateClass<ref<int<4>,f,f,qualified>>) -> unit), lit("IMP_modifier" : (IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>) -> unit)))))")
 	dependentFunPointerParam<int>(modifier);
 
 	#pragma test expect_ir(R"({
 		var ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,plain> v0 = lit("IMP_basic_ostream::ctor" : IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::())(ref_decl(type_lit(ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,plain>)));
 		var ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,cpp_ref> v1 = v0;
-		type_instantiation(type_lit(IMP_basic_ostream<ref<char,f,f,qualified>>::(ptr<(ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,cpp_ref>) -> unit,t,f>) -> ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,cpp_ref>), lit("IMP_basic_ostream::IMP_op" : IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::(ptr<(ref<IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,f,f,cpp_ref>) -> unit,t,f>) -> ref<IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,f,f,cpp_ref>))(v0, ptr_of_function(type_instantiation(type_lit((ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,cpp_ref>) -> unit), lit("IMP_endl" : (ref<IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,f,f,cpp_ref>) -> unit)))) materialize ;
-		type_instantiation(type_lit(IMP_basic_ostream<ref<char,f,f,qualified>>::(ptr<(ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,cpp_ref>) -> unit,t,f>) -> ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,cpp_ref>), lit("IMP_basic_ostream::IMP_op" : IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::(ptr<(ref<IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,f,f,cpp_ref>) -> unit,t,f>) -> ref<IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,f,f,cpp_ref>))(v1, ptr_of_function(type_instantiation(type_lit((ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,cpp_ref>) -> unit), lit("IMP_endl" : (ref<IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,f,f,cpp_ref>) -> unit)))) materialize ;
+		instantiate(lit("target_type" : IMP_basic_ostream<ref<char,f,f,qualified>>::(ptr<(ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,cpp_ref>) -> unit,t,f>) -> ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,cpp_ref>), lit("IMP_basic_ostream::IMP_op" : IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::(ptr<(ref<IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,f,f,cpp_ref>) -> unit,t,f>) -> ref<IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,f,f,cpp_ref>))(v0, ptr_of_function(instantiate(lit("target_type" : (ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,cpp_ref>) -> unit), lit("IMP_endl" : (ref<IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,f,f,cpp_ref>) -> unit)))) materialize ;
+		instantiate(lit("target_type" : IMP_basic_ostream<ref<char,f,f,qualified>>::(ptr<(ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,cpp_ref>) -> unit,t,f>) -> ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,cpp_ref>), lit("IMP_basic_ostream::IMP_op" : IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>::(ptr<(ref<IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,f,f,cpp_ref>) -> unit,t,f>) -> ref<IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,f,f,cpp_ref>))(v1, ptr_of_function(instantiate(lit("target_type" : (ref<IMP_basic_ostream<ref<char,f,f,qualified>>,f,f,cpp_ref>) -> unit), lit("IMP_endl" : (ref<IMP_basic_ostream<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>,f,f,cpp_ref>) -> unit)))) materialize ;
 	})")
 	{
 		ostream os;
@@ -210,13 +210,13 @@ int main() {
 
 	// Variadic templates //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir(R"(type_instantiation(type_lit((int<4>) -> int<4>), lit("IMP_variadicTemplateFun" : ('T_0_0) -> 'T_0_0))(0))")
+	#pragma test expect_ir(R"(instantiate(lit("target_type" : (int<4>) -> int<4>), lit("IMP_variadicTemplateFun" : ('T_0_0) -> 'T_0_0))(0))")
 	variadicTemplateFun(0);
 
-	#pragma test expect_ir(R"(type_instantiation(type_lit((int<4>, int<4>) -> int<4>), lit("IMP_variadicTemplateFun" : ('T_0_0, 'V_T_0_1...) -> 'T_0_0))(0, 1))")
+	#pragma test expect_ir(R"(instantiate(lit("target_type" : (int<4>, int<4>) -> int<4>), lit("IMP_variadicTemplateFun" : ('T_0_0, 'V_T_0_1...) -> 'T_0_0))(0, 1))")
 	variadicTemplateFun(0, 1);
 
-	#pragma test expect_ir(R"(type_instantiation(type_lit((int<4>, int<4>, real<8>, uint<4>) -> int<4>), lit("IMP_variadicTemplateFun" : ('T_0_0, 'V_T_0_1...) -> 'T_0_0))(0, 1, 2.0E+0, 90u))")
+	#pragma test expect_ir(R"(instantiate(lit("target_type" : (int<4>, int<4>, real<8>, uint<4>) -> int<4>), lit("IMP_variadicTemplateFun" : ('T_0_0, 'V_T_0_1...) -> 'T_0_0))(0, 1, 2.0E+0, 90u))")
 	variadicTemplateFun(0, 1, 2.0, 90u);
 
 	#pragma test expect_ir(R"({
@@ -228,10 +228,10 @@ int main() {
 
 	// Variadic template template //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir(R"(type_instantiation(type_lit(<IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>>() -> unit), lit("IMP_variadicTemplateTemplateFun" : <'V_T_T_0_0...<>>() -> unit))())")
+	#pragma test expect_ir(R"(instantiate(lit("target_type" : <IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>>() -> unit), lit("IMP_variadicTemplateTemplateFun" : <'V_T_T_0_0...<>>() -> unit))())")
 	variadicTemplateTemplateFun<TemplateClass>();
 
-	#pragma test expect_ir(R"(type_instantiation(type_lit(<IMP_TemplateWithMethod<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>, IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>>() -> unit), lit("IMP_variadicTemplateTemplateFun" : <'V_T_T_0_0...<>>() -> unit))())")
+	#pragma test expect_ir(R"(instantiate(lit("target_type" : <IMP_TemplateWithMethod<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>, IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>>() -> unit), lit("IMP_variadicTemplateTemplateFun" : <'V_T_T_0_0...<>>() -> unit))())")
 	variadicTemplateTemplateFun<TemplateWithMethod, TemplateClass>();
 
 	// Global template instance ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
