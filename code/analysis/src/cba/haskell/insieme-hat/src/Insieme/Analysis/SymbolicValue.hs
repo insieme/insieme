@@ -113,7 +113,7 @@ symbolicValue addr = case getNodeType addr of
     argVars = symbolicValue <$> ( tail . tail $ Addr.getChildren addr )
     
     -- the one operator handler that covers all operators
-    operatorHandler = OperatorHandler cov deps val
+    operatorHandler = OperatorHandler cov dep val
       where
         
         -- TODO: apply on all builtins, also deriveds
@@ -121,9 +121,9 @@ symbolicValue addr = case getNodeType addr of
           where
             covered = any (isBuiltin a) [ "ref_deref", "ref_assign" ]
       
-        deps _ = Solver.toVar <$> argVars
+        dep _ _ = Solver.toVar <$> argVars
       
-        val a = Solver.bot                   -- TODO: here we need to compose values
+        val _ a = Solver.bot                   -- TODO: here we need to compose values
                                              --  we also need to know the processed function
 
     compose = ComposedValue.toComposed

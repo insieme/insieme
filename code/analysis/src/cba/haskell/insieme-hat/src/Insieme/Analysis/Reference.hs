@@ -150,47 +150,47 @@ referenceValue addr = case getNodeType addr of
         allocHandler = OperatorHandler cov noDep val
             where
                 cov a = isBuiltin a "ref_alloc"
-                val a = compose $ BSet.singleton $ Reference addr DP.root
+                val _ a = compose $ BSet.singleton $ Reference addr DP.root
 
         declHandler = OperatorHandler cov noDep val
             where
                 cov a = isBuiltin a "ref_decl"
-                val a = compose $ BSet.singleton $ Reference (getEnclosingDecl addr) DP.root
+                val _ a = compose $ BSet.singleton $ Reference (getEnclosingDecl addr) DP.root
 
         refNull = OperatorHandler cov noDep val
             where
                 cov a = isBuiltin a "ref_null"
-                val a = compose $ BSet.singleton NullReference
+                val _ a = compose $ BSet.singleton NullReference
 
         refNarrow = OperatorHandler cov subRefDep val
             where
                 cov a = isBuiltin a "ref_narrow"
-                val a = compose $ narrow (baseRefVal a) (dataPathVal a)
+                val _ a = compose $ narrow (baseRefVal a) (dataPathVal a)
                 narrow = BSet.lift2 $ onRefs2 $ \(Reference l p) d -> Reference l (DP.append p d)
 
         refExpand = OperatorHandler cov subRefDep val
             where
                 cov a = isBuiltin a "ref_expand"
-                val a = compose $ expand (baseRefVal a) (dataPathVal a)
+                val _ a = compose $ expand (baseRefVal a) (dataPathVal a)
                 expand = BSet.lift2 $ onRefs2 $ \(Reference l p) d -> Reference l (DP.append p (DP.invert d))
 
         refCast = OperatorHandler cov dep val
             where
                 cov a = isBuiltin a "ref_cast"
-                dep _ = [toVar baseRefVar]
-                val a = get a baseRefVar
+                dep _ _ = [toVar baseRefVar]
+                val _ a = get a baseRefVar
 
         refReinterpret = OperatorHandler cov dep val
             where
                 cov a = isBuiltin a "ref_reinterpret"
-                dep _ = [toVar baseRefVar]
-                val a = get a baseRefVar            -- TODO: check when this conversion is actually valid
+                dep _ _ = [toVar baseRefVar]
+                val _ a = get a baseRefVar            -- TODO: check when this conversion is actually valid
 
         ptrToRef = OperatorHandler cov dep val
             where
                 cov a = isBuiltin a "ptr_to_ref"
-                dep _ = [toVar baseRefVar, toVar offsetVar]
-                val a = compose $ access (baseRefVal a) (offsetVal a)
+                dep _ _ = [toVar baseRefVar, toVar offsetVar]
+                val _ a = compose $ access (baseRefVal a) (offsetVal a)
 
                 baseRefVal a = ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 0) $ get a baseRefVar
 
@@ -202,16 +202,16 @@ referenceValue addr = case getNodeType addr of
         ptrFromRef = OperatorHandler cov dep val
             where
                 cov a = isBuiltin a "ptr_from_ref"
-                dep _ = [toVar baseRefVar]
-                val a = ComposedValue.composeElements [(component 0,compose res)]
+                dep _ _ = [toVar baseRefVar]
+                val _ a = ComposedValue.composeElements [(component 0,compose res)]
                     where
                         res = lower $ baseRefVal a
                         lower = BSet.map $ onRefs $ \(Reference l p) -> Reference l (DP.append p (DP.invert $ DP.step $ component 0))
 
 
-        noDep a = []
+        noDep _ a = []
 
-        subRefDep a = [toVar baseRefVar, toVar dataPathVar]
+        subRefDep _ a = [toVar baseRefVar, toVar dataPathVar]
 
         baseRefVar   = referenceValue $ goDown 1 $ goDown 2 addr
         baseRefVal a = ComposedValue.toValue $ get a baseRefVar
