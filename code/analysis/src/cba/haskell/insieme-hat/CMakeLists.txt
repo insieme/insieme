@@ -59,6 +59,12 @@ add_custom_command(
 
 add_custom_target(insieme_hat DEPENDS libHSinsieme-hat.so)
 
+add_test(
+  NAME insieme_hat_tests
+  COMMAND ${stack} test
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 if(MSVC)
 	set_target_properties(insieme_hat PROPERTIES FOLDER analysis)
 endif()
