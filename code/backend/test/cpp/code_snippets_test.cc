@@ -1610,7 +1610,7 @@ namespace backend {
 	TEST(CppSnippet, InterceptedTemplateFunctionPointer) {
 		auto prog = builder.parseProgram(R"(
 			int<4> main() {
-				ptr_of_function(type_instantiation(type_lit(<ref<int<4>,f,f,qualified>, ref<real<4>,f,f,qualified>>(real<4>) -> int<4>),
+				ptr_of_function(instantiate(lit("target_type": <ref<int<4>,f,f,qualified>, ref<real<4>,f,f,qualified>>(real<4>) -> int<4>),
 								lit("IMP_templateFunRetParam" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>('T_0_1) -> 'T_0_0)));
 				return 0;
 			}

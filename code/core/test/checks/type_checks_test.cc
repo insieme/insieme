@@ -294,7 +294,7 @@ namespace checks {
 		{
 			auto test = builder.parseExpr(R"(
 				let fun = lit("fun" : <'a>()->'a) in
-				type_instantiation(type_lit(<int>()->int), fun)()
+				instantiate(lit("target_type" : <int>()->int), fun)()
 			)");
 
 			auto res = checks::check(test);
@@ -303,7 +303,7 @@ namespace checks {
 		{
 			auto test = builder.parseExpr(R"(
 				let fun = lit("fun" : <'a, 'b>('b)->'a) in
-				type_instantiation(type_lit(<int<4>,uint<4>>(uint<4>)->int<4>), fun)(4u)
+				instantiate(lit("target_type" : <int<4>,uint<4>>(uint<4>)->int<4>), fun)(4u)
 			)");
 
 			auto res = checks::check(test);
@@ -314,7 +314,7 @@ namespace checks {
 		{
 			auto test = builder.parseExpr(R"(
 				let fun = lit("fun" : <'a,'b>()->'a) in
-				type_instantiation(type_lit(<int>()->int), fun)
+				instantiate(lit("target_type" : <int>()->int), fun)
 			)");
 
 			auto res = checks::check(test);
@@ -324,7 +324,7 @@ namespace checks {
 		// Not a function type
 		{
 			auto test = builder.parseExpr(R"(
-				type_instantiation(type_lit(int<4>), lit("not_fun" : 'a))
+				instantiate(lit("target_type" : int<4>), lit("not_fun" : 'a))
 			)");
 
 			auto res = checks::check(test);

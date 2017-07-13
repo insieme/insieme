@@ -319,7 +319,7 @@ namespace backend {
 		// -- casts --
 
 		res[basic.getNumericCast()] = OP_CONVERTER { return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); };
-		res[basic.getTypeInstantiation()] = OP_CONVERTER {
+		res[basic.getInstantiate()] = OP_CONVERTER {
 			auto lit = ARG(1).as<core::LiteralPtr>();
 			if(!lit) assert_fail() << "type instantiation should either be handled at call site or apply to function pointer literal";
 			auto replacementLit = core::IRBuilder(NODE_MANAGER).literal(lit->getValue(), call->getType());

@@ -1631,7 +1631,7 @@ namespace checks {
 		auto& mgr = callExpr->getNodeManager();
 		auto& basic = mgr.getLangBasic();
 
-		if(!basic.isTypeInstantiation(callExpr->getFunctionExpr())) return res;
+		if(!basic.isInstantiate(callExpr->getFunctionExpr())) return res;
 
 		auto instantiatedFunType = callExpr->getType().isa<FunctionTypePtr>();
 		auto subFunType = core::analysis::getArgument(callExpr, 1)->getType().isa<FunctionTypePtr>();
@@ -1641,12 +1641,6 @@ namespace checks {
 			add(res,
 				Message(callExpr, EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, format("Instantiated and sub types must both be function types"), Message::ERROR));
 			return res;
-		}
-
-		// check that the type literal parameter matches the generated type
-		if(instantiatedFunType != core::analysis::getRepresentedType(core::analysis::getArgument(callExpr, 0))) {
-			add(res,
-				Message(callExpr, EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, format("Instantiated type does not match type literal argument"), Message::ERROR));
 		}
 
 		auto subFunList = subFunType->getInstantiationTypeList();
