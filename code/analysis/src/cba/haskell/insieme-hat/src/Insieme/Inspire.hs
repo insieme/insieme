@@ -52,23 +52,42 @@ import Insieme.Inspire.NodeType
 
 -- * Tree
 
-data Tree = Tree { getID       :: Int,
-                   getNodeType :: NodeType,
-                   getChildren :: [Tree],
-                   builtinTags :: [String]
-                }
-  deriving (Show, Generic, NFData)
+data Tree = MkTree {
+      mtId        :: Maybe Int,
+      mtInnerTree :: InnerTree
+    } deriving (Show, Generic, NFData)
 
 instance Eq Tree where
-    (==) = (==) `on` getID
+    MkTree { mtId = Just ida } == MkTree { mtId = Just idb } =
+        ida == idb
+    a == b =
+        mtInnerTree a == mtInnerTree b
 
 instance Ord Tree where
-    compare = compare `on` getID
+    compare a@Tree{ getID = Just ida } b@Tree{ getID = Just idb } | ida == idb =
+        EQ
+    compare a b =
+        compare (mtInnerTree a) (mtInnerTree b)
 
-pattern Node x y <- Tree _ x y _
+treeExactEq a b = mtId a == mtId b && mtInnerTree a == mtInnerTree b
 
-mkNode :: Int -> NodeType -> [Tree] -> [String] -> Tree
-mkNode = Tree
+data InnerTree = InnerTree {
+      itNodeType    :: NodeType,
+      itChildren    :: [Tree],
+      itBuiltinTags :: [String]
+    } deriving (Eq, Ord, Show, Generic, NFData)
+
+pattern Node x y <- MkTree _ (InnerTree x y _)
+
+pattern Tree :: Maybe Int -> NodeType -> [Tree] -> [String] -> Tree
+pattern Tree { getID, getNodeType, getChildren, builtinTags }
+      = MkTree getID (InnerTree getNodeType getChildren builtinTags)
+
+unsafeMkNode :: Int -> NodeType -> [Tree] -> [String] -> Tree
+unsafeMkNode i nt ch bt = MkTree (Just i) (InnerTree nt ch bt)
+
+mkNode :: NodeType -> [Tree] -> [String] -> Tree
+mkNode nt ch bt = MkTree Nothing (InnerTree nt ch bt)
 
 numChildren :: Tree -> Int
 numChildren = length . getChildren

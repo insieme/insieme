@@ -132,7 +132,7 @@ arithmeticValue addr = case Addr.getNode addr of
     div = OperatorHandler cov dep val
       where
         cov a = any (isBuiltin a) [ "int_div", "uint_div", "gen_div" ]
-        val a = compose $ tryDiv (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
+        val _ a = compose $ tryDiv (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
 
         tryDiv x y = if not (BSet.isUniverse prod) && all (uncurry Ar.canDivide) (BSet.toList prod)
                         then BSet.map (uncurry Ar.divFormula) prod
@@ -147,8 +147,8 @@ arithmeticValue addr = case Addr.getNode addr of
     ptrFromRef = OperatorHandler cov dep val
       where
         cov a = isBuiltin a "ptr_from_ref"
-        dep _ = []
-        val a = ComposedValue.composeElements [(component 1,compose res)]
+        dep _ _ = []
+        val _ a = ComposedValue.composeElements [(component 1,compose res)]
           where
             res = BSet.singleton $ Ar.mkConst 0
 
@@ -157,9 +157,9 @@ arithmeticValue addr = case Addr.getNode addr of
     lhs = arithmeticValue $ Addr.goDown 2 addr
     rhs = arithmeticValue $ Addr.goDown 3 addr
 
-    dep a = Solver.toVar <$> [lhs, rhs]
+    dep _ a = Solver.toVar <$> [lhs, rhs]
 
-    val op a = compose $ (BSet.lift2 op) (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
+    val op _ a = compose $ (BSet.lift2 op) (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
 
 
 

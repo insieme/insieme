@@ -34,25 +34,37 @@
  - Performance Computing, Networking, Storage and Analysis (SC 2012),
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
-import Test.Tasty
-import Test.Tasty.HUnit
 
-import BoundSet
-import Formula
-import ParseInt
-import Transform
+module Insieme.Inspire.Transform 
+    ( substitute
+    , substitute'
+    ) where
 
-main = defaultMain tests
+import Insieme.Inspire
+import Control.Monad
+import Control.Monad.State
+import Data.Map (Map)
+import qualified Data.Map as Map
 
-tests = testGroup "Tests" [
-          testGroup "Insieme" [
-            testGroup "Inspire" [ utilsTests, transformTests ]
-          ]
-        ]
 
-utilsTests = testGroup "Utils"
-    [ boundSetTests
-    , formulaTests
-    , parseIntTests
-    ]
+type TreeSubst = Map Tree Tree
 
+
+substitute :: TreeSubst -> Tree -> Tree
+substitute s t = evalState (substitute' t) s
+
+substitute' :: Tree -> State TreeSubst Tree
+substitute' t = do
+  s <- get
+  case Map.lookup t s of
+    Just t' -> return t'
+    Nothing -> do
+        let ch = getChildren t
+        ch' <- mapM substitute' ch
+        let t' | ch' == ch = t { getChildren = ch' }
+               | otherwise = t { getID = Nothing
+                               , getChildren = ch'
+                               , builtinTags = []
+                               }
+        modify (Map.insert t t')
+        return t'

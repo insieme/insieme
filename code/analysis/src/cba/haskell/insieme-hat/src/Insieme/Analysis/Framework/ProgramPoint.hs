@@ -36,6 +36,7 @@
  -}
 module Insieme.Analysis.Framework.ProgramPoint where
 
+import Data.Maybe
 import Insieme.Inspire.NodeAddress
 
 import Insieme.Analysis.Entities.ProgramPoint
@@ -87,26 +88,29 @@ programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNodeType
                 hasUniversalTarget a = BSet.isUniverse $ extract $ Solver.get a targetVar
 
                 -- test whether any operator handlers are active
-                getActiveHandlers a = if BSet.isUniverse callables then [] else filter fit ops 
+                getActiveHandlers a = if BSet.isUniverse callables then [] else concatMap f ops 
                     where
                         callables = extract $ Solver.get a targetVar
 
-                        targets = BSet.toSet callables
+                        targets = BSet.toList callables
 
-                        fit o = any ( \t -> covers o $ toAddress t ) targets
-
+                        f o = mapMaybe go targets
+                            where
+                                go l = if covers o trg then Just (o,trg) else Nothing
+                                    where
+                                        trg = toAddress l 
 
                 isHandlerActive a = not . null $ getActiveHandlers a
 
                 -- compute the dependencies of the active handlers
                 operatorDeps a = concat $ map go $ getActiveHandlers a
                     where
-                        go o = dependsOn o a
+                        go (o,t) = dependsOn o t a
 
                 -- compute the value computed by the active handlers
                 operatorVal a = Solver.join $ map go $ getActiveHandlers a
                     where
-                        go o = getValue o a
+                        go (o,t) = getValue o t a
 
 
         -- everything else is just forwarded

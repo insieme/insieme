@@ -98,9 +98,9 @@ dataPathValue addr = dataflowValue addr analysis ops
       where
         cov a = isBuiltin a "dp_root"
 
-        dep a = []
+        dep _ a = []
 
-        val a = compose $ BSet.singleton root
+        val _ a = compose $ BSet.singleton root
 
 
     -- the handler for the member access path constructore --
@@ -108,9 +108,9 @@ dataPathValue addr = dataflowValue addr analysis ops
       where
         cov a = isBuiltin a "dp_member"
 
-        dep a = (Solver.toVar nestedPathVar) : (Solver.toVar fieldNameVar) : []
+        dep _ a = (Solver.toVar nestedPathVar) : (Solver.toVar fieldNameVar) : []
 
-        val a = compose $ combine (paths a) fieldNames
+        val _ a = compose $ combine (paths a) fieldNames
             where
                 combine = BSet.lift2 $ \p i -> append p ((step . field) (toString i))
                 fieldNames = ComposedValue.toValue $ Solver.get a fieldNameVar
@@ -123,9 +123,9 @@ dataPathValue addr = dataflowValue addr analysis ops
       where
         cov a = any (isBuiltin a) ["dp_element","dp_component"]
 
-        dep a = (Solver.toVar nestedPathVar) : (Solver.toVar indexVar) : []
+        dep _ a = (Solver.toVar nestedPathVar) : (Solver.toVar indexVar) : []
 
-        val a = compose $ combine (paths a) indexes
+        val _ a = compose $ combine (paths a) indexes
             where
                 combine BSet.Universe  _ = BSet.Universe
                 combine ps BSet.Universe = BSet.map (\p -> append p (step unknownIndex)) ps

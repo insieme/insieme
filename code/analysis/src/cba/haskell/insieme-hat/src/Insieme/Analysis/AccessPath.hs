@@ -106,40 +106,40 @@ accessPathValue addr = case getNodeType addr of
     allocHandler = OperatorHandler cov noDep val
         where
             cov a = isBuiltin a "ref_alloc"
-            val a = compose $ BSet.singleton AP.local
+            val _ a = compose $ BSet.singleton AP.local
 
     declHandler = OperatorHandler cov noDep val
         where
             cov a = isBuiltin a "ref_decl"
-            val a = compose $ BSet.singleton AP.local
+            val _ a = compose $ BSet.singleton AP.local
 
     refNarrow = OperatorHandler cov subRefDep val
         where
             cov a = isBuiltin a "ref_narrow"
-            val a = compose $ narrow (baseAccessPathVal a) (dataPathVal a)
+            val _ a = compose $ narrow (baseAccessPathVal a) (dataPathVal a)
             narrow = BSet.lift2 $ \a d -> AP.append a d
 
     refExpand = OperatorHandler cov subRefDep val
         where
             cov a = isBuiltin a "ref_expand"
-            val a = compose $ expand (baseAccessPathVal a) (dataPathVal a)
+            val _ a = compose $ expand (baseAccessPathVal a) (dataPathVal a)
             expand = BSet.lift2 $ \a d -> AP.append a (DP.invert d)
 
     refCast = OperatorHandler cov dep val
         where
             cov a = isBuiltin a "ref_cast"
-            dep _ = [Solver.toVar baseAccessPathVar]
-            val a = Solver.get a baseAccessPathVar
+            dep _ _ = [Solver.toVar baseAccessPathVar]
+            val _ a = Solver.get a baseAccessPathVar
 
     refReinterpret = OperatorHandler cov dep val
         where
             cov a = isBuiltin a "ref_reinterpret"
-            dep _ = [Solver.toVar baseAccessPathVar]
-            val a = Solver.get a baseAccessPathVar            -- TODO: check when this conversion is actually valid
+            dep _ _ = [Solver.toVar baseAccessPathVar]
+            val _ a = Solver.get a baseAccessPathVar            -- TODO: check when this conversion is actually valid
 
-    noDep a = []
+    noDep _ a = []
 
-    subRefDep a = [Solver.toVar baseAccessPathVar, Solver.toVar dataPathVar]
+    subRefDep _ a = [Solver.toVar baseAccessPathVar, Solver.toVar dataPathVar]
 
     baseAccessPathVar   = accessPathValue $ goDown 1 $ goDown 2 addr
     baseAccessPathVal a = ComposedValue.toValue $ Solver.get a baseAccessPathVar

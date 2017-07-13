@@ -197,18 +197,22 @@ dataflowValue addr analysis ops = case getNode addr of
 
         -- operator support --
 
-        getActiveOperators a = if BSet.isUniverse targets then [] else filter f extOps
+        getActiveOperators a = if BSet.isUniverse targets then [] else concatMap f extOps
             where
                 targets = callTargetVal a
-                f o = any (\l -> covers o (Callable.toAddress l)) $ BSet.toSet $ targets
+                f o = mapMaybe go $ BSet.toList targets
+                    where
+                        go l = if covers o trg then Just (o,trg) else Nothing
+                            where
+                                trg = Callable.toAddress l 
 
         getOperatorDependencies a = concat $ map go $ getActiveOperators a
             where
-                go o = dependsOn o a
+                go (o,t) = dependsOn o t a
 
         getOperatorValue a = map go $ getActiveOperators a
             where
-                go o = getValue o a
+                go (o,t) = getValue o t a
 
 
         -- support calls to unknown literal --
@@ -336,9 +340,9 @@ dataflowValue addr analysis ops = case getNode addr of
         where
             cov a = isBuiltin a "ref_deref"
 
-            dep a = (Solver.toVar targetRefVar) : (map Solver.toVar $ readValueVars a)
+            dep _ a = (Solver.toVar targetRefVar) : (map Solver.toVar $ readValueVars a)
 
-            val a = if includesUnknownSources targets then top else Solver.join $ map go $ BSet.toList targets
+            val _ a = if includesUnknownSources targets then top else Solver.join $ map go $ BSet.toList targets
                 where
                     targets = targetRefVal a
                     go r = ComposedValue.getElement (Reference.dataPath r) $ Solver.get a (memStateVarOf r)
@@ -361,9 +365,9 @@ dataflowValue addr analysis ops = case getNode addr of
         where
             cov a = isBuiltin a "tuple_member_access"
 
-            dep a = Solver.toVar indexValueVar : Solver.toVar tupleValueVar : []
+            dep _ a = Solver.toVar indexValueVar : Solver.toVar tupleValueVar : []
 
-            val a = if BSet.isUniverse indices
+            val _ a = if BSet.isUniverse indices
                     then top
                     else Solver.join $ map go dataPaths
                 where
