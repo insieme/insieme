@@ -153,6 +153,8 @@
 	AUTO         "auto"
 
 	VAR          "var"
+	FREE_VAR     "free_var"
+	
 	IF           "if"
 	ELSE         "else"
 	FOR          "for"
@@ -601,6 +603,7 @@ typed_expression : expression ":" type                                    { $$ =
 // -- variable --
 
 variable : "identifier"                                                   { $$ = driver.findSymbol(@$, $1); }
+         | "free_var" "(" type ")"                                        { $$ = driver.builder.variable($3); }
          ;
 
 
