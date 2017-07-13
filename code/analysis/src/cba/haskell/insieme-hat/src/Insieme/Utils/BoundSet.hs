@@ -89,6 +89,7 @@ module Insieme.Utils.BoundSet (
     union,
     intersection,
     cartProduct,
+    cartProductL,
 
     -- * Unbound Set
     UnboundSet,
@@ -214,6 +215,15 @@ cartProduct _            Universe     = Universe
 cartProduct (BoundSet x) (BoundSet y) = fromList prod
   where
      prod = [(u, v) | u <- Set.toList x, v <- Set.toList y]
+     
+cartProductL :: (IsBound bb, Ord a) => [BoundSet bb a] -> BoundSet bb [a]
+cartProductL       []        = singleton []
+cartProductL (Universe : bs) = Universe
+cartProductL (       h : bs) = if isUniverse base then Universe else fromList prod
+  where
+    base = cartProductL bs
+    prod = [ u : vs | u <- toList h, vs <- toList base ] 
+
 
 -- | Special bound which does not turn a 'BoundSet' automatically into
 -- 'Universe'.
