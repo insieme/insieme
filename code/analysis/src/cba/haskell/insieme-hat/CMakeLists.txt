@@ -73,7 +73,7 @@ if(BUILD_DOCS)
 endif()
 
 # runtime library exports
-set(LIBHSRTS_DIR ${stack_data}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts PARENT_SCOPE)
-set(LIBHSRTS ${stack_data}/programs/x86_64-linux/ghc-7.10.3/lib/ghc-7.10.3/rts/libHSrts-ghc7.10.3.so PARENT_SCOPE)
+set(LIBHSRTS_DIR ${stack_data}/programs/x86_64-linux/ghc-8.0.2/lib/ghc-8.0.2/rts PARENT_SCOPE)
+set(LIBHSRTS ${stack_data}/programs/x86_64-linux/ghc-8.0.2/lib/ghc-8.0.2/rts/libHSrts-ghc8.0.2.so PARENT_SCOPE)
 
 set(insieme_hat ${CMAKE_CURRENT_BINARY_DIR}/libHSinsieme-hat.so PARENT_SCOPE)
