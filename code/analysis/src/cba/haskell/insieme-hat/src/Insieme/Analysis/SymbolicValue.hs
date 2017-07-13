@@ -36,7 +36,11 @@
  -}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Insieme.Analysis.SymbolicValue where
+module Insieme.Analysis.SymbolicValue (
+    SymbolicValue,
+    SymbolicValueSet,
+    symbolicValue,
+) where
 
 import Data.Maybe
 import Data.Typeable
@@ -99,6 +103,22 @@ symbolicValue addr = case getNodeType addr of
 
     IR.Literal  -> Solver.mkVariable varId [] (compose $ BSet.singleton $ Addr.getNode addr)
 
+    IR.Declaration -> var
+      where
+        var = Solver.mkVariable varId [con] Solver.bot
+        con = Solver.createConstraint dep val var
+    
+        initValueVar = symbolicValue $ Addr.goDown 1 addr
+        initValueVal a = extract $ Solver.get a initValueVar
+    
+        dep _ = [Solver.toVar initValueVar]
+        val a = compose $ BSet.map toDecl $ initValueVal a
+          where
+            toDecl initVal = IR.mkNode IR.Declaration [declType,initVal] []
+            
+            declType = IR.goDown 0 $ Addr.getNode addr
+    
+
     _ -> dataflowValue addr analysis ops
 
   where
@@ -121,12 +141,34 @@ symbolicValue addr = case getNodeType addr of
           where
             covered = any (isBuiltin a) [ "ref_deref", "ref_assign" ]
       
+        -- if triggered, we will need the symbolic values of all arguments
         dep _ _ = Solver.toVar <$> argVars
       
-        val _ a = Solver.bot                   -- TODO: here we need to compose values
-                                             --  we also need to know the processed function
+        
+        -- to get the new value, we have to take the cross product of all arguments
+        val o a = compose $ BSet.map toCall argCombinations
+          
+          where
+          
+            argVals = extract . (Solver.get a) <$> argVars
+            
+            argCombinations = BSet.cartProductL argVals
+            
+            toCall args = IR.mkNode IR.CallExpr (resType : trg : args) []
+            
+            trg = Addr.getNode o
+            
+            resType = IR.goDown 0 $ Addr.getNode addr
+            
 
+    extract = ComposedValue.toValue
     compose = ComposedValue.toComposed
+
+
+
+
+
+
 
 
 --

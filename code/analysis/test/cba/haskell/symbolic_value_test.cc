@@ -68,7 +68,10 @@ namespace haskell {
 
 			// convert values
 			for(const auto& cur : values) {
-				res.push_back(toString(*cur));
+				// check that they do not contain semantic errors
+				assert_correct_ir(cur);
+				// add print-out to result values
+				res.push_back(toString(dumpOneLine(cur)));
 			}
 
 			// sort values
@@ -114,7 +117,7 @@ namespace haskell {
 
 	}
 
-	TEST(DISABLED_SymbolicValues, Operators) {
+	TEST(SymbolicValues, Operators) {
 		NodeManager mgr;
 
 		// test composed values
@@ -142,7 +145,7 @@ namespace haskell {
 
 	}
 
-	TEST(DISABLED_SymbolicValues, Increment) {
+	TEST(SymbolicValues, Increment) {
 		NodeManager mgr;
 
 		// test composed values
@@ -161,12 +164,12 @@ namespace haskell {
 
 	}
 
-	TEST(DISABLED_SymbolicValues, Computation) {
+	TEST(SymbolicValues, Computation) {
 		NodeManager mgr;
 
 		// test composed values
 		EXPECT_EQ(
-			"[3%((3*2)+1)]",
+			"[3%(3*2+1)]",
 			toString(getValues(mgr,
 				R"(
 					def fun = ( x : int<4> ) -> int<4> {
