@@ -36,14 +36,36 @@
  -}
 module Insieme.Utils.ParseIR where
 
+import Foreign
+import Foreign.C.String
+import Foreign.C.Types
+import Foreign.Marshal.Alloc (free)
 import Insieme.Inspire.BinaryParser
+import System.IO.Unsafe (unsafePerformIO)
 import System.Process
+import Insieme.Inspire.Transform (removeIds)
+
 import qualified Data.ByteString.Char8 as BS8
 import qualified Insieme.Inspire as IR
 
--- | Parse a given IR statement using the inspire binary.
+foreign import ccall "hat_c_parse_ir_statement"
+  cParseIrStatement :: CString -> CSize -> Ptr CString -> Ptr CSize -> IO ()
+
+-- | Parse a given IR statement.
 parseIR :: String -> IO IR.Tree
-parseIR ircode = do
-    irb <- readProcess "inspire" ["-s", "-i", "-", "-k", "-"] ircode
-    let Right ir = parseBinaryDump (BS8.pack irb)
-    return ir
+parseIR stmt = do
+    alloca $ \data_ptr_c ->
+        alloca $ \size_ptr_c -> do
+            withCStringLen stmt $ \(sz,l) ->cParseIrStatement sz (fromIntegral l) data_ptr_c size_ptr_c
+            data_c <- peek data_ptr_c
+            size_c <- peek size_ptr_c
+            dump   <- BS8.packCStringLen (data_c, fromIntegral size_c)
+            free data_c
+            let Right ir = parseBinaryDump dump
+            return ir
+
+refDeref :: IR.Tree
+refDeref = removeIds $ unsafePerformIO $ parseIR "ref_deref"
+
+refAssign :: IR.Tree
+refAssign = removeIds $ unsafePerformIO $ parseIR "ref_assign"

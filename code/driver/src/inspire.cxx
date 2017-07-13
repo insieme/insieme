@@ -49,6 +49,7 @@
 #include <insieme/core/dump/json_dump.h>
 #include "insieme/core/dump/binary_dump.h"
 #include "insieme/core/dump/binary_haskell.h"
+#include "insieme/core/lang/reference.h"
 #include "insieme/utils/compiler/compiler.h"
 
 #include "insieme/backend/sequential/sequential_backend.h"
@@ -167,7 +168,8 @@ int main(int argc, char** argv) {
 	NodePtr res;
 	try {
 		if(options.statement) {
-			res = core::parser::parseStmt(manager, input.str(), true);
+			auto& ref_ext = manager.getLangExtension<core::lang::ReferenceExtension>();
+			res = core::parser::parseStmt(manager, input.str(), true, ref_ext.getDefinedSymbols(), ref_ext.getDefinedTypeAliases());
 		} else {
 			res = core::parser::parseProgram(manager, input.str(), true);
 		}

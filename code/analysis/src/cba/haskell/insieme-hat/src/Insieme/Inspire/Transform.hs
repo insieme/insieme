@@ -35,9 +35,11 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Inspire.Transform 
+module Insieme.Inspire.Transform
     ( substitute
     , substitute'
+    , removeIds
+    , removeIds'
     ) where
 
 import Insieme.Inspire
@@ -66,5 +68,21 @@ substitute' t = do
                                , getChildren = ch'
                                , builtinTags = []
                                }
+        modify (Map.insert t t')
+        return t'
+
+
+removeIds :: Tree -> Tree
+removeIds t = evalState (removeIds' t) Map.empty
+
+removeIds' :: Tree -> State TreeSubst Tree
+removeIds' t = do
+  s <- get
+  case Map.lookup t s of
+    Just t' -> return t'
+    Nothing -> do
+        let ch = getChildren t
+        ch' <- mapM removeIds' ch
+        let t' = t { getID = Nothing, getChildren = ch' }
         modify (Map.insert t t')
         return t'

@@ -41,10 +41,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
+#include <string>
 
 #include "insieme/analysis/cba/common/set.h"
 
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/dump/binary_dump.h"
+#include "insieme/core/dump/binary_haskell.h"
 
 extern "C" {
 
@@ -76,6 +79,24 @@ extern "C" {
 
 		// Since this function is called by Haskell, `data` is freed in Haskell afterwards.
 		return new NodePtr(loaded_tree);
+	}
+
+	void hat_c_parse_ir_statement(const char* data, size_t size, char** data_c, size_t* size_c) {
+		assert_true(size > 0);
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		StatementPtr stmt = builder.parseStmt({data, size});
+		assert_true(stmt);
+
+		std::stringstream buffer(std::ios_base::out | std::ios_base::in | std::ios_base::binary);
+		dump::binary::haskell::dumpIR(buffer, stmt);
+
+		std::string dump = buffer.str();
+		*data_c = (char*) malloc(dump.size());
+		assert_true(*data_c);
+		memcpy(*data_c, dump.c_str(), dump.size());
+		*size_c = dump.size();
 	}
 
 	char* hat_c_pretty_print_tree(const char* data, size_t size) {
