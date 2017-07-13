@@ -43,7 +43,9 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/dump/json_dump.h"
+#include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
 namespace analysis {
@@ -56,6 +58,24 @@ namespace haskell {
 
 		using symbolic_value_list = std::vector<std::string>;
 
+
+		NodePtr groundFreeVariables(const NodePtr& node) {
+			IRBuilder builder(node.getNodeManager());
+
+			// get free variables
+			auto freeVars = core::analysis::getFreeVariables(node);
+
+			// compute replacements
+			unsigned i = 0;
+			core::NodeMap replacements;
+			for(const auto& var : freeVars) {
+				replacements[var] = builder.variable(var.getType(),i++);
+			}
+
+			// apply replacements
+			return core::transform::replaceAll(node.getNodeManager(),node,replacements);
+
+		}
 
 		symbolic_value_list toList(const SymbolicValueSet& values) {
 			symbolic_value_list res;
@@ -71,7 +91,7 @@ namespace haskell {
 				// check that they do not contain semantic errors
 				assert_correct_ir(cur);
 				// add print-out to result values
-				res.push_back(toString(dumpOneLine(cur)));
+				res.push_back(toString(dumpOneLine(groundFreeVariables(cur))));
 			}
 
 			// sort values
@@ -182,6 +202,183 @@ namespace haskell {
 					};
 					
 					fun(3)
+				)"
+			))
+		);
+
+	}
+
+
+	TEST(SymbolicValues, ConditionalComputation) {
+		NodeManager mgr;
+
+		// test composed values
+		EXPECT_EQ(
+			"[3%(3*2+1),3%(3+1)]",
+			toString(getValues(mgr,
+				R"(
+					def fun = ( x : int<4> ) -> int<4> {
+						var ref<int<4>> tmp;
+						tmp = x;
+						if (*tmp < *lit("X":ref<int<4>>)) {
+							tmp = *tmp * 2;
+						}
+						tmp = *tmp + 1;
+						tmp = 3 % (*tmp);
+						return *tmp;
+					};
+					
+					fun(3)
+				)"
+			))
+		);
+
+	}
+
+	TEST(SymbolicValues, Globals) {
+		NodeManager mgr;
+
+		// test reading from a global value
+		EXPECT_EQ(
+			"[*x]",
+			toString(getValues(mgr,
+				R"(
+					*lit("x":ref<int<4>>)
+				)"
+			))
+		);
+
+		// test composing this global value
+		EXPECT_EQ(
+			"[*x+2]",
+			toString(getValues(mgr,
+				R"(
+					*lit("x":ref<int<4>>) + 2
+				)"
+			))
+		);
+
+
+		// test some more complex computation
+		EXPECT_EQ(
+			"[3%(*x*2+*k),3%(*x+*k)]",
+			toString(getValues(mgr,
+				R"(
+					def fun = ( x : int<4> ) -> int<4> {
+						var ref<int<4>> tmp;
+						tmp = x;
+						if (*tmp < *lit("X":ref<int<4>>)) {
+							tmp = *tmp * 2;
+						}
+						tmp = *tmp + *lit("k":ref<int<4>>);
+						tmp = 3 % (*tmp);
+						return *tmp;
+					};
+					
+					fun(*lit("x":ref<int<4>>))
+				)"
+			))
+		);
+
+		// mutating global references
+		EXPECT_EQ(
+			"[*x+12]",
+			toString(getValues(mgr,
+				R"(
+					def fun = ( x : ref<int<4>> ) -> int<4> {
+						var ref<int<4>> tmp;
+						tmp = *x;
+						x = 12;
+						tmp = *tmp + *x;
+						return *tmp;
+					};
+					
+					fun(lit("x":ref<int<4>>))
+				)"
+			))
+		);
+
+	}
+
+	TEST(SymbolicValues, FreeVariable) {
+		NodeManager mgr;
+
+		// test retrieving a simple free variable
+		EXPECT_EQ(
+			"[v0]",
+			toString(getValues(mgr,
+				R"(
+					free_var(int<4>)
+				)"
+			))
+		);
+
+		// test reading from a free variable
+		EXPECT_EQ(
+			"[*v0]",
+			toString(getValues(mgr,
+				R"(
+					*free_var(ref<int<4>>)
+				)"
+			))
+		);
+
+		// test composing the free variable with a value
+		EXPECT_EQ(
+			"[v0+2]",
+			toString(getValues(mgr,
+				R"(
+					free_var(int<4>) + 2
+				)"
+			))
+		);
+
+		// test composing the free variable with a value
+		EXPECT_EQ(
+			"[*v0+2]",
+			toString(getValues(mgr,
+				R"(
+					*free_var(ref<int<4>>) + 2
+				)"
+			))
+		);
+
+		// test with free variables of value types
+		EXPECT_EQ(
+			"[3%(v0*2+1),3%(v0+1)]",
+			toString(getValues(mgr,
+				R"(
+					def fun = ( x : int<4> ) -> int<4> {
+						var ref<int<4>> tmp;
+						tmp = x;
+						if (*tmp < *lit("X":ref<int<4>>)) {
+							tmp = *tmp * 2;
+						}
+						tmp = *tmp + 1;
+						tmp = 3 % (*tmp);
+						return *tmp;
+					};
+
+					fun(free_var(int<4>))
+				)"
+			))
+		);
+
+
+		// test with free variables of reference types
+		EXPECT_EQ(
+			"[*v0+12]",
+			toString(getValues(mgr,
+				R"(
+					def fun = ( x : ref<int<4>> ) -> int<4> {
+						var ref<int<4>> tmp;
+						tmp = *x;
+						x = 12;
+						tmp = *tmp + *x;
+						return *tmp;
+					};
+
+					fun(free_var(ref<int<4>>))
 				)"
 			))
 		);

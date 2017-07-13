@@ -62,9 +62,11 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
+import qualified Insieme.Inspire.Builder as Builder
 import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Utils.BoundSet as BSet
+import qualified Insieme.Utils.ParseIR as Lang
 
 import Insieme.Analysis.Framework.Dataflow
 
@@ -123,7 +125,10 @@ symbolicValue addr = case getNodeType addr of
 
   where
 
-    analysis = (mkDataFlowAnalysis SymbolicValueAnalysis "S" symbolicValue)
+    analysis = (mkDataFlowAnalysis SymbolicValueAnalysis "S" symbolicValue) {
+        freeVariableHandler = freeVariableHandler,
+        initialValueHandler = initialMemoryValue
+    }
 
     varId = mkVarIdentifier analysis addr
     
@@ -159,7 +164,31 @@ symbolicValue addr = case getNodeType addr of
             trg = Addr.getNode o
             
             resType = IR.goDown 0 $ Addr.getNode addr
+
+
+    -- the handler determinign the value of a free variable
+
+    freeVariableHandler a = var
+      where
+        var = Solver.mkVariable varId [] val
+        val = compose $ BSet.singleton $ Addr.getNode a
+
             
+    -- the handler assigning values to pre-existing memory locations (e.g. globals)
+    
+    initialMemoryValue a = 
+        
+        if isReference lit then compose $ BSet.singleton value else Solver.top
+        
+      where
+
+        lit = Addr.getNode a
+      
+        value = Builder.deref lit
+        
+
+
+    -- utilities
 
     extract = ComposedValue.toValue
     compose = ComposedValue.toComposed
