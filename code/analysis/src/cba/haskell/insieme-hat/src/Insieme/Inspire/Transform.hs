@@ -63,7 +63,7 @@ substitute' t = do
     Nothing -> do
         let ch = getChildren t
         ch' <- mapM substitute' ch
-        let t' | ch' == ch = t { getChildren = ch' }
+        let t' | ch' == ch = t
                | otherwise = t { getID = Nothing
                                , getChildren = ch'
                                , builtinTags = []
