@@ -105,22 +105,6 @@ symbolicValue addr = case getNodeType addr of
 
     IR.Literal  -> Solver.mkVariable varId [] (compose $ BSet.singleton $ Addr.getNode addr)
 
-    IR.Declaration -> var
-      where
-        var = Solver.mkVariable varId [con] Solver.bot
-        con = Solver.createConstraint dep val var
-    
-        initValueVar = symbolicValue $ Addr.goDown 1 addr
-        initValueVal a = extract $ Solver.get a initValueVar
-    
-        dep _ = [Solver.toVar initValueVar]
-        val a = compose $ BSet.map toDecl $ initValueVal a
-          where
-            toDecl initVal = IR.mkNode IR.Declaration [declType,initVal] []
-            
-            declType = IR.goDown 0 $ Addr.getNode addr
-    
-
     _ -> dataflowValue addr analysis ops
 
   where
@@ -135,7 +119,7 @@ symbolicValue addr = case getNodeType addr of
     ops = [ operatorHandler ]
     
     -- a list of symbolic values of the arguments
-    argVars = symbolicValue <$> ( tail . tail $ Addr.getChildren addr )
+    argVars = symbolicValue <$> ( Addr.goDown 1 ) <$> ( tail . tail $ Addr.getChildren addr )
     
     -- the one operator handler that covers all operators
     operatorHandler = OperatorHandler cov dep val
@@ -159,7 +143,11 @@ symbolicValue addr = case getNodeType addr of
             
             argCombinations = BSet.cartProductL argVals
             
-            toCall args = IR.mkNode IR.CallExpr (resType : trg : args) []
+            toCall args = IR.mkNode IR.CallExpr (resType : trg : decls) []
+              where
+                decls = toDecl <$> zip (tail $ tail $ IR.getChildren $ Addr.getNode addr ) args
+                
+                toDecl (decl,arg) = IR.mkNode IR.Declaration [IR.goDown 0 decl, arg] []
             
             trg = Addr.getNode o
             
