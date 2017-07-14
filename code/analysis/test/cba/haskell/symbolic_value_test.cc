@@ -385,6 +385,66 @@ namespace haskell {
 
 	}
 
+	TEST(SymbolicValues, PassAndReturn) {
+		NodeManager mgr;
+
+		// test with free variables of reference types
+		EXPECT_EQ(
+			"[4]",
+			toString(getValues(mgr,
+				R"(
+					def fun = ( x : int<4> ) -> int<4> {
+						var ref<int<4>> sum = x;
+						return *sum;
+					};
+
+					fun(4)
+				)"
+			))
+		);
+	}
+
+
+	TEST(SymbolicValues, ForLoop) {
+		NodeManager mgr;
+
+		// make sure that for-loop variables remain unknown (and not fixed to lower or upper bound)
+		EXPECT_EQ(
+			"[-all-]",
+			toString(getValues(mgr,
+				R"(
+					def fun = ( x : int<4> ) -> int<4> {
+						var ref<int<4>> tmp = 0;
+						for(int<4> i = 1 .. x) {
+							tmp = i;
+						}
+						return *tmp;
+					};
+
+					fun(4)
+				)"
+			))
+		);
+
+		// make sure that for-loop variables remain unknown (and not fixed to lower or upper bound)
+		EXPECT_EQ(
+			"[-all-]",
+			toString(getValues(mgr,
+				R"(
+					def fun = ( x : int<4> ) -> int<4> {
+						var ref<int<4>> sum = 0;
+						for(int<4> i = 1 .. x) {
+							sum = *sum + i;
+						}
+						return *sum;
+					};
+
+					fun(4)
+				)"
+			))
+		);
+	}
+
 
 } // end namespace haskell
 } // end namespace cba

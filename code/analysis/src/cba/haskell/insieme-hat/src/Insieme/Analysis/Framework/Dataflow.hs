@@ -59,7 +59,7 @@ import Data.Int
 import Data.Maybe
 import Data.Typeable
 import Debug.Trace
-import Insieme.Analysis.Entities.DataPath
+import Insieme.Analysis.Entities.DataPath hiding (isRoot)
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.MemoryState
@@ -88,17 +88,18 @@ data DataFlowAnalysis a v = DataFlowAnalysis {
     analysisIdentifier         :: Solver.AnalysisIdentifier,            -- ^ the analysis identifier
     variableGenerator          :: NodeAddress -> Solver.TypedVar v,     -- ^ the variable generator of the represented analysis
     topValue                   :: v,                                    -- ^ the top value of this analysis
+    iteratorVariableHandler    :: NodeAddress -> Solver.TypedVar v,     -- ^ a function creating the constraints for the given iterator variable
     freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a free variable
     entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a entry point parameter
     initialValueHandler        :: NodeAddress -> v,                     -- ^ a function computing the initial value of a memory location
-    initValueHandler           :: v                                     -- ^ default value of a memory location
+    initValueHandler           :: v                                    -- ^ default value of a memory location
 }
 
 -- a function creating a simple data flow analysis
 mkDataFlowAnalysis :: (Typeable a, Solver.ExtLattice v) => a -> String -> (NodeAddress -> Solver.TypedVar v) -> DataFlowAnalysis a v
 mkDataFlowAnalysis a s g = res
     where
-        res = DataFlowAnalysis a aid g top justTop justTop (\_ -> top) top
+        res = DataFlowAnalysis a aid g top justTop justTop justTop (\_ -> top) top
         aid = (Solver.mkAnalysisIdentifier a s)
         justTop a = mkConstant res a top
         top = Solver.top
@@ -287,11 +288,18 @@ dataflowValue addr analysis ops = case getNode addr of
 
     handleDeclr declrAddr = case getNodeType (goUp declrAddr) of
 
+        -- handle iterator variables
+        IR.DeclarationStmt | ((depth declrAddr > 2) && ((getNodeType $ goUp $ goUp declrAddr) == IR.ForStmt))  -> var
+          where
+            var =  iteratorVariableHandler analysis addr
+
+        -- handle local variables
         IR.DeclarationStmt -> var
           where
             var = Solver.mkVariable (idGen addr) [constraint] Solver.bot
             constraint = Solver.forward (varGen (goDown 0 . goUp $ declrAddr)) var
 
+        -- handle parameters
         IR.Parameters -> case () of 
 
             _ | isImplicitCtorOrDtorParameter declrAddr -> iVar
