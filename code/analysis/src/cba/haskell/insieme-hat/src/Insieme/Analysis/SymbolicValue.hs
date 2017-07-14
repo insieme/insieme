@@ -37,9 +37,14 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.SymbolicValue (
+
     SymbolicValue,
     SymbolicValueSet,
     symbolicValue,
+    
+    SymbolicValueLattice,
+    genericSymbolicValue,
+    
 ) where
 
 import Data.Maybe
@@ -96,20 +101,34 @@ data SymbolicValueAnalysis = SymbolicValueAnalysis
     deriving (Typeable)
 
 
+-- the actual lattice used by the analysis
+type SymbolicValueLattice = (ValueTree.Tree SimpleFieldIndex SymbolicValueSet)
+
 --
 -- * Symbolic Value Variable and Constraint Generator
 --
 
-symbolicValue :: Addr.NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex SymbolicValueSet)
-symbolicValue addr = case getNodeType addr of
+symbolicValue :: Addr.NodeAddress -> Solver.TypedVar SymbolicValueLattice
+symbolicValue = genericSymbolicValue analysis
+  where
+    -- we just re-use the default version of the generic symbolic value analysis
+    analysis = (mkDataFlowAnalysis SymbolicValueAnalysis "S" symbolicValue)
+
+
+--
+-- * A generic symbolic value analysis which can be customized
+--
+
+genericSymbolicValue :: (Typeable d) => DataFlowAnalysis d SymbolicValueLattice -> Addr.NodeAddress -> Solver.TypedVar SymbolicValueLattice
+genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     IR.Literal  -> Solver.mkVariable varId [] (compose $ BSet.singleton $ Addr.getNode addr)
 
     _ -> dataflowValue addr analysis ops
 
   where
-
-    analysis = (mkDataFlowAnalysis SymbolicValueAnalysis "S" symbolicValue) {
+  
+    analysis = userDefinedAnalysis {
         freeVariableHandler = freeVariableHandler,
         initialValueHandler = initialMemoryValue
     }
@@ -119,7 +138,7 @@ symbolicValue addr = case getNodeType addr of
     ops = [ operatorHandler ]
     
     -- a list of symbolic values of the arguments
-    argVars = symbolicValue <$> ( Addr.goDown 1 ) <$> ( tail . tail $ Addr.getChildren addr )
+    argVars = (variableGenerator analysis) <$> ( Addr.goDown 1 ) <$> ( tail . tail $ Addr.getChildren addr )
     
     -- the one operator handler that covers all operators
     operatorHandler = OperatorHandler cov dep val

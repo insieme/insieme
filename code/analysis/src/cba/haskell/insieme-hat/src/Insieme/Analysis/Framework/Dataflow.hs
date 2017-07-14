@@ -42,6 +42,7 @@ module Insieme.Analysis.Framework.Dataflow (
         analysisIdentifier,
         variableGenerator,
         topValue,
+        iteratorVariableHandler,
         freeVariableHandler,
         entryPointParameterHandler,
         initialValueHandler,
