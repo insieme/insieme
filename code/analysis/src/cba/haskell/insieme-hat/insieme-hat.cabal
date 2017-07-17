@@ -46,6 +46,7 @@ library
                         Insieme.Inspire,
                         Insieme.Inspire.BinaryDumper,
                         Insieme.Inspire.BinaryParser,
+                        Insieme.Inspire.Builder,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.NodeType,
                         Insieme.Inspire.Query,

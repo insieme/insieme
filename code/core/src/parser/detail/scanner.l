@@ -169,6 +169,7 @@ blank         [ \t]
 "break"       return InspireParser::make_BREAK(loc);
 
 "var"         return InspireParser::make_VAR(loc);
+"free_var"    return InspireParser::make_FREE_VAR(loc);
 
 "true"        return InspireParser::make_TRUE(loc);
 "false"       return InspireParser::make_FALSE(loc);

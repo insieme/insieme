@@ -4,6 +4,7 @@ module Insieme.Analysis.Framework.Dataflow (
         analysisIdentifier,
         variableGenerator,
         topValue,
+        iteratorVariableHandler,
         freeVariableHandler,
         entryPointParameterHandler,
         initialValueHandler,
@@ -31,6 +32,7 @@ data DataFlowAnalysis a v = DataFlowAnalysis {
     analysisIdentifier         :: Solver.AnalysisIdentifier,            -- ^ the analysis identifier
     variableGenerator          :: NodeAddress -> Solver.TypedVar v,     -- ^ the variable generator of the represented analysis
     topValue                   :: v,                                    -- ^ the top value of this analysis
+    iteratorVariableHandler    :: NodeAddress -> Solver.TypedVar v,     -- ^ a function creating the constraints for the given iterator variable
     freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a free variable
     entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a entry point parameter
     initialValueHandler        :: NodeAddress -> v,                     -- ^ a function computing the initial value of a memory location

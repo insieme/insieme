@@ -34,38 +34,25 @@
  - Performance Computing, Networking, Storage and Analysis (SC 2012),
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
-module Insieme.Utils.ParseIR where
+-- | This moduel defines function to build peaces of code.
+-- The workings of these functions are specific to INSPIRE.
 
-import Foreign
-import Foreign.C.String
-import Foreign.C.Types
-import Foreign.Marshal.Alloc (free)
-import Insieme.Inspire.BinaryParser
-import System.IO.Unsafe (unsafePerformIO)
-import System.Process
-import Insieme.Inspire.Transform (removeIds)
+module Insieme.Inspire.Builder (
+    deref
+) where
 
-import qualified Data.ByteString.Char8 as BS8
+import Data.Maybe
+import Insieme.Inspire.Query
+
+import qualified Insieme.Utils.ParseIR as Lang
 import qualified Insieme.Inspire as IR
 
-foreign import ccall "hat_c_parse_ir_statement"
-  cParseIrStatement :: CString -> CSize -> Ptr CString -> Ptr CSize -> IO ()
 
--- | Parse a given IR statement.
-parseIR :: String -> IO IR.Tree
-parseIR stmt = do
-    alloca $ \data_ptr_c ->
-        alloca $ \size_ptr_c -> do
-            withCStringLen stmt $ \(sz,l) ->cParseIrStatement sz (fromIntegral l) data_ptr_c size_ptr_c
-            data_c <- peek data_ptr_c
-            size_c <- peek size_ptr_c
-            dump   <- BS8.packCStringLen (data_c, fromIntegral size_c)
-            free data_c
-            let Right ir = parseBinaryDump dump
-            return ir
-
-refDeref :: IR.Tree
-refDeref = removeIds $ unsafePerformIO $ parseIR "ref_deref"
-
-refAssign :: IR.Tree
-refAssign = removeIds $ unsafePerformIO $ parseIR "ref_assign"
+deref :: IR.Tree -> IR.Tree
+deref t = IR.mkNode IR.CallExpr [resType,Lang.refDeref,decl] []
+  where
+    resType = fromJust $ getReferencedType refType
+    
+    refType = IR.goDown 0 t
+    
+    decl = IR.mkNode IR.Declaration [refType,t] []

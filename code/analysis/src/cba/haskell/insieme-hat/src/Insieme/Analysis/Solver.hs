@@ -652,6 +652,14 @@ measure f p = unsafePerformIO $ do
 
 -- Debugging --
 
+
+-- a utility to escape double-quotes 
+escape str = concat $ escape' <$> str
+    where
+        escape' c | c == '"' = ['\\','"']
+        escape' c            = [c]
+
+
 -- prints the current assignment as a graph
 toDotGraph :: SolverState -> String
 toDotGraph (SolverState a@( Assignment m ) varIndex _ _ _) = "digraph G {\n\t"
@@ -659,7 +667,7 @@ toDotGraph (SolverState a@( Assignment m ) varIndex _ _ _) = "digraph G {\n\t"
         "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
         ++
         -- define nodes
-        ( intercalate "\n\t" ( map (\v -> "v" ++ (show $ fst v ) ++ " [label=\"" ++ (show $ snd v) ++ " = " ++ (valuePrint (snd v) a) ++ "\"];" ) vars ) )
+        ( intercalate "\n\t" ( map (\v -> "v" ++ (show $ fst v ) ++ " [label=\"" ++ (show $ snd v) ++ " = " ++ (escape $ cut $ valuePrint (snd v) a) ++ "\"];" ) vars ) )
         ++
         "\n\t"
         ++
@@ -691,6 +699,10 @@ toDotGraph (SolverState a@( Assignment m ) varIndex _ _ _) = "digraph G {\n\t"
         deps = foldr go [] vars
             where
                 go = (\v l -> (foldr (\s l -> (fst v, index s) : l ) [] (dep $ snd v )) ++ l)
+        
+        -- a utility to cut the length of labels
+        cut str | length str > 46 = (take 50 str) ++ " ..."
+        cut str                   = str
 
 
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
@@ -743,7 +755,7 @@ toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _ _) = "{\n"
                     where
                         k = fromJust $ addr v
                         i = index v
-                        msg = (show . analysis $ i) ++ " = " ++ (valuePrint v a)
+                        msg = (show . analysis $ i) ++ " = " ++ (escape $ valuePrint v a)
 
         print (a,ms) = "      \"" ++ (show a) ++ "\" : \"" ++ ( intercalate "<br>" ms) ++ "\""
 

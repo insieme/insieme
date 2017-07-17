@@ -633,6 +633,12 @@ namespace parser {
 		                                "variadic(1, 2)"));
 	}
 
+	TEST(IR_Parser, FreeVariable) {
+			NodeManager nm;
+			EXPECT_TRUE(test_expression(nm, "free_var(bool)"));
+			EXPECT_TRUE(test_expression(nm, "let x = free_var(bool) in true || x"));
+	}
+
 	TEST(IR_Parser, Precedence) {
 		NodeManager mgr;
 		EXPECT_EQ("int_add(1, int_mul(2, 3))", toString(*parseExpr(mgr, "1+2*3")));

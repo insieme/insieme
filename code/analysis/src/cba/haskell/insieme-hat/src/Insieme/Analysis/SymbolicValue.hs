@@ -37,9 +37,14 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.SymbolicValue (
+
     SymbolicValue,
     SymbolicValueSet,
     symbolicValue,
+    
+    SymbolicValueLattice,
+    genericSymbolicValue,
+    
 ) where
 
 import Data.Maybe
@@ -62,9 +67,11 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
+import qualified Insieme.Inspire.Builder as Builder
 import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Utils.BoundSet as BSet
+import qualified Insieme.Utils.ParseIR as Lang
 
 import Insieme.Analysis.Framework.Dataflow
 
@@ -94,43 +101,44 @@ data SymbolicValueAnalysis = SymbolicValueAnalysis
     deriving (Typeable)
 
 
+-- the actual lattice used by the analysis
+type SymbolicValueLattice = (ValueTree.Tree SimpleFieldIndex SymbolicValueSet)
+
 --
 -- * Symbolic Value Variable and Constraint Generator
 --
 
-symbolicValue :: Addr.NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex SymbolicValueSet)
-symbolicValue addr = case getNodeType addr of
+symbolicValue :: Addr.NodeAddress -> Solver.TypedVar SymbolicValueLattice
+symbolicValue = genericSymbolicValue analysis
+  where
+    -- we just re-use the default version of the generic symbolic value analysis
+    analysis = (mkDataFlowAnalysis SymbolicValueAnalysis "S" symbolicValue)
+
+
+--
+-- * A generic symbolic value analysis which can be customized
+--
+
+genericSymbolicValue :: (Typeable d) => DataFlowAnalysis d SymbolicValueLattice -> Addr.NodeAddress -> Solver.TypedVar SymbolicValueLattice
+genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     IR.Literal  -> Solver.mkVariable varId [] (compose $ BSet.singleton $ Addr.getNode addr)
-
-    IR.Declaration -> var
-      where
-        var = Solver.mkVariable varId [con] Solver.bot
-        con = Solver.createConstraint dep val var
-    
-        initValueVar = symbolicValue $ Addr.goDown 1 addr
-        initValueVal a = extract $ Solver.get a initValueVar
-    
-        dep _ = [Solver.toVar initValueVar]
-        val a = compose $ BSet.map toDecl $ initValueVal a
-          where
-            toDecl initVal = IR.mkNode IR.Declaration [declType,initVal] []
-            
-            declType = IR.goDown 0 $ Addr.getNode addr
-    
 
     _ -> dataflowValue addr analysis ops
 
   where
-
-    analysis = (mkDataFlowAnalysis SymbolicValueAnalysis "S" symbolicValue)
+  
+    analysis = userDefinedAnalysis {
+        freeVariableHandler = freeVariableHandler,
+        initialValueHandler = initialMemoryValue
+    }
 
     varId = mkVarIdentifier analysis addr
     
     ops = [ operatorHandler ]
     
     -- a list of symbolic values of the arguments
-    argVars = symbolicValue <$> ( tail . tail $ Addr.getChildren addr )
+    argVars = (variableGenerator analysis) <$> ( Addr.goDown 1 ) <$> ( tail . tail $ Addr.getChildren addr )
     
     -- the one operator handler that covers all operators
     operatorHandler = OperatorHandler cov dep val
@@ -154,12 +162,40 @@ symbolicValue addr = case getNodeType addr of
             
             argCombinations = BSet.cartProductL argVals
             
-            toCall args = IR.mkNode IR.CallExpr (resType : trg : args) []
+            toCall args = IR.mkNode IR.CallExpr (resType : trg : decls) []
+              where
+                decls = toDecl <$> zip (tail $ tail $ IR.getChildren $ Addr.getNode addr ) args
+                
+                toDecl (decl,arg) = IR.mkNode IR.Declaration [IR.goDown 0 decl, arg] []
             
             trg = Addr.getNode o
             
             resType = IR.goDown 0 $ Addr.getNode addr
+
+
+    -- the handler determinign the value of a free variable
+
+    freeVariableHandler a = var
+      where
+        var = Solver.mkVariable varId [] val
+        val = compose $ BSet.singleton $ Addr.getNode a
+
             
+    -- the handler assigning values to pre-existing memory locations (e.g. globals)
+    
+    initialMemoryValue a = 
+        
+        if isReference lit then compose $ BSet.singleton value else Solver.top
+        
+      where
+
+        lit = Addr.getNode a
+      
+        value = Builder.deref lit
+        
+
+
+    -- utilities
 
     extract = ComposedValue.toValue
     compose = ComposedValue.toComposed
