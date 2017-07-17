@@ -37,6 +37,8 @@
  */
 #include "insieme/core/annotations/source_location.h"
 
+#include <fstream>
+
 #include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/dump/annotations.h"
 #include "insieme/core/encoder/encoder.h"
@@ -241,6 +243,46 @@ LocationOpt getLocation(const NodeAddress& node) {
 LocationOpt getLocation(const NodePtr& node) {
 	return getLocation(NodeAddress(node));
 }
+
+	void prettyPrintLocation(std::ostream& out, const Location& loc) {
+		out << loc << "\n";
+
+		auto fs = std::fstream(loc.getFile());
+		if(!fs.good()) {
+			return;
+		}
+
+		// goto line
+		for(unsigned i = 0; i < loc.getStart().getLine() - 1; i++) {
+			fs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		}
+
+		bool isSingleLine = loc.getStart().getLine() == loc.getEnd().getLine();
+
+		if(isSingleLine) {
+			// print line
+			std::string line;
+			std::getline(fs, line);
+			out << line << "\n";
+
+			// print highlight
+			for(int i = 0; i < loc.getStart().getColumn() - 1; i++) {
+				out << (line[i] == '\t' ? "\t" : " ");
+			}
+			out << "^";
+			for(int i = loc.getStart().getColumn(); i < loc.getEnd().getColumn(); i++) {
+				out << "~";
+			}
+			out << "\n";
+		} else {
+			// print lines
+			for(unsigned i = loc.getStart().getLine(); i <= loc.getEnd().getLine(); i++) {
+				std::string line;
+				std::getline(fs, line);
+				out << line << "\n";
+			}
+		}
+	}
 
 } // end namespace annotations
 } // end namespace core
