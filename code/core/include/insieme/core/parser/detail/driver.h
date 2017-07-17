@@ -442,10 +442,17 @@ namespace parser {
 			ForStmtPtr genForStmt(const location& l, const TypePtr& iteratorType, const std::string iteratorName,
 			                      const ExpressionPtr& lowerBound, const ExpressionPtr& upperBound, const ExpressionPtr& stepExpr, const StatementPtr& body);
 
+
+			// Gets the list of default literals included in a type
+			LiteralList getDefaultMemberLiterals(const TypePtr& thisType) const;
+
 			/**
-			 * declares a new record type and all it's default members
+			 * declares a new record type and all its default members
 			 */
 			void declareRecordType(const location& l, const std::string name);
+
+			// Cleans automatically generated default members from the record type
+			void cleanRecordType();
 
 			/**
 			 * generates a new forward declaration for everything except member fields

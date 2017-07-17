@@ -1163,39 +1163,40 @@ namespace parser {
 			return builder.forStmt(iteratorVariable, getScalar(lowerBound), getScalar(upperBound), getScalar(stepExpr), body);
 		}
 
+
+		LiteralList InspireDriver::getDefaultMemberLiterals(const TypePtr& thisType) const {
+			return {
+				builder.getLiteralForConstructor(builder.getDefaultConstructorType(thisType)),
+				builder.getLiteralForConstructor(builder.getDefaultCopyConstructorType(thisType)),
+				builder.getLiteralForConstructor(builder.getDefaultMoveConstructorType(thisType)),
+				builder.getLiteralForDestructor(builder.getDefaultDestructorType(thisType)),
+				builder.getLiteralForMemberFunction(builder.getDefaultCopyAssignOperatorType(thisType), utils::getMangledOperatorAssignName()),
+				builder.getLiteralForMemberFunction(builder.getDefaultMoveAssignOperatorType(thisType), utils::getMangledOperatorAssignName())
+			};
+		}
+
 		void InspireDriver::declareRecordType(const location& l, const std::string name) {
 			const GenericTypePtr key = builder.genericType(name);
 
-			//declare the type
+			// declare the type
 			declareType(l, name, key);
 
-			//now register all the default members
-			TypePtr thisType = builder.refType(key);
+			// now register all the default members
+			for(const LiteralPtr& lit : getDefaultMemberLiterals(builder.refType(key))) {
+				tu.addFunction(lit, builder.lambdaExpr(lit->getType().as<FunctionTypePtr>(), builder.parameters(), parserIRExtension.getMemberDummyLambda()));
+			}
+		}
 
-			LiteralPtr lit;
-			//default constructor
-			lit = builder.getLiteralForConstructor(builder.getDefaultConstructorType(thisType));
-			tu.addFunction(lit, builder.lambdaExpr(lit->getType().as<FunctionTypePtr>(), builder.parameters(), parserIRExtension.getMemberDummyLambda()));
 
-			//default copy constructor
-			lit = builder.getLiteralForConstructor(builder.getDefaultCopyConstructorType(thisType));
-			tu.addFunction(lit, builder.lambdaExpr(lit->getType().as<FunctionTypePtr>(), builder.parameters(), parserIRExtension.getMemberDummyLambda()));
-
-			//default move constructor
-			lit = builder.getLiteralForConstructor(builder.getDefaultMoveConstructorType(thisType));
-			tu.addFunction(lit, builder.lambdaExpr(lit->getType().as<FunctionTypePtr>(), builder.parameters(), parserIRExtension.getMemberDummyLambda()));
-
-			//default destructor
-			lit = builder.getLiteralForDestructor(builder.getDefaultDestructorType(thisType));
-			tu.addFunction(lit, builder.lambdaExpr(lit->getType().as<FunctionTypePtr>(), builder.parameters(), parserIRExtension.getMemberDummyLambda()));
-
-			//default copy assignment operator
-			lit = builder.getLiteralForMemberFunction(builder.getDefaultCopyAssignOperatorType(thisType), utils::getMangledOperatorAssignName());
-			tu.addFunction(lit, builder.lambdaExpr(lit->getType().as<FunctionTypePtr>(), builder.parameters(), parserIRExtension.getMemberDummyLambda()));
-
-			//default move assignment operator
-			lit = builder.getLiteralForMemberFunction(builder.getDefaultMoveAssignOperatorType(thisType), utils::getMangledOperatorAssignName());
-			tu.addFunction(lit, builder.lambdaExpr(lit->getType().as<FunctionTypePtr>(), builder.parameters(), parserIRExtension.getMemberDummyLambda()));
+		void InspireDriver::cleanRecordType() {
+			// remove unchanged default member literals
+			for(const LiteralPtr& lit : getDefaultMemberLiterals(builder.refType(getThisType()))) {
+				if(auto found = findOrDefaultConstructed(tu.getFunctions(), lit).second) {
+					if(found.isa<LambdaExprPtr>() && found->getBody() == builder.compoundStmt(parserIRExtension.getMemberDummyLambda())) {
+						tu.removeFunction(lit);
+					}
+				}
+			}
 		}
 
 		void InspireDriver::genDeclaration(const location& l, const std::string name, const TypePtr& type) {
@@ -1504,6 +1505,7 @@ namespace parser {
 		void InspireDriver::endRecord() {
 			assert_false(currentRecordStack.empty());
 			closeScope();
+			cleanRecordType();
 			currentRecordStack.pop_back();
 		}
 
