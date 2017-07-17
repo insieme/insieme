@@ -78,6 +78,14 @@ struct is_container<T, typename std::conditional<false, detail::is_container_hel
                                                                            decltype(std::declval<T>().cbegin()), decltype(std::declval<T>().cend())>,
                                         void>::type> : public std::true_type {};
 
+
+
+template<class, class = void>
+struct is_associative_container : std::false_type {};
+
+template<class T>
+struct is_associative_container<T, typename std::enable_if<sizeof(typename T::key_type) != 0>::type> : std::true_type {};
+
 /** Checks whether a condition is true for any element of the supplied iteration range.
  *
  *  @param first iterator designating the start of the iteration range
@@ -417,6 +425,48 @@ inline bool contains(const Container& container, const typename Container::value
 template <class Map>
 inline bool containsKey(const Map& map, const typename Map::key_type& key) {
 	return map.find(key) != map.end();
+}
+
+/**
+* Locates element "toFind" using find. (vector-like variant)
+* If found, return it, otherwise returns "elseValue".
+*/
+template <class Container, class V = typename Container::value_type>
+inline typename std::enable_if<!is_associative_container<Container>::value, V>::type
+findOrElse(const Container& container, const V& toFind, const V& elseValue) {
+	auto found = std::find(container.cbegin(), container.cend(), toFind);
+	return found == container.cend() ? elseValue : *found;
+}
+
+/**
+* Locates element "toFind" using find. (vector-like variant)
+* If found, return it, otherwise returns a default constructed value.
+*/
+template <class Container, class V = typename Container::value_type>
+inline typename std::enable_if<!is_associative_container<Container>::value, V>::type
+findOrDefaultConstructed(const Container& container, const V& toFind) {
+	return findOrElse(container, toFind, V());
+}
+
+/**
+ * Locates element "toFind" using find. (associative)
+ * If found, return it, otherwise returns "elseValue".
+ */
+template <class Container, class V = typename Container::value_type, class K = typename Container::key_type>
+inline typename std::enable_if<is_associative_container<Container>::value, V>::type
+		findOrElse(const Container& container, const K& toFind, const V& elseValue) {
+	auto found = container.find(toFind);
+	return found == container.cend() ? elseValue : *found;
+}
+
+/**
+* Locates element "toFind" using find. (associative)
+* If found, return it, otherwise returns a default constructed value.
+*/
+template <class Container, class V = typename Container::value_type, class K = typename Container::key_type>
+inline typename std::enable_if<is_associative_container<Container>::value, V>::type
+		findOrDefaultConstructed(const Container& container, const K& toFind) {
+	return findOrElse(container, toFind, V());
 }
 
 /**

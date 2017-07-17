@@ -286,6 +286,28 @@ TEST(ContainerUtils, transform) {
 	EXPECT_TRUE(equals(mapB, mapResult));
 }
 
+TEST(ContainerUtils, FindOrElse) {
+
+	vector<double> a { 0, 1, 2, 3 };
+	EXPECT_EQ(findOrElse(a, 1, 5), 1);
+	EXPECT_EQ(findOrElse(a, -1, 5), 5);
+	EXPECT_EQ(findOrDefaultConstructed(a, 1), 1);
+	EXPECT_EQ(findOrDefaultConstructed(a, -1), 0);
+
+	std::map<int, double> b { { 1, 1.5 }, { 2, 2.5 } };
+	EXPECT_EQ(findOrElse(b, 1, { 42, 0.5 }).second, 1.5);
+	EXPECT_EQ(findOrElse(b, -1, { 42, 0.5 }).second, 0.5);
+	EXPECT_EQ(findOrDefaultConstructed(b, 1).second, 1.5);
+	EXPECT_EQ(findOrDefaultConstructed(b, -1).second, 0.0);
+
+	std::set<int> c { 0, 1, 2, 3 };
+	EXPECT_EQ(findOrElse(c, 1, 5), 1);
+	EXPECT_EQ(findOrElse(c, -1, 5), 5);
+	EXPECT_EQ(findOrDefaultConstructed(c, 1), 1);
+	EXPECT_EQ(findOrDefaultConstructed(c, -1), 0);
+
+}
+
 TEST(ContainerUtils, IsContainer) {
 	using AContainer = std::vector<int>;
 	using AlsoAContainer = std::map<char, string>;
