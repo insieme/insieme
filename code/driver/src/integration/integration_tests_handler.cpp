@@ -47,7 +47,7 @@
 #include "insieme/driver/integration/test_framework.h"
 #include "insieme/driver/perf_reg/logging.h"
 
-
+#include "insieme/utils/color.h"
 
 namespace bpo = boost::program_options;
 
@@ -173,7 +173,7 @@ namespace integration {
 		                  const int omittedCount,
 		                  const std::map<TestCase, TestResult>& failedSteps,
 		                  const int screenWidth,
-		                  const tf::Colorize& col) {
+		                  const insieme::utils::Colorize& col) {
 			string footerSummaryFormat("%" + to_string(screenWidth - 12) + "d");
 			string centerAlign("%|=" + to_string(screenWidth - 2) + "|");
 
@@ -287,7 +287,7 @@ namespace integration {
 		setup.perf = options.perf;
 		setup.executionDir = "";
 
-		tf::Colorize colorize(options.color);
+		insieme::utils::Colorize colorize(options.color);
 
 		// setup highlighted tests:
 		std::set<std::string> highlight;
@@ -389,7 +389,7 @@ namespace integration {
 							std::stringstream line;
 
 							// color certain passes:
-							if(highlight.find(curRes.first) != highlight.end()) { line << colorize.bold() << colorize.blue(); }
+							if(highlight.find(curRes.first) != highlight.end()) { line << colorize.light_blue(); }
 
 							line << "# " << curRes.first
 									 << boost::format(colOffset)

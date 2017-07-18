@@ -1,5 +1,5 @@
 # default location
-export PREFIX="${PREFIX:-$HOME/third_party_libs}"
+export PREFIX="${PREFIX:-${THIRD_PARTY_LIBS:-$HOME/third_party_libs}}"
 
 # default compile flags
 export CFLAGS="-mtune=native -O3"

@@ -37,12 +37,15 @@
  */
 #include "insieme/core/annotations/source_location.h"
 
+#include <fstream>
+
 #include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/dump/annotations.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/tuples.h"
 
 #include "insieme/utils/assert.h"
+#include "insieme/utils/color.h"
 
 namespace insieme {
 namespace core {
@@ -241,6 +244,63 @@ LocationOpt getLocation(const NodeAddress& node) {
 LocationOpt getLocation(const NodePtr& node) {
 	return getLocation(NodeAddress(node));
 }
+
+	void prettyPrintLocation(std::ostream& out, const Location& loc, bool disableColorization /* = false */) {
+		utils::Colorize colorize(!disableColorization);
+
+		out << colorize.white() << loc << colorize.reset() << "\n";
+
+		auto fs = std::fstream(loc.getFile());
+		if(!fs.good()) {
+			return;
+		}
+
+		// goto line
+		for(unsigned i = 0; i < loc.getStart().getLine() - 1; i++) {
+			fs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		}
+
+		bool singleLineLoc = loc.getStart().getLine() == loc.getEnd().getLine();
+
+		if(!singleLineLoc) {
+			out << colorize.light_purple() << ",-->    " << colorize.reset();
+		}
+
+		std::string line;
+		std::getline(fs, line);
+		out << line.substr(0, loc.getStart().getColumn() - 1)
+		    << colorize.light_purple();
+
+		if(singleLineLoc) {
+			out << line.substr(loc.getStart().getColumn() - 1, loc.getEnd().getColumn() - loc.getStart().getColumn() + 1);
+		} else {
+			out << line.substr(loc.getStart().getColumn() - 1) << "\n";
+			for(unsigned i = loc.getStart().getLine() + 1; i < loc.getEnd().getLine(); i++) {
+				std::getline(fs, line);
+				out << "|       " << line << "\n";
+			}
+			std::getline(fs, line);
+			out << colorize.light_purple()
+			    << "'-->    "
+			    << line.substr(0, loc.getEnd().getColumn());
+		}
+
+		out << colorize.reset()
+		    << line.substr(loc.getEnd().getColumn())
+		    << "\n";
+
+		// caret highlight
+		if(singleLineLoc) {
+			for(int i = 0; i < loc.getStart().getColumn() - 1; i++) {
+				out << (line[i] == '\t' ? "\t" : " ");
+			}
+			out << colorize.light_purple() << "^";
+			for(int i = loc.getStart().getColumn(); i < loc.getEnd().getColumn(); i++) {
+				out << "~";
+			}
+			out << colorize.reset() << "\n";
+		}
+	}
 
 } // end namespace annotations
 } // end namespace core

@@ -380,6 +380,15 @@ namespace annotations {
 		return loc ? toString(*loc) : std::string("Location could not be found!");
 	}
 
+	/**
+	 * Pretty prints the given source location to the given output stream. This will open the source file
+	 * and output the corresponding lines and some highlighting.
+	 *
+	 * @param out the output stream for printing
+	 * @param loc the location which should be printed
+	 */
+	void prettyPrintLocation(std::ostream& out, const Location& loc, bool disableColorization = false);
+
 } // end namespace annotations
 } // end namespace core
 } // end namespace insieme

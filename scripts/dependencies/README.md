@@ -68,6 +68,9 @@ Insieme is written in C++11 and relies on several third-party libraries:
 [hwloc]: <http://www.open-mpi.org/projects/hwloc/>
 [valgrind]: <http://valgrind.org/>
 
+While `PREFIX` takes precedence, the environment variable `THIRD_PARTY_LIBS` is
+also considered.
+
 ## Patches
 
 The default `pkg_prepare` action will apply all patches inside the `patches`

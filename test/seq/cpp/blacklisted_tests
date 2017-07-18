@@ -9,7 +9,6 @@ cast_static
 curiously_recurring_template_pattern
 curiously_recurring_template_pattern_2
 curiously_recurring_template_pattern_member_function
-expr_with_cleanups
 inherit_chained
 member_data_pointer
 memb_func_ptr
