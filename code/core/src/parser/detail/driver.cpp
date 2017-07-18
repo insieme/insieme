@@ -1240,6 +1240,15 @@ namespace parser {
 			}
 			auto structTyIt = tu.getTypes().find(genTy);
 			if(structTyIt == tu.getTypes().end()) {
+
+				// let's see if it's a free member lambda
+				string completeName = structName + "::" + lambdaName;
+				for(auto fun : tu.getFunctions()) {
+					if(fun.first->getStringValue() == completeName) {
+						return fun.second;
+					}
+				}
+
 				error(l, format("Struct %s not found in current TU", structName));
 				return nullptr;
 			}
@@ -1266,6 +1275,15 @@ namespace parser {
 				replacements[builder.stringValue(temporaryName->getValue() + "::" + utils::getMangledOperatorAssignName())] = builder.stringValue("::" + utils::getMangledOperatorAssignName());
 			}
 			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
+
+			// remove PARSER_UNRESOLVED_ prefix from literals
+			const std::string unresolvedPrefix { "PARSER_UNRESOLVED_" };
+			result = transform::transformBottomUpGen(result, [&](const LiteralPtr& lit) {
+				if(boost::starts_with(lit->getStringValue(), unresolvedPrefix)) {
+					return builder.literal(lit->getStringValue().substr(unresolvedPrefix.size()), lit->getType());
+				}
+				return lit;
+			});
 
 			// check if artifacts remain
 			bool foundArtifacts = false;
