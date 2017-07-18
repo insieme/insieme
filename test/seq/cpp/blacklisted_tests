@@ -19,7 +19,6 @@ static_assert
 static_data_member
 static_initialization
 static_var_init
-static_var_updates
 stl_list_iterator
 stl_read_file
 template_statics
