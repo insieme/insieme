@@ -387,7 +387,7 @@ namespace annotations {
 	 * @param out the output stream for printing
 	 * @param loc the location which should be printed
 	 */
-	void prettyPrintLocation(std::ostream& out, const Location& loc);
+	void prettyPrintLocation(std::ostream& out, const Location& loc, bool disableColorization = false);
 
 } // end namespace annotations
 } // end namespace core
