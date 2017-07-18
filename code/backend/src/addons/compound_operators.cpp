@@ -142,6 +142,13 @@ namespace addons {
 			COMP_OP_CONVERSION_RULE(CompAssignLeftShift,  BitwiseLeftShiftAssign)
 			COMP_OP_CONVERSION_RULE(CompAssignRightShift, BitwiseRightShiftAssign)
 
+			res[ext.getCompPrefixInc()] = OP_CONVERTER {
+				return c_ast::ref(c_ast::unaryOp(c_ast::UnaryOperation::PrefixInc, c_ast::derefIfNotImplicit(CONVERT_ARG(0), ARG(0))));
+			};
+			res[ext.getCompPrefixDec()] = OP_CONVERTER {
+				return c_ast::ref(c_ast::unaryOp(c_ast::UnaryOperation::PrefixDec, c_ast::derefIfNotImplicit(CONVERT_ARG(0), ARG(0))));
+			};
+
 			#undef COMP_OP_CONVERSION_RULE
 
 			#include "insieme/backend/operator_converter_end.inc"

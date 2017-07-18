@@ -104,6 +104,44 @@ int main() {
 		v--;
 	}
 
+	// CHECK FOR LVALUE SEMA ON PRE_INC //////////////////////////////////////////////////////////////
+
+	#pragma test expect_ir(R"(
+		using "ext.compound_ops";
+		{
+				var ref<uint<2>, f, f, plain> v0 = num_cast(0, type_lit(uint<2>));
+				var ref<array<int<4>, 100u>, f, f, plain> v1 = ref_decl(type_lit(ref<array<int<4>, 100u>, f, f, plain>));
+				ptr_subscript(ptr_from_array(v1), *comp_prefix_inc(v0));
+				gen_pre_inc(comp_prefix_inc(v0));
+				comp_prefix_inc(v0) = num_cast(5, type_lit(uint<2>));
+		}
+	)")
+	{
+		unsigned short v = 0;
+		int arr[100];
+		arr[++v];
+		++++v;
+		++v = 5;
+	}
+
+	#pragma test expect_ir(R"(
+		using "ext.compound_ops";
+		{
+			var ref<int<4>, f, f, plain> v0 = 0;
+			var ref<array<int<4>, 100u>, f, f, plain> v1 = ref_decl(type_lit(ref<array<int<4>, 100u>, f, f, plain>));
+			ptr_subscript(ptr_from_array(v1), *comp_prefix_dec(v0));
+			gen_pre_dec(comp_prefix_dec(v0));
+			comp_prefix_dec(v0) = 5;
+		}
+	)")
+	{
+		int v = 0;
+		int arr[100];
+		arr[--v];
+		----v;
+		--v = 5;
+	}
+
 	//===------------------------------------------------------------------------------------------------------------------------------- BINARY OPERATORS ---===
 
 	// COMMA OPERATOR //////////////////////////////////////////////////////////////

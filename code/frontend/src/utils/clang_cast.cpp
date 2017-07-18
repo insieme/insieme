@@ -139,7 +139,7 @@ namespace utils {
 		// The result of an r-value conversion is always unqualified.
 		// IR: this is the same as ref_deref: ref<a'> -> a'
 		case clang::CK_LValueToRValue: {
-			assert_true(core::lang::isReference(expr->getType())) << " no L to R in non-refencene types: " << expr << " : " << expr->getType();
+			frontend_assert(core::lang::isReference(expr->getType())) << " no L to R in non-reference types: " << expr << " : " << expr->getType();
 			return builder.deref(expr);
 		}
 

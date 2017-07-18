@@ -69,6 +69,7 @@
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/compound_operators.h"
 #include "insieme/core/lang/varargs_extension.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/materialize.h"
@@ -691,6 +692,26 @@ namespace conversion {
 			core::lang::ReferenceType plainRef(subExpr->getType());
 			plainRef.setKind(core::lang::ReferenceType::Kind::Plain);
 			subExpr = core::lang::buildRefCast(subExpr, plainRef.toType());
+		}
+
+		auto &compExt = converter.getNodeManager().getLangExtension<core::lang::CompoundOpsExtension>();
+
+		// prefix increment/decrement need to be handled differently in C++ (lvalue semantics)
+		// ...but first we have to make sure to correctly translate ops on pointers
+
+		if(core::lang::isReference(subExpr) && core::lang::isPointer(core::analysis::getReferencedType(subExpr->getType()))) {
+			auto opIt = unOpMap.find(unOp->getOpcode());
+			if(opIt != unOpMap.end()) {
+				auto op = opIt->second;
+				return core::lang::buildPtrOperation(op, subExpr);
+			}
+		}
+
+		if(unOp->getOpcode() == clang::UO_PreInc) {
+			return builder.callExpr(compExt.getCompPrefixInc(), subExpr);
+		}
+		else if(unOp->getOpcode() == clang::UO_PreDec) {
+			return builder.callExpr(compExt.getCompPrefixDec(), subExpr);
 		}
 
 		return retIr = createUnaryExpression(exprType, subExpr, unOp->getOpcode());

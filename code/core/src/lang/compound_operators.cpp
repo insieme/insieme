@@ -58,6 +58,14 @@ namespace lang {
 		       compOpExt.isCallOfCompAssignRightShift(node);
 	}
 
+
+	bool isCompoundAssignmentOrPrefixOp(const core::NodePtr& node) {
+		const auto& compOpExt = node->getNodeManager().getLangExtension<CompoundOpsExtension>();
+		if(isCompoundAssignmentOperation(node)) return true;
+		return compOpExt.isCallOfCompPrefixInc(node) ||
+		       compOpExt.isCallOfCompPrefixDec(node);
+	}
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

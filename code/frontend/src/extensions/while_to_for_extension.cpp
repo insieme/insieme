@@ -92,12 +92,15 @@ namespace extensions {
 			if(!call) return invalid;
 			auto callee = call->getFunctionExpr();
 
+			auto litType = call->getType();
+			if(core::analysis::isRefType(litType)) litType = core::analysis::getReferencedType(litType); // for compPrefix cases
+
 			if(callee == compOpExt.getCompAssignAdd() || callee == compOpExt.getCompAssignSubtract()) {
 				return std::make_pair(false, core::analysis::getArgument(operation, 1));
-			} else if(rMod.isGenPreInc(callee) || rMod.isGenPostInc(callee)) {
-				return std::make_pair(false, builder.literal("1", call->getType()));
-			} else if(rMod.isGenPreDec(callee) || rMod.isGenPostDec(callee)) {
-				return std::make_pair(false, builder.literal("-1", call->getType()));
+			} else if(rMod.isGenPreInc(callee) || rMod.isGenPostInc(callee) || callee == compOpExt.getCompPrefixInc()) {
+				return std::make_pair(false, builder.literal("1", litType));
+			} else if(rMod.isGenPreDec(callee) || rMod.isGenPostDec(callee) || callee == compOpExt.getCompPrefixDec()) {
+				return std::make_pair(false, builder.literal("-1", litType));
 			} else if(callee == rMod.getRefDeref()) {
 				// just a read, we can ignore this
 				return std::make_pair(true, core::ExpressionPtr());
