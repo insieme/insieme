@@ -478,7 +478,10 @@ namespace conversion {
 		retType = builder.refType(retType, qualifiedType.isConstQualified(), qualifiedType.isVolatileQualified());
 
 		retIr = builder.callExpr(retType, access, base, builder.getIdentifierLiteral(memName), retTypeLit);
-		if(unwrap) retIr = builder.deref(retIr);
+
+		// member expression node can have implicit r-value semantic
+		if(unwrap || membExpr->isRValue()) retIr = builder.deref(retIr);
+
 		return retIr;
 	}
 

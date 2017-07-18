@@ -43,6 +43,16 @@ void nameCheck() {
 	__func__;
 }
 
+typedef struct S {
+	int a;
+} S;
+
+S mkS(void) {
+	S s;
+	s.a = 0;
+	return s;
+}
+
 int main() {
 	nameCheck();
 
@@ -509,5 +519,23 @@ int main() {
 	{
 		int x = 5;
 		({ int y = 2; x+y; });
+	}
+
+	// r-value struct access
+	#pragma test expect_ir(R"(
+		def struct IMP_S {
+			a : int<4>;
+		};
+		def IMP_mkS = function () -> IMP_S {
+			var ref<IMP_S,f,f,plain> v0 = ref_decl(type_lit(ref<IMP_S,f,f,plain>));
+			v0.a = 0;
+			return *v0;
+		};
+		{
+			var ref<int<4>,f,f,plain> v0 = *IMP_mkS() materialize .a;
+		}
+	)")
+	{
+		int a = mkS().a;
 	}
 }
