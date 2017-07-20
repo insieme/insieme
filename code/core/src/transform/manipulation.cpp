@@ -845,8 +845,8 @@ namespace transform {
 			auto curT = cur->getType();
 			auto param = builder.variable(builder.refType(curT));
 			replacements[cur] = builder.deref(param);
-			// we don't want to wrap these into another level of reference
-			if(lang::isReference(curT) && (lang::isPointer(analysis::getReferencedType(curT)) || lang::isReference(analysis::getReferencedType(curT)))) {
+			// we don't want to wrap references to pointers into another level of reference
+			if(lang::isReference(curT) && lang::isPointer(analysis::getReferencedType(curT))) {
 				param = builder.variable(curT);
 				replacements[cur] = param;
 				paramTypes.push_back(analysis::getReferencedType(curT));

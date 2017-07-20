@@ -546,8 +546,25 @@ namespace omp {
 			return ret;
 		}
 
-		StatementPtr implementDataClauses(const StatementPtr& stmtNode, const DatasharingClause* clause, StatementList& outsideDecls,
+		StatementPtr handleThisCapture(const StatementPtr& stmtNode, StatementList& resultStmts) {
+			// for C++, we need special handling for "this"
+			auto freeVars = core::analysis::getFreeVariables(stmtNode);
+			for(const auto& var : freeVars) {
+				if(core::lang::isReference(var) && core::lang::isReference(core::analysis::getReferencedType(var))) {
+					auto newThis = build.variable(var->getType());
+					auto newThisDecl = build.declarationStmt(newThis, build.deref(var));
+					resultStmts.push_back(newThisDecl);
+					return core::transform::replaceAllGen(nodeMan, stmtNode, var, newThis);
+				}
+			}
+			return stmtNode;
+		}
+
+		StatementPtr implementDataClauses(const StatementPtr& stmtNodeIn, const DatasharingClause* clause, StatementList& outsideDecls,
 		                                  StatementList postFix = StatementList()) {
+
+			auto stmtNode = handleThisCapture(stmtNodeIn, outsideDecls);
+
 			const For* forP = dynamic_cast<const For*>(clause);
 			const Parallel* parallelP = dynamic_cast<const Parallel*>(clause);
 			const Task* taskP = dynamic_cast<const Task*>(clause);
@@ -687,6 +704,7 @@ namespace omp {
 
 		NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
 			StatementList resultStmts;
+
 			// handle implicit taskwait in postfix of task
 			StatementList postFix;
 			postFix.push_back(build.mergeAll());
