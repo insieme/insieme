@@ -41,11 +41,11 @@
 namespace insieme {
 namespace utils {
 
-	void insieme::utils::setAssertExtraInfoPrinter(std::function<void(void)> printer) {
-		extraAssertInformationPrinter = printer;
+	void setAssertExtraInfoPrinter(std::function<void(void)> printer) {
+		detail::extraAssertInformationPrinter = printer;
 	}
 	void clearAssertExtraInfoPrinter() {
-		extraAssertInformationPrinter = []() {};
+		detail::extraAssertInformationPrinter = []() {};
 	}
 
 	namespace detail {
