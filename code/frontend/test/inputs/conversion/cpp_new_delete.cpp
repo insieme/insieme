@@ -46,6 +46,12 @@ struct NonTrivial {
 	virtual ~NonTrivial() { 5; }
 };
 
+struct SelfDestructing {
+	void foo() {
+		delete this;
+	}
+};
+
 #define SimplestConstructor_IR R"( def struct IMP_SimplestConstructor { }; )"
 
 int main() {
@@ -253,6 +259,22 @@ int main() {
 		NonTrivial nt;
 		NonTrivial* arri = new NonTrivial[x+5]{nt, nt};
 		delete [] arri;
+	}
+
+	// Destructor call within class method ----------------------------------------------------------------------------------------------------------------------------------
+
+	#pragma test expect_ir(R"(
+		def struct IMP_SelfDestructing {
+			function IMP_foo = () -> unit {
+				ref_delete(IMP_SelfDestructing::~(this));
+			}
+		};
+		{
+			var ref<IMP_SelfDestructing,f,f,plain> v0 = IMP_SelfDestructing::(ref_decl(type_lit(ref<IMP_SelfDestructing,f,f,plain>)));
+		}
+	)")
+	{
+		SelfDestructing sd;
 	}
 
 	return 0;

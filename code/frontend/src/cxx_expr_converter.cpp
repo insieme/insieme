@@ -477,15 +477,12 @@ namespace conversion {
 			toDelete = core::lang::buildPtrToArray(exprToDelete);
 		} else {
 			// build destructor call if required
+			// 1) check in TU to see if the type needs a destructor call
+			// 2) if so, build call directly so that it works after resolving regardless of calling context
 			auto irType = converter.convertType(deleteExpr->getDestroyedType());
 			if(auto genType = irType.isa<core::GenericTypePtr>()) {
-				const auto& tuT = converter.getIRTranslationUnit().getTypes();
-				auto ttIt = tuT.find(genType);
-				if(ttIt != tuT.cend()) {
-					auto rec = ttIt->second->getRecord();
-					if(rec->hasDestructor()) {
-						toDelete = builder.callExpr(rec->getDestructor(), toDelete);
-					}
+				if(::containsKey(converter.getIRTranslationUnit().getTypes(), genType)) {
+					toDelete = builder.callExpr(builder.getLiteralForDestructor(builder.getDefaultDestructorType(builder.refType(irType))), toDelete);
 				}
 			}
 		}
