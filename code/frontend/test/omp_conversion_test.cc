@@ -68,5 +68,9 @@ namespace frontend {
 		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_task.c");
 	}
 
+	TEST(OpenMPConversion, This) {
+		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_this.cpp");
+	}
+
 } // fe namespace
 } // insieme namespace

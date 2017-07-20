@@ -116,11 +116,6 @@ namespace omp {
 			return ret.as<T>();
 		}
 
-		template<typename T>
-		T makeUniqueName(const T& node, const string& prefix) {
-			static int suffix = 0;
-			return renameLambdaReference(node, format("_ins_%s_%d", prefix, suffix++));
-		}
 	}
 
 	class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
@@ -137,14 +132,22 @@ namespace omp {
 		// literal markers for "ordered" implementation
 		const LiteralPtr orderedCountLit, orderedItLit, orderedIncLit;
 
+		int nameSuffix;
+
 	  public:
 		OMPSemaMapper(NodeManager& nodeMan)
 			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()),
 			  refExt(nodeMan.getLangExtension<lang::ReferenceExtension>()), toFlatten(),
 			  orderedCountLit(build.literal("ordered_counter", build.refType(basic.getInt8(), false, true))),
-			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())) {}
+			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())),
+			  nameSuffix(0) {}
 
 	  protected:
+		template<typename T>
+		T makeUniqueName(const T& node, const string& prefix) {
+			return renameLambdaReference(node, format("_ins_%s_%d", prefix, nameSuffix++));
+		}
+
 		// Identifies omp annotations and uses the correct methods to deal with them
 		// except for threadprivate, all omp annotations are on statement or expression marker nodes
 		virtual const NodePtr resolveElement(const NodePtr& node) {
