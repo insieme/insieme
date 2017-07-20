@@ -345,7 +345,7 @@ namespace extensions {
 
 			return std::make_shared<omp::Reduction>(op, handleIdentifierList(mmap, "reduction"));
 		}
-		
+
 		/**
 		 * Type traits used to determine the Marker type used to
 		 * attach annotations to the current IR node.
@@ -390,11 +390,34 @@ namespace extensions {
 		// Add the required header and macro definitions
 		kidnappedHeaders.push_back(utils::getInsiemeSourceRootDir() + "frontend/include/insieme/frontend/omp/input/");
 		macros.insert(std::make_pair("_OPENMP", ""));
-		
+
+		// attach pragmas to first suitable loop
+		auto attachToLoop = [](core::NodeList& nodes, const frontend::omp::AnnotationPtr& ann) {
+			frontend::omp::BaseAnnotation::AnnotationList anns;
+			anns.push_back(ann);
+			// apply omp for annotation to outermost loop
+			for(auto& node : nodes) {
+				core::StatementPtr stmt = node.as<core::StatementPtr>();
+
+				core::StatementAddress foundWhile;
+				visitDepthFirstOnceInterruptible(core::NodeAddress(stmt), [&](const core::WhileStmtAddress& whileAddr) {
+					foundWhile = whileAddr;
+					return true;
+				});
+				if(foundWhile != core::NodeAddress()) {
+					auto whileNode = foundWhile.getAddressedNode();
+					node = core::transform::replaceAddress(node->getNodeManager(), foundWhile, getMarkedNode(whileNode, anns)).getRootNode();
+					return nodes;
+				}
+			}
+			assert_fail() << "Could not attach OMP for annotation";
+			return nodes;
+		};
+
 		// Add a handler for pragma omp parallel:
 		// #pragma omp parallel [clause[ [, ]clause] ...] new-line
 		pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(insieme::frontend::extensions::PragmaHandler(
-		    "omp", "parallel", parallel_clause_list >> tok::eod, [](const MatchObject& object, core::NodeList nodes) {
+		    "omp", "parallel", parallel_clause_list >> tok::eod, [&attachToLoop](const MatchObject& object, core::NodeList nodes) {
 			    // attach annotation
 			    core::ExpressionPtr ifClause = handleSingleExpression(object, "if");
 			    // check for num_threads clause
@@ -426,26 +449,10 @@ namespace extensions {
 				    // check for ordered keyword
 				    bool ordered = object.stringValueExists("ordered");
 
-				    frontend::omp::BaseAnnotation::AnnotationList anns;
-				    anns.push_back(std::shared_ptr<omp::ParallelFor>(
-				        new omp::ParallelFor(ifClause, numThreadsClause, defaultClause, privateClause, firstPrivateClause, sharedClause, copyinClause,
-				                             reductionClause, lastPrivateClause, scheduleClause, collapseClause, noWait, ordered)));
-
-				    // get next for stmt from node list and annotate it
-				    for(auto& node : nodes) {
-					    core::StatementPtr&& stmt = node.as<core::StatementPtr>();
-					    // if it is already a marker stmt check the sub stmt
-					    // else check if it is a for and annotate it.
-					    if(stmt.isa<core::MarkerStmtPtr>()) {
-						    if(stmt.as<core::MarkerStmtPtr>()->getSubStatement().isa<core::ForStmtPtr>()) {
-							    node = getMarkedNode(stmt, anns);
-							    return nodes;
-						    }
-					    } else if(stmt.isa<core::ForStmtPtr>()) {
-						    node = getMarkedNode(stmt, anns);
-						    return nodes;
-					    }
-				    }
+					return attachToLoop(nodes,
+						std::make_shared<omp::ParallelFor>(
+							ifClause, numThreadsClause, defaultClause, privateClause, firstPrivateClause, sharedClause, copyinClause,
+							reductionClause, lastPrivateClause, scheduleClause, collapseClause, noWait, ordered));
 			    }
 
 			    // check for 'sections'
@@ -477,7 +484,7 @@ namespace extensions {
 
 		// Add a handler for pragma omp for
 		pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
-		    insieme::frontend::extensions::PragmaHandler("omp", "for", for_clause_list >> tok::eod, [](const MatchObject& object, core::NodeList nodes) {
+		    insieme::frontend::extensions::PragmaHandler("omp", "for", for_clause_list >> tok::eod, [&attachToLoop](const MatchObject& object, core::NodeList nodes) {
 			    // attach annotation
 			    // check for private clause
 			    omp::VarListPtr privateClause = handleIdentifierList(object, "private");
@@ -496,27 +503,9 @@ namespace extensions {
 			    // check for ordered keyword
 			    bool ordered = object.stringValueExists("ordered");
 
-			    frontend::omp::BaseAnnotation::AnnotationList anns;
-			    anns.push_back(std::make_shared<omp::For>(privateClause, firstPrivateClause, lastPrivateClause, reductionClause, scheduleClause, 
-				                                          collapseClause, noWait, ordered));
-
-			    // apply omp for annotation to outermost loop
-			    for(auto& node : nodes) {
-				    core::StatementPtr stmt = node.as<core::StatementPtr>();
-
-					core::StatementAddress foundWhile;
-					visitDepthFirstOnceInterruptible(core::NodeAddress(stmt), [&](const core::WhileStmtAddress& whileAddr) {
-						foundWhile = whileAddr;
-						return true;
-					});
-					if(foundWhile != core::NodeAddress()) {
-						auto whileNode = foundWhile.getAddressedNode();
-						node = core::transform::replaceAddress(node->getNodeManager(), foundWhile, getMarkedNode(whileNode, anns)).getRootNode();
-						return nodes;
-					}
-				}
-				assert_fail() << "Could not attach OMP for annotation";
-			    return nodes;
+				return attachToLoop(nodes,
+					std::make_shared<omp::For>(privateClause, firstPrivateClause, lastPrivateClause, reductionClause, scheduleClause,
+						collapseClause, noWait, ordered));
 			})));
 
 		// Add a handler for #pragma omp sections [clause[[,] clause] ...] new-line
