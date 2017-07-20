@@ -176,6 +176,10 @@ namespace conversion {
 	core::tu::IRTranslationUnit Converter::convert() {
 		assert_true(getCompiler().getASTContext().getTranslationUnitDecl());
 
+		insieme::utils::setAssertExtraInfoPrinter([&]() {
+			std::cerr << " ==> last Trackable location: " << getLastTrackableLocation() << "\n";
+		});
+
 		// collect all type definitions
 		auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
 		declConvPtr->VisitDeclContext(declContext);
@@ -183,6 +187,8 @@ namespace conversion {
 		//std::cout << " ==================================== " << std::endl;
 		//std::cout << getIRTranslationUnit() << std::endl;
 		//std::cout << " ==================================== " << std::endl;
+
+		insieme::utils::clearAssertExtraInfoPrinter();
 
 		// that's all
 		return irTranslationUnit;
