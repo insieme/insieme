@@ -2,7 +2,6 @@
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
 stream_c
-stream_omp
 
 
 ####################################################################################
