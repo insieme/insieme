@@ -27,6 +27,7 @@ option(ANALYSIS_HASKELL "Enable Haskell engine for analysis" OFF)
 if(ANALYSIS_HASKELL)
 	add_definitions(-DANALYSIS_HASKELL)
 endif()
+option(ANALYSIS_HASKELL_PROFILING "Enable Haskell profiling build" OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 

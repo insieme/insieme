@@ -88,8 +88,7 @@ parseHeader :: Parser [String]
 parseHeader = parseMagicNr *> parseList parseConverter
 
 parseMagicNr :: Parser Word64
-parseMagicNr =  word64le 0x494e5350495245
-            <|> fail "wrong magic number"
+parseMagicNr =  word64le 0x494e5350495245 <?> "magic number"
 
 parseConverter :: Parser String
 parseConverter = parseString
