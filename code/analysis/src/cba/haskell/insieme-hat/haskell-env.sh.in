@@ -1,0 +1,3 @@
+#!/bin/sh
+
+@haskell_env_cmd@ "$@"

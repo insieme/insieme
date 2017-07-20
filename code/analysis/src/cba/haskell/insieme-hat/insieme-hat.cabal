@@ -11,13 +11,8 @@ library
     ghc-options:        -O2
                         -optc-O3
     hs-source-dirs:     src
-    exposed-modules:    Insieme.Adapter,
-                        Insieme.Analysis.Entities.AccessPath,
-                        Insieme.Analysis.Entities.DataPath,
-                        Insieme.Analysis.Entities.FieldIndex,
-                        Insieme.Analysis.Entities.Memory,
-                        Insieme.Analysis.Entities.ProgramPoint,
-                        Insieme.Analysis.Entities.SymbolicFormula,
+    build-tools:        c2hs
+    exposed-modules:    Insieme.Adapter
                         Insieme.Analysis.AccessPath,
                         Insieme.Analysis.Alias,
                         Insieme.Analysis.Arithmetic,
@@ -25,22 +20,28 @@ library
                         Insieme.Analysis.Callable,
                         Insieme.Analysis.CallSite,
                         Insieme.Analysis.DataPath,
+                        Insieme.Analysis.Entities.AccessPath,
+                        Insieme.Analysis.Entities.DataPath,
+                        Insieme.Analysis.Entities.FieldIndex,
+                        Insieme.Analysis.Entities.Memory,
+                        Insieme.Analysis.Entities.ProgramPoint,
+                        Insieme.Analysis.Entities.SymbolicFormula,
                         Insieme.Analysis.ExitPoint,
+                        Insieme.Analysis.Framework.Dataflow,
+                        Insieme.Analysis.Framework.MemoryState,
+                        Insieme.Analysis.Framework.ProgramPoint,
+                        Insieme.Analysis.Framework.PropertySpace.ComposedValue,
+                        Insieme.Analysis.Framework.PropertySpace.ValueTree,
+                        Insieme.Analysis.Framework.Utils.OperatorHandler,
                         Insieme.Analysis.FreeLambdaReferences,
                         Insieme.Analysis.Identifier,
                         Insieme.Analysis.Predecessor,
-                        Insieme.Analysis.Reference,
-                        Insieme.Analysis.RecursiveLambdaReferences,
-                        Insieme.Analysis.Framework.Dataflow,
-                        Insieme.Analysis.Framework.ProgramPoint,
-                        Insieme.Analysis.Framework.MemoryState,
-                        Insieme.Analysis.Framework.Utils.OperatorHandler,
-                        Insieme.Analysis.Framework.PropertySpace.ComposedValue,
-                        Insieme.Analysis.Framework.PropertySpace.ValueTree,
-                        Insieme.Analysis.Utils.CppSemantic,
                         Insieme.Analysis.Reachable,
+                        Insieme.Analysis.RecursiveLambdaReferences,
+                        Insieme.Analysis.Reference,
                         Insieme.Analysis.Solver,
                         Insieme.Analysis.SymbolicValue,
+                        Insieme.Analysis.Utils.CppSemantic,
                         Insieme.Analysis.WriteSetSummary,
                         Insieme.Context,
                         Insieme.Inspire,
@@ -51,8 +52,8 @@ library
                         Insieme.Inspire.NodeType,
                         Insieme.Inspire.Query,
                         Insieme.Inspire.ThHelpers,
-                        Insieme.Inspire.Visit,
                         Insieme.Inspire.Transform,
+                        Insieme.Inspire.Visit,
                         Insieme.Utils,
                         Insieme.Utils.Arithmetic,
                         Insieme.Utils.BoundSet,
@@ -79,7 +80,25 @@ library
                         ../../../../../core/include
     default-language:   Haskell2010
 
-executable insieme-hat
+foreign-library insieme-hat
+    type:               native-shared
+    if os(windows)
+      options: standalone
+
+    -- Cannot build foreign libs with profiling yet
+    if flag(profiling)
+      buildable: False
+
+    hs-source-dirs:     src/flib
+    c-sources:          cbits/wrapper.c
+    other-modules:      Insieme.FFIExports
+    build-depends:      base >= 4.7,
+                        bytestring >= 0.10,
+                        insieme-hat
+    default-language:   Haskell2010
+
+
+executable insieme-hat-exe
     main-is:            Main.hs
     hs-source-dirs:     src/bin
     build-depends:      insieme-hat >= 0.2,
@@ -155,3 +174,21 @@ test-suite test
                         pretty-show >= 1.6 && < 1.7
     type:               exitcode-stdio-1.0
     default-language:   Haskell2010
+
+executable profiler
+    main-is:            Profiler.hs
+    hs-source-dirs:     src/bin
+    default-language:   Haskell2010
+    build-depends:
+                        base             >= 4.7
+                      , bytestring       == 0.10.*
+                      , containers       >= 0.5
+                      , process          >= 1.2.3
+                      , process-extras   >= 0.7.1
+                      , split            >= 0.2.3.1
+                      , filepath         >= 1.4
+
+flag profiling
+  description: Should be enabled manually when doing a profiling build
+  default:     False
+  manual:      True

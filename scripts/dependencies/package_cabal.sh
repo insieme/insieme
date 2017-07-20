@@ -1,28 +1,33 @@
 NAME="cabal"
-VERSION="1.24.0.0"
+VERSION="42d92c943a7b069f629f4ebc726be06dae953bcf"
 PACKAGE="$NAME-$VERSION"
 
-FILE="cabal-install-$VERSION.tar.gz"
-URL="https://www.haskell.org/cabal/release/cabal-install-$VERSION/$FILE"
-SHA256SUM="d840ecfd0a95a96e956b57fb2f3e9c81d9fc160e1fd0ea350b0d37d169d9e87e"
+URL="https://github.com/haskell/cabal.git"
 
-DEPENDS="ghc gmp zlib"
+DEPENDS="zlib gmp gcc ghc"
 
+GCC_PKG=$(get_property gcc PACKAGE)
 GHC_PKG=$(get_property ghc PACKAGE)
-GMP_PKG=$(get_property gmp PACKAGE)
 ZLIB_PKG=$(get_property zlib PACKAGE)
+GMP_PKG=$(get_property gmp PACKAGE)
 
-export PATH="$PREFIX/$GHC_PKG/bin:$PATH"
+export PATH="$PREFIX/$GHC_PKG/bin:$PREFIX/$GCC_PKG/bin:$PATH"
 export LD_LIBRARY_PATH="$PREFIX/$GMP_PKG/lib:$PREFIX/$ZLIB_PKG/lib"
+export LIBRARY_PATH="$PREFIX/$GMP_PKG/lib:$PREFIX/$ZLIB_PKG/lib"
+export C_INCLUDE_PATH="$PREFIX/$ZLIB_PKG/include"
+
+
+pkg_download() {
+	git clone "$URL" "$PACKAGE"
+	( cd "$PACKAGE"; git checkout "$VERSION" )
+}
 
 pkg_extract() {
-	tar xf "$FILE"
-	mv "cabal-install-$VERSION" "$PACKAGE"
+	true
 }
 
 pkg_configure() {
-	mkdir -p "$PREFIX/$PACKAGE"
-	ghc-pkg init "$PREFIX/$PACKAGE/packages.conf.d"
+	true
 }
 
 pkg_build() {
@@ -30,6 +35,34 @@ pkg_build() {
 }
 
 pkg_install() {
-	SCOPE_OF_INSTALLATION="--package-db=$PREFIX/$PACKAGE/packages.conf.d" \
-	PREFIX="$PREFIX/$PACKAGE" ./bootstrap.sh --no-doc
+	PKGS="$PKG_TEMP"/packages.conf.d; ghc-pkg init "$PKGS"
+
+	pushd Cabal/
+	ghc -j8 --make Setup.hs
+	./Setup configure \
+			--package-db="$PKG_TEMP"/packages.conf.d \
+			--prefix="$PREFIX/$PACKAGE" \
+			--enable-shared
+	./Setup build -j8
+	./Setup install
+	popd
+
+	pushd cabal-install/
+	env \
+		EXTRA_CONFIGURE_OPTS="--enable-shared --disable-executable-dynamic" \
+		SCOPE_OF_INSTALLATION=--package-db="$PKGS" \
+		PREFIX="$PREFIX/$PACKAGE" \
+		sh -x ./bootstrap.sh --no-doc
+	popd
+
+	[ ! -x "$PREFIX/$PACKAGE/bin/cabal" ] && exit 1
+
+	rm -f "$PREFIX/$NAME-latest"
+	ln -s "$PREFIX/$PACKAGE" "$PREFIX/$NAME-latest"
+	touch "$PREFIX/$PACKAGE/.installed"
+}
+
+pkg_cleanup() {
+	rm -rf "$PACKAGE" "$FILE"
+	rm -rf "$PKGS"
 }
