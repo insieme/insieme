@@ -37,6 +37,8 @@
  */
 #include "insieme/core/annotations/naming.h"
 
+#include <boost/algorithm/string.hpp>
+
 #include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/dump/annotations.h"
 #include "insieme/core/encoder/encoder.h"
@@ -88,6 +90,7 @@ const string& getAttachedName(const NodePtr& node) {
 
 void attachName(const NodePtr& node, const string& name) {
 	assert_false(name.empty()) << "Annotated name must not be empty!";
+	assert_false(name.find(" ") != std::string::npos && !boost::starts_with(name, "operator ")) << "Annotated name \"" << name << "\" must not contain spaces!";
 	node->attachValue(NameTag(name));
 }
 

@@ -1,8 +1,0 @@
-resolver: lts-7.0
-
-packages:
-- '.'
-
-extra-deps:
-- attoparsec-binary-0.2
-- directory-1.2.6.3
