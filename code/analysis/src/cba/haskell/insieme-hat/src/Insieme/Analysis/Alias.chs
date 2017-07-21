@@ -51,12 +51,12 @@ import qualified Insieme.Utils.BoundSet as BSet
  #}
 
 checkAlias :: Solver.SolverState -> NodeAddress -> NodeAddress -> (Results,Solver.SolverState)
-checkAlias init x y = (checkAlias' rx ry, final)
+checkAlias initial x y = (checkAlias' rx ry, final)
   where
     -- here we determine the kind of filed index to be used for the reference analysis
     rx :: BSet.UnboundSet (Reference SimpleFieldIndex)
     (rx:ry:[]) = ComposedValue.toValue <$> res
-    (res,final) = Solver.resolveAll init [ referenceValue x, referenceValue y ]
+    (res,final) = Solver.resolveAll initial [ referenceValue x, referenceValue y ]
 
 
 checkAlias' :: Eq i => BSet.UnboundSet (Reference i) -> BSet.UnboundSet (Reference i) -> Results
@@ -72,9 +72,9 @@ checkAlias' x y | areSingleton = areAlias (toReference x) (toReference y)
     areSingleton = BSet.size x == 1 && BSet.size y == 1
     toReference = head . BSet.toList
 
-checkAlias' x y = if any (==AreAlias) u then MayAlias else NotAlias
+checkAlias' x y = if any (==AreAlias) us then MayAlias else NotAlias
   where
-    u = [areAlias u v | u <- BSet.toList x, v <- BSet.toList y]
+    us = [areAlias u v | u <- BSet.toList x, v <- BSet.toList y]
 
 
 areAlias :: Eq i => Reference i -> Reference i -> Results

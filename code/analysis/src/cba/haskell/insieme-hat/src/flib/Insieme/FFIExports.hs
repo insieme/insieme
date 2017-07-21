@@ -42,6 +42,7 @@ import Insieme.Adapter
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
+import Insieme.Analysis.SymbolicValue
 
 import qualified Data.ByteString.Char8 as BS8
 import qualified Insieme.Analysis.Alias as Alias
@@ -117,3 +118,6 @@ foreign export ccall "hat_test_formulaExample2"
 
 foreign export ccall "hat_hs_test_binary_dumper_mirror"
   testBinaryDumperMirror :: CString -> CSize -> Ptr CString -> Ptr CSize -> IO ()
+
+foreign export ccall "hat_hs_symbolic_values"
+  hsSymbolicValues :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr SymbolicValue)

@@ -8,8 +8,7 @@ build-type:         Simple
 cabal-version:      >= 1.10
 
 library
-    ghc-options:        -O2
-                        -optc-O3
+    ghc-options:        -Wall -O2 -optc-O3
     hs-source-dirs:     src
     build-tools:        c2hs
     exposed-modules:    Insieme.Adapter

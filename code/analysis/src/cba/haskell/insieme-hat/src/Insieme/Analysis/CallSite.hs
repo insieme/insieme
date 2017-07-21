@@ -43,7 +43,6 @@ module Insieme.Analysis.CallSite where
 import Control.DeepSeq
 import Data.Maybe
 import Data.Typeable
-import Debug.Trace
 import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Visit
@@ -107,14 +106,15 @@ callSites addr = case getNodeType addr of
 
   where
 
-    id = Solver.mkIdentifierFromExpression callSiteAnalysis addr
+    idGen = Solver.mkIdentifierFromExpression callSiteAnalysis
 
-    noCalls = Solver.mkVariable id [] Solver.bot
+    noCalls = Solver.mkVariable (idGen addr) [] Solver.bot
 
     -- navigate to the enclosing expression
     e = case getNodeType addr of
         IR.Lambda   -> fromJust $ getParent =<< getParent =<< getParent addr
         IR.BindExpr -> addr
+        _           -> error "unhandled CallSite enclosing expression"
 
     i = getIndex e
     p = fromJust $ getParent e
@@ -127,10 +127,10 @@ callSites addr = case getNodeType addr of
 
 
     -- create the variable (by binding at least the id) --
-    var = Solver.mkVariable id cons init
+    var = Solver.mkVariable (idGen addr) cons initial
 
-    cons = if isRoot addr then [] else [con]
-    init = if isRoot addr then Solver.bot else directCall
+    cons    = if isRoot addr then [] else [con]
+    initial = if isRoot addr then Solver.bot else directCall
 
 
     -- assemble the constraint computing all call sites --
@@ -151,7 +151,7 @@ callSites addr = case getNodeType addr of
     -- determines whether all calls are statically bound (if not, we have to search) --
     isStaticallyBound a = i == 1 && isCall p && all check (recReferencesVal a)
       where
-        check a = getIndex a == 1 && (isCall $ fromJust $ getParent a)
+        check x = getIndex x == 1 && (isCall $ fromJust $ getParent x)
 
 
     -- the list of call site variables to be checked for potential calls to this lambda

@@ -87,14 +87,14 @@ $(let
       |]
 
     extend :: Q [Dec] -> Q [Dec]
-    extend base = do
+    extend base' = do
 #if MIN_VERSION_template_haskell(2,11,0)
-        [DataD [] n [] Nothing cons ds] <- base
+        [DataD [] n [] Nothing cons ds] <- base'
         TyConI (DataD [] _ [] Nothing nt_cons _) <- reify ''C_NodeType
         let cons' = genCons <$> filter (not . isLeaf) nt_cons
         return $ [DataD [] n [] Nothing (cons ++ cons') ds]
 #else
-        [DataD [] n [] cons ds] <- base
+        [DataD [] n [] cons ds] <- base'
         TyConI (DataD [] _ [] nt_cons _) <- reify ''C_NodeType
         let cons' = genCons <$> filter (not . isLeaf) nt_cons
         return $ [DataD [] n [] (cons ++ cons') ds]

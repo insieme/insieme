@@ -65,7 +65,7 @@ parseBinaryDump bs = (Addr.getRoot . head) <$> parseAddresses bs
 parseAddresses :: BS.ByteString -> Either String [Addr.NodeAddress]
 parseAddresses = parseOnly $ do
     -- parse components
-    parseHeader
+    _            <- parseHeader
     dumpNodes    <- IntMap.fromList <$> zip [0..] <$> parseList parseDumpNode
     dumpBuiltins <- Map.fromList <$> parseList parseBuiltin
     addresses    <- parseList parseNodePath
@@ -112,12 +112,12 @@ parseDumpNode = do
         IR.NT_StringValue -> DumpNode <$> IR.StringValue         <$> parseString <*> pure []
 
         -- intermediate nodes
-        _              -> do
+        _ -> do
             is  <- parseList anyInt32
             return $ DumpNode (IR.fromNodeType t) (fromIntegral <$> is)
 
     -- skip annotations
-    parseList anyWord64le
+    _ <- parseList anyWord64le
 
     return $ n
 

@@ -45,8 +45,6 @@ module Insieme.Inspire (
 ) where
 
 import Control.DeepSeq
-import Data.Function (on)
-import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Insieme.Inspire.NodeType
 
@@ -64,11 +62,10 @@ instance Eq Tree where
         mtInnerTree a == mtInnerTree b
 
 instance Ord Tree where
-    compare a@Tree{ getID = Just ida } b@Tree{ getID = Just idb } | ida == idb =
-        EQ
-    compare a b =
-        compare (mtInnerTree a) (mtInnerTree b)
+    compare Tree{ getID = Just ida } Tree{ getID = Just idb } | ida == idb = EQ
+    compare a b = compare (mtInnerTree a) (mtInnerTree b)
 
+treeExactEq :: Tree -> Tree -> Bool
 treeExactEq a b = mtId a == mtId b && mtInnerTree a == mtInnerTree b
 
 data InnerTree = InnerTree {
@@ -77,6 +74,7 @@ data InnerTree = InnerTree {
       itBuiltinTags :: [String]
     } deriving (Eq, Ord, Show, Generic, NFData)
 
+pattern Node :: NodeType -> [Tree] -> Tree
 pattern Node x y <- MkTree _ (InnerTree x y _)
 
 pattern Tree :: Maybe Int -> NodeType -> [Tree] -> [String] -> Tree
@@ -190,7 +188,7 @@ data FunctionKind = FK_Plain
   deriving (Eq, Ord, Show)
 
 toFunctionKind :: Tree -> Maybe FunctionKind
-toFunctionKind t@(Node FunctionType (_:_:k:_)) = case getNodeType k of
+toFunctionKind (Node FunctionType (_:_:k:_)) = case getNodeType k of
     UIntValue 1 -> Just $ FK_Plain
     UIntValue 2 -> Just $ FK_Closure
     UIntValue 3 -> Just $ FK_Constructor

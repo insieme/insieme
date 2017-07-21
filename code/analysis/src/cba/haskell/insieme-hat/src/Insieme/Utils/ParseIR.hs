@@ -42,7 +42,6 @@ import Foreign.C.Types
 import Foreign.Marshal.Alloc (free)
 import Insieme.Inspire.BinaryParser
 import System.IO.Unsafe (unsafePerformIO)
-import System.Process
 import Insieme.Inspire.Transform (removeIds)
 
 import qualified Data.ByteString.Char8 as BS8
