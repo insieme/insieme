@@ -35,6 +35,7 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Insieme.Analysis.SymbolicValue (
 
@@ -47,12 +48,13 @@ module Insieme.Analysis.SymbolicValue (
     
 ) where
 
+import Data.List (intercalate)
 import Data.Maybe
 import Data.Typeable
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
-import Insieme.Adapter (CRepPtr,CRepArr,CSetPtr,dumpIrTree,passBoundSet,updateContext)
+import Insieme.Adapter (CRepPtr,CRepArr,CSetPtr,dumpIrTree,passBoundSet,updateContext,pprintTree)
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
@@ -87,6 +89,9 @@ type SymbolicValueSet = BSet.BoundSet BSet.Bound10 SymbolicValue
 instance Solver.Lattice SymbolicValueSet where
     bot   = BSet.empty
     merge = BSet.union
+    
+    print BSet.Universe = "{-all-}"
+    print set = "{" ++ (intercalate "," $ pprintTree <$> BSet.toList set) ++ "}"  
 
 instance Solver.ExtLattice SymbolicValueSet where
     top   = BSet.Universe
@@ -119,7 +124,7 @@ symbolicValue = genericSymbolicValue analysis
 -- * A generic symbolic value analysis which can be customized
 --
 
-genericSymbolicValue :: (Typeable d) => DataFlowAnalysis d SymbolicValueLattice -> Addr.NodeAddress -> Solver.TypedVar SymbolicValueLattice
+genericSymbolicValue :: (Typeable d) => DataFlowAnalysis d SymbolicValueLattice SimpleFieldIndex -> Addr.NodeAddress -> Solver.TypedVar SymbolicValueLattice
 genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     IR.Literal  -> Solver.mkVariable varId [] (compose $ BSet.singleton $ Addr.getNode addr)
@@ -130,7 +135,8 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
   
     analysis = userDefinedAnalysis {
         freeVariableHandler = freeVariableHandler,
-        initialValueHandler = initialMemoryValue
+        initialValueHandler = initialMemoryValue,
+        excessiveFileAccessHandler = excessiveFileAccessHandler
     }
 
     varId = mkVarIdentifier analysis addr
@@ -145,9 +151,10 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
       where
         
         -- TODO: apply on all builtins, also deriveds
-        cov a = (getNodeType a == IR.Literal) && (not covered)
+        cov a = (getNodeType a == IR.Literal || toCover) && (not toIgnore)
           where
-            covered = any (isBuiltin a) [ "ref_deref", "ref_assign" ]
+            toCover  = any (isBuiltin a) [ "ref_member_access" ]            -- derived builtins to cover
+            toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign" ]      -- literal builtins to ignore
       
         -- if triggered, we will need the symbolic values of all arguments
         dep _ _ = Solver.toVar <$> argVars
@@ -168,7 +175,10 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
                 
                 toDecl (decl,arg) = IR.mkNode IR.Declaration [IR.goDown 0 decl, arg] []
             
-            trg = Addr.getNode o
+            trg = case getNodeType o of
+                IR.Literal -> Addr.getNode o
+                IR.Lambda  -> Addr.getNode $ Addr.goUpX 3 o
+                nt@_ -> error $ "Unexpected node type: " ++ (show nt) 
             
             resType = IR.goDown 0 $ Addr.getNode addr
 
@@ -194,6 +204,16 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
         value = Builder.deref lit
         
 
+    -- the handler processing excessive field accesses
+
+    excessiveFileAccessHandler composedValue (Field field) = res
+      where
+        res = ComposedValue.toComposed $ BSet.map append $ ComposedValue.toValue composedValue
+          where
+            append x = Builder.deref ext
+              where
+                base = child 1 $ child 2 x
+                ext = Builder.refMember base field
 
     -- utilities
 
