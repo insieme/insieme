@@ -135,8 +135,8 @@ namespace conversion {
 		}
 
 		varManPtr = std::make_shared<state::VariableManager>(*this);
-		funManPtr = std::make_shared<state::FunctionManager>(*this);
-		recordManPtr = std::make_shared<state::RecordManager>(*this);
+		funManPtr = std::make_shared<state::FunctionManager>();
+		recordManPtr = std::make_shared<state::RecordManager>();
 		headerTaggerPtr = std::make_shared<utils::HeaderTagger>(setup.getSystemHeadersDirectories(),
 		                                                        setup.getInterceptedHeaderDirs(),
 		                                                        setup.getIncludeDirectories(), getCompiler().getSourceManager());

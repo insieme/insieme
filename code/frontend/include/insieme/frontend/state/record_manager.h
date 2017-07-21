@@ -59,15 +59,11 @@ namespace state {
 	/// Manages record (struct/union/class) identities from clang to its INSPIRE translation
 	class RecordManager {
 	private:
-		Converter& converter;
-		
 		std::map<const clang::RecordDecl*, RecordConversionState> records;
 
 		unsigned recordConversionStackDepth = 0;
 
 	public:
-		RecordManager(Converter& converter) : converter(converter) {}
-
 		core::GenericTypePtr lookup(const clang::RecordDecl* recordDecl) const;
 		bool contains(const clang::RecordDecl* recordDecl) const;
 		void insert(const clang::RecordDecl* recordDecl, const core::GenericTypePtr& genType);
