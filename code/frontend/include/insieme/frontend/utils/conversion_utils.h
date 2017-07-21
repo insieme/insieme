@@ -92,6 +92,8 @@ namespace utils {
 		return core::lang::buildRefType(irThisType, funProto->isConst(), funProto->isVolatile(), refKind);
 	}
 
+	core::TypePtr getThisType(conversion::Converter& converter, const clang::CXXMethodDecl* methDecl);
+
 	inline const std::string getDummyAutoDeducedTypeName() {
 		return "INSIEME_AUTO_TYPE";
 	}

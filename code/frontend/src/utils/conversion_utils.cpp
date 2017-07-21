@@ -219,6 +219,11 @@ namespace utils {
 		return stmtutils::aggregateStmts(builder, newBody);
 	}
 
+	core::TypePtr getThisType(conversion::Converter& converter, const clang::CXXMethodDecl* methDecl) {
+		auto parentType = converter.convertType(converter.getCompiler().getASTContext().getRecordType(methDecl->getParent()));
+		return getThisType(methDecl, parentType);
+	}
+
 	bool isDefaultClassMember(const clang::CXXMethodDecl* methDecl) {
 		auto constDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl);
 		auto dtorDecl = llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl);
