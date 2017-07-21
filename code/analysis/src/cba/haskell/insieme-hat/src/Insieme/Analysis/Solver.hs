@@ -35,6 +35,7 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.Solver (
 
@@ -44,6 +45,7 @@ module Insieme.Analysis.Solver (
     merge,
     bot,
     less,
+    print,
 
     ExtLattice,
     top,
@@ -97,7 +99,7 @@ module Insieme.Analysis.Solver (
 
 ) where
 
-import Prelude hiding (lookup)
+import Prelude hiding (lookup,print)
 import Debug.Trace
 
 import Control.DeepSeq
@@ -146,6 +148,10 @@ class (Eq v, Show v, Typeable v, NFData v) => Lattice v where
         -- | induced order
         less :: v -> v -> Bool              -- determines whether one element of the lattice is less than another
         less a b = (a `merge` b) == b       -- default implementation
+        -- | debug printing
+        print :: v -> String                -- print a value of the lattice readable
+        print = show
+        
 
 
 class (Lattice v) => ExtLattice v where
@@ -253,6 +259,7 @@ address :: Identifier -> Maybe NodeAddress
 address = referencedAddress . idValue
 
 
+
 -- Analysis Variables ---------------------------------------
 
 -- general variables (management)
@@ -280,8 +287,8 @@ newtype TypedVar a = TypedVar Var
 mkVariable :: (Lattice a) => Identifier -> [Constraint] -> a -> TypedVar a
 mkVariable i cs b = var
     where
-        var = TypedVar ( Var i cs ( toDyn b ) print )
-        print = (\a -> show $ get a var )
+        var = TypedVar ( Var i cs ( toDyn b ) print' )
+        print' = (\a -> print $ get a var )
 
 toVar :: TypedVar a -> Var
 toVar (TypedVar x) = x
@@ -667,7 +674,7 @@ toDotGraph (SolverState a@( Assignment m ) varIndex _ _ _) = "digraph G {\n\t"
         "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
         ++
         -- define nodes
-        ( intercalate "\n\t" ( map (\v -> "v" ++ (show $ fst v ) ++ " [label=\"" ++ (show $ snd v) ++ " = " ++ (escape $ cut $ valuePrint (snd v) a) ++ "\"];" ) vars ) )
+        ( intercalate "\n\t" ( map (\v -> "v" ++ (show $ fst v ) ++ " [label=\"" ++ (show $ snd v) ++ " = " ++ (escape $ cut 100 $ valuePrint (snd v) a) ++ "\"];" ) vars ) )
         ++
         "\n\t"
         ++
@@ -701,8 +708,8 @@ toDotGraph (SolverState a@( Assignment m ) varIndex _ _ _) = "digraph G {\n\t"
                 go = (\v l -> (foldr (\s l -> (fst v, index s) : l ) [] (dep $ snd v )) ++ l)
         
         -- a utility to cut the length of labels
-        cut str | length str > 46 = (take 50 str) ++ " ..."
-        cut str                   = str
+        cut l str | length str > (l-4) = (take l str) ++ " ..."
+        cut l str                   = str
 
 
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
@@ -753,11 +760,11 @@ toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _ _) = "{\n"
             where
                 go v m = if isJust $ addr v then Map.insert k (msg : Map.findWithDefault [] k m) m else m
                     where
-                        k = fromJust $ addr v
+                        k = getAbsolutePath $ fromJust $ addr v
                         i = index v
                         msg = (show . analysis $ i) ++ " = " ++ (escape $ valuePrint v a)
 
-        print (a,ms) = "      \"" ++ (show a) ++ "\" : \"" ++ ( intercalate "<br>" ms) ++ "\""
+        print (a,ms) = "      \"" ++ (intercalate "-" $ (show <$> 0 : a)) ++ "\" : \"" ++ ( intercalate "<br>" ms) ++ "\""
 
 
 
