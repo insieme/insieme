@@ -269,9 +269,12 @@ namespace conversion {
 				// attach name for backend
 				if(auto tagDecl = llvm::dyn_cast<clang::TagDecl>(decl)) {
 					string name = insieme::utils::demangle(utils::getNameForTagDecl(*this, tagDecl, true).first);
-					if(tagDecl->isStruct()) insieme::annotations::c::attachCTag(node, "struct");
-					else if(tagDecl->isUnion()) insieme::annotations::c::attachCTag(node, "union");
-					else if(tagDecl->isEnum()) insieme::annotations::c::attachCTag(node, "enum");
+					// we only attach the tag if we are in C or the type comes from an extern C context
+					if(!getTranslationUnit().isCxx() || tagDecl->isExternCContext()) {
+						if(tagDecl->isStruct()) insieme::annotations::c::attachCTag(node, "struct");
+						else if(tagDecl->isUnion()) insieme::annotations::c::attachCTag(node, "union");
+						else if(tagDecl->isEnum()) insieme::annotations::c::attachCTag(node, "enum");
+					}
 					core::annotations::attachName(node, name);
 				}
 				else if(auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
