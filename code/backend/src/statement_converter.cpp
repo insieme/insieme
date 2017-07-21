@@ -142,6 +142,15 @@ namespace backend {
 				init = converter.getCNodeManager()->create<c_ast::Initializer>(type, toVector<c_ast::NodePtr>(c_ast::init(init->values)));
 			}
 
+			// on the other hand, if this is an intercepted type and we initialize it with a single fixed size array, we must not initialize the inner data member
+			if(insieme::annotations::c::hasIncludeAttached(innerType) && ptr->getInitExprList().size() == 1) {
+				auto inner = ptr->getInitExprList()[0].isa<core::InitExprPtr>();
+				if(inner && core::lang::isFixedSizedArray(core::analysis::getReferencedType(inner))) {
+					auto innerInit = converter.getStmtConverter().convertExpression(context, inner).as<c_ast::InitializerPtr>();
+					return c_ast::init(innerInit->values);
+				}
+			}
+
 			// return completed
 			return init;
 		}
