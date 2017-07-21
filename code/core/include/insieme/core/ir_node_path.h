@@ -41,6 +41,7 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_pointer.h"
+#include "insieme/core/ir_node.h"
 
 #include "insieme/utils/assert.h"
 #include "insieme/utils/printable.h"
@@ -150,7 +151,8 @@ namespace core {
 		 * @return a pointer to the requested path element
 		 */
 		const Derived* getParent(unsigned level = 1) const {
-			assert(level < depth);
+			assert_lt(level, depth) << "Trying to access unavailable parent on address:" << *this
+				<< " - node: " << dumpReadable(ptr);
 			return (level == 0) ? static_cast<const Derived*>(this) : parent->getParent(level - 1);
 		}
 
