@@ -35,32 +35,32 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-#pragma once
 
-#include <map>
-
-#include "insieme/frontend/converter.h"
-
-#include "insieme/core/forward_decls.h"
+#include "insieme/utils/assert.h"
 
 namespace insieme {
-namespace frontend {
-namespace state {
-	using namespace conversion;
+namespace utils {
 
-	/// Manages function identities from clang to its INSPIRE translation
-	class FunctionManager {
-	private:
-		/// Internal storage for mappings from clang function declarations to
-		/// IR literals
-		std::map<const clang::FunctionDecl*, core::LiteralPtr> functions;
+	void setAssertExtraInfoPrinter(std::function<void(void)> printer) {
+		detail::extraAssertInformationPrinter = printer;
+	}
+	void clearAssertExtraInfoPrinter() {
+		detail::extraAssertInformationPrinter = []() {};
+	}
 
-	public:
-		core::LiteralPtr lookup(const clang::FunctionDecl* funDecl) const;
-		bool contains(const clang::FunctionDecl* funDecl) const;
-		void insert(const clang::FunctionDecl* funDecl, const core::LiteralPtr& fun);
-	};
+	namespace detail {
 
-} // end namespace state
-} // end namespace frontend
+		thread_local std::function<void(void)> extraAssertInformationPrinter = []() {};
+
+		LazyAssertion::~LazyAssertion() {
+			if(!value) {
+				//std::cerr << "Assertion backtrace:\n" << debug::getBacktraceString(2); // disabled for now pending better implementation
+				extraAssertInformationPrinter();
+				std::cerr << "\n";
+				abort();
+			}
+		}
+
+	} // end namespace detail
+} // end namespace utils
 } // end namespace insieme

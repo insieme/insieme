@@ -60,7 +60,8 @@ Insieme is written in C++11 and relies on several third-party libraries:
 | [hwloc]    | >= 1.10  | Runtime system, for system architecture information         | New BSD License      |
 | [valgrind] | >= 3.11  | Memory checks                                               | GPLv2                |
 | [Soufflé]  | \*       | Datalog Analsysis Engine                                    | UPL                  |
-| [Stack]    | 1.0.4\*  | Haskell Analsysis Engine                                    | BSD 3-Clause License |
+| [GHC]      | 8.0.2    | Haskell Analsysis Engine                                    | 3-Clause BSD License |
+| [cabal]    | 42d92c9\*| Haskell Analsysis Engine                                    | 3-Clause BSD License |
 
 \* Use Insieme's dependency installer
 

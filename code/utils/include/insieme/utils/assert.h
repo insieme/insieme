@@ -45,6 +45,7 @@
 */
 
 #include <iostream>
+#include <functional>
 
 #include "insieme/utils/debug/backtrace.h"
 
@@ -77,18 +78,20 @@
 
 namespace insieme {
 namespace utils {
+
+	// allows to provide a lambda that adds printed information when an assertion occurs
+	void setAssertExtraInfoPrinter(std::function<void(void)> printer);
+	// clears the extra information printer lambda
+	void clearAssertExtraInfoPrinter();
+
 	namespace detail {
+
+		extern thread_local std::function<void(void)> extraAssertInformationPrinter;
 
 		struct LazyAssertion {
 			bool value;
 			LazyAssertion(bool value) : value(value) {}
-			~LazyAssertion() {
-				if(!value) {
-					std::cerr << "\n";
-					std::cerr << "Assertion backtrace:\n" << debug::getBacktraceString(2);
-					abort();
-				}
-			}
+			~LazyAssertion();
 			operator bool() const {
 				return !value;
 			}

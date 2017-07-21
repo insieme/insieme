@@ -213,6 +213,7 @@ namespace core {
 		// set the abort node if the env var is set
 		if(auto nodeIrString = getenv(INSIEME_ABORT_NODE)) {
 			data->abortNode = &(*IRBuilder(*this).parse(nodeIrString));
+			std::cout << "! Abort node set: " << *data->abortNode << std::endl;
 		}
 	}
 

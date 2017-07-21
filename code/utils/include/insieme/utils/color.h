@@ -45,76 +45,30 @@ namespace utils {
 
 	class Colorize {
 
-	  private:
-
-		enum Color {
-			RESET,
-			BLACK,
-			GRAY,
-			RED,
-			LIGHT_RED,
-			GREEN,
-			LIGHT_GREEN,
-			BROWN,
-			YELLOW,
-			BLUE,
-			LIGHT_BLUE,
-			PURPLE,
-			LIGHT_PURPLE,
-			CYAN,
-			LIGHT_CYAN,
-			LIGHT_GRAY,
-			WHITE,
-		};
-
 		bool colorize;
 
 	  public:
 
 		Colorize(bool colorize = true) : colorize(colorize) {}
 
-		std::string getColor(Color c) const {
-			if(colorize) {
-				switch(c) {
-				case RESET:        return "\033[0m";
-				case BLACK:        return "\033[0;30m";
-				case GRAY:         return "\033[1;30m";
-				case RED:          return "\033[0;31m";
-				case LIGHT_RED:    return "\033[1;31m";
-				case GREEN:        return "\033[0;32m";
-				case LIGHT_GREEN:  return "\033[1;32m";
-				case BROWN:        return "\033[0;33m";
-				case YELLOW:       return "\033[1;33m";
-				case BLUE:         return "\033[0;34m";
-				case LIGHT_BLUE:   return "\033[1;34m";
-				case PURPLE:       return "\033[0;35m";
-				case LIGHT_PURPLE: return "\033[1;35m";
-				case CYAN:         return "\033[0;36m";
-				case LIGHT_CYAN:   return "\033[1;36m";
-				case LIGHT_GRAY:   return "\033[0;37m";
-				case WHITE:        return "\033[1;37m";
-				}
-			}
-			return "";
-		}
+		std::string reset()        const { return !colorize ? "" : "\033[0m";    }
+		std::string black()        const { return !colorize ? "" : "\033[0;30m"; }
+		std::string gray()         const { return !colorize ? "" : "\033[1;30m"; }
+		std::string red()          const { return !colorize ? "" : "\033[0;31m"; }
+		std::string light_red()    const { return !colorize ? "" : "\033[1;31m"; }
+		std::string green()        const { return !colorize ? "" : "\033[0;32m"; }
+		std::string light_green()  const { return !colorize ? "" : "\033[1;32m"; }
+		std::string brown()        const { return !colorize ? "" : "\033[0;33m"; }
+		std::string yellow()       const { return !colorize ? "" : "\033[1;33m"; }
+		std::string blue()         const { return !colorize ? "" : "\033[0;34m"; }
+		std::string light_blue()   const { return !colorize ? "" : "\033[1;34m"; }
+		std::string purple()       const { return !colorize ? "" : "\033[0;35m"; }
+		std::string light_purple() const { return !colorize ? "" : "\033[1;35m"; }
+		std::string cyan()         const { return !colorize ? "" : "\033[0;36m"; }
+		std::string light_cyan()   const { return !colorize ? "" : "\033[1;36m"; }
+		std::string light_gray()   const { return !colorize ? "" : "\033[0;37m"; }
+		std::string white()        const { return !colorize ? "" : "\033[1;37m"; }
 
-		std::string reset()        const { return getColor(RESET);        }
-		std::string black()        const { return getColor(BLACK);        }
-		std::string gray()         const { return getColor(GRAY);         }
-		std::string red()          const { return getColor(RED);          }
-		std::string light_red()    const { return getColor(LIGHT_RED);    }
-		std::string green()        const { return getColor(GREEN);        }
-		std::string light_green()  const { return getColor(LIGHT_GREEN);  }
-		std::string brown()        const { return getColor(BROWN);        }
-		std::string yellow()       const { return getColor(YELLOW);       }
-		std::string blue()         const { return getColor(BLUE);         }
-		std::string light_blue()   const { return getColor(LIGHT_BLUE);   }
-		std::string purple()       const { return getColor(PURPLE);       }
-		std::string light_purple() const { return getColor(LIGHT_PURPLE); }
-		std::string cyan()         const { return getColor(CYAN);         }
-		std::string light_cyan()   const { return getColor(LIGHT_CYAN);   }
-		std::string light_gray()   const { return getColor(LIGHT_GRAY);   }
-		std::string white()        const { return getColor(WHITE);        }
 	};
 
 } // end namespace utils

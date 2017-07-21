@@ -8,6 +8,6 @@ source defaults.sh
 
 nice -n $NICE_LEVEL ./configure
 nice -n $NICE_LEVEL ./clean_cmake
-nice -n $NICE_LEVEL ./build_coverage_docs
+nice -n $NICE_LEVEL ./build_analysis_coverage_docs
 nice -n $NICE_LEVEL ./run_sloccount
 nice -n $NICE_LEVEL ./run_coverage
