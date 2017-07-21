@@ -46,7 +46,8 @@ module Insieme.Analysis.Framework.Dataflow (
         freeVariableHandler,
         entryPointParameterHandler,
         initialValueHandler,
-        initValueHandler
+        initValueHandler,
+        excessiveFileAccessHandler
     ),
     mkDataFlowAnalysis,
     mkVarIdentifier,
@@ -66,7 +67,7 @@ import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.MemoryState
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Utils.CppSemantic
-import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.NodeAddress hiding (getPath)
 import Insieme.Inspire.Query
 import Insieme.Inspire.Visit
 import qualified Data.Set as Set
@@ -84,7 +85,7 @@ import qualified Insieme.Utils.BoundSet as BSet
 -- * Data Flow Analysis summary
 --
 
-data DataFlowAnalysis a v = DataFlowAnalysis {
+data DataFlowAnalysis a v i = DataFlowAnalysis {
     analysis                   :: a,                                    -- ^ the analysis type token
     analysisIdentifier         :: Solver.AnalysisIdentifier,            -- ^ the analysis identifier
     variableGenerator          :: NodeAddress -> Solver.TypedVar v,     -- ^ the variable generator of the represented analysis
@@ -93,26 +94,28 @@ data DataFlowAnalysis a v = DataFlowAnalysis {
     freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a free variable
     entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a entry point parameter
     initialValueHandler        :: NodeAddress -> v,                     -- ^ a function computing the initial value of a memory location
-    initValueHandler           :: v                                    -- ^ default value of a memory location
+    initValueHandler           :: v,                                    -- ^ default value of a memory location
+    excessiveFileAccessHandler :: v -> i -> v                           -- ^ a handler processing excessive field accesses (if ref_narrow calls navigate too deep)
 }
 
 -- a function creating a simple data flow analysis
-mkDataFlowAnalysis :: (Typeable a, Solver.ExtLattice v) => a -> String -> (NodeAddress -> Solver.TypedVar v) -> DataFlowAnalysis a v
+mkDataFlowAnalysis :: (Typeable a, Solver.ExtLattice v) => a -> String -> (NodeAddress -> Solver.TypedVar v) -> DataFlowAnalysis a v i
 mkDataFlowAnalysis a s g = res
     where
-        res = DataFlowAnalysis a aid g top justTop justTop justTop (\_ -> top) top
+        res = DataFlowAnalysis a aid g top justTop justTop justTop (\_ -> top) top failOnAccess
         aid = (Solver.mkAnalysisIdentifier a s)
         justTop a = mkConstant res a top
         top = Solver.top
+        failOnAccess _ _ = Solver.top
 
 
 -- a function creation an identifier for a variable of a data flow analysis
-mkVarIdentifier :: DataFlowAnalysis a v -> NodeAddress -> Solver.Identifier
+mkVarIdentifier :: DataFlowAnalysis a v i -> NodeAddress -> Solver.Identifier
 mkVarIdentifier a n = Solver.mkIdentifierFromExpression (analysisIdentifier a) n
 
 
 -- a function creating a data flow analysis variable representing a constant value
-mkConstant :: (Typeable a, Solver.ExtLattice v) => DataFlowAnalysis a v -> NodeAddress -> v -> Solver.TypedVar v
+mkConstant :: (Typeable a, Solver.ExtLattice v) => DataFlowAnalysis a v i -> NodeAddress -> v -> Solver.TypedVar v
 mkConstant a n v = var
     where
         var = Solver.mkVariable (idGen n) [] v
@@ -125,7 +128,7 @@ mkConstant a n v = var
 
 dataflowValue :: (ComposedValue.ComposedValue a i v, Typeable d)
          => NodeAddress                                     -- ^ the address of the node for which to compute a variable representing the data flow value
-         -> DataFlowAnalysis d a                            -- ^ the summar of the analysis to be performed be realized by this function
+         -> DataFlowAnalysis d a i                          -- ^ the summar of the analysis to be performed be realized by this function
          -> [OperatorHandler a]                             -- ^ allows selected operators to be intercepted and interpreted
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
 dataflowValue addr analysis ops = case getNode addr of
@@ -354,7 +357,22 @@ dataflowValue addr analysis ops = case getNode addr of
             val _ a = if includesUnknownSources targets then top else Solver.join $ map go $ BSet.toList targets
                 where
                     targets = targetRefVal a
-                    go r = ComposedValue.getElement (Reference.dataPath r) $ Solver.get a (memStateVarOf r)
+                    
+                    go r = descent dp val
+                        where
+                            dp  = (Reference.dataPath r)
+                            val = Solver.get a (memStateVarOf r)
+
+                    descent dp val = case () of 
+
+                        _ | dp == root -> val
+
+                        _ | (isNarrow dp) && (ComposedValue.isValue val) -> res
+                          where
+                            (i:is) = reverse $ getPath dp
+                            res    = descent (narrow $ reverse is) $ excessiveFileAccessHandler analysis val i
+
+                        _ | otherwise -> ComposedValue.getElement dp val
 
             targetRefVar = Reference.referenceValue $ goDown 1 $ goDown 2 addr          -- here we have to skip the potentially materializing declaration!
             targetRefVal a = ComposedValue.toValue $ Solver.get a targetRefVar
