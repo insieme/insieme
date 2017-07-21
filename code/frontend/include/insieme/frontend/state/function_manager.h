@@ -51,15 +51,11 @@ namespace state {
 	/// Manages function identities from clang to its INSPIRE translation
 	class FunctionManager {
 	private:
-		Converter& converter;
-		
-		/// Internal storage for mappings from clang function declarations to 
+		/// Internal storage for mappings from clang function declarations to
 		/// IR literals
 		std::map<const clang::FunctionDecl*, core::LiteralPtr> functions;
 
 	public:
-		FunctionManager(Converter& converter) : converter(converter) {}
-
 		core::LiteralPtr lookup(const clang::FunctionDecl* funDecl) const;
 		bool contains(const clang::FunctionDecl* funDecl) const;
 		void insert(const clang::FunctionDecl* funDecl, const core::LiteralPtr& fun);

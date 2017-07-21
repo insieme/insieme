@@ -103,16 +103,7 @@
 
 #include "insieme/utils/assert.h"
 
-/**
-  * this macro is meant to be used in the visitors (stmt, expr and type) it requires the object converter to be present
-  * in the scope to able to print the current translating location
-  */
-#define frontend_assert(_COND) assert_true(_COND) << " ==> last Trackable location: " << converter.getLastTrackableLocation() << "\n"
+#define frontend_assert(_COND) assert_true(_COND)
 
-/**
-  * this macro is meant to be used in the visitors (stmt, expr and type) it requires the object converter to be present
-  * in the scope to able to print the current translating location
-  */
 #define frontend_assert_expr(_PRED, _EXPR)                                                                                                                     \
-	assert_true(_PRED(_EXPR)) << "Expr: " << dumpColor(_EXPR) << "\nType: " << dumpColor(_EXPR->getType())                                                     \
-	                          << "\n ==> last Trackable location: " << converter.getLastTrackableLocation() << "\n"
+	assert_true(_PRED(_EXPR)) << "Expr: " << dumpColor(_EXPR) << "\nType: " << dumpColor(_EXPR->getType())

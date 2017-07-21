@@ -1,14 +1,36 @@
 NAME="ghc"
-VERSION="7.10.3"
+VERSION="8.0.2"
 PACKAGE="$NAME-$VERSION"
 
-FILE="$PACKAGE-x86_64-centos67-linux.tar.bz2"
-URL="http://downloads.haskell.org/~ghc/7.10.3/ghc-7.10.3-x86_64-centos67-linux.tar.bz2"
-SHA256SUM="a8957f7a2fd81720c5d3dc403571d77d31115ff5f42edb2917c36d8e714220d4"
+FILE="$PACKAGE.tar.xz"
+
+declare -A URL
+URL=(
+	["CentOS release 6.6 (Final)"]="https://downloads.haskell.org/~ghc/8.0.2/ghc-8.0.2-x86_64-centos67-linux.tar.xz"
+	["default"]="https://downloads.haskell.org/~ghc/8.0.2/ghc-8.0.2-x86_64-deb8-linux.tar.xz")
+
+declare -A SHA256SUM
+SHA256SUM=(
+	["CentOS release 6.6 (Final)"]="145f12323c869f65c79f7c2d2b6dadfd3d9bad8739ef56580b38f715a6dbbb76"
+	["default"]="5ee68290db00ca0b79d57bc3a5bdce470de9ce9da0b098a7ce6c504605856c8f")
+
+KEY="$(cat /etc/centos-release 2>/dev/null || echo default)"
+
 
 DEPENDS="gmp"
 
 GMP_PKG=$(get_property gmp PACKAGE)
+
+pkg_download() {
+	if [ -z "${URL["$KEY"]}" ]; then
+		KEY="default"
+	fi
+
+	wget -nc "${URL["$KEY"]}" -O "$FILE"
+	if [[ "${SHA256SUM["$KEY"]}" ]]; then
+		echo "${SHA256SUM["$KEY"]}  $FILE" | sha256sum -c
+	fi
+}
 
 pkg_configure() {
 	./configure --prefix="$PREFIX/$PACKAGE" \

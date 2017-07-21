@@ -9,7 +9,6 @@ intercepted_baseclass
 mbstate
 member_function_ptr_init
 non_default_static
-static_data_member_struct
 static_in_template
 tellg
 throw

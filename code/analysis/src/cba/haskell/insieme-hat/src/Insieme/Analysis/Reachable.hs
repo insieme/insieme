@@ -198,5 +198,5 @@ reachableOut a = case getNodeType a of
 
     where
 
-        idGen a = Solver.mkIdentifierFromExpression reachableOutAnalysis a
+        idGen x = Solver.mkIdentifierFromExpression reachableOutAnalysis x
 

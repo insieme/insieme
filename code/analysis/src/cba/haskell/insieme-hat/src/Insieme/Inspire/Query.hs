@@ -42,7 +42,6 @@ module Insieme.Inspire.Query where
 import Control.Monad
 import Data.List
 import Data.Maybe
-import qualified Data.Map.Strict as Map
 import qualified Insieme.Inspire as IR
 
 -- * Node Reference
@@ -181,7 +180,7 @@ getRecord a = (child 1) <$> binding
     bindings = children <$> (child 1) <$> typ
     binding = bindings >>= find go
       where
-        go a = (node tag) == ((child 0) $ node a)
+        go x = (node tag) == ((child 0) $ node x)
 
 getFieldNames :: NodeReference a => a -> Maybe [String]
 getFieldNames a = map (getStringValue . node . child 0) <$> fields

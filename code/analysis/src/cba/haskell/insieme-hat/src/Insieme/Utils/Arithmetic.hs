@@ -268,7 +268,7 @@ instance Functor (Term c) where
 
 prettyShowTerm :: (Integral c, Show c, Show v) => Term c v -> String
 prettyShowTerm (Term c (Product [])) = show c
-prettyShowTerm (Term c p) | fromIntegral c == 1 = prettyShowProduct p
+prettyShowTerm (Term c p) | c == 1 = prettyShowProduct p
 prettyShowTerm (Term c p) = show c ++ " " ++ prettyShowProduct p
 
 normalizeTerm :: (Integral c, Ord v) => Term c v -> Term c v

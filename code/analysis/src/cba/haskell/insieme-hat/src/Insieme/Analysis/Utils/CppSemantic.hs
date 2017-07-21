@@ -37,28 +37,23 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.Utils.CppSemantic (
-    
+
     -- some tools to identify implicit contexts
     isImplicitCtorOrDtor,
     isImplicitConstructor,
     isImplicitDestructor,
-    
+
     isImplicitCtorOrDtorParameter,
     getEnclosingDeclaration,
-    
+
     getEnclosingScope,
     getImplicitDestructorBodies
 ) where
 
-import Debug.Trace
-
-import Data.List
 import Data.Maybe
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Query
 import qualified Insieme.Inspire as IR
-
-
 
 --- Identification of implicit constructor and destructor calls ---
 
@@ -67,7 +62,7 @@ isImplicitCtorOrDtor a = (depth a > 6) && isCorrectLambda && (nodeType == IR.Str
   where
     lambdaExpr = goUpX 3 a
     isCorrectLambda = fromMaybe False $ (==a) <$> getLambda lambdaExpr
-    
+
     record = goUpX 2 lambdaExpr
     nodeType = getNodeType record
 
@@ -82,11 +77,11 @@ isImplicitDestructor a = isImplicitCtorOrDtor a && getIndex ( goUpX 4 a ) == 3
 --- Navigation to 'call-sites' of implicit constructor and destructor calls ---
 
 isImplicitCtorOrDtorParameter :: NodeAddress -> Bool
-isImplicitCtorOrDtorParameter a = 
-    (depth a > 8) && (getNodeType a == IR.Variable) && (getNodeType params == IR.Parameters) && 
-                     (getNodeType lambda == IR.Lambda) && isImplicitCtorOrDtor lambda 
+isImplicitCtorOrDtorParameter a =
+    (depth a > 8) && (getNodeType a == IR.Variable) && (getNodeType params == IR.Parameters) &&
+                     (getNodeType lambda == IR.Lambda) && isImplicitCtorOrDtor lambda
   where
-    params = goUp a    
+    params = goUp a
     lambda = goUp params
 
 
@@ -94,26 +89,28 @@ getEnclosingDeclaration :: NodeAddress -> NodeAddress
 getEnclosingDeclaration a = case getNodeType a of
     IR.Declaration -> a
     _ | isRoot a   -> error "No enclosing declaration found!"
-    _              -> getEnclosingDeclaration $ fromJust $ getParent a 
+    _              -> getEnclosingDeclaration $ fromJust $ getParent a
 
-  
+
 --- Destructor Utilities ---
 
 getEnclosingScope :: NodeAddress -> NodeAddress
-getEnclosingScope s = case () of 
+getEnclosingScope s = case () of
     _ | getNodeType s == IR.CompoundStmt -> s
       | isRoot s                         -> error "No enclosing compound statement found!"
       | otherwise                        -> getEnclosingScope $ fromJust $ getParent s
 
 
 getImplicitDestructorBodies :: NodeAddress -> [NodeAddress]
-getImplicitDestructorBodies scope = case getNodeType scope of 
-    
-    IR.CompoundStmt -> reverse bodies 
-    
+getImplicitDestructorBodies scope = case getNodeType scope of
+
+    IR.CompoundStmt -> reverse bodies
+
+    _ -> error "unhandled getImplicitDestructorBodies case"
+
   where
-    
-    declarations = goDown 0 <$> (filter isDeclStmt $ getChildren scope) 
+
+    declarations = goDown 0 <$> (filter isDeclStmt $ getChildren scope)
       where
         isDeclStmt t = getNodeType t == IR.DeclarationStmt
 

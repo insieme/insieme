@@ -1731,6 +1731,13 @@ namespace parser {
 		EXPECT_TRUE(parseStmt(mgr, " { /* before */ 12 /* mid */ ; /* after */ }"));
 	}
 
+	TEST(IR_Parser, Unresolved) {
+		NodeManager mgr;
+		// the PARSER_UNRESOLVED_ prefix is used when the TU shouldn't resolve a specific literal
+		// it needs to be replaced at the very end of the process
+		EXPECT_EQ(parseExpr(mgr, R"(lit("PARSER_UNRESOLVED_bla": int<4>))"), parseExpr(mgr, R"(lit("bla": int<4>))"));
+	}
+
 } // parser
 } // core
 } // insieme

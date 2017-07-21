@@ -86,11 +86,17 @@ namespace lang {
 		LANG_EXT_DERIVED(CompAssignLeftShift,  INSPIRE_COMP_OP_CODE(<<) )
 		LANG_EXT_DERIVED(CompAssignRightShift, INSPIRE_COMP_OP_CODE(>>) )
 
+		// Prefix increment and decrement also have lvalue return semantics in C++
+
+		LANG_EXT_DERIVED(CompPrefixInc, "(val : ref<'a>) -> ref<'a> { val = val + lit(\"1\":'a); return val; }")
+		LANG_EXT_DERIVED(CompPrefixDec, "(val : ref<'a>) -> ref<'a> { val = val - lit(\"1\":'a); return val; }")
+
 		#undef INSPIRE_COMP_OP_CODE
 
 	};
 
 	bool isCompoundAssignmentOperation(const core::NodePtr& node);
+	bool isCompoundAssignmentOrPrefixOp(const core::NodePtr& node);
 
 } // end namespace lang
 } // end namespace core

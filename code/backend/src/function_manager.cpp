@@ -514,6 +514,7 @@ namespace backend {
 
 			// add dependencies and requirements
 			context.getDependencies().insert(info.prototype);
+			context.getDependencies().insert(context.getConverter().getTypeManager().getTypeInfo(context, call->getType()).definition);
 			context.getRequirements().insert(info.definition);
 
 			// deal with different call mechanisms

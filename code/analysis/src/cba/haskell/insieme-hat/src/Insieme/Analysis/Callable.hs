@@ -127,13 +127,16 @@ callableValue addr = case getNodeType addr of
 
     compose = ComposedValue.toComposed
 
-    getCallables4Ref r = search (getNode r) r
+    getCallables4Ref ref = search (getNode ref) ref
         where
             search r cur = case getNode cur of
                 IR.Node IR.LambdaDefinition cs | isJust pos -> BSet.singleton (Lambda $ goDown 1 $ goDown (fromJust pos) cur)
                     where
-                        pos = findIndex filter cs
-                        filter (IR.Node IR.LambdaBinding [a,_]) = a == r
+                        pos = findIndex filter' cs
+
+                        filter' (IR.Node IR.LambdaBinding [a,_]) = a == r
+                        filter' _ = error "unhandled getCallables4Ref filter"
+
                 _ | isRoot cur      -> BSet.Universe
                 _                   -> search r $ goUp cur
 

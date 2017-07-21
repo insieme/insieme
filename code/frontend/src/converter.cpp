@@ -135,8 +135,8 @@ namespace conversion {
 		}
 
 		varManPtr = std::make_shared<state::VariableManager>(*this);
-		funManPtr = std::make_shared<state::FunctionManager>(*this);
-		recordManPtr = std::make_shared<state::RecordManager>(*this);
+		funManPtr = std::make_shared<state::FunctionManager>();
+		recordManPtr = std::make_shared<state::RecordManager>();
 		headerTaggerPtr = std::make_shared<utils::HeaderTagger>(setup.getSystemHeadersDirectories(),
 		                                                        setup.getInterceptedHeaderDirs(),
 		                                                        setup.getIncludeDirectories(), getCompiler().getSourceManager());
@@ -176,6 +176,10 @@ namespace conversion {
 	core::tu::IRTranslationUnit Converter::convert() {
 		assert_true(getCompiler().getASTContext().getTranslationUnitDecl());
 
+		insieme::utils::setAssertExtraInfoPrinter([&]() {
+			std::cerr << " ==> last Trackable location: " << getLastTrackableLocation() << "\n";
+		});
+
 		// collect all type definitions
 		auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
 		declConvPtr->VisitDeclContext(declContext);
@@ -183,6 +187,8 @@ namespace conversion {
 		//std::cout << " ==================================== " << std::endl;
 		//std::cout << getIRTranslationUnit() << std::endl;
 		//std::cout << " ==================================== " << std::endl;
+
+		insieme::utils::clearAssertExtraInfoPrinter();
 
 		// that's all
 		return irTranslationUnit;
@@ -269,9 +275,12 @@ namespace conversion {
 				// attach name for backend
 				if(auto tagDecl = llvm::dyn_cast<clang::TagDecl>(decl)) {
 					string name = insieme::utils::demangle(utils::getNameForTagDecl(*this, tagDecl, true).first);
-					if(tagDecl->isStruct()) insieme::annotations::c::attachCTag(node, "struct");
-					else if(tagDecl->isUnion()) insieme::annotations::c::attachCTag(node, "union");
-					else if(tagDecl->isEnum()) insieme::annotations::c::attachCTag(node, "enum");
+					// we only attach the tag if we are in C or the type comes from an extern C context
+					if(!getTranslationUnit().isCxx() || tagDecl->isExternCContext()) {
+						if(tagDecl->isStruct()) insieme::annotations::c::attachCTag(node, "struct");
+						else if(tagDecl->isUnion()) insieme::annotations::c::attachCTag(node, "union");
+						else if(tagDecl->isEnum()) insieme::annotations::c::attachCTag(node, "enum");
+					}
 					core::annotations::attachName(node, name);
 				}
 				else if(auto funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {

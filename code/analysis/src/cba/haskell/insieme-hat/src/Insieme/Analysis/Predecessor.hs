@@ -50,7 +50,6 @@ import Insieme.Analysis.Callable
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.ExitPoint
 import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Query
 import Insieme.Inspire.Visit
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Utils.CppSemantic as Sema
@@ -102,21 +101,21 @@ predecessor p@(ProgramPoint a Pre) = case getNodeType parent of
             -- eval arguments in reverse order
             else ProgramPoint (goDown (i+1) parent) Post
 
-    IR.Lambda -> case () of 
+    IR.Lambda -> case () of
           _ | isImplicitCtor -> error "Ctors not yet implemented"
-            | isImplicitDtor -> case () of 
+            | isImplicitDtor -> case () of
                 _ | dtorIndex == 0 -> single $ ProgramPoint (goDown ((numChildren scope) -1) scope) Post
-                  | otherwise      -> single $ ProgramPoint (dtors !! (dtorIndex-1)) Post  
+                  | otherwise      -> single $ ProgramPoint (dtors !! (dtorIndex-1)) Post
             | otherwise      -> call_sites
         where
-            isImplicitCtor = Sema.isImplicitConstructor parent 
+            isImplicitCtor = Sema.isImplicitConstructor parent
             isImplicitDtor = Sema.isImplicitDestructor  parent
-                
+
             scope = Sema.getEnclosingScope parent
-                
+
             dtors = Sema.getImplicitDestructorBodies scope
             dtorIndex = fromJust $ elemIndex a dtors
-            
+
 
     IR.BindExpr -> call_sites
 
@@ -187,20 +186,20 @@ predecessor p@(ProgramPoint a Pre) = case getNodeType parent of
 
   where
     parent = fromJust $ getParent a
-    
+
     i = getIndex a
-    
+
     single = single' p
     multiple = multiple' p
-    
+
     call_sites = Solver.mkVariable (idGen p) [con] []
     con = Solver.createConstraint dep val call_sites
-    
-    dep a = [Solver.toVar callSitesVar]
+
+    dep _ = [Solver.toVar callSitesVar]
     val a = foldr go [] $ Solver.get a callSitesVar
       where
         go (CallSite call) list = ProgramPoint (goDown 1 call) Post : list
-        
+
     callSitesVar = callSites parent
 
 
@@ -268,12 +267,12 @@ predecessor p@(ProgramPoint a Post) = case getNodeType a of
 
     -- compound statements
     IR.CompoundStmt | numChildren a == 0 -> pre
-                    | otherwise          -> case () of 
+                    | otherwise          -> case () of
                         _ | null dtors -> single $ ProgramPoint (goDown ((numChildren a) -1) a) Post
-                          | otherwise  -> single $ ProgramPoint (last dtors) Post   
+                          | otherwise  -> single $ ProgramPoint (last dtors) Post
       where
         dtors = Sema.getImplicitDestructorBodies a
-                    
+
 
     -- declaration statement
     IR.DeclarationStmt -> single $ ProgramPoint (goDown 0 a) Post
@@ -283,7 +282,7 @@ predecessor p@(ProgramPoint a Post) = case getNodeType a of
       where
         var = Solver.mkVariable (idGen p) [con] []
         con = Solver.createConstraint dep val var
-        dep a = [Solver.toVar conditionValueVar]
+        dep _ = [Solver.toVar conditionValueVar]
         val a = case ComposedValue.toValue (Solver.get a conditionValueVar) of
                   Neither     -> []
                   AlwaysTrue  -> [thenBranch]
@@ -346,7 +345,7 @@ single' p x = multiple' p [x]
 postContinueStmt :: NodeAddress -> [ProgramPoint]
 postContinueStmt a = map (`ProgramPoint` Post)
                      (collectAddr IR.ContinueStmt prune a)
-  where 
+  where
     prune = [(== IR.WhileStmt), (== IR.ForStmt), (== IR.LambdaExpr), isType]
     isType = (==IR.Type) . IR.toNodeKind
 
@@ -359,4 +358,4 @@ unhandled :: String -> ProgramPoint -> IR.NodeType
           -> Solver.TypedVar PredecessorList
 unhandled pos p parent = error . unwords $
   ["Unhandled", pos, "Program Point:", show p, "for parent", show parent]
-  
+

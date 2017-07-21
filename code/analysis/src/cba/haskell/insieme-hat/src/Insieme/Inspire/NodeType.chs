@@ -87,16 +87,14 @@ $(let
       |]
 
     extend :: Q [Dec] -> Q [Dec]
-    extend base = do
-#if defined(MIN_VERSION_template_haskell)
+    extend base' = do
 #if MIN_VERSION_template_haskell(2,11,0)
-        [DataD [] n [] Nothing cons ds] <- base
+        [DataD [] n [] Nothing cons ds] <- base'
         TyConI (DataD [] _ [] Nothing nt_cons _) <- reify ''C_NodeType
         let cons' = genCons <$> filter (not . isLeaf) nt_cons
         return $ [DataD [] n [] Nothing (cons ++ cons') ds]
-#endif
 #else
-        [DataD [] n [] cons ds] <- base
+        [DataD [] n [] cons ds] <- base'
         TyConI (DataD [] _ [] nt_cons _) <- reify ''C_NodeType
         let cons' = genCons <$> filter (not . isLeaf) nt_cons
         return $ [DataD [] n [] (cons ++ cons') ds]
@@ -104,7 +102,7 @@ $(let
 
     genCons :: Con -> Con
     genCons (NormalC n _) = NormalC (removePrefix "NT_" n) []
-    genCons _             = error "unexpected Con"
+    genCons _             = error "genCons: unexpected Con"
 
   in extend base
  )
@@ -115,11 +113,11 @@ $(let
     baseFromNodeType =
       [d|
         fromNodeType :: C_NodeType -> NodeType
-        fromNodeType NT_BoolValue   = BoolValue False
-        fromNodeType NT_CharValue   = CharValue ' '
-        fromNodeType NT_IntValue    = IntValue 0
-        fromNodeType NT_UIntValue   = UIntValue 0
-        fromNodeType NT_StringValue = StringValue ""
+        fromNodeType nt@NT_BoolValue   = error $ "fromNodeType: invalid C_NodeType: " ++ show nt
+        fromNodeType nt@NT_CharValue   = error $ "fromNodeType: invalid C_NodeType: " ++ show nt
+        fromNodeType nt@NT_IntValue    = error $ "fromNodeType: invalid C_NodeType: " ++ show nt
+        fromNodeType nt@NT_UIntValue   = error $ "fromNodeType: invalid C_NodeType: " ++ show nt
+        fromNodeType nt@NT_StringValue = error $ "fromNodeType: invalid C_NodeType: " ++ show nt
       |]
 
     baseToNodeType :: Q [Dec]
@@ -136,10 +134,8 @@ $(let
     extend :: Q [Dec] -> (Con -> Clause) -> Q [Dec]
     extend base gen = do
         [d, FunD n cls]               <- base
-#if defined(MIN_VERSION_template_haskell)
 #if MIN_VERSION_template_haskell(2,11,0)
         TyConI (DataD [] _ [] Nothing cons _) <- reify ''C_NodeType
-#endif
 #else
         TyConI (DataD [] _ [] cons _) <- reify ''C_NodeType
 #endif
@@ -148,11 +144,11 @@ $(let
 
     genClauseFromNodeType :: Con -> Clause
     genClauseFromNodeType (NormalC n _) = Clause [ConP n []] (NormalB (ConE (removePrefix "NT_" n))) []
-    genClauseFromNodeType _             = error "unexpected Con"
+    genClauseFromNodeType _             = error "genClauseFromNodeType: unexpected Con"
 
     genClauseToNodeType :: Con -> Clause
     genClauseToNodeType (NormalC n _) = Clause [ConP (removePrefix "NT_" n) []] (NormalB (ConE n)) []
-    genClauseToNodeType _             = error "unexpected Con"
+    genClauseToNodeType _             = error "genClauseToNodeType: unexpected Con"
 
   in (++) <$> extend baseFromNodeType genClauseFromNodeType
           <*> extend baseToNodeType   genClauseToNodeType

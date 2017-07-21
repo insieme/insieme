@@ -348,6 +348,10 @@ namespace conversion {
 		}
 
 		core::TypePtr handleRecordType(Converter& converter, const RecordType* clangRecordTy) {
+
+			// Try to get clang to fully instantiate template types for us before we start handling the type
+			converter.getTranslationUnit().getInsiemeSema().RequireCompleteType(clangRecordTy->getDecl()->getLocStart(), clang::QualType(clangRecordTy, 0), 0);
+
 			core::NodeManager& mgr = converter.getNodeManager();
 			core::IRBuilder builder(mgr);
 			auto& rMan = *converter.getRecordMan();

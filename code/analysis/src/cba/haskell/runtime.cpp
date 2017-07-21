@@ -37,9 +37,8 @@
  */
 extern "C" {
 
-	// Haskell Runtime
-	void hs_init(int*, const char**[]);
-	void hs_exit(void);
+        int insieme_analysis_haskell_init(void);
+        void insieme_analysis_haskell_exit(void);
 
 }
 
@@ -53,9 +52,9 @@ namespace haskell {
 	// instance `rt` of this class.
 	class Runtime {
 	  public:
-		Runtime() { hs_init(nullptr, nullptr); }
+		Runtime() { insieme_analysis_haskell_init(); }
 
-		~Runtime() { hs_exit(); }
+		~Runtime() { insieme_analysis_haskell_exit(); }
 	} rt;
 
 } // end namespace haskell

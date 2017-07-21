@@ -9,7 +9,6 @@ cast_static
 curiously_recurring_template_pattern
 curiously_recurring_template_pattern_2
 curiously_recurring_template_pattern_member_function
-expr_with_cleanups
 inherit_chained
 member_data_pointer
 memb_func_ptr
@@ -19,7 +18,6 @@ static_assert
 static_data_member
 static_initialization
 static_var_init
-static_var_updates
 stl_list_iterator
 stl_read_file
 template_statics

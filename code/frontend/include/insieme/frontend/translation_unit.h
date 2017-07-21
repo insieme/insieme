@@ -127,6 +127,10 @@ class TranslationUnit : public boost::noncopyable {
 		return mPragmaList;
 	}
 
+	InsiemeSema& getInsiemeSema() const {
+		return const_cast<InsiemeSema&>(mSema);
+	}
+
 	const ClangCompiler& getCompiler() const {
 		return mClang;
 	}

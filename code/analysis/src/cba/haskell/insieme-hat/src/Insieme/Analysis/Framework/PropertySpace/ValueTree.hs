@@ -46,7 +46,6 @@ module Insieme.Analysis.Framework.PropertySpace.ValueTree (
 import Control.DeepSeq
 import Data.List (intercalate)
 import Data.Maybe
-import Debug.Trace
 import GHC.Generics (Generic)
 import Insieme.Analysis.Entities.DataPath
 import Insieme.Analysis.Entities.FieldIndex
@@ -80,7 +79,7 @@ instance (FieldIndex i, Solver.ExtLattice a) => ComposedValue (Tree i a) i a whe
     -- extract a value from a tree
     toValue Empty    = Solver.bot
     toValue (Leaf a) = a
-    toValue t        = Solver.top
+    toValue _        = Solver.top
 
 
     -- test whether something is a value or something composed
@@ -104,8 +103,8 @@ instance (FieldIndex i, Solver.ExtLattice a) => ComposedValue (Tree i a) i a whe
         where
             p = getPath dp
 
-            setElement' [] v t = v
-            setElement' (x:xs) v t = set x (setElement' xs v (get x t)) t
+            setElement' [] v' _ = v'
+            setElement' (x:xs) v' t' = set x (setElement' xs v' (get x t')) t'
 
     setElement _ _ _ = Inconsistent
 
@@ -138,7 +137,7 @@ get i (Node m)     = r
         k = project (Map.keys m) i
         r = Solver.join $ map extract k
             where
-                extract k = fromMaybe Inconsistent $ Map.lookup k m
+                extract k' = fromMaybe Inconsistent $ Map.lookup k' m
 
 get _ Empty        = Empty
 get _ _            = Inconsistent
@@ -162,16 +161,14 @@ mergeTree (Leaf a) (Leaf b)  = Leaf $ Solver.merge a b
 mergeTree a@(Node m) b@(Node n)  = r
     where
         -- the set of keys in the resulting node
-        k = join (Map.keys m) (Map.keys n)
+        keys = join (Map.keys m) (Map.keys n)
 
         -- compute the values of those keys
-
-        r = case k of
+        r = case keys of
                 Just k -> Node $ Map.fromList $ map fuse k
                     where
-                        fuse k = ( k, mergeTree (get k a) (get k b) )
+                        fuse x = (x, mergeTree (get x a) (get x b))
                 Nothing -> Inconsistent
 
-
 -- mergeTree a b = trace ("Unsupported merge of " ++ (show a) ++ " and " ++ (show b)) Inconsistent
-mergeTree a b = Inconsistent
+mergeTree _ _ = Inconsistent

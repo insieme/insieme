@@ -56,7 +56,6 @@ import Prelude hiding (null)
 
 import Control.DeepSeq
 import Data.Typeable
-import Debug.Trace
 import GHC.Generics (Generic)
 import Insieme.Analysis.AccessPath
 import Insieme.Analysis.Callable
@@ -69,7 +68,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Entities.AccessPath as AP
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Utils.BoundSet as BSet
@@ -165,7 +163,7 @@ writeSetSummary addr = case getNodeType addr of
                 con = Solver.createConstraint dep val var
 
                 dep _ = []
-                val a = fromAccessPath $ AP.parameter 0
+                val _ = fromAccessPath $ AP.parameter 0
 
 
         -- all other literals => no write sets
@@ -178,7 +176,7 @@ writeSetSummary addr = case getNodeType addr of
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
 
-                dep a = Solver.toVar <$> writeSetVars
+                dep _ = Solver.toVar <$> writeSetVars
                 val a = Solver.join $ (Solver.get a <$> writeSetVars)
 
 

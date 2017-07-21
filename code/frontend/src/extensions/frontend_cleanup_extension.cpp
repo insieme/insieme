@@ -89,6 +89,7 @@ namespace extensions {
 			core::IRBuilder builder(mgr);
 			auto& feExt = mgr.getLangExtension<utils::FrontendInspireModule>();
 			auto& rExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
+			auto& cExt = mgr.getLangExtension<core::lang::CompoundOpsExtension>();
 
 			return core::transform::transformBottomUpGen(ir, [&](const core::CompoundStmtPtr& compound) {
 				StatementList newStmts;
@@ -96,11 +97,20 @@ namespace extensions {
 					auto replacement = stmt;
 					if(feExt.isCallOfCStyleAssignment(stmt) || feExt.isCallOfCxxStyleAssignment(stmt)) {
 						replacement = builder.assign(core::analysis::getArgument(stmt, 0), core::analysis::getArgument(stmt, 1));
-					} else if(rExt.isCallOfRefDeref(stmt)) {
+					}
+					else if(cExt.isCallOfCompPrefixInc(stmt)) {
+						replacement = builder.preInc(core::analysis::getArgument(stmt, 0));
+					}
+					else if(cExt.isCallOfCompPrefixDec(stmt)) {
+						replacement = builder.preDec(core::analysis::getArgument(stmt, 0));
+					}
+					else if(rExt.isCallOfRefDeref(stmt)) {
 						replacement = core::analysis::getArgument(stmt, 0);
-					} else if(feExt.isCallOfBoolToInt(stmt)) {
+					}
+					else if(feExt.isCallOfBoolToInt(stmt)) {
 						replacement = core::analysis::getArgument(stmt, 0);
-					} else if(feExt.isCallOfCxxPseudoDestructorCall(stmt)) {
+					}
+					else if(feExt.isCallOfCxxPseudoDestructorCall(stmt)) {
 						// pseudo destructor calls are no-ops semantically
 						continue;
 					}

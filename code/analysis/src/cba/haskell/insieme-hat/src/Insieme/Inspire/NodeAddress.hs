@@ -82,7 +82,6 @@ module Insieme.Inspire.NodeAddress (
 ) where
 
 import Control.DeepSeq
-import Data.Function (on)
 import Data.List (foldl',isSuffixOf)
 import Data.Maybe
 import Debug.Trace
@@ -172,8 +171,8 @@ a `isChildOf` b = getRoot a == getRoot b && (getPathReversed b `isSuffixOf` getP
 -- respective child.
 goRel :: [Int] -> NodeAddress -> NodeAddress
 goRel []     = id
-goRel (i:is) | i <  0 = goRel is . last . take (1-i) . iterate goUp
-             | i >= 0 = goRel is . goDown i
+goRel (i:is) | i < 0     = goRel is . last . take (1-i) . iterate goUp
+             | otherwise = goRel is . goDown i
 
 goUp :: NodeAddress -> NodeAddress
 goUp na | isRoot na = trace "No parent for Root" undefined

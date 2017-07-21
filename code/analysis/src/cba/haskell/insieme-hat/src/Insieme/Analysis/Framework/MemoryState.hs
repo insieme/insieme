@@ -51,17 +51,12 @@ module Insieme.Analysis.Framework.MemoryState (
 import Control.DeepSeq
 import Data.Maybe
 import Data.Typeable
-import Debug.Trace
 import GHC.Generics (Generic)
-import Insieme.Analysis.AccessPath
 import Insieme.Analysis.Callable
-import Insieme.Analysis.Entities.DataPath hiding (isRoot)
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.Memory
 import Insieme.Analysis.Entities.ProgramPoint
-import Insieme.Analysis.Entities.SymbolicFormula (SymbolicFormula)
 import Insieme.Analysis.Framework.ProgramPoint
-import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Reference
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Query
@@ -120,7 +115,7 @@ memoryStateValue :: (ComposedValue.ComposedValue v i a, Typeable d)
          -> DataFlowAnalysis d v i                      -- ^ the underlying data flow analysis this memory state analysis is cooperating with
          -> Solver.TypedVar v                           -- ^ the analysis variable representing the requested state
 
-memoryStateValue ms@(MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocation loc)) analysis = var
+memoryStateValue ms@(MemoryStatePoint (ProgramPoint _ _) ml@(MemoryLocation loc)) analysis = var
 
     where
 

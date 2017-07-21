@@ -224,7 +224,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
         unknownTarget = Solver.createConstraint dep val var
             where
-                dep a = [] -- covered by known targets: [Solver.toVar trg]
+                dep _ = [] -- covered by known targets: [Solver.toVar trg]
                 val a = if hasUnknownTarget then top else Solver.bot
                     where
 
@@ -392,7 +392,7 @@ dataflowValue addr analysis ops = case getNode addr of
         where
             cov a = isBuiltin a "tuple_member_access"
 
-            dep _ a = Solver.toVar indexValueVar : Solver.toVar tupleValueVar : []
+            dep _ _ = Solver.toVar indexValueVar : Solver.toVar tupleValueVar : []
 
             val _ a = if BSet.isUniverse indices
                     then top

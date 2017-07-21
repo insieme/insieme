@@ -120,8 +120,8 @@ For some analysis engines additional paths must be provided to CMake
 
 | Analysis Engine | Required Path                                              |
 | --------------- | ---------------------------------------------------------- |
-| Datalog         | -DSOUFFLE_ROOT=/path/to/souffle                            |
-| Haskell         | -DSTACK_ROOT=/path/to/haskell_stack (without `/bin/stack`) |
+| Datalog         | -DSOUFFLE_ROOT=/path/to/souffle/prefix                     |
+| Haskell         | -DCABAL_ROOT=/path/to/cabal/prefix                         |
 
 ### Running Unit Tests
 

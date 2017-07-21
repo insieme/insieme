@@ -130,6 +130,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, StaticDataMember) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_static_data_member.cpp"); }
 
+	TEST(CppConversionTest, TemplateDeclInstantiation) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_template_decl_instantiation.cpp"); }
+
 	TEST(CppConversionTest, This) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_this.cpp"); }
 
 	TEST(CppConversionTest, Undeclared) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_undeclared.cpp"); }

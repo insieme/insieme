@@ -18,7 +18,7 @@ echo "Prefix: $PREFIX"
 
 for pkg in "$INSTALLER_DIR/package_"*.sh; do
 	source "$pkg"
-	if pkg_is_installed; then
+	if pkg_is_locally_installed; then
 		echo "Adding symlink for $PACKAGE"
 		ln -sfT "$PREFIX/$PACKAGE" "$THIRD_PARTY_DIR/$NAME"
 	fi

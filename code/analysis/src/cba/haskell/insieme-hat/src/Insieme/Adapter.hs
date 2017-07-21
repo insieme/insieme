@@ -85,17 +85,12 @@ type CRepPtr a = Ptr (CRep a)
 type CSetPtr a = Ptr (CSet a)
 type CRepArr a = Ptr (Ptr (CRep a))
 
--- 'freeStablePtr' is exported so it can be used directly within a C++ destructor.
-foreign export ccall "hat_freeStablePtr"
-  freeStablePtr :: StablePtr a -> IO ()
-
 -- * Context
 
 foreign import ccall "hat_update_context"
   updateContext :: Ctx.CContext -> StablePtr Ctx.Context -> IO ()
 
-foreign export ccall "hat_initialize_context"
-  initializeContext :: Ctx.CContext -> CString -> CSize -> IO (StablePtr Ctx.Context)
+initializeContext :: Ctx.CContext -> CString -> CSize -> IO (StablePtr Ctx.Context)
 -- | Create a new 'Ctx.Context' by providing a reference to a 'Ctx.CContext'
 -- and a binary dump (including size) of the relevant program.
 initializeContext context_c dump_c size_c = do
@@ -103,57 +98,50 @@ initializeContext context_c dump_c size_c = do
     let Right ir = BinPar.parseBinaryDump dump
     newStablePtr $ Ctx.mkContext context_c ir
 
-foreign export ccall "hat_print_statistic"
-  dumpStatistics :: StablePtr Ctx.Context -> IO ()
+dumpStatistics :: StablePtr Ctx.Context -> IO ()
 -- | Printer 'Solver.Solver' statistics.
 dumpStatistics ctx_hs = do
     ctx <- deRefStablePtr ctx_hs
     putStrLn $ Solver.showSolverStatistic $ Ctx.getSolverState ctx
 
-foreign export ccall "hat_dump_assignment"
-  dumpAssignment :: StablePtr Ctx.Context -> IO ()
 -- | Print current 'Solver.Solver' assignment.
+dumpAssignment :: StablePtr Ctx.Context -> IO ()
 dumpAssignment ctx_hs = do
     ctx <- deRefStablePtr ctx_hs
     putStrLn $ Solver.dumpSolverState True (Ctx.getSolverState ctx) "graph"
 
-foreign export ccall "hat_mk_node_address"
-  mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize -> IO (StablePtr Addr.NodeAddress)
 -- | Create a 'Addr.NodeAddress' from a dumped NodePath.
+mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize -> IO (StablePtr Addr.NodeAddress)
 mkNodeAddress ctx_hs path_c length_c = do
     ctx  <- deRefStablePtr ctx_hs
     path <- peekArray (fromIntegral length_c) path_c
     newStablePtr $ Addr.mkNodeAddress (fromIntegral <$> path) (Ctx.getTree ctx)
 
-foreign export ccall "hat_node_path_length"
-  nodePathLength :: StablePtr Addr.NodeAddress -> IO CSize
 -- | Returns the length of the given 'Addr.NodeAddress'
+nodePathLength :: StablePtr Addr.NodeAddress -> IO CSize
 nodePathLength addr_hs = do
     addr <- deRefStablePtr addr_hs
     return $ fromIntegral $ Addr.depthAbsolute addr
 
-foreign export ccall "hat_node_path_poke"
-  nodePathPoke :: StablePtr Addr.NodeAddress -> Ptr CSize -> IO ()
 -- | Write the NodePath of the given 'Addr.NodeAddress' into the array pointed
 -- to by @path_c@. Ensure the target array is big enough beforehand.
+nodePathPoke :: StablePtr Addr.NodeAddress -> Ptr CSize -> IO ()
 nodePathPoke addr_hs path_c = do
     addr <- deRefStablePtr addr_hs
     pokeArray path_c $ fromIntegral <$> Addr.getAbsolutePath addr
 
 -- * Analysis
 
-foreign export ccall "hat_find_declaration"
-  findDecl :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
 -- | Run 'Visit.findDecl' visitor with the given 'Addr.NodeAddress' as input,
 -- returns a 'Addr.NodeAddress' pointing to the found declaration or @null@.
+findDecl :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
 findDecl var_hs = do
     var <- deRefStablePtr var_hs
     case Visit.findDecl var of
         Nothing -> return $ castPtrToStablePtr nullPtr
         Just a  -> newStablePtr a
 
-foreign export ccall "hat_check_boolean"
-  checkBoolean :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
+checkBoolean :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
 checkBoolean ctx_hs expr_hs = handleAll (return $ fromIntegral $ fromEnum AnBoolean.Both) $ do
     ctx <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
@@ -163,8 +151,7 @@ checkBoolean ctx_hs expr_hs = handleAll (return $ fromIntegral $ fromEnum AnBool
     updateContext ctx_c ctx_nhs
     evaluate $ fromIntegral $ fromEnum $ ComposedValue.toValue res
 
-foreign export ccall "hat_check_alias"
-  checkAlias :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO CInt
+checkAlias :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO CInt
 checkAlias ctx_hs x_hs y_hs = handleAll (return . fromIntegral . fromEnum $ Alias.MayAlias) $ do
     ctx <- deRefStablePtr ctx_hs
     x <- deRefStablePtr x_hs
@@ -175,8 +162,7 @@ checkAlias ctx_hs x_hs y_hs = handleAll (return . fromIntegral . fromEnum $ Alia
     updateContext ctx_c ctx_nhs
     evaluate $ fromIntegral $ fromEnum res
 
-foreign export ccall "hat_arithmetic_value"
-  arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr ArithmeticFormula)
+arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr ArithmeticFormula)
 arithValue ctx_hs expr_hs = do
     ctx <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
@@ -203,12 +189,10 @@ passNodeAddress ctx_c addr = do
 
 -- ** References
 
-foreign export ccall "hat_check_null"
-  checkForNull :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
+checkForNull :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
 checkForNull = checkForReference Ref.NullReference
 
-foreign export ccall "hat_check_extern"
-  checkForExtern :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
+checkForExtern :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
 checkForExtern = checkForReference Ref.UninitializedReference
 
 checkForReference :: Ref.Reference FieldIndex.SimpleFieldIndex -> StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
@@ -234,8 +218,7 @@ checkForReference ref ctx_hs expr_hs = handleAll (return maybe) $ do
 
 type MemoryLocation = Addr.NodeAddress
 
-foreign export ccall "hat_memory_locations"
-  memoryLocations :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr MemoryLocation)
+memoryLocations :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr MemoryLocation)
 memoryLocations ctx_hs expr_hs = do
     ctx <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
@@ -345,31 +328,25 @@ withArrayUnsignedLen xs f = withArrayLen xs (\s a -> f a (fromIntegral s))
 
 -- ** Arithmetic Tests
 
-foreign export ccall "hat_test_formulaZero"
-  testFormulaZero :: IO (CRepPtr ArithmeticFormula)
+testFormulaZero :: IO (CRepPtr ArithmeticFormula)
 testFormulaZero = passFormula nullPtr Ar.zero
 
-foreign export ccall "hat_test_formulaOne"
-  testFormulaOne :: IO (CRepPtr ArithmeticFormula)
+testFormulaOne :: IO (CRepPtr ArithmeticFormula)
 testFormulaOne = passFormula nullPtr Ar.one
 
-foreign export ccall "hat_test_formulaExample1"
-  testFormulaExample1 :: StablePtr Addr.NodeAddress -> IO (CRepPtr ArithmeticFormula)
+testFormulaExample1 :: StablePtr Addr.NodeAddress -> IO (CRepPtr ArithmeticFormula)
 testFormulaExample1 addr_c = do
     addr <- deRefStablePtr addr_c
     passFormula nullPtr $ Ar.Formula [Ar.Term 2 (Ar.Product [Ar.Factor addr 2])]
 
-foreign export ccall "hat_test_formulaExample2"
-  testFormulaExample2 :: StablePtr Addr.NodeAddress -> IO (CRepPtr ArithmeticFormula)
+testFormulaExample2 :: StablePtr Addr.NodeAddress -> IO (CRepPtr ArithmeticFormula)
 testFormulaExample2 addr_c = do
     addr <- deRefStablePtr addr_c
     passFormula nullPtr $ Ar.Formula [ Ar.Term 1 (Ar.Product []), Ar.Term 2 (Ar.Product [Ar.Factor addr 2, Ar.Factor addr 4]) ]
 
 -- ** BinaryDumper Tests
 
-foreign export ccall "hat_hs_test_binary_dumper_mirror"
-  testBinaryDumperMirror :: CString -> CSize -> Ptr CString -> Ptr CSize -> IO ()
-
+testBinaryDumperMirror :: CString -> CSize -> Ptr CString -> Ptr CSize -> IO ()
 testBinaryDumperMirror dump_c size_c dump_hs_ptr size_hs_ptr = do
     dump <- BS8.packCStringLen (dump_c, fromIntegral size_c)
     let Right ir = BinPar.parseBinaryDump dump

@@ -55,12 +55,11 @@ import GHC.Generics (Generic)
 import Insieme.Analysis.Arithmetic
 import Insieme.Analysis.DataPath
 import Insieme.Analysis.Entities.FieldIndex
-import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress as Addr
 import Insieme.Inspire.Query
-import Insieme.Utils.Arithmetic
+
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
@@ -151,17 +150,17 @@ referenceValue addr = case getNodeType addr of
         allocHandler = OperatorHandler cov noDep val
             where
                 cov a = isBuiltin a "ref_alloc"
-                val _ a = compose $ BSet.singleton $ Reference addr DP.root
+                val _ _ = compose $ BSet.singleton $ Reference addr DP.root
 
         declHandler = OperatorHandler cov noDep val
             where
                 cov a = isBuiltin a "ref_decl"
-                val _ a = compose $ BSet.singleton $ Reference (getEnclosingDecl addr) DP.root
+                val _ _ = compose $ BSet.singleton $ Reference (getEnclosingDecl addr) DP.root
 
         refNull = OperatorHandler cov noDep val
             where
                 cov a = isBuiltin a "ref_null"
-                val _ a = compose $ BSet.singleton NullReference
+                val _ _ = compose $ BSet.singleton NullReference
 
         refNarrow = OperatorHandler cov subRefDep val
             where
@@ -210,9 +209,9 @@ referenceValue addr = case getNodeType addr of
                         lower = BSet.map $ onRefs $ \(Reference l p) -> Reference l (DP.append p (DP.invert $ DP.step $ component 0))
 
 
-        noDep _ a = []
+        noDep _ _ = []
 
-        subRefDep _ a = [toVar baseRefVar, toVar dataPathVar]
+        subRefDep _ _ = [toVar baseRefVar, toVar dataPathVar]
 
         baseRefVar   = referenceValue $ goDown 1 $ goDown 2 addr
         baseRefVal a = ComposedValue.toValue $ get a baseRefVar
