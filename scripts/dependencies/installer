@@ -31,8 +31,10 @@ install_pkg() {
 
 		mkdir -p \$PREFIX
 
-		if pkg_is_installed; then
-			echo "\$NAME \$VERSION already installed"
+		pkg_is_globally_installed && loc=globally
+		pkg_is_locally_installed && loc=locally
+		if [ -n "$loc" ]; then
+			echo "$NAME $VERSION already $loc installed"
 			exit 0
 		fi
 
