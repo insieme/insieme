@@ -51,21 +51,39 @@ import qualified Insieme.Inspire as IR
 foreign import ccall "hat_c_parse_ir_statement"
   cParseIrStatement :: CString -> CSize -> Ptr CString -> Ptr CSize -> IO ()
 
--- | Parse a given IR statement.
-parseIR :: String -> IO IR.Tree
-parseIR stmt = do
-    alloca $ \data_ptr_c ->
-        alloca $ \size_ptr_c -> do
-            withCStringLen stmt $ \(sz,l) ->cParseIrStatement sz (fromIntegral l) data_ptr_c size_ptr_c
-            data_c <- peek data_ptr_c
-            size_c <- peek size_ptr_c
-            dump   <- BS8.packCStringLen (data_c, fromIntegral size_c)
-            free data_c
-            let Right ir = parseBinaryDump dump
-            return ir
+-- | Parse a given IR expression.
+parseExpr :: String -> IR.Tree
+parseExpr stmt = removeIds $ unsafePerformIO $ parseIR' stmt
+  where
+    parseIR' stmt = do
+        alloca $ \data_ptr_c ->
+            alloca $ \size_ptr_c -> do
+                withCStringLen stmt $ \(sz,l) ->cParseIrStatement sz (fromIntegral l) data_ptr_c size_ptr_c
+                data_c <- peek data_ptr_c
+                size_c <- peek size_ptr_c
+                dump   <- BS8.packCStringLen (data_c, fromIntegral size_c)
+                free data_c
+                let Right ir = parseBinaryDump dump
+                return ir
+
+-- | Parse a given IR type.
+parseType :: String -> IR.Tree
+parseType txt = IR.goDown 0 $ parseExpr $ "lit(\"x\":" ++ txt ++ ")"
+
+
+-- inspire constructs --
+
+identifierType :: IR.Tree
+identifierType = parseType "identifier"
 
 refDeref :: IR.Tree
-refDeref = removeIds $ unsafePerformIO $ parseIR "ref_deref"
+refDeref = parseExpr "ref_deref"
 
 refAssign :: IR.Tree
-refAssign = removeIds $ unsafePerformIO $ parseIR "ref_assign"
+refAssign = parseExpr "ref_assign"
+
+-- Haskell extension constructs --
+
+hsRefMemberAccess :: IR.Tree
+hsRefMemberAccess = parseExpr "hs_ref_member_access"
+

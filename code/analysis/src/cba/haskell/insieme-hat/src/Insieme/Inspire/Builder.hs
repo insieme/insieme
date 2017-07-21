@@ -38,21 +38,59 @@
 -- The workings of these functions are specific to INSPIRE.
 
 module Insieme.Inspire.Builder (
-    deref
+    deref,
+    refMember
 ) where
 
+import Control.Exception.Base
 import Data.Maybe
+import Debug.Trace
 import Insieme.Inspire.Query
 
+import qualified Insieme.Inspire.Query as Q
 import qualified Insieme.Utils.ParseIR as Lang
 import qualified Insieme.Inspire as IR
 
 
+-- basic node types --
+
+mkStringValue :: String -> IR.Tree
+mkStringValue s = IR.mkNode (IR.StringValue s) [] []
+
+mkLiteral :: String -> IR.Tree -> IR.Tree
+mkLiteral s t = assert (Q.isType t) $ IR.mkNode IR.Literal [t,mkStringValue s] []
+
+mkDeclaration :: IR.Tree -> IR.Tree -> IR.Tree
+mkDeclaration t v = assert (Q.isType t) $ IR.mkNode IR.Declaration [t,v] []
+
+mkCall :: IR.Tree -> IR.Tree -> [IR.Tree] -> IR.Tree
+mkCall t f argDecls = IR.mkNode IR.CallExpr (t:f:argDecls) []
+
+mkIdentifier :: String -> IR.Tree
+mkIdentifier s = mkLiteral s Lang.identifierType
+
+
+-- invocations of built-ins --
+
 deref :: IR.Tree -> IR.Tree
-deref t = IR.mkNode IR.CallExpr [resType,Lang.refDeref,decl] []
+deref t = mkCall resType Lang.refDeref [decl]
   where
     resType = fromJust $ getReferencedType refType
     
     refType = IR.goDown 0 t
     
-    decl = IR.mkNode IR.Declaration [refType,t] []
+    decl = mkDeclaration refType t
+
+
+refMember :: IR.Tree -> String -> IR.Tree
+refMember t f = mkCall some_ref_type Lang.hsRefMemberAccess $ wrapSomeDecl <$> [t,mkIdentifier f]
+  where
+    wrapSomeDecl e = mkDeclaration some_type e
+
+
+-- utilities --
+
+some_type     = Lang.parseType "some_type"
+some_ref_type = Lang.parseType "ref<some_type>"
+
+
