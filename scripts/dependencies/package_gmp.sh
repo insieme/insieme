@@ -16,3 +16,12 @@ pkg_configure() {
 pkg_check() {
 	make check
 }
+
+pkg_is_globally_installed() {
+	cat > libgmp10-test.c <<EOF
+int main() { __gmpf_cmp_z(); }
+EOF
+	cc -o /dev/null libgmp10-test.c -lgmp  2>/dev/null
+	RV=$?
+	return $RV
+}

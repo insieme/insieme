@@ -23,13 +23,16 @@ resolve_dependencies_for_pkg() {
 }
 
 install_pkg() {
-	bash - <<-EOF
+	(
 		set -e
 
 		source "$INSTALLER_DIR/defaults.sh"
 		source "$INSTALLER_DIR/package_$1.sh"
 
-		mkdir -p \$PREFIX
+		mkdir -p $PREFIX
+
+		PKG_TEMP=$(mktemp -d)
+		pushd $PKG_TEMP
 
 		pkg_is_globally_installed && loc=globally
 		pkg_is_locally_installed && loc=locally
@@ -38,43 +41,40 @@ install_pkg() {
 			exit 0
 		fi
 
-		PKG_TEMP=\$(mktemp -d)
-		pushd \$PKG_TEMP
-
-		echo "####   Downloading \$PACKAGE   ####"
+		echo "####   Downloading $PACKAGE   ####"
 		pkg_download
 
-		echo "####   Extracting  \$PACKAGE   ####"
+		echo "####   Extracting  $PACKAGE   ####"
 		pkg_extract
 
-		pushd \$PACKAGE
+		pushd $PACKAGE
 
-		echo "####   Preparing   \$PACKAGE   ####"
+		echo "####   Preparing   $PACKAGE   ####"
 		pkg_prepare
 
-		echo "####   Configuring \$PACKAGE   ####"
+		echo "####   Configuring $PACKAGE   ####"
 		pkg_configure
 
-		echo "####   Building    \$PACKAGE   ####"
+		echo "####   Building    $PACKAGE   ####"
 		pkg_build
 
-		echo "####   Checking    \$PACKAGE   ####"
+		echo "####   Checking    $PACKAGE   ####"
 		pkg_check
 
-		echo "####   Installing  \$PACKAGE   ####"
+		echo "####   Installing  $PACKAGE   ####"
 		pkg_install
 
 		popd
 
 		pkg_install_done
 
-		echo "####   Cleaning    \$PACKAGE   ####"
+		echo "####   Cleaning    $PACKAGE   ####"
 		pkg_cleanup
 
 		popd
 
-		rmdir \$PKG_TEMP
-	EOF
+		rmdir $PKG_TEMP
+	)
 }
 
 if [[ $# -eq 0 ]]; then

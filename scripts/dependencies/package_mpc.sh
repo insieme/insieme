@@ -23,3 +23,16 @@ pkg_configure() {
 pkg_check() {
 	make check
 }
+
+pkg_is_globally_installed() {
+	cat > mpc-test.c <<EOF
+#include <mpc.h>
+#if MPC_VERSION < MPC_VERSION_NUM(0,8,0)
+choke me
+#endif
+int main() { return 0; }
+EOF
+	cc -o /dev/null mpc-test.c 2>/dev/null
+	RV=$?
+	return $RV
+}

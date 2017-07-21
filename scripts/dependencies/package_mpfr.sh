@@ -20,3 +20,16 @@ pkg_configure() {
 pkg_check() {
 	make check
 }
+
+pkg_is_globally_installed() {
+	cat > mpfr-test.c <<EOF
+#include <mpfr.h>
+#if MPFR_VERSION < MPFR_VERSION_NUM($(printf "$VERSION" | tr . ,))
+choke me
+#endif
+int main() { return 0; }
+EOF
+	cc -o /dev/null mpfr-test.c 2>/dev/null
+	RV=$?
+	return $RV
+}
