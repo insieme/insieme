@@ -77,4 +77,10 @@ if(BUILD_DOCS)
 	)
 endif()
 
+add_custom_target(clean_insieme_hat
+	COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_CURRENT_BINARY_DIR}/libinsieme-hat.so"
+	COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle/"
+	COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/cabal-home/.cabal"
+)
+
 set(insieme_hat ${CMAKE_CURRENT_BINARY_DIR}/libinsieme-hat.so PARENT_SCOPE)
