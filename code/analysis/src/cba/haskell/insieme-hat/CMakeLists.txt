@@ -21,7 +21,7 @@ set(cabal_file ${CMAKE_CURRENT_SOURCE_DIR}/insieme-hat.cabal)
 
 ## Paths to Haskell packages to include in the cabal.project file.
 set(HAT_PACKAGE_PATHS "${CMAKE_CURRENT_SOURCE_DIR} ${HAT_PACKAGE_PATHS}")
-configure_file(insieme-hat.project.in insieme-hat.project)
+configure_file(cabal.project.in cabal.project)
 
 string (REPLACE ";" " " haskell_env_cmd "${haskell_env}")
 configure_file(haskell-env.sh.in ${PROJECT_BINARY_DIR}/haskell-env.sh)
@@ -33,9 +33,9 @@ if(ANALYSIS_HASKELL_PROFILING)
 	# install dependencies and build package
 	COMMAND ${cabal} update
 	# -j1 because of cabal#4144
-	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/insieme-hat.project -v1 --enable-profiling -fprofiling
+	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 --enable-profiling -fprofiling
 
-	DEPENDS ${insieme_hat_srcs} scripts/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}/insieme-hat.project
+	DEPENDS ${insieme_hat_srcs} scripts/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}/cabal.project
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	COMMENT "Building Insieme HAT (with profiling)"
 	)
@@ -46,11 +46,11 @@ else()
 	# install dependencies and build package
 	COMMAND ${cabal} update
 	# -j1 because of cabal#4144
-	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/insieme-hat.project -v1 --enable-tests
+	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 --enable-tests
 	# copy library to binary dir
 	COMMAND ${runhaskell} scripts/copyLib.hs ${cabal_file} "%comp:insieme-hat" ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}
 
-	DEPENDS ${insieme_hat_srcs} scripts/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}/insieme-hat.project
+	DEPENDS ${insieme_hat_srcs} scripts/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}/cabal.project
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	COMMENT "Building Insieme HAT"
 )
