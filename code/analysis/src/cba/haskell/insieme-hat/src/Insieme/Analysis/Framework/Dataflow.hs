@@ -232,8 +232,8 @@ dataflowValue addr analysis ops = case getNode addr of
 
                         uncoveredLiterals = filter f $ BSet.toList $ targets
                             where
+                                f c | isCtorOrDtor c   = False
                                 f (Callable.Literal a) = not $ any (\h -> covers h a) extOps
-                                f c | isCtorOrDtor c     = False
                                 f _                    = False
 
                         hasUnknownTarget = (BSet.isUniverse targets) || ((not . null) uncoveredLiterals)
@@ -344,7 +344,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
     -- add support for predefined operator handlers --
 
-    extOps = readHandler : tupleMemberAccessHandler : ops
+    extOps = readHandler : tupleMemberAccessHandler : instantiateHandler : ops
 
     -- support the ref_deref operation (read)
 
@@ -413,3 +413,17 @@ dataflowValue addr analysis ops = case getNode addr of
             indexValueVar = Arithmetic.arithmeticValue $ goDown 3 addr
 
             tupleValueVar = varGen $ goDown 1 $ goDown 2 addr
+
+
+    -- support the instantiate operator (specialization of a generic values and functions)
+
+    instantiateHandler = OperatorHandler cov dep val
+        where
+            cov a = isBuiltin a "instantiate"
+
+            dep _ _ = [Solver.toVar valueVar]
+
+            val _ a = Solver.get a valueVar
+
+            valueVar = varGen $ goDown 1 $ goDown 3 addr
+        
