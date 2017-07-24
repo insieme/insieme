@@ -254,11 +254,18 @@ namespace conversion {
 			auto methodConversionResult = converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields());
 			if(mem->isVirtual() && mem->isPure()) {
 				pvMembers.push_back(builder.pureVirtualMemberFunction(methodConversionResult.memberFunction->getName(), methodConversionResult.literal->getType().as<core::FunctionTypePtr>()));
-			} else if(llvm::dyn_cast<clang::CXXConstructorDecl>(mem)) {
+
+			} else if(auto ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(mem)) {
 				recordMembers.constructors.push_back(methodConversionResult);
+				// if we just converted the default constructor, but it has (defaulted) arguments
+				if(ctorDecl->isDefaultConstructor() && ctorDecl->getNumParams() != 0) {
+					recordMembers.constructors.push_back(utils::createDefaultCtorFromDefaultCtorWithDefaultParams(converter, ctorDecl, methodConversionResult));
+				}
+
 			} else if(llvm::dyn_cast<clang::CXXDestructorDecl>(mem)) {
 				recordMembers.destructor = methodConversionResult;
 				destructorVirtual = mem->isVirtual();
+
 			} else {
 				recordMembers.memberFunctions.push_back(methodConversionResult);
 			}
