@@ -40,6 +40,7 @@
 #include "insieme/frontend/converter.h"
 #include "insieme/frontend/state/function_manager.h"
 
+#include "insieme/core/analysis/default_delete_member_semantics.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir.h"
@@ -230,6 +231,34 @@ namespace utils {
 		return (constDecl && (constDecl->isDefaultConstructor() || constDecl->isCopyOrMoveConstructor()))
 				|| dtorDecl
 				|| (methDecl && (methDecl->isCopyAssignmentOperator() || methDecl->isMoveAssignmentOperator()));
+	}
+
+	core::analysis::MemberProperties createDefaultCtorFromDefaultCtorWithDefaultParams(conversion::Converter& converter,
+	                                                                                   const clang::CXXConstructorDecl* ctorDecl,
+	                                                                                   const core::analysis::MemberProperties& defaultCtorWithParams) {
+		core::IRBuilder builder(defaultCtorWithParams.literal.getNodeManager());
+
+		// get necessary stuff
+		auto thisType = getThisType(converter, ctorDecl);
+		auto ctorType = builder.getDefaultConstructorType(thisType);
+		const auto& thisVariable = defaultCtorWithParams.lambda->getParameterList()[0];
+
+		// generate the body, which only contiains a call to the other constructor
+		core::ExpressionList args;
+		// first pass the this parameter
+		args.push_back(builder.deref(thisVariable));
+		// and then append all the constructor argument default values
+		for(unsigned index = 0; index < ctorDecl->getNumParams(); ++index) {
+			args.push_back(converter.convertCxxArgExpr(ctorDecl->getParamDecl(index)->getDefaultArg(),
+			                                           defaultCtorWithParams.lambda->getParameterList()[index + 1]->getType()));
+		}
+		auto body = builder.callExpr(defaultCtorWithParams.literal, args);
+
+		// build result
+		core::analysis::MemberProperties res;
+		res.literal = builder.getLiteralForConstructor(ctorType);
+		res.lambda = builder.lambdaExpr(ctorType, toVector(thisVariable), builder.compoundStmt(body));
+		return res;
 	}
 
 } // end namespace utils

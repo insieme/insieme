@@ -37,11 +37,18 @@
  */
 #pragma once
 
+
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/frontend/clang.h"
 
 namespace insieme {
+namespace core {
+namespace analysis {
+	struct MemberProperties;
+}
+}
+
 namespace frontend {
 
 namespace conversion {
@@ -101,6 +108,12 @@ namespace utils {
 	/// Returns whether the passed CXXMethodDecl is one of the six default constructs of a class
 	///
 	bool isDefaultClassMember(const clang::CXXMethodDecl* methDecl);
+
+	/// Creates a default constructor without parameters which calls the passed one with the default values correctly set
+	///
+	core::analysis::MemberProperties createDefaultCtorFromDefaultCtorWithDefaultParams(conversion::Converter& converter,
+	                                                                                   const clang::CXXConstructorDecl* ctorDecl,
+	                                                                                   const core::analysis::MemberProperties& defaultCtorWithParams);
 
 } // end namespace utils
 } // end namespace frontend
