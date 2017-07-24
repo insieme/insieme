@@ -58,6 +58,7 @@
 #include "insieme/core/printer/error_printer.h"
 
 #include "insieme/utils/config.h"
+#include "insieme/utils/input_test_utils.h"
 #include "insieme/utils/gtest_utils.h"
 #include "insieme/utils/name_mangling.h"
 
@@ -444,52 +445,8 @@ namespace cba {
 		test(GetParam());
 	}
 
-	namespace {
-
-		void collectFiles(const fs::path& dir, const std::string& prefix, std::vector<string>& res) {
-
-			fs::path root(dir);
-			assert_true(fs::is_directory(root));
-
-			for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
-				fs::path file = it->path();
-				// collect c files
-				auto ext = file.extension().string();
-				if (ext == ".c" || ext == ".cpp") {
-					res.push_back(prefix + file.filename().string());
-				}
-				// collect files recursively
-				if (fs::is_directory(file)) {
-					const auto& name = file.filename().string();
-					if (name != "_disabled") {
-						collectFiles(file, prefix + name + "/", res);
-					}
-				}
-			}
-
-		}
-
-	}
-
-	/*
-	 * Generate a list of configurations for the tests.
-	 * This is a cross-product of the cba_tests files and the Datalog/Haskell backends
-	 */
-	vector<std::string> getFilenames() {
-		vector<string> filenames;
-
-		// collect input files
-		collectFiles(fs::path(ROOT_DIR), "", filenames);
-
-		// sort files
-		std::sort(filenames.begin(), filenames.end());
-
-		// done
-		return filenames;
-	}
-
 	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(InputFileChecks, CBA_Inputs_Test, ::testing::ValuesIn(getFilenames()), TestCaseNamePrinter());
+	INSTANTIATE_TEST_CASE_P(InputFileChecks, CBA_Inputs_Test, ::testing::ValuesIn(utils::getInputTestFileNames(ROOT_DIR)), TestCaseNamePrinter());
 
 } // end namespace cba
 } // end namespace analysis
