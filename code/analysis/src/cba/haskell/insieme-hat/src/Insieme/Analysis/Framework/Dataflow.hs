@@ -425,5 +425,5 @@ dataflowValue addr analysis ops = case getNode addr of
 
             val _ a = Solver.get a valueVar
 
-            valueVar = varGen $ goDown 1 $ goDown 3 addr
+            valueVar = varGen $ goDown 1 $ goDown 2 addr
         
