@@ -98,9 +98,9 @@ dataPathValue addr = dataflowValue addr analysis ops
       where
         cov a = isBuiltin a "dp_root"
 
-        dep _ a = []
+        dep _ _ = []
 
-        val _ a = compose $ BSet.singleton root
+        val _ _ = compose $ BSet.singleton root
 
 
     -- the handler for the member access path constructore --
@@ -108,7 +108,7 @@ dataPathValue addr = dataflowValue addr analysis ops
       where
         cov a = isBuiltin a "dp_member"
 
-        dep _ a = (Solver.toVar nestedPathVar) : (Solver.toVar fieldNameVar) : []
+        dep _ _ = (Solver.toVar nestedPathVar) : (Solver.toVar fieldNameVar) : []
 
         val _ a = compose $ combine (paths a) fieldNames
             where
@@ -123,7 +123,7 @@ dataPathValue addr = dataflowValue addr analysis ops
       where
         cov a = any (isBuiltin a) ["dp_element","dp_component"]
 
-        dep _ a = (Solver.toVar nestedPathVar) : (Solver.toVar indexVar) : []
+        dep _ _ = (Solver.toVar nestedPathVar) : (Solver.toVar indexVar) : []
 
         val _ a = compose $ combine (paths a) indexes
             where

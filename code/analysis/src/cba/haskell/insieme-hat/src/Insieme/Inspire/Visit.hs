@@ -63,7 +63,7 @@ data Pruning = NoPrune       -- ^ Continue descending into child nodes
 
 -- | Collect all nodes of the given tree, matching the given predicate.
 collectAll :: (IR.Tree -> Bool) -> NodeAddress -> [NodeAddress]
-collectAll pred root = collectAllPrune pred (\_ -> NoPrune ) root
+collectAll p root = collectAllPrune p (const NoPrune) root
 
 -- | Like 'collectAll' but allows you to prune the search space.
 collectAllPrune :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> NodeAddress -> [NodeAddress]
@@ -80,7 +80,7 @@ collectAllPrune p pruning root = evalState (go root) IntMap.empty
                       r <- res
                       modify $ IntMap.insert key r
                       res
-          Nothing -> 
+          Nothing ->
               res
 
       where
@@ -91,9 +91,9 @@ collectAllPrune p pruning root = evalState (go root) IntMap.empty
               NoPrune -> mapM go (crop <$> getChildren addr)
               _       -> return []
 
-        grow lists = (zipWith go) [ goDown i addr | i <- [0..] ] lists
+        grow lists = (zipWith go') [ goDown i addr | i <- [0..] ] lists
             where
-                go head tails = append head <$> tails
+                go' x xs = append x <$> xs
 
         addAddr xs = maybeToList naddr ++ xs
             where
@@ -108,7 +108,7 @@ collectAddr :: IR.NodeType -> [IR.NodeType -> Bool] -> NodeAddress -> [NodeAddre
 collectAddr t fs = collectAllPrune p pruning
   where
     p = (==t) . IR.getNodeType
-    pruning t = if any (\f -> f $ IR.getNodeType t) fs then PruneHere else NoPrune
+    pruning n = if any (\f -> f $ IR.getNodeType n) fs then PruneHere else NoPrune
 
 -- | Fold the given 'IR.Tree'. The accumulator function takes the subtree and
 -- the address of this subtree in the base tree.
@@ -152,12 +152,12 @@ foldAddressPrune collect prune addr = visit addr mempty
 
 -- | Find declaration of given variable.
 findDecl :: NodeAddress -> Maybe NodeAddress
-findDecl start = findDecl start
+findDecl start = findDecl' start
   where
     org = getNode start
 
-    findDecl :: NodeAddress -> Maybe NodeAddress
-    findDecl addr = case getNode addr of
+    findDecl' :: NodeAddress -> Maybe NodeAddress
+    findDecl' addr = case getNode addr of
         IR.Node IR.Lambda _ -> lambda addr
         _ -> parameter addr <|> declstmt addr <|> forstmt addr   <|>
              bindexpr addr  <|> compstmt addr <|> nextlevel addr
@@ -192,8 +192,8 @@ findDecl start = findDecl start
     compstmt :: NodeAddress -> Maybe NodeAddress
     compstmt addr = getNode <$> getParent addr >>= \case
         IR.Node IR.CompoundStmt _ | getIndex addr == 0 -> Nothing
-        IR.Node IR.CompoundStmt _ -> findDecl $ goLeft addr
+        IR.Node IR.CompoundStmt _ -> findDecl' $ goLeft addr
         _ -> Nothing
 
     nextlevel :: NodeAddress -> Maybe NodeAddress
-    nextlevel addr = getParent addr >>= findDecl
+    nextlevel addr = getParent addr >>= findDecl'

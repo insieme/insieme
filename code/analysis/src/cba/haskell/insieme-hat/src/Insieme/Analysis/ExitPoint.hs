@@ -113,7 +113,7 @@ exitPoints addr = case getNodeType addr of
 
             returns = collectReturns addr
 
-            getReturnReachVars a = map (\a -> Reachable.reachableIn a) returns
+            getReturnReachVars _ = map Reachable.reachableIn returns
 
             body = (goDown 2 addr)
 

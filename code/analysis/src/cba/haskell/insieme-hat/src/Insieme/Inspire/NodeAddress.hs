@@ -82,7 +82,6 @@ module Insieme.Inspire.NodeAddress (
 ) where
 
 import Control.DeepSeq
-import Data.Function (on)
 import Data.List (foldl',isSuffixOf)
 import Data.Maybe
 import Debug.Trace
@@ -103,22 +102,17 @@ data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
   deriving (Generic, NFData)
 
 instance Eq NodeAddress where
-    x == y = nodeID x == nodeID y
+    x == y = getNode x == getNode y
              && getPathReversed x == getPathReversed y
-             && rootID x == rootID y
-      where
-        nodeID = IR.getID . getNode
-        rootID = IR.getID . getRoot
+             && getRoot x == getRoot y
 
 instance Ord NodeAddress where
     compare x y = r1 `thenCompare` r2 `thenCompare` r3
         where
-            r1 = compare (nodeID x) (nodeID y)
+            r1 = compare (getNode x) (getNode y)
             r2 = compare (getPathReversed x) (getPathReversed y)
-            r3 = compare (rootID x) (rootID y)
-
-            nodeID = IR.getID . getNode
-            rootID = IR.getID . getRoot
+            r3 = compare (getRoot x) (getRoot y)
+            
 
 instance Show NodeAddress where
     show = prettyShow
@@ -177,8 +171,8 @@ a `isChildOf` b = getRoot a == getRoot b && (getPathReversed b `isSuffixOf` getP
 -- respective child.
 goRel :: [Int] -> NodeAddress -> NodeAddress
 goRel []     = id
-goRel (i:is) | i <  0 = goRel is . last . take (1-i) . iterate goUp
-             | i >= 0 = goRel is . goDown i
+goRel (i:is) | i < 0     = goRel is . last . take (1-i) . iterate goUp
+             | otherwise = goRel is . goDown i
 
 goUp :: NodeAddress -> NodeAddress
 goUp na | isRoot na = trace "No parent for Root" undefined

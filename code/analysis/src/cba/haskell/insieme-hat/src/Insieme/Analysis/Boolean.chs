@@ -168,7 +168,7 @@ booleanValue addr =
     lhs = arithmeticValue $ goDown 2 addr
     rhs = arithmeticValue $ goDown 3 addr
 
-    dep _ a = Solver.toVar <$> [lhs, rhs]
+    dep _ _ = Solver.toVar <$> [lhs, rhs]
 
     val op _ a = combine (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
       where

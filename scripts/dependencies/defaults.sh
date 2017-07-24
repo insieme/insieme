@@ -16,8 +16,12 @@ export LDLAGS="-mtune=native -O3"
 # parallel build
 export SLOTS="${SLOTS:-$(nproc)}"
 
-pkg_is_installed() {
+pkg_is_locally_installed() {
 	[[ -f "$PREFIX/$PACKAGE/.installed" ]]
+}
+
+pkg_is_globally_installed() {
+	return 1
 }
 
 pkg_download() {

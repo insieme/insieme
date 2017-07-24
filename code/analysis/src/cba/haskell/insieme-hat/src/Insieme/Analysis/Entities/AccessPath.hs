@@ -46,7 +46,7 @@ module Insieme.Analysis.Entities.AccessPath (
     parameter,
     global,
     local,
-    
+
     append,
     deref,
     extend
@@ -54,11 +54,9 @@ module Insieme.Analysis.Entities.AccessPath (
 ) where
 
 import Control.DeepSeq
-import Data.List
 import GHC.Generics (Generic)
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import qualified Insieme.Inspire as IR
-
 
 --
 -- * AccessPaths
@@ -71,12 +69,12 @@ data BaseVar =
 
 instance Show BaseVar where
     show (Parameter i) = "p" ++ (show i)
-    show (Global n)    = show n 
+    show (Global n)    = show n
 
-data AccessPath i = 
+data AccessPath i =
           AccessPath BaseVar [DP.DataPath i]
         | Local
-        | Unknown 
+        | Unknown
     deriving (Eq,Ord,Generic,NFData)
 
 instance (Show i) => Show (AccessPath i) where
@@ -111,12 +109,12 @@ append _ DP.Invalid = Unknown
 append (AccessPath b (d:ds)) p = case DP.append d p of
     DP.Invalid -> Unknown
     r@_        -> AccessPath b (r:ds)
- 
+
 
 deref :: AccessPath i -> AccessPath i
 deref  Unknown          = Unknown
 deref  Local            = Local
-deref (AccessPath b ds) = AccessPath b (DP.Root:ds) 
+deref (AccessPath b ds) = AccessPath b (DP.Root:ds)
 
 
 extend :: AccessPath i -> AccessPath i -> AccessPath i
@@ -125,4 +123,3 @@ extend _ Unknown = Unknown
 extend Local   _ = Local
 extend _   Local = Local
 extend (AccessPath v a) (AccessPath _ b) = AccessPath v (a ++ (tail b))
- 

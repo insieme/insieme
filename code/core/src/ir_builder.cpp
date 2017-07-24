@@ -1194,6 +1194,7 @@ namespace core {
 
 		// get member of addressed type
 		core::TypePtr memberType = tagType->getFieldType(member);
+		assert_true(memberType) << "No member " << member->getValue() << " found in\n" << dumpPretty(structExpr->getType());
 
 		// create access instruction
 		core::ExpressionPtr access = manager.getLangExtension<lang::ReferenceExtension>().getRefMemberAccess();

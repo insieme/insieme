@@ -43,7 +43,6 @@ module Insieme.Inspire.Transform
     ) where
 
 import Insieme.Inspire
-import Control.Monad
 import Control.Monad.State
 import Data.Map (Map)
 import qualified Data.Map as Map

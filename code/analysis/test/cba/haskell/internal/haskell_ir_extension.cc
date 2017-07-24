@@ -35,50 +35,33 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <vector>
-
 #include <gtest/gtest.h>
 
-#include "insieme/utils/string_utils.h"
+#include "insieme/analysis/cba/haskell/internal/haskell_ir_extension.h"
+
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
-namespace utils {
+namespace analysis {
+namespace cba {
+namespace haskell {
+namespace internal {
 
-	class TestCaseNamePrinter {
-	  public:
-		template <class ParamType>
-		std::string operator()(const ::testing::TestParamInfo<ParamType>& info) {
-			return output(info.index, info.param.getName());
-		}
+	using namespace core;
 
-		std::string operator()(const ::testing::TestParamInfo<std::string>& info) {
-			return output(info.index, info.param);
-		}
+	TEST(HaskellExtension, Basic) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
 
-	  private:
-		std::string output(size_t index, std::string name) {
-			std::stringstream out;
+		auto& ext = builder.getExtension<HaskellExtension>();
 
-			// format the index
-			out << format("%03d", index);
+		EXPECT_TRUE(builder.parseExpr("hs_ref_member_access",ext.getDefinedSymbols()));
 
-			// format the name
-			name = name.substr(0, name.find_last_of('.'));
-			out << format("_%-100s", name);
+	}
 
-			// sanitize the resulting string
-			auto res = out.str();
-			std::replace(res.begin(), res.end(), ' ', '_');
-			std::replace(res.begin(), res.end(), '/', '_');
-			std::replace(res.begin(), res.end(), '.', '_');
-			std::replace(res.begin(), res.end(), '-', '_');
-
-			return res;
-		}
-	};
-
-} // end namespace utils
+} // end namespace internal
+} // end namespace haskell
+} // end namespace cba
+} // end namespace analysis
 } // end namespace insieme
+

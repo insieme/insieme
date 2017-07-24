@@ -35,33 +35,33 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Insieme.Analysis.SymbolicValue (
 
     SymbolicValue,
     SymbolicValueSet,
     symbolicValue,
-    
+
     SymbolicValueLattice,
     genericSymbolicValue,
-    
+
+    -- FFI
+    hsSymbolicValues,
+
 ) where
 
+import Data.List (intercalate)
 import Data.Maybe
 import Data.Typeable
 import Foreign
-import Foreign.C.String
 import Foreign.C.Types
-import Insieme.Adapter (CRepPtr,CRepArr,CSetPtr,dumpIrTree,passBoundSet,updateContext)
+import Insieme.Adapter (CRepPtr,CRepArr,CSetPtr,dumpIrTree,passBoundSet,updateContext,pprintTree)
 import Insieme.Analysis.Entities.FieldIndex
-import Insieme.Analysis.Entities.SymbolicFormula
+import Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-import Insieme.Inspire.BinaryDumper (dumpBinaryDump)
 import Insieme.Inspire.Query
-import Insieme.Inspire.Visit (findDecl)
-import Insieme.Utils.ParseInt
 
-import qualified Data.ByteString as BS
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
@@ -69,12 +69,7 @@ import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.Builder as Builder
 import qualified Insieme.Inspire.NodeAddress as Addr
-import qualified Insieme.Utils.Arithmetic as Ar
 import qualified Insieme.Utils.BoundSet as BSet
-import qualified Insieme.Utils.ParseIR as Lang
-
-import Insieme.Analysis.Framework.Dataflow
-
 
 --
 -- * Symbolic Value Lattice
@@ -87,6 +82,9 @@ type SymbolicValueSet = BSet.BoundSet BSet.Bound10 SymbolicValue
 instance Solver.Lattice SymbolicValueSet where
     bot   = BSet.empty
     merge = BSet.union
+    
+    print BSet.Universe = "{-all-}"
+    print set = "{" ++ (intercalate "," $ pprintTree <$> BSet.toList set) ++ "}"  
 
 instance Solver.ExtLattice SymbolicValueSet where
     top   = BSet.Universe
@@ -119,7 +117,7 @@ symbolicValue = genericSymbolicValue analysis
 -- * A generic symbolic value analysis which can be customized
 --
 
-genericSymbolicValue :: (Typeable d) => DataFlowAnalysis d SymbolicValueLattice -> Addr.NodeAddress -> Solver.TypedVar SymbolicValueLattice
+genericSymbolicValue :: (Typeable d) => DataFlowAnalysis d SymbolicValueLattice SimpleFieldIndex -> Addr.NodeAddress -> Solver.TypedVar SymbolicValueLattice
 genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     IR.Literal  -> Solver.mkVariable varId [] (compose $ BSet.singleton $ Addr.getNode addr)
@@ -127,48 +125,53 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
     _ -> dataflowValue addr analysis ops
 
   where
-  
+
     analysis = userDefinedAnalysis {
         freeVariableHandler = freeVariableHandler,
-        initialValueHandler = initialMemoryValue
+        initialValueHandler = initialMemoryValue,
+        excessiveFileAccessHandler = excessiveFileAccessHandler
     }
 
     varId = mkVarIdentifier analysis addr
-    
+
     ops = [ operatorHandler ]
-    
+
     -- a list of symbolic values of the arguments
     argVars = (variableGenerator analysis) <$> ( Addr.goDown 1 ) <$> ( tail . tail $ Addr.getChildren addr )
-    
+
     -- the one operator handler that covers all operators
     operatorHandler = OperatorHandler cov dep val
       where
-        
+
         -- TODO: apply on all builtins, also deriveds
-        cov a = (getNodeType a == IR.Literal) && (not covered)
+        cov a = (getNodeType a == IR.Literal || toCover) && (not toIgnore)
           where
-            covered = any (isBuiltin a) [ "ref_deref", "ref_assign" ]
-      
+            toCover  = any (isBuiltin a) [ "ref_member_access" ]            -- derived builtins to cover
+            toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign" ]      -- literal builtins to ignore
+
         -- if triggered, we will need the symbolic values of all arguments
         dep _ _ = Solver.toVar <$> argVars
-      
-        
+
+
         -- to get the new value, we have to take the cross product of all arguments
         val o a = compose $ BSet.map toCall argCombinations
-          
+
           where
-          
+
             argVals = extract . (Solver.get a) <$> argVars
-            
+
             argCombinations = BSet.cartProductL argVals
-            
+
             toCall args = IR.mkNode IR.CallExpr (resType : trg : decls) []
               where
                 decls = toDecl <$> zip (tail $ tail $ IR.getChildren $ Addr.getNode addr ) args
-                
+
                 toDecl (decl,arg) = IR.mkNode IR.Declaration [IR.goDown 0 decl, arg] []
             
-            trg = Addr.getNode o
+            trg = case getNodeType o of
+                IR.Literal -> Addr.getNode o
+                IR.Lambda  -> Addr.getNode $ Addr.goUpX 3 o
+                nt@_ -> error $ "Unexpected node type: " ++ (show nt) 
             
             resType = IR.goDown 0 $ Addr.getNode addr
 
@@ -180,20 +183,30 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
         var = Solver.mkVariable varId [] val
         val = compose $ BSet.singleton $ Addr.getNode a
 
-            
+
     -- the handler assigning values to pre-existing memory locations (e.g. globals)
-    
-    initialMemoryValue a = 
-        
+
+    initialMemoryValue a =
+
         if isReference lit then compose $ BSet.singleton value else Solver.top
-        
+
       where
 
         lit = Addr.getNode a
-      
-        value = Builder.deref lit
-        
 
+        value = Builder.deref lit
+
+
+    -- the handler processing excessive field accesses
+
+    excessiveFileAccessHandler composedValue (Field field) = res
+      where
+        res = ComposedValue.toComposed $ BSet.map append $ ComposedValue.toValue composedValue
+          where
+            append x = Builder.deref ext
+              where
+                base = child 1 $ child 2 x
+                ext = Builder.refMember base field
 
     -- utilities
 
@@ -211,14 +224,12 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 -- * FFI
 --
 
-foreign export ccall "hat_hs_symbolic_values"
-  hsSymbolicValues :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr SymbolicValue)
-  
-
 foreign import ccall "hat_c_mk_symbolic_value_set"
   mkCSymbolicValueSet :: CRepArr SymbolicValue -> CLLong -> IO (CSetPtr SymbolicValue)
 
-  
+hsSymbolicValues :: StablePtr Ctx.Context
+                 -> StablePtr Addr.NodeAddress
+                 -> IO (CSetPtr SymbolicValue)
 hsSymbolicValues ctx_hs stmt_hs = do
     ctx  <- deRefStablePtr ctx_hs
     stmt <- deRefStablePtr stmt_hs
@@ -227,7 +238,10 @@ hsSymbolicValues ctx_hs stmt_hs = do
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
     passSymbolicValueSet ctx_c $ ComposedValue.toValue res
-    
+
+passSymbolicValueSet :: Ctx.CContext
+                     -> BSet.BoundSet bb SymbolicValue
+                     -> IO (CSetPtr SymbolicValue)
 passSymbolicValueSet ctx s = do
     passBoundSet passSymbolicValue mkCSymbolicValueSet s
   where
@@ -235,5 +249,3 @@ passSymbolicValueSet ctx s = do
     passSymbolicValue :: SymbolicValue -> IO (CRepPtr SymbolicValue)
     passSymbolicValue s = do
         dumpIrTree ctx s
-
-    

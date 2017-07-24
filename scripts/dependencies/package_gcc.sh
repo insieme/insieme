@@ -25,3 +25,14 @@ pkg_configure() {
 		--disable-multilib \
 		--enable-lto
 }
+
+pkg_is_globally_installed() {
+	local currentver
+	currentver="$(gcc -dumpversion)"
+	if [ "$(printf "$VERSION\n$currentver" | sort -V | head -n1)" == "$currentver" ] && [ "$currentver" != "$VERSION" ]
+	then
+        return 1 # not installed
+	else
+		return 0 # is installed
+	fi
+}

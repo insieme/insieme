@@ -981,7 +981,6 @@ namespace analysis {
 			bool isReadOnly(const StatementPtr& stmt, const VariablePtr& var) {
 				// non-ref values are always read-only
 				if(!isRefType(var->getType())) { return true; }
-
 				// get deref token
 				auto deref = var->getNodeManager().getLangExtension<lang::ReferenceExtension>().getRefDeref();
 
@@ -1008,10 +1007,10 @@ namespace analysis {
 					}
 
 					// check whether value is used
-					if(cur.getParentNode()->getNodeType() == NT_CompoundStmt) { return true; }
+					if(cur.getDepth() > 1 && cur.getParentNode()->getNodeType() == NT_CompoundStmt) { return true; }
 
 					// if it is a call to a lambda, check the lambda
-					if(VisitScopes) {
+					if(VisitScopes && cur.getDepth() > 2) {
 						indirectionLevels -= peeledLevels;
 						if(CallExprPtr call = cur.getParentNode(2).isa<CallExprPtr>()) {
 							// check calls to nested functions
@@ -1036,7 +1035,7 @@ namespace analysis {
 					}
 
 					// check whether variable is dereferenced at this location
-					if(peeledLevels == indirectionLevels && !isCallOf(cur.getParentNode(2), deref)) {
+					if(peeledLevels == indirectionLevels && cur.getDepth() > 2 && !isCallOf(cur.getParentNode(2), deref)) {
 						// => it is not, so it is used by reference
 						readOnly = false; // it is no longer read-only
 						return true;      // we can stop the descent here

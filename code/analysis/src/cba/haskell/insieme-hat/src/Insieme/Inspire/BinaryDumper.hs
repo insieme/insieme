@@ -39,7 +39,6 @@
 
 module Insieme.Inspire.BinaryDumper (dumpBinaryDump) where
 
-import Control.Applicative
 import Control.Monad.State.Strict
 import Data.ByteString.Builder
 import Data.Char (ord)
@@ -64,9 +63,6 @@ dumpBinaryDump ir = L.toStrict
                               dumpAddresses ]
 
 -- * Dumping the header
-
-dumpHeader :: Builder
-dumpHeader = mappend magicNr dumpConverters
 
 magicNr :: Builder
 magicNr = word64LE 0x494e5350495245
@@ -116,15 +112,15 @@ data DumpNode = DumpNode IR.NodeType [Int]
   deriving (Eq, Ord, Show)
 
 toDumpNodes :: IR.Tree -> IntMap DumpNode
-toDumpNodes n = IntMap.union baseMap $ IntMap.fromList $ Map.elems map
+toDumpNodes n = IntMap.union baseMap $ IntMap.fromList $ Map.elems nodeMap
   where
-    (rootIndex, map) = runState (toDumpNode n) Map.empty
-    baseMap = IntMap.singleton 0 $ snd $ fromJust $ Map.lookup n map
+    nodeMap = execState (toDumpNode n) Map.empty
+    baseMap = IntMap.singleton 0 $ snd $ fromJust $ Map.lookup n nodeMap
 
 toDumpNode :: IR.Tree -> State (Map IR.Tree (Int, DumpNode)) Int
 toDumpNode n = do
-    map <- get
-    case Map.lookup n map of
+    nodeMap <- get
+    case Map.lookup n nodeMap of
         Just (i, _) -> return i
         Nothing     -> do
             children <- forM (IR.getChildren n) toDumpNode

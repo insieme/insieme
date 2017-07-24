@@ -48,11 +48,13 @@ class (Solver.ExtLattice c, FieldIndex i, Solver.ExtLattice v) => ComposedValue 
 
     toComposed :: v -> c
     toValue    :: c -> v
-    
+
+    isValue    :: c -> Bool
+
     setElement :: DataPath i -> c -> c -> c
     getElement :: DataPath i -> c -> c
-     
+
     composeElements :: [(i,c)] -> c
-    
+
     top :: c
-    
+

@@ -106,12 +106,12 @@ accessPathValue addr = case getNodeType addr of
     allocHandler = OperatorHandler cov noDep val
         where
             cov a = isBuiltin a "ref_alloc"
-            val _ a = compose $ BSet.singleton AP.local
+            val _ _ = compose $ BSet.singleton AP.local
 
     declHandler = OperatorHandler cov noDep val
         where
             cov a = isBuiltin a "ref_decl"
-            val _ a = compose $ BSet.singleton AP.local
+            val _ _ = compose $ BSet.singleton AP.local
 
     refNarrow = OperatorHandler cov subRefDep val
         where
@@ -137,9 +137,9 @@ accessPathValue addr = case getNodeType addr of
             dep _ _ = [Solver.toVar baseAccessPathVar]
             val _ a = Solver.get a baseAccessPathVar            -- TODO: check when this conversion is actually valid
 
-    noDep _ a = []
+    noDep _ _ = []
 
-    subRefDep _ a = [Solver.toVar baseAccessPathVar, Solver.toVar dataPathVar]
+    subRefDep _ _ = [Solver.toVar baseAccessPathVar, Solver.toVar dataPathVar]
 
     baseAccessPathVar   = accessPathValue $ goDown 1 $ goDown 2 addr
     baseAccessPathVal a = ComposedValue.toValue $ Solver.get a baseAccessPathVar
