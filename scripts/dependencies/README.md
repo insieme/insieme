@@ -127,7 +127,7 @@ Environment setup has been tested on a clean Ubuntu 16.04 Server (amd64)
 installation:
 
     $ sudo apt-get update
-    $ sudo apt-get install build-essential m4 pkg-config python ruby unzip valgrind
+    $ sudo apt-get install build-essential m4 pkg-config python ruby unzip valgrind flex bison cmake
     $ ./installer
 
 ## CentOS 6
