@@ -35,50 +35,70 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <vector>
 
-#include <gtest/gtest.h>
+struct Base {};
 
-#include "insieme/utils/string_utils.h"
+struct T1 {
+	int i;
+	int j;
+	T1(int i = 5) : i(i), j(4) {
+		3;
+	}
+};
 
-namespace insieme {
-namespace utils {
+struct T2 : public Base {
+	int i;
+	int j;
+	T2(int i = 5, bool b = false) : i(i), j(4) {
+		3;
+	}
+};
 
-	class TestCaseNamePrinter {
-	  public:
-		template <class ParamType>
-		std::string operator()(const ::testing::TestParamInfo<ParamType>& info) {
-			return output(info.index, info.param.getName());
+int main() {
+
+	// Here we test that the frontend also generates a default ctor without any arguments
+	// This is necessary, since there might be locations in the code where instances get created without any ctor call involved - not even
+	// in the Clang AST (like default construction of member objects, creation of arrays of object types, ...)
+
+	// So what is actually important here is that the generated struct contains a ctor without any parameters, which calls the other one
+
+	#pragma test expect_ir(R"(
+		def struct IMP_Base {
+		};
+		def struct IMP_T2 : [ public IMP_Base ] {
+			i : int<4>;
+			j : int<4>;
+			ctor function (v1 : ref<int<4>,f,f,plain>, v2 : ref<bool,f,f,plain>) {
+				IMP_Base::(ref_parent_cast(this, type_lit(IMP_Base)));
+				<ref<int<4>,f,f,plain>>((this).i) {*v1};
+				<ref<int<4>,f,f,plain>>((this).j) {4};
+				3;
+			}
+			ctor function () {
+				IMP_T2::(this, 5, false);
+			}
+		};
+		def struct IMP_T1 {
+			i : int<4>;
+			j : int<4>;
+			ctor function (v1 : ref<int<4>,f,f,plain>) {
+				<ref<int<4>,f,f,plain>>((this).i) {*v1};
+				<ref<int<4>,f,f,plain>>((this).j) {4};
+				3;
+			}
+			ctor function () {
+				IMP_T1::(this, 5);
+			}
+		};
+		{
+			var ref<IMP_T1,f,f,plain> v0 = IMP_T1::(ref_decl(type_lit(ref<IMP_T1,f,f,plain>)), 5);
+			var ref<IMP_T2,f,f,plain> v1 = IMP_T2::(ref_decl(type_lit(ref<IMP_T2,f,f,plain>)), 5, false);
 		}
+	)")
+	{
+		T1 t1;
+		T2 t2;
+	}
 
-		std::string operator()(const ::testing::TestParamInfo<std::string>& info) {
-			return output(info.index, info.param);
-		}
-
-	  private:
-		std::string output(size_t index, std::string name) {
-			std::stringstream out;
-
-			// format the index
-			out << format("%03d", index);
-
-			// format the name
-			name = name.substr(0, name.find_last_of('.'));
-			out << format("_%-100s", name);
-
-			// sanitize the resulting string
-			auto res = out.str();
-			std::replace(res.begin(), res.end(), ' ', '_');
-			std::replace(res.begin(), res.end(), '/', '_');
-			std::replace(res.begin(), res.end(), '.', '_');
-			std::replace(res.begin(), res.end(), '-', '_');
-
-			return res;
-		}
-	};
-
-} // end namespace utils
-} // end namespace insieme
+	return 0;
+}

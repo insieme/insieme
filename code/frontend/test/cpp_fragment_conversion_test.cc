@@ -60,6 +60,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, DefaultArgs) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args.cpp"); }
 
+	TEST(CppConversionTest, DefaultArgsConstructors) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_args_constructors.cpp"); }
+
 	TEST(CppConversionTest, DefaultDelete) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_delete.cpp"); }
 
 	TEST(CppConversionTest, DefaultConstructorDeclaration) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_constructor_declaration.cpp"); }

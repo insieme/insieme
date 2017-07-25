@@ -44,6 +44,7 @@ module Insieme.Analysis.Framework.PropertySpace.ValueTree (
 ) where
 
 import Control.DeepSeq
+import Data.List (intercalate)
 import Data.Maybe
 import GHC.Generics (Generic)
 import Insieme.Analysis.Entities.DataPath
@@ -81,6 +82,10 @@ instance (FieldIndex i, Solver.ExtLattice a) => ComposedValue (Tree i a) i a whe
     toValue _        = Solver.top
 
 
+    -- test whether something is a value or something composed
+    isValue (Leaf _) = True
+    isValue _        = False
+
     -- build a tree with nested elements
     composeElements l = Node $ Map.fromList l
 
@@ -110,6 +115,13 @@ instance (FieldIndex i, Solver.ExtLattice a) => ComposedValue (Tree i a) i a whe
 instance (FieldIndex i, Solver.Lattice a) => Solver.Lattice (Tree i a) where
     bot   = Empty
     merge = mergeTree
+    
+    -- add pretty print support for trees
+    print (Leaf a)     = Solver.print a
+    print (Node m)     = "{" ++ (intercalate "," ((\(k,v) -> (show k) ++ "=" ++ (Solver.print v)) <$> Map.toList m)) ++ "}"
+    print Empty        = "-empty-"
+    print Inconsistent = "-inconsistent-"
+
 
 
 -- | make every tree instance an extended lattice

@@ -101,11 +101,6 @@ namespace conversion {
 			return meth && !meth->isStatic();
 		}
 
-		core::TypePtr getThisType(Converter& converter, const clang::CXXMethodDecl* methDecl) {
-			auto parentType = converter.convertType(converter.getCompiler().getASTContext().getRecordType(methDecl->getParent()));
-			return frontend::utils::getThisType(methDecl, parentType);
-		}
-
 		core::FunctionTypePtr getFunMethodTypeInternal(Converter& converter, const clang::FunctionDecl* funDecl) {
 			// first get function type
 			auto funType = converter.convertType(funDecl->getType()).as<core::FunctionTypePtr>();
@@ -113,7 +108,7 @@ namespace conversion {
 			const clang::CXXMethodDecl* methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl);
 			if(!isIrMethod(methDecl)) return funType;
 			// now build "this" type
-			auto thisType = getThisType(converter, methDecl);
+			auto thisType = utils::getThisType(converter, methDecl);
 			// add "this" parameter to param list
 			auto paramList = funType->getParameterTypeList();
 			paramList.insert(paramList.begin(), thisType);
@@ -222,7 +217,7 @@ namespace conversion {
 				converter.getVarMan()->setRetType(core::transform::materialize(funType->getReturnType()));
 				// handle implicit "this" for methods
 				if(isIrMethod(funcDecl)) {
-					auto thisType = getThisType(converter, methDecl);
+					auto thisType = utils::getThisType(converter, methDecl);
 					auto thisVar = builder.variable(builder.refType(thisType));
 					params.push_back(thisVar);
 					converter.getVarMan()->setThis(thisVar);
@@ -270,7 +265,7 @@ namespace conversion {
 		if(methDecl->isDefaulted()
 				|| (methDecl->isDeleted() && utils::isDefaultClassMember(methDecl))) {
 			bool defaulted = methDecl->isDefaulted();
-			auto thisType = getThisType(converter, methDecl);
+			auto thisType = utils::getThisType(converter, methDecl);
 			if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) {
 				auto type = builder.getDefaultDestructorType(thisType);
 				ret.literal = builder.getLiteralForDestructor(type);

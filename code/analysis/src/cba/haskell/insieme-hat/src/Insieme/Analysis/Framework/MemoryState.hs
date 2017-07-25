@@ -102,7 +102,7 @@ instance Solver.ExtLattice Definitions where
 data MemoryStateAnalysis a = MemoryStateAnalysis a
     deriving (Typeable)
 
-memoryStateAnalysis :: (Typeable a, Typeable v) => DataFlowAnalysis a v -> Solver.AnalysisIdentifier
+memoryStateAnalysis :: (Typeable a, Typeable v, Typeable i) => DataFlowAnalysis a v i -> Solver.AnalysisIdentifier
 memoryStateAnalysis a = Solver.mkAnalysisIdentifier (MemoryStateAnalysis a) ('M' : (show $ analysisIdentifier a) )
 
 
@@ -112,7 +112,7 @@ memoryStateAnalysis a = Solver.mkAnalysisIdentifier (MemoryStateAnalysis a) ('M'
 
 memoryStateValue :: (ComposedValue.ComposedValue v i a, Typeable d)
          => MemoryStatePoint                            -- ^ the program point and memory location interested in
-         -> DataFlowAnalysis d v                        -- ^ the underlying data flow analysis this memory state analysis is cooperating with
+         -> DataFlowAnalysis d v i                      -- ^ the underlying data flow analysis this memory state analysis is cooperating with
          -> Solver.TypedVar v                           -- ^ the analysis variable representing the requested state
 
 memoryStateValue ms@(MemoryStatePoint (ProgramPoint _ _) ml@(MemoryLocation loc)) analysis = var
@@ -168,7 +168,7 @@ memoryStateValue ms@(MemoryStatePoint (ProgramPoint _ _) ml@(MemoryLocation loc)
 data DefinedValueAnalysis a = DefinedValueAnalysis a
     deriving (Typeable)
 
-definedValueAnalysis :: (Typeable a, Typeable v) => DataFlowAnalysis a v -> Solver.AnalysisIdentifier
+definedValueAnalysis :: (Typeable a, Typeable v, Typeable i) => DataFlowAnalysis a v i -> Solver.AnalysisIdentifier
 definedValueAnalysis a = Solver.mkAnalysisIdentifier (DefinedValueAnalysis a) ( "DV-" ++ (show $ analysisIdentifier a) )
 
 
@@ -179,7 +179,7 @@ definedValueAnalysis a = Solver.mkAnalysisIdentifier (DefinedValueAnalysis a) ( 
 definedValue :: (ComposedValue.ComposedValue v i a, Typeable d)
          => NodeAddress                                 -- ^ the assignment interrested in
          -> MemoryLocation                              -- ^ the memory location interrested in
-         -> DataFlowAnalysis d v                        -- ^ the underlying data flow analysis this defined value analysis is cooperating with
+         -> DataFlowAnalysis d v i                      -- ^ the underlying data flow analysis this defined value analysis is cooperating with
          -> Solver.TypedVar v                           -- ^ the analysis variable representing the requested value
 
 definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of

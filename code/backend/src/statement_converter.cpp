@@ -147,7 +147,7 @@ namespace backend {
 				auto inner = ptr->getInitExprList()[0].isa<core::InitExprPtr>();
 				if(inner && core::lang::isFixedSizedArray(core::analysis::getReferencedType(inner))) {
 					auto innerInit = converter.getStmtConverter().convertExpression(context, inner).as<c_ast::InitializerPtr>();
-					return c_ast::init(innerInit->values);
+					init->values[0] = innerInit->values[0];
 				}
 			}
 

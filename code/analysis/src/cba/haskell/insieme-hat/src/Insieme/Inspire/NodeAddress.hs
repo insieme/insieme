@@ -102,22 +102,17 @@ data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
   deriving (Generic, NFData)
 
 instance Eq NodeAddress where
-    x == y = nodeID x == nodeID y
+    x == y = getNode x == getNode y
              && getPathReversed x == getPathReversed y
-             && rootID x == rootID y
-      where
-        nodeID = IR.getID . getNode
-        rootID = IR.getID . getRoot
+             && getRoot x == getRoot y
 
 instance Ord NodeAddress where
     compare x y = r1 `thenCompare` r2 `thenCompare` r3
         where
-            r1 = compare (nodeID x) (nodeID y)
+            r1 = compare (getNode x) (getNode y)
             r2 = compare (getPathReversed x) (getPathReversed y)
-            r3 = compare (rootID x) (rootID y)
-
-            nodeID = IR.getID . getNode
-            rootID = IR.getID . getRoot
+            r3 = compare (getRoot x) (getRoot y)
+            
 
 instance Show NodeAddress where
     show = prettyShow
@@ -227,9 +222,7 @@ hasEnclosingStatement a = case getNode a of
     _ -> not (isRoot a) && hasEnclosingStatement (fromJust $ getParent a)
 
 isEntryPoint :: NodeAddress -> Bool
-isEntryPoint a = case getNode a of
-    IR.Node IR.CompoundStmt _ -> isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
-    _                       -> isRoot a
+isEntryPoint a = isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
 
 isEntryPointParameter :: NodeAddress -> Bool
 isEntryPointParameter v | (not . isVariable) v = False

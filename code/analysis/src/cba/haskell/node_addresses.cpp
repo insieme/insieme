@@ -44,6 +44,7 @@
 #include <string>
 
 #include "insieme/analysis/cba/common/set.h"
+#include "insieme/analysis/cba/haskell/internal/haskell_ir_extension.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/dump/binary_dump.h"
@@ -77,8 +78,11 @@ extern "C" {
 		auto loaded_tree = dump::binary::loadIR(buffer, ctx_c->getRoot().getNodeManager());
 		assert_true(loaded_tree) << "could not load received data";
 
+		// factor out haskell extension constructs
+		auto cleaned_tree = internal::clean(loaded_tree);
+
 		// Since this function is called by Haskell, `data` is freed in Haskell afterwards.
-		return new NodePtr(loaded_tree);
+		return new NodePtr(cleaned_tree);
 	}
 
 	void hat_c_parse_ir_statement(const char* data, size_t size, char** data_c, size_t* size_c) {
@@ -86,7 +90,9 @@ extern "C" {
 
 		NodeManager mgr;
 		IRBuilder builder(mgr);
-		StatementPtr stmt = builder.parseStmt({data, size});
+		auto& ext = mgr.getLangExtension<internal::HaskellExtension>();
+
+		StatementPtr stmt = builder.parseStmt({data, size},ext.getDefinedSymbols());
 		assert_true(stmt);
 
 		std::stringstream buffer(std::ios_base::out | std::ios_base::in | std::ios_base::binary);
@@ -110,9 +116,9 @@ extern "C" {
 		assert_true(loaded_tree) << "could not load received data";
 
 		auto dump = toString(dumpOneLine(loaded_tree));
-		char* dump_c = (char*) malloc(dump.size());
+		char* dump_c = (char*) malloc(dump.size()+1);
 		assert_true(dump_c);
-		memcpy(dump_c, dump.c_str(), dump.size());
+		memcpy(dump_c, dump.c_str(), dump.size()+1);
 		return dump_c;
 	}
 

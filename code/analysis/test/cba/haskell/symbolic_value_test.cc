@@ -446,6 +446,266 @@ namespace haskell {
 	}
 
 
+	TEST(SymbolicValues, StructMembers) {
+		NodeManager mgr;
+
+		// see whether a simple member access does work
+		EXPECT_EQ(
+			"[S.x]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+
+					lit("S":params).x
+				)"
+			))
+		);
+
+		EXPECT_EQ(
+			"[S.y]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+
+					lit("S":params).y
+				)"
+			))
+		);
+
+		// see whether a access to a ref member does work
+		EXPECT_EQ(
+			"[S.x]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+
+					lit("S":ref<params>).x
+				)"
+			))
+		);
+
+		EXPECT_EQ(
+			"[(*S).x]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+
+					(*lit("S":ref<params>)).x
+				)"
+			))
+		);
+
+		EXPECT_EQ(
+			"[*S.x]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+
+					*(lit("S":ref<params>).x)
+				)"
+			))
+		);
+
+		EXPECT_EQ(
+			"[S.y]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+
+					lit("S":ref<params>).y
+				)"
+			))
+		);
+
+		// also test this in conjunction with function calls
+		EXPECT_EQ(
+			"[S.x]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+					def fun = ( x : params ) -> int<4> {
+						return x.x;
+					};
+
+					fun(lit("S":params))
+				)"
+			))
+		);
+
+		EXPECT_EQ(
+			"[S.x+S.y]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+					def fun = ( x : params ) -> int<4> {
+						return x.x + x.y;
+					};
+
+					fun(lit("S":params))
+				)"
+			))
+		);
+
+		// and as reference - passed by reference
+		EXPECT_EQ(
+			"[*S.x+*S.y]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+					def fun = ( x : ref<params> ) -> int<4> {
+						return *x.x + *x.y;
+					};
+
+					fun(lit("S":ref<params>))
+				)"
+			))
+		);
+
+		// and as reference - passed by value
+		EXPECT_EQ(
+			"[(*S).x+(*S).y]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+					def fun = ( x : params ) -> int<4> {
+						return x.x + x.y;
+					};
+
+					fun(lit("S":ref<params>))
+				)"
+			))
+		);
+
+		// nested struct values
+		EXPECT_EQ(
+			"[S.a.x+S.b.y]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+
+					def struct ext_params {
+						a : params;
+						b : params;
+					};
+
+					lit("S":ext_params).a.x + lit("S":ext_params).b.y 
+				)"
+			))
+		);
+
+		// also test nested structs, passed by reference
+		EXPECT_EQ(
+			"[*S.b.x+*S.a.y]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+
+					def struct ext_params {
+						a : params;
+						b : params;
+					};
+
+					def fun = ( x : ref<ext_params> ) -> int<4> {
+						return *x.b.x + *x.a.y;
+					};
+
+					fun(lit("S":ref<ext_params>))
+				)"
+			))
+		);
+
+		// nested structs, passed by value
+		EXPECT_EQ(
+			"[(*S).b.x+(*S).a.y]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+
+					def struct ext_params {
+						a : params;
+						b : params;
+					};
+
+					def fun = ( x : ext_params ) -> int<4> {
+						return x.b.x + x.a.y;
+					};
+
+					fun(lit("S":ref<ext_params>))
+				)"
+			))
+		);
+
+		// three-times nested
+		EXPECT_EQ(
+			"[(*S).l.b.x+(*S).k.a.y]",
+			toString(getValues(mgr,
+				R"(
+					def struct params {
+						x : int<4>;
+						y : int<4>;
+					};
+
+					def struct ext_params {
+						a : params;
+						b : params;
+					};
+
+					def struct extra_ext_params {
+						k : ext_params;
+						l : ext_params;
+					};
+
+					def fun = ( x : extra_ext_params ) -> int<4> {
+						return x.l.b.x + x.k.a.y;
+					};
+
+					fun(lit("S":ref<extra_ext_params>))
+				)"
+			))
+		);
+
+	}
+
+
 } // end namespace haskell
 } // end namespace cba
 } // end namespace analysis

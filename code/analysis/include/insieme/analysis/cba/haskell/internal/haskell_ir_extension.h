@@ -35,50 +35,53 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <vector>
+#pragma once
 
-#include <gtest/gtest.h>
-
-#include "insieme/utils/string_utils.h"
+#include "insieme/core/lang/extension.h"
 
 namespace insieme {
-namespace utils {
+namespace analysis {
+namespace cba {
+namespace haskell {
+namespace internal {
 
-	class TestCaseNamePrinter {
+
+	// --------------------- Extension ----------------------------
+
+	/**
+	 * An extension covering a list of literals simplifying the generation
+	 * of IR code on the haskell side of analysis.
+	 */
+	class HaskellExtension : public core::lang::Extension {
+
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
+
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		HaskellExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
+
 	  public:
-		template <class ParamType>
-		std::string operator()(const ::testing::TestParamInfo<ParamType>& info) {
-			return output(info.index, info.param.getName());
-		}
 
-		std::string operator()(const ::testing::TestParamInfo<std::string>& info) {
-			return output(info.index, info.param);
-		}
+		/**
+		 * A token representing the stack.
+		 */
+		LANG_EXT_LITERAL(HaskellRefMemberAccess, "hs_ref_member_access", "(ref<'a,'c,'v,'k>, identifier) -> ref<'b,'c,'v, plain>")
 
-	  private:
-		std::string output(size_t index, std::string name) {
-			std::stringstream out;
-
-			// format the index
-			out << format("%03d", index);
-
-			// format the name
-			name = name.substr(0, name.find_last_of('.'));
-			out << format("_%-100s", name);
-
-			// sanitize the resulting string
-			auto res = out.str();
-			std::replace(res.begin(), res.end(), ' ', '_');
-			std::replace(res.begin(), res.end(), '/', '_');
-			std::replace(res.begin(), res.end(), '.', '_');
-			std::replace(res.begin(), res.end(), '-', '_');
-
-			return res;
-		}
 	};
 
-} // end namespace utils
+	/**
+	 * Cleans the given IR code fragment by removing all references
+	 * to IR extensions utilized for simplifying code generation on
+	 * the haskell side of the analysis.
+	 */
+	core::NodePtr clean(const core::NodePtr&);
+
+} // end namespace internal
+} // end namespace haskell
+} // end namespace cba
+} // end namespace analysis
 } // end namespace insieme

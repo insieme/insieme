@@ -35,50 +35,54 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  *
  */
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <vector>
+#include "insieme/analysis/cba/haskell/internal/haskell_ir_extension.h"
 
-#include <gtest/gtest.h>
-
-#include "insieme/utils/string_utils.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
-namespace utils {
+namespace analysis {
+namespace cba {
+namespace haskell {
+namespace internal {
 
-	class TestCaseNamePrinter {
-	  public:
-		template <class ParamType>
-		std::string operator()(const ::testing::TestParamInfo<ParamType>& info) {
-			return output(info.index, info.param.getName());
-		}
+	using namespace core;
 
-		std::string operator()(const ::testing::TestParamInfo<std::string>& info) {
-			return output(info.index, info.param);
-		}
+	/**
+	 * Cleans the given IR code fragment by removing all references
+	 * to IR extensions utilized for simplifying code generation on
+	 * the haskell side of the analysis.
+	 */
+	NodePtr clean(const NodePtr& code) {
 
-	  private:
-		std::string output(size_t index, std::string name) {
-			std::stringstream out;
+		auto& mgr = code->getNodeManager();
+		IRBuilder builder(mgr);
 
-			// format the index
-			out << format("%03d", index);
+		auto& ext = mgr.getLangExtension<HaskellExtension>();
 
-			// format the name
-			name = name.substr(0, name.find_last_of('.'));
-			out << format("_%-100s", name);
+		// transform input code bottom up
 
-			// sanitize the resulting string
-			auto res = out.str();
-			std::replace(res.begin(), res.end(), ' ', '_');
-			std::replace(res.begin(), res.end(), '/', '_');
-			std::replace(res.begin(), res.end(), '.', '_');
-			std::replace(res.begin(), res.end(), '-', '_');
+		return transform::transformBottomUp(code,[&](const NodePtr& node)->NodePtr {
 
-			return res;
-		}
-	};
+			// only interested in calls
+			auto call = node.isa<CallExprPtr>();
+			if (!call) return node;
 
-} // end namespace utils
+			// replace dummy-ref-member-access calls
+			if (ext.isCallOfHaskellRefMemberAccess(node)) {
+				assert_true(call->getArgument(0));
+				assert_true(call->getArgument(1));
+				assert_true(call->getArgument(1).isa<LiteralPtr>());
+				return builder.refMember(call->getArgument(0),call->getArgument(1).as<LiteralPtr>()->getStringValue());
+			}
+
+			// re-type all call expressions (types have to be re-deduced!)
+			return builder.callExpr(call->getFunctionExpr(),call->getArgumentList());
+		});
+	}
+
+} // end namespace internal
+} // end namespace haskell
+} // end namespace cba
+} // end namespace analysis
 } // end namespace insieme

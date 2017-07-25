@@ -286,22 +286,22 @@ namespace lang {
 		/**
 		 * A generic pre-order increment operator.
 		 */
-		LANG_EXT_DERIVED(GenPreInc, "(v : ref<'a,f,'v,'k>)->'a { v=*v+lit(\"1\":'a); return *v; }")
+		LANG_EXT_DERIVED(GenPreInc, "(v : ref<'a,f,'v,'k>)->'a { auto tmp=*v+lit(\"1\":'a); v=tmp; return tmp; }")
 
 		/**
 		 * A generic post-order increment operator.
 		 */
-		LANG_EXT_DERIVED(GenPostInc, "(v : ref<'a,f,'v,'k>)->'a { auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
+		LANG_EXT_DERIVED(GenPostInc, "(v : ref<'a,f,'v,'k>)->'a { auto tmp=*v; v=tmp+lit(\"1\":'a); return tmp; }")
 
 		/**
 		 * A generic pre-order decrement operator.
 		 */
-		LANG_EXT_DERIVED(GenPreDec, "(v : ref<'a,f,'v,'k>)->'a { v=*v-lit(\"1\":'a); return *v; }")
+		LANG_EXT_DERIVED(GenPreDec, "(v : ref<'a,f,'v,'k>)->'a { auto tmp=*v-lit(\"1\":'a); v=tmp; return tmp; }")
 
 		/**
 		 * A generic post-order decrement operator.
 		 */
-		LANG_EXT_DERIVED(GenPostDec, "(v : ref<'a,f,'v,'k>)->'a { auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
+		LANG_EXT_DERIVED(GenPostDec, "(v : ref<'a,f,'v,'k>)->'a { auto tmp=*v; v=tmp-lit(\"1\":'a); return tmp; }")
 
 
 		// -- integer conversion --
