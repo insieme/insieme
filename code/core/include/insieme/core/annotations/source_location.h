@@ -319,6 +319,16 @@ namespace annotations {
 			return *file == *other.file && start == other.start && end == other.end;
 		}
 
+		bool operator<(const Location& other) const {
+			if (getFile() < other.getFile()) return true;
+			if (!(getFile() == other.getFile())) return false;
+
+			if (getStart() < other.getStart()) return true;
+			if (!(getStart() == other.getStart())) return false;
+
+			return getEnd() < other.getEnd();
+		}
+
 		/**
 		 * Makes file locations printable.
 		 */
