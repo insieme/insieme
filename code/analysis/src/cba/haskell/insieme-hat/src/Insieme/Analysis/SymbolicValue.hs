@@ -52,14 +52,15 @@ module Insieme.Analysis.SymbolicValue (
 ) where
 
 import Data.List (intercalate)
-import Data.Maybe
 import Data.Typeable
+import Debug.Trace
 import Foreign
 import Foreign.C.Types
 import Insieme.Adapter (CRepPtr,CRepArr,CSetPtr,dumpIrTree,passBoundSet,updateContext,pprintTree)
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
+import Insieme.Analysis.Reference
 import Insieme.Inspire.Query
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -121,6 +122,20 @@ genericSymbolicValue :: (Typeable d) => DataFlowAnalysis d SymbolicValueLattice 
 genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     IR.Literal  -> Solver.mkVariable varId [] (compose $ BSet.singleton $ Addr.getNode addr)
+    
+    -- introduce implicit materialization into symbolic value
+    IR.Declaration | isMaterializingDeclaration $ Addr.getNode addr -> var
+      where
+        var = Solver.mkVariable varId [con] Solver.bot
+        con = Solver.createConstraint dep val var
+        
+        dep a = [Solver.toVar valueVar]
+        val a = compose $ BSet.map go $ valueVal a
+          where
+            go value = Builder.refTemporaryInit value
+        
+        valueVar = variableGenerator userDefinedAnalysis $ (Addr.goDown 1 addr)
+        valueVal a = extract $ Solver.get a valueVar
 
     _ -> dataflowValue addr analysis ops
 
@@ -146,8 +161,10 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
         -- TODO: apply on all builtins, also deriveds
         cov a = (getNodeType a == IR.Literal || toCover) && (not toIgnore)
           where
-            toCover  = any (isBuiltin a) [ "ref_member_access" ]            -- derived builtins to cover
-            toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign" ]      -- literal builtins to ignore
+            -- derived builtins to cover
+            toCover  = any (isBuiltin a) [ "ref_member_access", "ref_kind_cast" ]
+            -- literal builtins to ignore
+            toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign" ]      
 
         -- if triggered, we will need the symbolic values of all arguments
         dep _ _ = Solver.toVar <$> argVars

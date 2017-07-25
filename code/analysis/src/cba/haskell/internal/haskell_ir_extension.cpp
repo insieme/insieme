@@ -54,7 +54,6 @@ namespace internal {
 	 * the haskell side of the analysis.
 	 */
 	NodePtr clean(const NodePtr& code) {
-
 		auto& mgr = code->getNodeManager();
 		IRBuilder builder(mgr);
 

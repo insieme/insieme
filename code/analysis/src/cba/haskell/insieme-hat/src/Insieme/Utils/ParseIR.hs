@@ -81,6 +81,9 @@ refDeref = parseExpr "ref_deref"
 refAssign :: IR.Tree
 refAssign = parseExpr "ref_assign"
 
+refTempInit :: IR.Tree
+refTempInit = parseExpr "ref_temp_init"
+
 -- Haskell extension constructs --
 
 hsRefMemberAccess :: IR.Tree

@@ -39,7 +39,8 @@
 
 module Insieme.Inspire.Builder (
     deref,
-    refMember
+    refMember,
+    refTemporaryInit
 ) where
 
 import Control.Exception.Base
@@ -86,6 +87,10 @@ refMember :: IR.Tree -> String -> IR.Tree
 refMember t f = mkCall some_ref_type Lang.hsRefMemberAccess $ wrapSomeDecl <$> [t,mkIdentifier f]
   where
     wrapSomeDecl e = mkDeclaration some_type e
+
+
+refTemporaryInit :: IR.Tree -> IR.Tree
+refTemporaryInit e = mkCall some_ref_type Lang.refTempInit [mkDeclaration some_type e]
 
 
 -- utilities --
