@@ -68,6 +68,8 @@ Insieme is written in C++11 and relies on several third-party libraries:
 [PAPI]: <http://icl.cs.utk.edu/papi/>
 [hwloc]: <http://www.open-mpi.org/projects/hwloc/>
 [valgrind]: <http://valgrind.org/>
+[GHC]: <https://www.haskell.org/ghc/>
+[cabal]: <https://www.haskell.org/cabal/>
 
 While `PREFIX` takes precedence, the environment variable `THIRD_PARTY_LIBS` is
 also considered.
@@ -153,10 +155,10 @@ with newly installed GCC.
 
 Some packages like Ruby and Valgrind are not installed by default since most
 distributions have an up-to-date version in their repository. If this is not
-the case, the provided installer can be used to install an more recent version
+the case, the provided installer can be used to install a more recent version
 which will work for Insieme.
 
 Adjust your environment variables as needed, for example:
 
-    export PATH="$INSIEME_SRC/third_party/ruby/bin:$PATH"
-    export PATH="$INSIEME_SRC/third_party/valgrind/bin:$PATH"
+    export PATH="$BUILD_DIR/third_party/ruby/bin:$PATH"
+    export PATH="$BUILD_DIR/third_party/valgrind/bin:$PATH"
