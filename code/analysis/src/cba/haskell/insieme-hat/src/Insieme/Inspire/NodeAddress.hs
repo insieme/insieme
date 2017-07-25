@@ -222,9 +222,7 @@ hasEnclosingStatement a = case getNode a of
     _ -> not (isRoot a) && hasEnclosingStatement (fromJust $ getParent a)
 
 isEntryPoint :: NodeAddress -> Bool
-isEntryPoint a = case getNode a of
-    IR.Node IR.CompoundStmt _ -> isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
-    _                       -> isRoot a
+isEntryPoint a = isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
 
 isEntryPointParameter :: NodeAddress -> Bool
 isEntryPointParameter v | (not . isVariable) v = False
