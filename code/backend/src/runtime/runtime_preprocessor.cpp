@@ -561,11 +561,6 @@ namespace runtime {
 
 		virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
-			// skip types
-			if(ptr->getNodeCategory() == core::NC_Type) {
-				return ptr; // don't touch types
-			}
-
 			// start by processing the child nodes (bottom up)
 			core::NodePtr res = ptr->substitute(manager, *this);
 

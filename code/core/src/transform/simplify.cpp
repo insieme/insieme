@@ -48,6 +48,7 @@
 
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -303,6 +304,9 @@ namespace transform {
 					res = simplifyCompound(res);
 					res = simplifyITE(res);
 				}
+
+				// migrate migratable annotation to simplified replacement of each node
+				if(res != ptr) transform::utils::migrateAnnotations(ptr, res);
 
 				// no more modifications possible => done
 				return res;
