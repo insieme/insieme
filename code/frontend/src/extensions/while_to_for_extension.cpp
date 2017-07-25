@@ -56,6 +56,7 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/simplify.h"
 
 /// DELETEME
 #include "insieme/frontend/omp/omp_annotation.h"
@@ -126,7 +127,7 @@ namespace extensions {
 			auto call = operation.as<core::CallExprPtr>();
 			if(!call) return invalid;
 			auto callee = call->getFunctionExpr();
-			if(callee == fMod.getCStyleAssignment()) {
+			if(callee == fMod.getCStyleAssignment() || callee == fMod.getCxxStyleAssignment()) {
 				auto lhs = call->getArgument(0);
 				if(lhs != var) return invalid;
 				return std::make_pair(true, call->getArgument(1));
@@ -173,7 +174,22 @@ namespace extensions {
 
 			return invalid;
 		}
-	}
+
+		core::NodePtr removeNoopsFromCompound(const core::NodePtr& ptr) {
+			auto comp = ptr.isa<core::CompoundStmtPtr>();
+			if(!comp) return ptr;
+
+			core::IRBuilder builder(ptr->getNodeManager());
+			core::StatementList newStmts;
+			for(const auto& stmt : comp->getStatements()) {
+				if(stmt != builder.getNoOp()) newStmts.push_back(stmt);
+			}
+			auto newCompound = builder.compoundStmt(newStmts);
+			core::transform::utils::migrateAnnotations(comp, newCompound);
+			return newCompound;
+		}
+
+	} // anon namespace
 
 	bool isUsedAfterLoop(const core::StatementList& stmts, const core::WhileStmtPtr& whileStmt, const core::NodePtr& predecessor,
 		                 const core::VariablePtr& cvar) {
@@ -226,7 +242,7 @@ namespace extensions {
 
 				VLOG(1) << "======= START WHILE TO FOR ===========\n" << dumpColor(match.getRoot().getAddressedNode());
 
-				// check if body contains flow alterating stmts (break or return. continue is allowed.)
+				// check if body contains flow altering stmts (break or return. continue is allowed.)
 				bool flowAlteration = core::analysis::hasFreeBreakStatement(body) || core::analysis::hasFreeReturnStatement(body);
 				VLOG(1) << "--- flow alteration: " << flowAlteration << "\n";
 				if(flowAlteration) return original;
@@ -252,8 +268,8 @@ namespace extensions {
 							litAccess = true;;
 						}
 				});
-				VLOG(1) << "--- used literals:\n " << litAccess << "\n";
-				if (litAccess) return original;
+				VLOG(1) << "--- used literals in condition:\n " << litAccess << "\n";
+				if(litAccess) return original;
 
 				if(cvars.size() > 1 || cvars.size() == 0) return original;
 
@@ -268,9 +284,10 @@ namespace extensions {
 				/////////////////////////////////////////////////////////////////////////////////////// figuring out the step
 
 				// find all uses of the variable in the while body
-				core::ExpressionList writeStepExprs;
+				core::ExpressionPtr writeStepExpr = nullptr;
 				core::NodeList toRemoveFromBody;
-				bool cvar_is_last_statement = true;
+				bool cvarIsLastStatementOrBeforeContinue = true;
+				bool writeStepExprsAreTheSame = true;
 				core::visitDepthFirstPrunable(core::NodeAddress(body), [&](const core::NodeAddress& varA) {
 					auto var = varA.getAddressedNode().isa<core::VariablePtr>();
 					if(var == cvar) {
@@ -278,39 +295,52 @@ namespace extensions {
 						auto varParent = varA.getParentNode(2);
 						auto convertedPair = mapToStep(varParent);
 						if(convertedPair.second && !convertedPair.first) {
-							writeStepExprs.push_back(convertedPair.second);
-							core::NodePtr parentNode;
+							if(writeStepExpr && convertedPair.second != writeStepExpr) writeStepExprsAreTheSame = false;
+							writeStepExpr = convertedPair.second;
+							core::NodeAddress parentAddr;
 							// compound assignment operations are enclosed in an additional refDeref. We have to consider this here
 							if(varA.getDepth()>4) {
 								auto parentParent = varA.getParentAddress(4);
 								if(refExt.isCallOfRefDeref(parentParent)) {
 									toRemoveFromBody.push_back(parentParent);
-									parentNode = parentParent.getAddressedNode();
+									parentAddr = parentParent;
 								}
 							}
-							if(!parentNode) {
+							if(!parentAddr) {
 								toRemoveFromBody.push_back(varParent);
-								parentNode = varA.getParentNode(2);
+								parentAddr = varA.getParentAddress(2);
 							}
 							// additionally check if the condition var write
-							// occurs at the end of the while body, otherwise
-							// return original code.
-							if(body->getStatements().back() != parentNode) cvar_is_last_statement = false;
+							// occurs at the end of the while body ...
+							if(core::NodeAddress(body)->getChildList().back() != parentAddr) {
+								// ..or before continue
+								auto surroundingScope = parentAddr.getParentAddress();
+								auto idx = parentAddr.getIndex();
+								if(!surroundingScope
+								  || idx+1 >= surroundingScope.getChildList().size()
+								  || !surroundingScope->getChild(parentAddr.getIndex()+1).isa<core::ContinueStmtPtr>()) {
+									cvarIsLastStatementOrBeforeContinue = false;
+								}
+							}
 						}
 					}
 					if(varA.isa<core::LambdaExprAddress>()) return true;
 					return false;
 				});
-				VLOG(1) << "WriteStepExprs: " << writeStepExprs << "\n";
 
-				VLOG(1) << "Step expression is last statement: " << cvar_is_last_statement << "\n";
-				if(!cvar_is_last_statement) return original;
+				VLOG(1) << "Found step expression: " << writeStepExpr << "\n";
+				if(!writeStepExpr) return original;
 
-				// if there is not exactly one write, or there are free variables in the step, bail out
-				// (could be much smarter about the step)
-				if(writeStepExprs.size()!=1) return original;
-				if(!core::analysis::getFreeVariables(writeStepExprs.back()).empty()) return original;
-				auto convertedStepExpr = writeStepExprs.front();
+				VLOG(1) << "Step expressions are last statement or before continue: " << cvarIsLastStatementOrBeforeContinue << "\n";
+				if(!cvarIsLastStatementOrBeforeContinue) return original;
+
+				VLOG(1) << "Step expressions are are the same: " << writeStepExprsAreTheSame << "\n";
+				if(!writeStepExprsAreTheSame) return original;
+
+				VLOG(1) << "WriteStepExpr: " << writeStepExpr << "\n";
+				// if there there are free variables in the step, bail out (could be much smarter about the step)
+				if(!core::analysis::getFreeVariables(writeStepExpr).empty()) return original;
+				auto convertedStepExpr = writeStepExpr;
 
 				/////////////////////////////////////////////////////////////////////////////////////// figuring out start
 
@@ -330,23 +360,19 @@ namespace extensions {
 
 				/////////////////////////////////////////////////////////////////////////////////////// build the for
 
+				VLOG(1) << "toRemoveFromBody:\n";
+				for(const auto& rem : toRemoveFromBody) {
+					VLOG(1) << "\t" << dumpReadable(rem);
+				}
+
 				auto forVar = builder.variable(cvarType);
 
 				// prepare new body
-				core::StatementList newBodyStmts;
-				core::NodeMap loopVarReplacement;
-				loopVarReplacement[builder.deref(cvar)] = forVar; // TODO: replace cvar, not deref(cvar) -- issues with binds expecting refs
-				for(auto stmt : body->getStatements()) {
-					if(!::contains(toRemoveFromBody, stmt)) {
-						newBodyStmts.push_back(core::transform::replaceAllGen(mgr, stmt, loopVarReplacement));
-						if(!core::analysis::isReadOnly(stmt, cvar)) {
-							VLOG(1) << "Loop var not readonly in: " << stmt;
-							return original;
-						}
-					}
-				}
-
-				auto newBody = builder.compoundStmt(newBodyStmts);
+				auto newBody = core::transform::transformBottomUpGen(body, [&](const core::NodePtr ptr) -> core::NodePtr {
+					if(::contains(toRemoveFromBody, ptr)) return builder.getNoOp();
+					if(ptr == builder.deref(cvar)) return forVar; // TODO: replace cvar, not deref(cvar) -- issues with binds expecting refs
+					return removeNoopsFromCompound(ptr);
+				});
 
 				// if the old loop variable is free in the new body, we messed up and should bail
 				VLOG(2) << core::printer::PrettyPrinter(newBody, core::printer::PrettyPrinter::NO_EVAL_LAZY);
@@ -376,7 +402,12 @@ namespace extensions {
 				return builder.compoundStmt(stmtlist);
 			}).as<core::LambdaExprPtr>();
 
-			VLOG(1) << "While to for replacement - from function:\n" << dumpColor(fun.second) << " - to function:\n" << dumpColor(lambdaExpr);
+			if(fun.second != lambdaExpr) {
+				VLOG(1) << "While to for replacement - from function:\n" << dumpColor(fun.second) << " - to function:\n" << dumpColor(lambdaExpr);
+			}
+			else {
+				VLOG(1) << "Not replacing this while\n";
+			}
 
 			tu.replaceFunction(fun.first, lambdaExpr);
 		}
