@@ -259,7 +259,10 @@ namespace conversion {
 				recordMembers.constructors.push_back(methodConversionResult);
 				// if we just converted the default constructor, but it has (defaulted) arguments
 				if(ctorDecl->isDefaultConstructor() && ctorDecl->getNumParams() != 0) {
-					recordMembers.constructors.push_back(utils::createDefaultCtorFromDefaultCtorWithDefaultParams(converter, ctorDecl, methodConversionResult));
+					auto defaultCtor = utils::createDefaultCtorFromDefaultCtorWithDefaultParams(converter, ctorDecl, methodConversionResult);
+					if(defaultCtor.literal) {
+						recordMembers.constructors.push_back(defaultCtor);
+					}
 				}
 
 			} else if(llvm::dyn_cast<clang::CXXDestructorDecl>(mem)) {

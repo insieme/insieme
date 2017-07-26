@@ -251,6 +251,10 @@ namespace utils {
 		args.push_back(builder.deref(thisVariable));
 		// and then append all the constructor argument default values
 		for(unsigned index = 0; index < ctorDecl->getNumParams(); ++index) {
+			// if any of the default arguments isn't instantiated, we can't create this ctor here
+			if(ctorDecl->getParamDecl(index)->hasUninstantiatedDefaultArg()) {
+				return {};
+			}
 			args.push_back(converter.convertCxxArgExpr(ctorDecl->getParamDecl(index)->getDefaultArg(), paramTypes[index + 1]));
 		}
 		auto body = builder.callExpr(otherCtorLit, args);
