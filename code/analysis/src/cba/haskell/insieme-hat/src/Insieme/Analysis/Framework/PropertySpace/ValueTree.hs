@@ -120,7 +120,7 @@ instance (FieldIndex i, Solver.Lattice a) => Solver.Lattice (Tree i a) where
     print (Leaf a)     = Solver.print a
     print (Node m)     = "{" ++ (intercalate "," ((\(k,v) -> (show k) ++ "=" ++ (Solver.print v)) <$> Map.toList m)) ++ "}"
     print Empty        = "-empty-"
-    print Inconsistent = "-inconsistent-"
+    print Inconsistent = "-unknown or inconsistent-"
 
 
 
