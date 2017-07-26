@@ -66,7 +66,7 @@ instance (Show i, Show a) => Show (Tree i a) where
     show (Leaf a)     = show a
     show (Node m)     = show m
     show Empty        = "-empty-"
-    show Inconsistent = "-inconsistent-"
+    show Inconsistent = "-unknown or inconsistent-"
 
 
 
