@@ -236,12 +236,14 @@ namespace utils {
 	core::analysis::MemberProperties createDefaultCtorFromDefaultCtorWithDefaultParams(conversion::Converter& converter,
 	                                                                                   const clang::CXXConstructorDecl* ctorDecl,
 	                                                                                   const core::analysis::MemberProperties& defaultCtorWithParams) {
-		core::IRBuilder builder(defaultCtorWithParams.literal.getNodeManager());
+		const auto& otherCtorLit = defaultCtorWithParams.literal;
+		core::IRBuilder builder(otherCtorLit.getNodeManager());
 
 		// get necessary stuff
 		auto thisType = getThisType(converter, ctorDecl);
 		auto ctorType = builder.getDefaultConstructorType(thisType);
-		const auto& thisVariable = defaultCtorWithParams.lambda->getParameterList()[0];
+		auto thisVariable = builder.variable(builder.refType(thisType));
+		const auto& paramTypes = otherCtorLit->getType().as<core::FunctionTypePtr>()->getParameterTypeList();
 
 		// generate the body, which only contiains a call to the other constructor
 		core::ExpressionList args;
@@ -249,10 +251,9 @@ namespace utils {
 		args.push_back(builder.deref(thisVariable));
 		// and then append all the constructor argument default values
 		for(unsigned index = 0; index < ctorDecl->getNumParams(); ++index) {
-			args.push_back(converter.convertCxxArgExpr(ctorDecl->getParamDecl(index)->getDefaultArg(),
-			                                           defaultCtorWithParams.lambda->getParameterList()[index + 1]->getType()));
+			args.push_back(converter.convertCxxArgExpr(ctorDecl->getParamDecl(index)->getDefaultArg(), paramTypes[index + 1]));
 		}
-		auto body = builder.callExpr(defaultCtorWithParams.literal, args);
+		auto body = builder.callExpr(otherCtorLit, args);
 
 		// build result
 		core::analysis::MemberProperties res;
