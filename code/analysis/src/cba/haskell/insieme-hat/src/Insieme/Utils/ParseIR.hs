@@ -34,6 +34,7 @@
  - Performance Computing, Networking, Storage and Analysis (SC 2012),
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
+
 module Insieme.Utils.ParseIR where
 
 import Foreign
@@ -80,6 +81,9 @@ refDeref = parseExpr "ref_deref"
 
 refAssign :: IR.Tree
 refAssign = parseExpr "ref_assign"
+
+refTempInit :: IR.Tree
+refTempInit = parseExpr "ref_temp_init"
 
 -- Haskell extension constructs --
 

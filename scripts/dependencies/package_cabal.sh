@@ -4,7 +4,7 @@ PACKAGE="$NAME-$VERSION"
 
 URL="https://github.com/haskell/cabal.git"
 
-DEPENDS="zlib gmp gcc ghc"
+DEPENDS="zlib gmp ghc"
 
 GCC_PKG=$(get_property gcc PACKAGE)
 GHC_PKG=$(get_property ghc PACKAGE)

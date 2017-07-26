@@ -33,8 +33,8 @@
  * for Parallel Codes, in Proc. of the Intl. Conference for High
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
- *
  */
+
 int main() {
 
 	#pragma test expect_ir("{ var ref<int<4>,f,f> v0; var ref<int<4>,f,f> v1;}")

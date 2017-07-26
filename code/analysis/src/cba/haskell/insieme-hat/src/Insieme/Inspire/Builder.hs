@@ -34,12 +34,14 @@
  - Performance Computing, Networking, Storage and Analysis (SC 2012),
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
+
 -- | This moduel defines function to build peaces of code.
 -- The workings of these functions are specific to INSPIRE.
 
 module Insieme.Inspire.Builder (
     deref,
-    refMember
+    refMember,
+    refTemporaryInit
 ) where
 
 import Control.Exception.Base
@@ -86,6 +88,10 @@ refMember :: IR.Tree -> String -> IR.Tree
 refMember t f = mkCall some_ref_type Lang.hsRefMemberAccess $ wrapSomeDecl <$> [t,mkIdentifier f]
   where
     wrapSomeDecl e = mkDeclaration some_type e
+
+
+refTemporaryInit :: IR.Tree -> IR.Tree
+refTemporaryInit e = mkCall some_ref_type Lang.refTempInit [mkDeclaration some_type e]
 
 
 -- utilities --

@@ -34,6 +34,7 @@
  - Performance Computing, Networking, Storage and Analysis (SC 2012),
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
+
 module Insieme.Analysis.Alias where
 
 import Insieme.Analysis.Entities.FieldIndex

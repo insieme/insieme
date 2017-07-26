@@ -33,8 +33,8 @@
  * for Parallel Codes, in Proc. of the Intl. Conference for High
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
- *
  */
+
 #include "interceptor_header.h"
 
 #define SIMPLE_FUNC "def IMP_ns_colon__colon_simpleFunc = (v0 : int<4>) -> int<4> { return v0; };"

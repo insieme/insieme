@@ -67,7 +67,7 @@ module, located in the `/cmake` subdirectory.
 
 If PAPI is used, you have to add PAPI's lib directory to your `LD_LIBRARY_PATH`.
 
-    $ export LD_LIBRARY_PATH="$INSIEME_SRC/third_party/papi/lib:$LD_LIBRARY_PATH"
+    $ export LD_LIBRARY_PATH="$BUILD_DIR/third_party/papi/lib:$LD_LIBRARY_PATH"
 
 ### OpenCL
 
@@ -76,7 +76,7 @@ feature, one must supply the `OPENCL_ROOT` path to CMake. It should point to
 the directory containing the `include` and `lib64` directory of the OpenCL
 installation.
 
-    $ $INSIEME_SRC/third_party/cmake/bin/cmake -DOPENCL_ROOT=/path/to/opencl $INSIEME_SRC
+    $ $BUILD_DIR/third_party/cmake/bin/cmake -DOPENCL_ROOT=/path/to/opencl $INSIEME_SRC
 
 ### GCC
 
@@ -87,10 +87,10 @@ building Insieme. We assume `INSIEME_SRC` contains the path to the Insieme
 source directory, although it is not necessary to set this environment
 variable.
 
-    $ export CC="$INSIEME_SRC/third_party/gcc/bin/gcc"
-    $ export CXX="$INSIEME_SRC/third_party/gcc/bin/g++"
-    $ export PATH="$INSIEME_SRC/third_party/gcc/bin:$PATH"
-    $ export LD_LIBRARY_PATH="$INSIEME_SRC/third_party/gcc/lib64"
+    $ export CC="$BUILD_DIR/third_party/gcc/bin/gcc"
+    $ export CXX="$BUILD_DIR/third_party/gcc/bin/g++"
+    $ export PATH="$BUILD_DIR/third_party/gcc/bin:$PATH"
+    $ export LD_LIBRARY_PATH="$BUILD_DIR/third_party/gcc/lib64"
 
 ### Building Insieme
 
@@ -121,7 +121,6 @@ For some analysis engines additional paths must be provided to CMake
 | Analysis Engine | Required Path                                              |
 | --------------- | ---------------------------------------------------------- |
 | Datalog         | -DSOUFFLE_ROOT=/path/to/souffle/prefix                     |
-| Haskell         | -DCABAL_ROOT=/path/to/cabal/prefix                         |
 
 ### Running Unit Tests
 
@@ -134,7 +133,7 @@ binary with the `--preprocessing` flag.
 
 Unit tests can then be executed via ctest
 
-    $ $INSIEME_SRC/third_party/cmake/bin/ctest -j8       # Runs all unit tests using 8 parallel jobs
+    $ $BUILD_DIR/third_party/cmake/bin/ctest -j8       # Runs all unit tests using 8 parallel jobs
 
 ### Running Integration Tests
 

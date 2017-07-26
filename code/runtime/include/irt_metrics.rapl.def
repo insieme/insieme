@@ -33,8 +33,8 @@
  * for Parallel Codes, in Proc. of the Intl. Conference for High
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
- *
  */
+
 GROUP(energy_group, int eg_dummy, rapl_energy_data rapl_data, { irt_energy_select_instrumentation_method(); }, {}, { irt_rapl_finalize(); }, {}, {}, {},
       { irt_get_energy_consumption(&(rapl_data)); }, { irt_get_energy_consumption(&(rapl_data)); })
 

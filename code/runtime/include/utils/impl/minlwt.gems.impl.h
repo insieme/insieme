@@ -33,8 +33,8 @@
  * for Parallel Codes, in Proc. of the Intl. Conference for High
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
- *
  */
+
 void lwt_continue_impl_asm(irt_work_item* wi /*r0*/, wi_implementation_func* func /*r1*/, intptr_t* newstack /*r2*/, intptr_t* basestack /*r3*/);
 
 // TODO [_GEMS]: noinline is not supported by lcc

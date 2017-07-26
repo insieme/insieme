@@ -34,6 +34,7 @@
  - Performance Computing, Networking, Storage and Analysis (SC 2012),
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
+
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -66,7 +67,7 @@ instance (Show i, Show a) => Show (Tree i a) where
     show (Leaf a)     = show a
     show (Node m)     = show m
     show Empty        = "-empty-"
-    show Inconsistent = "-inconsistent-"
+    show Inconsistent = "-unknown or inconsistent-"
 
 
 
@@ -120,7 +121,7 @@ instance (FieldIndex i, Solver.Lattice a) => Solver.Lattice (Tree i a) where
     print (Leaf a)     = Solver.print a
     print (Node m)     = "{" ++ (intercalate "," ((\(k,v) -> (show k) ++ "=" ++ (Solver.print v)) <$> Map.toList m)) ++ "}"
     print Empty        = "-empty-"
-    print Inconsistent = "-inconsistent-"
+    print Inconsistent = "-unknown or inconsistent-"
 
 
 

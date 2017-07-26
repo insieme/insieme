@@ -33,8 +33,8 @@
  * for Parallel Codes, in Proc. of the Intl. Conference for High
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
- *
  */
+
 #define INFO_STRUCT_BEGIN(__name)                                                                                                                              \
 	__name##_info* irt_meta_info_get_##__name(irt_meta_info_table_entry* entry) {                                                                              \
 		IRT_ASSERT(entry && entry->__name.available, IRT_ERR_INTERNAL, "Accessing invalid or unavailable meta info table entry!");                             \

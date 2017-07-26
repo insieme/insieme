@@ -33,8 +33,8 @@
  * for Parallel Codes, in Proc. of the Intl. Conference for High
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
- *
  */
+
 #include "insieme/frontend/type_converter.h"
 
 #include "insieme/frontend/decl_converter.h"
@@ -259,7 +259,10 @@ namespace conversion {
 				recordMembers.constructors.push_back(methodConversionResult);
 				// if we just converted the default constructor, but it has (defaulted) arguments
 				if(ctorDecl->isDefaultConstructor() && ctorDecl->getNumParams() != 0) {
-					recordMembers.constructors.push_back(utils::createDefaultCtorFromDefaultCtorWithDefaultParams(converter, ctorDecl, methodConversionResult));
+					auto defaultCtor = utils::createDefaultCtorFromDefaultCtorWithDefaultParams(converter, ctorDecl, methodConversionResult);
+					if(defaultCtor.literal) {
+						recordMembers.constructors.push_back(defaultCtor);
+					}
 				}
 
 			} else if(llvm::dyn_cast<clang::CXXDestructorDecl>(mem)) {
