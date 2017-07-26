@@ -449,7 +449,7 @@ namespace parser {
 			/**
 			 * declares a new record type and all its default members
 			 */
-			void declareRecordType(const location& l, const std::string name);
+			void declareRecordType(const location& l, const GenericTypePtr& key);
 
 			// Cleans automatically generated default members from the record type
 			void cleanRecordType();
@@ -464,7 +464,8 @@ namespace parser {
 			 */
 			ExpressionPtr genThis(const location& l);
 
-			ExpressionPtr genMemLambdaReference(const location& l, const string& structName, const string& lambdaName);
+			ExpressionPtr genMemLambdaReference(const location& l, std::string name, const string& lambdaName);
+			ExpressionPtr genMemLambdaReference(const location& l, const GenericTypePtr& genTy, const string& lambdaName);
 
 		  private:
 			GenericTypePtr getThisTypeForLambdaAndFunction(const bool cnst, const bool voltile);
@@ -564,6 +565,11 @@ namespace parser {
 			 * Opens a new record definition (implies opening a new scope)
 			 */
 			void beginRecord(const location& l, const std::string& name);
+
+			/**
+			* Opens a new record definition (implies opening a new scope)
+			*/
+			void beginRecord(const location& l, const TypePtr& key);
 
 			/**
 			 * Ends a record definition (implies closing the current scope)

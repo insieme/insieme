@@ -247,6 +247,18 @@ namespace parser {
 				// get field type
 				return tagType->getFieldType(name);
 			}
+
+			static const std::string genTypeParamEncodingMarker { "_INSPIRE_PARSER_GEN_TY_PARAMS" };
+
+			std::string getGenTyName(const GenericTypePtr& type, bool outer = true) {
+				std::string ret = type->getName()->getValue();
+				if(outer && type->getTypeParameterList().size() > 0) ret += genTypeParamEncodingMarker;
+				for(const auto& tp : type->getTypeParameterList()) {
+					if(auto gt = tp.isa<GenericTypePtr>()) ret += "_" + getGenTyName(gt, false);
+					if(auto tv = tp.isa<TypeVariablePtr>()) ret += "_" + tv->getVarName()->getValue();
+				}
+				return ret;
+			}
 		}
 
 
@@ -743,6 +755,7 @@ namespace parser {
 
 			//the key used to register this member function in the TU
 			auto key = builder.getLiteralForMemberFunction(fun->getFunctionType(), name);
+			key = builder.literal(getGenTyName(currentRecordStack.back().record) + "::" + name, key->getType());
 
 			// rename lambda ref to the correct name for a member function
 			std::string lambdaName = key->getStringValue();
@@ -1175,8 +1188,9 @@ namespace parser {
 			};
 		}
 
-		void InspireDriver::declareRecordType(const location& l, const std::string name) {
-			const GenericTypePtr key = builder.genericType(name);
+		void InspireDriver::declareRecordType(const location& l, const GenericTypePtr& key) {
+
+			std::string name = getGenTyName(key);
 
 			// declare the type
 			declareType(l, name, key);
@@ -1231,7 +1245,14 @@ namespace parser {
 			return inLambda ? thisStack.back() : builder.deref(thisStack.back());
 		}
 
-		ExpressionPtr InspireDriver::genMemLambdaReference(const location& l, const string& structName, const string& lambdaName) {
+		ExpressionPtr InspireDriver::genMemLambdaReference(const location& l, std::string name, const string& lambdaName) {
+			return genMemLambdaReference(l, builder.genericType(name), lambdaName);
+		}
+
+		ExpressionPtr InspireDriver::genMemLambdaReference(const location& l, const GenericTypePtr& key, const string& lambdaName) {
+
+			string structName = getGenTyName(key);
+
 			auto lookupTy = findType(l, structName);
 			auto genTy = lookupTy ? lookupTy.isa<core::GenericTypePtr>() : nullptr;
 			if(!genTy) {
@@ -1276,14 +1297,21 @@ namespace parser {
 			}
 			result = transform::replaceAll(mgr, result, replacements, transform::globalReplacement);
 
-			// remove PARSER_UNRESOLVED_ prefix from literals
+			// remove PARSER_UNRESOLVED_ prefix from literals, remove encoded generic type parameters from string values
 			const std::string unresolvedPrefix { "PARSER_UNRESOLVED_" };
-			result = transform::transformBottomUpGen(result, [&](const LiteralPtr& lit) {
-				if(boost::starts_with(lit->getStringValue(), unresolvedPrefix)) {
-					return builder.literal(lit->getStringValue().substr(unresolvedPrefix.size()), lit->getType());
+			result = transform::transformBottomUpGen(result, [&](const StringValuePtr& strV) {
+				std::string str = strV->getValue();
+				if(boost::starts_with(str, unresolvedPrefix)) {
+					str = str.substr(unresolvedPrefix.size());
 				}
-				return lit;
-			});
+				auto markerStart = str.find(genTypeParamEncodingMarker);
+				if(markerStart != string::npos) {
+					auto doubleColonPos = str.find("::");
+					if(doubleColonPos == string::npos) doubleColonPos = str.size();
+					str = str.substr(0, markerStart) + str.substr(doubleColonPos);
+				}
+				return builder.stringValue(str);
+			}, transform::globalReplacement);
 
 			// check if artifacts remain
 			bool foundArtifacts = false;
@@ -1458,7 +1486,10 @@ namespace parser {
 		void InspireDriver::declareType(const location& l, const std::string& name, const TypePtr& node) {
 			assert_false(scopes.empty()) << "Missing global scope!";
 			// check name for validity
-			if(!checkSymbolName(l, name)) { return; }
+			if(!checkSymbolName(l, name)) {
+				error(l, format("Invalid type name: %s", name));
+				return;
+			}
 
 			// make sure that there isn't already a declaration for this type
 			if(getCurrentScope()->declaredTypes.find(name) != getCurrentScope()->declaredTypes.end()) {
@@ -1511,13 +1542,22 @@ namespace parser {
 		}
 
 		void InspireDriver::beginRecord(const location& l, const std::string& name) {
-			auto key = builder.genericType(name);
+			beginRecord(l, builder.genericType(name));
+		}
+
+		void InspireDriver::beginRecord(const location& l, const TypePtr& key) {
+			auto genTy = key.isa<GenericTypePtr>();
+			if(!genTy) {
+				error(l, format("Not a generic type: %s", *key));
+				return;
+			}
+			std::string name = getGenTyName(genTy);
 
 			// only declare the type implicitly if it hasn't already been declared
-			if(!isTypeDeclaredInCurrentScope(name)) { declareRecordType(l, name); }
+			if(!isTypeDeclaredInCurrentScope(name)) { declareRecordType(l, genTy); }
 
 			openScope();
-			currentRecordStack.push_back({key});
+			currentRecordStack.push_back({ genTy });
 		}
 
 		void InspireDriver::endRecord() {

@@ -1517,16 +1517,32 @@ namespace parser {
 		                               "}"));
 
 		// free non-ctor member
+		{
+			auto expected = R"(
+				def IMP_SimplestDI::function IMP_get = () -> unit {
+				};
+				{
+					var ref<IMP_SimplestDI, f, f, plain> v0 = lit("IMP_SimplestDI::ctor" : IMP_SimplestDI::())(ref_decl(type_lit(ref<IMP_SimplestDI, f, f, plain>)));
+					v0.IMP_get();
+				}
+			)";
+			EXPECT_TRUE(test_statement(nm, expected));
+		}
 
-		auto expected = R"(
-			def IMP_SimplestDI::function IMP_get = () -> unit {
-			};
-			{
-				var ref<IMP_SimplestDI, f, f, plain> v0 = lit("IMP_SimplestDI::ctor" : IMP_SimplestDI::())(ref_decl(type_lit(ref<IMP_SimplestDI, f, f, plain>)));
-				v0.IMP_get();
-			}
-		)";
-		EXPECT_TRUE(test_statement(nm, expected));
+		// free lambda on templated generic type
+		{
+			auto expected = R"(
+				def A<int<4>>::function bla = () -> unit {
+				};
+				{
+					lambda_name A<int<4>>::bla;
+
+					var ref<A<int<4>>> a;
+					lambda_name A<int<4>>::bla(a);
+				}
+			)";
+			EXPECT_TRUE(test_statement(nm, expected));
+		}
 	}
 
 	TEST(IR_Parser, DuplicateMemberFunctions) {

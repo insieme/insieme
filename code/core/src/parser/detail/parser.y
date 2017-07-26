@@ -140,6 +140,8 @@
 	STRUCT       "struct"
 	UNION        "union"
 
+	LAMBDA_NAME  "lambda_name"
+
 	LET          "let"
 	IN           "in"
 
@@ -154,7 +156,7 @@
 
 	VAR          "var"
 	FREE_VAR     "free_var"
-	
+
 	IF           "if"
 	ELSE         "else"
 	FOR          "for"
@@ -301,7 +303,7 @@ using : "using" "string"                                                    { dr
 alias : "alias" abstract_type "=" type                                      { driver.addTypeAlias($2,$4); }
       ;
 
-declaration : "decl" struct_or_union "identifier"                           { driver.declareRecordType(@3, $3); }
+declaration : "decl" struct_or_union generic_type                           { driver.declareRecordType(@3, $3.as<GenericTypePtr>()); }
             | "decl" "ctor" ":" constructor_type                            { driver.genDeclaration(@2, "ctor", $4); }
             | "decl" "dtor" ":" destructor_type                             { driver.genDeclaration(@2, "dtor", $4); }
             | "decl" "identifier" ":" type                                  { driver.genDeclaration(@2, $2, $4); }
@@ -396,9 +398,9 @@ pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" ":" pure_f
 
 //    -- free members -------------------------------------
 
-free_member_definition : "identifier" "::" "identifier" "=" "ctor"          { driver.beginRecord(@$, $1); }
+free_member_definition : generic_type "::" "identifier" "=" "ctor"          { driver.beginRecord(@$, $1); }
                                            constructor_lambda               { $$ = driver.genFreeConstructor(@$, $3, $7); INSPIRE_GUARD(@$, $$) driver.endRecord(); }
-                       | "identifier" "::"                                  { driver.beginRecord(@$, $1); }
+                       | generic_type "::"                                  { driver.beginRecord(@$, $1); }
                                            member_function                  { INSPIRE_GUARD(@4, $4) $$ = $4; driver.endRecord(); }
                        ;
 
@@ -745,6 +747,7 @@ this_expression : "this"                                                  { $$ =
                 ;
 
 mem_lambda_reference : "identifier" "::" "identifier"                     { $$ = driver.genMemLambdaReference(@$, $1, $3); }
+mem_lambda_reference : "lambda_name" generic_type "::" "identifier"       { $$ = driver.genMemLambdaReference(@$, $2.as<GenericTypePtr>(), $4); }
                      ;
 
 
