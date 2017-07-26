@@ -34,6 +34,7 @@
  - Performance Computing, Networking, Storage and Analysis (SC 2012),
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
+
 module Insieme.Analysis.Framework.Utils.OperatorHandler where
 
 import Insieme.Inspire.NodeAddress

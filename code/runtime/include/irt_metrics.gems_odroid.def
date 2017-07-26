@@ -33,8 +33,8 @@
  * for Parallel Codes, in Proc. of the Intl. Conference for High
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
- *
  */
+
 #include "platforms/odroid/rapmi.h"
 /*
  * #define METRIC( NAME, ID, UNIT, DATA_TYPE, FORMAT_STRING, SCOPE, AGGREGATION_METHOD, GROUP, WI_START_CODE, WI_END_CODE, REGION_EARLY_START_CODE,

@@ -33,8 +33,8 @@
  * for Parallel Codes, in Proc. of the Intl. Conference for High
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
- *
  */
+
 /* mapping memalign function to malloc on Windows
  (it is mapped to malloc because on Windows must use _aligend_free if _aligned_malloc was used, which makes things complicated */
 

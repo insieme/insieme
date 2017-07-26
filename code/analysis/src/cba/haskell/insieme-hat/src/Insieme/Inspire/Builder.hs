@@ -34,6 +34,7 @@
  - Performance Computing, Networking, Storage and Analysis (SC 2012),
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
+
 -- | This moduel defines function to build peaces of code.
 -- The workings of these functions are specific to INSPIRE.
 

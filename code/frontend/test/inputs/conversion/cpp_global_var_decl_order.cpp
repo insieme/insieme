@@ -33,7 +33,6 @@
  * for Parallel Codes, in Proc. of the Intl. Conference for High
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
- *
  */
 
 // Note: The order is important here. The global variable needs to be defined _below_ this function here for this test to test what was wrong here

@@ -33,8 +33,8 @@
  * for Parallel Codes, in Proc. of the Intl. Conference for High
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
- *
  */
+
 int f() {
 	static int x = 5;
 	#pragma test expect_ir("REGEX",R"(return\s*\*x_static_local_.*c_static_dot_c_39_2)")

@@ -33,8 +33,8 @@
  * for Parallel Codes, in Proc. of the Intl. Conference for High
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
- *
  */
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // What we are doing here is: patch the Clang preprocessor with a friend declaration to get internal access
 //   (without having to physically patch the compiled clang library) -- Don't think too hard about this.
