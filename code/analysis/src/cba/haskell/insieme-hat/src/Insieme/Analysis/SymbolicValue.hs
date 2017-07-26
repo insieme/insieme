@@ -162,7 +162,12 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
         cov a = (getNodeType a == IR.Literal || toCover) && (not toIgnore)
           where
             -- derived builtins to cover
-            toCover  = any (isBuiltin a) [ "ref_member_access", "ref_kind_cast" ]
+            toCover  = any (isBuiltin a) [ 
+                        "ref_member_access", 
+                        "ref_temp", "ref_temp_init", 
+                        "ref_new", "ref_new_init", 
+                        "ref_kind_cast", "ref_const_cast", "ref_volatile_cast", "ref_parent_cast" 
+                     ]
             -- literal builtins to ignore
             toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign" ]      
 
