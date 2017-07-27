@@ -28,10 +28,28 @@ namespace parser {
 			EXPECT_EQ(core::analysis::normalize(parsed), core::analysis::normalize(reparsed));
 		}
 
-		// most free member with "this" usage
+		// free member with "this" usage
 		{
 			auto freeMember = R"(
 					def GenericTypeWithFreeMember :: function free = () -> unit {
+						this;
+					};
+					{
+						var ref<GenericTypeWithFreeMember,f,f,plain> v0;
+						GenericTypeWithFreeMember::free(v0);
+					}
+				)";
+			auto parsed = builder.parseStmt(freeMember);
+			auto printed = toString(dumpPretty(parsed));
+			auto reparsed = builder.parseStmt(printed);
+
+			EXPECT_EQ(core::analysis::normalize(parsed), core::analysis::normalize(reparsed));
+		}
+
+		// const free member with "this" usage
+		{
+			auto freeMember = R"(
+					def GenericTypeWithFreeMember :: const function free = () -> unit {
 						this;
 					};
 					{

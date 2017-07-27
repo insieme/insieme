@@ -613,29 +613,25 @@ namespace printer {
 								}
 							} else if (visitedFreeFunctions.find(binding->getReference()) != visitedFreeFunctions.end()) {
 								// branch for the free member functions
-								thisStack.push(binding->getLambda()->getParameters().front());
 								if (funType->isConstructor()) {
 									auto tagname = std::get<0>(visitedFreeFunctions[binding->getReference()]);
 									auto funname = std::get<1>(visitedFreeFunctions[binding->getReference()]);
 
 									newLine();
 									(*out) << "def " << tagname << " :: " << funname << " = ";
+									thisStack.push(binding->getLambda()->getParameters().front());
 									visit(bindingAddress);
+									thisStack.pop();
 									(*out) << ";";
 								} else if (funType->isMemberFunction()) {
 									auto tagname = std::get<0>(visitedFreeFunctions[binding->getReference()]);
 									auto funname = std::get<1>(visitedFreeFunctions[binding->getReference()]);
 
 									newLine();
-									(*out) << "def " << tagname << " :: function " << funname << " = (";
-									printParameters(*out, bindingAddress->getLambda()->getParameters(), false);
-									(*out) << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
-									visit(NodeAddress(funType->getReturnType()));
-									(*out) << " ";
-									visit(bindingAddress->getLambda()->getBody());
+									(*out) << "def " << tagname << " :: ";
+									printMemberFunctionInternal(bindingAddress->getLambda(), funname);
 									(*out) << ";";
 								}
-								thisStack.pop();
 							}
 						}
 						return false;
@@ -1082,36 +1078,41 @@ namespace printer {
 				}
 			}
 
+			void printMemberFunctionInternal(const LambdaAddress& impl, const string& name) {
+				const auto& params = impl->getParameterList();
+				assert_true(params.size() >= 1);
+
+				auto thisParam = params.front().getAddressedNode();
+				thisStack.push(thisParam);
+				TypePtr thisParamType = thisParam->getType();
+				assert_true(analysis::isRefType(thisParamType));
+				if(analysis::isRefType(analysis::getReferencedType(thisParamType))) { thisParamType = analysis::getReferencedType(thisParamType); }
+				const auto thisParamRef = lang::ReferenceType(thisParamType);
+				if(thisParamRef.isConst()) { (*out) << "const "; }
+				if(thisParamRef.isVolatile()) { (*out) << "volatile "; }
+
+				(*out) << "function " << makeReadableIfRequired(name);
+
+				(*out) << " = (";
+				printParameters(*out, params, false);
+				const auto& funType = impl->getType();
+				(*out) << ")" << (funType->isVirtualMemberFunction() ? " ~> " : " -> ");
+				visit(funType->getReturnType());
+				(*out) << " ";
+				if(analysis::isaDefaultMember(impl.getAddressedNode())) {
+					(*out) << "= default;";
+				}
+				else {
+					visit(impl->getBody());
+				}
+				thisStack.pop();
+			}
+
 			PRINT(MemberFunction) {
 				if(!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(node.getAddressedNode())) return;
 				if(auto impl = node->getImplementation().isa<LambdaExprAddress>()) {
 					if(node->isVirtual()) (*out) << "virtual ";
-
-					const auto& params = impl->getParameterList();
-					assert_true(params.size() >= 1);
-
-					TypePtr thisParam = params[0].getAddressedNode()->getType();
-					assert_true(analysis::isRefType(thisParam));
-					if(analysis::isRefType(analysis::getReferencedType(thisParam))) { thisParam = analysis::getReferencedType(thisParam); }
-					const auto thisParamRef = lang::ReferenceType(thisParam);
-					if(thisParamRef.isConst()) { (*out) << "const "; }
-					if(thisParamRef.isVolatile()) { (*out) << "volatile "; }
-
-					(*out) << "function " << makeReadableIfRequired(node->getName()->getValue());
-					auto parameters = impl->getParameterList();
-					thisStack.push(parameters.front().getAddressedNode());
-
-					(*out) << " = (";
-					printParameters(*out, impl->getParameterList(), false);
-					(*out) << ") -> ";
-					visit(impl->getFunctionType()->getReturnType());
-					(*out) << " ";
-					if(analysis::isaDefaultMember(node.getAddressedNode())) {
-						(*out) << "= default;";
-					} else {
-						visit(impl->getBody());
-					}
-					thisStack.pop();
+					printMemberFunctionInternal(impl->getLambda(), node->getName()->getValue());
 				}
 			}
 
