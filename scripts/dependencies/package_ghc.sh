@@ -4,12 +4,12 @@ PACKAGE="$NAME-$VERSION"
 
 FILE="$PACKAGE.tar.xz"
 
-declare -A URL
+declare -g -A URL
 URL=(
 	["CentOS release 6.6 (Final)"]="https://downloads.haskell.org/~ghc/8.0.2/ghc-8.0.2-x86_64-centos67-linux.tar.xz"
 	["default"]="https://downloads.haskell.org/~ghc/8.0.2/ghc-8.0.2-x86_64-deb8-linux.tar.xz")
 
-declare -A SHA256SUM
+declare -g -A SHA256SUM
 SHA256SUM=(
 	["CentOS release 6.6 (Final)"]="145f12323c869f65c79f7c2d2b6dadfd3d9bad8739ef56580b38f715a6dbbb76"
 	["default"]="5ee68290db00ca0b79d57bc3a5bdce470de9ce9da0b098a7ce6c504605856c8f")
