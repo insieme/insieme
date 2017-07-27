@@ -63,6 +63,41 @@ namespace parser {
 
 			EXPECT_EQ(core::analysis::normalize(parsed), core::analysis::normalize(reparsed));
 		}
+
+		// reference to free member with no call
+		{
+			auto freeMember = R"(
+					def GenericTypeWithFreeMember :: volatile function free = () -> unit {
+					};
+					{
+						(GenericTypeWithFreeMember::free);
+					}
+				)";
+			auto parsed = builder.parseStmt(freeMember);
+			auto printed = toString(dumpPretty(parsed));
+			auto reparsed = builder.parseStmt(printed);
+
+			EXPECT_EQ(core::analysis::normalize(parsed), core::analysis::normalize(reparsed));
+		}
+
+		// free member of a generic type with type parameters
+		{
+			auto freeMember = R"(
+					def GenericTypeWithFreeMember<TypeParam1> :: const function free = () -> unit {
+						this;
+					};
+					{
+						var ref<GenericTypeWithFreeMember<TypeParam1>,f,f,plain> v0;
+						v0.free();
+					}
+				)";
+			auto parsed = builder.parseStmt(freeMember);
+			auto printed = toString(dumpPretty(parsed));
+			std::cout << "printed: " << printed;
+			auto reparsed = builder.parseStmt(printed);
+
+			EXPECT_EQ(core::analysis::normalize(parsed), core::analysis::normalize(reparsed));
+		}
 	}
 
 } // parser

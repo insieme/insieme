@@ -1134,7 +1134,13 @@ namespace printer {
 					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isDefaultDestructor(nodePtr)) return;
 				}
 
-				visit(node->getDefinition()->getBindingOf(node->getReference()));
+				auto freeIt = visitedFreeFunctions.find(node->getReference());
+				if(freeIt != visitedFreeFunctions.cend()) {
+					(*out) << std::get<0>(freeIt->second) << "::" << std::get<1>(freeIt->second);
+				}
+				else {
+					visit(node->getDefinition()->getBindingOf(node->getReference()));
+				}
 			}
 
 			PRINT(LambdaReference) {
