@@ -93,7 +93,23 @@ namespace parser {
 				)";
 			auto parsed = builder.parseStmt(freeMember);
 			auto printed = toString(dumpPretty(parsed));
-			std::cout << "printed: " << printed;
+			auto reparsed = builder.parseStmt(printed);
+
+			EXPECT_EQ(core::analysis::normalize(parsed), core::analysis::normalize(reparsed));
+		}
+
+		// reference to free member of a generic type with type parameters
+		{
+			auto freeMember = R"(
+					def GenericTypeWithFreeMember<TypeParam1> :: const function free = () -> unit {
+						this;
+					};
+					{
+						lambda_name GenericTypeWithFreeMember<TypeParam1>::free;
+					}
+				)";
+			auto parsed = builder.parseStmt(freeMember);
+			auto printed = toString(dumpPretty(parsed));
 			auto reparsed = builder.parseStmt(printed);
 
 			EXPECT_EQ(core::analysis::normalize(parsed), core::analysis::normalize(reparsed));

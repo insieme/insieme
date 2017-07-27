@@ -1136,7 +1136,9 @@ namespace printer {
 
 				auto freeIt = visitedFreeFunctions.find(node->getReference());
 				if(freeIt != visitedFreeFunctions.cend()) {
-					(*out) << std::get<0>(freeIt->second) << "::" << std::get<1>(freeIt->second);
+					auto typeString = std::get<0>(freeIt->second);
+					if(boost::contains(typeString, "<")) (*out) << "lambda_name ";
+					(*out) << typeString << "::" << std::get<1>(freeIt->second);
 				}
 				else {
 					visit(node->getDefinition()->getBindingOf(node->getReference()));
