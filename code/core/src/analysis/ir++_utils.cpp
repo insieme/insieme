@@ -141,18 +141,16 @@ namespace analysis {
 		if(auto mem = n.isa<MemberFunctionPtr>()) {
 			n = mem->getImplementation();
 		}
+		auto defaultCheck = [](const CompoundStmtPtr& body, const FunctionTypePtr& funType) {
+			if(!funType->isMember()) return false;
+			if(!body || body->size() < 1) return false;
+			auto first = body[0];
+			return first == getDefaultedMarker(IRBuilder(body->getNodeManager())) && first.hasAttachedValue<DefaultedTag>();
+		};
 		if (auto lambda = n.isa<LambdaExprPtr>()) {
-			if (!lambda->getFunctionType()->isMember()) return false;
-			auto body = lambda->getBody();
-			if (!body || body->size() < 1) return false;
-			auto first = body[0];
-			return first == getDefaultedMarker(IRBuilder(lambda->getNodeManager())) && first.hasAttachedValue<DefaultedTag>();
+			return defaultCheck(lambda->getBody(), lambda->getFunctionType());
 		} else if (auto lambda = n.isa<LambdaPtr>()) {
-			if (!lambda->getType()->isMember()) return false;
-			auto body = lambda->getBody();
-			if (!body || body->size() < 1) return false;
-			auto first = body[0];
-			return first == getDefaultedMarker(IRBuilder(lambda->getNodeManager())) && first.hasAttachedValue<DefaultedTag>();
+			return defaultCheck(lambda->getBody(), lambda->getType());
 		}
 		return false;
 	}
