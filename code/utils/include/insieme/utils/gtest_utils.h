@@ -35,20 +35,28 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
+#pragma once
+
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include <boost/filesystem.hpp>
+
 #include <gtest/gtest.h>
 
+#include "insieme/utils/assert.h"
+#include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
 
 namespace insieme {
 namespace utils {
 
 	class TestCaseNamePrinter {
+
 	  public:
+
 		template <class ParamType>
 		std::string operator()(const ::testing::TestParamInfo<ParamType>& info) {
 			return output(info.index, info.param.getName());
@@ -59,6 +67,7 @@ namespace utils {
 		}
 
 	  private:
+
 		std::string output(size_t index, std::string name) {
 			std::stringstream out;
 
@@ -78,7 +87,34 @@ namespace utils {
 
 			return res;
 		}
+
 	};
+
+	std::vector<std::string> collectInputFiles(const std::string& directory, const std::vector<std::string>& extensions) {
+		boost::filesystem::path root(directory);
+		assert_true(boost::filesystem::is_directory(root));
+
+		std::vector<std::string> input_files;
+		for(const auto& entry : boost::make_iterator_range(boost::filesystem::recursive_directory_iterator(root), {})) {
+			if(containsSubString(entry.path().string(), "_disabled")) {
+				continue;
+			}
+
+			if(!contains(extensions, entry.path().extension().string())) {
+				continue;
+			}
+
+			auto path = entry.path().string().substr(directory.size());
+			if(path[0] == '/') {
+				path = path.substr(1);
+			}
+
+			input_files.push_back(path);
+		}
+
+		std::sort(input_files.begin(), input_files.end());
+		return input_files;
+	}
 
 } // end namespace utils
 } // end namespace insieme
