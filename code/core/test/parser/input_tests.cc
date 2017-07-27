@@ -55,6 +55,7 @@
 #include "insieme/core/lang/io.h"
 
 #include "insieme/utils/config.h"
+#include "insieme/utils/gtest_utils.h"
 
 namespace insieme {
 namespace core {
@@ -122,23 +123,9 @@ namespace parser {
 	}
 
 	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(InputFileChecks, IRParserTest, ::testing::ValuesIn(getInputFiles()));
-
-
-	vector<string> getInputFiles() {
-		vector<string> res;
-
-		fs::path root(ROOT_DIR);
-		assert_true(fs::is_directory(root)) << root;
-
-		for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
-			fs::path file = it->path();
-			if(file.extension().string() == ".ir") { res.push_back(file.filename().string()); }
-		}
-		std::sort(res.begin(), res.end());
-
-		return res;
-	}
+	INSTANTIATE_TEST_CASE_P(InputFileChecks,
+	                        IRParserTest,
+	                        ::testing::ValuesIn(utils::collectInputFiles(ROOT_DIR, {".ir"})));
 
 } // end namespace parser2
 } // end namespace core

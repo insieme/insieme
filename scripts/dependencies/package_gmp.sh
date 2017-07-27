@@ -23,5 +23,6 @@ int main() { __gmpf_cmp_z(); }
 EOF
 	cc -o /dev/null libgmp10-test.c -lgmp  2>/dev/null
 	RV=$?
+        rm libgmp10-test.c
 	return $RV
 }

@@ -58,8 +58,8 @@
 
 extern "C" {
 
-	extern void hat_hs_test_binary_dumper_mirror(const char* data_c, std::size_t size_c,
-	                                             char** data_hs, std::size_t* size_hs);
+	void hat_hs_test_binary_dumper_mirror(const char* data_c, std::size_t size_c,
+	                                      char** data_hs, std::size_t* size_hs);
 
 }
 
@@ -127,46 +127,10 @@ namespace haskell {
 		ASSERT_EQ(*prog, *prog2);
 	}
 
-	namespace {
-
-		void collectFiles(const fs::path& dir, const string& prefix, vector<string>& res) {
-			fs::path root(dir);
-			assert_true(fs::is_directory(root));
-
-			for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
-				fs::path file = it->path();
-				// collect c files
-				auto ext = file.extension().string();
-				if(ext == ".c" || ext == ".cpp") {
-					res.push_back(prefix + file.filename().string());
-				}
-				// collect files recursively
-				if(fs::is_directory(file)) {
-					const auto& name = file.filename().string();
-					if(name != "_disabled") {
-						collectFiles(file, prefix + name + "/", res);
-					}
-				}
-			}
-		}
-
-		vector<string> getFilenames() {
-			vector<string> filenames;
-
-			// collect input files
-			collectFiles(fs::path(ROOT_DIR), "", filenames);
-
-			// sort files
-			std::sort(filenames.begin(), filenames.end());
-
-			// done
-			return filenames;
-		}
-
-	}
-
-	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(BinaryDumperChecks, Haskell_Binary_Dumper_Test, ::testing::ValuesIn(getFilenames()), TestCaseNamePrinter());
+	INSTANTIATE_TEST_CASE_P(BinaryDumperChecks,
+	                        Haskell_Binary_Dumper_Test,
+	                        ::testing::ValuesIn(utils::collectInputFiles(ROOT_DIR, {".c", ".cpp"})),
+	                        utils::TestCaseNamePrinter());
 
 } // end namespace haskell
 } // end namespace cba

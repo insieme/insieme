@@ -31,5 +31,6 @@ int main() { return 0; }
 EOF
 	cc -o /dev/null mpfr-test.c 2>/dev/null
 	RV=$?
+        rm mpfr-test.c
 	return $RV
 }

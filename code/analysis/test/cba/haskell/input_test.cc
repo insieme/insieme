@@ -58,7 +58,6 @@
 #include "insieme/core/printer/error_printer.h"
 
 #include "insieme/utils/config.h"
-#include "insieme/utils/input_test_utils.h"
 #include "insieme/utils/gtest_utils.h"
 #include "insieme/utils/name_mangling.h"
 
@@ -446,7 +445,10 @@ namespace cba {
 	}
 
 	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(InputFileChecks, CBA_Inputs_Test, ::testing::ValuesIn(utils::getInputTestFileNames(ROOT_DIR)), TestCaseNamePrinter());
+	INSTANTIATE_TEST_CASE_P(InputFileChecks,
+	                        CBA_Inputs_Test,
+	                        ::testing::ValuesIn(utils::collectInputFiles(ROOT_DIR, {".c", ".cpp"})),
+	                        utils::TestCaseNamePrinter());
 
 } // end namespace cba
 } // end namespace analysis
