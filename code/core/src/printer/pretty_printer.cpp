@@ -613,6 +613,7 @@ namespace printer {
 								}
 							} else if (visitedFreeFunctions.find(binding->getReference()) != visitedFreeFunctions.end()) {
 								// branch for the free member functions
+								thisStack.push(binding->getLambda()->getParameters().front());
 								if (funType->isConstructor()) {
 									auto tagname = std::get<0>(visitedFreeFunctions[binding->getReference()]);
 									auto funname = std::get<1>(visitedFreeFunctions[binding->getReference()]);
@@ -634,6 +635,7 @@ namespace printer {
 									visit(bindingAddress->getLambda()->getBody());
 									(*out) << ";";
 								}
+								thisStack.pop();
 							}
 						}
 						return false;

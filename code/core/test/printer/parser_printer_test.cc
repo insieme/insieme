@@ -440,7 +440,7 @@ namespace parser {
 		}
 	}
 
-TEST(After_Before_Test, Let) {
+	TEST(After_Before_Test, Let) {
 		NodeManager mgr;
 
     	EXPECT_TRUE(test_program(mgr, "alias int = int<4>; int main () { return 1; }"));
@@ -850,6 +850,8 @@ TEST(After_Before_Test, Let) {
 		EXPECT_TRUE(test_program(nm, "unit main()  {"
 			                         "while ( true || false ) { 1+1; }"
 			                         "}"));
+
+
 /*
 		EXPECT_TRUE(test_program(nm, "unit main()  {"
 			                         "while ( (false && true) || (true && false) ) { var int<4> a = 5; }"
@@ -864,6 +866,7 @@ TEST(After_Before_Test, Let) {
 			                         "}"));
 */
 	}
+
 } // parser
 } // core
 } // insieme
