@@ -1754,6 +1754,22 @@ namespace parser {
 		EXPECT_EQ(parseExpr(mgr, R"(lit("PARSER_UNRESOLVED_bla": int<4>))"), parseExpr(mgr, R"(lit("bla": int<4>))"));
 	}
 
+	TEST(IR_Parser, GenericTypeFreeMemberCall) {
+		NodeManager mgr;
+
+		auto code = R"(
+			def GenericTypeWithFreeMember<TypeParam1> :: const function free = () -> unit {
+				this;
+			};
+			{
+				var ref<GenericTypeWithFreeMember<TypeParam1>,f,f,plain> v0;
+				v0.free();
+			}
+		)";
+
+		EXPECT_TRUE(parseStmt(mgr, code));
+	}
+
 } // parser
 } // core
 } // insieme

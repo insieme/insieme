@@ -285,7 +285,7 @@ namespace parser {
 			// if the type is a generic type, we can proceed with the literal lookup here
 			if(auto genericObjectType = objectType.isa<GenericTypePtr>()) {
 				// create a key to look up the symbol in the global scope
-				std::string keyName = genericObjectType->getName()->getValue() + "::" + memberName;
+				std::string keyName = getGenTyName(genericObjectType) + "::" + memberName;
 
 				// look for the key in the global scope
 				auto lookupResult = lookupDeclaredInGlobalScope(keyName);
@@ -880,7 +880,7 @@ namespace parser {
 				argumentTypes.insert(argumentTypes.begin(), thisParam->getType());
 
 				// replace func with the lookup of the literal. first create the name of the literal
-				std::string typeName = thisParamType.as<GenericTypePtr>()->getName()->getValue();
+				std::string typeName = getGenTyName(thisParamType.as<GenericTypePtr>());
 				std::string functionName = func.as<CallExprPtr>()->getArgument(1).as<LiteralPtr>()->getValue()->getValue();
 				std::string memberName = typeName + "::" + functionName;
 
