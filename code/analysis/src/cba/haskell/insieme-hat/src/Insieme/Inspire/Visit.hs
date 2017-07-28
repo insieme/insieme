@@ -149,7 +149,7 @@ foldAddressPrune collect prune addr = visit addr mempty
                      else collect base $ visitsub base acc
     -- visitsub base acc = foldr (\i a -> visit (goDown i base) a) acc [0..(numChildren base - 1)]
     visitsub base acc = foldr visit acc (subtrees base)
-    subtrees addr = [goDown i addr | i <- [0..(numChildren addr) - 1]]
+    subtrees a = [goDown i a | i <- [0..(numChildren a) - 1]]
 
 -- | Find declaration of given variable.
 findDecl :: NodeAddress -> Maybe NodeAddress

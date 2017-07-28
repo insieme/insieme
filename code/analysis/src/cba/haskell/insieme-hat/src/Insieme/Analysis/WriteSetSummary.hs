@@ -112,6 +112,7 @@ fromAccessPaths xs = foldr union empty (fromAccessPath <$> xs)
 
 toAccessPaths :: WriteSet i -> [AP.AccessPath i]
 toAccessPaths (Known s) = foldr (++) [] (BSet.toList . snd <$> Map.toList s)
+toAccessPaths Unknown = error "toAccessPath: unknown WriteSet"
 
 parameters :: WriteSet i -> [Int]
 parameters Unknown = []
@@ -121,6 +122,7 @@ parameters (Known b) = toInt <$> filter params (Map.keys b)
         params _ = False
 
         toInt (AP.Parameter x) = x
+        toInt _ = error "toInt: unhandled case"
 
 
 bindAccessPaths :: (FieldIndex i) => (Map.Map Int (AccessPathSet i)) -> WriteSet i -> WriteSet i
@@ -131,7 +133,7 @@ bindAccessPaths a b = fromAccessPaths $ concat (bind <$> toAccessPaths b)
         bind p@(AP.AccessPath (AP.Parameter i) _) = case Map.lookup i a of
             Just s -> if BSet.isUniverse s then [AP.Unknown] else (\x -> AP.extend x p) <$> BSet.toList s
             Nothing -> error "Needed parameter not provided!"
-
+        bind _ = error "bindAccessPath: unhandled case"
 
 -- make write sets valid lattices
 instance (FieldIndex i) => Solver.Lattice (WriteSet i) where

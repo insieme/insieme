@@ -52,9 +52,10 @@ module Insieme.Analysis.SymbolicValue (
 
 ) where
 
+--import Debug.Trace
+
 import Data.List (intercalate)
 import Data.Typeable
-import Debug.Trace
 import Foreign
 import Foreign.C.Types
 import Insieme.Adapter (CRepPtr,CRepArr,CSetPtr,dumpIrTree,passBoundSet,updateContext,pprintTree)
@@ -84,9 +85,9 @@ type SymbolicValueSet = BSet.BoundSet BSet.Bound10 SymbolicValue
 instance Solver.Lattice SymbolicValueSet where
     bot   = BSet.empty
     merge = BSet.union
-    
+
     print BSet.Universe = "{-all-}"
-    print set = "{" ++ (intercalate "," $ pprintTree <$> BSet.toList set) ++ "}"  
+    print set = "{" ++ (intercalate "," $ pprintTree <$> BSet.toList set) ++ "}"
 
 instance Solver.ExtLattice SymbolicValueSet where
     top   = BSet.Universe
@@ -123,18 +124,18 @@ genericSymbolicValue :: (Typeable d) => DataFlowAnalysis d SymbolicValueLattice 
 genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     IR.Literal  -> Solver.mkVariable varId [] (compose $ BSet.singleton $ Addr.getNode addr)
-    
+
     -- introduce implicit materialization into symbolic value
     IR.Declaration | isMaterializingDeclaration $ Addr.getNode addr -> var
       where
         var = Solver.mkVariable varId [con] Solver.bot
         con = Solver.createConstraint dep val var
-        
-        dep a = [Solver.toVar valueVar]
+
+        dep _ = [Solver.toVar valueVar]
         val a = compose $ BSet.map go $ valueVal a
           where
             go value = Builder.refTemporaryInit value
-        
+
         valueVar = variableGenerator userDefinedAnalysis $ (Addr.goDown 1 addr)
         valueVal a = extract $ Solver.get a valueVar
 
@@ -163,14 +164,14 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
         cov a = (getNodeType a == IR.Literal || toCover) && (not toIgnore)
           where
             -- derived builtins to cover
-            toCover  = any (isBuiltin a) [ 
-                        "ref_member_access", 
-                        "ref_temp", "ref_temp_init", 
-                        "ref_new", "ref_new_init", 
-                        "ref_kind_cast", "ref_const_cast", "ref_volatile_cast", "ref_parent_cast" 
+            toCover  = any (isBuiltin a) [
+                        "ref_member_access",
+                        "ref_temp", "ref_temp_init",
+                        "ref_new", "ref_new_init",
+                        "ref_kind_cast", "ref_const_cast", "ref_volatile_cast", "ref_parent_cast"
                      ]
             -- literal builtins to ignore
-            toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign" ]      
+            toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign" ]
 
         -- if triggered, we will need the symbolic values of all arguments
         dep _ _ = Solver.toVar <$> argVars
@@ -190,12 +191,12 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
                 decls = toDecl <$> zip (tail $ tail $ IR.getChildren $ Addr.getNode addr ) args
 
                 toDecl (decl,arg) = IR.mkNode IR.Declaration [IR.goDown 0 decl, arg] []
-            
+
             trg = case getNodeType o of
                 IR.Literal -> Addr.getNode o
                 IR.Lambda  -> Addr.getNode $ Addr.goUpX 3 o
-                nt@_ -> error $ "Unexpected node type: " ++ (show nt) 
-            
+                nt@_ -> error $ "Unexpected node type: " ++ (show nt)
+
             resType = IR.goDown 0 $ Addr.getNode addr
 
 

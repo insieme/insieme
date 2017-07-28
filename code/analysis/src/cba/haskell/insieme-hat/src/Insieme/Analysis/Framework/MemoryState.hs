@@ -194,7 +194,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
              var = Solver.mkVariable varId [con] Solver.bot
              con = Solver.createEqualityConstraint dep val var
 
-             dep a = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
+             dep _ = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
              val a = ComposedValue.composeElements $ zip fields (valueVal a)
 
              fields = fromJust $ map field <$> getFieldNames elemType
@@ -208,7 +208,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
             var = Solver.mkVariable varId [con] Solver.bot
             con = Solver.createEqualityConstraint dep val var
 
-            dep a = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
+            dep _ = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
             val a = ComposedValue.composeElements $ elems a
 
             -- attach (unknownIndex, default value) if not all array elements are initialized
@@ -225,6 +225,8 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
 
         -- handle scalar values defined by init expressions
         IR.InitExpr -> var
+
+        _ -> error "definedValue: unhandled case"
 
     where
 
@@ -255,6 +257,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
         targetRefVar = referenceValue $ case getNodeType addr of
             IR.CallExpr -> goDown 1 $ goDown 2 addr         -- here we have to skip the potentially materializing declaration!
             IR.InitExpr -> goDown 1 addr                    -- the reference to be initialized
+            _ -> error "targetRefVar: unhandled case"
         targetRefVal a = ComposedValue.toValue $ Solver.get a targetRefVar
 
 
@@ -294,6 +297,8 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
                 IR.CallExpr  -> if isMaterializingDeclaration $ getNode valueDecl
                                 then memoryStateValue (MemoryStatePoint (ProgramPoint valueDecl Post) (MemoryLocation valueDecl)) analysis
                                 else valueVar (goDown 1 valueDecl)
+
+                _ -> error "elemValueVar: unhandled case"
 
             where
                 valueDecl = goDown 3 addr
@@ -475,6 +480,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
         refVar = referenceValue $ case getNodeType addr of
             IR.CallExpr -> goDown 1 $ goDown 2 addr             -- first argument
             IR.InitExpr -> goDown 1 addr                        -- target memory location
+            _ -> error "refVar: unhandled case"
 
         refVal a = ComposedValue.toValue $ Solver.get a refVar
 
@@ -598,6 +604,7 @@ writeSet addr = case getNodeType addr of
                             where
                                 infinite r = BSet.isUniverse $ ComposedValue.toValue $ Solver.get a r
                                 tooLong (AP.AccessPath _ d) = length d > 1
+                                tooLong _ = error "tooLong: unhandled case"
 
                         res = foldr go BSet.empty (WS.parameters wss)
                             where
@@ -639,4 +646,4 @@ writeSet addr = case getNodeType addr of
 -- killed definitions
 
 killedDefinitions :: MemoryStatePoint -> Solver.TypedVar Definitions
-killedDefinitions (MemoryStatePoint pp ml) = undefined
+killedDefinitions _ = undefined

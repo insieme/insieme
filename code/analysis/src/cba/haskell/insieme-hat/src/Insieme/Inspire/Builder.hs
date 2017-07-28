@@ -44,14 +44,15 @@ module Insieme.Inspire.Builder (
     refTemporaryInit
 ) where
 
+--import Debug.Trace
+
 import Control.Exception.Base
 import Data.Maybe
-import Debug.Trace
 import Insieme.Inspire.Query
 
+import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.Query as Q
 import qualified Insieme.Utils.ParseIR as Lang
-import qualified Insieme.Inspire as IR
 
 
 -- basic node types --
@@ -78,9 +79,9 @@ deref :: IR.Tree -> IR.Tree
 deref t = mkCall resType Lang.refDeref [decl]
   where
     resType = fromJust $ getReferencedType refType
-    
+
     refType = IR.goDown 0 t
-    
+
     decl = mkDeclaration refType t
 
 
@@ -96,7 +97,8 @@ refTemporaryInit e = mkCall some_ref_type Lang.refTempInit [mkDeclaration some_t
 
 -- utilities --
 
+some_type :: IR.Tree
 some_type     = Lang.parseType "some_type"
+
+some_ref_type :: IR.Tree
 some_ref_type = Lang.parseType "ref<some_type>"
-
-

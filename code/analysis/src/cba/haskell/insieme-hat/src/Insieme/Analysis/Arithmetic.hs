@@ -149,7 +149,7 @@ arithmeticValue addr = case Addr.getNode addr of
       where
         cov a = isBuiltin a "ptr_from_ref"
         dep _ _ = []
-        val _ a = ComposedValue.composeElements [(component 1,compose res)]
+        val _ _ = ComposedValue.composeElements [(component 1,compose res)]
           where
             res = BSet.singleton $ Ar.mkConst 0
 
@@ -158,7 +158,7 @@ arithmeticValue addr = case Addr.getNode addr of
     lhs = arithmeticValue $ Addr.goDown 2 addr
     rhs = arithmeticValue $ Addr.goDown 3 addr
 
-    dep _ a = Solver.toVar <$> [lhs, rhs]
+    dep _ _ = Solver.toVar <$> [lhs, rhs]
 
     val op _ a = compose $ (BSet.lift2 op) (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
 
