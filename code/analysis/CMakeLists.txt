@@ -97,7 +97,6 @@ endif()
 # Haskell dependency
 if(ANALYSIS_HASKELL)
 	add_dependencies(analysis insieme_hat)
-	target_include_directories(analysis SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/cba/haskell/insieme-hat/include)
 
 	target_link_libraries(analysis ${insieme_hat})
 endif()

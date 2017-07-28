@@ -90,7 +90,7 @@ findAnalysis addr acc =
             -> AnalysisRun addr s Pending : acc
         _   -> acc
 
-aliasAnalysis :: AnalysisRun -> State Solver.SolverState Alias.Results
+aliasAnalysis :: AnalysisRun -> State Solver.SolverState Alias.Result
 aliasAnalysis a = do
     state <- get
     let (res, state') = Alias.checkAlias state (Addr.goDown 1 $ Addr.goDown 2 $ getAddr a) (Addr.goDown 1 $ Addr.goDown 3 $ getAddr a)

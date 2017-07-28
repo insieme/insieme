@@ -44,14 +44,10 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Utils.BoundSet as BSet
 
-#include "alias_analysis.h"
+data Result = AreAlias | MayAlias | NotAlias
+  deriving (Eq, Ord, Show)
 
-{#enum AliasAnalysisResult as Results {}
-  with prefix = "AliasAnalysisResult_"
-  deriving (Eq, Show)
- #}
-
-checkAlias :: Solver.SolverState -> NodeAddress -> NodeAddress -> (Results,Solver.SolverState)
+checkAlias :: Solver.SolverState -> NodeAddress -> NodeAddress -> (Result,Solver.SolverState)
 checkAlias initial x y = (checkAlias' rx ry, final)
   where
     -- here we determine the kind of filed index to be used for the reference analysis
@@ -60,7 +56,7 @@ checkAlias initial x y = (checkAlias' rx ry, final)
     (res,final) = Solver.resolveAll initial [ referenceValue x, referenceValue y ]
 
 
-checkAlias' :: Eq i => BSet.UnboundSet (Reference i) -> BSet.UnboundSet (Reference i) -> Results
+checkAlias' :: Eq i => BSet.UnboundSet (Reference i) -> BSet.UnboundSet (Reference i) -> Result
 
 checkAlias' BSet.Universe s | BSet.null s = NotAlias
 checkAlias' BSet.Universe _               = MayAlias
@@ -78,6 +74,6 @@ checkAlias' x y = if any (==AreAlias) us then MayAlias else NotAlias
     us = [areAlias u v | u <- BSet.toList x, v <- BSet.toList y]
 
 
-areAlias :: Eq i => Reference i -> Reference i -> Results
+areAlias :: Eq i => Reference i -> Reference i -> Result
 areAlias x y | x == y = AreAlias
 areAlias _ _          = NotAlias

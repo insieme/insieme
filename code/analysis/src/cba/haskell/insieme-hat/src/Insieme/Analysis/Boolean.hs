@@ -59,13 +59,8 @@ import Insieme.Analysis.Entities.FieldIndex
 --
 -- * Boolean Value Results
 --
-
-#include "boolean_analysis.h"
-
-{#enum BooleanAnalysisResult as Result {}
-  with prefix = "BooleanAnalysisResult_"
-  deriving (Eq, Show, Generic, NFData)
- #}
+data Result = AlwaysTrue | AlwaysFalse | Both | Neither
+  deriving (Eq, Ord, Show, Generic, NFData)
 
 --
 -- * Boolean Lattice

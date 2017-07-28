@@ -53,8 +53,11 @@ namespace haskell {
 
 	using namespace insieme::core;
 
-
-	#include "alias_analysis.h"
+	enum class AliasAnalysisResult : int {
+		AreAlias = 0,
+		MayAlias = 1,
+		NotAlias = 2,
+	};
 
 	AliasAnalysisResult checkAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
 		auto x_hs = ctxt.resolveNodeAddress(x);
@@ -62,17 +65,16 @@ namespace haskell {
 		return static_cast<AliasAnalysisResult>(hat_check_alias(ctxt.getHaskellContext(), x_hs, y_hs));
 	}
 
-
 	bool areAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
-		return checkAlias(ctxt, x, y) == AliasAnalysisResult_AreAlias;
+		return checkAlias(ctxt, x, y) == AliasAnalysisResult::AreAlias;
 	}
 
 	bool mayAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
-		return checkAlias(ctxt, x, y) != AliasAnalysisResult_NotAlias;
+		return checkAlias(ctxt, x, y) != AliasAnalysisResult::NotAlias;
 	}
 
 	bool notAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
-		return checkAlias(ctxt, x, y) == AliasAnalysisResult_NotAlias;
+		return checkAlias(ctxt, x, y) == AliasAnalysisResult::NotAlias;
 	}
 
 } // end namespace haskell

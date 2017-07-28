@@ -143,17 +143,22 @@ findDecl var_hs = do
         Just a  -> newStablePtr a
 
 checkBoolean :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
-checkBoolean ctx_hs expr_hs = handleAll (return $ fromIntegral $ fromEnum AnBoolean.Both) $ do
+checkBoolean ctx_hs expr_hs = handleAll (return $ convertResult AnBoolean.Both) $ do
     ctx <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) $ AnBoolean.booleanValue expr
     let ctx_c = Ctx.getCContext ctx
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
-    evaluate $ fromIntegral $ fromEnum $ ComposedValue.toValue res
+    evaluate $ convertResult $ ComposedValue.toValue res
+  where
+    convertResult AnBoolean.AlwaysTrue = 0
+    convertResult AnBoolean.AlwaysFalse = 1
+    convertResult AnBoolean.Both = 2
+    convertResult AnBoolean.Neither = 3
 
 checkAlias :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO CInt
-checkAlias ctx_hs x_hs y_hs = handleAll (return . fromIntegral . fromEnum $ Alias.MayAlias) $ do
+checkAlias ctx_hs x_hs y_hs = handleAll (return $ convertResult Alias.MayAlias) $ do
     ctx <- deRefStablePtr ctx_hs
     x <- deRefStablePtr x_hs
     y <- deRefStablePtr y_hs
@@ -161,7 +166,11 @@ checkAlias ctx_hs x_hs y_hs = handleAll (return . fromIntegral . fromEnum $ Alia
     let ctx_c = Ctx.getCContext ctx
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
-    evaluate $ fromIntegral $ fromEnum res
+    evaluate $ fromIntegral $ convertResult res
+  where
+    convertResult Alias.AreAlias = 0
+    convertResult Alias.MayAlias = 1
+    convertResult Alias.NotAlias = 2
 
 arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr ArithmeticFormula)
 arithValue ctx_hs expr_hs = do

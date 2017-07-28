@@ -52,12 +52,17 @@ namespace analysis {
 namespace cba {
 namespace haskell {
 
-	#include "boolean_analysis.h"
+	enum class BooleanAnalysisResult : int {
+		AlwaysTrue = 0,
+		AlwaysFalse = 1,
+		Both = 2,
+		Neither = 3,
+	};
 
 	BooleanAnalysisResult checkBoolean(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto expr_hs = ctxt.resolveNodeAddress(expr);
 		auto res = static_cast<BooleanAnalysisResult>(hat_check_boolean(ctxt.getHaskellContext(), expr_hs));
-		if(res == BooleanAnalysisResult_Neither) {
+		if(res == BooleanAnalysisResult::Neither) {
 			std::vector<std::string> msgs{"Boolean Analysis Error"};
 			throw AnalysisFailure(msgs);
 		}
@@ -65,21 +70,21 @@ namespace haskell {
 	}
 
 	bool isTrue(Context& ctxt, const core::ExpressionAddress& expr) {
-		return checkBoolean(ctxt, expr) == BooleanAnalysisResult_AlwaysTrue;
+		return checkBoolean(ctxt, expr) == BooleanAnalysisResult::AlwaysTrue;
 	}
 
 	bool isFalse(Context& ctxt, const core::ExpressionAddress& expr) {
-		return checkBoolean(ctxt, expr) == BooleanAnalysisResult_AlwaysFalse;
+		return checkBoolean(ctxt, expr) == BooleanAnalysisResult::AlwaysFalse;
 	}
 
 	bool mayBeTrue(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto res = checkBoolean(ctxt, expr);
-		return res == BooleanAnalysisResult_AlwaysTrue || res == BooleanAnalysisResult_Both;
+		return res == BooleanAnalysisResult::AlwaysTrue || res == BooleanAnalysisResult::Both;
 	}
 
 	bool mayBeFalse(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto res = checkBoolean(ctxt, expr);
-		return res == BooleanAnalysisResult_AlwaysFalse || res == BooleanAnalysisResult_Both;
+		return res == BooleanAnalysisResult::AlwaysFalse || res == BooleanAnalysisResult::Both;
 	}
 
 } // end namespace haskell
