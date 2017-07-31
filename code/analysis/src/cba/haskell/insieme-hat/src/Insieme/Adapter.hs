@@ -183,7 +183,8 @@ arithValue ctx_hs expr_hs = do
     updateContext ctx_c ctx_nhs
     passBoundSet (passFormula ctx_c) arithmeticSet
         $ BSet.map Ar.convert
-        $ BSet.map (fmap SymbolicFormula.getAddr) results
+        $ BSet.map (fmap SymbolicFormula.getAddr)
+        $ Arith.unSFS results
 
 -- ** NodeAddresses
 
@@ -210,7 +211,7 @@ checkForReference ref ctx_hs expr_hs = handleAll (return maybe) $ do
     ctx <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
-    let results = (ComposedValue.toValue res) :: Ref.ReferenceSet FieldIndex.SimpleFieldIndex
+    let results = Ref.unRS $ ComposedValue.toValue res :: BSet.UnboundSet (Ref.Reference FieldIndex.SimpleFieldIndex)
     let ctx_c = Ctx.getCContext ctx
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
@@ -233,7 +234,7 @@ memoryLocations ctx_hs expr_hs = do
     ctx <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
-    let results = (ComposedValue.toValue res) :: Ref.ReferenceSet FieldIndex.SimpleFieldIndex
+    let results = Ref.unRS $ ComposedValue.toValue res :: BSet.UnboundSet (Ref.Reference FieldIndex.SimpleFieldIndex)
     let ctx_c = Ctx.getCContext ctx
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs

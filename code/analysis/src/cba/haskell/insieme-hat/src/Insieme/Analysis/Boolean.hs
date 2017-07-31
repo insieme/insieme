@@ -104,7 +104,7 @@ booleanValue addr =
   where
 
     compose = ComposedValue.toComposed
-    extract = ComposedValue.toValue
+    extractSFS = unSFS . ComposedValue.toValue
 
     analysis = mkDataFlowAnalysis BooleanAnalysis "B" booleanValue
     idGen = mkVarIdentifier analysis
@@ -166,7 +166,7 @@ booleanValue addr =
 
     dep _ _ = Solver.toVar <$> [lhs, rhs]
 
-    val op _ a = combine (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
+    val op _ a = combine (extractSFS $ Solver.get a lhs) (extractSFS $ Solver.get a rhs)
       where
         combine BSet.Universe _ = compose Both
         combine _ BSet.Universe = compose Both

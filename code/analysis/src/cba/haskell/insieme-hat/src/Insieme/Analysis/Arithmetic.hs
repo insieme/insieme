@@ -35,18 +35,23 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.Arithmetic where
 
+import Control.DeepSeq (NFData)
 import Data.Maybe
 import Data.Typeable
+import GHC.Generics (Generic)
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Inspire.Query
 import Insieme.Inspire.Visit (findDecl)
 import Insieme.Utils.ParseInt
+
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
@@ -62,14 +67,15 @@ import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 -- * Arithemtic Lattice
 --
 
-type SymbolicFormulaSet b = BSet.BoundSet b SymbolicFormula
+newtype SymbolicFormulaSet b = SymbolicFormulaSet { unSFS :: BSet.BoundSet b SymbolicFormula }
+  deriving (Eq, Ord, Show, Generic, NFData)
 
-instance BSet.IsBound b => Solver.Lattice (SymbolicFormulaSet b)  where
-    bot   = BSet.empty
-    merge = BSet.union
+instance BSet.IsBound b => Solver.Lattice (SymbolicFormulaSet b) where
+    bot   = SymbolicFormulaSet BSet.empty
+    (SymbolicFormulaSet x) `merge` (SymbolicFormulaSet y) = SymbolicFormulaSet $ BSet.union x y
 
-instance BSet.IsBound b => Solver.ExtLattice (SymbolicFormulaSet b)  where
-    top   = BSet.Universe
+instance BSet.IsBound b => Solver.ExtLattice (SymbolicFormulaSet b) where
+    top   = SymbolicFormulaSet BSet.Universe
 
 
 
@@ -113,8 +119,8 @@ arithmeticValue addr = case Addr.getNode addr of
 
     idGen = mkVarIdentifier analysis
 
-    compose = ComposedValue.toComposed
-    extract = ComposedValue.toValue
+    compose = ComposedValue.toComposed . SymbolicFormulaSet
+    extract = unSFS . ComposedValue.toValue
 
     ops = [ add, mul, sub, div, mod, ptrFromRef]
 

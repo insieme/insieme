@@ -51,25 +51,25 @@ checkAlias :: Solver.SolverState -> NodeAddress -> NodeAddress -> (Result,Solver
 checkAlias initial x y = (checkAlias' rx ry, final)
   where
     -- here we determine the kind of filed index to be used for the reference analysis
-    rx :: BSet.UnboundSet (Reference SimpleFieldIndex)
+    rx :: ReferenceSet SimpleFieldIndex
     (rx:ry:[]) = ComposedValue.toValue <$> res
     (res,final) = Solver.resolveAll initial [ referenceValue x, referenceValue y ]
 
 
-checkAlias' :: Eq i => BSet.UnboundSet (Reference i) -> BSet.UnboundSet (Reference i) -> Result
+checkAlias' :: Eq i => ReferenceSet i -> ReferenceSet i -> Result
 
-checkAlias' BSet.Universe s | BSet.null s = NotAlias
-checkAlias' BSet.Universe _               = MayAlias
+checkAlias' (ReferenceSet BSet.Universe) (ReferenceSet s) | BSet.null s = NotAlias
+checkAlias' (ReferenceSet BSet.Universe) _                              = MayAlias
 
-checkAlias' s BSet.Universe  = checkAlias' BSet.Universe s
+checkAlias' x y@(ReferenceSet BSet.Universe) = checkAlias' y x
 
 
-checkAlias' x y | areSingleton = areAlias (toReference x) (toReference y)
+checkAlias' (ReferenceSet x) (ReferenceSet y) | areSingleton = areAlias (toReference x) (toReference y)
   where
     areSingleton = BSet.size x == 1 && BSet.size y == 1
     toReference = head . BSet.toList
 
-checkAlias' x y = if any (==AreAlias) us then MayAlias else NotAlias
+checkAlias' (ReferenceSet x) (ReferenceSet y) = if any (==AreAlias) us then MayAlias else NotAlias
   where
     us = [areAlias u v | u <- BSet.toList x, v <- BSet.toList y]
 

@@ -35,13 +35,15 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.SymbolicValue (
 
     SymbolicValue,
-    SymbolicValueSet,
+    SymbolicValueSet(..),
     symbolicValue,
 
     SymbolicValueLattice,
@@ -54,10 +56,12 @@ module Insieme.Analysis.SymbolicValue (
 
 --import Debug.Trace
 
+import Control.DeepSeq (NFData)
 import Data.List (intercalate)
 import Data.Typeable
 import Foreign
 import Foreign.C.Types
+import GHC.Generics (Generic)
 import Insieme.Adapter (CRepPtr,CRepArr,CSetPtr,dumpIrTree,passBoundSet,updateContext,pprintTree)
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Dataflow
@@ -80,17 +84,18 @@ import qualified Insieme.Utils.BoundSet as BSet
 
 type SymbolicValue = IR.Tree
 
-type SymbolicValueSet = BSet.BoundSet BSet.Bound10 SymbolicValue
+newtype SymbolicValueSet = SymbolicValueSet { unSVS :: BSet.BoundSet BSet.Bound10 SymbolicValue }
+  deriving (Eq, Ord, Show, Generic, NFData)
 
 instance Solver.Lattice SymbolicValueSet where
-    bot   = BSet.empty
-    merge = BSet.union
+    bot   = SymbolicValueSet BSet.empty
+    (SymbolicValueSet x ) `merge` (SymbolicValueSet y) = SymbolicValueSet $ BSet.union x y
 
-    print BSet.Universe = "{-all-}"
-    print set = "{" ++ (intercalate "," $ pprintTree <$> BSet.toList set) ++ "}"
+    print (SymbolicValueSet BSet.Universe) = "{-all-}"
+    print (SymbolicValueSet s            ) = "{" ++ (intercalate "," $ pprintTree <$> BSet.toList s) ++ "}"
 
 instance Solver.ExtLattice SymbolicValueSet where
-    top   = BSet.Universe
+    top   = SymbolicValueSet BSet.Universe
 
 
 
@@ -225,7 +230,7 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     excessiveFileAccessHandler composedValue (Field field) = res
       where
-        res = ComposedValue.toComposed $ BSet.map append $ ComposedValue.toValue composedValue
+        res = compose $ BSet.map append $ extract composedValue
           where
             append x = Builder.deref ext
               where
@@ -234,8 +239,8 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     -- utilities
 
-    extract = ComposedValue.toValue
-    compose = ComposedValue.toComposed
+    extract = unSVS . ComposedValue.toValue
+    compose = ComposedValue.toComposed . SymbolicValueSet
 
 
 
@@ -261,7 +266,7 @@ hsSymbolicValues ctx_hs stmt_hs = do
     let ctx_c =  Ctx.getCContext ctx
     ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
     updateContext ctx_c ctx_nhs
-    passSymbolicValueSet ctx_c $ ComposedValue.toValue res
+    passSymbolicValueSet ctx_c $ unSVS $ ComposedValue.toValue res
 
 passSymbolicValueSet :: Ctx.CContext
                      -> BSet.BoundSet bb SymbolicValue

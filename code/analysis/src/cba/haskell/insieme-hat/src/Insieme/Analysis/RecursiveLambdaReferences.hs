@@ -75,14 +75,14 @@ recursiveCalls addr = case getNodeType addr of
 
     where
 
-        var = mkVariable varId [con] Set.empty
+        var = mkVariable varId [con] bot
         con = createConstraint dep val var
 
         varId = mkIdentifierFromExpression analysis addr
         analysis = mkAnalysisIdentifier RecursiveLambdaReferenceAnalysis "RecLambdaRefs"
 
         dep _ = toVar <$> freeRefVars
-        val a = Set.filter f $ join $ (get a) <$> freeRefVars
+        val a = LambdaReferenceSet $ Set.filter f $ unLRS $ join $ get a <$> freeRefVars
             where
                 f r = getNode r == tag
 

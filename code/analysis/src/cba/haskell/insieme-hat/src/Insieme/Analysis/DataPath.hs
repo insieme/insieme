@@ -35,11 +35,15 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.DataPath where
 
+import Control.DeepSeq (NFData)
 import Data.Typeable
+import GHC.Generics (Generic)
 import Insieme.Analysis.Arithmetic
 import Insieme.Analysis.Entities.DataPath
 import Insieme.Analysis.Entities.FieldIndex
@@ -47,6 +51,7 @@ import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Identifier
 import Insieme.Inspire.NodeAddress hiding (append)
 import Insieme.Inspire.Query
+
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
@@ -58,14 +63,15 @@ import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 -- * DataPath Lattice
 --
 
-type DataPathSet i = BSet.UnboundSet (DataPath i)
+newtype DataPathSet i = DataPathSet { unDPS :: BSet.UnboundSet (DataPath i) }
+  deriving (Eq, Ord, Show, Generic, NFData)
 
 instance (FieldIndex i) => Solver.Lattice (DataPathSet i) where
-    bot   = BSet.empty
-    merge = BSet.union
+    bot   = DataPathSet BSet.empty
+    (DataPathSet x) `merge` (DataPathSet y) = DataPathSet $ BSet.union x y
 
 instance (FieldIndex i) => Solver.ExtLattice (DataPathSet i) where
-    top = BSet.Universe
+    top = DataPathSet BSet.Universe
 
 
 --
@@ -88,7 +94,7 @@ dataPathValue addr = dataflowValue addr analysis ops
 
     analysis = mkDataFlowAnalysis DataPathAnalysis "DP" dataPathValue
 
-    compose = ComposedValue.toComposed
+    compose = ComposedValue.toComposed . DataPathSet
 
     -- add operator support
 
@@ -111,7 +117,7 @@ dataPathValue addr = dataflowValue addr analysis ops
 
         dep _ _ = (Solver.toVar nestedPathVar) : (Solver.toVar fieldNameVar) : []
 
-        val _ a = compose $ combine (paths a) fieldNames
+        val _ a = compose $ combine (unDPS $ paths a) fieldNames
             where
                 combine = BSet.lift2 $ \p i -> append p ((step . field) (toString i))
                 fieldNames = ComposedValue.toValue $ Solver.get a fieldNameVar
@@ -126,13 +132,13 @@ dataPathValue addr = dataflowValue addr analysis ops
 
         dep _ _ = (Solver.toVar nestedPathVar) : (Solver.toVar indexVar) : []
 
-        val _ a = compose $ combine (paths a) indexes
+        val _ a = compose $ combine (unDPS $ paths a) indexes
             where
                 combine BSet.Universe  _ = BSet.Universe
                 combine ps BSet.Universe = BSet.map (\p -> append p (step unknownIndex)) ps
                 combine ps is = (BSet.lift2 $ \p i -> append p ((step . index) i)) ps is
 
-                indexes = BSet.toUnboundSet $ ComposedValue.toValue $ Solver.get a indexVar
+                indexes = BSet.toUnboundSet $ unSFS $ ComposedValue.toValue $ Solver.get a indexVar
 
         indexVar = arithmeticValue $ goDown 3 addr
 

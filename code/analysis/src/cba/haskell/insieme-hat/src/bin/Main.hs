@@ -78,7 +78,7 @@ analysis addr = do
     state <- get
     let (res, state') = Solver.resolve state (Ref.referenceValue $ Addr.goDown 1 $ Addr.goDown 2 addr)
     put state'
-    let refs = ComposedValue.toValue res :: BSet.UnboundSet (Ref.Reference SimpleFieldIndex)
+    let refs = Ref.unRS $ ComposedValue.toValue res :: BSet.UnboundSet (Ref.Reference SimpleFieldIndex)
     return $ case () of _
                          | BSet.null refs       -> 'e'
                          | BSet.isUniverse refs -> 'u'

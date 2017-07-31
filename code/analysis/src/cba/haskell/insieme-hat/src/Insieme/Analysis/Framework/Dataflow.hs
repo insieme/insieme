@@ -71,6 +71,7 @@ import Insieme.Analysis.Utils.CppSemantic
 import Insieme.Inspire.NodeAddress hiding (getPath)
 import Insieme.Inspire.Query
 import Insieme.Inspire.Visit
+
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Arithmetic as Arithmetic
 import qualified Insieme.Analysis.CallSite as CallSite
@@ -210,7 +211,7 @@ dataflowValue addr analysis ops = case getNode addr of
                     where
                         go l = if covers o trg then Just (o,trg) else Nothing
                             where
-                                trg = Callable.toAddress l 
+                                trg = Callable.toAddress l
 
         getOperatorDependencies a = concat $ map go $ getActiveOperators a
             where
@@ -305,26 +306,26 @@ dataflowValue addr analysis ops = case getNode addr of
             constraint = Solver.forward (varGen (goDown 0 . goUp $ declrAddr)) var
 
         -- handle parameters
-        IR.Parameters -> case () of 
+        IR.Parameters -> case () of
 
             _ | isImplicitCtorOrDtorParameter declrAddr -> iVar
-              | isEntryPointParameter declrAddr         -> entryPointParameterHandler analysis declrAddr 
+              | isEntryPointParameter declrAddr         -> entryPointParameterHandler analysis declrAddr
               | otherwise                               -> var
 
           where
-          
+
             -- implicit ctor/dtor call --
-            
+
             iVar = Solver.mkVariable (idGen addr) [iCon] Solver.bot
             iCon = Solver.forward arg iVar
-            
-            objDecl = getEnclosingDeclaration declrAddr 
-            
+
+            objDecl = getEnclosingDeclaration declrAddr
+
             arg = case getIndex declrAddr of
                 0 -> varGen $ goDown 2 $ goDown 1 objDecl  -- the this parameter of the ctor (also for the dtor) TODO: move this to e.g. the tag type address
                 1 -> varGen $ goDown 1 objDecl             -- the argument of the implicit constructor call
-            
-          
+
+
             -- standard parameter --
             var = Solver.mkVariable (idGen addr) [con] Solver.bot
             con = Solver.createConstraint dep val var
@@ -357,14 +358,14 @@ dataflowValue addr analysis ops = case getNode addr of
 
             val _ a = if includesUnknownSources targets then top else Solver.join $ map go $ BSet.toList targets
                 where
-                    targets = targetRefVal a
-                    
+                    targets = Reference.unRS $ targetRefVal a
+
                     go r = descent dp val
                         where
                             dp  = (Reference.dataPath r)
                             val = Solver.get a (memStateVarOf r)
 
-                    descent dp val = case () of 
+                    descent dp val = case () of
 
                         _ | dp == root -> val
 
@@ -382,7 +383,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
             readValueVars a = if includesUnknownSources targets then [] else map memStateVarOf $ BSet.toList targets
                 where
-                    targets = targetRefVal a
+                    targets = Reference.unRS $ targetRefVal a
 
             memStateVarOf r = memoryStateValue (MemoryStatePoint (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis
 
@@ -400,7 +401,7 @@ dataflowValue addr analysis ops = case getNode addr of
                     else Solver.join $ map go dataPaths
                 where
 
-                    indices = ComposedValue.toValue (Solver.get a indexValueVar)
+                    indices = Arithmetic.unSFS $ ComposedValue.toValue (Solver.get a indexValueVar)
 
                     fieldIndices = index <$> (BSet.toList indices)
 
@@ -427,4 +428,3 @@ dataflowValue addr analysis ops = case getNode addr of
             val _ a = Solver.get a valueVar
 
             valueVar = varGen $ goDown 1 $ goDown 2 addr
-        

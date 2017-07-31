@@ -65,6 +65,7 @@ import Insieme.Analysis.FreeLambdaReferences
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Query
 import Insieme.Inspire.Visit
+
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Entities.AccessPath as AP
@@ -100,18 +101,20 @@ isUnknown _       = False
 union :: (FieldIndex i) => WriteSet i -> WriteSet i -> WriteSet i
 union Unknown _ = Unknown
 union _ Unknown = Unknown
-union (Known a) (Known b) = Known (Map.unionWith BSet.union a b)
+union (Known a) (Known b) = Known $ Map.unionWith accessPathSetUnion a b
+  where
+    accessPathSetUnion x y = AccessPathSet $ BSet.union (unAPS x) (unAPS y)
 
 fromAccessPath :: AP.AccessPath i -> WriteSet i
 fromAccessPath AP.Local              = empty
 fromAccessPath AP.Unknown            = Unknown
-fromAccessPath p@(AP.AccessPath v _) = Known (Map.singleton v (BSet.singleton p))
+fromAccessPath p@(AP.AccessPath v _) = Known $ Map.singleton v $ AccessPathSet $ BSet.singleton p
 
 fromAccessPaths :: (FieldIndex i) => [AP.AccessPath i] -> WriteSet i
 fromAccessPaths xs = foldr union empty (fromAccessPath <$> xs)
 
 toAccessPaths :: WriteSet i -> [AP.AccessPath i]
-toAccessPaths (Known s) = foldr (++) [] (BSet.toList . snd <$> Map.toList s)
+toAccessPaths (Known s) = foldr (++) [] (BSet.toList . unAPS . snd <$> Map.toList s)
 toAccessPaths Unknown = error "toAccessPath: unknown WriteSet"
 
 parameters :: WriteSet i -> [Int]
@@ -131,7 +134,9 @@ bindAccessPaths a b = fromAccessPaths $ concat (bind <$> toAccessPaths b)
     where
         bind p@(AP.AccessPath (AP.Global _) _)    = [p]
         bind p@(AP.AccessPath (AP.Parameter i) _) = case Map.lookup i a of
-            Just s -> if BSet.isUniverse s then [AP.Unknown] else (\x -> AP.extend x p) <$> BSet.toList s
+            Just (AccessPathSet s) -> if BSet.isUniverse s
+                                      then [AP.Unknown]
+                                      else (\x -> AP.extend x p) <$> BSet.toList s
             Nothing -> error "Needed parameter not provided!"
         bind _ = error "bindAccessPath: unhandled case"
 
@@ -194,7 +199,7 @@ writeSetSummary addr = case getNodeType addr of
 
                 hasFreeLambdaRefsVar = freeLambdaReferences $ goUp $ goUp $ goUp addr
 
-                isClosed a = depth addr >= 3 && (Set.null $ Solver.get a hasFreeLambdaRefsVar)
+                isClosed a = depth addr >= 3 && (Set.null $ unLRS $ Solver.get a hasFreeLambdaRefsVar)
 
                 -- the closed case --
 
@@ -272,7 +277,7 @@ writeSetSummary addr = case getNodeType addr of
                         res = fromAccessPaths $ BSet.toList aps
 
                 accessPathVar = accessPathValue $ goDown 1 addr
-                accessPathVal a = ComposedValue.toValue $ Solver.get a accessPathVar
+                accessPathVal a = unAPS $ ComposedValue.toValue $ Solver.get a accessPathVar
 
 
         _ | isRoot addr -> everything

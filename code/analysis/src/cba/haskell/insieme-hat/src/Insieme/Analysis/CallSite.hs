@@ -45,8 +45,10 @@ import Control.DeepSeq
 import Data.Maybe
 import Data.Typeable
 import GHC.Generics (Generic)
+import Insieme.Analysis.FreeLambdaReferences
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Visit
+
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.RecursiveLambdaReferences as RecLambdaRefs
@@ -145,12 +147,12 @@ callSites addr = case getNodeType addr of
     isLambda = getNodeType addr == IR.Lambda
 
     recReferencesVar = RecLambdaRefs.recursiveCalls addr
-    recReferencesVal a = if isLambda then Solver.get a recReferencesVar else Set.empty
+    recReferencesVal a = if isLambda then Solver.get a recReferencesVar else Solver.bot
     recReferencesDep   = if isLambda then [recReferencesVar] else []
 
 
     -- determines whether all calls are statically bound (if not, we have to search) --
-    isStaticallyBound a = i == 1 && isCall p && all check (recReferencesVal a)
+    isStaticallyBound a = i == 1 && isCall p && all check (unLRS $ recReferencesVal a)
       where
         check x = getIndex x == 1 && (isCall $ fromJust $ getParent x)
 
@@ -179,7 +181,7 @@ callSites addr = case getNodeType addr of
 
     indirectCalls a =
         Set.fromList $ if isStaticallyBound a
-            then CallSite . fromJust . getParent <$> Set.toList (recReferencesVal a)
+            then CallSite . fromJust . getParent <$> Set.toList (unLRS $ recReferencesVal a)
             else (CallSite <$> reachingCalls) ++ (CallSite <$> directRecursiveCalls)
       where
 
@@ -192,6 +194,6 @@ callSites addr = case getNodeType addr of
                 IR.BindExpr -> Callable.Closure addr
                 _           -> error "unexpected NodeType"
 
-        directRecursiveCalls = (fromJust . getParent) <$> (filter f $ Set.toList $ recReferencesVal a)
+        directRecursiveCalls = fromJust . getParent <$> (filter f $ Set.toList $ unLRS $ recReferencesVal a)
           where
             f r = getIndex r == 1 && isCall (fromJust $ getParent r)
