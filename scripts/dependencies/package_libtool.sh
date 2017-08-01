@@ -8,8 +8,8 @@ SHA256SUM="84aac136513b009278896ffa255e4d685bcdb0cb0e5363be36adad64c986177e"
 
 DEPENDS="autoconf automake"
 
-export PATH="$PREFIX/$(get_property autoconf PACKAGE)/bin:$PATH"
-export PATH="$PREFIX/$(get_property automake PACKAGE)/bin:$PATH"
+export PATH="$(get_pkg_prefix autoconf)/bin:$PATH"
+export PATH="$(get_pkg_prefix automake)/bin:$PATH"
 
 pkg_is_globally_installed() {
 	local cur_ver="$(libtool --version | head -n1 | grep -oE '[^ ]+$')"

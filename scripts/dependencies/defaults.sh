@@ -7,11 +7,11 @@ export CXXFLAGS="-mtune=native -O3"
 export LDLAGS="-mtune=native -O3"
 
 # override compiler
-#GCC_PKG=$(get_property gcc PACKAGE)
-#export CC="$PREFIX/$GCC_PKG/bin/gcc"
-#export CXX="$PREFIX/$GCC_PKG/bin/g++"
-#export PATH="$PREFIX/$GCC_PKG/bin:$PATH"
-#export LD_LIBRARY_PATH="$PREFIX/$GCC_PKG/lib64"
+#GCC_PKG=$(get_pkg_prefix gcc)
+#export CC="$GCC_PKG/bin/gcc"
+#export CXX="$GCC_PKG/bin/g++"
+#export PATH="$GCC_PKG/bin:$PATH"
+#export LD_LIBRARY_PATH="$GCC_PKG/lib64"
 
 # parallel build
 export SLOTS="${SLOTS:-$(nproc)}"

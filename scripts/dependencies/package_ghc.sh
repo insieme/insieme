@@ -19,7 +19,7 @@ KEY="$(cat /etc/centos-release 2>/dev/null || echo default)"
 
 DEPENDS="gmp"
 
-GMP_PKG=$(get_property gmp PACKAGE)
+GMP_PKG=$(get_pkg_prefix gmp)
 
 pkg_download() {
 	if [ -z "${URL["$KEY"]}" ]; then
@@ -34,8 +34,8 @@ pkg_download() {
 
 pkg_configure() {
 	./configure --prefix="$PREFIX/$PACKAGE" \
-		--with-gmp-includes="$PREFIX/$GMP_PKG/include" \
-		--with-gmp-libraries="$PREFIX/$GMP_PKG/lib"
+		--with-gmp-includes="$GMP_PKG/include" \
+		--with-gmp-libraries="$GMP_PKG/lib"
 }
 
 pkg_build() {
