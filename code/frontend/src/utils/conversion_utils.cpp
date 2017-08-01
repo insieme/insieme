@@ -245,17 +245,28 @@ namespace utils {
 		auto thisVariable = builder.variable(builder.refType(thisType));
 		const auto& paramTypes = otherCtorLit->getType().as<core::FunctionTypePtr>()->getParameterTypeList();
 
-		// generate the body, which only contiains a call to the other constructor
+		// generate the body, which only contains a call to the other constructor
 		core::ExpressionList args;
 		// first pass the this parameter
 		args.push_back(builder.deref(thisVariable));
 		// and then append all the constructor argument default values
 		for(unsigned index = 0; index < ctorDecl->getNumParams(); ++index) {
-			// if any of the default arguments isn't instantiated, we can't create this ctor here
-			if(ctorDecl->getParamDecl(index)->hasUninstantiatedDefaultArg()) {
-				return {};
+			const auto& parmVarDecl = ctorDecl->getParamDecl(index);
+			const clang::Expr* defaultArg;
+			// if the default argument is not uninstantiated, we can take it as is
+			if(!parmVarDecl->hasUninstantiatedDefaultArg()) {
+				defaultArg = parmVarDecl->getDefaultArg();
+
+			} else {
+				// otherwise we have to ask the clang sema to instantiate it for us
+				auto nonConstFunctionDecl = const_cast<clang::FunctionDecl*>(llvm::dyn_cast<clang::FunctionDecl>(ctorDecl));
+				auto nonConstParmVarDecl = const_cast<clang::ParmVarDecl*>(parmVarDecl);
+				auto exprResult = converter.getTranslationUnit().getInsiemeSema().BuildCXXDefaultArgExpr(ctorDecl->getLocation(),
+				                                                                                         nonConstFunctionDecl, nonConstParmVarDecl);
+				assert_false(exprResult.isInvalid()) << "Could not instantiate default argument";
+				defaultArg = exprResult.get();
 			}
-			args.push_back(converter.convertCxxArgExpr(ctorDecl->getParamDecl(index)->getDefaultArg(), paramTypes[index + 1]));
+			args.push_back(converter.convertCxxArgExpr(defaultArg, paramTypes[index + 1]));
 		}
 		auto body = builder.callExpr(otherCtorLit, args);
 
