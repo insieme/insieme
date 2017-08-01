@@ -27,11 +27,14 @@ pkg_configure() {
 }
 
 pkg_is_globally_installed() {
-	local currentver
-	currentver="$(gcc -dumpversion)"
-	if [ "$(printf "$VERSION\n$currentver" | sort -V | head -n1)" == "$currentver" ] && [ "$currentver" != "$VERSION" ]
-	then
-        return 1 # not installed
+	local cur_ver="$(gcc -dumpversion)"
+	if [ -z "$cur_ver" ]; then
+		return 1 # not installed
+	fi
+
+	local cmp_ver="$(printf "$VERSION\n$cur_ver" | sort -V | head -n1)"
+	if [ "$cmp_ver" == "$cur_ver" ] && [ "$cur_ver" != "$VERSION" ]; then
+		return 1 # not installed
 	else
 		return 0 # is installed
 	fi
