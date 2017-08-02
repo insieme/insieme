@@ -44,9 +44,11 @@ import Data.ByteString (getContents)
 import Data.List (isPrefixOf)
 import Data.Text.Format as Fmt
 import Data.Text.Lazy.Builder (fromString)
+import Insieme.Analysis.Entities.SymbolicFormula (SymbolicFormula)
 import Insieme.Inspire.BinaryParser (parseBinaryDump)
 import Insieme.Inspire.Visit (foldTree)
 import Insieme.Utils.Arithmetic (NumOrdering(NumEQ), numCompare)
+
 import qualified Insieme.Analysis.Alias as Alias
 import qualified Insieme.Analysis.Arithmetic as Arith
 import qualified Insieme.Analysis.Boolean as AnBoolean
@@ -90,7 +92,7 @@ findAnalysis addr acc =
             -> AnalysisRun addr s Pending : acc
         _   -> acc
 
-aliasAnalysis :: AnalysisRun -> State Solver.SolverState Alias.Results
+aliasAnalysis :: AnalysisRun -> State Solver.SolverState Alias.Result
 aliasAnalysis a = do
     state <- get
     let (res, state') = Alias.checkAlias state (Addr.goDown 1 $ Addr.goDown 2 $ getAddr a) (Addr.goDown 1 $ Addr.goDown 3 $ getAddr a)
@@ -100,18 +102,19 @@ aliasAnalysis a = do
 boolAnalysis :: AnalysisRun -> State Solver.SolverState AnBoolean.Result
 boolAnalysis a = CV.toValue <$> Solver.resolveS (AnBoolean.booleanValue $ Addr.goDown 2 $ getAddr a)
 
-arithAnalysis :: AnalysisRun -> State Solver.SolverState (Arith.SymbolicFormulaSet BSet.Bound10)
-arithAnalysis a = CV.toValue <$> Solver.resolveS (Arith.arithmeticValue $ Addr.goDown 2 $ getAddr a)
+arithAnalysis :: AnalysisRun -> State Solver.SolverState (BSet.BoundSet BSet.Bound10 SymbolicFormula)
+arithAnalysis a = Arith.unSFS <$> CV.toValue <$> Solver.resolveS (Arith.arithmeticValue $ Addr.goDown 2 $ getAddr a)
 
-arithAnalysis2 :: AnalysisRun -> State Solver.SolverState (Arith.SymbolicFormulaSet BSet.Bound10, Arith.SymbolicFormulaSet BSet.Bound10)
-arithAnalysis2 a = toValue <$> ((,) <$> lhs <*> rhs)
+arithAnalysis2 :: AnalysisRun -> State Solver.SolverState (BSet.BoundSet BSet.Bound10 SymbolicFormula, BSet.BoundSet BSet.Bound10 SymbolicFormula)
+arithAnalysis2 a = unSFS <$> toValue <$> ((,) <$> lhs <*> rhs)
   where
     lhs = Solver.resolveS (Arith.arithmeticValue $ Addr.goDown 2 $ getAddr a)
     rhs = Solver.resolveS (Arith.arithmeticValue $ Addr.goDown 3 $ getAddr a)
-    toValue (x, y) = (CV.toValue x, CV.toValue y)
+    unSFS   (x, y) = (Arith.unSFS x, Arith.unSFS y)
+    toValue (x, y) = (CV.toValue  x, CV.toValue  y)
 
 refAnalysis :: AnalysisRun -> State Solver.SolverState (BSet.UnboundSet Ref.Location)
-refAnalysis a = BSet.map Ref.creationPoint <$> value
+refAnalysis a = BSet.map Ref.creationPoint <$> Ref.unRS <$> value
   where
     value :: State Solver.SolverState (Ref.ReferenceSet FieldIndex.SimpleFieldIndex)
     value = CV.toValue <$> Solver.resolveS (Ref.referenceValue $ Addr.goDown 1 $ Addr.goDown 2 $ getAddr a)

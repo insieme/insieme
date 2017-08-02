@@ -42,14 +42,14 @@
 module Insieme.Analysis.Reference (
     Location,
     Reference(..),
-    ReferenceSet,
+    ReferenceSet(..),
     referenceValue,
 
     isMaterializingDeclaration,
     isMaterializingCall
 ) where
 
-import Control.DeepSeq
+import Control.DeepSeq (NFData)
 import Data.Maybe
 import Data.Typeable
 import GHC.Generics (Generic)
@@ -95,14 +95,15 @@ data Reference i =
 -- * Reference Lattice
 --
 
-type ReferenceSet i = BSet.UnboundSet (Reference i)
+newtype ReferenceSet i = ReferenceSet { unRS :: BSet.UnboundSet (Reference i) }
+  deriving (Eq, Ord, Show, Generic, NFData)
 
 instance (Eq i,Ord i,Show i,Typeable i,NFData i) => Lattice (ReferenceSet i) where
-    bot   = BSet.empty
-    merge = BSet.union
+    bot = ReferenceSet BSet.empty
+    (ReferenceSet x) `merge` (ReferenceSet y) = ReferenceSet $ BSet.union x y
 
 instance (Eq i,Ord i,Show i,Typeable i,NFData i) => ExtLattice (ReferenceSet i) where
-    top   = BSet.singleton UninitializedReference       -- What is not known, is not a valid reference
+    top = ReferenceSet $ BSet.singleton UninitializedReference       -- What is not known, is not a valid reference
 
 
 --
@@ -144,7 +145,7 @@ referenceValue addr = case getNodeType addr of
 
         idGen = mkVarIdentifier analysis
 
-        compose = ComposedValue.toComposed
+        compose = ComposedValue.toComposed . ReferenceSet
 
         opsHandler = [ allocHandler , declHandler , refNull, refNarrow , refExpand , refCast , refReinterpret , ptrToRef , ptrFromRef ]
 
@@ -166,13 +167,13 @@ referenceValue addr = case getNodeType addr of
         refNarrow = OperatorHandler cov subRefDep val
             where
                 cov a = isBuiltin a "ref_narrow"
-                val _ a = compose $ narrow (baseRefVal a) (dataPathVal a)
+                val _ a = compose $ narrow (baseRefVal a) (unDPS $ dataPathVal a)
                 narrow = BSet.lift2 $ onRefs2 $ \(Reference l p) d -> Reference l (DP.append p d)
 
         refExpand = OperatorHandler cov subRefDep val
             where
                 cov a = isBuiltin a "ref_expand"
-                val _ a = compose $ expand (baseRefVal a) (dataPathVal a)
+                val _ a = compose $ expand (baseRefVal a) (unDPS $ dataPathVal a)
                 expand = BSet.lift2 $ onRefs2 $ \(Reference l p) d -> Reference l (DP.append p (DP.invert d))
 
         refCast = OperatorHandler cov dep val
@@ -193,10 +194,10 @@ referenceValue addr = case getNodeType addr of
                 dep _ _ = [toVar baseRefVar, toVar offsetVar]
                 val _ a = compose $ access (baseRefVal a) (offsetVal a)
 
-                baseRefVal a = ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 0) $ get a baseRefVar
+                baseRefVal a = unRS $ ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 0) $ get a baseRefVar
 
                 offsetVar = arithmeticValue $ goDown 1 $ goDown 2 addr
-                offsetVal a = BSet.toUnboundSet $ ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 1) $ get a offsetVar
+                offsetVal a = BSet.toUnboundSet $ unSFS $ ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 1) $ get a offsetVar
 
                 access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ index offset))
 
@@ -215,7 +216,7 @@ referenceValue addr = case getNodeType addr of
         subRefDep _ _ = [toVar baseRefVar, toVar dataPathVar]
 
         baseRefVar   = referenceValue $ goDown 1 $ goDown 2 addr
-        baseRefVal a = ComposedValue.toValue $ get a baseRefVar
+        baseRefVal a = unRS $ ComposedValue.toValue $ get a baseRefVar
 
         dataPathVar   = dataPathValue $ goDown 3 addr
         dataPathVal a = ComposedValue.toValue $ get a dataPathVar

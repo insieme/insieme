@@ -35,16 +35,21 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.AccessPath where
 
+import Control.DeepSeq (NFData)
 import Data.Typeable
+import GHC.Generics (Generic)
 import Insieme.Analysis.DataPath
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Query
+
 import qualified Insieme.Analysis.Entities.AccessPath as AP
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -59,14 +64,15 @@ import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 -- * AccessPath Lattice
 --
 
-type AccessPathSet i = BSet.BoundSet BSet.Bound10 (AP.AccessPath i)
+newtype AccessPathSet i = AccessPathSet { unAPS :: BSet.BoundSet BSet.Bound10 (AP.AccessPath i) }
+  deriving (Eq, Ord, Show, Generic, NFData)
 
 instance (FieldIndex i) => Solver.Lattice (AccessPathSet i) where
-    bot   = BSet.empty
-    merge = BSet.union
+    bot = AccessPathSet BSet.empty
+    (AccessPathSet x) `merge` (AccessPathSet y) = AccessPathSet $ BSet.union x y
 
 instance (FieldIndex i) => Solver.ExtLattice (AccessPathSet i) where
-    top = BSet.Universe
+    top = AccessPathSet BSet.Universe
 
 
 --
@@ -82,7 +88,7 @@ data AccessPathAnalysis = AccessPathAnalysis
 -- * AccessPath Variable Generator
 --
 
-accessPathValue :: (FieldIndex i) => NodeAddress -> Solver.TypedVar (ValueTree.Tree i (AccessPathSet i))
+accessPathValue :: FieldIndex i => NodeAddress -> Solver.TypedVar (ValueTree.Tree i (AccessPathSet i))
 accessPathValue addr = case getNodeType addr of
 
     IR.Variable -> dataflowValue addr analysis ops
@@ -95,7 +101,7 @@ accessPathValue addr = case getNodeType addr of
         initialValueHandler = initValueHandler
     }
 
-    compose = ComposedValue.toComposed
+    compose = ComposedValue.toComposed . AccessPathSet
 
     initValueHandler a | isRoot a = compose $ BSet.singleton $ AP.global $ getNode a
     initValueHandler a = compose $ BSet.singleton $ AP.parameter $ getIndex a
@@ -143,7 +149,7 @@ accessPathValue addr = case getNodeType addr of
     subRefDep _ _ = [Solver.toVar baseAccessPathVar, Solver.toVar dataPathVar]
 
     baseAccessPathVar   = accessPathValue $ goDown 1 $ goDown 2 addr
-    baseAccessPathVal a = ComposedValue.toValue $ Solver.get a baseAccessPathVar
+    baseAccessPathVal a = unAPS $ ComposedValue.toValue $ Solver.get a baseAccessPathVar
 
     dataPathVar   = dataPathValue $ goDown 3 addr
-    dataPathVal a = BSet.changeBound $ ComposedValue.toValue $ Solver.get a dataPathVar
+    dataPathVal a = BSet.changeBound $ unDPS $ ComposedValue.toValue $ Solver.get a dataPathVar

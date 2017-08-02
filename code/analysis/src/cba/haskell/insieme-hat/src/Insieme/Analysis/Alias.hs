@@ -44,40 +44,36 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Utils.BoundSet as BSet
 
-#include "alias_analysis.h"
+data Result = AreAlias | MayAlias | NotAlias
+  deriving (Eq, Ord, Show)
 
-{#enum AliasAnalysisResult as Results {}
-  with prefix = "AliasAnalysisResult_"
-  deriving (Eq, Show)
- #}
-
-checkAlias :: Solver.SolverState -> NodeAddress -> NodeAddress -> (Results,Solver.SolverState)
+checkAlias :: Solver.SolverState -> NodeAddress -> NodeAddress -> (Result,Solver.SolverState)
 checkAlias initial x y = (checkAlias' rx ry, final)
   where
     -- here we determine the kind of filed index to be used for the reference analysis
-    rx :: BSet.UnboundSet (Reference SimpleFieldIndex)
+    rx :: ReferenceSet SimpleFieldIndex
     (rx:ry:[]) = ComposedValue.toValue <$> res
     (res,final) = Solver.resolveAll initial [ referenceValue x, referenceValue y ]
 
 
-checkAlias' :: Eq i => BSet.UnboundSet (Reference i) -> BSet.UnboundSet (Reference i) -> Results
+checkAlias' :: Eq i => ReferenceSet i -> ReferenceSet i -> Result
 
-checkAlias' BSet.Universe s | BSet.null s = NotAlias
-checkAlias' BSet.Universe _               = MayAlias
+checkAlias' (ReferenceSet BSet.Universe) (ReferenceSet s) | BSet.null s = NotAlias
+checkAlias' (ReferenceSet BSet.Universe) _                              = MayAlias
 
-checkAlias' s BSet.Universe  = checkAlias' BSet.Universe s
+checkAlias' x y@(ReferenceSet BSet.Universe) = checkAlias' y x
 
 
-checkAlias' x y | areSingleton = areAlias (toReference x) (toReference y)
+checkAlias' (ReferenceSet x) (ReferenceSet y) | areSingleton = areAlias (toReference x) (toReference y)
   where
     areSingleton = BSet.size x == 1 && BSet.size y == 1
     toReference = head . BSet.toList
 
-checkAlias' x y = if any (==AreAlias) us then MayAlias else NotAlias
+checkAlias' (ReferenceSet x) (ReferenceSet y) = if any (==AreAlias) us then MayAlias else NotAlias
   where
     us = [areAlias u v | u <- BSet.toList x, v <- BSet.toList y]
 
 
-areAlias :: Eq i => Reference i -> Reference i -> Results
+areAlias :: Eq i => Reference i -> Reference i -> Result
 areAlias x y | x == y = AreAlias
 areAlias _ _          = NotAlias

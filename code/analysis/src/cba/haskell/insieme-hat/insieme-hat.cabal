@@ -8,7 +8,8 @@ build-type:         Simple
 cabal-version:      >= 1.10
 
 library
-    ghc-options:        -Wall -O2 -optc-O3
+    ghc-options:        -Wall -Wno-name-shadowing -Wno-type-defaults -Wno-unused-do-bind
+                        -O2 -optc-O3
     hs-source-dirs:     src
     build-tools:        c2hs
     exposed-modules:    Insieme.Adapter
@@ -73,8 +74,7 @@ library
                         template-haskell >= 2.9,
                         transformers >= 0.4,
                         directory >= 1.2.0
-    include-dirs:       include,
-                        ../../../../../core/include
+    include-dirs:       ../../../../../core/include
     default-language:   Haskell2010
 
 foreign-library insieme-hat

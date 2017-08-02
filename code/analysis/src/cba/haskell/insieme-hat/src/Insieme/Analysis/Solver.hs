@@ -69,7 +69,7 @@ module Insieme.Analysis.Solver (
     toVar,
     getDependencies,
     getLimit,
-    
+
     -- assignments
     Assignment,
     get,
@@ -101,7 +101,8 @@ module Insieme.Analysis.Solver (
 ) where
 
 import Prelude hiding (lookup,print)
-import Debug.Trace
+
+--import Debug.Trace
 
 import Control.DeepSeq
 import Control.Exception
@@ -111,11 +112,16 @@ import Data.Function
 import Data.List hiding (insert,lookup)
 import Data.Maybe
 import Data.Tuple
+import Insieme.Analysis.Entities.Memory
+import Insieme.Analysis.Entities.ProgramPoint
+import Insieme.Inspire.NodeAddress
+import Insieme.Utils
 import System.CPUTime
 import System.Directory (doesFileExist)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Process
 import Text.Printf
+
 import qualified Control.Monad.State.Strict as State
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Graph as Graph
@@ -123,13 +129,6 @@ import qualified Data.Hashable as Hash
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-
-import Insieme.Utils
-import Insieme.Inspire.NodeAddress
-import Insieme.Analysis.Entities.Memory
-import Insieme.Analysis.Entities.ProgramPoint
-
-
 
 -- Lattice --------------------------------------------------
 
@@ -152,7 +151,7 @@ class (Eq v, Show v, Typeable v, NFData v) => Lattice v where
         -- | debug printing
         print :: v -> String                -- print a value of the lattice readable
         print = show
-        
+
 
 
 class (Lattice v) => ExtLattice v where
@@ -189,11 +188,11 @@ mkAnalysisIdentifier a n = AnalysisIdentifier {
 -- Identifier -----
 
 
-data IdentifierValue = 
+data IdentifierValue =
           IDV_NodeAddress NodeAddress
         | IDV_ProgramPoint ProgramPoint
         | IDV_MemoryStatePoint MemoryStatePoint
-        | IDV_Other BS.ByteString  
+        | IDV_Other BS.ByteString
     deriving (Eq,Ord,Show)
 
 
@@ -233,7 +232,7 @@ mkIdentifierFromExpression a n = Identifier {
         analysis = a,
         idValue = IDV_NodeAddress n,
         idHash = Hash.hashWithSalt (aidHash a) n
-    } 
+    }
 
 mkIdentifierFromProgramPoint :: AnalysisIdentifier -> ProgramPoint -> Identifier
 mkIdentifierFromProgramPoint a p = Identifier {
@@ -297,21 +296,22 @@ toVar (TypedVar x) = x
 getDependencies :: Assignment -> TypedVar a -> [Var]
 getDependencies a v = concat $ (go <$> (constraints . toVar) v)
     where
-        go c = dependingOn c a 
+        go c = dependingOn c a
 
 getLimit :: (Lattice a) => Assignment -> TypedVar a -> a
 getLimit a v = join (go <$> (constraints . toVar) v)
     where
         go c = get a' v
             where
-                (a',_) = update c a 
+                (a',_) = update c a
 
 
 
 -- Analysis Variable Maps -----------------------------------
 
 newtype VarMap a = VarMap (IntMap.IntMap (Map.Map Var a))
-    
+
+emptyVarMap :: VarMap a
 emptyVarMap = VarMap IntMap.empty
 
 lookup :: Var -> VarMap a -> Maybe a
@@ -320,23 +320,23 @@ lookup k (VarMap m) = (Map.lookup k) =<< (IntMap.lookup (idHash $ index k) m)
 insert :: Var -> a -> VarMap a -> VarMap a
 insert k v (VarMap m) = VarMap (IntMap.insertWith go (idHash $ index k) (Map.singleton k v) m)
     where
-        go n o = Map.insert k v o
+        go _ o = Map.insert k v o
 
 insertAll :: [(Var,a)] -> VarMap a -> VarMap a
 insertAll [] m = m
-insertAll ((k,v):xs) m = insertAll xs $ insert k v m 
-                
+insertAll ((k,v):xs) m = insertAll xs $ insert k v m
+
 
 keys :: VarMap a -> [Var]
 keys (VarMap m) = foldr go [] m
-    where 
-        go im l = (Map.keys im) ++ l 
+    where
+        go im l = (Map.keys im) ++ l
 
 
 keysSet :: VarMap a -> Set.Set Var
 keysSet (VarMap m) = foldr go Set.empty m
-    where 
-        go im s = Set.union (Map.keysSet im) s 
+    where
+        go im s = Set.union (Map.keysSet im) s
 
 
 -- Assignments ----------------------------------------------
@@ -370,14 +370,14 @@ set (Assignment a) (TypedVar v) d = Assignment (insert v (toDyn d) a)
 
 -- resets the values of the given variables within the given assignment
 reset :: Assignment -> Set.Set IndexedVar -> Assignment
-reset (Assignment m) vars = Assignment $ insertAll reseted m 
+reset (Assignment m) vars = Assignment $ insertAll reseted m
     where
         reseted = go <$> Set.toList vars
         go iv = (v,bottom v)
             where
                 v = indexToVar iv
 
- 
+
 
 -- Constraints ---------------------------------------------
 
@@ -390,7 +390,7 @@ data Event =
 
 data Constraint = Constraint {
         dependingOn         :: Assignment -> [Var],
-        update              :: (Assignment -> (Assignment,Event)),       -- update the assignment, a reset is allowed       
+        update              :: (Assignment -> (Assignment,Event)),       -- update the assignment, a reset is allowed
         updateWithoutReset  :: (Assignment -> (Assignment,Event)),       -- update the assignment, a reset is not allowed
         target              :: Var
    }
@@ -405,7 +405,7 @@ data Constraint = Constraint {
 -- a utility for indexing variables
 data IndexedVar = IndexedVar Int Var
 
-          
+
 indexToVar :: IndexedVar -> Var
 indexToVar (IndexedVar _ v) = v
 
@@ -415,13 +415,13 @@ toIndex (IndexedVar i _ ) = i
 
 instance Eq IndexedVar where
     (IndexedVar a _) == (IndexedVar b _) = a == b
-    
+
 instance Ord IndexedVar where
     compare (IndexedVar a _) (IndexedVar b _) = compare a b
 
 instance Show IndexedVar where
     show (IndexedVar _ v) = show v
-    
+
 
 
 data VariableIndex = VariableIndex Int (VarMap IndexedVar)
@@ -438,15 +438,15 @@ knownVariables (VariableIndex _ m) = keysSet m
 varToIndex :: VariableIndex -> Var -> (IndexedVar,VariableIndex)
 varToIndex (VariableIndex n m) v = (res, VariableIndex nn nm)
     where
-    
+
         ri = lookup v m
-        
+
         nm = if isNothing ri then insert v ni m else m
-        
+
         ni = IndexedVar n v           -- the new indexed variable, if necessary
-        
+
         res = fromMaybe ni ri
-        
+
         nn = if isNothing ri then n+1 else n
 
 
@@ -455,7 +455,7 @@ varsToIndex i vs = foldr go ([],i) vs
     where
         go v (rs,i') = (r:rs,i'')
             where
-                (r,i'') = varToIndex i' v 
+                (r,i'') = varToIndex i' v
 
 
 
@@ -465,13 +465,14 @@ varsToIndex i vs = foldr go ([],i) vs
 
 data SolverState = SolverState {
         assignment :: Assignment,
-        variableIndex :: VariableIndex,        
+        variableIndex :: VariableIndex,
         -- for performance evaluation
         numSteps  :: Map.Map AnalysisIdentifier Int,
         cpuTimes  :: Map.Map AnalysisIdentifier Integer,
         numResets :: Map.Map AnalysisIdentifier Int
-    } 
+    }
 
+initState :: SolverState
 initState = SolverState empty emptyVarIndex Map.empty Map.empty Map.empty
 
 
@@ -480,23 +481,24 @@ initState = SolverState empty emptyVarIndex Map.empty Map.empty Map.empty
 data Dependencies = Dependencies (IntMap.IntMap (Set.Set IndexedVar))
         deriving Show
 
+emptyDep :: Dependencies
 emptyDep = Dependencies IntMap.empty
 
 addDep :: Dependencies -> IndexedVar -> [IndexedVar] -> Dependencies
 addDep d _ [] = d
-addDep d@(Dependencies m) t (v:vs) = addDep (Dependencies (IntMap.insertWith (\_ s -> Set.insert t s) (toIndex v) (Set.singleton t) m)) t vs
+addDep (Dependencies m) t (v:vs) = addDep (Dependencies (IntMap.insertWith (\_ s -> Set.insert t s) (toIndex v) (Set.singleton t) m)) t vs
 
 getDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
 getDep (Dependencies d) v = fromMaybe Set.empty $ IntMap.lookup (toIndex v) d
 
 getAllDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
-getAllDep d i = collect d [i] Set.empty
+getAllDep d i = collect [i] Set.empty
     where
-        collect d [] s = s
-        collect d (v:_:_) s | v == i = s        -- we can stop if we reach the seed variable again
-        collect d (v:vs) s = collect d ((Set.toList $ Set.difference dep s) ++ vs) (Set.union dep s)
+        collect [] s = s
+        collect (v:_:_) s | v == i = s        -- we can stop if we reach the seed variable again
+        collect (v:vs) s = collect ((Set.toList $ Set.difference dep s) ++ vs) (Set.union dep s)
             where
-                dep = getDep d v 
+                dep = getDep d v
 
 
 -- solve for a single value
@@ -519,15 +521,15 @@ resolveAll :: (Lattice a) => SolverState -> [TypedVar a] -> ([a],SolverState)
 resolveAll i tvs = (res <$> tvs,s)
     where
         s = solve i (toVar <$> tvs)
-        ass = assignment s 
+        ass = assignment s
         res = get ass
 
 
 -- solve for a set of variables
 solve :: SolverState -> [Var] -> SolverState
-solve init vs = solveStep (init {variableIndex = nindex}) emptyDep ivs
+solve initial vs = solveStep (initial {variableIndex = nindex}) emptyDep ivs
     where
-        (ivs,nindex) = varsToIndex (variableIndex init) vs  
+        (ivs,nindex) = varsToIndex (variableIndex initial) vs
 
 
 -- solve for a set of variables with an initial assignment
@@ -557,34 +559,34 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
                 nu = Map.insertWith (+) aid  1 u
                 nr = if numResets > 0 then Map.insertWith (+) aid numResets r else r
                 aid = analysis $ index $ indexToVar v
-                
+
                 -- each constraint extends the result, the dependencies, and the vars to update
                 go _ = foldr processConstraint (a,i,d,vs,0) ( constraints $ indexToVar v )  -- update all constraints of current variable
                 processConstraint c (a,i,d,dv,numResets) = case ( update c a ) of
-                        
+
                         (a',None)         -> (a',ni,nd,nv,numResets)                -- nothing changed, we are fine
-                        
+
                         (a',Increment)    -> (a',ni,nd, uv ++ nv, numResets)        -- add depending variables to work list
-                        
+
                         (a',Reset)        -> (ra,ni,nd, uv ++ nv, numResets+1)      -- handling a local reset
-                            where 
+                            where
                                 dep = getAllDep nd trg
-                                ra = if not $ Set.member trg dep                    -- if variable is not indirectly depending on itself  
-                                    then reset a' dep                               -- reset all depending variables to their bottom value 
+                                ra = if not $ Set.member trg dep                    -- if variable is not indirectly depending on itself
+                                    then reset a' dep                               -- reset all depending variables to their bottom value
                                     else fst $ updateWithoutReset c a               -- otherwise insist on merging reseted value with current state
-                                        
+
                     where
                             trg = v
                             dep = dependingOn c a
                             (idep,ni) = varsToIndex i dep
-                            
+
                             newVarsList = filter f idep
-                                where 
+                                where
                                     f iv = toIndex iv >= numVars i
-                                    
+
                             nd = addDep d trg idep
                             nv = newVarsList ++ dv
-                            
+
                             uv = Set.elems $ getDep nd trg
 
 
@@ -597,32 +599,33 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
 --   * the current value of the constraint,
 --   * and the target variable for this constraint.
 createConstraint :: (Lattice a) => ( Assignment -> [Var] ) -> ( Assignment -> a ) -> TypedVar a -> Constraint
-createConstraint dep limit trg@(TypedVar var) = Constraint dep update update var
+createConstraint dep limit trg@(TypedVar var) = Constraint dep update' update' var
     where
-        update a = case () of
-                _ | value `less` current -> (                                a,      None)    -- nothing changed                                    
-                _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change                              
-            where 
-                value = limit a                                                               -- the value from the constraint      
+        update' a = case () of
+                _ | value `less` current -> (                                a,      None)    -- nothing changed
+                _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change
+            where
+                value = limit a                                                               -- the value from the constraint
                 current = get a trg                                                           -- the current value in the assignment
 
-                
+
 -- creates a constraint of the form f(A) = A[b] enforcing equality
+createEqualityConstraint :: Lattice t => (Assignment -> [Var]) -> (Assignment -> t) -> TypedVar t -> Constraint
 createEqualityConstraint dep limit trg@(TypedVar var) = Constraint dep update forceUpdate var
     where
         update a = case () of
-                _ | value `less` current -> (              a,      None)    -- nothing changed                                    
-                _ | current `less` value -> (set a trg value, Increment)    -- an incremental change                              
+                _ | value `less` current -> (              a,      None)    -- nothing changed
+                _ | current `less` value -> (set a trg value, Increment)    -- an incremental change
                 _                        -> (set a trg value,     Reset)    -- a reseting change, heading in a different direction
-            where 
-                value = limit a                                             -- the value from the constraint      
+            where
+                value = limit a                                             -- the value from the constraint
                 current = get a trg                                         -- the current value in the assignment
 
         forceUpdate a = case () of
-                _ | value `less` current -> (                                a,      None)    -- nothing changed                                    
-                _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change                              
-            where 
-                value = limit a                                                               -- the value from the constraint      
+                _ | value `less` current -> (                                a,      None)    -- nothing changed
+                _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change
+            where
+                value = limit a                                                               -- the value from the constraint
                 current = get a trg                                                           -- the current value in the assignment
 
 
@@ -642,7 +645,7 @@ forwardIf a b@(TypedVar v1) c@(TypedVar v2) d = createConstraint dep upt d
 
 -- creates a constraint of the form  x \in A[b]
 constant :: (Lattice a) => a -> TypedVar a -> Constraint
-constant x b = createConstraint (\_ -> []) (\a -> x) b
+constant x b = createConstraint (const []) (const x) b
 
 
 
@@ -651,17 +654,18 @@ constant x b = createConstraint (\_ -> []) (\a -> x) b
 -- Profiling --
 
 measure :: (a -> b) -> a -> (b,Integer)
-measure f p = unsafePerformIO $ do    
+measure f p = unsafePerformIO $ do
         t1 <- getCPUTime
         r  <- evaluate $! f p
-        t2 <- getCPUTime 
+        t2 <- getCPUTime
         return (r,t2-t1)
 
 
 -- Debugging --
 
 
--- a utility to escape double-quotes 
+-- a utility to escape double-quotes
+escape :: String -> String
 escape str = concat $ escape' <$> str
     where
         escape' c | c == '"' = ['\\','"']
@@ -670,12 +674,12 @@ escape str = concat $ escape' <$> str
 
 -- prints the current assignment as a graph
 toDotGraph :: SolverState -> String
-toDotGraph (SolverState a@( Assignment m ) varIndex _ _ _) = "digraph G {\n\t"
+toDotGraph (SolverState a@(Assignment _) varIndex _ _ _) = "digraph G {\n\t"
         ++
         "\n\tv0 [label=\"unresolved variable!\", color=red];\n"
         ++
         -- define nodes
-        ( intercalate "\n\t" ( map (\v -> "v" ++ (show $ fst v ) ++ " [label=\"" ++ (show $ snd v) ++ " = " ++ (escape $ cut 100 $ valuePrint (snd v) a) ++ "\"];" ) vars ) )
+        ( intercalate "\n\t" ( map (\v -> "v" ++ (show $ fst v) ++ " [label=\"" ++ (show $ snd v) ++ " = " ++ (escape $ cut 100 $ valuePrint (snd v) a) ++ "\"];" ) vars ) )
         ++
         "\n\t"
         ++
@@ -684,7 +688,7 @@ toDotGraph (SolverState a@( Assignment m ) varIndex _ _ _) = "digraph G {\n\t"
         ++
         "\n}"
     where
-    
+
         -- get set of known variables
         varSet = knownVariables varIndex
 
@@ -707,10 +711,10 @@ toDotGraph (SolverState a@( Assignment m ) varIndex _ _ _) = "digraph G {\n\t"
         deps = foldr go [] vars
             where
                 go = (\v l -> (foldr (\s l -> (fst v, index s) : l ) [] (dep $ snd v )) ++ l)
-        
+
         -- a utility to cut the length of labels
         cut l str | length str > (l-4) = (take l str) ++ " ..."
-        cut l str                   = str
+        cut _ str = str
 
 
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
@@ -718,7 +722,7 @@ dumpSolverState :: Bool -> SolverState -> FilePath -> String
 dumpSolverState overwrite s f = unsafePerformIO $ do
   base <- solverToDot overwrite s f
   pdfFromDot base
-  evaluate $ dumpToJsonFile s "solution_meta" 
+  evaluate $ dumpToJsonFile s "solution_meta"
   return ("Dumped assignment to " ++ base)
 
 -- | Dump solver state to the given file name, using the dot format.
@@ -738,13 +742,14 @@ pdfFromDot b = void (system $ "dot -Tpdf " ++ b ++ ".dot -o " ++ b ++ ".pdf")
 nonexistFile :: String -> String -> IO String
 nonexistFile base ext = tryFile names
     where
+      tryFile []     = error "specify at least one filename"
       tryFile (f:fs) = doesFileExist (f ++ "." ++ ext)
                        >>= \e -> if e then tryFile fs else return f
       names  = base : [ iter n | n <- [ 1.. ]]
       iter n = concat [base, "-", show n]
 
 toJsonMetaFile :: SolverState -> String
-toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _ _) = "{\n"
+toJsonMetaFile (SolverState a@(Assignment _) varIndex _ _ _) = "{\n"
         ++
         "    \"bodies\": {\n"
         ++
@@ -754,7 +759,7 @@ toJsonMetaFile (SolverState a@( Assignment m ) varIndex _ _ _) = "{\n"
     where
 
         addr = address . index
-        
+
         vars = knownVariables varIndex
 
         store = foldr go Map.empty vars
@@ -776,33 +781,33 @@ dumpToJsonFile s file = unsafePerformIO $ do
 
 
 showSolverStatistic :: SolverState -> String
-showSolverStatistic s = 
+showSolverStatistic s =
         "===================================================== Solver Statistic ==============================================================================================\n" ++
         "         Analysis                #Vars              Updates          Updates/Var            ~Time[us]        ~Time/Var[us]               Resets           Resets/Var" ++
         "\n=====================================================================================================================================================================\n" ++
         ( intercalate "\n" (map print $ Map.toList grouped)) ++
         "\n---------------------------------------------------------------------------------------------------------------------------------------------------------------------\n" ++
-        "           Total: " ++ (printf "%20d" numVars) ++ 
-                        (printf " %20d" totalUpdates) ++ (printf " %20.3f" avgUpdates) ++ 
+        "           Total: " ++ (printf "%20d" numVars) ++
+                        (printf " %20d" totalUpdates) ++ (printf " %20.3f" avgUpdates) ++
                         (printf " %20d" totalTime) ++ (printf " %20.3f" avgTime) ++
                         (printf " %20d" totalResets) ++ (printf " %20.3f" avgResets) ++
         "\n=====================================================================================================================================================================\n" ++
         analyseVarDependencies s ++
-        "\n=====================================================================================================================================================================\n" 
+        "\n=====================================================================================================================================================================\n"
     where
         vars = knownVariables $ variableIndex s
-        
+
         grouped = foldr go Map.empty vars
             where
                 go v m = Map.insertWith (+) ( analysis . index $ v ) (1::Int) m
-        
+
         print (a,c) = printf " %16s %20d %20d %20.3f %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime totalResets avgResets
             where
                 name = ((show a) ++ ":")
-            
+
                 totalUpdates = Map.findWithDefault 0 a $ numSteps s
                 avgUpdates = ((fromIntegral totalUpdates) / (fromIntegral c)) :: Float
-            
+
                 totalTime = toMs $ Map.findWithDefault 0 a $ cpuTimes s
                 avgTime = ((fromIntegral totalTime) / (fromIntegral c)) :: Float
 
@@ -811,43 +816,43 @@ showSolverStatistic s =
 
 
         numVars = Set.size vars
-        
+
         totalUpdates = foldr (+) 0 (numSteps s)
         avgUpdates = ((fromIntegral totalUpdates) / (fromIntegral numVars)) :: Float
-        
+
         totalTime = toMs $ foldr (+) 0 (cpuTimes s)
         avgTime = ((fromIntegral totalTime) / (fromIntegral numVars)) :: Float
 
         totalResets = foldr (+) 0 (numResets s)
         avgResets = ((fromIntegral totalResets) / (fromIntegral numVars)) :: Float
-        
+
         toMs a = a `div` 1000000
-        
-        
+
+
 analyseVarDependencies :: SolverState -> String
-analyseVarDependencies s = 
+analyseVarDependencies s =
 
             "  Number of SCCs: " ++ show (length sccs)   ++ "\n" ++
             "  largest SCCs:   " ++ show (take 10 $ reverse $ sort $ length . Graph.flattenSCC <$> sccs)
 
     where
-    
-        ass = assignment s 
-    
+
+        ass = assignment s
+
         index = variableIndex s
-        
+
         vars = knownVariables index
-        
+
         -- getDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
-        
+
         -- varToIndex :: VariableIndex -> Var -> (IndexedVar,VariableIndex)
-        
+
         nodes = go <$> Set.toList vars
             where
                 go v = (v,v,dep v)
                 dep v = foldr (\c l -> (dependingOn c ass) ++ l) [] (constraints v)
 
-        
+
         sccs = Graph.stronglyConnComp nodes
-        
-        
+
+

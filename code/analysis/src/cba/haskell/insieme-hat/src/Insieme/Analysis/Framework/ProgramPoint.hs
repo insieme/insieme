@@ -89,7 +89,7 @@ programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNodeType
                 hasUniversalTarget a = BSet.isUniverse $ extract $ Solver.get a targetVar
 
                 -- test whether any operator handlers are active
-                getActiveHandlers a = if BSet.isUniverse callables then [] else concatMap f ops 
+                getActiveHandlers a = if BSet.isUniverse callables then [] else concatMap f ops
                     where
                         callables = extract $ Solver.get a targetVar
 
@@ -99,7 +99,7 @@ programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNodeType
                             where
                                 go l = if covers o trg then Just (o,trg) else Nothing
                                     where
-                                        trg = toAddress l 
+                                        trg = toAddress l
 
                 isHandlerActive a = not . null $ getActiveHandlers a
 
@@ -134,7 +134,7 @@ mkPredecessorConstraintCredentials :: (Solver.Lattice a)
 mkPredecessorConstraintCredentials pp analysis = (dep,val)
     where
         predecessorVar = predecessor pp
-        predecessorStateVars a = map analysis (Solver.get a predecessorVar)
+        predecessorStateVars a = map analysis $ unPL $ Solver.get a predecessorVar
 
         dep a = (Solver.toVar predecessorVar) : map Solver.toVar (predecessorStateVars a)
         val a = Solver.join $ map (Solver.get a) (predecessorStateVars a)

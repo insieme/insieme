@@ -53,9 +53,9 @@ foreign import ccall "hat_c_parse_ir_statement"
 
 -- | Parse a given IR expression.
 parseExpr :: String -> IR.Tree
-parseExpr stmt = removeIds $ unsafePerformIO $ parseIR' stmt
+parseExpr = removeIds . unsafePerformIO . parseIR
   where
-    parseIR' stmt = do
+    parseIR stmt = do
         alloca $ \data_ptr_c ->
             alloca $ \size_ptr_c -> do
                 withCStringLen stmt $ \(sz,l) ->cParseIrStatement sz (fromIntegral l) data_ptr_c size_ptr_c

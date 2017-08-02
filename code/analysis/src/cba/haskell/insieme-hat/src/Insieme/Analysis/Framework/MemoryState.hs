@@ -49,7 +49,7 @@ module Insieme.Analysis.Framework.MemoryState (
 
 ) where
 
-import Control.DeepSeq
+import Control.DeepSeq (NFData)
 import Data.Maybe
 import Data.Typeable
 import GHC.Generics (Generic)
@@ -86,15 +86,16 @@ data Definition = Initial                                    -- it is the defini
               | Initialization NodeAddress                   -- an initialization expression conducting an update to a memory location
     deriving (Eq,Ord,Show,Generic,NFData)
 
-type Definitions = BSet.UnboundSet Definition
+newtype Definitions = Definitions { unD :: BSet.UnboundSet Definition }
+  deriving (Eq,Ord,Show,Generic,NFData)
 
 instance Solver.Lattice Definitions where
-    bot = BSet.empty
-    merge = BSet.union
+    bot = Definitions BSet.empty
+    (Definitions x) `merge` (Definitions y) = Definitions $ BSet.union x y
 
 
 instance Solver.ExtLattice Definitions where
-    top = BSet.Universe
+    top = Definitions BSet.Universe
 
 --
 -- * Memory State Analysis
@@ -148,7 +149,7 @@ memoryStateValue ms@(MemoryStatePoint (ProgramPoint _ _) ml@(MemoryLocation loc)
 
 
         reachingDefVar = reachingDefinitions ms
-        reachingDefVal a = Solver.get a reachingDefVar
+        reachingDefVal a = unD $ Solver.get a reachingDefVar
 
         definingValueVars a =
                 BSet.applyOrDefault [] (concat . (map go) . BSet.toList) $ reachingDefVal a
@@ -194,7 +195,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
              var = Solver.mkVariable varId [con] Solver.bot
              con = Solver.createEqualityConstraint dep val var
 
-             dep a = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
+             dep _ = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
              val a = ComposedValue.composeElements $ zip fields (valueVal a)
 
              fields = fromJust $ map field <$> getFieldNames elemType
@@ -208,7 +209,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
             var = Solver.mkVariable varId [con] Solver.bot
             con = Solver.createEqualityConstraint dep val var
 
-            dep a = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
+            dep _ = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
             val a = ComposedValue.composeElements $ elems a
 
             -- attach (unknownIndex, default value) if not all array elements are initialized
@@ -225,6 +226,8 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
 
         -- handle scalar values defined by init expressions
         IR.InitExpr -> var
+
+        _ -> error "definedValue: unhandled case"
 
     where
 
@@ -255,6 +258,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
         targetRefVar = referenceValue $ case getNodeType addr of
             IR.CallExpr -> goDown 1 $ goDown 2 addr         -- here we have to skip the potentially materializing declaration!
             IR.InitExpr -> goDown 1 addr                    -- the reference to be initialized
+            _ -> error "targetRefVar: unhandled case"
         targetRefVal a = ComposedValue.toValue $ Solver.get a targetRefVar
 
 
@@ -262,15 +266,15 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
 
         isActive a = (BSet.isUniverse trgs) || (any pred $ BSet.toSet $ trgs)
             where
-                trgs = targetRefVal a
+                trgs = unRS $ targetRefVal a
                 pred (Reference cp _) = cp == loc
                 pred _ = False
 
         isPerfectAssign a = (not $ BSet.isUniverse trgs) && (BSet.size trgs == 1)
             where
-                trgs = targetRefVal a
+                trgs = unRS $ targetRefVal a
 
-        isFullAssign a = isPerfectAssign a && (all pred $ BSet.toSet $ targetRefVal a)
+        isFullAssign a = isPerfectAssign a && (all pred $ BSet.toSet $ unRS $ targetRefVal a)
             where
                 pred (Reference _ DP.Root) = True
                 pred _ = False
@@ -295,6 +299,8 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
                                 then memoryStateValue (MemoryStatePoint (ProgramPoint valueDecl Post) (MemoryLocation valueDecl)) analysis
                                 else valueVar (goDown 1 valueDecl)
 
+                _ -> error "elemValueVar: unhandled case"
+
             where
                 valueDecl = goDown 3 addr
 
@@ -307,7 +313,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
                 oldVal = oldStateVal a
                 elemVal = elemValueVal a
 
-                trgs = targetRefVal a
+                trgs = unRS $ targetRefVal a
 
                 values = concat $ update <$> BSet.toList trgs
 
@@ -350,19 +356,19 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
         -- a declaration could be an assignment if it is materializing
         IR.Declaration | addr == loc && p == Pre ->
-            Solver.mkVariable varId [] (BSet.singleton $ Declaration addr)
+            Solver.mkVariable varId [] $ Definitions $ BSet.singleton $ Declaration addr
 
         -- a call could be an assignment if it is materializing
         IR.CallExpr | addr == loc && p == Post && isMaterializingCall (getNode addr) ->
-            Solver.mkVariable varId [] (BSet.singleton $ MaterializingCall addr)
+            Solver.mkVariable varId [] $ Definitions $ BSet.singleton $ MaterializingCall addr
 
         -- the call could also be the creation point if it is not materializing
         IR.CallExpr | addr == loc && p == Post ->
-            Solver.mkVariable varId [] (BSet.singleton Creation)
+            Solver.mkVariable varId [] $ Definitions $ BSet.singleton Creation
 
         -- the entry point is the creation of everything that reaches this point
         _ | p == Pre && isEntryPoint addr ->
-            Solver.mkVariable varId [] (BSet.singleton $ Initial)
+            Solver.mkVariable varId [] $ Definitions $ BSet.singleton Initial
 
         -- skip everything that can statically be considered assignment free
         _ | p == Post && isAssignmentFree addr && (not isParentOfLocation) ->
@@ -389,7 +395,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
                 val a = case () of
                     _ | mayAssign a -> case () of
                             _ | noRefs a  -> Solver.bot
-                              | hitsLoc a -> BSet.singleton $ Assignment addr
+                              | hitsLoc a -> Definitions $ BSet.singleton $ Assignment addr
                               | otherwise -> predVals
                       | otherwise   -> predVals
                     where
@@ -420,7 +426,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
                 val a = if canSkipCallable a then skipPredecessorVal a else nonSkipPredecessorVal a
 
                 writeSetVar = writeSet addr
-                writeSetVal a = Solver.get a writeSetVar
+                writeSetVal a = unWS $ Solver.get a writeSetVar
 
                 canSkipCallable = not . BSet.member loc . writeSetVal
 
@@ -447,7 +453,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
                 val a = case () of
                      _ | noRefs a  -> Solver.bot
-                       | hitsLoc a -> BSet.singleton $ Initialization addr
+                       | hitsLoc a -> Definitions $ BSet.singleton $ Initialization addr
                        | otherwise -> predecessorVal a
 
         -- for all the others, the magic is covered by the generic program point value constraint generator
@@ -475,14 +481,15 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
         refVar = referenceValue $ case getNodeType addr of
             IR.CallExpr -> goDown 1 $ goDown 2 addr             -- first argument
             IR.InitExpr -> goDown 1 addr                        -- target memory location
+            _ -> error "refVar: unhandled case"
 
-        refVal a = ComposedValue.toValue $ Solver.get a refVar
+        refVal :: Solver.Assignment -> BSet.UnboundSet (Reference SimpleFieldIndex)
+        refVal a = unRS $ ComposedValue.toValue $ Solver.get a refVar
 
         noRefs a = BSet.null $ refVal a
 
         hitsLoc a = BSet.isUniverse refs || (any hit $ BSet.toSet refs)
             where
-                refs :: ReferenceSet SimpleFieldIndex
                 refs = refVal a
                 hit (Reference cp _) = cp == loc
                 hit _ = False
@@ -572,36 +579,38 @@ data WriteSetAnalysis = WriteSetAnalysis
 writeSetAnalysis :: Solver.AnalysisIdentifier
 writeSetAnalysis = Solver.mkAnalysisIdentifier WriteSetAnalysis "WriteSet"
 
+newtype WriteSet = WriteSet { unWS :: BSet.UnboundSet Location }
+  deriving (Eq,Ord,Show,Generic,NFData)
 
-
-instance Solver.Lattice (BSet.UnboundSet Location) where
-    bot = BSet.empty
-    merge = BSet.union
+instance Solver.Lattice WriteSet where
+    bot = WriteSet BSet.empty
+    (WriteSet x) `merge` (WriteSet y) = WriteSet $ BSet.union x y
 
 
 -- an analysis computing the set of memory locations written by a expression
-writeSet :: NodeAddress -> Solver.TypedVar (BSet.UnboundSet Location)
+writeSet :: NodeAddress -> Solver.TypedVar WriteSet
 writeSet addr = case getNodeType addr of
 
         IR.CallExpr -> var
             where
-                var = Solver.mkVariable (idGen addr) [con] BSet.empty
+                var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
 
                 dep a = (Solver.toVar targetVar) : (Solver.toVar <$> writeSetSummaryVars a) ++ (Solver.toVar <$> refVars a)
-                val a = if unknown then BSet.Universe else res
+                val a = WriteSet $ if unknown then BSet.Universe else res
                     where
                         wss = writeSetSummaryVal a
                         aps = WS.toAccessPaths wss
 
                         unknown = (WS.isUnknown wss) || (any infinite $ refVars a) || (any tooLong aps)
                             where
-                                infinite r = BSet.isUniverse $ ComposedValue.toValue $ Solver.get a r
+                                infinite r = BSet.isUniverse $ unRS $ ComposedValue.toValue $ Solver.get a r
                                 tooLong (AP.AccessPath _ d) = length d > 1
+                                tooLong _ = error "tooLong: unhandled case"
 
                         res = foldr go BSet.empty (WS.parameters wss)
                             where
-                                go x s = BSet.union s $ BSet.fromList $ concat $ map toLoc $ BSet.toList $ ComposedValue.toValue $ Solver.get a $ refVar x
+                                go x s = BSet.union s $ BSet.fromList $ concat $ map toLoc $ BSet.toList $ unRS $ ComposedValue.toValue $ Solver.get a $ refVar x
                                 toLoc :: Reference SimpleFieldIndex -> [Location]
                                 toLoc (Reference l _ ) = [l]
                                 toLoc _ = []
@@ -626,11 +635,8 @@ writeSet addr = case getNodeType addr of
                         wss = writeSetSummaryVal a
                         res = refVar <$> WS.parameters wss
 
-        _ -> empty
-
+        _ -> Solver.mkVariable (idGen addr) [] Solver.bot
     where
-
-        empty = Solver.mkVariable (idGen addr) [] (BSet.empty)
 
         idGen a = Solver.mkIdentifierFromExpression writeSetAnalysis a
 
@@ -639,4 +645,4 @@ writeSet addr = case getNodeType addr of
 -- killed definitions
 
 killedDefinitions :: MemoryStatePoint -> Solver.TypedVar Definitions
-killedDefinitions (MemoryStatePoint pp ml) = undefined
+killedDefinitions _ = undefined

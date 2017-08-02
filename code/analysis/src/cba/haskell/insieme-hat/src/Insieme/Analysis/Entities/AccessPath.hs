@@ -106,7 +106,7 @@ append :: (Eq i) => AccessPath i -> DP.DataPath i -> AccessPath i
 append Unknown    _ = Unknown
 append Local      _ = Local
 append _ DP.Invalid = Unknown
-
+append (AccessPath _ []    ) _ = error "empty access path"
 append (AccessPath b (d:ds)) p = case DP.append d p of
     DP.Invalid -> Unknown
     r@_        -> AccessPath b (r:ds)

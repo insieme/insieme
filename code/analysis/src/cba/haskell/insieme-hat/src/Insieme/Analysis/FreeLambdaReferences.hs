@@ -35,11 +35,13 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Insieme.Analysis.FreeLambdaReferences (
 
-    LambdaReferenceSet,
+    LambdaReferenceSet(..),
     freeLambdaReferences,
 
 {-
@@ -49,11 +51,14 @@ module Insieme.Analysis.FreeLambdaReferences (
 
 ) where
 
+import Control.DeepSeq (NFData)
 import Data.Typeable
+import GHC.Generics (Generic)
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Query
 import Insieme.Inspire.Visit
+
 import qualified Data.Set as Set
 import qualified Insieme.Inspire as IR
 
@@ -61,11 +66,12 @@ import qualified Insieme.Inspire as IR
 -- * the lattice of this analysis
 --
 
-type LambdaReferenceSet = Set.Set NodeAddress
+newtype LambdaReferenceSet = LambdaReferenceSet { unLRS :: Set.Set NodeAddress }
+  deriving (Eq, Ord, Show, Generic, NFData)
 
 instance Lattice LambdaReferenceSet where
-    bot = Set.empty
-    merge = Set.union
+    bot = LambdaReferenceSet Set.empty
+    (LambdaReferenceSet x) `merge` (LambdaReferenceSet y) = LambdaReferenceSet $ Set.union x y
 
 
 
@@ -92,14 +98,14 @@ freeLambdaReferences addr = case getNodeType addr of
         -- this one handles root definitions, to utilize node sharing
         IR.LambdaDefinition | isRoot addr -> var
             where
-                var = mkVariable varId [con] bot
+                var = mkVariable varId [con] bot :: TypedVar LambdaReferenceSet
                 con = createConstraint (\_ -> toVar <$> deps) val var
 
                 bindings = getChildren addr
                 definedRefs = (getNode . goDown 0) <$> bindings
                 deps = (freeLambdaReferences . goDown 1) <$> bindings
 
-                val a = Set.filter f $ join $ get a <$> deps
+                val a = LambdaReferenceSet $ Set.filter f $ unLRS $ join $ get a <$> deps
                     where
                         f n = notElem (getNode n) definedRefs
 
@@ -111,7 +117,7 @@ freeLambdaReferences addr = case getNodeType addr of
                 con = createConstraint dep val var
 
                 dep _ = [toVar freeLambdaRefVar]
-                val a = Set.map (append addr) $ get a freeLambdaRefVar
+                val a = LambdaReferenceSet $ Set.map (append addr) $ unLRS $ get a freeLambdaRefVar
 
                 freeLambdaRefVar = freeLambdaReferences $ crop addr
 
@@ -122,7 +128,7 @@ freeLambdaReferences addr = case getNodeType addr of
         var = mkVariable varId [con] base
         con = createConstraint (\_ -> toVar <$> deps) val var
 
-        base = Set.fromList $ foldAddressPrune collector prune addr
+        base = LambdaReferenceSet $ Set.fromList $ foldAddressPrune collector prune addr
             where
                 collector c l = case getNodeType c of
                     IR.LambdaReference -> c : l
