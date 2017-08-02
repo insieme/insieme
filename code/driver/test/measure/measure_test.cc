@@ -279,7 +279,8 @@ namespace measure {
 		EXPECT_EQ(50 * 5, (int)res[forL][Metric::NUM_EXEC].getValue());
 	}
 
-	TEST(Measuring, MultipleExitPoints) {
+	/// NOTE: INVALID IR for loops
+	TEST(Measuring, DISABLED_MultipleExitPoints) {
 		IRBuilder builder(manager);
 
 		EXPECT_TRUE(measure(builder.parseStmt("{ return; }"), Metric::WALL_TIME, setup)[0].isValid());

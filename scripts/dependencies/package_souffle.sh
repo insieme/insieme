@@ -8,17 +8,17 @@ SHA256SUM="ffc5a36b66b1298a66631e0f89f47ff83a0af7afb8872a24346158e8d50b1cd4"
 
 DEPENDS="autoconf automake libtool bison flex boost sqlite"
 
-AUTOCONF_PKG=$(get_property autoconf PACKAGE)
-AUTOMAKE_PKG=$(get_property automake PACKAGE)
-LIBTOOL_PKG=$(get_property libtool PACKAGE)
-BISON_PKG=$(get_property bison PACKAGE)
-FLEX_PKG=$(get_property flex PACKAGE)
-BOOST_PKG=$(get_property boost PACKAGE)
-SQLITE_PKG=$(get_property sqlite PACKAGE)
+AUTOCONF_PKG=$(get_pkg_prefix autoconf)
+AUTOMAKE_PKG=$(get_pkg_prefix automake)
+LIBTOOL_PKG=$(get_pkg_prefix libtool)
+BISON_PKG=$(get_pkg_prefix bison)
+FLEX_PKG=$(get_pkg_prefix flex)
+BOOST_PKG=$(get_pkg_prefix boost)
+SQLITE_PKG=$(get_pkg_prefix sqlite)
 
-export PATH="$PREFIX/$AUTOCONF_PKG/bin:$PREFIX/$AUTOMAKE_PKG/bin:$PATH"
-export PATH="$PREFIX/$LIBTOOL_PKG/bin:$PATH"
-export PATH="$PREFIX/$BISON_PKG/bin:$PREFIX/$FLEX_PKG/bin:$PATH"
+export PATH="$AUTOCONF_PKG/bin:$AUTOMAKE_PKG/bin:$PATH"
+export PATH="$LIBTOOL_PKG/bin:$PATH"
+export PATH="$BISON_PKG/bin:$FLEX_PKG/bin:$PATH"
 
 pkg_extract() {
 	unzip -o -d "$PACKAGE" "$FILE"
@@ -42,10 +42,10 @@ pkg_configure() {
 	sh ./bootstrap
 	./configure \
 		--prefix="$PREFIX/$PACKAGE" \
-		--with-boost="$PREFIX/$BOOST_PKG" \
+		--with-boost="$BOOST_PKG" \
 		--disable-java \
-		CPPFLAGS="-I$PREFIX/$SQLITE_PKG/include" \
-		LDFLAGS="-L$PREFIX/$SQLITE_PKG/lib -Wl,-rpath,$PREFIX/$BISON_PKG/lib -Wl,-rpath,$PREFIX/$BOOST_PKG/lib"
+		CPPFLAGS="-I$SQLITE_PKG/include" \
+		LDFLAGS="-L$SQLITE_PKG/lib -Wl,-rpath,$BISON_PKG/lib -Wl,-rpath,$BOOST_PKG/lib"
 }
 
 pkg_build() {

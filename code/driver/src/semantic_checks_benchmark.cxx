@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
 		TIME_CHECK(UndeclaredVariableCheck);
 
 		// TIME_CHECK(UndefinedCheck>());
-		TIME_CHECK(FreeBreakInsideForLoopCheck);
+		TIME_CHECK(ForLoopSemanticsCheck);
 		TIME_CHECK(MissingReturnStmtCheck);
 		TIME_CHECK(ValidInitExprMemLocationCheck);
 

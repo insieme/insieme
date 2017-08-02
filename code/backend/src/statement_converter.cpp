@@ -621,7 +621,7 @@ namespace backend {
 		auto var_iter = ptr->getIterator();
 
 		// get induction variable info
-		const VariableInfo& info_iter = varManager.addInfo(context, var_iter, VariableInfo::NONE);
+		const VariableInfo info_iter = varManager.addInfo(context, var_iter, VariableInfo::NONE);
 		// add dependency to iterator type definition
 		context.getDependencies().insert(info_iter.typeInfo->definition);
 
@@ -634,28 +634,29 @@ namespace backend {
 
 		// handle step
 		core::ExpressionPtr step = ptr->getStep();
-		c_ast::ExpressionPtr cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, convertExpression(context, step));
+		auto cStepExpr = convertExpression(context, step);
+		c_ast::ExpressionPtr cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, cStepExpr);
+		core::arithmetic::Formula stepForm = core::arithmetic::toFormula(step);
 		if(!isSimple(step)) {
 			// create variable storing step
 			c_ast::VariablePtr var_step = manager->create<c_ast::Variable>(info_iter.var->type, manager->create("_step"));
 			initVector.push_back(std::make_pair(var_step, convertExpression(context, step)));
 			cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, var_step);
 		} else { // use pre(inc/dec) if abs(step) == 1
-			core::arithmetic::Formula form = core::arithmetic::toFormula(step);
-			if(form.isConstant()) {
-				if(form.isOne()) { cStep = c_ast::preInc(info_iter.var); }
-				if((-form).isOne()) { cStep = c_ast::preDec(info_iter.var); }
+			if(stepForm.isConstant()) {
+				if(stepForm.isOne()) { cStep = c_ast::preInc(info_iter.var); }
+				if((-stepForm).isOne()) { cStep = c_ast::preDec(info_iter.var); }
 			}
 		}
 
 		// handle end
 		core::ExpressionPtr end = ptr->getEnd();
-		c_ast::ExpressionPtr cCheck = c_ast::lt(info_iter.var, convertExpression(context, end));
+		c_ast::ExpressionPtr cEnd = convertExpression(context, end);
 		if(!isSimple(end)) {
 			// create variable storing end
 			c_ast::VariablePtr var_end = manager->create<c_ast::Variable>(info_iter.var->type, manager->create("_end"));
-			initVector.push_back(std::make_pair(var_end, convertExpression(context, end)));
-			cCheck = c_ast::lt(info_iter.var, var_end);
+			initVector.push_back(std::make_pair(var_end, cEnd));
+			cEnd = var_end;
 		}
 
 		// create init and body
@@ -666,10 +667,25 @@ namespace backend {
 
 		// remove variable info since no longer in scope
 		varManager.remInfo(var_iter);
-
 		converter.getNameManager().popVarScope();
+
 		// combine all into a for
-		return manager->create<c_ast::For>(cInit, cCheck, cStep, cBody);
+		auto createFor = [&](bool lessThan) {
+			c_ast::ExpressionPtr cCheck = lessThan ? c_ast::lt(info_iter.var, cEnd) : c_ast::gt(info_iter.var, cEnd);
+			return manager->create<c_ast::For>(cInit, cCheck, cStep, cBody);
+		};
+
+		// handle up- or down-counting loops
+		// if static: generate just one for with the correct operator
+		if(stepForm.isInteger()) {
+			int stepVal = stepForm.getIntegerValue();
+			assert_true(stepVal != 0) << "For loop with a '0' step unsupported";
+			return createFor(stepVal > 0);
+		}
+		// else: generate if depending on runtime value of step
+		auto upFor = createFor(true);
+		auto downFor = createFor(false);
+		return manager->create<c_ast::If>(c_ast::gt(cStepExpr, manager->create<c_ast::Literal>("0")), upFor, downFor);
 	}
 
 	c_ast::NodePtr StmtConverter::visitIfStmt(const core::IfStmtPtr& ptr, ConversionContext& context) {

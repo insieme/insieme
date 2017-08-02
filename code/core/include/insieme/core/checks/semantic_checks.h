@@ -57,9 +57,9 @@ namespace checks {
 	SIMPLE_CHECK(DefaultedDeletedPreTUMarker, Node, false);
 
 	/**
-	 * This check verifies that there are no free break statements inside for loops.
+	 * This check verifies that there are no free break or return statements inside for loops.
 	 */
-	SIMPLE_CHECK(FreeBreakInsideForLoop, ForStmt, false);
+	SIMPLE_CHECK(ForLoopSemantics, ForStmt, false);
 
 	/**
 	 * This check verifies that functions with non-unit return type return something on every code path.

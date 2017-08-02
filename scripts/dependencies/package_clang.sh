@@ -4,14 +4,14 @@ PACKAGE="$NAME-$VERSION"
 
 DEPENDS="gcc cmake python"
 
-GCC_PKG=$(get_property gcc PACKAGE)
-CMAKE_PKG=$(get_property cmake PACKAGE)
-PYTHON_PKG=$(get_property python PACKAGE)
+GCC_PKG=$(get_pkg_prefix gcc)
+CMAKE_PKG=$(get_pkg_prefix cmake)
+PYTHON_PKG=$(get_pkg_prefix python)
 
-export CC="$PREFIX/$GCC_PKG/bin/gcc"
-export CXX="$PREFIX/$GCC_PKG/bin/g++"
-export PATH="$PREFIX/$GCC_PKG/bin:$PATH"
-export LD_LIBRARY_PATH="$PREFIX/$GCC_PKG/lib64"
+export CC="$GCC_PKG/bin/gcc"
+export CXX="$GCC_PKG/bin/g++"
+export PATH="$GCC_PKG/bin:$PATH"
+export LD_LIBRARY_PATH="$GCC_PKG/lib64"
 
 pkg_download() {
 	wget "http://releases.llvm.org/$VERSION/llvm-$VERSION.src.tar.xz"
@@ -52,8 +52,8 @@ pkg_configure() {
 	$PREFIX/$CMAKE_PKG/bin/cmake \
 		-DCMAKE_INSTALL_PREFIX="$PREFIX/$PACKAGE" \
 		-DCMAKE_BUILD_TYPE=Release \
-		-DGCC_INSTALL_PREFIX="$PREFIX/$GCC_PKG" \
-		-DPYTHON_EXECUTABLE="$PREFIX/$PYTHON_PKG/bin/python" \
+		-DGCC_INSTALL_PREFIX="$GCC_PKG" \
+		-DPYTHON_EXECUTABLE="$PYTHON_PKG/bin/python" \
 		..
 }
 

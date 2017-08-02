@@ -12,12 +12,12 @@ SHA256SUM_PB="fedf161622170801f29be5d5096ea30e253b2bba54f185607f568c44ee151e5a"
 
 DEPENDS="gmp zlib"
 
-GMP_PKG=$(get_property gmp PACKAGE)
-ZLIB_PKG=$(get_property zlib PACKAGE)
+GMP_PKG=$(get_pkg_prefix gmp)
+ZLIB_PKG=$(get_pkg_prefix zlib)
 
-export CPATH="$PREFIX/$GMP_PKG/include:$PREFIX/$ZLIB_PKG/include"
-export LIBRARY_PATH="$PREFIX/$GMP_PKG/lib:$PREFIX/$ZLIB_PKG/lib"
-export LD_LIBRARY_PATH="$PREFIX/$GMP_PKG/lib:$PREFIX/$ZLIB_PKG/lib"
+export CPATH="$GMP_PKG/include:$ZLIB_PKG/include"
+export LIBRARY_PATH="$GMP_PKG/lib:$ZLIB_PKG/lib"
+export LD_LIBRARY_PATH="$GMP_PKG/lib:$ZLIB_PKG/lib"
 
 pkg_download() {
 	wget -nc "$URL"
