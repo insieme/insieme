@@ -135,8 +135,8 @@ namespace core {
 		/**
 		 * Compares the annotated iterator value.
 		 */
-		bool isValueLessThan(const IteratorValue& value) const {
-			return iter < value;
+		int compareValue(const IteratorValue& value) const {
+			return (iter < value) ? -1 : (iter == value ? 0 : 1);
 		}
 
 		/**
