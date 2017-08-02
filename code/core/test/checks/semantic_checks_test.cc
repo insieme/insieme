@@ -393,26 +393,6 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, checkResult, Message(addr, EC_SEMANTIC_FREE_RETURN_INSIDE_FOR_LOOP, "", Message::ERROR));
 	}
 
-	TEST(ForLoopSemanticsCheck, StaticStep) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		auto addr = builder.parseAddressesStatement(R"1N5P1RE(
-			{
-				var ref<int<4>> v0;
-				$for(int<4> v0 = 0 .. 10 : v0) {
-				}$
-			}
-			)1N5P1RE")[0];
-		auto stmt = addr.getRootNode();
-
-		CheckPtr forLoopSemanticsCheck = makeRecursive(make_check<ForLoopSemanticsCheck>());
-
-		auto checkResult = check(stmt, forLoopSemanticsCheck);
-		EXPECT_EQ(checkResult.size(), 1);
-		EXPECT_PRED2(containsMSG, checkResult, Message(addr, EC_SEMANTIC_NON_STATIC_FOR_STEP, "", Message::ERROR));
-	}
-
 	TEST(ValidInitExprMemLocationCheck, Valid) {
 		NodeManager manager;
 		IRBuilder builder(manager);

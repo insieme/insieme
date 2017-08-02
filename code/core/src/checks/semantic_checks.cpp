@@ -81,13 +81,6 @@ namespace checks {
 		auto& mgr = curfor->getNodeManager();
 		IRBuilder builder(mgr);
 
-		// check step statically evaluatable
-		if(!core::arithmetic::toConstantInt(curfor->getStep()).is_initialized()) {
-			add(res, Message(curfor, EC_SEMANTIC_NON_STATIC_FOR_STEP,
-				format("For loops must have statically evaluatable step expressions. -> step: %s", dumpReadable(curfor->getStep())), Message::ERROR));
-			std::cout << dumpReadable(curfor);
-		}
-
 		// check body for free break/return
 		core::visitDepthFirstPrunable(curfor->getBody(), [&](const core::NodeAddress& cur) -> bool {
 			if(cur.isa<core::BreakStmtAddress>()) {

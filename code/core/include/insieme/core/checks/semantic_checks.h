@@ -57,8 +57,7 @@ namespace checks {
 	SIMPLE_CHECK(DefaultedDeletedPreTUMarker, Node, false);
 
 	/**
-	 * This check verifies that there are no free break or return statements inside for loops,
-	 * and that the step expression is statically evaluatable.
+	 * This check verifies that there are no free break or return statements inside for loops.
 	 */
 	SIMPLE_CHECK(ForLoopSemantics, ForStmt, false);
 
