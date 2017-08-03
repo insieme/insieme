@@ -11,7 +11,7 @@ pkg_configure() {
 }
 
 pkg_is_globally_installed() {
-	local cur_ver="$(ruby -e 'puts RUBY_VERSION')"
+	local cur_ver="$(/usr/bin/ruby -e 'puts RUBY_VERSION' 2>/dev/null)"
 	if [ -z "$cur_ver" ]; then
 		return 1 # not installed
 	fi

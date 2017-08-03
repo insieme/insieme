@@ -16,7 +16,7 @@ pkg_install() {
 }
 
 pkg_is_globally_installed() {
-	local cur_ver="$(papi_version | grep -oE '[^ ]+$')"
+	local cur_ver="$(/usr/bin/papi_version 2>/dev/null | grep -oE '[^ ]+$')"
 	if [ -z "$cur_ver" ]; then
 		return 1 # not installed
 	fi

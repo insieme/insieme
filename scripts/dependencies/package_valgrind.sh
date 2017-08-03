@@ -10,7 +10,7 @@ export CFLAGS="-O3 -fPIC"
 export LDFLAGS="-O3 -fPIC"
 
 pkg_is_globally_installed() {
-	local cur_ver="$(valgrind --version | grep -oE '[^-]+$')"
+	local cur_ver="$(/usr/bin/valgrind --version 2>/dev/null | grep -oE '[^-]+$')"
 	if [ -z "$cur_ver" ]; then
 		return 1 # not installed
 	fi
