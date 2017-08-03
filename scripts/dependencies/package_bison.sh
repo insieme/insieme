@@ -7,7 +7,7 @@ URL="http://www.insieme-compiler.org/ext_libs/$FILE"
 SHA256SUM="b67fd2daae7a64b5ba862c66c07c1addb9e6b1b05c5f2049392cfd8a2172952e"
 
 pkg_is_globally_installed() {
-	local cur_ver="$(bison --version | head -n1 | grep -oE '[^ ]+$')"
+	local cur_ver="$(/usr/bin/bison --version 2>/dev/null | head -n1 | grep -oE '[^ ]+$')"
 	if [ -z "$cur_ver" ]; then
 		return 1 # not installed
 	fi

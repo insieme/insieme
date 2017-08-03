@@ -7,7 +7,7 @@ URL="http://www.insieme-compiler.org/ext_libs/$FILE"
 SHA256SUM="71dd1b58158c935027104c830c019e48c73250708af5def45ea256c789318948"
 
 pkg_is_globally_installed() {
-	local cur_ver="$(flex --version | head -n1 | grep -oE '[^ ]+$')"
+	local cur_ver="$(/usr/bin/flex --version 2>/dev/null | head -n1 | grep -oE '[^ ]+$')"
 	if [ -z "$cur_ver" ]; then
 		return 1 # not installed
 	fi

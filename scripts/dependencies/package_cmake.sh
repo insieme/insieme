@@ -11,7 +11,7 @@ pkg_configure() {
 }
 
 pkg_is_globally_installed() {
-	local cur_ver="$(cmake --version | head -n1 | grep -oE '[^ ]+$')"
+	local cur_ver="$(/usr/bin/cmake --version 2>/dev/null | head -n1 | grep -oE '[^ ]+$')"
 	if [ -z "$cur_ver" ]; then
 		return 1 # not installed
 	fi
