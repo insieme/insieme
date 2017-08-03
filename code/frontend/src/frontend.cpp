@@ -47,6 +47,9 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/compiler/compiler.h"
 
+#include "insieme/common/env_vars.h"
+
+#include "insieme/core/ir_statistic.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/tu/ir_translation_unit.h"
@@ -182,6 +185,14 @@ namespace frontend {
 		// maybe a visitor wants to manipulate the IR translation unit
 		for(auto extension : getExtensions()) {
 			program = extension->IRVisit(program);
+		}
+
+		// print IR statistics if requested by the environment variable
+		if(getenv(INSIEME_SHOW_STATISTICS)) {
+			std::cout << "---------------------------------------" << std::endl;
+			std::cout << "IR Statistics:" << std::endl;
+			std::cout << core::IRStatistic::evaluate(program) << std::endl;
+			std::cout << "---------------------------------------" << std::endl;
 		}
 
 		// return instance within global manager
