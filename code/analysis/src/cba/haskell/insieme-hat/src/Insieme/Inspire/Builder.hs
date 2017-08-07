@@ -41,6 +41,7 @@
 module Insieme.Inspire.Builder (
     deref,
     refMember,
+    refComponent,
     refTemporaryInit
 ) where
 
@@ -87,9 +88,9 @@ deref t = mkCall resType Lang.refDeref [decl]
 
 refMember :: IR.Tree -> String -> IR.Tree
 refMember t f = mkCall some_ref_type Lang.hsRefMemberAccess $ wrapSomeDecl <$> [t,mkIdentifier f]
-  where
-    wrapSomeDecl e = mkDeclaration some_type e
 
+refComponent :: IR.Tree -> Int -> IR.Tree
+refComponent t i = mkCall some_ref_type Lang.hsRefComponentAccess $ wrapSomeDecl <$> [t,mkLiteral (show i) Lang.uint8]
 
 refTemporaryInit :: IR.Tree -> IR.Tree
 refTemporaryInit e = mkCall some_ref_type Lang.refTempInit [mkDeclaration some_type e]
@@ -102,3 +103,5 @@ some_type     = Lang.parseType "some_type"
 
 some_ref_type :: IR.Tree
 some_ref_type = Lang.parseType "ref<some_type>"
+
+wrapSomeDecl = mkDeclaration some_type

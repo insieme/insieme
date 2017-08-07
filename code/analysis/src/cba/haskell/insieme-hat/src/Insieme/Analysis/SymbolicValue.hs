@@ -228,14 +228,18 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     -- the handler processing excessive field accesses
 
-    excessiveFileAccessHandler composedValue (Field field) = res
+    excessiveFileAccessHandler composedValue f = res
       where
         res = compose $ BSet.map append $ extract composedValue
           where
             append x = Builder.deref ext
               where
                 base = child 1 $ child 2 x
-                ext = Builder.refMember base field
+                
+                ext = case f of
+                    (Field field) -> Builder.refMember base field
+                    (Element i) -> Builder.refComponent base i
+
 
     -- utilities
 
