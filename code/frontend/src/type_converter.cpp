@@ -363,6 +363,8 @@ namespace conversion {
 					auto nonConstClassDecl = const_cast<clang::ClassTemplateSpecializationDecl*>(ctsd);
 					converter.getTranslationUnit().getInsiemeSema().InstantiateClassTemplateSpecializationMembers(nonConstClassDecl->getLocation(), nonConstClassDecl,
 					                                                                                              clang::TemplateSpecializationKind::TSK_ExplicitInstantiationDefinition);
+					// and after that, we ask clang to perform all pending implicit instantiations
+					converter.getTranslationUnit().getInsiemeSema().PerformPendingInstantiations();
 				}
 			}
 		}
