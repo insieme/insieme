@@ -160,6 +160,10 @@ namespace conversion {
 		const frontend::ir::FrontendIr feIR;
 		core::tu::IRTranslationUnit irTranslationUnit;
 
+		/// A set holding all the ClassTemplateSpecializationDecls we already asked clang to instantiate
+		///
+		std::set<clang::ClassTemplateSpecializationDecl*> instantiatedDecls;
+
 		/**
 		 * Attach annotations to a C function of the input translation unit.
 		 *
@@ -192,6 +196,8 @@ namespace conversion {
 
 		core::tu::IRTranslationUnit& getIRTranslationUnit() { return irTranslationUnit; }
 		const core::tu::IRTranslationUnit& getIRTranslationUnit() const { return irTranslationUnit; }
+
+		std::set<clang::ClassTemplateSpecializationDecl*>& getInstantiatedDecls() { return instantiatedDecls; }
 
 		std::shared_ptr<DeclConverter> getDeclConverter() const { return declConvPtr; }
 		std::shared_ptr<ExprConverter> getExprConverter() const { return exprConvPtr; }

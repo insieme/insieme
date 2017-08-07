@@ -347,10 +347,30 @@ namespace conversion {
 			return enumResTy;
 		}
 
-		core::TypePtr handleRecordType(Converter& converter, const RecordType* clangRecordTy) {
+		void tryEnsuruseFullClangType(Converter& converter, const RecordType* clangRecordTy) {
+			auto clangDecl = clangRecordTy->getDecl();
 
 			// Try to get clang to fully instantiate template types for us before we start handling the type
-			converter.getTranslationUnit().getInsiemeSema().RequireCompleteType(clangRecordTy->getDecl()->getLocStart(), clang::QualType(clangRecordTy, 0), 0);
+			converter.getTranslationUnit().getInsiemeSema().RequireCompleteType(clangDecl->getLocStart(), clang::QualType(clangRecordTy, 0), 0);
+
+			// if this type represents a ClassTemplateSpecialization, we ask clang to instantiate it explicitly
+			if(auto ctsd = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(clangDecl)) {
+				auto& instantiatedDecls = converter.getInstantiatedDecls();
+
+				// though we only do so if we didn't already instantiate the type already
+				if(instantiatedDecls.insert(ctsd).second) {
+					// we have to cast away the const-ness of the decl in order to ask clang to instantiate the type specialization for us
+					auto nonConstClassDecl = const_cast<clang::ClassTemplateSpecializationDecl*>(ctsd);
+					converter.getTranslationUnit().getInsiemeSema().InstantiateClassTemplateSpecializationMembers(nonConstClassDecl->getLocation(), nonConstClassDecl,
+					                                                                                              clang::TemplateSpecializationKind::TSK_ExplicitInstantiationDefinition);
+				}
+			}
+		}
+
+		core::TypePtr handleRecordType(Converter& converter, const RecordType* clangRecordTy) {
+
+			// try to get the full type from clang - instantiating templates where possible
+			tryEnsuruseFullClangType(converter, clangRecordTy);
 
 			core::NodeManager& mgr = converter.getNodeManager();
 			core::IRBuilder builder(mgr);
