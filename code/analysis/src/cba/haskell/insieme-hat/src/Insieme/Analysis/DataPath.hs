@@ -46,12 +46,13 @@ import Data.Typeable
 import GHC.Generics (Generic)
 import Insieme.Analysis.Arithmetic
 import Insieme.Analysis.Entities.DataPath
-import Insieme.Analysis.Entities.FieldIndex
+import Insieme.Analysis.Entities.FieldIndex hiding (element,component)
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Identifier
 import Insieme.Inspire.NodeAddress hiding (append)
 import Insieme.Inspire.Query
 
+import qualified Insieme.Analysis.Entities.FieldIndex as FieldIndex
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
@@ -98,7 +99,7 @@ dataPathValue addr = dataflowValue addr analysis ops
 
     -- add operator support
 
-    ops = [ rootOp, member, element] -- TODO: add parent
+    ops = [ rootOp, member, element, component] -- TODO: add parent
 
     -- handle the data path root constructore --
     rootOp = OperatorHandler cov dep val
@@ -125,10 +126,16 @@ dataPathValue addr = dataflowValue addr analysis ops
         fieldNameVar = identifierValue $ goDown 3 addr
 
 
-    -- the handler for the element and component access path constructore --
-    element = OperatorHandler cov dep val
+    -- the handler for the element access path constructor --
+    element = subscriptHandler "dp_element" index
+
+    -- the handler for the component access path constructor --
+    component = subscriptHandler "dp_component" FieldIndex.element
+
+
+    subscriptHandler operatorName dataPathStep = OperatorHandler cov dep val
       where
-        cov a = any (isBuiltin a) ["dp_element","dp_component"]
+        cov a = isBuiltin a operatorName
 
         dep _ _ = (Solver.toVar nestedPathVar) : (Solver.toVar indexVar) : []
 
@@ -136,7 +143,7 @@ dataPathValue addr = dataflowValue addr analysis ops
             where
                 combine BSet.Universe  _ = BSet.Universe
                 combine ps BSet.Universe = BSet.map (\p -> append p (step unknownIndex)) ps
-                combine ps is = (BSet.lift2 $ \p i -> append p ((step . index) i)) ps is
+                combine ps is = (BSet.lift2 $ \p i -> append p ((step . dataPathStep) i)) ps is
 
                 indexes = BSet.toUnboundSet $ unSFS $ ComposedValue.toValue $ Solver.get a indexVar
 

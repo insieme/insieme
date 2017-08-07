@@ -58,7 +58,6 @@ module Insieme.Analysis.Framework.Dataflow (
 
 
 import Data.Foldable
-import Data.Int
 import Data.Maybe
 import Data.Typeable
 import Debug.Trace
@@ -248,7 +247,7 @@ dataflowValue addr analysis ops = case getNode addr of
             con = Solver.createConstraint dep val var
 
             dep _ = Solver.toVar <$> componentValueVars
-            val a = ComposedValue.composeElements $ zip (component <$> [0 :: Int32 ..]) (map (Solver.get a) componentValueVars)
+            val a = ComposedValue.composeElements $ zip (component <$> [0 ..]) (map (Solver.get a) componentValueVars)
 
             componentValueVars = go <$> [0 .. ((length args) - 1) ]
                 where
@@ -403,7 +402,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
                     indices = Arithmetic.unSFS $ ComposedValue.toValue (Solver.get a indexValueVar)
 
-                    fieldIndices = index <$> (BSet.toList indices)
+                    fieldIndices = element <$> (BSet.toList indices)
 
                     dataPaths = step <$> fieldIndices
 
