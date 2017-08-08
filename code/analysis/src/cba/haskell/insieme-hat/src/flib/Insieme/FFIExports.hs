@@ -87,22 +87,22 @@ foreign export ccall "hat_find_declaration"
   findDecl :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
 
 foreign export ccall "hat_check_boolean"
-  checkBoolean :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
+  checkBoolean :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
 
 foreign export ccall "hat_check_alias"
-  checkAlias :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO CInt
+  checkAlias :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
 
 foreign export ccall "hat_arithmetic_value"
-  arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr ArithmeticFormula)
+  arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr (CSetPtr ArithmeticFormula))
 
 foreign export ccall "hat_check_null"
-  checkForNull :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
+  checkForNull :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
 
 foreign export ccall "hat_check_extern"
-  checkForExtern :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
+  checkForExtern :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
 
 foreign export ccall "hat_memory_locations"
-  memoryLocations :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr MemoryLocation)
+  memoryLocations :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr (CSetPtr MemoryLocation))
 
 foreign export ccall "hat_test_formulaZero"
   testFormulaZero :: IO (CRepPtr ArithmeticFormula)
@@ -120,4 +120,4 @@ foreign export ccall "hat_hs_test_binary_dumper_mirror"
   testBinaryDumperMirror :: CString -> CSize -> Ptr CString -> Ptr CSize -> IO ()
 
 foreign export ccall "hat_hs_symbolic_values"
-  hsSymbolicValues :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr SymbolicValue)
+  hsSymbolicValues :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr (CSetPtr SymbolicValue))

@@ -62,7 +62,7 @@ import Data.Typeable
 import Foreign
 import Foreign.C.Types
 import GHC.Generics (Generic)
-import Insieme.Adapter (CRepPtr,CRepArr,CSetPtr,dumpIrTree,passBoundSet,updateContext,pprintTree)
+import Insieme.Adapter (AnalysisResultPtr,CRepPtr,CRepArr,CSetPtr,allocAnalysisResult,dumpIrTree,passBoundSet,pprintTree)
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
@@ -262,15 +262,15 @@ foreign import ccall "hat_c_mk_symbolic_value_set"
 
 hsSymbolicValues :: StablePtr Ctx.Context
                  -> StablePtr Addr.NodeAddress
-                 -> IO (CSetPtr SymbolicValue)
+                 -> IO (AnalysisResultPtr (CSetPtr SymbolicValue))
 hsSymbolicValues ctx_hs stmt_hs = do
     ctx  <- deRefStablePtr ctx_hs
     stmt <- deRefStablePtr stmt_hs
-    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (symbolicValue stmt)
     let ctx_c =  Ctx.getCContext ctx
-    ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    updateContext ctx_c ctx_nhs
-    passSymbolicValueSet ctx_c $ unSVS $ ComposedValue.toValue res
+    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (symbolicValue stmt)
+    ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+    result <- passSymbolicValueSet ctx_c $ unSVS $ ComposedValue.toValue res
+    allocAnalysisResult ctx_new_hs result
 
 passSymbolicValueSet :: Ctx.CContext
                      -> BSet.BoundSet bb SymbolicValue

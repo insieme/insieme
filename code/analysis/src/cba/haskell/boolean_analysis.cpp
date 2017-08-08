@@ -43,7 +43,7 @@ extern "C" {
 	namespace hat = insieme::analysis::cba::haskell;
 
 	// Analysis
-	int hat_check_boolean(hat::StablePtr ctxt, const hat::HaskellNodeAddress expr_hs);
+	hat::AnalysisResult<int>* hat_check_boolean(hat::StablePtr ctxt, const hat::HaskellNodeAddress expr_hs);
 
 }
 
@@ -61,12 +61,13 @@ namespace haskell {
 
 	BooleanAnalysisResult checkBoolean(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto expr_hs = ctxt.resolveNodeAddress(expr);
-		auto res = static_cast<BooleanAnalysisResult>(hat_check_boolean(ctxt.getHaskellContext(), expr_hs));
-		if(res == BooleanAnalysisResult::Neither) {
+		auto result = hat_check_boolean(ctxt.getHaskellContext(), expr_hs);
+		auto value = static_cast<BooleanAnalysisResult>(ctxt.unwrapResult(result));
+		if(value == BooleanAnalysisResult::Neither) {
 			std::vector<std::string> msgs{"Boolean Analysis Error"};
 			throw AnalysisFailure(msgs);
 		}
-		return res;
+		return value;
 	}
 
 	bool isTrue(Context& ctxt, const core::ExpressionAddress& expr) {

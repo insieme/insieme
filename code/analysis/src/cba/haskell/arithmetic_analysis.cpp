@@ -48,7 +48,7 @@ extern "C" {
 	namespace hat = ia::haskell;
 
 	// Analysis
-	ia::ArithmeticSet* hat_arithmetic_value(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
+	hat::AnalysisResult<ia::ArithmeticSet*>* hat_arithmetic_value(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
 
 }
 
@@ -59,10 +59,11 @@ namespace haskell {
 
 	ArithmeticSet getArithmeticValue(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto expr_hs = ctxt.resolveNodeAddress(expr);
-		ArithmeticSet* res_ptr = hat_arithmetic_value(ctxt.getHaskellContext(), expr_hs);
-		ArithmeticSet res(std::move(*res_ptr));
-		delete res_ptr;
-		return res;
+		auto result = hat_arithmetic_value(ctxt.getHaskellContext(), expr_hs);
+		auto value_ptr = ctxt.unwrapResult(result);
+		ArithmeticSet value(std::move(*value_ptr));
+		delete value_ptr;
+		return value;
 	}
 
 } // end namespace haskell

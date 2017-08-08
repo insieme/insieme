@@ -42,7 +42,7 @@ extern "C" {
 	namespace hat = insieme::analysis::cba::haskell;
 
 	// Analysis
-	int hat_check_alias(hat::StablePtr ctxt, const hat::HaskellNodeAddress x_hs, const hat::HaskellNodeAddress y_hs);
+	hat::AnalysisResult<int>* hat_check_alias(hat::StablePtr ctxt, const hat::HaskellNodeAddress x_hs, const hat::HaskellNodeAddress y_hs);
 
 }
 
@@ -62,7 +62,8 @@ namespace haskell {
 	AliasAnalysisResult checkAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
 		auto x_hs = ctxt.resolveNodeAddress(x);
 		auto y_hs = ctxt.resolveNodeAddress(y);
-		return static_cast<AliasAnalysisResult>(hat_check_alias(ctxt.getHaskellContext(), x_hs, y_hs));
+		auto result = hat_check_alias(ctxt.getHaskellContext(), x_hs, y_hs);
+		return static_cast<AliasAnalysisResult>(ctxt.unwrapResult(result));
 	}
 
 	bool areAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {

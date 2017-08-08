@@ -37,6 +37,7 @@
 
 #pragma once
 
+#include <cstdlib>
 #include <map>
 
 #include "insieme/core/ir_address.h"
@@ -48,6 +49,16 @@ namespace haskell {
 
 	typedef void* StablePtr;
 	typedef void* HaskellNodeAddress;
+
+	// -- Analysis Result
+
+	template <typename T>
+	struct AnalysisResult {
+		StablePtr new_context_hs;
+		T result;
+	};
+
+	//  -- Context
 
 	class Context {
 
@@ -88,6 +99,18 @@ namespace haskell {
 
 		HaskellNodeAddress resolveNodeAddress(const core::NodeAddress& addr);
 		core::NodeAddress resolveNodeAddress(const HaskellNodeAddress& addr);
+
+		template <typename T>
+		T unwrapResult(AnalysisResult<T>* result) {
+			assert_true(result);
+
+			// update context
+			context_hs = result->new_context_hs;
+
+			T res = result->result;
+			free(result);
+			return res;
+		}
 
 	  private:
 

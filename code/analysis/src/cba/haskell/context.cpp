@@ -64,10 +64,8 @@ extern "C" {
 
 	// Haskell Context
 	StablePtr hat_initialize_context(const Context* ctx_c, const char* dump_c, size_t size_c);
-	void hat_update_context(Context* trg, StablePtr hs_context);
 	void hat_print_statistic(StablePtr hs_context);
 	void hat_dump_assignment(StablePtr hs_context);
-
 
 	// NodePath
 	StablePtr hat_mk_node_address(StablePtr ctx_hs, const size_t* path_c, size_t length_c);
@@ -219,11 +217,3 @@ namespace haskell {
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
-
-extern "C" {
-
-	void hat_update_context(Context* trg, StablePtr hs_context) {
-		trg->setHaskellContext(hs_context);
-	}
-
-}

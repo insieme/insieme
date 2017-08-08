@@ -44,9 +44,9 @@ extern "C" {
 	namespace hat = ia::haskell;
 
 	// Analysis
-	int hat_check_null(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
-	int hat_check_extern(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
-	ia::MemoryLocationSet* hat_memory_locations(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
+	hat::AnalysisResult<int>* hat_check_null(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
+	hat::AnalysisResult<int>* hat_check_extern(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
+	hat::AnalysisResult<ia::MemoryLocationSet*>* hat_memory_locations(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
 
 }
 
@@ -56,7 +56,7 @@ namespace cba {
 namespace haskell {
 
 
-	enum Result {
+	enum Result : int {
 		Yes=0, Maybe=1, No=2
 	};
 
@@ -64,7 +64,8 @@ namespace haskell {
 
 		Result checkNull(Context& ctxt, const core::ExpressionAddress& expr) {
 			auto expr_hs = ctxt.resolveNodeAddress(expr);
-			return (Result)hat_check_null(ctxt.getHaskellContext(), expr_hs);
+			auto result = hat_check_null(ctxt.getHaskellContext(), expr_hs);
+			return static_cast<Result>(ctxt.unwrapResult(result));
 		}
 
 	}
@@ -86,7 +87,8 @@ namespace haskell {
 
 		Result checkExtern(Context& ctxt, const core::ExpressionAddress& expr) {
 			auto expr_hs = ctxt.resolveNodeAddress(expr);
-			return (Result)hat_check_extern(ctxt.getHaskellContext(), expr_hs);
+			auto result = hat_check_extern(ctxt.getHaskellContext(), expr_hs);
+			return static_cast<Result>(ctxt.unwrapResult(result));
 		}
 
 	}
@@ -105,10 +107,12 @@ namespace haskell {
 
 	MemoryLocationSet getReferencedMemoryLocations(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto expr_hs = ctxt.resolveNodeAddress(expr);
-		MemoryLocationSet* res_ptr = hat_memory_locations(ctxt.getHaskellContext(), expr_hs);
-		MemoryLocationSet res(std::move(*res_ptr));
-		delete res_ptr;
-		return res;
+		auto result = hat_memory_locations(ctxt.getHaskellContext(), expr_hs);
+		auto value_ptr = ctxt.unwrapResult(result);
+
+		MemoryLocationSet value(std::move(*value_ptr));
+		delete value_ptr;
+		return value;
 	}
 
 } // end namespace haskell

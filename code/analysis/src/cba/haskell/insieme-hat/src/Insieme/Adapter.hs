@@ -35,7 +35,9 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {- | This module builds the bridge between the Haskell and C/C++ part of
     INSIEME.
@@ -48,11 +50,12 @@ These functions are used to pass data back and forth and start analysis runs.
 
 module Insieme.Adapter where
 
-import Control.Exception
 import Control.Monad
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
+import Foreign.CStorable
+import GHC.Generics (Generic)
 import System.IO.Unsafe (unsafePerformIO)
 
 import qualified Data.ByteString.Char8 as BS8
@@ -87,9 +90,6 @@ type CSetPtr a = Ptr (CSet a)
 type CRepArr a = Ptr (Ptr (CRep a))
 
 -- * Context
-
-foreign import ccall "hat_update_context"
-  updateContext :: Ctx.CContext -> StablePtr Ctx.Context -> IO ()
 
 initializeContext :: Ctx.CContext -> CString -> CSize -> IO (StablePtr Ctx.Context)
 -- | Create a new 'Ctx.Context' by providing a reference to a 'Ctx.CContext'
@@ -131,6 +131,30 @@ nodePathPoke addr_hs path_c = do
     addr <- deRefStablePtr addr_hs
     pokeArray path_c $ fromIntegral <$> Addr.getAbsolutePath addr
 
+-- * Analysis Result
+
+-- Cannot use 'StablePtr Ctx.Context' as it is no instance of 'Generic'
+data AnalysisResult a = AnalysisResult (Ptr ()) a
+  deriving (Generic)
+
+type AnalysisResultPtr a = Ptr (AnalysisResult a)
+
+instance CStorable a => CStorable (AnalysisResult a)
+instance CStorable a => Storable (AnalysisResult a) where
+    sizeOf = cSizeOf
+    alignment = cAlignment
+    peek = cPeek
+    poke = cPoke
+
+allocAnalysisResult :: forall a. CStorable a
+                    => StablePtr Ctx.Context
+                    -> a
+                    -> IO (Ptr (AnalysisResult a))
+allocAnalysisResult ctx v = do
+    res <- malloc :: IO (Ptr (AnalysisResult a))
+    poke res $ AnalysisResult (castStablePtrToPtr ctx) v
+    return res
+
 -- * Analysis
 
 -- | Run 'Visit.findDecl' visitor with the given 'Addr.NodeAddress' as input,
@@ -142,49 +166,45 @@ findDecl var_hs = do
         Nothing -> return $ castPtrToStablePtr nullPtr
         Just a  -> newStablePtr a
 
-checkBoolean :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
-checkBoolean ctx_hs expr_hs = handleAll (return $ convertResult AnBoolean.Both) $ do
-    ctx <- deRefStablePtr ctx_hs
+checkBoolean :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
+checkBoolean ctx_hs expr_hs = do
+    ctx  <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) $ AnBoolean.booleanValue expr
-    let ctx_c = Ctx.getCContext ctx
-    ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    updateContext ctx_c ctx_nhs
-    evaluate $ convertResult $ ComposedValue.toValue res
+    ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+    allocAnalysisResult ctx_new_hs $ convertResult $ ComposedValue.toValue res
   where
     convertResult AnBoolean.AlwaysTrue = 0
     convertResult AnBoolean.AlwaysFalse = 1
     convertResult AnBoolean.Both = 2
     convertResult AnBoolean.Neither = 3
 
-checkAlias :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO CInt
-checkAlias ctx_hs x_hs y_hs = handleAll (return $ convertResult Alias.MayAlias) $ do
+checkAlias :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
+checkAlias ctx_hs x_hs y_hs = do
     ctx <- deRefStablePtr ctx_hs
     x <- deRefStablePtr x_hs
     y <- deRefStablePtr y_hs
     let (res,ns) = Alias.checkAlias (Ctx.getSolverState ctx) x y
-    let ctx_c = Ctx.getCContext ctx
-    ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    updateContext ctx_c ctx_nhs
-    evaluate $ fromIntegral $ convertResult res
+    ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+    allocAnalysisResult ctx_new_hs $ fromIntegral $ convertResult res
   where
     convertResult Alias.AreAlias = 0
     convertResult Alias.MayAlias = 1
     convertResult Alias.NotAlias = 2
 
-arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr ArithmeticFormula)
+arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr (CSetPtr ArithmeticFormula))
 arithValue ctx_hs expr_hs = do
     ctx <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
-    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Arith.arithmeticValue expr)
-    let results = ComposedValue.toValue res
     let ctx_c = Ctx.getCContext ctx
-    ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    updateContext ctx_c ctx_nhs
-    passBoundSet (passFormula ctx_c) arithmeticSet
-        $ BSet.map Ar.convert
-        $ BSet.map (fmap SymbolicFormula.getAddr)
-        $ Arith.unSFS results
+    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Arith.arithmeticValue expr)
+    ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+    result <- passBoundSet (passFormula ctx_c) arithmeticSet
+            $ BSet.map Ar.convert
+            $ BSet.map (fmap SymbolicFormula.getAddr)
+            $ Arith.unSFS
+            $ ComposedValue.toValue res
+    allocAnalysisResult ctx_new_hs result
 
 -- ** NodeAddresses
 
@@ -200,26 +220,28 @@ passNodeAddress ctx_c addr = do
 
 -- ** References
 
-checkForNull :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
+checkForNull :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
 checkForNull = checkForReference Ref.NullReference
 
-checkForExtern :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
+checkForExtern :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
 checkForExtern = checkForReference Ref.UninitializedReference
 
-checkForReference :: Ref.Reference FieldIndex.SimpleFieldIndex -> StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO CInt
-checkForReference ref ctx_hs expr_hs = handleAll (return maybe) $ do
-    ctx <- deRefStablePtr ctx_hs
+checkForReference :: Ref.Reference FieldIndex.SimpleFieldIndex -> StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
+checkForReference ref ctx_hs expr_hs = do
+    ctx  <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
+
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
+    ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+
     let results = Ref.unRS $ ComposedValue.toValue res :: BSet.UnboundSet (Ref.Reference FieldIndex.SimpleFieldIndex)
-    let ctx_c = Ctx.getCContext ctx
-    ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    updateContext ctx_c ctx_nhs
-    evaluate $ case () of
-        _ |  BSet.member ref results -> case () of
-                _ | not (BSet.isUniverse results) && BSet.size results == 1 -> yes
-                  | otherwise              -> maybe
-          |  otherwise -> no
+    let result = case () of
+                   _ |  BSet.member ref results -> case () of
+                           _ | not (BSet.isUniverse results) && BSet.size results == 1 -> yes
+                             | otherwise -> maybe
+                     |  otherwise -> no
+
+    allocAnalysisResult ctx_new_hs result
   where
     yes   = 0
     maybe = 1
@@ -229,22 +251,26 @@ checkForReference ref ctx_hs expr_hs = handleAll (return maybe) $ do
 
 type MemoryLocation = Addr.NodeAddress
 
-memoryLocations :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (CSetPtr MemoryLocation)
+memoryLocations :: StablePtr Ctx.Context
+                -> StablePtr Addr.NodeAddress
+                -> IO (AnalysisResultPtr (CSetPtr MemoryLocation))
 memoryLocations ctx_hs expr_hs = do
-    ctx <- deRefStablePtr ctx_hs
+    ctx  <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
-    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
-    let results = Ref.unRS $ ComposedValue.toValue res :: BSet.UnboundSet (Ref.Reference FieldIndex.SimpleFieldIndex)
     let ctx_c = Ctx.getCContext ctx
-    ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    updateContext ctx_c ctx_nhs
-    passBoundSet (passNodeAddress ctx_c) mkCNodeAddressSet $
-        if BSet.member Ref.UninitializedReference results
-            then (BSet.Universe :: BSet.UnboundSet Ref.Location)
-            else  BSet.map Ref.creationPoint $ BSet.filter f results
-      where
-        f (Ref.Reference _ _ ) = True
-        f _ = False
+
+    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
+    ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+
+    let results = Ref.unRS $ ComposedValue.toValue res :: BSet.UnboundSet (Ref.Reference FieldIndex.SimpleFieldIndex)
+    result <- passBoundSet (passNodeAddress ctx_c) mkCNodeAddressSet
+            $ if BSet.member Ref.UninitializedReference results
+                then (BSet.Universe :: BSet.UnboundSet Ref.Location)
+                else  BSet.map Ref.creationPoint $ BSet.filter f results
+    allocAnalysisResult ctx_new_hs result
+  where
+    f (Ref.Reference _ _ ) = True
+    f _ = False
 
 -- ** Arithmetic
 
@@ -298,11 +324,6 @@ passFormula ctx_c formula_hs = do
     passValue addr_hs = withArrayUnsignedLen (fromIntegral <$> Addr.getAbsolutePath addr_hs) (arithmeticValue ctx_c)
 
 -- * Utilities
-
-handleAll :: IO a -> IO a -> IO a
-handleAll dummy action = catch action $ \e -> do
-    putStrLn $ "Exception: " ++ show (e :: SomeException)
-    dummy
 
 foreign import ccall "hat_c_mk_ir_tree"
   mkCIrTree :: Ctx.CContext -> CString -> CSize -> IO (CRepPtr IR.Tree)
