@@ -60,6 +60,7 @@ import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress as Addr
 import Insieme.Inspire.Query
+import Insieme.Utils.Arithmetic (mkConst)
 
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -208,7 +209,7 @@ referenceValue addr = case getNodeType addr of
                 val _ a = ComposedValue.composeElements [(component 0,compose res)]
                     where
                         res = lower $ baseRefVal a
-                        lower = BSet.map $ onRefs $ \(Reference l p) -> Reference l (DP.append p (DP.invert $ DP.step $ component 0))
+                        lower = BSet.map $ onRefs $ \(Reference l p) -> Reference l (DP.append p (DP.invert $ DP.step $ index $ mkConst 0))
 
 
         noDep _ _ = []

@@ -46,6 +46,7 @@ module Insieme.Analysis.Entities.FieldIndex (
     project,
     field,
     index,
+    element,
     unknownIndex,
     component,
 
@@ -70,11 +71,17 @@ class (Eq v, Ord v, Show v, Typeable v, NFData v) => FieldIndex v where
         project :: [v] -> v -> [v]
 
         field        :: String -> v
+        
         index        :: SymbolicFormula -> v
+        
+        element :: SymbolicFormula -> v
+        element = index
+        
         unknownIndex :: v
 
         component :: Int32 -> v
-        component = index . mkConst . CInt32
+        component = element . mkConst . CInt32
+        
 
 
 -- A simple field index example --
@@ -82,18 +89,20 @@ class (Eq v, Ord v, Show v, Typeable v, NFData v) => FieldIndex v where
 data SimpleFieldIndex =
               Field String
             | Index Int
+            | Element Int
             | UnknownIndex
     deriving(Eq,Ord,Typeable,Generic,NFData)
 
 instance Show SimpleFieldIndex where
-    show (Field s) = s
-    show (Index i) = "[" ++ (show i) ++ "]"
+    show (Field s)    = s
+    show (Index i)    = "[" ++ (show i) ++ "]"
+    show (Element i)  = "<" ++ (show i) ++ ">"
     show UnknownIndex = "[*]"
 
 
 -- | Merges the list of simple field indices of the two given lists
 simpleJoin :: [SimpleFieldIndex] -> [SimpleFieldIndex] -> Maybe [SimpleFieldIndex]
-simpleJoin a b | (allFields a && allFields b) || (allIndices a && allIndices b) =
+simpleJoin a b | (allFields a && allFields b) || (allIndices a && allIndices b) || (allElements a && allElements b) =
     Just $ Set.toList . Set.fromList $ a ++ b
 simpleJoin _ _ = Nothing
 
@@ -111,6 +120,10 @@ instance FieldIndex SimpleFieldIndex where
         Just i  -> Index (fromIntegral i)
         Nothing -> UnknownIndex
 
+    element a = case toConstant a of
+        Just i  -> Element (fromIntegral i)
+        Nothing -> UnknownIndex
+
     unknownIndex = UnknownIndex
 
 
@@ -121,5 +134,16 @@ isField _         = False
 allFields :: [SimpleFieldIndex] -> Bool
 allFields = all isField
 
+isIndex :: SimpleFieldIndex -> Bool
+isIndex (Index _ ) = True
+isIndex _          = False
+
 allIndices :: [SimpleFieldIndex] -> Bool
-allIndices = all $ not . isField
+allIndices = all isIndex
+
+isElement :: SimpleFieldIndex -> Bool
+isElement (Element _ ) = True
+isElement _            = False
+
+allElements :: [SimpleFieldIndex] -> Bool
+allElements = all isElement

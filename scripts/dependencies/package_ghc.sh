@@ -43,7 +43,7 @@ pkg_build() {
 }
 
 pkg_is_globally_installed() {
-	local cur_ver="$(ghc --numeric-version)"
+	local cur_ver="$(/usr/bin/ghc --numeric-version 2>/dev/null)"
 	if [ -z "$cur_ver" ]; then
 		return 1 # not installed
 	fi

@@ -156,9 +156,7 @@ namespace encoder {
 		struct encode_tuple {
 			core::ExpressionPtr operator()(NodeManager& manager, const tuple<T...>& tuple) const {
 				// convert tuple into tuple expression using helper function
-				auto ret = IRBuilder(manager).tupleExpr(encodeTuple(manager, tuple));
-				core::lang::markAsBuiltIn(ret);
-				return ret;
+				return IRBuilder(manager).tupleExpr(encodeTuple(manager, tuple));
 			}
 			encode_tuple() {}
 		};

@@ -75,6 +75,14 @@ namespace internal {
 				return builder.refMember(call->getArgument(0),call->getArgument(1).as<LiteralPtr>()->getStringValue());
 			}
 
+			// replace dummy-ref-component-access calls
+			if (ext.isCallOfHaskellRefComponentAccess(node)) {
+				assert_true(call->getArgument(0));
+				assert_true(call->getArgument(1));
+				assert_true(call->getArgument(1).isa<LiteralPtr>());
+				return builder.refComponent(call->getArgument(0),call->getArgument(1));
+			}
+
 			// re-type all call expressions (types have to be re-deduced!)
 			return builder.callExpr(call->getFunctionExpr(),call->getArgumentList());
 		});

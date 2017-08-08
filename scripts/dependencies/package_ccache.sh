@@ -7,7 +7,7 @@ URL="http://www.insieme-compiler.org/ext_libs/$FILE"
 SHA256SUM="7a553809e90faf9de3a23ee9c5b5f786cfd4836bf502744bedb824a24bee1097"
 
 pkg_is_globally_installed() {
-	local cur_ver="$(ccache --version | head -n1 | grep -oE '[^ ]+$')"
+	local cur_ver="$(/usr/bin/ccache --version 2>/dev/null | head -n1 | grep -oE '[^ ]+$')"
 	if [ -z "$cur_ver" ]; then
 		return 1 # not installed
 	fi

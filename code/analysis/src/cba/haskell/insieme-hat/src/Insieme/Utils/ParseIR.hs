@@ -73,6 +73,9 @@ parseType txt = IR.goDown 0 $ parseExpr $ "lit(\"x\":" ++ txt ++ ")"
 
 -- inspire constructs --
 
+uint8 :: IR.Tree
+uint8 = parseType "uint<8>"
+
 identifierType :: IR.Tree
 identifierType = parseType "identifier"
 
@@ -90,3 +93,5 @@ refTempInit = parseExpr "ref_temp_init"
 hsRefMemberAccess :: IR.Tree
 hsRefMemberAccess = parseExpr "hs_ref_member_access"
 
+hsRefComponentAccess :: IR.Tree
+hsRefComponentAccess = parseExpr "hs_ref_component_access"

@@ -11,7 +11,7 @@ DEPENDS="autoconf"
 export PATH="$(get_pkg_prefix autoconf)/bin:$PATH"
 
 pkg_is_globally_installed() {
-	local cur_ver="$(automake --version | head -n1 | grep -oE '[^ ]+$')"
+	local cur_ver="$(/usr/bin/automake --version 2>/dev/null | head -n1 | grep -oE '[^ ]+$')"
 	if [ -z "$cur_ver" ]; then
 		return 1 # not installed
 	fi

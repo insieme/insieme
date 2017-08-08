@@ -27,7 +27,7 @@ pkg_configure() {
 }
 
 pkg_is_globally_installed() {
-	local cur_ver="$(gcc -dumpversion)"
+	local cur_ver="$(/usr/bin/gcc -dumpversion 2>/dev/null)"
 	if [ -z "$cur_ver" ]; then
 		return 1 # not installed
 	fi
