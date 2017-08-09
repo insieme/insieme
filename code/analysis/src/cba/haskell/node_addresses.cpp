@@ -63,6 +63,10 @@ extern "C" {
 		return new NodeAddress(std::move(addr));
 	}
 
+	void hat_del_c_node_address(NodeAddress* n) {
+		delete n;
+	}
+
 	NodeAddressSet* hat_mk_c_node_address_set(NodeAddress* addrs[], long long length) {
 		return NodeAddressSet::fromArray(addrs, length);
 	}
@@ -82,6 +86,10 @@ extern "C" {
 
 		// Since this function is called by Haskell, `data` is freed in Haskell afterwards.
 		return new NodePtr(cleaned_tree);
+	}
+
+	void hat_c_del_ir_tree(NodePtr* n) {
+		delete n;
 	}
 
 	void hat_c_parse_ir_statement(const char* data, size_t size, char** data_c, size_t* size_c) {

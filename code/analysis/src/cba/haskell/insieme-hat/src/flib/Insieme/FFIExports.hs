@@ -68,6 +68,9 @@ foreign export ccall "hat_freeStablePtr"
 foreign export ccall "hat_initialize_context"
   initializeContext :: Ctx.CContext -> CString -> CSize -> IO (StablePtr Ctx.Context)
 
+foreign export ccall "hat_set_timelimit"
+  setTimelimit :: StablePtr Ctx.Context -> CLLong -> IO (StablePtr Ctx.Context)
+
 foreign export ccall "hat_print_statistic"
   dumpStatistics :: StablePtr Ctx.Context -> IO ()
 

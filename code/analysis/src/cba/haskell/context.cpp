@@ -66,6 +66,7 @@ extern "C" {
 	StablePtr hat_initialize_context(const Context* ctx_c, const char* dump_c, size_t size_c);
 	void hat_print_statistic(StablePtr hs_context);
 	void hat_dump_assignment(StablePtr hs_context);
+	StablePtr hat_set_timelimit(StablePtr hs_context, long long t);
 
 	// NodePath
 	StablePtr hat_mk_node_address(StablePtr ctx_hs, const size_t* path_c, size_t length_c);
@@ -91,6 +92,10 @@ namespace haskell {
 		clear();
 	}
 
+	void Context::setTimelimit(long long us) {
+		context_hs = hat_set_timelimit(context_hs, us);
+	}
+
 	void Context::dumpStatistics() const {
 		if (!context_hs) {
 			std::cout << "No statistics available.\n";
@@ -114,7 +119,12 @@ namespace haskell {
 	}
 
 	void Context::setHaskellContext(StablePtr new_ctxt) {
-		if (context_hs) hat_freeStablePtr(context_hs);
+		if (context_hs == new_ctxt)
+			return;
+
+		if (context_hs)
+			hat_freeStablePtr(context_hs);
+
 		context_hs = new_ctxt;
 	}
 

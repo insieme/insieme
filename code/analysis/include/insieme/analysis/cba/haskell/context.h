@@ -55,6 +55,7 @@ namespace haskell {
 	template <typename T>
 	struct AnalysisResult {
 		StablePtr new_context_hs;
+		bool timeout;
 		T result;
 	};
 
@@ -81,6 +82,8 @@ namespace haskell {
 		Context& operator=(const Context& other) = delete;
 		Context& operator=(Context&& other) = default;
 
+		/** Set time limit for analysis run in us */
+		void setTimelimit(long long us);
 
 		// -- general context interface requirements --
 
@@ -103,9 +106,9 @@ namespace haskell {
 		template <typename T>
 		T unwrapResult(AnalysisResult<T>* result) {
 			assert_true(result);
+			assert_false(result->timeout);
 
-			// update context
-			context_hs = result->new_context_hs;
+			setHaskellContext(result->new_context_hs);
 
 			T res = result->result;
 			free(result);
@@ -119,6 +122,6 @@ namespace haskell {
 	};
 
 } // end namespace haskell
-} //'end namespace cba
+} // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

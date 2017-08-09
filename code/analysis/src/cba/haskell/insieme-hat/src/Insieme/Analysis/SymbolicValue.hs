@@ -68,6 +68,7 @@ import Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Reference
 import Insieme.Inspire.Query
+import System.Timeout (timeout)
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
@@ -269,8 +270,13 @@ hsSymbolicValues ctx_hs stmt_hs = do
     let ctx_c =  Ctx.getCContext ctx
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (symbolicValue stmt)
     ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    result <- passSymbolicValueSet ctx_c $ unSVS $ ComposedValue.toValue res
-    allocAnalysisResult ctx_new_hs result
+    result <- timeout (Ctx.getTimelimit ctx) $ serialize ctx_c res
+    case result of
+        Just r  -> allocAnalysisResult ctx_new_hs False r
+        Nothing -> allocAnalysisResult ctx_hs True =<< serialize ctx_c Solver.top
+  where
+    serialize :: Ctx.CContext -> SymbolicValueLattice -> IO (CSetPtr SymbolicValue)
+    serialize ctx_c = passSymbolicValueSet ctx_c . unSVS . ComposedValue.toValue
 
 passSymbolicValueSet :: Ctx.CContext
                      -> BSet.BoundSet bb SymbolicValue

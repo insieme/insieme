@@ -36,6 +36,7 @@
  -}
 
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -50,6 +51,8 @@ These functions are used to pass data back and forth and start analysis runs.
 
 module Insieme.Adapter where
 
+import Control.Exception
+import Control.Exception.Base (evaluate)
 import Control.Monad
 import Foreign
 import Foreign.C.String
@@ -57,20 +60,22 @@ import Foreign.C.Types
 import Foreign.CStorable
 import GHC.Generics (Generic)
 import System.IO.Unsafe (unsafePerformIO)
+import System.Timeout (timeout)
 
 import qualified Data.ByteString.Char8 as BS8
 import qualified Insieme.Analysis.Alias as Alias
 import qualified Insieme.Analysis.Arithmetic as Arith
 import qualified Insieme.Analysis.Boolean as AnBoolean
-import qualified Insieme.Analysis.Reference as Ref
 import qualified Insieme.Analysis.Entities.FieldIndex as FieldIndex
 import qualified Insieme.Analysis.Entities.SymbolicFormula as SymbolicFormula
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
+import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
+import qualified Insieme.Analysis.Reference as Ref
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.BinaryDumper as BinDum
+import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Inspire.Visit as Visit
 import qualified Insieme.Utils.Arithmetic as Ar
@@ -98,6 +103,12 @@ initializeContext context_c dump_c size_c = do
     dump <- BS8.packCStringLen (dump_c, fromIntegral size_c)
     let Right ir = BinPar.parseBinaryDump dump
     newStablePtr $ Ctx.mkContext context_c ir
+
+setTimelimit :: StablePtr Ctx.Context -> CLLong -> IO (StablePtr Ctx.Context)
+setTimelimit ctx_hs t = do
+    ctx <- deRefStablePtr ctx_hs
+    freeStablePtr ctx_hs
+    newStablePtr $ ctx { Ctx.getTimelimit = fromIntegral t }
 
 dumpStatistics :: StablePtr Ctx.Context -> IO ()
 -- | Printer 'Solver.Solver' statistics.
@@ -134,7 +145,7 @@ nodePathPoke addr_hs path_c = do
 -- * Analysis Result
 
 -- Cannot use 'StablePtr Ctx.Context' as it is no instance of 'Generic'
-data AnalysisResult a = AnalysisResult (Ptr ()) a
+data AnalysisResult a = AnalysisResult (Ptr ()) Bool a
   deriving (Generic)
 
 type AnalysisResultPtr a = Ptr (AnalysisResult a)
@@ -148,11 +159,12 @@ instance CStorable a => Storable (AnalysisResult a) where
 
 allocAnalysisResult :: forall a. CStorable a
                     => StablePtr Ctx.Context
+                    -> Bool
                     -> a
                     -> IO (Ptr (AnalysisResult a))
-allocAnalysisResult ctx v = do
+allocAnalysisResult ctx t v = do
     res <- malloc :: IO (Ptr (AnalysisResult a))
-    poke res $ AnalysisResult (castStablePtrToPtr ctx) v
+    poke res $ AnalysisResult (castStablePtrToPtr ctx) t v
     return res
 
 -- * Analysis
@@ -172,12 +184,17 @@ checkBoolean ctx_hs expr_hs = do
     expr <- deRefStablePtr expr_hs
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) $ AnBoolean.booleanValue expr
     ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    allocAnalysisResult ctx_new_hs $ convertResult $ ComposedValue.toValue res
+    result <- timeout (Ctx.getTimelimit ctx) $ serialize res
+    case result of
+        Just r  -> allocAnalysisResult ctx_new_hs False r
+        Nothing -> allocAnalysisResult ctx_hs True =<< serialize Solver.top
   where
-    convertResult AnBoolean.AlwaysTrue = 0
+    serialize = evaluate . convertResult . ComposedValue.toValue
+
+    convertResult AnBoolean.AlwaysTrue  = 0
     convertResult AnBoolean.AlwaysFalse = 1
-    convertResult AnBoolean.Both = 2
-    convertResult AnBoolean.Neither = 3
+    convertResult AnBoolean.Both        = 2
+    convertResult AnBoolean.Neither     = 3
 
 checkAlias :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
 checkAlias ctx_hs x_hs y_hs = do
@@ -186,8 +203,13 @@ checkAlias ctx_hs x_hs y_hs = do
     y <- deRefStablePtr y_hs
     let (res,ns) = Alias.checkAlias (Ctx.getSolverState ctx) x y
     ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    allocAnalysisResult ctx_new_hs $ fromIntegral $ convertResult res
+    result <- timeout (Ctx.getTimelimit ctx) $ serialize res
+    case result of
+        Just r  -> allocAnalysisResult ctx_new_hs False r
+        Nothing -> allocAnalysisResult ctx_hs True $ convertResult Alias.MayAlias
   where
+    serialize = evaluate . convertResult
+
     convertResult Alias.AreAlias = 0
     convertResult Alias.MayAlias = 1
     convertResult Alias.NotAlias = 2
@@ -197,19 +219,27 @@ arithValue ctx_hs expr_hs = do
     ctx <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
     let ctx_c = Ctx.getCContext ctx
-    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Arith.arithmeticValue expr)
+    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) $ Arith.arithmeticValue expr
     ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    result <- passBoundSet (passFormula ctx_c) arithmeticSet
-            $ BSet.map Ar.convert
-            $ BSet.map (fmap SymbolicFormula.getAddr)
-            $ Arith.unSFS
-            $ ComposedValue.toValue res
-    allocAnalysisResult ctx_new_hs result
+    result <- timeout (Ctx.getTimelimit ctx) $ serialize ctx_c res
+    case result of
+        Just r  -> allocAnalysisResult ctx_new_hs False r
+        Nothing -> allocAnalysisResult ctx_hs True =<< serialize ctx_c Solver.top
+  where
+    serialize :: Ctx.CContext -> Arith.ArithResult -> IO (CSetPtr ArithmeticFormula)
+    serialize ctx_c r = passBoundSet (passFormula ctx_c) arithmeticSet
+                      $ BSet.map Ar.convert
+                      $ BSet.map (fmap SymbolicFormula.getAddr)
+                      $ Arith.unSFS
+                      $ ComposedValue.toValue r
 
 -- ** NodeAddresses
 
 foreign import ccall "hat_mk_c_node_address"
   mkCNodeAddress :: Ctx.CContext -> Ptr CSize -> CSize -> IO (CRepPtr Addr.NodeAddress)
+
+foreign import ccall "hat_del_c_node_address"
+  delCNodeAddress :: CRepPtr Addr.NodeAddress -> IO ()
 
 foreign import ccall "hat_mk_c_node_address_set"
   mkCNodeAddressSet :: CRepArr Addr.NodeAddress -> CLLong -> IO (CSetPtr Addr.NodeAddress)
@@ -241,7 +271,10 @@ checkForReference ref ctx_hs expr_hs = do
                              | otherwise -> maybe
                      |  otherwise -> no
 
-    allocAnalysisResult ctx_new_hs result
+    result' <- timeout (Ctx.getTimelimit ctx) (evaluate result)
+    case result' of
+        Just r  -> allocAnalysisResult ctx_new_hs False r
+        Nothing -> allocAnalysisResult ctx_hs True maybe
   where
     yes   = 0
     maybe = 1
@@ -262,13 +295,21 @@ memoryLocations ctx_hs expr_hs = do
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
     ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
 
-    let results = Ref.unRS $ ComposedValue.toValue res :: BSet.UnboundSet (Ref.Reference FieldIndex.SimpleFieldIndex)
-    result <- passBoundSet (passNodeAddress ctx_c) mkCNodeAddressSet
-            $ if BSet.member Ref.UninitializedReference results
-                then (BSet.Universe :: BSet.UnboundSet Ref.Location)
-                else  BSet.map Ref.creationPoint $ BSet.filter f results
-    allocAnalysisResult ctx_new_hs result
+    --let results = Ref.unRS $ ComposedValue.toValue res :: BSet.UnboundSet (Ref.Reference FieldIndex.SimpleFieldIndex)
+    result <- timeout (Ctx.getTimelimit ctx) $ serialize ctx_c res
+    case result of
+        Just r  -> allocAnalysisResult ctx_new_hs False r
+        Nothing -> allocAnalysisResult ctx_hs True =<< serialize ctx_c Solver.top
   where
+    serialize ctx_c results = passBoundSet (passNodeAddress ctx_c) mkCNodeAddressSet
+                            $ if BSet.member Ref.UninitializedReference (unwrap results)
+                                then (BSet.Universe :: BSet.UnboundSet Ref.Location)
+                                else  BSet.map Ref.creationPoint $ BSet.filter f (unwrap results)
+
+    unwrap :: (ValueTree.Tree FieldIndex.SimpleFieldIndex (Ref.ReferenceSet FieldIndex.SimpleFieldIndex))
+           -> BSet.UnboundSet (Ref.Reference FieldIndex.SimpleFieldIndex)
+    unwrap = Ref.unRS . ComposedValue.toValue
+
     f (Ref.Reference _ _ ) = True
     f _ = False
 
@@ -300,25 +341,41 @@ foreign import ccall "hat_mk_arithemtic_factor"
 foreign import ccall "hat_mk_arithmetic_value"
   arithmeticValue :: Ctx.CContext -> Ptr CSize -> CSize -> IO (CRepPtr ArithmeticValue)
 
+foreign import ccall "hat_del_arithmetic_value"
+  delArithmeticValue :: CRepPtr ArithmeticValue -> IO ()
+
+foreign import ccall "hat_del_arithmetic_factor"
+  delArithmeticFactor :: CRepPtr ArithmeticFactor -> IO ()
+
+foreign import ccall "hat_del_arithmetic_product"
+  delArithmeticProduct :: CRepPtr ArithmeticProduct -> IO ()
+
+foreign import ccall "hat_del_arithmetic_term"
+  delArithmeticTerm :: CRepPtr ArithmeticTerm -> IO ()
+
 passFormula :: Integral c => Ctx.CContext -> Ar.Formula c Addr.NodeAddress -> IO (CRepPtr ArithmeticFormula)
-passFormula ctx_c formula_hs = do
-    terms_c <- forM (Ar.terms formula_hs) passTerm
-    withArrayUnsignedLen terms_c arithmeticFormula
+passFormula ctx_c formula_hs = bracket
+    (forM (Ar.terms formula_hs) passTerm)
+    (mapM_ delArithmeticTerm)
+    (\terms_c -> withArrayUnsignedLen terms_c arithmeticFormula)
   where
     passTerm :: Integral c => Ar.Term c Addr.NodeAddress -> IO (CRepPtr ArithmeticTerm)
-    passTerm term_hs = do
-        product_c <- passProduct (Ar.product term_hs)
-        arithmeticTerm product_c (fromIntegral $ Ar.coeff term_hs)
+    passTerm term_hs = bracket
+        (passProduct (Ar.product term_hs))
+        (delArithmeticProduct)
+        (\product_c -> arithmeticTerm product_c (fromIntegral $ Ar.coeff term_hs))
 
     passProduct :: Integral c => Ar.Product c Addr.NodeAddress -> IO (CRepPtr ArithmeticProduct)
-    passProduct product_hs = do
-        factors_c <- forM (Ar.factors product_hs) passFactor
-        withArrayUnsignedLen factors_c arithmeticProduct
+    passProduct product_hs = bracket
+        (forM (Ar.factors product_hs) passFactor)
+        (mapM_ delArithmeticFactor)
+        (\factors_c -> withArrayUnsignedLen factors_c arithmeticProduct)
 
     passFactor :: Integral c => Ar.Factor c Addr.NodeAddress -> IO (CRepPtr ArithmeticFactor)
-    passFactor factor_hs = do
-        value_c <- passValue (Ar.base factor_hs)
-        arithemticFactor value_c (fromIntegral $ Ar.exponent factor_hs)
+    passFactor factor_hs = bracket
+        (passValue (Ar.base factor_hs))
+        (delArithmeticValue)
+        (\value_c -> arithemticFactor value_c (fromIntegral $ Ar.exponent factor_hs))
 
     passValue :: Addr.NodeAddress -> IO (CRepPtr ArithmeticValue)
     passValue addr_hs = withArrayUnsignedLen (fromIntegral <$> Addr.getAbsolutePath addr_hs) (arithmeticValue ctx_c)
@@ -332,6 +389,9 @@ dumpIrTree :: Ctx.CContext -> IR.Tree -> IO (CRepPtr IR.Tree)
 dumpIrTree ctx irtree = BS8.useAsCStringLen (BinDum.dumpBinaryDump irtree)
                       $ \(sz,l) -> mkCIrTree ctx sz (fromIntegral l)
 
+foreign import ccall "hat_c_del_ir_tree"
+  delCIrTree :: CRepPtr IR.Tree -> IO ()
+
 foreign import ccall "hat_c_pretty_print_tree"
   prettyPrintTree :: CString -> CSize -> IO CString
 
@@ -344,7 +404,7 @@ pprintTree ir = unsafePerformIO $ do
     return pretty
 
 passBoundSet :: (a -> IO (CRepPtr a))                   -- ^ Element constructor
-             -> (CRepArr a -> CLLong -> IO (CSetPtr a)) -- ^ Set constructor
+             -> (CRepArr a -> CLLong -> IO (CSetPtr a)) -- ^ Set constructor (destroys elements)
              -> BSet.BoundSet bb a                      -- ^ input set
              -> IO (CSetPtr a)
 passBoundSet _ mkSet BSet.Universe = mkSet nullPtr (-1)
