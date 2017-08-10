@@ -56,10 +56,9 @@ namespace haskell {
 	SymbolicValueSet getSymbolicValue(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto expr_hs = ctxt.resolveNodeAddress(expr);
 		auto result = hat_hs_symbolic_values(ctxt.getHaskellContext(), expr_hs);
-		auto value_ptr = ctxt.unwrapResult(result);
-		SymbolicValueSet value(std::move(*value_ptr));
-		delete value_ptr;
-		return value;
+		auto value = ctxt.unwrapResult(result);
+		assert_true(value);
+		return *value;
 	}
 
 } // end namespace haskell

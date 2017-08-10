@@ -40,6 +40,8 @@
 #include <cstdlib>
 #include <map>
 
+#include <boost/optional.hpp>
+
 #include "insieme/core/ir_address.h"
 
 namespace insieme {
@@ -104,15 +106,38 @@ namespace haskell {
 		core::NodeAddress resolveNodeAddress(const HaskellNodeAddress& addr);
 
 		template <typename T>
-		T unwrapResult(AnalysisResult<T>* result) {
+		boost::optional<T> unwrapResult(AnalysisResult<T*>* result) {
 			assert_true(result);
-			assert_false(result->timeout);
 
-			setHaskellContext(result->new_context_hs);
+			boost::optional<T> ret = {};
 
-			T res = result->result;
+			if(!result->timeout) {
+				setHaskellContext(result->new_context_hs);
+
+				ret = std::move(*result->result);
+			}
+
+			// even on timeout result->result holds an allocated object
+			delete result->result;
+
 			free(result);
-			return res;
+			return ret;
+		}
+
+		template <typename T>
+		boost::optional<T> unwrapResult(AnalysisResult<T>* result) {
+			assert_true(result);
+
+			boost::optional<T> ret = {};
+
+			if(!result->timeout) {
+				setHaskellContext(result->new_context_hs);
+
+				ret = result->result;
+			}
+
+			free(result);
+			return ret;
 		}
 
 	  private:
