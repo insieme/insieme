@@ -37,6 +37,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <cstdlib>
 #include <map>
 
@@ -84,8 +85,8 @@ namespace haskell {
 		Context& operator=(const Context& other) = delete;
 		Context& operator=(Context&& other) = default;
 
-		/** Set time limit for analysis run in us */
-		void setTimelimit(long long us);
+		/** Set time limit for analysis run. */
+		void setTimelimit(std::chrono::microseconds t);
 
 		// -- general context interface requirements --
 

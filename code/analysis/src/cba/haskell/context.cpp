@@ -92,8 +92,9 @@ namespace haskell {
 		clear();
 	}
 
-	void Context::setTimelimit(long long us) {
-		context_hs = hat_set_timelimit(context_hs, us);
+	void Context::setTimelimit(std::chrono::microseconds t) {
+		assert_true(context_hs) << "cannot set timeout before a context has been established, load a tree first";
+		context_hs = hat_set_timelimit(context_hs, t.count());
 	}
 
 	void Context::dumpStatistics() const {
