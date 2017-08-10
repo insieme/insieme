@@ -62,7 +62,7 @@ import Data.Typeable
 import Foreign
 import Foreign.C.Types
 import GHC.Generics (Generic)
-import Insieme.Adapter (AnalysisResultPtr,CRepPtr,CRepArr,CSetPtr,allocAnalysisResult,dumpIrTree,passBoundSet,pprintTree)
+import Insieme.Adapter (AnalysisResultPtr,CRepPtr,CRepArr,CSetPtr,allocAnalysisResult,dumpIrTree,getTimelimit,passBoundSet,pprintTree)
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
@@ -267,10 +267,11 @@ hsSymbolicValues :: StablePtr Ctx.Context
 hsSymbolicValues ctx_hs stmt_hs = do
     ctx  <- deRefStablePtr ctx_hs
     stmt <- deRefStablePtr stmt_hs
+    timelimit <- fromIntegral <$> getTimelimit (Ctx.getCContext ctx)
     let ctx_c =  Ctx.getCContext ctx
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (symbolicValue stmt)
     ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    result <- timeout (Ctx.getTimelimit ctx) $ serialize ctx_c res
+    result <- timeout timelimit $ serialize ctx_c res
     case result of
         Just r  -> allocAnalysisResult ctx_new_hs False r
         Nothing -> allocAnalysisResult ctx_hs True =<< serialize ctx_c Solver.top

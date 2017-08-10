@@ -51,6 +51,8 @@
 
 
 using namespace std;
+using namespace std::literals::chrono_literals;
+
 using namespace insieme::core;
 using namespace insieme::core::dump::binary::haskell;
 
@@ -66,7 +68,6 @@ extern "C" {
 	StablePtr hat_initialize_context(const Context* ctx_c, const char* dump_c, size_t size_c);
 	void hat_print_statistic(StablePtr hs_context);
 	void hat_dump_assignment(StablePtr hs_context);
-	StablePtr hat_set_timelimit(StablePtr hs_context, long long t);
 
 	// NodePath
 	StablePtr hat_mk_node_address(StablePtr ctx_hs, const size_t* path_c, size_t length_c);
@@ -82,9 +83,9 @@ namespace haskell {
 
 	// ------------------------------------------------------------ Context
 
-	Context::Context() : context_hs(nullptr), root() {}
+	Context::Context() : context_hs(nullptr), root(), timelimit(-1us) {}
 
-	Context::Context(const core::NodePtr& node) : context_hs(nullptr) {
+	Context::Context(const core::NodePtr& node) : context_hs(nullptr), timelimit(-1us) {
 		setRoot(node);
 	}
 
@@ -92,9 +93,12 @@ namespace haskell {
 		clear();
 	}
 
+	std::chrono::microseconds Context::getTimelimit() const {
+		return timelimit;
+	}
+
 	void Context::setTimelimit(std::chrono::microseconds t) {
-		assert_true(context_hs) << "cannot set timeout before a context has been established, load a tree first";
-		context_hs = hat_set_timelimit(context_hs, t.count());
+		timelimit = t;
 	}
 
 	void Context::dumpStatistics() const {
@@ -228,3 +232,14 @@ namespace haskell {
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
+
+extern "C" {
+
+	using insieme::analysis::cba::haskell::Context;
+
+	long long hat_c_get_timelimit(const Context* ctx_c) {
+		assert_true(ctx_c);
+		return ctx_c->getTimelimit().count();
+	}
+
+}

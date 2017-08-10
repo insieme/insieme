@@ -104,12 +104,6 @@ initializeContext context_c dump_c size_c = do
     let Right ir = BinPar.parseBinaryDump dump
     newStablePtr $ Ctx.mkContext context_c ir
 
-setTimelimit :: StablePtr Ctx.Context -> CLLong -> IO (StablePtr Ctx.Context)
-setTimelimit ctx_hs t = do
-    ctx <- deRefStablePtr ctx_hs
-    freeStablePtr ctx_hs
-    newStablePtr $ ctx { Ctx.getTimelimit = fromIntegral t }
-
 dumpStatistics :: StablePtr Ctx.Context -> IO ()
 -- | Printer 'Solver.Solver' statistics.
 dumpStatistics ctx_hs = do
@@ -141,6 +135,9 @@ nodePathPoke :: StablePtr Addr.NodeAddress -> Ptr CSize -> IO ()
 nodePathPoke addr_hs path_c = do
     addr <- deRefStablePtr addr_hs
     pokeArray path_c $ fromIntegral <$> Addr.getAbsolutePath addr
+
+foreign import ccall "hat_c_get_timelimit"
+  getTimelimit :: Ctx.CContext -> IO CLLong
 
 -- * Analysis Result
 
@@ -182,9 +179,10 @@ checkBoolean :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (Analy
 checkBoolean ctx_hs expr_hs = do
     ctx  <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
+    timelimit <- fromIntegral <$> getTimelimit (Ctx.getCContext ctx)
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) $ AnBoolean.booleanValue expr
     ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    result <- timeout (Ctx.getTimelimit ctx) $ serialize res
+    result <- timeout timelimit $ serialize res
     case result of
         Just r  -> allocAnalysisResult ctx_new_hs False r
         Nothing -> allocAnalysisResult ctx_hs True =<< serialize Solver.top
@@ -201,9 +199,10 @@ checkAlias ctx_hs x_hs y_hs = do
     ctx <- deRefStablePtr ctx_hs
     x <- deRefStablePtr x_hs
     y <- deRefStablePtr y_hs
+    timelimit <- fromIntegral <$> getTimelimit (Ctx.getCContext ctx)
     let (res,ns) = Alias.checkAlias (Ctx.getSolverState ctx) x y
     ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    result <- timeout (Ctx.getTimelimit ctx) $ serialize res
+    result <- timeout timelimit $ serialize res
     case result of
         Just r  -> allocAnalysisResult ctx_new_hs False r
         Nothing -> allocAnalysisResult ctx_hs True $ convertResult Alias.MayAlias
@@ -218,10 +217,11 @@ arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (Analysi
 arithValue ctx_hs expr_hs = do
     ctx <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
+    timelimit <- fromIntegral <$> getTimelimit (Ctx.getCContext ctx)
     let ctx_c = Ctx.getCContext ctx
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) $ Arith.arithmeticValue expr
     ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    result <- timeout (Ctx.getTimelimit ctx) $ serialize ctx_c res
+    result <- timeout timelimit $ serialize ctx_c res
     case result of
         Just r  -> allocAnalysisResult ctx_new_hs False r
         Nothing -> allocAnalysisResult ctx_hs True =<< serialize ctx_c Solver.top
@@ -260,6 +260,7 @@ checkForReference :: Ref.Reference FieldIndex.SimpleFieldIndex -> StablePtr Ctx.
 checkForReference ref ctx_hs expr_hs = do
     ctx  <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
+    timelimit <- fromIntegral <$> getTimelimit (Ctx.getCContext ctx)
 
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
     ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
@@ -271,7 +272,7 @@ checkForReference ref ctx_hs expr_hs = do
                              | otherwise -> maybe
                      |  otherwise -> no
 
-    result' <- timeout (Ctx.getTimelimit ctx) (evaluate result)
+    result' <- timeout timelimit (evaluate result)
     case result' of
         Just r  -> allocAnalysisResult ctx_new_hs False r
         Nothing -> allocAnalysisResult ctx_hs True maybe
@@ -290,13 +291,14 @@ memoryLocations :: StablePtr Ctx.Context
 memoryLocations ctx_hs expr_hs = do
     ctx  <- deRefStablePtr ctx_hs
     expr <- deRefStablePtr expr_hs
+    timelimit <- fromIntegral <$> getTimelimit (Ctx.getCContext ctx)
     let ctx_c = Ctx.getCContext ctx
 
     let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (Ref.referenceValue expr)
     ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
 
     --let results = Ref.unRS $ ComposedValue.toValue res :: BSet.UnboundSet (Ref.Reference FieldIndex.SimpleFieldIndex)
-    result <- timeout (Ctx.getTimelimit ctx) $ serialize ctx_c res
+    result <- timeout timelimit $ serialize ctx_c res
     case result of
         Just r  -> allocAnalysisResult ctx_new_hs False r
         Nothing -> allocAnalysisResult ctx_hs True =<< serialize ctx_c Solver.top

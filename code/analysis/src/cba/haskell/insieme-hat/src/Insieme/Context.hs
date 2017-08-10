@@ -56,7 +56,6 @@ module Insieme.Context (
     getCContext,
     getTree,
     getSolverState,
-    getTimelimit,
 ) where
 
 import Foreign.Ptr
@@ -67,13 +66,12 @@ type CContext = Ptr ()
 
 data Context = Context { getCContext    :: CContext,
                          getTree        :: IR.Tree,
-                         getSolverState :: Solver.SolverState,
-                         getTimelimit   :: Int }
+                         getSolverState :: Solver.SolverState }
 
 -- | Create a new 'Context', it will be initialized with an /empty/
 -- 'Solver.SolverState'.
 mkContext :: CContext -> IR.Tree -> Context
-mkContext i c = Context i c Solver.initState (-1)
+mkContext i c = Context i c Solver.initState
 
 -- | Create a new 'Context' without a reference to a
 -- @insieme::analysis::haskell::Context@ instance.

@@ -72,6 +72,8 @@ namespace haskell {
 
 		std::map<core::NodeAddress, HaskellNodeAddress> addresses;
 
+		std::chrono::microseconds timelimit;
+
 	  public:
 
 		Context();
@@ -85,7 +87,7 @@ namespace haskell {
 		Context& operator=(const Context& other) = delete;
 		Context& operator=(Context&& other) = default;
 
-		/** Set time limit for analysis run. */
+		std::chrono::microseconds getTimelimit() const;
 		void setTimelimit(std::chrono::microseconds t);
 
 		// -- general context interface requirements --
