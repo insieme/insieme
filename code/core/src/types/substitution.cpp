@@ -41,6 +41,7 @@
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
 
 namespace insieme {
@@ -49,184 +50,57 @@ namespace types {
 
 	namespace {
 
-		/**
-		 * This class provides a wrapper for a substitution to be applied to some type. This
-		 * wrapper is based on a node mapping, which allows this class to exploit the general node mapping
-		 * mechanism to perform
-		 */
-		class SubstitutionMapper : public transform::CachedNodeMapping {
+		const std::vector<TypeAddress>& getFreeTypeVariables(const NodePtr& node) {
 
-			/**
-			 * The node manager to be used for creating new type nodes.
-			 */
-			NodeManager& manager;
-
-			/**
-			 * The substitution to be applied.
-			 */
-			const Substitution& substitution;
-
-			/**
-			 * The root node of the substitution. This one will always be effected, however,
-			 * nested scopes will be skipped.
-			 */
-			NodePtr root;
-
-			/**
-			 * A cache for storing whether a given node contains free type variables or not.
-			 */
-			std::map<NodePtr,bool> containsTypeVarsCache;
-
-		  public:
-			/**
-			 * Creates a new instance of this class wrapping the given substitution.
-			 *
-			 * @param manager the node manager to be used for creating new node instances if necessary
-			 * @param substitution the substitution to be wrapped by the resulting instance.
-			 */
-			SubstitutionMapper(NodeManager& manager, const Substitution& substitution, const NodePtr& root)
-			    : manager(manager), substitution(substitution), root(root) {};
-
-			/**
-			 * The procedure mapping a node to its substitution.
-			 *
-			 * @param element the node to be resolved
-			 */
-			const NodePtr resolveElement(const NodePtr& element) override {
-
-				// determine whether the current node is free of type variables
-				auto containsTypeVars = visitDepthFirstOnceInterruptible(element, [&](const NodePtr& node) {
-
-					auto pos = containsTypeVarsCache.find(node);
-					if (pos != containsTypeVarsCache.end()) {
-						return pos->second;
-					}
-
-					bool& res = containsTypeVarsCache[node];
-					if(auto typeVar = node.isa<TypeVariablePtr>()) {
-						if(substitution[typeVar]) {
-							return res = true;
-						}
-					}
-					if(auto typeVar = node.isa<GenericTypeVariablePtr>()) {
-						if(substitution[typeVar]) {
-							return res = true;
-						}
-					}
-					if(auto typeVar = node.isa<VariadicTypeVariablePtr>()) {
-						if(substitution[typeVar]) {
-							return res = true;
-						}
-					}
-					if(auto typeVar = node.isa<VariadicGenericTypeVariablePtr>()) {
-						if(substitution[typeVar]) {
-							return res = true;
-						}
-					}
-					return res = false;
-				}, true, true);
-
-				if(!containsTypeVars) {
-					return element;
+			struct Cache : public core::value_annotation::drop_on_clone {
+				std::vector<TypeAddress> vars;
+				bool operator==(const Cache& other) const {
+					return vars == other.vars;
 				}
+			};
 
-				// prune area of influence
-				if (element != root && (
-						element.isa<LambdaExprPtr>() ||
-						element.isa<BindExprPtr>() ||
-						(element.isa<LiteralPtr>() && element.as<LiteralPtr>()->getType().isa<FunctionTypePtr>())
-					)) {
-
-					// lambdas define new scopes for variables => filter
-					auto funType = element.as<ExpressionPtr>()->getType().as<FunctionTypePtr>();
-
-					// compute reduced type variable substitution
-					Substitution sub = substitution;
-					sub.removeMappings(analysis::getTypeVariablesBoundBy(funType));
-					sub.removeMappings(analysis::getVariadicTypeVariablesBoundBy(funType));
-					
-					// run substitution recursively on reduced set
-					return sub(element);
-				}
-
-				// make sure current limitations are not exceeded
-				assert_true(!element.isa<LambdaExprPtr>() ||
-						!element.as<LambdaExprPtr>()->isRecursive() ||
-						!analysis::isGeneric(element.as<ExpressionPtr>()->getType()) ||
-						element.as<LambdaExprPtr>()->getDefinition().size() == 1)
-						<< "Instantiation of generic recursive functions not supported yet!"
-						<< "Function:\n" << dumpColor(element);
-
-				// handle tuple types
-				if (TupleTypePtr tuple = element.isa<TupleTypePtr>()) {
-					// map tuple types to type lists, convert those, and move back
-					NodeManager& mgr = element->getNodeManager();
-					auto types = Types::get(mgr, tuple->getElementTypes());
-					auto newTypes = map(types).as<TypesPtr>();
-					return TupleType::get(mgr, newTypes->getTypes());
-				}
-
-				// check for variadic type variables
-				if (TypesPtr types = element.isa<TypesPtr>()) {
-					if (!types.empty()) {
-						if (auto vvar = types.back().isa<VariadicTypeVariablePtr>()) {
-							if (auto expanded = substitution[vvar]) {
-								TypeList list = types.getTypes();
-								list.pop_back();
-								for (const auto& cur : *expanded) {
-									list.push_back(cur);
-								}
-								return map(Types::get(element->getNodeManager(), list));
-							}
-						} else if (auto vvar = types.back().isa<VariadicGenericTypeVariablePtr>()) {
-							if (auto expanded = substitution[vvar]) {
-								TypeList list = types.getTypes();
-								list.pop_back();
-								for (const auto& cur : *expanded) {
-									list.push_back(GenericTypeVariable::get(manager, cur->getVarName(), vvar->getTypeParameter()));
-								}
-								return map(Types::get(element->getNodeManager(), list));
-							}
-						}
-					}
-				}
-
-				// from here on, only variables are substituted
-				if (auto var = element.isa<TypeVariablePtr>()) {
-					// lookup current variable within the mapping
-					if (TypePtr replacement = substitution[var]) {
-						// found! => replace
-						return replacement;
-					}
-				}
-
-				// and generic type variable substitution
-				if (auto var = element.isa<GenericTypeVariablePtr>()) {
-					// lookup current variable within the mapping
-					if (TypePtr replacement = substitution[var]) {
-						// found! => replace, but only type family name
-						if (auto genType = replacement.isa<GenericTypePtr>()) {
-							return map(GenericType::get(manager, genType->getName(), var->getTypeParameter()).as<TypePtr>());
-						} else if (auto gvar = replacement.isa<GenericTypeVariablePtr>()) {
-							return map(GenericTypeVariable::get(manager, gvar->getVarName(), var->getTypeParameter()).as<TypePtr>());
-						}
-						assert_fail() << "Invalid mapping of " << *var << ": " << *replacement << " of type " << replacement->getNodeType();
-					}
-				}
-
-
-				// -- everything else --
-
-				// replace base
-				auto res = element->substitute(manager, *this);
-
-				// move annotations
-				transform::utils::migrateAnnotations(element, res);
-
-				// done
-				return res;
+			if (auto cache = node->hasAttachedValue<Cache>()) {
+				return cache->vars;
 			}
-		};
+
+			// create a new list of variables
+			auto& vars = node->attachValue<Cache>().vars;
+			visitDepthFirstPrunable(NodeAddress(node),[&](const NodeAddress& cur)->Action {
+
+				switch(cur->getNodeType()) {
+
+					// collect addresses of type variables
+					case NT_TypeVariable:
+					case NT_GenericTypeVariable:
+					case NT_VariadicTypeVariable:
+					case NT_VariadicGenericTypeVariable:
+						vars.push_back(cur.as<TypeAddress>());
+						return Action::Prune;
+
+					// prune scope
+					case NT_LambdaExpr:
+
+						// we do not need to descent further (lambdas create their own scope)
+						return Action::Prune;
+
+					case NT_Literal:
+						// also literals of function types introduce new type variable scopes
+						return (cur.as<LiteralPtr>()->getType().isa<FunctionTypePtr>())
+								? Action::Prune
+								: Action::Descent;
+
+					default: {
+						// nothing
+					}
+				}
+
+				// for all the rest, continue searching
+				return Action::Descent;
+			},true);
+
+			return vars;
+
+		}
 
 	} // end anonymous namespace
 
@@ -283,11 +157,121 @@ namespace types {
 	}
 
 	NodePtr Substitution::applyTo(NodeManager& manager, const NodePtr& node) const {
+
 		// shortcut for empty substitutions
 		if (empty()) return node;
-		// perform substitution
-		SubstitutionMapper mapper(manager, *this, node);
-		return mapper.map(0, node);
+
+		// when being applied to functions or bind expressions, apply to defined scope
+		if (node.isa<LiteralPtr>() || node.isa<LambdaExprPtr>() || node.isa<BindExprPtr>()) {
+			auto mapper = makeLambdaMapper([&](unsigned,const NodePtr& node){
+				return applyTo(manager,node);
+			});
+			return node->substitute(manager, mapper);
+
+		}
+
+		// step 1: expand variadic type variables
+		NodePtr res = node;
+
+		std::map<NodeAddress,NodePtr> replacements;
+		for(const auto& cur : getFreeTypeVariables(res)) {
+
+			// a utility to expand variadic types
+			auto expandList = [&](const auto& listPtr) {
+				// ignore null-pointer
+				if (!listPtr) return;
+
+				// compute replacement
+				assert_true(!cur.isRoot()) << "Unable to substitute free-standing variadic type variable: " << *cur << "\n";
+
+				// make it dependent on the parent
+				auto parent = cur.getParentAddress();
+
+				// we have to distinguish the parent type
+				NodePtr expanded;
+				if (auto types = parent.isa<TypesPtr>()) {
+					TypeList list = types.getTypes();
+					list.pop_back();
+					for (const auto& var : *listPtr) {
+						if (cur.template isa<VariadicTypeVariablePtr>()) {
+							list.push_back(var);
+						} else if (auto vvar = cur.template isa<VariadicGenericTypeVariablePtr>()) {
+							list.push_back(GenericTypeVariable::get(manager, var->getVarName(), vvar->getTypeParameter()));
+						} else {
+							assert_not_implemented() << "No for expanding variadic type variables into " << var->getNodeType() << " elements.";
+						}
+					}
+					expanded = applyTo(manager,Types::get(manager,list));
+
+				} else if (auto tupleType = parent.isa<TupleTypePtr>()) {
+
+					// we convert it to a type list ..
+					auto types = Types::get(manager,tupleType->getElementTypes());
+
+					// apply the the substitution on this type list ..
+					types = applyTo(manager,types).as<TypesPtr>();
+
+					// and convert it back to a tuple
+					expanded = TupleType::get(manager,types->getTypes());
+
+				} else {
+					assert_not_implemented() << "No support for expanding variadic type variables in " << parent->getNodeType() << " nodes.";
+				}
+
+				// add replacement
+				assert_true(expanded);
+				replacements[parent] = expanded;
+			};
+
+			if (VariadicTypeVariablePtr var = cur.isa<VariadicTypeVariablePtr>()) {
+				expandList(operator[](var));
+			}
+
+			if (VariadicGenericTypeVariablePtr var = cur.isa<VariadicGenericTypeVariablePtr>()) {
+				expandList(operator[](var));
+			}
+		}
+
+		// apply variadic variable expansion
+		if (!replacements.empty()) {
+			res = transform::replaceAll(manager,replacements);
+		}
+
+		// step 2: substitute remaining type variables
+
+		// create substitution map
+		replacements.clear();
+		for(const auto& cur : getFreeTypeVariables(res)) {
+
+			// ordinary type variable substitution ..
+			if(TypeVariablePtr var = cur.isa<TypeVariablePtr>()) {
+				if (auto replacement = operator[](var)) {
+					replacements[cur] = replacement;
+				}
+			}
+
+			// and generic type variable substitution
+			if(GenericTypeVariablePtr var = cur.isa<GenericTypeVariablePtr>()) {
+				// lookup current variable within the substitution mapping
+				if (auto replacement = operator[](var)) {
+					// found! => replace, but only type family name
+					if (auto genType = replacement.isa<GenericTypePtr>()) {
+						replacements[cur] = applyTo(manager,GenericType::get(manager, genType->getName(), var->getTypeParameter()).as<TypePtr>());
+					} else if (auto gvar = replacement.isa<GenericTypeVariablePtr>()) {
+						replacements[cur] = applyTo(manager,GenericTypeVariable::get(manager, gvar->getVarName(), var->getTypeParameter()).as<TypePtr>());
+					} else {
+						assert_fail() << "Invalid mapping of " << *var << ": " << *replacement << " of type " << replacement->getNodeType();
+					}
+				}
+			}
+		}
+
+		if (!replacements.empty()) {
+			res = transform::replaceAll(manager,replacements);
+		}
+
+		// done
+		return res;
 	}
 
 	void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {

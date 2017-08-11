@@ -12,7 +12,7 @@ pkg_extract() {
 }
 
 pkg_is_globally_installed() {
-	local cur_ver="$(python3 -c 'import platform; print(platform.python_version())')"
+	local cur_ver="$(/usr/bin/python3 -c 'import platform; print(platform.python_version())' 2>/dev/null)"
 	if [ -z "$cur_ver" ]; then
 		return 1 # not installed
 	fi

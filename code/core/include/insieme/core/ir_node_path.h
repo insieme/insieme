@@ -214,37 +214,54 @@ namespace core {
 			}
 
 			// compare the rest (cheap stuff first)
-			return (index == other.index) && (*parent == *other.parent);
+			return (index == other.index) && static_cast<const Derived&>(*this).compareValue(other.getValue())==0 && (*parent == *other.parent);
 		}
+
+	  private:
+
+		static int compare(const Derived& a, const Derived& b) {
+
+			// short-cut for identical instance
+			if (&a == &b) return 0;
+
+			// get depth to same length
+			if (a.depth < b.depth) {
+				return (compare(a,*b.parent) <= 0) ? -1 : 1;
+			}
+			if (a.depth > b.depth) {
+				return (compare(*a.parent,b) < 0) ? -1 : 1;
+			}
+
+			// here we have the same length
+			assert_eq(a.depth,b.depth);
+
+			// handle the root node case
+			if (!a.parent) {
+				return (*a.ptr < *b.ptr) ? -1 : ((*a.ptr == *b.ptr) ? 0 : 1);
+			}
+
+			// handle the child case
+			auto base = compare(*a.parent,*b.parent);
+
+			// if the prefix was different, we take that result
+			if (base != 0) return base;
+
+			// if the prefix was identical, compare this step
+			auto res = (a.index < b.index) ? -1 : ((a.index == b.index) ? 0 : 1);
+			if (res != 0) return res;
+
+			// finally, if this is all the same, check the value
+			return a.compareValue(b.getValue());
+		}
+
+	  public:
 
 		/**
 		 * Realizes a lexicographical order on the address paths.
 		 */
 		bool operator<(const Derived& other) const {
-			// quick test - shortcut
-			if(this == &other) { return false; }
-
-			// make sure this one is the shorter path
-			if(depth > other.depth) { return !(other < static_cast<const Derived&>(*this)); }
-
-			// reduce length to equal size
-			if(depth < other.depth) { return (*this == *other.parent) || (*this < *(other.parent)); }
-
-			// now the length is equally long
-			assert(depth == other.depth);
-
-			// handle root case
-			if(depth == 1) {
-				assert(!parent && !other.parent);
-				return index < other.index || (index == other.index && *ptr < *other.ptr);
-			}
-
-			// implement lexicographical order
-			if(*parent < *other.parent) { return true; }
-			if(*parent != *other.parent) { return false; }
-			if(index < other.index) { return true; }
-			if(index != other.index) { return false; }
-			return static_cast<const Derived&>(*this).isValueLessThan(other.getValue());
+			// use the lexicographical comparator
+			return compare(static_cast<const Derived&>(*this),other) < 0;
 		}
 
 		/**
@@ -289,8 +306,8 @@ namespace core {
 		/**
 		 * Compares the given value with the local value.
 		 */
-		bool isValueLessThan(const V& other) const {
-			return value < other;
+		int compareValue(const V& other) const {
+			return (value < other) ? -1 : ((value == other) ? 0 : 1);
 		}
 
 		/**
@@ -354,8 +371,8 @@ namespace core {
 		/**
 		 * Compares the attached value with another value => since it is empty, they are all the same
 		 */
-		bool isValueLessThan(const empty& other) const {
-			return false; // they are all the same
+		int compareValue(const empty&) const {
+			return 0; // they are all the same
 		}
 
 		/**
@@ -402,14 +419,14 @@ namespace core {
 		/**
 		 * A default constructor for this class.
 		 */
-		NodePath() : element(NULL){};
+		NodePath() : element(nullptr){};
 
 		/**
 		 * A constructor creating a path consisting of a single node (the root node).
 		 *
 		 * @param node the node the new path should consist of
 		 */
-		NodePath(const NodePtr& node, const V& value = V()) : element(new NodePathElement<V>(node, 0, value, NULL)) {
+		NodePath(const NodePtr& node, const V& value = V()) : element(new NodePathElement<V>(node, 0, value, nullptr)) {
 			element->incRefCount();
 		}
 
@@ -424,7 +441,7 @@ namespace core {
 		 * A move constructor for this paths.
 		 */
 		NodePath(NodePath&& other) : element(other.element) {
-			other.element = NULL;
+			other.element = nullptr;
 		}
 
 		/**

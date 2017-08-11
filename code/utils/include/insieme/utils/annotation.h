@@ -620,8 +620,9 @@ namespace utils {
 		 * @return true if such a value has been attached, false otherwise
 		 */
 		template <typename V>
-		bool hasAttachedValue() const {
-			return hasAnnotation(detail::ValueAnnotation<V, AnnotationType, KeyType>::KEY);
+		const V* hasAttachedValue() const {
+			auto ptr = getAnnotation(detail::ValueAnnotation<V, AnnotationType, KeyType>::KEY);
+			return (ptr) ? &ptr->getValue() : nullptr;
 		}
 
 		/**

@@ -760,5 +760,41 @@ namespace backend {
 	}
 
 
+	TEST(ForLoop, BasicUp) {
+		DO_TEST(R"(
+			int<4> function IMP_main() {
+				for(int<4> v0 = 0 .. 5 : 1) { }
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
+			EXPECT_PRED2(containsSubString, code, "for (int32_t v0 = 0; v0 < 5; ++v0) { };");
+		})
+	}
+
+	TEST(ForLoop, BasicDown) {
+		DO_TEST(R"(
+			int<4> function IMP_main() {
+				for(int<4> v0 = 5 .. 0 : -1) { }
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
+			EXPECT_PRED2(containsSubString, code, "for (int32_t v0 = 5; v0 > 0; --v0) { };");
+		})
+	}
+
+	TEST(ForLoop, VariableStep) {
+		DO_TEST(R"(
+			int<4> function IMP_main() {
+				var ref<int<4>> a;
+				for(int<4> v0 = 5 .. 0 : *a) { }
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
+			EXPECT_PRED2(containsSubString, code, "if (a > 0) ");
+			EXPECT_PRED2(containsSubString, code, "for (int32_t v0 = 5; v0 < 0; v0+=a)");
+			EXPECT_PRED2(containsSubString, code, "for (int32_t v0 = 5; v0 > 0; v0+=a) ");
+		})
+	}
+
 } // namespace backend
 } // namespace insieme

@@ -24,7 +24,7 @@ pkg_install() {
 }
 
 pkg_is_globally_installed() {
-	local cur_ver="$(luajit -v | awk '{print $2}')"
+	local cur_ver="$(/usr/bin/luajit -v 2>/dev/null | awk '{print $2}')"
 	if [ -z "$cur_ver" ]; then
 		return 1 # not installed
 	fi

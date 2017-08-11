@@ -1449,14 +1449,29 @@ namespace analysis {
 
 		namespace {
 
+
 			const vector<RecordAddress>& collectAllRecordsInternal(const NodePtr& root, const NodePtr& cur, std::map<NodePtr,vector<RecordAddress>>& cache) {
+
+				struct Cache : public core::value_annotation::drop_on_clone {
+					vector<RecordAddress> records;
+					bool operator==(const Cache& other) const {
+						return records == other.records;
+					}
+				};
+
+				// retrieve annotated records
+				if (cur != root) {
+					if (const Cache* cache = cur->hasAttachedValue<Cache>()) {
+						return cache->records;
+					}
+				}
 
 				// check cache
 				auto pos = cache.find(cur);
 				if (pos != cache.end()) return pos->second;
 
 				// collect records for this node
-				auto& records = cache[cur];
+				auto& records = (cur == root) ? cache[cur] : cur->attachValue<Cache>().records;
 
 				// if it is a built-in we stop here
 				if (core::lang::isBuiltIn(cur)) return records;
@@ -1540,7 +1555,7 @@ namespace analysis {
 				std::map<Key,RecordAddress> index;
 				for(const auto& cur : records) {
 
-					// get first enclosing tag type defintion
+					// get first enclosing tag type definition
 					NodeAddress t = cur;
 					while(t && !t.isa<TagTypeDefinitionAddress>()) t = (t.isRoot()) ? TagTypeDefinitionAddress() : t.getParentAddress();
 					TagTypeDefinitionPtr innerDef = t.getAddressedNode().as<TagTypeDefinitionPtr>();

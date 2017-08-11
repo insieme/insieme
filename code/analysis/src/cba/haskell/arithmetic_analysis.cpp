@@ -48,7 +48,7 @@ extern "C" {
 	namespace hat = ia::haskell;
 
 	// Analysis
-	ia::ArithmeticSet* hat_arithmetic_value(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
+	hat::AnalysisResult<ia::ArithmeticSet*>* hat_arithmetic_value(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
 
 }
 
@@ -59,10 +59,10 @@ namespace haskell {
 
 	ArithmeticSet getArithmeticValue(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto expr_hs = ctxt.resolveNodeAddress(expr);
-		ArithmeticSet* res_ptr = hat_arithmetic_value(ctxt.getHaskellContext(), expr_hs);
-		ArithmeticSet res(std::move(*res_ptr));
-		delete res_ptr;
-		return res;
+		auto result = hat_arithmetic_value(ctxt.getHaskellContext(), expr_hs);
+		auto value = ctxt.unwrapResult(result);
+		assert_true(value);
+		return *value;
 	}
 
 } // end namespace haskell
@@ -98,7 +98,6 @@ extern "C" {
 
 	arithmetic::Product::Factor* hat_mk_arithemtic_factor(arithmetic::Value* value_c, int exponent) {
 		auto ret = new pair<arithmetic::Value, int>(*value_c, exponent);
-		delete value_c;
 		return ret;
 	}
 
@@ -106,14 +105,12 @@ extern "C" {
 		auto ret = new arithmetic::Product();
 		for(size_t i = 0; i < length; i++) {
 			*ret *= arithmetic::Product(factors_c[i]->first, factors_c[i]->second);
-			delete factors_c[i];
 		}
 		return ret;
 	}
 
 	arithmetic::Formula::Term* hat_mk_arithmetic_term(arithmetic::Product* term_c, int64_t coeff) {
 		auto ret = new pair<arithmetic::Product, arithmetic::Rational>(*term_c, arithmetic::Rational(coeff));
-		delete term_c;
 		return ret;
 	}
 
@@ -121,13 +118,28 @@ extern "C" {
 		auto ret = new arithmetic::Formula();
 		for(size_t i = 0; i < length; i++) {
 			*ret += arithmetic::Formula(terms_c[i]->first, terms_c[i]->second);
-			delete terms_c[i];
 		}
 		return ret;
 	}
 
 	ArithmeticSet* hat_mk_arithmetic_set(arithmetic::Formula* formulas_c[], long long length) {
 		return ArithmeticSet::fromArray(formulas_c, length);
+	}
+
+	void hat_del_arithmetic_value(arithmetic::Value* v) {
+		delete v;
+	}
+
+	void hat_del_arithmetic_factor(arithmetic::Product::Factor* v) {
+		delete v;
+	}
+
+	void hat_del_arithmetic_product(arithmetic::Product* v) {
+		delete v;
+	}
+
+	void hat_del_arithmetic_term(arithmetic::Formula::Term* v) {
+		delete v;
 	}
 
 }

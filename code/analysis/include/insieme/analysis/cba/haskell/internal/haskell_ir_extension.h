@@ -67,9 +67,16 @@ namespace internal {
 	  public:
 
 		/**
-		 * A token representing the stack.
+		 * A dummy operator for the haskell side to create a member access, replaced
+		 * by a real member access during haskell to C++ conversion.
 		 */
 		LANG_EXT_LITERAL(HaskellRefMemberAccess, "hs_ref_member_access", "(ref<'a,'c,'v,'k>, identifier) -> ref<'b,'c,'v, plain>")
+
+		/**
+		 * A dummy operator for the haskell side to create a component access, replaced
+		 * by a real member access during haskell to C++ conversion.
+		 */
+		LANG_EXT_LITERAL(HaskellRefComponentAccess, "hs_ref_component_access", "(ref<'a,'c,'v,'k>, uint<8>) -> ref<'b,'c,'v, plain>")
 
 	};
 

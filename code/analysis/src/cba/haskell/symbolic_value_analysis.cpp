@@ -44,7 +44,7 @@ extern "C" {
 	namespace hat = ia::haskell;
 
 	// Analysis
-	hat::SymbolicValueSet* hat_hs_symbolic_values(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
+	hat::AnalysisResult<hat::SymbolicValueSet*>* hat_hs_symbolic_values(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
 
 }
 
@@ -55,10 +55,10 @@ namespace haskell {
 
 	SymbolicValueSet getSymbolicValue(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto expr_hs = ctxt.resolveNodeAddress(expr);
-		SymbolicValueSet* res_ptr = hat_hs_symbolic_values(ctxt.getHaskellContext(), expr_hs);
-		SymbolicValueSet res(std::move(*res_ptr));
-		delete res_ptr;
-		return res;
+		auto result = hat_hs_symbolic_values(ctxt.getHaskellContext(), expr_hs);
+		auto value = ctxt.unwrapResult(result);
+		assert_true(value);
+		return *value;
 	}
 
 } // end namespace haskell

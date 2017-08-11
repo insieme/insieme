@@ -76,15 +76,20 @@ namespace checks {
 		return res;
 	}
 
-	OptionalMessageList FreeBreakInsideForLoopCheck::visitForStmt(const ForStmtAddress& curfor) {
+	OptionalMessageList ForLoopSemanticsCheck::visitForStmt(const ForStmtAddress& curfor) {
 		OptionalMessageList res;
 		auto& mgr = curfor->getNodeManager();
 		IRBuilder builder(mgr);
 
+		// check body for free break/return
 		core::visitDepthFirstPrunable(curfor->getBody(), [&](const core::NodeAddress& cur) -> bool {
 			if(cur.isa<core::BreakStmtAddress>()) {
 				add(res, Message(cur, EC_SEMANTIC_FREE_BREAK_INSIDE_FOR_LOOP,
 				                 format("Free break statements are not allowed inside for loops. Consider while loop instead."), Message::ERROR));
+			}
+			if(cur.isa<core::ReturnStmtAddress>()) {
+				add(res, Message(cur, EC_SEMANTIC_FREE_RETURN_INSIDE_FOR_LOOP,
+				                 format("Free return statements are not allowed inside for loops. Consider while loop instead."), Message::ERROR));
 			}
 
 			if(cur.isa<core::LambdaExprAddress>() || cur.isa<core::ForStmtAddress>() || cur.isa<core::WhileStmtAddress>()

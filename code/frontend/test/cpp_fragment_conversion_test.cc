@@ -74,6 +74,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, ExpressionsRef) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_expressions_ref.cpp"); }
 
+	TEST(CppConversionTest, FunDef) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_fun_def.cpp"); }
+
 	TEST(CppConversionTest, Globals) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_globals.cpp"); }
 
 	TEST(CppConversionTest, GlobalVarDeclOrder) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_global_var_decl_order.cpp"); }

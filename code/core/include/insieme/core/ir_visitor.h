@@ -1120,14 +1120,14 @@ namespace core {
 	 * @param preorder if set to true, nodes will be visited in preorder (parent node first), otherwise
 	 * 				   post order will be enforced.
 	 */
-	template <typename Node, template <class Target> class Ptr, typename... P>
-	inline bool visitDepthFirstOnceInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
+	template <typename Node, typename Action, template <class Target> class Ptr, typename... P>
+	inline bool visitDepthFirstOnceInterruptible(const Ptr<Node>& root, IRVisitor<Action, Ptr, P...>&& visitor, bool preorder = true) {
 		return makeDepthFirstOnceInterruptibleVisitor(visitor, preorder).visit(root);
 	}
 
 	// same as above, however it is accepting visitors by reference
-	template <typename Node, template <class Target> class Ptr, typename... P>
-	inline bool visitDepthFirstOnceInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
+	template <typename Node, typename Action, template <class Target> class Ptr, typename... P>
+	inline bool visitDepthFirstOnceInterruptible(const Ptr<Node>& root, IRVisitor<Action, Ptr, P...>& visitor, bool preorder = true) {
 		return makeDepthFirstOnceInterruptibleVisitor(visitor, preorder).visit(root);
 	}
 

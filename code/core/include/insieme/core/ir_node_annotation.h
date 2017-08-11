@@ -300,7 +300,7 @@ namespace core {
 
 		// -- Value Attachments ---------------------
 		template <typename V>
-		bool hasAttachedValue() const {
+		const V* hasAttachedValue() const {
 			return getAnnotationContainer().template hasAttachedValue<V>();
 		}
 
