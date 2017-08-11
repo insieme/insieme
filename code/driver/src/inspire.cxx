@@ -54,6 +54,10 @@
 
 #include "insieme/backend/sequential/sequential_backend.h"
 
+#ifdef ANALYSIS_HASKELL
+#include "insieme/analysis/cba/haskell/internal/haskell_ir_extension.h"
+#endif
+
 /**
  * This executable is realizing the control flow required for optimizing
  * programs using the Insieme compiler infrastructure.
@@ -166,10 +170,21 @@ int main(int argc, char** argv) {
 	// parse input
 	NodeManager manager;
 	NodePtr res;
+
 	try {
 		if(options.statement) {
+			insieme::core::parser::DefinitionMap defs;
 			auto& ref_ext = manager.getLangExtension<core::lang::ReferenceExtension>();
-			res = core::parser::parseStmt(manager, input.str(), true, ref_ext.getDefinedSymbols(), ref_ext.getDefinedTypeAliases());
+			defs.insert(ref_ext.getDefinedSymbols().begin(), ref_ext.getDefinedSymbols().end());
+
+#ifdef ANALYSIS_HASKELL
+			{
+				auto& ext = manager.getLangExtension<insieme::analysis::cba::haskell::internal::HaskellExtension>();
+				defs.insert(ext.getDefinedSymbols().begin(), ext.getDefinedSymbols().end());
+			}
+#endif
+
+			res = core::parser::parseStmt(manager, input.str(), true, defs, ref_ext.getDefinedTypeAliases());
 		} else {
 			res = core::parser::parseProgram(manager, input.str(), true);
 		}
