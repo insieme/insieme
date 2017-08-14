@@ -49,9 +49,6 @@ module Insieme.Analysis.SymbolicValue (
     SymbolicValueLattice,
     genericSymbolicValue,
 
-    -- FFI
-    hsSymbolicValues,
-
 ) where
 
 --import Debug.Trace
@@ -59,21 +56,21 @@ module Insieme.Analysis.SymbolicValue (
 import Control.DeepSeq (NFData)
 import Data.List (intercalate)
 import Data.Typeable
-import Foreign
-import Foreign.C.Types
+--import Foreign
+--import Foreign.C.Types
 import GHC.Generics (Generic)
-import Insieme.Adapter (AnalysisResultPtr,CRepPtr,CRepArr,CSetPtr,allocAnalysisResult,dumpIrTree,getTimelimit,passBoundSet,pprintTree)
+--import Insieme.Adapter (AnalysisResultPtr,CRepPtr,CRepArr,CSetPtr,allocAnalysisResult,dumpIrTree,getTimelimit,passBoundSet,pprintTree)
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Reference
 import Insieme.Inspire.Query
-import System.Timeout (timeout)
+--import System.Timeout (timeout)
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Context as Ctx
+--import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.Builder as Builder
 import qualified Insieme.Inspire.NodeAddress as Addr
@@ -93,7 +90,8 @@ instance Solver.Lattice SymbolicValueSet where
     (SymbolicValueSet x ) `merge` (SymbolicValueSet y) = SymbolicValueSet $ BSet.union x y
 
     print (SymbolicValueSet BSet.Universe) = "{-all-}"
-    print (SymbolicValueSet s            ) = "{" ++ (intercalate "," $ pprintTree <$> BSet.toList s) ++ "}"
+    --print (SymbolicValueSet s            ) = "{" ++ (intercalate "," $ pprintTree <$> BSet.toList s) ++ "}"
+    print (SymbolicValueSet s            ) = "{" ++ (intercalate "," $ (const "-omitted for profiling-") <$> BSet.toList s) ++ "}"
 
 instance Solver.ExtLattice SymbolicValueSet where
     top   = SymbolicValueSet BSet.Universe
@@ -258,6 +256,8 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 -- * FFI
 --
 
+{-
+
 foreign import ccall "hat_c_mk_symbolic_value_set"
   mkCSymbolicValueSet :: CRepArr SymbolicValue -> CLLong -> IO (CSetPtr SymbolicValue)
 
@@ -289,3 +289,4 @@ passSymbolicValueSet ctx s = do
     passSymbolicValue :: SymbolicValue -> IO (CRepPtr SymbolicValue)
     passSymbolicValue s = do
         dumpIrTree ctx s
+-}

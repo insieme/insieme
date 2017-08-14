@@ -37,10 +37,10 @@
 
 module Insieme.Utils.ParseIR where
 
-import Foreign
-import Foreign.C.String
-import Foreign.C.Types
-import Foreign.Marshal.Alloc (free)
+--import Foreign
+--import Foreign.C.String
+--import Foreign.C.Types
+--import Foreign.Marshal.Alloc (free)
 import Insieme.Inspire.BinaryParser
 import Insieme.Inspire.Transform (removeIds)
 import System.IO.Unsafe (unsafePerformIO)

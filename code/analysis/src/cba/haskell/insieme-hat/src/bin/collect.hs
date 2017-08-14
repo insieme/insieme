@@ -35,31 +35,23 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.FFIExports where
+module Main where
 
-import Insieme.Adapter
+import Control.Monad
+import Insieme.Inspire.BinaryParser
+import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.Visit
 
-import Foreign
-import Foreign.C.String
-import Foreign.C.Types
-import Insieme.Analysis.SymbolicValue
-
-import qualified Data.ByteString.Char8 as BS8
-import qualified Insieme.Analysis.Alias as Alias
-import qualified Insieme.Analysis.Arithmetic as Arith
-import qualified Insieme.Analysis.Boolean as AnBoolean
-import qualified Insieme.Analysis.Reference as Ref
-import qualified Insieme.Analysis.Entities.FieldIndex as FieldIndex
-import qualified Insieme.Analysis.Entities.SymbolicFormula as SymbolicFormula
-import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Context as Ctx
+import qualified Data.ByteString as BS
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.BinaryParser as BinPar
-import qualified Insieme.Inspire.BinaryDumper as BinDum
-import qualified Insieme.Inspire.NodeAddress as Addr
-import qualified Insieme.Inspire.Visit as Visit
-import qualified Insieme.Utils.Arithmetic as Ar
-import qualified Insieme.Utils.BoundSet as BSet
 
--- TODO remove this file
+main :: IO ()
+main = do
+    Right ir <- parseBinaryDump <$> BS.getContents
+    let nodes = collectAll (const True) $ mkNodeAddress [] ir
+    print $ length nodes -- $ filter isCallExpr nodes
+    --print $ length $ collectAll (const True) $ mkNodeAddress [] ir
+
+isCallExpr :: NodeAddress -> Bool
+isCallExpr a | getNodeType a == IR.CallExpr = True
+isCallExpr _ = False

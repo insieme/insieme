@@ -72,6 +72,7 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Reference as Ref
 import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Analysis.SymbolicValue as SV
 import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.BinaryDumper as BinDum
@@ -93,6 +94,68 @@ data CSet a
 type CRepPtr a = Ptr (CRep a)
 type CSetPtr a = Ptr (CSet a)
 type CRepArr a = Ptr (Ptr (CRep a))
+
+-- * Exports
+
+foreign export ccall "hat_freeStablePtr"
+  freeStablePtr :: StablePtr a -> IO ()
+
+foreign export ccall "hat_initialize_context"
+  initializeContext :: Ctx.CContext -> CString -> CSize -> IO (StablePtr Ctx.Context)
+
+foreign export ccall "hat_print_statistic"
+  dumpStatistics :: StablePtr Ctx.Context -> IO ()
+
+foreign export ccall "hat_dump_assignment"
+  dumpAssignment :: StablePtr Ctx.Context -> IO ()
+
+foreign export ccall "hat_mk_node_address"
+  mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize -> IO (StablePtr Addr.NodeAddress)
+
+foreign export ccall "hat_node_path_length"
+  nodePathLength :: StablePtr Addr.NodeAddress -> IO CSize
+
+foreign export ccall "hat_node_path_poke"
+  nodePathPoke :: StablePtr Addr.NodeAddress -> Ptr CSize -> IO ()
+
+foreign export ccall "hat_find_declaration"
+  findDecl :: StablePtr Addr.NodeAddress -> IO (StablePtr Addr.NodeAddress)
+
+foreign export ccall "hat_check_boolean"
+  checkBoolean :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
+
+foreign export ccall "hat_check_alias"
+  checkAlias :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
+
+foreign export ccall "hat_arithmetic_value"
+  arithValue :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr (CSetPtr ArithmeticFormula))
+
+foreign export ccall "hat_check_null"
+  checkForNull :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
+
+foreign export ccall "hat_check_extern"
+  checkForExtern :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr CInt)
+
+foreign export ccall "hat_memory_locations"
+  memoryLocations :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr (CSetPtr MemoryLocation))
+
+foreign export ccall "hat_test_formulaZero"
+  testFormulaZero :: IO (CRepPtr ArithmeticFormula)
+
+foreign export ccall "hat_test_formulaOne"
+  testFormulaOne :: IO (CRepPtr ArithmeticFormula)
+
+foreign export ccall "hat_test_formulaExample1"
+  testFormulaExample1 :: StablePtr Addr.NodeAddress -> IO (CRepPtr ArithmeticFormula)
+
+foreign export ccall "hat_test_formulaExample2"
+  testFormulaExample2 :: StablePtr Addr.NodeAddress -> IO (CRepPtr ArithmeticFormula)
+
+foreign export ccall "hat_hs_test_binary_dumper_mirror"
+  testBinaryDumperMirror :: CString -> CSize -> Ptr CString -> Ptr CSize -> IO ()
+
+foreign export ccall "hat_hs_symbolic_values"
+  symbolicValues :: StablePtr Ctx.Context -> StablePtr Addr.NodeAddress -> IO (AnalysisResultPtr (CSetPtr SV.SymbolicValue))
 
 -- * Context
 
@@ -381,6 +444,34 @@ passFormula ctx_c formula_hs = bracket
 
     passValue :: Addr.NodeAddress -> IO (CRepPtr ArithmeticValue)
     passValue addr_hs = withArrayUnsignedLen (fromIntegral <$> Addr.getAbsolutePath addr_hs) (arithmeticValue ctx_c)
+
+-- * Symbolic Value
+
+foreign import ccall "hat_c_mk_symbolic_value_set"
+  mkCSymbolicValueSet :: CRepArr SV.SymbolicValue -> CLLong -> IO (CSetPtr SV.SymbolicValue)
+
+symbolicValues :: StablePtr Ctx.Context
+               -> StablePtr Addr.NodeAddress
+               -> IO (AnalysisResultPtr (CSetPtr SV.SymbolicValue))
+symbolicValues ctx_hs stmt_hs = do
+    ctx  <- deRefStablePtr ctx_hs
+    stmt <- deRefStablePtr stmt_hs
+    timelimit <- fromIntegral <$> getTimelimit (Ctx.getCContext ctx)
+    let ctx_c =  Ctx.getCContext ctx
+    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (SV.symbolicValue stmt)
+    ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+    result <- timeout timelimit $ serialize ctx_c res
+    case result of
+        Just r  -> allocAnalysisResult ctx_new_hs False r
+        Nothing -> allocAnalysisResult ctx_hs True =<< serialize ctx_c Solver.top
+  where
+    serialize :: Ctx.CContext -> SV.SymbolicValueLattice -> IO (CSetPtr SV.SymbolicValue)
+    serialize ctx_c = passSymbolicValueSet ctx_c . SV.unSVS . ComposedValue.toValue
+
+passSymbolicValueSet :: Ctx.CContext
+                     -> BSet.BoundSet bb SV.SymbolicValue
+                     -> IO (CSetPtr SV.SymbolicValue)
+passSymbolicValueSet ctx s = passBoundSet (dumpIrTree ctx) mkCSymbolicValueSet s
 
 -- * Utilities
 
