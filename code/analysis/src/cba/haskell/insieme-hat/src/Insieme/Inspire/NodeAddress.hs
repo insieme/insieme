@@ -45,6 +45,7 @@ module Insieme.Inspire.NodeAddress (
 
     -- ** Constructor
     mkNodeAddress,
+    mkNodeAddresses,
 
     -- ** Queries
     getPathReversed,
@@ -83,13 +84,19 @@ module Insieme.Inspire.NodeAddress (
 ) where
 
 import Control.DeepSeq
+import Control.Monad.State.Strict
 import Data.List (foldl',isSuffixOf)
+import Data.Map.Strict (Map)
 import Data.Maybe
+import Data.Sequence (Seq(..))
 import Debug.Trace
 import GHC.Generics (Generic)
 import Insieme.Inspire.Query
 import Insieme.Utils
+
 import qualified Data.Hashable as Hash
+import qualified Data.Map.Strict as Map
+import qualified Data.Sequence as Seq
 import qualified Insieme.Inspire as IR
 
 type NodePath = [Int]
@@ -113,7 +120,6 @@ instance Ord NodeAddress where
             r1 = compare (getNode x) (getNode y)
             r2 = compare (getPathReversed x) (getPathReversed y)
             r3 = compare (getRoot x) (getRoot y)
-            
 
 instance Show NodeAddress where
     show = prettyShow
@@ -132,6 +138,25 @@ prettyShow na = '0' : concat ['-' : show x | x <- getPath na]
 -- | Create a 'NodeAddress' from a list of indizes and a root node.
 mkNodeAddress :: [Int] -> IR.Tree -> NodeAddress
 mkNodeAddress xs root = foldl' (flip goDown) (NodeAddress [] root Nothing root []) xs
+
+-- | Create multiple 'NodeAddress'es from a list of 'NodePath's (as sequences),
+-- originating from the given root node. Use this instead of mapping
+-- 'mkNodeAddress' over a list of 'NodePath's to utilise reuse of already
+-- constructed 'NodeAddress'es.
+mkNodeAddresses :: IR.Tree -> [Seq Int] -> [NodeAddress]
+mkNodeAddresses root paths = evalState (forM paths mkNodeAddress) Map.empty
+  where
+    mkNodeAddress :: Seq Int -> State (Map (Seq Int) NodeAddress) NodeAddress
+    mkNodeAddress path = do
+        cache <- get
+        case Map.lookup path cache of
+            Just addr -> return addr
+            Nothing   -> do
+                addr <- case path of
+                    Empty    -> return $ NodeAddress [] root Nothing root []
+                    xs :|> x -> goDown x <$> mkNodeAddress xs
+                modify $ Map.insert path addr
+                return addr
 
 -- | Slow, use 'getPathReversed' where possible
 getPath :: NodeAddress -> NodePath
