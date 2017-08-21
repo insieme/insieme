@@ -46,6 +46,7 @@ module Insieme.Inspire.NodeAddress (
     -- ** Constructor
     mkNodeAddress,
     mkNodeAddresses,
+    mkNodeAddresses',
 
     -- ** Queries
     getPathReversed,
@@ -85,7 +86,7 @@ module Insieme.Inspire.NodeAddress (
 
 import Control.DeepSeq
 import Control.Monad.State.Strict
-import Data.List (foldl',isSuffixOf)
+import Data.List (foldl',isSuffixOf,sort)
 import Data.Map.Strict (Map)
 import Data.Maybe
 import Data.Sequence (Seq(..))
@@ -139,24 +140,28 @@ prettyShow na = '0' : concat ['-' : show x | x <- getPath na]
 mkNodeAddress :: [Int] -> IR.Tree -> NodeAddress
 mkNodeAddress xs root = foldl' (flip goDown) (NodeAddress [] root Nothing root []) xs
 
--- | Create multiple 'NodeAddress'es from a list of 'NodePath's (as sequences),
--- originating from the given root node. Use this instead of mapping
--- 'mkNodeAddress' over a list of 'NodePath's to utilise reuse of already
--- constructed 'NodeAddress'es.
-mkNodeAddresses :: IR.Tree -> [Seq Int] -> [NodeAddress]
-mkNodeAddresses root paths = evalState (forM paths mkNodeAddress) Map.empty
+-- | Create multiple 'NodeAddress'es from a list of 'NodePath's, originating
+-- from the given root node.
+mkNodeAddresses :: IR.Tree -> [NodePath] -> [NodeAddress]
+mkNodeAddresses ir paths = mkNodeAddresses' ir $ sort paths
+
+-- | Create multiple 'NodeAddress'es from a sorted list of 'NodePath's,
+-- originating from the given root node.
+mkNodeAddresses' :: IR.Tree -> [NodePath] -> [NodeAddress]
+mkNodeAddresses' ir []     = []
+mkNodeAddresses' ir (p:pp) = (\(_,_,x) -> first : x) $ foldr go (first, p, []) pp
   where
-    mkNodeAddress :: Seq Int -> State (Map (Seq Int) NodeAddress) NodeAddress
-    mkNodeAddress path = do
-        cache <- get
-        case Map.lookup path cache of
-            Just addr -> return addr
-            Nothing   -> do
-                addr <- case path of
-                    Empty    -> return $ NodeAddress [] root Nothing root []
-                    xs :|> x -> goDown x <$> mkNodeAddress xs
-                modify $ Map.insert path addr
-                return addr
+    first = mkNodeAddress p ir
+
+    go :: NodePath -> (NodeAddress, NodePath, [NodeAddress]) -> (NodeAddress, NodePath, [NodeAddress])
+    go path (prevAddr, prevPath, acc) = (addr, path, addr : acc)
+      where
+        addr = goRel (mkRelPath prevPath path) prevAddr
+
+    mkRelPath :: NodePath -> NodePath -> NodePath
+    mkRelPath x y = case distinctSuffixes x y of
+        ([], ys) -> ys
+        (xs, ys) -> negate (length xs) : ys
 
 -- | Slow, use 'getPathReversed' where possible
 getPath :: NodeAddress -> NodePath

@@ -41,3 +41,9 @@ module Insieme.Utils where
 thenCompare :: Ordering -> Ordering -> Ordering
 thenCompare EQ o = o
 thenCompare o  _ = o
+
+-- | Returns the distinct suffixes of the two given lists. This is the inverse
+-- to the common prefix.
+distinctSuffixes :: Eq a => [a] -> [a] -> ([a], [a])
+distinctSuffixes (x:xs) (y:ys) | x == y = distinctSuffixes xs ys
+distinctSuffixes xs     ys     = (xs, ys)
