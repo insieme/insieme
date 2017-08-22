@@ -721,8 +721,8 @@ toDotGraph (SolverState a@(Assignment _) varIndex _ _ _) = "digraph G {\n\t"
 dumpSolverState :: Bool -> SolverState -> FilePath -> String
 dumpSolverState overwrite s f = unsafePerformIO $ do
   base <- solverToDot overwrite s f
-  pdfFromDot base
   evaluate $ dumpToJsonFile s "solution_meta"
+  pdfFromDot base
   return ("Dumped assignment to " ++ base)
 
 -- | Dump solver state to the given file name, using the dot format.
@@ -735,6 +735,7 @@ solverToDot overwrite s base = target >>=
 -- | Generate a PDF from the dot file with the given basename.
 pdfFromDot :: FilePath -> IO ()
 pdfFromDot b = void (system $ "dot -Tpdf " ++ b ++ ".dot -o " ++ b ++ ".pdf")
+
 
 -- | Generate a file name which does not exist yet. The arguments to
 -- this function is the file name base, and the file extension. The
