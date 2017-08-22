@@ -180,7 +180,7 @@ namespace omp {
 	class Reduction {
 	  public:
 		// operator = + or - or * or & or | or ^ or && or ||
-		enum Operator { PLUS, MINUS, MUL, AND, OR, XOR, LAND, LOR };
+		enum Operator { PLUS, MINUS, MUL, AND, OR, XOR, LAND, LOR, MIN, MAX };
 
 		Reduction(const Operator& op, const VarListPtr& vars) : op(op), vars(vars) {}
 		const Operator& getOperator() const {
@@ -205,6 +205,8 @@ namespace omp {
 			case XOR: return "^";
 			case LAND: return "&&";
 			case LOR: return "||";
+			case MIN: return "min";
+			case MAX: return "max";
 			}
 			assert_fail() << "Operator doesn't exist";
 			return "?";

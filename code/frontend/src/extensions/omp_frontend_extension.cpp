@@ -99,8 +99,8 @@ namespace extensions {
 		// num_threads(list)
 		auto num_threads_clause = kwd("num_threads") >> l_paren >> expr["num_threads"] >> r_paren;
 
-		// + or - or * or & or | or ^ or && or ||
-		auto op = tok::plus | tok::minus | tok::star | tok::amp | tok::pipe | tok::caret | tok::ampamp | tok::pipepipe;
+		// + or - or * or & or | or ^ or && or || or min or max
+		auto op = tok::plus | tok::minus | tok::star | tok::amp | tok::pipe | tok::caret | tok::ampamp | tok::pipepipe | kwd("min") | kwd ("max");
 
 		// reduction(operator: list)
 		auto reduction_clause = kwd("reduction") >> l_paren >> op["reduction_op"] >> colon >> var_list["reduction"] >> r_paren;
@@ -339,6 +339,10 @@ namespace extensions {
 				op = omp::Reduction::LAND;
 			} else if(opIt == "||") {
 				op = omp::Reduction::LOR;
+			} else if(opIt == "min") {
+				op = omp::Reduction::MIN;
+			} else if(opIt == "max") {
+				op = omp::Reduction::MAX;
 			} else {
 				assert_fail() << "Reduction operator not supported.";
 			}
