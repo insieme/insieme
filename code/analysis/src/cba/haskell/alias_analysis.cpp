@@ -37,12 +37,20 @@
 
 #include "insieme/analysis/cba/haskell/alias_analysis.h"
 
+enum class AliasAnalysisResult : int {
+	AreAlias = 0,
+	MayAlias = 1,
+	NotAlias = 2,
+};
+
 extern "C" {
 
 	namespace hat = insieme::analysis::cba::haskell;
 
 	// Analysis
-	int hat_check_alias(hat::StablePtr ctxt, const hat::HaskellNodeAddress x_hs, const hat::HaskellNodeAddress y_hs);
+	hat::AnalysisResult<AliasAnalysisResult>* hat_check_alias(hat::StablePtr ctxt,
+	                                                          const hat::HaskellNodeAddress x_hs,
+	                                                          const hat::HaskellNodeAddress y_hs);
 
 }
 
@@ -53,16 +61,13 @@ namespace haskell {
 
 	using namespace insieme::core;
 
-	enum class AliasAnalysisResult : int {
-		AreAlias = 0,
-		MayAlias = 1,
-		NotAlias = 2,
-	};
-
 	AliasAnalysisResult checkAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
 		auto x_hs = ctxt.resolveNodeAddress(x);
 		auto y_hs = ctxt.resolveNodeAddress(y);
-		return static_cast<AliasAnalysisResult>(hat_check_alias(ctxt.getHaskellContext(), x_hs, y_hs));
+		auto result = hat_check_alias(ctxt.getHaskellContext(), x_hs, y_hs);
+		auto value = ctxt.unwrapResult(result);
+		assert_true(value);
+		return *value;
 	}
 
 	bool areAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {

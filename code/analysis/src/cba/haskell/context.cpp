@@ -51,6 +51,8 @@
 
 
 using namespace std;
+using namespace std::literals::chrono_literals;
+
 using namespace insieme::core;
 using namespace insieme::core::dump::binary::haskell;
 
@@ -64,10 +66,8 @@ extern "C" {
 
 	// Haskell Context
 	StablePtr hat_initialize_context(const Context* ctx_c, const char* dump_c, size_t size_c);
-	void hat_update_context(Context* trg, StablePtr hs_context);
 	void hat_print_statistic(StablePtr hs_context);
 	void hat_dump_assignment(StablePtr hs_context);
-
 
 	// NodePath
 	StablePtr hat_mk_node_address(StablePtr ctx_hs, const size_t* path_c, size_t length_c);
@@ -83,14 +83,22 @@ namespace haskell {
 
 	// ------------------------------------------------------------ Context
 
-	Context::Context() : context_hs(nullptr), root() {}
+	Context::Context() : context_hs(nullptr), root(), timelimit(-1us) {}
 
-	Context::Context(const core::NodePtr& node) : context_hs(nullptr) {
+	Context::Context(const core::NodePtr& node) : context_hs(nullptr), timelimit(-1us) {
 		setRoot(node);
 	}
 
 	Context::~Context() {
 		clear();
+	}
+
+	std::chrono::microseconds Context::getTimelimit() const {
+		return timelimit;
+	}
+
+	void Context::setTimelimit(std::chrono::microseconds t) {
+		timelimit = t;
 	}
 
 	void Context::dumpStatistics() const {
@@ -116,7 +124,12 @@ namespace haskell {
 	}
 
 	void Context::setHaskellContext(StablePtr new_ctxt) {
-		if (context_hs) hat_freeStablePtr(context_hs);
+		if (context_hs == new_ctxt)
+			return;
+
+		if (context_hs)
+			hat_freeStablePtr(context_hs);
+
 		context_hs = new_ctxt;
 	}
 
@@ -222,8 +235,11 @@ namespace haskell {
 
 extern "C" {
 
-	void hat_update_context(Context* trg, StablePtr hs_context) {
-		trg->setHaskellContext(hs_context);
+	using insieme::analysis::cba::haskell::Context;
+
+	long long hat_c_get_timelimit(const Context* ctx_c) {
+		assert_true(ctx_c);
+		return ctx_c->getTimelimit().count();
 	}
 
 }

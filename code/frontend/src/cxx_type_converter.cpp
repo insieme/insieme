@@ -259,10 +259,8 @@ namespace conversion {
 				recordMembers.constructors.push_back(methodConversionResult);
 				// if we just converted the default constructor, but it has (defaulted) arguments
 				if(ctorDecl->isDefaultConstructor() && ctorDecl->getNumParams() != 0) {
-					auto defaultCtor = utils::createDefaultCtorFromDefaultCtorWithDefaultParams(converter, ctorDecl, methodConversionResult);
-					if(defaultCtor.literal) {
-						recordMembers.constructors.push_back(defaultCtor);
-					}
+					// we create a dummy no-arg default constructor which calls the other one with the default values
+					recordMembers.constructors.push_back(utils::createDefaultCtorFromDefaultCtorWithDefaultParams(converter, ctorDecl, methodConversionResult));
 				}
 
 			} else if(llvm::dyn_cast<clang::CXXDestructorDecl>(mem)) {
@@ -490,13 +488,15 @@ namespace conversion {
 
 		if(memPointerTy->isMemberFunctionPointer()) {
 			auto memFunTy = retTy.as<core::FunctionTypePtr>();
-			auto funProto = llvm::dyn_cast<clang::FunctionProtoType>(memPointerTy->getPointeeType());
+			core::TypeList paramTypes = memFunTy->getParameterTypes();
+			core::TypePtr returnTy = memFunTy->getReturnType();
 
 			// prepend this obj to the param list
-			auto thisTy = frontend::utils::getThisType(funProto, converter.convertType(clang::QualType(memPointerTy->getClass(), 0)));
-			core::TypeList paramTypes = memFunTy->getParameterTypes();
-			paramTypes.insert(paramTypes.begin(), thisTy);
-			core::TypePtr returnTy = memFunTy->getReturnType();
+			auto funProto = llvm::dyn_cast<clang::FunctionProtoType>(memPointerTy->getPointeeType());
+			if (funProto) {
+				auto thisTy = frontend::utils::getThisType(funProto, converter.convertType(clang::QualType(memPointerTy->getClass(), 0)));
+				paramTypes.insert(paramTypes.begin(), thisTy);
+			}
 
 			// generate new member function type (fun ptr/ref types are const by convention in INSPIRE)
 			retTy = builder.ptrType(builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION), true);

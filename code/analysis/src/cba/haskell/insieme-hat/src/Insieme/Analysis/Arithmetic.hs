@@ -91,7 +91,9 @@ data ArithmeticAnalysis = ArithmeticAnalysis
 -- * Arithemtic Value Variable Generator
 --
 
-arithmeticValue :: Addr.NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex (SymbolicFormulaSet BSet.Bound10))
+type ArithResult = ValueTree.Tree SimpleFieldIndex (SymbolicFormulaSet BSet.Bound10)
+
+arithmeticValue :: Addr.NodeAddress -> Solver.TypedVar ArithResult
 arithmeticValue addr = case Addr.getNode addr of
 
     IR.Node IR.Literal [t, IR.Node (IR.StringValue v) _] | isIntType t -> case parseInt v of

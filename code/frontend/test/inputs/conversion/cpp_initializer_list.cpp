@@ -219,6 +219,15 @@ int main() {
 				(this)._M_original = false;
 				return this;
 			}
+			const function IMP_begin_returns_const_iterator = () -> ptr<IMP_TestObj,t,f> {
+				return *(this)._M_array;
+			}
+			const function IMP_end_returns_const_iterator = () -> ptr<IMP_TestObj,t,f> {
+				return ptr_add(this.IMP_begin_returns_const_iterator(), num_cast(this.IMP_size_returns_size_type(), type_lit(int<8>)));
+			}
+			const function IMP_size_returns_size_type = () -> uint<8> {
+				return *(this)._M_len;
+			}
 		};
 		def struct IMP_T2 {
 			ctor function (v1 : ref<IMP_std_colon__colon_initializer_list_struct_TestObj,f,f,plain>) { }
