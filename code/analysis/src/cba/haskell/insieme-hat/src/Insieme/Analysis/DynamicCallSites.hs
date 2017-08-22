@@ -51,6 +51,7 @@ import Insieme.Inspire.Visit
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
+import qualified Insieme.Inspire.Query as Q
 
 
 --
@@ -104,15 +105,18 @@ dynamicCalls addr = case getNodeType addr of
 
     var = Solver.mkVariable (idGen addr) [] (trace ("Number of call sites: " ++ (show $ Set.size allCalls)) allCalls)
 
-    allCalls = Set.fromList $ CallSite <$> collectAll callable (getRootAddress addr)
+    allCalls = Set.fromList $ CallSite <$> collectAllPrune dynamicBoundCall skipTypes (getRootAddress addr)
       where
-        callable node = case IR.getNodeType node of
+        dynamicBoundCall node = case IR.getNodeType node of
             IR.CallExpr ->
                 case IR.getNodeType $ IR.getChildren node !! 1 of
-                    IR.Lambda          -> False
+                    IR.LambdaExpr      -> False
                     IR.BindExpr        -> False
                     IR.Literal         -> False
                     IR.LambdaReference -> False
                     _                  -> True
             _ -> False
+        
+        -- NOTE: this is a simplification, since types may contain functions with dynamically bound calls
+        skipTypes node = if Q.isType node then PruneHere else NoPrune
 
