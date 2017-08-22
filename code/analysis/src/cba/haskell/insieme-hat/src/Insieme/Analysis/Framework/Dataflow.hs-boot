@@ -9,7 +9,8 @@ module Insieme.Analysis.Framework.Dataflow (
         entryPointParameterHandler,
         initialValueHandler,
         initValueHandler,
-        excessiveFileAccessHandler
+        excessiveFileAccessHandler,
+        unknownOperatorHandler
     ),
     mkDataFlowAnalysis,
     mkVarIdentifier,
@@ -38,7 +39,8 @@ data DataFlowAnalysis a v i = DataFlowAnalysis {
     entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a entry point parameter
     initialValueHandler        :: NodeAddress -> v,                     -- ^ a function computing the initial value of a memory location
     initValueHandler           :: v,                                    -- ^ default value of a memory location
-    excessiveFileAccessHandler :: v -> i -> v                           -- ^ a handler processing excessive field accesses (if ref_narrow calls navigate too deep)
+    excessiveFileAccessHandler :: v -> i -> v,                          -- ^ a handler processing excessive field accesses (if ref_narrow calls navigate too deep)
+    unknownOperatorHandler     :: NodeAddress -> v                      -- ^ a handler invoked for unknown operators
 }
 
 -- a function creating a simple data flow analysis
