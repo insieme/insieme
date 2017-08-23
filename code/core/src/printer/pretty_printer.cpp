@@ -1691,12 +1691,6 @@ namespace printer {
 				OUT(".");
 				PRINT_ARG(1);
 			};
-			ADD_FORMATTER(refExt.getRefComponentAccess()) {
-				PRINT_ARG(0);
-				OUT(".get<");
-				PRINT_ARG(1);
-				OUT(">()");
-			};
 			ADD_FORMATTER(basic.getCompositeMemberAccess()) {
 				PRINT_ARG(0);
 				OUT(".");
