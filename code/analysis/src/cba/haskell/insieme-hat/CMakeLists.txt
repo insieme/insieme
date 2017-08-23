@@ -1,7 +1,7 @@
 get_filename_component(CABAL_PATH_ENTRY "${CABAL_EXECUTABLE}" DIRECTORY)
 set(CABAL_PATH_ENTRY "${CABAL_PATH_ENTRY}:")
 
-file(GLOB_RECURSE insieme_hat_srcs insieme-hat.cabal src/*.hs src/*.chs)
+file(GLOB_RECURSE insieme_hat_srcs insieme-hat.cabal src/*.hs src/*.chs tests/*.hs bench/*.hs)
 
 get_filename_component(GMP_LIBRARIES_DIR ${GMP_LIBRARIES} PATH)
 get_filename_component(ZLIB_LIBRARIES_DIR ${ZLIB_LIBRARIES} PATH)
@@ -46,7 +46,7 @@ else()
 	# install dependencies and build package
 	COMMAND ${cabal} update
 	# -j1 because of cabal#4144
-	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 --enable-tests
+	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 --enable-tests --enable-benchmarks
 	# copy library to binary dir
 	COMMAND ${runhaskell} scripts/copyLib.hs ${cabal_file} "%comp:insieme-hat" ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}
 
