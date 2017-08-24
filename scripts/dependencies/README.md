@@ -26,18 +26,18 @@ environment variable:
 
 Insieme is written in C++11 and relies on several third-party libraries:
 
-| Name          | Version   | Purpose                                                             | License                |
-| ------------- | --------- | ------------------------------------------------------------------- | ---------------------- |
-| [G++]         | >= 5.1    | Compiler                                                            | GPLv3                  |
-| [CMake]       | >= 3.2.x  | Build System                                                        | BSD 3-clause License   |
-| [Google Test] | >= 1.8    | Unit testing --- is installed/built by us --- no need to install it | New BSD License        |
-| [Boost]       | >= 1.59   | Utilities, regex, filesystem, program options, ...                  | Boost Software License |
-| [LLVM/Clang]  | = 3.6.2\* | C/C++ frontend                                                      | LLVM Release License   |
-| [CUDD]        | >= 2.4.2  | Manipulation of decision diagrams                                   | see source             |
-| [LuaJIT]      | >= 2.0.0  | Scripting                                                           | MIT License            |
-| [Bison]       | >= 3.0    | Inspire language parser                                             | GPLv3                  |
-| [Flex]        | >= 2.5    | Inspire language scanner                                            | modified BSD License   |
-| [Ruby]        | >= 2.0    | Scripting                                                           | BSD 2-clause License   |
+| Name          | Version    | Purpose                                                             | License                |
+| ------------- | ---------- | ------------------------------------------------------------------- | ---------------------- |
+| [G++]         | >= 5.1     | Compiler                                                            | GPLv3                  |
+| [CMake]       | >= 3.2.x   | Build System                                                        | BSD 3-clause License   |
+| [Google Test] | >= 1.8     | Unit testing --- is installed/built by us --- no need to install it | New BSD License        |
+| [Boost]       | >= 1.59    | Utilities, regex, filesystem, program options, ...                  | Boost Software License |
+| [LLVM/Clang]  | = 3.6.2\*  | C/C++ frontend                                                      | LLVM Release License   |
+| [CUDD]        | >= 2.4.2\* | Manipulation of decision diagrams                                   | see source             |
+| [LuaJIT]      | >= 2.0.0   | Scripting                                                           | MIT License            |
+| [Bison]       | >= 3.0     | Inspire language parser                                             | GPLv3                  |
+| [Flex]        | >= 2.5     | Inspire language scanner                                            | modified BSD License   |
+| [Ruby]        | >= 2.0     | Scripting                                                           | BSD 2-clause License   |
 
 \* Insieme specific patch required.
 

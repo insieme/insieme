@@ -1,0 +1,44 @@
+#!/bin/bash
+
+set -e
+set -u
+
+export DIR="$(dirname "$(readlink -f "$0")")"
+
+# Install basic dependencies
+if hash apt-get 2>/dev/null; then
+	sudo apt-get update
+	sudo apt-get -y install \
+		bison \
+		build-essential \
+		cmake \
+		flex \
+		libgmp10 \
+		libhwloc-dev \
+		libluajit-5.1-dev \
+		libpapi-dev \
+		m4 \
+		pkg-config \
+		ruby \
+		zlib1g
+else
+	>&2 echo "Error: Not running on a Debian based distribution."
+	>&2 echo "       Please check the README for instructions."
+	exit 1
+fi
+
+# Run installer with default settings to install additional dependencies.
+"$DIR/installer" llvm boost cudd
+
+# Some changes may require a complete wipe of the build directory.
+if [[ -f wipe_counter ]] && ! diff -q wipe_counter "$DIR/wipe_counter"; then
+	>&2 echo "Warning: Your should wipe your build directory and run this script again."
+elif [[ ! -f wipe_counter ]]; then
+	cp "$DIR/wipe_counter" wipe_counter
+fi
+
+# Run third party linker to ensure that all links are up-to-date.
+"$DIR/third_party_linker"
+
+# Remove CMake cache to re-check dependency versions on next run.
+rm -f CMakeCache.txt
