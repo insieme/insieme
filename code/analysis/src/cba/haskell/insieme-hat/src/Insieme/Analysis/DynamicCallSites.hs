@@ -41,7 +41,6 @@
 
 module Insieme.Analysis.DynamicCallSites where
 
-import Debug.Trace
 import Control.DeepSeq
 import Data.Typeable
 import GHC.Generics (Generic)
@@ -103,7 +102,7 @@ dynamicCalls addr = case getNodeType addr of
 
     idGen = Solver.mkIdentifierFromExpression dynamicCallsAnalysis
 
-    var = Solver.mkVariable (idGen addr) [] (trace ("Number of call sites: " ++ (show $ Set.size allCalls)) allCalls)
+    var = Solver.mkVariable (idGen addr) [] allCalls
 
     allCalls = Set.fromList $ CallSite <$> collectAllPrune dynamicBoundCall skipTypes (getRootAddress addr)
       where
