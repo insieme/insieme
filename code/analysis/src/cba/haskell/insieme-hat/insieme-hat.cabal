@@ -49,6 +49,9 @@ library
                         Insieme.Inspire.Builder,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.NodeType,
+                        Insieme.Inspire.NodePath,
+                        Insieme.Inspire.NodePaths,
+                        Insieme.Inspire.NodeMap,
                         Insieme.Inspire.Query,
                         Insieme.Inspire.ThHelpers,
                         Insieme.Inspire.Transform,
@@ -172,21 +175,23 @@ executable parseNdump
 
 executable collect
     main-is:            collect.hs
-    ghc-options:        -fprof-auto
     hs-source-dirs:     src/bin
     build-depends:      insieme-hat >= 0.2
                       , base        >= 4.7
                       , bytestring  >= 0.10
+                      , deepseq
+                      , containers
     default-language:   Haskell2010
 
-test-suite test
+executable test
     main-is:            test.hs
     hs-source-dirs:     tests
     other-modules:      BoundSet,
                         Formula,
                         ParseInt,
-                        Transform
     build-depends:      insieme-hat >= 0.2,
+                        Transform,
+                        Visit
                         base >= 4.7,
                         containers >= 0.5.10,
                         tasty >= 0.11,

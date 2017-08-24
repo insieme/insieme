@@ -37,21 +37,60 @@
 
 module Main where
 
+import System.IO
 import Control.Monad
+import Control.Exception
+import Control.DeepSeq
+import Data.List
 import Insieme.Inspire.BinaryParser
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Visit
 
+import qualified Data.Set as Set
 import qualified Data.ByteString as BS
 import qualified Insieme.Inspire as IR
 
 main :: IO ()
 main = do
     Right ir <- parseBinaryDump <$> BS.getContents
-    let nodes = collectAll (const True) $ mkNodeAddress [] ir
-    print $ length nodes -- $ filter isCallExpr nodes
-    --print $ length $ collectAll (const True) $ mkNodeAddress [] ir
+    -- ir' <- evaluate $ force ir
 
-isCallExpr :: NodeAddress -> Bool
-isCallExpr a | getNodeType a == IR.CallExpr = True
+--    print  "evaluate"
+
+--    let cnt n = (1+) $ sum $ map cnt $ IR.getChildren n
+--    let ids n = Set.insert (IR.getID n) $ Set.unions $ map ids $ IR.getChildren n
+
+--    print  ("cnt", cnt ir')
+--    print  ("ids", ids ir')
+
+-- (isCallExpr)
+    let nodes = collectAllPrune (const True) (const NoPrune) $ mkNodeAddress [] ir
+    let paths = collectAllPrunePaths (const True) (const NoPrune) ir
+--    let nodes' = collectAllPrune' isCallExpr ir
+
+--    let cnt n = (1+) $ sum $ map cnt $ IR.getChildren n
+
+--    print $ cnt ir
+
+    print $ length paths
+--    print $ take 100 nodes
+--    mapM_ evaluate $ map force nodes
+--    evaluate $ force nodes
+
+--(flip mkNodeAddress ir)
+-- mkNodeAddresses' ir
+--    evaluate $ force $ map getPathReversed $ mkNodeAddresses ir paths
+
+
+    -- print ("is sorted", sort nodes' == nodes')
+    -- print (" elems", take 10 (sort nodes'))
+    -- print ("selems", take 10       nodes')
+
+    -- print ("is same", sort nodes == sort nodes')
+    -- print ("len", length nodes, length nodes')
+
+    return ()
+
+isCallExpr :: IR.Tree -> Bool
+isCallExpr a | IR.getNodeType a == IR.CallExpr = True
 isCallExpr _ = False

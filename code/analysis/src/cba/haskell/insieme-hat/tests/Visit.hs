@@ -35,29 +35,44 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
+module Visit (visitTests) where
+
+import Insieme.Inspire
+import Insieme.Inspire.Visit
 import Test.Tasty
 import Test.Tasty.HUnit
+import TestUtils
 
-import BoundSet
-import Formula
-import ParseInt
-import Transform
-import Visit
+import Data.List
+import Text.Show.Pretty
 
-main = defaultMain tests
+import Debug.Trace
 
-tests = testGroup "Tests" [
-          testGroup "Insieme" [
-            testGroup "Inspire" [ utilsTests
-                                , transformTests
-                                , visitTests
-                                ]
-          ]
-        ]
+ex1, ex2 :: (Int -> [Tree] -> Tree) -> Tree
+ex1 n = n 10 [ nil n, nil n, nil n ]
 
-utilsTests = testGroup "Utils"
-    [ boundSetTests
-    , formulaTests
-    , parseIntTests
-    ]
+ex2 n = n 10 [ n 20 [], n 21 [ nil n ], n 22 [ nil n, nil n ] ]
 
+visitTests =
+    testGroup "Visit" $ [
+        testGroup "collectAllPrunePaths" $
+            let collect  = collectAllPrunePaths (const True) (const NoPrune)
+                collect' = collectAllPaths'Naive (const True)
+
+                tests n ex r = [ testCase (n ++ " withoutId") $ do
+                                 let n = ex nodeWithoutId
+                                 collect n @?= collect' n
+                                 collect n @?= r
+                             , testCase (n ++ " withId") $ do
+                                 let n = ex nodeWithId
+                                 collect n @?= collect' n
+                                 collect n @?= r
+                             ]
+            in
+            [ testCase "nil withoutId" $ do
+                   let n = nil nodeWithoutId
+                   collect n @?= collect' n
+                   collect n @?= [[]]
+            ] ++ tests "ex1" ex1 [[], [0], [1], [2]]
+              ++ tests "ex2" ex2 [[], [0], [1], [1,0], [2], [2,0], [2,1]]
+      ]

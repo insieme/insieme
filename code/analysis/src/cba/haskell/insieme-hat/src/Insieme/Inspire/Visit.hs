@@ -36,11 +36,16 @@
  -}
 
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Insieme.Inspire.Visit (
     Pruning(..),
     collectAll,
     collectAllPrune,
+    collectAllPrunePaths,
+    collectAllPaths'Naive,
     collectAddr,
     foldTree,
     foldAddress,
@@ -50,12 +55,15 @@ module Insieme.Inspire.Visit (
 ) where
 
 import Control.Applicative
-import Control.Monad.State.Strict
 import Data.List
-import Data.Maybe
+import Insieme.Inspire.NodeMap
+import qualified Insieme.Inspire.NodeMap as NodeMap
+import Insieme.Inspire.NodePath
+import Insieme.Inspire.NodePaths
 import Insieme.Inspire.NodeAddress
-import qualified Data.IntMap.Strict as IntMap
 import qualified Insieme.Inspire as IR
+
+-- import Debug.Trace
 
 data Pruning = NoPrune       -- ^ Continue descending into child nodes
              | PruneChildren -- ^ Skip children, but cover current node
@@ -68,40 +76,39 @@ collectAll p root = collectAllPrune p (const NoPrune) root
 
 -- | Like 'collectAll' but allows you to prune the search space.
 collectAllPrune :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> NodeAddress -> [NodeAddress]
-collectAllPrune p pruning root = evalState (go root) IntMap.empty
+collectAllPrune p pruning addr = resolveNodePaths $ collectAllPrunePaths p pruning (getNode addr)
   where
-    go :: NodeAddress -> State (IntMap.IntMap [NodeAddress]) [NodeAddress]
-    go addr = do
-        cache <- get
-        case mkey of
-          Just key ->
-              case IntMap.lookup key cache of
-                  Just hit -> return hit
-                  Nothing  -> do
-                      r <- res
-                      modify $ IntMap.insert key r
-                      res
-          Nothing ->
-              res
+    resolveNodePaths :: [NodePath] -> [NodeAddress]
+--    resolveNodePaths = map (error "dohh!!")
+    resolveNodePaths = map (flip mkNodeAddress (getNode addr))
+--    resolveNodePaths = mkNodeAddresses' (getNode addr)
 
-      where
-        node = getNode addr
-        mkey = IR.getID node
-        res = addAddr <$> concat <$> grow <$>
-            case pruning node of
-              NoPrune -> mapM go (crop <$> getChildren addr)
-              _       -> return []
 
-        grow lists = (zipWith go') [ goDown i addr | i <- [0..] ] lists
-            where
-                go' x xs = append x <$> xs
+collectAllPrunePaths :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> IR.Tree -> [NodePath]
+collectAllPrunePaths p pruning root = flattenNodePaths $ go root
+  where
+    {-# NOINLINE resultMap #-}
+    resultMap :: NodeMap (NodePaths Int)
+    resultMap = fmap (\n -> {- traceShow ("result", (IR.getID n)) -} (go n)) $ mkNodeMap root
 
-        addAddr xs = maybeToList naddr ++ xs
-            where
-              naddr
-                  | pruning node /= PruneHere, p (getNode addr) = Just addr
-                  | otherwise = Nothing
+    lookup :: IR.Tree -> Maybe (NodePaths Int)
+    lookup n = {- traceShow ("lookup", IR.getID n) $ -} NodeMap.lookup n resultMap
 
+    go :: IR.Tree -> NodePaths Int
+    go n = mergeNodePath (p n && pruning n /= PruneHere) $
+                case pruning n of
+                   NoPrune -> map (lookup >>| go) $ IR.getChildren n
+                   _       -> []
+
+    (>>|) :: (a -> Maybe b) -> (a -> b) -> a -> b
+    f >>| g = \a -> case f a of Just x -> x; Nothing -> g a
+
+collectAllPaths'Naive :: (IR.Tree -> Bool) -> IR.Tree -> [NodePath]
+collectAllPaths'Naive pred root = map reverse $ go [] root
+  where
+    go :: NodePath -> IR.Tree -> [NodePath]
+    go p n =
+        (if pred n then (p:) else id) $ concat $ zipWith (\i c -> go (i : p) c) [0..] (IR.getChildren n)
 
 -- | Collect all nodes of the given 'IR.NodeType' but prune the tree when
 -- encountering one of the other 'IR.NodeType's.

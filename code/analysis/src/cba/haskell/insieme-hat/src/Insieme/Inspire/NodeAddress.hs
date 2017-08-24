@@ -90,17 +90,15 @@ import Data.List (foldl',isSuffixOf,sort)
 import Data.Map.Strict (Map)
 import Data.Maybe
 import Data.Sequence (Seq(..))
-import Debug.Trace
 import GHC.Generics (Generic)
 import Insieme.Inspire.Query
+import Insieme.Inspire.NodePath
 import Insieme.Utils
 
 import qualified Data.Hashable as Hash
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Insieme.Inspire as IR
-
-type NodePath = [Int]
 
 data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
                                  getNode             :: IR.Tree,
@@ -202,12 +200,12 @@ a `isChildOf` b = getRoot a == getRoot b && (getPathReversed b `isSuffixOf` getP
 -- respective child.
 goRel :: [Int] -> NodeAddress -> NodeAddress
 goRel []     = id
-goRel (i:is) | i < 0     = goRel is . last . take (1-i) . iterate goUp
+goRel (i:is) | i < 0     = goRel is . goUpX (negate i)
              | otherwise = goRel is . goDown i
 
 goUp :: NodeAddress -> NodeAddress
-goUp na | isRoot na = trace "No parent for Root" undefined
-goUp na = fromJust (getParent na)
+goUp NodeAddress { getParent = Just p }  = p
+goUp NodeAddress { getParent = Nothing } = error "goUp: No parent for Root"
 
 goUpX :: Int -> NodeAddress -> NodeAddress
 goUpX 0 a = a

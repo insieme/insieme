@@ -41,28 +41,21 @@ import Insieme.Inspire
 import Insieme.Inspire.Transform
 import Test.Tasty
 import Test.Tasty.HUnit
+import TestUtils
 
 import Text.Show.Pretty
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
 
-nil n = n 0 []
-
-nodeType = IntValue 0
-
-node ch = MkTree Nothing (InnerTree nodeType ch ["dummy"])
-nodeWithoutId, nodeWithId :: Int -> [Tree] -> Tree
-nodeWithoutId _id ch = MkTree Nothing (InnerTree nodeType ch ["dummy"])
-nodeWithId     id ch = MkTree (Just id) (InnerTree nodeType ch ["dummy"])
-
-nodeWithBuiltinTags bt ch = MkTree Nothing (InnerTree nodeType ch bt)
-
 ex1, ex1_disj, ex1_subst :: (Int -> [Tree] -> Tree) -> Tree
 ex1 n = n 10 [ nil n, nil n, nil n ]
 ex1_disj n = n 20 [ nil n, nil n, nil n, nil n ]
 ex1_subst n = 
     nodeWithBuiltinTags [] [ ex1 n, ex1 n, ex1 n ]
+
+-- | Singleton substitution
+a |-> b = Map.fromList [(a,b)]
 
 transformTests = 
     testGroup "Transform" $ concat
@@ -119,16 +112,3 @@ identityTests n (msg, ex, disj) = testGroup ("identity tests with "++msg)
     ]
 
 
-a |-> b = Map.fromList [(a,b)]
-
-a @?~ b = (a == b) @? 
-    "expected:\n"++simplShow 0 b++"\ngot:\n"++simplShow 0 a++"\n"++
-    "expected:\n"++ppShow b++"\ngot:\n"++ppShow a++"\n"
-
-a @?=== b = (treeExactEq a b) @?
-    "expected:\n"++simplShow 0 b++"\ngot:\n"++simplShow 0 a++"\n"++
-    "expected:\n"++ppShow b++"\ngot:\n"++ppShow a++"\n"
-
-simplShow d (Tree i _ ch bt) =
-    "|"++replicate (4*d) ' ' ++ "o "++ maybe "" id (show <$> i) ++ " " ++ (case bt of ["dummy"] -> ""; _ -> show bt) ++ "\n" ++
-    (concat $ map (simplShow (d+1)) ch)

@@ -35,29 +35,7 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-import Test.Tasty
-import Test.Tasty.HUnit
+module Insieme.Inspire.NodePath where
 
-import BoundSet
-import Formula
-import ParseInt
-import Transform
-import Visit
-
-main = defaultMain tests
-
-tests = testGroup "Tests" [
-          testGroup "Insieme" [
-            testGroup "Inspire" [ utilsTests
-                                , transformTests
-                                , visitTests
-                                ]
-          ]
-        ]
-
-utilsTests = testGroup "Utils"
-    [ boundSetTests
-    , formulaTests
-    , parseIntTests
-    ]
-
+-- TODO: newtype?
+type NodePath = [Int]

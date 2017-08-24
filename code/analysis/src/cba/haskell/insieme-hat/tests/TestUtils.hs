@@ -35,29 +35,41 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
+module TestUtils where
+
+import Insieme.Inspire
+import Insieme.Inspire.Transform
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import BoundSet
-import Formula
-import ParseInt
-import Transform
-import Visit
+import Text.Show.Pretty
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Maybe
 
-main = defaultMain tests
+nil n = n 0 []
 
-tests = testGroup "Tests" [
-          testGroup "Insieme" [
-            testGroup "Inspire" [ utilsTests
-                                , transformTests
-                                , visitTests
-                                ]
-          ]
-        ]
+nodeType = IntValue 0
 
-utilsTests = testGroup "Utils"
-    [ boundSetTests
-    , formulaTests
-    , parseIntTests
-    ]
+node ch = MkTree Nothing (InnerTree nodeType ch ["dummy"])
 
+nodeWithoutId, nodeWithId :: Int -> [Tree] -> Tree
+nodeWithoutId _id ch = MkTree Nothing (InnerTree nodeType ch ["dummy"])
+nodeWithId     id ch = MkTree (Just id) (InnerTree nodeType ch ["dummy"])
+
+nodeWithBuiltinTags bt ch = MkTree Nothing (InnerTree nodeType ch bt)
+
+-- | Assert node equality modulo IDs using the ordinary Eq instance
+a @?~ b = (a == b) @?
+    "expected:\n"++simplShow 0 b++"\ngot:\n"++simplShow 0 a++"\n"++
+    "expected:\n"++ppShow b++"\ngot:\n"++ppShow a++"\n"
+
+-- | Assert exact node equality including IDs
+a @?=== b = (treeExactEq a b) @?
+    "expected:\n"++simplShow 0 b++"\ngot:\n"++simplShow 0 a++"\n"++
+    "expected:\n"++ppShow b++"\ngot:\n"++ppShow a++"\n"
+
+-- | Show a simplified graphical representation of a node
+simplShow d (Tree i _ ch bt) =
+    "|"++replicate (4*d) ' ' ++ "o "++ maybe "" id (show <$> i) ++ " " ++ (case bt of ["dummy"] -> ""; _ -> show bt) ++ "\n" ++
+    (concat $ map (simplShow (d+1)) ch)

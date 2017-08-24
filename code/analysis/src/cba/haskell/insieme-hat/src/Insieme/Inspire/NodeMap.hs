@@ -35,29 +35,54 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-import Test.Tasty
-import Test.Tasty.HUnit
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-import BoundSet
-import Formula
-import ParseInt
-import Transform
-import Visit
+module Insieme.Inspire.NodeMap where
 
-main = defaultMain tests
+import Control.Monad.State
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
+import Prelude hiding (map)
 
-tests = testGroup "Tests" [
-          testGroup "Insieme" [
-            testGroup "Inspire" [ utilsTests
-                                , transformTests
-                                , visitTests
-                                ]
-          ]
-        ]
+import qualified Insieme.Inspire as IR
 
-utilsTests = testGroup "Utils"
-    [ boundSetTests
-    , formulaTests
-    , parseIntTests
-    ]
+data NodeMap a = NodeMap { nmIdMap :: IntMap a }
 
+mkNodeMap :: IR.Tree -> NodeMap IR.Tree
+mkNodeMap node = NodeMap $ execState (buildMap node) $ IntMap.empty
+  where
+    buildMap :: IR.Tree -> State (IntMap IR.Tree) ()
+    buildMap n@IR.MkTree { IR.mtId = Just i } = do
+      whenM (not . IntMap.member i <$> get) $ do
+           modify $ IntMap.insert i n
+           mapM_ buildMap $ IR.getChildren n
+    buildMap IR.MkTree { IR.mtId = Nothing } =
+      return ()
+
+    whenM :: Monad m => m Bool -> m () -> m ()
+    whenM cond a = do
+      b <- cond
+      when b a
+
+mkNodeMap'Naive :: IR.Tree -> NodeMap IR.Tree
+mkNodeMap'Naive n = NodeMap $ go n
+  where
+    go n = insert n $ IntMap.unions $ fmap go $ IR.getChildren n
+
+    insert n =
+        case IR.getID n of
+          Just i  -> IntMap.insert i n
+          Nothing -> id
+
+lookup :: IR.Tree -> NodeMap a -> Maybe a
+lookup   IR.MkTree { IR.mtId = Just i  } NodeMap { nmIdMap } =
+    IntMap.lookup i nmIdMap
+lookup IR.MkTree { IR.mtId = Nothing } _nm =
+    Nothing
+
+instance Functor NodeMap where
+    fmap = mapNodeMap
+
+mapNodeMap :: (a -> b) -> NodeMap a -> NodeMap b
+mapNodeMap f (NodeMap im) = NodeMap $ fmap f im
