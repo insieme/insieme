@@ -115,7 +115,7 @@ foreign-library insieme-hat
 executable insieme-hat-exe
     main-is:            Main.hs
     hs-source-dirs:     src/bin
-    build-depends:      insieme-hat >= 0.2,
+    build-depends:      insieme-hat,
                         attoparsec >= 0.13,
                         attoparsec-binary >= 0.2,
                         base >= 4.7,
@@ -134,7 +134,7 @@ executable insieme-hat-exe
 executable cba_runner
     main-is:            CbaRunner.hs
     hs-source-dirs:     src/bin
-    build-depends:      insieme-hat >= 0.2,
+    build-depends:      insieme-hat,
                         attoparsec >= 0.13,
                         attoparsec-binary >= 0.2,
                         base >= 4.7,
@@ -155,7 +155,7 @@ executable cba_runner
 executable parseNdump
     main-is:            parseNdump.hs
     hs-source-dirs:     src/bin
-    build-depends:      insieme-hat >= 0.2,
+    build-depends:      insieme-hat,
                         attoparsec >= 0.13,
                         attoparsec-binary >= 0.2,
                         base >= 4.7,
@@ -176,7 +176,7 @@ executable parseNdump
 executable collect
     main-is:            collect.hs
     hs-source-dirs:     src/bin
-    build-depends:      insieme-hat >= 0.2
+    build-depends:      insieme-hat
                       , base        >= 4.7
                       , bytestring  >= 0.10
                       , deepseq
@@ -189,9 +189,9 @@ executable test
     other-modules:      BoundSet,
                         Formula,
                         ParseInt,
-    build-depends:      insieme-hat >= 0.2,
                         Transform,
                         Visit
+    build-depends:      insieme-hat,
                         base >= 4.7,
                         containers >= 0.5.10,
                         tasty >= 0.11,
