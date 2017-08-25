@@ -501,8 +501,8 @@ namespace backend {
 			// 	Classes && generic types (which are intercepted objects)
 			if(type.isa<core::TagTypePtr>() || (type.isa<core::GenericTypePtr>() && !isPrimitiveType(type))) { return c_ast::ref(res); }
 
-			// creates a something of the format "(int[1]){x}"
-			return c_ast::init(c_ast::vec(valueTypeInfo.rValueType, 1), res);
+			// creates a something of the format "&(int){x}"
+			return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, res));
 		};
 
 		res[refExt.getRefNew()] = OP_CONVERTER {
