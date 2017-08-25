@@ -485,17 +485,6 @@ dumpIrTree ctx irtree = BS8.useAsCStringLen (BinDum.dumpBinaryDump irtree)
 foreign import ccall "hat_c_del_ir_tree"
   delCIrTree :: CRepPtr IR.Tree -> IO ()
 
-foreign import ccall "hat_c_pretty_print_tree"
-  prettyPrintTree :: CString -> CSize -> IO CString
-
-pprintTree :: IR.Tree -> String
-pprintTree ir = unsafePerformIO $ do
-    let dump = BinDum.dumpBinaryDump ir
-    pretty_c <- BS8.useAsCStringLen dump $ \(sz,l) -> prettyPrintTree sz (fromIntegral l)
-    pretty   <- peekCString pretty_c
-    free pretty_c
-    return pretty
-
 passBoundSet :: (a -> IO (CRepPtr a))                   -- ^ Element constructor
              -> (CRepArr a -> CLLong -> IO (CSetPtr a)) -- ^ Set constructor (destroys elements)
              -> BSet.BoundSet bb a                      -- ^ input set

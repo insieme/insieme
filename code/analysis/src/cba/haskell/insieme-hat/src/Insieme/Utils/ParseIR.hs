@@ -37,53 +37,20 @@
 
 module Insieme.Utils.ParseIR where
 
---import Foreign
---import Foreign.C.String
---import Foreign.C.Types
---import Foreign.Marshal.Alloc (free)
-import Insieme.Inspire.BinaryParser
+import Insieme.Adapter.Utils (parseIR)
 import Insieme.Inspire.Transform (removeIds)
 import System.IO.Unsafe (unsafePerformIO)
-import System.Process
-import System.Environment (getEnvironment)
 
-import qualified Data.ByteString.Char8 as BS8
 import qualified Insieme.Inspire as IR
-
---foreign import ccall "hat_c_parse_ir_statement"
---  cParseIrStatement :: CString -> CSize -> Ptr CString -> Ptr CSize -> IO ()
 
 -- | Parse a given IR expression.
 
 parseExpr :: String -> IR.Tree
 parseExpr = removeIds . unsafePerformIO . parseIR
-  where
-    {-
-    parseIR stmt = do
-        alloca $ \data_ptr_c ->
-            alloca $ \size_ptr_c -> do
-                withCStringLen stmt $ \(sz,l) ->cParseIrStatement sz (fromIntegral l) data_ptr_c size_ptr_c
-                data_c <- peek data_ptr_c
-                size_c <- peek size_ptr_c
-                dump   <- BS8.packCStringLen (data_c, fromIntegral size_c)
-                free data_c
-                let Right ir = parseBinaryDump dump
-                return ir
-    -}
-    parseIR stmt = do
-        envvars <- getEnvironment
-        let cp = (proc "inspire" ["-s", "-i", "-", "-k", "-"]) {
-                      env = Just $ envvars ++ [("INSIEME_NO_SEMA","1")]
-                  }
-        irb <- readCreateProcess cp stmt
-        let Right ir = parseBinaryDump $ BS8.pack irb
-        return ir
-
 
 -- | Parse a given IR type.
 parseType :: String -> IR.Tree
 parseType txt = IR.goDown 0 $ parseExpr $ "lit(\"x\":" ++ txt ++ ")"
-
 
 -- inspire constructs --
 

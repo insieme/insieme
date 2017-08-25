@@ -10,9 +10,14 @@ cabal-version:      >= 1.10
 library
     ghc-options:        -Wall -Wno-name-shadowing -Wno-type-defaults -Wno-unused-do-bind
                         -O2 -optc-O3
+
+    if flag(profiling)
+        hs-source-dirs:  profiling-stubs/
+
     hs-source-dirs:     src
     build-tools:        c2hs
-    exposed-modules:    Insieme.Analysis.AccessPath,
+    exposed-modules:    Insieme.Adapter.Utils,
+                        Insieme.Analysis.AccessPath,
                         Insieme.Analysis.Alias,
                         Insieme.Analysis.Arithmetic,
                         Insieme.Analysis.Boolean,
@@ -89,7 +94,7 @@ foreign-library insieme-hat
     if flag(profiling)
       buildable: False
 
-    hs-source-dirs:     src
+    hs-source-dirs:     flib/
     c-sources:          cbits/wrapper.c
     other-modules:      Insieme.Adapter
     build-depends:      insieme-hat,
@@ -114,7 +119,7 @@ foreign-library insieme-hat
 
 executable insieme-hat-exe
     main-is:            Main.hs
-    hs-source-dirs:     src/bin
+    hs-source-dirs:     bin/
     build-depends:      insieme-hat,
                         attoparsec >= 0.13,
                         attoparsec-binary >= 0.2,
@@ -133,7 +138,7 @@ executable insieme-hat-exe
 
 executable cba_runner
     main-is:            CbaRunner.hs
-    hs-source-dirs:     src/bin
+    hs-source-dirs:     bin/
     build-depends:      insieme-hat,
                         attoparsec >= 0.13,
                         attoparsec-binary >= 0.2,
@@ -154,7 +159,7 @@ executable cba_runner
 
 executable parseNdump
     main-is:            parseNdump.hs
-    hs-source-dirs:     src/bin
+    hs-source-dirs:     bin/
     build-depends:      insieme-hat,
                         attoparsec >= 0.13,
                         attoparsec-binary >= 0.2,
@@ -175,7 +180,7 @@ executable parseNdump
 
 executable collect
     main-is:            collect.hs
-    hs-source-dirs:     src/bin
+    hs-source-dirs:     bin/
     build-depends:      insieme-hat
                       , base        >= 4.7
                       , bytestring  >= 0.10
@@ -202,7 +207,7 @@ executable test
 
 executable profiler
     main-is:            Profiler.hs
-    hs-source-dirs:     src/bin
+    hs-source-dirs:     bin/
     default-language:   Haskell2010
     build-depends:
                         base             >= 4.7

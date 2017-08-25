@@ -1,7 +1,6 @@
 .stack-work
 dist-newstyle
 /.dist-buildwrapper/
-/bin
 *.prof*
 *.irbd
 *.aux

@@ -35,31 +35,47 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.FFIExports where
+{- ONLY USE THIS MODULE IF YOU ARE LINKING WITH libinsieme_analysis.so -}
 
-import Insieme.Adapter
+{-# LANGUAGE ForeignFunctionInterface #-}
+
+module Insieme.Adapter.Utils (
+    parseIR
+  , pprintTree
+) where
 
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
-import Insieme.Analysis.SymbolicValue
+import Insieme.Inspire.BinaryDumper
+import Insieme.Inspire.BinaryParser
+import System.IO.Unsafe (unsafePerformIO)
 
 import qualified Data.ByteString.Char8 as BS8
-import qualified Insieme.Analysis.Alias as Alias
-import qualified Insieme.Analysis.Arithmetic as Arith
-import qualified Insieme.Analysis.Boolean as AnBoolean
-import qualified Insieme.Analysis.Reference as Ref
-import qualified Insieme.Analysis.Entities.FieldIndex as FieldIndex
-import qualified Insieme.Analysis.Entities.SymbolicFormula as SymbolicFormula
-import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.BinaryParser as BinPar
-import qualified Insieme.Inspire.BinaryDumper as BinDum
-import qualified Insieme.Inspire.NodeAddress as Addr
-import qualified Insieme.Inspire.Visit as Visit
-import qualified Insieme.Utils.Arithmetic as Ar
-import qualified Insieme.Utils.BoundSet as BSet
 
--- TODO remove this file
+foreign import ccall "hat_c_parse_ir_statement"
+  cParseIrStatement :: CString -> CSize -> Ptr CString -> Ptr CSize -> IO ()
+
+parseIR :: String -> IO IR.Tree
+parseIR stmt = do
+    alloca $ \data_ptr_c ->
+        alloca $ \size_ptr_c -> do
+            withCStringLen stmt $ \(sz,l) ->cParseIrStatement sz (fromIntegral l) data_ptr_c size_ptr_c
+            data_c <- peek data_ptr_c
+            size_c <- peek size_ptr_c
+            dump   <- BS8.packCStringLen (data_c, fromIntegral size_c)
+            free data_c
+            let Right ir = parseBinaryDump dump
+            return ir
+
+foreign import ccall "hat_c_pretty_print_tree"
+  prettyPrintTree :: CString -> CSize -> IO CString
+
+pprintTree :: IR.Tree -> String
+pprintTree ir = unsafePerformIO $ do
+    let dump = dumpBinaryDump ir
+    pretty_c <- BS8.useAsCStringLen dump $ \(sz,l) -> prettyPrintTree sz (fromIntegral l)
+    pretty   <- peekCString pretty_c
+    free pretty_c
+    return pretty

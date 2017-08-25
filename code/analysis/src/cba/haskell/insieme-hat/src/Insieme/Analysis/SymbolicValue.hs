@@ -56,21 +56,17 @@ module Insieme.Analysis.SymbolicValue (
 import Control.DeepSeq (NFData)
 import Data.List (intercalate)
 import Data.Typeable
---import Foreign
---import Foreign.C.Types
 import GHC.Generics (Generic)
---import Insieme.Adapter (AnalysisResultPtr,CRepPtr,CRepArr,CSetPtr,allocAnalysisResult,dumpIrTree,getTimelimit,passBoundSet,pprintTree)
+import Insieme.Adapter.Utils (pprintTree)
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Reference
 import Insieme.Inspire.Query
---import System.Timeout (timeout)
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
---import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.Builder as Builder
 import qualified Insieme.Inspire.NodeAddress as Addr
@@ -90,8 +86,7 @@ instance Solver.Lattice SymbolicValueSet where
     (SymbolicValueSet x ) `merge` (SymbolicValueSet y) = SymbolicValueSet $ BSet.union x y
 
     print (SymbolicValueSet BSet.Universe) = "{-all-}"
-    --print (SymbolicValueSet s            ) = "{" ++ (intercalate "," $ pprintTree <$> BSet.toList s) ++ "}"
-    print (SymbolicValueSet s            ) = "{" ++ (intercalate "," $ (const "-omitted for profiling-") <$> BSet.toList s) ++ "}"
+    print (SymbolicValueSet s            ) = "{" ++ (intercalate "," $ pprintTree <$> BSet.toList s) ++ "}"
 
 instance Solver.ExtLattice SymbolicValueSet where
     top   = SymbolicValueSet BSet.Universe
@@ -244,49 +239,3 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     extract = unSVS . ComposedValue.toValue
     compose = ComposedValue.toComposed . SymbolicValueSet
-
-
-
-
-
-
-
-
---
--- * FFI
---
-
-{-
-
-foreign import ccall "hat_c_mk_symbolic_value_set"
-  mkCSymbolicValueSet :: CRepArr SymbolicValue -> CLLong -> IO (CSetPtr SymbolicValue)
-
-hsSymbolicValues :: StablePtr Ctx.Context
-                 -> StablePtr Addr.NodeAddress
-                 -> IO (AnalysisResultPtr (CSetPtr SymbolicValue))
-hsSymbolicValues ctx_hs stmt_hs = do
-    ctx  <- deRefStablePtr ctx_hs
-    stmt <- deRefStablePtr stmt_hs
-    timelimit <- fromIntegral <$> getTimelimit (Ctx.getCContext ctx)
-    let ctx_c =  Ctx.getCContext ctx
-    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (symbolicValue stmt)
-    ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    result <- timeout timelimit $ serialize ctx_c res
-    case result of
-        Just r  -> allocAnalysisResult ctx_new_hs False r
-        Nothing -> allocAnalysisResult ctx_hs True =<< serialize ctx_c Solver.top
-  where
-    serialize :: Ctx.CContext -> SymbolicValueLattice -> IO (CSetPtr SymbolicValue)
-    serialize ctx_c = passSymbolicValueSet ctx_c . unSVS . ComposedValue.toValue
-
-passSymbolicValueSet :: Ctx.CContext
-                     -> BSet.BoundSet bb SymbolicValue
-                     -> IO (CSetPtr SymbolicValue)
-passSymbolicValueSet ctx s = do
-    passBoundSet passSymbolicValue mkCSymbolicValueSet s
-  where
-
-    passSymbolicValue :: SymbolicValue -> IO (CRepPtr SymbolicValue)
-    passSymbolicValue s = do
-        dumpIrTree ctx s
--}

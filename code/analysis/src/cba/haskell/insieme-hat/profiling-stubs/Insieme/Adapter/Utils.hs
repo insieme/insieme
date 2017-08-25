@@ -39,7 +39,7 @@
      No FFI imports are allowed here!
  -}
 
-module Insieme.Adapter where
+module Insieme.Adapter.Utils where
 
 import Insieme.Inspire.BinaryParser
 import System.Process
