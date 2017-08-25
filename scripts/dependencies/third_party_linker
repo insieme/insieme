@@ -5,17 +5,18 @@ set -e
 export INSTALLER_DIR="$(dirname "$(readlink -f "$0")")"
 
 source "$INSTALLER_DIR/config.sh"
+source "$INSTALLER_DIR/internal/functions.sh"
 
 mkdir -p "$THIRD_PARTY_DIR"
 
-source "$INSTALLER_DIR/defaults.sh"
-
 echo "Prefix: $PREFIX"
 
-for pkg in "$INSTALLER_DIR/package_"*.sh; do
-	source "$pkg"
-	if pkg_is_locally_installed; then
-		echo "Adding symlink for $PACKAGE"
-		ln -sfT "$PREFIX/$PACKAGE" "$THIRD_PARTY_DIR/$NAME"
+for pkg in $(get_pkg_list); do
+	if is_pkg_installed $pkg; then
+		(
+			load_pkg $pkg
+			echo "Adding symlink for $PACKAGE"
+			ln -sfT "$PREFIX/$PACKAGE" "$THIRD_PARTY_DIR/$NAME"
+		)
 	fi
 done

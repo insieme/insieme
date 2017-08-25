@@ -28,7 +28,7 @@ else
 fi
 
 # Run installer with default settings to install additional dependencies.
-"$DIR/installer" llvm boost cudd
+"$DIR/../dependencies/installer" llvm boost cudd
 
 # Some changes may require a complete wipe of the build directory.
 if [[ -f wipe_counter ]] && ! diff -q wipe_counter "$DIR/wipe_counter"; then
@@ -38,7 +38,7 @@ elif [[ ! -f wipe_counter ]]; then
 fi
 
 # Run third party linker to ensure that all links are up-to-date.
-"$DIR/third_party_linker"
+"$DIR/../dependencies/third_party_linker"
 
 # Remove CMake cache to re-check dependency versions on next run.
 rm -f CMakeCache.txt

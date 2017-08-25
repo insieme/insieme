@@ -1,19 +1,20 @@
+# Default install location.
+export PREFIX="${PREFIX:-${THIRD_PARTY_LIBS:-$HOME/third_party_libs}}"
+
 # Name of the third party directory.
-export THIRD_PARTY_DIR="third_party"
+export THIRD_PARTY_DIR="${THIRD_PARTY_DIR:-third_party}"
 
-get_property() {
-	echo $(echo "source \"$INSTALLER_DIR/package_$1.sh\" && echo -n \$$2" | bash -)
-}
-export -f get_property
+# Default compile flags.
+export CFLAGS="${CFLAGS:-"-mtune=native -O3"}"
+export CXXFLAGS="${CXXFLAGS:-"-mtune=native -O3"}"
+export LDLAGS="${LDLAGS:-"-mtune=native -O3"}"
 
-get_pkg_prefix() {
-	(
-		source $INSTALLER_DIR/package_$1.sh
-		if pkg_is_globally_installed ; then
-			echo -n /usr
-		else
-			echo -n "$PREFIX/$PACKAGE"
-		fi
-	)
-}
-export -f get_pkg_prefix
+# Number of parallel jobs.
+export SLOTS="${SLOTS:-$(nproc)}"
+
+# Override Compiler.
+#GCC_PKG
+#export CC="$GCC_PKG/bin/gcc"
+#export CXX="$GCC_PKG/bin/g++"
+#export PATH="$GCC_PKG/bin:$PATH"
+#export LD_LIBRARY_PATH="$GCC_PKG/lib64"

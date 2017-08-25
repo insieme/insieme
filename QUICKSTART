@@ -13,7 +13,7 @@ cd build
 
 # The follow script will install the needed dependencies and setup the build
 # directory (uses sudo).
-../scripts/dependencies/setup_build_environment
+../scripts/environment/setup
 
 # Next we can invoke CMake and build the project.
 cmake ../code

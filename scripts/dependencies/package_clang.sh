@@ -4,9 +4,9 @@ PACKAGE="$NAME-$VERSION"
 
 DEPENDS="gcc cmake python"
 
-GCC_PKG=$(get_pkg_prefix gcc)
-CMAKE_PKG=$(get_pkg_prefix cmake)
-PYTHON_PKG=$(get_pkg_prefix python)
+GCC_PKG=$PREFIX/$(get_property gcc PACKAGE)
+CMAKE_PKG=$PREFIX/$(get_property cmake PACKAGE)
+PYTHON_PKG=$PREFIX/$(get_property python PACKAGE)
 
 export CC="$GCC_PKG/bin/gcc"
 export CXX="$GCC_PKG/bin/g++"
