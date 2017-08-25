@@ -33,7 +33,7 @@ if(ANALYSIS_HASKELL_PROFILING)
 	# install dependencies and build package
 	COMMAND ${cabal} update
 	# -j1 because of cabal#4144
-	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 --enable-profiling -fprofiling
+	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 --enable-profiling --enable-library-profiling -fprofiling --ghc-option=-fprof-auto
 
 	DEPENDS ${insieme_hat_srcs} scripts/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}/cabal.project
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
