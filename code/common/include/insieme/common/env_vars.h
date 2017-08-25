@@ -50,6 +50,9 @@
 // the context size to use (default 0)
 #define INSIEME_IRDIFF_CONTEXT_SIZE "INSIEME_IRDIFF_CONTEXT_SIZE"
 
+// print IR statistics after frontend conversion
+#define INSIEME_SHOW_STATISTICS "INSIEME_SHOW_STATISTICS"
+
 
 ///////////// CORE
 

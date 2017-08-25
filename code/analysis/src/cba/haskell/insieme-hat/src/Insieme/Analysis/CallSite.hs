@@ -39,12 +39,14 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Insieme.Analysis.CallSite where
+module Insieme.Analysis.CallSite (
+    module Insieme.Analysis.DynamicCallSites,
+    callSites
+) where
 
-import Control.DeepSeq
 import Data.Maybe
 import Data.Typeable
-import GHC.Generics (Generic)
+import Insieme.Analysis.DynamicCallSites
 import Insieme.Analysis.FreeLambdaReferences
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Visit
@@ -57,27 +59,6 @@ import qualified Insieme.Inspire as IR
 import qualified Insieme.Utils.BoundSet as BSet
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-
---
--- * CallSite Results
---
-
-newtype CallSite = CallSite NodeAddress
- deriving (Eq, Ord, Generic, NFData)
-
-instance Show CallSite where
-    show (CallSite na) = "Call@" ++ (prettyShow na)
-
---
--- * CallSite Lattice
---
-
-type CallSiteSet = Set.Set CallSite
-
-instance Solver.Lattice CallSiteSet where
-    bot   = Set.empty
-    merge = Set.union
-
 
 --
 -- * CallSite Analysis
@@ -139,7 +120,7 @@ callSites addr = case getNodeType addr of
     -- assemble the constraint computing all call sites --
 
     con = Solver.createConstraint dep val var
-    dep a = (Solver.toVar <$> recReferencesDep) ++ (Solver.toVar <$> callSiteVars a)
+    dep a = (Solver.toVar <$> recReferencesDep) ++ (Solver.toVar <$> callSiteVars a) ++ (Solver.toVar <$> allCallsVars a)
     val a = indirectCalls a
 
 
@@ -160,22 +141,21 @@ callSites addr = case getNodeType addr of
     -- the list of call site variables to be checked for potential calls to this lambda
     callSiteVars a =
         if isStaticallyBound a then []
-        else Callable.callableValue . (goDown 1) <$> allCalls
+        else Callable.callableValue . (goDown 1) <$> allCalls a
 
+    -- add the all-calls variable dependency in case the processed function is not statically bound
+    allCallsVars a =
+        if isStaticallyBound a then []
+        else [allCallsVar]
 
     -- computes a list of addresses of all potentiall call sites
-    allCalls = collectAll callable (getRootAddress addr)
+    allCallsVar = dynamicCalls $ getRootAddress addr 
+    allCallsVal a = Solver.get a allCallsVar
+    
+    allCalls a = filter p $ peel <$> (Set.toList $ allCallsVal a)
       where
-        callable node = case IR.getNodeType node of
-            IR.CallExpr | IR.numChildren node == 2 + numParams ->
-                case IR.getNodeType $ IR.getChildren node !! 1 of
-                    IR.Lambda          -> False
-                    IR.BindExpr        -> False
-                    IR.Literal         -> False
-                    IR.LambdaReference -> False
-                    _                  -> True
-            _ -> False
-
+        p a = (IR.numChildren $ getNode a) == 2 + numParams
+        peel (CallSite a) = a
 
     directCall = if i == 1 && isCall p then Set.singleton $ CallSite p else Set.empty
 
@@ -185,7 +165,7 @@ callSites addr = case getNodeType addr of
             else (CallSite <$> reachingCalls) ++ (CallSite <$> directRecursiveCalls)
       where
 
-        reachingCalls = filter f $ allCalls
+        reachingCalls = filter f $ allCalls a
           where
             f c = BSet.member callable $ ComposedValue.toValue $ Solver.get a $ Callable.callableValue $ goDown 1 c
 

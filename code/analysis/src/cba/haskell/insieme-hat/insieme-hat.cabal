@@ -24,6 +24,7 @@ library
                         Insieme.Analysis.Callable,
                         Insieme.Analysis.CallSite,
                         Insieme.Analysis.DataPath,
+                        Insieme.Analysis.DynamicCallSites,
                         Insieme.Analysis.Entities.AccessPath,
                         Insieme.Analysis.Entities.DataPath,
                         Insieme.Analysis.Entities.FieldIndex,

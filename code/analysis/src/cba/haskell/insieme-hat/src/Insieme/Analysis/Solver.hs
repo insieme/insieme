@@ -721,8 +721,8 @@ toDotGraph (SolverState a@(Assignment _) varIndex _ _ _) = "digraph G {\n\t"
 dumpSolverState :: Bool -> SolverState -> FilePath -> String
 dumpSolverState overwrite s f = unsafePerformIO $ do
   base <- solverToDot overwrite s f
-  pdfFromDot base
   evaluate $ dumpToJsonFile s "solution_meta"
+  pdfFromDot base
   return ("Dumped assignment to " ++ base)
 
 -- | Dump solver state to the given file name, using the dot format.
@@ -735,6 +735,7 @@ solverToDot overwrite s base = target >>=
 -- | Generate a PDF from the dot file with the given basename.
 pdfFromDot :: FilePath -> IO ()
 pdfFromDot b = void (system $ "dot -Tpdf " ++ b ++ ".dot -o " ++ b ++ ".pdf")
+
 
 -- | Generate a file name which does not exist yet. The arguments to
 -- this function is the file name base, and the file extension. The
@@ -782,18 +783,18 @@ dumpToJsonFile s file = unsafePerformIO $ do
 
 showSolverStatistic :: SolverState -> String
 showSolverStatistic s =
-        "===================================================== Solver Statistic ==============================================================================================\n" ++
-        "         Analysis                #Vars              Updates          Updates/Var            ~Time[us]        ~Time/Var[us]               Resets           Resets/Var" ++
-        "\n=====================================================================================================================================================================\n" ++
+        "========================================================= Solver Statistic ==============================================================================================\n" ++
+        "             Analysis                #Vars              Updates          Updates/Var            ~Time[us]        ~Time/Var[us]               Resets           Resets/Var" ++
+        "\n=========================================================================================================================================================================\n" ++
         ( intercalate "\n" (map print $ Map.toList grouped)) ++
-        "\n---------------------------------------------------------------------------------------------------------------------------------------------------------------------\n" ++
-        "           Total: " ++ (printf "%20d" numVars) ++
+        "\n-------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n" ++
+        "               Total: " ++ (printf "%20d" numVars) ++
                         (printf " %20d" totalUpdates) ++ (printf " %20.3f" avgUpdates) ++
                         (printf " %20d" totalTime) ++ (printf " %20.3f" avgTime) ++
                         (printf " %20d" totalResets) ++ (printf " %20.3f" avgResets) ++
-        "\n=====================================================================================================================================================================\n" ++
+        "\n=========================================================================================================================================================================\n" ++
         analyseVarDependencies s ++
-        "\n=====================================================================================================================================================================\n"
+        "\n=========================================================================================================================================================================\n"
     where
         vars = knownVariables $ variableIndex s
 
@@ -801,7 +802,7 @@ showSolverStatistic s =
             where
                 go v m = Map.insertWith (+) ( analysis . index $ v ) (1::Int) m
 
-        print (a,c) = printf " %16s %20d %20d %20.3f %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime totalResets avgResets
+        print (a,c) = printf " %20s %20d %20d %20.3f %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime totalResets avgResets
             where
                 name = ((show a) ++ ":")
 

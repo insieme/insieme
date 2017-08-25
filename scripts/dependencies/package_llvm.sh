@@ -1,16 +1,15 @@
 NAME="llvm"
-VERSION="3.6.2"
+LLVM_VERSION="3.6.2"
+PATCH_VERSION="2"
+
+VERSION="${LLVM_VERSION}p${PATCH_VERSION}"
 PACKAGE="$NAME-$VERSION"
 
-FILE="$PACKAGE.src.tar.xz"
+FILE="$NAME-$LLVM_VERSION.src.tar.xz"
 SHA256SUM="f60dc158bfda6822de167e87275848969f0558b3134892ff54fced87e4667b94"
 
-FILE_CFE="cfe-$VERSION.src.tar.xz"
+FILE_CFE="cfe-$LLVM_VERSION.src.tar.xz"
 SHA256SUM_CFE="ae9180466a23acb426d12444d866b266ff2289b266064d362462e44f8d4699f3"
-
-DEPENDS="python"
-
-PYTHON_PKG=$(get_pkg_prefix python)
 
 export CFLAGS="-O3 -std=c++0x"
 export CXXFLAGS="-O3 -std=c++0x"
@@ -24,9 +23,9 @@ pkg_download() {
 
 pkg_extract() {
 	tar xf "$FILE"
-	mv "$PACKAGE.src" "$PACKAGE"
+	mv "$NAME-$LLVM_VERSION.src" "$PACKAGE"
 	tar xf "$FILE_CFE"
-	mv "cfe-$VERSION.src" "$PACKAGE/tools/clang"
+	mv "cfe-$LLVM_VERSION.src" "$PACKAGE/tools/clang"
 }
 
 pkg_configure() {
@@ -36,8 +35,7 @@ pkg_configure() {
 		--enable-debug-symbols=no \
 		--enable-optimized=yes \
 		--enable-shared=yes \
-		--enable-bindings=none \
-		--with-python="$PYTHON_PKG/bin/python"
+		--enable-bindings=none
 }
 
 pkg_build() {

@@ -197,3 +197,41 @@
  
    if (getLangOpts().MicrosoftExt) {
      PP.RemovePragmaHandler(MSCommentHandler.get());
+--- a/tools/clang/lib/Sema/SemaTemplateInstantiate.cpp    2015-01-09 02:19:56.000000000 +0100
++++ b/tools/clang/lib/Sema/SemaTemplateInstantiate.cpp       2017-08-03 15:32:26.343919652 +0200
+@@ -2480,7 +2480,7 @@
+             = Function->getInstantiatedFromMemberFunction()) {
+         MemberSpecializationInfo *MSInfo 
+           = Function->getMemberSpecializationInfo();
+-        assert(MSInfo && "No member specialization information?");
++        if (!MSInfo) continue; // Insieme fix. Was formerly: assert(MSInfo && "No member specialization information?");
+         if (MSInfo->getTemplateSpecializationKind()
+                                                  == TSK_ExplicitSpecialization)
+           continue;
+@@ -2521,7 +2521,7 @@
+ 
+       if (Var->isStaticDataMember()) {
+         MemberSpecializationInfo *MSInfo = Var->getMemberSpecializationInfo();
+-        assert(MSInfo && "No member specialization information?");
++        if (!MSInfo) continue; // Insieme fix. Was formerly: assert(MSInfo && "No member specialization information?");
+         if (MSInfo->getTemplateSpecializationKind()
+                                                  == TSK_ExplicitSpecialization)
+           continue;
+@@ -2562,7 +2562,7 @@
+         continue;
+       
+       MemberSpecializationInfo *MSInfo = Record->getMemberSpecializationInfo();
+-      assert(MSInfo && "No member specialization information?");
++      if (!MSInfo) continue; // Insieme fix. Was formerly: assert(MSInfo && "No member specialization information?");
+       
+       if (MSInfo->getTemplateSpecializationKind()
+                                                 == TSK_ExplicitSpecialization)
+@@ -2613,7 +2613,7 @@
+                                 TSK);
+     } else if (auto *Enum = dyn_cast<EnumDecl>(D)) {
+       MemberSpecializationInfo *MSInfo = Enum->getMemberSpecializationInfo();
+-      assert(MSInfo && "No member specialization information?");
++      if (!MSInfo) continue; // Insieme fix. Was formerly: assert(MSInfo && "No member specialization information?");
+ 
+       if (MSInfo->getTemplateSpecializationKind()
+             == TSK_ExplicitSpecialization)
