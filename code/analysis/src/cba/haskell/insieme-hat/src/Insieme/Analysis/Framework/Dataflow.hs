@@ -48,7 +48,8 @@ module Insieme.Analysis.Framework.Dataflow (
         entryPointParameterHandler,
         initialValueHandler,
         initValueHandler,
-        excessiveFileAccessHandler
+        excessiveFileAccessHandler,
+        unknownOperatorHandler
     ),
     mkDataFlowAnalysis,
     mkVarIdentifier,
@@ -96,18 +97,20 @@ data DataFlowAnalysis a v i = DataFlowAnalysis {
     entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a entry point parameter
     initialValueHandler        :: NodeAddress -> v,                     -- ^ a function computing the initial value of a memory location
     initValueHandler           :: v,                                    -- ^ default value of a memory location
-    excessiveFileAccessHandler :: v -> i -> v                           -- ^ a handler processing excessive field accesses (if ref_narrow calls navigate too deep)
+    excessiveFileAccessHandler :: v -> i -> v,                          -- ^ a handler processing excessive field accesses (if ref_narrow calls navigate too deep)
+    unknownOperatorHandler     :: NodeAddress -> v                      -- ^ a handler invoked for unknown operators
 }
 
 -- a function creating a simple data flow analysis
 mkDataFlowAnalysis :: (Typeable a, Solver.ExtLattice v) => a -> String -> (NodeAddress -> Solver.TypedVar v) -> DataFlowAnalysis a v i
 mkDataFlowAnalysis a s g = res
     where
-        res = DataFlowAnalysis a aid g top justTop justTop justTop (\_ -> top) top failOnAccess
+        res = DataFlowAnalysis a aid g top justTop justTop justTop (\_ -> top) top failOnAccess unknownTarget
         aid = (Solver.mkAnalysisIdentifier a s)
         justTop a = mkConstant res a top
         top = Solver.top
         failOnAccess _ _ = Solver.top
+        unknownTarget _ = Solver.top
 
 
 -- a function creation an identifier for a variable of a data flow analysis
@@ -226,7 +229,7 @@ dataflowValue addr analysis ops = case getNode addr of
         unknownTarget = Solver.createConstraint dep val var
             where
                 dep _ = [] -- covered by known targets: [Solver.toVar trg]
-                val a = if hasUnknownTarget then top else Solver.bot
+                val a = if BSet.isUniverse targets then top else uncoveredOperatorValue
                     where
 
                         targets = callTargetVal a
@@ -237,7 +240,7 @@ dataflowValue addr analysis ops = case getNode addr of
                                 f (Callable.Literal a) = not $ any (\h -> covers h a) extOps
                                 f _                    = False
 
-                        hasUnknownTarget = (BSet.isUniverse targets) || ((not . null) uncoveredLiterals)
+                        uncoveredOperatorValue = Solver.join $ (unknownOperatorHandler analysis) . Callable.toAddress <$> uncoveredLiterals
 
 
 

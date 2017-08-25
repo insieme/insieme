@@ -62,12 +62,13 @@ import Data.Typeable
 import Foreign
 import Foreign.C.Types
 import GHC.Generics (Generic)
-import Insieme.Adapter (CRepPtr,CRepArr,CSetPtr,dumpIrTree,passBoundSet,updateContext,pprintTree)
+import Insieme.Adapter (AnalysisResultPtr,CRepPtr,CRepArr,CSetPtr,allocAnalysisResult,dumpIrTree,getTimelimit,passBoundSet,pprintTree)
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Reference
 import Insieme.Inspire.Query
+import System.Timeout (timeout)
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
@@ -173,7 +174,8 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
                         "ref_member_access",
                         "ref_temp", "ref_temp_init",
                         "ref_new", "ref_new_init",
-                        "ref_kind_cast", "ref_const_cast", "ref_volatile_cast", "ref_parent_cast"
+                        "ref_kind_cast", "ref_const_cast", "ref_volatile_cast", "ref_parent_cast",
+                        "num_cast"
                      ]
             -- literal builtins to ignore
             toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign" ]
@@ -262,15 +264,21 @@ foreign import ccall "hat_c_mk_symbolic_value_set"
 
 hsSymbolicValues :: StablePtr Ctx.Context
                  -> StablePtr Addr.NodeAddress
-                 -> IO (CSetPtr SymbolicValue)
+                 -> IO (AnalysisResultPtr (CSetPtr SymbolicValue))
 hsSymbolicValues ctx_hs stmt_hs = do
     ctx  <- deRefStablePtr ctx_hs
     stmt <- deRefStablePtr stmt_hs
-    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (symbolicValue stmt)
+    timelimit <- fromIntegral <$> getTimelimit (Ctx.getCContext ctx)
     let ctx_c =  Ctx.getCContext ctx
-    ctx_nhs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
-    updateContext ctx_c ctx_nhs
-    passSymbolicValueSet ctx_c $ unSVS $ ComposedValue.toValue res
+    let (res,ns) = Solver.resolve (Ctx.getSolverState ctx) (symbolicValue stmt)
+    ctx_new_hs <- newStablePtr $ ctx { Ctx.getSolverState = ns }
+    result <- timeout timelimit $ serialize ctx_c res
+    case result of
+        Just r  -> allocAnalysisResult ctx_new_hs False r
+        Nothing -> allocAnalysisResult ctx_hs True =<< serialize ctx_c Solver.top
+  where
+    serialize :: Ctx.CContext -> SymbolicValueLattice -> IO (CSetPtr SymbolicValue)
+    serialize ctx_c = passSymbolicValueSet ctx_c . unSVS . ComposedValue.toValue
 
 passSymbolicValueSet :: Ctx.CContext
                      -> BSet.BoundSet bb SymbolicValue

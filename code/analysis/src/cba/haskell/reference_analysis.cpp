@@ -38,15 +38,21 @@
 #include "insieme/analysis/cba/haskell/reference_analysis.h"
 #include "insieme/core/lang/reference.h"
 
+enum class Result : int {
+	Yes=0,
+	Maybe=1,
+	No=2,
+};
+
 extern "C" {
 
 	namespace ia = insieme::analysis::cba;
 	namespace hat = ia::haskell;
 
 	// Analysis
-	int hat_check_null(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
-	int hat_check_extern(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
-	ia::MemoryLocationSet* hat_memory_locations(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
+	hat::AnalysisResult<Result>* hat_check_null(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
+	hat::AnalysisResult<Result>* hat_check_extern(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
+	hat::AnalysisResult<ia::MemoryLocationSet*>* hat_memory_locations(hat::StablePtr ctx, const hat::HaskellNodeAddress expr_hs);
 
 }
 
@@ -55,30 +61,28 @@ namespace analysis {
 namespace cba {
 namespace haskell {
 
-
-	enum Result {
-		Yes=0, Maybe=1, No=2
-	};
-
 	namespace {
 
 		Result checkNull(Context& ctxt, const core::ExpressionAddress& expr) {
 			auto expr_hs = ctxt.resolveNodeAddress(expr);
-			return (Result)hat_check_null(ctxt.getHaskellContext(), expr_hs);
+			auto result = hat_check_null(ctxt.getHaskellContext(), expr_hs);
+			auto value = ctxt.unwrapResult(result);
+			assert_true(value);
+			return *value;
 		}
 
 	}
 
 	bool isNull(Context& ctxt, const core::ExpressionAddress& expr) {
-		return checkNull(ctxt, expr) == Yes;
+		return checkNull(ctxt, expr) == Result::Yes;
 	}
 
 	bool mayBeNull(Context& ctxt, const core::ExpressionAddress& expr) {
-		return checkNull(ctxt, expr) == Maybe;
+		return checkNull(ctxt, expr) == Result::Maybe;
 	}
 
 	bool notNull(Context& ctxt, const core::ExpressionAddress& expr) {
-		return checkNull(ctxt, expr) == No;
+		return checkNull(ctxt, expr) == Result::No;
 	}
 
 
@@ -86,29 +90,32 @@ namespace haskell {
 
 		Result checkExtern(Context& ctxt, const core::ExpressionAddress& expr) {
 			auto expr_hs = ctxt.resolveNodeAddress(expr);
-			return (Result)hat_check_extern(ctxt.getHaskellContext(), expr_hs);
+			auto result = hat_check_extern(ctxt.getHaskellContext(), expr_hs);
+			auto value = ctxt.unwrapResult(result);
+			assert_true(value);
+			return *value;
 		}
 
 	}
 
 	bool isExtern(Context& ctxt, const core::ExpressionAddress& expr) {
-		return checkExtern(ctxt, expr) == Yes;
+		return checkExtern(ctxt, expr) == Result::Yes;
 	}
 
 	bool mayBeExtern(Context& ctxt, const core::ExpressionAddress& expr) {
-		return checkExtern(ctxt, expr) == Maybe;
+		return checkExtern(ctxt, expr) == Result::Maybe;
 	}
 
 	bool notExtern(Context& ctxt, const core::ExpressionAddress& expr) {
-		return checkExtern(ctxt, expr) == No;
+		return checkExtern(ctxt, expr) == Result::No;
 	}
 
 	MemoryLocationSet getReferencedMemoryLocations(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto expr_hs = ctxt.resolveNodeAddress(expr);
-		MemoryLocationSet* res_ptr = hat_memory_locations(ctxt.getHaskellContext(), expr_hs);
-		MemoryLocationSet res(std::move(*res_ptr));
-		delete res_ptr;
-		return res;
+		auto result = hat_memory_locations(ctxt.getHaskellContext(), expr_hs);
+		auto value = ctxt.unwrapResult(result);
+		assert_true(value);
+		return *value;
 	}
 
 } // end namespace haskell

@@ -37,7 +37,11 @@
 
 #pragma once
 
+#include <chrono>
+#include <cstdlib>
 #include <map>
+
+#include <boost/optional.hpp>
 
 #include "insieme/core/ir_address.h"
 
@@ -49,6 +53,17 @@ namespace haskell {
 	typedef void* StablePtr;
 	typedef void* HaskellNodeAddress;
 
+	// -- Analysis Result
+
+	template <typename T>
+	struct AnalysisResult {
+		StablePtr new_context_hs;
+		bool timeout;
+		T result;
+	};
+
+	//  -- Context
+
 	class Context {
 
 		StablePtr context_hs;
@@ -56,6 +71,8 @@ namespace haskell {
 		core::NodePtr root;
 
 		std::map<core::NodeAddress, HaskellNodeAddress> addresses;
+
+		std::chrono::microseconds timelimit;
 
 	  public:
 
@@ -70,6 +87,8 @@ namespace haskell {
 		Context& operator=(const Context& other) = delete;
 		Context& operator=(Context&& other) = default;
 
+		std::chrono::microseconds getTimelimit() const;
+		void setTimelimit(std::chrono::microseconds t);
 
 		// -- general context interface requirements --
 
@@ -89,6 +108,41 @@ namespace haskell {
 		HaskellNodeAddress resolveNodeAddress(const core::NodeAddress& addr);
 		core::NodeAddress resolveNodeAddress(const HaskellNodeAddress& addr);
 
+		template <typename T>
+		boost::optional<T> unwrapResult(AnalysisResult<T*>* result) {
+			assert_true(result);
+
+			boost::optional<T> ret = {};
+
+			if(!result->timeout) {
+				setHaskellContext(result->new_context_hs);
+
+				ret = std::move(*result->result);
+			}
+
+			// even on timeout result->result holds an allocated object
+			delete result->result;
+
+			free(result);
+			return ret;
+		}
+
+		template <typename T>
+		boost::optional<T> unwrapResult(AnalysisResult<T>* result) {
+			assert_true(result);
+
+			boost::optional<T> ret = {};
+
+			if(!result->timeout) {
+				setHaskellContext(result->new_context_hs);
+
+				ret = result->result;
+			}
+
+			free(result);
+			return ret;
+		}
+
 	  private:
 
 		void clear();
@@ -96,6 +150,6 @@ namespace haskell {
 	};
 
 } // end namespace haskell
-} //'end namespace cba
+} // end namespace cba
 } // end namespace analysis
 } // end namespace insieme

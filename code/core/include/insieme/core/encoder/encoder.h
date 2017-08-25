@@ -447,6 +447,7 @@ namespace encoder {
 
 	ADD_EXPRESSION_CONVERTER(ExpressionPtr);
 	ADD_EXPRESSION_CONVERTER(LambdaExprPtr);
+	ADD_EXPRESSION_CONVERTER(VariablePtr);
 	ADD_EXPRESSION_CONVERTER(LiteralPtr);
 
 	// --------------------------------------------------------------------
