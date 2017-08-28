@@ -344,7 +344,7 @@ keysSet (VarMap m) = foldr go Set.empty m
 newtype Assignment = Assignment ( VarMap Dynamic )
 
 instance Show Assignment where
-    show a@( Assignment m ) = "Assignemnet {\n\t"
+    show a@( Assignment m ) = "Assignment {\n\t"
             ++
             ( intercalate ",\n\t\t" ( map (\v -> (show v) ++ " = " ++ (valuePrint v a) ) vars ) )
             ++
