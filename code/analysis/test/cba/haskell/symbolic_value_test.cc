@@ -706,6 +706,20 @@ namespace haskell {
 	}
 
 
+	TEST(SymbolicValues, Constructors) {
+		NodeManager mgr;
+
+		// in case of constructors, the result value should only be the initialized value
+		EXPECT_EQ(
+			"[A(ref_temp(type_lit(A)))]",
+			toString(getValues(mgr,
+				R"(
+					lit("A": A::() )(ref_temp(type_lit(A)))
+				)"
+			))
+		);
+	}
+
 } // end namespace haskell
 } // end namespace cba
 } // end namespace analysis
