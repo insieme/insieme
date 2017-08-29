@@ -19,28 +19,34 @@ set(cabal ${haskell_env} ${CABAL_EXECUTABLE})
 set(runhaskell ${haskell_env} runhaskell)
 set(cabal_file ${CMAKE_CURRENT_SOURCE_DIR}/insieme-hat.cabal)
 
+list(APPEND HAT_PACKAGE_PATHS_LIST "${CMAKE_CURRENT_SOURCE_DIR}")
+
+# Prepare command list for creating cabal superproject dir
+unset(HAT_PACKAGES_SYMLINK_COMMANDS)
+unset(HAT_PACKAGE_PATHS_REL_LIST)
+foreach(pkg ${HAT_PACKAGE_PATHS_LIST})
+	string(REGEX REPLACE "[/\\]$" "" pkg_trailing "${pkg}")
+	get_filename_component(pkg_dirname "${pkg_trailing}" NAME)
+	list(APPEND HAT_PACKAGES_SYMLINK_COMMANDS
+		COMMAND ${CMAKE_COMMAND} -E create_symlink "${pkg}" "${CMAKE_BINARY_DIR}/hat-vanilla-project/${pkg_dirname}"
+		COMMAND ${CMAKE_COMMAND} -E create_symlink "${pkg}" "${CMAKE_BINARY_DIR}/hat-profiling-project/${pkg_dirname}")
+	list(APPEND HAT_PACKAGE_PATHS_REL_LIST "./${pkg_dirname}")
+endforeach()
+
 ## Paths to Haskell packages to include in the cabal.project file.
-set(HAT_PACKAGE_PATHS "${CMAKE_CURRENT_SOURCE_DIR} ${HAT_PACKAGE_PATHS}")
+set(HAT_COMPILER_PATH "${THIRD_PARTY_DIR}/ghc/bin/ghc")
+string(REPLACE ";" " " HAT_PACKAGE_PATHS "${HAT_PACKAGE_PATHS_LIST}")
 configure_file(cabal.project.in cabal.project)
 
+string(REPLACE ";" " " HAT_PACKAGE_PATHS "${HAT_PACKAGE_PATHS_REL_LIST}")
+configure_file(cabal.project.in ${CMAKE_BINARY_DIR}/hat-vanilla-project/cabal.project)
+configure_file(cabal.project.in ${CMAKE_BINARY_DIR}/hat-profiling-project/cabal.project)
+configure_file(cabal.project.local.in ${CMAKE_BINARY_DIR}/hat-profiling-project/cabal.project.local)
+
 string (REPLACE ";" " " haskell_env_cmd "${haskell_env}")
-configure_file(haskell-env.sh.in ${PROJECT_BINARY_DIR}/haskell-env.sh)
+configure_file(haskell-env.sh.in ${CMAKE_BINARY_DIR}/haskell-env.sh)
 
-if(ANALYSIS_HASKELL_PROFILING)
-  add_custom_command(
-	OUTPUT libinsieme-hat.so
-
-	# install dependencies and build package
-	COMMAND ${cabal} update
-	# -j1 because of cabal#4144
-	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 --enable-profiling --enable-library-profiling -fprofiling --ghc-option=-fprof-auto
-
-	DEPENDS ${insieme_hat_srcs} scripts/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}/cabal.project
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	COMMENT "Building Insieme HAT (with profiling)"
-	)
-else()
-  add_custom_command(
+add_custom_command(
 	OUTPUT libinsieme-hat.so
 
 	# install dependencies and build package
@@ -54,9 +60,18 @@ else()
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	COMMENT "Building Insieme HAT"
 )
-endif()
 
-add_custom_target(insieme_hat DEPENDS libinsieme-hat.so)
+
+add_custom_target(insieme_hat
+	DEPENDS libinsieme-hat.so
+
+	# Create symlinks for hat cabal superproject dir
+	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/hat-vanilla-project"
+	COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle" "${CMAKE_BINARY_DIR}/hat-vanilla-project/dist-newstyle"
+
+	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/hat-profiling-project"
+	${HAT_PACKAGES_SYMLINK_COMMANDS}
+	)
 
 add_test(
   NAME insieme_hat_tests
