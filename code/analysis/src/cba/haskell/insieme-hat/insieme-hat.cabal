@@ -191,7 +191,7 @@ executable collect
                       , containers
     default-language:   Haskell2010
 
-executable test
+test-suite test
     main-is:            test.hs
     hs-source-dirs:     tests
     other-modules:      BoundSet,
