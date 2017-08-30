@@ -221,7 +221,12 @@ namespace conversion {
 		// if we still have no body (because we had no body and no increment
 		if(!newBody) newBody = builder.compoundStmt();
 
-		retStmt.push_back(builder.whileStmt(condExpr, newBody));
+		auto whileStmt = builder.whileStmt(condExpr, newBody);
+
+		// attach location to while explicitly
+		utils::attachLocationFromClang(whileStmt, converter.getSourceManager(), forStmt->getLocStart(), forStmt->getLocEnd());
+
+		retStmt.push_back(whileStmt);
 
 		// compound statement required for correct scoping of variables declared in init statement of for header
 		return builder.compoundStmt(retStmt);
