@@ -84,6 +84,12 @@ namespace driver {
 		EXPECT_PRED2(notContainsSubString, utils::removePragmas(codeString), "*");
 	}
 
+	TEST(DriverInterceptionTest, ArrayInit) {
+		auto codeString = testCompilation("frontend/test/inputs/interceptor/array_init.cpp");
+		EXPECT_PRED2(notContainsSubString, utils::removePragmas(codeString), "new");
+		EXPECT_PRED2(notContainsSubString, utils::removePragmas(codeString), "*");
+	}
+
 	TEST(DriverInterceptionTest, Templates) {
 		auto codeString = testCompilation("frontend/test/inputs/interceptor/template_interception.cpp");
 		EXPECT_PRED2(notContainsSubString, utils::removePragmas(codeString), "*");

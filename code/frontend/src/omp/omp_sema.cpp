@@ -817,7 +817,8 @@ namespace omp {
 		}
 
 		NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP, bool isParallel = false) {
-			assert_true(stmtNode.getNodeType() == NT_ForStmt) << "Trying to attach OpenMP for to non-for statement.\n" << dumpColor(stmtNode);
+			assert_true(stmtNode.getNodeType() == NT_ForStmt) << "Trying to attach OpenMP for to non-for statement.\n" << dumpColor(stmtNode)
+				<< "from: " << core::annotations::getLocationString(stmtNode) << std::endl;
 			ForStmtPtr outer = dynamic_pointer_cast<const ForStmt>(stmtNode);
 			// outer = collapseForNest(outer);
 			StatementList resultStmts;
