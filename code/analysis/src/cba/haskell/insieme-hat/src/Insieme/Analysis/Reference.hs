@@ -264,10 +264,11 @@ getEnclosingDecl addr = case getNodeType addr of
 
         fun = (goDown 1) <$> getParent addr
 
-        isCtorThisParam = isCtorCall && getIndex addr == 2
+        isCallParam = fromMaybe False $ isCallExpr <$> getParent addr
+        isCtorThisParam = isCallParam && isCtorCall && getIndex addr == 2
         isCtorCall = fromMaybe False $ (isConstructor . Addr.getNode) <$> fun
 
-        isRefCastParam = isRefCastCall && getIndex addr == 2
+        isRefCastParam = isCallParam && isRefCastCall && getIndex addr == 2
         isRefCastCall = case fun of
             Just f  -> case getNodeType f of
                 IR.LambdaExpr -> isRefCast f
