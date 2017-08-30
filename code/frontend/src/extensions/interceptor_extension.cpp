@@ -385,6 +385,11 @@ namespace extensions {
 		// member calls and their variants
 		const clang::ASTTemplateArgumentListInfo* explicitTemplateArgs = nullptr;
 		if(auto construct = llvm::dyn_cast<clang::CXXConstructExpr>(expr)) {
+			// for array initializations, we need to build an init expr rather than a constructor call
+			if(expr->getType()->isArrayType()) {
+				assert_eq(construct->getNumArgs(), 0) << "Interceptor: can't construct array of objects with constructor args";
+				return builder.initExprTemp(converter.convertType(expr->getType()));
+			}
 			auto thisFactory = [&](const core::TypePtr& retType){ return core::lang::buildRefTemp(retType); };
 			return interceptMethodCall(converter, construct->getConstructor(), thisFactory, construct->arguments(), nullptr, explicitTemplateArgs);
 		}

@@ -64,6 +64,14 @@ namespace frontend {
 		});
 	}
 
+	TEST(InterceptorTest, ArrayInit) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/array_init.cpp", [](ConversionJob& job) {
+			job.addIncludeDirectory(FRONTEND_TEST_DIR + "/inputs/interceptor");
+			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");
+			job.registerFrontendExtension<extensions::InterceptorExtension, extensions::TestPragmaExtension>();
+		});
+	}
+
 	TEST(InterceptorTest, TemplateNames) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/template_interception_names.cpp", [](ConversionJob& job) {
 			job.addIncludeDirectory(FRONTEND_TEST_DIR + "/inputs/interceptor");
