@@ -1,2 +1,4 @@
 packages: @HAT_PACKAGE_PATHS@
+with-compiler: @HAT_COMPILER_PATH@
+
 index-state: 2017-08-08T13:14:22Z

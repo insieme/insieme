@@ -145,7 +145,8 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
     analysis = userDefinedAnalysis {
         freeVariableHandler = freeVariableHandler,
         initialValueHandler = initialMemoryValue,
-        excessiveFileAccessHandler = excessiveFileAccessHandler
+        excessiveFileAccessHandler = excessiveFileAccessHandler,
+        forwardCtorDtorResultValue = False
     }
 
     varId = mkVarIdentifier analysis addr

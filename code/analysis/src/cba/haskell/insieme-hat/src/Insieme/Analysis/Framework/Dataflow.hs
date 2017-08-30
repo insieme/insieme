@@ -49,7 +49,8 @@ module Insieme.Analysis.Framework.Dataflow (
         initialValueHandler,
         initValueHandler,
         excessiveFileAccessHandler,
-        unknownOperatorHandler
+        unknownOperatorHandler,
+        forwardCtorDtorResultValue
     ),
     mkDataFlowAnalysis,
     mkVarIdentifier,
@@ -98,14 +99,15 @@ data DataFlowAnalysis a v i = DataFlowAnalysis {
     initialValueHandler        :: NodeAddress -> v,                     -- ^ a function computing the initial value of a memory location
     initValueHandler           :: v,                                    -- ^ default value of a memory location
     excessiveFileAccessHandler :: v -> i -> v,                          -- ^ a handler processing excessive field accesses (if ref_narrow calls navigate too deep)
-    unknownOperatorHandler     :: NodeAddress -> v                      -- ^ a handler invoked for unknown operators
+    unknownOperatorHandler     :: NodeAddress -> v,                     -- ^ a handler invoked for unknown operators
+    forwardCtorDtorResultValue :: Bool                                  -- ^ a flag to enable / disable the implicit return of constructors and destructurs
 }
 
 -- a function creating a simple data flow analysis
 mkDataFlowAnalysis :: (Typeable a, Solver.ExtLattice v) => a -> String -> (NodeAddress -> Solver.TypedVar v) -> DataFlowAnalysis a v i
 mkDataFlowAnalysis a s g = res
     where
-        res = DataFlowAnalysis a aid g top justTop justTop justTop (\_ -> top) top failOnAccess unknownTarget
+        res = DataFlowAnalysis a aid g top justTop justTop justTop (\_ -> top) top failOnAccess unknownTarget True
         aid = (Solver.mkAnalysisIdentifier a s)
         justTop a = mkConstant res a top
         top = Solver.top
@@ -192,9 +194,11 @@ dataflowValue addr analysis ops = case getNode addr of
 
         -- support for calls to constructors and destructors --
 
+        enableCtorDtorForward = forwardCtorDtorResultValue analysis
+
         isCtorOrDtor c = isConstructorOrDestructor $ getNode $ Callable.toAddress c
 
-        getCtorDtorVars a = if BSet.isUniverse targets then [] else concat $ go <$> Set.toList uninterceptedTargets
+        getCtorDtorVars a = if not enableCtorDtorForward || BSet.isUniverse targets then [] else concat $ go <$> Set.toList uninterceptedTargets
             where
                 targets = callTargetVal a
                 uninterceptedTargets = filterInterceptedLambdas targets

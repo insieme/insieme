@@ -1,0 +1,8 @@
+profiling: True
+profiling-detail: all-functions
+
+package insieme-hat
+  flags: +profiling
+
+package allscale-hat
+  flags: +profiling
