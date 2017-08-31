@@ -119,6 +119,11 @@ namespace extensions {
 						typeVar = getGenericRefType(builder, templateParamTypeDecl);
 					}
 				} else if(auto templateNonTypeParamDecl = llvm::dyn_cast<clang::NonTypeTemplateParmDecl>(tempParam)) {
+					if(templateNonTypeParamDecl->isParameterPack()) {
+						templateGenericParams.push_back(getTypeVarForVariadicTemplateTypeParmType(builder, templateNonTypeParamDecl));
+						// we only need arguments up to the first top-level variadic, the rest can be deduced
+						break;
+					}
 					typeVar = getTypeVarForTemplateTypeParmType(builder, templateNonTypeParamDecl);
 				} else if(auto templateTemplateParamDecl = llvm::dyn_cast<clang::TemplateTemplateParmDecl>(tempParam)) {
 					if(templateTemplateParamDecl->isParameterPack()) {

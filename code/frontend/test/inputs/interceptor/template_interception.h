@@ -86,6 +86,11 @@ template<typename... Args>
 class VariadicClass {
 };
 
+template<typename T, int... Args>
+int variadicNonTypeTemplateFun(T first) {
+	return sizeof...(Args);
+}
+
 // variadic template template /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<template<typename> class ... Name>
