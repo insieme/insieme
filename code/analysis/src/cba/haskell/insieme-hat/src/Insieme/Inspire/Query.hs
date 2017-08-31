@@ -235,6 +235,11 @@ getLambda a = case () of
       where
         go b = ref == ((child 0) $ node b)
 
+-- *** Call Expressions
+
+isCallExpr :: NodeReference a => a -> Bool
+isCallExpr a = getNodeType a == IR.CallExpr
+
 -- ** Builtins
 
 isBuiltin :: (NodeReference a) => a -> String -> Bool
