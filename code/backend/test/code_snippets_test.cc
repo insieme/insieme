@@ -743,7 +743,7 @@ namespace backend {
 			}
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
 			EXPECT_PRED2(notContainsSubString, code, "comma_operator");
-			EXPECT_PRED2(containsSubString, code, "2,3,4");
+			EXPECT_PRED2(containsSubString, code, "2, 3, 4");
 		})
 	}
 
@@ -791,8 +791,8 @@ namespace backend {
 			}
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
 			EXPECT_PRED2(containsSubString, code, "if (a > 0) ");
-			EXPECT_PRED2(containsSubString, code, "for (int32_t v0 = 5; v0 < 0; v0+=a)");
-			EXPECT_PRED2(containsSubString, code, "for (int32_t v0 = 5; v0 > 0; v0+=a) ");
+			EXPECT_PRED2(containsSubString, code, "for (int32_t v0 = 5; v0 < 0; v0 += a)");
+			EXPECT_PRED2(containsSubString, code, "for (int32_t v0 = 5; v0 > 0; v0 += a) ");
 		})
 	}
 

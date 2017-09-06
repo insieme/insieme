@@ -313,7 +313,9 @@ namespace c_ast {
 
 				std::size_t size = node->statements.size();
 				for(std::size_t i = 0; i < size; i++) {
-					const NodePtr& cur = node->statements[i];
+					NodePtr& cur = node->statements[i];
+					// we don't need to parenthesize full expressions used as statements
+					if(auto par = cur.isa<c_ast::ParenthesesPtr>()) cur = par->expression;
 					out << print(cur);
 					//					auto type = cur->getType();
 					//					if (type != NT_For && type != NT_While && type != NT_If && type != NT_Switch && type != NT_Compound) {
@@ -513,21 +515,21 @@ namespace c_ast {
 				case BinaryOperation::BitwiseAnd: op = " & "; break;
 				case BinaryOperation::BitwiseOr: op = " | "; break;
 				case BinaryOperation::BitwiseXOr: op = "^"; break;
-				case BinaryOperation::BitwiseLeftShift: op = "<<"; break;
-				case BinaryOperation::BitwiseRightShift: op = ">>"; break;
-				case BinaryOperation::AdditionAssign: op = "+="; break;
-				case BinaryOperation::SubtractionAssign: op = "-="; break;
-				case BinaryOperation::MultiplicationAssign: op = "*="; break;
-				case BinaryOperation::DivisionAssign: op = "/="; break;
-				case BinaryOperation::ModuloAssign: op = "%="; break;
-				case BinaryOperation::BitwiseAndAssign: op = "&="; break;
-				case BinaryOperation::BitwiseOrAssign: op = "|="; break;
-				case BinaryOperation::BitwiseXOrAssign: op = "^="; break;
-				case BinaryOperation::BitwiseLeftShiftAssign: op = "<<="; break;
-				case BinaryOperation::BitwiseRightShiftAssign: op = ">>="; break;
+				case BinaryOperation::BitwiseLeftShift: op = " << "; break;
+				case BinaryOperation::BitwiseRightShift: op = " >> "; break;
+				case BinaryOperation::AdditionAssign: op = " += "; break;
+				case BinaryOperation::SubtractionAssign: op = " -= "; break;
+				case BinaryOperation::MultiplicationAssign: op = " *= "; break;
+				case BinaryOperation::DivisionAssign: op = " /= "; break;
+				case BinaryOperation::ModuloAssign: op = " %= "; break;
+				case BinaryOperation::BitwiseAndAssign: op = " &= "; break;
+				case BinaryOperation::BitwiseOrAssign: op = " |= "; break;
+				case BinaryOperation::BitwiseXOrAssign: op = " ^= "; break;
+				case BinaryOperation::BitwiseLeftShiftAssign: op = " <<= "; break;
+				case BinaryOperation::BitwiseRightShiftAssign: op = " >>= "; break;
 				case BinaryOperation::MemberAccess: op = "."; break;
 				case BinaryOperation::IndirectMemberAccess: op = "->"; break;
-				case BinaryOperation::Comma: op = ","; break;
+				case BinaryOperation::Comma: op = ", "; break;
 
 				// special handling for subscript and cast
 				case BinaryOperation::Subscript: return out << print(node->operandA) << "[" << print(node->operandB) << "]";
@@ -557,7 +559,7 @@ namespace c_ast {
 			PRINT(TernaryOperation) {
 				switch(node->operation) {
 				case TernaryOperation::TernaryCondition: {
-					return out << print(node->operandA) << "?" << print(node->operandB) << ":" << print(node->operandC);
+					return out << print(node->operandA) << " ? " << print(node->operandB) << " : " << print(node->operandC);
 				}
 				case TernaryOperation::NewArray: {
 					out << "new " << print(node->operandA) << "[" << print(node->operandB) << "]";
