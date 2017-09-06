@@ -200,7 +200,7 @@ referenceValue addr = case getNodeType addr of
                 offsetVar = arithmeticValue $ goDown 1 $ goDown 2 addr
                 offsetVal a = BSet.toUnboundSet $ unSFS $ ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 1) $ get a offsetVar
 
-                access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ index offset))
+                access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ arrayIndex offset))
 
         ptrFromRef = OperatorHandler cov dep val
             where
@@ -209,7 +209,7 @@ referenceValue addr = case getNodeType addr of
                 val _ a = ComposedValue.composeElements [(component 0,compose res)]
                     where
                         res = lower $ baseRefVal a
-                        lower = BSet.map $ onRefs $ \(Reference l p) -> Reference l (DP.append p (DP.invert $ DP.step $ index $ mkConst 0))
+                        lower = BSet.map $ onRefs $ \(Reference l p) -> Reference l (DP.append p (DP.invert $ DP.step $ arrayIndex $ mkConst 0))
 
 
         noDep _ _ = []

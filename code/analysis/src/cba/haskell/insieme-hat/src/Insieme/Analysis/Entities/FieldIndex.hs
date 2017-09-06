@@ -40,13 +40,14 @@
 
 module Insieme.Analysis.Entities.FieldIndex (
 
-    -- a type class for field indices
+    -- a type class for field indexes
     FieldIndex,
     join,
     project,
-    field,
-    index,
-    element,
+    structField,
+    unionField,
+    tupleElementIndex,
+    arrayIndex,
     unknownIndex,
     component,
 
@@ -66,43 +67,81 @@ import Insieme.Utils.ParseInt
 import qualified Data.Set as Set
 
 class (Eq v, Ord v, Show v, Typeable v, NFData v) => FieldIndex v where
-        {-# MINIMAL join, project, field, index, unknownIndex #-}
+        
+        -- interface for integration in composed value trees
         join :: [v] -> [v] -> Maybe [v]
         project :: [v] -> v -> [v]
 
-        field        :: String -> v
+        -- interface for integration in data path analysis
         
-        index        :: SymbolicFormula -> v
+        structField        :: String -> v
+        unionField         :: String -> v
         
-        element :: SymbolicFormula -> v
-        element = index
+        tupleElementIndex  :: SymbolicFormula -> v
         
-        unknownIndex :: v
+        arrayIndex         :: SymbolicFormula -> v
+        
+        unknownIndex       :: v
 
+
+        -- convenience functions
+        
         component :: Int32 -> v
-        component = element . mkConst . CInt32
+        component = tupleElementIndex . mkConst . CInt32
         
 
 
--- A simple field index example --
+-- A simple field index working with numericall values for indices only --
+
 
 data SimpleFieldIndex =
-              Field String
-            | Index Int
-            | Element Int
-            | UnknownIndex
+          StructField String
+        | UnionField String
+
+        | TupleElementIndex Int
+
+        | ArrayIndex Int                    -- Index of the array element
+
+--        | StdArrayIndex Int                 -- Index of the std::array element
+--        
+--        | StdVectorIndex Int Int            -- Index of the std::vector elemnet and version
+--        
+--        | StdSetIndex Bool                  -- True = Begin, False = End
+
+        | UnknownIndex                        -- the index is not known
+
     deriving(Eq,Ord,Typeable,Generic,NFData)
 
 instance Show SimpleFieldIndex where
-    show (Field s)    = s
-    show (Index i)    = "[" ++ (show i) ++ "]"
-    show (Element i)  = "<" ++ (show i) ++ ">"
-    show UnknownIndex = "[*]"
+    show (StructField s)       = s
+    show (UnionField s)        = s
+    show (TupleElementIndex i) = "<" ++ (show i) ++ ">"
+    show (ArrayIndex i)        = "[" ++ (show i) ++ "]"
+    show  UnknownIndex         = "[*]"
+    
+
+instance FieldIndex SimpleFieldIndex where
+    join    = simpleJoin
+    project = simpleProject
+
+    structField = StructField
+    unionField  = StructField
+
+    tupleElementIndex a = case toConstant a of
+        Just i  -> TupleElementIndex (fromIntegral i)
+        Nothing -> UnknownIndex
+
+    arrayIndex a = case toConstant a of
+        Just i  -> ArrayIndex (fromIntegral i)
+        Nothing -> UnknownIndex
+
+    unknownIndex = UnknownIndex
+
 
 
 -- | Merges the list of simple field indices of the two given lists
 simpleJoin :: [SimpleFieldIndex] -> [SimpleFieldIndex] -> Maybe [SimpleFieldIndex]
-simpleJoin a b | (allFields a && allFields b) || (allIndices a && allIndices b) || (allElements a && allElements b) =
+simpleJoin a b | sameIndexTypes a b =
     Just $ Set.toList . Set.fromList $ a ++ b
 simpleJoin _ _ = Nothing
 
@@ -111,39 +150,41 @@ simpleProject :: [SimpleFieldIndex] -> SimpleFieldIndex -> [SimpleFieldIndex]
 simpleProject is i = if elem i is then [i] else [UnknownIndex]
 
 
-instance FieldIndex SimpleFieldIndex where
-    join = simpleJoin
-    project = simpleProject
+-- Utilities:
 
-    field n = Field n
-    index a = case toConstant a of
-        Just i  -> Index (fromIntegral i)
-        Nothing -> UnknownIndex
-
-    element a = case toConstant a of
-        Just i  -> Element (fromIntegral i)
-        Nothing -> UnknownIndex
-
-    unknownIndex = UnknownIndex
+sameIndexTypes :: [SimpleFieldIndex] -> [SimpleFieldIndex] -> Bool
+sameIndexTypes a b =
+    (       allStructFields a &&        allStructFields b) ||
+    (        allUnionFields a &&         allUnionFields b) ||
+    (allTupleElementIndexes a && allTupleElementIndexes b) ||
+    (       allArrayIndexes a &&        allArrayIndexes b)
+    
 
 
-isField :: SimpleFieldIndex -> Bool
-isField (Field _) = True
-isField _         = False
+isStructField :: SimpleFieldIndex -> Bool
+isStructField (StructField _) = True
+isStructField _               = False
 
-allFields :: [SimpleFieldIndex] -> Bool
-allFields = all isField
+allStructFields :: [SimpleFieldIndex] -> Bool
+allStructFields = all isStructField
 
-isIndex :: SimpleFieldIndex -> Bool
-isIndex (Index _ ) = True
-isIndex _          = False
+isUnionField :: SimpleFieldIndex -> Bool
+isUnionField (UnionField _) = True
+isUnionField _              = False
 
-allIndices :: [SimpleFieldIndex] -> Bool
-allIndices = all isIndex
+allUnionFields :: [SimpleFieldIndex] -> Bool
+allUnionFields = all isUnionField
 
-isElement :: SimpleFieldIndex -> Bool
-isElement (Element _ ) = True
-isElement _            = False
+isTupleElementIndex :: SimpleFieldIndex -> Bool
+isTupleElementIndex (TupleElementIndex _ ) = True
+isTupleElementIndex _                      = False
 
-allElements :: [SimpleFieldIndex] -> Bool
-allElements = all isElement
+allTupleElementIndexes :: [SimpleFieldIndex] -> Bool
+allTupleElementIndexes = all isTupleElementIndex
+
+isArrayIndex :: SimpleFieldIndex -> Bool
+isArrayIndex (ArrayIndex _ ) = True
+isArrayIndex _          = False
+
+allArrayIndexes :: [SimpleFieldIndex] -> Bool
+allArrayIndexes = all isArrayIndex

@@ -408,7 +408,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
                     indices = Arithmetic.unSFS $ ComposedValue.toValue (Solver.get a indexValueVar)
 
-                    fieldIndices = element <$> (BSet.toList indices)
+                    fieldIndices = tupleElementIndex <$> (BSet.toList indices)
 
                     dataPaths = step <$> fieldIndices
 

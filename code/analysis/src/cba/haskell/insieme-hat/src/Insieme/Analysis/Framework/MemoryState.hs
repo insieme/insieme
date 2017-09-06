@@ -198,7 +198,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
              dep _ = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
              val a = ComposedValue.composeElements $ zip fields (valueVal a)
 
-             fields = fromJust $ map field <$> getFieldNames elemType
+             fields = fromJust $ map structField <$> getFieldNames elemType
 
              valueVal a = Solver.get a <$> valueVars
              valueVars = valueVar <$> getChildren (goDown 2 addr)
@@ -218,7 +218,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
 
             arrayType = goDown 0 $ goDown 2 $ goDown 0 addr
 
-            indices = (index . Ar.mkConst . fromIntegral) <$> [0..numIndices-1]
+            indices = (arrayIndex . Ar.mkConst . fromIntegral) <$> [0..numIndices-1]
             numIndices = numChildren $ goDown 2 addr
 
             valueVal a = Solver.get a <$> valueVars
