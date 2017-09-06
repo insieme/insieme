@@ -124,13 +124,13 @@ referenceValue :: (FieldIndex i) => NodeAddress -> TypedVar (ValueTree.Tree i (R
 referenceValue addr = case getNodeType addr of
 
         IR.Literal ->
-            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference (crop addr) DP.root)
+            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference (crop addr) DP.Root)
 
         IR.Declaration | isMaterializingDeclaration (Addr.getNode addr) ->
-            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.root)
+            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.Root)
 
         IR.CallExpr | isMaterializingCall (Addr.getNode addr) ->
-            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.root)
+            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.Root)
 
         _ -> dataflowValue addr analysis opsHandler
 
@@ -142,7 +142,7 @@ referenceValue addr = case getNodeType addr of
             initValueHandler = compose $ BSet.singleton $ NullReference
         }
 
-        epParamHandler a = mkConstant analysis a $ compose $ BSet.singleton $ Reference a DP.root
+        epParamHandler a = mkConstant analysis a $ compose $ BSet.singleton $ Reference a DP.Root
 
         idGen = mkVarIdentifier analysis
 
@@ -153,12 +153,12 @@ referenceValue addr = case getNodeType addr of
         allocHandler = OperatorHandler cov noDep val
             where
                 cov a = isBuiltin a "ref_alloc"
-                val _ _ = compose $ BSet.singleton $ Reference addr DP.root
+                val _ _ = compose $ BSet.singleton $ Reference addr DP.Root
 
         declHandler = OperatorHandler cov noDep val
             where
                 cov a = isBuiltin a "ref_decl"
-                val _ _ = compose $ BSet.singleton $ Reference (getEnclosingDecl addr) DP.root
+                val _ _ = compose $ BSet.singleton $ Reference (getEnclosingDecl addr) DP.Root
 
         refNull = OperatorHandler cov noDep val
             where

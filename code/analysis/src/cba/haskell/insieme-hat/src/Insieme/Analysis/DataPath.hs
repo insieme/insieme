@@ -108,7 +108,7 @@ dataPathValue addr = dataflowValue addr analysis ops
 
         dep _ _ = []
 
-        val _ _ = compose $ BSet.singleton root
+        val _ _ = compose $ BSet.singleton Root
 
 
     -- the handler for the member access path constructore --

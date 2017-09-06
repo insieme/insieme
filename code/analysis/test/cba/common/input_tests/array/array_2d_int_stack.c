@@ -64,6 +64,18 @@ int main(int argc, char** argv) {
 	cba_expect_eq_int(a[1][0], 14);
 	cba_expect_undefined_int(a[1][1]);
 
+	// set more values
+	a[0][0] = 10;
+	a[0][1] = 12;
+	a[1][0] = 14;
+	a[1][1] = 16;
+
+	// check those values
+	cba_expect_eq_int(a[0][0], 10);
+	cba_expect_eq_int(a[0][1], 12);
+	cba_expect_eq_int(a[1][0], 14);
+	cba_expect_eq_int(a[1][1], 16);
+
 //	cba_print_code();
 //	cba_dump_solution();
 //	cba_dump_json();
