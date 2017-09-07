@@ -223,7 +223,10 @@ namespace compiler {
 		string&& cmd = compiler.getCommand(sourcefile, targetfile);
 		LOG(INFO) << "Compiling with: " << cmd << std::endl;
 		int res = system(cmd.c_str());
-		if(res) { std::cerr << "Failure with exit status " << res << std::endl; }
+		if(res) {
+			std::cerr << "Command line:\n\t" << cmd << std::endl;
+			std::cerr << "Failure with exit status " << res << std::endl;
+		}
 		return res == 0;
 	}
 
