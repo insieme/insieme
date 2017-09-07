@@ -124,13 +124,13 @@ referenceValue :: (FieldIndex i) => NodeAddress -> TypedVar (ValueTree.Tree i (R
 referenceValue addr = case getNodeType addr of
 
         IR.Literal ->
-            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference (crop addr) DP.root)
+            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference (crop addr) DP.Root)
 
         IR.Declaration | isMaterializingDeclaration (Addr.getNode addr) ->
-            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.root)
+            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.Root)
 
         IR.CallExpr | isMaterializingCall (Addr.getNode addr) ->
-            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.root)
+            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.Root)
 
         _ -> dataflowValue addr analysis opsHandler
 
@@ -142,23 +142,23 @@ referenceValue addr = case getNodeType addr of
             initValueHandler = compose $ BSet.singleton $ NullReference
         }
 
-        epParamHandler a = mkConstant analysis a $ compose $ BSet.singleton $ Reference a DP.root
+        epParamHandler a = mkConstant analysis a $ compose $ BSet.singleton $ Reference a DP.Root
 
         idGen = mkVarIdentifier analysis
 
         compose = ComposedValue.toComposed . ReferenceSet
 
-        opsHandler = [ allocHandler , declHandler , refNull, refNarrow , refExpand , refCast , refReinterpret , ptrToRef , ptrFromRef ]
+        opsHandler = [ allocHandler , declHandler , refNull, refNarrow , refExpand , refCast , refReinterpret , ptrToRef , ptrFromRef , stdArraySubscript ]
 
         allocHandler = OperatorHandler cov noDep val
             where
                 cov a = isBuiltin a "ref_alloc"
-                val _ _ = compose $ BSet.singleton $ Reference addr DP.root
+                val _ _ = compose $ BSet.singleton $ Reference addr DP.Root
 
         declHandler = OperatorHandler cov noDep val
             where
                 cov a = isBuiltin a "ref_decl"
-                val _ _ = compose $ BSet.singleton $ Reference (getEnclosingDecl addr) DP.root
+                val _ _ = compose $ BSet.singleton $ Reference (getEnclosingDecl addr) DP.Root
 
         refNull = OperatorHandler cov noDep val
             where
@@ -200,7 +200,7 @@ referenceValue addr = case getNodeType addr of
                 offsetVar = arithmeticValue $ goDown 1 $ goDown 2 addr
                 offsetVal a = BSet.toUnboundSet $ unSFS $ ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 1) $ get a offsetVar
 
-                access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ index offset))
+                access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ arrayIndex offset))
 
         ptrFromRef = OperatorHandler cov dep val
             where
@@ -209,7 +209,24 @@ referenceValue addr = case getNodeType addr of
                 val _ a = ComposedValue.composeElements [(component 0,compose res)]
                     where
                         res = lower $ baseRefVal a
-                        lower = BSet.map $ onRefs $ \(Reference l p) -> Reference l (DP.append p (DP.invert $ DP.step $ index $ mkConst 0))
+                        lower = BSet.map $ onRefs $ \(Reference l p) -> Reference l (DP.append p (DP.invert $ DP.step $ arrayIndex $ mkConst 0))
+
+
+        -- container support --
+        
+        stdArraySubscript = OperatorHandler cov dep val
+          where
+            cov = isOperator "IMP_std_colon__colon_array::IMP__operator_subscript_"
+            dep _ _ = [toVar baseRefVar, toVar indexVar]
+            val _ a = compose $ access (baseRefVal a) (indexVal a)
+            
+            indexVar = arithmeticValue $ goDown 1 $ goDown 3 addr
+            indexVal a = BSet.toUnboundSet $ unSFS $ ComposedValue.toValue $ get a indexVar
+
+            access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ stdArrayIndex offset))
+
+
+        isOperator n a = fromMaybe False $ (==n) <$> getLiteralValue a
 
 
         noDep _ _ = []

@@ -92,22 +92,24 @@ instance (FieldIndex i, Solver.ExtLattice a) => ComposedValue (Tree i a) i a whe
 
 
     -- obtain an addressed value within a tree
-    getElement dp t | isRoot dp   = t
-    getElement dp t | isNarrow dp = get i (getElement (narrow is) t)
-        where
-            (i:is) = getPath dp
+    getElement  Root t = t
+    getElement (DataPath p Down i) t = get i $ getElement p t
     getElement _ _ = Inconsistent
 
 
     -- update a field in the tree
-    setElement dp v t | isNarrow dp = setElement' (reverse p) v t
-        where
-            p = getPath dp
-
-            setElement' [] v' _ = v'
-            setElement' (x:xs) v' t' = set x (setElement' xs v' (get x t')) t'
-
+    setElement Root v _ = v
+    setElement (DataPath p Down i) v t = setElement p new t
+      where
+        old = getElement p t
+        new = set i v old
     setElement _ _ _ = Inconsistent
+
+    -- implement element map
+    mapElements _ l@(Leaf _) = l
+    mapElements _ Empty = Empty
+    mapElements _ Inconsistent = Inconsistent
+    mapElements f (Node m) = Node $ Map.fromList $ f <$> Map.toList m
 
     top = Inconsistent
 

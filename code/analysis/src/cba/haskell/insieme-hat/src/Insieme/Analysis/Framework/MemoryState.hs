@@ -198,12 +198,12 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
              dep _ = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
              val a = ComposedValue.composeElements $ zip fields (valueVal a)
 
-             fields = fromJust $ map field <$> getFieldNames elemType
+             fields = fromJust $ map structField <$> getFieldNames elemType
 
              valueVal a = Solver.get a <$> valueVars
              valueVars = valueVar <$> getChildren (goDown 2 addr)
 
-        -- handle struct values defined by init expressions
+        -- handle array values defined by init expressions
         IR.InitExpr | isArray elemType -> var
           where
             var = Solver.mkVariable varId [con] Solver.bot
@@ -218,11 +218,54 @@ definedValue addr ml@(MemoryLocation loc) analysis = case getNodeType addr of
 
             arrayType = goDown 0 $ goDown 2 $ goDown 0 addr
 
-            indices = (index . Ar.mkConst . fromIntegral) <$> [0..numIndices-1]
+            indices = (arrayIndex . Ar.mkConst . fromIntegral) <$> [0..numIndices-1]
             numIndices = numChildren $ goDown 2 addr
 
-            valueVal a = Solver.get a <$> valueVars
             valueVars = valueVar <$> getChildren (goDown 2 addr)
+            valueVal a = Solver.get a <$> valueVars
+
+        -- handle std::array values defined by init expressions
+        IR.InitExpr | isStdArray elemType -> var
+          where
+            var = Solver.mkVariable varId [con] Solver.bot
+            con = Solver.createEqualityConstraint dep val var
+
+            dep a = (Solver.toVar nestedArrayRefVar) : (Solver.toVar . snd <$> nestedArrayMemStateVars a)
+            val a = convertToStdArray $ nestedArrayMemStateVal a
+
+            -- get value of nested array initialization
+
+            nestedArrayInitAddr = goDown 0 $ goDown 2 addr
+
+            -- the variable representing a reference to the initialized array
+            nestedArrayRefVar = referenceValue nestedArrayInitAddr
+            nestedArrayRefVal a = unRS $ ComposedValue.toValue $ Solver.get a nestedArrayRefVar 
+
+            -- get memory state of initialized nested array
+            nestedArrayMemStateVars a = if BSet.isUniverse refs then [] else vars
+              where
+                refs = nestedArrayRefVal a
+                refList = BSet.toList refs
+                vars = zip refList $ toStateVar <$> refList
+
+                toStateVar (Reference loc _) = memoryStateValue (MemoryStatePoint pp (MemoryLocation loc)) analysis
+                toStateVar r = error ("Sorry, unsupported reference value: " ++ (show r)) 
+
+                pp = ProgramPoint (goDown 2 addr) Post
+
+            nestedArrayMemStateVal a = Solver.join values
+              where
+                values = (go <$> nestedArrayMemStateVars a)
+                go ((Reference _ dp),memValVar) = ComposedValue.getElement dp $ Solver.get a memValVar
+                go (r,_) = error ("Unsupported reference value: " ++ (show r)) 
+
+            -- a utility to convert an array to a std::array
+            convertToStdArray t = ComposedValue.mapElements toArrayIndex t
+              where
+                toArrayIndex e@(i,_) | i == unknownIndex = e
+                toArrayIndex (i,t) = case getNumericIndex i of
+                    Just n -> (stdArrayIndex n, t)
+                    Nothing -> error $ "Array initialized with incompatible Index: " ++ (show i)
 
         -- handle scalar values defined by init expressions
         IR.InitExpr -> var

@@ -40,18 +40,10 @@
 
 module Insieme.Analysis.Entities.DataPath (
 
-    DataPath(Root,Invalid),
-    root,
-    invalid,
+    Direction(..),
+    DataPath(..),
     step,
     narrow,
-    expand,
-
-    isRoot,
-    isInvalid,
-    isNarrow,
-    isExpand,
-    getPath,
 
     append,
     invert
@@ -59,103 +51,82 @@ module Insieme.Analysis.Entities.DataPath (
 ) where
 
 import Control.DeepSeq
-import Data.List
 import GHC.Generics (Generic)
+import Insieme.Analysis.Entities.FieldIndex
+
+-- 
+-- * Data Path Direction
+--
+
+data Direction = Up | Down
+  deriving (Eq,Ord,Generic,NFData)
+
+instance Show Direction where
+    show Up   = "↑"
+    show Down = "↓"
+
+
 
 --
 -- * DataPaths
 --
 
-
 data DataPath i =
           Root
-        | Narrow [i]
-        | Expand [i]
+        | DataPath (DataPath i) Direction i
         | Invalid
   deriving (Eq,Ord,Generic,NFData)
 
 
 instance (Show i) => Show (DataPath i) where
-    show  Root      = "⊥"
-    show (Narrow p) = "⊥." ++ (intercalate "." $ show <$> (reverse p))
-    show (Expand p) = (intercalate "." $ show <$> p) ++ ".⊥"
-    show  Invalid   = "?"
+    show  Root            = "⊥"
+    show (DataPath p d s) = (show p) ++ "." ++ (show d) ++ (show s)
+    show  Invalid         = "?"
 
-
--- a token for an empty path
-root :: DataPath i
-root = Root
-
--- a token for an invalid path
-invalid :: DataPath i
-invalid = Invalid
 
 
 -- creates a single-step data path
 step :: i -> DataPath i
-step i = Narrow [i]
+step = DataPath Root Down
 
-
+-- creates multiple steps of a data path
 narrow :: [i] -> DataPath i
-narrow [] = Root
-narrow p  = Narrow p
-
-
-expand :: [i] -> DataPath i
-expand [] = Root
-expand p  = Expand p
-
-
-isRoot :: DataPath i -> Bool
-isRoot Root = True
-isRoot _    = False
-
-
-isInvalid :: DataPath i -> Bool
-isInvalid Invalid = True
-isInvalid _       = False
-
-isNarrow :: DataPath i -> Bool
-isNarrow  Root      = True
-isNarrow (Narrow _) = True
-isNarrow  _         = False
-
-isExpand :: DataPath i -> Bool
-isExpand  Root      = True
-isExpand (Expand _) = True
-isExpand  _         = False
-
-
-getPath :: DataPath i -> [i]
-getPath  Root      = []
-getPath (Narrow p) = p
-getPath (Expand p) = p
-getPath Invalid    = error "invalid path"
+narrow s = foldl go Root s
+  where
+    go p i = DataPath p Down i
 
 
 -- concatenation of paths
-append :: (Eq i) => DataPath i -> DataPath i -> DataPath i
-append a Root = a
-append Root a = a
+append :: (FieldIndex i) => DataPath i -> DataPath i -> DataPath i
 
+-- handle root cases
+append Root p = p
+append p Root = p
+
+-- handle invalid paths
 append Invalid _ = Invalid
 append _ Invalid = Invalid
 
-append (Narrow a) (Narrow b) = Narrow (b ++ a)
-append (Expand a) (Expand b) = Expand (b ++ a)
+-- let same steps in different directions cancel out
+append (DataPath p Up a) (DataPath Root Down b) | a == b = p
+append (DataPath p Down a) (DataPath Root Up b) | a == b = p
 
-append (Narrow [x]) (Expand [y])       | x == y = Root
-append (Narrow (x:xs)) (Expand [y])    | x == y = Narrow xs
-append (Narrow (x:xs)) (Expand (y:ys)) | x == y = append (Narrow xs) (Expand ys)
-append (Narrow _)      (Expand _)               = Invalid
-
-append a@(Expand _) b@(Narrow _) = invert $ append (invert a) (invert b)
+-- append paths as required
+append a (DataPath b d i)    = contract $ DataPath (append a b) d i
 
 
+-- a contraction operation
+contract :: (FieldIndex i) => DataPath i -> DataPath i
+contract f@(DataPath (DataPath (DataPath p d a) Up b) Down c) = case tryContract a b c of
+    Just r  -> DataPath p d r
+    Nothing -> f
 
--- inverts a path from narrow to expand and vica versa
+contract a = a
+
+-- inverts a path's direction. Every up becomes a down and vica versa.
 invert :: DataPath i -> DataPath i
-invert  Root      = Root
-invert  Invalid   = Invalid
-invert (Narrow p) = Expand p
-invert (Expand p) = Narrow p
+invert Root = Root
+invert Invalid = Invalid
+invert (DataPath p Down i) = DataPath (invert p) Up i
+invert (DataPath p Up i) = DataPath (invert p) Down i
+

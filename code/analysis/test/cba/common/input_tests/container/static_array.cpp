@@ -35,50 +35,13 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
+#include "array_like_container_test.h"
 
-#include <stdlib.h>
+int main() {
 
-#include "../../input_tests/cba.h"
+	// all tests delegated
+	test<int[4]>();
 
-int main(int argc, char** argv) {
-
-	// create an array
-	int a[10][10];
-
-	// all values should be undefined
-	cba_expect_undefined_int(a[0][0]);
-	cba_expect_undefined_int(a[0][1]);
-	cba_expect_undefined_int(a[1][0]);
-	cba_expect_undefined_int(a[1][1]);
-
-	// set some values
-	a[0][1] = 12;
-	a[1][0] = 14;
-
-	// check those values
-	cba_expect_undefined_int(a[0][0]);
-	cba_expect_eq_int(a[0][1], 12);
-	cba_expect_eq_int(a[1][0], 14);
-	cba_expect_undefined_int(a[1][1]);
-
-	// set more values
-	a[0][0] = 10;
-	a[0][1] = 12;
-	a[1][0] = 14;
-	a[1][1] = 16;
-
-	// check those values
-	cba_expect_eq_int(a[0][0], 10);
-	cba_expect_eq_int(a[0][1], 12);
-	cba_expect_eq_int(a[1][0], 14);
-	cba_expect_eq_int(a[1][1], 16);
-
-//	cba_print_code();
-//	cba_dump_solution();
-//	cba_dump_json();
-
+	// done
 	return 0;
 }

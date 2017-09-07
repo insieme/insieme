@@ -108,3 +108,6 @@ void cba_dump_json() {};
 void cba_dump_statistic() {};
 void cba_dump_solution() {};
 
+#define cba_debug() cba_print_code(); cba_dump_json(); cba_dump_solution();
+
+

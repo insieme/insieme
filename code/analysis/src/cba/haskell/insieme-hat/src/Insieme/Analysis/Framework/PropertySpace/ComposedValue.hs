@@ -57,5 +57,7 @@ class (Solver.ExtLattice c, FieldIndex i, Solver.ExtLattice v) => ComposedValue 
 
     composeElements :: [(i,c)] -> c
 
+    mapElements :: ((i,c) -> (i,c)) -> c -> c
+
     top :: c
 

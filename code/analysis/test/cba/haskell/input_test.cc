@@ -406,7 +406,7 @@ namespace cba {
 				// debugging
 				} else if (name == "cba_print_code") {
 					// just dump the code
-					dumpPretty(prog);
+					dumpReadable(prog);
 
 				} else if (name == "cba_dump_json") {
 					// dump the code as a json file

@@ -46,7 +46,7 @@ import Data.Typeable
 import GHC.Generics (Generic)
 import Insieme.Analysis.Arithmetic
 import Insieme.Analysis.Entities.DataPath
-import Insieme.Analysis.Entities.FieldIndex hiding (element,component)
+import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Identifier
 import Insieme.Inspire.NodeAddress hiding (append)
@@ -108,7 +108,7 @@ dataPathValue addr = dataflowValue addr analysis ops
 
         dep _ _ = []
 
-        val _ _ = compose $ BSet.singleton root
+        val _ _ = compose $ BSet.singleton Root
 
 
     -- the handler for the member access path constructore --
@@ -120,17 +120,17 @@ dataPathValue addr = dataflowValue addr analysis ops
 
         val _ a = compose $ combine (unDPS $ paths a) fieldNames
             where
-                combine = BSet.lift2 $ \p i -> append p ((step . field) (toString i))
+                combine = BSet.lift2 $ \p i -> append p ((step . structField) (toString i))
                 fieldNames = ComposedValue.toValue $ Solver.get a fieldNameVar
 
         fieldNameVar = identifierValue $ goDown 3 addr
 
 
     -- the handler for the element access path constructor --
-    element = subscriptHandler "dp_element" index
+    element = subscriptHandler "dp_element" arrayIndex
 
     -- the handler for the component access path constructor --
-    component = subscriptHandler "dp_component" FieldIndex.element
+    component = subscriptHandler "dp_component" FieldIndex.tupleElementIndex
 
 
     subscriptHandler operatorName dataPathStep = OperatorHandler cov dep val

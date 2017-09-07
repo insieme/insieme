@@ -233,8 +233,10 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
                 base = child 1 $ child 2 x
                 
                 ext = case f of
-                    (Field field) -> Builder.refMember base field
-                    (Element i) -> Builder.refComponent base i
+                    (StructField field)   -> Builder.refMember base field
+                    (UnionField field)    -> Builder.refMember base field
+                    (TupleElementIndex i) -> Builder.refComponent base i
+                    _                     -> error $ "Unsupported field access: " ++ (show f)
 
 
     -- utilities

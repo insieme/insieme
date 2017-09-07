@@ -63,7 +63,7 @@ import Data.Foldable
 import Data.Maybe
 import Data.Typeable
 import Debug.Trace
-import Insieme.Analysis.Entities.DataPath hiding (isRoot)
+import Insieme.Analysis.Entities.DataPath
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.MemoryState
@@ -371,14 +371,13 @@ dataflowValue addr analysis ops = case getNode addr of
                             dp  = (Reference.dataPath r)
                             val = Solver.get a (memStateVarOf r)
 
-                    descent dp val = case () of
+                    descent dp val = case dp of
 
-                        _ | dp == root -> val
+                        Root -> val
 
-                        _ | (isNarrow dp) && (ComposedValue.isValue val) -> res
+                        DataPath p Down i | ComposedValue.isValue val -> res
                           where
-                            (i:is) = reverse $ getPath dp
-                            res    = descent (narrow $ reverse is) $ excessiveFileAccessHandler analysis val i
+                            res = excessiveFileAccessHandler analysis (descent p val) i
 
                         _ | otherwise -> ComposedValue.getElement dp val
 
@@ -409,7 +408,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
                     indices = Arithmetic.unSFS $ ComposedValue.toValue (Solver.get a indexValueVar)
 
-                    fieldIndices = element <$> (BSet.toList indices)
+                    fieldIndices = tupleElementIndex <$> (BSet.toList indices)
 
                     dataPaths = step <$> fieldIndices
 
@@ -433,4 +432,8 @@ dataflowValue addr analysis ops = case getNode addr of
 
             val _ a = Solver.get a valueVar
 
-            valueVar = varGen $ goDown 1 $ goDown 2 addr
+            arg1 = goDown 1 $ goDown 2 addr
+            arg2 = goDown 1 $ goDown 3 addr
+
+            valueVar = varGen $ if isLiteral arg1 then arg2 else arg1
+
