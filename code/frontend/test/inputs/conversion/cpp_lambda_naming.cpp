@@ -102,8 +102,8 @@ int main() {
 	#pragma test expect_ir(R"(
 		decl struct __any_string__class_int;
 		decl struct __any_string__class_real;
-		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen_int_rparen_:const __any_string__class_int::() -> ptr<(int<4>) -> unit,t,f>;
-		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen_float_rparen_:const __any_string__class_real::() -> ptr<(real<4>) -> unit,t,f>;
+		decl IMP__conversion_operator_void__lparen__star__rparen__lparen_int_rparen_:const __any_string__class_int::() -> ptr<(int<4>) -> unit,t,f>;
+		decl IMP__conversion_operator_void__lparen__star__rparen__lparen_float_rparen_:const __any_string__class_real::() -> ptr<(real<4>) -> unit,t,f>;
 		def struct __any_string__class_int {
 			const function IMP__operator_call_ = (v1 : ref<int<4>,f,f,plain>) -> unit {
 				v1;
@@ -137,9 +137,9 @@ int main() {
 		decl struct __any_string__1;
 		decl struct __any_string__2;
 		decl struct IMP_ClassWithTemplatedFun;
-		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen__rparen_:const __any_string__0::() -> ptr<() -> unit,t,f>;
-		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen__rparen_:const __any_string__1::() -> ptr<() -> unit,t,f>;
-		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen__rparen_:const __any_string__2::() -> ptr<() -> unit,t,f>;
+		decl IMP__conversion_operator_void__lparen__star__rparen__lparen_void_rparen_:const __any_string__0::() -> ptr<() -> unit,t,f>;
+		decl IMP__conversion_operator_void__lparen__star__rparen__lparen_void_rparen_:const __any_string__1::() -> ptr<() -> unit,t,f>;
+		decl IMP__conversion_operator_void__lparen__star__rparen__lparen_void_rparen_:const __any_string__2::() -> ptr<() -> unit,t,f>;
 		def struct __any_string__0 {
 			const function IMP__operator_call_ = () -> unit {
 				var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));

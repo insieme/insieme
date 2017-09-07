@@ -140,6 +140,16 @@ class TemplateTemplateClass {
 	TT<X> x;
 };
 
+class ConvertibleToTemplateClass {
+public:
+	operator TemplateClass<int>() {
+		return {};
+	}
+	operator TemplateClass<float>() {
+		return {};
+	}
+};
+
 // function pointers ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename T, typename S>

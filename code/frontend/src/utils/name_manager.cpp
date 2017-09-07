@@ -228,6 +228,14 @@ namespace utils {
 			}
 		}
 
+		// adjust name for conversion operators
+		{
+			auto operatorNameIdx = name.find("operator ");
+			if(operatorNameIdx != string::npos) {
+				name = name.substr(0, operatorNameIdx) + "operator " + getTypeString(funcDecl->getReturnType());
+			}
+		}
+
 		// adjust name for things in anonymous namespaces
 		if(boost::contains(name, "(anonymous") || name.empty()) {
 			name = createNameForAnon(name, funcDecl, converter.getSourceManager());
