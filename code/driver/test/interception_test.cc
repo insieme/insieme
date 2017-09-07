@@ -108,5 +108,10 @@ namespace driver {
 		auto codeString = testCompilation("frontend/test/inputs/interceptor/system_interception.cpp");
 	}
 
+	TEST(DriverInterceptionTest, OperatorSyntax) {
+		auto codeString = testCompilation("frontend/test/inputs/interceptor/be_operator_interception.cpp");
+		EXPECT_PRED2(notContainsSubString, utils::removePragmas(codeString), "operator");
+	}
+
 } // end namespace driver
 } // end namespace insieme
