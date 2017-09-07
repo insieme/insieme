@@ -35,12 +35,14 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
+#include <array>
+
 #include "array_like_container_test.h"
 
 int main() {
 
 	// all tests delegated
-	test<int[4]>();
+	test<std::array<int,4>>();
 
 	// done
 	return 0;

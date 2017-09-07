@@ -148,7 +148,7 @@ referenceValue addr = case getNodeType addr of
 
         compose = ComposedValue.toComposed . ReferenceSet
 
-        opsHandler = [ allocHandler , declHandler , refNull, refNarrow , refExpand , refCast , refReinterpret , ptrToRef , ptrFromRef ]
+        opsHandler = [ allocHandler , declHandler , refNull, refNarrow , refExpand , refCast , refReinterpret , ptrToRef , ptrFromRef , stdArraySubscript ]
 
         allocHandler = OperatorHandler cov noDep val
             where
@@ -210,6 +210,23 @@ referenceValue addr = case getNodeType addr of
                     where
                         res = lower $ baseRefVal a
                         lower = BSet.map $ onRefs $ \(Reference l p) -> Reference l (DP.append p (DP.invert $ DP.step $ arrayIndex $ mkConst 0))
+
+
+        -- container support --
+        
+        stdArraySubscript = OperatorHandler cov dep val
+          where
+            cov = isOperator "IMP_std_colon__colon_array::IMP__operator_subscript_"
+            dep _ _ = [toVar baseRefVar, toVar indexVar]
+            val _ a = compose $ access (baseRefVal a) (indexVal a)
+            
+            indexVar = arithmeticValue $ goDown 1 $ goDown 3 addr
+            indexVal a = BSet.toUnboundSet $ unSFS $ ComposedValue.toValue $ get a indexVar
+
+            access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ stdArrayIndex offset))
+
+
+        isOperator n a = fromMaybe False $ (==n) <$> getLiteralValue a
 
 
         noDep _ _ = []

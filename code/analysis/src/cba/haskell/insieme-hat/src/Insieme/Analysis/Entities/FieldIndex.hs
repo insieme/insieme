@@ -48,8 +48,10 @@ module Insieme.Analysis.Entities.FieldIndex (
     unionField,
     tupleElementIndex,
     arrayIndex,
+    stdArrayIndex,
     unknownIndex,
     component,
+    tryContract,
 
     -- an example implementation
     SimpleFieldIndex(..)
@@ -73,22 +75,28 @@ class (Eq v, Ord v, Show v, Typeable v, NFData v) => FieldIndex v where
         project :: [v] -> v -> [v]
 
         -- interface for integration in data path analysis
-        
+
         structField        :: String -> v
         unionField         :: String -> v
-        
+
         tupleElementIndex  :: SymbolicFormula -> v
-        
+
         arrayIndex         :: SymbolicFormula -> v
-        
+
+        stdArrayIndex      :: SymbolicFormula -> v
+
         unknownIndex       :: v
 
 
         -- convenience functions
-        
+
         component :: Int32 -> v
         component = tupleElementIndex . mkConst . CInt32
-        
+
+
+        -- operation for path aggregation
+
+        tryContract           :: v -> v -> v -> Maybe v        -- can those consecutive steps be merged? 
 
 
 -- A simple field index working with numericall values for indices only --
@@ -102,11 +110,11 @@ data SimpleFieldIndex =
 
         | ArrayIndex Int                    -- Index of the array element
 
---        | StdArrayIndex Int                 -- Index of the std::array element
---        
---        | StdVectorIndex Int Int            -- Index of the std::vector elemnet and version
---        
---        | StdSetIndex Bool                  -- True = Begin, False = End
+        | StdArrayIndex Int                 -- Index of the std::array element
+
+        | StdVectorIndex Int Int            -- Index of the std::vector elemnet and version
+
+        | StdSetIndex Bool                  -- True = Begin, False = End
 
         | UnknownIndex                        -- the index is not known
 
@@ -117,6 +125,9 @@ instance Show SimpleFieldIndex where
     show (UnionField s)        = s
     show (TupleElementIndex i) = "<" ++ (show i) ++ ">"
     show (ArrayIndex i)        = "[" ++ (show i) ++ "]"
+    show (StdArrayIndex i)     = "a[" ++ (show i) ++ "]"
+    show (StdVectorIndex i g)  = "v<" ++ (show g) ++ ">[" ++ (show i) ++ "]"
+    show (StdSetIndex b)       = if b then "in" else "end"
     show  UnknownIndex         = "[*]"
     
 
@@ -135,8 +146,14 @@ instance FieldIndex SimpleFieldIndex where
         Just i  -> ArrayIndex (fromIntegral i)
         Nothing -> UnknownIndex
 
+    stdArrayIndex a = case toConstant a of
+        Just i  -> StdArrayIndex (fromIntegral i)
+        Nothing -> UnknownIndex
+
     unknownIndex = UnknownIndex
 
+
+    tryContract = simpleContract
 
 
 -- | Merges the list of simple field indices of the two given lists
@@ -157,8 +174,10 @@ sameIndexTypes a b =
     (       allStructFields a &&        allStructFields b) ||
     (        allUnionFields a &&         allUnionFields b) ||
     (allTupleElementIndexes a && allTupleElementIndexes b) ||
-    (       allArrayIndexes a &&        allArrayIndexes b)
-    
+    (       allArrayIndexes a &&        allArrayIndexes b) ||
+    (    allStdArrayIndexes a &&     allStdArrayIndexes b) ||
+    (   allStdVectorIndexes a &&    allStdVectorIndexes b) ||
+    (      allStdSetIndexes a &&       allStdSetIndexes b)
 
 
 isStructField :: SimpleFieldIndex -> Bool
@@ -188,3 +207,41 @@ isArrayIndex _          = False
 
 allArrayIndexes :: [SimpleFieldIndex] -> Bool
 allArrayIndexes = all isArrayIndex
+
+isStdArrayIndex :: SimpleFieldIndex -> Bool
+isStdArrayIndex (StdArrayIndex _ ) = True
+isStdArrayIndex _          = False
+
+allStdArrayIndexes :: [SimpleFieldIndex] -> Bool
+allStdArrayIndexes = all isStdArrayIndex
+
+isStdVectorIndex :: SimpleFieldIndex -> Bool
+isStdVectorIndex (StdVectorIndex _ _ ) = True
+isStdVectorIndex _          = False
+
+allStdVectorIndexes :: [SimpleFieldIndex] -> Bool
+allStdVectorIndexes = all isStdVectorIndex
+
+isStdSetIndex :: SimpleFieldIndex -> Bool
+isStdSetIndex (StdVectorIndex _ _ ) = True
+isStdSetIndex _          = False
+
+allStdSetIndexes :: [SimpleFieldIndex] -> Bool
+allStdSetIndexes = all isStdSetIndex
+
+-- index steps compression
+--  Parameters: some step, one step up, one step down -> contracted 
+simpleContract :: SimpleFieldIndex -> SimpleFieldIndex -> SimpleFieldIndex -> Maybe SimpleFieldIndex
+
+-- if up and down is the same, we can ignore those
+simpleContract o u d | u == d = Just o
+
+-- if up and down are array indices, they can be aggregated
+simpleContract (      ArrayIndex a) (ArrayIndex b) (ArrayIndex c) = Just $ ArrayIndex (a + b + c)
+simpleContract (   StdArrayIndex a) (ArrayIndex b) (ArrayIndex c) = Just $ StdArrayIndex (a + b + c)
+simpleContract (StdVectorIndex a v) (ArrayIndex b) (ArrayIndex c) = Just $ StdVectorIndex (a + b + c) v
+
+
+-- everthing else we have to pass
+simpleContract _ _ _ = Nothing
+

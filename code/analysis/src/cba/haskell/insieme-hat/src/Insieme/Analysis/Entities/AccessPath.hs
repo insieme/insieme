@@ -56,6 +56,7 @@ module Insieme.Analysis.Entities.AccessPath (
 
 import Control.DeepSeq
 import GHC.Generics (Generic)
+import Insieme.Analysis.Entities.FieldIndex
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import qualified Insieme.Inspire as IR
 
@@ -102,7 +103,7 @@ local = Local
 
 -- manipulation
 
-append :: (Eq i) => AccessPath i -> DP.DataPath i -> AccessPath i
+append :: (FieldIndex i) => AccessPath i -> DP.DataPath i -> AccessPath i
 append Unknown    _ = Unknown
 append Local      _ = Local
 append _ DP.Invalid = Unknown

@@ -235,6 +235,19 @@ getLambda a = case () of
       where
         go b = ref == ((child 0) $ node b)
 
+-- *** Literal Expressions
+
+isLiteral :: NodeReference a => a -> Bool
+isLiteral a = getNodeType a == IR.Literal
+
+getLiteralValue :: NodeReference a => a -> Maybe String
+getLiteralValue a | isLiteral a = case node a of
+    IR.Node IR.Literal (_ : (IR.Node (IR.StringValue name) _) : _) -> Just name
+    _ -> Nothing
+
+getLiteralValue _ = Nothing
+
+
 -- *** Call Expressions
 
 isCallExpr :: NodeReference a => a -> Bool

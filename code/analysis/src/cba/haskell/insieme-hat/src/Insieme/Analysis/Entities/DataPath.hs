@@ -52,6 +52,7 @@ module Insieme.Analysis.Entities.DataPath (
 
 import Control.DeepSeq
 import GHC.Generics (Generic)
+import Insieme.Analysis.Entities.FieldIndex
 
 -- 
 -- * Data Path Direction
@@ -96,7 +97,7 @@ narrow s = foldl go Root s
 
 
 -- concatenation of paths
-append :: (Eq i) => DataPath i -> DataPath i -> DataPath i
+append :: (FieldIndex i) => DataPath i -> DataPath i -> DataPath i
 
 -- handle root cases
 append Root p = p
@@ -109,11 +110,18 @@ append _ Invalid = Invalid
 -- let same steps in different directions cancel out
 append (DataPath p Up a) (DataPath Root Down b) | a == b = p
 append (DataPath p Down a) (DataPath Root Up b) | a == b = p
-append (DataPath _ Up _) (DataPath Root Down _) = Invalid  -- TODO: improve this
 
 -- append paths as required
-append a (DataPath b d i)    = DataPath (append a b) d i
+append a (DataPath b d i)    = contract $ DataPath (append a b) d i
 
+
+-- a contraction operation
+contract :: (FieldIndex i) => DataPath i -> DataPath i
+contract f@(DataPath (DataPath (DataPath p d a) Up b) Down c) = case tryContract a b c of
+    Just r  -> DataPath p d r
+    Nothing -> f
+
+contract a = a
 
 -- inverts a path's direction. Every up becomes a down and vica versa.
 invert :: DataPath i -> DataPath i
