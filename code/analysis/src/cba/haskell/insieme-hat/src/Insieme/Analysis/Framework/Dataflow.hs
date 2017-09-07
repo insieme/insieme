@@ -432,4 +432,8 @@ dataflowValue addr analysis ops = case getNode addr of
 
             val _ a = Solver.get a valueVar
 
-            valueVar = varGen $ goDown 1 $ goDown 2 addr
+            arg1 = goDown 1 $ goDown 2 addr
+            arg2 = goDown 1 $ goDown 3 addr
+
+            valueVar = varGen $ if isLiteral arg1 then arg2 else arg1
+
