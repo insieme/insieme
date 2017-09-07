@@ -39,6 +39,8 @@
 
 #include <fstream>
 
+#include <boost/filesystem/path.hpp>
+
 #include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/dump/annotations.h"
 #include "insieme/core/encoder/encoder.h"
@@ -137,6 +139,28 @@ const NodePtr& attachLocation(const NodePtr& node, const string& file, const Tex
 
 // -- Location Data Structure ----------------------------------------------
 
+namespace detail {
+
+	// TODO replace use of this function with boost::filesystem::weakly_canonical upon upgrading to boost 1.64
+	std::string normalizePath(const std::string& path) {
+		boost::filesystem::path fs_path(path);
+		boost::filesystem::path ret;
+
+		for(const auto& part : fs_path) {
+			if(part == "..") {
+				if (!ret.empty()) {
+					ret.remove_filename();
+				}
+			} else {
+				ret /= part;
+			}
+		}
+
+		return ret.string();
+	}
+
+}
+
 std::ostream& TextPosition::printTo(std::ostream& out) const {
 	return out << line << ":" << column;
 }
@@ -146,7 +170,7 @@ std::ostream& Location::printTo(std::ostream& out) const {
 	if(shared) { return out << "-shared node-"; }
 
 	// print location
-	out << *file << "@" << start;
+	out << detail::normalizePath(file->getValue()) << "@" << start;
 	if(start != end) { out << "-" << end; }
 	return out;
 }

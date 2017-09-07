@@ -110,26 +110,31 @@ namespace extensions {
 			                           core::TypeList& templateGenericParams) {
 			for(auto tempParam : *tempParamList) {
 				core::TypePtr typeVar;
-				if(auto templateParamTypeDecl = llvm::dyn_cast<clang::TemplateTypeParmDecl>(tempParam)) {
-					if(templateParamTypeDecl->isParameterPack()) {
-						templateGenericParams.push_back(getTypeVarForVariadicTemplateTypeParmType(builder, templateParamTypeDecl));
-						// we only need arguments up to the first top-level variadic, the rest can be deduced
-						break;
-					} else {
-						typeVar = getGenericRefType(builder, templateParamTypeDecl);
+				// handles parameter packs in each branch below
+				// (we can't do it here since we need the specific types, and they have no common interface)
+				auto handleParamPack = [&templateGenericParams, &builder](const auto& parm) {
+					if(parm->isParameterPack()) {
+						core::TypePtr typeVar = getTypeVarForVariadicTemplateTypeParmType(builder, parm);
+						if(llvm::dyn_cast<clang::TemplateTemplateParmDecl>(parm)) {
+							typeVar = getTypeVarForVariadicTemplateTemplateTypeParmType(builder, parm);
+						}
+						templateGenericParams.push_back(typeVar);
+						// we only need arguments up to the first top-level variadic, the rest can be deduced, so we break
+						return true;
 					}
+					return false;
+				};
+				if(auto templateParamTypeDecl = llvm::dyn_cast<clang::TemplateTypeParmDecl>(tempParam)) {
+					if(handleParamPack(templateParamTypeDecl)) break;
+					typeVar = getGenericRefType(builder, templateParamTypeDecl);
 				} else if(auto templateNonTypeParamDecl = llvm::dyn_cast<clang::NonTypeTemplateParmDecl>(tempParam)) {
+					if(handleParamPack(templateNonTypeParamDecl)) break;
 					typeVar = getTypeVarForTemplateTypeParmType(builder, templateNonTypeParamDecl);
 				} else if(auto templateTemplateParamDecl = llvm::dyn_cast<clang::TemplateTemplateParmDecl>(tempParam)) {
-					if(templateTemplateParamDecl->isParameterPack()) {
-						templateGenericParams.push_back(getTypeVarForVariadicTemplateTemplateTypeParmType(builder, templateTemplateParamDecl));
-						// we only need arguments up to the first top-level variadic, the rest can be deduced
-						break;
-					} else {
-						core::TypeList paramTypeList;
-						convertTemplateParameters(templateTemplateParamDecl->getTemplateParameters(), builder, paramTypeList);
-						typeVar = builder.genericTypeVariable("T_" + getTemplateTypeParmName(templateTemplateParamDecl), paramTypeList);
-					}
+					if(handleParamPack(templateTemplateParamDecl)) break;
+					core::TypeList paramTypeList;
+					convertTemplateParameters(templateTemplateParamDecl->getTemplateParameters(), builder, paramTypeList);
+					typeVar = builder.genericTypeVariable("T_" + getTemplateTypeParmName(templateTemplateParamDecl), paramTypeList);
 				} else {
 					tempParam->dump();
 					assert_not_implemented() << "Unexpected kind of template parameter\n";

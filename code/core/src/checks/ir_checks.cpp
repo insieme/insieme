@@ -408,7 +408,8 @@ namespace checks {
 					meta.addExpand(error.getOrigin());
 					std::string msg = error.getMessage();
 					boost::algorithm::replace_all(msg, "<", "&lt;");
-					meta.addBody(error.getOrigin(), std::string("<pre>") + msg + "</pre>");
+					meta.addBody(error.getOrigin(), std::string("<pre>") + msg + "</pre>" +
+						"<p> <b>Source location:</b> " + annotations::getLocationString(error.getOrigin()) + "</p>");
 				}
 				std::ofstream metaOut(metaFile);
 				meta.dump(metaOut);

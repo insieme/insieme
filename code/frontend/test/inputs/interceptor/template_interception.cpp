@@ -219,6 +219,9 @@ int main() {
 	#pragma test expect_ir(R"(instantiate(lit("target_type" : (int<4>, int<4>, real<8>, uint<4>) -> int<4>), lit("IMP_variadicTemplateFun" : ('T_0_0, 'V_T_0_1...) -> 'T_0_0))(0, 1, 2.0E+0, 90u))")
 	variadicTemplateFun(0, 1, 2.0, 90u);
 
+	#pragma test expect_ir(R"(instantiate(lit("target_type" : <ref<real<8>,f,f,qualified>, 0, 1, 2>(real<8>) -> int<4>), lit("IMP_variadicNonTypeTemplateFun" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, 'V_T_0_1...>('T_0_0) -> int<4>))(0.0E+0))")
+	variadicNonTypeTemplateFun<double, 0,1,2>(0.0);
+
 	#pragma test expect_ir(R"({
 	var ref<IMP_VariadicClass<ref<int<4>,f,f,qualified>,ref<real<8>,f,f,qualified>>,f,f,plain> v0 = lit("IMP_VariadicClass::ctor" : IMP_VariadicClass<'V_T_0_0...>::())(ref_decl(type_lit(ref<IMP_VariadicClass<ref<int<4>,f,f,qualified>,ref<real<8>,f,f,qualified>>,f,f,plain>))) materialize ;
 	})")
