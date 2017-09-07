@@ -96,11 +96,29 @@ void test() {
 	cba_expect_not_alias(&a[2], &a[3]);
 
 
-//	// an initialized array
-//	Container b = { 1, 2, 3, 4 };
-//
-//	cba_expect_eq_int(1,b[0]);
-//	cba_expect_eq_int(2,b[1]);
-//	cba_expect_eq_int(3,b[2]);
-//	cba_expect_eq_int(4,b[3]);
+	// an initialized array
+	Container b = { 1, 2, 3, 4 };
+
+	cba_expect_eq_int(1,b[0]);
+	cba_expect_eq_int(2,b[1]);
+	cba_expect_eq_int(3,b[2]);
+	cba_expect_eq_int(4,b[3]);
+
+
+	// another type of initialization
+	Container c { 1, 2, 3, 4 };
+
+	cba_expect_eq_int(1,c[0]);
+	cba_expect_eq_int(2,c[1]);
+	cba_expect_eq_int(3,c[2]);
+	cba_expect_eq_int(4,c[3]);
+
+
+	// check partially
+	Container d { 1, 2 };
+
+	cba_expect_eq_int(1,d[0]);
+	cba_expect_eq_int(2,d[1]);
+	cba_expect_eq_int(0,d[2]);
+	cba_expect_eq_int(0,d[3]);
 }

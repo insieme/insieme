@@ -51,6 +51,7 @@ module Insieme.Analysis.Entities.FieldIndex (
     stdArrayIndex,
     unknownIndex,
     component,
+    getNumericIndex,
     tryContract,
 
     -- an example implementation
@@ -93,6 +94,7 @@ class (Eq v, Ord v, Show v, Typeable v, NFData v) => FieldIndex v where
         component :: Int32 -> v
         component = tupleElementIndex . mkConst . CInt32
 
+        getNumericIndex    :: v -> Maybe SymbolicFormula
 
         -- operation for path aggregation
 
@@ -152,6 +154,7 @@ instance FieldIndex SimpleFieldIndex where
 
     unknownIndex = UnknownIndex
 
+    getNumericIndex = simpleGetIndex
 
     tryContract = simpleContract
 
@@ -165,6 +168,30 @@ simpleJoin _ _ = Nothing
 -- | Computes the list of indices to combine when accessing a specific indices
 simpleProject :: [SimpleFieldIndex] -> SimpleFieldIndex -> [SimpleFieldIndex]
 simpleProject is i = if elem i is then [i] else [UnknownIndex]
+
+
+
+-- index steps compression
+--  Parameters: some step, one step up, one step down -> contracted 
+simpleContract :: SimpleFieldIndex -> SimpleFieldIndex -> SimpleFieldIndex -> Maybe SimpleFieldIndex
+
+-- if up and down is the same, we can ignore those
+simpleContract o u d | u == d = Just o
+
+-- if up and down are array indices, they can be aggregated
+simpleContract (      ArrayIndex a) (ArrayIndex b) (ArrayIndex c) = Just $ ArrayIndex (a + b + c)
+simpleContract (   StdArrayIndex a) (ArrayIndex b) (ArrayIndex c) = Just $ StdArrayIndex (a + b + c)
+simpleContract (StdVectorIndex a v) (ArrayIndex b) (ArrayIndex c) = Just $ StdVectorIndex (a + b + c) v
+
+
+-- everthing else we have to pass
+simpleContract _ _ _ = Nothing
+
+simpleGetIndex :: SimpleFieldIndex -> Maybe SymbolicFormula
+simpleGetIndex (    ArrayIndex a  ) = Just $ mkConst $ fromIntegral a
+simpleGetIndex ( StdArrayIndex a  ) = Just $ mkConst $ fromIntegral a
+simpleGetIndex (StdVectorIndex a _) = Just $ mkConst $ fromIntegral a
+simpleGetIndex _ = Nothing
 
 
 -- Utilities:
@@ -229,19 +256,4 @@ isStdSetIndex _          = False
 allStdSetIndexes :: [SimpleFieldIndex] -> Bool
 allStdSetIndexes = all isStdSetIndex
 
--- index steps compression
---  Parameters: some step, one step up, one step down -> contracted 
-simpleContract :: SimpleFieldIndex -> SimpleFieldIndex -> SimpleFieldIndex -> Maybe SimpleFieldIndex
-
--- if up and down is the same, we can ignore those
-simpleContract o u d | u == d = Just o
-
--- if up and down are array indices, they can be aggregated
-simpleContract (      ArrayIndex a) (ArrayIndex b) (ArrayIndex c) = Just $ ArrayIndex (a + b + c)
-simpleContract (   StdArrayIndex a) (ArrayIndex b) (ArrayIndex c) = Just $ StdArrayIndex (a + b + c)
-simpleContract (StdVectorIndex a v) (ArrayIndex b) (ArrayIndex c) = Just $ StdVectorIndex (a + b + c) v
-
-
--- everthing else we have to pass
-simpleContract _ _ _ = Nothing
 

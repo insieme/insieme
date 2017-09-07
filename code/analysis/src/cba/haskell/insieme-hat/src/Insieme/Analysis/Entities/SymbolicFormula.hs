@@ -39,7 +39,16 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Insieme.Analysis.Entities.SymbolicFormula where
+module Insieme.Analysis.Entities.SymbolicFormula (
+
+    Symbol(..),
+    SymbolicFormula,
+    
+    Ar.zero,
+    Ar.one,
+    Ar.mkConst,
+
+) where
 
 import Control.DeepSeq
 import GHC.Generics (Generic)

@@ -157,6 +157,23 @@ getArraySize n = read $ getStringValue $ gotoValue $ fromJust $ getType n
   where
     gotoValue = child 1 . child 0 . child 1 . child 2
 
+-- *** std::array type
+
+isStdArrayType :: NodeReference a => a -> Bool
+isStdArrayType n = case node n of
+    IR.Node IR.GenericType (IR.Node (IR.StringValue "IMP_std_colon__colon_array") _ : _) -> True
+    _ -> False
+
+isStdArray :: NodeReference a => a -> Bool
+isStdArray n = fromMaybe False $ isStdArrayType <$> getType n
+
+getStdArraySize :: NodeReference a => a -> Int
+getStdArraySize n | not (isStdArray n) = error "node reference is not an array"
+getStdArraySize n = read $ getStringValue $ gotoValue $ fromJust $ getType n
+  where
+    gotoValue = child 1 . child 0 . child 1 . child 2
+
+
 -- *** Tag Type
 
 isTagType :: NodeReference a => a -> Bool

@@ -105,6 +105,12 @@ instance (FieldIndex i, Solver.ExtLattice a) => ComposedValue (Tree i a) i a whe
         new = set i v old
     setElement _ _ _ = Inconsistent
 
+    -- implement element map
+    mapElements _ l@(Leaf _) = l
+    mapElements _ Empty = Empty
+    mapElements _ Inconsistent = Inconsistent
+    mapElements f (Node m) = Node $ Map.fromList $ f <$> Map.toList m
+
     top = Inconsistent
 
 
