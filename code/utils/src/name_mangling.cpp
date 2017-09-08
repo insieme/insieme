@@ -169,6 +169,10 @@ namespace utils {
 		return format("%s%s", manglePrefix, applyReplacements(name));
 	}
 
+	std::string mangleSymbols(std::string name) {
+		return applyReplacements(name);
+	}
+
 	string demangle(string name, bool keepLocation) {
 		if(!isMangled(name)) return name;
 		auto ret = name.substr(manglePrefix.size());
@@ -188,6 +192,15 @@ namespace utils {
 	}
 
 	string demangleToIdentifier(string name, bool keepLocation) {
+
+		// handle front and back of method names separately
+		auto colonLoc = name.rfind("::");
+		if(colonLoc != string::npos) {
+			auto className = name.substr(0, colonLoc);
+			auto methName = name.substr(colonLoc + 2);
+			return demangleToIdentifier(className) + "::" + demangleToIdentifier(methName);
+		}
+
 		// special case for conversion operators
 		if(boost::starts_with(name, getMangledOperatorConversionPrefix())) {
 			return demangle(name);

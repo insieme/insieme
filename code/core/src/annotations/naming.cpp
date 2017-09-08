@@ -90,7 +90,7 @@ const string& getAttachedName(const NodePtr& node) {
 
 void attachName(const NodePtr& node, const string& name) {
 	assert_false(name.empty()) << "Annotated name must not be empty!";
-	assert_false(name.find(" ") != std::string::npos && !boost::starts_with(name, "operator ")) << "Annotated name \"" << name << "\" must not contain spaces!";
+	//assert_false(name.find(" ") != std::string::npos && !boost::starts_with(name, "operator ")) << "Annotated name \"" << name << "\" must not contain spaces!";
 	node->attachValue(NameTag(name));
 }
 

@@ -459,6 +459,71 @@ namespace backend {
 
 			return builder.lambdaExpr(funType, params, builder.compoundStmt(call));
 		}
+
+		// generate intercepted operator calls as operators in output code
+		c_ast::NodePtr postprocessOperatorCalls(const c_ast::NodePtr& potentialOpCall) {
+			// first, grab the information we need (name and arguments)
+			// regardless of whether we are dealing with a function or a method
+			string name;
+			c_ast::ExpressionPtr left = nullptr;
+			c_ast::ExpressionPtr right = nullptr;
+			if(auto funCall = potentialOpCall.isa<c_ast::CallPtr>()) {
+				if(auto ident = funCall->function.isa<c_ast::IdentifierPtr>()) {
+					name = ident->name;
+					if(funCall->arguments.size() > 0) left = funCall->arguments[0].isa<c_ast::ExpressionPtr>();
+					if(funCall->arguments.size() > 1) right = funCall->arguments[1].isa<c_ast::ExpressionPtr>();
+				}
+			}
+			if(auto memCall = potentialOpCall.isa<c_ast::MemberCallPtr>()) {
+				if(auto ident = memCall->memberFun.isa<c_ast::IdentifierPtr>()) {
+					name = ident->name;
+					left = memCall->object.isa<c_ast::ExpressionPtr>();
+					if(memCall->arguments.size() > 0) right = memCall->arguments[0].isa<c_ast::ExpressionPtr>();
+				}
+			}
+			// gathered required data
+			if(!left) return potentialOpCall; // early exit if we don't have any argument value
+			// now, we handle the operators
+			// first binary
+			if(right) {
+				if(boost::ends_with(name, "operator<<=")) return c_ast::binaryOp(c_ast::BinaryOperation::BitwiseLeftShiftAssign, left, right);
+				if(boost::ends_with(name, "operator>>=")) return c_ast::binaryOp(c_ast::BinaryOperation::BitwiseRightShiftAssign, left, right);
+				if(boost::ends_with(name, "operator->*")) return c_ast::binaryOp(c_ast::BinaryOperation::PointerToMember, left, right);
+				if(boost::ends_with(name, "operator+="))  return c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, left, right);
+				if(boost::ends_with(name, "operator-="))  return c_ast::binaryOp(c_ast::BinaryOperation::SubtractionAssign, left, right);
+				if(boost::ends_with(name, "operator*="))  return c_ast::binaryOp(c_ast::BinaryOperation::MultiplicationAssign, left, right);
+				if(boost::ends_with(name, "operator/="))  return c_ast::binaryOp(c_ast::BinaryOperation::DivisionAssign, left, right);
+				if(boost::ends_with(name, "operator%="))  return c_ast::binaryOp(c_ast::BinaryOperation::ModuloAssign, left, right);
+				if(boost::ends_with(name, "operator^="))  return c_ast::binaryOp(c_ast::BinaryOperation::BitwiseXOrAssign, left, right);
+				if(boost::ends_with(name, "operator&="))  return c_ast::binaryOp(c_ast::BinaryOperation::BitwiseAndAssign, left, right);
+				if(boost::ends_with(name, "operator|="))  return c_ast::binaryOp(c_ast::BinaryOperation::BitwiseOrAssign, left, right);
+				if(boost::ends_with(name, "operator<<"))  return c_ast::binaryOp(c_ast::BinaryOperation::BitwiseLeftShift, left, right);
+				if(boost::ends_with(name, "operator>>"))  return c_ast::binaryOp(c_ast::BinaryOperation::BitwiseRightShift, left, right);
+				if(boost::ends_with(name, "operator=="))  return c_ast::binaryOp(c_ast::BinaryOperation::Equal, left, right);
+				if(boost::ends_with(name, "operator!="))  return c_ast::binaryOp(c_ast::BinaryOperation::NotEqual, left, right);
+				if(boost::ends_with(name, "operator<="))  return c_ast::binaryOp(c_ast::BinaryOperation::LessOrEqual, left, right);
+				if(boost::ends_with(name, "operator>="))  return c_ast::binaryOp(c_ast::BinaryOperation::GreaterOrEqual, left, right);
+				if(boost::ends_with(name, "operator&&"))  return c_ast::binaryOp(c_ast::BinaryOperation::LogicAnd, left, right);
+				if(boost::ends_with(name, "operator||"))  return c_ast::binaryOp(c_ast::BinaryOperation::LogicOr, left, right);
+				if(boost::ends_with(name, "operator+"))   return c_ast::binaryOp(c_ast::BinaryOperation::Additon, left, right);
+				if(boost::ends_with(name, "operator-"))   return c_ast::binaryOp(c_ast::BinaryOperation::Subtraction, left, right);
+				if(boost::ends_with(name, "operator*"))   return c_ast::binaryOp(c_ast::BinaryOperation::Multiplication, left, right);
+				if(boost::ends_with(name, "operator/"))   return c_ast::binaryOp(c_ast::BinaryOperation::Division, left, right);
+				if(boost::ends_with(name, "operator%"))   return c_ast::binaryOp(c_ast::BinaryOperation::Modulo, left, right);
+				if(boost::ends_with(name, "operator^"))   return c_ast::binaryOp(c_ast::BinaryOperation::BitwiseXOr, left, right);
+				if(boost::ends_with(name, "operator&"))   return c_ast::binaryOp(c_ast::BinaryOperation::BitwiseAnd, left, right);
+				if(boost::ends_with(name, "operator|"))   return c_ast::binaryOp(c_ast::BinaryOperation::BitwiseOr, left, right);
+				if(boost::ends_with(name, "operator="))   return c_ast::binaryOp(c_ast::BinaryOperation::Assignment, left, right);
+				if(boost::ends_with(name, "operator<"))   return c_ast::binaryOp(c_ast::BinaryOperation::LessThan, left, right);
+				if(boost::ends_with(name, "operator>"))   return c_ast::binaryOp(c_ast::BinaryOperation::GreaterThan, left, right);
+				if(boost::ends_with(name, "operator,"))   return c_ast::binaryOp(c_ast::BinaryOperation::Comma, left, right);
+			}
+			// then, unary
+			if(boost::ends_with(name, "operator!")) return c_ast::logicNot(left);
+			if(boost::ends_with(name, "operator~")) return c_ast::bitwiseNot(left);
+
+			return potentialOpCall;
+		}
 	}
 
 	const c_ast::NodePtr FunctionManager::getCall(ConversionContext& context, const core::CallExprPtr& in) {
@@ -504,6 +569,7 @@ namespace backend {
 			// return external function call
 			auto ret = handleMemberCall(context, call, res);
 			ret = instantiateCall(ret, info.instantiationTypes);
+			ret = postprocessOperatorCalls(ret);
 			return ret;
 		}
 

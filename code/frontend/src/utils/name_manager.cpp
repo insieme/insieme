@@ -54,24 +54,6 @@ namespace utils {
 	using namespace llvm;
 	using std::string;
 
-	std::string removeSymbols(std::string str) {
-		boost::replace_all(str, " ", "_");
-		boost::replace_all(str, "<", "_lt_");
-		boost::replace_all(str, ">", "_gt_");
-		boost::replace_all(str, ":", "_colon_");
-		boost::replace_all(str, " ", "_space_");
-		boost::replace_all(str, "(", "_lparen_");
-		boost::replace_all(str, ")", "_rparen_");
-		boost::replace_all(str, ",", "_comma_");
-		boost::replace_all(str, "*", "_star_");
-		boost::replace_all(str, "&", "_ampersand_");
-		boost::replace_all(str, ".", "_dot_");
-		boost::replace_all(str, "+", "_plus_");
-		boost::replace_all(str, "/", "_slash_");
-		boost::replace_all(str, "-", "_minus_");
-		return str;
-	}
-
 	std::string getLocationAsString(const clang::SourceLocation sl, const clang::SourceManager& sm, bool mangled) {
 		std::stringstream ss;
 
@@ -84,14 +66,14 @@ namespace utils {
 		ss << "_" << sm.getExpansionLineNumber(sl);
 		ss << "_" << sm.getExpansionColumnNumber(sl);
 
-		return mangled ? removeSymbols(ss.str()) : ss.str();
+		return mangled ? insieme::utils::mangleSymbols(ss.str()) : ss.str();
 	}
 
 	std::string createNameForAnon(const std::string& prefix, const clang::Decl* decl, const clang::SourceManager& sm) {
 		std::stringstream ss;
 		ss << prefix;
 		ss << getLocationAsString(decl->getLocStart(), sm);
-		return removeSymbols(ss.str());
+		return insieme::utils::mangleSymbols(ss.str());
 	}
 
 	/* we build a complete name for the class,
@@ -118,7 +100,7 @@ namespace utils {
 			boost::replace_last(fullName, name, std::string(typeName.begin() + pos, typeName.end()));
 		}
 
-		return removeSymbols(fullName);
+		return insieme::utils::mangleSymbols(fullName);
 	}
 
 	namespace {
@@ -129,7 +111,7 @@ namespace utils {
 			if (cStyleName) {
 				return s;
 			}
-			return removeSymbols(s);
+			return insieme::utils::mangleSymbols(s);
 		}
 	}
 
@@ -172,7 +154,7 @@ namespace utils {
 			}
 			case clang::TemplateArgument::Template: {
 				std::string templateName = arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getQualifiedNameAsString();
-				suffix << separator << (cStyleName ? templateName : removeSymbols(templateName));
+				suffix << separator << (cStyleName ? templateName : insieme::utils::mangleSymbols(templateName));
 				break;
 			}
 			case clang::TemplateArgument::TemplateExpansion: {
@@ -225,6 +207,14 @@ namespace utils {
 			if(!method->isStatic()) {
 				// no need to qualify method name
 				name = funcDecl->getNameAsString();
+			}
+		}
+
+		// adjust name for conversion operators
+		{
+			auto operatorNameIdx = name.find("operator ");
+			if(operatorNameIdx != string::npos) {
+				name = name.substr(0, operatorNameIdx) + "operator " + getTypeString(funcDecl->getReturnType());
 			}
 		}
 

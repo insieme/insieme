@@ -79,8 +79,8 @@ int main() {
 	;
 
 	#pragma test expect_ir(R"(
-		def IMP_plusOne_unsigned_int_returns_unsigned_int = (v1 : uint<4>) -> uint<4> { return v1+num_cast(1, type_lit(uint<4>)); };
-		IMP_plusOne_unsigned_int_returns_unsigned_int(1u))")
+		def IMP_plusOne_unsigned_space_int_returns_unsigned_space_int = (v1 : uint<4>) -> uint<4> { return v1+num_cast(1, type_lit(uint<4>)); };
+		IMP_plusOne_unsigned_space_int_returns_unsigned_space_int(1u))")
 	plusOne(1u);
 	#pragma test expect_ir(R"(
 		def IMP_plusOne_int_returns_int = (v1 : int<4>) -> int<4> { return v1+1; };
@@ -138,12 +138,12 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"(
-		def IMP_takeT_char__lbracket_5_rbracket__returns_void = function (v0 : ref<array<char,5u>,t,f,cpp_ref>) -> unit { };
-		def IMP_takeT_int__lbracket_3_rbracket__returns_void = function (v0 : ref<array<int<4>,3u>,t,f,cpp_ref>) -> unit { };
+		def IMP_takeT_char_space__lbracket_5_rbracket__returns_void = function (v0 : ref<array<char,5u>,t,f,cpp_ref>) -> unit { };
+		def IMP_takeT_int_space__lbracket_3_rbracket__returns_void = function (v0 : ref<array<int<4>,3u>,t,f,cpp_ref>) -> unit { };
 		{
-			IMP_takeT_char__lbracket_5_rbracket__returns_void(ref_kind_cast(lit(""test"" : ref<array<char,5u>,t,f,plain>), type_lit(cpp_ref)));
+			IMP_takeT_char_space__lbracket_5_rbracket__returns_void(ref_kind_cast(lit(""test"" : ref<array<char,5u>,t,f,plain>), type_lit(cpp_ref)));
 			var ref<array<int<4>,3u>,f,f,plain> v0 = <ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>,f,f,plain>))) {1, 2, 3};
-			IMP_takeT_int__lbracket_3_rbracket__returns_void(ref_kind_cast(v0, type_lit(cpp_ref)));
+			IMP_takeT_int_space__lbracket_3_rbracket__returns_void(ref_kind_cast(v0, type_lit(cpp_ref)));
 		}
 	)")
 	{
