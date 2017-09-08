@@ -54,6 +54,10 @@ namespace utils {
 	///
 	std::string mangle(std::string name);
 
+	/// Mangle symbols, but do not add a prefix
+	///
+	std::string mangleSymbols(std::string name);
+
 	/// Retrieve the original name from the mangled representation.
 	///
 	std::string demangle(std::string name, bool keepLocation = false);

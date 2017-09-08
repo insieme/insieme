@@ -174,10 +174,10 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		decl struct IMP_TestObj;
-		decl IMP_size_returns_size_type:const IMP_std_colon__colon_initializer_list_struct_TestObj::() -> uint<8>;
-		decl IMP_end_returns_const_iterator:const IMP_std_colon__colon_initializer_list_struct_TestObj::() -> ptr<IMP_TestObj,t,f>;
-		decl IMP_begin_returns_const_iterator:const IMP_std_colon__colon_initializer_list_struct_TestObj::() -> ptr<IMP_TestObj,t,f>;
-		def struct IMP_std_colon__colon_initializer_list_struct_TestObj {
+		decl IMP_size_returns_size_type:const IMP_std_colon__colon_initializer_list_struct_space_TestObj::() -> uint<8>;
+		decl IMP_end_returns_const_iterator:const IMP_std_colon__colon_initializer_list_struct_space_TestObj::() -> ptr<IMP_TestObj,t,f>;
+		decl IMP_begin_returns_const_iterator:const IMP_std_colon__colon_initializer_list_struct_space_TestObj::() -> ptr<IMP_TestObj,t,f>;
+		def struct IMP_std_colon__colon_initializer_list_struct_space_TestObj {
 			_M_array : ptr<IMP_TestObj,t,f>;
 			_M_len : uint<8>;
 			_M_original : bool;
@@ -185,12 +185,12 @@ int main() {
 				(this)._M_len = 0ul;
 				(this)._M_original = true;
 			}
-			ctor function (v1 : ref<IMP_std_colon__colon_initializer_list_struct_TestObj,t,f,cpp_ref>) {
+			ctor function (v1 : ref<IMP_std_colon__colon_initializer_list_struct_space_TestObj,t,f,cpp_ref>) {
 				(this)._M_array = *v1._M_array;
 				(this)._M_len = *v1._M_len;
 				(this)._M_original = false;
 			}
-			ctor function (v1 : ref<IMP_std_colon__colon_initializer_list_struct_TestObj,f,f,cpp_rref>) {
+			ctor function (v1 : ref<IMP_std_colon__colon_initializer_list_struct_space_TestObj,f,f,cpp_rref>) {
 				(this)._M_array = *v1._M_array;
 				(this)._M_len = *v1._M_len;
 				(this)._M_original = false;
@@ -207,13 +207,13 @@ int main() {
 					}
 				}
 			}
-			function IMP__operator_assign_ = (v1 : ref<IMP_std_colon__colon_initializer_list_struct_TestObj,t,f,cpp_ref>) -> ref<IMP_std_colon__colon_initializer_list_struct_TestObj,f,f,cpp_ref> {
+			function IMP__operator_assign_ = (v1 : ref<IMP_std_colon__colon_initializer_list_struct_space_TestObj,t,f,cpp_ref>) -> ref<IMP_std_colon__colon_initializer_list_struct_space_TestObj,f,f,cpp_ref> {
 				(this)._M_array = *v1._M_array;
 				(this)._M_len = *v1._M_len;
 				(this)._M_original = false;
 				return this;
 			}
-			function IMP__operator_assign_ = (v1 : ref<IMP_std_colon__colon_initializer_list_struct_TestObj,f,f,cpp_rref>) -> ref<IMP_std_colon__colon_initializer_list_struct_TestObj,f,f,cpp_ref> {
+			function IMP__operator_assign_ = (v1 : ref<IMP_std_colon__colon_initializer_list_struct_space_TestObj,f,f,cpp_rref>) -> ref<IMP_std_colon__colon_initializer_list_struct_space_TestObj,f,f,cpp_ref> {
 				(this)._M_array = *v1._M_array;
 				(this)._M_len = *v1._M_len;
 				(this)._M_original = false;
@@ -230,7 +230,7 @@ int main() {
 			}
 		};
 		def struct IMP_T2 {
-			ctor function (v1 : ref<IMP_std_colon__colon_initializer_list_struct_TestObj,f,f,plain>) { }
+			ctor function (v1 : ref<IMP_std_colon__colon_initializer_list_struct_space_TestObj,f,f,plain>) { }
 		};
 		def struct IMP_TestObj {
 			ctor function () {
@@ -248,7 +248,7 @@ int main() {
 		};
 		{
 			var ref<IMP_TestObj,f,f,plain> v0 = IMP_TestObj::(ref_decl(type_lit(ref<IMP_TestObj,f,f,plain>)));
-			IMP_T2::(ref_temp(type_lit(IMP_T2)), ref_cast(IMP_std_colon__colon_initializer_list_struct_TestObj::(ref_temp(type_lit(IMP_std_colon__colon_initializer_list_struct_TestObj)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))), type_lit(t), type_lit(f), type_lit(cpp_ref)));
+			IMP_T2::(ref_temp(type_lit(IMP_T2)), ref_cast(IMP_std_colon__colon_initializer_list_struct_space_TestObj::(ref_temp(type_lit(IMP_std_colon__colon_initializer_list_struct_space_TestObj)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))), type_lit(t), type_lit(f), type_lit(cpp_ref)));
 		}
 	)")
 	{

@@ -54,4 +54,13 @@ int main() {
 		TemplateClass<int> implicitlyConverted = convertible;
 		TemplateClass<float> implicitlyConvertedFloat = convertible;
 	}
+
+	#pragma test expect_ir(R"({
+		var ref<IMP_ConvertibleToTemplateClass,f,f,plain> v0 = lit("IMP_ConvertibleToTemplateClass::ctor" : IMP_ConvertibleToTemplateClass::())(ref_decl(type_lit(ref<IMP_ConvertibleToTemplateClass,f,f,plain>)));
+		var ref<IMP_TemplateClass<ref<int<4>,t,f,qualified>>,f,f,plain> v1 = ref_cast(lit("IMP_ConvertibleToTemplateClass::IMP__conversion_operator_TemplateClass_lt_const_space_int_gt_" : IMP_ConvertibleToTemplateClass::() -> IMP_TemplateClass<ref<int<4>,t,f,qualified>>)(v0) materialize , type_lit(f), type_lit(f), type_lit(cpp_rref));
+	})")
+	{
+		ConvertibleToTemplateClass convertible;
+		TemplateClass<const int> implicitlyConvertedFloat = convertible;
+	}
 }

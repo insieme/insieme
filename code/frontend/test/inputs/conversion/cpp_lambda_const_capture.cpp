@@ -84,7 +84,7 @@ int main() {
 	// weirder still - this seems to be a real bug in clang. We can use a const variable, even though it hasn't been captured
 	#pragma test expect_ir(R"(
 		decl struct __any_string__lambda;
-		decl IMP__conversion_operator_auto__lparen__star__rparen__lparen_void_rparen___minus__gt__void:const __any_string__lambda::() -> ptr<() -> unit,t,f>;
+		decl IMP__conversion_operator_auto_space__lparen__star__rparen__lparen_void_rparen__space__minus__gt__space_void:const __any_string__lambda::() -> ptr<() -> unit,t,f>;
 		def struct __any_string__lambda {
 			const function IMP__operator_call_ = () -> unit {
 				var ref<int<4>,f,f,plain> v1 = *ref_temp_init(7000);

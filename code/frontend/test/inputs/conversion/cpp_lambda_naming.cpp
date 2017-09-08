@@ -102,8 +102,8 @@ int main() {
 	#pragma test expect_ir(R"(
 		decl struct __any_string__class_int;
 		decl struct __any_string__class_real;
-		decl IMP__conversion_operator_void__lparen__star__rparen__lparen_int_rparen_:const __any_string__class_int::() -> ptr<(int<4>) -> unit,t,f>;
-		decl IMP__conversion_operator_void__lparen__star__rparen__lparen_float_rparen_:const __any_string__class_real::() -> ptr<(real<4>) -> unit,t,f>;
+		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen_int_rparen_:const __any_string__class_int::() -> ptr<(int<4>) -> unit,t,f>;
+		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen_float_rparen_:const __any_string__class_real::() -> ptr<(real<4>) -> unit,t,f>;
 		def struct __any_string__class_int {
 			const function IMP__operator_call_ = (v1 : ref<int<4>,f,f,plain>) -> unit {
 				v1;
@@ -137,9 +137,9 @@ int main() {
 		decl struct __any_string__1;
 		decl struct __any_string__2;
 		decl struct IMP_ClassWithTemplatedFun;
-		decl IMP__conversion_operator_void__lparen__star__rparen__lparen_void_rparen_:const __any_string__0::() -> ptr<() -> unit,t,f>;
-		decl IMP__conversion_operator_void__lparen__star__rparen__lparen_void_rparen_:const __any_string__1::() -> ptr<() -> unit,t,f>;
-		decl IMP__conversion_operator_void__lparen__star__rparen__lparen_void_rparen_:const __any_string__2::() -> ptr<() -> unit,t,f>;
+		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen_void_rparen_:const __any_string__0::() -> ptr<() -> unit,t,f>;
+		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen_void_rparen_:const __any_string__1::() -> ptr<() -> unit,t,f>;
+		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen_void_rparen_:const __any_string__2::() -> ptr<() -> unit,t,f>;
 		def struct __any_string__0 {
 			const function IMP__operator_call_ = () -> unit {
 				var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
@@ -174,14 +174,14 @@ int main() {
 			var ref<IMP_ClassWithTemplatedFun,f,f,plain> v0 = IMP_ClassWithTemplatedFun::(ref_decl(type_lit(ref<IMP_ClassWithTemplatedFun,f,f,plain>)));
 			v0.__any_string__fun(<ref<__any_string__1,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__1)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {});
 		};
-		def IMP_templatedFunUsingTemplatedClass_struct_ClassWithTemplatedFun_returns_void = function () -> unit {
+		def IMP_templatedFunUsingTemplatedClass_struct_space_ClassWithTemplatedFun_returns_void = function () -> unit {
 			var ref<IMP_ClassWithTemplatedFun,f,f,plain> v0 = IMP_ClassWithTemplatedFun::(ref_decl(type_lit(ref<IMP_ClassWithTemplatedFun,f,f,plain>)));
 			v0.__any_string__fun(<ref<__any_string__2,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__2)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {});
 		};
 		{
 			IMP_templatedFunUsingTemplatedClass_int_returns_void();
 			IMP_templatedFunUsingTemplatedClass_double_returns_void();
-			IMP_templatedFunUsingTemplatedClass_struct_ClassWithTemplatedFun_returns_void();
+			IMP_templatedFunUsingTemplatedClass_struct_space_ClassWithTemplatedFun_returns_void();
 		}
 	)")
 	{

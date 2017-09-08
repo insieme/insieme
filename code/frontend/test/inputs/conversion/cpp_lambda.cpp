@@ -66,7 +66,7 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		decl struct __any_string__;
-		decl IMP__conversion_operator_auto__lparen__star__rparen__lparen_void_rparen___minus__gt__void:const __any_string__::() -> ptr<() -> unit,t,f>;
+		decl IMP__conversion_operator_auto_space__lparen__star__rparen__lparen_void_rparen__space__minus__gt__space_void:const __any_string__::() -> ptr<() -> unit,t,f>;
 		def struct __any_string__ {
 			const function IMP__operator_call_ = () -> unit {
 				5;
@@ -143,7 +143,7 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		decl struct __any_string__class;
-		decl IMP__conversion_operator_void__lparen__star__rparen__lparen_int_rparen_:const __any_string__class::() -> ptr<(int<4>) -> unit,t,f>;
+		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen_int_rparen_:const __any_string__class::() -> ptr<(int<4>) -> unit,t,f>;
 		def struct __any_string__class {
 			const function IMP__operator_call_ = (v1 : ref<int<4>,f,f,plain>) -> unit {
 				v1;
@@ -183,7 +183,7 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		decl struct __any_string__;
-		decl IMP__conversion_operator_auto__lparen__star__rparen__lparen_void_rparen___minus__gt__int:const __any_string__::() -> ptr<() -> int<4>,t,f>;
+		decl IMP__conversion_operator_auto_space__lparen__star__rparen__lparen_void_rparen__space__minus__gt__space_int:const __any_string__::() -> ptr<() -> int<4>,t,f>;
 		def struct __any_string__ {
 			const function IMP__operator_call_ = () -> int<4> {
 				return 5;
@@ -262,7 +262,7 @@ int main() {
 			5;
 		};
 		def struct __any_string__class {
-			const function IMP__conversion_operator_auto__lparen__star__rparen__lparen_void_rparen___minus__gt__void = () -> ptr<() -> unit,t,f> {
+			const function IMP__conversion_operator_auto_space__lparen__star__rparen__lparen_void_rparen__space__minus__gt__space_void = () -> ptr<() -> unit,t,f> {
 				return ptr_of_function(__any_string__invoke);
 			}
 			const function IMP__operator_call_ = () -> unit {
@@ -270,7 +270,7 @@ int main() {
 			}
 		};
 		{
-			var ref<ptr<() -> unit,t,f>,f,f,plain> v0 = <ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {}.IMP__conversion_operator_auto__lparen__star__rparen__lparen_void_rparen___minus__gt__void();
+			var ref<ptr<() -> unit,t,f>,f,f,plain> v0 = <ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {}.IMP__conversion_operator_auto_space__lparen__star__rparen__lparen_void_rparen__space__minus__gt__space_void();
 		}
 	)")
 	{
@@ -282,7 +282,7 @@ int main() {
 			p1;
 		};
 		def struct __any_string__class {
-			const function IMP__conversion_operator_void__lparen__star__rparen__lparen_int_rparen_ = () -> ptr<(int<4>) -> unit,t,f> {
+			const function IMP__conversion_operator_void_space__lparen__star__rparen__lparen_int_rparen_ = () -> ptr<(int<4>) -> unit,t,f> {
 				return ptr_of_function(__any_string__invoke);
 			}
 			const function IMP__operator_call_ = (p1 : ref<int<4>>) -> unit {
@@ -290,7 +290,7 @@ int main() {
 			}
 		};
 		{
-			var ref<ptr<(int<4>) -> unit,t,f>,f,f,plain> v0 = <ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {}.IMP__conversion_operator_void__lparen__star__rparen__lparen_int_rparen_();
+			var ref<ptr<(int<4>) -> unit,t,f>,f,f,plain> v0 = <ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {}.IMP__conversion_operator_void_space__lparen__star__rparen__lparen_int_rparen_();
 		}
 	)")
 	{
@@ -301,7 +301,7 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		decl struct __any_string__class;
-		decl IMP__conversion_operator_auto__lparen__star__rparen__lparen_void_rparen___minus__gt__void:const __any_string__class::() -> ptr<() -> unit,t,f>;
+		decl IMP__conversion_operator_auto_space__lparen__star__rparen__lparen_void_rparen__space__minus__gt__space_void:const __any_string__class::() -> ptr<() -> unit,t,f>;
 		def struct __any_string__class {
 			const function IMP__operator_call_ = () -> unit {
 				42;
@@ -326,7 +326,7 @@ int main() {
 			ptr_deref(*v0)();
 		};
 		def struct __any_string__class {
-			const function IMP__conversion_operator_auto__lparen__star__rparen__lparen_void_rparen___minus__gt__void = () -> ptr<() -> unit,t,f> {
+			const function IMP__conversion_operator_auto_space__lparen__star__rparen__lparen_void_rparen__space__minus__gt__space_void = () -> ptr<() -> unit,t,f> {
 				return ptr_of_function(__any_string__invoke);
 			}
 			const function IMP__operator_call_ = () -> unit {
@@ -334,7 +334,7 @@ int main() {
 			}
 		};
 		{
-			IMP_takeLambdaAsFunction(<ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {}.IMP__conversion_operator_auto__lparen__star__rparen__lparen_void_rparen___minus__gt__void());
+			IMP_takeLambdaAsFunction(<ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {}.IMP__conversion_operator_auto_space__lparen__star__rparen__lparen_void_rparen__space__minus__gt__space_void());
 		}
 	)")
 	{
@@ -345,7 +345,7 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		decl struct __any_string__class;
-		decl IMP__conversion_operator_void__lparen__star__rparen__lparen_void_rparen_:const __any_string__class::() -> ptr<() -> unit,t,f>;
+		decl IMP__conversion_operator_void_space__lparen__star__rparen__lparen_void_rparen_:const __any_string__class::() -> ptr<() -> unit,t,f>;
 		def struct __any_string__class {
 			const function IMP__operator_call_ = () -> unit { }
 		};
