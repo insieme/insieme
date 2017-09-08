@@ -198,14 +198,11 @@ namespace utils {
 		if(colonLoc != string::npos) {
 			auto className = name.substr(0, colonLoc);
 			auto methName = name.substr(colonLoc + 2);
-			std::cout << demangleToIdentifier(className) << std::endl;
-			std::cout << demangleToIdentifier(methName) << std::endl;
 			return demangleToIdentifier(className) + "::" + demangleToIdentifier(methName);
 		}
 
 		// special case for conversion operators
 		if(boost::starts_with(name, getMangledOperatorConversionPrefix())) {
-			std::cout << name << " -> " << demangle(name) << std::endl;
 			return demangle(name);
 		}
 
