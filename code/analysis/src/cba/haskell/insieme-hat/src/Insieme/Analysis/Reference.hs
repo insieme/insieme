@@ -216,7 +216,10 @@ referenceValue addr = case getNodeType addr of
         
         stdArraySubscript = OperatorHandler cov dep val
           where
-            cov = isOperator "IMP_std_colon__colon_array::IMP__operator_subscript_"
+            cov = isOneOf [
+                        "IMP_std_colon__colon_array::IMP__operator_subscript_",
+                        "IMP_std_colon__colon_array::IMP_at"
+                    ]
             dep _ _ = [toVar baseRefVar, toVar indexVar]
             val _ a = compose $ access (baseRefVal a) (indexVal a)
             
@@ -227,7 +230,10 @@ referenceValue addr = case getNodeType addr of
 
 
         isOperator n a = fromMaybe False $ (==n) <$> getLiteralValue a
-
+        
+        isOneOf ns a = any go ns
+          where
+            go n = isOperator n a
 
         noDep _ _ = []
 
