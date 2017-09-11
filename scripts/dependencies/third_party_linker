@@ -11,8 +11,10 @@ mkdir -p "$THIRD_PARTY_DIR"
 
 echo "Prefix: $PREFIX"
 
+atleastone=false
 for pkg in $(get_pkg_list); do
 	if is_pkg_installed $pkg; then
+		atleastone=true
 		(
 			load_pkg $pkg
 			echo "Adding symlink for $PACKAGE"
@@ -20,3 +22,7 @@ for pkg in $(get_pkg_list); do
 		)
 	fi
 done
+
+if ! $atleastone; then
+	>&2 echo "Warning: No symlinks added, check PREFIX."
+fi
