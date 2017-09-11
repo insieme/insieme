@@ -13,7 +13,7 @@ export LDLAGS="${LDLAGS:-"-mtune=native -O3"}"
 export SLOTS="${SLOTS:-$(nproc)}"
 
 # Override Compiler.
-#GCC_PKG
+#GCC_PKG=$PREFIX/$(get_property gcc PACKAGE)
 #export CC="$GCC_PKG/bin/gcc"
 #export CXX="$GCC_PKG/bin/g++"
 #export PATH="$GCC_PKG/bin:$PATH"

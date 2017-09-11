@@ -4,9 +4,10 @@ set -e
 
 export INSTALLER_DIR="$(dirname "$(readlink -f "$0")")"
 
-source "$INSTALLER_DIR/config.sh"
 source "$INSTALLER_DIR/internal/functions.sh"
 source "$INSTALLER_DIR/internal/install_steps.sh"
+
+source "$INSTALLER_DIR/config.sh"
 
 if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]]; then
 	echo "usage: $0 <package_name>..."
