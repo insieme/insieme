@@ -59,23 +59,47 @@ int main(int argc, char** argv) {
 	A b(2);
 	cba_expect_eq_int(b.x,2);
 
+	// check the initialization without explicit constructor
+	A c = 3;
+	cba_expect_eq_int(c.x,3);
 
 	// check a new call
-	A* c = new A();
-	cba_expect_eq_int(c->x,1);
+	A* d = new A();
+	cba_expect_eq_int(d->x,1);
+
 
 	// check a new call with parameters
-	A* d = new A(3);
-	cba_expect_eq_int(d->x,3);
+	A* e = new A(3);
+	cba_expect_eq_int(e->x,3);
 
 
-	int x = (argc > 2) ? c->x : d->x;
-//	cba_expect_one_of_int(x,iset(1,3));
-	cba_expect_defined_int(x);
+	// check an explicit copy constructor
+	A f(b);
+	cba_expect_not_alias(&f,&b);
+	cba_expect_not_alias(&f.x,&b.x);
+	cba_expect_eq_int(f.x,2);
 
-//	cba_dump_solution();
-//	cba_print_code();
-//	cba_dump_json();
+	// check another form of implicit copy constructor
+	A g = b;
+	cba_expect_not_alias(&g,&b);
+	cba_expect_not_alias(&g.x,&b.x);
+	cba_expect_eq_int(g.x,2);
+
+
+	// check creation of an alias
+	A& h = b;
+	cba_expect_eq_int(h.x,2);
+
+	// h is a alias, not a copy
+	cba_expect_is_alias(&h,&b);
+	cba_expect_is_alias(&h.x,&b.x);
+
+
+//	cba_debug();
+
+//	int x = (argc > 2) ? c->x : d->x;
+////	cba_expect_one_of_int(x,iset(1,3));
+//	cba_expect_defined_int(x);
 
 	return 0;
 }

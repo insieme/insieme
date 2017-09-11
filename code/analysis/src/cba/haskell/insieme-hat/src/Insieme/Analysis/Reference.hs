@@ -57,6 +57,7 @@ import Insieme.Analysis.Arithmetic
 import Insieme.Analysis.DataPath
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Utils.OperatorHandler
+import Insieme.Analysis.Utils.CppSemantic
 import Insieme.Analysis.Solver
 import Insieme.Inspire.NodeAddress as Addr
 import Insieme.Inspire.Query
@@ -130,6 +131,10 @@ referenceValue addr = case getNodeType addr of
             mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.Root)
 
         IR.CallExpr | isMaterializingCall (Addr.getNode addr) ->
+            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.Root)
+
+        -- the type of a declaration is used to address the memory location of a potential implicit this pointer
+        _ | not (isRoot addr) && isType addr && getNodeType (goUp addr) == IR.Declaration ->
             mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.Root)
 
         _ -> dataflowValue addr analysis opsHandler
@@ -255,28 +260,6 @@ referenceValue addr = case getNodeType addr of
         onRefs2 _ UninitializedReference _ = UninitializedReference
         onRefs2 f r d = f r d
 
-
-getTypeParam :: Int -> IR.Tree -> IR.Tree
-getTypeParam i (IR.Node IR.GenericType ( _ : _ : (IR.Node IR.Types params) : [] )) = params !! i
-getTypeParam _ _ = error "unexpected NodeType"
-
-hasMoreReferences :: IR.Tree -> IR.Tree -> Bool
-hasMoreReferences a b | isReference a && (not . isReference $ b) = True
-hasMoreReferences a b | isReference a && isReference b = hasMoreReferences (getTypeParam 0 a) (getTypeParam 0 b)
-hasMoreReferences _ _ = False
-
-
--- tests whether the given node is a materializing declaration
-isMaterializingDeclaration :: IR.Tree -> Bool
-isMaterializingDeclaration (IR.Node IR.Declaration [declType,IR.Node _ (initType:_)]) = hasMoreReferences declType initType
-isMaterializingDeclaration _ = False
-
-
--- tests whether the given node is a materializing call
-isMaterializingCall :: IR.Tree -> Bool
-isMaterializingCall _ = False        -- the default, for now - TODO: implement real check
--- isMaterializingCall (IR.Node IR.CallExpr ( resType : (IR.Node _ ((IR.Node IR.FunctionType (_:retType:_)):_)) : _)) = hasMoreReferences resType retType
--- isMaterializingCall _ = False
 
 getEnclosingDecl :: NodeAddress -> NodeAddress
 getEnclosingDecl addr = case getNodeType addr of

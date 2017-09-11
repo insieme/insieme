@@ -55,6 +55,7 @@ import Insieme.Analysis.Callable
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.ExitPoint
 import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.Query
 import Insieme.Inspire.Visit
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -109,7 +110,8 @@ predecessor p@(ProgramPoint a Pre) = case getNodeType parent of
             else ProgramPoint (goDown (i+1) parent) Post
 
     IR.Lambda -> case () of
-          _ | isImplicitCtor -> error "Ctors not yet implemented"
+          _ | isImplicitCtor ->
+                single $ ProgramPoint (goDown 1 $ Sema.getEnclosingDeclaration parent) Post 
             | isImplicitDtor -> case () of
                 _ | dtorIndex == 0 -> single $ ProgramPoint (goDown ((numChildren scope) -1) scope) Post
                   | otherwise      -> single $ ProgramPoint (dtors !! (dtorIndex-1)) Post
@@ -265,7 +267,12 @@ predecessor p@(ProgramPoint a Post) = case getNodeType a of
     -- cast expressions just process the nested node
     IR.CastExpr -> single $ ProgramPoint (goDown 1 a) Post
 
-    -- declarationns are done once the init expression is done
+    -- declarations with implicit constructor are done once the init expression is done
+    IR.Declaration | Sema.callsImplicitConstructor a -> case Sema.getImplicitConstructor a of
+        Just ctor -> single $ ProgramPoint (goDown 2 $ fromJust $ getLambda ctor) Post  -- TODO: support multiple exit points for ctor
+        Nothing   -> error "Implicit constructor not found?!"
+    
+    -- declarations without implicit constructor are done once the init expression is done
     IR.Declaration -> single $ ProgramPoint (goDown 1 a) Post
 
     -- handle lists of expressions

@@ -58,6 +58,7 @@ import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.Memory
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.ProgramPoint
+import Insieme.Analysis.Utils.CppSemantic
 import Insieme.Analysis.Reference
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Query
@@ -117,7 +118,18 @@ memoryStateValue :: (ComposedValue.ComposedValue v i a, Typeable d)
          -> DataFlowAnalysis d v i                      -- ^ the underlying data flow analysis this memory state analysis is cooperating with
          -> Solver.TypedVar v                           -- ^ the analysis variable representing the requested state
 
-memoryStateValue ms@(MemoryStatePoint (ProgramPoint _ _) ml@(MemoryLocation loc)) analysis = var
+memoryStateValue ms@(MemoryStatePoint (ProgramPoint _ _) ml@(MemoryLocation loc)) analysis = case getNodeType loc of
+
+        -- the value of the implicit this pointer of implicit ctor calls is modeled here
+        _ | (not $ isRoot loc) && getNodeType parent == IR.Declaration && getIndex loc == 0 -> var
+            where
+              var = Solver.mkVariable varId [con] Solver.bot
+              con = Solver.forward (variableGenerator analysis parent) var
+              
+              parent = goUp loc
+
+        -- all other memory locations are handled here
+        _ -> var
 
     where
 
@@ -156,8 +168,8 @@ memoryStateValue ms@(MemoryStatePoint (ProgramPoint _ _) ml@(MemoryLocation loc)
             where
                 go (Declaration       addr)         = [variableGenerator analysis $ goDown 1 addr]
                 go (MaterializingCall addr)         = [variableGenerator analysis $ addr]
-                go (Assignment addr)                = [definedValue addr ml analysis]
-                go (Initialization addr)            = [definedValue addr ml analysis]
+                go (Assignment        addr)         = [definedValue addr ml analysis]
+                go (Initialization    addr)         = [definedValue addr ml analysis]
                 go _                                = []
 
 
