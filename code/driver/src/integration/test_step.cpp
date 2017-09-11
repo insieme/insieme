@@ -92,9 +92,8 @@ namespace integration {
 		}
 
 		TestStep createRefCompStep(const string& name, Language l) {
-			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
+			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				std::stringstream cmd;
-				TestSetup set = setup;
 				auto props = test.getPropertiesFor(name);
 
 				// start with executable
@@ -109,54 +108,45 @@ namespace integration {
 				cmd << " " << join(" ", test.getCompilerArguments(name, l == Language::CPP, true, true));
 
 				// disable multithreading
-				set.numThreads = 0;
+				setup.numThreads = 0;
 
-				// get execution directory
-				string executionDirectory = test.getDirectory().string();
-				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
-
-				// set output file, stdOutFile and stdErrFile
-				set.outputFile = executionDirectory + "/" + test.getBaseName() + ".ref";
-				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				string outputDir = test.getOutputDirectory().string();
+				setup.outputFile = outputDir + "/" + test.getBaseName() + ".ref";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, set, props, cmd.str());
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
 			}, std::set<std::string>(), COMPILE);
 		}
 
 		TestStep createRefRunStep(const string& name, const Dependencies& deps = Dependencies(), int numThreads = 0) {
-			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
+			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				std::stringstream cmd;
-				TestSetup set = setup;
 				auto props = test.getPropertiesFor(name);
 
-				// get execution directory
-				string executionDirectory = test.getDirectory().string();
-				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
+				string outputDir = test.getOutputDirectory().string();
 
 				// start with executable
-				cmd << executionDirectory << "/" << test.getBaseName() << ".ref";
+				cmd << outputDir << "/" << test.getBaseName() << ".ref";
 
 				// add arguments
 				cmd << " " << props["executionFlags"];
 
 				// set number of threads
-				set.numThreads = numThreads;
+				setup.numThreads = numThreads;
 
-				// set output files
-				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, set, props, cmd.str(), "", executionDirectory);
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
 			}, deps, RUN);
 		}
 
 		TestStep createBashCommandStep(const string& name, const Dependencies& deps = Dependencies()) {
-			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
+			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				std::stringstream cmd;
-				TestSetup set = setup;
 				auto props = test.getPropertiesFor(name);
 
 				if(props[name].empty()) return TestResult::stepOmitted(name);
@@ -165,25 +155,20 @@ namespace integration {
 				cmd << props[name];
 
 				// set number of threads
-				set.numThreads = 0;
+				setup.numThreads = 0;
 
-				// get execution directory
-				string executionDirectory = test.getDirectory().string();
-				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
-
-				// set output files
-				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				string outputDir = test.getOutputDirectory().string();
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, set, props, cmd.str(), "", executionDirectory);
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
 			}, deps);
 		}
 
 		TestStep createInsiemeccSemaStep(const string& name, Language l, const Dependencies& deps = Dependencies()) {
-			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
+			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				std::stringstream cmd;
-				TestSetup set = setup;
 				auto props = test.getPropertiesFor(name);
 
 				// start with executable
@@ -203,29 +188,26 @@ namespace integration {
 				// enable semantic tests
 				cmd << " --check-sema-only";
 
-				// get execution dir
-				string executionDirectory = test.getDirectory().string();
-				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
+				string outputDir = test.getOutputDirectory().string();
 
 				// also dump IR
-				std::string irFile = executionDirectory + "/" + test.getBaseName() + ".ir";
+				std::string irFile = outputDir + "/" + test.getBaseName() + ".ir";
 				cmd << " --dump-ir " << irFile;
 
 				// disable multithreading
-				set.numThreads = 0;
+				setup.numThreads = 0;
 
-				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, set, props, cmd.str(), irFile);
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory(), irFile);
 			}, deps, COMPILE);
 		}
 
 		TestStep createInsiemeccConversionStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
-			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
+			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				std::stringstream cmd;
-				TestSetup set = setup;
 				auto props = test.getPropertiesFor(name);
 
 				// start with executable
@@ -242,34 +224,30 @@ namespace integration {
 				// append the Insieme specific arguments
 				cmd << " " << join(" ", test.getInsiemeCompilerArguments(name, l == Language::CPP));
 
-				// get execution dir
-				string executionDirectory = test.getDirectory().string();
-				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
-
 				// determine backend
 				string be = getBackendKey(backend);
 				cmd << " --backend " << be;
 
+				string outputDir = test.getOutputDirectory().string();
+
 				// source-to-source compilation only
-				set.outputFile = executionDirectory + "/" + test.getBaseName() + ".insieme." + be + "." + getExtension(l);
-				cmd << " --dump-trg-only " << set.outputFile;
+				setup.outputFile = outputDir + "/" + test.getBaseName() + ".insieme." + be + "." + getExtension(l);
+				cmd << " --dump-trg-only " << setup.outputFile;
 
 				// disable multithreading
-				set.numThreads = 0;
+				setup.numThreads = 0;
 
-				// set stdOut file and stdErr file
-				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, set, props, cmd.str());
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
 			}, deps, COMPILE);
 		}
 
 		TestStep createInsiemeccCompilationStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
-			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
+			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				std::stringstream cmd;
-				TestSetup set = setup;
 				auto props = test.getPropertiesFor(name);
 
 				// start with executable
@@ -278,12 +256,10 @@ namespace integration {
 				// determine backend
 				string be = getBackendKey(backend);
 
-				// get execution dir
-				string executionDirectory = test.getDirectory().string();
-				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
+				string outputDir = test.getOutputDirectory().string();
 
 				// add input file
-				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
+				cmd << " " << outputDir << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
 
 				// append all the arguments
 				cmd << " " << join(" ", test.getCompilerArguments(name, l == Language::CPP, true, true));
@@ -295,63 +271,58 @@ namespace integration {
 				}
 
 				// disable multithreading
-				set.numThreads = 0;
+				setup.numThreads = 0;
 
-				// set output file, stdOut file and stdErr file
-				set.outputFile = executionDirectory + "/" + test.getBaseName() + ".insieme." + be;
-				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.outputFile = outputDir + "/" + test.getBaseName() + ".insieme." + be;
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, set, props, cmd.str());
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
 			}, deps, COMPILE);
 		}
 
 		TestStep createInsiemeccExecuteStep(const string& name, Backend backend, const Dependencies& deps = Dependencies(), int numThreads = 0,
 		                                    SchedulingPolicy sched = SCHED_UNDEFINED) {
-			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
+			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				std::stringstream cmd;
-				TestSetup set = setup;
 				auto props = test.getPropertiesFor(name);
 
-				// get execution dir
-				string executionDirectory = test.getDirectory().string();
-				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
+				string outputDir = test.getOutputDirectory().string();
 
 				// the log file to delete afterwards
 				std::string logFile = "";
 				if (backend == Runtime) {
-					logFile = executionDirectory + "/insieme_runtime.log";
+					logFile = outputDir + "/insieme_runtime.log";
 				}
 
 				// determine backend
 				string be = getBackendKey(backend);
 
 				// start with executable
-				cmd << executionDirectory << "/" << test.getBaseName() << ".insieme." << be;
+				cmd << outputDir << "/" << test.getBaseName() << ".insieme." << be;
 
 				// add arguments
 				cmd << " " << props["executionFlags"];
 
 				// set number of threads
-				set.numThreads = numThreads;
+				setup.numThreads = numThreads;
 
 				// set scheduling variant
-				set.sched = sched;
+				setup.sched = sched;
 
-				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, set, props, cmd.str(), logFile, executionDirectory);
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory(), logFile);
 			}, deps, RUN);
 		}
 
 		TestStep createInsiemeccCheckStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies(), int numThreads = 0,
 		                                  SchedulingPolicy sched = SCHED_UNDEFINED) {
-			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
+			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				std::stringstream cmd;
-				TestSetup set = setup;
 				auto props = test.getPropertiesFor(name);
 
 				std::string langstr("_c_");
@@ -369,24 +340,22 @@ namespace integration {
 				cmd << props["compareOutputScript"];
 
 				// disable multithreading
-				set.numThreads = 0;
+				setup.numThreads = 0;
 
-				// get execution dir
-				string executionDirectory = test.getDirectory().string();
-				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
+				string outputDir = test.getOutputDirectory().string();
 
 				// start with executable
-				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref" + langstr + "execute.out";
+				cmd << " " << outputDir << "/" << test.getBaseName() << ".ref" + langstr + "execute.out";
 
 				// determine backend
 				string be = getBackendKey(backend);
 
 				// pipe result to output file
 				if(numThreads)
-					cmd << " " << executionDirectory << "/" << test.getBaseName()
+					cmd << " " << outputDir << "/" << test.getBaseName()
 					    << ".insiemecc_" + be + langstr + "execute_" + schedString + std::to_string(numThreads) + ".out";
 				else {
-					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insiemecc_" + be + langstr + "execute.out";
+					cmd << " " << outputDir << "/" << test.getBaseName() << ".insiemecc_" + be + langstr + "execute.out";
 				}
 
 				// add awk pattern
@@ -394,48 +363,45 @@ namespace integration {
 				string outputAwk = props["outputAwk"]; //.substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
 				cmd << " \"" << outputAwk << "\"";
 
-				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, set, props, cmd.str());
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
 			}, deps, CHECK);
 		}
 
 		TestStep createRefCheckStep(const string& name, Language l, const Dependencies& deps = Dependencies(), int numThreads = 0) {
-			return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
+			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				auto props = test.getPropertiesFor(name);
 
 				std::string langstr("c");
 				if(l == CPP) langstr = string("cpp");
 
 				std::stringstream cmd;
-				TestSetup set = setup;
 
 				// define comparison script
 				cmd << props["compareOutputScript"];
 
-				// get execution dir
-				string executionDirectory = test.getDirectory().string();
-				if(!set.executionDir.empty()) executionDirectory = set.executionDir;
+				string outputDir = test.getOutputDirectory().string();
 
 				// start with executable
-				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref_" << langstr << "_execute.out";
+				cmd << " " << outputDir << "/" << test.getBaseName() << ".ref_" << langstr << "_execute.out";
 
 				// pipe result to output file
-				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref_" << langstr << "_execute_" << std::to_string(numThreads) << ".out";
+				cmd << " " << outputDir << "/" << test.getBaseName() << ".ref_" << langstr << "_execute_" << std::to_string(numThreads) << ".out";
 
 				// add awk pattern
 				cmd << " \"" << props["outputAwk"] << "\"";
 
 				// disable multithreading
-				set.numThreads = 0;
+				setup.numThreads = 0;
 
-				set.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				set.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, set, props, cmd.str());
+				return runner.runCommand(name, setup, props, cmd.str(), "", outputDir);
 			}, deps, CHECK);
 		}
 
@@ -780,39 +746,11 @@ namespace integration {
 		return output;
 	}
 
-
-	namespace {
-		bool runSingleTestStep(const IntegrationTestCase& test, const std::string stepName) {
-			TestStep step = getStepByName(stepName);
-
-			// prepare the setup
-			TestSetup setup;
-			setup.mockRun = false;
-			setup.sched = SCHED_UNDEFINED;
-			setup.clean = true;
-			setup.executionDir = "";
-			setup.perf = false;
-
-			// now execute the step
-			auto result = step.run(setup, test, TestRunner::getInstance());
-
-			// and don't forget to clean up the produced files here
-			result.clean();
-
-			// also return true if the step was omitted
-			return result.wasSuccessful() || result.wasOmitted();
-		}
-	}
-
-	bool checkPrerequisites(const IntegrationTestCase& test) {
-		return runSingleTestStep(test, TEST_STEP_CHECK_PREREQUISITES);
-	}
-
 	/*
 	 *  Test Runner member functions
 	 */
 	int TestRunner::executeWithTimeout(const string& executableParam, const string& argumentsParam, const string& environmentParam, const string& outFilePath,
-	                                   const string& errFilePath, unsigned cpuTimeLimit, const string& execDir) const {
+	                                   const string& errFilePath, unsigned cpuTimeLimit, const fs::path& execDir) const {
 		/*
 		 * Setup arguments
 		 */
@@ -937,8 +875,7 @@ namespace integration {
 			if(close(fdOut) == -1) { std::cerr << "Unable to close stdout file descriptor, reason: " << strerror(errno) << "\n"; }
 			if(close(fdErr) == -1) { std::cerr << "Unable to close stderr file descriptor, reason: " << strerror(errno) << "\n"; }
 
-			// navigate to execution directory if one is specified
-			if(!execDir.empty()) { boost::filesystem::current_path(execDir); }
+			boost::filesystem::current_path(execDir);
 
 			if(execve(executableParam.c_str(), argumentsForExec.data(), environmentForExec.data()) == -1) {
 				assert_fail() << "Unable to run executable " << executableParam << ", reason: " << strerror(errno) << "\n";
@@ -952,7 +889,7 @@ namespace integration {
 	}
 
 	TestResult TestRunner::runCommand(const string& stepName, const TestSetup& setup, const PropertyView& testConfig, const string& cmd,
-	                                  const string& producedFile, const string& execDir) const {
+	                                  const fs::path& execDir, const string& producedFile) const {
 		vector<string> producedFiles;
 		producedFiles.push_back(setup.stdOutFile);
 		producedFiles.push_back(setup.stdErrFile);
@@ -970,6 +907,9 @@ namespace integration {
 			producedFiles.push_back(setup.outputFile);
 			outfile = " -o " + setup.outputFile;
 		}
+
+		if(!execDir.empty())
+			fs::create_directories(execDir);
 
 		// setup possible environment vars
 		std::stringstream env;
@@ -1013,7 +953,7 @@ namespace integration {
 		// if it is a mock-run do nothing
 		if(setup.mockRun) {
 			return TestResult(TestResult::ResultType::SUCCESS, stepName, 0, metricResults, "", "",
-			                  (execDir.empty() ? "" : "cd " + execDir + " && ") + env.str() + cmd + outfile);
+			                  (execDir.empty() ? "" : "cd " + execDir.string() + " && ") + env.str() + cmd + outfile);
 		}
 
 		string perfString("");

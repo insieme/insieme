@@ -85,6 +85,7 @@ namespace integration {
 					("step,s",              bpo::value<string>(),                "the test step to be applied")
 					("repeat,r",            bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
 					("no-clean",            "keep all output files")
+					("inplace",             "write test output files in source directory")
 					("no-color",            "force-disable highlighting of output")
 					("blacklisted-only",    "only run the blacklisted test cases")
 					("long-tests-only",     "only run test cases which take long to execute")
@@ -135,6 +136,7 @@ namespace integration {
 
 			res.mockrun = map.count("mock");
 			res.no_clean = map.count("no-clean");
+			res.inplace = map.count("inplace");
 			res.color = !map.count("no-color");
 			// if colored output was not disabled explicitely, disable anyway if there is no support
 			if(res.color) { res.color = isatty(fileno(stdout)); }
@@ -208,7 +210,7 @@ namespace integration {
 	}
 
 	int handleIntegrationTests(int argc, char** argv, const std::string& programName, const std::string& programVersion,
-	                           const IntegrationTestCaseDefaultsPaths& defaultPaths) {
+	                           const IntegrationTestPaths& testPaths) {
 		// TODO custom root config file
 		// set OMP/IRT environment variables if not already set
 		auto checkAndSetEnv = [](const char* identifier, const char* defaultValue){
@@ -235,7 +237,7 @@ namespace integration {
 		}
 
 		// get list of test cases
-		auto cases = tf::loadCases(defaultPaths, options);
+		auto cases = tf::loadCases(testPaths, options);
 
 		string header = programName + " version: " + programVersion;
 
@@ -253,7 +255,7 @@ namespace integration {
 			for(const auto& cur : cases) {
 				std::cout << (++counter) << "/" << cases.size() << ":\n";
 				std::cout << "Test Case: " << cur.getName() << "\n";
-				std::cout << "Directory: " << cur.getDirectory().string() << "\n";
+				std::cout << "Directory: " << cur.getSourceDirectory().string() << "\n";
 				std::cout << cur.getProperties() << "\n";
 			}
 
@@ -281,11 +283,11 @@ namespace integration {
 		// load list of test steps
 		auto steps = tf::getTestSteps(options);
 
+
 		itc::TestSetup setup;
 		setup.mockRun = options.mockrun;
-		setup.clean = !options.no_clean;
+		setup.clean   = !options.no_clean;
 		setup.perf = options.perf;
-		setup.executionDir = "";
 
 		insieme::utils::Colorize colorize(options.color);
 
@@ -355,6 +357,7 @@ namespace integration {
 				// run steps
 				vector<pair<string, TestResult>> results;
 				bool success = true;
+
 				for(const auto& step : list) {
 					auto res = step.run(setup, cur, runner);
 					results.push_back(std::make_pair(step.getName(), res));
@@ -407,7 +410,7 @@ namespace integration {
 
 							success = success && curRes.second.wasSuccessful();
 						}
-						if(!options.no_clean) { curRes.second.clean(); }
+						if(setup.clean) { curRes.second.clean(); }
 
 						if(curRes.second.wasAborted()) { panic = true; }
 					}
