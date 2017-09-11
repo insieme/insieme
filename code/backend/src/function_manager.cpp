@@ -70,6 +70,7 @@
 
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/extern_c.h"
+#include "insieme/annotations/c/implicit.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
@@ -461,7 +462,8 @@ namespace backend {
 		}
 
 		// generate intercepted operator calls as operators in output code
-		c_ast::NodePtr postprocessOperatorCalls(const c_ast::NodePtr& potentialOpCall) {
+		// also omit implicit conversion operator calls
+		c_ast::NodePtr postprocessOperatorCalls(const c_ast::NodePtr& potentialOpCall, bool isImplicit) {
 			// first, grab the information we need (name and arguments)
 			// regardless of whether we are dealing with a function or a method
 			string name;
@@ -522,12 +524,16 @@ namespace backend {
 			if(boost::ends_with(name, "operator!")) return c_ast::logicNot(left);
 			if(boost::ends_with(name, "operator~")) return c_ast::bitwiseNot(left);
 
+			// finally conversion
+			if(isImplicit && boost::contains(name, "operator ")) return left;
+
 			return potentialOpCall;
 		}
 	}
 
 	const c_ast::NodePtr FunctionManager::getCall(ConversionContext& context, const core::CallExprPtr& in) {
 		core::IRBuilder builder(context.getConverter().getNodeManager());
+		bool isImplicit = insieme::annotations::c::isMarkedAsImplicit(in);
 
 		// conduct some cleanup (argument wrapping)
 		core::CallExprPtr call = wrapPlainFunctionArguments(in);
@@ -540,6 +546,7 @@ namespace backend {
 			auto replacementLit = builder.literal(innerLit->getValue(), typeInstCall->getType());
 			core::transform::utils::migrateAnnotations(innerLit, replacementLit);
 			call = builder.callExpr(typeInstCall->getType().as<core::FunctionTypePtr>()->getReturnType(), replacementLit, call->getArgumentList());
+			isImplicit = isImplicit || insieme::annotations::c::isMarkedAsImplicit(call);
 		}
 
 		// extract target function
@@ -569,7 +576,7 @@ namespace backend {
 			// return external function call
 			auto ret = handleMemberCall(context, call, res);
 			ret = instantiateCall(ret, info.instantiationTypes);
-			ret = postprocessOperatorCalls(ret);
+			ret = postprocessOperatorCalls(ret, isImplicit);
 			return ret;
 		}
 

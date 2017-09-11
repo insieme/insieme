@@ -113,5 +113,11 @@ namespace driver {
 		EXPECT_PRED2(notContainsSubString, utils::removePragmas(codeString), "operator");
 	}
 
+	TEST(DriverInterceptionTest, ImplicitConversionOperator) {
+		auto codeString = testCompilation("frontend/test/inputs/interceptor/be_implicit_conversion_operator_interception.cpp");
+		EXPECT_PRED2(notContainsSubString, utils::removePragmas(codeString), "operator");
+		EXPECT_PRED2(notContainsSubString, utils::removePragmas(codeString), "&");
+	}
+
 } // end namespace driver
 } // end namespace insieme

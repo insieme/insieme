@@ -35,51 +35,24 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
-// intercepted
-namespace ns {
-	static int simpleFunc(int x) {
-		return x;
-	}
+#pragma once
 
-	struct S {
-		int a, b, c;
-		int memberFunc(int x) {
-			return x;
-		}
-	};
-}
+#include <string>
+#include "insieme/core/forward_decls.h"
 
-static int x;
-int& refFunTest() {
-	return x;
-}
+/**
+ * An annotation to mark implicit conversion operator calls so that,
+ * if they are unchanged, the backend can omit them.
+ */
 
-struct RefOpTest {
-	RefOpTest& operator+(const RefOpTest& rhs) {
-		return *this;
-	}
-};
+namespace insieme {
+namespace annotations {
+namespace c {
 
-struct RefMethTest {
-	RefMethTest& meth() {
-		return *this;
-	}
-};
+	bool isMarkedAsImplicit(const insieme::core::NodePtr& call);
 
-struct StaticMember {
-	static int staticMem;
-};
+	void markAsImplicit(const insieme::core::NodePtr& call, bool value = true);
 
-// literal checked for in true interception test
-int StaticMember::staticMem = 31337;
-
-struct InterceptedPOD {
-	int x;
-	float y;
-};
-
-class InterceptedWithImplicitConversion {
-	using MyPrivateNameForInt = int;
-public:
-	operator MyPrivateNameForInt() { return 0; }
-};
+} // end namespace c
+} // end namespace annotations
+} // end namespace insieme
