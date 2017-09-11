@@ -11,11 +11,11 @@ details.
 ## Quick Start Guide
 
 To build Insieme, clone this repository and take a peek at `QUICKSTART`. You
-can directly run execute it, given you are on a recent Ubuntu / Debian.
+can directly execute it, given you are running a recent Ubuntu / Debian.
 
     $ git clone https://github.com/insieme/insieme
     $ cd insieme
-    $ ./QUICKSTART    # uses sudo
+    $ ./QUICKSTART    # prompts for sudo
 
 If you are using a different distribution use your package manager to install
 all dependencies available. A list of dependencies can be viewed in
@@ -80,13 +80,13 @@ installation.
     $ cd build
     $ cmake -DOPENCL_ROOT=/path/to/opencl ..
 
-### GCC
+### Older GCC
 
 The dependency installer provides a version of GCC suitable for Insieme, since
 some distros still ship a version of GCC that is too old for us to work with.
 `CC`, `CXX`, `PATH` and `LD_LIBRARY_PATH` should be set accordingly when
-building Insieme. We assume `INSIEME_SRC` contains the path to the Insieme
-source directory, although it is not necessary to set this environment
+building Insieme. We assume `BUILD_DIR` contains the absolute path to the
+Insieme build directory. However, it is not necessary to set this environment
 variable.
 
     $ export CC="$BUILD_DIR/third_party/gcc/bin/gcc"
@@ -176,9 +176,7 @@ header to each source file upon commit. See `/scripts/license`.
 
 ### Visual Studio Solution
 
-    $ cmake -G "Visual Studio 15 2017 Win64" -DBUILD_SHARED_LIBS=OFF Z:\path\to\project
-
-Add path for third-party libraries when needed.
+    $ cmake -G "Visual Studio 15 2017 Win64" -DBUILD_SHARED_LIBS=OFF Z:\path\to\project\code
 
 ### Coverage
 
