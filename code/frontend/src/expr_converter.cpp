@@ -76,6 +76,7 @@
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/c/include.h"
+#include "insieme/annotations/c/implicit.h"
 
 using namespace insieme;
 
@@ -346,7 +347,9 @@ namespace conversion {
 	}
 
 	core::ExpressionPtr Converter::ExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
-		return VisitCastExpr(castExpr);
+		auto retIr = VisitCastExpr(castExpr);
+		insieme::annotations::c::markAsImplicit(retIr);
+		return retIr;
 	}
 	core::ExpressionPtr Converter::ExprConverter::VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr) {
 		return VisitCastExpr(castExpr);
