@@ -76,17 +76,17 @@ namespace integration {
 	class IntegrationTestCase : public utils::Printable {
 
 		/**
-		 * The name of this test case.
+		 * The canonical name of this test case.
 		 */
-		string name;
+		boost::filesystem::path name;
 
 		/**
-		 * The directory forming containing the test case.
+		 * The absolute path to the directory containing the test input files.
 		 */
 		boost::filesystem::path dir;
 
 		/**
-		 * The input files of this test case.
+		 * The absolute paths to the input files for this test case.
 		 */
 		vector<boost::filesystem::path> files;
 
@@ -135,7 +135,7 @@ namespace integration {
 		/**
 		 * Creates a new test case based on the given arguments.
 		 */
-		IntegrationTestCase(const string& name,
+		IntegrationTestCase(const boost::filesystem::path& name,
 		                    const boost::filesystem::path& dir,
 		                    const vector<boost::filesystem::path>& files,
 		                    const vector<boost::filesystem::path>& includeDirs,
@@ -162,6 +162,13 @@ namespace integration {
 		 * Obtains the name of this test case.
 		 */
 		const string& getName() const {
+			return name.string();
+		}
+
+		/**
+		 * Get canonical name of this test case as a path.
+		 */
+		const boost::filesystem::path& getCanonicalPath() const {
 			return name;
 		}
 
@@ -169,7 +176,7 @@ namespace integration {
 		 * Get Basename of this test case
 		 */
 		string getBaseName() const {
-			return boost::filesystem::path(dir).filename().string();
+			return boost::filesystem::path(dir).remove_trailing_separator().filename().string();
 		}
 
 		/**
@@ -180,7 +187,7 @@ namespace integration {
 		}
 
 		/**
-		 * Obtains the files this test case is consisting of.
+		 * Obtains the input files for this test case.
 		 */
 		const vector<boost::filesystem::path>& getFiles() const {
 			return files;
@@ -290,7 +297,6 @@ namespace integration {
 		const vector<string> getInsiemeCompilerArguments(std::string step, bool isCpp) const;
 	};
 
-
 	/**
 	 * A struct used to hold various paths needed to successfully lookup integration tests and their configuration
 	 */
@@ -317,7 +323,6 @@ namespace integration {
 
 	IntegrationTestCaseDefaultsPaths getDefaultIntegrationTestCaseDefaultsPaths();
 
-
 	// an enum describing the different modes which test cases to load
 	enum LoadTestCaseMode { ENABLED_TESTS, ENABLED_AND_LONG_TESTS, LONG_TESTS, BLACKLISTED_TESTS, ALL_TESTS };
 
@@ -340,10 +345,10 @@ namespace integration {
 	/**
 	 * Obtains a list of test cases in the given path or below.
 	 *
-	 * @param path the directory representing the integration test
+	 * @param testDir the directory representing the integration test, may be absolute or relative
 	 * @return the list of test cases within this directory or below
 	 */
-	vector<IntegrationTestCase> getTestSuite(const string& path,
+	vector<IntegrationTestCase> getTestSuite(const boost::filesystem::path& testDir,
 	                                         const IntegrationTestCaseDefaultsPaths defaultPaths = getDefaultIntegrationTestCaseDefaultsPaths());
 
 	/**
