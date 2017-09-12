@@ -193,10 +193,19 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
                 toDecl (decl,arg) = IR.mkNode IR.Declaration [IR.goDown 0 decl, arg] []
 
-            trg = case getNodeType o of
-                IR.Literal -> Addr.getNode o
-                IR.Lambda  -> Addr.getNode $ Addr.goUpX 3 o
+            callTrg = case getNodeType o of
+                IR.Literal -> o
+                IR.Lambda  -> Addr.goUpX 3 o
                 nt@_ -> error $ "Unexpected node type: " ++ (show nt)
+
+            trg = Addr.getNode $ if isInstantiated then instantiateCall else callTrg
+              where
+
+                isInstantiated = Addr.depth callTrg > 2 
+                    && getNodeType instantiateCall == IR.CallExpr
+                    && isBuiltin (Addr.goDown 1 instantiateCall) "instantiate"
+
+                instantiateCall = Addr.goUp $ Addr.goUp callTrg
 
             resType = IR.goDown 0 $ Addr.getNode addr
 
