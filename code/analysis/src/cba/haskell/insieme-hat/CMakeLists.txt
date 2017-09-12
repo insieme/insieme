@@ -52,7 +52,7 @@ add_custom_command(
 	# install dependencies and build package
 	COMMAND ${cabal} update
 	# -j1 because of cabal#4144
-	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 --enable-tests --enable-benchmarks
+	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 flib:insieme-hat
 	# copy library to binary dir
 	COMMAND ${runhaskell} scripts/copyLib.hs ${cabal_file} "%comp:insieme-hat" ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}
 
@@ -60,7 +60,6 @@ add_custom_command(
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	COMMENT "Building Insieme HAT"
 )
-
 
 add_custom_target(insieme_hat
 	DEPENDS libinsieme-hat.so
@@ -73,10 +72,15 @@ add_custom_target(insieme_hat
 	${HAT_PACKAGES_SYMLINK_COMMANDS}
 	)
 
+add_custom_target(insieme_hat_build_tests
+	DEPENDS insieme_analysis
+	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 insieme-hat:tests
+)
+
 add_test(
-  NAME insieme_hat_tests
-  COMMAND ${haskell_env} ./scripts/hat-exec ${CMAKE_CURRENT_BINARY_DIR} test
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	NAME insieme_hat_run_tests
+	COMMAND ${haskell_env} ./scripts/hat-exec ${CMAKE_CURRENT_BINARY_DIR} test
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 if(MSVC)
