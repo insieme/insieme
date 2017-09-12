@@ -191,6 +191,11 @@ predecessor p@(ProgramPoint a Pre) = case getNodeType parent of
 
     IR.ReturnStmt -> single $ ProgramPoint parent Pre
 
+    -- if the parent is types, we are in an implicit intercepted constructor
+    IR.Types -> single $ ProgramPoint (goDown 1 decl) Post  -- end if init expression
+      where
+        decl = Sema.getEnclosingDeclaration parent
+
     _ -> unhandled "Pre" p (getNodeType parent)
 
   where
@@ -269,7 +274,10 @@ predecessor p@(ProgramPoint a Post) = case getNodeType a of
 
     -- declarations with implicit constructor are done once the init expression is done
     IR.Declaration | Sema.callsImplicitConstructor a -> case Sema.getImplicitConstructor a of
-        Just ctor -> single $ ProgramPoint (goDown 2 $ fromJust $ getLambda ctor) Post  -- TODO: support multiple exit points for ctor
+        Just ctor -> case getNodeType ctor of
+            -- TODO: support multiple exit points for ctor
+            IR.LambdaExpr -> single $ ProgramPoint (goDown 2 $ fromJust $ getLambda ctor) Post
+            _ -> single $ ProgramPoint ctor Post
         Nothing   -> error "Implicit constructor not found?!"
     
     -- declarations without implicit constructor are done once the init expression is done
@@ -338,6 +346,10 @@ predecessor p@(ProgramPoint a Post) = case getNodeType a of
 
     -- return statement
     IR.ReturnStmt -> single $ ProgramPoint (goDown 0 a) Post
+
+    -- if the program point is pointing to a type, it is an implicit constructor call
+    IR.GenericType  -> single $ ProgramPoint a Pre
+    IR.TypeVariable -> single $ ProgramPoint a Pre 
 
     _ -> unhandled "Post" p (getNodeType a)
 

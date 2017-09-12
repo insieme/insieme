@@ -48,70 +48,68 @@ int main() {
 	std::array<int,4> a { 1, 2, 3, 4 };
 	std::array<int,4> b { 5, 6, 7, 8 };
 
-//	cba_expect_eq_int(1,a[0]);
-//	cba_expect_eq_int(2,a[1]);
-//	cba_expect_eq_int(3,a[2]);
-//	cba_expect_eq_int(4,a[3]);
-//
-//	cba_expect_eq_int(5,b[0]);
-//	cba_expect_eq_int(6,b[1]);
-//	cba_expect_eq_int(7,b[2]);
-//	cba_expect_eq_int(8,b[3]);
-//
-//	// check the at operator
-//	cba_expect_eq_int(1,a.at(0));
-//	cba_expect_eq_int(2,a.at(1));
-//	cba_expect_eq_int(3,a.at(2));
-//	cba_expect_eq_int(4,a.at(3));
-//
-//	cba_expect_eq_int(5,b.at(0));
-//	cba_expect_eq_int(6,b.at(1));
-//	cba_expect_eq_int(7,b.at(2));
-//	cba_expect_eq_int(8,b.at(3));
+	cba_expect_eq_int(1,a[0]);
+	cba_expect_eq_int(2,a[1]);
+	cba_expect_eq_int(3,a[2]);
+	cba_expect_eq_int(4,a[3]);
+
+	cba_expect_eq_int(5,b[0]);
+	cba_expect_eq_int(6,b[1]);
+	cba_expect_eq_int(7,b[2]);
+	cba_expect_eq_int(8,b[3]);
+
+	// check the at operator
+	cba_expect_eq_int(1,a.at(0));
+	cba_expect_eq_int(2,a.at(1));
+	cba_expect_eq_int(3,a.at(2));
+	cba_expect_eq_int(4,a.at(3));
+
+	cba_expect_eq_int(5,b.at(0));
+	cba_expect_eq_int(6,b.at(1));
+	cba_expect_eq_int(7,b.at(2));
+	cba_expect_eq_int(8,b.at(3));
 
 	// check copy constructor
 	std::array<int,4> c = a;
 
-//	cba_expect_eq_int(1,a[0]);
-//	cba_expect_eq_int(2,a[1]);
-//	cba_expect_eq_int(3,a[2]);
-//	cba_expect_eq_int(4,a[3]);
-//
-//	cba_expect_eq_int(5,b[0]);
-//	cba_expect_eq_int(6,b[1]);
-//	cba_expect_eq_int(7,b[2]);
-//	cba_expect_eq_int(8,b[3]);
-//
+	cba_expect_eq_int(1,a[0]);
+	cba_expect_eq_int(2,a[1]);
+	cba_expect_eq_int(3,a[2]);
+	cba_expect_eq_int(4,a[3]);
+
+	cba_expect_eq_int(5,b[0]);
+	cba_expect_eq_int(6,b[1]);
+	cba_expect_eq_int(7,b[2]);
+	cba_expect_eq_int(8,b[3]);
+
 //	cba_expect_eq_int(1,c[0]);
 //	cba_expect_eq_int(2,c[1]);
 //	cba_expect_eq_int(3,c[2]);
 //	cba_expect_eq_int(4,c[3]);
 
+	cba_expect_not_alias(&a,&c);
 	cba_expect_not_alias(&a[0],&c[0]);
+	cba_expect_not_alias(&a[1],&c[1]);
+	cba_expect_not_alias(&a[2],&c[2]);
+	cba_expect_not_alias(&a[3],&c[3]);
 
-//	cba_debug();
-
-//	cba_expect_not_alias(&a[1],&c[1]);
-//	cba_expect_not_alias(&a[2],&c[2]);
-//	cba_expect_not_alias(&a[3],&c[3]);
 
 	// mutate copy (and copy only)
-//	c[2] = 9;
+	c[2] = 9;
 
+	cba_expect_eq_int(1,a[0]);
+	cba_expect_eq_int(2,a[1]);
+	cba_expect_eq_int(3,a[2]);
+	cba_expect_eq_int(4,a[3]);
 
-//	cba_expect_eq_int(1,a[0]);
-//	cba_expect_eq_int(2,a[1]);
-//	cba_expect_eq_int(3,a[2]);
-//	cba_expect_eq_int(4,a[3]);
-//
-//	cba_expect_eq_int(5,b[0]);
-//	cba_expect_eq_int(6,b[1]);
-//	cba_expect_eq_int(7,b[2]);
-//	cba_expect_eq_int(8,b[3]);
+	cba_expect_eq_int(5,b[0]);
+	cba_expect_eq_int(6,b[1]);
+	cba_expect_eq_int(7,b[2]);
+	cba_expect_eq_int(8,b[3]);
 
 //	cba_expect_eq_int(1,c[0]);
 //	cba_expect_eq_int(2,c[1]);
-//	cba_expect_eq_int(9,c[2]);
+	cba_expect_eq_int(9,c[2]);
 //	cba_expect_eq_int(4,c[3]);
 
 	// check copy assignment

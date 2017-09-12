@@ -119,16 +119,24 @@ getImplicitConstructor addr | not (callsImplicitConstructor addr) =
     error "Can not obtain implicit constructor from expression without implicit constructor."
 
 getImplicitConstructor addr = case getNode addr of
-    (IR.Node IR.Declaration [declType,IR.Node _ (initType:_)]) -> case getNodeType $ fromJust $ getReferencedType declType of
-
-        IR.GenericType -> error $ "Not yet supporting implicit initialization of generic types in " ++ (show addr)
+    (IR.Node IR.Declaration [declType,IR.Node _ (initType:_)]) -> case nodeType of
 
         IR.TagType -> getConstructorAccepting [initType] declObjType
           where
             declTypeAddr = goDown 0 $ addr
             declObjType = fromJust $ getReferencedType declTypeAddr
 
-        _ -> error $ "Unsupported type with constructor encountered!"
+        -- for intercepted and variable cases, we point to the declared type
+        IR.GenericType  -> genericCtor
+        IR.TypeVariable -> genericCtor
+
+        _ -> error $ "Unsupported type with constructor encountered: " ++ (show nodeType) ++ " @ " ++ (show addr)
+
+      where
+
+        nodeType = getNodeType $ fromJust $ getReferencedType declType
+
+        genericCtor = getReferencedType $ goDown 0 addr
 
     _ -> error "Should not be reachable!" -- due to filter above!
 
