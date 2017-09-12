@@ -82,10 +82,10 @@ int main() {
 	cba_expect_eq_int(7,b[2]);
 	cba_expect_eq_int(8,b[3]);
 
-//	cba_expect_eq_int(1,c[0]);
-//	cba_expect_eq_int(2,c[1]);
-//	cba_expect_eq_int(3,c[2]);
-//	cba_expect_eq_int(4,c[3]);
+	cba_expect_eq_int(1,c[0]);
+	cba_expect_eq_int(2,c[1]);
+	cba_expect_eq_int(3,c[2]);
+	cba_expect_eq_int(4,c[3]);
 
 	cba_expect_not_alias(&a,&c);
 	cba_expect_not_alias(&a[0],&c[0]);
@@ -107,10 +107,10 @@ int main() {
 	cba_expect_eq_int(7,b[2]);
 	cba_expect_eq_int(8,b[3]);
 
-//	cba_expect_eq_int(1,c[0]);
-//	cba_expect_eq_int(2,c[1]);
+	cba_expect_eq_int(1,c[0]);
+	cba_expect_eq_int(2,c[1]);
 	cba_expect_eq_int(9,c[2]);
-//	cba_expect_eq_int(4,c[3]);
+	cba_expect_eq_int(4,c[3]);
 
 	// check copy assignment
 //	c = b;
