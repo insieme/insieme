@@ -85,19 +85,14 @@ module Insieme.Inspire.NodeAddress (
 ) where
 
 import Control.DeepSeq
-import Control.Monad.State.Strict
 import Data.List (foldl',isSuffixOf,sort)
-import Data.Map.Strict (Map)
 import Data.Maybe
-import Data.Sequence (Seq(..))
 import GHC.Generics (Generic)
 import Insieme.Inspire.Query
 import Insieme.Inspire.NodePath
 import Insieme.Utils
 
 import qualified Data.Hashable as Hash
-import qualified Data.Map.Strict as Map
-import qualified Data.Sequence as Seq
 import qualified Insieme.Inspire as IR
 
 data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
