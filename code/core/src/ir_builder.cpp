@@ -462,7 +462,9 @@ namespace core {
 		const auto& otherType = ctorType->getParameterType(1);
 		auto thisParam = variable(refType(thisType));
 		auto otherParam = variable(otherType);
-		auto body = compoundStmt(assign(deref(thisParam),deref(otherParam)));
+		// TODO: build actual copy-body
+//		auto body = compoundStmt(assign(deref(thisParam),deref(otherParam)));
+		auto body = getNoOp();
 		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(thisParam, otherParam),
 		                                                                body, name->getValue()->getValue())).as<LambdaExprPtr>());
 	}
@@ -478,7 +480,9 @@ namespace core {
 		const auto& otherType = ctorType->getParameterType(1);
 		auto thisParam = variable(refType(thisType));
 		auto otherParam = variable(otherType);
-		auto body = compoundStmt(assign(deref(thisParam),deref(otherParam)));
+		// TODO: build actual move-body
+//		auto body = compoundStmt(assign(deref(thisParam),deref(otherParam)));
+		auto body = getNoOp();
 		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(thisParam, otherParam),
 		                                                                body, name->getValue()->getValue())).as<LambdaExprPtr>());
 	}

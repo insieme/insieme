@@ -40,10 +40,11 @@
 struct A {
 	int x;
 	A() { x = 1; }
+	A(const A& other) : x(other.x) {}	// explicit impl, since Insieme-default is empty
 	A(int x) { this->x = x; }
 };
 
-int main(int argc, char** argv) {
+int main() {
 
 	// default initialization
 	A a;
