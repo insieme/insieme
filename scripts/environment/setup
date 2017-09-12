@@ -32,7 +32,7 @@ fi
 
 # Some changes may require a complete wipe of the build directory.
 if [[ -f wipe_counter ]] && ! diff -q wipe_counter "$DIR/wipe_counter"; then
-	>&2 echo "Warning: Your should wipe your build directory and run this script again."
+	>&2 echo "Warning: You should wipe your build directory and run this script again."
 elif [[ ! -f wipe_counter ]]; then
 	cp "$DIR/wipe_counter" wipe_counter
 fi

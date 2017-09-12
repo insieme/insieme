@@ -10,7 +10,7 @@ automatically.
     $ ./installer gcc ruby valgrind
 
 Note that all dependencies will be installed regardless of whether they are
-already present on your system outside of this dependency installer.
+already present on your system, outside of this dependency installer.
 
 The default `PREFIX` is set in `config.sh` and can be overwritten via an
 environment variable:
@@ -22,7 +22,7 @@ also considered.
 
 ## Using Installed Packages
 
-To use one of the installed packages directly adjust your `PATH` and / or
+To use one of the installed packages directly adjust your `PATH` and/or
 `LD_LIBRARY_PATH` accordingly.
 
 ## Patches
@@ -42,19 +42,16 @@ Compiler* inside `config.sh`. Install GCC before installing other dependencies.
     $ ./installer gcc
     $ ./installer llvm cudd boost ...
 
-## Third Party Sym-Linker
+## Third Party Symlinker
 
 All packages installed by the installer are separated by their name and
 version, this allows one to have multiple versions of a package installed
-side-by-side. Hence the content of `PREFIX` can be shared across multiple
-projects.
-
-In order for a project to find its required dependencies another layer of
-indirection has to be added.
+side-by-side. Yet, in order for a project to find its required dependencies
+another layer of indirection is added.
 
 A folder `third_party` should be located inside the Insieme build directory,
-containing contain symlinks for each dependency. The symlinks point to
-installed package in `PREFIX`. The `third_party` folder should not contain
+containing symlinks for each dependency. The symlinks point to
+installed packages in `PREFIX`. The `third_party` folder should not contain
 different versions of the same package. Example:
 
     $ PREFIX="$HOME/third_party_libs"

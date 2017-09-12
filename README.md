@@ -65,7 +65,7 @@ Following options can be supplied to CMake:
 | -DTHIRD_PARTY_DIR              | \<path\>        |
 
 These settings are defined in the [build_settings] and [insieme_specific] CMake
-module, located in the `/cmake` subdirectory.
+modules, located in the `/cmake` subdirectory.
 
 [build_settings]: <cmake/build_settings.cmake>
 [insieme_specific]: <cmake/insieme_specific.cmake>
@@ -82,12 +82,11 @@ installation.
 
 ### Older GCC
 
-The dependency installer provides a version of GCC suitable for Insieme, since
-some distros still ship a version of GCC that is too old for us to work with.
+Since some distros still ship a version of GCC that is too old for us to work
+with, the dependency installer provides a version of GCC suitable for Insieme.
 `CC`, `CXX`, `PATH` and `LD_LIBRARY_PATH` should be set accordingly when
 building Insieme. We assume `BUILD_DIR` contains the absolute path to the
-Insieme build directory. However, it is not necessary to set this environment
-variable.
+Insieme build directory.
 
     $ export CC="$BUILD_DIR/third_party/gcc/bin/gcc"
     $ export CXX="$BUILD_DIR/third_party/gcc/bin/g++"
@@ -127,7 +126,7 @@ Integration tests can be run via the `integration_tests` binary.
     $ cd build
     $ driver/integration_tests -w 8
 
-Furthermore this integration test driver provides useful features, like
+Furthermore the integration test driver provides useful features, like
 repeating a test multiple times. See a full list of options by using `-h` as
 argument.
 
@@ -141,10 +140,10 @@ If everything was successful...
 ### Compiling Application Codes
 
 The main executable provided by the Insieme framework is called `insiemecc`,
-located in `build/driver`. It can be used to replace e.g. occurrences of
+located in `/build/driver`. It can be used to replace e.g. occurrences of
 another compiler such as `gcc` in makefiles. It supports both
 source-to-source-only compilation, as well as full compilation by calling a
-backend compiler.  Environment variables `INSIEME_C_BACKEND_COMPILER` and
+backend compiler. Environment variables `INSIEME_C_BACKEND_COMPILER` and
 `INSIEME_CXX_BACKEND_COMPILER` can be used to change the backend compiler at
 runtime, while the CMake options `-DINSIEME_C_BACKEND_COMPILER` and
 `-DINSIEME_CXX_BACKEND_COMPILER` allow setting the compiler prior building.
