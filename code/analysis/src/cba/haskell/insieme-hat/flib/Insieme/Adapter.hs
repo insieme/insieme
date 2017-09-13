@@ -107,7 +107,7 @@ foreign export ccall "hat_print_statistic"
   dumpStatistics :: StablePtr Ctx.Context -> IO ()
 
 foreign export ccall "hat_dump_assignment"
-  dumpAssignment :: StablePtr Ctx.Context -> IO ()
+  dumpAssignment :: StablePtr Ctx.Context -> CString -> CSize -> IO ()
 
 foreign export ccall "hat_mk_node_address"
   mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize -> IO (StablePtr Addr.NodeAddress)
@@ -174,10 +174,11 @@ dumpStatistics ctx_hs = do
     putStrLn $ Solver.showSolverStatistic $ Ctx.getSolverState ctx
 
 -- | Print current 'Solver.Solver' assignment.
-dumpAssignment :: StablePtr Ctx.Context -> IO ()
-dumpAssignment ctx_hs = do
+dumpAssignment :: StablePtr Ctx.Context -> CString -> CSize-> IO ()
+dumpAssignment ctx_hs filenamePrefix dumpGraph = do
     ctx <- deRefStablePtr ctx_hs
-    putStrLn $ Solver.dumpSolverState True (Ctx.getSolverState ctx) "graph"
+    prefix <- peekCString filenamePrefix
+    putStrLn $ Solver.dumpSolverState True (Ctx.getSolverState ctx) prefix ((fromIntegral dumpGraph) > 0)
 
 -- | Create a 'Addr.NodeAddress' from a dumped NodePath.
 mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize -> IO (StablePtr Addr.NodeAddress)

@@ -106,7 +106,7 @@ import Prelude hiding (lookup,print)
 
 import Control.DeepSeq
 import Control.Exception
-import Control.Monad (void)
+import Control.Monad (void,when)
 import Data.Dynamic
 import Data.Function
 import Data.List hiding (insert,lookup)
@@ -717,12 +717,13 @@ toDotGraph (SolverState a@(Assignment _) varIndex _ _ _) = "digraph G {\n\t"
 
 
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
-dumpSolverState :: Bool -> SolverState -> FilePath -> String
-dumpSolverState overwrite s f = unsafePerformIO $ do
-  base <- solverToDot overwrite s f
-  evaluate $ dumpToJsonFile s "solution_meta"
-  pdfFromDot base
-  return ("Dumped assignment to " ++ base)
+dumpSolverState :: Bool -> SolverState -> FilePath -> Bool -> String
+dumpSolverState overwrite s prefix genGraph = unsafePerformIO $ do
+  evaluate $ dumpToJsonFile s (prefix ++ "_meta")
+  when genGraph $ do
+    base <- solverToDot overwrite s (prefix ++ "_graph")
+    pdfFromDot base
+  return ("Dumped assignment to " ++ prefix ++ "* files")
 
 -- | Dump solver state to the given file name, using the dot format.
 solverToDot :: Bool -> SolverState -> FilePath -> IO FilePath
