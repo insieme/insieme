@@ -76,6 +76,7 @@ namespace testFramework {
 		bool panic_mode;
 		bool list_only;
 		bool no_clean;
+		bool inplace;
 		bool color;
 		bool overwrite;
 		vector<string> cases;
@@ -100,7 +101,7 @@ namespace testFramework {
 
 		Options(bool valid = true)
 		    : valid(valid), mockrun(false), num_threads(1), num_repetitions(1), use_median(false), statistics(false), scheduling(false),
-		      print_configs(false), panic_mode(false), list_only(false), no_clean(false), color(true), overwrite(false), blacklistedOnly(false),
+		      print_configs(false), panic_mode(false), list_only(false), no_clean(false), inplace(false), color(true), overwrite(false), blacklistedOnly(false),
 		      longTestsOnly(false), longTestsAlso(false), preprocessingOnly(false), postprocessingOnly(false), logToCsvFile(false),
 		      csvFile(""), perf(false), load_miss(""), store_miss(""), flops("") {}
 
@@ -181,7 +182,7 @@ namespace testFramework {
 		vector<TestCase> cases;
 		for(const auto& cur : options.cases) {
 			// load test case based on the location
-			auto curSuite = getTestSuite(cur, defaultPaths);
+			auto curSuite = getTestSuite(boost::filesystem::path(cur), defaultPaths);
 			for(const auto& cur : curSuite) {
 				if(!contains(cases, cur)) { // make sure every test is only present once
 					cases.push_back(cur);

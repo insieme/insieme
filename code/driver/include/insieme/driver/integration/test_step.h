@@ -128,11 +128,12 @@ namespace integration {
 		bool mockRun;
 		SchedulingPolicy sched;
 		bool clean;
+                bool inplace;
 		int numThreads;
 		std::string stdOutFile;
 		std::string stdErrFile;
 		std::string outputFile;
-		std::string executionDir;
+                boost::filesystem::path executionDir;
 
 		// perf metrics
 		bool perf;
@@ -145,7 +146,7 @@ namespace integration {
 	enum StepType { COMPILE, RUN, CHECK, STATIC_METRIC, UNDEFINED };
 
 	struct TestStep : public boost::less_than_comparable<TestStep>, public boost::equality_comparable<TestStep>, public insieme::utils::Printable {
-		typedef std::function<TestResult(const TestSetup&, const IntegrationTestCase& test, const TestRunner& runner)> StepOp;
+		typedef std::function<TestResult(TestSetup, const IntegrationTestCase& test, const TestRunner& runner)> StepOp;
 
 	  private:
 		std::string name;
