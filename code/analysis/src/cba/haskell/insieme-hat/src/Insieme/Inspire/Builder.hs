@@ -104,4 +104,5 @@ some_type     = Lang.parseType "some_type"
 some_ref_type :: IR.Tree
 some_ref_type = Lang.parseType "ref<some_type>"
 
+wrapSomeDecl :: IR.Tree -> IR.Tree
 wrapSomeDecl = mkDeclaration some_type

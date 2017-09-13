@@ -344,10 +344,25 @@ namespace c_ast {
 		return unaryOp(UnaryOperation::Indirection, expr);
 	}
 
+	// forward declaration
+	bool isTernaryOp(NodePtr candidate, TernaryOperation::TernaryOp op);
+	ExpressionPtr ite(ExpressionPtr condition, ExpressionPtr thenValue, ExpressionPtr elseValue);
+
 	inline ExpressionPtr deref(ExpressionPtr expr) {
-		MAKE_PRETTY(NodePtr sub = removeParentheses(expr); if(isUnaryOp(sub, UnaryOperation::Reference)) {
-			return static_pointer_cast<Expression>(static_pointer_cast<UnaryOperation>(sub)->operand);
-		});
+		MAKE_PRETTY(
+			NodePtr sub = removeParentheses(expr);
+			if(isUnaryOp(sub, UnaryOperation::Reference)) {
+				return static_pointer_cast<Expression>(static_pointer_cast<UnaryOperation>(sub)->operand);
+			}
+			if(isTernaryOp(sub, TernaryOperation::TernaryCondition)) {
+				TernaryOperationPtr orig = static_pointer_cast<TernaryOperation>(sub);
+				return ite(
+					orig->operandA.as<ExpressionPtr>(),
+					deref(orig->operandB.as<ExpressionPtr>()),
+					deref(orig->operandC.as<ExpressionPtr>())
+				);
+			}
+		);
 		return unaryOp(UnaryOperation::Indirection, expr);
 	}
 
@@ -620,6 +635,12 @@ namespace c_ast {
 		b = (getPriority(b) <= getPriority(op)) ? parentheses(b) : b;
 		c = (getPriority(c) <= getPriority(op)) ? parentheses(c) : c;
 		return a->getManager()->create<TernaryOperation>(op, a, b, c);
+	}
+
+	inline bool isTernaryOp(NodePtr candidate, TernaryOperation::TernaryOp op) {
+		NodePtr cur = removeParentheses(candidate);
+		if(cur->getType() == NT_TernaryOperation) { return static_pointer_cast<TernaryOperation>(cur)->operation == op; }
+		return false;
 	}
 
 	inline ExpressionPtr ite(ExpressionPtr condition, ExpressionPtr thenValue, ExpressionPtr elseValue) {

@@ -67,7 +67,7 @@ extern "C" {
 	// Haskell Context
 	StablePtr hat_initialize_context(const Context* ctx_c, const char* dump_c, size_t size_c);
 	void hat_print_statistic(StablePtr hs_context);
-	void hat_dump_assignment(StablePtr hs_context);
+	void hat_dump_assignment(StablePtr hs_context, const char* filename, size_t generateGraph);
 
 	// NodePath
 	StablePtr hat_mk_node_address(StablePtr ctx_hs, const size_t* path_c, size_t length_c);
@@ -109,13 +109,13 @@ namespace haskell {
 		hat_print_statistic(context_hs);
 	}
 
-	void Context::dumpSolution() const {
+	void Context::dumpSolution(const std::string& filenamePrefix, bool generateGraph) const {
 		if (!context_hs) {
 			std::cout << "No statistics available.\n";
 			return;
 		}
 		std::cout << "Dumping assignment ...\n";
-		hat_dump_assignment(context_hs);
+		hat_dump_assignment(context_hs,filenamePrefix.c_str(),(generateGraph)?1:0);
 	}
 
 	StablePtr Context::getHaskellContext() const {

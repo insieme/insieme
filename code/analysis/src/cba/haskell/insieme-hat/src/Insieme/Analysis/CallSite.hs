@@ -49,7 +49,6 @@ import Data.Typeable
 import Insieme.Analysis.DynamicCallSites
 import Insieme.Analysis.FreeLambdaReferences
 import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Visit
 
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Callable as Callable

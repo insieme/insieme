@@ -123,6 +123,14 @@ isUnitType n = case node n of
 isUnit :: NodeReference a => a -> Bool
 isUnit n = fromMaybe False $ isUnitType <$> getType n
 
+
+-- *** Generic Types
+
+getTypeParameter :: Int -> IR.Tree -> IR.Tree
+getTypeParameter i (IR.Node IR.GenericType ( _ : _ : (IR.Node IR.Types params) : [] )) = params !! i
+getTypeParameter _ _ = error "unexpected NodeType"
+
+
 -- *** Reference Type
 
 isReferenceType :: NodeReference a => a -> Bool
@@ -138,6 +146,24 @@ getReferenceType a = mfilter isReference $ getType a
 
 getReferencedType :: NodeReference a => a -> Maybe a
 getReferencedType n = (child 0) <$> (child 2) <$> getReferenceType n
+
+data ReferenceKind =
+      RK_Plain
+    | RK_CppRef
+    | RK_CppRRef
+    | RK_Unknown
+  deriving (Eq, Ord, Show)
+
+getReferenceKind :: NodeReference a => a -> ReferenceKind
+getReferenceKind r | isReference r = case kind of
+    (IR.Node IR.GenericType ((IR.Node (IR.StringValue    "plain") _) : _)) -> RK_Plain
+    (IR.Node IR.GenericType ((IR.Node (IR.StringValue  "cpp_ref") _) : _)) -> RK_CppRef
+    (IR.Node IR.GenericType ((IR.Node (IR.StringValue "cpp_rref") _) : _)) -> RK_CppRRef
+    _ -> RK_Unknown
+  where
+    kind = child 3 $ child 2 $ fromJust $ getReferenceType $ node r
+
+getReferenceKind _ = RK_Unknown
 
 
 -- *** Array Type
@@ -204,6 +230,34 @@ getFieldNames :: NodeReference a => a -> Maybe [String]
 getFieldNames a = map (getStringValue . node . child 0) <$> fields
   where
     fields = (children . child 1) <$> getRecord a
+
+
+getConstructorAccepting :: (NodeReference a, NodeReference b) => [b] -> a -> Maybe a
+getConstructorAccepting paramTypes tagType = ctor
+  where
+    ctors = child 2 <$> getRecord tagType
+    ctor = (children <$> ctors) >>= (find filter)
+
+    requiredParamTypes = node <$> paramTypes
+    filter lambda = eqList requiredParamTypes curParamTypes 
+      where
+        curParamTypes = (tail $ children $ child 0 $ fromJust $ getType $ node lambda)
+
+    -- a type-list comparison interpreting tag types and tag type references equivalent
+
+    eqList [] [] = True
+    eqList []  _ = False
+    eqList _  [] = False
+    eqList (x:xs) (y:ys) = eq x y && eqList xs ys
+
+    eq a b | a == b = True
+    eq (IR.Node t1 c1) (IR.Node t2 c2) | t1 == t2 = eqList c1 c2
+    eq (IR.Node IR.TagType (a : _) ) b@(IR.Node IR.TagTypeReference _ ) | a == b = True
+    eq a@(IR.Node IR.TagTypeReference _ ) (IR.Node IR.TagType (b : _) ) | a == b = True
+    eq _ _ = False
+
+
+
 
 getDestructor :: NodeReference a => a -> Maybe a
 getDestructor a = if noDtor then Nothing else (child 0) <$> optDtor

@@ -274,7 +274,7 @@ LocationOpt getLocation(const NodePtr& node) {
 
 		out << colorize.white() << loc << colorize.reset() << "\n";
 
-		auto fs = std::fstream(loc.getFile());
+		auto fs = std::ifstream(loc.getFile());
 		if(!fs.good()) {
 			return;
 		}

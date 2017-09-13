@@ -94,7 +94,7 @@ namespace haskell {
 
 		void dumpStatistics() const;
 
-		void dumpSolution() const;
+		void dumpSolution(const std::string& filenamePrefix = "solution", bool generateGraph = false) const;
 
 
 		// -- haskell engine specific requirements --

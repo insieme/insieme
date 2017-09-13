@@ -39,6 +39,14 @@
 
 module Insieme.Analysis.Utils.CppSemantic (
 
+    -- some tools to deduce construct properties
+    isMaterializingDeclaration,
+    isMaterializingCall,
+
+    -- some tools to identify calls to implicit constructs
+    callsImplicitConstructor,
+    getImplicitConstructor,
+
     -- some tools to identify implicit contexts
     isImplicitCtorOrDtor,
     isImplicitConstructor,
@@ -55,6 +63,85 @@ import Data.Maybe
 import Insieme.Inspire.NodeAddress
 import Insieme.Inspire.Query
 import qualified Insieme.Inspire as IR
+
+
+
+hasMoreReferences :: IR.Tree -> IR.Tree -> Bool
+hasMoreReferences a b | isReference a && (not . isReference $ b) = True
+hasMoreReferences a b | isReference a && isReference b = hasMoreReferences (getTypeParameter 0 a) (getTypeParameter 0 b)
+hasMoreReferences _ _ = False
+
+isCtorBasedConversion :: IR.Tree -> IR.Tree -> Bool
+isCtorBasedConversion srcType trgType | isReference srcType && isReference trgType =
+    -- if the source reference is a plain, but the target not, an implicit constructor is called
+    (srcRefKind == RK_CppRef || srcRefKind == RK_CppRRef) && (trgRefKind == RK_Plain) && (not $ isReference srcObjType) && (not $ isReference trgObjType)
+  where
+    srcRefKind = getReferenceKind srcType
+    trgRefKind = getReferenceKind trgType
+
+    srcObjType = fromJust $ getReferencedType srcType
+    trgObjType = fromJust $ getReferencedType trgType
+
+
+isCtorBasedConversion _ _ = False
+
+-- tests whether a given combination of declaration and init type causes a materializiation
+isMaterializing :: IR.Tree -> IR.Tree -> Bool
+isMaterializing declType initType | hasMoreReferences declType initType = True
+isMaterializing declType initType | isCtorBasedConversion initType declType = True
+isMaterializing _ _ = False
+
+-- tests whether the given node is a materializing declaration
+isMaterializingDeclaration :: IR.Tree -> Bool
+isMaterializingDeclaration (IR.Node IR.Declaration [declType,IR.Node _ (initType:_)]) = isMaterializing declType initType
+isMaterializingDeclaration _ = False
+
+
+-- tests whether the given node is a materializing call
+isMaterializingCall :: IR.Tree -> Bool
+isMaterializingCall _ = False        -- the default, for now - TODO: implement real check
+-- isMaterializingCall (IR.Node IR.CallExpr ( resType : (IR.Node _ ((IR.Node IR.FunctionType (_:retType:_)):_)) : _)) = hasMoreReferences resType retType
+-- isMaterializingCall _ = False
+
+
+
+--- Tests whether a declaration is involving an implicit constructor call
+
+callsImplicitConstructor :: NodeAddress -> Bool
+callsImplicitConstructor addr = case getNode addr of
+    (IR.Node IR.Declaration [declType,IR.Node _ (initType:_)]) -> isCtorBasedConversion initType declType
+    _ -> False
+
+
+-- locates a matching implicit constructor in the given declaration
+getImplicitConstructor :: NodeAddress -> Maybe NodeAddress
+getImplicitConstructor addr | not (callsImplicitConstructor addr) = 
+    error "Can not obtain implicit constructor from expression without implicit constructor."
+
+getImplicitConstructor addr = case getNode addr of
+    (IR.Node IR.Declaration [declType,IR.Node _ (initType:_)]) -> case nodeType of
+
+        IR.TagType -> getConstructorAccepting [initType] declObjType
+          where
+            declTypeAddr = goDown 0 $ addr
+            declObjType = fromJust $ getReferencedType declTypeAddr
+
+        -- for intercepted and variable cases, we point to the declared type
+        IR.GenericType  -> genericCtor
+        IR.TypeVariable -> genericCtor
+
+        _ -> error $ "Unsupported type with constructor encountered: " ++ (show nodeType) ++ " @ " ++ (show addr)
+
+      where
+
+        nodeType = getNodeType $ fromJust $ getReferencedType declType
+
+        genericCtor = getReferencedType $ goDown 0 addr
+
+    _ -> error "Should not be reachable!" -- due to filter above!
+
+
+
 
 --- Identification of implicit constructor and destructor calls ---
 

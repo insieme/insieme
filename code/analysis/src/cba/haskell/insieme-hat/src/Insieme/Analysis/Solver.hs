@@ -106,7 +106,7 @@ import Prelude hiding (lookup,print)
 
 import Control.DeepSeq
 import Control.Exception
-import Control.Monad (void)
+import Control.Monad (void,when)
 import Data.Dynamic
 import Data.Function
 import Data.List hiding (insert,lookup)
@@ -391,8 +391,7 @@ data Event =
 data Constraint = Constraint {
         dependingOn         :: Assignment -> [Var],
         update              :: (Assignment -> (Assignment,Event)),       -- update the assignment, a reset is allowed
-        updateWithoutReset  :: (Assignment -> (Assignment,Event)),       -- update the assignment, a reset is not allowed
-        target              :: Var
+        updateWithoutReset  :: (Assignment -> (Assignment,Event))        -- update the assignment, a reset is not allowed
    }
 
 
@@ -599,7 +598,7 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
 --   * the current value of the constraint,
 --   * and the target variable for this constraint.
 createConstraint :: (Lattice a) => ( Assignment -> [Var] ) -> ( Assignment -> a ) -> TypedVar a -> Constraint
-createConstraint dep limit trg@(TypedVar var) = Constraint dep update' update' var
+createConstraint dep limit trg = Constraint dep update' update'
     where
         update' a = case () of
                 _ | value `less` current -> (                                a,      None)    -- nothing changed
@@ -611,7 +610,7 @@ createConstraint dep limit trg@(TypedVar var) = Constraint dep update' update' v
 
 -- creates a constraint of the form f(A) = A[b] enforcing equality
 createEqualityConstraint :: Lattice t => (Assignment -> [Var]) -> (Assignment -> t) -> TypedVar t -> Constraint
-createEqualityConstraint dep limit trg@(TypedVar var) = Constraint dep update forceUpdate var
+createEqualityConstraint dep limit trg = Constraint dep update forceUpdate
     where
         update a = case () of
                 _ | value `less` current -> (              a,      None)    -- nothing changed
@@ -718,12 +717,13 @@ toDotGraph (SolverState a@(Assignment _) varIndex _ _ _) = "digraph G {\n\t"
 
 
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
-dumpSolverState :: Bool -> SolverState -> FilePath -> String
-dumpSolverState overwrite s f = unsafePerformIO $ do
-  base <- solverToDot overwrite s f
-  evaluate $ dumpToJsonFile s "solution_meta"
-  pdfFromDot base
-  return ("Dumped assignment to " ++ base)
+dumpSolverState :: Bool -> SolverState -> FilePath -> Bool -> String
+dumpSolverState overwrite s prefix genGraph = unsafePerformIO $ do
+  evaluate $ dumpToJsonFile s (prefix ++ "_meta")
+  when genGraph $ do
+    base <- solverToDot overwrite s (prefix ++ "_graph")
+    pdfFromDot base
+  return ("Dumped assignment to " ++ prefix ++ "* files")
 
 -- | Dump solver state to the given file name, using the dot format.
 solverToDot :: Bool -> SolverState -> FilePath -> IO FilePath

@@ -327,10 +327,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
             objDecl = getEnclosingDeclaration declrAddr
 
-            arg = case getIndex declrAddr of
-                0 -> varGen $ goDown 2 $ goDown 1 objDecl  -- the this parameter of the ctor (also for the dtor) TODO: move this to e.g. the tag type address
-                1 -> varGen $ goDown 1 objDecl             -- the argument of the implicit constructor call
-
+            arg = varGen $ goDown (getIndex declrAddr) objDecl   -- we use the type of the declaration as a fake-address for the this pointer
 
             -- standard parameter --
             var = Solver.mkVariable (idGen addr) [con] Solver.bot

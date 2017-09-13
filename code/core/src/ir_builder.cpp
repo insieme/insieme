@@ -460,8 +460,13 @@ namespace core {
 		auto ctorType = getDefaultCopyConstructorType(thisType);
 		auto name = getLiteralForConstructor(ctorType);
 		const auto& otherType = ctorType->getParameterType(1);
-		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)),
-		                                                                getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
+		auto thisParam = variable(refType(thisType));
+		auto otherParam = variable(otherType);
+		// TODO: build actual copy-body
+//		auto body = compoundStmt(assign(deref(thisParam),deref(otherParam)));
+		auto body = getNoOp();
+		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(thisParam, otherParam),
+		                                                                body, name->getValue()->getValue())).as<LambdaExprPtr>());
 	}
 
 	FunctionTypePtr IRBuilderBaseModule::getDefaultMoveConstructorType(const TypePtr& thisType) const {
@@ -473,8 +478,13 @@ namespace core {
 		auto ctorType = getDefaultMoveConstructorType(thisType);
 		auto name = getLiteralForConstructor(ctorType);
 		const auto& otherType = ctorType->getParameterType(1);
-		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(variable(refType(thisType)), variable(otherType)),
-		                                                                getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
+		auto thisParam = variable(refType(thisType));
+		auto otherParam = variable(otherType);
+		// TODO: build actual move-body
+//		auto body = compoundStmt(assign(deref(thisParam),deref(otherParam)));
+		auto body = getNoOp();
+		return core::analysis::markAsDefaultMember(normalize(lambdaExpr(ctorType, toVector(thisParam, otherParam),
+		                                                                body, name->getValue()->getValue())).as<LambdaExprPtr>());
 	}
 
 	FunctionTypePtr IRBuilderBaseModule::getDefaultDestructorType(const TypePtr& thisType) const {

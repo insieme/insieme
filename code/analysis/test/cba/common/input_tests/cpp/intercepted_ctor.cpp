@@ -34,15 +34,12 @@
  * Performance Computing, Networking, Storage and Analysis (SC 2012),
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
+#include <tuple>
 
 #include "../../input_tests/cba.h"
 
-struct A {
-	int x;
-	A() { x = 1; }
-	A(const A& other) : x(other.x) {}	// explicit impl, since Insieme-default is empty
-	A(int x) { this->x = x; }
-};
+// a type intercepted by the frontend
+using A = std::tuple<int>;
 
 int main() {
 
@@ -53,48 +50,46 @@ int main() {
 	cba_expect_defined_ptr(&a);
 
 	// check that the default constructor was processed
-	cba_expect_eq_int(a.x, 1);
+	cba_expect_undefined_int(std::get<0>(a));
 
 
 	// check a call with parameter
 	A b(2);
-	cba_expect_eq_int(b.x,2);
+	cba_expect_not_alias(&a,&b);
+	cba_expect_undefined_int(std::get<0>(b));
 
 	// check the initialization without explicit constructor
-	A c = 3;
-	cba_expect_eq_int(c.x,3);
+	A c = A(3);
+	cba_expect_not_alias(&a,&c);
+	cba_expect_not_alias(&b,&c);
+	cba_expect_undefined_int(std::get<0>(c));
 
 	// check a new call
 	A* d = new A();
-	cba_expect_eq_int(d->x,1);
-
+	cba_expect_not_alias(&a,d);
+	cba_expect_undefined_int(std::get<0>(*d));
 
 	// check a new call with parameters
 	A* e = new A(3);
-	cba_expect_eq_int(e->x,3);
-
+	cba_expect_not_alias(&a,e);
+	cba_expect_not_alias( d,e);
+	cba_expect_undefined_int(std::get<0>(*e));
 
 	// check an explicit copy constructor
 	A f(b);
 	cba_expect_not_alias(&f,&b);
-	cba_expect_not_alias(&f.x,&b.x);
-	cba_expect_eq_int(f.x,2);
+	cba_expect_undefined_int(std::get<0>(f));
 
 	// check another form of implicit copy constructor
 	A g = b;
 	cba_expect_not_alias(&g,&b);
-	cba_expect_not_alias(&g.x,&b.x);
-	cba_expect_eq_int(g.x,2);
-
+	cba_expect_undefined_int(std::get<0>(g));
 
 	// check creation of an alias
 	A& h = b;
-	cba_expect_eq_int(h.x,2);
 
 	// h is a alias, not a copy
 	cba_expect_is_alias(&h,&b);
-	cba_expect_is_alias(&h.x,&b.x);
-
 
 //	cba_debug();
 
