@@ -188,6 +188,34 @@ namespace extensions {
 			}
 		}
 
+		// used to replace concrete types with type variables in
+		// fully generic template function types (which are the targets of instantiation)
+		core::FunctionTypePtr fullyGenerifyFunType(const core::FunctionTypePtr& genericFunType) {
+			core::IRBuilder builder(genericFunType->getNodeManager());
+			size_t paramNum = 0;
+			return core::transform::transformBottomUpGen(genericFunType, [&](const core::GenericTypePtr& genTy) {
+				if(!core::lang::isBuiltIn(genTy) && insieme::utils::isMangled(genTy->getName()->getValue())) {
+					core::TypeList newTypeParams;
+					for(auto& typeParm : genTy->getTypeParameterList()) {
+						if(typeParm.isa<core::TypeVariablePtr>()
+							|| typeParm.isa<core::VariadicTypeVariablePtr>()
+							|| typeParm.isa<core::GenericTypeVariablePtr>()
+							|| typeParm.isa<core::VariadicGenericTypeVariablePtr>()
+							|| core::lang::isReference(typeParm)) {
+							newTypeParams.push_back(typeParm);
+						}
+						else {
+							newTypeParams.push_back(builder.typeVariable(::format("TX_%d", paramNum++)));
+						}
+					}
+					auto replacement = builder.genericType(genTy->getName(), genTy->getParents(), builder.types(newTypeParams));
+					core::transform::utils::migrateAnnotations(genTy, replacement);
+					return replacement;
+				}
+				return genTy;
+			});
+		}
+
 		std::pair<core::ExpressionPtr, core::TypePtr> generateCallee(conversion::Converter& converter, const clang::Decl* decl, const clang::Expr* clangExpr,
 			                                                         const clang::ASTTemplateArgumentListInfo* explicitTemplateArgs) {
 			const core::IRBuilder& builder(converter.getIRBuilder());
@@ -277,8 +305,11 @@ namespace extensions {
 
 			auto genericFunLit = litConverter(pattern);
 			auto genericFunType = genericFunLit->getType().as<core::FunctionTypePtr>();
+
+			genericFunType = fullyGenerifyFunType(genericFunType);
+
 			genericFunType = builder.functionType(genericFunType->getParameterTypes(), genericFunType->getReturnType(), genericFunType->getKind(),
-				                                  explicitGenericTypeParams);
+			                                      explicitGenericTypeParams);
 			auto innerLit = builder.literal(genericFunLit->getValue(), genericFunType);
 			converter.applyHeaderTagging(innerLit, decl);
 
