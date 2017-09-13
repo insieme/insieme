@@ -764,7 +764,7 @@ namespace integration {
 
 
 	namespace {
-		bool runSingleTestStep(const IntegrationTestCase& test, const std::string stepName) {
+		bool runSingleTestStep(const IntegrationTestCase& test, const std::string stepName, fs::path buildDir) {
 			TestStep step = getStepByName(stepName);
 
 			// prepare the setup
@@ -774,6 +774,8 @@ namespace integration {
 			setup.clean = true;
 			setup.inplace = false;
 			setup.perf = false;
+			setup.executionDir = buildDir / "integration-testdirs" / test.getCanonicalPath();
+			fs::create_directories(setup.executionDir);
 
 			// now execute the step
 			auto result = step.run(setup, test, TestRunner::getInstance());
@@ -786,8 +788,8 @@ namespace integration {
 		}
 	}
 
-	bool checkPrerequisites(const IntegrationTestCase& test) {
-		return runSingleTestStep(test, TEST_STEP_CHECK_PREREQUISITES);
+	bool checkPrerequisites(const IntegrationTestCase& test, fs::path buildDir) {
+		return runSingleTestStep(test, TEST_STEP_CHECK_PREREQUISITES, buildDir);
 	}
 
 	/*

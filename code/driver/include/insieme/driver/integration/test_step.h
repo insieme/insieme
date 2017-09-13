@@ -73,7 +73,7 @@ namespace integration {
 	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads = 0, bool scheduling = false);
 
 	// checks the prerequisites for a test case in case there is such a step. Returns false if the prerequisites are not satisfied.
-	bool checkPrerequisites(const IntegrationTestCase& test);
+	bool checkPrerequisites(const IntegrationTestCase& test, boost::filesystem::path buildDir);
 
 	// reads out a given file and returns the contents
 	std::string readFile(std::string filename);
