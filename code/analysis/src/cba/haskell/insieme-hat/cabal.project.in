@@ -9,11 +9,16 @@ extra-lib-dirs: @PROJECT_BINARY_DIR@/analysis
                 @PROJECT_BINARY_DIR@/transform
                 @PROJECT_BINARY_DIR@/utils
 
+program-locations
+  gcc-location: @CMAKE_C_COMPILER@
+
 package insieme-hat
+    ghc-options: -pgmc @CMAKE_C_COMPILER@ -pgml @CMAKE_C_COMPILER@
     benchmarks: true
     tests: true
 
 package allscale-hat
+    ghc-options: -pgmc @CMAKE_C_COMPILER@ -pgml @CMAKE_C_COMPILER@
     benchmarks: true
     tests: true
 

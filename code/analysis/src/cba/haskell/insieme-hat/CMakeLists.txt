@@ -9,8 +9,8 @@ get_filename_component(ZLIB_LIBRARIES_DIR ${ZLIB_LIBRARIES} PATH)
 set(haskell_env
   ${CMAKE_COMMAND} -E env
   "PATH=${CABAL_PATH_ENTRY}${THIRD_PARTY_DIR}/ghc/bin/:$ENV{PATH}"
-  "LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}"
-  "LD_LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}"
+  "LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}:$ENV{LIBRARY_PATH}"
+  "LD_LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}:$ENV{LD_LIBRARY_PATH}"
   "HOME=${CMAKE_CURRENT_BINARY_DIR}/cabal-home"
 )
 
@@ -72,16 +72,22 @@ add_custom_target(insieme_hat
 	${HAT_PACKAGES_SYMLINK_COMMANDS}
 	)
 
-add_custom_target(insieme_hat_build_tests
-	DEPENDS insieme_analysis
-	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 insieme-hat:tests
-)
+if(BUILD_TESTS)
+	add_custom_target(insieme_hat_build_tests
+		ALL
+		DEPENDS analysis
+		COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 insieme-hat:tests
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	)
 
-add_test(
-	NAME insieme_hat_run_tests
-	COMMAND ${haskell_env} ./scripts/hat-exec ${CMAKE_CURRENT_BINARY_DIR} test
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
+	add_test(
+		NAME insieme_hat_run_tests
+		COMMAND ${haskell_env} ./scripts/hat-exec ${CMAKE_CURRENT_BINARY_DIR} test
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	)
+
+	set_tests_properties(insieme_hat_run_tests PROPERTIES DEPENDS insieme_hat_build_tests)
+endif()
 
 if(MSVC)
 	set_target_properties(insieme_hat PROPERTIES FOLDER analysis)
