@@ -46,7 +46,6 @@
 #include "insieme/driver/integration/test_step.h"
 #include "insieme/driver/utils/object_file_utils.h"
 
-#include "insieme/utils/config.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
@@ -155,7 +154,7 @@ namespace integration {
 		}
 
 		// each test might require some prerequisites which are checked here
-		if (!driver::integration::checkPrerequisites(testCase, getInsiemeBuildRootDir())) {
+		if (!driver::integration::checkPrerequisites(testCase)) {
 			ASSERT_TRUE(false) << "Prerequisites for test case " << testCase.getName() << " are not satisfied";
 			return;
 		}
