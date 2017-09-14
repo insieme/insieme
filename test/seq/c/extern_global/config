@@ -1,6 +1,7 @@
-preprocessing=bash -c "gcc -std=c99 -Wall -fPIC ${PATH}/separate_tu.c -c -o separate_tu.o && ar rcs libtu.a separate_tu.o && rm ./*.o"
+preprocessing=bash -c "gcc -std=c99 -Wall -fPIC separate_tu.c -c -o separate_tu.o && ar rcs libtu.a separate_tu.o && rm ./*.o"
 check_prerequisites=bash -c "test -f libtu.a"
 postprocessing=bash -c "rm ./*.a"
 
 libPaths="./"
 libNames="tu"
+

@@ -85,7 +85,6 @@ namespace integration {
 					("step,s",              bpo::value<string>(),                "the test step to be applied")
 					("repeat,r",            bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
 					("no-clean",            "keep all output files")
-					("inplace",             "write test output files in source directory")
 					("no-color",            "force-disable highlighting of output")
 					("blacklisted-only",    "only run the blacklisted test cases")
 					("long-tests-only",     "only run test cases which take long to execute")
@@ -136,7 +135,6 @@ namespace integration {
 
 			res.mockrun = map.count("mock");
 			res.no_clean = map.count("no-clean");
-			res.inplace = map.count("inplace");
 			res.color = !map.count("no-color");
 			// if colored output was not disabled explicitely, disable anyway if there is no support
 			if(res.color) { res.color = isatty(fileno(stdout)); }
@@ -283,12 +281,11 @@ namespace integration {
 		// load list of test steps
 		auto steps = tf::getTestSteps(options);
 
-
 		itc::TestSetup setup;
 		setup.mockRun = options.mockrun;
-		setup.clean   = !options.no_clean;
-		setup.inplace = options.inplace;
+		setup.clean = !options.no_clean;
 		setup.perf = options.perf;
+		setup.executionDir = "";
 
 		insieme::utils::Colorize colorize(options.color);
 
@@ -355,22 +352,11 @@ namespace integration {
 				// if this test doesn't schedule any steps we count it as omitted
 				if(list.empty()) { omittedTestsCount++; }
 
-
-				TestSetup tmp_setup(setup);
-				if(tmp_setup.inplace) {
-					tmp_setup.executionDir = cur.getDirectory();
-				} else {
-					// cannot use unique_path here otherwise preprocessing/check_prerequisits doesn't work
-					tmp_setup.executionDir = boost::filesystem::path(defaultPaths.buildDir) / "integration-testdirs" / cur.getCanonicalPath();
-					boost::filesystem::create_directories(tmp_setup.executionDir);
-				}
-
 				// run steps
 				vector<pair<string, TestResult>> results;
 				bool success = true;
-
 				for(const auto& step : list) {
-					auto res = step.run(tmp_setup, cur, runner);
+					auto res = step.run(setup, cur, runner);
 					results.push_back(std::make_pair(step.getName(), res));
 					if(!res.wasOmitted() && !res.wasSuccessful()) {
 						failedSteps[cur] = res;
@@ -421,7 +407,7 @@ namespace integration {
 
 							success = success && curRes.second.wasSuccessful();
 						}
-						if(setup.clean) { curRes.second.clean(); }
+						if(!options.no_clean) { curRes.second.clean(); }
 
 						if(curRes.second.wasAborted()) { panic = true; }
 					}
