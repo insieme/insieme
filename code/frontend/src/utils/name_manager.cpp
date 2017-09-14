@@ -337,7 +337,7 @@ namespace utils {
 		// encode template parameters in name
 		auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(tagDecl);
 		if(tempSpec && !cStyleName) {
-			name = name + utils::buildNameSuffixForTemplate(tempSpec->getTemplateInstantiationArgs(), tempSpec->getASTContext(), cStyleName);
+			name = name + utils::buildNameSuffixForTemplate(tempSpec->getTemplateArgs(), tempSpec->getASTContext(), cStyleName);
 		}
 
 		// if externally visible, build mangled name based on canonical decl without location

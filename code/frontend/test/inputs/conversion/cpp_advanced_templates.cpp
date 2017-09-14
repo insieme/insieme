@@ -62,6 +62,17 @@ struct ConstNonConstInline {
 	T bla() const { return T(); }
 };
 
+template<int num>
+struct NonTypeTemplateClass {
+	int x = num;
+};
+template<>
+struct NonTypeTemplateClass<0> {
+};
+template<>
+struct NonTypeTemplateClass<1> {
+};
+
 int main() {
 	;
 
@@ -139,6 +150,26 @@ int main() {
 		c.bla<int>();
 		const ConstNonConstInline& cr = c;
 		cr.bla<int>();
+	}
+
+	#pragma test expect_ir(R"(
+		def struct IMP_NonTypeTemplateClass_2 {
+			x : int<4>;
+		};
+		def struct IMP_NonTypeTemplateClass_1 {
+		};
+		def struct IMP_NonTypeTemplateClass_0 {
+		};
+		{
+			var ref<IMP_NonTypeTemplateClass_0,f,f,plain> v0 = IMP_NonTypeTemplateClass_0::(ref_decl(type_lit(ref<IMP_NonTypeTemplateClass_0,f,f,plain>)));
+			var ref<IMP_NonTypeTemplateClass_1,f,f,plain> v1 = IMP_NonTypeTemplateClass_1::(ref_decl(type_lit(ref<IMP_NonTypeTemplateClass_1,f,f,plain>)));
+			var ref<IMP_NonTypeTemplateClass_2,f,f,plain> v2 = IMP_NonTypeTemplateClass_2::(ref_decl(type_lit(ref<IMP_NonTypeTemplateClass_2,f,f,plain>)));
+		}
+	)")
+	{
+		NonTypeTemplateClass<0> nttc0;
+		NonTypeTemplateClass<1> nttc1;
+		NonTypeTemplateClass<2> nttc2;
 	}
 
 	return 0;

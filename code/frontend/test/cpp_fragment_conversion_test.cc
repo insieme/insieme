@@ -104,6 +104,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, ObjectPassing) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_object_passing.cpp"); }
 
+	TEST(CppConversionTest, PartiallySpecializedTemplates) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_partially_specialized_templates.cpp"); }
+
 	TEST(CppConversionTest, PlacementNew) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_placement_new.cpp", [](ConversionJob& job) {
 			// Requires interceptor extension (test extension needs to be last)
