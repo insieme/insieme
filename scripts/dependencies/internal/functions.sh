@@ -1,6 +1,6 @@
 # Loads a given package file into the current shell.
-#  $1 = package name
 load_pkg() {
+	local name=$1
 	source "$INSTALLER_DIR/package_$1.sh"
 }
 
@@ -12,46 +12,46 @@ get_pkg_list() {
 }
 
 # Returns a property defined in a given package file.
-#  $1 = package name
-#  $2 = property
 get_property() {
+	local name=$1
+	local property=$2
 	(
-		load_pkg $1
-		eval "echo -n \$$2"
+		load_pkg $name
+		eval "echo -n \$$property"
 	)
 }
 
 # Indicates whether the given package is installed.
-#  $1 = package name
 is_pkg_installed() {
+	local name=$1
 	(
-		load_pkg $1
+		load_pkg $name
 		[[ -f "$PREFIX/$PACKAGE/.installed" ]]
 	)
 }
 
 # Aborts if no package with the given name is found.
-#  $1 = package name
 assert_pkg_exists() {
-	if [[ ! -f "$INSTALLER_DIR/package_$1.sh" ]]; then
-		>&2 echo "Error: No file package_$1.sh found."
+	local name=$1
+	if [[ ! -f "$INSTALLER_DIR/package_$name.sh" ]]; then
+		>&2 echo "Error: No file package_$name.sh found."
 		exit 1
 	fi
 }
 
 # Gets all dependencies of the given packages.
-#  $1 = list of package names
 resolve_dependencies() {
-	for pkg in $1; do
+	local names=$1
+	for pkg in $names; do
 		resolve_dependencies_for_pkg "$pkg"
 	done | awk '!unique[$_]++'
 }
 
 # Recursively get dependencies of the given package.
-#  $1 = package name
 resolve_dependencies_for_pkg() {
-	for pkg in $(get_property $1 DEPENDS); do
+	local name=$1
+	for pkg in $(get_property $name DEPENDS); do
 		resolve_dependencies_for_pkg "$pkg"
 	done
-	echo "$1"
+	echo "$name"
 }

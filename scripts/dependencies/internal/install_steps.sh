@@ -1,13 +1,13 @@
 # This file contains the install steps for all packages.
 
 # Installs a given package.
-#  $1 = package name
 install_pkg() {
+	local name=$1
 	(
 		set -e
 
 		source "$INSTALLER_DIR/internal/default_implementation.sh"
-		load_pkg $1
+		load_pkg $name
 
 		mkdir -p $PREFIX
 
