@@ -3,8 +3,8 @@ set(CABAL_PATH_ENTRY "${CABAL_PATH_ENTRY}:")
 
 file(GLOB_RECURSE insieme_hat_srcs insieme-hat.cabal *.hs *.chs)
 
-get_filename_component(GMP_LIBRARIES_DIR ${GMP_LIBRARIES} PATH)
-get_filename_component(ZLIB_LIBRARIES_DIR ${ZLIB_LIBRARIES} PATH)
+get_filename_component(GMP_LIBRARIES_DIR "${GMP_LIBRARIES}" PATH)
+get_filename_component(ZLIB_LIBRARIES_DIR "${ZLIB_LIBRARIES}" PATH)
 
 set(haskell_env
   ${CMAKE_COMMAND} -E env
