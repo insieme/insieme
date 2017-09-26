@@ -3,14 +3,14 @@ set(CABAL_PATH_ENTRY "${CABAL_PATH_ENTRY}:")
 
 file(GLOB_RECURSE insieme_hat_srcs insieme-hat.cabal *.hs *.chs)
 
-get_filename_component(GMP_LIBRARIES_DIR ${GMP_LIBRARIES} PATH)
-get_filename_component(ZLIB_LIBRARIES_DIR ${ZLIB_LIBRARIES} PATH)
+get_filename_component(GMP_LIBRARIES_DIR "${GMP_LIBRARIES}" PATH)
+get_filename_component(ZLIB_LIBRARIES_DIR "${ZLIB_LIBRARIES}" PATH)
 
 set(haskell_env
   ${CMAKE_COMMAND} -E env
   "PATH=${CABAL_PATH_ENTRY}${THIRD_PARTY_DIR}/ghc/bin/:$ENV{PATH}"
-  "LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}"
-  "LD_LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}"
+  "LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}:$ENV{LIBRARY_PATH}"
+  "LD_LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}:$ENV{LD_LIBRARY_PATH}"
   "HOME=${CMAKE_CURRENT_BINARY_DIR}/cabal-home"
 )
 
@@ -33,6 +33,16 @@ foreach(pkg ${HAT_PACKAGE_PATHS_LIST})
 	list(APPEND HAT_PACKAGE_PATHS_REL_LIST "./${pkg_dirname}")
 endforeach()
 
+
+# Allows to specify a different compiler to use for compiling and linking haskell.
+# Normally you wouldn't want to do this, but in case you are using a wrapper like distcc (or maybe also ccache), you might
+# need to set this variable to the actual compiler you are using, since e.g. distcc doesn't support the @file argument syntax.
+if(NOT HASKELL_C_COMPILER)
+	set(HASKELL_C_COMPILER "${CMAKE_C_COMPILER}")
+endif()
+message(STATUS "Using ${HASKELL_C_COMPILER} for compiling Haskell")
+
+
 ## Paths to Haskell packages to include in the cabal.project file.
 set(HAT_COMPILER_PATH "${THIRD_PARTY_DIR}/ghc/bin/ghc")
 string(REPLACE ";" " " HAT_PACKAGE_PATHS "${HAT_PACKAGE_PATHS_LIST}")
@@ -52,7 +62,7 @@ add_custom_command(
 	# install dependencies and build package
 	COMMAND ${cabal} update
 	# -j1 because of cabal#4144
-	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 --enable-tests --enable-benchmarks
+	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 flib:insieme-hat
 	# copy library to binary dir
 	COMMAND ${runhaskell} scripts/copyLib.hs ${cabal_file} "%comp:insieme-hat" ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}
 
@@ -60,7 +70,6 @@ add_custom_command(
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	COMMENT "Building Insieme HAT"
 )
-
 
 add_custom_target(insieme_hat
 	DEPENDS libinsieme-hat.so
@@ -73,11 +82,22 @@ add_custom_target(insieme_hat
 	${HAT_PACKAGES_SYMLINK_COMMANDS}
 	)
 
-add_test(
-  NAME insieme_hat_tests
-  COMMAND ${haskell_env} ./scripts/hat-exec ${CMAKE_CURRENT_BINARY_DIR} test
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
+if(BUILD_TESTS)
+	add_custom_target(insieme_hat_build_tests
+		ALL
+		DEPENDS analysis
+		COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 insieme-hat:tests
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	)
+
+	add_test(
+		NAME insieme_hat_run_tests
+		COMMAND ${haskell_env} ./scripts/hat-exec ${CMAKE_CURRENT_BINARY_DIR} test
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	)
+
+	set_tests_properties(insieme_hat_run_tests PROPERTIES DEPENDS insieme_hat_build_tests)
+endif()
 
 if(MSVC)
 	set_target_properties(insieme_hat PROPERTIES FOLDER analysis)

@@ -123,6 +123,8 @@ foreign-library insieme-hat
 executable insieme-hat-exe
     main-is:            Main.hs
     hs-source-dirs:     bin/
+    extra-libraries:    insieme_analysis
+                        stdc++
     build-depends:      insieme-hat,
                         attoparsec >= 0.13,
                         attoparsec-binary >= 0.2,
@@ -142,6 +144,8 @@ executable insieme-hat-exe
 executable cba_runner
     main-is:            CbaRunner.hs
     hs-source-dirs:     bin/
+    extra-libraries:    insieme_analysis
+                        stdc++
     build-depends:      insieme-hat,
                         attoparsec >= 0.13,
                         attoparsec-binary >= 0.2,
@@ -163,6 +167,8 @@ executable cba_runner
 executable parseNdump
     main-is:            parseNdump.hs
     hs-source-dirs:     bin/
+    extra-libraries:    insieme_analysis
+                        stdc++
     build-depends:      insieme-hat,
                         attoparsec >= 0.13,
                         attoparsec-binary >= 0.2,
@@ -184,6 +190,8 @@ executable parseNdump
 executable collect
     main-is:            collect.hs
     hs-source-dirs:     bin/
+    extra-libraries:    insieme_analysis
+                        stdc++
     build-depends:      insieme-hat
                       , base        >= 4.7
                       , bytestring  >= 0.10
@@ -194,6 +202,8 @@ executable collect
 test-suite test
     main-is:            test.hs
     hs-source-dirs:     tests
+    extra-libraries:    insieme_analysis
+                        stdc++
     other-modules:      BoundSet,
                         Formula,
                         ParseInt,
@@ -211,6 +221,8 @@ test-suite test
 executable profiler
     main-is:            Profiler.hs
     hs-source-dirs:     bin/
+    extra-libraries:    insieme_analysis
+                        stdc++
     default-language:   Haskell2010
     build-depends:
                         base             >= 4.7
@@ -224,6 +236,8 @@ executable profiler
 benchmark bench
     main-is:            bench.hs
     hs-source-dirs:     bench
+    extra-libraries:    insieme_analysis
+                        stdc++
     default-language:   Haskell2010
     type:               exitcode-stdio-1.0
     other-modules:      Insieme.Benchmark.InputData

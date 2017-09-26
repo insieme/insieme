@@ -42,5 +42,5 @@
 int main(int argc, char** argv) {
 	// we simply forward the parameters to the integration test handler, using the default path configuration
 	return insieme::driver::integration::handleIntegrationTests(argc, argv, "Insieme Integration Test Driver", insieme::utils::getVersion(),
-	                                                            insieme::driver::integration::getDefaultIntegrationTestCaseDefaultsPaths());
+	                                                            insieme::driver::integration::getDefaultIntegrationTestPaths());
 }

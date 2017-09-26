@@ -40,7 +40,6 @@
 #include <string>
 #include <map>
 #include <vector>
-#include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -71,22 +70,59 @@ namespace integration {
 	using std::vector;
 
 	/**
+	 * A struct used to hold various paths needed to successfully lookup integration tests and their configuration
+	 */
+	struct IntegrationTestPaths {
+
+		/**
+		 * The default test source folder.
+		 * This is used to look up tests by name.
+		 */
+		boost::filesystem::path testsRootDir;
+
+		/**
+		 * The default build folder.
+		 * This is used to look up the global configuration file and also the insiemecc binary.
+		 */
+		boost::filesystem::path buildDir;
+
+		/**
+		 * The name to the global configuration file.
+		 * This file will be searched in the current working directory, all it's parents and finally in the build folder.
+		 */
+		std::string globalConfigFileName;
+
+		/**
+		 * The directory where test steps can produce output files to be
+		 * used by subsequent steps as well as temporary files.
+		 */
+		boost::filesystem::path outputDir;
+	};
+
+	IntegrationTestPaths getDefaultIntegrationTestPaths();
+
+	/**
 	 * Instances of this class represent integration test cases within
 	 */
 	class IntegrationTestCase : public utils::Printable {
 
 		/**
-		 * The name of this test case.
+		 * The canonical path to the directory containing the test input files.
 		 */
-		string name;
+		boost::filesystem::path cnTestSourceDir;
 
 		/**
-		 * The directory forming containing the test case.
+		 * The absolute path to the directory containing the test input files.
 		 */
-		boost::filesystem::path dir;
+		boost::filesystem::path absTestSourceDir;
 
 		/**
-		 * The input files of this test case.
+		 * The absolute path to the directory containing the test output files.
+		 */
+		boost::filesystem::path absTestOutputDir;
+
+		/**
+		 * The absolute paths to the input files for this test case.
 		 */
 		vector<boost::filesystem::path> files;
 
@@ -128,15 +164,16 @@ namespace integration {
 		friend class boost::serialization::access;
 		template <class Archive>
 		void serialize(Archive& ar, const unsigned int version) {
-			ar & name;
+			ar & cnTestSourceDir;
 		}
 
 	  public:
 		/**
 		 * Creates a new test case based on the given arguments.
 		 */
-		IntegrationTestCase(const string& name,
-		                    const boost::filesystem::path& dir,
+		IntegrationTestCase(const boost::filesystem::path& cnTestSourceDir,
+		                    const boost::filesystem::path& absTestSourceDir,
+		                    const boost::filesystem::path& absTestOutputDir,
 		                    const vector<boost::filesystem::path>& files,
 		                    const vector<boost::filesystem::path>& includeDirs,
 		                    const vector<boost::filesystem::path>& libDirs,
@@ -162,25 +199,39 @@ namespace integration {
 		 * Obtains the name of this test case.
 		 */
 		const string& getName() const {
-			return name;
+			return cnTestSourceDir.string();
+		}
+
+		/**
+		 * Get canonical name of this test case as a path.
+		 */
+		const boost::filesystem::path& getCanonicalPath() const {
+			return cnTestSourceDir;
 		}
 
 		/**
 		 * Get Basename of this test case
 		 */
 		string getBaseName() const {
-			return boost::filesystem::path(dir).filename().string();
+			return boost::filesystem::path(absTestSourceDir).remove_trailing_separator().filename().string();
 		}
 
 		/**
 		 * Obtains the directory forming this test case.
 		 */
-		const boost::filesystem::path& getDirectory() const {
-			return dir;
+		const boost::filesystem::path& getSourceDirectory() const {
+			return absTestSourceDir;
 		}
 
 		/**
-		 * Obtains the files this test case is consisting of.
+		 * Obtains the output directory for this test case.
+		 */
+		const boost::filesystem::path& getOutputDirectory() const {
+			return absTestOutputDir;
+		}
+
+		/**
+		 * Obtains the input files for this test case.
 		 */
 		const vector<boost::filesystem::path>& getFiles() const {
 			return files;
@@ -247,21 +298,21 @@ namespace integration {
 		 * Allows to print this test case to some stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << name;
+			return out << cnTestSourceDir;
 		}
 
 		/**
 		 * An equality operator for integration test case instances.
 		 */
 		bool operator==(const IntegrationTestCase& other) const {
-			return name == other.name;
+			return cnTestSourceDir == other.cnTestSourceDir;
 		}
 
 		/**
 		 * A comparison operator for integration test case instances.
 		 */
 		bool operator<(const IntegrationTestCase& other) const {
-			return name < other.name;
+			return cnTestSourceDir < other.cnTestSourceDir;
 		}
 
 		/**
@@ -290,61 +341,32 @@ namespace integration {
 		const vector<string> getInsiemeCompilerArguments(std::string step, bool isCpp) const;
 	};
 
-
-	/**
-	 * A struct used to hold various paths needed to successfully lookup integration tests and their configuration
-	 */
-	struct IntegrationTestCaseDefaultsPaths {
-
-		/**
-		 * The default test source folder.
-		 * This is used to look up tests by name.
-		 */
-		std::string testDir;
-
-		/**
-		 * The default build folder.
-		 * This is used to look up the global configuration file and also the insiemecc binary.
-		 */
-		std::string buildDir;
-
-		/**
-		 * The name to the global configuration file.
-		 * This file will be searched in the current working directory, all it's parents and finally in the build folder.
-		 */
-		std::string globalConfigFileName;
-	};
-
-	IntegrationTestCaseDefaultsPaths getDefaultIntegrationTestCaseDefaultsPaths();
-
-
 	// an enum describing the different modes which test cases to load
 	enum LoadTestCaseMode { ENABLED_TESTS, ENABLED_AND_LONG_TESTS, LONG_TESTS, BLACKLISTED_TESTS, ALL_TESTS };
-
 
 	/**
 	 * Obtains a full list of all test cases available within the system.
 	 */
 	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode = ENABLED_TESTS,
-	                                               const IntegrationTestCaseDefaultsPaths defaultPaths = getDefaultIntegrationTestCaseDefaultsPaths());
+	                                               const IntegrationTestPaths testPaths = getDefaultIntegrationTestPaths());
 
 	/**
 	 * Obtains the test case matching the given name.
 	 *
-	 * @param name the name of the test case looking for
+	 * @param cnTestDir the canonical directory representing the integration test, may be absolute or relative
 	 * @return an optional representing the test case or being uninitialized if there is no such test case.
 	 */
-	const boost::optional<IntegrationTestCase> getCase(const string& name,
-	                                                   const IntegrationTestCaseDefaultsPaths defaultPaths = getDefaultIntegrationTestCaseDefaultsPaths());
+	const boost::optional<IntegrationTestCase> getCase(const boost::filesystem::path& testDir,
+	                                                   const IntegrationTestPaths testPaths = getDefaultIntegrationTestPaths());
 
 	/**
 	 * Obtains a list of test cases in the given path or below.
 	 *
-	 * @param path the directory representing the integration test
+	 * @param testDir the directory representing the integration test, may be absolute or relative
 	 * @return the list of test cases within this directory or below
 	 */
-	vector<IntegrationTestCase> getTestSuite(const string& path,
-	                                         const IntegrationTestCaseDefaultsPaths defaultPaths = getDefaultIntegrationTestCaseDefaultsPaths());
+	vector<IntegrationTestCase> getTestSuite(const boost::filesystem::path& testDir,
+	                                         const IntegrationTestPaths testPaths = getDefaultIntegrationTestPaths());
 
 	/**
 	 * Allow Integration Tests to be properly printed within gtest.

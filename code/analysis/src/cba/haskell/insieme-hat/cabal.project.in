@@ -1,4 +1,25 @@
 packages: @HAT_PACKAGE_PATHS@
 with-compiler: @HAT_COMPILER_PATH@
+extra-lib-dirs: @PROJECT_BINARY_DIR@/analysis
+                @PROJECT_BINARY_DIR@/annotations
+                @PROJECT_BINARY_DIR@/backend
+                @PROJECT_BINARY_DIR@/core
+                @PROJECT_BINARY_DIR@/common
+                @PROJECT_BINARY_DIR@/frontend
+                @PROJECT_BINARY_DIR@/transform
+                @PROJECT_BINARY_DIR@/utils
+
+program-locations
+  gcc-location: @HASKELL_C_COMPILER@
+
+package insieme-hat
+    ghc-options: -pgmc @HASKELL_C_COMPILER@ -pgml @HASKELL_C_COMPILER@
+    benchmarks: true
+    tests: true
+
+package allscale-hat
+    ghc-options: -pgmc @HASKELL_C_COMPILER@ -pgml @HASKELL_C_COMPILER@
+    benchmarks: true
+    tests: true
 
 index-state: 2017-08-08T13:14:22Z
