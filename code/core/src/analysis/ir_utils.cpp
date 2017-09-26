@@ -1450,28 +1450,74 @@ namespace analysis {
 		namespace {
 
 
-			const vector<RecordAddress>& collectAllRecordsInternal(const NodePtr& root, const NodePtr& cur, std::map<NodePtr,vector<RecordAddress>>& cache) {
+			// A utility class for the effective storage of collections of addresses.
+			class AddressCollection {
 
-				struct Cache : public core::value_annotation::drop_on_clone {
-					vector<RecordAddress> records;
-					bool operator==(const Cache& other) const {
-						return records == other.records;
+				// a marker that this node is included in the set
+				bool thisNode;
+
+				// a list of children, compressed
+				std::vector<std::pair<std::size_t,const AddressCollection*>> children;
+
+				// a list of children, explicit
+				std::vector<NodeAddress> list;
+
+			public:
+
+				// creates a new, empty collection
+				AddressCollection() : thisNode(false) {}
+
+				bool empty() const {
+					return !thisNode && children.empty() && list.empty();
+				}
+
+				// inserts a new address
+				void insert(const NodeAddress& cur) {
+
+					// roots are easy
+					if (cur.isRoot()) {
+						thisNode = true;
+						return;
 					}
-				};
 
-				// retrieve annotated records
-				if (cur != root) {
-					if (const Cache* cache = cur->hasAttachedValue<Cache>()) {
-						return cache->records;
+					// in all other cases, we have to add it explicitly
+					list.push_back(cur);
+				}
+
+				void insert(std::size_t child, const AddressCollection& collection) {
+					if (collection.empty()) return;
+					children.push_back({child,&collection});
+				}
+
+				// runs an operation on each node in the set
+				template<typename Operator>
+				void forEach(const NodePtr& root, const Operator& op) const {
+					forEach(NodeAddress(root),op);
+				}
+
+			private:
+
+				template<typename Operator>
+				void forEach(const NodeAddress& head, Operator& op) const {
+					if (thisNode) op(head);
+					for(const auto& cur : children) {
+						cur.second->forEach(head.getAddressOfChild(cur.first),op);
+					}
+					for(const auto& cur : list) {
+						op(concat(head,cur));
 					}
 				}
+
+			};
+
+			const AddressCollection& collectAllRecordsInternal(const NodePtr& root, const NodePtr& cur, std::map<NodePtr,AddressCollection>& cache) {
 
 				// check cache
 				auto pos = cache.find(cur);
 				if (pos != cache.end()) return pos->second;
 
 				// collect records for this node
-				auto& records = (cur == root) ? cache[cur] : cur->attachValue<Cache>().records;
+				auto& records = cache[cur];
 
 				// if it is a built-in we stop here
 				if (core::lang::isBuiltIn(cur)) return records;
@@ -1480,10 +1526,10 @@ namespace analysis {
 				if (cur != root) {
 					if (auto tagType = cur.isa<TagTypePtr>()) {
 						if (!hasFreeTagTypeReferences(tagType)) {
-							auto cannoncial = getCanonicalType(tagType);
-							if (*cannoncial == *tagType) {
+							auto canonical = getCanonicalType(tagType);
+							if (*canonical == *tagType) {
 								for(const auto& def : TagTypeAddress(tagType)->getDefinition()) {
-									records.push_back(def->getRecord());
+									records.insert(def->getRecord());
 								}
 								return records;
 							}
@@ -1493,26 +1539,34 @@ namespace analysis {
 
 				// if this node is a record, add it to the result set
 				if (cur.isa<RecordPtr>()) {
-					records.push_back(RecordAddress(cur));
+					records.insert(RecordAddress(cur));
 				}
 
 				// collect records from sub-nodes
-				for(const auto& child : NodeAddress(cur).getChildList()) {
-					for(const auto& rec : collectAllRecordsInternal(root,child,cache)) {
-						records.push_back(concat(child,rec));
-					}
+				std::size_t i = 0;
+				for(const auto& child : cur->getChildList()) {
+					records.insert(i,collectAllRecordsInternal(root,child,cache));
+					i++;
 				}
 				return records;
 			}
-
 
 			/**
 			 * Collects a list of addresses pointing to nested records within the given node.
 			 */
 			vector<RecordAddress> collectAllRecords(const NodePtr& root) {
 				// run everything through an internal, cached collector
-				std::map<NodePtr,vector<RecordAddress>> cache;
-				return collectAllRecordsInternal(root, root, cache);
+				std::map<NodePtr,AddressCollection> cache;
+				auto& collection = collectAllRecordsInternal(root, root, cache);
+
+				// convert the collection to a list of records
+				std::vector<RecordAddress> res;
+				collection.forEach(root,[&](const NodeAddress& cur){
+					res.push_back(cur.as<RecordAddress>());
+				});
+
+				// move out the result
+				return std::move(res);
 			}
 
 		}
