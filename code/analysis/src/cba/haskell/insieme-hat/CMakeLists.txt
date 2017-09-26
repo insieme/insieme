@@ -33,6 +33,16 @@ foreach(pkg ${HAT_PACKAGE_PATHS_LIST})
 	list(APPEND HAT_PACKAGE_PATHS_REL_LIST "./${pkg_dirname}")
 endforeach()
 
+
+# Allows to specify a different compiler to use for compiling and linking haskell.
+# Normally you wouldn't want to do this, but in case you are using a wrapper like distcc (or maybe also ccache), you might
+# need to set this variable to the actual compiler you are using, since e.g. distcc doesn't support the @file argument syntax.
+if(NOT HASKELL_C_COMPILER)
+	set(HASKELL_C_COMPILER "${CMAKE_C_COMPILER}")
+endif()
+message(STATUS "Using ${HASKELL_C_COMPILER} for compiling Haskell")
+
+
 ## Paths to Haskell packages to include in the cabal.project file.
 set(HAT_COMPILER_PATH "${THIRD_PARTY_DIR}/ghc/bin/ghc")
 string(REPLACE ";" " " HAT_PACKAGE_PATHS "${HAT_PACKAGE_PATHS_LIST}")
