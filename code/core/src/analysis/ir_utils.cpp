@@ -1566,7 +1566,7 @@ namespace analysis {
 				});
 
 				// move out the result
-				return std::move(res);
+				return res;
 			}
 
 		}
