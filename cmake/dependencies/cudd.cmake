@@ -1,2 +1,4 @@
 set(CUDD_VERSION 2.4.2 CACHE STRING "CUDD Version")
-find_package(CUDD ${CUDD_VERSION} EXACT REQUIRED)
+if(NOT MSVC)
+	find_package(CUDD ${CUDD_VERSION} EXACT REQUIRED)
+endif()

@@ -210,7 +210,7 @@ namespace integration {
 	}
 
 	int handleIntegrationTests(int argc, char** argv, const std::string& programName, const std::string& programVersion,
-	                           const IntegrationTestCaseDefaultsPaths& defaultPaths) {
+	                           const IntegrationTestPaths& testPaths) {
 		// TODO custom root config file
 		// set OMP/IRT environment variables if not already set
 		auto checkAndSetEnv = [](const char* identifier, const char* defaultValue){
@@ -237,7 +237,7 @@ namespace integration {
 		}
 
 		// get list of test cases
-		auto cases = tf::loadCases(defaultPaths, options);
+		auto cases = tf::loadCases(testPaths, options);
 
 		string header = programName + " version: " + programVersion;
 
@@ -255,7 +255,7 @@ namespace integration {
 			for(const auto& cur : cases) {
 				std::cout << (++counter) << "/" << cases.size() << ":\n";
 				std::cout << "Test Case: " << cur.getName() << "\n";
-				std::cout << "Directory: " << cur.getDirectory().string() << "\n";
+				std::cout << "Directory: " << cur.getSourceDirectory().string() << "\n";
 				std::cout << cur.getProperties() << "\n";
 			}
 
@@ -287,7 +287,6 @@ namespace integration {
 		itc::TestSetup setup;
 		setup.mockRun = options.mockrun;
 		setup.clean   = !options.no_clean;
-		setup.inplace = options.inplace;
 		setup.perf = options.perf;
 
 		insieme::utils::Colorize colorize(options.color);
@@ -355,22 +354,12 @@ namespace integration {
 				// if this test doesn't schedule any steps we count it as omitted
 				if(list.empty()) { omittedTestsCount++; }
 
-
-				TestSetup tmp_setup(setup);
-				if(tmp_setup.inplace) {
-					tmp_setup.executionDir = cur.getDirectory();
-				} else {
-					// cannot use unique_path here otherwise preprocessing/check_prerequisits doesn't work
-					tmp_setup.executionDir = boost::filesystem::path(defaultPaths.buildDir) / "integration-testdirs" / cur.getCanonicalPath();
-					boost::filesystem::create_directories(tmp_setup.executionDir);
-				}
-
 				// run steps
 				vector<pair<string, TestResult>> results;
 				bool success = true;
 
 				for(const auto& step : list) {
-					auto res = step.run(tmp_setup, cur, runner);
+					auto res = step.run(setup, cur, runner);
 					results.push_back(std::make_pair(step.getName(), res));
 					if(!res.wasOmitted() && !res.wasSuccessful()) {
 						failedSteps[cur] = res;

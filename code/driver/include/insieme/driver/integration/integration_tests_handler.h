@@ -44,7 +44,7 @@ namespace insieme {
 namespace driver {
 namespace integration {
 
-	struct IntegrationTestCaseDefaultsPaths;
+	struct IntegrationTestPaths;
 
 	/**
 	 * Performs all the steps required for integration testing.
@@ -52,7 +52,7 @@ namespace integration {
 	 * @return The exit code
 	 */
 	int handleIntegrationTests(int argc, char** argv, const std::string& programName, const std::string& provramVersion,
-	                           const IntegrationTestCaseDefaultsPaths& defaultPaths);
+	                           const IntegrationTestPaths& testPaths);
 
 } // end namespace integration
 } // end namespace driver

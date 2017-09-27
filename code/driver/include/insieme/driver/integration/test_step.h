@@ -45,6 +45,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/operators.hpp>
+#include <boost/filesystem.hpp>
 
 #include "insieme/driver/integration/tests.h"
 #include "insieme/driver/integration/test_result.h"
@@ -73,7 +74,7 @@ namespace integration {
 	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads = 0, bool scheduling = false);
 
 	// checks the prerequisites for a test case in case there is such a step. Returns false if the prerequisites are not satisfied.
-	bool checkPrerequisites(const IntegrationTestCase& test);
+	bool checkPrerequisites(const IntegrationTestCase& test, boost::filesystem::path buildDir);
 
 	// reads out a given file and returns the contents
 	std::string readFile(std::string filename);
@@ -128,12 +129,10 @@ namespace integration {
 		bool mockRun;
 		SchedulingPolicy sched;
 		bool clean;
-                bool inplace;
 		int numThreads;
 		std::string stdOutFile;
 		std::string stdErrFile;
 		std::string outputFile;
-                boost::filesystem::path executionDir;
 
 		// perf metrics
 		bool perf;
@@ -231,9 +230,9 @@ namespace integration {
 			return r;
 		}
 		int executeWithTimeout(const string& executableParam, const string& argumentsParam, const string& environmentParam, const string& outFilePath,
-		                       const string& errFilePath, unsigned cpuTimeLimit, const string& execDir = "") const;
+		                       const string& errFilePath, unsigned cpuTimeLimit, const boost::filesystem::path& execDir = "") const;
 		TestResult runCommand(const string& stepName, const TestSetup& setup, const PropertyView& testConfig, const string& cmd,
-		                      const string& producedFile = "", const string& execDir = "") const;
+		                      const boost::filesystem::path& execDir = "", const string& producedFile = "") const;
 		void attachExecuteOnKill(std::function<void()> f) {
 			func = f;
 		}

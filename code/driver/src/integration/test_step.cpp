@@ -110,16 +110,13 @@ namespace integration {
 				// disable multithreading
 				setup.numThreads = 0;
 
-				// get execution directory
-				string executionDirectory = setup.executionDir.string();
-
-				// set output file, stdOutFile and stdErrFile
-				setup.outputFile = executionDirectory + "/" + test.getBaseName() + ".ref";
-				setup.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				setup.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				string outputDir = test.getOutputDirectory().string();
+				setup.outputFile = outputDir + "/" + test.getBaseName() + ".ref";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, setup, props, cmd.str(), "", executionDirectory);
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
 			}, std::set<std::string>(), COMPILE);
 		}
 
@@ -128,11 +125,10 @@ namespace integration {
 				std::stringstream cmd;
 				auto props = test.getPropertiesFor(name);
 
-				// get execution directory
-				string executionDirectory = setup.executionDir.string();
+				string outputDir = test.getOutputDirectory().string();
 
 				// start with executable
-				cmd << executionDirectory << "/" << test.getBaseName() << ".ref";
+				cmd << outputDir << "/" << test.getBaseName() << ".ref";
 
 				// add arguments
 				cmd << " " << props["executionFlags"];
@@ -140,12 +136,11 @@ namespace integration {
 				// set number of threads
 				setup.numThreads = numThreads;
 
-				// set output files
-				setup.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				setup.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, setup, props, cmd.str(), "", executionDirectory);
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
 			}, deps, RUN);
 		}
 
@@ -162,15 +157,12 @@ namespace integration {
 				// set number of threads
 				setup.numThreads = 0;
 
-				// get execution directory
-				string executionDirectory = setup.executionDir.string();
-
-				// set output files
-				setup.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				setup.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				string outputDir = test.getOutputDirectory().string();
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, setup, props, cmd.str(), "", executionDirectory);
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
 			}, deps);
 		}
 
@@ -196,21 +188,20 @@ namespace integration {
 				// enable semantic tests
 				cmd << " --check-sema-only";
 
-				// get execution dir
-				string executionDirectory = setup.executionDir.string();
+				string outputDir = test.getOutputDirectory().string();
 
 				// also dump IR
-				std::string irFile = executionDirectory + "/" + test.getBaseName() + ".ir";
+				std::string irFile = outputDir + "/" + test.getBaseName() + ".ir";
 				cmd << " --dump-ir " << irFile;
 
 				// disable multithreading
 				setup.numThreads = 0;
 
-				setup.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				setup.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, setup, props, cmd.str(), irFile, executionDirectory);
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory(), irFile);
 			}, deps, COMPILE);
 		}
 
@@ -233,26 +224,24 @@ namespace integration {
 				// append the Insieme specific arguments
 				cmd << " " << join(" ", test.getInsiemeCompilerArguments(name, l == Language::CPP));
 
-				// get execution dir
-				string executionDirectory = setup.executionDir.string();
-
 				// determine backend
 				string be = getBackendKey(backend);
 				cmd << " --backend " << be;
 
+				string outputDir = test.getOutputDirectory().string();
+
 				// source-to-source compilation only
-				setup.outputFile = executionDirectory + "/" + test.getBaseName() + ".insieme." + be + "." + getExtension(l);
+				setup.outputFile = outputDir + "/" + test.getBaseName() + ".insieme." + be + "." + getExtension(l);
 				cmd << " --dump-trg-only " << setup.outputFile;
 
 				// disable multithreading
 				setup.numThreads = 0;
 
-				// set stdOut file and stdErr file
-				setup.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				setup.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, setup, props, cmd.str(), "", executionDirectory);
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
 			}, deps, COMPILE);
 		}
 
@@ -267,11 +256,10 @@ namespace integration {
 				// determine backend
 				string be = getBackendKey(backend);
 
-				// get execution dir
-				string executionDirectory = setup.executionDir.string();
+				string outputDir = test.getOutputDirectory().string();
 
 				// add input file
-				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
+				cmd << " " << outputDir << "/" << test.getBaseName() << ".insieme." << be << "." << getExtension(l);
 
 				// append all the arguments
 				cmd << " " << join(" ", test.getCompilerArguments(name, l == Language::CPP, true, true));
@@ -285,13 +273,12 @@ namespace integration {
 				// disable multithreading
 				setup.numThreads = 0;
 
-				// set output file, stdOut file and stdErr file
-				setup.outputFile = executionDirectory + "/" + test.getBaseName() + ".insieme." + be;
-				setup.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				setup.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.outputFile = outputDir + "/" + test.getBaseName() + ".insieme." + be;
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, setup, props, cmd.str(), "", executionDirectory);
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
 			}, deps, COMPILE);
 		}
 
@@ -301,20 +288,19 @@ namespace integration {
 				std::stringstream cmd;
 				auto props = test.getPropertiesFor(name);
 
-				// get execution dir
-				string executionDirectory = setup.executionDir.string();
+				string outputDir = test.getOutputDirectory().string();
 
 				// the log file to delete afterwards
 				std::string logFile = "";
 				if (backend == Runtime) {
-					logFile = executionDirectory + "/insieme_runtime.log";
+					logFile = outputDir + "/insieme_runtime.log";
 				}
 
 				// determine backend
 				string be = getBackendKey(backend);
 
 				// start with executable
-				cmd << executionDirectory << "/" << test.getBaseName() << ".insieme." << be;
+				cmd << outputDir << "/" << test.getBaseName() << ".insieme." << be;
 
 				// add arguments
 				cmd << " " << props["executionFlags"];
@@ -325,11 +311,11 @@ namespace integration {
 				// set scheduling variant
 				setup.sched = sched;
 
-				setup.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				setup.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, setup, props, cmd.str(), logFile, executionDirectory);
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory(), logFile);
 			}, deps, RUN);
 		}
 
@@ -356,21 +342,20 @@ namespace integration {
 				// disable multithreading
 				setup.numThreads = 0;
 
-				// get execution dir
-				string executionDirectory = setup.executionDir.string();
+				string outputDir = test.getOutputDirectory().string();
 
 				// start with executable
-				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref" + langstr + "execute.out";
+				cmd << " " << outputDir << "/" << test.getBaseName() << ".ref" + langstr + "execute.out";
 
 				// determine backend
 				string be = getBackendKey(backend);
 
 				// pipe result to output file
 				if(numThreads)
-					cmd << " " << executionDirectory << "/" << test.getBaseName()
+					cmd << " " << outputDir << "/" << test.getBaseName()
 					    << ".insiemecc_" + be + langstr + "execute_" + schedString + std::to_string(numThreads) + ".out";
 				else {
-					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insiemecc_" + be + langstr + "execute.out";
+					cmd << " " << outputDir << "/" << test.getBaseName() << ".insiemecc_" + be + langstr + "execute.out";
 				}
 
 				// add awk pattern
@@ -378,11 +363,11 @@ namespace integration {
 				string outputAwk = props["outputAwk"]; //.substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
 				cmd << " \"" << outputAwk << "\"";
 
-				setup.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				setup.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, setup, props, cmd.str(), "", executionDirectory);
+				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
 			}, deps, CHECK);
 		}
 
@@ -398,14 +383,13 @@ namespace integration {
 				// define comparison script
 				cmd << props["compareOutputScript"];
 
-				// get execution dir
-				string executionDirectory = setup.executionDir.string();
+				string outputDir = test.getOutputDirectory().string();
 
 				// start with executable
-				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref_" << langstr << "_execute.out";
+				cmd << " " << outputDir << "/" << test.getBaseName() << ".ref_" << langstr << "_execute.out";
 
 				// pipe result to output file
-				cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref_" << langstr << "_execute_" << std::to_string(numThreads) << ".out";
+				cmd << " " << outputDir << "/" << test.getBaseName() << ".ref_" << langstr << "_execute_" << std::to_string(numThreads) << ".out";
 
 				// add awk pattern
 				cmd << " \"" << props["outputAwk"] << "\"";
@@ -413,11 +397,11 @@ namespace integration {
 				// disable multithreading
 				setup.numThreads = 0;
 
-				setup.stdOutFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".out";
-				setup.stdErrFile = executionDirectory + "/" + test.getBaseName() + "." + name + ".err.out";
+				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
+				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
-				return runner.runCommand(name, setup, props, cmd.str(), "", executionDirectory);
+				return runner.runCommand(name, setup, props, cmd.str(), "", outputDir);
 			}, deps, CHECK);
 		}
 
@@ -762,39 +746,11 @@ namespace integration {
 		return output;
 	}
 
-
-	namespace {
-		bool runSingleTestStep(const IntegrationTestCase& test, const std::string stepName) {
-			TestStep step = getStepByName(stepName);
-
-			// prepare the setup
-			TestSetup setup;
-			setup.mockRun = false;
-			setup.sched = SCHED_UNDEFINED;
-			setup.clean = true;
-			setup.inplace = false;
-			setup.perf = false;
-
-			// now execute the step
-			auto result = step.run(setup, test, TestRunner::getInstance());
-
-			// and don't forget to clean up the produced files here
-			result.clean();
-
-			// also return true if the step was omitted
-			return result.wasSuccessful() || result.wasOmitted();
-		}
-	}
-
-	bool checkPrerequisites(const IntegrationTestCase& test) {
-		return runSingleTestStep(test, TEST_STEP_CHECK_PREREQUISITES);
-	}
-
 	/*
 	 *  Test Runner member functions
 	 */
 	int TestRunner::executeWithTimeout(const string& executableParam, const string& argumentsParam, const string& environmentParam, const string& outFilePath,
-	                                   const string& errFilePath, unsigned cpuTimeLimit, const string& execDir) const {
+	                                   const string& errFilePath, unsigned cpuTimeLimit, const fs::path& execDir) const {
 		/*
 		 * Setup arguments
 		 */
@@ -919,8 +875,7 @@ namespace integration {
 			if(close(fdOut) == -1) { std::cerr << "Unable to close stdout file descriptor, reason: " << strerror(errno) << "\n"; }
 			if(close(fdErr) == -1) { std::cerr << "Unable to close stderr file descriptor, reason: " << strerror(errno) << "\n"; }
 
-			// navigate to execution directory if one is specified
-			if(!execDir.empty()) { boost::filesystem::current_path(execDir); }
+			boost::filesystem::current_path(execDir);
 
 			if(execve(executableParam.c_str(), argumentsForExec.data(), environmentForExec.data()) == -1) {
 				assert_fail() << "Unable to run executable " << executableParam << ", reason: " << strerror(errno) << "\n";
@@ -934,7 +889,7 @@ namespace integration {
 	}
 
 	TestResult TestRunner::runCommand(const string& stepName, const TestSetup& setup, const PropertyView& testConfig, const string& cmd,
-	                                  const string& producedFile, const string& execDir) const {
+	                                  const fs::path& execDir, const string& producedFile) const {
 		vector<string> producedFiles;
 		producedFiles.push_back(setup.stdOutFile);
 		producedFiles.push_back(setup.stdErrFile);
@@ -952,6 +907,9 @@ namespace integration {
 			producedFiles.push_back(setup.outputFile);
 			outfile = " -o " + setup.outputFile;
 		}
+
+		if(!execDir.empty())
+			fs::create_directories(execDir);
 
 		// setup possible environment vars
 		std::stringstream env;
@@ -995,7 +953,7 @@ namespace integration {
 		// if it is a mock-run do nothing
 		if(setup.mockRun) {
 			return TestResult(TestResult::ResultType::SUCCESS, stepName, 0, metricResults, "", "",
-			                  (execDir.empty() ? "" : "cd " + execDir + " && ") + env.str() + cmd + outfile);
+			                  (execDir.empty() ? "" : "cd " + execDir.string() + " && ") + env.str() + cmd + outfile);
 		}
 
 		string perfString("");

@@ -46,6 +46,7 @@
 #include "insieme/driver/integration/test_step.h"
 #include "insieme/driver/utils/object_file_utils.h"
 
+#include "insieme/utils/config.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
@@ -61,6 +62,11 @@
 
 #include "insieme/backend/runtime/runtime_backend.h"
 
+#include <stdio.h>
+#include <execinfo.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 using namespace insieme::utils;
 
@@ -83,7 +89,30 @@ namespace integration {
 		SCOPED_TRACE("Testing Case: " + testCase.getName());
 		LOG(INFO) << "Testing Case: " + testCase.getName();
 
+		boost::filesystem::create_directories(testCase.getOutputDirectory());
+
 		core::ProgramPtr code = testCase.load(manager);
+
+		// prepare the setup
+		TestSetup setup;
+		setup.mockRun = false;
+		setup.sched = SCHED_UNDEFINED;
+		setup.clean = true;
+		setup.perf = false;
+
+		auto checkPrerequisites = [setup](const IntegrationTestCase& testCase) -> bool {
+			TestStep step = getStepByName(TEST_STEP_CHECK_PREREQUISITES);
+
+			// now execute the step
+			auto result = step.run(setup, testCase, TestRunner::getInstance());
+
+			// and don't forget to clean up the produced files here
+			result.clean();
+
+			// also return true if the step was omitted
+			return result.wasSuccessful() || result.wasOmitted();
+		};
+
 
 		//TEST THE FRONTEND
 		{
@@ -154,7 +183,7 @@ namespace integration {
 		}
 
 		// each test might require some prerequisites which are checked here
-		if (!driver::integration::checkPrerequisites(testCase)) {
+		if (!checkPrerequisites(testCase)) {
 			ASSERT_TRUE(false) << "Prerequisites for test case " << testCase.getName() << " are not satisfied";
 			return;
 		}

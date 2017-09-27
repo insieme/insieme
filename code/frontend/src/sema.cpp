@@ -226,8 +226,8 @@ namespace frontend {
 			const char* strData = buffer.begin() + locInfo.second;
 			char const* rBracePos = strchr(strData, '}');
 
-			// We know the location of the right bracket, we overwrite the value of R with the correct location
-			if((((rightBraceImmediateLoc.getRawEncoding() & ~MacroIDBit) + (rBracePos - strData)) & MacroIDBit) == 0) {
+			// If we know the location of the right bracket, we overwrite the value of R with the correct location
+			if(rBracePos != NULL && (((rightBraceImmediateLoc.getRawEncoding() & ~MacroIDBit) + (rBracePos - strData)) & MacroIDBit) == 0) {
 				rightBraceLoc = rightBraceImmediateLoc.getLocWithOffset(rBracePos - strData);
 			}
 		}

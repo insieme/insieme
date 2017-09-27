@@ -168,21 +168,25 @@ namespace testFramework {
 	}
 
 
-	vector<TestCase> loadCases(const IntegrationTestCaseDefaultsPaths& defaultPaths, const Options& options) {
+	vector<TestCase> loadCases(IntegrationTestPaths testPaths, const Options& options) {
 		// if no test is specified explicitly load all of them
 		LoadTestCaseMode loadMode = ENABLED_TESTS;
 		if(options.blacklistedOnly) loadMode = BLACKLISTED_TESTS;
 		else if(options.longTestsOnly) loadMode = LONG_TESTS;
 		else if(options.longTestsAlso) loadMode = ENABLED_AND_LONG_TESTS;
+
+		if(options.inplace)
+			testPaths.outputDir = testPaths.testsRootDir;
+
 		if(options.cases.empty()) {
-			return getAllCases(loadMode, defaultPaths);
+			return getAllCases(loadMode, testPaths);
 		}
 
 		// load selected test cases
 		vector<TestCase> cases;
 		for(const auto& cur : options.cases) {
 			// load test case based on the location
-			auto curSuite = getTestSuite(boost::filesystem::path(cur), defaultPaths);
+			auto curSuite = getTestSuite(boost::filesystem::path(cur), testPaths);
 			for(const auto& cur : curSuite) {
 				if(!contains(cases, cur)) { // make sure every test is only present once
 					cases.push_back(cur);
