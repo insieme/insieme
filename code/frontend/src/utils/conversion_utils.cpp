@@ -41,6 +41,7 @@
 #include "insieme/frontend/state/function_manager.h"
 
 #include "insieme/core/analysis/default_delete_member_semantics.h"
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir.h"
@@ -241,7 +242,7 @@ namespace utils {
 
 		// get necessary stuff
 		auto thisType = getThisType(converter, ctorDecl);
-		auto ctorType = builder.getDefaultConstructorType(thisType);
+		auto ctorType = core::analysis::getDefaultConstructorType(thisType);
 		auto thisVariable = builder.variable(builder.refType(thisType));
 		const auto& paramTypes = otherCtorLit->getType().as<core::FunctionTypePtr>()->getParameterTypeList();
 

@@ -44,6 +44,7 @@
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/analysis/compare.h"
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/annotations/naming.h"
@@ -250,15 +251,15 @@ namespace analysis {
 		// if we should check for a trivial type, we also check for a trivial default constructor here
 		if(checkTrivial) {
 			// the defult constructor must not be deleted and be either implicit or defaulted)
-			auto defaultConstructor = getCtorByType(builder.getDefaultConstructorType(thisType));
+			auto defaultConstructor = getCtorByType(analysis::getDefaultConstructorType(thisType));
 			if(!defaultConstructor || !isaDefaultMember(defaultConstructor)) return false;
 		}
 
 		// check for trivial constructors. They have to be either deleted or (implicitly) defaulted
-		auto copyConstructor = getCtorByType(builder.getDefaultCopyConstructorType(thisType));
+		auto copyConstructor = getCtorByType(analysis::getDefaultCopyConstructorType(thisType));
 		if(copyConstructor && !isaDefaultMember(copyConstructor)) return false;
 
-		auto moveConstructor = getCtorByType(builder.getDefaultMoveConstructorType(thisType));
+		auto moveConstructor = getCtorByType(analysis::getDefaultMoveConstructorType(thisType));
 		if(moveConstructor && !isaDefaultMember(moveConstructor)) return false;
 
 		// check trivial destructor
@@ -266,10 +267,10 @@ namespace analysis {
 		if(destructor && !isaDefaultMember(destructor)) return false;
 
 		// check for trivial copy and move assignments
-		auto copyAssignment = getAssignmentOperatorByType(builder.getDefaultCopyAssignOperatorType(thisType));
+		auto copyAssignment = getAssignmentOperatorByType(analysis::getDefaultCopyAssignOperatorType(thisType));
 		if(copyAssignment && !isaDefaultMember(copyAssignment)) return false;
 
-		auto moveAssignment = getAssignmentOperatorByType(builder.getDefaultMoveAssignOperatorType(thisType));
+		auto moveAssignment = getAssignmentOperatorByType(analysis::getDefaultMoveAssignOperatorType(thisType));
 		if(moveAssignment && !isaDefaultMember(moveAssignment)) return false;
 
 		// check for virtual member functions

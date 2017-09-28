@@ -62,11 +62,12 @@
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/pointer.h"
 
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/analysis/type_utils.h"
-#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/default_members.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/parentheses.h"
+#include "insieme/core/analysis/type_utils.h"
 
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/encoder/lists.h"
@@ -817,15 +818,15 @@ namespace printer {
 				auto containsCtorType = [&](const TypePtr& type) {
 					return ::any(node->getConstructors(), [&type](const auto& ctor) { return ctor->getType().getAddressedNode() == type; });
 				};
-				if(!containsCtorType(builder.getDefaultConstructorType(thisType))) {
+				if(!containsCtorType(analysis::getDefaultConstructorType(thisType))) {
 					newLine();
 					(*out) << "ctor function () = delete;";
 				}
-				if(!containsCtorType(builder.getDefaultCopyConstructorType(thisType))) {
+				if(!containsCtorType(analysis::getDefaultCopyConstructorType(thisType))) {
 					newLine();
 					(*out) << "ctor function (other : ref<" << recordName << ",t,f,cpp_ref>) = delete;";
 				}
-				if(!containsCtorType(builder.getDefaultMoveConstructorType(thisType))) {
+				if(!containsCtorType(analysis::getDefaultMoveConstructorType(thisType))) {
 					newLine();
 					(*out) << "ctor function (other : ref<" << recordName << ",f,f,cpp_rref>) = delete;";
 				}
@@ -858,11 +859,11 @@ namespace printer {
 							return memfun->getNameAsString() == utils::getMangledOperatorAssignName() && memfun->getImplementation()->getType().getAddressedNode() == type;
 					});
 				};
-				if(!containsAssignOperatorType(builder.getDefaultCopyAssignOperatorType(thisType))) {
+				if(!containsAssignOperatorType(analysis::getDefaultCopyAssignOperatorType(thisType))) {
 					newLine();
 					(*out) << "function " << utils::getMangledOperatorAssignName() << " = (rhs : ref<" << recordName << ",t,f,cpp_ref>) -> ref<" << recordName << ",f,f,cpp_ref> = delete;";
 				}
-				if(!containsAssignOperatorType(builder.getDefaultMoveAssignOperatorType(thisType))) {
+				if(!containsAssignOperatorType(analysis::getDefaultMoveAssignOperatorType(thisType))) {
 					newLine();
 					(*out) << "function " << utils::getMangledOperatorAssignName() << " = (rhs : ref<" << recordName << ",f,f,cpp_rref>) -> ref<" << recordName << ",f,f,cpp_ref> = delete;";
 				}

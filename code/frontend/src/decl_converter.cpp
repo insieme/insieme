@@ -44,6 +44,7 @@
 #include "insieme/frontend/utils/name_manager.h"
 
 #include "insieme/core/analysis/default_delete_member_semantics.h"
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/annotations/default_delete.h"
 #include "insieme/core/annotations/naming.h"
@@ -267,18 +268,18 @@ namespace conversion {
 			bool defaulted = methDecl->isDefaulted();
 			auto thisType = utils::getThisType(converter, methDecl);
 			if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) {
-				auto type = builder.getDefaultDestructorType(thisType);
+				auto type = core::analysis::getDefaultDestructorType(thisType);
 				ret.literal = builder.getLiteralForDestructor(type);
 			} else if(auto constDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl)) {
 				core::FunctionTypePtr type;
 				if(constDecl->isDefaultConstructor()) {
-					type = builder.getDefaultConstructorType(thisType);
+					type = core::analysis::getDefaultConstructorType(thisType);
 				}
 				else if(constDecl->isCopyConstructor()) {
-					type = builder.getDefaultCopyConstructorType(thisType);
+					type = core::analysis::getDefaultCopyConstructorType(thisType);
 				}
 				else if(constDecl->isMoveConstructor()) {
-					type = builder.getDefaultMoveConstructorType(thisType);
+					type = core::analysis::getDefaultMoveConstructorType(thisType);
 				} else {
 					assert_fail() << "Can't translate defaulted constructor: " << dumpClang(methDecl);
 				}
@@ -286,9 +287,9 @@ namespace conversion {
 			} else {
 				core::FunctionTypePtr type;
 				if(methDecl->isCopyAssignmentOperator()) {
-					type = builder.getDefaultCopyAssignOperatorType(thisType);
+					type = core::analysis::getDefaultCopyAssignOperatorType(thisType);
 				} else if(methDecl->isMoveAssignmentOperator()) {
-					type = builder.getDefaultMoveAssignOperatorType(thisType);
+					type = core::analysis::getDefaultMoveAssignOperatorType(thisType);
 				} else {
 					assert_fail() << "Can't translate defaulted method: " << dumpClang(methDecl);
 				}

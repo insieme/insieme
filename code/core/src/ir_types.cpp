@@ -50,6 +50,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/reference.h"
 
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
@@ -594,15 +595,15 @@ namespace core {
 		auto thisType = builder.refType(builder.tagTypeReference(name));
 		return get(manager, name, parents, fields,
 				Expressions::get(manager, toVector<ExpressionPtr>(
-						builder.getDefaultConstructor(thisType, parents, fields),
-						builder.getDefaultCopyConstructor(thisType, parents, fields),
-						builder.getDefaultMoveConstructor(thisType, parents, fields)
+						analysis::getDefaultConstructor(thisType, parents, fields),
+						analysis::getDefaultCopyConstructor(thisType, parents, fields),
+						analysis::getDefaultMoveConstructor(thisType, parents, fields)
 				)),
-				builder.getDefaultDestructor(thisType),
+				analysis::getDefaultDestructor(thisType, parents, fields),
 				BoolValue::get(manager, false),
 				MemberFunctions::get(manager, toVector<MemberFunctionPtr>(
-						builder.getDefaultCopyAssignOperator(thisType, parents, fields),
-						builder.getDefaultMoveAssignOperator(thisType, parents, fields)
+						analysis::getDefaultCopyAssignOperator(thisType, parents, fields),
+						analysis::getDefaultMoveAssignOperator(thisType, parents, fields)
 				)),
 				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
 			);
@@ -614,15 +615,15 @@ namespace core {
 		auto parents = builder.parents(ParentList());
 		return get(manager, name, fields,
 				Expressions::get(manager, toVector<ExpressionPtr>(
-						builder.getDefaultConstructor(thisType, parents, fields),
-						builder.getDefaultCopyConstructor(thisType, parents, fields),
-						builder.getDefaultMoveConstructor(thisType, parents, fields)
+						analysis::getDefaultConstructor(thisType, parents, fields),
+						analysis::getDefaultCopyConstructor(thisType, parents, fields),
+						analysis::getDefaultMoveConstructor(thisType, parents, fields)
 				)),
-				builder.getDefaultDestructor(thisType),
+				analysis::getDefaultDestructor(thisType, parents, fields),
 				BoolValue::get(manager, false),
 				MemberFunctions::get(manager, toVector<MemberFunctionPtr>(
-						builder.getDefaultCopyAssignOperator(thisType, parents, fields),
-						builder.getDefaultMoveAssignOperator(thisType, parents, fields)
+						analysis::getDefaultCopyAssignOperator(thisType, parents, fields),
+						analysis::getDefaultMoveAssignOperator(thisType, parents, fields)
 				)),
 				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
 			);

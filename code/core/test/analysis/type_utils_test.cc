@@ -42,6 +42,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/encoder/lists.h"
@@ -639,22 +640,19 @@ namespace analysis {
 		auto thisType = builder.refType(builder.tagTypeReference("A"));
 		auto parents = builder.parents();
 		auto fields = builder.fields();
-		auto defaultCtor = builder.getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
-		auto defaultDtor = builder.getDefaultDestructor(thisType);
-		auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
 
 		{
-			auto ctor = builder.getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
+			auto ctor = analysis::getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
 			EXPECT_TRUE(isaDefaultConstructor(ctor));
 		}
 
 		{
-			auto ctor = builder.getDefaultCopyConstructor(thisType, parents, fields).as<ExpressionPtr>();
+			auto ctor = analysis::getDefaultCopyConstructor(thisType, parents, fields).as<ExpressionPtr>();
 			EXPECT_TRUE(isaDefaultConstructor(ctor));
 		}
 
 		{
-			auto ctor = builder.getDefaultMoveConstructor(thisType, parents, fields).as<ExpressionPtr>();
+			auto ctor = analysis::getDefaultMoveConstructor(thisType, parents, fields).as<ExpressionPtr>();
 			EXPECT_TRUE(isaDefaultConstructor(ctor));
 		}
 
@@ -672,8 +670,8 @@ namespace analysis {
 		auto thisType = builder.refType(builder.tagTypeReference("A"));
 		auto parents = builder.parents();
 		auto fields = builder.fields();
-		auto defaultCtor = builder.getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
-		auto defaultDtor = builder.getDefaultDestructor(thisType);
+		auto defaultCtor = analysis::getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
+		auto defaultDtor = analysis::getDefaultDestructor(thisType, parents, fields);
 
 		{
 			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
@@ -695,17 +693,14 @@ namespace analysis {
 		auto thisType = builder.refType(builder.tagTypeReference("A"));
 		auto parents = builder.parents();
 		auto fields = builder.fields();
-		auto defaultCtor = builder.getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
-		auto defaultDtor = builder.getDefaultDestructor(thisType);
-		auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
 
 		{
-			auto member = builder.getDefaultCopyAssignOperator(thisType, parents, fields);
+			auto member = analysis::getDefaultCopyAssignOperator(thisType, parents, fields);
 			EXPECT_TRUE(core::analysis::isaDefaultMember(member));
 		}
 
 		{
-			auto member = builder.getDefaultMoveAssignOperator(thisType, parents, fields);
+			auto member = analysis::getDefaultMoveAssignOperator(thisType, parents, fields);
 			EXPECT_TRUE(core::analysis::isaDefaultMember(member));
 		}
 

@@ -48,6 +48,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/materialize.h"
 #include "insieme/core/analysis/default_delete_member_semantics.h"
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/annotations/default_delete.h"
 #include "insieme/core/annotations/naming.h"
@@ -1179,12 +1180,12 @@ namespace parser {
 
 		LiteralList InspireDriver::getDefaultMemberLiterals(const TypePtr& thisType) const {
 			return {
-				builder.getLiteralForConstructor(builder.getDefaultConstructorType(thisType)),
-				builder.getLiteralForConstructor(builder.getDefaultCopyConstructorType(thisType)),
-				builder.getLiteralForConstructor(builder.getDefaultMoveConstructorType(thisType)),
-				builder.getLiteralForDestructor(builder.getDefaultDestructorType(thisType)),
-				builder.getLiteralForMemberFunction(builder.getDefaultCopyAssignOperatorType(thisType), utils::getMangledOperatorAssignName()),
-				builder.getLiteralForMemberFunction(builder.getDefaultMoveAssignOperatorType(thisType), utils::getMangledOperatorAssignName())
+				builder.getLiteralForConstructor(analysis::getDefaultConstructorType(thisType)),
+				builder.getLiteralForConstructor(analysis::getDefaultCopyConstructorType(thisType)),
+				builder.getLiteralForConstructor(analysis::getDefaultMoveConstructorType(thisType)),
+				builder.getLiteralForDestructor(analysis::getDefaultDestructorType(thisType)),
+				builder.getLiteralForMemberFunction(analysis::getDefaultCopyAssignOperatorType(thisType), utils::getMangledOperatorAssignName()),
+				builder.getLiteralForMemberFunction(analysis::getDefaultMoveAssignOperatorType(thisType), utils::getMangledOperatorAssignName())
 			};
 		}
 
