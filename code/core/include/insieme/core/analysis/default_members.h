@@ -44,6 +44,8 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
+	// ---------------------------- Getters for the 6 default members and their type --------------------------------------
+
 	FunctionTypePtr getDefaultConstructorType(const TypePtr& thisType);
 	LambdaExprPtr   getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields);
 
@@ -61,6 +63,59 @@ namespace analysis {
 
 	FunctionTypePtr   getDefaultMoveAssignOperatorType(const TypePtr& thisType);
 	MemberFunctionPtr getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields);
+
+
+	// ---------------------------- Functions to check for default members --------------------------------------
+
+	/**
+	 * Determines whether the given tag type has a default constructor.
+	 */
+	bool hasDefaultConstructor(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given tag type has a copy constructor.
+	 */
+	bool hasCopyConstructor(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given tag type has a move constructor.
+	 */
+	bool hasMoveConstructor(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given TagType has the default generated destructor.
+	 */
+	bool hasDefaultDestructor(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given tag type has a copy assignment operator.
+	 */
+	bool hasCopyAssignment(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given tag type has a move assignment operator.
+	 */
+	bool hasMoveAssignment(const TagTypePtr&);
+
+	/**
+	 * Determines whether the given constructor is one of the default generated ones for the given type.
+	 */
+	bool isaDefaultConstructor(const ExpressionPtr& ctor);
+
+	/*
+	 * Determines whether the given expression is a destructor and if it is a default destructor
+	 */
+	bool isDefaultDestructor(const ExpressionPtr& dtor);
+
+	/**
+	 * Determines whether the given member function is one of the default generated assignment operators for the given type.
+	 */
+	bool isDefaultAssignment(const MemberFunctionPtr& memberFunction);
+
+	/**
+	 * Checks whether the given node is a lambda or member function which is marked as a default member
+	 */
+	bool isaDefaultMember(const NodePtr& node);
 
 } // end namespace analysis
 } // end namespace core

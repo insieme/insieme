@@ -42,7 +42,6 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/encoder/lists.h"
@@ -631,108 +630,6 @@ namespace analysis {
 		EXPECT_EQ(std::is_trivial<S5>::value, isTrivial(builder.parseType(R"(struct S5 {
 			ctor(i : int<4>) {}
 		})")));
-	}
-
-	TEST(IsaDefaultConstructor, Basic) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		auto thisType = builder.refType(builder.tagTypeReference("A"));
-		auto parents = builder.parents();
-		auto fields = builder.fields();
-
-		{
-			auto ctor = analysis::getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
-			EXPECT_TRUE(isaDefaultConstructor(ctor));
-		}
-
-		{
-			auto ctor = analysis::getDefaultCopyConstructor(thisType, parents, fields).as<ExpressionPtr>();
-			EXPECT_TRUE(isaDefaultConstructor(ctor));
-		}
-
-		{
-			auto ctor = analysis::getDefaultMoveConstructor(thisType, parents, fields).as<ExpressionPtr>();
-			EXPECT_TRUE(isaDefaultConstructor(ctor));
-		}
-
-		{
-			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_CONSTRUCTOR);
-			auto ctor = builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp());
-			EXPECT_FALSE(isaDefaultConstructor(ctor));
-		}
-	}
-
-	TEST(HasDefaultDestructor, Basic) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		auto thisType = builder.refType(builder.tagTypeReference("A"));
-		auto parents = builder.parents();
-		auto fields = builder.fields();
-		auto defaultCtor = analysis::getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
-		auto defaultDtor = analysis::getDefaultDestructor(thisType, parents, fields);
-
-		{
-			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
-			EXPECT_TRUE(hasDefaultDestructor(record));
-		}
-
-		{
-			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_DESTRUCTOR);
-			auto dtor = builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp());
-			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), dtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
-			EXPECT_FALSE(hasDefaultDestructor(record));
-		}
-	}
-
-	TEST(IsaDefaultMember, Basic) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		auto thisType = builder.refType(builder.tagTypeReference("A"));
-		auto parents = builder.parents();
-		auto fields = builder.fields();
-
-		{
-			auto member = analysis::getDefaultCopyAssignOperator(thisType, parents, fields);
-			EXPECT_TRUE(core::analysis::isaDefaultMember(member));
-		}
-
-		{
-			auto member = analysis::getDefaultMoveAssignOperator(thisType, parents, fields);
-			EXPECT_TRUE(core::analysis::isaDefaultMember(member));
-		}
-
-		{
-			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_MEMBER_FUNCTION);
-			auto member = builder.memberFunction(false, "foo", builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp()));
-			EXPECT_FALSE(core::analysis::isaDefaultMember(member));
-		}
-
-		{
-			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_MEMBER_FUNCTION);
-			auto member = builder.memberFunction(false, utils::getMangledOperatorAssignName(), builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp()));
-			EXPECT_FALSE(core::analysis::isaDefaultMember(member));
-		}
-	}
-
-	TEST(EssentialsChecks, Basic) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		auto A = builder.parseType("struct A { }").isa<TagTypePtr>();
-		EXPECT_TRUE(A);
-		bool(*hD1)(const TagTypePtr&) = hasDefaultDestructor;
-		bool(*hD2)(const RecordPtr&) = hasDefaultDestructor;
-		EXPECT_PRED1(hasDefaultConstructor, A);
-		EXPECT_PRED1(hasCopyConstructor, A);
-		EXPECT_PRED1(hasMoveConstructor, A);
-		EXPECT_PRED1(hD1, A);
-		EXPECT_PRED1(hD2, A->getRecord());
-
-		EXPECT_PRED1(hasCopyAssignment, A);
-		EXPECT_PRED1(hasMoveAssignment, A);
 	}
 
 	/*

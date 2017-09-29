@@ -54,10 +54,11 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/static_vars.h"
 
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/analysis/type_utils.h"
-#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/default_members.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 
 #include "insieme/core/types/type_variable_deduction.h"
 

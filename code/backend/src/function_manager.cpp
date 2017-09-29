@@ -51,6 +51,7 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/normalize.h"
@@ -1032,7 +1033,7 @@ namespace backend {
 			decl->isVirtual = memberFun->isVirtual();
 
 			// check for default members
-			if(core::analysis::isaDefaultMember(memberFun)) {
+			if(core::analysis::isDefaultAssignment(memberFun)) {
 				// set declaration to default
 				decl->flag = c_ast::BodyFlag::Default;
 

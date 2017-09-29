@@ -120,18 +120,6 @@ namespace analysis {
 	 */
 	bool isConstructorCall(const core::ExpressionPtr& expr);
 
-	// ---------------------------- Defaulted Members --------------------------------------
-
-	/**
-	 * Returns a new lambda which has been marked to be a default member
-	 */
-	LambdaExprPtr markAsDefaultMember(const LambdaExprPtr& lambda);
-
-	/**
-	 * Checks whether the given node is a lambda or member function which is marked as a default member
-	 */
-	bool isaDefaultMember(const NodePtr& node);
-
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

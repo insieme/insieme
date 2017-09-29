@@ -132,60 +132,6 @@ namespace analysis {
 	bool hasMemberOfType(const TagTypePtr& type, const std::string& name, const FunctionTypePtr& funType);
 
 	/**
-	 * Determines whether the given tag type has a default constructor.
-	 */
-	bool hasDefaultConstructor(const TagTypePtr&);
-
-	/**
-	 * Determines whether the given tag type has a copy constructor.
-	 */
-	bool hasCopyConstructor(const TagTypePtr&);
-
-	/**
-	 * Determines whether the given tag type has a move constructor.
-	 */
-	bool hasMoveConstructor(const TagTypePtr&);
-
-	/**
-	 * Determines whether the given tag type has a copy assignment operator.
-	 */
-	bool hasCopyAssignment(const TagTypePtr&);
-
-	/**
-	 * Determines whether the given tag type has a move assignment operator.
-	 */
-	bool hasMoveAssignment(const TagTypePtr&);
-
-	/**
-	* Determines whether the given constructor is one of the default generated ones for the given type.
-	*
-	* @param ctor the ctor to check
-	*/
-	bool isaDefaultConstructor(const ExpressionPtr& ctor);
-
-	/*
-	* Determines whether the given expression is a destructor and if it is a default destructor
-	*/
-	bool isDefaultDestructor(const ExpressionPtr& dtor);
-
-	/**
-	 * Determines whether the given TagType has the default generated destructor.
-	 */
-	bool hasDefaultDestructor(const TagTypePtr&);
-
-	/*
-	* Determines whether the given Record has the default generated destructor.
-	*/
-	bool hasDefaultDestructor(const RecordPtr&);
-
-	/**
-	 * Determines whether the given member function is one of the default generated assignment operators for the given type.
-	 *
-	 * @param memberFunction the memberFunction to check
-	 */
-	bool isaDefaultMember(const MemberFunctionPtr& memberFunction);
-
-	/**
 	* Obtains the object type this function is attached to in case it is a constructor, destructor
 	* or member function. In case it is a plain or closure function type a call to this function is
 	* invalid.
