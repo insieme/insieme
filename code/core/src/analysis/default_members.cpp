@@ -64,6 +64,24 @@ namespace analysis {
 			std::copy(lambda->getBody()->begin(), lambda->getBody()->end(), std::back_inserter(newBody));
 			return builder.lambdaExpr(lambda->getType(), lambda->getParameterList(), builder.compoundStmt(newBody), lambda->getReference()->getNameAsString());
 		}
+
+		LambdaExprPtr buildConstructorLambda(const FunctionTypePtr& ctorType, const VariableList& variables, const StatementPtr& body) {
+			IRBuilder builder(ctorType->getNodeManager());
+			auto name = builder.getLiteralForConstructor(ctorType)->getValue()->getValue();
+			return markAsDefaultMember(normalize(builder.lambdaExpr(ctorType, variables, body, name)));
+		}
+		LambdaExprPtr buildDestructorLambda(const FunctionTypePtr& dtorType, const VariableList& variables, const StatementPtr& body) {
+			IRBuilder builder(dtorType->getNodeManager());
+			auto name = builder.getLiteralForDestructor(dtorType)->getValue()->getValue();
+			return markAsDefaultMember(normalize(builder.lambdaExpr(dtorType, variables, body, name)));
+		}
+		MemberFunctionPtr buildAssignmentLambda(const FunctionTypePtr& funType, const VariableList& variables, const StatementPtr& body) {
+			IRBuilder builder(funType->getNodeManager());
+			auto funName = utils::getMangledOperatorAssignName();
+			auto name = builder.getLiteralForMemberFunction(funType, funName)->getValue()->getValue();
+			auto fun = markAsDefaultMember(normalize(builder.lambdaExpr(funType, variables, body, name)));
+			return builder.memberFunction(false, funName, fun);
+		}
 	}
 
 
@@ -75,9 +93,9 @@ namespace analysis {
 	LambdaExprPtr getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto ctorType = getDefaultConstructorType(thisType);
-		auto name = builder.getLiteralForConstructor(ctorType);
-		return markAsDefaultMember(normalize(builder.lambdaExpr(ctorType, toVector(builder.variable(builder.refType(thisType))),
-		                                                                        builder.getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
+		auto thisParam = builder.variable(builder.refType(thisType));
+		auto body = builder.getNoOp();
+		return buildConstructorLambda(ctorType, toVector(thisParam), body);
 	}
 
 	FunctionTypePtr getDefaultCopyConstructorType(const TypePtr& thisType) {
@@ -89,15 +107,13 @@ namespace analysis {
 	LambdaExprPtr getDefaultCopyConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto ctorType = getDefaultCopyConstructorType(thisType);
-		auto name = builder.getLiteralForConstructor(ctorType);
 		const auto& otherType = ctorType->getParameterType(1);
 		auto thisParam = builder.variable(builder.refType(thisType));
 		auto otherParam = builder.variable(otherType);
 		// TODO: build actual copy-body
 //		auto body = compoundStmt(assign(deref(thisParam),deref(otherParam)));
 		auto body = builder.getNoOp();
-		return markAsDefaultMember(normalize(builder.lambdaExpr(ctorType, toVector(thisParam, otherParam),
-		                                                                        body, name->getValue()->getValue())).as<LambdaExprPtr>());
+		return buildConstructorLambda(ctorType, toVector(thisParam, otherParam), body);
 	}
 
 	FunctionTypePtr getDefaultMoveConstructorType(const TypePtr& thisType) {
@@ -109,15 +125,13 @@ namespace analysis {
 	LambdaExprPtr getDefaultMoveConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto ctorType = getDefaultMoveConstructorType(thisType);
-		auto name = builder.getLiteralForConstructor(ctorType);
 		const auto& otherType = ctorType->getParameterType(1);
 		auto thisParam = builder.variable(builder.refType(thisType));
 		auto otherParam = builder.variable(otherType);
 		// TODO: build actual move-body
 //		auto body = compoundStmt(assign(deref(thisParam),deref(otherParam)));
 		auto body = builder.getNoOp();
-		return markAsDefaultMember(normalize(builder.lambdaExpr(ctorType, toVector(thisParam, otherParam),
-		                                                                        body, name->getValue()->getValue())).as<LambdaExprPtr>());
+		return buildConstructorLambda(ctorType, toVector(thisParam, otherParam), body);
 	}
 
 	FunctionTypePtr getDefaultDestructorType(const TypePtr& thisType) {
@@ -128,9 +142,9 @@ namespace analysis {
 	LambdaExprPtr getDefaultDestructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto dtorType = getDefaultDestructorType(thisType);
-		auto name = builder.getLiteralForDestructor(dtorType);
-		return markAsDefaultMember(normalize(builder.lambdaExpr(dtorType, toVector(builder.variable(builder.refType(thisType))),
-		                                                                        builder.getNoOp(), name->getValue()->getValue())).as<LambdaExprPtr>());
+		auto thisParam = builder.variable(builder.refType(thisType));
+		auto body = builder.getNoOp();
+		return buildDestructorLambda(dtorType, toVector(thisParam), body);
 	}
 
 	FunctionTypePtr getDefaultCopyAssignOperatorType(const TypePtr& thisType) {
@@ -144,12 +158,10 @@ namespace analysis {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto funType = getDefaultCopyAssignOperatorType(thisType);
 		auto thisParam = builder.variable(builder.refType(thisType));
-		auto res = builder.returnStmt(lang::buildRefCast(builder.deref(thisParam), funType->getReturnType()));
-		auto name = builder.getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
-		const auto& otherType = funType->getParameterType(1);
-		auto fun = markAsDefaultMember(normalize(builder.lambdaExpr(funType, toVector(thisParam, builder.variable(otherType)),
-		                                                                            res, name->getValue()->getValue())).as<LambdaExprPtr>());
-		return builder.memberFunction(false, utils::getMangledOperatorAssignName(), fun);
+		auto otherParam = builder.variable(funType->getParameterType(1));
+		// TODO: build actual copy-assign-body
+		auto body = builder.compoundStmt(builder.returnStmt(lang::buildRefCast(builder.deref(thisParam), funType->getReturnType())));
+		return buildAssignmentLambda(funType, toVector(thisParam, otherParam), body);
 	}
 
 	FunctionTypePtr getDefaultMoveAssignOperatorType(const TypePtr& thisType) {
@@ -163,35 +175,23 @@ namespace analysis {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto funType = getDefaultMoveAssignOperatorType(thisType);
 		auto thisParam = builder.variable(builder.refType(thisType));
-		auto res = builder.returnStmt(lang::buildRefCast(builder.deref(thisParam), funType->getReturnType()));
-		auto name = builder.getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName());
-		const auto& otherType = funType->getParameterType(1);
-		auto fun = markAsDefaultMember(normalize(builder.lambdaExpr(funType, toVector(thisParam, builder.variable(otherType)),
-		                                                                            res, name->getValue()->getValue())).as<LambdaExprPtr>());
-		return builder.memberFunction(false, utils::getMangledOperatorAssignName(), fun);
+		auto otherParam = builder.variable(funType->getParameterType(1));
+		// TODO: build actual move-assign-body
+		auto body = builder.compoundStmt(builder.returnStmt(lang::buildRefCast(builder.deref(thisParam), funType->getReturnType())));
+		return buildAssignmentLambda(funType, toVector(thisParam, otherParam), body);
 	}
 
 
 	bool hasDefaultConstructor(const TagTypePtr& type) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-		auto thisType = builder.refType(type->getTag());
-		auto ctorType = builder.functionType(TypeList{ thisType }, thisType, FK_CONSTRUCTOR);
-		return hasConstructorOfType(type, ctorType);
+		return analysis::hasConstructorOfType(type, getDefaultConstructorType(lang::buildRefType(type->getTag())));
 	}
 
 	bool hasCopyConstructor(const TagTypePtr& type) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-		auto otherType = builder.refType(type->getTag(), true, false, lang::ReferenceType::Kind::CppReference);
-		return hasConstructorAccepting(type, otherType);
+		return analysis::hasConstructorOfType(type, getDefaultCopyConstructorType(lang::buildRefType(type->getTag())));
 	}
 
 	bool hasMoveConstructor(const TagTypePtr& type) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-		auto otherType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppRValueReference);
-		return hasConstructorAccepting(type, otherType);
+		return analysis::hasConstructorOfType(type, getDefaultMoveConstructorType(lang::buildRefType(type->getTag())));
 	}
 
 	bool hasDefaultDestructor(const TagTypePtr& type) {
@@ -200,23 +200,11 @@ namespace analysis {
 	}
 
 	bool hasCopyAssignment(const TagTypePtr& type) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-		auto thisType = builder.refType(type->getTag());
-		auto otherType = builder.refType(type->getTag(), true, false, lang::ReferenceType::Kind::CppReference);
-		auto resType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppReference);
-		auto funType = builder.functionType(TypeList{ thisType, otherType }, resType, FK_MEMBER_FUNCTION);
-		return hasMemberOfType(type, utils::getMangledOperatorAssignName(), funType);
+		return analysis::hasMemberOfType(type, utils::getMangledOperatorAssignName(), getDefaultCopyAssignOperatorType(lang::buildRefType(type->getTag())));
 	}
 
 	bool hasMoveAssignment(const TagTypePtr& type) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-		auto thisType = builder.refType(type->getTag());
-		auto otherType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppRValueReference);
-		auto resType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppReference);
-		auto funType = builder.functionType(TypeList{ thisType, otherType }, resType, FK_MEMBER_FUNCTION);
-		return hasMemberOfType(type, utils::getMangledOperatorAssignName(), funType);
+		return analysis::hasMemberOfType(type, utils::getMangledOperatorAssignName(), getDefaultMoveAssignOperatorType(lang::buildRefType(type->getTag())));
 	}
 
 	bool isaDefaultConstructor(const ExpressionPtr& ctor) {
