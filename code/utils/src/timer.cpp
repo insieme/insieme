@@ -46,6 +46,22 @@
 namespace insieme {
 namespace utils {
 
+	namespace {
+		double curTime() {
+			auto t = std::chrono::high_resolution_clock::now().time_since_epoch();
+			auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
+			return ms / 1000.0;
+		}
+	}
+
+	Timer::Timer(const std::string& name /*= "Time"*/) : lastStep(0.0), mName(name), isStopped(false) {
+		startTime = curTime();
+	}
+
+	double Timer::elapsed() {
+		return curTime() - startTime;
+	}
+
 	double Timer::stop() {
 		mElapsed = elapsed();
 		isStopped = true;
@@ -60,7 +76,7 @@ namespace utils {
 	}
 
 	double Timer::getTime() const {
-		assert_true(isStopped) << "Cannnot read time of a running timer.";
+		assert_true(isStopped) << "Cannot read time of a running timer.";
 		return mElapsed;
 	}
 
@@ -75,3 +91,4 @@ namespace utils {
 
 } // end utils namespace
 } // end insieme namespace
+
