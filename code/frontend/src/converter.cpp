@@ -138,7 +138,7 @@ namespace conversion {
 		funManPtr = std::make_shared<state::FunctionManager>();
 		recordManPtr = std::make_shared<state::RecordManager>();
 		headerTaggerPtr = std::make_shared<utils::HeaderTagger>(setup.getSystemHeadersDirectories(),
-		                                                        setup.getInterceptedHeaderDirs(),
+		                                                        setup.getInterceptedHeaderDirs(), setup.getInterceptionWhitelist(),
 		                                                        setup.getIncludeDirectories(), getCompiler().getSourceManager());
 
 		declConvPtr = std::make_shared<DeclConverter>(*this);

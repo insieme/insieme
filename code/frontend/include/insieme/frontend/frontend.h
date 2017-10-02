@@ -135,6 +135,11 @@ namespace frontend {
 		vector<path> interceptedHeaderDirs;
 
 		/**
+		 * A list of filename suffixes which should not be intercepted (i.e. which are whitelisted)
+		 */
+		vector<std::string> interceptionWhitelist;
+
+		/**
 		 * A list of optimization flags (-f flags) that need to be used at least in the
 		 * backend compiler
 		 */
@@ -299,6 +304,27 @@ namespace frontend {
 		 */
 		void addInterceptedHeaderDir(const path& directory) {
 			this->interceptedHeaderDirs.push_back(directory);
+		}
+
+		/**
+		 * Obtains a reference to the interception whitelist.
+		 */
+		const vector<std::string>& getInterceptionWhitelist() const {
+			return interceptionWhitelist;
+		}
+
+		/**
+		 * Updates the interception whitelist.
+		 */
+		void setInterceptionWhitelist(const vector<std::string>& interceptionWhitelist) {
+			this->interceptionWhitelist = interceptionWhitelist;
+		}
+
+		/**
+		 * Adds an additional include directory.
+		 */
+		void addInterceptionWhitelistEntry(const std::string& pathSuffix) {
+			this->interceptionWhitelist.push_back(pathSuffix);
 		}
 
 		/**
