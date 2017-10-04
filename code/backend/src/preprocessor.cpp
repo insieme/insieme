@@ -37,16 +37,25 @@
 
 #include "insieme/backend/preprocessor.h"
 
-#include "insieme/annotations/backend_instantiate.h"
+#include <boost/algorithm/string.hpp>
 
-#include "insieme/backend/ir_extensions.h"
+
+#include "insieme/annotations/backend_instantiate.h"
+#include "insieme/annotations/c/include.h"
+
 #include "insieme/backend/function_manager.h"
+#include "insieme/backend/ir_extensions.h"
 #include "insieme/backend/type_manager.h"
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_visitor.h"
+
+#include "insieme/core/analysis/ir++_utils.h"
+
+#include "insieme/core/annotations/backend_interception_info.h"
+#include "insieme/core/annotations/naming.h"
 
 #include "insieme/core/encoder/encoder.h"
 
@@ -54,20 +63,21 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/static_vars.h"
 
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/analysis/type_utils.h"
-#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 
 #include "insieme/core/types/type_variable_deduction.h"
 
-#include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/instantiate.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/name_mangling.h"
 
 namespace insieme {
 namespace backend {
@@ -327,6 +337,103 @@ namespace backend {
 			}
 		});
 		return code;
+	}
+
+
+	void BackendInterceptor::addBackendInterception(const std::string& namePtefix, const std::string& headerToAttach) {
+		backendInterceptions.push_back({ namePtefix, headerToAttach });
+	}
+
+	core::NodePtr BackendInterceptor::process(const Converter& converter, const core::NodePtr& code) {
+		// early exit
+		if(backendInterceptions.empty()) return code;
+
+		core::IRBuilder builder(code.getNodeManager());
+		auto res = code;
+
+		// first we replace calls to LambdaExprs with Literals
+		res = core::transform::transformBottomUpGen(res, [&](const core::CallExprPtr& call) {
+			const auto& callee = call->getFunctionExpr();
+			const auto& calleeType = callee->getType().as<core::FunctionTypePtr>();
+			// only consider calls to members of TagTypes
+			if(calleeType->isMember() && callee.isa<core::LambdaExprPtr>()) {
+				auto objectType = core::analysis::getObjectType(calleeType);
+				if(const auto& tagType = objectType.isa<core::TagTypePtr>()) {
+					const auto& typeName = tagType->getTag()->getName()->getValue();
+
+					// we iterate over all mappings
+					for(const auto& backendInterception : backendInterceptions) {
+						// if this is a call we should modify
+						if(boost::starts_with(typeName, backendInterception.first)) {
+							// we create a new callee
+							auto oldCalleeName = callee.as<core::LambdaExprPtr>()->getReference()->getNameAsString();
+							std::string targetName;
+							// if the frontend attached backend interception information, we can use that
+							if(core::annotations::hasBackendInterceptionInfo(callee)) {
+								targetName = core::annotations::getBackendInterceptionInfo(callee).qualifiedName;
+
+								// if this is a call to a default generated assignment operator, we know the name
+							} else if(calleeType->isMemberFunction() && core::analysis::isaDefaultMember(callee)) {
+								targetName = "operator=";
+
+								// otherwise we don't know what to do. we just use the old name
+							} else {
+								targetName = oldCalleeName;
+							}
+
+							// we create a surrogate literal callee, which will mimic an interception by the frontend
+							auto newCallee = builder.literal(callee->getType(), oldCalleeName);
+							// we migrate annotations and attach the name as well as the include location
+							core::transform::utils::migrateAnnotations(callee, newCallee);
+							annotations::c::attachInclude(newCallee, backendInterception.second);
+							core::annotations::attachName(newCallee, targetName);
+
+							// and create the new call to return with annotations migrated
+							auto res = builder.callExpr(call->getType(), newCallee, call->getArgumentDeclarationList());
+							core::transform::utils::migrateAnnotations(call, res);
+							return res;
+						}
+					}
+				}
+			}
+			return call;
+		}, core::transform::globalReplacement, false); // Note that we are migrating annotations ourselves. We don't want transformBottomUpGen to do it for us
+
+		// and then we replace TagTypes with GenericTypes
+		res = core::transform::transformBottomUpGen(res, [&](const core::TypePtr& type) {
+			if(const auto& tagType = type.isa<core::TagTypePtr>()) {
+				const auto& typeName = tagType->getTag()->getName()->getValue();
+
+				// we iterate over all mappings
+				for(const auto& backendInterception : backendInterceptions) {
+					// if this is a call we should modify
+					if(boost::starts_with(typeName, backendInterception.first)) {
+						// if this type has backend interception info attached, we can proceed
+						if(core::annotations::hasBackendInterceptionInfo(tagType)) {
+							auto backendInterceptionInfo = core::annotations::getBackendInterceptionInfo(tagType);
+
+							// for each instantiation argument, we create a generic type with a fake header attachment (one we already use anyways), so it will get printed verbatim by the backend
+							core::TypeList instantiationArguments = ::transform(backendInterceptionInfo.instantiationArguments, [&builder](const std::string& arg) -> core::TypePtr {
+								auto genArg = builder.genericType(arg);
+								annotations::c::attachInclude(genArg, "stdint.h");
+								return genArg;
+							});
+
+							// we create a surrogate type, which will mimic an interception by the frontend
+							auto res = builder.genericType(utils::mangle(backendInterceptionInfo.qualifiedName), instantiationArguments);
+							// we migrate annotations and attach the name as well as the include location
+							core::transform::utils::migrateAnnotations(type, res);
+							annotations::c::attachInclude(res, backendInterception.second);
+							core::annotations::attachName(res, backendInterceptionInfo.qualifiedName);
+							return res.as<core::TypePtr>();
+						}
+					}
+				}
+			}
+			return type;
+		}, core::transform::globalReplacement, false); // Note that we are migrating annotations ourselves. We don't want transformBottomUpGen to do it for us
+
+		return res;
 	}
 
 } // end namespace backend
