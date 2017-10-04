@@ -40,6 +40,7 @@
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/converter.h"
 #include "insieme/utils/assert.h"
+#include "insieme/utils/string_utils.h"
 #include "insieme/utils/name_mangling.h"
 
 #include <boost/algorithm/string.hpp>
@@ -115,46 +116,43 @@ namespace utils {
 		}
 	}
 
+	std::vector<std::string> buildSuffixListForTemplate(const llvm::ArrayRef<clang::TemplateArgument>& tempArgs, clang::ASTContext& astContext, bool cStyleName) {
+		std::vector<std::string> res;
 
-	std::string buildNameSuffixForTemplateInternal(const llvm::ArrayRef<clang::TemplateArgument>& tempArgs, clang::ASTContext& astContext, bool cStyleName) {
-		std::string separator = cStyleName ? "," : "_";
-		std::stringstream suffix;
 		for(auto arg : tempArgs) {
 			switch(arg.getKind()) {
 			case clang::TemplateArgument::Expression: {
-				suffix << separator << arg.getAsExpr()->getType().getAsString();
+				res.push_back(arg.getAsExpr()->getType().getAsString());
 				break;
 			}
 			case clang::TemplateArgument::Type: {
 				// check if the type is a lambda, this one needs special handling
-				std::string typeName;
 				if(arg.getAsType().getTypePtr()->getAsCXXRecordDecl() && arg.getAsType().getTypePtr()->getAsCXXRecordDecl()->isLambda()) {
-					typeName = createNameForAnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), astContext.getSourceManager());
+					res.push_back(createNameForAnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), astContext.getSourceManager()));
 				} else {
-					typeName = getTypeString(arg.getAsType(), cStyleName);
+					res.push_back(getTypeString(arg.getAsType(), cStyleName));
 				}
-				suffix << separator << typeName;
 				break;
 			}
 			case clang::TemplateArgument::Null: {
-				suffix << separator << "null";
+				res.push_back("null");
 				break;
 			}
 			case clang::TemplateArgument::Declaration: {
-				suffix << separator << getTypeString(arg.getAsDecl()->getType(), cStyleName);
+				res.push_back(getTypeString(arg.getAsDecl()->getType(), cStyleName));
 				break;
 			}
 			case clang::TemplateArgument::NullPtr: {
-				suffix << separator << "nullptr";
+				res.push_back("nullptr");
 				break;
 			}
 			case clang::TemplateArgument::Integral: {
-				suffix << separator << arg.getAsIntegral().toString(10);
+				res.push_back(arg.getAsIntegral().toString(10));
 				break;
 			}
 			case clang::TemplateArgument::Template: {
 				std::string templateName = arg.getAsTemplate().getAsTemplateDecl()->getTemplatedDecl()->getQualifiedNameAsString();
-				suffix << separator << (cStyleName ? templateName : insieme::utils::mangleSymbols(templateName));
+				res.push_back(cStyleName ? templateName : insieme::utils::mangleSymbols(templateName));
 				break;
 			}
 			case clang::TemplateArgument::TemplateExpansion: {
@@ -164,38 +162,28 @@ namespace utils {
 			}
 			case clang::TemplateArgument::Pack: {
 				if(!cStyleName) {
-					suffix << separator << "pack_begin";
+					res.push_back("pack_begin");
 				}
-				suffix << buildNameSuffixForTemplateInternal(arg.getPackAsArray(), astContext, cStyleName);
+				auto packArgs = buildSuffixListForTemplate(arg.getPackAsArray(), astContext, cStyleName);
+				std::copy(packArgs.cbegin(), packArgs.cend(), std::back_inserter(res));
 				if(!cStyleName) {
-					suffix << separator << "pack_end";
+					res.push_back("pack_end");
 				}
 				break;
 			}
 			}
 		}
 
-		//if we should build a c-style name then the first separator isn't correct. also the whole suffix should be packed inside '<' and '>'
-		if (cStyleName) {
-			std::string res = suffix.str();
-			//append another space in case it is needed to avoid the substring ">>"
-			if (res.size() > 0 && res[res.size() - 1] == '>') {
-				res += " >";
-			} else {
-				res += ">";
-			}
-			if (res.length() == 1) {
-				return "";
-			}
-			res[0] = '<';
-			return res;
-		}
-
-		return suffix.str();
+		return res;
 	}
 
-	std::string buildNameSuffixForTemplate(const clang::TemplateArgumentList& tempArgs, clang::ASTContext& astContext, bool cStyleName) {
-		return buildNameSuffixForTemplateInternal(tempArgs.asArray(), astContext, cStyleName);
+	std::string buildNameSuffixForTemplate(const llvm::ArrayRef<clang::TemplateArgument>& tempArgs, clang::ASTContext& astContext, bool cStyleName) {
+		auto suffixList = buildSuffixListForTemplate(tempArgs, astContext, cStyleName);
+
+		if(cStyleName) {
+			return ::format("<%s >", toString(::join(",", suffixList)));
+		}
+		return ::format("_%s", toString(::join("_", suffixList)));
 	}
 
 	std::string buildNameForFunction(const clang::FunctionDecl* funcDecl, const conversion::Converter& converter, bool cStyleName) {
@@ -227,7 +215,7 @@ namespace utils {
 		std::stringstream suffix;
 
 		if(!cStyleName && funcDecl->isFunctionTemplateSpecialization() && funcDecl->getTemplateSpecializationArgs()) {
-			suffix << buildNameSuffixForTemplate(*funcDecl->getTemplateSpecializationArgs(), funcDecl->getASTContext());
+			suffix << buildNameSuffixForTemplate(funcDecl->getTemplateSpecializationArgs()->asArray(), funcDecl->getASTContext());
 		}
 
 		if(!cStyleName && funcDecl->isTemplateInstantiation()) {
@@ -337,7 +325,7 @@ namespace utils {
 		// encode template parameters in name
 		auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(tagDecl);
 		if(tempSpec && !cStyleName) {
-			name = name + utils::buildNameSuffixForTemplate(tempSpec->getTemplateArgs(), tempSpec->getASTContext(), cStyleName);
+			name = name + utils::buildNameSuffixForTemplate(tempSpec->getTemplateArgs().asArray(), tempSpec->getASTContext(), cStyleName);
 		}
 
 		// if externally visible, build mangled name based on canonical decl without location

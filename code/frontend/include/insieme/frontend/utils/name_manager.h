@@ -75,13 +75,17 @@ namespace utils {
 	std::string getNameForRecord(const clang::NamedDecl* decl, const clang::Type* type, const clang::SourceManager& sm);
 
 	/**
+	 * Gather the suffix list for encoding the template parameters provided
+	 */
+	std::vector<std::string> buildSuffixListForTemplate(const llvm::ArrayRef<clang::TemplateArgument>& tempArgs, clang::ASTContext& astContext, bool cStyleName = false);
+	/**
 	 * build a string suffix encoding the template parameters provided
 	 * @param tempArgs template argument list
 	 * @param astContext AstContext used for type name lookup
 	 * @param cStyleName whether to build a name suitable for usage in a C program or for the IR
 	 * @return encoded string value
 	 */
-	std::string buildNameSuffixForTemplate(const clang::TemplateArgumentList& tempArgs, clang::ASTContext& astContext, bool cStyleName = false);
+	std::string buildNameSuffixForTemplate(const llvm::ArrayRef<clang::TemplateArgument>& tempArgs, clang::ASTContext& astContext, bool cStyleName = false);
 
 	/**
 	 * build a string to identify a function
