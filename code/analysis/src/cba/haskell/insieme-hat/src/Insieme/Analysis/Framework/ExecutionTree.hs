@@ -66,7 +66,7 @@ data ExecutionTreeAnalysis v = ExecutionTreeAnalysis {
     , variableGenerator          :: NodeAddress -> Solver.TypedVar v     -- ^ the variable generator of the represented analysis
     , opHandler                  :: [OperatorHandler v]                  -- ^ a list of operator handlers handling calls to (external) functions
     , unhandledOperatorHandler   :: NodeAddress -> v                     -- ^ a handler for calls to unhandled operators
-    , unknownTarget              :: NodeAddress -> v                     -- ^ a handler for calls to unknown target functions
+    , unknownTargetHandler       :: NodeAddress -> v                     -- ^ a handler for calls to unknown target functions
 }
 
 -- a function creating a simple execution tree analysis
@@ -77,11 +77,11 @@ mkExecutionTreeAnalysis :: (Typeable a, Solver.ExtLattice v)
         -> ExecutionTreeAnalysis v
 mkExecutionTreeAnalysis a s g = res
   where
-    res = ExecutionTreeAnalysis aid g [] unhandledOperatorHandler unknownTarget
+    res = ExecutionTreeAnalysis aid g [] unhandledOperatorHandler unknownTargetHandler
     aid = Solver.mkAnalysisIdentifier a s
     justTop _ = Solver.top
     unhandledOperatorHandler = justTop
-    unknownTarget = justTop
+    unknownTargetHandler = justTop
 
 
 --
@@ -145,7 +145,7 @@ executionTreeValue analysis addr = case getNode addr of
 
             -- add effects in case of unknown call targets
             unknownTargetEffects a = case () of
-                _ | BSet.isUniverse $ callableVal a -> unknownTarget analysis $ goDown 1 addr
+                _ | BSet.isUniverse $ callableVal a -> unknownTargetHandler analysis $ goDown 1 addr
                 _                                   -> Solver.bot
 
 
