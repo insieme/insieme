@@ -34,6 +34,7 @@ library
                         Insieme.Analysis.Entities.SymbolicFormula,
                         Insieme.Analysis.ExitPoint,
                         Insieme.Analysis.Framework.Dataflow,
+                        Insieme.Analysis.Framework.ExecutionTree,
                         Insieme.Analysis.Framework.MemoryState,
                         Insieme.Analysis.Framework.ProgramPoint,
                         Insieme.Analysis.Framework.PropertySpace.ComposedValue,
