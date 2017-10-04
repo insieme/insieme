@@ -195,7 +195,7 @@ namespace core {
 		NodeAddress replaceAddress(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement);
 
 		namespace detail {
-			NodePtr transformBottomUpInternal(const NodePtr& root, const TransformFunc& transformFunc, const ReplaceLimiter& replaceLimiter);
+			NodePtr transformBottomUpInternal(const NodePtr& root, const TransformFunc& transformFunc, const ReplaceLimiter& replaceLimiter, bool migrateAnnotations);
 		}
 
 		/**
@@ -204,13 +204,14 @@ namespace core {
 		 */
 		template<typename TransformLambda,
 			typename LambdaArgType = typename std::remove_const<typename std::remove_reference<typename lambda_traits<TransformLambda>::arg1_type>::type>::type>
-		NodePtr transformBottomUp(const NodePtr& root, TransformLambda transformFunc, const ReplaceLimiter& replaceLimiter = localReplacement) {
+		NodePtr transformBottomUp(const NodePtr& root, TransformLambda transformFunc, const ReplaceLimiter& replaceLimiter = localReplacement,
+		                          bool migrateAnnotations = true) {
 			TransformFunc adjustedTransformFunc = [&transformFunc](const NodePtr& node) -> NodePtr {
 				if(!node.isa<LambdaArgType>()) return node;
 				return transformFunc(node.as<LambdaArgType>());
 			};
 
-			return detail::transformBottomUpInternal(root, adjustedTransformFunc, replaceLimiter);
+			return detail::transformBottomUpInternal(root, adjustedTransformFunc, replaceLimiter, migrateAnnotations);
 		}
 
 		/**
@@ -219,8 +220,9 @@ namespace core {
 		 * Note: make sure you are not changing the type of the root node in the transformation
 		 */
 		template<typename NodeType, typename TransformLambda>
-		NodeType transformBottomUpGen(const NodeType& root, TransformLambda transformFunc, const ReplaceLimiter& replaceLimiter = localReplacement) {
-			return transformBottomUp(root, transformFunc, replaceLimiter).template as<NodeType>();
+		NodeType transformBottomUpGen(const NodeType& root, TransformLambda transformFunc, const ReplaceLimiter& replaceLimiter = localReplacement,
+		                              bool migrateAnnotations = true) {
+			return transformBottomUp(root, transformFunc, replaceLimiter, migrateAnnotations).template as<NodeType>();
 		}
 
 	} // End transform namespace

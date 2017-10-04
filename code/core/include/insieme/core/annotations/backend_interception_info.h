@@ -35,60 +35,45 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
-#include "insieme/utils/timer.h"
+#pragma once
 
-#include <sstream>
-#include <cassert>
+#include <string>
+#include <vector>
 
-#include "insieme/utils/numeric_cast.h"
-#include "insieme/utils/string_utils.h"
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node_annotation.h"
+
+/**
+ * A header file for annotating backend instantiation informations on nodes
+ */
 
 namespace insieme {
-namespace utils {
+namespace core {
+namespace annotations {
 
-	namespace {
-		double curTime() {
-			auto t = std::chrono::high_resolution_clock::now().time_since_epoch();
-			auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
-			return ms / 1000.0;
+	struct BackendInterceptionInfo : public value_annotation::copy_on_migration {
+
+		std::string qualifiedName;
+
+		std::vector<std::string> instantiationArguments;
+
+		BackendInterceptionInfo(const std::string& qualifiedName) : qualifiedName(qualifiedName) {}
+
+		BackendInterceptionInfo(const std::string& qualifiedName, std::vector<std::string>& instantiationArguments) :
+			qualifiedName(qualifiedName), instantiationArguments(instantiationArguments) {}
+
+		bool operator==(const BackendInterceptionInfo& other) const {
+			return qualifiedName == other.qualifiedName
+					&& instantiationArguments == other.instantiationArguments;
 		}
-	}
+	};
 
-	Timer::Timer(const std::string& name /*= "Time"*/) : lastStep(0.0), mName(name), isStopped(false) {
-		startTime = curTime();
-	}
+	bool hasBackendInterceptionInfo(const insieme::core::NodePtr& node);
 
-	double Timer::elapsed() {
-		return curTime() - startTime;
-	}
+	void attachBackendInterceptionInfo(const insieme::core::NodePtr& node, const BackendInterceptionInfo& interceptionInfo);
 
-	double Timer::stop() {
-		mElapsed = elapsed();
-		isStopped = true;
-		return mElapsed;
-	}
+	BackendInterceptionInfo getBackendInterceptionInfo(const insieme::core::NodePtr& node);
 
-	double Timer::step() {
-		double cur = elapsed();
-		double res = cur - lastStep;
-		lastStep = cur;
-		return res;
-	}
-
-	double Timer::getTime() const {
-		assert_true(isStopped) << "Cannot read time of a running timer.";
-		return mElapsed;
-	}
-
-	std::ostream& operator<<(std::ostream& out, const Timer& timer) {
-		std::string&& time = format("%.3f", timer.getTime());
-
-		std::string&& frame = std::string(timer.mName.size() + time.size() + 14, '*');
-		out << std::endl << frame << std::endl;
-		out << "* " << timer.mName << ":    " << time << " secs *" << std::endl;
-		return out << frame << std::endl;
-	}
-
-} // end utils namespace
-} // end insieme namespace
-
+} // end namespace annotations
+} // end namespace core
+} // end namespace insieme

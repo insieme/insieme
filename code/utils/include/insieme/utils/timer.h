@@ -39,7 +39,7 @@
 
 #include <functional>
 #include <string>
-#include <boost/timer.hpp>
+#include <chrono>
 
 #include "insieme/utils/logging.h"
 
@@ -49,7 +49,8 @@ namespace utils {
 	/**
 	 * Simple timer used to measured time.
 	 */
-	class Timer : public boost::timer {
+	class Timer {
+		double startTime;
 		double lastStep;
 		double mElapsed;
 		std::string mName;
@@ -58,7 +59,10 @@ namespace utils {
 		friend std::ostream& operator<<(std::ostream& out, const Timer& timer);
 
 	  public:
-		Timer(const std::string& name = "Time") : boost::timer(), lastStep(0.0), mName(name), isStopped(false) {}
+		Timer(const std::string& name = "Time");
+
+		double elapsed();
+
 		/**
 		 * Stops the timer returning the elapsed amount of seconds
 		 */
@@ -106,3 +110,4 @@ namespace utils {
 		timer.stop();                                                                                                                                          \
 		return timer.getTime();                                                                                                                                \
 	})()
+

@@ -216,5 +216,22 @@ namespace backend {
 		virtual std::ostream& printTo(std::ostream& out) const { return out << "DefaultedMemberCallMarker"; }
 	};
 
+	/**
+	 * Performs "interception" in the backend - or at least mimics it.
+	 * TagTypes and LambdaExprs which's name start with registered prefixes get replaced by constructs which look like
+	 * if the frontend had originally intercepted them.
+	 */
+	class BackendInterceptor : public PreProcessor {
+
+		std::vector<std::pair<std::string, std::string>> backendInterceptions;
+
+	  public:
+		void addBackendInterception(const std::string& namePtefix, const std::string& headerToAttach);
+
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+
+		virtual std::ostream& printTo(std::ostream& out) const { return out << "BackendInterceptor"; }
+	};
+
 } // end namespace backend
 } // end namespace insieme

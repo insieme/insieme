@@ -126,10 +126,12 @@ namespace utils {
 
 	HeaderTagger::HeaderTagger(const vector<fs::path>& stdLibDirs,
 	                           const vector<fs::path>& interceptedHeaderDirs,
+	                           const vector<std::string>& interceptionWhitelist,
 	                           const vector<fs::path>& userIncludeDirs,
 	                           const clang::SourceManager& srcMgr)
 		: stdLibDirs(removeDuplicatesAndCanonicalize(stdLibDirs)),
 		  interceptedHeaderDirs(removeDuplicatesAndCanonicalize(interceptedHeaderDirs)),
+		  interceptionWhitelist(interceptionWhitelist),
 		  userIncludeDirs(removeDuplicatesAndCanonicalize(userIncludeDirs)),
 		  sm(srcMgr) {
 
@@ -404,6 +406,15 @@ namespace utils {
 		if(auto namedDecl = llvm::dyn_cast<clang::NamedDecl>(decl)) {
 			if(boost::starts_with(namedDecl->getQualifiedNameAsString(), "std::initializer_list")) return false;
 		}
+
+		// we check whether this location should not be intercepted because it has been whitelisted
+		if(!interceptionWhitelist.empty()) {
+			const auto fileName = sm.getFilename(location).str();
+			if(::any(interceptionWhitelist, [&fileName](const auto& entry) { return boost::ends_with(fileName, entry); })) {
+				return false;
+			}
+		}
+
 		// check whether we should intercept this decl
 		return isStdLibHeader(location) || isInterceptedLibHeader(location);
 	}
