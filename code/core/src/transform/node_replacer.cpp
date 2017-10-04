@@ -354,11 +354,12 @@ namespace transform {
 			NodeManager& manager;
 			const TransformFunc& transformation;
 			const ReplaceLimiter limiter;
+			const bool migrateAnnotations;
 			bool interrupted = false;
 
 		  public:
-			NodeTransformer(NodeManager& manager, const TransformFunc& transformation, const ReplaceLimiter limiter)
-				: manager(manager), transformation(transformation), limiter(limiter) {}
+			NodeTransformer(NodeManager& manager, const TransformFunc& transformation, const ReplaceLimiter limiter, bool migrateAnnotations)
+				: manager(manager), transformation(transformation), limiter(limiter), migrateAnnotations(migrateAnnotations) {}
 
 		  private:
 			virtual const NodePtr resolveElement(const NodePtr& ptr) {
@@ -391,15 +392,17 @@ namespace transform {
 				}
 
 				// preserve annotations
-				utils::migrateAnnotations(ptr, res);
+				if(migrateAnnotations) {
+					utils::migrateAnnotations(ptr, res);
+				}
 
 				// done
 				return res;
 			}
 		};
 
-		NodePtr transformBottomUpInternal(const NodePtr& root, const TransformFunc& transformFunc, const ReplaceLimiter& replaceLimiter) {
-			NodeTransformer transformer(root.getNodeManager(), transformFunc, replaceLimiter);
+		NodePtr transformBottomUpInternal(const NodePtr& root, const TransformFunc& transformFunc, const ReplaceLimiter& replaceLimiter, bool migrateAnnotations) {
+			NodeTransformer transformer(root.getNodeManager(), transformFunc, replaceLimiter, migrateAnnotations);
 			return transformer.map(root);
 		}
 	}
