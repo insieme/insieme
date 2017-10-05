@@ -70,6 +70,7 @@ namespace ba = boost::algorithm;
 class HeaderTagger {
 	std::vector<fs::path> stdLibDirs;
 	std::vector<fs::path> interceptedHeaderDirs;
+	const std::vector<std::string> interceptionWhitelist;
 	std::vector<fs::path> userIncludeDirs;
 	const clang::SourceManager& sm;
 
@@ -112,6 +113,7 @@ class HeaderTagger {
   public:
 	HeaderTagger(const vector<fs::path>& stdLibDirs,
 	             const vector<fs::path>& interceptedHeaderDirs,
+	             const vector<std::string>& interceptionWhitelist,
 	             const vector<fs::path>& userIncludeDirs,
 	             const clang::SourceManager& srcMgr);
 

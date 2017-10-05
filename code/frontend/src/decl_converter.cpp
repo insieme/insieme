@@ -46,6 +46,7 @@
 #include "insieme/core/analysis/default_delete_member_semantics.h"
 #include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/type_utils.h"
+#include "insieme/core/annotations/backend_interception_info.h"
 #include "insieme/core/annotations/default_delete.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir.h"
@@ -237,6 +238,10 @@ namespace conversion {
 				auto body = builder.compoundStmt(bodyStmts);
 				auto lambda = builder.lambda(funType, params, body);
 				auto funExp = builder.lambdaExpr(lambda, name);
+
+				// attach backend interception information
+				core::annotations::attachBackendInterceptionInfo(funExp, { funcDecl->getNameAsString() });
+
 				return funExp;
 			} else {
 				return core::LambdaExprPtr();

@@ -50,6 +50,7 @@
 #include "insieme/utils/numeric_cast.h"
 
 #include "insieme/core/analysis/type_utils.h"
+#include "insieme/core/annotations/backend_interception_info.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/ir_types.h"
@@ -408,6 +409,12 @@ namespace conversion {
 			converter.applyHeaderTagging(recordType, clangDecl);
 			// we'll attach name only if available, this could be a problem if anonymous names are used
 			if(!clangDecl->getNameAsString().empty()) core::annotations::attachName(recordType, clangDecl->getNameAsString());
+
+			// attach the backend interception info, if this is a Template SpecializationDecl
+			if(auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(clangDecl)) {
+				auto templateArgs = utils::buildSuffixListForTemplate(tempSpec->getTemplateArgs().asArray(), tempSpec->getASTContext(), true);
+				core::annotations::attachBackendInterceptionInfo(recordType, { clangDecl->getQualifiedNameAsString(), templateArgs });
+			}
 
 			// attach the element type if the type is a std::initializer_list type
 			if(clangDecl->getQualifiedNameAsString() == "std::initializer_list") {

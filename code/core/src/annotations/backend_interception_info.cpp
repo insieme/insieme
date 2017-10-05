@@ -35,60 +35,28 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
-#include "insieme/utils/timer.h"
+#include "insieme/core/annotations/backend_interception_info.h"
 
-#include <sstream>
-#include <cassert>
+#include "insieme/core/ir_node.h"
 
-#include "insieme/utils/numeric_cast.h"
-#include "insieme/utils/string_utils.h"
 
 namespace insieme {
-namespace utils {
+namespace core {
+namespace annotations {
 
-	namespace {
-		double curTime() {
-			auto t = std::chrono::high_resolution_clock::now().time_since_epoch();
-			auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
-			return ms / 1000.0;
-		}
+	bool hasBackendInterceptionInfo(const insieme::core::NodePtr& node) {
+		return node->hasAttachedValue<BackendInterceptionInfo>();
 	}
 
-	Timer::Timer(const std::string& name /*= "Time"*/) : lastStep(0.0), mName(name), isStopped(false) {
-		startTime = curTime();
+	void attachBackendInterceptionInfo(const insieme::core::NodePtr& node, const BackendInterceptionInfo& interceptionInfo) {
+		node->attachValue(interceptionInfo);
 	}
 
-	double Timer::elapsed() {
-		return curTime() - startTime;
+	BackendInterceptionInfo getBackendInterceptionInfo(const insieme::core::NodePtr& node) {
+		assert_true(hasBackendInterceptionInfo(node)) << "Does not have BackendInterceptionInfo annotation!";
+		return node->getAttachedValue<BackendInterceptionInfo>();
 	}
 
-	double Timer::stop() {
-		mElapsed = elapsed();
-		isStopped = true;
-		return mElapsed;
-	}
-
-	double Timer::step() {
-		double cur = elapsed();
-		double res = cur - lastStep;
-		lastStep = cur;
-		return res;
-	}
-
-	double Timer::getTime() const {
-		assert_true(isStopped) << "Cannot read time of a running timer.";
-		return mElapsed;
-	}
-
-	std::ostream& operator<<(std::ostream& out, const Timer& timer) {
-		std::string&& time = format("%.3f", timer.getTime());
-
-		std::string&& frame = std::string(timer.mName.size() + time.size() + 14, '*');
-		out << std::endl << frame << std::endl;
-		out << "* " << timer.mName << ":    " << time << " secs *" << std::endl;
-		return out << frame << std::endl;
-	}
-
-} // end utils namespace
-} // end insieme namespace
-
+} // end namespace annotations
+} // end namespace core
+} // end namespace insieme

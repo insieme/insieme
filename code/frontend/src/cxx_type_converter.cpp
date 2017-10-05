@@ -52,9 +52,10 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/ir_types.h"
-#include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/default_delete_member_semantics.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -300,6 +301,9 @@ namespace conversion {
 			                          recordMembers.getDestructorLiteral(), destructorVirtual,
 			                          recordMembers.getMemberFunctionList(), pvMembers);
 		}
+
+		// don't forget to migrate annotations
+		core::transform::utils::migrateAnnotations(tagTy, retTy);
 
 		// add the type to the irTU
 		converter.getIRTranslationUnit().replaceType(genTy, retTy.as<core::TagTypePtr>());
