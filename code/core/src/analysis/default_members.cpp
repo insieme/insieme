@@ -43,6 +43,7 @@
 #include "insieme/core/analysis/type_utils.h"
 
 #include "insieme/utils/name_mangling.h"
+#include "insieme/utils/map_utils.h"
 
 
 namespace insieme {
@@ -90,7 +91,7 @@ namespace analysis {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		return builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
 	}
-	LambdaExprPtr getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) {
+	LambdaExprPtr getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields, const FieldInitMap& fieldInits) {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto ctorType = getDefaultConstructorType(thisType);
 		auto thisParam = builder.variable(builder.refType(thisType));

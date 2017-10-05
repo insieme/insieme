@@ -85,6 +85,10 @@ namespace analysis {
 		}
 	}
 
+	bool MemberProperties::operator==(const MemberProperties& rhs) const {
+		return literal == rhs.literal && lambda == rhs.lambda && memberFunction == rhs.memberFunction;
+	}
+
 	CppDefaultDeleteMembers::CppDefaultDeleteMembers(NodeManager& mgr, const ExpressionList& constructors, const ExpressionPtr& destructor,
 	                                                 const MemberFunctionList& memberFunctions) : CppDefaultDeleteMembers() {
 		IRBuilder builder(mgr);
@@ -113,6 +117,7 @@ namespace analysis {
 	}
 
 	CppDefaultDeleteMembers applyCppDefaultDeleteSemantics(const GenericTypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields,
+	                                                       const FieldInitMap& fieldInits,
 	                                                       const CppDefaultDeleteMembers& inputMembers) {
 
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
@@ -161,7 +166,7 @@ namespace analysis {
 		bool hasMoveAssignment = providedMoveAssignment.literal;
 
 		// all the default constructs
-		auto defaultDefaultConstructor = getMemberPropertiesForConstructor(builder, analysis::getDefaultConstructor(thisType, parents, fields));
+		auto defaultDefaultConstructor = getMemberPropertiesForConstructor(builder, analysis::getDefaultConstructor(thisType, parents, fields, fieldInits));
 		auto defaultCopyConstructor = getMemberPropertiesForConstructor(builder, analysis::getDefaultCopyConstructor(thisType, parents, fields));
 		auto defaultMoveConstructor = getMemberPropertiesForConstructor(builder, analysis::getDefaultMoveConstructor(thisType, parents, fields));
 		auto defaultDestructor = getMemberPropertiesForDestructor(builder, analysis::getDefaultDestructor(thisType, parents, fields));

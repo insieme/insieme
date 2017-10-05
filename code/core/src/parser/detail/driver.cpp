@@ -438,7 +438,7 @@ namespace parser {
 				// handle defaulted and deleted members
 				analysis::CppDefaultDeleteMembers inputMembers(mgr, ctors, dtor, mfuns);
 				auto recordMembers = analysis::applyCppDefaultDeleteSemantics(builder.refType(key), builder.parents(parents),
-				                                                              builder.fields(fields), inputMembers);
+				                                                              builder.fields(fields), {}, inputMembers);
 
 				// register/update all lambdas in the TU
 				auto registerInTu = [&tu](const core::analysis::MemberProperties& member) {

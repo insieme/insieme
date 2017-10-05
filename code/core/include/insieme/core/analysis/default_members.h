@@ -41,13 +41,22 @@
 
 
 namespace insieme {
+namespace utils {
+namespace map {
+	template <class KeyPtr, class ValueType>
+	struct PointerMap;
+}
+}
+
 namespace core {
 namespace analysis {
+
+	using FieldInitMap = utils::map::PointerMap<FieldPtr, ExpressionPtr>;
 
 	// ---------------------------- Getters for the 6 default members and their type --------------------------------------
 
 	FunctionTypePtr getDefaultConstructorType(const TypePtr& thisType);
-	LambdaExprPtr   getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields);
+	LambdaExprPtr   getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields, const FieldInitMap& fieldInits = {});
 
 	FunctionTypePtr getDefaultCopyConstructorType(const TypePtr& thisType);
 	LambdaExprPtr   getDefaultCopyConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields);

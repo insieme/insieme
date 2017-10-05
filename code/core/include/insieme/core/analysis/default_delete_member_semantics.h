@@ -41,7 +41,8 @@
 
 #include <boost/optional.hpp>
 
-#include "insieme/core/ir.h"
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/analysis/default_members.h"
 
 
 namespace insieme {
@@ -59,9 +60,7 @@ namespace analysis {
 		LambdaExprPtr lambda;
 		MemberFunctionPtr memberFunction;
 
-		bool operator== (const MemberProperties& rhs) const {
-			return literal == rhs.literal && lambda == rhs.lambda && memberFunction == rhs.memberFunction;
-		}
+		bool operator==(const MemberProperties& rhs) const;
 	};
 
 	/**
@@ -102,13 +101,14 @@ namespace analysis {
 	 * Applies the C++ semantics for defaulted and deleted members on the given members.
 	 * This function returns an object containing the resulting members which can be used to build record types.
 	 *
-	 * Note that this function will only require the input member object only be filled with literals for all types of members, as well as
-	 * MemberFunction objects for member functions, which will be used to get the name of these.
+	 * Note that this function will only require the input member object to be filled with literals for all types of members, as well as
+	 * MemberFunction objects for member functions, which will be used to get the name of these. The LambdaExprs need not be set.
 	 * These literals may be marked as defaulted or deleted by use of core::annotations::markedDefaultedPreTU and core::annotations::markedDeletedPreTU.
 	 * The resulting object will contain the remaining members. All new members will have their literals set correctly, as well as contain a
 	 * lambda with the implementation. Note that the generated member functions will have their implementation set to the literal, not the lambda.
 	 */
 	CppDefaultDeleteMembers applyCppDefaultDeleteSemantics(const GenericTypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields,
+	                                                       const FieldInitMap& fieldInits,
 	                                                       const CppDefaultDeleteMembers& inputMembers);
 
 } // end namespace analysis
