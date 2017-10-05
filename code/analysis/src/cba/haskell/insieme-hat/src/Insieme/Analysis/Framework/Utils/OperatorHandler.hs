@@ -37,7 +37,7 @@
 
 module Insieme.Analysis.Framework.Utils.OperatorHandler where
 
-import Insieme.Inspire.NodeAddress
+import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Analysis.Solver as Solver
 
 data OperatorHandler a = OperatorHandler {

@@ -53,12 +53,13 @@ value.
 
  -}
 
-module Insieme.Inspire.NodeType where
+module Insieme.Inspire.IR.NodeType where
 
 import Control.DeepSeq
 import GHC.Generics (Generic)
-import Insieme.Inspire.ThHelpers
 import Language.Haskell.TH
+
+import Insieme.Inspire.IR.NodeType.ThHelpers
 
 #c
 #define CONCRETE(name) NT_##name,

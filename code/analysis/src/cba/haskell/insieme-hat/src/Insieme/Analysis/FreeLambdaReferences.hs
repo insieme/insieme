@@ -52,15 +52,14 @@ module Insieme.Analysis.FreeLambdaReferences (
 ) where
 
 import Control.DeepSeq (NFData)
+import qualified Data.Set as Set
 import Data.Typeable
 import GHC.Generics (Generic)
-import Insieme.Analysis.Solver
-import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Query
-import Insieme.Inspire.Visit
 
-import qualified Data.Set as Set
-import qualified Insieme.Inspire as IR
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import qualified Insieme.Query as Q
+import Insieme.Analysis.Solver
 
 --
 -- * the lattice of this analysis
@@ -88,38 +87,38 @@ data FreeLambdaReferenceAnalysis = FreeLambdaReferenceAnalysis
 --
 
 freeLambdaReferences :: NodeAddress -> TypedVar LambdaReferenceSet
-freeLambdaReferences addr = case getNodeType addr of
+freeLambdaReferences addr = case Q.getNodeType addr of
 
-        IR.LambdaExpr -> var
+        I.LambdaExpr -> var
             where
                 var = mkVariable varId [con] bot
-                con = forward (freeLambdaReferences $ goDown 2 addr) var
+                con = forward (freeLambdaReferences $ I.goDown 2 addr) var
 
         -- this one handles root definitions, to utilize node sharing
-        IR.LambdaDefinition | isRoot addr -> var
+        I.LambdaDefinition | I.isRoot addr -> var
             where
                 var = mkVariable varId [con] bot :: TypedVar LambdaReferenceSet
                 con = createConstraint (\_ -> toVar <$> deps) val var
 
-                bindings = getChildren addr
-                definedRefs = (getNode . goDown 0) <$> bindings
-                deps = (freeLambdaReferences . goDown 1) <$> bindings
+                bindings = I.children addr
+                definedRefs = (I.getNode . I.goDown 0) <$> bindings
+                deps = (freeLambdaReferences . I.goDown 1) <$> bindings
 
                 val a = LambdaReferenceSet $ Set.filter f $ unLRS $ join $ get a <$> deps
                     where
-                        f n = notElem (getNode n) definedRefs
+                        f n = notElem (I.getNode n) definedRefs
 
 
         -- this is the one utilizing shared data
-        IR.LambdaDefinition -> var
+        I.LambdaDefinition -> var
             where
                 var = mkVariable varId [con] bot
                 con = createConstraint dep val var
 
                 dep _ = [toVar freeLambdaRefVar]
-                val a = LambdaReferenceSet $ Set.map (append addr) $ unLRS $ get a freeLambdaRefVar
+                val a = LambdaReferenceSet $ Set.map (I.append addr) $ unLRS $ get a freeLambdaRefVar
 
-                freeLambdaRefVar = freeLambdaReferences $ crop addr
+                freeLambdaRefVar = freeLambdaReferences $ I.crop addr
 
         _ -> var
 
@@ -128,25 +127,25 @@ freeLambdaReferences addr = case getNodeType addr of
         var = mkVariable varId [con] base
         con = createConstraint (\_ -> toVar <$> deps) val var
 
-        base = LambdaReferenceSet $ Set.fromList $ foldAddressPrune collector prune addr
+        base = LambdaReferenceSet $ Set.fromList $ I.foldAddressPrune collector prune addr
             where
-                collector c l = case getNodeType c of
-                    IR.LambdaReference -> c : l
+                collector c l = case Q.getNodeType c of
+                    I.LambdaReference -> c : l
                     _                  -> l
 
-                prune a = IR.LambdaExpr == nodeType || isType a
+                prune a = I.LambdaExpr == nodeType || Q.isType a
                     where
-                        nodeType = getNodeType a
+                        nodeType = Q.getNodeType a
 
-        deps = foldAddressPrune collector prune addr
+        deps = I.foldAddressPrune collector prune addr
             where
-                collector c l = case getNodeType c of
-                    IR.LambdaDefinition -> freeLambdaReferences c : l
+                collector c l = case Q.getNodeType c of
+                    I.LambdaDefinition -> freeLambdaReferences c : l
                     _                  -> l
 
-                prune a = IR.LambdaBinding == nodeType || isType a
+                prune a = I.LambdaBinding == nodeType || Q.isType a
                     where
-                        nodeType = getNodeType a
+                        nodeType = Q.getNodeType a
 
         val a = join $ get a <$> deps
 

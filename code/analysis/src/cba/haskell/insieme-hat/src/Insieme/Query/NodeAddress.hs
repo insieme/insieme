@@ -35,44 +35,32 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Utils.ParseIR where
+module Insieme.Query.NodeAddress where
 
-import Insieme.Adapter.Utils (parseIR)
-import Insieme.Inspire.Transform (removeIds)
-import System.IO.Unsafe (unsafePerformIO)
+import Data.Maybe
 
+import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Inspire as IR
+import Insieme.Query.NodeReference
 
--- | Parse a given IR expression.
+-- * Semantic Queries
 
-parseExpr :: String -> IR.Tree
-parseExpr = removeIds . unsafePerformIO . parseIR
+-- | Returns 'True' if given variable (in declaration) is a loop iterator.
+isLoopIterator :: NodeAddress -> Bool
+isLoopIterator a = (IR.depth a >= 2) && ((==IR.ForStmt) $ getNodeType $ IR.goUp $ IR.goUp a)
 
--- | Parse a given IR type.
-parseType :: String -> IR.Tree
-parseType txt = IR.goDown 0 $ parseExpr $ "lit(\"x\":" ++ txt ++ ")"
+hasEnclosingStatement :: NodeAddress -> Bool
+hasEnclosingStatement a = case IR.getNode a of
+    IR.Node n _ | (IR.toNodeKind n) == IR.Statement -> True
+    IR.Node n _ | n /= IR.LambdaExpr && n /= IR.Variable && (IR.toNodeKind n) == IR.Expression -> True
+    _ -> not (IR.isRoot a) && hasEnclosingStatement (fromJust $ IR.getParent a)
 
--- inspire constructs --
+isEntryPoint :: NodeAddress -> Bool
+isEntryPoint a = IR.isRoot a || not (hasEnclosingStatement $ fromJust $ IR.getParent a)
 
-uint8 :: IR.Tree
-uint8 = parseType "uint<8>"
-
-identifierType :: IR.Tree
-identifierType = parseType "identifier"
-
-refDeref :: IR.Tree
-refDeref = parseExpr "ref_deref"
-
-refAssign :: IR.Tree
-refAssign = parseExpr "ref_assign"
-
-refTempInit :: IR.Tree
-refTempInit = parseExpr "ref_temp_init"
-
--- Haskell extension constructs --
-
-hsRefMemberAccess :: IR.Tree
-hsRefMemberAccess = parseExpr "hs_ref_member_access"
-
-hsRefComponentAccess :: IR.Tree
-hsRefComponentAccess = parseExpr "hs_ref_component_access"
+isEntryPointParameter :: NodeAddress -> Bool
+isEntryPointParameter v | (not . isVariable) v = False
+isEntryPointParameter v | IR.isRoot v = False
+isEntryPointParameter v = case IR.getNode $ fromJust $ IR.getParent v of
+            IR.Node IR.Parameters _ -> not $ hasEnclosingStatement v
+            _                     -> False

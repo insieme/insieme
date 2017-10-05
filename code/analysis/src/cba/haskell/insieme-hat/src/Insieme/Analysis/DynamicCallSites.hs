@@ -42,16 +42,15 @@
 module Insieme.Analysis.DynamicCallSites where
 
 import Control.DeepSeq
+import qualified Data.Set as Set
 import Data.Typeable
 import GHC.Generics (Generic)
-import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Visit
 
-import qualified Data.Set as Set
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import qualified Insieme.Query as Q
+
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.Query as Q
-
 
 --
 -- * CallSite Results
@@ -61,7 +60,7 @@ newtype CallSite = CallSite NodeAddress
  deriving (Eq, Ord, Generic, NFData)
 
 instance Show CallSite where
-    show (CallSite na) = "Call@" ++ (prettyShow na)
+    show (CallSite na) = "Call@" ++ (I.prettyShow na)
 
 --
 -- * CallSite Lattice
@@ -90,13 +89,13 @@ dynamicCallsAnalysis = Solver.mkAnalysisIdentifier DynamicCallsAnalysis "DynCall
 --
 
 dynamicCalls :: NodeAddress -> Solver.TypedVar CallSiteSet
-dynamicCalls addr = case getNodeType addr of
+dynamicCalls addr = case Q.getNodeType addr of
 
     -- for root elements => collect all dynamic call sites
-    _ | isRoot addr -> var
+    _ | I.isRoot addr -> var
 
     -- for all other nodes, redirect to the root node
-    _ -> dynamicCalls $ getRootAddress addr
+    _ -> dynamicCalls $ I.getRootAddress addr
 
   where
 
@@ -104,18 +103,18 @@ dynamicCalls addr = case getNodeType addr of
 
     var = Solver.mkVariable (idGen addr) [] allCalls
 
-    allCalls = Set.fromList $ CallSite <$> collectAllPrune dynamicBoundCall skipTypes (getRootAddress addr)
+    allCalls = Set.fromList $ CallSite <$> I.collectAllPrune dynamicBoundCall skipTypes (I.getRootAddress addr)
       where
-        dynamicBoundCall node = case IR.getNodeType node of
-            IR.CallExpr ->
-                case IR.getNodeType $ IR.getChildren node !! 1 of
-                    IR.LambdaExpr      -> False
-                    IR.BindExpr        -> False
-                    IR.Literal         -> False
-                    IR.LambdaReference -> False
+        dynamicBoundCall node = case I.getNodeType node of
+            I.CallExpr ->
+                case I.getNodeType $ I.getChildren node !! 1 of
+                    I.LambdaExpr      -> False
+                    I.BindExpr        -> False
+                    I.Literal         -> False
+                    I.LambdaReference -> False
                     _                  -> True
             _ -> False
         
         -- NOTE: this is a simplification, since types may contain functions with dynamically bound calls
-        skipTypes node = if Q.isType node then PruneHere else NoPrune
+        skipTypes node = if Q.isType node then I.PruneHere else I.NoPrune
 

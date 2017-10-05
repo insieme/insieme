@@ -62,14 +62,14 @@ import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Reference
-import Insieme.Inspire.Query
+import Insieme.Query
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
+import qualified Insieme.Inspire as Addr
 import qualified Insieme.Inspire.Builder as Builder
-import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Utils.BoundSet as BSet
 
 --
@@ -154,7 +154,7 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
     ops = [ operatorHandler ]
 
     -- a list of symbolic values of the arguments
-    argVars = (variableGenerator analysis) <$> ( Addr.goDown 1 ) <$> ( tail . tail $ Addr.getChildren addr )
+    argVars = (variableGenerator analysis) <$> ( Addr.goDown 1 ) <$> ( tail . tail $ IR.children addr )
 
     -- the one operator handler that covers all operators
     operatorHandler = OperatorHandler cov dep val
@@ -189,9 +189,9 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
             toCall args = IR.mkNode IR.CallExpr (resType : trg : decls) []
               where
-                decls = toDecl <$> zip (tail $ tail $ IR.getChildren $ Addr.getNode addr ) args
+                decls = toDecl <$> zip (tail $ tail $ IR.children $ IR.node addr ) args
 
-                toDecl (decl,arg) = IR.mkNode IR.Declaration [IR.goDown 0 decl, arg] []
+                toDecl (decl,arg) = IR.mkNode IR.Declaration [IR.child 0 decl, arg] []
 
             callTrg = case getNodeType o of
                 IR.Literal -> o
@@ -207,7 +207,7 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
                 instantiateCall = Addr.goUp $ Addr.goUp callTrg
 
-            resType = IR.goDown 0 $ Addr.getNode addr
+            resType = IR.child 0 $ IR.node addr
 
 
     -- the handler determinign the value of a free variable
@@ -239,7 +239,7 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
           where
             append x = Builder.deref ext
               where
-                base = child 1 $ child 2 x
+                base = IR.child 1 $ IR.child 2 x
                 
                 ext = case f of
                     (StructField field)   -> Builder.refMember base field

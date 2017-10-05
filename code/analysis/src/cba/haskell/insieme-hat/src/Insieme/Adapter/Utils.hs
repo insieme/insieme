@@ -39,42 +39,22 @@
 
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module Insieme.Adapter.Utils (
-    parseIR
-  , pprintTree
-) where
+module Insieme.Adapter.Utils (pprintTree) where
 
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
-import Insieme.Inspire.BinaryDumper
-import Insieme.Inspire.BinaryParser
 import System.IO.Unsafe (unsafePerformIO)
-
 import qualified Data.ByteString.Char8 as BS8
-import qualified Insieme.Inspire as IR
 
-foreign import ccall "hat_c_parse_ir_statement"
-  cParseIrStatement :: CString -> CSize -> Ptr CString -> Ptr CSize -> IO ()
-
-parseIR :: String -> IO IR.Tree
-parseIR stmt = do
-    alloca $ \data_ptr_c ->
-        alloca $ \size_ptr_c -> do
-            withCStringLen stmt $ \(sz,l) ->cParseIrStatement sz (fromIntegral l) data_ptr_c size_ptr_c
-            data_c <- peek data_ptr_c
-            size_c <- peek size_ptr_c
-            dump   <- BS8.packCStringLen (data_c, fromIntegral size_c)
-            free data_c
-            let Right ir = parseBinaryDump dump
-            return ir
+import qualified Insieme.Inspire as I
 
 foreign import ccall "hat_c_pretty_print_tree"
   prettyPrintTree :: CString -> CSize -> IO CString
 
-pprintTree :: IR.Tree -> String
+pprintTree :: I.Tree -> String
 pprintTree ir = unsafePerformIO $ do
-    let dump = dumpBinaryDump ir
+    let dump = I.dumpBinaryDump ir
     pretty_c <- BS8.useAsCStringLen dump $ \(sz,l) -> prettyPrintTree sz (fromIntegral l)
     pretty   <- peekCString pretty_c
     free pretty_c

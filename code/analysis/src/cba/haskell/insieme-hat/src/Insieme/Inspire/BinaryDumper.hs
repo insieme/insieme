@@ -45,13 +45,12 @@ import Data.Char (ord)
 import Data.IntMap.Strict (IntMap)
 import Data.Maybe
 import Data.Map.Strict (Map)
-import Insieme.Inspire.NodeType
-
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as L
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
-import qualified Insieme.Inspire as IR
+
+import qualified Insieme.Inspire.IR as IR
 
 dumpBinaryDump :: IR.Tree -> BS.ByteString
 dumpBinaryDump ir = L.toStrict
@@ -86,7 +85,7 @@ dumpNodes ns = dumpList $ (dumpNode . snd) <$> IntMap.toAscList ns
 dumpNode :: DumpNode -> Builder
 dumpNode (DumpNode t cs) = mconcat [type_, value, children, annotations]
   where
-    type_ = word16LE $ fromIntegral $ fromEnum $ toNodeType t
+    type_ = word16LE $ fromIntegral $ fromEnum $ IR.toNodeType t
 
     value = case t of
         IR.BoolValue   v -> word8 $ if v then 1 else 0

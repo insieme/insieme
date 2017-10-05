@@ -20,7 +20,8 @@ module Insieme.Analysis.Framework.Dataflow (
 ) where
 
 import Data.Typeable
-import Insieme.Inspire.NodeAddress
+
+import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Analysis.Solver as Solver
 
 import Insieme.Analysis.Framework.Utils.OperatorHandler

@@ -56,12 +56,11 @@ module Insieme.Inspire.Visit (
 
 import Control.Applicative
 import Data.List
-import Insieme.Inspire.NodeMap
-import qualified Insieme.Inspire.NodeMap as NodeMap
-import Insieme.Inspire.NodePath
-import Insieme.Inspire.NodePaths
+import Insieme.Inspire.Visit.NodeMap (NodeMap)
+import qualified Insieme.Inspire.Visit.NodeMap as NodeMap
+import Insieme.Inspire.Visit.NodePaths
 import Insieme.Inspire.NodeAddress
-import qualified Insieme.Inspire as IR
+import qualified Insieme.Inspire.IR as IR
 
 -- import Debug.Trace
 
@@ -89,7 +88,7 @@ collectAllPrunePaths p pruning root = flattenNodePaths $ go root
   where
     {-# NOINLINE resultMap #-}
     resultMap :: NodeMap (NodePaths Int)
-    resultMap = fmap (\n -> {- traceShow ("result", (IR.getID n)) -} (go n)) $ mkNodeMap root
+    resultMap = fmap (\n -> {- traceShow ("result", (IR.getID n)) -} (go n)) $ NodeMap.mkNodeMap root
 
     lookup :: IR.Tree -> Maybe (NodePaths Int)
     lookup n = {- traceShow ("lookup", IR.getID n) $ -} NodeMap.lookup n resultMap

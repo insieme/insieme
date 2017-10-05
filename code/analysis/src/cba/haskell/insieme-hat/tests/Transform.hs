@@ -37,8 +37,8 @@
 
 module Transform (transformTests) where
 
-import Insieme.Inspire
-import Insieme.Inspire.Transform
+import Insieme.Inspire.IR.Transform
+import Insieme.Inspire.IR.Tree
 import Test.Tasty
 import Test.Tasty.HUnit
 import TestUtils

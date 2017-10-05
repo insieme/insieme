@@ -35,48 +35,60 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE PatternSynonyms   #-}
 
-module Insieme.Analysis.Entities.SymbolicFormula (
-
-    Symbol(..),
-    SymbolicFormula,
-    
-    Ar.zero,
-    Ar.one,
-    Ar.mkConst,
-
-) where
+module Insieme.Inspire.IR.Tree where
 
 import Control.DeepSeq
 import GHC.Generics (Generic)
 
-import Insieme.Inspire (NodeAddress)
-import qualified Insieme.Inspire as IR
-import Insieme.Utils.ParseInt
-import qualified Insieme.Utils.Arithmetic as Ar
+import Insieme.Inspire.IR.NodeType
+import {-# UP #-} Insieme.Inspire.NodeReference
 
---
--- * Arithemtic Symbol
---
+-- TODO: Rename to 'Node'
+data Tree = MkTree {
+      mtId        :: Maybe Int,
+      mtInnerTree :: InnerTree
+    } deriving (Show, Generic, NFData)
 
-data Symbol = Constant {getNode :: IR.Tree,
-                        getAddr :: NodeAddress }
-            | Variable {getNode :: IR.Tree,
-                        getAddr :: NodeAddress }
-  deriving (Generic, NFData)
+instance Eq Tree where
+    MkTree { mtId = Just ida } == MkTree { mtId = Just idb } =
+        ida == idb
+    a == b =
+        mtInnerTree a == mtInnerTree b
 
-instance Eq Symbol where
-    x == y = (getNode x) == (getNode y)
+instance Ord Tree where
+    compare Tree{ getID = Just ida } Tree{ getID = Just idb } | ida == idb = EQ
+    compare a b = compare (mtInnerTree a) (mtInnerTree b)
 
-instance Ord Symbol where
-    compare x y = compare (getNode x) (getNode y)
+instance NodeReference Tree where
+    child i  = (!!i) . children 
+    children = getChildren
 
-instance Show Symbol where
-    show (Constant (IR.Node IR.Literal  [_, IR.Node (IR.StringValue v) _]) _) = v
-    show (Variable (IR.Node IR.Variable [_, IR.Node (IR.UIntValue   v) _]) _) = "v" ++ show v
-    show _ = "???"
+treeExactEq :: Tree -> Tree -> Bool
+treeExactEq a b = mtId a == mtId b && mtInnerTree a == mtInnerTree b
 
-type SymbolicFormula = Ar.Formula CInt Symbol
+data InnerTree = InnerTree {
+      itNodeType    :: NodeType,
+      itChildren    :: [Tree],
+      itBuiltinTags :: [String]
+    } deriving (Eq, Ord, Show, Generic, NFData)
+
+pattern Node :: NodeType -> [Tree] -> Tree
+pattern Node x y <- MkTree _ (InnerTree x y _)
+
+pattern Tree :: Maybe Int -> NodeType -> [Tree] -> [String] -> Tree
+pattern Tree { getID, getNodeType, getChildren, builtinTags }
+      = MkTree getID (InnerTree getNodeType getChildren builtinTags)
+
+unsafeMkNode :: Int -> NodeType -> [Tree] -> [String] -> Tree
+unsafeMkNode i nt ch bt = MkTree (Just i) (InnerTree nt ch bt)
+
+mkNode :: NodeType -> [Tree] -> [String] -> Tree
+mkNode nt ch bt = MkTree Nothing (InnerTree nt ch bt)
+
+isBuiltin :: Tree -> String -> Bool
+isBuiltin t s = elem s $ builtinTags t

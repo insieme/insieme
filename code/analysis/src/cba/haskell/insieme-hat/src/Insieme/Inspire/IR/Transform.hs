@@ -35,17 +35,52 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
--- | This module exports helper functions for the Template Haskell code in
--- "Insieme.Inspire.NodeType"
+module Insieme.Inspire.IR.Transform
+    ( substitute
+    , substitute'
+    , removeIds
+    , removeIds'
+    ) where
 
-module Insieme.Inspire.ThHelpers where
+import Control.Monad.State
+import Data.Map (Map)
+import qualified Data.Map as Map
 
-import Data.List
-import Language.Haskell.TH
+import Insieme.Inspire.IR.Tree as IR
 
-removePrefix :: String -> Name -> Name
-removePrefix p n = mkName $ drop (length p) (nameBase n)
+type TreeSubst = Map IR.Tree IR.Tree
 
-isLeaf :: Con -> Bool
-isLeaf (NormalC n _) = isSuffixOf "Value" (nameBase n)
-isLeaf _             = False
+substitute :: TreeSubst -> IR.Tree -> IR.Tree
+substitute s t = evalState (substitute' t) s
+
+substitute' :: IR.Tree -> State TreeSubst IR.Tree
+substitute' t = do
+  s <- get
+  case Map.lookup t s of
+    Just t' -> return t'
+    Nothing -> do
+        let ch = getChildren t
+        ch' <- mapM substitute' ch
+        let t' | ch' == ch = t
+               | otherwise = t { getID = Nothing
+                               , getChildren = ch'
+                               , builtinTags = []
+                               }
+        modify (Map.insert t t')
+        return t'
+
+
+removeIds :: IR.Tree -> IR.Tree
+removeIds t = evalState (removeIds' t) Map.empty
+
+removeIds' :: IR.Tree -> State TreeSubst IR.Tree
+removeIds' t = do
+  s <- get
+  case Map.lookup t s of
+    Just t' -> return t'
+    Nothing -> do
+        let ch = getChildren t
+        ch' <- mapM removeIds' ch
+        let t' = t { getID = Nothing, getChildren = ch' }
+        modify (Map.insert t t')
+        return t'

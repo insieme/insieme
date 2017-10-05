@@ -35,54 +35,31 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TemplateHaskell #-}
+{- ONLY USE THIS MODULE IF YOU ARE LINKING WITH libinsieme_analysis.so -}
 
-module Insieme.Inspire.NodeMap where
+{-# LANGUAGE ForeignFunctionInterface #-}
 
-import Control.Monad.State
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IntMap
-import Prelude hiding (map)
+module Insieme.Inspire.SourceParser.FFI (parseInspireSource) where
 
-import qualified Insieme.Inspire as IR
+import Foreign
+import Foreign.C.String
+import Foreign.C.Types
+import qualified Data.ByteString.Char8 as BS8
 
-data NodeMap a = NodeMap { nmIdMap :: IntMap a }
+import qualified Insieme.Inspire.IR as IR
+import qualified Insieme.Inspire.BinaryParser as Bin
 
-mkNodeMap :: IR.Tree -> NodeMap IR.Tree
-mkNodeMap node = NodeMap $ execState (buildMap node) $ IntMap.empty
-  where
-    buildMap :: IR.Tree -> State (IntMap IR.Tree) ()
-    buildMap n@IR.MkTree { IR.mtId = Just i } = do
-      whenM (not . IntMap.member i <$> get) $ do
-           modify $ IntMap.insert i n
-           mapM_ buildMap $ IR.getChildren n
-    buildMap IR.MkTree { IR.mtId = Nothing } =
-      return ()
+foreign import ccall "hat_c_parse_ir_statement"
+  cParseIrStatement :: CString -> CSize -> Ptr CString -> Ptr CSize -> IO ()
 
-    whenM :: Monad m => m Bool -> m () -> m ()
-    whenM cond a = do
-      b <- cond
-      when b a
-
-mkNodeMap'Naive :: IR.Tree -> NodeMap IR.Tree
-mkNodeMap'Naive n = NodeMap $ go n
-  where
-    go n = insert n $ IntMap.unions $ fmap go $ IR.getChildren n
-
-    insert n =
-        case IR.getID n of
-          Just i  -> IntMap.insert i n
-          Nothing -> id
-
-lookup :: IR.Tree -> NodeMap a -> Maybe a
-lookup   IR.MkTree { IR.mtId = Just i  } NodeMap { nmIdMap } =
-    IntMap.lookup i nmIdMap
-lookup IR.MkTree { IR.mtId = Nothing } _nm =
-    Nothing
-
-instance Functor NodeMap where
-    fmap = mapNodeMap
-
-mapNodeMap :: (a -> b) -> NodeMap a -> NodeMap b
-mapNodeMap f (NodeMap im) = NodeMap $ fmap f im
+parseInspireSource :: String -> IO IR.Tree
+parseInspireSource stmt = do
+    alloca $ \data_ptr_c ->
+        alloca $ \size_ptr_c -> do
+            withCStringLen stmt $ \(sz,l) -> cParseIrStatement sz (fromIntegral l) data_ptr_c size_ptr_c
+            data_c <- peek data_ptr_c
+            size_c <- peek size_ptr_c
+            dump   <- BS8.packCStringLen (data_c, fromIntegral size_c)
+            free data_c
+            let Right ir = Bin.parseBinaryDump dump
+            return ir

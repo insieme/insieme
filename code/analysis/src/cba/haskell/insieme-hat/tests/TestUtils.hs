@@ -38,7 +38,6 @@
 module TestUtils where
 
 import Insieme.Inspire
-import Insieme.Inspire.Transform
 import Test.Tasty
 import Test.Tasty.HUnit
 

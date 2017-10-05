@@ -35,63 +35,44 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE FlexibleInstances #-}
+module Insieme.Inspire.SourceParser where
 
-module Insieme.Analysis.RecursiveLambdaReferences (
+import System.IO.Unsafe (unsafePerformIO)
 
-    LambdaReferenceSet,
-    recursiveCalls
+import Insieme.Inspire.SourceParser.FFI (parseInspireSource)
+import Insieme.Inspire.NodeReference
+import qualified Insieme.Inspire.IR as IR
 
-) where
+-- | Parse a given IR expression.
 
-import Data.Typeable
-import qualified Data.Set as Set
+parseExpr :: String -> IR.Tree
+parseExpr = IR.removeIds . unsafePerformIO . parseInspireSource
 
-import Insieme.Inspire (NodeAddress)
-import qualified Insieme.Inspire as I
-import qualified Insieme.Query as Q
+-- | Parse a given IR type.
+parseType :: String -> IR.Tree
+parseType txt = child 0 $ parseExpr $ "lit(\"x\":" ++ txt ++ ")"
 
-import Insieme.Analysis.Solver
-import Insieme.Analysis.FreeLambdaReferences
+-- inspire constructs --
 
+uint8 :: IR.Tree
+uint8 = parseType "uint<8>"
 
---
--- * RecursiveLambdaReferences Analysis
---
+identifierType :: IR.Tree
+identifierType = parseType "identifier"
 
-data RecursiveLambdaReferenceAnalysis = RecursiveLambdaReferenceAnalysis
-    deriving (Typeable)
+refDeref :: IR.Tree
+refDeref = parseExpr "ref_deref"
 
+refAssign :: IR.Tree
+refAssign = parseExpr "ref_assign"
 
---
--- * the constraint generator
---
+refTempInit :: IR.Tree
+refTempInit = parseExpr "ref_temp_init"
 
-recursiveCalls :: NodeAddress -> TypedVar LambdaReferenceSet
-recursiveCalls addr = case Q.getNodeType addr of
+-- Haskell extension constructs --
 
-        I.Lambda | I.depth addr >= 3 -> var
+hsRefMemberAccess :: IR.Tree
+hsRefMemberAccess = parseExpr "hs_ref_member_access"
 
-        _ -> error "Can only compute recursive calls for lambdas with sufficient context!"
-
-    where
-
-        var = mkVariable varId [con] bot
-        con = createConstraint dep val var
-
-        varId = mkIdentifierFromExpression analysis addr
-        analysis = mkAnalysisIdentifier RecursiveLambdaReferenceAnalysis "RecLambdaRefs"
-
-        dep _ = toVar <$> freeRefVars
-        val a = LambdaReferenceSet $ Set.filter f $ unLRS $ join $ get a <$> freeRefVars
-            where
-                f r = I.getNode r == tag
-
-        tag = I.getNode $ I.goDown 0 $ I.goUp addr
-        def = I.goUp $ I.goUp addr
-
-        lambdas = I.goDown 1 <$> I.children def
-
-        freeRefVars = freeLambdaReferences <$> lambdas
-
-
+hsRefComponentAccess :: IR.Tree
+hsRefComponentAccess = parseExpr "hs_ref_component_access"

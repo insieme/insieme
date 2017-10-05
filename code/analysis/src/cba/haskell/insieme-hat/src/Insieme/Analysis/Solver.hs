@@ -100,10 +100,9 @@ module Insieme.Analysis.Solver (
 
 ) where
 
-import Prelude hiding (lookup,print)
-
 --import Debug.Trace
 
+import Prelude hiding (lookup,print)
 import Control.DeepSeq
 import Control.Exception
 import Control.Monad (void,when)
@@ -112,10 +111,6 @@ import Data.Function
 import Data.List hiding (insert,lookup)
 import Data.Maybe
 import Data.Tuple
-import Insieme.Analysis.Entities.Memory
-import Insieme.Analysis.Entities.ProgramPoint
-import Insieme.Inspire.NodeAddress
-import Insieme.Utils
 import System.CPUTime
 import System.Directory (doesFileExist)
 import System.IO.Unsafe (unsafePerformIO)
@@ -129,6 +124,15 @@ import qualified Data.Hashable as Hash
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import Insieme.Utils
+
+import Insieme.Analysis.Entities.Memory
+import Insieme.Analysis.Entities.ProgramPoint
+
+
 
 -- Lattice --------------------------------------------------
 
@@ -767,7 +771,7 @@ toJsonMetaFile (SolverState a@(Assignment _) varIndex _ _ _) = "{\n"
             where
                 go v m = if isJust $ addr v then Map.insert k (msg : Map.findWithDefault [] k m) m else m
                     where
-                        k = getAbsolutePath $ fromJust $ addr v
+                        k = I.getAbsolutePath $ fromJust $ addr v
                         i = index v
                         msg = (show . analysis $ i) ++ " = " ++ (escape $ valuePrint v a)
 

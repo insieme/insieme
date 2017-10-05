@@ -49,12 +49,11 @@ module Insieme.Inspire.Builder (
 
 import Control.Exception.Base
 import Data.Maybe
-import Insieme.Inspire.Query
 
-import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.Query as Q
-import qualified Insieme.Utils.ParseIR as Lang
-
+import Insieme.Inspire.NodeReference
+import qualified Insieme.Inspire.IR as IR
+import qualified Insieme.Inspire.SourceParser as SP
+import {-# UP #-} qualified Insieme.Query as Q
 
 -- basic node types --
 
@@ -71,38 +70,38 @@ mkCall :: IR.Tree -> IR.Tree -> [IR.Tree] -> IR.Tree
 mkCall t f argDecls = IR.mkNode IR.CallExpr (t:f:argDecls) []
 
 mkIdentifier :: String -> IR.Tree
-mkIdentifier s = mkLiteral s Lang.identifierType
+mkIdentifier s = mkLiteral s SP.identifierType
 
 
 -- invocations of built-ins --
 
 deref :: IR.Tree -> IR.Tree
-deref t = mkCall resType Lang.refDeref [decl]
+deref t = mkCall resType SP.refDeref [decl]
   where
-    resType = fromJust $ getReferencedType refType
+    resType = fromJust $ Q.getReferencedType refType
 
-    refType = IR.goDown 0 t
+    refType = child 0 t
 
     decl = mkDeclaration refType t
 
 
 refMember :: IR.Tree -> String -> IR.Tree
-refMember t f = mkCall some_ref_type Lang.hsRefMemberAccess $ wrapSomeDecl <$> [t,mkIdentifier f]
+refMember t f = mkCall some_ref_type SP.hsRefMemberAccess $ wrapSomeDecl <$> [t,mkIdentifier f]
 
 refComponent :: IR.Tree -> Int -> IR.Tree
-refComponent t i = mkCall some_ref_type Lang.hsRefComponentAccess $ wrapSomeDecl <$> [t,mkLiteral (show i) Lang.uint8]
+refComponent t i = mkCall some_ref_type SP.hsRefComponentAccess $ wrapSomeDecl <$> [t,mkLiteral (show i) SP.uint8]
 
 refTemporaryInit :: IR.Tree -> IR.Tree
-refTemporaryInit e = mkCall some_ref_type Lang.refTempInit [mkDeclaration some_type e]
+refTemporaryInit e = mkCall some_ref_type SP.refTempInit [mkDeclaration some_type e]
 
 
 -- utilities --
 
 some_type :: IR.Tree
-some_type     = Lang.parseType "some_type"
+some_type     = SP.parseType "some_type"
 
 some_ref_type :: IR.Tree
-some_ref_type = Lang.parseType "ref<some_type>"
+some_ref_type = SP.parseType "ref<some_type>"
 
 wrapSomeDecl :: IR.Tree -> IR.Tree
 wrapSomeDecl = mkDeclaration some_type

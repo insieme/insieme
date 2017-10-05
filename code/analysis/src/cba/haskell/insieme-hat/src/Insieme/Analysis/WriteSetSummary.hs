@@ -63,15 +63,14 @@ import Insieme.Analysis.Callable
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.FreeLambdaReferences
 import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Query
-import Insieme.Inspire.Visit
+import Insieme.Query
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Entities.AccessPath as AP
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Inspire as IR
+import qualified Insieme.Inspire as I
 import qualified Insieme.Utils.BoundSet as BSet
 
 
@@ -165,7 +164,7 @@ writeSetSummary :: (FieldIndex i) => NodeAddress -> Solver.TypedVar (WriteSet i)
 writeSetSummary addr = case getNodeType addr of
 
         -- ref_assign writes to location addressed by first argument
-        IR.Literal | isRoot addr && (isBuiltin addr "ref_assign") -> var
+        I.Literal | isRoot addr && (isBuiltin addr "ref_assign") -> var
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
@@ -175,11 +174,11 @@ writeSetSummary addr = case getNodeType addr of
 
 
         -- all other literals => no write sets
-        IR.Literal | isRoot addr -> nothing
+        I.Literal | isRoot addr -> nothing
 
 
         -- for lambdas, all call sites of the body have to be aggregated
-        IR.Lambda | isContextFree addr -> var
+        I.Lambda | isContextFree addr -> var
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
@@ -189,7 +188,7 @@ writeSetSummary addr = case getNodeType addr of
 
 
         -- for non context-free lambdas, it has to be tested wether they are closed
-        IR.Lambda -> var
+        I.Lambda -> var
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createEqualityConstraint dep val var
@@ -213,7 +212,7 @@ writeSetSummary addr = case getNodeType addr of
                 openVal a = Solver.join $ (Solver.get a <$> writeSetVars)
 
         -- compute write sets for calls
-        IR.CallExpr -> var
+        I.CallExpr -> var
             where
 
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
@@ -265,7 +264,7 @@ writeSetSummary addr = case getNodeType addr of
 
 
         -- compute write set for init expressions
-        IR.InitExpr -> var
+        I.InitExpr -> var
             where
                 var = Solver.mkVariable (idGen addr) [con] Solver.bot
                 con = Solver.createConstraint dep val var
@@ -299,16 +298,16 @@ writeSetSummary addr = case getNodeType addr of
     idGen a = Solver.mkIdentifierFromExpression writeSetAnalysis a
 
     -- get list of calls and init expressions within current node --
-    potentialWriteOps = foldAddressPrune collect filter addr
+    potentialWriteOps = I.foldAddressPrune collect filter addr
         where
 
             filter cur = case getNode cur of
-                IR.Node IR.Lambda _ -> cur /= addr
+                I.Node I.Lambda _ -> cur /= addr
                 _                   -> isType cur
 
             collect cur l = case getNode cur of
-                IR.Node IR.CallExpr _ -> cur : l
-                IR.Node IR.InitExpr _ -> cur : l
+                I.Node I.CallExpr _ -> cur : l
+                I.Node I.InitExpr _ -> cur : l
                 _                     -> l
 
 
@@ -321,9 +320,9 @@ writeSetSummary addr = case getNodeType addr of
 dropContext :: NodeAddress -> NodeAddress
 dropContext addr = case getNodeType addr of
 
-        IR.Literal -> crop addr
+        I.Literal -> crop addr
 
-        IR.LambdaDefinition -> crop addr
+        I.LambdaDefinition -> crop addr
 
         _ | isRoot addr -> addr
 

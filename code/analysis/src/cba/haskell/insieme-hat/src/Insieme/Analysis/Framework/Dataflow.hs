@@ -63,17 +63,19 @@ import Data.Foldable
 import Data.Maybe
 import Data.Typeable
 import Debug.Trace
+import qualified Data.Set as Set
+
+
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import Insieme.Query
+
 import Insieme.Analysis.Entities.DataPath
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Framework.MemoryState
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Utils.CppSemantic
-import Insieme.Inspire.NodeAddress hiding (getPath)
-import Insieme.Inspire.Query
-import Insieme.Inspire.Visit
-
-import qualified Data.Set as Set
 import qualified Insieme.Analysis.Arithmetic as Arithmetic
 import qualified Insieme.Analysis.CallSite as CallSite
 import qualified Insieme.Analysis.Callable as Callable
@@ -81,7 +83,6 @@ import qualified Insieme.Analysis.ExitPoint as ExitPoint
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Reference as Reference
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Inspire as IR
 import qualified Insieme.Utils.BoundSet as BSet
 
 --
@@ -137,14 +138,14 @@ dataflowValue :: (ComposedValue.ComposedValue a i v, Typeable d)
          -> DataFlowAnalysis d a i                          -- ^ the summar of the analysis to be performed be realized by this function
          -> [OperatorHandler a]                             -- ^ allows selected operators to be intercepted and interpreted
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
-dataflowValue addr analysis ops = case getNode addr of
+dataflowValue addr analysis ops = case I.getNode addr of
 
-    IR.Node IR.Variable _ -> case findDecl addr of
+    I.Node I.Variable _ -> case I.findDecl addr of
             Just declrAddr -> handleDeclr declrAddr              -- this variable is declared, use declared value
             _              -> freeVariableHandler analysis addr  -- it is a free variable, ask the analysis what to do with it
 
 
-    IR.Node IR.CallExpr _ -> var
+    I.Node I.CallExpr _ -> var
       where
         var = Solver.mkVariable (idGen addr) [knownTargets,unknownTarget] Solver.bot
         knownTargets = Solver.createConstraint dep val var
@@ -160,7 +161,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
         -- utilities --
 
-        callTargetVar = Callable.callableValue (goDown 1 addr)
+        callTargetVar = Callable.callableValue (I.goDown 1 addr)
 
         callTargetVal a = ComposedValue.toValue $ Solver.get a callTargetVar
 
@@ -185,8 +186,8 @@ dataflowValue addr analysis ops = case getNode addr of
                 go e = concat $ map resolve e
 
                 resolve (ExitPoint.ExitPoint r) = case getNodeType r of
-                    IR.Declaration  -> [memoryStateValue (MemoryStatePoint (ProgramPoint r Post) (MemoryLocation r)) analysis]
-                    IR.CompoundStmt | isConstructorOrDestructor $ getNode $ fromJust $ getParent r -> []
+                    I.Declaration  -> [memoryStateValue (MemoryStatePoint (ProgramPoint r Post) (MemoryLocation r)) analysis]
+                    I.CompoundStmt | isConstructorOrDestructor $ I.getNode $ fromJust $ I.getParent r -> []
                     _               -> [varGen r]
 
         getReturnValues a = map (Solver.get a) (getReturnValueVars a)
@@ -196,14 +197,14 @@ dataflowValue addr analysis ops = case getNode addr of
 
         enableCtorDtorForward = forwardCtorDtorResultValue analysis
 
-        isCtorOrDtor c = isConstructorOrDestructor $ getNode $ Callable.toAddress c
+        isCtorOrDtor c = isConstructorOrDestructor $ I.getNode $ Callable.toAddress c
 
         getCtorDtorVars a = if not enableCtorDtorForward || BSet.isUniverse targets then [] else concat $ go <$> Set.toList uninterceptedTargets
             where
                 targets = callTargetVal a
                 uninterceptedTargets = filterInterceptedLambdas targets
 
-                go c = if isCtorOrDtor c then [varGen $ goDown 1 $ goDown 2 addr] else []
+                go c = if isCtorOrDtor c then [varGen $ I.goDown 1 $ I.goDown 2 addr] else []
 
         getCtorDtorValues a = (Solver.get a) <$> getCtorDtorVars a
 
@@ -248,7 +249,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
 
 
-    IR.Node IR.TupleExpr [_,IR.Node IR.Expressions args] -> var
+    I.Node I.TupleExpr [_,I.Node I.Expressions args] -> var
         where
             var = Solver.mkVariable (idGen addr) [con] Solver.bot
             con = Solver.createConstraint dep val var
@@ -258,10 +259,10 @@ dataflowValue addr analysis ops = case getNode addr of
 
             componentValueVars = go <$> [0 .. ((length args) - 1) ]
                 where
-                    go i = varGen (goDown i $ goDown 1 $ addr)
+                    go i = varGen (I.goDown i $ I.goDown 1 $ addr)
 
 
-    decl@(IR.Node IR.Declaration _) -> var
+    decl@(I.Node I.Declaration _) -> var
       where
         var = Solver.mkVariable (idGen addr) [con] Solver.bot
 
@@ -269,15 +270,15 @@ dataflowValue addr analysis ops = case getNode addr of
             (
                 if Reference.isMaterializingDeclaration decl
                 then memoryStateValue (MemoryStatePoint (ProgramPoint addr Post) (MemoryLocation addr)) analysis
-                else varGen (goDown 1 addr)
+                else varGen (I.goDown 1 addr)
             )
             var
 
-    IR.Node IR.InitExpr _ -> var
+    I.Node I.InitExpr _ -> var
       where
         var = Solver.mkVariable (idGen addr) [con] Solver.bot
 
-        con = Solver.forward (varGen (goDown 1 addr)) var
+        con = Solver.forward (varGen (I.goDown 1 addr)) var
 
 
     _ -> unknown
@@ -298,21 +299,21 @@ dataflowValue addr analysis ops = case getNode addr of
 
     -- variable declaration handler
 
-    handleDeclr declrAddr = case getNodeType (goUp declrAddr) of
+    handleDeclr declrAddr = case getNodeType (I.goUp declrAddr) of
 
         -- handle iterator variables
-        IR.DeclarationStmt | ((depth declrAddr > 2) && ((getNodeType $ goUp $ goUp declrAddr) == IR.ForStmt))  -> var
+        I.DeclarationStmt | ((I.depth declrAddr > 2) && ((getNodeType $ I.goUp $ I.goUp declrAddr) == I.ForStmt))  -> var
           where
             var =  iteratorVariableHandler analysis addr
 
         -- handle local variables
-        IR.DeclarationStmt -> var
+        I.DeclarationStmt -> var
           where
             var = Solver.mkVariable (idGen addr) [constraint] Solver.bot
-            constraint = Solver.forward (varGen (goDown 0 . goUp $ declrAddr)) var
+            constraint = Solver.forward (varGen (I.goDown 0 . I.goUp $ declrAddr)) var
 
         -- handle parameters
-        IR.Parameters -> case () of
+        I.Parameters -> case () of
 
             _ | isImplicitCtorOrDtorParameter declrAddr -> iVar
               | isEntryPointParameter declrAddr         -> entryPointParameterHandler analysis declrAddr
@@ -327,22 +328,22 @@ dataflowValue addr analysis ops = case getNode addr of
 
             objDecl = getEnclosingDeclaration declrAddr
 
-            arg = varGen $ goDown (getIndex declrAddr) objDecl   -- we use the type of the declaration as a fake-address for the this pointer
+            arg = varGen $ I.goDown (I.getIndex declrAddr) objDecl   -- we use the type of the declaration as a fake-address for the this pointer
 
             -- standard parameter --
             var = Solver.mkVariable (idGen addr) [con] Solver.bot
             con = Solver.createConstraint dep val var
 
-            n = getIndex declrAddr
+            n = I.getIndex declrAddr
 
-            callSiteVar = CallSite.callSites (goUp $ goUp declrAddr)
+            callSiteVar = CallSite.callSites (I.goUp $ I.goUp declrAddr)
 
             dep a = (Solver.toVar callSiteVar) : (map Solver.toVar (getArgumentVars a))
             val a = compose $ Solver.join $ map (extract . Solver.get a) (getArgumentVars a)
 
             getArgumentVars a = foldr go [] $ Solver.get a callSiteVar
                 where
-                    go = \(CallSite.CallSite call) list -> (varGen $ goDown (n+2) call) : list
+                    go = \(CallSite.CallSite call) list -> (varGen $ I.goDown (n+2) call) : list
 
 
         _ -> trace " Unhandled Variable parent!" $ error "unhandled case"
@@ -378,7 +379,7 @@ dataflowValue addr analysis ops = case getNode addr of
 
                         _ | otherwise -> ComposedValue.getElement dp val
 
-            targetRefVar = Reference.referenceValue $ goDown 1 $ goDown 2 addr          -- here we have to skip the potentially materializing declaration!
+            targetRefVar = Reference.referenceValue $ I.goDown 1 $ I.goDown 2 addr          -- here we have to skip the potentially materializing declaration!
             targetRefVal a = ComposedValue.toValue $ Solver.get a targetRefVar
 
             includesUnknownSources t = BSet.member Reference.NullReference t || BSet.member Reference.UninitializedReference t
@@ -414,9 +415,9 @@ dataflowValue addr analysis ops = case getNode addr of
                     go i = ComposedValue.getElement i tupleValue
 
 
-            indexValueVar = Arithmetic.arithmeticValue $ goDown 3 addr
+            indexValueVar = Arithmetic.arithmeticValue $ I.goDown 3 addr
 
-            tupleValueVar = varGen $ goDown 1 $ goDown 2 addr
+            tupleValueVar = varGen $ I.goDown 1 $ I.goDown 2 addr
 
 
     -- support the instantiate operator (specialization of a generic values and functions)
@@ -429,8 +430,8 @@ dataflowValue addr analysis ops = case getNode addr of
 
             val _ a = Solver.get a valueVar
 
-            arg1 = goDown 1 $ goDown 2 addr
-            arg2 = goDown 1 $ goDown 3 addr
+            arg1 = I.goDown 1 $ I.goDown 2 addr
+            arg2 = I.goDown 1 $ I.goDown 3 addr
 
             valueVar = varGen $ if isLiteral arg1 then arg2 else arg1
 

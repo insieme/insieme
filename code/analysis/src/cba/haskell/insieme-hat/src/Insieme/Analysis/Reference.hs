@@ -53,20 +53,21 @@ import Control.DeepSeq (NFData)
 import Data.Maybe
 import Data.Typeable
 import GHC.Generics (Generic)
+
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import qualified Insieme.Query as Q
+import Insieme.Utils.Arithmetic (mkConst)
+
 import Insieme.Analysis.Arithmetic
 import Insieme.Analysis.DataPath
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Utils.CppSemantic
 import Insieme.Analysis.Solver
-import Insieme.Inspire.NodeAddress as Addr
-import Insieme.Inspire.Query
-import Insieme.Utils.Arithmetic (mkConst)
-
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
-import qualified Insieme.Inspire as IR
 import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
@@ -122,19 +123,19 @@ data ReferenceAnalysis = ReferenceAnalysis
 --
 
 referenceValue :: (FieldIndex i) => NodeAddress -> TypedVar (ValueTree.Tree i (ReferenceSet i))
-referenceValue addr = case getNodeType addr of
+referenceValue addr = case Q.getNodeType addr of
 
-        IR.Literal ->
-            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference (crop addr) DP.Root)
+        I.Literal ->
+            mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference (I.crop addr) DP.Root)
 
-        IR.Declaration | isMaterializingDeclaration (Addr.getNode addr) ->
+        I.Declaration | isMaterializingDeclaration (I.getNode addr) ->
             mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.Root)
 
-        IR.CallExpr | isMaterializingCall (Addr.getNode addr) ->
+        I.CallExpr | isMaterializingCall (I.getNode addr) ->
             mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.Root)
 
         -- the type of a declaration is used to address the memory location of a potential implicit this pointer
-        _ | not (isRoot addr) && isType addr && getNodeType (goUp addr) == IR.Declaration ->
+        _ | not (I.isRoot addr) && Q.isType addr && Q.getNodeType (I.goUp addr) == I.Declaration ->
             mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.Root)
 
         _ -> dataflowValue addr analysis opsHandler
@@ -157,59 +158,59 @@ referenceValue addr = case getNodeType addr of
 
         allocHandler = OperatorHandler cov noDep val
             where
-                cov a = isBuiltin a "ref_alloc"
+                cov a = Q.isBuiltin a "ref_alloc"
                 val _ _ = compose $ BSet.singleton $ Reference addr DP.Root
 
         declHandler = OperatorHandler cov noDep val
             where
-                cov a = isBuiltin a "ref_decl"
+                cov a = Q.isBuiltin a "ref_decl"
                 val _ _ = compose $ BSet.singleton $ Reference (getEnclosingDecl addr) DP.Root
 
         refNull = OperatorHandler cov noDep val
             where
-                cov a = isBuiltin a "ref_null"
+                cov a = Q.isBuiltin a "ref_null"
                 val _ _ = compose $ BSet.singleton NullReference
 
         refNarrow = OperatorHandler cov subRefDep val
             where
-                cov a = isBuiltin a "ref_narrow"
+                cov a = Q.isBuiltin a "ref_narrow"
                 val _ a = compose $ narrow (baseRefVal a) (unDPS $ dataPathVal a)
                 narrow = BSet.lift2 $ onRefs2 $ \(Reference l p) d -> Reference l (DP.append p d)
 
         refExpand = OperatorHandler cov subRefDep val
             where
-                cov a = isBuiltin a "ref_expand"
+                cov a = Q.isBuiltin a "ref_expand"
                 val _ a = compose $ expand (baseRefVal a) (unDPS $ dataPathVal a)
                 expand = BSet.lift2 $ onRefs2 $ \(Reference l p) d -> Reference l (DP.append p (DP.invert d))
 
         refCast = OperatorHandler cov dep val
             where
-                cov a = isBuiltin a "ref_cast"
+                cov a = Q.isBuiltin a "ref_cast"
                 dep _ _ = [toVar baseRefVar]
                 val _ a = get a baseRefVar
 
         refReinterpret = OperatorHandler cov dep val
             where
-                cov a = isBuiltin a "ref_reinterpret"
+                cov a = Q.isBuiltin a "ref_reinterpret"
                 dep _ _ = [toVar baseRefVar]
                 val _ a = get a baseRefVar            -- TODO: check when this conversion is actually valid
 
         ptrToRef = OperatorHandler cov dep val
             where
-                cov a = isBuiltin a "ptr_to_ref"
+                cov a = Q.isBuiltin a "ptr_to_ref"
                 dep _ _ = [toVar baseRefVar, toVar offsetVar]
                 val _ a = compose $ access (baseRefVal a) (offsetVal a)
 
                 baseRefVal a = unRS $ ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 0) $ get a baseRefVar
 
-                offsetVar = arithmeticValue $ goDown 1 $ goDown 2 addr
+                offsetVar = arithmeticValue $ I.goDown 1 $ I.goDown 2 addr
                 offsetVal a = BSet.toUnboundSet $ unSFS $ ComposedValue.toValue $ ComposedValue.getElement (DP.step $ component 1) $ get a offsetVar
 
                 access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ arrayIndex offset))
 
         ptrFromRef = OperatorHandler cov dep val
             where
-                cov a = isBuiltin a "ptr_from_ref"
+                cov a = Q.isBuiltin a "ptr_from_ref"
                 dep _ _ = [toVar baseRefVar]
                 val _ a = ComposedValue.composeElements [(component 0,compose res)]
                     where
@@ -228,13 +229,13 @@ referenceValue addr = case getNodeType addr of
             dep _ _ = [toVar baseRefVar, toVar indexVar]
             val _ a = compose $ access (baseRefVal a) (indexVal a)
             
-            indexVar = arithmeticValue $ goDown 1 $ goDown 3 addr
+            indexVar = arithmeticValue $ I.goDown 1 $ I.goDown 3 addr
             indexVal a = BSet.toUnboundSet $ unSFS $ ComposedValue.toValue $ get a indexVar
 
             access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ stdArrayIndex offset))
 
 
-        isOperator n a = fromMaybe False $ (==n) <$> getLiteralValue a
+        isOperator n a = fromMaybe False $ (==n) <$> Q.getLiteralValue a
         
         isOneOf ns a = any go ns
           where
@@ -244,10 +245,10 @@ referenceValue addr = case getNodeType addr of
 
         subRefDep _ _ = [toVar baseRefVar, toVar dataPathVar]
 
-        baseRefVar   = referenceValue $ goDown 1 $ goDown 2 addr
+        baseRefVar   = referenceValue $ I.goDown 1 $ I.goDown 2 addr
         baseRefVal a = unRS $ ComposedValue.toValue $ get a baseRefVar
 
-        dataPathVar   = dataPathValue $ goDown 3 addr
+        dataPathVar   = dataPathValue $ I.goDown 3 addr
         dataPathVal a = ComposedValue.toValue $ get a dataPathVar
 
 
@@ -262,27 +263,27 @@ referenceValue addr = case getNodeType addr of
 
 
 getEnclosingDecl :: NodeAddress -> NodeAddress
-getEnclosingDecl addr = case getNodeType addr of
-        IR.Declaration | not isCtorThisParam && not isRefCastParam -> addr
-        _ | isRoot addr -> error "getEnclosingDecl has no parent to go to"
-        _               -> getEnclosingDecl $ fromJust $ getParent addr
+getEnclosingDecl addr = case Q.getNodeType addr of
+        I.Declaration | not isCtorThisParam && not isRefCastParam -> addr
+        _ | I.isRoot addr -> error "getEnclosingDecl has no parent to go to"
+        _                 -> getEnclosingDecl $ fromJust $ I.getParent addr
     where
 
-        fun = (goDown 1) <$> getParent addr
+        fun = (I.goDown 1) <$> I.getParent addr
 
-        isCallParam = fromMaybe False $ isCallExpr <$> getParent addr
-        isCtorThisParam = isCallParam && isCtorCall && getIndex addr == 2
-        isCtorCall = fromMaybe False $ (isConstructor . Addr.getNode) <$> fun
+        isCallParam = fromMaybe False $ Q.isCallExpr <$> I.getParent addr
+        isCtorThisParam = isCallParam && isCtorCall && I.getIndex addr == 2
+        isCtorCall = fromMaybe False $ (Q.isConstructor . I.getNode) <$> fun
 
-        isRefCastParam = isCallParam && isRefCastCall && getIndex addr == 2
+        isRefCastParam = isCallParam && isRefCastCall && I.getIndex addr == 2
         isRefCastCall = case fun of
-            Just f  -> case getNodeType f of
-                IR.LambdaExpr -> isRefCast f
-                IR.Literal    -> isRefCast f
+            Just f  -> case Q.getNodeType f of
+                I.LambdaExpr -> isRefCast f
+                I.Literal    -> isRefCast f
                 _             -> False
             Nothing -> False
 
-        isRefCast f = any (isBuiltin f) [
+        isRefCast f = any (Q.isBuiltin f) [
                         "ref_cast",
                         "ref_const_cast",
                         "ref_volatile_cast",

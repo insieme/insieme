@@ -35,53 +35,26 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Inspire.Transform
-    ( substitute
-    , substitute'
-    , removeIds
-    , removeIds'
-    ) where
+{- | Use this module instead of the original Insieme.Adapter for profiling.
+     No FFI imports are allowed here!
+ -}
 
-import Insieme.Inspire
-import Control.Monad.State
-import Data.Map (Map)
-import qualified Data.Map as Map
+module Insieme.Inspire.SourceParser.FFI where
 
+import qualified Data.ByteString.Char8 as BS8
+import System.Process (proc, CreateProcess(..))
+import System.Process.ByteString
+import System.Environment (getEnvironment)
 
-type TreeSubst = Map Tree Tree
+import qualified Insieme.Inspire.IR as IR
+import qualified Insieme.Inspire.BinaryParser as Bin
 
-
-substitute :: TreeSubst -> Tree -> Tree
-substitute s t = evalState (substitute' t) s
-
-substitute' :: Tree -> State TreeSubst Tree
-substitute' t = do
-  s <- get
-  case Map.lookup t s of
-    Just t' -> return t'
-    Nothing -> do
-        let ch = getChildren t
-        ch' <- mapM substitute' ch
-        let t' | ch' == ch = t
-               | otherwise = t { getID = Nothing
-                               , getChildren = ch'
-                               , builtinTags = []
-                               }
-        modify (Map.insert t t')
-        return t'
-
-
-removeIds :: Tree -> Tree
-removeIds t = evalState (removeIds' t) Map.empty
-
-removeIds' :: Tree -> State TreeSubst Tree
-removeIds' t = do
-  s <- get
-  case Map.lookup t s of
-    Just t' -> return t'
-    Nothing -> do
-        let ch = getChildren t
-        ch' <- mapM removeIds' ch
-        let t' = t { getID = Nothing, getChildren = ch' }
-        modify (Map.insert t t')
-        return t'
+parseInspireSource :: String -> IO IR.Tree
+parseInspireSource input = do
+    envvars <- getEnvironment
+    let cp = (proc "inspire" ["-s", "-i", "-", "-k", "-"]) {
+                    env = Just $ envvars ++ [("INSIEME_NO_SEMA","1")]
+                }
+    irb <- readCreateProcess cp (BS8.pack input)
+    let Right ir = Bin.parseBinaryDump irb
+    return ir

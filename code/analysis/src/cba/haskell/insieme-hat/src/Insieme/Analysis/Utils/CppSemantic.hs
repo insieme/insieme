@@ -60,18 +60,20 @@ module Insieme.Analysis.Utils.CppSemantic (
 ) where
 
 import Data.Maybe
-import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Query
-import qualified Insieme.Inspire as IR
+
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import Insieme.Query as Q
 
 
 
-hasMoreReferences :: IR.Tree -> IR.Tree -> Bool
+
+hasMoreReferences :: I.Tree -> I.Tree -> Bool
 hasMoreReferences a b | isReference a && (not . isReference $ b) = True
 hasMoreReferences a b | isReference a && isReference b = hasMoreReferences (getTypeParameter 0 a) (getTypeParameter 0 b)
 hasMoreReferences _ _ = False
 
-isCtorBasedConversion :: IR.Tree -> IR.Tree -> Bool
+isCtorBasedConversion :: I.Tree -> I.Tree -> Bool
 isCtorBasedConversion srcType trgType | isReference srcType && isReference trgType =
     -- if the source reference is a plain, but the target not, an implicit constructor is called
     (srcRefKind == RK_CppRef || srcRefKind == RK_CppRRef) && (trgRefKind == RK_Plain) && (not $ isReference srcObjType) && (not $ isReference trgObjType)
@@ -86,21 +88,21 @@ isCtorBasedConversion srcType trgType | isReference srcType && isReference trgTy
 isCtorBasedConversion _ _ = False
 
 -- tests whether a given combination of declaration and init type causes a materializiation
-isMaterializing :: IR.Tree -> IR.Tree -> Bool
+isMaterializing :: I.Tree -> I.Tree -> Bool
 isMaterializing declType initType | hasMoreReferences declType initType = True
 isMaterializing declType initType | isCtorBasedConversion initType declType = True
 isMaterializing _ _ = False
 
 -- tests whether the given node is a materializing declaration
-isMaterializingDeclaration :: IR.Tree -> Bool
-isMaterializingDeclaration (IR.Node IR.Declaration [declType,IR.Node _ (initType:_)]) = isMaterializing declType initType
+isMaterializingDeclaration :: I.Tree -> Bool
+isMaterializingDeclaration (I.Node I.Declaration [declType,I.Node _ (initType:_)]) = isMaterializing declType initType
 isMaterializingDeclaration _ = False
 
 
 -- tests whether the given node is a materializing call
-isMaterializingCall :: IR.Tree -> Bool
+isMaterializingCall :: I.Tree -> Bool
 isMaterializingCall _ = False        -- the default, for now - TODO: implement real check
--- isMaterializingCall (IR.Node IR.CallExpr ( resType : (IR.Node _ ((IR.Node IR.FunctionType (_:retType:_)):_)) : _)) = hasMoreReferences resType retType
+-- isMaterializingCall (I.Node I.CallExpr ( resType : (I.Node _ ((I.Node I.FunctionType (_:retType:_)):_)) : _)) = hasMoreReferences resType retType
 -- isMaterializingCall _ = False
 
 
@@ -108,8 +110,8 @@ isMaterializingCall _ = False        -- the default, for now - TODO: implement r
 --- Tests whether a declaration is involving an implicit constructor call
 
 callsImplicitConstructor :: NodeAddress -> Bool
-callsImplicitConstructor addr = case getNode addr of
-    (IR.Node IR.Declaration [declType,IR.Node _ (initType:_)]) -> isCtorBasedConversion initType declType
+callsImplicitConstructor addr = case I.getNode addr of
+    (I.Node I.Declaration [declType,I.Node _ (initType:_)]) -> isCtorBasedConversion initType declType
     _ -> False
 
 
@@ -118,17 +120,17 @@ getImplicitConstructor :: NodeAddress -> Maybe NodeAddress
 getImplicitConstructor addr | not (callsImplicitConstructor addr) = 
     error "Can not obtain implicit constructor from expression without implicit constructor."
 
-getImplicitConstructor addr = case getNode addr of
-    (IR.Node IR.Declaration [declType,IR.Node _ (initType:_)]) -> case nodeType of
+getImplicitConstructor addr = case I.getNode addr of
+    (I.Node I.Declaration [declType,I.Node _ (initType:_)]) -> case nodeType of
 
-        IR.TagType -> getConstructorAccepting [initType] declObjType
+        I.TagType -> getConstructorAccepting [initType] declObjType
           where
-            declTypeAddr = goDown 0 $ addr
+            declTypeAddr = I.goDown 0 $ addr
             declObjType = fromJust $ getReferencedType declTypeAddr
 
         -- for intercepted and variable cases, we point to the declared type
-        IR.GenericType  -> genericCtor
-        IR.TypeVariable -> genericCtor
+        I.GenericType  -> genericCtor
+        I.TypeVariable -> genericCtor
 
         _ -> error $ "Unsupported type with constructor encountered: " ++ (show nodeType) ++ " @ " ++ (show addr)
 
@@ -136,7 +138,7 @@ getImplicitConstructor addr = case getNode addr of
 
         nodeType = getNodeType $ fromJust $ getReferencedType declType
 
-        genericCtor = getReferencedType $ goDown 0 addr
+        genericCtor = getReferencedType $ I.goDown 0 addr
 
     _ -> error "Should not be reachable!" -- due to filter above!
 
@@ -146,67 +148,67 @@ getImplicitConstructor addr = case getNode addr of
 --- Identification of implicit constructor and destructor calls ---
 
 isImplicitCtorOrDtor :: NodeAddress -> Bool
-isImplicitCtorOrDtor a = (depth a > 6) && isCorrectLambda && (nodeType == IR.Struct || nodeType == IR.Union)
+isImplicitCtorOrDtor a = (I.depth a > 6) && isCorrectLambda && (nodeType == I.Struct || nodeType == I.Union)
   where
-    lambdaExpr = goUpX 3 a
+    lambdaExpr = I.goUpX 3 a
     isCorrectLambda = fromMaybe False $ (==a) <$> getLambda lambdaExpr
 
-    record = goUpX 2 lambdaExpr
+    record = I.goUpX 2 lambdaExpr
     nodeType = getNodeType record
 
 
 isImplicitConstructor :: NodeAddress -> Bool
-isImplicitConstructor a = isImplicitCtorOrDtor a && getIndex ( goUpX 4 a ) == 2
+isImplicitConstructor a = isImplicitCtorOrDtor a && I.getIndex ( I.goUpX 4 a ) == 2
 
 isImplicitDestructor :: NodeAddress -> Bool
-isImplicitDestructor a = isImplicitCtorOrDtor a && getIndex ( goUpX 4 a ) == 3
+isImplicitDestructor a = isImplicitCtorOrDtor a && I.getIndex ( I.goUpX 4 a ) == 3
 
 
 --- Navigation to 'call-sites' of implicit constructor and destructor calls ---
 
 isImplicitCtorOrDtorParameter :: NodeAddress -> Bool
 isImplicitCtorOrDtorParameter a =
-    (depth a > 8) && (getNodeType a == IR.Variable) && (getNodeType params == IR.Parameters) &&
-                     (getNodeType lambda == IR.Lambda) && isImplicitCtorOrDtor lambda
+    (I.depth a > 8) && (getNodeType a == I.Variable) && (getNodeType params == I.Parameters) &&
+                     (getNodeType lambda == I.Lambda) && isImplicitCtorOrDtor lambda
   where
-    params = goUp a
-    lambda = goUp params
+    params = I.goUp a
+    lambda = I.goUp params
 
 
 getEnclosingDeclaration :: NodeAddress -> NodeAddress
 getEnclosingDeclaration a = case getNodeType a of
-    IR.Declaration -> a
-    _ | isRoot a   -> error "No enclosing declaration found!"
-    _              -> getEnclosingDeclaration $ fromJust $ getParent a
+    I.Declaration -> a
+    _ | I.isRoot a   -> error "No enclosing declaration found!"
+    _              -> getEnclosingDeclaration $ fromJust $ I.getParent a
 
 
 --- Destructor Utilities ---
 
 getEnclosingScope :: NodeAddress -> NodeAddress
 getEnclosingScope s = case () of
-    _ | getNodeType s == IR.CompoundStmt -> s
-      | isRoot s                         -> error "No enclosing compound statement found!"
-      | otherwise                        -> getEnclosingScope $ fromJust $ getParent s
+    _ | getNodeType s == I.CompoundStmt -> s
+      | I.isRoot s                         -> error "No enclosing compound statement found!"
+      | otherwise                        -> getEnclosingScope $ fromJust $ I.getParent s
 
 
 getImplicitDestructorBodies :: NodeAddress -> [NodeAddress]
 getImplicitDestructorBodies scope = case getNodeType scope of
 
-    IR.CompoundStmt -> reverse bodies
+    I.CompoundStmt -> reverse bodies
 
     _ -> error "unhandled getImplicitDestructorBodies case"
 
   where
 
-    declarations = goDown 0 <$> (filter isDeclStmt $ getChildren scope)
+    declarations = I.goDown 0 <$> (filter isDeclStmt $ I.children scope)
       where
-        isDeclStmt t = getNodeType t == IR.DeclarationStmt
+        isDeclStmt t = getNodeType t == I.DeclarationStmt
 
     classes = catMaybes $ go <$> declarations
       where
         go d = getReferencedType d >>= getTagType
 
-    bodies = (goDown 2 . fromJust . getLambda) <$> dtors
+    bodies = (I.goDown 2 . fromJust . getLambda) <$> dtors
         where
             dtors =  catMaybes $ getDestructor <$> classes
 

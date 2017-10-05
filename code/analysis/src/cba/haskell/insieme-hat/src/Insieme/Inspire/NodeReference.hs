@@ -35,63 +35,11 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE FlexibleInstances #-}
+module Insieme.Inspire.NodeReference where
 
-module Insieme.Analysis.RecursiveLambdaReferences (
+-- * Node Reference
 
-    LambdaReferenceSet,
-    recursiveCalls
-
-) where
-
-import Data.Typeable
-import qualified Data.Set as Set
-
-import Insieme.Inspire (NodeAddress)
-import qualified Insieme.Inspire as I
-import qualified Insieme.Query as Q
-
-import Insieme.Analysis.Solver
-import Insieme.Analysis.FreeLambdaReferences
-
-
---
--- * RecursiveLambdaReferences Analysis
---
-
-data RecursiveLambdaReferenceAnalysis = RecursiveLambdaReferenceAnalysis
-    deriving (Typeable)
-
-
---
--- * the constraint generator
---
-
-recursiveCalls :: NodeAddress -> TypedVar LambdaReferenceSet
-recursiveCalls addr = case Q.getNodeType addr of
-
-        I.Lambda | I.depth addr >= 3 -> var
-
-        _ -> error "Can only compute recursive calls for lambdas with sufficient context!"
-
-    where
-
-        var = mkVariable varId [con] bot
-        con = createConstraint dep val var
-
-        varId = mkIdentifierFromExpression analysis addr
-        analysis = mkAnalysisIdentifier RecursiveLambdaReferenceAnalysis "RecLambdaRefs"
-
-        dep _ = toVar <$> freeRefVars
-        val a = LambdaReferenceSet $ Set.filter f $ unLRS $ join $ get a <$> freeRefVars
-            where
-                f r = I.getNode r == tag
-
-        tag = I.getNode $ I.goDown 0 $ I.goUp addr
-        def = I.goUp $ I.goUp addr
-
-        lambdas = I.goDown 1 <$> I.children def
-
-        freeRefVars = freeLambdaReferences <$> lambdas
-
-
+-- | Implementing this class allows certain queries to be used directly.
+class NodeReference a where
+    child :: Int -> a -> a
+    children :: a -> [a]

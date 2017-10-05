@@ -44,19 +44,20 @@ module Insieme.Analysis.AccessPath where
 import Control.DeepSeq (NFData)
 import Data.Typeable
 import GHC.Generics (Generic)
+
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import qualified Insieme.Query as Q
+import qualified Insieme.Utils.BoundSet as BSet
+
 import Insieme.Analysis.DataPath
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Query
-
 import qualified Insieme.Analysis.Entities.AccessPath as AP
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Inspire as IR
-import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 
@@ -89,9 +90,9 @@ data AccessPathAnalysis = AccessPathAnalysis
 --
 
 accessPathValue :: FieldIndex i => NodeAddress -> Solver.TypedVar (ValueTree.Tree i (AccessPathSet i))
-accessPathValue addr = case getNodeType addr of
+accessPathValue addr = case Q.getNodeType addr of
 
-    IR.Variable -> dataflowValue addr analysis ops
+    I.Variable -> dataflowValue addr analysis ops
 
     _ -> dataflowValue addr analysis ops
 
@@ -103,8 +104,8 @@ accessPathValue addr = case getNodeType addr of
 
     compose = ComposedValue.toComposed . AccessPathSet
 
-    initValueHandler a | isRoot a = compose $ BSet.singleton $ AP.global $ getNode a
-    initValueHandler a = compose $ BSet.singleton $ AP.parameter $ getIndex a
+    initValueHandler a | I.isRoot a = compose $ BSet.singleton $ AP.global $ I.getNode a
+    initValueHandler a = compose $ BSet.singleton $ AP.parameter $ I.getIndex a
 
     -- add operator support
 
@@ -112,35 +113,35 @@ accessPathValue addr = case getNodeType addr of
 
     allocHandler = OperatorHandler cov noDep val
         where
-            cov a = isBuiltin a "ref_alloc"
+            cov a = Q.isBuiltin a "ref_alloc"
             val _ _ = compose $ BSet.singleton AP.local
 
     declHandler = OperatorHandler cov noDep val
         where
-            cov a = isBuiltin a "ref_decl"
+            cov a = Q.isBuiltin a "ref_decl"
             val _ _ = compose $ BSet.singleton AP.local
 
     refNarrow = OperatorHandler cov subRefDep val
         where
-            cov a = isBuiltin a "ref_narrow"
+            cov a = Q.isBuiltin a "ref_narrow"
             val _ a = compose $ narrow (baseAccessPathVal a) (dataPathVal a)
             narrow = BSet.lift2 $ \a d -> AP.append a d
 
     refExpand = OperatorHandler cov subRefDep val
         where
-            cov a = isBuiltin a "ref_expand"
+            cov a = Q.isBuiltin a "ref_expand"
             val _ a = compose $ expand (baseAccessPathVal a) (dataPathVal a)
             expand = BSet.lift2 $ \a d -> AP.append a (DP.invert d)
 
     refCast = OperatorHandler cov dep val
         where
-            cov a = isBuiltin a "ref_cast"
+            cov a = Q.isBuiltin a "ref_cast"
             dep _ _ = [Solver.toVar baseAccessPathVar]
             val _ a = Solver.get a baseAccessPathVar
 
     refReinterpret = OperatorHandler cov dep val
         where
-            cov a = isBuiltin a "ref_reinterpret"
+            cov a = Q.isBuiltin a "ref_reinterpret"
             dep _ _ = [Solver.toVar baseAccessPathVar]
             val _ a = Solver.get a baseAccessPathVar            -- TODO: check when this conversion is actually valid
 
@@ -148,8 +149,8 @@ accessPathValue addr = case getNodeType addr of
 
     subRefDep _ _ = [Solver.toVar baseAccessPathVar, Solver.toVar dataPathVar]
 
-    baseAccessPathVar   = accessPathValue $ goDown 1 $ goDown 2 addr
+    baseAccessPathVar   = accessPathValue $ I.goDown 1 $ I.goDown 2 addr
     baseAccessPathVal a = unAPS $ ComposedValue.toValue $ Solver.get a baseAccessPathVar
 
-    dataPathVar   = dataPathValue $ goDown 3 addr
+    dataPathVar   = dataPathValue $ I.goDown 3 addr
     dataPathVal a = BSet.changeBound $ unDPS $ ComposedValue.toValue $ Solver.get a dataPathVar

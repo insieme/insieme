@@ -36,7 +36,7 @@
  -}
 
 {-# LANGUAGE ScopedTypeVariables #-}
-module Insieme.Inspire.NodePaths where
+module Insieme.Inspire.Visit.NodePaths where
 
 import Data.Tree
 -- import Data.DList (DList)

@@ -53,10 +53,10 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.IntMap as IntMap
 import qualified Data.Map.Strict as Map
-import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.NodeAddress as Addr
-
 import Prelude hiding (take)
+
+import qualified Insieme.Inspire.IR as IR
+import qualified Insieme.Inspire.NodeAddress as Addr
 
 -- | Parse INSPIRE binary dump. Builtins are attached to the end of the dump
 -- and builtin nodes are marked as such.
