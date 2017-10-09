@@ -316,3 +316,9 @@ isCallExpr a = getNodeType a == IR.CallExpr
 
 isBuiltin :: (NodeLike a) => a -> String -> Bool
 isBuiltin r n = IR.isBuiltin (node r) n
+
+-- ** Operator
+
+isOperator :: (NodeLike a) => a -> String -> Bool
+isOperator a n = fromMaybe False $ (==n) <$> getLiteralValue a
+

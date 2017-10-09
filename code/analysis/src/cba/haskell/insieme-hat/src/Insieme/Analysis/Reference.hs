@@ -222,7 +222,7 @@ referenceValue addr = case Q.getNodeType addr of
         
         stdArraySubscript = OperatorHandler cov dep val
           where
-            cov = isOneOf [
+            cov a = any (Q.isOperator a) [
                         "IMP_std_colon__colon_array::IMP__operator_subscript_",
                         "IMP_std_colon__colon_array::IMP_at"
                     ]
@@ -234,12 +234,6 @@ referenceValue addr = case Q.getNodeType addr of
 
             access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ stdArrayIndex offset))
 
-
-        isOperator n a = fromMaybe False $ (==n) <$> Q.getLiteralValue a
-        
-        isOneOf ns a = any go ns
-          where
-            go n = isOperator n a
 
         noDep _ _ = []
 
