@@ -170,7 +170,7 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
                         "ref_new", "ref_new_init",
                         "ref_kind_cast", "ref_const_cast", "ref_volatile_cast", "ref_parent_cast",
                         "num_cast"
-                     ]
+                     ] || isConstructor a
             -- literal builtins to ignore
             toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign" ]
 
