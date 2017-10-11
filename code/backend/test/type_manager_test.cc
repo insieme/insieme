@@ -93,9 +93,6 @@ namespace backend {
 		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("int32_t", toC(info.lValueType));
 		EXPECT_EQ("int32_t", toC(info.rValueType));
-		EXPECT_EQ("int32_t", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE(info.definition == info.declaration);
@@ -108,9 +105,6 @@ namespace backend {
 		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("int64_t", toC(info.lValueType));
 		EXPECT_EQ("int64_t", toC(info.rValueType));
-		EXPECT_EQ("int64_t", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE(info.definition == info.declaration);
@@ -123,9 +117,6 @@ namespace backend {
 		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("uint128_t", toC(info.lValueType));
 		EXPECT_EQ("uint128_t", toC(info.rValueType));
-		EXPECT_EQ("uint128_t", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE(info.definition == info.declaration);
@@ -138,9 +129,6 @@ namespace backend {
 		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("float", toC(info.lValueType));
 		EXPECT_EQ("float", toC(info.rValueType));
-		EXPECT_EQ("float", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_FALSE(info.definition);
 		EXPECT_FALSE(info.declaration);
 
@@ -149,9 +137,6 @@ namespace backend {
 		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("double", toC(info.lValueType));
 		EXPECT_EQ("double", toC(info.rValueType));
-		EXPECT_EQ("double", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_FALSE(info.definition);
 		EXPECT_FALSE(info.declaration);
 
@@ -160,9 +145,6 @@ namespace backend {
 		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("long double", toC(info.lValueType));
 		EXPECT_EQ("long double", toC(info.rValueType));
-		EXPECT_EQ("long double", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_FALSE(info.definition);
 		EXPECT_FALSE(info.declaration);
 
@@ -170,9 +152,6 @@ namespace backend {
 		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("bool", toC(info.lValueType));
 		EXPECT_EQ("bool", toC(info.rValueType));
-		EXPECT_EQ("bool", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE(info.definition == info.declaration);
@@ -203,9 +182,6 @@ namespace backend {
 		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name", toC(info.rValueType));
-		EXPECT_EQ("name", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 
@@ -217,9 +193,6 @@ namespace backend {
 		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name", toC(info.rValueType));
-		EXPECT_EQ("name", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
@@ -257,11 +230,6 @@ namespace backend {
 		info = typeManager.getArrayTypeInfo(context, type);
 		EXPECT_EQ("int32_t[]", toC(info.lValueType));
 		EXPECT_EQ("int32_t[]", toC(info.rValueType));
-		EXPECT_EQ("int32_t[]", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
-		EXPECT_EQ("Y", toC(info.externalize(cManager, expr)));
-		EXPECT_EQ("Y", toC(info.internalize(cManager, expr)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 
@@ -270,11 +238,6 @@ namespace backend {
 		info = typeManager.getArrayTypeInfo(context, type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name", toC(info.rValueType));
-		EXPECT_EQ("int32_t[24]", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("INS_INIT(name){X}", toC(info.internalize(cManager, lit)));
-		EXPECT_EQ("Y.data", toC(info.externalize(cManager, expr)));
-		EXPECT_EQ("INS_INIT(name){Y}", toC(info.internalize(cManager, expr)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_PRED2(containsSubString, toC(info.definition), "struct name");
@@ -289,9 +252,6 @@ namespace backend {
 //		info = typeManager.getArrayTypeInfo(context, type);
 //		EXPECT_EQ("name", toC(info.lValueType));
 //		EXPECT_EQ("name", toC(info.rValueType));
-//		EXPECT_EQ("int32_t[24]", toC(info.externalType));
-//		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-//		EXPECT_EQ("(name){X}", toC(info.internalize(cManager, lit)));
 //		EXPECT_TRUE((bool)info.declaration);
 //		EXPECT_TRUE((bool)info.definition);
 
@@ -376,9 +336,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t", toC(info.lValueType));
 		EXPECT_EQ("int32_t*", toC(info.rValueType));
-		EXPECT_EQ("int32_t*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -389,9 +346,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int64_t", toC(info.lValueType));
 		EXPECT_EQ("int64_t*", toC(info.rValueType));
-		EXPECT_EQ("int64_t*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -402,9 +356,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("float", toC(info.lValueType));
 		EXPECT_EQ("float*", toC(info.rValueType));
-		EXPECT_EQ("float*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_FALSE((bool)info.declaration);
 		EXPECT_FALSE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -417,9 +368,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name*", toC(info.rValueType));
-		EXPECT_EQ("name*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -431,9 +379,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int64_t", toC(info.lValueType));
 		EXPECT_EQ("const int64_t*", toC(info.rValueType));
-		EXPECT_EQ("const int64_t*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -445,9 +390,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int64_t", toC(info.lValueType));
 		EXPECT_EQ("volatile int64_t*", toC(info.rValueType));
-		EXPECT_EQ("volatile int64_t*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -459,9 +401,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const volatile int64_t", toC(info.lValueType));
 		EXPECT_EQ("const volatile int64_t*", toC(info.rValueType));
-		EXPECT_EQ("const volatile int64_t*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -490,9 +429,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int64_t*", toC(info.lValueType));
 		EXPECT_EQ("int64_t**", toC(info.rValueType));
-		EXPECT_EQ("int64_t**", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -503,9 +439,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int64_t* volatile", toC(info.lValueType));
 		EXPECT_EQ("int64_t* volatile*", toC(info.rValueType));
-		EXPECT_EQ("int64_t* volatile*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -516,9 +449,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int64_t* const", toC(info.lValueType));
 		EXPECT_EQ("int64_t* const*", toC(info.rValueType));
-		EXPECT_EQ("int64_t* const*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -529,9 +459,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int64_t* const volatile", toC(info.lValueType));
 		EXPECT_EQ("int64_t* const volatile*", toC(info.rValueType));
-		EXPECT_EQ("int64_t* const volatile*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -542,9 +469,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int64_t*", toC(info.lValueType));
 		EXPECT_EQ("volatile int64_t**", toC(info.rValueType));
-		EXPECT_EQ("volatile int64_t**", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -555,9 +479,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int64_t* volatile", toC(info.lValueType));
 		EXPECT_EQ("volatile int64_t* volatile*", toC(info.rValueType));
-		EXPECT_EQ("volatile int64_t* volatile*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -568,9 +489,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int64_t* const", toC(info.lValueType));
 		EXPECT_EQ("volatile int64_t* const*", toC(info.rValueType));
-		EXPECT_EQ("volatile int64_t* const*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -581,9 +499,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int64_t* const volatile", toC(info.lValueType));
 		EXPECT_EQ("volatile int64_t* const volatile*", toC(info.rValueType));
-		EXPECT_EQ("volatile int64_t* const volatile*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -594,9 +509,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int64_t*", toC(info.lValueType));
 		EXPECT_EQ("const int64_t**", toC(info.rValueType));
-		EXPECT_EQ("const int64_t**", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -607,9 +519,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int64_t* volatile", toC(info.lValueType));
 		EXPECT_EQ("const int64_t* volatile*", toC(info.rValueType));
-		EXPECT_EQ("const int64_t* volatile*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -620,9 +529,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int64_t* const", toC(info.lValueType));
 		EXPECT_EQ("const int64_t* const*", toC(info.rValueType));
-		EXPECT_EQ("const int64_t* const*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -633,9 +539,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int64_t* const volatile", toC(info.lValueType));
 		EXPECT_EQ("const int64_t* const volatile*", toC(info.rValueType));
-		EXPECT_EQ("const int64_t* const volatile*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -646,9 +549,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const volatile int64_t*", toC(info.lValueType));
 		EXPECT_EQ("const volatile int64_t**", toC(info.rValueType));
-		EXPECT_EQ("const volatile int64_t**", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -659,9 +559,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const volatile int64_t* volatile", toC(info.lValueType));
 		EXPECT_EQ("const volatile int64_t* volatile*", toC(info.rValueType));
-		EXPECT_EQ("const volatile int64_t* volatile*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -672,9 +569,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const volatile int64_t* const", toC(info.lValueType));
 		EXPECT_EQ("const volatile int64_t* const*", toC(info.rValueType));
-		EXPECT_EQ("const volatile int64_t* const*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -685,9 +579,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const volatile int64_t* const volatile", toC(info.lValueType));
 		EXPECT_EQ("const volatile int64_t* const volatile*", toC(info.rValueType));
-		EXPECT_EQ("const volatile int64_t* const volatile*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -701,9 +592,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int64_t* const* volatile", toC(info.lValueType));
 		EXPECT_EQ("volatile int64_t* const* volatile*", toC(info.rValueType));
-		EXPECT_EQ("volatile int64_t* const* volatile*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -715,9 +603,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int64_t* volatile* const", toC(info.lValueType));
 		EXPECT_EQ("const int64_t* volatile* const*", toC(info.rValueType));
-		EXPECT_EQ("const int64_t* volatile* const*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -750,9 +635,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t*", toC(info.lValueType));
 		EXPECT_EQ("int32_t*", toC(info.rValueType));
-		EXPECT_EQ("int32_t*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -764,9 +646,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const int32_t*", toC(info.lValueType));
 		EXPECT_EQ("const int32_t*", toC(info.rValueType));
-		EXPECT_EQ("const int32_t*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -778,9 +657,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("volatile int32_t*", toC(info.lValueType));
 		EXPECT_EQ("volatile int32_t*", toC(info.rValueType));
-		EXPECT_EQ("volatile int32_t*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -792,9 +668,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("const volatile int32_t*", toC(info.lValueType));
 		EXPECT_EQ("const volatile int32_t*", toC(info.rValueType));
-		EXPECT_EQ("const volatile int32_t*", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.newOperator);
@@ -809,8 +682,6 @@ namespace backend {
 //		EXPECT_EQ("ref<array<int<4>,4>,f,f,plain>", toString(*type));
 //		EXPECT_EQ("name", toC(info.lValueType));
 //		EXPECT_EQ("name*", toC(info.rValueType));
-//		EXPECT_EQ("int32_t*", toC(info.externalType));
-//		EXPECT_EQ("(int32_t*)X", toC(info.externalize(cManager, lit)));
 //		EXPECT_TRUE((bool)info.declaration);
 //		EXPECT_TRUE((bool)info.definition);
 //		EXPECT_TRUE((bool)info.newOperator);
@@ -823,8 +694,6 @@ namespace backend {
 //		EXPECT_EQ("ref<array<array<int<4>,4>,2>,f,f,plain>", toString(*type));
 //		EXPECT_EQ("name", toC(info.lValueType));
 //		EXPECT_EQ("name*", toC(info.rValueType));
-//		EXPECT_EQ("int32_t(*)[2]", toC(info.externalType));
-//		EXPECT_EQ("(int32_t(*)[2])X", toC(info.externalize(cManager, lit)));
 //		EXPECT_TRUE((bool)info.declaration);
 //		EXPECT_TRUE((bool)info.definition);
 //		EXPECT_TRUE((bool)info.newOperator);
@@ -837,8 +706,6 @@ namespace backend {
 //		EXPECT_EQ("ref<ref<int<4>,f,f,plain>,f,f,plain>", toString(*type));
 //		EXPECT_EQ("int32_t*", toC(info.lValueType));
 //		EXPECT_EQ("int32_t**", toC(info.rValueType));
-//		EXPECT_EQ("int32_t**", toC(info.externalType));
-//		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 //		EXPECT_TRUE((bool)info.declaration);
 //		EXPECT_TRUE((bool)info.definition);
 //		EXPECT_TRUE((bool)info.newOperator);
@@ -851,8 +718,6 @@ namespace backend {
 //		EXPECT_EQ("ref<ref<int<4>,t,f>,f,t>", toString(*type));
 //		EXPECT_EQ("int32_t*", toC(info.lValueType));
 //		EXPECT_EQ("int32_t**", toC(info.rValueType));
-//		EXPECT_EQ("int32_t**", toC(info.externalType));
-//		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 //		EXPECT_TRUE((bool)info.declaration);
 //		EXPECT_TRUE((bool)info.definition);
 //		EXPECT_TRUE((bool)info.newOperator);
@@ -865,8 +730,6 @@ namespace backend {
 //		EXPECT_EQ("ref<ref<array<int<4>,inf>,f,f,plain>,f,f,plain>", toString(*type));
 //		EXPECT_EQ("int32_t*", toC(info.lValueType));
 //		EXPECT_EQ("int32_t**", toC(info.rValueType));
-//		EXPECT_EQ("int32_t**", toC(info.externalType));
-//		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 //		EXPECT_TRUE((bool)info.declaration);
 //		EXPECT_TRUE((bool)info.definition);
 //		EXPECT_TRUE((bool)info.newOperator);
@@ -900,9 +763,6 @@ namespace backend {
 			info = typeManager.getRefTypeInfo(context, type);
 			EXPECT_EQ("name", toC(info.lValueType));
 			EXPECT_EQ("name*", toC(info.rValueType));
-			EXPECT_EQ("int32_t(*)[12]", toC(info.externalType));
-			EXPECT_EQ("(int32_t(*)[12])X", toC(info.externalize(cManager, lit)));
-			EXPECT_EQ("(name*)X", toC(info.internalize(cManager, lit)));
 			EXPECT_TRUE((bool)info.declaration);
 			EXPECT_TRUE((bool)info.definition);
 			EXPECT_TRUE((bool)info.newOperator);
@@ -914,9 +774,6 @@ namespace backend {
 			info = typeManager.getRefTypeInfo(context, type);
 			EXPECT_EQ("const name", toC(info.lValueType));
 			EXPECT_EQ("const name*", toC(info.rValueType));
-			EXPECT_EQ("const int32_t(*)[12]", toC(info.externalType));
-			EXPECT_EQ("(const int32_t(*)[12])X", toC(info.externalize(cManager, lit)));
-			EXPECT_EQ("(const name*)X", toC(info.internalize(cManager, lit)));
 			EXPECT_TRUE((bool)info.declaration);
 			EXPECT_TRUE((bool)info.definition);
 			EXPECT_TRUE((bool)info.newOperator);
@@ -928,9 +785,6 @@ namespace backend {
 			info = typeManager.getRefTypeInfo(context, type);
 			EXPECT_EQ("volatile name", toC(info.lValueType));
 			EXPECT_EQ("volatile name*", toC(info.rValueType));
-			EXPECT_EQ("volatile int32_t(*)[12]", toC(info.externalType));
-			EXPECT_EQ("(volatile int32_t(*)[12])X", toC(info.externalize(cManager, lit)));
-			EXPECT_EQ("(volatile name*)X", toC(info.internalize(cManager, lit)));
 			EXPECT_TRUE((bool)info.declaration);
 			EXPECT_TRUE((bool)info.definition);
 			EXPECT_TRUE((bool)info.newOperator);
@@ -942,9 +796,6 @@ namespace backend {
 			info = typeManager.getRefTypeInfo(context, type);
 			EXPECT_EQ("const volatile name", toC(info.lValueType));
 			EXPECT_EQ("const volatile name*", toC(info.rValueType));
-			EXPECT_EQ("const volatile int32_t(*)[12]", toC(info.externalType));
-			EXPECT_EQ("(const volatile int32_t(*)[12])X", toC(info.externalize(cManager, lit)));
-			EXPECT_EQ("(const volatile name*)X", toC(info.internalize(cManager, lit)));
 			EXPECT_TRUE((bool)info.declaration);
 			EXPECT_TRUE((bool)info.definition);
 			EXPECT_TRUE((bool)info.newOperator);
@@ -977,9 +828,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t&", toC(info.lValueType));
 		EXPECT_EQ("int32_t&", toC(info.rValueType));
-		EXPECT_EQ("int32_t&", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_FALSE((bool)info.newOperator);
@@ -990,9 +838,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t const&", toC(info.lValueType));
 		EXPECT_EQ("int32_t const&", toC(info.rValueType));
-		EXPECT_EQ("int32_t const&", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_FALSE((bool)info.newOperator);
@@ -1003,9 +848,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t volatile&", toC(info.lValueType));
 		EXPECT_EQ("int32_t volatile&", toC(info.rValueType));
-		EXPECT_EQ("int32_t volatile&", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_FALSE((bool)info.newOperator);
@@ -1014,11 +856,8 @@ namespace backend {
 		type = builder.parseType("ref<int<4>,t,t,cpp_ref>").as<core::GenericTypePtr>();
 		EXPECT_PRED1(core::lang::isCppReference, type);
 		info = typeManager.getRefTypeInfo(context, type);
-		EXPECT_EQ("int32_t const volatile&", toC(info.externalType));
 		EXPECT_EQ("int32_t const volatile&", toC(info.lValueType));
 		EXPECT_EQ("int32_t const volatile&", toC(info.rValueType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_FALSE((bool)info.newOperator);
@@ -1049,9 +888,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t&&", toC(info.lValueType));
 		EXPECT_EQ("int32_t&&", toC(info.rValueType));
-		EXPECT_EQ("int32_t&&", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_FALSE((bool)info.newOperator);
@@ -1062,9 +898,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t const&&", toC(info.lValueType));
 		EXPECT_EQ("int32_t const&&", toC(info.rValueType));
-		EXPECT_EQ("int32_t const&&", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_FALSE((bool)info.newOperator);
@@ -1075,9 +908,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t volatile&&", toC(info.lValueType));
 		EXPECT_EQ("int32_t volatile&&", toC(info.rValueType));
-		EXPECT_EQ("int32_t volatile&&", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_FALSE((bool)info.newOperator);
@@ -1088,9 +918,6 @@ namespace backend {
 		info = typeManager.getRefTypeInfo(context, type);
 		EXPECT_EQ("int32_t const volatile&&", toC(info.lValueType));
 		EXPECT_EQ("int32_t const volatile&&", toC(info.rValueType));
-		EXPECT_EQ("int32_t const volatile&&", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_FALSE((bool)info.newOperator);
@@ -1127,7 +954,6 @@ namespace backend {
 		EXPECT_FALSE(info.plain);
 		EXPECT_EQ("name*", toC(info.lValueType));
 		EXPECT_EQ("name*", toC(info.rValueType));
-		EXPECT_EQ("name*", toC(info.externalType)); // should this be this way?
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_TRUE((bool)info.callerName);
@@ -1154,9 +980,6 @@ namespace backend {
 		EXPECT_TRUE(contains(info.caller->getDependencies(), info.definition));
 		EXPECT_TRUE(contains(info.constructor->getDependencies(), info.definition));
 
-		// check externalizing / internalizing
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-
 
 		// -- test a plain function type --
 
@@ -1166,7 +989,6 @@ namespace backend {
 		EXPECT_TRUE(info.plain);
 		EXPECT_EQ("name", toC(info.lValueType)); // there is an implicit typedef, therefore the type is used with a symbol name
 		EXPECT_EQ("name", toC(info.rValueType));
-		EXPECT_EQ("name", toC(info.externalType)); // should this be this way?
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_FALSE((bool)info.callerName);
@@ -1176,9 +998,6 @@ namespace backend {
 
 		EXPECT_PRED2(containsSubString, toC(info.definition), "");
 		EXPECT_PRED2(containsSubString, toC(info.definition), "");
-
-		// check externalizing / internalizing
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 
 		// check variable declaration
 		auto decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(info.lValueType, cManager->create("var")));
@@ -1206,7 +1025,6 @@ namespace backend {
 		EXPECT_TRUE(info.plain);
 		EXPECT_EQ("name", toC(info.lValueType)); // there is an implicit typedef, therefore the type is used with a symbol name
 		EXPECT_EQ("name", toC(info.rValueType));
-		EXPECT_EQ("name", toC(info.externalType));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 		EXPECT_FALSE((bool)info.callerName);
@@ -1216,9 +1034,6 @@ namespace backend {
 
 		EXPECT_PRED2(containsSubString, toC(info.definition), "");
 		EXPECT_PRED2(containsSubString, toC(info.definition), "");
-
-		// check externalizing / internalizing
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 
 		// check variable declaration
 		decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(info.lValueType, cManager->create("var")));
@@ -1359,9 +1174,6 @@ namespace backend {
 		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name", toC(info.rValueType));
-		EXPECT_EQ("name", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);
 
@@ -1370,9 +1182,6 @@ namespace backend {
 		info = typeManager.getTypeInfo(context, type);
 		EXPECT_EQ("name", toC(info.lValueType));
 		EXPECT_EQ("name", toC(info.rValueType));
-		EXPECT_EQ("name", toC(info.externalType));
-		EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
-		EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 
 		EXPECT_TRUE((bool)info.declaration);
 		EXPECT_TRUE((bool)info.definition);

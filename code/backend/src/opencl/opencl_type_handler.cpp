@@ -107,9 +107,6 @@ namespace opencl {
 				// lValues of this type are now bound to their corresponding address space
 				typeInfo->lValueType = c_ast::attribute(attribute, info.lValueType);
 				typeInfo->rValueType = c_ast::attribute(attribute, info.rValueType);
-				typeInfo->externalType = info.externalType;
-				typeInfo->externalize = info.externalize;
-				typeInfo->internalize = info.internalize;
 				typeInfo->declaration = info.declaration;
 				typeInfo->definition = info.definition;
 				return typeInfo;

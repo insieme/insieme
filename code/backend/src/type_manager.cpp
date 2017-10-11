@@ -290,7 +290,7 @@ namespace backend {
 		}
 	}
 
-	TypeInfo::TypeInfo() : externalize(&type_info_utils::NoOp), internalize(&type_info_utils::NoOp) {}
+	TypeInfo::TypeInfo() {}
 
 	namespace detail {
 
@@ -927,17 +927,8 @@ namespace backend {
 			// create the external type
 			c_ast::LiteralPtr vectorSize = manager->create<c_ast::Literal>(boost::lexical_cast<string>(size));
 			c_ast::TypePtr pureVectorType = manager->create<c_ast::VectorType>(elementTypeInfo->lValueType, vectorSize);
-			res->externalType = pureVectorType;
 
 			c_ast::IdentifierPtr dataElementName = manager->create("data");
-
-			// create externalizer
-			res->externalize = [dataElementName](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-				return (node->getNodeType() == c_ast::NT_Literal) ? node : access(node, dataElementName);
-			};
-
-			// create internalizer
-			res->internalize = [vectorType](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) { return init(vectorType, node); };
 
 			// create declaration
 			c_ast::StructTypePtr vectorStructType = manager->create<c_ast::StructType>(name);
@@ -982,11 +973,6 @@ namespace backend {
 			// set L / R value types
 			res->lValueType = arrayType;
 			res->rValueType = arrayType;
-			res->externalType = arrayType;
-
-			// set externalizer / internalizer
-			res->externalize = &type_info_utils::NoOp;
-			res->internalize = &type_info_utils::NoOp;
 
 			// set declaration / definition (based on element type)
 			res->declaration = elementTypeInfo->declaration;
@@ -1018,11 +1004,6 @@ namespace backend {
 			// set L / R value types
 			res->lValueType = arrayType;
 			res->rValueType = arrayType;
-			res->externalType = arrayType;
-
-			// set externalizer / internalizer
-			res->externalize = &type_info_utils::NoOp;
-			res->internalize = &type_info_utils::NoOp;
 
 			// set declaration / definition (based on element type)
 			res->declaration = elementTypeInfo->declaration;
@@ -1073,7 +1054,6 @@ namespace backend {
 					// local (l-value) values are simply qualified types, the rest is a pointer
 					res->lValueType = c_ast::qualify(subType->lValueType, ref.isConst(), ref.isVolatile());
 					res->rValueType = c_ast::ptr(c_ast::qualify(subType->rValueType, ref.isConst(), ref.isVolatile()));
-					res->externalType = c_ast::ptr(c_ast::qualify(subType->externalType, ref.isConst(), ref.isVolatile()));
 
 					break;
 				}
@@ -1085,7 +1065,6 @@ namespace backend {
 					// here we just add a reference to the nested type
 					res->lValueType = c_ast::ref(subType->lValueType, ref.isConst(), ref.isVolatile());
 					res->rValueType = c_ast::ref(subType->rValueType, ref.isConst(), ref.isVolatile());
-					res->externalType = c_ast::ref(subType->externalType, ref.isConst(), ref.isVolatile());
 
 					break;
 				}
@@ -1097,7 +1076,6 @@ namespace backend {
 					// here we just add a reference to the nested type
 					res->lValueType = c_ast::rvalue_ref(subType->lValueType, ref.isConst(), ref.isVolatile());
 					res->rValueType = c_ast::rvalue_ref(subType->rValueType, ref.isConst(), ref.isVolatile());
-					res->externalType = c_ast::rvalue_ref(subType->externalType, ref.isConst(), ref.isVolatile());
 
 					break;
 				}
@@ -1107,7 +1085,6 @@ namespace backend {
 					// local (l-value) values are simply qualified types, the rest is a pointer
 					res->lValueType = c_ast::qualify(subType->lValueType, ref.isConst(), ref.isVolatile());
 					res->rValueType = res->lValueType;
-					res->externalType = res->lValueType;
 
 					break;
 				}
@@ -1132,33 +1109,6 @@ namespace backend {
 				// both, R and L value are just pointers
 				res->lValueType = c_ast::ptr(c_ast::qualify(arrayElementTypeInfo->lValueType, ref.isConst(), ref.isVolatile()));
 				res->rValueType = c_ast::ptr(c_ast::qualify(arrayElementTypeInfo->rValueType, ref.isConst(), ref.isVolatile()));
-				res->externalType = c_ast::ptr(c_ast::qualify(arrayElementTypeInfo->externalType, ref.isConst(), ref.isVolatile()));
-			}
-
-			// add externalization operators
-			if(*res->rValueType == *res->externalType) {
-				// no difference => do nothing
-				res->externalize = &type_info_utils::NoOp;
-				res->internalize = &type_info_utils::NoOp;
-			} else {
-				// requires a cast
-				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-					if (auto lit = node.isa<c_ast::LiteralPtr>()) {
-						if (lit->value[0] == '"') {
-							return node;  // for string literals
-						}
-					}
-					// resolve l/r-value duality of array init expressions
-					if (auto initExp = node.isa<c_ast::InitializerPtr>()) {
-						if (initExp->type && !initExp->type.isa<c_ast::UnionTypePtr>() && !initExp->type.isa<c_ast::StructTypePtr>()) {
-							return c_ast::cast(res->externalType, c_ast::ref(node));
-						}
-					}
-					return c_ast::cast(res->externalType, node);
-				};
-				res->internalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-					return c_ast::cast(res->rValueType, node);
-				};
 			}
 
 			// the declaration / definition of the sub-type is also the declaration / definition of the pointer type
@@ -1250,11 +1200,6 @@ namespace backend {
 			res->rValueType = funcType;
 			res->lValueType = res->rValueType;
 
-			// external type handling
-			res->externalType = res->rValueType;
-			res->externalize = &type_info_utils::NoOp;
-			res->internalize = &type_info_utils::NoOp;
-
 			// ------------ Initialize the rest ------------------
 
 			res->callerName = c_ast::IdentifierPtr();
@@ -1310,11 +1255,6 @@ namespace backend {
 			c_ast::TypePtr funcType = manager->create<c_ast::NamedType>(funcTypeName);
 			res->rValueType = funcType;
 			res->lValueType = res->rValueType;
-
-			// external type handling
-			res->externalType = res->rValueType;
-			res->externalize = &type_info_utils::NoOp;
-			res->internalize = &type_info_utils::NoOp;
 
 			// ------------ Initialize the rest ------------------
 
@@ -1387,11 +1327,6 @@ namespace backend {
 			c_ast::TypePtr namedType = manager->create<c_ast::NamedType>(manager->create(name));
 			res->rValueType = c_ast::ptr(namedType);
 			res->lValueType = res->rValueType;
-
-			// external type handling
-			res->externalType = res->rValueType;
-			res->externalize = &type_info_utils::NoOp;
-			res->internalize = &type_info_utils::NoOp;
 
 
 			// ---------------- add caller ------------------------

@@ -102,7 +102,6 @@ namespace addons {
 			retTypeInfo->definition = definition;
 			retTypeInfo->lValueType = cEnumVarTy;
 			retTypeInfo->rValueType = cEnumVarTy;
-			retTypeInfo->externalType = cEnumVarTy;
 
 			// build up and return resulting type information
 			return retTypeInfo;
