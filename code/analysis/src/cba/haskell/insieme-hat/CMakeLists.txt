@@ -55,8 +55,6 @@ string (REPLACE ";" " " haskell_env_cmd "${haskell_env}")
 configure_file(haskell-env.sh.in ${CMAKE_BINARY_DIR}/haskell-env.sh)
 
 add_custom_target(insieme_hat
-	ALL
-
 	# install dependencies and build package
 	COMMAND ${cabal} update
 	# -j1 because of cabal#4144
