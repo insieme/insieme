@@ -194,4 +194,4 @@ copyLib compBuildDir' = do
       srclib  = srcdir </> lib
       destlib = destdir </> lib
 
-  copyFile srclib destlib
+  copyFileWithMetadata srclib destlib
