@@ -37,19 +37,14 @@
 
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TupleSections #-}
 
 module Insieme.Analysis.Solver (
 
     -- lattices
-    Lattice,
-    join,
-    merge,
-    bot,
-    less,
-    print,
-
-    ExtLattice,
-    top,
+    Lattice(..),
+    ExtLattice(..),
 
     -- analysis identifiers
     AnalysisIdentifier,
@@ -96,16 +91,22 @@ module Insieme.Analysis.Solver (
 
     -- debugging
     dumpSolverState,
-    showSolverStatistic
+    showSolverStatistic,
+
+    -- metadata
+    module Insieme.Analysis.Solver.Metadata
 
 ) where
 
 --import Debug.Trace
 
 import Prelude hiding (lookup,print)
+import Control.Arrow
 import Control.DeepSeq
 import Control.Exception
 import Control.Monad (void,when)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Dynamic
 import Data.Function
 import Data.List hiding (insert,lookup)
@@ -116,23 +117,23 @@ import System.Directory (doesFileExist)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Process
 import Text.Printf
+import Text.JSON
 
 import qualified Control.Monad.State.Strict as State
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Graph as Graph
 import qualified Data.Hashable as Hash
 import qualified Data.IntMap.Strict as IntMap
-import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
-import Insieme.Inspire (NodeAddress)
+import Insieme.Inspire (NodeAddress, NodePath)
 import qualified Insieme.Inspire as I
 import Insieme.Utils
 
 import Insieme.Analysis.Entities.Memory
 import Insieme.Analysis.Entities.ProgramPoint
 
-
+import Insieme.Analysis.Solver.Metadata
 
 -- Lattice --------------------------------------------------
 
@@ -143,15 +144,19 @@ class (Eq v, Show v, Typeable v, NFData v) => Lattice v where
         join :: [v] -> v                    -- need to be provided by implementations
         join [] = bot                       -- a default implementation for the join operator
         join xs = foldr1 merge xs           -- a default implementation for the join operator
+
         -- | binary join
         merge :: v -> v -> v                -- a binary version of the join
         merge a b = join [ a , b ]          -- its default implementation derived from join
+
         -- | bottom element
         bot  :: v                           -- the bottom element of the join
         bot = join []                       -- default implementation
+
         -- | induced order
         less :: v -> v -> Bool              -- determines whether one element of the lattice is less than another
         less a b = (a `merge` b) == b       -- default implementation
+
         -- | debug printing
         print :: v -> String                -- print a value of the lattice readable
         print = show
@@ -268,20 +273,20 @@ address = referencedAddress . idValue
 
 -- general variables (management)
 data Var = Var {
-                index :: Identifier,                 -- the variable identifier
+                varIdent :: Identifier,              -- the variable identifier
                 constraints :: [Constraint],         -- the list of constraints
                 bottom :: Dynamic,                   -- the bottom value for this variable
                 valuePrint :: Assignment -> String   -- a utility for unpacking an printing a value assigned to this variable
         }
 
 instance Eq Var where
-        (==) a b = (index a) == (index b)
+        (==) a b = (varIdent a) == (varIdent b)
 
 instance Ord Var where
-        compare a b = compare (index a) (index b)
+        compare a b = compare (varIdent a) (varIdent b)
 
 instance Show Var where
-        show v = show (index v)
+        show v = show (varIdent v)
 
 
 -- typed variables (user interaction)
@@ -319,10 +324,10 @@ emptyVarMap :: VarMap a
 emptyVarMap = VarMap IntMap.empty
 
 lookup :: Var -> VarMap a -> Maybe a
-lookup k (VarMap m) = (Map.lookup k) =<< (IntMap.lookup (idHash $ index k) m)
+lookup k (VarMap m) = (Map.lookup k) =<< (IntMap.lookup (idHash $ varIdent k) m)
 
 insert :: Var -> a -> VarMap a -> VarMap a
-insert k v (VarMap m) = VarMap (IntMap.insertWith go (idHash $ index k) (Map.singleton k v) m)
+insert k v (VarMap m) = VarMap (IntMap.insertWith go (idHash $ varIdent k) (Map.singleton k v) m)
     where
         go _ o = Map.insert k v o
 
@@ -561,7 +566,7 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
                 nt = Map.insertWith (+) aid dt t
                 nu = Map.insertWith (+) aid  1 u
                 nr = if numResets > 0 then Map.insertWith (+) aid numResets r else r
-                aid = analysis $ index $ indexToVar v
+                aid = analysis $ varIdent $ indexToVar v
 
                 -- each constraint extends the result, the dependencies, and the vars to update
                 go _ = foldr processConstraint (a,i,d,vs,0) ( constraints $ indexToVar v )  -- update all constraints of current variable
@@ -721,9 +726,9 @@ toDotGraph (SolverState a@(Assignment _) varIndex _ _ _) = "digraph G {\n\t"
 
 
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
-dumpSolverState :: Bool -> SolverState -> FilePath -> Bool -> String
-dumpSolverState overwrite s prefix genGraph = unsafePerformIO $ do
-  evaluate $ dumpToJsonFile s (prefix ++ "_meta")
+dumpSolverState :: Bool -> I.Tree -> SolverState -> FilePath -> Bool -> String
+dumpSolverState overwrite root s prefix genGraph = unsafePerformIO $ do
+  evaluate $ dumpToJsonFile root s (prefix ++ "_meta")
   when genGraph $ do
     base <- solverToDot overwrite s (prefix ++ "_graph")
     pdfFromDot base
@@ -753,35 +758,53 @@ nonexistFile base ext = tryFile names
       names  = base : [ iter n | n <- [ 1.. ]]
       iter n = concat [base, "-", show n]
 
-toJsonMetaFile :: SolverState -> String
-toJsonMetaFile (SolverState a@(Assignment _) varIndex _ _ _) = "{\n"
-        ++
-        "    \"bodies\": {\n"
-        ++
-        ( intercalate ",\n" ( map print $ Map.toList store ) )
-        ++
-        "\n    }\n}"
-    where
 
-        addr = address . index
+toJsonMetaFile :: I.Tree -> SolverState -> String
+toJsonMetaFile root SolverState {assignment, variableIndex} =
+    ($ "") $ showJSValue $ showJSON meta_file
 
-        vars = knownVariables varIndex
+  where
+    meta_file = MetadataFile [] [] [] [] $ Map.toList addr_metadata_map
+    addr_metadata_map :: Map NodePath MetadataBody
+    addr_metadata_map =
+        flip Map.map addr_vars_map $ \vars ->
+        MetadataBody $
+        flip map vars $ \var ->
+        let ident = show (analysis (varIdent var))
+            showed = valuePrint var assignment
+            (summary, details) = shorten showed
+        in (show $ varIdent var,) $ MetadataGroup ident summary details $
+        flip map (constraints var) $ \c ->
+        let dep_vars = dependingOn c assignment
+        in MetadataLinkGroup "Depending on this variable" $
+        flip map dep_vars $ \dep_var ->
+        let vi = varIdent dep_var
+        in MetadataLink (show vi) (show (analysis vi)) (varPathJust dep_var) (hasRoot root dep_var)
 
-        store = foldr go Map.empty vars
-            where
-                go v m = if isJust $ addr v then Map.insert k (msg : Map.findWithDefault [] k m) m else m
-                    where
-                        k = I.getAbsolutePath $ fromJust $ addr v
-                        i = index v
-                        msg = (show . analysis $ i) ++ " = " ++ (escape $ valuePrint v a)
+    addr_vars_map :: Map NodePath [Var]
+    addr_vars_map =
+        Map.fromListWith (++) $
+        map (varPathJust &&& (:[])) $
+        filter (hasRoot root) vars
 
-        print (a,ms) = "      \"" ++ (intercalate "-" $ (show <$> 0 : a)) ++ "\" : \"" ++ ( intercalate "<br>" ms) ++ "\""
+    hasRoot :: I.Tree -> Var -> Bool
+    hasRoot r v = (I.getRoot <$> address (varIdent v)) == Just r
+
+    varPath v = fmap I.getAbsolutePath $ address $ varIdent v
+    varPathJust v = let Just x = varPath v in x
+    vars = Set.toList $ knownVariables variableIndex
+
+    shorten xs =
+        case splitAt 100 xs of
+          (s,[]) -> (s, Nothing)
+          (s,rs) -> (s ++ takeWhile looksLikeNodeAddress rs  ++ " ...", Just xs)
+
+    looksLikeNodeAddress c = c `elem` "1234567890-"
 
 
-
-dumpToJsonFile :: SolverState -> String -> String
-dumpToJsonFile s file = unsafePerformIO $ do
-         writeFile (file ++ ".json") $ toJsonMetaFile s
+dumpToJsonFile :: I.Tree -> SolverState -> String -> String
+dumpToJsonFile root s file = unsafePerformIO $ do
+         writeFile (file ++ ".json") $ toJsonMetaFile root s
          return ("Dumped assignment into file " ++ file ++ ".json!")
 
 
@@ -804,7 +827,7 @@ showSolverStatistic s =
 
         grouped = foldr go Map.empty vars
             where
-                go v m = Map.insertWith (+) ( analysis . index $ v ) (1::Int) m
+                go v m = Map.insertWith (+) ( analysis . varIdent $ v ) (1::Int) m
 
         print (a,c) = printf " %20s %20d %20d %20.3f %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime totalResets avgResets
             where

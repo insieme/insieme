@@ -41,6 +41,7 @@
 module Insieme.Inspire.NodeAddress (
     -- * Node Path
     NodePath,
+    pprintNodePath,
 
     -- * Node Address
     NodeAddress,
@@ -93,6 +94,10 @@ import qualified Insieme.Inspire.IR as IR
 
 
 type NodePath = [Int]
+
+pprintNodePath :: NodePath -> String
+pprintNodePath np = '0' : concat ['-' : show x | x <- np]
+
 
 data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
                                  getNode             :: IR.Tree,
