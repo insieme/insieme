@@ -210,9 +210,21 @@ namespace integration {
 			}
 		}
 
+		fs::path absolutizeTestDir(const fs::path& testDir, const IntegrationTestPaths testPaths) {
+			fs::path absTestDir;
+			if(testDir.is_relative() && fs::exists(testDir)) {
+				absTestDir = fs::current_path() / testDir;
+			} else if(testDir.is_relative()) {
+				absTestDir = fs::path(testPaths.testsRootDir) / testDir;
+			} else { // testDir is absolute
+				absTestDir = testDir;
+			}
+
+			return absTestDir;
+		}
+
 		boost::optional<IntegrationTestCase> loadSingleTestCase(const fs::path& testDir, const IntegrationTestPaths testPaths) {
-			// make sure test dir is absolute, append default test root dir if not
-			const fs::path absTestSourceDir = testDir.is_absolute() ? testDir : fs::path(testPaths.testsRootDir) / testDir;
+			const fs::path absTestSourceDir = absolutizeTestDir(testDir, testPaths);
 
 			if(!fs::exists(absTestSourceDir)) {
 				LOG(WARNING) << "Directory for test case " + absTestSourceDir.string() + " not found!";
@@ -220,7 +232,10 @@ namespace integration {
 			}
 
 			const fs::path cnTestSourceDir = canonicalizeTestName(absTestSourceDir, testPaths);
-			const fs::path absTestOutputDir = testPaths.outputDir / cnTestSourceDir;
+
+			const fs::path absTestOutputDir = testPaths.outputDir == testPaths.testsRootDir
+				? absTestSourceDir
+				: testPaths.outputDir / cnTestSourceDir;
 
 			// assemble properties
 			Properties prop;
@@ -603,7 +618,7 @@ namespace integration {
 	}
 
 	IntegrationTestPaths getDefaultIntegrationTestPaths() {
-		return { fs::path(utils::getInsiemeTestRootDir()), fs::path(utils::getInsiemeBuildRootDir()), "integration_test_config", fs::path(utils::getInsiemeBuildRootDir()) / "integration-testdirs"};
+		return { fs::path(utils::getInsiemeTestRootDir()), fs::path(utils::getInsiemeBuildRootDir()), "integration_test_config", fs::path(utils::getInsiemeBuildRootDir()) / "integration-testdirs" };
 	}
 
 	const vector<IntegrationTestCase>& getAllCases(const LoadTestCaseMode loadTestCaseMode, const IntegrationTestPaths testPaths) {
@@ -627,8 +642,7 @@ namespace integration {
 	}
 
 	vector<IntegrationTestCase> getTestSuite(const fs::path& testDir, const IntegrationTestPaths testPaths) {
-		// make sure test dir is absolute, append default test root dir if not
-		const fs::path absTestDir = testDir.is_absolute() ? testDir : fs::path(testPaths.testsRootDir) / testDir;
+		fs::path absTestDir = absolutizeTestDir(testDir, testPaths);
 
 		// first check if it's an individual test case. Individual test cases have no "blacklisted_tests" file in their folder
 		if(!fs::exists(absTestDir / "blacklisted_tests")) {
