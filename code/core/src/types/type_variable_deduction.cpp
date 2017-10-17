@@ -527,7 +527,8 @@ namespace types {
 				break;
 			}
 
-			case NT_NumericType: {
+			case NT_NumericType:
+			case NT_TagTypeReference: {
 				// check for equality
 				if (*typeA != *typeB) {
 					// if they are different => constraints unsatisfiable
