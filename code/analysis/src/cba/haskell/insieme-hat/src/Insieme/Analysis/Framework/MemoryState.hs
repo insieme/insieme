@@ -215,7 +215,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case Q.getNodeType addr of
                 t -> error $ "Unexpected ctor type: " ++ (show t)
 
             -- the default handling
-            uninitialized = Solver.mkVariable varId [] $ initValueHandler analysis
+            uninitialized = Solver.mkVariable varId [] $ uninitializedValue analysis
 
             -- here additional constructors can be integrated
             interceptable = case () of
@@ -298,7 +298,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case Q.getNodeType addr of
 
             -- attach (unknownIndex, default value) if not all array elements are initialized
             elems a | numIndices == Q.getArraySize arrayType = zip indices (valueVal a)
-            elems a = (unknownIndex, initValueHandler analysis) : zip indices (valueVal a)
+            elems a = (unknownIndex, initialValue analysis) : zip indices (valueVal a)
 
             arrayType = I.goDown 0 $ I.goDown 2 $ I.goDown 0 addr
 

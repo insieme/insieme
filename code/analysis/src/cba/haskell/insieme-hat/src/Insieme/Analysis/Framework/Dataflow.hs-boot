@@ -8,7 +8,8 @@ module Insieme.Analysis.Framework.Dataflow (
         freeVariableHandler,
         entryPointParameterHandler,
         initialValueHandler,
-        initValueHandler,
+        initialValue,
+        uninitializedValue,
         excessiveFileAccessHandler,
         unknownOperatorHandler,
         forwardCtorDtorResultValue
@@ -40,7 +41,8 @@ data DataFlowAnalysis a v i = DataFlowAnalysis {
     freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a free variable
     entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a entry point parameter
     initialValueHandler        :: NodeAddress -> v,                     -- ^ a function computing the initial value of a memory location
-    initValueHandler           :: v,                                    -- ^ default value of a memory location
+    initialValue               :: v,                                    -- ^ default value of a memory location
+    uninitializedValue         :: v,                                    -- ^ value of an uninitialized memory location
     excessiveFileAccessHandler :: v -> i -> v,                          -- ^ a handler processing excessive field accesses (if ref_narrow calls navigate too deep)
     unknownOperatorHandler     :: NodeAddress -> v,                     -- ^ a handler invoked for unknown operators
     forwardCtorDtorResultValue :: Bool                                  -- ^ a flag to enable / disable the implicit return of constructors and destructurs

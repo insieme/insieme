@@ -145,7 +145,7 @@ referenceValue addr = case Q.getNodeType addr of
         analysis = (mkDataFlowAnalysis ReferenceAnalysis "R" referenceValue){
             freeVariableHandler=epParamHandler,
             entryPointParameterHandler=epParamHandler,
-            initValueHandler = compose $ BSet.singleton $ NullReference
+            initialValue = compose $ BSet.singleton $ NullReference
         }
 
         epParamHandler a = mkConstant analysis a $ compose $ BSet.singleton $ Reference a DP.Root
