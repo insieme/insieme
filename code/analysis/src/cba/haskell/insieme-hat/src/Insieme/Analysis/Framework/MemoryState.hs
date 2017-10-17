@@ -215,7 +215,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case Q.getNodeType addr of
                 t -> error $ "Unexpected ctor type: " ++ (show t)
 
             -- the default handling
-            uninitialized = Solver.mkVariable varId [] Solver.top
+            uninitialized = Solver.mkVariable varId [] $ initValueHandler analysis
 
             -- here additional constructors can be integrated
             interceptable = case () of
@@ -264,7 +264,11 @@ definedValue addr ml@(MemoryLocation loc) analysis = case Q.getNodeType addr of
 
 
         -- handle declarations without implicit constructors (simple assignments)
-        I.Declaration -> variableGenerator analysis $ I.goDown 1 addr
+        I.Declaration -> var
+          where
+            var = Solver.mkVariable varId [con] Solver.bot
+            con = Solver.forward initVar var
+            initVar = variableGenerator analysis $ I.goDown 1 addr
 
         -- handle values defined by assignments
         I.CallExpr -> var
