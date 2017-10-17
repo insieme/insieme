@@ -576,7 +576,9 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
 
                         (a',Increment)    -> (a',ni,nd, uv ++ nv, numResets)        -- add depending variables to work list
 
-                        (a',Reset)        -> (ra,ni,nd, uv ++ nv, numResets+1)      -- handling a local reset
+                        -- TODO: figure out why the local reset needs to add all dependent variables to the work queue
+                        -- (a',Reset)        -> (ra,ni,nd, uv ++ nv, numResets+1)      -- handling a local reset
+                        (a',Reset)        -> (ra,ni,nd, (Set.toList dep) ++ nv, numResets+1)      -- handling a local reset
                             where
                                 dep = getAllDep nd trg
                                 ra = if not $ Set.member trg dep                    -- if variable is not indirectly depending on itself
