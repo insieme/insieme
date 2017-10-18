@@ -76,3 +76,9 @@ hsRefMemberAccess = parseExpr "hs_ref_member_access"
 
 hsRefComponentAccess :: IR.Tree
 hsRefComponentAccess = parseExpr "hs_ref_component_access"
+
+hsRefArrayElementAccess :: IR.Tree
+hsRefArrayElementAccess = parseExpr "hs_ref_array_element_access"
+
+hsRefStdArrayElementAccess :: IR.Tree
+hsRefStdArrayElementAccess = parseExpr "hs_ref_std_array_element_access"

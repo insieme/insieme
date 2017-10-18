@@ -42,7 +42,9 @@ module Insieme.Inspire.Builder (
     deref,
     refMember,
     refComponent,
-    refTemporaryInit
+    refTemporaryInit,
+    refArrayElement,
+    refStdArrayElement
 ) where
 
 --import Debug.Trace
@@ -94,6 +96,11 @@ refComponent t i = mkCall some_ref_type SP.hsRefComponentAccess $ wrapSomeDecl <
 refTemporaryInit :: IR.Tree -> IR.Tree
 refTemporaryInit e = mkCall some_ref_type SP.refTempInit [mkDeclaration some_type e]
 
+refArrayElement :: IR.Tree -> Int -> IR.Tree
+refArrayElement t i = mkCall some_ref_type SP.hsRefArrayElementAccess $ wrapSomeDecl <$> [t,mkLiteral (show i) SP.uint8]
+
+refStdArrayElement :: IR.Tree -> Int -> IR.Tree
+refStdArrayElement t i = mkCall some_ref_type SP.hsRefStdArrayElementAccess $ wrapSomeDecl <$> [t,mkLiteral (show i) SP.uint8]
 
 -- utilities --
 

@@ -78,6 +78,18 @@ namespace internal {
 		 */
 		LANG_EXT_LITERAL(HaskellRefComponentAccess, "hs_ref_component_access", "(ref<'a,'c,'v,'k>, uint<8>) -> ref<'b,'c,'v, plain>")
 
+		/**
+		 * A dummy operator for the haskell side to create a array element access, replaced
+		 * by a real element access during haskell to C++ conversion.
+		 */
+		LANG_EXT_LITERAL(HaskellRefArrayElementAccess, "hs_ref_array_element_access", "(ref<'a,'c,'v,'k>, uint<8>) -> ref<'b,'c,'v, plain>")
+
+		/**
+		 * A dummy operator for the haskell side to create a std::array element access, replaced
+		 * by a real element access during haskell to C++ conversion.
+		 */
+		LANG_EXT_LITERAL(HaskellRefStdArrayElementAccess, "hs_ref_std_array_element_access", "(ref<'a,'c,'v,'k>, uint<8>) -> ref<'b,'c,'v, plain>")
+
 	};
 
 	/**

@@ -245,6 +245,8 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
                     (StructField field)   -> Builder.refMember base field
                     (UnionField field)    -> Builder.refMember base field
                     (TupleElementIndex i) -> Builder.refComponent base i
+                    (ArrayIndex i)        -> Builder.refArrayElement base i
+                    (StdArrayIndex i)     -> Builder.refStdArrayElement base i
                     _                     -> error $ "Unsupported field access: " ++ (show f)
 
 

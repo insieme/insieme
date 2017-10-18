@@ -83,6 +83,24 @@ namespace internal {
 				return builder.refComponent(call->getArgument(0),call->getArgument(1));
 			}
 
+			// replace dummy-ref-array-access calls
+			if (ext.isCallOfHaskellRefArrayElementAccess(node)) {
+				assert_true(call->getArgument(0));
+				assert_true(call->getArgument(1));
+				assert_true(call->getArgument(1).isa<LiteralPtr>());
+				return builder.arrayRefElem(call->getArgument(0),call->getArgument(1));
+			}
+
+			// replace dummy-ref-array-access calls
+			if (ext.isCallOfHaskellRefStdArrayElementAccess(node)) {
+				assert_true(call->getArgument(0));
+				assert_true(call->getArgument(1));
+				assert_true(call->getArgument(1).isa<LiteralPtr>());
+				assert_not_implemented();
+				// TODO: use real std::array access operator signature
+				return builder.arrayRefElem(call->getArgument(0),call->getArgument(1));
+			}
+
 			// re-type all call expressions (types have to be re-deduced!)
 			return builder.callExpr(call->getFunctionExpr(),call->getArgumentList());
 		});
