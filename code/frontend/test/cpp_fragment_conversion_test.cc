@@ -82,6 +82,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, InitializerList) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_initializer_list.cpp"); }
 
+	TEST(CppConversionTest, ITE) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_ite.cpp"); }
+
 	TEST(CppConversionTest, Lambda) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda.cpp"); }
 
 	TEST(CppConversionTest, LambdaCapture) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda_capture.cpp"); }
