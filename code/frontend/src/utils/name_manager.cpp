@@ -293,7 +293,17 @@ namespace utils {
 						}
 					}
 				}
+			}
+		}
 
+		// encode template parameters in name
+		auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(tagDecl);
+		if(tempSpec && !cStyleName) {
+			name = name + utils::buildNameSuffixForTemplate(tempSpec->getTemplateArgs().asArray(), tempSpec->getASTContext(), cStyleName);
+
+			// if this isn't a template specialization, we have to create unique names for certain types of RecordTypes like lambdas and local classes
+		} else if(auto rec = llvm::dyn_cast<clang::CXXRecordDecl>(tagDecl->getCanonicalDecl())) {
+			if(rec->isLambda() || rec->isLocalClass()) {
 				// now we check that the generated name is unique, as we need to generate unique names for different instantiations.
 				// we look up the name in instantiationNameMapping.
 				auto instantiationNameMappingSearch = instantiationNameMapping.find(name);
@@ -322,11 +332,6 @@ namespace utils {
 			}
 		}
 
-		// encode template parameters in name
-		auto tempSpec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(tagDecl);
-		if(tempSpec && !cStyleName) {
-			name = name + utils::buildNameSuffixForTemplate(tempSpec->getTemplateArgs().asArray(), tempSpec->getASTContext(), cStyleName);
-		}
 
 		// if externally visible, build mangled name based on canonical decl without location
 		if(tagDecl->isExternallyVisible()) return std::make_pair(insieme::utils::mangle(name), true);

@@ -140,6 +140,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, TemplateDeclInstantiation) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_template_decl_instantiation.cpp"); }
 
+	TEST(CppConversionTest, TemplateNaming) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_template_naming.cpp"); }
+
 	TEST(CppConversionTest, This) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_this.cpp"); }
 
 	TEST(CppConversionTest, Undeclared) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_undeclared.cpp"); }
