@@ -279,7 +279,7 @@ namespace cba {
 				} else if (name == "cba_expect_undefined_int") {
 					std::cerr << "Performing " << name << std::endl;
 					ArithmeticSet res = this->getValue(call.getArgument(0));
-					EXPECT_TRUE(res.isUniversal())
+					EXPECT_TRUE(res.empty() || res.isUniversal())
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "ArithmeticSet evaluates to " << res << std::endl;
 

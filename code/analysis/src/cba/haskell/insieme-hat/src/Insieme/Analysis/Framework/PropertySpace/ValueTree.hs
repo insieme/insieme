@@ -140,7 +140,7 @@ get i (Node m)     = r
         k = project (Map.keys m) i
         r = Solver.join $ map extract k
             where
-                extract k' = fromMaybe Inconsistent $ Map.lookup k' m
+                extract k' = fromMaybe Empty $ Map.lookup k' m
 
 get _ Empty        = Empty
 get _ _            = Inconsistent
