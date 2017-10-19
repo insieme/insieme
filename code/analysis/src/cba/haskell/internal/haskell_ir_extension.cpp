@@ -40,6 +40,9 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/transform/materialize.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -102,7 +105,16 @@ namespace internal {
 			}
 
 			// re-type all call expressions (types have to be re-deduced!)
-			return builder.callExpr(call->getFunctionExpr(),call->getArgumentList());
+			auto res = builder.callExpr(call->getFunctionExpr(),call->getArgumentList());
+
+			// if the old one was materializing ...
+			if (core::analysis::isMaterializingCall(call)) {
+				// make the new one materializing too
+				res = builder.callExpr(core::transform::materialize(res->getType()),call->getFunctionExpr(),call->getArgumentList());
+			}
+
+			// done
+			return res;
 		});
 	}
 
