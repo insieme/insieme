@@ -78,5 +78,12 @@ int main() {
 	// the original instance should now be altered
 	cba_expect_eq_int(a.x,0);
 
+	// check the reference
+	cba_expect_defined_ptr(&reflect(a));
+	cba_expect_defined_ptr(&reflect(static_cast<A&&>(a)));
+
+	cba_expect_not_alias(&a,&reflect(a));
+	cba_expect_not_alias(&a,&reflect(static_cast<A&&>(a)));
+
 	return 0;
 }
