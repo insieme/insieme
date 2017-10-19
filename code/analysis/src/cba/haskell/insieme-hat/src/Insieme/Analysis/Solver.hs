@@ -760,6 +760,7 @@ nonexistFile base ext = tryFile names
       iter n = concat [base, "-", show n]
 
 
+
 toJsonMetaFile :: I.Tree -> SolverState -> String
 toJsonMetaFile root SolverState {assignment, variableIndex} =
     ($ "") $ showJSValue $ showJSON meta_file
@@ -771,7 +772,7 @@ toJsonMetaFile root SolverState {assignment, variableIndex} =
         flip Map.map addr_vars_map $ \vars ->
         MetadataBody $
         flip map vars $ \var ->
-        let ident = show (analysis (varIdent var))
+        let ident = formatVar var
             showed = valuePrint var assignment
             (summary, details) = shorten showed
         in (show $ varIdent var,) $ MetadataGroup ident summary details $
@@ -780,7 +781,7 @@ toJsonMetaFile root SolverState {assignment, variableIndex} =
         in MetadataLinkGroup "Depending on this variable" $
         flip map dep_vars $ \dep_var ->
         let vi = varIdent dep_var
-        in MetadataLink (show vi) (show (analysis vi)) (varPathJust dep_var) (hasRoot root dep_var)
+        in MetadataLink (show vi) (formatVar dep_var) (varPathJust dep_var) (hasRoot root dep_var)
 
     addr_vars_map :: Map NodePath [Var]
     addr_vars_map =
@@ -801,6 +802,15 @@ toJsonMetaFile root SolverState {assignment, variableIndex} =
           (s,rs) -> (s ++ takeWhile looksLikeNodeAddress rs  ++ " ...", Just xs)
 
     looksLikeNodeAddress c = c `elem` "1234567890-"
+
+    formatVar var = (show (analysis id)) ++ formatIdentifier (idValue id)
+      where
+        id = varIdent var
+
+    formatIdentifier (IDV_NodeAddress _) = ""
+    formatIdentifier (IDV_ProgramPoint (ProgramPoint _ p)) = "/" ++ show p
+    formatIdentifier (IDV_MemoryStatePoint (MemoryStatePoint (ProgramPoint _ p) (MemoryLocation l))) = "/" ++ (show p) ++ "/loc=" ++ (show l)
+    formatIdentifier (IDV_Other _) = ""
 
 
 dumpToJsonFile :: I.Tree -> SolverState -> String -> String
