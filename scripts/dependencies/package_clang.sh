@@ -10,7 +10,7 @@ PYTHON_PKG=$PREFIX/$(get_property python PACKAGE)
 
 export CC="$GCC_PKG/bin/gcc"
 export CXX="$GCC_PKG/bin/g++"
-export PATH="$GCC_PKG/bin:$PATH"
+export PATH="$GCC_PKG/bin:$CMAKE_PKG/bin:$PATH"
 export LD_LIBRARY_PATH="$GCC_PKG/lib64"
 
 pkg_download() {
@@ -49,7 +49,7 @@ pkg_extract() {
 pkg_configure() {
 	mkdir build
 	cd build
-	$PREFIX/$CMAKE_PKG/bin/cmake \
+	cmake \
 		-DCMAKE_INSTALL_PREFIX="$PREFIX/$PACKAGE" \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DGCC_INSTALL_PREFIX="$GCC_PKG" \
