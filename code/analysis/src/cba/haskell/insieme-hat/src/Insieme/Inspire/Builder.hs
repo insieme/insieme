@@ -39,6 +39,13 @@
 -- The workings of these functions are specific to INSPIRE.
 
 module Insieme.Inspire.Builder (
+
+    plus,
+    plusOne,
+
+    minus,
+    minusOne,
+
     deref,
     refMember,
     refComponent,
@@ -71,11 +78,36 @@ mkDeclaration t v = assert (Q.isType t) $ IR.mkNode IR.Declaration [t,v] []
 mkCall :: IR.Tree -> IR.Tree -> [IR.Tree] -> IR.Tree
 mkCall t f argDecls = IR.mkNode IR.CallExpr (t:f:argDecls) []
 
+mkCallWithArgs :: IR.Tree -> IR.Tree -> [IR.Tree] -> IR.Tree
+mkCallWithArgs t f args = mkCall t f $ toDecl <$> args
+  where
+    toDecl a = mkDeclaration t a
+      where 
+        Just t = Q.getType a
+
 mkIdentifier :: String -> IR.Tree
 mkIdentifier s = mkLiteral s SP.identifierType
 
 
--- invocations of built-ins --
+
+-- arithmetic operator calls --
+
+
+plus :: IR.Tree -> IR.Tree -> IR.Tree
+plus a b = mkCallWithArgs some_type SP.arithAdd [a,b]
+
+plusOne :: IR.Tree -> IR.Tree
+plusOne a = plus a $ mkLiteral "1" SP.uint1
+
+
+minus :: IR.Tree -> IR.Tree -> IR.Tree
+minus a b = mkCallWithArgs some_type SP.arithSub [a,b]
+
+minusOne :: IR.Tree -> IR.Tree
+minusOne a = minus a $ mkLiteral "1" SP.uint1
+
+
+-- ref-operator calls --
 
 deref :: IR.Tree -> IR.Tree
 deref t = mkCall resType SP.refDeref [decl]
@@ -85,7 +117,6 @@ deref t = mkCall resType SP.refDeref [decl]
     refType = child 0 t
 
     decl = mkDeclaration refType t
-
 
 refMember :: IR.Tree -> String -> IR.Tree
 refMember t f = mkCall some_ref_type SP.hsRefMemberAccess $ wrapSomeDecl <$> [t,mkIdentifier f]

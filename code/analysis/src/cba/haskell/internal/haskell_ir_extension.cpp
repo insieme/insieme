@@ -70,6 +70,20 @@ namespace internal {
 			auto call = node.isa<CallExprPtr>();
 			if (!call) return node;
 
+			// replace dummy-arith-add calls
+			if (ext.isCallOfHaskellArithAdd(node)) {
+				assert_true(call->getArgument(0));
+				assert_true(call->getArgument(1));
+				return builder.add(call->getArgument(0),call->getArgument(1));
+			}
+
+			// replace dummy-arith-sub calls
+			if (ext.isCallOfHaskellArithSub(node)) {
+				assert_true(call->getArgument(0));
+				assert_true(call->getArgument(1));
+				return builder.sub(call->getArgument(0),call->getArgument(1));
+			}
+
 			// replace dummy-ref-member-access calls
 			if (ext.isCallOfHaskellRefMemberAccess(node)) {
 				assert_true(call->getArgument(0));

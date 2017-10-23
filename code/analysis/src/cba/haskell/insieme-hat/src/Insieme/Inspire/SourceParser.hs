@@ -54,11 +54,46 @@ parseType txt = child 0 $ parseExpr $ "lit(\"x\":" ++ txt ++ ")"
 
 -- inspire constructs --
 
+int1 :: IR.Tree
+int1 = parseType "int<1>"
+
+int2 :: IR.Tree
+int2 = parseType "int<2>"
+
+int4 :: IR.Tree
+int4 = parseType "int<4>"
+
+int8 :: IR.Tree
+int8 = parseType "int<8>"
+
+
+uint1 :: IR.Tree
+uint1 = parseType "uint<1>"
+
+uint2 :: IR.Tree
+uint2 = parseType "uint<2>"
+
+uint4 :: IR.Tree
+uint4 = parseType "uint<4>"
+
 uint8 :: IR.Tree
 uint8 = parseType "uint<8>"
 
+
 identifierType :: IR.Tree
 identifierType = parseType "identifier"
+
+-- arithmetic operations --
+
+
+arithAdd :: IR.Tree
+arithAdd = parseExpr "hs_arith_add"
+
+arithSub :: IR.Tree
+arithSub = parseExpr "hs_arith_sub"
+
+
+-- reference operations --
 
 refDeref :: IR.Tree
 refDeref = parseExpr "ref_deref"

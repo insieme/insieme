@@ -101,22 +101,42 @@ getType n | kind == IR.Type        = Just $ n
     ntyp = getNodeType n
     kind = IR.toNodeKind ntyp
 
+
+
+-- *** Generic Types
+
+getGenericTypeFamilyName :: NodeLike a => a -> Maybe String
+getGenericTypeFamilyName n = case node n of
+    IR.Node IR.GenericType (IR.Node (IR.StringValue name) _ : _) -> Just name
+    _ -> Nothing
+
+hasFamilyName :: NodeLike a => String -> a -> Bool
+hasFamilyName s n = fromMaybe False $ (==s) <$> getGenericTypeFamilyName n
+
+getTypeParameter :: Int -> IR.Tree -> IR.Tree
+getTypeParameter i (IR.Node IR.GenericType ( _ : _ : (IR.Node IR.Types params) : [] )) = params !! i
+getTypeParameter _ _ = error "unexpected NodeType"
+
+
 -- *** Unit Type
 
 isUnitType :: NodeLike a => a -> Bool
-isUnitType n = case node n of
-    IR.Node IR.GenericType (IR.Node (IR.StringValue "unit") _ : _) -> True
-    _ -> False
+isUnitType = hasFamilyName "unit"
 
 isUnit :: NodeLike a => a -> Bool
 isUnit n = fromMaybe False $ isUnitType <$> getType n
 
 
--- *** Generic Types
+-- *** Integral Types
 
-getTypeParameter :: Int -> IR.Tree -> IR.Tree
-getTypeParameter i (IR.Node IR.GenericType ( _ : _ : (IR.Node IR.Types params) : [] )) = params !! i
-getTypeParameter _ _ = error "unexpected NodeType"
+isIntegerType :: NodeLike a => a -> Bool
+isIntegerType a = isSignedIntegerType a || isUnsignedIntegerType a
+
+isSignedIntegerType :: NodeLike a => a -> Bool
+isSignedIntegerType = hasFamilyName "int"
+
+isUnsignedIntegerType :: NodeLike a => a -> Bool
+isUnsignedIntegerType = hasFamilyName "uint"
 
 
 -- *** Reference Type

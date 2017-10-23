@@ -67,6 +67,16 @@ namespace internal {
 	  public:
 
 		/**
+		 * A dummy operator for the haskell side to create an addition.
+		 */
+		LANG_EXT_LITERAL(HaskellArithAdd, "hs_arith_add", "('a,'b) -> some_type")
+
+		/**
+		 * A dummy operator for the haskell side to create a subtraction.
+		 */
+		LANG_EXT_LITERAL(HaskellArithSub, "hs_arith_sub", "('a,'b) -> some_type")
+
+		/**
 		 * A dummy operator for the haskell side to create a member access, replaced
 		 * by a real member access during haskell to C++ conversion.
 		 */
