@@ -10,11 +10,18 @@ source "$INSTALLER_DIR/internal/install_steps.sh"
 source "$INSTALLER_DIR/config.sh"
 
 if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]]; then
-	echo "usage: $0 <package_name>..."
+	echo "usage: $0 [--with-depends] <package_name>..."
 	exit 1
 fi
 
-for pkg in "$@"; do
+if [[ "$1" == "--with-depends" ]]; then
+	shift
+	pkgs=$(resolve_dependencies "$@")
+else
+	pkgs="$@"
+fi
+
+for pkg in $pkgs; do
 	assert_pkg_exists $pkg
 
 	if is_pkg_installed $pkg; then

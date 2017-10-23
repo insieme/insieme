@@ -5,9 +5,13 @@ Each file with the prefix `package_` contains meta data and build instructions
 for a specific package as well as its dependencies.
 
 The `installer` can be used to install packages, dependencies will be resolved
-automatically.
+automatically if `--with-depends` is provided.
 
-    $ ./installer gcc ruby valgrind
+    $ ./installer gmp mpfr mpc gcc
+
+or
+
+    $ ./installer --with-depends gcc ruby valgrind
 
 Note that all dependencies will be installed regardless of whether they are
 already present on your system, outside of this dependency installer.

@@ -41,7 +41,7 @@ assert_pkg_exists() {
 
 # Gets all dependencies of the given packages.
 resolve_dependencies() {
-	local names=$1
+	local names=$@
 	for pkg in $names; do
 		resolve_dependencies_for_pkg "$pkg"
 	done | awk '!unique[$_]++'
