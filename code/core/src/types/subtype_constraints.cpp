@@ -41,6 +41,7 @@
 #include <boost/graph/topological_sort.hpp>
 
 #include "insieme/core/ir_types.h"
+#include "insieme/core/lang/basic.h"
 
 #include "insieme/utils/graph_utils.h"
 
@@ -195,7 +196,37 @@ namespace types {
 				}
 			}
 		}
-	}
+
+		SubstitutionOpt isUnsignedToSignedConversion(const TypePtr& argType, const TypePtr& paramType) {
+			SubstitutionOpt fail;
+
+			// convert to generic types
+			GenericTypePtr arg = argType.isa<GenericTypePtr>();
+			GenericTypePtr param = paramType.isa<GenericTypePtr>();
+
+			// both must be generic types
+			if (!arg || !param) return fail;
+
+			// only for unsigned to signed integer conversion
+			if (arg->getFamilyName() != "uint" || param->getFamilyName() != "int") return fail;
+
+			// the parameter must be variadic
+			auto var = param.getTypeParameter(0).isa<TypeVariablePtr>();
+			if (!var) return fail;
+
+			// fix the size one size larger than the input
+			auto& basic = arg.getNodeManager().getLangBasic();
+			if (basic.isUInt1(arg)) return Substitution(var,basic.getInt2().as<GenericTypePtr>().getTypeParameter(0));
+			if (basic.isUInt2(arg)) return Substitution(var,basic.getInt4().as<GenericTypePtr>().getTypeParameter(0));
+			if (basic.isUInt4(arg)) return Substitution(var,basic.getInt8().as<GenericTypePtr>().getTypeParameter(0));
+			if (basic.isUInt8(arg)) return Substitution(var,basic.getIntInf().as<GenericTypePtr>().getTypeParameter(0));
+			if (basic.isUIntInf(arg)) return Substitution(var,basic.getIntInf().as<GenericTypePtr>().getTypeParameter(0));
+
+			// otherwise => problem
+			return fail;
+		}
+
+	} // end namespace
 
 	SubstitutionOpt SubTypeConstraints::solve() const {
 		if(!isSatisfiable()) { return boost::none; }
@@ -379,11 +410,21 @@ namespace types {
 					// add to resulting unifier
 					res = Substitution::compose(manager, res, *unifier);
 					continue;
+
+				// handle special case of unsigned-to-signed integer conversion
+				} else if (auto unifier = isUnsignedToSignedConversion(limit,cur)) {
+					// fine => use unified version
+					applyUnifierToAllNodes(graph, unifier);
+
+					// add to resulting unifier
+					res = Substitution::compose(manager, res, *unifier);
+					continue;
+
 				} else {
 					// check whether current type is a sub-type of the limit
 					if(!isSubTypeOf(limit, cur)) {
 						// => no solution
-						if(debug) { std::cout << "The type " << cur << " is definetly not a sub-type of " << limit << std::endl; }
+						if(debug) { std::cout << "The type " << cur << " is definitely not a sub-type of " << limit << std::endl; }
 						return boost::none;
 					}
 				}
