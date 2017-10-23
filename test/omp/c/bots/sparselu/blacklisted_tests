@@ -10,3 +10,4 @@ sparselu_for
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
++sparselu_single
