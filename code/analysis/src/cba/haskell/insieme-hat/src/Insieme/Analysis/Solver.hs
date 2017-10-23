@@ -98,7 +98,7 @@ module Insieme.Analysis.Solver (
 
 ) where
 
---import Debug.Trace
+import Debug.Trace
 
 import Prelude hiding (lookup,print)
 import Control.Arrow
@@ -398,13 +398,18 @@ data Event =
 
 
 data Constraint = Constraint {
-        dependingOn         :: Assignment -> [Var],
+        dependingOn         :: Assignment -> [Var],                      -- obtains list of variables depending on
         update              :: (Assignment -> (Assignment,Event)),       -- update the assignment, a reset is allowed
-        updateWithoutReset  :: (Assignment -> (Assignment,Event))        -- update the assignment, a reset is not allowed
+        updateWithoutReset  :: (Assignment -> (Assignment,Event)),       -- update the assignment, a reset is not allowed
+        check               :: SolverState -> Maybe Violation            -- check whether this constraint is satisfied
    }
 
 
-
+data Violation = Violation {
+        violationMsg         :: String,       -- a message describing the issue
+        violationShouldValue :: String,       -- the value a variable should have (at least)
+        violationIsValue     :: String        -- the value a variable does have
+    }
 
 
 -- Variable Index -----------------------------------------------
@@ -535,9 +540,22 @@ resolveAll i tvs = (res <$> tvs,s)
 
 -- solve for a set of variables
 solve :: SolverState -> [Var] -> SolverState
-solve initial vs = solveStep (initial {variableIndex = nindex}) emptyDep ivs
+solve initial vs = case violations of
+        [] -> res
+        _  -> error $ "Unsatisfied constraints:\n\t" ++ (intercalate "\n\t" $ print <$> violations )
     where
+        -- compute the solution
         (ivs,nindex) = varsToIndex (variableIndex initial) vs
+        res = solveStep (initial {variableIndex = nindex}) emptyDep ivs
+
+        -- compute the list of violated constraints (should be empty)
+        allConstraints = concatMap constraints $ Set.toList $ knownVariables $ variableIndex res
+        violations = mapMaybe (flip check $ res) allConstraints
+
+        -- print utility formatting violations
+        print v = (violationMsg v) ++ "\n\t\tshould: " ++ (violationShouldValue v) 
+                                   ++ "\n\t\t    is: " ++ (violationIsValue v)
+
 
 
 -- solve for a set of variables with an initial assignment
@@ -607,7 +625,7 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
 --   * the current value of the constraint,
 --   * and the target variable for this constraint.
 createConstraint :: (Lattice a) => ( Assignment -> [Var] ) -> ( Assignment -> a ) -> TypedVar a -> Constraint
-createConstraint dep limit trg = Constraint dep update' update'
+createConstraint dep limit trg = Constraint dep update' update' check'
     where
         update' a = case () of
                 _ | value `less` current -> (                                a,      None)    -- nothing changed
@@ -616,10 +634,19 @@ createConstraint dep limit trg = Constraint dep update' update'
                 value = limit a                                                               -- the value from the constraint
                 current = get a trg                                                           -- the current value in the assignment
 
+        check' state = 
+                if value `less` current then Nothing
+                else Just $ Violation (print') (show value) (show current)
+            where
+                a = assignment state
+                value = limit a
+                current = get a trg
+
+        print' = "f(A) => g(A) ⊑ " ++ (show trg)
 
 -- creates a constraint of the form f(A) = A[b] enforcing equality
 createEqualityConstraint :: Lattice t => (Assignment -> [Var]) -> (Assignment -> t) -> TypedVar t -> Constraint
-createEqualityConstraint dep limit trg = Constraint dep update forceUpdate
+createEqualityConstraint dep limit trg = Constraint dep update forceUpdate check'
     where
         update a = case () of
                 _ | value `less` current -> (              a,      None)    -- nothing changed
@@ -637,6 +664,28 @@ createEqualityConstraint dep limit trg = Constraint dep update forceUpdate
                 value = limit a                                                               -- the value from the constraint
                 current = get a trg                                                           -- the current value in the assignment
 
+        check' state = case () of
+                _ | value `less` current && current `less` value -> Nothing             -- perfect, it is equal!
+                _ | value `less` current && inCycle              -> Nothing             -- it is not equal, but in a cycle ... acceptable
+                _ | otherwise -> Just $ Violation (print') (show value) (show current)  -- not so good :(
+            where
+                a = assignment state
+                value = limit a
+                current = get a trg
+
+                -- compute the set of all variables the constraint variable is depending on
+                allDependencies = collect (dep a) Set.empty
+                    where
+                        collect [] s = s
+                        collect (v:vs) s = collect ((Set.toList $ Set.difference dep s) ++ vs) (Set.union dep s)
+                            where
+                                dep = Set.fromList $ concatMap (flip dependingOn $ a) $ constraints v
+
+                -- determine whether the constraint variable is indeed in a active cycle
+                inCycle = Set.member (toVar trg) allDependencies
+
+
+        print' = "f(A) => g(A) = " ++ (show trg)
 
 
 -- creates a constraint of the form   A[a] \in A[b]

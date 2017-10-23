@@ -50,6 +50,8 @@ import Control.DeepSeq (NFData)
 import Data.Typeable
 import GHC.Generics (Generic)
 
+import qualified Data.Set as Set
+
 import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Query as Q
 import qualified Insieme.Inspire as I
@@ -68,12 +70,12 @@ import qualified Insieme.Analysis.Solver as Solver
 -- * Predecessor Lattice
 --
 
-newtype PredecessorList = PredecessorList { unPL :: [ProgramPoint] }
+newtype PredecessorList = PredecessorList { unPL :: Set.Set ProgramPoint }
   deriving (Eq, Ord, Show, Generic, NFData)
 
 instance Solver.Lattice PredecessorList where
-    bot = PredecessorList []
-    (PredecessorList x) `merge` (PredecessorList y) = PredecessorList $ x ++ y
+    bot = PredecessorList Set.empty
+    (PredecessorList x) `merge` (PredecessorList y) = PredecessorList $ Set.union x y
 
 --
 -- * Predecessor Analysis
@@ -165,7 +167,7 @@ predecessor p@(ProgramPoint a Pre) = case Q.getNodeType parent of
       -- pred of step value is end value
       | i == 2 -> single $ ProgramPoint (I.goDown 1 parent) Post
       -- pred of body is 1. step value, 2. previous body, or 3. continue stmt
-      | i == 3 -> multiple $ PredecessorList $
+      | i == 3 -> multiple $ PredecessorList $ Set.fromList $
                 [ ProgramPoint (I.goDown 2 parent) Post    -- step
                 , ProgramPoint (I.goDown 3 parent) Post]   -- body (n-1)
                 ++ postContinueStmt a                    -- all continues
@@ -173,7 +175,7 @@ predecessor p@(ProgramPoint a Pre) = case Q.getNodeType parent of
     I.WhileStmt
       -- cond of while is evaluated 1. after entering while, 2. after
       -- regular loop, and 3. after a continue
-      | i == 0 -> multiple $ PredecessorList $
+      | i == 0 -> multiple $ PredecessorList $ Set.fromList $
                 [ ProgramPoint parent Pre                -- entering
                 , ProgramPoint (I.goDown 1 parent) Post]   -- regular loop
                 ++ postContinueStmt a                    -- all continues
@@ -210,7 +212,7 @@ predecessor p@(ProgramPoint a Pre) = case Q.getNodeType parent of
     con = Solver.createConstraint dep val call_sites
 
     dep _ = [Solver.toVar callSitesVar]
-    val a = PredecessorList $ foldr go [] $ Solver.get a callSitesVar
+    val a = PredecessorList $ Set.fromList $ foldr go [] $ Solver.get a callSitesVar
       where
         go (CallSite call) list = ProgramPoint (I.goDown 1 call) Post : list
 
@@ -227,7 +229,7 @@ predecessor  p@(ProgramPoint addr Internal) = case Q.getNodeType addr of
         var = Solver.mkVariable (idGen p) [con] Solver.bot
         con = Solver.createConstraint dep val var
         dep a = Solver.toVar callableVar : map Solver.toVar (exitPointVars a)
-        val a = PredecessorList $ [litPredecessor | callsLiteral] ++ nonLiteralExit
+        val a = PredecessorList $ Set.fromList $ [litPredecessor | callsLiteral] ++ nonLiteralExit
           where
             nonLiteralExit = foldr go [] (exitPointVars a)
             go e l = foldr (\(ExitPoint r) l -> ProgramPoint r Post : l)
@@ -305,7 +307,7 @@ predecessor p@(ProgramPoint a Post) = case Q.getNodeType a of
         var = Solver.mkVariable (idGen p) [con] Solver.bot
         con = Solver.createConstraint dep val var
         dep _ = [Solver.toVar conditionValueVar]
-        val a = PredecessorList $ case ComposedValue.toValue (Solver.get a conditionValueVar) of
+        val a = PredecessorList $ Set.fromList $ case ComposedValue.toValue (Solver.get a conditionValueVar) of
                   Neither     -> []
                   AlwaysTrue  -> [thenBranch]
                   AlwaysFalse -> [elseBranch]
@@ -315,13 +317,13 @@ predecessor p@(ProgramPoint a Post) = case Q.getNodeType a of
         elseBranch = ProgramPoint (I.goDown 2 a) Post
 
     -- for loop statement
-    I.ForStmt -> multiple $ PredecessorList
+    I.ForStmt -> multiple $ PredecessorList $ Set.fromList $
       [ ProgramPoint (I.goDown 2 a) Post     -- loop never entered
       , ProgramPoint (I.goDown 3 a) Post ]   -- body when loop was run
 
     -- while stmts evaluate as a last step either 1. their condition,
     -- or 2. a BreakStmt
-    I.WhileStmt -> multiple $ PredecessorList $ map (`ProgramPoint` Post) $
+    I.WhileStmt -> multiple $ PredecessorList $ Set.fromList $ map (`ProgramPoint` Post) $
       I.goDown 0 a:                          -- condition
       I.collectAddr I.BreakStmt prune a     -- all subordinate 'BreakStmt's
       where
@@ -333,7 +335,7 @@ predecessor p@(ProgramPoint a Post) = case Q.getNodeType a of
 
     -- switch stmts have executed either 1. the default branch, 2. one
     -- of the breaks, or 3. one of the cases without a break
-    I.SwitchStmt -> multiple $ PredecessorList $ map (`ProgramPoint` Post) $
+    I.SwitchStmt -> multiple $ PredecessorList $ Set.fromList $ map (`ProgramPoint` Post) $
       I.goDown 2 a :                         -- default branch
       I.collectAddr I.BreakStmt prune a ++  -- break statements
       [I.goRel [1, i, 1] a | i <- enumFromTo 0 (I.numChildren (I.goDown 1 a)-1)] -- case
@@ -364,7 +366,7 @@ multiple' p = Solver.mkVariable (idGen p) []
 
 -- | Create a dependence to a program point.
 single' :: ProgramPoint -> ProgramPoint -> Solver.TypedVar PredecessorList
-single' p x = multiple' p $ PredecessorList [x]
+single' p x = multiple' p $ PredecessorList $ Set.singleton x
 
 -- | 'Post' 'ProgramPoint's for all 'ContinueStmt' nodes directly
 -- below the given address.

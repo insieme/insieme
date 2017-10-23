@@ -39,6 +39,8 @@ module Insieme.Analysis.Framework.ProgramPoint where
 
 import Data.Maybe
 
+import qualified Data.Set as Set
+
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Query as Q
 import qualified Insieme.Utils.BoundSet as BSet
@@ -132,7 +134,7 @@ mkPredecessorConstraintCredentials :: (Solver.Lattice a)
 mkPredecessorConstraintCredentials pp analysis = (dep,val)
     where
         predecessorVar = predecessor pp
-        predecessorStateVars a = map analysis $ unPL $ Solver.get a predecessorVar
+        predecessorStateVars a = map analysis $ Set.toList $ unPL $ Solver.get a predecessorVar
 
         dep a = (Solver.toVar predecessorVar) : map Solver.toVar (predecessorStateVars a)
         val a = Solver.join $ map (Solver.get a) (predecessorStateVars a)
