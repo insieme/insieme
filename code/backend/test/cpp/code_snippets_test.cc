@@ -291,7 +291,7 @@ namespace backend {
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			EXPECT_PRED2(containsSubString, code, "v324 = IMP_S()");
+			EXPECT_PRED2(containsSubString, code, "v324 = IMP_S{}");
 			EXPECT_PRED2(notContainsSubString, code, "new");
 			EXPECT_PRED2(notContainsSubString, code, "alloca(");
 		})
@@ -1320,13 +1320,13 @@ namespace backend {
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			EXPECT_PRED2(containsSubString, code, "A a1;");
-			EXPECT_PRED2(containsSubString, code, "A a2((1));");
-			EXPECT_PRED2(containsSubString, code, "A* a1r = new A();");
-			EXPECT_PRED2(containsSubString, code, "A* a2r = new A(1);");
-			EXPECT_PRED2(containsSubString, code, "A* a3 = new A();");
-			EXPECT_PRED2(containsSubString, code, "A* a4 = new A(1);");
-			EXPECT_PRED2(containsSubString, code, "new (&a5) A();");
-			EXPECT_PRED2(containsSubString, code, "new (&a6) A(1);");
+			EXPECT_PRED2(containsSubString, code, "A a2{(1)};");
+			EXPECT_PRED2(containsSubString, code, "A* a1r = new A{};");
+			EXPECT_PRED2(containsSubString, code, "A* a2r = new A{1};");
+			EXPECT_PRED2(containsSubString, code, "A* a3 = new A{};");
+			EXPECT_PRED2(containsSubString, code, "A* a4 = new A{1};");
+			EXPECT_PRED2(containsSubString, code, "new (&a5) A{};");
+			EXPECT_PRED2(containsSubString, code, "new (&a6) A{1};");
 		})
 	}
 
@@ -1358,9 +1358,9 @@ namespace backend {
 			EXPECT_PRED2(containsSubString, code, "free(i);");
 			EXPECT_PRED2(containsSubString, code, "int32_t* j = _ref_new___insieme_type_2(42);");
 			EXPECT_PRED2(containsSubString, code, "free(j);");
-			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o1 = new IMP_SimplestConstructor();");
+			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* o1 = new IMP_SimplestConstructor{};");
 			EXPECT_PRED2(containsSubString, code, "delete o1;");
-			EXPECT_PRED2(containsSubString, code, "IMP_SlightlyLessSimpleConstructor* o2 = new IMP_SlightlyLessSimpleConstructor(42);");
+			EXPECT_PRED2(containsSubString, code, "IMP_SlightlyLessSimpleConstructor* o2 = new IMP_SlightlyLessSimpleConstructor{42};");
 			EXPECT_PRED2(containsSubString, code, "delete o2;");
 			EXPECT_PRED2(notContainsSubString, code, "= malloc("); // make sure there are no malloc calls with result not cast to the right type
 		})
@@ -1389,8 +1389,8 @@ namespace backend {
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			EXPECT_PRED2(containsSubString, code, "int32_t* inta = (int32_t*)((void*)(&intplace));");
 			EXPECT_PRED2(containsSubString, code, "int32_t* intb = cxx_placement_new((void*)(&intplace), 42);");
-			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* object = new ((IMP_SimplestConstructor*)((void*)(&objectPlace))) IMP_SimplestConstructor()");
-			EXPECT_PRED2(containsSubString, code, "new ((IMP_SimplestConstructor*)((void*)(&expressionPlace))) IMP_SimplestConstructor()");
+			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* object = new ((IMP_SimplestConstructor*)((void*)(&objectPlace))) IMP_SimplestConstructor{}");
+			EXPECT_PRED2(containsSubString, code, "new ((IMP_SimplestConstructor*)((void*)(&expressionPlace))) IMP_SimplestConstructor{}");
 		})
 	}
 
