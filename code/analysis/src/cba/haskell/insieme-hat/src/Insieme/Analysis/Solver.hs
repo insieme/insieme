@@ -97,7 +97,7 @@ module Insieme.Analysis.Solver (
 
 ) where
 
-import Debug.Trace
+-- import Debug.Trace
 
 import GHC.Stack
 
@@ -135,6 +135,10 @@ import Insieme.Analysis.Entities.Memory
 import Insieme.Analysis.Entities.ProgramPoint
 
 import Insieme.Analysis.Solver.Metadata
+
+-- A flag to enable / disable internal consistency checks (for debugging)
+check_consistency :: Bool
+check_consistency = False -- || True
 
 -- Lattice --------------------------------------------------
 
@@ -395,9 +399,8 @@ data AssignmentView = UnfilteredView Assignment
 
 get :: (HasCallStack, Typeable a) => AssignmentView -> TypedVar a -> a
 get (UnfilteredView a) v = get' a v
---get (FilteredView _ a) v = get' a v
 get (FilteredView vs a) v = case () of 
-    _ | elem (toVar v) vs -> res
+    _ | not check_consistency || elem (toVar v) vs -> res
     _ | otherwise -> error ("Invalid variable access: " ++ (show v) ++ " not in " ++ (show vs))
   where
     res = get' a v
@@ -559,6 +562,7 @@ resolveAll i tvs = (res <$> tvs,s)
 -- solve for a set of variables
 solve :: SolverState -> [Var] -> SolverState
 solve initial vs = case violations of
+        _ | not check_consistency -> res
         [] -> res
         _  -> error $ "Unsatisfied constraints:\n\t" ++ (intercalate "\n\t" $ print <$> violations )
 --        _  -> trace ("Unsatisfied constraints:\n\t" ++ (intercalate "\n\t" $ print <$> violations )) res
