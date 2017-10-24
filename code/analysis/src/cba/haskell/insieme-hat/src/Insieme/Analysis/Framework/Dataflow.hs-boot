@@ -20,6 +20,8 @@ module Insieme.Analysis.Framework.Dataflow (
     dataflowValue
 ) where
 
+import GHC.Stack
+
 import Data.Typeable
 
 import Insieme.Inspire (NodeAddress)
@@ -61,7 +63,7 @@ mkConstant :: (Typeable a, Solver.ExtLattice v) => DataFlowAnalysis a v i -> Nod
 -- * Generic Data Flow Value Analysis
 --
 
-dataflowValue :: (ComposedValue.ComposedValue a i v, Typeable d)
+dataflowValue :: (HasCallStack, ComposedValue.ComposedValue a i v, Typeable d)
          => NodeAddress                                     -- ^ the address of the node for which to compute a variable representing the data flow value
          -> DataFlowAnalysis d a i                          -- ^ the summar of the analysis to be performed be realized by this function
          -> [OperatorHandler a]                             -- ^ allows selected operators to be intercepted and interpreted

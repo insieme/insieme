@@ -60,6 +60,8 @@ module Insieme.Analysis.Framework.Dataflow (
 ) where
 
 
+import GHC.Stack
+
 import Data.Foldable
 import Data.Maybe
 import Data.Typeable
@@ -135,7 +137,7 @@ mkConstant a n v = var
 -- * Generic Data Flow Value Analysis
 --
 
-dataflowValue :: (ComposedValue.ComposedValue a i v, Typeable d)
+dataflowValue :: (HasCallStack, ComposedValue.ComposedValue a i v, Typeable d)
          => NodeAddress                                     -- ^ the address of the node for which to compute a variable representing the data flow value
          -> DataFlowAnalysis d a i                          -- ^ the summar of the analysis to be performed be realized by this function
          -> [OperatorHandler a]                             -- ^ allows selected operators to be intercepted and interpreted
@@ -235,7 +237,7 @@ dataflowValue addr analysis ops = case I.getNode addr of
 
         unknownTarget = Solver.createConstraint dep val var
             where
-                dep _ = [] -- covered by known targets: [Solver.toVar trg]
+                dep _ = [Solver.toVar callTargetVar]
                 val a = if BSet.isUniverse targets then top else uncoveredOperatorValue
                     where
 

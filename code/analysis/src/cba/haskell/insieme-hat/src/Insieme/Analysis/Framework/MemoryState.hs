@@ -613,7 +613,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
             I.InitExpr -> I.goDown 1 addr                        -- target memory location
             _ -> error "refVar: unhandled case"
 
-        refVal :: Solver.Assignment -> BSet.UnboundSet (Reference SimpleFieldIndex)
+        refVal :: Solver.AssignmentView -> BSet.UnboundSet (Reference SimpleFieldIndex)
         refVal a = unRS $ ComposedValue.toValue $ Solver.get a refVar
 
         noRefs a = BSet.null $ refVal a
@@ -751,7 +751,7 @@ writeSet addr = case Q.getNodeType addr of
                 targetVar = callableValue $ I.goDown 1 addr
                 targetVal a = ComposedValue.toValue $ Solver.get a targetVar
 
-                writeSetSummaryVars :: Solver.Assignment -> [Solver.TypedVar (WS.WriteSet SimpleFieldIndex)]
+                writeSetSummaryVars :: Solver.AssignmentView -> [Solver.TypedVar (WS.WriteSet SimpleFieldIndex)]
                 writeSetSummaryVars a = if BSet.isUniverse trgs then [] else list
                     where
                         trgs = targetVal a

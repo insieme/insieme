@@ -230,6 +230,7 @@ allTupleElementIndexes = all isTupleElementIndex
 
 isArrayIndex :: SimpleFieldIndex -> Bool
 isArrayIndex (ArrayIndex _ ) = True
+isArrayIndex (UnknownIndex)  = True
 isArrayIndex _          = False
 
 allArrayIndexes :: [SimpleFieldIndex] -> Bool
@@ -237,6 +238,7 @@ allArrayIndexes = all isArrayIndex
 
 isStdArrayIndex :: SimpleFieldIndex -> Bool
 isStdArrayIndex (StdArrayIndex _ ) = True
+isStdArrayIndex (UnknownIndex) = True
 isStdArrayIndex _          = False
 
 allStdArrayIndexes :: [SimpleFieldIndex] -> Bool
@@ -244,6 +246,7 @@ allStdArrayIndexes = all isStdArrayIndex
 
 isStdVectorIndex :: SimpleFieldIndex -> Bool
 isStdVectorIndex (StdVectorIndex _ _ ) = True
+isStdVectorIndex (UnknownIndex) = True
 isStdVectorIndex _          = False
 
 allStdVectorIndexes :: [SimpleFieldIndex] -> Bool

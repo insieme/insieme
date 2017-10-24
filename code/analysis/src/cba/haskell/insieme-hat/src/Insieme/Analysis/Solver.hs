@@ -65,10 +65,9 @@ module Insieme.Analysis.Solver (
     getDependencies,
     getLimit,
 
-    -- assignments
-    Assignment,
+    -- assignment views
+    AssignmentView,
     get,
-    set,
 
     -- solver state
     SolverState,
@@ -99,6 +98,8 @@ module Insieme.Analysis.Solver (
 ) where
 
 import Debug.Trace
+
+import GHC.Stack
 
 import Prelude hiding (lookup,print)
 import Control.Arrow
@@ -297,20 +298,20 @@ mkVariable :: (Lattice a) => Identifier -> [Constraint] -> a -> TypedVar a
 mkVariable i cs b = var
     where
         var = TypedVar ( Var i cs ( toDyn b ) print' )
-        print' = (\a -> print $ get a var )
+        print' = (\a -> print $ get' a var )
 
 toVar :: TypedVar a -> Var
 toVar (TypedVar x) = x
 
-getDependencies :: Assignment -> TypedVar a -> [Var]
+getDependencies :: AssignmentView -> TypedVar a -> [Var]
 getDependencies a v = concat $ (go <$> (constraints . toVar) v)
     where
         go c = dependingOn c a
 
-getLimit :: (Lattice a) => Assignment -> TypedVar a -> a
+getLimit :: (Lattice a) => AssignmentView -> TypedVar a -> a
 getLimit a v = join (go <$> (constraints . toVar) v)
     where
-        go c = get a' v
+        go c = get' a' v
             where
                 (a',_) = update c a
 
@@ -367,8 +368,8 @@ empty = Assignment emptyVarMap
 
 -- retrieves a value from the assignment
 -- if the value is not present, the bottom value of the variable will be returned
-get :: (Typeable a) => Assignment -> TypedVar a -> a
-get (Assignment m) (TypedVar v) =
+get' :: (Typeable a) => Assignment -> TypedVar a -> a
+get' (Assignment m) (TypedVar v) =
         fromJust $ (fromDynamic :: ((Typeable a) => Dynamic -> (Maybe a)) ) $ fromMaybe (bottom v) (lookup v m)
 
 
@@ -387,6 +388,24 @@ reset (Assignment m) vars = Assignment $ insertAll reseted m
                 v = indexToVar iv
 
 
+-- Assignment Views ----------------------------------------
+
+data AssignmentView = UnfilteredView Assignment
+                    | FilteredView [Var] Assignment
+
+get :: (HasCallStack, Typeable a) => AssignmentView -> TypedVar a -> a
+get (UnfilteredView a) v = get' a v
+--get (FilteredView _ a) v = get' a v
+get (FilteredView vs a) v = case () of 
+    _ | elem (toVar v) vs -> res
+    _ | otherwise -> error ("Invalid variable access: " ++ (show v) ++ " not in " ++ (show vs))
+  where
+    res = get' a v
+
+stripFilter :: AssignmentView -> Assignment
+stripFilter (UnfilteredView a) = a
+stripFilter (FilteredView _ a) = a
+
 
 -- Constraints ---------------------------------------------
 
@@ -398,10 +417,10 @@ data Event =
 
 
 data Constraint = Constraint {
-        dependingOn         :: Assignment -> [Var],                      -- obtains list of variables depending on
-        update              :: (Assignment -> (Assignment,Event)),       -- update the assignment, a reset is allowed
-        updateWithoutReset  :: (Assignment -> (Assignment,Event)),       -- update the assignment, a reset is not allowed
-        check               :: SolverState -> Maybe Violation            -- check whether this constraint is satisfied
+        dependingOn         :: AssignmentView -> [Var],                      -- obtains list of variables depending on
+        update              :: (AssignmentView -> (Assignment,Event)),       -- update the assignment, a reset is allowed
+        updateWithoutReset  :: (AssignmentView -> (Assignment,Event)),       -- update the assignment, a reset is not allowed
+        check               :: SolverState -> Maybe Violation                -- check whether this constraint is satisfied
    }
 
 
@@ -508,7 +527,6 @@ getAllDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
 getAllDep d i = collect [i] Set.empty
     where
         collect [] s = s
-        collect (v:_:_) s | v == i = s        -- we can stop if we reach the seed variable again
         collect (v:vs) s = collect ((Set.toList $ Set.difference dep s) ++ vs) (Set.union dep s)
             where
                 dep = getDep d v
@@ -535,7 +553,7 @@ resolveAll i tvs = (res <$> tvs,s)
     where
         s = solve i (toVar <$> tvs)
         ass = assignment s
-        res = get ass
+        res = get' ass
 
 
 -- solve for a set of variables
@@ -543,6 +561,7 @@ solve :: SolverState -> [Var] -> SolverState
 solve initial vs = case violations of
         [] -> res
         _  -> error $ "Unsatisfied constraints:\n\t" ++ (intercalate "\n\t" $ print <$> violations )
+--        _  -> trace ("Unsatisfied constraints:\n\t" ++ (intercalate "\n\t" $ print <$> violations )) res
     where
         -- compute the solution
         (ivs,nindex) = varsToIndex (variableIndex initial) vs
@@ -588,7 +607,7 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
 
                 -- each constraint extends the result, the dependencies, and the vars to update
                 go _ = foldr processConstraint (a,i,d,vs,0) ( constraints $ indexToVar v )  -- update all constraints of current variable
-                processConstraint c (a,i,d,dv,numResets) = case ( update c a ) of
+                processConstraint c (a,i,d,dv,numResets) = case ( update c fa ) of
 
                         (a',None)         -> (a',ni,nd,nv,numResets)                -- nothing changed, we are fine
 
@@ -599,11 +618,14 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
                                 dep = getAllDep nd trg
                                 ra = if not $ Set.member trg dep                    -- if variable is not indirectly depending on itself
                                     then reset a' dep                               -- reset all depending variables to their bottom value
-                                    else fst $ updateWithoutReset c a               -- otherwise insist on merging reseted value with current state
+                                    else fst $ updateWithoutReset c fa              -- otherwise insist on merging reseted value with current state
 
                     where
+                            ua = UnfilteredView a
+                            fa = FilteredView dep a
+
                             trg = v
-                            dep = dependingOn c a
+                            dep = dependingOn c ua
                             (idep,ni) = varsToIndex i dep
 
                             newVarsList = filter f idep
@@ -624,45 +646,50 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
 --   * a function to return the dependent variables of this constraint,
 --   * the current value of the constraint,
 --   * and the target variable for this constraint.
-createConstraint :: (Lattice a) => ( Assignment -> [Var] ) -> ( Assignment -> a ) -> TypedVar a -> Constraint
+createConstraint :: (Lattice a) => ( AssignmentView -> [Var] ) -> ( AssignmentView -> a ) -> TypedVar a -> Constraint
 createConstraint dep limit trg = Constraint dep update' update' check'
     where
-        update' a = case () of
+        update' fa = case () of
                 _ | value `less` current -> (                                a,      None)    -- nothing changed
                 _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change
             where
-                value = limit a                                                               -- the value from the constraint
-                current = get a trg                                                           -- the current value in the assignment
+                value = limit fa                                                              -- the value from the constraint
+                current = get' a trg                                                          -- the current value in the assignment
+                a = stripFilter fa
 
         check' state = 
                 if value `less` current then Nothing
                 else Just $ Violation (print') (show value) (show current)
             where
                 a = assignment state
-                value = limit a
-                current = get a trg
+                ua = UnfilteredView a
+                fa = FilteredView (dep ua) a
+                value = limit fa
+                current = get' a trg
 
         print' = "f(A) => g(A) ⊑ " ++ (show trg)
 
 -- creates a constraint of the form f(A) = A[b] enforcing equality
-createEqualityConstraint :: Lattice t => (Assignment -> [Var]) -> (Assignment -> t) -> TypedVar t -> Constraint
+createEqualityConstraint :: Lattice t => (AssignmentView -> [Var]) -> (AssignmentView -> t) -> TypedVar t -> Constraint
 createEqualityConstraint dep limit trg = Constraint dep update forceUpdate check'
     where
-        update a = case () of
+        update fa = case () of
                 _ | value `less` current -> (              a,      None)    -- nothing changed
                 _ | current `less` value -> (set a trg value, Increment)    -- an incremental change
                 _                        -> (set a trg value,     Reset)    -- a reseting change, heading in a different direction
 
             where
-                value = limit a                                             -- the value from the constraint
-                current = get a trg                                         -- the current value in the assignment
+                value = limit fa                                            -- the value from the constraint
+                current = get' a trg                                        -- the current value in the assignment
+                a = stripFilter fa
 
-        forceUpdate a = case () of
+        forceUpdate fa = case () of
                 _ | value `less` current -> (                                a,      None)    -- nothing changed
                 _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change
             where
-                value = limit a                                                               -- the value from the constraint
-                current = get a trg                                                           -- the current value in the assignment
+                value = limit fa                                                              -- the value from the constraint
+                current = get' a trg                                                          -- the current value in the assignment
+                a = stripFilter fa
 
         check' state = case () of
                 _ | value `less` current && current `less` value -> Nothing             -- perfect, it is equal!
@@ -670,22 +697,24 @@ createEqualityConstraint dep limit trg = Constraint dep update forceUpdate check
                 _ | otherwise -> Just $ Violation (print') (show value) (show current)  -- not so good :(
             where
                 a = assignment state
-                value = limit a
-                current = get a trg
+                ua = UnfilteredView a
+                fa = FilteredView (dep ua) a
+                value = limit fa
+                current = get' a trg
 
                 -- compute the set of all variables the constraint variable is depending on
-                allDependencies = collect (dep a) Set.empty
+                allDependencies = collect (dep ua) Set.empty
                     where
                         collect [] s = s
                         collect (v:vs) s = collect ((Set.toList $ Set.difference dep s) ++ vs) (Set.union dep s)
                             where
-                                dep = Set.fromList $ concatMap (flip dependingOn $ a) $ constraints v
+                                dep = Set.fromList $ concatMap (flip dependingOn ua) $ constraints v
 
                 -- determine whether the constraint variable is indeed in a active cycle
                 inCycle = Set.member (toVar trg) allDependencies
 
 
-        print' = "f(A) => g(A) = " ++ (show trg)
+        print' = "f(A) => g(A) = " ++ (show trg) ++ " with " ++ (show $ length $ constraints $ toVar trg) ++ " constraints"
 
 
 -- creates a constraint of the form   A[a] \in A[b]
@@ -751,7 +780,7 @@ toDotGraph (SolverState a@(Assignment _) varIndex _ _ _) = "digraph G {\n\t"
         varSet = knownVariables varIndex
 
         -- a function collecting all variables a variable is depending on
-        dep v = foldr (\c l -> (dependingOn c a) ++ l) [] (constraints v)
+        dep v = foldr (\c l -> (dependingOn c $ UnfilteredView a) ++ l) [] (constraints v)
 
         -- list of all variables in the analysis
         allVars = Set.toList $ varSet
@@ -826,7 +855,7 @@ toJsonMetaFile root SolverState {assignment, variableIndex} =
             (summary, details) = shorten showed
         in (show $ varIdent var,) $ MetadataGroup ident summary details $
         flip map (constraints var) $ \c ->
-        let dep_vars = dependingOn c assignment
+        let dep_vars = dependingOn c $ UnfilteredView assignment
         in MetadataLinkGroup "Depending on this variable" $
         flip map dep_vars $ \dep_var ->
         let vi = varIdent dep_var
@@ -938,7 +967,7 @@ analyseVarDependencies s =
         nodes = go <$> Set.toList vars
             where
                 go v = (v,v,dep v)
-                dep v = foldr (\c l -> (dependingOn c ass) ++ l) [] (constraints v)
+                dep v = foldr (\c l -> (dependingOn c $ UnfilteredView ass) ++ l) [] (constraints v)
 
 
         sccs = Graph.stronglyConnComp nodes

@@ -129,7 +129,7 @@ programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case Q.getNodeTy
 mkPredecessorConstraintCredentials :: (Solver.Lattice a)
         => ProgramPoint
         -> (ProgramPoint -> Solver.TypedVar a)
-        -> (Solver.Assignment -> [Solver.Var],Solver.Assignment -> a)
+        -> (Solver.AssignmentView -> [Solver.Var],Solver.AssignmentView -> a)
 
 mkPredecessorConstraintCredentials pp analysis = (dep,val)
     where
