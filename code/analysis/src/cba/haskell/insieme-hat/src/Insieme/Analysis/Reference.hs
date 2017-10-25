@@ -146,7 +146,8 @@ referenceValue addr = case Q.getNodeType addr of
             freeVariableHandler=epParamHandler,
             entryPointParameterHandler=epParamHandler,
             initialValue = compose $ BSet.singleton $ NullReference,
-            uninitializedValue = compose $ BSet.singleton UninitializedReference
+            uninitializedValue = compose $ BSet.singleton UninitializedReference,
+            unknownOperatorHandler = const $ compose $ BSet.singleton UninitializedReference  -- we assume that everything from extern is unrelated to intern
         }
 
         epParamHandler a = mkConstant analysis a $ compose $ BSet.singleton $ Reference a DP.Root
