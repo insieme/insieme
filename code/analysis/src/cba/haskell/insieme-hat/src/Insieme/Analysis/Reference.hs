@@ -38,6 +38,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Insieme.Analysis.Reference (
     Location,
@@ -235,13 +236,22 @@ referenceValue addr = case Q.getNodeType addr of
                         "IMP_std_colon__colon_array::IMP_at"
                     ]
             dep _ _ = [toVar baseRefVar, toVar indexVar]
-            val _ a = compose $ access (baseRefVal a) (indexVal a)
-            
+            val _ a = compose $ refs 
+              where
+                baseRefs = baseRefVal a
+                indexes = indexVal a
+
+                refs = case () of 
+                  _ | BSet.isUniverse baseRefs -> BSet.Universe
+                    | BSet.isUniverse indexes  -> accessUnknown baseRefs
+                    | otherwise                -> access baseRefs indexes
+
             indexVar = arithmeticValue $ I.goDown 1 $ I.goDown 3 addr
             indexVal a = BSet.toUnboundSet $ unSFS $ ComposedValue.toValue $ get a indexVar
 
             access = BSet.lift2 $ onRefs2 $ \(Reference l p) offset -> Reference l (DP.append p (DP.step $ stdArrayIndex offset))
 
+            accessUnknown = BSet.lift $ onRefs $ \(Reference l p) -> Reference l (DP.append p (DP.step unknownIndex))
 
         noDep _ _ = []
 

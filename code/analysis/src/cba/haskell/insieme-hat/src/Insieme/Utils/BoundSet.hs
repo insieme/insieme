@@ -84,6 +84,7 @@ module Insieme.Utils.BoundSet (
     applyOrDefault,
     filter,
     map,
+    lift,
     lift2,
 
     -- ** Set Operations
@@ -96,6 +97,8 @@ module Insieme.Utils.BoundSet (
     UnboundSet,
     toUnboundSet,
 ) where
+
+import GHC.Stack
 
 import Control.DeepSeq
 import Data.Typeable
@@ -167,7 +170,7 @@ toSet  Universe    = error "Cannot convert Universe :: UnboundSet to set"
 toSet (BoundSet s) = s
 
 -- Convert a 'BoundSet' to a list, throws an error when used with 'Universe'.
-toList :: BoundSet bb a -> [a]
+toList :: (HasCallStack) => BoundSet bb a -> [a]
 toList Universe     = error "Cannot convet Universe to list"
 toList (BoundSet x) = Set.toList x
 
@@ -186,6 +189,13 @@ map f (BoundSet x) = BoundSet (Set.map f x)
 filter :: (IsBound bb, Ord a) => (a->Bool) -> BoundSet bb a -> BoundSet bb a
 filter _ Universe     = Universe
 filter f (BoundSet x) = BoundSet (Set.filter f x)
+
+
+lift :: (IsBound bb, Ord a, Ord b)
+     => (a -> b) -> (BoundSet bb a -> BoundSet bb b)
+lift _ Universe     = Universe
+lift f (BoundSet x) = fromList $ f <$> Set.toList x
+
 
 lift2 :: (IsBound bb, Ord a, Ord b, Ord c)
       => (a -> b -> c) -> (BoundSet bb a -> BoundSet bb b -> BoundSet bb c)
