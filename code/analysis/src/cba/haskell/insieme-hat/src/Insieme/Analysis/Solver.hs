@@ -138,7 +138,7 @@ import Insieme.Analysis.Solver.Metadata
 
 -- A flag to enable / disable internal consistency checks (for debugging)
 check_consistency :: Bool
-check_consistency = False -- || True
+check_consistency = False
 
 -- Lattice --------------------------------------------------
 
