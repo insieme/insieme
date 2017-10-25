@@ -97,8 +97,6 @@ module Insieme.Analysis.Solver (
 
 ) where
 
--- import Debug.Trace
-
 import GHC.Stack
 
 import Prelude hiding (lookup,print)
@@ -136,9 +134,11 @@ import Insieme.Analysis.Entities.ProgramPoint
 
 import Insieme.Analysis.Solver.Metadata
 
+
 -- A flag to enable / disable internal consistency checks (for debugging)
 check_consistency :: Bool
 check_consistency = False -- || True
+
 
 -- Lattice --------------------------------------------------
 
@@ -360,7 +360,7 @@ newtype Assignment = Assignment ( VarMap Dynamic )
 instance Show Assignment where
     show a@( Assignment m ) = "Assignment {\n\t"
             ++
-            ( intercalate ",\n\t\t" ( map (\v -> (show v) ++ " = " ++ (valuePrint v a) ) vars ) )
+            ( intercalate ",\n\t\t" ( map (\v -> (show v) ++ " #" ++ (show $ idHash $ varIdent v) ++ " = " ++ (valuePrint v a) ) vars ) )
             ++
             "\n}"
         where
@@ -423,7 +423,8 @@ data Constraint = Constraint {
         dependingOn         :: AssignmentView -> [Var],                      -- obtains list of variables depending on
         update              :: (AssignmentView -> (Assignment,Event)),       -- update the assignment, a reset is allowed
         updateWithoutReset  :: (AssignmentView -> (Assignment,Event)),       -- update the assignment, a reset is not allowed
-        check               :: SolverState -> Maybe Violation                -- check whether this constraint is satisfied
+        check               :: SolverState -> Maybe Violation,               -- check whether this constraint is satisfied
+        printLimit          :: AssignmentView -> String                      -- requests to print the current limit defined (debugging)
    }
 
 
@@ -651,7 +652,7 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
 --   * the current value of the constraint,
 --   * and the target variable for this constraint.
 createConstraint :: (Lattice a) => ( AssignmentView -> [Var] ) -> ( AssignmentView -> a ) -> TypedVar a -> Constraint
-createConstraint dep limit trg = Constraint dep update' update' check'
+createConstraint dep limit trg = Constraint dep update' update' check' printLimit'
     where
         update' fa = case () of
                 _ | value `less` current -> (                                a,      None)    -- nothing changed
@@ -673,9 +674,11 @@ createConstraint dep limit trg = Constraint dep update' update' check'
 
         print' = "f(A) => g(A) ⊑ " ++ (show trg)
 
+        printLimit' a = print $ limit a
+
 -- creates a constraint of the form f(A) = A[b] enforcing equality
 createEqualityConstraint :: Lattice t => (AssignmentView -> [Var]) -> (AssignmentView -> t) -> TypedVar t -> Constraint
-createEqualityConstraint dep limit trg = Constraint dep update forceUpdate check'
+createEqualityConstraint dep limit trg = Constraint dep update forceUpdate check' printLimit'
     where
         update fa = case () of
                 _ | value `less` current -> (              a,      None)    -- nothing changed
@@ -719,6 +722,8 @@ createEqualityConstraint dep limit trg = Constraint dep update forceUpdate check
 
 
         print' = "f(A) => g(A) = " ++ (show trg) ++ " with " ++ (show $ length $ constraints $ toVar trg) ++ " constraints"
+
+        printLimit' a = print $ limit a
 
 
 -- creates a constraint of the form   A[a] \in A[b]
@@ -848,6 +853,7 @@ toJsonMetaFile root SolverState {assignment, variableIndex} =
     ($ "") $ showJSValue $ showJSON meta_file
 
   where
+    ua = UnfilteredView assignment
     meta_file = MetadataFile [] [] [] [] $ Map.toList addr_metadata_map
     addr_metadata_map :: Map NodePath MetadataBody
     addr_metadata_map =
@@ -859,8 +865,8 @@ toJsonMetaFile root SolverState {assignment, variableIndex} =
             (summary, details) = shorten showed
         in (show $ varIdent var,) $ MetadataGroup ident summary details $
         flip map (constraints var) $ \c ->
-        let dep_vars = dependingOn c $ UnfilteredView assignment
-        in MetadataLinkGroup "Depending on this variable" $
+        let dep_vars = dependingOn c ua
+        in MetadataLinkGroup ("Constraint with limit " ++ (printLimit c ua) ++ " depending on:") $
         flip map dep_vars $ \dep_var ->
         let vi = varIdent dep_var
         in MetadataLink (show vi) (formatVar dep_var) (varPathJust dep_var) (hasRoot root dep_var)

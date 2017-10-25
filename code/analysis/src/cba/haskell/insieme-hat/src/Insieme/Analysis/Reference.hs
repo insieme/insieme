@@ -106,7 +106,7 @@ instance (Eq i,Ord i,Show i,Typeable i,NFData i) => Lattice (ReferenceSet i) whe
     (ReferenceSet x) `merge` (ReferenceSet y) = ReferenceSet $ BSet.union x y
 
 instance (Eq i,Ord i,Show i,Typeable i,NFData i) => ExtLattice (ReferenceSet i) where
-    top = ReferenceSet $ BSet.singleton UninitializedReference       -- What is not known, is not a valid reference
+    top = ReferenceSet $ BSet.Universe
 
 
 --
@@ -145,7 +145,8 @@ referenceValue addr = case Q.getNodeType addr of
         analysis = (mkDataFlowAnalysis ReferenceAnalysis "R" referenceValue){
             freeVariableHandler=epParamHandler,
             entryPointParameterHandler=epParamHandler,
-            initialValue = compose $ BSet.singleton $ NullReference
+            initialValue = compose $ BSet.singleton $ NullReference,
+            uninitializedValue = compose $ BSet.singleton UninitializedReference
         }
 
         epParamHandler a = mkConstant analysis a $ compose $ BSet.singleton $ Reference a DP.Root
@@ -154,7 +155,7 @@ referenceValue addr = case Q.getNodeType addr of
 
         compose = ComposedValue.toComposed . ReferenceSet
 
-        opsHandler = [ allocHandler , declHandler , refNull, refNarrow , refExpand , refCast , refReinterpret , ptrToRef , ptrFromRef , stdArraySubscript ]
+        opsHandler = [ allocHandler , declHandler , refNull, refNarrow , refExpand , refCast , refReinterpret , refFromIntegral, ptrToRef , ptrFromRef , stdArraySubscript ]
 
         allocHandler = OperatorHandler cov noDep val
             where
@@ -194,6 +195,12 @@ referenceValue addr = case Q.getNodeType addr of
                 cov a = Q.isBuiltin a "ref_reinterpret"
                 dep _ _ = [toVar baseRefVar]
                 val _ a = get a baseRefVar            -- TODO: check when this conversion is actually valid
+
+        refFromIntegral = OperatorHandler cov dep val
+            where
+                cov a = Q.isBuiltin a "ref_from_integral"
+                dep _ _ = []
+                val _ _ = uninitializedValue analysis
 
         ptrToRef = OperatorHandler cov dep val
             where
@@ -242,7 +249,7 @@ referenceValue addr = case Q.getNodeType addr of
         baseRefVar   = referenceValue $ I.goDown 1 $ I.goDown 2 addr
         baseRefVal a = unRS $ ComposedValue.toValue $ get a baseRefVar
 
-        dataPathVar   = dataPathValue $ I.goDown 3 addr
+        dataPathVar   = dataPathValue $ I.goDown 1 $ I.goDown 3 addr
         dataPathVal a = ComposedValue.toValue $ get a dataPathVar
 
 

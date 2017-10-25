@@ -60,9 +60,7 @@ int main(int argc, char** argv) {
 	b[1][2] = 12;
 	cba_expect_eq_int(y,3);
 
-//	cba_print_code();
-//	cba_dump_solution();
-//	cba_dump_json();
+//	cba_debug();
 
 	return 0;
 }

@@ -54,8 +54,6 @@ import Insieme.Analysis.Framework.PropertySpace.ComposedValue
 import qualified Data.Map as Map
 import qualified Insieme.Analysis.Solver as Solver
 
-
-
 data Tree i a = Leaf a
               | Node (Map.Map i (Tree i a))
               | Empty
@@ -173,5 +171,16 @@ mergeTree a@(Node m) b@(Node n)  = r
                         fuse x = (x, mergeTree (get x a) (get x b))
                 Nothing -> Inconsistent
 
--- mergeTree a b = trace ("Unsupported merge of " ++ (show a) ++ " and " ++ (show b)) Inconsistent
-mergeTree _ _ = Inconsistent
+mergeTree a@(Node m) b@(Leaf _) = r
+    where
+        -- push leaf value into next level
+        keys = Map.keys m
+
+        r = Node $ Map.fromList $ map fuse keys
+        fuse x = (x, mergeTree (get x a) b)
+
+mergeTree a@(Leaf _) b@(Node _) = mergeTree b a
+
+mergeTree Inconsistent _ = Inconsistent
+mergeTree _ Inconsistent = Inconsistent
+

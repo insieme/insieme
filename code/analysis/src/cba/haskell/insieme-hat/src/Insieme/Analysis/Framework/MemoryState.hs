@@ -143,7 +143,7 @@ memoryStateValue ms@(MemoryStatePoint (ProgramPoint _ _) ml@(MemoryLocation loc)
 
         dep a = (Solver.toVar reachingDefVar) :
                    (
-                     if BSet.isUniverse defs || BSet.member Creation defs then []
+                     if BSet.isUniverse defs then []
                      else (map Solver.toVar $ definingValueVars a)
                    )
             where
@@ -151,13 +151,16 @@ memoryStateValue ms@(MemoryStatePoint (ProgramPoint _ _) ml@(MemoryLocation loc)
 
         val a = case () of
                 _ | BSet.isUniverse defs      -> Solver.top
-                  | BSet.member Initial defs  -> Solver.merge init value
                   | otherwise                 -> value
             where
-                init = initialValueHandler analysis loc
+                value = Solver.join $ (mapMaybe go $ BSet.toList defs) ++ valuesFromDefs
+                  where
+                    go def = case def of
+                        Initial  -> Just $ initialValueHandler analysis loc
+                        Creation -> Just $ uninitializedValue analysis
+                        _        -> Nothing
 
-                value = if BSet.member Creation $ defs then ComposedValue.top
-                        else Solver.join $ map (Solver.get a) (definingValueVars a)
+                valuesFromDefs = map (Solver.get a) (definingValueVars a)
 
                 defs = reachingDefVal a
 
