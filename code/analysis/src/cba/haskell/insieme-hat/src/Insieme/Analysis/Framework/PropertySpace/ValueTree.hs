@@ -91,6 +91,7 @@ instance (FieldIndex i, Solver.ExtLattice a) => ComposedValue (Tree i a) i a whe
 
     -- obtain an addressed value within a tree
     getElement  Root t = t
+    getElement _ l@(Leaf _) = l
     getElement (DataPath p Down i) t = get i $ getElement p t
     getElement _ _ = Inconsistent
 
@@ -147,7 +148,7 @@ get _ _            = Inconsistent
 set :: (Ord i) => i -> Tree i a -> Tree i a -> Tree i a
 set i v Empty        = Node $ Map.singleton i v
 set i v Inconsistent = Node $ Map.singleton i v
-set _ _ (Leaf _)     = Inconsistent
+set i v (Leaf _)     = Node $ Map.singleton i v
 set i v (Node m)     = Node $ Map.insert i v m
 
 
