@@ -67,6 +67,11 @@ namespace internal {
 	  public:
 
 		/**
+		 * A dummy operator for the haskell side to invoke an implicit constructor.
+		 */
+		LANG_EXT_LITERAL(HaskellImplicitCtor, "hs_implicit_ctor", "(ref<'a,f,f,plain>,'b) -> ref<'a,f,f,plain>")
+
+		/**
 		 * A dummy operator for the haskell side to create an addition.
 		 */
 		LANG_EXT_LITERAL(HaskellArithAdd, "hs_arith_add", "('a,'b) -> some_type")

@@ -51,7 +51,7 @@ module Insieme.Analysis.SymbolicValue (
 
 ) where
 
---import Debug.Trace
+-- import Debug.Trace
 
 import Control.DeepSeq (NFData)
 import Data.List (intercalate)
@@ -62,6 +62,7 @@ import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Reference
+import Insieme.Analysis.Utils.CppSemantic
 import Insieme.Query
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -123,6 +124,32 @@ genericSymbolicValue :: (Typeable d) => DataFlowAnalysis d SymbolicValueLattice 
 genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     IR.Literal  -> Solver.mkVariable varId [] (compose $ BSet.singleton $ Addr.getNode addr)
+
+    -- handle implicit constructor calls
+    IR.Declaration | callsImplicitConstructor addr -> var
+      where
+
+        -- retrieve the implicit constructor
+        Just ctor = getImplicitConstructor addr
+
+        -- decide based on constructor what to do
+        var = case getNodeType ctor of
+            IR.LambdaExpr   -> makeExplicit
+            t -> error $ "Unexpected ctor type: " ++ (show t)
+
+        makeExplicit = Solver.mkVariable varId [con] Solver.bot
+        con = Solver.createConstraint dep val makeExplicit
+
+        dep _ = [Solver.toVar initValueVar]
+        val a = compose $ BSet.map go $ initValueVal a
+          where
+            go arg = Builder.mkCallWithArgs resType IR.hsImplicitConstructor [mem,arg]
+            Just resType = getType $ Addr.getNode $ Addr.goDown 1 addr
+            Just objType = getReferencedType $ resType
+            mem = Builder.refTemporary $ objType
+
+        initValueVar = variableGenerator userDefinedAnalysis $ (Addr.goDown 1 addr)
+        initValueVal a = extract $ Solver.get a initValueVar
 
     -- introduce implicit materialization into symbolic value
     IR.Declaration | isMaterializingDeclaration $ Addr.getNode addr -> var

@@ -212,13 +212,17 @@ definedValue addr ml@(MemoryLocation loc) analysis = case Q.getNodeType addr of
 
             -- decide based on constructor what to do
             var = case Q.getNodeType ctor of
-                I.LambdaExpr   -> uninitialized -- the constructor is doing the rest
+                I.LambdaExpr   -> declValue -- the constructor is doing the rest
                 I.GenericType  -> interceptable
                 I.TypeVariable -> interceptable
                 t -> error $ "Unexpected ctor type: " ++ (show t)
 
             -- the default handling
             uninitialized = Solver.mkVariable varId [] $ uninitializedValue analysis
+
+            -- let the data flow analysis for the declaration figure out the value at this point
+            declValue = Solver.mkVariable varId [con] Solver.bot
+            con = Solver.forward (variableGenerator analysis addr) declValue
 
             -- here additional constructors can be integrated
             interceptable = case () of

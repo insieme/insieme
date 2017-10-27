@@ -101,10 +101,16 @@ refDeref = parseExpr "ref_deref"
 refAssign :: IR.Tree
 refAssign = parseExpr "ref_assign"
 
+refTemp :: IR.Tree
+refTemp = parseExpr "ref_temp"
+
 refTempInit :: IR.Tree
 refTempInit = parseExpr "ref_temp_init"
 
 -- Haskell extension constructs --
+
+hsImplicitConstructor :: IR.Tree
+hsImplicitConstructor = parseExpr "hs_implicit_ctor"
 
 hsRefMemberAccess :: IR.Tree
 hsRefMemberAccess = parseExpr "hs_ref_member_access"

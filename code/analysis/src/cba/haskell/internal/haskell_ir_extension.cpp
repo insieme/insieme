@@ -41,6 +41,7 @@
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/materialize.h"
 
 namespace insieme {
@@ -69,6 +70,26 @@ namespace internal {
 			// only interested in calls
 			auto call = node.isa<CallExprPtr>();
 			if (!call) return node;
+
+			// replace implicit constructor calls
+			if (ext.isCallOfHaskellImplicitCtor(node)) {
+				// decompose
+				auto arg0 = call->getArgument(0);
+				auto arg1 = call->getArgument(1);
+
+				// obtain the object type
+				auto objType = core::analysis::getReferencedType(arg0->getType()).as<TagTypePtr>();
+
+				// locate the implicit constructor
+				auto ctor = core::analysis::hasConstructorAccepting(objType,arg1->getType());
+				assert_true(ctor);
+
+				// peel constructor to fit outside world
+				auto peeledCtor = objType->peel(mgr,(*ctor).as<NodePtr>()).as<ExpressionPtr>();
+
+				// create resulting call
+				return builder.callExpr(peeledCtor,arg0,arg1);
+			}
 
 			// replace dummy-arith-add calls
 			if (ext.isCallOfHaskellArithAdd(node)) {

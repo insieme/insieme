@@ -40,6 +40,12 @@
 
 module Insieme.Inspire.Builder (
 
+    mkCall,
+    mkCallWithArgs,
+
+    mkTypeLiteralType,
+    mkTypeLiteral,
+
     plus,
     plusOne,
 
@@ -49,6 +55,7 @@ module Insieme.Inspire.Builder (
     deref,
     refMember,
     refComponent,
+    refTemporary,
     refTemporaryInit,
     refArrayElement,
     refStdArrayElement
@@ -88,6 +95,15 @@ mkCallWithArgs t f args = mkCall t f $ toDecl <$> args
 mkIdentifier :: String -> IR.Tree
 mkIdentifier s = mkLiteral s SP.identifierType
 
+mkTypeLiteralType :: IR.Tree -> IR.Tree
+mkTypeLiteralType t = IR.mkNode IR.GenericType [name, parents, params] []
+  where
+    name = mkStringValue "type"
+    parents = IR.mkNode IR.Parents [] []
+    params = IR.mkNode IR.Types [t] []
+
+mkTypeLiteral :: IR.Tree -> IR.Tree
+mkTypeLiteral t = mkLiteral "type_literal" $ mkTypeLiteralType t
 
 
 -- arithmetic operator calls --
@@ -123,6 +139,9 @@ refMember t f = mkCall some_ref_type SP.hsRefMemberAccess $ wrapSomeDecl <$> [t,
 
 refComponent :: IR.Tree -> Int -> IR.Tree
 refComponent t i = mkCall some_ref_type SP.hsRefComponentAccess $ wrapSomeDecl <$> [t,mkLiteral (show i) SP.uint8]
+
+refTemporary :: IR.Tree -> IR.Tree
+refTemporary t = mkCall some_ref_type SP.refTemp [mkDeclaration some_type (mkTypeLiteral t)]
 
 refTemporaryInit :: IR.Tree -> IR.Tree
 refTemporaryInit e = mkCall some_ref_type SP.refTempInit [mkDeclaration some_type e]
