@@ -136,9 +136,8 @@ namespace extensions {
 		}
 
 		// tries to map a given operation (conditional) to an end expr for an IR for loop
-		// returns (valid, end expression)
-		std::pair<bool, core::ExpressionPtr> mapToEnd(core::VariablePtr var, core::ExpressionPtr operation) {
-			auto invalid = std::make_pair(false, core::ExpressionPtr());
+		core::ExpressionPtr mapToEnd(core::VariablePtr var, core::ExpressionPtr operation) {
+			auto invalid = core::ExpressionPtr();
 
 			auto& mgr = operation->getNodeManager();
 			core::IRBuilder builder(mgr);
@@ -150,24 +149,32 @@ namespace extensions {
 			auto callee = callExpr->getFunctionExpr();
 			if(!callExpr || callExpr->getNumArguments() != 2) return invalid;
 
+			auto lhs = callExpr->getArgument(0).isa<core::CallExprPtr>();
+			auto rhs = callExpr->getArgument(1);
+
+			auto rhsType = rhs->getType();
+			// if the LHS is wrapped in a numCast, we strip the cast but convert the RHS to the type of LHS - note that a numCast to the same type is a no-op
+			if(basic.isNumericCast(lhs->getFunctionExpr())) {
+				lhs = lhs->getArgument(0).isa<core::CallExprPtr>();
+				rhsType = lhs->getType();
+			}
+
 			// first check if variable is on LHS
 			// (should also work for rhs -- not yet)
-			auto lhs = callExpr->getArgument(0).isa<core::CallExprPtr>();
 			if(!rMod.isRefDeref(lhs->getFunctionExpr())) return invalid;
 			if(lhs->getArgument(0) != var) return invalid;
 
-			auto rhs = callExpr->getArgument(1);
 			// now check type of comparison
 			if(basic.isSignedIntNe(callee) || basic.isUnsignedIntNe(callee) || basic.isCharNe(callee) || basic.isSignedIntLt(callee)
 			   || basic.isUnsignedIntLt(callee) || basic.isCharLt(callee)) {
-				return std::make_pair(true, rhs);
+				return builder.numericCast(rhs, rhsType);
 			} else if(basic.isSignedIntGt(callee) || basic.isUnsignedIntGt(callee) || basic.isCharGt(callee)) {
 				// don't handle these for now, complex to say for certain what to do in all cases
 				return invalid;
 			} else if(basic.isSignedIntLe(callee) || basic.isUnsignedIntLe(callee) || basic.isCharLe(callee)) {
-				return std::make_pair(true, builder.add(rhs, builder.literal("1", rhs->getType())));
+				return builder.numericCast(builder.add(rhs, builder.literal("1", rhs->getType())), rhsType);
 			} else if(basic.isSignedIntGe(callee) || basic.isUnsignedIntGe(callee) || basic.isCharGe(callee)) {
-				//return std::make_pair(true, builder.sub(rhs, builder.literal("1", rhs->getType())));
+				//return builder.numericCast(builder.sub(rhs, builder.literal("1", rhs->getType())), rhsType);
 				// don't handle these for now, complex to say for certain what to do in all cases
 				return invalid;
 			}
@@ -278,6 +285,8 @@ namespace extensions {
 				core::TypePtr cvarType = core::analysis::getReferencedType(cvar->getType());
 				VLOG(1) << "cvar: " << dumpColor(cvar) << "\n -- type: " << cvarType << "\n";
 
+				VLOG(1) << "condition: " << dumpColor(condition) << "\n";
+
 				// if it's not an integer, we bail out for now
 				if(!basic.isInt(cvarType)) return original;
 
@@ -290,7 +299,7 @@ namespace extensions {
 				bool writeStepExprsAreTheSame = true;
 				core::visitDepthFirstPrunable(core::NodeAddress(body), [&](const core::NodeAddress& varA) {
 					auto var = varA.getAddressedNode().isa<core::VariablePtr>();
-					if(var == cvar) {
+					if(var == cvar && varA.getDepth()>2) {
 						// check if it's a write
 						auto varParent = varA.getParentNode(2);
 						auto convertedPair = mapToStep(varParent);
@@ -352,11 +361,11 @@ namespace extensions {
 
 				/////////////////////////////////////////////////////////////////////////////////////// figuring out end
 
-				auto convertedEndPair = mapToEnd(cvar, condition);
-				VLOG(1) << "EndPair: " << convertedEndPair.first << " // " << convertedEndPair.second << "\n";
+				auto convertedEnd = mapToEnd(cvar, condition);
+				VLOG(1) << "End: " << convertedEnd << "\n";
 
 				// bail if no valid end found
-				if(!convertedEndPair.first) return original;
+				if(!convertedEnd) return original;
 
 				/////////////////////////////////////////////////////////////////////////////////////// build the for
 
@@ -380,7 +389,7 @@ namespace extensions {
 				VLOG(1) << "oldLoopVarFree: " << oldLoopVarFree << " // " << "free vars: " << core::analysis::getFreeVariables(newBody) << "\n";
 				if(oldLoopVarFree) return original;
 
-				auto forStmt = builder.forStmt(forVar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr, newBody);
+				auto forStmt = builder.forStmt(forVar, convertedStartPair.second, convertedEnd, convertedStepExpr, newBody);
 				core::transform::utils::migrateAnnotations(whileAddr.getAddressedNode(), forStmt);
 				VLOG(1) << "======> FOR:\n" << dumpColor(forStmt);
 
@@ -391,7 +400,7 @@ namespace extensions {
 				/////////////////////////////////////////////////////////////////////////////////////// check if post assignment is mandatory
 				auto usedAfterLoop = isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), pred, cvar);
 				if(usedAfterLoop) {
-					stmtlist.push_back(getPostCondition(cvar, convertedStartPair.second, convertedEndPair.second, convertedStepExpr));
+					stmtlist.push_back(getPostCondition(cvar, convertedStartPair.second, convertedEnd, convertedStepExpr));
 				}
 
 				/////////////////////////////////////////////////////////////////////////////////////// remove declaration if we can

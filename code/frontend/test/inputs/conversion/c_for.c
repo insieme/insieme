@@ -40,6 +40,9 @@ int g_bla = 10;
 #define N 10
 double g_volume[N][N][N][N];
 
+void fooValue(int i) {}
+void fooPointer(int* i) {}
+
 int main() {
 
 	int magic;
@@ -158,6 +161,41 @@ int main() {
 			l_bla2++;
 		}
 
+	}
+
+	// passing the iterator as value is ok, passing it as pointer will cause the while loop not to be transformed to a for loop
+	#pragma test expect_ir(R"(
+		def IMP_fooValue = function (v0 : ref<int<4>,f,f,plain>) -> unit { };
+		{
+			{
+				for( int<4> v0 = 0 .. 10 : 1) {
+					IMP_fooValue(v0);
+				}
+			}
+		}
+	)")
+	{
+		for(int i = 0; i < 10; i++) {
+			fooValue(i);
+		}
+	}
+
+	#pragma test expect_ir(R"(
+		def IMP_fooPointer = function (v0 : ref<ptr<int<4>>,f,f,plain>) -> unit { };
+		{
+			{
+				var ref<int<4>,f,f,plain> v0 = 0;
+				while(*v0<10) {
+					IMP_fooPointer(ptr_from_ref(v0));
+					gen_post_inc(v0);
+				}
+			}
+		}
+	)")
+	{
+		for(int i = 0; i < 10; i++) {
+			fooPointer(&i);
+		}
 	}
 
 	/* FOLLOWING TEST SNIPPETS ARE CHECKING THE
