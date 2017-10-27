@@ -1,7 +1,6 @@
 # Do not remove this file even if it does not blacklist any test.
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
-array_bug
 const_type_modifier
 if_decl
 indirect_member_init
@@ -12,7 +11,6 @@ non_default_static
 static_in_template
 tellg
 throw
-tr1_array
 try_catch
 unspecified_bool_type
 vfunc
@@ -24,5 +22,3 @@ vfunc
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
-+templated_return_type
-+const_ref_init

@@ -3,7 +3,6 @@
 
 alignof
 async
-function_type_template_arg
 rvalue
 stdinitlistexpr
 
@@ -15,5 +14,3 @@ stdinitlistexpr
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
-+lambda
-+init_list
