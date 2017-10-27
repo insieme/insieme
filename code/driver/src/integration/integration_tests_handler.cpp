@@ -379,6 +379,8 @@ namespace integration {
 										<< boost::format("%-" + paddingWidth + "s") % cur.getName() << "#\n";
 					std::cout << "#" << std::string(screenWidth - 2, '-') << "#\n";
 
+					float totalTime = 0;
+					float maxMemory = 0;
 					for(const auto& curRes : results) {
 						// skip omitted steps
 						if(curRes.second.wasOmitted()) { continue; }
@@ -394,9 +396,13 @@ namespace integration {
 							// color certain passes:
 							if(highlight.find(curRes.first) != highlight.end()) { line << colorize.light_blue(); }
 
+							float time = curRes.second.getRuntime();
+							totalTime += time;
+							float memory = curRes.second.getMemory() / 1024;
+							maxMemory = memory > maxMemory ? memory : maxMemory;
 							line << "# " << curRes.first
 									 << boost::format(colOffset)
-													% (boost::format("[%.3f secs, %7.3f MB]") % curRes.second.getRuntime() % (curRes.second.getMemory() / 1024))
+													% (boost::format("[%.3f secs, %7.3f MB]") % time % memory)
 									 << " #" << colorize.reset() << "\n";
 
 							if(curRes.second.wasSuccessful()) {
@@ -413,6 +419,15 @@ namespace integration {
 						if(setup.clean) { curRes.second.clean(); }
 
 						if(curRes.second.wasAborted()) { panic = true; }
+					}
+
+					if(!options.mockrun && !options.preprocessingOnly && !options.postprocessingOnly) {
+						// print the total time/max memory for this test
+						std::cout << "#" << std::string(screenWidth - 2, '-') << "#\n";
+
+						std::string lineBegin = "# Total Time, Maximum Memory: ";
+						std::string lineEnd = (boost::format("[%.3f secs, %7.3f MB] #") % totalTime % maxMemory).str();
+						std::cout << lineBegin << std::string(screenWidth - lineBegin.size() - lineEnd.size(), ' ') << lineEnd << "\n";
 					}
 
 					if(!options.mockrun) {
