@@ -38,6 +38,8 @@
 module Insieme.Inspire.IR.Transform
     ( substitute
     , substitute'
+    , substituteInLocalScope
+    , substituteInLocalScope'
     , removeIds
     , removeIds'
     ) where
@@ -46,6 +48,7 @@ import Control.Monad.State
 import Data.Map (Map)
 import qualified Data.Map as Map
 
+import Insieme.Inspire.IR.NodeType as NT
 import Insieme.Inspire.IR.Tree as IR
 
 type TreeSubst = Map IR.Tree IR.Tree
@@ -68,6 +71,28 @@ substitute' t = do
                                }
         modify (Map.insert t t')
         return t'
+
+substituteInLocalScope :: TreeSubst -> IR.Tree -> IR.Tree
+substituteInLocalScope s t = evalState (substituteInLocalScope' t) s
+
+substituteInLocalScope' :: IR.Tree -> State TreeSubst IR.Tree
+substituteInLocalScope' t = do
+  s <- get
+  case getNodeType t of
+    NT.Lambda -> return t
+    _ -> case Map.lookup t s of
+        Just t' -> return t'
+        Nothing -> do
+            let ch = getChildren t
+            ch' <- mapM substitute' ch
+            let t' | ch' == ch = t
+                   | otherwise = t { getID = Nothing
+                                   , getChildren = ch'
+                                   , builtinTags = []
+                                   }
+            modify (Map.insert t t')
+            return t'
+
 
 
 removeIds :: IR.Tree -> IR.Tree
