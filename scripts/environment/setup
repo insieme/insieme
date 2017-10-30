@@ -1,30 +1,25 @@
 #!/bin/bash
 
-set -e
-set -u
+set -eu
 
 export DIR="$(dirname "$(readlink -f "$0")")"
 
+function already_installed() {
+        for pkg in "$@"; do
+                if ! dpkg-query -W $pkg; then
+                        return 1
+                fi
+        done
+        return 0
+}
+
 # Install basic dependencies
-if hash apt-get 2>/dev/null; then
-	sudo apt-get update
-	sudo apt-get -y install \
-		bison \
-		build-essential \
-		cmake \
-		flex \
-		libgmp10 \
-		libhwloc-dev \
-		libluajit-5.1-dev \
-		libpapi-dev \
-		m4 \
-		pkg-config \
-		ruby \
-		zlib1g
-else
+if ! [[ -f /usr/bin/apt-get && -f /usr/bin/dpkg-query ]]; then
 	>&2 echo "Error: Not running on a Debian based distribution."
 	>&2 echo "       Please check the README for instructions."
 	exit 1
+elif ! already_installed $(cat "$DIR/system_packages"); then
+	sudo "$DIR/install_system_packages"
 fi
 
 # Run installer with default settings to install additional dependencies.

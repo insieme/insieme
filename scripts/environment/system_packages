@@ -1,0 +1,12 @@
+bison
+build-essential
+cmake
+flex
+libgmp10
+libhwloc-dev
+libluajit-5.1-dev
+libpapi-dev
+m4
+pkg-config
+ruby
+zlib1g
