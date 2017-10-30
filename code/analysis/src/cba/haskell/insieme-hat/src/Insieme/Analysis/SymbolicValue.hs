@@ -196,8 +196,12 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
                         "ref_temp", "ref_temp_init",
                         "ref_new", "ref_new_init",
                         "ref_kind_cast", "ref_const_cast", "ref_volatile_cast", "ref_parent_cast",
+                         "ref_reinterpret",
                         "num_cast"
-                     ] || isConstructor a
+                     ] || any (isOperator a) [
+                        "IMP_std_colon__colon_array::IMP__operator_subscript_",
+                        "IMP_std_colon__colon_array::IMP_at"
+                     ] || isConstructor a 
             -- literal builtins to ignore
             toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign" ]
 
