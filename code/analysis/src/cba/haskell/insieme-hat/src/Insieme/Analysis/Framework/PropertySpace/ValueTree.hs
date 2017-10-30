@@ -91,6 +91,7 @@ instance (FieldIndex i, Solver.ExtLattice a) => ComposedValue (Tree i a) i a whe
 
     -- obtain an addressed value within a tree
     getElement  Root t = t
+    getElement _ Empty = Empty
     getElement _ l@(Leaf _) = l
     getElement (DataPath p Down i) t = get i $ getElement p t
     getElement _ _ = Inconsistent
