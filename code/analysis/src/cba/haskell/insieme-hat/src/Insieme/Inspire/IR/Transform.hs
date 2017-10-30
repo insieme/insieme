@@ -84,7 +84,7 @@ substituteInLocalScope' t = do
         Just t' -> return t'
         Nothing -> do
             let ch = getChildren t
-            ch' <- mapM substitute' ch
+            ch' <- mapM substituteInLocalScope' ch
             let t' | ch' == ch = t
                    | otherwise = t { getID = Nothing
                                    , getChildren = ch'
