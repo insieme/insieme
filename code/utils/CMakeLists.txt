@@ -8,7 +8,7 @@ target_include_directories(utils SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
 
 # LuaJIT
 find_package(LuaJIT REQUIRED)
-target_link_libraries(utils ${LuaJIT_LIBRARIES})
+target_link_libraries(utils ${LuaJIT_LIBRARIES} m ${CMAKE_DL_LIBS})
 target_include_directories(utils SYSTEM PUBLIC ${LuaJIT_INCLUDE_DIRS})
 
 glob_tests(utils_tests test)
