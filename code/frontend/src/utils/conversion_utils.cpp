@@ -51,35 +51,50 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/utils/name_mangling.h"
+
 namespace insieme {
 namespace frontend {
 namespace utils {
 
 	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& memLoc, const core::ExpressionPtr& initExpIn) {
-		auto& mgr = initExpIn->getNodeManager();
+		static auto initializerListMangledName = insieme::utils::mangle("std::initializer_list");
+
+		core::ExpressionPtr initExp(initExpIn);
+		auto& mgr = initExp->getNodeManager();
 		auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
+
+		// initializations of std::initializer_list objects have special semantics in C++. The frontend generates a ref_deref around it, which should not be there
+		if(refExt.isCallOfRefDeref(initExp)) {
+			auto elementType = initExp->getType();
+			if(auto tagT = elementType.isa<core::GenericTypePtr>()) {
+				if(boost::starts_with(tagT->getName()->getValue(), initializerListMangledName)) {
+					initExp = core::analysis::getArgument(initExp, 0);
+				}
+			}
+		}
+
 		// if the init expr is a constructor call
-		if(core::analysis::isConstructorCall(initExpIn)) {
-			core::CallExprAddress call(initExpIn.as<core::CallExprPtr>());
+		if(core::analysis::isConstructorCall(initExp)) {
+			core::CallExprAddress call(initExp.as<core::CallExprPtr>());
 			assert_ge(call->getNumArguments(), 1) << "Ill-formed constructor call. Missing this argument";
 			if(refExt.isCallOfRefTemp(call->getArgument(0))) {
 				// we replace the first parameter (which has been created as ref_temp) by the memory space being initialized
-				return core::transform::replaceNode(
-					       initExpIn->getNodeManager(), call->getArgument(0),
+				return core::transform::replaceNode(mgr, call->getArgument(0),
 					       core::lang::buildRefCast(memLoc, call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterType(0)))
 					.as<core::ExpressionPtr>();
 			}
 		}
 		// if the init expr is an init expr
-		core::ExpressionAddress initExp(initExpIn);
-		if(refExt.isCallOfRefDeref(initExp)) initExp = core::ExpressionAddress(initExpIn.as<core::CallExprPtr>()->getArgument(0));
-		if(auto initInitExpr = initExp.isa<core::InitExprAddress>()) {
+		core::ExpressionAddress initExpAddr(initExp);
+		if(refExt.isCallOfRefDeref(initExp)) initExpAddr = core::ExpressionAddress(initExpAddr.as<core::CallExprPtr>()->getArgument(0));
+		if(auto initInitExpr = initExpAddr.isa<core::InitExprAddress>()) {
 			auto memExprAddr = initInitExpr->getMemoryExpr();
 			if(refExt.isCallOfRefTemp(memExprAddr)) {
-				return core::transform::replaceNode(initExp->getNodeManager(), memExprAddr, memLoc).as<core::ExpressionPtr>();
+				return core::transform::replaceNode(mgr, memExprAddr, memLoc).as<core::ExpressionPtr>();
 			}
 		}
-		return initExpIn;
+		return initExp;
 	}
 
 

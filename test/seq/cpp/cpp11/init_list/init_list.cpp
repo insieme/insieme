@@ -16,26 +16,33 @@ void f(std::initializer_list<int> l) {
 	}
 }
 
+int getNextID() {
+	static int nextId = 0;
+	return nextId++;
+}
+
 //more complicated semantics
 struct TestObj {
-	TestObj() {
-		std::cout << "Construct TestObj" << std::endl;
+	int id;
+
+	TestObj() : id(getNextID()) {
+		std::cout << "Construct TestObj " << id << std::endl;
 	}
-	TestObj(const TestObj& other) {
-		std::cout << "Copy construct TestObj" << std::endl;
+	TestObj(const TestObj& other) : id(getNextID()) {
+		std::cout << "Copy construct TestObj " << id << " from other: " << other.id << std::endl;
 	}
-	TestObj(TestObj&& other) {
-		std::cout << "Move construct TestObj" << std::endl;
+	TestObj(TestObj&& other) : id(getNextID()) {
+		std::cout << "Move construct TestObj " << id << " from other: " << other.id << std::endl;
 	}
 	~TestObj() {
-		std::cout << "Destroy TestObj" << std::endl;
+		std::cout << "Destroy TestObj " << id << std::endl;
 	}
 	TestObj& operator= (const TestObj& other) {
-		std::cout << "Copy assign TestObj" << std::endl;
+		std::cout << "Copy assign TestObj " << id << " from other: " << other.id << std::endl;
 		return *this;
 	}
 	TestObj& operator= (TestObj&& other) {
-		std::cout << "Move assign TestObj" << std::endl;
+		std::cout << "Move assign TestObj " << id << " from other: " << other.id << std::endl;
 		return *this;
 	}
 };
@@ -53,10 +60,11 @@ int main (){
 	T{42,43};
 	f({ 5 });
 
+	std::initializer_list<int> i1;
 	std::initializer_list<int> i{42, 43, 44};
 	std::cout << i.size() << std::endl;
 	std::cout << *i.begin() << std::endl;
-	std::cout << *i.end() << std::endl;
+	std::cout << *(i.end() - 1) << std::endl;
 	std::initializer_list<int> ib;
 	ib = i;
 

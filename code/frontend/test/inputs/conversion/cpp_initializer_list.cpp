@@ -131,7 +131,7 @@ int main() {
 
 	#pragma test expect_ir(int_IR, R"(
 		{
-			var ref<IMP_std_colon__colon_initializer_list_int,f,f,plain> v0 = ref_cast(IMP_std_colon__colon_initializer_list_int::(ref_temp(type_lit(IMP_std_colon__colon_initializer_list_int)), 1, 2, 3), type_lit(t), type_lit(f), type_lit(cpp_ref));
+			var ref<IMP_std_colon__colon_initializer_list_int,f,f,plain> v0 = IMP_std_colon__colon_initializer_list_int::(ref_decl(type_lit(ref<IMP_std_colon__colon_initializer_list_int,f,f,plain>)), 1, 2, 3);
 		}
 	)")
 	{
