@@ -41,6 +41,7 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <regex>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/tokenizer.hpp>
@@ -656,6 +657,141 @@ namespace integration {
 
 		// otherwise it is a whole directory structure. Load all the test cases in there
 		return loadAllCasesInDirectory(absTestDir, testPaths);
+	}
+
+	vector<IntegrationTestCase> loadCasesForOptions(IntegrationTestPaths testPaths, const Options& options) {
+		// if no test is specified explicitly load all of them
+		LoadTestCaseMode loadMode = ENABLED_TESTS;
+		if(options.blacklistedOnly) loadMode = BLACKLISTED_TESTS;
+		else if(options.longTestsOnly) loadMode = LONG_TESTS;
+		else if(options.longTestsAlso) loadMode = ENABLED_AND_LONG_TESTS;
+
+		if(options.inplace)
+			testPaths.outputDir = testPaths.testsRootDir;
+
+		if(options.cases.empty()) {
+			return getAllCases(loadMode, testPaths);
+		}
+
+		// load selected test cases
+		vector<IntegrationTestCase> cases;
+		for(const auto& cur : options.cases) {
+			// load test case based on the location
+			auto curSuite = getTestSuite(boost::filesystem::path(cur), testPaths);
+			for(const auto& cur : curSuite) {
+				if(!contains(cases, cur)) { // make sure every test is only present once
+					cases.push_back(cur);
+				}
+			}
+		}
+		return cases;
+	}
+
+	vector<TestStep> getTestStepsForOptions(const Options& options) {
+		vector<TestStep> steps;
+		vector<TestStep> all = getFullStepList();
+
+		// load steps selected by the options
+		if(!options.steps.empty()) {
+			for(const auto& cur : options.steps) {
+				bool found = false;
+				for(auto step : all) {
+					if(step.getName() == cur) {
+						steps.push_back(step);
+						found = true;
+					}
+				}
+				if(!found) { std::cout << "WARNING: Unknown test step: " << cur << "\n"; }
+			}
+			return steps;
+		}
+
+		return all;
+	}
+
+	namespace {
+		bool isExcluded(string excludes, TestStep step) {
+			boost::char_separator<char> sep(",\"");
+			boost::tokenizer<boost::char_separator<char>> tokens(excludes, sep);
+
+			for(const string& it : tokens) {
+				string tmp(it);
+				boost::replace_all(tmp, "*", ".*");
+				std::regex reg(tmp);
+				if(std::regex_match(step.getName(), reg)) { return true; }
+			}
+			return false;
+		}
+
+		void scheduleStep(const TestStep& step, vector<TestStep>& res, const IntegrationTestCase& test) {
+			// check whether test is already present
+			if(::contains(res, step)) { return; }
+			auto props = test.getProperties();
+
+			if(isExcluded(props["excludeSteps"], step)) {
+				LOG(WARNING) << test.getName() << " has a step with a dependency on an excluded step (" << step.getName() << ") -- please fix the test config!"
+				             << std::endl;
+			}
+
+			// check that all dependencies are present
+			for(const auto& cur : step.getDependencies()) {
+				scheduleStep(getStepByName(cur), res, test);
+			}
+
+			// append step to schedule
+			res.push_back(step);
+		}
+	}
+
+	// filter steps based on some conflicting steps
+	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test) {
+		auto props = test.getProperties();
+		vector<TestStep> stepsToExecute;
+
+		for(const TestStep step : steps) {
+			bool conflicts = false;
+			string conflictingStep = "";
+
+			if(!isExcluded(props["excludeSteps"], step) && !conflicts) { stepsToExecute.push_back(step); }
+
+			// in case the test requires OpenCL but we do lack of e.g. headers, simply disable it
+			if(test.isEnableOpenCL() && !utils::compiler::isOpenCLAvailable()) return vector<TestStep>();
+		}
+
+		// in case the test is not an OpenCL one automatically remove all such devoted steps
+		if(!test.isEnableOpenCL()) {
+			// filter out all steps which are devoted to OpenCL
+			stepsToExecute.erase(std::remove_if(stepsToExecute.begin(), stepsToExecute.end(), [](const auto& step) {
+				return step.getName().find("_ocl_") != std::string::npos;
+			}));
+		}
+
+		return stepsToExecute;
+	}
+
+
+	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test) {
+		vector<TestStep> res;
+		for(const auto& cur : steps) {
+			scheduleStep(cur, res, test);
+		}
+
+		// Handling the preprocessing & postprocessing case as well as the prerequisite check
+		vector<TestStep> final;
+		TestStep prerequisiteCheck;
+		for(const auto& cur : res) {
+			// store the prerequisite step
+			if(cur.getName() == TEST_STEP_CHECK_PREREQUISITES) {
+				prerequisiteCheck = cur;
+
+				// add all the others except pre- and post-processing which we'll simply drop
+			} else if(cur.getName() != TEST_STEP_PREPROCESSING && cur.getName() != TEST_STEP_POSTPROCESSING) {
+				final.push_back(cur);
+			}
+		}
+
+		if(!prerequisiteCheck.getName().empty()) { final.insert(final.begin(), prerequisiteCheck); }
+		return final;
 	}
 
 } // end namespace integration

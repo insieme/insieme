@@ -37,7 +37,7 @@
 
 #pragma once
 
-#include <map>
+#include <vector>
 #include <set>
 #include <string>
 #include <functional>
@@ -59,25 +59,11 @@ namespace integration {
 	struct TestStep;
 	class TestRunner;
 
-	// a function obtaining an index of available steps
-	const std::map<std::string, TestStep>& getFullStepList(int statThreads, bool scheduling);
-	const std::map<std::string, TestStep>& getFullStepList();
+	// a function obtaining a list of available steps
+	const std::vector<TestStep>& getFullStepList();
 
 	// gets a specific test step by name
-	const TestStep& getStepByName(const std::string& name, int numThreads = 0, bool scheduling = false);
-
-	// filters out test steps that are not suitable for the given tests
-	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test,
-	                             const map<string, string>& conflicting = map<string, string>());
-
-	// schedules the list of test steps by adding dependent steps and fixing the order properly
-	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads = 0, bool scheduling = false);
-
-	// checks the prerequisites for a test case in case there is such a step. Returns false if the prerequisites are not satisfied.
-	bool checkPrerequisites(const IntegrationTestCase& test, boost::filesystem::path buildDir);
-
-	// reads out a given file and returns the contents
-	std::string readFile(std::string filename);
+	const TestStep& getStepByName(const std::string& name);
 
 	// ------------------------------------------------------------------------
 
@@ -127,25 +113,17 @@ namespace integration {
 
 	struct TestSetup {
 		bool mockRun;
-		SchedulingPolicy sched;
 		bool clean;
 		int numThreads;
 		std::string stdOutFile;
 		std::string stdErrFile;
 		std::string outputFile;
-
-		// perf metrics
-		bool perf;
-		string load_miss;
-		string store_miss;
-		string flops;
-		vector<string> perf_metrics;
 	};
 
-	enum StepType { COMPILE, RUN, CHECK, STATIC_METRIC, UNDEFINED };
 
 	struct TestStep : public boost::less_than_comparable<TestStep>, public boost::equality_comparable<TestStep>, public insieme::utils::Printable {
-		typedef std::function<TestResult(TestSetup, const IntegrationTestCase& test, const TestRunner& runner)> StepOp;
+
+		using StepOp = std::function<TestResult(TestSetup, const IntegrationTestCase& test, const TestRunner& runner)>;
 
 	  private:
 		std::string name;
@@ -154,25 +132,11 @@ namespace integration {
 
 		std::set<std::string> dependencies;
 
-		StepType type;
-
-	  protected:
-		friend class boost::serialization::access;
-		template <class Archive>
-		void serialize(Archive& ar, const unsigned int version) {
-			ar& name;
-			// ar & step;
-			ar& dependencies;
-			ar& type;
-		}
-
-		TestStep(StepType type) : type(type){};
-
 	  public:
 		TestStep(){};
 
-		TestStep(const std::string& name, const StepOp& op, const std::set<std::string>& dependencies = std::set<std::string>(), StepType type = UNDEFINED)
-		    : name(name), step(op), dependencies(dependencies), type(type) {}
+		TestStep(const std::string& name, const StepOp& op, const std::set<std::string>& dependencies = std::set<std::string>())
+		    : name(name), step(op), dependencies(dependencies) {}
 
 		const std::string& getName() const {
 			return name;
@@ -197,23 +161,12 @@ namespace integration {
 		std::ostream& printTo(std::ostream& out) const {
 			return out << name;
 		}
-
-		const StepType getStepType() const {
-			return type;
-		}
-	};
-
-	// special test step only to contain results of static metrics
-	struct StaticMetricsStep : public TestStep {
-	  public:
-		StaticMetricsStep() : TestStep(STATIC_METRIC){};
 	};
 
 
 	// define the TestRunner here
 	class TestRunner {
 	  private:
-		typedef insieme::driver::integration::IntegrationTestCase TestCase;
 		mutable std::vector<pid_t> pids;
 		std::function<void()> func;
 		std::function<void()> pre;

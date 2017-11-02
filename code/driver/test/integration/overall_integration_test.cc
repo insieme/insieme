@@ -96,9 +96,7 @@ namespace integration {
 		// prepare the setup
 		TestSetup setup;
 		setup.mockRun = false;
-		setup.sched = SCHED_UNDEFINED;
 		setup.clean = true;
-		setup.perf = false;
 
 		auto checkPrerequisites = [setup](const IntegrationTestCase& testCase) -> bool {
 			TestStep step = getStepByName(TEST_STEP_CHECK_PREREQUISITES);
