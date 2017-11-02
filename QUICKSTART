@@ -8,7 +8,7 @@ set -e
 set -u
 
 # Let us first create a build directory and enter it.
-mkdir build
+mkdir -p build
 cd build
 
 # The follow script will install the needed dependencies and setup the build
