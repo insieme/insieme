@@ -11,15 +11,18 @@ details.
 ## Quick Start Guide
 
 To build Insieme, clone this repository and take a peek at `QUICKSTART`. You
-can directly execute it, given you are running a recent Ubuntu / Debian.
+can directly execute it, given you are running a recent Ubuntu / Debian (and
+have `sudo` installed).
 
     $ git clone https://github.com/insieme/insieme
     $ cd insieme
     $ ./QUICKSTART    # prompts for sudo
 
 If you are using a different distribution use your package manager to install
-all dependencies available. A list of dependencies can be viewed in
-[`/scripts/dependencies/README.md`](scripts/dependencies/README.md).
+all dependencies available. The generalized list of dependencies can be viewed
+in [`/scripts/dependencies/README.md`](scripts/dependencies/README.md). The
+list of system packages installed by the quick start guide are found in
+[`system_packages`](scripts/environment/system_packages).
 
 For software not available in your package manager (or the ones that require an
 Insieme specific patch) use the provided dependency installer inside
@@ -27,7 +30,7 @@ Insieme specific patch) use the provided dependency installer inside
 
 ## Directory Structure
 
-Insieme contains 5 main sub-directories:
+Insieme contains 5 sub-directories:
 
 | Directory  | Contains                            |
 | ---------- | ----------------------------------- |
@@ -64,11 +67,9 @@ Following options can be supplied to CMake:
 | -DINSIEME_CXX_BACKEND_COMPILER | \<path\>        |
 | -DTHIRD_PARTY_DIR              | \<path\>        |
 
-These settings are defined in the [build_settings] and [insieme_specific] CMake
-modules, located in the `/cmake` subdirectory.
-
-[build_settings]: <cmake/build_settings.cmake>
-[insieme_specific]: <cmake/insieme_specific.cmake>
+These settings are defined in
+[`build_settings.cmake`](cmake/build_settings.cmake) and
+[`insieme_specific.cmake`](cmake/insieme_specific.cmake).
 
 ### OpenCL
 
@@ -161,12 +162,6 @@ prefer to use Insieme from the build directory. Install scripts may be provided
 in future releases.
 
 ## Development
-
-### Executable Bit
-
-When working on Windows via SMB share, consider setting following Git setting.
-
-    $ git config core.filemode false
 
 ### Licensor
 
