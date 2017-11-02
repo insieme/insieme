@@ -9,4 +9,8 @@ libpapi-dev
 m4
 pkg-config
 ruby
+wget
 zlib1g
+python
+groff-base
+time
