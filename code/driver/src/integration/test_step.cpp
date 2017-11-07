@@ -344,10 +344,12 @@ namespace integration {
 			return output;
 		}
 
-		std::vector<TestStep> createFullStepList() {
-			std::vector<TestStep> list;
+		std::set<TestStep> createFullStepList() {
+			std::set<TestStep> list;
 
-			auto add = [&](const TestStep& step) { list.push_back(step); };
+			auto add = [&](const TestStep& step) { list.insert(step); };
+
+			// Note that we have to create the steps here in the order they should (and can) be executed. The creation order will set their id which will be used for comparison
 
 			// the check for the prerequisites is executed before all other steps
 			add(createBashCommandStep(TEST_STEP_CHECK_PREREQUISITES));
@@ -360,12 +362,12 @@ namespace integration {
 			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_SEQ_C_COMPILE, Sequential, C, {TEST_STEP_INSIEMECC_SEQ_C_CONVERT}));
 			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_SEQ_C_EXECUTE, Sequential, {TEST_STEP_INSIEMECC_SEQ_C_COMPILE}));
 			// run
-			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_RUN_C_COMPILE, Runtime, C, {TEST_STEP_INSIEMECC_RUN_C_CONVERT}));
 			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_RUN_C_CONVERT, Runtime, C));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_RUN_C_COMPILE, Runtime, C, {TEST_STEP_INSIEMECC_RUN_C_CONVERT}));
 			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_C_EXECUTE, Runtime, {TEST_STEP_INSIEMECC_RUN_C_COMPILE}));
 			// ocl
-			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_OCL_C_COMPILE, Opencl, C, {TEST_STEP_INSIEMECC_OCL_C_CONVERT}));
 			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_OCL_C_CONVERT, Opencl, C));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_OCL_C_COMPILE, Opencl, C, {TEST_STEP_INSIEMECC_OCL_C_CONVERT}));
 			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_OCL_C_EXECUTE, Opencl, {TEST_STEP_INSIEMECC_OCL_C_COMPILE}));
 			// ref
 			add(createRefCompilationStep(TEST_STEP_REF_C_COMPILE, C));
@@ -403,22 +405,18 @@ namespace integration {
 		}
 	}
 
-	const std::vector<TestStep>& getFullStepList() {
+	const std::set<TestStep>& getFullStepList() {
 		const static auto list = createFullStepList();
 		return list;
 	}
 
-	const TestStep& getStepByName(const std::string& name) {
-		static const TestStep fail;
-
+	boost::optional<TestStep> getStepByName(const std::string& name) {
 		for(const auto& step : getFullStepList()) {
 			if(step.getName() == name) {
 				return step;
 			}
 		}
-
-		assert_fail() << "Requested unknown step: " << name;
-		return fail;
+		return {};
 	}
 
 	/*

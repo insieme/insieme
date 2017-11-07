@@ -39,6 +39,7 @@
 
 #include <string>
 #include <map>
+#include <set>
 #include <vector>
 #include <boost/filesystem.hpp>
 
@@ -404,19 +405,9 @@ namespace integration {
 	vector<IntegrationTestCase> loadCasesForOptions(IntegrationTestPaths testPaths, const Options& options);
 
 	/**
-	 * Returns all the test steps which should be used for the given options
+	 * Get the test steps for the given options (maybe all available steps, or only selected steps) considering the excludes specified for the given test case
 	 */
-	vector<TestStep> getTestStepsForOptions(const Options& options);
-
-	/**
-	 * Filters out test steps that are not suitable for the given tests
-	 */
-	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test);
-
-	/**
-	 * Schedules the list of test steps by adding dependent steps and fixing the order properly
-	 */
-	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test);
+	std::set<TestStep> getTestStepsForTestCaseAndOptions(const IntegrationTestCase& testCase, const Options& options);
 
 	/**
 	 * Allow Integration Tests to be properly printed within gtest.

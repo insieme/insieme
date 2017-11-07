@@ -99,7 +99,7 @@ namespace integration {
 		setup.clean = true;
 
 		auto checkPrerequisites = [setup](const IntegrationTestCase& testCase) -> bool {
-			TestStep step = getStepByName(TEST_STEP_CHECK_PREREQUISITES);
+			TestStep step = getStepByName(TEST_STEP_CHECK_PREREQUISITES).get();
 
 			// now execute the step
 			auto result = step.run(setup, testCase, TestRunner::getInstance());

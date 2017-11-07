@@ -280,9 +280,6 @@ namespace integration {
 			return 0;
 		}
 
-		// load list of test steps
-		auto steps = itc::getTestStepsForOptions(options);
-
 
 		itc::TestSetup setup;
 		setup.mockRun = options.mockrun;
@@ -335,29 +332,22 @@ namespace integration {
 
 				if(panic) { continue; }
 
-				vector<TestStep> list;
-
-				if(options.preprocessingOnly) {
-					list.push_back(itc::getStepByName(itc::TEST_STEP_PREPROCESSING));
-
-				} else if(options.postprocessingOnly) {
-					list.push_back(itc::getStepByName(itc::TEST_STEP_POSTPROCESSING));
-
-				} else {
-					// filter applicable steps based on test case
-					list = itc::filterSteps(steps, cur);
-					// schedule resulting steps
-					list = itc::scheduleSteps(list, cur);
-				}
+				// the test steps to execute
+				std::set<TestStep> steps = itc::getTestStepsForTestCaseAndOptions(cur, options);
 
 				// if this test doesn't schedule any steps we count it as omitted
-				if(list.empty()) { omittedTestsCount++; }
+				if(steps.empty()) {
+					#pragma omp critical
+					{
+						omittedTestsCount++;
+					}
+				}
 
 				// run steps
 				vector<TestResult> results;
 				bool success = true;
 
-				for(const auto& step : list) {
+				for(const auto& step : steps) {
 					auto res = step.run(setup, cur, runner);
 					results.push_back(res);
 					if(!res.wasOmitted() && !res.wasSuccessful()) {
@@ -380,14 +370,14 @@ namespace integration {
 
 					float totalTime = 0;
 					float maxMemory = 0;
-					for(const auto& step : results) {
-						const auto& stepName = step.getStepName();
+					for(const auto& result : results) {
+						const auto& stepName = result.getStepName();
 						// skip omitted steps
-						if(step.wasOmitted()) { continue; }
+						if(result.wasOmitted()) { continue; }
 
 						if(options.mockrun) {
 							std::cout << colorize.blue() << stepName << std::endl;
-							std::cout << colorize.green() << step.getCmd() << colorize.reset() << std::endl;
+							std::cout << colorize.green() << result.getCmd() << colorize.reset() << std::endl;
 						} else {
 							string colOffset;
 							colOffset = string("%") + std::to_string(screenWidth - 4 - stepName.size()) + "s";
@@ -396,29 +386,29 @@ namespace integration {
 							// color certain passes:
 							if(highlight.find(stepName) != highlight.end()) { line << colorize.light_blue(); }
 
-							float time = step.getRuntime();
+							float time = result.getRuntime();
 							totalTime += time;
-							float memory = step.getMemory() / 1024;
+							float memory = result.getMemory() / 1024;
 							maxMemory = memory > maxMemory ? memory : maxMemory;
 							line << "# " << stepName
 									 << boost::format(colOffset)
 													% (boost::format("[%.3f secs, %7.3f MB]") % time % memory)
 									 << " #" << colorize.reset() << "\n";
 
-							if(step.wasSuccessful()) {
+							if(result.wasSuccessful()) {
 								std::cout << line.str();
 							} else {
 								std::cout << colorize.red() << line.str();
 								std::cout << "#" << std::string(screenWidth - 2, '-') << "#" << colorize.reset() << std::endl;
-								std::cout << "Command: " << colorize.green() << step.getCmd() << colorize.reset() << std::endl << std::endl;
-								std::cout << step.getFullOutput();
+								std::cout << "Command: " << colorize.green() << result.getCmd() << colorize.reset() << std::endl << std::endl;
+								std::cout << result.getFullOutput();
 							}
 
-							success = success && step.wasSuccessful();
+							success = success && result.wasSuccessful();
 						}
-						if(setup.clean) { step.clean(); }
+						if(setup.clean) { result.clean(); }
 
-						if(step.wasAborted()) { panic = true; }
+						if(result.wasAborted()) { panic = true; }
 					}
 
 					if(!options.mockrun && !options.preprocessingOnly && !options.postprocessingOnly) {

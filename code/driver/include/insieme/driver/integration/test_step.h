@@ -43,9 +43,10 @@
 #include <functional>
 #include <signal.h>
 
+#include <boost/filesystem.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/operators.hpp>
-#include <boost/filesystem.hpp>
+#include <boost/optional.hpp>
 
 #include "insieme/driver/integration/tests.h"
 #include "insieme/driver/integration/test_result.h"
@@ -60,10 +61,10 @@ namespace integration {
 	class TestRunner;
 
 	// a function obtaining a list of available steps
-	const std::vector<TestStep>& getFullStepList();
+	const std::set<TestStep>& getFullStepList();
 
 	// gets a specific test step by name
-	const TestStep& getStepByName(const std::string& name);
+	boost::optional<TestStep> getStepByName(const std::string& name);
 
 	// ------------------------------------------------------------------------
 
@@ -126,6 +127,8 @@ namespace integration {
 		using StepOp = std::function<TestResult(TestSetup, const IntegrationTestCase& test, const TestRunner& runner)>;
 
 	  private:
+		unsigned id;
+
 		std::string name;
 
 		StepOp step;
@@ -133,10 +136,11 @@ namespace integration {
 		std::set<std::string> dependencies;
 
 	  public:
-		TestStep(){};
-
 		TestStep(const std::string& name, const StepOp& op, const std::set<std::string>& dependencies = std::set<std::string>())
-		    : name(name), step(op), dependencies(dependencies) {}
+		    : name(name), step(op), dependencies(dependencies) {
+			static unsigned idCounter = 0;
+			id = idCounter++;
+		}
 
 		const std::string& getName() const {
 			return name;
@@ -155,7 +159,7 @@ namespace integration {
 		}
 
 		bool operator<(const TestStep& other) const {
-			return name < other.name;
+			return id < other.id;
 		}
 
 		std::ostream& printTo(std::ostream& out) const {

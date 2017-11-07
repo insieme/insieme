@@ -687,30 +687,9 @@ namespace integration {
 		return cases;
 	}
 
-	vector<TestStep> getTestStepsForOptions(const Options& options) {
-		vector<TestStep> steps;
-		vector<TestStep> all = getFullStepList();
-
-		// load steps selected by the options
-		if(!options.steps.empty()) {
-			for(const auto& cur : options.steps) {
-				bool found = false;
-				for(auto step : all) {
-					if(step.getName() == cur) {
-						steps.push_back(step);
-						found = true;
-					}
-				}
-				if(!found) { std::cout << "WARNING: Unknown test step: " << cur << "\n"; }
-			}
-			return steps;
-		}
-
-		return all;
-	}
-
 	namespace {
-		bool isExcluded(string excludes, TestStep step) {
+		bool isExcluded(const IntegrationTestCase& testCase, const TestStep& testStep) {
+			std::string excludes = testCase.getProperties()["excludeSteps"];
 			boost::char_separator<char> sep(",\"");
 			boost::tokenizer<boost::char_separator<char>> tokens(excludes, sep);
 
@@ -718,80 +697,87 @@ namespace integration {
 				string tmp(it);
 				boost::replace_all(tmp, "*", ".*");
 				std::regex reg(tmp);
-				if(std::regex_match(step.getName(), reg)) { return true; }
+				if(std::regex_match(testStep.getName(), reg)) { return true; }
 			}
 			return false;
 		}
 
-		void scheduleStep(const TestStep& step, vector<TestStep>& res, const IntegrationTestCase& test) {
-			// check whether test is already present
-			if(::contains(res, step)) { return; }
-			auto props = test.getProperties();
-
-			if(isExcluded(props["excludeSteps"], step)) {
-				LOG(WARNING) << test.getName() << " has a step with a dependency on an excluded step (" << step.getName() << ") -- please fix the test config!"
-				             << std::endl;
+		bool addStepDependencies(std::set<TestStep>& steps, const TestStep& testStep, const IntegrationTestCase& testCase, bool excludeIsWarning) {
+			if(isExcluded(testCase, testStep)) {
+				return false;
 			}
 
-			// check that all dependencies are present
-			for(const auto& cur : step.getDependencies()) {
-				scheduleStep(getStepByName(cur), res, test);
+			// insert the step itself
+			steps.insert(testStep);
+
+			// and insert all dependencies recursively
+			for(const auto& dependencyName : testStep.getDependencies()) {
+				auto dependency = getStepByName(dependencyName);
+				assert_true(dependency) << "TestStep \"" << testStep.getName() << "\" depends on non-existant TestStep \"" << dependencyName << "\"";
+				// add child dependencies. If one of them is excluded, return false
+				if(!addStepDependencies(steps, dependency.get(), testCase, excludeIsWarning)) {
+					if(excludeIsWarning) {
+						std::cerr << "INFO: TestStep \"" << testStep.getName() << "\" can not be scheduled because it's dependency \"" << dependencyName << "\" has been excluded" << std::endl;
+					}
+					return false;
+				}
+			}
+			return true;
+		}
+
+		std::set<TestStep> scheduleStep(const TestStep& testStep, const IntegrationTestCase& testCase, bool excludeIsWarning) {
+			std::set<TestStep> res;
+			// recursively add the TestStep itself, as well as any dependencies.
+			if(addStepDependencies(res, testStep, testCase, excludeIsWarning)) {
+				return res;
 			}
 
-			// append step to schedule
-			res.push_back(step);
+			// return an empty set of steps, if one of the steps or it's dependencies has been excluded
+			return {};
 		}
 	}
 
-	// filter steps based on some conflicting steps
-	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test) {
-		auto props = test.getProperties();
-		vector<TestStep> stepsToExecute;
+	std::set<TestStep> getTestStepsForTestCaseAndOptions(const IntegrationTestCase& testCase, const Options& options) {
+		// in case the test requires OpenCL but we do lack of e.g. headers, simply disable it
+		if(testCase.isEnableOpenCL() && !utils::compiler::isOpenCLAvailable()) return {};
 
-		for(const TestStep step : steps) {
-			bool conflicts = false;
-			string conflictingStep = "";
-
-			if(!isExcluded(props["excludeSteps"], step) && !conflicts) { stepsToExecute.push_back(step); }
-
-			// in case the test requires OpenCL but we do lack of e.g. headers, simply disable it
-			if(test.isEnableOpenCL() && !utils::compiler::isOpenCLAvailable()) return vector<TestStep>();
+		// if we should run pre- or postprocessing only, return the respective steps
+		if(options.preprocessingOnly) {
+			return { getStepByName(TEST_STEP_PREPROCESSING).get() };
+		} else if(options.postprocessingOnly) {
+			return { getStepByName(TEST_STEP_POSTPROCESSING).get() };
 		}
 
-		// in case the test is not an OpenCL one automatically remove all such devoted steps
-		if(!test.isEnableOpenCL()) {
-			// filter out all steps which are devoted to OpenCL
-			stepsToExecute.erase(std::remove_if(stepsToExecute.begin(), stepsToExecute.end(), [](const auto& step) {
-				return step.getName().find("_ocl_") != std::string::npos;
-			}));
-		}
+		std::set<TestStep> res;
 
-		return stepsToExecute;
-	}
+		// if the user requested to execute only certain steps, we add them and all their dependencies, if neither is blacklisted
+		if(!options.steps.empty()) {
+			for(const auto& stepToExecute : options.steps) {
+				auto step = getStepByName(stepToExecute);
+				if(!step) {
+					std::cerr << "WARNING: No such step to run: " << stepToExecute << std::endl;
+				} else {
+					// add all required steps to the final schedule
+					auto stepsToSchedule = scheduleStep(step.get(), testCase, true);
+					res.insert(stepsToSchedule.begin(), stepsToSchedule.end());
+					if(stepsToSchedule.empty()) {
+						std::cerr << "WARNING: No steps scheduled for step: " << stepToExecute << std::endl;
+					}
+				}
+			}
 
-
-	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test) {
-		vector<TestStep> res;
-		for(const auto& cur : steps) {
-			scheduleStep(cur, res, test);
-		}
-
-		// Handling the preprocessing & postprocessing case as well as the prerequisite check
-		vector<TestStep> final;
-		TestStep prerequisiteCheck;
-		for(const auto& cur : res) {
-			// store the prerequisite step
-			if(cur.getName() == TEST_STEP_CHECK_PREREQUISITES) {
-				prerequisiteCheck = cur;
-
-				// add all the others except pre- and post-processing which we'll simply drop
-			} else if(cur.getName() != TEST_STEP_PREPROCESSING && cur.getName() != TEST_STEP_POSTPROCESSING) {
-				final.push_back(cur);
+			// if the user didn't specify steps, we schedule all steps which haven't been excluded (or depend on excluded steps respectively)
+		} else {
+			for(const auto& step : getFullStepList()) {
+				auto stepsToSchedule = scheduleStep(step, testCase, false);
+				res.insert(stepsToSchedule.begin(), stepsToSchedule.end());
 			}
 		}
 
-		if(!prerequisiteCheck.getName().empty()) { final.insert(final.begin(), prerequisiteCheck); }
-		return final;
+		// ensure the prerequisite check is there (it will be scheduled as the first step)
+		res.insert(getStepByName(TEST_STEP_CHECK_PREREQUISITES).get());
+
+		return res;
 	}
 
 } // end namespace integration
