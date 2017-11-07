@@ -774,6 +774,10 @@ namespace integration {
 			}
 		}
 
+		// remove the pre- and postprocessing steps from this list. Those steps are special and shouldn't be executed normally
+		res.erase(getStepByName(TEST_STEP_PREPROCESSING).get());
+		res.erase(getStepByName(TEST_STEP_POSTPROCESSING).get());
+
 		// ensure the prerequisite check is there (it will be scheduled as the first step)
 		res.insert(getStepByName(TEST_STEP_CHECK_PREREQUISITES).get());
 
