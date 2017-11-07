@@ -702,8 +702,8 @@ namespace integration {
 			return false;
 		}
 
-		bool addStepDependencies(std::set<TestStep>& steps, const TestStep& testStep, const IntegrationTestCase& testCase, bool excludeIsWarning) {
-			if(isExcluded(testCase, testStep)) {
+		bool addStepDependencies(std::set<TestStep>& steps, const TestStep& testStep, const IntegrationTestCase& testCase, bool ignoreExcludes, bool excludeIsWarning) {
+			if(!ignoreExcludes && isExcluded(testCase, testStep)) {
 				return false;
 			}
 
@@ -715,7 +715,7 @@ namespace integration {
 				auto dependency = getStepByName(dependencyName);
 				assert_true(dependency) << "TestStep \"" << testStep.getName() << "\" depends on non-existant TestStep \"" << dependencyName << "\"";
 				// add child dependencies. If one of them is excluded, return false
-				if(!addStepDependencies(steps, dependency.get(), testCase, excludeIsWarning)) {
+				if(!addStepDependencies(steps, dependency.get(), testCase, ignoreExcludes, excludeIsWarning)) {
 					if(excludeIsWarning) {
 						std::cerr << "INFO: TestStep \"" << testStep.getName() << "\" can not be scheduled because it's dependency \"" << dependencyName << "\" has been excluded" << std::endl;
 					}
@@ -725,10 +725,10 @@ namespace integration {
 			return true;
 		}
 
-		std::set<TestStep> scheduleStep(const TestStep& testStep, const IntegrationTestCase& testCase, bool excludeIsWarning) {
+		std::set<TestStep> scheduleStep(const TestStep& testStep, const IntegrationTestCase& testCase, bool ignoreExcludes, bool excludeIsWarning) {
 			std::set<TestStep> res;
 			// recursively add the TestStep itself, as well as any dependencies.
-			if(addStepDependencies(res, testStep, testCase, excludeIsWarning)) {
+			if(addStepDependencies(res, testStep, testCase, ignoreExcludes, excludeIsWarning)) {
 				return res;
 			}
 
@@ -758,7 +758,7 @@ namespace integration {
 					std::cerr << "WARNING: No such step to run: " << stepToExecute << std::endl;
 				} else {
 					// add all required steps to the final schedule
-					auto stepsToSchedule = scheduleStep(step.get(), testCase, true);
+					auto stepsToSchedule = scheduleStep(step.get(), testCase, options.ignoreExcludes, true);
 					res.insert(stepsToSchedule.begin(), stepsToSchedule.end());
 					if(stepsToSchedule.empty()) {
 						std::cerr << "WARNING: No steps scheduled for step: " << stepToExecute << std::endl;
@@ -769,7 +769,7 @@ namespace integration {
 			// if the user didn't specify steps, we schedule all steps which haven't been excluded (or depend on excluded steps respectively)
 		} else {
 			for(const auto& step : getFullStepList()) {
-				auto stepsToSchedule = scheduleStep(step, testCase, false);
+				auto stepsToSchedule = scheduleStep(step, testCase, false, false);
 				res.insert(stepsToSchedule.begin(), stepsToSchedule.end());
 			}
 		}

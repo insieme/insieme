@@ -84,6 +84,7 @@ namespace integration {
 					("worker,w",            bpo::value<int>()->default_value(1), "the number of parallel workers to be utilized")
 					("cases",               bpo::value<vector<string>>(),        "the list of test cases to be executed")
 					("step,s",              bpo::value<string>(),                "the test step to be applied")
+					("ignore-excludes",     "ignore excluded steps specifications from config files. Run all the necessary steps regardless of excludes (Only honored if running specific steps using --step)")
 					("repeat,r",            bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
 					("no-clean",            "keep all output files")
 					("inplace",             "write test output files in source directory")
@@ -147,7 +148,10 @@ namespace integration {
 
 			res.listOnly = map.count("list");
 
-			if(map.count("step")) { res.steps.push_back(map["step"].as<string>()); }
+			if(map.count("step")) {
+				res.steps.push_back(map["step"].as<string>());
+				res.ignoreExcludes = map.count("ignore-excludes");
+			}
 
 			res.blacklistedOnly = map.count("blacklisted-only");
 			res.longTestsOnly = map.count("long-tests-only");

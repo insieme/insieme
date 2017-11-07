@@ -354,6 +354,7 @@ namespace integration {
 		bool color;
 		vector<string> cases;
 		vector<string> steps;
+		bool ignoreExcludes;
 		bool blacklistedOnly;
 		bool longTestsOnly;
 		bool longTestsAlso;
@@ -366,7 +367,8 @@ namespace integration {
 
 		Options(bool valid = true)
 		    : valid(valid), mockrun(false), numThreads(1), numRepetitions(1), printConfig(false), panicMode(false), listOnly(false), noClean(false),
-		      inplace(false), color(true), blacklistedOnly(false), longTestsOnly(false), longTestsAlso(false), preprocessingOnly(false), postprocessingOnly(false),
+		      inplace(false), color(true), ignoreExcludes(false),
+		      blacklistedOnly(false), longTestsOnly(false), longTestsAlso(false), preprocessingOnly(false), postprocessingOnly(false),
 		      logToCsvFile(false), csvFile("") {}
 	};
 
