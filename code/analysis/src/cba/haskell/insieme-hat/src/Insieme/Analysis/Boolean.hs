@@ -163,8 +163,8 @@ booleanValue addr =
             Sometimes -> Both
             _         -> AlwaysFalse
 
-    lhs = arithmeticValue $ I.goDown 2 addr
-    rhs = arithmeticValue $ I.goDown 3 addr
+    lhs = arithmeticValue $ I.goDown 1 $ I.goDown 2 addr
+    rhs = arithmeticValue $ I.goDown 1 $ I.goDown 3 addr
 
     dep _ _ = Solver.toVar <$> [lhs, rhs]
 
