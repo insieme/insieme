@@ -41,6 +41,7 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <regex>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/tokenizer.hpp>
@@ -656,6 +657,131 @@ namespace integration {
 
 		// otherwise it is a whole directory structure. Load all the test cases in there
 		return loadAllCasesInDirectory(absTestDir, testPaths);
+	}
+
+	vector<IntegrationTestCase> loadCasesForOptions(IntegrationTestPaths testPaths, const Options& options) {
+		// if no test is specified explicitly load all of them
+		LoadTestCaseMode loadMode = ENABLED_TESTS;
+		if(options.blacklistedOnly) loadMode = BLACKLISTED_TESTS;
+		else if(options.longTestsOnly) loadMode = LONG_TESTS;
+		else if(options.longTestsAlso) loadMode = ENABLED_AND_LONG_TESTS;
+
+		if(options.inplace)
+			testPaths.outputDir = testPaths.testsRootDir;
+
+		if(options.cases.empty()) {
+			return getAllCases(loadMode, testPaths);
+		}
+
+		// load selected test cases
+		vector<IntegrationTestCase> cases;
+		for(const auto& cur : options.cases) {
+			// load test case based on the location
+			auto curSuite = getTestSuite(boost::filesystem::path(cur), testPaths);
+			for(const auto& cur : curSuite) {
+				if(!contains(cases, cur)) { // make sure every test is only present once
+					cases.push_back(cur);
+				}
+			}
+		}
+		return cases;
+	}
+
+	namespace {
+		bool isExcluded(const IntegrationTestCase& testCase, const TestStep& testStep) {
+			std::string excludes = testCase.getProperties()["excludeSteps"];
+			boost::char_separator<char> sep(",\"");
+			boost::tokenizer<boost::char_separator<char>> tokens(excludes, sep);
+
+			for(const string& it : tokens) {
+				string tmp(it);
+				boost::replace_all(tmp, "*", ".*");
+				std::regex reg(tmp);
+				if(std::regex_match(testStep.getName(), reg)) { return true; }
+			}
+			return false;
+		}
+
+		bool addStepDependencies(std::set<TestStep>& steps, const TestStep& testStep, const IntegrationTestCase& testCase, bool ignoreExcludes, bool excludeIsWarning) {
+			if(!ignoreExcludes && isExcluded(testCase, testStep)) {
+				return false;
+			}
+
+			// insert the step itself
+			steps.insert(testStep);
+
+			// and insert all dependencies recursively
+			for(const auto& dependencyName : testStep.getDependencies()) {
+				auto dependency = getStepByName(dependencyName);
+				assert_true(dependency) << "TestStep \"" << testStep.getName() << "\" depends on non-existant TestStep \"" << dependencyName << "\"";
+				// add child dependencies. If one of them is excluded, return false
+				if(!addStepDependencies(steps, dependency.get(), testCase, ignoreExcludes, excludeIsWarning)) {
+					if(excludeIsWarning) {
+						std::cerr << "INFO: TestStep \"" << testStep.getName() << "\" can not be scheduled because it's dependency \"" << dependencyName << "\" has been excluded" << std::endl;
+					}
+					return false;
+				}
+			}
+			return true;
+		}
+
+		std::set<TestStep> scheduleStep(const TestStep& testStep, const IntegrationTestCase& testCase, bool ignoreExcludes, bool excludeIsWarning) {
+			std::set<TestStep> res;
+			// recursively add the TestStep itself, as well as any dependencies.
+			if(addStepDependencies(res, testStep, testCase, ignoreExcludes, excludeIsWarning)) {
+				return res;
+			}
+
+			// return an empty set of steps, if one of the steps or it's dependencies has been excluded
+			return {};
+		}
+	}
+
+	std::set<TestStep> getTestStepsForTestCaseAndOptions(const IntegrationTestCase& testCase, const Options& options) {
+		// in case the test requires OpenCL but we do lack of e.g. headers, simply disable it
+		if(testCase.isEnableOpenCL() && !utils::compiler::isOpenCLAvailable()) return {};
+
+		// if we should run pre- or postprocessing only, return the respective steps
+		if(options.preprocessingOnly) {
+			return { getStepByName(TEST_STEP_PREPROCESSING).get() };
+		} else if(options.postprocessingOnly) {
+			return { getStepByName(TEST_STEP_POSTPROCESSING).get() };
+		}
+
+		std::set<TestStep> res;
+
+		// if the user requested to execute only certain steps, we add them and all their dependencies, if neither is blacklisted
+		if(!options.steps.empty()) {
+			for(const auto& stepToExecute : options.steps) {
+				auto step = getStepByName(stepToExecute);
+				if(!step) {
+					std::cerr << "WARNING: No such step to run: " << stepToExecute << std::endl;
+				} else {
+					// add all required steps to the final schedule
+					auto stepsToSchedule = scheduleStep(step.get(), testCase, options.ignoreExcludes, true);
+					res.insert(stepsToSchedule.begin(), stepsToSchedule.end());
+					if(stepsToSchedule.empty()) {
+						std::cerr << "WARNING: No steps scheduled for step: " << stepToExecute << std::endl;
+					}
+				}
+			}
+
+			// if the user didn't specify steps, we schedule all steps which haven't been excluded (or depend on excluded steps respectively)
+		} else {
+			for(const auto& step : getFullStepList()) {
+				auto stepsToSchedule = scheduleStep(step, testCase, false, false);
+				res.insert(stepsToSchedule.begin(), stepsToSchedule.end());
+			}
+		}
+
+		// remove the pre- and postprocessing steps from this list. Those steps are special and shouldn't be executed normally
+		res.erase(getStepByName(TEST_STEP_PREPROCESSING).get());
+		res.erase(getStepByName(TEST_STEP_POSTPROCESSING).get());
+
+		// ensure the prerequisite check is there (it will be scheduled as the first step)
+		res.insert(getStepByName(TEST_STEP_CHECK_PREREQUISITES).get());
+
+		return res;
 	}
 
 } // end namespace integration

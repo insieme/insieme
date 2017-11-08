@@ -49,7 +49,7 @@
 
 #include "insieme/utils/name_mangling.h"
 
-#include "insieme/driver/integration/test_framework.h"
+#include "insieme/driver/integration/tests.h"
 
 using namespace std;
 using namespace insieme;

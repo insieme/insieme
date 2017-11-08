@@ -38,16 +38,19 @@
 #include "insieme/driver/integration/integration_tests_handler.h"
 
 #include <string>
+#include <iomanip>
 
 #include <boost/format.hpp>
 #include <boost/program_options.hpp>
 
+#include <omp.h>
+
 #include "insieme/driver/integration/tests.h"
 #include "insieme/driver/integration/test_step.h"
-#include "insieme/driver/integration/test_framework.h"
 #include "insieme/driver/perf_reg/logging.h"
 
 #include "insieme/utils/color.h"
+#include "insieme/utils/logging.h"
 
 namespace bpo = boost::program_options;
 
@@ -58,16 +61,14 @@ using itc::TestResult;
 
 using insieme::driver::perf_reg::TestResultsLogger;
 
-namespace tf = itc::testFramework;
-
 
 namespace insieme {
 namespace driver {
 namespace integration {
 
 	namespace {
-		tf::Options parseCommandLine(int argc, char** argv) {
-			static const tf::Options fail(false);
+		itc::Options parseCommandLine(int argc, char** argv) {
+			static const itc::Options fail(false);
 
 			// -- parsing -------------------------------------------
 
@@ -83,6 +84,7 @@ namespace integration {
 					("worker,w",            bpo::value<int>()->default_value(1), "the number of parallel workers to be utilized")
 					("cases",               bpo::value<vector<string>>(),        "the list of test cases to be executed")
 					("step,s",              bpo::value<string>(),                "the test step to be applied")
+					("ignore-excludes",     "ignore excluded steps specifications from config files. Run all the necessary steps regardless of excludes (Only honored if running specific steps using --step)")
 					("repeat,r",            bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
 					("no-clean",            "keep all output files")
 					("inplace",             "write test output files in source directory")
@@ -112,9 +114,9 @@ namespace integration {
 				std::cout << desc << "\n";
 
 				std::cout << " ------------- Steps -----------------\n";
-				for(auto entry : insieme::driver::integration::getFullStepList()) {
-					std::cout << "\t" << std::left << std::setw(30) << entry.first;
-					auto deps = entry.second.getDependencies();
+				for(auto step : insieme::driver::integration::getFullStepList()) {
+					std::cout << "\t" << std::left << std::setw(30) << step.getName();
+					auto deps = step.getDependencies();
 					if(!deps.empty()) {
 						std::cout << " <- [ ";
 						for(auto dep : deps) {
@@ -128,26 +130,28 @@ namespace integration {
 				return fail;
 			}
 
-			tf::Options res;
+			itc::Options res;
 
-			if(map.count("config")) { res.print_configs = true; }
+			if(map.count("config")) { res.printConfig = true; }
 
 			if(map.count("cases")) { res.cases = map["cases"].as<vector<string>>(); }
 
 			res.mockrun = map.count("mock");
-			res.no_clean = map.count("no-clean");
+			res.noClean = map.count("no-clean");
 			res.inplace = map.count("inplace");
 			res.color = !map.count("no-color");
 			// if colored output was not disabled explicitely, disable anyway if there is no support
 			if(res.color) { res.color = isatty(fileno(stdout)); }
-			res.panic_mode = map.count("panic");
-			res.num_threads = map["worker"].as<int>();
-			res.num_repetitions = map["repeat"].as<int>();
-			res.perf = false;
+			res.panicMode = map.count("panic");
+			res.numThreads = map["worker"].as<int>();
+			res.numRepetitions = map["repeat"].as<int>();
 
-			res.list_only = map.count("list");
+			res.listOnly = map.count("list");
 
-			if(map.count("step")) { res.steps.push_back(map["step"].as<string>()); }
+			if(map.count("step")) {
+				res.steps.push_back(map["step"].as<string>());
+				res.ignoreExcludes = map.count("ignore-excludes");
+			}
 
 			res.blacklistedOnly = map.count("blacklisted-only");
 			res.longTestsOnly = map.count("long-tests-only");
@@ -224,7 +228,7 @@ namespace integration {
 		checkAndSetEnv("OMP_NUM_THREADS", "3");
 
 		// parse parameters
-		tf::Options options = parseCommandLine(argc, argv);
+		itc::Options options = parseCommandLine(argc, argv);
 
 		// output width in characters
 		unsigned screenWidth = 120;
@@ -237,19 +241,19 @@ namespace integration {
 		}
 
 		// get list of test cases
-		auto cases = tf::loadCases(testPaths, options);
+		auto cases = itc::loadCasesForOptions(testPaths, options);
 
 		string header = programName + " version: " + programVersion;
 
 		std::cout << "#" << string(screenWidth - 2, '-') << "#\n";
 		std::cout << "#" << boost::format(centerAlign) % header << "#\n";
 		std::cout << "#" << string(screenWidth - 2, '-') << "#\n";
-		string benchmarkHeader("Running " + to_string(cases.size()) + " benchmark(s) " + to_string(options.num_repetitions) + " time(s)");
+		string benchmarkHeader("Running " + to_string(cases.size()) + " benchmark(s) " + to_string(options.numRepetitions) + " time(s)");
 		std::cout << "#" << boost::format(centerAlign) % benchmarkHeader << "#\n";
 		std::cout << "#" << string(screenWidth - 2, '-') << "#\n";
 
 		// check whether only the configurations are requested
-		if(options.print_configs) {
+		if(options.printConfig) {
 			int counter = 0;
 			// print configurations
 			for(const auto& cur : cases) {
@@ -262,12 +266,12 @@ namespace integration {
 			return 0;
 		}
 
-		int totalTests = cases.size() * options.num_repetitions;
+		int totalTests = cases.size() * options.numRepetitions;
 		int maxCounterStringLength = to_string(totalTests).length();
 		string maxCounterStringLengthAsString(to_string(maxCounterStringLength));
 
 		// only list test cases if requested so
-		if(options.list_only) {
+		if(options.listOnly) {
 			int counter = 0;
 			for(const auto& cur : cases) {
 				string paddingWidth(to_string(screenWidth - (8 + maxCounterStringLength * 2)));
@@ -280,14 +284,10 @@ namespace integration {
 			return 0;
 		}
 
-		// load list of test steps
-		auto steps = tf::getTestSteps(options);
-
 
 		itc::TestSetup setup;
 		setup.mockRun = options.mockrun;
-		setup.clean   = !options.no_clean;
-		setup.perf = options.perf;
+		setup.clean   = !options.noClean;
 
 		insieme::utils::Colorize colorize(options.color);
 
@@ -306,7 +306,7 @@ namespace integration {
 		int omittedTestsCount = 0;
 		map<TestCase, TestResult> failedSteps;
 		#ifdef _OPENMP
-		omp_set_num_threads(options.num_threads);
+		omp_set_num_threads(options.numThreads);
 		#endif
 
 		bool panic = false;
@@ -321,7 +321,7 @@ namespace integration {
 				logger.setID(options.csvFileID);
 		}
 
-		for(int i = 0; i < options.num_repetitions; i++) {
+		for(int i = 0; i < options.numRepetitions; i++) {
 			// get instance of the test runner
 			itc::TestRunner& runner = itc::TestRunner::getInstance();
 			// set lambda to print some execution summary at the end
@@ -336,33 +336,26 @@ namespace integration {
 
 				if(panic) { continue; }
 
-				vector<TestStep> list;
-
-				if(options.preprocessingOnly) {
-					list.push_back(itc::getStepByName(itc::TEST_STEP_PREPROCESSING));
-
-				} else if(options.postprocessingOnly) {
-					list.push_back(itc::getStepByName(itc::TEST_STEP_POSTPROCESSING));
-
-				} else {
-					// filter applicable steps based on test case
-					list = itc::filterSteps(steps, cur);
-					// schedule resulting steps
-					list = itc::scheduleSteps(list, cur);
-				}
+				// the test steps to execute
+				std::set<TestStep> steps = itc::getTestStepsForTestCaseAndOptions(cur, options);
 
 				// if this test doesn't schedule any steps we count it as omitted
-				if(list.empty()) { omittedTestsCount++; }
+				if(steps.empty()) {
+					#pragma omp critical
+					{
+						omittedTestsCount++;
+					}
+				}
 
 				// run steps
-				vector<pair<string, TestResult>> results;
+				vector<TestResult> results;
 				bool success = true;
 
-				for(const auto& step : list) {
+				for(const auto& step : steps) {
 					auto res = step.run(setup, cur, runner);
-					results.push_back(std::make_pair(step.getName(), res));
+					results.push_back(res);
 					if(!res.wasOmitted() && !res.wasSuccessful()) {
-						failedSteps[cur] = res;
+						failedSteps.insert({cur, res});
 						success = false;
 						break;
 					}
@@ -379,40 +372,56 @@ namespace integration {
 										<< boost::format("%-" + paddingWidth + "s") % cur.getName() << "#\n";
 					std::cout << "#" << std::string(screenWidth - 2, '-') << "#\n";
 
-					for(const auto& curRes : results) {
+					float totalTime = 0;
+					float maxMemory = 0;
+					for(const auto& result : results) {
+						const auto& stepName = result.getStepName();
 						// skip omitted steps
-						if(curRes.second.wasOmitted()) { continue; }
+						if(result.wasOmitted()) { continue; }
 
 						if(options.mockrun) {
-							std::cout << colorize.blue() << curRes.first << std::endl;
-							std::cout << colorize.green() << curRes.second.getCmd() << colorize.reset() << std::endl;
+							std::cout << colorize.blue() << stepName << std::endl;
+							std::cout << colorize.green() << result.getCmd() << colorize.reset() << std::endl;
 						} else {
 							string colOffset;
-							colOffset = string("%") + std::to_string(screenWidth - 4 - curRes.first.size()) + "s";
+							colOffset = string("%") + std::to_string(screenWidth - 4 - stepName.size()) + "s";
 							std::stringstream line;
 
 							// color certain passes:
-							if(highlight.find(curRes.first) != highlight.end()) { line << colorize.light_blue(); }
+							if(highlight.find(stepName) != highlight.end()) { line << colorize.light_blue(); }
 
-							line << "# " << curRes.first
+							float time = result.getRuntime();
+							totalTime += time;
+							float memory = result.getMemory() / 1024;
+							maxMemory = memory > maxMemory ? memory : maxMemory;
+							line << "# " << stepName
 									 << boost::format(colOffset)
-													% (boost::format("[%.3f secs, %7.3f MB]") % curRes.second.getRuntime() % (curRes.second.getMemory() / 1024))
+													% (boost::format("[%.3f secs, %7.3f MB]") % time % memory)
 									 << " #" << colorize.reset() << "\n";
 
-							if(curRes.second.wasSuccessful()) {
+							if(result.wasSuccessful()) {
 								std::cout << line.str();
 							} else {
 								std::cout << colorize.red() << line.str();
 								std::cout << "#" << std::string(screenWidth - 2, '-') << "#" << colorize.reset() << std::endl;
-								std::cout << "Command: " << colorize.green() << curRes.second.getCmd() << colorize.reset() << std::endl << std::endl;
-								std::cout << curRes.second.getFullOutput();
+								std::cout << "Command: " << colorize.green() << result.getCmd() << colorize.reset() << std::endl << std::endl;
+								std::cout << result.getFullOutput();
 							}
 
-							success = success && curRes.second.wasSuccessful();
+							success = success && result.wasSuccessful();
 						}
-						if(setup.clean) { curRes.second.clean(); }
+						if(setup.clean) { result.clean(); }
 
-						if(curRes.second.wasAborted()) { panic = true; }
+						if(result.wasAborted()) { panic = true; }
+					}
+
+					if(!options.mockrun && !options.preprocessingOnly && !options.postprocessingOnly) {
+						// print the total time/max memory for this test
+						std::cout << "#" << std::string(screenWidth - 2, '-') << "#\n";
+
+						std::string lineBegin = "# Total Time, Maximum Memory: ";
+						std::string lineEnd = (boost::format("[%.3f secs, %7.3f MB] #") % totalTime % maxMemory).str();
+						std::cout << lineBegin << std::string(screenWidth - lineBegin.size() - lineEnd.size(), ' ') << lineEnd << "\n";
 					}
 
 					if(!options.mockrun) {
@@ -453,7 +462,7 @@ namespace integration {
 
 						if(!success) {
 							// trigger panic mode and graceful shutdown
-							if(options.panic_mode) { panic = true; }
+							if(options.panicMode) { panic = true; }
 						}
 					}
 
@@ -463,17 +472,16 @@ namespace integration {
 					// save results if they should be logged to a file afterwards
 					if(options.logToCsvFile) {
 						auto &logger = TestResultsLogger::getInstance();
-						for (const auto &result : results) {
-							if (!result.second.wasSuccessful())
+						for (const auto &step : results) {
+							if (!step.wasSuccessful())
 								continue;
 
-							const auto &test = cur.getName();
-							const auto &step = result.first;
-							const auto &runtime = result.second.getRuntime();
-							const auto &memory  = result.second.getMemory() / 1024;
+							const auto &name = step.getStepName();
+							const auto &runtime = step.getRuntime();
+							const auto &memory  = step.getMemory() / 1024;
 
-							logger.addResult(test, step, "RuntimeSec", runtime);
-							logger.addResult(test, step, "MemoryMB", memory);
+							logger.addResult(name, name, "RuntimeSec", runtime);
+							logger.addResult(name, name, "MemoryMB", memory);
 						}
 					}
 				}
