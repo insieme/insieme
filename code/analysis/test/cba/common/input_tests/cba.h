@@ -101,6 +101,14 @@ typedef struct {} _pset;
 void cba_expect_one_of_ptr(int a, _pset* b) {};
 
 
+#ifdef __cplusplus
+
+	// symbolic value
+	template<typename T>
+	void cba_expect_symbolic_value(const char*, T);
+
+#endif
+
 // debugging
 void cba_print_code() {};
 void cba_print_int(int a) {};

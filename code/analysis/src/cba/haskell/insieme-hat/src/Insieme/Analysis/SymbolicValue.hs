@@ -178,12 +178,22 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     varId = mkVarIdentifier analysis addr
 
-    ops = [ operatorHandler ]
+    ops = [ refDeclHandler, operatorHandler ]
 
     -- a list of symbolic values of the arguments
     argVars = (variableGenerator analysis) <$> ( Addr.goDown 1 ) <$> ( tail . tail $ IR.children addr )
 
-    -- the one operator handler that covers all operators
+    -- the handler for ref_decl calls
+    refDeclHandler = OperatorHandler cov dep val
+      where
+        cov a = isBuiltin a "ref_decl"
+        dep _ _ = []
+        val _ _ = compose $ BSet.singleton $ Builder.refTemporary objType
+          where
+            Just resType = getType $ Addr.getNode $ Addr.goDown 0 addr
+            Just objType = getReferencedType $ resType
+
+    -- the one operator handler that covers all other operators
     operatorHandler = OperatorHandler cov dep val
       where
 
@@ -203,7 +213,7 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
                         "IMP_std_colon__colon_array::IMP_at"
                      ] || isConstructor a 
             -- literal builtins to ignore
-            toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign" ]
+            toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign", "ref_decl" ]
 
         -- if triggered, we will need the symbolic values of all arguments
         dep _ _ = Solver.toVar <$> argVars
