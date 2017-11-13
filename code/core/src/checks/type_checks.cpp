@@ -96,7 +96,7 @@ namespace checks {
 			if(address->getParameterTypes().empty()) {
 				add(res, Message(address, EC_TYPE_ILLEGAL_OBJECT_TYPE, format("Missing object type within ctor / dtor / member function."), Message::ERROR));
 			} else if(!analysis::isObjectReferenceType(address->getParameterType(0))) {
-				add(res, Message(address, EC_TYPE_ILLEGAL_OBJECT_TYPE, format("Invalid type for target object: %s", toString(address->getParameterType(0))),
+				add(res, Message(address, EC_TYPE_ILLEGAL_OBJECT_TYPE, format("Invalid type for target object: %s", toString(*address->getParameterType(0))),
 					             Message::ERROR));
 			}
 		}
