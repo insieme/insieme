@@ -56,22 +56,22 @@ namespace analysis {
 	// ---------------------------- Getters for the 6 default members and their type --------------------------------------
 
 	FunctionTypePtr getDefaultConstructorType(const TypePtr& thisType);
-	LambdaExprPtr   getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields, const FieldInitMap& fieldInits = {});
+	LambdaExprPtr   getDefaultConstructor(const TypePtr& thisType, const ParentList& parents, const FieldList& fields, const FieldInitMap& fieldInits = {});
 
 	FunctionTypePtr getDefaultCopyConstructorType(const TypePtr& thisType);
-	LambdaExprPtr   getDefaultCopyConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields);
+	LambdaExprPtr   getDefaultCopyConstructor(const TypePtr& thisType, const ParentList& parents, const FieldList& fields);
 
 	FunctionTypePtr getDefaultMoveConstructorType(const TypePtr& thisType);
-	LambdaExprPtr   getDefaultMoveConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields);
+	LambdaExprPtr   getDefaultMoveConstructor(const TypePtr& thisType, const ParentList& parents, const FieldList& fields);
 
 	FunctionTypePtr getDefaultDestructorType(const TypePtr& thisType);
-	LambdaExprPtr   getDefaultDestructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields);
+	LambdaExprPtr   getDefaultDestructor(const TypePtr& thisType, const ParentList& parents, const FieldList& fields);
 
 	FunctionTypePtr   getDefaultCopyAssignOperatorType(const TypePtr& thisType);
-	MemberFunctionPtr getDefaultCopyAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields);
+	MemberFunctionPtr getDefaultCopyAssignOperator(const TypePtr& thisType, const ParentList& parents, const FieldList& fields);
 
 	FunctionTypePtr   getDefaultMoveAssignOperatorType(const TypePtr& thisType);
-	MemberFunctionPtr getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields);
+	MemberFunctionPtr getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentList& parents, const FieldList& fields);
 
 
 	// ---------------------------- Functions to check for default members --------------------------------------

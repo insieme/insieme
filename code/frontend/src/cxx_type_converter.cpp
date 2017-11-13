@@ -274,7 +274,7 @@ namespace conversion {
 		}
 
 		// handle defaulted and deleted members accordingly
-		recordMembers = core::analysis::applyCppDefaultDeleteSemantics(builder.refType(genTy), irParents, recordTy->getFields(), {}, recordMembers);
+		recordMembers = core::analysis::applyCppDefaultDeleteSemantics(builder.refType(genTy), parents, recordTy->getFields(), {}, recordMembers);
 
 		// register all lambdas in the TU
 		auto registerInTu = [this](const core::analysis::MemberProperties& member) {

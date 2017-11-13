@@ -116,7 +116,7 @@ namespace analysis {
 		});
 	}
 
-	CppDefaultDeleteMembers applyCppDefaultDeleteSemantics(const GenericTypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields,
+	CppDefaultDeleteMembers applyCppDefaultDeleteSemantics(const GenericTypePtr& thisType, const ParentList& parents, const FieldList& fields,
 	                                                       const FieldInitMap& fieldInits,
 	                                                       const CppDefaultDeleteMembers& inputMembers) {
 

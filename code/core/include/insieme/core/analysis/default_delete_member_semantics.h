@@ -107,7 +107,7 @@ namespace analysis {
 	 * The resulting object will contain the remaining members. All new members will have their literals set correctly, as well as contain a
 	 * lambda with the implementation. Note that the generated member functions will have their implementation set to the literal, not the lambda.
 	 */
-	CppDefaultDeleteMembers applyCppDefaultDeleteSemantics(const GenericTypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields,
+	CppDefaultDeleteMembers applyCppDefaultDeleteSemantics(const GenericTypePtr& thisType, const ParentList& parents, const FieldList& fields,
 	                                                       const FieldInitMap& fieldInits,
 	                                                       const CppDefaultDeleteMembers& inputMembers);
 

@@ -91,7 +91,7 @@ namespace analysis {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		return builder.functionType(toVector(thisType), thisType, FK_CONSTRUCTOR);
 	}
-	LambdaExprPtr getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields, const FieldInitMap& fieldInits) {
+	LambdaExprPtr getDefaultConstructor(const TypePtr& thisType, const ParentList& parents, const FieldList& fields, const FieldInitMap& fieldInits) {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto ctorType = getDefaultConstructorType(thisType);
 		auto thisParam = builder.variable(builder.refType(thisType));
@@ -105,7 +105,7 @@ namespace analysis {
 		TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), true, false, lang::ReferenceType::Kind::CppReference);
 		return builder.functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
 	}
-	LambdaExprPtr getDefaultCopyConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) {
+	LambdaExprPtr getDefaultCopyConstructor(const TypePtr& thisType, const ParentList& parents, const FieldList& fields) {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto ctorType = getDefaultCopyConstructorType(thisType);
 		const auto& otherType = ctorType->getParameterType(1);
@@ -123,7 +123,7 @@ namespace analysis {
 		TypePtr otherType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppRValueReference);
 		return builder.functionType(toVector(thisType, otherType), thisType, FK_CONSTRUCTOR);
 	}
-	LambdaExprPtr getDefaultMoveConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) {
+	LambdaExprPtr getDefaultMoveConstructor(const TypePtr& thisType, const ParentList& parents, const FieldList& fields) {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto ctorType = getDefaultMoveConstructorType(thisType);
 		const auto& otherType = ctorType->getParameterType(1);
@@ -140,7 +140,7 @@ namespace analysis {
 		assert_true(analysis::isRefType(thisType)) << "thisType has to be a ref type";
 		return builder.functionType(toVector(thisType), thisType, FK_DESTRUCTOR);
 	}
-	LambdaExprPtr getDefaultDestructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) {
+	LambdaExprPtr getDefaultDestructor(const TypePtr& thisType, const ParentList& parents, const FieldList& fields) {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto dtorType = getDefaultDestructorType(thisType);
 		auto thisParam = builder.variable(builder.refType(thisType));
@@ -155,7 +155,7 @@ namespace analysis {
 		TypePtr resType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
 		return builder.functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
 	}
-	MemberFunctionPtr getDefaultCopyAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) {
+	MemberFunctionPtr getDefaultCopyAssignOperator(const TypePtr& thisType, const ParentList& parents, const FieldList& fields) {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto funType = getDefaultCopyAssignOperatorType(thisType);
 		auto thisParam = builder.variable(builder.refType(thisType));
@@ -172,7 +172,7 @@ namespace analysis {
 		TypePtr resType = builder.refType(analysis::getReferencedType(thisType), false, false, lang::ReferenceType::Kind::CppReference);
 		return builder.functionType(toVector(thisType, otherType), resType, FK_MEMBER_FUNCTION);
 	}
-	MemberFunctionPtr getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) {
+	MemberFunctionPtr getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentList& parents, const FieldList& fields) {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto funType = getDefaultMoveAssignOperatorType(thisType);
 		auto thisParam = builder.variable(builder.refType(thisType));
