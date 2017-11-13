@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# This script is the run-able quickstart guide for building this project. It
+# assumes you are running on a recent version of Ubuntu or Debian. See the
+# README file if you are using a different distribution.
+
+set -eu
+
+# Let us first create a build directory and enter it.
+mkdir -p build
+cd build
+
+# The follow script will install the needed dependencies and setup the build
+# directory (uses sudo).
+../scripts/environment/setup
+
+# Next we can invoke CMake and build the project.
+cmake ../code
+make -j8
+
+# Finally we run all units tests for verification.
+ctest -j8

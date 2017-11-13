@@ -1,0 +1,41 @@
+#!/bin/bash
+
+set -eu
+
+export DIR="$(dirname "$(readlink -f "$0")")"
+
+function already_installed() {
+        for pkg in "$@"; do
+                if ! dpkg-query -W $pkg; then
+                        return 1
+                fi
+        done
+        return 0
+}
+
+# Install basic dependencies
+if ! [[ -f /usr/bin/apt-get && -f /usr/bin/dpkg-query ]]; then
+	>&2 echo "Error: Not running on a Debian based distribution."
+	>&2 echo "       Please check the README for instructions."
+	exit 1
+elif ! already_installed $(cat "$DIR/system_packages"); then
+	sudo "$DIR/install_system_packages"
+fi
+
+# Run installer with default settings to install additional dependencies.
+"$DIR/../dependencies/installer" llvm boost cudd
+
+# Run third party linker to ensure that all links are up-to-date.
+"$DIR/../dependencies/third_party_linker"
+
+# Remove CMake cache to re-check dependency versions on next run.
+rm -f CMakeCache.txt
+
+# Some changes may require a complete wipe of the build directory.
+if [[ -f wipe_counter ]] && ! diff -q wipe_counter "$DIR/wipe_counter"; then
+	>&2 echo "Warning: ================================================================="
+	>&2 echo "Warning:  You should wipe your build directory and run this script again."
+	>&2 echo "Warning: ================================================================="
+elif [[ ! -f wipe_counter ]]; then
+	cp "$DIR/wipe_counter" wipe_counter
+fi

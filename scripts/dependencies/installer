@@ -2,86 +2,32 @@
 
 set -e
 
-export INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export INSTALLER_DIR="$(dirname "$(readlink -f "$0")")"
+
+source "$INSTALLER_DIR/internal/functions.sh"
+source "$INSTALLER_DIR/internal/install_steps.sh"
 
 source "$INSTALLER_DIR/config.sh"
 
-resolve_dependencies() {
-	for pkg in $1; do
-		resolve_dependencies_for_pkg "$pkg"
-	done | awk '!unique[$_]++'
-}
-
-resolve_dependencies_for_pkg() {
-	for pkg in $(get_property $1 DEPENDS); do
-		resolve_dependencies_for_pkg "$pkg"
-	done
-	echo "$1"
-}
-
-install_pkg() {
-	(
-		set -e
-
-		source "$INSTALLER_DIR/defaults.sh"
-		source "$INSTALLER_DIR/package_$1.sh"
-
-		mkdir -p $PREFIX
-
-		PKG_TEMP=$(mktemp -d)
-		pushd $PKG_TEMP
-
-		pkg_is_globally_installed && loc=globally
-		pkg_is_locally_installed && loc=locally
-		if [ -n "$loc" ]; then
-			echo "$NAME $VERSION already $loc installed"
-			exit 0
-		fi
-
-		echo "####   Downloading $PACKAGE   ####"
-		pkg_download
-
-		echo "####   Extracting  $PACKAGE   ####"
-		pkg_extract
-
-		pushd $PACKAGE
-
-		echo "####   Preparing   $PACKAGE   ####"
-		pkg_prepare
-
-		echo "####   Configuring $PACKAGE   ####"
-		pkg_configure
-
-		echo "####   Building    $PACKAGE   ####"
-		pkg_build
-
-		echo "####   Checking    $PACKAGE   ####"
-		pkg_check
-
-		echo "####   Installing  $PACKAGE   ####"
-		pkg_install
-
-		popd
-
-		pkg_install_done
-
-		echo "####   Cleaning    $PACKAGE   ####"
-		pkg_cleanup
-
-		popd
-
-		rmdir $PKG_TEMP
-	)
-}
-
-if [[ $# -eq 0 ]]; then
-	PACKAGES="llvm boost cmake luajit cudd bison flex papi hwloc"
-else
-	PACKAGES="$@"
+if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]]; then
+	echo "usage: $0 [--with-depends] <package_name>..."
+	exit 1
 fi
 
-PACKAGES="$(resolve_dependencies "$PACKAGES")"
+if [[ "$1" == "--with-depends" ]]; then
+	shift
+	pkgs=$(resolve_dependencies "$@")
+else
+	pkgs="$@"
+fi
 
-for pkg in $PACKAGES; do
-	install_pkg "$pkg"
+for pkg in $pkgs; do
+	assert_pkg_exists $pkg
+
+	if is_pkg_installed $pkg; then
+		echo "$(get_property $pkg PACKAGE) already installed"
+		continue
+	fi
+
+	install_pkg $pkg
 done

@@ -8,7 +8,7 @@ SHA256SUM="7b66c3f13dc8385f08264c805853f3e1a8eedab8071d582f3e661971c9acd5fd"
 
 DEPENDS="gmp"
 
-GMP_PKG=$(get_pkg_prefix gmp)
+GMP_PKG=$PREFIX/$(get_property gmp PACKAGE)
 
 unset CC CXX LD_LIBRARY_PATH
 export LD_RUN_PATH="$GMP_PKG/lib"
@@ -19,18 +19,4 @@ pkg_configure() {
 
 pkg_check() {
 	make check
-}
-
-pkg_is_globally_installed() {
-	cat > mpfr-test.c <<EOF
-#include <mpfr.h>
-#if MPFR_VERSION < MPFR_VERSION_NUM($(printf "$VERSION" | tr . ,))
-choke me
-#endif
-int main() { return 0; }
-EOF
-	cc -o /dev/null mpfr-test.c 2>/dev/null
-	RV=$?
-        rm mpfr-test.c
-	return $RV
 }

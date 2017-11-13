@@ -8,13 +8,13 @@ SHA256SUM="ffc5a36b66b1298a66631e0f89f47ff83a0af7afb8872a24346158e8d50b1cd4"
 
 DEPENDS="autoconf automake libtool bison flex boost sqlite"
 
-AUTOCONF_PKG=$(get_pkg_prefix autoconf)
-AUTOMAKE_PKG=$(get_pkg_prefix automake)
-LIBTOOL_PKG=$(get_pkg_prefix libtool)
-BISON_PKG=$(get_pkg_prefix bison)
-FLEX_PKG=$(get_pkg_prefix flex)
-BOOST_PKG=$(get_pkg_prefix boost)
-SQLITE_PKG=$(get_pkg_prefix sqlite)
+AUTOCONF_PKG=$PREFIX/$(get_property autoconf PACKAGE)
+AUTOMAKE_PKG=$PREFIX/$(get_property automake PACKAGE)
+LIBTOOL_PKG=$PREFIX/$(get_property libtool PACKAGE)
+BISON_PKG=$PREFIX/$(get_property bison PACKAGE)
+FLEX_PKG=$PREFIX/$(get_property flex PACKAGE)
+BOOST_PKG=$PREFIX/$(get_property boost PACKAGE)
+SQLITE_PKG=$PREFIX/$(get_property sqlite PACKAGE)
 
 export PATH="$AUTOCONF_PKG/bin:$AUTOMAKE_PKG/bin:$PATH"
 export PATH="$LIBTOOL_PKG/bin:$PATH"

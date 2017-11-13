@@ -19,7 +19,7 @@ KEY="$(cat /etc/centos-release 2>/dev/null || echo default)"
 
 DEPENDS="gmp"
 
-GMP_PKG=$(get_pkg_prefix gmp)
+GMP_PKG=$PREFIX/$(get_property gmp PACKAGE)
 
 pkg_download() {
 	if [ -z "${URL["$KEY"]}" ]; then
@@ -40,18 +40,4 @@ pkg_configure() {
 
 pkg_build() {
 	true
-}
-
-pkg_is_globally_installed() {
-	local cur_ver="$(/usr/bin/ghc --numeric-version 2>/dev/null)"
-	if [ -z "$cur_ver" ]; then
-		return 1 # not installed
-	fi
-
-	local cmp_ver="$(printf "$VERSION\n$cur_ver" | sort -V | head -n1)"
-	if [ "$cmp_ver" == "$cur_ver" ] && [ "$cur_ver" != "$VERSION" ]; then
-		return 1 # not installed
-	else
-		return 0 # installed
-	fi
 }
