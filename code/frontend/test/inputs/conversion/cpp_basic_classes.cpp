@@ -82,18 +82,18 @@ def struct IMP_C {
 
 // check member use within struct member function
 struct D1 {
-	void bla() {}
-	void test() {
-		bla();
+	void bar() {}
+	void foo() {
+		bar();
 	}
 };
 
 // check member use within struct member function, inverse order
 struct D2 {
-	void test() {
-		bla();
+	void bar() {
+		foo();
 	}
-	void bla() {}
+	void foo() {}
 };
 
 
@@ -186,10 +186,34 @@ int main() {
 		C c2(6u);
 	}
 
+	#pragma test expect_ir(R"(
+		def struct IMP_D1 {
+			function IMP_bar = () -> unit { }
+			function IMP_foo = () -> unit {
+				this.IMP_bar();
+			}
+		};
+		{
+			var ref<IMP_D1,f,f,plain> v0 = IMP_D1::(ref_decl(type_lit(ref<IMP_D1,f,f,plain>)));
+		}
+	)")
 	{
 		D1 d1;
 	}
 
+	#pragma test expect_ir(R"(
+		decl struct IMP_D2;
+		decl IMP_foo:IMP_D2::() -> unit;
+		def struct IMP_D2 {
+			function IMP_bar = () -> unit {
+				this.IMP_foo();
+			}
+			function IMP_foo = () -> unit { }
+		};
+		{
+			var ref<IMP_D2,f,f,plain> v0 = IMP_D1::(ref_decl(type_lit(ref<IMP_D2,f,f,plain>)));
+		}
+	)")
 	{
 		D2 d2;
 	}
