@@ -165,6 +165,21 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
         valueVar = variableGenerator userDefinedAnalysis $ (Addr.goDown 1 addr)
         valueVal a = extract $ Solver.get a valueVar
 
+    -- handle materializing return statements to produce constructor calls
+    IR.ReturnStmt -> var
+      where
+        var = Solver.mkVariable varId [con] Solver.bot
+        con = Solver.createConstraint dep val var
+        dep _ = [Solver.toVar declVar]
+        val a = compose $ BSet.map go $ extract $ declVal a
+          where
+            go x = case () of
+                _ | isCallOfRefTempInit x -> let Just val = getArgument 0 x in val
+                _ -> x
+
+        declVar = genericSymbolicValue userDefinedAnalysis $ IR.goDown 0 addr
+        declVal a = Solver.get a declVar
+
     _ -> dataflowValue addr analysis ops
 
   where

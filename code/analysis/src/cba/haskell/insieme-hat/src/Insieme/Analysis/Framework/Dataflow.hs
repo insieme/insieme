@@ -190,7 +190,6 @@ dataflowValue addr analysis ops = case I.getNode addr of
                 go e = concat $ map resolve e
 
                 resolve (ExitPoint.ExitPoint r) = case getNodeType r of
-                    I.Declaration  -> [memoryStateValue (MemoryStatePoint (ProgramPoint r Post) (MemoryLocation r)) analysis]
                     I.CompoundStmt | isConstructorOrDestructor $ I.getNode $ fromJust $ I.getParent r -> []
                     _               -> [varGen r]
 
@@ -284,6 +283,13 @@ dataflowValue addr analysis ops = case I.getNode addr of
 
         con = Solver.forward (varGen (I.goDown 1 addr)) var
 
+    I.Node I.ReturnStmt _ -> var
+      where
+        -- return statements return the value of the temporary memory location they create
+        var = Solver.mkVariable (idGen addr) [con] Solver.bot
+        con = Solver.forward memVar var
+        memVar = memoryStateValue (MemoryStatePoint (ProgramPoint r Post) (MemoryLocation r)) analysis
+        r = I.goDown 0 addr
 
     _ -> unknown
 

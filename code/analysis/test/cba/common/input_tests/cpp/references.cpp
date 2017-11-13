@@ -35,30 +35,30 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
-#include "../cba.h"
+#include "../input_tests/cba.h"
 
-struct A {
-	int x, y;
-	A(int a, int b) : x(a), y(b) {}
-};
+int& forward(int& a) {
+	return a;
+}
 
-int main() {
 
-	// check an ordinary constructor call
-	A a(1,2);
-	cba_expect_symbolic_value("[ref_cast(IMP_A::(ref_temp(type_lit(IMP_A)), 1, 2), type_lit(t), type_lit(f), type_lit(cpp_ref))]",a);
+int main(int argc, char** argv) {
 
-	// check the value of x
-	cba_expect_symbolic_value("[1]",a.x);
+	int x;
+	int& y = x;
 
-	// check the value of y
-	cba_expect_symbolic_value("[2]",a.y);
+	cba_expect_is_alias(&x,&y);
 
-	// check support for r-value
-	cba_expect_symbolic_value("[ref_cast(IMP_A::(ref_temp(type_lit(IMP_A)), 3, 4), type_lit(f), type_lit(f), type_lit(cpp_rref))]",A(3,4));
+	cba_expect_is_alias(&x,&forward(x));
+	cba_expect_is_alias(&x,&forward(y));
+	cba_expect_is_alias(&y,&forward(x));
+	cba_expect_is_alias(&y,&forward(y));
 
-//	cba_debug();
-//	cba_print_code();
+	int& z = forward(y);
+
+	cba_expect_is_alias(&x,&y);
+	cba_expect_is_alias(&x,&z);
+	cba_expect_is_alias(&y,&z);
 
 	return 0;
 }

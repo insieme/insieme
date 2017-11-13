@@ -140,5 +140,5 @@ collectReturns = I.foldAddressPrune collector filter
   where
     filter cur = Q.getNodeType cur == I.LambdaExpr
     collector cur returns = if Q.getNodeType cur == I.ReturnStmt
-                               then (I.goDown 0 cur : returns)
+                               then (cur : returns)
                                else returns

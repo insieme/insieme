@@ -42,20 +42,25 @@ struct A {
 	A(int a, int b) : x(a), y(b) {}
 };
 
+int f() {
+	return 12;
+}
+
+A g() {
+	return {1,2};
+}
+
 int main() {
 
-	// check an ordinary constructor call
-	A a(1,2);
-	cba_expect_symbolic_value("[ref_cast(IMP_A::(ref_temp(type_lit(IMP_A)), 1, 2), type_lit(t), type_lit(f), type_lit(cpp_ref))]",a);
+	// check the return value of functions
+	cba_expect_symbolic_value("[12]",f());
 
-	// check the value of x
-	cba_expect_symbolic_value("[1]",a.x);
+	// the value of a object type
+	cba_expect_symbolic_value("[ref_cast(IMP_A::(ref_temp(type_lit(IMP_A)), 1, 2), type_lit(f), type_lit(f), type_lit(cpp_rref))]",g());
 
-	// check the value of y
-	cba_expect_symbolic_value("[2]",a.y);
-
-	// check support for r-value
-	cba_expect_symbolic_value("[ref_cast(IMP_A::(ref_temp(type_lit(IMP_A)), 3, 4), type_lit(f), type_lit(f), type_lit(cpp_rref))]",A(3,4));
+//	// the value of a field of a returned object
+//	cba_expect_symbolic_value("[1]",g().x);
+//	cba_expect_symbolic_value("[2]",g().y);
 
 //	cba_debug();
 //	cba_print_code();
