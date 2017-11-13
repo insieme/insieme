@@ -113,12 +113,13 @@ namespace integration {
 
 
 	struct TestSetup {
-		bool mockRun;
-		bool clean;
-		int numThreads;
+		bool mockRun = false;
+		bool clean = false;
 		std::string stdOutFile;
 		std::string stdErrFile;
 		std::string outputFile;
+
+		TestSetup() = default;
 	};
 
 

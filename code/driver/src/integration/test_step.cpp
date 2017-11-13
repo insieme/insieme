@@ -594,12 +594,6 @@ namespace integration {
 				env << "${LD_LIBRARY_PATH} ";
 			}
 
-			// set number of threads
-			if(setup.numThreads) {
-				env << "OMP_NUM_THREADS=" << setup.numThreads << " ";
-				env << "IRT_NUM_WORKERS=" << setup.numThreads << " ";
-			}
-
 			// append user defined custom environment variables
 			if(!testConfig.get("env").empty()) {
 				env << testConfig.get("env") << " ";
