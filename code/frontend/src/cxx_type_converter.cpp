@@ -273,8 +273,17 @@ namespace conversion {
 			}
 		}
 
+		// create the init map for the generated default ctor
+		core::analysis::FieldInitMap fieldInits;
+		for(const auto field : classDecl->fields()) {
+			if(field->hasInClassInitializer()) {
+				auto initExpr = converter.convertExpr(field->getInClassInitializer());
+				fieldInits[recordTy->getFields()->getFields()[field->getFieldIndex()]] = initExpr;
+			}
+		}
+
 		// handle defaulted and deleted members accordingly
-		recordMembers = core::analysis::applyCppDefaultDeleteSemantics(builder.refType(genTy), parents, recordTy->getFields(), {}, recordMembers);
+		recordMembers = core::analysis::applyCppDefaultDeleteSemantics(builder.refType(genTy), parents, recordTy->getFields(), fieldInits, recordMembers);
 
 		// register all lambdas in the TU
 		auto registerInTu = [this](const core::analysis::MemberProperties& member) {
