@@ -44,6 +44,7 @@ import Data.List
 import Data.Maybe
 
 import Insieme.Inspire (NodeReference(..), node)
+import Insieme.Inspire.SourceParser
 import qualified Insieme.Inspire.IR as IR
 
 type NodeLike a = (IR.NodeLike a, NodeReference a)
@@ -331,6 +332,23 @@ getLiteralValue _ = Nothing
 
 isCallExpr :: NodeLike a => a -> Bool
 isCallExpr a = getNodeType a == IR.CallExpr
+
+
+isCallOf :: (NodeLike a, NodeLike b) => a -> b -> Bool
+isCallOf fun n = case node n of
+    IR.Node IR.CallExpr (_ : f : _ ) -> node fun == f
+    _ -> False
+
+
+isCallOfRefTempInit :: NodeLike a => a -> Bool
+isCallOfRefTempInit = isCallOf refTempInit
+
+
+getArgument :: (NodeLike a) => Int -> a -> Maybe a
+getArgument p c = case getNodeType c of
+    IR.CallExpr -> Just $ child 1 $ child (p + 2) c
+    _ -> Nothing
+
 
 -- ** Builtins
 
