@@ -82,14 +82,29 @@ namespace analysis {
 	bool hasDefaultConstructor(const TagTypePtr&);
 
 	/**
+	 * Returns the default constructor of the given type. Asserts if there is none.
+	 */
+	LambdaExprPtr getDefaultConstructor(const TagTypePtr&);
+
+	/**
 	 * Determines whether the given tag type has a copy constructor.
 	 */
 	bool hasCopyConstructor(const TagTypePtr&);
 
 	/**
+	 * Returns the copy constructor of the given type. Asserts if there is none.
+	 */
+	LambdaExprPtr getCopyConstructor(const TagTypePtr&);
+
+	/**
 	 * Determines whether the given tag type has a move constructor.
 	 */
 	bool hasMoveConstructor(const TagTypePtr&);
+
+	/**
+	 * Returns the move constructor of the given type. Asserts if there is none.
+	 */
+	LambdaExprPtr getMoveConstructor(const TagTypePtr&);
 
 	/**
 	 * Determines whether the given TagType has the default generated destructor.
@@ -102,9 +117,19 @@ namespace analysis {
 	bool hasCopyAssignment(const TagTypePtr&);
 
 	/**
+	 * Returns the copy assignment operator implementation of the given type. Asserts if there is none.
+	 */
+	LambdaExprPtr getCopyAssignment(const TagTypePtr&);
+
+	/**
 	 * Determines whether the given tag type has a move assignment operator.
 	 */
 	bool hasMoveAssignment(const TagTypePtr&);
+
+	/**
+	 * Returns the move assignment operator implementation of the given type. Asserts if there is none.
+	 */
+	LambdaExprPtr getMoveAssignment(const TagTypePtr&);
 
 	/**
 	 * Determines whether the given constructor is one of the default generated ones for the given type.

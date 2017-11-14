@@ -375,16 +375,46 @@ namespace analysis {
 
 
 
+	namespace {
+		LambdaExprPtr getConstructorByType(const TagTypePtr& type, const FunctionTypePtr& ctorType) {
+			auto res = analysis::hasConstructorOfType(type, ctorType);
+			assert_true(res) << "Passed TagType " << *type << " doesn't have a destructor of type " << *ctorType;
+			return res->as<LambdaExprPtr>();
+		}
+
+		LambdaExprPtr getAssignmentByType(const TagTypePtr& type, const FunctionTypePtr& assignmentType) {
+			for(const auto& cur : type->getRecord()->getMemberFunctions()) {
+				if(cur->getImplementation()->getType() == assignmentType && cur->getNameAsString() == utils::getMangledOperatorAssignName()) {
+					return cur->getImplementation().as<LambdaExprPtr>();
+				}
+			}
+			assert_fail() << "Passed TagType " << *type << " doesn't have an assignment operator of type " << *assignmentType;
+			return {};
+		}
+	}
+
 	bool hasDefaultConstructor(const TagTypePtr& type) {
 		return analysis::hasConstructorOfType(type, buildDefaultDefaultConstructorType(lang::buildRefType(type->getTag())));
+	}
+
+	LambdaExprPtr getDefaultConstructor(const TagTypePtr& type) {
+		return getConstructorByType(type, buildDefaultDefaultConstructorType(lang::buildRefType(type->getTag())));
 	}
 
 	bool hasCopyConstructor(const TagTypePtr& type) {
 		return analysis::hasConstructorOfType(type, buildDefaultCopyConstructorType(lang::buildRefType(type->getTag())));
 	}
 
+	LambdaExprPtr getCopyConstructor(const TagTypePtr& type) {
+		return getConstructorByType(type, buildDefaultCopyConstructorType(lang::buildRefType(type->getTag())));
+	}
+
 	bool hasMoveConstructor(const TagTypePtr& type) {
 		return analysis::hasConstructorOfType(type, buildDefaultMoveConstructorType(lang::buildRefType(type->getTag())));
+	}
+
+	LambdaExprPtr getMoveConstructor(const TagTypePtr& type) {
+		return getConstructorByType(type, buildDefaultMoveConstructorType(lang::buildRefType(type->getTag())));
 	}
 
 	bool hasDefaultDestructor(const TagTypePtr& type) {
@@ -396,8 +426,16 @@ namespace analysis {
 		return analysis::hasMemberOfType(type, utils::getMangledOperatorAssignName(), buildDefaultCopyAssignOperatorType(lang::buildRefType(type->getTag())));
 	}
 
+	LambdaExprPtr getCopyAssignment(const TagTypePtr& type) {
+		return getAssignmentByType(type, buildDefaultCopyAssignOperatorType(lang::buildRefType(type->getTag())));
+	}
+
 	bool hasMoveAssignment(const TagTypePtr& type) {
 		return analysis::hasMemberOfType(type, utils::getMangledOperatorAssignName(), buildDefaultMoveAssignOperatorType(lang::buildRefType(type->getTag())));
+	}
+
+	LambdaExprPtr getMoveAssignment(const TagTypePtr& type) {
+		return getAssignmentByType(type, buildDefaultMoveAssignOperatorType(lang::buildRefType(type->getTag())));
 	}
 
 	bool isaDefaultConstructor(const ExpressionPtr& ctor) {
