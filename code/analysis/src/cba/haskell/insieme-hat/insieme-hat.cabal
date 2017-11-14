@@ -58,6 +58,7 @@ library
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.Builder,
                         Insieme.Inspire.IR.NodeKind,
+                        Insieme.Inspire.IR.NodeLike
                         Insieme.Inspire.IR.NodeType,
                         Insieme.Inspire.IR.NodeType.ThHelpers,
                         Insieme.Inspire.IR.Transform,
