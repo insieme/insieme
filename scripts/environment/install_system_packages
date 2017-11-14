@@ -1,0 +1,8 @@
+#!/bin/bash
+
+set -eu
+
+export DIR="$(dirname "$(readlink -f "$0")")"
+
+apt-get update
+apt-get -y --no-upgrade install $(cat "$DIR/system_packages")

@@ -6,10 +6,10 @@ URL="https://github.com/haskell/cabal.git"
 
 DEPENDS="zlib gmp ghc"
 
-GCC_PKG=$(get_pkg_prefix gcc)
-GHC_PKG=$(get_pkg_prefix ghc)
-ZLIB_PKG=$(get_pkg_prefix zlib)
-GMP_PKG=$(get_pkg_prefix gmp)
+GCC_PKG=$PREFIX/$(get_property gcc PACKAGE)
+GHC_PKG=$PREFIX/$(get_property ghc PACKAGE)
+ZLIB_PKG=$PREFIX/$(get_property zlib PACKAGE)
+GMP_PKG=$PREFIX/$(get_property gmp PACKAGE)
 
 export PATH="$GHC_PKG/bin:$GCC_PKG/bin:$PATH"
 export LD_LIBRARY_PATH="$GMP_PKG/lib:$ZLIB_PKG/lib"

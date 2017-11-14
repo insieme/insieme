@@ -39,6 +39,8 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_node_annotation.h"
+#include "insieme/core/dump/annotations.h"
+#include "insieme/core/encoder/encoder.h"
 
 namespace insieme {
 namespace core {
@@ -67,6 +69,42 @@ namespace annotations {
 			if(value) markDeletedPreTU(target);
 		}
 	};
+
+	// ---------------- Support Dump ----------------------
+
+	VALUE_ANNOTATION_CONVERTER(DefaultedTag)
+
+		typedef core::value_node_annotation<DefaultedTag>::type annotation_type;
+
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only defaulted tag annotations supported!";
+			return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().value);
+		}
+
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert_true(encoder::isEncodingOf<bool>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+			return std::make_shared<annotation_type>(DefaultedTag(encoder::toValue<bool>(node)));
+		}
+
+	VALUE_ANNOTATION_CONVERTER_END
+
+	VALUE_ANNOTATION_CONVERTER(DeletedTag)
+
+		typedef core::value_node_annotation<DeletedTag>::type annotation_type;
+
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert_fail();
+			assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only deleted tag info annotations supported!";
+			return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().value);
+		}
+
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert_fail();
+			assert_true(encoder::isEncodingOf<bool>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+			return std::make_shared<annotation_type>(DeletedTag(encoder::toValue<bool>(node)));
+		}
+
+	VALUE_ANNOTATION_CONVERTER_END
 
 	// ----------------------------------------------------
 

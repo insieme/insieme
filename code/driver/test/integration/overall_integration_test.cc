@@ -95,7 +95,6 @@ namespace integration {
 
 		// prepare the setup
 		TestSetup setup;
-		setup.mockRun = false;
 		setup.clean = true;
 
 		auto checkPrerequisites = [setup](const IntegrationTestCase& testCase) -> bool {
