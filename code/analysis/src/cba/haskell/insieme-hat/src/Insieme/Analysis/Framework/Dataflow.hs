@@ -51,7 +51,8 @@ module Insieme.Analysis.Framework.Dataflow (
         uninitializedValue,
         excessiveFileAccessHandler,
         unknownOperatorHandler,
-        forwardCtorDtorResultValue
+        forwardCtorDtorResultValue,
+        implicitCtorHandler
     ),
     mkDataFlowAnalysis,
     mkVarIdentifier,
@@ -93,26 +94,27 @@ import qualified Insieme.Utils.BoundSet as BSet
 --
 
 data DataFlowAnalysis a v i = DataFlowAnalysis {
-    analysis                   :: a,                                    -- ^ the analysis type token
-    analysisIdentifier         :: Solver.AnalysisIdentifier,            -- ^ the analysis identifier
-    variableGenerator          :: NodeAddress -> Solver.TypedVar v,     -- ^ the variable generator of the represented analysis
-    topValue                   :: v,                                    -- ^ the top value of this analysis
-    iteratorVariableHandler    :: NodeAddress -> Solver.TypedVar v,     -- ^ a function creating the constraints for the given iterator variable
-    freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a free variable
-    entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a entry point parameter
-    initialValueHandler        :: NodeAddress -> v,                     -- ^ a function computing the initial value of a memory location
-    initialValue               :: v,                                    -- ^ default value of a memory location
-    uninitializedValue         :: v,                                    -- ^ value of an uninitialized memory location
-    excessiveFileAccessHandler :: v -> i -> v,                          -- ^ a handler processing excessive field accesses (if ref_narrow calls navigate too deep)
-    unknownOperatorHandler     :: NodeAddress -> v,                     -- ^ a handler invoked for unknown operators
-    forwardCtorDtorResultValue :: Bool                                  -- ^ a flag to enable / disable the implicit return of constructors and destructurs
+    analysis                   :: a,                                         -- ^ the analysis type token
+    analysisIdentifier         :: Solver.AnalysisIdentifier,                 -- ^ the analysis identifier
+    variableGenerator          :: NodeAddress -> Solver.TypedVar v,          -- ^ the variable generator of the represented analysis
+    topValue                   :: v,                                         -- ^ the top value of this analysis
+    iteratorVariableHandler    :: NodeAddress -> Solver.TypedVar v,          -- ^ a function creating the constraints for the given iterator variable
+    freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,          -- ^ a function computing the value of a free variable
+    entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,          -- ^ a function computing the value of a entry point parameter
+    initialValueHandler        :: NodeAddress -> v,                          -- ^ a function computing the initial value of a memory location
+    initialValue               :: v,                                         -- ^ default value of a memory location
+    uninitializedValue         :: v,                                         -- ^ value of an uninitialized memory location
+    excessiveFileAccessHandler :: v -> i -> v,                               -- ^ a handler processing excessive field accesses (if ref_narrow calls navigate too deep)
+    unknownOperatorHandler     :: NodeAddress -> v,                          -- ^ a handler invoked for unknown operators
+    forwardCtorDtorResultValue :: Bool,                                      -- ^ a flag to enable / disable the implicit return of constructors and destructurs
+    implicitCtorHandler        :: Maybe (NodeAddress -> Solver.TypedVar v)   -- ^ an optional override for the handling of constructors in the defined value analysis
 }
 
 -- a function creating a simple data flow analysis
 mkDataFlowAnalysis :: (Typeable a, Solver.ExtLattice v) => a -> String -> (NodeAddress -> Solver.TypedVar v) -> DataFlowAnalysis a v i
 mkDataFlowAnalysis a s g = res
     where
-        res = DataFlowAnalysis a aid g top justTop justTop justTop (\_ -> top) top top failOnAccess unknownTarget True
+        res = DataFlowAnalysis a aid g top justTop justTop justTop (\_ -> top) top top failOnAccess unknownTarget True Nothing
         aid = (Solver.mkAnalysisIdentifier a s)
         justTop a = mkConstant res a top
         top = Solver.top

@@ -249,6 +249,17 @@ predecessor  p@(ProgramPoint addr Internal) = case Q.getNodeType addr of
         exitPointVars a =
           foldr (\t l -> exitPoints (toAddress t) : l) [] (callableVal a)
 
+    -- declarations with implicit constructor are done once the init expression is done
+    I.Declaration | Sema.callsImplicitConstructor addr -> case Sema.getImplicitConstructor addr of
+        Just ctor -> case Q.getNodeType ctor of
+            -- TODO: support multiple exit points for ctor
+            I.LambdaExpr -> single' p $ ProgramPoint (I.goDown 2 $ fromJust $ Q.getLambda ctor) Post
+            _ -> single' p $ ProgramPoint ctor Post
+        Nothing   -> error "Implicit constructor not found?!"
+
+    -- declarations without implicit constructor are done once the init expression is done
+    I.Declaration -> single' p $ ProgramPoint (I.goDown 1 addr) Post
+
     _ -> unhandled "Internal" p (Q.getNodeType $ fromJust $ I.getParent addr)
 
 -- Predecessor rules for post program points.
@@ -274,16 +285,8 @@ predecessor p@(ProgramPoint a Post) = case Q.getNodeType a of
     -- cast expressions just process the nested node
     I.CastExpr -> single $ ProgramPoint (I.goDown 1 a) Post
 
-    -- declarations with implicit constructor are done once the init expression is done
-    I.Declaration | Sema.callsImplicitConstructor a -> case Sema.getImplicitConstructor a of
-        Just ctor -> case Q.getNodeType ctor of
-            -- TODO: support multiple exit points for ctor
-            I.LambdaExpr -> single $ ProgramPoint (I.goDown 2 $ fromJust $ Q.getLambda ctor) Post
-            _ -> single $ ProgramPoint ctor Post
-        Nothing   -> error "Implicit constructor not found?!"
-    
     -- declarations without implicit constructor are done once the init expression is done
-    I.Declaration -> single $ ProgramPoint (I.goDown 1 a) Post
+    I.Declaration -> single $ ProgramPoint a Internal
 
     -- handle lists of expressions
     I.Expressions | I.numChildren a == 0 -> single $ ProgramPoint a Pre

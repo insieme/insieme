@@ -65,6 +65,7 @@ import Insieme.Analysis.Reference
 import Insieme.Analysis.Utils.CppSemantic
 import Insieme.Query
 
+
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
@@ -177,7 +178,7 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
                 _ | isCallOfRefTempInit x -> let Just val = getArgument 0 x in val
                 _ -> x
 
-        declVar = genericSymbolicValue userDefinedAnalysis $ IR.goDown 0 addr
+        declVar = varGen $ IR.goDown 0 addr
         declVal a = Solver.get a declVar
 
     _ -> dataflowValue addr analysis ops
@@ -188,10 +189,14 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
         freeVariableHandler = freeVariableHandler,
         initialValueHandler = initialMemoryValue,
         excessiveFileAccessHandler = excessiveFileAccessHandler,
-        forwardCtorDtorResultValue = False
+        forwardCtorDtorResultValue = False,
+        implicitCtorHandler = Just implicitConstructorHandler
     }
 
-    varId = mkVarIdentifier analysis addr
+    varIdGen = mkVarIdentifier analysis
+    varId = varIdGen addr
+
+    varGen = genericSymbolicValue userDefinedAnalysis
 
     ops = [ refDeclHandler, operatorHandler ]
 
@@ -266,6 +271,13 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
             resType = IR.child 0 $ IR.node addr
 
 
+    -- a handler converting implicit constructor calls into explict once for the defined value analysis
+    implicitConstructorHandler addr = var
+      where
+        var = Solver.mkVariable (varIdGen addr) [con] Solver.bot
+        con = Solver.forward declVar var
+        declVar = varGen addr
+
     -- the handler determinign the value of a free variable
 
     freeVariableHandler a = var
@@ -295,7 +307,7 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
           where
             append x = Builder.deref ext
               where
-                base = IR.child 1 $ IR.child 2 x
+                base = if isReference x then x else IR.child 1 $ IR.child 2 x
                 
                 ext = case f of
                     (StructField field)   -> Builder.refMember base field
@@ -310,3 +322,5 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     extract = unSVS . ComposedValue.toValue
     compose = ComposedValue.toComposed . SymbolicValueSet
+
+

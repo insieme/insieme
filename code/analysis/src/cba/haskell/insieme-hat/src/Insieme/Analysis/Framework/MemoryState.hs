@@ -84,6 +84,7 @@ import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 data Definition = Initial                                    -- it is the definiton obtained at program startup
               | Creation                                     -- it is the creation point definition (e.g. ref_alloc)
               | Declaration NodeAddress                      -- the definition is conducted by an assignment triggered through a materializing declaration
+              | Constructor NodeAddress                      -- the definition is conducted by a constructor call triggered at the given position
               | MaterializingCall NodeAddress                -- the definition is conducted by an assignment triggered through a materializing call
               | Assignment NodeAddress                       -- an assignment conducting an update to a memory location
               | Initialization NodeAddress                   -- an initialization expression conducting an update to a memory location
@@ -171,10 +172,11 @@ memoryStateValue ms@(MemoryStatePoint (ProgramPoint _ _) ml@(MemoryLocation loc)
         definingValueVars a =
                 BSet.applyOrDefault [] (concat . (map go) . BSet.toList) $ reachingDefVal a
             where
-                go (Declaration       addr)         = [definedValue addr ml analysis]
+                go (Declaration       addr)         = [definedValue addr Pre  ml analysis]
+                go (Constructor       addr)         = [definedValue addr Post ml analysis]
                 go (MaterializingCall addr)         = [variableGenerator analysis $ addr]
-                go (Assignment        addr)         = [definedValue addr ml analysis]
-                go (Initialization    addr)         = [definedValue addr ml analysis]
+                go (Assignment        addr)         = [definedValue addr Post ml analysis]
+                go (Initialization    addr)         = [definedValue addr Post ml analysis]
                 go _                                = []
 
 
@@ -196,15 +198,16 @@ definedValueAnalysis a = Solver.mkAnalysisIdentifier (DefinedValueAnalysis a) ( 
 --
 
 definedValue :: (ComposedValue.ComposedValue v i a, Typeable d)
-         => NodeAddress                                 -- ^ the assignment interrested in
+         => NodeAddress                                 -- ^ the definition interrested in
+         -> Phase                                       -- ^ the execution phase of this definition
          -> MemoryLocation                              -- ^ the memory location interrested in
          -> DataFlowAnalysis d v i                      -- ^ the underlying data flow analysis this defined value analysis is cooperating with
          -> Solver.TypedVar v                           -- ^ the analysis variable representing the requested value
 
-definedValue addr ml@(MemoryLocation loc) analysis = case Q.getNodeType addr of
+definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType addr of
 
-        -- handle declarations
-        I.Declaration | callsImplicitConstructor addr -> var
+        -- handle declarations with implicit constructors (Pre-constructor execution)
+        I.Declaration | callsImplicitConstructor addr && phase == Pre -> var
           where
 
             -- retrieve the implicit constructor
@@ -264,6 +267,16 @@ definedValue addr ml@(MemoryLocation loc) analysis = case Q.getNodeType addr of
 
                 -- by default, there is no initialization
                 _ | otherwise -> uninitialized
+
+        -- handle declarations with implicit constructors (Post-constructor execution)
+        I.Declaration | callsImplicitConstructor addr && phase == Post -> case implicitCtorHandler analysis of
+            Just handler -> handler addr
+            Nothing -> var
+          where
+            var = Solver.mkVariable varId [con] Solver.bot
+            con = Solver.forward constructedStateVar var
+
+            constructedStateVar = memoryStateValue (MemoryStatePoint (ProgramPoint addr Internal) ml) analysis
 
 
         -- handle declarations without implicit constructors (simple assignments)
@@ -364,7 +377,7 @@ definedValue addr ml@(MemoryLocation loc) analysis = case Q.getNodeType addr of
         -- the ID of the produced variable
         varId = Solver.mkIdentifierFromMemoryStatePoint (definedValueAnalysis analysis) ms
             where
-                ms = MemoryStatePoint (ProgramPoint addr Post) ml
+                ms = MemoryStatePoint (ProgramPoint addr phase) ml
 
 
         -- the variable for assignment and scalar init
@@ -487,6 +500,10 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
         -- a declaration could be an assignment if it is materializing
         I.Declaration | addr == loc && p == Pre ->
             Solver.mkVariable varId [] $ Definitions $ BSet.singleton $ Declaration addr
+
+        -- an implicit constructor call can be a definition
+        I.Declaration | callsImplicitConstructor addr && addr == loc && p == Post ->
+            Solver.mkVariable varId [] $ Definitions $ BSet.singleton $ Constructor addr
 
         -- a call could be an assignment if it is materializing
         I.CallExpr | addr == loc && p == Post && isMaterializingCall (I.getNode addr) ->
@@ -774,8 +791,3 @@ writeSet addr = case Q.getNodeType addr of
         idGen a = Solver.mkIdentifierFromExpression writeSetAnalysis a
 
 
-
--- killed definitions
-
-killedDefinitions :: MemoryStatePoint -> Solver.TypedVar Definitions
-killedDefinitions _ = undefined
