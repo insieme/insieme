@@ -143,11 +143,11 @@ namespace analysis {
 		};
 
 		// the types of the default constructs
-		auto defaultConstructorType = analysis::getDefaultConstructorType(thisType);
-		auto copyConstructorType = analysis::getDefaultCopyConstructorType(thisType);
-		auto moveConstructorType = analysis::getDefaultMoveConstructorType(thisType);
-		auto copyAssignmentType = analysis::getDefaultCopyAssignOperatorType(thisType);
-		auto moveAssignmentType = analysis::getDefaultMoveAssignOperatorType(thisType);
+		auto defaultConstructorType = analysis::buildDefaultDefaultConstructorType(thisType);
+		auto copyConstructorType = analysis::buildDefaultCopyConstructorType(thisType);
+		auto moveConstructorType = analysis::buildDefaultMoveConstructorType(thisType);
+		auto copyAssignmentType = analysis::buildDefaultCopyAssignOperatorType(thisType);
+		auto moveAssignmentType = analysis::buildDefaultMoveAssignOperatorType(thisType);
 
 		// pointers to them if they are present
 		auto providedDefaultConstructor = getCtorByType(defaultConstructorType);
@@ -166,12 +166,12 @@ namespace analysis {
 		bool hasMoveAssignment = providedMoveAssignment.literal;
 
 		// all the default constructs
-		auto defaultDefaultConstructor = getMemberPropertiesForConstructor(builder, analysis::getDefaultConstructor(thisType, parents, fields, fieldInits));
-		auto defaultCopyConstructor = getMemberPropertiesForConstructor(builder, analysis::getDefaultCopyConstructor(thisType, parents, fields));
-		auto defaultMoveConstructor = getMemberPropertiesForConstructor(builder, analysis::getDefaultMoveConstructor(thisType, parents, fields));
-		auto defaultDestructor = getMemberPropertiesForDestructor(builder, analysis::getDefaultDestructor(thisType, parents, fields));
-		auto defaultCopyAssignment = getMemberPropertiesForMemberFunction(builder, analysis::getDefaultCopyAssignOperator(thisType, parents, fields));
-		auto defaultMoveAssignment = getMemberPropertiesForMemberFunction(builder, analysis::getDefaultMoveAssignOperator(thisType, parents, fields));
+		auto defaultDefaultConstructor = getMemberPropertiesForConstructor(builder, analysis::buildDefaultDefaultConstructor(thisType, parents, fields, fieldInits));
+		auto defaultCopyConstructor = getMemberPropertiesForConstructor(builder, analysis::buildDefaultCopyConstructor(thisType, parents, fields));
+		auto defaultMoveConstructor = getMemberPropertiesForConstructor(builder, analysis::buildDefaultMoveConstructor(thisType, parents, fields));
+		auto defaultDestructor = getMemberPropertiesForDestructor(builder, analysis::buildDefaultDestructor(thisType, parents, fields));
+		auto defaultCopyAssignment = getMemberPropertiesForMemberFunction(builder, analysis::buildDefaultCopyAssignOperator(thisType, parents, fields));
+		auto defaultMoveAssignment = getMemberPropertiesForMemberFunction(builder, analysis::buildDefaultMoveAssignOperator(thisType, parents, fields));
 
 		// the resulting object with the final members
 		CppDefaultDeleteMembers res(inputMembers);

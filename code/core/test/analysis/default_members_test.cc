@@ -57,17 +57,17 @@ namespace analysis {
 		auto fields = builder.fields();
 
 		{
-			auto ctor = analysis::getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
+			auto ctor = analysis::buildDefaultDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
 			EXPECT_TRUE(isaDefaultConstructor(ctor));
 		}
 
 		{
-			auto ctor = analysis::getDefaultCopyConstructor(thisType, parents, fields).as<ExpressionPtr>();
+			auto ctor = analysis::buildDefaultCopyConstructor(thisType, parents, fields).as<ExpressionPtr>();
 			EXPECT_TRUE(isaDefaultConstructor(ctor));
 		}
 
 		{
-			auto ctor = analysis::getDefaultMoveConstructor(thisType, parents, fields).as<ExpressionPtr>();
+			auto ctor = analysis::buildDefaultMoveConstructor(thisType, parents, fields).as<ExpressionPtr>();
 			EXPECT_TRUE(isaDefaultConstructor(ctor));
 		}
 
@@ -85,8 +85,8 @@ namespace analysis {
 		auto thisType = builder.refType(builder.tagTypeReference("A"));
 		auto parents = builder.parents();
 		auto fields = builder.fields();
-		auto defaultCtor = analysis::getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
-		auto defaultDtor = analysis::getDefaultDestructor(thisType, parents, fields);
+		auto defaultCtor = analysis::buildDefaultDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
+		auto defaultDtor = analysis::buildDefaultDestructor(thisType, parents, fields);
 
 		{
 			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
@@ -110,12 +110,12 @@ namespace analysis {
 		auto fields = builder.fields();
 
 		{
-			auto member = analysis::getDefaultCopyAssignOperator(thisType, parents, fields);
+			auto member = analysis::buildDefaultCopyAssignOperator(thisType, parents, fields);
 			EXPECT_TRUE(core::analysis::isaDefaultMember(member));
 		}
 
 		{
-			auto member = analysis::getDefaultMoveAssignOperator(thisType, parents, fields);
+			auto member = analysis::buildDefaultMoveAssignOperator(thisType, parents, fields);
 			EXPECT_TRUE(core::analysis::isaDefaultMember(member));
 		}
 

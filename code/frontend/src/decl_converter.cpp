@@ -273,18 +273,18 @@ namespace conversion {
 			bool defaulted = methDecl->isDefaulted();
 			auto thisType = utils::getThisType(converter, methDecl);
 			if(llvm::dyn_cast<clang::CXXDestructorDecl>(methDecl)) {
-				auto type = core::analysis::getDefaultDestructorType(thisType);
+				auto type = core::analysis::buildDefaultDestructorType(thisType);
 				ret.literal = builder.getLiteralForDestructor(type);
 			} else if(auto constDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(methDecl)) {
 				core::FunctionTypePtr type;
 				if(constDecl->isDefaultConstructor()) {
-					type = core::analysis::getDefaultConstructorType(thisType);
+					type = core::analysis::buildDefaultDefaultConstructorType(thisType);
 				}
 				else if(constDecl->isCopyConstructor()) {
-					type = core::analysis::getDefaultCopyConstructorType(thisType);
+					type = core::analysis::buildDefaultCopyConstructorType(thisType);
 				}
 				else if(constDecl->isMoveConstructor()) {
-					type = core::analysis::getDefaultMoveConstructorType(thisType);
+					type = core::analysis::buildDefaultMoveConstructorType(thisType);
 				} else {
 					assert_fail() << "Can't translate defaulted constructor: " << dumpClang(methDecl);
 				}
@@ -292,9 +292,9 @@ namespace conversion {
 			} else {
 				core::FunctionTypePtr type;
 				if(methDecl->isCopyAssignmentOperator()) {
-					type = core::analysis::getDefaultCopyAssignOperatorType(thisType);
+					type = core::analysis::buildDefaultCopyAssignOperatorType(thisType);
 				} else if(methDecl->isMoveAssignmentOperator()) {
-					type = core::analysis::getDefaultMoveAssignOperatorType(thisType);
+					type = core::analysis::buildDefaultMoveAssignOperatorType(thisType);
 				} else {
 					assert_fail() << "Can't translate defaulted method: " << dumpClang(methDecl);
 				}

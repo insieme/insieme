@@ -1180,12 +1180,12 @@ namespace parser {
 
 		LiteralList InspireDriver::getDefaultMemberLiterals(const TypePtr& thisType) const {
 			return {
-				builder.getLiteralForConstructor(analysis::getDefaultConstructorType(thisType)),
-				builder.getLiteralForConstructor(analysis::getDefaultCopyConstructorType(thisType)),
-				builder.getLiteralForConstructor(analysis::getDefaultMoveConstructorType(thisType)),
-				builder.getLiteralForDestructor(analysis::getDefaultDestructorType(thisType)),
-				builder.getLiteralForMemberFunction(analysis::getDefaultCopyAssignOperatorType(thisType), utils::getMangledOperatorAssignName()),
-				builder.getLiteralForMemberFunction(analysis::getDefaultMoveAssignOperatorType(thisType), utils::getMangledOperatorAssignName())
+				builder.getLiteralForConstructor(analysis::buildDefaultDefaultConstructorType(thisType)),
+				builder.getLiteralForConstructor(analysis::buildDefaultCopyConstructorType(thisType)),
+				builder.getLiteralForConstructor(analysis::buildDefaultMoveConstructorType(thisType)),
+				builder.getLiteralForDestructor(analysis::buildDefaultDestructorType(thisType)),
+				builder.getLiteralForMemberFunction(analysis::buildDefaultCopyAssignOperatorType(thisType), utils::getMangledOperatorAssignName()),
+				builder.getLiteralForMemberFunction(analysis::buildDefaultMoveAssignOperatorType(thisType), utils::getMangledOperatorAssignName())
 			};
 		}
 

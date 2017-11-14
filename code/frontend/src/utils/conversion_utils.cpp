@@ -242,7 +242,7 @@ namespace utils {
 
 		// get necessary stuff
 		auto thisType = getThisType(converter, ctorDecl);
-		auto ctorType = core::analysis::getDefaultConstructorType(thisType);
+		auto ctorType = core::analysis::buildDefaultDefaultConstructorType(thisType);
 		auto thisVariable = builder.variable(builder.refType(thisType));
 		const auto& paramTypes = otherCtorLit->getType().as<core::FunctionTypePtr>()->getParameterTypeList();
 

@@ -818,15 +818,15 @@ namespace printer {
 				auto containsCtorType = [&](const TypePtr& type) {
 					return ::any(node->getConstructors(), [&type](const auto& ctor) { return ctor->getType().getAddressedNode() == type; });
 				};
-				if(!containsCtorType(analysis::getDefaultConstructorType(thisType))) {
+				if(!containsCtorType(analysis::buildDefaultDefaultConstructorType(thisType))) {
 					newLine();
 					(*out) << "ctor function () = delete;";
 				}
-				if(!containsCtorType(analysis::getDefaultCopyConstructorType(thisType))) {
+				if(!containsCtorType(analysis::buildDefaultCopyConstructorType(thisType))) {
 					newLine();
 					(*out) << "ctor function (other : ref<" << recordName << ",t,f,cpp_ref>) = delete;";
 				}
-				if(!containsCtorType(analysis::getDefaultMoveConstructorType(thisType))) {
+				if(!containsCtorType(analysis::buildDefaultMoveConstructorType(thisType))) {
 					newLine();
 					(*out) << "ctor function (other : ref<" << recordName << ",f,f,cpp_rref>) = delete;";
 				}
@@ -859,11 +859,11 @@ namespace printer {
 							return memfun->getNameAsString() == utils::getMangledOperatorAssignName() && memfun->getImplementation()->getType().getAddressedNode() == type;
 					});
 				};
-				if(!containsAssignOperatorType(analysis::getDefaultCopyAssignOperatorType(thisType))) {
+				if(!containsAssignOperatorType(analysis::buildDefaultCopyAssignOperatorType(thisType))) {
 					newLine();
 					(*out) << "function " << utils::getMangledOperatorAssignName() << " = (rhs : ref<" << recordName << ",t,f,cpp_ref>) -> ref<" << recordName << ",f,f,cpp_ref> = delete;";
 				}
-				if(!containsAssignOperatorType(analysis::getDefaultMoveAssignOperatorType(thisType))) {
+				if(!containsAssignOperatorType(analysis::buildDefaultMoveAssignOperatorType(thisType))) {
 					newLine();
 					(*out) << "function " << utils::getMangledOperatorAssignName() << " = (rhs : ref<" << recordName << ",f,f,cpp_rref>) -> ref<" << recordName << ",f,f,cpp_ref> = delete;";
 				}

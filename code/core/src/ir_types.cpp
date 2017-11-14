@@ -595,15 +595,15 @@ namespace core {
 		auto thisType = builder.refType(builder.tagTypeReference(name));
 		return get(manager, name, parents, fields,
 				Expressions::get(manager, toVector<ExpressionPtr>(
-						analysis::getDefaultConstructor(thisType, parents, fields),
-						analysis::getDefaultCopyConstructor(thisType, parents, fields),
-						analysis::getDefaultMoveConstructor(thisType, parents, fields)
+						analysis::buildDefaultDefaultConstructor(thisType, parents, fields),
+						analysis::buildDefaultCopyConstructor(thisType, parents, fields),
+						analysis::buildDefaultMoveConstructor(thisType, parents, fields)
 				)),
-				analysis::getDefaultDestructor(thisType, parents, fields),
+				analysis::buildDefaultDestructor(thisType, parents, fields),
 				BoolValue::get(manager, false),
 				MemberFunctions::get(manager, toVector<MemberFunctionPtr>(
-						analysis::getDefaultCopyAssignOperator(thisType, parents, fields),
-						analysis::getDefaultMoveAssignOperator(thisType, parents, fields)
+						analysis::buildDefaultCopyAssignOperator(thisType, parents, fields),
+						analysis::buildDefaultMoveAssignOperator(thisType, parents, fields)
 				)),
 				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
 			);
@@ -615,15 +615,15 @@ namespace core {
 		auto parents = builder.parents(ParentList());
 		return get(manager, name, fields,
 				Expressions::get(manager, toVector<ExpressionPtr>(
-						analysis::getDefaultConstructor(thisType, parents, fields),
-						analysis::getDefaultCopyConstructor(thisType, parents, fields),
-						analysis::getDefaultMoveConstructor(thisType, parents, fields)
+						analysis::buildDefaultDefaultConstructor(thisType, parents, fields),
+						analysis::buildDefaultCopyConstructor(thisType, parents, fields),
+						analysis::buildDefaultMoveConstructor(thisType, parents, fields)
 				)),
-				analysis::getDefaultDestructor(thisType, parents, fields),
+				analysis::buildDefaultDestructor(thisType, parents, fields),
 				BoolValue::get(manager, false),
 				MemberFunctions::get(manager, toVector<MemberFunctionPtr>(
-						analysis::getDefaultCopyAssignOperator(thisType, parents, fields),
-						analysis::getDefaultMoveAssignOperator(thisType, parents, fields)
+						analysis::buildDefaultCopyAssignOperator(thisType, parents, fields),
+						analysis::buildDefaultMoveAssignOperator(thisType, parents, fields)
 				)),
 				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
 			);

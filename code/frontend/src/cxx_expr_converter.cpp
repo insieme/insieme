@@ -483,7 +483,7 @@ namespace conversion {
 			auto irType = converter.convertType(deleteExpr->getDestroyedType());
 			if(auto genType = irType.isa<core::GenericTypePtr>()) {
 				if(::containsKey(converter.getIRTranslationUnit().getTypes(), genType)) {
-					toDelete = builder.callExpr(builder.getLiteralForDestructor(core::analysis::getDefaultDestructorType(builder.refType(irType))), toDelete);
+					toDelete = builder.callExpr(builder.getLiteralForDestructor(core::analysis::buildDefaultDestructorType(builder.refType(irType))), toDelete);
 				}
 			}
 		}

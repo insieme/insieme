@@ -251,15 +251,15 @@ namespace analysis {
 		// if we should check for a trivial type, we also check for a trivial default constructor here
 		if(checkTrivial) {
 			// the defult constructor must not be deleted and be either implicit or defaulted)
-			auto defaultConstructor = getCtorByType(analysis::getDefaultConstructorType(thisType));
+			auto defaultConstructor = getCtorByType(analysis::buildDefaultDefaultConstructorType(thisType));
 			if(!defaultConstructor || !isaDefaultMember(defaultConstructor)) return false;
 		}
 
 		// check for trivial constructors. They have to be either deleted or (implicitly) defaulted
-		auto copyConstructor = getCtorByType(analysis::getDefaultCopyConstructorType(thisType));
+		auto copyConstructor = getCtorByType(analysis::buildDefaultCopyConstructorType(thisType));
 		if(copyConstructor && !isaDefaultMember(copyConstructor)) return false;
 
-		auto moveConstructor = getCtorByType(analysis::getDefaultMoveConstructorType(thisType));
+		auto moveConstructor = getCtorByType(analysis::buildDefaultMoveConstructorType(thisType));
 		if(moveConstructor && !isaDefaultMember(moveConstructor)) return false;
 
 		// check trivial destructor
@@ -267,10 +267,10 @@ namespace analysis {
 		if(destructor && !isaDefaultMember(destructor)) return false;
 
 		// check for trivial copy and move assignments
-		auto copyAssignment = getAssignmentOperatorByType(analysis::getDefaultCopyAssignOperatorType(thisType));
+		auto copyAssignment = getAssignmentOperatorByType(analysis::buildDefaultCopyAssignOperatorType(thisType));
 		if(copyAssignment && !isaDefaultMember(copyAssignment)) return false;
 
-		auto moveAssignment = getAssignmentOperatorByType(analysis::getDefaultMoveAssignOperatorType(thisType));
+		auto moveAssignment = getAssignmentOperatorByType(analysis::buildDefaultMoveAssignOperatorType(thisType));
 		if(moveAssignment && !isaDefaultMember(moveAssignment)) return false;
 
 		// check for virtual member functions
