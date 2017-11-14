@@ -415,7 +415,15 @@ int main() {
 
 	//===------------------------------------------------------------------------------------------------------------------------------------ MEMBER EXPR ---===
 
-	#pragma test expect_ir("REGEX_S", R"(.*var ref<struct \{ i : int<4>; \},f,f,plain> v0 =.*)")
+	#pragma test expect_ir(R"(
+		def struct __any_string__struct {
+			i : int<4>;
+		};
+		{
+			var ref<__any_string__struct,f,f,plain> v0 = ref_decl(type_lit(ref<__any_string__struct,f,f,plain>));
+			v0.i;
+		}
+	)")
 	{
 		struct {
 			int i;
@@ -423,7 +431,16 @@ int main() {
 		ts.i;
 	}
 
-	#pragma test expect_ir("REGEX_S", R"(.*var ref<union \{ i : int<4>; \},f,f,plain> v0 =.*)")
+//	#pragma test expect_ir("REGEX_S", R"(.*var ref<union \{ i : int<4>; \},f,f,plain> v0 =.*)")
+	#pragma test expect_ir(R"(
+		def union __any_string__union {
+			i : int<4>;
+		};
+		{
+			var ref<__any_string__union,f,f,plain> v0 = ref_decl(type_lit(ref<__any_string__union,f,f,plain>));
+			v0.i;
+		}
+	)")
 	{
 		union {
 			int i;
@@ -431,7 +448,15 @@ int main() {
 		tu.i;
 	}
 
-	#pragma test expect_ir("REGEX_S", R"(.*var ref<ptr<struct \{ i : int<4>; \}>,f,f,plain> v0 =.*)")
+	#pragma test expect_ir(R"(
+		def struct __any_string__struct {
+			i : int<4>;
+		};
+		{
+			var ref<ptr<__any_string__struct>,f,f,plain> v0 = ref_decl(type_lit(ref<ptr<__any_string__struct>,f,f,plain>));
+			ptr_to_ref(*v0).i;
+		}
+	)")
 	{
 		struct {
 			int i;
@@ -439,7 +464,15 @@ int main() {
 		ts->i;
 	}
 
-	#pragma test expect_ir("REGEX_S", R"(.*var ref<ptr<union \{ i : int<4>; \}>,f,f,plain> v0 =.*)")
+	#pragma test expect_ir(R"(
+		def union __any_string__union {
+			i : int<4>;
+		};
+		{
+			var ref<ptr<__any_string__union>,f,f,plain> v0 = ref_decl(type_lit(ref<ptr<__any_string__union>,f,f,plain>));
+			ptr_to_ref(*v0).i;
+		}
+	)")
 	{
 		union {
 			int i;

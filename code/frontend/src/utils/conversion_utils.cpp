@@ -278,6 +278,45 @@ namespace utils {
 		return res;
 	}
 
+	core::TagTypePtr createStructOrUnion(conversion::Converter& converter, bool isStruct,
+	                                     const core::GenericTypePtr& recordName, const core::ParentList& parents, const core::FieldList& fields,
+	                                     const core::analysis::FieldInitMap& fieldInits,
+	                                     core::analysis::CppDefaultDeleteMembers recordMembersIn,
+	                                     bool destructorVirtual, const core::PureVirtualMemberFunctionList& pvMembers) {
+
+		core::IRBuilder builder(recordName->getNodeManager());
+
+		// first, apply the default and delete semantics
+		auto recordMembers = core::analysis::applyCppDefaultDeleteSemantics(builder.refType(recordName), parents, fields, fieldInits, recordMembersIn);
+
+		// then register all lambdas in the TU
+		auto registerInTu = [&converter](const core::analysis::MemberProperties& member) {
+			if(member.literal && member.lambda) {
+				VLOG(2) << "adding method lambda literal " << *member.literal << " of type " << dumpColor(member.literal->getType()) << " to IRTU";
+				converter.getIRTranslationUnit().addFunction(member.literal, member.lambda);
+			}
+		};
+		::for_each(recordMembers.constructors, [&](const auto& ctor) { registerInTu(ctor); });
+		if(recordMembers.destructor) registerInTu(*recordMembers.destructor);
+		::for_each(recordMembers.memberFunctions, [&](const auto& mfun) { registerInTu(mfun); });
+
+		// and finally create new structTy/unionTy
+		if(isStruct) {
+			return builder.structType(recordName->getName()->getValue(), parents, fields, recordMembers.getConstructorLiteralList(),
+			                          recordMembers.getDestructorLiteral(), destructorVirtual,
+			                          recordMembers.getMemberFunctionList(), pvMembers);
+		} else {
+			return builder.unionType(recordName->getName()->getValue(), fields, recordMembers.getConstructorLiteralList(),
+			                         recordMembers.getDestructorLiteral(), destructorVirtual,
+			                         recordMembers.getMemberFunctionList(), pvMembers);
+		}
+	}
+
+	core::TagTypePtr createStructOrUnion(conversion::Converter& converter, bool isStruct,
+	                                     const core::GenericTypePtr& recordName, const core::FieldList& fields) {
+		return createStructOrUnion(converter, isStruct, recordName, {}, fields, {}, {}, false, {});
+	}
+
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme

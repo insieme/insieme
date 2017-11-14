@@ -282,40 +282,19 @@ namespace conversion {
 			}
 		}
 
-		// handle defaulted and deleted members accordingly
-		recordMembers = core::analysis::applyCppDefaultDeleteSemantics(builder.refType(genTy), parents, recordTy->getFields(), fieldInits, recordMembers);
-
-		// register all lambdas in the TU
-		auto registerInTu = [this](const core::analysis::MemberProperties& member) {
-			if(member.literal && member.lambda) {
-				VLOG(2) << "adding method lambda literal " << *member.literal << " of type " << dumpColor(member.literal->getType()) << " to IRTU";
-				converter.getIRTranslationUnit().addFunction(member.literal, member.lambda);
-			}
-		};
-		::for_each(recordMembers.constructors, [&](const auto& ctor) { registerInTu(ctor); });
-		if(recordMembers.destructor) registerInTu(*recordMembers.destructor);
-		::for_each(recordMembers.memberFunctions, [&](const auto& mfun) { registerInTu(mfun); });
+		// handle defaulted/deleted members, default implementations, registering in TU and struct/union creation
+		auto finalRetType = frontend::utils::createStructOrUnion(converter, tagTy->isStruct(), genTy, parents, recordTy->getFields(), fieldInits,
+		                                                         recordMembers, destructorVirtual, pvMembers);
 
 		// after method translation: generate invoke and pop lambda scope in case it was a lambda class
-		generateLambdaInvokeOperator(methodDecls, classDecl, recordMembers.getMemberFunctionList(), converter);
+		generateLambdaInvokeOperator(methodDecls, classDecl, finalRetType->getRecord()->getMemberFunctions(), converter);
 		converter.getVarMan()->popLambda();
 
-		// create new structTy/unionTy
-		if(tagTy->isStruct()) {
-			retTy = builder.structType(genTy->getName()->getValue(), parents, recordTy->getFields()->getFields(), recordMembers.getConstructorLiteralList(),
-			                           recordMembers.getDestructorLiteral(), destructorVirtual,
-			                           recordMembers.getMemberFunctionList(), pvMembers);
-		} else {
-			retTy = builder.unionType(genTy->getName()->getValue(), recordTy->getFields()->getFields(), recordMembers.getConstructorLiteralList(),
-			                          recordMembers.getDestructorLiteral(), destructorVirtual,
-			                          recordMembers.getMemberFunctionList(), pvMembers);
-		}
-
 		// don't forget to migrate annotations
-		core::transform::utils::migrateAnnotations(tagTy, retTy);
+		core::transform::utils::migrateAnnotations(tagTy, finalRetType);
 
 		// add the type to the irTU
-		converter.getIRTranslationUnit().replaceType(genTy, retTy.as<core::TagTypePtr>());
+		converter.getIRTranslationUnit().replaceType(genTy, finalRetType);
 
 		// finally, we can mark the record conversion as done
 		converter.getRecordMan()->markDone(clangRecTy->getDecl());

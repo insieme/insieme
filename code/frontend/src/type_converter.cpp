@@ -39,6 +39,7 @@
 
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/state/record_manager.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/utils/macros.h"
@@ -380,9 +381,11 @@ namespace conversion {
 			auto& rMan = *converter.getRecordMan();
 			auto clangDecl = clangRecordTy->getDecl();
 			core::GenericTypePtr genTy;
-			string mangledName;
-			bool useName;
-			std::tie(mangledName, useName) = utils::getNameForTagDecl(converter, clangDecl);
+			string mangledName = utils::getNameForTagDecl(converter, clangDecl).first;
+			// of getNameForTagDecl failed to get a name, we ask getNameForRecord to do so. that function will also create nice names for anonymous types
+			if(mangledName.empty()) {
+				mangledName = insieme::utils::mangle(utils::getNameForRecord(clangDecl, clangRecordTy, converter.getSourceManager()));
+			}
 			if(rMan.contains(clangDecl)) {
 				genTy = rMan.lookup(clangDecl);
 			} else {
@@ -402,9 +405,19 @@ namespace conversion {
 			for(auto mem : clangDecl->fields()) {
 				recordMembers.push_back(builder.field(insieme::frontend::utils::getNameForField(mem, converter.getSourceManager()), converter.convertType(mem->getType())));
 			}
-			auto compoundName = useName ? builder.stringValue(mangledName) : builder.stringValue("");
-			core::TagTypePtr recordType = clangRecordTy->isUnionType() ? builder.unionType(compoundName, recordMembers)
-				                                                       : builder.structType(compoundName, recordMembers);
+
+			core::TagTypePtr recordType;
+			// if we are translating some C struct
+			if(!converter.getTranslationUnit().isCxx()) {
+				// create the record with defaults and members already registered in the IrTU
+				recordType = frontend::utils::createStructOrUnion(converter, !clangRecordTy->isUnionType(), builder.genericType(mangledName), recordMembers);
+
+				// if it is C++ however, this will all be done in the cxx_type_converter and must not be done here
+			} else {
+				recordType = clangRecordTy->isUnionType() ? builder.unionType(builder.stringValue(mangledName), recordMembers)
+				                                          : builder.structType(builder.stringValue(mangledName), recordMembers);
+			}
+
 			// attach necessary information for types defined in library headers
 			converter.applyHeaderTagging(recordType, clangDecl);
 			// we'll attach name only if available, this could be a problem if anonymous names are used
