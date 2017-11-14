@@ -37,12 +37,38 @@
 
 #include "insieme/core/annotations/backend_interception_info.h"
 
+#include "insieme/core/encoder/encoder.h"
+#include "insieme/core/encoder/lists.h"
+#include "insieme/core/encoder/pairs.h"
+#include "insieme/core/dump/annotations.h"
 #include "insieme/core/ir_node.h"
 
 
 namespace insieme {
 namespace core {
 namespace annotations {
+
+	// ---------------- Support Dump ----------------------
+
+	VALUE_ANNOTATION_CONVERTER(BackendInterceptionInfo)
+
+		typedef core::value_node_annotation<BackendInterceptionInfo>::type annotation_type;
+
+		using dumpType = std::pair<std::string, std::vector<std::string>>;
+
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only backend interception info annotations supported!";
+			const BackendInterceptionInfo& val = static_pointer_cast<annotation_type>(annotation)->getValue();
+			return encoder::toIR<dumpType>(manager, std::make_pair(val.qualifiedName, val.instantiationArguments));
+		}
+
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert_true(encoder::isEncodingOf<dumpType>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+			const dumpType& res = encoder::toValue<dumpType>(node);
+			return std::make_shared<annotation_type>(BackendInterceptionInfo(res.first, res.second));
+		}
+
+	VALUE_ANNOTATION_CONVERTER_END
 
 	bool hasBackendInterceptionInfo(const insieme::core::NodePtr& node) {
 		return node->hasAttachedValue<BackendInterceptionInfo>();
