@@ -417,9 +417,12 @@ namespace analysis {
 		return getConstructorByType(type, buildDefaultMoveConstructorType(lang::buildRefType(type->getTag())));
 	}
 
-	bool hasDefaultDestructor(const TagTypePtr& type) {
-		const auto& record = type->getRecord();
-		return record->hasDestructor() && isDefaultDestructor(record->getDestructor());
+	bool hasDestructor(const TagTypePtr& type) {
+		return type->getRecord()->hasDestructor();
+	}
+
+	LambdaExprPtr getDestructor(const TagTypePtr& type) {
+		return type->getRecord()->getDestructor().as<LambdaExprPtr>();
 	}
 
 	bool hasCopyAssignment(const TagTypePtr& type) {
@@ -445,14 +448,14 @@ namespace analysis {
 		return false;
 	}
 
-	bool isDefaultDestructor(const ExpressionPtr& dtor) {
+	bool isaDefaultDestructor(const ExpressionPtr& dtor) {
 		if (auto lambda = dtor.isa<LambdaExprPtr>()) {
 			return lambda->getType().as<FunctionTypePtr>().isDestructor() && isaDefaultMember(lambda);
 		}
 		return false;
 	}
 
-	bool isDefaultAssignment(const MemberFunctionPtr& memberFunction) {
+	bool isaDefaultAssignment(const MemberFunctionPtr& memberFunction) {
 		//only assignment operators can be default member functions
 		if (memberFunction->getNameAsString() != utils::getMangledOperatorAssignName()) return false;
 

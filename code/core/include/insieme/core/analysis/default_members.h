@@ -107,9 +107,14 @@ namespace analysis {
 	LambdaExprPtr getMoveConstructor(const TagTypePtr&);
 
 	/**
-	 * Determines whether the given TagType has the default generated destructor.
+	 * Determines whether the given TagType has a destructor.
 	 */
-	bool hasDefaultDestructor(const TagTypePtr&);
+	bool hasDestructor(const TagTypePtr&);
+
+	/**
+	 * Returns the destructor of the given type. Asserts if there is none.
+	 */
+	LambdaExprPtr getDestructor(const TagTypePtr&);
 
 	/**
 	 * Determines whether the given tag type has a copy assignment operator.
@@ -139,12 +144,12 @@ namespace analysis {
 	/*
 	 * Determines whether the given expression is a destructor and if it is a default destructor
 	 */
-	bool isDefaultDestructor(const ExpressionPtr& dtor);
+	bool isaDefaultDestructor(const ExpressionPtr& dtor);
 
 	/**
 	 * Determines whether the given member function is one of the default generated assignment operators for the given type.
 	 */
-	bool isDefaultAssignment(const MemberFunctionPtr& memberFunction);
+	bool isaDefaultAssignment(const MemberFunctionPtr& memberFunction);
 
 	/**
 	 * Checks whether the given node is a lambda or member function which is marked as a default member

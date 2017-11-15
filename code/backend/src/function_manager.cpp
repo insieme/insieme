@@ -1033,7 +1033,7 @@ namespace backend {
 			decl->isVirtual = memberFun->isVirtual();
 
 			// check for default members
-			if(core::analysis::isDefaultAssignment(memberFun)) {
+			if(core::analysis::isaDefaultAssignment(memberFun)) {
 				// set declaration to default
 				decl->flag = c_ast::BodyFlag::Default;
 
@@ -1324,7 +1324,7 @@ namespace backend {
 					} else if(funType.isDestructor()) {
 						// add destructor
 						assert_false(classDecl->dtor) << "Destructor already defined!";
-						bool defaultDtor = core::analysis::isDefaultDestructor(lambda);
+						bool defaultDtor = core::analysis::isaDefaultDestructor(lambda);
 						c_ast::BodyFlag flag = defaultDtor ? c_ast::BodyFlag::Default : c_ast::BodyFlag::None;
 						auto dtor = cManager->create<c_ast::Destructor>(classDecl->name, info->function);
 						auto decl = cManager->create<c_ast::DestructorPrototype>(dtor, flag);
@@ -1387,7 +1387,7 @@ namespace backend {
 					if(core::analysis::isaDefaultConstructor(lambda)) return;
 				}
 				if(funType->isDestructor()) {
-					if(core::analysis::isDefaultDestructor(lambda)) return;
+					if(core::analysis::isaDefaultDestructor(lambda)) return;
 				}
 
 				// peel function and create function definition

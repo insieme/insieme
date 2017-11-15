@@ -90,14 +90,14 @@ namespace analysis {
 
 		{
 			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
-			EXPECT_TRUE(hasDefaultDestructor(record));
+			EXPECT_TRUE(isaDefaultDestructor(getDestructor(record)));
 		}
 
 		{
 			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_DESTRUCTOR);
 			auto dtor = builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp());
 			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), dtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
-			EXPECT_FALSE(hasDefaultDestructor(record));
+			EXPECT_FALSE(isaDefaultDestructor(getDestructor(record)));
 		}
 	}
 
@@ -138,12 +138,10 @@ namespace analysis {
 
 		auto A = builder.parseType("struct A { }").isa<TagTypePtr>();
 		EXPECT_TRUE(A);
-		bool(*hD1)(const TagTypePtr&) = hasDefaultDestructor;
 		EXPECT_PRED1(hasDefaultConstructor, A);
 		EXPECT_PRED1(hasCopyConstructor, A);
 		EXPECT_PRED1(hasMoveConstructor, A);
-		EXPECT_PRED1(hD1, A);
-
+		EXPECT_PRED1(hasDestructor, A);
 		EXPECT_PRED1(hasCopyAssignment, A);
 		EXPECT_PRED1(hasMoveAssignment, A);
 	}
