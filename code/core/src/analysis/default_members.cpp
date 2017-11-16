@@ -86,38 +86,73 @@ namespace analysis {
 			return builder.memberFunction(false, funName, fun);
 		}
 
-		TypePtr checkForTagType(const TypePtr& type) {
-			if(type.isa<core::TagTypePtr>()) {
-				assert_not_implemented() << "Support for using TagTypes in default member initializations not implemented";
-			}
-			return type;
-		}
-
 		bool canCopyTrivially(const TypePtr& type) {
 			// we can copy trivially, if it is a built-in type, a reference, an array or a tuple (and thus also pointer)
-			return lang::isBuiltIn(type) || analysis::isRefType(type) || lang::isArray(type) || type.isa<TupleTypePtr>();
+			return lang::isBuiltIn(type) || analysis::isRefType(type) || lang::isArray(type) || type.isa<TupleTypePtr>() || type.isa<TypeVariablePtr>();
+		}
+
+		template<typename GenTypeLG, typename GenTypeCTC, typename TagTypeCE>
+		core::ExpressionPtr getGenericCallee(const core::TypePtr& fieldType,
+		                                     const GenTypeLG& genTypeLiteralGenerator, const GenTypeCTC& genTypeCalleeTypeCreator,
+		                                     const TagTypeCE& tagTypeCalleeExtractor) {
+			core::IRBuilder builder(fieldType.getNodeManager());
+
+			// if we are dealing with a generic type here, we are working pre-TU
+			if(fieldType.isa<core::GenericTypePtr>()) {
+				// create a substitute callee literal
+				return genTypeLiteralGenerator(genTypeCalleeTypeCreator(builder.refType(fieldType)));
+			}
+
+			// otherwise we are working with a tag type. In this case return the actual callee from a lookup
+			auto tagType = fieldType.isa<core::TagTypePtr>();
+			assert_true(tagType) << "Don't know how to handle node type " << fieldType->getNodeType() << " here. Fields/Parents may only be of type GenericType or TagType";
+			return tagTypeCalleeExtractor(tagType);
+		}
+
+		enum OperationType { Default, Copy, Move };
+
+		core::ExpressionPtr getConstructorCallee(const core::TypePtr& fieldType, OperationType operation) {
+			core::IRBuilder builder(fieldType.getNodeManager());
+			return getGenericCallee(fieldType, [&builder](const core::FunctionTypePtr& funType) { return builder.getLiteralForConstructor(funType); },
+			                        operation == Default ? buildDefaultDefaultConstructorType : (operation == Copy ? buildDefaultCopyConstructorType : buildDefaultMoveConstructorType),  // GenericType
+			                        operation == Default ? getDefaultConstructor : (operation == Copy ? getCopyConstructor : getMoveConstructor));                                        // TagType
+		}
+
+		core::ExpressionPtr getDestructorCallee(const core::TypePtr& fieldType) {
+			core::IRBuilder builder(fieldType.getNodeManager());
+			return getGenericCallee(fieldType, [&builder](const core::FunctionTypePtr& funType) { return builder.getLiteralForDestructor(funType); },
+			                        buildDefaultDestructorType, // GenericType
+			                        getDestructor);             // TagType
+		}
+
+		core::ExpressionPtr getAssignmentCallee(const core::TypePtr& fieldType, OperationType operation) {
+			assert_true(operation != Default);
+			core::IRBuilder builder(fieldType.getNodeManager());
+			return getGenericCallee(fieldType, [&builder](const core::FunctionTypePtr& funType) { return builder.getLiteralForMemberFunction(funType, utils::getMangledOperatorAssignName()); },
+			                        operation == Copy ? buildDefaultCopyAssignOperatorType : buildDefaultMoveAssignOperatorType,  // GenericType
+			                        operation == Copy ? getCopyAssignment : getMoveAssignment);                                   // TagType
 		}
 
 		core::StatementPtr buildCopyOrMoveConstructorBody(const core::VariablePtr& thisParam, const core::VariablePtr& otherParam,
-		                                                  const ParentList& parents, const FieldList& fields, bool isCopy) {
+		                                                  const ParentList& parents, const FieldList& fields, OperationType operation) {
+			assert_true(operation != Default);
 			core::IRBuilder builder(thisParam.getNodeManager());
 			const auto& refExt = thisParam.getNodeManager().getLangExtension<lang::ReferenceExtension>();
 
 			core::StatementList bodyStmts;
 			// first call base class copy/move ctors
 			for(const auto& parent : parents) {
-				const auto& parentType = checkForTagType(parent->getType());
-				auto parentFunType = isCopy ? buildDefaultCopyConstructorType(builder.refType(parentType)) : buildDefaultMoveConstructorType(builder.refType(parentType));
-				auto parentCtorLit = builder.getLiteralForConstructor(parentFunType);
+				const auto& parentType = parent->getType();
+				auto parentCtor = getConstructorCallee(parentType, operation);
 				auto callArg = lang::buildRefParentCast(builder.deref(thisParam), parentType);
 				auto otherCallArg = lang::buildRefParentCast(otherParam, parentType);
-				bodyStmts.push_back(builder.callExpr(parentCtorLit, callArg, otherCallArg));
+				bodyStmts.push_back(builder.callExpr(parentCtor, callArg, otherCallArg));
 			}
 
 			// after that, copy/move all fields
 			for(const auto& field : fields) {
 				// get the type and build the member accesses
-				const auto& fieldType = checkForTagType(field->getType());
+				const auto& fieldType = field->getType();
 				auto fieldAccess = builder.callExpr(refExt.getRefMemberAccess(), builder.deref(thisParam),
 				                                    builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
 				auto otherFieldAccess = builder.callExpr(refExt.getRefMemberAccess(), otherParam,
@@ -130,11 +165,10 @@ namespace analysis {
 
 					// otherwise we initialize by calling the copy/move constructor
 				} else {
-					auto refFieldType = builder.refType(fieldType);
-					auto targetCtor = builder.getLiteralForConstructor(isCopy ? buildDefaultCopyConstructorType(refFieldType) : buildDefaultMoveConstructorType(refFieldType));
-					bodyStmts.push_back(builder.callExpr(targetCtor, fieldAccess,
+					auto fieldCtor = getConstructorCallee(fieldType, operation);
+					bodyStmts.push_back(builder.callExpr(fieldCtor, fieldAccess,
 					                                     lang::buildRefKindCast(otherFieldAccess,
-					                                                            isCopy ? lang::ReferenceType::Kind::CppReference : lang::ReferenceType::Kind::CppRValueReference)));
+					                                                            operation == Copy ? lang::ReferenceType::Kind::CppReference : lang::ReferenceType::Kind::CppRValueReference)));
 				}
 			}
 
@@ -142,25 +176,25 @@ namespace analysis {
 		}
 
 		core::StatementPtr buildCopyOrMoveAssignmentBody(const core::VariablePtr& thisParam, const core::VariablePtr& otherParam,
-		                                                 const ParentList& parents, const FieldList& fields, bool isCopy) {
+		                                                 const ParentList& parents, const FieldList& fields, OperationType operation) {
+			assert_true(operation != Default);
 			core::IRBuilder builder(thisParam.getNodeManager());
 			const auto& refExt = thisParam.getNodeManager().getLangExtension<lang::ReferenceExtension>();
 
 			core::StatementList bodyStmts;
 			// first call base class copy/move assignments
 			for(const auto& parent : parents) {
-				const auto& parentType = checkForTagType(parent->getType());
-				auto parentFunType = isCopy ? buildDefaultCopyAssignOperatorType(builder.refType(parentType)) : buildDefaultMoveAssignOperatorType(builder.refType(parentType));
-				auto parentMethodLit = builder.getLiteralForMemberFunction(parentFunType, utils::getMangledOperatorAssignName());
+				const auto& parentType = parent->getType();
+				auto parentMethodCallee = getAssignmentCallee(parentType, operation);
 				auto callArg = lang::buildRefParentCast(builder.deref(thisParam), parentType);
 				auto otherCallArg = lang::buildRefParentCast(otherParam, parentType);
-				bodyStmts.push_back(builder.callExpr(parentMethodLit, callArg, otherCallArg));
+				bodyStmts.push_back(builder.callExpr(parentMethodCallee, callArg, otherCallArg));
 			}
 
 			// after that, copy/move assign all fields
 			for(const auto& field : fields) {
 				// get the type and build the member accesses
-				const auto& fieldType = checkForTagType(field->getType());
+				const auto& fieldType = field->getType();
 				auto fieldAccess = builder.callExpr(refExt.getRefMemberAccess(), builder.deref(thisParam),
 				                                    builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
 				auto otherFieldAccess = builder.callExpr(refExt.getRefMemberAccess(), otherParam,
@@ -173,12 +207,10 @@ namespace analysis {
 
 					// otherwise we initialize by calling the copy/move assignment operators
 				} else {
-					auto refFieldType = builder.refType(fieldType);
-					auto targetMethod = builder.getLiteralForMemberFunction(isCopy ? buildDefaultCopyAssignOperatorType(refFieldType) : buildDefaultMoveAssignOperatorType(refFieldType),
-					                                                        utils::getMangledOperatorAssignName());
+					auto targetMethod = getAssignmentCallee(fieldType, operation);
 					bodyStmts.push_back(builder.callExpr(targetMethod, fieldAccess,
 					                                     lang::buildRefKindCast(otherFieldAccess,
-					                                                            isCopy ? lang::ReferenceType::Kind::CppReference : lang::ReferenceType::Kind::CppRValueReference)));
+					                                                            operation == Copy ? lang::ReferenceType::Kind::CppReference : lang::ReferenceType::Kind::CppRValueReference)));
 				}
 			}
 
@@ -205,17 +237,16 @@ namespace analysis {
 		core::StatementList bodyStmts;
 		// first call base class ctors
 		for(const auto& parent : parents) {
-			const auto& parentType = checkForTagType(parent->getType());
-			auto parentFunType = buildDefaultDefaultConstructorType(builder.refType(parentType));
-			auto parentCtorLit = builder.getLiteralForConstructor(parentFunType);
+			const auto& parentType = parent->getType();
+			auto parentCtor = getConstructorCallee(parentType, OperationType::Default);
 			auto callArg = lang::buildRefParentCast(builder.deref(thisParam), parentType);
-			bodyStmts.push_back(builder.callExpr(parentCtorLit, callArg));
+			bodyStmts.push_back(builder.callExpr(parentCtor, callArg));
 		}
 
 		// after that, init all fields
 		for(const auto& field : fields) {
 			// get the type and build the member access
-			const auto& fieldType = checkForTagType(field->getType());
+			const auto& fieldType = field->getType();
 			auto fieldAccess = builder.callExpr(refExt.getRefMemberAccess(), builder.deref(thisParam),
 			                                    builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
 
@@ -229,14 +260,16 @@ namespace analysis {
 
 				// otherwise we initialize it in either case
 			} else {
-				auto refFieldType = builder.refType(fieldType);
 				// if it has no initialization, we call the default constructor
 				if(fieldInit == fieldInits.end()) {
-					auto targetCtor = builder.getLiteralForConstructor(buildDefaultDefaultConstructorType(refFieldType));
+					auto targetCtor = getConstructorCallee(fieldType, OperationType::Default);
 					bodyStmts.push_back(builder.callExpr(targetCtor, fieldAccess));
 
 					// otherwise we call the constructor accepting the type of the initialization expression
 				} else {
+					if(fieldType.isa<core::TagTypePtr>()) {
+						assert_not_implemented() << "Support for initialization of members of TagType type in default constructor not implemented yet";
+					}
 					auto init = fieldInit->second;
 					// strip ctor calls with red_temp as memory location
 					if(core::analysis::isConstructorCall(init)) {
@@ -272,7 +305,7 @@ namespace analysis {
 		auto thisParam = builder.variable(builder.refType(thisType));
 		auto otherParam = builder.variable(otherType);
 
-		auto body = buildCopyOrMoveConstructorBody(thisParam, otherParam, parents, fields, true);
+		auto body = buildCopyOrMoveConstructorBody(thisParam, otherParam, parents, fields, OperationType::Copy);
 		return buildConstructorLambda(ctorType, toVector(thisParam, otherParam), body);
 	}
 
@@ -290,7 +323,7 @@ namespace analysis {
 		auto thisParam = builder.variable(builder.refType(thisType));
 		auto otherParam = builder.variable(otherType);
 
-		auto body = buildCopyOrMoveConstructorBody(thisParam, otherParam, parents, fields, false);
+		auto body = buildCopyOrMoveConstructorBody(thisParam, otherParam, parents, fields, OperationType::Move);
 		return buildConstructorLambda(ctorType, toVector(thisParam, otherParam), body);
 	}
 
@@ -312,13 +345,12 @@ namespace analysis {
 		core::FieldList reverseFields(fields);
 		::reverse(reverseFields);
 		for(const auto& field : reverseFields) {
-			const auto& fieldType = checkForTagType(field->getType());
+			const auto& fieldType = field->getType();
 			auto fieldAccess = builder.callExpr(refExt.getRefMemberAccess(), builder.deref(thisParam),
 			                                    builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
 			// if the field can not be copied trivially
 			if(!canCopyTrivially(fieldType)) {
-				auto refFieldType = builder.refType(fieldType);
-				auto targetDtor = builder.getLiteralForDestructor(buildDefaultDestructorType(refFieldType));
+				auto targetDtor = getDestructorCallee(fieldType);
 				bodyStmts.push_back(builder.callExpr(targetDtor, fieldAccess));
 			}
 		}
@@ -327,8 +359,8 @@ namespace analysis {
 		core::ParentList reverseParents(parents);
 		::reverse(reverseParents);
 		for(const auto& parent : reverseParents) {
-			const auto& parentType = checkForTagType(parent->getType());
-			auto targetDtor = builder.getLiteralForDestructor(buildDefaultDestructorType(builder.refType(parentType)));
+			const auto& parentType = parent->getType();
+			auto targetDtor = getDestructorCallee(parentType);
 			auto callArg = lang::buildRefParentCast(builder.deref(thisParam), parentType);
 			bodyStmts.push_back(builder.callExpr(targetDtor, callArg));
 		}
@@ -351,7 +383,7 @@ namespace analysis {
 		auto thisParam = builder.variable(builder.refType(thisType));
 		auto otherParam = builder.variable(funType->getParameterType(1));
 
-		auto body = buildCopyOrMoveAssignmentBody(thisParam, otherParam, parents, fields, true);
+		auto body = buildCopyOrMoveAssignmentBody(thisParam, otherParam, parents, fields, OperationType::Copy);
 		return buildAssignmentLambda(funType, toVector(thisParam, otherParam), body);
 	}
 
@@ -369,7 +401,7 @@ namespace analysis {
 		auto thisParam = builder.variable(builder.refType(thisType));
 		auto otherParam = builder.variable(funType->getParameterType(1));
 
-		auto body = buildCopyOrMoveAssignmentBody(thisParam, otherParam, parents, fields, false);
+		auto body = buildCopyOrMoveAssignmentBody(thisParam, otherParam, parents, fields, OperationType::Move);
 		return buildAssignmentLambda(funType, toVector(thisParam, otherParam), body);
 	}
 
@@ -398,7 +430,7 @@ namespace analysis {
 	}
 
 	LambdaExprPtr getDefaultConstructor(const TagTypePtr& type) {
-		return getConstructorByType(type, buildDefaultDefaultConstructorType(lang::buildRefType(type->getTag())));
+		return type->peel(getConstructorByType(type, buildDefaultDefaultConstructorType(lang::buildRefType(type->getTag()))));
 	}
 
 	bool hasCopyConstructor(const TagTypePtr& type) {
@@ -406,7 +438,7 @@ namespace analysis {
 	}
 
 	LambdaExprPtr getCopyConstructor(const TagTypePtr& type) {
-		return getConstructorByType(type, buildDefaultCopyConstructorType(lang::buildRefType(type->getTag())));
+		return type->peel(getConstructorByType(type, buildDefaultCopyConstructorType(lang::buildRefType(type->getTag()))));
 	}
 
 	bool hasMoveConstructor(const TagTypePtr& type) {
@@ -414,7 +446,7 @@ namespace analysis {
 	}
 
 	LambdaExprPtr getMoveConstructor(const TagTypePtr& type) {
-		return getConstructorByType(type, buildDefaultMoveConstructorType(lang::buildRefType(type->getTag())));
+		return type->peel(getConstructorByType(type, buildDefaultMoveConstructorType(lang::buildRefType(type->getTag()))));
 	}
 
 	bool hasDestructor(const TagTypePtr& type) {
@@ -422,7 +454,7 @@ namespace analysis {
 	}
 
 	LambdaExprPtr getDestructor(const TagTypePtr& type) {
-		return type->getRecord()->getDestructor().as<LambdaExprPtr>();
+		return type->peel(type->getRecord()->getDestructor().as<LambdaExprPtr>());
 	}
 
 	bool hasCopyAssignment(const TagTypePtr& type) {
@@ -430,7 +462,7 @@ namespace analysis {
 	}
 
 	LambdaExprPtr getCopyAssignment(const TagTypePtr& type) {
-		return getAssignmentByType(type, buildDefaultCopyAssignOperatorType(lang::buildRefType(type->getTag())));
+		return type->peel(getAssignmentByType(type, buildDefaultCopyAssignOperatorType(lang::buildRefType(type->getTag()))));
 	}
 
 	bool hasMoveAssignment(const TagTypePtr& type) {
@@ -438,7 +470,7 @@ namespace analysis {
 	}
 
 	LambdaExprPtr getMoveAssignment(const TagTypePtr& type) {
-		return getAssignmentByType(type, buildDefaultMoveAssignOperatorType(lang::buildRefType(type->getTag())));
+		return type->peel(getAssignmentByType(type, buildDefaultMoveAssignOperatorType(lang::buildRefType(type->getTag()))));
 	}
 
 	bool isaDefaultConstructor(const ExpressionPtr& ctor) {

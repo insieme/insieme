@@ -82,7 +82,7 @@ namespace analysis {
 	bool hasDefaultConstructor(const TagTypePtr&);
 
 	/**
-	 * Returns the default constructor of the given type. Asserts if there is none.
+	 * Returns the default constructor of the given type in peeled form. Asserts if there is none.
 	 */
 	LambdaExprPtr getDefaultConstructor(const TagTypePtr&);
 
@@ -92,7 +92,7 @@ namespace analysis {
 	bool hasCopyConstructor(const TagTypePtr&);
 
 	/**
-	 * Returns the copy constructor of the given type. Asserts if there is none.
+	 * Returns the copy constructor of the given type in peeled form. Asserts if there is none.
 	 */
 	LambdaExprPtr getCopyConstructor(const TagTypePtr&);
 
@@ -102,7 +102,7 @@ namespace analysis {
 	bool hasMoveConstructor(const TagTypePtr&);
 
 	/**
-	 * Returns the move constructor of the given type. Asserts if there is none.
+	 * Returns the move constructor of the given type in peeled form. Asserts if there is none.
 	 */
 	LambdaExprPtr getMoveConstructor(const TagTypePtr&);
 
@@ -112,7 +112,7 @@ namespace analysis {
 	bool hasDestructor(const TagTypePtr&);
 
 	/**
-	 * Returns the destructor of the given type. Asserts if there is none.
+	 * Returns the destructor of the given type in peeled form. Asserts if there is none.
 	 */
 	LambdaExprPtr getDestructor(const TagTypePtr&);
 
@@ -122,7 +122,7 @@ namespace analysis {
 	bool hasCopyAssignment(const TagTypePtr&);
 
 	/**
-	 * Returns the copy assignment operator implementation of the given type. Asserts if there is none.
+	 * Returns the copy assignment operator implementation of the given type in peeled form. Asserts if there is none.
 	 */
 	LambdaExprPtr getCopyAssignment(const TagTypePtr&);
 
@@ -132,7 +132,7 @@ namespace analysis {
 	bool hasMoveAssignment(const TagTypePtr&);
 
 	/**
-	 * Returns the move assignment operator implementation of the given type. Asserts if there is none.
+	 * Returns the move assignment operator implementation of the given type in peeled form. Asserts if there is none.
 	 */
 	LambdaExprPtr getMoveAssignment(const TagTypePtr&);
 
