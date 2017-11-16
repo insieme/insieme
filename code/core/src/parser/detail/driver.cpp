@@ -91,6 +91,20 @@ namespace parser {
 			  parser(*this, scanner), printedErrors(false), parserIRExtension(mgr.getLangExtension<ParserIRExtension>()) {
 			// begin the global scope
 			openScope();
+
+			// we need to call the getters of all builtins once, in order for them to be actually marked as builtins.
+			// Note that we must avoid a circular calling pattern here, as the builtins will of course also be parsed using this parser here.
+			if(!mgr.getLangBasic().hasBeenInitialized()) {
+				mgr.getLangBasic().setInitialized();
+
+				#define TYPE(_id, _spec)                                     mgr.getLangBasic().get##_id();
+				#define LITERAL(_id, _name, _spec)                           mgr.getLangBasic().get##_id();
+				#define DERIVED(_id, _name, _code) LITERAL(_id, _name, fail) mgr.getLangBasic().get##_id();
+				#define OPERATION(_type, _op, _name, _spec)                  mgr.getLangBasic().get##_type##_op();
+				#define DERIVED_OP(_type, _op, _name, _spec)                 mgr.getLangBasic().get##_type##_op();
+
+				#include "insieme/core/lang/inspire_api/lang.def"
+			}
 		}
 
 		InspireDriver::~InspireDriver() {}

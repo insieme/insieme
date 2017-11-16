@@ -67,6 +67,7 @@ namespace core {
 
 		class BasicGenerator : boost::noncopyable {
 			NodeManager& nm;
+			mutable bool builtinsHaveBeenInitialized = false;
 			struct BasicGeneratorImpl;
 			mutable BasicGeneratorImpl* pimpl;
 			class SubTypeLattice;
@@ -135,6 +136,20 @@ namespace core {
 			 * expression obtained through the previous method (inverse procedure)
 			 */
 			Operator getOperator(const ExpressionPtr& lit) const;
+
+			/**
+			 * Indicates whether the builtins in this BasicGenerator have already all been parsed and marked as builtins
+			 */
+			bool hasBeenInitialized() const {
+				return builtinsHaveBeenInitialized;
+			}
+
+			/**
+			 * Sets the initialized state to true
+			 */
+			void setInitialized() const {
+				builtinsHaveBeenInitialized = true;
+			}
 
 			// ----- type hierarchy utilities ---
 

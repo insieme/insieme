@@ -110,7 +110,7 @@ TEST(PrettyPrinter, Wrapper) {
 
 	LiteralPtr lit = Literal::get(mgr, mgr.getLangBasic().getString(), "\"this is a string literal\"");
 	LiteralPtr one = Literal::get(mgr, mgr.getLangBasic().getInt4(), "1");
-	VariablePtr iter = Variable::get(mgr, mgr.getLangBasic().getInt4());
+	VariablePtr iter = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1);
 	ForStmtPtr forStmt = builder.forStmt(iter, one, one, one, lit);
 
 	PrettyPrinter printerA(forStmt, PrettyPrinter::OPTIONS_DEFAULT);
@@ -680,10 +680,10 @@ TEST(PrettyPrinter, Variable) {
 	NodeManager nm;
 	IRBuilder builder(nm);
 
-	auto aType = builder.parseStmt("{var ref<int<4>> v123;\n var ref<#v123> b;}");
+	auto aType = builder.normalize(builder.parseStmt("{var ref<int<4>> v123;\n var ref<#v123> b;}"));
 	//dumpText(aType);
 	PrettyPrinter printer(aType);
-	EXPECT_EQ("{\n    var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n    var ref<#v1,f,f,plain> v2 = ref_decl(type_lit(ref<#v1,f,f,plain>));\n}", toString(printer)) << printer;
+	EXPECT_EQ("{\n    var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n    var ref<#v0,f,f,plain> v1 = ref_decl(type_lit(ref<#v0,f,f,plain>));\n}", toString(printer)) << printer;
 }
 
 TEST(PrettyPrinter, StructSuperTypes) {
@@ -1253,7 +1253,7 @@ TEST(PrettyPrinter, MarkerTest) {
 				            "}";
 
 		std::string res = "{\n"
-				          "    <m id=1>1</m>;\n"
+				          "    <m id=20>1</m>;\n"
 				          "}";
 
 		auto ir = builder.normalize(builder.parseStmt(input));

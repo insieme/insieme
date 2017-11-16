@@ -146,7 +146,7 @@ TEST(ErrorPrinter, error) {
 	IRBuilder builder(mgr);
 
 	auto valueType = builder.getLangBasic().getInt4();
-	auto var = builder.variable(valueType);
+	auto var = builder.variable(valueType, 1);
 	auto expr = builder.literal("1", valueType);
 	auto stmt = builder.callExpr(mgr.getLangBasic().getUnit(), mgr.getLangExtension<lang::ReferenceExtension>().getRefAssign(), var, expr);
 
