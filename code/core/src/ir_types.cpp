@@ -609,6 +609,13 @@ namespace core {
 			);
 	}
 
+	StructPtr Struct::getStructWithFieldsAndNoDefaults(NodeManager& mgr, const std::string& name, const vector<FieldPtr>& fields) {
+		std::cerr << "WARNING: You are using a method intended for internal testing only in " << __FILE__ << ":" << __LINE__ << std::endl;
+		return get(mgr, StringValue::get(mgr, name), Parents::get(mgr, ParentList()), Fields::get(mgr, fields), Expressions::get(mgr, ExpressionList()),
+		           Expressions::get(mgr, ExpressionList()), BoolValue::get(mgr, false),
+		           MemberFunctions::get(mgr, MemberFunctionList()), PureVirtualMemberFunctions::get(mgr, PureVirtualMemberFunctionList()));
+	}
+
 	UnionPtr Union::get(NodeManager & manager, const StringValuePtr& name, const FieldsPtr& fields) {
 		IRBuilder builder(manager);
 		auto thisType = builder.refType(builder.tagTypeReference(name));

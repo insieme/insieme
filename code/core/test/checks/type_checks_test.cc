@@ -1623,47 +1623,47 @@ namespace checks {
 
 		// ----- struct ------
 
-		// test it within a struct
-		cur = builder.structType(toVector(builder.field("a", arrayType)));
-		errors = check(cur, typeCheck);
-		EXPECT_TRUE(errors.empty()) << errors;
-
-		// .. a bigger struct
-		cur = builder.structType(toVector(builder.field("c", element), builder.field("a", arrayType)));
-		errors = check(cur, typeCheck);
-		EXPECT_TRUE(errors.empty()) << errors;
-
-		// it has to be the last element
-		cur = builder.structType(toVector(builder.field("a", arrayType), builder.field("c", element)));
-		errors = check(cur, typeCheck);
-		EXPECT_FALSE(errors.empty()) << errors;
-		EXPECT_EQ(1u, errors.size());
-		EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
-
-		// and must not be present multiple times
-		cur = builder.structType(toVector(builder.field("a", arrayType), builder.field("b", element), builder.field("c", arrayType)));
-		errors = check(cur, typeCheck);
-		EXPECT_FALSE(errors.empty()) << errors;
-		EXPECT_EQ(1u, errors.size());
-		EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
-
-		// may be nested inside another struct
-		cur = builder.structType(toVector(builder.field("a", builder.structType(toVector(builder.field("a", arrayType))))));
-		errors = check(cur, typeCheck);
-		EXPECT_TRUE(errors.empty()) << errors;
-
-
-		// ----- union ------
-
-		// also union
-		cur = builder.unionType(toVector(builder.field("c", element), builder.field("a", arrayType)));
-		errors = check(cur, typeCheck);
-		EXPECT_TRUE(errors.empty()) << errors;
-
-		// here the order is not important
-		cur = builder.unionType(toVector(builder.field("a", arrayType), builder.field("c", element)));
-		errors = check(cur, typeCheck);
-		EXPECT_TRUE(errors.empty()) << errors;
+//		// test it within a struct
+//		cur = builder.structType(toVector(builder.field("a", arrayType)));
+//		errors = check(cur, typeCheck);
+//		EXPECT_TRUE(errors.empty()) << errors;
+//
+//		// .. a bigger struct
+//		cur = builder.structType(toVector(builder.field("c", element), builder.field("a", arrayType)));
+//		errors = check(cur, typeCheck);
+//		EXPECT_TRUE(errors.empty()) << errors;
+//
+//		// it has to be the last element
+//		cur = builder.structType(toVector(builder.field("a", arrayType), builder.field("c", element)));
+//		errors = check(cur, typeCheck);
+//		EXPECT_FALSE(errors.empty()) << errors;
+//		EXPECT_EQ(1u, errors.size());
+//		EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
+//
+//		// and must not be present multiple times
+//		cur = builder.structType(toVector(builder.field("a", arrayType), builder.field("b", element), builder.field("c", arrayType)));
+//		errors = check(cur, typeCheck);
+//		EXPECT_FALSE(errors.empty()) << errors;
+//		EXPECT_EQ(1u, errors.size());
+//		EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
+//
+//		// may be nested inside another struct
+//		cur = builder.structType(toVector(builder.field("a", builder.structType(toVector(builder.field("a", arrayType))))));
+//		errors = check(cur, typeCheck);
+//		EXPECT_TRUE(errors.empty()) << errors;
+//
+//
+//		// ----- union ------
+//
+//		// also union
+//		cur = builder.unionType(toVector(builder.field("c", element), builder.field("a", arrayType)));
+//		errors = check(cur, typeCheck);
+//		EXPECT_TRUE(errors.empty()) << errors;
+//
+//		// here the order is not important
+//		cur = builder.unionType(toVector(builder.field("a", arrayType), builder.field("c", element)));
+//		errors = check(cur, typeCheck);
+//		EXPECT_TRUE(errors.empty()) << errors;
 
 
 		// ----- tuples ------

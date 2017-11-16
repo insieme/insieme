@@ -2039,6 +2039,14 @@ namespace core {
 			return get(manager, Parents::get(manager), fields);
 		}
 
+		/**
+		 * A factory method allowing to obtain a pointer to a named struct type representing
+		 * an instance managed by the given manager.
+		 *
+		 * Note that this method will _not_ add the 6 default members to the struct and it is intended for internal testing only.
+		 */
+		static StructPtr getStructWithFieldsAndNoDefaults(NodeManager& manager, const std::string& name, const vector<FieldPtr>& fields = vector<FieldPtr>());
+
 	IR_NODE_END()
 
 

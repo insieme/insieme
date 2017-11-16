@@ -435,6 +435,7 @@ TEST(PrettyPrinter, Declarations) {
 														"    a : int<4>;"
 														"    b : B;"
 														"};"
+														"def struct B {};"
 														"A"));
 		PrettyPrinter printer(type, PrettyPrinter::OPTIONS_DEFAULT | PrettyPrinter::PRINT_CASTS
 									| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS
@@ -443,9 +444,12 @@ TEST(PrettyPrinter, Declarations) {
 									| PrettyPrinter::PRINT_DERIVED_IMPL);
 
 		EXPECT_EQ(toString(printer), ""
+		"decl struct B;\n"
 		"decl struct A;\n"
 		"decl A::a : int<4>;\n"
 		"decl A::b : B;\n"
+		"def struct B {\n"
+		"};\n"
 		"def struct A {\n"
 		"    a : int<4>;\n"
 		"    b : B;\n"
@@ -686,15 +690,15 @@ TEST(PrettyPrinter, StructSuperTypes) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	TypePtr classA = builder.structType(toVector(builder.field("a", builder.genericType("A"))));
-	EXPECT_EQ("struct {\n    a : A;\n}", toString(PrettyPrinter(classA))) << toString(PrettyPrinter(classA));
+	TypePtr classA = builder.structType(toVector(builder.field("a", builder.getLangBasic().getInt4())));
+	EXPECT_EQ("struct {\n    a : int<4>;\n}", toString(PrettyPrinter(classA))) << toString(PrettyPrinter(classA));
 
-	TypePtr classB = builder.structType(toVector(classA), toVector(builder.field("b", builder.genericType("B"))));
-	EXPECT_EQ("struct : [ public struct {\n    a : A;\n} ] {\n    b : B;\n}", toString(PrettyPrinter(classB)));
+	TypePtr classB = builder.structType(toVector(classA), toVector(builder.field("b", builder.getLangBasic().getInt8())));
+	EXPECT_EQ("struct : [ public struct {\n    a : int<4>;\n} ] {\n    b : int<8>;\n}", toString(PrettyPrinter(classB)));
 
-	TypePtr classC = builder.structType(toVector(builder.parent(true, classB)), toVector(builder.field("c", builder.genericType("C"))));
+	TypePtr classC = builder.structType(toVector(builder.parent(true, classB)), toVector(builder.field("c", builder.getLangBasic().getInt16())));
 	EXPECT_EQ(
-	    "struct : [ virtual public struct : [ public struct {\n    a : A;\n} ] {\n    b : B;\n} ] {\n    c : C;\n}",
+	    "struct : [ virtual public struct : [ public struct {\n    a : int<4>;\n} ] {\n    b : int<8>;\n} ] {\n    c : int<16>;\n}",
 	    toString(PrettyPrinter(classC)));
 }
 
