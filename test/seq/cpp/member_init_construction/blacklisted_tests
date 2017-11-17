@@ -1,22 +1,10 @@
 # Do not remove this file even if it does not blacklist any test.
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
-mpi
-pointer_arith_vla
-variadic_functions
 
-# Disabling tests because they fail with assertion:
-# Goto not implemented
-label_goto
+# Not supported in the backend yet
+correct_init_no_ctors
 
-# Disabling tests because they fail with assertion:
-# VectorType not implemented.
-longlong
-simd_vector
-
-# Problems with unknown sized arrays
-qap
-variable_sized_struct
 
 ####################################################################################
 # The following tests are not really blacklisted but take rather long to execute.  #
@@ -24,4 +12,3 @@ variable_sized_struct
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
-+mqap
