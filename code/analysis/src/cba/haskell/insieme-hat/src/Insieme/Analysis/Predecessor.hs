@@ -49,31 +49,33 @@ import Data.Maybe
 import Control.DeepSeq (NFData)
 import Data.Typeable
 import GHC.Generics (Generic)
+
+import qualified Data.Set as Set
+
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Query as Q
+import qualified Insieme.Inspire as I
+import qualified Insieme.Utils.BoundSet as BSet
+
 import Insieme.Analysis.Boolean
 import Insieme.Analysis.CallSite
 import Insieme.Analysis.Callable
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.ExitPoint
-import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Query
-import Insieme.Inspire.Visit
-
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Utils.CppSemantic as Sema
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Inspire as IR
-import qualified Insieme.Utils.BoundSet as BSet
 
 --
 -- * Predecessor Lattice
 --
 
-newtype PredecessorList = PredecessorList { unPL :: [ProgramPoint] }
+newtype PredecessorList = PredecessorList { unPL :: Set.Set ProgramPoint }
   deriving (Eq, Ord, Show, Generic, NFData)
 
 instance Solver.Lattice PredecessorList where
-    bot = PredecessorList []
-    (PredecessorList x) `merge` (PredecessorList y) = PredecessorList $ x ++ y
+    bot = PredecessorList Set.empty
+    (PredecessorList x) `merge` (PredecessorList y) = PredecessorList $ Set.union x y
 
 --
 -- * Predecessor Analysis
@@ -95,25 +97,25 @@ predecessorAnalysis = Solver.mkAnalysisIdentifier PredecessorAnalysis "pred_of"
 predecessor :: ProgramPoint -> Solver.TypedVar PredecessorList
 
 -- Predecessor rules for the program root node
-predecessor p@(ProgramPoint a Pre) | isRoot a = var
+predecessor p@(ProgramPoint a Pre) | I.isRoot a = var
     where
         var = Solver.mkVariable (idGen p) [] Solver.bot
 
 -- Predecessor rules for pre program points
-predecessor p@(ProgramPoint a Pre) = case getNodeType parent of
+predecessor p@(ProgramPoint a Pre) = case Q.getNodeType parent of
 
-    IR.CallExpr -> single $
-            if i == (numChildren parent) - 1
+    I.CallExpr -> single $
+            if i == (I.numChildren parent) - 1
             -- start with last argument
             then ProgramPoint parent Pre
             -- eval arguments in reverse order
-            else ProgramPoint (goDown (i+1) parent) Post
+            else ProgramPoint (I.goDown (i+1) parent) Post
 
-    IR.Lambda -> case () of
+    I.Lambda -> case () of
           _ | isImplicitCtor ->
-                single $ ProgramPoint (goDown 1 $ Sema.getEnclosingDeclaration parent) Post 
+                single $ ProgramPoint (I.goDown 1 $ Sema.getEnclosingDeclaration parent) Post 
             | isImplicitDtor -> case () of
-                _ | dtorIndex == 0 -> single $ ProgramPoint (goDown ((numChildren scope) -1) scope) Post
+                _ | dtorIndex == 0 -> single $ ProgramPoint (I.goDown ((I.numChildren scope) -1) scope) Post
                   | otherwise      -> single $ ProgramPoint (dtors !! (dtorIndex-1)) Post
             | otherwise      -> call_sites
         where
@@ -126,82 +128,82 @@ predecessor p@(ProgramPoint a Pre) = case getNodeType parent of
             dtorIndex = fromJust $ elemIndex a dtors
 
 
-    IR.BindExpr -> call_sites
+    I.BindExpr -> call_sites
 
-    IR.TupleExpr -> single $ ProgramPoint parent Pre
+    I.TupleExpr -> single $ ProgramPoint parent Pre
 
-    IR.InitExpr
-      | i == 1    -> single $ ProgramPoint (goDown 2 parent) Post
+    I.InitExpr
+      | i == 1    -> single $ ProgramPoint (I.goDown 2 parent) Post
       | otherwise -> single $ ProgramPoint parent Pre
 
-    IR.CastExpr -> single $ ProgramPoint parent Pre
+    I.CastExpr -> single $ ProgramPoint parent Pre
 
-    IR.Expressions
+    I.Expressions
       | i == 0     -> single $ ProgramPoint parent Pre
-      | otherwise -> single $ ProgramPoint (goDown (i-1) parent) Post
+      | otherwise -> single $ ProgramPoint (I.goDown (i-1) parent) Post
 
-    IR.Declaration -> single $ ProgramPoint parent Pre
+    I.Declaration -> single $ ProgramPoint parent Pre
 
-    IR.DeclarationStmt -> single $ ProgramPoint parent Pre
+    I.DeclarationStmt -> single $ ProgramPoint parent Pre
 
-    IR.CompoundStmt -> single $
+    I.CompoundStmt -> single $
       -- if it is the first statement
       if i == 0
       -- then go to the pre-state of the compound statement
       then ProgramPoint parent Pre
       -- else to the post state of the previous statement
-      else ProgramPoint (goDown (i-1) parent) Post
+      else ProgramPoint (I.goDown (i-1) parent) Post
 
-    IR.IfStmt
+    I.IfStmt
       | i == 0    -> single $ ProgramPoint parent Pre
       -- TODO: make dependent on result of conditional expression
-      | otherwise -> single $ ProgramPoint (goDown 0 parent) Post
+      | otherwise -> single $ ProgramPoint (I.goDown 0 parent) Post
 
-    IR.ForStmt
+    I.ForStmt
       -- pred of declarations is loop itself
       | i == 0 -> single $ ProgramPoint parent Pre
       -- pred of end value is declaration block
-      | i == 1 -> single $ ProgramPoint (goDown 0 parent) Post
+      | i == 1 -> single $ ProgramPoint (I.goDown 0 parent) Post
       -- pred of step value is end value
-      | i == 2 -> single $ ProgramPoint (goDown 1 parent) Post
+      | i == 2 -> single $ ProgramPoint (I.goDown 1 parent) Post
       -- pred of body is 1. step value, 2. previous body, or 3. continue stmt
-      | i == 3 -> multiple $ PredecessorList $
-                [ ProgramPoint (goDown 2 parent) Post    -- step
-                , ProgramPoint (goDown 3 parent) Post]   -- body (n-1)
+      | i == 3 -> multiple $ PredecessorList $ Set.fromList $
+                [ ProgramPoint (I.goDown 2 parent) Post    -- step
+                , ProgramPoint (I.goDown 3 parent) Post]   -- body (n-1)
                 ++ postContinueStmt a                    -- all continues
 
-    IR.WhileStmt
+    I.WhileStmt
       -- cond of while is evaluated 1. after entering while, 2. after
       -- regular loop, and 3. after a continue
-      | i == 0 -> multiple $ PredecessorList $
+      | i == 0 -> multiple $ PredecessorList $ Set.fromList $
                 [ ProgramPoint parent Pre                -- entering
-                , ProgramPoint (goDown 1 parent) Post]   -- regular loop
+                , ProgramPoint (I.goDown 1 parent) Post]   -- regular loop
                 ++ postContinueStmt a                    -- all continues
       -- body of a while is evaluated only after the condition
-      | i == 1 -> single $ ProgramPoint (goDown 0 parent) Post
+      | i == 1 -> single $ ProgramPoint (I.goDown 0 parent) Post
 
-    IR.SwitchStmt
+    I.SwitchStmt
       -- pred of the switch expression is the switch stmt itself
       | i == 0     -> single $ ProgramPoint parent Pre
       -- pred of a branch always is the switch expression
-      | otherwise -> single $ ProgramPoint (goRel [-1, 0] a) Post
+      | otherwise -> single $ ProgramPoint (I.goRel [-1, 0] a) Post
 
     -- after processing a lone BreakStmt we end up here; go to switch expr
-    IR.SwitchCase -> single . flip ProgramPoint Post $ goRel [-3, 0] a
+    I.SwitchCase -> single . flip ProgramPoint Post $ I.goRel [-3, 0] a
 
-    IR.ReturnStmt -> single $ ProgramPoint parent Pre
+    I.ReturnStmt -> single $ ProgramPoint parent Pre
 
     -- if the parent is types, we are in an implicit intercepted constructor
-    IR.Types -> single $ ProgramPoint (goDown 1 decl) Post  -- end if init expression
+    I.Types -> single $ ProgramPoint (I.goDown 1 decl) Post  -- end if init expression
       where
         decl = Sema.getEnclosingDeclaration parent
 
-    _ -> unhandled "Pre" p (getNodeType parent)
+    _ -> unhandled "Pre" p (Q.getNodeType parent)
 
   where
-    parent = fromJust $ getParent a
+    parent = fromJust $ I.getParent a
 
-    i = getIndex a
+    i = I.getIndex a
 
     single = single' p
     multiple = multiple' p
@@ -210,24 +212,24 @@ predecessor p@(ProgramPoint a Pre) = case getNodeType parent of
     con = Solver.createConstraint dep val call_sites
 
     dep _ = [Solver.toVar callSitesVar]
-    val a = PredecessorList $ foldr go [] $ Solver.get a callSitesVar
+    val a = PredecessorList $ Set.fromList $ foldr go [] $ Solver.get a callSitesVar
       where
-        go (CallSite call) list = ProgramPoint (goDown 1 call) Post : list
+        go (CallSite call) list = ProgramPoint (I.goDown 1 call) Post : list
 
     callSitesVar = callSites parent
 
 
 -- Predecessor rules for internal program points.
-predecessor  p@(ProgramPoint addr Internal) = case getNodeType addr of
+predecessor  p@(ProgramPoint addr Internal) = case Q.getNodeType addr of
 
     -- link to exit points of potential target functions
-    IR.CallExpr -> var
+    I.CallExpr -> var
       where
         extract = ComposedValue.toValue
         var = Solver.mkVariable (idGen p) [con] Solver.bot
         con = Solver.createConstraint dep val var
         dep a = Solver.toVar callableVar : map Solver.toVar (exitPointVars a)
-        val a = PredecessorList $ [litPredecessor | callsLiteral] ++ nonLiteralExit
+        val a = PredecessorList $ Set.fromList $ [litPredecessor | callsLiteral] ++ nonLiteralExit
           where
             nonLiteralExit = foldr go [] (exitPointVars a)
             go e l = foldr (\(ExitPoint r) l -> ProgramPoint r Post : l)
@@ -236,8 +238,8 @@ predecessor  p@(ProgramPoint addr Internal) = case getNodeType addr of
               where
                 isLiteral (Literal _) = True
                 isLiteral _ = False
-            litPredecessor = ProgramPoint (goDown 1 addr) Post
-        callableVar = callableValue (goDown 1 addr)
+            litPredecessor = ProgramPoint (I.goDown 1 addr) Post
+        callableVar = callableValue (I.goDown 1 addr)
         callableVal a = BSet.toSet $
                 if BSet.isUniverse callables
                 then collectAllCallables addr
@@ -247,111 +249,114 @@ predecessor  p@(ProgramPoint addr Internal) = case getNodeType addr of
         exitPointVars a =
           foldr (\t l -> exitPoints (toAddress t) : l) [] (callableVal a)
 
-    _ -> unhandled "Internal" p (getNodeType $ fromJust $ getParent addr)
+    -- declarations with implicit constructor are done once the init expression is done
+    I.Declaration | Sema.callsImplicitConstructor addr -> case Sema.getImplicitConstructor addr of
+        Just ctor -> case Q.getNodeType ctor of
+            -- TODO: support multiple exit points for ctor
+            I.LambdaExpr -> single' p $ ProgramPoint (I.goDown 2 $ fromJust $ Q.getLambda ctor) Post
+            _ -> single' p $ ProgramPoint ctor Post
+        Nothing   -> error "Implicit constructor not found?!"
+
+    -- declarations without implicit constructor are done once the init expression is done
+    I.Declaration -> single' p $ ProgramPoint (I.goDown 1 addr) Post
+
+    _ -> unhandled "Internal" p (Q.getNodeType $ fromJust $ I.getParent addr)
 
 -- Predecessor rules for post program points.
-predecessor p@(ProgramPoint a Post) = case getNodeType a of
+predecessor p@(ProgramPoint a Post) = case Q.getNodeType a of
 
     -- basic expressions are directly switching from Pre to Post
-    IR.Variable        -> pre
-    IR.Literal         -> pre
-    IR.LambdaExpr      -> pre
-    IR.LambdaReference -> pre
-    IR.BindExpr        -> pre
-    IR.JobExpr         -> pre
+    I.Variable        -> pre
+    I.Literal         -> pre
+    I.LambdaExpr      -> pre
+    I.LambdaReference -> pre
+    I.BindExpr        -> pre
+    I.JobExpr         -> pre
 
     -- call expressions are switching from Internal to Post
-    IR.CallExpr -> single $ ProgramPoint a Internal
+    I.CallExpr -> single $ ProgramPoint a Internal
 
     -- for tuple expressions, the predecessor is the end of the epxressions
-    IR.TupleExpr -> single $ ProgramPoint (goDown 1 a) Post
+    I.TupleExpr -> single $ ProgramPoint (I.goDown 1 a) Post
 
     -- for initialization expressions, we finish with the first sub-expression
-    IR.InitExpr -> single $ ProgramPoint (goDown 1 a) Post
+    I.InitExpr -> single $ ProgramPoint (I.goDown 1 a) Post
 
     -- cast expressions just process the nested node
-    IR.CastExpr -> single $ ProgramPoint (goDown 1 a) Post
+    I.CastExpr -> single $ ProgramPoint (I.goDown 1 a) Post
 
-    -- declarations with implicit constructor are done once the init expression is done
-    IR.Declaration | Sema.callsImplicitConstructor a -> case Sema.getImplicitConstructor a of
-        Just ctor -> case getNodeType ctor of
-            -- TODO: support multiple exit points for ctor
-            IR.LambdaExpr -> single $ ProgramPoint (goDown 2 $ fromJust $ getLambda ctor) Post
-            _ -> single $ ProgramPoint ctor Post
-        Nothing   -> error "Implicit constructor not found?!"
-    
     -- declarations without implicit constructor are done once the init expression is done
-    IR.Declaration -> single $ ProgramPoint (goDown 1 a) Post
+    I.Declaration -> single $ ProgramPoint a Internal
 
     -- handle lists of expressions
-    IR.Expressions | numChildren a == 0 -> single $ ProgramPoint a Pre
-                   | otherwise          -> single $ ProgramPoint (goDown ((numChildren a) - 1) a) Post
+    I.Expressions | I.numChildren a == 0 -> single $ ProgramPoint a Pre
+                  | otherwise            -> single $ ProgramPoint (I.goDown ((I.numChildren a) - 1) a) Post
 
     -- compound statements
-    IR.CompoundStmt | numChildren a == 0 -> pre
-                    | otherwise          -> case () of
-                        _ | null dtors -> single $ ProgramPoint (goDown ((numChildren a) -1) a) Post
-                          | otherwise  -> single $ ProgramPoint (last dtors) Post
+    I.CompoundStmt | I.numChildren a == 0 -> pre
+                   | otherwise            -> case () of
+                       _ | null dtors -> single $ ProgramPoint (I.goDown ((I.numChildren a) -1) a) Post
+                         | otherwise  -> single $ ProgramPoint (last dtors) Post
       where
         dtors = Sema.getImplicitDestructorBodies a
 
 
     -- declaration statement
-    IR.DeclarationStmt -> single $ ProgramPoint (goDown 0 a) Post
+    I.DeclarationStmt -> single $ ProgramPoint (I.goDown 0 a) Post
 
     -- conditional statement
-    IR.IfStmt -> var
+    I.IfStmt -> var
       where
         var = Solver.mkVariable (idGen p) [con] Solver.bot
         con = Solver.createConstraint dep val var
         dep _ = [Solver.toVar conditionValueVar]
-        val a = PredecessorList $ case ComposedValue.toValue (Solver.get a conditionValueVar) of
+        val a = PredecessorList $ Set.fromList $ case ComposedValue.toValue (Solver.get a conditionValueVar) of
                   Neither     -> []
                   AlwaysTrue  -> [thenBranch]
                   AlwaysFalse -> [elseBranch]
                   Both        -> [thenBranch,elseBranch]
-        conditionValueVar = booleanValue $ goDown 0 a
-        thenBranch = ProgramPoint (goDown 1 a) Post
-        elseBranch = ProgramPoint (goDown 2 a) Post
+        conditionValueVar = booleanValue $ I.goDown 0 a
+        thenBranch = ProgramPoint (I.goDown 1 a) Post
+        elseBranch = ProgramPoint (I.goDown 2 a) Post
 
     -- for loop statement
-    IR.ForStmt -> multiple $ PredecessorList
-      [ ProgramPoint (goDown 2 a) Post     -- loop never entered
-      , ProgramPoint (goDown 3 a) Post ]   -- body when loop was run
+    I.ForStmt -> multiple $ PredecessorList $ Set.fromList $
+      [ ProgramPoint (I.goDown 2 a) Post     -- loop never entered
+      , ProgramPoint (I.goDown 3 a) Post ]   -- body when loop was run
 
     -- while stmts evaluate as a last step either 1. their condition,
     -- or 2. a BreakStmt
-    IR.WhileStmt -> multiple $ PredecessorList $ map (`ProgramPoint` Post) $
-      goDown 0 a:                          -- condition
-      collectAddr IR.BreakStmt prune a     -- all subordinate 'BreakStmt's
+    I.WhileStmt -> multiple $ PredecessorList $ Set.fromList $ map (`ProgramPoint` Post) $
+      I.goDown 0 a:                          -- condition
+      I.collectAddr I.BreakStmt prune a     -- all subordinate 'BreakStmt's
       where
-        prune = [(== IR.SwitchStmt), (== IR.WhileStmt), isType]
-        isType = (==IR.Type) . IR.toNodeKind
+        prune = [(== I.SwitchStmt), (== I.WhileStmt), isType]
+        isType = (==I.Type) . I.toNodeKind
 
     -- moving backwards after continue stmt we jump to its beginning
-    IR.ContinueStmt -> pre
+    I.ContinueStmt -> pre
 
     -- switch stmts have executed either 1. the default branch, 2. one
     -- of the breaks, or 3. one of the cases without a break
-    IR.SwitchStmt -> multiple $ PredecessorList $ map (`ProgramPoint` Post) $
-      goDown 2 a :                         -- default branch
-      collectAddr IR.BreakStmt prune a ++  -- break statements
-      [goRel [1, i, 1] a | i <- enumFromTo 0 (numChildren (goDown 1 a)-1)] -- case
+    I.SwitchStmt -> multiple $ PredecessorList $ Set.fromList $ map (`ProgramPoint` Post) $
+      I.goDown 2 a :                         -- default branch
+      I.collectAddr I.BreakStmt prune a ++  -- break statements
+      [I.goRel [1, i, 1] a | i <- enumFromTo 0 (I.numChildren (I.goDown 1 a)-1)] -- case
       where
-        prune = [(== IR.SwitchStmt), (== IR.WhileStmt), isType]
-        isType = (==IR.Type) . IR.toNodeKind
+        prune = [(== I.SwitchStmt), (== I.WhileStmt), isType]
+        isType = (==I.Type) . I.toNodeKind
 
     -- moving backwards after break stmt we jump to its beginning
-    IR.BreakStmt -> pre
+    I.BreakStmt -> pre
 
     -- return statement
-    IR.ReturnStmt -> single $ ProgramPoint (goDown 0 a) Post
+    I.ReturnStmt -> single $ ProgramPoint (I.goDown 0 a) Post
 
     -- if the program point is pointing to a type, it is an implicit constructor call
-    IR.GenericType  -> single $ ProgramPoint a Pre
-    IR.TypeVariable -> single $ ProgramPoint a Pre 
+    I.GenericType  -> single $ ProgramPoint a Pre
+    I.TypeVariable -> single $ ProgramPoint a Pre 
 
-    _ -> unhandled "Post" p (getNodeType a)
+    _ -> unhandled "Post" p (Q.getNodeType a)
 
   where
     multiple = multiple' p
@@ -364,23 +369,23 @@ multiple' p = Solver.mkVariable (idGen p) []
 
 -- | Create a dependence to a program point.
 single' :: ProgramPoint -> ProgramPoint -> Solver.TypedVar PredecessorList
-single' p x = multiple' p $ PredecessorList [x]
+single' p x = multiple' p $ PredecessorList $ Set.singleton x
 
 -- | 'Post' 'ProgramPoint's for all 'ContinueStmt' nodes directly
 -- below the given address.
 postContinueStmt :: NodeAddress -> [ProgramPoint]
 postContinueStmt a = map (`ProgramPoint` Post)
-                     (collectAddr IR.ContinueStmt prune a)
+                     (I.collectAddr I.ContinueStmt prune a)
   where
-    prune = [(== IR.WhileStmt), (== IR.ForStmt), (== IR.LambdaExpr), isType]
-    isType = (==IR.Type) . IR.toNodeKind
+    prune = [(== I.WhileStmt), (== I.ForStmt), (== I.LambdaExpr), isType]
+    isType = (==I.Type) . I.toNodeKind
 
 -- | Variable ID generator
 idGen :: ProgramPoint -> Solver.Identifier
 idGen pp = Solver.mkIdentifierFromProgramPoint predecessorAnalysis pp
 
 -- | Unhandled cases should print an error message for easier debugging.
-unhandled :: String -> ProgramPoint -> IR.NodeType
+unhandled :: String -> ProgramPoint -> I.NodeType
           -> Solver.TypedVar PredecessorList
 unhandled pos p parent = error . unwords $
   ["Unhandled", pos, "Program Point:", show p, "for parent", show parent]

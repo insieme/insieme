@@ -57,8 +57,7 @@ int main(int argc, char** argv) {
 	int* p3 = (argc > 2) ? p1 : p2;
 	cba_expect_maybe_extern_ptr(p3);
 
-//	cba_print_code();
-//	cba_dump_solution();
+//	cba_debug();
 
 	return 0;
 }

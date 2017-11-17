@@ -37,12 +37,14 @@
 
 module Insieme.Analysis.Alias where
 
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Utils.BoundSet as BSet
+
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Reference
-import Insieme.Inspire.NodeAddress
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Utils.BoundSet as BSet
+
 
 data Result = AreAlias | MayAlias | NotAlias
   deriving (Eq, Ord, Show)

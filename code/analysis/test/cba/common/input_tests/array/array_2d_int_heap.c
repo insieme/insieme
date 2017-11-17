@@ -78,9 +78,8 @@ int main(int argc, char** argv) {
 //	cba_expect_eq_int(a[1][0], 14);
 	cba_expect_undefined_int(a[1][1]);
 
-//	cba_print_code();
-//	cba_dump_solution();
-//	cba_dump_json();
+//	cba_dump_statistic();
+//	cba_debug();
 
 	return 0;
 }

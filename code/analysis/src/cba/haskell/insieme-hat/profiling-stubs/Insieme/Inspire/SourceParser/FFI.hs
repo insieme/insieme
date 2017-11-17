@@ -35,7 +35,26 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Inspire.NodePath where
+{- | Use this module instead of the original Insieme.Adapter for profiling.
+     No FFI imports are allowed here!
+ -}
 
--- TODO: newtype?
-type NodePath = [Int]
+module Insieme.Inspire.SourceParser.FFI where
+
+import qualified Data.ByteString.Char8 as BS8
+import System.Process (proc, CreateProcess(..))
+import System.Process.ByteString
+import System.Environment (getEnvironment)
+
+import qualified Insieme.Inspire.IR as IR
+import qualified Insieme.Inspire.BinaryParser as Bin
+
+parseInspireSource :: String -> IO IR.Tree
+parseInspireSource input = do
+    envvars <- getEnvironment
+    let cp = (proc "inspire" ["-s", "-i", "-", "-k", "-"]) {
+                    env = Just $ envvars ++ [("INSIEME_NO_SEMA","1")]
+                }
+    irb <- readCreateProcess cp (BS8.pack input)
+    let Right ir = Bin.parseBinaryDump irb
+    return ir

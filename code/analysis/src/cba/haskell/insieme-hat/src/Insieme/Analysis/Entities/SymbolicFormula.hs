@@ -52,9 +52,10 @@ module Insieme.Analysis.Entities.SymbolicFormula (
 
 import Control.DeepSeq
 import GHC.Generics (Generic)
-import Insieme.Utils.ParseInt
+
+import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.NodeAddress as Addr
+import Insieme.Utils.ParseInt
 import qualified Insieme.Utils.Arithmetic as Ar
 
 --
@@ -62,9 +63,9 @@ import qualified Insieme.Utils.Arithmetic as Ar
 --
 
 data Symbol = Constant {getNode :: IR.Tree,
-                        getAddr :: Addr.NodeAddress }
+                        getAddr :: NodeAddress }
             | Variable {getNode :: IR.Tree,
-                        getAddr :: Addr.NodeAddress }
+                        getAddr :: NodeAddress }
   deriving (Generic, NFData)
 
 instance Eq Symbol where

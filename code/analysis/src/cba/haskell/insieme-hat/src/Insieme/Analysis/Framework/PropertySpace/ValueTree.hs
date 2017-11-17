@@ -54,8 +54,6 @@ import Insieme.Analysis.Framework.PropertySpace.ComposedValue
 import qualified Data.Map as Map
 import qualified Insieme.Analysis.Solver as Solver
 
-
-
 data Tree i a = Leaf a
               | Node (Map.Map i (Tree i a))
               | Empty
@@ -93,6 +91,8 @@ instance (FieldIndex i, Solver.ExtLattice a) => ComposedValue (Tree i a) i a whe
 
     -- obtain an addressed value within a tree
     getElement  Root t = t
+    getElement _ Empty = Empty
+    getElement _ l@(Leaf _) = l
     getElement (DataPath p Down i) t = get i $ getElement p t
     getElement _ _ = Inconsistent
 
@@ -140,7 +140,7 @@ get i (Node m)     = r
         k = project (Map.keys m) i
         r = Solver.join $ map extract k
             where
-                extract k' = fromMaybe Inconsistent $ Map.lookup k' m
+                extract k' = fromMaybe Empty $ Map.lookup k' m
 
 get _ Empty        = Empty
 get _ _            = Inconsistent
@@ -149,7 +149,7 @@ get _ _            = Inconsistent
 set :: (Ord i) => i -> Tree i a -> Tree i a -> Tree i a
 set i v Empty        = Node $ Map.singleton i v
 set i v Inconsistent = Node $ Map.singleton i v
-set _ _ (Leaf _)     = Inconsistent
+set i v (Leaf _)     = Node $ Map.singleton i v
 set i v (Node m)     = Node $ Map.insert i v m
 
 
@@ -173,5 +173,16 @@ mergeTree a@(Node m) b@(Node n)  = r
                         fuse x = (x, mergeTree (get x a) (get x b))
                 Nothing -> Inconsistent
 
--- mergeTree a b = trace ("Unsupported merge of " ++ (show a) ++ " and " ++ (show b)) Inconsistent
-mergeTree _ _ = Inconsistent
+mergeTree a@(Node m) b@(Leaf _) = r
+    where
+        -- push leaf value into next level
+        keys = Map.keys m
+
+        r = Node $ Map.fromList $ map fuse keys
+        fuse x = (x, mergeTree (get x a) b)
+
+mergeTree a@(Leaf _) b@(Node _) = mergeTree b a
+
+mergeTree Inconsistent _ = Inconsistent
+mergeTree _ Inconsistent = Inconsistent
+

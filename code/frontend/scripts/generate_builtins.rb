@@ -24,7 +24,7 @@ enum_pattern = /(\w*)\s*enum\s+(\w*)([^}]+?})\s*(\w*);/
 preprocessor_pattern = /^(#(?:if|else|endif|include).*)$/
 
 # tokens to be removed/ignored
-standard_tokens = %w(void char short int unsigned long float double const enum \*)
+standard_tokens = %w(void char short int unsigned long float double size_t const enum \*)
 
 $options = {:insieme_builtins_dir => nil, :command => nil, :std_include_dirs => nil, :force => false, :quiet => false, :detect_via_compiler => nil}
 

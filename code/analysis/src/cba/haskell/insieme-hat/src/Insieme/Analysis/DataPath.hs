@@ -44,13 +44,16 @@ module Insieme.Analysis.DataPath where
 import Control.DeepSeq (NFData)
 import Data.Typeable
 import GHC.Generics (Generic)
+
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import qualified Insieme.Query as Q
+
 import Insieme.Analysis.Arithmetic
 import Insieme.Analysis.Entities.DataPath
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Identifier
-import Insieme.Inspire.NodeAddress hiding (append)
-import Insieme.Inspire.Query
 
 import qualified Insieme.Analysis.Entities.FieldIndex as FieldIndex
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -104,7 +107,7 @@ dataPathValue addr = dataflowValue addr analysis ops
     -- handle the data path root constructore --
     rootOp = OperatorHandler cov dep val
       where
-        cov a = isBuiltin a "dp_root"
+        cov a = Q.isBuiltin a "dp_root"
 
         dep _ _ = []
 
@@ -114,7 +117,7 @@ dataPathValue addr = dataflowValue addr analysis ops
     -- the handler for the member access path constructore --
     member = OperatorHandler cov dep val
       where
-        cov a = isBuiltin a "dp_member"
+        cov a = Q.isBuiltin a "dp_member"
 
         dep _ _ = (Solver.toVar nestedPathVar) : (Solver.toVar fieldNameVar) : []
 
@@ -123,7 +126,7 @@ dataPathValue addr = dataflowValue addr analysis ops
                 combine = BSet.lift2 $ \p i -> append p ((step . structField) (toString i))
                 fieldNames = ComposedValue.toValue $ Solver.get a fieldNameVar
 
-        fieldNameVar = identifierValue $ goDown 3 addr
+        fieldNameVar = identifierValue $ I.goDown 3 addr
 
 
     -- the handler for the element access path constructor --
@@ -135,7 +138,7 @@ dataPathValue addr = dataflowValue addr analysis ops
 
     subscriptHandler operatorName dataPathStep = OperatorHandler cov dep val
       where
-        cov a = isBuiltin a operatorName
+        cov a = Q.isBuiltin a operatorName
 
         dep _ _ = (Solver.toVar nestedPathVar) : (Solver.toVar indexVar) : []
 
@@ -147,11 +150,11 @@ dataPathValue addr = dataflowValue addr analysis ops
 
                 indexes = BSet.toUnboundSet $ unSFS $ ComposedValue.toValue $ Solver.get a indexVar
 
-        indexVar = arithmeticValue $ goDown 3 addr
+        indexVar = arithmeticValue $ I.goDown 3 addr
 
 
     -- common utilities --
 
-    nestedPathVar = dataPathValue $ goDown 2 addr
+    nestedPathVar = dataPathValue $ I.goDown 2 addr
 
     paths a = ComposedValue.toValue $ Solver.get a nestedPathVar

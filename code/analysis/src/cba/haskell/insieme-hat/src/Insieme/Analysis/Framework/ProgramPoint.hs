@@ -38,19 +38,19 @@
 module Insieme.Analysis.Framework.ProgramPoint where
 
 import Data.Maybe
-import Insieme.Inspire.NodeAddress
+
+import qualified Data.Set as Set
+
+import qualified Insieme.Inspire as IR
+import qualified Insieme.Query as Q
+import qualified Insieme.Utils.BoundSet as BSet
 
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.Predecessor
 import Insieme.Analysis.Callable
 import qualified Insieme.Analysis.Solver as Solver
-
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-
-import qualified Insieme.Utils.BoundSet as BSet
-import qualified Insieme.Inspire as IR
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-
 
 --
 -- A generic variable and constraint generator for variables describing
@@ -64,7 +64,7 @@ programPointValue :: (Solver.ExtLattice a)
          -> [OperatorHandler a]                             -- ^ a list of operator handlers to intercept the interpretation of certain operators
          -> Solver.TypedVar a                               -- ^ the resulting variable representing the requested information
 
-programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNodeType addr of
+programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case Q.getNodeType addr of
 
         -- allow operator handlers to intercept the interpretation of calls
         IR.CallExpr | p == Post -> ivar
@@ -83,7 +83,7 @@ programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNodeType
                 ival a = if hasUniversalTarget a then Solver.top else if isHandlerActive a then operatorVal a else val a
 
                 -- the variable storing the target of the call
-                targetVar = callableValue (goDown 1 addr)
+                targetVar = callableValue (IR.goDown 1 addr)
 
                 -- tests whether the set of callees is universal
                 hasUniversalTarget a = BSet.isUniverse $ extract $ Solver.get a targetVar
@@ -129,12 +129,12 @@ programPointValue pp@(ProgramPoint addr p) idGen analysis ops = case getNodeType
 mkPredecessorConstraintCredentials :: (Solver.Lattice a)
         => ProgramPoint
         -> (ProgramPoint -> Solver.TypedVar a)
-        -> (Solver.Assignment -> [Solver.Var],Solver.Assignment -> a)
+        -> (Solver.AssignmentView -> [Solver.Var],Solver.AssignmentView -> a)
 
 mkPredecessorConstraintCredentials pp analysis = (dep,val)
     where
         predecessorVar = predecessor pp
-        predecessorStateVars a = map analysis $ unPL $ Solver.get a predecessorVar
+        predecessorStateVars a = map analysis $ Set.toList $ unPL $ Solver.get a predecessorVar
 
         dep a = (Solver.toVar predecessorVar) : map Solver.toVar (predecessorStateVars a)
         val a = Solver.join $ map (Solver.get a) (predecessorStateVars a)

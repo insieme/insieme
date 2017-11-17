@@ -44,19 +44,20 @@ module Insieme.Analysis.CallSite (
     callSites
 ) where
 
+import qualified Data.Set as Set
 import Data.Maybe
 import Data.Typeable
+
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import qualified Insieme.Query as Q
+import qualified Insieme.Utils.BoundSet as BSet
+
 import Insieme.Analysis.DynamicCallSites
 import Insieme.Analysis.FreeLambdaReferences
-import Insieme.Inspire.NodeAddress
-
-import qualified Data.Set as Set
 import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.RecursiveLambdaReferences as RecLambdaRefs
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Inspire as IR
-import qualified Insieme.Utils.BoundSet as BSet
-
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
 --
@@ -75,14 +76,14 @@ callSiteAnalysis = Solver.mkAnalysisIdentifier CallSiteAnalysis "CS"
 --
 
 callSites :: NodeAddress -> Solver.TypedVar CallSiteSet
-callSites addr = case getNodeType addr of
+callSites addr = case Q.getNodeType addr of
 
     -- for root elements => no call sites
-    _ | isRoot e -> noCalls
+    _ | I.isRoot e -> noCalls
 
     -- for lambdas and bind exressions: collect all call sites
-    IR.Lambda   -> var
-    IR.BindExpr -> var
+    I.Lambda   -> var
+    I.BindExpr -> var
 
     -- everything else has no call sites
     _ -> noCalls
@@ -94,26 +95,26 @@ callSites addr = case getNodeType addr of
     noCalls = Solver.mkVariable (idGen addr) [] Solver.bot
 
     -- navigate to the enclosing expression
-    e = case getNodeType addr of
-        IR.Lambda   -> fromJust $ getParent =<< getParent =<< getParent addr
-        IR.BindExpr -> addr
+    e = case Q.getNodeType addr of
+        I.Lambda   -> fromJust $ I.getParent =<< I.getParent =<< I.getParent addr
+        I.BindExpr -> addr
         _           -> error "unhandled CallSite enclosing expression"
 
-    i = getIndex e
-    p = fromJust $ getParent e
+    i = I.getIndex e
+    p = fromJust $ I.getParent e
 
-    isCall a = getNodeType a == IR.CallExpr
+    isCall a = Q.getNodeType a == I.CallExpr
 
 
     -- the number of parameters of this callable
-    numParams = numChildren $ goDown 1 addr                     -- TODO: this is wrong in case of variadic parameters!!
+    numParams = I.numChildren $ I.goDown 1 addr                     -- TODO: this is wrong in case of variadic parameters!!
 
 
     -- create the variable (by binding at least the id) --
     var = Solver.mkVariable (idGen addr) cons initial
 
-    cons    = if isRoot addr then [] else [con]
-    initial = if isRoot addr then Solver.bot else directCall
+    cons    = if I.isRoot addr then [] else [con]
+    initial = if I.isRoot addr then Solver.bot else directCall
 
 
     -- assemble the constraint computing all call sites --
@@ -124,7 +125,7 @@ callSites addr = case getNodeType addr of
 
 
     -- a test whether the targeted function is a lambda or a bind --
-    isLambda = getNodeType addr == IR.Lambda
+    isLambda = Q.getNodeType addr == I.Lambda
 
     recReferencesVar = RecLambdaRefs.recursiveCalls addr
     recReferencesVal a = if isLambda then Solver.get a recReferencesVar else Solver.bot
@@ -134,13 +135,13 @@ callSites addr = case getNodeType addr of
     -- determines whether all calls are statically bound (if not, we have to search) --
     isStaticallyBound a = i == 1 && isCall p && all check (unLRS $ recReferencesVal a)
       where
-        check x = getIndex x == 1 && (isCall $ fromJust $ getParent x)
+        check x = I.getIndex x == 1 && (isCall $ fromJust $ I.getParent x)
 
 
     -- the list of call site variables to be checked for potential calls to this lambda
     callSiteVars a =
         if isStaticallyBound a then []
-        else Callable.callableValue . (goDown 1) <$> allCalls a
+        else Callable.callableValue . (I.goDown 1) <$> allCalls a
 
     -- add the all-calls variable dependency in case the processed function is not statically bound
     allCallsVars a =
@@ -148,31 +149,31 @@ callSites addr = case getNodeType addr of
         else [allCallsVar]
 
     -- computes a list of addresses of all potentiall call sites
-    allCallsVar = dynamicCalls $ getRootAddress addr 
+    allCallsVar = dynamicCalls $ I.getRootAddress addr 
     allCallsVal a = Solver.get a allCallsVar
     
     allCalls a = filter p $ peel <$> (Set.toList $ allCallsVal a)
       where
-        p a = (IR.numChildren $ getNode a) == 2 + numParams
+        p a = (I.numChildren a) == 2 + numParams
         peel (CallSite a) = a
 
     directCall = if i == 1 && isCall p then Set.singleton $ CallSite p else Set.empty
 
     indirectCalls a =
         Set.fromList $ if isStaticallyBound a
-            then CallSite . fromJust . getParent <$> Set.toList (unLRS $ recReferencesVal a)
+            then CallSite . fromJust . I.getParent <$> Set.toList (unLRS $ recReferencesVal a)
             else (CallSite <$> reachingCalls) ++ (CallSite <$> directRecursiveCalls)
       where
 
         reachingCalls = filter f $ allCalls a
           where
-            f c = BSet.member callable $ ComposedValue.toValue $ Solver.get a $ Callable.callableValue $ goDown 1 c
+            f c = BSet.member callable $ ComposedValue.toValue $ Solver.get a $ Callable.callableValue $ I.goDown 1 c
 
-            callable = case getNodeType addr of
-                IR.Lambda   -> Callable.Lambda addr
-                IR.BindExpr -> Callable.Closure addr
+            callable = case Q.getNodeType addr of
+                I.Lambda   -> Callable.Lambda addr
+                I.BindExpr -> Callable.Closure addr
                 _           -> error "unexpected NodeType"
 
-        directRecursiveCalls = fromJust . getParent <$> (filter f $ Set.toList $ unLRS $ recReferencesVal a)
+        directRecursiveCalls = fromJust . I.getParent <$> (filter f $ Set.toList $ unLRS $ recReferencesVal a)
           where
-            f r = getIndex r == 1 && isCall (fromJust $ getParent r)
+            f r = I.getIndex r == 1 && isCall (fromJust $ I.getParent r)

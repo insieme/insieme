@@ -91,7 +91,7 @@ namespace integration {
 			return "xxx";
 		}
 
-		TestStep createRefCompStep(const string& name, Language l) {
+		TestStep createRefCompilationStep(const string& name, Language l) {
 			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				std::stringstream cmd;
 				auto props = test.getPropertiesFor(name);
@@ -107,9 +107,6 @@ namespace integration {
 				// append all the arguments
 				cmd << " " << join(" ", test.getCompilerArguments(name, l == Language::CPP, true, true));
 
-				// disable multithreading
-				setup.numThreads = 0;
-
 				string outputDir = test.getOutputDirectory().string();
 				setup.outputFile = outputDir + "/" + test.getBaseName() + ".ref";
 				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
@@ -117,10 +114,10 @@ namespace integration {
 
 				// run it
 				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
-			}, std::set<std::string>(), COMPILE);
+			}, std::set<std::string>());
 		}
 
-		TestStep createRefRunStep(const string& name, const Dependencies& deps = Dependencies(), int numThreads = 0) {
+		TestStep createRefExecuteStep(const string& name, const Dependencies& deps = Dependencies()) {
 			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				std::stringstream cmd;
 				auto props = test.getPropertiesFor(name);
@@ -133,15 +130,12 @@ namespace integration {
 				// add arguments
 				cmd << " " << props["executionFlags"];
 
-				// set number of threads
-				setup.numThreads = numThreads;
-
 				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
 				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
 				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
-			}, deps, RUN);
+			}, deps);
 		}
 
 		TestStep createBashCommandStep(const string& name, const Dependencies& deps = Dependencies()) {
@@ -153,9 +147,6 @@ namespace integration {
 
 				// start with executable
 				cmd << props[name];
-
-				// set number of threads
-				setup.numThreads = 0;
 
 				string outputDir = test.getOutputDirectory().string();
 				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
@@ -194,15 +185,12 @@ namespace integration {
 				std::string irFile = outputDir + "/" + test.getBaseName() + ".ir";
 				cmd << " --dump-ir " << irFile;
 
-				// disable multithreading
-				setup.numThreads = 0;
-
 				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
 				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
 				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory(), irFile);
-			}, deps, COMPILE);
+			}, deps);
 		}
 
 		TestStep createInsiemeccConversionStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
@@ -234,15 +222,12 @@ namespace integration {
 				setup.outputFile = outputDir + "/" + test.getBaseName() + ".insieme." + be + "." + getExtension(l);
 				cmd << " --dump-trg-only " << setup.outputFile;
 
-				// disable multithreading
-				setup.numThreads = 0;
-
 				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
 				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
 				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
-			}, deps, COMPILE);
+			}, deps);
 		}
 
 		TestStep createInsiemeccCompilationStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
@@ -270,20 +255,16 @@ namespace integration {
 					cmd << " -I " << utils::getInsiemeSourceRootDir() << "common/include";
 				}
 
-				// disable multithreading
-				setup.numThreads = 0;
-
 				setup.outputFile = outputDir + "/" + test.getBaseName() + ".insieme." + be;
 				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
 				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
 				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
-			}, deps, COMPILE);
+			}, deps);
 		}
 
-		TestStep createInsiemeccExecuteStep(const string& name, Backend backend, const Dependencies& deps = Dependencies(), int numThreads = 0,
-		                                    SchedulingPolicy sched = SCHED_UNDEFINED) {
+		TestStep createInsiemeccExecuteStep(const string& name, Backend backend, const Dependencies& deps = Dependencies()) {
 			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				std::stringstream cmd;
 				auto props = test.getPropertiesFor(name);
@@ -305,22 +286,15 @@ namespace integration {
 				// add arguments
 				cmd << " " << props["executionFlags"];
 
-				// set number of threads
-				setup.numThreads = numThreads;
-
-				// set scheduling variant
-				setup.sched = sched;
-
 				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
 				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
 
 				// run it
 				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory(), logFile);
-			}, deps, RUN);
+			}, deps);
 		}
 
-		TestStep createInsiemeccCheckStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies(), int numThreads = 0,
-		                                  SchedulingPolicy sched = SCHED_UNDEFINED) {
+		TestStep createInsiemeccCheckStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
 			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
 				std::stringstream cmd;
 				auto props = test.getPropertiesFor(name);
@@ -328,19 +302,8 @@ namespace integration {
 				std::string langstr("_c_");
 				if(l == CPP) langstr = string("_cpp_");
 
-				std::string schedString("");
-				if(sched == STATIC)
-					schedString = "stat_";
-				else if(sched == DYNAMIC)
-					schedString = "dyn_";
-				else if(sched == GUIDED)
-					schedString = "guid_";
-
 				// define comparison script
 				cmd << props["compareOutputScript"];
-
-				// disable multithreading
-				setup.numThreads = 0;
 
 				string outputDir = test.getOutputDirectory().string();
 
@@ -351,12 +314,7 @@ namespace integration {
 				string be = getBackendKey(backend);
 
 				// pipe result to output file
-				if(numThreads)
-					cmd << " " << outputDir << "/" << test.getBaseName()
-					    << ".insiemecc_" + be + langstr + "execute_" + schedString + std::to_string(numThreads) + ".out";
-				else {
-					cmd << " " << outputDir << "/" << test.getBaseName() << ".insiemecc_" + be + langstr + "execute.out";
-				}
+				cmd << " " << outputDir << "/" << test.getBaseName() << ".insiemecc_" + be + langstr + "execute.out";
 
 				// add awk pattern
 				// TODO: generally remove outer quotation marks in properties if present - I don't have the time now but it needs to be done at some point
@@ -368,223 +326,72 @@ namespace integration {
 
 				// run it
 				return runner.runCommand(name, setup, props, cmd.str(), test.getOutputDirectory());
-			}, deps, CHECK);
+			}, deps);
 		}
 
-		TestStep createRefCheckStep(const string& name, Language l, const Dependencies& deps = Dependencies(), int numThreads = 0) {
-			return TestStep(name, [=](TestSetup setup, const IntegrationTestCase& test, const TestRunner& runner) -> TestResult {
-				auto props = test.getPropertiesFor(name);
+		string readFile(string fileName) {
+			FILE* file = fopen(fileName.c_str(), "r");
 
-				std::string langstr("c");
-				if(l == CPP) langstr = string("cpp");
+			if(file == NULL) { return string(""); }
 
-				std::stringstream cmd;
+			char buffer[1024];
+			string output;
 
-				// define comparison script
-				cmd << props["compareOutputScript"];
-
-				string outputDir = test.getOutputDirectory().string();
-
-				// start with executable
-				cmd << " " << outputDir << "/" << test.getBaseName() << ".ref_" << langstr << "_execute.out";
-
-				// pipe result to output file
-				cmd << " " << outputDir << "/" << test.getBaseName() << ".ref_" << langstr << "_execute_" << std::to_string(numThreads) << ".out";
-
-				// add awk pattern
-				cmd << " \"" << props["outputAwk"] << "\"";
-
-				// disable multithreading
-				setup.numThreads = 0;
-
-				setup.stdOutFile = outputDir + "/" + test.getBaseName() + "." + name + ".out";
-				setup.stdErrFile = outputDir + "/" + test.getBaseName() + "." + name + ".err.out";
-
-				// run it
-				return runner.runCommand(name, setup, props, cmd.str(), "", outputDir);
-			}, deps, CHECK);
+			while(!feof(file)) {
+				if(fgets(buffer, 1024, file) != NULL) { output += string(buffer); }
+			}
+			fclose(file);
+			return output;
 		}
 
-		// create steps for statistics mode
-		std::map<std::string, TestStep> createFullStepList(int statThreads, bool schedule) {
-			std::map<std::string, TestStep> list;
+		std::set<TestStep> createFullStepList() {
+			std::set<TestStep> list;
 
-			vector<int> threadList;
-			for(int i = 1; i < statThreads; i *= 2) {
-				threadList.push_back(i);
-			}
-			threadList.push_back(statThreads);
+			auto add = [&](const TestStep& step) { list.insert(step); };
 
-			auto add = [&](const TestStep& step) { list.insert({step.getName(), step}); };
-
-			// --- real steps ----
-
-			// ref compile steps
-			add(createRefCompStep(TEST_STEP_REF_C_COMPILE, C));
-			add(createRefCompStep(TEST_STEP_REF_CPP_COMPILE, CPP));
-
-			// ref run steps
-			add(createRefRunStep(TEST_STEP_REF_C_EXECUTE, {TEST_STEP_REF_C_COMPILE}, 1));
-			add(createRefRunStep(TEST_STEP_REF_CPP_EXECUTE, {TEST_STEP_REF_CPP_COMPILE}, 1));
-			// iterate over whole vector starting with second element (> 1 thread)
-			for(int i : vector<int>(++threadList.begin(), threadList.end())) {
-				std::string suffix = "_" + std::to_string(i);
-				add(createRefRunStep(TEST_STEP_REF_C_EXECUTE + suffix, {TEST_STEP_REF_C_COMPILE}, i));
-				add(createRefRunStep(TEST_STEP_REF_CPP_EXECUTE + suffix, {TEST_STEP_REF_CPP_COMPILE}, i));
-			}
-
-			// insiemecc sema steps
-			add(createInsiemeccSemaStep(TEST_STEP_INSIEMECC_C_SEMA, C));
-			add(createInsiemeccSemaStep(TEST_STEP_INSIEMECC_CPP_SEMA, CPP));
-
-			// insiemecc conversion steps
-			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_SEQ_C_CONVERT, Sequential, C));
-			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_RUN_C_CONVERT, Runtime, C));
-			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_OCL_C_CONVERT, Opencl, C));
-			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT, Sequential, CPP));
-			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_RUN_CPP_CONVERT, Runtime, CPP));
-
-			// insiemecc compilation steps
-			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_SEQ_C_COMPILE, Sequential, C, {TEST_STEP_INSIEMECC_SEQ_C_CONVERT}));
-			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_RUN_C_COMPILE, Runtime, C, {TEST_STEP_INSIEMECC_RUN_C_CONVERT}));
-			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_OCL_C_COMPILE, Opencl, C, {TEST_STEP_INSIEMECC_OCL_C_CONVERT}));
-			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE, Sequential, CPP, {TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT}));
-			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_RUN_CPP_COMPILE, Runtime, CPP, {TEST_STEP_INSIEMECC_RUN_CPP_CONVERT}));
-
-			// insiemecc execute steps
-			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_SEQ_C_EXECUTE, Sequential, {TEST_STEP_INSIEMECC_SEQ_C_COMPILE}));
-			for(int i : threadList) {
-				std::string suffix = "_" + std::to_string(i);
-				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_C_EXECUTE + suffix, Runtime, {TEST_STEP_INSIEMECC_RUN_C_COMPILE}, i));
-			}
-			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_OCL_C_EXECUTE, Opencl, {TEST_STEP_INSIEMECC_OCL_C_COMPILE}));
-			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE, Sequential, {TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE}));
-			for(int i : threadList) {
-				std::string suffix = "_" + std::to_string(i);
-				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + suffix, Runtime, {TEST_STEP_INSIEMECC_RUN_CPP_COMPILE}, i));
-			}
-
-			// insiemecc check steps
-			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_SEQ_C_CHECK, Sequential, C, {TEST_STEP_INSIEMECC_SEQ_C_EXECUTE, TEST_STEP_REF_C_EXECUTE}));
-			for(int i : threadList) {
-				std::string suffix = "_" + std::to_string(i);
-				add(createInsiemeccCheckStep(std::string(TEST_STEP_INSIEMECC_RUN_C_CHECK) + suffix, Runtime, C,
-				                             {TEST_STEP_INSIEMECC_RUN_C_EXECUTE + suffix, TEST_STEP_REF_C_EXECUTE}, i));
-			}
-			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_OCL_C_CHECK, Opencl, C, {TEST_STEP_INSIEMECC_OCL_C_EXECUTE, TEST_STEP_REF_C_EXECUTE}));
-			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_SEQ_CPP_CHECK, Sequential, CPP, {TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE, TEST_STEP_REF_CPP_EXECUTE}));
-			for(int i : threadList) {
-				std::string suffix = "_" + std::to_string(i);
-				add(createInsiemeccCheckStep(std::string(TEST_STEP_INSIEMECC_RUN_CPP_CHECK) + suffix, Runtime, CPP,
-				                             {TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + suffix, TEST_STEP_REF_CPP_EXECUTE}, i));
-			}
-
-			// additional ref steps
-			for(int i : threadList) {
-				std::string suffix = "_" + std::to_string(i);
-				// ref check
-				if(i != 1) {
-					add(createRefCheckStep(TEST_STEP_REF_C_CHECK + suffix, C, {TEST_STEP_REF_C_EXECUTE, TEST_STEP_REF_C_EXECUTE + suffix}, i));
-					add(createRefCheckStep(TEST_STEP_REF_CPP_CHECK + suffix, CPP, {TEST_STEP_REF_CPP_EXECUTE, TEST_STEP_REF_C_EXECUTE + suffix}, i));
-				}
-			}
-
-			// clone insiemecc steps using different scheduling policies
-			if(schedule) {
-				std::string suffix = "_" + std::to_string(statThreads);
-
-				std::string statSuffix = "_stat" + suffix;
-				// execute STATIC
-				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_C_EXECUTE + statSuffix, Runtime, {TEST_STEP_INSIEMECC_RUN_C_COMPILE}, statThreads,
-				                               STATIC));
-				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + statSuffix, Runtime, {TEST_STEP_INSIEMECC_RUN_CPP_COMPILE}, statThreads,
-				                               STATIC));
-				// check STATIC
-				add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_C_CHECK + statSuffix, Runtime, C,
-				                             {TEST_STEP_INSIEMECC_RUN_C_EXECUTE + statSuffix, TEST_STEP_REF_C_EXECUTE}, statThreads, STATIC));
-				add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_CPP_CHECK + statSuffix, Runtime, CPP,
-				                             {TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + statSuffix, TEST_STEP_REF_CPP_EXECUTE}, statThreads, STATIC));
-
-				std::string dynSuffix = "_dyn" + suffix;
-				// execute DYNAMIC
-				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_C_EXECUTE + dynSuffix, Runtime, {TEST_STEP_INSIEMECC_RUN_C_COMPILE}, statThreads,
-				                               DYNAMIC));
-				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + dynSuffix, Runtime, {TEST_STEP_INSIEMECC_RUN_CPP_COMPILE}, statThreads,
-				                               DYNAMIC));
-				// check DYNAMIC
-				add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_C_CHECK + dynSuffix, Runtime, C,
-				                             {TEST_STEP_INSIEMECC_RUN_C_EXECUTE + dynSuffix, TEST_STEP_REF_C_EXECUTE}, statThreads, DYNAMIC));
-				add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_CPP_CHECK + dynSuffix, Runtime, CPP,
-				                             {TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + dynSuffix, TEST_STEP_REF_CPP_EXECUTE}, statThreads, DYNAMIC));
-
-				std::string guidSuffix = "_guid" + suffix;
-				// execute GUIDED
-				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_C_EXECUTE + guidSuffix, Runtime, {TEST_STEP_INSIEMECC_RUN_C_COMPILE}, statThreads,
-				                               GUIDED));
-				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + guidSuffix, Runtime, {TEST_STEP_INSIEMECC_RUN_CPP_COMPILE}, statThreads,
-				                               GUIDED));
-				// check GUIDED
-				add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_C_CHECK + guidSuffix, Runtime, C,
-				                             {TEST_STEP_INSIEMECC_RUN_C_EXECUTE + guidSuffix, TEST_STEP_REF_C_EXECUTE}, statThreads, GUIDED));
-				add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_CPP_CHECK + guidSuffix, Runtime, CPP,
-				                             {TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + guidSuffix, TEST_STEP_REF_CPP_EXECUTE}, statThreads, GUIDED));
-			}
-
-			// preprocessing steps are executed by a special run of the integration test driver - as are postprocessing steps
-			// these steps are excluded from normal runs
-			// see "scheduleSteps" function
-			add(createBashCommandStep(TEST_STEP_PREPROCESSING));
-			add(createBashCommandStep(TEST_STEP_POSTPROCESSING));
+			// Note that we have to create the steps here in the order they should (and can) be executed. The creation order will set their id which will be used for comparison
 
 			// the check for the prerequisites is executed before all other steps
 			add(createBashCommandStep(TEST_STEP_CHECK_PREREQUISITES));
 
-			return list;
-		}
-
-
-		std::map<std::string, TestStep> createFullStepList() {
-			std::map<std::string, TestStep> list;
-
-			auto add = [&](const TestStep& step) { list.insert({step.getName(), step}); };
-
-			// ref compile steps
-			add(createRefCompStep(TEST_STEP_REF_C_COMPILE, C));
-			add(createRefCompStep(TEST_STEP_REF_CPP_COMPILE, CPP));
-
-			// ref run steps
-			add(createRefRunStep(TEST_STEP_REF_C_EXECUTE, {TEST_STEP_REF_C_COMPILE}));
-			add(createRefRunStep(TEST_STEP_REF_CPP_EXECUTE, {TEST_STEP_REF_CPP_COMPILE}));
-
-			// insiemecc sema steps
+			// C steps --------------
+			// sema
 			add(createInsiemeccSemaStep(TEST_STEP_INSIEMECC_C_SEMA, C));
-			add(createInsiemeccSemaStep(TEST_STEP_INSIEMECC_CPP_SEMA, CPP));
-
-			// insiemecc conversion steps
+			// seq
 			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_SEQ_C_CONVERT, Sequential, C));
-			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_RUN_C_CONVERT, Runtime, C));
-			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_OCL_C_CONVERT, Opencl, C));
-			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT, Sequential, CPP));
-			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_RUN_CPP_CONVERT, Runtime, CPP));
-
-			// insiemecc compilation steps
 			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_SEQ_C_COMPILE, Sequential, C, {TEST_STEP_INSIEMECC_SEQ_C_CONVERT}));
-			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_RUN_C_COMPILE, Runtime, C, {TEST_STEP_INSIEMECC_RUN_C_CONVERT}));
-			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_OCL_C_COMPILE, Opencl, C, {TEST_STEP_INSIEMECC_OCL_C_CONVERT}));
-			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE, Sequential, CPP, {TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT}));
-			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_RUN_CPP_COMPILE, Runtime, CPP, {TEST_STEP_INSIEMECC_RUN_CPP_CONVERT}));
-
-			// insiemecc execution steps
 			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_SEQ_C_EXECUTE, Sequential, {TEST_STEP_INSIEMECC_SEQ_C_COMPILE}));
+			// run
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_RUN_C_CONVERT, Runtime, C));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_RUN_C_COMPILE, Runtime, C, {TEST_STEP_INSIEMECC_RUN_C_CONVERT}));
 			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_C_EXECUTE, Runtime, {TEST_STEP_INSIEMECC_RUN_C_COMPILE}));
+			// ocl
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_OCL_C_CONVERT, Opencl, C));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_OCL_C_COMPILE, Opencl, C, {TEST_STEP_INSIEMECC_OCL_C_CONVERT}));
 			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_OCL_C_EXECUTE, Opencl, {TEST_STEP_INSIEMECC_OCL_C_COMPILE}));
-			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE, Sequential, {TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE}));
-			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE, Runtime, {TEST_STEP_INSIEMECC_RUN_CPP_COMPILE}));
-
-			// insiemecc check steps
+			// ref
+			add(createRefCompilationStep(TEST_STEP_REF_C_COMPILE, C));
+			add(createRefExecuteStep(TEST_STEP_REF_C_EXECUTE, {TEST_STEP_REF_C_COMPILE}));
+			// check
 			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_SEQ_C_CHECK, Sequential, C, {TEST_STEP_INSIEMECC_SEQ_C_EXECUTE, TEST_STEP_REF_C_EXECUTE}));
 			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_C_CHECK, Runtime, C, {TEST_STEP_INSIEMECC_RUN_C_EXECUTE, TEST_STEP_REF_C_EXECUTE}));
 			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_OCL_C_CHECK, Opencl, C, {TEST_STEP_INSIEMECC_OCL_C_EXECUTE, TEST_STEP_REF_C_EXECUTE}));
+
+			// CPP steps --------------
+			// sema
+			add(createInsiemeccSemaStep(TEST_STEP_INSIEMECC_CPP_SEMA, CPP));
+			// seq
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT, Sequential, CPP));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE, Sequential, CPP, {TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT}));
+			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE, Sequential, {TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE}));
+			// run
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_RUN_CPP_CONVERT, Runtime, CPP));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_RUN_CPP_COMPILE, Runtime, CPP, {TEST_STEP_INSIEMECC_RUN_CPP_CONVERT}));
+			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE, Runtime, {TEST_STEP_INSIEMECC_RUN_CPP_COMPILE}));
+			// ref
+			add(createRefCompilationStep(TEST_STEP_REF_CPP_COMPILE, CPP));
+			add(createRefExecuteStep(TEST_STEP_REF_CPP_EXECUTE, {TEST_STEP_REF_CPP_COMPILE}));
+			// check
 			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_SEQ_CPP_CHECK, Sequential, CPP, {TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE, TEST_STEP_REF_CPP_EXECUTE}));
 			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_CPP_CHECK, Runtime, CPP, {TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE, TEST_STEP_REF_CPP_EXECUTE}));
 
@@ -594,156 +401,22 @@ namespace integration {
 			add(createBashCommandStep(TEST_STEP_PREPROCESSING));
 			add(createBashCommandStep(TEST_STEP_POSTPROCESSING));
 
-			// the check for the prerequisites is executed before all other steps
-			add(createBashCommandStep(TEST_STEP_CHECK_PREREQUISITES));
-
 			return list;
 		}
 	}
 
-
-	// a function obtaining an index of available steps
-	const std::map<std::string, TestStep>& getFullStepList(int statThreads, bool scheduling) {
-		const static std::map<std::string, TestStep> list = createFullStepList(statThreads, scheduling);
+	const std::set<TestStep>& getFullStepList() {
+		const static auto list = createFullStepList();
 		return list;
 	}
 
-	const std::map<std::string, TestStep>& getFullStepList() {
-		const static std::map<std::string, TestStep> list = createFullStepList();
-		return list;
-	}
-
-	const TestStep& getStepByName(const std::string& name, int numThreads, bool scheduling) {
-		static const TestStep fail;
-
-		if(numThreads) {
-			auto& list = getFullStepList(numThreads, scheduling);
-			auto pos = list.find(name);
-			if(pos != list.end()) { return pos->second; }
-		} else {
-			auto& list = getFullStepList();
-			auto pos = list.find(name);
-			if(pos != list.end()) { return pos->second; }
-		}
-		assert_fail() << "Requested unknown step: " << name;
-		return fail;
-	}
-
-	bool isExcluded(string excludes, TestStep step) {
-		boost::char_separator<char> sep(",\"");
-		boost::tokenizer<boost::char_separator<char>> tokens(excludes, sep);
-
-		for(const string& it : tokens) {
-			string tmp(it);
-			boost::replace_all(tmp, "*", ".*");
-			std::regex reg(tmp);
-			if(std::regex_match(step.getName(), reg)) { return true; }
-		}
-		return false;
-	}
-
-	// filter steps based on some conflicting steps
-	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, const map<string, string>& conflicting) {
-		auto props = test.getProperties();
-		vector<TestStep> stepsToExecute;
-
-		for(const TestStep step : steps) {
-			bool conflicts = false;
-			string conflictingStep = "";
-
-			if(!conflicting.empty()) {
-				for(auto confl = conflicting.begin(); confl != conflicting.end(); confl++) {
-					if(step.getName().find(confl->first) != std::string::npos) {
-						conflictingStep = confl->second;
-						break;
-					}
-				}
-
-				if(!conflictingStep.empty()) {
-					for(const TestStep stepConfl : stepsToExecute) {
-						if(stepConfl.getName().find(conflictingStep) != std::string::npos) {
-							conflicts = true;
-							break;
-						}
-					}
-				}
-			}
-
-			if(!isExcluded(props["excludeSteps"], step) && !conflicts) { stepsToExecute.push_back(step); }
-
-			// in case the test requires OpenCL but we do lack of e.g. headers, simply disable it
-			if(test.isEnableOpenCL() && !utils::compiler::isOpenCLAvailable()) return vector<TestStep>();
-			// in case the test is not an OpenCL one automatically remove all such devoted steps
-			if(!test.isEnableOpenCL()) {
-				// filter out all steps which are devoted to OpenCL
-				for(TestStep& step : stepsToExecute)
-					if(step.getName().find("_ocl_") != std::string::npos) { return vector<TestStep>(); }
+	boost::optional<TestStep> getStepByName(const std::string& name) {
+		for(const auto& step : getFullStepList()) {
+			if(step.getName() == name) {
+				return step;
 			}
 		}
-		return stepsToExecute;
-	}
-
-
-	namespace {
-
-		void scheduleStep(const TestStep& step, vector<TestStep>& res, const IntegrationTestCase& test, int numThreads = 0, bool scheduling = false) {
-			// check whether test is already present
-			if(::contains(res, step)) { return; }
-			auto props = test.getProperties();
-
-			if(isExcluded(props["excludeSteps"], step)) {
-				LOG(WARNING) << test.getName() << " has a step with a dependency on an excluded step (" << step.getName() << ") -- please fix the test config!"
-				             << std::endl;
-			}
-
-			// check that all dependencies are present
-			for(const auto& cur : step.getDependencies()) {
-				scheduleStep(getStepByName(cur, numThreads, scheduling), res, test);
-			}
-
-			// append step to schedule
-			res.push_back(step);
-		}
-	}
-
-
-	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads, bool scheduling) {
-		vector<TestStep> res;
-		for(const auto& cur : steps) {
-			scheduleStep(cur, res, test, numThreads, scheduling);
-		}
-
-		// Handling the preprocessing & postprocessing case as well as the prerequisite check
-		vector<TestStep> final;
-		TestStep prerequisiteCheck;
-		for(const auto& cur : res) {
-			// store the prerequisite step
-			if(cur.getName() == TEST_STEP_CHECK_PREREQUISITES) {
-				prerequisiteCheck = cur;
-
-				// add all the others except pre- and post-processing which we'll simply drop
-			} else if(cur.getName() != TEST_STEP_PREPROCESSING && cur.getName() != TEST_STEP_POSTPROCESSING) {
-				final.push_back(cur);
-			}
-		}
-
-		if(!prerequisiteCheck.getName().empty()) { final.insert(final.begin(), prerequisiteCheck); }
-		return final;
-	}
-
-	string readFile(string fileName) {
-		FILE* file = fopen(fileName.c_str(), "r");
-
-		if(file == NULL) { return string(""); }
-
-		char buffer[1024];
-		string output;
-
-		while(!feof(file)) {
-			if(fgets(buffer, 1024, file) != NULL) { output += string(buffer); }
-		}
-		fclose(file);
-		return output;
+		return {};
 	}
 
 	/*
@@ -894,11 +567,9 @@ namespace integration {
 		producedFiles.push_back(setup.stdOutFile);
 		producedFiles.push_back(setup.stdErrFile);
 
-		map<string, float> metricResults;
 		// insert dummy vals
-		metricResults["walltime"] = 0;
-		metricResults["cputime"] = 0;
-		metricResults["mem"] = 0;
+		float walltime = 0;
+		float mem = 0;
 
 		if(!producedFile.empty()) { producedFiles.push_back(producedFile); }
 
@@ -923,27 +594,6 @@ namespace integration {
 				env << "${LD_LIBRARY_PATH} ";
 			}
 
-			// set number of threads
-			if(setup.numThreads) {
-				env << "OMP_NUM_THREADS=" << setup.numThreads << " ";
-				env << "IRT_NUM_WORKERS=" << setup.numThreads << " ";
-			}
-
-			// set scheduling policy
-			if(setup.sched == STATIC) {
-				env << "IRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC ";
-				env << "IRT_LOOP_SCHED_POLICY=IRT_STATIC ";
-				env << "OMP_SCHEDULE=STATIC ";
-			} else if(setup.sched == DYNAMIC) {
-				env << "IRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC ";
-				env << "IRT_LOOP_SCHED_POLICY=IRT_DYNAMIC ";
-				env << "OMP_SCHEDULE=DYNAMIC ";
-			} else if(setup.sched == GUIDED) {
-				env << "IRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC ";
-				env << "IRT_LOOP_SCHED_POLICY=IRT_GUIDED ";
-				env << "OMP_SCHEDULE=GUIDED ";
-			}
-
 			// append user defined custom environment variables
 			if(!testConfig.get("env").empty()) {
 				env << testConfig.get("env") << " ";
@@ -952,36 +602,19 @@ namespace integration {
 
 		// if it is a mock-run do nothing
 		if(setup.mockRun) {
-			return TestResult(TestResult::ResultType::SUCCESS, stepName, 0, metricResults, "", "",
+			return TestResult(TestResult::ResultType::SUCCESS, stepName, 0, 0, 0, "", "",
 			                  (execDir.empty() ? "" : "cd " + execDir.string() + " && ") + env.str() + cmd + outfile);
-		}
-
-		string perfString("");
-		vector<string> perfCodes;
-		if(setup.perf) {
-			// cache load misses
-			perfCodes.push_back(setup.load_miss);
-
-			// cache write misses
-			perfCodes.push_back(setup.store_miss);
-
-			// flops
-			perfCodes.push_back(setup.flops);
-
-			// additional requested metrics
-			BOOST_FOREACH(string s, setup.perf_metrics) { perfCodes.push_back(s); }
-
-			// build perf command
-			perfString = "perf stat -x , ";
-			BOOST_FOREACH(string s, perfCodes) { perfString = perfString + "-e " + s + " "; }
 		}
 
 		string executable = string(testConfig["time_executable"]);
 		string envString = env.str();
-		string argumentString = string(" -f WALLTIME%e\nCPUTIME%U\nMEM%M\n ") + perfString + cmd + outfile;
+		string argumentString = string(" -f WALLTIME%e\nCPUTIME%U\nMEM%M\n ") + cmd + outfile;
 
 		// cpu time limit in seconds
-		const unsigned cpuTimeLimit = 1200;
+		unsigned cpuTimeLimit = 1200;
+		if(!testConfig.get("cpuTimeLimit").empty()) {
+			cpuTimeLimit = atoi(testConfig.get("cpuTimeLimit").c_str());
+		}
 
 		int retVal = executeWithTimeout(executable, argumentString, envString, setup.stdOutFile, setup.stdErrFile, cpuTimeLimit, execDir);
 
@@ -1011,56 +644,26 @@ namespace integration {
 		for(boost::tokenizer<boost::char_separator<char>>::iterator beg = tok.begin(); beg != tok.end(); ++beg) {
 			string token(*beg);
 			if(token.find("WALLTIME") != token.npos) {
-				metricResults["walltime"] = atof(token.substr(token.find("WALLTIME") + 8).c_str());
+				walltime = atof(token.substr(token.find("WALLTIME") + 8).c_str());
 			} else if(token.find("CPUTIME") != token.npos) {
-				metricResults["cputime"] = atof(token.substr(token.find("CPUTIME") + 7).c_str());
+				float cputime = atof(token.substr(token.find("CPUTIME") + 7).c_str());
 				// check if we approached the cpu time limit. If so, print a warning
-				if(((metricResults["cputime"])) / cpuTimeLimit > 0.95) {
-					std::cerr << "Killed by timeout, CPU time was " << metricResults["cputime"] << ", limit was " << cpuTimeLimit << " seconds\n";
-					metricResults["timeout"] = 1;
+				if(cputime / cpuTimeLimit > 0.95) {
+					std::cerr << "Killed by timeout, CPU time was " << cputime << ", limit was " << cpuTimeLimit << " seconds\n";
 				}
 			} else if(token.find("MEM") != token.npos) {
-				metricResults["mem"] = atof(token.substr(token.find("MEM") + 3).c_str());
+				mem = atof(token.substr(token.find("MEM") + 3).c_str());
 			} else {
-				// check perf metrics, otherwise append to stderr
-				bool found = false;
-				for(auto code : perfCodes) {
-					if(token.find(code) != token.npos) {
-						string value = token.substr(0, token.find(","));
-						float intVal;
-						// try cast to int
-						try {
-							intVal = boost::lexical_cast<float>(value);
-						} catch(const boost::bad_lexical_cast&) {
-							// not counted or error
-							intVal = -1;
-						}
-
-						// mark special perf metrics
-						if(code.compare(setup.load_miss) == 0) {
-							metricResults["load_miss"] = intVal;
-						} else if(code.compare(setup.store_miss) == 0) {
-							metricResults["store_miss"] = intVal;
-						} else if(code.compare(setup.flops) == 0) {
-							metricResults["flops"] = intVal;
-						} else {
-							metricResults[code] = intVal;
-						}
-
-						found = true;
-						break;
-					}
-				}
 				// no metric -> it is stdErr
-				if(!found) { stdErr += token + "\n"; }
+				stdErr += token + "\n";
 			}
 		}
 
 		// check whether execution has been aborted by the user
 		if(actualReturnCode == SIGINT || actualReturnCode == SIGQUIT) { return TestResult::userAborted(stepName); }
 		// produce regular result
-		return TestResult(retVal == 0 ? TestResult::ResultType::SUCCESS : TestResult::ResultType::FAILURE, stepName, actualReturnCode, metricResults, output,
-		                  stdErr, cmd, producedFiles, setup.numThreads, setup.sched);
+		return TestResult(retVal == 0 ? TestResult::ResultType::SUCCESS : TestResult::ResultType::FAILURE, stepName, actualReturnCode, walltime, mem, output,
+		                  stdErr, cmd, producedFiles);
 	}
 
 

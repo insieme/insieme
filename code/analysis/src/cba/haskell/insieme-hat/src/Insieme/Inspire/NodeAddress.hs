@@ -39,6 +39,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Insieme.Inspire.NodeAddress (
+    -- * Node Path
+    NodePath,
+    pprintNodePath,
+
     -- * Node Address
     NodeAddress,
     prettyShow,
@@ -51,25 +55,18 @@ module Insieme.Inspire.NodeAddress (
     -- ** Queries
     getPathReversed,
     getNode,
-    getNodeType,
     getParent,
     getPath,
     getAbsolutePath,
     depth,
     depthAbsolute,
     numChildren,
-    getChildren,
+--    getChildren,
     getIndex,
     isRoot,
     getRoot,
     getRootAddress,
     isChildOf,
-
-    -- *** Semantic Queries
-    isLoopIterator,
-    hasEnclosingStatement,
-    isEntryPoint,
-    isEntryPointParameter,
 
     -- ** Navigation
     goRel,
@@ -88,12 +85,19 @@ import Control.DeepSeq
 import Data.List (foldl',isSuffixOf,sort)
 import Data.Maybe
 import GHC.Generics (Generic)
-import Insieme.Inspire.Query
-import Insieme.Inspire.NodePath
-import Insieme.Utils
 
+import Insieme.Utils
+import Insieme.Inspire.NodeReference
 import qualified Data.Hashable as Hash
-import qualified Insieme.Inspire as IR
+import qualified Insieme.Inspire.IR as IR
+
+
+
+type NodePath = [Int]
+
+pprintNodePath :: NodePath -> String
+pprintNodePath np = '0' : concat ['-' : show x | x <- np]
+
 
 data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
                                  getNode             :: IR.Tree,
@@ -102,6 +106,13 @@ data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
                                  getAbsoluteRootPath :: NodePath
                                }
   deriving (Generic, NFData)
+
+instance IR.NodeLike NodeAddress where
+    node     = getNode
+
+instance NodeReference NodeAddress where
+    child    = goDown
+    children = getChildren
 
 instance Eq NodeAddress where
     x == y = getNode x == getNode y
@@ -121,10 +132,6 @@ instance Show NodeAddress where
 instance Hash.Hashable NodeAddress where
     hashWithSalt s n = Hash.hashWithSalt s $ getPathReversed n
     hash n = Hash.hash $ getPathReversed n
-
-instance NodeReference NodeAddress where
-    node  = getNode
-    child = goDown
 
 prettyShow :: NodeAddress -> String
 prettyShow na = '0' : concat ['-' : show x | x <- getPath na]
@@ -234,23 +241,3 @@ append a b = NodeAddress {
 -- | Creates a 'NodeAddress' relative from the give node.
 crop :: NodeAddress -> NodeAddress
 crop a = NodeAddress [] (getNode a) Nothing (getNode a) ((getPathReversed a) ++ (getAbsoluteRootPath a))
-
--- | Returns 'True' if given variable (in declaration) is a loop iterator.
-isLoopIterator :: NodeAddress -> Bool
-isLoopIterator a = (depth a >= 2) && ((==IR.ForStmt) $ getNodeType $ goUp $ goUp a)
-
-hasEnclosingStatement :: NodeAddress -> Bool
-hasEnclosingStatement a = case getNode a of
-    IR.Node n _ | (IR.toNodeKind n) == IR.Statement -> True
-    IR.Node n _ | n /= IR.LambdaExpr && n /= IR.Variable && (IR.toNodeKind n) == IR.Expression -> True
-    _ -> not (isRoot a) && hasEnclosingStatement (fromJust $ getParent a)
-
-isEntryPoint :: NodeAddress -> Bool
-isEntryPoint a = isRoot a || not (hasEnclosingStatement $ fromJust $ getParent a)
-
-isEntryPointParameter :: NodeAddress -> Bool
-isEntryPointParameter v | (not . isVariable) v = False
-isEntryPointParameter v | isRoot v = False
-isEntryPointParameter v = case getNode $ fromJust $ getParent v of
-            IR.Node IR.Parameters _ -> not $ hasEnclosingStatement v
-            _                     -> False

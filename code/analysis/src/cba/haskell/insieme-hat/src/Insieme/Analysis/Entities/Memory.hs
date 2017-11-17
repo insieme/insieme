@@ -38,7 +38,7 @@
 module Insieme.Analysis.Entities.Memory where
 
 import Insieme.Analysis.Entities.ProgramPoint
-import Insieme.Inspire.NodeAddress
+import Insieme.Inspire (NodeAddress)
 import qualified Data.Hashable as Hash
 
 

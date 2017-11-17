@@ -16,8 +16,9 @@ if(GHC_EXECUTABLE)
   else()
 	set(GHC_VERSION ${GHC_version_output})
   endif()
-
-  include(FindPackageHandleStandardArgs)
-  FIND_PACKAGE_HANDLE_STANDARD_ARGS(GHC REQUIRED_VARS GHC_EXECUTABLE
-    VERSION_VAR GHC_VERSION)
 endif()
+
+include(FindPackageHandleStandardArgs)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(GHC
+	REQUIRED_VARS GHC_EXECUTABLE
+    VERSION_VAR GHC_VERSION)

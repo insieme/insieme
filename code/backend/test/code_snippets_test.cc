@@ -164,18 +164,6 @@ namespace backend {
 		})
 	}
 
-	TEST(FunctionCall, FixedSizedArrayInit) {
-		DO_TEST(R"(
-			decl call_vector : (ref<array<uint<8>,3u>>)->unit ;
-			int<4> main() {
-				call_vector(<ref<array<uint<8>,3u>>>{0ul,0ul,0ul});
-				return 0;
-			}
-		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
-			EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t(*)[3])(&INS_INIT(__insieme_type_2){{0ul, 0ul, 0ul}}))");
-		})
-	}
-
 	TEST(Literals, BoolLiterals) {
 		DO_TEST(R"(int<4> main() {
 			true;

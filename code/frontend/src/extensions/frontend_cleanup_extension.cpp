@@ -153,11 +153,6 @@ namespace extensions {
 						if(boost::starts_with(tagT->getName()->getValue(), mangledName)) {
 							auto targetType = core::lang::ReferenceType::create(elementType, true, false, core::lang::ReferenceType::Kind::CppReference);
 							expr = core::analysis::getArgument(expr, 0);
-							// however, replace ref_decl with ref_temp inside ctor calls which should be casted
-							if(core::analysis::isConstructorCall(expr) && refExt.isCallOfRefDecl(core::analysis::getArgument(expr, 0))) {
-								core::CallExprAddress exprAddr(expr.as<core::CallExprPtr>());
-								expr = core::transform::replaceNode(mgr, exprAddr->getArgument(0), core::lang::buildRefTemp(type)).as<core::ExpressionPtr>();
-							}
 							return builder.declaration(type, core::lang::buildRefCast(expr, targetType));
 						}
 					}

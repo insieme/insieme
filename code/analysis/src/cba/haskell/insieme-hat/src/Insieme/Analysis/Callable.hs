@@ -46,13 +46,13 @@ import Data.List
 import Data.Maybe
 import Data.Typeable
 import GHC.Generics (Generic)
-import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Query
-import Insieme.Inspire.Visit
-import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Inspire as IR
+
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import qualified Insieme.Query as Q
 import qualified Insieme.Utils.BoundSet as BSet
 
+import qualified Insieme.Analysis.Solver as Solver
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
@@ -69,9 +69,9 @@ data Callable =
  deriving (Eq, Ord, Generic, NFData)
 
 instance Show Callable where
-    show (Lambda na) = "Lambda@" ++ (prettyShow na)
-    show (Literal na) = "Literal@" ++ (prettyShow na)
-    show (Closure na) = "Closure@" ++ (prettyShow na)
+    show (Lambda na) = "Lambda@" ++ (I.prettyShow na)
+    show (Literal na) = "Literal@" ++ (I.prettyShow na)
+    show (Closure na) = "Closure@" ++ (I.prettyShow na)
 
 toAddress :: Callable -> NodeAddress
 toAddress (Lambda a) = a
@@ -105,17 +105,17 @@ data CallableAnalysis = CallableAnalysis
 --
 
 callableValue :: NodeAddress -> Solver.TypedVar (ValueTree.Tree SimpleFieldIndex CallableSet)
-callableValue addr = case getNodeType addr of
-    IR.LambdaExpr ->
-        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton (Lambda (fromJust $ getLambda addr )))
+callableValue addr = case Q.getNodeType addr of
+    I.LambdaExpr ->
+        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton (Lambda (fromJust $ Q.getLambda addr )))
 
-    IR.LambdaReference ->
+    I.LambdaReference ->
         Solver.mkVariable (idGen addr) [] (compose $ getCallables4Ref addr)
 
-    IR.BindExpr ->
+    I.BindExpr ->
         Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton (Closure addr))
 
-    IR.Literal ->
+    I.Literal ->
         Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton (Literal addr))
 
     _ -> dataflowValue addr analysis []
@@ -128,26 +128,26 @@ callableValue addr = case getNodeType addr of
 
     compose = ComposedValue.toComposed
 
-    getCallables4Ref ref = search (getNode ref) ref
+    getCallables4Ref ref = search (I.getNode ref) ref
         where
-            search r cur = case getNode cur of
-                IR.Node IR.LambdaDefinition cs | isJust pos -> BSet.singleton (Lambda $ goDown 1 $ goDown (fromJust pos) cur)
+            search r cur = case I.getNode cur of
+                I.Node I.LambdaDefinition cs | isJust pos -> BSet.singleton (Lambda $ I.goDown 1 $ I.goDown (fromJust pos) cur)
                     where
                         pos = findIndex filter' cs
 
-                        filter' (IR.Node IR.LambdaBinding [a,_]) = a == r
+                        filter' (I.Node I.LambdaBinding [a,_]) = a == r
                         filter' _ = error "unhandled getCallables4Ref filter"
 
-                _ | isRoot cur      -> BSet.Universe
-                _                   -> search r $ goUp cur
+                _ | I.isRoot cur      -> BSet.Universe
+                _                   -> search r $ I.goUp cur
 
 
 -- | a utility to collect all callables of a program
 collectAllCallables :: NodeAddress -> CallableSet
-collectAllCallables addr = BSet.fromList $ foldTree collector (getRoot addr)
+collectAllCallables addr = BSet.fromList $ I.foldTree collector (I.getRoot addr)
     where
-        collector cur callables = case getNodeType cur of
-            IR.Lambda   -> ((Lambda  cur) : callables)
-            IR.BindExpr -> ((Closure cur) : callables)
-            IR.Literal  -> ((Literal cur) : callables)
+        collector cur callables = case Q.getNodeType cur of
+            I.Lambda   -> ((Lambda  cur) : callables)
+            I.BindExpr -> ((Closure cur) : callables)
+            I.Literal  -> ((Literal cur) : callables)
             _ -> callables

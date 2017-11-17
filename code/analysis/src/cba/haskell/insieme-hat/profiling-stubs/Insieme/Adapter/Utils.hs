@@ -41,23 +41,7 @@
 
 module Insieme.Adapter.Utils where
 
-import Insieme.Inspire.BinaryParser
-import qualified Data.ByteString.Char8 as BS8
-import System.Process (proc, CreateProcess(..))
-import System.Process.ByteString
-import System.Environment (getEnvironment)
-
-import qualified Insieme.Inspire as IR
+import qualified Insieme.Inspire.IR as IR
 
 pprintTree :: IR.Tree -> String
 pprintTree = const "-omitted-for-profiling-"
-
-parseIR :: String -> IO IR.Tree
-parseIR input = do
-    envvars <- getEnvironment
-    let cp = (proc "inspire" ["-s", "-i", "-", "-k", "-"]) {
-                    env = Just $ envvars ++ [("INSIEME_NO_SEMA","1")]
-                }
-    irb <- readCreateProcess cp (BS8.pack input)
-    let Right ir = parseBinaryDump irb
-    return ir

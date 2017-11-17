@@ -8,10 +8,12 @@ module Insieme.Analysis.Framework.Dataflow (
         freeVariableHandler,
         entryPointParameterHandler,
         initialValueHandler,
-        initValueHandler,
+        initialValue,
+        uninitializedValue,
         excessiveFileAccessHandler,
         unknownOperatorHandler,
-        forwardCtorDtorResultValue
+        forwardCtorDtorResultValue,
+        implicitCtorHandler
     ),
     mkDataFlowAnalysis,
     mkVarIdentifier,
@@ -19,8 +21,11 @@ module Insieme.Analysis.Framework.Dataflow (
     dataflowValue
 ) where
 
+import GHC.Stack
+
 import Data.Typeable
-import Insieme.Inspire.NodeAddress
+
+import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Analysis.Solver as Solver
 
 import Insieme.Analysis.Framework.Utils.OperatorHandler
@@ -31,18 +36,20 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 --
 
 data DataFlowAnalysis a v i = DataFlowAnalysis {
-    analysis                   :: a,                                    -- ^ the analysis type token
-    analysisIdentifier         :: Solver.AnalysisIdentifier,            -- ^ the analysis identifier
-    variableGenerator          :: NodeAddress -> Solver.TypedVar v,     -- ^ the variable generator of the represented analysis
-    topValue                   :: v,                                    -- ^ the top value of this analysis
-    iteratorVariableHandler    :: NodeAddress -> Solver.TypedVar v,     -- ^ a function creating the constraints for the given iterator variable
-    freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a free variable
-    entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,     -- ^ a function computing the value of a entry point parameter
-    initialValueHandler        :: NodeAddress -> v,                     -- ^ a function computing the initial value of a memory location
-    initValueHandler           :: v,                                    -- ^ default value of a memory location
-    excessiveFileAccessHandler :: v -> i -> v,                          -- ^ a handler processing excessive field accesses (if ref_narrow calls navigate too deep)
-    unknownOperatorHandler     :: NodeAddress -> v,                     -- ^ a handler invoked for unknown operators
-    forwardCtorDtorResultValue :: Bool                                  -- ^ a flag to enable / disable the implicit return of constructors and destructurs
+    analysis                   :: a,                                         -- ^ the analysis type token
+    analysisIdentifier         :: Solver.AnalysisIdentifier,                 -- ^ the analysis identifier
+    variableGenerator          :: NodeAddress -> Solver.TypedVar v,          -- ^ the variable generator of the represented analysis
+    topValue                   :: v,                                         -- ^ the top value of this analysis
+    iteratorVariableHandler    :: NodeAddress -> Solver.TypedVar v,          -- ^ a function creating the constraints for the given iterator variable
+    freeVariableHandler        :: NodeAddress -> Solver.TypedVar v,          -- ^ a function computing the value of a free variable
+    entryPointParameterHandler :: NodeAddress -> Solver.TypedVar v,          -- ^ a function computing the value of a entry point parameter
+    initialValueHandler        :: NodeAddress -> v,                          -- ^ a function computing the initial value of a memory location
+    initialValue               :: v,                                         -- ^ default value of a memory location
+    uninitializedValue         :: v,                                         -- ^ value of an uninitialized memory location
+    excessiveFileAccessHandler :: v -> i -> v,                               -- ^ a handler processing excessive field accesses (if ref_narrow calls navigate too deep)
+    unknownOperatorHandler     :: NodeAddress -> v,                          -- ^ a handler invoked for unknown operators
+    forwardCtorDtorResultValue :: Bool,                                      -- ^ a flag to enable / disable the implicit return of constructors and destructurs
+    implicitCtorHandler        :: Maybe (NodeAddress -> Solver.TypedVar v)   -- ^ an optional override for the handling of constructors in the defined value analysis
 }
 
 -- a function creating a simple data flow analysis
@@ -58,7 +65,7 @@ mkConstant :: (Typeable a, Solver.ExtLattice v) => DataFlowAnalysis a v i -> Nod
 -- * Generic Data Flow Value Analysis
 --
 
-dataflowValue :: (ComposedValue.ComposedValue a i v, Typeable d)
+dataflowValue :: (HasCallStack, ComposedValue.ComposedValue a i v, Typeable d)
          => NodeAddress                                     -- ^ the address of the node for which to compute a variable representing the data flow value
          -> DataFlowAnalysis d a i                          -- ^ the summar of the analysis to be performed be realized by this function
          -> [OperatorHandler a]                             -- ^ allows selected operators to be intercepted and interpreted

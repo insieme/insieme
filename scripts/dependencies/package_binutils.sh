@@ -8,7 +8,7 @@ SHA256SUM="26253bf0f360ceeba1d9ab6965c57c6a48a01a8343382130d1ed47c468a3094f"
 
 DEPENDS="bison"
 
-export PATH="$(get_pkg_prefix bison)/bin:$PATH"
+export PATH="$PREFIX/$(get_property bison PACKAGE)/bin:$PATH"
 
 pkg_configure() {
 	./configure --prefix="$PREFIX/$PACKAGE" --enable-gold

@@ -51,7 +51,7 @@ module Insieme.Analysis.SymbolicValue (
 
 ) where
 
---import Debug.Trace
+-- import Debug.Trace
 
 import Control.DeepSeq (NFData)
 import Data.List (intercalate)
@@ -62,14 +62,16 @@ import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Dataflow
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Reference
-import Insieme.Inspire.Query
+import Insieme.Analysis.Utils.CppSemantic
+import Insieme.Query
+
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
 import qualified Insieme.Inspire as IR
+import qualified Insieme.Inspire as Addr
 import qualified Insieme.Inspire.Builder as Builder
-import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Utils.BoundSet as BSet
 
 --
@@ -124,6 +126,32 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     IR.Literal  -> Solver.mkVariable varId [] (compose $ BSet.singleton $ Addr.getNode addr)
 
+    -- handle implicit constructor calls
+    IR.Declaration | callsImplicitConstructor addr -> var
+      where
+
+        -- retrieve the implicit constructor
+        Just ctor = getImplicitConstructor addr
+
+        -- decide based on constructor what to do
+        var = case getNodeType ctor of
+            IR.LambdaExpr   -> makeExplicit
+            t -> error $ "Unexpected ctor type: " ++ (show t)
+
+        makeExplicit = Solver.mkVariable varId [con] Solver.bot
+        con = Solver.createConstraint dep val makeExplicit
+
+        dep _ = [Solver.toVar initValueVar]
+        val a = compose $ BSet.map go $ initValueVal a
+          where
+            go arg = Builder.mkCallWithArgs resType IR.hsImplicitConstructor [mem,arg]
+            Just resType = getType $ Addr.getNode $ Addr.goDown 1 addr
+            Just objType = getReferencedType $ resType
+            mem = Builder.refTemporary $ objType
+
+        initValueVar = variableGenerator userDefinedAnalysis $ (Addr.goDown 1 addr)
+        initValueVal a = extract $ Solver.get a initValueVar
+
     -- introduce implicit materialization into symbolic value
     IR.Declaration | isMaterializingDeclaration $ Addr.getNode addr -> var
       where
@@ -138,6 +166,21 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
         valueVar = variableGenerator userDefinedAnalysis $ (Addr.goDown 1 addr)
         valueVal a = extract $ Solver.get a valueVar
 
+    -- handle materializing return statements to produce constructor calls
+    IR.ReturnStmt -> var
+      where
+        var = Solver.mkVariable varId [con] Solver.bot
+        con = Solver.createConstraint dep val var
+        dep _ = [Solver.toVar declVar]
+        val a = compose $ BSet.map go $ extract $ declVal a
+          where
+            go x = case () of
+                _ | isCallOfRefTempInit x -> let Just val = getArgument 0 x in val
+                _ -> x
+
+        declVar = varGen $ IR.goDown 0 addr
+        declVal a = Solver.get a declVar
+
     _ -> dataflowValue addr analysis ops
 
   where
@@ -146,17 +189,31 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
         freeVariableHandler = freeVariableHandler,
         initialValueHandler = initialMemoryValue,
         excessiveFileAccessHandler = excessiveFileAccessHandler,
-        forwardCtorDtorResultValue = False
+        forwardCtorDtorResultValue = False,
+        implicitCtorHandler = Just implicitConstructorHandler
     }
 
-    varId = mkVarIdentifier analysis addr
+    varIdGen = mkVarIdentifier analysis
+    varId = varIdGen addr
 
-    ops = [ operatorHandler ]
+    varGen = genericSymbolicValue userDefinedAnalysis
+
+    ops = [ refDeclHandler, operatorHandler ]
 
     -- a list of symbolic values of the arguments
-    argVars = (variableGenerator analysis) <$> ( Addr.goDown 1 ) <$> ( tail . tail $ Addr.getChildren addr )
+    argVars = (variableGenerator analysis) <$> ( Addr.goDown 1 ) <$> ( tail . tail $ IR.children addr )
 
-    -- the one operator handler that covers all operators
+    -- the handler for ref_decl calls
+    refDeclHandler = OperatorHandler cov dep val
+      where
+        cov a = isBuiltin a "ref_decl"
+        dep _ _ = []
+        val _ _ = compose $ BSet.singleton $ Builder.refTemporary objType
+          where
+            Just resType = getType $ Addr.getNode $ Addr.goDown 0 addr
+            Just objType = getReferencedType $ resType
+
+    -- the one operator handler that covers all other operators
     operatorHandler = OperatorHandler cov dep val
       where
 
@@ -169,10 +226,14 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
                         "ref_temp", "ref_temp_init",
                         "ref_new", "ref_new_init",
                         "ref_kind_cast", "ref_const_cast", "ref_volatile_cast", "ref_parent_cast",
+                         "ref_reinterpret",
                         "num_cast"
-                     ]
+                     ] || any (isOperator a) [
+                        "IMP_std_colon__colon_array::IMP__operator_subscript_",
+                        "IMP_std_colon__colon_array::IMP_at"
+                     ] || isConstructor a 
             -- literal builtins to ignore
-            toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign" ]
+            toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign", "ref_decl" ]
 
         -- if triggered, we will need the symbolic values of all arguments
         dep _ _ = Solver.toVar <$> argVars
@@ -189,9 +250,9 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
             toCall args = IR.mkNode IR.CallExpr (resType : trg : decls) []
               where
-                decls = toDecl <$> zip (tail $ tail $ IR.getChildren $ Addr.getNode addr ) args
+                decls = toDecl <$> zip (tail $ tail $ IR.children $ IR.node addr ) args
 
-                toDecl (decl,arg) = IR.mkNode IR.Declaration [IR.goDown 0 decl, arg] []
+                toDecl (decl,arg) = IR.mkNode IR.Declaration [IR.child 0 decl, arg] []
 
             callTrg = case getNodeType o of
                 IR.Literal -> o
@@ -207,8 +268,15 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
                 instantiateCall = Addr.goUp $ Addr.goUp callTrg
 
-            resType = IR.goDown 0 $ Addr.getNode addr
+            resType = IR.child 0 $ IR.node addr
 
+
+    -- a handler converting implicit constructor calls into explict once for the defined value analysis
+    implicitConstructorHandler addr = var
+      where
+        var = Solver.mkVariable (varIdGen addr) [con] Solver.bot
+        con = Solver.forward declVar var
+        declVar = varGen addr
 
     -- the handler determinign the value of a free variable
 
@@ -239,12 +307,14 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
           where
             append x = Builder.deref ext
               where
-                base = child 1 $ child 2 x
+                base = if isReference x then x else IR.child 1 $ IR.child 2 x
                 
                 ext = case f of
                     (StructField field)   -> Builder.refMember base field
                     (UnionField field)    -> Builder.refMember base field
                     (TupleElementIndex i) -> Builder.refComponent base i
+                    (ArrayIndex i)        -> Builder.refArrayElement base i
+                    (StdArrayIndex i)     -> Builder.refStdArrayElement base i
                     _                     -> error $ "Unsupported field access: " ++ (show f)
 
 
@@ -252,3 +322,5 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
     extract = unSVS . ComposedValue.toValue
     compose = ComposedValue.toComposed . SymbolicValueSet
+
+

@@ -45,20 +45,21 @@ import Control.DeepSeq (NFData)
 import Data.Maybe
 import Data.Typeable
 import GHC.Generics (Generic)
+
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import qualified Insieme.Query as Q
+import qualified Insieme.Utils.Arithmetic as Ar
+import qualified Insieme.Utils.BoundSet as BSet
+import Insieme.Utils.ParseInt
+
+
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Entities.SymbolicFormula
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-import Insieme.Inspire.Query
-import Insieme.Inspire.Visit (findDecl)
-import Insieme.Utils.ParseInt
-
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.NodeAddress as Addr
-import qualified Insieme.Utils.Arithmetic as Ar
-import qualified Insieme.Utils.BoundSet as BSet
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 
@@ -93,30 +94,30 @@ data ArithmeticAnalysis = ArithmeticAnalysis
 
 type ArithResult = ValueTree.Tree SimpleFieldIndex (SymbolicFormulaSet BSet.Bound10)
 
-arithmeticValue :: Addr.NodeAddress -> Solver.TypedVar ArithResult
-arithmeticValue addr = case Addr.getNode addr of
+arithmeticValue :: NodeAddress -> Solver.TypedVar ArithResult
+arithmeticValue addr = case I.getNode addr of
 
-    IR.Node IR.Literal [t, IR.Node (IR.StringValue v) _] | isIntType t -> case parseInt v of
+    I.Node I.Literal [t, I.Node (I.StringValue v) _] | isIntType t -> case parseInt v of
         Just cint -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkConst cint)
-        Nothing   -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNode addr) addr)
+        Nothing   -> Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Constant (I.getNode addr) addr)
 
-    IR.Node IR.Variable _ | Addr.isLoopIterator addr -> Solver.mkVariable (idGen addr) [] (compose $ BSet.Universe)
+    I.Node I.Variable _ | Q.isLoopIterator addr -> Solver.mkVariable (idGen addr) [] (compose $ BSet.Universe)
 
-    IR.Node IR.Variable (t:_) | isIntType t && isFreeVariable addr ->
-        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Variable (Addr.getNode addr) addr)
+    I.Node I.Variable (t:_) | isIntType t && isFreeVariable addr ->
+        Solver.mkVariable (idGen addr) [] (compose $ BSet.singleton $ Ar.mkVar $ Variable (I.getNode addr) addr)
 
-    IR.Node IR.CastExpr (t:_) | isIntType t -> var
+    I.Node I.CastExpr (t:_) | isIntType t -> var
       where
         var = Solver.mkVariable (idGen addr) [con] Solver.bot
-        con = Solver.forward (arithmeticValue $ Addr.goDown 1 addr) var
+        con = Solver.forward (arithmeticValue $ I.goDown 1 addr) var
 
     _ -> dataflowValue addr analysis ops
 
   where
 
     analysis = (mkDataFlowAnalysis ArithmeticAnalysis "A" arithmeticValue) {
-        initialValueHandler = \a -> compose $ BSet.singleton $ Ar.mkVar $ Constant (Addr.getNode a) a,
-        initValueHandler = compose $ BSet.singleton $ Ar.zero
+        initialValueHandler = \a -> compose $ BSet.singleton $ Ar.mkVar $ Constant (I.getNode a) a,
+        initialValue = compose $ BSet.singleton $ Ar.zero
     }
 
     idGen = mkVarIdentifier analysis
@@ -128,19 +129,19 @@ arithmeticValue addr = case Addr.getNode addr of
 
     add = OperatorHandler cov dep (val Ar.addFormula)
       where
-        cov a = any (isBuiltin a) [ "int_add", "uint_add", "gen_add" ]
+        cov a = any (Q.isBuiltin a) [ "int_add", "uint_add", "gen_add" ]
 
     sub = OperatorHandler cov dep (val Ar.subFormula)
       where
-        cov a = any (isBuiltin a) [ "int_sub", "uint_sub", "gen_sub" ]
+        cov a = any (Q.isBuiltin a) [ "int_sub", "uint_sub", "gen_sub" ]
 
     mul = OperatorHandler cov dep (val Ar.mulFormula)
       where
-        cov a = any (isBuiltin a) [ "int_mul", "uint_mul", "gen_mul" ]
+        cov a = any (Q.isBuiltin a) [ "int_mul", "uint_mul", "gen_mul" ]
 
     div = OperatorHandler cov dep val
       where
-        cov a = any (isBuiltin a) [ "int_div", "uint_div", "gen_div" ]
+        cov a = any (Q.isBuiltin a) [ "int_div", "uint_div", "gen_div" ]
         val _ a = compose $ tryDiv (extract $ Solver.get a lhs) (extract $ Solver.get a rhs)
 
         tryDiv x y = if not (BSet.isUniverse prod) && all (uncurry Ar.canDivide) (BSet.toList prod)
@@ -151,11 +152,11 @@ arithmeticValue addr = case Addr.getNode addr of
 
     mod = OperatorHandler cov dep (val Ar.modFormula)
       where
-        cov a = any (isBuiltin a) [ "int_mod", "uint_mod", "gen_mod" ]
+        cov a = any (Q.isBuiltin a) [ "int_mod", "uint_mod", "gen_mod" ]
 
     ptrFromRef = OperatorHandler cov dep val
       where
-        cov a = isBuiltin a "ptr_from_ref"
+        cov a = Q.isBuiltin a "ptr_from_ref"
         dep _ _ = []
         val _ _ = ComposedValue.composeElements [(component 1,compose res)]
           where
@@ -163,8 +164,8 @@ arithmeticValue addr = case Addr.getNode addr of
 
 
 
-    lhs = arithmeticValue $ Addr.goDown 2 addr
-    rhs = arithmeticValue $ Addr.goDown 3 addr
+    lhs = arithmeticValue $ I.goDown 2 addr
+    rhs = arithmeticValue $ I.goDown 3 addr
 
     dep _ _ = Solver.toVar <$> [lhs, rhs]
 
@@ -172,12 +173,12 @@ arithmeticValue addr = case Addr.getNode addr of
 
 
 
-isIntType :: IR.Tree -> Bool
-isIntType (IR.Node IR.GenericType (IR.Node (IR.StringValue "int" ) _:_)) = True
-isIntType (IR.Node IR.GenericType (IR.Node (IR.StringValue "uint") _:_)) = True
-isIntType (IR.Node IR.TypeVariable _ )                                 = True
+isIntType :: I.Tree -> Bool
+isIntType (I.Node I.GenericType (I.Node (I.StringValue "int" ) _:_)) = True
+isIntType (I.Node I.GenericType (I.Node (I.StringValue "uint") _:_)) = True
+isIntType (I.Node I.TypeVariable _ )                                 = True
 isIntType _ = False
 
-isFreeVariable :: Addr.NodeAddress -> Bool
-isFreeVariable v | (not . isVariable) v = False
-isFreeVariable v = isNothing (findDecl v)
+isFreeVariable :: NodeAddress -> Bool
+isFreeVariable v | (not . Q.isVariable) v = False
+isFreeVariable v = isNothing (I.findDecl v)

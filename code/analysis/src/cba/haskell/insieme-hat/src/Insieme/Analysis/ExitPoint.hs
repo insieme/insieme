@@ -42,14 +42,16 @@
 module Insieme.Analysis.ExitPoint where
 
 import Control.DeepSeq
+import qualified Data.Set as Set
 import Data.Typeable
 import GHC.Generics (Generic)
-import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Visit
-import qualified Data.Set as Set
+
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import qualified Insieme.Query as Q
+
 import qualified Insieme.Analysis.Reachable as Reachable
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Inspire as IR
 
 
 --
@@ -60,7 +62,7 @@ newtype ExitPoint = ExitPoint NodeAddress
  deriving (Eq, Ord, Generic, NFData)
 
 instance Show ExitPoint where
-    show (ExitPoint na) = "Exit@" ++ (prettyShow na)
+    show (ExitPoint na) = "Exit@" ++ (I.prettyShow na)
 
 --
 -- * ExitPoint Lattice
@@ -89,10 +91,10 @@ exitPointAnalysis = Solver.mkAnalysisIdentifier ExitPointAnalysis "EP"
 --
 
 exitPoints :: NodeAddress -> Solver.TypedVar ExitPointSet
-exitPoints addr = case getNodeType addr of
+exitPoints addr = case Q.getNodeType addr of
 
     -- for lambdas: collect all reachable return statements and end of body
-    IR.Lambda -> var
+    I.Lambda -> var
         where
             var = Solver.mkVariable id [con] Solver.bot
             con = Solver.createConstraint dep val var
@@ -116,13 +118,13 @@ exitPoints addr = case getNodeType addr of
 
             getReturnReachVars _ = map Reachable.reachableIn returns
 
-            body = (goDown 2 addr)
+            body = (I.goDown 2 addr)
 
             endOfBodyReachable = Reachable.reachableOut body
 
 
     -- for bind expressions: use nested call expression
-    IR.BindExpr -> Solver.mkVariable id [] $ Set.singleton $ ExitPoint $ goDown 2 addr
+    I.BindExpr -> Solver.mkVariable id [] $ Set.singleton $ ExitPoint $ I.goDown 2 addr
 
     -- everything else has no call sites
     _ -> Solver.mkVariable id [] Solver.bot
@@ -134,9 +136,9 @@ exitPoints addr = case getNodeType addr of
 
 
 collectReturns :: NodeAddress -> [NodeAddress]
-collectReturns = foldAddressPrune collector filter
+collectReturns = I.foldAddressPrune collector filter
   where
-    filter cur = getNodeType cur == IR.LambdaExpr
-    collector cur returns = if getNodeType cur == IR.ReturnStmt
-                               then (goDown 0 cur : returns)
+    filter cur = Q.getNodeType cur == I.LambdaExpr
+    collector cur returns = if Q.getNodeType cur == I.ReturnStmt
+                               then (cur : returns)
                                else returns

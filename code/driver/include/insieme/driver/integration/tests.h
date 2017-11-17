@@ -39,15 +39,15 @@
 
 #include <string>
 #include <map>
+#include <set>
 #include <vector>
 #include <boost/filesystem.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
 
 #include "insieme/core/ir_program.h"
-#include "insieme/utils/printable.h"
-#include "insieme/utils/config.h"
+
 #include "insieme/driver/integration/properties.h"
+
+#include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace core {
@@ -68,6 +68,9 @@ namespace integration {
 	using std::map;
 	using std::string;
 	using std::vector;
+
+	// forward declarations for stuff we need in here
+	struct TestStep;
 
 	/**
 	 * A struct used to hold various paths needed to successfully lookup integration tests and their configuration
@@ -160,12 +163,6 @@ namespace integration {
 		 * The properties configured for this test case.
 		 */
 		Properties properties;
-
-		friend class boost::serialization::access;
-		template <class Archive>
-		void serialize(Archive& ar, const unsigned int version) {
-			ar & cnTestSourceDir;
-		}
 
 	  public:
 		/**
@@ -341,6 +338,41 @@ namespace integration {
 		const vector<string> getInsiemeCompilerArguments(std::string step, bool isCpp) const;
 	};
 
+	/**
+	 * Options used for integration test execution
+	 */
+	struct Options {
+		bool valid;
+		bool mockrun;
+		int numThreads;
+		int numRepetitions;
+		bool printConfig;
+		bool panicMode;
+		bool listOnly;
+		bool noClean;
+		bool inplace;
+		bool color;
+		vector<string> cases;
+		vector<string> steps;
+		bool ignoreExcludes;
+		bool blacklistedOnly;
+		bool longTestsOnly;
+		bool longTestsAlso;
+		bool preprocessingOnly;
+		bool postprocessingOnly;
+		bool logToCsvFile;
+		std::string csvFile;
+		bool csvFileIDisset;
+		std::string csvFileID;
+
+		Options(bool valid = true)
+		    : valid(valid), mockrun(false), numThreads(1), numRepetitions(1), printConfig(false), panicMode(false), listOnly(false), noClean(false),
+		      inplace(false), color(true), ignoreExcludes(false),
+		      blacklistedOnly(false), longTestsOnly(false), longTestsAlso(false), preprocessingOnly(false), postprocessingOnly(false),
+		      logToCsvFile(false), csvFile("") {}
+	};
+
+
 	// an enum describing the different modes which test cases to load
 	enum LoadTestCaseMode { ENABLED_TESTS, ENABLED_AND_LONG_TESTS, LONG_TESTS, BLACKLISTED_TESTS, ALL_TESTS };
 
@@ -367,6 +399,17 @@ namespace integration {
 	 */
 	vector<IntegrationTestCase> getTestSuite(const boost::filesystem::path& testDir,
 	                                         const IntegrationTestPaths testPaths = getDefaultIntegrationTestPaths());
+
+
+	/**
+	 * Loads all the cases for the given paths and the passed options.
+	 */
+	vector<IntegrationTestCase> loadCasesForOptions(IntegrationTestPaths testPaths, const Options& options);
+
+	/**
+	 * Get the test steps for the given options (maybe all available steps, or only selected steps) considering the excludes specified for the given test case
+	 */
+	std::set<TestStep> getTestStepsForTestCaseAndOptions(const IntegrationTestCase& testCase, const Options& options);
 
 	/**
 	 * Allow Integration Tests to be properly printed within gtest.

@@ -67,6 +67,21 @@ namespace internal {
 	  public:
 
 		/**
+		 * A dummy operator for the haskell side to invoke an implicit constructor.
+		 */
+		LANG_EXT_LITERAL(HaskellImplicitCtor, "hs_implicit_ctor", "(ref<'a,f,f,plain>,'b) -> ref<'a,f,f,plain>")
+
+		/**
+		 * A dummy operator for the haskell side to create an addition.
+		 */
+		LANG_EXT_LITERAL(HaskellArithAdd, "hs_arith_add", "('a,'b) -> some_type")
+
+		/**
+		 * A dummy operator for the haskell side to create a subtraction.
+		 */
+		LANG_EXT_LITERAL(HaskellArithSub, "hs_arith_sub", "('a,'b) -> some_type")
+
+		/**
 		 * A dummy operator for the haskell side to create a member access, replaced
 		 * by a real member access during haskell to C++ conversion.
 		 */
@@ -77,6 +92,18 @@ namespace internal {
 		 * by a real member access during haskell to C++ conversion.
 		 */
 		LANG_EXT_LITERAL(HaskellRefComponentAccess, "hs_ref_component_access", "(ref<'a,'c,'v,'k>, uint<8>) -> ref<'b,'c,'v, plain>")
+
+		/**
+		 * A dummy operator for the haskell side to create a array element access, replaced
+		 * by a real element access during haskell to C++ conversion.
+		 */
+		LANG_EXT_LITERAL(HaskellRefArrayElementAccess, "hs_ref_array_element_access", "(ref<'a,'c,'v,'k>, uint<8>) -> ref<'b,'c,'v, plain>")
+
+		/**
+		 * A dummy operator for the haskell side to create a std::array element access, replaced
+		 * by a real element access during haskell to C++ conversion.
+		 */
+		LANG_EXT_LITERAL(HaskellRefStdArrayElementAccess, "hs_ref_std_array_element_access", "(ref<'a,'c,'v,'k>, uint<8>) -> ref<'b,'c,'v, plain>")
 
 	};
 

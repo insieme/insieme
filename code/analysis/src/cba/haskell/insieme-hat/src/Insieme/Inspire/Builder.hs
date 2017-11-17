@@ -39,22 +39,37 @@
 -- The workings of these functions are specific to INSPIRE.
 
 module Insieme.Inspire.Builder (
+
+    mkCall,
+    mkCallWithArgs,
+
+    mkTypeLiteralType,
+    mkTypeLiteral,
+
+    plus,
+    plusOne,
+
+    minus,
+    minusOne,
+
     deref,
     refMember,
     refComponent,
-    refTemporaryInit
+    refTemporary,
+    refTemporaryInit,
+    refArrayElement,
+    refStdArrayElement
 ) where
 
 --import Debug.Trace
 
 import Control.Exception.Base
 import Data.Maybe
-import Insieme.Inspire.Query
 
-import qualified Insieme.Inspire as IR
-import qualified Insieme.Inspire.Query as Q
-import qualified Insieme.Utils.ParseIR as Lang
-
+import Insieme.Inspire.NodeReference
+import qualified Insieme.Inspire.IR as IR
+import qualified Insieme.Inspire.SourceParser as SP
+import {-# UP #-} qualified Insieme.Query as Q
 
 -- basic node types --
 
@@ -70,39 +85,80 @@ mkDeclaration t v = assert (Q.isType t) $ IR.mkNode IR.Declaration [t,v] []
 mkCall :: IR.Tree -> IR.Tree -> [IR.Tree] -> IR.Tree
 mkCall t f argDecls = IR.mkNode IR.CallExpr (t:f:argDecls) []
 
+mkCallWithArgs :: IR.Tree -> IR.Tree -> [IR.Tree] -> IR.Tree
+mkCallWithArgs t f args = mkCall t f $ toDecl <$> args
+  where
+    toDecl a = mkDeclaration t a
+      where 
+        Just t = Q.getType a
+
 mkIdentifier :: String -> IR.Tree
-mkIdentifier s = mkLiteral s Lang.identifierType
+mkIdentifier s = mkLiteral s SP.identifierType
+
+mkTypeLiteralType :: IR.Tree -> IR.Tree
+mkTypeLiteralType t = IR.mkNode IR.GenericType [name, parents, params] []
+  where
+    name = mkStringValue "type"
+    parents = IR.mkNode IR.Parents [] []
+    params = IR.mkNode IR.Types [t] []
+
+mkTypeLiteral :: IR.Tree -> IR.Tree
+mkTypeLiteral t = mkLiteral "type_literal" $ mkTypeLiteralType t
 
 
--- invocations of built-ins --
+-- arithmetic operator calls --
+
+
+plus :: IR.Tree -> IR.Tree -> IR.Tree
+plus a b = mkCallWithArgs some_type SP.arithAdd [a,b]
+
+plusOne :: IR.Tree -> IR.Tree
+plusOne a = plus a $ mkLiteral "1" SP.uint1
+
+
+minus :: IR.Tree -> IR.Tree -> IR.Tree
+minus a b = mkCallWithArgs some_type SP.arithSub [a,b]
+
+minusOne :: IR.Tree -> IR.Tree
+minusOne a = minus a $ mkLiteral "1" SP.uint1
+
+
+-- ref-operator calls --
 
 deref :: IR.Tree -> IR.Tree
-deref t = mkCall resType Lang.refDeref [decl]
+deref t = mkCall resType SP.refDeref [decl]
   where
-    resType = fromJust $ getReferencedType refType
+    resType = fromJust $ Q.getReferencedType refType
 
-    refType = IR.goDown 0 t
+    refType = child 0 t
 
     decl = mkDeclaration refType t
 
-
 refMember :: IR.Tree -> String -> IR.Tree
-refMember t f = mkCall some_ref_type Lang.hsRefMemberAccess $ wrapSomeDecl <$> [t,mkIdentifier f]
+refMember t f = mkCall some_ref_type SP.hsRefMemberAccess $ wrapSomeDecl <$> [t,mkIdentifier f]
 
 refComponent :: IR.Tree -> Int -> IR.Tree
-refComponent t i = mkCall some_ref_type Lang.hsRefComponentAccess $ wrapSomeDecl <$> [t,mkLiteral (show i) Lang.uint8]
+refComponent t i = mkCall some_ref_type SP.hsRefComponentAccess $ wrapSomeDecl <$> [t,mkLiteral (show i) SP.uint8]
+
+refTemporary :: IR.Tree -> IR.Tree
+refTemporary t = mkCall some_ref_type SP.refTemp [mkDeclaration some_type (mkTypeLiteral t)]
 
 refTemporaryInit :: IR.Tree -> IR.Tree
-refTemporaryInit e = mkCall some_ref_type Lang.refTempInit [mkDeclaration some_type e]
+refTemporaryInit e = mkCall some_ref_type SP.refTempInit [mkDeclaration some_type e]
 
+refArrayElement :: IR.Tree -> Int -> IR.Tree
+refArrayElement t i = mkCall some_ref_type SP.hsRefArrayElementAccess $ wrapSomeDecl <$> [t,mkLiteral (show i) SP.uint8]
+
+refStdArrayElement :: IR.Tree -> Int -> IR.Tree
+refStdArrayElement t i = mkCall some_ref_type SP.hsRefStdArrayElementAccess $ wrapSomeDecl <$> [t,mkLiteral (show i) SP.uint8]
 
 -- utilities --
 
 some_type :: IR.Tree
-some_type     = Lang.parseType "some_type"
+some_type     = SP.parseType "some_type"
 
 some_ref_type :: IR.Tree
-some_ref_type = Lang.parseType "ref<some_type>"
+some_ref_type = SP.parseType "ref<some_type>"
 
 wrapSomeDecl :: IR.Tree -> IR.Tree
 wrapSomeDecl = mkDeclaration some_type

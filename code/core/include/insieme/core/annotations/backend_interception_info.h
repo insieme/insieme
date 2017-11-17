@@ -59,12 +59,11 @@ namespace annotations {
 
 		BackendInterceptionInfo(const std::string& qualifiedName) : qualifiedName(qualifiedName) {}
 
-		BackendInterceptionInfo(const std::string& qualifiedName, std::vector<std::string>& instantiationArguments) :
+		BackendInterceptionInfo(const std::string& qualifiedName, const std::vector<std::string>& instantiationArguments) :
 			qualifiedName(qualifiedName), instantiationArguments(instantiationArguments) {}
 
 		bool operator==(const BackendInterceptionInfo& other) const {
-			return qualifiedName == other.qualifiedName
-					&& instantiationArguments == other.instantiationArguments;
+			return qualifiedName == other.qualifiedName && instantiationArguments == other.instantiationArguments;
 		}
 	};
 

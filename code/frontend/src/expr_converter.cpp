@@ -71,6 +71,7 @@
 #include "insieme/core/lang/compound_operators.h"
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/reference.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/materialize.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -678,16 +679,55 @@ namespace conversion {
 		core::ExpressionPtr retIr;
 		LOG_EXPR_CONVERSION(condOp, retIr);
 
-		core::TypePtr retTy = converter.convertType(condOp->getType());
+		core::ExpressionPtr condExpr = converter.convertExpr(condOp->getCond());
 		core::ExpressionPtr trueExpr = converter.convertExpr(condOp->getTrueExpr());
 		core::ExpressionPtr falseExpr = converter.convertExpr(condOp->getFalseExpr());
-		core::ExpressionPtr condExpr = converter.convertExpr(condOp->getCond());
 
+		// before we pack the true and false expressions into lazies we need to check whether they have the same reference properties
+		if(core::lang::isReference(trueExpr) && core::lang::isReference(falseExpr)) {
+			core::lang::ReferenceType trueRefType(trueExpr);
+			core::lang::ReferenceType falseRefType(falseExpr);
+
+			if(trueRefType.getElementType() == falseRefType.getElementType()) {
+				core::lang::ReferenceType targetTrueRefType(trueRefType);
+				core::lang::ReferenceType targetFalseRefType(falseRefType);
+
+				// if one of them is const, cast them both to const
+				if(trueRefType.isConst() || falseRefType.isConst()) {
+					targetTrueRefType.setConst(true);
+					targetFalseRefType.setConst(true);
+				}
+
+				// if their kinds differ and one of them is plain, cast them both to plain
+				if(trueRefType.getKind() != falseRefType.getKind()) {
+					if(trueRefType.getKind() == core::lang::ReferenceType::Kind::Plain) {
+						targetFalseRefType.setKind(core::lang::ReferenceType::Kind::Plain);
+					} else if(falseRefType.getKind() == core::lang::ReferenceType::Kind::Plain) {
+						targetTrueRefType.setKind(core::lang::ReferenceType::Kind::Plain);
+					}
+				}
+				// now build the ref casts. In case the type is already correct, this is a no-op
+				trueExpr = core::lang::buildRefCast(trueExpr, targetTrueRefType.toType());
+				falseExpr = core::lang::buildRefCast(falseExpr, targetFalseRefType.toType());
+			}
+		}
+		// the same goes for pointer types
+		if(core::lang::isPointer(trueExpr) && core::lang::isPointer(falseExpr)) {
+			core::lang::PointerType truePtrType(trueExpr);
+			core::lang::PointerType falsePtrType(falseExpr);
+
+			// if one of them is const, cast them both to const
+			if(truePtrType.isConst() || falsePtrType.isConst()) {
+				trueExpr = core::lang::buildPtrCast(trueExpr, true, truePtrType.isVolatile());
+				falseExpr = core::lang::buildPtrCast(falseExpr, true, falsePtrType.isVolatile());
+			}
+		}
+
+		condExpr = utils::exprToBool(condExpr);
 		trueExpr = builder.wrapLazy(trueExpr);
 		falseExpr = builder.wrapLazy(falseExpr);
-		condExpr = utils::exprToBool(condExpr);
 
-		retIr = builder.callExpr(basic.getIfThenElse(), condExpr, trueExpr, falseExpr);
+		retIr = builder.ite(condExpr, trueExpr, falseExpr);
 
 		return retIr;
 	}

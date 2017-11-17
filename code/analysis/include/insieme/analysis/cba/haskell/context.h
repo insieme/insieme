@@ -82,10 +82,10 @@ namespace haskell {
 
 		// move semantics
 		Context(const Context& other) = delete;
-		Context(Context&& other) = default;
+		Context(Context&& other) = delete;
 
 		Context& operator=(const Context& other) = delete;
-		Context& operator=(Context&& other) = default;
+		Context& operator=(Context&& other) = delete;
 
 		std::chrono::microseconds getTimelimit() const;
 		void setTimelimit(std::chrono::microseconds t);

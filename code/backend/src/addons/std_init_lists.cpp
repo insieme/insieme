@@ -79,10 +79,7 @@ namespace addons {
 			// this extension is based upon the symbols defined by the reference module
 			IMPORT_MODULE(core::lang::ReferenceExtension);
 
-			LANG_EXT_LITERAL(InitListCreate, "init_list_create", "(type<'a>, 'b...) -> ref<IMP_std_colon__colon_initializer_list<'a>>")
-
 			LANG_EXT_LITERAL(InitListAssign, "init_list_assign", "('a, 'b) -> 'b")
-
 		};
 
 		/**
@@ -93,7 +90,6 @@ namespace addons {
 			virtual core::NodePtr process(const Converter& Converter, const core::NodePtr& code) override {
 				auto& mgr = code->getNodeManager();
 				core::IRBuilder builder(mgr);
-				const auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
 				const auto& initListExt = mgr.getLangExtension<StdInitListBackendExtension>();
 
 				utils::set::PointerSet<core::TypePtr> replacedTypes;
@@ -131,31 +127,6 @@ namespace addons {
 					return name;
 				};
 
-				// we undo the changes made during the frontend cleanup to reflect copy semantics in the IR
-				res = core::transform::transformBottomUpGen(res, [&](const core::CallExprPtr& call) -> core::NodePtr {
-					// we undo the changes performed by the frontend cleanup to encode copy operations on initializer_lists
-					if(refExt.isCallOfRefCast(call) || refExt.isCallOfRefKindCast(call)) {
-						auto callArg = call->getArgument(0).isa<core::CallExprPtr>();
-						if(callArg && core::analysis::isConstructorCall(callArg)) {
-							auto ctorArg = callArg.as<core::CallExprPtr>()->getArgument(0);
-							if(refExt.isCallOfRefTemp(ctorArg)) {
-								auto callRefType = callArg->getType();
-								if(core::analysis::isRefType(callRefType)) {
-									auto callType = core::analysis::getReferencedType(callRefType).isa<core::GenericTypePtr>();
-									if(replacedTypes.find(callType) != replacedTypes.end()) {
-										// if we end up here, we have a call to ref_temp inside a ctor call inside a ref_cast.
-										// in this case we return a call to ref_decl inside the ctor call
-										auto ctorCallAddress = core::CallExprAddress(callArg);
-										return builder.deref(
-												core::transform::replaceNode(mgr, ctorCallAddress->getArgument(0), core::lang::buildRefDecl(callRefType)).as<core::ExpressionPtr>());
-									}
-								}
-							}
-						}
-					}
-					return call;
-				}, core::transform::globalReplacement);
-
 				// now we need to check all the calls and generate replacement literals for them
 				res = core::transform::transformBottomUpGen(res, [&](const core::CallExprPtr& call) -> core::NodePtr {
 					auto callee = call->getFunctionExpr();
@@ -167,30 +138,19 @@ namespace addons {
 							core::ExpressionPtr replacementCallee = callee;
 							if(calleeType->isConstructor()) {
 								// we create a replacement literal for the default ctor
-								if(call->getNumArguments() == 1) {
-									replacementCallee = builder.literal("IMP_std_colon__colon_initializer_list::ctor", calleeType);
+								replacementCallee = builder.literal("IMP_std_colon__colon_initializer_list::ctor", calleeType);
 
-									// the other ctors get replaced with a call to a custom IR symbol, which will be replaced later on
-								} else {
-									auto oldArgs = call->getArgumentList();
-									auto args = core::ExpressionList(oldArgs.begin() + 1, oldArgs.end());
-									args.insert(args.begin(), builder.getTypeLiteral(objectType.as<core::GenericTypePtr>()->getTypeParameter(0)));
-									return builder.callExpr(call->getType(), initListExt.getInitListCreate(), args);
-								}
-							}
-
-							// member functions size, begin and end get their name changed, assignment operators get replaced by a custom IR symbol
-							if(calleeType->isMemberFunction()) {
+								// member functions size, begin and end get their name changed, assignment operators get replaced by a custom IR symbol
+							} else if(calleeType->isMemberFunction()) {
 								auto name = getName(callee);
 								if(name == utils::getMangledOperatorAssignName()) {
 									replacementCallee = initListExt.getInitListAssign();
 								} else {
 									replacementCallee = builder.literal(name, calleeType);
 								}
-							}
 
-							// dtor calls are always invalid
-							if(calleeType->isDestructor()) assert_fail() << "Call to dtor of std::initializer_list encountered";
+								// dtor calls are always invalid
+							} else if(calleeType->isDestructor()) assert_fail() << "Call to dtor of std::initializer_list encountered";
 
 							annotations::c::attachInclude(replacementCallee, "initializer_list");
 							return core::transform::replaceNode(mgr, core::CallExprAddress(call).getFunctionExpr(), replacementCallee);
@@ -210,14 +170,6 @@ namespace addons {
 			const auto& initListExt = mgr.getLangExtension<StdInitListBackendExtension>();
 
 			#include "insieme/backend/operator_converter_begin.inc"
-
-			res[initListExt.getInitListCreate()] = OP_CONVERTER {
-				std::vector<c_ast::NodePtr> args;
-				for(unsigned i = 1; i < call->getNumArguments(); ++i) {
-					args.push_back(CONVERT_ARG(i));
-				}
-				return c_ast::init(C_NODE_MANAGER.get(), args);
-			};
 
 			res[initListExt.getInitListAssign()] = OP_CONVERTER {
 				return c_ast::assign(c_ast::deref(CONVERT_ARG(0)), CONVERT_ARG(1));

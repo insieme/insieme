@@ -13,17 +13,3 @@ pkg_configure() {
 pkg_check() {
 	make check
 }
-
-pkg_is_globally_installed() {
-	local cur_ver="$(/usr/bin/hwloc-info --version 2>/dev/null | grep -oE '[^ ]+$')"
-	if [ -z "$cur_ver" ]; then
-		return 1 # not installed
-	fi
-
-	local cmp_ver="$(printf "$VERSION\n$cur_ver" | sort -V | head -n1)"
-	if [ "$cmp_ver" == "$cur_ver" ] && [ "$cur_ver" != "$VERSION" ]; then
-		return 1 # not installed
-	else
-		return 0 # installed
-	fi
-}

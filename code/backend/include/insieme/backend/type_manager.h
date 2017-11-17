@@ -137,22 +137,13 @@ namespace backend {
 
 	struct TypeInfo {
 		// to be included:
-		// 		- l / r value name
-		//		- external name
-		//		- declaration pattern
-		//		- parameter pattern
-		//		- externalization
-		//		- internalization
+		// 		- l / r value type
+		//		- declaration
+		//		- definition
 
 		c_ast::TypePtr lValueType;
 
 		c_ast::TypePtr rValueType;
-
-		c_ast::TypePtr externalType; // always rValue
-
-		NodeConverter externalize;
-
-		NodeConverter internalize;
 
 		c_ast::CodeFragmentPtr declaration;
 
@@ -218,9 +209,6 @@ namespace backend {
 			T* res = new T();
 			res->lValueType = type;
 			res->rValueType = type;
-			res->externalType = type;
-			res->externalize = &NoOp;
-			res->internalize = &NoOp;
 			return res;
 		}
 

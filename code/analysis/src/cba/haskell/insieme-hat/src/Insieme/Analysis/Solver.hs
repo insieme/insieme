@@ -37,19 +37,14 @@
 
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TupleSections #-}
 
 module Insieme.Analysis.Solver (
 
     -- lattices
-    Lattice,
-    join,
-    merge,
-    bot,
-    less,
-    print,
-
-    ExtLattice,
-    top,
+    Lattice(..),
+    ExtLattice(..),
 
     -- analysis identifiers
     AnalysisIdentifier,
@@ -70,10 +65,9 @@ module Insieme.Analysis.Solver (
     getDependencies,
     getLimit,
 
-    -- assignments
-    Assignment,
+    -- assignment views
+    AssignmentView,
     get,
-    set,
 
     -- solver state
     SolverState,
@@ -96,39 +90,55 @@ module Insieme.Analysis.Solver (
 
     -- debugging
     dumpSolverState,
-    showSolverStatistic
+    showSolverStatistic,
+
+    -- metadata
+    module Insieme.Analysis.Solver.Metadata
 
 ) where
 
+import GHC.Stack
+
 import Prelude hiding (lookup,print)
-
---import Debug.Trace
-
+import Control.Arrow
 import Control.DeepSeq
 import Control.Exception
 import Control.Monad (void,when)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Dynamic
 import Data.Function
 import Data.List hiding (insert,lookup)
 import Data.Maybe
 import Data.Tuple
-import Insieme.Analysis.Entities.Memory
-import Insieme.Analysis.Entities.ProgramPoint
-import Insieme.Inspire.NodeAddress
-import Insieme.Utils
 import System.CPUTime
 import System.Directory (doesFileExist)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Process
 import Text.Printf
+import Text.JSON
 
 import qualified Control.Monad.State.Strict as State
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Graph as Graph
 import qualified Data.Hashable as Hash
 import qualified Data.IntMap.Strict as IntMap
-import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+
+import Insieme.Inspire (NodeAddress, NodePath)
+import qualified Insieme.Inspire as I
+import Insieme.Utils
+
+import Insieme.Analysis.Entities.Memory
+import Insieme.Analysis.Entities.ProgramPoint
+
+import Insieme.Analysis.Solver.Metadata
+
+
+-- A flag to enable / disable internal consistency checks (for debugging)
+check_consistency :: Bool
+check_consistency = False
+
 
 -- Lattice --------------------------------------------------
 
@@ -139,15 +149,19 @@ class (Eq v, Show v, Typeable v, NFData v) => Lattice v where
         join :: [v] -> v                    -- need to be provided by implementations
         join [] = bot                       -- a default implementation for the join operator
         join xs = foldr1 merge xs           -- a default implementation for the join operator
+
         -- | binary join
         merge :: v -> v -> v                -- a binary version of the join
         merge a b = join [ a , b ]          -- its default implementation derived from join
+
         -- | bottom element
         bot  :: v                           -- the bottom element of the join
         bot = join []                       -- default implementation
+
         -- | induced order
         less :: v -> v -> Bool              -- determines whether one element of the lattice is less than another
         less a b = (a `merge` b) == b       -- default implementation
+
         -- | debug printing
         print :: v -> String                -- print a value of the lattice readable
         print = show
@@ -264,20 +278,20 @@ address = referencedAddress . idValue
 
 -- general variables (management)
 data Var = Var {
-                index :: Identifier,                 -- the variable identifier
+                varIdent :: Identifier,              -- the variable identifier
                 constraints :: [Constraint],         -- the list of constraints
                 bottom :: Dynamic,                   -- the bottom value for this variable
                 valuePrint :: Assignment -> String   -- a utility for unpacking an printing a value assigned to this variable
         }
 
 instance Eq Var where
-        (==) a b = (index a) == (index b)
+        (==) a b = (varIdent a) == (varIdent b)
 
 instance Ord Var where
-        compare a b = compare (index a) (index b)
+        compare a b = compare (varIdent a) (varIdent b)
 
 instance Show Var where
-        show v = show (index v)
+        show v = show (varIdent v)
 
 
 -- typed variables (user interaction)
@@ -288,20 +302,20 @@ mkVariable :: (Lattice a) => Identifier -> [Constraint] -> a -> TypedVar a
 mkVariable i cs b = var
     where
         var = TypedVar ( Var i cs ( toDyn b ) print' )
-        print' = (\a -> print $ get a var )
+        print' = (\a -> print $ get' a var )
 
 toVar :: TypedVar a -> Var
 toVar (TypedVar x) = x
 
-getDependencies :: Assignment -> TypedVar a -> [Var]
+getDependencies :: AssignmentView -> TypedVar a -> [Var]
 getDependencies a v = concat $ (go <$> (constraints . toVar) v)
     where
         go c = dependingOn c a
 
-getLimit :: (Lattice a) => Assignment -> TypedVar a -> a
+getLimit :: (Lattice a) => AssignmentView -> TypedVar a -> a
 getLimit a v = join (go <$> (constraints . toVar) v)
     where
-        go c = get a' v
+        go c = get' a' v
             where
                 (a',_) = update c a
 
@@ -315,10 +329,10 @@ emptyVarMap :: VarMap a
 emptyVarMap = VarMap IntMap.empty
 
 lookup :: Var -> VarMap a -> Maybe a
-lookup k (VarMap m) = (Map.lookup k) =<< (IntMap.lookup (idHash $ index k) m)
+lookup k (VarMap m) = (Map.lookup k) =<< (IntMap.lookup (idHash $ varIdent k) m)
 
 insert :: Var -> a -> VarMap a -> VarMap a
-insert k v (VarMap m) = VarMap (IntMap.insertWith go (idHash $ index k) (Map.singleton k v) m)
+insert k v (VarMap m) = VarMap (IntMap.insertWith go (idHash $ varIdent k) (Map.singleton k v) m)
     where
         go _ o = Map.insert k v o
 
@@ -346,7 +360,7 @@ newtype Assignment = Assignment ( VarMap Dynamic )
 instance Show Assignment where
     show a@( Assignment m ) = "Assignment {\n\t"
             ++
-            ( intercalate ",\n\t\t" ( map (\v -> (show v) ++ " = " ++ (valuePrint v a) ) vars ) )
+            ( intercalate ",\n\t\t" ( map (\v -> (show v) ++ " #" ++ (show $ idHash $ varIdent v) ++ " = " ++ (valuePrint v a) ) vars ) )
             ++
             "\n}"
         where
@@ -358,8 +372,8 @@ empty = Assignment emptyVarMap
 
 -- retrieves a value from the assignment
 -- if the value is not present, the bottom value of the variable will be returned
-get :: (Typeable a) => Assignment -> TypedVar a -> a
-get (Assignment m) (TypedVar v) =
+get' :: (Typeable a) => Assignment -> TypedVar a -> a
+get' (Assignment m) (TypedVar v) =
         fromJust $ (fromDynamic :: ((Typeable a) => Dynamic -> (Maybe a)) ) $ fromMaybe (bottom v) (lookup v m)
 
 
@@ -378,6 +392,23 @@ reset (Assignment m) vars = Assignment $ insertAll reseted m
                 v = indexToVar iv
 
 
+-- Assignment Views ----------------------------------------
+
+data AssignmentView = UnfilteredView Assignment
+                    | FilteredView [Var] Assignment
+
+get :: (HasCallStack, Typeable a) => AssignmentView -> TypedVar a -> a
+get (UnfilteredView a) v = get' a v
+get (FilteredView vs a) v = case () of 
+    _ | not check_consistency || elem (toVar v) vs -> res
+    _ | otherwise -> error ("Invalid variable access: " ++ (show v) ++ " not in " ++ (show vs))
+  where
+    res = get' a v
+
+stripFilter :: AssignmentView -> Assignment
+stripFilter (UnfilteredView a) = a
+stripFilter (FilteredView _ a) = a
+
 
 -- Constraints ---------------------------------------------
 
@@ -389,13 +420,19 @@ data Event =
 
 
 data Constraint = Constraint {
-        dependingOn         :: Assignment -> [Var],
-        update              :: (Assignment -> (Assignment,Event)),       -- update the assignment, a reset is allowed
-        updateWithoutReset  :: (Assignment -> (Assignment,Event))        -- update the assignment, a reset is not allowed
+        dependingOn         :: AssignmentView -> [Var],                      -- obtains list of variables depending on
+        update              :: (AssignmentView -> (Assignment,Event)),       -- update the assignment, a reset is allowed
+        updateWithoutReset  :: (AssignmentView -> (Assignment,Event)),       -- update the assignment, a reset is not allowed
+        check               :: SolverState -> Maybe Violation,               -- check whether this constraint is satisfied
+        printLimit          :: AssignmentView -> String                      -- requests to print the current limit defined (debugging)
    }
 
 
-
+data Violation = Violation {
+        violationMsg         :: String,       -- a message describing the issue
+        violationShouldValue :: String,       -- the value a variable should have (at least)
+        violationIsValue     :: String        -- the value a variable does have
+    }
 
 
 -- Variable Index -----------------------------------------------
@@ -494,7 +531,6 @@ getAllDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
 getAllDep d i = collect [i] Set.empty
     where
         collect [] s = s
-        collect (v:_:_) s | v == i = s        -- we can stop if we reach the seed variable again
         collect (v:vs) s = collect ((Set.toList $ Set.difference dep s) ++ vs) (Set.union dep s)
             where
                 dep = getDep d v
@@ -521,14 +557,29 @@ resolveAll i tvs = (res <$> tvs,s)
     where
         s = solve i (toVar <$> tvs)
         ass = assignment s
-        res = get ass
+        res = get' ass
 
 
 -- solve for a set of variables
 solve :: SolverState -> [Var] -> SolverState
-solve initial vs = solveStep (initial {variableIndex = nindex}) emptyDep ivs
+solve initial vs = case violations of
+        _ | not check_consistency -> res
+        [] -> res
+        _  -> error $ "Unsatisfied constraints:\n\t" ++ (intercalate "\n\t" $ print <$> violations )
+--        _  -> trace ("Unsatisfied constraints:\n\t" ++ (intercalate "\n\t" $ print <$> violations )) res
     where
+        -- compute the solution
         (ivs,nindex) = varsToIndex (variableIndex initial) vs
+        res = solveStep (initial {variableIndex = nindex}) emptyDep ivs
+
+        -- compute the list of violated constraints (should be empty)
+        allConstraints = concatMap constraints $ Set.toList $ knownVariables $ variableIndex res
+        violations = mapMaybe (flip check $ res) allConstraints
+
+        -- print utility formatting violations
+        print v = (violationMsg v) ++ "\n\t\tshould: " ++ (violationShouldValue v) 
+                                   ++ "\n\t\t    is: " ++ (violationIsValue v)
+
 
 
 -- solve for a set of variables with an initial assignment
@@ -557,11 +608,11 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
                 nt = Map.insertWith (+) aid dt t
                 nu = Map.insertWith (+) aid  1 u
                 nr = if numResets > 0 then Map.insertWith (+) aid numResets r else r
-                aid = analysis $ index $ indexToVar v
+                aid = analysis $ varIdent $ indexToVar v
 
                 -- each constraint extends the result, the dependencies, and the vars to update
                 go _ = foldr processConstraint (a,i,d,vs,0) ( constraints $ indexToVar v )  -- update all constraints of current variable
-                processConstraint c (a,i,d,dv,numResets) = case ( update c a ) of
+                processConstraint c (a,i,d,dv,numResets) = case ( update c fa ) of
 
                         (a',None)         -> (a',ni,nd,nv,numResets)                -- nothing changed, we are fine
 
@@ -572,11 +623,14 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
                                 dep = getAllDep nd trg
                                 ra = if not $ Set.member trg dep                    -- if variable is not indirectly depending on itself
                                     then reset a' dep                               -- reset all depending variables to their bottom value
-                                    else fst $ updateWithoutReset c a               -- otherwise insist on merging reseted value with current state
+                                    else fst $ updateWithoutReset c fa              -- otherwise insist on merging reseted value with current state
 
                     where
+                            ua = UnfilteredView a
+                            fa = FilteredView dep a
+
                             trg = v
-                            dep = dependingOn c a
+                            dep = dependingOn c ua
                             (idep,ni) = varsToIndex i dep
 
                             newVarsList = filter f idep
@@ -597,36 +651,79 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
 --   * a function to return the dependent variables of this constraint,
 --   * the current value of the constraint,
 --   * and the target variable for this constraint.
-createConstraint :: (Lattice a) => ( Assignment -> [Var] ) -> ( Assignment -> a ) -> TypedVar a -> Constraint
-createConstraint dep limit trg = Constraint dep update' update'
+createConstraint :: (Lattice a) => ( AssignmentView -> [Var] ) -> ( AssignmentView -> a ) -> TypedVar a -> Constraint
+createConstraint dep limit trg = Constraint dep update' update' check' printLimit'
     where
-        update' a = case () of
+        update' fa = case () of
                 _ | value `less` current -> (                                a,      None)    -- nothing changed
                 _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change
             where
-                value = limit a                                                               -- the value from the constraint
-                current = get a trg                                                           -- the current value in the assignment
+                value = limit fa                                                              -- the value from the constraint
+                current = get' a trg                                                          -- the current value in the assignment
+                a = stripFilter fa
 
+        check' state = 
+                if value `less` current then Nothing
+                else Just $ Violation (print') (show value) (show current)
+            where
+                a = assignment state
+                ua = UnfilteredView a
+                fa = FilteredView (dep ua) a
+                value = limit fa
+                current = get' a trg
+
+        print' = "f(A) => g(A) ⊑ " ++ (show trg)
+
+        printLimit' a = print $ limit a
 
 -- creates a constraint of the form f(A) = A[b] enforcing equality
-createEqualityConstraint :: Lattice t => (Assignment -> [Var]) -> (Assignment -> t) -> TypedVar t -> Constraint
-createEqualityConstraint dep limit trg = Constraint dep update forceUpdate
+createEqualityConstraint :: Lattice t => (AssignmentView -> [Var]) -> (AssignmentView -> t) -> TypedVar t -> Constraint
+createEqualityConstraint dep limit trg = Constraint dep update forceUpdate check' printLimit'
     where
-        update a = case () of
+        update fa = case () of
                 _ | value `less` current -> (              a,      None)    -- nothing changed
                 _ | current `less` value -> (set a trg value, Increment)    -- an incremental change
                 _                        -> (set a trg value,     Reset)    -- a reseting change, heading in a different direction
-            where
-                value = limit a                                             -- the value from the constraint
-                current = get a trg                                         -- the current value in the assignment
 
-        forceUpdate a = case () of
+            where
+                value = limit fa                                            -- the value from the constraint
+                current = get' a trg                                        -- the current value in the assignment
+                a = stripFilter fa
+
+        forceUpdate fa = case () of
                 _ | value `less` current -> (                                a,      None)    -- nothing changed
                 _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change
             where
-                value = limit a                                                               -- the value from the constraint
-                current = get a trg                                                           -- the current value in the assignment
+                value = limit fa                                                              -- the value from the constraint
+                current = get' a trg                                                          -- the current value in the assignment
+                a = stripFilter fa
 
+        check' state = case () of
+                _ | value `less` current && current `less` value -> Nothing             -- perfect, it is equal!
+                _ | value `less` current && inCycle              -> Nothing             -- it is not equal, but in a cycle ... acceptable
+                _ | otherwise -> Just $ Violation (print') (show value) (show current)  -- not so good :(
+            where
+                a = assignment state
+                ua = UnfilteredView a
+                fa = FilteredView (dep ua) a
+                value = limit fa
+                current = get' a trg
+
+                -- compute the set of all variables the constraint variable is depending on
+                allDependencies = collect (dep ua) Set.empty
+                    where
+                        collect [] s = s
+                        collect (v:vs) s = collect ((Set.toList $ Set.difference dep s) ++ vs) (Set.union dep s)
+                            where
+                                dep = Set.fromList $ concatMap (flip dependingOn ua) $ constraints v
+
+                -- determine whether the constraint variable is indeed in a active cycle
+                inCycle = Set.member (toVar trg) allDependencies
+
+
+        print' = "f(A) => g(A) = " ++ (show trg) ++ " with " ++ (show $ length $ constraints $ toVar trg) ++ " constraints"
+
+        printLimit' a = print $ limit a
 
 
 -- creates a constraint of the form   A[a] \in A[b]
@@ -692,7 +789,7 @@ toDotGraph (SolverState a@(Assignment _) varIndex _ _ _) = "digraph G {\n\t"
         varSet = knownVariables varIndex
 
         -- a function collecting all variables a variable is depending on
-        dep v = foldr (\c l -> (dependingOn c a) ++ l) [] (constraints v)
+        dep v = foldr (\c l -> (dependingOn c $ UnfilteredView a) ++ l) [] (constraints v)
 
         -- list of all variables in the analysis
         allVars = Set.toList $ varSet
@@ -717,9 +814,9 @@ toDotGraph (SolverState a@(Assignment _) varIndex _ _ _) = "digraph G {\n\t"
 
 
 -- prints the current assignment to the file graph.dot and renders a pdf (for debugging)
-dumpSolverState :: Bool -> SolverState -> FilePath -> Bool -> String
-dumpSolverState overwrite s prefix genGraph = unsafePerformIO $ do
-  evaluate $ dumpToJsonFile s (prefix ++ "_meta")
+dumpSolverState :: Bool -> I.Tree -> SolverState -> FilePath -> Bool -> String
+dumpSolverState overwrite root s prefix genGraph = unsafePerformIO $ do
+  evaluate $ dumpToJsonFile root s (prefix ++ "_meta")
   when genGraph $ do
     base <- solverToDot overwrite s (prefix ++ "_graph")
     pdfFromDot base
@@ -749,35 +846,64 @@ nonexistFile base ext = tryFile names
       names  = base : [ iter n | n <- [ 1.. ]]
       iter n = concat [base, "-", show n]
 
-toJsonMetaFile :: SolverState -> String
-toJsonMetaFile (SolverState a@(Assignment _) varIndex _ _ _) = "{\n"
-        ++
-        "    \"bodies\": {\n"
-        ++
-        ( intercalate ",\n" ( map print $ Map.toList store ) )
-        ++
-        "\n    }\n}"
-    where
-
-        addr = address . index
-
-        vars = knownVariables varIndex
-
-        store = foldr go Map.empty vars
-            where
-                go v m = if isJust $ addr v then Map.insert k (msg : Map.findWithDefault [] k m) m else m
-                    where
-                        k = getAbsolutePath $ fromJust $ addr v
-                        i = index v
-                        msg = (show . analysis $ i) ++ " = " ++ (escape $ valuePrint v a)
-
-        print (a,ms) = "      \"" ++ (intercalate "-" $ (show <$> 0 : a)) ++ "\" : \"" ++ ( intercalate "<br>" ms) ++ "\""
 
 
+toJsonMetaFile :: I.Tree -> SolverState -> String
+toJsonMetaFile root SolverState {assignment, variableIndex} =
+    ($ "") $ showJSValue $ showJSON meta_file
 
-dumpToJsonFile :: SolverState -> String -> String
-dumpToJsonFile s file = unsafePerformIO $ do
-         writeFile (file ++ ".json") $ toJsonMetaFile s
+  where
+    ua = UnfilteredView assignment
+    meta_file = MetadataFile [] [] [] [] $ Map.toList addr_metadata_map
+    addr_metadata_map :: Map NodePath MetadataBody
+    addr_metadata_map =
+        flip Map.map addr_vars_map $ \vars ->
+        MetadataBody $
+        flip map vars $ \var ->
+        let ident = formatVar var
+            showed = valuePrint var assignment
+            (summary, details) = shorten showed
+        in (show $ varIdent var,) $ MetadataGroup ident summary details $
+        flip map (constraints var) $ \c ->
+        let dep_vars = dependingOn c ua
+        in MetadataLinkGroup ("Constraint with limit " ++ (printLimit c ua) ++ " depending on:") $
+        flip map dep_vars $ \dep_var ->
+        let vi = varIdent dep_var
+        in MetadataLink (show vi) (formatVar dep_var) (varPathJust dep_var) (hasRoot root dep_var)
+
+    addr_vars_map :: Map NodePath [Var]
+    addr_vars_map =
+        Map.fromListWith (++) $
+        map (varPathJust &&& (:[])) $
+        filter (hasRoot root) vars
+
+    hasRoot :: I.Tree -> Var -> Bool
+    hasRoot r v = (I.getRoot <$> address (varIdent v)) == Just r
+
+    varPath v = fmap I.getAbsolutePath $ address $ varIdent v
+    varPathJust v = let Just x = varPath v in x
+    vars = Set.toList $ knownVariables variableIndex
+
+    shorten xs =
+        case splitAt 100 xs of
+          (s,[]) -> (s, Nothing)
+          (s,rs) -> (s ++ takeWhile looksLikeNodeAddress rs  ++ " ...", Just xs)
+
+    looksLikeNodeAddress c = c `elem` "1234567890-"
+
+    formatVar var = (show (analysis id)) ++ formatIdentifier (idValue id)
+      where
+        id = varIdent var
+
+    formatIdentifier (IDV_NodeAddress _) = ""
+    formatIdentifier (IDV_ProgramPoint (ProgramPoint _ p)) = "/" ++ show p
+    formatIdentifier (IDV_MemoryStatePoint (MemoryStatePoint (ProgramPoint _ p) (MemoryLocation l))) = "/" ++ (show p) ++ "/loc=" ++ (show l)
+    formatIdentifier (IDV_Other _) = ""
+
+
+dumpToJsonFile :: I.Tree -> SolverState -> String -> String
+dumpToJsonFile root s file = unsafePerformIO $ do
+         writeFile (file ++ ".json") $ toJsonMetaFile root s
          return ("Dumped assignment into file " ++ file ++ ".json!")
 
 
@@ -800,7 +926,7 @@ showSolverStatistic s =
 
         grouped = foldr go Map.empty vars
             where
-                go v m = Map.insertWith (+) ( analysis . index $ v ) (1::Int) m
+                go v m = Map.insertWith (+) ( analysis . varIdent $ v ) (1::Int) m
 
         print (a,c) = printf " %20s %20d %20d %20.3f %20d %20.3f %20d %20.3f" name c totalUpdates avgUpdates totalTime avgTime totalResets avgResets
             where
@@ -851,7 +977,7 @@ analyseVarDependencies s =
         nodes = go <$> Set.toList vars
             where
                 go v = (v,v,dep v)
-                dep v = foldr (\c l -> (dependingOn c ass) ++ l) [] (constraints v)
+                dep v = foldr (\c l -> (dependingOn c $ UnfilteredView ass) ++ l) [] (constraints v)
 
 
         sccs = Graph.stronglyConnComp nodes

@@ -41,10 +41,10 @@
 module Insieme.Analysis.Entities.ProgramPoint where
 
 import Control.DeepSeq
-import GHC.Generics (Generic)
-import Insieme.Inspire.NodeAddress
 import qualified Data.Hashable as Hash
+import GHC.Generics (Generic)
 
+import Insieme.Inspire (NodeAddress)
 
 -- The execution phase of an expresssion
 data Phase = Pre | Internal | Post 

@@ -1,8 +1,6 @@
 get_filename_component(CABAL_PATH_ENTRY "${CABAL_EXECUTABLE}" DIRECTORY)
 set(CABAL_PATH_ENTRY "${CABAL_PATH_ENTRY}:")
 
-file(GLOB_RECURSE insieme_hat_srcs insieme-hat.cabal *.hs *.chs)
-
 get_filename_component(GMP_LIBRARIES_DIR "${GMP_LIBRARIES}" PATH)
 get_filename_component(ZLIB_LIBRARIES_DIR "${ZLIB_LIBRARIES}" PATH)
 
@@ -56,38 +54,33 @@ configure_file(cabal.project.local.in ${CMAKE_BINARY_DIR}/hat-profiling-project/
 string (REPLACE ";" " " haskell_env_cmd "${haskell_env}")
 configure_file(haskell-env.sh.in ${CMAKE_BINARY_DIR}/haskell-env.sh)
 
-add_custom_command(
-	OUTPUT libinsieme-hat.so
-
+add_custom_target(insieme_hat
 	# install dependencies and build package
 	COMMAND ${cabal} update
 	# -j1 because of cabal#4144
 	COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 flib:insieme-hat
 	# copy library to binary dir
-	COMMAND ${runhaskell} scripts/copyLib.hs ${cabal_file} "%comp:insieme-hat" ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}
-
-	DEPENDS ${insieme_hat_srcs} scripts/copyLib.hs ${CMAKE_CURRENT_BINARY_DIR}/cabal.project
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	COMMENT "Building Insieme HAT"
-)
-
-add_custom_target(insieme_hat
-	DEPENDS libinsieme-hat.so
+	COMMAND ${runhaskell} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/copyLib.hs ${cabal_file} "%comp:insieme-hat" ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}
 
 	# Create symlinks for hat cabal superproject dir
 	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/hat-vanilla-project"
 	COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle" "${CMAKE_BINARY_DIR}/hat-vanilla-project/dist-newstyle"
 
 	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/hat-profiling-project"
+
+	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+
+	COMMENT "Building Insieme HAT"
+
 	${HAT_PACKAGES_SYMLINK_COMMANDS}
-	)
+)
 
 if(BUILD_TESTS)
 	add_custom_target(insieme_hat_build_tests
 		ALL
 		DEPENDS analysis
 		COMMAND ${cabal} new-build -j --builddir=${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle --project-file=${CMAKE_CURRENT_BINARY_DIR}/cabal.project -v1 insieme-hat:tests
-		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BUILD_DIR}
 	)
 
 	add_test(

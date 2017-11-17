@@ -274,13 +274,13 @@ namespace c_ast {
 						if(call->arguments.empty()) { return out; }
 
 						// just add list of parameters
-						return out << "(" << join(", ", call->arguments, [&](std::ostream& out, const NodePtr& cur) {
+						return out << "{" << join(", ", call->arguments, [&](std::ostream& out, const NodePtr& cur) {
 							// we don't print additional parentheses around initializers, as this isn't allowed
 							if(!cur.isa<c_ast::InitializerPtr>()) out << "(";
 							out << print(cur);
 							if(!cur.isa<c_ast::InitializerPtr>()) out << ")";
 						})
-								<< ")";
+								<< "}";
 					}
 
 					// add init value
@@ -602,8 +602,8 @@ namespace c_ast {
 					nameString = nameString.substr(nameString.find(" ") + 1);
 				}
 
-				return out << nameString << "(" << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); })
-				           << ")";
+				return out << nameString << "{" << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); })
+				           << "}";
 			}
 
 			PRINT(DestructorCall) {

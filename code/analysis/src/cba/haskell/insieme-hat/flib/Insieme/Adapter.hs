@@ -178,7 +178,7 @@ dumpAssignment :: StablePtr Ctx.Context -> CString -> CSize-> IO ()
 dumpAssignment ctx_hs filenamePrefix dumpGraph = do
     ctx <- deRefStablePtr ctx_hs
     prefix <- peekCString filenamePrefix
-    putStrLn $ Solver.dumpSolverState True (Ctx.getSolverState ctx) prefix ((fromIntegral dumpGraph) > 0)
+    putStrLn $ Solver.dumpSolverState True (Ctx.getTree ctx) (Ctx.getSolverState ctx) prefix ((fromIntegral dumpGraph) > 0)
 
 -- | Create a 'Addr.NodeAddress' from a dumped NodePath.
 mkNodeAddress :: StablePtr Ctx.Context -> Ptr CSize -> CSize -> IO (StablePtr Addr.NodeAddress)

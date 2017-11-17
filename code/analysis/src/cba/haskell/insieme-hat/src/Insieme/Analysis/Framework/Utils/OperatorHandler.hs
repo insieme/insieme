@@ -37,11 +37,11 @@
 
 module Insieme.Analysis.Framework.Utils.OperatorHandler where
 
-import Insieme.Inspire.NodeAddress
+import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Analysis.Solver as Solver
 
 data OperatorHandler a = OperatorHandler {
     covers     :: NodeAddress -> Bool, 
-    dependsOn  :: NodeAddress -> Solver.Assignment -> [Solver.Var],
-    getValue   :: NodeAddress -> Solver.Assignment -> a
+    dependsOn  :: NodeAddress -> Solver.AssignmentView -> [Solver.Var],
+    getValue   :: NodeAddress -> Solver.AssignmentView -> a
 }

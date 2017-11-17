@@ -17,7 +17,8 @@ library
         hs-source-dirs:  src/
 
     build-tools:        c2hs
-    exposed-modules:    Insieme.Adapter.Utils,
+    exposed-modules:    
+                        Insieme.Adapter.Utils,
                         Insieme.Analysis.AccessPath,
                         Insieme.Analysis.Alias,
                         Insieme.Analysis.Arithmetic,
@@ -47,6 +48,7 @@ library
                         Insieme.Analysis.RecursiveLambdaReferences,
                         Insieme.Analysis.Reference,
                         Insieme.Analysis.Solver,
+                        Insieme.Analysis.Solver.Metadata,
                         Insieme.Analysis.SymbolicValue,
                         Insieme.Analysis.Utils.CppSemantic,
                         Insieme.Analysis.WriteSetSummary,
@@ -55,19 +57,24 @@ library
                         Insieme.Inspire.BinaryDumper,
                         Insieme.Inspire.BinaryParser,
                         Insieme.Inspire.Builder,
+                        Insieme.Inspire.IR.NodeKind,
+                        Insieme.Inspire.IR.NodeType,
+                        Insieme.Inspire.IR.NodeType.ThHelpers,
+                        Insieme.Inspire.IR.Transform,
+                        Insieme.Inspire.IR.Tree,
                         Insieme.Inspire.NodeAddress,
-                        Insieme.Inspire.NodeType,
-                        Insieme.Inspire.NodePath,
-                        Insieme.Inspire.NodePaths,
-                        Insieme.Inspire.NodeMap,
-                        Insieme.Inspire.Query,
-                        Insieme.Inspire.ThHelpers,
-                        Insieme.Inspire.Transform,
+                        Insieme.Query,
+                        Insieme.Query.NodeReference,
+                        Insieme.Query.NodeAddress,
+                        Insieme.Inspire.NodeReference
+                        Insieme.Inspire.SourceParser
+                        Insieme.Inspire.SourceParser.FFI
                         Insieme.Inspire.Visit,
+                        Insieme.Inspire.Visit.NodeMap,
+                        Insieme.Inspire.Visit.NodePaths,
                         Insieme.Utils,
                         Insieme.Utils.Arithmetic,
                         Insieme.Utils.BoundSet,
-                        Insieme.Utils.ParseIR,
                         Insieme.Utils.ParseInt
     build-depends:      attoparsec >= 0.13,
                         attoparsec-binary >= 0.2,
@@ -77,7 +84,6 @@ library
                         containers >= 0.5.10,
                         deepseq >= 1.4,
                         hashable >= 1.2.4,
-                        lens >= 4.13,
                         mtl >= 2.2,
                         pretty-show >= 1.6,
                         process >= 1.2.3,
@@ -85,7 +91,8 @@ library
                         split >= 0.2.3.1,
                         template-haskell >= 2.9,
                         transformers >= 0.4,
-                        directory >= 1.2.0
+                        directory >= 1.2.0,
+                        json >= 0.9
     include-dirs:       ../../../../../core/include
     default-language:   Haskell2010
 
@@ -110,7 +117,6 @@ foreign-library insieme-hat
                         containers >= 0.5.10,
                         deepseq >= 1.4,
                         hashable >= 1.2.4,
-                        lens >= 4.13,
                         mtl >= 2.2,
                         pretty-show >= 1.6,
                         process >= 1.2.3,
@@ -133,7 +139,6 @@ executable insieme-hat-exe
                         bytestring >= 0.10,
                         containers >= 0.5.10,
                         hashable >= 1.2.4,
-                        lens >= 4.13,
                         mtl >= 2.2,
                         pretty-show >= 1.6,
                         process >= 1.2.3,
@@ -154,7 +159,6 @@ executable cba_runner
                         bytestring >= 0.10,
                         containers >= 0.5.10,
                         hashable >= 1.2.4,
-                        lens >= 4.13,
                         mtl >= 2.2,
                         pretty-show >= 1.6,
                         process >= 1.2.3,
@@ -177,7 +181,6 @@ executable parseNdump
                         bytestring >= 0.10,
                         containers >= 0.5.10,
                         hashable >= 1.2.4,
-                        lens >= 4.13,
                         mtl >= 2.2,
                         pretty-show >= 1.6,
                         process >= 1.2.3,

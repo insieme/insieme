@@ -651,7 +651,6 @@ namespace types {
 		TypePtr uint8 = manager.getLangBasic().getUInt8();
 		TypePtr uintInf = manager.getLangBasic().getUIntInf();
 
-
 		EXPECT_PRED2(matchable, int8, int4);
 
 		EXPECT_PRED2(matchable, intInf, int4);
@@ -705,6 +704,37 @@ namespace types {
 
 		EXPECT_PRED2(matchable, intInf, uintInf);
 		EXPECT_PRED2(notMatchable, uintInf, intInf);
+
+
+		// generic cases
+		TypePtr intGen = manager.getLangBasic().getIntGen();
+		TypePtr uintGen = manager.getLangBasic().getUIntGen();
+
+		EXPECT_PRED2(matchable,intGen,int1);
+		EXPECT_PRED2(matchable,intGen,int2);
+		EXPECT_PRED2(matchable,intGen,int4);
+		EXPECT_PRED2(matchable,intGen,int8);
+		EXPECT_PRED2(matchable,intGen,intInf);
+
+		EXPECT_PRED2(matchable,uintGen,uint1);
+		EXPECT_PRED2(matchable,uintGen,uint2);
+		EXPECT_PRED2(matchable,uintGen,uint4);
+		EXPECT_PRED2(matchable,uintGen,uint8);
+		EXPECT_PRED2(matchable,uintGen,uintInf);
+
+		// check that unsigned can be passed to signed
+		EXPECT_PRED2(matchable,intGen,uint1);
+		EXPECT_PRED2(matchable,intGen,uint2);
+		EXPECT_PRED2(matchable,intGen,uint4);
+		EXPECT_PRED2(matchable,intGen,uint8);
+		EXPECT_PRED2(matchable,intGen,uintInf);
+
+		// but signed can not be passed to unsigned
+		EXPECT_PRED2(notMatchable,uintGen,int1);
+		EXPECT_PRED2(notMatchable,uintGen,int2);
+		EXPECT_PRED2(notMatchable,uintGen,int4);
+		EXPECT_PRED2(notMatchable,uintGen,int8);
+		EXPECT_PRED2(notMatchable,uintGen,intInf);
 	}
 
 	TEST(TypeVariableDeduction, VectorMatchingBug) {

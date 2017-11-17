@@ -48,5 +48,11 @@ namespace frontend {
 		);
 	}
 
+	TEST(WhileToForConversionTest, CppWhileToFor) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR "/inputs/conversion/cpp_for.cpp",
+			[](ConversionJob& job) { job.registerFrontendExtension<extensions::WhileToForExtension>(); }
+		);
+	}
+
 } // fe namespace
 } // insieme namespace

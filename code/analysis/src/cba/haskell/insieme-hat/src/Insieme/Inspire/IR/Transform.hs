@@ -35,26 +35,28 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Inspire.Transform
+module Insieme.Inspire.IR.Transform
     ( substitute
     , substitute'
+    , substituteInLocalScope
+    , substituteInLocalScope'
     , removeIds
     , removeIds'
     ) where
 
-import Insieme.Inspire
 import Control.Monad.State
 import Data.Map (Map)
 import qualified Data.Map as Map
 
+import Insieme.Inspire.IR.NodeType as NT
+import Insieme.Inspire.IR.Tree as IR
 
-type TreeSubst = Map Tree Tree
+type TreeSubst = Map IR.Tree IR.Tree
 
-
-substitute :: TreeSubst -> Tree -> Tree
+substitute :: TreeSubst -> IR.Tree -> IR.Tree
 substitute s t = evalState (substitute' t) s
 
-substitute' :: Tree -> State TreeSubst Tree
+substitute' :: IR.Tree -> State TreeSubst IR.Tree
 substitute' t = do
   s <- get
   case Map.lookup t s of
@@ -70,11 +72,33 @@ substitute' t = do
         modify (Map.insert t t')
         return t'
 
+substituteInLocalScope :: TreeSubst -> IR.Tree -> IR.Tree
+substituteInLocalScope s t = evalState (substituteInLocalScope' t) s
 
-removeIds :: Tree -> Tree
+substituteInLocalScope' :: IR.Tree -> State TreeSubst IR.Tree
+substituteInLocalScope' t = do
+  s <- get
+  case getNodeType t of
+    NT.Lambda -> return t
+    _ -> case Map.lookup t s of
+        Just t' -> return t'
+        Nothing -> do
+            let ch = getChildren t
+            ch' <- mapM substituteInLocalScope' ch
+            let t' | ch' == ch = t
+                   | otherwise = t { getID = Nothing
+                                   , getChildren = ch'
+                                   , builtinTags = []
+                                   }
+            modify (Map.insert t t')
+            return t'
+
+
+
+removeIds :: IR.Tree -> IR.Tree
 removeIds t = evalState (removeIds' t) Map.empty
 
-removeIds' :: Tree -> State TreeSubst Tree
+removeIds' :: IR.Tree -> State TreeSubst IR.Tree
 removeIds' t = do
   s <- get
   case Map.lookup t s of

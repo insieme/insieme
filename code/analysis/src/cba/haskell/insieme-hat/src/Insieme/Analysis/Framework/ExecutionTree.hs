@@ -46,15 +46,17 @@ module Insieme.Analysis.Framework.ExecutionTree (
 
 import Data.Maybe
 import Data.Typeable
+
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import qualified Insieme.Query as Q
+import qualified Insieme.Utils.BoundSet as BSet
+
 import Insieme.Analysis.Framework.PropertySpace.ComposedValue (toValue)
 import Insieme.Analysis.Framework.Utils.OperatorHandler
-import Insieme.Inspire.NodeAddress
-import Insieme.Inspire.Query
-
 import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Inspire as IR
-import qualified Insieme.Utils.BoundSet as BSet
+
 
 
 --
@@ -92,22 +94,22 @@ executionTreeValue :: (Solver.ExtLattice a)
          => ExecutionTreeAnalysis a
          -> NodeAddress
          -> Solver.TypedVar a
-executionTreeValue analysis addr = case getNode addr of
+executionTreeValue analysis addr = case I.getNode addr of
 
     -- types are not executed (terminal)
-    n | isType n -> noExecution
+    n | Q.isType n -> noExecution
 
     -- also literals are not executed (terminal)
-    IR.Node IR.Literal _ -> noExecution
+    I.Node I.Literal _ -> noExecution
 
     -- also variables are not executed (terminal)
-    IR.Node IR.Variable _ -> noExecution
+    I.Node I.Variable _ -> noExecution
 
     -- also lambda expressions are not executed (terminal)
-    IR.Node IR.LambdaExpr _ | not (isEntryPoint addr) -> noExecution
+    I.Node I.LambdaExpr _ | not (Q.isEntryPoint addr) -> noExecution
 
     -- for call expressions, the execution has to include the targeted function
-    IR.Node IR.CallExpr _ -> var
+    I.Node I.CallExpr _ -> var
       where
         -- for calls we have to aggregate the effects of the children and the targeted functions
         var = Solver.mkVariable varId cons Solver.bot
@@ -121,7 +123,7 @@ executionTreeValue analysis addr = case getNode addr of
             val a = Solver.join (callTargetEffects a : unknownTargetEffects a : unhandledOperatorEffects a ++ localEffects a )
 
             -- get access to functions targeted by this call
-            callableVar = Callable.callableValue $ goDown 1 addr
+            callableVar = Callable.callableValue $ I.goDown 1 addr
             callableVal a = toValue $ Solver.get a callableVar
 
 
@@ -131,8 +133,8 @@ executionTreeValue analysis addr = case getNode addr of
                 _ | BSet.isUniverse callTargets -> []
                 _                               -> foldr go [] $ BSet.toList callTargets
                   where
-                    go (Callable.Lambda  addr) bs = (varGen $ goDown 2 addr) : bs
-                    go (Callable.Closure addr) bs = (varGen $ goDown 2 addr) : bs
+                    go (Callable.Lambda  addr) bs = (varGen $ I.goDown 2 addr) : bs
+                    go (Callable.Closure addr) bs = (varGen $ I.goDown 2 addr) : bs
                     go (Callable.Literal   _) bs = bs      -- literal calls are handled by operator handler
               where
                 callTargets = callableVal a
@@ -145,7 +147,7 @@ executionTreeValue analysis addr = case getNode addr of
 
             -- add effects in case of unknown call targets
             unknownTargetEffects a = case () of
-                _ | BSet.isUniverse $ callableVal a -> unknownTargetHandler analysis $ goDown 1 addr
+                _ | BSet.isUniverse $ callableVal a -> unknownTargetHandler analysis $ I.goDown 1 addr
                 _                                   -> Solver.bot
 
 
@@ -208,7 +210,7 @@ executionTreeValue analysis addr = case getNode addr of
     noExecution = Solver.mkVariable varId [] Solver.bot
 
     -- the standard-child-aggregation constraints
-    childConstraints var = map go $ getChildren addr
+    childConstraints var = map go $ I.children addr
       where
         go addr = Solver.forward (varGen addr) var
 

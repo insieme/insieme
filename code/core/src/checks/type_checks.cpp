@@ -925,9 +925,20 @@ namespace checks {
 			return true;
 		});
 
-		if(refDeclType != declType) {
-			add(res, Message(address, EC_TYPE_REF_DECL_TYPE_MISMATCH, format("ref_decl type mismatch\nreferenced: %s\n    actual: %s", *refDeclType, *declType),
-				             Message::ERROR));
+		if (!declType) {
+			add(res, Message(
+					address,
+					EC_TYPE_REF_DECL_TYPE_MISMATCH,
+					format("ref_decl type mismatch\nreferenced: %s\n    actual: - no enclosing declaration found -", *refDeclType),
+					Message::ERROR
+			));
+		} else if(refDeclType != declType) {
+			add(res, Message(
+					address,
+					EC_TYPE_REF_DECL_TYPE_MISMATCH,
+					format("ref_decl type mismatch\nreferenced: %s\n    actual: %s", *refDeclType, *declType),
+					Message::ERROR
+			));
 		}
 		return res;
 	}

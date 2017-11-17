@@ -4,7 +4,6 @@
 CGAL_CFG_ARRAY_MEMBER_INITIALIZATION_BUG
 CGAL_CFG_NESTED_CLASS_FRIEND_DECLARATION_BUG
 CGAL_CFG_NO_TMPL_IN_TMPL_PARAM
-CGAL_CFG_NO_TR1_ARRAY
 CGAL_CFG_OUTOFLINE_MEMBER_DEFINITION_BUG
 CGAL_CFG_USING_BASE_MEMBER_BUG_2
 
@@ -15,4 +14,3 @@ CGAL_CFG_USING_BASE_MEMBER_BUG_2
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
-+CGAL_CFG_LONGNAME_BUG

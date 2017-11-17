@@ -53,8 +53,9 @@ import GHC.Generics (Generic)
 
 import qualified Insieme.Analysis.Solver as Solver
 
-import Insieme.Inspire.NodeAddress
-import qualified Insieme.Inspire as IR
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import qualified Insieme.Query as Q
 
 import qualified Insieme.Analysis.Boolean as Boolean
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -91,35 +92,35 @@ reachableInAnalysis = Solver.mkAnalysisIdentifier ReachableInAnalysis "R[in]"
 --
 reachableIn :: NodeAddress -> Solver.TypedVar Reachable
 
-reachableIn a | isRoot a = Solver.mkVariable (reachableInIdGen a) [] (Reachable True)
+reachableIn a | I.isRoot a = Solver.mkVariable (reachableInIdGen a) [] (Reachable True)
 
-reachableIn a = case getNodeType parent of
+reachableIn a = case Q.getNodeType parent of
 
-    IR.Lambda -> Solver.mkVariable (idGen a) [] (Reachable True)
+    I.Lambda -> Solver.mkVariable (idGen a) [] (Reachable True)
 
-    IR.CompoundStmt -> var
+    I.CompoundStmt -> var
         where
-            n = getIndex a
+            n = I.getIndex a
             var = Solver.mkVariable (idGen a) [con] Solver.bot
             con = if n == 0
                 then Solver.forward (reachableIn parent) var
-                else Solver.forward (reachableOut $ goDown (n-1) parent) var
+                else Solver.forward (reachableOut $ I.goDown (n-1) parent) var
 
-    IR.IfStmt -> var
+    I.IfStmt -> var
         where
             var = Solver.mkVariable (idGen a) [con] Solver.bot
-            con = case getIndex a of
+            con = case I.getIndex a of
                 0 -> Solver.forward (reachableIn parent) var
-                1 -> Solver.forwardIf (compose Boolean.AlwaysTrue)  (Boolean.booleanValue $ goDown 0 parent) (reachableOut $ goDown 0 parent) var
-                2 -> Solver.forwardIf (compose Boolean.AlwaysFalse) (Boolean.booleanValue $ goDown 0 parent) (reachableOut $ goDown 0 parent) var
+                1 -> Solver.forwardIf (compose Boolean.AlwaysTrue)  (Boolean.booleanValue $ I.goDown 0 parent) (reachableOut $ I.goDown 0 parent) var
+                2 -> Solver.forwardIf (compose Boolean.AlwaysFalse) (Boolean.booleanValue $ I.goDown 0 parent) (reachableOut $ I.goDown 0 parent) var
                 _ -> error "index out of bound"
 
-    IR.WhileStmt -> var
+    I.WhileStmt -> var
         where
             var = Solver.mkVariable (idGen a) [con] Solver.bot
-            con = case getIndex a of
+            con = case I.getIndex a of
                 0 -> Solver.forward (reachableIn parent) var
-                1 -> Solver.forwardIf (compose Boolean.AlwaysTrue)  (Boolean.booleanValue $ goDown 0 parent) (reachableOut $ goDown 0 parent) var
+                1 -> Solver.forwardIf (compose Boolean.AlwaysTrue)  (Boolean.booleanValue $ I.goDown 0 parent) (reachableOut $ I.goDown 0 parent) var
                 _ -> error "index out of bound"
 
     -- for all others: if the parent is reachable, so is this node
@@ -130,7 +131,7 @@ reachableIn a = case getNodeType parent of
 
     where
 
-        parent = fromJust $ getParent a
+        parent = fromJust $ I.getParent a
 
         idGen = reachableInIdGen
 
@@ -158,37 +159,37 @@ reachableOutAnalysis = Solver.mkAnalysisIdentifier ReachableOutAnalysis "R[out]"
 -- * Reachable-Out Variable Generator
 --
 reachableOut :: NodeAddress -> Solver.TypedVar Reachable
-reachableOut a = case getNodeType a of
+reachableOut a = case Q.getNodeType a of
 
     -- the end of a return is not reachable
-    IR.ReturnStmt -> Solver.mkVariable (idGen a) [] Solver.bot
+    I.ReturnStmt -> Solver.mkVariable (idGen a) [] Solver.bot
 
     -- the end of continue is not reachable
-    IR.ContinueStmt -> Solver.mkVariable (idGen a) [] Solver.bot
+    I.ContinueStmt -> Solver.mkVariable (idGen a) [] Solver.bot
 
     -- the end of break is not reachable
-    IR.BreakStmt -> Solver.mkVariable (idGen a) [] Solver.bot
+    I.BreakStmt -> Solver.mkVariable (idGen a) [] Solver.bot
 
     -- a commound statement ends if the last statement ends
-    IR.CompoundStmt -> var
+    I.CompoundStmt -> var
         where
             var = Solver.mkVariable (idGen a) [cnt] Solver.bot
-            cnt = if numChildren a == 0
+            cnt = if I.numChildren a == 0
                 then Solver.forward (reachableIn a) var
-                else Solver.forward (reachableOut $ goDown ( (numChildren a) - 1 ) a) var
+                else Solver.forward (reachableOut $ I.goDown ( (I.numChildren a) - 1 ) a) var
 
     -- the end of a if is reached if any of the bodies is finished
-    IR.IfStmt -> var
+    I.IfStmt -> var
         where
             var = Solver.mkVariable (idGen a) [t,e] Solver.bot
-            t = Solver.forward (reachableOut $ goDown 1 a) var
-            e = Solver.forward (reachableOut $ goDown 2 a) var
+            t = Solver.forward (reachableOut $ I.goDown 1 a) var
+            e = Solver.forward (reachableOut $ I.goDown 2 a) var
 
     -- the end of a while is reached after a false condition
-    IR.WhileStmt -> var
+    I.WhileStmt -> var
         where
             var = Solver.mkVariable (idGen a) [cnt] Solver.bot
-            cnt = Solver.forwardIf (ComposedValue.toComposed Boolean.AlwaysFalse) (Boolean.booleanValue $ goDown 0 a) (reachableOut $ goDown 0 a) var
+            cnt = Solver.forwardIf (ComposedValue.toComposed Boolean.AlwaysFalse) (Boolean.booleanValue $ I.goDown 0 a) (reachableOut $ I.goDown 0 a) var
 
 
     -- everything else: if the begin is reachable, so is the end

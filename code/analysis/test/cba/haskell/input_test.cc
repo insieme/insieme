@@ -49,13 +49,18 @@
 
 #include "insieme/analysis/cba/interface.h"
 #include "insieme/analysis/cba/common/preprocessing.h"
+#include "insieme/analysis/cba/haskell/symbolic_value_analysis.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_statistic.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/dump/binary_haskell.h"
 #include "insieme/core/dump/json_dump.h"
 #include "insieme/core/printer/error_printer.h"
+#include "insieme/core/lang/pointer.h"
+#include "insieme/core/transform/node_replacer.h"
+
 
 #include "insieme/utils/config.h"
 #include "insieme/utils/gtest_utils.h"
@@ -194,6 +199,79 @@ namespace cba {
 		}
 
 
+		// -- symbolic values --
+
+		using symbolic_value_list = std::vector<std::string>;
+
+		NodePtr groundFreeVariables(const NodePtr& node) {
+			IRBuilder builder(node.getNodeManager());
+
+			// get free variables
+			auto freeVars = core::analysis::getFreeVariables(node);
+
+			// compute replacements
+			unsigned i = 0;
+			core::NodeMap replacements;
+			for(const auto& var : freeVars) {
+				replacements[var] = builder.variable(var.getType(),i++);
+			}
+
+			// apply replacements
+			return core::transform::replaceAll(node.getNodeManager(),node,replacements);
+
+		}
+
+		symbolic_value_list toList(const insieme::analysis::cba::haskell::SymbolicValueSet& values) {
+			symbolic_value_list res;
+
+			// handle universal sets
+			if (values.isUniversal()) {
+				res.push_back("-all-");
+				return res;
+			}
+
+			// convert values
+			for(const auto& cur : values) {
+				// check that they do not contain semantic errors
+				EXPECT_TRUE(cur && insieme::core::checks::check(cur).empty())
+					<< insieme::core::printer::dumpErrors(insieme::core::checks::check(cur));
+				// add print-out to result values
+				res.push_back(toString(dumpOneLine(groundFreeVariables(cur))));
+			}
+
+			// sort values
+			std::sort(res.begin(),res.end());
+
+			// done
+			return res;
+		}
+
+		// symbolic value
+		std::pair<std::string,std::string> checkSymbolicValue(const core::ExpressionPtr& _should, const core::ExpressionAddress& e) {
+			NodeManager& mgr = _should.getNodeManager();
+			auto& ptrExt = mgr.getLangExtension<core::lang::PointerExtension>();
+
+			// extract the value we should get
+			auto should = _should;
+
+			// strip of optional pointer cast
+			if (ptrExt.isCallOfPtrCast(should)) should = should.as<CallExprPtr>().getArgument(0);
+
+			// remove ptr-from-array call and extract literal
+			assert_true(ptrExt.isCallOfPtrFromArray(should)) << "Should is not a string constant: " << dumpPretty(_should);
+			auto lit = should.as<CallExprPtr>().getArgument(0).as<LiteralPtr>();
+			assert_true(lit) << "Should is not a string constant: " << dumpPretty(_should);
+			assert_le(2,lit->getStringValue().size());
+			auto expected = lit->getStringValue().substr(1,lit->getStringValue().size()-2);
+
+			// run the analysis
+			auto values = insieme::analysis::cba::haskell::getSymbolicValue(ctxt,e);
+
+			// compare results
+			return std::make_pair(expected,toString(toList(values)));
+		}
+
+
 	public:
 		ActualTest() {}
 
@@ -279,7 +357,7 @@ namespace cba {
 				} else if (name == "cba_expect_undefined_int") {
 					std::cerr << "Performing " << name << std::endl;
 					ArithmeticSet res = this->getValue(call.getArgument(0));
-					EXPECT_TRUE(res.isUniversal())
+					EXPECT_TRUE(res.empty() || res.isUniversal())
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "ArithmeticSet evaluates to " << res << std::endl;
 
@@ -402,6 +480,12 @@ namespace cba {
 					EXPECT_TRUE(this->maybeExtern(call.getArgument(0)))
 						<< *core::annotations::getLocation(call) << std::endl;
 
+				// symbolic value analysis
+				} else if (name.substr(0,25) == "cba_expect_symbolic_value") {
+					std::cerr << "Performing " << name << std::endl;
+					auto res = this->checkSymbolicValue(call.getArgument(0),call.getArgument(1));
+					EXPECT_EQ(res.first,res.second)
+						<< *core::annotations::getLocation(call) << std::endl;
 
 				// debugging
 				} else if (name == "cba_print_code") {

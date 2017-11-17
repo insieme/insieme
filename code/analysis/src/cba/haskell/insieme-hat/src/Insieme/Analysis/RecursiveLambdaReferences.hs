@@ -47,8 +47,9 @@ module Insieme.Analysis.RecursiveLambdaReferences (
 import Data.Typeable
 import qualified Data.Set as Set
 
-import Insieme.Inspire.NodeAddress
-import qualified Insieme.Inspire as IR
+import Insieme.Inspire (NodeAddress)
+import qualified Insieme.Inspire as I
+import qualified Insieme.Query as Q
 
 import Insieme.Analysis.Solver
 import Insieme.Analysis.FreeLambdaReferences
@@ -67,9 +68,9 @@ data RecursiveLambdaReferenceAnalysis = RecursiveLambdaReferenceAnalysis
 --
 
 recursiveCalls :: NodeAddress -> TypedVar LambdaReferenceSet
-recursiveCalls addr = case getNodeType addr of
+recursiveCalls addr = case Q.getNodeType addr of
 
-        IR.Lambda | depth addr >= 3 -> var
+        I.Lambda | I.depth addr >= 3 -> var
 
         _ -> error "Can only compute recursive calls for lambdas with sufficient context!"
 
@@ -84,12 +85,12 @@ recursiveCalls addr = case getNodeType addr of
         dep _ = toVar <$> freeRefVars
         val a = LambdaReferenceSet $ Set.filter f $ unLRS $ join $ get a <$> freeRefVars
             where
-                f r = getNode r == tag
+                f r = I.getNode r == tag
 
-        tag = getNode $ goDown 0 $ goUp addr
-        def = goUp $ goUp addr
+        tag = I.getNode $ I.goDown 0 $ I.goUp addr
+        def = I.goUp $ I.goUp addr
 
-        lambdas = goDown 1 <$> getChildren def
+        lambdas = I.goDown 1 <$> I.children def
 
         freeRefVars = freeLambdaReferences <$> lambdas
 
