@@ -1383,11 +1383,8 @@ namespace backend {
 
 				// skip default implementations
 				auto funType = lambda->getFunctionType();
-				if(funType->isConstructor()) {
-					if(core::analysis::isaDefaultConstructor(lambda)) return;
-				}
-				if(funType->isDestructor()) {
-					if(core::analysis::isaDefaultDestructor(lambda)) return;
+				if(core::analysis::isaDefaultMember(lambda)) {
+					return;
 				}
 
 				// peel function and create function definition
