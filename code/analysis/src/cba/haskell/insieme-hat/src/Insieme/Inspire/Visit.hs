@@ -60,6 +60,7 @@ import Insieme.Inspire.Visit.NodeMap (NodeMap)
 import qualified Insieme.Inspire.Visit.NodeMap as NodeMap
 import Insieme.Inspire.Visit.NodePaths
 import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.NodePath
 import qualified Insieme.Inspire.IR as IR
 
 -- import Debug.Trace

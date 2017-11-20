@@ -35,93 +35,125 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE 
+  NamedFieldPuns,
+  RecordWildCards,
+  DeriveGeneric,
+  DeriveAnyClass,
+  OverloadedStrings,
+  ScopedTypeVariables,
+  FlexibleInstances,
+  GeneralizedNewtypeDeriving
+  #-}
 
 module Insieme.Analysis.Solver.Metadata where
 
-import Data.Bifunctor
-import Text.JSON
+import Control.DeepSeq
+import GHC.Generics
+import Data.Aeson as A
+import Data.Aeson.Encoding as A
+import qualified Data.ByteString.Builder as BSB
+import qualified Data.Map.Strict as Map
+import Data.Map.Strict (Map)
+import Data.Monoid
 
-import Insieme.Inspire (NodePath)
-import qualified Insieme.Inspire as I
+type PPNodePath = String
 
 data MetadataFile = MetadataFile
-    { mfBookmarks  :: [NodePath]
-    , mfExpands    :: [NodePath]
-    , mfLabels     :: [(NodePath, String)]
-    , mfHighlights :: [NodePath]
-    , mfBodies     :: [(NodePath, MetadataBody)]
-    }
+    { mfBookmarks  :: [PPNodePath]
+    , mfExpands    :: [PPNodePath]
+    , mfLabels     :: [(PPNodePath, String)]
+    , mfHighlights :: [PPNodePath]
+    , mfBodies     :: Map PPNodePath MetadataBody
+    } deriving (Eq, Show, Generic, NFData)
 
 data MetadataBody = MetadataBody
-    { mGroups  :: [(String, MetadataGroup)]
-    }
+    { mGroups  :: [(String , MetadataGroup)]
+    } deriving (Eq, Show, Generic, NFData)
 
 data MetadataGroup = MetadataGroup
     { mgLabel      :: String
     , mgSummary    :: String
     , mgDetails    :: Maybe String
     , mgLinkGroups :: [MetadataLinkGroup]
-    }
+    } deriving (Eq, Show, Generic, NFData)
 
 data MetadataLinkGroup = MetadataLinkGroup
     { mlgHeading :: String
     , mlgLinks   :: [MetadataLink]
-    }
+    } deriving (Eq, Show, Generic, NFData)
 
 data MetadataLink = MetadataLink
     { mlIdentifier :: String
     , mlLabel      :: String
-    , mlAddress    :: NodePath
+    , mlAddress    :: PPNodePath
     , mlActive     :: Bool
-    }
+    } deriving (Eq, Show, Generic, NFData)
+---------------------------------------
 
-instance JSON MetadataFile where
-    readJSON = undefined
-    showJSON MetadataFile
-                 {mfBookmarks, mfExpands, mfLabels, mfHighlights, mfBodies} =
-        JSObject $ toJSObject $
-            [ ("magic", showJSON "This is an Inspyer node-metadata dump")
-            , ("bookmarks", showJSON mfBookmarks)
-            , ("expands", showJSON mfExpands)
-            , ("labels", showJSON mfLabels)
-            , ("highlights", showJSON mfHighlights)
-            , ("bodies_v2",
-                  JSObject $ toJSObject $ map (bimap I.pprintNodePath showJSON) mfBodies)
-            ]
+newtype PPNodePath' = PPNodePath' String deriving (Eq, Ord)
 
-instance JSON MetadataBody where
-    readJSON = undefined
-    showJSON MetadataBody {mGroups} =
-        JSObject $ toJSObject
-            [ ("groups", showJSON $ map fst mGroups)
-            , ("group_map", showJSON $ toJSObject $ map (second showJSON) mGroups)
-            ]
+instance ToJSONKey PPNodePath' where
+    toJSONKeyList = undefined
+    toJSONKey = ToJSONKeyText f g
+      where
+        f (PPNodePath' _) = error ""
+        g (PPNodePath' np) = A.unsafeToEncoding $ 
+            BSB.char7 '"' <> BSB.string7 np <> BSB.char7 '"'
 
-instance JSON MetadataGroup where
-    readJSON = undefined
-    showJSON MetadataGroup {mgLabel, mgSummary, mgDetails, mgLinkGroups} =
-        JSObject $ toJSObject
-            [ ("label", showJSON mgLabel)
-            , ("summary", showJSON mgSummary)
-            , ("details", maybe JSNull showJSON mgDetails)
-            , ("link_groups", showJSON mgLinkGroups)
-            ]
+instance ToJSON PPNodePath' where
+    toJSON = error "ToJSON PPNodePath'"
+    toEncoding = unsafeToEncoding . 
+                 fromEncoding . 
+                 let ToJSONKeyText _ f = toJSONKey in f
 
-instance JSON MetadataLinkGroup where
-    readJSON = undefined
-    showJSON MetadataLinkGroup {mlgHeading, mlgLinks} =
-        JSObject $ toJSObject
-            [ ("heading", showJSON mlgHeading)
-            , ("links", showJSON mlgLinks)
-            ]
+instance ToJSON MetadataFile where
+    toJSON = undefined
+    toEncoding MetadataFile{..}
+        = pairs $
+            "magic"      .= ("This is an Inspyer node-metadata dump" :: String) <>
+            "bookmarks"  .= mfBookmarks <>
+            "expands"    .= mfExpands <>
+            "labels"     .= mfLabels <>
+            "highlights" .= mfHighlights <>
+            "bodies_v2"  .= Map.mapKeys PPNodePath' mfBodies
 
-instance JSON MetadataLink where
-    readJSON = undefined
-    showJSON MetadataLink {mlIdentifier, mlLabel, mlAddress, mlActive} =
-        JSObject $ toJSObject
-            [ ("identifier", showJSON mlIdentifier)
-            , ("label", showJSON mlLabel)
-            , ("address", showJSON $ I.pprintNodePath mlAddress)
-            , ("active", showJSON mlActive)
-            ]
+instance ToJSON MetadataBody where
+    toJSON = undefined
+    toEncoding MetadataBody {..}
+        = pairs $
+            "groups"    .= map fst mGroups <>
+            "group_map" .= Map.fromListWithKey checkDup mGroups
+      where
+        checkDup k a b
+            | a == b = a
+            | otherwise = error $ "MetadataBody: duplicate group key: " ++ k
+
+
+instance ToJSON MetadataGroup where
+    toJSON = undefined
+    toEncoding MetadataGroup {..}
+        = pairs $
+            "label"       .= mgLabel <>
+            "summary"     .= mgSummary <>
+            "details"     .= mgDetails <>
+            "link_groups" .= mgLinkGroups
+
+instance ToJSON MetadataLinkGroup where
+    toJSON = undefined
+    toEncoding MetadataLinkGroup {..}
+        = pairs $
+            "heading" .= mlgHeading <>
+            "links"   .= mlgLinks
+
+instance ToJSON MetadataLink where
+    toJSON = undefined
+    toEncoding MetadataLink {..} 
+        = pairs $
+            "identifier" .= mlIdentifier <>
+            "label"      .= mlLabel <>
+            "address"    .= PPNodePath' mlAddress <>
+            "active"     .= mlActive
+
+
+
