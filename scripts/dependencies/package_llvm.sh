@@ -11,7 +11,7 @@ SHA256SUM="f60dc158bfda6822de167e87275848969f0558b3134892ff54fced87e4667b94"
 FILE_CFE="cfe-$LLVM_VERSION.src.tar.xz"
 SHA256SUM_CFE="ae9180466a23acb426d12444d866b266ff2289b266064d362462e44f8d4699f3"
 
-export CFLAGS="-O3 -std=c++0x"
+export CFLAGS="-O3 -std=c99"
 export CXXFLAGS="-O3 -std=c++0x"
 
 pkg_download() {
