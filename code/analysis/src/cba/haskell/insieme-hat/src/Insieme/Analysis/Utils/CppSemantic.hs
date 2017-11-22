@@ -47,6 +47,9 @@ module Insieme.Analysis.Utils.CppSemantic (
     callsImplicitConstructor,
     getImplicitConstructor,
 
+    callsImplicitCopyConstructor,
+    callsImplicitMoveConstructor,
+
     -- some tools to identify implicit contexts
     isImplicitCtorOrDtor,
     isImplicitConstructor,
@@ -73,10 +76,11 @@ hasMoreReferences a b | isReference a && (not . isReference $ b) = True
 hasMoreReferences a b | isReference a && isReference b = hasMoreReferences (getTypeParameter 0 a) (getTypeParameter 0 b)
 hasMoreReferences _ _ = False
 
-isCtorBasedConversion :: I.Tree -> I.Tree -> Bool
-isCtorBasedConversion srcType trgType | isReference srcType && isReference trgType =
+
+isCtorBasedConversion' :: ReferenceKind -> I.Tree -> I.Tree -> Bool
+isCtorBasedConversion' refKind srcType trgType | isReference srcType && isReference trgType =
     -- if the source reference is a plain, but the target not, an implicit constructor is called
-    (srcRefKind == RK_CppRef || srcRefKind == RK_CppRRef) && (trgRefKind == RK_Plain) && (not $ isReference srcObjType) && (not $ isReference trgObjType)
+    (srcRefKind == refKind) && (trgRefKind == RK_Plain) && (not $ isReference srcObjType) && (not $ isReference trgObjType)
   where
     srcRefKind = getReferenceKind srcType
     trgRefKind = getReferenceKind trgType
@@ -84,8 +88,18 @@ isCtorBasedConversion srcType trgType | isReference srcType && isReference trgTy
     srcObjType = fromJust $ getReferencedType srcType
     trgObjType = fromJust $ getReferencedType trgType
 
+isCtorBasedConversion' _ _ _ = False
 
-isCtorBasedConversion _ _ = False
+
+isCopyCtorConversion :: I.Tree -> I.Tree -> Bool
+isCopyCtorConversion = isCtorBasedConversion' RK_CppRef
+
+isMoveCtorConversion :: I.Tree -> I.Tree -> Bool
+isMoveCtorConversion = isCtorBasedConversion' RK_CppRRef
+
+isCtorBasedConversion :: I.Tree -> I.Tree -> Bool
+isCtorBasedConversion a b = isCopyCtorConversion a b || isMoveCtorConversion a b
+
 
 -- tests whether a given combination of declaration and init type causes a materializiation
 isMaterializing :: I.Tree -> I.Tree -> Bool
@@ -112,6 +126,16 @@ isMaterializingCall _ = False        -- the default, for now - TODO: implement r
 callsImplicitConstructor :: NodeAddress -> Bool
 callsImplicitConstructor addr = case I.getNode addr of
     (I.Node I.Declaration [declType,I.Node _ (initType:_)]) -> isCtorBasedConversion initType declType
+    _ -> False
+
+callsImplicitCopyConstructor :: NodeAddress -> Bool
+callsImplicitCopyConstructor addr = case I.getNode addr of
+    (I.Node I.Declaration [declType,I.Node _ (initType:_)]) -> isCopyCtorConversion initType declType
+    _ -> False
+
+callsImplicitMoveConstructor :: NodeAddress -> Bool
+callsImplicitMoveConstructor addr = case I.getNode addr of
+    (I.Node I.Declaration [declType,I.Node _ (initType:_)]) -> isMoveCtorConversion initType declType
     _ -> False
 
 
