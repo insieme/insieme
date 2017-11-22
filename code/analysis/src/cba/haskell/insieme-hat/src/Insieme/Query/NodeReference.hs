@@ -104,6 +104,23 @@ getType n | kind == IR.Type        = Just $ n
 
 
 
+-- *** Function Type
+
+isFunctionType :: NodeLike a => a -> Bool
+isFunctionType n = case node n of
+    IR.Node IR.FunctionType _ -> True
+    _ -> False
+
+isFunction :: NodeLike a => a -> Bool
+isFunction n = fromMaybe False $ isFunctionType <$> getType n
+
+getFunctionType :: NodeLike a => a -> Maybe a
+getFunctionType a = mfilter isFunctionType $ getType a
+
+getParameterTypes :: NodeLike a => a -> Maybe [a]
+getParameterTypes n = children <$> (child 0) <$> getFunctionType n
+
+
 -- *** Generic Types
 
 getGenericTypeFamilyName :: NodeLike a => a -> Maybe String
@@ -173,6 +190,14 @@ getReferenceKind r | isReference r = case kind of
     kind = child 3 $ child 2 $ fromJust $ getReferenceType $ node r
 
 getReferenceKind _ = RK_Unknown
+
+
+isConstReference :: NodeLike a => a -> Bool
+isConstReference n = case getReferenceType $ node n of
+    Just t -> case getTypeParameter 1 t of
+        IR.Node IR.GenericType ((IR.Node (IR.StringValue "t") _) : _) -> True
+        _ -> False
+    _ -> False
 
 
 -- *** Array Type
@@ -354,6 +379,9 @@ getArgument p c = case getNodeType c of
 
 isBuiltin :: (NodeLike a) => a -> String -> Bool
 isBuiltin r n = IR.isBuiltin (node r) n
+
+isaBuiltin :: (NodeLike a) => a -> Bool
+isaBuiltin n = IR.isaBuiltin $ node n
 
 -- ** Operator
 

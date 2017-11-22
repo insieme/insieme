@@ -92,3 +92,6 @@ mkNode nt ch bt = MkTree Nothing (InnerTree nt ch bt)
 
 isBuiltin :: Tree -> String -> Bool
 isBuiltin t s = elem s $ builtinTags t
+
+isaBuiltin :: Tree -> Bool
+isaBuiltin t = not $ null $ builtinTags t
