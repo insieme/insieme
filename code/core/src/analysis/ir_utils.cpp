@@ -37,6 +37,7 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 
+#include <algorithm>
 #include <set>
 #include <map>
 #include <regex>
@@ -2052,71 +2053,107 @@ namespace analysis {
 		template<typename T>
 		struct free_reference_collector;
 
-		template<>
-		struct free_reference_collector<TagTypeReferencePtr> : public IRVisitor<void,Address,TagTypeReferenceAddressList&,const TagTypeReferenceSet&> {
-
+		template <>
+		struct free_reference_collector<TagTypeReferencePtr> : public IRVisitor<TagTypeReferenceAddressList, Pointer, const TagTypeReferenceSet&>
+		{
 			using reference_list_type = TagTypeReferenceAddressList;
 
 			free_reference_collector(const TagTypeDefinitionPtr&) : IRVisitor(true) {}
 
+			std::map<NodePtr, TagTypeReferenceAddressList> cache;
+
 			TagTypeReferenceAddressList operator()(const NodePtr& node) {
-				TagTypeReferenceAddressList res;
-				TagTypeReferenceSet bound;
-				visit(NodeAddress(node),res,bound);
-				return res;
-			}
-
-			void visitTagTypeReference(const TagTypeReferenceAddress& ref, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
-				if (!bound.contains(ref)) res.push_back(ref);
-			}
-
-			void visitTagTypeDefinition(const TagTypeDefinitionAddress& def, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
-				TagTypeReferenceSet nestedBound = bound;
-				for(const auto& cur : def) nestedBound.insert(cur->getTag());
-				for(const auto& cur : def) visit(cur->getRecord(), res, nestedBound);
-			}
-
-			void visitTagType(const TagTypeAddress& type, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
-				// here we cache the result of nested calls
-				struct Cache {
-					TagTypeReferenceAddressList references;
-					bool operator==(const Cache& other) const {
-						return this == &other || references == other.references;
-					}
-				};
-
-				// check for a cached result
-				if (type->hasAttachedValue<Cache>()) {
-					for (const auto& cur : type->getAttachedValue<Cache>().references) {
-						res.push_back(concat(type->getDefinition(),cur));
-					}
-					return;
+				auto it = cache.find(node);
+				if(it != cache.end()) {
+					return it->second;
 				}
 
-				// attach a cache
-				Cache& cache = type->attachValue<Cache>();
-
-				// fill it
-				visit(TagTypeDefinitionAddress(TagTypePtr(type)->getDefinition()), cache.references, bound);
-
-				// restart lookup
-				visitTagType(type,res,bound);
+				TagTypeReferenceSet bound;
+				return visit(node, bound);
 			}
 
-			void visitNode(const NodeAddress& node, TagTypeReferenceAddressList& res, const TagTypeReferenceSet& bound) override {
-				visitAll(node->getChildList(), res, bound);
+			TagTypeReferenceAddressList visitNode(const NodePtr& node, const TagTypeReferenceSet& bound) override {
+				auto it = cache.find(node);
+				if(it != cache.end()) {
+					return it->second;
+				}
+
+				auto& entry = cache[node];
+
+				for (const auto& child : NodeAddress(node).getChildAddresses()) {
+					auto res = visit(child.getAddressedNode(), bound);
+					std::transform(res.begin(), res.end(), std::back_inserter(entry), [&](const TagTypeReferenceAddress& tag) {
+						return concat(child, tag);
+					});
+				}
+
+				return entry;
+			}
+
+			TagTypeReferenceAddressList visitTagTypeReference(const TagTypeReferencePtr& ref, const TagTypeReferenceSet& bound) override {
+				auto it = cache.find(ref);
+				if(it != cache.end()) {
+					return it->second;
+				}
+
+				auto& entry = cache[ref];
+
+				if (!bound.contains(ref)) {
+					entry.push_back(TagTypeReferenceAddress(ref));
+				}
+
+				return entry;
+			}
+
+			TagTypeReferenceAddressList visitTagTypeDefinition(const TagTypeDefinitionPtr& def, const TagTypeReferenceSet& bound) override {
+				auto it = cache.find(def);
+				if(it != cache.end()) {
+					return it->second;
+				}
+
+				TagTypeReferenceSet nestedBound = bound;
+				for(const auto& cur : def) {
+					nestedBound.insert(cur->getTag());
+				}
+
+				auto& entry = cache[def];
+
+				for(const auto& cur : TagTypeDefinitionAddress(def)) {
+					auto res = visit(cur->getRecord(), nestedBound);
+					std::transform(res.begin(), res.end(), std::back_inserter(entry), [&](const TagTypeReferenceAddress& tag) {
+						return concat(cur.getRecord(), tag);
+					});
+				}
+
+				return entry;
+			}
+
+			TagTypeReferenceAddressList visitTagType(const TagTypePtr& type, const TagTypeReferenceSet& bound) override {
+				auto it = cache.find(type);
+				if(it != cache.end()) {
+					return it->second;
+				}
+
+				auto& entry = cache[type];
+
+				auto res = visit(type->getDefinition(), bound);
+				std::transform(res.begin(), res.end(), std::back_inserter(entry), [&](const TagTypeReferenceAddress& tag) {
+					return concat(TagTypeAddress(type).getDefinition(), tag);
+				});
+
+				return entry;
 			}
 
 		};
 
 		template<>
-		struct free_reference_collector<LambdaReferencePtr> : public IRVisitor<void,Address,VariableAddressList&,const VariableSet&>  {
+		struct free_reference_collector<LambdaReferencePtr> {
 
 			using reference_list_type = LambdaReferenceAddressList;
 
 			std::map<LambdaPtr, LambdaReferenceAddressList> index;
 
-			free_reference_collector(const LambdaDefinitionPtr& def) : IRVisitor(true) {
+			free_reference_collector(const LambdaDefinitionPtr& def) {
 				for (const auto& cur : def) {
 					for (const auto& ref : def->getRecursiveCallsOf(cur->getReference())) {
 
