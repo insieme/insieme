@@ -320,9 +320,9 @@ namespace c_ast {
 		return out;
 	}
 
-	void CCodeFragment::apply(const PostProcessorPtr& processor) {
+	void CCodeFragment::apply(const Converter& converter, const PostProcessorPtr& processor) {
 		// apply processing to all code fragments
-		for_each(code, [&](NodePtr& cur) { cur = processor->process(*cNodeManager, cur); });
+		for_each(code, [&](NodePtr& cur) { cur = processor->process(converter, cur); });
 	}
 
 	CodeFragmentPtr DummyFragment::createNew(const SharedCodeFragmentManager& manager, const FragmentSet& dependencies) {

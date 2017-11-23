@@ -126,9 +126,7 @@ namespace opencl {
 			getBasicPreProcessorSequence());
 		converter.setPreProcessor(preprocessor);
 
-		PostProcessorPtr postprocessor = makePostProcessor<PostProcessingSequence>(
-			makePostProcessor<OffloadSupportPost>(boost::ref(sc)));
-		converter.setPostProcessor(postprocessor);
+		converter.setPostProcessors({makePostProcessor<OffloadSupportPost>(boost::ref(sc))});
 
 		TypeManager& typeManager = converter.getTypeManager();
 		typeManager.addTypeHandler(KrnlTypeHandler);

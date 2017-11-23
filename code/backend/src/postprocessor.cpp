@@ -42,27 +42,27 @@
 namespace insieme {
 namespace backend {
 
-	void applyToAll(const PostProcessorPtr& processor, vector<c_ast::CodeFragmentPtr>& fragments) {
+	void applyToAll(const Converter& converter, const PostProcessorPtr& processor, vector<c_ast::CodeFragmentPtr>& fragments) {
 		// apply to all fragments ...
 		for_each(fragments, [&](const c_ast::CodeFragmentPtr& cur) {
 			// => test whether it is a C-code fragment
-			if(c_ast::CCodeFragmentPtr frag = dynamic_pointer_cast<c_ast::CCodeFragment>(cur)) { frag->apply(processor); }
+			if(c_ast::CCodeFragmentPtr frag = dynamic_pointer_cast<c_ast::CCodeFragment>(cur)) { frag->apply(converter, processor); }
 		});
 	}
 
 
-	c_ast::NodePtr PostProcessingSequence::process(c_ast::CNodeManager& manager, const c_ast::NodePtr& code) {
+	c_ast::NodePtr PostProcessingSequence::process(const Converter& converter, const c_ast::NodePtr& code) {
 		c_ast::NodePtr res = code;
 
 		// apply sequence of post-processing steps
-		for_each(processors, [&](const PostProcessorPtr& cur) { res = cur->process(manager, res); });
+		for_each(processors, [&](const PostProcessorPtr& cur) { res = cur->process(converter, res); });
 
 		// return final result
 		return res;
 	}
 
 
-	c_ast::NodePtr NoPostProcessing::process(c_ast::CNodeManager& manager, const c_ast::NodePtr& code) {
+	c_ast::NodePtr NoPostProcessing::process(const Converter& converter, const c_ast::NodePtr& code) {
 		// nothing to do
 		return code;
 	}
