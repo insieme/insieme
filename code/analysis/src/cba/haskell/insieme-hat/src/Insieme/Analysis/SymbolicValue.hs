@@ -223,6 +223,7 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
             -- derived builtins to cover
             toCover  = any (isBuiltin a) [
                         "ref_member_access",
+                        "ref_component_access",
                         "ref_temp", "ref_temp_init",
                         "ref_new", "ref_new_init",
                         "ref_kind_cast", "ref_const_cast", "ref_volatile_cast", "ref_parent_cast",
