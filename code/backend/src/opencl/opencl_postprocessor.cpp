@@ -48,11 +48,11 @@ namespace opencl {
 		PostProcessor(), sc(sc)
 	{ }
 
-	c_ast::NodePtr OffloadSupportPost::process(c_ast::CNodeManager& manager, const c_ast::NodePtr& node) {
+	c_ast::NodePtr OffloadSupportPost::process(const Converter& converter, const c_ast::NodePtr& node) {
 		switch(node->getNodeType()) {
 		case c_ast::NT_Comment:
 			// strip them, comments are not useful in kernels anyway
-			return manager.create<c_ast::OpaqueExpr>("");
+			return converter.getCNodeManager()->create<c_ast::OpaqueExpr>("");
 		case c_ast::NT_Function:
 			{
 				// if the name of the function is __insieme_fun_0 we tag it as kernel
@@ -63,7 +63,7 @@ namespace opencl {
 		case c_ast::NT_UnaryOperation:
 				// this is introduced as the kernel backend is called with a lambdaExpr!
 				// the last statement in the tree is therefore &...
-				return manager.create<c_ast::OpaqueExpr>("");
+				return converter.getCNodeManager()->create<c_ast::OpaqueExpr>("");
 		default:
 				// nothing is changed or stripped .. just pass through
 				return node;

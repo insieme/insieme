@@ -60,6 +60,8 @@ namespace backend {
 	class PostProcessor;
 	typedef std::shared_ptr<PostProcessor> PostProcessorPtr;
 
+	class Converter;
+
 	namespace c_ast {
 
 		class CodeFragmentManager : boost::noncopyable {
@@ -437,7 +439,7 @@ namespace backend {
 			 *
 			 * @param processor the post-processor to be applied on this fragment.
 			 */
-			void apply(const PostProcessorPtr& processor);
+			void apply(const Converter& converter, const PostProcessorPtr& processor);
 		};
 
 		/**

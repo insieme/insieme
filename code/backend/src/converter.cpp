@@ -61,7 +61,7 @@ namespace backend {
 
 	Converter::Converter(core::NodeManager& nodeManager, const std::string& name, const BackendConfig& config)
 	    : nodeManager(nodeManager), fragmentManager(c_ast::CodeFragmentManager::createShared()), converterName(name), config(config),
-	      preProcessor(makePreProcessor<NoPreProcessing>()), postProcessor(makePostProcessor<NoPostProcessing>()),
+	      preProcessor(makePreProcessor<NoPreProcessing>()), postProcessors({makePostProcessor<NoPostProcessing>()}),
 	      nameManager(std::make_shared<SimpleNameManager>()), typeManager(std::make_shared<TypeManager>(*this)),
 	      stmtConverter(std::make_shared<StmtConverter>(*this)), functionManager(std::make_shared<FunctionManager>(*this)) {}
 
@@ -114,7 +114,12 @@ namespace backend {
 		timer = insieme::utils::Timer(getConverterName() + " Postprocessing");
 
 		// apply post-processing passes
-		applyToAll(getPostProcessor(), fragments);
+		for(const auto& postProcessor : getPostProcessors()) {
+			applyToAll(*this, postProcessor, fragments);
+		}
+
+		// sort the fragments again, as the post-processing might have changed the dependencies
+		fragments = c_ast::getOrderedClosure(toVector(fragment));
 
 		timer.stop();
 		LOG(INFO) << timer;

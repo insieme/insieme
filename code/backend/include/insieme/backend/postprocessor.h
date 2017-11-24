@@ -46,6 +46,8 @@
 namespace insieme {
 namespace backend {
 
+	class Converter;
+
 	/**
 	 * A generic interface for a post-processor to be applied to the resulting C AST.
 	 * Such post-processors may be used to correct cosmetic issues with the generated code
@@ -64,11 +66,11 @@ namespace backend {
 		 * and the result will be returned. In the likely case that new nodes need to be constructed
 		 * during the processing, the given manager will be used.
 		 *
-		 * @param manager the manager to be used to create new node instances
+		 * @param converter the converter to access backend facilities (i.e. the CNodeManager to create new node instances)
 		 * @param code the code to be post-processed
 		 * @return the result of the post-processing step.
 		 */
-		virtual c_ast::NodePtr process(c_ast::CNodeManager& manager, const c_ast::NodePtr& code) = 0;
+		virtual c_ast::NodePtr process(const Converter& converter, const c_ast::NodePtr& code) = 0;
 	};
 
 
@@ -95,10 +97,11 @@ namespace backend {
 	 * Applies the given post-processor on the given list of fragments. This will alter
 	 * the given fragments.
 	 *
+	 * @param converter the converter to access backend facilities (i.e. the CNodeManager to create new node instances)
 	 * @param processor the post-processor to be applied on the given fragments.
 	 * @param fragments the fragments to be processed
 	 */
-	void applyToAll(const PostProcessorPtr& processor, vector<c_ast::CodeFragmentPtr>& fragments);
+	void applyToAll(const Converter& converter, const PostProcessorPtr& processor, vector<c_ast::CodeFragmentPtr>& fragments);
 
 
 	// -------------------------------------------------------------------------
@@ -127,11 +130,11 @@ namespace backend {
 		 * Applies this post-processor on the given target code. Therefore, the internally maintained
 		 * sequence of post-processing steps will be applied in order.
 		 *
-		 * @param manager the manager to be used to create new node instances
+		 * @param converter the converter to access backend facilities (i.e. the CNodeManager to create new node instances)
 		 * @param code the code to be post-processed
 		 * @return the result of the post-processing step.
 		 */
-		virtual c_ast::NodePtr process(c_ast::CNodeManager& manager, const c_ast::NodePtr& code);
+		virtual c_ast::NodePtr process(const Converter& converter, const c_ast::NodePtr& code);
 	};
 
 
@@ -145,7 +148,7 @@ namespace backend {
 	 */
 	class NoPostProcessing : public PostProcessor {
 	  public:
-		virtual c_ast::NodePtr process(c_ast::CNodeManager& manager, const c_ast::NodePtr& code);
+		virtual c_ast::NodePtr process(const Converter& converter, const c_ast::NodePtr& code);
 	};
 
 

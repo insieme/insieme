@@ -115,10 +115,10 @@ namespace backend {
 		/**
 		 * The post-processor will be applied on the resulting C AST after the conversion
 		 * IR <=> C AST took place. Post-processors may be used to introduce additional C
-		 * constructs like instrumentation code into the resulting AST or to performe some
+		 * constructs like instrumentation code into the resulting AST or to perform some
 		 * target code based code optimizations.
 		 */
-		PostProcessorPtr postProcessor;
+		std::vector<PostProcessorPtr> postProcessors;
 
 		// ------- Manager involved in the conversion process -----------
 
@@ -194,13 +194,14 @@ namespace backend {
 			preProcessor = newPreProcessor;
 		}
 
-		const PostProcessorPtr& getPostProcessor() const {
-			assert_true(postProcessor);
-			return postProcessor;
+		const std::vector<PostProcessorPtr>& getPostProcessors() const {
+			assert_false(postProcessors.empty());
+			return postProcessors;
 		}
 
-		void setPostProcessor(PostProcessorPtr newPostProcessor) {
-			postProcessor = newPostProcessor;
+		void setPostProcessors(std::vector<PostProcessorPtr> newPostProcessors) {
+			assert_false(postProcessors.empty());
+			postProcessors = newPostProcessors;
 		}
 
 		NameManager& getNameManager() const {

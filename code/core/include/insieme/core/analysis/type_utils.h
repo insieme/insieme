@@ -192,6 +192,7 @@ namespace analysis {
 	*/
 	template<template <typename> class Ptr, typename T>
 	Ptr<const Type> getObjectType(const Ptr<const T>& type) {
+		static_assert(std::is_base_of<Type, T>(), "Type node expected");
 		auto funType = type.template as<Ptr<const FunctionType>>();
 		assert_true(funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction() || funType->isVirtualMemberFunction());
 		assert_false(funType->getParameterTypes().empty());
