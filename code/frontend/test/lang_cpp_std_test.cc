@@ -60,7 +60,7 @@ namespace frontend {
 		// some simple cases
 		EXPECT_PRED1(isStdArray,utils::parseType(mgr,"std::array<int,3>"));
 		EXPECT_PRED1(isStdArray,utils::parseType(mgr,"std::array<double,2>"));
-		EXPECT_PRED1(isStdArray,utils::parseType(mgr,"std::array<A,8>", "struct A {};"));
+		EXPECT_PRED1(isStdArray,utils::parseType(mgr,"struct A {};", "std::array<A,8>"));
 
 		// check the access to the element type
 		auto type = utils::parseType(mgr,"std::array<int,123223>");
@@ -80,7 +80,7 @@ namespace frontend {
 		// some simple cases
 		EXPECT_PRED1(isStdVector,utils::parseType(mgr,"std::vector<int>"));
 		EXPECT_PRED1(isStdVector,utils::parseType(mgr,"std::vector<double>"));
-		EXPECT_PRED1(isStdVector,utils::parseType(mgr,"std::vector<A>", "struct A {};"));
+		EXPECT_PRED1(isStdVector,utils::parseType(mgr,"struct A {};", "std::vector<A>"));
 
 		// check the access to the element type
 		auto type = utils::parseType(mgr,"std::vector<int>");
@@ -101,7 +101,7 @@ namespace frontend {
 		// some simple cases
 		EXPECT_PRED1(isStdPair,utils::parseType(mgr,"std::pair<int,double>"));
 		EXPECT_PRED1(isStdPair,utils::parseType(mgr,"std::pair<bool,char>"));
-		EXPECT_PRED1(isStdPair,utils::parseType(mgr,"std::pair<A,int>", "struct A {};"));
+		EXPECT_PRED1(isStdPair,utils::parseType(mgr,"struct A {};", "std::pair<A,int>"));
 
 		// check the access to the element type
 		auto type = utils::parseType(mgr,"std::pair<int,double>");

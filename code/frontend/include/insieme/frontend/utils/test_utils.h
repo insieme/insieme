@@ -83,11 +83,21 @@ namespace utils {
 	 *
 	 * @param mgr the manager used for creating the resulting program
 	 * @param type the type to be parsed
-	 * @param header some header text to be included, e.g. include statements
 	 * @param a job configurator specializing to configure the frontend conversion job
 	 * @return the parsed type
 	 */
-	insieme::core::TypePtr parseType(insieme::core::NodeManager& mgr, const std::string& type, const std::string& header = "", const JobConfigurator& configurator = detail::defaultConfig);
+	insieme::core::TypePtr parseType(insieme::core::NodeManager& mgr, const std::string& type, const JobConfigurator& configurator = detail::defaultConfig);
+
+	/**
+	 * A utility parsing a given C/C++ type using the insieme frontend.
+	 *
+	 * @param mgr the manager used for creating the resulting program
+	 * @param header some header text to be included, e.g. include statements
+	 * @param type the type to be parsed
+	 * @param a job configurator specializing to configure the frontend conversion job
+	 * @return the parsed type
+	 */
+	insieme::core::TypePtr parseType(insieme::core::NodeManager& mgr, const std::string& header, const std::string& type, const JobConfigurator& configurator = detail::defaultConfig);
 
 } // end namespace utils
 } // end namespace frontend

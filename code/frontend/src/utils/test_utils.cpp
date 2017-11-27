@@ -141,7 +141,7 @@ namespace utils {
 		return parseFile(mgr,src,configurator);
 	}
 
-	insieme::core::TypePtr parseType(insieme::core::NodeManager& mgr, const std::string& type, const std::string& header, const JobConfigurator& configurator) {
+	insieme::core::TypePtr parseType(insieme::core::NodeManager& mgr, const std::string& header, const std::string& type, const JobConfigurator& configurator) {
 
 		// extend type to full program
 		std::string code =
@@ -165,6 +165,9 @@ namespace utils {
 		return insieme::core::analysis::getReferencedType(var->getType());
 	}
 
+	insieme::core::TypePtr parseType(insieme::core::NodeManager& mgr, const std::string& type, const JobConfigurator& configurator) {
+		return parseType(mgr,"",type,configurator);
+	}
 
 
 } // end namespace utils
