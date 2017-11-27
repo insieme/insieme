@@ -262,7 +262,7 @@ namespace conversion {
 		// build the new record and replace the old one in the irTU
 		auto newRecord = builder.structType(oldRecord->getName(), oldRecord->getParents(), builder.fields(fields), builder.expressions(ctors),
 		                                    dtorLiteral, builder.boolValue(false), builder.memberFunctions(mFuns),
-		                                    oldRecord->getPureVirtualMemberFunctions());
+		                                    oldRecord->getPureVirtualMemberFunctions(), oldRecord->getStaticMemberFunctions());
 		converter.getIRTranslationUnit().replaceType(key, newRecord);
 
 		if(stdInitListExpr->isRValue()) retIr = builder.deref(retIr);

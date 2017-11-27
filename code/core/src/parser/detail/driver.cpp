@@ -430,7 +430,8 @@ namespace parser {
 			void handleDefaultedDeletedAndRegisterType(NodeManager& mgr, tu::IRTranslationUnit& tu, const NodeType& type, const string& name,
 			                                           const ParentList& parents, const FieldList& fields,
 			                                           const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
-			                                           const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
+			                                           const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns,
+			                                           const StaticMemberFunctionList& sfuns) {
 				IRBuilder builder(mgr);
 				auto key = builder.genericType(name);
 
@@ -457,11 +458,11 @@ namespace parser {
 				if(type == NT_Struct) {
 					tu.addType(key, builder.structType(name, parents, fields, recordMembers.getConstructorLiteralList(),
 																						 recordMembers.getDestructorLiteral(), dtorIsVirtual,
-																						 recordMembers.getMemberFunctionList(), pvmfuns));
+																						 recordMembers.getMemberFunctionList(), pvmfuns, sfuns));
 				} else {
 					tu.addType(key, builder.unionType(name, fields, recordMembers.getConstructorLiteralList(),
 																						recordMembers.getDestructorLiteral(), dtorIsVirtual,
-																						recordMembers.getMemberFunctionList(), pvmfuns));
+																						recordMembers.getMemberFunctionList(), pvmfuns, sfuns));
 				}
 			}
 		}
@@ -509,7 +510,7 @@ namespace parser {
 			}
 
 			// now we handle the defaulted and deleted members, create the type and register it in the TU
-			handleDefaultedDeletedAndRegisterType(mgr, tu, type, name, parents, fields, ctors, dtor, dtorIsVirtual, mfunsNew, pvmfuns);
+			handleDefaultedDeletedAndRegisterType(mgr, tu, type, name, parents, fields, ctors, dtor, dtorIsVirtual, mfunsNew, pvmfuns, StaticMemberFunctionList());
 
 			// done
 			return key;
@@ -531,7 +532,7 @@ namespace parser {
 
 			// now we handle the defaulted and deleted members, create the type and register it in the TU
 			handleDefaultedDeletedAndRegisterType(mgr, tu, type, name->getValue(), ParentList(), fields, ExpressionList(), {}, false,
-			                                      MemberFunctionList(), PureVirtualMemberFunctionList());
+			                                      MemberFunctionList(), PureVirtualMemberFunctionList(), StaticMemberFunctionList());
 
 			// end the record here
 			endRecord();

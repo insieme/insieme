@@ -295,11 +295,11 @@ namespace conversion {
 		if(tagTy->isStruct()) {
 			retTy = builder.structType(genTy->getName()->getValue(), parents, recordTy->getFields()->getFields(), recordMembers.getConstructorLiteralList(),
 			                           recordMembers.getDestructorLiteral(), destructorVirtual,
-			                           recordMembers.getMemberFunctionList(), pvMembers);
+			                           recordMembers.getMemberFunctionList(), pvMembers, {});
 		} else {
 			retTy = builder.unionType(genTy->getName()->getValue(), recordTy->getFields()->getFields(), recordMembers.getConstructorLiteralList(),
 			                          recordMembers.getDestructorLiteral(), destructorVirtual,
-			                          recordMembers.getMemberFunctionList(), pvMembers);
+			                          recordMembers.getMemberFunctionList(), pvMembers, {});
 		}
 
 		// don't forget to migrate annotations

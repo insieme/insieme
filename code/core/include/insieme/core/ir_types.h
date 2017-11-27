@@ -1734,6 +1734,112 @@ namespace core {
 
 	IR_NODE_END()
 
+
+	// ------------------------------ Static Member Function ----------------------------
+
+	/**
+	 * The accessor associated to static member functions. A static member function is linking a name to
+	 * an implementation. Static member functions can be associated to records.
+	 */
+	IR_NODE_ACCESSOR(StaticMemberFunction, Support, StringValue, Expression)
+
+		/**
+		 * Obtains the name of this member function.
+		 */
+		IR_NODE_PROPERTY(StringValue, Name, 0);
+
+		/**
+		 * Obtains the implementation of this static member function.
+		 */
+		IR_NODE_PROPERTY(Expression, Implementation, 1);
+
+		/**
+		 * Obtains the name of this member function as a string.
+		 */
+		const std::string& getNameAsString() const {
+			return getName().getValue();
+		}
+
+	IR_NODE_END()
+
+	/**
+	 * The node type utilized to represent static member functions.
+	 */
+	IR_NODE(StaticMemberFunction, Support)
+	  protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const {
+			return out << "static " << *getName() << ":" << *getImplementation();
+		}
+
+	  public:
+
+		/**
+		 * This static factory method allows to construct a new static member function
+		 * based on the given ingredients.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param name the name of the static member function
+		 * @param implementation the implementation of the static member function
+		 * @return the requested static member function instance managed by the given manager
+		 */
+		static StaticMemberFunctionPtr get(NodeManager& manager, const StringValuePtr& name, const ExpressionPtr& implementation) {
+			return manager.get(StaticMemberFunction(name, implementation));
+		}
+
+		/**
+		 * This static factory method allows to construct a new static member function
+		 * based on the given ingredients.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param name the name of the static member function
+		 * @param implementation the implementation of the static member function
+		 * @return the requested pure virtual member function instance managed by the given manager
+		 */
+		static StaticMemberFunctionPtr get(NodeManager& manager, const std::string& name, const ExpressionPtr& implementation) {
+			return get(manager, StringValue::get(manager, name), implementation);
+		}
+
+	IR_NODE_END()
+
+	/**
+	 * The accessor associated to a list of pure virtual member functions.
+	 */
+	IR_LIST_NODE_ACCESSOR(StaticMemberFunctions, Support, Members, StaticMemberFunction)
+	IR_NODE_END()
+
+	/**
+	 * A node type representing a list of pure virtual member functions.
+	 */
+	IR_NODE(StaticMemberFunctions, Support)
+	  protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const {
+			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
+		}
+
+	  public:
+
+		/**
+		 * This static factory method allows to construct a static member function list based
+		 * on a given list of member functions.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param members the members to be included within the resulting static member function list
+		 * @return the requested member function list instance managed by the given manager
+		 */
+		static StaticMemberFunctionsPtr get(NodeManager& manager, const StaticMemberFunctionList& methods = StaticMemberFunctionList()) {
+			return manager.get(StaticMemberFunctions(convertList(methods)));
+		}
+
+	IR_NODE_END()
+
 	// --------------------------------- Records ----------------------------
 
 	/**
@@ -1777,6 +1883,11 @@ namespace core {
 		 * Obtains the list of all pure virtual member functions fined for this record type.
 		 */
 		IR_NODE_PROPERTY(PureVirtualMemberFunctions, PureVirtualMemberFunctions, 6);
+
+		/**
+		 * Obtains the list of all static member functions fined for this record type.
+		 */
+		IR_NODE_PROPERTY(StaticMemberFunctions, StaticMemberFunctions, 7);
 
 		/**
 		 * Retrieves the field with the given name within this
@@ -1848,7 +1959,7 @@ namespace core {
 	/**
 	 * A node type used to represent a common base-class for structs and unions.
 	 */
-	class Record : public Support, public AbstractFixedSizeNodeHelper<Record,StringValue,Fields,Expressions,Expressions,BoolValue,MemberFunctions,PureVirtualMemberFunctions> {
+	class Record : public Support, public AbstractFixedSizeNodeHelper<Record,StringValue,Fields,Expressions,Expressions,BoolValue,MemberFunctions,PureVirtualMemberFunctions,StaticMemberFunctions> {
 	  protected:
 		/**
 		 * A constructor creating a new instance of this type based on a given child-node list.
@@ -1872,7 +1983,7 @@ namespace core {
 
 
     #define IR_RECORD_ACCESSOR(NAME, ...)                                                                                                                  \
-		IR_NODE_ACCESSOR(NAME, Record, StringValue, Fields, Expressions, Expressions, BoolValue, MemberFunctions, PureVirtualMemberFunctions, ##__VA_ARGS__)
+		IR_NODE_ACCESSOR(NAME, Record, StringValue, Fields, Expressions, Expressions, BoolValue, MemberFunctions, PureVirtualMemberFunctions, StaticMemberFunctions, ##__VA_ARGS__)
 
 
 	// --------------------------------- Struct ----------------------------
@@ -1885,7 +1996,7 @@ namespace core {
 		/**
 		 * Obtains the list of parent classes associated to this struct.
 		 */
-		IR_NODE_PROPERTY(Parents, Parents, 7);
+		IR_NODE_PROPERTY(Parents, Parents, 8);
 
 	IR_NODE_END();
 
@@ -1922,10 +2033,10 @@ namespace core {
 		 */
 		static StructPtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
 		                     const ExpressionsPtr& ctors, const ExpressionsPtr& dtorOpt, const BoolValuePtr& dtorIsVirtual,
-		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
+		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns, const StaticMemberFunctionsPtr& sfuns) {
 			ExpressionList sortedCtors = ctors.getExpressions();
 		    std::stable_sort(sortedCtors.begin(), sortedCtors.end(), detail::semanticNodeLessThan);
-			return manager.get(Struct(name, fields, Expressions::get(manager, sortedCtors), dtorOpt, dtorIsVirtual, mfuns, pvfuns, parents));
+			return manager.get(Struct(name, fields, Expressions::get(manager, sortedCtors), dtorOpt, dtorIsVirtual, mfuns, pvfuns, sfuns, parents));
 		}
 
 		/**
@@ -1946,8 +2057,8 @@ namespace core {
 		 */
 		static StructPtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields,
 		                     const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
-		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			return get(manager, name, parents, fields, ctors, Expressions::get(manager, dtor ? toVector(dtor) : ExpressionList()), dtorIsVirtual, mfuns, pvfuns);
+		                     const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns, const StaticMemberFunctionsPtr& sfuns) {
+			return get(manager, name, parents, fields, ctors, Expressions::get(manager, dtor ? toVector(dtor) : ExpressionList()), dtorIsVirtual, mfuns, pvfuns, sfuns);
 		}
 
 		/**
@@ -2080,10 +2191,10 @@ namespace core {
 		 */
 		static UnionPtr get(NodeManager& manager, const StringValuePtr& name, const FieldsPtr& fields,
 		                    const ExpressionsPtr& ctors, const ExpressionsPtr& dtorOpt, const BoolValuePtr& dtorIsVirtual,
-		                    const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
+		                    const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns, const StaticMemberFunctionsPtr& sfuns) {
 			ExpressionList sortedCtors = ctors.getExpressions();
 		    std::stable_sort(sortedCtors.begin(), sortedCtors.end(), detail::semanticNodeLessThan);
-			return manager.get(Union(name, fields, Expressions::get(manager, sortedCtors), dtorOpt, dtorIsVirtual, mfuns, pvfuns));
+			return manager.get(Union(name, fields, Expressions::get(manager, sortedCtors), dtorOpt, dtorIsVirtual, mfuns, pvfuns, sfuns));
 		}
 
 		/**
@@ -2103,8 +2214,8 @@ namespace core {
 		 */
 		static UnionPtr get(NodeManager& manager, const StringValuePtr& name, const FieldsPtr& fields,
 		                    const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
-		                    const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns) {
-			return get(manager, name, fields, ctors, Expressions::get(manager, dtor ? toVector(dtor) : ExpressionList()), dtorIsVirtual, mfuns, pvfuns);
+		                    const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvfuns, const StaticMemberFunctionsPtr& sfuns) {
+			return get(manager, name, fields, ctors, Expressions::get(manager, dtor ? toVector(dtor) : ExpressionList()), dtorIsVirtual, mfuns, pvfuns, sfuns);
 		}
 
 		/**

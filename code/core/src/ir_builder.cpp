@@ -378,17 +378,19 @@ namespace core {
 
 	TagTypePtr IRBuilderBaseModule::unionType(const string& name, const FieldList& filds,
 	                                          const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
-	                                          const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
+	                                          const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns,
+	                                          const StaticMemberFunctionList& sfuns) const {
 		return unionType(stringValue(name), fields(filds),
 		                 expressions(convertList<Expression>(ctors)), dtor, boolValue(dtorIsVirtual),
-		                 memberFunctions(mfuns), pureVirtualMemberFunctions(pvmfuns));
+		                 memberFunctions(mfuns), pureVirtualMemberFunctions(pvmfuns), staticMemberFunctions(sfuns));
 	}
 
 	TagTypePtr IRBuilderBaseModule::unionType(const StringValuePtr& name, const FieldsPtr& fields,
 	                                          const ExpressionsPtr& ctors, const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual,
-	                                          const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns) const {
+	                                          const MemberFunctionsPtr& mfuns, const PureVirtualMemberFunctionsPtr& pvmfuns,
+	                                          const StaticMemberFunctionsPtr& sfuns) const {
 		auto tag = tagTypeReference(name);
-				return tagType(tag, tagTypeDefinition({ { tag, unionRecord(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns) } }));
+				return tagType(tag, tagTypeDefinition({ { tag, unionRecord(name, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns, sfuns) } }));
 	}
 
 
@@ -427,17 +429,19 @@ namespace core {
 
 	TagTypePtr IRBuilderBaseModule::structType(const string& name, const ParentList& prents, const FieldList& filds,
 	                                           const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
-	                                           const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) const {
+	                                           const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns,
+	                                           const StaticMemberFunctionList& sfuns) const {
 		return structType(stringValue(name), parents(prents), fields(filds),
 		                  expressions(convertList<Expression>(ctors)), dtor, boolValue(dtorIsVirtual),
-		                  memberFunctions(mfuns), pureVirtualMemberFunctions(pvmfuns));
+		                  memberFunctions(mfuns), pureVirtualMemberFunctions(pvmfuns), staticMemberFunctions(sfuns));
 	}
 
 	TagTypePtr IRBuilderBaseModule::structType(const StringValuePtr& name, const ParentsPtr& parents, const FieldsPtr& fields, const ExpressionsPtr& ctors,
 	                                           const ExpressionPtr& dtor, const BoolValuePtr& dtorIsVirtual, const MemberFunctionsPtr& mfuns,
-	                                           const PureVirtualMemberFunctionsPtr& pvmfuns) const {
+	                                           const PureVirtualMemberFunctionsPtr& pvmfuns,
+	                                           const StaticMemberFunctionsPtr& sfuns) const {
 		auto tag = tagTypeReference(name);
-		return tagType(tag, tagTypeDefinition({ { tag, structRecord(name, parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns) } }));
+		return tagType(tag, tagTypeDefinition({ { tag, structRecord(name, parents, fields, ctors, dtor, dtorIsVirtual, mfuns, pvmfuns, sfuns) } }));
 	}
 
 	FunctionTypePtr IRBuilderBaseModule::getDefaultConstructorType(const TypePtr& thisType) const {

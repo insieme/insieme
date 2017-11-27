@@ -139,11 +139,11 @@ namespace pattern {
 		}
 
 		inline TreePattern structRecord(const TreePattern& name, const TreePattern& parent, const TreePattern& fields) {
-			return node(core::NT_Struct, single(name) << single(fields) << any << any << any << any << any << single(parent));
+			return node(core::NT_Struct, single(name) << single(fields) << any << any << any << any << any << any << single(parent));
 		}
 
 		inline TreePattern unionRecord(const TreePattern& name, const TreePattern& fields) {
-			return node(core::NT_Union, single(name) << single(fields) << any << any << any << any << any);
+			return node(core::NT_Union, single(name) << single(fields) << any << any << any << any << any << any);
 		}
 
 		inline TreePattern structType(const ListPattern& pattern) {

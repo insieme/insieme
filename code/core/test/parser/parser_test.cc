@@ -1260,7 +1260,7 @@ namespace parser {
 		auto ctor = builder.lambdaExpr(ctorType, builder.parameters(thisVariable), ctorBody, "A::ctor");
 
 		auto constructed = builder.structType("A", ParentList(), toVector(field), toVector<ExpressionPtr>(ctor),
-			builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList());
+			builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList(), StaticMemberFunctionList());
 
 		constructed = builder.normalize(constructed);
 

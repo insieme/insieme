@@ -641,7 +641,7 @@ namespace analysis {
 		auto fields = builder.fields();
 		auto defaultCtor = builder.getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
 		auto defaultDtor = builder.getDefaultDestructor(thisType);
-		auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
+		auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions(), builder.staticMemberFunctions());
 
 		{
 			auto ctor = builder.getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
@@ -676,14 +676,14 @@ namespace analysis {
 		auto defaultDtor = builder.getDefaultDestructor(thisType);
 
 		{
-			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
+			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions(), builder.staticMemberFunctions());
 			EXPECT_TRUE(hasDefaultDestructor(record));
 		}
 
 		{
 			auto funType = builder.functionType(toVector(thisType.as<TypePtr>()), FK_DESTRUCTOR);
 			auto dtor = builder.lambdaExpr(funType, builder.parameters(toVector(builder.variable(thisType))), builder.getNoOp());
-			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), dtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
+			auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), dtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions(), builder.staticMemberFunctions());
 			EXPECT_FALSE(hasDefaultDestructor(record));
 		}
 	}
@@ -697,7 +697,7 @@ namespace analysis {
 		auto fields = builder.fields();
 		auto defaultCtor = builder.getDefaultConstructor(thisType, parents, fields).as<ExpressionPtr>();
 		auto defaultDtor = builder.getDefaultDestructor(thisType);
-		auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions());
+		auto record = builder.structType("A", parents, fields, builder.expressions(toVector(defaultCtor)), defaultDtor, false, builder.memberFunctions(), builder.pureVirtualMemberFunctions(), builder.staticMemberFunctions());
 
 		{
 			auto member = builder.getDefaultCopyAssignOperator(thisType, parents, fields);

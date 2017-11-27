@@ -604,7 +604,8 @@ namespace core {
 						builder.getDefaultCopyAssignOperator(thisType, parents, fields),
 						builder.getDefaultMoveAssignOperator(thisType, parents, fields)
 				)),
-				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
+				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList()),
+				StaticMemberFunctions::get(manager, StaticMemberFunctionList())
 			);
 	}
 
@@ -624,7 +625,8 @@ namespace core {
 						builder.getDefaultCopyAssignOperator(thisType, parents, fields),
 						builder.getDefaultMoveAssignOperator(thisType, parents, fields)
 				)),
-				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
+				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList()),
+				StaticMemberFunctions::get(manager, StaticMemberFunctionList())
 			);
 	}
 
