@@ -71,6 +71,25 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
+
+	TypePtr getType(const NodePtr& node) {
+
+		// simplest case: node is a type
+		if (auto type = node.isa<TypePtr>()) return type;
+
+		// if it is an expression, take the expression's type
+		if (auto expr = node.isa<ExpressionPtr>()) return expr->getType();
+
+		// also support declarations ..
+		if (auto decl = node.isa<DeclarationPtr>()) return decl->getType();
+
+		// .. and fields
+		if (auto field = node.isa<FieldPtr>()) return field->getType();
+
+		// everything else is not typeable
+		return nullptr;
+	}
+
 	using std::map;
 
 	NodeList getFreeNodes(const NodePtr& node, NodeType controlStmt, const vector<NodeType>& pruneNodes) {

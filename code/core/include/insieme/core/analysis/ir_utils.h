@@ -47,6 +47,14 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
+	/**
+	 * Obtains the type of the given node, where applicable, or a null pointer, if no
+	 * type can be obtained.
+	 *
+	 * @param node the node whose type shell be obtained
+	 * @return the type of the node or null, if not applicable
+	 */
+	TypePtr getType(const NodePtr& node);
 
 	/**
 	 * Gets all nodes of the given type in node which are free.
