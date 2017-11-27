@@ -47,6 +47,7 @@ module Insieme.Inspire
   , module Insieme.Inspire.SourceParser
   , module Insieme.Inspire.Visit
   , module Insieme.Inspire.NodeAddress
+  , module Insieme.Inspire.NodePath
   , module Insieme.Inspire.NodeReference
   ) where
 
@@ -56,4 +57,5 @@ import Insieme.Inspire.IR
 import Insieme.Inspire.SourceParser
 import Insieme.Inspire.Visit
 import Insieme.Inspire.NodeAddress
+import Insieme.Inspire.NodePath
 import Insieme.Inspire.NodeReference
