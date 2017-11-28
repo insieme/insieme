@@ -246,8 +246,16 @@ namespace conversion {
 		core::analysis::CppDefaultDeleteMembers recordMembers;
 		core::PureVirtualMemberFunctionList pvMembers;
 		bool destructorVirtual = false;
+		core::StaticMemberFunctionList staticMembers;
+
 		for(auto mem : methodDecls) {
-			if(mem->isStatic()) continue;
+			if(mem->isStatic()) {
+				if(mem->hasBody()) {
+					assert_true(converter.getFunMan()->contains(mem));
+					staticMembers.push_back(builder.staticMemberFunction(mem->getNameAsString(), converter.getFunMan()->lookup(mem)));
+				}
+				continue;
+			}
 			// if the method is implicit and one of the default constructs we skip it, because the C++ semantics too will add these again correctly
 			if(mem->isImplicit() && utils::isDefaultClassMember(mem)) {
 				continue;
@@ -296,11 +304,11 @@ namespace conversion {
 		if(tagTy->isStruct()) {
 			retTy = builder.structType(genTy->getName()->getValue(), parents, recordTy->getFields()->getFields(), recordMembers.getConstructorLiteralList(),
 			                           recordMembers.getDestructorLiteral(), destructorVirtual,
-			                           recordMembers.getMemberFunctionList(), pvMembers, {});
+			                           recordMembers.getMemberFunctionList(), pvMembers, staticMembers);
 		} else {
 			retTy = builder.unionType(genTy->getName()->getValue(), recordTy->getFields()->getFields(), recordMembers.getConstructorLiteralList(),
 			                          recordMembers.getDestructorLiteral(), destructorVirtual,
-			                          recordMembers.getMemberFunctionList(), pvMembers, {});
+			                          recordMembers.getMemberFunctionList(), pvMembers, staticMembers);
 		}
 
 		// don't forget to migrate annotations
