@@ -38,6 +38,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 
 module Insieme.Analysis.Solver (
@@ -104,6 +105,7 @@ import Control.Arrow
 import Control.DeepSeq
 import Control.Exception
 import Control.Monad (void,when)
+import Control.Parallel.Strategies
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Dynamic
@@ -116,13 +118,15 @@ import System.Directory (doesFileExist)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Process
 import Text.Printf
-import Text.JSON
 
 import qualified Control.Monad.State.Strict as State
+import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Graph as Graph
 import qualified Data.Hashable as Hash
 import qualified Data.IntMap.Strict as IntMap
+import           Data.Set (Set)
 import qualified Data.Set as Set
 
 import Insieme.Inspire (NodeAddress, NodePath)
@@ -219,23 +223,10 @@ referencedAddress ( IDV_Other _ )                                               
 
 
 data Identifier = Identifier {
-    analysis :: AnalysisIdentifier,
+    idHash   :: Int,
     idValue  :: IdentifierValue,
-    idHash   :: Int
-}
-
-
-instance Eq Identifier where
-    (==) (Identifier a1 v1 h1) (Identifier a2 v2 h2) =
-            h1 == h2 && v1 == v2 && a1 == a2
-
-instance Ord Identifier where
-    compare (Identifier a1 v1 h1) (Identifier a2 v2 h2) =
-            r0 `thenCompare` r1 `thenCompare` r2
-        where
-            r0 = compare h1 h2
-            r1 = compare v1 v2
-            r2 = compare a1 a2
+    analysis :: AnalysisIdentifier
+} deriving (Eq, Ord)
 
 instance Show Identifier where
         show (Identifier a v _) = (show a) ++ "/" ++ (show v)
@@ -292,7 +283,6 @@ instance Ord Var where
 
 instance Show Var where
         show v = show (varIdent v)
-
 
 -- typed variables (user interaction)
 newtype TypedVar a = TypedVar Var
@@ -846,64 +836,99 @@ nonexistFile base ext = tryFile names
       names  = base : [ iter n | n <- [ 1.. ]]
       iter n = concat [base, "-", show n]
 
-
-
-toJsonMetaFile :: I.Tree -> SolverState -> String
-toJsonMetaFile root SolverState {assignment, variableIndex} =
-    ($ "") $ showJSValue $ showJSON meta_file
-
+toJsonMetaFile :: I.Tree -> SolverState -> LBS.ByteString
+toJsonMetaFile root SolverState {assignment, variableIndex} = A.encode meta_file
   where
-    ua = UnfilteredView assignment
-    meta_file = MetadataFile [] [] [] [] $ Map.toList addr_metadata_map
+    meta_file = MetadataFile [] [] [] []
+                    (Map.mapKeys I.ppNodePathStr addr_metadata_map
+                            `using` parTraversable rdeepseq)
+
     addr_metadata_map :: Map NodePath MetadataBody
     addr_metadata_map =
         flip Map.map addr_vars_map $ \vars ->
         MetadataBody $
-        flip map vars $ \var ->
-        let ident = formatVar var
-            showed = valuePrint var assignment
-            (summary, details) = shorten showed
-        in (show $ varIdent var,) $ MetadataGroup ident summary details $
-        flip map (constraints var) $ \c ->
-        let dep_vars = dependingOn c ua
-        in MetadataLinkGroup ("Constraint with limit " ++ (printLimit c ua) ++ " depending on:") $
-        flip map dep_vars $ \dep_var ->
-        let vi = varIdent dep_var
-        in MetadataLink (show vi) (formatVar dep_var) (varPathJust dep_var) (hasRoot root dep_var)
+        flip map (Set.toList vars) $ \var ->
+        let Just (MetadataVarCache _ vid fvid _np (summary, details) _ lims cdeps)
+                = Map.lookup var var_cache
+        in
+        (vid,) $
+        MetadataGroup fvid summary details $
+        flip map (lims `zip` cdeps) $ \(limit, dep_vars) ->
+        MetadataLinkGroup ("Constraint with limit " ++ limit ++ " depending on:") $
+        flip map dep_vars $ \(MetadataVarCache _ dep_vid dep_fvid dep_np _ dep_has_root _ _) ->
+        MetadataLink dep_vid dep_fvid dep_np dep_has_root
 
-    addr_vars_map :: Map NodePath [Var]
-    addr_vars_map =
-        Map.fromListWith (++) $
-        map (varPathJust &&& (:[])) $
-        filter (hasRoot root) vars
+    addr_vars_map :: Map NodePath (Set Var)
+    addr_vars_map = Map.fromListWith Set.union $
+        map (varPathJust &&& Set.singleton) $ filter (hasRoot root) $
+        Set.toList vars
+
+    var_cache :: Map Var MetadataVarCache
+    var_cache = Map.fromListWith dupError $ map go $ zip [0..] $ Set.toAscList vars
+      where
+        dupError a b = error $ "var_cache: var set duplicate, WTF?\n" ++
+                       unlines [ show (mvcVar a)
+                               , show (mvcVar b)
+                               , show $ compare (mvcVar a) (mvcVar b)
+                               ]
+
+        go (i, v) = (v, MetadataVarCache {..})
+          where
+            mvcVar           = v
+            mvcId            = show i
+            mvcFormatted     = formatVar v
+            mvcNodePath      = I.ppNodePathStr $ varPathJust v
+            mvcValue         = shorten $ valuePrint v assignment
+            mvcHasRoot       = hasRoot root v
+            (mvcConstraintLims, mvcConstrainsDeps)
+                = unzip $ flip map (constraints v) $ \c ->
+                     ( printLimit c (UnfilteredView assignment)
+                     , map (\v -> let Just vc = Map.lookup v var_cache in vc) $
+                       dependingOn c (UnfilteredView assignment)
+                     )
+
+    vars = knownVariables variableIndex
+
+    varPathJust v = let Just x = varPath v in x
+    varPath v = fmap I.getAbsolutePath $ address $ varIdent v
 
     hasRoot :: I.Tree -> Var -> Bool
     hasRoot r v = (I.getRoot <$> address (varIdent v)) == Just r
 
-    varPath v = fmap I.getAbsolutePath $ address $ varIdent v
-    varPathJust v = let Just x = varPath v in x
-    vars = Set.toList $ knownVariables variableIndex
-
     shorten xs =
         case splitAt 100 xs of
           (s,[]) -> (s, Nothing)
-          (s,rs) -> (s ++ takeWhile looksLikeNodeAddress rs  ++ " ...", Just xs)
+          (s,rs) -> (s ++ takeWhile looksLikeNodeAddress rs  ++ " ...", Nothing {-Just xs -})
 
     looksLikeNodeAddress c = c `elem` "1234567890-"
 
-    formatVar var = (show (analysis id)) ++ formatIdentifier (idValue id)
+    formatVar var = (show (analysis vid)) ++ formatIdentifier (idValue vid)
       where
-        id = varIdent var
+        vid = varIdent var
 
-    formatIdentifier (IDV_NodeAddress _) = ""
-    formatIdentifier (IDV_ProgramPoint (ProgramPoint _ p)) = "/" ++ show p
-    formatIdentifier (IDV_MemoryStatePoint (MemoryStatePoint (ProgramPoint _ p) (MemoryLocation l))) = "/" ++ (show p) ++ "/loc=" ++ (show l)
-    formatIdentifier (IDV_Other _) = ""
+    formatIdentifier (IDV_NodeAddress _)
+        = ""
+    formatIdentifier (IDV_ProgramPoint (ProgramPoint _ p))
+        = "/" ++ show p
+    formatIdentifier (IDV_MemoryStatePoint (MemoryStatePoint (ProgramPoint _ p) (MemoryLocation l)))
+        = "/" ++ (show p) ++ "/loc=" ++ (show l)
+    formatIdentifier (IDV_Other _)
+        = ""
 
+data MetadataVarCache = MetadataVarCache
+    { mvcVar           :: Var
+    , mvcId            :: String
+    , mvcFormatted     :: String
+    , mvcNodePath      :: String
+    , mvcValue         :: (String, Maybe String)
+    , mvcHasRoot       :: Bool
+    , mvcConstraintLims:: [String]
+    , mvcConstrainsDeps:: [[MetadataVarCache]]
+    }
 
 dumpToJsonFile :: I.Tree -> SolverState -> String -> String
 dumpToJsonFile root s file = unsafePerformIO $ do
-         writeFile (file ++ ".json") $ toJsonMetaFile root s
+         LBS.writeFile (file ++ ".json") $ toJsonMetaFile root s
          return ("Dumped assignment into file " ++ file ++ ".json!")
 
 
