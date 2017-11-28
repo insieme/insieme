@@ -1085,9 +1085,17 @@ namespace core {
 		 * Obtains a specific definition maintained within this node.
 		 */
 		Ptr<const Record> getDefinitionOf(const TagTypeReferencePtr& tag) const {
+			auto binding = this->getBindingOf(tag);
+			return (binding) ? binding->getRecord() : Ptr<const Record>();
+		}
+
+		/**
+		 * Obtains a specific binding maintained within this node.
+		 */
+		Ptr<const TagTypeBinding> getBindingOf(const TagTypeReferencePtr& tag) const {
 			const auto& list = getDefinitions();
 			auto pos = std::find_if(list.begin(), list.end(), [&](const TagTypeBindingPtr& cur) { return *cur->getTag() == *tag; });
-			return (pos == list.end()) ? Ptr<const Record>() : (*pos)->getRecord();
+			return (pos == list.end()) ? Ptr<const TagTypeBinding>() : *pos;
 		}
 
 		/**
