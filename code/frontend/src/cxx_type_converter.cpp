@@ -110,7 +110,6 @@ namespace conversion {
 			auto& builder = converter.getIRBuilder();
 			// deal with the invoke operator on lambdas
 			for(auto mem : methodDecls) {
-				mem = mem->getCanonicalDecl();
 				// if we have an automatically generated static "__invoke" function in a lambda, copy its body from operator()
 				if(mem->getNameAsString() == "__invoke" && mem->hasBody()) {
 					auto opIt = std::find_if(members.cbegin(), members.cend(), [&](const core::MemberFunctionPtr& mf) {
@@ -201,6 +200,7 @@ namespace conversion {
 				}
 			}
 		}
+		methodDecls = ::transform(methodDecls, [](clang::CXXMethodDecl* mem) { return mem->getCanonicalDecl(); });
 
 		// add static vars as globals - if not already done
 		if(!converter.getRecordMan()->hasConvertedGlobals(clangRecTy->getDecl())) {
@@ -217,13 +217,13 @@ namespace conversion {
 		// add symbols for all methods to function manager before conversion
 		for(auto mem : methodDecls) {
 			if(mem->isStatic()) continue;
-			converter.getDeclConverter()->convertMethodDecl(mem->getCanonicalDecl(), irParents, recordTy->getFields(), true);
+			converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields(), true);
 		}
 
 		// deal with static methods as functions (afterwards!)
 		for(auto mem : methodDecls) {
 			if(mem->isStatic()) {
-				converter.getDeclConverter()->VisitFunctionDecl(mem->getCanonicalDecl());
+				converter.getDeclConverter()->VisitFunctionDecl(mem);
 			}
 		}
 
@@ -247,7 +247,6 @@ namespace conversion {
 		core::PureVirtualMemberFunctionList pvMembers;
 		bool destructorVirtual = false;
 		for(auto mem : methodDecls) {
-			mem = mem->getCanonicalDecl();
 			if(mem->isStatic()) continue;
 			// if the method is implicit and one of the default constructs we skip it, because the C++ semantics too will add these again correctly
 			if(mem->isImplicit() && utils::isDefaultClassMember(mem)) {
