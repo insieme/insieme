@@ -354,13 +354,15 @@ namespace core {
 
 	  private:
 		LiteralPtr getLiteralForMember(const FunctionTypePtr& functionType, const std::string& memberName) const;
-	  public:
 
+	  public:
 		LiteralPtr getLiteralForConstructor(const FunctionTypePtr& functionType) const;
 
 		LiteralPtr getLiteralForDestructor(const FunctionTypePtr& functionType) const;
 
 		LiteralPtr getLiteralForMemberFunction(const FunctionTypePtr& functionType, const std::string& memberName) const;
+
+		LiteralPtr getLiteralForStaticMemberFunction(const FunctionTypePtr& functionType, const std::string& typeName, const std::string& memberName) const;
 
 		// -----------------------------------
 

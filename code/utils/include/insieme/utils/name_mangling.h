@@ -90,5 +90,9 @@ namespace utils {
 	///
 	const std::string getReadableName(const std::string& name);
 
+	/// Returns the name infix used for static member functions (not really a name mangling thing, but still somehow related).
+	///
+	const std::string& getStaticMemberfunctionNameInfix();
+
 }
 }

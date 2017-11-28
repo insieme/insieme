@@ -560,6 +560,10 @@ namespace core {
 		return getLiteralForMember(functionType, memberName);
 	}
 
+	LiteralPtr IRBuilderBaseModule::getLiteralForStaticMemberFunction(const FunctionTypePtr& functionType, const std::string& typeName, const std::string& memberName) const {
+		return literal(typeName + utils::getStaticMemberfunctionNameInfix() + memberName, functionType);
+	}
+
 	FieldPtr IRBuilderBaseModule::field(const string& name, const TypePtr& type) const {
 		return field(stringValue(name), type);
 	}

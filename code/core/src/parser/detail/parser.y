@@ -125,6 +125,7 @@
 
 	VIRTUAL      "virtual"
 	PURE         "pure"
+	STATIC       "static"
 	CONST        "const"
 	VOLATILE     "volatile"
 	PRIVATE      "private"
@@ -226,6 +227,8 @@
 %type <MemberFunctionList>             member_functions
 %type <PureVirtualMemberFunctionPtr>   pure_virtual_member_function
 %type <PureVirtualMemberFunctionList>  pure_virtual_member_functions
+%type <StaticMemberFunctionPtr>        static_member_function
+%type <StaticMemberFunctionList>       static_member_functions
 
 %type <TypePtr>                        object_type qual_object_type generic_type abstract_type parallel_type type_variable
 %type <FunctionTypePtr>                instantiated_function_type function_type pure_function_type closure_type constructor_type destructor_type member_function_type virtual_function_type
@@ -325,8 +328,8 @@ main : type "identifier" "(" parameters                                     { dr
 
 record_definition : struct_or_union "identifier" parent_spec "{"            { driver.beginRecord(@$, $2); }
                                     fields                                  { driver.registerFields(@$, $6); }
-                                           constructors destructor member_functions pure_virtual_member_functions "}"
-                                                                            { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $8, $9.first, $9.second, $10, $11); driver.endRecord(); }
+                                           constructors destructor member_functions pure_virtual_member_functions static_member_functions "}"
+                                                                            { $$ = driver.genRecordType(@$, $1, $2, $3, $6, $8, $9.first, $9.second, $10, $11, $12); driver.endRecord(); }
                   | struct_or_union "{" fields "}"                          { $$ = driver.genSimpleStructOrUnionType(@$, $1, $3); }
                   ;
 
@@ -394,6 +397,13 @@ pure_virtual_member_functions : pure_virtual_member_functions pure_virtual_membe
 
 pure_virtual_member_function : "pure" "virtual" cv_flags "identifier" ":" pure_function_type    { $$ = driver.genPureVirtualMemberFunction(@$, $3.first, $3.second, $4, $6); }
                              ;
+
+static_member_functions : static_member_functions static_member_function    { $1.push_back($2); $$ = $1; }
+                        |                                                   { $$ = StaticMemberFunctionList(); }
+                        ;
+
+static_member_function : "static" "identifier" "=" lambda                   { $$ = driver.genStaticMemberFunction(@$, $2, $4); }
+                       ;
 
 
 //    -- free members -------------------------------------
