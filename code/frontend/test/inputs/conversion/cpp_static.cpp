@@ -80,15 +80,15 @@ int main() {
 	// static methods ==========================================================================================================================================
 
 	#pragma test expect_ir(R"(
-		decl IMP_X__static__b : () -> unit;
+		decl IMP_X__static__IMP_b : () -> unit;
 		def struct IMP_X {
-			static a = function () -> unit {
-				IMP_X__static__b();
+			static IMP_a = function () -> unit {
+				IMP_X__static__IMP_b();
 			}
-			static b = function () -> unit { }
+			static IMP_b = function () -> unit { }
 		};
 		{
-			IMP_X__static__a();
+			IMP_X__static__IMP_a();
 		}
 	)")
 	{
@@ -97,11 +97,11 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		def struct IMP_S {
-			static a = function () -> unit { }
+			static IMP_a = function () -> unit { }
 		};
 		{
 			var ref<IMP_S,f,f,plain> v0 = IMP_S::(ref_decl(type_lit(ref<IMP_S,f,f,plain>)));
-			IMP_S__static__a();
+			IMP_S__static__IMP_a();
 		}
 	)")
 	{
@@ -110,16 +110,16 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"(
-		decl IMP_Y__static__b : () -> unit;
+		decl IMP_Y__static__IMP_b : () -> unit;
 		def struct IMP_Y {
-			static a = function () -> unit {
+			static IMP_a = function () -> unit {
 				var ref<IMP_Y,f,f,plain> v0 = IMP_Y::(ref_decl(type_lit(ref<IMP_Y,f,f,plain>)));
-				IMP_Y__static__b();
+				IMP_Y__static__IMP_b();
 			}
-			static b = function () -> unit { }
+			static IMP_b = function () -> unit { }
 		};
 		{
-			IMP_Y__static__a();
+			IMP_Y__static__IMP_a();
 		}
 	)")
 	{

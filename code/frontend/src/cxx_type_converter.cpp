@@ -252,7 +252,7 @@ namespace conversion {
 			if(mem->isStatic()) {
 				if(mem->hasBody()) {
 					assert_true(converter.getFunMan()->contains(mem));
-					staticMembers.push_back(builder.staticMemberFunction(mem->getNameAsString(), converter.getFunMan()->lookup(mem)));
+					staticMembers.push_back(builder.staticMemberFunction(utils::buildNameForFunction(mem, converter), converter.getFunMan()->lookup(mem)));
 				}
 				continue;
 			}

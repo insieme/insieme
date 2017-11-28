@@ -453,18 +453,14 @@ namespace conversion {
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
 		auto name = utils::buildNameForFunction(funcDecl, converter);
 		core::LiteralPtr irLit = builder.literal(name, funType);
-		// if this is a static member function
+		// if this is a static member function,  we change the name to use and create the literal differently
 		if(const auto& methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
 			if(methodDecl->isStatic()) {
-				// we change the name to use and create the literal differently
-				// we need to remove the mangling prefix from the method name, as the type name which we'll append to already has it
-				auto newName = insieme::utils::mangleSymbols(insieme::utils::demangle(name));
-
 				// get the name of the record type for prefixing
 				const auto& recordType = converter.convertType(clang::QualType(methodDecl->getParent()->getTypeForDecl(), 0)).isa<core::GenericTypePtr>();
 				assert_true(recordType);
 
-				irLit = builder.getLiteralForStaticMemberFunction(funType, recordType->getFamilyName(), newName);
+				irLit = builder.getLiteralForStaticMemberFunction(funType, recordType->getFamilyName(), name);
 				name = irLit->getStringValue();
 			}
 		}
