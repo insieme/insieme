@@ -105,12 +105,14 @@ namespace conversion {
 		/// here we generate this body by copying the operator() body (static variables need to be multiversioning-safe in INSPIRE)
 		void generateLambdaInvokeOperator(const std::vector<clang::CXXMethodDecl*>& methodDecls, const clang::CXXRecordDecl* classDecl,
 			                              const core::MemberFunctionList& members, Converter& converter) {
+			if(!classDecl->isLambda()) return;
+
 			auto& builder = converter.getIRBuilder();
 			// deal with the invoke operator on lambdas
 			for(auto mem : methodDecls) {
 				mem = mem->getCanonicalDecl();
 				// if we have an automatically generated static "__invoke" function in a lambda, copy its body from operator()
-				if(classDecl->isLambda() && mem->getNameAsString() == "__invoke" && mem->hasBody()) {
+				if(mem->getNameAsString() == "__invoke" && mem->hasBody()) {
 					auto opIt = std::find_if(members.cbegin(), members.cend(), [&](const core::MemberFunctionPtr& mf) {
 						return boost::starts_with(mf->getNameAsString(), insieme::utils::getMangledOperatorCallName());
 					});
