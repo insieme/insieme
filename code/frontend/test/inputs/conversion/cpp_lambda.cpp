@@ -258,14 +258,15 @@ int main() {
 	/// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Lambda Function Pointer Conversion
 
 	#pragma test expect_ir(R"(
-		def __any_string__invoke = function () -> unit {
-			5;
-		};
+		decl __any_string__class__static____invoke : () -> unit;
 		def struct __any_string__class {
 			const function IMP__conversion_operator_auto_space__lparen__star__rparen__lparen_void_rparen__space__minus__gt__space_void = () -> ptr<() -> unit,t,f> {
-				return ptr_of_function(__any_string__invoke);
+				return ptr_of_function(__any_string__class__static____invoke);
 			}
 			const function IMP__operator_call_ = () -> unit {
+				5;
+			}
+			static __invoke = function () -> unit {
 				5;
 			}
 		};
@@ -278,14 +279,15 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"(
-		def __any_string__invoke = function (p1 : ref<int<4>>) -> unit {
-			p1;
-		};
+		decl __any_string__class__static____invoke : (int<4>) -> unit;
 		def struct __any_string__class {
 			const function IMP__conversion_operator_void_space__lparen__star__rparen__lparen_int_rparen_ = () -> ptr<(int<4>) -> unit,t,f> {
-				return ptr_of_function(__any_string__invoke);
+				return ptr_of_function(__any_string__class__static____invoke);
 			}
 			const function IMP__operator_call_ = (p1 : ref<int<4>>) -> unit {
+				p1;
+			}
+			static __invoke = function (p1 : ref<int<4>>) -> unit {
 				p1;
 			}
 		};
@@ -319,17 +321,18 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"(
-		def __any_string__invoke = function () -> unit {
-			42;
-		};
+		decl __any_string__class__static____invoke : () -> unit;
 		def IMP_takeLambdaAsFunction = function (v0 : ref<ptr<() -> unit,t,f>,f,f,plain>) -> unit {
 			ptr_deref(*v0)();
 		};
 		def struct __any_string__class {
 			const function IMP__conversion_operator_auto_space__lparen__star__rparen__lparen_void_rparen__space__minus__gt__space_void = () -> ptr<() -> unit,t,f> {
-				return ptr_of_function(__any_string__invoke);
+				return ptr_of_function(__any_string__class__static____invoke);
 			}
 			const function IMP__operator_call_ = () -> unit {
+				42;
+			}
+			static __invoke = function () -> unit {
 				42;
 			}
 		};

@@ -105,12 +105,13 @@ namespace conversion {
 		/// here we generate this body by copying the operator() body (static variables need to be multiversioning-safe in INSPIRE)
 		void generateLambdaInvokeOperator(const std::vector<clang::CXXMethodDecl*>& methodDecls, const clang::CXXRecordDecl* classDecl,
 			                              const core::MemberFunctionList& members, Converter& converter) {
+			if(!classDecl->isLambda()) return;
+
 			auto& builder = converter.getIRBuilder();
 			// deal with the invoke operator on lambdas
 			for(auto mem : methodDecls) {
-				mem = mem->getCanonicalDecl();
 				// if we have an automatically generated static "__invoke" function in a lambda, copy its body from operator()
-				if(classDecl->isLambda() && mem->getNameAsString() == "__invoke" && mem->hasBody()) {
+				if(mem->getNameAsString() == "__invoke" && mem->hasBody()) {
 					auto opIt = std::find_if(members.cbegin(), members.cend(), [&](const core::MemberFunctionPtr& mf) {
 						return boost::starts_with(mf->getNameAsString(), insieme::utils::getMangledOperatorCallName());
 					});
@@ -199,6 +200,7 @@ namespace conversion {
 				}
 			}
 		}
+		methodDecls = ::transform(methodDecls, [](clang::CXXMethodDecl* mem) { return mem->getCanonicalDecl(); });
 
 		// add static vars as globals - if not already done
 		if(!converter.getRecordMan()->hasConvertedGlobals(clangRecTy->getDecl())) {
@@ -215,13 +217,13 @@ namespace conversion {
 		// add symbols for all methods to function manager before conversion
 		for(auto mem : methodDecls) {
 			if(mem->isStatic()) continue;
-			converter.getDeclConverter()->convertMethodDecl(mem->getCanonicalDecl(), irParents, recordTy->getFields(), true);
+			converter.getDeclConverter()->convertMethodDecl(mem, irParents, recordTy->getFields(), true);
 		}
 
 		// deal with static methods as functions (afterwards!)
 		for(auto mem : methodDecls) {
 			if(mem->isStatic()) {
-				converter.getDeclConverter()->VisitFunctionDecl(mem->getCanonicalDecl());
+				converter.getDeclConverter()->VisitFunctionDecl(mem);
 			}
 		}
 
@@ -244,9 +246,16 @@ namespace conversion {
 		core::analysis::CppDefaultDeleteMembers recordMembers;
 		core::PureVirtualMemberFunctionList pvMembers;
 		bool destructorVirtual = false;
+		core::StaticMemberFunctionList staticMembers;
+
 		for(auto mem : methodDecls) {
-			mem = mem->getCanonicalDecl();
-			if(mem->isStatic()) continue;
+			if(mem->isStatic()) {
+				if(mem->hasBody()) {
+					assert_true(converter.getFunMan()->contains(mem));
+					staticMembers.push_back(builder.staticMemberFunction(mem->getNameAsString(), converter.getFunMan()->lookup(mem)));
+				}
+				continue;
+			}
 			// if the method is implicit and one of the default constructs we skip it, because the C++ semantics too will add these again correctly
 			if(mem->isImplicit() && utils::isDefaultClassMember(mem)) {
 				continue;
@@ -295,11 +304,11 @@ namespace conversion {
 		if(tagTy->isStruct()) {
 			retTy = builder.structType(genTy->getName()->getValue(), parents, recordTy->getFields()->getFields(), recordMembers.getConstructorLiteralList(),
 			                           recordMembers.getDestructorLiteral(), destructorVirtual,
-			                           recordMembers.getMemberFunctionList(), pvMembers, {});
+			                           recordMembers.getMemberFunctionList(), pvMembers, staticMembers);
 		} else {
 			retTy = builder.unionType(genTy->getName()->getValue(), recordTy->getFields()->getFields(), recordMembers.getConstructorLiteralList(),
 			                          recordMembers.getDestructorLiteral(), destructorVirtual,
-			                          recordMembers.getMemberFunctionList(), pvMembers, {});
+			                          recordMembers.getMemberFunctionList(), pvMembers, staticMembers);
 		}
 
 		// don't forget to migrate annotations

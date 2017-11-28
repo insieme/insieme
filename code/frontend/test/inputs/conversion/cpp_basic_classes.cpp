@@ -214,9 +214,11 @@ int main() {
 	}
 
 	#pragma test expect_ir(R"(
-	def IMP_ClassWithStaticMethod_colon__colon_bla = function () -> unit { };
+	def struct IMP_ClassWithStaticMethod {
+		static bla = function () -> unit { }
+	};
 	{
-		IMP_ClassWithStaticMethod_colon__colon_bla();
+		IMP_ClassWithStaticMethod__static__bla();
 	})")
 	{
 		ClassWithStaticMethod::bla();

@@ -57,10 +57,10 @@ int main() {
 		def struct IMP_stefan_colon__colon_Joerg {
 			ctor function () { }
 			function IMP_foo = () -> unit { }
+			static getInstanceOfBla = function () -> ptr<IMP_stefan_colon__colon_Joerg> {
+				return ptr_from_ref(IMP_stefan_colon__colon_Joerg::(ref_new(type_lit(IMP_stefan_colon__colon_Joerg))));
+			}
 		};
-		def IMP_stefan_colon__colon_Joerg_colon__colon_getInstanceOfBla = function () -> ptr<IMP_stefan_colon__colon_Joerg> {
-			return ptr_from_ref(IMP_stefan_colon__colon_Joerg::(ref_new(type_lit(IMP_stefan_colon__colon_Joerg))));
-		};
-		ptr_to_ref(IMP_stefan_colon__colon_Joerg_colon__colon_getInstanceOfBla()).IMP_foo())")
+		ptr_to_ref(IMP_stefan_colon__colon_Joerg__static__getInstanceOfBla()).IMP_foo())")
 	stefan::Joerg::getInstanceOfBla()->foo();
 }
