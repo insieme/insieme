@@ -934,8 +934,16 @@ namespace conversion {
 
 		// create new body with <returnStmt <expr>> instead of <expr> as last stmt
 		core::StatementList newBody(bodyIr->getStatements());
-		frontend_assert(newBody.back().isa<core::ExpressionPtr>()) << "Last entry in Statement Expression must be an expression";
-		newBody.back() = converter.builder.returnStmt(newBody.back().as<core::ExpressionPtr>());
+
+		auto& lastEntry = newBody.back();
+		
+		if(lastEntry.isa<core::ExpressionPtr>()) {
+			// the last entry is an expression, use its return type and value
+			lastEntry = converter.builder.returnStmt(lastEntry.as<core::ExpressionPtr>());
+		} else {
+			// the last entry is a statement, return type is void
+			lastEntry = converter.builder.returnStmt();
+		}
 
 		// create call to lambda with new body
 		retIr = core::transform::outline(bodyIr->getNodeManager(), converter.builder.compoundStmt(newBody), true);

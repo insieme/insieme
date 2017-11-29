@@ -1635,7 +1635,7 @@ namespace backend {
 				IMP_S__static__IMP_test();
 				return 0;
 			}
-		)", true, utils::compiler::Compiler::getDefaultCppCompiler(), {
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			EXPECT_PRED2(containsSubString, code, "static int32_t IMP_test();");
 			EXPECT_PRED2(containsSubString, code, "int32_t IMP_S::IMP_test() {");
 			EXPECT_PRED2(containsSubString, code, "int32_t IMP_T::IMP_test() {");
