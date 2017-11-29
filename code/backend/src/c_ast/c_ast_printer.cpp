@@ -666,8 +666,7 @@ namespace c_ast {
 				out << (boost::starts_with(fun->name->name, "operator ") ? "" : toC(fun->returnType) + " ");
 				auto name = fun->name->name;
 				// we don't print the leading class name prefix for static member functions
-				if (node->fun->isStatic) {
-					assert_true(name.find("::") != string::npos);
+				if (node->fun->isStatic && name.find("::") != string::npos) {
 					name = name.substr(name.rfind("::") + 2);
 				}
 				out << name << "(";
