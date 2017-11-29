@@ -848,20 +848,19 @@ toJsonMetaFile root SolverState {assignment, variableIndex} = A.encode meta_file
         flip Map.map addr_vars_map $ \vars ->
         MetadataBody $
         flip map (Set.toList vars) $ \var ->
-        let Just (MetadataVarCache _ vid fvid _np (summary, details) _ lims cdeps)
+        let Just (MetadataVarCache _ vid fvid _np (summary, details) lims cdeps)
                 = Map.lookup var var_cache
         in
         (vid,) $
         MetadataGroup fvid summary details $
         flip map (lims `zip` cdeps) $ \(limit, dep_vars) ->
         MetadataLinkGroup ("Constraint with limit " ++ limit ++ " depending on:") $
-        flip map dep_vars $ \(MetadataVarCache _ dep_vid dep_fvid dep_np _ dep_has_root _ _) ->
-        MetadataLink dep_vid dep_fvid dep_np dep_has_root
+        flip map dep_vars $ \(MetadataVarCache _ dep_vid dep_fvid dep_np _ _ _) ->
+        MetadataLink dep_vid dep_fvid dep_np True
 
     addr_vars_map :: Map NodePath (Set Var)
     addr_vars_map = Map.fromListWith Set.union $
-        map (varPathJust &&& Set.singleton) $ filter (hasRoot root) $
-        Set.toList vars
+        map (varPathJust &&& Set.singleton) $ Set.toList vars
 
     var_cache :: Map Var MetadataVarCache
     var_cache = Map.fromListWith dupError $ map go $ zip [0..] $ Set.toAscList vars
@@ -879,7 +878,6 @@ toJsonMetaFile root SolverState {assignment, variableIndex} = A.encode meta_file
             mvcFormatted     = formatVar v
             mvcNodePath      = I.ppNodePathStr $ varPathJust v
             mvcValue         = shorten $ valuePrint v assignment
-            mvcHasRoot       = hasRoot root v
             (mvcConstraintLims, mvcConstrainsDeps)
                 = unzip $ flip map (constraints v) $ \c ->
                      ( printLimit c (UnfilteredView assignment)
@@ -921,7 +919,6 @@ data MetadataVarCache = MetadataVarCache
     , mvcFormatted     :: String
     , mvcNodePath      :: String
     , mvcValue         :: (String, Maybe String)
-    , mvcHasRoot       :: Bool
     , mvcConstraintLims:: [String]
     , mvcConstrainsDeps:: [[MetadataVarCache]]
     }
