@@ -775,8 +775,9 @@ namespace backend {
 					// The declaration is added to the members of the type
 					type->members.push_back(decl);
 
-					// finally we need to add a requirement from the type definition to the function definition
+					// finally we need to add requirements and dependencies for correct code generation
 					definition->addRequirement(info.definition);
+					info.definition->addDependency(definition);
 				}
 
 
