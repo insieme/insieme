@@ -1636,10 +1636,10 @@ namespace backend {
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			EXPECT_PRED2(containsSubString, code, "static int32_t IMP_test();");
-			EXPECT_PRED2(containsSubString, code, "int32_t IMP_S::IMP_test() {");
-			EXPECT_PRED2(containsSubString, code, "int32_t IMP_T::IMP_test() {");
-			EXPECT_PRED2(containsSubString, code, "IMP_S::IMP_test();");
+			EXPECT_PRED2(containsSubString, code, "static int32_t test();");
+			EXPECT_PRED2(containsSubString, code, "int32_t IMP_S::test() {");
+			EXPECT_PRED2(containsSubString, code, "int32_t IMP_T::test() {");
+			EXPECT_PRED2(containsSubString, code, "IMP_S::test();");
 		})
 	}
 

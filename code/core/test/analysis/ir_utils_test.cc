@@ -489,7 +489,7 @@ namespace analysis {
 		const lang::BasicGenerator& gen = builder.getLangBasic();
 
 		LiteralPtr zero = builder.literal(gen.getUInt4(), "0");
-		VariablePtr x = builder.variable(builder.refType(gen.getUInt4()), 3);
+		VariablePtr x = builder.variable(builder.refType(gen.getUInt4(),false,false,core::lang::ReferenceType::Kind::CppReference), 3);
 
 		ExpressionPtr call1 = builder.callExpr(builder.refType(gen.getBool()), gen.getUnsignedIntEq(), x, zero);
 		EXPECT_TRUE(isMaterializingCall(call1));
@@ -508,6 +508,16 @@ namespace analysis {
 			"fun(1);"
 		);
 		EXPECT_FALSE(isMaterializingCall(call4));
+	}
+
+	TEST(IsMaterializingCall, Pick) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto pick = builder.parseExpr("pick([1,2,3])");
+
+		EXPECT_TRUE(pick);
+		EXPECT_FALSE(isMaterializingCall(pick));
+
 	}
 
 	TEST(IsMaterializingDecl, Basic) {

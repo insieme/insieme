@@ -55,6 +55,7 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/materialize.h"
 #include "insieme/core/types/type_variable_deduction.h"
+#include "insieme/core/types/return_type_deduction.h"
 #include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/core/lang/basic.h"
@@ -214,9 +215,34 @@ namespace analysis {
 		if(!call) return false;
 		auto callType = call->getType();
 		auto function = call->getFunctionExpr();
-		auto funType = function->getType().as<FunctionTypePtr>()->getReturnType();
+		auto retType = function->getType().as<FunctionTypePtr>()->getReturnType();
 
-		return !analysis::equalTypes(callType, funType) && types::getTypeVariableInstantiation(call->getNodeManager(), callType, transform::materialize(funType));
+		// shortcut 0: only plain references can be materializations
+		if (!lang::isPlainReference(callType)) return false;
+
+		// strip of cpp references
+		if (lang::isCppReference(retType) || lang::isCppRValueReference(retType)) {
+			retType = analysis::getReferencedType(retType);
+		}
+
+		// shortcut I: if equal, it is not materializing
+		if (analysis::equalTypes(callType,retType)) return false;
+
+		auto& mgr = candidate->getNodeManager();
+		IRBuilder builder(mgr);
+
+		// shortcut II:
+		if (analysis::equalTypes(callType,builder.refType(retType))) return true;
+
+		// instantiate return type
+		auto sub = types::getTypeVariableInstantiation(mgr,call,true);
+
+		// risky default: it is not materializing (this is not semantically correct IR!)
+		if (!sub) return false;
+
+		// check relation between should and is
+		auto expected = sub->applyTo(mgr,retType);
+		return types::isSubTypeOf(expected, getReferencedType(callType));
 	}
 
 	bool isMaterializingDecl(const NodePtr& candidate) {

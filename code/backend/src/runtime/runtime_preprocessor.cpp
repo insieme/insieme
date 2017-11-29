@@ -770,7 +770,7 @@ namespace runtime {
 
 			// create resulting switch
 			core::ExpressionPtr optionList = core::encoder::toIR(manager, options);
-			core::ExpressionPtr switchExpr = builder.callExpr(basic.getUInt4(), basic.getPick(), optionList);
+			core::ExpressionPtr switchExpr = builder.callExpr(basic.getPick(), optionList);
 			return builder.switchStmt(switchExpr, cases, builder.getNoOp());
 		}
 
