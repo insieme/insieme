@@ -575,7 +575,7 @@ namespace backend {
 				if(rec->hasDestructor()) {
 					if(!core::analysis::isaDefaultMember(rec->getDestructor())) return false;
 				}
-				return rec->getPureVirtualMemberFunctions().empty();
+				return rec->getPureVirtualMemberFunctions().empty() && rec->getStaticMemberFunctions().empty();
 			}
 		}
 
@@ -752,6 +752,31 @@ namespace backend {
 				// add member functions
 				for(const auto& member : record->getMemberFunctions()) {
 					funMgr.getInfo(context, tagType, member);
+				}
+
+				// add static member functions
+				for(const auto& member : record->getStaticMemberFunctions()) {
+					// TODO: This is only here, because it can't really be done nicely in the function manager, as we lose the TagType on the way and have no way to get it back - opposed to normal member functions
+
+					// we extract the implementation
+					const auto& impl = member->getImplementation().isa<core::LambdaExprPtr>();
+					assert_true(impl);
+					// get the info for the implementation itself. No special handling needed for static member functions
+					auto& info = funMgr.getInfo(context, tagType, impl);
+					// set the name function to the fully qualified name including class name to the name of the member function
+					info.function->name->name = type->name->name + "::" + member->getNameAsString();
+
+					// now we create a MemberFunction with the translated function and make it static
+					auto mfun = converter.getCNodeManager()->create<c_ast::MemberFunction>(type->name, info.function);
+					mfun->isStatic = true;
+					// as well as a MemberFunctionPrototype
+					auto decl = converter.getCNodeManager()->create<c_ast::MemberFunctionPrototype>(mfun, c_ast::BodyFlag::None);
+
+					// The declaration is added to the members of the type
+					type->members.push_back(decl);
+
+					// finally we need to add a requirement from the type definition to the function definition
+					definition->addRequirement(info.definition);
 				}
 
 
