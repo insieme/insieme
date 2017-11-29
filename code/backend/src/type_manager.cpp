@@ -764,7 +764,7 @@ namespace backend {
 					// get the info for the implementation itself. No special handling needed for static member functions
 					auto& info = funMgr.getInfo(context, tagType, impl);
 					// set the name function to the fully qualified name including class name to the name of the member function
-					info.function->name->name = type->name->name + "::" + member->getNameAsString();
+					info.function->name->name = type->name->name + "::" + utils::demangleToIdentifier(member->getNameAsString());
 
 					// now we create a MemberFunction with the translated function and make it static
 					auto mfun = converter.getCNodeManager()->create<c_ast::MemberFunction>(type->name, info.function);
