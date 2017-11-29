@@ -43,7 +43,7 @@
 
 #include <assert.h>
 
-#define bool int
+#define mybool int
 #define true (1)
 #define false (0)
 
@@ -54,10 +54,10 @@ void cba_expect_not_alias(void* a, void* b) { assert(a!=b); };
 void cba_expect_may_alias(void* a, void* b) {};
 
 // boolean analysis
-void cba_expect_true(bool a)         { assert(a); };
-void cba_expect_false(bool a)        { assert(!a); };
-void cba_expect_may_be_true(bool a)  {};
-void cba_expect_may_be_false(bool a) {};
+void cba_expect_true(mybool a)         { assert(a); };
+void cba_expect_false(mybool a)        { assert(!a); };
+void cba_expect_may_be_true(mybool a)  {};
+void cba_expect_may_be_false(mybool a) {};
 
 // integer tests
 void cba_expect_undefined_int(int a)     {};                  // = is universe
