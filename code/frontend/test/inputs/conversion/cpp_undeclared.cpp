@@ -50,17 +50,13 @@ namespace stefan {
 int main() {
 
 	#pragma test expect_ir(R"(
-		decl struct IMP_stefan_colon__colon_Joerg;
-		decl IMP_stefan_colon__colon_Joerg_colon__colon_getInstanceOfBla : () -> ptr<IMP_stefan_colon__colon_Joerg>;
-		decl ctor:IMP_stefan_colon__colon_Joerg::();
-		decl IMP_foo:IMP_stefan_colon__colon_Joerg::() -> unit;
 		def struct IMP_stefan_colon__colon_Joerg {
 			ctor function () { }
 			function IMP_foo = () -> unit { }
+			static IMP_getInstanceOfBla = function () -> ptr<IMP_stefan_colon__colon_Joerg> {
+				return ptr_from_ref(IMP_stefan_colon__colon_Joerg::(ref_new(type_lit(IMP_stefan_colon__colon_Joerg))));
+			}
 		};
-		def IMP_stefan_colon__colon_Joerg_colon__colon_getInstanceOfBla = function () -> ptr<IMP_stefan_colon__colon_Joerg> {
-			return ptr_from_ref(IMP_stefan_colon__colon_Joerg::(ref_new(type_lit(IMP_stefan_colon__colon_Joerg))));
-		};
-		ptr_to_ref(IMP_stefan_colon__colon_Joerg_colon__colon_getInstanceOfBla()).IMP_foo())")
+		ptr_to_ref(IMP_stefan_colon__colon_Joerg__static__IMP_getInstanceOfBla()).IMP_foo())")
 	stefan::Joerg::getInstanceOfBla()->foo();
 }

@@ -225,7 +225,7 @@ namespace core {
 			//print member function types
 			for (const auto& memberFunction : record->getMemberFunctions()) {
 				printSeparator();
-				const auto& implementationType = memberFunction->getImplementation().getType().as<FunctionTypePtr>();
+				const auto& implementationType = memberFunction->getImplementation()->getType().as<FunctionTypePtr>();
 				const auto& parameterTypes = implementationType->getParameterTypes();
 				assert_ge(parameterTypes->size(), 1) << "Invalid method, no parameters (should at least have this)";
 				out << *memberFunction->getName() << "(" << join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->"
@@ -240,6 +240,15 @@ namespace core {
 				assert_ge(parameterTypes->size(), 1) << "Invalid pure virtual method, no parameters (should at least have this)";
 				out << "pure virtual " << *memberFunction->getName() << "("
 						<< join(",", ++parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->" << *implementationType->getReturnType();
+			}
+
+			// print static member function types
+			for (const auto& staticMemberFunction : record->getStaticMemberFunctions()) {
+				printSeparator();
+				const auto& implementationType = staticMemberFunction->getImplementation()->getType().as<FunctionTypePtr>();
+				const auto& parameterTypes = implementationType->getParameterTypes();
+				out << "static " << *staticMemberFunction->getName() << "("
+						<< join(",", parameterTypes.begin(), parameterTypes.end(), print<deref<NodePtr>>()) << ")->" << *implementationType->getReturnType();
 			}
 
 			return out << "}";
@@ -604,7 +613,8 @@ namespace core {
 						builder.getDefaultCopyAssignOperator(thisType, parents, fields),
 						builder.getDefaultMoveAssignOperator(thisType, parents, fields)
 				)),
-				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
+				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList()),
+				StaticMemberFunctions::get(manager, StaticMemberFunctionList())
 			);
 	}
 
@@ -624,7 +634,8 @@ namespace core {
 						builder.getDefaultCopyAssignOperator(thisType, parents, fields),
 						builder.getDefaultMoveAssignOperator(thisType, parents, fields)
 				)),
-				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList())
+				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList()),
+				StaticMemberFunctions::get(manager, StaticMemberFunctionList())
 			);
 	}
 

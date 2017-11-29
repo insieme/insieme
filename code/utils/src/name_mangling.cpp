@@ -263,5 +263,9 @@ namespace utils {
 		return ret;
 	}
 
+	const std::string& getStaticMemberfunctionNameInfix() {
+		static string result = "__static__";
+		return result;
+	}
 }
 }

@@ -218,6 +218,7 @@ namespace parser {
 		                          "  lambda f = () -> int<4> { return 1; }"
 		                          "  virtual const volatile lambda g = () -> int<4> { return 1; }"
 		                          "  pure virtual h : () -> int<4>"
+		                          "  static s = () -> int<4> { return 0; }"
 		                          "}"));
 	}
 
@@ -1260,7 +1261,7 @@ namespace parser {
 		auto ctor = builder.lambdaExpr(ctorType, builder.parameters(thisVariable), ctorBody, "A::ctor");
 
 		auto constructed = builder.structType("A", ParentList(), toVector(field), toVector<ExpressionPtr>(ctor),
-			builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList());
+			builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList(), StaticMemberFunctionList());
 
 		constructed = builder.normalize(constructed);
 
@@ -1701,6 +1702,64 @@ namespace parser {
 			auto range = exp.as<JobExprPtr>()->getThreadNumRange();
 			EXPECT_TRUE(parExt.isCallOfCreateBoundRangeMod(range)) << range;
 		}
+	}
+
+	TEST(IR_Parser, StaticMemberFunctions) {
+		NodeManager nm;
+
+		// "__static__" must not be contained in function names
+		EXPECT_FALSE(test_expression(nm, R"(
+			def foo__static__ = () -> unit { };
+			foo
+		)"));
+
+		// "__static__" must not be contained in member function names
+		EXPECT_FALSE(test_type(nm, R"(
+			def struct A {
+				lambda foo__static__ = () -> unit { };
+			};
+			A
+		)"));
+
+		// no "this" in static member functions
+		EXPECT_FALSE(test_type(nm, R"(
+			def struct A {
+				static a = ()->unit {
+					this;
+				}
+			};
+			A
+		)"));
+
+		// no member function lookup in static member functions
+		EXPECT_FALSE(test_type(nm, R"(
+			def struct A {
+				lambda a = ()->unit { }
+				static b = ()->unit {
+					a();
+				}
+			};
+			A
+		)"));
+
+		// a correct example
+		EXPECT_TRUE(test_program(nm, R"(
+			decl A__static__c : (int<4>) -> int<4>; // we need a forward decl for call c in b. Note that the "__static__" infix is implicitely added
+			def struct A {
+				static a = function () -> unit { } // we can also specify the lambda as "function" type
+				static b = () -> int<4> {
+					A__static__a();         // call a with the implicit infix
+					return A__static__c(5); // here we can call c because of the forward declaration above
+				}
+				static c = (i : int<4>) -> int<4> {
+					return i;
+				}
+			};
+			unit main() {
+				var ref<A> a;
+				A__static__b(); // statics are registered in the global scope
+			}
+		)"));
 	}
 
 	TEST(IR_Parser, MaterializeCall) {

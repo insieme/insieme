@@ -453,6 +453,17 @@ namespace conversion {
 		auto funType = getFunMethodTypeInternal(converter, funcDecl);
 		auto name = utils::buildNameForFunction(funcDecl, converter);
 		core::LiteralPtr irLit = builder.literal(name, funType);
+		// if this is a static member function,  we change the name to use and create the literal differently
+		if(const auto& methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
+			if(methodDecl->isStatic()) {
+				// get the name of the record type for prefixing
+				const auto& recordType = converter.convertType(clang::QualType(methodDecl->getParent()->getTypeForDecl(), 0)).isa<core::GenericTypePtr>();
+				assert_true(recordType);
+
+				irLit = builder.getLiteralForStaticMemberFunction(funType, recordType->getFamilyName(), name);
+				name = irLit->getStringValue();
+			}
+		}
 		// add required annotations
 		if(inExternC) { annotations::c::markAsExternC(irLit); }
 		converter.applyHeaderTagging(irLit, funcDecl->getCanonicalDecl());

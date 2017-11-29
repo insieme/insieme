@@ -1127,6 +1127,54 @@ TEST(PrettyPrinter, FreeFunctions) {
 
 }
 
+TEST(PrettyPrinter, StaticMemberfunctions) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	std::string input = R"(
+		decl A__static__c : (int<4>) -> int<4>; // we need a forward decl for call c in b. Note that the "__static__" infix is implicitely added
+		def struct A {
+			static a = function () -> unit { } // we can also specify the lambda as "function" type
+			static b = () -> int<4> {
+				A__static__a();         // call a with the implicit infix
+				return A__static__c(5); // here we can call c because of the forward declaration above
+			}
+			static c = (i : int<4>) -> int<4> {
+				return i;
+			}
+		};
+		unit main() {
+			var ref<A> a;
+			A__static__b(); // statics are registered in the global scope
+		}
+	)";
+
+	auto ir = builder.normalize(builder.parseProgram(input));
+
+	PrettyPrinter printer(ir, PrettyPrinter::OPTIONS_DEFAULT);
+
+	EXPECT_EQ("decl struct A;\n"
+			"decl main : () -> unit;\n"
+			"decl A__static__a : () -> unit;\n"
+			"decl A__static__b : () -> int<4>;\n"
+			"decl A__static__c : (int<4>) -> int<4>;\n"
+			"def struct A {\n"
+			"    static a = function () -> unit { }\n"
+			"    static b = function () -> int<4> {\n"
+			"        A__static__a();\n"
+			"        return A__static__c(5);\n"
+			"    }\n"
+			"    static c = function (v0 : ref<int<4>,f,f,plain>) -> int<4> {\n"
+			"        return *v0;\n"
+			"    }\n"
+			"};\n"
+			"// Inspire Program\n"
+			"unit function main (){\n"
+			"    var ref<A,f,f,plain> v0 = ref_decl(type_lit(ref<A,f,f,plain>));\n"
+			"    A__static__b();\n"
+			"}", toString(printer));
+}
+
 TEST(PrettyPrinter, ListExtension) {
 	NodeManager nm;
 	IRBuilder builder(nm);

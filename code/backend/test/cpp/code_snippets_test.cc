@@ -1621,6 +1621,28 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, code, "templateFunRetParam<int32_t, float >");
 	}
 
+	TEST(CppSnippet, StaticMemberFunction) {
+		DO_TEST(R"(
+			def struct IMP_S {
+				static IMP_test = function () -> int<4> { return 5; }
+			};
+			def struct IMP_T {
+				static IMP_test = function () -> int<4> { return 6; }
+			};
+			int<4> main() {
+				var ref<IMP_S> s;
+				var ref<IMP_T> t;
+				IMP_S__static__IMP_test();
+				return 0;
+			}
+		)", true, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "static int32_t IMP_test();");
+			EXPECT_PRED2(containsSubString, code, "int32_t IMP_S::IMP_test() {");
+			EXPECT_PRED2(containsSubString, code, "int32_t IMP_T::IMP_test() {");
+			EXPECT_PRED2(containsSubString, code, "IMP_S::IMP_test();");
+		})
+	}
+
 	TEST(CppSnippet, DISABLED_StaticVariableConst) {
 		DO_TEST(R"(
 			using "ext.static";

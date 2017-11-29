@@ -255,7 +255,7 @@ namespace parser {
 			 * generate a record type
 			 */
 			TypePtr genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields, const ExpressionList& ctors,
-					const ExpressionPtr& dtor, const bool dtorIsVirtual, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns);
+					const ExpressionPtr& dtor, const bool dtorIsVirtual, const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns, const StaticMemberFunctionList& sfuns);
 
 			/**
 			 * generate a simple struct or union consisting only of fields. The decision between sctuct or union will be made based on the given node type.
@@ -310,9 +310,14 @@ namespace parser {
 			MemberFunctionPtr genMemberFunction(const location& l, bool virtl, bool cnst, bool voltile, const std::string& name, const VariableList& params, const TypePtr& retType, const StatementPtr& body);
 
 			/**
-			 * generates a member function for the currently defined record type
+			 * generates a pure virtual member function for the currently defined record type
 			 */
 			PureVirtualMemberFunctionPtr genPureVirtualMemberFunction(const location& l, bool cnst, bool voltile, const std::string& name, const FunctionTypePtr& type);
+
+			/**
+			 * generates a static member function for the currently defined record type
+			 */
+			StaticMemberFunctionPtr genStaticMemberFunction(const location& l, const std::string& name, const LambdaExprPtr& implementation);
 
 			/**
 			 * generates a free constructor for the given lambda

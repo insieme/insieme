@@ -192,7 +192,7 @@ namespace utils {
 
 		std::string name = funcDecl->getQualifiedNameAsString();
 		if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
-			if(!method->isStatic()) {
+			if(!cStyleName || !method->isStatic()) {
 				// no need to qualify method name
 				name = funcDecl->getNameAsString();
 			}

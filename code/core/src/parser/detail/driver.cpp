@@ -430,7 +430,8 @@ namespace parser {
 			void handleDefaultedDeletedAndRegisterType(NodeManager& mgr, tu::IRTranslationUnit& tu, const NodeType& type, const string& name,
 			                                           const ParentList& parents, const FieldList& fields,
 			                                           const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
-			                                           const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
+			                                           const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns,
+			                                           const StaticMemberFunctionList& sfuns) {
 				IRBuilder builder(mgr);
 				auto key = builder.genericType(name);
 
@@ -457,18 +458,19 @@ namespace parser {
 				if(type == NT_Struct) {
 					tu.addType(key, builder.structType(name, parents, fields, recordMembers.getConstructorLiteralList(),
 																						 recordMembers.getDestructorLiteral(), dtorIsVirtual,
-																						 recordMembers.getMemberFunctionList(), pvmfuns));
+																						 recordMembers.getMemberFunctionList(), pvmfuns, sfuns));
 				} else {
 					tu.addType(key, builder.unionType(name, fields, recordMembers.getConstructorLiteralList(),
 																						recordMembers.getDestructorLiteral(), dtorIsVirtual,
-																						recordMembers.getMemberFunctionList(), pvmfuns));
+																						recordMembers.getMemberFunctionList(), pvmfuns, sfuns));
 				}
 			}
 		}
 
 		TypePtr InspireDriver::genRecordType(const location& l, const NodeType& type, const string& name, const ParentList& parents, const FieldList& fields,
 			                                 const ExpressionList& ctors, const ExpressionPtr& dtor, const bool dtorIsVirtual,
-			                                 const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns) {
+			                                 const MemberFunctionList& mfuns, const PureVirtualMemberFunctionList& pvmfuns,
+			                                 const StaticMemberFunctionList& sfuns) {
 			// check if this type has already been defined before
 			const GenericTypePtr key = builder.genericType(name);
 			if(tu[key]) {
@@ -509,7 +511,7 @@ namespace parser {
 			}
 
 			// now we handle the defaulted and deleted members, create the type and register it in the TU
-			handleDefaultedDeletedAndRegisterType(mgr, tu, type, name, parents, fields, ctors, dtor, dtorIsVirtual, mfunsNew, pvmfuns);
+			handleDefaultedDeletedAndRegisterType(mgr, tu, type, name, parents, fields, ctors, dtor, dtorIsVirtual, mfunsNew, pvmfuns, sfuns);
 
 			// done
 			return key;
@@ -531,7 +533,7 @@ namespace parser {
 
 			// now we handle the defaulted and deleted members, create the type and register it in the TU
 			handleDefaultedDeletedAndRegisterType(mgr, tu, type, name->getValue(), ParentList(), fields, ExpressionList(), {}, false,
-			                                      MemberFunctionList(), PureVirtualMemberFunctionList());
+			                                      MemberFunctionList(), PureVirtualMemberFunctionList(), StaticMemberFunctionList());
 
 			// end the record here
 			endRecord();
@@ -737,6 +739,12 @@ namespace parser {
 			                                               const VariableList& params, const TypePtr& retType, const StatementPtr& body) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
+			// check for static infix in name
+			if(name.find(utils::getStaticMemberfunctionNameInfix()) != string::npos) {
+				error(l, format("Member function names must not contain the string \"%s\"", utils::getStaticMemberfunctionNameInfix()));
+				return nullptr;
+			}
+
 			// create full parameter list
 			VariableList fullParams { thisStack.back() };
 			for(const auto& cur : params) {
@@ -803,6 +811,28 @@ namespace parser {
 			return builder.pureVirtualMemberFunction(name, memberFunType);
 		}
 
+		StaticMemberFunctionPtr InspireDriver::genStaticMemberFunction(const location& l, const std::string& name, const LambdaExprPtr& implementation) {
+			assert_true(implementation) << "No implementation provided";
+			auto implementationType = implementation->getType().isa<core::FunctionTypePtr>();
+			assert_true(implementationType) << "Implementation has to be of FunctionType";
+			assert_true(implementationType->isPlain()) << "Only plain function types should be covered here!";
+			assert_false(currentRecordStack.empty()) << "Not within record definition!";
+
+			// generate the literal for lookup
+			auto key = builder.getLiteralForStaticMemberFunction(implementationType, getThisType()->getFamilyName(), name);
+			// generate a new name, and create a replacement lambda with the new name
+			auto globalName = key->getStringValue();
+			annotations::attachName(implementation, globalName);
+			auto newLambda = builder.lambdaExpr(implementation->getLambda(), globalName);
+
+			// only declare the symbol implicitly if it hasn't already been declared
+			if(!isSymbolDeclaredInGlobalScope(globalName)) { declareSymbolInGlobalScope(l, globalName, newLambda); }
+
+			// register the new lambda in the TU and return the newly built static member function
+			tu.addFunction(key, newLambda);
+			return builder.staticMemberFunction(name, newLambda);
+		}
+
 		ExpressionPtr InspireDriver::genFreeConstructor(const location& l, const std::string& name, const LambdaExprPtr& ctor) {
 			assert_false(currentRecordStack.empty()) << "Not within record definition!";
 
@@ -824,6 +854,12 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genFunctionDefinition(const location& l, const std::string name, const LambdaExprPtr& lambda) {
+			// check for static infix in name
+			if(name.find(utils::getStaticMemberfunctionNameInfix()) != string::npos) {
+				error(l, format("Function names must not contain the string \"%s\"", utils::getStaticMemberfunctionNameInfix()));
+				return nullptr;
+			}
+
 			// check if this type has already been defined before
 			const LiteralPtr key = builder.literal(name, lambda->getType());
 			if(tu[key]) {
@@ -1241,7 +1277,11 @@ namespace parser {
 		}
 
 		ExpressionPtr InspireDriver::genThis(const location& l) {
-			assert_false(thisStack.empty());
+			assert_false(currentRecordStack.empty());
+			if(currentRecordStack.size() != thisStack.size()) {
+				error(l, "The symbol this is not available in static member functions");
+				return nullptr;
+			}
 			return inLambda ? thisStack.back() : builder.deref(thisStack.back());
 		}
 
@@ -1376,8 +1416,11 @@ namespace parser {
 
 			//if we didn't find anything and we are in a record type currently
 			if (!result && isInRecordType()) {
-				//we try to locate a record member using the implicit this pointer here
-				result = genMemberAccess(l, genThis(l), name);
+				// if the this stack is as high as the record stack (i.e. we are in a non-static member function)
+				if(currentRecordStack.size() == thisStack.size()) {
+					//we try to locate a record member using the implicit this pointer here
+					result = genMemberAccess(l, genThis(l), name);
+				}
 			}
 
 			// fail if not found

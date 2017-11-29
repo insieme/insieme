@@ -180,6 +180,7 @@ blank         [ \t]
 
 "virtual"     return InspireParser::make_VIRTUAL(loc);
 "pure"        return InspireParser::make_PURE(loc);
+"static"      return InspireParser::make_STATIC(loc);
 "const"       return InspireParser::make_CONST(loc);
 "volatile"    return InspireParser::make_VOLATILE(loc);
 "private"     return InspireParser::make_PRIVATE(loc);

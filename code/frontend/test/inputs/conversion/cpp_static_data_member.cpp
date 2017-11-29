@@ -48,11 +48,11 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		def struct IMP_Joerg {
+			static IMP_getInstanceOfBla = function () -> ptr<IMP_Joerg> {
+				return ptr_from_ref(lit("IMP_Joerg_colon__colon_joerg" : ref<IMP_Joerg,f,f,plain>));
+			}
 		};
-		def IMP_Joerg_colon__colon_getInstanceOfBla = function () -> ptr<IMP_Joerg> {
-			return ptr_from_ref(lit("IMP_Joerg_colon__colon_joerg" : ref<IMP_Joerg,f,f,plain>));
-		};
-		IMP_Joerg_colon__colon_getInstanceOfBla()
+		IMP_Joerg__static__IMP_getInstanceOfBla()
 	)")
 	Joerg::getInstanceOfBla();
 }

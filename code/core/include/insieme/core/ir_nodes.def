@@ -257,6 +257,9 @@ AST_TERMINAL(MemberFunctions, Support)
 AST_TERMINAL(PureVirtualMemberFunction, Support)
 AST_TERMINAL(PureVirtualMemberFunctions, Support)
 
+AST_TERMINAL(StaticMemberFunction, Support)
+AST_TERMINAL(StaticMemberFunctions, Support)
+
 AST_TERMINAL(Parent, Support)
 AST_TERMINAL(Parents, Support)
 

@@ -222,6 +222,7 @@ namespace printer {
 			utils::set::PointerSet<LambdaReferencePtr> visitedMemberFunctions;
 			utils::set::PointerSet<LambdaReferencePtr> visitedConstructors;
 			utils::set::PointerSet<LiteralPtr> literalMemberFunctions;
+			utils::set::PointerSet<LambdaReferencePtr> staticMemberFunctions;
 
 			std::vector<std::pair<TypePtr,TypePtr>> aliases;
 
@@ -370,6 +371,12 @@ namespace printer {
 								literalMemberFunctions.insert(literal);
 							}
 						}
+
+						// store all static member functions, so that we can skip them later
+						for (const auto& sfun : binding->getRecord()->getStaticMemberFunctions()) {
+							if(const auto& lambda = sfun->getImplementation().isa<LambdaExprPtr>())
+							staticMemberFunctions.insert(lambda->getReference());
+						}
 					}
 				});
 
@@ -408,7 +415,7 @@ namespace printer {
 				});
 
 				if(!printer.hasOption(PrettyPrinter::JUST_LOCAL_CONTEXT)) {
-					//first: print all type declarations
+					// print all type declarations
 					for(auto& tag : visitedTagTypes) {
 						if(tag->getName()->getValue().compare("")) {
 							newLine();
@@ -440,7 +447,7 @@ namespace printer {
 					// visitedBinding is used to check, if some Bindings are already visited
 					utils::set::PointerSet<LambdaBindingPtr> visitedBindings;
 
-					//second: print all function declarations
+					// print all function declarations
 					visitDepthFirstOncePrunable(node, [&](const LambdaExprPtr& cur) {
 						// jump over this part, if lambda is derived, but printer don't have the option to print them
 						if(lang::isDerived(cur) && !printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL)) {
@@ -493,7 +500,7 @@ namespace printer {
 
 					});
 
-					//third: print all declarations for memberFields, constructors, destructors, memberFunctions...
+					// print all declarations for memberFields, constructors, destructors, memberFunctions...
 					for(auto& tag : visitedTagTypes) {
 						auto record = tag.getRecord();
 						auto& tagName = makeReadableIfRequired(tag->getName()->getValue());
@@ -555,7 +562,7 @@ namespace printer {
 						}
 					}
 
-					//fourth: print all member functions which are just literals
+					// print all member functions which are just literals
 					for(auto& literal : literalMemberFunctions) {
 						newLine();
 						vector<std::string> splitstring;
@@ -565,7 +572,7 @@ namespace printer {
 						(*out) << ";";
 					}
 
-					//fifth: print all record definitions
+					// print all record definitions
 					for(auto& tag : visitedTagTypes) {
 						if (auto record = tag.getRecord().isa<RecordPtr>()) {
 							//auto& recordName = record->getName()->getValue();
@@ -578,11 +585,16 @@ namespace printer {
 						}
 					}
 
-					//sixth: print all definitions for functions
+					// print all definitions for functions
 					visitedBindings.clear();
 					visitDepthFirstOncePrunable(node, [&](const LambdaExprPtr& cur) {
 						// jump over this part, if lambda is derived, but printer don't have the option to print them
 						LambdaExprAddress curAddress{cur};
+
+						// skip static functions
+						if(staticMemberFunctions.find(cur->getReference()) != staticMemberFunctions.end()) {
+							return true;
+						}
 
 						if(lang::isDerived(cur) && !printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL)) {
 							return true;
@@ -877,6 +889,12 @@ namespace printer {
 
 				// TODO: print all pure virtual member functions
 
+				// print static member functions
+				for(const auto& sfun : node->getStaticMemberFunctions()) {
+					newLine();
+					visit(sfun);
+				}
+
 				// close record scope
 				decreaseIndent();
 				newLine();
@@ -1113,6 +1131,13 @@ namespace printer {
 				if(auto impl = node->getImplementation().isa<LambdaExprAddress>()) {
 					if(node->isVirtual()) (*out) << "virtual ";
 					printMemberFunctionInternal(impl->getLambda(), node->getName()->getValue());
+				}
+			}
+
+			PRINT(StaticMemberFunction) {
+				if(auto impl = node->getImplementation().isa<LambdaExprAddress>()) {
+					(*out) << "static " << makeReadableIfRequired(node->getName()->getValue()) << " = ";
+					visit(impl->getLambda());
 				}
 			}
 

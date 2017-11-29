@@ -61,11 +61,13 @@ int main() {
 			ctor function (v1 : ref<int<4>,f,f,plain>) { }
 		};
 		def IMP_constSRefConsumer = function (v0 : ref<IMP_S,t,f,cpp_ref>) -> unit { };
-		def IMP_range_splitter_lt_S_gt__colon__colon_split_returns_std_colon__colon_pair_lt_S_comma__space_S_gt_ = function () -> IMP_std_colon__colon_pair<ref<IMP_S,f,f,qualified>,ref<IMP_S,f,f,qualified>> {
-			return instantiate(lit("target_type" : IMP_std_colon__colon_pair<ref<IMP_S,f,f,qualified>,ref<IMP_S,f,f,qualified>>::(ref<IMP_S,t,f,cpp_ref>, ref<IMP_S,t,f,cpp_ref>)), lit("IMP_std_colon__colon_pair::ctor" : IMP_std_colon__colon_pair<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::(ref<'T_0_0,t,f,cpp_ref>, ref<'T_0_1,t,f,cpp_ref>)))(ref_decl(type_lit(ref<IMP_std_colon__colon_pair<ref<IMP_S,f,f,qualified>,ref<IMP_S,f,f,qualified>>,f,f,plain>)), ref_kind_cast(IMP_S::(ref_temp(type_lit(IMP_S)), 5), type_lit(cpp_ref)), ref_kind_cast(IMP_S::(ref_temp(type_lit(IMP_S)), 6), type_lit(cpp_ref)));
+		def struct IMP_range_splitter_struct_space_S {
+			static IMP_split_returns_std_colon__colon_pair_lt_S_comma__space_S_gt_ = function () -> IMP_std_colon__colon_pair<ref<IMP_S,f,f,qualified>,ref<IMP_S,f,f,qualified>> {
+				return instantiate(lit("target_type" : IMP_std_colon__colon_pair<ref<IMP_S,f,f,qualified>,ref<IMP_S,f,f,qualified>>::(ref<IMP_S,t,f,cpp_ref>, ref<IMP_S,t,f,cpp_ref>)), lit("IMP_std_colon__colon_pair::ctor" : IMP_std_colon__colon_pair<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>,ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>::(ref<'T_0_0,t,f,cpp_ref>, ref<'T_0_1,t,f,cpp_ref>)))(ref_decl(type_lit(ref<IMP_std_colon__colon_pair<ref<IMP_S,f,f,qualified>,ref<IMP_S,f,f,qualified>>,f,f,plain>)), ref_kind_cast(IMP_S::(ref_temp(type_lit(IMP_S)), 5), type_lit(cpp_ref)), ref_kind_cast(IMP_S::(ref_temp(type_lit(IMP_S)), 6), type_lit(cpp_ref)));
+			}
 		};
 		{
-			IMP_constSRefConsumer(ref_kind_cast(ref_member_access(IMP_range_splitter_lt_S_gt__colon__colon_split_returns_std_colon__colon_pair_lt_S_comma__space_S_gt_() materialize, lit("first"), type_lit(IMP_S)), type_lit(cpp_ref)));
+			IMP_constSRefConsumer(ref_kind_cast(ref_member_access(IMP_range_splitter_struct_space_S__static__IMP_split_returns_std_colon__colon_pair_lt_S_comma__space_S_gt_() materialize, lit("first"), type_lit(IMP_S)), type_lit(cpp_ref)));
 		}
 	)")
 	{
