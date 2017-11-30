@@ -366,6 +366,18 @@ namespace backend {
 		})
 	}
 
+	TEST(CppSnippet, RefMove) {
+		DO_TEST(R"(
+			int<4> function IMP_main() {
+				var ref<int<4>> i;
+				ref_move(ref_kind_cast(i, type_lit(cpp_ref)));
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "std::move(i);");
+		})
+	}
+
 	TEST(CppSnippet, MemberAccess) {
 		DO_TEST(R"(
 			def struct IMP_NonTrivial {

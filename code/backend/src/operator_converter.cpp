@@ -825,6 +825,16 @@ namespace backend {
 			return c_ast::ref(c_ast::access(c_ast::derefIfNotImplicit(CONVERT_ARG(0), ARG(0)), field));
 		};
 
+		// -- std::move --
+
+		res[refExt.getRefMove()] = OP_CONVERTER {
+			// signature of operation:
+			//		(i : ref<'a,f,f,cpp_ref>) -> ref<'a,f,f,cpp_rref>
+
+			ADD_HEADER("utility");
+			return c_ast::call(C_NODE_MANAGER->create("std::move"), CONVERT_ARG(0));
+		};
+
 		// -- others --
 
 		res[basic.getId()] = OP_CONVERTER {

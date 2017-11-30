@@ -317,6 +317,13 @@ namespace lang {
 		LANG_EXT_LITERAL(RefFromIntegral, "ref_from_integral", "('i, type<'r>) -> ref<'r,f,f,plain>")
 
 
+		// -- std::move --
+
+		/**
+		 * A generic post-order decrement operator.
+		 */
+		LANG_EXT_DERIVED(RefMove, "(i : ref<'a,f,f,cpp_ref>) -> ref<'a,f,f,cpp_rref> { return ref_kind_cast(i, type_lit(cpp_rref)); }")
+
 	};
 
 
