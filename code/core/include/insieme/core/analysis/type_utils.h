@@ -132,15 +132,27 @@ namespace analysis {
 	bool hasMemberOfType(const TagTypePtr& type, const std::string& name, const FunctionTypePtr& funType);
 
 	/**
+	 * Returns the default constructor of the given type, if it has one
+	 */
+	boost::optional<ExpressionPtr> getDefaultConstructor(const TagTypePtr&);
+	/**
 	 * Determines whether the given tag type has a default constructor.
 	 */
 	bool hasDefaultConstructor(const TagTypePtr&);
 
 	/**
+	 * Returns the copy constructor of the given type, if it has one
+	 */
+	boost::optional<ExpressionPtr> getCopyConstructor(const TagTypePtr&);
+	/**
 	 * Determines whether the given tag type has a copy constructor.
 	 */
 	bool hasCopyConstructor(const TagTypePtr&);
 
+	/**
+	 * Returns the move constructor of the given type, if it has one
+	 */
+	boost::optional<ExpressionPtr> getMoveConstructor(const TagTypePtr&);
 	/**
 	 * Determines whether the given tag type has a move constructor.
 	 */

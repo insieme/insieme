@@ -386,26 +386,35 @@ namespace analysis {
 		return false;
 	}
 
-	bool hasDefaultConstructor(const TagTypePtr& type) {
+	boost::optional<core::ExpressionPtr> getDefaultConstructor(const TagTypePtr& type) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 		auto thisType = builder.refType(type->getTag());
 		auto ctorType = builder.functionType(TypeList{ thisType }, thisType, FK_CONSTRUCTOR);
 		return hasConstructorOfType(type, ctorType);
 	}
+	bool hasDefaultConstructor(const TagTypePtr& type) {
+		return getDefaultConstructor(type);
+	}
 
-	bool hasCopyConstructor(const TagTypePtr& type) {
+	boost::optional<core::ExpressionPtr> getCopyConstructor(const TagTypePtr& type) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 		auto otherType = builder.refType(type->getTag(), true, false, lang::ReferenceType::Kind::CppReference);
 		return hasConstructorAccepting(type, otherType);
 	}
+	bool hasCopyConstructor(const TagTypePtr& type) {
+		return getCopyConstructor(type);
+	}
 
-	bool hasMoveConstructor(const TagTypePtr& type) {
+	boost::optional<core::ExpressionPtr> getMoveConstructor(const TagTypePtr& type) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 		auto otherType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppRValueReference);
 		return hasConstructorAccepting(type, otherType);
+	}
+	bool hasMoveConstructor(const TagTypePtr& type) {
+		return getMoveConstructor(type);
 	}
 
 	bool hasCopyAssignment(const TagTypePtr& type) {
