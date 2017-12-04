@@ -481,6 +481,20 @@ namespace core {
 		return tupleExpr(type, Expressions::get(manager, values));
 	}
 
+	InitExprPtr IRBuilderBaseModule::initExpr(const GenericTypePtr& type, const ExpressionPtr& memExpr, const ExpressionList& initExprs) const {
+
+		// TODO: match init values with target types and initialize fields accordingly
+
+		DeclarationList decls;
+		for(const auto& cur : initExprs) {
+			decls.push_back(declaration(cur->getType(),cur));
+		}
+
+		// build result
+		return initExpr(type,memExpr,declarations(decls));
+	}
+
+
 	IfStmtPtr IRBuilderBaseModule::ifStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) const {
 		if(!elseBody) { return ifStmt(condition, wrapBody(thenBody), getNoOp()); }
 		return ifStmt(condition, wrapBody(thenBody), wrapBody(elseBody));

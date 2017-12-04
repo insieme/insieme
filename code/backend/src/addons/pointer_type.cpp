@@ -132,7 +132,7 @@ namespace addons {
 					if(LANG_EXT_REF.isCallOfRefNew(initExp->getMemoryExpr())) {
 						c_ast::InitializerPtr cInit = nullptr;
 						// create init expression
-						if(!initExp->getInitExprs().empty()) {
+						if(!initExp->getInitDecls().empty()) {
 							auto initElems = ::transform(initExp->getInitExprList(),
 								[&](const core::ExpressionPtr& cur) { return CONVERT_EXPR(cur).as<c_ast::NodePtr>(); });
 							cInit = c_ast::init(initElems);

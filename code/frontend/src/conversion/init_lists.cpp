@@ -109,7 +109,8 @@ namespace conversion {
 			core::TypeList funParamTypes { irThisType };
 			core::VariableList funParams { thisVar };
 			core::ExpressionList callArguments { callThisVar };
-			for(auto expr : subEx.as<core::InitExprPtr>()->getInitExprs()) {
+			for(auto decl : subEx.as<core::InitExprPtr>()->getInitDecls()) {
+				auto expr = decl->getInitialization();
 				auto exprType = expr->getType();
 				if(core::analysis::isRefType(exprType)) exprType = core::analysis::getReferencedType(exprType);
 				auto paramType = builder.refType(exprType, true, false, core::lang::ReferenceType::Kind::CppReference);

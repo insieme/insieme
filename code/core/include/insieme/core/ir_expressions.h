@@ -1127,7 +1127,7 @@ namespace core {
 	/**
 	 * The accessor associated to an init expression.
 	 */
-	IR_NODE_ACCESSOR(InitExpr, Expression, GenericType, Expression, Expressions)
+	IR_NODE_ACCESSOR(InitExpr, Expression, GenericType, Expression, Declarations)
 
 		/**
 		 * Obtains the expression providing the reference to the memory location being initialized.
@@ -1138,10 +1138,14 @@ namespace core {
 		/**
 		 * Obtains the initialization expressions.
 		 */
-		IR_NODE_PROPERTY(Expressions, InitExprs, 2);
+		IR_NODE_PROPERTY(Declarations, InitDecls, 2);
 
 		vector<Ptr<const Expression>> getInitExprList() const {
-			return getInitExprs()->getExpressions();
+			vector<Ptr<const Expression>> res;
+			for(const auto& cur : getInitDecls()) {
+				res.push_back(cur->getInitialization());
+			}
+			return res;
 		}
 
 	IR_NODE_END()
@@ -1168,11 +1172,11 @@ namespace core {
 		 * @param manager the manager used for maintaining instances of this class
 		 * @param type the type of the value constructed
 		 * @param memoryExpr the expression describing the memory location to be populated
-		 * @param initExprs initialization expressions
+		 * @param initDecls declarations for the values to be initialized
 		 * @return the requested init expression
 		 */
-		static InitExprPtr get(NodeManager& manager, const GenericTypePtr& type, const ExpressionPtr& memoryExpr, const ExpressionsPtr& initExprs) {
-			return manager.get(InitExpr(type, memoryExpr, initExprs));
+		static InitExprPtr get(NodeManager& manager, const GenericTypePtr& type, const ExpressionPtr& memoryExpr, const DeclarationsPtr& initDecls) {
+			return manager.get(InitExpr(type, memoryExpr, initDecls));
 		}
 
 	IR_NODE_END()

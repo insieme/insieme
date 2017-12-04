@@ -237,6 +237,40 @@ namespace core {
 	IR_NODE_END()
 
 
+	// ------------------------------------- Declarations -----------------------------------
+
+	/**
+	 * The accessor associated to a list of declarations.
+	 */
+	IR_LIST_NODE_ACCESSOR(Declarations, Support, Declarations, Declaration)
+	IR_NODE_END()
+
+	/**
+	 * A node type representing a list of expressions.
+	 */
+	IR_NODE(Declarations, Support)
+	  protected:
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream & out) const {
+			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
+		}
+
+	  public:
+		/**
+		 * This static factory method allows to construct a declaration list based
+		 * on the given declarations.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param declarations the list of declarations to be included
+		 * @return the requested instance managed by the given manager
+		 */
+		static DeclarationsPtr get(NodeManager & manager, const DeclarationList& declarations) {
+			return manager.get(Declarations(convertList(declarations)));
+		}
+	IR_NODE_END()
+
 	// ---------------------------------------- Declaration Statement ------------------------------
 
 	/**

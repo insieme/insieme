@@ -355,10 +355,13 @@ namespace core {
 			return tupleExpr(toVector<ExpressionPtr>(expr, rest...));
 		}
 
+		InitExprPtr initExpr(const GenericTypePtr& type, const ExpressionPtr& memExpr, const ExpressionList& initExprs) const;
+
 		InitExprPtr initExpr(const ExpressionPtr& memExpr, const ExpressionList& initExprs = ExpressionList()) const {
 			assert_true(lang::isReference(memExpr)) << "initExpr needs to be built on Reference type, got " << dumpColor(memExpr->getType());
-			return initExpr(memExpr->getType().as<GenericTypePtr>(), memExpr, expressions(initExprs));
+			return initExpr(memExpr->getType().as<GenericTypePtr>(), memExpr, initExprs);
 		}
+
 		template <typename... T>
 		InitExprPtr initExpr(const ExpressionPtr& memExpr, const T&... initExprs) const {
 			return initExpr(memExpr, toVector<ExpressionPtr>(initExprs...));

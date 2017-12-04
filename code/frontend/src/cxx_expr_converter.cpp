@@ -385,7 +385,8 @@ namespace conversion {
 				// convert the initializer to a temporary init expression and then use its init expressions
 				auto tempInits = converter.convertInitExpr(newExpr->getInitializer());
 				if(tempInits->getNodeType() != core::NT_InitExpr) tempInits = core::analysis::getArgument(tempInits, 0);
-				for(auto expr : tempInits.as<core::InitExprPtr>()->getInitExprs()) {
+				for(auto decl : tempInits.as<core::InitExprPtr>()->getInitDecls()) {
+					auto expr = decl->getInitialization();
 					auto exprType = expr->getType();
 					if(core::analysis::isRefType(exprType)) exprType = core::analysis::getReferencedType(exprType);
 					auto paramType = builder.refType(exprType, true, false, core::lang::ReferenceType::Kind::CppReference);

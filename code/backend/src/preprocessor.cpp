@@ -281,8 +281,8 @@ namespace backend {
 			core::IRBuilder builder(init->getNodeManager());
 			auto initType = core::lang::ReferenceType(init->getType()).getElementType();
 			// scalar init cpp references from plain references
-			if(init.getInitExprs().size() == 1) {
-				auto expr = init.getInitExprs().front();
+			if(init.getInitDecls().size() == 1) {
+				auto expr = init.getInitDecls().front()->getInitialization();
 				auto ttype = init->getType();
 				if(cl::isReference(ttype) && cl::isReferenceTo(expr, initType)) {
 						cl::ReferenceType varT(ttype), initT(expr);

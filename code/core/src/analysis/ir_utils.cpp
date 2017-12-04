@@ -140,7 +140,7 @@ namespace analysis {
 		// if initExpr is an InitExpr node, test all of its subexpressions
 		if(auto initNode = initExpr.isa<InitExprPtr>()) {
 			if(refExt.isCallOfRefDecl(initNode->getMemoryExpr())) {
-				return all(initNode->getInitExprs(), [](const ExpressionPtr& expr) { return isSideEffectFree(expr); });
+				return all(initNode->getInitDecls(), [](const DeclarationPtr& decl) { return isSideEffectFree(decl); });
 			}
 		}
 		// if initExpr is a constructor call, return false for now
