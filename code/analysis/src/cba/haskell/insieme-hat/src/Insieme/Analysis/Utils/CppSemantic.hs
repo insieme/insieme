@@ -43,6 +43,13 @@ module Insieme.Analysis.Utils.CppSemantic (
     isMaterializingDeclaration,
     isMaterializingCall,
 
+    -- a utility to spot constructor calls
+    callsConstructor,
+
+    -- some tools to identify calls to explicit constructs
+    isExplicitConstructorCall,
+    callsExplicitConstructor,
+
     -- some tools to identify calls to implicit constructs
     callsImplicitConstructor,
     getImplicitConstructor,
@@ -119,6 +126,28 @@ isMaterializingCall _ = False        -- the default, for now - TODO: implement r
 -- isMaterializingCall (I.Node I.CallExpr ( resType : (I.Node _ ((I.Node I.FunctionType (_:retType:_)):_)) : _)) = hasMoreReferences resType retType
 -- isMaterializingCall _ = False
 
+
+
+--- Tests whether a call is a constructor call
+
+isExplicitConstructorCall :: NodeAddress -> Bool
+isExplicitConstructorCall addr = case I.getNode addr of
+    (I.Node I.CallExpr ( _ : fun : _ )) -> isConstructor fun
+    _ -> False
+
+
+--- Tests whether a declaration is involving an explicit constructor call
+
+callsConstructor :: NodeAddress -> Bool
+callsConstructor addr = callsExplicitConstructor addr || callsImplicitConstructor addr
+
+
+--- Tests whether a declaration is involving an explicit constructor call
+
+callsExplicitConstructor :: NodeAddress -> Bool
+callsExplicitConstructor addr = case Q.getNodeType addr of
+    I.Declaration -> isExplicitConstructorCall $ I.goDown 1 addr
+    _ -> False
 
 
 --- Tests whether a declaration is involving an implicit constructor call

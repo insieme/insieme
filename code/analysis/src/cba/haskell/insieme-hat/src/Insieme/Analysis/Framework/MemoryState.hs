@@ -501,6 +501,15 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
         I.Declaration | addr == loc && p == Pre ->
             Solver.mkVariable varId [] $ Definitions $ BSet.singleton $ Declaration addr
 
+        -- at the declaration, potential initial definitions can be filtered out (artifact of recursive functions)
+        I.Declaration | addr == loc && p == Internal -> var
+          where
+            var = Solver.mkVariable varId [con] Solver.bot
+            con = Solver.createConstraint dep val var
+
+            dep a = Solver.getDependencies a defaultVar
+            val a = Definitions $ BSet.delete Initial $ unD $ Solver.getLimit a defaultVar
+
         -- an implicit constructor call can be a definition
         I.Declaration | callsImplicitConstructor addr && addr == loc && p == Post ->
             Solver.mkVariable varId [] $ Definitions $ BSet.singleton $ Constructor addr
@@ -563,9 +572,11 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
                         assign c = Q.isBuiltin (toAddress c) "ref_assign"
 
 
+        -- TODO: this optimization has been disabled due to invalid write set summaries
+        --       re-enable once fixed
 
         -- to prune the set of variables, we check whether the invoced callable may update the traced reference
-        I.CallExpr | p == Internal && (not isParentOfLocation)-> var
+        I.CallExpr | False && p == Internal && (not isParentOfLocation)-> var
             where
                 var = Solver.mkVariable varId [con] Solver.bot
                 con = Solver.createEqualityConstraint dep val var

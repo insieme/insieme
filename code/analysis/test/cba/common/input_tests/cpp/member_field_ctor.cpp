@@ -35,24 +35,37 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
-#include "../cba.h"
+#include "../../input_tests/cba.h"
+
 
 struct A {
 	int x, y;
-	A(int a, int b) : x(a), y(b) {}
 };
 
+struct P {
+	A a, b;
+	P(const A& a, const A& b) : a(a), b(b) {}
+};
 
 int main() {
 
-	A a(1,2);
+	// create two As
 
-	// just taking the local value should be fine
-	cba_expect_symbolic_value("[ref_cast(IMP_A::(ref_temp(type_lit(IMP_A)), 1, 2), type_lit(t), type_lit(f), type_lit(cpp_ref))]",a);
+	A a{1,2};
+	A b{3,4};
 
-//	// now I create a pointer to it, and it should be the same value
-//	A* p = &a;
-//	cba_expect_symbolic_value("[ref_cast(IMP_A::(ref_temp(type_lit(IMP_A)), 1, 2), type_lit(t), type_lit(f), type_lit(cpp_ref))]",*p);
+	cba_expect_eq_int(1,a.x);
+	cba_expect_eq_int(2,a.y);
+	cba_expect_eq_int(3,b.x);
+	cba_expect_eq_int(4,b.y);
+
+	// create a P
+	P p(a,b);
+
+	cba_expect_eq_int(1,p.a.x);
+	cba_expect_eq_int(2,p.a.y);
+	cba_expect_eq_int(3,p.b.x);
+	cba_expect_eq_int(4,p.b.y);
 
 //	cba_debug();
 

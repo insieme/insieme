@@ -545,8 +545,7 @@ namespace cba {
 
 	}
 
-
-	TYPED_TEST_P(ArithmeticValue, RecursiveNonClosedLambda) {
+	TYPED_TEST_P(ArithmeticValue, RecursiveClosedLambda) {
 
 		// the problem modeled here has been uncovered by a stress test
 
@@ -558,9 +557,10 @@ namespace cba {
 			decl f : (int<4>)->int<4>;
 			def f = ( x : int<4> ) -> int<4> {
 				return ( y : int<4> ) -> int<4> {
+					if (y > 10) { return 0; }
 					return f(y + 1);
 				}(x);
-		    };
+			};
 
 			{
 				var ref<int<4>> a = 10;
@@ -588,9 +588,56 @@ namespace cba {
 		EXPECT_FALSE(g->getDefinition()->getDefinitionOf(f->getReference()));
 		EXPECT_TRUE(core::analysis::contains(g,f->getReference()));
 
-
-		// run analysis crossing f
+		// run analysis crossing f, where f is terminating
 		EXPECT_EQ("{10}", toString(this->getValue(CompoundStmtAddress(code)[2].as<ExpressionAddress>())));
+
+	}
+
+
+	TYPED_TEST_P(ArithmeticValue, RecursiveNonClosedLambda) {
+
+		// the problem modeled here has been uncovered by a stress test
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		// create a code example exhibiting a non-closed lambda
+		auto code = builder.parseStmt(R"(
+			decl f : (int<4>)->int<4>;
+			def f = ( x : int<4> ) -> int<4> {
+				return ( y : int<4> ) -> int<4> {
+					return f(y + 1);
+				}(x);
+			};
+
+			{
+				var ref<int<4>> a = 10;
+				f(2);
+				*a;
+			}
+		)").as<CompoundStmtPtr>();
+
+		// get references to the two lambdas
+		LambdaExprPtr f;
+		LambdaExprPtr g;
+		core::visitDepthFirst(code, [&](const core::LambdaExprPtr& lambda){
+			if (lambda->isRecursive()) {
+				EXPECT_FALSE(f);
+				f = lambda;
+			} else {
+				EXPECT_FALSE(g);
+				g = lambda;
+			}
+		});
+		EXPECT_TRUE(f);
+		EXPECT_TRUE(g);
+
+		// check that g has a free lambda reference to f
+		EXPECT_FALSE(g->getDefinition()->getDefinitionOf(f->getReference()));
+		EXPECT_TRUE(core::analysis::contains(g,f->getReference()));
+
+		// actually the value should be empty, since *a is not reachable
+		EXPECT_EQ("{}", toString(this->getValue(CompoundStmtAddress(code)[2].as<ExpressionAddress>())));
 
 	}
 
@@ -616,6 +663,7 @@ namespace cba {
 			MemoryState,
 			PassByReference,
 			Tuples,
+			RecursiveClosedLambda,
 			RecursiveNonClosedLambda
 	);
 
