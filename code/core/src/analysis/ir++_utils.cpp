@@ -117,44 +117,6 @@ namespace analysis {
 		return funType && funType->isConstructor();
 	}
 
-	// ---------------------------- Defaulted Members --------------------------------------
-
-	namespace {
-		struct DefaultedTag {};
-
-		LiteralPtr getDefaultedMarker(const IRBuilder& builder) {
-			auto defaulted = builder.stringLit("INSIEME_DEFAULTED");
-			defaulted.attachValue<DefaultedTag>();
-			return defaulted;
-		}
-	}
-
-	LambdaExprPtr markAsDefaultMember(const LambdaExprPtr& lambda) {
-		IRBuilder builder(lambda->getNodeManager());
-		StatementList newBody{ getDefaultedMarker(builder) };
-		std::copy(lambda->getBody()->begin(), lambda->getBody()->end(), std::back_inserter(newBody));
-		return builder.lambdaExpr(lambda->getType(), lambda->getParameterList(), builder.compoundStmt(newBody), lambda->getReference()->getNameAsString());
-	}
-
-	bool isaDefaultMember(const NodePtr& node) {
-		auto n = node;
-		if(auto mem = n.isa<MemberFunctionPtr>()) {
-			n = mem->getImplementation();
-		}
-		auto defaultCheck = [](const CompoundStmtPtr& body, const FunctionTypePtr& funType) {
-			if(!funType->isMember()) return false;
-			if(!body || body->size() < 1) return false;
-			auto first = body[0];
-			return first == getDefaultedMarker(IRBuilder(body->getNodeManager())) && first.hasAttachedValue<DefaultedTag>();
-		};
-		if (auto lambda = n.isa<LambdaExprPtr>()) {
-			return defaultCheck(lambda->getBody(), lambda->getFunctionType());
-		} else if (auto lambda = n.isa<LambdaPtr>()) {
-			return defaultCheck(lambda->getBody(), lambda->getType());
-		}
-		return false;
-	}
-
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

@@ -101,7 +101,7 @@ namespace parser {
 		NodeManager nm;
 
 		EXPECT_TRUE(test_type(nm, "int<8>"));
-		EXPECT_TRUE(test_type(nm, "alias int = int<5>; int"));
+		EXPECT_TRUE(test_type(nm, "alias int = int<4>; int"));
 		EXPECT_TRUE(test_type(nm, "someweirdname<>"));
 		EXPECT_TRUE(test_type(nm, "vector<int<4>, 4>"));
 		EXPECT_TRUE(test_type(nm, "vector<'a, 4>"));
@@ -115,9 +115,9 @@ namespace parser {
 		// pointer
 		EXPECT_TRUE(test_type(nm, "ref<'a,f,f,cpp_rref>"));
 
-		EXPECT_TRUE(test_type(nm, "struct { a : int<4>; b : int<5>;}"));
-		EXPECT_TRUE(test_type(nm, "struct name { a: int<4>; b : int<5>;}"));
-		EXPECT_TRUE(test_type(nm, "struct { a : int<4>; b: int<5>;}"));
+		EXPECT_TRUE(test_type(nm, "struct { a : int<4>; b : int<8>;}"));
+		EXPECT_TRUE(test_type(nm, "struct name { a: int<4>; b : int<8>;}"));
+		EXPECT_TRUE(test_type(nm, "struct { a : int<4>; b: int<8>;}"));
 
 		// function
 		EXPECT_TRUE(test_type(nm, "(int<4> , ref<int<4>>) -> int<4>"));
@@ -130,8 +130,8 @@ namespace parser {
 		EXPECT_TRUE(test_type(nm, "Foo<()->int<4>>::() -> unit"));
 
 		EXPECT_TRUE(test_type(nm, "struct C { field : int<4>; }"));
-		EXPECT_TRUE(test_type(nm, "alias papa = t<11>; alias mama = t<4>; struct name : [ papa, mama ] { a: int<4>; b : int<5>;}"));
-		EXPECT_TRUE(test_type(nm, "alias papa = t<11>; struct name :[ papa ]{ a : int<4>; b : int<5>;}"));
+		EXPECT_TRUE(test_type(nm, "alias papa = struct P { field : int<4>; }; alias mama = struct M { field : int<4>; }; struct name : [ papa, mama ] { a: int<4>; b : int<8>;}"));
+		EXPECT_TRUE(test_type(nm, "alias papa = struct P { field : int<4>; }; struct name :[ papa ]{ a : int<4>; b : int<8>;}"));
 
 		// tuple types
 		EXPECT_TRUE(test_type(nm, "(int<4>, int<8>)"));
@@ -563,7 +563,7 @@ namespace parser {
 		"}"));
 
 		EXPECT_TRUE(test_program(mgr,
-		"def struct name { a: int<4>; b : int<5>;};"
+		"def struct name { a: int<4>; b : int<8>;};"
 		"alias class = name;"
 		"unit main() {"
 		"   var ref<class> x;"
@@ -587,13 +587,13 @@ namespace parser {
 		"decl struct name;"
 		"decl f:name::()->unit;"
 		"decl g:name::()->unit;"
-		"def struct shoe { a : int<8>; c : int<9>; d : int<4>; g : int<1>;};"
+		"def struct shoe { a : int<8>; c : int<8>; d : int<4>; g : int<1>;};"
 		"alias fancy = shoe;"
-		"def struct hair { f : int<3>; a : int<2>; z : int<16>;};"
+		"def struct hair { f : int<4>; a : int<2>; z : int<16>;};"
 		"alias fency = hair;"
 		"def struct name : [ fancy,fency ] { "
 		"    a : int<4>;"
-		"    b : int<5>;"
+		"    b : int<8>;"
 		"    lambda f = () -> unit {"
 		"        g();"
 		"    }"

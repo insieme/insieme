@@ -647,7 +647,7 @@ namespace core {
 		ExpressionPtr sum = builder.add(a, b);
 
 		EXPECT_EQ("int_add(v1, v2)", toString(*sum));
-		EXPECT_EQ("rec _.{_=fun(ref<int<4>,f,f,plain> v3, ref<int<4>,f,f,plain> v4) {return int_add(ref_deref(v3), ref_deref(v4));}}(v1, v2)", toString(*transform::outline(mgr, sum)));
+		EXPECT_EQ("rec _.{_=fun(ref<int<4>,f,f,plain> v20, ref<int<4>,f,f,plain> v21) {return int_add(ref_deref(v20), ref_deref(v21));}}(v1, v2)", toString(*transform::outline(mgr, sum)));
 
 		EXPECT_EQ(sum, transform::tryInlineToExpr(mgr, transform::outline(mgr, sum)));
 	}

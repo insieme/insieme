@@ -62,11 +62,12 @@
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/pointer.h"
 
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/analysis/type_utils.h"
-#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/default_members.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/parentheses.h"
+#include "insieme/core/analysis/type_utils.h"
 
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/encoder/lists.h"
@@ -532,7 +533,7 @@ namespace printer {
 							}
 
 							// print destructor declaration
-							if(record->hasDestructor() && (printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) || !analysis::hasDefaultDestructor(tag))) {
+							if(record->hasDestructor() && (printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) || !analysis::isaDefaultDestructor(analysis::getDestructor(tag)))) {
 								auto destructor = record->getDestructor();
 								if(auto dtorIn = destructor.isa<LambdaExprPtr>()) {
 									auto dtor = tag->peel(dtorIn);
@@ -548,7 +549,7 @@ namespace printer {
 							for (auto memberFunIn : memberFunctions) {
 								auto memberFun = tag->peel(memberFunIn);
 								if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) &&
-									analysis::isaDefaultMember(memberFun))
+									analysis::isaDefaultAssignment(memberFun))
 									continue;
 								if (auto member = memberFun->getImplementation().isa<LambdaExprPtr>()) {
 									newLine();
@@ -829,15 +830,15 @@ namespace printer {
 				auto containsCtorType = [&](const TypePtr& type) {
 					return ::any(node->getConstructors(), [&type](const auto& ctor) { return ctor->getType().getAddressedNode() == type; });
 				};
-				if(!containsCtorType(builder.getDefaultConstructorType(thisType))) {
+				if(!containsCtorType(analysis::buildDefaultDefaultConstructorType(thisType))) {
 					newLine();
 					(*out) << "ctor function () = delete;";
 				}
-				if(!containsCtorType(builder.getDefaultCopyConstructorType(thisType))) {
+				if(!containsCtorType(analysis::buildDefaultCopyConstructorType(thisType))) {
 					newLine();
 					(*out) << "ctor function (other : ref<" << recordName << ",t,f,cpp_ref>) = delete;";
 				}
-				if(!containsCtorType(builder.getDefaultMoveConstructorType(thisType))) {
+				if(!containsCtorType(analysis::buildDefaultMoveConstructorType(thisType))) {
 					newLine();
 					(*out) << "ctor function (other : ref<" << recordName << ",f,f,cpp_rref>) = delete;";
 				}
@@ -852,7 +853,7 @@ namespace printer {
 				// print the destructor definitions
 				if(node->hasDestructor()) {
 					if(auto dtor = node->getDestructor().isa<LambdaExprAddress>()) {
-						if(printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) || !analysis::isDefaultDestructor(dtor.getAddressedNode())) {
+						if(printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) || !analysis::isaDefaultDestructor(dtor.getAddressedNode())) {
 							newLine();
 							(*out) << "dtor ";
 							if(node->getDestructorVirtual() && node->getDestructorVirtual()->getValue()) { (*out) << "virtual "; }
@@ -870,11 +871,11 @@ namespace printer {
 							return memfun->getNameAsString() == utils::getMangledOperatorAssignName() && memfun->getImplementation()->getType().getAddressedNode() == type;
 					});
 				};
-				if(!containsAssignOperatorType(builder.getDefaultCopyAssignOperatorType(thisType))) {
+				if(!containsAssignOperatorType(analysis::buildDefaultCopyAssignOperatorType(thisType))) {
 					newLine();
 					(*out) << "function " << utils::getMangledOperatorAssignName() << " = (rhs : ref<" << recordName << ",t,f,cpp_ref>) -> ref<" << recordName << ",f,f,cpp_ref> = delete;";
 				}
-				if(!containsAssignOperatorType(builder.getDefaultMoveAssignOperatorType(thisType))) {
+				if(!containsAssignOperatorType(analysis::buildDefaultMoveAssignOperatorType(thisType))) {
 					newLine();
 					(*out) << "function " << utils::getMangledOperatorAssignName() << " = (rhs : ref<" << recordName << ",f,f,cpp_rref>) -> ref<" << recordName << ",f,f,cpp_ref> = delete;";
 				}
@@ -882,7 +883,7 @@ namespace printer {
 				// and then all the ones which are present
 				auto memberfuns = node->getMemberFunctions();
 				for(auto memberFun : memberfuns) {
-					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(memberFun.getAddressedNode())) continue;
+					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultAssignment(memberFun.getAddressedNode())) continue;
 					newLine();
 					visit(memberFun);
 				}
@@ -1127,7 +1128,7 @@ namespace printer {
 			}
 
 			PRINT(MemberFunction) {
-				if(!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultMember(node.getAddressedNode())) return;
+				if(!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultAssignment(node.getAddressedNode())) return;
 				if(auto impl = node->getImplementation().isa<LambdaExprAddress>()) {
 					if(node->isVirtual()) (*out) << "virtual ";
 					printMemberFunctionInternal(impl->getLambda(), node->getName()->getValue());
@@ -1156,7 +1157,7 @@ namespace printer {
 					// check if lambda is a default constructor and printing for them is enabled
 					if(!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultConstructor(nodePtr)) return;
 				} else if(funType->isDestructor()) {
-					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isDefaultDestructor(nodePtr)) return;
+					if (!printer.hasOption(PrettyPrinter::PRINT_DEFAULT_MEMBERS) && analysis::isaDefaultDestructor(nodePtr)) return;
 				}
 
 				auto freeIt = visitedFreeFunctions.find(node->getReference());

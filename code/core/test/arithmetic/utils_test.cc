@@ -361,8 +361,8 @@ namespace arithmetic {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		VariablePtr v1 = builder.variable(mgr.getLangBasic().getInt4());
-		VariablePtr v2 = builder.variable(mgr.getLangBasic().getInt4());
+		VariablePtr v1 = builder.variable(mgr.getLangBasic().getInt4(), 1);
+		VariablePtr v2 = builder.variable(mgr.getLangBasic().getInt4(), 2);
 
 		Formula f = 2 + v1 + v2 * 5 - (v1 ^ 2);
 		EXPECT_EQ("-v1^2+v1+5*v2+2", toString(f));
@@ -393,8 +393,8 @@ namespace arithmetic {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		VariablePtr v1 = builder.variable(mgr.getLangBasic().getInt4());
-		VariablePtr v2 = builder.variable(mgr.getLangBasic().getInt4());
+		VariablePtr v1 = builder.variable(mgr.getLangBasic().getInt4(), 1);
+		VariablePtr v2 = builder.variable(mgr.getLangBasic().getInt4(), 2);
 
 		Formula f = 2 + v1 + v2 * 5 - (v1 ^ 2);
 		Inequality c(f);
@@ -418,8 +418,8 @@ namespace arithmetic {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		VariablePtr v1 = builder.variable(mgr.getLangBasic().getInt4());
-		VariablePtr v2 = builder.variable(mgr.getLangBasic().getInt4());
+		VariablePtr v1 = builder.variable(mgr.getLangBasic().getInt4(), 1);
+		VariablePtr v2 = builder.variable(mgr.getLangBasic().getInt4(), 2);
 
 		Formula f = -2 - v1 + (v1 ^ 2);
 		Constraint c1 = (f <= 0);
@@ -453,9 +453,9 @@ namespace arithmetic {
 
 		using utils::ConstraintType;
 
-		VariablePtr v1 = builder.variable(mgr.getLangBasic().getInt4());
-		VariablePtr v2 = builder.variable(mgr.getLangBasic().getInt4());
-		VariablePtr v3 = builder.variable(mgr.getLangBasic().getInt4());
+		VariablePtr v1 = builder.variable(mgr.getLangBasic().getInt4(), 1);
+		VariablePtr v2 = builder.variable(mgr.getLangBasic().getInt4(), 2);
+		VariablePtr v3 = builder.variable(mgr.getLangBasic().getInt4(), 3);
 
 		Piecewise pw;
 		pw = pw + Piecewise(v1 + (v1 ^ 2) >= 0, 3 + 4 - v1);
@@ -489,7 +489,7 @@ namespace arithmetic {
 		auto& basic = mgr.getLangBasic();
 
 		// reconstruct expression
-		VariablePtr v1 = builder.variable(basic.getInt4());
+		VariablePtr v1 = builder.variable(basic.getInt4(), 1);
 		ExpressionPtr ten = builder.castExpr(basic.getUInt4(), builder.intLit(10));
 		//	ExpressionPtr expr = builder.callExpr(basic.getInt4(), basic.getSignedIntSub(), v1, ten);
 		ExpressionPtr expr = builder.sub(v1, ten);
@@ -507,8 +507,8 @@ namespace arithmetic {
 
 		using utils::ConstraintType;
 
-		Formula v1 = Formula(builder.variable(mgr.getLangBasic().getInt4()));
-		Formula v2 = Formula(builder.variable(mgr.getLangBasic().getInt4()));
+		Formula v1 = Formula(builder.variable(mgr.getLangBasic().getInt4(), 1));
+		Formula v2 = Formula(builder.variable(mgr.getLangBasic().getInt4(), 2));
 
 		auto all = checks::getFullCheck();
 

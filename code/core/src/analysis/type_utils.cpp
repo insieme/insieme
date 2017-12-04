@@ -44,6 +44,7 @@
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/analysis/compare.h"
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/annotations/naming.h"
@@ -250,15 +251,15 @@ namespace analysis {
 		// if we should check for a trivial type, we also check for a trivial default constructor here
 		if(checkTrivial) {
 			// the defult constructor must not be deleted and be either implicit or defaulted)
-			auto defaultConstructor = getCtorByType(builder.getDefaultConstructorType(thisType));
+			auto defaultConstructor = getCtorByType(analysis::buildDefaultDefaultConstructorType(thisType));
 			if(!defaultConstructor || !isaDefaultMember(defaultConstructor)) return false;
 		}
 
 		// check for trivial constructors. They have to be either deleted or (implicitly) defaulted
-		auto copyConstructor = getCtorByType(builder.getDefaultCopyConstructorType(thisType));
+		auto copyConstructor = getCtorByType(analysis::buildDefaultCopyConstructorType(thisType));
 		if(copyConstructor && !isaDefaultMember(copyConstructor)) return false;
 
-		auto moveConstructor = getCtorByType(builder.getDefaultMoveConstructorType(thisType));
+		auto moveConstructor = getCtorByType(analysis::buildDefaultMoveConstructorType(thisType));
 		if(moveConstructor && !isaDefaultMember(moveConstructor)) return false;
 
 		// check trivial destructor
@@ -266,10 +267,10 @@ namespace analysis {
 		if(destructor && !isaDefaultMember(destructor)) return false;
 
 		// check for trivial copy and move assignments
-		auto copyAssignment = getAssignmentOperatorByType(builder.getDefaultCopyAssignOperatorType(thisType));
+		auto copyAssignment = getAssignmentOperatorByType(analysis::buildDefaultCopyAssignOperatorType(thisType));
 		if(copyAssignment && !isaDefaultMember(copyAssignment)) return false;
 
-		auto moveAssignment = getAssignmentOperatorByType(builder.getDefaultMoveAssignOperatorType(thisType));
+		auto moveAssignment = getAssignmentOperatorByType(analysis::buildDefaultMoveAssignOperatorType(thisType));
 		if(moveAssignment && !isaDefaultMember(moveAssignment)) return false;
 
 		// check for virtual member functions
@@ -382,91 +383,6 @@ namespace analysis {
 		}
 		for (const auto& cur : record->getPureVirtualMemberFunctions()) {
 			if (*funType == *cur->getType() && cur->getNameAsString() == name) return true;
-		}
-		return false;
-	}
-
-	boost::optional<core::ExpressionPtr> getDefaultConstructor(const TagTypePtr& type) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-		auto thisType = builder.refType(type->getTag());
-		auto ctorType = builder.functionType(TypeList{ thisType }, thisType, FK_CONSTRUCTOR);
-		return hasConstructorOfType(type, ctorType);
-	}
-	bool hasDefaultConstructor(const TagTypePtr& type) {
-		return getDefaultConstructor(type);
-	}
-
-	boost::optional<core::ExpressionPtr> getCopyConstructor(const TagTypePtr& type) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-		auto otherType = builder.refType(type->getTag(), true, false, lang::ReferenceType::Kind::CppReference);
-		return hasConstructorAccepting(type, otherType);
-	}
-	bool hasCopyConstructor(const TagTypePtr& type) {
-		return getCopyConstructor(type);
-	}
-
-	boost::optional<core::ExpressionPtr> getMoveConstructor(const TagTypePtr& type) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-		auto otherType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppRValueReference);
-		return hasConstructorAccepting(type, otherType);
-	}
-	bool hasMoveConstructor(const TagTypePtr& type) {
-		return getMoveConstructor(type);
-	}
-
-	bool hasCopyAssignment(const TagTypePtr& type) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-		auto thisType = builder.refType(type->getTag());
-		auto otherType = builder.refType(type->getTag(), true, false, lang::ReferenceType::Kind::CppReference);
-		auto resType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppReference);
-		auto funType = builder.functionType(TypeList{ thisType, otherType }, resType, FK_MEMBER_FUNCTION);
-		return hasMemberOfType(type, utils::getMangledOperatorAssignName(), funType);
-	}
-
-	bool hasMoveAssignment(const TagTypePtr& type) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-		auto thisType = builder.refType(type->getTag());
-		auto otherType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppRValueReference);
-		auto resType = builder.refType(type->getTag(), false, false, lang::ReferenceType::Kind::CppReference);
-		auto funType = builder.functionType(TypeList{ thisType, otherType }, resType, FK_MEMBER_FUNCTION);
-		return hasMemberOfType(type, utils::getMangledOperatorAssignName(), funType);
-	}
-
-	bool isaDefaultConstructor(const ExpressionPtr& ctor) {
-		if (auto lambda = ctor.isa<LambdaExprPtr>()) {
-			return lambda->getType().as<FunctionTypePtr>().isConstructor() && isaDefaultMember(lambda);
-		}
-		return false;
-	}
-
-	bool isDefaultDestructor(const ExpressionPtr& dtor) {
-		if (auto lambda = dtor.isa<LambdaExprPtr>()) {
-			return lambda->getType().as<FunctionTypePtr>().isDestructor() && isaDefaultMember(lambda);
-		}
-		return false;
-	}
-
-	bool hasDefaultDestructor(const TagTypePtr& type) {
-		auto record = type->getRecord();
-		return hasDefaultDestructor(record);
-	}
-
-	bool hasDefaultDestructor(const RecordPtr& record) {
-		return record->hasDestructor() && isDefaultDestructor(record->getDestructor());
-	}
-
-	bool isaDefaultMember(const MemberFunctionPtr& memberFunction) {
-		//only assignment operators can be default member functions
-		if (memberFunction->getNameAsString() != utils::getMangledOperatorAssignName()) return false;
-
-		const auto& impl = memberFunction->getImplementation();
-		if(auto lambda = impl.isa<LambdaExprPtr>()) {
-			return lambda->getType().as<FunctionTypePtr>().isMemberFunction() && isaDefaultMember(lambda);
 		}
 		return false;
 	}

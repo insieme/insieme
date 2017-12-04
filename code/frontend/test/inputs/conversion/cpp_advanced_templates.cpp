@@ -155,6 +155,10 @@ int main() {
 	#pragma test expect_ir(R"(
 		def struct IMP_NonTypeTemplateClass_2 {
 			x : int<4>;
+			ctor function() {
+				lit(""INSIEME_DEFAULTED"":ref<array<char,18u>,t,f>);
+				<ref<int<4>,f,f,plain>>(this.x) {2};
+			}
 		};
 		def struct IMP_NonTypeTemplateClass_1 {
 		};

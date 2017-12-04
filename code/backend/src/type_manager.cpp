@@ -50,6 +50,7 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"

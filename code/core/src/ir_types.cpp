@@ -50,6 +50,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/lang/reference.h"
 
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
@@ -603,19 +604,26 @@ namespace core {
 		auto thisType = builder.refType(builder.tagTypeReference(name));
 		return get(manager, name, parents, fields,
 				Expressions::get(manager, toVector<ExpressionPtr>(
-						builder.getDefaultConstructor(thisType, parents, fields),
-						builder.getDefaultCopyConstructor(thisType, parents, fields),
-						builder.getDefaultMoveConstructor(thisType, parents, fields)
+						analysis::buildDefaultDefaultConstructor(thisType, parents, fields),
+						analysis::buildDefaultCopyConstructor(thisType, parents, fields),
+						analysis::buildDefaultMoveConstructor(thisType, parents, fields)
 				)),
-				builder.getDefaultDestructor(thisType),
+				analysis::buildDefaultDestructor(thisType, parents, fields),
 				BoolValue::get(manager, false),
 				MemberFunctions::get(manager, toVector<MemberFunctionPtr>(
-						builder.getDefaultCopyAssignOperator(thisType, parents, fields),
-						builder.getDefaultMoveAssignOperator(thisType, parents, fields)
+						analysis::buildDefaultCopyAssignOperator(thisType, parents, fields),
+						analysis::buildDefaultMoveAssignOperator(thisType, parents, fields)
 				)),
 				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList()),
 				StaticMemberFunctions::get(manager, StaticMemberFunctionList())
 			);
+	}
+
+	StructPtr Struct::getStructWithFieldsAndNoDefaults(NodeManager& mgr, const std::string& name, const vector<FieldPtr>& fields) {
+		std::cerr << "WARNING: You are using a method intended for internal testing only in " << __FILE__ << ":" << __LINE__ << std::endl;
+		return get(mgr, StringValue::get(mgr, name), Parents::get(mgr, ParentList()), Fields::get(mgr, fields), Expressions::get(mgr, ExpressionList()),
+		           Expressions::get(mgr, ExpressionList()), BoolValue::get(mgr, false),
+		           MemberFunctions::get(mgr, MemberFunctionList()), PureVirtualMemberFunctions::get(mgr, PureVirtualMemberFunctionList()), StaticMemberFunctions::get(mgr,StaticMemberFunctionList()));
 	}
 
 	UnionPtr Union::get(NodeManager & manager, const StringValuePtr& name, const FieldsPtr& fields) {
@@ -624,15 +632,15 @@ namespace core {
 		auto parents = builder.parents(ParentList());
 		return get(manager, name, fields,
 				Expressions::get(manager, toVector<ExpressionPtr>(
-						builder.getDefaultConstructor(thisType, parents, fields),
-						builder.getDefaultCopyConstructor(thisType, parents, fields),
-						builder.getDefaultMoveConstructor(thisType, parents, fields)
+						analysis::buildDefaultDefaultConstructor(thisType, parents, fields),
+						analysis::buildDefaultCopyConstructor(thisType, parents, fields),
+						analysis::buildDefaultMoveConstructor(thisType, parents, fields)
 				)),
-				builder.getDefaultDestructor(thisType),
+				analysis::buildDefaultDestructor(thisType, parents, fields),
 				BoolValue::get(manager, false),
 				MemberFunctions::get(manager, toVector<MemberFunctionPtr>(
-						builder.getDefaultCopyAssignOperator(thisType, parents, fields),
-						builder.getDefaultMoveAssignOperator(thisType, parents, fields)
+						analysis::buildDefaultCopyAssignOperator(thisType, parents, fields),
+						analysis::buildDefaultMoveAssignOperator(thisType, parents, fields)
 				)),
 				PureVirtualMemberFunctions::get(manager, PureVirtualMemberFunctionList()),
 				StaticMemberFunctions::get(manager, StaticMemberFunctionList())

@@ -48,6 +48,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/materialize.h"
 #include "insieme/core/analysis/default_delete_member_semantics.h"
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/annotations/default_delete.h"
 #include "insieme/core/annotations/naming.h"
@@ -90,6 +91,20 @@ namespace parser {
 			  parser(*this, scanner), printedErrors(false), parserIRExtension(mgr.getLangExtension<ParserIRExtension>()) {
 			// begin the global scope
 			openScope();
+
+			// we need to call the getters of all builtins once, in order for them to be actually marked as builtins.
+			// Note that we must avoid a circular calling pattern here, as the builtins will of course also be parsed using this parser here.
+			if(!mgr.getLangBasic().hasBeenInitialized()) {
+				mgr.getLangBasic().setInitialized();
+
+				#define TYPE(_id, _spec)                                     mgr.getLangBasic().get##_id();
+				#define LITERAL(_id, _name, _spec)                           mgr.getLangBasic().get##_id();
+				#define DERIVED(_id, _name, _code) LITERAL(_id, _name, fail) mgr.getLangBasic().get##_id();
+				#define OPERATION(_type, _op, _name, _spec)                  mgr.getLangBasic().get##_type##_op();
+				#define DERIVED_OP(_type, _op, _name, _spec)                 mgr.getLangBasic().get##_type##_op();
+
+				#include "insieme/core/lang/inspire_api/lang.def"
+			}
 		}
 
 		InspireDriver::~InspireDriver() {}
@@ -438,7 +453,7 @@ namespace parser {
 				// handle defaulted and deleted members
 				analysis::CppDefaultDeleteMembers inputMembers(mgr, ctors, dtor, mfuns);
 				auto recordMembers = analysis::applyCppDefaultDeleteSemantics(builder.refType(key), builder.parents(parents),
-				                                                              builder.fields(fields), inputMembers);
+				                                                              builder.fields(fields), {}, inputMembers);
 
 				// register/update all lambdas in the TU
 				auto registerInTu = [&tu](const core::analysis::MemberProperties& member) {
@@ -1215,12 +1230,12 @@ namespace parser {
 
 		LiteralList InspireDriver::getDefaultMemberLiterals(const TypePtr& thisType) const {
 			return {
-				builder.getLiteralForConstructor(builder.getDefaultConstructorType(thisType)),
-				builder.getLiteralForConstructor(builder.getDefaultCopyConstructorType(thisType)),
-				builder.getLiteralForConstructor(builder.getDefaultMoveConstructorType(thisType)),
-				builder.getLiteralForDestructor(builder.getDefaultDestructorType(thisType)),
-				builder.getLiteralForMemberFunction(builder.getDefaultCopyAssignOperatorType(thisType), utils::getMangledOperatorAssignName()),
-				builder.getLiteralForMemberFunction(builder.getDefaultMoveAssignOperatorType(thisType), utils::getMangledOperatorAssignName())
+				builder.getLiteralForConstructor(analysis::buildDefaultDefaultConstructorType(thisType)),
+				builder.getLiteralForConstructor(analysis::buildDefaultCopyConstructorType(thisType)),
+				builder.getLiteralForConstructor(analysis::buildDefaultMoveConstructorType(thisType)),
+				builder.getLiteralForDestructor(analysis::buildDefaultDestructorType(thisType)),
+				builder.getLiteralForMemberFunction(analysis::buildDefaultCopyAssignOperatorType(thisType), utils::getMangledOperatorAssignName()),
+				builder.getLiteralForMemberFunction(analysis::buildDefaultMoveAssignOperatorType(thisType), utils::getMangledOperatorAssignName())
 			};
 		}
 

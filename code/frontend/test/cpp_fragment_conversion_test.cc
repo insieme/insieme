@@ -66,6 +66,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, DefaultConstructorDeclaration) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_constructor_declaration.cpp"); }
 
+	TEST(CppConversionTest, DefaultMemberInitialization) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_default_member_initialization.cpp"); }
+
 	TEST(CppConversionTest, Destructors) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_destructors.cpp"); }
 
 	TEST(CppConversionTest, Enum) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_enum.cpp"); }

@@ -303,9 +303,9 @@ namespace core {
 
 		StatementPtr body = builder.getNoOp();
 
-		ForStmtPtr stmt = builder.forStmt(var, start, end, step, body);
+		ForStmtPtr stmt = builder.normalize(builder.forStmt(var, start, end, step, body));
 
-		EXPECT_EQ("for(int<4> v1 = 1 .. 9 : 2) {}", toString(*stmt));
+		EXPECT_EQ("for(int<4> v0 = 1 .. 9 : 2) {}", toString(*stmt));
 
 		// check hash codes, children and cloning
 		basicNodeTests(stmt, toVector<NodePtr>(stmt->getDeclaration(), end, step, body));

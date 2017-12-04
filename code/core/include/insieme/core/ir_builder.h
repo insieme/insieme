@@ -334,24 +334,6 @@ namespace core {
 
 		// -- special functions for classes --
 
-		FunctionTypePtr getDefaultConstructorType(const TypePtr& thisType) const;
-		LambdaExprPtr   getDefaultConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
-
-		FunctionTypePtr getDefaultCopyConstructorType(const TypePtr& thisType) const;
-		LambdaExprPtr   getDefaultCopyConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
-
-		FunctionTypePtr getDefaultMoveConstructorType(const TypePtr& thisType) const;
-		LambdaExprPtr   getDefaultMoveConstructor(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
-
-		FunctionTypePtr getDefaultDestructorType(const TypePtr& thisType) const;
-		LambdaExprPtr   getDefaultDestructor(const TypePtr& thisType) const;
-
-		FunctionTypePtr   getDefaultCopyAssignOperatorType(const TypePtr& thisType) const;
-		MemberFunctionPtr getDefaultCopyAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
-
-		FunctionTypePtr   getDefaultMoveAssignOperatorType(const TypePtr& thisType) const;
-		MemberFunctionPtr getDefaultMoveAssignOperator(const TypePtr& thisType, const ParentsPtr& parents, const FieldsPtr& fields) const;
-
 	  private:
 		LiteralPtr getLiteralForMember(const FunctionTypePtr& functionType, const std::string& memberName) const;
 

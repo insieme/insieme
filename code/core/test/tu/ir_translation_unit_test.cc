@@ -43,6 +43,7 @@
 #include "insieme/core/tu/ir_translation_unit_io.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/type_utils.h"
 
 namespace insieme {
@@ -208,8 +209,8 @@ namespace tu {
 		auto literalMemberFunctionG = builder.literal("A::g", lambdaG->getFunctionType());
 		tu.addFunction(literalMemberFunctionG, lambdaG);
 		std::cout << "Registered member function " << literalMemberFunctionG << " of type " << literalMemberFunctionG->getType() << "\n";
+		auto recordType = builder.structType("A", ParentList(), FieldList(), ExpressionList(), analysis::buildDefaultDestructor(thisType, builder.parents(), builder.fields()), false, toVector(memberFunctionF, memberFunctionG), PureVirtualMemberFunctionList(), StaticMemberFunctionList());
 
-		auto recordType = builder.structType("A", ParentList(), FieldList(), ExpressionList(), builder.getDefaultDestructor(thisType), false, toVector(memberFunctionF, memberFunctionG), PureVirtualMemberFunctionList(), StaticMemberFunctionList());
 		tu.addType(genericType, recordType);
 
 		std::cout << "\nContents of TU:\n";

@@ -62,46 +62,6 @@ namespace analysis {
 		EXPECT_TRUE(isConstructorCall(call));
 	}
 
-	TEST(IRppUtils, DefaultedMembers) {
-		NodeManager man;
-		IRBuilder builder(man);
-
-		auto addresses = builder.parseAddressesStatement(R"(
-			def struct S { };
-			def struct O {
-				ctor () { "Nonstandard"; }
-				lambda f = () -> unit {}
-			};
-			{
-				var ref<S> s = $S::(s)$;
-				$S::(s, ref_cast(s, type_lit(t), type_lit(f), type_lit(cpp_ref)))$;
-				$s.)" + utils::getMangledOperatorAssignName() + R"((ref_cast(s, type_lit(t), type_lit(f), type_lit(cpp_ref)))$;
-				$s.)" + utils::getMangledOperatorAssignName() + R"((ref_kind_cast(s, type_lit(cpp_rref)))$;
-
-				var ref<O> o = $O::(o)$;
-				$O::(o, ref_cast(o, type_lit(t), type_lit(f), type_lit(cpp_ref)))$;
-				$o.)" + utils::getMangledOperatorAssignName() + R"((ref_cast(o, type_lit(t), type_lit(f), type_lit(cpp_ref)))$;
-				$o.f()$;
-			}
-		)");
-
-		auto extractLambda = [](const NodeAddress& addr) {
-			return addr.getAddressedNode().as<CallExprPtr>()->getFunctionExpr().as<LambdaExprPtr>();
-		};
-
-		ASSERT_EQ(8, addresses.size());
-
-		EXPECT_TRUE (isaDefaultMember(extractLambda(addresses[0]))); // default ctor
-		EXPECT_TRUE (isaDefaultMember(extractLambda(addresses[1]))); // copy ctor
-		EXPECT_TRUE (isaDefaultMember(extractLambda(addresses[2]))); // copy assignment
-		EXPECT_TRUE (isaDefaultMember(extractLambda(addresses[3]))); // move assignment
-
-		EXPECT_FALSE(isaDefaultMember(extractLambda(addresses[4]))); // non-default ctor
-		EXPECT_TRUE (isaDefaultMember(extractLambda(addresses[5]))); // copy ctor
-		EXPECT_TRUE (isaDefaultMember(extractLambda(addresses[6]))); // copy assignment
-		EXPECT_FALSE(isaDefaultMember(extractLambda(addresses[7]))); // member function
-	}
-
 	TEST(IRppUtils, isIRpp) {
 		// checking, if, starting from a nodePtr, there are some object orientated constructs
 		NodeManager nm;

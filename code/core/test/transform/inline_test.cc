@@ -160,7 +160,7 @@ namespace transform {
 
 			auto result = inlineMultiReturn(nm, ir);
 
-			EXPECT_EQ("{{var ref<bool,f,f,plain> v0 = false;{{v1 = 1;v0 = true;}}}}",
+			EXPECT_EQ("{{var ref<bool,f,f,plain> v0 = false;{{v20 = 1;v0 = true;}}}}",
 				toString(printer::PrettyPrinter(core::analysis::normalize(result), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 		}
 

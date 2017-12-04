@@ -39,6 +39,7 @@
 
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/analysis/default_delete_member_semantics.h"
 #include "insieme/core/lang/reference.h"
 #include "insieme/frontend/clang.h"
 
@@ -114,6 +115,20 @@ namespace utils {
 	core::analysis::MemberProperties createDefaultCtorFromDefaultCtorWithDefaultParams(conversion::Converter& converter,
 	                                                                                   const clang::CXXConstructorDecl* ctorDecl,
 	                                                                                   const core::analysis::MemberProperties& defaultCtorWithParams);
+
+	/// Creates a new struct or union (depending on the passed flag) with the given recordName, parents and fields.
+	/// Also the constructors, destructor and member functions passed in recordMembers will be added.
+	/// This function will correctly honour defaulted and deleted members as well as create all the missing default members according to C++ semantics.
+	/// This function will also take care of registering all ctors/dtor/member functions in the IrTU (not the returned type itself though)
+	///
+	core::TagTypePtr createStructOrUnion(conversion::Converter& converter, bool isStruct,
+	                                     const core::GenericTypePtr& recordName, const core::ParentList& parents, const core::FieldList& fields,
+	                                     const core::analysis::FieldInitMap& fieldInits,
+	                                     core::analysis::CppDefaultDeleteMembers recordMembersIn,
+	                                     bool destructorVirtual, const core::PureVirtualMemberFunctionList& pvMembers,
+										 const core::StaticMemberFunctionList& sFuns = core::StaticMemberFunctionList());
+	core::TagTypePtr createStructOrUnion(conversion::Converter& converter, bool isStruct,
+	                                     const core::GenericTypePtr& recordName, const core::FieldList& fields);
 
 } // end namespace utils
 } // end namespace frontend

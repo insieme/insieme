@@ -41,6 +41,7 @@
 #include "insieme/frontend/state/function_manager.h"
 
 #include "insieme/core/analysis/default_delete_member_semantics.h"
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir.h"
@@ -256,7 +257,7 @@ namespace utils {
 
 		// get necessary stuff
 		auto thisType = getThisType(converter, ctorDecl);
-		auto ctorType = builder.getDefaultConstructorType(thisType);
+		auto ctorType = core::analysis::buildDefaultDefaultConstructorType(thisType);
 		auto thisVariable = builder.variable(builder.refType(thisType));
 		const auto& paramTypes = otherCtorLit->getType().as<core::FunctionTypePtr>()->getParameterTypeList();
 
@@ -290,6 +291,45 @@ namespace utils {
 		res.literal = builder.getLiteralForConstructor(ctorType);
 		res.lambda = builder.lambdaExpr(ctorType, toVector(thisVariable), builder.compoundStmt(body));
 		return res;
+	}
+
+	core::TagTypePtr createStructOrUnion(conversion::Converter& converter, bool isStruct,
+	                                     const core::GenericTypePtr& recordName, const core::ParentList& parents, const core::FieldList& fields,
+	                                     const core::analysis::FieldInitMap& fieldInits,
+	                                     core::analysis::CppDefaultDeleteMembers recordMembersIn,
+	                                     bool destructorVirtual, const core::PureVirtualMemberFunctionList& pvMembers, const core::StaticMemberFunctionList& sFuns) {
+
+		core::IRBuilder builder(recordName->getNodeManager());
+
+		// first, apply the default and delete semantics
+		auto recordMembers = core::analysis::applyCppDefaultDeleteSemantics(builder.refType(recordName), parents, fields, fieldInits, recordMembersIn);
+
+		// then register all lambdas in the TU
+		auto registerInTu = [&converter](const core::analysis::MemberProperties& member) {
+			if(member.literal && member.lambda) {
+				VLOG(2) << "adding method lambda literal " << *member.literal << " of type " << dumpColor(member.literal->getType()) << " to IRTU";
+				converter.getIRTranslationUnit().addFunction(member.literal, member.lambda);
+			}
+		};
+		::for_each(recordMembers.constructors, [&](const auto& ctor) { registerInTu(ctor); });
+		if(recordMembers.destructor) registerInTu(*recordMembers.destructor);
+		::for_each(recordMembers.memberFunctions, [&](const auto& mfun) { registerInTu(mfun); });
+
+		// and finally create new structTy/unionTy
+		if(isStruct) {
+			return builder.structType(recordName->getName()->getValue(), parents, fields, recordMembers.getConstructorLiteralList(),
+			                          recordMembers.getDestructorLiteral(), destructorVirtual,
+			                          recordMembers.getMemberFunctionList(), pvMembers, sFuns);
+		} else {
+			return builder.unionType(recordName->getName()->getValue(), fields, recordMembers.getConstructorLiteralList(),
+			                         recordMembers.getDestructorLiteral(), destructorVirtual,
+			                         recordMembers.getMemberFunctionList(), pvMembers, sFuns);
+		}
+	}
+
+	core::TagTypePtr createStructOrUnion(conversion::Converter& converter, bool isStruct,
+	                                     const core::GenericTypePtr& recordName, const core::FieldList& fields) {
+		return createStructOrUnion(converter, isStruct, recordName, {}, fields, {}, {}, false, {}, {});
 	}
 
 } // end namespace utils

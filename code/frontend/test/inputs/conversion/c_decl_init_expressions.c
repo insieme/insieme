@@ -126,46 +126,165 @@ int main() {
 	// STRUCT TYPES //////////////////////////////////////////////////////////////
 
 	// basic
-	#pragma test expect_ir("REGEX_S", R"(.*var ref<struct \{ a : int<4>; b : real<4>; \},f,f,plain> v0 =.*)")
-	{ struct { int a; float b; } sif = { 1, 1.0f }; }
+	#pragma test expect_ir(R"(
+		def struct __any_string__struct {
+			a : int<4>;
+			b : real<4>;
+		};
+		{
+			var ref<__any_string__struct,f,f,plain> v0 = <ref<__any_string__struct,f,f,plain>>(ref_decl(type_lit(ref<__any_string__struct,f,f,plain>))) {1, 1.0E+0f};
+		}
+	)")
+	{
+		struct {
+			int a; float b;
+		} sif = { 1, 1.0f };
+	}
 
 	// implicit
-	#pragma test expect_ir("REGEX_S", R"(.*var ref<struct \{ a : int<4>; b : real<4>; c : uint<4>; \},f,f,plain> v0 =.*)")
-	{ struct { int a; float b; unsigned c; } sifc = { .a = 1, .c = 2u }; }
+	#pragma test expect_ir(R"(
+		def struct __any_string__struct {
+			a : int<4>;
+			b : real<4>;
+			c : uint<4>;
+		};
+		{
+			var ref<__any_string__struct,f,f,plain> v0 = <ref<__any_string__struct,f,f,plain>>(ref_decl(type_lit(ref<__any_string__struct,f,f,plain>))) {1, 0.0f, 2u};
+		}
+	)")
+	{
+		struct {
+			int a; float b; unsigned c;
+		} sifc = { .a = 1, .c = 2u };
+	}
 
 	// explicit
-	#pragma test expect_ir("REGEX_S", R"(.*var ref<struct \{ a : int<4>; b : real<4>; c : uint<4>; \},f,f,plain> v0 =.*)")
-	{ struct { int a; float b; unsigned c; } sifc2 = { 1, 0.0f, 2u }; }
+	#pragma test expect_ir(R"(
+		def struct __any_string__struct {
+			a : int<4>;
+			b : real<4>;
+			c : uint<4>;
+		};
+		{
+			var ref<__any_string__struct,f,f,plain> v0 = <ref<__any_string__struct,f,f,plain>>(ref_decl(type_lit(ref<__any_string__struct,f,f,plain>))) {1, 0.0E+0f, 2u};
+		}
+	)")
+	{
+		struct {
+			int a; float b; unsigned c;
+		} sifc2 = { 1, 0.0f, 2u };
+	}
 
 	// UNION TYPES //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("REGEX_S", R"(.*var ref<union \{ a : int<4>; b : real<4>; \},f,f,plain> v0 = .*)")
-	{ union { int a; float b; } uif = { 1 }; }
+	#pragma test expect_ir(R"(
+		def union __any_string__union {
+			a : int<4>;
+			b : real<4>;
+		};
+		{
+			var ref<__any_string__union,f,f,plain> v0 = <ref<__any_string__union,f,f,plain>>(ref_decl(type_lit(ref<__any_string__union,f,f,plain>))) {1};
+		}
+	)")
+	{
+		union {
+			int a; float b;
+		} uif = { 1 };
+	}
 
 
-	#pragma test expect_ir("REGEX_S", R"(.*var ref<union \{ a : int<4>; b : real<4>; \},f,f,plain> v0 = .*)")
-	{ union { int a; float b; } uif = { .a = 1 }; }
+	#pragma test expect_ir(R"(
+		def union __any_string__union {
+			a : int<4>;
+			b : real<4>;
+		};
+		{
+			var ref<__any_string__union,f,f,plain> v0 = <ref<__any_string__union,f,f,plain>>(ref_decl(type_lit(ref<__any_string__union,f,f,plain>))) {1};
+		}
+	)")
+	{
+		union {
+			int a; float b;
+		} uif = { .a = 1 };
+	}
 
-	#pragma test expect_ir("REGEX_S", R"(.*var ref<union \{ a : int<4>; b : real<4>; \},f,f,plain> v0 = .*)")
-	{ union { int a; float b; } uif = { .b = 1.0f }; }
+	#pragma test expect_ir(R"(
+		def union __any_string__union {
+			a : int<4>;
+			b : real<4>;
+		};
+		{
+			var ref<__any_string__union,f,f,plain> v0 = <ref<__any_string__union,f,f,plain>>(ref_decl(type_lit(ref<__any_string__union,f,f,plain>))) {1.0E+0f};
+		}
+	)")
+	{
+		union {
+			int a; float b;
+		} uif = { .b = 1.0f };
+	}
 
 	// NESTED INITIALIZERS //////////////////////////////////////////////////////
 
-	#pragma test expect_ir("REGEX_S", R"(.*ref<struct \{ is : struct \{ inner1 : int<4>; inner2 : real<4>; \}; iu : union \{ u1 : int<4>; u2 : real<4>; \}; \},f,f,plain> v0 = .*)")
-	{ struct { struct { int inner1; float inner2; } is; union { int u1; float u2; } iu; } su = { { 1, 2.0f }, { 3 } }; }
+	#pragma test expect_ir(R"(
+		def struct __any_string__struct_inner {
+			inner1 : int<4>;
+			inner2 : real<4>;
+		};
+		def union __any_string__union_inner {
+			u1 : int<4>;
+			u2 : real<4>;
+		};
+		def struct __any_string__struct {
+			is : __any_string__struct_inner;
+			iu : __any_string__union_inner;
+		};
+		{
+			var ref<__any_string__struct,f,f,plain> v0 = <ref<__any_string__struct,f,f,plain>>(
+					ref_decl(type_lit(ref<__any_string__struct,f,f,plain>))) {
+							<ref<__any_string__struct_inner,f,f,plain>>(ref_temp(type_lit(__any_string__struct_inner))) {1, 2.0E+0f},
+							<ref<__any_string__union_inner,f,f,plain>>(ref_temp(type_lit(__any_string__union_inner))) {3}};
+		}
+	)")
+	{
+		struct {
+			struct { int inner1; float inner2; } is;
+			union { int u1; float u2; } iu;
+		} su = { { 1, 2.0f }, { 3 } };
+	}
 
-	#pragma test expect_ir("REGEX_S", R"(.*ref<array<struct \{ a : int<4>; b : uint<4>;  \},2u>,f,f,plain> v0 = .*)")
-	{ struct { int a; unsigned b; } su[2] = { { 1, 2u }, { 3, 4u } }; }
+	#pragma test expect_ir(R"(
+		def struct __any_string__struct {
+			a : int<4>;
+			b : uint<4>;
+		};
+		{
+			var ref<array<__any_string__struct,2u>,f,f,plain> v0 = <ref<array<__any_string__struct,2u>,f,f,plain>>(
+					ref_decl(type_lit(ref<array<__any_string__struct,2u>,f,f,plain>))) {
+							<ref<__any_string__struct,f,f,plain>>(ref_temp(type_lit(__any_string__struct))) {1, 2u},
+							<ref<__any_string__struct,f,f,plain>>(ref_temp(type_lit(__any_string__struct))) {3, 4u}};
+		}
+	)")
+	{
+		struct {
+			int a; unsigned b;
+		} su[2] = { { 1, 2u }, { 3, 4u } };
+	}
 
-	#pragma test expect_ir(R"({
-		var ref<union { u1 : array<char,2u>; },f,f,plain> v0 =
-			<ref<union { u1 : array<char,2u>; },f,f,plain>>
-			(ref_decl(type_lit(ref<union { u1 : array<char,2u>; },f,f,plain>)))
-			{
-				<ref<array<char,2u>,f,f,plain>>(ref_temp(type_lit(array<char,2u>))) {num_cast(1, type_lit(char)), num_cast(2, type_lit(char))}
-			};
-	})")
-	{ union { char u1[2]; } us = { { 1, 2 } }; }
+	#pragma test expect_ir(R"(
+		def union __any_string__union {
+			u1 : array<char,2u>;
+		};
+		{
+			var ref<__any_string__union,f,f,plain> v0 = <ref<__any_string__union,f,f,plain>>(
+					ref_decl(type_lit(ref<__any_string__union,f,f,plain>))) {
+							<ref<array<char,2u>,f,f,plain>>(ref_temp(type_lit(array<char,2u>))) {num_cast(1, type_lit(char)), num_cast(2, type_lit(char))}};
+		}
+	)")
+	{
+		union {
+			char u1[2];
+		} us = { { 1, 2 } };
+	}
 
 	// BOOL CONVERSION //////////////////////////////////////////////////////
 

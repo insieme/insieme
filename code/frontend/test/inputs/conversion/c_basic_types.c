@@ -154,8 +154,17 @@ int main() {
 
 	// STRUCT TYPES //////////////////////////////////////////////////////////////
 
-	#pragma test expect_ir("STRING", "var ref<struct {i : int<4>;\n},f,f,plain> v0 = ref_decl(type_lit(ref<struct {\n    i : int<4>;\n},f,f,plain>))")
-	struct { int i; } swi_anon;
+	#pragma test expect_ir(R"(
+		def struct __any_string__struct {
+			i : int<4>;
+		};
+		{
+			var ref<__any_string__struct,f,f,plain> v0 = ref_decl(type_lit(ref<__any_string__struct,f,f,plain>));
+		}
+	)")
+	{
+		struct { int i; } swi_anon;
+	}
 
 	typedef struct swi_s { int i; } swi_t;
 	#pragma test expect_ir(R"(
@@ -183,22 +192,26 @@ int main() {
 	union_t uni;
 
 	#pragma test expect_ir(R"(
-		var ref<union {
-			__any_string__s : struct {
-				a : int<4>;
-				b : int<4>;
-			};
+		def struct __any_string__struct {
+			a : int<4>;
+			b : int<4>;
+		};
+		def union __any_string__union {
+			__any_string__anonymous : __any_string__struct;
 			v : array<int<4>,2u>;
-		},f,f,plain> v0 = ref_decl(type_lit(ref<union {
-			__any_string__s : struct {
-				a : int<4>;
-				b : int<4>;
-			};
-			v : array<int<4>,2u>;
-		},f,f,plain>));
+		};
+		{
+			var ref<__any_string__union,f,f,plain> v0 = ref_decl(type_lit(ref<__any_string__union,f,f,plain>));
+			v0.__any_string__anonymous.a;
+		}
 	)")
-	union { struct { int a; int b; }; int v[2]; } anonymous_inner;
-
-	#pragma test expect_ir("REGEX", R"(.*v\d+\.\w+EMPTY\w+\.a.*)")
-	anonymous_inner.a;
+	{
+		union {
+			struct {
+				int a; int b;
+			};
+			int v[2];
+		} anonymous_inner;
+		anonymous_inner.a;
+	}
 }

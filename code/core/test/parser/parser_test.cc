@@ -41,6 +41,7 @@
 #include "insieme/core/parser/detail/driver.h"
 
 #include "insieme/core/analysis/compare.h"
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/ir.h"
@@ -1252,6 +1253,7 @@ namespace parser {
 		ASSERT_TRUE(parsedChecked.empty()) << parsedChecked;
 
 		auto field = builder.field("i", basic.getInt4());
+		auto fields = toVector(field);
 		auto thisType = builder.refType(builder.tagTypeReference("A"));
 		auto thisVariable = builder.variable(builder.refType(thisType));
 		auto ctorType = builder.functionType(builder.types(toVector<TypePtr>(thisType)), thisType, FK_CONSTRUCTOR);
@@ -1260,8 +1262,8 @@ namespace parser {
 		auto ctorBody = builder.compoundStmt(builder.assign(fieldAccess, builder.intLit(0)));
 		auto ctor = builder.lambdaExpr(ctorType, builder.parameters(thisVariable), ctorBody, "A::ctor");
 
-		auto constructed = builder.structType("A", ParentList(), toVector(field), toVector<ExpressionPtr>(ctor),
-			builder.getDefaultDestructor(thisType), false, MemberFunctionList(), PureVirtualMemberFunctionList(), StaticMemberFunctionList());
+		auto constructed = builder.structType("A", ParentList(), fields, toVector<ExpressionPtr>(ctor),
+			analysis::buildDefaultDestructor(thisType, builder.parents(), builder.fields(fields)), false, MemberFunctionList(), PureVirtualMemberFunctionList(), StaticMemberFunctionList());
 
 		constructed = builder.normalize(constructed);
 

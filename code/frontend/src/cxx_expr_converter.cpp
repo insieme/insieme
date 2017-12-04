@@ -59,6 +59,7 @@
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/name_mangling.h"
 
+#include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
@@ -482,7 +483,7 @@ namespace conversion {
 			auto irType = converter.convertType(deleteExpr->getDestroyedType());
 			if(auto genType = irType.isa<core::GenericTypePtr>()) {
 				if(::containsKey(converter.getIRTranslationUnit().getTypes(), genType)) {
-					toDelete = builder.callExpr(builder.getLiteralForDestructor(builder.getDefaultDestructorType(builder.refType(irType))), toDelete);
+					toDelete = builder.callExpr(builder.getLiteralForDestructor(core::analysis::buildDefaultDestructorType(builder.refType(irType))), toDelete);
 				}
 			}
 		}
