@@ -81,6 +81,7 @@ module Insieme.Utils.BoundSet (
 
     -- ** Modifiers
     insert,
+    delete,
     applyOrDefault,
     filter,
     map,
@@ -175,8 +176,12 @@ toList Universe     = error "Cannot convet Universe to list"
 toList (BoundSet x) = Set.toList x
 
 insert :: (IsBound bb, Ord a) => a -> BoundSet bb a -> BoundSet bb a
-insert _  Universe      = Universe
+insert _  Universe    = Universe
 insert e (BoundSet s) = BoundSet $ Set.insert e s
+
+delete :: (IsBound bb, Ord a) => a -> BoundSet bb a -> BoundSet bb a
+delete _  Universe    = Universe
+delete e (BoundSet s) = BoundSet $ Set.delete e s
 
 applyOrDefault :: IsBound bb => b -> (BoundSet bb a -> b) -> BoundSet bb a -> b
 applyOrDefault d _ Universe = d
