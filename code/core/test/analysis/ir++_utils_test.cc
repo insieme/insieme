@@ -84,6 +84,120 @@ namespace analysis {
 
 	}
 
+	TEST(IsCopyConstructor,Basic) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		// some positive tests
+		EXPECT_TRUE(isCopyConstructor(builder.parseType("A::(ref<A,t,f,cpp_ref>)")));
+		EXPECT_TRUE(isCopyConstructor(builder.parseExpr("lit(\"X\" : A::(ref<A,t,f,cpp_ref>))")));
+
+		// some negative tests
+		EXPECT_FALSE(isCopyConstructor(builder.parseType("A::(ref<A,f,f,cpp_ref>)")));
+		EXPECT_FALSE(isCopyConstructor(builder.parseType("A::(ref<A,t,t,cpp_ref>)")));
+		EXPECT_FALSE(isCopyConstructor(builder.parseType("A::(ref<A,f,t,cpp_ref>)")));
+
+		EXPECT_FALSE(isCopyConstructor(builder.parseType("A::(ref<A,f,f,cpp_rref>)")));
+		EXPECT_FALSE(isCopyConstructor(builder.parseType("A::(ref<A,t,t,cpp_rref>)")));
+		EXPECT_FALSE(isCopyConstructor(builder.parseType("A::(ref<A,f,t,cpp_rref>)")));
+		EXPECT_FALSE(isCopyConstructor(builder.parseType("A::(ref<A,t,f,cpp_rref>)")));
+
+		EXPECT_FALSE(isCopyConstructor(builder.parseType("int<4>")));
+		EXPECT_FALSE(isCopyConstructor(builder.parseType("A::(ref<A,t,f,cpp_ref>)->A")));
+		EXPECT_FALSE(isCopyConstructor(builder.parseType("A::(ref<A,t,f,cpp_ref>)->int<4>")));
+
+	}
+
+	TEST(IsMoveConstructor,Basic) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		// some positive tests
+		EXPECT_TRUE(isMoveConstructor(builder.parseType("A::(ref<A,f,f,cpp_rref>)")));
+		EXPECT_TRUE(isMoveConstructor(builder.parseExpr("lit(\"X\" : A::(ref<A,f,f,cpp_rref>))")));
+
+		// some negative tests
+		EXPECT_FALSE(isMoveConstructor(builder.parseType("A::(ref<A,t,f,cpp_rref>)")));
+		EXPECT_FALSE(isMoveConstructor(builder.parseType("A::(ref<A,t,t,cpp_rref>)")));
+		EXPECT_FALSE(isMoveConstructor(builder.parseType("A::(ref<A,f,t,cpp_rref>)")));
+
+		EXPECT_FALSE(isMoveConstructor(builder.parseType("A::(ref<A,f,f,cpp_ref>)")));
+		EXPECT_FALSE(isMoveConstructor(builder.parseType("A::(ref<A,t,t,cpp_ref>)")));
+		EXPECT_FALSE(isMoveConstructor(builder.parseType("A::(ref<A,f,t,cpp_ref>)")));
+		EXPECT_FALSE(isMoveConstructor(builder.parseType("A::(ref<A,t,f,cpp_ref>)")));
+
+		EXPECT_FALSE(isMoveConstructor(builder.parseType("int<4>")));
+		EXPECT_FALSE(isMoveConstructor(builder.parseType("A::(ref<A,f,f,cpp_rref>)->A")));
+		EXPECT_FALSE(isMoveConstructor(builder.parseType("A::(ref<A,f,f,cpp_rref>)->int<4>")));
+
+	}
+
+	TEST(IsCopyAssignmentType,Basic) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		// some positive tests
+		EXPECT_TRUE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,t,f,cpp_ref>)->ref<A,f,f,cpp_ref>")));
+		EXPECT_TRUE(isOfCopyAssignmentType(builder.parseExpr("lit(\"X\" : A::(ref<A,t,f,cpp_ref>)->ref<A,f,f,cpp_ref>)")));
+
+		// some negative tests
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_ref>)->ref<A,f,f,cpp_ref>")));
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,t,t,cpp_ref>)->ref<A,f,f,cpp_ref>")));
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,f,t,cpp_ref>)->ref<A,f,f,cpp_ref>")));
+
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_rref>)->ref<A,f,f,cpp_ref>")));
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,t,t,cpp_rref>)->ref<A,f,f,cpp_ref>")));
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,f,t,cpp_rref>)->ref<A,f,f,cpp_ref>")));
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,t,f,cpp_rref>)->ref<A,f,f,cpp_ref>")));
+
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,t,f,cpp_ref>)->ref<A,t,f,cpp_ref>")));
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,t,f,cpp_ref>)->ref<A,f,t,cpp_ref>")));
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,t,f,cpp_ref>)->ref<A,t,t,cpp_ref>")));
+
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,t,f,cpp_ref>)->ref<A,f,f,cpp_rref>")));
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,t,f,cpp_ref>)->ref<A,t,f,cpp_rref>")));
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,t,f,cpp_ref>)->ref<A,f,t,cpp_rref>")));
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,t,f,cpp_ref>)->ref<A,t,t,cpp_rref>")));
+
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("int<4>")));
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_rref>)->A")));
+		EXPECT_FALSE(isOfCopyAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_rref>)->int<4>")));
+
+	}
+
+	TEST(IsMoveAssignmentType,Basic) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		// some positive tests
+		EXPECT_TRUE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_rref>)->ref<A,f,f,cpp_ref>")));
+		EXPECT_TRUE(isOfMoveAssignmentType(builder.parseExpr("lit(\"X\" : A::(ref<A,f,f,cpp_rref>)->ref<A,f,f,cpp_ref>)")));
+
+		// some negative tests
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,t,f,cpp_rref>)->ref<A,f,f,cpp_ref>")));
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,t,t,cpp_rref>)->ref<A,f,f,cpp_ref>")));
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,f,t,cpp_rref>)->ref<A,f,f,cpp_ref>")));
+
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_ref>)->ref<A,f,f,cpp_ref>")));
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,t,t,cpp_ref>)->ref<A,f,f,cpp_ref>")));
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,f,t,cpp_ref>)->ref<A,f,f,cpp_ref>")));
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,t,f,cpp_ref>)->ref<A,f,f,cpp_ref>")));
+
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_rref>)->ref<A,t,f,cpp_ref>")));
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_rref>)->ref<A,f,t,cpp_ref>")));
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_rref>)->ref<A,t,t,cpp_ref>")));
+
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_rref>)->ref<A,f,f,cpp_rref>")));
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_rref>)->ref<A,t,f,cpp_rref>")));
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_rref>)->ref<A,f,t,cpp_rref>")));
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_rref>)->ref<A,t,t,cpp_rref>")));
+
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("int<4>")));
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_rref>)->A")));
+		EXPECT_FALSE(isOfMoveAssignmentType(builder.parseType("A::(ref<A,f,f,cpp_rref>)->int<4>")));
+
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme
