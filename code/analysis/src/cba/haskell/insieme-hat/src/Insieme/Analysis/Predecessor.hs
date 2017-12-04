@@ -139,10 +139,14 @@ predecessor p@(ProgramPoint a Pre) = case Q.getNodeType parent of
     I.CastExpr -> single $ ProgramPoint parent Pre
 
     I.Expressions
-      | i == 0     -> single $ ProgramPoint parent Pre
+      | i == 0    -> single $ ProgramPoint parent Pre
       | otherwise -> single $ ProgramPoint (I.goDown (i-1) parent) Post
 
     I.Declaration -> single $ ProgramPoint parent Pre
+
+    I.Declarations
+      | i == 0    -> single $ ProgramPoint parent Pre
+      | otherwise -> single $ ProgramPoint (I.goDown (i-1) parent) Post
 
     I.DeclarationStmt -> single $ ProgramPoint parent Pre
 
@@ -287,6 +291,10 @@ predecessor p@(ProgramPoint a Post) = case Q.getNodeType a of
 
     -- declarations without implicit constructor are done once the init expression is done
     I.Declaration -> single $ ProgramPoint a Internal
+
+    -- handle lists of declarations
+    I.Declarations | I.numChildren a == 0 -> single $ ProgramPoint a Pre
+                   | otherwise            -> single $ ProgramPoint (I.goDown ((I.numChildren a) - 1) a) Post
 
     -- handle lists of expressions
     I.Expressions | I.numChildren a == 0 -> single $ ProgramPoint a Pre

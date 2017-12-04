@@ -121,6 +121,7 @@ toNodeKind SwitchCases                  = Support
 toNodeKind CatchClause                  = Support
 toNodeKind Parameters                   = Support
 toNodeKind Expressions                  = Support
+toNodeKind Declarations                 = Support
 
 
 data FunctionKind = FK_Plain
