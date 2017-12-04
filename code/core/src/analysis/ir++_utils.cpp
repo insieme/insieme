@@ -41,6 +41,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 
 #include "insieme/core/datapath/datapath.h"
 
@@ -116,6 +117,94 @@ namespace analysis {
 		auto funType = call->getFunctionExpr()->getType().isa<FunctionTypePtr>();
 		return funType && funType->isConstructor();
 	}
+
+	namespace {
+
+		bool isCopyOrMoveConstructor(const NodePtr& node, bool constParam, lang::ReferenceType::Kind kind) {
+
+			// extract the type
+			auto type = getType(node).isa<FunctionTypePtr>();
+
+			// if it is not a function type at all => it is not a ctor
+			if (!type) return false;
+
+			// test that the function is a constructor
+			if (!type->isConstructor()) return false;
+
+			// check number of parameters
+			if(type->getParameterTypeList().size() != 2) return false;
+
+			// get the this type
+			auto thisType = getObjectType(type);
+
+			// the second parameter must be a reference
+			if(!core::lang::isReference(type->getParameterType(1))) return false;
+
+			// and the type referenced by the second argument must be equivalent to the this type
+			auto refType = core::lang::ReferenceType(type->getParameterType(1));
+			if(refType.isConst() != constParam || refType.isVolatile() || *refType.getElementType() != *thisType) return false;
+
+			// finally we check the reference kind to determine whether it is a copy or move constructor
+			return refType.getKind() == kind;
+		}
+
+	}
+
+	bool isCopyConstructor(const NodePtr& node) {
+		return isCopyOrMoveConstructor(node,true,lang::ReferenceType::Kind::CppReference);
+	}
+
+	bool isMoveConstructor(const NodePtr& node) {
+		return isCopyOrMoveConstructor(node,false,lang::ReferenceType::Kind::CppRValueReference);
+	}
+
+
+	namespace {
+
+		bool isOfCopyOrMoveAssignmentType(const NodePtr& node, bool constParam, lang::ReferenceType::Kind kind) {
+
+			// extract the type
+			auto type = getType(node).isa<FunctionTypePtr>();
+
+			// if it is not a function type at all => it is not a ctor
+			if (!type) return false;
+
+			// test that the function is a constructor
+			if (!type->isMemberFunction()) return false;
+
+			// check number of parameters
+			if(type->getParameterTypeList().size() != 2) return false;
+
+			// get the this type
+			auto thisType = getObjectType(type);
+
+			// the result type must be a reference to the this type
+			if (!core::lang::isReference(type->getReturnType())) return false;
+
+			auto retType = core::lang::ReferenceType(type->getReturnType());
+			if (retType.isConst() || retType.isVolatile() || !retType.isCppReference()) return false;
+
+			// the second parameter must be a reference
+			if(!core::lang::isReference(type->getParameterType(1))) return false;
+
+			// and the type referenced by the second argument must be equivalent to the this type
+			auto refType = core::lang::ReferenceType(type->getParameterType(1));
+			if(refType.isConst() != constParam || refType.isVolatile() || *refType.getElementType() != *thisType) return false;
+
+			// finally we check the reference kind to determine whether it is a copy or move constructor
+			return refType.getKind() == kind;
+		}
+
+	}
+
+	bool isOfCopyAssignmentType(const NodePtr& node) {
+		return isOfCopyOrMoveAssignmentType(node, true, lang::ReferenceType::Kind::CppReference);
+	}
+
+	bool isOfMoveAssignmentType(const NodePtr& node) {
+		return isOfCopyOrMoveAssignmentType(node, false, lang::ReferenceType::Kind::CppRValueReference);
+	}
+
 
 } // end namespace analysis
 } // end namespace core

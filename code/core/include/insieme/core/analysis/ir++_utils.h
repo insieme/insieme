@@ -114,6 +114,26 @@ namespace analysis {
 	// ---------------------------- Constructors --------------------------------------
 
 	/**
+	 * Determines whether the given node is a copy-constructor expression or type.
+	 */
+	bool isCopyConstructor(const NodePtr& node);
+
+	/**
+	 * Determines whether the given node is a move-constructor expression or type.
+	 */
+	bool isMoveConstructor(const NodePtr& node);
+
+	/**
+	 * Determines whether the given node has the type of a copy assignment operator.
+	 */
+	bool isOfCopyAssignmentType(const NodePtr& node);
+
+	/**
+	 * Determines whether the given node has the type of a move assignment operator.
+	 */
+	bool isOfMoveAssignmentType(const NodePtr& node);
+
+	/**
 	 * checks if a expression is a constructor call
 	 * @param expr, the expression to be checked
 	 * @return if is a call to constructor, even intercepted ones
