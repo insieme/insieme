@@ -42,6 +42,8 @@
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/lang/reference.h"
 
+#include "insieme/core/ir_builder.h"
+
 extern "C" {
 
 	namespace ia = insieme::analysis::cba;
@@ -80,10 +82,17 @@ extern "C" {
 
 	arithmetic::Value* hat_mk_arithmetic_value(Context* ctx_c, const size_t* addr_hs, size_t length_hs) {
 		assert_true(ctx_c) << "hat_mk_arithmetic_value called without context";
+
 		// build NodeAddress
 		NodeAddress addr(ctx_c->getRoot());
 		for(size_t i = 0; i < length_hs; i++) {
 			addr = addr.getAddressOfChild(addr_hs[i]);
+		}
+
+		// handle faulty cases where the given node is not an expression
+		if (!addr.isa<ExpressionPtr>()) {
+			IRBuilder builder(addr.getNodeManager());
+			return new arithmetic::Value(builder.literal("?",builder.getLangBasic().getInt4()));
 		}
 
 		// add de-ref operations (assumed implicitly by analysis)

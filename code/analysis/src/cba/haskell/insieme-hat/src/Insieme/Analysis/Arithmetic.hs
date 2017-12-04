@@ -116,7 +116,7 @@ arithmeticValue addr = case I.getNode addr of
   where
 
     analysis = (mkDataFlowAnalysis ArithmeticAnalysis "A" arithmeticValue) {
-        initialValueHandler = \a -> compose $ BSet.singleton $ Ar.mkVar $ Constant (I.getNode a) a,
+        initialValueHandler = toInitialValue,
         initialValue = compose $ BSet.singleton $ Ar.zero
     }
 
@@ -124,6 +124,13 @@ arithmeticValue addr = case I.getNode addr of
 
     compose = ComposedValue.toComposed . SymbolicFormulaSet
     extract = unSFS . ComposedValue.toValue
+
+    toInitialValue a = case Q.getNodeType a of
+        I.Literal  -> value
+        I.Variable -> value
+        _          -> Solver.top
+      where
+        value = compose $ BSet.singleton $ Ar.mkVar $ Constant (I.getNode a) a
 
     ops = [ add, mul, sub, div, mod, ptrFromRef]
 
