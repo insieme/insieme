@@ -507,21 +507,26 @@ namespace analysis {
 		EXPECT_PRED2(isMaterializationOf, t("ref<A,f,f,plain>"), t("ref<A,t,f,cpp_ref>"));
 		EXPECT_PRED2(isMaterializationOf, t("ref<A,f,f,plain>"), t("ref<A,f,f,cpp_rref>"));
 
+		EXPECT_PRED2(isMaterializationOf, t("ref<A,f,f,plain>"), t("A"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<A,t,f,plain>"), t("A"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<A,f,t,plain>"), t("A"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<A,t,t,plain>"), t("A"));
+
+		EXPECT_PRED2(isMaterializationOf, t("ref<A,f,f,plain>"), t("ref<A,t,f,cpp_ref>"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<A,t,f,plain>"), t("ref<A,t,f,cpp_ref>"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<A,f,t,plain>"), t("ref<A,t,f,cpp_ref>"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<A,t,t,plain>"), t("ref<A,t,f,cpp_ref>"));
+
 		// some negative checks
 		EXPECT_PRED2(isNotMaterializationOf, t("ref<A>"), t("B"));
 
-		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,t,f,plain>"), t("A"));
-		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,t,plain>"), t("A"));
-		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,t,t,plain>"), t("A"));
 		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,f,cpp_ref>"), t("A"));
 		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,f,cpp_rref>"), t("A"));
 
 		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,t,f,plain>"), t("ref<A,t,f,plain>"));
 		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,f,plain>"), t("ref<A,t,f,plain>"));
 
-		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,t,f,plain>"), t("ref<A,t,f,cpp_ref>"));
-		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,t,plain>"), t("ref<A,t,f,cpp_ref>"));
-		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,t,t,plain>"), t("ref<A,t,f,cpp_ref>"));
+
 		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,f,cpp_ref>"), t("ref<A,t,f,cpp_ref>"));
 		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,f,cpp_rref>"), t("ref<A,t,f,cpp_ref>"));
 
@@ -600,9 +605,9 @@ namespace analysis {
 
 		// only mutable references
 		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>,f,f,plain>", "5")));
-		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,t,plain>", "5")));
-		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,t,f,plain>", "5")));
-		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,t,t,plain>", "5")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>,f,t,plain>", "5")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>,t,f,plain>", "5")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>,t,t,plain>", "5")));
 
 		// no type variable instantiation
 		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<'a>>", "6")));

@@ -766,6 +766,10 @@ namespace core {
 		return returnStmt(manager.getLangBasic().getUnitConstant());
 	}
 
+	ReturnStmtPtr IRBuilderBaseModule::returnStmt(const ExpressionPtr& expr, const TypePtr& type) const {
+		return returnStmt(declaration(type, expr));
+	}
+
 	CallExprPtr IRBuilderBaseModule::acquireLock(const ExpressionPtr& lock) const {
 		assert_true(analysis::isRefOf(lock, manager.getLangExtension<lang::ParallelExtension>().getLock())) << "Cannot lock a non-lock type: " << dumpColor(lock) << " of type " << dumpColor(lock->getType());
 		return callExpr(manager.getLangBasic().getUnit(), manager.getLangExtension<lang::ParallelExtension>().getLockAcquire(), lock);

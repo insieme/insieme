@@ -467,6 +467,7 @@ namespace core {
 
 		// Return Statement
 		ReturnStmtPtr returnStmt() const;
+		ReturnStmtPtr returnStmt(const ExpressionPtr& expr, const TypePtr& type) const;
 
 		// Call Expressions
 		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const;

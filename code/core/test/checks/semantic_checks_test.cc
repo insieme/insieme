@@ -488,6 +488,39 @@ namespace checks {
 		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
 		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
 
+		// -- non-const to const and non-volatile to volatile conversion is allowed --
+		decl = mkDecl("ref<int<'s>,f,f,plain>", "lit(\"X\":ref<int<'s>,f,f,plain>)");
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("ref<int<'s>,t,f,plain>", "lit(\"X\":ref<int<'s>,f,f,plain>)");
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("ref<int<'s>,f,t,plain>", "lit(\"X\":ref<int<'s>,f,f,plain>)");
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("ref<int<'s>,t,t,plain>", "lit(\"X\":ref<int<'s>,f,f,plain>)");
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("ref<int<'s>,f,f,cpp_ref>", "lit(\"X\":ref<int<'s>,f,f,cpp_ref>)");
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("ref<int<'s>,t,f,cpp_ref>", "lit(\"X\":ref<int<'s>,f,f,cpp_ref>)");
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("ref<int<'s>,f,t,cpp_ref>", "lit(\"X\":ref<int<'s>,f,f,cpp_ref>)");
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("ref<int<'s>,t,t,cpp_ref>", "lit(\"X\":ref<int<'s>,f,f,cpp_ref>)");
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
 
 		// check materializing declarations
 

@@ -86,8 +86,12 @@ namespace core {
 		return get(manager, DeclarationStmt::get(manager, iterator, start), end, step, body);
 	}
 
+	ReturnStmtPtr ReturnStmt::get(NodeManager & manager, const DeclarationPtr& declaration) {
+		return manager.get(ReturnStmt(declaration));
+	}
+
 	ReturnStmtPtr ReturnStmt::get(NodeManager & manager, const ExpressionPtr& returnExpr) {
-		return manager.get(ReturnStmt(transform::materialize(returnExpr)));
+		return get(manager,transform::materialize(returnExpr));
 	}
 
 } // end namespace core

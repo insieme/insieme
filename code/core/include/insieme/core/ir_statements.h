@@ -927,6 +927,17 @@ namespace core {
 		}
 
 	  public:
+
+		/**
+		 * This static factory method allows to obtain a return statement instance
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param declaration the declaration of the return value
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ReturnStmtPtr get(NodeManager & manager, const DeclarationPtr& declaration);
+
 		/**
 		 * This static factory method allows to obtain a return statement instance
 		 * within the given node manager based on the given parameters.

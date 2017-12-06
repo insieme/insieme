@@ -217,6 +217,7 @@ namespace checks {
 			// the init type and declared type need to be identical
 			auto dT = decl->getType();
 			auto iT = decl->getInitialization()->getType();
+
 			if (!types::isSubTypeOf(iT,dT)) {
 				add(res,Message(
 						decl,

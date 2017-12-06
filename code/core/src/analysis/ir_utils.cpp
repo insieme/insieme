@@ -220,9 +220,8 @@ namespace analysis {
 		// the materialized type must be a plain reference
 		if (!lang::isPlainReference(materialized)) return false;
 
-		// the materialized type must also not be const nor volatile
+		// parse materialized type
 		lang::ReferenceType matRefType(materialized);
-		if (matRefType.isConst() || matRefType.isVolatile()) return false;
 
 		// if the value type is a plain reference, it is not a materialization
 		if (lang::isPlainReference(type)) return false;
