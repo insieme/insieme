@@ -276,7 +276,7 @@ namespace parser {
 
 		EXPECT_TRUE(test_expression(nm, ""
 		                                "decl foo : (int<4>) -> int<4>; "
-		                                "def bar = function (a : ref<int<4>,f,f,plain>) -> int<4> { return foo(a); }; "
+		                                "def bar = function (a : ref<int<4>,f,f,plain>) -> int<4> { return foo(*a); }; "
 		                                "def foo = (b : int<4>) -> int<4> { return bar(b); }; "
 		                                "foo"));
 

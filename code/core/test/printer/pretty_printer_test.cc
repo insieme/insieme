@@ -1232,7 +1232,7 @@ TEST(PrettyPrinter, Pick) {
 		    "};\n"
 		    "{\n"
 		    "    var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));\n"
-		    "    pick([f,g,h])(v0);\n"
+		    "    pick([f,g,h])(*v0);\n"
 		    "}";
 
 		auto ir = builder.normalize(builder.parseStmt(input));
@@ -1257,7 +1257,7 @@ TEST(PrettyPrinter, Pick) {
 			"        function (a : ref<int<4>>) -> unit {\n"
 			"            a = 1 * 3;\n"
 			"        }\n"
-			"    ])(a);\n"
+			"    ])(*a);\n"
 			"}\n";
 
 		auto ir = builder.normalize(builder.parseStmt(input));

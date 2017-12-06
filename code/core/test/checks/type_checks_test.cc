@@ -169,6 +169,89 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
 	}
 
+	TEST(CallExprTypeCheck, ReferencePassing) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// Test: pass ref<A,f,f,plain> to A parameter must not be allowed
+
+		// instantiate the type check
+		CheckPtr typeCheck = make_check<CallExprTypeCheck>();
+
+		CallExprPtr call;
+		MessageList issues;
+
+		auto test = [&](const std::string& paramType, const std::string& argType) {
+			auto fun = builder.parseExpr("lit(\"fun\":(" + paramType + ")->unit)");
+			auto arg = builder.parseExpr("lit(\"a\":" + argType + ")");
+			call = builder.callExpr(manager.getLangBasic().getUnit(),fun,arg);
+			issues = check(call,typeCheck);
+		};
+
+		// --- positive cases ---
+
+		// passing a value by value should be fine
+		test("A","A");
+		EXPECT_TRUE(issues.empty()) << "Issues: " << issues;
+
+		// passing by cpp ref should also be allowed
+		test("ref<A,f,f,cpp_ref>","ref<A,f,f,cpp_ref>");
+		EXPECT_TRUE(issues.empty()) << "Issues: " << issues;
+
+		// also non-const to const
+		test("ref<A,t,f,cpp_ref>","ref<A,f,f,cpp_ref>");
+		EXPECT_TRUE(issues.empty()) << "Issues: " << issues;
+
+		// or non-volatile to volatile
+		test("ref<A,f,t,cpp_ref>","ref<A,f,f,cpp_ref>");
+		EXPECT_TRUE(issues.empty()) << "Issues: " << issues;
+
+		// or rvalue references
+		test("ref<A,f,f,cpp_rref>","ref<A,f,f,cpp_rref>");
+		EXPECT_TRUE(issues.empty()) << "Issues: " << issues;
+
+		// or plain references
+		test("ref<A,f,f,plain>","ref<A,f,f,plain>");
+		EXPECT_TRUE(issues.empty()) << "Issues: " << issues;
+
+
+		// pass a cpp_ref to a value should be fine
+		test("A","ref<A,t,f,cpp_ref>");
+		EXPECT_TRUE(issues.empty()) << "Issues: " << issues;
+
+		// as well as an r-value reference
+		test("A","ref<A,f,f,cpp_rref>");
+		EXPECT_TRUE(issues.empty()) << "Issues: " << issues;
+
+		// --- negative cases ---
+
+		// can't pass unrelated values
+		test("A","B");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a plain reference to a value
+		test("A","ref<A,f,f,plain>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a const plain reference to a value
+		test("A","ref<A,t,f,plain>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a volatile plain reference to a value
+		test("A","ref<A,f,t,plain>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a const volatile plain reference to a value
+		test("A","ref<A,t,t,plain>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+	}
+
 	TEST(FunctionKindCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);

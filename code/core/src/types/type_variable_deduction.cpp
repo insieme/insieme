@@ -930,10 +930,8 @@ namespace types {
 						else if(analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
 							materializedArguments[i] = parameter[i];
 						}
-						// directly passing initialized materialized value as plain ref
-						else if(transform::materialize(parameter[i]) == materializedArguments[i]) {
-							materializedArguments[i] = parameter[i];
-						}
+						// all other reference arguments are invalid
+						else return fail;
 					}
 
 					// qualifier promotion and implicit plain-ref casting
