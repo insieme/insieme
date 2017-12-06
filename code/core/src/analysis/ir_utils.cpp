@@ -152,15 +152,15 @@ namespace analysis {
 		return isSideEffectFree(initExpr);
 	}
 
-	bool isCallOf(const CallExprPtr& candidate, const NodePtr& function) {
+	CallExprPtr isCallOf(const CallExprPtr& candidate, const NodePtr& function) {
 		// check for null
 		if(!candidate) { return false; }
 
 		// check invoked function
-		return *(stripAttributes(candidate->getFunctionExpr())) == *function;
+		return (*(stripAttributes(candidate->getFunctionExpr())) == *function) ? candidate : CallExprPtr();
 	}
 
-	bool isCallOf(const NodePtr& candidate, const NodePtr& function) {
+	CallExprPtr isCallOf(const NodePtr& candidate, const NodePtr& function) {
 		// check for null
 		if(!candidate) { return false; }
 

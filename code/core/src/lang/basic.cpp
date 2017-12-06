@@ -229,6 +229,9 @@ namespace lang {
 		};                                                                                                                                                     \
 		bool BasicGenerator::is##_id(const NodePtr& p) const {                                                                                                 \
 			return *p == *get##_id();                                                                                                                          \
+		};                                                                                                                                                     \
+		CallExprPtr BasicGenerator::isCallOf##_id(const NodePtr& p) const {                                                                                    \
+			return analysis::isCallOf(p,get##_id());                                                                                                           \
 		};
 
 	#define DERIVED(_id, _name, _spec)                                                                                                                         \
@@ -245,6 +248,9 @@ namespace lang {
 		};                                                                                                                                                     \
 		bool BasicGenerator::is##_id(const NodePtr& p) const {                                                                                                 \
 			return *p == *get##_id();                                                                                                                          \
+		};                                                                                                                                                     \
+		CallExprPtr BasicGenerator::isCallOf##_id(const NodePtr& p) const {                                                                                    \
+			return analysis::isCallOf(p,get##_id());                                                                                                           \
 		};
 
 

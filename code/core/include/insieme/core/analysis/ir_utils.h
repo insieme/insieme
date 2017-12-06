@@ -86,18 +86,18 @@ namespace analysis {
 	 *
 	 * @param candidate the node to be tested
 	 * @param function the function to be tested for
-	 * @return true if so, false otherwise
+	 * @return the candidate expression if it is a call to the given function, a null pointer otherwise
 	 */
-	bool isCallOf(const CallExprPtr& candidate, const NodePtr& function);
+	CallExprPtr isCallOf(const CallExprPtr& candidate, const NodePtr& function);
 
 	/**
 	 * Tests whether the node referenced by the given pointer is a call to the given function.
 	 *
 	 * @param candidate the node to be tested
 	 * @param function the function to be tested for
-	 * @return true if so, false otherwise
+	 * @return the candidate expression as a call expression if it is a call to the given function, a null pointer otherwise
 	 */
-	bool isCallOf(const NodePtr& candidate, const NodePtr& function);
+	CallExprPtr isCallOf(const NodePtr& candidate, const NodePtr& function);
 
 	/**
 	 * Obtains the (optional) ref_decl call referenced by the init expression of the given declaration,

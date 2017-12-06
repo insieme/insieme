@@ -92,11 +92,13 @@ namespace core {
 
 			#define LITERAL(_id, _name, _spec)                                                                                                                 \
 				LiteralPtr get##_id() const;                                                                                                                   \
-				bool is##_id(const NodePtr& p) const;
+				bool is##_id(const NodePtr& p) const;                                                                                                          \
+				CallExprPtr isCallOf##_id(const NodePtr& p) const;
 
 			#define DERIVED(_id, _name, _spec)                                                                                                                 \
 				ExpressionPtr get##_id() const;                                                                                                                \
-				bool is##_id(const NodePtr& p) const;
+				bool is##_id(const NodePtr& p) const;                                                                                                          \
+				CallExprPtr isCallOf##_id(const NodePtr& p) const;
 
 			#define OPERATION(_type, _op, _name, _spec)                                                                                                        \
 				LiteralPtr get##_type##_op() const;                                                                                                            \
