@@ -69,11 +69,6 @@ namespace transform {
 	DeclarationPtr materialize(const ExpressionPtr& value) {
 		auto& mgr = value->getNodeManager();
 
-		// do not materialize references
-		if (lang::isReference(value->getType())) {
-			return Declaration::get(mgr, value->getType(), value);
-		}
-
 		// but everything else
 		return Declaration::get(mgr, materialize(value->getType()), value);
 	}

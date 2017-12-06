@@ -809,6 +809,52 @@ namespace parser {
 		}
 	}
 
+	TEST(IR_Parser, ReferenceArguments) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+
+		auto l = [&](const std::string& fun) {
+			LambdaExprPtr lambda = builder.parseExpr(fun).isa<LambdaExprPtr>();
+			assert_correct_ir(lambda);
+			return lambda;
+		};
+
+		auto p = [&](const std::string& fun) {
+			return l(fun)->getFunctionType()->getParameterType(0);
+		};
+
+		auto v = [&](const std::string& fun) {
+			return l(fun)->getLambda()->getParameters()[0]->getType();
+		};
+
+		auto t = [&](const std::string& type) {
+			return builder.parseType(type);
+		};
+
+		// test parameter types
+		EXPECT_EQ(p("( a : bool ) -> unit {}"),						t("bool"));
+		EXPECT_EQ(p("( a : ref<bool> ) -> unit {}"),				t("ref<bool,f,f,plain>"));
+		EXPECT_EQ(p("( a : ref<bool,f,f,plain> ) -> unit {}"),		t("ref<bool,f,f,plain>"));
+		EXPECT_EQ(p("( a : ref<bool,f,f,cpp_ref> ) -> unit {}"),	t("ref<bool,f,f,cpp_ref>"));
+		EXPECT_EQ(p("( a : ref<bool,f,f,cpp_rref> ) -> unit {}"),	t("ref<bool,f,f,cpp_rref>"));
+
+		EXPECT_EQ(p("( a : ref<bool,t,f,cpp_ref> ) -> unit {}"),	t("ref<bool,t,f,cpp_ref>"));
+		EXPECT_EQ(p("( a : ref<bool,f,t,cpp_ref> ) -> unit {}"),	t("ref<bool,f,t,cpp_ref>"));
+		EXPECT_EQ(p("( a : ref<bool,t,t,cpp_ref> ) -> unit {}"),	t("ref<bool,t,t,cpp_ref>"));
+
+		// test variable types
+		EXPECT_EQ(v("( a : bool ) -> unit {}"),						t("ref<bool,f,f,plain>"));
+		EXPECT_EQ(v("( a : ref<bool> ) -> unit {}"),				t("ref<ref<bool,f,f,plain>,f,f,plain>"));
+		EXPECT_EQ(v("( a : ref<bool,f,f,plain> ) -> unit {}"),		t("ref<ref<bool,f,f,plain>,f,f,plain>"));
+		EXPECT_EQ(v("( a : ref<bool,f,f,cpp_ref> ) -> unit {}"),	t("ref<bool,f,f,cpp_ref>"));
+		EXPECT_EQ(v("( a : ref<bool,f,f,cpp_rref> ) -> unit {}"),	t("ref<bool,f,f,cpp_rref>"));
+
+		EXPECT_EQ(v("( a : ref<bool,t,f,cpp_ref> ) -> unit {}"),	t("ref<bool,t,f,cpp_ref>"));
+		EXPECT_EQ(v("( a : ref<bool,f,t,cpp_ref> ) -> unit {}"),	t("ref<bool,f,t,cpp_ref>"));
+		EXPECT_EQ(v("( a : ref<bool,t,t,cpp_ref> ) -> unit {}"),	t("ref<bool,t,t,cpp_ref>"));
+
+	}
+
 	TEST(IR_Parser, LambdaNames) {
 		NodeManager nm;
 		IRBuilder builder(nm);

@@ -223,14 +223,14 @@ namespace analysis {
 		// parse materialized type
 		lang::ReferenceType matRefType(materialized);
 
+		// if the element of the resulting reference is the same as the input value, we are fine
+		if (*matRefType.getElementType() == *type) return true;
+
 		// if the value type is a plain reference, it is not a materialization
 		if (lang::isPlainReference(type)) return false;
 
 		// remove (optional) references from the value type
 		auto valueType = (lang::isReference(type)) ? analysis::getReferencedType(type) : type;
-
-		// if the element of the resulting reference is the same as the input value, we are fine
-		if (*matRefType.getElementType() == *valueType) return true;
 
 		// also if it is a sub-type
 		if (types::isSubTypeOf(valueType,matRefType.getElementType())) return true;
