@@ -210,6 +210,36 @@ namespace analysis {
 
 	}
 
+	bool isMaterializationOf(const TypePtr& materialized, const TypePtr& type) {
+		// if any is null, we stop
+		if (!materialized || !type) return false;
+
+		// shortcut 1: if the types are identical, it is not a materialization
+		if (analysis::equalTypes(materialized,type)) return false;
+
+		// the materialized type must be a plain reference
+		if (!lang::isPlainReference(materialized)) return false;
+
+		// the materialized type must also not be const nor volatile
+		lang::ReferenceType matRefType(materialized);
+		if (matRefType.isConst() || matRefType.isVolatile()) return false;
+
+		// if the value type is a plain reference, it is not a materialization
+		if (lang::isPlainReference(type)) return false;
+
+		// remove (optional) references from the value type
+		auto valueType = (lang::isReference(type)) ? analysis::getReferencedType(type) : type;
+
+		// if the element of the resulting reference is the same as the input value, we are fine
+		if (*matRefType.getElementType() == *valueType) return true;
+
+		// also if it is a sub-type
+		if (types::isSubTypeOf(valueType,matRefType.getElementType())) return true;
+
+		// everything else is not
+		return false;
+	}
+
 	bool isMaterializingCall(const NodePtr& candidate) {
 		auto call = candidate.isa<CallExprPtr>();
 		if(!call) return false;
@@ -226,13 +256,13 @@ namespace analysis {
 		}
 
 		// shortcut I: if equal, it is not materializing
-		if (analysis::equalTypes(callType,retType)) return false;
+		if (*callType == *retType) return false;
 
 		auto& mgr = candidate->getNodeManager();
 		IRBuilder builder(mgr);
 
 		// shortcut II:
-		if (analysis::equalTypes(callType,builder.refType(retType))) return true;
+		if (*callType == *builder.refType(retType)) return true;
 
 		// instantiate return type
 		auto sub = types::getTypeVariableInstantiation(mgr,call,true);
@@ -242,46 +272,18 @@ namespace analysis {
 
 		// check relation between should and is
 		auto expected = sub->applyTo(mgr,retType);
-		return types::isSubTypeOf(expected, getReferencedType(callType));
+		return isMaterializationOf(callType,expected);
 	}
 
 	bool isMaterializingDecl(const NodePtr& candidate) {
 		auto decl = candidate.isa<DeclarationPtr>();
 		if(!decl) return false;
-		auto dT = decl->getType();
 
-		// only plain reference declarations can be materializing
-		if(!lang::isPlainReference(dT)) return false;
-
-		// a materialization happens if the init expression contains a associated ref_decl call
-		auto init = decl->getInitialization();
+		// check for explicit materialization due to ctor calls or init expressions
 		if (getRefDeclCall(decl)) return true;
 
-		// in all other cases the relation between the declared and initialized type determines whether a materialization happens
-		auto iT = init->getType();
-
-		// if the two types are identical => no materialization
-		if (*dT == *iT) return false;
-
-		// if both are plain references, allow implicit kind casts
-		if (lang::isPlainReference(iT)) {
-			auto dRT = lang::ReferenceType(dT);
-			auto iRT = lang::ReferenceType(iT);
-
-			// allow implicit kind casts of any form
-			// TODO: think about restricting to only non-const to const and volatile to non-volatile casts
-			dRT.setConst(false);
-			dRT.setVolatile(false);
-			dT = dRT.toType();
-
-			iRT.setConst(false);
-			iRT.setVolatile(false);
-			iT = iRT.toType();
-
-		}
-
-		// a materialization happens if the types have changed by any reason (whether the reason is valid is checked by semantic checks)
-		return *dT != *iT;
+		// check the types whether there might be an implicit materialization
+		return isMaterializationOf(decl->getType(),decl->getInitialization()->getType());
 	}
 
 	bool isNoOp(const StatementPtr& candidate) {

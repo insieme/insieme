@@ -48,6 +48,7 @@
 #include "insieme/core/inspyer/inspyer.h"
 
 #include "insieme/core/dump/text_dump.h"
+#include "insieme/core/dump/json_dump.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/extension.h"
@@ -301,4 +302,8 @@ IRDump dumpDetailColored(const insieme::core::NodePtr& node, std::ostream& out) 
 		print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
 		return out << print << std::endl;
 	}, out);
+}
+
+void dumpJSON(const insieme::core::NodePtr& node, const std::string& filename) {
+	insieme::core::dump::json::dumpIR(filename,node);
 }

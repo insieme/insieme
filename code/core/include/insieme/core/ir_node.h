@@ -1403,3 +1403,6 @@ IRDump dumpOneLine(const insieme::core::NodePtr&, std::ostream& out = std::cout)
 IRDump dumpPretty(const insieme::core::NodePtr&, std::ostream& out = std::cout);
 IRDump dumpDetail(const insieme::core::NodePtr&, std::ostream& out = std::cout);
 IRDump dumpDetailColored(const insieme::core::NodePtr& node, std::ostream& out = std::cout);
+
+void dumpJSON(const insieme::core::NodePtr& node, const std::string& filename = "ir.json");
+

@@ -208,11 +208,28 @@ namespace checks {
 		return res;
 	}
 
-	OptionalMessageList ValidMaterializingDeclarationCheck::visitDeclaration(const DeclarationAddress& decl) {
+	OptionalMessageList ValidDeclarationCheck::visitDeclaration(const DeclarationAddress& decl) {
 		OptionalMessageList res;
 
-		// only interested in materializing declarations
-		if (!analysis::isMaterializingDecl(decl)) return res;
+		// if it is not a materializing declaration
+		if (!analysis::isMaterializingDecl(decl)) {
+
+			// the init type and declared type need to be identical
+			auto dT = decl->getType();
+			auto iT = decl->getInitialization()->getType();
+			if (!types::isSubTypeOf(iT,dT)) {
+				add(res,Message(
+						decl,
+						EC_SEMANTIC_INVALID_NON_MATERIALIZING_DECLARATION,
+						format("Invalid non-materializing declaration imposing implicit type conversion.\n\tinit-type: %s\n\tdecl-type: %s", *iT, *dT),
+						Message::ERROR
+				));
+			}
+
+			// done in this case
+			return res;
+		}
+
 
 		// now, that it is materializing, there has to be a reason for that
 		auto init = decl.getAddressedNode()->getInitialization();

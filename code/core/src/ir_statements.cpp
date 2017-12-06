@@ -38,6 +38,7 @@
 #include "insieme/core/ir_statements.h"
 
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/transform/materialize.h"
 
 namespace insieme {
 namespace core {
@@ -83,6 +84,10 @@ namespace core {
 	ForStmtPtr ForStmt::get(NodeManager& manager, const VariablePtr& iterator, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step,
 	                        const CompoundStmtPtr& body) {
 		return get(manager, DeclarationStmt::get(manager, iterator, start), end, step, body);
+	}
+
+	ReturnStmtPtr ReturnStmt::get(NodeManager & manager, const ExpressionPtr& returnExpr) {
+		return manager.get(ReturnStmt(transform::materialize(returnExpr)));
 	}
 
 } // end namespace core

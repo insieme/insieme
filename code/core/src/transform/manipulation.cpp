@@ -1095,12 +1095,19 @@ namespace transform {
 				// - actual bind
 				auto bind = builder.bindExpr(funTypeOut, lambda->getParameterList().as<ParametersPtr>(), builder.callExpr(newLambda, newArgs));
 
+				// this is passed as an argument, and thus wrapped in a declaration
+				assert_true(res.getParentNode().isa<DeclarationPtr>());
+
+				// we have to replace the declaration too
+				auto decl = builder.declaration(materialize(bind->getType()),bind);
+
 				// build address to result for next step
-				res = replaceAddress(manager, res, bind);
-				res = res.as<BindExprAddress>()->getCall()->getFunctionExpr();
+				res = replaceAddress(manager, res.getParentAddress(), decl);
+				res = res.as<DeclarationAddress>()->getInitialization().as<BindExprAddress>()->getCall()->getFunctionExpr();
 
 				// update propagated variable
 				value = innerValue;
+
 			}
 
 			// for all others: just return result

@@ -41,6 +41,8 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/core/transform/materialize.h"
+
 #include "ir_node_test.inc"
 
 namespace insieme {
@@ -202,12 +204,12 @@ namespace core {
 
 		LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
 		IRBuilder builder(manager);
-		ReturnStmtPtr stmt = ReturnStmt::get(manager, literal, literal->getType());
+		ReturnStmtPtr stmt = ReturnStmt::get(manager, literal);
 
 		EXPECT_EQ("return 12", toString(*stmt));
 
 		// check hash codes, children and cloning
-		basicNodeTests(stmt, toVector<NodePtr>(builder.declaration(literal->getType(), literal)));
+		basicNodeTests(stmt, toVector<NodePtr>(builder.declaration(transform::materialize(literal->getType()), literal)));
 	}
 
 	TEST(StatementsTest, Goto) {

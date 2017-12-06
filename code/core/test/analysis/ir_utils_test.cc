@@ -483,6 +483,56 @@ namespace analysis {
 		EXPECT_EQ("[0-0-1-0,0-0-2-0]", toString(res));
 	}
 
+	TEST(IsMaterializationOf, Basic) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto t = [&](const std::string& code) {
+			return builder.parseType(code);
+		};
+
+		auto isNotMaterializationOf = [](const TypePtr& a, const TypePtr& b) {
+			return !isMaterializationOf(a,b);
+		};
+
+		// some positive checks
+		EXPECT_PRED2(isMaterializationOf, t("ref<A>"), t("A"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<int<4>>"), t("int<4>"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<int<4>>"), t("int<2>"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<int<4>>"), t("uint<2>"));
+
+		EXPECT_PRED2(isMaterializationOf, t("ref<'a>"), t("'a"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<int<'a>>"), t("int<'a>"));
+
+		EXPECT_PRED2(isMaterializationOf, t("ref<A,f,f,plain>"), t("ref<A,t,f,cpp_ref>"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<A,f,f,plain>"), t("ref<A,f,f,cpp_rref>"));
+
+		// some negative checks
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<A>"), t("B"));
+
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,t,f,plain>"), t("A"));
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,t,plain>"), t("A"));
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,t,t,plain>"), t("A"));
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,f,cpp_ref>"), t("A"));
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,f,cpp_rref>"), t("A"));
+
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,t,f,plain>"), t("ref<A,t,f,plain>"));
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,f,plain>"), t("ref<A,t,f,plain>"));
+
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,t,f,plain>"), t("ref<A,t,f,cpp_ref>"));
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,t,plain>"), t("ref<A,t,f,cpp_ref>"));
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,t,t,plain>"), t("ref<A,t,f,cpp_ref>"));
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,f,cpp_ref>"), t("ref<A,t,f,cpp_ref>"));
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,f,cpp_rref>"), t("ref<A,t,f,cpp_ref>"));
+
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<int<4>>"), t("uint<4>"));
+
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<'a>"), t("'b"));
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<int<'a>>"), t("int<'b>"));
+
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<'a>"), t("int<4>"));
+	}
+
 	TEST(IsMaterializingCall, Basic) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
@@ -508,6 +558,18 @@ namespace analysis {
 			"fun(1);"
 		);
 		EXPECT_FALSE(isMaterializingCall(call4));
+
+		auto call5 = builder.parseStmt(
+			"def fun = (a : 'a) -> 'a { return a; };"
+			"fun(1);"
+		);
+		EXPECT_FALSE(isMaterializingCall(call5));
+
+		auto call6 = builder.parseStmt(
+			"def fun = (a : 'a) -> 'a { return a; };"
+			"fun(1) materialize;"
+		);
+		EXPECT_TRUE(isMaterializingCall(call6));
 	}
 
 	TEST(IsMaterializingCall, Pick) {
@@ -535,25 +597,33 @@ namespace analysis {
 		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>>", "2")));
 		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<8>>", "3")));
 		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<8>>", "4u")));
-		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>,t,t,plain>", "5")));
 
-		// type variables
-		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<'a>>", "6")));
-		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<'a>", "7")));
+		// only mutable references
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<int<4>,f,f,plain>", "5")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,f,t,plain>", "5")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,t,f,plain>", "5")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>,t,t,plain>", "5")));
+
+		// no type variable instantiation
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<'a>>", "6")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<'a>", "7")));
 
 		// mapping functions to binds
-		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<()=>'b>", "()-> int<4> { return 0; }")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<()=>'b>", "()-> int<4> { return 0; }")));
+		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<()=>int<4>>", "()-> int<4> { return 0; }")));
 
 		// pointer qualifier addition is allowed
 		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<ptr<int<4>,t,f>>", R"(lit("p":ptr<int<4>,f,f>))")));
-		EXPECT_TRUE(isMaterializingDecl(buildDecl("ref<ptr<'a,t,f>>", R"(lit("p":ptr<int<4>,f,f>))")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<ptr<'a,t,f>>", R"(lit("p":ptr<int<4>,f,f>))")));
 
 		// classes and structs materializing by (1) construction, (2) init expressions, or (3) implicit constructor calls
 		string structA = "def struct A { ctor () { } ctor (p : real<8>) { }  ctor (x : ref<int<4>>) { } }; ";
 		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "A::(ref_decl(type_lit(ref<A>)))")));
 		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "<ref<A>>(ref_decl(type_lit(ref<A>))){}")));
-		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "4.0")));
-		EXPECT_TRUE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "lit(\"X\":ref<int<4>>)")));
+
+		// implicit conversion constructors are not allowed in declarations
+		EXPECT_FALSE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "4.0")));
+		EXPECT_FALSE(isMaterializingDecl(buildDecl(structA + "ref<A>", structA + "lit(\"X\":ref<int<4>>)")));
 
 		// cases which are NOT materializing
 		EXPECT_FALSE(isMaterializingDecl(buildDecl("ref<int<4>>", R"(lit("a":ref<int<4>>))")));

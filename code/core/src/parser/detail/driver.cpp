@@ -598,9 +598,7 @@ namespace parser {
 
 			// replace return statement types
 			auto retBody = core::transform::transformBottomUpGen(body, [&retType, this](const core::ReturnStmtPtr& ret) {
-				auto retT = ret->getReturnType();
-				auto replacementT = core::transform::materialize(retType);
-				return builder.returnStmt(ret->getReturnExpr(), replacementT);
+				return builder.returnStmt(ret->getReturnExpr());
 			});
 
 			// if it is a function with explicitly auto-created parameters no materialization of the parameters is required
@@ -1213,10 +1211,26 @@ namespace parser {
 		 * constructs a new declaration statement for the variable with an undefined init expression
 		 */
 		DeclarationStmtPtr InspireDriver::genUndefinedDeclarationStmt(const location& l, const TypePtr& type, const std::string name) {
+
+			// make sure that if it is a reference
+			if (!lang::isReference(type)) {
+				error(l, "Can not declare non-plain-reference type without initializer.");
+				return nullptr;
+			}
+
+			// and actually plain reference
+			if (!lang::isPlainReference(type)) {
+				error(l, "Can not declare non-plain reference type without initializer.");
+				return nullptr;
+			}
+
+			// create the variable
 			auto var = genVariableDeclaration(l, type, name);
 			if (!var) {
 				return nullptr;
 			}
+
+			// use default initializer
 			return builder.declarationStmt(var, lang::buildRefDecl(var->getType()));
 		}
 

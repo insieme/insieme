@@ -106,6 +106,17 @@ namespace analysis {
 	CallExprPtr getRefDeclCall(const DeclarationPtr& decl);
 
 	/**
+	 * Determines whether the first type is the materialized type of the second type. This
+	 * function does not check whether the materialization is valued, thus, whether the necessary
+	 * copy or move constructors are available.
+	 *
+	 * @param materialized the materialized type
+	 * @param type the original type
+	 * @return true, if the first type is a materialized type of the second type, false otherwise
+	 */
+	bool isMaterializationOf(const TypePtr& materialized, const TypePtr& type);
+
+	/**
 	 * Tests whether the given call is materializing its result
 	 * (this is the case if the function returns a value type but the return value of the call is a reference to that type)
 	 */

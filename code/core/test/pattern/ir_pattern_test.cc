@@ -666,7 +666,7 @@ namespace pattern {
 		ASSERT_TRUE(res3);
 		//	std::cout << "Match: " << *res3 << "\n";
 		EXPECT_EQ("AP(v0)", toString(res3->getVarBinding("x").getValue()));
-		EXPECT_EQ("[AP(decl ref<int<'a>,f,f,plain> : v0),AP(decl ref<int<'a>,f,f,plain> : v0)]", toString(res3->getVarBinding("y").getList()));
+		EXPECT_EQ("[AP(decl ref<int<4>,f,f,plain> : v0),AP(decl ref<int<4>,f,f,plain> : v0)]", toString(res3->getVarBinding("y").getList()));
 
 		//	std::cout << "x=" << res->getVarBinding("x") << "\n";
 		//	std::cout << "y=" << res->getVarBinding("y") << "\n";

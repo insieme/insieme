@@ -42,6 +42,8 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation_utils.h"
 
+#include "insieme/core/lang/reference.h"
+
 namespace insieme {
 namespace core {
 namespace transform {
@@ -62,6 +64,18 @@ namespace transform {
 		// wrap type into plain ref
 		IRBuilder builder(type->getNodeManager());
 		return builder.refType(type);
+	}
+
+	DeclarationPtr materialize(const ExpressionPtr& value) {
+		auto& mgr = value->getNodeManager();
+
+		// do not materialize references
+		if (lang::isReference(value->getType())) {
+			return Declaration::get(mgr, value->getType(), value);
+		}
+
+		// but everything else
+		return Declaration::get(mgr, materialize(value->getType()), value);
 	}
 
 	TypePtr dematerialize(const TypePtr& type) {

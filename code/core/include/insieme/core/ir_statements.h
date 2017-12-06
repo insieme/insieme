@@ -933,12 +933,10 @@ namespace core {
 		 *
 		 * @param manager the manager used for maintaining instances of this class
 		 * @param returnExpr the expression forming the return value
-		 * @param returnType the type associated with this return
 		 * @return the requested type instance managed by the given manager
 		 */
-		static ReturnStmtPtr get(NodeManager & manager, const ExpressionPtr& returnExpr, const TypePtr& returnType) {
-			return manager.get(ReturnStmt(Declaration::get(manager, returnType, returnExpr)));
-		}
+		static ReturnStmtPtr get(NodeManager & manager, const ExpressionPtr& returnExpr);
+
 	IR_NODE_END()
 
 } // end namespace core

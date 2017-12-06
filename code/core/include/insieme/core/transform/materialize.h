@@ -46,6 +46,8 @@ namespace transform {
 	TypePtr materialize(const TypePtr&);
 	TypePtr dematerialize(const TypePtr&);
 
+	DeclarationPtr materialize(const ExpressionPtr& value);
+
 	struct LambdaIngredients {
 		VariableList params;
 		StatementPtr body;

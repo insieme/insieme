@@ -72,9 +72,10 @@ namespace checks {
 	SIMPLE_CHECK(ValidInitExprMemLocation, InitExpr, false);
 
 	/**
-	 * This check verifies that materializing declarations are backed up through a constructor or an implicit conversion.
+	 * This check verifies that materializing declarations are backed up through a constructor or an implicit conversion
+	 * and all other are non-materializing declarations that are simply copying data.
 	 */
-	SIMPLE_CHECK(ValidMaterializingDeclaration, Declaration, false);
+	SIMPLE_CHECK(ValidDeclaration, Declaration, false);
 
 	#undef SIMPLE_CHECK
 

@@ -353,10 +353,8 @@ namespace core {
 		NodeList children;
 		children.push_back(type);
 		children.push_back(function);
-		auto param_types = function->getType().as<FunctionTypePtr>()->getParameterTypeList();
-		for(size_t i = 0; i < arguments.size(); ++i) {
-			auto t = i < param_types.size() ? param_types[i] : arguments[i]->getType();
-			children.push_back(Declaration::get(manager, transform::materialize(t), arguments[i]));
+		for(const auto& arg : arguments) {
+			children.push_back(transform::materialize(arg));
 		}
 		return manager.get(CallExpr(children));
 	}

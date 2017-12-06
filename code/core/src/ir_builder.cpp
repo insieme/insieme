@@ -762,10 +762,6 @@ namespace core {
 		return declarationStmt(value, lang::buildRefDecl(value->getType()));
 	}
 
-	ReturnStmtPtr IRBuilderBaseModule::returnStmt(const ExpressionPtr& retVal) const {
-		return returnStmt(retVal, retVal->getType());
-	}
-
 	ReturnStmtPtr IRBuilderBaseModule::returnStmt() const {
 		return returnStmt(manager.getLangBasic().getUnitConstant());
 	}
@@ -1482,9 +1478,7 @@ namespace core {
 		auto funType = functionType(extractTypes(list), expr->getType());
 		// replace return statement types
 		ingredients.body = core::transform::transformBottomUpGen(ingredients.body, [&funType, this](const core::ReturnStmtPtr& ret) {
-			auto retT = ret->getReturnType();
-			auto replacementT = core::transform::materialize(funType->getReturnType());
-			return returnStmt(ret->getReturnExpr(), replacementT);
+			return returnStmt(ret->getReturnExpr());
 		});
 
 		ExpressionPtr res = lambdaExpr(funType, ingredients.params, ingredients.body);
