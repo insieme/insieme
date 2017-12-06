@@ -601,7 +601,7 @@ namespace haskell {
 						return x.x + x.y;
 					};
 
-					fun(lit("S":ref<params>))
+					fun(*lit("S":ref<params>))
 				)"
 			))
 		);
@@ -669,7 +669,7 @@ namespace haskell {
 						return x.b.x + x.a.y;
 					};
 
-					fun(lit("S":ref<ext_params>))
+					fun(*lit("S":ref<ext_params>))
 				)"
 			))
 		);
@@ -698,7 +698,7 @@ namespace haskell {
 						return x.l.b.x + x.k.a.y;
 					};
 
-					fun(lit("S":ref<extra_ext_params>))
+					fun(*lit("S":ref<extra_ext_params>))
 				)"
 			))
 		);
