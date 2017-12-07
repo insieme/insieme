@@ -41,6 +41,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/core/lang/array.h"
+#include "insieme/core/lang/pointer.h"
 
 #include "insieme/utils/set_utils.h"
 
@@ -197,6 +198,39 @@ namespace types {
 		EXPECT_PRED2(isNotSubTypeOf, refInt4, refInt8);
 		EXPECT_PRED2(isNotSubTypeOf, refReal4, refReal8);
 
+	}
+
+	TEST(TypeUtils, IsSubTypeOfPtrType) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const auto& basic = manager.getLangBasic();
+
+		TypePtr int4 = basic.getInt4();
+
+		TypePtr ptrType4 = lang::PointerType::create(int4);
+		TypePtr ptrType4C = lang::PointerType::create(int4, true);
+		TypePtr ptrType4V = lang::PointerType::create(int4, false, true);
+		TypePtr ptrType4CV = lang::PointerType::create(int4, true, true);
+
+		EXPECT_PRED2(isSubTypeOf,    ptrType4,   ptrType4);
+		EXPECT_PRED2(isSubTypeOf,    ptrType4,   ptrType4C);
+		EXPECT_PRED2(isSubTypeOf,    ptrType4,   ptrType4V);
+		EXPECT_PRED2(isSubTypeOf,    ptrType4,   ptrType4CV);
+
+		EXPECT_PRED2(isNotSubTypeOf, ptrType4C,  ptrType4);
+		EXPECT_PRED2(isSubTypeOf,    ptrType4C,  ptrType4C);
+		EXPECT_PRED2(isNotSubTypeOf, ptrType4C,  ptrType4V);
+		EXPECT_PRED2(isSubTypeOf,    ptrType4C,  ptrType4CV);
+
+		EXPECT_PRED2(isNotSubTypeOf, ptrType4V,  ptrType4);
+		EXPECT_PRED2(isNotSubTypeOf, ptrType4V,  ptrType4C);
+		EXPECT_PRED2(isSubTypeOf,    ptrType4V,  ptrType4V);
+		EXPECT_PRED2(isSubTypeOf,    ptrType4V,  ptrType4CV);
+
+		EXPECT_PRED2(isNotSubTypeOf, ptrType4CV, ptrType4);
+		EXPECT_PRED2(isNotSubTypeOf, ptrType4CV, ptrType4C);
+		EXPECT_PRED2(isNotSubTypeOf, ptrType4CV, ptrType4V);
+		EXPECT_PRED2(isSubTypeOf,    ptrType4CV, ptrType4CV);
 	}
 
 	TEST(TypeUtils, IsSubTypeOfFunctionType) {
