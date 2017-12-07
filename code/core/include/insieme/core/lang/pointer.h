@@ -313,6 +313,12 @@ namespace lang {
 
 		LANG_EXT_DERIVED(PtrPreDec,  "(p : ref<ptr<'a,'c,'v>>) -> ptr<'a,'c,'v> { p = ptr_sub(*p, 1l); return *p; }")
 
+
+		// C++-style unary pointer operations
+		LANG_EXT_DERIVED(CxxStylePtrPreInc, "(arg : ref<ptr<'a,'c,'v>,f,'rv,plain>) -> ref<ptr<'a,'c,'v>,f,'rv,plain> { ptr_pre_inc(ref_cast(arg, type_lit(f), type_lit(f), type_lit(plain))); return arg; }")
+		LANG_EXT_DERIVED(CxxStylePtrPreDec, "(arg : ref<ptr<'a,'c,'v>,f,'rv,plain>) -> ref<ptr<'a,'c,'v>,f,'rv,plain> { ptr_pre_dec(ref_cast(arg, type_lit(f), type_lit(f), type_lit(plain))); return arg; }")
+
+
 	};
 
 
