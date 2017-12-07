@@ -513,13 +513,10 @@ namespace checks {
 		TypePtr retType = substitution->applyTo(returnType);
 		TypePtr resType = address->getType();
 
-		if(types::typeMatchesWithOptionalMaterialization(manager, resType, retType)) return res;
+		// the result type must be a subtype of the computed type or its materialized form
+		if (types::isSubTypeOf(retType,resType) || types::isSubTypeOf(transform::materialize(retType),resType)) return res;
 
-		// FIXME: this should only be allowed if the actual return within the lambda generates a ref
-		if(lang::isPlainReference(resType)) {
-			if(analysis::equalTypes(analysis::getReferencedType(resType), retType)) return res;
-		}
-
+		// if this is not the case, we found an issue
 		add(res, Message(address, EC_TYPE_INVALID_RETURN_TYPE,
 			                format("Invalid result type of call expression \nexpected: \n\t%s \nactual: \n\t%s \nfunction type: \n\t%s",
 			                    *retType, *resType, *functionType),
@@ -979,8 +976,22 @@ namespace checks {
 
 		core::TypePtr type = analysis::getReferencedType(refType);
 
+		// test that all declarations are materializing declarations or cpp references
+		for(const auto cur : address->getInitDecls()) {
+			auto decl = cur.getAddressedNode();
+			auto dT = decl->getType();
+			auto iT = decl->getInitialization()->getType();
+
+			if (!lang::isCppReference(iT) && !lang::isCppRValueReference(dT) && !analysis::isMaterializingDecl(decl)) {
+				add(res, Message(cur, EC_TYPE_INVALID_ARGUMENT_TYPE,
+					 format("Invalid non-materializing declaration in init expression: \n\tdecl-type: %s\n\tinit-type: %s", *dT, *iT),
+					 Message::ERROR));
+			}
+		}
+
+
 		// get initializers
-		auto initExprs = address.getAddressedNode()->getInitExprList();
+		auto initDecls = address.getAddressedNode()->getInitDecls();
 
 		auto materialize = [&](const TypePtr& tt) -> TypePtr {
 			if(!core::lang::isReference(tt)) return IRBuilder(mgr).refType(tt);
@@ -988,8 +999,8 @@ namespace checks {
 		};
 
 		// check if we are initializing a scalar
-		if(initExprs.size() == 1) {
-			if(types::typeMatchesWithOptionalMaterialization(mgr, refType, initExprs.front()->getType())) {
+		if(initDecls.size() == 1) {
+			if(types::typeMatchesWithOptionalMaterialization(mgr, refType, initDecls.front()->getType())) {
 				return res;
 			}
 		}
@@ -1004,22 +1015,32 @@ namespace checks {
 			if(structType) {
 				std::vector<FieldPtr> fields = structType->getFields()->getFields();
 				// check number of initializers
-				if(initExprs.size() != fields.size()) {
+				if(initDecls.size() != fields.size()) {
 					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-						             format("Wrong number of initialization expressions (%d expressions for %d fields)", initExprs.size(), fields.size()),
+						             format("Wrong number of initialization expressions (%d expressions for %d fields)", initDecls.size(), fields.size()),
 						             Message::ERROR));
 					return res;
 				}
 				// check type of values within init expression
 				unsigned i = 0;
-				for(const auto& cur : initExprs) {
-					core::TypePtr requiredType = nominalize(fields[i++]->getType());
+				for(const auto& cur : initDecls) {
+					core::TypePtr fieldType = nominalize(fields[i]->getType());
+					core::TypePtr requiredType = materialize(fieldType);
 					core::TypePtr isType = nominalize(cur->getType());
-					if(!types::typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
-						add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-										 format("Invalid type of struct-member initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
+					if (!types::isSubTypeOf(isType,requiredType)) {
+						add(res, Message(address->getInitDecls()[i], EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_TYPE,
+										 format("Invalid type of struct-member initialization:\n\t - expected type: %s\n\t   - actual type: %s", *requiredType, *isType),
 										 Message::ERROR));
 					}
+
+					// also, if field is a reference, the declaration should not be initializing
+					if ((lang::isCppReference(fieldType) || lang::isCppRValueReference(fieldType)) && analysis::isMaterializingDecl(cur)) {
+						add(res, Message(address->getInitDecls()[i], EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_MATERIALIZATION,
+										 format("Invalid materializing struct-member initialization:\n\t - field type: %s\n\t    - init type: %s", *fieldType, *isType),
+										 Message::ERROR));
+					}
+
+					i++;
 				}
 				return res;
 			}
@@ -1028,18 +1049,18 @@ namespace checks {
 			core::UnionPtr unionType = analysis::isUnion(tagT->peel());
 			if(unionType) {
 				// check for single initializer
-				if(initExprs.size() != 1) {
+				if(initDecls.size() != 1) {
 					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, "More than one initialization expression for union", Message::ERROR));
 					return res;
 				}
 				// check that its type matches any of the union types
-				core::TypePtr isType = nominalize(initExprs.front()->getType());
+				core::TypePtr isType = nominalize(initDecls.front()->getType());
 				bool matchesAny = false;
 				for(const auto& field : unionType->getFields()) {
 					if(types::typeMatchesWithOptionalMaterialization(mgr, materialize(nominalize(field->getType())), isType)) matchesAny = true;
 				}
 				if(!matchesAny) {
-					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
+					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_TYPE,
 						             format("Union initialization expression (of type %s) does not match any union types", isType), Message::ERROR));
 				}
 				return res;
@@ -1050,17 +1071,17 @@ namespace checks {
 			lang::ArrayType arrType = lang::ArrayType(type);
 			// check number of initializers
 			if(arrType.isConstSize()) {
-				if(initExprs.size() > arrType.getNumElements()) {
+				if(initDecls.size() > arrType.getNumElements()) {
 					add(res,
 						Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-						        format("Too many initialization expressions (%d expressions for array size %d)", initExprs.size(), arrType.getNumElements()),
+						        format("Too many initialization expressions (%d expressions for array size %d)", initDecls.size(), arrType.getNumElements()),
 						        Message::ERROR));
 					return res;
 				}
 			}
 			// check type of values within init expression
 			core::TypePtr requiredType = arrType.getElementType();
-			for(const auto& cur : initExprs) {
+			for(const auto& cur : initDecls) {
 				core::TypePtr isType = cur->getType();
 				if(!types::typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
 					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
@@ -1075,15 +1096,15 @@ namespace checks {
 
 			core::TypeList elementTypes = tupleType->getElementTypes();
 			// check number of initializers
-			if(initExprs.size() != elementTypes.size()) {
+			if(initDecls.size() != elementTypes.size()) {
 				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-								 format("Wrong number of initialization expressions (%d expressions for %d elements)", initExprs.size(), elementTypes.size()),
+								 format("Wrong number of initialization expressions (%d expressions for %d elements)", initDecls.size(), elementTypes.size()),
 								 Message::ERROR));
 				return res;
 			}
 			// check type of values within init expression
 			unsigned i = 0;
-			for(const auto& cur : initExprs) {
+			for(const auto& cur : initDecls) {
 				core::TypePtr requiredType = nominalize(elementTypes[i++]);
 				core::TypePtr isType = nominalize(cur->getType());
 				if(!types::typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
@@ -1101,7 +1122,7 @@ namespace checks {
 		}
 
 		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-			             format("Invalid type of initialization - expected type: \n%s, actual: \n%s", *refType, toString(initExprs)), Message::ERROR));
+			             format("Invalid type of initialization - expected type: \n%s, actual: \n%s", *refType, toString(initDecls)), Message::ERROR));
 
 		return res;
 	}

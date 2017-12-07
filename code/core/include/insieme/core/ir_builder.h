@@ -355,6 +355,10 @@ namespace core {
 			return tupleExpr(toVector<ExpressionPtr>(expr, rest...));
 		}
 
+		InitExprPtr initExpr(const GenericTypePtr& type, const ExpressionPtr& memExpr, const DeclarationList& initDecls) const;
+
+		InitExprPtr initExpr(const ExpressionPtr& memExpr, const DeclarationList& initDecls) const;
+
 		InitExprPtr initExpr(const GenericTypePtr& type, const ExpressionPtr& memExpr, const ExpressionList& initExprs) const;
 
 		InitExprPtr initExpr(const ExpressionPtr& memExpr, const ExpressionList& initExprs = ExpressionList()) const {

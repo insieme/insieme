@@ -747,7 +747,73 @@ namespace checks {
 		EXPECT_TRUE(check(ok, typeCheck).empty());
 		ASSERT_FALSE(check(err, typeCheck).empty());
 
-		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(InitExprAddress(err)->getInitDecls()[0], EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_TYPE, "", Message::ERROR));
+	}
+
+
+	TEST(InitExprTypeCheck, MaterializingDeclarations) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto decl = [&](const std::string& declType, const std::string& initType) {
+			auto dT = builder.parseType(declType);
+			auto iT = builder.parseType(initType);
+			return builder.declaration(dT,builder.literal("X",iT));
+		};
+
+		auto trg = builder.parseExpr(
+				"def struct S { "
+				"	x : int<4>;"
+				"	y : A;"
+				"	z : B;"
+				"	w : ref<C,t,f,cpp_ref>;"
+				"};"
+				"ref_temp(type_lit(S))"
+		);
+
+		CheckPtr initCheck = make_check<InitExprTypeCheck>();
+
+		// check a positive case
+		{
+			DeclarationList decls;
+			decls.push_back(decl("ref<int<4>,f,f,plain>","int<4>"));
+			decls.push_back(decl("ref<A,f,f,plain>","A"));
+			decls.push_back(decl("ref<B,f,f,plain>","ref<B,t,f,cpp_ref>"));
+			decls.push_back(decl("ref<C,t,f,cpp_ref>","ref<C,t,f,cpp_ref>"));
+			auto init = builder.initExpr(trg,decls);
+
+			auto issues = check(init,initCheck);
+			EXPECT_TRUE(issues.empty()) << "Issues: " << issues;
+		}
+
+		// check some negative case
+		{
+			DeclarationList decls;
+			decls.push_back(decl("int<4>","int<4>"));			// this one is not materialized
+			decls.push_back(decl("ref<A,f,f,plain>","A"));
+			decls.push_back(decl("ref<B,f,f,plain>","ref<B,t,f,cpp_ref>"));
+			decls.push_back(decl("ref<C,t,f,cpp_ref>","ref<C,t,f,cpp_ref>"));
+			auto init = builder.initExpr(trg,decls);
+
+			auto issues = check(init,initCheck);
+			EXPECT_EQ(2,issues.size()) << "Issues: " << issues;
+			EXPECT_PRED2(containsMSG, issues, Message(InitExprAddress(init)->getInitDecls()[0], EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+			EXPECT_PRED2(containsMSG, issues, Message(InitExprAddress(init)->getInitDecls()[0], EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_TYPE, "", Message::ERROR));
+		}
+
+		{
+			DeclarationList decls;
+			decls.push_back(decl("ref<int<4>,f,f,plain>","int<4>"));
+			decls.push_back(decl("ref<A,f,f,plain>","A"));
+			decls.push_back(decl("ref<B,f,f,plain>","ref<B,t,f,cpp_ref>"));
+			decls.push_back(decl("ref<C,f,f,plain>","ref<C,t,f,cpp_ref>"));		// this one should not be materialized
+			auto init = builder.initExpr(trg,decls);
+
+			auto issues = check(init,initCheck);
+			EXPECT_EQ(2,issues.size()) << "Issues: " << issues;
+			EXPECT_PRED2(containsMSG, issues, Message(InitExprAddress(init)->getInitDecls()[3], EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_TYPE, "", Message::ERROR));
+			EXPECT_PRED2(containsMSG, issues, Message(InitExprAddress(init)->getInitDecls()[3], EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_MATERIALIZATION, "", Message::ERROR));
+		}
 	}
 
 	TEST(InitExprTypeCheck, Tuple) {
