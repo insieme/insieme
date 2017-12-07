@@ -154,7 +154,7 @@ namespace analysis {
 
 	CallExprPtr isCallOf(const CallExprPtr& candidate, const NodePtr& function) {
 		// check for null
-		if(!candidate) { return false; }
+		if(!candidate || !function) return {};
 
 		// check invoked function
 		return (*(stripAttributes(candidate->getFunctionExpr())) == *function) ? candidate : CallExprPtr();
@@ -162,7 +162,7 @@ namespace analysis {
 
 	CallExprPtr isCallOf(const NodePtr& candidate, const NodePtr& function) {
 		// check for null
-		if(!candidate) { return false; }
+		if(!candidate || !function) return {};
 
 		// check invoked function
 		return isCallOf(candidate.isa<CallExprPtr>(), function);
