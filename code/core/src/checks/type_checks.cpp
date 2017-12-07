@@ -804,7 +804,23 @@ namespace checks {
 		ExpressionPtr init = declaration->getInitialization();
 		TypePtr initType = init->getType();
 
-		if(types::typeMatchesWithOptionalMaterialization(address->getNodeManager(), variableType, initType)) { return res; }
+		// depending on whether this is a materializing declaration
+		if (analysis::isMaterializingDecl(declaration)) {
+
+			// constructor call is ok
+			if (analysis::getRefDeclCall(declaration) && *variableType == *initType) return res;
+
+			// TODO: check that a copy / move compiler exists
+
+			// materialization is also ok
+			if (analysis::isMaterializationOf(variableType,initType)) return res;
+
+		} else {
+
+			// for non-materializing types it has to be a sub-type conversion
+			if (types::isSubTypeOf(initType,variableType)) return res;
+
+		}
 
 		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, format("Invalid initialization - types do not match\n"
 			                                                                  " - initialized type: %s\n - init expr type  : %s",
