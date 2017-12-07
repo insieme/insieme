@@ -90,6 +90,7 @@ namespace extensions {
 			auto& feExt = mgr.getLangExtension<utils::FrontendInspireModule>();
 			auto& rExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
 			auto& cExt = mgr.getLangExtension<core::lang::CompoundOpsExtension>();
+			auto& pExt = mgr.getLangExtension<core::lang::PointerExtension>();
 
 			return core::transform::transformBottomUpGen(ir, [&](const core::CompoundStmtPtr& compound) {
 				StatementList newStmts;
@@ -103,6 +104,12 @@ namespace extensions {
 					}
 					else if(cExt.isCallOfCompPrefixDec(stmt)) {
 						replacement = builder.preDec(core::analysis::getArgument(stmt, 0));
+					}
+					else if(pExt.isCallOfCxxStylePtrPreInc(stmt)) {
+						replacement = builder.callExpr(pExt.getPtrPreInc(), core::analysis::getArgument(stmt, 0));
+					}
+					else if(pExt.isCallOfCxxStylePtrPreDec(stmt)) {
+						replacement = builder.callExpr(pExt.getPtrPreDec(), core::analysis::getArgument(stmt, 0));
 					}
 					else if(rExt.isCallOfRefDeref(stmt)) {
 						replacement = core::analysis::getArgument(stmt, 0);
@@ -118,6 +125,26 @@ namespace extensions {
 					newStmts.push_back(replacement);
 				}
 				return builder.compoundStmt(newStmts);
+			}, core::transform::globalReplacement);
+		}
+
+		//////////////////////////////////////////////////////////////////////////
+		// Simplify cxx-style increment/decrement if the resulting ref is immediately dereffed
+		// =======================================================================
+		core::ExpressionPtr simplifyCxxStyleIncDec(const core::ExpressionPtr& ir) {
+			auto& mgr = ir->getNodeManager();
+			core::IRBuilder builder(mgr);
+			auto& rExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
+			auto& pExt = mgr.getLangExtension<core::lang::PointerExtension>();
+
+			return core::transform::transformBottomUpGen(ir, [&](const core::CallExprPtr& call) {
+				auto replacement = call;
+				if(rExt.isCallOfRefDeref(call)) {
+					auto arg = call->getArgument(0);
+					if(pExt.isCallOfCxxStylePtrPreDec(arg)) replacement = builder.callExpr(pExt.getPtrPreDec(), core::analysis::getArgument(arg, 0));
+					if(pExt.isCallOfCxxStylePtrPreInc(arg)) replacement = builder.callExpr(pExt.getPtrPreInc(), core::analysis::getArgument(arg, 0));
+				}
+				return replacement;
 			}, core::transform::globalReplacement);
 		}
 
@@ -247,6 +274,7 @@ namespace extensions {
 	core::tu::IRTranslationUnit FrontendCleanupExtension::IRVisit(core::tu::IRTranslationUnit& tu) {
 		auto ir = core::tu::toIR(tu.getNodeManager(), tu);
 
+		ir = simplifyCxxStyleIncDec(ir);
 		ir = simplifyExpressionsInCompoundStatements(ir);
 		ir = replaceFERefTemp(ir);
 		ir = replaceStdInitListCopies(ir);

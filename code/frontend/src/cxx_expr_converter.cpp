@@ -692,11 +692,19 @@ namespace conversion {
 		}
 
 		auto &compExt = converter.getNodeManager().getLangExtension<core::lang::CompoundOpsExtension>();
+		auto &pExt = converter.getNodeManager().getLangExtension<core::lang::PointerExtension>();
 
 		// prefix increment/decrement need to be handled differently in C++ (lvalue semantics)
-		// ...but first we have to make sure to correctly translate ops on pointers
+		// ... but first we have to make sure to correctly translate ops on pointers
+		// ... which also needs special C++ semantics
 
 		if(core::lang::isReference(subExpr) && core::lang::isPointer(core::analysis::getReferencedType(subExpr->getType()))) {
+			if(unOp->getOpcode() == clang::UO_PreInc) {
+				return builder.callExpr(subExpr->getType(), pExt.getCxxStylePtrPreInc(), subExpr);
+			}
+			else if(unOp->getOpcode() == clang::UO_PreDec) {
+				return builder.callExpr(subExpr->getType(), pExt.getCxxStylePtrPreDec(), subExpr);
+			}
 			auto opIt = unOpMap.find(unOp->getOpcode());
 			if(opIt != unOpMap.end()) {
 				auto op = opIt->second;
