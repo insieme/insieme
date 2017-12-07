@@ -901,9 +901,9 @@ namespace analysis {
 
 	bool contains(const NodePtr& code, const NodePtr& element) {
 		assert_true(element) << "Element to be searched must not be empty!";
-		return code && makeCachedLambdaVisitor([&](const NodePtr& cur, rec_call<bool>::type& rec) -> bool {
-			       return *cur == *element || any(cur->getChildList(), rec);
-			   }, true)(code);
+		return code && visitDepthFirstOnceInterruptible(code,[&](const NodePtr& cur) {
+			return (*cur == *element) ? Action::Interrupt : Action::Continue;
+		},true,true);
 	}
 
 	unsigned countInstances(const NodePtr& code, const NodePtr& element, bool limitScope) {
