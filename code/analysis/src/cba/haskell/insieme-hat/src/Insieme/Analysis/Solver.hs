@@ -877,7 +877,7 @@ toJsonMetaFile root SolverState {assignment, variableIndex} = A.encode meta_file
             mvcId            = show i
             mvcFormatted     = formatVar v
             mvcNodePath      = I.ppNodePathStr $ varPathJust v
-            mvcValue         = shorten $ valuePrint v assignment
+            mvcValue         = splitSummary $ valuePrint v assignment
             (mvcConstraintLims, mvcConstrainsDeps)
                 = unzip $ flip map (constraints v) $ \c ->
                      ( printLimit c (UnfilteredView assignment)
@@ -892,13 +892,6 @@ toJsonMetaFile root SolverState {assignment, variableIndex} = A.encode meta_file
 
     hasRoot :: I.Tree -> Var -> Bool
     hasRoot r v = (I.getRoot <$> address (varIdent v)) == Just r
-
-    shorten xs =
-        case splitAt 100 xs of
-          (s,[]) -> (s, Nothing)
-          (s,rs) -> (s ++ takeWhile looksLikeNodeAddress rs  ++ " ...", Nothing {-Just xs -})
-
-    looksLikeNodeAddress c = c `elem` "1234567890-"
 
     formatVar var = (show (analysis vid)) ++ formatIdentifier (idValue vid)
       where

@@ -38,6 +38,7 @@
 {-# LANGUAGE 
   NamedFieldPuns,
   RecordWildCards,
+  TupleSections,
   DeriveGeneric,
   DeriveAnyClass,
   OverloadedStrings,
@@ -53,11 +54,18 @@ import GHC.Generics
 import Data.Aeson as A
 import Data.Aeson.Encoding as A
 import qualified Data.ByteString.Builder as BSB
+import Data.Char
+import Data.List
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict (Map)
 import Data.Monoid
 
+import Insieme.Inspire (NodePath, parseNodePathStr)
+
 type PPNodePath = String
+type NodeId = String
+type VarId = String
+type TplId = String
 
 data MetadataFile = MetadataFile
     { mfBookmarks  :: [PPNodePath]
@@ -156,4 +164,27 @@ instance ToJSON MetadataLink where
             "active"     .= mlActive
 
 
+splitSummary :: String -> (String, Maybe a)
+splitSummary xs =
+    case splitAt 100 xs of
+      (s,[]) -> (s, Nothing)
+      (s,rs) -> (s ++ takeWhile (not . isSpace) rs  ++ " ...", Nothing {-Just xs -})
 
+scanForNodeAddrs :: (String -> (String, String)) -> String -> String
+scanForNodeAddrs f [] = []
+scanForNodeAddrs f xs@('0':'-':_) =
+    let (x,r) = f xs in x ++ scanForNodeAddrs f r
+scanForNodeAddrs f (x:xs) = x : scanForNodeAddrs f xs
+
+shortenNodeAddr :: Map NodePath NodeId -> String -> (String, String)
+shortenNodeAddr np_ni_map xs =
+    let Just ((np, ppnp), r) = parseNodePathStr xs in
+    (,r) $ case Map.lookupLE np np_ni_map of
+      Just (np'@(_:_:_:_:_:_:_:_), ni)
+          | np == np'
+              -> "0-!"++ni++"-0"
+          | Just npr <- stripPrefix np' np
+              -> "0-:"++ni++"-" ++ intercalate "-" (map show npr)
+          -- | otherwise
+          --     -> error $ "shortenNodeAddr: found addr not a prefix: " ++ show (np, np')
+      _       -> ppnp
