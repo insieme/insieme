@@ -39,6 +39,7 @@
 #include <fstream>
 #include <functional>
 #include <regex>
+#include <unordered_set>
 
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
@@ -59,6 +60,7 @@
 
 #include "insieme/annotations/expected_ir_annotation.h"
 #include "insieme/utils/config.h"
+#include "insieme/utils/hash_utils.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/common/env_vars.h"
 
@@ -73,6 +75,7 @@ namespace utils {
 	using insieme::annotations::ExpectedIRAnnotation;
 
 	namespace detail {
+
 		/*
 		 * This function compares both trees recursively and returns whether they match considering some special markers.
 		 *
@@ -84,10 +87,14 @@ namespace utils {
 		 *   and member name part.
 		 */
 		static inline bool compareWithMarkerNodeHandlingInternal(const NodePtr& expected, const NodePtr& actual,
-		                                                         std::map<std::string, std::string>& nameMappings) {
+		                                                         std::map<std::string, std::string>& nameMappings,
+		                                                         std::unordered_set<std::pair<core::NodePtr, core::NodePtr>>& equalNodes) {
 			static const std::string markerPrefix = "__any_string__";
 			static const std::string anyExprString = "__any_expr__";
 			static const std::string anyTypeString = "__any_type__";
+
+			// lookup in cache
+			if(equalNodes.find({expected, actual}) != equalNodes.end()) return true;
 
 			// if the expected node is the special __any_type__ generic type
 			if(expected->getNodeType() == core::NT_GenericType && expected.as<core::GenericTypePtr>()->getFamilyName() == anyTypeString) {
@@ -143,15 +150,18 @@ namespace utils {
 				// all other nodes are compared by comparing all their children
 			} else {
 				for(size_t index = 0; index < expected->getChildList().size(); ++index) {
-					if(!compareWithMarkerNodeHandlingInternal(expected->getChild(index), actual->getChild(index), nameMappings)) return false;
+					if(!compareWithMarkerNodeHandlingInternal(expected->getChild(index), actual->getChild(index), nameMappings, equalNodes)) return false;
 				}
 			}
 
+			// insert a new entry into our cache
+			equalNodes.insert({expected, actual});
 			return true;
 		}
 		static inline bool compareWithMarkerNodeHandling(const NodePtr& expected, const NodePtr& actual) {
 			std::map<std::string, std::string> nameMappings;
-			return compareWithMarkerNodeHandlingInternal(expected, actual, nameMappings);
+			std::unordered_set<std::pair<core::NodePtr, core::NodePtr>> equalNodes;
+			return compareWithMarkerNodeHandlingInternal(expected, actual, nameMappings, equalNodes);
 		}
 	}
 
