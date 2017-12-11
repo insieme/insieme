@@ -185,6 +185,6 @@ shortenNodeAddr np_ni_map xs =
               -> "0-!"++ni++"-0"
           | Just npr <- stripPrefix np' np
               -> "0-:"++ni++"-" ++ intercalate "-" (map show npr)
-          -- | otherwise
+          --  otherwise
           --     -> error $ "shortenNodeAddr: found addr not a prefix: " ++ show (np, np')
       _       -> ppnp
