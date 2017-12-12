@@ -164,11 +164,11 @@ instance ToJSON MetadataLink where
             "active"     .= mlActive
 
 
-splitSummary :: String -> (String, Maybe a)
+splitSummary :: String -> (String, Maybe String)
 splitSummary xs =
     case splitAt 100 xs of
       (s,[]) -> (s, Nothing)
-      (s,rs) -> (s ++ takeWhile (not . isSpace) rs  ++ " ...", Nothing {-Just xs -})
+      (s,rs) -> (s ++ takeWhile (not . isSpace) rs, Just xs)
 
 scanForNodeAddrs :: (String -> (String, String)) -> String -> String
 scanForNodeAddrs f [] = []
