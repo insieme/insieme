@@ -132,6 +132,8 @@ if(WIN32)
 
   set(Hwloc_LDFLAGS "${Hwloc_LIBRARY}")
 
+  get_filename_component(Hwloc_LIBRARY_DIR ${Hwloc_LIBRARY} DIRECTORY)
+
 else()
 
   # Find with pkgconfig
@@ -176,5 +178,10 @@ else()
         "Found hwloc ${Hwloc_VERSION} in ${Hwloc_INCLUDE_DIRS}:${Hwloc_LIBRARIES}")
     endif()
   endif()
-endif()
 
+  get_filename_component(HWLOC_LIBRARIES ${Hwloc_LIBRARIES} DIRECTORY)
+
+  set(Hwloc_INCLUDE_DIR ${Hwloc_INCLUDE_DIRS})
+  set(Hwloc_LIBRARY_DIR ${Hwloc_LIBRARY_DIRS})
+
+endif()
