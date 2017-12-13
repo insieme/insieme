@@ -62,7 +62,7 @@ namespace conversion {
 			auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 
 			auto buildMemberAccess = [&builder, &refExt](const core::ExpressionPtr& thisVar, const std::string memberName, const core::TypePtr& memberType) {
-				return builder.callExpr(refExt.getRefMemberAccess(), builder.deref(thisVar), builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
+				return builder.callExpr(refExt.getRefMemberAccess(), core::lang::toPlainReference(builder.deref(thisVar)), builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
 			};
 
 			// extract function type and param types
@@ -101,7 +101,7 @@ namespace conversion {
 			core::IRBuilder builder(irThisType.getNodeManager());
 			auto& refExt = irThisType.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 			auto buildMemberAccess = [&builder, &refExt](const core::ExpressionPtr& thisVar, const std::string memberName, const core::TypePtr& memberType) {
-				return builder.callExpr(refExt.getRefMemberAccess(), builder.deref(thisVar), builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
+				return builder.callExpr(refExt.getRefMemberAccess(), core::lang::toPlainReference(builder.deref(thisVar)), builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
 			};
 
 			// generate function param types, actual param variables and the argument expressions to call this function

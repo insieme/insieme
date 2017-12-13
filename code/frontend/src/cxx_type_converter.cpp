@@ -73,7 +73,7 @@ namespace conversion {
 			string memName = frontend::utils::getNameForField(fieldDecl, converter.getSourceManager());
 			auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
 			auto retType = converter.convertType(fieldDecl->getType());
-			core::ExpressionPtr mem = builder.callExpr(access, thisExpr, builder.getIdentifierLiteral(memName), builder.getTypeLiteral(retType));
+			core::ExpressionPtr mem = builder.callExpr(access, core::lang::toPlainReference(thisExpr), builder.getIdentifierLiteral(memName), builder.getTypeLiteral(retType));
 			if(core::lang::isCppReference(retType) || core::lang::isCppRValueReference(retType)) mem = builder.deref(mem);
 			return mem;
 		}

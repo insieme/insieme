@@ -289,6 +289,7 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
         -- handle values defined by assignments
         I.CallExpr -> var
 
+
         -- handle struct values defined by init expressions
         I.InitExpr | Q.isTagType elemType -> var
            where
@@ -301,7 +302,7 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
              fields = fromJust $ map structField <$> Q.getFieldNames elemType
 
              valueVal a = Solver.get a <$> valueVars
-             valueVars = valueVar <$> I.children (I.goDown 2 addr)
+             valueVars = valueVar . (I.goDown 1) <$> I.children (I.goDown 2 addr)
 
         -- handle array values defined by init expressions
         I.InitExpr | Q.isArray elemType -> var
@@ -436,7 +437,7 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
 
         elemValueVar = case Q.getNodeType addr of
 
-                I.InitExpr  -> valueVar $ I.goDown 0 $ I.goDown 2 addr
+                I.InitExpr  -> valueVar $ I.goDown 1 $ I.goDown 0 $ I.goDown 2 addr
 
                 I.CallExpr  -> if isMaterializingDeclaration $ I.getNode valueDecl
                                 then memoryStateValue (MemoryStatePoint (ProgramPoint valueDecl Post) (MemoryLocation valueDecl)) analysis

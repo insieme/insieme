@@ -394,6 +394,17 @@ namespace lang {
 		return builder.callExpr(rExt.getRefReinterpret(), refExpr, builder.getTypeLiteral(targetTy));
 	}
 
+	ExpressionPtr toPlainReference(const ExpressionPtr& refExpr) {
+		return buildRefKindCast(refExpr,ReferenceType::Kind::Plain);
+	}
+
+	ExpressionPtr toCppReference(const ExpressionPtr& refExpr) {
+		return buildRefKindCast(refExpr,ReferenceType::Kind::CppReference);
+	}
+
+	ExpressionPtr toCppRValueReference(const ExpressionPtr& refExpr) {
+		return buildRefKindCast(refExpr,ReferenceType::Kind::CppRValueReference);
+	}
 
 	bool isAnyRefCast(const NodePtr& node) {
 		auto expr = node.isa<ExpressionPtr>();

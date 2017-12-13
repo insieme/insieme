@@ -934,7 +934,7 @@ namespace types {
 						else return fail;
 					}
 
-					// qualifier promotion and implicit plain-ref casting
+					// qualifier promotion
 					if(isRefArg && isRefParam) {
 						lang::ReferenceType argType(arguments[i]);
 						lang::ReferenceType paramType(parameter[i]);
@@ -942,11 +942,6 @@ namespace types {
 						// promote qualifiers
 						if(paramType.isConst() && !argType.isConst()) { argType.setConst(true); }
 						if(paramType.isVolatile() && !argType.isVolatile()) { argType.setVolatile(true); }
-
-						// convert implicitly to plain reference
-						if(paramType.isPlain() && (argType.isCppReference() || argType.isCppRValueReference())) {
-							argType.setKind(lang::ReferenceType::Kind::Plain);
-						}
 
 						// update argument
 						materializedArguments[i] = argType.toType();

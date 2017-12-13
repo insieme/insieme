@@ -250,6 +250,68 @@ namespace checks {
 		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
 		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
 
+		// can't pass a cpp_ref to a plain reference
+		test("ref<A,f,f,plain>","ref<A,f,f,cpp_ref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a const cpp_ref to a plain reference
+		test("ref<A,f,f,plain>","ref<A,t,f,cpp_ref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a volatile cpp_ref to a plain reference
+		test("ref<A,f,f,plain>","ref<A,f,t,cpp_ref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a cpp_rref to a plain reference
+		test("ref<A,f,f,plain>","ref<A,f,f,cpp_rref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a const cpp_rref to a plain reference
+		test("ref<A,f,f,plain>","ref<A,t,f,cpp_rref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a volatile cpp_rref to a plain reference
+		test("ref<A,f,f,plain>","ref<A,f,t,cpp_rref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// -- same for generic parameter types --
+
+		// can't pass a cpp_ref to a plain reference
+		test("ref<A,'c,'v,plain>","ref<A,f,f,cpp_ref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a const cpp_ref to a plain reference
+		test("ref<A,'c,'v,plain>","ref<A,t,f,cpp_ref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a volatile cpp_ref to a plain reference
+		test("ref<A,'c,'v,plain>","ref<A,f,t,cpp_ref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a cpp_rref to a plain reference
+		test("ref<A,'c,'v,plain>","ref<A,f,f,cpp_rref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a const cpp_rref to a plain reference
+		test("ref<A,'c,'v,plain>","ref<A,t,f,cpp_rref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// can't pass a volatile cpp_rref to a plain reference
+		test("ref<A,'c,'v,plain>","ref<A,f,t,cpp_rref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
 	}
 
 	TEST(FunctionKindCheck, Basic) {

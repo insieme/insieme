@@ -300,7 +300,7 @@ namespace cba {
 
 			// running semantic checks
 			auto res = core::checks::check(prog);
-			EXPECT_TRUE(res.empty()) << res << "\n------\n" << printer::dumpErrors(res);
+			ASSERT_TRUE(res.empty()) << res << "\n------\n" << printer::dumpErrors(res);
 
 			// run CBA analysis
 			int testCount = 0;

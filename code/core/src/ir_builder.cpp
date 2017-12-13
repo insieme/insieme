@@ -1142,9 +1142,12 @@ namespace core {
 		core::TypePtr memberType = tagType->getFieldType(member);
 		assert_true(memberType) << "No member " << member->getValue() << " found in\n" << dumpPretty(structExpr->getType());
 
+		// cast struct expression to plain reference if necessary
+		auto src = lang::buildRefKindCast(structExpr,lang::ReferenceType::Kind::Plain);
+
 		// create access instruction
 		core::ExpressionPtr access = manager.getLangExtension<lang::ReferenceExtension>().getRefMemberAccess();
-		return callExpr(access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
+		return callExpr(access, src, getIdentifierLiteral(member), getTypeLiteral(memberType));
 	}
 
 	CallExprPtr IRBuilderBaseModule::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {

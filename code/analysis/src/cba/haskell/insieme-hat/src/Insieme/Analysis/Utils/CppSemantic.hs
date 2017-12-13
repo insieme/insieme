@@ -109,14 +109,16 @@ isCtorBasedConversion a b = isCopyCtorConversion a b || isMoveCtorConversion a b
 
 
 -- tests whether a given combination of declaration and init type causes a materializiation
-isMaterializing :: I.Tree -> I.Tree -> Bool
-isMaterializing declType initType | hasMoreReferences declType initType = True
-isMaterializing declType initType | isCtorBasedConversion initType declType = True
-isMaterializing _ _ = False
+isMaterializationOf :: I.Tree -> I.Tree -> Bool
+isMaterializationOf declType initType | hasMoreReferences declType initType = True
+isMaterializationOf declType initType | isCtorBasedConversion initType declType = True
+isMaterializationOf _ _ = False
 
 -- tests whether the given node is a materializing declaration
 isMaterializingDeclaration :: I.Tree -> Bool
-isMaterializingDeclaration (I.Node I.Declaration [declType,I.Node _ (initType:_)]) = isMaterializing declType initType
+isMaterializingDeclaration (I.Node I.Declaration [declType,I.Node _ (initType:_)]) | isMaterializationOf declType initType = True
+isMaterializingDeclaration (I.Node I.Declaration [_,I.Node I.CallExpr ( _ : fun : _ )]) | isConstructor fun = True
+isMaterializingDeclaration (I.Node I.Declaration [_,I.Node I.InitExpr _]) = True
 isMaterializingDeclaration _ = False
 
 

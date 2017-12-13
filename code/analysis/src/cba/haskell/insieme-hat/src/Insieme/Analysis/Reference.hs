@@ -157,7 +157,7 @@ referenceValue addr = case Q.getNodeType addr of
 
         compose = ComposedValue.toComposed . ReferenceSet
 
-        opsHandler = [ allocHandler , declHandler , refNull, refNarrow , refExpand , refCast , refReinterpret , refFromIntegral, ptrToRef , ptrFromRef , stdArraySubscript ]
+        opsHandler = [ allocHandler , declHandler , refNull, refNarrow , refExpand , refCasts , refReinterpret , refFromIntegral, ptrToRef , ptrFromRef , stdArraySubscript ]
 
         allocHandler = OperatorHandler cov noDep val
             where
@@ -186,9 +186,9 @@ referenceValue addr = case Q.getNodeType addr of
                 val _ a = compose $ expand (baseRefVal a) (unDPS $ dataPathVal a)
                 expand = BSet.lift2 $ onRefs2 $ \(Reference l p) d -> Reference l (DP.append p (DP.invert d))
 
-        refCast = OperatorHandler cov dep val
+        refCasts = OperatorHandler cov dep val
             where
-                cov a = Q.isBuiltin a "ref_cast"
+                cov a = any (Q.isBuiltin a) ["ref_cast","ref_kind_cast","ref_const_cast","ref_parent_cast","ref_volatile_cast"]
                 dep _ _ = [toVar baseRefVar]
                 val _ a = get a baseRefVar
 

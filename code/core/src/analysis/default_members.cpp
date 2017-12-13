@@ -155,7 +155,7 @@ namespace analysis {
 				const auto& fieldType = field->getType();
 				auto fieldAccess = builder.callExpr(refExt.getRefMemberAccess(), builder.deref(thisParam),
 				                                    builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
-				auto otherFieldAccess = builder.callExpr(refExt.getRefMemberAccess(), otherParam,
+				auto otherFieldAccess = builder.callExpr(refExt.getRefMemberAccess(), lang::toPlainReference(otherParam),
 				                                         builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
 
 				// if the field can be copied trivially
@@ -197,7 +197,7 @@ namespace analysis {
 				const auto& fieldType = field->getType();
 				auto fieldAccess = builder.callExpr(refExt.getRefMemberAccess(), builder.deref(thisParam),
 				                                    builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
-				auto otherFieldAccess = builder.callExpr(refExt.getRefMemberAccess(), otherParam,
+				auto otherFieldAccess = builder.callExpr(refExt.getRefMemberAccess(), lang::toPlainReference(otherParam),
 				                                         builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
 
 				// if the field can be copied trivially

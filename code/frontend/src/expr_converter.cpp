@@ -481,7 +481,7 @@ namespace conversion {
 		if(unwrap) qualifiedType = membExpr->getBase()->getType();
 		retType = builder.refType(retType, qualifiedType.isConstQualified(), qualifiedType.isVolatileQualified());
 
-		retIr = builder.callExpr(retType, access, base, builder.getIdentifierLiteral(memName), retTypeLit);
+		retIr = builder.callExpr(retType, access, core::lang::toPlainReference(base), builder.getIdentifierLiteral(memName), retTypeLit);
 
 		// member expression node can have implicit r-value semantic
 		if(unwrap || membExpr->isRValue()) retIr = builder.deref(retIr);

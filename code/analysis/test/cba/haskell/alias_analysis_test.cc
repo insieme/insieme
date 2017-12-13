@@ -254,6 +254,116 @@ namespace cba {
 	}
 
 
+	TEST(AdvancedAliasAnalysis, RefKindCastPlainTest) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto stmt = builder.parseStmt(
+				"{"
+				"	var ref<A> a = ref_new(type_lit(A)); "
+				"	"
+				"	a;"
+				"	ref_kind_cast(a,type_lit(plain));"
+				"	ref_kind_cast(a,type_lit(cpp_ref));"
+				"	ref_kind_cast(a,type_lit(cpp_rref));"
+				""
+				"	ref_const_cast(a,type_lit(t));"
+				"	ref_const_cast(a,type_lit(f));"
+				""
+				"	ref_volatile_cast(a,type_lit(t));"
+				"	ref_volatile_cast(a,type_lit(f));"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(stmt);
+
+		auto comp = CompoundStmtAddress(stmt);
+
+		EXPECT_TRUE(areAlias(comp[1], comp[1]));
+		EXPECT_TRUE(areAlias(comp[1], comp[2]));
+		EXPECT_TRUE(areAlias(comp[1], comp[3]));
+		EXPECT_TRUE(areAlias(comp[1], comp[4]));
+		EXPECT_TRUE(areAlias(comp[1], comp[5]));
+		EXPECT_TRUE(areAlias(comp[1], comp[6]));
+		EXPECT_TRUE(areAlias(comp[1], comp[7]));
+		EXPECT_TRUE(areAlias(comp[1], comp[8]));
+
+	}
+
+
+	TEST(AdvancedAliasAnalysis, RefKindCastCppRefTest) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto stmt = builder.parseStmt(
+				"{"
+				"	var ref<A,f,f,cpp_ref> a = ref_kind_cast(ref_new(type_lit(A)),type_lit(cpp_ref)); "
+				"	"
+				"	a;"
+				"	ref_kind_cast(a,type_lit(plain));"
+				"	ref_kind_cast(a,type_lit(cpp_ref));"
+				"	ref_kind_cast(a,type_lit(cpp_rref));"
+				""
+				"	ref_const_cast(a,type_lit(t));"
+				"	ref_const_cast(a,type_lit(f));"
+				""
+				"	ref_volatile_cast(a,type_lit(t));"
+				"	ref_volatile_cast(a,type_lit(f));"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(stmt);
+
+		auto comp = CompoundStmtAddress(stmt);
+
+		EXPECT_TRUE(areAlias(comp[1], comp[1]));
+		EXPECT_TRUE(areAlias(comp[1], comp[2]));
+		EXPECT_TRUE(areAlias(comp[1], comp[3]));
+		EXPECT_TRUE(areAlias(comp[1], comp[4]));
+		EXPECT_TRUE(areAlias(comp[1], comp[5]));
+		EXPECT_TRUE(areAlias(comp[1], comp[6]));
+		EXPECT_TRUE(areAlias(comp[1], comp[7]));
+		EXPECT_TRUE(areAlias(comp[1], comp[8]));
+
+	}
+
+
+	TEST(AdvancedAliasAnalysis, RefKindCastCppRRefTest) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto stmt = builder.parseStmt(
+				"{"
+				"	var ref<A,f,f,cpp_rref> a = ref_kind_cast(ref_new(type_lit(A)),type_lit(cpp_rref)); "
+				"	"
+				"	a;"
+				"	ref_kind_cast(a,type_lit(plain));"
+				"	ref_kind_cast(a,type_lit(cpp_ref));"
+				"	ref_kind_cast(a,type_lit(cpp_rref));"
+				""
+				"	ref_const_cast(a,type_lit(t));"
+				"	ref_const_cast(a,type_lit(f));"
+				""
+				"	ref_volatile_cast(a,type_lit(t));"
+				"	ref_volatile_cast(a,type_lit(f));"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(stmt);
+
+		auto comp = CompoundStmtAddress(stmt);
+
+		EXPECT_TRUE(areAlias(comp[1], comp[1]));
+		EXPECT_TRUE(areAlias(comp[1], comp[2]));
+		EXPECT_TRUE(areAlias(comp[1], comp[3]));
+		EXPECT_TRUE(areAlias(comp[1], comp[4]));
+		EXPECT_TRUE(areAlias(comp[1], comp[5]));
+		EXPECT_TRUE(areAlias(comp[1], comp[6]));
+		EXPECT_TRUE(areAlias(comp[1], comp[7]));
+		EXPECT_TRUE(areAlias(comp[1], comp[8]));
+
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
