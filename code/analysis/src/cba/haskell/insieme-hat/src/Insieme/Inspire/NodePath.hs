@@ -1,9 +1,11 @@
 {-# LANGUAGE FlexibleContexts, RankNTypes, ScopedTypeVariables, MagicHash #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 module Insieme.Inspire.NodePath 
     ( NodePath
     , ppNodePathStr
 --    , ppNodePathBS
 --    , ppNodePathVec
+    , parseNodePathStr
     ) where
 
 -- import Control.Monad.ST
@@ -18,6 +20,8 @@ module Insieme.Inspire.NodePath
 -- import           Data.List
 -- import           Data.Word
 -- import           Data.Char
+import           Data.List.Split
+import           Text.Regex.TDFA ((=~))
 
 type NodePath = [Int]
 
@@ -27,6 +31,13 @@ ppNodePathStr np = '0' : go np
     go [] = []
     go (n:np) = '-' : shows n (go np)
 
+parseNodePathStr :: String -> Maybe ((NodePath, String), String)
+parseNodePathStr str =
+    case str =~ "^([0-9]+(-[0-9]+)*)([^0-9-]|$)"
+             :: (String, String, String, [String]) of
+      (b,_,_,_) | not (null b) -> Nothing
+      ("", _, a, [m,_,x]) ->
+          Just $ let ([0], np) = splitAt 1 $ map read $ splitOn "-" m in ((np, m), x++a)
 
 -- ppNodePathStr :: NodePath -> String
 -- ppNodePathStr = map (chr . fromIntegral) . V.toList . storableVec . ppNodePathVec 100

@@ -42,7 +42,11 @@
 
 namespace insieme {
 namespace frontend {
-	
+
+	TEST(FragmentConversionTest, Atoi) {
+		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_atoi.c");
+	}
+
 	TEST(FragmentConversionTest, BasicTypes) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_basic_types.c");
 	}
@@ -62,7 +66,7 @@ namespace frontend {
 	TEST(FragmentConversionTest, Expressions) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_expressions.c");
 	}
-	
+
 	TEST(FragmentConversionTest, FunCalls) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/c_fun_calls.c");
 	}

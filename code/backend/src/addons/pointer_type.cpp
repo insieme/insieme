@@ -243,6 +243,8 @@ namespace addons {
 			res[ext.getPtrPostDec()] = OP_CONVERTER { return c_ast::postDec(c_ast::deref(CONVERT_ARG(0))); };
 			res[ext.getPtrPreInc()] = OP_CONVERTER { return c_ast::preInc(c_ast::deref(CONVERT_ARG(0))); };
 			res[ext.getPtrPreDec()] = OP_CONVERTER { return c_ast::preDec(c_ast::deref(CONVERT_ARG(0))); };
+			res[ext.getCxxStylePtrPreInc()] = OP_CONVERTER { return c_ast::ref(c_ast::preInc(c_ast::deref(CONVERT_ARG(0)))); };
+			res[ext.getCxxStylePtrPreDec()] = OP_CONVERTER { return c_ast::ref(c_ast::preDec(c_ast::deref(CONVERT_ARG(0)))); };
 
 
             #include "insieme/backend/operator_converter_end.inc"

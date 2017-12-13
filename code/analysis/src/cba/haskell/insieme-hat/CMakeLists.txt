@@ -68,6 +68,8 @@ add_custom_target(insieme_hat
 
 	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/hat-profiling-project"
 
+	BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/libinsieme-hat.so
+
 	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 
 	COMMENT "Building Insieme HAT"

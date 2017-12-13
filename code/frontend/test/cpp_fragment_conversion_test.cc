@@ -46,6 +46,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, AdvancedTemplates) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_advanced_templates.cpp"); }
 
+	TEST(CppConversionTest, Atoi) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_atoi.cpp"); }
+
 	TEST(CppConversionTest, BasicClasses) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_classes.cpp"); }
 
 	TEST(CppConversionTest, BasicTemplates) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_basic_templates.cpp"); }
