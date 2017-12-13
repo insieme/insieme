@@ -337,7 +337,7 @@ namespace parser {
 
 				// otherwise it is a field
 				if(analysis::isRefType(exprType)) {
-					return builder.callExpr(refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
+					return builder.callExpr(refAccess, lang::toPlainReference(expr), builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
 				}
 				return builder.callExpr(fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(memberType));
 
@@ -347,7 +347,7 @@ namespace parser {
 				if(auto fieldType = getFieldType(exprType, memberName)) {
 					// create access
 					if(analysis::isRefType(exprType)) {
-						return builder.callExpr(refAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
+						return builder.callExpr(refAccess, lang::toPlainReference(expr), builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
 					}
 					return builder.callExpr(fieldAccess, expr, builder.getIdentifierLiteral(memberName), builder.getTypeLiteral(fieldType));
 				}

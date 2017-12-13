@@ -226,7 +226,7 @@ namespace lang {
 		assert_pred1(isArray, core::analysis::getReferencedType(arrExpr->getType())) << "Trying to buildPtrFromArray from non-array.";
 		IRBuilder builder(arrExpr->getNodeManager());
 		auto& pExt = arrExpr->getNodeManager().getLangExtension<PointerExtension>();
-		return builder.callExpr(pExt.getPtrFromArray(), arrExpr);
+		return builder.callExpr(pExt.getPtrFromArray(), lang::toPlainReference(arrExpr));
 	}
 
 	ExpressionPtr buildPtrFromIntegral(const ExpressionPtr& intExpr, const TypePtr& ptrType) {

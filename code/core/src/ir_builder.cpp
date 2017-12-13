@@ -1143,7 +1143,7 @@ namespace core {
 		assert_true(memberType) << "No member " << member->getValue() << " found in\n" << dumpPretty(structExpr->getType());
 
 		// cast struct expression to plain reference if necessary
-		auto src = lang::buildRefKindCast(structExpr,lang::ReferenceType::Kind::Plain);
+		auto src = lang::toPlainReference(structExpr);
 
 		// create access instruction
 		core::ExpressionPtr access = manager.getLangExtension<lang::ReferenceExtension>().getRefMemberAccess();
@@ -1187,9 +1187,10 @@ namespace core {
 
 		// create access instruction
 		core::ExpressionPtr access = manager.getLangExtension<lang::ReferenceExtension>().getRefComponentAccess();
+		core::ExpressionPtr src = lang::toPlainReference(tupleExpr);
 		core::ExpressionPtr index = literal(getLangBasic().getUInt8(), utils::numeric_cast<string>(component));
 		core::ExpressionPtr typeLiteral = getTypeLiteral(componentType);
-		return callExpr(access, tupleExpr, index, typeLiteral);
+		return callExpr(access, src, index, typeLiteral);
 	}
 
 

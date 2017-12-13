@@ -605,6 +605,9 @@ namespace conversion {
 		core::ExpressionPtr lhs = converter.convertExpr(compOp->getLHS());
 		core::ExpressionPtr rhs = converter.convertExpr(compOp->getRHS());
 
+		// make lhs a plain reference
+		lhs = core::lang::toPlainReference(lhs);
+
 		core::ExpressionPtr compAssignFunc;
 		auto& compOpExt = converter.getNodeManager().getLangExtension<core::lang::CompoundOpsExtension>();
 
