@@ -179,7 +179,7 @@ else()
     endif()
   endif()
 
-  get_filename_component(HWLOC_LIBRARIES ${Hwloc_LIBRARIES} DIRECTORY)
+  get_filename_component(Hwloc_LIBRARY_DIRS ${HWLOC_LIBRARIES} DIRECTORY)
 
   set(Hwloc_INCLUDE_DIR ${Hwloc_INCLUDE_DIRS})
   set(Hwloc_LIBRARY_DIR ${Hwloc_LIBRARY_DIRS})
