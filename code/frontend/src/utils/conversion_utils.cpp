@@ -92,6 +92,10 @@ namespace utils {
 					.as<core::ExpressionPtr>();
 			}
 		}
+
+		// skip a ref_deref which remained until here
+		if(refExt.isCallOfRefDeref(innerInitExp)) innerInitExp = core::analysis::getArgument(innerInitExp, 0);
+
 		// if the init expr is an init expr
 		if(auto initInitExpr = innerInitExp.isa<core::InitExprAddress>()) {
 			auto memExprAddr = initInitExpr->getMemoryExpr();
