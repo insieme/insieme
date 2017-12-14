@@ -196,6 +196,14 @@ namespace utils {
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
 		case clang::CK_ArrayToPointerDecay:
+			// if the array is deref-ed here (which will be the case if we come from C++, where it is an r-value), we have to remove the ref_deref.
+			// there is nothing we can do really already at the point where we translate the sub-tree which would indicate this to us.
+			if(!core::lang::isReference(expr)) {
+				const auto& refExt = expr->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+				if(refExt.isCallOfRefDeref(expr)) {
+					expr = core::analysis::getArgument(expr, 0);
+				}
+			}
 			return core::lang::buildPtrFromArray(expr);
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////////
