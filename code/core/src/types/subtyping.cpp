@@ -38,6 +38,7 @@
 #include "insieme/core/types/subtyping.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/analysis/normalize.h"
@@ -216,6 +217,15 @@ namespace types {
 			if(adapted) {
 				return isSubTypeOf(subPtrType, superPtrType);
 			}
+		}
+
+		// check array types
+		if(lang::ArrayType::isFixedSizedArrayType(subType) && lang::ArrayType::isUnknownSizedArrayType(superType)) {
+			// fixed sized arrays are subtypes of unknown sized arrays, if their element types match
+			auto subArrayType = lang::ArrayType(subType);
+			auto superArrayType = lang::ArrayType(superType);
+
+			if(analysis::equalTypes(subArrayType.getElementType(), superArrayType.getElementType())) { return true; }
 		}
 
 		// check whether the sub-type is generic

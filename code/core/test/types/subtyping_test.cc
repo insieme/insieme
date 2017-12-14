@@ -233,6 +233,33 @@ namespace types {
 		EXPECT_PRED2(isSubTypeOf,    ptrType4CV, ptrType4CV);
 	}
 
+	TEST(TypeUtils, IsSubTypeOfArrayType) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const auto& basic = manager.getLangBasic();
+
+		TypePtr int4 = basic.getInt4();
+		TypePtr int8 = basic.getInt8();
+
+		TypePtr arrayType42 = lang::ArrayType::create(int4, builder.intLit(2));
+		TypePtr arrayType44 = lang::ArrayType::create(int4, builder.intLit(4));
+		TypePtr arrayType4Inf = lang::ArrayType::create(int4);
+		TypePtr arrayType82 = lang::ArrayType::create(int8, builder.intLit(2));
+		TypePtr arrayType84 = lang::ArrayType::create(int8, builder.intLit(4));
+		TypePtr arrayType8Inf = lang::ArrayType::create(int8);
+
+		EXPECT_PRED2(isNotSubTypeOf, arrayType42,   arrayType44);
+		EXPECT_PRED2(isNotSubTypeOf, arrayType44,   arrayType42);
+
+		EXPECT_PRED2(isSubTypeOf,    arrayType42,   arrayType4Inf);
+		EXPECT_PRED2(isSubTypeOf,    arrayType44,   arrayType4Inf);
+		EXPECT_PRED2(isNotSubTypeOf, arrayType4Inf, arrayType42);
+		EXPECT_PRED2(isNotSubTypeOf, arrayType4Inf, arrayType44);
+
+		EXPECT_PRED2(isNotSubTypeOf, arrayType4Inf, arrayType82);
+		EXPECT_PRED2(isNotSubTypeOf, arrayType8Inf, arrayType42);
+	}
+
 	TEST(TypeUtils, IsSubTypeOfFunctionType) {
 		NodeManager manager;
 		IRBuilder builder(manager);
