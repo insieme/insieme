@@ -187,13 +187,8 @@ namespace types {
 			// if element and kind are the same, and flags are compatible, return true
 			if(analysis::equalTypes(srcElement, trgElement)) return true;
 
-			// support nested references
-			if(analysis::isRefType(srcElement) && analysis::isRefType(trgElement)) { return isSubTypeOf(srcElement, trgElement); }
-
-			// also support references of derived classes being passed to base-type pointer
-			if(core::analysis::isObjectType(srcElement) && core::analysis::isObjectType(trgElement)) {
-				if(isSubTypeOf(srcElement, trgElement)) { return true; }
-			}
+			// otherwise we recursively compare the element types
+			if(isSubTypeOf(srcElement, trgElement)) { return true; }
 		}
 
 		// check pointer types

@@ -193,11 +193,69 @@ namespace types {
 		TypePtr refReal8 = builder.refType(real8);
 
 		EXPECT_PRED2(isSubTypeOf, int4, int8);
+		EXPECT_PRED2(isSubTypeOf, refInt4, refInt8);
 		EXPECT_PRED2(isSubTypeOf, real4, real8);
+		EXPECT_PRED2(isSubTypeOf, refReal4, refReal8);
 
-		EXPECT_PRED2(isNotSubTypeOf, refInt4, refInt8);
-		EXPECT_PRED2(isNotSubTypeOf, refReal4, refReal8);
+		TypePtr refType4 = lang::ReferenceType::create(int4);
+		TypePtr refType4C = lang::ReferenceType::create(int4, true);
+		TypePtr refType4V = lang::ReferenceType::create(int4, false, true);
+		TypePtr refType4CV = lang::ReferenceType::create(int4, true, true);
 
+		EXPECT_PRED2(isSubTypeOf,    refType4,   refType4);
+		EXPECT_PRED2(isSubTypeOf,    refType4,   refType4C);
+		EXPECT_PRED2(isSubTypeOf,    refType4,   refType4V);
+		EXPECT_PRED2(isSubTypeOf,    refType4,   refType4CV);
+
+		EXPECT_PRED2(isNotSubTypeOf, refType4C,  refType4);
+		EXPECT_PRED2(isSubTypeOf,    refType4C,  refType4C);
+		EXPECT_PRED2(isNotSubTypeOf, refType4C,  refType4V);
+		EXPECT_PRED2(isSubTypeOf,    refType4C,  refType4CV);
+
+		EXPECT_PRED2(isNotSubTypeOf, refType4V,  refType4);
+		EXPECT_PRED2(isNotSubTypeOf, refType4V,  refType4C);
+		EXPECT_PRED2(isSubTypeOf,    refType4V,  refType4V);
+		EXPECT_PRED2(isSubTypeOf,    refType4V,  refType4CV);
+
+		EXPECT_PRED2(isNotSubTypeOf, refType4CV, refType4);
+		EXPECT_PRED2(isNotSubTypeOf, refType4CV, refType4C);
+		EXPECT_PRED2(isNotSubTypeOf, refType4CV, refType4V);
+		EXPECT_PRED2(isSubTypeOf,    refType4CV, refType4CV);
+
+		TypePtr refType8 = lang::ReferenceType::create(int8);
+		TypePtr refType8C = lang::ReferenceType::create(int8, true);
+		TypePtr refType8V = lang::ReferenceType::create(int8, false, true);
+		TypePtr refType8CV = lang::ReferenceType::create(int8, true, true);
+
+		EXPECT_PRED2(isSubTypeOf,    refType4,   refType8);
+		EXPECT_PRED2(isSubTypeOf,    refType4,   refType8C);
+		EXPECT_PRED2(isSubTypeOf,    refType4,   refType8V);
+		EXPECT_PRED2(isSubTypeOf,    refType4,   refType8CV);
+
+		EXPECT_PRED2(isNotSubTypeOf, refType4C,  refType8);
+		EXPECT_PRED2(isSubTypeOf,    refType4C,  refType8C);
+		EXPECT_PRED2(isNotSubTypeOf, refType4C,  refType8V);
+		EXPECT_PRED2(isSubTypeOf,    refType4C,  refType8CV);
+
+		EXPECT_PRED2(isNotSubTypeOf, refType4V,  refType8);
+		EXPECT_PRED2(isNotSubTypeOf, refType4V,  refType8C);
+		EXPECT_PRED2(isSubTypeOf,    refType4V,  refType8V);
+		EXPECT_PRED2(isSubTypeOf,    refType4V,  refType8CV);
+
+		EXPECT_PRED2(isNotSubTypeOf, refType4CV, refType8);
+		EXPECT_PRED2(isNotSubTypeOf, refType4CV, refType8C);
+		EXPECT_PRED2(isNotSubTypeOf, refType4CV, refType8V);
+		EXPECT_PRED2(isSubTypeOf,    refType4CV, refType8CV);
+
+		TypePtr refType4CppRef = lang::ReferenceType::create(int4, false, false, lang::ReferenceType::Kind::CppReference);
+		TypePtr refType4CppRRef = lang::ReferenceType::create(int4, false, false, lang::ReferenceType::Kind::CppRValueReference);
+
+		EXPECT_PRED2(isNotSubTypeOf, refType4,        refType4CppRef);
+		EXPECT_PRED2(isNotSubTypeOf, refType4CppRef,  refType4);
+		EXPECT_PRED2(isNotSubTypeOf, refType4,        refType4CppRRef);
+		EXPECT_PRED2(isNotSubTypeOf, refType4CppRRef, refType4);
+		EXPECT_PRED2(isNotSubTypeOf, refType4CppRef,  refType4CppRRef);
+		EXPECT_PRED2(isNotSubTypeOf, refType4CppRRef, refType4CppRef);
 	}
 
 	TEST(TypeUtils, IsSubTypeOfPtrType) {
