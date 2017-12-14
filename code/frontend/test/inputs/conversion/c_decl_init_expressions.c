@@ -117,10 +117,10 @@ int main() {
 	#pragma test expect_ir("var ref<array<int<4>,3u>,f,f> v0 = <ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>,f,f,plain>))) {0,1,2};")
 	int arr_implied[] = {0,1,2};
 
-	#pragma test expect_ir("var ref<array<array<int<4>,3u>,2u>,f,f> v0 = <ref<array<array<int<4>,3u>,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3u>,2u>,f,f>))) {<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {1,2,3},<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {4,5,6}};")
+	#pragma test expect_ir("var ref<array<array<int<4>,3u>,2u>,f,f> v0 = <ref<array<array<int<4>,3u>,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3u>,2u>,f,f>))) {<ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>>))) {1,2,3},<ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>>))) {4,5,6}};")
 	int arr_multi[2][3] = {{1,2,3}, {4,5,6}};
 
-	#pragma test expect_ir("var ref<array<array<int<4>,3u>,2u>,f,f,plain> v0 = <ref<array<array<int<4>,3u>,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3u>,2u>,f,f,plain>))) {<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {1},<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {4,5}};")
+	#pragma test expect_ir("var ref<array<array<int<4>,3u>,2u>,f,f,plain> v0 = <ref<array<array<int<4>,3u>,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3u>,2u>,f,f,plain>))) {<ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>>))) {1},<ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>>))) {4,5}};")
 	int arr_multi_partial[2][3] = {{1}, {4,5}};
 
 	// STRUCT TYPES //////////////////////////////////////////////////////////////
@@ -241,8 +241,8 @@ int main() {
 		{
 			var ref<__any_string__struct,f,f,plain> v0 = <ref<__any_string__struct,f,f,plain>>(
 					ref_decl(type_lit(ref<__any_string__struct,f,f,plain>))) {
-							<ref<__any_string__struct_inner,f,f,plain>>(ref_temp(type_lit(__any_string__struct_inner))) {1, 2.0E+0f},
-							<ref<__any_string__union_inner,f,f,plain>>(ref_temp(type_lit(__any_string__union_inner))) {3}};
+							<ref<__any_string__struct_inner,f,f,plain>>(ref_decl(type_lit(ref<__any_string__struct_inner>))) {1, 2.0E+0f},
+							<ref<__any_string__union_inner,f,f,plain>>(ref_decl(type_lit(ref<__any_string__union_inner>))) {3}};
 		}
 	)")
 	{
@@ -260,8 +260,8 @@ int main() {
 		{
 			var ref<array<__any_string__struct,2u>,f,f,plain> v0 = <ref<array<__any_string__struct,2u>,f,f,plain>>(
 					ref_decl(type_lit(ref<array<__any_string__struct,2u>,f,f,plain>))) {
-							<ref<__any_string__struct,f,f,plain>>(ref_temp(type_lit(__any_string__struct))) {1, 2u},
-							<ref<__any_string__struct,f,f,plain>>(ref_temp(type_lit(__any_string__struct))) {3, 4u}};
+							<ref<__any_string__struct,f,f,plain>>(ref_decl(type_lit(ref<__any_string__struct>))) {1, 2u},
+							<ref<__any_string__struct,f,f,plain>>(ref_decl(type_lit(ref<__any_string__struct>))) {3, 4u}};
 		}
 	)")
 	{
@@ -277,7 +277,7 @@ int main() {
 		{
 			var ref<__any_string__union,f,f,plain> v0 = <ref<__any_string__union,f,f,plain>>(
 					ref_decl(type_lit(ref<__any_string__union,f,f,plain>))) {
-							<ref<array<char,2u>,f,f,plain>>(ref_temp(type_lit(array<char,2u>))) {num_cast(1, type_lit(char)), num_cast(2, type_lit(char))}};
+							<ref<array<char,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<char,2u>>))) {num_cast(1, type_lit(char)), num_cast(2, type_lit(char))}};
 		}
 	)")
 	{

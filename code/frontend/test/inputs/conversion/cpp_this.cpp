@@ -114,7 +114,7 @@ int main() {
 		};
 		{
 			var ref<int<4>,f,f,plain> v0 = 0;
-			var ref<IMP_A,t,f,plain> v1 = <ref<IMP_A,f,f,plain>>(ref_decl(type_lit(ref<IMP_A,t,f,plain>))) {1, v0};
+			var ref<IMP_A,t,f,plain> v1 = <ref<IMP_A,t,f,plain>>(ref_decl(type_lit(ref<IMP_A,t,f,plain>))) {1, ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref))};
 			v1.x;
 			v1.y;
 		}
