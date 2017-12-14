@@ -598,7 +598,9 @@ namespace parser {
 
 			// replace return statement types
 			auto retBody = core::transform::transformBottomUpGen(body, [&retType, this](const core::ReturnStmtPtr& ret) {
-				return builder.returnStmt(ret->getReturnExpr());
+				auto retT = ret->getReturnType();
+				auto replacementT = core::transform::materialize(retType);
+				return builder.returnStmt(ret->getReturnExpr(), replacementT);
 			});
 
 			// if it is a function with explicitly auto-created parameters no materialization of the parameters is required
