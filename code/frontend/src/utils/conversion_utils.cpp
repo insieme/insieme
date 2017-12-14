@@ -61,23 +61,29 @@ namespace utils {
 	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& memLoc, const core::ExpressionPtr& initExpIn) {
 		static auto initializerListMangledName = insieme::utils::mangle("std::initializer_list");
 
-		core::ExpressionPtr initExp(initExpIn);
+		core::ExpressionAddress initExp(initExpIn);
 		auto& mgr = initExp->getNodeManager();
 		auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
 
 		// initializations of std::initializer_list objects have special semantics in C++. The frontend generates a ref_deref around it, which should not be there
 		if(refExt.isCallOfRefDeref(initExp)) {
 			auto elementType = initExp->getType();
-			if(auto tagT = elementType.isa<core::GenericTypePtr>()) {
+			if(auto tagT = elementType.isa<core::GenericTypeAddress>()) {
 				if(boost::starts_with(tagT->getName()->getValue(), initializerListMangledName)) {
 					initExp = core::analysis::getArgument(initExp, 0);
 				}
 			}
 		}
 
+		// we skip any form of ref cast
+		core::ExpressionAddress innerInitExp = initExp;
+		while(core::lang::isAnyRefCast(innerInitExp)) {
+			innerInitExp = core::analysis::getArgument(innerInitExp, 0);
+		}
+
 		// if the init expr is a constructor call
-		if(core::analysis::isConstructorCall(initExp)) {
-			core::CallExprAddress call(initExp.as<core::CallExprPtr>());
+		if(core::analysis::isConstructorCall(innerInitExp)) {
+			core::CallExprAddress call(innerInitExp.as<core::CallExprAddress>());
 			assert_ge(call->getNumArguments(), 1) << "Ill-formed constructor call. Missing this argument";
 			if(refExt.isCallOfRefTemp(call->getArgument(0))) {
 				// we replace the first parameter (which has been created as ref_temp) by the memory space being initialized
@@ -87,17 +93,15 @@ namespace utils {
 			}
 		}
 		// if the init expr is an init expr
-		core::ExpressionAddress initExpAddr(initExp);
-		if(refExt.isCallOfRefDeref(initExp)) initExpAddr = core::ExpressionAddress(initExpAddr.as<core::CallExprPtr>()->getArgument(0));
-		if(auto initInitExpr = initExpAddr.isa<core::InitExprAddress>()) {
+		if(auto initInitExpr = innerInitExp.isa<core::InitExprAddress>()) {
 			auto memExprAddr = initInitExpr->getMemoryExpr();
 			// replace memory location if it is a ref_temp
 			if(refExt.isCallOfRefTemp(memExprAddr)) {
-				auto res = core::transform::replaceNode(mgr, memExprAddr, memLoc).as<core::InitExprPtr>();
+				auto res = core::transform::replaceNode(mgr, memExprAddr, memLoc).as<core::ExpressionPtr>();
 				// fix the type of the expression if necessary
 				if(res->getType() != memLoc->getType()) {
-					initInitExpr = core::InitExprAddress(res);
-					res = core::transform::replaceNode(mgr, initInitExpr->getType(), memLoc->getType()).as<core::InitExprPtr>();
+					initInitExpr = initInitExpr.switchRoot(res);
+					res = core::transform::replaceNode(mgr, initInitExpr->getType(), memLoc->getType()).as<core::ExpressionPtr>();
 				}
 				// also replace ref_temps in all child init expressions
 				return fixTempMemoryInInitExpressionInits(res);
