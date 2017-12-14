@@ -323,16 +323,16 @@ void returnVariableTest() {
 				j : int<4>;
 		};
 		def IMP_v1 = function () -> ref<IMP_VarReturn,t,f,cpp_ref> {
-				return IMP_VarReturn::(ref_cast(ref_decl(type_lit(ref<IMP_VarReturn,t,f,cpp_ref>)), type_lit(f), type_lit(f), type_lit(plain))) in ref<IMP_VarReturn,t,f,cpp_ref>;
+				return ref_cast(IMP_VarReturn::(ref_temp(type_lit(IMP_VarReturn))), type_lit(t), type_lit(f), type_lit(cpp_ref));
 		};
 		def IMP_v2 = function () -> ptr<IMP_VarReturn> {
 				return ptr_from_ref(IMP_VarReturn::(ref_new(type_lit(IMP_VarReturn))));
 		};
 		def IMP_v3 = function () -> ref<IMP_VarReturn,t,f,cpp_ref> {
-				return IMP_VarReturn::(ref_cast(ref_decl(type_lit(ref<IMP_VarReturn,t,f,cpp_ref>)), type_lit(f), type_lit(f), type_lit(plain)), ref_kind_cast(lit("v":ref<IMP_VarReturn>), type_lit(cpp_ref))) in ref<IMP_VarReturn,t,f,cpp_ref>;
+				return ref_cast(IMP_VarReturn::(ref_temp(type_lit(IMP_VarReturn)), ref_kind_cast(lit("v" : ref<IMP_VarReturn,f,f,plain>), type_lit(cpp_ref))), type_lit(t), type_lit(f), type_lit(cpp_ref));
 		};
 		def IMP_v4 = function () -> ref<IMP_VarReturn,t,f,cpp_ref> {
-				return IMP_VarReturn::(ref_cast(ref_decl(type_lit(ref<IMP_VarReturn,t,f,cpp_ref>)), type_lit(f), type_lit(f), type_lit(plain)), ref_kind_cast(IMP_VarReturn::(ref_temp(type_lit(IMP_VarReturn))), type_lit(cpp_rref))) in ref<IMP_VarReturn,t,f,cpp_ref>;
+				return ref_cast(IMP_VarReturn::(ref_temp(type_lit(IMP_VarReturn)), ref_kind_cast(IMP_VarReturn::(ref_temp(type_lit(IMP_VarReturn))), type_lit(cpp_rref))), type_lit(t), type_lit(f), type_lit(cpp_ref));
 		};
 		def IMP_v5 = function () -> ptr<IMP_VarReturn> {
 				return ptr_from_ref(IMP_VarReturn::(ref_new(type_lit(IMP_VarReturn)), ref_kind_cast(lit("v":ref<IMP_VarReturn>), type_lit(cpp_ref))));
@@ -341,16 +341,16 @@ void returnVariableTest() {
 				return ptr_from_ref(IMP_VarReturn::(ref_new(type_lit(IMP_VarReturn)), ref_kind_cast(IMP_VarReturn::(ref_temp(type_lit(IMP_VarReturn))), type_lit(cpp_rref))));
 		};
 		def IMP_v7 = function () -> ref<IMP_VarReturn,f,f,cpp_rref> {
-				return <ref<IMP_VarReturn,f,f,plain>>(ref_decl(type_lit(ref<IMP_VarReturn,f,f,cpp_rref>))) {0, 0} in ref<IMP_VarReturn,f,f,cpp_rref>;
+				return <ref<IMP_VarReturn,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_VarReturn)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {0, 0};
 		};
 		def IMP_v8 = function () -> ref<IMP_VarReturn,f,f,cpp_rref> {
-				return <ref<IMP_VarReturn,f,f,plain>>(ref_decl(type_lit(ref<IMP_VarReturn,f,f,cpp_rref>))) {1, 0} in ref<IMP_VarReturn,f,f,cpp_rref>;
+				return <ref<IMP_VarReturn,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_VarReturn)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {1, 0};
 		};
 		def IMP_v9 = function () -> ref<IMP_VarReturn,f,f,cpp_rref> {
-				return <ref<IMP_VarReturn,f,f,plain>>(ref_decl(type_lit(ref<IMP_VarReturn,f,f,cpp_rref>))) {1, 2} in ref<IMP_VarReturn,f,f,cpp_rref>;
+				return <ref<IMP_VarReturn,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_VarReturn)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {1, 2};
 		};
 		def IMP_v10 = function () -> ref<IMP_VarReturn,f,f,cpp_rref> {
-				return <ref<IMP_VarReturn,f,f,plain>>(ref_decl(type_lit(ref<IMP_VarReturn,f,f,cpp_rref>))) {0, 0} in ref<IMP_VarReturn,f,f,cpp_rref>;
+				return <ref<IMP_VarReturn,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_VarReturn)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {0, 0};
 		};
 		{
 				IMP_v1() materialize ;

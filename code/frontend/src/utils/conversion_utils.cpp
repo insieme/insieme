@@ -61,6 +61,11 @@ namespace utils {
 	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& memLoc, const core::ExpressionPtr& initExpIn) {
 		static auto initializerListMangledName = insieme::utils::mangle("std::initializer_list");
 
+		// early exit. We don't change the memory location for references or r-value references
+		if(core::lang::isCppReference(memLoc) || core::lang::isCppRValueReference(memLoc)) {
+			return initExpIn;
+		}
+
 		core::ExpressionAddress initExp(initExpIn);
 		auto& mgr = initExp->getNodeManager();
 		auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
