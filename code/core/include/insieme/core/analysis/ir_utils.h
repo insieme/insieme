@@ -136,9 +136,10 @@ namespace analysis {
 	 * @param index the index of the requested argument
 	 * @return the extracted argument
 	 */
-	static inline core::ExpressionPtr getArgument(const NodePtr& call, int index) {
+	template<template <typename> class Ptr, typename T>
+	static inline Ptr<const core::Expression> getArgument(const Ptr<const T>& call, int index) {
 		assert_eq(call->getNodeType(), core::NT_CallExpr) << "Call has to be a call expression!";
-		return static_pointer_cast<const CallExpr>(call)->getArgument(index);
+		return call.template as<Ptr<const core::CallExpr>>()->getArgument(index);
 	}
 
 	/**
