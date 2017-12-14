@@ -39,6 +39,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation_utils.h"
 
@@ -69,7 +70,11 @@ namespace transform {
 	DeclarationPtr materialize(const ExpressionPtr& value) {
 		auto& mgr = value->getNodeManager();
 
-		// but everything else
+		// we don't materialize if the expression is a constructor call or an init expression
+		if(analysis::isConstructorCall(value) || value.isa<InitExprPtr>()) {
+			return Declaration::get(mgr, value->getType(), value);
+		}
+
 		return Declaration::get(mgr, materialize(value->getType()), value);
 	}
 
