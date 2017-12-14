@@ -514,7 +514,7 @@ namespace checks {
 		TypePtr resType = address->getType();
 
 		// the result type must be a subtype of the computed type or its materialized form
-		if (types::isSubTypeOf(retType,resType) || types::isSubTypeOf(transform::materialize(retType),resType)) return res;
+		if (types::isSubTypeOf(retType,resType) || analysis::isMaterializationOf(resType, retType)) return res;
 
 		// if this is not the case, we found an issue
 		add(res, Message(address, EC_TYPE_INVALID_RETURN_TYPE,
@@ -808,9 +808,9 @@ namespace checks {
 		if (analysis::isMaterializingDecl(declaration)) {
 
 			// constructor call is ok
-			if (analysis::getRefDeclCall(declaration) && *variableType == *initType) return res;
+			if (analysis::getRefDeclCall(declaration) && types::isSubTypeOf(initType,variableType)) return res;
 
-			// TODO: check that a copy / move compiler exists
+			// TODO: check that a copy / move constructor exists
 
 			// materialization is also ok
 			if (analysis::isMaterializationOf(variableType,initType)) return res;
