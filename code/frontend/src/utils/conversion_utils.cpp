@@ -232,6 +232,17 @@ namespace utils {
 		return retIr;
 	}
 
+	core::ExpressionPtr castInitializationIfNotMaterializing(const core::TypePtr& initializedType, const core::ExpressionPtr& init) {
+		const auto& initType = init->getType();
+		// we need to add a cast if both types are reference, differ in their kind, but the initializedType is not the materialization of the type of init
+		if(core::lang::isReference(initializedType) && core::lang::isReference(initType)
+				&& core::lang::ReferenceType(initializedType).getKind() != core::lang::ReferenceType(initType).getKind()
+				&& !core::analysis::isMaterializationOf(initializedType, initType)) {
+			return core::lang::buildRefCast(init, initializedType);
+		}
+		return init;
+	}
+
 	core::ExpressionPtr prepareThisExpr(conversion::Converter& converter, core::ExpressionPtr thisArg) {
 		if(core::lang::isPointer(thisArg)) thisArg = core::lang::buildPtrToRef(thisArg);
 		if(!core::lang::isReference(thisArg)) thisArg = frontend::utils::convertMaterializingExpr(converter, thisArg);

@@ -833,7 +833,7 @@ namespace conversion {
 		// check on clang type, at this point in the IR no struct types exist
 		auto clangType = initList->getType();
 		// convert the type if this is the first time we encounter it
-		converter.convertType(clangType);
+		auto initListType = converter.convertType(clangType);
 		auto convertedExprType = convertExprType(initList);
 		if(!core::lang::isReference(convertedExprType)) convertedExprType = builder.refType(convertedExprType);
 		auto genType = convertedExprType.as<core::GenericTypePtr>();
@@ -841,12 +841,25 @@ namespace conversion {
 		if(clangType->isStructureType() || clangType->isClassType()) {
 			auto types = lookupRecordTypes(converter, initList);
 			auto values = buildExprListForStructInit(converter, initList);
+
+			// now we might have to add casts to those expressions, as they are effectively initializations
+			const auto& genInitListType = initListType.isa<core::GenericTypePtr>();
+			assert_true(genInitListType);
+			assert_true(converter.getIRTranslationUnit().getTypes().find(genInitListType) != converter.getIRTranslationUnit().getTypes().end());
+			const auto& structType = converter.getIRTranslationUnit().getTypes().find(genInitListType)->second;
+			assert_true(structType->isStruct());
+			// cast init expression to field type as appropriate
+			for(unsigned index = 0; index < values.size(); ++index) {
+				values[index] = utils::castInitializationIfNotMaterializing(structType->getStruct()->getFields()->getElement(index)->getType(), values[index]);
+			}
+
 			retIr = builder.initExprTemp(genType, values);
 			retIr = utils::fixTempMemoryInInitExpressionInits(retIr);
 		}
 		else if(clangType->isUnionType()) {
 			auto types = lookupRecordTypes(converter, initList);
 			auto initExp = converter.convertInitExpr(initList->getInit(0));
+			// note that we don't need to convert the init expression for unions, as unions must not contain reference members in C++
 			retIr = builder.initExprTemp(genType, initExp);
 			retIr = utils::fixTempMemoryInInitExpressionInits(retIr);
 		}

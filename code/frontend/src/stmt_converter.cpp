@@ -132,6 +132,9 @@ namespace conversion {
 				initExp = refDecl;
 			}
 
+			// maybe add necessary casts if not materializing
+			initExp = utils::castInitializationIfNotMaterializing(convertedDecl.first->getType(), initExp);
+
 			// build ir declaration
 			return builder.declarationStmt(convertedDecl.first, initExp);
 		}
@@ -165,6 +168,8 @@ namespace conversion {
 		// check if we have a return value
 		if(clang::Expr* expr = retStmt->getRetValue()) {
 			auto returnExpr = converter.convertCxxArgExpr(expr);
+			// maybe add necessary casts if not materializing
+			returnExpr = utils::castInitializationIfNotMaterializing(retType, returnExpr);
 			// case of return void_function();
 			if(isUnitRet) {
 				retIr.push_back(returnExpr);
