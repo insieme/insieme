@@ -106,6 +106,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, Naming) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_naming.cpp"); }
 
+	TEST(CppConversionTest, NestedInit) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_nested_init.cpp"); }
+
 	TEST(CppConversionTest, NewDelete) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_new_delete.cpp"); }
 
 	TEST(CppConversionTest, ObjectPassing) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_object_passing.cpp"); }

@@ -842,11 +842,13 @@ namespace conversion {
 			auto types = lookupRecordTypes(converter, initList);
 			auto values = buildExprListForStructInit(converter, initList);
 			retIr = builder.initExprTemp(genType, values);
+			retIr = utils::fixTempMemoryInInitExpressionInits(retIr);
 		}
 		else if(clangType->isUnionType()) {
 			auto types = lookupRecordTypes(converter, initList);
 			auto initExp = converter.convertInitExpr(initList->getInit(0));
 			retIr = builder.initExprTemp(genType, initExp);
+			retIr = utils::fixTempMemoryInInitExpressionInits(retIr);
 		}
 		else if(clangType->isArrayType()) {
 			auto gT = converter.convertType(clangType).as<core::GenericTypePtr>();
@@ -862,6 +864,7 @@ namespace conversion {
 				}
 				retIr = builder.initExprTemp(genType, initExps);
 			}
+			retIr = utils::fixTempMemoryInInitExpressionInits(retIr);
 		}
 		else if(clangType->isScalarType()) {
 			retIr = convertInitExpr(initList->getInit(0));
