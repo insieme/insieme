@@ -62,6 +62,10 @@ namespace utils {
 	///
 	core::ExpressionPtr fixTempMemoryInInitExpression(const core::ExpressionPtr& memLoc, const core::ExpressionPtr& initExp);
 
+	/// Replace RefTemps in the inits of the passed InitExpr with ref_decls
+	///
+	core::ExpressionPtr fixTempMemoryInInitExpressionInits(const core::ExpressionPtr& exprIn);
+
 	/// Build a Cxx method call from its components
 	///
 	core::CallExprPtr buildCxxMethodCall(conversion::Converter& converter, const core::TypePtr& retType, const core::ExpressionPtr& callee,

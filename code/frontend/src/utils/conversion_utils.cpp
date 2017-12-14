@@ -91,11 +91,47 @@ namespace utils {
 		if(refExt.isCallOfRefDeref(initExp)) initExpAddr = core::ExpressionAddress(initExpAddr.as<core::CallExprPtr>()->getArgument(0));
 		if(auto initInitExpr = initExpAddr.isa<core::InitExprAddress>()) {
 			auto memExprAddr = initInitExpr->getMemoryExpr();
+			// replace memory location if it is a ref_temp
 			if(refExt.isCallOfRefTemp(memExprAddr)) {
-				return core::transform::replaceNode(mgr, memExprAddr, memLoc).as<core::ExpressionPtr>();
+				auto res = core::transform::replaceNode(mgr, memExprAddr, memLoc).as<core::InitExprPtr>();
+				// fix the type of the expression if necessary
+				if(res->getType() != memLoc->getType()) {
+					initInitExpr = core::InitExprAddress(res);
+					res = core::transform::replaceNode(mgr, initInitExpr->getType(), memLoc->getType()).as<core::InitExprPtr>();
+				}
+				// also replace ref_temps in all child init expressions
+				return fixTempMemoryInInitExpressionInits(res);
 			}
 		}
 		return initExp;
+	}
+
+	core::ExpressionPtr fixTempMemoryInInitExpressionInits(const core::ExpressionPtr& exprIn) {
+		const auto& initExprIn = exprIn.isa<core::InitExprPtr>();
+		if(!initExprIn) return exprIn;
+
+		auto& mgr = initExprIn->getNodeManager();
+		core::IRBuilder builder(mgr);
+
+		core::InitExprAddress initExp(initExprIn);
+		std::map<core::NodeAddress, core::NodePtr> replacements;
+		// recursively replace ref_temp in initializations
+		for(const auto& initDecl : initExp->getInitDecls()) {
+			const auto& init = initDecl->getInitialization();
+			auto initType = init->getType().getAddressedNode();
+			if(!core::lang::isReference(initType)) {
+				initType =  builder.refType(initType);
+			}
+			auto newInit = fixTempMemoryInInitExpression(core::lang::buildRefDecl(initType), init);
+			// add the replacement if something actually changed
+			if(newInit != init.getAddressedNode()) {
+				replacements[initDecl] = builder.declaration(initType, newInit);
+			}
+		}
+		if(!replacements.empty()) {
+			return core::transform::replaceAll(mgr, replacements).as<core::ExpressionPtr>();
+		}
+		return exprIn;
 	}
 
 
