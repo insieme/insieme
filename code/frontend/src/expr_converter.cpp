@@ -841,6 +841,7 @@ namespace conversion {
 		if(clangType->isStructureType() || clangType->isClassType()) {
 			auto types = lookupRecordTypes(converter, initList);
 			auto values = buildExprListForStructInit(converter, initList);
+			core::DeclarationList decls;
 
 			// now we might have to add casts to those expressions, as they are effectively initializations
 			const auto& genInitListType = initListType.isa<core::GenericTypePtr>();
@@ -848,12 +849,14 @@ namespace conversion {
 			assert_true(converter.getIRTranslationUnit().getTypes().find(genInitListType) != converter.getIRTranslationUnit().getTypes().end());
 			const auto& structType = converter.getIRTranslationUnit().getTypes().find(genInitListType)->second;
 			assert_true(structType->isStruct());
-			// cast init expression to field type as appropriate
+			// we use the field type to get the desired decl type and we may also need to cast the init expression accordingly
 			for(unsigned index = 0; index < values.size(); ++index) {
-				values[index] = utils::castInitializationIfNotMaterializing(structType->getStruct()->getFields()->getElement(index)->getType(), values[index]);
+				auto declType = core::transform::materialize(structType->getStruct()->getFields()->getElement(index)->getType());
+				auto init = utils::castInitializationIfNotMaterializing(declType, values[index]);
+				decls.push_back(builder.declaration(declType, init));
 			}
 
-			retIr = builder.initExprTemp(genType, values);
+			retIr = builder.initExpr(core::lang::buildRefTemp(genType), decls);
 			retIr = utils::fixTempMemoryInInitExpressionInits(retIr);
 		}
 		else if(clangType->isUnionType()) {

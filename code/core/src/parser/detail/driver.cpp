@@ -1086,6 +1086,28 @@ namespace parser {
 				error(l, format("type for initialization must be a reference type (is %s)", *type));
 				return nullptr;
 			}
+
+			// now we need to fix the types of the declarations in the InitExpr for correct materialization
+			const auto& elementType = analysis::getReferencedType(type);
+
+			// if we are initializing a struct
+			if(const auto& genType = elementType.isa<core::GenericTypePtr>()) {
+				if(tu.getTypes().find(genType) != tu.getTypes().end()) {
+					const auto& tuType = tu.getTypes().find(genType)->second;
+					if(tuType.isStruct()) {
+						const auto& structType = tuType.getStruct();
+						// get the correct type of the decl from the field for each init expression
+						DeclarationList decls;
+						for(unsigned index = 0; index < list.size(); ++index) {
+							auto declType = core::transform::materialize(structType->getFields()->getElement(index)->getType());
+							decls.push_back(builder.declaration(declType, list[index]));
+						}
+						return builder.initExpr(memExpr, decls);
+					}
+				}
+			}
+
+			// fallback for all other types
 			return builder.initExpr(type.as<GenericTypePtr>(), memExpr, builder.expressions(list));
 		}
 
