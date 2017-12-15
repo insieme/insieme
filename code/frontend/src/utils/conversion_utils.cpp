@@ -80,11 +80,8 @@ namespace utils {
 			}
 		}
 
-		// we skip any form of ref cast
+		// from here on we must not overwrite initial node address anymore for the last return at the end, so we create another one
 		core::ExpressionAddress innerInitExp = initExp;
-		while(core::lang::isAnyRefCast(innerInitExp)) {
-			innerInitExp = core::analysis::getArgument(innerInitExp, 0);
-		}
 
 		// if the init expr is a constructor call
 		if(core::analysis::isConstructorCall(innerInitExp)) {
