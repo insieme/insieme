@@ -470,6 +470,11 @@ namespace lang {
 	bool isQualifiedReference(const NodePtr& node);
 
 	/**
+	 * Determines whether a given node is a reference with an undefined kind.
+	 */
+	bool isUndefinedReference(const NodePtr& node);
+
+	/**
 	 * Determines whether a given node is a reference type or an expression of a const C++ reference type.
 	 */
 	bool isConstCppReference(const NodePtr& node);

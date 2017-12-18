@@ -267,6 +267,11 @@ namespace lang {
 		return isReference(node) && ReferenceType(node).isQualified();
 	}
 
+	bool isUndefinedReference(const NodePtr& node) {
+		TypePtr type = toType(node);
+		return type && isReference(type) && parseKind(type.as<GenericTypePtr>()->getTypeParameter(3)) == ReferenceType::Kind::Undefined;
+	}
+
 	bool isConstCppReference(const NodePtr& node) {
 		if(!isReference(node)) return false;
 		ReferenceType refType(node);
