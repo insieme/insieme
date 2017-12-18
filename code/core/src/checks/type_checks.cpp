@@ -1066,7 +1066,7 @@ namespace checks {
 			if(unionType) {
 				// check for single initializer
 				if(initDecls.size() != 1) {
-					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, "More than one initialization expression for union", Message::ERROR));
+					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, "More (or less) than one initialization expression for union", Message::ERROR));
 					return res;
 				}
 				// check that its type matches any of the union types
