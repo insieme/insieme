@@ -1224,18 +1224,26 @@ namespace types {
 		// check for null
 		if(!call) { return boost::none; }
 
-		// derive substitution
+		// get function parameter types
+		const auto& funType = call->getFunctionExpr()->getType().isa<core::FunctionTypePtr>();
+		if(!funType) { return boost::none; }
 
 		// get argument types
 		TypeList argTypes;
-		::transform(call->getArgumentList(), back_inserter(argTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
-
-		// get function parameter types
-		const TypePtr& funType = call->getFunctionExpr()->getType();
-		if(funType->getNodeType() != NT_FunctionType) { return boost::none; }
+		unsigned numParams = funType->getParameterTypeList().size();
+		DeclarationList argDeclList = call->getArgumentDeclarationList();
+		// built-ins are handled differently
+		bool isBuiltIn = lang::isBuiltIn(call->getFunctionExpr());
+		for(unsigned i = 0; i < numParams && i < argDeclList.size(); ++i) {
+			if(isBuiltIn) {
+				argTypes.push_back(argDeclList[i]->getInitialization()->getType());
+			} else {
+				argTypes.push_back(transform::dematerialize(argDeclList[i]->getType()));
+			}
+		}
 
 		// compute type variable instantiation
-		SubstitutionOpt res = getTypeVariableInstantiation(manager, static_pointer_cast<const FunctionType>(funType), argTypes, allowMaterialization);
+		SubstitutionOpt res = getTypeVariableInstantiation(manager, funType, argTypes, allowMaterialization);
 
 		// done
 		return res;
