@@ -46,13 +46,13 @@ int* gen_ptr() { return g; }
 int main() {
 
 	#pragma test expect_ir(R"({
-    var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
-    var ref<ptr<int<4>>,f,f,plain> v1 = ptr_from_ref(v0);
-    var ref<int<4>,f,f,cpp_ref> v2 = v0;
-    var ref<int<4>,f,f,plain> v3 = *ptr_to_ref(*v1);
-    var ref<ptr<int<4>>,f,f,plain> v4 = ptr_from_ref(ref_cast(v2, type_lit(f), type_lit(f), type_lit(plain)));
-    var ref<int<4>,f,f,cpp_ref> v5 = ptr_to_ref(*v1);
-})")
+		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+		var ref<ptr<int<4>>,f,f,plain> v1 = ptr_from_ref(v0);
+		var ref<int<4>,f,f,cpp_ref> v2 = ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref));
+		var ref<int<4>,f,f,plain> v3 = *ptr_to_ref(*v1);
+		var ref<ptr<int<4>>,f,f,plain> v4 = ptr_from_ref(ref_cast(v2, type_lit(f), type_lit(f), type_lit(plain)));
+		var ref<int<4>,f,f,cpp_ref> v5 = ref_cast(ptr_to_ref(*v1), type_lit(f), type_lit(f), type_lit(cpp_ref));
+	})")
 	{
 		int i;
 		int* i_ptr = &i;
@@ -69,7 +69,7 @@ int main() {
 		{
 			var ref<int<4>,f,f,plain> v0;
 			var ref<ptr<int<4>>,f,f,plain> v1 = ptr_from_ref(v0);
-			var ref<int<4>,f,f,cpp_ref> v2 = v0;
+			var ref<int<4>,f,f,cpp_ref> v2 = ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref));
 
 			IMP_take_ref(ref_kind_cast(ptr_to_ref(*v1), type_lit(cpp_ref)));
 			IMP_take_ptr(ptr_from_ref(ref_cast(v2, type_lit(f), type_lit(f), type_lit(plain))));
@@ -86,7 +86,7 @@ int main() {
 
 	#pragma test expect_ir(R"(
 		def IMP_gen_ref = function () -> ref<int<4>,f,f,cpp_ref> {
-			return ptr_to_ref(*lit("g" : ref<ptr<int<4>>,f,f,plain>));
+			return ref_cast(ptr_to_ref(*lit("g" : ref<ptr<int<4>>,f,f,plain>)), type_lit(f), type_lit(f), type_lit(cpp_ref));
 		};
 		def IMP_gen_ptr = function () -> ptr<int<4>> {
 			return *lit("g" : ref<ptr<int<4>>,f,f,plain>);
