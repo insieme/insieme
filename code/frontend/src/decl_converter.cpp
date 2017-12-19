@@ -200,7 +200,9 @@ namespace conversion {
 				}
 
 				// build init expression
-				retStmts.push_back(builder.initExpr(irMember, converter.convertCxxArgExpr(clangInitExpr)));
+				auto irInit = converter.convertCxxArgExpr(clangInitExpr);
+				irInit = utils::castInitializationIfNotMaterializing(irMember->getType(), irInit);
+				retStmts.push_back(builder.initExpr(irMember, irInit));
 			}
 			return retStmts;
 		}

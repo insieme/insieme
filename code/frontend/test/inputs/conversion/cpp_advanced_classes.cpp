@@ -67,12 +67,12 @@ int main() {
 			i : int<4>;
 			j : ref<int<4>,f,f,cpp_ref>;
 			ctor function () {
-				<ref<int<4>,f,f,cpp_ref>>(*(this).j) {(this).i};
+				<ref<int<4>,f,f,cpp_ref>>(*(this).j) {ref_cast((this).i, type_lit(f), type_lit(f), type_lit(cpp_ref))};
 			}
 		};
 		{
 			var ref<IMP_A,f,f,plain> v0 = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
-			var ref<IMP_A,f,f,cpp_ref> v1 = v0;
+			var ref<IMP_A,f,f,cpp_ref> v1 = ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref));
 			v0.i;
 			v0.j;
 			v1.i;
