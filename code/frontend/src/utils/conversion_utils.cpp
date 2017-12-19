@@ -75,7 +75,7 @@ namespace utils {
 			auto elementType = initExp->getType();
 			if(auto tagT = elementType.isa<core::GenericTypeAddress>()) {
 				if(boost::starts_with(tagT->getName()->getValue(), initializerListMangledName)) {
-					initExp = core::analysis::getArgument(initExp, 0);
+					initExp = core::ExpressionAddress(core::analysis::getArgument(initExp.getAddressedNode(), 0));
 				}
 			}
 		}
@@ -96,7 +96,7 @@ namespace utils {
 		}
 
 		// skip a ref_deref which remained until here
-		if(refExt.isCallOfRefDeref(innerInitExp)) innerInitExp = core::analysis::getArgument(innerInitExp, 0);
+		if(refExt.isCallOfRefDeref(innerInitExp)) innerInitExp = core::ExpressionAddress(core::analysis::getArgument(innerInitExp.getAddressedNode(), 0));
 
 		// if the init expr is an init expr
 		if(auto initInitExpr = innerInitExp.isa<core::InitExprAddress>()) {
