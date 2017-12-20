@@ -79,7 +79,7 @@ struct RefOpTest {
 #define REFOPTEST_IR R"(
 def struct IMP_RefOpTest {
 	function IMP__operator_plus_ = (v0 : ref<IMP_RefOpTest,t,f,cpp_ref>) -> ref<IMP_RefOpTest,f,f,cpp_ref> {
-		return this;
+		return ref_cast(this, type_lit(f), type_lit(f), type_lit(cpp_ref));
 	}
 };)"
 
