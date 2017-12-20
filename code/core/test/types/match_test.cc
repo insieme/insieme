@@ -105,6 +105,13 @@ namespace types {
 		EXPECT_PRED2(notMatchable, type("(A)->R"), type("<'a>('a)->'r"));
 		EXPECT_PRED2(notMatchable, type("<A>(B)->R"), type("<'a>('a)->'r"));
 
+		// -- test subtypes --
+
+		EXPECT_PRED2(matchable, type("int<4>"), type("int<4>"));
+		EXPECT_PRED2(notMatchable, type("int<4>"), type("int<8>"));
+		EXPECT_PRED2(notMatchable, type("int<4>"), type("int<2>"));
+		EXPECT_PRED2(notMatchable, type("int<4>"), type("uint<2>"));
+
 	}
 
 	TEST(Matchable, VariadicTypeVariables) {

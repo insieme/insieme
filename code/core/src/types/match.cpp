@@ -460,6 +460,12 @@ namespace types {
 				});
 			}
 
+			// => check numeric types
+			if (typeOfA == NT_NumericType) {
+				// they must be equivalent
+				return *a == *b;
+			}
+
 			// for the rest: process type parameters
 			return matchParameters(manager, a, b, res);
 		}
