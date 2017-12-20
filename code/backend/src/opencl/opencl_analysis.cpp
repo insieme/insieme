@@ -95,7 +95,6 @@ namespace analysis {
 
 		bool hasBuiltInLiterals(const core::NodePtr& node) {
 			bool result = true;
-			auto& refExt = node->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 			// check for invalid usage of global and externally declared literals
 			core::visitDepthFirstOnceInterruptible(node, [&](const core::LiteralPtr& literal) {
 				// if the literal is reference, it is a global var
@@ -105,13 +104,6 @@ namespace analysis {
 				}
 				// IR constructs are always legal
 				if (core::lang::isBuiltIn(literal) || core::lang::isDerived(literal)) {
-					// special check built-ins which allocate memory on the heap
-					if (core::analysis::isCallOf(refExt.getRefAlloc(), literal)) {
-						core::ExpressionPtr memloc = core::analysis::getArgument(literal, 1);
-						if (memloc == refExt.getMemLocHeap())
-							// whoops.. malloc & friends cannot be used in kernels
-							return false;
-					}
 					return false;
 				}
 				// handle potential external functions
