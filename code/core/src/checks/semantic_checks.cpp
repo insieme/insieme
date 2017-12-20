@@ -265,45 +265,40 @@ namespace checks {
 
 		// -- some implicit constructor based initialization --
 
-		auto innerType = analysis::getReferencedType(decl->getType());
-		if (analysis::hasConstructorAccepting(innerType,init->getType())) return res;
+		auto innerDeclaredType = analysis::getReferencedType(decl->getType());
+		if (analysis::hasConstructorAccepting(innerDeclaredType,init->getType())) return res;
 
 		// also, assume that all generic types, tuple types, and tag type references have implicit copy and move constructors
 		auto initType = init->getType();
-		if ((innerType.isa<GenericTypePtr>() || innerType.isa<TupleTypePtr>() || innerType.isa<TagTypeReferencePtr>())  && lang::isReference(initType)) {
+		if (lang::isReference(initType) && (innerDeclaredType.isa<GenericTypePtr>() || innerDeclaredType.isa<TupleTypePtr>() || innerDeclaredType.isa<TagTypeReferencePtr>())) {
 			lang::ReferenceType initRefType(initType);
 
-			// apply a matching to instantiate type variables (if present)
-			auto match = types::match(innerType.getNodeManager(),initRefType.getElementType(),innerType);
-
-			// if a match can be obtained, everything is fine
-			if (match) {
+			// check that the passed type is a sub-type of the declared type
+			if (types::isSubTypeOf(initRefType.getElementType(),innerDeclaredType)) {
 
 				// the init value is a const reference ..
 				if (initRefType.isCppReference() && initRefType.isConst()) return res;
 
 				// ... or a r-value reference
 				if (initRefType.isCppRValueReference() && !initRefType.isConst()) return res;
+
 			}
 
 		}
 
 
-		// -- some assignment based constructor --
+		// -- simple, c-style assignment based initializations --
 
-		// if the init type is a reference and the inner target type is a plain ref, adjust init type
-		if((lang::isCppReference(initType) || lang::isCppRValueReference(initType)) && lang::isPlainReference(innerType)) {
-			initType = lang::ReferenceType::create(core::analysis::getReferencedType(initType));
-		}
-		// if both types are reference types, unify their qualifiers
-		if(lang::isReference(initType) && lang::isReference(innerType)) {
-			auto innerRef = core::lang::ReferenceType(innerType);
-			auto initRef = core::lang::ReferenceType(initType);
-			initType = lang::ReferenceType::create(initRef.getElementType(), innerRef.isConst(), innerRef.isVolatile(), initRef.getKind());
-		}
+		// a value of type T can also initialize a ref<S,f,f,plain> whenever T is a subtype of S, and T is a trivial type
+		if (analysis::isTrivial(initType)) {	// this covers e.g. scalars and PODs
 
-		// see whether init type can be assigned to the inner type
-		if(*innerType == *initType || types::getTypeVariableInstantiation(decl->getNodeManager(), innerType, initType, false)) return res;
+			// parse decl type
+			lang::ReferenceType declRef(decl->getType());
+
+			// let a value of type T initialize a ref<S,f,f,plain> whenever T is a subtype of S
+			if (declRef.isPlain() && !declRef.isConst() && !declRef.isVolatile() && types::isSubTypeOf(initType,declRef.getElementType())) return res;
+
+		}
 
 		// no reason found => this is not ok
 		add(res,Message(decl,
