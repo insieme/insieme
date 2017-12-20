@@ -608,7 +608,7 @@ namespace transform {
 						}
 
 						// create new call
-						return CallExpr::get(manager, call->getType(), fun, newArgs);
+						return IRBuilder(manager).callExpr(call->getType(), fun, newArgs);
 					}
 				}
 
@@ -800,7 +800,7 @@ namespace transform {
 
 		// build new bind with modified call expression
 		auto newBind = BindExpr::get(manager, bind->getType().as<FunctionTypePtr>(), bind->getParameters(),
-		                             CallExpr::get(manager, callWithinBind->getType(), callWithinBind->getFunctionExpr(), newBindCallArgs));
+		                             builder.callExpr(callWithinBind->getType(), callWithinBind->getFunctionExpr(), newBindCallArgs));
 
 		// fix parameter within body of lambda
 		auto newBody = fixParameter(manager, lambda->getBody(), lambda->getParameterList()[index], newBind).as<StatementPtr>();
@@ -906,7 +906,7 @@ namespace transform {
 		assert_true(funType) << "Illegal lazy type!";
 
 		// form call expression
-		core::CallExprPtr call = core::CallExpr::get(manager, funType->getReturnType(), lazy, toVector<core::ExpressionPtr>());
+		core::CallExprPtr call = core::IRBuilder(manager).callExpr(funType->getReturnType(), lazy, toVector<core::ExpressionPtr>());
 
 		// evaluated call by inlining it
 		return core::transform::tryInlineToExpr(manager, call, evalDerivedOps);

@@ -349,16 +349,6 @@ namespace core {
 		return LambdaDefinition::get(manager, newBindings);
 	}
 
-	CallExprPtr CallExpr::get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& function, const NodeRange<ExpressionPtr>& arguments) {
-		NodeList children;
-		children.push_back(type);
-		children.push_back(function);
-		for(const auto& arg : arguments) {
-			children.push_back(transform::materialize(arg));
-		}
-		return manager.get(CallExpr(children));
-	}
-
 	CallExprPtr CallExpr::get(NodeManager & manager, const TypePtr& type, const ExpressionPtr& function, const NodeRange<DeclarationPtr>& argumentDecls) {
 		NodeList children;
 		children.push_back(type);

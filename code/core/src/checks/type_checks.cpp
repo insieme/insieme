@@ -1137,8 +1137,21 @@ namespace checks {
 			if(!lang::isBuiltIn(genTy))	return res;
 		}
 
-		add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-			             format("Invalid type of initialization - expected type: \n%s, actual: \n%s", *refType, toString(initDecls)), Message::ERROR));
+		add(res,
+			Message(
+				address,
+				EC_TYPE_INVALID_INITIALIZATION_EXPR,
+				format("Invalid type of initialization\n"
+						"\t    initialized type: %s\n"
+						"\t    argument type(s): %s\n"
+						"\t declaration type(s): %s\n",
+						*refType,
+						join(",",initDecls,[](std::ostream& out, const DeclarationPtr& decl){ out << *decl->getInitialization()->getType(); }),
+						join(",",initDecls,[](std::ostream& out, const DeclarationPtr& decl){ out << *decl->getType(); })
+				),
+				Message::ERROR
+			)
+		);
 
 		return res;
 	}

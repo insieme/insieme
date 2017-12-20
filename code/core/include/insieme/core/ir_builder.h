@@ -475,6 +475,8 @@ namespace core {
 
 		// Call Expressions
 		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const;
+		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionList& args) const;
+		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const NodeRange<ExpressionPtr>& args) const;
 
 		template <typename First, typename... Rest>
 		typename std::enable_if<!std::is_same<First, DeclarationPtr>::value, CallExprPtr>::type

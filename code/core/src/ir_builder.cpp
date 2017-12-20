@@ -913,6 +913,24 @@ namespace core {
 		}
 	}
 
+
+	CallExprPtr IRBuilderBaseModule::callExpr(const TypePtr& type, const ExpressionPtr& function, const ExpressionList& arguments) const {
+		DeclarationList decls;
+		for(const auto& arg : arguments) {
+			decls.push_back(transform::materialize(arg));
+		}
+		return CallExpr::get(manager,type,function,decls);
+	}
+
+	CallExprPtr IRBuilderBaseModule::callExpr(const TypePtr& type, const ExpressionPtr& function, const NodeRange<ExpressionPtr>& arguments) const {
+		ExpressionList args;
+		for(const auto& cur : arguments) {
+			args.push_back(cur);
+		}
+		return callExpr(type,function,args);
+	}
+
+
 	CallExprPtr IRBuilderBaseModule::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) const {
 		// use deduced return type to construct call
 		return callExpr(deduceReturnTypeForCall(functionExpr, arguments), functionExpr, arguments);

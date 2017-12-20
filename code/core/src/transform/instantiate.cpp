@@ -65,6 +65,7 @@ namespace transform {
 
 			virtual const NodePtr resolveElement(const NodePtr& ptr) override {
 				NodeManager& mgr = ptr->getNodeManager();
+				IRBuilder builder(mgr);
 
 				// check skip-filter
 				if(skip(ptr)) return ptr;
@@ -92,7 +93,7 @@ namespace transform {
 				auto newArgs = call->getArgumentList();
 
 				// build replacement call
-				NodePtr res = CallExpr::get(mgr, call->getType(), newFun, newArgs);
+				NodePtr res = builder.callExpr(call->getType(), newFun, newArgs);
 
 				// move annotations
 				transform::utils::migrateAnnotations(call, res);
