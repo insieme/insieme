@@ -525,6 +525,17 @@ namespace analysis {
 		EXPECT_PRED2(isMaterializationOf, t("ref<ref<A,t,f,plain>,f,f,plain>"), t("ref<A,t,f,plain>"));
 		EXPECT_PRED2(isMaterializationOf, t("ref<ref<A,t,t,plain>,f,f,plain>"), t("ref<A,t,f,plain>"));
 
+		EXPECT_PRED2(isMaterializationOf, t("ref<int<4>>"), t("'b"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<int<4>>"), t("int<'b>"));
+
+		EXPECT_PRED2(isMaterializationOf, t("ref<'a>"), t("'b"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<int<'a>>"), t("int<'b>"));
+
+		EXPECT_PRED2(isMaterializationOf, t("ref<(bool)->bool,f,f,plain>"), t("('a)->'a"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<(int<4>)->int<4>,f,f,plain>"), t("('a)->'a"));
+
+		EXPECT_PRED2(isMaterializationOf, t("ref<(bool)->bool,f,f,plain>"), t("('a)->'b"));
+		EXPECT_PRED2(isMaterializationOf, t("ref<(int<4>)->int<4>,f,f,plain>"), t("('a)->'b"));
 
 		// some negative checks
 		EXPECT_PRED2(isNotMaterializationOf, t("ref<A>"), t("B"));
@@ -540,14 +551,14 @@ namespace analysis {
 		EXPECT_PRED2(isNotMaterializationOf, t("ref<A,f,f,cpp_rref>"), t("ref<A,t,f,cpp_ref>"));
 
 		EXPECT_PRED2(isNotMaterializationOf, t("ref<int<4>>"), t("uint<4>"));
-
-		EXPECT_PRED2(isNotMaterializationOf, t("ref<'a>"), t("'b"));
-		EXPECT_PRED2(isNotMaterializationOf, t("ref<int<'a>>"), t("int<'b>"));
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<int<4>>"), t("int<8>"));
 
 		EXPECT_PRED2(isNotMaterializationOf, t("ref<'a>"), t("int<4>"));
 
 		EXPECT_PRED2(isNotMaterializationOf, t("ref<ref<A,f,f,plain>,f,f,plain>"), t("ref<A,t,f,plain>"));
 		EXPECT_PRED2(isNotMaterializationOf, t("ref<ref<A,f,t,plain>,f,f,plain>"), t("ref<A,t,f,plain>"));
+
+		EXPECT_PRED2(isNotMaterializationOf, t("ref<(int<4>)->bool,f,f,plain>"), t("('a)->'a"));
 
 	}
 

@@ -226,6 +226,9 @@ namespace analysis {
 		// if the element of the resulting reference is the same as the input value, we are fine
 		if (*matRefType.getElementType() == *type) return true;
 
+		// if the init type is a generalization of the materialized element type, we are fine too
+		if (types::match(type->getNodeManager(),matRefType.getElementType(),type)) return true;
+
 		// remove (optional) references from the value type
 		auto valueType = (lang::isCppReference(type) || lang::isCppRValueReference(type)) ? analysis::getReferencedType(type) : type;
 
