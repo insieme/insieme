@@ -490,7 +490,7 @@ namespace checks {
 		for(const auto& decl : address->getArgumentDeclarations()) {
 			if(!lang::isCppReference(decl->getType()) && !lang::isCppRValueReference(decl->getType()) && !lang::isReference(decl->getInitialization()) && !analysis::isMaterializingDecl(decl)) {
 				add(res, Message(address, EC_TYPE_INVALID_ARGUMENT_TYPE,
-					             format("Invalid non-materializing argument: \n\t%s\n\t - init expr of type %s", *decl, *decl->getInitialization()->getType()),
+					             format("Invalid non-materialized argument: \n\t%s\n\t - init expr of type %s", *decl, *decl->getInitialization()->getType()),
 					             Message::ERROR));
 				return res;
 			}

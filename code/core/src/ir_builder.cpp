@@ -57,6 +57,7 @@
 #include "insieme/core/transform/materialize.h"
 
 #include "insieme/core/types/unification.h"
+#include "insieme/core/types/function_type_instantiation.h"
 #include "insieme/core/types/return_type_deduction.h"
 
 #include "insieme/core/analysis/ir_utils.h"
@@ -915,10 +916,38 @@ namespace core {
 
 
 	CallExprPtr IRBuilderBaseModule::callExpr(const TypePtr& type, const ExpressionPtr& function, const ExpressionList& arguments) const {
-		DeclarationList decls;
-		for(const auto& arg : arguments) {
-			decls.push_back(transform::materialize(arg));
+
+		// we need to deduce the type of parameters in the instantiated function expression
+		// and materialize the arguments to those parameter types using declarations
+
+		// step 1: instantiate function type
+		auto argTypes = extractTypes(arguments);
+		auto genFunType = function->getType().as<FunctionTypePtr>();
+		auto intFunType = types::tryInstantiateFunctionType(genFunType,argTypes);
+
+		// check that instantiation was successful
+		if (!intFunType) {
+			// backup: this is not a valid function call, build a best-effort call (needed for testing invalid calls)
+			DeclarationList decls;
+			for(const auto& cur : arguments) {
+				decls.push_back(transform::materialize(cur));
+			}
+			return CallExpr::get(manager,type,function,decls);
 		}
+
+		// extract parameter types
+		auto paramTypes = intFunType->getParameterTypeList();
+
+		// check that the number of parameters in the instantiated function matches the number of arguments
+		assert_eq(paramTypes.size(),arguments.size());
+
+		// step 2: materialize arguments using declarations for parameter types (where needed)
+		DeclarationList decls;
+		for(const auto& pair : make_paired_range(paramTypes,arguments)) {
+			decls.push_back(declaration(transform::materialize(pair.first),pair.second));
+		}
+
+		// step 3: build the resulting call expression
 		return CallExpr::get(manager,type,function,decls);
 	}
 

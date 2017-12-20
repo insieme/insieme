@@ -162,7 +162,7 @@ namespace types {
 		//		MSG: Invalid return type -
 		// 				expected: uint<a>
 		// 				actual:   uint<4>
-		// 				function type: ((vector<'elem,l>,'res,(('elem,'res)->'res))->'res)
+		// 				function type: ((array<'elem,l>,'res,(('elem,'res)->'res))->'res)
 		//
 		// This error occurs when the function is invoked using a literal as
 		// its second argument and a generic integer operation is its last.
