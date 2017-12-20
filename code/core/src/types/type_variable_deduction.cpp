@@ -821,7 +821,7 @@ namespace types {
 		}
 
 
-		SubstitutionOpt getTypeVariableInstantiationInternal(NodeManager& manager, TypeList parameter, TypeList arguments, bool allowMaterialization) {
+		SubstitutionOpt getTypeVariableInstantiationInternal(NodeManager& manager, TypeList parameter, TypeList arguments) {
 			const bool debug = false;
 
 			// the result to be returned upon failure
@@ -887,65 +887,62 @@ namespace types {
 			TypeList materializedArguments = arguments;
 			for (size_t i = 0; i < parameter.size(); i++) {
 
-				if(allowMaterialization) {
+				bool isRefArg = lang::isReference(arguments[i]);
+				bool isRefParam = lang::isReference(parameter[i]);
 
-					bool isRefArg = lang::isReference(arguments[i]);
-					bool isRefParam = lang::isReference(parameter[i]);
-
-					// implicit materialization
-					if (!isRefArg && isRefParam) {
-						lang::ReferenceType refParam(parameter[i]);
-						switch (refParam.getKind()) {
-						case lang::ReferenceType::Kind::Undefined: return fail;
-						case lang::ReferenceType::Kind::Plain: return fail;
-						case lang::ReferenceType::Kind::Qualified: return fail;
-						case lang::ReferenceType::Kind::CppReference: {
-							/* the cpp reference must be const */
-							if (!refParam.isConst()) return fail;
-							break;
-						}
-						case lang::ReferenceType::Kind::CppRValueReference: {
-							/* all fine */
-						}
-						}
-
-						// check whether the argument is not trivially copyable and not convertible to parameter type
-						if (!analysis::isTriviallyCopyable(arguments[i]) && !analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
-							return fail;
-						}
-
-						// all checks out => materialize
-						materializedArguments[i] = lang::ReferenceType::create(
-							arguments[i], refParam.isConst(), refParam.isVolatile(), refParam.getKind()
-							);
+				// implicit materialization
+				if (!isRefArg && isRefParam) {
+					lang::ReferenceType refParam(parameter[i]);
+					switch (refParam.getKind()) {
+					case lang::ReferenceType::Kind::Undefined: return fail;
+					case lang::ReferenceType::Kind::Plain: return fail;
+					case lang::ReferenceType::Kind::Qualified: return fail;
+					case lang::ReferenceType::Kind::CppReference: {
+						/* the cpp reference must be const */
+						if (!refParam.isConst()) return fail;
+						break;
+					}
+					case lang::ReferenceType::Kind::CppRValueReference: {
+						/* all fine */
+					}
 					}
 
-					// deal with value construction
-					if(isRefArg && !isRefParam) {
-						if(lang::isCppReference(arguments[i]) || lang::isCppRValueReference(arguments[i])) {
-							lang::ReferenceType refArg(arguments[i]);
-							materializedArguments[i] = refArg.getElementType();
-						}
-						// implicit copy construction
-						else if(analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
-							materializedArguments[i] = parameter[i];
-						}
-						// all other reference arguments are invalid
-						else return fail;
+					// check whether the argument is not trivially copyable and not convertible to parameter type
+					if (!analysis::isTriviallyCopyable(arguments[i]) && !analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
+						return fail;
 					}
 
-					// qualifier promotion
-					if(isRefArg && isRefParam) {
-						lang::ReferenceType argType(arguments[i]);
-						lang::ReferenceType paramType(parameter[i]);
+					// all checks out => materialize
+					materializedArguments[i] = lang::ReferenceType::create(
+						arguments[i], refParam.isConst(), refParam.isVolatile(), refParam.getKind()
+						);
+				}
 
-						// promote qualifiers
-						if(paramType.isConst() && !argType.isConst()) { argType.setConst(true); }
-						if(paramType.isVolatile() && !argType.isVolatile()) { argType.setVolatile(true); }
-
-						// update argument
-						materializedArguments[i] = argType.toType();
+				// deal with value construction
+				if(isRefArg && !isRefParam) {
+					if(lang::isCppReference(arguments[i]) || lang::isCppRValueReference(arguments[i])) {
+						lang::ReferenceType refArg(arguments[i]);
+						materializedArguments[i] = refArg.getElementType();
 					}
+					// implicit copy construction
+					else if(analysis::hasConstructorAccepting(parameter[i], arguments[i])) {
+						materializedArguments[i] = parameter[i];
+					}
+					// all other reference arguments are invalid
+					else return fail;
+				}
+
+				// qualifier promotion
+				if(isRefArg && isRefParam) {
+					lang::ReferenceType argType(arguments[i]);
+					lang::ReferenceType paramType(parameter[i]);
+
+					// promote qualifiers
+					if(paramType.isConst() && !argType.isConst()) { argType.setConst(true); }
+					if(paramType.isVolatile() && !argType.isVolatile()) { argType.setVolatile(true); }
+
+					// update argument
+					materializedArguments[i] = argType.toType();
 				}
 
 				// promote qualifiers on pointers (TODO: better solution to this)
@@ -1083,9 +1080,9 @@ namespace types {
 
 	}
 
-	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypeList& parameter, const TypeList& arguments, bool allowMaterialization) {
+	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypeList& parameter, const TypeList& arguments) {
 
-		using ResultMap = std::map<std::tuple<TypeList, TypeList, bool>, SubstitutionOpt>;
+		using ResultMap = std::map<std::tuple<TypeList,TypeList>, SubstitutionOpt>;
 
 		struct ResultCache {
 			mutable ResultMap results;
@@ -1111,16 +1108,16 @@ namespace types {
 		for (const auto& cur : arguments) args.push_back(manager.get(cur));
 
 		// look up cache
-		ResultMap::key_type key { params, args, allowMaterialization };
+		ResultMap::key_type key { params, args };
 		auto pos = cache.find(key);
 		if (pos != cache.end()) return pos->second;
 
 		// resolve internal, cache, and return result
-		return cache[key] = getTypeVariableInstantiationInternal(manager, params, args, allowMaterialization);
+		return cache[key] = getTypeVariableInstantiationInternal(manager, params, args);
 	}
 
-	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypePtr& parameter, const TypePtr& argument, bool allowMaterialization) {
-		return getTypeVariableInstantiation(manager, toVector(parameter), toVector(argument), allowMaterialization);
+	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypePtr& parameter, const TypePtr& argument) {
+		return getTypeVariableInstantiation(manager, toVector(parameter), toVector(argument));
 	}
 
 
@@ -1214,13 +1211,13 @@ namespace types {
 	}
 
 
-	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const FunctionTypePtr& function, const TypeList& arguments, bool allowMaterialization) {
+	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const FunctionTypePtr& function, const TypeList& arguments) {
 		// use deduction mechanism
-		return getTypeVariableInstantiation(manager, function->getParameterTypes()->getTypes(), arguments, allowMaterialization);
+		return getTypeVariableInstantiation(manager, function->getParameterTypes()->getTypes(), arguments);
 	}
 
 
-	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const CallExprPtr& call, bool allowMaterialization) {
+	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const CallExprPtr& call) {
 		// check for null
 		if(!call) { return boost::none; }
 
@@ -1243,7 +1240,7 @@ namespace types {
 		}
 
 		// compute type variable instantiation
-		SubstitutionOpt res = getTypeVariableInstantiation(manager, funType, argTypes, allowMaterialization);
+		SubstitutionOpt res = getTypeVariableInstantiation(manager, funType, argTypes);
 
 		// done
 		return res;

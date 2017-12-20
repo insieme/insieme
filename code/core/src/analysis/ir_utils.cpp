@@ -261,7 +261,7 @@ namespace analysis {
 		if (*callType == *builder.refType(retType)) return true;
 
 		// instantiate return type
-		auto sub = types::getTypeVariableInstantiation(mgr,call,true);
+		auto sub = types::getTypeVariableInstantiation(mgr,call);
 
 		// risky default: it is not materializing (this is not semantically correct IR!)
 		if (!sub) return false;
