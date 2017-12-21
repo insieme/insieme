@@ -925,6 +925,13 @@ namespace parser {
 				// we add the callable itself as the first argument of the call
 				auto thisParam = func.as<CallExprPtr>()->getArgument(0);
 				auto thisParamType = thisParam->getType();
+
+				// give a nice error message, if the this prameter isn't of plain reference type, as this isn't too easy to recognize otherwise
+				if(!lang::isPlainReference(thisParamType)) {
+					error(l, format("This parameter for member call has to be of plain reference type - is %s", *thisParamType));
+					return nullptr;
+				}
+
 				if(analysis::isRefType(thisParamType)) { thisParamType = analysis::getReferencedType(thisParamType); }
 
 				args.insert(args.begin(), thisParam);

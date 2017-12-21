@@ -638,7 +638,7 @@ namespace backend {
 		res[refExt.getRefKindCast()] = OP_CONVERTER {
 			// get source and target reference kinds
 			auto srcRefKind = core::lang::getReferenceKind(ARG(0));
-			auto trgRefKind = core::lang::getReferenceKind(ARG(1));
+			auto trgRefKind = core::lang::getRepresentedReferenceKind(ARG(1)->getType());
 
 			if(ARG(0).isa<core::InitExprPtr>()) return CONVERT_ARG(0);
 
