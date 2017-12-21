@@ -417,7 +417,7 @@ namespace backend {
 			}
 
 			// exchange arguments and done
-			return core::CallExpr::get(manager, call->getType(), call->getFunctionExpr(), newArgs);
+			return builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs);
 		}
 
 		// helpers for determining target types for parameter expression conversion
