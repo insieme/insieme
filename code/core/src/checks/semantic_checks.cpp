@@ -296,7 +296,7 @@ namespace checks {
 			lang::ReferenceType declRef(decl->getType());
 
 			// let a value of type T initialize a ref<S,f,f,plain> whenever T is a subtype of S
-			if (declRef.isPlain() && !declRef.isConst() && !declRef.isVolatile() && types::isSubTypeOf(initType,declRef.getElementType())) return res;
+			if (declRef.isPlain() && types::isSubTypeOf(initType,declRef.getElementType())) return res;
 
 		}
 
