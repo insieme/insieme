@@ -95,7 +95,7 @@ int main() {
 		def struct IMP_RefMember {
 			mem : ref<int<4>,t,f,cpp_ref>;
 			ctor function () {
-				<ref<int<4>,t,f,cpp_ref>>(*(this).mem) {0};
+				<ref<int<4>,t,f,cpp_ref>>(*(this).mem) {ref_cast(ref_temp_init(0), type_lit(t), type_lit(f), type_lit(cpp_ref))};
 				(this).mem;
 			}
 		};

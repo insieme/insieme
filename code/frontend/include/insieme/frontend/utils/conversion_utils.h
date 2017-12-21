@@ -81,7 +81,7 @@ namespace utils {
 
 	/// Materialize "retIr" if possible
 	///
-	core::ExpressionPtr convertMaterializingExpr(conversion::Converter& converter, core::ExpressionPtr retIr);
+	core::ExpressionPtr convertMaterializingExpr(conversion::Converter& converter, const core::ExpressionPtr& retIr);
 
 	/// Surrounds the given init with a ref cast to the initializedType if necessary according to materialization semantics
 	///

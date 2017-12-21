@@ -104,11 +104,15 @@ int main() {
 	#pragma test expect_ir(R"(
 		def IMP_take_const_ref = function (v0 : ref<int<4>,t,f,cpp_ref>) -> unit { };
 		{
-			IMP_take_const_ref(5);
+			IMP_take_const_ref(ref_kind_cast(ref_temp_init(5), type_lit(cpp_ref)));
+			var ref<int<4>,t,f,cpp_ref> v0 = ref_cast(ref_temp_init(6), type_lit(t), type_lit(f), type_lit(cpp_ref));
+			var ref<int<4>,t,f,cpp_ref> v1 = ref_cast(ref_temp_init(7+8), type_lit(t), type_lit(f), type_lit(cpp_ref));
 		}
 	)")
 	{
 		take_const_ref(5);
+		const int& i = 6;
+		const int& j = 7 + 8;
 	}
 
 	return 0;
