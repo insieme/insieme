@@ -190,7 +190,7 @@ int main() {
 		};
 		{
 			var ref<int<4>,f,f,plain> v0 = 50;
-			var ref<ptr<int<4>>,f,f,plain> v1 = new_arr_fun(num_cast(*v0+5, type_lit(uint<inf>)), 1, 2, 3);
+			var ref<ptr<int<4>>,f,f,plain> v1 = new_arr_fun(num_cast(*v0+5, type_lit(uint<inf>)), ref_cast(ref_temp_init(1), type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(ref_temp_init(2), type_lit(t), type_lit(f), type_lit(cpp_ref)), ref_cast(ref_temp_init(3), type_lit(t), type_lit(f), type_lit(cpp_ref)));
 			ref_delete(ptr_to_array(*v1));
 		}
 	)")

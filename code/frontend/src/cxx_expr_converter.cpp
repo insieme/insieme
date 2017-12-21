@@ -392,7 +392,11 @@ namespace conversion {
 					auto paramType = builder.refType(exprType, true, false, core::lang::ReferenceType::Kind::CppReference);
 					initFunParamTypes.push_back(paramType);
 					initFunParams.push_back(builder.variable(paramType));
-					initFunArguments.push_back(expr);
+
+					// materialize the argument if it isn't already of reference type, and cast as necessary
+					auto arg = expr;
+					if(!core::lang::isReference(arg)) arg = utils::convertMaterializingExpr(converter, expr);
+					initFunArguments.push_back(utils::castInitializationIfNotMaterializing(paramType, arg));
 				}
 				core::ExpressionList initList;
 				for(auto i = initFunParams.cbegin()+1; i != initFunParams.cend(); ++i) {
