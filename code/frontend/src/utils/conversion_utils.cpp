@@ -248,7 +248,7 @@ namespace utils {
 		if(core::lang::isReference(initializedType) && core::lang::isReference(initType)
 				&& core::lang::ReferenceType(initializedType).getKind() != core::lang::ReferenceType(initType).getKind()
 				&& !core::analysis::isMaterializationOf(initializedType, initType)) {
-			return core::lang::buildRefCast(init, initializedType);
+			return core::lang::buildRefKindCast(init, core::lang::getReferenceKind(initializedType));
 		}
 		return init;
 	}

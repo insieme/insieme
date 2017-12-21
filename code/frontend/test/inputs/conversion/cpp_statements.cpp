@@ -43,7 +43,7 @@ int main() {
 	#pragma test expect_ir(R"(
 		{
 			var ref<array<int<4>,3u>,f,f,plain> v0 = <ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>,f,f,plain>))) {1, 2, 3};
-			var ref<array<int<4>,3u>,f,f,cpp_ref> v1 = ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref));
+			var ref<array<int<4>,3u>,f,f,cpp_ref> v1 = ref_kind_cast(v0, type_lit(cpp_ref));
 			var ref<ptr<int<4>>,f,f,plain> v2 = ptr_from_array(ref_kind_cast(v1, type_lit(plain)));
 			var ref<ptr<int<4>>,f,f,plain> v3 = ptr_add(ptr_from_array(ref_kind_cast(v1, type_lit(plain))), 3l);
 			while(ptr_ne(*v2, *v3)) {
@@ -65,7 +65,7 @@ int main() {
 	#pragma test expect_ir(R"(
 		{
 			var ref<array<int<4>,3u>,f,f,plain> v0 = <ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>,f,f,plain>))) {1, 2, 3};
-			var ref<array<int<4>,3u>,f,f,cpp_ref> v1 = ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref));
+			var ref<array<int<4>,3u>,f,f,cpp_ref> v1 = ref_kind_cast(v0,type_lit(cpp_ref));
 			var ref<ptr<int<4>>,f,f,plain> v2 = ptr_from_array(ref_kind_cast(v1, type_lit(plain)));
 			var ref<ptr<int<4>>,f,f,plain> v3 = ptr_add(ptr_from_array(ref_kind_cast(v1, type_lit(plain))), 3l);
 			while(ptr_ne(*v2, *v3)) {
@@ -94,7 +94,7 @@ int main() {
 	#pragma test expect_ir(R"(
 		{
 			var ref<array<int<4>,3u>,f,f,plain> v0 = <ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>,f,f,plain>))) {1, 2, 3};
-			var ref<array<int<4>,3u>,f,f,cpp_ref> v1 = ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref));
+			var ref<array<int<4>,3u>,f,f,cpp_ref> v1 = ref_kind_cast(v0, type_lit(cpp_ref));
 			var ref<ptr<int<4>>,f,f,plain> v2 = ptr_from_array(ref_kind_cast(v1, type_lit(plain)));
 			var ref<ptr<int<4>>,f,f,plain> v3 = ptr_add(ptr_from_array(ref_kind_cast(v1, type_lit(plain))), 3l);
 			while(ptr_ne(*v2, *v3)) {

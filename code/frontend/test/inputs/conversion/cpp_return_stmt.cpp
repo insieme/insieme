@@ -46,7 +46,7 @@ int scalar_int() {
 	}
 }
 const int& scalar_ref_int() {
-	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0; return ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)); } ")
+	#pragma test expect_ir("{var ref<int<4>,f,f,plain> v0; return ref_kind_cast(v0, type_lit(cpp_ref)) in ref<int<4>,t,f,cpp_ref>; } ")
 	{
 		int a;
 		return a;
@@ -80,7 +80,7 @@ constIntPtr nonconst_to_const_pointer_int() {
 }
 
 intPtr& reference_pointer_int() {
-	#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0; return ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref)); } ")
+	#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0; return ref_kind_cast(v0, type_lit(cpp_ref)); } ")
 	{
 		intPtr a;
 		return a;
@@ -88,7 +88,7 @@ intPtr& reference_pointer_int() {
 }
 
 const intPtr& const_reference_pointer_int() {
-	#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0; return ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)); } ")
+	#pragma test expect_ir("{var ref<ptr<int<4>>,f,f,plain> v0; return ref_kind_cast(v0, type_lit(cpp_ref)) in ref<ptr<int<4>>,t,f,cpp_ref>; } ")
 	{
 		intPtr a;
 		return a;
@@ -96,7 +96,7 @@ const intPtr& const_reference_pointer_int() {
 }
 
 constIntPtr& reference_const_pointer_int() {
-	#pragma test expect_ir("{var ref<ptr<int<4>,t,f>,f,f,plain> v0; return ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref)); } ")
+	#pragma test expect_ir("{var ref<ptr<int<4>,t,f>,f,f,plain> v0; return ref_kind_cast(v0, type_lit(cpp_ref)); } ")
 	{
 		constIntPtr a;
 		return a;
@@ -104,7 +104,7 @@ constIntPtr& reference_const_pointer_int() {
 }
 
 const constIntPtr& const_reference_const_pointer_int() {
-	#pragma test expect_ir("{var ref<ptr<int<4>,t,f>,f,f,plain> v0; return ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)); } ")
+	#pragma test expect_ir("{var ref<ptr<int<4>,t,f>,f,f,plain> v0; return ref_kind_cast(v0, type_lit(cpp_ref)) in ref<ptr<int<4>,t,f>,t,f,cpp_ref>; } ")
 	{
 		constIntPtr a;
 		return a;
