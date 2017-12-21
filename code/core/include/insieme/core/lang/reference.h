@@ -487,8 +487,12 @@ namespace lang {
 	/**
 	 * Determines the reference kind represented by the given input type literal
 	 */
-	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType);
-	ReferenceType::Kind getReferenceKind(const ExpressionPtr& expression);
+	ReferenceType::Kind getRepresentedReferenceKind(const TypePtr& typeLitType);
+
+	/**
+	 * Determines the reference kind represented by the given input type literal
+	 */
+	ReferenceType::Kind getReferenceKind(const NodePtr& node);
 
 	/**
 	 * A factory function creating a reference type utilizing the given element type and flag combination.

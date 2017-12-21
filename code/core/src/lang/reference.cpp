@@ -284,13 +284,14 @@ namespace lang {
 		return rExt.isCallOfRefAssign(node);
 	}
 
-	ReferenceType::Kind getReferenceKind(const TypePtr& typeLitType) {
+	ReferenceType::Kind getRepresentedReferenceKind(const TypePtr& typeLitType) {
 		if(core::analysis::isTypeLiteralType(typeLitType)) return parseKind(core::analysis::getRepresentedType(typeLitType));
 		return parseKind(typeLitType);
 	}
-	ReferenceType::Kind getReferenceKind(const ExpressionPtr& expression) {
-		if(isReference(expression)) return ReferenceType(expression).getKind();
-		return getReferenceKind(core::analysis::getRepresentedType(expression));
+
+	ReferenceType::Kind getReferenceKind(const NodePtr& node) {
+		assert_true(isReference(node)) << "Can't get reference kind of non-ref node " << node;
+		return ReferenceType(node).getKind();
 	}
 
 	TypePtr buildRefType(const TypePtr& elementType, bool _const, bool _volatile, const ReferenceType::Kind& kind) {
