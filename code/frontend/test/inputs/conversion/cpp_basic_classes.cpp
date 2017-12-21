@@ -256,8 +256,8 @@ int main() {
 		{
 			var ref<IMP_ClassWithConstAndNonConstMethodInline,f,f,plain> v0 = IMP_ClassWithConstAndNonConstMethodInline::(ref_decl(type_lit(ref<IMP_ClassWithConstAndNonConstMethodInline,f,f,plain>)));
 			v0.IMP_bla();
-			var ref<IMP_ClassWithConstAndNonConstMethodInline,t,f,cpp_ref> v1 = v0;
-			v1.IMP_bla();
+			var ref<IMP_ClassWithConstAndNonConstMethodInline,t,f,cpp_ref> v1 = ref_kind_cast(v0, type_lit(cpp_ref));
+			ref_kind_cast(v1, type_lit(plain)).IMP_bla();
 		}
 	)")
 	{

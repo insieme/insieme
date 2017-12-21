@@ -208,17 +208,17 @@ int main() {
 			var ref<IMP_Base,f,f,plain> v0 = IMP_Base::(ref_decl(type_lit(ref<IMP_Base,f,f,plain>)));
 			var ref<IMP_Derived,f,f,plain> v1 = IMP_Derived::(ref_decl(type_lit(ref<IMP_Derived,f,f,plain>)));
 			var ref<IMP_DerivedSpecifyingFoo,f,f,plain> v2 = IMP_DerivedSpecifyingFoo::(ref_decl(type_lit(ref<IMP_DerivedSpecifyingFoo,f,f,plain>)));
-			var ref<IMP_Base,f,f,cpp_ref> v3 = v0;
-			var ref<IMP_Derived,f,f,cpp_ref> v4 = v1;
-			var ref<IMP_DerivedSpecifyingFoo,f,f,cpp_ref> v5 = v2;
-			var ref<IMP_Base,f,f,cpp_ref> v6 = ref_parent_cast(v1, type_lit(IMP_Base));
-			var ref<IMP_Base,f,f,cpp_ref> v7 = ref_parent_cast(v2, type_lit(IMP_Base));
-			v3.IMP_foo();
-			v4.IMP_bar();
-			ref_parent_cast(v4, type_lit(IMP_Base)).IMP_foo();
-			v5.IMP_foo();
-			v6.IMP_foo();
-			v7.IMP_foo();
+			var ref<IMP_Base,f,f,cpp_ref> v3 = ref_kind_cast(v0, type_lit(cpp_ref));
+			var ref<IMP_Derived,f,f,cpp_ref> v4 = ref_kind_cast(v1, type_lit(cpp_ref));
+			var ref<IMP_DerivedSpecifyingFoo,f,f,cpp_ref> v5 = ref_kind_cast(v2, type_lit(cpp_ref));
+			var ref<IMP_Base,f,f,cpp_ref> v6 = ref_kind_cast(ref_parent_cast(v1, type_lit(IMP_Base)), type_lit(cpp_ref));
+			var ref<IMP_Base,f,f,cpp_ref> v7 = ref_kind_cast(ref_parent_cast(v2, type_lit(IMP_Base)), type_lit(cpp_ref));
+			ref_kind_cast(v3, type_lit(plain)).IMP_foo();
+			ref_kind_cast(v4, type_lit(plain)).IMP_bar();
+			ref_kind_cast(ref_parent_cast(v4, type_lit(IMP_Base)), type_lit(plain)).IMP_foo();
+			ref_kind_cast(v5, type_lit(plain)).IMP_foo();
+			ref_kind_cast(v6, type_lit(plain)).IMP_foo();
+			ref_kind_cast(v7, type_lit(plain)).IMP_foo();
 		}
 	)")
 	{

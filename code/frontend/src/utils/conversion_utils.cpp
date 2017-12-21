@@ -256,6 +256,11 @@ namespace utils {
 	core::ExpressionPtr prepareThisExpr(conversion::Converter& converter, core::ExpressionPtr thisArg) {
 		if(core::lang::isPointer(thisArg)) thisArg = core::lang::buildPtrToRef(thisArg);
 		if(!core::lang::isReference(thisArg)) thisArg = frontend::utils::convertMaterializingExpr(converter, thisArg);
+		assert_true(core::lang::isReference(thisArg)) << "This parameter isn't of reference type";
+		// we need to add casts if the this argument isn't a plain reference
+		if(!core::lang::isPlainReference(thisArg)) {
+			thisArg = core::lang::toPlainReference(thisArg);
+		}
 		return thisArg;
 	}
 

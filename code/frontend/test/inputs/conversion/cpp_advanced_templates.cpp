@@ -141,8 +141,8 @@ int main() {
 		{
 			var ref<IMP_ConstNonConstInline,f,f,plain> v0 = IMP_ConstNonConstInline::(ref_decl(type_lit(ref<IMP_ConstNonConstInline,f,f,plain>)));
 			v0.IMP_bla_int_returns_int();
-			var ref<IMP_ConstNonConstInline,t,f,cpp_ref> v1 = v0;
-			v1.IMP_bla_int_returns_int();
+			var ref<IMP_ConstNonConstInline,t,f,cpp_ref> v1 = ref_kind_cast(v0, type_lit(cpp_ref));
+			ref_kind_cast(v1, type_lit(plain)).IMP_bla_int_returns_int();
 		}
 	)")
 	{
