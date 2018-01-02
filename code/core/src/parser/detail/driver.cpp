@@ -1115,7 +1115,17 @@ namespace parser {
 				if(tu.getTypes().find(genType) != tu.getTypes().end()) {
 					const auto& tuType = tu.getTypes().find(genType)->second;
 					if(tuType.isStruct()) {
+
+						// extract the struct
 						const auto& structType = tuType.getStruct();
+
+						// check that the field number fits
+						auto numFields = structType->getFields()->size();
+						if (list.size() > numFields) {
+							error(l, format("Unable to initialize %d fields with %d value(s).", numFields, list.size()));
+							return nullptr;
+						}
+
 						// get the correct type of the decl from the field for each init expression
 						DeclarationList decls;
 						for(unsigned index = 0; index < list.size(); ++index) {
