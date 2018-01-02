@@ -812,6 +812,61 @@ namespace checks {
 		EXPECT_PRED2(containsMSG, check(err, typeCheck), Message(InitExprAddress(err)->getInitDecls()[0], EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_TYPE, "", Message::ERROR));
 	}
 
+	TEST(InitExprTypeCheck, InOutType) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto type = [&](const std::string& type) {
+			return builder.parseType(type);
+		};
+
+		auto init = [&](const std::string& initType, const std::string& memType) {
+			auto refType = type(initType).isa<GenericTypePtr>();
+			EXPECT_TRUE(refType) << initType;
+			auto elemType = analysis::getReferencedType(refType);
+			return builder.initExpr(
+					refType,
+					builder.literal("M",type(memType)),
+					ExpressionList{builder.literal("X",elemType)}
+			);
+
+		};
+
+		// build the init type check
+		CheckPtr typeCheck = make_check<InitExprTypeCheck>();
+
+		// some positive check
+		auto initExpr = init("ref<A,f,f,plain>","ref<A,f,f,plain>");
+		EXPECT_TRUE(check(initExpr,typeCheck).empty()) << check(initExpr,typeCheck);
+
+		initExpr = init("ref<B,f,f,plain>","ref<B,f,f,plain>");
+		EXPECT_TRUE(check(initExpr,typeCheck).empty()) << check(initExpr,typeCheck);
+
+		initExpr = init("ref<B,t,f,plain>","ref<B,t,f,plain>");
+		EXPECT_TRUE(check(initExpr,typeCheck).empty()) << check(initExpr,typeCheck);
+
+		initExpr = init("ref<B,f,t,plain>","ref<B,f,t,plain>");
+		EXPECT_TRUE(check(initExpr,typeCheck).empty()) << check(initExpr,typeCheck);
+
+		initExpr = init("ref<B,t,t,plain>","ref<B,t,t,plain>");
+		EXPECT_TRUE(check(initExpr,typeCheck).empty()) << check(initExpr,typeCheck);
+
+
+		// some negative checks
+		initExpr = init("ref<A,f,f,cpp_ref>","ref<A,f,f,cpp_ref>");
+		EXPECT_EQ(1,check(initExpr,typeCheck).size()) << check(initExpr,typeCheck);
+		EXPECT_PRED2(containsMSG, check(initExpr, typeCheck), Message(InitExprAddress(initExpr), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+
+		initExpr = init("ref<A,f,f,cpp_ref>","ref<A,f,f,plain>");
+		EXPECT_EQ(2,check(initExpr,typeCheck).size()) << check(initExpr,typeCheck);
+		EXPECT_PRED2(containsMSG, check(initExpr, typeCheck), Message(InitExprAddress(initExpr), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+
+		initExpr = init("ref<A,f,f,plain>","ref<A,f,f,cpp_ref>");
+		EXPECT_EQ(1,check(initExpr,typeCheck).size()) << check(initExpr,typeCheck);
+		EXPECT_PRED2(containsMSG, check(initExpr, typeCheck), Message(InitExprAddress(initExpr), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+
+
+	}
 
 	TEST(InitExprTypeCheck, MaterializingDeclarations) {
 		NodeManager manager;

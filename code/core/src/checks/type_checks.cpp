@@ -983,14 +983,41 @@ namespace checks {
 		auto& mgr = address->getNodeManager();
 
 		// extract type and check for ref
-		core::TypePtr refType = address.getAddressedNode()->getType();
+		InitExprPtr initExpr = address.getAddressedNode();
+		TypePtr refType = initExpr->getType();
 		if(!analysis::isRefType(refType)) {
 			add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 				             format("InitExpr only initializes memory and therefore requires a reference type (got %s)", *refType), Message::ERROR));
 			return res;
 		}
 
-		core::TypePtr type = analysis::getReferencedType(refType);
+		// the resulting reference must be a plain reference
+		if (!lang::isPlainReference(refType)) {
+			add(res,
+					Message(
+						address,
+						EC_TYPE_INVALID_INITIALIZATION_EXPR,
+						format("Result type of an init expression must be a plain reference, given: %s", lang::getReferenceKind(refType)),
+						Message::ERROR
+					)
+			);
+		}
+
+		// make sure that the target reference is the same as the result reference
+		TypePtr trgType = initExpr->getMemoryExpr()->getType();
+		if (*refType != *trgType) {
+			add(res,
+					Message(
+						address,
+						EC_TYPE_INVALID_INITIALIZATION_EXPR,
+						format("Result type of init expression does not match input memory expression.\n\tincoming: %s\n\toutgoing: %s", *refType, *trgType),
+						Message::ERROR
+					)
+			);
+		}
+
+
+		TypePtr type = analysis::getReferencedType(refType);
 
 		// test that all declarations are materializing declarations or cpp references
 		for(const auto cur : address->getInitDecls()) {
