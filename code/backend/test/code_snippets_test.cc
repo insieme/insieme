@@ -525,10 +525,10 @@ namespace backend {
 				var ref<array<int<4>,3u>,f,f> v3 = <ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>,f,f,plain>))) {0,1,2};
 				//int arr_implied[] = {0,1,2};
 
-				var ref<array<array<int<4>,3u>,2u>,f,f> v4 = <ref<array<array<int<4>,3u>,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3u>,2u>,f,f>))) {<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {1,2,3},<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {4,5,6}};
+				var ref<array<array<int<4>,3u>,2u>,f,f> v4 = <ref<array<array<int<4>,3u>,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3u>,2u>,f,f>))) {<ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>>))) {1,2,3},<ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>>))) {4,5,6}};
 				//int arr_multi[2][3] = {{1,2,3}, {4,5,6}};
 
-				var ref<array<array<int<4>,3u>,2u>,f,f,plain> v5 = <ref<array<array<int<4>,3u>,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3u>,2u>,f,f,plain>))) {<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {1},<ref<array<int<4>,3u>,f,f,plain>>(ref_temp(type_lit(array<int<4>,3u>))) {4,5}};
+				var ref<array<array<int<4>,3u>,2u>,f,f,plain> v5 = <ref<array<array<int<4>,3u>,2u>,f,f,plain>>(ref_decl(type_lit(ref<array<array<int<4>,3u>,2u>,f,f,plain>))) {<ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>>))) {1},<ref<array<int<4>,3u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,3u>>))) {4,5}};
 				//int arr_multi_partial[2][3] = {{1}, {4,5}};
 
 				return 0;
@@ -590,7 +590,7 @@ namespace backend {
 			int<4> main() {
 				<ref<int<4>,f,f,plain>>(lit("initedGlobal" : ref<int<4>,f,f,plain>)) {5};
 				<ref<S,f,f,plain>>(lit("y" : ref<S,f,f,plain>)) {1, 5u};
-				<ref<array<S,3u>,f,f,plain>>(lit("klaus_test" : ref<array<S,3u>,t,f,plain>)) {<ref<S,f,f,plain>>(ref_temp(type_lit(S))) {1, 2u}, <ref<S,f,f,plain>>(ref_temp(type_lit(S))) {3, 4u}, <ref<S,f,f,plain>>(ref_temp(type_lit(S))) {5, 6u}};
+				<ref<array<S,3u>,t,f,plain>>(lit("klaus_test" : ref<array<S,3u>,t,f,plain>)) {<ref<S,f,f,plain>>(ref_decl(type_lit(ref<S>))) {1, 2u}, <ref<S,f,f,plain>>(ref_decl(type_lit(ref<S>))) {3, 4u}, <ref<S,f,f,plain>>(ref_decl(type_lit(ref<S>))) {5, 6u}};
 				<ref<array<char,255u>,f,f,plain>>(lit("char_arr" : ref<array<char,255u>,f,f,plain>)) {'\0'};
 				<ref<array<int<4>,2u>,f,f,plain>>(lit("arr" : ref<array<int<4>,2u>,f,f,plain>)) {42, 43};
 
