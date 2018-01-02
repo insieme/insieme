@@ -143,8 +143,8 @@ int main() {
 			i1 : int<4>;
 			ctor function (v1 : ref<IMP_std_colon__colon_initializer_list_int,t,f,cpp_ref>) {
 				var ref<IMP_std_colon__colon_initializer_list_int,t,f,cpp_ref> v2 = v1;
-				var ref<ptr<int<4>,t,f>,f,f,plain> v3 = v2.IMP_begin_returns_const_iterator();
-				var ref<ptr<int<4>,t,f>,f,f,plain> v4 = v2.IMP_end_returns_const_iterator();
+				var ref<ptr<int<4>,t,f>,f,f,plain> v3 = ref_kind_cast(v2,type_lit(plain)).IMP_begin_returns_const_iterator();
+				var ref<ptr<int<4>,t,f>,f,f,plain> v4 = ref_kind_cast(v2,type_lit(plain)).IMP_end_returns_const_iterator();
 				while(ptr_ne(*v3, *v4)) {
 					var ref<int<4>,f,f,plain> v5 = *ptr_to_ref(*v3);
 					{

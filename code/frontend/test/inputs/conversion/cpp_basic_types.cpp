@@ -56,13 +56,13 @@ int main() {
 		a = false;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>> v0; var ref<int<4>,f,f,cpp_ref> v1 = ref_cast(v0, type_lit(f), type_lit(f), type_lit(cpp_ref)); }")
+	#pragma test expect_ir("{ var ref<int<4>> v0; var ref<int<4>,f,f,cpp_ref> v1 = ref_kind_cast(v0, type_lit(cpp_ref)); }")
 	{
 		int i;
 		int& ref_i = i;
 	}
 
-	#pragma test expect_ir("{ var ref<int<4>> v0; var ref<int<4>,t,f,cpp_ref> v1 = ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref)); }")
+	#pragma test expect_ir("{ var ref<int<4>> v0; var ref<int<4>,t,f,cpp_ref> v1 = ref_kind_cast(v0, type_lit(cpp_ref)); }")
 	{
 		int i;
 		const int& ref_i = i;

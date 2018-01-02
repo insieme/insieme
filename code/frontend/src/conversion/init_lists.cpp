@@ -188,8 +188,8 @@ namespace conversion {
 
 		// the body of all the move and assign ctors/operators
 		std::string moveAssignBody = R"(
-			_m_array = *ref_member_access(_param_1, lit("_M_array"), type_lit(ptr<_member_type, t, f>));
-			_m_len = *ref_member_access(_param_1, lit("_M_len"), type_lit(uint<8>));
+			_m_array = *ref_member_access(ref_kind_cast(_param_1, type_lit(plain)), lit("_M_array"), type_lit(ptr<_member_type, t, f>));
+			_m_len = *ref_member_access(ref_kind_cast(_param_1, type_lit(plain)), lit("_M_len"), type_lit(uint<8>));
 			_m_original = false;
 		)";
 
