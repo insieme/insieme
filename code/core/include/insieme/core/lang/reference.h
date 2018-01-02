@@ -437,6 +437,10 @@ namespace lang {
 
 		GenericTypePtr toType() const;
 
+		friend std::ostream& operator<<(std::ostream&, const ReferenceType& ref);
+
+		friend std::ostream& operator<<(std::ostream&, Kind kind);
+
 	};
 
 	/**

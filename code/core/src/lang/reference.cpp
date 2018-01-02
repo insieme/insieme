@@ -175,6 +175,22 @@ namespace lang {
 		return isRefMarker(kind) && getKind() == Kind::Qualified;
 	}
 
+	std::ostream& operator<<(std::ostream& out, const ReferenceType& ref) {
+		return out << *ref.toType();
+	}
+
+	std::ostream& operator<<(std::ostream& out, ReferenceType::Kind kind) {
+		switch(kind) {
+		case ReferenceType::Kind::CppRValueReference: return out << "cpp_rref";
+		case ReferenceType::Kind::CppReference:       return out << "cpp_ref";
+		case ReferenceType::Kind::Plain:              return out << "plain";
+		case ReferenceType::Kind::Qualified:          return out << "qualified";
+		case ReferenceType::Kind::Undefined:          return out << "var";
+		default:                                      return out << "?";
+		}
+	}
+
+
 	namespace {
 
 		bool isReferenceInternal(const GenericTypePtr& ref) {
