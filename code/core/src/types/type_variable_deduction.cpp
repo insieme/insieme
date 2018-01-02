@@ -837,7 +837,7 @@ namespace types {
 			}
 
 
-			// -------------------------------- Invalid Call By Value ---------------------------------------
+			// ------------------------ Variadic Parameter List Expansion -----------------------------------
 			//
 			// Support variadic type variables in parameter list.
 			//
@@ -863,17 +863,6 @@ namespace types {
 			// check length of parameter and arguments
 			if (parameter.size() != arguments.size()) { return fail; }
 
-
-			// -------------------------------- Invalid Call By Value ---------------------------------------
-			//
-			// Non-Trivial types must not be passed by value.
-			//
-			// ----------------------------------------------------------------------------------------------
-
-			// check all arguments
-			for (const auto& cur : arguments) {
-				if (!analysis::isTriviallyCopyable(cur)) return fail;
-			}
 
 
 			// ------------------------------ Implicit Materialization --------------------------------------
@@ -1110,7 +1099,9 @@ namespace types {
 		// look up cache
 		ResultMap::key_type key { params, args };
 		auto pos = cache.find(key);
-		if (pos != cache.end()) return pos->second;
+		if (pos != cache.end()) {
+			return pos->second;
+		}
 
 		// resolve internal, cache, and return result
 		return cache[key] = getTypeVariableInstantiationInternal(manager, params, args);
@@ -1118,96 +1109,6 @@ namespace types {
 
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypePtr& parameter, const TypePtr& argument) {
 		return getTypeVariableInstantiation(manager, toVector(parameter), toVector(argument));
-	}
-
-
-	namespace {
-
-		// -------------------------------------- Function Type Annotations -----------------------
-
-		/**
-		 * The kind of annotations attached to a function type nodes to cache type variable substitutions.
-		 */
-		class VariableInstantionInfo : public core::NodeAnnotation {
-			// The name of this annotation
-			const static string NAME;
-
-		  public:
-			// The key used to attack instantiation results to call nodes
-			const static utils::StringKey<VariableInstantionInfo> KEY;
-
-		  private:
-			/**
-			 * The type of map used internally to manager
-			 */
-			typedef boost::unordered_map<TypeList, SubstitutionOpt> SubstitutionMap;
-
-			/**
-			 * A container for cached results. Both, the type list and the
-			 * substitution has to refere to elements maintained by the same manager
-			 * than the annotated function type.
-			 */
-			SubstitutionMap substitutions;
-
-		  public:
-			VariableInstantionInfo() {}
-
-			virtual const utils::AnnotationKeyPtr getKey() const {
-				return &KEY;
-			}
-
-			virtual const std::string& getAnnotationName() const {
-				return NAME;
-			}
-
-			const SubstitutionOpt* get(const TypeList& args) const {
-				auto pos = substitutions.find(args);
-				if(pos != substitutions.end()) { return &(pos->second); }
-				return 0;
-			}
-
-			void add(const TypeList& args, const SubstitutionOpt& res) {
-				substitutions.insert(std::make_pair(args, res));
-			}
-
-			virtual void clone(const NodeAnnotationPtr& ptr, const NodePtr& clone) const {
-				// copy the nodes reference by this annotation to the new manager
-				NodeManager& manager = clone->getNodeManager();
-
-				// attach annotation
-				std::shared_ptr<VariableInstantionInfo> copy =
-				    (clone->hasAnnotation(KEY)) ? clone->getAnnotation(KEY) : std::make_shared<VariableInstantionInfo>();
-				SubstitutionMap& map = copy->substitutions;
-
-				// insert copies of the current map
-				for_each(substitutions,
-				         [&](const SubstitutionMap::value_type& cur) { map.insert(std::make_pair(manager.getAll(cur.first), copyTo(manager, cur.second))); });
-
-				// finally, add new annotation to new version of node
-				clone->addAnnotation(copy);
-			}
-
-			static const SubstitutionOpt* getFromAnnotation(const FunctionTypePtr& function, const TypeList& arguments) {
-				// try loading annotation
-				if(auto res = function->getAnnotation(VariableInstantionInfo::KEY)) { return res->get(arguments); }
-
-				// no such annotation present
-				return 0;
-			}
-
-			static void addToAnnotation(const FunctionTypePtr& function, const TypeList& arguments, const SubstitutionOpt& substitution) {
-				auto res = function->getAnnotation(VariableInstantionInfo::KEY);
-				if(!res) {
-					// create a new annotation
-					res = std::make_shared<VariableInstantionInfo>();
-					function->addAnnotation(res);
-				}
-				res->add(arguments, substitution);
-			}
-		};
-
-		const string VariableInstantionInfo::NAME = "VariableInstantionInfo";
-		const utils::StringKey<VariableInstantionInfo> VariableInstantionInfo::KEY = utils::StringKey<VariableInstantionInfo>("VARIABLE_INSTANTIATION_INFO");
 	}
 
 
@@ -1225,25 +1126,14 @@ namespace types {
 		const auto& funType = call->getFunctionExpr()->getType().isa<core::FunctionTypePtr>();
 		if(!funType) { return boost::none; }
 
-		// get argument types
+		// collect list of arguments (dematerialized)
 		TypeList argTypes;
-		unsigned numParams = funType->getParameterTypeList().size();
-		DeclarationList argDeclList = call->getArgumentDeclarationList();
-		// built-ins are handled differently
-		bool isBuiltIn = lang::isBuiltIn(call->getFunctionExpr());
-		for(unsigned i = 0; i < numParams && i < argDeclList.size(); ++i) {
-			if(isBuiltIn) {
-				argTypes.push_back(argDeclList[i]->getInitialization()->getType());
-			} else {
-				argTypes.push_back(transform::dematerialize(argDeclList[i]->getType()));
-			}
+		for(const auto& decl : call->getArgumentDeclarations()) {
+			argTypes.push_back(transform::dematerialize(decl->getType()));
 		}
 
 		// compute type variable instantiation
-		SubstitutionOpt res = getTypeVariableInstantiation(manager, funType, argTypes);
-
-		// done
-		return res;
+		return getTypeVariableInstantiation(manager, funType, argTypes);
 	}
 
 } // end namespace types

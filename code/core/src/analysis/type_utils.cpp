@@ -212,98 +212,99 @@ namespace analysis {
 	namespace {
 		bool isTrivialOrTriviallyCopyable(const TypePtr& type, const bool checkTrivial) {
 			auto ttype = type.isa<TagTypePtr>();
-		if(!ttype) {
-			if(core::lang::isArray(type)) {
-				// in case of an array, check the enclosed type for the same properties
-				return isTrivialOrTriviallyCopyable(core::lang::ArrayType(type).getElementType(), checkTrivial);
+			if(!ttype) {
+				if(core::lang::isArray(type)) {
+					// in case of an array, check the enclosed type for the same properties
+					return isTrivialOrTriviallyCopyable(core::lang::ArrayType(type).getElementType(), checkTrivial);
+				}
+				// non-tag-type & non-array types are always trivial
+				return true;
 			}
-			// non-tag-type & non-array types are always trivial
+
+			auto record = ttype->getRecord();
+
+			IRBuilder builder(type->getNodeManager());
+
+			auto getCtorByType = [&](const FunctionTypePtr& ctorType) -> ExpressionPtr {
+				for(const auto& ctor : record->getConstructors()) {
+					if(ctor->getType() == ctorType) {
+						return ctor;
+					}
+				}
+				return {};
+			};
+
+			auto getAssignmentOperatorByType = [&](const FunctionTypePtr& mfunType) -> MemberFunctionPtr {
+				for(const auto& mfun : record->getMemberFunctions()) {
+					if(mfun->getNameAsString() == utils::getMangledOperatorAssignName() && mfun->getImplementation()->getType() == mfunType) {
+						return mfun;
+					}
+				}
+				return {};
+			};
+
+			auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
+
+			// a virtual destructor means this type is not trivially copyable
+			if(record->hasVirtualDestructor()) return false;
+
+			// if we should check for a trivial type, we also check for a trivial default constructor here
+			if(checkTrivial) {
+				// the default constructor must not be deleted and be either implicit or defaulted)
+				auto defaultConstructor = getCtorByType(analysis::buildDefaultDefaultConstructorType(thisType));
+				if(!defaultConstructor || !isaDefaultMember(defaultConstructor)) return false;
+			}
+
+			// check for trivial constructors. They have to be either deleted or (implicitly) defaulted
+			auto copyConstructor = getCtorByType(analysis::buildDefaultCopyConstructorType(thisType));
+			if(copyConstructor && !isaDefaultMember(copyConstructor)) return false;
+
+			auto moveConstructor = getCtorByType(analysis::buildDefaultMoveConstructorType(thisType));
+			if(moveConstructor && !isaDefaultMember(moveConstructor)) return false;
+
+			// check trivial destructor
+			auto destructor = record->getDestructor();
+			if(destructor && !isaDefaultMember(destructor)) return false;
+
+			// check for trivial copy and move assignments
+			auto copyAssignment = getAssignmentOperatorByType(analysis::buildDefaultCopyAssignOperatorType(thisType));
+			if(copyAssignment && !isaDefaultMember(copyAssignment)) return false;
+
+			auto moveAssignment = getAssignmentOperatorByType(analysis::buildDefaultMoveAssignOperatorType(thisType));
+			if(moveAssignment && !isaDefaultMember(moveAssignment)) return false;
+
+			// check for virtual member functions
+			for(auto memFun : record->getMemberFunctions()) {
+				if(memFun->getVirtualFlag().getValue()) return false;
+			}
+
+			if(!record->getPureVirtualMemberFunctions().empty()) return false;
+
+			// check for virtual & non-trivial base classes
+			if(ttype->isStruct()) {
+				auto stype = ttype->getStruct();
+				for(auto par : stype->getParents()) {
+					if(par->getVirtual().getValue()) return false;
+					// if our direct base class is non-trivial, we cannot be trivial per-se
+					if(!isTrivial(par->getType())) return false;
+				}
+			}
+
+			// check that all non-static members are trivial
+			for(auto field : record->getFields()) {
+				auto fieldType = field->getType();
+				if(!isTrivial(fieldType)) return false;
+				//check cpp_ref field types
+				if(analysis::isRefType(fieldType) && lang::isCppReference(fieldType)) {
+					//TODO this is an over approximation which has to be refined
+					return false;
+				}
+			}
+
 			return true;
 		}
 
-		auto record = ttype->getRecord();
-
-		IRBuilder builder(type->getNodeManager());
-
-		auto getCtorByType = [&](const FunctionTypePtr& ctorType) -> ExpressionPtr {
-			for(const auto& ctor : record->getConstructors()) {
-				if(ctor->getType() == ctorType) {
-					return ctor;
-				}
-			}
-			return {};
-		};
-
-		auto getAssignmentOperatorByType = [&](const FunctionTypePtr& mfunType) -> MemberFunctionPtr {
-			for(const auto& mfun : record->getMemberFunctions()) {
-				if(mfun->getNameAsString() == utils::getMangledOperatorAssignName() && mfun->getImplementation()->getType() == mfunType) {
-					return mfun;
-				}
-			}
-			return {};
-		};
-
-		auto thisType = builder.refType(builder.tagTypeReference(record->getName()));
-
-		// a virtual destructor means this type is not trivially copyable
-		if(record->hasVirtualDestructor()) return false;
-
-		// if we should check for a trivial type, we also check for a trivial default constructor here
-		if(checkTrivial) {
-			// the defult constructor must not be deleted and be either implicit or defaulted)
-			auto defaultConstructor = getCtorByType(analysis::buildDefaultDefaultConstructorType(thisType));
-			if(!defaultConstructor || !isaDefaultMember(defaultConstructor)) return false;
-		}
-
-		// check for trivial constructors. They have to be either deleted or (implicitly) defaulted
-		auto copyConstructor = getCtorByType(analysis::buildDefaultCopyConstructorType(thisType));
-		if(copyConstructor && !isaDefaultMember(copyConstructor)) return false;
-
-		auto moveConstructor = getCtorByType(analysis::buildDefaultMoveConstructorType(thisType));
-		if(moveConstructor && !isaDefaultMember(moveConstructor)) return false;
-
-		// check trivial destructor
-		auto destructor = record->getDestructor();
-		if(destructor && !isaDefaultMember(destructor)) return false;
-
-		// check for trivial copy and move assignments
-		auto copyAssignment = getAssignmentOperatorByType(analysis::buildDefaultCopyAssignOperatorType(thisType));
-		if(copyAssignment && !isaDefaultMember(copyAssignment)) return false;
-
-		auto moveAssignment = getAssignmentOperatorByType(analysis::buildDefaultMoveAssignOperatorType(thisType));
-		if(moveAssignment && !isaDefaultMember(moveAssignment)) return false;
-
-		// check for virtual member functions
-		for(auto memFun : record->getMemberFunctions()) {
-			if(memFun->getVirtualFlag().getValue()) return false;
-		}
-
-		if(!record->getPureVirtualMemberFunctions().empty()) return false;
-
-		// check for virtual & non-trivial base classes
-		if(ttype->isStruct()) {
-			auto stype = ttype->getStruct();
-			for(auto par : stype->getParents()) {
-				if(par->getVirtual().getValue()) return false;
-				// if our direct base class is non-trivial, we cannot be trivial per-se
-				if(!isTrivial(par->getType())) return false;
-			}
-		}
-
-		// check that all non-static members are trivial
-		for(auto field : record->getFields()) {
-			auto fieldType = field->getType();
-			if(!isTrivial(fieldType)) return false;
-			//check cpp_ref field types
-			if(analysis::isRefType(fieldType) && lang::isCppReference(fieldType)) {
-				//TODO this is an over approximation which has to be refined
-				return false;
-			}
-		}
-
-		return true;
-		}
-	}
+	} // end of namespace
 
 	/**
 	 * The only trivially copyable types are scalar types, trivially copyable classes, and arrays of such types/classes.

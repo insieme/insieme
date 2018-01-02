@@ -991,18 +991,6 @@ namespace checks {
 			return res;
 		}
 
-		// the resulting reference must be a plain reference
-		if (!lang::isPlainReference(refType)) {
-			add(res,
-					Message(
-						address,
-						EC_TYPE_INVALID_INITIALIZATION_EXPR,
-						format("Result type of an init expression must be a plain reference, given: %s", lang::getReferenceKind(refType)),
-						Message::ERROR
-					)
-			);
-		}
-
 		// make sure that the target reference is the same as the result reference
 		TypePtr trgType = initExpr->getMemoryExpr()->getType();
 		if (*refType != *trgType) {

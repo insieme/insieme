@@ -1029,8 +1029,21 @@ namespace parser {
 			try {
 				retType = types::tryDeduceReturnType(ftype.as<FunctionTypePtr>(), argumentTypes);
 			} catch(const types::ReturnTypeDeductionException& e) {
-				error(l, format("Error in call expression :\n%s", e.what()));
-				return nullptr;
+
+				// strip ref-plains in argument type list and try again (for explicitly initialized parameters)
+				for(auto& arg : argumentTypes) {
+					if (lang::isPlainReference(arg)) {
+						arg = analysis::getReferencedType(arg);
+					}
+				}
+
+				try {
+					// repeat deduction
+					retType = types::tryDeduceReturnType(ftype.as<FunctionTypePtr>(), argumentTypes);
+				} catch (const types::ReturnTypeDeductionException& e) {
+					error(l, format("Error in call expression :\n%s", e.what()));
+					return nullptr;
+				}
 			}
 
 			ExpressionPtr res;

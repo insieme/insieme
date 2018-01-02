@@ -342,10 +342,10 @@ namespace types {
 		symbols["A"] = builder.parseType("struct A { a : int<4>; ctor (other : ref<A,t,f,cpp_ref>) { } }");
 		EXPECT_FALSE(analysis::isTrivial(symbols["A"].as<TypePtr>()));
 
-		// pass by value should not be possible
+		// pass by value is supported by the type deduction, but a semantic check will make it invalid
 		argType = builder.parseType("A", symbols);
 		funType = builder.parseType("(A)->bool", symbols).as<FunctionTypePtr>();
-		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
+		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));
 
 		// pass by reference should be possible
 		argType = builder.parseType("ref<A>", symbols);
@@ -385,10 +385,6 @@ namespace types {
 
 
 		// also, non-trivial objects must be passed by reference to value parameters
-		argType = builder.parseType("A", symbols);
-		funType = builder.parseType("(A)->bool", symbols).as<FunctionTypePtr>();
-		EXPECT_EQ("unit",toString(*deduceReturnType(funType, {argType})));
-
 		argType = builder.parseType("ref<A,t,f,cpp_ref>", symbols);
 		funType = builder.parseType("(A)->bool", symbols).as<FunctionTypePtr>();
 		EXPECT_EQ("bool",toString(*deduceReturnType(funType, {argType})));

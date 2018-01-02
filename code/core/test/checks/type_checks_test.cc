@@ -43,6 +43,7 @@
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/checks/type_checks.h"
+#include "insieme/core/checks/semantic_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
 
@@ -175,8 +176,8 @@ namespace checks {
 
 		// Test: pass ref<A,f,f,plain> to A parameter must not be allowed
 
-		// instantiate the type check
-		CheckPtr typeCheck = make_check<CallExprTypeCheck>();
+		auto callExprCheck = make_check<CallExprTypeCheck>();
+		auto declCheck = make_check<ValidDeclarationCheck>();
 
 		CallExprPtr call;
 		MessageList issues;
@@ -185,7 +186,14 @@ namespace checks {
 			auto fun = builder.parseExpr("lit(\"fun\":(" + paramType + ")->unit)");
 			auto arg = builder.parseExpr("lit(\"a\":" + argType + ")");
 			call = builder.callExpr(manager.getLangBasic().getUnit(),fun,arg);
-			issues = check(call,typeCheck);
+			issues = check(call,callExprCheck);
+			CallExprAddress callAddr(call);
+			for(const auto& decl : callAddr->getArgumentDeclarations()) {
+				auto localIssues = (*declCheck)(decl);
+				if (localIssues) {
+					issues.addAll(*localIssues);
+				}
+			}
 		};
 
 		// --- positive cases ---
@@ -221,6 +229,14 @@ namespace checks {
 
 		// as well as an r-value reference
 		test("A","ref<A,f,f,cpp_rref>");
+		EXPECT_TRUE(issues.empty()) << "Issues: " << issues;
+
+		// also allow it for a class type
+		test("struct A {}", "ref<struct A {},t,f,cpp_ref>");
+		EXPECT_TRUE(issues.empty()) << "Issues: " << issues;
+
+		// and for classes with move constructor
+		test("struct A {}", "ref<struct A {},f,f,cpp_rref>");
 		EXPECT_TRUE(issues.empty()) << "Issues: " << issues;
 
 		// --- negative cases ---
@@ -311,6 +327,26 @@ namespace checks {
 		test("ref<A,'c,'v,plain>","ref<A,f,t,cpp_rref>");
 		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
 		EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(call), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		// do not allow non-copy-ctor calls
+		test("struct A {}", "ref<struct A {},f,f,cpp_ref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(CallExprAddress(call)->getArgumentDeclaration(0), EC_SEMANTIC_INVALID_MATERIALIZING_DECLARATION, "", Message::ERROR));
+
+		// and non-move-ctor-calls
+		test("struct A {}", "ref<struct A {},t,f,cpp_rref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(CallExprAddress(call)->getArgumentDeclaration(0), EC_SEMANTIC_INVALID_MATERIALIZING_DECLARATION, "", Message::ERROR));
+
+		// also allow for classes without move constructor
+		test("struct A { ctor(other: ref<A,t,f,cpp_ref>) = delete; }", "ref<struct A { ctor(other: ref<A,t,f,cpp_ref>) = delete; },t,f,cpp_ref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(CallExprAddress(call)->getArgumentDeclaration(0), EC_SEMANTIC_INVALID_MATERIALIZING_DECLARATION, "", Message::ERROR));
+
+		// and for classes with move constructor
+		test("struct A { ctor(other: ref<A,f,f,cpp_rref>) = delete; }", "ref<struct A { ctor(other: ref<A,f,f,cpp_rref>) = delete; },f,f,cpp_ref>");
+		EXPECT_EQ(1,issues.size()) << "Issues: " << issues;
+		EXPECT_PRED2(containsMSG, issues, Message(CallExprAddress(call)->getArgumentDeclaration(0), EC_SEMANTIC_INVALID_MATERIALIZING_DECLARATION, "", Message::ERROR));
 
 	}
 
@@ -851,14 +887,13 @@ namespace checks {
 		initExpr = init("ref<B,t,t,plain>","ref<B,t,t,plain>");
 		EXPECT_TRUE(check(initExpr,typeCheck).empty()) << check(initExpr,typeCheck);
 
+		initExpr = init("ref<B,f,f,cpp_ref>","ref<B,f,f,cpp_ref>");
+		EXPECT_TRUE(check(initExpr,typeCheck).empty()) << check(initExpr,typeCheck);
+
 
 		// some negative checks
-		initExpr = init("ref<A,f,f,cpp_ref>","ref<A,f,f,cpp_ref>");
-		EXPECT_EQ(1,check(initExpr,typeCheck).size()) << check(initExpr,typeCheck);
-		EXPECT_PRED2(containsMSG, check(initExpr, typeCheck), Message(InitExprAddress(initExpr), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
-
 		initExpr = init("ref<A,f,f,cpp_ref>","ref<A,f,f,plain>");
-		EXPECT_EQ(2,check(initExpr,typeCheck).size()) << check(initExpr,typeCheck);
+		EXPECT_EQ(1,check(initExpr,typeCheck).size()) << check(initExpr,typeCheck);
 		EXPECT_PRED2(containsMSG, check(initExpr, typeCheck), Message(InitExprAddress(initExpr), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 
 		initExpr = init("ref<A,f,f,plain>","ref<A,f,f,cpp_ref>");
