@@ -357,6 +357,8 @@ namespace core {
 
 		InitExprPtr initExpr(const GenericTypePtr& type, const ExpressionPtr& memExpr, const DeclarationList& initDecls) const;
 
+		InitExprPtr initExpr(const ExpressionPtr& memExpr, const DeclarationsPtr& initDecls) const;
+
 		InitExprPtr initExpr(const ExpressionPtr& memExpr, const DeclarationList& initDecls) const;
 
 		InitExprPtr initExpr(const GenericTypePtr& type, const ExpressionPtr& memExpr, const ExpressionList& initExprs) const;
@@ -369,6 +371,14 @@ namespace core {
 		template <typename... T>
 		InitExprPtr initExpr(const ExpressionPtr& memExpr, const T&... initExprs) const {
 			return initExpr(memExpr, toVector<ExpressionPtr>(initExprs...));
+		}
+
+		InitExprPtr initExprTemp(const TypePtr& type, const DeclarationsPtr& decls) const {
+			return initExpr(lang::buildRefTemp(type), decls);
+		}
+
+		InitExprPtr initExprTemp(const TypePtr& type, const DeclarationList& decls) const {
+			return initExpr(lang::buildRefTemp(type), decls);
 		}
 
 		InitExprPtr initExprTemp(const TypePtr& type, const ExpressionList& initExprs = ExpressionList()) const {

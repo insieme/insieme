@@ -801,17 +801,23 @@ namespace conversion {
 		auto fields = tagTyIt->second.getFields();
 
 		// gather init expressions and translate as if they were arguments
-		core::ExpressionList initExprs;
+		core::DeclarationList decls;
 		size_t fieldIndex = 0;
 		for(auto capture: lExpr->capture_inits()) {
 			frontend_assert(fields.size() > fieldIndex)
 				<< "Mismatch between number of captures in generated struct and number of initializers while translating LambdaExpr";
-			initExprs.push_back(converter.convertCxxArgExpr(capture, fields[fieldIndex++]->getType()));
+
+			auto value = converter.convertInitExpr(capture);
+			auto declType = core::transform::materialize(fields[fieldIndex]->getType());
+			auto init = utils::castInitializationIfNotMaterializing(declType, value);
+			decls.push_back(builder.declaration(declType, init));
+
+			fieldIndex++;
+
 		}
 
-
 		// generate init expr of the lambda type
-		return builder.initExprTemp(genTy, initExprs);
+		return builder.initExpr(core::lang::buildRefTemp(genTy), decls);
 	}
 
 } // End conversion namespace

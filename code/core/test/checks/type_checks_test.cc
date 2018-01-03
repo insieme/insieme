@@ -990,20 +990,20 @@ namespace checks {
 
 		// create some init expressions
 		core::ExpressionList ok = {
-			builder.initExprTemp(builder.refType(tupleType), { valueA, valueB }),
-			builder.initExprTemp(builder.refType(tupleType), { valueA, cppRefValueB }),
-			builder.initExprTemp(builder.refType(tupleType), { cppRefValueA, valueB }),
-			builder.initExprTemp(builder.refType(tupleType), { cppRefValueA, cppRefValueB })
+			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueA, valueB }),
+			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueA, cppRefValueB }),
+			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ cppRefValueA, valueB }),
+			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ cppRefValueA, cppRefValueB })
 		};
 
 		core::ExpressionList err = {
-			builder.initExprTemp(builder.refType(tupleType), { valueA }),
-			builder.initExprTemp(builder.refType(tupleType), { valueA, valueA }),
-			builder.initExprTemp(builder.refType(tupleType), { valueB, valueA }),
-			builder.initExprTemp(builder.refType(tupleType), { valueB, valueB }),
-			builder.initExprTemp(builder.refType(tupleType), { valueA, valueB, valueC }),
-			builder.initExprTemp(builder.refType(tupleType), { cppRefValueA, cppRefValueA }),
-			builder.initExprTemp(builder.refType(tupleType), { cppRefValueB, cppRefValueA })
+			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueA }),
+			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueA, valueA }),
+			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueB, valueA }),
+			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueB, valueB }),
+			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueA, valueB, valueC }),
+			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ cppRefValueA, cppRefValueA }),
+			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ cppRefValueB, cppRefValueA })
 		};
 
 		// conduct checks

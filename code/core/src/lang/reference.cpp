@@ -379,7 +379,7 @@ namespace lang {
 		// for temp init exprs, simply change type being created rather than casting
 		if(auto initExpr = refExpr.isa<InitExprPtr>()) {
 			if(rExt.isCallOfRefTemp(initExpr->getMemoryExpr())) {
-				return builder.initExprTemp(targetTy.as<GenericTypePtr>(), initExpr->getInitExprList());
+				return builder.initExprTemp(targetTy.as<GenericTypePtr>(), initExpr->getInitDecls());
 			}
 		}
 

@@ -86,7 +86,7 @@ namespace transform {
 		if(type->getNodeManager().getLangBasic().isUnit(type)) return type;
 
 		// make sure we are dealing with a reference here
-		assert_true(analysis::isRefType(type)) << "Trying to de-materialize a non-ref type";
+		if (!analysis::isRefType(type)) return type;
 
 		// do not materialize references
 		if(lang::isCppReference(type)||lang::isCppRValueReference(type)) {

@@ -128,7 +128,7 @@ namespace utils {
 		// recursively replace ref_temp in initializations
 		for(const auto& initDecl : initExp->getInitDecls()) {
 			const auto& init = initDecl->getInitialization();
-			auto initType = init->getType().getAddressedNode();
+			auto initType = initDecl->getType().getAddressedNode();
 			if(!core::lang::isReference(initType)) {
 				initType =  builder.refType(initType);
 			}

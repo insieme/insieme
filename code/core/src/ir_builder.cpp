@@ -486,6 +486,10 @@ namespace core {
 		return initExpr(type,memExpr,declarations(initDecls));
 	}
 
+	InitExprPtr IRBuilderBaseModule::initExpr(const ExpressionPtr& memExpr, const DeclarationsPtr& initDecls) const {
+		return initExpr(memExpr->getType().as<GenericTypePtr>(), memExpr, initDecls);
+	}
+
 	InitExprPtr IRBuilderBaseModule::initExpr(const ExpressionPtr& memExpr, const DeclarationList& initDecls) const {
 		return initExpr(memExpr->getType().as<GenericTypePtr>(), memExpr, initDecls);
 	}
