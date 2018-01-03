@@ -84,13 +84,13 @@
 			(this)._M_array = *v1._M_array;
 			(this)._M_len = *v1._M_len;
 			(this)._M_original = false;
-			return this;
+			return ref_kind_cast(this,type_lit(cpp_ref));
 		}
 		function IMP__operator_assign_ = (v1 : ref<IMP_std_colon__colon_initializer_list_int,f,f,cpp_rref>) -> ref<IMP_std_colon__colon_initializer_list_int,f,f,cpp_ref> {
 			(this)._M_array = *v1._M_array;
 			(this)._M_len = *v1._M_len;
 			(this)._M_original = false;
-			return this;
+			return ref_kind_cast(this,type_lit(cpp_ref));
 		}
 		const function IMP_begin_returns_const_iterator = () -> ptr<int<4>,t,f> {
 			return *(this)._M_array;
@@ -131,7 +131,7 @@ int main() {
 
 	#pragma test expect_ir(int_IR, R"(
 		{
-			var ref<IMP_std_colon__colon_initializer_list_int,f,f,plain> v0 = IMP_std_colon__colon_initializer_list_int::(ref_decl(type_lit(ref<IMP_std_colon__colon_initializer_list_int,f,f,plain>)), 1, 2, 3);
+			var ref<IMP_std_colon__colon_initializer_list_int,f,f,plain> v0 = IMP_std_colon__colon_initializer_list_int::(ref_decl(type_lit(ref<IMP_std_colon__colon_initializer_list_int,f,f,plain>)), ref_kind_cast(ref_temp_init(1), type_lit(cpp_ref)), ref_kind_cast(ref_temp_init(2), type_lit(cpp_ref)), ref_kind_cast(ref_temp_init(3), type_lit(cpp_ref)));
 		}
 	)")
 	{
@@ -155,7 +155,7 @@ int main() {
 			}
 		};
 		{
-			IMP_S::(ref_temp(type_lit(IMP_S)), ref_kind_cast(IMP_std_colon__colon_initializer_list_int::(ref_temp(type_lit(IMP_std_colon__colon_initializer_list_int)), 42, 43), type_lit(cpp_ref))).i1;
+			IMP_S::(ref_temp(type_lit(IMP_S)), ref_kind_cast(IMP_std_colon__colon_initializer_list_int::(ref_temp(type_lit(IMP_std_colon__colon_initializer_list_int)), ref_kind_cast(ref_temp_init(42), type_lit(cpp_ref)), ref_kind_cast(ref_temp_init(43), type_lit(cpp_ref))), type_lit(cpp_ref))).i1;
 		}
 	)")
 	{
@@ -165,7 +165,7 @@ int main() {
 	#pragma test expect_ir(int_IR, R"(
 		def IMP_f = function (v0 : ref<IMP_std_colon__colon_initializer_list_int,f,f,plain>) -> unit { };
 		{
-			IMP_f(ref_cast(IMP_std_colon__colon_initializer_list_int::(ref_temp(type_lit(IMP_std_colon__colon_initializer_list_int)), 5), type_lit(t), type_lit(f), type_lit(cpp_ref)));
+			IMP_f(ref_cast(IMP_std_colon__colon_initializer_list_int::(ref_temp(type_lit(IMP_std_colon__colon_initializer_list_int)), ref_kind_cast(ref_temp_init(5), type_lit(cpp_ref))), type_lit(t), type_lit(f), type_lit(cpp_ref)));
 		}
 	)")
 	{
@@ -211,13 +211,13 @@ int main() {
 				(this)._M_array = *v1._M_array;
 				(this)._M_len = *v1._M_len;
 				(this)._M_original = false;
-				return this;
+				return ref_kind_cast(this,type_lit(cpp_ref));
 			}
 			function IMP__operator_assign_ = (v1 : ref<IMP_std_colon__colon_initializer_list_struct_space_TestObj,f,f,cpp_rref>) -> ref<IMP_std_colon__colon_initializer_list_struct_space_TestObj,f,f,cpp_ref> {
 				(this)._M_array = *v1._M_array;
 				(this)._M_len = *v1._M_len;
 				(this)._M_original = false;
-				return this;
+				return ref_kind_cast(this,type_lit(cpp_ref));
 			}
 			const function IMP_begin_returns_const_iterator = () -> ptr<IMP_TestObj,t,f> {
 				return *(this)._M_array;

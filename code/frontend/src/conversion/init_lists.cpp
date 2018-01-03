@@ -116,7 +116,13 @@ namespace conversion {
 				auto paramType = builder.refType(exprType, true, false, core::lang::ReferenceType::Kind::CppReference);
 				funParamTypes.push_back(paramType);
 				funParams.push_back(builder.variable(paramType));
-				callArguments.push_back(expr);
+
+				// materialize parameter if necessary
+				if (!core::lang::isReference(expr)) {
+					expr = builder.refTemp(expr);
+				}
+				// pass value by reference
+				callArguments.push_back(core::lang::toCppReference(expr));
 			}
 			core::ExpressionList initList;
 			std::copy(funParams.cbegin()+1, funParams.cend(), std::back_inserter(initList));
@@ -221,7 +227,7 @@ namespace conversion {
 			auto name = insieme::utils::getMangledOperatorAssignName();
 			auto mFunLit = builder.getLiteralForMemberFunction(funType, name);
 			buildInitializerMemberFunction(converter, mFunLit, ptrType, initListIRType,
-			                               std::string("{") + moveAssignBody + R"( return _deref_this in ref<_this_type,f,f,cpp_ref>; })");
+			                               std::string("{") + moveAssignBody + R"( return ref_kind_cast(_deref_this,type_lit(cpp_ref)); })");
 			return builder.memberFunction(false, name, mFunLit);
 		};
 		auto copyAssignment = generateMFun(builder.refType(core::analysis::getReferencedType(irThisType), true, false, core::lang::ReferenceType::Kind::CppReference));
