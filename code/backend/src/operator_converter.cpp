@@ -319,19 +319,22 @@ namespace backend {
 		// -- casts --
 
 		res[basic.getNumericCast()] = OP_CONVERTER { return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); };
-		res[basic.getInstantiate()] = OP_CONVERTER {
-			auto lit = ARG(1).as<core::LiteralPtr>();
-			if(!lit) assert_fail() << "type instantiation should either be handled at call site or apply to function pointer literal";
-			auto replacementLit = core::IRBuilder(NODE_MANAGER).literal(lit->getValue(), call->getType());
-			core::transform::utils::migrateAnnotations(lit, replacementLit);
-			auto ret = CONVERT_EXPR(replacementLit);
-			// perform explicit instantiation if required
-			auto explicitInstantiationList = ::transform(call->getType().as<core::FunctionTypePtr>()->getInstantiationTypeList(), [&](const core::TypePtr& t){
-				return CONVERT_TYPE(t);
-			});
-			if(!explicitInstantiationList.empty()) ret = C_NODE_MANAGER->create<c_ast::ExplicitInstantiation>(ret, explicitInstantiationList);
-			return ret;
-		};
+
+		// -- instantiations --
+
+//		res[basic.getInstantiate()] = OP_CONVERTER {
+//			auto lit = ARG(1).as<core::LiteralPtr>();
+//			if(!lit) assert_fail() << "type instantiation should either be handled at call site or apply to function pointer literal";
+//			auto replacementLit = core::IRBuilder(NODE_MANAGER).literal(lit->getValue(), call->getType());
+//			core::transform::utils::migrateAnnotations(lit, replacementLit);
+//			auto ret = CONVERT_EXPR(replacementLit);
+//			// perform explicit instantiation if required
+//			auto explicitInstantiationList = ::transform(call->getType().as<core::FunctionTypePtr>()->getInstantiationTypeList(), [&](const core::TypePtr& t){
+//				return CONVERT_TYPE(t);
+//			});
+//			if(!explicitInstantiationList.empty()) ret = C_NODE_MANAGER->create<c_ast::ExplicitInstantiation>(ret, explicitInstantiationList);
+//			return ret;
+//		};
 
 		// -- reals --
 
