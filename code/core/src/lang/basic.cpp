@@ -288,6 +288,16 @@ namespace lang {
 		}                                                                                                                                                      \
 		const vector<NodePtr>& BasicGenerator::get##_id##Group() const {                                                                                       \
 			return pimpl->get##_id##Group();                                                                                                                   \
+		}                                                                                                                                                      \
+		bool BasicGenerator::isCallOf##_id(const NodePtr& n) const {                                                                                           \
+			auto call = n.isa<CallExprPtr>();                                                                                                                  \
+			if (!call) return false;                                                                                                                           \
+			for(const auto& cur : get##_id##Group()) {                                                                                                         \
+				if (auto expr = cur.isa<ExpressionPtr>()) {                                                                                                    \
+					if (analysis::isCallOf(call,expr)) return true;                                                                                            \
+				}                                                                                                                                              \
+			}                                                                                                                                                  \
+			return false;                                                                                                                                      \
 		}
 
 	#include "insieme/core/lang/inspire_api/lang.def"

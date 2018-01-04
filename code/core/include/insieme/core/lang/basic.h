@@ -110,7 +110,8 @@ namespace core {
 
 			#define GROUP(_id, ...)                                                                                                                            \
 				bool is##_id(const NodePtr& p) const;                                                                                                          \
-				const vector<NodePtr>& get##_id##Group() const;
+				const vector<NodePtr>& get##_id##Group() const;                                                                                                \
+				bool isCallOf##_id(const NodePtr& p) const;
 
 			#include "insieme/core/lang/inspire_api/lang.def"
 
