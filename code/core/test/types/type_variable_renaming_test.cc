@@ -68,28 +68,28 @@ namespace types {
 
 		// rename once => should produce new names
 		auto sub = renamer.mapVariables(varA);
-		EXPECT_EQ("{'a<->'insieme_renamed_fresh_type_var_1}", toString(sub));
+		EXPECT_EQ("{'a<->'_rv_001}", toString(sub));
 
 		auto res = sub.applyForward(varA);
-		EXPECT_EQ("'insieme_renamed_fresh_type_var_1", toString(*res));
+		EXPECT_EQ("'_rv_001", toString(*res));
 
 		// rename another type with the same renamer => should produce a different name
 		res = renamer.rename(varB);
-		EXPECT_EQ("'insieme_renamed_fresh_type_var_2", toString(*res));
+		EXPECT_EQ("'_rv_002", toString(*res));
 
 		// rename a more complex type
 		renamer.reset();
-		EXPECT_EQ("T<'insieme_renamed_fresh_type_var_1,'insieme_renamed_fresh_type_var_2>", toString(*renamer.rename(genAB)));
+		EXPECT_EQ("T<'_rv_001,'_rv_002>", toString(*renamer.rename(genAB)));
 
 		// rename a type with multiple occurrences of the same variable
 		renamer.reset();
-		EXPECT_EQ("T<'insieme_renamed_fresh_type_var_1,'insieme_renamed_fresh_type_var_2,'insieme_renamed_fresh_type_var_1>", toString(*renamer.rename(genABA)));
+		EXPECT_EQ("T<'_rv_001,'_rv_002,'_rv_001>", toString(*renamer.rename(genABA)));
 
 		renamer.reset();
-		EXPECT_EQ("T<'insieme_renamed_fresh_type_var_1,'insieme_renamed_fresh_type_var_2>", toString(*renamer.rename(genABx)));
+		EXPECT_EQ("T<'_rv_001,'_rv_002>", toString(*renamer.rename(genABx)));
 
 		renamer.reset();
-		EXPECT_EQ("T<'insieme_renamed_fresh_type_var_1,'insieme_renamed_fresh_type_var_2,'insieme_renamed_fresh_type_var_1>", toString(*renamer.rename(genABAxyx)));
+		EXPECT_EQ("T<'_rv_001,'_rv_002,'_rv_001>", toString(*renamer.rename(genABAxyx)));
 
 
 		// test multiple types within a set
@@ -98,8 +98,7 @@ namespace types {
 		sub = renamer.mapVariables(manager, list);
 		vector<TypePtr> renamed;
 		::transform(list, std::back_inserter(renamed), [&](const TypePtr& cur) -> TypePtr { return sub.applyForward(cur); });
-		EXPECT_EQ("[AP('insieme_renamed_fresh_type_var_1),AP(T<'insieme_renamed_fresh_type_var_1,'insieme_renamed_fresh_type_var_2>),AP(T<'insieme_renamed_"
-			      "fresh_type_var_1,'insieme_renamed_fresh_type_var_2,'insieme_renamed_fresh_type_var_1>),AP('insieme_renamed_fresh_type_var_2)]",
+		EXPECT_EQ("[AP('_rv_001),AP(T<'_rv_001,'_rv_002>),AP(T<'_rv_001,'_rv_002,'_rv_001>),AP('_rv_002)]",
 			      toString(renamed));
 	}
 

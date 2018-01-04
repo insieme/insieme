@@ -292,11 +292,11 @@ namespace types {
 	  private:
 
 		TypeVariablePtr getFreshVariable(NodeManager& manager) {
-			return TypeVariable::get(manager, format("insieme_renamed_fresh_type_var_%d", (++varCounter)));
+			return TypeVariable::get(manager, format("_rv_%03d", (++varCounter)));
 		}
 
 		GenericTypeVariablePtr getFreshGenericVariable(NodeManager& manager, const GenericTypeVariablePtr& var) {
-			return GenericTypeVariable::get(manager, format("insieme_renamed_fresh_type_var_%d", (++varCounter)), var->getTypeParameter());
+			return GenericTypeVariable::get(manager, format("_rv_%03d", (++varCounter)), var->getTypeParameter());
 		}
 	};
 
