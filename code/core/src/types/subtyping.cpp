@@ -184,9 +184,6 @@ namespace types {
 			auto srcElement = analysis::getReferencedType(subType);
 			auto trgElement = analysis::getReferencedType(superType);
 
-			// if element and kind are the same, and flags are compatible, return true
-			if(analysis::equalTypes(srcElement, trgElement)) return true;
-
 			// otherwise we recursively compare the element types
 			if(isSubTypeOf(srcElement, trgElement)) { return true; }
 		}

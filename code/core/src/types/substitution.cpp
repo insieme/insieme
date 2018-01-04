@@ -176,60 +176,71 @@ namespace types {
 		std::map<NodeAddress,NodePtr> replacements;
 		for(const auto& cur : getFreeTypeVariables(res)) {
 
-			// a utility to expand variadic types
-			auto expandList = [&](const auto& listPtr) {
-				// ignore null-pointer
-				if (!listPtr) return;
+			// only interested in variadic variables mapped in this substitution
+			if (!cur.isa<VariadicTypeVariablePtr>() && !cur.isa<VariadicGenericTypeVariablePtr>()) continue;
 
-				// compute replacement
-				assert_true(!cur.isRoot()) << "Unable to substitute free-standing variadic type variable: " << *cur << "\n";
+			// if it is the root, also not interested (con't do anything)
+			if (cur.isRoot()) continue;
 
-				// make it dependent on the parent
-				auto parent = cur.getParentAddress();
+			// distinguish parent type
+			auto parent = cur.getParentAddress();
 
-				// we have to distinguish the parent type
-				NodePtr expanded;
-				if (auto types = parent.isa<TypesPtr>()) {
-					TypeList list = types.getTypes();
-					list.pop_back();
-					for (const auto& var : *listPtr) {
-						if (cur.template isa<VariadicTypeVariablePtr>()) {
-							list.push_back(var);
-						} else if (auto vvar = cur.template isa<VariadicGenericTypeVariablePtr>()) {
-							list.push_back(GenericTypeVariable::get(manager, var->getVarName(), vvar->getTypeParameter()));
+			// a utility to expand lists of types
+			auto expandList = [&](const TypeList& list)->TypeList {
+				TypeList res;
+				for(const auto& cur : list) {
+
+					// expand variadic variables
+					if (auto var = cur.isa<VariadicTypeVariablePtr>()) {
+
+						// expand variadic type variable in list of type variables
+						auto expanded = operator[](var);
+						if (expanded) {
+							for(const auto& cur : *expanded) {
+								res.push_back(cur);
+							}
 						} else {
-							assert_not_implemented() << "No for expanding variadic type variables into " << var->getNodeType() << " elements.";
+							res.push_back(cur);
 						}
+
+					} else if (auto var = cur.isa<VariadicGenericTypeVariablePtr>()) {
+
+						// expand variadic generic type variable into list of generic type variables
+						auto expanded = operator[](var);
+						if (expanded) {
+							for(const auto& cur : *expanded) {
+								res.push_back(GenericTypeVariable::get(manager, cur->getVarName(), var->getTypeParameter()));
+							}
+						} else {
+							res.push_back(cur);
+						}
+
+					} else {
+
+						// all others are just copied
+						res.push_back(cur);
 					}
-					expanded = Types::get(manager,list);
-
-				} else if (auto tupleType = parent.isa<TupleTypePtr>()) {
-
-					// we convert it to a type list ..
-					auto types = Types::get(manager,tupleType->getElementTypes());
-
-					// apply the the substitution on this type list ..
-					types = applyTo(manager,types).as<TypesPtr>();
-
-					// and convert it back to a tuple
-					expanded = TupleType::get(manager,types->getTypes());
-
-				} else {
-					assert_not_implemented() << "No support for expanding variadic type variables in " << parent->getNodeType() << " nodes.";
 				}
-
-				// add replacement
-				assert_true(expanded);
-				replacements[parent] = expanded;
+				return res;
 			};
 
-			if (VariadicTypeVariablePtr var = cur.isa<VariadicTypeVariablePtr>()) {
-				expandList(operator[](var));
+			// a free variable may only be within type lists or tuple types
+			if (auto types = parent.isa<TypesPtr>()) {
+
+				// expand list of types and create new types node
+				auto newList = Types::get(manager,expandList(types->getTypes()));
+				if (*types != *newList) replacements[parent] = newList;
+
+			} else if (auto tupleType = parent.isa<TupleTypePtr>()) {
+
+				// expand list of types and create new tuple node
+				auto newTuple = TupleType::get(manager,expandList(tupleType->getElementTypes()));
+				if (*tupleType != *newTuple) replacements[parent] = newTuple;
+
+			} else {
+				assert_not_implemented() << "No support for expanding variadic type variables in " << parent->getNodeType() << " nodes.";
 			}
 
-			if (VariadicGenericTypeVariablePtr var = cur.isa<VariadicGenericTypeVariablePtr>()) {
-				expandList(operator[](var));
-			}
 		}
 
 		// apply variadic variable expansion

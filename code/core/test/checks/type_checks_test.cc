@@ -476,7 +476,7 @@ namespace checks {
 		{
 			auto test = builder.parseExpr(R"(
 				let fun = lit("fun" : <'a>()->'a) in
-				instantiate(lit("target_type" : <int>()->int), fun)
+				instantiate_fun(lit("target_type" : <int>()->int), fun)
 			)");
 
 			auto res = checks::check(test);
@@ -486,7 +486,7 @@ namespace checks {
 		{
 			auto test = builder.parseExpr(R"(
 				let fun = lit("fun" : <'a, 'b>('b)->'a) in
-				instantiate(lit("target_type" : <int<4>,uint<4>>(uint<4>)->int<4>), fun)
+				instantiate_fun(lit("target_type" : <int<4>,uint<4>>(uint<4>)->int<4>), fun)
 			)");
 
 			auto res = checks::check(test);
@@ -498,7 +498,37 @@ namespace checks {
 		{
 			auto test = builder.parseExpr(R"(
 				let fun = lit("fun" : <'a,'b>()->'a) in
-				instantiate(lit("target_type" : <int>()->int), fun)
+				instantiate_fun(lit("target_type" : <int>()->int), fun)
+			)");
+
+			auto res = checks::check(test);
+			EXPECT_PRED2(containsMSG, res, Message(NodeAddress(test), EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, "", Message::ERROR));
+		}
+
+		{
+			auto test = builder.parseExpr(R"(
+				let fun = lit("fun" : <'a,'b>'c::()) in
+				instantiate_ctor(lit("target_type" : <int>A::()), fun)
+			)");
+
+			auto res = checks::check(test);
+			EXPECT_PRED2(containsMSG, res, Message(NodeAddress(test), EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, "", Message::ERROR));
+		}
+
+		{
+			auto test = builder.parseExpr(R"(
+				let fun = lit("fun" : <'a,'b>~'c::()) in
+				instantiate_dtor(lit("target_type" : <int>~A::()), fun)
+			)");
+
+			auto res = checks::check(test);
+			EXPECT_PRED2(containsMSG, res, Message(NodeAddress(test), EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, "", Message::ERROR));
+		}
+
+		{
+			auto test = builder.parseExpr(R"(
+				let fun = lit("fun" : <'a,'b>'c::()->'a) in
+				instantiate_member(lit("target_type" : <int>A::()->int), fun)
 			)");
 
 			auto res = checks::check(test);

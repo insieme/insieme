@@ -356,6 +356,63 @@ namespace types {
 
 	}
 
+	TEST(ReturnTypeDeduction, GenericFunctionTypeObjectTypeBug) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto funType = builder.parseType("(ref<'c,'x,'y,plain>::()->'r)-> 'r").as<FunctionTypePtr>();
+
+		// it should accept simple member functions
+		EXPECT_EQ("int<4>", toString(*deduceReturnType(funType, toVector(builder.parseType("A::()->int<4>")))));
+
+		// it should also support the const version of it
+		EXPECT_EQ("int<4>", toString(*deduceReturnType(funType, toVector(builder.parseType("const A::()->int<4>")))));
+
+		// and a volatile
+		EXPECT_EQ("int<4>", toString(*deduceReturnType(funType, toVector(builder.parseType("volatile A::()->int<4>")))));
+
+	}
+
+	TEST(ReturnTypeDeduction, GenericFunctionTypeParameterBug) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto funType = builder.parseType("(<'p...>'c::('a...)->'r)-> 'c::('a...)->'r").as<FunctionTypePtr>();
+
+		// it should accept simple member functions
+		EXPECT_EQ("(A::()->int<4>)", toString(*deduceReturnType(funType, toVector(builder.parseType("A::()->int<4>")))));
+		EXPECT_EQ("(A::(int<4>)->int<4>)", toString(*deduceReturnType(funType, toVector(builder.parseType("A::(int<4>)->int<4>")))));
+		EXPECT_EQ("(A::(int<4>,bool)->int<4>)", toString(*deduceReturnType(funType, toVector(builder.parseType("A::(int<4>,bool)->int<4>")))));
+
+		// it should also accept member functions with instantiation variables
+		EXPECT_EQ("(A::()->int<4>)", toString(*deduceReturnType(funType, toVector(builder.parseType("<B>A::()->int<4>")))));
+		EXPECT_EQ("(A::(int<4>)->int<4>)", toString(*deduceReturnType(funType, toVector(builder.parseType("<B>A::(int<4>)->int<4>")))));
+		EXPECT_EQ("(A::(int<4>,bool)->int<4>)", toString(*deduceReturnType(funType, toVector(builder.parseType("<B>A::(int<4>,bool)->int<4>")))));
+
+		// also generic functions
+		EXPECT_EQ("('y::()->'z)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'x>'y::()->'z")))));
+		EXPECT_EQ("('y::('w)->'z)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'x>'y::('w)->'z")))));
+		EXPECT_EQ("('y::('w,'q)->'z)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'x>'y::('w,'q)->'z")))));
+
+		// also generic functions with colliding parameters
+		EXPECT_EQ("('b::()->'e)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'a>'b::()->'e")))));
+		EXPECT_EQ("('b::('c)->'e)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'a>'b::('c)->'e")))));
+		EXPECT_EQ("('b::('c,'d)->'e)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'a>'b::('c,'d)->'e")))));
+
+
+		auto funType2 = builder.parseType("(<'p...>'x::('a...)->'b,<'q...>'y::('c...)->'d)->('p...,'x,'a...,'b,'q...,'y,'c...,'d)").as<FunctionTypePtr>();
+
+		EXPECT_EQ("(P,A,B,C,Q,X,Y,Z)", toString(*deduceReturnType(funType2, toVector(builder.parseType("<P>A::(B)->C"),builder.parseType("<Q>X::(Y)->Z")))));
+		EXPECT_EQ("(P,A,B,C,P,A,B,C)", toString(*deduceReturnType(funType2, toVector(builder.parseType("<P>A::(B)->C"),builder.parseType("<P>A::(B)->C")))));
+
+		EXPECT_EQ("(A,uint<8>,A,uint<8>)", toString(*deduceReturnType(funType2, toVector(builder.parseType("A::()->uint<8>"),builder.parseType("A::()->uint<8>")))));
+
+		EXPECT_EQ("(A<R,S>,B,C,X<T,V>,Y,Z)", toString(*deduceReturnType(funType2, toVector(builder.parseType("A<R,S>::(B)->C"),builder.parseType("X<T,V>::(Y)->Z")))));
+
+	}
+
 	TEST(ReturnTypeDeduction, ImplicitMaterialization) {
 
 		NodeManager manager;
@@ -621,6 +678,24 @@ namespace types {
 
 		EXPECT_EQ("struct {a:(A,B),b:(C)", toString(*deduce(type("(('a...),('b...))->struct { a : ('a...);  b: ('b...); }"), { type("(A,B)"), type("(C)") })).substr(0, 21));
 		EXPECT_EQ("((A,B),(C))", toString(*deduce(type("(struct { a : ('a...); b:('b...); })->(('a...),('b...))"), { type("struct { a : (A,B); b:(C); }") })));
+
+
+		// test concatenation
+
+		auto funType = builder.parseType("(('a...),('b...))->('a...,'b...)").as<FunctionTypePtr>();
+
+		auto test = [&](const std::string& p1, const std::string& p2) {
+			return toString(*deduceReturnType(funType, toVector(builder.parseType(p1),builder.parseType(p2))));
+		};
+
+		EXPECT_EQ("()",        test("()","()"));
+		EXPECT_EQ("(A)",       test("(A)","()"));
+		EXPECT_EQ("(A)",       test("()","(A)"));
+		EXPECT_EQ("(A,A)",     test("(A)","(A)"));
+		EXPECT_EQ("(A,B)",     test("(A)","(B)"));
+		EXPECT_EQ("(A,B,C)",   test("(A)","(B,C)"));
+		EXPECT_EQ("(A,B,C)",   test("(A,B)","(C)"));
+		EXPECT_EQ("(A,B,C,D)", test("(A,B)","(C,D)"));
 
 	}
 

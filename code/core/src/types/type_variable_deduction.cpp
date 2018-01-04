@@ -683,13 +683,21 @@ namespace types {
 				return;
 			}
 
-			// --------------------------------------------- Generic Types ---------------------------------------------
+			// ---------------------------------------------- Scalar Types ---------------------------------------------
 
-			// if both are generic types => add sub-type constraint
+			// a test for scalar types
+			auto isScalar = [&](const TypePtr& type) {
+				auto& mgr = type.getNodeManager();
+				const auto& basic = mgr.getLangBasic();
+				return basic.isScalarType(type) || match(mgr,basic.getIntGen(),type) || match(mgr,basic.getUIntGen(),type) || match(mgr,basic.getRealGen(),type);
+			};
+
+			// if both are scalar types => add sub-type constraint
 			if(nodeTypeA == nodeTypeB && nodeTypeA == NT_GenericType) {
-				// add a simple sub-type constraint
-				constraints.addSubtypeConstraint(argType, paramType);
-				return;
+				if (isScalar(argType) && isScalar(paramType)) {
+					constraints.addSubtypeConstraint(argType, paramType);
+					return;
+				}
 			}
 
 			// --------------------------------------------- Remaining Types ---------------------------------------------
