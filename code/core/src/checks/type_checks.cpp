@@ -1709,7 +1709,7 @@ namespace checks {
 
 		if(!basic.isInstantiate(callExpr->getFunctionExpr())) return res;
 
-		auto instantiatedFunType = callExpr->getType().isa<FunctionTypePtr>();
+		auto instantiatedFunType = core::analysis::getArgument(callExpr, 0)->getType().isa<FunctionTypePtr>();
 		auto subFunType = core::analysis::getArgument(callExpr, 1)->getType().isa<FunctionTypePtr>();
 
 		// check that we are instantiating a function

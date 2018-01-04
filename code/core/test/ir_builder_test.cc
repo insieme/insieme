@@ -131,5 +131,37 @@ namespace core {
 		EXPECT_EQ(exp_max, result_max);
 	}
 
+
+	TEST(BuilderTest, Instantiate) {
+		NodeManager nm;
+		IRBuilder builder(nm);
+		const auto& basic = nm.getLangBasic();
+
+		// extract the function
+		auto fun = basic.getInstantiate();
+		auto spe = builder.parseExpr("lit( \"B\" : <TA,TB>(TB)->TA )");
+		auto gen = builder.parseExpr("lit( \"A\" : <'a,'b>('b)->'a )");
+
+		EXPECT_EQ("((<'p...>(('a...)->'b),<'q...>(('c...)->'d))->(('a...)->'b))",toString(*fun->getType()));
+		EXPECT_EQ("<TA,TB>((TB)->TA)",toString(*spe->getType()));
+		EXPECT_EQ("<'a,'b>(('b)->'a)",toString(*gen->getType()));
+
+		// build the call
+		CallExprPtr call = builder.callExpr(fun,spe,gen);
+
+		// test the type of the call (to check return type deduction)
+		EXPECT_EQ("((TB)->TA)",toString(*call->getType()));
+
+		// test the type of the declarations
+		auto decl0 = call->getArgumentDeclaration(0);
+		auto decl1 = call->getArgumentDeclaration(1);
+
+		EXPECT_EQ("ref<<TA,TB>((TB)->TA),f,f,plain>",toString(*decl0->getType()));
+		EXPECT_EQ("<TA,TB>((TB)->TA)",toString(*decl0->getInitialization()->getType()));
+
+		EXPECT_EQ("ref<<'a,'b>(('b)->'a),f,f,plain>",toString(*decl1->getType()));
+		EXPECT_EQ("<'a,'b>(('b)->'a)",toString(*decl1->getInitialization()->getType()));
+	}
+
 }
 }

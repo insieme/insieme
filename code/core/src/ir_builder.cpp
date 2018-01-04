@@ -1001,6 +1001,23 @@ namespace core {
 		return bindExpr(type, parameters(params), call);
 	}
 
+	CallExprPtr IRBuilderBaseModule::instantiate(const TypePtr& specializedType, const ExpressionPtr& generic) const {
+		auto resType = specializedType;
+
+		// if it is a function type ..
+		if (auto funType = resType.isa<FunctionTypePtr>()) {
+			// .. we drop the concrete function type parameters for the result type
+			resType = functionType(funType->getParameterTypes(),funType->getReturnType(),funType->getKind());
+		}
+
+		// build the instantiation call
+		return callExpr(resType, getLangBasic().getInstantiate(), literal("target_type",specializedType), generic);
+	}
+
+	CallExprPtr IRBuilderBaseModule::instantiate(const ExpressionPtr& specialized, const ExpressionPtr& generic) const {
+		return callExpr(specialized->getType(), getLangBasic().getInstantiate(), specialized, generic);
+	}
+
 	JobExprPtr IRBuilderBaseModule::jobExpr(const ExpressionPtr& threadNumRange, const ExpressionPtr& body) const {
 		GenericTypePtr type = static_pointer_cast<GenericTypePtr>(manager.getLangBasic().getJob());
 		return jobExpr(type, threadNumRange, body);

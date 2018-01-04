@@ -289,7 +289,7 @@ OPERATION(Type, Eq, "type_eq", "(type<'a>, type<'a>) -> bool")
 
 LITERAL(NumTypeToInt, "type_to_int", "(type<'a>)->int<8>")
 
-LITERAL(Instantiate, "instantiate", "('a, 'b) -> 'a")
+LITERAL(Instantiate, "instantiate", "(<'p...>('a...)->'b, <'q...>('c...)->'d) -> ('a...)->'b")
 
 GROUP(TypeCompOp, TypeEq)
 

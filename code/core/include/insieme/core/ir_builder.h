@@ -532,6 +532,10 @@ namespace core {
 			return Parameters::get(manager, toVector<VariablePtr>(vars...));
 		}
 
+		// generic construct instantiation
+		CallExprPtr instantiate(const TypePtr& specializedType, const ExpressionPtr& generic) const;
+		CallExprPtr instantiate(const ExpressionPtr& specialized, const ExpressionPtr& generic) const;
+
 		// Create a job expression
 		JobExprPtr jobExpr(const ExpressionPtr& threadNumRange, const ExpressionPtr& body) const;
 		JobExprPtr jobExpr(const ExpressionPtr& rangeLowerBound, const ExpressionPtr& rangeUpperBound, const ExpressionPtr& body) const;

@@ -309,6 +309,53 @@ namespace types {
 		EXPECT_EQ("'b", toString(*deduceReturnType(funType, toVector(argType, arfType))));
 	}
 
+	TEST(ReturnTypeDeduction, GenericArgumentAndParameter) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// start with a function
+		auto funType = builder.parseType("('a)->'a").as<FunctionTypePtr>();
+
+		// passing a concrete type results in required type
+		EXPECT_EQ("int<4>", toString(*deduceReturnType(funType, toVector(builder.parseType("int<4>")))));
+
+		// passing a generic type should return the generic type
+		EXPECT_EQ("'b", toString(*deduceReturnType(funType, toVector(builder.parseType("'b")))));
+
+		// even if it is the same name
+		EXPECT_EQ("'a", toString(*deduceReturnType(funType, toVector(builder.parseType("'a")))));
+
+		// also if it is something more complex
+		EXPECT_EQ("(('a)->'b)", toString(*deduceReturnType(funType, toVector(builder.parseType("('a)->'b")))));
+
+		// --- more complex types ---
+
+		// if the argument type is more complex
+		funType = builder.parseType("(<'a>('b)->'c)->('b)->'c").as<FunctionTypePtr>();
+
+		EXPECT_EQ("((B)->C)", toString(*deduceReturnType(funType, toVector(builder.parseType("<A>(B)->C")))));
+		EXPECT_EQ("(('b)->'c)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'a>('b)->'c")))));
+		EXPECT_EQ("(('y)->'z)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'x>('y)->'z")))));
+
+		EXPECT_EQ("(('x)->'x)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'x>('x)->'x")))));
+
+		// --- even more complex ---
+
+		// something that caused problems
+		funType = builder.parseType("(<'a,'b>('c)->'d)->('c)->'d").as<FunctionTypePtr>();
+		EXPECT_EQ("(('b)->'a)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'a,'b>('b)->'a")))));
+		EXPECT_EQ("(('y)->'x)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'x,'y>('y)->'x")))));
+
+		// also with variadic parameters
+		funType = builder.parseType("(<'a...>('b...)->'c)->('b...)->'c").as<FunctionTypePtr>();
+		EXPECT_EQ("(('b)->'a)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'a,'b>('b)->'a")))));
+		EXPECT_EQ("(('b)->'c)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'c,'b>('b)->'c")))));
+		EXPECT_EQ("(('c)->'a)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'a,'c>('c)->'a")))));
+		EXPECT_EQ("(('y)->'x)", toString(*deduceReturnType(funType, toVector(builder.parseType("<'x,'y>('y)->'x")))));
+
+	}
+
 	TEST(ReturnTypeDeduction, ImplicitMaterialization) {
 
 		NodeManager manager;

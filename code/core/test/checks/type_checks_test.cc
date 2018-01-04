@@ -476,20 +476,22 @@ namespace checks {
 		{
 			auto test = builder.parseExpr(R"(
 				let fun = lit("fun" : <'a>()->'a) in
-				instantiate(lit("target_type" : <int>()->int), fun)()
+				instantiate(lit("target_type" : <int>()->int), fun)
 			)");
 
 			auto res = checks::check(test);
 			EXPECT_TRUE(res.empty()) << res;
+			EXPECT_EQ("(()->int)",toString(*test->getType()));
 		}
 		{
 			auto test = builder.parseExpr(R"(
 				let fun = lit("fun" : <'a, 'b>('b)->'a) in
-				instantiate(lit("target_type" : <int<4>,uint<4>>(uint<4>)->int<4>), fun)(4u)
+				instantiate(lit("target_type" : <int<4>,uint<4>>(uint<4>)->int<4>), fun)
 			)");
 
 			auto res = checks::check(test);
 			EXPECT_TRUE(res.empty()) << res;
+			EXPECT_EQ("((uint<4>)->int<4>)",toString(*test->getType()));
 		}
 
 		// Instantiation type list arity mismatch
@@ -497,16 +499,6 @@ namespace checks {
 			auto test = builder.parseExpr(R"(
 				let fun = lit("fun" : <'a,'b>()->'a) in
 				instantiate(lit("target_type" : <int>()->int), fun)
-			)");
-
-			auto res = checks::check(test);
-			EXPECT_PRED2(containsMSG, res, Message(NodeAddress(test), EC_TYPE_ILLEGAL_FUNCTION_INSTANTIATION, "", Message::ERROR));
-		}
-
-		// Not a function type
-		{
-			auto test = builder.parseExpr(R"(
-				instantiate(lit("target_type" : int<4>), lit("not_fun" : 'a))
 			)");
 
 			auto res = checks::check(test);
