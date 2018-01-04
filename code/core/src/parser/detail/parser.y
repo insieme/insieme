@@ -530,7 +530,7 @@ member_function_type : qual_object_type "::" "(" types ")" "->" type      { $4.i
 virtual_function_type : qual_object_type "::" "(" types ")" "~>" type     { $4.insert($4.begin(), $1); $$ = driver.builder.functionType($4, $7, FK_VIRTUAL_MEMBER_FUNCTION); }
                       ;
 
-qual_object_type : object_type                                            { $$ = lang::ReferenceType::create($1); }
+qual_object_type : object_type                                            { $$ = lang::isReference($1) ? $1 : lang::ReferenceType::create($1); }
                  | "const" object_type                                    { $$ = lang::ReferenceType::create($2, true,  false); }
                  | "volatile" object_type                                 { $$ = lang::ReferenceType::create($2, false, true); }
                  | "const" "volatile" object_type                         { $$ = lang::ReferenceType::create($3, true,  true); }
