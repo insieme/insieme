@@ -138,7 +138,7 @@ namespace core {
 		const auto& basic = nm.getLangBasic();
 
 		// extract the function
-		auto fun = basic.getInstantiate();
+		auto fun = basic.getInstantiateFun();
 		auto spe = builder.parseExpr("lit( \"B\" : <TA,TB>(TB)->TA )");
 		auto gen = builder.parseExpr("lit( \"A\" : <'a,'b>('b)->'a )");
 

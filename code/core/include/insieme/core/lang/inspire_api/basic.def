@@ -289,7 +289,12 @@ OPERATION(Type, Eq, "type_eq", "(type<'a>, type<'a>) -> bool")
 
 LITERAL(NumTypeToInt, "type_to_int", "(type<'a>)->int<8>")
 
-LITERAL(Instantiate, "instantiate", "(<'p...>('a...)->'b, <'q...>('c...)->'d) -> ('a...)->'b")
+LITERAL(InstantiateFun,    "instantiate_fun",    "(<'p...>('a...)->'b, <'q...>('c...)->'d) -> ('a...)->'b")
+LITERAL(InstantiateCtor,   "instantiate_ctor",   "(<'p...> ref<'x,'c1,'v1,plain>::('a...),     <'q...> ref<'y,'c2,'v2,plain>::('c...)    ) ->  ref<'x,'c1,'v1,plain>::('a...)    ")
+LITERAL(InstantiateDtor,   "instantiate_dtor",   "(<'p...>~ref<'x,'c1,'v1,plain>::(),          <'q...>~ref<'y,'c2,'v2,plain>::()         ) -> ~ref<'x,'c1,'v1,plain>::()         ")
+LITERAL(InstantiateMember, "instantiate_member", "(<'p...> ref<'x,'c1,'v1,plain>::('a...)->'b, <'q...> ref<'y,'c2,'v2,plain>::('c...)->'d) ->  ref<'x,'c1,'v1,plain>::('a...)->'b")
+
+GROUP(Instantiate, InstantiateFun, InstantiateCtor, InstantiateDtor, InstantiateMember)
 
 GROUP(TypeCompOp, TypeEq)
 

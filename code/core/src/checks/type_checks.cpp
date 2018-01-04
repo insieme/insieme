@@ -1707,7 +1707,8 @@ namespace checks {
 		auto& mgr = callExpr->getNodeManager();
 		auto& basic = mgr.getLangBasic();
 
-		if(!basic.isInstantiate(callExpr->getFunctionExpr())) return res;
+		auto fun = callExpr->getFunctionExpr();
+		if(!basic.isInstantiate(fun)) return res;
 
 		auto instantiatedFunType = core::analysis::getArgument(callExpr, 0)->getType().isa<FunctionTypePtr>();
 		auto subFunType = core::analysis::getArgument(callExpr, 1)->getType().isa<FunctionTypePtr>();

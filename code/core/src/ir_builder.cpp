@@ -1001,21 +1001,32 @@ namespace core {
 		return bindExpr(type, parameters(params), call);
 	}
 
-	CallExprPtr IRBuilderBaseModule::instantiate(const TypePtr& specializedType, const ExpressionPtr& generic) const {
-		auto resType = specializedType;
 
-		// if it is a function type ..
-		if (auto funType = resType.isa<FunctionTypePtr>()) {
-			// .. we drop the concrete function type parameters for the result type
-			resType = functionType(funType->getParameterTypes(),funType->getReturnType(),funType->getKind());
-		}
 
-		// build the instantiation call
-		return callExpr(resType, getLangBasic().getInstantiate(), literal("target_type",specializedType), generic);
+	CallExprPtr IRBuilderBaseModule::instantiate(const FunctionTypePtr& specializedType, const ExpressionPtr& generic) const {
+		return instantiate(literal("target_type",specializedType),generic);
 	}
 
 	CallExprPtr IRBuilderBaseModule::instantiate(const ExpressionPtr& specialized, const ExpressionPtr& generic) const {
-		return callExpr(specialized->getType(), getLangBasic().getInstantiate(), specialized, generic);
+		// specialized type must be a function
+		assert_true(specialized->getType().isa<FunctionTypePtr>());
+		auto resType = specialized->getType().as<FunctionTypePtr>();
+
+		// we drop the concrete function type parameters for the result type
+		resType = functionType(resType->getParameterTypes(),resType->getReturnType(),resType->getKind());
+
+		// select the necessary instantiation function
+		ExpressionPtr trg;
+		switch(resType->getKind()) {
+		case FK_PLAIN:           trg = getLangBasic().getInstantiateFun(); break;
+		case FK_CONSTRUCTOR:     trg = getLangBasic().getInstantiateCtor(); break;
+		case FK_DESTRUCTOR:      trg = getLangBasic().getInstantiateDtor(); break;
+		case FK_MEMBER_FUNCTION: trg = getLangBasic().getInstantiateMember(); break;
+		default: assert_fail() << "Unsupported function type: " << resType->getKind();
+		}
+
+		// build the instantiation call
+		return callExpr(resType, trg, specialized, generic);
 	}
 
 	JobExprPtr IRBuilderBaseModule::jobExpr(const ExpressionPtr& threadNumRange, const ExpressionPtr& body) const {

@@ -533,7 +533,7 @@ namespace core {
 		}
 
 		// generic construct instantiation
-		CallExprPtr instantiate(const TypePtr& specializedType, const ExpressionPtr& generic) const;
+		CallExprPtr instantiate(const FunctionTypePtr& specializedType, const ExpressionPtr& generic) const;
 		CallExprPtr instantiate(const ExpressionPtr& specialized, const ExpressionPtr& generic) const;
 
 		// Create a job expression
