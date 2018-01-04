@@ -535,7 +535,7 @@ namespace backend {
 		core::CallExprPtr call = wrapPlainFunctionArguments(in);
 
 		// handle template calls
-		if(builder.getLangBasic().isCallOfInstantiate(call)) {
+		if(builder.getLangBasic().isCallOfInstantiate(call->getFunctionExpr())) {
 			auto typeInstCall = call->getFunctionExpr();
 			auto innerLit = core::analysis::getArgument(typeInstCall, 1).isa<core::LiteralPtr>();
 			assert_true(innerLit) << "Non-intercepted template calls not implemented";
