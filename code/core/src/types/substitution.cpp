@@ -201,7 +201,7 @@ namespace types {
 							assert_not_implemented() << "No for expanding variadic type variables into " << var->getNodeType() << " elements.";
 						}
 					}
-					expanded = applyTo(manager,Types::get(manager,list));
+					expanded = Types::get(manager,list);
 
 				} else if (auto tupleType = parent.isa<TupleTypePtr>()) {
 

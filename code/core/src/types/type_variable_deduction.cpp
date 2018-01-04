@@ -636,11 +636,24 @@ namespace types {
 					return;
 				}
 
+				// check number of type parameters
+				const TypeList& typeParamParams = funParamType->getInstantiationTypes()->getTypes();
+				const TypeList& typeArgParams = funArgType->getInstantiationTypes()->getTypes();
+				if (typeParamParams.size() != typeArgParams.size()) {
+					// different number of type parameters => unsatisfiable
+					constraints.makeUnsatisfiable();
+					return;
+				}
+
 				// add constraints on arguments
-				auto begin = make_paired_iterator(paramParams.begin(), argParams.begin());
-				auto end = make_paired_iterator(paramParams.end(), argParams.end());
-				for(auto it = begin; constraints.isSatisfiable() && it != end; ++it) {
-					addTypeConstraints(constraints, substitution, it->first, it->second, inverse(direction));
+				for(const auto& cur : make_paired_range(paramParams,argParams)) {
+					addTypeConstraints(constraints, substitution, cur.first, cur.second, inverse(direction));
+				}
+
+				// add constraints on type parameters
+				for(const auto& cur : make_paired_range(typeParamParams,typeArgParams)) {
+					addTypeConstraints(constraints, substitution, cur.first, cur.second, Direction::SUB_TYPE);
+					addTypeConstraints(constraints, substitution, cur.first, cur.second, Direction::SUPER_TYPE);
 				}
 
 				// ... and the return type
