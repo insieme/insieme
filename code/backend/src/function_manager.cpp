@@ -537,9 +537,10 @@ namespace backend {
 		// handle template calls
 		if(builder.getLangBasic().isCallOfInstantiate(call->getFunctionExpr())) {
 			auto typeInstCall = call->getFunctionExpr();
+			auto targetType = core::analysis::getArgument(typeInstCall, 0)->getType();
 			auto innerLit = core::analysis::getArgument(typeInstCall, 1).isa<core::LiteralPtr>();
 			assert_true(innerLit) << "Non-intercepted template calls not implemented";
-			auto replacementLit = builder.literal(innerLit->getValue(), typeInstCall->getType());
+			auto replacementLit = builder.literal(innerLit->getValue(), targetType);
 			core::transform::utils::migrateAnnotations(innerLit, replacementLit);
 			call = builder.callExpr(typeInstCall->getType().as<core::FunctionTypePtr>()->getReturnType(), replacementLit, call->getArgumentList());
 			isImplicit = isImplicit || insieme::annotations::c::isMarkedAsImplicit(call);
