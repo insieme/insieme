@@ -575,6 +575,38 @@ namespace types {
 		EXPECT_EQ(builder.refType(intLit->getType()), call->getType());
 	}
 
+	TEST(TypeUtils, GenericTypes) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto type = [&](const std::string& type) {
+			return builder.parseType(type);
+		};
+
+		// all type variables are universal qualified,
+		// thus a type T is only a subtype of S if for all
+		// variable substitutions I we have I(T) <: I(S)
+
+		// two different type variables are unrelated
+		EXPECT_PRED2(isNotSubTypeOf, type("'a"), type("'b"));
+
+		// a type variable is also unrelated to an concrete type
+		EXPECT_PRED2(isNotSubTypeOf, type("'a"), type("A"));
+
+		// however, if it is the same variable, it is a subtype
+		EXPECT_PRED2(isSubTypeOf, type("'a"), type("'a"));
+
+		// this also has to work when nesting type parameters
+		EXPECT_PRED2(isSubTypeOf, type("('a)->'b"), type("('a)->'b"));
+
+		EXPECT_PRED2(isNotSubTypeOf, type("('a)->'b"), type("('b)->'a"));
+		EXPECT_PRED2(isNotSubTypeOf, type("('a)->'a"), type("('b)->'a"));
+		EXPECT_PRED2(isNotSubTypeOf, type("('b)->'b"), type("('b)->'a"));
+		EXPECT_PRED2(isNotSubTypeOf, type("(A)->B"), type("('b)->'a"));
+
+
+	}
+
 } // end namespace types
 } // end namespace core
 } // end namespace insieme
