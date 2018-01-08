@@ -88,7 +88,7 @@ namespace backend {
 			};
 
 			int main() {
-				f(g(),g(),g());
+				f(ref_kind_cast(g() materialize,type_lit(cpp_rref)),ref_kind_cast(g() materialize,type_lit(cpp_rref)),ref_kind_cast(g() materialize,type_lit(cpp_rref)));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
@@ -138,7 +138,7 @@ namespace backend {
 				var ref<IMP_RefMember,f,f,plain> refmem = IMP_RefMember::(ref_decl(type_lit(ref<IMP_RefMember,f,f,plain>)));
 
 				var ref<int<4>,f,f,plain> main_int = 0;
-				var ref<IMP_A,t,f,plain> a_instance = <ref<IMP_A,f,f,plain>>(ref_decl(type_lit(ref<IMP_A,t,f,plain>))) {1, main_int};
+				var ref<IMP_A,t,f,plain> a_instance = <ref<IMP_A,f,f,plain>>(ref_decl(type_lit(ref<IMP_A,t,f,plain>))) {1, ref_kind_cast(main_int,type_lit(cpp_ref))};
 				a_instance.x;
 				*a_instance.y;
 
@@ -163,8 +163,8 @@ namespace backend {
 				cdr : ref<IMP_D,t,f,cpp_ref>;
 				ctor function () {
 					IMP_D::((this).dD);
-					<ref<IMP_D,f,f,cpp_ref>>(*(this).dr) {(this).dD};
-					<ref<IMP_D,t,f,cpp_ref>>(*(this).cdr) {*(this).dr};
+					<ref<ref<IMP_D,f,f,cpp_ref>,f,f,plain>>((this).dr) {*(this).dD};
+					<ref<ref<IMP_D,t,f,cpp_ref>,f,f,plain>>((this).cdr) {*(this).dr};
 				}
 			};
 			// Inspire Program
@@ -181,7 +181,7 @@ namespace backend {
 		DO_TEST(R"(
 			def IMP_test = function () -> ref<array<int<4>,1u>,f,f,cpp_ref> {
 				auto x = <ref<array<int<4>,1u>,f,f,plain>>(ref_decl(type_lit(ref<array<int<4>,1u>,f,f,plain>))){};
-				return x;
+				return ref_kind_cast(x,type_lit(cpp_ref));
 			};
 			int<4> main() {
 				IMP_test();
@@ -211,7 +211,7 @@ namespace backend {
 		DO_TEST(R"(
 			int<4> function IMP_main () {
 				var ref<int<4>,f,f,plain> bla = 2;
-				var ref<int<4>,f,f,cpp_ref> alb = bla;
+				var ref<int<4>,f,f,cpp_ref> alb = ref_kind_cast(bla,type_lit(cpp_ref));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
@@ -224,7 +224,7 @@ namespace backend {
 			def IMP_test = function (v1 : ref<int<4>,f,f,cpp_ref>) -> unit { };
 			int<4> function IMP_main () {
 				var ref<int<4>,f,f,plain> bla = 2;
-				var ref<int<4>,f,f,cpp_ref> alb = bla;
+				var ref<int<4>,f,f,cpp_ref> alb = ref_kind_cast(bla,type_lit(cpp_ref));
 				IMP_test(alb);
 				bla + alb;
 				alb = 8;
@@ -244,7 +244,7 @@ namespace backend {
 
 			int<4> main() {
 				var ref<S> y;
-				var ref<S,t,f,cpp_ref> x = y;
+				var ref<S,t,f,cpp_ref> x = ref_kind_cast(y,type_lit(cpp_ref));
 				x.mem == 0 && x.mem == 1;
 				return 0;
 			}
@@ -264,13 +264,13 @@ namespace backend {
 			};
 
 			def fun = (b : ref<B,t,f,cpp_ref>) -> unit {
-				var ref<int<4>,t,f,cpp_ref> a = b.v;
+				var ref<int<4>,t,f,cpp_ref> a = ref_kind_cast(b.v,type_lit(cpp_ref));
 			};
 
 			int<4> function IMP_main () {
 				var ref<A> a;
-				var ref<A,f,f,cpp_ref> a2 = a;
-				a2.foo();
+				var ref<A,f,f,cpp_ref> a2 = ref_kind_cast(a,type_lit(cpp_ref));
+				ref_kind_cast(a2,type_lit(plain)).foo();
 				var ref<B> b;
 				fun(ref_kind_cast(b,type_lit(cpp_ref)));
 				return 0;
@@ -287,11 +287,11 @@ namespace backend {
 			};
 
 			int<4> function IMP_main () {
-				var ref<IMP_S,t,f,cpp_ref> v324 = IMP_S::(ref_cast(ref_decl(type_lit(ref<IMP_S,t,f,cpp_ref>)), type_lit(f), type_lit(f), type_lit(plain)));
+				var ref<IMP_S,t,f,cpp_ref> v324 = ref_cast(IMP_S::(ref_cast(ref_temp(type_lit(IMP_S)), type_lit(f), type_lit(f), type_lit(plain))), type_lit(t), type_lit(f), type_lit(cpp_ref));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
-			EXPECT_PRED2(containsSubString, code, "v324 = IMP_S{}");
+			EXPECT_PRED2(containsSubString, code, "v324 = (IMP_S const&)IMP_S{}");
 			EXPECT_PRED2(notContainsSubString, code, "new");
 			EXPECT_PRED2(notContainsSubString, code, "alloca(");
 		})
@@ -310,10 +310,10 @@ namespace backend {
 			int<4> function IMP_main (){
 				var ref<int<4>,f,f,plain> i;
 				var ref<ptr<int<4>>,f,f,plain> i_ptr = ptr_from_ref(i);
-				var ref<int<4>,f,f,cpp_ref> i_ref = i;
+				var ref<int<4>,f,f,cpp_ref> i_ref = ref_kind_cast(i,type_lit(cpp_ref));
 				var ref<int<4>,f,f,plain> j = *ptr_to_ref(*i_ptr);
 				var ref<ptr<int<4>>,f,f,plain> j_ptr = ptr_from_ref(ref_cast(i_ref, type_lit(f), type_lit(f), type_lit(plain)));
-				var ref<int<4>,f,f,cpp_ref> j_ref = ptr_to_ref(*i_ptr);
+				var ref<int<4>,f,f,cpp_ref> j_ref = ref_kind_cast(ptr_to_ref(*i_ptr),type_lit(cpp_ref));
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
@@ -335,7 +335,7 @@ namespace backend {
 			int<4> function IMP_main() {
 				var ref<int<4>,f,f,plain> v0 = v0;
 				var ref<ptr<int<4>>,f,f,plain> v1 = ptr_from_ref(v0);
-				var ref<int<4>,f,f,cpp_ref> v2 = v0;
+				var ref<int<4>,f,f,cpp_ref> v2 = ref_kind_cast(v0,type_lit(cpp_ref));
 
 				IMP_take_ref(ref_kind_cast(ptr_to_ref(*v1), type_lit(cpp_ref)));
 				IMP_take_ptr(ptr_from_ref(ref_cast(v2, type_lit(f), type_lit(f), type_lit(plain))));
@@ -350,7 +350,7 @@ namespace backend {
 	TEST(CppSnippet, RefPtrRet) {
 		DO_TEST(R"(
 			def gen_ref = function () -> ref<int<4>,f,f,cpp_ref> {
-				return ptr_to_ref(*lit("gr" : ref<ptr<int<4>>,f,f,plain>));
+				return ref_kind_cast(ptr_to_ref(*lit("gr" : ref<ptr<int<4>>,f,f,plain>)),type_lit(cpp_ref));
 			};
 			def gen_ptr = function () -> ptr<int<4>> {
 				return *lit("gf" : ref<ptr<int<4>>,f,f,plain>);
@@ -611,7 +611,7 @@ namespace backend {
 			};
 
 			def IMP_j = function (v57 : ref<IMP_S,f,f,cpp_ref>) -> ref<IMP_S,f,f,cpp_ref> {
-				return ref_kind_cast(v57, type_lit(plain)).IMP__operator_assign_(ref_kind_cast(<ref<IMP_S,f,f,plain>>(ref_temp(type_lit(IMP_S))) {5}, type_lit(cpp_ref))) materialize ;
+				return ref_kind_cast(ref_kind_cast(v57, type_lit(plain)).IMP__operator_assign_(ref_kind_cast(<ref<IMP_S,f,f,plain>>(ref_temp(type_lit(IMP_S))) {5}, type_lit(cpp_ref))), type_lit(cpp_ref)) ;
 			};
 
 			int<4> main() {
@@ -645,7 +645,7 @@ namespace backend {
 			};
 
 			def IMP_j = function (v57 : ref<IMP_S,f,f,cpp_ref>) -> ref<IMP_S,f,f,cpp_ref> {
-				return ref_kind_cast(v57, type_lit(plain)).IMP__operator_assign_(ref_kind_cast(<ref<IMP_S,f,f,plain>>(ref_temp(type_lit(IMP_S))) {5}, type_lit(cpp_ref))) materialize ;
+				return ref_kind_cast(ref_kind_cast(v57, type_lit(plain)).IMP__operator_assign_(ref_kind_cast(<ref<IMP_S,f,f,plain>>(ref_temp(type_lit(IMP_S))) {5}, type_lit(cpp_ref))), type_lit(cpp_ref));
 			};
 
 			int<4> main() {
@@ -1278,8 +1278,8 @@ namespace backend {
 				ptr_to_ref(ptr_parent_cast(*v_ptr, type_lit(IMP_Base))).IMP_foo();
 
 				// cpp reference
-				var ref<IMP_Derived,f,f,cpp_ref> v_cppref = v1;
-				ref_parent_cast(v_cppref, type_lit(IMP_Base)).IMP_foo();
+				var ref<IMP_Derived,f,f,cpp_ref> v_cppref = ref_kind_cast(v1,type_lit(cpp_ref));
+				ref_kind_cast(ref_parent_cast(v_cppref, type_lit(IMP_Base)),type_lit(plain)).IMP_foo();
 
 				return 0;
 			}
@@ -1478,7 +1478,7 @@ namespace backend {
 				}
 				{
 					var ref<int<4>,f,f,plain> v0 = 50;
-					var ref<ptr<int<4>>,f,f,plain> v1 = new_arr_fun_1(num_cast(*v0+5, type_lit(uint<inf>)), 1, 2, 3);
+					var ref<ptr<int<4>>,f,f,plain> v1 = new_arr_fun_1(num_cast(*v0+5, type_lit(uint<inf>)), <ref<int<4>,f,f,plain>>(ref_decl(type_lit(ref<int<4>>))){1}, <ref<int<4>,f,f,plain>>(ref_decl(type_lit(ref<int<4>>))){2}, <ref<int<4>,f,f,plain>>(ref_decl(type_lit(ref<int<4>>))){3});
 					ref_delete(ptr_to_array(*v1));
 				}
 				{
@@ -1498,7 +1498,7 @@ namespace backend {
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
 			EXPECT_PRED2(containsSubString, code, "int32_t* v1 = new_arr_fun_0((uint64_t)(v0 + 5));");
 			EXPECT_PRED2(containsSubString, code, "return new int32_t[v1];");
-			EXPECT_PRED2(containsSubString, code, "int32_t* var_3 = new_arr_fun_1((uint64_t)(var_2 + 5), 1, 2, 3);");
+			EXPECT_PRED2(containsSubString, code, "int32_t* var_3 = new_arr_fun_1((uint64_t)(var_2 + 5), {1}, {2}, {3});");
 			EXPECT_PRED2(containsSubString, code, "return new int32_t[v4]{v1, v2, v3};");
 			EXPECT_PRED2(containsSubString, code, "IMP_SimplestConstructor* var_5 = new_arr_fun_2((uint64_t)(var_4 + 5))");
 			EXPECT_PRED2(containsSubString, code, "return new IMP_SimplestConstructor[v1];");
@@ -1539,8 +1539,8 @@ namespace backend {
 			int<4> main() {
 				var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 				var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
-				var ref<lambda_class,f,f,plain> v2 = <ref<lambda_class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(lambda_class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {*v0, v1};
-				<ref<lambda_class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(lambda_class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {*v0, v1}.IMP__operator_call_(42);
+				var ref<lambda_class,f,f,plain> v2 = <ref<lambda_class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(lambda_class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {*v0, ref_kind_cast(v1,type_lit(cpp_ref))};
+				<ref<lambda_class,f,f,plain>>(ref_temp(type_lit(lambda_class))) {*v0, ref_kind_cast(v1,type_lit(cpp_ref)) }.IMP__operator_call_(42);
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
@@ -1621,7 +1621,7 @@ namespace backend {
 	TEST(CppSnippet, InterceptedTemplateFunctionPointer) {
 		auto prog = builder.parseProgram(R"(
 			int<4> main() {
-				ptr_of_function(instantiate(lit("target_type": <ref<int<4>,f,f,qualified>, ref<real<4>,f,f,qualified>>(real<4>) -> int<4>),
+				ptr_of_function(instantiate_fun(lit("target_type": <ref<int<4>,f,f,qualified>, ref<real<4>,f,f,qualified>>(real<4>) -> int<4>),
 								lit("IMP_templateFunRetParam" : <ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>, ref<'T_0_1,'T_0_1_a,'T_0_1_b,'T_0_1_c>>('T_0_1) -> 'T_0_0)));
 				return 0;
 			}
