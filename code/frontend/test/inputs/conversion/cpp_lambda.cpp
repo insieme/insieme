@@ -73,7 +73,7 @@ int main() {
 			}
 		};
 		{
-			var ref<__any_string__,f,f,plain> v0 = <ref<__any_string__,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
+			var ref<__any_string__,f,f,plain> v0 = ref_cast(<ref<__any_string__,f,f,plain>>(ref_temp(type_lit(__any_string__))) {}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 			v0.IMP__operator_call_();
 		}
 	)")
@@ -93,7 +93,7 @@ int main() {
 		};
 		{
 			var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
-			var ref<__any_string__class,f,f,plain> v1 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {*v0};
+			var ref<__any_string__class,f,f,plain> v1 = ref_cast(<ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {*v0}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 		}
 	)")
 	{
@@ -112,7 +112,7 @@ int main() {
 		};
 		{
 			var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
-			var ref<__any_string__class,f,f,plain> v1 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {*v0};
+			var ref<__any_string__class,f,f,plain> v1 = ref_cast(<ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {*v0}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 		}
 	)")
 	{
@@ -131,7 +131,7 @@ int main() {
 		};
 		{
 			var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
-			var ref<__any_string__class,f,f,plain> v1 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {ref_kind_cast(v0, type_lit(cpp_ref))};
+			var ref<__any_string__class,f,f,plain> v1 = ref_cast(<ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {ref_kind_cast(v0, type_lit(cpp_ref))}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 		}
 	)")
 	{
@@ -150,7 +150,7 @@ int main() {
 			}
 		};
 		{
-			var ref<__any_string__class,f,f,plain> v0 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
+			var ref<__any_string__class,f,f,plain> v0 = ref_cast(<ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 		}
 	)")
 	{
@@ -170,7 +170,7 @@ int main() {
 		{
 			var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 			var ref<int<4>,f,f,plain> v1 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
-			var ref<__any_string__class,f,f,plain> v2 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {*v0, ref_kind_cast(v1, type_lit(cpp_ref))};
+			var ref<__any_string__class,f,f,plain> v2 = ref_cast(<ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {*v0, ref_kind_cast(v1, type_lit(cpp_ref))}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 		}
 	)")
 	{
@@ -190,7 +190,7 @@ int main() {
 			}
 		};
 		{
-			var ref<__any_string__,f,f,plain> v0 = <ref<__any_string__,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
+			var ref<__any_string__,f,f,plain> v0 = ref_cast(<ref<__any_string__,f,f,plain>>(ref_temp(type_lit(__any_string__))) {}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 		}
 	)")
 	{
@@ -211,7 +211,7 @@ int main() {
 		def struct IMP_C {
 			x : int<4>;
 			ctor function () {
-				var ref<__any_string__class,f,f,plain> v1 = <ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {ptr_from_ref(this)};
+				var ref<__any_string__class,f,f,plain> v1 = ref_cast(<ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {ptr_from_ref(this)}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 			}
 		};
 		{
@@ -236,13 +236,13 @@ int main() {
 		def struct __any_string__outer {
 			capture_0 : int<4>;
 			const function IMP__operator_call_ = () -> int<4> {
-				var ref<__any_string__inner,f,f,plain> v1 = <ref<__any_string__inner,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__inner)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {ref_kind_cast((this).capture_0, type_lit(cpp_ref))};
+				var ref<__any_string__inner,f,f,plain> v1 = ref_cast(<ref<__any_string__inner,f,f,plain>>(ref_temp(type_lit(__any_string__inner))) {ref_kind_cast((this).capture_0, type_lit(cpp_ref))}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 				return v1.IMP__operator_call_();
 			}
 		};
 		{
 			var ref<int<4>,f,f,plain> v0;
-			var ref<__any_string__outer,f,f,plain> v1 = <ref<__any_string__outer,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__outer)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {*v0};
+			var ref<__any_string__outer,f,f,plain> v1 = ref_cast(<ref<__any_string__outer,f,f,plain>>(ref_temp(type_lit(__any_string__outer))) {*v0}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 		}
 	)")
 	{
@@ -313,7 +313,7 @@ int main() {
 			v0.IMP__operator_call_();
 		};
 		{
-			__any_string__take_lambda(<ref<__any_string__class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {});
+			__any_string__take_lambda(ref_cast(<ref<__any_string__class,f,f,plain>>(ref_temp(type_lit(__any_string__class))) {}, type_lit(f), type_lit(f), type_lit(cpp_rref)));
 		}
 	)")
 	{

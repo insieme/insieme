@@ -63,9 +63,9 @@ int main() {
 		};
 		{
 			var ref<IMP_C,f,f,plain> v0 = IMP_C::(ref_decl(type_lit(ref<IMP_C,f,f,plain>)));
-			var ref<__any_string__lambda_class,f,f,plain> v1 = <ref<__any_string__lambda_class,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__lambda_class)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {
+			var ref<__any_string__lambda_class,f,f,plain> v1 = ref_cast(<ref<__any_string__lambda_class,f,f,plain>>(ref_temp(type_lit(__any_string__lambda_class))) {
 				ref_cast(v0, type_lit(t), type_lit(f), type_lit(cpp_ref))
-			};
+			}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 		}
 	)")
 	{

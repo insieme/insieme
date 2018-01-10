@@ -49,7 +49,7 @@ int main() {
 		};
 		{
 			var ref<int<4>,t,f,plain> v0 = 7000;
-			var ref<__any_string__lambda,f,f,plain> v1 = <ref<__any_string__lambda,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__lambda)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
+			var ref<__any_string__lambda,f,f,plain> v1 = ref_cast(<ref<__any_string__lambda,f,f,plain>>(ref_temp(type_lit(__any_string__lambda))) {}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 		}
 	)")
 	{
@@ -70,7 +70,7 @@ int main() {
 		{
 			var ref<int<4>,f,f,plain> v0 = 7000;
 			var ref<int<4>,t,f,plain> v1 = *v0;
-			var ref<__any_string__lambda,f,f,plain> v2 = <ref<__any_string__lambda,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__lambda)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {ref_kind_cast(v1, type_lit(cpp_ref))};
+			var ref<__any_string__lambda,f,f,plain> v2 = ref_cast(<ref<__any_string__lambda,f,f,plain>>(ref_temp(type_lit(__any_string__lambda))) {ref_kind_cast(v1, type_lit(cpp_ref))}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 		}
 	)")
 	{
@@ -92,7 +92,7 @@ int main() {
 		};
 		{
 			var ref<int<4>,t,f,plain> v0 = 7000;
-			var ref<__any_string__lambda,f,f,plain> v1 = <ref<__any_string__lambda,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__lambda)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {};
+			var ref<__any_string__lambda,f,f,plain> v1 = ref_cast(<ref<__any_string__lambda,f,f,plain>>(ref_temp(type_lit(__any_string__lambda))) {}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 		}
 	)")
 	{

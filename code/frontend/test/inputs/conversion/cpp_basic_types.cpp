@@ -113,9 +113,9 @@ int main() {
 		def IMP_dfun = function (v0 : ref<IMP_D,f,f,plain>) -> unit { };
 		{
 			var ref<IMP_D,f,f,plain> v0 = <ref<IMP_D,f,f,plain>>(ref_decl(type_lit(ref<IMP_D,f,f,plain>))) {1};
-			var ref<IMP_D,f,f,plain> v1 = <ref<IMP_D,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_D)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {1};
+			var ref<IMP_D,f,f,plain> v1 = ref_cast(<ref<IMP_D,f,f,plain>>(ref_temp(type_lit(IMP_D))) {1}, type_lit(f), type_lit(f), type_lit(cpp_rref));
 			IMP_dfun(<ref<IMP_D,f,f,plain>>(ref_decl(type_lit(ref<IMP_D,f,f,plain>))) {1});
-			IMP_dfun(<ref<IMP_D,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(IMP_D)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {1});
+			IMP_dfun(ref_cast(<ref<IMP_D,f,f,plain>>(ref_temp(type_lit(IMP_D))) {1}, type_lit(f), type_lit(f), type_lit(cpp_rref)));
 		}
 	)")
 	{
