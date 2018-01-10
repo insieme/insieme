@@ -168,15 +168,15 @@ int main() {
 		};
 		def IMP_templatedFunUsingTemplatedClass_int_returns_void = function () -> unit {
 			var ref<IMP_ClassWithTemplatedFun,f,f,plain> v0 = IMP_ClassWithTemplatedFun::(ref_decl(type_lit(ref<IMP_ClassWithTemplatedFun,f,f,plain>)));
-			v0.__any_string__fun(<ref<__any_string__0,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__0)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {});
+			v0.__any_string__fun(ref_cast(<ref<__any_string__0,f,f,plain>>(ref_temp(type_lit(__any_string__0))) {}, type_lit(f), type_lit(f), type_lit(cpp_rref)));
 		};
 		def IMP_templatedFunUsingTemplatedClass_double_returns_void = function () -> unit {
 			var ref<IMP_ClassWithTemplatedFun,f,f,plain> v0 = IMP_ClassWithTemplatedFun::(ref_decl(type_lit(ref<IMP_ClassWithTemplatedFun,f,f,plain>)));
-			v0.__any_string__fun(<ref<__any_string__1,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__1)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {});
+			v0.__any_string__fun(ref_cast(<ref<__any_string__1,f,f,plain>>(ref_temp(type_lit(__any_string__1))) {}, type_lit(f), type_lit(f), type_lit(cpp_rref)));
 		};
 		def IMP_templatedFunUsingTemplatedClass_struct_space_ClassWithTemplatedFun_returns_void = function () -> unit {
 			var ref<IMP_ClassWithTemplatedFun,f,f,plain> v0 = IMP_ClassWithTemplatedFun::(ref_decl(type_lit(ref<IMP_ClassWithTemplatedFun,f,f,plain>)));
-			v0.__any_string__fun(<ref<__any_string__2,f,f,cpp_rref>>(ref_cast(ref_temp(type_lit(__any_string__2)), type_lit(f), type_lit(f), type_lit(cpp_rref))) {});
+			v0.__any_string__fun(ref_cast(<ref<__any_string__2,f,f,plain>>(ref_temp(type_lit(__any_string__2))) {}, type_lit(f), type_lit(f), type_lit(cpp_rref)));
 		};
 		{
 			IMP_templatedFunUsingTemplatedClass_int_returns_void();

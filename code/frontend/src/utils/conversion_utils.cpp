@@ -129,9 +129,6 @@ namespace utils {
 		for(const auto& initDecl : initExp->getInitDecls()) {
 			const auto& init = initDecl->getInitialization();
 			auto initType = initDecl->getType().getAddressedNode();
-			if(!core::lang::isReference(initType)) {
-				initType =  builder.refType(initType);
-			}
 			auto newInit = fixTempMemoryInInitExpression(core::lang::buildRefDecl(initType), init);
 			// add the replacement if something actually changed
 			if(newInit != init.getAddressedNode()) {

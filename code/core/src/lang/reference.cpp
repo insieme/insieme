@@ -376,17 +376,10 @@ namespace lang {
 		auto& bmExt = refExpr->getNodeManager().getLangExtension<BooleanMarkerExtension>();
 		ReferenceType referenceTy(targetTy);
 
-		// for temp init exprs, simply change type being created rather than casting
-		if(auto initExpr = refExpr.isa<InitExprPtr>()) {
-			if(rExt.isCallOfRefTemp(initExpr->getMemoryExpr())) {
-				return builder.initExprTemp(targetTy.as<GenericTypePtr>(), initExpr->getInitDecls());
-			}
-		}
-
 		return builder.callExpr(rExt.getRefCast(), refExpr,
-						bmExt.getMarkerTypeLiteral(referenceTy.isConst()),
-			            bmExt.getMarkerTypeLiteral(referenceTy.isVolatile()),
-						builder.getTypeLiteral(lang::toType(refExpr->getNodeManager(), referenceTy.getKind())));
+		                        bmExt.getMarkerTypeLiteral(referenceTy.isConst()),
+		                        bmExt.getMarkerTypeLiteral(referenceTy.isVolatile()),
+		                        builder.getTypeLiteral(lang::toType(refExpr->getNodeManager(), referenceTy.getKind())));
 	}
 
 	ExpressionPtr buildRefKindCast(const ExpressionPtr& refExpr, ReferenceType::Kind newKind) {

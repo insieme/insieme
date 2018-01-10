@@ -46,6 +46,7 @@
 
 #include "insieme/frontend/converter.h"
 #include "insieme/frontend/state/function_manager.h"
+#include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/utils/name_mangling.h"
@@ -95,7 +96,8 @@ namespace conversion {
 			converter.getIRTranslationUnit().addFunction(literal, lambda);
 		}
 
-		std::pair<core::LambdaExprPtr, core::ExpressionList> buildGenerationCtor(const core::GenericTypePtr& irThisType, const core::ExpressionPtr subEx,
+		std::pair<core::LambdaExprPtr, core::ExpressionList> buildGenerationCtor(Converter& converter,
+		                                                                         const core::GenericTypePtr& irThisType, const core::ExpressionPtr subEx,
 		                                                                         const core::TypePtr& memberType, unsigned numElements,
 		                                                                         const core::ExpressionPtr& callThisVar) {
 			core::IRBuilder builder(irThisType.getNodeManager());
@@ -117,12 +119,10 @@ namespace conversion {
 				funParamTypes.push_back(paramType);
 				funParams.push_back(builder.variable(paramType));
 
-				// materialize parameter if necessary
-				if (!core::lang::isReference(expr)) {
-					expr = builder.refTemp(expr);
-				}
-				// pass value by reference
-				callArguments.push_back(core::lang::toCppReference(expr));
+				// materialize the argument if it isn't already of reference type, and cast as necessary
+				auto arg = expr;
+				if(!core::lang::isReference(arg)) arg = utils::convertMaterializingExpr(converter, expr);
+				callArguments.push_back(utils::castInitializationIfNotMaterializing(paramType, arg));
 			}
 			core::ExpressionList initList;
 			std::copy(funParams.cbegin()+1, funParams.cend(), std::back_inserter(initList));
@@ -234,7 +234,7 @@ namespace conversion {
 		auto moveAssignment = generateMFun(builder.refType(core::analysis::getReferencedType(irThisType), false, false, core::lang::ReferenceType::Kind::CppRValueReference));
 
 		// generate special ctor with the correct number of arguments to call directly in order to preserve special cpp copy semantics
-		auto generationCtor = buildGenerationCtor(irThisType, subEx, memberType, numElements, thisVar);
+		auto generationCtor = buildGenerationCtor(converter, irThisType, subEx, memberType, numElements, thisVar);
 		auto generationCtorLit = builder.getLiteralForConstructor(generationCtor.first->getType());
 		converter.getIRTranslationUnit().addFunction(generationCtorLit, generationCtor.first);
 		ctorsToAdd.push_back(generationCtorLit);

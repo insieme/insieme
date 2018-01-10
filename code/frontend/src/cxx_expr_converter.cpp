@@ -143,6 +143,8 @@ namespace conversion {
 		size_t i = 0;
 		std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(newArgs), [&](const clang::Expr* clangArgExpr) {
 			return convertCxxArgExpr(clangArgExpr, paramTypeList[i++]);
+//			auto arg = convertCxxArgExpr(clangArgExpr, paramTypeList[i]);
+//			return utils::castInitializationIfNotMaterializing(paramTypeList[i++], arg);
 		});
 
 		// Implicit materialization of this argument is not performed in clang AST
@@ -806,18 +808,16 @@ namespace conversion {
 		for(auto capture: lExpr->capture_inits()) {
 			frontend_assert(fields.size() > fieldIndex)
 				<< "Mismatch between number of captures in generated struct and number of initializers while translating LambdaExpr";
-
-			auto value = converter.convertInitExpr(capture);
-			auto declType = core::transform::materialize(fields[fieldIndex]->getType());
-			auto init = utils::castInitializationIfNotMaterializing(declType, value);
+			const auto& fieldType = fields[fieldIndex++]->getType();
+			auto declType = core::transform::materialize(fieldType);
+			auto init = utils::castInitializationIfNotMaterializing(declType, converter.convertCxxArgExpr(capture, fieldType));
 			decls.push_back(builder.declaration(declType, init));
-
-			fieldIndex++;
-
 		}
 
 		// generate init expr of the lambda type
-		return builder.initExpr(core::lang::buildRefTemp(genTy), decls);
+		retIr = builder.initExpr(core::lang::buildRefTemp(genTy), decls);
+		retIr = utils::fixTempMemoryInInitExpressionInits(retIr);
+		return retIr;
 	}
 
 } // End conversion namespace
