@@ -352,9 +352,13 @@ namespace types {
 	std::ostream& Substitution::printTo(std::ostream& out) const {
 		out << "{";
 		
-		out << join(",", typeVarMapping, [](std::ostream& out, const TypeVariableMapping::value_type& cur) { 
-			out << *cur.first << "->" << *cur.second; 
-		});
+		// print variable -> type mappings sorted
+		std::vector<std::string> mappings;
+		for(const auto& cur : typeVarMapping) {
+			mappings.push_back(format("%s->%s",*cur.first,*cur.second));
+		}
+		std::sort(mappings.begin(),mappings.end());
+		out << join(",",mappings);
 		
 		if (!typeVarMapping.empty() && !genericTypeVarMapping.empty()) out << ",";
 		

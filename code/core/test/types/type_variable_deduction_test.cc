@@ -891,6 +891,34 @@ namespace types {
 		EXPECT_TRUE(checks::check(ir).empty());
 	}
 
+	TEST(TypeVariableDeduction, LambdaConversionBug) {
+		/**
+		 * This test failed since the parameters of function types nested in generic types have not
+		 * been considered for creating type constraints.
+		 */
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto funType = builder.parseType("('l, type<('a...) => 'b>) -> ('a...) => 'b").as<FunctionTypePtr>();
+
+		EXPECT_EQ("{'a#1->B,'b->X,'l->A|a->['a#1]}",toString(*getTypeVariableInstantiation(mgr,funType,{
+			builder.parseType("A"),
+			builder.parseType("type<(B)=>X>")
+		})));
+
+		EXPECT_EQ("{'b->X,'l->A|a->[]}",toString(*getTypeVariableInstantiation(mgr,funType,{
+			builder.parseType("A"),
+			builder.parseType("type<()=>X>")
+		})));
+
+		EXPECT_EQ("{'a#1->B,'a#2->C,'b->X,'l->A|a->['a#1,'a#2]}",toString(*getTypeVariableInstantiation(mgr,funType,{
+			builder.parseType("A"),
+			builder.parseType("type<(B,C)=>X>")
+		})));
+
+
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

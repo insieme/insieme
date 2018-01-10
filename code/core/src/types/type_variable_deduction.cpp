@@ -310,7 +310,6 @@ namespace types {
 			// 1) collect all variadic type variables
 			std::vector<VariadicTypeVariablePtr> vvars;
 			std::vector<VariadicGenericTypeVariablePtr> vgvars;
-			//visitDepthFirstPrunable(TupleType::get(manager, TypeList{ paramTuple, argsTuple }), [&](const NodePtr& cur) {
 			visitDepthFirstPrunable(paramTuple, [&](const NodePtr& cur) {
 
 				// stop descent for expressions and statements
@@ -418,7 +417,6 @@ namespace types {
 					constraints.makeUnsatisfiable();
 					return;
 				}
-
 				// check parameter types
 				for(auto it = make_paired_iterator(genParamType->getTypeParameter().begin(), genArgType->getTypeParameter().begin());
 				    it != make_paired_iterator(genParamType->getTypeParameter().end(), genArgType->getTypeParameter().end()); ++it) {
@@ -457,10 +455,24 @@ namespace types {
 				// check all child nodes
 				for(auto it = make_paired_iterator(paramChildren.begin(), argChildren.begin());
 				    it != make_paired_iterator(paramChildren.end(), argChildren.end()); ++it) {
-					// filter int-type parameter
+					// filter types ...
 					if((*it).first->getNodeCategory() == NC_Type) {
 						// add equality constraints recursively
 						addEqualityConstraints(constraints, static_pointer_cast<const Type>((*it).first), static_pointer_cast<const Type>((*it).second));
+					}
+					// ... and type lists
+					auto paramTypes = (*it).first.isa<TypesPtr>();
+					auto argTypes = (*it).second.isa<TypesPtr>();
+					if(paramTypes && argTypes && paramTypes.size() == argTypes.size()) {
+						// add constraints pairwise
+						for(const auto& cur : make_paired_range(paramTypes,argTypes)) {
+							addEqualityConstraints(constraints,cur.first,cur.second);
+						}
+					} else {
+						if (paramTypes || argTypes) {
+							constraints.makeUnsatisfiable();
+							return;
+						}
 					}
 				}
 
