@@ -173,7 +173,8 @@ namespace types {
 		// step 1: expand variadic type variables
 		NodePtr res = node;
 
-		std::map<NodeAddress,NodePtr> replacements;
+		// get list of parents of type variadic type variables
+		std::set<NodeAddress> parents;
 		for(const auto& cur : getFreeTypeVariables(res)) {
 
 			// only interested in variadic variables mapped in this substitution
@@ -182,8 +183,13 @@ namespace types {
 			// if it is the root, also not interested (con't do anything)
 			if (cur.isRoot()) continue;
 
-			// distinguish parent type
-			auto parent = cur.getParentAddress();
+			// record parent
+			parents.insert(cur.getParentAddress());
+		}
+
+		// expand all parents, in reverse order (bottom up)
+		for(auto it = parents.rbegin(); it != parents.rend(); ++it) {
+			auto parent = it->switchRoot(res);
 
 			// a utility to expand lists of types
 			auto expandList = [&](const TypeList& list)->TypeList {
@@ -229,13 +235,13 @@ namespace types {
 
 				// expand list of types and create new types node
 				auto newList = Types::get(manager,expandList(types->getTypes()));
-				if (*types != *newList) replacements[parent] = newList;
+				if (*types != *newList) res = transform::replaceNode(manager,parent,newList);
 
 			} else if (auto tupleType = parent.isa<TupleTypePtr>()) {
 
 				// expand list of types and create new tuple node
 				auto newTuple = TupleType::get(manager,expandList(tupleType->getElementTypes()));
-				if (*tupleType != *newTuple) replacements[parent] = newTuple;
+				if (*tupleType != *newTuple) res = transform::replaceNode(manager,parent,newTuple);
 
 			} else {
 				assert_not_implemented() << "No support for expanding variadic type variables in " << parent->getNodeType() << " nodes.";
@@ -243,15 +249,11 @@ namespace types {
 
 		}
 
-		// apply variadic variable expansion
-		if (!replacements.empty()) {
-			res = transform::replaceAll(manager,replacements);
-		}
 
 		// step 2: substitute remaining type variables
 
 		// create substitution map
-		replacements.clear();
+		std::map<NodeAddress,NodePtr> replacements;
 		for(const auto& cur : getFreeTypeVariables(res)) {
 
 			// ordinary type variable substitution ..

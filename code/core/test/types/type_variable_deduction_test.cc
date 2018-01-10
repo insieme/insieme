@@ -919,6 +919,40 @@ namespace types {
 
 	}
 
+	TEST(TypeVariableDeduction, MultipleVariadicVariableExpansion) {
+		/**
+		 * This bug was based on only expanding a single appreance of a variadic type parameter,
+		 */
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto funType = builder.parseType("(desc<('Args...),'Res>,'Args...)->'Res").as<FunctionTypePtr>();
+
+		// test with one parameter
+
+		auto sub = getTypeVariableInstantiation(mgr,funType,{
+			builder.parseType("desc<(A),R>"),
+			builder.parseType("A")
+		});
+
+		// the important thing is that a solution is found
+		ASSERT_TRUE(sub);
+
+		// the solution itself is not so important
+		EXPECT_EQ("",toString(*sub));
+		std::cout << *sub << "\n";
+
+
+		// test with two parameter
+
+//		Function Type:  ((art_wi_desc<('Args...),'Res>,'Args...)->'Res)
+//		Argument Types:   art_wi_desc<(int<4>,(ref<array<(ref<array<char,inf>,f,f,plain>,int<8>),inf>,f,f,plain>,int<8>)),int<4>>,int<4>,(ref<array<(ref<array<char,inf>,f,f,plain>,int<8>),inf>,f,f,plain>,int<8>)
+
+
+
+	}
+
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme
