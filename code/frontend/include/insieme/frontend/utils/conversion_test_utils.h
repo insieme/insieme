@@ -199,7 +199,8 @@ namespace utils {
 			actual = builder.normalize(actual);
 			auto print = [](const core::NodePtr& node) {
 				return core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::OPTIONS_DEFAULT | core::printer::PrettyPrinter::USE_COLOR
-				                                              | core::printer::PrettyPrinter::PRINT_DEREFS | core::printer::PrettyPrinter::FULL_LITERAL_SYNTAX);
+				                                              | core::printer::PrettyPrinter::PRINT_DEREFS | core::printer::PrettyPrinter::FULL_LITERAL_SYNTAX
+				                                              | core::printer::PrettyPrinter::CALL_ARG_LINE_BREAKS);
 			};
 
 			// first we check whether the given trees are identical
