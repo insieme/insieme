@@ -939,14 +939,35 @@ namespace types {
 		ASSERT_TRUE(sub);
 
 		// the solution itself is not so important
-		EXPECT_EQ("",toString(*sub));
-		std::cout << *sub << "\n";
+		EXPECT_EQ("{'Args#1->A,'Res->R|Args->['Args#1]}",toString(*sub));
 
 
-		// test with two parameter
+		// test with two parameters
 
-//		Function Type:  ((art_wi_desc<('Args...),'Res>,'Args...)->'Res)
-//		Argument Types:   art_wi_desc<(int<4>,(ref<array<(ref<array<char,inf>,f,f,plain>,int<8>),inf>,f,f,plain>,int<8>)),int<4>>,int<4>,(ref<array<(ref<array<char,inf>,f,f,plain>,int<8>),inf>,f,f,plain>,int<8>)
+		sub = getTypeVariableInstantiation(mgr,funType,{
+			builder.parseType("desc<(A,B),R>"),
+			builder.parseType("A"),
+			builder.parseType("B")
+		});
+
+		// the important thing is that a solution is found
+		ASSERT_TRUE(sub);
+
+		// the solution itself is not so important
+		EXPECT_EQ("{'Args#1->A,'Args#2->B,'Res->R|Args->['Args#1,'Args#2]}",toString(*sub));
+
+
+		// test with no parameters
+
+		sub = getTypeVariableInstantiation(mgr,funType,TypeList{
+			builder.parseType("desc<(),R>")
+		});
+
+		// the important thing is that a solution is found
+		ASSERT_TRUE(sub);
+
+		// the solution itself is not so important
+		EXPECT_EQ("{'Res->R|Args->[]}",toString(*sub));
 
 
 
