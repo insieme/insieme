@@ -53,17 +53,17 @@ int arr[2] = { 42, 43 };
 #pragma test expect_ir(R"INSPIRE(
 def struct IMP_S { x: int<4>; y: uint<4>; };
 def IMP_main = ()->int<4> {
-    <ref<int<4>,f,f,plain>>(lit("initedGlobal" : ref<int<4>,f,f,plain>)) {5};
-    <ref<IMP_S,f,f,plain>>(lit("y" : ref<IMP_S,f,f,plain>)) {1, 5u};
-    <ref<array<IMP_S,inf>,t,f,plain>>(lit("klaus_test" : ref<array<IMP_S,inf>,t,f,plain>)) {<ref<IMP_S,f,f,plain>>(ref_decl(type_lit(ref<IMP_S>))) {1, 2u}, <ref<IMP_S,f,f,plain>>(ref_decl(type_lit(ref<IMP_S>))) {3, 4u}, <ref<IMP_S,f,f,plain>>(ref_decl(type_lit(ref<IMP_S>))) {5, 6u}};
-    <ref<array<char,inf>,f,f,plain>>(lit("char_arr" : ref<array<char,inf>,f,f,plain>)) {'\0'};
-    <ref<array<int<4>,inf>,f,f,plain>>(lit("arr" : ref<array<int<4>,inf>,f,f,plain>)) {42, 43};
+	<ref<int<4>,f,f,plain>>(lit("initedGlobal" : ref<int<4>,f,f,plain>)) {5};
+	<ref<IMP_S,f,f,plain>>(lit("y" : ref<IMP_S,f,f,plain>)) {1, 5u};
+	<ref<array<IMP_S,3u>,t,f,plain>>(lit("klaus_test" : ref<array<IMP_S,3u>,t,f,plain>)) {<ref<IMP_S,f,f,plain>>(ref_decl(type_lit(ref<IMP_S,f,f,plain>))) {1, 2u}, <ref<IMP_S,f,f,plain>>(ref_decl(type_lit(ref<IMP_S,f,f,plain>))) {3, 4u}, <ref<IMP_S,f,f,plain>>(ref_decl(type_lit(ref<IMP_S,f,f,plain>))) {5, 6u}};
+	<ref<array<char,255u>,f,f,plain>>(lit("char_arr" : ref<array<char,255u>,f,f,plain>)) {'\0'};
+	<ref<array<int<4>,2u>,f,f,plain>>(lit("arr" : ref<array<int<4>,2u>,f,f,plain>)) {42, 43};
 
-	lit("initedGlobal":ref<int<4>>);
-	lit("y":ref<IMP_S>);
-	ptr_from_array(lit("klaus_test":ref<array<IMP_S,inf>,t,f>));
-	ptr_from_array(lit("char_arr":ref<array<char,inf>,f,f>));
-	ptr_from_array(lit("arr":ref<array<int<4>,inf>,f,f>));
+	lit("initedGlobal" : ref<int<4>,f,f,plain>);
+	lit("y" : ref<IMP_S,f,f,plain>);
+	ptr_from_array(ref_reinterpret(lit("klaus_test" : ref<array<IMP_S,3u>,t,f,plain>), type_lit(array<IMP_S,inf>)));
+	ptr_from_array(ref_reinterpret(lit("char_arr" : ref<array<char,255u>,f,f,plain>), type_lit(array<char,inf>)));
+	ptr_from_array(ref_reinterpret(lit("arr" : ref<array<int<4>,2u>,f,f,plain>), type_lit(array<int<4>,inf>)));
 	return 0;
 };
 IMP_main

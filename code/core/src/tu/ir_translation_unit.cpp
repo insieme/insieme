@@ -582,6 +582,7 @@ namespace tu {
 
 			// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			core::NodeMap replacements;
+			core::NodeMap initReplacements;
 			for(auto cur : unit.getGlobals()) {
 				// only consider having an initialization value
 				if(!cur.second) { continue; }
@@ -592,7 +593,7 @@ namespace tu {
 				// check if the initialization of any literal specifies the array type more accurately than the literal (e.g. inf -> fixed size)
 				// if so, replace the literal type
 				auto globalRefT = core::analysis::getReferencedType(newLit);
-				auto lit = newLit;
+				ExpressionPtr lit = newLit;
 				auto initT = cur.second->getType();
 				// if we init an array using an initExpr the type is wrapped in a reference and we need to unwrap it
 				if(core::analysis::isRefType(cur.second) && core::lang::isArray(core::analysis::getReferencedType(cur.second))) {
@@ -604,11 +605,14 @@ namespace tu {
 					if(litArrT.isUnknownSize() && !initArrT.isUnknownSize()) {
 						// get the literal
 						auto rT = core::lang::ReferenceType(newLit);
-						auto replacement =
-							resolver.apply(builder.literal(newLit->getStringValue(), core::lang::ReferenceType::create((GenericTypePtr)initArrT, rT.isConst(),
-							                                                                                           rT.isVolatile(), rT.getKind())));
+						auto replacementLit = builder.literal(newLit->getStringValue(),
+						                                      core::lang::ReferenceType::create((GenericTypePtr)initArrT, rT.isConst(), rT.isVolatile(), rT.getKind()));
+						auto replacementCast = lang::buildRefReinterpret(replacementLit, globalRefT);
+						auto replacement = resolver.apply(replacementCast);
+						auto initReplacement = resolver.apply(replacementLit);
 						// add to replacement list
 						replacements.insert({newLit, replacement});
+						initReplacements.insert({newLit, initReplacement});
 						lit = replacement;
 					}
 				}
@@ -638,6 +642,11 @@ namespace tu {
 				if(!core::analysis::isRefType(type) || !ext.isStaticType(core::analysis::getReferencedType(type))) { continue; }
 				// add creation statement
 				inits.push_back(builder.createStaticVariable(lit));
+			}
+
+			// in the inits for our globals, we apply a different set of replacements
+			for(auto& init : inits) {
+				init = transform::replaceAllGen(init->getNodeManager(), init, initReplacements, core::transform::globalReplacement);
 			}
 
 			// build resulting lambda

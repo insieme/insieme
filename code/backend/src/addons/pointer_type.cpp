@@ -169,6 +169,11 @@ namespace addons {
 					}
 				}
 
+				// we don't need to deref unknown sized arrays
+				if(core::lang::isUnknownSizedArray(elementType)) {
+					return CONVERT_ARG(0);
+				}
+
 				// otherwise references and pointers are the same
 				return c_ast::deref(CONVERT_ARG(0));
 			};

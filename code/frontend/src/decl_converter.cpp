@@ -393,7 +393,10 @@ namespace conversion {
 		// for global arrays, purge size information (this is required for sized and unsized arrays in different translation units to be correctly unified)
 		auto refT = core::lang::ReferenceType(globalLit->getType());
 		auto elemType = refT.getElementType();
+		core::TypePtr arrayType;
 		if(core::lang::isArray(elemType)) {
+			// we keep the original  size for later fixing though
+			arrayType = elemType;
 			auto newArrType = core::lang::ArrayType::create(core::lang::ArrayType(elemType).getElementType());
 			auto newRefType = core::lang::ReferenceType::create(newArrType, refT.isConst(), refT.isVolatile(), refT.getKind());
 			globalLit = builder.literal(newRefType, name);
@@ -413,6 +416,12 @@ namespace conversion {
 		if(!var->hasExternalStorage()) {
 			auto init = (var->getInit()) ? converter.convertInitExpr(var->getInit()) : builder.getZero(elemType);
 			init = utils::fixTempMemoryInInitExpression(globalLit, init);
+			// if we originally dropped the size information of an global array init
+			if(arrayType) {
+				// we change the type if the init expr back. (from type ref<array,inf>,...>)
+				auto memLocAddr = core::InitExprAddress(init.as<core::InitExprPtr>())->getType().as<core::GenericTypeAddress>()->getTypeParameter(0);
+				init = core::transform::replaceNode(init->getNodeManager(), memLocAddr, arrayType).as<core::ExpressionPtr>();
+			}
 			core::annotations::attachName(globalLit, name);
 			// remove extern tag, add declared tag
 			annotations::c::markExtern(globalLit, false);
