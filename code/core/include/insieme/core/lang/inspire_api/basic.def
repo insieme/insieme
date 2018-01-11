@@ -298,6 +298,7 @@ GROUP(Instantiate, InstantiateFun, InstantiateCtor, InstantiateDtor, Instantiate
 
 GROUP(TypeCompOp, TypeEq)
 
+LITERAL(ToClosure, "to_closure", "(('a...)->'b) -> ('a...)=>'b")
 
 // Generic Operations -------------------------------------------------------------------------------------------------
 
