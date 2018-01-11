@@ -488,6 +488,9 @@ namespace checks {
 
 		// 2) check that all parameter declarations are either materializing or cpp/rrefs
 		for(const auto& decl : address->getArgumentDeclarations()) {
+			// unit doesn't get materialized, so we don't need to check for correct materialization here
+			if(manager.getLangBasic().isUnit(decl->getType())) continue;
+
 			if(!lang::isCppReference(decl->getType()) && !lang::isCppRValueReference(decl->getType()) && !lang::isReference(decl->getInitialization()) && !analysis::isMaterializingDecl(decl)) {
 				add(res, Message(address, EC_TYPE_INVALID_ARGUMENT_TYPE,
 					             format("Invalid non-materialized argument: \n\t%s\n\t - init expr of type %s", *decl, *decl->getInitialization()->getType()),
