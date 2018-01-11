@@ -39,9 +39,17 @@ void take_ref(int& a) {}
 void take_const_ref(const int& a) {}
 void take_ptr(int* a) {}
 
+
 int* g;
 int& gen_ref() { return *g; }
 int* gen_ptr() { return g; }
+
+typedef int* intPtr;
+void take_const_ptr_ref(const intPtr& a) {}
+const intPtr& return_const_ptr_ref() {
+	int i;
+	return &i;
+}
 
 int main() {
 
@@ -113,6 +121,26 @@ int main() {
 		take_const_ref(5);
 		const int& i = 6;
 		const int& j = 7 + 8;
+	}
+
+
+
+	#pragma test expect_ir(R"(
+		def IMP_take_const_ptr_ref = function (v0 : ref<ptr<int<4>>,t,f,cpp_ref>) -> unit { };
+		def IMP_return_const_ptr_ref = function () -> ref<ptr<int<4>>,t,f,cpp_ref> {
+			var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+			return ref_kind_cast(ref_temp_init(ptr_from_ref(v0)), type_lit(cpp_ref));
+		};
+		{
+			var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+			IMP_take_const_ptr_ref(ref_kind_cast(ref_temp_init(ptr_from_ref(v0)), type_lit(cpp_ref)));
+			IMP_return_const_ptr_ref() materialize ;
+		}
+	)")
+	{
+		int i;
+		take_const_ptr_ref(&i);
+		return_const_ptr_ref();
 	}
 
 	return 0;
