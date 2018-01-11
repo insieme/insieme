@@ -59,6 +59,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/array.h"
+#include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/pointer.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/types/subtyping.h"
@@ -750,6 +751,11 @@ namespace backend {
 			return converter.getCNodeManager()->create<c_ast::Return>(directInit);
 		}
 
+		// test for a materialization, which is implicit in C++
+		if(auto implicit = checkPassingTemporaryMaterializedToReference(context, ptr->getReturnExpr())) {
+			return converter.getCNodeManager()->create<c_ast::Return>(implicit);
+		}
+
 		// return value of return expression
 		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, ptr->getReturnExpr()));
 	}
@@ -811,6 +817,20 @@ namespace backend {
 		if(!conCall.isa<c_ast::ConstructorCallPtr>()) conCall = conCall.as<c_ast::UnaryOperationPtr>()->operand;
 		auto constructorCall = conCall.as<c_ast::ConstructorCallPtr>();
 		return c_ast::init(context.getConverter().getCNodeManager().get(), constructorCall->arguments);
+	}
+
+	c_ast::ExpressionPtr checkPassingTemporaryMaterializedToReference(ConversionContext& context, const core::ExpressionPtr& arg) {
+		const auto& refExt = arg->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+		if(refExt.isCallOfRefKindCast(arg) || refExt.isCallOfRefCast(arg)) {
+			if(core::lang::isCppReference(arg) || core::lang::isCppRValueReference(arg)) {
+				const auto& inner = core::analysis::getArgument(arg, 0);
+				if(refExt.isCallOfRefTempInit(inner)) {
+					const auto& target = core::analysis::getArgument(inner, 0);
+					return context.getConverter().getStmtConverter().convert(context, target).as<c_ast::ExpressionPtr>();
+				}
+			}
+		}
+		return {};
 	}
 
 } // end namespace backend

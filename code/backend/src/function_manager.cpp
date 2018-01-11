@@ -253,6 +253,12 @@ namespace backend {
 					return;
 				}
 
+				// test for a materialization, which is implicit in C++
+				if(auto implicit = checkPassingTemporaryMaterializedToReference(context, cur)) {
+					call->arguments.push_back(implicit);
+					return;
+				}
+
 				// convert the argument
 				c_ast::ExpressionPtr res =
 				    targetType ? stmtConverter.convertInitExpression(context, targetType, cur) : stmtConverter.convertExpression(context, cur);

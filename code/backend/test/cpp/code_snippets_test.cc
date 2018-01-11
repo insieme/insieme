@@ -914,6 +914,25 @@ namespace backend {
 		})
 	}
 
+	TEST(CppSnippet, TemporaryMaterialization) {
+		DO_TEST(R"(
+			def IMP_take_const_ptr_ref = function (v0 : ref<ptr<int<4>>,t,f,cpp_ref>) -> unit { };
+			def IMP_return_const_ptr_ref = function () -> ref<ptr<int<4>>,t,f,cpp_ref> {
+				var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+				return ref_kind_cast(ref_temp_init(ptr_from_ref(v0)), type_lit(cpp_ref));
+			};
+			int<4> main() {
+				var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+				IMP_take_const_ptr_ref(ref_kind_cast(ref_temp_init(ptr_from_ref(v0)), type_lit(cpp_ref)));
+				IMP_return_const_ptr_ref() materialize ;
+				return 0;
+			}
+		)", false, utils::compiler::Compiler::getDefaultCppCompiler(), {
+			EXPECT_PRED2(containsSubString, code, "IMP_take_const_ptr_ref(&v0);");
+			EXPECT_PRED2(containsSubString, code, "return &v0;");
+		})
+	}
+
 	TEST(CppSnippet, Globals) {
 		DO_TEST(R"(
 			def struct A {

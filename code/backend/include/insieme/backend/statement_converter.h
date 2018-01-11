@@ -168,5 +168,10 @@ namespace backend {
 	// in case direct construction is required, returns the required C AST, otherwise returns a null pointer
 	c_ast::ExpressionPtr checkDirectConstruction(ConversionContext& context, const core::TypePtr& targetT, const core::ExpressionPtr& arg);
 
+	// if the passed expression represents the passing of an implicit materialization to a reference or r-value reference,
+	// (i.e. a ref(kind)cast of a ref_temp_init in our IR) then this function will return the converted argument to the ref_temp_init call.
+	// this is what we actually want since the materialization is implicit in C++ in these situations
+	c_ast::ExpressionPtr checkPassingTemporaryMaterializedToReference(ConversionContext& context, const core::ExpressionPtr& arg);
+
 } // end namespace backend
 } // end namespace insieme
