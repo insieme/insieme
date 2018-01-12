@@ -152,6 +152,14 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
         initValueVar = variableGenerator userDefinedAnalysis $ (Addr.goDown 1 addr)
         initValueVal a = extract $ Solver.get a initValueVar
 
+    -- handle explict constructor call
+    IR.Declaration | callsExplicitConstructor addr -> var
+      where
+        -- forared init value
+        var = Solver.mkVariable varId [con] Solver.bot
+        con = Solver.forward declaredValue var
+        declaredValue = varGen $ Addr.goDown 1 addr
+
     -- introduce implicit materialization into symbolic value
     IR.Declaration | isMaterializingDeclaration $ Addr.getNode addr -> var
       where
