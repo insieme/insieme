@@ -195,17 +195,6 @@ namespace backend {
 	};
 
 	/**
-	 * Adjust the semantics of cpp references by introducing ref casts as required.
-	 * This needs to be done in the backend, since the implicit materialization information is lost otherwise.
-	 */
-	class RefCastIntroducer : public PreProcessor {
-	  public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-
-		virtual std::ostream& printTo(std::ostream& out) const { return out << "RefCastIntroducer"; }
-	};
-
-	/**
 	 * Determines whether defaulted methods are ever called.
 	 * (because if so, they need to be generated in their respective structs even in case those structs are C-like otherwise)
 	 */
