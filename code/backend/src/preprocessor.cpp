@@ -89,7 +89,6 @@ namespace backend {
 		if(!(options & SKIP_POINTWISE_EXPANSION)) { steps.push_back(makePreProcessor<InlinePointwise>()); }
 		steps.push_back(makePreProcessor<CorrectRecVariableUsage>());
 		steps.push_back(makePreProcessor<RecursiveLambdaInstantiator>());
-		steps.push_back(makePreProcessor<RefCastIntroducer>());
 		steps.push_back(makePreProcessor<DefaultedMemberCallMarker>());
 		return makePreProcessor<PreProcessingSequence>(steps);
 	}
@@ -220,111 +219,6 @@ namespace backend {
 			return !annotations::isBackendInstantiate(node) && converter.getFunctionManager().isBuiltIn(node);
 		};
 		return core::transform::instantiateTypes(code, skipInstantiation);
-	}
-
-	namespace cl = core::lang;
-
-	core::NodePtr RefCastIntroducer::process(const Converter& converter, const core::NodePtr& code) {
-		core::IRBuilder builder(code->getNodeManager());
-
-		auto builtInLimiter = [](const core::NodePtr& cur) {
-			if(core::lang::isBuiltIn(cur)) return core::transform::ReplaceAction::Prune;
-			return core::transform::ReplaceAction::Process;
-		};
-
-		// 1) declaration stmts
-		auto retCode = core::transform::transformBottomUpGen(code, [](const core::DeclarationStmtPtr& decl) {
-			if(cl::isReference(decl->getVariable()) && cl::isReference(decl->getInitialization())) {
-				cl::ReferenceType varT(decl->getVariable()), initT(decl->getInitialization());
-				if(!varT.isPlain() && initT.isPlain()) {
-					core::DeclarationStmtAddress addr(decl);
-					auto replacement = core::transform::replaceAddress(decl->getNodeManager(), addr->getInitialization(),
-					                                                   cl::buildRefKindCast(decl->getInitialization(), varT.getKind()));
-					return replacement.getRootNode().as<core::DeclarationStmtPtr>();
-				}
-			}
-			return decl;
-		}, builtInLimiter);
-
-		// 2) returns
-		retCode = core::transform::transformBottomUpGen(retCode, [](const core::ReturnStmtPtr& ret) {
-			if(cl::isReference(ret->getReturnType()) && cl::isReference(ret->getReturnExpr())) {
-				cl::ReferenceType varT(ret->getReturnType()), initT(ret->getReturnExpr());
-				if(!varT.isPlain() && initT.isPlain()) {
-					core::ReturnStmtAddress addr(ret);
-					auto replacement = core::transform::replaceAddress(ret->getNodeManager(), addr->getReturnExpr(),
-					                                                   cl::buildRefKindCast(ret->getReturnExpr(), varT.getKind()));
-					return replacement.getRootNode().as<core::ReturnStmtPtr>();
-				}
-			}
-			return ret;
-		}, builtInLimiter);
-
-		// 3) init exprs
-		// this pass can be greatly simplified when we introduce declarations in init expressions
-
-		utils::map::PointerMap<core::TagTypeReferencePtr, core::TagTypePtr> ttAssignment;
-		visitDepthFirstOnce(retCode, [&](const core::TagTypeDefinitionPtr& td){
-			for(const auto& ttb : td->getDefinitions()) {
-				const auto& ttRef = ttb->getTag();
-				auto tt = builder.normalize(builder.tagType(ttRef, td));
-				if(ttAssignment.find(ttRef) != ttAssignment.end() && ttAssignment[ttRef] != tt) {
-					assert_not_implemented()
-							<< "Case of non-unique tag type references not handled here, could be done but complex, and this code should be obsolete in the future\n"
-							<< "Duplicated tag type reference: " << *ttRef;
-				}
-				ttAssignment[ttRef] = tt;
-			}
-		});
-
-		retCode = core::transform::transformBottomUpGen(retCode, [&ttAssignment](const core::InitExprPtr& init) {
-			core::IRBuilder builder(init->getNodeManager());
-			auto initType = core::lang::ReferenceType(init->getType()).getElementType();
-			// scalar init cpp references from plain references
-			if(init.getInitDecls().size() == 1) {
-				auto expr = init.getInitDecls().front()->getInitialization();
-				auto ttype = init->getType();
-				if(cl::isReference(ttype) && cl::isReferenceTo(expr, initType)) {
-						cl::ReferenceType varT(ttype), initT(expr);
-						if(!varT.isPlain() && initT.isPlain()) {
-							return builder.initExpr(init->getMemoryExpr(), cl::buildRefKindCast(expr, varT.getKind()));
-						}
-				}
-			}
-			// init tagtypes
-			auto tt = initType.isa<core::TagTypePtr>();
-			if(auto ttRef = initType.isa<core::TagTypeReferencePtr>()) {
-				tt = ttAssignment[ttRef];
-			}
-			if(tt) {
-				core::TypeList targetTypes;
-				for(auto field: tt->getRecord()->getFields()->getFields()) {
-					targetTypes.push_back(field->getType());
-				}
-				core::ExpressionList newInits;
-				size_t i = 0;
-				for(auto expr: init->getInitExprList()) {
-					if(targetTypes.size() <= i) {
-						newInits.push_back(expr);
-						continue;
-					}
-					auto& ttype = targetTypes[i++];
-
-					if(cl::isReference(ttype) && cl::isReference(expr)) {
-						cl::ReferenceType varT(ttype), initT(expr);
-						if(!varT.isPlain() && initT.isPlain()) {
-							newInits.push_back(cl::buildRefKindCast(expr, varT.getKind()));
-							continue;
-						}
-					}
-					newInits.push_back(expr);
-				}
-				return builder.initExpr(init->getMemoryExpr(), newInits);
-			}
-			return init;
-		}, builtInLimiter);
-
-		return retCode;
 	}
 
 	core::NodePtr DefaultedMemberCallMarker::process(const Converter& converter, const core::NodePtr& code) {

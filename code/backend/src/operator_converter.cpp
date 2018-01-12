@@ -446,11 +446,6 @@ namespace backend {
 			// deref of an assigment, do not
 			if(core::analysis::isCallOf(ARG(0), LANG_EXT_REF.getRefAssign())) { return CONVERT_ARG(0); }
 
-			// deref of init expression is implicit in C/++
-			if(ARG(0).isa<core::InitExprPtr>()) {
-				return CONVERT_ARG(0);
-			}
-
 			return c_ast::derefIfNotImplicit(CONVERT_ARG(0), ARG(0));
 		};
 
@@ -647,8 +642,6 @@ namespace backend {
 			auto srcRefKind = core::lang::getReferenceKind(ARG(0));
 			auto trgRefKind = core::lang::getRepresentedReferenceKind(ARG(1)->getType());
 
-			if(ARG(0).isa<core::InitExprPtr>()) return CONVERT_ARG(0);
-
 			if(srcRefKind == core::lang::ReferenceType::Kind::Plain) {
 				if(trgRefKind == core::lang::ReferenceType::Kind::CppReference || trgRefKind == core::lang::ReferenceType::Kind::CppRValueReference) {
 					// special handling for string literal arguments
@@ -661,7 +654,7 @@ namespace backend {
 				}
 			}
 
-			if(srcRefKind == core::lang::ReferenceType::Kind::CppReference || trgRefKind == core::lang::ReferenceType::Kind::CppRValueReference) {
+			if(srcRefKind == core::lang::ReferenceType::Kind::CppReference || srcRefKind == core::lang::ReferenceType::Kind::CppRValueReference) {
 				if(trgRefKind == core::lang::ReferenceType::Kind::Plain) {
 					return c_ast::ref(CONVERT_ARG(0));
 				}
@@ -731,7 +724,7 @@ namespace backend {
 			// access source
 			auto src = CONVERT_ARG(0);
 			if (core::lang::isFixedSizedArray(arrayType)) {
-				src = c_ast::access(c_ast::derefIfNotImplicit(src, ARG(0)), "data");
+				src = c_ast::access(c_ast::deref(src), "data");
 			}
 
 			// generated code &(X[Y])
@@ -775,14 +768,8 @@ namespace backend {
 			assert_eq(ARG(1)->getNodeType(), core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 
-			auto converted = CONVERT_ARG(0);
-			auto thisObject = c_ast::derefIfNotImplicit(converted, ARG(0));
+			auto thisObject = c_ast::deref(CONVERT_ARG(0));
 			auto access = c_ast::access(thisObject, field);
-
-			// handle inner initExpr
-			if(ARG(0).isa<core::InitExprPtr>()) {
-				access = c_ast::access(converted, field);
-			}
 
 			// handle implicit C array / pointer duality
 			if(core::lang::isVariableSizedArray(core::analysis::getReferencedType(call->getType()))) { return access; }

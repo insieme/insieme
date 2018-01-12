@@ -86,6 +86,10 @@ namespace backend {
 			// to be created: an initialization of the corresponding struct
 			//     (<type>){<list of members>}
 
+			auto addRef = [&](const c_ast::ExpressionPtr& res) {
+				return (core::lang::isPlainReference(ptr)) ? c_ast::ref(res) : res;
+			};
+
 			auto innerType = core::analysis::getReferencedType(ptr->getType());
 			auto typeInfo = converter.getTypeManager().getTypeInfo(context, innerType);
 			context.addDependency(typeInfo.definition);
@@ -99,38 +103,25 @@ namespace backend {
 				type = nullptr;
 			}
 
-			// handle unions
-			if(core::analysis::isUnion(innerType)) {
-				auto cmgr = context.getConverter().getCNodeManager();
-				auto initExp = ptr->getInitExprList().back();
-				// special handling for vector initialization (should not be turned into a struct)
-				auto value = converter.getStmtConverter().convertExpression(context, initExp);
-				auto& refExt = innerType->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
-				if(refExt.isCallOfRefDeref(initExp)) initExp = core::analysis::getArgument(initExp, 0);
-				if(initExp.isa<core::InitExprPtr>()) {
-					auto initValue = value.isa<c_ast::InitializerPtr>();
-					assert_true(initValue);
-					initValue->type = nullptr;
-				}
-
-				return converter.getCNodeManager()->create<c_ast::Initializer>(type, toVector<c_ast::NodePtr>(value));
-			}
-
 			// create init expression
 			c_ast::InitializerPtr init = converter.getCNodeManager()->create<c_ast::Initializer>(type);
 
 			// append initialization values
 			::transform(ptr->getInitExprList(), std::back_inserter(init->values), [&](const core::ExpressionPtr& cur) {
+
 				auto conv = converter.getStmtConverter().convertExpression(context, cur);
 				// disable explicit types for nested init values since those are inferred automatically
 				if(auto nestedInit = conv.isa<c_ast::InitializerPtr>()) {
 					nestedInit->type = nullptr;
 				}
+				if (core::lang::isPlainReference(cur)) {
+					conv = c_ast::deref(conv);
+				}
 				return conv;
 			});
 
 			// support empty initialization
-			if(init->values.empty()) { return init; }
+			if(init->values.empty()) { return addRef(init); }
 
 			// remove last element if it is a variable sized struct
 			if(core::lang::isUnknownSizedArray(ptr->getInitExprList().back())) {
@@ -147,13 +138,13 @@ namespace backend {
 			if(insieme::annotations::c::hasIncludeAttached(innerType) && ptr->getInitExprList().size() == 1) {
 				auto inner = ptr->getInitExprList()[0].isa<core::InitExprPtr>();
 				if(inner && core::lang::isFixedSizedArray(core::analysis::getReferencedType(inner))) {
-					auto innerInit = converter.getStmtConverter().convertExpression(context, inner).as<c_ast::InitializerPtr>();
+					auto innerInit = converter.getStmtConverter().convertExpression(context, inner).as<c_ast::UnaryOperationPtr>()->operand.as<c_ast::InitializerPtr>();
 					init->values[0] = innerInit->values[0];
 				}
 			}
 
 			// return completed
-			return init;
+			return addRef(init);
 		}
 
 		void convertGlobalInit(ConversionContext& context, const core::LiteralPtr& lit, const core::ExpressionPtr& initExpr) {
@@ -172,7 +163,7 @@ namespace backend {
 			ConversionContext innerContext(converter, context.getEntryPoint());
 			auto irInitExpr = initExpr.isa<core::InitExprPtr>();
 			if(irInitExpr) { // it's either an init expr, or...
-				decl->init = visitInitExprInternal(innerContext.getConverter(), irInitExpr, innerContext);
+				decl->init = c_ast::deref(visitInitExprInternal(innerContext.getConverter(), irInitExpr, innerContext));
 			} else { // it has to be a constructor call
 				assert_true(core::analysis::isConstructorCall(initExpr));
 				// change constructor mem loc to ref temp and translate normally
@@ -561,11 +552,9 @@ namespace backend {
 
 		c_ast::ExpressionPtr initValue = convertInitExpression(context, plainType, init);
 
-		// if LHS is cpp ref/rref, or we have a direct plain ref initialization, remove ref on RHS
-		if(core::lang::isCppReference(var) || core::lang::isCppRValueReference(var)
-		   || (core::lang::isPlainReference(init) && core::lang::isPlainReference(plainType) && core::analysis::isConstructorCall(init))) {
-			auto unOp = initValue.isa<c_ast::UnaryOperationPtr>();
-			if(unOp && unOp->operation == c_ast::UnaryOperation::Reference) initValue = unOp->operand.as<c_ast::ExpressionPtr>();
+		// deref materialized initial value if explicitly initialized
+		if (location == VariableInfo::DIRECT && core::analysis::getRefDeclCall(ptr->getDeclaration())) {
+			initValue = c_ast::deref(initValue);
 		}
 
 		// if the declared variable is undefined, we don't create an initialization value
@@ -747,7 +736,7 @@ namespace backend {
 		}
 
 		// special handling for in-place construction
-		if(auto directInit = checkDirectConstruction(context, ptr->getReturnDeclaration()->getType(), ptr->getReturnExpr())) {
+		if(auto directInit = checkDirectConstruction(context, ptr->getReturnDeclaration())) {
 			return converter.getCNodeManager()->create<c_ast::Return>(directInit);
 		}
 
@@ -756,8 +745,16 @@ namespace backend {
 			return converter.getCNodeManager()->create<c_ast::Return>(implicit);
 		}
 
+		// convert the result expression
+		auto result = convertExpression(context, ptr->getReturnExpr());
+
+		// deref plain references before returning the resulting value
+		if (*ptr->getReturnType() == *ptr->getReturnExpr()->getType() && core::lang::isPlainReference(ptr->getReturnExpr())) {
+			result = c_ast::deref(result);
+		}
+
 		// return value of return expression
-		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, ptr->getReturnExpr()));
+		return converter.getCNodeManager()->create<c_ast::Return>(result);
 	}
 
 	c_ast::NodePtr StmtConverter::visitThrowStmt(const core::ThrowStmtPtr& ptr, ConversionContext& context) {
@@ -805,7 +802,9 @@ namespace backend {
 		return visit(ptr->getSubStatement(), context);
 	}
 
-	insieme::backend::c_ast::ExpressionPtr checkDirectConstruction(ConversionContext& context, const core::TypePtr& targetT, const core::ExpressionPtr& arg) {
+	insieme::backend::c_ast::ExpressionPtr checkDirectConstruction(ConversionContext& context, const core::DeclarationPtr& decl) {
+		auto targetT = decl->getType();
+		auto arg = decl->getInitialization();
 		if(!targetT) return {};
 		if(!(core::lang::isPlainReference(targetT) && core::lang::isPlainReference(arg))) return {};
 		if(!core::analysis::isConstructorCall(arg)) return {};

@@ -153,8 +153,6 @@ namespace addons {
 						}
 					}
 					auto converted = CONVERT_ARG(0);
-					// if directly nested init expression, we need to get its address
-					if(ARG(0).isa<core::InitExprPtr>()) converted = c_ast::ref(converted);
 
 					// If we have an intercepted type or ref_member_access of intercepted types, we must not access the "data" member of the insieme structs
 					auto arg = ARG(0);
@@ -165,7 +163,7 @@ namespace addons {
 
 						// every other access is a normal fixed size array and we actually should access the data member of the struct we created for it
 					} else {
-						return c_ast::access(c_ast::derefIfNotImplicit(converted, ARG(0)), "data");
+						return c_ast::access(c_ast::deref(converted), "data");
 					}
 				}
 

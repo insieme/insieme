@@ -166,7 +166,7 @@ namespace backend {
 	// - in IR, as a non-materializing constructor with a ref_decl as its this parameter
 	// - in C++, it's implemented by performing an in-place construction using the {} syntax
 	// in case direct construction is required, returns the required C AST, otherwise returns a null pointer
-	c_ast::ExpressionPtr checkDirectConstruction(ConversionContext& context, const core::TypePtr& targetT, const core::ExpressionPtr& arg);
+	c_ast::ExpressionPtr checkDirectConstruction(ConversionContext& context, const core::DeclarationPtr& decl);
 
 	// if the passed expression represents the passing of an implicit materialization to a reference or r-value reference,
 	// (i.e. a ref(kind)cast of a ref_temp_init in our IR) then this function will return the converted argument to the ref_temp_init call.

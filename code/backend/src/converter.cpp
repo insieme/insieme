@@ -71,14 +71,14 @@ namespace backend {
 
 		utils::Timer timer = insieme::utils::Timer(getConverterName() + " Preprocessing");
 
-		assert_true(core::checks::check(source).empty())
-			<< "Invalid IR passed to backend: " << core::checks::check(source);
+		assert_correct_ir(source)
+			<< "Invalid IR passed to backend.";
 
 		// pre-process program
 		core::NodePtr processed = getPreProcessor()->process(*this, source);
 
-		assert_true(core::checks::check(processed).empty())
-			<< "Errors introduced by backend pre-processors: " << core::printer::dumpErrors(core::checks::check(processed))
+		assert_correct_ir(processed)
+			<< "Errors introduced by backend pre-processors."
 			<< "Active backend Preprocessors: "<< *getPreProcessor() << std::endl;
 
 		timer.stop();

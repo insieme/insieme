@@ -221,7 +221,7 @@ namespace backend {
 
 	namespace {
 
-		void appendAsArguments(ConversionContext& context, c_ast::CallPtr& call, const core::TypeList& targetTypes, const core::ExpressionList& arguments) {
+		void appendAsArguments(ConversionContext& context, c_ast::CallPtr& call, const core::DeclarationList& decls) {
 			// collect some manager references
 			const Converter& converter = context.getConverter();
 			StmtConverter& stmtConverter = converter.getStmtConverter();
@@ -229,16 +229,19 @@ namespace backend {
 			auto varlistPack = converter.getNodeManager().getLangExtension<core::lang::VarArgsExtension>().getVarlistPack();
 
 			// create a recursive lambda appending arguments to the caller (descent into varlist-pack calls)
-			std::function<void(const core::TypePtr& targetType, const core::ExpressionPtr& argument)> append;
-			auto recLambda = [&](const core::TypePtr& targetType, const core::ExpressionPtr& cur) {
+			std::function<void(const core::DeclarationPtr& argument)> append;
+			auto recLambda = [&](const core::DeclarationPtr& decl) {
+
+				auto cur = decl->getInitialization();
+
+				// -- some special case handling --
 
 				// test if current argument is a variable argument list
 				if(core::analysis::isCallOf(cur, varlistPack)) {
 					// inline arguments of varlist-pack call => append arguments directly
 					const auto& packed = core::transform::extractArgExprsFromCall(cur.as<core::CallExprPtr>());
-
 					for_each(static_pointer_cast<const core::TupleExpr>(packed[0])->getExpressions()->getElements(),
-					         [&](const core::ExpressionPtr& cur) { append(nullptr, cur); });
+					         [&](const core::ExpressionPtr& cur) { append(core::transform::materialize(cur)); });
 					return;
 				}
 
@@ -248,7 +251,7 @@ namespace backend {
 				}
 
 				// test for direct construction
-				if(auto direct = checkDirectConstruction(context, targetType, cur)) {
+				if(auto direct = checkDirectConstruction(context, decl)) {
 					call->arguments.push_back(direct);
 					return;
 				}
@@ -259,18 +262,34 @@ namespace backend {
 					return;
 				}
 
+
+				// -- default case handling --
+
 				// convert the argument
-				c_ast::ExpressionPtr res =
-				    targetType ? stmtConverter.convertInitExpression(context, targetType, cur) : stmtConverter.convertExpression(context, cur);
-				call->arguments.push_back(res);
+				c_ast::ExpressionPtr arg = stmtConverter.convertExpression(context,cur);
+
+				// deref materialized initial value if explicitly initialized (by accessing ref_decl)
+				if (core::analysis::getRefDeclCall(decl)) {
+					arg = c_ast::deref(arg);
+				}
+
+				// add argument
+				call->arguments.push_back(arg);
 
 			};
 			append = recLambda;
 
 			// invoke append for all arguments
-			for(const auto& pair : make_paired_range(targetTypes, arguments)) {
-				append(pair.first, pair.second);
+			for(const auto& decl : decls) {
+				append(decl);
 			}
+		}
+
+		void appendAsArguments(ConversionContext& context, c_ast::CallPtr& call, const core::ExpressionList& args) {
+			auto decls = ::transform(args,[](const core::ExpressionPtr& expr){
+				return core::transform::materialize(expr);
+			});
+			return appendAsArguments(context,call,decls);
 		}
 
 		c_ast::NodePtr handleMemberCall(ConversionContext& context, const core::CallExprPtr& call, c_ast::CallPtr c_call) {
@@ -349,10 +368,9 @@ namespace backend {
 				assert_false(args.empty());
 
 				auto obj = args[0].as<c_ast::ExpressionPtr>();
-				if(!irCallArgs[0].isa<core::InitExprPtr>() && core::lang::isPlainReference(irCallArgs[0])) obj = c_ast::deref(obj);
 				args.erase(args.begin());
 
-				res = c_ast::memberCall(obj, c_call->function, args);
+				res = c_ast::memberCall(c_ast::deref(obj), c_call->function, args);
 			}
 
 			// --------------- virtual member function call -------------
@@ -427,9 +445,6 @@ namespace backend {
 		}
 
 		// helpers for determining target types for parameter expression conversion
-		core::TypeList materializeTypeList(const core::TypeList& types) {
-			return ::transform(types, [](const core::TypePtr& typ) { return core::transform::materialize(typ); });
-		};
 		core::TypeList extractCallTypeList(const core::CallExprPtr& call) {
 			return call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getParameterTypeList();
 		};
@@ -571,7 +586,7 @@ namespace backend {
 
 			// produce call to external literal
 			c_ast::CallPtr res = c_ast::call(info.function->name);
-			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArgumentList());
+			appendAsArguments(context, res, call->getArgumentDeclarationList());
 
 			// add dependencies
 			context.getDependencies().insert(info.prototype);
@@ -600,7 +615,7 @@ namespace backend {
 
 			// produce call to internal lambda
 			c_ast::CallPtr c_call = c_ast::call(info.function->name);
-			appendAsArguments(context, c_call, materializeTypeList(extractCallTypeList(call)), call->getArgumentList());
+			appendAsArguments(context, c_call, call->getArgumentDeclarationList());
 
 			// handle potential member calls
 			auto ret = handleMemberCall(context, call, c_call);
@@ -613,7 +628,7 @@ namespace backend {
 		if(funType->isPlain()) {
 			// add call to function pointer (which is the value)
 			c_ast::CallPtr res = c_ast::call(c_ast::parentheses(getValue(context, call->getFunctionExpr())));
-			appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArgumentList());
+			appendAsArguments(context, res, call->getArgumentDeclarationList());
 			return res;
 		}
 
@@ -631,9 +646,9 @@ namespace backend {
 			c_ast::CallPtr res = c_ast::call(funcExpr);
 			core::TypeList types = extractCallTypeList(call);
 			types.erase(types.begin());
-			core::ExpressionList args = call->getArgumentList();
-			args.erase(args.begin());
-			appendAsArguments(context, res, materializeTypeList(types), args);
+			core::DeclarationList decls = call->getArgumentDeclarationList();
+			decls.erase(decls.begin());
+			appendAsArguments(context, res, decls);
 			return res;
 		}
 
@@ -649,7 +664,7 @@ namespace backend {
 
 		const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(context, funType);
 		c_ast::CallPtr res = c_ast::call(typeInfo.callerName, c_ast::cast(typeInfo.rValueType, value));
-		appendAsArguments(context, res, materializeTypeList(extractCallTypeList(call)), call->getArgumentList());
+		appendAsArguments(context, res, call->getArgumentDeclarationList());
 
 		// add dependencies
 		context.getDependencies().insert(typeInfo.caller);
@@ -745,9 +760,7 @@ namespace backend {
 
 		// add captured expressions
 		auto boundExpressions = bind->getBoundExpressions();
-		auto emptyTypes = ::transform(boundExpressions, [](const core::NodePtr&) { return core::TypePtr(); });
-		// TODO do we need correct target types for bind expression arguments?
-		appendAsArguments(context, res, emptyTypes, boundExpressions);
+		appendAsArguments(context, res, boundExpressions);
 
 		// done
 		return res;
