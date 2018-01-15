@@ -171,9 +171,12 @@ namespace conversion {
 				if(prefFunType->getParameterTypeList().size() == 2) {
 					VLOG(2) << "CopyOrMove in param list at " << utils::location(clangArgExpr->getLocStart(), converter.getSourceManager()) << "\n";
 					ret = converter.convertExpr(constructExpr->getArg(0));
-					// cast ref as required by copy constructor
-					if(core::lang::isReference(ret)) {
-						ret = core::lang::buildRefCast(ret, prefFunType->getParameterType(1));
+					// cast ref as required by copy/move constructor
+					auto paramType = prefFunType->getParameterType(1);
+					// Note that we only cast here, if also the paramType is a ref-type. This might not be the case if we are translating some code, where some
+					// extensions are not using the type system in the same way we expect here in the frontend
+					if(core::lang::isReference(ret) && core::lang::isReference(paramType)) {
+						ret = core::lang::buildRefCast(ret, paramType);
 					}
 					VLOG(2) << "CXX call converted newArg: " << dumpPretty(ret);
 				}
