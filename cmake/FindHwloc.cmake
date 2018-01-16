@@ -112,9 +112,6 @@ if(WIN32)
   # All good
   #
 
-  set(Hwloc_LIBRARIES ${Hwloc_LIBRARY})
-  set(Hwloc_INCLUDE_DIRS ${Hwloc_INCLUDE_DIR})
-
   include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(
     Hwloc
@@ -164,17 +161,31 @@ else()
     pkg_check_modules(Hwloc ${_hwloc_OPTS} hwloc)
   endif()
 
-  find_library(HWLOC_LIBRARIES NAMES hwloc HINTS "${HWLOC_ROOT}/lib")
-  mark_as_advanced(HWLOC_LIBRARIES)
+  find_path(Hwloc_INCLUDE_DIR
+    NAMES hwloc.h
+    PATHS ${HWLOC_ROOT} ENV HWLOC_ROOT
+    PATH_SUFFIXES include
+  )
+  find_library(Hwloc_LIBRARY
+    NAMES hwloc
+    PATHS ${HWLOC_ROOT} ENV HWLOC_ROOT
+    PATH_SUFFIXES lib
+  )
+  mark_as_advanced(Hwloc_INCLUDE_DIR Hwloc_LIBRARY)
 
   if(Hwloc_FOUND)
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(Hwloc DEFAULT_MSG Hwloc_LIBRARIES)
+    find_package_handle_standard_args(HWLOC DEFAULT_MSG Hwloc_LIBRARY Hwloc_INCLUDE_DIR)
 
     if(_hwloc_output)
       message(STATUS
-        "Found hwloc ${Hwloc_VERSION} in ${Hwloc_INCLUDE_DIRS}:${Hwloc_LIBRARIES}")
+        "Found hwloc ${Hwloc_VERSION} in ${Hwloc_INCLUDE_DIR}:${Hwloc_LIBRARY}")
     endif()
   endif()
+
 endif()
 
+get_filename_component(Hwloc_LIBRARY_DIR ${Hwloc_LIBRARY} DIRECTORY)
+set(Hwloc_INCLUDE_DIRS ${Hwloc_INCLUDE_DIR})
+set(Hwloc_LIBRARIES ${Hwloc_LIBRARY})
+set(Hwloc_LIBRARY_DIRS ${Hwloc_LIBRARY_DIR})

@@ -18,7 +18,7 @@ macro(add_runtime_dependencies target)
 
 	# TODO revisit FindHwloc script
 	if(Hwloc_FOUND)
-		target_link_libraries(${target} ${HWLOC_LIBRARIES})
+		target_link_libraries(${target} ${Hwloc_LIBRARIES})
 		target_include_directories(${target} PRIVATE ${Hwloc_INCLUDE_DIRS})
 	endif()
 endmacro()
