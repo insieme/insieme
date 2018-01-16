@@ -244,7 +244,7 @@ namespace core {
 		}
 
 		vector<Ptr<const Declaration>> getArgumentDeclarationList() const {
-			return (DeclarationList)getArgumentDeclarations();
+			return getArgumentDeclarations();
 		}
 
 		/**
