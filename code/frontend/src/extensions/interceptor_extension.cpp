@@ -378,7 +378,9 @@ namespace extensions {
 					for(unsigned i = 0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
 						initExps.push_back(converter.convertInitExpr(initList->getInit(i)));
 					}
-					return builder.initExprTemp(converter.convertType(initList->getType()), initExps);
+					core::ExpressionPtr retIr = builder.initExprTemp(converter.convertType(initList->getType()), initExps);
+					retIr = utils::fixTempMemoryInInitExpressionInits(retIr);
+					return retIr;
 				}
 			}
 		}
@@ -424,7 +426,9 @@ namespace extensions {
 			// for array initializations, we need to build an init expr rather than a constructor call
 			if(expr->getType()->isArrayType()) {
 				assert_eq(construct->getNumArgs(), 0) << "Interceptor: can't construct array of objects with constructor args";
-				return builder.initExprTemp(converter.convertType(expr->getType()));
+				core::ExpressionPtr retIr = builder.initExprTemp(converter.convertType(expr->getType()));
+				retIr = utils::fixTempMemoryInInitExpressionInits(retIr);
+				return retIr;
 			}
 			auto thisFactory = [&](const core::TypePtr& retType){ return core::lang::buildRefTemp(retType); };
 			return interceptMethodCall(converter, construct->getConstructor(), thisFactory, construct->arguments(), nullptr, explicitTemplateArgs);
