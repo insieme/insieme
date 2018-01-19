@@ -125,7 +125,7 @@ namespace analysis {
 		NodeManager manager;
 		IRBuilder builder(manager);
 		// a member of type reference is non-trivial
-		EXPECT_TRUE(isTrivial(builder.parseType(
+		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
 			"  data: ref<'a,f,f>;"
 			"}")));
@@ -144,7 +144,7 @@ namespace analysis {
 	TEST(TrivialMemberNested, Reference) {
 		NodeManager manager;
 		IRBuilder builder(manager);
-		EXPECT_TRUE(isTrivial(builder.parseType(
+		EXPECT_FALSE(isTrivial(builder.parseType(
 			"struct class {"
 			"  data: struct {"
 			"    data: ref<'a,f,f>;"

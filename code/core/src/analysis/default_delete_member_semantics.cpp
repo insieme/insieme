@@ -83,6 +83,20 @@ namespace analysis {
 			assert_fail() << "Don't know how to convert memberFunction expression " << dumpReadable(implementation) << " to MemberProperties";
 			return {};
 		}
+
+		bool canHaveDefaultDefaultCtor(const FieldList& fields, const FieldInitMap& fieldInits) {
+			return ::all(fields, [&fieldInits](const auto& field) {
+				// if all fields are non-references (so not cpp_ref, cpp_rref), or are references but have an initialization, we can add the default ctor
+				return !lang::isReference(field->getType()) || fieldInits.find(field) != fieldInits.end();
+			});
+		}
+
+		bool canHaveDefaultCopyOrMoveAssignmentOperator(const FieldList& fields) {
+			return ::all(fields, [](const auto& field) {
+				// if all fields are non-references (so not cpp_ref, cpp_rref), we can add the default copy/move assignment operators
+				return !lang::isReference(field->getType());
+			});
+		}
 	}
 
 	bool MemberProperties::operator==(const MemberProperties& rhs) const {
@@ -214,8 +228,8 @@ namespace analysis {
 		bool hasNoMoveOperation = !hasMoveConstructor && !hasMoveAssignment;
 		bool hasNoCopyOrMoveOperation = !hasCopyConstructor && !hasCopyAssignment && !hasMoveConstructor && !hasMoveAssignment;
 
-		// only if the user didn't provide any constructor (not even defaulted or deleted ones), we create a default constructor
-		if(inputMembers.constructors.size() == 0) {
+		// only if the user didn't provide any constructor (not even defaulted or deleted ones) and we can create one based on the fields, we create a default constructor
+		if(inputMembers.constructors.size() == 0 && canHaveDefaultDefaultCtor(fields, fieldInits)) {
 			res.constructors.push_back(defaultDefaultConstructor);
 		}
 
@@ -229,8 +243,8 @@ namespace analysis {
 			res.constructors.push_back(defaultCopyConstructor);
 		}
 
-		// the copy assignment is added if we didn't have one, and the user didn't specify any move operations
-		if(!hasCopyAssignment && hasNoMoveOperation) {
+		// the copy assignment is added if we didn't have one, and the user didn't specify any move operations and we can create one based on the fields
+		if(!hasCopyAssignment && hasNoMoveOperation && canHaveDefaultCopyOrMoveAssignmentOperator(fields)) {
 			res.memberFunctions.push_back(defaultCopyAssignment);
 		}
 
@@ -239,8 +253,8 @@ namespace analysis {
 			res.constructors.push_back(defaultMoveConstructor);
 		}
 
-		// the move assignment is added if we didn't have one, and the user didn't specify a destructor or any copy and move operations
-		if(!hasMoveAssignment && !hasDestructor && hasNoCopyOrMoveOperation) {
+		// the move assignment is added if we didn't have one, and the user didn't specify a destructor or any copy and move operations and we can create one based on the fields
+		if(!hasMoveAssignment && !hasDestructor && hasNoCopyOrMoveOperation && canHaveDefaultCopyOrMoveAssignmentOperator(fields)) {
 			res.memberFunctions.push_back(defaultMoveAssignment);
 		}
 

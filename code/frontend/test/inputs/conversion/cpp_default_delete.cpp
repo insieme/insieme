@@ -101,6 +101,20 @@ struct WildMix {
 	WildMix& operator=(WildMix&& rhs) = delete;
 };
 
+int global;
+struct BasedOnFields1 {
+	int i;
+};
+struct BasedOnFields2 {
+	int i = 5;
+};
+struct BasedOnFields3 {
+	int& i;
+};
+struct BasedOnFields4 {
+	int& i = global;
+};
+
 int main() {
 
 	// verifies that the frontend and the parser handle defaulted and deleted members equally
@@ -191,6 +205,53 @@ int main() {
 		DefaultedMoveAssignment* c12;
 		DeletedMoveAssignment* c13;
 		WildMix* w;
+	}
+
+
+	// Verifies that certain members get removed if we have reference fields. Also checks correct initialization of reference fields in the default ctor
+
+	#pragma test expect_ir(R"(
+		def struct IMP_BasedOnFields1 {
+			i : int<4>;
+		};
+		def struct IMP_BasedOnFields2 {
+			i : int<4>;
+			ctor function() {
+				lit(""INSIEME_DEFAULTED"":ref<array<char,18u>,t,f>);
+				<ref<int<4>,f,f,plain>>((this).i) {5};
+			}
+		};
+		def struct IMP_BasedOnFields3 {
+			i : ref<int<4>,f,f,cpp_ref>;
+			ctor function () = delete;
+			ctor function (other : ref<IMP_BasedOnFields3,t,f,cpp_ref>) = default;
+			ctor function (other : ref<IMP_BasedOnFields3,f,f,cpp_rref>) = default;
+			function IMP__operator_assign_ = (rhs : ref<IMP_BasedOnFields3,t,f,cpp_ref>) -> ref<IMP_BasedOnFields3,f,f,cpp_ref> = delete;
+			function IMP__operator_assign_ = (rhs : ref<IMP_BasedOnFields3,f,f,cpp_rref>) -> ref<IMP_BasedOnFields3,f,f,cpp_ref> = delete;
+		};
+		def struct IMP_BasedOnFields4 {
+			i : ref<int<4>,f,f,cpp_ref>;
+			ctor function() {
+				lit(""INSIEME_DEFAULTED"":ref<array<char,18u>,t,f>);
+				<ref<int<4>,f,f,cpp_ref>>(*(this).i) {ref_kind_cast(lit("global" : ref<int<4>,f,f,plain>), type_lit(cpp_ref))};
+			}
+			ctor function (other : ref<IMP_BasedOnFields4,t,f,cpp_ref>) = default;
+			ctor function (other : ref<IMP_BasedOnFields4,f,f,cpp_rref>) = default;
+			function IMP__operator_assign_ = (rhs : ref<IMP_BasedOnFields4,t,f,cpp_ref>) -> ref<IMP_BasedOnFields4,f,f,cpp_ref> = delete;
+			function IMP__operator_assign_ = (rhs : ref<IMP_BasedOnFields4,f,f,cpp_rref>) -> ref<IMP_BasedOnFields4,f,f,cpp_ref> = delete;
+		};
+		{
+			var ref<ptr<IMP_BasedOnFields1>,f,f,plain> v0 = ref_decl(type_lit(ref<ptr<IMP_BasedOnFields1>,f,f,plain>));
+			var ref<ptr<IMP_BasedOnFields2>,f,f,plain> v1 = ref_decl(type_lit(ref<ptr<IMP_BasedOnFields2>,f,f,plain>));
+			var ref<ptr<IMP_BasedOnFields3>,f,f,plain> v2 = ref_decl(type_lit(ref<ptr<IMP_BasedOnFields3>,f,f,plain>));
+			var ref<ptr<IMP_BasedOnFields4>,f,f,plain> v3 = ref_decl(type_lit(ref<ptr<IMP_BasedOnFields4>,f,f,plain>));
+		}
+	)")
+	{
+		BasedOnFields1* c1;
+		BasedOnFields2* c2;
+		BasedOnFields3* c3;
+		BasedOnFields4* c4;
 	}
 
 	return 0;

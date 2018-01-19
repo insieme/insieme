@@ -43,6 +43,7 @@
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/lang/array.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/transform/materialize.h"
 
 #include "insieme/utils/name_mangling.h"
 #include "insieme/utils/map_utils.h"
@@ -157,6 +158,7 @@ namespace analysis {
 				                                    builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
 				auto otherFieldAccess = builder.callExpr(refExt.getRefMemberAccess(), lang::toPlainReference(otherParam),
 				                                         builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
+				// if the field is a cpp_ref or cpp_rrref we need to add another deref here - but then the ctor won't be used anyways
 
 				// if the field can be copied trivially
 				if(canCopyTrivially(fieldType)) {
@@ -199,6 +201,7 @@ namespace analysis {
 				                                    builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
 				auto otherFieldAccess = builder.callExpr(refExt.getRefMemberAccess(), lang::toPlainReference(otherParam),
 				                                         builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
+				// if the field is a cpp_ref or cpp_rrref we need to add another deref here - but then the assignment won't be used anyways
 
 				// if the field can be copied trivially
 				if(canCopyTrivially(fieldType)) {
@@ -247,15 +250,19 @@ namespace analysis {
 		for(const auto& field : fields) {
 			// get the type and build the member access
 			const auto& fieldType = field->getType();
-			auto fieldAccess = builder.callExpr(refExt.getRefMemberAccess(), builder.deref(thisParam),
-			                                    builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
+			core::ExpressionPtr fieldAccess = builder.callExpr(refExt.getRefMemberAccess(), builder.deref(thisParam),
+			                                                   builder.getIdentifierLiteral(field->getName()), builder.getTypeLiteral(fieldType));
+			// if the field is a cpp_ref or cpp_rrref we need to add another deref here
+			if(lang::isCppReference(fieldType) || lang::isCppRValueReference(fieldType)) {
+				fieldAccess = builder.deref(fieldAccess);
+			}
 
 			const auto& fieldInit = fieldInits.find(field);
 			// if the field can be copied trivially
 			if(canCopyTrivially(fieldType)) {
 				// we only initialize it if it has an initialization
 				if(fieldInit != fieldInits.end()) {
-					bodyStmts.push_back(builder.initExpr(fieldAccess, fieldInit->second));
+					bodyStmts.push_back(builder.initExpr(fieldAccess, transform::castInitializationIfNotMaterializing(fieldType, fieldInit->second)));
 				}
 
 				// otherwise we initialize it in either case
@@ -270,7 +277,7 @@ namespace analysis {
 					if(fieldType.isa<core::TagTypePtr>()) {
 						assert_not_implemented() << "Support for initialization of members of TagType type in default constructor not implemented yet";
 					}
-					auto init = fieldInit->second;
+					auto init = transform::castInitializationIfNotMaterializing(fieldType, fieldInit->second);
 					// strip ctor calls with red_temp as memory location
 					if(core::analysis::isConstructorCall(init)) {
 						auto initCall = init.as<core::CallExprPtr>();

@@ -563,13 +563,13 @@ namespace backend {
 			decl struct B;
 
 			def struct A {
-				data : ref<B>;
+				data : ptr<B>;
 				ctor( ) {}
 				ctor( x : int ) {}
 			};
 
 			def struct B {
-				data : ref<A>;
+				data : ptr<A>;
 				ctor( ) {}
 				ctor( x : int ) {}
 			};
