@@ -55,6 +55,11 @@ namespace transform {
 
 	LambdaIngredients materialize(const LambdaIngredients&);
 
+	/**
+	 * Surrounds the given init with a ref cast to the initializedType if necessary according to materialization semantics
+	 */
+	ExpressionPtr castInitializationIfNotMaterializing(const TypePtr& initializedType, const ExpressionPtr& init);
+
 } // end namespace transform
 } // end namespace core
 } // end namespace insieme

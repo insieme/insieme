@@ -40,6 +40,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/lang/reference.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation_utils.h"
 
@@ -137,6 +138,17 @@ namespace transform {
 
 		// done
 		return out;
+	}
+
+	ExpressionPtr castInitializationIfNotMaterializing(const TypePtr& initializedType, const ExpressionPtr& init) {
+		const auto& initType = init->getType();
+		// we need to add a cast if both types are reference, differ in their kind, but the initializedType is not the materialization of the type of init
+		if(lang::isReference(initializedType) && lang::isReference(initType)
+				&& lang::ReferenceType(initializedType).getKind() != lang::ReferenceType(initType).getKind()
+				&& !analysis::isMaterializationOf(initializedType, initType)) {
+			return lang::buildRefKindCast(init, lang::getReferenceKind(initializedType));
+		}
+		return init;
 	}
 
 } // end namespace transform

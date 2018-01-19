@@ -122,7 +122,7 @@ namespace conversion {
 				// materialize the argument if it isn't already of reference type, and cast as necessary
 				auto arg = expr;
 				if(!core::lang::isReference(arg)) arg = utils::convertMaterializingExpr(converter, expr);
-				callArguments.push_back(utils::castInitializationIfNotMaterializing(paramType, arg));
+				callArguments.push_back(core::transform::castInitializationIfNotMaterializing(paramType, arg));
 			}
 			core::ExpressionList initList;
 			std::copy(funParams.cbegin()+1, funParams.cend(), std::back_inserter(initList));

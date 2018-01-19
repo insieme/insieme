@@ -143,8 +143,6 @@ namespace conversion {
 		size_t i = 0;
 		std::transform(callExpr->arg_begin(), callExpr->arg_end(), std::back_inserter(newArgs), [&](const clang::Expr* clangArgExpr) {
 			return convertCxxArgExpr(clangArgExpr, paramTypeList[i++]);
-//			auto arg = convertCxxArgExpr(clangArgExpr, paramTypeList[i]);
-//			return utils::castInitializationIfNotMaterializing(paramTypeList[i++], arg);
 		});
 
 		// Implicit materialization of this argument is not performed in clang AST
@@ -398,7 +396,7 @@ namespace conversion {
 					// materialize the argument if it isn't already of reference type, and cast as necessary
 					auto arg = expr;
 					if(!core::lang::isReference(arg)) arg = utils::convertMaterializingExpr(converter, expr);
-					initFunArguments.push_back(utils::castInitializationIfNotMaterializing(paramType, arg));
+					initFunArguments.push_back(core::transform::castInitializationIfNotMaterializing(paramType, arg));
 				}
 				core::ExpressionList initList;
 				for(auto i = initFunParams.cbegin()+1; i != initFunParams.cend(); ++i) {
@@ -810,7 +808,7 @@ namespace conversion {
 				<< "Mismatch between number of captures in generated struct and number of initializers while translating LambdaExpr";
 			const auto& fieldType = fields[fieldIndex++]->getType();
 			auto declType = core::transform::materialize(fieldType);
-			auto init = utils::castInitializationIfNotMaterializing(declType, converter.convertCxxArgExpr(capture, fieldType));
+			auto init = core::transform::castInitializationIfNotMaterializing(declType, converter.convertCxxArgExpr(capture, fieldType));
 			decls.push_back(builder.declaration(declType, init));
 		}
 

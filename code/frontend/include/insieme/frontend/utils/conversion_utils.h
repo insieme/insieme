@@ -83,10 +83,6 @@ namespace utils {
 	///
 	core::ExpressionPtr convertMaterializingExpr(conversion::Converter& converter, const core::ExpressionPtr& retIr);
 
-	/// Surrounds the given init with a ref cast to the initializedType if necessary according to materialization semantics
-	///
-	core::ExpressionPtr castInitializationIfNotMaterializing(const core::TypePtr& initializedType, const core::ExpressionPtr& init);
-
 	/// Prepare the given 'this' argument if necessary
 	///
 	core::ExpressionPtr prepareThisExpr(conversion::Converter& converter, core::ExpressionPtr thisArg);

@@ -201,7 +201,7 @@ namespace conversion {
 
 				// build init expression
 				auto irInit = converter.convertCxxArgExpr(clangInitExpr);
-				irInit = utils::castInitializationIfNotMaterializing(irMember->getType(), irInit);
+				irInit = core::transform::castInitializationIfNotMaterializing(irMember->getType(), irInit);
 				retStmts.push_back(builder.initExpr(irMember, irInit));
 			}
 			return retStmts;

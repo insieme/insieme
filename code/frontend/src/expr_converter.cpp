@@ -855,7 +855,7 @@ namespace conversion {
 			// we use the field type to get the desired decl type and we may also need to cast the init expression accordingly
 			for(unsigned index = 0; index < values.size(); ++index) {
 				auto declType = core::transform::materialize(structType->getStruct()->getFields()->getElement(index)->getType());
-				auto init = utils::castInitializationIfNotMaterializing(declType, values[index]);
+				auto init = core::transform::castInitializationIfNotMaterializing(declType, values[index]);
 				decls.push_back(builder.declaration(declType, init));
 			}
 

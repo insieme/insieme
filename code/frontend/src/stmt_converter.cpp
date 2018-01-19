@@ -56,6 +56,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/materialize.h"
 
 using namespace clang;
 
@@ -133,7 +134,7 @@ namespace conversion {
 			}
 
 			// maybe add necessary casts if not materializing
-			initExp = utils::castInitializationIfNotMaterializing(convertedDecl.first->getType(), initExp);
+			initExp = core::transform::castInitializationIfNotMaterializing(convertedDecl.first->getType(), initExp);
 
 			// build ir declaration
 			return builder.declarationStmt(convertedDecl.first, initExp);
@@ -169,7 +170,7 @@ namespace conversion {
 		if(clang::Expr* expr = retStmt->getRetValue()) {
 			auto returnExpr = converter.convertCxxArgExpr(expr);
 			// maybe add necessary casts if not materializing
-			returnExpr = utils::castInitializationIfNotMaterializing(retType, returnExpr);
+			returnExpr = core::transform::castInitializationIfNotMaterializing(retType, returnExpr);
 			// case of return void_function();
 			if(isUnitRet) {
 				retIr.push_back(returnExpr);
