@@ -1027,11 +1027,6 @@ namespace checks {
 		// get initializers
 		auto initDecls = address.getAddressedNode()->getInitDecls();
 
-		auto materialize = [&](const TypePtr& tt) -> TypePtr {
-			if(!core::lang::isReference(tt)) return IRBuilder(mgr).refType(tt);
-			return tt;
-		};
-
 		// check if we are initializing a scalar
 		if(initDecls.size() == 1) {
 			if(types::typeMatchesWithOptionalMaterialization(mgr, refType, initDecls.front()->getType())) {
@@ -1059,7 +1054,7 @@ namespace checks {
 				unsigned i = 0;
 				for(const auto& cur : initDecls) {
 					core::TypePtr fieldType = nominalize(fields[i]->getType());
-					core::TypePtr requiredType = materialize(fieldType);
+					core::TypePtr requiredType = transform::materialize(fieldType);
 					core::TypePtr isType = nominalize(cur->getType());
 					if (!types::isSubTypeOf(isType,requiredType)) {
 						add(res, Message(address->getInitDecls()[i], EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_TYPE,
@@ -1091,7 +1086,7 @@ namespace checks {
 				core::TypePtr isType = nominalize(initDecls.front()->getType());
 				bool matchesAny = false;
 				for(const auto& field : unionType->getFields()) {
-					if(types::typeMatchesWithOptionalMaterialization(mgr, materialize(nominalize(field->getType())), isType)) matchesAny = true;
+					if(types::typeMatchesWithOptionalMaterialization(mgr, transform::materialize(nominalize(field->getType())), isType)) matchesAny = true;
 				}
 				if(!matchesAny) {
 					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_TYPE,
@@ -1117,7 +1112,7 @@ namespace checks {
 			core::TypePtr requiredType = arrType.getElementType();
 			for(const auto& cur : initDecls) {
 				core::TypePtr isType = cur->getType();
-				if(!types::typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
+				if(!types::typeMatchesWithOptionalMaterialization(mgr, transform::materialize(requiredType), isType)) {
 					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 										format("Invalid type of array-member initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
 										Message::ERROR));
@@ -1141,7 +1136,7 @@ namespace checks {
 			for(const auto& cur : initDecls) {
 				core::TypePtr requiredType = nominalize(elementTypes[i++]);
 				core::TypePtr isType = nominalize(cur->getType());
-				if(!types::typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
+				if(!types::typeMatchesWithOptionalMaterialization(mgr, transform::materialize(requiredType), isType)) {
 					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
 									 format("Invalid type of tuple-element initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
 									 Message::ERROR));
