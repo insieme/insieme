@@ -767,6 +767,41 @@ namespace types {
 
 	}
 
+	TEST(ReturnTypeDeduction, Bug_PassPlainReferenceToTypeVariable) {
+
+		// This bug has been encountered by the AllScale compiler developers:
+		//		Function Type:  ((dependencies,art_wi_desc<('Args...),'Res>,'InitArgs...)->treeture<'Res,f>)
+		//		Argument Types:   dependencies,art_wi_desc<(int<4>),unit>,ref<int<4>,t,f,plain>
+		// The return type could not be deduced.
+		//
+		// The cause of the bug was that when passing a reference to a type type variable, which is not a reference
+		// type, an implicit materialization was impossed as if the type variable would have been a generic type.
+		// This implicit materialization is not allowed starting from an ref<'a,t,f,plain>.
+		//
+		// Fix: implicit materialization is no longer attempted if the parameter type is a type variable.
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto deduce = [&](const TypePtr& fun, const TypeList& args) {
+			return deduceReturnType(fun.as<FunctionTypePtr>(), args);
+		};
+
+		auto type = [&](const std::string& type) {
+			return builder.parseType(type);
+		};
+
+
+		// parse the function type
+		auto funType = type("(deps,desc<('A...),'R>,'I...) -> t<'R,f>");
+		ASSERT_TRUE(funType);
+
+		EXPECT_EQ("t<unit,f>", toString(*deduce(funType, { type("deps"),     type("desc<(int<4>),unit>"),  type("ref<int<4>,t,f,plain>")})));
+		EXPECT_EQ("t<uint<4>,f>", toString(*deduce(funType, { type("deps"),     type("desc<(int<4>),uint<4>>"),  type("ref<int<4>,t,f,plain>")})));
+
+
+	}
+
 } // end namespace types
 } // end namespace core
 } // end namespace insieme

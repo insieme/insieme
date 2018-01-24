@@ -909,6 +909,9 @@ namespace types {
 			TypeList materializedArguments = arguments;
 			for (size_t i = 0; i < parameter.size(); i++) {
 
+				// skip materialization if target type is a type variable
+				if (parameter[i].isa<TypeVariablePtr>()) continue;
+
 				bool isRefArg = lang::isReference(arguments[i]);
 				bool isRefParam = lang::isReference(parameter[i]);
 
