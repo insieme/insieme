@@ -41,6 +41,8 @@
 #include "insieme/core/test/test_utils.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/core/types/return_type_deduction.h"
+
 namespace insieme {
 namespace core {
 namespace lang {
@@ -181,7 +183,7 @@ namespace lang {
 
 		// assign
 		EXPECT_TRUE(builder.callExpr(ext.getRefAssign(), refExpr, valueExpr));
-		ASSERT_DEATH_IF_SUPPORTED( builder.callExpr(ext.getRefAssign(), constRefExpr, valueExpr), ".*");
+		EXPECT_THROW(builder.callExpr(ext.getRefAssign(), constRefExpr, valueExpr), types::ReturnTypeDeductionException);
 		// dies without message? Release nothing, debug assert: regex takes everithing
 		EXPECT_TRUE(builder.callExpr(ext.getRefAssign(), volatileRefExpr, valueExpr));
 

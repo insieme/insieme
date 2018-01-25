@@ -905,9 +905,13 @@ namespace core {
 
 			TypePtr res = types::deduceReturnType(funType, argumentTypes, false);
 
-			assert_true(res) << "Unable to deduce return type!\n"
-					"Function Type:  " << *funType << "\n"
-					"Argument Types:   " << join(",", argumentTypes, print<deref<TypePtr>>()) << "\n";
+			// if there is no result ...
+			if (!res) {
+				// ... throw an exception informing the user
+				throw types::ReturnTypeDeductionException(
+					format("Unable to deduce return type!\nFunction Type:  %s\nArgument Types:   %s\n", *funType, join(",",argumentTypes,print<deref<TypePtr>>()))
+				);
+			}
 
 			return res;
 		}
