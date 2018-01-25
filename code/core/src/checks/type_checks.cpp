@@ -965,20 +965,30 @@ namespace checks {
 			return core::transform::transformBottomUpGen(input, [](const core::TagTypePtr& tt) { return tt->getTag(); }, core::transform::globalReplacement);
 		}
 
-		core::TagTypePtr findTagTypeForReference(const TypePtr type, const NodeAddress& location) {
-			// if we have a reference rather than the actual tag type, find it
-			TagTypePtr tagT = nullptr;
-			if(auto tagR = type.isa<TagTypeReferencePtr>()) {
-				visitPathBottomUpInterruptible(location, [&tagR, &tagT](const TagTypeDefinitionPtr& ttDef) {
-					if(::any(ttDef.getDefinitions(), [&tagR](const TagTypeBindingPtr& ttb){ return ttb->getTag() == tagR; })) {
-						tagT = IRBuilder(ttDef.getNodeManager()).tagType(tagR, ttDef);
-						return true;
-					}
-					return false;
-				});
-			}
-			return tagT;
+		bool isCopyInit(const InitExprPtr& init) {
+
+			// a copy init is when the init parameter is the same type as the resulting value
+
+			// 1) check number of declarations
+			auto decls = init->getInitDecls();
+			if (decls.size() != 1) return false;
+			auto decl = decls[0];
+
+			// 2) check type of declaration
+			auto resType = init->getType();
+
+			// if declared and result type are identical => we have a copy init
+			return (*resType == *decl->getType());
 		}
+
+		TypeList collectFields(const TagTypePtr& tagType) {
+			TypeList res;
+			for(const auto& cur : tagType->getRecord()->getFields()) {
+				res.push_back(cur->getType());
+			}
+			return res;
+		}
+
 	}
 
 	OptionalMessageList InitExprTypeCheck::visitInitExpr(const InitExprAddress& address) {
@@ -1007,170 +1017,168 @@ namespace checks {
 			);
 		}
 
-
+		// the type of the object initialized
 		TypePtr type = analysis::getReferencedType(refType);
 
-		// test that all declarations are materializing declarations or cpp references
-		for(const auto cur : address->getInitDecls()) {
-			auto decl = cur.getAddressedNode();
-			auto dT = decl->getType();
-			auto iT = decl->getInitialization()->getType();
+		// the list of element declarations
+		auto decls = initExpr->getInitDecls();
 
-			if (!lang::isCppReference(iT) && !lang::isCppRValueReference(dT) && !analysis::isMaterializingDecl(decl)) {
-				add(res, Message(cur, EC_TYPE_INVALID_ARGUMENT_TYPE,
-					 format("Invalid non-materializing declaration in init expression: \n\tdecl-type: %s\n\tinit-type: %s", *dT, *iT),
-					 Message::ERROR));
-			}
-		}
+		// Part 1: collect list of element types to be initialized
 
+		// the list of elements to be initialized
+		TypeList elements;
 
-		// get initializers
-		auto initDecls = address.getAddressedNode()->getInitDecls();
+		// special case: it is a copy initialization
+		if (isCopyInit(initExpr)) {
+			elements.push_back(type);
 
-		auto materialize = [&](const TypePtr& tt) -> TypePtr {
-			if(!core::lang::isReference(tt)) return IRBuilder(mgr).refType(tt);
-			return tt;
-		};
+		// handle structs
+		} else if (type.isa<TagTypePtr>() && type.as<TagTypePtr>()->isStruct()) {
 
-		// check if we are initializing a scalar
-		if(initDecls.size() == 1) {
-			if(types::typeMatchesWithOptionalMaterialization(mgr, refType, initDecls.front()->getType())) {
-				return res;
-			}
-		}
+			// just collect fields
+			elements = collectFields(type.as<TagTypePtr>());
 
-		auto tagT = type.isa<TagTypePtr>();
-		if(!tagT) {
-			tagT = findTagTypeForReference(type, address);
-		}
-		if(tagT) {
-			// test struct types
-			core::StructPtr structType = analysis::isStruct(tagT->peel());
-			if(structType) {
-				std::vector<FieldPtr> fields = structType->getFields()->getFields();
-				// check number of initializers
-				if(initDecls.size() != fields.size()) {
-					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-						             format("Wrong number of initialization expressions (%d expressions for %d fields)", initDecls.size(), fields.size()),
-						             Message::ERROR));
-					return res;
-				}
-				// check type of values within init expression
-				unsigned i = 0;
-				for(const auto& cur : initDecls) {
-					core::TypePtr fieldType = nominalize(fields[i]->getType());
-					core::TypePtr requiredType = materialize(fieldType);
-					core::TypePtr isType = nominalize(cur->getType());
-					if (!types::isSubTypeOf(isType,requiredType)) {
-						add(res, Message(address->getInitDecls()[i], EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_TYPE,
-										 format("Invalid type of struct-member initialization:\n\t - expected type: %s\n\t   - actual type: %s", *requiredType, *isType),
-										 Message::ERROR));
+		// handle unions
+		} else if (type.isa<TagTypePtr>() && type.as<TagTypePtr>()->isUnion()) {
+
+			// get fields
+			auto options = collectFields(type.as<TagTypePtr>());
+
+			// pick fitting option
+			if (decls.empty()) {
+				elements.push_back(options[0]);
+			} else {
+
+				// the value might be the decl type or its element type
+				auto trgA = decls[0]->getType();
+				auto trgB = (lang::isReference(trgA)) ? analysis::getReferencedType(trgA) : trgA;
+
+				// search for a match
+				for(const auto& cur : options) {
+					if (*cur == *trgA || *cur == *trgB) {
+						elements.push_back(cur);
+						break;
 					}
-
-					// also, if field is a reference, the declaration should not be initializing
-					if ((lang::isCppReference(fieldType) || lang::isCppRValueReference(fieldType)) && analysis::isMaterializingDecl(cur)) {
-						add(res, Message(address->getInitDecls()[i], EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_MATERIALIZATION,
-										 format("Invalid materializing struct-member initialization:\n\t - field type: %s\n\t    - init type: %s", *fieldType, *isType),
-										 Message::ERROR));
-					}
-
-					i++;
 				}
-				return res;
+
 			}
 
-			// test unions
-			core::UnionPtr unionType = analysis::isUnion(tagT->peel());
-			if(unionType) {
-				// check for single initializer
-				if(initDecls.size() != 1) {
-					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR, "More (or less) than one initialization expression for union", Message::ERROR));
-					return res;
-				}
-				// check that its type matches any of the union types
-				core::TypePtr isType = nominalize(initDecls.front()->getType());
-				bool matchesAny = false;
-				for(const auto& field : unionType->getFields()) {
-					if(types::typeMatchesWithOptionalMaterialization(mgr, materialize(nominalize(field->getType())), isType)) matchesAny = true;
-				}
-				if(!matchesAny) {
-					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_TYPE,
-						             format("Union initialization expression (of type %s) does not match any union types", isType), Message::ERROR));
-				}
-				return res;
-			}
-		}
+		// handle tuples
+		} else if (auto tupleType = type.isa<TupleTypePtr>()) {
 
-		if(lang::isArray(type)) {
-			lang::ArrayType arrType = lang::ArrayType(type);
-			// check number of initializers
-			if(arrType.isConstSize()) {
-				if(initDecls.size() > arrType.getNumElements()) {
-					add(res,
-						Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-						        format("Too many initialization expressions (%d expressions for array size %d)", initDecls.size(), arrType.getNumElements()),
-						        Message::ERROR));
-					return res;
+			// just take the element types
+			elements = tupleType->getElementTypes();
+
+		// handle arrays
+		} else if (lang::isArray(type)) {
+
+			// parse array
+			auto array = lang::ArrayType(type);
+
+			// check max elements
+			if (array.isConstSize() && decls.size() > array.getNumElements()) {
+				add(res,
+					Message(address,
+							EC_TYPE_INVALID_INITIALIZATION_EXPR,
+							format("Too many initialization expressions (%d expressions for array size %d)", decls.size(), array.getNumElements()),
+							Message::ERROR
+					)
+				);
+
+			}
+
+			// create list of elements to be initialized
+			for(std::size_t i=0; i<decls.size(); i++) {
+				elements.push_back(array.getElementType());
+			}
+
+		// handle remaining generic types
+		} else if (type.isa<GenericTypePtr>() && !lang::isReference(type)) {
+
+			// for generic types we have to accept any element list (it may be an intercepted type and the init expression is a call to a ctor)
+			for (const auto& cur : decls) {
+				auto type = cur->getType();
+				if (lang::isPlainReference(type)) {
+					elements.push_back(analysis::getReferencedType(type));
+				} else {
+					elements.push_back(type);
 				}
 			}
-			// check type of values within init expression
-			core::TypePtr requiredType = arrType.getElementType();
-			for(const auto& cur : initDecls) {
-				core::TypePtr isType = cur->getType();
-				if(!types::typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
-					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-										format("Invalid type of array-member initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
-										Message::ERROR));
-				}
-			}
+
+		// handle everything else
+		} else {
+
+			// anything else can not be initialized
+			add(res,
+				Message(
+					address,
+					EC_TYPE_INVALID_INITIALIZATION_EXPR,
+					format("InitExpr can not be utilized to initialize %s of kind %s", *type, type->getNodeType()),
+					Message::ERROR
+				)
+			);
+
+			// done
 			return res;
 		}
 
-		if(auto tupleType = type.isa<TupleTypePtr>()) {
 
-			core::TypeList elementTypes = tupleType->getElementTypes();
-			// check number of initializers
-			if(initDecls.size() != elementTypes.size()) {
-				add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-								 format("Wrong number of initialization expressions (%d expressions for %d elements)", initDecls.size(), elementTypes.size()),
-								 Message::ERROR));
-				return res;
+		// Part 2: compare list with list of declarations
+
+		// step 2a: check number of init values
+		if (elements.size() != decls.size()) {
+			add(res,
+				Message(
+					address,
+					EC_TYPE_INVALID_INITIALIZATION_EXPR,
+					format("Wrong number of initialization expressions - %d expressions for %d elements", decls.size(), elements.size()),
+					Message::ERROR
+				)
+			);
+		}
+
+		// step 2b: check types of init declarations
+		for(std::size_t i=0; i<(std::min(elements.size(),decls.size())); i++) {
+
+			// get element type and declaration address
+			auto element = elements[i];
+			auto decl = address->getInitDecls()[i];
+
+			// A) declaration must be materializing or a C++ reference
+			{
+				auto declNode = decl.getAddressedNode();
+				auto dT = declNode->getType();
+				auto iT = declNode->getInitialization()->getType();
+
+				if (!lang::isCppReference(iT) && !lang::isCppRValueReference(dT) && !analysis::isMaterializingDecl(declNode)) {
+					add(res, Message(decl, EC_TYPE_INVALID_ARGUMENT_TYPE,
+						 format("Invalid non-materializing declaration in init expression: \n\tdecl-type: %s\n\tinit-type: %s", *dT, *iT),
+						 Message::ERROR));
+				}
 			}
-			// check type of values within init expression
-			unsigned i = 0;
-			for(const auto& cur : initDecls) {
-				core::TypePtr requiredType = nominalize(elementTypes[i++]);
-				core::TypePtr isType = nominalize(cur->getType());
-				if(!types::typeMatchesWithOptionalMaterialization(mgr, materialize(requiredType), isType)) {
-					add(res, Message(address, EC_TYPE_INVALID_INITIALIZATION_EXPR,
-									 format("Invalid type of tuple-element initialization - expected type: \n%s, actual: \n%s", *requiredType, *isType),
+
+			// B) declaration type must match element type
+			{
+				core::TypePtr elementType = nominalize(element);
+				core::TypePtr requiredType = core::transform::materialize(elementType);
+				core::TypePtr isType = nominalize(decl.getAddressedNode()->getType());
+				if (!types::isSubTypeOf(isType,requiredType)) {
+					add(res, Message(decl, EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_TYPE,
+									 format("Invalid type of element initialization:\n\t - expected type: %s\n\t   - actual type: %s", *requiredType, *isType),
+									 Message::ERROR));
+				}
+
+				// also, if field is a reference, the declaration should not be materializing
+				if ((lang::isCppReference(elementType) || lang::isCppRValueReference(elementType)) && analysis::isMaterializingDecl(decl)) {
+					add(res, Message(decl, EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_MATERIALIZATION,
+									 format("Invalid materializing element initialization:\n\t - element type: %s\n\t      - init type: %s", *elementType, *isType),
 									 Message::ERROR));
 				}
 			}
-			return res;
+
 		}
 
-		// generic types which are not builtins could be the result of interception and therefore need to be initializable with everything
-		if(auto genTy = type.isa<GenericTypePtr>()) {
-			if(!lang::isBuiltIn(genTy))	return res;
-		}
-
-		add(res,
-			Message(
-				address,
-				EC_TYPE_INVALID_INITIALIZATION_EXPR,
-				format("Invalid type of initialization\n"
-						"\t    initialized type: %s\n"
-						"\t    argument type(s): %s\n"
-						"\t declaration type(s): %s\n",
-						*refType,
-						join(",",initDecls,[](std::ostream& out, const DeclarationPtr& decl){ out << *decl->getInitialization()->getType(); }),
-						join(",",initDecls,[](std::ostream& out, const DeclarationPtr& decl){ out << *decl->getType(); })
-				),
-				Message::ERROR
-			)
-		);
-
+		// done
 		return res;
 	}
 

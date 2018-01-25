@@ -1007,41 +1007,123 @@ namespace checks {
 		core::ExpressionPtr cppRefValueB = builder.literal(builder.parseType("cpp_ref<B,t,f>"), "b");
 		core::ExpressionPtr cppRefValueC = builder.literal(builder.parseType("cpp_ref<C,t,f>"), "c");
 
+		core::DeclarationPtr valueA_matDecl = builder.declaration(builder.parseType("ref<A,f,f,plain>"),valueA);
+		core::DeclarationPtr valueB_matDecl = builder.declaration(builder.parseType("ref<B,f,f,plain>"),valueB);
+		core::DeclarationPtr valueC_matDecl = builder.declaration(builder.parseType("ref<C,f,f,plain>"),valueC);
+
+		core::DeclarationPtr valueA_nonMatDecl = builder.declaration(builder.parseType("ref<A,t,f,cpp_ref>"),cppRefValueA);
+		core::DeclarationPtr valueB_nonMatDecl = builder.declaration(builder.parseType("ref<B,t,f,cpp_ref>"),cppRefValueB);
+		core::DeclarationPtr valueC_nonMatDecl = builder.declaration(builder.parseType("ref<C,t,f,cpp_ref>"),cppRefValueC);
+
+		ASSERT_PRED1(analysis::isMaterializingDecl, valueA_matDecl);
+		ASSERT_PRED1(analysis::isMaterializingDecl, valueB_matDecl);
+		ASSERT_PRED1(analysis::isMaterializingDecl, valueC_matDecl);
+
+		ASSERT_FALSE(analysis::isMaterializingDecl(valueA_nonMatDecl));
+		ASSERT_FALSE(analysis::isMaterializingDecl(valueB_nonMatDecl));
+		ASSERT_FALSE(analysis::isMaterializingDecl(valueC_nonMatDecl));
+
 		// create the resulting tuple type
 		auto tupleType = builder.tupleType({ typeA, typeB });
 
 		// create some init expressions
 		core::ExpressionList ok = {
-			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueA, valueB }),
-			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueA, cppRefValueB }),
-			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ cppRefValueA, valueB }),
-			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ cppRefValueA, cppRefValueB })
+			builder.initExprTemp(builder.refType(tupleType), DeclarationList{ valueA_matDecl, valueB_matDecl })
 		};
 
 		core::ExpressionList err = {
-			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueA }),
-			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueA, valueA }),
-			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueB, valueA }),
-			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueB, valueB }),
-			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ valueA, valueB, valueC }),
-			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ cppRefValueA, cppRefValueA }),
-			builder.initExprTemp(builder.refType(tupleType), ExpressionList{ cppRefValueB, cppRefValueA })
+			builder.initExprTemp(builder.refType(tupleType), DeclarationList{ valueA_matDecl }),
+			builder.initExprTemp(builder.refType(tupleType), DeclarationList{ valueB_matDecl, valueA_matDecl }),
+			builder.initExprTemp(builder.refType(tupleType), DeclarationList{ valueA_matDecl, valueC_matDecl }),
+			builder.initExprTemp(builder.refType(tupleType), DeclarationList{ valueC_matDecl, valueB_matDecl }),
+			builder.initExprTemp(builder.refType(tupleType), DeclarationList{ valueA_matDecl, valueB_matDecl, valueC_matDecl }),
+			builder.initExprTemp(builder.refType(tupleType), DeclarationList{ valueA_matDecl, valueB_nonMatDecl }),
+			builder.initExprTemp(builder.refType(tupleType), DeclarationList{ valueA_nonMatDecl, valueB_matDecl }),
+			builder.initExprTemp(builder.refType(tupleType), DeclarationList{ valueA_nonMatDecl, valueB_nonMatDecl })
 		};
 
 		// conduct checks
 		CheckPtr typeCheck = make_check<InitExprTypeCheck>();
 
 		for(const auto& cur : ok) {
-			EXPECT_TRUE(check(cur, typeCheck).empty()) << "Failed on " << dumpReadable(cur);
+			EXPECT_TRUE(check(cur, typeCheck).empty()) << "Failed on " << dumpReadable(cur) << "\nIssues: " << check(cur, typeCheck);
 		}
 
 		for(const auto& cur : err) {
 			auto errors = check(cur, typeCheck);
 			EXPECT_FALSE(errors.empty()) << "Should have failed on " << dumpReadable(cur);
-			if (!errors.empty()) {
-				EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(cur), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
-			}
 		}
+	}
+
+	TEST(InitExprTypeCheck, Array) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto decl = [&](const std::string& declType, const std::string& initType) {
+			auto type = builder.parseType(declType);
+			auto value = builder.literal("X",builder.parseType(initType));
+			return builder.declaration(type,value);
+		};
+
+		auto arrayType = builder.parseType("array<int<4>,2>");
+
+		ASSERT_TRUE(lang::isArray(arrayType));
+
+		// conduct checks
+		CheckPtr typeCheck = make_check<InitExprTypeCheck>();
+
+		// -- variants that are OK --
+
+		// a simple value-materialization should be ok
+		auto init = builder.initExprTemp(builder.refType(arrayType), DeclarationList{
+			decl("ref<int<4>,f,f,plain>","int<4>"),
+			decl("ref<int<4>,f,f,plain>","int<4>")
+		});
+		EXPECT_TRUE(check(init,typeCheck).empty());
+
+		// also for sub-types
+		init = builder.initExprTemp(builder.refType(arrayType), DeclarationList{
+			decl("ref<int<2>,f,f,plain>","int<2>"),
+			decl("ref<uint<2>,f,f,plain>","uint<2>")
+		});
+		EXPECT_TRUE(check(init,typeCheck).empty());
+
+		// to few elements should be fine
+		init = builder.initExprTemp(builder.refType(arrayType), DeclarationList{
+			decl("ref<int<4>,f,f,plain>","int<4>")
+		});
+		EXPECT_TRUE(check(init,typeCheck).empty());
+
+
+		// -- faulty variants --
+
+		// too many elements should not be allowed
+		init = builder.initExprTemp(builder.refType(arrayType), DeclarationList{
+			decl("ref<int<4>,f,f,plain>","int<4>"),
+			decl("ref<int<4>,f,f,plain>","int<4>"),
+			decl("ref<int<4>,f,f,plain>","int<4>")
+		});
+		EXPECT_FALSE(check(init,typeCheck).empty());
+		EXPECT_PRED2(containsMSG, check(init, typeCheck), Message(NodeAddress(init), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+
+		// all elements have to be materializing declarations
+		EXPECT_TRUE(analysis::isMaterializingDecl(decl("ref<int<4>,f,f,plain>","int<4>")));
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl("int<4>","int<4>")));
+
+		init = builder.initExprTemp(builder.refType(arrayType), DeclarationList{
+			decl("int<4>","int<4>"),
+			decl("ref<int<4>,f,f,plain>","int<4>")
+		});
+		EXPECT_FALSE(check(init,typeCheck).empty());
+		EXPECT_PRED2(containsMSG, check(init, typeCheck), Message(InitExprAddress(init)->getInitDecls()[0], EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
+		init = builder.initExprTemp(builder.refType(arrayType), DeclarationList{
+			decl("ref<int<4>,f,f,plain>","int<4>"),
+			decl("int<4>","int<4>")
+		});
+		EXPECT_FALSE(check(init,typeCheck).empty());
+		EXPECT_PRED2(containsMSG, check(init, typeCheck), Message(InitExprAddress(init)->getInitDecls()[1], EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+
 	}
 
 	TEST(UnhandledMemberStructExprTypeCheck, Basic) {
