@@ -115,7 +115,7 @@ namespace lang {
 			return arr->getParents().empty()
 				&& arr->getName()->getValue() == "array"
 				&& (size.isa<TypeVariablePtr>()
-						|| (sizeNumericType && arr.getNodeManager().getLangBasic().isUnsignedInt(sizeNumericType->getValue()->getType())) // if the size is a NumericType, make sure it is unsigned
+						|| sizeNumericType
 						|| isInf(size));
 		}
 
