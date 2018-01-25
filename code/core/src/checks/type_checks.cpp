@@ -1164,7 +1164,7 @@ namespace checks {
 				core::TypePtr isType = nominalize(decl.getAddressedNode()->getType());
 				if (!types::isSubTypeOf(isType,requiredType)) {
 					add(res, Message(decl, EC_TYPE_INVALID_INITIALIZATION_ARGUMENT_TYPE,
-									 format("Invalid type of element initialization:\n\t - expected type: %s\n\t   - actual type: %s", *requiredType, *isType),
+									 format("Invalid type of element initialization:\n\t - expected declaration type: %s\n\t   - actual declaration type: %s", *requiredType, *isType),
 									 Message::ERROR));
 				}
 
