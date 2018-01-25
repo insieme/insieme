@@ -993,7 +993,6 @@ namespace checks {
 
 	OptionalMessageList InitExprTypeCheck::visitInitExpr(const InitExprAddress& address) {
 		OptionalMessageList res;
-		auto& mgr = address->getNodeManager();
 
 		// extract type and check for ref
 		InitExprPtr initExpr = address.getAddressedNode();
@@ -1092,8 +1091,14 @@ namespace checks {
 				elements.push_back(array.getElementType());
 			}
 
+		// handle references that are not copy initializations
+		} else if (lang::isReference(type)) {
+
+			// anything else can not be initialized
+			elements.push_back(type);
+
 		// handle remaining generic types
-		} else if (type.isa<GenericTypePtr>() && !lang::isReference(type)) {
+		} else if (type.isa<GenericTypePtr>()) {
 
 			// for generic types we have to accept any element list (it may be an intercepted type and the init expression is a call to a ctor)
 			for (const auto& cur : decls) {

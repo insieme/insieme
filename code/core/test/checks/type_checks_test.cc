@@ -1126,6 +1126,41 @@ namespace checks {
 
 	}
 
+	TEST(InitExprTypeCheck, CppReferences) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto cppRef = builder.parseType("ref<int<4>,f,f,cpp_ref>");
+		auto cppRRef = builder.parseType("ref<int<4>,f,f,cpp_rref>");
+
+		auto cppRefLit = builder.parseExpr("lit(\"X\":ref<int<4>,f,f,cpp_ref>)");
+		auto cppRRefLit = builder.parseExpr("lit(\"X\":ref<int<4>,f,f,cpp_rref>)");
+
+		auto cppRefDecl = builder.declaration(cppRef,cppRefLit);
+		auto cppRRefDecl = builder.declaration(cppRRef,cppRRefLit);
+
+		EXPECT_FALSE(analysis::isMaterializingDecl(cppRefDecl));
+		EXPECT_FALSE(analysis::isMaterializingDecl(cppRRefDecl));
+
+		// create check
+		CheckPtr typeCheck = make_check<InitExprTypeCheck>();
+
+		// it should be possible to initialize a cppRef by a cppRef
+		auto init = builder.initExprTemp(builder.refType(cppRef), DeclarationList{ cppRefDecl });
+		EXPECT_TRUE(check(init,typeCheck).empty());
+
+		init = builder.initExprTemp(builder.refType(cppRRef), DeclarationList{ cppRRefDecl });
+		EXPECT_TRUE(check(init,typeCheck).empty());
+
+		// but not the with non-matching references
+		init = builder.initExprTemp(builder.refType(cppRef), DeclarationList{ cppRRefDecl });
+		EXPECT_FALSE(check(init,typeCheck).empty());
+
+		init = builder.initExprTemp(builder.refType(cppRRef), DeclarationList{ cppRefDecl });
+		EXPECT_FALSE(check(init,typeCheck).empty());
+
+	}
+
 	TEST(UnhandledMemberStructExprTypeCheck, Basic) {
 		NodeManager manager;
 		IRBuilder builder(manager);
