@@ -67,7 +67,7 @@ int main() {
 			i : int<4>;
 			j : ref<int<4>,f,f,cpp_ref>;
 			ctor function () {
-				<ref<int<4>,f,f,cpp_ref>>(*(this).j) {ref_kind_cast((this).i, type_lit(cpp_ref))};
+				<ref<ref<int<4>,f,f,cpp_ref>,f,f,plain>>((this).j) {ref_kind_cast((this).i, type_lit(cpp_ref))};
 			}
 		};
 		{

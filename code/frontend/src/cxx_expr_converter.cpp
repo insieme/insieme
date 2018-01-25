@@ -337,7 +337,7 @@ namespace conversion {
 			frontend_assert(form.isConstant()) << "Non const-sized new[] not yet implemented";
 			arrTy.setSize(form.getIntegerValue());
 
-			core::ExpressionPtr retIr = builder.initExpr(builder.undefinedNew((core::GenericTypePtr)arrTy), initExpr.getInitExprList());
+			core::ExpressionPtr retIr = builder.initExpr(builder.undefinedNew((core::GenericTypePtr)arrTy), initExpr.getInitDecls());
 			return retIr;
 		}
 
@@ -398,11 +398,12 @@ namespace conversion {
 					if(!core::lang::isReference(arg)) arg = utils::convertMaterializingExpr(converter, expr);
 					initFunArguments.push_back(core::transform::castInitializationIfNotMaterializing(paramType, arg));
 				}
-				core::ExpressionList initList;
+				const auto declType = core::transform::materialize(elemType);
+				core::DeclarationList decls;
 				for(auto i = initFunParams.cbegin()+1; i != initFunParams.cend(); ++i) {
-					initList.push_back(*i);
+					decls.push_back(builder.declaration(declType, *i));
 				}
-				arr = builder.initExpr(memloc, initList);
+				arr = builder.initExpr(memloc, decls);
 			}
 			auto initFunRetType = core::lang::buildPtrType(elemType);
 			auto initFunType = builder.functionType(initFunParamTypes, initFunRetType);

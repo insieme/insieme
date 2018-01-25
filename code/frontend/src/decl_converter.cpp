@@ -145,23 +145,20 @@ namespace conversion {
 
 				// check if field or delegating initialization
 				auto fieldDecl = init->getMember();
+				core::TypePtr initTargetType;
 				if(fieldDecl) {
 					// access IR field
 					auto access = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>().getRefMemberAccess();
 					auto retType = converter.convertVarType(fieldDecl->getType().getUnqualifiedType());
 					auto fieldType = core::lang::ReferenceType(retType).getElementType();
-					// if Cpp ref or Cpp Rref then use that reference type as field type
-					bool unwrap = false;
+					// if Cpp ref or Cpp Rref then we need to cast the init to that type later on
 					if(!core::lang::isPlainReference(retType)) {
 						fieldType = retType;
+						initTargetType = fieldType;
 						retType = builder.refType(fieldType);
-						unwrap  = true;
 					}
 					irMember = builder.callExpr(retType, access, irThis, builder.getIdentifierLiteral(fieldDecl->getNameAsString()),
 						                        builder.getTypeLiteral(fieldType));
-					if(unwrap) {
-						irMember = builder.deref(irMember);
-					}
 				}
 				// handle CXXDefaultInitExpr
 				auto clangInitExpr = init->getInit();
@@ -201,7 +198,7 @@ namespace conversion {
 
 				// build init expression
 				auto irInit = converter.convertCxxArgExpr(clangInitExpr);
-				irInit = core::transform::castInitializationIfNotMaterializing(irMember->getType(), irInit);
+				irInit = core::transform::castInitializationIfNotMaterializing(initTargetType ? initTargetType : irMember->getType(), irInit);
 				retStmts.push_back(builder.initExpr(irMember, irInit));
 			}
 			return retStmts;

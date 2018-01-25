@@ -233,7 +233,7 @@ int main() {
 			i : ref<int<4>,f,f,cpp_ref>;
 			ctor function() {
 				lit(""INSIEME_DEFAULTED"":ref<array<char,18u>,t,f>);
-				<ref<int<4>,f,f,cpp_ref>>(*(this).i) {ref_kind_cast(lit("global" : ref<int<4>,f,f,plain>), type_lit(cpp_ref))};
+				<ref<ref<int<4>,f,f,cpp_ref>,f,f,plain>>((this).i) {ref_kind_cast(lit("global" : ref<int<4>,f,f,plain>), type_lit(cpp_ref))};
 			}
 			ctor function (other : ref<IMP_BasedOnFields4,t,f,cpp_ref>) = default;
 			ctor function (other : ref<IMP_BasedOnFields4,f,f,cpp_rref>) = default;

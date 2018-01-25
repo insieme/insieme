@@ -124,13 +124,16 @@ namespace conversion {
 				if(!core::lang::isReference(arg)) arg = utils::convertMaterializingExpr(converter, expr);
 				callArguments.push_back(core::transform::castInitializationIfNotMaterializing(paramType, arg));
 			}
-			core::ExpressionList initList;
-			std::copy(funParams.cbegin()+1, funParams.cend(), std::back_inserter(initList));
+			const auto initDeclType = core::transform::materialize(memberType);
+			core::DeclarationList initDecls;
+			for(auto it = funParams.cbegin()+1; it != funParams.cend(); ++it) {
+				initDecls.push_back(builder.declaration(initDeclType, *it));
+			}
 
 			// build the body of the ctor, which will allocate a new array and copy the elements, assign the length and the original flag
 			auto arrayType = core::lang::ArrayType::create(memberType, numElements);
 			auto memloc = builder.undefinedNew(arrayType);
-			auto arrayInitExpr = builder.initExpr(memloc, initList);
+			auto arrayInitExpr = builder.initExpr(memloc, initDecls);
 
 			auto arrayMemberAccess = buildMemberAccess(thisVar, "_M_array", core::lang::PointerType::create(memberType, true, false));
 			auto ptrInit = core::lang::buildPtrCast(core::lang::buildPtrFromArray(arrayInitExpr), true, false);
