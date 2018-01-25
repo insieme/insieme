@@ -138,7 +138,7 @@ namespace backend {
 				var ref<IMP_RefMember,f,f,plain> refmem = IMP_RefMember::(ref_decl(type_lit(ref<IMP_RefMember,f,f,plain>)));
 
 				var ref<int<4>,f,f,plain> main_int = 0;
-				var ref<IMP_A,t,f,plain> a_instance = <ref<IMP_A,f,f,plain>>(ref_decl(type_lit(ref<IMP_A,t,f,plain>))) {1, ref_kind_cast(main_int,type_lit(cpp_ref))};
+				var ref<IMP_A,t,f,plain> a_instance = <ref<IMP_A,t,f,plain>>(ref_decl(type_lit(ref<IMP_A,t,f,plain>))) {1, ref_kind_cast(main_int,type_lit(cpp_ref))};
 				a_instance.x;
 				*a_instance.y;
 
@@ -163,7 +163,7 @@ namespace backend {
 				cdr : ref<IMP_D,t,f,cpp_ref>;
 				ctor function () {
 					IMP_D::((this).dD);
-					<ref<ref<IMP_D,f,f,cpp_ref>,f,f,plain>>((this).dr) {*(this).dD};
+					<ref<ref<IMP_D,f,f,cpp_ref>,f,f,plain>>((this).dr) { ref_kind_cast((this).dD, type_lit(cpp_ref)) };
 					<ref<ref<IMP_D,t,f,cpp_ref>,f,f,plain>>((this).cdr) {*(this).dr};
 				}
 			};
