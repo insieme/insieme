@@ -1019,6 +1019,29 @@ namespace checks {
 		// the type of the object initialized
 		TypePtr type = analysis::getReferencedType(refType);
 
+		// handle tag type references
+		if (auto tagTypeRef = type.isa<TagTypeReferencePtr>()) {
+
+			// try to locate surrounding tag type
+			IRBuilder builder(type->getNodeManager());
+			auto success = visitPathBottomUpInterruptible(address,[&](const TagTypeDefinitionAddress& defs){
+				if (defs->getDefinitionOf(tagTypeRef)) {
+					type = builder.tagType(tagTypeRef, defs);
+					return Action::Interrupt;
+				}
+				return Action::Continue;
+			});
+
+			// there should not be any free tag type references
+			assert_true(success);
+
+			if (!success) {
+				// well, there is nothing we can really assume about the fields => accept everything
+				return res;
+			}
+
+		}
+
 		// the list of element declarations
 		auto decls = initExpr->getInitDecls();
 

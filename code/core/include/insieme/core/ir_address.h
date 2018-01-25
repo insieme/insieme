@@ -790,9 +790,9 @@ namespace core {
 		return res;
 	}
 	template <typename T, typename Lambda, typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
-	void visitPathBottomUpInterruptible(const Address<const T>& addr, Lambda lam) {
+	bool visitPathBottomUpInterruptible(const Address<const T>& addr, Lambda lam) {
 		auto visitor = makeLambdaVisitor(lam);
-		visitPathBottomUpInterruptible(addr, visitor);
+		return visitPathBottomUpInterruptible(addr, visitor);
 	}
 
 	template <typename Visitor, typename T>
@@ -802,9 +802,9 @@ namespace core {
 		return res || visitor.visit(addr);
 	}
 	template <typename T, typename Lambda, typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
-	void visitPathTopDownInterruptible(const Address<const T>& addr, Lambda lam) {
+	bool visitPathTopDownInterruptible(const Address<const T>& addr, Lambda lam) {
 		auto visitor = makeLambdaVisitor(lam);
-		visitPathTopDownInterruptible(addr, visitor);
+		return visitPathTopDownInterruptible(addr, visitor);
 	}
 
 	template <typename Visitor>
