@@ -1110,8 +1110,17 @@ namespace parser {
 			// now we need to fix the types of the declarations in the InitExpr for correct materialization
 			const auto& elementType = analysis::getReferencedType(type);
 
+			// if we are initializing an array
+			if(lang::isArray(elementType)) {
+				DeclarationList decls;
+				auto declType = transform::materialize(lang::getArrayElementType(elementType));
+				for(unsigned index = 0; index < list.size(); ++index) {
+					decls.push_back(builder.declaration(declType, list[index]));
+				}
+				return builder.initExpr(memExpr, decls);
+
 			// if we are initializing a struct
-			if(const auto& genType = elementType.isa<core::GenericTypePtr>()) {
+			} else if(const auto& genType = elementType.isa<core::GenericTypePtr>()) {
 				if(tu.getTypes().find(genType) != tu.getTypes().end()) {
 					const auto& tuType = tu.getTypes().find(genType)->second;
 					if(tuType.isStruct()) {

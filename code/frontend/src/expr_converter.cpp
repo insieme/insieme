@@ -878,10 +878,14 @@ namespace conversion {
 				retIr = convertInitExpr(initList->getInit(0));
 				return retIr;
 			} else {
+				core::DeclarationList decls;
+				auto declType = core::transform::materialize(core::lang::getArrayElementType(gT));
 				for(unsigned i = 0; i < initList->getNumInits(); ++i) { // yes, that is really the best way to do this in clang 3.6
-					initExps.push_back(convertInitExpr(initList->getInit(i)));
+					auto init = convertInitExpr(initList->getInit(i));
+					init = core::transform::castInitializationIfNotMaterializing(declType, init);
+					decls.push_back(builder.declaration(declType, init));
 				}
-				retIr = builder.initExprTemp(genType, initExps);
+				retIr = builder.initExpr(core::lang::buildRefTemp(genType), decls);
 			}
 			retIr = utils::fixTempMemoryInInitExpressionInits(retIr);
 		}
