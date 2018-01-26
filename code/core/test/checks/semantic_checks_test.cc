@@ -521,6 +521,18 @@ namespace checks {
 		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
 		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
 
+		decl = mkDecl("(A)->A", "lit(\"X\":(A)->A)");
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("('a)->'a", "lit(\"X\":(A)->A)");
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("('a)->'b", "lit(\"X\":(A)->A)");
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
 
 		// check materializing declarations
 
@@ -596,6 +608,20 @@ namespace checks {
 		EXPECT_TRUE(analysis::isMaterializingDecl(decl));
 		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
 
+		// - functions may be specialized
+
+		decl = mkDecl("ref<(A)->A,f,f,plain>", "lit(\"X\" : (A)->A )");
+		EXPECT_TRUE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("ref<(A)->A,f,f,plain>", "lit(\"X\" : ('a)->'a )");
+		EXPECT_TRUE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("ref<(A)->A,f,f,plain>", "lit(\"X\" : ('a)->'b )");
+		EXPECT_TRUE(analysis::isMaterializingDecl(decl));
+		EXPECT_TRUE(check(decl,declCheck).empty()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
 
 		// -- invalid --
 
@@ -637,6 +663,14 @@ namespace checks {
 		EXPECT_EQ(1,check(decl,declCheck).size()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
 
 		decl = mkDecl("ref<('ts...),f,f,plain>", "lit(\"X\" : ref<(int<4>,bool),f,f,cpp_rref>)");
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
+		EXPECT_EQ(1,check(decl,declCheck).size()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("(A)->B", "lit(\"X\" : ('a)->'a )");
+		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
+		EXPECT_EQ(1,check(decl,declCheck).size()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
+
+		decl = mkDecl("ref<(A)->B,f,f,plain>", "lit(\"X\" : ('a)->'a )");
 		EXPECT_FALSE(analysis::isMaterializingDecl(decl));
 		EXPECT_EQ(1,check(decl,declCheck).size()) << "Declaration:\n" << dumpReadable(decl) << "\nErrors: " << check(decl,declCheck);
 

@@ -218,7 +218,7 @@ namespace checks {
 			auto dT = decl->getType();
 			auto iT = decl->getInitialization()->getType();
 
-			if (!types::isSubTypeOf(iT,dT)) {
+			if (!types::isSubTypeOf(iT,dT) && !(dT.isa<FunctionTypePtr>() && types::isMatchable(iT,dT))) {
 				add(res,Message(
 						decl,
 						EC_SEMANTIC_INVALID_NON_MATERIALIZING_DECLARATION,
@@ -297,6 +297,17 @@ namespace checks {
 
 			// let a value of type T initialize a ref<S,f,f,plain> whenever T is a subtype of S
 			if (declRef.isPlain() && types::isSubTypeOf(initType,declRef.getElementType())) return res;
+
+		}
+
+		// functions can be specialized
+		if (initType.isa<FunctionTypePtr>()) {
+
+			// parse decl type
+			lang::ReferenceType declRef(decl->getType());
+
+			// let a specialized function can be initialized by a more generic function
+			if (declRef.isPlain() && types::isMatchable(declRef.getElementType(),initType)) return res;
 
 		}
 
