@@ -43,6 +43,7 @@
 #include "insieme/core/dump/binary_dump.h"
 #include "insieme/core/dump/binary_utils.h"
 #include "insieme/core/lang/lang.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/assert.h"
 
@@ -81,25 +82,45 @@ namespace haskell {
 
 		// find builtins
 		NodeSet covered;
-		std::map<string, NodeAddress> builtins;
+		std::map<string, std::vector<NodeAddress>> builtins;
 		visitDepthFirstOnce(NodeAddress(root), [&](const ExpressionAddress& expr) {
 			if(covered.contains(expr.getAddressedNode())) return;
 
 			covered.insert(expr.getAddressedNode());
 
 			if(core::lang::isBuiltIn(expr)) {
-				builtins[core::lang::getConstructName(expr)] = expr;
 				if (auto fun = expr.isa<LambdaExprAddress>()) {
-					builtins[core::lang::getConstructName(expr)] = fun->getLambda();
+					builtins[core::lang::getConstructName(expr)].push_back(fun->getLambda());
+				} else {
+					builtins[core::lang::getConstructName(expr)].push_back(expr);
 				}
 			}
 		});
 
-		// attach builtins
-		write<length_t>(out, builtins.size());
-		for(auto& builtin : builtins) {
-			utils::dumpString(out, builtin.first);
-			utils::dumpString(out, toString(builtin.second));
+		// find materializing calls
+		auto materializing_tag = "tag_materializing";
+		assert_true(builtins.find(materializing_tag) == builtins.end()) << "name collision with builtin";
+		visitDepthFirstOnce(NodeAddress(root), [&](const NodeAddress& addr) {
+			if(!core::analysis::isMaterializingCall(addr) && !core::analysis::isMaterializingDecl(addr)) {
+				return;
+			}
+
+			builtins[materializing_tag].push_back(addr);
+		});
+
+		// attach tags
+		{
+			length_t count = 0;
+			for(const auto& builtin : builtins) {
+				count += builtin.second.size();
+			}
+			write<length_t>(out, count);
+			for(const auto& builtin : builtins) {
+				for(const auto& addr : builtin.second) {
+					utils::dumpString(out, builtin.first);
+					utils::dumpString(out, toString(addr));
+				}
+			}
 		}
 
 		// attach addresses
