@@ -47,7 +47,6 @@ import Data.Attoparsec.ByteString
 import Data.Char (chr)
 import Data.List.Split (splitOn)
 import Data.Maybe
-import Data.Tuple
 import Data.Word
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
@@ -68,7 +67,7 @@ parseAddresses = parseOnly $ do
     -- parse components
     parseHeader
     dumpNodes    <- IntMap.fromList <$> zip [0..] <$> parseList parseDumpNode
-    dumpBuiltins <- Map.fromList <$> parseList parseBuiltin
+    dumpBuiltins <- parseList parseBuiltin
     addresses    <- parseList parseNodePath
 
     -- connect components
@@ -79,9 +78,12 @@ parseAddresses = parseOnly $ do
     return $ (\p -> Addr.mkNodeAddress p ir) <$> addresses
 
   where
-      resolve :: IR.Tree -> [Int] -> IR.Tree
-      resolve node []     = node
-      resolve node (x:xs) = resolve (IR.getChildren node !! x) xs
+      resolve :: IR.Tree -> (String, [Int]) -> (String, IR.Tree)
+      resolve root (s, addr) = (s, resolveAddr root addr)
+
+      resolveAddr :: IR.Tree -> [Int] -> IR.Tree
+      resolveAddr node []     = node
+      resolveAddr node (x:xs) = resolveAddr (IR.getChildren node !! x) xs
 
 -- * Parsing the header
 
@@ -143,7 +145,8 @@ connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
                 modify (IntMap.insert index n)
                 return n
 
-markBuiltins :: IR.Tree -> Map.Map String IR.Tree -> IR.Tree
+
+markBuiltins :: IR.Tree -> [(String, IR.Tree)] -> IR.Tree
 markBuiltins root builtins = evalState (go root) Map.empty
   where
     go :: IR.Tree -> State (Map.Map IR.Tree IR.Tree) IR.Tree
@@ -153,12 +156,14 @@ markBuiltins root builtins = evalState (go root) Map.empty
             Just n -> return n
             Nothing -> do
                 children <- mapM go $ IR.getChildren node0
-                let tags1 = maybeToList $ Map.lookup node0 builtinIndex
-                    node1 = node0 { IR.getChildren = children, IR.builtinTags = tags1 }
+                let tags1 = fromMaybe [] $ Map.lookup node0 builtinIndex
+                    node1 = node0 { IR.getChildren = children
+                                  , IR.builtinTags = IR.builtinTags node0 ++ tags1
+                                  }
                 modify (Map.insert node0 node1)
                 return node1
 
-    builtinIndex = Map.fromList $ swap <$> Map.toList builtins
+    builtinIndex = Map.fromListWith (++) $ (\(x,y) -> (y,[x])) <$> builtins
 
 -- * Helper Functions
 

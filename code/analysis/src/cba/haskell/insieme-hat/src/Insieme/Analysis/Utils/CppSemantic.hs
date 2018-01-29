@@ -116,19 +116,17 @@ isMaterializationOf _ _ = False
 
 -- tests whether the given node is a materializing declaration
 isMaterializingDeclaration :: I.Tree -> Bool
-isMaterializingDeclaration (I.Node I.Declaration [declType,I.Node _ (initType:_)]) | isMaterializationOf declType initType = True
-isMaterializingDeclaration (I.Node I.Declaration [_,I.Node I.CallExpr ( _ : fun : _ )]) | isConstructor fun = True
-isMaterializingDeclaration (I.Node I.Declaration [_,I.Node I.InitExpr _]) = True
+isMaterializingDeclaration n@(I.Node I.Declaration _) = hasMaterializingTag n
 isMaterializingDeclaration _ = False
 
 
 -- tests whether the given node is a materializing call
 isMaterializingCall :: I.Tree -> Bool
-isMaterializingCall _ = False        -- the default, for now - TODO: implement real check
--- isMaterializingCall (I.Node I.CallExpr ( resType : (I.Node _ ((I.Node I.FunctionType (_:retType:_)):_)) : _)) = hasMoreReferences resType retType
--- isMaterializingCall _ = False
+-- isMaterializingCall n@(I.Node I.CallExpr _) = hasMaterializingTag n
+isMaterializingCall _ = False
 
-
+hasMaterializingTag :: I.Tree -> Bool
+hasMaterializingTag n = isBuiltin n "tag_materializing"
 
 --- Tests whether a call is a constructor call
 
