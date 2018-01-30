@@ -216,57 +216,50 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
             -- decide based on constructor what to do
             var = case Q.getNodeType ctor of
                 I.LambdaExpr   -> uninitialized -- the constructor is doing the rest
-                I.GenericType  -> interceptable
-                I.TypeVariable -> interceptable
+                I.GenericType  -> valueSemantic  -- here we assume value semantic for all generic types
+                I.TypeVariable -> valueSemantic  -- and all type variables
                 t -> error $ "Unexpected ctor type: " ++ (show t)
 
             -- the default handling
             uninitialized = Solver.mkVariable varId [] $ uninitializedValue analysis
 
-            -- here additional constructors can be integrated
-            interceptable = case () of
+            -- assume that the implicit copy or move constructor is copying the stored value (analysis data is preserved)
+            valueSemantic = var
+              where
+                -- for generic types we copy the memory state of the input parameter (assume value semantic)
+                var = Solver.mkVariable varId [con] Solver.bot
+                con = Solver.createEqualityConstraint dep val var
 
-                -- support for std::array constructor
-                _ | Q.isStdArray ctor -> var
+                dep a = (Solver.toVar initRefVar) : (Solver.toVar . snd <$> initMemStateVars a)
+                val = initMemStateVal
+
+                -- the variable representing a reference to the value passed as argument
+                initRefVar = referenceValue $ I.goDown 1 addr
+                initRefVal a = unRS $ ComposedValue.toValue $ Solver.get a initRefVar
+
+                -- get memory state variables of passed argument
+                initMemStateVars a = if BSet.isUniverse refs then [] else vars
                   where
-                    -- for std::arrays we copy the memory state of the input parameters
-                    var = Solver.mkVariable varId [con] Solver.bot
-                    con = Solver.createEqualityConstraint dep val var
+                    refs = initRefVal a
+                    refList = BSet.toList refs
+                    vars = zip refList $ toStateVar <$> refList
 
-                    dep a = (Solver.toVar initRefVar) : (Solver.toVar . snd <$> initMemStateVars a)
-                    val = initMemStateVal
+                    toStateVar (Reference loc _) = memoryStateValue (MemoryStatePoint pp (MemoryLocation loc)) analysis
+                    toStateVar r = error ("Sorry, unexpected reference value: " ++ (show r))
 
-                    -- the variable representing a reference to the initialized array
-                    initRefVar = referenceValue $ I.goDown 1 addr
-                    initRefVal a = unRS $ ComposedValue.toValue $ Solver.get a initRefVar
+                    pp = ProgramPoint (I.goDown 1 addr) Post
 
-                    -- get memory state variables of initialized nested array
-                    initMemStateVars a = if BSet.isUniverse refs then [] else vars
-                      where
-                        refs = initRefVal a
-                        refList = BSet.toList refs
-                        vars = zip refList $ toStateVar <$> refList
+                -- compute aggregated memory state value
+                initMemStateVal a =
+                    if BSet.isUniverse refs
+                    then Solver.top
+                    else Solver.join values
+                  where
+                    refs = initRefVal a
 
-                        toStateVar (Reference loc _) = memoryStateValue (MemoryStatePoint pp (MemoryLocation loc)) analysis
-                        toStateVar r = error ("Sorry, unexpected reference value: " ++ (show r))
-
-                        pp = ProgramPoint (I.goDown 1 addr) Post
-
-                    -- compute aggregated memory state value
-                    initMemStateVal a =
-                        if BSet.isUniverse refs
-                        then Solver.top
-                        else Solver.join values
-                      where
-                        refs = initRefVal a
-
-                        values = (go <$> initMemStateVars a)
-                        go ((Reference _ dp),memValVar) = ComposedValue.getElement dp $ Solver.get a memValVar
-                        go (r,_) = error ("Unexpected reference value: " ++ (show r))
-
-
-                -- by default, there is no initialization
-                _ | otherwise -> uninitialized
+                    values = (go <$> initMemStateVars a)
+                    go ((Reference _ dp),memValVar) = ComposedValue.getElement dp $ Solver.get a memValVar
+                    go (r,_) = error ("Unexpected reference value: " ++ (show r))
 
         -- handle declarations with implicit constructors (Post-constructor execution)
         I.Declaration | callsImplicitConstructor addr && phase == Post -> case implicitCtorHandler analysis of
@@ -278,6 +271,12 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
 
             constructedStateVar = memoryStateValue (MemoryStatePoint (ProgramPoint addr Internal) ml) analysis
 
+        -- handle declarations with explict constructor calls
+        I.Declaration | callsExplicitConstructor addr -> var
+          where
+            var = Solver.mkVariable varId [con] Solver.bot
+            con = Solver.forward memVar var
+            memVar = memoryStateValue (MemoryStatePoint (ProgramPoint (I.goDown 1 addr) Post) ml) analysis
 
         -- handle declarations without implicit constructors (simple assignments)
         I.Declaration -> var
