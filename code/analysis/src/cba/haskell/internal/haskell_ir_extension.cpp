@@ -44,6 +44,8 @@
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/materialize.h"
 
+#include "insieme/core/types/return_type_deduction.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -139,17 +141,27 @@ namespace internal {
 				return builder.arrayRefElem(call->getArgument(0),call->getArgument(1));
 			}
 
-			// re-type all call expressions (types have to be re-deduced!)
-			auto res = builder.callExpr(call->getFunctionExpr(),call->getArgumentList());
+			try {
 
-			// if the old one was materializing ...
-			if (core::analysis::isMaterializingCall(call)) {
-				// make the new one materializing too
-				res = builder.callExpr(core::transform::materialize(res->getType()),call->getFunctionExpr(),call->getArgumentList());
+				// re-type all call expressions (types have to be re-deduced!)
+				auto res = builder.callExpr(call->getFunctionExpr(),call->getArgumentList());
+
+				// if the old one was materializing ...
+				if (core::analysis::isMaterializingCall(call)) {
+					// make the new one materializing too
+					res = builder.callExpr(core::transform::materialize(res->getType()),call->getFunctionExpr(),call->getArgumentList());
+				}
+
+				// done
+				return res;
+
+			} catch (const core::types::ReturnTypeDeductionException&) {
+
+				// if there is a deduction error, skip the re-typing
+				// results will be false, but debugging by investigating
+				// assignments will be enabled
+				return call;
 			}
-
-			// done
-			return res;
 		});
 	}
 
