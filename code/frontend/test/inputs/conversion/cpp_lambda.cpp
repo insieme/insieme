@@ -126,7 +126,7 @@ int main() {
 		def struct __any_string__class {
 			__any_string__field : ref<int<4>,f,f,cpp_ref>;
 			const function IMP__operator_call_ = () -> unit {
-				*(this).__any_string__field = 5;
+				ref_kind_cast(*(this).__any_string__field, type_lit(plain)) = 5;
 			}
 		};
 		{

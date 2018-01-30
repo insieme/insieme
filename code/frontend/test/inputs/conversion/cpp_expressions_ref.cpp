@@ -272,7 +272,7 @@ int main() {
 		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<ptr<int<4>>,f,f,plain> v1 = ref_decl(type_lit(ref<ptr<int<4>>,f,f,plain>));
 		var ref<ptr<int<4>>,f,f,cpp_ref> v2 = ref_kind_cast(v1, type_lit(cpp_ref));
-		v2 = ptr_from_ref(v0);
+		ref_kind_cast(v2, type_lit(plain)) = ptr_from_ref(v0);
 	})")
 	{
 		int v;
@@ -331,7 +331,7 @@ int main() {
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = ref_kind_cast(v0, type_lit(cpp_ref));
-		v1 = *v0;
+		ref_kind_cast(v1, type_lit(plain)) = *v0;
 	})")
 	{
 		int b;
@@ -342,7 +342,7 @@ int main() {
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = ref_kind_cast(v0, type_lit(cpp_ref));
-		v1 = 1;
+		ref_kind_cast(v1, type_lit(plain)) = 1;
 	})")
 	{
 		int b;
@@ -354,7 +354,7 @@ int main() {
 		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = ref_kind_cast(v0, type_lit(cpp_ref));
 		var ref<int<4>,f,f,cpp_ref> v2 = ref_kind_cast(v0, type_lit(cpp_ref));
-		v1 = *v2;
+		ref_kind_cast(v1, type_lit(plain)) = *v2;
 	})")
 	{
 		int b;
@@ -367,7 +367,7 @@ int main() {
 		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = ref_kind_cast(v0, type_lit(cpp_ref));
 		var ref<int<4>,f,f,cpp_ref> v2 = ref_kind_cast(v0, type_lit(cpp_ref));
-		v0 = *cxx_style_assignment(v1, *v2);
+		v0 = *cxx_style_assignment(ref_kind_cast(v1, type_lit(plain)), *v2);
 	})")
 	{
 		int b;
@@ -381,7 +381,7 @@ int main() {
 	#pragma test expect_ir(R"({
 		var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 		var ref<int<4>,f,f,cpp_ref> v1 = ref_kind_cast(v0, type_lit(cpp_ref));
-		v1 = num_cast(sizeof(type_lit(int<4>)), type_lit(int<4>));
+		ref_kind_cast(v1, type_lit(plain)) = num_cast(sizeof(type_lit(int<4>)), type_lit(int<4>));
 	})")
 	{
 		int a;

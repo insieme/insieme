@@ -84,7 +84,7 @@ namespace utils {
 		/**
 		 * Implements a C++ style assignment (returning the assigned value)
 		 */
-		LANG_EXT_DERIVED(CxxStyleAssignment, "(lhs : ref<'a,f,'b,'c>, rhs : 'a) -> ref<'a,f,'b,'c> { lhs = rhs; return lhs; }")
+		LANG_EXT_DERIVED(CxxStyleAssignment, "(lhs : ref<'a,f,'b,plain>, rhs : 'a) -> ref<'a,f,'b,plain> { lhs = rhs; return lhs; }")
 
 		/**
 		 * Implements the C comma operator semantics
