@@ -133,6 +133,7 @@ referenceValue addr = case Q.getNodeType addr of
             mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.Root)
 
         I.CallExpr | isMaterializingCall (I.getNode addr) ->
+            -- TODO: actualy this should be the same memory location as the return
             mkVariable (idGen addr) [] (compose $ BSet.singleton $ Reference addr DP.Root)
 
         -- the type of a declaration is used to address the memory location of a potential implicit this pointer

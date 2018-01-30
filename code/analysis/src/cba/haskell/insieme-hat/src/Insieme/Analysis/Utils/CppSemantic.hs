@@ -122,11 +122,9 @@ isMaterializingDeclaration _ = False
 
 -- tests whether the given node is a materializing call
 isMaterializingCall :: I.Tree -> Bool
--- isMaterializingCall n@(I.Node I.CallExpr _) = hasMaterializingTag n
+isMaterializingCall n@(I.Node I.CallExpr _) = hasMaterializingTag n
 isMaterializingCall _ = False
 
-hasMaterializingTag :: I.Tree -> Bool
-hasMaterializingTag n = isBuiltin n "tag_materializing"
 
 --- Tests whether a call is a constructor call
 

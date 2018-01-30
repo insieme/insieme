@@ -383,6 +383,13 @@ isBuiltin r n = IR.isBuiltin (node r) n
 isaBuiltin :: (NodeLike a) => a -> Bool
 isaBuiltin n = IR.isaBuiltin $ node n
 
+
+-- ** Materializing
+
+hasMaterializingTag :: (NodeLike a) => a -> Bool
+hasMaterializingTag n = IR.hasMaterializingTag $ node n
+
+
 -- ** Operator
 
 isOperator :: (NodeLike a) => a -> String -> Bool

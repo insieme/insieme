@@ -95,3 +95,6 @@ isBuiltin t s = elem s $ builtinTags t
 
 isaBuiltin :: Tree -> Bool
 isaBuiltin t = not $ null $ builtinTags t
+
+hasMaterializingTag :: Tree -> Bool
+hasMaterializingTag n = isBuiltin n "tag_materializing"
