@@ -349,14 +349,6 @@ namespace extensions {
 			return nullptr;
 		}
 
-		core::CallExprPtr fixMaterializedReturnType(conversion::Converter& converter, const clang::CallExpr* clangCall, const core::CallExprPtr& call) {
-			if(!call) return call;
-			auto irRetType = converter.convertExprType(clangCall);
-			auto newCall = converter.getIRBuilder().callExpr(irRetType, call->getFunctionExpr(), call->getArgumentDeclarations());
-			core::transform::utils::migrateAnnotations(call, newCall);
-			return newCall;
-		}
-
 		const clang::TemplateTypeParmType* getPotentiallyReferencedTemplateTypeParmType(const clang::Type* type) {
 			auto ret = llvm::dyn_cast<clang::TemplateTypeParmType>(type);
 			if(ret) return ret;
@@ -458,8 +450,7 @@ namespace extensions {
 			auto callee = llvm::dyn_cast<clang::MemberExpr>(memberCall->getCallee());
 			if(callee) explicitTemplateArgs = callee->getOptionalExplicitTemplateArgs();
 			auto thisFactory = [&](const core::TypePtr& retType) { return converter.convertExpr(memberCall->getImplicitObjectArgument()); };
-			return fixMaterializedReturnType(converter, memberCall, interceptMethodCall(converter, memberCall->getCalleeDecl(), thisFactory,
-				                                                                        memberCall->arguments(), memberCall, explicitTemplateArgs));
+			return interceptMethodCall(converter, memberCall->getCalleeDecl(), thisFactory, memberCall->arguments(), memberCall, explicitTemplateArgs);
 		}
 		if(auto operatorCall = llvm::dyn_cast<clang::CXXOperatorCallExpr>(expr)) {
 			auto decl = operatorCall->getCalleeDecl();
@@ -470,8 +461,7 @@ namespace extensions {
 					auto argList = operatorCall->arguments();
 					auto thisFactory = [&](const core::TypePtr& retType) { return converter.convertExpr(*argList.begin()); };
 					decltype(argList) remainder(argList.begin() + 1, argList.end());
-					return fixMaterializedReturnType(converter, operatorCall,
-						                             interceptMethodCall(converter, decl, thisFactory, remainder, operatorCall, explicitTemplateArgs));
+					return interceptMethodCall(converter, decl, thisFactory, remainder, operatorCall, explicitTemplateArgs);
 				}
 			}
 		}

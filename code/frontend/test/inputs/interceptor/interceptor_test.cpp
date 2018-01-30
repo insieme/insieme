@@ -115,9 +115,11 @@ void intercept_materialize() {
 	#pragma test expect_ir(R"( {
 		var ref<IMP_RefOpTest,f,f,plain> v0 = lit("IMP_RefOpTest::ctor" : IMP_RefOpTest::())(ref_decl(type_lit(ref<IMP_RefOpTest,f,f,plain>)));
 		var ref<IMP_RefOpTest,f,f,plain> v1 = lit("IMP_RefOpTest::ctor" : IMP_RefOpTest::())(ref_decl(type_lit(ref<IMP_RefOpTest,f,f,plain>)));
-		lit("IMP_RefOpTest::IMP__operator_plus_" : IMP_RefOpTest::(ref<IMP_RefOpTest,t,f,cpp_ref>) -> ref<IMP_RefOpTest,f,f,cpp_ref>)
-			(lit("IMP_RefOpTest::IMP__operator_plus_" : IMP_RefOpTest::(ref<IMP_RefOpTest,t,f,cpp_ref>) -> ref<IMP_RefOpTest,f,f,cpp_ref>)
-				(v0, ref_kind_cast(v1, type_lit(cpp_ref))) materialize , ref_kind_cast(v1, type_lit(cpp_ref))) materialize ;
+		lit("IMP_RefOpTest::IMP__operator_plus_" : IMP_RefOpTest::(ref<IMP_RefOpTest,t,f,cpp_ref>) -> ref<IMP_RefOpTest,f,f,cpp_ref>)(
+				ref_kind_cast(
+						lit("IMP_RefOpTest::IMP__operator_plus_" : IMP_RefOpTest::(ref<IMP_RefOpTest,t,f,cpp_ref>) -> ref<IMP_RefOpTest,f,f,cpp_ref>)(v0, ref_kind_cast(v1, type_lit(cpp_ref))),
+						type_lit(plain)
+				), ref_kind_cast(v1, type_lit(cpp_ref)));
 	} )")
 	{
 		RefOpTest a, b;
@@ -126,7 +128,7 @@ void intercept_materialize() {
 
 	#pragma test expect_ir(R"( {
 		var ref<IMP_RefMethTest,f,f,plain> v0 = lit("IMP_RefMethTest::ctor" : IMP_RefMethTest::())(ref_decl(type_lit(ref<IMP_RefMethTest,f,f,plain>)));
-		lit("IMP_RefMethTest::IMP_meth" : IMP_RefMethTest::() -> ref<IMP_RefMethTest,f,f,cpp_ref>)(v0) materialize ;
+		lit("IMP_RefMethTest::IMP_meth" : IMP_RefMethTest::() -> ref<IMP_RefMethTest,f,f,cpp_ref>)(v0);
 	} )")
 	{
 		RefMethTest a;
