@@ -601,6 +601,32 @@ namespace analysis {
 		EXPECT_TRUE(isMaterializingCall(call6));
 	}
 
+	TEST(IsMaterializingCall, Deref) {
+			NodeManager mgr;
+			IRBuilder builder(mgr);
+
+			// for concrete types
+			ExpressionPtr lit = builder.parseExpr("lit(\"X\":ref<ref<int<4>,f,f,plain>,f,f,plain>)");
+			auto deref = builder.deref(lit);
+
+			// the result type should be an integer reference
+			EXPECT_EQ("ref<int<4>,f,f,plain>",toString(*deref->getType()));
+
+			// this should not be a materializing call
+			EXPECT_FALSE(isMaterializingCall(deref));
+
+			// also for generic types
+			lit = builder.parseExpr("lit(\"X\":ref<ref<'a,f,f,plain>,f,f,plain>)");
+			deref = builder.deref(lit);
+
+			// the result type should be an integer reference
+			EXPECT_EQ("ref<'a,f,f,plain>",toString(*deref->getType()));
+
+			// this should not be a materializing call
+			EXPECT_FALSE(isMaterializingCall(deref));
+
+	}
+
 	TEST(IsMaterializingCall, Pick) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);

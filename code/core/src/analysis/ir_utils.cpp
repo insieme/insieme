@@ -260,9 +260,6 @@ namespace analysis {
 		auto& mgr = candidate->getNodeManager();
 		IRBuilder builder(mgr);
 
-		// shortcut II:
-		if (*callType == *builder.refType(retType)) return true;
-
 		// instantiate return type
 		auto sub = types::getTypeVariableInstantiation(mgr,call);
 
