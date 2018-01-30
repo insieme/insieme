@@ -154,7 +154,9 @@ namespace utils {
 		}
 
 		// return call
-		return converter.getIRBuilder().callExpr(retType, callee, arguments);
+		// note that we create a call type here and set it. This type might then be overridden by applyCallMaterialization, but we still need to set
+		// it here, as we might not be able to deduce the type
+		return fixCallMaterialization(converter.getIRBuilder().callExpr(retType, callee, arguments));
 	}
 
 	core::ExpressionPtr buildEnumConstantExpression(conversion::Converter& converter, const clang::EnumConstantDecl* decl) {
@@ -248,6 +250,21 @@ namespace utils {
 			thisArg = core::lang::toPlainReference(thisArg);
 		}
 		return thisArg;
+	}
+
+	core::CallExprPtr fixCallMaterialization(const core::CallExprPtr& irCall) {
+		// we need some special handling here for materializing calls
+		// if the call returns a cpp_ref or cpp_rref and the set return type is a ref_plain
+		const auto& callReturnType = irCall->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->getReturnType();
+		if(core::lang::isPlainReference(irCall->getType())
+				&& (core::lang::isCppReference(callReturnType) || core::lang::isCppRValueReference(callReturnType))) {
+			// we surround it with a cast to ref_plain and don't use the provided call type
+			core::IRBuilder builder(irCall->getNodeManager());
+			return core::lang::toPlainReference(builder.callExpr(irCall->getFunctionExpr(), irCall->getArgumentDeclarationList())).as<core::CallExprPtr>();
+		}
+
+		// otherwise, we leave the call as is
+		return irCall;
 	}
 
 	core::StatementPtr addIncrementExprBeforeAllExitPoints(const core::StatementPtr& body, const core::StatementPtr& incrementExpression) {

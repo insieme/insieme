@@ -150,7 +150,10 @@ namespace conversion {
 			newArgs[0] = frontend::utils::prepareThisExpr(converter, newArgs[0]);
 		}
 
-		return builder.callExpr(convertExprType(callExpr), funExp, newArgs);
+		// note that we create a call type here and set it. This type might then be overridden by applyCallMaterialization, but we still need to set
+		// it here, as we might not be able to deduce the type
+		auto callType = convertExprType(callExpr);
+		return utils::fixCallMaterialization(builder.callExpr(callType, funExp, newArgs));
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -109,7 +109,7 @@ void intercept_new() {
 
 void intercept_materialize() {
 
-	#pragma test expect_ir(R"(lit("IMP_refFunTest" : () -> ref<int<4>,f,f,cpp_ref>)() materialize)")
+	#pragma test expect_ir(R"(lit("IMP_refFunTest" : () -> ref<int<4>,f,f,cpp_ref>)())")
 	refFunTest();
 
 	#pragma test expect_ir(R"( {

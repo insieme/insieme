@@ -100,7 +100,7 @@ int main() {
 			return *lit("g" : ref<ptr<int<4>>,f,f,plain>);
 		};
 		{
-			IMP_gen_ref() materialize ;
+			IMP_gen_ref();
 			IMP_gen_ptr();
 		}
 	)")
@@ -134,7 +134,7 @@ int main() {
 		{
 			var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
 			IMP_take_const_ptr_ref(ref_kind_cast(ref_temp_init(ptr_from_ref(v0)), type_lit(cpp_ref)));
-			IMP_return_const_ptr_ref() materialize ;
+			IMP_return_const_ptr_ref();
 		}
 	)")
 	{

@@ -87,6 +87,10 @@ namespace utils {
 	///
 	core::ExpressionPtr prepareThisExpr(conversion::Converter& converter, core::ExpressionPtr thisArg);
 
+	/// Applies the correct call materialization semantics
+	///
+	core::CallExprPtr fixCallMaterialization(const core::CallExprPtr& irCall);
+
 	/// Modify the body of a for loop to contain the given update expression before every possible exit point
 	///
 	core::StatementPtr addIncrementExprBeforeAllExitPoints(const core::StatementPtr& body, const core::StatementPtr& incrementExpression);

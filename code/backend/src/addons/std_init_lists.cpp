@@ -79,7 +79,7 @@ namespace addons {
 			// this extension is based upon the symbols defined by the reference module
 			IMPORT_MODULE(core::lang::ReferenceExtension);
 
-			LANG_EXT_LITERAL(InitListAssign, "init_list_assign", "('a, 'b) -> 'b")
+			LANG_EXT_LITERAL(InitListAssign, "init_list_assign", "(ref<'a,f,'b,'c>, 'a) -> ref<'a,f,'b,'c>")
 		};
 
 		/**
@@ -145,6 +145,7 @@ namespace addons {
 								auto name = getName(callee);
 								if(name == utils::getMangledOperatorAssignName()) {
 									replacementCallee = initListExt.getInitListAssign();
+									return builder.callExpr(initListExt.getInitListAssign(), call->getArgument(0), builder.deref(call->getArgument(1)));
 								} else {
 									replacementCallee = builder.literal(name, calleeType);
 								}

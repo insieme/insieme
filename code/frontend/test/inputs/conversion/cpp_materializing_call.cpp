@@ -35,55 +35,75 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
-struct A {};
-struct B {};
+int& forward(int& x) {
+	return x;
+}
+
+void consumeValue(int i) {}
+void consumeRef(int& i) {}
 
 int main() {
+	;
 
-	// reinterpret_cast with different type
-	#pragma test expect_ir(R"({
-		var ref<bool,f,f,plain> v0 = false;
-		ref_reinterpret(v0, type_lit(char)) = 'a';
-	})")
-	{
-		bool b = false;
-		reinterpret_cast<char&>(b) = 'a';
-	}
-
-	// reinterpret_cast with different qualifiers
-	#pragma test expect_ir(R"({
-		var ref<bool,f,f,plain> v0 = false;
-		ref_cast(v0, type_lit(f), type_lit(t), type_lit(plain)) = 'a'!='\0';
-	})")
-	{
-		bool b = false;
-		reinterpret_cast<volatile bool&>(b) = 'a';
-	}
-
-	// reinterpret_cast with different type and qualifiers
-	#pragma test expect_ir(R"({
-		var ref<bool,f,f,plain> v0 = false;
-		ref_cast(ref_reinterpret(v0, type_lit(char)), type_lit(f), type_lit(t), type_lit(plain)) = 'a';
-	})")
-	{
-		bool b = false;
-		reinterpret_cast<volatile char&>(b) = 'a';
-	}
-
-	// reinterpret_cast with classes
 	#pragma test expect_ir(R"(
-		def struct IMP_B { };
-		def struct IMP_A { };
+		def IMP_forward = function (v0 : ref<int<4>,f,f,cpp_ref>) -> ref<int<4>,f,f,cpp_ref> {
+			return v0;
+		};
 		{
-			var ref<IMP_A,f,f,plain> v0 = IMP_A::(ref_decl(type_lit(ref<IMP_A,f,f,plain>)));
-			var ref<IMP_B,f,f,plain> v1 = IMP_B::(ref_decl(type_lit(ref<IMP_B,f,f,plain>)));
-			ref_reinterpret(v0, type_lit(IMP_B)).IMP__operator_assign_(ref_kind_cast(v1, type_lit(cpp_ref)));
+			var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+			var ref<int<4>,f,f,cpp_ref> v1 = ref_kind_cast(v0, type_lit(cpp_ref));
+			v1;
+			IMP_forward(v1);
+			var ref<int<4>,f,f,cpp_ref> v2 = IMP_forward(v1);
 		}
 	)")
 	{
-		A a;
-		B b;
-		reinterpret_cast<B&>(a) = b;
+		int i;
+		int& r = i;
+		r;
+		forward(r);
+		int& r2 = forward(r);
+	}
+
+	#pragma test expect_ir(R"(
+		def IMP_consumeValue = function (v0 : ref<int<4>,f,f,plain>) -> unit { };
+		def IMP_forward = function (v0 : ref<int<4>,f,f,cpp_ref>) -> ref<int<4>,f,f,cpp_ref> {
+			return v0;
+		};
+		def IMP_consumeRef = function (v0 : ref<int<4>,f,f,cpp_ref>) -> unit { };
+		{
+			var ref<int<4>,f,f,plain> v0 = ref_decl(type_lit(ref<int<4>,f,f,plain>));
+			var ref<int<4>,f,f,cpp_ref> v1 = ref_kind_cast(v0, type_lit(cpp_ref));
+			IMP_consumeValue(*v0);
+			IMP_consumeValue(*v1);
+			IMP_consumeValue(
+					*ref_kind_cast(
+							IMP_forward(ref_kind_cast(v0, type_lit(cpp_ref))),
+							type_lit(plain)
+					)
+			);
+			IMP_consumeValue(
+					*ref_kind_cast(IMP_forward(v1), type_lit(plain))
+			);
+			IMP_consumeRef(ref_kind_cast(v0, type_lit(cpp_ref)));
+			IMP_consumeRef(v1);
+			IMP_consumeRef(
+					IMP_forward(ref_kind_cast(v0, type_lit(cpp_ref)))
+			);
+			IMP_consumeRef(IMP_forward(v1));
+		}
+	)")
+	{
+		int i;
+		int& r = i;
+		consumeValue(i);
+		consumeValue(r);
+		consumeValue(forward(i));
+		consumeValue(forward(r));
+		consumeRef(i);
+		consumeRef(r);
+		consumeRef(forward(i));
+		consumeRef(forward(r));
 	}
 
 	return 0;

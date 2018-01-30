@@ -107,14 +107,15 @@ namespace backend {
 			c_ast::InitializerPtr init = converter.getCNodeManager()->create<c_ast::Initializer>(type);
 
 			// append initialization values
-			::transform(ptr->getInitExprList(), std::back_inserter(init->values), [&](const core::ExpressionPtr& cur) {
+			::transform(ptr->getInitDecls()->getDeclarations(), std::back_inserter(init->values), [&](const core::DeclarationPtr& decl) {
 
-				auto conv = converter.getStmtConverter().convertExpression(context, cur);
+				auto conv = converter.getStmtConverter().convertExpression(context, decl->getInitialization());
 				// disable explicit types for nested init values since those are inferred automatically
 				if(auto nestedInit = conv.isa<c_ast::InitializerPtr>()) {
 					nestedInit->type = nullptr;
 				}
-				if (core::lang::isPlainReference(cur)) {
+				// if we are initializing with a declaration, which references part of our own memory here, we add a deref
+				if (core::analysis::getRefDeclCall(decl)) {
 					conv = c_ast::deref(conv);
 				}
 				return conv;

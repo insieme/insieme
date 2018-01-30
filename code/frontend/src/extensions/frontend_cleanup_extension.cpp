@@ -114,6 +114,9 @@ namespace extensions {
 					else if(rExt.isCallOfRefDeref(stmt)) {
 						replacement = core::analysis::getArgument(stmt, 0);
 					}
+					else if(core::lang::isAnyRefCast(stmt)) {
+						replacement = core::analysis::getArgument(stmt, 0);
+					}
 					else if(feExt.isCallOfBoolToInt(stmt)) {
 						replacement = core::analysis::getArgument(stmt, 0);
 					}
@@ -127,6 +130,28 @@ namespace extensions {
 				return builder.compoundStmt(newStmts);
 			}, core::transform::globalReplacement);
 		}
+
+		//////////////////////////////////////////////////////////////////////////
+		// Simplify calls which have no side effects because we cast from Type A to Type B to Type A again
+		// =======================================================================
+		core::ExpressionPtr simplifyRedundantNestedKindCasts(const core::ExpressionPtr& ir) {
+			auto& mgr = ir->getNodeManager();
+			const auto& refExt = mgr.getLangExtension<core::lang::ReferenceExtension>();
+			return core::transform::transformBottomUpGen(ir, [&](const core::CallExprPtr& call) -> core::ExpressionPtr {
+				if(refExt.isCallOfRefKindCast(call)) {
+					const auto& middle = call->getArgument(0);
+					if(refExt.isCallOfRefKindCast(middle)) {
+						// if we have two nested ref_kind_casts here, we check whether the outer type is the same as the object being casted
+						const auto& inner = middle.as<core::CallExprPtr>()->getArgument(0);
+						if(core::lang::getReferenceKind(call) == core::lang::getReferenceKind(inner)) {
+							return inner;
+						}
+					}
+				}
+				return call;
+			}, core::transform::globalReplacement);
+		}
+
 
 		//////////////////////////////////////////////////////////////////////////
 		// Simplify cxx-style increment/decrement if the resulting ref is immediately dereffed
@@ -276,6 +301,7 @@ namespace extensions {
 
 		ir = simplifyCxxStyleIncDec(ir);
 		ir = simplifyExpressionsInCompoundStatements(ir);
+		ir = simplifyRedundantNestedKindCasts(ir);
 		ir = replaceFERefTemp(ir);
 		ir = replaceStdInitListCopies(ir);
 
