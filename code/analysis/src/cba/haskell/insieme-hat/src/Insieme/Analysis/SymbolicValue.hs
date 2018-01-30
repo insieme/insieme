@@ -273,7 +273,7 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
 
                 isInstantiated = Addr.depth callTrg > 2 
                     && getNodeType instantiateCall == IR.CallExpr
-                    && isBuiltin (Addr.goDown 1 instantiateCall) "instantiate"
+                    && any (isBuiltin $ Addr.goDown 1 instantiateCall) ["instantiate_fun","instantiate_ctor","instantiate_dtor","instantiate_member"]
 
                 instantiateCall = Addr.goUp $ Addr.goUp callTrg
 
