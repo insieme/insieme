@@ -272,7 +272,7 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
             constructedStateVar = memoryStateValue (MemoryStatePoint (ProgramPoint addr Internal) ml) analysis
 
         -- handle declarations with explict constructor calls
-        I.Declaration | callsExplicitConstructor addr -> var
+        I.Declaration | callsExplicitConstructor addr && phase == Post-> var
           where
             var = Solver.mkVariable varId [con] Solver.bot
             con = Solver.forward memVar var
