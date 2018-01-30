@@ -147,7 +147,12 @@ dataflowValue :: (HasCallStack, ComposedValue.ComposedValue a i v, Typeable d)
 dataflowValue addr analysis ops = case I.getNode addr of
 
     I.Node I.Variable _ -> case I.findDecl addr of
-            Just declrAddr -> handleDeclr declrAddr              -- this variable is declared, use declared value
+            Just declAddr | addr == declAddr -> handleDeclr declAddr
+            Just declAddr  -> var
+              where
+                var = Solver.mkVariable (idGen addr) [con] Solver.bot
+                con = Solver.forward (varGen declAddr) var
+--            Just declrAddr -> handleDeclr declrAddr              -- this variable is declared, use declared value
             _              -> freeVariableHandler analysis addr  -- it is a free variable, ask the analysis what to do with it
 
 
@@ -305,9 +310,6 @@ dataflowValue addr analysis ops = case I.getNode addr of
 
     unknown = Solver.mkVariable (idGen addr) [] top
 
-    compose = ComposedValue.toComposed
-    extract = ComposedValue.toValue
-
 
     -- variable declaration handler
 
@@ -351,7 +353,7 @@ dataflowValue addr analysis ops = case I.getNode addr of
             callSiteVar = CallSite.callSites (I.goUp $ I.goUp declrAddr)
 
             dep a = (Solver.toVar callSiteVar) : (map Solver.toVar (getArgumentVars a))
-            val a = compose $ Solver.join $ map (extract . Solver.get a) (getArgumentVars a)
+            val a = Solver.join $ map (Solver.get a) (getArgumentVars a)
 
             getArgumentVars a = foldr go [] $ Solver.get a callSiteVar
                 where
