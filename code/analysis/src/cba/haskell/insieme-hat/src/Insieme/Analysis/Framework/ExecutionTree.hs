@@ -130,14 +130,13 @@ executionTreeValue analysis addr = case I.getNode addr of
             -- Function Calls --
 
             callableBodyVars a = case () of
-                _ | BSet.isUniverse callTargets -> []
-                _                               -> foldr go [] $ BSet.toList callTargets
+                _                               -> foldr go [] callTargets
                   where
                     go (Callable.Lambda  addr) bs = (varGen $ I.goDown 2 addr) : bs
                     go (Callable.Closure addr) bs = (varGen $ I.goDown 2 addr) : bs
                     go (Callable.Literal   _) bs = bs      -- literal calls are handled by operator handler
               where
-                callTargets = callableVal a
+                callTargets = getUnhandledOperators a
 
             -- aggregate effects of call targets
             callTargetEffects a = Solver.join $ Solver.get a <$> callableBodyVars a
@@ -178,19 +177,22 @@ executionTreeValue analysis addr = case I.getNode addr of
             -- Unhandled operators --
 
             -- collect all unhandled operators
-            getUnhandledOperators a = if BSet.isUniverse targets then [] else Callable.toAddress <$> (filter f $ BSet.toList targets)
+            getUnhandledOperators a = if BSet.isUniverse targets then [] else (filter f $ BSet.toList targets)
                 where
                     targets = callableVal a
-                    f t = case t of 
-                        Callable.Literal addr -> any cover $ opHandler analysis
-                              where 
-                                cover h = covers h addr
-                        _                     -> False
+                    f t = case t of
+                        Callable.Lambda addr  -> isNotCovered addr 
+                        Callable.Literal addr -> isNotCovered addr
+                        _                     -> True
+                      where
+                        isNotCovered addr = not $ any cover $ opHandler analysis
+                          where
+                            cover h = covers h addr
 
             unhandledOperatorEffects a = if null ops then [] else effects
               where
                 ops = getUnhandledOperators a
-                effects = (unhandledOperatorHandler analysis) <$> ops
+                effects = (unhandledOperatorHandler analysis) <$> (Callable.toAddress <$> ops)
 
 
     -- for everything else we aggregate the results of the execution of the child nodes
