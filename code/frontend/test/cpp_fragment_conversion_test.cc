@@ -96,6 +96,8 @@ namespace frontend {
 
 	TEST(CppConversionTest, LambdaNaming) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_lambda_naming.cpp"); }
 
+	TEST(CppConversionTest, MaterializingCall) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_materializing_call.cpp"); }
+
 	TEST(CppConversionTest, MemberCalls) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_member_calls.cpp"); }
 
 	TEST(CppConversionTest, Members) { utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/conversion/cpp_members.cpp"); }

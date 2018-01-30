@@ -157,13 +157,15 @@ NonTrivial returnNonTrivialInitWithParam() {
 int main() {
 	{} // help pragmas to find their way
 
+	// NOTE: We are using the comma operator here in several cases to avoid the frontend cleanup changing the types of our call expressions
+
 	{
 		#pragma test expect_ir("EXPR_TYPE", "int<4>")
 		scalar_int();
 		#pragma test expect_ir("EXPR_TYPE", "real<4>")
 		scalar_float();
 		#pragma test expect_ir("EXPR_TYPE", "ref<int<4>,t,f>")
-		scalar_ref_int();
+		scalar_ref_int(), scalar_ref_int();
 	}
 
 	{
@@ -179,16 +181,16 @@ int main() {
 
 	{
 		#pragma test expect_ir("EXPR_TYPE", "ref<ptr<int<4>>>")
-		reference_pointer_int();
+		reference_pointer_int(), reference_pointer_int();
 
 		#pragma test expect_ir("EXPR_TYPE", "ref<ptr<int<4>>,t,f>")
-		const_reference_pointer_int();
+		const_reference_pointer_int(), const_reference_pointer_int();
 
 		#pragma test expect_ir("EXPR_TYPE", "ref<ptr<int<4>,t,f>,f,f>")
-		reference_const_pointer_int();
+		reference_const_pointer_int(), reference_const_pointer_int();
 
 		#pragma test expect_ir("EXPR_TYPE", "ref<ptr<int<4>,t,f>,t,f>")
-		const_reference_const_pointer_int();
+		const_reference_const_pointer_int(), const_reference_const_pointer_int();
 	}
 
 	#pragma test expect_ir(R"(
