@@ -12,8 +12,8 @@ cd "$BUILD_DIR"
 cmake "$WORKSPACE/code" \
 	-DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
 	-DCMAKE_CXX_FLAGS="-Werror" \
-	-DANALYSIS_DATALOG=ON -DSOUFFLE_ROOT="$BUILD_DIR/third_party/souffle" \
-	-DANALYSIS_HASKELL=ON -DCABAL_ROOT="$BUILD_DIR/third_party/cabal"
+	-DANALYSIS_HASKELL=ON -DCABAL_ROOT="$BUILD_DIR/third_party/cabal" \
+	#-DANALYSIS_DATALOG=ON -DSOUFFLE_ROOT="$BUILD_DIR/third_party/souffle"
 
 make -j "$NPROC"
 

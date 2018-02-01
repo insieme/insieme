@@ -107,9 +107,9 @@ information how to install their respective dependencies.
 
 For some analysis engines additional paths must be provided to CMake:
 
-| Analysis Engine | Required Path                                              |
-| --------------- | ---------------------------------------------------------- |
-| Datalog         | -DSOUFFLE_ROOT=/path/to/souffle/prefix                     |
+| Analysis Engine      | Required Path                                              |
+| -------------------- | ---------------------------------------------------------- |
+| Datalog (DEPRECATED) | -DSOUFFLE_ROOT=/path/to/souffle/prefix                     |
 
 ### Running Tests
 
