@@ -41,6 +41,7 @@
 #include "insieme/core/analysis/default_members.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/annotations/default_delete.h"
+#include "insieme/core/lang/array.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/name_mangling.h"
@@ -82,6 +83,11 @@ namespace analysis {
 			}
 			assert_fail() << "Don't know how to convert memberFunction expression " << dumpReadable(implementation) << " to MemberProperties";
 			return {};
+		}
+
+		bool canHaveAnyDefaultOperation(const FieldList& fields) {
+			// if this struct is dynamically sized (the last field is unknown sized), we can't have any default construct
+			return fields.empty() || !lang::isUnknownSizedArray(fields.back()->getType());
 		}
 
 		bool canHaveDefaultDefaultCtor(const FieldList& fields, const FieldInitMap& fieldInits) {
@@ -200,6 +206,11 @@ namespace analysis {
 		res.memberFunctions.erase(std::remove_if(res.memberFunctions.begin(), res.memberFunctions.end(), [](const MemberProperties& member) {
 			return annotations::isMarkedDeletedPreTU(member.literal);
 		}), res.memberFunctions.end());
+
+		// if this struct can't have any of the default constructs automatically created, we are done here
+		if(!canHaveAnyDefaultOperation(fields)) {
+			return res;
+		}
 
 		// now we replace all constructs which the user defaulted with the generated default versions
 		if(hasDefaultConstructor && annotations::isMarkedDefaultedPreTU(providedDefaultConstructor.literal)) {
