@@ -678,7 +678,20 @@ namespace core {
 			if(pos != ext.end()) { return static_cast<const E&>(*(pos->second)); }
 
 			// create a new instance
-			ext[key] = new E(data->root);
+			auto extension = new E(data->root);
+
+			// re-check whether it has been inserted in the meantime already
+			// this might have happened, if the extension caused the same extension to be loaded somehow recursively
+			if(ext.find(key) == ext.end()) {
+				// if it still isn't registered, we can do so now
+				ext[key] = extension;
+
+				// otherwise we have to destroy the instance we just created
+			} else {
+				delete extension;
+			}
+
+			// either way, we return the registered extension by calling this function again recursively
 			return getLangExtension<E>();
 		}
 
