@@ -599,5 +599,80 @@ TEST(NodeAddressTest, CloneTo) {
 		EXPECT_EQ("int", toString(*x));
 	}
 
+	TEST(Address, AddressOnDepth) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto stmt = builder.parseStmt(
+			"{"
+			"	{"
+			"		12;"
+			"		14;"
+			"		16;"
+			"		18;"
+			"	}"
+			"}"
+		);
+
+		NodeAddress r(stmt);
+		NodeAddress r0 = r.getAddressOfChild(0);
+		NodeAddress r02 = r0.getAddressOfChild(2);
+		NodeAddress r020 = r02.getAddressOfChild(0);
+		NodeAddress r021 = r02.getAddressOfChild(1);
+
+		EXPECT_EQ("0",toString(r));
+		EXPECT_EQ("0-0",toString(r0));
+		EXPECT_EQ("0-0-2",toString(r02));
+		EXPECT_EQ("0-0-2-0",toString(r020));
+		EXPECT_EQ("0-0-2-1",toString(r021));
+
+		EXPECT_EQ(1, r.getDepth());
+		EXPECT_EQ(2, r0.getDepth());
+		EXPECT_EQ(3, r02.getDepth());
+		EXPECT_EQ(4, r020.getDepth());
+		EXPECT_EQ(4, r021.getDepth());
+
+		// check that on depth returns right depth
+
+		EXPECT_EQ(1, r.getAddressOnDepth(1).getDepth());
+		EXPECT_EQ(1, r0.getAddressOnDepth(1).getDepth());
+		EXPECT_EQ(1, r02.getAddressOnDepth(1).getDepth());
+		EXPECT_EQ(1, r020.getAddressOnDepth(1).getDepth());
+		EXPECT_EQ(1, r021.getAddressOnDepth(1).getDepth());
+
+		EXPECT_EQ(2, r0.getAddressOnDepth(2).getDepth());
+		EXPECT_EQ(2, r02.getAddressOnDepth(2).getDepth());
+		EXPECT_EQ(2, r020.getAddressOnDepth(2).getDepth());
+		EXPECT_EQ(2, r021.getAddressOnDepth(2).getDepth());
+
+		EXPECT_EQ(3, r02.getAddressOnDepth(3).getDepth());
+		EXPECT_EQ(3, r020.getAddressOnDepth(3).getDepth());
+		EXPECT_EQ(3, r021.getAddressOnDepth(3).getDepth());
+
+		EXPECT_EQ(4, r020.getAddressOnDepth(4).getDepth());
+		EXPECT_EQ(4, r021.getAddressOnDepth(4).getDepth());
+
+		// check that results are equal
+		EXPECT_EQ(r, r.getAddressOnDepth(1));
+		EXPECT_EQ(r, r0.getAddressOnDepth(1));
+		EXPECT_EQ(r, r02.getAddressOnDepth(1));
+		EXPECT_EQ(r, r020.getAddressOnDepth(1));
+		EXPECT_EQ(r, r021.getAddressOnDepth(1));
+
+		EXPECT_EQ(r0, r0.getAddressOnDepth(2));
+		EXPECT_EQ(r0, r02.getAddressOnDepth(2));
+		EXPECT_EQ(r0, r020.getAddressOnDepth(2));
+		EXPECT_EQ(r0, r021.getAddressOnDepth(2));
+
+		EXPECT_EQ(r02, r02.getAddressOnDepth(3));
+		EXPECT_EQ(r02, r020.getAddressOnDepth(3));
+		EXPECT_EQ(r02, r021.getAddressOnDepth(3));
+
+		EXPECT_EQ(r020, r020.getAddressOnDepth(4));
+
+		EXPECT_EQ(r021, r021.getAddressOnDepth(4));
+
+	}
+
 } // end namespace core
 } // end namespace insieme

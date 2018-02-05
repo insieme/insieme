@@ -406,6 +406,17 @@ namespace core {
 		}
 
 		/**
+		 * Obtains the node address referencing the node when following the given number
+		 * of levels of this node address.
+		 *
+		 * @param depth the depth of the requested node (must be >= the depth of this node)
+		 * @return the requested node address
+		 */
+		NodeAddress getAddressOnDepth(unsigned depth) const {
+			return NodeAddress(path.getPathToDepth(depth));
+		}
+
+		/**
 		 * Obtains the address of the first parent node of the given address of type typ
 		 *
 		 * @param the node type of the parent to find

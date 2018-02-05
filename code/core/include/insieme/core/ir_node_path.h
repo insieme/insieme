@@ -520,6 +520,17 @@ namespace core {
 		}
 
 		/**
+		 * Obtains the path ending at the given depth.
+		 *
+		 * @param depth if set to 0, it will be the root node, if set to 1 a child of the root node
+		 * @return the requested path
+		 */
+		NodePath getPathToDepth(unsigned depth) const {
+			assert_le(depth, getLength()) << "Not enough levels!";
+			return getPathToParent(getLength() - depth);
+		}
+
+		/**
 		 * Obtains a path extending this path by a node referencing the given child.
 		 *
 		 * @param index the index of the next step
