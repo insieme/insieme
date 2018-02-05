@@ -100,7 +100,7 @@ namespace c_ast {
 		case BinaryOperation::LessThan: return 10;
 		case BinaryOperation::GreaterOrEqual: return 10;
 		case BinaryOperation::LessOrEqual: return 10;
-		case BinaryOperation::LogicAnd: return 5;
+		case BinaryOperation::LogicAnd: return 4;	// actually 5, but GCC warns when mixing && and ||
 		case BinaryOperation::LogicOr: return 4;
 		case BinaryOperation::BitwiseAnd: return 8;
 		case BinaryOperation::BitwiseOr: return 6;
