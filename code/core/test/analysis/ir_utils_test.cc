@@ -1189,6 +1189,54 @@ namespace analysis {
 	}
 
 
+	TEST(Development,GetFreeTagTypeReferenceSimple) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto type = builder.parseType(
+				"struct A {"
+				"	a : ref<A>;"
+				"}"
+		).as<TagTypePtr>();
+
+		EXPECT_TRUE(type.isRecursive());
+
+		auto def = type->getDefinition();
+
+		auto references = getContainedFreeReferences(def);
+		for(const auto& cur : references) {
+			EXPECT_EQ(type->getTag()->getNodeType(),cur->getNodeType());
+			ASSERT_EQ("^A", toString(*cur));
+		}
+	}
+
+	TEST(Development,GetFreeTagTypeReferenceNested) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto type = builder.parseType(
+				"def struct A {"
+				"	a : ref<A>;"
+				"};"
+				""
+				"struct B {"
+				"	a : A;"
+				"	b : ref<B>;"
+				"}"
+		).as<TagTypePtr>();
+
+		EXPECT_TRUE(type.isRecursive());
+
+		auto def = type->getDefinition();
+
+		auto references = getContainedFreeReferences(def);
+		for(const auto& cur : references) {
+			EXPECT_EQ(NT_TagTypeReference,cur->getNodeType());
+			ASSERT_EQ("^B", toString(*cur));
+		}
+	}
+
+
 	TEST(Utils, MinimizeRecursiveTypes) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);

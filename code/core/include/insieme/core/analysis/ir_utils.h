@@ -563,6 +563,40 @@ namespace analysis {
 	// ------------------------------- utilities for recursive constructs -------------------------
 
 	/**
+	 * Obtains a list of addresses to free tag type references within the given code fragment.
+	 *
+	 * @param node the root of the code fragment to be analyzed
+	 * @return a list of addresses to free tag type references in the given code fragment.
+	 */
+	TagTypeReferenceAddressList getFreeTagTypeReferences(const NodePtr& node);
+
+	/**
+	 * Obtains a list of addresses to free lambda references within the given code fragment.
+	 *
+	 * @param node the root of the code fragment to be analyzed
+	 * @return a list of addresses to free lambda references in the given code fragment.
+	 */
+	LambdaReferenceAddressList getFreeLambdaReferences(const NodePtr& node);
+
+	/**
+	 * Computes the list of tag type reference addresses rooted by the given definition referencing free
+	 * tag type references, not considering references bound by the given definition.
+	 *
+	 * @param def the definition to start the search from
+	 * @return a complete list of addresses to free tag type references
+	 */
+	const TagTypeReferenceAddressList& getContainedFreeReferences(const TagTypeDefinitionPtr& def);
+
+	/**
+	 * Computes the list of lambda reference addresses rooted by the given definition referencing free
+	 * lambda references, not considering references bound by the given definition.
+	 *
+	 * @param def the definition to start the search from
+	 * @return a complete list of addresses to free lambda references
+	 */
+	const LambdaReferenceAddressList& getContainedFreeReferences(const LambdaDefinitionPtr& def);
+
+	/**
 	 * Computes equivalent definitions of the given tag type definition only containing
 	 * minimal definition group sizes.
 	 */

@@ -280,108 +280,6 @@ namespace core {
 		return printRecordTypeContents(this, out);
 	}
 
-	namespace {
-
-		const vector<TagTypeReferenceAddress>& collectFreeTagTypeReferences(const NodePtr& root, bool fieldsOnly, const TagTypeReferencePtr& origin, std::map<NodePtr,vector<TagTypeReferenceAddress>>& cache) {
-
-			// start by checking the cache
-			auto pos = cache.find(root);
-			if (pos != cache.end()) return pos->second;
-
-			auto& result = cache[root];
-
-			// collect free tag type references
-			if (auto tag = root.isa<TagTypeReferencePtr>()) {
-				result.push_back(TagTypeReferenceAddress(tag));
-				return result;
-			}
-
-			// handle nested expressions
-			if (auto expr = root.isa<ExpressionPtr>()) {
-				// stop here if only fields should be covered
-				if (fieldsOnly) return result;
-
-				// extract nested references
-				if (origin) {
-
-					// collect tag type references starting from here
-					auto nested = collectFreeTagTypeReferences(expr, false, TagTypeReferencePtr(), cache);
-
-					// filter out origin from references in the expressions
-					for(const auto& cur : nested) {
-						if (*cur != *origin) result.push_back(cur);
-					}
-
-					// done
-					return result;
-				}
-			}
-
-			// skip tags in type variable bindings
-			if (auto tagType = root.isa<TagTypePtr>()) {
-				// if there are free tag type references ...
-				if (analysis::hasFreeTagTypeReferences(tagType)) {
-					// ... collect and extend those too
-					auto def = TagTypeAddress(root)->getDefinition();
-					for(const auto& cur : collectFreeTagTypeReferences(tagType->getDefinition(), fieldsOnly, origin, cache)) {
-						result.push_back(concat(def,cur));
-					}
-				}
-				return result;
-			}
-
-			// handle nested definitions
-			if (auto def = root.isa<TagTypeDefinitionPtr>()) {
-
-				// for each definition ..
-				for(const auto& cur : TagTypeDefinitionAddress(def)) {
-					// get nested references
-					auto nested = collectFreeTagTypeReferences(cur->getRecord(), fieldsOnly, origin, cache);
-
-					// filter out references defined in this definition
-					auto rec = cur->getRecord();
-					for(const auto& ref : nested) {
-						if (!def->getDefinitionOf(ref)) result.push_back(concat(rec,ref));
-					}
-				}
-
-				// done
-				return result;
-			}
-
-			// descent recursively
-			for(const auto& child : NodeAddress(root).getChildList()) {
-				for(const auto& ref : collectFreeTagTypeReferences(child, fieldsOnly, origin, cache)) {
-					result.push_back(concat(child,ref));
-				}
-			}
-
-			// done
-			return result;
-		}
-
-		/**
-		 * Collects all free tag-type references in the given code fragment by excluding the given origin-reference.
-		 */
-		std::vector<TagTypeReferenceAddress> getFreeTagTypeReferences(const NodeAddress& node, const TagTypeReferencePtr& origin = TagTypeReferencePtr()) {
-			std::map<NodePtr,vector<TagTypeReferenceAddress>> cache;
-			auto res = collectFreeTagTypeReferences(node,false,origin,cache);
-			if (!node.isRoot()) {
-				for(auto& cur : res) {
-					cur = concat(node,cur);
-				}
-			}
-			return res;
-		}
-
-		std::set<TagTypeReferencePtr> getFreeTagTypeReferencesInFields(const NodePtr& root) {
-			std::map<NodePtr,vector<TagTypeReferenceAddress>> cache;
-			auto list = collectFreeTagTypeReferences(root,true,TagTypeReferencePtr(),cache);
-			return std::set<TagTypeReferencePtr>(list.begin(),list.end());
-		}
-
-	}
-
 	TagTypeDefinitionPtr TagTypeDefinition::get(NodeManager& manager, const TagTypeBindingMap& bindings) {
 		vector<TagTypeBindingPtr> tagTypeBindings;
 		for(auto p : bindings) {
@@ -395,31 +293,9 @@ namespace core {
 
 	const vector<TagTypeReferenceAddress>& TagTypeDefinition::getRecursiveReferences() const {
 
-		// the annotation to store the reference list
-		struct reference_list {
-			vector<TagTypeReferenceAddress> list;
-			bool operator==(const reference_list& other) const {
-				return list == other.list;
-			}
-		};
+		// collect recursive tag type references
+		return analysis::getContainedFreeReferences(TagTypeDefinitionPtr(this));
 
-		// check the attached list
-		if (hasAttachedValue<reference_list>()) {
-			return getAttachedValue<reference_list>().list;
-		}
-
-		// compute references
-		vector<TagTypeReferenceAddress> res;
-		for (const auto& binding : TagTypeDefinitionAddress(TagTypeDefinitionPtr(this))) {
-			for (const auto& cur : getFreeTagTypeReferences(NodeAddress(binding->getRecord()), TagTypeReferencePtr())) {
-				assert_eq(cur.getRootNode().ptr, this) << cur << " = " << *cur << " is not rooted by this definition!\n" << *this;
-				res.push_back(cur);
-			}
-		}
-
-		// attach the result
-		attachValue(reference_list{ res });
-		return getRecursiveReferences();
 	}
 
 	const vector<TagTypeReferenceAddress>& TagTypeDefinition::getRecursiveReferencesOf(const TagTypeReferencePtr& reference) const {
@@ -473,7 +349,23 @@ namespace core {
 		}
 
 		// get list of free tag type references
-		auto tags = getFreeTagTypeReferences(NodeAddress(getDefinitionOf(tag)), tag);
+		const auto& refs = analysis::getContainedFreeReferences(TagTypeDefinitionPtr(this));
+
+		TagTypeReferenceAddressList tags;
+		auto recordDefinition = getDefinitionOf(tag);
+		for(const auto& cur : refs) {
+
+			// it should be in the associated record
+			auto enclosingRecord = cur.getAddressOnDepth(3).as<RecordAddress>();
+			if (*recordDefinition != *enclosingRecord) continue;
+
+			// and it should be in a field or parent list (not operators; in there, the recursion can remain)
+			auto recordElement = cur.getAddressOnDepth(4);
+			if (!recordElement.isa<FieldsAddress>() && !(recordElement.isa<ParentsAddress>())) continue;
+
+			// this is a reference we need to replace
+			tags.push_back(cropRootNode(cur,enclosingRecord));
+		}
 
 		// if there are recursive references
 		if (!tags.empty()) {
@@ -506,7 +398,7 @@ namespace core {
 	NodePtr TagTypeDefinition::peelMember(NodeManager& manager, const NodePtr& member) const {
 
 		// collect free tag type references in the given member
-		auto positions = getFreeTagTypeReferences(NodeAddress(member));
+		auto positions = analysis::getFreeTagTypeReferences(member);
 
 		// skip if there is nothing to do
 		if (positions.empty()) return member;
@@ -550,42 +442,51 @@ namespace core {
 			return this->getAttachedValue<RecursiveTypeMarker>().value;
 		}
 
+		// get all references
+		const auto& refs = analysis::getContainedFreeReferences(getDefinition());
 
-		// the list of referenced tag type references
-		std::set<TagTypeReferencePtr> referenced;
+		bool res = false;
+		{
+			// the set of resolved tag type references
+			std::set<TagTypeReferencePtr> covered;
+			std::vector<TagTypeReferencePtr> worklist;
 
-		// the set of resolved tag type references
-		std::set<TagTypeReferencePtr> covered;
-		std::vector<TagTypeReferencePtr> worklist;
+			// start with this type
+			worklist.push_back(this->getTag());
+			covered.insert(this->getTag());
 
-		// start with this type
-		worklist.push_back(this->getTag());
-		covered.insert(this->getTag());
+			// compute closure
+			while(!res && !worklist.empty()) {
 
-		// compute closure
-		while(!worklist.empty()) {
+				// get next tag
+				TagTypeReferencePtr next = worklist.back();
+				worklist.pop_back();
 
-			// get next tag
-			TagTypeReferencePtr next = worklist.back();
-			worklist.pop_back();
+				// resolve this tag
+				auto def = TagTypeDefinitionAddress(this->getDefinition())->getDefinitionOf(next);
+				if (!def) continue;
 
-			// resolve this tag
-			auto def = this->getDefinition()->getDefinitionOf(next);
-			if (!def) continue;
+				// process result
+				for(const auto& cur : refs) {
 
-			// process result
-			auto set = getFreeTagTypeReferencesInFields(def);
-			for(const auto& cur : set) {
-				if (covered.insert(cur).second) worklist.push_back(cur);
+					// it must be a child of the current definition
+					if (!isChildOf(def,cur)) continue;
+
+					// must have been reached through a field
+					auto recordElement = cur.getAddressOnDepth(4);
+					if (!recordElement.isa<FieldsPtr>() && !(recordElement.isa<ParentsPtr>())) continue;
+
+					// if this is the one we are looking for => done
+					if (*cur == *this->getTag()) {
+						res = true;
+						break;
+					}
+
+					// add to worklist
+					if (covered.insert(cur).second) worklist.push_back(cur);
+				}
 			}
-
-			// add computed set to result set
-			referenced.insert(set.begin(), set.end());
 		}
-
-		// check whether the local reference is referenced
-		auto pos = referenced.find(this->getTag());
-		bool res = (pos != referenced.end());
 
 		// attach result to node
 		this->attachValue((RecursiveTypeMarker){res});

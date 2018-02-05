@@ -115,93 +115,44 @@ namespace core {
 			}
 		};
 
+		RecursiveCallLocations findRecursiveCalls(const LambdaDefinitionPtr& definition) {
 
-		class RecursiveCallCollector : private IRVisitor<void, Address, vector<LambdaReferenceAddress>&, LambdaReferenceSet&> {
-			typedef IRVisitor<void, Address, vector<LambdaReferenceAddress>&, LambdaReferenceSet&> super;
+			// use IR utils to locate recursive references
+			const auto& recRefs = analysis::getContainedFreeReferences(definition);
 
-		  public:
-			/**
-			 * The entry point for the resolution of recursive call sides. This function finds all
-			 * recursive calls within the lambda bodies.
-			 *
-			 * @param definition the recursive definition to be processed
-			 * @param var the variable referencing the recursive function to be processed within the definition
-			 * @return a list of addresses relative to the defining lambda referencing all recursive calls within
-			 * 		the selected lambda.
-			 */
-			RecursiveCallLocations findLocations(const LambdaDefinitionPtr& definition) {
-				// set up set of recursive variables
-				LambdaReferenceSet recRefSet;
-				for(const LambdaBindingPtr& cur : definition) {
-					recRefSet.insert(cur->getReference());
-				}
-
-				// search locations
-				RecursiveCallLocations res(definition);
-				for(auto cur : definition) {
-					vector<LambdaReferenceAddress>& curList = res.bind2ref[cur];
-					visit(NodeAddress(cur->getLambda()), curList, recRefSet);
-				}
-
-				// check whether some recursive calls have been
-				if(res.empty()) { return res; }
-
-				// get relative address from definition to the bindings
-				map<LambdaBindingPtr, LambdaAddress> lambdas;
-				for(auto cur : LambdaDefinitionAddress(definition)) {
-					lambdas[cur.as<LambdaBindingPtr>()] = cur->getLambda();
-				}
-
-				// complete var2call index
-				for(auto cur : res.bind2ref) {
-					auto head = lambdas[cur.first];
-					for(auto ref : cur.second) {
-						res.ref2ref[ref.as<LambdaReferencePtr>()].push_back(concat(head, ref));
-					}
-				}
-
-				// done
-				return res;
+			// index references
+			RecursiveCallLocations res(definition);
+			// sort in bindings
+			for(const auto& cur : recRefs) {
+				auto binding = cur.getAddressOnDepth(2).as<LambdaBindingPtr>();
+				if (!definition->getBindingOf(cur)) continue;
+				res.bind2ref[binding].push_back(cropRootNode(cur,cur.getAddressOnDepth(3)));
 			}
 
-		  private:
+			// check whether some recursive calls have been
+			if(res.empty()) { return res; }
 
-			void visitLambdaReference(const LambdaReferenceAddress& ref, vector<LambdaReferenceAddress>& res, LambdaReferenceSet& recRefs) override {
-				// if a recursive variable has been encountered => record the address
-				if(recRefs.contains(ref)) { res.push_back(ref); }
+			// get relative address from definition to the bindings
+			map<LambdaBindingPtr, LambdaAddress> lambdas;
+			for(auto cur : LambdaDefinitionAddress(definition)) {
+				lambdas[cur.as<LambdaBindingPtr>()] = cur->getLambda();
 			}
 
-			void visitLambdaExpr(const LambdaExprAddress& lambda, vector<LambdaReferenceAddress>& res, LambdaReferenceSet& recRefs) override {
-				// skip over this reference
-				visit(lambda->getDefinition(), res, recRefs);
-			}
-
-			void visitLambdaDefinition(const LambdaDefinitionAddress& def, vector<LambdaReferenceAddress>& res, LambdaReferenceSet& recRefs) override {
-				// eliminate re-defined recursive variables from recVar set
-				LambdaReferenceSet subSet;
-
-				// filter recursive variables by eliminating re-defined variables
-				for(const LambdaReferencePtr& ref : recRefs) {
-					if(!def->getDefinitionOf(ref)) { subSet.insert(ref); }
+			// complete var2call index
+			for(auto cur : res.bind2ref) {
+				auto head = lambdas[cur.first];
+				for(auto ref : cur.second) {
+					res.ref2ref[ref.as<LambdaReferencePtr>()].push_back(concat(head, ref));
 				}
-
-				// see whether there is still something to search
-				if(subSet.empty()) { return; }
-
-				// process recursively
-				visitAll(def->getChildList(), res, subSet);
 			}
 
-			void visitNode(const NodeAddress& node, vector<LambdaReferenceAddress>& res, LambdaReferenceSet& recRefs) override {
-				if(node->getNodeCategory() == NC_Type) { return; }
-				// a general forwarding to all child nodes
-				visitAll(node->getChildList(), res, recRefs);
-			}
-		};
+			// done
+			return res;
+		}
 
 		const RecursiveCallLocations& getRecursiveCallLocations(const LambdaDefinitionPtr& definition) {
 			// compute recursive call locations if missing
-			if(!definition->hasAttachedValue<RecursiveCallLocations>()) { definition->attachValue(RecursiveCallCollector().findLocations(definition)); }
+			if(!definition->hasAttachedValue<RecursiveCallLocations>()) { definition->attachValue(findRecursiveCalls(definition)); }
 
 			// return a reference to the call location set
 			const auto& res = definition->getAttachedValue<RecursiveCallLocations>();
@@ -210,8 +161,7 @@ namespace core {
 
 			// check validity of annotation (not moved between node managers)
 			if(res.root != definition) {
-				definition->attachValue(RecursiveCallCollector().findLocations(definition));
-				return definition->getAttachedValue<RecursiveCallLocations>();
+				return definition->attachValue(findRecursiveCalls(definition));
 			}
 
 			return res;

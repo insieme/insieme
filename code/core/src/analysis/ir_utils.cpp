@@ -42,9 +42,12 @@
 #include <map>
 #include <regex>
 
+#include <boost/graph/transitive_closure.hpp>
+
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir_address_collector.h"
 #include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/attributes.h"
@@ -1386,71 +1389,88 @@ namespace analysis {
 				return res;
 			}
 
-			bool isDecendant(const NodeAddress& child, const std::vector<RecordAddress>& anchesters, std::set<NodeAddress>& visited) {
+			class RecordDependencies {
 
-				// fast forward for non-record addresses
-				if (!child.isa<RecordAddress>()) {
-					// => continue with parent
-					if (child.isRoot()) return false;
-					return isDecendant(child.getParentAddress(), anchesters, visited);
-				}
+				using Graph = boost::adjacency_list<>;
 
-				// if we reached a target, we are done
-				for(const auto& p : anchesters) {
-					if(p == child) return true;
-				}
+				std::map<RecordAddress,std::size_t> index;
 
-				// stop here when already visited
-				if(!visited.insert(child).second) return false;
+				Graph dependencies;
 
-				// if we reached the root, we are done
-				if (child.isRoot()) return false;
+				RecordDependencies(const std::vector<RecordAddress>& records) {
 
-				// inspect parent
-				auto binding = child.getParentAddress().as<TagTypeBindingAddress>();
-				assert(!binding.isRoot());
-				auto def = binding.getParentAddress().as<TagTypeDefinitionAddress>();
-
-				// walk through all references of the current type
-				for(const auto& cur : def->getRecursiveReferencesOf(binding->getTag())) {
-
-					// get full address of the tag type reference
-					auto ref = concat(def,cur);
-
-					// filter out references in the same sub-branch we have been coming from
-					if (isChildOf(child,ref)) continue;
-
-					// check whether we found a (in-)direct child
-					for(const auto& p : anchesters) {
-						if (isChildOf(p,ref)) return true;
+					// index records
+					int i = 0;
+					for(const auto& cur : records) {
+						index[cur] = i++;
 					}
 
-					// explore reference
-					if (isDecendant(ref, anchesters, visited)) return true;
-				}
+					// create graph of dependencies
+					Graph dependencies;
 
-				// skip up to the tag type
-				assert(!def.isRoot());
-				return isDecendant(def.getParentAddress().as<TagTypeAddress>(), anchesters, visited);
-			}
+					// add direct dependencies between records
+					for(std::size_t i=0; i<records.size(); i++) {
+						const auto& a = records[i];
 
-			bool dependsOn(const std::vector<RecordAddress>& a, const std::vector<RecordAddress>& b) {
+						// add dependencies to nested records
+						for(std::size_t j=0; j<records.size(); j++) {
+							const auto& b = records[j];
+							if (isChildOf(a,b)) {
+								boost::add_edge(i,j,dependencies);
+							}
+						}
 
-				// quick check: if any of the addresses in b is a prefix of any of the addresses in a
-				for(const auto& x : a) {
-					for(const auto& y : b) {
-						if(x != y && isChildOf(x, y)) return true;
+						// also add dependencies to records addressed through tag type references
+						for(const auto& cur : getFreeTagTypeReferences(a)) {
+							// get the full address
+							auto ref = concat(a,cur);
+
+							// get the associated definition
+							RecordAddress definition;
+							visitPathBottomUpInterruptible(ref,[&](const TagTypeDefinitionAddress& def) {
+								definition = def.getDefinitionOf(ref);
+								return (definition) ? Action::Interrupt : Action::Continue;
+							});
+
+							// there should be a definition
+							if (!definition) continue;
+
+							// the definition should be indexed
+							assert_true(index.find(definition) != index.end());
+
+							// add a dependency
+							boost::add_edge(i,index[definition],dependencies);
+						}
 					}
+
+					// fill in actual dependencies by computing transitive closure
+					boost::transitive_closure(dependencies,this->dependencies);
 				}
 
-				// more expensive: check whether some b can be reached from some a
-				std::set<NodeAddress> visited;
-				for(const auto& x : b) {
-					if(isDecendant(x, a, visited)) return true;
+			public:
+
+				static RecordDependencies create(const std::vector<RecordAddress>& records) {
+					return records;
 				}
 
-				return false;
-			}
+				bool dependsOn(const RecordAddress& a, const RecordAddress& b) const {
+					auto posA = index.find(a);
+					if (posA == index.end()) return false;
+					auto posB = index.find(b);
+					if (posB == index.end()) return false;
+					return boost::edge(posA->second,posB->second,dependencies).second;
+				}
+
+				bool dependsOn(const std::vector<RecordAddress>& a, const std::vector<RecordAddress>& b) const {
+					for(const auto& x : a) {
+						for(const auto& y : b) {
+							if (dependsOn(x,y)) return true;
+						}
+					}
+					return false;
+				}
+
+			};
 
 			RecordAddress getRepresentForClass(const std::vector<RecordAddress>& clss) {
 				assert_false(clss.empty());
@@ -1493,124 +1513,38 @@ namespace analysis {
 
 		namespace {
 
-
-			// A utility class for the effective storage of collections of addresses.
-			class AddressCollection {
-
-				// a marker that this node is included in the set
-				bool thisNode;
-
-				// a list of children, compressed
-				std::vector<std::pair<std::size_t,const AddressCollection*>> children;
-
-				// a list of children, explicit
-				std::vector<NodeAddress> list;
-
-			public:
-
-				// creates a new, empty collection
-				AddressCollection() : thisNode(false) {}
-
-				bool empty() const {
-					return !thisNode && children.empty() && list.empty();
-				}
-
-				// inserts a new address
-				void insert(const NodeAddress& cur) {
-
-					// roots are easy
-					if (cur.isRoot()) {
-						thisNode = true;
-						return;
-					}
-
-					// in all other cases, we have to add it explicitly
-					list.push_back(cur);
-				}
-
-				void insert(std::size_t child, const AddressCollection& collection) {
-					if (collection.empty()) return;
-					children.push_back({child,&collection});
-				}
-
-				// runs an operation on each node in the set
-				template<typename Operator>
-				void forEach(const NodePtr& root, const Operator& op) const {
-					forEach(NodeAddress(root),op);
-				}
-
-			private:
-
-				template<typename Operator>
-				void forEach(const NodeAddress& head, Operator& op) const {
-					if (thisNode) op(head);
-					for(const auto& cur : children) {
-						cur.second->forEach(head.getAddressOfChild(cur.first),op);
-					}
-					for(const auto& cur : list) {
-						op(concat(head,cur));
-					}
-				}
-
-			};
-
-			const AddressCollection& collectAllRecordsInternal(const NodePtr& root, const NodePtr& cur, std::map<NodePtr,AddressCollection>& cache) {
-
-				// check cache
-				auto pos = cache.find(cur);
-				if (pos != cache.end()) return pos->second;
-
-				// collect records for this node
-				auto& records = cache[cur];
-
-				// if it is a built-in we stop here
-				if (core::lang::isBuiltIn(cur)) return records;
-
-				// check whether this is already a canonical tag type
-				if (cur != root) {
-					if (auto tagType = cur.isa<TagTypePtr>()) {
-						if (!hasFreeTagTypeReferences(tagType)) {
-							auto canonical = getCanonicalType(tagType);
-							if (*canonical == *tagType) {
-								for(const auto& def : TagTypeAddress(tagType)->getDefinition()) {
-									records.insert(def->getRecord());
-								}
-								return records;
-							}
-						}
-					}
-				}
-
-				// if this node is a record, add it to the result set
-				if (cur.isa<RecordPtr>()) {
-					records.insert(RecordAddress(cur));
-				}
-
-				// collect records from sub-nodes
-				std::size_t i = 0;
-				for(const auto& child : cur->getChildList()) {
-					records.insert(i,collectAllRecordsInternal(root,child,cache));
-					i++;
-				}
-				return records;
-			}
-
 			/**
 			 * Collects a list of addresses pointing to nested records within the given node.
 			 */
 			vector<RecordAddress> collectAllRecords(const NodePtr& root) {
-				// run everything through an internal, cached collector
-				std::map<NodePtr,AddressCollection> cache;
-				auto& collection = collectAllRecordsInternal(root, root, cache);
 
-				// convert the collection to a list of records
-				std::vector<RecordAddress> res;
-				collection.forEach(root,[&](const NodeAddress& cur){
-					res.push_back(cur.as<RecordAddress>());
+				return collectAllAddresses<Record>(NodeAddress(root),[root](const NodePtr& cur, auto& records){
+					// if it is a built-in we stop here
+					if (core::lang::isBuiltIn(cur)) return Action::Prune;
+
+					// check whether this is already a canonical tag type
+					if (cur != root) {
+						if (auto tagType = cur.isa<TagTypePtr>()) {
+							if (!hasFreeTagTypeReferences(tagType)) {
+								auto canonical = getCanonicalType(tagType);
+								if (*canonical == *tagType) {
+									for(const auto& def : TagTypeAddress(tagType)->getDefinition()) {
+										records.insert(def->getRecord());
+									}
+									return Action::Prune;
+								}
+							}
+						}
+					}
+
+					// if this node is a record, add it to the result set
+					if (cur.isa<RecordPtr>()) {
+						records.insert(RecordAddress(cur));
+					}
+
+					return Action::Descent;
 				});
 
-				// move out the result
-				return res;
 			}
 
 		}
@@ -1754,10 +1688,13 @@ namespace analysis {
 				vertices.push_back(cur);
 			}
 
+			// create record dependency graph
+			auto recordDependencies = RecordDependencies::create(records);
+
 			// add dependencies
 			for (const auto& a : vertices) {
 				for (const auto& b : vertices) {
-					if (&a != &b && dependsOn(a, b)) {
+					if (&a != &b && recordDependencies.dependsOn(a,b)) {
 						depGraph.addEdge(b, a);
 					}
 				}
@@ -1840,10 +1777,10 @@ namespace analysis {
 
 					// filter replacement map to nested addresses
 					std::map<NodeAddress, NodePtr> local_replacements;
-					for (const auto& cur : replacements) {
-						if (isChildOf(represent, cur.first)) {
-							local_replacements[cur.first] = cur.second;
-						}
+					auto low = replacements.lower_bound(represent);
+					while(low != replacements.end() && isChildOf(represent,low->first)) {
+						local_replacements[low->first] = low->second;
+						++low;
 					}
 
 					// print filtered replacement
@@ -1899,7 +1836,8 @@ namespace analysis {
 			if (replacements.empty()) return type;
 
 			// convert the input type
-			auto result = transform::replaceAll(type.getNodeManager(), replacements).as<TypePtr>();
+			const auto& pair = *replacements.begin();
+			auto result = transform::replaceNode(type.getNodeManager(), pair.first, pair.second).as<TypePtr>();
 
 			// make sure the resulting type is OK
 			if(debug) assert_true(checks::check(result).empty()) << checks::check(result);
@@ -2091,172 +2029,218 @@ namespace analysis {
 		return lambda;
 	}
 
+
+	// ------------------------------- utilities for recursive constructs -------------------------
+
+
 	namespace {
 
-		template<typename T>
-		struct free_reference_collector;
-
-		template <>
-		struct free_reference_collector<TagTypeReferencePtr> : public IRVisitor<const TagTypeReferenceAddressList*, Pointer, const TagTypeReferenceSet&>
-		{
-			using reference_list_type = TagTypeReferenceAddressList;
-
-			free_reference_collector(const TagTypeDefinitionPtr&) : IRVisitor(true) {}
-
-			std::map<NodePtr, TagTypeReferenceAddressList> cache;
-
-			TagTypeReferenceAddressList operator()(const NodePtr& node) {
-				auto it = cache.find(node);
-				if(it != cache.end()) {
-					return it->second;
-				}
-
-				TagTypeReferenceSet bound;
-				auto result = visit(node, bound);
-				if(!result) {
-					return {};
-				}
-
-				return *result;
-			}
-
-			const TagTypeReferenceAddressList* visitNode(const NodePtr& node, const TagTypeReferenceSet& bound) override {
-				auto it = cache.find(node);
-				if(it != cache.end()) {
-					return &it->second;
-				}
-
-				auto& entry = cache[node];
-
-				for (const auto& child : NodeAddress(node).getChildAddresses()) {
-					auto res = visit(child.getAddressedNode(), bound);
-					if(!res) {
-						continue;
-					}
-
-					std::transform(res->begin(), res->end(), std::back_inserter(entry), [&](const TagTypeReferenceAddress& tag) {
-						return concat(child, tag);
-					});
-				}
-
-				return &entry;
-			}
-
-			const TagTypeReferenceAddressList* visitTagTypeReference(const TagTypeReferencePtr& ref, const TagTypeReferenceSet& bound) override {
-				auto it = cache.find(ref);
-				if(it != cache.end()) {
-					return &it->second;
-				}
-
-				auto& entry = cache[ref];
-
-				if (!bound.contains(ref)) {
-					entry.push_back(TagTypeReferenceAddress(ref));
-				}
-
-				return &entry;
-			}
-
-			const TagTypeReferenceAddressList* visitTagTypeDefinition(const TagTypeDefinitionPtr& def, const TagTypeReferenceSet& bound) override {
-				auto it = cache.find(def);
-				if(it != cache.end()) {
-					return &it->second;
-				}
-
-				TagTypeReferenceSet nestedBound = bound;
-				for(const auto& cur : def) {
-					nestedBound.insert(cur->getTag());
-				}
-
-				auto& entry = cache[def];
-
-				for(const auto& cur : TagTypeDefinitionAddress(def)) {
-					auto res = visit(cur->getRecord(), nestedBound);
-					if(!res) {
-						continue;
-					}
-
-					std::transform(res->begin(), res->end(), std::back_inserter(entry), [&](const TagTypeReferenceAddress& tag) {
-						return concat(cur.getRecord(), tag);
-					});
-				}
-
-				return &entry;
-			}
-
-			const TagTypeReferenceAddressList* visitTagType(const TagTypePtr& type, const TagTypeReferenceSet& bound) override {
-				auto it = cache.find(type);
-				if(it != cache.end()) {
-					return &it->second;
-				}
-
-				auto& entry = cache[type];
-
-				auto res = visit(type->getDefinition(), bound);
-				if(!res) {
-					return nullptr;
-				}
-
-				std::transform(res->begin(), res->end(), std::back_inserter(entry), [&](const TagTypeReferenceAddress& tag) {
-					return concat(TagTypeAddress(type).getDefinition(), tag);
-				});
-
-				return &entry;
-			}
-
-		};
-
-		template<>
-		struct free_reference_collector<LambdaReferencePtr> {
-
-			using reference_list_type = LambdaReferenceAddressList;
-
-			std::map<LambdaPtr, LambdaReferenceAddressList> index;
-
-			free_reference_collector(const LambdaDefinitionPtr& def) {
-				for (const auto& cur : def) {
-					for (const auto& ref : def->getRecursiveCallsOf(cur->getReference())) {
-
-						// lower root
-						LambdaAddress lambda;
-						visitPathTopDownInterruptible(ref, [&](const NodeAddress& cur)->bool {
-							return lambda = cur.isa<LambdaAddress>();
-						});
-
-						// add to index
-						if (!lambda) continue;
-						index[lambda].push_back(cropRootNode(ref, lambda));
-					}
-				}
-			}
-
-			LambdaReferenceAddressList operator()(const NodePtr& node) {
-				if (auto lambda = node.as<LambdaPtr>()) {
-					return index[lambda];
-				}
-				return LambdaReferenceAddressList();
-			}
-
+		template<typename Value>
+		struct reference_types {
+			using type = Value;
+			using pointer = Pointer<const Value>;
+			using address = Address<const Value>;
 		};
 
 		template<
-			typename Var,
-			typename Construct,
+			typename Reference,
+			typename Definition,
 			typename Value,
-			typename Def
+			typename Selector
 		>
-		std::map<Var,Pointer<const Construct>> minimizeRecursiveGroupsGen(const Pointer<const Def>& def) {
+		struct config {
+			using reference		= reference_types<Reference>;
+			using definition	= reference_types<Definition>;
+			using value			= reference_types<Value>;
+			using selector		= reference_types<Selector>;
 
-			using Collector = free_reference_collector<Var>;
-			using RefAddressList = typename Collector::reference_list_type;
+			using result_t = std::map<typename reference::pointer,typename selector::pointer>;
+		};
 
-			// instantiate reference collector
-			Collector collector(def);
+		struct tag_type_config : public config<TagTypeReference,TagTypeDefinition,Record,TagType> {};
+		struct lambda_config   : public config<LambdaReference,LambdaDefinition,Lambda,LambdaExpr> {};
 
-			// collect references
+
+		template<typename config>
+		std::vector<typename config::reference::address> getFreeRecursiveReferences(const NodePtr& root) {
+
+			using reference_t = typename config::reference::type;
+			using reference_ptr = typename config::reference::pointer;
+			using reference_adr = typename config::reference::address;
+			using selector_ptr = typename config::selector::pointer;
+			using selector_adr = typename config::selector::address;
+			using definition_ptr = typename config::definition::pointer;
+
+			return collectAllAddresses<reference_t>(NodeAddress(root),[](const NodePtr& cur, auto& collection) {
+
+				// if it is a reference
+				if (cur.isa<reference_ptr>()) {
+					collection.insert(reference_adr(cur));
+					return Action::Prune;
+				}
+
+				// if it is a selector (LambdaExpr or TagType)
+				if (auto selector = cur.isa<selector_ptr>()) {
+
+					// get address of definition
+					auto def = selector_adr(selector)->getDefinition();
+
+					// get free references in definition
+					auto& freeRefs = getContainedFreeReferences(def);
+
+					for(const auto& cur : freeRefs) {
+						if (def->getBindingOf(cur.getAddressedNode())) continue;
+						collection.insert(concat(def,cur));
+					}
+
+					// done
+					return Action::Prune;
+				}
+
+				// if it is a definition
+				if (auto def = cur.isa<definition_ptr>()) {
+
+					// get free references in definition
+					auto& freeRefs = getContainedFreeReferences(def);
+
+					for(const auto& cur : freeRefs) {
+						if (def->getBindingOf(cur.getAddressedNode())) continue;
+						collection.insert(cur);
+					}
+
+					// done
+					return Action::Prune;
+				}
+
+				// everything else: keep searching
+				return Action::Descent;
+			});
+		}
+
+
+	}
+
+
+	TagTypeReferenceAddressList getFreeTagTypeReferences(const NodePtr& node) {
+		return getFreeRecursiveReferences<tag_type_config>(node);
+	}
+
+	LambdaReferenceAddressList getFreeLambdaReferences(const NodePtr& node) {
+		return getFreeRecursiveReferences<lambda_config>(node);
+	}
+
+
+	namespace detail {
+
+		template<typename Reference, typename Selector, typename Definition>
+		const std::vector<Address<const Reference>>& getContainedFreeReferences(const Pointer<const Definition>& def);
+
+
+		template<typename Reference, typename Selector, typename Definition>
+		std::vector<Address<const Reference>> collectFreeReferences(const Pointer<const Definition>& def) {
+
+			using node_t = Pointer<const Reference>;
+			using address_t = Address<const Reference>;
+
+			using selector_t = Pointer<const Selector>;
+
+			// collect all addresses of free references
+			auto references = collectAllAddresses<Reference>(NodeAddress(def),[](const NodePtr& cur, auto& collection) {
+
+				// if it is a tag type reference: add it to the resulting collection
+				if (cur.isa<node_t>()) {
+					collection.insert(address_t(cur));
+					return Action::Prune;
+				}
+
+				// if it is a usage element
+				if (const auto& use = cur.isa<selector_t>()) {
+
+					// get free references from nested definition
+					auto def = Address<const Selector>(use)->getDefinition();
+
+					// find free references in this construct
+					const auto& references = getContainedFreeReferences<Reference,Selector>(def.getAddressedNode());
+
+					// filter out references bound by the current definition
+					for(const auto& cur : references) {
+						if (def->getBindingOf(cur)) continue;
+						collection.insert(concat(def,cur));
+					}
+
+					// done
+					return Action::Prune;
+				}
+
+				// search child addresses
+				return Action::Descent;
+			});
+
+			// filter out references in bindings
+			std::vector<Address<const Reference>> res;
+			for(const auto& cur : references) {
+				if (cur.getDepth() > 3) res.push_back(cur);
+			}
+
+			// done
+			return res;
+		}
+
+
+
+		template<typename Reference, typename Selector, typename Definition>
+		const std::vector<Address<const Reference>>& getContainedFreeReferences(const Pointer<const Definition>& def) {
+
+			using list_type = std::vector<Address<const Reference>>;
+
+			struct annotation {
+				list_type list;
+				bool operator==(const annotation& other) const {
+					return list == other.list;
+				}
+			};
+
+			// check annotation
+			auto* value = def->template hasAttachedValue<annotation>();
+			if (value) return value->list;
+
+			// create new annotation
+			auto& value_annotation = def->template attachValue<annotation>();
+			return value_annotation.list = collectFreeReferences<Reference,Selector>(def);
+
+		}
+
+	}
+
+	const TagTypeReferenceAddressList& getContainedFreeReferences(const TagTypeDefinitionPtr& def) {
+		return detail::getContainedFreeReferences<TagTypeReference,TagType>(def);
+	}
+
+	const LambdaReferenceAddressList& getContainedFreeReferences(const LambdaDefinitionPtr& def) {
+		return detail::getContainedFreeReferences<LambdaReference,LambdaExpr>(def);
+	}
+
+	namespace {
+
+		template<typename config>
+		typename config::result_t minimizeRecursiveGroupsGen(const typename config::definition::pointer& def) {
+
+			using ReferencePtr = typename config::reference::pointer;
+			using ValuePtr = typename config::value::pointer;
+			using Definition = typename config::definition::type;
+			using Selector = typename config::selector::type;
+
+			using RefAddressList = std::vector<typename config::reference::address>;
+
+			// get all contained references
+			const auto& containedReferences = getContainedFreeReferences(def);
+
+			// index references
 			std::map<NodePtr,RefAddressList> references;
-			for(const auto& cur : def) {
-				references[cur->getChild(0)] = collector(cur->getChild(1));
+			for(const auto& cur : containedReferences) {
+				auto value = cur.getAddressOnDepth(2).getAddressedNode()->getChild(0);
+				auto relAddr = cropRootNode(cur,cur.getAddressOnDepth(3));
+				references[value].push_back(relAddr);
 			}
 
 			// extract dependency graph
@@ -2279,16 +2263,16 @@ namespace analysis {
 
 			// build up resulting map
 			NodeManager& mgr = def.getNodeManager();
-			std::map<Var, Pointer<const Construct>> res;
+			typename config::result_t res;
 
 			// process in reverse order
 			for(auto it = components.rbegin(); it != components.rend(); ++it) {
 				auto& comp = *it;
 
 				// build new bindings
-				utils::map::PointerMap<Var, Value> bindings;
+				utils::map::PointerMap<ReferencePtr, ValuePtr> bindings;
 				for(const auto& var : comp) {
-					auto v = var.as<Var>();
+					auto v = var.as<ReferencePtr>();
 
 					// get old definition
 					auto oldDef = def->getDefinitionOf(v);
@@ -2321,12 +2305,12 @@ namespace analysis {
 				}
 
 				// build reduced definition group
-				auto def = Def::get(mgr, bindings);
+				auto def = Definition::get(mgr, bindings);
 
 				// add definitions to result
 				for(const auto& var : comp) {
-					auto v = var.as<Var>();
-					res[v] = Construct::get(mgr, v, def);
+					auto v = var.as<ReferencePtr>();
+					res[v] = Selector::get(mgr, v, def);
 				}
 			}
 
@@ -2338,12 +2322,12 @@ namespace analysis {
 
 	std::map<TagTypeReferencePtr, TagTypePtr> minimizeRecursiveGroup(const TagTypeDefinitionPtr& def) {
 		// conduct minimization
-		return minimizeRecursiveGroupsGen<TagTypeReferencePtr, TagType, RecordPtr>(def);
+		return minimizeRecursiveGroupsGen<tag_type_config>(def);
 	}
 
 	std::map<LambdaReferencePtr, LambdaExprPtr> minimizeRecursiveGroup(const LambdaDefinitionPtr& def) {
 		// conduct minimization
-		return minimizeRecursiveGroupsGen<LambdaReferencePtr, LambdaExpr, LambdaPtr>(def);
+		return minimizeRecursiveGroupsGen<lambda_config>(def);
 	}
 
 
