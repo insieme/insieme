@@ -263,8 +263,7 @@ namespace analysis {
 			if(moveConstructor && !isaDefaultMember(moveConstructor)) return false;
 
 			// check trivial destructor
-			auto destructor = record->getDestructor();
-			if(destructor && !isaDefaultMember(destructor)) return false;
+			if(record->hasDestructor() && !isaDefaultMember(record->getDestructor())) return false;
 
 			// check for trivial copy and move assignments
 			auto copyAssignment = getAssignmentOperatorByType(analysis::buildDefaultCopyAssignOperatorType(thisType));

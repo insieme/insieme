@@ -772,7 +772,8 @@ namespace backend {
 			auto access = c_ast::access(thisObject, field);
 
 			// handle implicit C array / pointer duality
-			if(core::lang::isVariableSizedArray(core::analysis::getReferencedType(call->getType()))) { return access; }
+			if(core::lang::isVariableSizedArray(core::analysis::getReferencedType(call->getType()))
+					|| core::lang::isUnknownSizedArray(core::analysis::getReferencedType(call->getType()))) { return access; }
 
 			// access the type
 			return c_ast::ref(access);
