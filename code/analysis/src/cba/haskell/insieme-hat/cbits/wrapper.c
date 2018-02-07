@@ -37,14 +37,20 @@
 
 #include <stdlib.h>
 #include "HsFFI.h"
+#include "Rts.h"
 
 int insieme_analysis_haskell_init(void)
 {
-  hs_init(NULL, NULL);
-  return 0;
+        char *rtsopts = getenv("INSIEME_HASKELL_RTSOPTS");
+
+	RtsConfig conf = defaultRtsConfig;
+	conf.rts_opts_enabled = RtsOptsAll;
+        conf.rts_opts = rtsopts;
+	hs_init_ghc(NULL, NULL, conf);
+	return 0;
 }
 
 void insieme_analysis_haskell_exit(void)
 {
-  hs_exit();
+	hs_exit();
 }
