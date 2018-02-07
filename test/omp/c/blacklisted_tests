@@ -29,9 +29,6 @@ velvet
 vivid
 ziggurat
 
-# Problems with unknown sized arrays
-qap2
-
 
 ####################################################################################
 # The following tests are not really blacklisted but take rather long to execute.  #

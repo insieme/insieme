@@ -14,10 +14,6 @@ label_goto
 longlong
 simd_vector
 
-# Problems with unknown sized arrays
-qap
-variable_sized_struct
-
 ####################################################################################
 # The following tests are not really blacklisted but take rather long to execute.  #
 # All test names preceded with a '+' will not be executed by default but only when #
