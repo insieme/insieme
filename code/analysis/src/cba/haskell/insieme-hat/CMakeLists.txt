@@ -55,6 +55,9 @@ string (REPLACE ";" " " haskell_env_cmd "${haskell_env}")
 configure_file(haskell-env.sh.in ${CMAKE_BINARY_DIR}/haskell-env.sh)
 
 add_custom_target(insieme_hat
+	# Fix rebuilding of .chs files
+	COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_SOURCE_DIR}/src/Insieme/Inspire/IR/NodeType.chs"
+
 	# install dependencies and build package
 	COMMAND ${cabal} update
 	# -j1 because of cabal#4144
@@ -107,6 +110,13 @@ if(BUILD_DOCS)
 	)
 endif()
 
+# cleanup
+set_directory_properties(
+	PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
+	"${CMAKE_CURRENT_BINARY_DIR}/libinsieme-hat.so;${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle"
+)
+
+# force cabal home cleanup
 add_custom_target(clean_insieme_hat
 	COMMAND ${CMAKE_COMMAND} -E remove "${CMAKE_CURRENT_BINARY_DIR}/libinsieme-hat.so"
 	COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/dist-newstyle/"

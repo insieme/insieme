@@ -413,7 +413,7 @@ namespace analysis {
 	namespace {
 		LambdaExprPtr getConstructorByType(const TagTypePtr& type, const FunctionTypePtr& ctorType) {
 			auto res = analysis::hasConstructorOfType(type, ctorType);
-			assert_true(res) << "Passed TagType " << *type << " doesn't have a destructor of type " << *ctorType;
+			assert_true(res) << "Passed TagType " << *type << " doesn't have a constructor of type " << *ctorType;
 			return res->as<LambdaExprPtr>();
 		}
 
