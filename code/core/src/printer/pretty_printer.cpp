@@ -217,12 +217,9 @@ namespace printer {
 			 */
 			utils::map::PointerMap<LambdaReferencePtr, std::string> lambdaNames;
 			utils::set::PointerSet<LambdaReferencePtr> entryPoints;
-			utils::set::PointerSet<TagTypePtr> visitedTagTypes;
 			utils::set::PointerSet<LiteralPtr> visitedLiterals;
 			utils::map::PointerMap<LambdaReferencePtr, std::tuple<std::string, std::string>> visitedFreeFunctions;
-			utils::set::PointerSet<LambdaReferencePtr> visitedMemberFunctions;
 			utils::set::PointerSet<LambdaReferencePtr> visitedConstructors;
-			utils::set::PointerSet<LiteralPtr> literalMemberFunctions;
 			utils::set::PointerSet<LambdaReferencePtr> staticMemberFunctions;
 
 			std::vector<std::pair<TypePtr,TypePtr>> aliases;
@@ -342,6 +339,8 @@ namespace printer {
 				};
 
 				// get all lambda names out of member functions
+				utils::set::PointerSet<LambdaReferencePtr> visitedMemberFunctions;
+				utils::set::PointerSet<LiteralPtr> literalMemberFunctions;
 				visitDepthFirstOnce(node, [&](const TagTypePtr& cur) {
 					const auto& definition = cur->getDefinition();
 
@@ -351,12 +350,20 @@ namespace printer {
 						for(auto& memberFun : binding->getRecord()->getMemberFunctions()) {
 							if (const auto& lambdaExpr = memberFun->getImplementation().isa<LambdaExprPtr>()) {
 								const auto& lambdaBinding = lambdaExpr->getDefinition()->getBindingOf(lambdaExpr->getReference());
-								lambdaNames[cur->peel(lambdaBinding)->getReference()] = makeReadableIfRequired(memberFun->getName()->getValue());
-								lambdaNames[lambdaBinding->getReference()] = makeReadableIfRequired(memberFun->getName()->getValue());
+
+								auto ref = lambdaBinding->getReference();
+								auto peeledRef = IRBuilder(ref->getNodeManager()).lambdaReference(
+										cur->peel(ref->getType()),
+										ref->getName()
+								);
+
+								auto name = makeReadableIfRequired(memberFun->getName()->getValue());
+								lambdaNames[ref] = name;
+								lambdaNames[peeledRef] = name;
 
 								// later used to find out which member functions are not visited -> free defined memFuns
-								visitedMemberFunctions.insert(lambdaBinding->getReference());
-								visitedMemberFunctions.insert(cur->peel(lambdaBinding)->getReference());
+								visitedMemberFunctions.insert(ref);
+								visitedMemberFunctions.insert(peeledRef);
 							} else if (const auto& literal = memberFun->getImplementation().isa<LiteralPtr>()) {
 								literalMemberFunctions.insert(literal);
 							}
@@ -405,17 +412,21 @@ namespace printer {
 					return;
 				}
 
-				// collect all tagtypes
-				IRBuilder builder(nm);
-				visitDepthFirstOnce(node, [&](const TagTypePtr& cur) {
-					auto definition = cur->getDefinition();
-					for(auto& binding : definition->getDefinitions()) {
-						auto tag = binding->getTag();
-						visitedTagTypes.insert(builder.tagType(tag,definition));
-					}
-				});
 
 				if(!printer.hasOption(PrettyPrinter::JUST_LOCAL_CONTEXT)) {
+
+					utils::set::PointerSet<TagTypePtr> visitedTagTypes;
+
+					// collect all tagtypes
+					IRBuilder builder(nm);
+					visitDepthFirstOnce(node, [&](const TagTypePtr& cur) {
+						auto definition = cur->getDefinition();
+						for(auto& binding : definition->getDefinitions()) {
+							auto tag = binding->getTag();
+							visitedTagTypes.insert(builder.tagType(tag,definition));
+						}
+					});
+
 					// print all type declarations
 					for(auto& tag : visitedTagTypes) {
 						if(tag->getName()->getValue().compare("")) {
