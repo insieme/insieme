@@ -111,7 +111,7 @@ type SymbolicValueLattice = (ValueTree.Tree SimpleFieldIndex SymbolicValueSet)
 --
 
 symbolicValue :: Addr.NodeAddress -> Solver.TypedVar SymbolicValueLattice
-symbolicValue = genericSymbolicValue analysis
+symbolicValue = genericSymbolicValue True analysis
   where
     -- we just re-use the default version of the generic symbolic value analysis
     analysis = (mkDataFlowAnalysis SymbolicValueAnalysis "S" symbolicValue)
@@ -121,8 +121,65 @@ symbolicValue = genericSymbolicValue analysis
 -- * A generic symbolic value analysis which can be customized
 --
 
-genericSymbolicValue :: (Typeable d) => DataFlowAnalysis d SymbolicValueLattice SimpleFieldIndex -> Addr.NodeAddress -> Solver.TypedVar SymbolicValueLattice
-genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
+-- This is the gernal interface, handling the introduction of implicit reference casts,
+-- while the genericSymbolicValue' is handling the actual computaiton of symbolic values
+genericSymbolicValue :: (Typeable d) => Bool -> DataFlowAnalysis d SymbolicValueLattice SimpleFieldIndex -> Addr.NodeAddress -> Solver.TypedVar SymbolicValueLattice
+genericSymbolicValue slice_functions userDefinedAnalysis addr = case getNodeType addr of
+
+    -- declartions and call expressions may cause implicit ref-casts (e.g. non-const to const)
+    IR.Declaration -> adapted
+    IR.CallExpr -> adapted
+
+    -- for all others, just forward internal value
+    _ -> value
+
+  where
+
+    -- get the variable representing the actual value
+    inner = genericSymbolicValue' slice_functions userDefinedAnalysis addr
+
+    -- the standard forwarded value, not adapted
+    value = Solver.mkVariable varId [fwd] Solver.bot
+    fwd = Solver.forward inner value
+
+    -- a possibly adapted forwarded value
+    adapted = Solver.mkVariable varId [con] Solver.bot
+    con = Solver.createConstraint dep val adapted
+
+    dep _ = [Solver.toVar inner]
+    val a = if mayNeedRefCast && ComposedValue.isValue raw then mod else raw
+      where
+        raw = Solver.get a inner
+        mod = ComposedValue.toComposed $ SymbolicValueSet ( BSet.map convert values )
+
+        values = unSVS $ ComposedValue.toValue raw
+
+        convert value = if isReference value then converted else value
+          where
+            converted = Builder.refCast value targetIsConstRef targetIsVolatileRef
+
+    Just targetType = getType $ Addr.node addr
+
+    targetIsConstRef = isConstReference targetType
+    targetIsVolatileRef = isVolatileReference targetType
+    mayNeedRefCast = targetIsConstRef || targetIsVolatileRef
+
+    -- utilities
+    varIdGen = mkVarIdentifier userDefinedAnalysis
+    varId = varIdGen addr
+
+
+
+data GenericSymbolicValueAnalysis a = GenericSymbolicValueAnalysis a
+    deriving (Typeable)
+
+-- a utility function to obtain a analyiss identifier for concrete symbolic value analysis (prime)
+genericSymbolicValueAnalysis :: (Typeable a) => DataFlowAnalysis a SymbolicValueLattice SimpleFieldIndex -> Solver.AnalysisIdentifier
+genericSymbolicValueAnalysis a = Solver.mkAnalysisIdentifier (GenericSymbolicValueAnalysis a) ((show $ analysisIdentifier a) ++ "'")
+
+-- the actula (generic) symbolic value analysis
+genericSymbolicValue' :: (Typeable d) => Bool -> DataFlowAnalysis d SymbolicValueLattice SimpleFieldIndex -> Addr.NodeAddress -> Solver.TypedVar SymbolicValueLattice
+genericSymbolicValue' slice_functions userDefinedAnalysis addr = case getNodeType addr of
 
     IR.Literal  -> Solver.mkVariable varId [] (compose $ BSet.singleton $ Addr.getNode addr)
 
@@ -194,6 +251,7 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
   where
 
     analysis = userDefinedAnalysis {
+        analysisIdentifier = genericSymbolicValueAnalysis userDefinedAnalysis,
         freeVariableHandler = freeVariableHandler,
         initialValueHandler = initialMemoryValue,
         excessiveFileAccessHandler = excessiveFileAccessHandler,
@@ -204,7 +262,7 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
     varIdGen = mkVarIdentifier analysis
     varId = varIdGen addr
 
-    varGen = genericSymbolicValue userDefinedAnalysis
+    varGen = variableGenerator userDefinedAnalysis
 
     ops = [ refDeclHandler, operatorHandler ]
 
@@ -225,8 +283,17 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
     operatorHandler = OperatorHandler cov dep val
       where
 
-        -- TODO: apply on all builtins, also deriveds
-        cov a = (getNodeType a == IR.Literal || toCover) && (not toIgnore)
+        -- switch between the modes
+        cov = if slice_functions then cov_builtin_only else cov_all
+
+        -- TODO: filter out non-pure functions
+        cov_all a = not toIgnore
+          where
+            -- literal builtins to ignore
+            toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign", "ref_decl" ]
+
+        -- in this mode only known built-ins are covered
+        cov_builtin_only a = (getNodeType a == IR.Literal || toCover) && (not toIgnore)
           where
             -- derived builtins to cover
             toCover  = any (isBuiltin a) [
@@ -243,6 +310,8 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
                      ] || isConstructor a 
             -- literal builtins to ignore
             toIgnore = any (isBuiltin a) [ "ref_deref", "ref_assign", "ref_decl" ]
+
+
 
         -- if triggered, we will need the symbolic values of all arguments
         dep _ _ = Solver.toVar <$> argVars
@@ -261,7 +330,7 @@ genericSymbolicValue userDefinedAnalysis addr = case getNodeType addr of
               where
                 decls = toDecl <$> zip (tail $ tail $ IR.children $ IR.node addr ) args
 
-                toDecl (decl,arg) = IR.mkNode IR.Declaration [IR.child 0 decl, arg] []
+                toDecl (decl,arg) = Builder.mkDeclaration (IR.child 0 decl) arg
 
             callTrg = case getNodeType o of
                 IR.Literal -> o

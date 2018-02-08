@@ -192,11 +192,26 @@ getReferenceKind r | isReference r = case kind of
 getReferenceKind _ = RK_Unknown
 
 
+isFlag :: NodeLike a => String -> a -> Bool
+isFlag s n = case node n of
+    IR.Node IR.GenericType ((IR.Node (IR.StringValue v) _) : _) -> s == v
+    _ -> False
+
+isTrueFlag :: NodeLike a => a -> Bool
+isTrueFlag = isFlag "t"
+
+isFalseFlag :: NodeLike a => a -> Bool
+isFalseFlag = isFlag "f"
+
+
 isConstReference :: NodeLike a => a -> Bool
 isConstReference n = case getReferenceType $ node n of
-    Just t -> case getTypeParameter 1 t of
-        IR.Node IR.GenericType ((IR.Node (IR.StringValue "t") _) : _) -> True
-        _ -> False
+    Just t -> isTrueFlag $ getTypeParameter 1 t
+    _ -> False
+
+isVolatileReference :: NodeLike a => a -> Bool
+isVolatileReference n = case getReferenceType $ node n of
+    Just t -> isTrueFlag $ getTypeParameter 2 t
     _ -> False
 
 
@@ -320,6 +335,10 @@ isConstructorOrDestructor n = isConstructor n || isDestructor n
 
 -- ** Expressions
 
+-- | Return 'True' if the given node is a expression.
+isExpression :: NodeLike a => a -> Bool
+isExpression = (==IR.Expression) . IR.toNodeKind . IR.getNodeType . node
+
 -- *** Lambda Expressions
 
 getLambda :: NodeLike a => a -> Maybe a
@@ -373,6 +392,14 @@ getArgument :: (NodeLike a) => Int -> a -> Maybe a
 getArgument p c = case getNodeType c of
     IR.CallExpr -> Just $ child 1 $ child (p + 2) c
     _ -> Nothing
+
+
+-- ** Supports
+
+-- | Return 'True' if the given node is a expression.
+isDeclaration :: NodeLike a => a -> Bool
+isDeclaration = (==IR.Declaration) . IR.getNodeType . node
+
 
 
 -- ** Builtins

@@ -40,6 +40,8 @@
 
 module Insieme.Inspire.Builder (
 
+    mkDeclaration,
+
     mkCall,
     mkCallWithArgs,
 
@@ -53,6 +55,7 @@ module Insieme.Inspire.Builder (
     minusOne,
 
     deref,
+    refCast,
     refMember,
     refComponent,
     refTemporary,
@@ -80,7 +83,8 @@ mkLiteral :: String -> IR.Tree -> IR.Tree
 mkLiteral s t = assert (Q.isType t) $ IR.mkNode IR.Literal [t,mkStringValue s] []
 
 mkDeclaration :: IR.Tree -> IR.Tree -> IR.Tree
-mkDeclaration t v = assert (Q.isType t) $ IR.mkNode IR.Declaration [t,v] []
+mkDeclaration _ v | Q.isDeclaration v = v
+mkDeclaration t v = assert (Q.isType t) $ assert (Q.isExpression v) $ IR.mkNode IR.Declaration [t,v] []
 
 mkCall :: IR.Tree -> IR.Tree -> [IR.Tree] -> IR.Tree
 mkCall t f argDecls = IR.mkNode IR.CallExpr (t:f:argDecls) []
@@ -123,16 +127,64 @@ minusOne :: IR.Tree -> IR.Tree
 minusOne a = minus a $ mkLiteral "1" SP.uint1
 
 
+-- true/false flags --
+
+trueFlagType :: IR.Tree
+trueFlagType = SP.parseType "t"
+
+falseFlagType :: IR.Tree
+falseFlagType = SP.parseType "f"
+
+
+trueFlagLit :: IR.Tree
+trueFlagLit = SP.parseExpr "type_lit(t)"
+
+falseFlagLit :: IR.Tree
+falseFlagLit = SP.parseExpr "type_lit(f)"
+
+
+-- reference types --
+
+mkReferenceType :: IR.Tree -> IR.Tree -> IR.Tree -> IR.Tree -> IR.Tree
+mkReferenceType e c v k = IR.mkNode IR.GenericType [name, parents, params] []
+  where
+    name = mkStringValue "ref"
+    parents = IR.mkNode IR.Parents [] []
+    params = IR.mkNode IR.Types [e,c,v,k] []
+
+
 -- ref-operator calls --
 
 deref :: IR.Tree -> IR.Tree
-deref t = mkCall resType SP.refDeref [decl]
+deref t = mkCallWithArgs resType SP.refDeref [t]
   where
     resType = fromJust $ Q.getReferencedType refType
-
     refType = child 0 t
 
-    decl = mkDeclaration refType t
+
+refCast :: IR.Tree -> Bool -> Bool -> IR.Tree
+refCast r c v = if ci /= c || vi /= v then cast else r
+  where
+
+    -- check input type
+    Just inType = Q.getReferenceType r
+    ci = Q.isConstReference r
+    vi = Q.isVolatileReference r
+
+    -- build a ref cast expression
+    cast = mkCallWithArgs resType SP.refCast [r,cf,vf,kf]
+
+    Just et = Q.getReferencedType r
+    resType = mkReferenceType et ct vt kt
+
+    ct = if c then trueFlagType else falseFlagType
+    vt = if v then trueFlagType else falseFlagType
+    kt = Q.getTypeParameter 3 inType
+
+    cf = if c then trueFlagLit else falseFlagLit
+    vf = if v then trueFlagLit else falseFlagLit
+    kf = mkTypeLiteral kt
+
 
 refMember :: IR.Tree -> String -> IR.Tree
 refMember t f = mkCall some_ref_type SP.hsRefMemberAccess $ wrapSomeDecl <$> [t,mkIdentifier f]

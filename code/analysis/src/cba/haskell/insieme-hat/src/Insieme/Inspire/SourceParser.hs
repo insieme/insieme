@@ -98,6 +98,9 @@ arithSub = parseExpr "hs_arith_sub"
 refDeref :: IR.Tree
 refDeref = parseExpr "ref_deref"
 
+refCast :: IR.Tree
+refCast = parseExpr "ref_cast"
+
 refAssign :: IR.Tree
 refAssign = parseExpr "ref_assign"
 
