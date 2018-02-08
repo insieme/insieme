@@ -1347,7 +1347,7 @@ namespace printer {
 					(*out) << "()";
 				} else {
 					auto begin = args.begin() + (isMemberFun ? 1 : 0);
-					std::stringstream argStream;
+
 					auto argPrinter = [&](std::ostream& argStream, const NodeAddress& curParam) {
 						if(auto p = curParam.getAddressedNode().isa<LambdaExprPtr>()) {
 							argStream << lambdaNames[p->getReference()];
@@ -1358,22 +1358,40 @@ namespace printer {
 							out = actualOut;
 						}
 					};
-					argStream << "(" << join(", ", begin, args.end(), argPrinter) << ")";
-					if(!printer.hasOption(PrettyPrinter::CALL_ARG_LINE_BREAKS) || argStream.str().length() < printer.CALL_ARG_LINE_BREAKS_THRESHOLD) {
-						(*out) << argStream.str();
+
+					std::vector<string> argStrings;
+
+					// print arguments
+					std::size_t length = 0;
+					for(auto it = begin; it < args.end(); ++it) {
+						std::stringstream argStream;
+						argPrinter(argStream,*it);
+						argStrings.push_back(argStream.str());
+						length += argStrings.back().length();
 					}
-					else { // if requested, line break long arguments
+
+					// format arguments
+					if (!printer.hasOption(PrettyPrinter::CALL_ARG_LINE_BREAKS) || length < printer.CALL_ARG_LINE_BREAKS_THRESHOLD) {
+						(*out) << "(" << join(", ", argStrings) << ")";
+					} else {
+						// add additional intention to argument strings
+						for(auto& cur : argStrings) {
+							boost::replace_all(cur,"\n","\n" + printer.tabSep);
+						}
+
+						// print arguments line by line
 						(*out) << "(";
 						increaseIndent();
-						for(auto it = begin; it < args.end(); ++it) {
+						for(const auto& cur : argStrings) {
 							newLine();
-							argPrinter(*out, *it);
-							if(it+1 < args.end()) (*out) << ",";
+							(*out) << cur;
+							if(&cur != &argStrings.back()) (*out) << ",";
 						}
 						decreaseIndent();
 						newLine();
 						(*out) << ")";
 					}
+
 				}
 
 				// print materialize if required
