@@ -42,7 +42,6 @@
 
 module Insieme.Inspire.IR.Tree where
 
-import Data.Maybe
 import Data.List
 import Control.DeepSeq
 import GHC.Generics (Generic)
@@ -93,10 +92,11 @@ mkNode :: NodeType -> [Tree] -> [String] -> Tree
 mkNode nt ch bt = MkTree Nothing (InnerTree nt ch bt)
 
 getBuiltinTarget :: Tree -> Tree
-getBuiltinTarget n@(Node LambdaExpr [_,tag,(Node LambdaDefinition bindings)]) = res
+getBuiltinTarget (Node LambdaExpr [_,tag,(Node LambdaDefinition bindings)]) = res
   where
     Just res = (child 1) <$> find p bindings
     p (Node LambdaBinding [t,_]) = tag == t
+    p _ = error "Invalid node composition!"
 getBuiltinTarget n = n
 
 isBuiltin :: Tree -> String -> Bool
