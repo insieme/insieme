@@ -572,6 +572,25 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
                         assign c = Q.isBuiltin (toAddress c) "ref_assign"
 
 
+        -- skip the interpretation of known effect-free builtins
+        I.CallExpr | p == Internal && isCallToEffectFreeBuiltin -> var
+            where
+                var = Solver.mkVariable varId [con] Solver.bot
+                con = Solver.forward pre var
+                pre = reachingDefinitions $ MemoryStatePoint (ProgramPoint (I.goDown 1 addr) Post) ml
+
+                isCallToEffectFreeBuiltin = any (Q.isBuiltin $ I.goDown 1 addr)
+                    [
+                      "ref_kind_cast", "ref_const_cast",
+                      "ref_scalar_to_ref_array",
+                      "ref_array_element", "ref_member_access", "ref_component_access",
+                      "ptr_from_array", "ptr_to_array", "ptr_to_ref", "ptr_null", "ptr_const_cast",
+                      "ptr_cast", "ptr_add", "ptr_sub",
+                      "bool_not",
+                      "num_cast"
+                    ]
+
+
         -- TODO: this optimization has been disabled due to invalid write set summaries
         --       re-enable once fixed
 
@@ -600,6 +619,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
                 nonSkipPredecessorVars a = Solver.getDependencies a defaultVar
                 nonSkipPredecessorVal a = Solver.getLimit a defaultVar
+
 
         -- init expressions may alter memory states as well
         I.InitExpr | p == Post -> var
@@ -633,7 +653,9 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
         isAssignCandidate = res
             where
-                res = I.numChildren addr == 4 && unitRes && refParam
+                res = (not isNotRef) && I.numChildren addr == 4 && unitRes && refParam
+                fun = I.goDown 1 addr
+                isNotRef = Q.isaBuiltin fun && not (Q.isBuiltin fun "ref_assign")
                 unitRes  = Q.isUnit $ I.getNode addr
                 refParam = Q.isReference $ I.getNode $ I.goDown 1 $ I.goDown 2 addr
 

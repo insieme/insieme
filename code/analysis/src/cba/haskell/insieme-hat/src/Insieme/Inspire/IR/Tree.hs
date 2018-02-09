@@ -42,6 +42,8 @@
 
 module Insieme.Inspire.IR.Tree where
 
+import Data.Maybe
+import Data.List
 import Control.DeepSeq
 import GHC.Generics (Generic)
 
@@ -90,11 +92,18 @@ unsafeMkNode i nt ch bt = MkTree (Just i) (InnerTree nt ch bt)
 mkNode :: NodeType -> [Tree] -> [String] -> Tree
 mkNode nt ch bt = MkTree Nothing (InnerTree nt ch bt)
 
+getBuiltinTarget :: Tree -> Tree
+getBuiltinTarget n@(Node LambdaExpr [_,tag,(Node LambdaDefinition bindings)]) = res
+  where
+    Just res = (child 1) <$> find p bindings
+    p (Node LambdaBinding [t,_]) = tag == t
+getBuiltinTarget n = n
+
 isBuiltin :: Tree -> String -> Bool
-isBuiltin t s = elem s $ builtinTags t
+isBuiltin t s = elem s $ builtinTags $ getBuiltinTarget t
 
 isaBuiltin :: Tree -> Bool
-isaBuiltin t = not $ null $ builtinTags t
+isaBuiltin t = not $ null $ builtinTags $ getBuiltinTarget t
 
 hasMaterializingTag :: Tree -> Bool
 hasMaterializingTag n = isBuiltin n "tag_materializing"
