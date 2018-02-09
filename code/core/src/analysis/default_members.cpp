@@ -72,18 +72,18 @@ namespace analysis {
 		LambdaExprPtr buildConstructorLambda(const FunctionTypePtr& ctorType, const VariableList& variables, const StatementPtr& body) {
 			IRBuilder builder(ctorType->getNodeManager());
 			auto name = builder.getLiteralForConstructor(ctorType)->getValue()->getValue();
-			return markAsDefaultMember(normalize(builder.lambdaExpr(ctorType, variables, body, name)));
+			return markAsDefaultMember(builder.lambdaExpr(ctorType, variables, body, name));
 		}
 		LambdaExprPtr buildDestructorLambda(const FunctionTypePtr& dtorType, const VariableList& variables, const StatementPtr& body) {
 			IRBuilder builder(dtorType->getNodeManager());
 			auto name = builder.getLiteralForDestructor(dtorType)->getValue()->getValue();
-			return markAsDefaultMember(normalize(builder.lambdaExpr(dtorType, variables, body, name)));
+			return markAsDefaultMember(builder.lambdaExpr(dtorType, variables, body, name));
 		}
 		MemberFunctionPtr buildAssignmentLambda(const FunctionTypePtr& funType, const VariableList& variables, const StatementPtr& body) {
 			IRBuilder builder(funType->getNodeManager());
 			auto funName = utils::getMangledOperatorAssignName();
 			auto name = builder.getLiteralForMemberFunction(funType, funName)->getValue()->getValue();
-			auto fun = markAsDefaultMember(normalize(builder.lambdaExpr(funType, variables, body, name)));
+			auto fun = markAsDefaultMember(builder.lambdaExpr(funType, variables, body, name));
 			return builder.memberFunction(false, funName, fun);
 		}
 
@@ -234,7 +234,7 @@ namespace analysis {
 		core::IRBuilder builder(thisType.getNodeManager());
 		const auto& refExt = thisType.getNodeManager().getLangExtension<lang::ReferenceExtension>();
 		auto ctorType = buildDefaultDefaultConstructorType(thisType);
-		auto thisParam = builder.variable(builder.refType(thisType));
+		auto thisParam = builder.variable(builder.refType(thisType), 0);
 
 		// create the body
 		core::StatementList bodyStmts;
@@ -305,8 +305,8 @@ namespace analysis {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto ctorType = buildDefaultCopyConstructorType(thisType);
 		const auto& otherType = ctorType->getParameterType(1);
-		auto thisParam = builder.variable(builder.refType(thisType));
-		auto otherParam = builder.variable(otherType);
+		auto thisParam = builder.variable(builder.refType(thisType), 0);
+		auto otherParam = builder.variable(otherType, 1);
 
 		auto body = buildCopyOrMoveConstructorBody(thisParam, otherParam, parents, fields, OperationType::Copy);
 		return buildConstructorLambda(ctorType, toVector(thisParam, otherParam), body);
@@ -323,8 +323,8 @@ namespace analysis {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto ctorType = buildDefaultMoveConstructorType(thisType);
 		const auto& otherType = ctorType->getParameterType(1);
-		auto thisParam = builder.variable(builder.refType(thisType));
-		auto otherParam = builder.variable(otherType);
+		auto thisParam = builder.variable(builder.refType(thisType), 0);
+		auto otherParam = builder.variable(otherType, 1);
 
 		auto body = buildCopyOrMoveConstructorBody(thisParam, otherParam, parents, fields, OperationType::Move);
 		return buildConstructorLambda(ctorType, toVector(thisParam, otherParam), body);
@@ -340,7 +340,7 @@ namespace analysis {
 		core::IRBuilder builder(thisType.getNodeManager());
 		const auto& refExt = thisType.getNodeManager().getLangExtension<lang::ReferenceExtension>();
 		auto dtorType = buildDefaultDestructorType(thisType);
-		auto thisParam = builder.variable(builder.refType(thisType));
+		auto thisParam = builder.variable(builder.refType(thisType), 0);
 
 		// create the body
 		core::StatementList bodyStmts;
@@ -383,8 +383,8 @@ namespace analysis {
 	MemberFunctionPtr buildDefaultCopyAssignOperator(const TypePtr& thisType, const ParentList& parents, const FieldList& fields) {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto funType = buildDefaultCopyAssignOperatorType(thisType);
-		auto thisParam = builder.variable(builder.refType(thisType));
-		auto otherParam = builder.variable(funType->getParameterType(1));
+		auto thisParam = builder.variable(builder.refType(thisType), 0);
+		auto otherParam = builder.variable(funType->getParameterType(1), 1);
 
 		auto body = buildCopyOrMoveAssignmentBody(thisParam, otherParam, parents, fields, OperationType::Copy);
 		return buildAssignmentLambda(funType, toVector(thisParam, otherParam), body);
@@ -401,8 +401,8 @@ namespace analysis {
 	MemberFunctionPtr buildDefaultMoveAssignOperator(const TypePtr& thisType, const ParentList& parents, const FieldList& fields) {
 		core::IRBuilder builder(thisType.getNodeManager());
 		auto funType = buildDefaultMoveAssignOperatorType(thisType);
-		auto thisParam = builder.variable(builder.refType(thisType));
-		auto otherParam = builder.variable(funType->getParameterType(1));
+		auto thisParam = builder.variable(builder.refType(thisType), 0);
+		auto otherParam = builder.variable(funType->getParameterType(1), 1);
 
 		auto body = buildCopyOrMoveAssignmentBody(thisParam, otherParam, parents, fields, OperationType::Move);
 		return buildAssignmentLambda(funType, toVector(thisParam, otherParam), body);
