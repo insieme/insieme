@@ -92,7 +92,8 @@ data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
                                  getNode             :: IR.Tree,
                                  getParent           :: Maybe NodeAddress,
                                  getRoot             :: IR.Tree,
-                                 getAbsoluteRootPath :: NodePath
+                                 getAbsoluteRootPath :: NodePath,
+                                 getHash             :: Int
                                }
   deriving (Generic, NFData)
 
@@ -119,15 +120,14 @@ instance Show NodeAddress where
     show = prettyShow
 
 instance Hash.Hashable NodeAddress where
-    hashWithSalt s n = Hash.hashWithSalt s $ getPathReversed n
-    hash n = Hash.hash $ getPathReversed n
+    hashWithSalt s n = Hash.hashWithSalt s $ getHash n
 
 prettyShow :: NodeAddress -> String
 prettyShow na = ppNodePathStr $ getPath na
 
 -- | Create a 'NodeAddress' from a list of indizes and a root node.
 mkNodeAddress :: [Int] -> IR.Tree -> NodeAddress
-mkNodeAddress xs root = foldl' (flip goDown) (NodeAddress [] root Nothing root []) xs
+mkNodeAddress xs root = foldl' (flip goDown) (NodeAddress [] root Nothing root [] 0) xs
 
 -- | Create multiple 'NodeAddress'es from a list of 'NodePath's, originating
 -- from the given root node.
@@ -203,30 +203,33 @@ goUpX 0 a = a
 goUpX n a = goUpX (n-1) $ goUp a
 
 goDown :: Int -> NodeAddress -> NodeAddress
-goDown x parent@(NodeAddress xs n _ ir r) = NodeAddress (x : xs) n' (Just parent) ir r
+goDown x parent@(NodeAddress xs n _ ir r h) = NodeAddress (x : xs) n' (Just parent) ir r (Hash.hashWithSalt h x)
   where
     n' = IR.getChildren n !! x
 
 goLeft :: NodeAddress -> NodeAddress
-goLeft na@(NodeAddress xs _ _             _ _) | head xs == 0 = na
-goLeft na@(NodeAddress _  _ Nothing       _ _) = na
-goLeft    (NodeAddress xs _ (Just parent) _ _) = goDown (head xs - 1) parent
+goLeft na@(NodeAddress xs _ _             _ _ _) | head xs == 0 = na
+goLeft na@(NodeAddress _  _ Nothing       _ _ _) = na
+goLeft    (NodeAddress xs _ (Just parent) _ _ _) = goDown (head xs - 1) parent
 
 goRight :: NodeAddress -> NodeAddress
-goRight na@(NodeAddress _  _ Nothing       _ _) = na
-goRight    (NodeAddress xs _ (Just parent) _ _) = goDown (head xs + 1) parent
+goRight na@(NodeAddress _  _ Nothing       _ _ _) = na
+goRight    (NodeAddress xs _ (Just parent) _ _ _) = goDown (head xs + 1) parent
 
 append :: NodeAddress -> NodeAddress -> NodeAddress
 append a b | isRoot a = b
 append a b | isRoot b = a
 append a b = NodeAddress {
-                getPathReversed     = (getPathReversed b) ++ (getPathReversed a),
+                getPathReversed     = (getIndex b) : (getPathReversed newParent),
                 getNode             = getNode b,
                 getRoot             = getRoot a,
-                getParent           = Just $ append a $ fromJust $ getParent b,
-                getAbsoluteRootPath = getAbsoluteRootPath a
+                getParent           = Just $ newParent,
+                getAbsoluteRootPath = getAbsoluteRootPath a,
+                getHash             = Hash.hashWithSalt (getHash newParent) (getIndex b)
              }
+  where
+    newParent = append a $ fromJust $ getParent b
 
 -- | Creates a 'NodeAddress' relative from the give node.
 crop :: NodeAddress -> NodeAddress
-crop a = NodeAddress [] (getNode a) Nothing (getNode a) ((getPathReversed a) ++ (getAbsoluteRootPath a))
+crop a = NodeAddress [] (getNode a) Nothing (getNode a) ((getPathReversed a) ++ (getAbsoluteRootPath a)) 0
