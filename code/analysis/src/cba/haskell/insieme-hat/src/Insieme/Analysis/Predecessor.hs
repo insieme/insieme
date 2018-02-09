@@ -150,13 +150,22 @@ predecessor p@(ProgramPoint a Pre) = case Q.getNodeType parent of
 
     I.DeclarationStmt -> single $ ProgramPoint parent Pre
 
-    I.CompoundStmt -> single $
-      -- if it is the first statement
-      if i == 0
-      -- then go to the pre-state of the compound statement
-      then ProgramPoint parent Pre
-      -- else to the post state of the previous statement
-      else ProgramPoint (I.goDown (i-1) parent) Post
+    I.CompoundStmt ->
+        -- if it is the first statement
+        if i == 0
+        -- then go to the pre-state of the compound statement
+        then single $ ProgramPoint parent Pre
+        -- else to the post state of the previous statement
+        else predecessorPoint
+
+      where
+
+        predecessor = I.goDown (i-1) parent
+        predecessorPoint = case Q.getNodeType predecessor of
+            I.ReturnStmt   -> none
+            I.BreakStmt    -> none
+            I.ContinueStmt -> none
+            _              -> single $ ProgramPoint predecessor Post
 
     I.IfStmt
       | i == 0    -> single $ ProgramPoint parent Pre
@@ -209,6 +218,7 @@ predecessor p@(ProgramPoint a Pre) = case Q.getNodeType parent of
 
     i = I.getIndex a
 
+    none = none' p
     single = single' p
     multiple = multiple' p
 
@@ -378,6 +388,10 @@ multiple' p = Solver.mkVariable (idGen p) []
 -- | Create a dependence to a program point.
 single' :: ProgramPoint -> ProgramPoint -> Solver.TypedVar PredecessorList
 single' p x = multiple' p $ PredecessorList $ Set.singleton x
+
+-- | Create a dependence to no program point
+none' :: ProgramPoint -> Solver.TypedVar PredecessorList
+none' p = Solver.mkVariable (idGen p) [] Solver.bot
 
 -- | 'Post' 'ProgramPoint's for all 'ContinueStmt' nodes directly
 -- below the given address.
