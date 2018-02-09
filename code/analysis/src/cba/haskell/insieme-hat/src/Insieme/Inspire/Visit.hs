@@ -76,7 +76,7 @@ collectAll p root = collectAllPrune p (const NoPrune) root
 
 -- | Like 'collectAll' but allows you to prune the search space.
 collectAllPrune :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> NodeAddress -> [NodeAddress]
-collectAllPrune p pruning addr = resolveNodePaths $ collectAllPrunePaths p pruning (getNode addr)
+collectAllPrune p pruning addr = map (append addr) $ resolveNodePaths $ collectAllPrunePaths p pruning (getNode addr)
   where
     resolveNodePaths :: [NodePath] -> [NodeAddress]
 --    resolveNodePaths = map (error "dohh!!")
