@@ -37,7 +37,9 @@
 
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE BinaryLiterals #-}
 
 module Insieme.Inspire.NodeAddress (
     -- * Node Address
@@ -80,6 +82,7 @@ module Insieme.Inspire.NodeAddress (
 
 import Control.DeepSeq
 import Data.List (foldl',isSuffixOf,sort)
+import Data.Bits
 import Data.Maybe
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -97,7 +100,7 @@ data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
                                  getParent           :: Maybe NodeAddress,
                                  getRoot             :: IR.Tree,
                                  getAbsoluteRootPath :: NodePath,
-                                 getPathBS           :: ByteString,
+                                 getPathBNP          :: BinNodePath,
                                  getHash             :: Int
                                }
   deriving (Generic, NFData)
@@ -111,14 +114,14 @@ instance NodeReference NodeAddress where
 
 instance Eq NodeAddress where
     x == y = getNode x == getNode y
-             && getPathBS x == getPathBS y
+             && getPathBNP x == getPathBNP y
              && getRoot x == getRoot y
 
 instance Ord NodeAddress where
     compare x y = r1 `thenCompare` r2 `thenCompare` r3
         where
             r1 = compare (getNode x) (getNode y)
-            r2 = compare (getPathBS x) (getPathBS y)
+            r2 = compare (getPathBNP x) (getPathBNP y)
             r3 = compare (getRoot x) (getRoot y)
 
 instance Show NodeAddress where
@@ -127,12 +130,31 @@ instance Show NodeAddress where
 instance Hash.Hashable NodeAddress where
     hashWithSalt s n = Hash.hashWithSalt s $ getHash n
 
+
+newtype BinNodePath = BinNodePath Integer 
+    deriving (Eq, Ord, Show, Read, Generic, NFData)
+
+emptyBNP :: BinNodePath
+emptyBNP = BinNodePath 1
+
+appendBNP :: Int -> BinNodePath -> BinNodePath
+appendBNP 0 (BinNodePath xs) = BinNodePath $ shift xs 1
+appendBNP 1 (BinNodePath xs) = BinNodePath $ 0b10      .|. shift xs 2
+appendBNP 2 (BinNodePath xs) = BinNodePath $ 0b110     .|. shift xs 3
+appendBNP 3 (BinNodePath xs) = BinNodePath $ 0b1110    .|. shift xs 4
+appendBNP 4 (BinNodePath xs) = BinNodePath $ 0b11110   .|. shift xs 5
+appendBNP 5 (BinNodePath xs) = BinNodePath $ 0b111110  .|. shift xs 6
+appendBNP 6 (BinNodePath xs) = BinNodePath $ 0b1111110 .|. shift xs 7
+appendBNP x (BinNodePath xs) | x < 2^8  
+                             = BinNodePath $ (shift 0b11111110 8 ) .|. ((fromIntegral x) .&. 0xff)     .|. shift xs 16
+appendBNP x (BinNodePath xs) = BinNodePath $ (shift 0b11111111 24) .|. ((fromIntegral x) .&. 0xffffff) .|. shift xs 32
+
 prettyShow :: NodeAddress -> String
 prettyShow na = ppNodePathStr $ getPath na
 
 -- | Create a 'NodeAddress' from a list of indizes and a root node.
 mkNodeAddress :: [Int] -> IR.Tree -> NodeAddress
-mkNodeAddress xs root = foldl' (flip goDown) (NodeAddress [] root Nothing root [] "0" 0) xs
+mkNodeAddress xs root = foldl' (flip goDown) (NodeAddress [] root Nothing root [] emptyBNP 0) xs
 
 -- | Create multiple 'NodeAddress'es from a list of 'NodePath's, originating
 -- from the given root node.
@@ -208,7 +230,8 @@ goUpX 0 a = a
 goUpX n a = goUpX (n-1) $ goUp a
 
 goDown :: Int -> NodeAddress -> NodeAddress
-goDown x parent@(NodeAddress xs n _ ir r _ h) = NodeAddress (x : xs) n' (Just parent) ir r (BS8.pack $ show (x : xs)) (Hash.hashWithSalt h x)
+goDown x parent@(NodeAddress xs n _ ir r bnp h) = 
+    NodeAddress (x : xs) n' (Just parent) ir r (appendBNP x bnp) (Hash.hashWithSalt h x)
   where
     n' = IR.getChildren n !! x
 
@@ -230,7 +253,7 @@ append a b = NodeAddress {
                 getRoot             = getRoot a,
                 getParent           = Just $ newParent,
                 getAbsoluteRootPath = getAbsoluteRootPath a,
-                getPathBS           = BS8.pack $ show $ (getIndex b) : (getPathReversed newParent),
+                getPathBNP          = appendBNP (getIndex b) (getPathBNP newParent),
                 getHash             = Hash.hashWithSalt (getHash newParent) (getIndex b)
              }
   where
@@ -238,4 +261,4 @@ append a b = NodeAddress {
 
 -- | Creates a 'NodeAddress' relative from the give node.
 crop :: NodeAddress -> NodeAddress
-crop a = NodeAddress [] (getNode a) Nothing (getNode a) ((getPathReversed a) ++ (getAbsoluteRootPath a)) "0" 0
+crop a = NodeAddress [] (getNode a) Nothing (getNode a) ((getPathReversed a) ++ (getAbsoluteRootPath a)) emptyBNP 0
