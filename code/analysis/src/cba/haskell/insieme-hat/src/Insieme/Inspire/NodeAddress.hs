@@ -37,6 +37,7 @@
 
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Insieme.Inspire.NodeAddress (
     -- * Node Address
@@ -80,6 +81,9 @@ module Insieme.Inspire.NodeAddress (
 import Control.DeepSeq
 import Data.List (foldl',isSuffixOf,sort)
 import Data.Maybe
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS8
 import GHC.Generics (Generic)
 
 import Insieme.Utils
@@ -93,6 +97,7 @@ data NodeAddress = NodeAddress { getPathReversed     :: NodePath,
                                  getParent           :: Maybe NodeAddress,
                                  getRoot             :: IR.Tree,
                                  getAbsoluteRootPath :: NodePath,
+                                 getPathBS           :: ByteString,
                                  getHash             :: Int
                                }
   deriving (Generic, NFData)
@@ -106,14 +111,14 @@ instance NodeReference NodeAddress where
 
 instance Eq NodeAddress where
     x == y = getNode x == getNode y
-             && getPathReversed x == getPathReversed y
+             && getPathBS x == getPathBS y
              && getRoot x == getRoot y
 
 instance Ord NodeAddress where
     compare x y = r1 `thenCompare` r2 `thenCompare` r3
         where
             r1 = compare (getNode x) (getNode y)
-            r2 = compare (getPathReversed x) (getPathReversed y)
+            r2 = compare (getPathBS x) (getPathBS y)
             r3 = compare (getRoot x) (getRoot y)
 
 instance Show NodeAddress where
@@ -127,7 +132,7 @@ prettyShow na = ppNodePathStr $ getPath na
 
 -- | Create a 'NodeAddress' from a list of indizes and a root node.
 mkNodeAddress :: [Int] -> IR.Tree -> NodeAddress
-mkNodeAddress xs root = foldl' (flip goDown) (NodeAddress [] root Nothing root [] 0) xs
+mkNodeAddress xs root = foldl' (flip goDown) (NodeAddress [] root Nothing root [] "0" 0) xs
 
 -- | Create multiple 'NodeAddress'es from a list of 'NodePath's, originating
 -- from the given root node.
@@ -203,18 +208,18 @@ goUpX 0 a = a
 goUpX n a = goUpX (n-1) $ goUp a
 
 goDown :: Int -> NodeAddress -> NodeAddress
-goDown x parent@(NodeAddress xs n _ ir r h) = NodeAddress (x : xs) n' (Just parent) ir r (Hash.hashWithSalt h x)
+goDown x parent@(NodeAddress xs n _ ir r _ h) = NodeAddress (x : xs) n' (Just parent) ir r (BS8.pack $ show (x : xs)) (Hash.hashWithSalt h x)
   where
     n' = IR.getChildren n !! x
 
 goLeft :: NodeAddress -> NodeAddress
-goLeft na@(NodeAddress xs _ _             _ _ _) | head xs == 0 = na
-goLeft na@(NodeAddress _  _ Nothing       _ _ _) = na
-goLeft    (NodeAddress xs _ (Just parent) _ _ _) = goDown (head xs - 1) parent
+goLeft na@(NodeAddress xs _ _             _ _ _ _) | head xs == 0 = na
+goLeft na@(NodeAddress _  _ Nothing       _ _ _ _) = na
+goLeft    (NodeAddress xs _ (Just parent) _ _ _ _) = goDown (head xs - 1) parent
 
 goRight :: NodeAddress -> NodeAddress
-goRight na@(NodeAddress _  _ Nothing       _ _ _) = na
-goRight    (NodeAddress xs _ (Just parent) _ _ _) = goDown (head xs + 1) parent
+goRight na@(NodeAddress _  _ Nothing       _ _ _ _) = na
+goRight    (NodeAddress xs _ (Just parent) _ _ _ _) = goDown (head xs + 1) parent
 
 append :: NodeAddress -> NodeAddress -> NodeAddress
 append a b | isRoot a = b
@@ -225,6 +230,7 @@ append a b = NodeAddress {
                 getRoot             = getRoot a,
                 getParent           = Just $ newParent,
                 getAbsoluteRootPath = getAbsoluteRootPath a,
+                getPathBS           = BS8.pack $ show $ (getIndex b) : (getPathReversed newParent),
                 getHash             = Hash.hashWithSalt (getHash newParent) (getIndex b)
              }
   where
@@ -232,4 +238,4 @@ append a b = NodeAddress {
 
 -- | Creates a 'NodeAddress' relative from the give node.
 crop :: NodeAddress -> NodeAddress
-crop a = NodeAddress [] (getNode a) Nothing (getNode a) ((getPathReversed a) ++ (getAbsoluteRootPath a)) 0
+crop a = NodeAddress [] (getNode a) Nothing (getNode a) ((getPathReversed a) ++ (getAbsoluteRootPath a)) "0" 0
