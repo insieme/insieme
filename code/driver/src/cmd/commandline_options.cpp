@@ -41,6 +41,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/tokenizer.hpp>
 
+#include "insieme/common/env_vars.h"
 #include "insieme/utils/version.h"
 
 namespace insieme {
@@ -74,11 +75,28 @@ namespace cmd {
 		res.job.registerExtensionFlags(desc);
 	}
 
-	Options OptionParser::parse(std::vector<std::string>& args) {
+	Options OptionParser::parse(const std::vector<std::string>& argsIn) {
+		auto args = argsIn;
+		// make sure we have at least the program name present
+		assert_true(args.size() >= 1) << "Invalid command line parse call. Expecting at least 1 argument (the executable name)";
+
 		// -- parsing -----------------------------------------
 		// remove the first entry: this should be the name of the executable like "insiemecc"
 		std::string programName = *args.begin();
 		args.erase(args.begin());
+
+		// insert flags passed via the environment variable INSIEMECC_FLAGS - which should work just like CC_FLAGS and CXX_FLAGS do
+		if(getenv(INSIEMECC_FLAGS)) {
+			std::vector<std::string> flagArgs;
+			// tokenize on spaces
+			std::string flags = getenv(INSIEMECC_FLAGS);
+			boost::tokenizer<boost::char_separator<char>> tokens(flags, boost::char_separator<char>(" "));
+			for(const auto& token : tokens) {
+				flagArgs.push_back(token);
+			}
+			// and insert all the flag arguments at the beginning
+			args.insert(args.begin(), flagArgs.cbegin(), flagArgs.cend());
+		}
 
 		// define positional options (all options not being named) - the input files
 		boost::program_options::positional_options_description pos;

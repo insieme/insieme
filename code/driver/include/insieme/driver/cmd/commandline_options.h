@@ -156,7 +156,7 @@ namespace cmd {
 		 * Parses the given command line options.
 		 * Note that the first argument will be ignored.
 		 */
-		Options parse(std::vector<std::string>& args);
+		Options parse(const std::vector<std::string>& args);
 
 		/**
 		 * Parses the given command line options. This is a convenience overload to directly pass the arguments from a main function.

@@ -89,3 +89,9 @@
 
 // Set up a regular expression filtering log messages by function names.
 #define LOG_FILTER_ENV "INSIEME_LOG_FILTER"
+
+
+///////////// DRIVER
+
+#define INSIEMECC_FLAGS "INSIEMECC_FLAGS"
+
