@@ -573,22 +573,11 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
 
         -- skip the interpretation of known effect-free builtins
-        I.CallExpr | p == Internal && isCallToEffectFreeBuiltin -> var
+        I.CallExpr | p == Internal && (isSideEffectFreeBuiltin $ I.goDown 1 addr) -> var
             where
                 var = Solver.mkVariable varId [con] Solver.bot
                 con = Solver.forward pre var
                 pre = reachingDefinitions $ MemoryStatePoint (ProgramPoint (I.goDown 1 addr) Post) ml
-
-                isCallToEffectFreeBuiltin = any (Q.isBuiltin $ I.goDown 1 addr)
-                    [
-                      "ref_kind_cast", "ref_const_cast",
-                      "ref_scalar_to_ref_array",
-                      "ref_array_element", "ref_member_access", "ref_component_access",
-                      "ptr_from_array", "ptr_to_array", "ptr_to_ref", "ptr_null", "ptr_const_cast",
-                      "ptr_cast", "ptr_add", "ptr_sub",
-                      "bool_not",
-                      "num_cast"
-                    ]
 
 
         -- TODO: this optimization has been disabled due to invalid write set summaries

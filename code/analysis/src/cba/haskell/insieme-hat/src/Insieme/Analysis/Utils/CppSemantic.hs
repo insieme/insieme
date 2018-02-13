@@ -66,7 +66,11 @@ module Insieme.Analysis.Utils.CppSemantic (
     getEnclosingDeclaration,
 
     getEnclosingScope,
-    getImplicitDestructorBodies
+    getImplicitDestructorBodies,
+
+    -- a utility to identify side-effect free builtin operators
+    isSideEffectFreeBuiltin
+
 ) where
 
 import Data.Maybe
@@ -262,4 +266,19 @@ getImplicitDestructorBodies scope = case getNodeType scope of
     bodies = (I.goDown 2 . fromJust . getLambda) <$> dtors
         where
             dtors =  catMaybes $ getDestructor <$> classes
+
+
+--- Side-effect free operators ---
+
+isSideEffectFreeBuiltin :: NodeAddress -> Bool
+isSideEffectFreeBuiltin addr = any (Q.isBuiltin addr)
+        [
+          "ref_kind_cast", "ref_const_cast",
+          "ref_scalar_to_ref_array",
+          "ref_array_element", "ref_member_access", "ref_component_access",
+          "ptr_from_array", "ptr_to_array", "ptr_to_ref", "ptr_null", "ptr_const_cast",
+          "ptr_cast", "ptr_add", "ptr_sub",
+          "bool_not",
+          "num_cast"
+        ]
 

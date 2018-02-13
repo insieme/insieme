@@ -54,6 +54,7 @@ import qualified Insieme.Utils.BoundSet as BSet
 
 import Insieme.Analysis.Framework.PropertySpace.ComposedValue (toValue)
 import Insieme.Analysis.Framework.Utils.OperatorHandler
+import Insieme.Analysis.Utils.CppSemantic
 import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.Solver as Solver
 
@@ -69,6 +70,7 @@ data ExecutionTreeAnalysis v = ExecutionTreeAnalysis {
     , opHandler                  :: [OperatorHandler v]                  -- ^ a list of operator handlers handling calls to (external) functions
     , unhandledOperatorHandler   :: NodeAddress -> v                     -- ^ a handler for calls to unhandled operators
     , unknownTargetHandler       :: NodeAddress -> v                     -- ^ a handler for calls to unknown target functions
+    , skipSideEffectFreeBuiltins :: Bool                                 -- ^ a flag to enable / disable the processing of side-effect free builtins
 }
 
 -- a function creating a simple execution tree analysis
@@ -79,7 +81,7 @@ mkExecutionTreeAnalysis :: (Typeable a, Solver.ExtLattice v)
         -> ExecutionTreeAnalysis v
 mkExecutionTreeAnalysis a s g = res
   where
-    res = ExecutionTreeAnalysis aid g [] unhandledOperatorHandler unknownTargetHandler
+    res = ExecutionTreeAnalysis aid g [] unhandledOperatorHandler unknownTargetHandler True
     aid = Solver.mkAnalysisIdentifier a s
     justTop _ = Solver.top
     unhandledOperatorHandler = justTop
@@ -129,14 +131,11 @@ executionTreeValue analysis addr = case I.getNode addr of
 
             -- Function Calls --
 
-            callableBodyVars a = case () of
-                _                               -> foldr go [] callTargets
-                  where
-                    go (Callable.Lambda  addr) bs = (varGen $ I.goDown 2 addr) : bs
-                    go (Callable.Closure addr) bs = (varGen $ I.goDown 2 addr) : bs
-                    go (Callable.Literal   _) bs = bs      -- literal calls are handled by operator handler
+            callableBodyVars a = foldr go [] $ getUnhandledOperators a
               where
-                callTargets = getUnhandledOperators a
+                go (Callable.Lambda  addr) bs = (varGen $ I.goDown 2 addr) : bs
+                go (Callable.Closure addr) bs = (varGen $ I.goDown 2 addr) : bs
+                go (Callable.Literal   _) bs = bs      -- literal calls are handled by operator handler
 
             -- aggregate effects of call targets
             callTargetEffects a = Solver.join $ Solver.get a <$> callableBodyVars a
@@ -181,9 +180,10 @@ executionTreeValue analysis addr = case I.getNode addr of
                 where
                     targets = callableVal a
                     f t = case t of
-                        Callable.Lambda addr  -> isNotCovered addr 
-                        Callable.Literal addr -> isNotCovered addr
-                        _                     -> True
+                        c | isSideEffectFree c -> False
+                        Callable.Lambda addr   -> isNotCovered addr
+                        Callable.Literal addr  -> isNotCovered addr
+                        _                      -> True
                       where
                         isNotCovered addr = not $ any cover $ opHandler analysis
                           where
@@ -193,6 +193,14 @@ executionTreeValue analysis addr = case I.getNode addr of
               where
                 ops = getUnhandledOperators a
                 effects = (unhandledOperatorHandler analysis) <$> (Callable.toAddress <$> ops)
+
+            -- a utility to filter out side-effect free operations to be skipped
+            isSideEffectFree l = isSkipping && case l of
+                Callable.Lambda addr -> isSideEffectFreeBuiltin addr
+                _ -> False
+              where
+                isSkipping = skipSideEffectFreeBuiltins analysis
+
 
 
     -- for everything else we aggregate the results of the execution of the child nodes
