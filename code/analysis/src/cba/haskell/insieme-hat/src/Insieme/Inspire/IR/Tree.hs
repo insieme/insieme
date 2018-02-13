@@ -52,7 +52,7 @@ import {-# UP #-} Insieme.Inspire.NodeReference
 -- TODO: Rename to 'Node'
 data Tree = MkTree {
       mtId        :: Maybe Int,
-      mtInnerTree :: InnerTree
+      mtInnerTree :: {-# UNPACK #-} !InnerTree
     } deriving (Show, Generic, NFData)
 
 instance Eq Tree where
@@ -73,9 +73,9 @@ treeExactEq :: Tree -> Tree -> Bool
 treeExactEq a b = mtId a == mtId b && mtInnerTree a == mtInnerTree b
 
 data InnerTree = InnerTree {
-      itNodeType    :: NodeType,
-      itChildren    :: [Tree],
-      itBuiltinTags :: [String]
+      itNodeType    :: !NodeType,
+      itChildren    :: ![Tree],
+      itBuiltinTags :: ![String]
     } deriving (Eq, Ord, Show, Generic, NFData)
 
 pattern Node :: NodeType -> [Tree] -> Tree

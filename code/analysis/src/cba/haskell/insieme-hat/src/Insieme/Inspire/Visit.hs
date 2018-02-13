@@ -80,8 +80,8 @@ collectAllPrune p pruning addr = map (append addr) $ resolveNodePaths $ collectA
   where
     resolveNodePaths :: [NodePath] -> [NodeAddress]
 --    resolveNodePaths = map (error "dohh!!")
-    resolveNodePaths = map (flip mkNodeAddress (getNode addr))
---    resolveNodePaths = mkNodeAddresses' (getNode addr)
+--    resolveNodePaths = map (flip mkNodeAddress (getNode addr))
+    resolveNodePaths = mkNodeAddresses' (getNode addr)
 
 
 collectAllPrunePaths :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> IR.Tree -> [NodePath]
