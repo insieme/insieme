@@ -508,6 +508,29 @@ namespace analysis {
 		return pnt == NT_InitExpr || pnt == NT_TupleExpr || pnt == NT_JobExpr;
 	}
 
+	namespace {
+
+		template<typename Filter>
+		bool isCastedResultOf(const ExpressionPtr& expr, const Filter& filter) {
+			if (filter(expr)) return true;
+			if (core::lang::isAnyRefCast(expr)) return isCastedResultOf(expr.as<CallExprPtr>()->getArgument(0), filter);
+			return false;
+		}
+
+	}
+
+	bool isRefDeclResult(const ExpressionPtr& expr) {
+		if (!expr) return false;
+		const auto& ext = expr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+		return isCastedResultOf(expr, [&](const ExpressionPtr& expr) { return ext.isCallOfRefDecl(expr); });
+	}
+
+	bool isRefTempResult(const ExpressionPtr& expr) {
+		if (!expr) return false;
+		const auto& ext = expr->getNodeManager().getLangExtension<lang::ReferenceExtension>();
+		return isCastedResultOf(expr, [&](const ExpressionPtr& expr) { return ext.isCallOfRefTemp(expr); });
+	}
+
 
 	// ------ Free Variable Extraction ----------
 
