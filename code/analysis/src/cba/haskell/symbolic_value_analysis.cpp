@@ -35,6 +35,7 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
+#include "insieme/analysis/cba/common/failure.h"
 #include "insieme/analysis/cba/haskell/symbolic_value_analysis.h"
 
 
@@ -55,10 +56,9 @@ namespace haskell {
 
 	SymbolicValueSet getSymbolicValue(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto expr_hs = ctxt.resolveNodeAddress(expr);
-		auto result = hat_hs_symbolic_values(ctxt.getHaskellContext(), expr_hs);
-		auto value = ctxt.unwrapResult(result);
-		assert_true(value);
-		return *value;
+		auto result = ctxt.runAnalysis<hat::SymbolicValueSet*>(hat_hs_symbolic_values, expr_hs);
+		if(!result) throw AnalysisFailure("Timeout in Symbolic Value Analysis");
+		return *result;
 	}
 
 } // end namespace haskell

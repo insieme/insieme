@@ -97,9 +97,6 @@ type CRepArr a = Ptr (Ptr (CRep a))
 
 -- * Exports
 
-foreign export ccall "hat_freeStablePtr"
-  freeStablePtr :: StablePtr a -> IO ()
-
 foreign export ccall "hat_initialize_context"
   initializeContext :: Ctx.CContext -> CString -> CSize -> IO (StablePtr Ctx.Context)
 

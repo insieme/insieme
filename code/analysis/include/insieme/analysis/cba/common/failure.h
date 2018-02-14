@@ -62,8 +62,13 @@ namespace cba {
 	public:
 
 		/**
+		 * Creates a new instance wrapping up the given failure.
+		 */
+		AnalysisFailure(const std::string& msg) : AnalysisFailure(std::vector<std::string>{msg}) {}
+
+		/**
 		 * Creates a new instance wrapping up the given failures.
-		 * The list of failures most not be empty.
+		 * The list of failures must not be empty.
 		 */
 		AnalysisFailure(const std::vector<std::string>& failures) : failures(failures) {
 			std::stringstream s;

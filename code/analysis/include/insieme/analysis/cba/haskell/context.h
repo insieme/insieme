@@ -37,6 +37,7 @@
 
 #pragma once
 
+#include <type_traits>
 #include <chrono>
 #include <cstdlib>
 #include <map>
@@ -52,6 +53,14 @@ namespace haskell {
 
 	typedef void* StablePtr;
 	typedef void* HaskellNodeAddress;
+
+	extern "C" {
+
+		// Haskell Object Management
+		void hs_free_stable_ptr(StablePtr ptr);
+		void hs_perform_gc(void);
+
+	}
 
 	// -- Analysis Result
 
@@ -96,11 +105,7 @@ namespace haskell {
 
 		void dumpSolution(const std::string& filenamePrefix = "solution", bool generateGraph = false) const;
 
-
 		// -- haskell engine specific requirements --
-
-		StablePtr getHaskellContext() const;
-		void setHaskellContext(StablePtr);
 
 		void setRoot(const core::NodePtr&);
 		core::NodePtr getRoot() const;
@@ -108,44 +113,54 @@ namespace haskell {
 		HaskellNodeAddress resolveNodeAddress(const core::NodeAddress& addr);
 		core::NodeAddress resolveNodeAddress(const HaskellNodeAddress& addr);
 
-		template <typename T>
-		boost::optional<T> unwrapResult(AnalysisResult<T*>* result) {
+		template <typename RT, typename FN, typename... Args>
+		boost::optional<typename std::remove_pointer<RT>::type> runAnalysis(FN f, Args&&... args) {
+			assert_true(context_hs) << "Context not initialized!";
+
+			AnalysisResult<RT> *result = f(context_hs, std::forward<Args>(args)...);
 			assert_true(result);
 
-			boost::optional<T> ret = {};
+			assert_false(result->timeout) << "Timeout occurred!";
 
-			if(!result->timeout) {
-				setHaskellContext(result->new_context_hs);
-
-				ret = std::move(*result->result);
+			// update context
+			if(context_hs != result->new_context_hs) {
+				hs_free_stable_ptr(context_hs);
+				context_hs = result->new_context_hs;
 			}
 
-			// even on timeout result->result holds an allocated object
-			delete result->result;
+			// always obtain actual result
+			boost::optional<typename std::remove_pointer<RT>::type> ret = ResultExtractor<RT>()(result);
 
-			free(result);
-			return ret;
-		}
-
-		template <typename T>
-		boost::optional<T> unwrapResult(AnalysisResult<T>* result) {
-			assert_true(result);
-
-			boost::optional<T> ret = {};
-
-			if(!result->timeout) {
-				setHaskellContext(result->new_context_hs);
-
-				ret = result->result;
+			if(result->timeout) {
+				ret = boost::none;
 			}
 
 			free(result);
+
+			hs_perform_gc();
+
 			return ret;
 		}
 
 	  private:
 
 		void clear();
+
+		template <typename T>
+		struct ResultExtractor {
+			T operator()(AnalysisResult<T> *result) {
+				return result->result;
+			}
+		};
+
+		template <typename T>
+		struct ResultExtractor<T*> {
+			T operator()(AnalysisResult<T*> *result) {
+				T ret = std::move(*result->result);
+				delete result->result;
+				return ret;
+			}
+		};
 
 	};
 

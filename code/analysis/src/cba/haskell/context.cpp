@@ -61,9 +61,6 @@ extern "C" {
 	using insieme::analysis::cba::haskell::Context;
 	using insieme::analysis::cba::haskell::StablePtr;
 
-	// Haskell Object Management
-	void hat_freeStablePtr(StablePtr ptr);
-
 	// Haskell Context
 	StablePtr hat_initialize_context(const Context* ctx_c, const char* dump_c, size_t size_c);
 	void hat_print_statistic(StablePtr hs_context);
@@ -116,21 +113,6 @@ namespace haskell {
 		}
 		std::cout << "Dumping assignment ...\n";
 		hat_dump_assignment(context_hs,filenamePrefix.c_str(),(generateGraph)?1:0);
-	}
-
-	StablePtr Context::getHaskellContext() const {
-		assert_true(context_hs) << "Context not initialized!";
-		return context_hs;
-	}
-
-	void Context::setHaskellContext(StablePtr new_ctxt) {
-		if (context_hs == new_ctxt)
-			return;
-
-		if (context_hs)
-			hat_freeStablePtr(context_hs);
-
-		context_hs = new_ctxt;
 	}
 
 	NodePtr Context::getRoot() const {
@@ -216,11 +198,11 @@ namespace haskell {
 
 		// delete converted addresses
 		for(auto pair : addresses) {
-			hat_freeStablePtr(pair.second);
+			hs_free_stable_ptr(pair.second);
 		}
 
 		// delete remaining context information on the haskell side
-		hat_freeStablePtr(context_hs);
+		hs_free_stable_ptr(context_hs);
 
 		// reset fields
 		context_hs = nullptr;
