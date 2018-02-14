@@ -47,15 +47,42 @@ import Foreign.C.Types
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Data.ByteString.Char8 as BS8
 
+import Data.List
+
 import qualified Insieme.Inspire as I
 
 foreign import ccall "hat_c_pretty_print_tree"
   prettyPrintTree :: CString -> CSize -> IO CString
 
 pprintTree :: I.Tree -> String
-pprintTree ir = unsafePerformIO $ do
-    let dump = I.dumpBinaryDump ir
-    pretty_c <- BS8.useAsCStringLen dump $ \(sz,l) -> prettyPrintTree sz (fromIntegral l)
-    pretty   <- peekCString pretty_c
-    free pretty_c
-    return pretty
+
+--pprintTree ir = unsafePerformIO $ do
+--    let dump = I.dumpBinaryDump ir
+--    pretty_c <- BS8.useAsCStringLen dump $ \(sz,l) -> prettyPrintTree sz (fromIntegral l)
+--    pretty   <- peekCString pretty_c
+--    free pretty_c
+--    return pretty
+
+
+-- support node types
+pprintTree (I.Node (I.StringValue s) _) = s
+pprintTree (I.Node (I.BoolValue   v) _) = show v
+pprintTree (I.Node (I.CharValue   v) _) = show v
+pprintTree (I.Node (I.IntValue    v) _) = show v
+pprintTree (I.Node (I.UIntValue   v) _) = show v
+
+-- support expressions
+pprintTree (I.Node I.Literal [_,v]) = pprintTree v
+pprintTree (I.Node I.Variable [_,i]) = "v" ++ pprintTree i
+pprintTree (I.Node I.CallExpr (_:f:args) ) = (pprintTree f) ++ "(" ++ (intercalate "," $ pprintTree <$> args) ++ ")"
+
+-- handle derived built-ins
+--pprintTree n@(I.Node (I.LambdaExpr) _) | I.isaBuiltin n = head $ I.builtinTags n
+
+
+-- support support nodes
+pprintTree (I.Node I.Declaration [_,v]) = pprintTree v
+
+
+-- everything else
+pprintTree (I.Node n _) = "<some " ++ show n ++ " node>"
