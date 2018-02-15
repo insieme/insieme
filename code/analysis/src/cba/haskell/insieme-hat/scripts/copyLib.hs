@@ -42,6 +42,7 @@ import Data.Char
 import Data.List
 import Data.Maybe
 import Data.Function
+import System.Exit
 import System.Directory
 import System.Environment
 import System.FilePath
@@ -117,7 +118,7 @@ exec compBuildDir' = do
   let distdir = builddir </> "dist-newstyle"
       dir = compBuildDir' distdir pkg_name pkg_ver (OtherComp cmd)
 
-  void $ rawSystem (dir </> cmd) args
+  exitWith =<< rawSystem (dir </> cmd) args
 
 haddock compDistDir' = do
   builddir:comp:args <- getArgs
