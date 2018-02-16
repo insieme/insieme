@@ -137,7 +137,7 @@ namespace haskell {
 
 			free(result);
 
-			hs_perform_gc();
+//			hs_perform_gc();
 
 			return ret;
 		}
