@@ -35,8 +35,8 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
-#include "insieme/analysis/cba/haskell/boolean_analysis.h"
 #include "insieme/analysis/cba/common/failure.h"
+#include "insieme/analysis/cba/haskell/boolean_analysis.h"
 
 enum class Result : int {
 	AlwaysTrue = 0,
@@ -61,15 +61,10 @@ namespace haskell {
 
 	Result checkBoolean(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto expr_hs = ctxt.resolveNodeAddress(expr);
-		auto result = hat_check_boolean(ctxt.getHaskellContext(), expr_hs);
-		auto value = ctxt.unwrapResult(result);
-		assert_true(value);
-
-		if(*value == Result::Neither) {
-			std::vector<std::string> msgs{"Boolean Analysis Error"};
-			throw AnalysisFailure(msgs);
-		}
-		return *value;
+		auto result = ctxt.runAnalysis<Result>(hat_check_boolean, expr_hs);
+		if(!result) throw AnalysisFailure("Timeout in Boolean Analysis");
+		if(*result == Result::Neither) throw AnalysisFailure("Error in Boolean Analysis");
+		return *result;
 	}
 
 	bool isTrue(Context& ctxt, const core::ExpressionAddress& expr) {

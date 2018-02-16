@@ -35,6 +35,7 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
+#include "insieme/analysis/cba/common/failure.h"
 #include "insieme/analysis/cba/haskell/alias_analysis.h"
 
 enum class AliasAnalysisResult : int {
@@ -64,10 +65,9 @@ namespace haskell {
 	AliasAnalysisResult checkAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
 		auto x_hs = ctxt.resolveNodeAddress(x);
 		auto y_hs = ctxt.resolveNodeAddress(y);
-		auto result = hat_check_alias(ctxt.getHaskellContext(), x_hs, y_hs);
-		auto value = ctxt.unwrapResult(result);
-		assert_true(value);
-		return *value;
+		auto result = ctxt.runAnalysis<AliasAnalysisResult>(hat_check_alias, x_hs, y_hs);
+		if(!result) throw AnalysisFailure("Timeout in Alias Analysis");
+		return *result;
 	}
 
 	bool areAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
