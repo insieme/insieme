@@ -480,6 +480,12 @@ namespace conversion {
 				name = irLit->getStringValue();
 			}
 		}
+
+		// if this function is a template specialization, we mark it as such, so that it may be purged in the cleanup step, if it isn't called anywhere
+		if(funcDecl->isFunctionTemplateSpecialization()) {
+			irLit.attachValue(annotations::TemplateInstantiationMarkerAnnotation());
+		}
+
 		// add required annotations
 		if(inExternC) { insieme::annotations::c::markAsExternC(irLit); }
 		converter.applyHeaderTagging(irLit, funcDecl->getCanonicalDecl());

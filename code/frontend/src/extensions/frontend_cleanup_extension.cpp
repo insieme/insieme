@@ -86,14 +86,16 @@ namespace extensions {
 		// Removes member functions from types which are template instantiations and are not called by ourselves. These can't be called in any other way anyways.
 		// =======================================================================
 		void purgeUncalledTemplateInstantiationMemberFunctions(core::tu::IRTranslationUnit& tu) {
-			core::IRBuilder builder(tu.getNodeManager());
+			auto& mgr = tu.getNodeManager();
+			core::IRBuilder builder(mgr);
+			auto& functions = tu.getFunctions();
 
 			// we need a fixpoint iteration here which applies the transformation until we don't perform any deletions anymore
 			while(true) {
 				bool changed = false;
 				// first we collect all called literals, which are calling template instantiations
 				insieme::utils::set::PointerSet<core::LiteralPtr> calledLiterals;
-				for(const auto& fun : tu.getFunctions()) {
+				for(const auto& fun : functions) {
 					core::visitDepthFirstOnce(fun.second, [&](const core::CallExprPtr& callExpr) {
 						const auto& callee = callExpr.getFunctionExpr().isa<core::LiteralPtr>();
 						if(callee && callee.hasAttachedValue<annotations::TemplateInstantiationMarkerAnnotation>()) { calledLiterals.insert(callee); }
@@ -106,34 +108,28 @@ namespace extensions {
 					core::MemberFunctionList memFuns = tagType->getRecord()->getMemberFunctions()->getElements();
 					memFuns.erase(std::remove_if(memFuns.begin(), memFuns.end(), [&](const core::MemberFunctionPtr& memFun) {
 						const auto& impl = memFun->getImplementation().isa<core::LiteralPtr>();
-						if(impl && impl.hasAttachedValue<annotations::TemplateInstantiationMarkerAnnotation>() && calledLiterals.find(impl) == calledLiterals.end()) {
-							// if we can remove this member function here, we also remove it in the TU
-							tu.removeFunction(impl);
-							return true;
-						}
-						return false;
+						return impl && impl.hasAttachedValue<annotations::TemplateInstantiationMarkerAnnotation>() && calledLiterals.find(impl) == calledLiterals.end();
 					}), memFuns.end());
 
 					// if we removed some member function(s)
 					if(memFuns.size() != tagType->getRecord()->getMemberFunctions().size()) {
 						changed = true;
 						// we create a replacement type
-						core::TagTypePtr newType;
-						if(tagType->isStruct()) {
-							const auto& structType = tagType->getStruct();
-							newType = builder.structType(tagType->getName(), structType->getParents(), structType->getFields(), structType->getConstructors(),
-							                             structType->hasDestructor() ? structType->getDestructor() : nullptr, structType->getDestructorVirtual(),
-							                             builder.memberFunctions(memFuns),
-							                             structType->getPureVirtualMemberFunctions(), structType->getStaticMemberFunctions());
-						} else {
-							const auto& unionType = tagType->getUnion();
-							newType = builder.unionType(tagType->getName(), unionType->getFields(), unionType->getConstructors(),
-							                            unionType->hasDestructor() ? unionType->getDestructor() : nullptr, unionType->getDestructorVirtual(),
-							                            builder.memberFunctions(memFuns),
-							                            unionType->getPureVirtualMemberFunctions(), unionType->getStaticMemberFunctions());
-						}
+						auto newType = core::transform::replaceNode(mgr, core::TagTypeAddress(tagType)->getRecord()->getMemberFunctions(),
+						                                            builder.memberFunctions(memFuns)).as<core::TagTypePtr>();
 						// and actually replace it in the TU
 						tu.replaceType(it.first, newType);
+					}
+				}
+
+				// remove all uncalled template instantiations from the TU
+				for(auto it = functions.begin(); it != functions.end(); ) {
+					const auto& impl = it->first;
+					if(impl.hasAttachedValue<annotations::TemplateInstantiationMarkerAnnotation>() && calledLiterals.find(impl) == calledLiterals.end()) {
+						changed = true;
+						it = functions.erase(it);
+					} else {
+						++it;
 					}
 				}
 

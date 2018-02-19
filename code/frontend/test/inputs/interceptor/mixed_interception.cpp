@@ -50,9 +50,18 @@ struct Transitive {
 	TransitiveReturnType<S> transitive() { return {}; }
 };
 
+template<typename T>
+void functionFoo() {
+	TransitiveType<T> unused;
+	Transitive t;
+	t.transitive<T>();
+}
+
 struct NotIntercepted {
 	template<typename T>
 	void foo() {
+		functionFoo<T>();
+
 		TransitiveType<T> unused;
 		Transitive t;
 		t.transitive<T>();
@@ -68,6 +77,9 @@ int main() {
 	// We should not have an instance if foo<float> in NotIntercepted, of transitive<float> in Transitive, as well as TransitiveType<float> and TransitiveReturnType<float>.
 	// These member functions and the associated types should be cleaned iff we do not call them ourselves directly in a non-intercepted way,
 	// as nobody else will be able to call/use them anyways otherwise
+
+	// Note, that the same also applies for templated functions like functionFoo. Instantiations of this function (and all related types/functions)
+	// should only end up in the program if they are called directly.
 	#pragma test expect_ir(R"(
 		def struct IMP_TransitiveType_int {
 			t : int<4>;
@@ -82,11 +94,15 @@ int main() {
 				)) {0};
 			}
 		};
+		def IMP_functionFoo_int_returns_void = function () -> unit {
+			var ref<IMP_TransitiveType_int,f,f,plain> v1 = IMP_TransitiveType_int::(ref_decl(type_lit(ref<IMP_TransitiveType_int,f,f,plain>)));
+			var ref<IMP_Transitive,f,f,plain> v0 = IMP_Transitive::(ref_decl(type_lit(ref<IMP_Transitive,f,f,plain>)));
+			v0.IMP_transitive_int_returns_TransitiveReturnType_lt_int_gt_();
+		};
 		def struct IMP_NotIntercepted {
 			function IMP_foo_int_returns_void = () -> unit {
-				var ref<IMP_TransitiveType_int,f,f,plain> v1 = IMP_TransitiveType_int::(
-						ref_decl(type_lit(ref<IMP_TransitiveType_int,f,f,plain>))
-				);
+				IMP_functionFoo_int_returns_void();
+				var ref<IMP_TransitiveType_int,f,f,plain> v1 = IMP_TransitiveType_int::(ref_decl(type_lit(ref<IMP_TransitiveType_int,f,f,plain>)));
 				var ref<IMP_Transitive,f,f,plain> v2 = IMP_Transitive::(ref_decl(type_lit(ref<IMP_Transitive,f,f,plain>)));
 				v2.IMP_transitive_int_returns_TransitiveReturnType_lt_int_gt_();
 			}
@@ -106,9 +122,9 @@ int main() {
 		}
 	)")
 	{
-		NotIntercepted niwm;
-		Intercepted iwm;
-		niwm.foo<int>();
-		iwm.bar<float>();
+		NotIntercepted ni;
+		Intercepted i;
+		ni.foo<int>();
+		i.bar<float>();
 	}
 };

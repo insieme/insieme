@@ -41,6 +41,8 @@
 struct Intercepted {
 	template<typename T>
 	void bar() {
+		functionFoo<T>();
+
 		NotIntercepted niwm;
 		niwm.foo<T>();
 	}
