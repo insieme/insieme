@@ -52,13 +52,14 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/tu/ir_translation_unit.h"
+#include "insieme/core/tu/ir_translation_unit_io.h"
 
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/data_annotations.h"
 
 #include "insieme/frontend/converter.h"
-#include "insieme/core/tu/ir_translation_unit.h"
-#include "insieme/core/tu/ir_translation_unit_io.h"
+#include "insieme/frontend/annotations/frontend_annotations.h"
 #include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/frontend_inspire_module.h"
 #include "insieme/frontend/utils/memalloc.h"
@@ -80,6 +81,68 @@ namespace extensions {
 
 	namespace {
 		//// TU steps ------------------------------------------------------------------------------------------------------------------------------------
+
+		//////////////////////////////////////////////////////////////////////////
+		// Removes member functions from types which are template instantiations and are not called by ourselves. These can't be called in any other way anyways.
+		// =======================================================================
+		void purgeUncalledTemplateInstantiationMemberFunctions(core::tu::IRTranslationUnit& tu) {
+			core::IRBuilder builder(tu.getNodeManager());
+
+			// we need a fixpoint iteration here which applies the transformation until we don't perform any deletions anymore
+			while(true) {
+				bool changed = false;
+				// first we collect all called literals, which are calling template instantiations
+				insieme::utils::set::PointerSet<core::LiteralPtr> calledLiterals;
+				for(const auto& fun : tu.getFunctions()) {
+					core::visitDepthFirstOnce(fun.second, [&](const core::CallExprPtr& callExpr) {
+						const auto& callee = callExpr.getFunctionExpr().isa<core::LiteralPtr>();
+						if(callee && callee.hasAttachedValue<annotations::TemplateInstantiationMarkerAnnotation>()) { calledLiterals.insert(callee); }
+					});
+				}
+
+				// iterate over all tag types and check their member functions. if they are template instantiations and are not in the list of called functions, remove them
+				for(const auto& it : tu.getTypes()) {
+					const auto& tagType = it.second;
+					core::MemberFunctionList memFuns = tagType->getRecord()->getMemberFunctions()->getElements();
+					memFuns.erase(std::remove_if(memFuns.begin(), memFuns.end(), [&](const core::MemberFunctionPtr& memFun) {
+						const auto& impl = memFun->getImplementation().isa<core::LiteralPtr>();
+						if(impl && impl.hasAttachedValue<annotations::TemplateInstantiationMarkerAnnotation>() && calledLiterals.find(impl) == calledLiterals.end()) {
+							// if we can remove this member function here, we also remove it in the TU
+							tu.removeFunction(impl);
+							return true;
+						}
+						return false;
+					}), memFuns.end());
+
+					// if we removed some member function(s)
+					if(memFuns.size() != tagType->getRecord()->getMemberFunctions().size()) {
+						changed = true;
+						// we create a replacement type
+						core::TagTypePtr newType;
+						if(tagType->isStruct()) {
+							const auto& structType = tagType->getStruct();
+							newType = builder.structType(tagType->getName(), structType->getParents(), structType->getFields(), structType->getConstructors(),
+							                             structType->hasDestructor() ? structType->getDestructor() : nullptr, structType->getDestructorVirtual(),
+							                             builder.memberFunctions(memFuns),
+							                             structType->getPureVirtualMemberFunctions(), structType->getStaticMemberFunctions());
+						} else {
+							const auto& unionType = tagType->getUnion();
+							newType = builder.unionType(tagType->getName(), unionType->getFields(), unionType->getConstructors(),
+							                            unionType->hasDestructor() ? unionType->getDestructor() : nullptr, unionType->getDestructorVirtual(),
+							                            builder.memberFunctions(memFuns),
+							                            unionType->getPureVirtualMemberFunctions(), unionType->getStaticMemberFunctions());
+						}
+						// and actually replace it in the TU
+						tu.replaceType(it.first, newType);
+					}
+				}
+
+				// if we didn't change anything anymore, we are done
+				if(!changed) {
+					return;
+				}
+			}
+		}
 
 		//////////////////////////////////////////////////////////////////////////
 		// Simplify calls which have no side effects if their return value is clearly unused (in compound)
@@ -297,6 +360,8 @@ namespace extensions {
 	}
 
 	core::tu::IRTranslationUnit FrontendCleanupExtension::IRVisit(core::tu::IRTranslationUnit& tu) {
+		purgeUncalledTemplateInstantiationMemberFunctions(tu);
+
 		auto ir = core::tu::toIR(tu.getNodeManager(), tu);
 
 		ir = simplifyCxxStyleIncDec(ir);

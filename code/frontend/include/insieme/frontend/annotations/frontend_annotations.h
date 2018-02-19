@@ -38,10 +38,16 @@
 #pragma once
 
 
-struct Intercepted {
-	template<typename T>
-	void bar() {
-		NotIntercepted niwm;
-		niwm.foo<T>();
-	}
-};
+namespace insieme {
+namespace frontend {
+namespace annotations {
+
+	/**
+	 * This struct is used as a value annotation to indicate that a member function is a template instantiation.
+	 * This information can be used by the frontend cleanup extension to purge functions which are not called.
+	 */
+	struct TemplateInstantiationMarkerAnnotation {};
+
+} // annotations
+} // frontend
+} // insieme

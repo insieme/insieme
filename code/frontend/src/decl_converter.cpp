@@ -38,6 +38,7 @@
 #include "insieme/frontend/decl_converter.h"
 
 #include "insieme/frontend/converter.h"
+#include "insieme/frontend/annotations/frontend_annotations.h"
 #include "insieme/frontend/state/function_manager.h"
 #include "insieme/frontend/state/variable_manager.h"
 #include "insieme/frontend/utils/conversion_utils.h"
@@ -315,7 +316,13 @@ namespace conversion {
 			if(methDecl->isStatic()) { ret.literal = builder.literal(name, funType); } // static members are not methods in IR, need to treat here
 			else if(funType->getKind() == core::FK_CONSTRUCTOR) { ret.literal = builder.getLiteralForConstructor(funType); }
 			else if(funType->getKind() == core::FK_DESTRUCTOR) { ret.literal = builder.getLiteralForDestructor(funType); }
-			else { ret.literal = builder.getLiteralForMemberFunction(funType, name); }
+			else {
+				ret.literal = builder.getLiteralForMemberFunction(funType, name);
+				// if this member function is a template specialization, we mark it as such, so that it may be purged in the cleanup step, if it isn't called anywhere
+				if(methDecl->isFunctionTemplateSpecialization()) {
+					ret.literal.attachValue(annotations::TemplateInstantiationMarkerAnnotation());
+				}
+			}
 			if(!converter.getFunMan()->contains(methDecl)) converter.getFunMan()->insert(methDecl, ret.literal);
 			if(!declOnly) {
 				ret.lambda = convertFunMethodInternal(converter, funType, methDecl, ret.literal->getStringValue());
@@ -400,7 +407,7 @@ namespace conversion {
 		}
 
 		// mark as extern and tag with source header if required
-		if(var->hasExternalStorage() && !globalLit->hasAttachedValue<DeclaredTag>()) annotations::c::markExtern(globalLit);
+		if(var->hasExternalStorage() && !globalLit->hasAttachedValue<DeclaredTag>()) insieme::annotations::c::markExtern(globalLit);
 		converter.applyHeaderTagging(globalLit, var);
 
 		// handle pragmas attached to decls
@@ -421,7 +428,7 @@ namespace conversion {
 			}
 			core::annotations::attachName(globalLit, name);
 			// remove extern tag, add declared tag
-			annotations::c::markExtern(globalLit, false);
+			insieme::annotations::c::markExtern(globalLit, false);
 			globalLit->attachValue<DeclaredTag>();
 			converter.getIRTranslationUnit().addGlobal(globalLit, init);
 		}
@@ -474,7 +481,7 @@ namespace conversion {
 			}
 		}
 		// add required annotations
-		if(inExternC) { annotations::c::markAsExternC(irLit); }
+		if(inExternC) { insieme::annotations::c::markAsExternC(irLit); }
 		converter.applyHeaderTagging(irLit, funcDecl->getCanonicalDecl());
 		// insert first before converting the body - skip if we already handled this decl
 		if(!converter.getFunMan()->contains(funcDecl->getCanonicalDecl())) converter.getFunMan()->insert(funcDecl->getCanonicalDecl(), irLit);
