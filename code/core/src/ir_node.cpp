@@ -205,7 +205,7 @@ namespace core {
 		if(auto mgr = trg->getNodeManagerPtr()) {
 			auto abortNode = mgr->getAbortNode();
 			if(abortNode && *trg == *abortNode) {
-				abort();
+				assert_fail() << "Abort node encountered";
 			}
 		}
 	}
