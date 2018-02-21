@@ -529,12 +529,18 @@ namespace backend {
 
 			auto getNamedType = [&](const core::NodePtr& nodePtr){
 				std::string name = ptr->getName()->getValue();
-				// only demangle the name for intercepted types
-				if(annotations::c::hasIncludeAttached(nodePtr)) name = insieme::utils::demangle(name);
-				if(core::annotations::hasAttachedName(ptr)) {
-					name = core::annotations::getAttachedName(ptr);
-					if(annotations::c::hasAttachedCTag(ptr)) {
-						name = annotations::c::getAttachedCTag(ptr) + " " + name;
+				// if the type is a lambda
+				if(boost::contains(name, utils::getLambdaNameInfix())) {
+					// we need to demangleToIdentifier, as it might contain invalid identifier symbols like spaces or slashes
+					name = utils::demangleToIdentifier(name, true);
+				} else {
+					// only demangle the name for intercepted types
+					if(annotations::c::hasIncludeAttached(nodePtr)) name = insieme::utils::demangle(name);
+					if(core::annotations::hasAttachedName(ptr)) {
+						name = core::annotations::getAttachedName(ptr);
+						if(annotations::c::hasAttachedCTag(ptr)) {
+							name = annotations::c::getAttachedCTag(ptr) + " " + name;
+						}
 					}
 				}
 				return manager.create<c_ast::NamedType>(manager.create<c_ast::Identifier>(name));
