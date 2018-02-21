@@ -107,6 +107,8 @@ namespace backend {
 
 			TypeHandlerList typeHandlers;
 
+			std::vector<TypePostprocessor> typePostprocessors;
+
 			utils::map::PointerMap<core::TypePtr, std::vector<const TypeInfo*>> typeInfos; // < may contain duplicates
 
 			std::set<const TypeInfo*> allInfos;
@@ -133,6 +135,10 @@ namespace backend {
 
 			void addTypeHandler(const TypeHandlerList& handler) {
 				typeHandlers.insert(typeHandlers.end(), handler.begin(), handler.end());
+			}
+
+			void addTypePostprocessor(const TypePostprocessor& processor) {
+				typePostprocessors.push_back(processor);
 			}
 
 			/**
@@ -272,6 +278,10 @@ namespace backend {
 		store->addTypeHandler(list);
 	}
 
+	void TypeManager::addTypePostprocessor(const TypePostprocessor& processor) {
+		store->addTypePostprocessor(processor);
+	}
+
 	namespace type_info_utils {
 
 		const TypeInfo* headerAnnotatedTypeHandler(const Converter& converter, const core::TypePtr& type,
@@ -343,6 +353,14 @@ namespace backend {
 
 			// resolve information if there is no information yet
 			auto info = resolveTypeInternal(context, type);
+
+			// apply post-processing
+			for(const auto& cur : typePostprocessors) {
+				auto res = cur(context,in,const_cast<TypeInfo&>(*info));
+				if (!res || res == info) continue;
+				delete info;
+				info = res;
+			}
 
 			// register information
 			addInfo(type, info);

@@ -263,6 +263,23 @@ namespace analysis {
 		return refExt.isCallOfRefDecl(decl->getInitialization());
 	}
 
+	/**
+	 * Determines whether the given expression is a possible ref-casted version of the result
+	 * of a ref decl call.
+	 *
+	 * @param expr the expression to test
+	 * @return true if it is the direct result of a ref_decl call, false otherwise
+	 */
+	bool isRefDeclResult(const ExpressionPtr& expr);
+
+	/**
+	 * Determines whether the given expression is a possible ref-casted version of the result
+	 * of a ref temp call.
+	 *
+	 * @param expr the expression to test
+	 * @return true if it is the direct result of a ref_temp call, false otherwise
+	 */
+	bool isRefTempResult(const ExpressionPtr& expr);
 
 	// ----------------------------------- Type-Literals ----------------------------
 

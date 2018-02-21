@@ -37,7 +37,13 @@
 
 #pragma once
 
-template<int Dims>
+
 struct Intercepted {
-	Intercepted(const NotIntercepted<Dims>& x, int i) {}
+	template<typename T>
+	void bar() {
+		functionFoo<T>();
+
+		NotIntercepted niwm;
+		niwm.foo<T>();
+	}
 };

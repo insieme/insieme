@@ -35,6 +35,7 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
+#include "insieme/analysis/cba/common/failure.h"
 #include "insieme/analysis/cba/haskell/reference_analysis.h"
 #include "insieme/core/lang/reference.h"
 
@@ -65,10 +66,9 @@ namespace haskell {
 
 		Result checkNull(Context& ctxt, const core::ExpressionAddress& expr) {
 			auto expr_hs = ctxt.resolveNodeAddress(expr);
-			auto result = hat_check_null(ctxt.getHaskellContext(), expr_hs);
-			auto value = ctxt.unwrapResult(result);
-			assert_true(value);
-			return *value;
+			auto result = ctxt.runAnalysis<Result>(hat_check_null, expr_hs);
+			if(!result) throw AnalysisFailure("Timeout in Reference Analysis");
+			return *result;
 		}
 
 	}
@@ -90,12 +90,10 @@ namespace haskell {
 
 		Result checkExtern(Context& ctxt, const core::ExpressionAddress& expr) {
 			auto expr_hs = ctxt.resolveNodeAddress(expr);
-			auto result = hat_check_extern(ctxt.getHaskellContext(), expr_hs);
-			auto value = ctxt.unwrapResult(result);
-			assert_true(value);
-			return *value;
+			auto result = ctxt.runAnalysis<Result>(hat_check_extern, expr_hs);
+			if(!result) throw AnalysisFailure("Timeout in Reference Analysis");
+			return *result;
 		}
-
 	}
 
 	bool isExtern(Context& ctxt, const core::ExpressionAddress& expr) {
@@ -112,10 +110,9 @@ namespace haskell {
 
 	MemoryLocationSet getReferencedMemoryLocations(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto expr_hs = ctxt.resolveNodeAddress(expr);
-		auto result = hat_memory_locations(ctxt.getHaskellContext(), expr_hs);
-		auto value = ctxt.unwrapResult(result);
-		assert_true(value);
-		return *value;
+		auto result = ctxt.runAnalysis<ia::MemoryLocationSet*>(hat_memory_locations, expr_hs);
+		if(!result) throw AnalysisFailure("TImeout in Reference Analysis");
+		return *result;
 	}
 
 } // end namespace haskell

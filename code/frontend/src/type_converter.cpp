@@ -81,12 +81,16 @@ namespace conversion {
 	}
 
 	core::TypePtr Converter::TypeConverter::convert(const clang::QualType& type) {
+		/////////////// translationStack
+		Converter::TranslationStackEntryInserter translationStackEntryInserter(converter, type.getTypePtr());
+
 		auto retTy = converter.applyExtensions<core::TypePtr>(type, [&](const clang::QualType& param) {
 			return convertInternal(param);
 		});
 
 		if(!retTy) type->dump();
 		assert_true(retTy) << "^^^^^^^^^^^^^^^^^ Type conversion to null\n";
+
 		return retTy;
 	}
 

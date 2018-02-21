@@ -104,7 +104,7 @@ namespace frontend {
 		});
 	}
 
-	TEST(InterceptorTest, DISABLED_MixedTemplates) {
+	TEST(InterceptorTest, MixedTemplates) {
 		utils::runConversionTestOn(FRONTEND_TEST_DIR + "/inputs/interceptor/mixed_interception.cpp", [](ConversionJob& job) {
 			job.addIncludeDirectory(FRONTEND_TEST_DIR + "/inputs/interceptor");
 			job.addInterceptedHeaderDir(FRONTEND_TEST_DIR + "/inputs/interceptor");

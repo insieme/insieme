@@ -35,9 +35,9 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
-#include "insieme/analysis/cba/haskell/arithmetic_analysis.h"
-
+#include "insieme/analysis/cba/common/failure.h"
 #include "insieme/analysis/cba/common/set.h"
+#include "insieme/analysis/cba/haskell/arithmetic_analysis.h"
 
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/lang/reference.h"
@@ -61,10 +61,9 @@ namespace haskell {
 
 	ArithmeticSet getArithmeticValue(Context& ctxt, const core::ExpressionAddress& expr) {
 		auto expr_hs = ctxt.resolveNodeAddress(expr);
-		auto result = hat_arithmetic_value(ctxt.getHaskellContext(), expr_hs);
-		auto value = ctxt.unwrapResult(result);
-		assert_true(value);
-		return *value;
+		auto result = ctxt.runAnalysis<ia::ArithmeticSet*>(hat_arithmetic_value, expr_hs);
+		if(!result) throw AnalysisFailure("Timeout in Arithmetic Analysis");
+		return *result;
 	}
 
 } // end namespace haskell

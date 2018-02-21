@@ -78,6 +78,8 @@ namespace backend {
 		return TypeHandlerList();
 	}
 
+	typedef std::function<TypeInfo*(ConversionContext&, const core::TypePtr&,TypeInfo&)> TypePostprocessor;
+
 	namespace detail {
 		class TypeInfoStore;
 	}
@@ -122,6 +124,8 @@ namespace backend {
 		void addTypeHandler(const TypeHandler& handler);
 
 		void addTypeHandler(const TypeHandlerList& list);
+
+		void addTypePostprocessor(const TypePostprocessor& processor);
 	};
 
 

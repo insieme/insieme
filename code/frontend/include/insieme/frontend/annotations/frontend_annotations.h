@@ -35,54 +35,19 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
-#include "insieme/analysis/cba/common/failure.h"
-#include "insieme/analysis/cba/haskell/alias_analysis.h"
+#pragma once
 
-enum class AliasAnalysisResult : int {
-	AreAlias = 0,
-	MayAlias = 1,
-	NotAlias = 2,
-};
-
-extern "C" {
-
-	namespace hat = insieme::analysis::cba::haskell;
-
-	// Analysis
-	hat::AnalysisResult<AliasAnalysisResult>* hat_check_alias(hat::StablePtr ctxt,
-	                                                          const hat::HaskellNodeAddress x_hs,
-	                                                          const hat::HaskellNodeAddress y_hs);
-
-}
 
 namespace insieme {
-namespace analysis {
-namespace cba {
-namespace haskell {
+namespace frontend {
+namespace annotations {
 
-	using namespace insieme::core;
+	/**
+	 * This struct is used as a value annotation to indicate that a member function is a template instantiation.
+	 * This information can be used by the frontend cleanup extension to purge functions which are not called.
+	 */
+	struct TemplateInstantiationMarkerAnnotation {};
 
-	AliasAnalysisResult checkAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
-		auto x_hs = ctxt.resolveNodeAddress(x);
-		auto y_hs = ctxt.resolveNodeAddress(y);
-		auto result = ctxt.runAnalysis<AliasAnalysisResult>(hat_check_alias, x_hs, y_hs);
-		if(!result) throw AnalysisFailure("Timeout in Alias Analysis");
-		return *result;
-	}
-
-	bool areAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
-		return checkAlias(ctxt, x, y) == AliasAnalysisResult::AreAlias;
-	}
-
-	bool mayAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
-		return checkAlias(ctxt, x, y) != AliasAnalysisResult::NotAlias;
-	}
-
-	bool notAlias(Context& ctxt, const ExpressionAddress& x, const ExpressionAddress& y) {
-		return checkAlias(ctxt, x, y) == AliasAnalysisResult::NotAlias;
-	}
-
-} // end namespace haskell
-} // end namespace cba
-} // end namespace analysis
-} // end namespace insieme
+} // annotations
+} // frontend
+} // insieme
