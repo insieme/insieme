@@ -2,12 +2,13 @@
 
 # Installs a given package.
 install_pkg() {
-	local name=$1
+	local pkg_script=$1
 	(
 		set -e
 
-		source "$INSTALLER_DIR/internal/default_implementation.sh"
-		load_pkg $name
+                source "$(dirname "$pkg_script")"/default_impls.sh
+
+		source "$pkg_script"
 
 		mkdir -p $PREFIX
 

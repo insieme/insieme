@@ -29,5 +29,5 @@ for pkg in $pkgs; do
 		continue
 	fi
 
-	install_pkg $pkg
+	install_pkg "$(get_pkg_path $pkg)"
 done
