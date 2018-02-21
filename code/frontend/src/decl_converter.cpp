@@ -320,7 +320,9 @@ namespace conversion {
 				ret.literal = builder.getLiteralForMemberFunction(funType, name);
 				// if this member function is a template specialization, we mark it as such, so that it may be purged in the cleanup step, if it isn't called anywhere
 				if(methDecl->isFunctionTemplateSpecialization()) {
-					ret.literal.attachValue(annotations::TemplateInstantiationMarkerAnnotation());
+					if(!boost::starts_with(methDecl->getNameAsString(), "operator")) {
+						ret.literal.attachValue(annotations::TemplateInstantiationMarkerAnnotation());
+					}
 				}
 			}
 			if(!converter.getFunMan()->contains(methDecl)) converter.getFunMan()->insert(methDecl, ret.literal);
@@ -483,7 +485,9 @@ namespace conversion {
 
 		// if this function is a template specialization, we mark it as such, so that it may be purged in the cleanup step, if it isn't called anywhere
 		if(funcDecl->isFunctionTemplateSpecialization()) {
-			irLit.attachValue(annotations::TemplateInstantiationMarkerAnnotation());
+			if(!boost::starts_with(funcDecl->getNameAsString(), "operator")) {
+				irLit.attachValue(annotations::TemplateInstantiationMarkerAnnotation());
+			}
 		}
 
 		// add required annotations
