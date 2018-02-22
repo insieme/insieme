@@ -1,31 +1,21 @@
-get_pkg_path() {
-        local -; set +x
-	local path=$1
-        name=$(basename $path)
-        dir=$(dirname $path)
-        printf '%s\n' "$INSTALLER_DIR/$dir/package_$name.sh"
-}
-
-
 # Loads a given package file into the current shell.
 load_pkg() {
-	source "$(get_pkg_path "$1")"
+	local name=$1
+	source "$INSTALLER_DIR/package_$1.sh"
 }
 
 # Get a list of all available packages.
 get_pkg_list() {
-	find "$INSTALLER_DIR" -maxdepth 2 -name "package_*.sh" \
-		-exec realpath --relative-to "$INSTALLER_DIR" {} \; \
-		| sed -e 's/package_\([^/]*\)\.sh$/\1/'
+	find "$INSTALLER_DIR" -maxdepth 1 -name "package_*.sh" \
+		-exec basename {} \; \
+		| sed -e "s/^package_//" -e "s/\.sh$//"
 }
 
 # Returns a property defined in a given package file.
 get_property() {
-        local -; set +x
 	local name=$1
 	local property=$2
 	(
-                set +x
 		load_pkg $name
 		eval "echo -n \$$property"
 	)
@@ -43,7 +33,7 @@ is_pkg_installed() {
 # Aborts if no package with the given name is found.
 assert_pkg_exists() {
 	local name=$1
-	if [[ ! -f "$(get_pkg_path "$1")" ]]; then
+	if [[ ! -f "$INSTALLER_DIR/package_$name.sh" ]]; then
 		>&2 echo "Error: No file package_$name.sh found."
 		exit 1
 	fi
