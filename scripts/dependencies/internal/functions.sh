@@ -1,5 +1,4 @@
 get_pkg_path() {
-        local -; set +x
 	local path=$1
         name=$(basename $path)
         dir=$(dirname $path)
@@ -21,7 +20,6 @@ get_pkg_list() {
 
 # Returns a property defined in a given package file.
 get_property() {
-        local -; set +x
 	local name=$1
 	local property=$2
 	(
