@@ -128,7 +128,7 @@ namespace utils {
 			case clang::TemplateArgument::Type: {
 				// check if the type is a lambda, this one needs special handling
 				if(arg.getAsType().getTypePtr()->getAsCXXRecordDecl() && arg.getAsType().getTypePtr()->getAsCXXRecordDecl()->isLambda()) {
-					res.push_back(createNameForAnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), astContext.getSourceManager()));
+					res.push_back(createNameForAnon(insieme::utils::getLambdaNameInfix(), arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), astContext.getSourceManager()));
 				} else {
 					res.push_back(getTypeString(arg.getAsType(), cStyleName));
 				}
@@ -282,6 +282,7 @@ namespace utils {
 			// for anonymous structs created to implement lambdas, encode capture type as well as call operator type in name
 			auto rec = llvm::dyn_cast<clang::CXXRecordDecl>(tagDecl);
 			if(rec && rec->isLambda()) {
+				name = utils::createNameForAnon(insieme::utils::getLambdaNameInfix(), tagDecl, converter.getSourceManager());
 				for(auto capture : rec->fields()) {
 					name = name + "_" + getTypeString(capture->getType().getCanonicalType(), false);
 				}

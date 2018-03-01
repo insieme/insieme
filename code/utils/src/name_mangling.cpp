@@ -267,5 +267,10 @@ namespace utils {
 		static string result = "__static__";
 		return result;
 	}
+
+	const std::string& getLambdaNameInfix() {
+		static string result = "_Insieme__lambda_";
+		return result;
+	}
 }
 }

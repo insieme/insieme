@@ -94,5 +94,9 @@ namespace utils {
 	///
 	const std::string& getStaticMemberfunctionNameInfix();
 
+	/// Returns the name infix used for lambda types (not really a name mangling thing, but still somehow related).
+	///
+	const std::string& getLambdaNameInfix();
+
 }
 }

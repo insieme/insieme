@@ -177,6 +177,14 @@ namespace conversion {
 		std::stack<clang::SourceLocation> lastTrackableLocation;
 
 	  public:
+		class TranslationStackEntry;
+	  private:
+		/**
+		 * The stack of steps taken during translation of an input program. Dumped when an assertion is failing.
+		 */
+		std::stack<TranslationStackEntry> translationStack;
+
+	  public:
 		Converter(core::NodeManager& mgr, const TranslationUnit& translationUnit, const ConversionSetup& setup = ConversionSetup());
 
 		// should only be run once
@@ -342,6 +350,49 @@ namespace conversion {
 			}
 			return ret;
 		}
+
+
+		class TranslationStackEntryInserter;
+
+		/**
+		 * An entry for the translation stack, which can be printed when an assertion fails.
+		 */
+		class TranslationStackEntry {
+
+			friend class Converter::TranslationStackEntryInserter;
+
+			std::string entryTitle;
+			const clang::Type* clangType = nullptr;
+			const clang::Stmt* clangStmt = nullptr;
+
+			TranslationStackEntry(Converter& converter, const clang::Type* clangType);
+
+			TranslationStackEntry(Converter& converter, const clang::Stmt* clangStmt);
+
+		  public:
+			bool operator==(const TranslationStackEntry& other) const;
+
+			std::string getEntryTitle() const;
+
+			void dumpClangNode() const;
+		};
+
+		/**
+		 * An object which will create a new TranslationStackEntry upon creation and insert it into the Converter's translationStack.
+		 * Upon destruction the entry on the stack will be popped.
+		 */
+		class TranslationStackEntryInserter {
+
+			Converter& converter;
+			TranslationStackEntry entry;
+
+		  public:
+			TranslationStackEntryInserter(Converter& converter, const clang::Type* clangType);
+
+			TranslationStackEntryInserter(Converter& converter, const clang::Stmt* clangStmt);
+
+			~TranslationStackEntryInserter();
+		};
 
 	};
 

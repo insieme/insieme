@@ -53,6 +53,9 @@
 // print IR statistics after frontend conversion
 #define INSIEME_SHOW_STATISTICS "INSIEME_SHOW_STATISTICS"
 
+// print translation stack dumps
+#define INSIEME_TRANSLATION_STACK_DUMP "INSIEME_TRANSLATION_STACK_DUMP"
+
 
 ///////////// CORE
 

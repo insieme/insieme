@@ -46,6 +46,7 @@
 #include "insieme/frontend/utils/conversion_utils.h"
 #include "insieme/frontend/utils/expr_to_bool.h"
 #include "insieme/frontend/utils/macros.h"
+#include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
@@ -74,6 +75,8 @@ namespace frontend {
 namespace conversion {
 
 	stmtutils::StmtWrapper Converter::StmtConverter::BaseVisit(clang::Stmt* stmt, std::function<stmtutils::StmtWrapper(clang::Stmt*)> self) {
+		/////////////// translationStack
+		Converter::TranslationStackEntryInserter translationStackEntryInserter(converter, stmt);
 
 		auto retStmt = converter.applyExtensions<stmtutils::StmtWrapper>(stmt, [&](clang::Stmt* param) {
 			converter.trackSourceLocation(param);

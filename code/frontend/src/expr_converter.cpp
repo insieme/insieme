@@ -90,6 +90,8 @@ namespace conversion {
 	//---------------------------------------------------------------------------------------------------------------------
 
 	core::ExpressionPtr Converter::ExprConverter::BaseVisit(const clang::Expr* expr, std::function<core::ExpressionPtr(const clang::Expr*)> self) {
+		/////////////// translationStack
+		Converter::TranslationStackEntryInserter translationStackEntryInserter(converter, expr);
 
 		auto retIr = converter.applyExtensions<core::ExpressionPtr>(expr, [&](const clang::Expr* param) {
 			converter.trackSourceLocation(param);

@@ -178,6 +178,26 @@ namespace conversion {
 
 		insieme::utils::setAssertExtraInfoPrinter([&]() {
 			std::cerr << " ==> last Trackable location: " << getLastTrackableLocation() << "\n";
+
+			// print translationStack
+			std::cerr << "\n\nTranslationStack:\n\n";
+			bool printDumps = getenv(INSIEME_TRANSLATION_STACK_DUMP);
+			int index = 0;
+			while(!translationStack.empty()) {
+				const auto& entry = translationStack.top();
+				std::cerr << "  " << index++ << ": " << entry.getEntryTitle() << std::endl;
+				if(printDumps) {
+					std::cerr << std::endl;
+					entry.dumpClangNode();
+					std::cerr << "\n\n" << std::endl;
+				}
+				translationStack.pop();
+			}
+
+			// if the user didn't request to print entry dumps, tell him how he can do so
+			if(!printDumps) {
+				std::cerr << "\n\nTo print the TranslationStack with entry dumps, set the environment variable " << INSIEME_TRANSLATION_STACK_DUMP << std::endl;
+			}
 		});
 
 		// collect all type definitions
@@ -339,6 +359,53 @@ namespace conversion {
 
 	core::TypePtr Converter::convertExprType(const clang::Expr* expr) const {
 		return exprConvPtr->convertExprType(expr);
+	}
+
+
+	Converter::TranslationStackEntryInserter::TranslationStackEntryInserter(Converter& converter, const clang::Type* clangType) : converter(converter), entry(converter, clangType) {
+		converter.translationStack.push(entry);
+	}
+
+	Converter::TranslationStackEntryInserter::TranslationStackEntryInserter(Converter& converter, const clang::Stmt* clangStmt) : converter(converter), entry(converter, clangStmt) {
+		converter.translationStack.push(entry);
+	}
+
+	Converter::TranslationStackEntryInserter::~TranslationStackEntryInserter() {
+		assert_true(converter.translationStack.top() == entry) << "Invalid translation stack state.\nexpected "
+				<< converter.translationStack.top().getEntryTitle() << "\nactual " << entry.getEntryTitle() << "\n";
+		converter.translationStack.pop();
+	}
+
+
+	Converter::TranslationStackEntry::TranslationStackEntry(Converter& converter, const clang::Type* clangType) : clangType(clangType) {
+		auto name = ::format("%p", clangType);
+		if(auto tt = llvm::dyn_cast<clang::TagType>(clangType)) {
+			if(auto namedDecl = llvm::dyn_cast<clang::NamedDecl>(tt->getDecl())) {
+				name = namedDecl->getNameAsString();
+			}
+		}
+		entryTitle = "Converting Type " + name;
+	}
+
+	Converter::TranslationStackEntry::TranslationStackEntry(Converter& converter, const clang::Stmt* clangStmt) : clangStmt(clangStmt) {
+		entryTitle = std::string("Converting ") + (llvm::dyn_cast<clang::Expr>(clangStmt) ? "Expr" : "Stmt") + " at "
+				+ frontend::utils::getLocationAsString(clangStmt->getLocStart(), converter.getSourceManager());
+	}
+
+	bool Converter::TranslationStackEntry::operator==(const TranslationStackEntry& other) const {
+		return entryTitle == other.entryTitle && clangType == other.clangType && clangStmt == other.clangStmt;
+	}
+
+	std::string Converter::TranslationStackEntry::getEntryTitle() const {
+		return entryTitle;
+	}
+
+	void Converter::TranslationStackEntry::dumpClangNode() const {
+		if(clangType) {
+			clangType->dump();
+		} else if(clangStmt) {
+			clangStmt->dumpColor();
+		}
 	}
 
 } // End conversion namespace
