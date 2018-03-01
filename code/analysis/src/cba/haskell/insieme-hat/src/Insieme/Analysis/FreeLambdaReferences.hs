@@ -87,7 +87,20 @@ data FreeLambdaReferenceAnalysis = FreeLambdaReferenceAnalysis
 --
 
 freeLambdaReferences :: NodeAddress -> TypedVar LambdaReferenceSet
-freeLambdaReferences addr = case Q.getNodeType addr of
+freeLambdaReferences addr =
+
+      if I.isRoot addr then direct else redirect
+
+    where
+
+      redirect = mkVariable varId [fwd] bot
+      fwd = createConstraint dep val redirect
+        where
+          dep _ = [ toVar rooted_var ]
+          val a = LambdaReferenceSet $ Set.mapMonotonic (I.append addr) (unLRS $ get a rooted_var)
+          rooted_var = freeLambdaReferences $ I.crop addr
+
+      direct = case Q.getNodeType addr of
 
         I.LambdaExpr -> var
             where
@@ -116,42 +129,36 @@ freeLambdaReferences addr = case Q.getNodeType addr of
                 con = createConstraint dep val var
 
                 dep _ = [toVar freeLambdaRefVar]
-                val a = LambdaReferenceSet $ Set.map (I.append addr) $ unLRS $ get a freeLambdaRefVar
+                val a = LambdaReferenceSet $ Set.mapMonotonic (I.append addr) $ unLRS $ get a freeLambdaRefVar
 
                 freeLambdaRefVar = freeLambdaReferences $ I.crop addr
 
         _ -> var
 
-    where
+      var = mkVariable varId [con] base
+      con = createConstraint (\_ -> toVar <$> deps) val var
 
-        var = mkVariable varId [con] base
-        con = createConstraint (\_ -> toVar <$> deps) val var
+      base = LambdaReferenceSet $ Set.fromList $ I.collectAllPrune filter prune addr
+          where
+              filter n = Q.getNodeType n == I.LambdaReference
 
-        base = LambdaReferenceSet $ Set.fromList $ I.foldAddressPrune collector prune addr
-            where
-                collector c l = case Q.getNodeType c of
-                    I.LambdaReference -> c : l
-                    _                  -> l
+              prune a = if I.LambdaExpr == nodeType || Q.isType a then I.PruneHere else I.NoPrune
+                  where
+                      nodeType = Q.getNodeType a
 
-                prune a = I.LambdaExpr == nodeType || Q.isType a
-                    where
-                        nodeType = Q.getNodeType a
+      deps = freeLambdaReferences <$> I.collectAllPrune filter prune addr
+          where
+              filter n = Q.getNodeType n == I.LambdaDefinition
 
-        deps = I.foldAddressPrune collector prune addr
-            where
-                collector c l = case Q.getNodeType c of
-                    I.LambdaDefinition -> freeLambdaReferences c : l
-                    _                  -> l
+              prune a = if I.LambdaBinding == nodeType || Q.isType a then I.PruneHere else I.NoPrune
+                  where
+                      nodeType = Q.getNodeType a
 
-                prune a = I.LambdaBinding == nodeType || Q.isType a
-                    where
-                        nodeType = Q.getNodeType a
+      val a = join $ get a <$> deps
 
-        val a = join $ get a <$> deps
+      varId = mkIdentifierFromExpression analysis addr
 
-        varId = mkIdentifierFromExpression analysis addr
-
-        analysis = mkAnalysisIdentifier FreeLambdaReferenceAnalysis "FreeLambdaRefs"
+      analysis = mkAnalysisIdentifier FreeLambdaReferenceAnalysis "FreeLambdaRefs"
 
 
 
