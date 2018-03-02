@@ -43,13 +43,13 @@
 module Insieme.Inspire.Visit (
     Pruning(..),
     collectAll,
+    collectAllFromTree,
     collectAllPrune,
+    collectAllPruneFromTree,
     collectAllPrunePaths,
     collectAllPaths'Naive,
     collectAddr,
-    foldTree,
     foldAddress,
-    foldTreePrune,
     foldAddressPrune,
     findDecl,
 ) where
@@ -74,15 +74,18 @@ data Pruning = NoPrune       -- ^ Continue descending into child nodes
 collectAll :: (IR.Tree -> Bool) -> NodeAddress -> [NodeAddress]
 collectAll p root = collectAllPrune p (const NoPrune) root
 
+collectAllFromTree :: (IR.Tree -> Bool) -> IR.Tree -> [NodeAddress]
+collectAllFromTree p root = collectAll p (mkNodeAddress [] root)
+
 -- | Like 'collectAll' but allows you to prune the search space.
 collectAllPrune :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> NodeAddress -> [NodeAddress]
 collectAllPrune p pruning addr = map (append addr) $ resolveNodePaths $ collectAllPrunePaths p pruning (getNode addr)
   where
     resolveNodePaths :: [NodePath] -> [NodeAddress]
---    resolveNodePaths = map (error "dohh!!")
---    resolveNodePaths = map (flip mkNodeAddress (getNode addr))
     resolveNodePaths = mkNodeAddresses' (getNode addr)
 
+collectAllPruneFromTree :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> IR.Tree -> [NodeAddress]
+collectAllPruneFromTree pred prun root = collectAllPrune pred prun (mkNodeAddress [] root)
 
 collectAllPrunePaths :: (IR.Tree -> Bool) -> (IR.Tree -> Pruning) -> IR.Tree -> [NodePath]
 collectAllPrunePaths p pruning root = flattenNodePaths $ go root
@@ -120,11 +123,7 @@ collectAddr t fs = collectAllPrune p pruning
 
 -- | Fold the given 'IR.Tree'. The accumulator function takes the subtree and
 -- the address of this subtree in the base tree.
-foldTree :: Monoid a => (NodeAddress -> a -> a) -> IR.Tree -> a
-foldTree = flip foldTreePrune noPrune
-
--- | Fold the given 'IR.Tree'. The accumulator function takes the subtree and
--- the address of this subtree in the base tree.
+-- TODO remove
 foldAddress :: Monoid a => (NodeAddress -> a -> a) -> NodeAddress -> a
 foldAddress = flip foldAddressPrune noPrune
 
@@ -134,16 +133,7 @@ noPrune = const False
 
 -- | Like 'foldTree' but is able to not follow entire subtrees when the pruning
 -- function returns 'False'.
-foldTreePrune :: Monoid a
-                => (NodeAddress -> a -> a)      -- ^ aggregation function
-                -> (NodeAddress -> Bool)        -- ^ prune subtrees?
-                -> IR.Tree                      -- ^ current processed node
-                -> a                            -- ^ accumulated result
-foldTreePrune collect prune ir = foldAddressPrune collect prune (mkNodeAddress [] ir)
-
-
--- | Like 'foldTree' but is able to not follow entire subtrees when the pruning
--- function returns 'False'.
+-- TODO remove
 foldAddressPrune :: Monoid a
                 => (NodeAddress -> a -> a)      -- ^ aggregation function
                 -> (NodeAddress -> Bool)        -- ^ prune subtrees?

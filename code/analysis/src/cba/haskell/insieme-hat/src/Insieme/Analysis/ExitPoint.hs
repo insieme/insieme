@@ -136,9 +136,9 @@ exitPoints addr = case Q.getNodeType addr of
 
 
 collectReturns :: NodeAddress -> [NodeAddress]
-collectReturns = I.foldAddressPrune collector filter
+collectReturns = I.collectAllPrune pred prune
   where
-    filter cur = Q.getNodeType cur == I.LambdaExpr
-    collector cur returns = if Q.getNodeType cur == I.ReturnStmt
-                               then (cur : returns)
-                               else returns
+    pred cur = Q.getNodeType cur == I.ReturnStmt
+
+    prune cur | Q.getNodeType cur == I.LambdaExpr = I.PruneHere
+    prune _ = I.NoPrune
