@@ -46,7 +46,7 @@ import Data.Text.Format as Fmt
 import Data.Text.Lazy.Builder (fromString)
 import Insieme.Analysis.Entities.SymbolicFormula (SymbolicFormula)
 import Insieme.Inspire.BinaryParser (parseBinaryDump)
-import Insieme.Inspire.Visit (foldTree)
+import Insieme.Inspire.Visit (collectAll)
 import Insieme.Utils.Arithmetic (NumOrdering(NumEQ), numCompare)
 
 import qualified Insieme.Analysis.Alias as Alias
@@ -64,7 +64,7 @@ main :: IO ()
 main = do
     dump <- Data.ByteString.getContents
     let Right ir = parseBinaryDump dump
-    let findings = foldTree findAnalysis ir
+    let findings = toAnalysisRun <$> IR.collectAllFromTree findAnalysis ir
     let results = evalState (sequence $ analysis <$> findings) Solver.initState
     forM_ results line
     return ()
@@ -85,12 +85,20 @@ data AnalysisResult = Ok | Inaccurate | Fail | Pending
 isPending :: AnalysisRun -> Bool
 isPending = (==Pending) . getResult
 
-findAnalysis :: Addr.NodeAddress -> [AnalysisRun] -> [AnalysisRun]
-findAnalysis addr acc =
-    case Addr.getNode addr of
-        IR.Node IR.CallExpr (_:IR.Node IR.Literal [_, IR.Node (IR.StringValue s) _]:_) | "cba_expect" `isPrefixOf` s
-            -> AnalysisRun addr s Pending : acc
-        _   -> acc
+isCbaExpect :: Addr.NodeAddress -> Bool
+isCbaExpect addr = case Addr.getNode addr of
+    IR.Node IR.CallExpr (_:IR.Node IR.Literal [_, IR.Node (IR.StringValue s) _]:_) -> "cba_expect" `isPrefixOf` s
+    _ -> False
+
+findAnalysis :: IR.Tree -> Bool
+findAnalysis (IR.Node IR.CallExpr (_:IR.Node IR.Literal [_, IR.Node (IR.StringValue s) _]:_)) = "cba_expect" `isPrefixOf` s
+findAnalysis _ = False
+
+toAnalysisRun :: Addr.NodeAddress -> AnalysisRun
+toAnalysisRun addr = AnalysisRun addr (target $ Addr.getNode addr) Pending
+  where
+    target (IR.Node IR.CallExpr (_:IR.Node IR.Literal [_, IR.Node (IR.StringValue s) _]:_)) = s
+    target _ = undefined
 
 aliasAnalysis :: AnalysisRun -> State Solver.SolverState Alias.Result
 aliasAnalysis a = do

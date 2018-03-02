@@ -298,17 +298,17 @@ writeSetSummary addr = case getNodeType addr of
     idGen a = Solver.mkIdentifierFromExpression writeSetAnalysis a
 
     -- get list of calls and init expressions within current node --
-    potentialWriteOps = I.foldAddressPrune collect filter addr
-        where
+    potentialWriteOps = I.collectAllPrune pred prune addr
+      where
+        pred (I.Node I.CallExpr _) = True
+        pred (I.Node I.InitExpr _) = True
+        pred _ = False
 
-            filter cur = case getNode cur of
-                I.Node I.Lambda _ -> cur /= addr
-                _                   -> isType cur
+        prune cur = case cur of
+            I.Node I.Lambda _ | cur /= getNode addr -> I.PruneHere
+            _                 | isType cur          -> I.PruneHere
+            _                                       -> I.NoPrune
 
-            collect cur l = case getNode cur of
-                I.Node I.CallExpr _ -> cur : l
-                I.Node I.InitExpr _ -> cur : l
-                _                     -> l
 
 
     -- get list of write sets at calls

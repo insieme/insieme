@@ -78,6 +78,13 @@ toAddress (Lambda a) = a
 toAddress (Literal a) = a
 toAddress (Closure a) = a
 
+toCallable :: NodeAddress -> Callable
+toCallable a = case Q.getNodeType a of
+    I.Lambda   -> Lambda a
+    I.BindExpr -> Closure a
+    I.Literal  -> Literal a
+    _ -> error "not a callable"
+
 --
 -- * Callable Lattice
 --
@@ -144,10 +151,8 @@ callableValue addr = case Q.getNodeType addr of
 
 -- | a utility to collect all callables of a program
 collectAllCallables :: NodeAddress -> CallableSet
-collectAllCallables addr = BSet.fromList $ I.foldTree collector (I.getRoot addr)
-    where
-        collector cur callables = case Q.getNodeType cur of
-            I.Lambda   -> ((Lambda  cur) : callables)
-            I.BindExpr -> ((Closure cur) : callables)
-            I.Literal  -> ((Literal cur) : callables)
-            _ -> callables
+collectAllCallables addr = BSet.map toCallable
+                         $ BSet.fromList
+                         $ I.collectAll isCallable addr
+  where
+    isCallable node = Q.getNodeType node `elem` [I.Lambda, I.BindExpr, I.Literal]

@@ -41,15 +41,14 @@ module Main where
 
 import Control.Monad.State.Strict
 import Insieme.Analysis.Entities.FieldIndex (SimpleFieldIndex)
-import Insieme.Inspire.Visit (foldTreePrune)
 import qualified Data.ByteString as BS
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Reference as Ref
 import qualified Insieme.Analysis.Solver as Solver
-import qualified Insieme.Inspire as IR
+import qualified Insieme.Inspire as I
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr
-import qualified Insieme.Inspire.Query as Q
+import qualified Insieme.Query as Q
 import qualified Insieme.Utils.BoundSet as BSet
 
 main :: IO ()
@@ -58,9 +57,9 @@ main = do
     dump <- BS.getContents
 
     -- run parser
-    let Right ir = BinPar.parseBinaryDump dump
+    let Right ir = I.parseBinaryDump dump
 
-    let targets = foldTreePrune findTargets (Q.isType) ir
+    let targets = I.collectAllPruneFromTree findTargets typePruner ir
 
     let res = evalState (sequence $ analysis <$> targets) Solver.initState
 
@@ -68,15 +67,18 @@ main = do
     putStr $ "Unknown: " ++ (show $ length $ filter (=='u') res) ++ "\n"
     putStr $ "OK:      " ++ (show $ length $ filter (=='o') res) ++ "\n"
 
-findTargets :: Addr.NodeAddress -> [Addr.NodeAddress] -> [Addr.NodeAddress]
-findTargets addr xs = case Addr.getNode addr of
-    IR.Node IR.CallExpr _ | Q.isBuiltin (Addr.goDown 1 addr) "ref_deref" -> addr : xs
-    _ -> xs
+findTargets :: I.Tree -> Bool
+findTargets n@(I.Node I.CallExpr _) = Q.isBuiltin (I.child 1 n) "ref_deref"
+findTargets _ = False
 
-analysis :: Addr.NodeAddress -> State Solver.SolverState Char
+typePruner :: I.Tree -> I.Pruning
+typePruner n | Q.isType n = I.PruneHere
+typePruner _ = I.NoPrune
+
+analysis :: I.NodeAddress -> State Solver.SolverState Char
 analysis addr = do
     state <- get
-    let (res, state') = Solver.resolve state (Ref.referenceValue $ Addr.goDown 1 $ Addr.goDown 2 addr)
+    let (res, state') = Solver.resolve state (Ref.referenceValue $ I.goDown 1 $ I.goDown 2 addr)
     put state'
     let refs = Ref.unRS $ ComposedValue.toValue res :: BSet.UnboundSet (Ref.Reference SimpleFieldIndex)
     return $ case () of _
