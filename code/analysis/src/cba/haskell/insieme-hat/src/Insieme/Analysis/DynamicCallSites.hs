@@ -101,7 +101,8 @@ dynamicCalls addr = case Q.getNodeType addr of
 
     idGen = Solver.mkIdentifierFromExpression dynamicCallsAnalysis
 
-    var = Solver.mkVariable (idGen addr) [] allCalls
+    var = Solver.mkVariable (idGen addr) [con] Solver.bot
+    con = Solver.constant allCalls var
 
     allCalls = Set.fromList $ CallSite <$> I.collectAllPrune dynamicBoundCall skipTypes (I.getRootAddress addr)
       where

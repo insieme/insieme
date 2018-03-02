@@ -111,9 +111,10 @@ callSites addr = case Q.getNodeType addr of
 
 
     -- create the variable (by binding at least the id) --
-    var = Solver.mkVariable (idGen addr) cons initial
+    var = Solver.mkVariable (idGen addr) cons Solver.bot
 
-    cons    = if I.isRoot addr then [] else [con]
+    cons    = if I.isRoot addr then [initc] else [con,initc]
+    initc   = Solver.constant initial var
     initial = if I.isRoot addr then Solver.bot else directCall
 
 
