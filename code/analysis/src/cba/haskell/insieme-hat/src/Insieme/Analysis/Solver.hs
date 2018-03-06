@@ -108,6 +108,8 @@ import Control.Monad (void,when)
 import Control.Parallel.Strategies
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HashMap
 import Data.Dynamic
 import Data.Function
 import Data.List hiding (insert,lookup)
@@ -124,6 +126,7 @@ import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Graph as Graph
+import           Data.Hashable (Hashable)
 import qualified Data.Hashable as Hash
 import qualified Data.IntMap.Strict as IntMap
 import           Data.Set (Set)
@@ -231,6 +234,9 @@ data Identifier = Identifier {
 instance Show Identifier where
         show (Identifier a v _) = (show a) ++ "/" ++ (show v)
 
+instance Hashable Identifier  where
+    hashWithSalt s Identifier {idHash} = Hash.hashWithSalt s idHash
+    hash Identifier {idHash} = idHash
 
 mkIdentifierFromExpression :: AnalysisIdentifier -> NodeAddress -> Identifier
 mkIdentifierFromExpression a n = Identifier {
@@ -284,6 +290,10 @@ instance Ord Var where
 instance Show Var where
         show v = show (varIdent v)
 
+instance Hashable Var where
+    hashWithSalt s Var {varIdent} = Hash.hashWithSalt s varIdent
+    hash Var {varIdent} = Hash.hash varIdent
+
 -- typed variables (user interaction)
 newtype TypedVar a = TypedVar Var
         deriving ( Show, Eq, Ord )
@@ -313,35 +323,31 @@ getLimit a v = join (go <$> (constraints . toVar) v)
 
 -- Analysis Variable Maps -----------------------------------
 
-newtype VarMap a = VarMap (IntMap.IntMap (Map.Map Var a))
+newtype VarMap a = VarMap (HashMap Var a)
 
 emptyVarMap :: VarMap a
-emptyVarMap = VarMap IntMap.empty
+emptyVarMap = VarMap HashMap.empty
 
 lookup :: Var -> VarMap a -> Maybe a
-lookup k (VarMap m) = (Map.lookup k) =<< (IntMap.lookup (idHash $ varIdent k) m)
+lookup k (VarMap m) = HashMap.lookup k m
+-- (Map.lookup k) =<< (IntMap.lookup (idHash $ varIdent k) m)
 
 insert :: Var -> a -> VarMap a -> VarMap a
-insert k v (VarMap m) = VarMap (IntMap.insertWith go (idHash $ varIdent k) (Map.singleton k v) m)
-    where
-        go _ o = Map.insert k v o
+insert k v (VarMap m) = VarMap $ HashMap.insert k v m
+---  (IntMap.insertWith go (idHash $ varIdent k) (Map.singleton k v) m)
+    -- where
+    --     go _ o = Map.insert k v o
 
 insertAll :: [(Var,a)] -> VarMap a -> VarMap a
-insertAll [] m = m
-insertAll ((k,v):xs) m = insertAll xs $ insert k v m
-
+insertAll kvs (VarMap m) = VarMap $ foldr go m kvs
+  where
+    go (k,v) m = HashMap.insert k v m
 
 keys :: VarMap a -> [Var]
-keys (VarMap m) = foldr go [] m
-    where
-        go im l = (Map.keys im) ++ l
-
+keys (VarMap m) = HashMap.keys m
 
 keysSet :: VarMap a -> Set.Set Var
-keysSet (VarMap m) = foldr go Set.empty m
-    where
-        go im s = Set.union (Map.keysSet im) s
-
+keysSet (VarMap m) = Set.fromList $ HashMap.keys m
 
 -- Assignments ----------------------------------------------
 
@@ -504,15 +510,16 @@ initState = SolverState empty emptyVarIndex Map.empty Map.empty Map.empty
 
 
 -- a utility to maintain dependencies between variables
-data Dependencies = Dependencies (IntMap.IntMap (Set.Set IndexedVar))
+newtype Dependencies = Dependencies (IntMap.IntMap (Set.Set IndexedVar))
         deriving Show
 
 emptyDep :: Dependencies
 emptyDep = Dependencies IntMap.empty
 
 addDep :: Dependencies -> IndexedVar -> [IndexedVar] -> Dependencies
-addDep d _ [] = d
-addDep (Dependencies m) t (v:vs) = addDep (Dependencies (IntMap.insertWith (\_ s -> Set.insert t s) (toIndex v) (Set.singleton t) m)) t vs
+addDep (Dependencies m) t vs = Dependencies $ IntMap.unionWith Set.union m m'
+  where
+    m' = IntMap.fromList $ map (\v -> (toIndex v, Set.singleton t)) vs
 
 getDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
 getDep (Dependencies d) v = fromMaybe Set.empty $ IntMap.lookup (toIndex v) d
@@ -745,7 +752,6 @@ measure f p = unsafePerformIO $ do
         r  <- evaluate $! f p
         t2 <- getCPUTime
         return (r,t2-t1)
-
 
 -- Debugging --
 
