@@ -48,7 +48,17 @@ library
                         Insieme.Analysis.RecursiveLambdaReferences,
                         Insieme.Analysis.Reference,
                         Insieme.Analysis.Solver,
-                        Insieme.Analysis.Solver.Metadata,
+                        Insieme.Analysis.Solver.Assignment
+                        Insieme.Analysis.Solver.AssignmentView
+                        Insieme.Analysis.Solver.Constraint
+                        Insieme.Analysis.Solver.DebugFlags
+                        Insieme.Analysis.Solver.Identifier
+                        Insieme.Analysis.Solver.Lattice
+                        Insieme.Analysis.Solver.Metadata
+                        Insieme.Analysis.Solver.SolverState
+                        Insieme.Analysis.Solver.Var
+                        Insieme.Analysis.Solver.VarMap
+                        Insieme.Analysis.Solver.VariableIndex
                         Insieme.Analysis.SymbolicValue,
                         Insieme.Analysis.Utils.CppSemantic,
                         Insieme.Analysis.WriteSetSummary,

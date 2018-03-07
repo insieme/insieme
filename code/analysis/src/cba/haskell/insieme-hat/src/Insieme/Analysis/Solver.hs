@@ -98,20 +98,11 @@ module Insieme.Analysis.Solver (
 
 ) where
 
-import GHC.Stack
-
 import Prelude hiding (lookup,print)
 import Control.Arrow
-import Control.DeepSeq
 import Control.Exception
 import Control.Monad (void,when)
 import Control.Parallel.Strategies
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HashMap
-import Data.Dynamic
-import Data.Function
 import Data.List hiding (insert,lookup)
 import Data.Maybe
 import Data.Tuple
@@ -123,395 +114,39 @@ import Text.Printf
 
 import qualified Control.Monad.State.Strict as State
 import qualified Data.Aeson as A
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
+
 import qualified Data.Graph as Graph
-import           Data.Hashable (Hashable)
-import qualified Data.Hashable as Hash
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import qualified Data.IntMap.Strict as IntMap
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
-import Insieme.Inspire (NodeAddress, NodePath)
+import Insieme.Inspire (NodePath)
 import qualified Insieme.Inspire as I
-import Insieme.Utils
 
 import Insieme.Analysis.Entities.Memory
 import Insieme.Analysis.Entities.ProgramPoint
 
+import Insieme.Analysis.Solver.Assignment
+import Insieme.Analysis.Solver.AssignmentView
+import Insieme.Analysis.Solver.Constraint
+import Insieme.Analysis.Solver.DebugFlags
+import Insieme.Analysis.Solver.Identifier
+import Insieme.Analysis.Solver.Lattice
 import Insieme.Analysis.Solver.Metadata
-
-
--- A flag to enable / disable internal consistency checks (for debugging)
-check_consistency :: Bool
-check_consistency = False
-
-
--- Lattice --------------------------------------------------
-
--- this is actually a bound join-semilattice
-class (Eq v, Show v, Typeable v, NFData v) => Lattice v where
-        {-# MINIMAL join | merge, bot #-}
-        -- | combine elements
-        join :: [v] -> v                    -- need to be provided by implementations
-        join [] = bot                       -- a default implementation for the join operator
-        join xs = foldr1 merge xs           -- a default implementation for the join operator
-
-        -- | binary join
-        merge :: v -> v -> v                -- a binary version of the join
-        merge a b = join [ a , b ]          -- its default implementation derived from join
-
-        -- | bottom element
-        bot  :: v                           -- the bottom element of the join
-        bot = join []                       -- default implementation
-
-        -- | induced order
-        less :: v -> v -> Bool              -- determines whether one element of the lattice is less than another
-        less a b = (a `merge` b) == b       -- default implementation
-
-        -- | debug printing
-        print :: v -> String                -- print a value of the lattice readable
-        print = show
-
-
-
-class (Lattice v) => ExtLattice v where
-        -- | top element
-        top  :: v                           -- the top element of this lattice
-
-
-
-
--- Analysis Identifier -----
-
-data AnalysisIdentifier = AnalysisIdentifier {
-    aidToken :: TypeRep,
-    aidName  :: String,
-    aidHash  :: Int
-}
-
-instance Eq AnalysisIdentifier where
-    (==) = (==) `on` aidToken
-
-instance Ord AnalysisIdentifier where
-    compare = compare `on` aidToken
-
-instance Show AnalysisIdentifier where
-    show = aidName
-
-
-mkAnalysisIdentifier :: (Typeable a) => a -> String -> AnalysisIdentifier
-mkAnalysisIdentifier a n = AnalysisIdentifier {
-        aidToken = (typeOf a), aidName = n , aidHash = (Hash.hash n)
-    }
-
-
--- Identifier -----
-
-
-data IdentifierValue =
-          IDV_NodeAddress NodeAddress
-        | IDV_ProgramPoint ProgramPoint
-        | IDV_MemoryStatePoint MemoryStatePoint
-        | IDV_Other BS.ByteString
-    deriving (Eq,Ord,Show)
-
-
-referencedAddress :: IdentifierValue -> Maybe NodeAddress
-referencedAddress ( IDV_NodeAddress   a )                                           = Just a
-referencedAddress ( IDV_ProgramPoint (ProgramPoint a _) )                           = Just a
-referencedAddress ( IDV_MemoryStatePoint (MemoryStatePoint (ProgramPoint a _) _ ) ) = Just a
-referencedAddress ( IDV_Other _ )                                                   = Nothing
-
-
-
-data Identifier = Identifier {
-    idHash   :: Int,
-    idValue  :: IdentifierValue,
-    analysis :: AnalysisIdentifier
-} deriving (Eq, Ord)
-
-instance Show Identifier where
-        show (Identifier a v _) = (show a) ++ "/" ++ (show v)
-
-instance Hashable Identifier  where
-    hashWithSalt s Identifier {idHash} = Hash.hashWithSalt s idHash
-    hash Identifier {idHash} = idHash
-
-mkIdentifierFromExpression :: AnalysisIdentifier -> NodeAddress -> Identifier
-mkIdentifierFromExpression a n = Identifier {
-        analysis = a,
-        idValue = IDV_NodeAddress n,
-        idHash = Hash.hashWithSalt (aidHash a) n
-    }
-
-mkIdentifierFromProgramPoint :: AnalysisIdentifier -> ProgramPoint -> Identifier
-mkIdentifierFromProgramPoint a p = Identifier {
-    analysis = a,
-    idValue = IDV_ProgramPoint p,
-    idHash = Hash.hashWithSalt (aidHash a) p
-}
-
-mkIdentifierFromMemoryStatePoint :: AnalysisIdentifier -> MemoryStatePoint -> Identifier
-mkIdentifierFromMemoryStatePoint a m = Identifier {
-    analysis = a,
-    idValue = IDV_MemoryStatePoint m,
-    idHash = Hash.hashWithSalt (aidHash a) m
-}
-
-mkIdentifierFromString :: AnalysisIdentifier -> String -> Identifier
-mkIdentifierFromString a s = Identifier {
-    analysis = a,
-    idValue = IDV_Other $ BS.pack s,
-    idHash = Hash.hashWithSalt (aidHash a) $ s
-}
-
-address :: Identifier -> Maybe NodeAddress
-address = referencedAddress . idValue
-
-
-
--- Analysis Variables ---------------------------------------
-
--- general variables (management)
-data Var = Var {
-                varIdent :: Identifier,              -- the variable identifier
-                constraints :: [Constraint],         -- the list of constraints
-                bottom :: Dynamic,                   -- the bottom value for this variable
-                valuePrint :: Assignment -> String   -- a utility for unpacking an printing a value assigned to this variable
-        }
-
-instance Eq Var where
-        (==) a b = (varIdent a) == (varIdent b)
-
-instance Ord Var where
-        compare a b = compare (varIdent a) (varIdent b)
-
-instance Show Var where
-        show v = show (varIdent v)
-
-instance Hashable Var where
-    hashWithSalt s Var {varIdent} = Hash.hashWithSalt s varIdent
-    hash Var {varIdent} = Hash.hash varIdent
-
--- typed variables (user interaction)
-newtype TypedVar a = TypedVar Var
-        deriving ( Show, Eq, Ord )
-
-mkVariable :: (Lattice a) => Identifier -> [Constraint] -> a -> TypedVar a
-mkVariable i cs b = var
-    where
-        var = TypedVar ( Var i cs ( toDyn b ) print' )
-        print' = (\a -> print $ get' a var )
-
-toVar :: TypedVar a -> Var
-toVar (TypedVar x) = x
-
-getDependencies :: AssignmentView -> TypedVar a -> [Var]
-getDependencies a v = concat $ (go <$> (constraints . toVar) v)
-    where
-        go c = dependingOn c a
-
-getLimit :: (Lattice a) => AssignmentView -> TypedVar a -> a
-getLimit a v = join (go <$> (constraints . toVar) v)
-    where
-        go c = get' a' v
-            where
-                (a',_) = update c a
-
-
-
--- Analysis Variable Maps -----------------------------------
-
-newtype VarMap a = VarMap (HashMap Var a)
-
-emptyVarMap :: VarMap a
-emptyVarMap = VarMap HashMap.empty
-
-lookup :: Var -> VarMap a -> Maybe a
-lookup k (VarMap m) = HashMap.lookup k m
--- (Map.lookup k) =<< (IntMap.lookup (idHash $ varIdent k) m)
-
-insert :: Var -> a -> VarMap a -> VarMap a
-insert k v (VarMap m) = VarMap $ HashMap.insert k v m
----  (IntMap.insertWith go (idHash $ varIdent k) (Map.singleton k v) m)
-    -- where
-    --     go _ o = Map.insert k v o
-
-insertAll :: [(Var,a)] -> VarMap a -> VarMap a
-insertAll kvs (VarMap m) = VarMap $ foldr go m kvs
-  where
-    go (k,v) m = HashMap.insert k v m
-
-keys :: VarMap a -> [Var]
-keys (VarMap m) = HashMap.keys m
-
-keysSet :: VarMap a -> Set.Set Var
-keysSet (VarMap m) = Set.fromList $ HashMap.keys m
-
--- Assignments ----------------------------------------------
-
-newtype Assignment = Assignment ( VarMap Dynamic )
-
-instance Show Assignment where
-    show a@( Assignment m ) = "Assignment {\n\t"
-            ++
-            ( intercalate ",\n\t\t" ( map (\v -> (show v) ++ " #" ++ (show $ idHash $ varIdent v) ++ " = " ++ (valuePrint v a) ) vars ) )
-            ++
-            "\n}"
-        where
-            vars = keys m
-
-
-empty :: Assignment
-empty = Assignment emptyVarMap
-
--- retrieves a value from the assignment
--- if the value is not present, the bottom value of the variable will be returned
-get' :: (Typeable a) => Assignment -> TypedVar a -> a
-get' (Assignment m) (TypedVar v) =
-        fromJust $ (fromDynamic :: ((Typeable a) => Dynamic -> (Maybe a)) ) $ fromMaybe (bottom v) (lookup v m)
-
-
--- updates the value for the given variable stored within the given assignment
-set :: (Typeable a, NFData a) => Assignment -> TypedVar a -> a -> Assignment
-set (Assignment a) (TypedVar v) d = Assignment (insert v (toDyn d) a)
-
-
--- resets the values of the given variables within the given assignment
-reset :: Assignment -> Set.Set IndexedVar -> Assignment
-reset (Assignment m) vars = Assignment $ insertAll reseted m
-    where
-        reseted = go <$> Set.toList vars
-        go iv = (v,bottom v)
-            where
-                v = indexToVar iv
-
-
--- Assignment Views ----------------------------------------
-
-data AssignmentView = UnfilteredView Assignment
-                    | FilteredView [Var] Assignment
-
-get :: (HasCallStack, Typeable a) => AssignmentView -> TypedVar a -> a
-get (UnfilteredView a) v = get' a v
-get (FilteredView vs a) v = case () of 
-    _ | not check_consistency || elem (toVar v) vs -> res
-    _ | otherwise -> error ("Invalid variable access: " ++ (show v) ++ " not in " ++ (show vs))
-  where
-    res = get' a v
-
-stripFilter :: AssignmentView -> Assignment
-stripFilter (UnfilteredView a) = a
-stripFilter (FilteredView _ a) = a
-
-
--- Constraints ---------------------------------------------
-
-data Event =
-          None                        -- ^ an update had no effect
-        | Increment                   -- ^ an update was an incremental update
-        | Reset                       -- ^ an update was not incremental
-
-
-
-data Constraint = Constraint {
-        dependingOn         :: AssignmentView -> [Var],                      -- obtains list of variables depending on
-        update              :: (AssignmentView -> (Assignment,Event)),       -- update the assignment, a reset is allowed
-        updateWithoutReset  :: (AssignmentView -> (Assignment,Event)),       -- update the assignment, a reset is not allowed
-        check               :: SolverState -> Maybe Violation,               -- check whether this constraint is satisfied
-        printLimit          :: AssignmentView -> String                      -- requests to print the current limit defined (debugging)
-   }
-
-
-data Violation = Violation {
-        violationMsg         :: String,       -- a message describing the issue
-        violationShouldValue :: String,       -- the value a variable should have (at least)
-        violationIsValue     :: String        -- the value a variable does have
-    }
-
-
--- Variable Index -----------------------------------------------
-
-
--- a utility for indexing variables
-data IndexedVar = IndexedVar Int Var
-
-
-indexToVar :: IndexedVar -> Var
-indexToVar (IndexedVar _ v) = v
-
-toIndex :: IndexedVar -> Int
-toIndex (IndexedVar i _ ) = i
-
-
-instance Eq IndexedVar where
-    (IndexedVar a _) == (IndexedVar b _) = a == b
-
-instance Ord IndexedVar where
-    compare (IndexedVar a _) (IndexedVar b _) = compare a b
-
-instance Show IndexedVar where
-    show (IndexedVar _ v) = show v
-
-
-
-data VariableIndex = VariableIndex Int (VarMap IndexedVar)
-
-emptyVarIndex :: VariableIndex
-emptyVarIndex = VariableIndex 0 emptyVarMap
-
-numVars :: VariableIndex -> Int
-numVars (VariableIndex n _) = n
-
-knownVariables :: VariableIndex -> Set.Set Var
-knownVariables (VariableIndex _ m) = keysSet m
-
-varToIndex :: VariableIndex -> Var -> (IndexedVar,VariableIndex)
-varToIndex (VariableIndex n m) v = (res, VariableIndex nn nm)
-    where
-
-        ri = lookup v m
-
-        nm = if isNothing ri then insert v ni m else m
-
-        ni = IndexedVar n v           -- the new indexed variable, if necessary
-
-        res = fromMaybe ni ri
-
-        nn = if isNothing ri then n+1 else n
-
-
-varsToIndex :: VariableIndex -> [Var] -> ([IndexedVar],VariableIndex)
-varsToIndex i vs = foldr go ([],i) vs
-    where
-        go v (rs,i') = (r:rs,i'')
-            where
-                (r,i'') = varToIndex i' v
-
-
+import Insieme.Analysis.Solver.SolverState
+import Insieme.Analysis.Solver.Var
+import Insieme.Analysis.Solver.VariableIndex
 
 -- Solver ---------------------------------------------------
-
--- a aggregation of the 'state' of a solver for incremental analysis
-
-data SolverState = SolverState {
-        assignment :: Assignment,
-        variableIndex :: VariableIndex,
-        -- for performance evaluation
-        numSteps  :: Map.Map AnalysisIdentifier Int,
-        cpuTimes  :: Map.Map AnalysisIdentifier Integer,
-        numResets :: Map.Map AnalysisIdentifier Int
-    }
-
-initState :: SolverState
-initState = SolverState empty emptyVarIndex Map.empty Map.empty Map.empty
-
-
 
 -- a utility to maintain dependencies between variables
 newtype Dependencies = Dependencies (IntMap.IntMap (Set.Set IndexedVar))
         deriving Show
+
+-- (HashMap IndexedVar (Set IndexedVar))
 
 emptyDep :: Dependencies
 emptyDep = Dependencies IntMap.empty
@@ -519,10 +154,10 @@ emptyDep = Dependencies IntMap.empty
 addDep :: Dependencies -> IndexedVar -> [IndexedVar] -> Dependencies
 addDep (Dependencies m) t vs = Dependencies $ IntMap.unionWith Set.union m m'
   where
-    m' = IntMap.fromList $ map (\v -> (toIndex v, Set.singleton t)) vs
+    m' = IntMap.fromList $ map (\v -> (ivIndex v, Set.singleton t)) vs
 
 getDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
-getDep (Dependencies d) v = fromMaybe Set.empty $ IntMap.lookup (toIndex v) d
+getDep (Dependencies d) v = fromMaybe Set.empty $ IntMap.lookup (ivIndex v) d
 
 getAllDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
 getAllDep d i = collect [i] Set.empty
@@ -566,7 +201,7 @@ solve initial vs = case violations of
 --        _  -> trace ("Unsatisfied constraints:\n\t" ++ (intercalate "\n\t" $ print <$> violations )) res
     where
         -- compute the solution
-        (ivs,nindex) = varsToIndex (variableIndex initial) vs
+        (ivs,nindex) = varsToIndexedVars (variableIndex initial) vs
         res = solveStep (initial {variableIndex = nindex}) emptyDep ivs
 
         -- compute the list of violated constraints (should be empty)
@@ -605,10 +240,10 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
                 nt = Map.insertWith (+) aid dt t
                 nu = Map.insertWith (+) aid  1 u
                 nr = if numResets > 0 then Map.insertWith (+) aid numResets r else r
-                aid = analysis $ varIdent $ indexToVar v
+                aid = analysis $ varIdent $ ivVar v
 
                 -- each constraint extends the result, the dependencies, and the vars to update
-                go _ = foldr processConstraint (a,i,d,vs,0) ( constraints $ indexToVar v )  -- update all constraints of current variable
+                go _ = foldr processConstraint (a,i,d,vs,0) ( constraints $ ivVar v )  -- update all constraints of current variable
                 processConstraint c (a,i,d,dv,numResets) = case ( update c fa ) of
 
                         (a',None)         -> (a',ni,nd,nv,numResets)                -- nothing changed, we are fine
@@ -628,118 +263,16 @@ solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIn
 
                             trg = v
                             dep = dependingOn c ua
-                            (idep,ni) = varsToIndex i dep
+                            (idep,ni) = varsToIndexedVars i dep
 
                             newVarsList = filter f idep
                                 where
-                                    f iv = toIndex iv >= numVars i
+                                    f iv = ivIndex iv >= numVars i
 
                             nd = addDep d trg idep
                             nv = newVarsList ++ dv
 
                             uv = Set.elems $ getDep nd trg
-
-
-
--- Utils ---------------------------------------------------
-
-
--- | A simple constraint factory, taking as arguments
---   * a function to return the dependent variables of this constraint,
---   * the current value of the constraint,
---   * and the target variable for this constraint.
-createConstraint :: (Lattice a) => ( AssignmentView -> [Var] ) -> ( AssignmentView -> a ) -> TypedVar a -> Constraint
-createConstraint dep limit trg = Constraint dep update' update' check' printLimit'
-    where
-        update' fa = case () of
-                _ | value `less` current -> (                                a,      None)    -- nothing changed
-                _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change
-            where
-                value = limit fa                                                              -- the value from the constraint
-                current = get' a trg                                                          -- the current value in the assignment
-                a = stripFilter fa
-
-        check' state = 
-                if value `less` current then Nothing
-                else Just $ Violation (print') (show value) (show current)
-            where
-                a = assignment state
-                ua = UnfilteredView a
-                fa = FilteredView (dep ua) a
-                value = limit fa
-                current = get' a trg
-
-        print' = "f(A) => g(A) ⊑ " ++ (show trg)
-
-        printLimit' a = print $ limit a
-
--- creates a constraint of the form f(A) = A[b] enforcing equality
-createEqualityConstraint :: Lattice t => (AssignmentView -> [Var]) -> (AssignmentView -> t) -> TypedVar t -> Constraint
-createEqualityConstraint dep limit trg = Constraint dep update forceUpdate check' printLimit'
-    where
-        update fa = case () of
-                _ | value `less` current -> (              a,      None)    -- nothing changed
-                _ | current `less` value -> (set a trg value, Increment)    -- an incremental change
-                _                        -> (set a trg value,     Reset)    -- a reseting change, heading in a different direction
-
-            where
-                value = limit fa                                            -- the value from the constraint
-                current = get' a trg                                        -- the current value in the assignment
-                a = stripFilter fa
-
-        forceUpdate fa = case () of
-                _ | value `less` current -> (                                a,      None)    -- nothing changed
-                _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change
-            where
-                value = limit fa                                                              -- the value from the constraint
-                current = get' a trg                                                          -- the current value in the assignment
-                a = stripFilter fa
-
-        check' state = case () of
-                _ | value `less` current && current `less` value -> Nothing             -- perfect, it is equal!
-                _ | value `less` current && inCycle              -> Nothing             -- it is not equal, but in a cycle ... acceptable
-                _ | otherwise -> Just $ Violation (print') (show value) (show current)  -- not so good :(
-            where
-                a = assignment state
-                ua = UnfilteredView a
-                fa = FilteredView (dep ua) a
-                value = limit fa
-                current = get' a trg
-
-                -- compute the set of all variables the constraint variable is depending on
-                allDependencies = collect (dep ua) Set.empty
-                    where
-                        collect [] s = s
-                        collect (v:vs) s = collect ((Set.toList $ Set.difference dep s) ++ vs) (Set.union dep s)
-                            where
-                                dep = Set.fromList $ concatMap (flip dependingOn ua) $ constraints v
-
-                -- determine whether the constraint variable is indeed in a active cycle
-                inCycle = Set.member (toVar trg) allDependencies
-
-
-        print' = "f(A) => g(A) = " ++ (show trg) ++ " with " ++ (show $ length $ constraints $ toVar trg) ++ " constraints"
-
-        printLimit' a = print $ limit a
-
-
--- creates a constraint of the form   A[a] \in A[b]
-forward :: (Lattice a) => TypedVar a -> TypedVar a -> Constraint
-forward a@(TypedVar v) b = createConstraint (\_ -> [v]) (\a' -> get a' a) b
-
-
--- creates a constraint of the form  x \sub A[a] => A[b] \in A[c]
-forwardIf :: (Lattice a, Lattice b) => a -> TypedVar a -> TypedVar b -> TypedVar b -> Constraint
-forwardIf a b@(TypedVar v1) c@(TypedVar v2) d = createConstraint dep upt d
-    where
-        dep = (\a' -> if less a $ get a' b then [v1,v2] else [v1] )
-        upt = (\a' -> if less a $ get a' b then get a' c else bot )
-
-
--- creates a constraint of the form  x \in A[b]
-constant :: (Lattice a) => a -> TypedVar a -> Constraint
-constant x b = createConstraint (const []) (const x) b
-
 
 
 --------------------------------------------------------------
