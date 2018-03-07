@@ -35,44 +35,28 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Analysis.Solver.VarMap 
-    ( VarMap
-    , empty
-    , lookup
-    , insert
-    , insertAll
-    , keys
-    , keysSet
-    ) where
+module Insieme.Solver.Var where
 
-import           Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HashMap
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import Prelude hiding (lookup)
+import Data.Dynamic (Dynamic)
+import Data.Hashable (Hashable)
 
-import {-# SOURCE #-} Insieme.Analysis.Solver.Var
+import {-# SOURCE #-} Insieme.Solver.Constraint
 
--- Analysis Variable Maps -----------------------------------
+data Var
 
-newtype VarMap a = VarMap (HashMap Var a)
+instance Eq Var
+instance Ord Var
+instance Show Var
+instance Hashable Var
 
-empty :: VarMap a
-empty = VarMap HashMap.empty
+constraints :: Var -> [Constraint]
+bottom :: Var -> Dynamic
+maybeValToBottom :: Var -> Maybe Dynamic -> Dynamic
 
-lookup :: Var -> VarMap a -> Maybe a
-lookup k (VarMap m) = HashMap.lookup k m
+newtype TypedVar a = TypedVar Var
 
-insert :: Var -> a -> VarMap a -> VarMap a
-insert k v (VarMap m) = VarMap $ HashMap.insert k v m
+instance Eq   (TypedVar a)
+instance Ord  (TypedVar a)
+instance Show (TypedVar a)
 
-insertAll :: [(Var,a)] -> VarMap a -> VarMap a
-insertAll kvs (VarMap m) = VarMap $ foldr go m kvs
-  where
-    go (k,v) m = HashMap.insert k v m
-
-keys :: VarMap a -> [Var]
-keys (VarMap m) = HashMap.keys m
-
-keysSet :: VarMap a -> Set Var
-keysSet (VarMap m) = Set.fromList $ HashMap.keys m
+toVar :: TypedVar a -> Var

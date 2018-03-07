@@ -56,7 +56,7 @@ import Insieme.Analysis.Framework.PropertySpace.ComposedValue (toValue)
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Utils.CppSemantic
 import qualified Insieme.Analysis.Callable as Callable
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 
 
 

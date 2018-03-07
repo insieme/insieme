@@ -26,7 +26,7 @@ import GHC.Stack
 import Data.Typeable
 
 import Insieme.Inspire (NodeAddress)
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue

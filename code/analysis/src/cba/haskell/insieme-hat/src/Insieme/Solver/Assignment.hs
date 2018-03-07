@@ -35,7 +35,7 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Analysis.Solver.Assignment 
+module Insieme.Solver.Assignment 
     ( Assignment(..)
     , empty
     , get'
@@ -50,14 +50,14 @@ import Data.Maybe
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
-import {-# SOURCE #-} Insieme.Analysis.Solver.Var
+import {-# SOURCE #-} Insieme.Solver.Var
 
 
-import           Insieme.Analysis.Solver.VarMap (VarMap)
-import qualified Insieme.Analysis.Solver.VarMap as VarMap
+import           Insieme.Solver.VarMap (VarMap)
+import qualified Insieme.Solver.VarMap as VarMap
 
-import           Insieme.Analysis.Solver.VariableIndex (IndexedVar)
-import qualified Insieme.Analysis.Solver.VariableIndex as VariableIndex
+import           Insieme.Solver.VariableIndex (IndexedVar)
+import qualified Insieme.Solver.VariableIndex as VariableIndex
 
 
 -- Assignments ----------------------------------------------

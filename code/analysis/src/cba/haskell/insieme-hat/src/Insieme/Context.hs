@@ -60,7 +60,7 @@ module Insieme.Context (
 
 import Foreign.Ptr
 import qualified Insieme.Inspire as IR
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 
 type CContext = Ptr ()
 

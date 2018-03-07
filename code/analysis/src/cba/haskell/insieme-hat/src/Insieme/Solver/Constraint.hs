@@ -35,7 +35,7 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Analysis.Solver.Constraint
+module Insieme.Solver.Constraint
     ( Constraint(..)
     , createConstraint
     , createEqualityConstraint
@@ -55,11 +55,11 @@ import Prelude hiding (print)
 
 import qualified Data.Set as Set
 
-import {-# SOURCE #-} Insieme.Analysis.Solver.Var
-import Insieme.Analysis.Solver.Assignment
-import Insieme.Analysis.Solver.AssignmentView
-import Insieme.Analysis.Solver.Lattice
-import Insieme.Analysis.Solver.SolverState
+import {-# SOURCE #-} Insieme.Solver.Var
+import Insieme.Solver.Assignment
+import Insieme.Solver.AssignmentView
+import Insieme.Solver.Lattice
+import Insieme.Solver.SolverState
 
 -- Constraints ---------------------------------------------
 

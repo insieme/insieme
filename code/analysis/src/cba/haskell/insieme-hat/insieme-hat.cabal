@@ -47,18 +47,6 @@ library
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.RecursiveLambdaReferences,
                         Insieme.Analysis.Reference,
-                        Insieme.Analysis.Solver,
-                        Insieme.Analysis.Solver.Assignment
-                        Insieme.Analysis.Solver.AssignmentView
-                        Insieme.Analysis.Solver.Constraint
-                        Insieme.Analysis.Solver.DebugFlags
-                        Insieme.Analysis.Solver.Identifier
-                        Insieme.Analysis.Solver.Lattice
-                        Insieme.Analysis.Solver.Metadata
-                        Insieme.Analysis.Solver.SolverState
-                        Insieme.Analysis.Solver.Var
-                        Insieme.Analysis.Solver.VarMap
-                        Insieme.Analysis.Solver.VariableIndex
                         Insieme.Analysis.SymbolicValue,
                         Insieme.Analysis.Utils.CppSemantic,
                         Insieme.Analysis.WriteSetSummary,
@@ -75,15 +63,27 @@ library
                         Insieme.Inspire.IR.Tree,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.NodePath,
-                        Insieme.Query,
-                        Insieme.Query.NodeReference,
-                        Insieme.Query.NodeAddress,
                         Insieme.Inspire.NodeReference
                         Insieme.Inspire.SourceParser
                         Insieme.Inspire.SourceParser.FFI
                         Insieme.Inspire.Visit,
                         Insieme.Inspire.Visit.NodeMap,
                         Insieme.Inspire.Visit.NodePaths,
+                        Insieme.Query,
+                        Insieme.Query.NodeReference,
+                        Insieme.Query.NodeAddress,
+                        Insieme.Solver,
+                        Insieme.Solver.Assignment
+                        Insieme.Solver.AssignmentView
+                        Insieme.Solver.Constraint
+                        Insieme.Solver.DebugFlags
+                        Insieme.Solver.Identifier
+                        Insieme.Solver.Lattice
+                        Insieme.Solver.Metadata
+                        Insieme.Solver.SolverState
+                        Insieme.Solver.Var
+                        Insieme.Solver.VarMap
+                        Insieme.Solver.VariableIndex
                         Insieme.Utils,
                         Insieme.Utils.Arithmetic,
                         Insieme.Utils.BoundSet,

@@ -55,7 +55,7 @@ import qualified Insieme.Analysis.Boolean as AnBoolean
 import qualified Insieme.Analysis.Entities.FieldIndex as FieldIndex
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as CV
 import qualified Insieme.Analysis.Reference as Ref
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire.NodeAddress as Addr
 import qualified Insieme.Utils.BoundSet as BSet

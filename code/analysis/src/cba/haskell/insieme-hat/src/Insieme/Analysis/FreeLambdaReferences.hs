@@ -59,7 +59,7 @@ import GHC.Generics (Generic)
 import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Inspire as I
 import qualified Insieme.Query as Q
-import Insieme.Analysis.Solver
+import Insieme.Solver
 
 --
 -- * the lattice of this analysis

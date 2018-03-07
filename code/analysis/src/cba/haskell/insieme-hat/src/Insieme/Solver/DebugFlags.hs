@@ -35,28 +35,9 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Analysis.Solver.Var where
+module Insieme.Solver.DebugFlags where
 
-import Data.Dynamic (Dynamic)
-import Data.Hashable (Hashable)
+-- | A flag to enable / disable internal consistency checks (for debugging)
+check_consistency :: Bool
+check_consistency = False
 
-import {-# SOURCE #-} Insieme.Analysis.Solver.Constraint
-
-data Var
-
-instance Eq Var
-instance Ord Var
-instance Show Var
-instance Hashable Var
-
-constraints :: Var -> [Constraint]
-bottom :: Var -> Dynamic
-maybeValToBottom :: Var -> Maybe Dynamic -> Dynamic
-
-newtype TypedVar a = TypedVar Var
-
-instance Eq   (TypedVar a)
-instance Ord  (TypedVar a)
-instance Show (TypedVar a)
-
-toVar :: TypedVar a -> Var

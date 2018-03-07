@@ -41,7 +41,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 
-module Insieme.Analysis.Solver (
+module Insieme.Solver (
 
     -- lattices
     Lattice(..),
@@ -94,7 +94,7 @@ module Insieme.Analysis.Solver (
     showSolverStatistic,
 
     -- metadata
-    module Insieme.Analysis.Solver.Metadata
+    module Insieme.Solver.Metadata
 
 ) where
 
@@ -129,16 +129,16 @@ import qualified Insieme.Inspire as I
 import Insieme.Analysis.Entities.Memory
 import Insieme.Analysis.Entities.ProgramPoint
 
-import Insieme.Analysis.Solver.Assignment
-import Insieme.Analysis.Solver.AssignmentView
-import Insieme.Analysis.Solver.Constraint
-import Insieme.Analysis.Solver.DebugFlags
-import Insieme.Analysis.Solver.Identifier
-import Insieme.Analysis.Solver.Lattice
-import Insieme.Analysis.Solver.Metadata
-import Insieme.Analysis.Solver.SolverState
-import Insieme.Analysis.Solver.Var
-import Insieme.Analysis.Solver.VariableIndex
+import Insieme.Solver.Assignment
+import Insieme.Solver.AssignmentView
+import Insieme.Solver.Constraint
+import Insieme.Solver.DebugFlags
+import Insieme.Solver.Identifier
+import Insieme.Solver.Lattice
+import Insieme.Solver.Metadata
+import Insieme.Solver.SolverState
+import Insieme.Solver.Var
+import Insieme.Solver.VariableIndex
 
 -- Solver ---------------------------------------------------
 

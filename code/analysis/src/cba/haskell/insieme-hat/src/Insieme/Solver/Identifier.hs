@@ -37,7 +37,7 @@
 
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Insieme.Analysis.Solver.Identifier where
+module Insieme.Solver.Identifier where
 
 import Prelude hiding (lookup,print)
 import Data.Dynamic

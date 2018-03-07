@@ -64,7 +64,7 @@ import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Analysis.ExitPoint
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Utils.CppSemantic as Sema
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 
 --
 -- * Predecessor Lattice

@@ -37,7 +37,7 @@
 
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Insieme.Analysis.Solver.Var 
+module Insieme.Solver.Var 
     ( Var
     , varIdent
     , constraints
@@ -57,10 +57,10 @@ import Data.Dynamic
 import           Data.Hashable (Hashable)
 import qualified Data.Hashable as Hash
 
-import Insieme.Analysis.Solver.Constraint
-import Insieme.Analysis.Solver.Identifier
-import Insieme.Analysis.Solver.Assignment
-import Insieme.Analysis.Solver.Lattice
+import Insieme.Solver.Constraint
+import Insieme.Solver.Identifier
+import Insieme.Solver.Assignment
+import Insieme.Solver.Lattice
 
 -- * Analysis Variables ---------------------------------------
 

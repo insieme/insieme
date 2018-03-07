@@ -37,7 +37,7 @@
 
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Insieme.Analysis.Solver.VariableIndex
+module Insieme.Solver.VariableIndex
     ( IndexedVar
     , ivIndex
     , ivVar
@@ -54,10 +54,10 @@ import Data.Maybe
 
 import qualified Data.Set as Set
 
-import {-# SOURCE #-} Insieme.Analysis.Solver.Var
+import {-# SOURCE #-} Insieme.Solver.Var
 
-import           Insieme.Analysis.Solver.VarMap (VarMap)
-import qualified Insieme.Analysis.Solver.VarMap as VarMap
+import           Insieme.Solver.VarMap (VarMap)
+import qualified Insieme.Solver.VarMap as VarMap
 
 -- Variable Index -----------------------------------------------
 

@@ -51,7 +51,7 @@ import qualified Insieme.Inspire as I
 import qualified Insieme.Query as Q
 
 import qualified Insieme.Analysis.Reachable as Reachable
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 
 
 --

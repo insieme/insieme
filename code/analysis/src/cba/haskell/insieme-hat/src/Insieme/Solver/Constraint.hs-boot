@@ -35,6 +35,6 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Analysis.Solver.Constraint (Constraint) where
+module Insieme.Solver.Constraint (Constraint) where
 
 data Constraint

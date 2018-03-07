@@ -35,34 +35,44 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Analysis.Solver.AssignmentView
-    ( AssignmentView(..)
-    , get
-    , stripFilter
+module Insieme.Solver.VarMap 
+    ( VarMap
+    , empty
+    , lookup
+    , insert
+    , insertAll
+    , keys
+    , keysSet
     ) where
 
-import GHC.Stack
+import           Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HashMap
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import Prelude hiding (lookup)
 
-import Data.Typeable
+import {-# SOURCE #-} Insieme.Solver.Var
 
-import {-# SOURCE #-} Insieme.Analysis.Solver.Var
-import Insieme.Analysis.Solver.Assignment
-import Insieme.Analysis.Solver.DebugFlags
+-- Analysis Variable Maps -----------------------------------
 
--- Assignment Views ----------------------------------------
+newtype VarMap a = VarMap (HashMap Var a)
 
-data AssignmentView = UnfilteredView Assignment
-                    | FilteredView [Var] Assignment
+empty :: VarMap a
+empty = VarMap HashMap.empty
 
-get :: (HasCallStack, Typeable a) => AssignmentView -> TypedVar a -> a
-get (UnfilteredView a) v = get' a v
-get (FilteredView vs a) v = case () of 
-    _ | not check_consistency || elem (toVar v) vs -> res
-    _ | otherwise -> error ("Invalid variable access: " ++ (show v) ++ " not in " ++ (show vs))
+lookup :: Var -> VarMap a -> Maybe a
+lookup k (VarMap m) = HashMap.lookup k m
+
+insert :: Var -> a -> VarMap a -> VarMap a
+insert k v (VarMap m) = VarMap $ HashMap.insert k v m
+
+insertAll :: [(Var,a)] -> VarMap a -> VarMap a
+insertAll kvs (VarMap m) = VarMap $ foldr go m kvs
   where
-    res = get' a v
+    go (k,v) m = HashMap.insert k v m
 
-stripFilter :: AssignmentView -> Assignment
-stripFilter (UnfilteredView a) = a
-stripFilter (FilteredView _ a) = a
+keys :: VarMap a -> [Var]
+keys (VarMap m) = HashMap.keys m
 
+keysSet :: VarMap a -> Set Var
+keysSet (VarMap m) = Set.fromList $ HashMap.keys m

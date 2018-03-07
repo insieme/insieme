@@ -71,7 +71,7 @@ import qualified Insieme.Analysis.Entities.AccessPath as AP
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 import qualified Insieme.Analysis.WriteSetSummary as WS
 
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow

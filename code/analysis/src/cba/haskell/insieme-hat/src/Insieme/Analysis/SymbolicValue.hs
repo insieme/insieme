@@ -68,7 +68,7 @@ import Insieme.Query
 
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Inspire as Addr
 import qualified Insieme.Inspire.Builder as Builder

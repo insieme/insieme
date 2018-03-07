@@ -35,9 +35,31 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Analysis.Solver.DebugFlags where
+module Insieme.Solver.SolverState where
 
--- | A flag to enable / disable internal consistency checks (for debugging)
-check_consistency :: Bool
-check_consistency = False
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 
+import Insieme.Solver.Identifier
+
+import           Insieme.Solver.VariableIndex (VariableIndex)
+import qualified Insieme.Solver.VariableIndex as VarIndex
+import           Insieme.Solver.Assignment (Assignment)
+import qualified Insieme.Solver.Assignment as Assignment
+
+
+-- * Solver state --------------------------------------------
+
+-- | a aggregation of the 'state' of a solver for incremental analysis
+data SolverState = SolverState {
+        assignment    :: Assignment,
+        variableIndex :: VariableIndex,
+
+        -- for performance evaluation
+        numSteps      :: Map AnalysisIdentifier Int,
+        cpuTimes      :: Map AnalysisIdentifier Integer,
+        numResets     :: Map AnalysisIdentifier Int
+    }
+
+initState :: SolverState
+initState = SolverState Assignment.empty VarIndex.empty Map.empty Map.empty Map.empty

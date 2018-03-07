@@ -35,7 +35,7 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Analysis.Solver.Lattice where
+module Insieme.Solver.Lattice where
 
 import Prelude hiding (lookup,print)
 import Control.DeepSeq

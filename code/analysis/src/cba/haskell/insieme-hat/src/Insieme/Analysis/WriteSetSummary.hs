@@ -69,7 +69,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Entities.AccessPath as AP
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 import qualified Insieme.Inspire as I
 import qualified Insieme.Utils.BoundSet as BSet
 

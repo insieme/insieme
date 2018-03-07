@@ -35,31 +35,34 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module Insieme.Analysis.Solver.SolverState where
+module Insieme.Solver.AssignmentView
+    ( AssignmentView(..)
+    , get
+    , stripFilter
+    ) where
 
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import GHC.Stack
 
-import Insieme.Analysis.Solver.Identifier
+import Data.Typeable
 
-import           Insieme.Analysis.Solver.VariableIndex (VariableIndex)
-import qualified Insieme.Analysis.Solver.VariableIndex as VarIndex
-import           Insieme.Analysis.Solver.Assignment (Assignment)
-import qualified Insieme.Analysis.Solver.Assignment as Assignment
+import {-# SOURCE #-} Insieme.Solver.Var
+import Insieme.Solver.Assignment
+import Insieme.Solver.DebugFlags
 
+-- Assignment Views ----------------------------------------
 
--- * Solver state --------------------------------------------
+data AssignmentView = UnfilteredView Assignment
+                    | FilteredView [Var] Assignment
 
--- | a aggregation of the 'state' of a solver for incremental analysis
-data SolverState = SolverState {
-        assignment    :: Assignment,
-        variableIndex :: VariableIndex,
+get :: (HasCallStack, Typeable a) => AssignmentView -> TypedVar a -> a
+get (UnfilteredView a) v = get' a v
+get (FilteredView vs a) v = case () of 
+    _ | not check_consistency || elem (toVar v) vs -> res
+    _ | otherwise -> error ("Invalid variable access: " ++ (show v) ++ " not in " ++ (show vs))
+  where
+    res = get' a v
 
-        -- for performance evaluation
-        numSteps      :: Map AnalysisIdentifier Int,
-        cpuTimes      :: Map AnalysisIdentifier Integer,
-        numResets     :: Map AnalysisIdentifier Int
-    }
+stripFilter :: AssignmentView -> Assignment
+stripFilter (UnfilteredView a) = a
+stripFilter (FilteredView _ a) = a
 
-initState :: SolverState
-initState = SolverState Assignment.empty VarIndex.empty Map.empty Map.empty Map.empty

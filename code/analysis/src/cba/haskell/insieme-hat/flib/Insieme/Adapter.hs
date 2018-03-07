@@ -71,7 +71,7 @@ import qualified Insieme.Analysis.Entities.SymbolicFormula as SymbolicFormula
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Reference as Ref
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 import qualified Insieme.Analysis.SymbolicValue as SV
 import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR

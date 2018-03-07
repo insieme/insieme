@@ -47,7 +47,7 @@
   GeneralizedNewtypeDeriving
   #-}
 
-module Insieme.Analysis.Solver.Metadata where
+module Insieme.Solver.Metadata where
 
 import Control.DeepSeq
 import GHC.Generics
