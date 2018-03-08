@@ -65,12 +65,12 @@ import Insieme.Solver.Lattice
 -- * Analysis Variables ---------------------------------------
 
 -- | General variables (management)
-data Var = Var 
+data Var = MkVar 
     { _varIdent    :: Identifier
         -- ^ the variable identifier
     , _constraints :: [Constraint]
         -- ^ the list of constraints
-    , _bottom     :: Dynamic              
+    , _bottom      :: Dynamic
         -- ^ the bottom value for this variable
     , _valuePrint  :: Assignment -> String
         -- ^ a utility for unpacking an printing a value assigned to this
@@ -87,8 +87,8 @@ instance Show Var where
         show v = show (_varIdent v)
 
 instance Hashable Var where
-    hashWithSalt s Var {_varIdent} = Hash.hashWithSalt s _varIdent
-    hash Var {_varIdent} = Hash.hash _varIdent
+    hashWithSalt s MkVar {_varIdent} = Hash.hashWithSalt s _varIdent
+    hash MkVar {_varIdent} = Hash.hash _varIdent
 
 -- | typed variables (user interaction)
 newtype TypedVar a = TypedVar Var
@@ -117,7 +117,7 @@ maybeValToBottom _ (Just v) = v
 mkVariable :: Lattice a => Identifier -> [Constraint] -> a -> TypedVar a
 mkVariable i cs b = var
     where
-        var = TypedVar (Var i cs (toDyn b) print')
+        var = TypedVar (MkVar i cs (toDyn b) print')
         print' = (\a -> print $ get' a var)
 
 toVar :: TypedVar a -> Var
