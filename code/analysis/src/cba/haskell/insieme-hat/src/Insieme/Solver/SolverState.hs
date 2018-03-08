@@ -51,14 +51,14 @@ import qualified Insieme.Solver.Assignment as Assignment
 -- * Solver state --------------------------------------------
 
 -- | a aggregation of the 'state' of a solver for incremental analysis
-data SolverState = SolverState {
-        assignment    :: Assignment,
-        variableIndex :: VariableIndex,
+data SolverState = SolverState
+    { assignment    :: !Assignment
+    , variableIndex :: !VariableIndex
 
         -- for performance evaluation
-        numSteps      :: Map AnalysisIdentifier Int,
-        cpuTimes      :: Map AnalysisIdentifier Integer,
-        numResets     :: Map AnalysisIdentifier Int
+    , numSteps      :: !(Map AnalysisIdentifier Int)
+    , cpuTimes      :: !(Map AnalysisIdentifier Integer)
+    , numResets     :: !(Map AnalysisIdentifier Int)
     }
 
 initState :: SolverState
