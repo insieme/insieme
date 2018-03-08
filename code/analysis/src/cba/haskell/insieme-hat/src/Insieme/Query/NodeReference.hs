@@ -288,7 +288,7 @@ getConstructorAccepting paramTypes tagType = ctor
     ctor = (children <$> ctors) >>= (find filter)
 
     requiredParamTypes = node <$> paramTypes
-    filter lambda = eqList requiredParamTypes curParamTypes 
+    filter lambda = eqList requiredParamTypes curParamTypes
       where
         curParamTypes = (tail $ children $ child 0 $ fromJust $ getType $ node lambda)
 
@@ -394,6 +394,13 @@ getArgument p c = case getNodeType c of
     _ -> Nothing
 
 
+-- ** Statements
+
+-- | Return 'True' if the given node is a statement.
+isStatement :: NodeLike a => a -> Bool
+isStatement = (==IR.Statement) . IR.toNodeKind . IR.getNodeType . node
+
+
 -- ** Supports
 
 -- | Return 'True' if the given node is a expression.
@@ -421,4 +428,3 @@ hasMaterializingTag n = IR.hasMaterializingTag $ node n
 
 isOperator :: (NodeLike a) => a -> String -> Bool
 isOperator a n = fromMaybe False $ (==n) <$> getLiteralValue a
-

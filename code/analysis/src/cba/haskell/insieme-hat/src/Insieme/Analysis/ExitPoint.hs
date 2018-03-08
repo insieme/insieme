@@ -141,4 +141,6 @@ collectReturns = I.collectAllPrune pred prune
     pred cur = Q.getNodeType cur == I.ReturnStmt
 
     prune cur | Q.getNodeType cur == I.LambdaExpr = I.PruneHere
+    prune cur | Q.isExpression cur = I.PruneHere
+    prune cur | Q.isType cur = I.PruneHere
     prune _ = I.NoPrune

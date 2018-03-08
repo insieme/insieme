@@ -135,7 +135,8 @@ freeLambdaReferences addr =
 
         _ -> var
 
-      var = mkVariable varId [con] base
+      var = mkVariable varId [init,con] bot
+      init = constant base var
       con = createConstraint (\_ -> toVar <$> deps) val var
 
       base = LambdaReferenceSet $ Set.fromList $ I.collectAllPrune filter prune addr

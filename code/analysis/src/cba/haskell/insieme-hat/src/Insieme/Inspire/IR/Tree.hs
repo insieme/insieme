@@ -62,11 +62,11 @@ instance Eq Tree where
         mtInnerTree a == mtInnerTree b
 
 instance Ord Tree where
-    compare Tree{ getID = Just ida } Tree{ getID = Just idb } | ida == idb = EQ
+    compare Tree{ getID = Just ida } Tree{ getID = Just idb } = compare ida idb
     compare a b = compare (mtInnerTree a) (mtInnerTree b)
 
 instance NodeReference Tree where
-    child i  = (!!i) . children 
+    child i  = (!!i) . children
     children = getChildren
 
 treeExactEq :: Tree -> Tree -> Bool
