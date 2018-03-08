@@ -49,8 +49,6 @@ module Insieme.Inspire.Visit (
     collectAllPrunePaths,
     collectAllPaths'Naive,
     collectAddr,
-    foldAddress,
-    foldAddressPrune,
     findDecl,
 ) where
 
@@ -121,32 +119,9 @@ collectAddr t fs = collectAllPrune p pruning
     p = (==t) . IR.getNodeType
     pruning n = if any (\f -> f $ IR.getNodeType n) fs then PruneHere else NoPrune
 
--- | Fold the given 'IR.Tree'. The accumulator function takes the subtree and
--- the address of this subtree in the base tree.
--- TODO remove
-foldAddress :: Monoid a => (NodeAddress -> a -> a) -> NodeAddress -> a
-foldAddress = flip foldAddressPrune noPrune
-
 -- | Disables pruning for 'foldTreePrune'.
 noPrune :: NodeAddress -> Bool
 noPrune = const False
-
--- | Like 'foldTree' but is able to not follow entire subtrees when the pruning
--- function returns 'False'.
--- TODO remove
-foldAddressPrune :: Monoid a
-                => (NodeAddress -> a -> a)      -- ^ aggregation function
-                -> (NodeAddress -> Bool)        -- ^ prune subtrees?
-                -> NodeAddress                  -- ^ the root of the fold operation
-                -> a                            -- ^ accumulated result
-foldAddressPrune collect prune addr = visit addr mempty
-  where
-    visit base acc = if prune base
-                     then acc
-                     else collect base $ visitsub base acc
-    -- visitsub base acc = foldr (\i a -> visit (goDown i base) a) acc [0..(numChildren base - 1)]
-    visitsub base acc = foldr visit acc (subtrees base)
-    subtrees a = [goDown i a | i <- [0..(numChildren a) - 1]]
 
 -- | Find declaration of given variable.
 findDecl :: NodeAddress -> Maybe NodeAddress
