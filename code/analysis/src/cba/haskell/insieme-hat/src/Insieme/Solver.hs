@@ -119,7 +119,10 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Graph as Graph
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IntMap
+--import           Data.Judy (JudyL)
+--import qualified Data.Judy as Judy
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -143,7 +146,7 @@ import Insieme.Solver.VariableIndex
 -- Solver ---------------------------------------------------
 
 -- a utility to maintain dependencies between variables
-newtype Dependencies = Dependencies (IntMap.IntMap (Set.Set IndexedVar))
+newtype Dependencies = Dependencies (IntMap (Set IndexedVar))
         deriving Show
 
 -- (HashMap IndexedVar (Set IndexedVar))
@@ -156,17 +159,17 @@ addDep (Dependencies m) t vs = Dependencies $ IntMap.unionWith Set.union m m'
   where
     m' = IntMap.fromList $ map (\v -> (ivIndex v, Set.singleton t)) vs
 
-getDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
+getDep :: Dependencies -> IndexedVar -> Set IndexedVar
 getDep (Dependencies d) v = fromMaybe Set.empty $ IntMap.lookup (ivIndex v) d
 
-getAllDep :: Dependencies -> IndexedVar -> Set.Set IndexedVar
+getAllDep :: Dependencies -> IndexedVar -> Set IndexedVar
 getAllDep d i = collect [i] Set.empty
-    where
-        collect [] s = s
-        collect (v:vs) s = collect ((Set.toList $ Set.difference dep s) ++ vs) (Set.union dep s)
-            where
-                dep = getDep d v
-
+  where
+    collect [] s = s
+    collect (v:vs) s = 
+        let deps = getDep d v in
+        let nvs = Set.difference deps s in
+        collect (Set.toList nvs ++ vs) (Set.union nvs s)
 
 -- solve for a single value
 resolve :: (Lattice a) => SolverState -> TypedVar a -> (a,SolverState)
@@ -214,14 +217,14 @@ solve initial vs = case violations of
 
 
 
--- solve for a set of variables with an initial assignment
+-- | solve for a set of variables with an initial assignment
 -- (the variable list is the work list)
 -- Parameters:
---        the current state (assignment and known variables)
---        dependencies between variables
---        work list
+--
+--   * the current state (assignment and known variables)
+--   * dependencies between variables
+--   * work list
 solveStep :: SolverState -> Dependencies -> [IndexedVar] -> SolverState
-
 
 -- solveStep _ _ (q:qs) | trace ("WS-length: " ++ (show $ (length qs) + 1) ++ " next: " ++ (show q)) $ False = undefined
 
@@ -233,46 +236,62 @@ solveStep :: SolverState -> Dependencies -> [IndexedVar] -> SolverState
 solveStep s _ [] = s                                                                                                    -- work list is empty
 
 -- compute next element in work list
-solveStep (SolverState a i u t r) d (v:vs) = solveStep (SolverState resAss resIndex nu nt nr) resDep ds
-        where
-                -- profiling --
-                ((resAss,resIndex,resDep,ds,numResets),dt) = measure go ()
-                nt = Map.insertWith (+) aid dt t
-                nu = Map.insertWith (+) aid  1 u
-                nr = if numResets > 0 then Map.insertWith (+) aid numResets r else r
-                aid = analysis $ varIdent $ ivVar v
 
-                -- each constraint extends the result, the dependencies, and the vars to update
-                go _ = foldr processConstraint (a,i,d,vs,0) ( constraints $ ivVar v )  -- update all constraints of current variable
-                processConstraint c (a,i,d,dv,numResets) = case ( update c fa ) of
+solveStep !(SolverState a i u t r) d (v:vs) = 
+    solveStep (SolverState resAss resIndex nu nt nr) resDep ds
+  where
+    -- profiling --
+    ((resAss,resIndex,resDep,ds,numResets),dt) = measure go ()
+    nt = Map.insertWith (+) aid dt t
+    nu = Map.insertWith (+) aid  1 u
+    nr = if numResets > 0 then Map.insertWith (+) aid numResets r else r
+    aid = analysis $ varIdent $ ivVar v
 
-                        (a',None)         -> (a',ni,nd,nv,numResets)                -- nothing changed, we are fine
+    -- ??? each constraint extends the result, the dependencies, and the vars to
+    -- update
 
-                        (a',Increment)    -> (a',ni,nd, uv ++ nv, numResets)        -- add depending variables to work list
+    -- | update all constraints of current variable
+    go () = foldr processConstraint (a,i,d,vs,0) $ constraints (ivVar v)
 
-                        (a',Reset)        -> (ra,ni,nd, uv ++ nv, numResets+1)      -- handling a local reset
-                            where
-                                dep = getAllDep nd trg
-                                ra = if not $ Set.member trg dep                    -- if variable is not indirectly depending on itself
-                                    then reset a' dep                               -- reset all depending variables to their bottom value
-                                    else fst $ updateWithoutReset c fa              -- otherwise insist on merging reseted value with current state
+    processConstraint c (a, i, d, dv, numResets) = 
+        case update c fa of
+          -- nothing changed, we are fine
+          (a', None)      -> (a', ni, nd, nv, numResets)
 
-                    where
-                            ua = UnfilteredView a
-                            fa = FilteredView dep a
+          -- add depending variables to work list
+          (a', Increment) -> (a', ni, nd, uv ++ nv, numResets)
+        
+          -- handling a local reset
+          (a', Reset)     -> (ra, ni, nd, uv ++ nv, numResets+1)
+            where
+              dep = getAllDep nd trg
+            
+              ra | not (Set.member trg dep) = 
+                     -- if variable is not indirectly depending on itself reset
+                     -- all depending variables to their bottom value
+                     reset a' dep 
+            
+                 | otherwise                 =
+                     -- otherwise insist on merging reseted value with current
+                     -- state
+                     fst $ updateWithoutReset c fa
 
-                            trg = v
-                            dep = dependingOn c ua
-                            (idep,ni) = varsToIndexedVars i dep
+      where
+        ua = UnfilteredView a
+        fa = FilteredView dep a
 
-                            newVarsList = filter f idep
-                                where
-                                    f iv = ivIndex iv >= numVars i
+        trg = v
+        dep = dependingOn c ua
+        (idep,ni) = varsToIndexedVars i dep
 
-                            nd = addDep d trg idep
-                            nv = newVarsList ++ dv
+        newVarsList = filter f idep
+            where
+                f iv = ivIndex iv >= numVars i
 
-                            uv = Set.elems $ getDep nd trg
+        nd = addDep d trg idep
+        nv = newVarsList ++ dv
+
+        uv = Set.elems $ getDep nd trg
 
 
 --------------------------------------------------------------

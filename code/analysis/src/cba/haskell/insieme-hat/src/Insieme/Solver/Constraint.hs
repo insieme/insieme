@@ -35,6 +35,8 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
+{-# LANGUAGE RecordWildCards #-}
+
 module Insieme.Solver.Constraint
     ( Constraint(..)
     , createConstraint
@@ -53,6 +55,7 @@ module Insieme.Solver.Constraint
 
 import Prelude hiding (print)
 
+import           Data.Set (Set)
 import qualified Data.Set as Set
 
 import {-# SOURCE #-} Insieme.Solver.Var
@@ -81,9 +84,12 @@ data Constraint = Constraint
     }
 
 data Violation = Violation 
-    { violationMsg         :: String -- ^ a message describing the issue
-    , violationShouldValue :: String -- ^ the value a variable should have (at least)
-    , violationIsValue     :: String -- ^ the value a variable does have
+    { violationMsg         :: String 
+        -- ^ a message describing the issue
+    , violationShouldValue :: String
+        -- ^ the value a variable should have (at least)
+    , violationIsValue     :: String
+        -- ^ the value a variable does have
     }
 
 getDependencies :: AssignmentView -> TypedVar a -> [Var]
@@ -98,84 +104,125 @@ getLimit a v = join (go <$> (constraints . toVar) v)
             where
                 (a',_) = update c a
 
+-- | compute the set of all variables the constraint variable is depending on
+allDependencies :: AssignmentView -> [Var] -> Set Var
+allDependencies ua vs = go vs Set.empty
+  where
+    go []     s = s
+    go (v:vs) s = 
+        let deps = Set.unions $ map dependingOnSet $ constraints v in
+        let nvs  = Set.difference deps s in
+        go (Set.toList nvs ++ vs) (Set.union nvs s)
+      where
+        dependingOnSet :: Constraint -> Set Var
+        dependingOnSet c = Set.fromList $ dependingOn c ua
 
--- | A simple constraint factory, taking as arguments
+
+-- | A simple constraint factory, taking as arguments:
+-- 
 --   * a function to return the dependent variables of this constraint,
 --   * the current value of the constraint,
 --   * and the target variable for this constraint.
-createConstraint :: Lattice a => ( AssignmentView -> [Var] ) -> ( AssignmentView -> a ) -> TypedVar a -> Constraint
-createConstraint dep limit trg = Constraint dep update' update' check' printLimit'
-    where
-        update' fa = case () of
-                _ | value `less` current -> (                                a,      None)    -- nothing changed
-                _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change
-            where
-                value = limit fa                                                              -- the value from the constraint
-                current = get' a trg                                                          -- the current value in the assignment
-                a = stripFilter fa
+createConstraint
+    :: Lattice a
+    => (AssignmentView -> [Var])
+    -> (AssignmentView -> a)
+    -> TypedVar a -> Constraint
+createConstraint dependingOn limit trg = 
+    Constraint {..}
+  where
+    updateWithoutReset = update
+    update fa
+        | value `less` current = (a0, None)      -- nothing changed
+        | otherwise            = (a1, Increment) -- an incremental change
+      where
+        a0 = stripFilter fa
+        a1 = set a0 trg (value `merge` current)
 
-        check' state = 
-                if value `less` current then Nothing
-                else Just $ Violation (print') (show value) (show current)
-            where
-                a = assignment state
-                ua = UnfilteredView a
-                fa = FilteredView (dep ua) a
-                value = limit fa
-                current = get' a trg
+        value = limit fa      -- the value from the constraint
+        current = get' a0 trg -- the current value in the assignment
 
-        print' = "f(A) => g(A) ⊑ " ++ (show trg)
+    check state 
+        | value `less` current = Nothing
+        | otherwise            = Just violation
+      where
+          a = assignment state
+          fa = FilteredView (dependingOn (UnfilteredView a)) a
 
-        printLimit' a = print $ limit a
+          value = limit fa
+          current = get' a trg
+
+          violation = Violation
+              { violationMsg         = "f(A) => g(A) ⊑ " ++ show trg
+              , violationShouldValue = show value
+              , violationIsValue     = show current
+              }
+
+    printLimit = print . limit
 
 -- creates a constraint of the form f(A) = A[b] enforcing equality
-createEqualityConstraint :: Lattice t => (AssignmentView -> [Var]) -> (AssignmentView -> t) -> TypedVar t -> Constraint
-createEqualityConstraint dep limit trg = Constraint dep update forceUpdate check' printLimit'
-    where
-        update fa = case () of
-                _ | value `less` current -> (              a,      None)    -- nothing changed
-                _ | current `less` value -> (set a trg value, Increment)    -- an incremental change
-                _                        -> (set a trg value,     Reset)    -- a reseting change, heading in a different direction
+createEqualityConstraint
+    :: Lattice t
+    => (AssignmentView -> [Var])
+    -> (AssignmentView -> t)
+    -> TypedVar t
+    -> Constraint
+createEqualityConstraint myDependingOn limit trg = 
+    Constraint 
+    { dependingOn = myDependingOn
+    , ..
+    }
+  where
+    update fa 
+        | value `less` current =
+            (a0, None)      -- nothing changed
+        | current `less` value =
+            (a1, Increment) -- an incremental change
+        | otherwise =
+            (a1, Reset)     -- a reseting change, heading in a different
+                            -- direction
+      where
+        a0 = stripFilter fa
+        a1 = set a0 trg value
 
-            where
-                value = limit fa                                            -- the value from the constraint
-                current = get' a trg                                        -- the current value in the assignment
-                a = stripFilter fa
+        value = limit fa       -- the value from the constraint
+        current = get' a0 trg  -- the current value in the assignment
 
-        forceUpdate fa = case () of
-                _ | value `less` current -> (                                a,      None)    -- nothing changed
-                _                        -> (set a trg (value `merge` current), Increment)    -- an incremental change
-            where
-                value = limit fa                                                              -- the value from the constraint
-                current = get' a trg                                                          -- the current value in the assignment
-                a = stripFilter fa
+    -- force update
+    updateWithoutReset fa
+        | value `less` current = (a0, None)      -- nothing changed
+        | otherwise            = (a1, Increment) -- an incremental change
+      where
+        a0 = stripFilter fa
+        a1 = set a0 trg (value `merge` current)
 
-        check' state = case () of
-                _ | value `less` current && current `less` value -> Nothing             -- perfect, it is equal!
-                _ | value `less` current && inCycle              -> Nothing             -- it is not equal, but in a cycle ... acceptable
-                _ | otherwise -> Just $ Violation (print') (show value) (show current)  -- not so good :(
-            where
-                a = assignment state
-                ua = UnfilteredView a
-                fa = FilteredView (dep ua) a
-                value = limit fa
-                current = get' a trg
+        value = limit fa      -- the value from the constraint
+        current = get' a1 trg -- the current value in the assignment
 
-                -- compute the set of all variables the constraint variable is depending on
-                allDependencies = collect (dep ua) Set.empty
-                    where
-                        collect [] s = s
-                        collect (v:vs) s = collect ((Set.toList $ Set.difference dep s) ++ vs) (Set.union dep s)
-                            where
-                                dep = Set.fromList $ concatMap (flip dependingOn ua) $ constraints v
+    check state
+          -- perfect, it is equal!
+        | value `less` current && current `less` value = Nothing
+          -- it is not equal, but in a cycle ... acceptable
+        | value `less` current && inCycle              = Nothing   
+          -- not so good :(
+        | otherwise =
+            Just $ Violation msg (show value) (show current)  
+        where
+            a = assignment state
+            ua = UnfilteredView a
+            fa = FilteredView (myDependingOn ua) a
+            value = limit fa
+            current = get' a trg
 
-                -- determine whether the constraint variable is indeed in a active cycle
-                inCycle = Set.member (toVar trg) allDependencies
+            -- determine whether the constraint variable is indeed in a active cycle
+            inCycle = Set.member (toVar trg) $ allDependencies ua (myDependingOn ua)
 
 
-        print' = "f(A) => g(A) = " ++ (show trg) ++ " with " ++ (show $ length $ constraints $ toVar trg) ++ " constraints"
+    msg = "f(A) => g(A) = " 
+          ++ show trg ++ " with " 
+          ++ show (length $ constraints $ toVar trg) ++ " constraints"
 
-        printLimit' a = print $ limit a
+    printLimit = print . limit
 
 
 -- creates a constraint of the form   A[a] \in A[b]
