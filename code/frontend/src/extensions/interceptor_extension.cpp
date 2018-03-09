@@ -45,6 +45,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/lang/pointer.h"
+#include "insieme/core/lang/variadic_template_extension.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/types/return_type_deduction.h"
@@ -185,6 +186,10 @@ namespace extensions {
 				} else {
 					templateArgsTypes.push_back(convertTemplateArgument(converter, arg));
 				}
+			}
+			// If we don't have any template arguments here, we encode this information in order to be able to recognice this in the backend again and print the empty list <>
+			if(templateArgsTypes.empty()) {
+				templateArgsTypes.push_back(converter.getNodeManager().getLangExtension<core::lang::VariadicTemplateExtension>().getEmptyVariadicTemplateArguments());
 			}
 		}
 

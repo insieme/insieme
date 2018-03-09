@@ -204,6 +204,7 @@ namespace c_ast {
 			auto res = type->getManager()->create<c_ast::NamedType>(namedType->name, isConst, isVolatile);
 			res->isFunctionType = namedType->isFunctionType;
 			res->parameters = namedType->parameters;
+			res->isGenericType = namedType->isGenericType;
 			return res;
 		}
 		if (auto compositeType = type.isa<c_ast::NamedCompositeTypePtr>()) {

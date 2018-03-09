@@ -229,6 +229,14 @@ int main() {
 		VariadicClass<int, double> a;
 	}
 
+	// test representation of empty variadic argument list
+	#pragma test expect_ir(R"({
+		var ref<IMP_VariadicClass<empty_variadic_template_arguments>,f,f,plain> v0 = lit("IMP_VariadicClass::ctor" : IMP_VariadicClass<'V_T_0_0...>::())(ref_decl(type_lit(ref<IMP_VariadicClass<empty_variadic_template_arguments>,f,f,plain>)));
+	})")
+	{
+		VariadicClass<> a;
+	}
+
 	// Variadic template template //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	#pragma test expect_ir(R"(instantiate_fun(lit("target_type" : <IMP_TemplateClass<ref<'T_0_0,'T_0_0_a,'T_0_0_b,'T_0_0_c>>>() -> unit), lit("IMP_variadicTemplateTemplateFun" : <'V_T_T_0_0...<>>() -> unit))())")
