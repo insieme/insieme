@@ -35,29 +35,34 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
+module Insieme.Solver.AssignmentView
+    ( AssignmentView(..)
+    , get
+    , stripFilter
+    ) where
 
-module Insieme.Analysis.Framework.PropertySpace.ComposedValue where
+import GHC.Stack
 
-import Insieme.Analysis.Entities.DataPath
-import Insieme.Analysis.Entities.FieldIndex
-import qualified Insieme.Solver as Solver
+import Data.Typeable
 
+import {-# SOURCE #-} Insieme.Solver.Var
+import Insieme.Solver.Assignment
+import Insieme.Solver.DebugFlags
 
-class (Solver.ExtLattice c, FieldIndex i, Solver.ExtLattice v) => ComposedValue c i v | c -> i v where
+-- Assignment Views ----------------------------------------
 
-    toComposed :: v -> c
-    toValue    :: c -> v
+data AssignmentView = UnfilteredView Assignment
+                    | FilteredView [Var] Assignment
 
-    isValue    :: c -> Bool
+get :: (HasCallStack, Typeable a) => AssignmentView -> TypedVar a -> a
+get (UnfilteredView a) v = get' a v
+get (FilteredView vs a) v = case () of 
+    _ | not check_consistency || elem (toVar v) vs -> res
+    _ | otherwise -> error ("Invalid variable access: " ++ (show v) ++ " not in " ++ (show vs))
+  where
+    res = get' a v
 
-    setElement :: DataPath i -> c -> c -> c
-    getElement :: DataPath i -> c -> c
-
-    composeElements :: [(i,c)] -> c
-
-    mapElements :: ((i,c) -> (i,c)) -> c -> c
-
-    top :: c
+stripFilter :: AssignmentView -> Assignment
+stripFilter (UnfilteredView a) = a
+stripFilter (FilteredView _ a) = a
 

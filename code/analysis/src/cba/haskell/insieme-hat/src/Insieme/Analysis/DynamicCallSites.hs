@@ -50,7 +50,7 @@ import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Inspire as I
 import qualified Insieme.Query as Q
 
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 
 --
 -- * CallSite Results

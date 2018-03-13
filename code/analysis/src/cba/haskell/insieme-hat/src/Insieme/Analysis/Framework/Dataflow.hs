@@ -86,7 +86,7 @@ import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.ExitPoint as ExitPoint
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Reference as Reference
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 import qualified Insieme.Utils.BoundSet as BSet
 
 --

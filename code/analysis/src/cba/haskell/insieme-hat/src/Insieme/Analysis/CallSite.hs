@@ -56,7 +56,7 @@ import qualified Insieme.Utils.BoundSet as BSet
 import Insieme.Analysis.DynamicCallSites
 import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.RecursiveLambdaReferences as RecLambdaRefs
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 
 --

@@ -35,29 +35,31 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
+module Insieme.Solver.SolverState where
 
-module Insieme.Analysis.Framework.PropertySpace.ComposedValue where
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 
-import Insieme.Analysis.Entities.DataPath
-import Insieme.Analysis.Entities.FieldIndex
-import qualified Insieme.Solver as Solver
+import Insieme.Solver.Identifier
+
+import           Insieme.Solver.VariableIndex (VariableIndex)
+import qualified Insieme.Solver.VariableIndex as VarIndex
+import           Insieme.Solver.Assignment (Assignment)
+import qualified Insieme.Solver.Assignment as Assignment
 
 
-class (Solver.ExtLattice c, FieldIndex i, Solver.ExtLattice v) => ComposedValue c i v | c -> i v where
+-- * Solver state --------------------------------------------
 
-    toComposed :: v -> c
-    toValue    :: c -> v
+-- | a aggregation of the 'state' of a solver for incremental analysis
+data SolverState = SolverState
+    { assignment    :: !Assignment
+    , variableIndex :: !VariableIndex
 
-    isValue    :: c -> Bool
+        -- for performance evaluation
+    , numSteps      :: !(Map AnalysisIdentifier Int)
+    , cpuTimes      :: !(Map AnalysisIdentifier Integer)
+    , numResets     :: !(Map AnalysisIdentifier Int)
+    }
 
-    setElement :: DataPath i -> c -> c -> c
-    getElement :: DataPath i -> c -> c
-
-    composeElements :: [(i,c)] -> c
-
-    mapElements :: ((i,c) -> (i,c)) -> c -> c
-
-    top :: c
-
+initState :: SolverState
+initState = SolverState Assignment.empty VarIndex.empty Map.empty Map.empty Map.empty

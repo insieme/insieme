@@ -53,7 +53,7 @@ import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Inspire as I
 import qualified Insieme.Query as Q
 
-import Insieme.Analysis.Solver
+import Insieme.Solver
 
 import qualified Data.Map as Map
 import Data.Maybe

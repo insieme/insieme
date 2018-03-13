@@ -35,29 +35,40 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
+module Insieme.Solver.Lattice where
 
-module Insieme.Analysis.Framework.PropertySpace.ComposedValue where
+import Prelude hiding (lookup,print)
+import Control.DeepSeq
+import Data.Typeable
 
-import Insieme.Analysis.Entities.DataPath
-import Insieme.Analysis.Entities.FieldIndex
-import qualified Insieme.Solver as Solver
+-- Lattice --------------------------------------------------
 
+-- this is actually a bound join-semilattice
+class (Eq v, Show v, Typeable v, NFData v) => Lattice v where
+        {-# MINIMAL join | merge, bot #-}
+        -- | combine elements. a default implementation for the join operator,
+        join :: [v] -> v                    
+        join [] = bot
+        join xs = foldr1 merge xs
 
-class (Solver.ExtLattice c, FieldIndex i, Solver.ExtLattice v) => ComposedValue c i v | c -> i v where
+        -- | binary version of the join, its default implementation derived from
+        -- join.
+        merge :: v -> v -> v  
+        merge a b = join [ a , b ]          
 
-    toComposed :: v -> c
-    toValue    :: c -> v
+        -- | bottom element of the join.
+        bot :: v
+        bot = join []
 
-    isValue    :: c -> Bool
+        -- | induced order, determines whether one element of the lattice is
+        -- less than another
+        less :: v -> v -> Bool
+        less a b = (a `merge` b) == b
 
-    setElement :: DataPath i -> c -> c -> c
-    getElement :: DataPath i -> c -> c
+        -- | debug printing, print a value of the lattice readable
+        print :: v -> String
+        print = show
 
-    composeElements :: [(i,c)] -> c
-
-    mapElements :: ((i,c) -> (i,c)) -> c -> c
-
-    top :: c
-
+class (Lattice v) => ExtLattice v where
+        -- | top element of this lattice
+        top  :: v

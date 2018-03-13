@@ -35,29 +35,44 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
+module Insieme.Solver.VarMap 
+    ( VarMap
+    , empty
+    , lookup
+    , insert
+    , insertAll
+    , keys
+    , keysSet
+    ) where
 
-module Insieme.Analysis.Framework.PropertySpace.ComposedValue where
+import           Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HashMap
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import Prelude hiding (lookup)
 
-import Insieme.Analysis.Entities.DataPath
-import Insieme.Analysis.Entities.FieldIndex
-import qualified Insieme.Solver as Solver
+import {-# SOURCE #-} Insieme.Solver.Var
 
+-- Analysis Variable Maps -----------------------------------
 
-class (Solver.ExtLattice c, FieldIndex i, Solver.ExtLattice v) => ComposedValue c i v | c -> i v where
+newtype VarMap a = VarMap (HashMap Var a)
 
-    toComposed :: v -> c
-    toValue    :: c -> v
+empty :: VarMap a
+empty = VarMap HashMap.empty
 
-    isValue    :: c -> Bool
+lookup :: Var -> VarMap a -> Maybe a
+lookup k (VarMap m) = HashMap.lookup k m
 
-    setElement :: DataPath i -> c -> c -> c
-    getElement :: DataPath i -> c -> c
+insert :: Var -> a -> VarMap a -> VarMap a
+insert k v (VarMap m) = VarMap $ HashMap.insert k v m
 
-    composeElements :: [(i,c)] -> c
+insertAll :: [(Var,a)] -> VarMap a -> VarMap a
+insertAll kvs (VarMap m) = VarMap $ foldr go m kvs
+  where
+    go (k,v) m = HashMap.insert k v m
 
-    mapElements :: ((i,c) -> (i,c)) -> c -> c
+keys :: VarMap a -> [Var]
+keys (VarMap m) = HashMap.keys m
 
-    top :: c
-
+keysSet :: VarMap a -> Set Var
+keysSet (VarMap m) = Set.fromList $ HashMap.keys m

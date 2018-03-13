@@ -55,7 +55,7 @@ import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 
 --

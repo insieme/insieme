@@ -51,7 +51,7 @@ import Data.Maybe
 import Data.Typeable
 import GHC.Generics (Generic)
 
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 
 import Insieme.Inspire (NodeAddress)
 import qualified Insieme.Inspire as I

@@ -62,6 +62,7 @@
 #include "insieme/core/lang/const_extension.h"
 #include "insieme/core/lang/enum.h"
 #include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/variadic_template_extension.h"
 
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/tag.h"
@@ -553,23 +554,30 @@ namespace backend {
 				if(annotations::c::hasIncludeAttached(ptr)) {
 					definition = c_ast::IncludeFragment::createNew(converter.getFragmentManager(), annotations::c::getAttachedInclude(ptr));
 				}
-				// also handle optional template arguments
-				for(auto typeArg : ptr->getTypeParameterList()) {
-					auto tempParamType = converter.getTypeManager().getTemplateArgumentType(context, typeArg);
-					namedType->parameters.push_back(tempParamType);
+				// if he have to encode an empty template argument list here
+				if(ptr->getTypeParameterList().size() == 1
+						&& ptr->getNodeManager().getLangExtension<core::lang::VariadicTemplateExtension>().isEmptyVariadicTemplateArguments(ptr->getTypeParameter(0))) {
+					namedType->isGenericType = true;
 
-					// we need to drop qualified-refs here in order to then correctly generate a dependency to the definition of the type
-					if(core::lang::isQualifiedReference(typeArg)) typeArg = core::analysis::getReferencedType(typeArg);
+					// handle optional template arguments
+				} else {
+					for(auto typeArg : ptr->getTypeParameterList()) {
+						auto tempParamType = converter.getTypeManager().getTemplateArgumentType(context, typeArg);
+						namedType->parameters.push_back(tempParamType);
 
-					// if argument type is not intercepted, add a dependency on its definition
-					auto tempParamTypeInfo = getInfo(typeArg);
-					if (tempParamTypeInfo) {
-						assert_true(definition) << "Tried to add a dependency to non-existent definition";
-						auto def = tempParamTypeInfo->definition;
-						if (contains(inDefinition, def)) {
-							def = tempParamTypeInfo->declaration;
+						// we need to drop qualified-refs here in order to then correctly generate a dependency to the definition of the type
+						if(core::lang::isQualifiedReference(typeArg)) typeArg = core::analysis::getReferencedType(typeArg);
+
+						// if argument type is not intercepted, add a dependency on its definition
+						auto tempParamTypeInfo = getInfo(typeArg);
+						if (tempParamTypeInfo) {
+							assert_true(definition) << "Tried to add a dependency to non-existent definition";
+							auto def = tempParamTypeInfo->definition;
+							if (contains(inDefinition, def)) {
+								def = tempParamTypeInfo->declaration;
+							}
+							definition->addDependency(def);
 						}
-						definition->addDependency(def);
 					}
 				}
 				// if there is a definition then use it, otherwise create a forward declaration

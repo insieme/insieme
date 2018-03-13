@@ -45,7 +45,7 @@ import Control.DeepSeq
 import Data.Typeable
 import GHC.Generics (Generic)
 import Insieme.Inspire.NodeAddress
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 import qualified Insieme.Inspire as IR
 import qualified Insieme.Utils.BoundSet as BSet
 

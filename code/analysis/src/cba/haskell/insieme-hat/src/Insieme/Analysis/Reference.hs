@@ -65,7 +65,7 @@ import Insieme.Analysis.DataPath
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.Utils.OperatorHandler
 import Insieme.Analysis.Utils.CppSemantic
-import Insieme.Analysis.Solver
+import Insieme.Solver
 import qualified Insieme.Analysis.Entities.DataPath as DP
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree

@@ -52,7 +52,7 @@ import qualified Insieme.Inspire as I
 import qualified Insieme.Query as Q
 import qualified Insieme.Utils.BoundSet as BSet
 
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree

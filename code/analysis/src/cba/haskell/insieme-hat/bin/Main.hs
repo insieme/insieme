@@ -44,7 +44,7 @@ import Insieme.Analysis.Entities.FieldIndex (SimpleFieldIndex)
 import qualified Data.ByteString as BS
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
 import qualified Insieme.Analysis.Reference as Ref
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 import qualified Insieme.Inspire as I
 import qualified Insieme.Inspire.BinaryParser as BinPar
 import qualified Insieme.Inspire.NodeAddress as Addr

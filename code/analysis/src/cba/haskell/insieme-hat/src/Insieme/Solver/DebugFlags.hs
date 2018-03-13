@@ -35,29 +35,9 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
+module Insieme.Solver.DebugFlags where
 
-module Insieme.Analysis.Framework.PropertySpace.ComposedValue where
-
-import Insieme.Analysis.Entities.DataPath
-import Insieme.Analysis.Entities.FieldIndex
-import qualified Insieme.Solver as Solver
-
-
-class (Solver.ExtLattice c, FieldIndex i, Solver.ExtLattice v) => ComposedValue c i v | c -> i v where
-
-    toComposed :: v -> c
-    toValue    :: c -> v
-
-    isValue    :: c -> Bool
-
-    setElement :: DataPath i -> c -> c -> c
-    getElement :: DataPath i -> c -> c
-
-    composeElements :: [(i,c)] -> c
-
-    mapElements :: ((i,c) -> (i,c)) -> c -> c
-
-    top :: c
+-- | A flag to enable / disable internal consistency checks (for debugging)
+check_consistency :: Bool
+check_consistency = False
 

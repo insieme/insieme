@@ -43,7 +43,7 @@ import qualified Insieme.Utils.BoundSet as BSet
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Reference
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 
 
 data Result = AreAlias | MayAlias | NotAlias

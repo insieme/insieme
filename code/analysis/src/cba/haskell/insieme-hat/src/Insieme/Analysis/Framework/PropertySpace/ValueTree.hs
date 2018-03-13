@@ -52,7 +52,7 @@ import Insieme.Analysis.Entities.DataPath
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.PropertySpace.ComposedValue
 import qualified Data.Map as Map
-import qualified Insieme.Analysis.Solver as Solver
+import qualified Insieme.Solver as Solver
 
 data Tree i a = Leaf a
               | Node (Map.Map i (Tree i a))

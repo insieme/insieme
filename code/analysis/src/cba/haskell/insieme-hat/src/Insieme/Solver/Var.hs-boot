@@ -35,29 +35,28 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
+module Insieme.Solver.Var where
 
-module Insieme.Analysis.Framework.PropertySpace.ComposedValue where
+import Data.Dynamic (Dynamic)
+import Data.Hashable (Hashable)
 
-import Insieme.Analysis.Entities.DataPath
-import Insieme.Analysis.Entities.FieldIndex
-import qualified Insieme.Solver as Solver
+import {-# SOURCE #-} Insieme.Solver.Constraint
 
+data Var
 
-class (Solver.ExtLattice c, FieldIndex i, Solver.ExtLattice v) => ComposedValue c i v | c -> i v where
+instance Eq Var
+instance Ord Var
+instance Show Var
+instance Hashable Var
 
-    toComposed :: v -> c
-    toValue    :: c -> v
+constraints :: Var -> [Constraint]
+bottom :: Var -> Dynamic
+maybeValToBottom :: Var -> Maybe Dynamic -> Dynamic
 
-    isValue    :: c -> Bool
+newtype TypedVar a = TypedVar Var
 
-    setElement :: DataPath i -> c -> c -> c
-    getElement :: DataPath i -> c -> c
+instance Eq   (TypedVar a)
+instance Ord  (TypedVar a)
+instance Show (TypedVar a)
 
-    composeElements :: [(i,c)] -> c
-
-    mapElements :: ((i,c) -> (i,c)) -> c -> c
-
-    top :: c
-
+toVar :: TypedVar a -> Var

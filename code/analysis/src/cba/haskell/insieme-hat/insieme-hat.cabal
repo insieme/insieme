@@ -46,8 +46,6 @@ library
                         Insieme.Analysis.Reachable,
                         Insieme.Analysis.RecursiveLambdaReferences,
                         Insieme.Analysis.Reference,
-                        Insieme.Analysis.Solver,
-                        Insieme.Analysis.Solver.Metadata,
                         Insieme.Analysis.SymbolicValue,
                         Insieme.Analysis.Utils.CppSemantic,
                         Insieme.Analysis.WriteSetSummary,
@@ -64,15 +62,27 @@ library
                         Insieme.Inspire.IR.Tree,
                         Insieme.Inspire.NodeAddress,
                         Insieme.Inspire.NodePath,
-                        Insieme.Query,
-                        Insieme.Query.NodeReference,
-                        Insieme.Query.NodeAddress,
                         Insieme.Inspire.NodeReference
                         Insieme.Inspire.SourceParser
                         Insieme.Inspire.SourceParser.FFI
                         Insieme.Inspire.Visit,
                         Insieme.Inspire.Visit.NodeMap,
                         Insieme.Inspire.Visit.NodePaths,
+                        Insieme.Query,
+                        Insieme.Query.NodeReference,
+                        Insieme.Query.NodeAddress,
+                        Insieme.Solver,
+                        Insieme.Solver.Assignment
+                        Insieme.Solver.AssignmentView
+                        Insieme.Solver.Constraint
+                        Insieme.Solver.DebugFlags
+                        Insieme.Solver.Identifier
+                        Insieme.Solver.Lattice
+                        Insieme.Solver.Metadata
+                        Insieme.Solver.SolverState
+                        Insieme.Solver.Var
+                        Insieme.Solver.VarMap
+                        Insieme.Solver.VariableIndex
                         Insieme.Utils,
                         Insieme.Utils.Arithmetic,
                         Insieme.Utils.BoundSet,
@@ -83,6 +93,7 @@ library
                         bytestring >= 0.10,
                         c-storable-deriving >= 0.1.3,
                         containers >= 0.5.10,
+                        unordered-containers >= 0.2,
                         deepseq >= 1.4,
                         hashable >= 1.2.4,
                         mtl >= 2.2,
