@@ -86,3 +86,9 @@ instance Functor NodeMap where
 
 mapNodeMap :: (a -> b) -> NodeMap a -> NodeMap b
 mapNodeMap f (NodeMap im) = NodeMap $ fmap f im
+
+instance Foldable NodeMap where
+    foldr = mapNodeFoldr
+
+mapNodeFoldr :: (a -> b -> b) -> b -> NodeMap a -> b
+mapNodeFoldr f a (NodeMap im) = foldr f a im
