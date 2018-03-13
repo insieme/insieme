@@ -36,10 +36,12 @@
  -}
 
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Insieme.Analysis.RecursiveLambdaReferences (
 
-    LambdaReferenceSet,
+    LambdaReferenceSet(..),
     recursiveCalls
 
 ) where
@@ -52,7 +54,26 @@ import qualified Insieme.Inspire as I
 import qualified Insieme.Query as Q
 
 import Insieme.Analysis.Solver
-import Insieme.Analysis.FreeLambdaReferences
+
+import qualified Data.Map as Map
+import Data.Maybe
+
+import Control.DeepSeq (NFData)
+import GHC.Generics (Generic)
+
+import qualified Insieme.Inspire.Visit.NodeMap as NodeMap
+
+
+--
+-- * the lattice of this analysis
+--
+
+newtype LambdaReferenceSet = LambdaReferenceSet { unLRS :: Set.Set NodeAddress }
+  deriving (Eq, Ord, Show, Generic, NFData)
+
+instance Lattice LambdaReferenceSet where
+    bot = LambdaReferenceSet Set.empty
+    (LambdaReferenceSet x) `merge` (LambdaReferenceSet y) = LambdaReferenceSet $ Set.union x y
 
 
 --
@@ -76,22 +97,175 @@ recursiveCalls addr = case Q.getNodeType addr of
 
     where
 
-        var = mkVariable varId [con] bot
-        con = createConstraint dep val var
+      var = mkVariable varId [con] bot
+      con = createConstraint dep val var
 
-        varId = mkIdentifierFromExpression analysis addr
-        analysis = mkAnalysisIdentifier RecursiveLambdaReferenceAnalysis "RecLambdaRefs"
+      varId = mkIdentifierFromExpression analysis addr
+      analysis = mkAnalysisIdentifier RecursiveLambdaReferenceAnalysis "RecLambdaRefs"
 
-        dep _ = toVar <$> freeRefVars
-        val a = LambdaReferenceSet $ Set.filter f $ unLRS $ join $ get a <$> freeRefVars
-            where
-                f r = I.getNode r == tag
+      dep _ = [toVar indexVar]
 
-        tag = I.getNode $ I.goDown 0 $ I.goUp addr
-        def = I.goUp $ I.goUp addr
+      val a = LambdaReferenceSet $ Set.fromList refs
+        where
+          refs = getRecursiveReferences (get a indexVar) addr
 
-        lambdas = I.goDown 1 <$> I.children def
-
-        freeRefVars = freeLambdaReferences <$> lambdas
+      indexVar = globalRecursiveLambdaReferenceIndex $ I.node $ I.getRootAddress addr
 
 
+
+
+--------------------------------------------------------------------------------
+--           Global Recursive Lambda Reference Index Analysis                 --
+--------------------------------------------------------------------------------
+
+--
+-- * the lattice of this analysis
+--
+
+newtype RecursiveLambdaReferenceIndex = RecursiveLambdaReferenceIndex (Map.Map I.Tree (Map.Map I.Tree [NodeAddress]))
+  deriving (Eq, Ord, Show, Generic, NFData)
+
+instance Lattice RecursiveLambdaReferenceIndex where
+    bot = RecursiveLambdaReferenceIndex Map.empty
+    (RecursiveLambdaReferenceIndex a) `merge` (RecursiveLambdaReferenceIndex b) = case () of
+      _ | Map.null a -> RecursiveLambdaReferenceIndex b
+        | Map.null b -> RecursiveLambdaReferenceIndex a
+        | otherwise  -> undefined
+
+
+getRecursiveReferences :: RecursiveLambdaReferenceIndex -> NodeAddress -> [NodeAddress]
+getRecursiveReferences _ lambda | I.depth lambda <= 2 = []
+getRecursiveReferences (RecursiveLambdaReferenceIndex index) lambda = I.append definition <$> list
+  where
+    Just binding = I.getParent lambda
+    Just definition = I.getParent binding
+    def = I.node definition
+    tag = I.child 0 $ I.node binding
+
+    inner = fromMaybe Map.empty $ Map.lookup def index
+    list = fromMaybe [] $ Map.lookup tag inner
+
+
+--
+-- * RecursiveLambdaReferenceIndex Analysis
+--
+
+data RecursiveLambdaReferenceIndexAnalysis = RecursiveLambdaReferenceIndexAnalysis
+    deriving (Typeable)
+
+
+--
+-- * the constraint generator
+--
+
+globalRecursiveLambdaReferenceIndex :: I.Tree -> TypedVar RecursiveLambdaReferenceIndex
+globalRecursiveLambdaReferenceIndex root = var
+  where
+    var = mkVariable id [con] bot
+    con = constant index var
+
+    aid = mkAnalysisIdentifier RecursiveLambdaReferenceIndexAnalysis "RecLambdaRefIndex"
+    id = mkIdentifierFromExpression aid $ I.mkNodeAddress [] root
+
+    index = indexRecursiveLambdaReferences root
+
+
+
+
+-- a utility to store sets of addresses by sharing indices
+-- in the form of a tree
+data NodeAddressSet = Level Bool [(Int,NodeAddressSet)]
+  deriving Show
+
+empty :: NodeAddressSet
+empty = Level False []
+
+isEmpty :: NodeAddressSet -> Bool
+isEmpty (Level False []) = True
+isEmpty (Level False ls) = all isEmpty (snd <$> ls)
+isEmpty _ = False
+
+
+toAddresses :: NodeAddress -> NodeAddressSet -> [NodeAddress]
+toAddresses r s = go r s []
+  where
+    go a (Level f nested) rs = foldr step nrs nested
+      where
+        nrs = if f then a:rs else rs
+        step (i,l) = go (I.child i a) l
+
+
+filterSet :: (I.Tree -> Bool) -> I.Tree -> NodeAddressSet -> NodeAddressSet
+filterSet p t (Level f cs) = if isEmpty res then empty else res
+  where
+    res = Level cur subs
+    cur = f && p t
+    subs = go <$> cs
+    go (i,s) = (i,filterSet p (I.child i t) s)
+
+
+
+-- the actual lambda reference indexer
+indexRecursiveLambdaReferences :: I.Tree -> RecursiveLambdaReferenceIndex
+indexRecursiveLambdaReferences root = RecursiveLambdaReferenceIndex index
+  where
+    -- the resulting index
+    index :: Map.Map I.Tree (Map.Map I.Tree [NodeAddress])
+    index = foldr go Map.empty $ Map.keys refIndex
+      where
+        -- only interested in lambda definitions
+        go :: I.Tree -> Map.Map I.Tree (Map.Map I.Tree [NodeAddress]) -> Map.Map I.Tree (Map.Map I.Tree [NodeAddress])
+        go t res | I.getNodeType t /= I.LambdaDefinition = res
+        go t cur = res
+          where
+            res :: Map.Map I.Tree (Map.Map I.Tree [NodeAddress])
+            res = Map.insert t indexed cur
+
+            -- get full list of references
+            references :: [NodeAddress]
+            references = foldr go [] $ I.children $ I.mkNodeAddress [] t
+              where
+                go a ls = newAddresses ++ ls
+                  where
+                    newAddresses = toAddresses a refSet
+                    Just refSet = Map.lookup (I.node a) refIndex
+
+            -- an indexed version of the references (ref->addresses)
+            indexed :: Map.Map I.Tree [NodeAddress]
+            indexed = foldr go Map.empty references
+              where
+                go a = Map.insertWith (++) (I.node a) [a]
+
+    -- an index of all tag type reference addresses
+    refIndex :: Map.Map I.Tree NodeAddressSet
+    refIndex = Map.fromList $ foldr (:) [] resultMap
+      where
+        resultMap = go <$> NodeMap.mkNodeMap root
+
+        go tree = (tree,set)
+          where
+            -- see whether this node is a lambada reference
+            isRef = I.getNodeType tree == I.LambdaReference
+
+            -- lookup value of child nodes (memorized)
+            resolve t = let Just x = NodeMap.lookup t resultMap in snd x
+
+            -- skip tags in lamba expressions and bindings
+            subs = case I.getNodeType tree of
+              I.LambdaExpr       -> [ empty, empty, resolve $ I.child 2 tree ]
+              I.LambdaBinding    -> [ empty , resolve $ I.child 1 tree ]
+              _                  -> resolve <$> I.children tree
+
+            -- create child list and filter out empty sub-lists
+            lst = filter go $ zip [0..] subs
+              where
+                go (_,b) = not $ isEmpty b
+
+            -- finally, filter out bound references
+            set = case I.getNodeType tree of
+                I.LambdaDefinition -> filterSet p tree unfiltered
+                _ -> unfiltered
+              where
+                unfiltered = Level isRef lst
+                p n = I.getNodeType n == I.LambdaReference && notElem n definedTags
+                definedTags = head <$> (I.children <$> I.children tree)

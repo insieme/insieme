@@ -154,8 +154,8 @@ callsExplicitConstructor addr = case Q.getNodeType addr of
 
 --- Tests whether a declaration is involving an implicit constructor call
 
-callsImplicitConstructor :: NodeAddress -> Bool
-callsImplicitConstructor addr = case I.getNode addr of
+callsImplicitConstructor :: NodeLike a => a -> Bool
+callsImplicitConstructor addr = case I.node addr of
     (I.Node I.Declaration [declType,I.Node _ (initType:_)]) -> isCtorBasedConversion initType declType
     _ -> False
 
@@ -172,7 +172,7 @@ callsImplicitMoveConstructor addr = case I.getNode addr of
 
 -- locates a matching implicit constructor in the given declaration
 getImplicitConstructor :: NodeAddress -> Maybe NodeAddress
-getImplicitConstructor addr | not (callsImplicitConstructor addr) = 
+getImplicitConstructor addr | not (callsImplicitConstructor addr) =
     error "Can not obtain implicit constructor from expression without implicit constructor."
 
 getImplicitConstructor addr = case I.getNode addr of
@@ -281,4 +281,3 @@ isSideEffectFreeBuiltin addr = any (Q.isBuiltin addr)
           "bool_not",
           "num_cast"
         ]
-

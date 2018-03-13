@@ -128,7 +128,7 @@ memoryStateValue ms@(MemoryStatePoint (ProgramPoint _ _) ml@(MemoryLocation loc)
             where
               var = Solver.mkVariable varId [con] Solver.bot
               con = Solver.forward (variableGenerator analysis parent) var
-              
+
               parent = I.goUp loc
 
         -- all other memory locations are handled here
@@ -339,7 +339,7 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
 
             -- the variable representing a reference to the initialized array
             nestedArrayRefVar = referenceValue nestedArrayInitAddr
-            nestedArrayRefVal a = unRS $ ComposedValue.toValue $ Solver.get a nestedArrayRefVar 
+            nestedArrayRefVal a = unRS $ ComposedValue.toValue $ Solver.get a nestedArrayRefVar
 
             -- get memory state of initialized nested array
             nestedArrayMemStateVars a = if BSet.isUniverse refs then [] else vars
@@ -349,7 +349,7 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
                 vars = zip refList $ toStateVar <$> refList
 
                 toStateVar (Reference loc _) = memoryStateValue (MemoryStatePoint pp (MemoryLocation loc)) analysis
-                toStateVar r = error ("Sorry, unexpected reference value: " ++ (show r)) 
+                toStateVar r = error ("Sorry, unexpected reference value: " ++ (show r))
 
                 pp = ProgramPoint (I.goDown 2 addr) Post
 
@@ -357,7 +357,7 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
               where
                 values = (go <$> nestedArrayMemStateVars a)
                 go ((Reference _ dp),memValVar) = ComposedValue.getElement dp $ Solver.get a memValVar
-                go (r,_) = error ("Unexpected reference value: " ++ (show r)) 
+                go (r,_) = error ("Unexpected reference value: " ++ (show r))
 
             -- a utility to convert an array to a std::array
             convertToStdArray t = ComposedValue.mapElements toArrayIndex t
@@ -527,8 +527,8 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
             Solver.mkVariable varId [] $ Definitions $ BSet.singleton Initial
 
         -- skip everything that can statically be considered assignment free
-        _ | p == Post && isAssignmentFree addr && (not isParentOfLocation) -> var
-            where 
+        _ | p == Post && isAssignmentFree (I.getNode addr) && (not isParentOfLocation) -> var
+            where
               var = Solver.mkVariable varId [con] Solver.bot
               con = Solver.forward src var
               src = reachingDefinitions $ MemoryStatePoint (ProgramPoint addr Pre) ml
@@ -672,32 +672,32 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
 -- A filter for the reaching definition analysis --
 
-isAssignmentFree :: NodeAddress -> Bool
-isAssignmentFree addr = case Q.getNodeType addr of
+isAssignmentFree :: I.Tree -> Bool
+isAssignmentFree tree = case Q.getNodeType tree of
 
         I.Literal     -> True
 
         I.Variable    -> True
 
-        I.CallExpr    -> isAssignmentFreeFunction (I.goDown 1 addr) &&
-                            all isAssignmentFree [ I.goDown x addr | x <- [1 .. (I.numChildren addr - 1)] ]
+        I.CallExpr    -> isAssignmentFreeFunction (I.child 1 tree) &&
+                            all isAssignmentFree (tail $ I.getChildren tree)
 
         I.LambdaExpr  -> True
 
         I.BindExpr    -> True
 
-        I.Declaration -> not (callsImplicitConstructor addr) && (isAssignmentFree $ I.goDown 1 addr)
+        I.Declaration -> not (callsImplicitConstructor tree) && (isAssignmentFree $ I.child 1 tree)
 
         _ -> False
 
 
 
-isAssignmentFreeFunction :: NodeAddress -> Bool
-isAssignmentFreeFunction addr = case Q.getNodeType addr of
+isAssignmentFreeFunction :: I.Tree -> Bool
+isAssignmentFreeFunction tree = case Q.getNodeType tree of
 
-    I.Literal -> not $ Q.isBuiltin addr "ref_assign"
+    I.Literal -> not $ Q.isBuiltin tree "ref_assign"
 
-    I.LambdaExpr -> any (Q.isBuiltin addr) [
+    I.LambdaExpr -> any (Q.isBuiltin tree) [
                                 "bool_and",
                                 "bool_not",
                                 "bool_or",
@@ -811,5 +811,3 @@ writeSet addr = case Q.getNodeType addr of
     where
 
         idGen a = Solver.mkIdentifierFromExpression writeSetAnalysis a
-
-

@@ -54,7 +54,6 @@ import qualified Insieme.Query as Q
 import qualified Insieme.Utils.BoundSet as BSet
 
 import Insieme.Analysis.DynamicCallSites
-import Insieme.Analysis.FreeLambdaReferences
 import qualified Insieme.Analysis.Callable as Callable
 import qualified Insieme.Analysis.RecursiveLambdaReferences as RecLambdaRefs
 import qualified Insieme.Analysis.Solver as Solver
@@ -134,7 +133,7 @@ callSites addr = case Q.getNodeType addr of
 
 
     -- determines whether all calls are statically bound (if not, we have to search) --
-    isStaticallyBound a = i == 1 && isCall p && all check (unLRS $ recReferencesVal a)
+    isStaticallyBound a = i == 1 && isCall p && all check (RecLambdaRefs.unLRS $ recReferencesVal a)
       where
         check x = I.getIndex x == 1 && (isCall $ fromJust $ I.getParent x)
 
@@ -150,9 +149,9 @@ callSites addr = case Q.getNodeType addr of
         else [allCallsVar]
 
     -- computes a list of addresses of all potentiall call sites
-    allCallsVar = dynamicCalls $ I.getRootAddress addr 
+    allCallsVar = dynamicCalls $ I.getRootAddress addr
     allCallsVal a = Solver.get a allCallsVar
-    
+
     allCalls a = filter p $ peel <$> (Set.toList $ allCallsVal a)
       where
         p a = (I.numChildren a) == 2 + numParams
@@ -162,7 +161,7 @@ callSites addr = case Q.getNodeType addr of
 
     indirectCalls a =
         Set.fromList $ if isStaticallyBound a
-            then CallSite . fromJust . I.getParent <$> Set.toList (unLRS $ recReferencesVal a)
+            then CallSite . fromJust . I.getParent <$> Set.toList (RecLambdaRefs.unLRS $ recReferencesVal a)
             else (CallSite <$> reachingCalls) ++ (CallSite <$> directRecursiveCalls)
       where
 
@@ -175,6 +174,6 @@ callSites addr = case Q.getNodeType addr of
                 I.BindExpr -> Callable.Closure addr
                 _           -> error "unexpected NodeType"
 
-        directRecursiveCalls = fromJust . I.getParent <$> (filter f $ Set.toList $ unLRS $ recReferencesVal a)
+        directRecursiveCalls = fromJust . I.getParent <$> (filter f $ Set.toList $ RecLambdaRefs.unLRS $ recReferencesVal a)
           where
             f r = I.getIndex r == 1 && isCall (fromJust $ I.getParent r)

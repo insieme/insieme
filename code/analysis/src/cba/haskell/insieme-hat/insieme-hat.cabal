@@ -17,7 +17,7 @@ library
         hs-source-dirs:  src/
 
     build-tools:        c2hs
-    exposed-modules:    
+    exposed-modules:
                         Insieme.Adapter.Utils,
                         Insieme.Analysis.AccessPath,
                         Insieme.Analysis.Alias,
@@ -41,7 +41,6 @@ library
                         Insieme.Analysis.Framework.PropertySpace.ComposedValue,
                         Insieme.Analysis.Framework.PropertySpace.ValueTree,
                         Insieme.Analysis.Framework.Utils.OperatorHandler,
-                        Insieme.Analysis.FreeLambdaReferences,
                         Insieme.Analysis.Identifier,
                         Insieme.Analysis.Predecessor,
                         Insieme.Analysis.Reachable,

@@ -61,7 +61,6 @@ import GHC.Generics (Generic)
 import Insieme.Analysis.AccessPath
 import Insieme.Analysis.Callable
 import Insieme.Analysis.Entities.FieldIndex
-import Insieme.Analysis.FreeLambdaReferences
 import Insieme.Inspire.NodeAddress
 import Insieme.Query
 
@@ -188,28 +187,29 @@ writeSetSummary addr = case getNodeType addr of
 
 
         -- for non context-free lambdas, it has to be tested wether they are closed
-        I.Lambda -> var
-            where
-                var = Solver.mkVariable (idGen addr) [con] Solver.bot
-                con = Solver.createEqualityConstraint dep val var
-
-                dep a = Solver.toVar hasFreeLambdaRefsVar : if isClosed a then closedDep a else openDep a
-                val a = if isClosed a then closedVal a else openVal a
-
-                hasFreeLambdaRefsVar = freeLambdaReferences $ goUp $ goUp $ goUp addr
-
-                isClosed a = depth addr >= 3 && (Set.null $ unLRS $ Solver.get a hasFreeLambdaRefsVar)
-
-                -- the closed case --
-
-                closedWriteSetVar = writeSetSummary contextFreeAddr
-                closedDep _ = [Solver.toVar closedWriteSetVar]
-                closedVal a = Solver.get a closedWriteSetVar
-
-                -- the non closed case --
-
-                openDep _ = Solver.toVar <$> writeSetVars
-                openVal a = Solver.join $ (Solver.get a <$> writeSetVars)
+        -- TODO: if this ever used again, provide a substitute for the free lambda reference analysis
+        -- I.Lambda -> var
+        --     where
+        --         var = Solver.mkVariable (idGen addr) [con] Solver.bot
+        --         con = Solver.createEqualityConstraint dep val var
+        --
+        --         dep a = Solver.toVar hasFreeLambdaRefsVar : if isClosed a then closedDep a else openDep a
+        --         val a = if isClosed a then closedVal a else openVal a
+        --
+        --         hasFreeLambdaRefsVar = freeLambdaReferences $ goUp $ goUp $ goUp addr
+        --
+        --         isClosed a = depth addr >= 3 && (Set.null $ unLRS $ Solver.get a hasFreeLambdaRefsVar)
+        --
+        --         -- the closed case --
+        --
+        --         closedWriteSetVar = writeSetSummary contextFreeAddr
+        --         closedDep _ = [Solver.toVar closedWriteSetVar]
+        --         closedVal a = Solver.get a closedWriteSetVar
+        --
+        --         -- the non closed case --
+        --
+        --         openDep _ = Solver.toVar <$> writeSetVars
+        --         openVal a = Solver.join $ (Solver.get a <$> writeSetVars)
 
         -- compute write sets for calls
         I.CallExpr -> var
