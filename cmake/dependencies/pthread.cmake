@@ -1,2 +1,2 @@
-set(THEADS_PREFER_PTHEAD_FLAG on)
+set(THREADS_PREFER_PTHREAD_FLAG on)
 find_package(Threads REQUIRED)
