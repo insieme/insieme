@@ -1,0 +1,11 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/andy-morris/hashcons.git
+	branch = master
+	commit = 3e8f3aa3b469217eae5ac40d05586f3263a4bb0f
+	parent = bdb5abbd9c9c9998ee4cf5ee25be2084d33570b0
+	cmdver = 0.3.1
