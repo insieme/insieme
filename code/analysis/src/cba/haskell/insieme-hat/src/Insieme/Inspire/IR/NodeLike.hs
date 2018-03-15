@@ -35,6 +35,8 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+
 module Insieme.Inspire.IR.NodeLike where
 
 import Insieme.Inspire.IR.Tree

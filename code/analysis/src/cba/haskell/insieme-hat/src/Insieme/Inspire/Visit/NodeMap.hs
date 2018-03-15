@@ -38,57 +38,48 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Insieme.Inspire.Visit.NodeMap where
+module Insieme.Inspire.Visit.NodeMap
+    ( NodeMap
+    , mkNodeMap
+    , lookup
+    , mapNodeMap
+    , mapNodeFoldr
+    ) where
 
 import Control.Monad.State
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IntMap
-import Prelude hiding (map)
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HashMap
+import Prelude hiding (map, lookup)
 
 import qualified Insieme.Inspire.IR as IR
 
-data NodeMap a = NodeMap { nmIdMap :: IntMap a }
+newtype NodeMap a = NodeMap (HashMap (IR.Tree) a)
 
 mkNodeMap :: IR.Tree -> NodeMap IR.Tree
-mkNodeMap node = NodeMap $ execState (buildMap node) $ IntMap.empty
+mkNodeMap node = NodeMap $ execState (buildMap node) $ HashMap.empty
   where
-    buildMap :: IR.Tree -> State (IntMap IR.Tree) ()
-    buildMap n@IR.MkTree { IR.mtId = Just i } = do
-      whenM (not . IntMap.member i <$> get) $ do
-           modify $ IntMap.insert i n
+    buildMap :: IR.Tree -> State (HashMap IR.Tree IR.Tree) ()
+    buildMap n = do
+      whenM (not . HashMap.member n <$> get) $ do
+           modify $ HashMap.insert n n
            mapM_ buildMap $ IR.getChildren n
-    buildMap IR.MkTree { IR.mtId = Nothing } =
-      return ()
 
     whenM :: Monad m => m Bool -> m () -> m ()
     whenM cond a = do
       b <- cond
       when b a
 
-mkNodeMap'Naive :: IR.Tree -> NodeMap IR.Tree
-mkNodeMap'Naive n = NodeMap $ go n
-  where
-    go n = insert n $ IntMap.unions $ fmap go $ IR.getChildren n
-
-    insert n =
-        case IR.getID n of
-          Just i  -> IntMap.insert i n
-          Nothing -> id
-
 lookup :: IR.Tree -> NodeMap a -> Maybe a
-lookup   IR.MkTree { IR.mtId = Just i  } NodeMap { nmIdMap } =
-    IntMap.lookup i nmIdMap
-lookup IR.MkTree { IR.mtId = Nothing } _nm =
-    Nothing
+lookup n (NodeMap m) = HashMap.lookup n m
 
 instance Functor NodeMap where
     fmap = mapNodeMap
 
 mapNodeMap :: (a -> b) -> NodeMap a -> NodeMap b
-mapNodeMap f (NodeMap im) = NodeMap $ fmap f im
+mapNodeMap f (NodeMap m) = NodeMap $ fmap f m
 
 instance Foldable NodeMap where
     foldr = mapNodeFoldr
 
 mapNodeFoldr :: (a -> b -> b) -> b -> NodeMap a -> b
-mapNodeFoldr f a (NodeMap im) = foldr f a im
+mapNodeFoldr f a (NodeMap m) = foldr f a m

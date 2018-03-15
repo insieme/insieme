@@ -1,4 +1,4 @@
-packages: @HAT_PACKAGE_PATHS@
+packages: @CMAKE_CURRENT_SOURCE_DIR@/vendor/hashcons @HAT_PACKAGE_PATHS@
 with-compiler: @HAT_COMPILER_PATH@
 extra-lib-dirs: @PROJECT_BINARY_DIR@/analysis
                 @PROJECT_BINARY_DIR@/annotations

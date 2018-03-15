@@ -35,77 +35,61 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
+{-# LANGUAGE ViewPatterns #-}
+
 module Insieme.Inspire.IR.Transform
     ( substitute
     , substitute'
     , substituteInLocalScope
     , substituteInLocalScope'
     , removeIds
-    , removeIds'
     ) where
 
 import Control.Monad.State
-import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.HashCons
+
+import           Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HashMap
+
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 
 import Insieme.Inspire.IR.NodeType as NT
 import Insieme.Inspire.IR.Tree as IR
 
-type TreeSubst = Map IR.Tree IR.Tree
+type TreeSubst = HashMap IR.Tree IR.Tree
 
 substitute :: TreeSubst -> IR.Tree -> IR.Tree
 substitute s t = evalState (substitute' t) s
 
 substitute' :: IR.Tree -> State TreeSubst IR.Tree
-substitute' t = do
+substitute' t@(Node nt ch) = do
   s <- get
-  case Map.lookup t s of
+  case HashMap.lookup t s of
     Just t' -> return t'
     Nothing -> do
-        let ch = getChildren t
         ch' <- mapM substitute' ch
         let t' | ch' == ch = t
-               | otherwise = t { getID = Nothing
-                               , getChildren = ch'
-                               , builtinTags = []
-                               }
-        modify (Map.insert t t')
+               | otherwise = mkNode nt ch' []
+        modify (HashMap.insert t t')
         return t'
 
 substituteInLocalScope :: TreeSubst -> IR.Tree -> IR.Tree
 substituteInLocalScope s t = evalState (substituteInLocalScope' t) s
 
 substituteInLocalScope' :: IR.Tree -> State TreeSubst IR.Tree
-substituteInLocalScope' t = do
+substituteInLocalScope' t@(Node nt ch) = do
   s <- get
-  case getNodeType t of
+  case nt of
     NT.Lambda -> return t
-    _ -> case Map.lookup t s of
+    _ -> case HashMap.lookup t s of
         Just t' -> return t'
         Nothing -> do
-            let ch = getChildren t
             ch' <- mapM substituteInLocalScope' ch
             let t' | ch' == ch = t
-                   | otherwise = t { getID = Nothing
-                                   , getChildren = ch'
-                                   , builtinTags = []
-                                   }
-            modify (Map.insert t t')
+                   | otherwise = mkNode nt ch' []
+            modify (HashMap.insert t t')
             return t'
 
-
-
 removeIds :: IR.Tree -> IR.Tree
-removeIds t = evalState (removeIds' t) Map.empty
-
-removeIds' :: IR.Tree -> State TreeSubst IR.Tree
-removeIds' t = do
-  s <- get
-  case Map.lookup t s of
-    Just t' -> return t'
-    Nothing -> do
-        let ch = getChildren t
-        ch' <- mapM removeIds' ch
-        let t' = t { getID = Nothing, getChildren = ch' }
-        modify (Map.insert t t')
-        return t'
+removeIds = id

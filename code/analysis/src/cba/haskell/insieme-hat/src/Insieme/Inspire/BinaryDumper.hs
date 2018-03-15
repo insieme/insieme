@@ -43,6 +43,8 @@ import Control.Monad.State.Strict
 import Data.ByteString.Builder
 import Data.Char (ord)
 import Data.IntMap.Strict (IntMap)
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HashMap
 import Data.Maybe
 import Data.Map.Strict (Map)
 import qualified Data.ByteString as BS
@@ -111,24 +113,24 @@ data DumpNode = DumpNode IR.NodeType [Int]
   deriving (Eq, Ord, Show)
 
 toDumpNodes :: IR.Tree -> IntMap DumpNode
-toDumpNodes n = IntMap.union baseMap $ IntMap.fromList $ Map.elems nodeMap
+toDumpNodes n = IntMap.union baseMap $ IntMap.fromList $ HashMap.elems nodeMap
   where
-    nodeMap = execState (toDumpNode n) Map.empty
-    baseMap = IntMap.singleton 0 $ snd $ fromJust $ Map.lookup n nodeMap
+    nodeMap = execState (toDumpNode n) HashMap.empty
+    baseMap = IntMap.singleton 0 $ snd $ fromJust $ HashMap.lookup n nodeMap
 
-toDumpNode :: IR.Tree -> State (Map IR.Tree (Int, DumpNode)) Int
+toDumpNode :: IR.Tree -> State (HashMap IR.Tree (Int, DumpNode)) Int
 toDumpNode n = do
     nodeMap <- get
-    case Map.lookup n nodeMap of
+    case HashMap.lookup n nodeMap of
         Just (i, _) -> return i
         Nothing     -> do
             children <- forM (IR.getChildren n) toDumpNode
 
             -- index 0 is reserved for the root node, therefore we start at 1
             -- and set the root afterwards
-            index <- (+1) <$> Map.size <$> get
+            index <- (+1) <$> HashMap.size <$> get
 
-            modify $ Map.insert n $ (index, DumpNode (IR.getNodeType n) children)
+            modify $ HashMap.insert n $ (index, DumpNode (IR.getNodeType n) children)
             return $ index
 
 -- * Helper Functions

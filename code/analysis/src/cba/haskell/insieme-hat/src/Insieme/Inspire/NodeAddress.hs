@@ -194,7 +194,7 @@ depthAbsolute a = length $ getPathReversed a ++ getAbsoluteRootPath a
 
 -- | Get the number of children of a given node.
 numChildren :: NodeAddress -> Int
-numChildren = length . IR.getChildren . getNode
+numChildren = length . children . getNode
 
 getChildren :: NodeAddress -> [NodeAddress]
 getChildren a = (flip goDown) a <$> [0..numChildren a - 1]
@@ -233,7 +233,7 @@ goDown :: Int -> NodeAddress -> NodeAddress
 goDown x parent@(NodeAddress xs n _ ir r bnp h) = 
     NodeAddress (x : xs) n' (Just parent) ir r (appendBNP x bnp) (Hash.hashWithSalt h x)
   where
-    n' = IR.getChildren n !! x
+    n' = children n !! x
 
 goLeft :: NodeAddress -> NodeAddress
 goLeft na@(NodeAddress xs _ _             _ _ _ _) | head xs == 0 = na
