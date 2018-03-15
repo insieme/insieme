@@ -12,7 +12,7 @@
 
 {-# LANGUAGE
     BangPatterns, DataKinds, KindSignatures, MagicHash, UnboxedTuples,
-    ScopedTypeVariables
+    ScopedTypeVariables, TypeOperators, CPP
   #-}
 
 module Data.HashCons.MkWeak (MkWeak (..), Weak, Finalizer, deRefWeak) where
@@ -56,9 +56,14 @@ class MkWeak k where
   addFinalizer :: k -> Finalizer -> IO ()
   addFinalizer x fin = () <$ mkWeak x () (Just fin)
 
-
+#if MIN_VERSION_base(4,10,0)
 mkWeakUnlifted :: forall (k :: TYPE 'UnliftedRep) v.
                   k -> v -> Maybe Finalizer -> IO (Weak v)
+#else
+mkWeakUnlifted :: forall (k :: TYPE 'PtrRepUnlifted) v.
+                  k -> v -> Maybe Finalizer -> IO (Weak v)
+#endif
+
 mkWeakUnlifted k# v fin' = IO $ \s1 ->
   case fin' of
     Nothing ->
