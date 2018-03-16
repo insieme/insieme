@@ -77,6 +77,11 @@ namespace checks {
 	 */
 	SIMPLE_CHECK(ValidDeclaration, Declaration, false);
 
+	/**
+	 * A debug check, which even runs when all the other checks are disabled using the environment variable INSIEME_NO_SEMA
+	 */
+	SIMPLE_CHECK(Debug, Node, true);
+
 	#undef SIMPLE_CHECK
 
 } // end namespace check

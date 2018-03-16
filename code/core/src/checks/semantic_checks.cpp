@@ -320,6 +320,10 @@ namespace checks {
 		return res;
 	}
 
+	OptionalMessageList DebugCheck::visitNode(const NodeAddress& addr) {
+		return {};
+	}
+
 } // end namespace check
 } // end namespace core
 } // end namespace insieme

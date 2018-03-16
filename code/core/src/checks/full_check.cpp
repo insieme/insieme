@@ -139,6 +139,9 @@ namespace checks {
 
 			context_free_checks.push_back(make_check<LiteralFormatCheck>());
 
+			// uncomment this to include the debug check
+//			context_free_checks.push_back(make_check<DebugCheck>());
+
 			// assemble the IR check list
 			return make_check<FullCheck>(combine(toVector<CheckPtr>(
 				makeVisitOnce(combine(context_free_checks)),
@@ -154,6 +157,7 @@ namespace checks {
 	CheckPtr getFullCheck() {
 		// don't run the checks if the user requested this with the environment variable
 		if(getenv(INSIEME_NO_SEMA)) {
+//			return combine({ makeVisitOnce(make_check<DebugCheck>()) }); // we still might want to run the debug checks though
 			return combine({});
 		}
 		// share common check-instance (initialization is thread save in C++11)
