@@ -80,6 +80,12 @@ namespace transform {
 				// for calls: check type variable instantiations
 				auto fun = call->getFunctionExpr();
 
+				// we don't instantiate calls with Literals as their callee
+				if(fun->getNodeType() == NT_Literal) {
+					// ... just descend recursively
+					return ptr->substitute(mgr, *this);
+				}
+
 				// instantiate type parameters
 				auto substitution = types::getTypeVariableInstantiation(mgr, call);
 

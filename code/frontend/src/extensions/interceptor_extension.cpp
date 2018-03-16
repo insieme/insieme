@@ -259,23 +259,6 @@ namespace extensions {
 			// handle non-templated functions
 			if(!funDecl->isTemplateInstantiation()) {
 				auto funType = lit->getType().as<core::FunctionTypePtr>();
-				// if defaulted, fix "this" type to generic type
-				auto methDecl = llvm::dyn_cast<clang::CXXMethodDecl>(funDecl);
-				if(methDecl && methDecl->isDefaulted()) {
-					// check if method of class template specialization
-					auto recordDecl = methDecl->getParent();
-					if(auto specializedDecl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(recordDecl)) {
-						auto paramTypes = funType->getParameterTypeList();
-						auto genericDecl = specializedDecl->getSpecializedTemplate();
-						core::TypeList genericTypeParams;
-						convertTemplateParameters(genericDecl->getTemplateParameters(), builder, genericTypeParams);
-						auto genericGenType =
-							converter.getIRBuilder().genericType(insieme::utils::mangle(specializedDecl->getQualifiedNameAsString()), genericTypeParams);
-						auto prevThisType = core::analysis::getReferencedType(paramTypes[0]);
-						auto thisType = genericGenType;
-						lit = core::transform::replaceAllGen(converter.getNodeManager(), lit, prevThisType, thisType);
-					}
-				}
 				// if return type is type variable, and we have a target type, instantiate
 				if(clangExpr && core::analysis::isGeneric(retType)) {
 					retType = converter.convertExprType(clangExpr);
