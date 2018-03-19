@@ -17,8 +17,12 @@ is_absolute () {
     [ "$1" != "${1#/}" ] || return 1
 }
 
+is_relative () {
+    [ "$1" = "${1#/}" ] || return 1
+}
+
 is_third_party () {
-    is_absolute $(realpath --relative-base "$third_party_dir" "$1")
+    is_relative "$(realpath -s --relative-base "$third_party_dir" "$1")" || return 1
 }
 
 prepend_path () {
@@ -26,7 +30,6 @@ prepend_path () {
 	eval "$1=\$2"
     else
 	eval "$1=\"\${2}:\$${1}\""
-	export "$1"
     fi
 }
 
@@ -36,6 +39,7 @@ prepend_lib_paths () {
     prepend_path lib_path "$libdir"
 }
 
+unset ld_path lib_path bin_path
 ld_path=$LD_LIBRARY_PATH
 lib_path=$LIBRARY_PATH
 bin_path=$PATH
