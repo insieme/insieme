@@ -231,7 +231,8 @@ test-suite test
                         Formula,
                         ParseInt,
                         Transform,
-                        Visit
+                        Visit,
+                        TreeUtils
     build-depends:      insieme-hat,
                         base >= 4.7,
                         containers >= 0.5.10,

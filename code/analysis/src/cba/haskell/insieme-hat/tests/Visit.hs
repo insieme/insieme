@@ -41,38 +41,43 @@ import Insieme.Inspire
 import Insieme.Inspire.Visit
 import Test.Tasty
 import Test.Tasty.HUnit
-import TestUtils
+import TreeUtils
 
 import Data.List
 import Text.Show.Pretty
 
 import Debug.Trace
 
--- ex1, ex2 :: (Int -> [Tree] -> Tree) -> Tree
--- ex1 n = n 10 [ nil n, nil n, nil n ]
+ex1, ex2 :: ([Tree] -> Tree) -> Tree
+ex1 n = n [ nil n, nil n, nil n ]
 
--- ex2 n = n 10 [ n 20 [], n 21 [ nil n ], n 22 [ nil n, nil n ] ]
+ex2 n = n [ n [], n [ nil n ], n [ nil n, nil n ] ]
 
 visitTests =
-    testGroup "Visit" $ []
-      --   testGroup "collectAllPrunePaths" $
-      --       let collect  = collectAllPrunePaths (const True) (const NoPrune)
-      --           collect' = collectAllPaths'Naive (const True)
+  testGroup "Visit" $ [
+    testGroup "collectAllPrunePaths" $
+      let collect  = collectAllPrunePaths (const True) (const NoPrune)
+          collect' = collectAllPaths'Naive (const True)
 
-      --           tests n ex r = [ testCase (n ++ " withoutId") $ do
-      --                            let n = ex nodeWithoutId
-      --                            collect n @?= collect' n
-      --                            collect n @?= r
-      --                        , testCase (n ++ " withId") $ do
-      --                            let n = ex nodeWithId
-      --                            collect n @?= collect' n
-      --                            collect n @?= r
-      --                        ]
-      --       in
-      --       [ testCase "nil withoutId" $ do
-      --              let n = nil nodeWithoutId
-      --              collect n @?= collect' n
-      --              collect n @?= [[]]
-      --       ] ++ tests "ex1" ex1 [[], [0], [1], [2]]
-      --         ++ tests "ex2" ex2 [[], [0], [1], [1,0], [2], [2,0], [2,1]]
-      -- ]
+          sameAsNaive exn ex =
+              testCase (exn ++ " same as naive version") $ do
+                  let n = ex TreeUtils.node
+                  collect n @?= collect' n
+
+          givesExampleResult exn ex res =
+              testCase (exn ++ " same as example result") $ do
+                  let n = ex TreeUtils.node
+                  collect n @?= res
+      in
+        [ testCase "nil gives only root-addr" $ do
+               let n = nil TreeUtils.node
+               collect n @?= collect' n
+               collect n @?= [[]]
+
+        , sameAsNaive "ex1" ex1
+        , sameAsNaive "ex2" ex2
+
+        , givesExampleResult "ex1" ex1 [[], [0], [1], [2]]
+        , givesExampleResult "ex2" ex2 [[], [0], [1], [1,0], [2], [2,0], [2,1]]
+        ]
+  ]
