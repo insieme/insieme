@@ -1,16 +1,8 @@
 get_filename_component(CABAL_PATH_ENTRY "${CABAL_EXECUTABLE}" DIRECTORY)
 set(CABAL_PATH_ENTRY "${CABAL_PATH_ENTRY}:")
 
-get_filename_component(GMP_LIBRARIES_DIR "${GMP_LIBRARIES}" PATH)
-get_filename_component(ZLIB_LIBRARIES_DIR "${ZLIB_LIBRARIES}" PATH)
 
-set(haskell_env
-  ${CMAKE_COMMAND} -E env
-  "PATH=${CABAL_PATH_ENTRY}${THIRD_PARTY_DIR}/ghc/bin/:$ENV{PATH}"
-  "LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}:$ENV{LIBRARY_PATH}"
-  "LD_LIBRARY_PATH=${GMP_LIBRARIES_DIR}:${ZLIB_LIBRARIES_DIR}:$ENV{LD_LIBRARY_PATH}"
-  "HOME=${CMAKE_CURRENT_BINARY_DIR}/cabal-home"
-)
+set(haskell_env sh ${CMAKE_BINARY_DIR}/haskell-env.sh)
 
 
 set(cabal ${haskell_env} ${CABAL_EXECUTABLE})
@@ -51,8 +43,7 @@ configure_file(cabal.project.in ${CMAKE_BINARY_DIR}/hat-vanilla-project/cabal.pr
 configure_file(cabal.project.in ${CMAKE_BINARY_DIR}/hat-profiling-project/cabal.project)
 configure_file(cabal.project.local.in ${CMAKE_BINARY_DIR}/hat-profiling-project/cabal.project.local)
 
-string (REPLACE ";" " " haskell_env_cmd "${haskell_env}")
-configure_file(haskell-env.sh.in ${CMAKE_BINARY_DIR}/haskell-env.sh)
+configure_file(haskell-env.sh.in ${CMAKE_BINARY_DIR}/haskell-env.sh @ONLY)
 
 add_custom_target(insieme_hat
 	# Fix rebuilding of .chs files

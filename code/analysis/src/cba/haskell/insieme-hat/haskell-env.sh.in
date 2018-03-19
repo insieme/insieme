@@ -1,3 +1,49 @@
 #!/bin/sh
 
-@haskell_env_cmd@ "$@"
+third_party_dir='@THIRD_PARTY_DIR@'
+gmp_libs='@GMP_LIBRARIES@'
+zlib_libs='@ZLIB_LIBRARIES@'
+
+cabal_exe='@CABAL_EXECUTABLE@'
+ghc_exe='@GHC_EXECUTABLE@'
+
+if [ -d "$HOME"/.cabal -a -x "$HOME"/.cabal ]; then
+    cabal_home=
+else
+    cabal_home='@CMAKE_CURRENT_BINARY_DIR@/cabal-home'
+fi
+
+is_absolute () {
+    [ "$1" != "${1#/}" ] || return 1
+}
+
+is_third_party () {
+    is_absolute $(realpath --relative-base "$third_party_dir" "$1")
+}
+
+prepend_path () {
+    if eval "[ -z \"\${$1}\" ]"; then
+	eval "$1=\$2"
+    else
+	eval "$1=\"\${2}:\$${1}\""
+	export "$1"
+    fi
+}
+
+prepend_lib_paths () {
+    libdir="$(dirname "$1")"
+    prepend_path ld_path "$libdir"
+    prepend_path lib_path "$libdir"
+}
+
+ld_path=$LD_LIBRARY_PATH
+lib_path=$LIBRARY_PATH
+bin_path=$PATH
+
+is_third_party "$gmp_libs"  && prepend_lib_paths "$gmp_libs"
+is_third_party "$zlib_libs" && prepend_lib_paths "$zlib_libs"
+
+prepend_path bin_path "$(dirname "$ghc_exe")"
+
+IFS=
+env -- PATH=$bin_path LD_LIBRARY_PATH=$ld_path LIBRARY_PATH=$lib_path ${cabal_home:+HOME=$cabal_home} "$@"
