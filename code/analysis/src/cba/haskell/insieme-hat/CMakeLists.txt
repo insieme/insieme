@@ -1,6 +1,3 @@
-get_filename_component(CABAL_PATH_ENTRY "${CABAL_EXECUTABLE}" DIRECTORY)
-set(CABAL_PATH_ENTRY "${CABAL_PATH_ENTRY}:")
-
 
 set(haskell_env sh ${CMAKE_BINARY_DIR}/haskell-env.sh)
 

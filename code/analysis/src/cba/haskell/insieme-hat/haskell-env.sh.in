@@ -47,7 +47,8 @@ bin_path=$PATH
 is_third_party "$gmp_libs"  && prepend_lib_paths "$gmp_libs"
 is_third_party "$zlib_libs" && prepend_lib_paths "$zlib_libs"
 
-prepend_path bin_path "$(dirname "$ghc_exe")"
+is_third_party "$ghc_exe"   && prepend_path bin_path "$(dirname "$ghc_exe")"
+is_third_party "$cabal_exe" && prepend_path bin_path "$(dirname "$cabal_exe")"
 
 IFS=
 env -- PATH=$bin_path LD_LIBRARY_PATH=$ld_path LIBRARY_PATH=$lib_path ${cabal_home:+HOME=$cabal_home} "$@"
