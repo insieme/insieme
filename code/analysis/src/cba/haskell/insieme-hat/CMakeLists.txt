@@ -1,10 +1,13 @@
+file(GLOB_RECURSE INSIEME_HAT_SRCS insieme-hat.cabal *.hs *.chs)
 
 set(haskell_env sh ${CMAKE_BINARY_DIR}/haskell-env.sh)
-
 
 set(cabal ${haskell_env} ${CABAL_EXECUTABLE})
 set(runhaskell ${haskell_env} runhaskell)
 set(cabal_file ${CMAKE_CURRENT_SOURCE_DIR}/insieme-hat.cabal)
+
+get_target_property(INSIEME_CORE_SOURCE_DIR core SOURCE_DIR)
+
 
 list(APPEND HAT_PACKAGE_PATHS_LIST "${CMAKE_CURRENT_SOURCE_DIR}")
 
@@ -42,7 +45,12 @@ configure_file(cabal.project.local.in ${CMAKE_BINARY_DIR}/hat-profiling-project/
 
 configure_file(haskell-env.sh.in ${CMAKE_BINARY_DIR}/haskell-env.sh @ONLY)
 
-add_custom_target(insieme_hat
+# mostly for get_target_property in allscale-hat
+add_custom_target(insieme_hat ALL)
+
+add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libinsieme-hat.so
+
 	# Fix rebuilding of .chs files
 	COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_SOURCE_DIR}/src/Insieme/Inspire/IR/NodeType.chs"
 
@@ -59,7 +67,9 @@ add_custom_target(insieme_hat
 
 	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/hat-profiling-project"
 
-	BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/libinsieme-hat.so
+        DEPENDS ${INSIEME_HAT_SRCS}
+        DEPENDS ${INSIEME_CORE_SOURCE_DIR}/include/insieme/core/ir_nodes.def
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/cabal.project.in ${CMAKE_CURRENT_SOURCE_DIR}/cabal.project.local.in
 
 	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 
