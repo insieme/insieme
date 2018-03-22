@@ -96,6 +96,7 @@ endif()
 
 # Haskell dependency
 if(ANALYSIS_HASKELL)
+        add_dependencies(analysis insieme_hat)
 	target_link_libraries(analysis ${insieme_hat})
 endif()
 

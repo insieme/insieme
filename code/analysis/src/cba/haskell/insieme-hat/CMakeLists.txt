@@ -46,10 +46,10 @@ configure_file(cabal.project.local.in ${CMAKE_BINARY_DIR}/hat-profiling-project/
 configure_file(haskell-env.sh.in ${CMAKE_BINARY_DIR}/haskell-env.sh @ONLY)
 
 # mostly for get_target_property in allscale-hat
-add_custom_target(insieme_hat ALL)
+add_custom_target(insieme_hat DEPENDS libinsieme-hat.so)
 
 add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libinsieme-hat.so
+        OUTPUT libinsieme-hat.so
 
 	# Fix rebuilding of .chs files
 	COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_SOURCE_DIR}/src/Insieme/Inspire/IR/NodeType.chs"
