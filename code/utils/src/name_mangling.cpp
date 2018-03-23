@@ -251,7 +251,8 @@ namespace utils {
 
 		// for templates, remove arguments
 		auto firstTemplateArg = boost::find_first(ret, applyReplacements("<"));
-		if(!firstTemplateArg.empty()) {
+		auto endTemplateArg = boost::find_first(ret, applyReplacements(">"));
+		if(!firstTemplateArg.empty() && !endTemplateArg.empty() && firstTemplateArg < endTemplateArg) {
 			ret = string(ret.begin(), firstTemplateArg.begin()) + "_TI";
 		}
 
