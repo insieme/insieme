@@ -405,63 +405,23 @@ namespace omp {
 			return inside;
 		}
 
-		// beware! the darkness hath returned to prey upon innocent globals yet again
-		// will the frontend prevail?
-		// new and improved crazyness! does not directly implement accesses, replaces with variable
+		// handle threadprivate variables by replication
+		// beware less because literals are easy
 		// masterCopy -> return access expression for master copy of tp value
 		NodePtr handleThreadprivate(const NodePtr& node, bool masterCopy = false) {
-			//NamedValuePtr member = dynamic_pointer_cast<const NamedValue>(node);
-			//if(member) {
-			//	// cout << "%%%%%%%%%%%%%%%%%%\nMEMBER THREADPRIVATE:\n" << *member << "\n";
-			//	ExpressionPtr initExp = member->getValue();
-			//	StringValuePtr name = member->getName();
-			//	ExpressionPtr vInit = build.vectorInit(initExp, build.concreteIntTypeParam(MAX_THREADPRIVATE));
-			//	fixStructType = true;
-			//	return build.namedValue(name, vInit);
-			//}
 
-			//// prepare index expression
-			//ExpressionPtr indexExpr = build.castExpr(basic.getUInt8(), build.getThreadId());
-			//if(masterCopy) { indexExpr = build.literal(basic.getUInt8(), "0"); }
+			auto oldLit = node.isa<core::LiteralPtr>();
+			assert_true(oldLit) << "Threadprivate only expected on globals, but was on " << dumpReadable(node) << " of type " << node.getNodeType();
+			assert_true(core::lang::isReference(node)) << "Threadprivate global is expected to be a reference, but is " << dumpReadable(oldLit->getType());
 
-			//CallExprPtr call = node.isa<CallExprPtr>();
-			//if(call) {
-			//	// cout << "%%%%%%%%%%%%%%%%%%\nCALL THREADPRIVATE:\n" << *call << "\n";
-			//	assert(call->getFunctionExpr() == basic.getCompositeRefElem() && "Threadprivate not on composite ref elem access");
-			//	ExpressionList args = call->getArguments();
-			//	TypePtr elemType = core::analysis::getReferencedType(call->getType());
-			//	elemType = build.vectorType(elemType, build.concreteIntTypeParam(MAX_THREADPRIVATE));
-			//	CallExprPtr memAccess = build.callExpr(build.refType(elemType), basic.getCompositeRefElem(), args[0], args[1], build.getTypeLiteral(elemType));
-			//	ExpressionPtr accessExpr = build.arrayRefElem(memAccess, indexExpr);
-			//	if(masterCopy) { return accessExpr; }
-			//	// if not a master copy, optimize access
-			//	if(thisLambdaTPAccesses.find(accessExpr) != thisLambdaTPAccesses.end()) {
-			//		// repeated access, just use existing variable
-			//		return thisLambdaTPAccesses[accessExpr];
-			//	} else {
-			//		// new access, generate var and add to map
-			//		VariablePtr varP = build.variable(accessExpr->getType());
-			//		assert_eq(varP->getType()->getNodeType(), NT_RefType) << "Non-ref threadprivate!";
-			//		thisLambdaTPAccesses.insert(std::make_pair(accessExpr, varP));
-			//		return varP;
-			//	}
-			//}
-			//LiteralPtr literal = node.isa<LiteralPtr>();
-			//if(literal) {
-			//	// std::cout << "Encountered thread-private annotation at literal: " << *literal << " of type " << *literal->getType() << "\n";
-			//	assert_eq(literal->getType()->getNodeType(), NT_RefType);
-			//	// alter the type of the literal
-			//	TypePtr newType =
-			//	    build.refType(build.vectorType(core::analysis::getReferencedType(literal->getType()), build.concreteIntTypeParam(MAX_THREADPRIVATE)));
-			//	// create the new literal
-			//	LiteralPtr newLiteral = build.literal(literal->getValue(), newType);
-			//	// create an expression accessing the literal
-			//	ExpressionPtr accessExpr = build.arrayRefElem(newLiteral, indexExpr);
-			//	return accessExpr;
-			//}
-			//assert_fail() << "OMP threadprivate annotation on non-member / non-call / non-literal";
-			assert_not_implemented() << "OMP threadprivate not yet supported";
-			return NodePtr();
+			auto newType = build.refType(build.arrayType(core::analysis::getReferencedType(node), MAX_THREADPRIVATE));
+			ExpressionPtr indexExpr = build.castExpr(basic.getInt8(), build.getThreadId());
+			if(masterCopy) {
+				indexExpr = build.literal(basic.getInt8(), "0");
+			}
+			auto replacementLiteral = build.literal("omp_threadprivate_" + oldLit->getStringValue(), newType);
+			auto replacementExpr = build.arrayRefElem(replacementLiteral, indexExpr);
+			return replacementExpr;
 		}
 
 		// implements omp flush by generating INSPIRE flush() calls
@@ -910,6 +870,8 @@ namespace omp {
 		// everything has to run through the OMP sema mapper
 		OMPSemaMapper semaMapper(mgr);
 
+		core::IRBuilder build(mgr);
+
 		// resulting tu
 		core::tu::IRTranslationUnit res(mgr);
 
@@ -934,11 +896,23 @@ namespace omp {
 		for(auto& cur : unit.getGlobals()) {
 			ExpressionPtr newGlobal = semaMapper.map(cur.first.as<ExpressionPtr>());
 
-			// if it is an access to a thread-private value
-			//if(CallExprPtr call = newGlobal.isa<CallExprPtr>()) {
-			//	assert_true(core::analysis::isCallOf(call, mgr.getLangBasic().getVectorRefElem()));
-			//	newGlobal = call[0]; // take first argument
-			//}
+			// if it is an access to a threadprivate value
+			if(CallExprPtr call = newGlobal.isa<CallExprPtr>()) {
+				newGlobal = call->getArgument(0); // take first argument
+				auto initializer = (cur.second) ? semaMapper.map(cur.second) : cur.second;
+				// if there is an initializer, we need to initialize all threads' copies
+				if(initializer) {
+					core::ExpressionPtr innerInit = initializer;
+					// if we have an array initialization, we need to replace the memory location
+					if(auto initExpr = initializer.isa<core::InitExprPtr>()) {
+						innerInit = build.initExpr(core::lang::buildRefDecl(initExpr->getType()), initExpr->getInitDecls());
+					}
+					core::ExpressionList initExprs(MAX_THREADPRIVATE, innerInit);
+					initializer = build.initExpr(newGlobal, initExprs);
+				}
+				res.addGlobal(newGlobal.as<LiteralPtr>(), initializer);
+				continue;
+			}
 
 			// global locks are initialized by calls, should not have initializers here
 			if(parExt.isLock(core::analysis::getReferencedType(newGlobal))) {

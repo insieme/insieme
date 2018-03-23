@@ -72,5 +72,13 @@ namespace frontend {
 		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_this.cpp");
 	}
 
+	TEST(OpenMPConversion, Threadprivate) {
+		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_threadprivate.c");
+	}
+
+	TEST(OpenMPConversion, ThreadprivateInit) {
+		runOmpTestOn(FRONTEND_TEST_DIR "/inputs/omp/omp_threadprivate_init.c");
+	}
+
 } // fe namespace
 } // insieme namespace
