@@ -177,7 +177,10 @@ namespace compiler {
 			}
 		}
 		PCLOSE_WRAPPER(file);
-		if(paths.empty()) { std::cerr << "ATTENTION: No default include paths found. Terminal local language has to be set to en_XX.\n"; }
+		if(paths.empty()) {
+			std::cerr << "ATTENTION: No default include paths found.\nEnsure that the currently set backend compiler is working.\nTerminal local language has to be set to en_XX.\n";
+			std::cerr << "Failed command was: " << cmd << "\n";
+		}
 		return paths;
 	}
 
