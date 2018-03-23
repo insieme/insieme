@@ -60,6 +60,7 @@ import Foreign.C.Types
 import Foreign.CStorable
 import GHC.Generics (Generic)
 import System.IO.Unsafe (unsafePerformIO)
+import System.IO
 import System.Timeout (timeout)
 
 import qualified Data.ByteString.Char8 as BS8
@@ -160,6 +161,9 @@ initializeContext :: Ctx.CContext -> CString -> CSize -> IO (StablePtr Ctx.Conte
 -- | Create a new 'Ctx.Context' by providing a reference to a 'Ctx.CContext'
 -- and a binary dump (including size) of the relevant program.
 initializeContext context_c dump_c size_c = do
+    hSetBuffering stdout NoBuffering
+    hSetBuffering stderr NoBuffering
+
     dump <- BS8.packCStringLen (dump_c, fromIntegral size_c)
     let Right ir = BinPar.parseBinaryDump dump
     newStablePtr $ Ctx.mkContext context_c ir
