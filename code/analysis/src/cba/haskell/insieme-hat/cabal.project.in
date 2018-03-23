@@ -14,11 +14,13 @@ program-locations
 
 package insieme-hat
     ghc-options: -pgmc @HASKELL_C_COMPILER@ -pgml @HASKELL_C_COMPILER@ -pgma @HASKELL_C_COMPILER@ -optl-Wl,-rpath,@PROJECT_BINARY_DIR@/analysis:@PROJECT_BINARY_DIR@/annotations:@PROJECT_BINARY_DIR@/backend:@PROJECT_BINARY_DIR@/core:@PROJECT_BINARY_DIR@/common:@PROJECT_BINARY_DIR@/frontend:@PROJECT_BINARY_DIR@/transform:@PROJECT_BINARY_DIR@/utils
+    ghc-options: -j
     benchmarks: true
     tests: true
 
 package allscale-hat
     ghc-options: -pgmc @HASKELL_C_COMPILER@ -pgml @HASKELL_C_COMPILER@ -pgma @HASKELL_C_COMPILER@ -optl-Wl,-rpath,@PROJECT_BINARY_DIR@/analysis:@PROJECT_BINARY_DIR@/annotations:@PROJECT_BINARY_DIR@/backend:@PROJECT_BINARY_DIR@/core:@PROJECT_BINARY_DIR@/common:@PROJECT_BINARY_DIR@/frontend:@PROJECT_BINARY_DIR@/transform:@PROJECT_BINARY_DIR@/utils
+    ghc-options: -j
     benchmarks: true
     tests: true
 
