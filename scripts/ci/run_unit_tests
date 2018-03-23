@@ -12,4 +12,4 @@ cd "$BUILD_DIR"
 # Adjust resource restriction.
 ulimit -t 14400
 
-make test ARGS="-j $NPROC"
+ctest -j$NPROC --output-on-failure
