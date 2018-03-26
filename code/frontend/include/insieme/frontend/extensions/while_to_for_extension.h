@@ -61,9 +61,24 @@ namespace extensions {
 
 	// some helpers which may also be used elsewhere
 	namespace detail {
-		std::pair<bool, core::ExpressionPtr> mapToStep(core::NodePtr operation);
-		std::tuple<bool, core::ExpressionPtr, core::ExpressionPtr> mapToStart(core::VariablePtr var, core::NodePtr operation);
-		core::ExpressionPtr mapToEnd(core::VariablePtr var, core::ExpressionPtr operation);
+		struct MapToStepResult {
+			bool readOnly;
+			core::ExpressionPtr stepExpr;
+		};
+		MapToStepResult mapToStep(core::NodePtr operation);
+
+		struct MapToStartResult {
+			bool isValid;
+			core::ExpressionPtr lhs;
+			core::ExpressionPtr startExpr;
+		};
+		MapToStartResult mapToStart(core::VariablePtr var, core::NodePtr operation);
+
+		struct MapToendResult {
+			bool countingUp;
+			core::ExpressionPtr endExpr;
+		};
+		MapToendResult mapToEnd(core::VariablePtr var, core::ExpressionPtr operation);
 	}
 
 } // namespace extensions

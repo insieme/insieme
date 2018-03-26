@@ -81,8 +81,8 @@ namespace extensions {
 	namespace detail {
 		// tries to map a given operation (assignment or increment/decrement) to a step for an IR for loop
 		// returns (read/write, step expression)
-		std::pair<bool, core::ExpressionPtr> mapToStep(core::NodePtr operation) {
-			auto invalid = std::make_pair(false, core::ExpressionPtr());
+		MapToStepResult mapToStep(core::NodePtr operation) {
+			auto invalid = MapToStepResult{ false, core::ExpressionPtr() };
 
 			auto& mgr = operation->getNodeManager();
 			core::IRBuilder builder(mgr);
@@ -97,24 +97,24 @@ namespace extensions {
 			if(core::analysis::isRefType(litType)) litType = core::analysis::getReferencedType(litType); // for compPrefix cases
 
 			if(callee == compOpExt.getCompAssignAdd()) {
-				return std::make_pair(false, core::analysis::getArgument(operation, 1));
+				return { false, core::analysis::getArgument(operation, 1) };
 			} else if(callee == compOpExt.getCompAssignSubtract()) {
-				return std::make_pair(false, builder.sub(builder.literal("0", litType), core::analysis::getArgument(operation, 1)));
+				return { false, builder.sub(builder.literal("0", litType), core::analysis::getArgument(operation, 1)) };
 			} else if(rMod.isGenPreInc(callee) || rMod.isGenPostInc(callee) || callee == compOpExt.getCompPrefixInc()) {
-				return std::make_pair(false, builder.literal("1", litType));
+				return { false, builder.literal("1", litType) };
 			} else if(rMod.isGenPreDec(callee) || rMod.isGenPostDec(callee) || callee == compOpExt.getCompPrefixDec()) {
-				return std::make_pair(false, builder.literal("-1", litType));
+				return { false, builder.literal("-1", litType) };
 			} else if(callee == rMod.getRefDeref()) {
 				// just a read, we can ignore this
-				return std::make_pair(true, core::ExpressionPtr());
+				return { true, core::ExpressionPtr() };
 			}
 			return invalid;
 		}
 
 		// tries to map a given operation (declaration or assignment) to a start expr for an IR for loop
 		// returns (valid, lhs, start expression)
-		std::tuple<bool, core::ExpressionPtr, core::ExpressionPtr> mapToStart(core::VariablePtr var, core::NodePtr operation) {
-			auto invalid = std::make_tuple(false, core::ExpressionPtr(), core::ExpressionPtr());
+		MapToStartResult mapToStart(core::VariablePtr var, core::NodePtr operation) {
+			auto invalid = MapToStartResult{ false, core::ExpressionPtr(), core::ExpressionPtr() };
 
 			auto& mgr = operation->getNodeManager();
 			core::IRBuilder builder(mgr);
@@ -137,8 +137,8 @@ namespace extensions {
 		}
 
 		// tries to map a given operation (conditional) to an end expr for an IR for loop
-		core::ExpressionPtr mapToEnd(core::VariablePtr var, core::ExpressionPtr operation) {
-			auto invalid = core::ExpressionPtr();
+		MapToendResult mapToEnd(core::VariablePtr var, core::ExpressionPtr operation) {
+			auto invalid = MapToendResult{ true, core::ExpressionPtr() };
 
 			auto& mgr = operation->getNodeManager();
 			core::IRBuilder builder(mgr);
@@ -168,12 +168,12 @@ namespace extensions {
 			// now check type of comparison
 			if(basic.isSignedIntNe(callee) || basic.isUnsignedIntNe(callee) || basic.isCharNe(callee) || basic.isSignedIntLt(callee)
 			   || basic.isUnsignedIntLt(callee) || basic.isCharLt(callee)) {
-				return builder.numericCast(rhs, rhsType);
+				return { true, builder.numericCast(rhs, rhsType) };
 			} else if(basic.isSignedIntGt(callee) || basic.isUnsignedIntGt(callee) || basic.isCharGt(callee)) {
 				// don't handle these for now, complex to say for certain what to do in all cases
 				return invalid;
 			} else if(basic.isSignedIntLe(callee) || basic.isUnsignedIntLe(callee) || basic.isCharLe(callee)) {
-				return builder.numericCast(builder.add(rhs, builder.literal("1", rhs->getType())), rhsType);
+				return { true, builder.numericCast(builder.add(rhs, builder.literal("1", rhs->getType())), rhsType) };
 			} else if(basic.isSignedIntGe(callee) || basic.isUnsignedIntGe(callee) || basic.isCharGe(callee)) {
 				//return builder.numericCast(builder.sub(rhs, builder.literal("1", rhs->getType())), rhsType);
 				// don't handle these for now, complex to say for certain what to do in all cases
@@ -306,10 +306,10 @@ namespace extensions {
 					if(var == cvar && varA.getDepth()>2) {
 						// check if it's a write
 						auto varParent = varA.getParentNode(2);
-						auto convertedPair = detail::mapToStep(varParent);
-						if(convertedPair.second && !convertedPair.first) {
-							if(writeStepExpr && convertedPair.second != writeStepExpr) writeStepExprsAreTheSame = false;
-							writeStepExpr = convertedPair.second;
+						auto stepResult = detail::mapToStep(varParent);
+						if(stepResult.stepExpr && !stepResult.readOnly) {
+							if(writeStepExpr && stepResult.stepExpr != writeStepExpr) writeStepExprsAreTheSame = false;
+							writeStepExpr = stepResult.stepExpr;
 							core::NodeAddress parentAddr;
 							// compound assignment operations are enclosed in an additional refDeref. We have to consider this here
 							if(varA.getDepth()>4) {
@@ -358,18 +358,18 @@ namespace extensions {
 				/////////////////////////////////////////////////////////////////////////////////////// figuring out start
 
 				auto convertedStart = detail::mapToStart(cvar, pred);
-				VLOG(1) << "StartPair: " << std::get<0>(convertedStart) << " // " << std::get<1>(convertedStart) << " // " << std::get<2>(convertedStart) << "\n";
+				VLOG(1) << "StartPair: " << convertedStart.isValid << " // " << convertedStart.lhs << " // " << convertedStart.startExpr << "\n";
 
 				// bail if no valid start found
-				if(!std::get<0>(convertedStart)) return original;
+				if(!convertedStart.isValid) return original;
 
 				/////////////////////////////////////////////////////////////////////////////////////// figuring out end
 
 				auto convertedEnd = detail::mapToEnd(cvar, condition);
-				VLOG(1) << "End: " << convertedEnd << "\n";
+				VLOG(1) << "End: " << convertedEnd.endExpr << "\n";
 
 				// bail if no valid end found
-				if(!convertedEnd) return original;
+				if(!convertedEnd.endExpr) return original;
 
 				/////////////////////////////////////////////////////////////////////////////////////// build the for
 
@@ -393,7 +393,7 @@ namespace extensions {
 				VLOG(1) << "oldLoopVarFree: " << oldLoopVarFree << " // " << "free vars: " << core::analysis::getFreeVariables(newBody) << "\n";
 				if(oldLoopVarFree) return original;
 
-				auto forStmt = builder.forStmt(forVar, std::get<2>(convertedStart), convertedEnd, convertedStepExpr, newBody);
+				auto forStmt = builder.forStmt(forVar, convertedStart.startExpr, convertedEnd.endExpr, convertedStepExpr, newBody);
 				core::transform::utils::migrateAnnotations(whileAddr.getAddressedNode(), forStmt);
 				VLOG(1) << "======> FOR:\n" << dumpColor(forStmt);
 
@@ -404,7 +404,7 @@ namespace extensions {
 				/////////////////////////////////////////////////////////////////////////////////////// check if post assignment is mandatory
 				auto usedAfterLoop = isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), pred, cvar);
 				if(usedAfterLoop) {
-					stmtlist.push_back(getPostCondition(cvar, std::get<2>(convertedStart), convertedEnd, convertedStepExpr));
+					stmtlist.push_back(getPostCondition(cvar, convertedStart.startExpr, convertedEnd.endExpr, convertedStepExpr));
 				}
 
 				/////////////////////////////////////////////////////////////////////////////////////// remove declaration if we can

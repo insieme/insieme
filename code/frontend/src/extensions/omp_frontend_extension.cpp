@@ -724,9 +724,9 @@ namespace extensions {
 		const auto convertedInit = converter.convertStmt(forStmt->getInit());
 		const auto mappedInit = detail::mapToStart({}, convertedInit);
 		// we extract the left hand, which has to be a variable for us to proceed, as well as the initialization
-		const auto& originalIteratorVar = std::get<1>(mappedInit).isa<core::VariablePtr>();
+		const auto& originalIteratorVar = mappedInit.lhs.isa<core::VariablePtr>();
 		if(!originalIteratorVar) return {};
-		const auto& originalIteratorInit = std::get<2>(mappedInit);
+		const auto& originalIteratorInit = mappedInit.startExpr;
 
 		// we now construct a new declaration, as we must not declare a variable of ref type in the for loop
 		const auto originalIteratorVarType = originalIteratorVar->getType();
@@ -746,12 +746,12 @@ namespace extensions {
 			convertedCondition = core::analysis::getArgument(convertedCondition, 0);
 		}
 		const auto mappedCondition = detail::mapToEnd(originalIteratorVar, convertedCondition);
-		if(!mappedCondition) return {};
+		if(!mappedCondition.endExpr) return {};
 		if(refExt.isCallOfRefDeref(convertedStep)) {
 			convertedStep = core::analysis::getArgument(convertedStep, 0);
 		}
 		const auto mappedStep = detail::mapToStep(convertedStep);
-		if(mappedStep.first || !mappedStep.second) return {};
+		if(mappedStep.readOnly || !mappedStep.stepExpr) return {};
 
 		// insert a new local variable declaration into the body and initialize it with the new iterator variable.
 		// then we replace the original iterator variable with this newly created variable
@@ -775,7 +775,7 @@ namespace extensions {
 		if(core::analysis::hasFreeBreakStatement(newBody) || core::analysis::hasFreeReturnStatement(newBody)) return {};
 
 		// finally, we can build the loop
-		return { builder.forStmt(newIteratorVarDecl, mappedCondition, mappedStep.second, newBody) };
+		return { builder.forStmt(newIteratorVarDecl, mappedCondition.endExpr, mappedStep.stepExpr, newBody) };
 	}
 
 	/**
