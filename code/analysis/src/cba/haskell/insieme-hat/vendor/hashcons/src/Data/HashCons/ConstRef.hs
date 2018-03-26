@@ -41,6 +41,5 @@ newConstRef x = CR <$> newIORef x
 -- | Read the value of a 'ConstRef'.
 readConstRef :: ConstRef a -> a
 readConstRef (CR r) = unsafeDupablePerformIO $ readIORef r
-{-# INLINE readConstRef #-}
 
 instance MkWeak (ConstRef a) where mkWeak (CR r) = mkWeak r
