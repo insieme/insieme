@@ -58,9 +58,10 @@ namespace extensions {
 
 	  public:
 		OmpFrontendExtension();
-		virtual FlagHandler registerFlag(boost::program_options::options_description& options);
-		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu);
-		virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
+		virtual FlagHandler registerFlag(boost::program_options::options_description& options) override;
+		virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& converter) override;
+		virtual core::tu::IRTranslationUnit IRVisit(core::tu::IRTranslationUnit& tu) override;
+		virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog) override;
 	};
 
 } // end namespace extensions

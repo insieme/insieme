@@ -78,7 +78,7 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-	namespace {
+	namespace detail {
 		// tries to map a given operation (assignment or increment/decrement) to a step for an IR for loop
 		// returns (read/write, step expression)
 		std::pair<bool, core::ExpressionPtr> mapToStep(core::NodePtr operation) {
@@ -112,9 +112,9 @@ namespace extensions {
 		}
 
 		// tries to map a given operation (declaration or assignment) to a start expr for an IR for loop
-		// returns (valid, start expression)
-		std::pair<bool, core::ExpressionPtr> mapToStart(core::VariablePtr var, core::NodePtr operation) {
-			auto invalid = std::make_pair(false, core::ExpressionPtr());
+		// returns (valid, lhs, start expression)
+		std::tuple<bool, core::ExpressionPtr, core::ExpressionPtr> mapToStart(core::VariablePtr var, core::NodePtr operation) {
+			auto invalid = std::make_tuple(false, core::ExpressionPtr(), core::ExpressionPtr());
 
 			auto& mgr = operation->getNodeManager();
 			core::IRBuilder builder(mgr);
@@ -122,17 +122,16 @@ namespace extensions {
 
 			// first check if declaration
 			if(auto decl = operation.isa<core::DeclarationStmtPtr>()) {
-				return std::make_pair(decl->getVariable() == var, decl->getInitialization());
+				return { decl->getVariable() == var, decl->getVariable(), decl->getInitialization() };
 			}
 
 			// otherwise assignment call
-			auto call = operation.as<core::CallExprPtr>();
+			auto call = operation.isa<core::CallExprPtr>();
 			if(!call) return invalid;
 			auto callee = call->getFunctionExpr();
 			if(callee == fMod.getCStyleAssignment() || callee == fMod.getCxxStyleAssignment()) {
 				auto lhs = call->getArgument(0);
-				if(lhs != var) return invalid;
-				return std::make_pair(true, call->getArgument(1));
+				return { lhs == var, lhs, call->getArgument(1) };
 			}
 			return invalid;
 		}
@@ -148,8 +147,8 @@ namespace extensions {
 
 			// operation needs to be a call and have 2 arguments
 			auto callExpr = operation.isa<core::CallExprPtr>();
-			auto callee = callExpr->getFunctionExpr();
 			if(!callExpr || callExpr->getNumArguments() != 2) return invalid;
+			auto callee = callExpr->getFunctionExpr();
 
 			auto lhs = callExpr->getArgument(0).isa<core::CallExprPtr>();
 			auto rhs = callExpr->getArgument(1);
@@ -184,6 +183,9 @@ namespace extensions {
 			return invalid;
 		}
 
+	} // detail namespace
+
+	namespace {
 		core::NodePtr removeNoopsFromCompound(const core::NodePtr& ptr) {
 			auto comp = ptr.isa<core::CompoundStmtPtr>();
 			if(!comp) return ptr;
@@ -304,7 +306,7 @@ namespace extensions {
 					if(var == cvar && varA.getDepth()>2) {
 						// check if it's a write
 						auto varParent = varA.getParentNode(2);
-						auto convertedPair = mapToStep(varParent);
+						auto convertedPair = detail::mapToStep(varParent);
 						if(convertedPair.second && !convertedPair.first) {
 							if(writeStepExpr && convertedPair.second != writeStepExpr) writeStepExprsAreTheSame = false;
 							writeStepExpr = convertedPair.second;
@@ -355,15 +357,15 @@ namespace extensions {
 
 				/////////////////////////////////////////////////////////////////////////////////////// figuring out start
 
-				auto convertedStartPair = mapToStart(cvar, pred);
-				VLOG(1) << "StartPair: " << convertedStartPair.first << " // " << convertedStartPair.second << "\n";
+				auto convertedStart = detail::mapToStart(cvar, pred);
+				VLOG(1) << "StartPair: " << std::get<0>(convertedStart) << " // " << std::get<1>(convertedStart) << " // " << std::get<2>(convertedStart) << "\n";
 
 				// bail if no valid start found
-				if(!convertedStartPair.first) return original;
+				if(!std::get<0>(convertedStart)) return original;
 
 				/////////////////////////////////////////////////////////////////////////////////////// figuring out end
 
-				auto convertedEnd = mapToEnd(cvar, condition);
+				auto convertedEnd = detail::mapToEnd(cvar, condition);
 				VLOG(1) << "End: " << convertedEnd << "\n";
 
 				// bail if no valid end found
@@ -391,7 +393,7 @@ namespace extensions {
 				VLOG(1) << "oldLoopVarFree: " << oldLoopVarFree << " // " << "free vars: " << core::analysis::getFreeVariables(newBody) << "\n";
 				if(oldLoopVarFree) return original;
 
-				auto forStmt = builder.forStmt(forVar, convertedStartPair.second, convertedEnd, convertedStepExpr, newBody);
+				auto forStmt = builder.forStmt(forVar, std::get<2>(convertedStart), convertedEnd, convertedStepExpr, newBody);
 				core::transform::utils::migrateAnnotations(whileAddr.getAddressedNode(), forStmt);
 				VLOG(1) << "======> FOR:\n" << dumpColor(forStmt);
 
@@ -402,7 +404,7 @@ namespace extensions {
 				/////////////////////////////////////////////////////////////////////////////////////// check if post assignment is mandatory
 				auto usedAfterLoop = isUsedAfterLoop(original->getStatements(), whileAddr.getAddressedNode(), pred, cvar);
 				if(usedAfterLoop) {
-					stmtlist.push_back(getPostCondition(cvar, convertedStartPair.second, convertedEnd, convertedStepExpr));
+					stmtlist.push_back(getPostCondition(cvar, std::get<2>(convertedStart), convertedEnd, convertedStepExpr));
 				}
 
 				/////////////////////////////////////////////////////////////////////////////////////// remove declaration if we can

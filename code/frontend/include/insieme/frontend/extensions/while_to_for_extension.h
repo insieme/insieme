@@ -59,6 +59,13 @@ namespace extensions {
 
 	};
 
+	// some helpers which may also be used elsewhere
+	namespace detail {
+		std::pair<bool, core::ExpressionPtr> mapToStep(core::NodePtr operation);
+		std::tuple<bool, core::ExpressionPtr, core::ExpressionPtr> mapToStart(core::VariablePtr var, core::NodePtr operation);
+		core::ExpressionPtr mapToEnd(core::VariablePtr var, core::ExpressionPtr operation);
+	}
+
 } // namespace extensions
 } // frontend
 } // insieme

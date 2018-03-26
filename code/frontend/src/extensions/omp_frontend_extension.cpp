@@ -46,9 +46,13 @@
 #include "insieme/core/lang/reference.h"
 #include "insieme/core/lang/parallel.h"
 
+#include "insieme/frontend/clang.h"
+#include "insieme/frontend/converter.h"
+#include "insieme/frontend/extensions/while_to_for_extension.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/frontend/pragma/matcher.h"
+#include "insieme/frontend/utils/frontend_inspire_module.h"
 
 #include "insieme/utils/config.h"
 
@@ -392,7 +396,7 @@ namespace extensions {
 
 	OmpFrontendExtension::OmpFrontendExtension() : flagActivated(false) {
 		// Add the required header and macro definitions
-		kidnappedHeaders.push_back(utils::getInsiemeSourceRootDir() + "frontend/include/insieme/frontend/omp/input/");
+		kidnappedHeaders.push_back(insieme::utils::getInsiemeSourceRootDir() + "frontend/include/insieme/frontend/omp/input/");
 		macros.insert(std::make_pair("_OPENMP", ""));
 
 		// attach pragmas to first suitable loop
@@ -403,14 +407,14 @@ namespace extensions {
 			for(auto& node : nodes) {
 				core::StatementPtr stmt = node.as<core::StatementPtr>();
 
-				core::StatementAddress foundWhile;
-				visitDepthFirstOnceInterruptible(core::NodeAddress(stmt), [&](const core::WhileStmtAddress& whileAddr) {
-					foundWhile = whileAddr;
+				core::StatementAddress foundFor;
+				visitDepthFirstOnceInterruptible(core::NodeAddress(stmt), [&](const core::ForStmtAddress& whileAddr) {
+					foundFor = whileAddr;
 					return true;
 				});
-				if(foundWhile != core::NodeAddress()) {
-					auto whileNode = foundWhile.getAddressedNode();
-					node = core::transform::replaceAddress(node->getNodeManager(), foundWhile, getMarkedNode(whileNode, anns)).getRootNode();
+				if(foundFor != core::NodeAddress()) {
+					auto whileNode = foundFor.getAddressedNode();
+					node = core::transform::replaceAddress(node->getNodeManager(), foundFor, getMarkedNode(whileNode, anns)).getRootNode();
 					return nodes;
 				}
 			}
@@ -694,6 +698,85 @@ namespace extensions {
 			})));
 	}
 
+
+	/**
+	 * We are converting C(++) for loops directly to IR for loops, if they are also OpenMP for loops
+	 */
+	stmtutils::StmtWrapper OmpFrontendExtension::Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& converter) {
+		auto& builder = converter.getIRBuilder();
+		const auto& refExt = converter.getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
+		const auto& frontendExt = converter.getNodeManager().getLangExtension<frontend::utils::FrontendInspireModule>();
+
+		// we only intercept for loops
+		const auto forStmt = llvm::dyn_cast<clang::ForStmt>(stmt);
+		if(!forStmt) return {};
+
+		// we only handle loops, which have an omp parallel or omp for pragma attached
+		const auto pragmaRange = pragma::getPragmasForNode(stmt, converter);
+		if(!::any(pragmaRange.first, pragmaRange.second, [](const pragma::PragmaStmtMap::StmtMap::value_type& pragma) {
+							return pragma.second->getType() == "omp::parallel" || pragma.second->getType() == "omp::for";
+						})) return {};
+
+		// we can only continue converting to an IR loop if we have all the elements
+		if(!forStmt->getInit() || !forStmt->getCond() || !forStmt->getInc() || !forStmt->getBody()) return {};
+
+		// the initialization can be a declaration statement or an assignment
+		const auto convertedInit = converter.convertStmt(forStmt->getInit());
+		const auto mappedInit = detail::mapToStart({}, convertedInit);
+		// we extract the left hand, which has to be a variable for us to proceed, as well as the initialization
+		const auto& originalIteratorVar = std::get<1>(mappedInit).isa<core::VariablePtr>();
+		if(!originalIteratorVar) return {};
+		const auto& originalIteratorInit = std::get<2>(mappedInit);
+
+		// we now construct a new declaration, as we must not declare a variable of ref type in the for loop
+		const auto originalIteratorVarType = originalIteratorVar->getType();
+		if(!core::analysis::isRefType(originalIteratorVarType)) return {};
+		const auto& newIteratorVarType = core::analysis::getReferencedType(originalIteratorVarType);
+		if(!builder.getLangBasic().isInt(newIteratorVarType)) return {};
+		const auto newIteratorVar = builder.variable(newIteratorVarType);
+		const auto newIteratorVarDecl = builder.declarationStmt(newIteratorVar,
+				core::analysis::isRefType(originalIteratorInit) ? builder.deref(originalIteratorInit) : originalIteratorInit);
+
+		// convert the condition and step
+		auto convertedCondition = converter.convertExpr(forStmt->getCond());
+		auto convertedStep = converter.convertExpr(forStmt->getInc());
+
+		//transform the condition and step to match our new iterator variable declaration
+		if(frontendExt.isCallOfBoolToInt(convertedCondition)) {
+			convertedCondition = core::analysis::getArgument(convertedCondition, 0);
+		}
+		const auto mappedCondition = detail::mapToEnd(originalIteratorVar, convertedCondition);
+		if(!mappedCondition) return {};
+		if(refExt.isCallOfRefDeref(convertedStep)) {
+			convertedStep = core::analysis::getArgument(convertedStep, 0);
+		}
+		const auto mappedStep = detail::mapToStep(convertedStep);
+		if(mappedStep.first || !mappedStep.second) return {};
+
+		// insert a new local variable declaration into the body and initialize it with the new iterator variable.
+		// then we replace the original iterator variable with this newly created variable
+		// Note that we don't need to restore the state of the original iterator variable for the outside world, as this isn't needed for OpenMP loops
+		core::StatementList stmts;
+		auto newLocalIteratorVar = builder.variable(originalIteratorVarType);
+		stmts.push_back(builder.declarationStmt(newLocalIteratorVar, newIteratorVar));
+		// convert the body
+		auto convertedBody = converter.convertStmt(forStmt->getBody());
+		// replace iterator variable
+		convertedBody = core::transform::replaceAllGen(convertedBody.getNodeManager(), convertedBody, originalIteratorVar, newLocalIteratorVar);
+		// append the now transformed body to the new body
+		if(const auto& compound = convertedBody.isa<core::CompoundStmtPtr>()) {
+			stmts.insert(stmts.end(), compound.getStatements().cbegin(), compound.getStatements().cend());
+		} else {
+			stmts.push_back(convertedBody);
+		}
+		auto newBody = builder.compoundStmt(stmts);
+
+		// check for free break and return statements in the body
+		if(core::analysis::hasFreeBreakStatement(newBody) || core::analysis::hasFreeReturnStatement(newBody)) return {};
+
+		// finally, we can build the loop
+		return { builder.forStmt(newIteratorVarDecl, mappedCondition, mappedStep.second, newBody) };
+	}
 
 	/**
 	 *  Insieme frontend extension IR visitor. This needs to be done to find all thread_private variables.
