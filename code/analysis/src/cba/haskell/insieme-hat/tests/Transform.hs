@@ -44,19 +44,42 @@ import Insieme.Inspire.IR.Tree
 import Insieme.Inspire.IR.NodeType
 import Test.Tasty
 import Test.Tasty.HUnit
-import TreeUtils
+import TestUtils
 
 import Text.Show.Pretty
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Maybe
 
+nil n = n []
 
 ex1, ex1_disj, ex1_subst :: ([Tree] -> Tree) -> Tree
 ex1 n = n [ nil n, nil n, nil n ]
 ex1_disj n = n [ nil n, nil n, nil n, nil n ]
 ex1_subst n =
     nodeWithBuiltinTags [ ex1 n, ex1 n, ex1 n ] []
+
+node ch = mkNode (IntValue 0) ch ["dummy"]
+nodeWithBuiltinTags ch bt = mkNode (IntValue 0) ch bt
+
+-- | Assert node equality using constant time HashCons equality
+(@?~) :: Tree -> Tree -> Assertion
+a @?~ b = (a == b) @? msg (unTree a) (unTree b)
+
+(@?===) :: Tree -> Tree -> Assertion
+(unTree -> a) @?=== (unTree -> b) = (a == b) @? msg a b
+
+msg :: Tree' -> Tree' -> String
+msg a b =
+    "expected:\n"++simplShow 0 b++"\ngot:\n"++simplShow 0 a++"\n"++
+    "expected:\n"++ppShow b++"\ngot:\n"++ppShow a++"\n"
+
+-- | Show a simplified graphical representation of a node
+simplShow :: Int -> Tree' -> String
+simplShow d (Tree' _ ch bt) =
+    "|"++replicate (4*d) ' ' ++ "o " ++ (case bt of ["dummy"] -> ""; _ -> show bt) ++ "\n" ++
+    (concat $ map (simplShow (d+1)) $ map unTree ch)
+
 
 -- | Singleton substitution
 a |-> b = HashMap.fromList [(a,b)]

@@ -37,7 +37,7 @@
 
 {-# LANGUAGE ViewPatterns #-}
 
-module TreeUtils where
+module TestUtils where
 
 import Insieme.Inspire
 import Test.Tasty
@@ -47,26 +47,3 @@ import Text.Show.Pretty
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
-
-nil n = n []
-
-node ch = mkNode (IntValue 0) ch ["dummy"]
-nodeWithBuiltinTags ch bt = mkNode (IntValue 0) ch bt
-
--- | Assert node equality using constant time HashCons equality
-(@?~) :: Tree -> Tree -> Assertion
-a @?~ b = (a == b) @? msg (unTree a) (unTree b)
-
-(@?===) :: Tree -> Tree -> Assertion
-(unTree -> a) @?=== (unTree -> b) = (a == b) @? msg a b
-
-msg :: Tree' -> Tree' -> String
-msg a b =
-    "expected:\n"++simplShow 0 b++"\ngot:\n"++simplShow 0 a++"\n"++
-    "expected:\n"++ppShow b++"\ngot:\n"++ppShow a++"\n"
-
--- | Show a simplified graphical representation of a node
-simplShow :: Int -> Tree' -> String
-simplShow d (Tree' _ ch bt) =
-    "|"++replicate (4*d) ' ' ++ "o " ++ (case bt of ["dummy"] -> ""; _ -> show bt) ++ "\n" ++
-    (concat $ map (simplShow (d+1)) $ map unTree ch)
