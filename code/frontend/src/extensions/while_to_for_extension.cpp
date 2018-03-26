@@ -137,8 +137,9 @@ namespace extensions {
 		}
 
 		// tries to map a given operation (conditional) to an end expr for an IR for loop
-		MapToendResult mapToEnd(core::VariablePtr var, core::ExpressionPtr operation) {
-			auto invalid = MapToendResult{ true, core::ExpressionPtr() };
+		// returns (lessThanOrEquals, endExpr)
+		MapToEndResult mapToEnd(core::VariablePtr var, core::ExpressionPtr operation) {
+			auto invalid = MapToEndResult{ true, core::ExpressionPtr() };
 
 			auto& mgr = operation->getNodeManager();
 			core::IRBuilder builder(mgr);
@@ -170,14 +171,11 @@ namespace extensions {
 			   || basic.isUnsignedIntLt(callee) || basic.isCharLt(callee)) {
 				return { true, builder.numericCast(rhs, rhsType) };
 			} else if(basic.isSignedIntGt(callee) || basic.isUnsignedIntGt(callee) || basic.isCharGt(callee)) {
-				// don't handle these for now, complex to say for certain what to do in all cases
-				return invalid;
+				return { false, builder.numericCast(rhs, rhsType) };
 			} else if(basic.isSignedIntLe(callee) || basic.isUnsignedIntLe(callee) || basic.isCharLe(callee)) {
 				return { true, builder.numericCast(builder.add(rhs, builder.literal("1", rhs->getType())), rhsType) };
 			} else if(basic.isSignedIntGe(callee) || basic.isUnsignedIntGe(callee) || basic.isCharGe(callee)) {
-				//return builder.numericCast(builder.sub(rhs, builder.literal("1", rhs->getType())), rhsType);
-				// don't handle these for now, complex to say for certain what to do in all cases
-				return invalid;
+				return { false, builder.numericCast(builder.add(rhs, builder.literal("1", rhs->getType())), rhsType) };
 			}
 
 			return invalid;
@@ -368,8 +366,8 @@ namespace extensions {
 				auto convertedEnd = detail::mapToEnd(cvar, condition);
 				VLOG(1) << "End: " << convertedEnd.endExpr << "\n";
 
-				// bail if no valid end found
-				if(!convertedEnd.endExpr) return original;
+				// bail if no valid end found or we compare with greater than/equals
+				if(!convertedEnd.lessThanOrEquals || !convertedEnd.endExpr) return original;
 
 				/////////////////////////////////////////////////////////////////////////////////////// build the for
 

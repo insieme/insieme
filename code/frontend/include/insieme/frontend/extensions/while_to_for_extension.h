@@ -74,11 +74,11 @@ namespace extensions {
 		};
 		MapToStartResult mapToStart(core::VariablePtr var, core::NodePtr operation);
 
-		struct MapToendResult {
-			bool countingUp;
+		struct MapToEndResult {
+			bool lessThanOrEquals;
 			core::ExpressionPtr endExpr;
 		};
-		MapToendResult mapToEnd(core::VariablePtr var, core::ExpressionPtr operation);
+		MapToEndResult mapToEnd(core::VariablePtr var, core::ExpressionPtr operation);
 	}
 
 } // namespace extensions
