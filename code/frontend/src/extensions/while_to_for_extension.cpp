@@ -96,8 +96,10 @@ namespace extensions {
 			auto litType = call->getType();
 			if(core::analysis::isRefType(litType)) litType = core::analysis::getReferencedType(litType); // for compPrefix cases
 
-			if(callee == compOpExt.getCompAssignAdd() || callee == compOpExt.getCompAssignSubtract()) {
+			if(callee == compOpExt.getCompAssignAdd()) {
 				return std::make_pair(false, core::analysis::getArgument(operation, 1));
+			} else if(callee == compOpExt.getCompAssignSubtract()) {
+				return std::make_pair(false, builder.sub(builder.literal("0", litType), core::analysis::getArgument(operation, 1)));
 			} else if(rMod.isGenPreInc(callee) || rMod.isGenPostInc(callee) || callee == compOpExt.getCompPrefixInc()) {
 				return std::make_pair(false, builder.literal("1", litType));
 			} else if(rMod.isGenPreDec(callee) || rMod.isGenPostDec(callee) || callee == compOpExt.getCompPrefixDec()) {

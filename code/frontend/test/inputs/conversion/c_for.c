@@ -35,6 +35,7 @@
  * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  */
 
+
 int g_bla = 10;
 
 #define N 10
@@ -64,6 +65,13 @@ int main() {
 	#pragma test expect_ir("{{ for(int<4> v1 = 2 .. 5+1 : 5) { v1; }; }}")
 	{
 		for(int k = 2; k <= 5; k+=5) {
+			k;
+		}
+	}
+
+	#pragma test expect_ir("{{ for(int<4> v1 = 2 .. 5+1 : 0 - -5) { v1; }; }}")
+	{
+		for(int k = 2; k <= 5; k-=-5) {
 			k;
 		}
 	}
