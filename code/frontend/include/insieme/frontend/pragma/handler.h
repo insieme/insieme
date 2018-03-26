@@ -309,6 +309,8 @@ namespace pragma {
 	};
 
 	// Handle the processing of pragmas in extensions
+	typedef PragmaStmtMap::StmtMap::const_iterator PragmaStmtIter;
+	std::pair<PragmaStmtIter, PragmaStmtIter> getPragmasForNode(const clang::Stmt* clangNode, conversion::Converter& fact);
 	core::NodeList handlePragmas(const core::NodeList& nodes, const clang::Stmt* clangNode, conversion::Converter& fact);
 	core::NodeList handlePragmas(const core::NodeList& nodes, const clang::Decl* clangDecl, conversion::Converter& fact);
 

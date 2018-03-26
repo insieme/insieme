@@ -100,10 +100,15 @@ namespace pragma {
 	}
 
 
+	typedef PragmaStmtMap::StmtMap::const_iterator PragmaStmtIter;
+
+	std::pair<PragmaStmtIter, PragmaStmtIter> getPragmasForNode(const clang::Stmt* clangNode, conversion::Converter& fact) {
+		// Get the list of pragmas attached to the clang node
+		return fact.getPragmaMap().getStatementMap().equal_range(clangNode);
+	}
+
 	core::NodeList handlePragmas(const core::NodeList& nodes, const clang::Stmt* clangNode, conversion::Converter& fact) {
 		const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
-
-		typedef PragmaStmtMap::StmtMap::const_iterator PragmaStmtIter;
 
 		// Get the list of pragmas attached to the clang node
 		std::pair<PragmaStmtIter, PragmaStmtIter>&& iter = pragmaStmtMap.equal_range(clangNode);
