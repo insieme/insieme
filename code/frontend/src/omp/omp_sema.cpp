@@ -120,6 +120,7 @@ namespace omp {
 
 	class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 		NodeManager& nodeMan;
+		const core::tu::IRTranslationUnit::GlobalsList& globals;
 		IRBuilder build;
 		const lang::BasicGenerator& basic;
 		const lang::ParallelExtension& parExt;
@@ -135,8 +136,8 @@ namespace omp {
 		int nameSuffix;
 
 	  public:
-		OMPSemaMapper(NodeManager& nodeMan)
-			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()),
+		OMPSemaMapper(NodeManager& nodeMan, const core::tu::IRTranslationUnit::GlobalsList& globals)
+			: nodeMan(nodeMan), globals(globals), build(nodeMan), basic(nodeMan.getLangBasic()), parExt(nodeMan.getLangExtension<lang::ParallelExtension>()),
 			  refExt(nodeMan.getLangExtension<lang::ReferenceExtension>()), toFlatten(),
 			  orderedCountLit(build.literal("ordered_counter", build.refType(basic.getInt8(), false, true))),
 			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())),
@@ -414,7 +415,18 @@ namespace omp {
 			assert_true(oldLit) << "Threadprivate only expected on globals, but was on " << dumpReadable(node) << " of type " << node.getNodeType();
 			assert_true(core::lang::isReference(node)) << "Threadprivate global is expected to be a reference, but is " << dumpReadable(oldLit->getType());
 
-			auto newType = build.refType(build.arrayType(core::analysis::getReferencedType(node), MAX_THREADPRIVATE));
+			auto innerType = core::analysis::getReferencedType(node);
+			// lookup the init type for this global in the global map. If we find it there, we take that as element type for the new array type
+			for(const auto& pair : globals) {
+				if(pair.first == oldLit) {
+					const auto initType = pair.second->getType();
+					if(core::lang::isReference(initType) && core::lang::isArray(core::analysis::getReferencedType(initType))) {
+						innerType = core::analysis::getReferencedType(initType);
+						break;
+					}
+				}
+			}
+			auto newType = build.refType(build.arrayType(innerType, MAX_THREADPRIVATE));
 			ExpressionPtr indexExpr = build.castExpr(basic.getInt8(), build.getThreadId());
 			if(masterCopy) {
 				indexExpr = build.literal(basic.getInt8(), "0");
@@ -868,7 +880,7 @@ namespace omp {
 
 	core::tu::IRTranslationUnit applySema(const core::tu::IRTranslationUnit& unit, core::NodeManager& mgr) {
 		// everything has to run through the OMP sema mapper
-		OMPSemaMapper semaMapper(mgr);
+		OMPSemaMapper semaMapper(mgr, unit.getGlobals());
 
 		core::IRBuilder build(mgr);
 
@@ -899,6 +911,7 @@ namespace omp {
 			// if it is an access to a threadprivate value
 			if(CallExprPtr call = newGlobal.isa<CallExprPtr>()) {
 				newGlobal = call->getArgument(0); // take first argument
+
 				auto initializer = (cur.second) ? semaMapper.map(cur.second) : cur.second;
 				// if there is an initializer, we need to initialize all threads' copies
 				if(initializer) {
@@ -910,6 +923,7 @@ namespace omp {
 					core::ExpressionList initExprs(MAX_THREADPRIVATE, innerInit);
 					initializer = build.initExpr(newGlobal, initExprs);
 				}
+
 				res.addGlobal(newGlobal.as<LiteralPtr>(), initializer);
 				continue;
 			}

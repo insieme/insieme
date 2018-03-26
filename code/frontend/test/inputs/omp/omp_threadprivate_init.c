@@ -43,7 +43,7 @@ int y[2] = { 42, 43 };
 #pragma test expect_ir(R"INSPIRE(REGEX_S
 .*
     <ref<array<int<4>,80u>,f,f,plain>>\(omp_threadprivate_x\) \{8, 8, .* 8\};
-    <ref<array<array<int<4>,inf>,80u>,f,f,plain>>\(omp_threadprivate_y\) \{<ref<array<int<4>,2u>,f,f,plain>>\(ref_decl\(type_lit\(ref<array<int<4>,2u>,f,f,plain>\)\)\) \{42, 43\}, <ref<array<int<4>,2u>,f,f,plain>>\(ref_decl\(type_lit\(ref<array<int<4>,2u>,f,f,plain>\)\)\) \{42, 43\}, .*, <ref<array<int<4>,2u>,f,f,plain>>\(ref_decl\(type_lit\(ref<array<int<4>,2u>,f,f,plain>\)\)\) \{42, 43\}\};
+    <ref<array<array<int<4>,2u>,80u>,f,f,plain>>\(omp_threadprivate_y\) \{<ref<array<int<4>,2u>,f,f,plain>>\(ref_decl\(type_lit\(ref<array<int<4>,2u>,f,f,plain>\)\)\) \{42, 43\}, <ref<array<int<4>,2u>,f,f,plain>>\(ref_decl\(type_lit\(ref<array<int<4>,2u>,f,f,plain>\)\)\) \{42, 43\}, .*, <ref<array<int<4>,2u>,f,f,plain>>\(ref_decl\(type_lit\(ref<array<int<4>,2u>,f,f,plain>\)\)\) \{42, 43\}\};
 .*
 )INSPIRE")
 int main() {
