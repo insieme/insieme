@@ -63,7 +63,7 @@ namespace stmtutils {
 		StmtWrapper(const CompoundStmtPtr& stmt) : StatementList({stmt}) {}
 
 		StatementPtr getSingleStmt() const {
-			assert_eq(size(), 1) << "More than 1 statement present";
+			assert_eq(size(), 1) << "Zero or more than 1 statement present";
 			return front();
 		}
 
