@@ -1,4 +1,4 @@
 includes="${CUR_CONFIG_PATH}/common"
 files="${CUR_CONFIG_PATH}/common/print_results.c","${CUR_CONFIG_PATH}/common/c_timers.c","${CUR_CONFIG_PATH}/common/wtime.c","${CUR_CONFIG_PATH}/common/c_print_results.c"
-outputAwk="/^[[:space:]]VERIFICATION[[:space:]]+=[[:space:]]+\w+$/{ print $3 }"
+outputAwk="/^[[:space:]]Verification[[:space:]]+=[[:space:]]+\w+$/{ print $3 }"
 use_libmath=1
