@@ -106,25 +106,18 @@ namespace {
 			// convert octal numbers
 			if(in.compare(0, 1, "0") == 0 || in.compare(0, 2, "-0") == 0) { return boost::lexical_cast<OctTo<RetTy>>(in); }
 
-
-			// Now we check the suffix of the literal
-			bool isUnsigned = false;
-
+			// Now we clear the suffix of the literal
 			const char* str = in.c_str();
 			std::size_t size = in.size();
 			while(size > 0 && (str[size - 1] == 'l' || str[size - 1] == 'L' || str[size - 1] == 'u' || str[size - 1] == 'U')) {
-				if(str[size - 1] == 'u' || str[size - 1] == 'U') { isUnsigned = true; }
 				size--;
 			}
-
-			// also check sign
-			if(size > 0 && str[0] == '-') { isUnsigned = false; }
 
 			// get cleared value
 			std::string cleared(str, str + size);
 
-			// convert to long-long and then to target type
-			return (RetTy)((isUnsigned) ? boost::lexical_cast<unsigned long long>(cleared) : boost::lexical_cast<long long>(cleared));
+			// convert to target type
+			return boost::lexical_cast<RetTy>(cleared);
 		}
 	};
 

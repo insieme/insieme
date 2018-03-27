@@ -179,11 +179,9 @@ namespace checks {
 		EXPECT_EQ(0, check(builder.literal(basic.getUInt2(), toString(UINT16_MAX))).size());
 		EXPECT_EQ(0, check(builder.literal(basic.getUInt4(), toString(UINT32_MAX))).size());
 		EXPECT_EQ(0, check(builder.literal(basic.getUInt8(), toString(UINT64_MAX) + "u")).size());
-		EXPECT_EQ(1, check(builder.literal(basic.getUInt8(), toString(UINT64_MAX))).size());
-		EXPECT_EQ(0, check(builder.literal(basic.getUInt8(), toString(UINT64_MAX) + "u")).size());
-		EXPECT_EQ(1, check(builder.literal(basic.getUInt8(), toString(UINT64_MAX))).size());
+		EXPECT_EQ(1, check(builder.literal(basic.getInt8(), toString(UINT64_MAX))).size());
 		EXPECT_EQ(0, check(builder.literal(basic.getUInt16(), toString(UINT64_MAX) + "u")).size());
-		EXPECT_EQ(1, check(builder.literal(basic.getUInt16(), toString(UINT64_MAX))).size());
+		EXPECT_EQ(1, check(builder.literal(basic.getInt16(), toString(UINT64_MAX))).size());
 
 		EXPECT_EQ(0, check(builder.literal(basic.getReal4(), toString(0.0))).size());
 		EXPECT_EQ(0, check(builder.literal(basic.getReal4(), toString(.0))).size());

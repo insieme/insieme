@@ -55,7 +55,7 @@ namespace checks {
 		// some static regex expressions to be utilized by literal format checks
 		std::regex floatRegex(R"((-?[0-9]+((\.[0-9]+)?(((E|e)(\+|-)[0-9]+)|f)?)?)|(0x[0-9]+\.[0-9]+p(\+|-)[0-9]+))", FLAGS);
 		std::regex doubleRegex(R"((-?[0-9]+((\.[0-9]+)?(((E|e)(\+|-)[0-9]+))?)?)|(0x[0-9]+\.[0-9]+p(\+|-)[0-9]+))", FLAGS);
-		
+
 		// allow char literals
 		std::regex signedAndCharRegex(R"(((-?(0|[1-9][0-9]*))(l|ll)?)|('\\?.'))", FLAGS);
 		std::regex unsignedRegex(R"((0|[1-9][0-9]*)u?(l|ll)?)", FLAGS);
@@ -186,8 +186,8 @@ namespace checks {
 					add(res, Message(address, EC_FORMAT_INVALID_LITERAL, format("Literal out of range for type %s literal: %s", toString(*type), value),
 					                 Message::ERROR));
 				}
-			} catch(...) {
-				add(res, Message(address, EC_FORMAT_INVALID_LITERAL, format("Malformed Literal %s literal: %s", toString(*type), value), Message::ERROR));
+			} catch(const boost::bad_lexical_cast& bc) {
+				add(res, Message(address, EC_FORMAT_INVALID_LITERAL, format("Malformed Literal %s literal: %s\nException: %s", toString(*type), value, bc.what()), Message::ERROR));
 			}
 		}
 

@@ -61,6 +61,10 @@ int main() {
 	#pragma test expect_ir("7ull")
 	7ull;
 
+	// test bit size available
+	#pragma test expect_ir("9223372036854775808ull")
+	9223372036854775808ull;
+
 	#pragma test expect_ir("lit(\"8.0E+0\":real<4>)")
 	8.0f;
 
