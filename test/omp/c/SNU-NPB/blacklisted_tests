@@ -3,6 +3,16 @@
 
 common
 
+BT
+CG
+DC
+EP
+FT
+LU
+MG
+SP
+UA
+
 
 ####################################################################################
 # The following tests are not really blacklisted but take rather long to execute.  #

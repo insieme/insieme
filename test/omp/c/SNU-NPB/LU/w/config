@@ -1,1 +1,0 @@
-includes="${includes}","${CUR_CONFIG_PATH}"

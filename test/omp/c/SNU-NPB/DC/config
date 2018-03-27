@@ -1,1 +1,2 @@
 files=${files},"${CUR_CONFIG_PATH}/adc.c","${CUR_CONFIG_PATH}/dc.c","${CUR_CONFIG_PATH}/extbuild.c","${CUR_CONFIG_PATH}/rbt.c","${CUR_CONFIG_PATH}/jobcntl.c"
+includes="${includes}","${TEST_SOURCE_DIR}"

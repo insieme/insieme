@@ -1,1 +1,2 @@
 files=${files},"${CUR_CONFIG_PATH}/is.c"
+includes="${includes}","${TEST_SOURCE_DIR}"

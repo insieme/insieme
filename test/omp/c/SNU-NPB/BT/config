@@ -1,1 +1,2 @@
 files=${files},"${CUR_CONFIG_PATH}/bt.c","${CUR_CONFIG_PATH}/initialize.c","${CUR_CONFIG_PATH}/exact_solution.c","${CUR_CONFIG_PATH}/exact_rhs.c","${CUR_CONFIG_PATH}/set_constants.c","${CUR_CONFIG_PATH}/adi.c","${CUR_CONFIG_PATH}/rhs.c","${CUR_CONFIG_PATH}/x_solve.c","${CUR_CONFIG_PATH}/y_solve.c","${CUR_CONFIG_PATH}/solve_subs.c","${CUR_CONFIG_PATH}/z_solve.c","${CUR_CONFIG_PATH}/add.c","${CUR_CONFIG_PATH}/error.c","${CUR_CONFIG_PATH}/verify.c"
+includes="${includes}","${TEST_SOURCE_DIR}"

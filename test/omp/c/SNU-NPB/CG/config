@@ -1,1 +1,2 @@
 files=${files},"${CUR_CONFIG_PATH}/cg.c","${CUR_CONFIG_PATH}/../common/randdp.c",
+includes="${includes}","${TEST_SOURCE_DIR}"
