@@ -278,11 +278,14 @@ namespace runtime {
 		// atomics
 
 		#define BIN_ATOMIC_CONVERTER(__IRNAME, __IRTNAME)                                                                                                      \
-			table[parExt.get##__IRNAME()] = OP_CONVERTER {                                                                                                      \
-		        ADD_HEADER_FOR(#__IRTNAME);                                                                                                                    \
+		    table[parExt.get##__IRNAME()] = OP_CONVERTER {                                                                                                     \
+		        auto argType = core::analysis::getReferencedType(ARG(0)->getType());                                                                           \
+		        bool isFloatingPoint = context.getConverter().getNodeManager().getLangBasic().isReal(argType);                                                 \
+		        ADD_HEADER_FOR(isFloatingPoint ? ( #__IRTNAME"_fp" ) : ( #__IRTNAME ));                                                                        \
 		        core::IRBuilder builder(NODE_MANAGER);                                                                                                         \
-		        return c_ast::call(C_NODE_MANAGER->create(#__IRTNAME), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_TYPE(builder.deref(ARG(0))->getType()));        \
-			};
+		        auto callee = C_NODE_MANAGER->create(isFloatingPoint ? #__IRTNAME"_fp" : #__IRTNAME);                                                          \
+		        return c_ast::call(callee, CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_TYPE(argType));                                                             \
+		    };
 
 		BIN_ATOMIC_CONVERTER(AtomicFetchAndAdd, irt_atomic_fetch_and_add)
 		BIN_ATOMIC_CONVERTER(AtomicAddAndFetch, irt_atomic_add_and_fetch)

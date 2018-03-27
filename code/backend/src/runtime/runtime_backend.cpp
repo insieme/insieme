@@ -161,6 +161,11 @@ namespace runtime {
 			table["irt_atomic_val_compare_and_swap"] = "irt_all_impls.h";
 			table["irt_atomic_bool_compare_and_swap"] = "irt_all_impls.h";
 
+			table["irt_atomic_fetch_and_add_fp"] = "irt_all_impls.h";
+			table["irt_atomic_fetch_and_sub_fp"] = "irt_all_impls.h";
+			table["irt_atomic_add_and_fetch_fp"] = "irt_all_impls.h";
+			table["irt_atomic_sub_and_fetch_fp"] = "irt_all_impls.h";
+
 			table["irt_variant_pick"] = "irt_all_impls.h";
 		}
 
