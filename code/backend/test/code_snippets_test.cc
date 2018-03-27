@@ -762,11 +762,14 @@ namespace backend {
 	TEST(ForLoop, BasicDown) {
 		DO_TEST(R"(
 			int<4> function IMP_main() {
-				for(int<4> v0 = 5 .. 0 : -1) { }
+				for(int<4> v0 = 0 - 5 .. 0 - 0 : 0 - -1) {
+					var ref<int<4>> i = -v0;
+				}
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
-			EXPECT_PRED2(containsSubString, code, "for (int32_t v0 = 5; v0 > 0; --v0) { };");
+			EXPECT_PRED2(containsSubString, code, "for (int32_t v0 = 0 - 5; v0 < 0 - 0; ++v0) {");
+			EXPECT_PRED2(containsSubString, code, "int32_t i = 0 - v0;");
 		})
 	}
 
@@ -778,9 +781,7 @@ namespace backend {
 				return 0;
 			}
 		)", false, utils::compiler::Compiler::getDefaultC99Compiler(), {
-			EXPECT_PRED2(containsSubString, code, "if (a > 0) ");
 			EXPECT_PRED2(containsSubString, code, "for (int32_t v0 = 5; v0 < 0; v0 += a)");
-			EXPECT_PRED2(containsSubString, code, "for (int32_t v0 = 5; v0 > 0; v0 += a) ");
 		})
 	}
 
