@@ -87,6 +87,7 @@ namespace extensions {
 			auto& mgr = operation->getNodeManager();
 			core::IRBuilder builder(mgr);
 			auto& rMod = mgr.getLangExtension<core::lang::ReferenceExtension>();
+			auto& fMod = mgr.getLangExtension<utils::FrontendInspireModule>();
 			auto& compOpExt = mgr.getLangExtension<core::lang::CompoundOpsExtension>();
 
 			auto call = operation.isa<core::CallExprPtr>();
@@ -104,6 +105,25 @@ namespace extensions {
 				return { false, builder.literal("1", litType) };
 			} else if(rMod.isGenPreDec(callee) || rMod.isGenPostDec(callee) || callee == compOpExt.getCompPrefixDec()) {
 				return { false, builder.literal("-1", litType) };
+
+				// full assignments like "x = x + 5"
+			} else if(callee == rMod.getRefAssign() || callee == fMod.getCStyleAssignment() || callee == fMod.getCxxStyleAssignment()) {
+				const auto& lhs = call->getArgument(0);
+				const auto& rhsCall = call->getArgument(1).isa<core::CallExprPtr>();
+				if(!rhsCall) return invalid;
+				const auto& rhsCallee = rhsCall->getFunctionExpr();
+				if(mgr.getLangBasic().isSubOp(rhsCallee)) {
+					return { false, builder.sub(builder.literal("0", litType), rhsCall->getArgument(1)) };
+				} else if(mgr.getLangBasic().isAddOp(rhsCallee)) {
+					if(core::analysis::contains(rhsCall->getArgument(0), lhs)) {
+						return { false, rhsCall->getArgument(1) };
+					} else if(core::analysis::contains(rhsCall->getArgument(1), lhs)) {
+						return { false, rhsCall->getArgument(0) };
+					}
+					return invalid;
+				}
+				return invalid;
+
 			} else if(callee == rMod.getRefDeref()) {
 				// just a read, we can ignore this
 				return { true, core::ExpressionPtr() };
@@ -175,7 +195,7 @@ namespace extensions {
 			} else if(basic.isSignedIntLe(callee) || basic.isUnsignedIntLe(callee) || basic.isCharLe(callee)) {
 				return { true, builder.numericCast(builder.add(rhs, builder.literal("1", rhs->getType())), rhsType) };
 			} else if(basic.isSignedIntGe(callee) || basic.isUnsignedIntGe(callee) || basic.isCharGe(callee)) {
-				return { false, builder.numericCast(builder.add(rhs, builder.literal("1", rhs->getType())), rhsType) };
+				return { false, builder.numericCast(builder.sub(rhs, builder.literal("1", rhs->getType())), rhsType) };
 			}
 
 			return invalid;

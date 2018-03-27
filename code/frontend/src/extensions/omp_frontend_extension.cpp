@@ -734,14 +734,14 @@ namespace extensions {
 		const auto& newIteratorVarType = core::analysis::getReferencedType(originalIteratorVarType);
 		if(!builder.getLangBasic().isInt(newIteratorVarType)) return {};
 		const auto newIteratorVar = builder.variable(newIteratorVarType);
-		const auto newIteratorVarDecl = builder.declarationStmt(newIteratorVar,
+		auto newIteratorVarDecl = builder.declarationStmt(newIteratorVar,
 				core::analysis::isRefType(originalIteratorInit) ? builder.deref(originalIteratorInit) : originalIteratorInit);
 
 		// convert the condition and step
 		auto convertedCondition = converter.convertExpr(forStmt->getCond());
 		auto convertedStep = converter.convertExpr(forStmt->getInc());
 
-		//transform the condition and step to match our new iterator variable declaration
+		// transform the condition and step to match our new iterator variable declaration
 		if(frontendExt.isCallOfBoolToInt(convertedCondition)) {
 			convertedCondition = core::analysis::getArgument(convertedCondition, 0);
 		}
@@ -753,12 +753,25 @@ namespace extensions {
 		const auto mappedStep = detail::mapToStep(convertedStep);
 		if(mappedStep.readOnly || !mappedStep.stepExpr) return {};
 
+		// the three components making up the loop bounds
+		auto newEndExpr = mappedCondition.endExpr;
+		auto newStepExpr = mappedStep.stepExpr;
+		core::ExpressionPtr newLocalIteratorVarInit = newIteratorVar;
+		// depending on whether the end is compared with <(=) or >(=), we need to invert some stuff
+		if(!mappedCondition.lessThanOrEquals) {
+			newIteratorVarDecl = builder.declarationStmt(newIteratorVarDecl->getVariable(), builder.sub(builder.literal("0", newIteratorVarDecl->getInitialization()->getType()),
+			                                                                                            newIteratorVarDecl->getInitialization()));
+			newEndExpr = builder.sub(builder.literal("0", newEndExpr->getType()), newEndExpr);
+			newStepExpr = builder.sub(builder.literal("0", newStepExpr->getType()), newStepExpr);
+			newLocalIteratorVarInit = builder.sub(builder.literal("0", newLocalIteratorVarInit->getType()), newLocalIteratorVarInit);
+		}
+
 		// insert a new local variable declaration into the body and initialize it with the new iterator variable.
 		// then we replace the original iterator variable with this newly created variable
 		// Note that we don't need to restore the state of the original iterator variable for the outside world, as this isn't needed for OpenMP loops
 		core::StatementList stmts;
 		auto newLocalIteratorVar = builder.variable(originalIteratorVarType);
-		stmts.push_back(builder.declarationStmt(newLocalIteratorVar, newIteratorVar));
+		stmts.push_back(builder.declarationStmt(newLocalIteratorVar, newLocalIteratorVarInit));
 		// convert the body
 		auto convertedBody = converter.convertStmt(forStmt->getBody());
 		// replace iterator variable
@@ -775,7 +788,7 @@ namespace extensions {
 		if(core::analysis::hasFreeBreakStatement(newBody) || core::analysis::hasFreeReturnStatement(newBody)) return {};
 
 		// finally, we can build the loop
-		return { builder.forStmt(newIteratorVarDecl, mappedCondition.endExpr, mappedStep.stepExpr, newBody) };
+		return { builder.forStmt(newIteratorVarDecl, newEndExpr, newStepExpr, newBody) };
 	}
 
 	/**

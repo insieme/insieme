@@ -1,0 +1,2 @@
+# We need to run this program sequentially to ensure the correct output
+env="OMP_NUM_THREADS=1 IRT_NUM_WORKERS=1"
