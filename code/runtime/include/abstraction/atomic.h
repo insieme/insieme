@@ -196,6 +196,33 @@ _IRT_DEFINE_ATOMIC_COMPARE_AND_SWAP(uintptr_t)
 #define irt_atomic_inc(__location, __type) (void) irt_atomic_fetch_and_add(__location, 1, __type)
 #define irt_atomic_dec(__location, __type) (void) irt_atomic_fetch_and_sub(__location, 1, __type)
 
+
+// The atomic operations for float and double types
+#define _IRT_DEFINE_ATOMIC_FP_OP_IMPL(__type, __integral_type, __opName, __op, __nameInfix, __return)                                                          \
+	static inline __type _irt_atomic_##__nameInfix##_fp_##__type(__type* __location, __type __value) {                                                           \
+		while(true) {                                                                                                                                              \
+			__type oldVal = *__location;                                                                                                                             \
+			__type newVal = oldVal __op __value;                                                                                                                     \
+			if(_irt_atomic_bool_compare_and_swap_impl_##__integral_type(__location, *(__integral_type*)(&oldVal), *(__integral_type*)(&newVal))) {                   \
+				return __return;                                                                                                                                       \
+			}                                                                                                                                                        \
+		}                                                                                                                                                          \
+	}
+#define _IRT_DEFINE_ATOMIC_FP_OP(__type, __integral_type, __opName, __op)                                                                                      \
+	_IRT_DEFINE_ATOMIC_FP_OP_IMPL(__type, __integral_type, __opName, __op, fetch_and_##__opName, oldVal)                                                         \
+	_IRT_DEFINE_ATOMIC_FP_OP_IMPL(__type, __integral_type, __opName, __op, __opName##_and_fetch, newVal)
+
+_IRT_DEFINE_ATOMIC_FP_OP(float,  uint32, add, +)
+_IRT_DEFINE_ATOMIC_FP_OP(float,  uint32, sub, -)
+_IRT_DEFINE_ATOMIC_FP_OP(double, uint64, add, +)
+_IRT_DEFINE_ATOMIC_FP_OP(double, uint64, sub, -)
+
+#define irt_atomic_fetch_and_add_fp(__location, __value, __type) _irt_atomic_fetch_and_add_fp_##__type((__type*)__location, __value)
+#define irt_atomic_fetch_and_sub_fp(__location, __value, __type) _irt_atomic_fetch_and_sub_fp_##__type((__type*)__location, __value)
+
+#define irt_atomic_add_and_fetch_fp(__location, __value, __type) _irt_atomic_add_and_fetch_fp_##__type((__type*)__location, __value)
+#define irt_atomic_sub_and_fetch_fp(__location, __value, __type) _irt_atomic_sub_and_fetch_fp_##__type((__type*)__location, __value)
+
 #else
 
 #include <Windows.h>
