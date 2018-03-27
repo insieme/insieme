@@ -149,12 +149,12 @@ IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP_DECLARATION(bool)
 // memory model have to be used differently
 #define _IRT_DEFINE_ATOMIC_COMPARE_AND_SWAP(__type)                                                                                                            \
 	static inline bool _irt_atomic_bool_compare_and_swap_impl_##__type(__type* __location, __type __oldval, __type __newval) {                                 \
-		/* We need to create a temporary here since the builtin needs a pointer */                                                                             \
+		/* We need to create a temporary here since the builtin needs a pointer and will modify the value pointed to it if the comparison fails */             \
 		__type _irt_atomic_temp = __oldval;                                                                                                                    \
 		return __atomic_compare_exchange_n(__location, &_irt_atomic_temp, __newval, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);                                \
 	}                                                                                                                                                          \
 	static inline __type _irt_atomic_val_compare_and_swap_impl_##__type(__type* __location, __type __oldval, __type __newval) {                                \
-		/* We need to create a temporary here since the builtin needs a pointer */                                                                             \
+		/* We need to create a temporary here since the builtin needs a pointer and will modify the value pointed to it if the comparison fails */             \
 		__type _irt_atomic_temp = __oldval;                                                                                                                    \
 		__atomic_compare_exchange_n(__location, &_irt_atomic_temp, __newval, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);                                       \
 		return _irt_atomic_temp;                                                                                                                               \
@@ -173,7 +173,7 @@ _IRT_DEFINE_ATOMIC_COMPARE_AND_SWAP(uintptr_t)
 
 #define irt_atomic_add_and_fetch(__location, __value, __type) __atomic_add_fetch(__location, __value, __ATOMIC_SEQ_CST)
 #define irt_atomic_sub_and_fetch(__location, __value, __type) __atomic_sub_fetch(__location, __value, __ATOMIC_SEQ_CST)
-#define irt_atomic_or_and_fetch (__location, __value, __type) __atomic_or_fetch(__location, __value, __ATOMIC_SEQ_CST)
+#define irt_atomic_or_and_fetch (__location, __value, __type) __atomic_or_fetch (__location, __value, __ATOMIC_SEQ_CST)
 #define irt_atomic_and_and_fetch(__location, __value, __type) __atomic_and_fetch(__location, __value, __ATOMIC_SEQ_CST)
 #define irt_atomic_xor_and_fetch(__location, __value, __type) __atomic_xor_fetch(__location, __value, __ATOMIC_SEQ_CST)
 
