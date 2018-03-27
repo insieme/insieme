@@ -661,22 +661,8 @@ namespace backend {
 		converter.getNameManager().popVarScope();
 
 		// combine all into a for
-		auto createFor = [&](bool lessThan) {
-			c_ast::ExpressionPtr cCheck = lessThan ? c_ast::lt(info_iter.var, cEnd) : c_ast::gt(info_iter.var, cEnd);
-			return manager->create<c_ast::For>(cInit, cCheck, cStep, cBody);
-		};
-
-		// handle up- or down-counting loops
-		// if static: generate just one for with the correct operator
-		if(stepForm.isInteger()) {
-			int stepVal = stepForm.getIntegerValue();
-			assert_true(stepVal != 0) << "For loop with a '0' step unsupported";
-			return createFor(stepVal > 0);
-		}
-		// else: generate if depending on runtime value of step
-		auto upFor = createFor(true);
-		auto downFor = createFor(false);
-		return manager->create<c_ast::If>(c_ast::gt(cStepExpr, manager->create<c_ast::Literal>("0")), upFor, downFor);
+		// Note: the IR for loop always assumes "<" as the operator used to compare the end value
+		return manager->create<c_ast::For>(cInit, c_ast::lt(info_iter.var, cEnd), cStep, cBody);
 	}
 
 	c_ast::NodePtr StmtConverter::visitIfStmt(const core::IfStmtPtr& ptr, ConversionContext& context) {

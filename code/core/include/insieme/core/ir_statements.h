@@ -487,6 +487,16 @@ namespace core {
 
 	/**
 	 * The accessor associated to the for statement.
+	 *
+	 * Note that the IR for loop always assumes the operator "<" for the end comparison.
+	 * The IR ForStmt
+	 *   for(int<4> v0 = 0 .. 5 : 1) {
+	 *     var ref<int<4>> i = v0;
+	 *   }
+	 * Represents the C for loop
+	 *   for(int i = 0; i < 5; ++i) { }
+	 *
+	 * If the original for loop used > (or >= or <=) as the operator, the start, end, step and variable assignment in the body need to be adjusted accordingly.
 	 */
 	IR_NODE_ACCESSOR(ForStmt, Statement, DeclarationStmt, Expression, Expression, CompoundStmt)
 

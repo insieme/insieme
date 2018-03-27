@@ -2,8 +2,6 @@
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
 comd-omp
-copyin
-gemm
 gemsclaim
 mergeSort
 molecularDynamics
@@ -12,18 +10,14 @@ n_body
 n_body_2
 nested_pfor_irregular
 nested_pfor_recursive
-ordered
 pfor_pointer
 prime
 qap
 qap3
 satisfy
 sgefa
-SNU-NPB
 ssca2
 tasks
-threadprivate
-threadprivate_static
 transpose
 velvet
 vivid

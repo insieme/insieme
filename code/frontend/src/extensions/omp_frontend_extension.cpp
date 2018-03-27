@@ -724,9 +724,9 @@ namespace extensions {
 		const auto convertedInit = converter.convertStmt(forStmt->getInit());
 		const auto mappedInit = detail::mapToStart({}, convertedInit);
 		// we extract the left hand, which has to be a variable for us to proceed, as well as the initialization
-		const auto& originalIteratorVar = std::get<1>(mappedInit).isa<core::VariablePtr>();
+		const auto& originalIteratorVar = mappedInit.lhs.isa<core::VariablePtr>();
 		if(!originalIteratorVar) return {};
-		const auto& originalIteratorInit = std::get<2>(mappedInit);
+		const auto& originalIteratorInit = mappedInit.startExpr;
 
 		// we now construct a new declaration, as we must not declare a variable of ref type in the for loop
 		const auto originalIteratorVarType = originalIteratorVar->getType();
@@ -734,31 +734,44 @@ namespace extensions {
 		const auto& newIteratorVarType = core::analysis::getReferencedType(originalIteratorVarType);
 		if(!builder.getLangBasic().isInt(newIteratorVarType)) return {};
 		const auto newIteratorVar = builder.variable(newIteratorVarType);
-		const auto newIteratorVarDecl = builder.declarationStmt(newIteratorVar,
+		auto newIteratorVarDecl = builder.declarationStmt(newIteratorVar,
 				core::analysis::isRefType(originalIteratorInit) ? builder.deref(originalIteratorInit) : originalIteratorInit);
 
 		// convert the condition and step
 		auto convertedCondition = converter.convertExpr(forStmt->getCond());
 		auto convertedStep = converter.convertExpr(forStmt->getInc());
 
-		//transform the condition and step to match our new iterator variable declaration
+		// transform the condition and step to match our new iterator variable declaration
 		if(frontendExt.isCallOfBoolToInt(convertedCondition)) {
 			convertedCondition = core::analysis::getArgument(convertedCondition, 0);
 		}
 		const auto mappedCondition = detail::mapToEnd(originalIteratorVar, convertedCondition);
-		if(!mappedCondition) return {};
+		if(!mappedCondition.endExpr) return {};
 		if(refExt.isCallOfRefDeref(convertedStep)) {
 			convertedStep = core::analysis::getArgument(convertedStep, 0);
 		}
 		const auto mappedStep = detail::mapToStep(convertedStep);
-		if(mappedStep.first || !mappedStep.second) return {};
+		if(mappedStep.readOnly || !mappedStep.stepExpr) return {};
+
+		// the three components making up the loop bounds
+		auto newEndExpr = mappedCondition.endExpr;
+		auto newStepExpr = mappedStep.stepExpr;
+		core::ExpressionPtr newLocalIteratorVarInit = newIteratorVar;
+		// depending on whether the end is compared with <(=) or >(=), we need to invert some stuff
+		if(!mappedCondition.lessThanOrEquals) {
+			newIteratorVarDecl = builder.declarationStmt(newIteratorVarDecl->getVariable(), builder.sub(builder.literal("0", newIteratorVarDecl->getInitialization()->getType()),
+			                                                                                            newIteratorVarDecl->getInitialization()));
+			newEndExpr = builder.sub(builder.literal("0", newEndExpr->getType()), newEndExpr);
+			newStepExpr = builder.sub(builder.literal("0", newStepExpr->getType()), newStepExpr);
+			newLocalIteratorVarInit = builder.sub(builder.literal("0", newLocalIteratorVarInit->getType()), newLocalIteratorVarInit);
+		}
 
 		// insert a new local variable declaration into the body and initialize it with the new iterator variable.
 		// then we replace the original iterator variable with this newly created variable
 		// Note that we don't need to restore the state of the original iterator variable for the outside world, as this isn't needed for OpenMP loops
 		core::StatementList stmts;
 		auto newLocalIteratorVar = builder.variable(originalIteratorVarType);
-		stmts.push_back(builder.declarationStmt(newLocalIteratorVar, newIteratorVar));
+		stmts.push_back(builder.declarationStmt(newLocalIteratorVar, newLocalIteratorVarInit));
 		// convert the body
 		auto convertedBody = converter.convertStmt(forStmt->getBody());
 		// replace iterator variable
@@ -775,7 +788,7 @@ namespace extensions {
 		if(core::analysis::hasFreeBreakStatement(newBody) || core::analysis::hasFreeReturnStatement(newBody)) return {};
 
 		// finally, we can build the loop
-		return { builder.forStmt(newIteratorVarDecl, mappedCondition, mappedStep.second, newBody) };
+		return { builder.forStmt(newIteratorVarDecl, newEndExpr, newStepExpr, newBody) };
 	}
 
 	/**
