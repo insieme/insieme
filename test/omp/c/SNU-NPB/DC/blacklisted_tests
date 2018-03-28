@@ -1,6 +1,9 @@
 # Do not remove this file even if it does not blacklist any test.
 # It is needed for the integration test driver to recognize this folder as the parent for multiple other tests.
 
+# These tests are only blacklisted because they take ages to execute
+a
+b
 
 ####################################################################################
 # The following tests are not really blacklisted but take rather long to execute.  #
@@ -8,6 +11,4 @@
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
-+a
-+b
 +w
