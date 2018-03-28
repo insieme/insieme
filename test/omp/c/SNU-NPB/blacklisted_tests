@@ -5,12 +5,10 @@ common
 
 BT
 CG
-DC
 FT
 LU
 MG
 SP
-UA
 
 
 ####################################################################################
@@ -19,3 +17,5 @@ UA
 # the integration test driver is run with the option to run these long tests also. #
 ####################################################################################
 
++DC
++UA
