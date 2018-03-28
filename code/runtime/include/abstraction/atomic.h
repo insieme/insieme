@@ -203,7 +203,7 @@ _IRT_DEFINE_ATOMIC_COMPARE_AND_SWAP(uintptr_t)
 		while(true) {                                                                                                                                              \
 			__type oldVal = *__location;                                                                                                                             \
 			__type newVal = oldVal __op __value;                                                                                                                     \
-			if(_irt_atomic_bool_compare_and_swap_impl_##__integral_type(__location, *(__integral_type*)(&oldVal), *(__integral_type*)(&newVal))) {                   \
+			if(_irt_atomic_bool_compare_and_swap_impl_##__integral_type((__integral_type*)__location, *(__integral_type*)(&oldVal), *(__integral_type*)(&newVal))) { \
 				return __return;                                                                                                                                       \
 			}                                                                                                                                                        \
 		}                                                                                                                                                          \
