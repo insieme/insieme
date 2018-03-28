@@ -39,89 +39,71 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms   #-}
-{-# LANGUAGE ViewPatterns      #-}
 
-module Insieme.Inspire.IR.Tree
-    ( Tree
-    , unTree
-    , Tree' (..)
-    , pattern Tree
-    , pattern Node
-    , getChildren
-    , getNodeType
-    , builtinTags
-    , getBuiltinTarget
-    , mkNode
-    , isBuiltin
-    , isaBuiltin
-    , hasMaterializingTag
-    ) where
+module Insieme.Inspire.IR.Tree where
 
 import Data.List
-import Data.HashCons
 import Control.DeepSeq
 import GHC.Generics (Generic)
 
 import Insieme.Inspire.IR.NodeType
 import {-# UP #-} Insieme.Inspire.NodeReference
 
+-- TODO: Rename to 'Node'
+data Tree = MkTree {
+      mtId        :: Maybe Int,
+      mtInnerTree :: {-# UNPACK #-} !InnerTree
+    } deriving (Show, Generic, NFData)
 
-newtype Tree = MkTree (HC Tree')
-    deriving (Eq, Hashable, Generic, NFData)
+instance Eq Tree where
+    MkTree { mtId = Just ida } == MkTree { mtId = Just idb } =
+        ida == idb
+    a == b =
+        mtInnerTree a == mtInnerTree b
 
 instance Ord Tree where
-    compare (MkTree a) (MkTree b) = hash a `compare` hash b
-
-instance Show Tree where
-    show (MkTree a) = show $ getVal a
+    compare Tree{ getID = Just ida } Tree{ getID = Just idb } = compare ida idb
+    compare a b = compare (mtInnerTree a) (mtInnerTree b)
 
 instance NodeReference Tree where
-    child i (MkTree a)  = (!!i) $ tChildren $ getVal a
-    children (MkTree a) = tChildren $ getVal a
+    child i  = (!!i) . children
+    children = getChildren
 
-data Tree' = Tree' {
-      tNodeType    :: !NodeType,
-      tChildren    :: ![Tree],
-      tBuiltinTags :: ![String] -- dont compare
-    } deriving (Eq, Show, Generic, NFData, Hashable)
+treeExactEq :: Tree -> Tree -> Bool
+treeExactEq a b = mtId a == mtId b && mtInnerTree a == mtInnerTree b
 
-instance HashCons Tree' where
-
-unTree :: Tree -> Tree'
-unTree (MkTree hc) = getVal hc
-
-getChildren :: Tree -> [Tree]
-getChildren = tChildren . unTree
-
-getNodeType :: Tree -> NodeType
-getNodeType = tNodeType . unTree
-
-builtinTags :: Tree -> [String]
-builtinTags = tBuiltinTags . unTree
-
-mkNode :: NodeType -> [Tree] -> [String] -> Tree
-mkNode nt ch bt = MkTree $ hc $ Tree' nt ch bt
+data InnerTree = InnerTree {
+      itNodeType    :: !NodeType,
+      itChildren    :: ![Tree],
+      itBuiltinTags :: ![String]
+    } deriving (Eq, Ord, Show, Generic, NFData)
 
 pattern Node :: NodeType -> [Tree] -> Tree
-pattern Node x y <- (unTree -> Tree' x y _)
+pattern Node x y <- MkTree _ (InnerTree x y _)
 
-pattern Tree :: NodeType -> [Tree] -> [String] -> Tree
-pattern Tree x y z <- (unTree -> Tree' x y z)
+pattern Tree :: Maybe Int -> NodeType -> [Tree] -> [String] -> Tree
+pattern Tree { getID, getNodeType, getChildren, builtinTags }
+      = MkTree getID (InnerTree getNodeType getChildren builtinTags)
+
+unsafeMkNode :: Int -> NodeType -> [Tree] -> [String] -> Tree
+unsafeMkNode i nt ch bt = MkTree (Just i) (InnerTree nt ch bt)
+
+mkNode :: NodeType -> [Tree] -> [String] -> Tree
+mkNode nt ch bt = MkTree Nothing (InnerTree nt ch bt)
 
 getBuiltinTarget :: Tree -> Tree
-getBuiltinTarget (Node  LambdaExpr [_, tag, (Node LambdaDefinition binds)]) = res
+getBuiltinTarget (Node LambdaExpr [_,tag,(Node LambdaDefinition bindings)]) = res
   where
-    Just res = ((!!1) . tChildren) <$> find p (map unTree binds)
-    p (Tree' LambdaBinding [t,_] _) = tag == t
+    Just res = (child 1) <$> find p bindings
+    p (Node LambdaBinding [t,_]) = tag == t
     p _ = error "Invalid node composition!"
 getBuiltinTarget n = n
 
 isBuiltin :: Tree -> String -> Bool
-isBuiltin t s = elem s $ tBuiltinTags $ unTree $ getBuiltinTarget t
+isBuiltin t s = elem s $ builtinTags $ getBuiltinTarget t
 
 isaBuiltin :: Tree -> Bool
-isaBuiltin t = not $ null $ tBuiltinTags $ unTree $ getBuiltinTarget t
+isaBuiltin t = not $ null $ builtinTags $ getBuiltinTarget t
 
 hasMaterializingTag :: Tree -> Bool
 hasMaterializingTag n = isBuiltin n "tag_materializing"
-

@@ -17,11 +17,11 @@
 --
 -- This library should be thread- and exception-safe.
 
-{-# LANGUAGE FlexibleInstances, BangPatterns, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Data.HashCons
   (HashCons, hc,
-   HC, getVal,
+   HC, getVal, getTag, Tag,
    Hashable (..))
 where
 
@@ -29,10 +29,13 @@ import Data.HashCons.ConstRef
 import Data.HashCons.MkWeak
 
 import Data.Hashable
-import Data.HashTable.IO (CuckooHashTable)
+import Data.HashTable.IO (BasicHashTable)
 import qualified Data.HashTable.IO as HashTable
 
 import Control.DeepSeq
+
+import Control.Concurrent.MVar
+import System.Mem.StableName
 
 import System.IO.Unsafe
 import Foreign
@@ -45,21 +48,38 @@ import qualified Data.ByteString as S
 import qualified Data.ByteString.Lazy as L
 -- }}}
 
+
+-- | A tag for a value. Tags are unique among values which are simultaneously
+-- alive.
+newtype Tag a = Tag {fromTag :: StableName a} deriving Eq
+
+instance Hashable (Tag a) where
+  hash         = hash . fromTag
+  hashWithSalt = hashUsing fromTag
+
+makeTag :: a -> IO (Tag a)
+makeTag x = fmap Tag . makeStableName $! x
+
+
 -- | A value which has been given a unique tag.
-data HC a = HC !Int {-# UNPACK #-} !(ConstRef a)
+data HC a = HC {-# UNPACK #-} !(Tag a) !(ConstRef a)
 
 -- | Make an @HC@ value.
-makeHC :: Hashed a -> IO (HC a)
-makeHC x = HC <$> pure (hash x) <*> newConstRef (unhashed x)
+makeHC :: a -> IO (HC a)
+makeHC x = HC <$> makeTag x <*> newConstRef x
+
+-- | Retrieves the unique tag for the value.
+getTag :: HC a -> Tag a
+getTag (HC t _) = t
 
 -- | Retrieves the underlying value.
 getVal :: HC a -> a
 getVal (HC _ x) = readConstRef x
-{-# INLINE getVal #-}
+
 
 -- | \(\mathcal{O}(1)\) using the tag
 instance Eq (HC a) where
-  (HC _ x) == (HC _ y) = x == y
+  x == y = getTag x == getTag y
 
 -- | Checks the tag for equality first, and otherwise falls back to the
 -- underlying type's ordering
@@ -72,8 +92,8 @@ instance Show a => Show (HC a) where
 
 -- | \(\mathcal{O}(1)\) using the tag
 instance Hashable (HC a) where
-  hash           (HC h _) = h
-  hashWithSalt s (HC h _) = hashWithSalt s h
+  hash         = hash . getTag
+  hashWithSalt = hashUsing getTag
 
 -- | Also evaluates the underlying value
 instance NFData a => NFData (HC a) where
@@ -93,16 +113,23 @@ instance (Storable a, HashCons a) => Storable (HC a) where
   peek      = fmap hc . peek . castPtr
   poke p    = poke (castPtr p) . getVal
 
--- We cache the hash value so rehashing is fast, so we can use Cuckoo
-type HashTable k v = CuckooHashTable k v
 
-newtype Cache a = C (HashTable (Hashed a) (CacheEntry a))
+type HashTable k v = BasicHashTable k v
+
+newtype Cache a = C (MVar (HashTable (Hashed a) (CacheEntry a)))
 
 type CacheEntry a = Weak (HC a)
 
 
 newCache :: IO (Cache a)
-newCache = C <$> HashTable.new
+newCache =
+  fmap C $ newMVar =<< HashTable.new
+
+remove :: (Eq a, Hashable a) => a -> Cache a -> IO ()
+remove x (C var) =
+  let !hx = hashed x in
+  withMVar var $ \cache ->
+    HashTable.delete cache hx
 
 -- TODO: switch to this when/if mutateIO is added to hashtables
 -- newHC :: (Eq a, Hashable a) => a -> Cache a -> IO (Maybe (CacheEntry a), HC a)
@@ -122,21 +149,20 @@ newCache = C <$> HashTable.new
 --         Just y  -> pure (Just ptr, y)
 
 
-lookupOrAdd :: forall a. (Eq a, Hashable a) => a -> Cache a -> IO (HC a)
-lookupOrAdd x (C cache) =
-    HashTable.lookup cache hx >>= \ent -> case ent of
-      Nothing   -> insertHC
-      Just wptr -> deRefWeak wptr >>= \val -> case val of
-        Nothing   -> insertHC
-        Just hptr -> pure hptr
+lookupOrAdd :: (Eq a, Hashable a) => a -> Cache a -> IO (HC a)
+lookupOrAdd x c@(C var) =
+    withMVar var $ \cache ->
+      HashTable.lookup cache hx >>= \ent -> case ent of
+        Nothing  -> newHC cache
+        Just ptr -> deRefWeak ptr >>= \y' -> case y' of
+          Nothing -> newHC cache
+          Just y  -> pure y
   where
     !hx = hashed x
-    insertHC :: IO (HC a)
-    insertHC = do
-      hptr <- makeHC hx
-      wptr <- mkWeakPtr hptr (Just $ HashTable.delete cache hx)
-      HashTable.insert cache hx wptr
-      pure hptr
+    newHC cache = do
+      y   <- makeHC x
+      ptr <- mkWeakPtr y (Just $ remove x c)
+      y <$ HashTable.insert cache hx ptr
 
 
 -- | Types which support hash-consing.

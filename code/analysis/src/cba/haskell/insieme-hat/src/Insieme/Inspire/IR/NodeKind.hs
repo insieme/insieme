@@ -35,11 +35,7 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE ViewPatterns #-}
-
 module Insieme.Inspire.IR.NodeKind where
-
-import Data.HashCons
 
 import Insieme.Inspire.IR.NodeType
 import Insieme.Inspire.IR.Tree
@@ -137,13 +133,13 @@ data FunctionKind = FK_Plain
   deriving (Eq, Ord, Show)
 
 toFunctionKind :: Tree -> Maybe FunctionKind
-toFunctionKind (Node FunctionType (_:_:(Node nt _):_)) =
-    case nt of
-      UIntValue 1 -> Just FK_Plain
-      UIntValue 2 -> Just FK_Closure
-      UIntValue 3 -> Just FK_Constructor
-      UIntValue 4 -> Just FK_Destructor
-      UIntValue 5 -> Just FK_MemberFunction
-      UIntValue 6 -> Just FK_VirtualMemberFunction
-      _           -> Nothing
+toFunctionKind (Node FunctionType (_:_:k:_)) = case getNodeType k of
+    UIntValue 1 -> Just $ FK_Plain
+    UIntValue 2 -> Just $ FK_Closure
+    UIntValue 3 -> Just $ FK_Constructor
+    UIntValue 4 -> Just $ FK_Destructor
+    UIntValue 5 -> Just $ FK_MemberFunction
+    UIntValue 6 -> Just $ FK_VirtualMemberFunction
+    _ -> Nothing
+
 toFunctionKind _ = Nothing

@@ -35,7 +35,7 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-{-# LANGUAGE OverloadedStrings, NamedFieldPuns, ViewPatterns #-}
+{-# LANGUAGE OverloadedStrings, NamedFieldPuns #-}
 
 module Insieme.Inspire.BinaryParser (parseBinaryDump) where
 
@@ -48,15 +48,11 @@ import Data.Char (chr)
 import Data.List.Split (splitOn)
 import Data.Maybe
 import Data.Word
-import Data.HashCons
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.IntMap as IntMap
-import Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Map.Strict as Map
 import Prelude hiding (take)
-
-import Insieme.Inspire.NodeReference
 
 import qualified Insieme.Inspire.IR as IR
 import qualified Insieme.Inspire.NodeAddress as Addr
@@ -87,7 +83,7 @@ parseAddresses = parseOnly $ do
 
       resolveAddr :: IR.Tree -> [Int] -> IR.Tree
       resolveAddr node []     = node
-      resolveAddr node (x:xs) = resolveAddr (children node !! x) xs
+      resolveAddr node (x:xs) = resolveAddr (IR.getChildren node !! x) xs
 
 -- * Parsing the header
 
@@ -145,27 +141,29 @@ connectDumpNodes dumpNodes = evalState (go 0) IntMap.empty
             Nothing -> do
                 let (DumpNode irnode is) = dumpNodes IntMap.! index
                 children <- mapM go is
-                let n = IR.mkNode irnode children []
+                let n = IR.unsafeMkNode index irnode children []
                 modify (IntMap.insert index n)
                 return n
 
 
 markBuiltins :: IR.Tree -> [(String, IR.Tree)] -> IR.Tree
-markBuiltins root builtins = evalState (go root) HashMap.empty
+markBuiltins root builtins = evalState (go root) Map.empty
   where
-    go :: IR.Tree -> State (HashMap IR.Tree IR.Tree) IR.Tree
-    go node0@(IR.Tree nt0 ch0 bt0) = do
+    go :: IR.Tree -> State (Map.Map IR.Tree IR.Tree) IR.Tree
+    go node0 = do
         memo <- get
-        case HashMap.lookup node0 memo of
+        case Map.lookup node0 memo of
             Just n -> return n
             Nothing -> do
-                ch1 <- mapM go ch0
-                let bt1  = bt0 ++ fromMaybe [] (HashMap.lookup node0 builtinIndex)
-                    node1 = IR.mkNode nt0 ch1 bt1
-                modify (HashMap.insert node0 node1)
+                children <- mapM go $ IR.getChildren node0
+                let tags1 = fromMaybe [] $ Map.lookup node0 builtinIndex
+                    node1 = node0 { IR.getChildren = children
+                                  , IR.builtinTags = IR.builtinTags node0 ++ tags1
+                                  }
+                modify (Map.insert node0 node1)
                 return node1
 
-    builtinIndex = HashMap.fromListWith (++) $ (\(x,y) -> (y,[x])) <$> builtins
+    builtinIndex = Map.fromListWith (++) $ (\(x,y) -> (y,[x])) <$> builtins
 
 -- * Helper Functions
 
