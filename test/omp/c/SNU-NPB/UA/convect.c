@@ -59,9 +59,9 @@ void convect(logical ifmortar)
   alpha2     = alpha*alpha;
   dtime2     = dtime/2.0;
   rdtime     = 1.0/dtime;
-  subtime[0] = time;
-  subtime[1] = time+dtime2;
-  subtime[2] = time+dtime;
+  subtime[0] = currentTime;
+  subtime[1] = currentTime+dtime2;
+  subtime[2] = currentTime+dtime;
   for (substep = 0; substep < 3; substep++) {
     xx0[substep] = X00+VELX*subtime[substep];
     yy0[substep] = Y00+VELY*subtime[substep];

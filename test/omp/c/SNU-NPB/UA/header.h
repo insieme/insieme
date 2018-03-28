@@ -52,7 +52,7 @@ extern double alpha, dlmin, dtime;
 extern int nelt, ntot, nmor, nvertex;
 
 /* common /bench1/ */
-extern double x0, _y0, z0, time;
+extern double x0, _y0, z0, currentTime;
 
 #define VELX    3.0
 #define VELY    3.0

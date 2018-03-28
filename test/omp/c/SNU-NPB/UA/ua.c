@@ -54,7 +54,7 @@ double alpha, dlmin, dtime;
 int nelt, ntot, nmor, nvertex;
 
 /* common /bench1/ */
-double x0, _y0, z0, time;
+double x0, _y0, z0, currentTime;
 
 // double arrays associated with collocation points
 /* common /colldp/ */
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
   setpcmo_pre();
 
   // refine initial mesh and do some preliminary work
-  time = 0.0;
+  currentTime = 0.0;
   mortar();
   prepwork();
   adaptation(&ifmortar, 0);
@@ -343,13 +343,13 @@ int main(int argc, char *argv[])
 
   timer_clear(1);
 
-  time = 0.0;
+  currentTime = 0.0;
   for (step = 0; step <= niter; step++) {
     if (step == 1) {
       // reset the solution and start the timer, keep track of total no elms
       r_init((double *)ta1, ntot, 0.0);
 
-      time = 0.0;
+      currentTime = 0.0;
       nelt_tot = 0.0;
       for (i = 1; i <= t_last; i++) {
         if (i != t_init) timer_clear(i);
@@ -414,7 +414,7 @@ int main(int argc, char *argv[])
     if (timeron) timer_stop(t_add2);
 
     // perform mesh adaptation
-    time = time + dtime;
+    currentTime = currentTime + dtime;
     if ((step != 0) && (step/fre*fre == step)) {
       if (step != niter) {
         adaptation(&ifmortar, step);

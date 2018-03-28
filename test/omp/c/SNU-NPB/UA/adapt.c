@@ -67,9 +67,9 @@ void adaptation(logical *ifmortar, int step)
   if (timeron) timer_start(t_adaptation);
   *ifmortar = false;
   // compute heat source center(x0,y0,z0)
-  x0 = X00+VELX*time;
-  _y0 = Y00+VELY*time;
-  z0 = Z00+VELZ*time;
+  x0 = X00+VELX*currentTime;
+  _y0 = Y00+VELY*currentTime;
+  z0 = Z00+VELZ*currentTime;
 
   // Search elements to be refined. Check with restrictions. Perform
   // refinement repeatedly until all desired refinements are done.

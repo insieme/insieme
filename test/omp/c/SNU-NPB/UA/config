@@ -1,2 +1,3 @@
 files=${files},"${CUR_CONFIG_PATH}/ua.c","${CUR_CONFIG_PATH}/convect.c","${CUR_CONFIG_PATH}/diffuse.c","${CUR_CONFIG_PATH}/adapt.c","${CUR_CONFIG_PATH}/move.c","${CUR_CONFIG_PATH}/mason.c","${CUR_CONFIG_PATH}/precond.c","${CUR_CONFIG_PATH}/utils.c","${CUR_CONFIG_PATH}/verify.c","${CUR_CONFIG_PATH}/setup.c","${CUR_CONFIG_PATH}/transfer.c"
 includes="${includes}","${TEST_SOURCE_DIR}"
+env="OMP_NUM_THREADS=2 IRT_NUM_WORKERS=2"
