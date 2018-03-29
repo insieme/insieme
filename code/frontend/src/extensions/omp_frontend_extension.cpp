@@ -408,13 +408,19 @@ namespace extensions {
 				core::StatementPtr stmt = node.as<core::StatementPtr>();
 
 				core::StatementAddress foundFor;
-				visitDepthFirstOnceInterruptible(core::NodeAddress(stmt), [&](const core::ForStmtAddress& whileAddr) {
-					foundFor = whileAddr;
+				visitDepthFirstOnceInterruptible(core::NodeAddress(stmt), [&](const core::ForStmtAddress& forAddr) {
+					// if the loop is already a child of a MarkerStmt, we return the parent to attach the annotations there
+					if(!forAddr.isRoot() && forAddr.getParentNode().isa<core::MarkerStmtPtr>()) {
+						foundFor = forAddr.getParentAddress().as<core::StatementAddress>();
+					} else {
+						// otherwise we return the loop itself
+						foundFor = forAddr;
+					}
 					return true;
 				});
 				if(foundFor != core::NodeAddress()) {
-					auto whileNode = foundFor.getAddressedNode();
-					node = core::transform::replaceAddress(node->getNodeManager(), foundFor, getMarkedNode(whileNode, anns)).getRootNode();
+					auto forNode = foundFor.getAddressedNode();
+					node = core::transform::replaceAddress(node->getNodeManager(), foundFor, getMarkedNode(forNode, anns)).getRootNode();
 					return nodes;
 				}
 			}
