@@ -198,13 +198,18 @@ _IRT_DEFINE_ATOMIC_COMPARE_AND_SWAP(uintptr_t)
 
 
 // The atomic operations for float and double types
+#define _IRT_DEFINE_ATOMIC_FP_OP_CONVERSION_UNION(__type, __integral_type)                                                                                     \
+	typedef union _irt_atomic_fp_conversion_type_##__type##_to_##__integral_type {                                                                               \
+		__integral_type raw;                                                                                                                                       \
+		__type data;                                                                                                                                               \
+	} _irt_atomic_fp_conversion_type_##__type##_to_##__integral_type;
 #define _IRT_DEFINE_ATOMIC_FP_OP_IMPL(__type, __integral_type, __opName, __op, __nameInfix, __return)                                                          \
 	static inline __type _irt_atomic_##__nameInfix##_fp_##__type(__type* __location, __type __value) {                                                           \
 		while(true) {                                                                                                                                              \
-			__type oldVal = *__location;                                                                                                                             \
-			__type newVal = oldVal __op __value;                                                                                                                     \
-			if(_irt_atomic_bool_compare_and_swap_impl_##__integral_type((__integral_type*)__location, *(__integral_type*)(&oldVal), *(__integral_type*)(&newVal))) { \
-				return __return;                                                                                                                                       \
+			_irt_atomic_fp_conversion_type_##__type##_to_##__integral_type oldVal = { .data = *__location };                                                         \
+			_irt_atomic_fp_conversion_type_##__type##_to_##__integral_type newVal = { .data = oldVal.data __op __value };                                            \
+			if(_irt_atomic_bool_compare_and_swap_impl_##__integral_type((__integral_type*)__location, oldVal.raw, newVal.raw)) {                                     \
+				return __return.data;                                                                                                                                  \
 			}                                                                                                                                                        \
 		}                                                                                                                                                          \
 	}
@@ -212,8 +217,10 @@ _IRT_DEFINE_ATOMIC_COMPARE_AND_SWAP(uintptr_t)
 	_IRT_DEFINE_ATOMIC_FP_OP_IMPL(__type, __integral_type, __opName, __op, fetch_and_##__opName, oldVal)                                                         \
 	_IRT_DEFINE_ATOMIC_FP_OP_IMPL(__type, __integral_type, __opName, __op, __opName##_and_fetch, newVal)
 
+_IRT_DEFINE_ATOMIC_FP_OP_CONVERSION_UNION(float, uint32)
 _IRT_DEFINE_ATOMIC_FP_OP(float,  uint32, add, +)
 _IRT_DEFINE_ATOMIC_FP_OP(float,  uint32, sub, -)
+_IRT_DEFINE_ATOMIC_FP_OP_CONVERSION_UNION(double, uint64)
 _IRT_DEFINE_ATOMIC_FP_OP(double, uint64, add, +)
 _IRT_DEFINE_ATOMIC_FP_OP(double, uint64, sub, -)
 
