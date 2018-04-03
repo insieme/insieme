@@ -76,6 +76,7 @@ namespace haskell {
 	class Context {
 
 		StablePtr context_hs;
+		StablePtr solver_stats_hs;
 
 		core::NodePtr root;
 
@@ -101,7 +102,9 @@ namespace haskell {
 
 		// -- general context interface requirements --
 
-		void dumpStatistics() const;
+                void clearStatistics();
+		void dumpStatistics();
+                void dumpStatisticsToFile(const std::string& keyPrefix, const std::string& filename);
 
 		void dumpSolution(const std::string& filenamePrefix = "solution", bool generateGraph = false) const;
 
@@ -144,6 +147,7 @@ namespace haskell {
 
 	  private:
 
+                StablePtr getStatistics();
 		void clear();
 
 		template <typename T>

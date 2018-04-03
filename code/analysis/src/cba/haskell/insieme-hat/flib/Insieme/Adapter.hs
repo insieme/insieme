@@ -54,11 +54,13 @@ module Insieme.Adapter where
 import Control.Exception
 import Control.Exception.Base (evaluate)
 import Control.Monad
+import Data.Bool
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
 import Foreign.CStorable
 import GHC.Generics (Generic)
+import GHC.Stats
 import System.IO.Unsafe (unsafePerformIO)
 import System.IO
 import System.Timeout (timeout)
@@ -73,6 +75,7 @@ import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as Compo
 import qualified Insieme.Analysis.Framework.PropertySpace.ValueTree as ValueTree
 import qualified Insieme.Analysis.Reference as Ref
 import qualified Insieme.Solver as Solver
+import qualified Insieme.Solver.Statistics as SS
 import qualified Insieme.Analysis.SymbolicValue as SV
 import qualified Insieme.Context as Ctx
 import qualified Insieme.Inspire as IR
@@ -101,8 +104,14 @@ type CRepArr a = Ptr (Ptr (CRep a))
 foreign export ccall "hat_initialize_context"
   initializeContext :: Ctx.CContext -> CString -> CSize -> IO (StablePtr Ctx.Context)
 
-foreign export ccall "hat_print_statistic"
-  dumpStatistics :: StablePtr Ctx.Context -> IO ()
+foreign export ccall "hat_get_statistics"
+  mkSolverStats :: StablePtr Ctx.Context -> IO (StablePtr SS.SolverStats)
+
+foreign export ccall "hat_print_statistics"
+  dumpStatistics :: StablePtr SS.SolverStats -> IO ()
+
+foreign export ccall "hat_dump_statistics_to_file"
+  dumpStatisticsToFile :: StablePtr SS.SolverStats -> CString -> CString -> IO ()
 
 foreign export ccall "hat_dump_assignment"
   dumpAssignment :: StablePtr Ctx.Context -> CString -> CSize -> IO ()
@@ -168,11 +177,25 @@ initializeContext context_c dump_c size_c = do
     let Right ir = BinPar.parseBinaryDump dump
     newStablePtr $ Ctx.mkContext context_c ir
 
-dumpStatistics :: StablePtr Ctx.Context -> IO ()
--- | Printer 'Solver.Solver' statistics.
-dumpStatistics ctx_hs = do
+mkSolverStats :: StablePtr Ctx.Context -> IO (StablePtr SS.SolverStats)
+mkSolverStats ctx_hs = do
     ctx <- deRefStablePtr ctx_hs
-    putStrLn $ Solver.showSolverStatistic $ Ctx.getSolverState ctx
+    gcStats <- bool (pure Nothing) (Just <$> getGCStats) =<< getGCStatsEnabled
+    let stats = SS.solverStats (Ctx.getSolverState ctx) gcStats
+    newStablePtr stats
+
+dumpStatistics :: StablePtr SS.SolverStats -> IO ()
+-- | Printer 'Solver.Solver' statistics.
+dumpStatistics stats_hs = do
+    stats <- deRefStablePtr stats_hs
+    putStrLn $ Solver.showSolverStatistics stats
+
+dumpStatisticsToFile :: StablePtr SS.SolverStats -> CString -> CString -> IO ()
+dumpStatisticsToFile stats_hs keyPostfix_cstr filename_cstr = do
+    stats <- deRefStablePtr stats_hs
+    filename <- peekCString filename_cstr
+    keyPostfix <- peekCString keyPostfix_cstr
+    appendFile filename $ SS.showGipedaSolverStatistics keyPostfix stats
 
 -- | Print current 'Solver.Solver' assignment.
 dumpAssignment :: StablePtr Ctx.Context -> CString -> CSize-> IO ()

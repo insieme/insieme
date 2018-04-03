@@ -80,6 +80,7 @@ library
                         Insieme.Solver.Lattice
                         Insieme.Solver.Metadata
                         Insieme.Solver.SolverState
+                        Insieme.Solver.Statistics
                         Insieme.Solver.Var
                         Insieme.Solver.VarMap
                         Insieme.Solver.VariableIndex

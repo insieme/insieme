@@ -63,7 +63,9 @@ extern "C" {
 
 	// Haskell Context
 	StablePtr hat_initialize_context(const Context* ctx_c, const char* dump_c, size_t size_c);
-	void hat_print_statistic(StablePtr hs_context);
+	StablePtr hat_get_statistics(StablePtr hs_context);
+	void hat_print_statistics(StablePtr hs_solver_stats);
+	void hat_dump_statistics_to_file(StablePtr hs_solver_stats, const char* keyPostfix, const char* filename);
 	void hat_dump_assignment(StablePtr hs_context, const char* filename, size_t generateGraph);
 
 	// NodePath
@@ -80,9 +82,9 @@ namespace haskell {
 
 	// ------------------------------------------------------------ Context
 
-	Context::Context() : context_hs(nullptr), root(), timelimit(-1us) {}
+	Context::Context() : context_hs(nullptr), solver_stats_hs(nullptr), root(), timelimit(-1us) {}
 
-	Context::Context(const core::NodePtr& node) : context_hs(nullptr), timelimit(-1us) {
+	Context::Context(const core::NodePtr& node) : context_hs(nullptr), solver_stats_hs(nullptr), timelimit(-1us) {
 		setRoot(node);
 	}
 
@@ -98,17 +100,37 @@ namespace haskell {
 		timelimit = t;
 	}
 
-	void Context::dumpStatistics() const {
-		if (!context_hs) {
-			std::cout << "No statistics available.\n";
-			return;
-		}
-		hat_print_statistic(context_hs);
+        void Context::clearStatistics() {
+                if(solver_stats_hs) {
+                        hs_free_stable_ptr(solver_stats_hs);
+                        solver_stats_hs = nullptr;
+                }
+        }
+
+        StablePtr Context::getStatistics() {
+                assert_true(context_hs);
+
+                if(solver_stats_hs)
+                        return solver_stats_hs;
+
+                assert_true(context_hs);
+
+                solver_stats_hs = hat_get_statistics(context_hs);
+                return solver_stats_hs;
+        }
+
+	void Context::dumpStatistics() {
+                clearStatistics();
+		hat_print_statistics(getStatistics());
 	}
+
+        void Context::dumpStatisticsToFile(const std::string& keyPostfix, const std::string& filename) {
+                hat_dump_statistics_to_file(getStatistics(), keyPostfix.c_str(), filename.c_str());
+        }
 
 	void Context::dumpSolution(const std::string& filenamePrefix, bool generateGraph) const {
 		if (!context_hs) {
-			std::cout << "No statistics available.\n";
+			std::cout << "No solution available.\n";
 			return;
 		}
 		std::cout << "Dumping assignment ...\n";
@@ -202,6 +224,7 @@ namespace haskell {
 		}
 
 		// delete remaining context information on the haskell side
+                Context::clearStatistics();
 		hs_free_stable_ptr(context_hs);
 
 		// reset fields
