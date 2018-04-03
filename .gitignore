@@ -17,11 +17,20 @@ build*/
 create*.sh
 worker_event_log.*
 Thumbs.db
-tags
 CMakeLists.txt.user
 code/.idea*
+
+# Emacs per directory settings
+.dir-locals.el
 
 # ignore vim ycm files
 .ycm_extra_conf.py
 .ycm_extra_conf.pyc
 .ropeproject
+
+# Various Tags formats
+tags
+TAGS
+GPATH
+GRTAGS
+GTAGS
