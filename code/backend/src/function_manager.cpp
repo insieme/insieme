@@ -49,6 +49,7 @@
 #include "insieme/backend/name_manager.h"
 #include "insieme/backend/variable_manager.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
+#include "insieme/backend/c_ast/c_ast_printer.h"
 
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/default_members.h"
@@ -1655,8 +1656,9 @@ namespace backend {
 					}
 					if(rExt.isCallOfRefParentCast(memLoc)) {
 						// base constructors
-						return cmgr->create<c_ast::Identifier>(
-						    core::analysis::getTypeName(core::analysis::getRepresentedType(core::analysis::getArgument(memLoc, 1))));
+						const auto& baseType = core::analysis::getRepresentedType(core::analysis::getArgument(memLoc, 1));
+						const auto& info = context.getConverter().getTypeManager().getTypeInfo(context, baseType);
+						return cmgr->create<c_ast::Identifier>(c_ast::toC(info.rValueType));
 					}
 					if(rExt.isCallOfRefDeref(memLoc)) memLoc = core::analysis::getArgument(memLoc, 0);
 					if(rExt.isCallOfRefMemberAccess(memLoc)) {
