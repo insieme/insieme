@@ -1,7 +1,7 @@
 NAME="ccache"
-VERSION="3.2.5"
+VERSION="3.4.2"
 PACKAGE="$NAME-$VERSION"
 
-FILE="$PACKAGE.tar.bz2"
-URL="http://www.insieme-compiler.org/ext_libs/$FILE"
-SHA256SUM="7a553809e90faf9de3a23ee9c5b5f786cfd4836bf502744bedb824a24bee1097"
+FILE="$PACKAGE.tar.gz"
+URL="https://www.samba.org/ftp/ccache/$FILE"
+SHA256SUM="b2264923c63e2b90a17cf56acb1df3f4229c416fb88e476e5ec7e02919d319c3"
