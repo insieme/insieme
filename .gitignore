@@ -14,7 +14,7 @@ build*/
 *.chs.h
 *.i
 /nbproject/private/
-create*.sh
+/create*.sh
 worker_event_log.*
 Thumbs.db
 CMakeLists.txt.user
