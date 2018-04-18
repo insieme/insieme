@@ -13,9 +13,9 @@ pkg_configure() {
 }
 
 pkg_build() {
-    DOCBOOK2XMAN='sh -c "touch "' make -e -j"$SLOTS"
+    MANS='' make -e  all
 }
 
 pkg_install() {
-    make -e install PREFIX="$PREFIX/$PACKAGE"
+    MANS='' make -e install PREFIX="$PREFIX/$PACKAGE"
 }
