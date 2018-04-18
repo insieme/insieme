@@ -38,6 +38,7 @@
 #include "insieme/analysis/features/effort_estimation.h"
 
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/lang/lang.h"
 
@@ -46,17 +47,31 @@ namespace analysis {
 namespace features {
 
 	namespace {
-		unsigned long long EFFORT_SIMPLE_OP = 1;
-		unsigned long long EFFORT_BRANCH = 2;
-		unsigned long long EFFORT_LOOP = 5;
-		unsigned long long EFFORT_LOOP_ITERATIONS = 100;
-		unsigned long long EFFORT_LOOP_COMPARISON = 1;
-		unsigned long long EFFORT_LOOP_STEP = 1;
-		unsigned long long EFFORT_BUILTIN = 1;
-		unsigned long long EFFORT_FUN_CALL = 5;
+		struct EffortAnnotation : public core::value_annotation::copy_on_migration {
+			EffortEstimationType effort;
+			EffortAnnotation(const EffortEstimationType& effort) : effort(effort) {}
+			bool operator==(const EffortAnnotation& other) const {
+				return effort == other.effort;
+			}
+		};
 
-		unsigned long long estimateEffortInternal(const core::NodePtr& function) {
-			unsigned long long effort = 0;
+		EffortEstimationType EFFORT_SIMPLE_OP = 1;
+		EffortEstimationType EFFORT_BRANCH = 2;
+		EffortEstimationType EFFORT_LOOP = 5;
+		EffortEstimationType EFFORT_LOOP_ITERATIONS = 100;
+		EffortEstimationType EFFORT_LOOP_COMPARISON = 1;
+		EffortEstimationType EFFORT_LOOP_STEP = 1;
+		EffortEstimationType EFFORT_BUILTIN = 1;
+		EffortEstimationType EFFORT_FUN_CALL = 5;
+
+		EffortEstimationType estimateEffortInternal(const core::NodePtr& function) {
+
+			// get cached value from annotation if present
+			if(function.hasAttachedValue<EffortAnnotation>()) {
+				return function.getAttachedValue<EffortAnnotation>().effort;
+			}
+
+			EffortEstimationType effort = 0;
 			bool debug = false;
 			core::visitDepthFirstPrunable(function, [&](const core::NodePtr& node) {
 				switch(node->getNodeType()) {
@@ -87,27 +102,32 @@ namespace features {
 						//ignore
 					}
 					effort += EFFORT_LOOP + loopIters * (estimateEffortInternal(forStmt->getBody()) + EFFORT_LOOP_STEP + EFFORT_LOOP_COMPARISON);
-					return true;
+					return core::Prune;
 				}
 
 				case core::NT_WhileStmt:
 					if(debug) std::cout << "While loop" << std::endl;
 					effort += EFFORT_LOOP + EFFORT_LOOP_ITERATIONS * (estimateEffortInternal(node.as<core::WhileStmtPtr>()->getBody()) + EFFORT_LOOP_COMPARISON);
-					return true;
+					return core::Prune;
 
 				case core::NT_CallExpr: {
-					const auto& callee = node.as<core::CallExprPtr>()->getFunctionExpr();
+					const auto& call = node.as<core::CallExprPtr>();
+					const auto& callee = call->getFunctionExpr();
 					if(callee.isa<core::LambdaReferencePtr>()) {
 						if(debug) std::cout << "Recursive function call" << std::endl;
-						return true;
+						effort += EFFORT_FUN_CALL;
 
-					} else if(core::lang::isBuiltIn(callee)) {
-						if(debug) std::cout << "Function call to builtin" << std::endl;
+					} else if(core::lang::isBuiltIn(callee) || core::lang::isDerived(callee)) {
+						if(debug) std::cout << "Function call to builtin/derived " << callee << std::endl;
 						effort += EFFORT_BUILTIN;
+						for(const auto& arg : call->getArgumentList()) {
+							effort += estimateEffortInternal(arg);
+						}
+						return core::Prune;
 
 					} else {
 						if(debug) std::cout << "Function call" << std::endl;
-						effort += EFFORT_FUN_CALL + estimateEffortInternal(callee);
+						effort += EFFORT_FUN_CALL;
 					}
 					break;
 				}
@@ -115,14 +135,18 @@ namespace features {
 				default:
 					; //no effort
 				}
-				return false;
+				return core::Descent;
 			});
+
+			// attach annotation with calculated value
+			function.attachValue(EffortAnnotation(effort));
+
 			return effort;
 		}
 	}
 
-	unsigned long long estimateEffort(const core::LambdaExprPtr& function) {
-		return estimateEffortInternal(function->getBody());
+	EffortEstimationType estimateEffort(const core::NodePtr& node) {
+		return estimateEffortInternal(node);
 	}
 
 } // end namespace features

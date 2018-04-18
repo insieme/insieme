@@ -45,7 +45,9 @@ namespace insieme {
 namespace analysis {
 namespace features {
 
-	unsigned long long estimateEffort(const core::LambdaExprPtr& function);
+	using EffortEstimationType = unsigned long long;
+
+	EffortEstimationType estimateEffort(const core::NodePtr& node);
 
 } // end namespace features
 } // end namespace analysis
