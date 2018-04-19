@@ -13,9 +13,9 @@ pkg_configure() {
 }
 
 pkg_build() {
-    MANS='' make -e  all
+    MANS='' make -e all
 }
 
 pkg_install() {
-    MANS='' make -e install PREFIX="$PREFIX/$PACKAGE"
+    MANS='/dev/null' make -e install PREFIX="$PREFIX/$PACKAGE"
 }
