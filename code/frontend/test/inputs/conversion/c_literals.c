@@ -58,6 +58,9 @@ int main() {
 	#pragma test expect_ir("6ul")
 	6UL;
 
+	#pragma test expect_ir("2567483615ul")
+	0x9908b0dfUL;
+
 	#pragma test expect_ir("7ull")
 	7ull;
 

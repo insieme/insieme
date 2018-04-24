@@ -1293,6 +1293,10 @@ namespace core {
 		return numericType(literal(format("%d", value), getLangBasic().getIntInf()));
 	}
 
+	TypePtr IRBuilderBaseModule::numericTypeUnsigned(uint64_t value) const {
+		return numericType(literal(format("%u", value), getLangBasic().getUIntInf()));
+	}
+
 	LiteralPtr IRBuilderBaseModule::getTypeLiteral(const TypePtr& type) const {
 		auto literalType = getTypeLiteralType(type);
 		return literal(literalType, "type_literal");

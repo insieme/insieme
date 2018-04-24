@@ -155,7 +155,13 @@ namespace extensions {
 			switch(arg.getKind()) {
 			case clang::TemplateArgument::Expression: return adjustTemplateTypeReferenceQualifierKind(converter.convertVarType(arg.getAsExpr()->getType()));
 			case clang::TemplateArgument::Type: return adjustTemplateTypeReferenceQualifierKind(converter.convertVarType(arg.getAsType()));
-			case clang::TemplateArgument::Integral: return converter.getIRBuilder().numericType(arg.getAsIntegral().getSExtValue());
+			case clang::TemplateArgument::Integral: {
+				if(arg.getAsIntegral().isUnsigned()) {
+					return converter.getIRBuilder().numericTypeUnsigned(arg.getAsIntegral().getZExtValue());
+				} else {
+					return converter.getIRBuilder().numericType(arg.getAsIntegral().getSExtValue());
+				}
+			}
 			case clang::TemplateArgument::Template: {
 				auto tempDecl = arg.getAsTemplate().getAsTemplateDecl();
 				core::TypeList paramTypes;

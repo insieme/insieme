@@ -434,9 +434,14 @@ namespace core {
 		TypePtr getTypeLiteralType(const TypePtr& type) const;
 
 		/**
-		 * Build a numeric Type from a number.
+		 * Build a signed numeric Type from a number.
 		 */
 		TypePtr numericType(int64_t value) const;
+
+		/**
+		* Build an unsigned numeric Type from a number.
+		*/
+		TypePtr numericTypeUnsigned(uint64_t value) const;
 
 		/**
 		 * A factory method for a type literals.
