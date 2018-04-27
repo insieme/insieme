@@ -123,7 +123,10 @@ recursiveCalls addr = case Q.getNodeType addr of
 --
 
 newtype RecursiveLambdaReferenceIndex = RecursiveLambdaReferenceIndex (Map.Map I.Tree (Map.Map I.Tree [NodeAddress]))
-  deriving (Eq, Ord, Show, Generic, NFData)
+  deriving (Eq, Ord, Generic, NFData)
+
+instance Show RecursiveLambdaReferenceIndex where
+    show _ = "RecursiveLambdaReferenceIndex{ .. }"
 
 instance Lattice RecursiveLambdaReferenceIndex where
     bot = RecursiveLambdaReferenceIndex Map.empty

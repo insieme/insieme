@@ -48,6 +48,7 @@ module Insieme.Analysis.Utils.CppSemantic (
 
     -- some tools to identify calls to explicit constructs
     isExplicitConstructorCall,
+    isExplicitCopyOrMoveConstructorCall,
     callsExplicitConstructor,
 
     -- some tools to identify calls to implicit constructs
@@ -137,6 +138,10 @@ isExplicitConstructorCall addr = case I.getNode addr of
     (I.Node I.CallExpr ( _ : fun : _ )) -> isConstructor fun
     _ -> False
 
+isExplicitCopyOrMoveConstructorCall :: NodeAddress -> Bool
+isExplicitCopyOrMoveConstructorCall addr = case I.getNode addr of
+    (I.Node I.CallExpr ( _ : fun : _ )) -> isCopyOrMoveConstructor fun
+    _ -> False
 
 --- Tests whether a declaration is involving an explicit constructor call
 

@@ -372,47 +372,11 @@ dataflowValue addr analysis ops = case I.getNode addr of
         where
             cov a = isBuiltin a "ref_deref"
 
-            dep _ a = (Solver.toVar targetRefVar) : (map Solver.toVar $ readValueVars a)
+            dep _ _ = [Solver.toVar valueVar]
 
-            val _ a = 
-                    if BSet.isUniverse targets 
-                    then top 
-                    else Solver.join $ map go $ BSet.toList targets
-                where
-                    targets = Reference.unRS $ targetRefVal a
+            val _ a = Solver.get a valueVar
 
-                    go r = case r of 
-                        Reference.NullReference          -> top
-                        Reference.UninitializedReference -> uninitializedValue analysis
-                        _                                -> descent dp val
-                      where
-                        dp  = (Reference.dataPath r)
-                        val = Solver.get a (fromJust $ memStateVarOf r)
-
-                    descent dp val = case dp of
-
-                        Root -> val
-
-                        DataPath p Down i | ComposedValue.isValue val -> res
-                          where
-                            res = excessiveFileAccessHandler analysis (descent p val) i
-
-                        _ | otherwise -> ComposedValue.getElement dp val
-
-
-            targetRefVar = Reference.referenceValue $ I.goDown 1 $ I.goDown 2 addr          -- here we have to skip the potentially materializing declaration!
-            targetRefVal a = ComposedValue.toValue $ Solver.get a targetRefVar
-
-            readValueVars a = 
-                    if BSet.isUniverse targets 
-                    then []
-                    else mapMaybe memStateVarOf $ BSet.toList targets
-                where
-                    targets = Reference.unRS $ targetRefVal a
-
-            memStateVarOf Reference.NullReference = Nothing
-            memStateVarOf Reference.UninitializedReference = Nothing
-            memStateVarOf r = Just $ memoryStateValue (MemoryStatePoint (ProgramPoint addr Internal) (MemoryLocation $ Reference.creationPoint r)) analysis
+            valueVar = referencedValue (I.goDown 1 $ I.goDown 2 addr) analysis
 
 
     -- support the tuple_member_access operation (read from tuple component)
@@ -458,4 +422,3 @@ dataflowValue addr analysis ops = case I.getNode addr of
             arg2 = I.goDown 1 $ I.goDown 3 addr
 
             valueVar = varGen $ if isLiteral arg1 then arg2 else arg1
-

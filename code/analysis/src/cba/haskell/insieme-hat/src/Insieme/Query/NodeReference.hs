@@ -327,6 +327,21 @@ checkFunctionKind test n = fromMaybe False $ test <$> (IR.toFunctionKind =<< get
 isConstructor :: NodeLike a => a -> Bool
 isConstructor = checkFunctionKind (==IR.FK_Constructor)
 
+isCopyConstructor :: NodeLike a => a -> Bool
+isCopyConstructor n =  isConstructor n && length params == 2 && isConstCppRef (params !! 1)
+  where
+    params = fromJust $ getParameterTypes n
+    isConstCppRef r = getReferenceKind r == RK_CppRef && isConstReference r
+
+isMoveConstructor :: NodeLike a => a -> Bool
+isMoveConstructor n =  isConstructor n && length params == 2 && isConstCppRef (params !! 1)
+  where
+    params = fromJust $ getParameterTypes n
+    isConstCppRef r = getReferenceKind r == RK_CppRRef && not (isConstReference r)
+
+isCopyOrMoveConstructor :: NodeLike a => a -> Bool
+isCopyOrMoveConstructor n = isCopyConstructor n || isMoveConstructor n
+
 isDestructor :: NodeLike a => a -> Bool
 isDestructor = checkFunctionKind (==IR.FK_Destructor)
 

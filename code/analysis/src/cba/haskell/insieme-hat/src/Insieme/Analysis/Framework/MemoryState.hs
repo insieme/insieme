@@ -45,7 +45,9 @@ module Insieme.Analysis.Framework.MemoryState (
 
     MemoryLocation(..),       -- re-exported for convinience
     MemoryStatePoint(..),
-    memoryStateValue
+    memoryStateValue,
+
+    referencedValue
 
 ) where
 
@@ -285,9 +287,8 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
             con = Solver.forward initVar var
             initVar = variableGenerator analysis $ I.goDown 1 addr
 
-        -- handle values defined by assignments
+        -- handle values defined by assignments or explicit constructor calls
         I.CallExpr -> var
-
 
         -- handle struct values defined by init expressions
         I.InitExpr | Q.isTagType elemType -> var
@@ -438,9 +439,10 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
 
                 I.InitExpr  -> valueVar $ I.goDown 1 $ I.goDown 0 $ I.goDown 2 addr
 
-                I.CallExpr  -> if isMaterializingDeclaration $ I.getNode valueDecl
-                                then memoryStateValue (MemoryStatePoint (ProgramPoint valueDecl Post) (MemoryLocation valueDecl)) analysis
-                                else valueVar (I.goDown 1 valueDecl)
+                I.CallExpr -> case () of
+                  _ | isExplicitConstructorCall addr -> referencedValue (I.goDown 1 valueDecl) analysis
+                    | isMaterializingDeclaration $ I.getNode valueDecl -> memoryStateValue (MemoryStatePoint (ProgramPoint valueDecl Post) (MemoryLocation valueDecl)) analysis
+                    | otherwise -> valueVar (I.goDown 1 valueDecl)
 
                 _ -> error "elemValueVar: unhandled case"
 
@@ -475,6 +477,88 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
         -- type checks
 
         elemType = fromJust $ Q.getReferencedType =<< Q.getType addr
+
+
+
+
+
+--
+-- * Referenced Value Analysis
+--
+
+data ReferencedValueAnalysis a = ReferencedValueAnalysis a
+    deriving (Typeable)
+
+referencedValueAnalysis :: (Typeable a, Typeable v, Typeable i) => DataFlowAnalysis a v i -> Solver.AnalysisIdentifier
+referencedValueAnalysis a = Solver.mkAnalysisIdentifier (ReferencedValueAnalysis a) ( "RV-" ++ (show $ analysisIdentifier a) )
+
+
+--
+-- * Referenced Value Variable Generator
+--
+
+referencedValue :: (ComposedValue.ComposedValue v i a, Typeable d)
+         => NodeAddress                                 -- ^ the expression providing a reference to the value of interest
+         -> DataFlowAnalysis d v i                      -- ^ the underlying data flow analysis this defined value analysis is cooperating with
+         -> Solver.TypedVar v                           -- ^ the analysis variable representing the requested value
+
+referencedValue addr analysis = case () of
+
+    -- filter out references (fail if it is not a reference)
+    _ | not (Q.isReference addr) -> error "Not a reference!"
+      | otherwise -> var
+
+  where
+
+    -- the ID of the produced variable
+    varId = Solver.mkIdentifierFromExpression (referencedValueAnalysis analysis) addr
+
+    -- the variable obtaining the value of a referenced memory location
+
+    var = Solver.mkVariable varId [con] Solver.bot
+    con = Solver.createConstraint dep val var
+
+    dep a = (Solver.toVar targetRefVar) : (map Solver.toVar $ readValueVars a)
+
+    val a =
+            if BSet.isUniverse targets
+            then Solver.top
+            else Solver.join $ map go $ BSet.toList targets
+        where
+            targets = unRS $ targetRefVal a
+
+            go r = case r of
+                NullReference          -> Solver.top
+                UninitializedReference -> uninitializedValue analysis
+                _                      -> descent dp val
+              where
+                dp  = dataPath r
+                val = Solver.get a (fromJust $ memStateVarOf r)
+
+            descent dp val = case dp of
+
+                DP.Root -> val
+
+                DP.DataPath p DP.Down i | ComposedValue.isValue val -> res
+                  where
+                    res = excessiveFileAccessHandler analysis (descent p val) i
+
+                _ | otherwise -> ComposedValue.getElement dp val
+
+
+    targetRefVar = referenceValue addr
+    targetRefVal a = ComposedValue.toValue $ Solver.get a targetRefVar
+
+    readValueVars a =
+            if BSet.isUniverse targets
+            then []
+            else mapMaybe memStateVarOf $ BSet.toList targets
+        where
+            targets = unRS $ targetRefVal a
+
+    memStateVarOf NullReference = Nothing
+    memStateVarOf UninitializedReference = Nothing
+    memStateVarOf r = Just $ memoryStateValue (MemoryStatePoint (ProgramPoint addr Post) (MemoryLocation $ creationPoint r)) analysis
 
 
 
@@ -569,7 +653,11 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
                 mayAssign a = BSet.isUniverse funs || (any assign $ BSet.toSet funs)
                     where
                         funs = funVal a
-                        assign c = Q.isBuiltin (toAddress c) "ref_assign"
+                        assign c = isRefAssign || isCtor
+                          where
+                            isRefAssign = Q.isBuiltin addr "ref_assign"
+                            isCtor = Q.isLiteral addr && Q.isCopyOrMoveConstructor addr
+                            addr = toAddress c
 
 
         -- skip the interpretation of known effect-free builtins
@@ -640,7 +728,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
         defaultVar = programPointValue pp idGen analysis []
 
-        isAssignCandidate = res
+        isAssignCandidate = res || isExplicitCopyOrMoveConstructorCall addr
             where
                 res = (not isNotRef) && I.numChildren addr == 4 && unitRes && refParam
                 fun = I.goDown 1 addr
@@ -695,7 +783,7 @@ isAssignmentFree tree = case Q.getNodeType tree of
 isAssignmentFreeFunction :: I.Tree -> Bool
 isAssignmentFreeFunction tree = case Q.getNodeType tree of
 
-    I.Literal -> not $ Q.isBuiltin tree "ref_assign"
+    I.Literal -> Q.isaBuiltin tree && not (Q.isBuiltin tree "ref_assign")
 
     I.LambdaExpr -> any (Q.isBuiltin tree) [
                                 "bool_and",

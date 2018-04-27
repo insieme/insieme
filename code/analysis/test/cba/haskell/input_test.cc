@@ -384,7 +384,9 @@ namespace cba {
 					EXPECT_TRUE(!lhs.empty() && lhs == rhs)
 						<< *core::annotations::getLocation(call) << std::endl
 						<< "LHS ArithmeticSet evaluates to " << lhs << std::endl
-						<< "RHS ArithmeticSet evaluates to " << rhs << std::endl;
+						<< "RHS ArithmeticSet evaluates to " << rhs << std::endl
+						<< "LHS: " << call.getArgument(0) << std::endl
+						<< "RHS: " << call.getArgument(1) << std::endl;
 
 				} else if (name == "cba_expect_ne_int") {
 					std::cerr << "Performing " << name << std::endl;
