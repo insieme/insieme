@@ -36,62 +36,57 @@
  -}
 
 module Insieme.Inspire.IR.Transform
-    ( substitute
-    , substitute'
+    ( substitutePrunable
+    , substitute
     , substituteInLocalScope
-    , substituteInLocalScope'
     , removeIds
     , removeIds'
     ) where
 
+
 import Control.Monad.State
 import Data.Map (Map)
+import Data.Maybe
 import qualified Data.Map as Map
 
 import Insieme.Inspire.IR.NodeType as NT
 import Insieme.Inspire.IR.Tree as IR
 
+import qualified Insieme.Inspire.Visit.NodeMap as NodeMap
+
+
+
 type TreeSubst = Map IR.Tree IR.Tree
 
-substitute :: TreeSubst -> IR.Tree -> IR.Tree
-substitute s t = evalState (substitute' t) s
+substitutePrunable :: (IR.Tree -> Bool) -> TreeSubst -> IR.Tree -> IR.Tree
+substitutePrunable prune s t = resolve t
+  where
+    -- memorized result
+    transformed = go <$> NodeMap.mkNodeMap t
+    go t =
+      case Map.lookup t s of
+        Just t' -> t'
+        Nothing -> if prune t then t else res
+          where
+            ch = getChildren t
+            ch' = resolve <$> ch
+            res = if ch == ch' then t
+              else t { getID = Nothing
+                     , getChildren = ch'
+                     , builtinTags = []
+                     }
 
-substitute' :: IR.Tree -> State TreeSubst IR.Tree
-substitute' t = do
-  s <- get
-  case Map.lookup t s of
-    Just t' -> return t'
-    Nothing -> do
-        let ch = getChildren t
-        ch' <- mapM substitute' ch
-        let t' | ch' == ch = t
-               | otherwise = t { getID = Nothing
-                               , getChildren = ch'
-                               , builtinTags = []
-                               }
-        modify (Map.insert t t')
-        return t'
+    -- function resolving a value
+    resolve n = fromMaybe (go n) (NodeMap.lookup n transformed)
+
+
+
+
+substitute :: TreeSubst -> IR.Tree -> IR.Tree
+substitute = substitutePrunable $ const False
 
 substituteInLocalScope :: TreeSubst -> IR.Tree -> IR.Tree
-substituteInLocalScope s t = evalState (substituteInLocalScope' t) s
-
-substituteInLocalScope' :: IR.Tree -> State TreeSubst IR.Tree
-substituteInLocalScope' t = do
-  s <- get
-  case getNodeType t of
-    NT.Lambda -> return t
-    _ -> case Map.lookup t s of
-        Just t' -> return t'
-        Nothing -> do
-            let ch = getChildren t
-            ch' <- mapM substituteInLocalScope' ch
-            let t' | ch' == ch = t
-                   | otherwise = t { getID = Nothing
-                                   , getChildren = ch'
-                                   , builtinTags = []
-                                   }
-            modify (Map.insert t t')
-            return t'
+substituteInLocalScope = substitutePrunable $ (NT.Lambda==) . getNodeType
 
 
 

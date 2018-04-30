@@ -45,7 +45,7 @@ import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Prelude hiding (map)
 
-import qualified Insieme.Inspire.IR as IR
+import qualified Insieme.Inspire.IR.Tree as IR
 
 data NodeMap a = NodeMap { nmIdMap :: IntMap a }
 
