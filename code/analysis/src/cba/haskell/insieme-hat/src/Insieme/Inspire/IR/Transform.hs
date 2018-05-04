@@ -59,27 +59,24 @@ import qualified Insieme.Inspire.Visit.NodeMap as NodeMap
 type TreeSubst = Map IR.Tree IR.Tree
 
 substitutePrunable :: (IR.Tree -> Bool) -> TreeSubst -> IR.Tree -> IR.Tree
-substitutePrunable prune s t = resolve t
-  where
-    -- memorized result
-    transformed = go <$> NodeMap.mkNodeMap t
-    go t =
-      case Map.lookup t s of
-        Just t' -> t'
-        Nothing -> if prune t then t else res
-          where
-            ch = getChildren t
-            ch' = resolve <$> ch
-            res = if ch == ch' then t
-              else t { getID = Nothing
-                     , getChildren = ch'
-                     , builtinTags = []
-                     }
+substitutePrunable prune s t = evalState (substitutePrunable' prune t) s
 
-    -- function resolving a value
-    resolve n = fromMaybe (go n) (NodeMap.lookup n transformed)
-
-
+substitutePrunable' :: (IR.Tree -> Bool) -> IR.Tree -> State TreeSubst IR.Tree
+substitutePrunable' prune t = do
+  s <- get
+  case Map.lookup t s of
+    Just t' -> return t'
+    Nothing | prune t -> return t
+    Nothing -> do
+       let ch = getChildren t
+       ch' <- mapM (substitutePrunable' prune) ch
+       let t' | ch' == ch = t
+              | otherwise = t { getID = Nothing
+                              , getChildren = ch'
+                              , builtinTags = []
+                              }
+       modify (Map.insert t t')
+       return t'
 
 
 substitute :: TreeSubst -> IR.Tree -> IR.Tree
