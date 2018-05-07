@@ -224,8 +224,8 @@ data VarDependencyStats =
 varDependencyStats :: SolverState -> VarDependencyStats
 varDependencyStats s = 
     VarDependencyStats 
-    { vdsNumSCCs     = length sccs
-    , vdsLargestSCCs = take 10 $ reverse $ sort $ length . Graph.flattenSCC <$> sccs
+    { vdsNumSCCs     = 0 -- length sccs
+    , vdsLargestSCCs = [] -- take 10 $ reverse $ sort $ length . Graph.flattenSCC <$> sccs
     }
 
   where
@@ -243,6 +243,6 @@ varDependencyStats s =
 
 showVarDependencyStats :: VarDependencyStats -> String
 showVarDependencyStats VarDependencyStats {..} = unlines
-  [ "  Number of SCCs: " ++ show vdsNumSCCs
-  , "  largest SCCs:   " ++ show vdsLargestSCCs
+  [ "  Number of SCCs: " -- ++ show vdsNumSCCs
+  , "  largest SCCs:   " -- ++ show vdsLargestSCCs
   ]
