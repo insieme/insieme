@@ -114,7 +114,7 @@ namespace haskell {
 		core::NodePtr getRoot() const;
 
 		HaskellNodeAddress resolveNodeAddress(const core::NodeAddress& addr);
-		core::NodeAddress resolveNodeAddress(const HaskellNodeAddress& addr);
+		core::NodeAddress resolveNodeAddress(const HaskellNodeAddress&& addr);
 
 		template <typename RT, typename FN, typename... Args>
 		boost::optional<typename std::remove_pointer<RT>::type> runAnalysis(FN f, Args&&... args) {

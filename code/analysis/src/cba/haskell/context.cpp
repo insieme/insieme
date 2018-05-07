@@ -196,7 +196,7 @@ namespace haskell {
 		return addr_hs;
 	}
 
-	core::NodeAddress Context::resolveNodeAddress(const HaskellNodeAddress& addr_hs) {
+	core::NodeAddress Context::resolveNodeAddress(const HaskellNodeAddress&& addr_hs) {
 
 		// support the conversion of null-addresses
 		if (!addr_hs) return core::NodeAddress();
@@ -211,6 +211,7 @@ namespace haskell {
 			addr = addr.getAddressOfChild(i);
 		}
 
+                hs_free_stable_ptr(addr_hs);
 		return addr;
 	}
 

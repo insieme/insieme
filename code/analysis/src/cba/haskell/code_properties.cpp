@@ -54,7 +54,7 @@ namespace haskell {
 	core::VariableAddress getDefinitionPoint(Context& ctxt, const core::VariableAddress& var) {
 		auto var_hs = ctxt.resolveNodeAddress(var);
 		auto def = hat_find_declaration(var_hs);
-		return ctxt.resolveNodeAddress(def).as<core::VariableAddress>();
+		return ctxt.resolveNodeAddress(std::move(def)).as<core::VariableAddress>();
 	}
 
 } // end namespace haskell
