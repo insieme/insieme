@@ -39,57 +39,63 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms   #-}
+{-# LANGUAGE ViewPatterns      #-}
 
 module Insieme.Inspire.IR.Tree where
 
 import Data.List
+import Data.Hashable
 import Control.DeepSeq
 import GHC.Generics (Generic)
 
 import Insieme.Inspire.IR.NodeType
+import Insieme.Inspire.IR.HashCons
 import {-# UP #-} Insieme.Inspire.NodeReference
 
 -- TODO: Rename to 'Node'
 data Tree = MkTree {
-      mtId        :: Maybe Int,
-      mtInnerTree :: {-# UNPACK #-} !InnerTree
-    } deriving (Show, Generic, NFData)
-
-instance Eq Tree where
-    MkTree { mtId = Just ida } == MkTree { mtId = Just idb } =
-        ida == idb
-    a == b =
-        mtInnerTree a == mtInnerTree b
-
-instance Ord Tree where
-    compare Tree{ getID = Just ida } Tree{ getID = Just idb } = compare ida idb
-    compare a b = compare (mtInnerTree a) (mtInnerTree b)
+      mtId        :: !(Maybe Int),
+      mtInnerTree :: {-# UNPACK#-} !(HC InnerTree)
+    } deriving (Show, Eq, Ord, Generic, NFData, Hashable)
 
 instance NodeReference Tree where
     child i  = (!!i) . children
     children = getChildren
 
-treeExactEq :: Tree -> Tree -> Bool
-treeExactEq a b = mtId a == mtId b && mtInnerTree a == mtInnerTree b
-
 data InnerTree = InnerTree {
       itNodeType    :: !NodeType,
       itChildren    :: ![Tree],
       itBuiltinTags :: ![String]
-    } deriving (Eq, Ord, Show, Generic, NFData)
+    } deriving (Eq, Show, Generic, NFData, Hashable, Ord)
+
+instance HashCons InnerTree where
 
 pattern Node :: NodeType -> [Tree] -> Tree
-pattern Node x y <- MkTree _ (InnerTree x y _)
+pattern Node x y <- MkTree _ (hcVal -> InnerTree x y _)
 
-pattern Tree :: Maybe Int -> NodeType -> [Tree] -> [String] -> Tree
-pattern Tree { getID, getNodeType, getChildren, builtinTags }
-      = MkTree getID (InnerTree getNodeType getChildren builtinTags)
+innerTree :: Tree -> InnerTree
+innerTree = hcVal . mtInnerTree
+
+getID :: Tree -> Maybe Int
+getID = mtId
+
+getNodeType :: Tree -> NodeType
+getNodeType = itNodeType . innerTree
+
+getChildren :: Tree -> [Tree]
+getChildren = itChildren . innerTree
+
+builtinTags :: Tree -> [String]
+builtinTags = itBuiltinTags . innerTree
 
 unsafeMkNode :: Int -> NodeType -> [Tree] -> [String] -> Tree
-unsafeMkNode i nt ch bt = MkTree (Just i) (InnerTree nt ch bt)
+unsafeMkNode i nt ch bt = MkTree (Just i) (hc $ InnerTree nt ch bt)
+
+unsafeMkNode' :: Maybe Int -> NodeType -> [Tree] -> [String] -> Tree
+unsafeMkNode' i nt ch bt = MkTree i (hc $ InnerTree nt ch bt)
 
 mkNode :: NodeType -> [Tree] -> [String] -> Tree
-mkNode nt ch bt = MkTree Nothing (InnerTree nt ch bt)
+mkNode nt ch bt = MkTree Nothing (hc $ InnerTree nt ch bt)
 
 getBuiltinTarget :: Tree -> Tree
 getBuiltinTarget (Node LambdaExpr [_,tag,(Node LambdaDefinition bindings)]) = res

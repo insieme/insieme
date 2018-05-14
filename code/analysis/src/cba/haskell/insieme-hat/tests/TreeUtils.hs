@@ -35,7 +35,9 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
-module TestUtils where
+{-# LANGUAGE ViewPatterns #-}
+
+module TreeUtils where
 
 import Insieme.Inspire
 import Test.Tasty
@@ -46,29 +48,25 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
 
-nil n = n 0 []
+nil n = n []
 
-nodeType = IntValue 0
+node ch = mkNode (IntValue 0) ch ["dummy"]
+nodeWithBuiltinTags ch bt = mkNode (IntValue 0) ch bt
 
-node ch = MkTree Nothing (InnerTree nodeType ch ["dummy"])
+-- | Assert node equality using constant time HashCons equality
+(@?~) :: Tree -> Tree -> Assertion
+a @?~ b = (a == b) @? msg a b
 
-nodeWithoutId, nodeWithId :: Int -> [Tree] -> Tree
-nodeWithoutId _id ch = MkTree Nothing (InnerTree nodeType ch ["dummy"])
-nodeWithId     id ch = MkTree (Just id) (InnerTree nodeType ch ["dummy"])
+(@?===) :: Tree -> Tree -> Assertion
+(@?===) = (@?~)
 
-nodeWithBuiltinTags bt ch = MkTree Nothing (InnerTree nodeType ch bt)
-
--- | Assert node equality modulo IDs using the ordinary Eq instance
-a @?~ b = (a == b) @?
-    "expected:\n"++simplShow 0 b++"\ngot:\n"++simplShow 0 a++"\n"++
-    "expected:\n"++ppShow b++"\ngot:\n"++ppShow a++"\n"
-
--- | Assert exact node equality including IDs
-a @?=== b = (treeExactEq a b) @?
+msg :: Tree -> Tree -> String
+msg a b =
     "expected:\n"++simplShow 0 b++"\ngot:\n"++simplShow 0 a++"\n"++
     "expected:\n"++ppShow b++"\ngot:\n"++ppShow a++"\n"
 
 -- | Show a simplified graphical representation of a node
-simplShow d (Tree i _ ch bt) =
-    "|"++replicate (4*d) ' ' ++ "o "++ maybe "" id (show <$> i) ++ " " ++ (case bt of ["dummy"] -> ""; _ -> show bt) ++ "\n" ++
+simplShow :: Int -> Tree -> String
+simplShow d t@(Node _nt ch) =
+    "|"++replicate (4*d) ' ' ++ "o " ++ (case (builtinTags t) of ["dummy"] -> ""; _ -> show (builtinTags t)) ++ "\n" ++
     (concat $ map (simplShow (d+1)) ch)

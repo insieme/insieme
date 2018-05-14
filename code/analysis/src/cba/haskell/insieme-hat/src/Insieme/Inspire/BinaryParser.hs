@@ -157,9 +157,7 @@ markBuiltins root builtins = evalState (go root) Map.empty
             Nothing -> do
                 children <- mapM go $ IR.getChildren node0
                 let tags1 = fromMaybe [] $ Map.lookup node0 builtinIndex
-                    node1 = node0 { IR.getChildren = children
-                                  , IR.builtinTags = IR.builtinTags node0 ++ tags1
-                                  }
+                    node1 = IR.unsafeMkNode' (IR.getID node0) (IR.getNodeType node0) children (IR.builtinTags node0 ++ tags1) 
                 modify (Map.insert node0 node1)
                 return node1
 

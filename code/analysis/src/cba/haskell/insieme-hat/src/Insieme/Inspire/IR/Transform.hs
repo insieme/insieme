@@ -45,9 +45,9 @@ module Insieme.Inspire.IR.Transform
 
 
 import Control.Monad.State
-import Data.Map (Map)
+import Data.HashMap.Lazy (HashMap)
 import Data.Maybe
-import qualified Data.Map as Map
+import qualified Data.HashMap.Lazy as HashMap -- TODO: Strict?
 
 import Insieme.Inspire.IR.NodeType as NT
 import Insieme.Inspire.IR.Tree as IR
@@ -56,7 +56,7 @@ import qualified Insieme.Inspire.Visit.NodeMap as NodeMap
 
 
 
-type TreeSubst = Map IR.Tree IR.Tree
+type TreeSubst = HashMap IR.Tree IR.Tree
 
 substitutePrunable :: (IR.Tree -> Bool) -> TreeSubst -> IR.Tree -> IR.Tree
 substitutePrunable prune s t = evalState (substitutePrunable' prune t) s
@@ -64,18 +64,15 @@ substitutePrunable prune s t = evalState (substitutePrunable' prune t) s
 substitutePrunable' :: (IR.Tree -> Bool) -> IR.Tree -> State TreeSubst IR.Tree
 substitutePrunable' prune t = do
   s <- get
-  case Map.lookup t s of
+  case HashMap.lookup t s of
     Just t' -> return t'
     Nothing | prune t -> return t
     Nothing -> do
        let ch = getChildren t
        ch' <- mapM (substitutePrunable' prune) ch
        let t' | ch' == ch = t
-              | otherwise = t { getID = Nothing
-                              , getChildren = ch'
-                              , builtinTags = []
-                              }
-       modify (Map.insert t t')
+              | otherwise = mkNode (getNodeType t) ch' []
+       modify (HashMap.insert t t')
        return t'
 
 
@@ -88,16 +85,16 @@ substituteInLocalScope = substitutePrunable $ (NT.Lambda==) . getNodeType
 
 
 removeIds :: IR.Tree -> IR.Tree
-removeIds t = evalState (removeIds' t) Map.empty
+removeIds t = evalState (removeIds' t) HashMap.empty
 
 removeIds' :: IR.Tree -> State TreeSubst IR.Tree
 removeIds' t = do
   s <- get
-  case Map.lookup t s of
+  case HashMap.lookup t s of
     Just t' -> return t'
     Nothing -> do
         let ch = getChildren t
         ch' <- mapM removeIds' ch
-        let t' = t { getID = Nothing, getChildren = ch' }
-        modify (Map.insert t t')
+        let t' = mkNode (getNodeType t) ch' (builtinTags t)
+        modify (HashMap.insert t t')
         return t'

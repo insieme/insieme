@@ -56,6 +56,7 @@ value.
 module Insieme.Inspire.IR.NodeType where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics (Generic)
 import Language.Haskell.TH
 
@@ -85,7 +86,7 @@ $(let
                       | IntValue    Int
                       | UIntValue   Int
                       | StringValue String
-          deriving (Eq, Ord, Show, Read, Generic, NFData)
+          deriving (Eq, Ord, Show, Read, Generic, NFData, Hashable)
       |]
 
     extend :: Q [Dec] -> Q [Dec]

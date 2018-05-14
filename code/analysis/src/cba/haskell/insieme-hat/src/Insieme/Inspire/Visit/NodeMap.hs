@@ -46,6 +46,7 @@ import qualified Data.IntMap as IntMap
 import Prelude hiding (map)
 
 import qualified Insieme.Inspire.IR.Tree as IR
+import Insieme.Inspire.IR.HashCons
 
 data NodeMap a = NodeMap { nmIdMap :: IntMap a }
 
@@ -53,12 +54,11 @@ mkNodeMap :: IR.Tree -> NodeMap IR.Tree
 mkNodeMap node = NodeMap $ execState (buildMap node) $ IntMap.empty
   where
     buildMap :: IR.Tree -> State (IntMap IR.Tree) ()
-    buildMap n@IR.MkTree { IR.mtId = Just i } = do
+    buildMap n = do
+      let i = hcId $ IR.mtInnerTree n
       whenM (not . IntMap.member i <$> get) $ do
            modify $ IntMap.insert i n
            mapM_ buildMap $ IR.getChildren n
-    buildMap IR.MkTree { IR.mtId = Nothing } =
-      return ()
 
     whenM :: Monad m => m Bool -> m () -> m ()
     whenM cond a = do
@@ -76,10 +76,9 @@ mkNodeMap'Naive n = NodeMap $ go n
           Nothing -> id
 
 lookup :: IR.Tree -> NodeMap a -> Maybe a
-lookup   IR.MkTree { IR.mtId = Just i  } NodeMap { nmIdMap } =
+lookup   n NodeMap { nmIdMap } =
+    let i = hcId $ IR.mtInnerTree n in
     IntMap.lookup i nmIdMap
-lookup IR.MkTree { IR.mtId = Nothing } _nm =
-    Nothing
 
 instance Functor NodeMap where
     fmap = mapNodeMap

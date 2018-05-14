@@ -244,6 +244,7 @@ indexRecursiveLambdaReferences root = RecursiveLambdaReferenceIndex index
     refIndex = Map.fromList $ foldr (:) [] resultMap
       where
         resultMap = go <$> NodeMap.mkNodeMap root
+        {-# NOINLINE resultMap #-}
 
         go tree = (tree,set)
           where
