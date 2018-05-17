@@ -141,6 +141,9 @@ namespace analysis {
 		void irDiff_internal(NodeAddress nodeA, NodeAddress nodeB, const string& nameA, const string& nameB, size_t contextSize) {
 			const auto& locString = core::annotations::getLocationString(nodeA);
 
+			// prune if the nodes are indeed identical
+			if (nodeA == nodeB) return;
+
 			auto maxLen = std::max(nameA.length(), nameB.length());
 
 			auto reportError = [&](const string& msg, const string& id, const auto& printForA, const auto& printForB) {
