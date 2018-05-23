@@ -53,10 +53,7 @@ import Data.IORef
 
 import System.IO.Unsafe
 
-data HC a = HC { hcHash :: !Int, hcVal :: a, hcId :: !Int, hcDeRef :: IORef () }
-
--- hcVal :: HC a -> a
--- hcVal (HC _ ref) = unsafePerformIO $ readIORef ref
+data HC a = HC { hcHash :: !Int, hcVal :: a, hcId :: !HCId, hcDeRef :: IORef () }
 
 instance Hashable (HC a) where
     hash = hcHash
@@ -64,7 +61,6 @@ instance Hashable (HC a) where
 
 instance Eq (HC a) where
     HC _ _ a _ == HC _ _ b _ = a == b
---    HC _ a _ == HC _ b _ = a == b
 
 -- | Checks the tag for equality first, and otherwise falls back to the
 -- underlying type's ordering
@@ -74,9 +70,14 @@ instance Ord a => Ord (HC a) where
 instance NFData a => NFData (HC a) where
     rnf HC {hcVal}  = hcVal `seq` () -- since we calculate the hash strictly
                                      -- when inserting HCs are already in NF
-
 instance Show a => Show (HC a) where
     show = show . hcVal
+
+newtype HCId = HCId { unHCId :: Int }
+    deriving (Eq, Ord, Show)
+
+inc :: HCId -> HCId
+inc (HCId !i) = HCId (i + 1)
 
 type HashTable k v = BasicHashTable k v
 type Cache a = (HashTable (Hashed a) (Weak (HC a)), IORef Integer)
@@ -91,8 +92,11 @@ class (Eq a, Hashable a) => HashCons a where
               newCache
   {-# NOINLINE hcCache #-}
 
-hcGlobalId :: MVar Int
-hcGlobalId = unsafePerformIO $ newMVar 0
+class HashConsed a where
+    hcdId :: a -> HCId
+
+hcGlobalId :: MVar HCId
+hcGlobalId = unsafePerformIO $ newMVar (HCId 0)
 {-# NOINLINE hcGlobalId #-}
 
 lookupOrAdd :: (Eq a, Hashable a) => a -> Cache a -> IO (HC a)
@@ -117,7 +121,7 @@ lookupOrAdd x (c, sr) = do
 
        !i <- takeMVar hcGlobalId
        modifyIORef' sr (+1)
-       putMVar hcGlobalId (i+1)
+       putMVar hcGlobalId (inc i)
 
        let hc = HC (hash hx) x i ref
 
