@@ -87,9 +87,7 @@ newCache = (,) <$> HashTable.newSized 1000000 <*> newIORef 0
 
 class (Eq a, Hashable a) => HashCons a where
   hcCache :: Cache a
-  hcCache = unsafePerformIO $ do
-              hPutStrLn stderr "+++++++++\nnewCache\n+++++++++"
-              newCache
+  hcCache = unsafePerformIO newCache
   {-# NOINLINE hcCache #-}
 
 class HashConsed a where
@@ -101,7 +99,6 @@ hcGlobalId = unsafePerformIO $ newMVar (HCId 0)
 
 lookupOrAdd :: (Eq a, Hashable a) => a -> Cache a -> IO (HC a)
 lookupOrAdd x (c, sr) = do
---   hPutStrLn stderr $ "======hash: " ++ show (hash hx)
    mhc <- HashTable.lookup c hx
    case mhc of
      Nothing ->
@@ -126,7 +123,6 @@ lookupOrAdd x (c, sr) = do
        let hc = HC (hash hx) x i ref
 
        HashTable.insert c hx =<< mkWeakPtr hc Nothing
-       -- hPutStrLn stderr . ("hashtable size:" ++) . show =<< readIORef sr
        return hc
 
 
