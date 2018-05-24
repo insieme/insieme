@@ -35,26 +35,25 @@
  - IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
  -}
 
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
+
 module Insieme.Analysis.Entities.Memory where
+
+import Control.DeepSeq (NFData)
+import Data.Hashable (Hashable)
+import GHC.Generics (Generic)
 
 import Insieme.Analysis.Entities.ProgramPoint
 import Insieme.Inspire (NodeAddress)
-import qualified Data.Hashable as Hash
-
 
 -- a memory location is simply addressed by its creation point
 newtype MemoryLocation = MemoryLocation NodeAddress
-    deriving (Eq,Ord,Show)
-    
-instance Hash.Hashable MemoryLocation where
-    hashWithSalt s (MemoryLocation n) = Hash.hashWithSalt s n
-    
-    
+    deriving (Eq, Ord, Show, Generic, NFData, Hashable)
+        
 -- a memory state point is referencing to the state of a memory location 
 -- at a given program point     
 data MemoryStatePoint = MemoryStatePoint ProgramPoint MemoryLocation
-    deriving (Eq,Ord,Show)
+    deriving (Eq, Ord, Show, Generic, NFData, Hashable)
     
-instance Hash.Hashable MemoryStatePoint where
-    hashWithSalt s (MemoryStatePoint p l) = Hash.hashWithSalt (Hash.hashWithSalt s p) l
     
