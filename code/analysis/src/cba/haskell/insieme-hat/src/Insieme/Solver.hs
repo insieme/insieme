@@ -236,7 +236,7 @@ solveStep s _ [] = s                                                            
 
 -- compute next element in work list
 
-solveStep !(SolverState a i u t r) d (v:vs) = 
+solveStep (SolverState !a !i u t r) d (v:vs) =
     solveStep (SolverState resAss resIndex nu nt nr) resDep ds
   where
     -- profiling --
