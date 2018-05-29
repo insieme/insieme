@@ -56,6 +56,7 @@ module Insieme.Analysis.SymbolicValue (
 import Control.DeepSeq (NFData)
 import Data.List (intercalate)
 import Data.Typeable
+import Data.Hashable
 import GHC.Generics (Generic)
 import Insieme.Adapter.Utils (pprintTree)
 import Insieme.Analysis.Entities.FieldIndex
@@ -81,7 +82,7 @@ import qualified Insieme.Utils.BoundSet as BSet
 type SymbolicValue = IR.Tree
 
 newtype SymbolicValueSet = SymbolicValueSet { unSVS :: BSet.BoundSet BSet.Bound10 SymbolicValue }
-  deriving (Eq, Ord, Show, Generic, NFData)
+  deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance Solver.Lattice SymbolicValueSet where
     bot   = SymbolicValueSet BSet.empty

@@ -254,7 +254,7 @@ predecessor  p@(ProgramPoint addr Internal) = case Q.getNodeType addr of
                 isLiteral _ = False
             litPredecessor = ProgramPoint (I.goDown 1 addr) Post
         callableVar = callableValue (I.goDown 1 addr)
-        callableVal a = BSet.toSet $
+        callableVal a = 
                 if BSet.isUniverse callables
                 then collectAllCallables addr
                 else callables

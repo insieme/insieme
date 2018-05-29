@@ -45,9 +45,10 @@ module Insieme.Inspire.IR.Transform
 
 
 import Control.Monad.State
-import Data.HashMap.Lazy (HashMap)
 import Data.Maybe
-import qualified Data.HashMap.Lazy as HashMap -- TODO: Strict?
+
+import Data.AbstractHashMap.Lazy (Map, MapKey)
+import qualified Data.AbstractHashMap.Lazy as Map -- TODO: Strict?
 
 import Insieme.Inspire.IR.NodeType as NT
 import Insieme.Inspire.IR.Tree as IR
@@ -56,45 +57,45 @@ import qualified Insieme.Inspire.Visit.NodeMap as NodeMap
 
 
 
-type TreeSubst = HashMap IR.Tree IR.Tree
+type TreeSubst = Map IR.Tree IR.Tree
 
-substitutePrunable :: (IR.Tree -> Bool) -> TreeSubst -> IR.Tree -> IR.Tree
-substitutePrunable prune s t = evalState (substitutePrunable' prune t) s
+substitutePrunable :: (IR.Tree -> Bool) -> (IR.Tree -> IR.Tree) -> IR.Tree -> IR.Tree
+substitutePrunable prune subst t = evalState (substitutePrunable' prune subst t) Map.empty
 
-substitutePrunable' :: (IR.Tree -> Bool) -> IR.Tree -> State TreeSubst IR.Tree
-substitutePrunable' prune t = do
+substitutePrunable' :: (IR.Tree -> Bool) -> (IR.Tree -> IR.Tree) -> IR.Tree -> State TreeSubst IR.Tree
+substitutePrunable' prune subst t0 = do
   s <- get
-  case HashMap.lookup t s of
-    Just t' -> return t'
-    Nothing | prune t -> return t
+  case Map.lookup t0 s of
+    Just t1 -> return t1
+    Nothing | prune t0 -> return t0
     Nothing -> do
-       let ch = getChildren t
-       ch' <- mapM (substitutePrunable' prune) ch
-       let t' | ch' == ch = t
-              | otherwise = mkNode (getNodeType t) ch' []
-       modify (HashMap.insert t t')
-       return t'
+       let ch = getChildren t0
+       ch' <- mapM (substitutePrunable' prune subst) ch
+       let t1 = subst t0
+       let t2 | ch' == ch = t1
+              | otherwise = mkNode (getNodeType t1) ch' []
+       modify (Map.insert t0 t2)
+       return t2
 
 
-substitute :: TreeSubst -> IR.Tree -> IR.Tree
+substitute :: (IR.Tree -> IR.Tree) -> IR.Tree -> IR.Tree
 substitute = substitutePrunable $ const False
 
-substituteInLocalScope :: TreeSubst -> IR.Tree -> IR.Tree
+substituteInLocalScope :: (IR.Tree -> IR.Tree) -> IR.Tree -> IR.Tree
 substituteInLocalScope = substitutePrunable $ (NT.Lambda==) . getNodeType
 
 
-
 removeIds :: IR.Tree -> IR.Tree
-removeIds t = evalState (removeIds' t) HashMap.empty
+removeIds t = evalState (removeIds' t) Map.empty
 
 removeIds' :: IR.Tree -> State TreeSubst IR.Tree
 removeIds' t = do
   s <- get
-  case HashMap.lookup t s of
+  case Map.lookup t s of
     Just t' -> return t'
     Nothing -> do
         let ch = getChildren t
         ch' <- mapM removeIds' ch
         let t' = mkNode (getNodeType t) ch' (builtinTags t)
-        modify (HashMap.insert t t')
+        modify (Map.insert t t')
         return t'

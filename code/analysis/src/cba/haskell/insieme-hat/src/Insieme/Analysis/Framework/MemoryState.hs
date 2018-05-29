@@ -54,6 +54,7 @@ module Insieme.Analysis.Framework.MemoryState (
 import Control.DeepSeq (NFData)
 import Data.Maybe
 import Data.Typeable
+import Data.Hashable
 import GHC.Generics (Generic)
 import Insieme.Analysis.Callable
 import Insieme.Analysis.Entities.FieldIndex
@@ -90,10 +91,10 @@ data Definition = Initial                                    -- it is the defini
               | MaterializingCall NodeAddress                -- the definition is conducted by an assignment triggered through a materializing call
               | Assignment NodeAddress                       -- an assignment conducting an update to a memory location
               | Initialization NodeAddress                   -- an initialization expression conducting an update to a memory location
-    deriving (Eq,Ord,Show,Generic,NFData)
+    deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 newtype Definitions = Definitions { unD :: BSet.UnboundSet Definition }
-  deriving (Eq,Ord,Show,Generic,NFData)
+  deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance Solver.Lattice Definitions where
     bot = Definitions BSet.empty
@@ -411,7 +412,7 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
 
         -- some checks regarding the scope of the update
 
-        isActive a = (BSet.isUniverse trgs) || (any pred $ BSet.toSet $ trgs)
+        isActive a = (BSet.isUniverse trgs) || (any pred trgs)
             where
                 trgs = unRS $ targetRefVal a
                 pred (Reference cp _) = cp == loc
@@ -421,7 +422,7 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
             where
                 trgs = unRS $ targetRefVal a
 
-        isFullAssign a = isPerfectAssign a && (all pred $ BSet.toSet $ unRS $ targetRefVal a)
+        isFullAssign a = isPerfectAssign a && (all pred $ unRS $ targetRefVal a)
             where
                 pred (Reference _ DP.Root) = True
                 pred _ = False
@@ -656,7 +657,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
                 noFuns a = BSet.null $ funVal a
 
-                mayAssign a = BSet.isUniverse funs || (any assign $ BSet.toSet funs)
+                mayAssign a = BSet.isUniverse funs || (any assign funs)
                     where
                         funs = funVal a
                         assign c = isRefAssign || isCtor
@@ -754,7 +755,7 @@ reachingDefinitions (MemoryStatePoint pp@(ProgramPoint addr p) ml@(MemoryLocatio
 
         noRefs a = BSet.null $ refVal a
 
-        hitsLoc a = BSet.isUniverse refs || (any hit $ BSet.toSet refs)
+        hitsLoc a = BSet.isUniverse refs || (any hit refs)
             where
                 refs = refVal a
                 hit (Reference cp _) = cp == loc
@@ -846,7 +847,7 @@ writeSetAnalysis :: Solver.AnalysisIdentifier
 writeSetAnalysis = Solver.mkAnalysisIdentifier WriteSetAnalysis "WriteSet"
 
 newtype WriteSet = WriteSet { unWS :: BSet.UnboundSet Location }
-  deriving (Eq,Ord,Show,Generic,NFData)
+  deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance Solver.Lattice WriteSet where
     bot = WriteSet BSet.empty

@@ -44,6 +44,7 @@ module Insieme.Analysis.Arithmetic where
 import Control.DeepSeq (NFData)
 import Data.Maybe
 import Data.Typeable
+import Data.Hashable
 import GHC.Generics (Generic)
 
 import Insieme.Inspire (NodeAddress)
@@ -69,7 +70,7 @@ import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 --
 
 newtype SymbolicFormulaSet b = SymbolicFormulaSet { unSFS :: BSet.BoundSet b SymbolicFormula }
-  deriving (Eq, Ord, Show, Generic, NFData)
+  deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance BSet.IsBound b => Solver.Lattice (SymbolicFormulaSet b) where
     bot   = SymbolicFormulaSet BSet.empty

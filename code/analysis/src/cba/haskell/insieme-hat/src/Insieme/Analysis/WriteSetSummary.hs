@@ -57,6 +57,9 @@ import Prelude hiding (null)
 
 import Control.DeepSeq
 import Data.Typeable
+import Data.Hashable
+import Data.AbstractMap.Strict (Map, MapKey)
+import qualified Data.AbstractMap.Strict as Map
 import GHC.Generics (Generic)
 import Insieme.Analysis.AccessPath
 import Insieme.Analysis.Callable
@@ -64,7 +67,6 @@ import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Inspire.NodeAddress
 import Insieme.Query
 
-import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Insieme.Analysis.Entities.AccessPath as AP
 import qualified Insieme.Analysis.Framework.PropertySpace.ComposedValue as ComposedValue
@@ -78,9 +80,9 @@ import qualified Insieme.Utils.BoundSet as BSet
 --
 
 data WriteSet i =
-          Known (Map.Map AP.BaseVar (AccessPathSet i))
+          Known (Map AP.BaseVar (AccessPathSet i))
         | Unknown
-    deriving(Eq,Ord,Show,Generic,NFData)
+    deriving(Eq, Ord, Show, Generic, NFData, Hashable)
 
 
 -- an empty write set value
@@ -103,12 +105,12 @@ union (Known a) (Known b) = Known $ Map.unionWith accessPathSetUnion a b
   where
     accessPathSetUnion x y = AccessPathSet $ BSet.union (unAPS x) (unAPS y)
 
-fromAccessPath :: AP.AccessPath i -> WriteSet i
+fromAccessPath :: FieldIndex i => AP.AccessPath i -> WriteSet i
 fromAccessPath AP.Local              = empty
 fromAccessPath AP.Unknown            = Unknown
 fromAccessPath p@(AP.AccessPath v _) = Known $ Map.singleton v $ AccessPathSet $ BSet.singleton p
 
-fromAccessPaths :: (FieldIndex i) => [AP.AccessPath i] -> WriteSet i
+fromAccessPaths :: FieldIndex i => [AP.AccessPath i] -> WriteSet i
 fromAccessPaths xs = foldr union empty (fromAccessPath <$> xs)
 
 toAccessPaths :: WriteSet i -> [AP.AccessPath i]
@@ -126,7 +128,7 @@ parameters (Known b) = toInt <$> filter params (Map.keys b)
         toInt _ = error "toInt: unhandled case"
 
 
-bindAccessPaths :: (FieldIndex i) => (Map.Map Int (AccessPathSet i)) -> WriteSet i -> WriteSet i
+bindAccessPaths :: FieldIndex i => (Map Int (AccessPathSet i)) -> WriteSet i -> WriteSet i
 bindAccessPaths _ Unknown = Unknown
 bindAccessPaths a b = fromAccessPaths $ concat (bind <$> toAccessPaths b)
     where

@@ -70,7 +70,7 @@ data InnerTree = InnerTree {
       itNodeType    :: !NodeType,
       itChildren    :: ![Tree],
       itBuiltinTags :: ![String]
-    } deriving (Eq, Show, Generic, NFData, Hashable, Ord)
+    } deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance HashCons InnerTree where
 

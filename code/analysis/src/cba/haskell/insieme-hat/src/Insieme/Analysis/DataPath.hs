@@ -43,6 +43,7 @@ module Insieme.Analysis.DataPath where
 
 import Control.DeepSeq (NFData)
 import Data.Typeable
+import Data.Hashable
 import GHC.Generics (Generic)
 
 import Insieme.Inspire (NodeAddress)
@@ -68,7 +69,7 @@ import {-# SOURCE #-} Insieme.Analysis.Framework.Dataflow
 --
 
 newtype DataPathSet i = DataPathSet { unDPS :: BSet.UnboundSet (DataPath i) }
-  deriving (Eq, Ord, Show, Generic, NFData)
+  deriving (Eq, Ord, Show, Generic, NFData, Hashable)
 
 instance (FieldIndex i) => Solver.Lattice (DataPathSet i) where
     bot   = DataPathSet BSet.empty

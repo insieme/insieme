@@ -47,19 +47,21 @@ module Insieme.Analysis.Framework.PropertySpace.ValueTree (
 import Control.DeepSeq
 import Data.List (intercalate)
 import Data.Maybe
+import Data.Hashable
+import Data.AbstractMap (Map, MapKey)
+import qualified Data.AbstractMap as Map
 import GHC.Generics (Generic)
 import Insieme.Analysis.Entities.DataPath
 import Insieme.Analysis.Entities.FieldIndex
 import Insieme.Analysis.Framework.PropertySpace.ComposedValue
-import qualified Data.Map as Map
 import qualified Insieme.Solver as Solver
 
+
 data Tree i a = Leaf a
-              | Node (Map.Map i (Tree i a))
+              | Node (Map i (Tree i a))
               | Empty
               | Inconsistent
-    deriving (Eq,Ord,Generic,NFData)
-
+    deriving (Eq, Ord, Generic, NFData, Hashable)
 
 instance (Show i, Show a) => Show (Tree i a) where
     show (Leaf a)     = show a
@@ -146,7 +148,7 @@ get _ Empty        = Empty
 get _ _            = Inconsistent
 
 -- | updates the value of a sub tree
-set :: (Ord i) => i -> Tree i a -> Tree i a -> Tree i a
+set :: MapKey i => i -> Tree i a -> Tree i a -> Tree i a
 set i v Empty        = Node $ Map.singleton i v
 set i v Inconsistent = Node $ Map.singleton i v
 set i v (Leaf _)     = Node $ Map.singleton i v

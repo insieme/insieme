@@ -46,6 +46,7 @@ import Data.Int
 import Data.List
 import Data.Maybe
 import Data.Word
+import Data.Hashable
 import GHC.Generics (Generic)
 import Numeric (readOct, readDec, readHex)
 
@@ -54,7 +55,7 @@ data CInt = CInt32  Int32   -- ^ Represents @int@
           | CInt64  Int64   -- ^ Represents @long@
           | CUInt32 Word32  -- ^ Represents @unsigned int@
           | CUInt64 Word64  -- ^ Represents @unsigned long@
-  deriving (Eq, Ord, Generic, NFData)
+  deriving (Eq, Ord, Generic, NFData, Hashable)
 
 instance Show CInt where
     show (CInt32  x) = show x
