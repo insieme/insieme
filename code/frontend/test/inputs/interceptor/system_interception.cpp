@@ -51,11 +51,6 @@ struct InitListTest {
 	InitListTest() : v() {};
 };
 
-struct InitDataMemberWithArguments {
-	struct timeval t;
-	InitDataMemberWithArguments() : t{0, 0} {};
-};
-
 int main() {
 
 	// simple C function with struct param
@@ -170,21 +165,6 @@ int main() {
 	)")
 	{
 		InitListTest il;
-	}
-
-	#pragma test expect_ir(R"(
-		def struct IMP_InitDataMemberWithArguments {
-			t : IMP_timeval;
-			ctor function () {
-				<ref<IMP_timeval,f,f,plain>>((this).t) {<ref<IMP_timeval,f,f,plain>>(ref_decl(type_lit(ref<IMP_timeval,f,f,plain>))) {num_cast(0, type_lit(int<8>)), num_cast(0, type_lit(int<8>))}};
-			}
-		};
-		{
-			var ref<IMP_InitDataMemberWithArguments,f,f,plain> v1 = IMP_InitDataMemberWithArguments::(ref_decl(type_lit(ref<IMP_InitDataMemberWithArguments,f,f,plain>)));
-		}
-	)")
-	{
-		InitDataMemberWithArguments i2;
 	}
 
 	#pragma test expect_ir(R"(

@@ -271,7 +271,7 @@ namespace frontend {
 		checkForFunction(irTu, "IMP_std_colon__colon_basic_ostream::IMP__operator_lshift_");
 
 		// only our own types should have been translated to a type
-		EXPECT_EQ(4, irTu.getTypes().size());
+		EXPECT_EQ(3, irTu.getTypes().size());
 
 		// check the attached name of the intercepted structs for correctness
 		auto code = job.execute(manager);

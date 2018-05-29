@@ -1097,66 +1097,72 @@ namespace parser {
 			return exp;
 		}
 
-		ExpressionPtr InspireDriver::genInitializerExprTemp(const location& l, const TypePtr& type, const ExpressionList& list) {
+		ExpressionPtr InspireDriver::genInitializerExprTemp(const location& l, const TypePtr& type, const ParserTypedExpressionList& list) {
 			return genInitializerExpr(l, type, lang::buildRefTemp(type), list);
 		}
 
-		ExpressionPtr InspireDriver::genInitializerExpr(const location& l, const TypePtr& type, const ExpressionPtr& memExpr, const ExpressionList& list) {
+		ExpressionPtr InspireDriver::genInitializerExpr(const location& l, const TypePtr& type, const ExpressionPtr& memExpr, const ParserTypedExpressionList& list) {
 			if(!lang::isReference(type)) {
 				error(l, format("type for initialization must be a reference type (is %s)", *type));
 				return nullptr;
 			}
 
-			// now we need to fix the types of the declarations in the InitExpr for correct materialization
-			const auto& elementType = analysis::getReferencedType(type);
-
-			core::RecordPtr tuRecordType;
-			if(const auto& genType = elementType.isa<core::GenericTypePtr>()) {
-				if(tu.getTypes().find(genType) != tu.getTypes().end()) {
-					tuRecordType = tu.getTypes().find(genType)->second->getRecord();
+			// we allowe typed expressions only for single-argument InitExprs
+			if(list.size() == 1) {
+				if(::any(list.cbegin() + 1, list.cend(), [](const auto& entry) { return entry.type != entry.expression->getType(); })) {
+					error(l, "Typed expressions in InitExpression list only allowed for single inits");
+					return nullptr;
 				}
 			}
+
+			// now we need to fix the types of the declarations in the InitExpr for correct materialization
+			const auto& elementType = analysis::getReferencedType(type);
 
 			// if we are initializing an array
 			if(lang::isArray(elementType)) {
 				DeclarationList decls;
 				auto declType = transform::materialize(lang::getArrayElementType(elementType));
 				for(unsigned index = 0; index < list.size(); ++index) {
-					decls.push_back(builder.declaration(declType, list[index]));
+					decls.push_back(builder.declaration(declType, list[index].expression));
 				}
 				return builder.initExpr(memExpr, decls);
 
 			// if we are initializing a struct
-			} else if(tuRecordType && tuRecordType.isa<core::StructPtr>()) {
-				// extract the struct
-				const auto& structType = tuRecordType.as<core::StructPtr>();
+			} else if(const auto& genType = elementType.isa<core::GenericTypePtr>()) {
+				if(tu.getTypes().find(genType) != tu.getTypes().end()) {
+					const auto& tuType = tu.getTypes().find(genType)->second;
+					if(tuType.isStruct()) {
 
-				// check that the field number fits
-				auto numFields = structType->getFields()->size();
-				if (list.size() > numFields) {
-					error(l, format("Unable to initialize %d fields with %d value(s).", numFields, list.size()));
-					return nullptr;
+						// extract the struct
+						const auto& structType = tuType.getStruct();
+
+						// check that the field number fits
+						auto numFields = structType->getFields()->size();
+						if (list.size() > numFields) {
+							error(l, format("Unable to initialize %d fields with %d value(s).", numFields, list.size()));
+							return nullptr;
+						}
+
+						// get the correct type of the decl from the field for each init expression
+						DeclarationList decls;
+						for(unsigned index = 0; index < list.size(); ++index) {
+							auto declType = core::transform::materialize(structType->getFields()->getElement(index)->getType());
+							decls.push_back(builder.declaration(declType, list[index].expression));
+						}
+						return builder.initExpr(memExpr, decls);
+					}
 				}
+			}
 
-				// get the correct type of the decl from the field for each init expression
-				DeclarationList decls;
-				for(unsigned index = 0; index < list.size(); ++index) {
-					auto declType = core::transform::materialize(structType->getFields()->getElement(index)->getType());
-					decls.push_back(builder.declaration(declType, list[index]));
-				}
-				return builder.initExpr(memExpr, decls);
-
-			// if this is a scalar initialization, and we are not initializing a union here
-			} else if(list.size() == 1 && (!tuRecordType || tuRecordType.isa<core::StructPtr>())) {
-				auto init = list[0];
-				auto declType = core::transform::materialize(core::analysis::getReferencedType(memExpr->getType()));
-				auto decl = builder.declaration(declType, init);
-				auto ret = builder.initExpr(memExpr, toVector(decl));
-				return ret;
+			// if this is a scalar initialization, and we have an explicit declaration type
+			if(list.size() == 1 && list[0].type != list[0].expression->getType()) {
+				auto decl = builder.declaration(list[0].type, list[0].expression);
+				return builder.initExpr(memExpr, toVector(decl));
 			}
 
 			// fallback for all other types
-			return builder.initExpr(type.as<GenericTypePtr>(), memExpr, builder.expressions(list));
+			return builder.initExpr(type.as<GenericTypePtr>(), memExpr,
+			                        builder.expressions(::transform(list, [](const ParserTypedExpression& entry) { return entry.expression; })));
 		}
 
 		VariablePtr InspireDriver::genParameter(const location& l, const std::string& name, const TypePtr& type) {

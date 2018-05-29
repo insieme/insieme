@@ -362,12 +362,12 @@ namespace parser {
 			/**
 			 * constructs an initializer expression according to the given type and expression list
 			 */
-			ExpressionPtr genInitializerExprTemp(const location& l, const TypePtr& type, const ExpressionList& list);
+			ExpressionPtr genInitializerExprTemp(const location& l, const TypePtr& type, const ParserTypedExpressionList& list);
 
 			/**
 			 * constructs an initializer expression according to the given type and expression list
 			 */
-			ExpressionPtr genInitializerExpr(const location& l, const TypePtr& type, const ExpressionPtr& memExpr, const ExpressionList& list);
+			ExpressionPtr genInitializerExpr(const location& l, const TypePtr& type, const ExpressionPtr& memExpr, const ParserTypedExpressionList& list);
 
 			/**
 			 * constructs a parameter
