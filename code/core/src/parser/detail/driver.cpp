@@ -1110,6 +1110,13 @@ namespace parser {
 			// now we need to fix the types of the declarations in the InitExpr for correct materialization
 			const auto& elementType = analysis::getReferencedType(type);
 
+			core::RecordPtr tuRecordType;
+			if(const auto& genType = elementType.isa<core::GenericTypePtr>()) {
+				if(tu.getTypes().find(genType) != tu.getTypes().end()) {
+					tuRecordType = tu.getTypes().find(genType)->second->getRecord();
+				}
+			}
+
 			// if we are initializing an array
 			if(lang::isArray(elementType)) {
 				DeclarationList decls;
@@ -1120,30 +1127,32 @@ namespace parser {
 				return builder.initExpr(memExpr, decls);
 
 			// if we are initializing a struct
-			} else if(const auto& genType = elementType.isa<core::GenericTypePtr>()) {
-				if(tu.getTypes().find(genType) != tu.getTypes().end()) {
-					const auto& tuType = tu.getTypes().find(genType)->second;
-					if(tuType.isStruct()) {
+			} else if(tuRecordType && tuRecordType.isa<core::StructPtr>()) {
+				// extract the struct
+				const auto& structType = tuRecordType.as<core::StructPtr>();
 
-						// extract the struct
-						const auto& structType = tuType.getStruct();
-
-						// check that the field number fits
-						auto numFields = structType->getFields()->size();
-						if (list.size() > numFields) {
-							error(l, format("Unable to initialize %d fields with %d value(s).", numFields, list.size()));
-							return nullptr;
-						}
-
-						// get the correct type of the decl from the field for each init expression
-						DeclarationList decls;
-						for(unsigned index = 0; index < list.size(); ++index) {
-							auto declType = core::transform::materialize(structType->getFields()->getElement(index)->getType());
-							decls.push_back(builder.declaration(declType, list[index]));
-						}
-						return builder.initExpr(memExpr, decls);
-					}
+				// check that the field number fits
+				auto numFields = structType->getFields()->size();
+				if (list.size() > numFields) {
+					error(l, format("Unable to initialize %d fields with %d value(s).", numFields, list.size()));
+					return nullptr;
 				}
+
+				// get the correct type of the decl from the field for each init expression
+				DeclarationList decls;
+				for(unsigned index = 0; index < list.size(); ++index) {
+					auto declType = core::transform::materialize(structType->getFields()->getElement(index)->getType());
+					decls.push_back(builder.declaration(declType, list[index]));
+				}
+				return builder.initExpr(memExpr, decls);
+
+			// if this is a scalar initialization, and we are not initializing a union here
+			} else if(list.size() == 1 && (!tuRecordType || tuRecordType.isa<core::StructPtr>())) {
+				auto init = list[0];
+				auto declType = core::transform::materialize(core::analysis::getReferencedType(memExpr->getType()));
+				auto decl = builder.declaration(declType, init);
+				auto ret = builder.initExpr(memExpr, toVector(decl));
+				return ret;
 			}
 
 			// fallback for all other types

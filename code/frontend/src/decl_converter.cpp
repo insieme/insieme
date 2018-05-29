@@ -198,9 +198,13 @@ namespace conversion {
 				}
 
 				// build init expression
-				auto irInit = converter.convertCxxArgExpr(clangInitExpr);
-				irInit = core::transform::castInitializationIfNotMaterializing(initTargetType ? initTargetType : irMember->getType(), irInit);
-				retStmts.push_back(builder.initExpr(irMember, irInit));
+				auto declType = core::transform::materialize(converter.convertType(fieldDecl->getType()));
+				auto irInit = converter.convertInitExpr(clangInitExpr);
+				irInit = core::transform::castInitializationIfNotMaterializing(declType, irInit);
+				auto decl = builder.declaration(declType, irInit);
+				core::ExpressionPtr initExpr = builder.initExpr(irMember, toVector(decl));
+				initExpr = utils::fixTempMemoryInInitExpressionInits(initExpr);
+				retStmts.push_back(initExpr);
 			}
 			return retStmts;
 		}
