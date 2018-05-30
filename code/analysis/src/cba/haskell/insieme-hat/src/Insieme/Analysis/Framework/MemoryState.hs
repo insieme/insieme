@@ -296,8 +296,8 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
              var = Solver.mkVariable varId [con] Solver.bot
              con = Solver.createEqualityConstraint dep val var
 
-             dep _ = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
-             val a = ComposedValue.composeElements $ zip fields (valueVal a)
+             dep a = valueDepsWithElemVars (Solver.toVar <$> valueVars) a
+             val a = updatedValueWithValue (ComposedValue.composeElements $ zip fields (valueVal a)) a
 
              fields = fromJust $ map structField <$> Q.getFieldNames elemType
 
@@ -310,8 +310,8 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
             var = Solver.mkVariable varId [con] Solver.bot
             con = Solver.createEqualityConstraint dep val var
 
-            dep _ = Solver.toVar targetRefVar : (Solver.toVar <$> valueVars)
-            val a = ComposedValue.composeElements $ elems a
+            dep a = valueDepsWithElemVars (Solver.toVar <$> valueVars) a
+            val a = updatedValueWithValue (ComposedValue.composeElements $ elems a) a
 
             -- attach (unknownIndex, default value) if not all array elements are initialized
             elems a | numIndices == Q.getArraySize arrayType = zip indices (valueVal a)
@@ -331,8 +331,11 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
             var = Solver.mkVariable varId [con] Solver.bot
             con = Solver.createEqualityConstraint dep val var
 
-            dep a = (Solver.toVar nestedArrayRefVar) : (Solver.toVar . snd <$> nestedArrayMemStateVars a)
-            val a = convertToStdArray $ nestedArrayMemStateVal a
+            dep a = valueDepsWithElemVars (initValueVars a) a
+            val a = updatedValueWithValue (convertToStdArray $ nestedArrayMemStateVal a) a
+
+            -- auxiliary dependency collection variables
+            initValueVars a = (Solver.toVar nestedArrayRefVar) : (Solver.toVar . snd <$> nestedArrayMemStateVars a)
 
             -- get value of nested array initialization
 
@@ -431,9 +434,12 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
 
         -- value composing utilities
 
-        valueDeps a = case () of _ | not $ isActive a -> [Solver.toVar oldStateVar]
-                                   | isFullAssign a   -> [Solver.toVar elemValueVar]
-                                   | otherwise        -> [Solver.toVar oldStateVar, Solver.toVar elemValueVar]
+        valueDepsWithElemVars valueVars a =
+              case () of _ | not $ isActive a -> [Solver.toVar oldStateVar]
+                           | isFullAssign a   -> valueVars
+                           | otherwise        -> (Solver.toVar oldStateVar) :  valueVars
+
+        valueDeps = valueDepsWithElemVars [Solver.toVar elemValueVar]
 
         elemValueVar = case Q.getNodeType addr of
 
@@ -452,11 +458,10 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
 
         elemValueVal a = Solver.get a elemValueVar
 
-        updatedValue a =
+        updatedValueWithValue elemVal a =
                 if BSet.isUniverse trgs then Solver.top else Solver.join values
             where
                 oldVal = oldStateVal a
-                elemVal = elemValueVal a
 
                 trgs = unRS $ targetRefVal a
 
@@ -467,6 +472,7 @@ definedValue addr phase ml@(MemoryLocation loc) analysis = case Q.getNodeType ad
                     ]
                 update _ = []
 
+        updatedValue a = updatedValueWithValue (elemValueVal a) a
 
         -- access to the old state
 
