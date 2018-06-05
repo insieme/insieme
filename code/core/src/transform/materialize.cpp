@@ -71,12 +71,26 @@ namespace transform {
 	DeclarationPtr materialize(const ExpressionPtr& value) {
 		auto& mgr = value->getNodeManager();
 
-		// we don't materialize if the expression is a constructor call or an init expression
-		if(analysis::isConstructorCall(value) || value.isa<InitExprPtr>()) {
+		// we don't materialize if the expression is a constructor call or an init expression or a materializing call
+		if(analysis::isConstructorCall(value) || value.isa<InitExprPtr>() || analysis::isMaterializingCall(value)) {
 			return Declaration::get(mgr, value->getType(), value);
 		}
 
 		return Declaration::get(mgr, materialize(value->getType()), value);
+	}
+
+	CallExprPtr materializeCall(const CallExprPtr& call) {
+		if(analysis::isMaterializingCall(call)) return call;
+
+		// materialize the type of the call
+		TypePtr returnType = materialize(call->getType());
+		// unit calls don't get materialized
+		if(call.getNodeManager().getLangBasic().isUnit(returnType)) return call;
+
+		// create the new call
+		auto res = replaceNode(call.getNodeManager(), CallExprAddress(call)->getType(), returnType).as<CallExprPtr>();
+		assert_pred1(analysis::isMaterializingCall, res) << "With call type " << returnType;
+		return res;
 	}
 
 	TypePtr dematerialize(const TypePtr& type) {
