@@ -55,7 +55,7 @@ import Data.Maybe
 import Data.Typeable
 import Data.Hashable
 import Data.AbstractSet (Set, SetKey)
-import Data.AbstractSet as Set
+import qualified Data.AbstractSet as Set
 import GHC.Generics (Generic)
 
 import Insieme.Inspire (NodeAddress)
