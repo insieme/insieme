@@ -44,7 +44,7 @@ module Insieme.Analysis.CallSite (
     callSites
 ) where
 
-import qualified Data.Set as Set
+import qualified Data.AbstractSet as Set
 import Data.Maybe
 import Data.Typeable
 

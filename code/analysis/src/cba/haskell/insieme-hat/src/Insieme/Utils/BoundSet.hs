@@ -173,7 +173,7 @@ fromList as = fromSet $ Set.fromList as
 
 -- | Convert a 'BoundSet' to a regular 'HashSet', throws an error when used with
 -- 'Universe'.
-toSet :: (IsBound bb, Ord a) => BoundSet bb a -> Set a
+toSet :: (IsBound bb, SetKey a) => BoundSet bb a -> Set a
 toSet  Universe    = error "Cannot convert Universe :: UnboundSet to set"
 toSet (BoundSet s) = Set.fromList $ Set.toList s
 
